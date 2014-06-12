@@ -1,0 +1,26 @@
+# Object files
+*.o
+*.lo
+
+# Libraries
+*.lib
+*.a
+
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+
+# Executables
+*.exe
+*.out
+*.app
+
+*/src/.libs
+*/src/.deps
+*/config.log
+*/examples
+sdp-bootstrap
+
+.DS_Store
