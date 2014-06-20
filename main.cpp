@@ -276,8 +276,20 @@ public:
 
 class SDP {
 public:
+  // Each algebra basis vector matrix has columns of the form
+  // { q_1(x_k), q_2(x_k), ..., q_n(x_k) },
+  // with one column for each k = 1,...,kmax.
+  //
+  // Here, q_i are a bilinear basis for a positive function of some
+  // type, in the sense that q_i q_j span the space that the function
+  // lives in.  For example, our function might be a polynomial of
+  // degree d, in which case we can take the monomial basis q_i = x^i
+  // and kmax = d+1 (since we need d+1 values to determine a degree-d
+  // polynomial).  The number n of q's needed is d/2+1 if d is even.
   vector<Matrix> algebraBasisVectors;
   vector<SDPConstraint> constraints;
+  vector<Real> affineConstants;
+  vector<Real> objective;
 
   int numConstraints() const {
     int result = 0;
@@ -404,7 +416,7 @@ public:
   int cols;
   vector<vector<Polynomial> > elements;
 
-  int degree() {
+  int degree() const {
     int d = 0;
     for (vector<vector<Polynomial> >::const_iterator e = elements.begin(); e != elements.end(); e++)
       for (vector<Polynomial>::const_iterator p = e->begin(); p != e->end(); p++)
@@ -414,10 +426,81 @@ public:
 
 };
 
+SDPConstraint diagonalConstraint(const vector<Real> &vec) {
+  SDPConstraint c;
+  c.row = 0;
+  c.col = 0;
+  c.diagonalConstraints.push_back(vec);
+  return c;
+}
+
+vector<Real> naturalNumbers(int n) {
+  vector<Real> xs(n);
+  for (int i = 0; i < n; i++)
+    xs[i] = Real(i+1);
+  return xs;
+}
+
+Matrix monomialAlgebraBasis(int d1, int d, const vector<Real> &xs, bool halfShift) {
+  Matrix basisMatrix(d1+1, d+1);
+  for (int k = 0; k < d+1; k++) {
+    Real x = xs[k];
+    
+    Real xToTheN = 1;
+    if (halfShift)
+      xToTheN = sqrt(x);
+
+    for (int n = 0; n < d1+1; n++) {
+      basisMatrix.set(n, k, xToTheN);
+      xToTheN *= x;
+    }
+  }
+  return basisMatrix;
+}
+
+vector<Real> mapPolynomial(const Polynomial &p, const vector<Real> &xs) {
+  vector<Real> ys(xs.size());
+  for (unsigned int i = 0; i < xs.size(); i++)
+    ys[i] = p(xs[i]);
+  return ys;
+}
+
 SDP bootstrapSDP(const vector<Real> &objective,
                  const vector<Real> &normalization,
                  const vector<PolynomialVectorMatrix> &positiveMatrixPols) {
-  return SDP();
+  SDP sdp;
+  sdp.objective = objective;
+  sdp.constraints.push_back(diagonalConstraint(normalization));
+  sdp.affineConstants.push_back(1);
+
+  for (vector<PolynomialVectorMatrix>::const_iterator m = positiveMatrixPols.begin();
+       m != positiveMatrixPols.end();
+       m++) {
+
+    int d  = m->degree();
+    int d1 = d/2;
+    int d2 = (d-1)/2;
+
+    vector<int> blocks;
+    vector<Real> xs = naturalNumbers(d+1);
+
+    blocks.push_back(sdp.algebraBasisVectors.size());
+    sdp.algebraBasisVectors.push_back(monomialAlgebraBasis(d1, d, xs, false));
+
+    blocks.push_back(sdp.algebraBasisVectors.size());
+    sdp.algebraBasisVectors.push_back(monomialAlgebraBasis(d2, d, xs, true));
+
+    for (int c = 0; c < m->cols; c++) {
+      for (int r = 0; r < m->rows; r++) {
+
+        
+
+      }
+    }
+
+  }
+
+  return sdp;
 }
 
 template <class T>
