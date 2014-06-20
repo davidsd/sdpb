@@ -16,7 +16,7 @@ OBJECTS = main.o mpack/Rdot.o \
         mpack/Rlaev2.o mpack/Rlasr.o mpack/Rlartg.o \
         mpack/Rswap.o mpack/Rsyev.o mpack/Rlansy.o \
         mpack/Mutils.o
-HEADERS = types.h mpack/mblas_gmp.h mpack/mlapack_gmp.h mpack/mpack_config.h mpack/mutils_gmp.h
+HEADERS = types.h mpack/mblas_gmp.h mpack/mlapack_gmp.h mpack/mpack_config.h mpack/mutils_gmp.h SquareMatrix.h
 SOURCES = $(OJBECTS:.o=.cpp)
 RESULT  = sdp-bootstrap
 
