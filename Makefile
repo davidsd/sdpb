@@ -1,4 +1,4 @@
-OBJECTS = main.o mpack/Rdot.o \
+OBJECTS = main.o tinyxml2.o mpack/Rdot.o \
         mpack/Rtrsm.o mpack/Rsyrk.o mpack/Raxpy.o \
         mpack/Rgemm.o mpack/Rtrmm.o mpack/Rtrsv.o \
         mpack/iMlaenv.o mpack/Rlamch.o mpack/Rlascl.o \
@@ -16,7 +16,7 @@ OBJECTS = main.o mpack/Rdot.o \
         mpack/Rlaev2.o mpack/Rlasr.o mpack/Rlartg.o \
         mpack/Rswap.o mpack/Rsyev.o mpack/Rlansy.o \
         mpack/Mutils.o
-HEADERS = types.h mpack/mblas_gmp.h mpack/mlapack_gmp.h mpack/mpack_config.h mpack/mutils_gmp.h SquareMatrix.h
+HEADERS = mpack/mblas_gmp.h mpack/mlapack_gmp.h mpack/mpack_config.h mpack/mutils_gmp.h types.h tinyxml2.h
 SOURCES = $(OJBECTS:.o=.cpp)
 RESULT  = sdp-bootstrap
 

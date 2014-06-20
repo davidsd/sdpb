@@ -4,11 +4,17 @@
 #include <vector>
 #include <assert.h>
 #include "types.h"
+#include "tinyxml2.h"
 
 using std::vector;
 using std::cout;
 using std::endl;
 using std::ostream;
+using std::max;
+using std::min;
+
+using tinyxml2::XMLDocument;
+using tinyxml2::XMLElement;
 
 class Matrix {
  public:
@@ -292,6 +298,37 @@ inline Real quadDotProduct(const vector<Real> &v1,
   return result;
 }
 
+Real blockPairing(const SDPConstraint &f1,
+                  const SDPConstraint &f2,
+                  const unsigned int k1, 
+                  const unsigned int k2,
+                  const vector<Matrix> &bilinearPairingsY,
+                  const vector<Matrix> &bilinearPairingsXInv) {
+
+  int kMax  = f1.diagonalConstraints.size();
+  int kMax2 = f2.diagonalConstraints.size();
+  assert(kMax == kMax2);
+
+  int i1 = f1.row;
+  int j1 = f1.col;
+  int i2 = f2.row;
+  int j2 = f2.col;
+
+  Real tmp = 0;
+  for (vector<int>::const_iterator b1 = f1.blocks.begin(); b1 != f1.blocks.end(); b1++) {
+    for (vector<int>::const_iterator b2 = f2.blocks.begin(); b2 != f2.blocks.end(); b2++) {
+      if (*b1 == *b2) {
+        int b = *b1;
+        tmp += (bilinearPairingsY[b].get(i1*kMax+k1,i2*kMax+k2) * bilinearPairingsXInv[b].get(j2*kMax+k2,j1*kMax+k1) +
+                bilinearPairingsY[b].get(i1*kMax+k1,j2*kMax+k2) * bilinearPairingsXInv[b].get(i2*kMax+k2,j1*kMax+k1) +
+                bilinearPairingsY[b].get(j1*kMax+k1,j2*kMax+k2) * bilinearPairingsXInv[b].get(i2*kMax+k2,i1*kMax+k1) +
+                bilinearPairingsY[b].get(j1*kMax+k1,i2*kMax+k2) * bilinearPairingsXInv[b].get(j2*kMax+k2,i1*kMax+k1));
+      }
+    }
+  }
+  return tmp/4;
+}
+
 void schurComplement(const SDP &sdp,
                      const BlockDiagonalMatrix &y,
                      const BlockDiagonalMatrix &xInv,
@@ -308,57 +345,143 @@ void schurComplement(const SDP &sdp,
   }
 
   unsigned int r = 0;
-  for (vector<SDPConstraint>::const_iterator f1 = sdp.constraints.begin(); f1 != sdp.constraints.end(); ++f1) {
-
-    int kMax1 = f1->diagonalConstraints.size();
-    for (int k1 = 0; k1 < kMax1; k1++, r++) {
-      
-      int row1 = f1->row;
-      int col1 = f1->col;
+  for (vector<SDPConstraint>::const_iterator f1 = sdp.constraints.begin(); f1 != sdp.constraints.end(); f1++) {
+    for (unsigned int k1 = 0; k1 < f1->diagonalConstraints.size(); k1++, r++) {
 
       unsigned int c = 0;
-      for (vector<SDPConstraint>::const_iterator f2 = sdp.constraints.begin(); f2 != sdp.constraints.end(); ++f2) {
+      for (vector<SDPConstraint>::const_iterator f2 = sdp.constraints.begin(); f2 != sdp.constraints.end(); f2++) {
+        for (unsigned int k2 = 0; k2 < f2->diagonalConstraints.size(); k2++, c++) {
 
-        int kMax2 = f2->diagonalConstraints.size();
-        for (int k2 = 0; k2 < kMax2; k2++, c++) {
-
-          int row2 = f2->row;
-          int col2 = f2->col;
-
-          // TODO: take advantage of the fact that this part of the pairing is symmetric
-          Real tmp = quadDotProduct(f1->diagonalConstraints[k1], y.diagonalPart,
-                                    f2->diagonalConstraints[k2], xInv.diagonalPart);
-
-          for (unsigned int j1 = 0; j1 < f1->blocks.size(); j1++) {
-            int b1 = f1->blocks[j1];
-
-            for (unsigned int j2 = 0; j2 < f2->blocks.size(); j2++) {
-              int b2 = f2->blocks[j2];
-
-              if (b1 == b2) {
-                int kMax = sdp.algebraBasisVectors[b1].cols;
-                assert(kMax == kMax1);
-                assert(kMax == kMax2);
-
-                // TODO: make the division by 4 happen only once
-                tmp += (bilinearPairingsY[b1].get(row1*kMax+k1,row2*kMax+k2) * bilinearPairingsXInv[b1].get(col2*kMax+k2,col1*kMax+k1) +
-                        bilinearPairingsY[b1].get(row1*kMax+k1,col2*kMax+k2) * bilinearPairingsXInv[b1].get(row2*kMax+k2,col1*kMax+k1) +
-                        bilinearPairingsY[b1].get(col1*kMax+k1,col2*kMax+k2) * bilinearPairingsXInv[b1].get(row2*kMax+k2,row1*kMax+k1) +
-                        bilinearPairingsY[b1].get(col1*kMax+k1,row2*kMax+k2) * bilinearPairingsXInv[b1].get(col2*kMax+k2,row1*kMax+k1))/4;
-              }
-
-            }
-          }
-          
-          schur.set(r, c, tmp);
+          schur.set(r, c,
+                    blockPairing(*f1, *f2, k1, k2, bilinearPairingsY, bilinearPairingsXInv) +
+                    quadDotProduct(f1->diagonalConstraints[k1], y.diagonalPart,
+                                   f2->diagonalConstraints[k2], xInv.diagonalPart));
 
         }
       }
-
     }
+  }
+}
 
+class Polynomial {
+public:
+  vector<Real> coeffs;
+
+  Polynomial(): coeffs(vector<Real>(1, 0)) {}
+
+  int degree() const {
+    return coeffs.size() - 1;
+  };
+
+  Real operator()(const Real &x) const {
+    int deg = degree();
+    Real y = coeffs[deg];
+    for (int i = deg - 1; i >= 0; i--) {
+      y *= x;
+      y += coeffs[i];
+    }
+    return y;
   }
 
+  friend ostream& operator<<(ostream& os, const Polynomial& p);
+
+};
+
+ostream& operator<<(ostream& os, const Polynomial& p) {
+  for (int i = p.degree(); i >= 0; i--) {
+    os << p.coeffs[i];
+    if (i > 1)
+      os << "x^" << i << " + ";
+    else if (i == 1)
+      os << "x + ";
+  }
+  return os;
+}
+
+class PolynomialVectorMatrix {
+public:
+  int rows;
+  int cols;
+  vector<vector<Polynomial> > elements;
+
+  int degree() {
+    int d = 0;
+    for (vector<vector<Polynomial> >::const_iterator e = elements.begin(); e != elements.end(); e++)
+      for (vector<Polynomial>::const_iterator p = e->begin(); p != e->end(); p++)
+        d = max(p->degree(), d);
+    return d;
+  }
+
+};
+
+SDP bootstrapSDP(const vector<Real> &objective,
+                 const vector<Real> &normalization,
+                 const vector<PolynomialVectorMatrix> &positiveMatrixPols) {
+  return SDP();
+}
+
+template <class T>
+vector<T> parseMany(const char *name, T(*parse)(XMLElement *), XMLElement *elt) {
+  XMLElement *e;
+  vector<T> v;
+  for (e = elt->FirstChildElement(name);
+       e != NULL;
+       e = e->NextSiblingElement(name)) {
+    v.push_back(parse(e));
+  }
+  return v;
+}
+
+Real parseReal(XMLElement *rXml) {
+  return Real(rXml->GetText());
+}
+
+int parseInt(XMLElement *iXml) {
+  return atoi(iXml->GetText());
+}
+
+vector<Real> parseVector(XMLElement *vecXml) {
+  return parseMany("coord", parseReal, vecXml);
+}
+
+Polynomial parsePolynomial(XMLElement *polXml) {
+  Polynomial p;
+  p.coeffs = parseMany("coeff", parseReal, polXml);
+  return p;
+}
+
+vector<Polynomial> parsePolynomialVector(XMLElement *polVecXml) {
+  return parseMany("polynomial", parsePolynomial, polVecXml);
+}
+
+PolynomialVectorMatrix parsePolynomialVectorMatrix(XMLElement *polVecMatrixXml) {
+  PolynomialVectorMatrix m;
+  m.rows = parseInt(polVecMatrixXml->FirstChildElement("rows"));
+  m.cols = parseInt(polVecMatrixXml->FirstChildElement("cols"));
+  m.elements = parseMany("polynomialVector", parsePolynomialVector,
+                         polVecMatrixXml->FirstChildElement("elements"));
+  return m;
+}
+
+SDP parseBootstrapSDP(XMLElement *sdpXml) {
+  vector<PolynomialVectorMatrix> positiveMatrixPols =
+    parseMany("polynomialVectorMatrix",
+              parsePolynomialVectorMatrix,
+              sdpXml->FirstChildElement("positiveMatrixPols"));
+  vector<Real> objective     = parseVector(sdpXml->FirstChildElement("objective"));
+  vector<Real> normalization = parseVector(sdpXml->FirstChildElement("normalization"));
+  return bootstrapSDP(objective, normalization, positiveMatrixPols);
+}
+
+PolynomialVectorMatrix readPolynomialVectorMatrixFile(const char*file) {
+  XMLDocument doc;
+  doc.LoadFile(file);
+  return parsePolynomialVectorMatrix(doc.FirstChildElement("polynomialVectorMatrix"));
+}
+
+void testPolVectorMatrix() {
+  PolynomialVectorMatrix m = readPolynomialVectorMatrixFile("test.foo");
+  cout << m.elements[0][0] << endl;
 }
 
 void testBlockCongruence() {
@@ -407,9 +530,14 @@ void testBlockDiagonalCholesky() {
   cout << inverse << endl;
 }
 
+void testSchurComplement() {
+  return;
+}
+
 int main(int argc, char** argv) {
 
   testBlockCongruence();
   testBlockDiagonalCholesky();
+  testPolVectorMatrix();
 
 }
