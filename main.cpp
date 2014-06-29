@@ -32,8 +32,8 @@ class Matrix {
   int rows;
   int cols;
   vector<Real> elements;
-  
-  Matrix(int rows, int cols):
+
+  Matrix(int rows = 0, int cols = 0):
     rows(rows),
     cols(cols),
     elements(vector<Real>(rows*cols, 0)) {}
@@ -50,12 +50,32 @@ class Matrix {
     std::fill(elements.begin(), elements.end(), 0);
   }
 
+  void addIdentity(const Real &c) {
+    for (int i = 0; i < rows; i++)
+      elements[i * (rows + 1)] += c;
+  }
+
   void setIdentity() {
     assert(rows == cols);
-
     setZero();
-    for (int i = 0; i < rows; i++)
-      elements[i * (rows + 1)] = 1;
+    addIdentity(1);
+  }
+
+  void scalarMultiply(const Real &c) {
+    for (unsigned int i = 0; i < elements.size(); i++)
+      elements[i] *= c;
+  }
+
+  void symmetrize() {
+    assert(rows == cols);
+
+    for (int r = 0; r < rows; r++) {
+      for (int c = 0; c < r; c++) {
+        Real tmp = (get(r,c)+get(c,r))/2; 
+        set(r, c, tmp);
+        set(c, r, tmp);
+      }
+    }
   }
 
   friend ostream& operator<<(ostream& os, const Matrix& a);
@@ -225,18 +245,36 @@ public:
   void setZero() {
     std::fill(diagonalPart.begin(), diagonalPart.end(), 0);
 
-    for (unsigned int b = 0; b < blocks.size(); b++) {
+    for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b].setZero();
-    }
+  }
+
+  void addIdentity(const Real &c) {
+    for (unsigned int i = 0; i < diagonalPart.size(); i++)
+      diagonalPart[i] += c;
+
+    for (unsigned int b = 0; b < blocks.size(); b++)
+      blocks[b].addIdentity(c);
   }
 
   void setIdentity() {
-    std::fill(diagonalPart.begin(), diagonalPart.end(), 1);
-
-    for (unsigned int b = 0; b < blocks.size(); b++) {
-      blocks[b].setIdentity();
-    }
+    setZero();
+    addIdentity(1);
   }
+
+  void scalarMultiply(const Real &c) {
+    for (unsigned int i = 0; i < diagonalPart.size(); i++)
+      diagonalPart[i] *= c;
+
+    for (unsigned int b = 0; b < blocks.size(); b++)
+      blocks[b].scalarMultiply(c);
+  }
+
+  void symmetrize() {
+    for (unsigned int b = 0; b < blocks.size(); b++)
+      blocks[b].symmetrize();
+  }
+
 
   friend ostream& operator<<(ostream& os, const BlockDiagonalMatrix& a);
 
@@ -318,8 +356,50 @@ ostream& operator<<(ostream& os, const SDPConstraint& c) {
   return os;
 }
 
-
 class SDP {
+public:
+  vector<Matrix> binomialBases;
+  Matrix polMatrixValues;
+  vector<Real> affineConstants;
+  vector<Real> objective;
+  vector<int> dimensions;
+  vector<int> degrees;
+  vector<vector<int> > blocks;
+
+  vector<int> binomialBasisDims() const {
+    vector<int> dims;
+    for (vector<Matrix>::const_iterator q = binomialBases.begin(); q != binomialBases.end(); q++)
+      dims.push_back(q->rows);
+    return dims;
+  }
+
+  friend ostream& operator<<(ostream& os, const SDP& sdp);
+};
+
+ostream& operator<<(ostream& os, const SDP& sdp) {
+  os << "SDP(binomialBases = ";
+  printVector(os, sdp.binomialBases);
+  os << ", polMatrixValues = " << sdp.polMatrixValues;
+  os << ", affineConstants = ";
+  printVector(os, sdp.affineConstants);
+  os << ", objective = ";
+  printVector(os, sdp.objective);
+  os << ", dimensions = ";
+  printVector(os, sdp.dimensions);
+  os << ", degrees = ";
+  printVector(os, sdp.degrees);
+  os << ", blocks = ";
+  for (vector<vector<int> >::const_iterator b = sdp.blocks.begin();
+       b != sdp.blocks.end();
+       b++)
+    printVector(os, *b);
+  os << ")";
+
+  return os;
+}
+
+
+class SDPOld {
 public:
   // Each algebra basis vector matrix has columns of the form
   // { q_1(x_k), q_2(x_k), ..., q_n(x_k) },
@@ -340,7 +420,7 @@ public:
 
   // The constants c_i on the right-hand side of the affine
   // constraints Tr(F_i Y) = c_i.  We should have
-  // affineConstraints.size() = =numConstraints()
+  // affineConstants.size() = =numConstraints()
   vector<Real> affineConstants;
   vector<Real> objective;
 
@@ -376,10 +456,10 @@ public:
   //   return sizes;
   // }
 
-  friend ostream& operator<<(ostream& os, const SDP& sdp);
+  friend ostream& operator<<(ostream& os, const SDPOld& sdp);
 };
 
-ostream& operator<<(ostream& os, const SDP& sdp) {
+ostream& operator<<(ostream& os, const SDPOld& sdp) {
   os << "SDP(algebraBasisVectors = ";
   printVector(os, sdp.algebraBasisVectors);
   os << ", constraints = ";
@@ -434,7 +514,7 @@ Real blockPairing(const SDPConstraint &f1,
   return tmp/4;
 }
 
-void schurComplement(const SDP &sdp,
+void schurComplement(const SDPOld &sdp,
                      const BlockDiagonalMatrix &y,
                      const BlockDiagonalMatrix &xInv,
                      vector<Matrix> &bilinearPairingsY,
@@ -577,10 +657,10 @@ vector<vector<Real> > evalPolVectors(const vector<Polynomial> &v, const vector<R
   return ys;
 }
 
-SDP bootstrapSDP(const vector<Real> &objective,
+SDPOld bootstrapSDPOld(const vector<Real> &objective,
                  const vector<Real> &normalization,
                  const vector<PolynomialVectorMatrix> &positiveMatrixPols) {
-  SDP sdp;
+  SDPOld sdp;
   sdp.objective = objective;
   sdp.constraints.push_back(SDPConstraint::diagonal(normalization));
   sdp.affineConstants.push_back(1);
@@ -613,6 +693,76 @@ SDP bootstrapSDP(const vector<Real> &objective,
     }
 
   }
+
+  return sdp;
+}
+
+SDP bootstrapSDP(const vector<Real> &objective,
+                 const vector<Real> &normalization,
+                 const vector<PolynomialVectorMatrix> &positiveMatrixPols,
+                 const vector<Real> &xs) {
+  SDP sdp;
+  sdp.objective = objective;
+
+  int objDimension = objective.size();
+  int numConstraints = 0;
+  for (vector<PolynomialVectorMatrix>::const_iterator m = positiveMatrixPols.begin();
+       m != positiveMatrixPols.end();
+       m++) {
+    int dimension = m->cols;
+    int degree    = m->degree();
+
+    sdp.dimensions.push_back(dimension);
+    sdp.degrees.push_back(degree);
+    numConstraints += (degree+1)*dimension*(dimension+1)/2;
+  }
+
+  // For the normalization constraint
+  sdp.dimensions.push_back(1);
+  sdp.degrees.push_back(0);
+  numConstraints += 1;
+
+  sdp.polMatrixValues = Matrix(numConstraints, objDimension);
+  sdp.affineConstants = vector<Real>(numConstraints, 0);
+
+  // normalization constraint
+  sdp.affineConstants[numConstraints-1] = 1;
+
+  int p = 0;
+  for (vector<PolynomialVectorMatrix>::const_iterator m = positiveMatrixPols.begin();
+       m != positiveMatrixPols.end();
+       m++) {
+
+    int degree = m->degree();
+    int delta1 = degree/2;
+    int delta2 = (degree-1)/2;
+
+    vector<int> blocks;
+
+    blocks.push_back(sdp.binomialBases.size());
+    sdp.binomialBases.push_back(monomialAlgebraBasis(delta1, degree, xs, false));
+
+    if (delta2 >= 0) {
+      blocks.push_back(sdp.binomialBases.size());
+      sdp.binomialBases.push_back(monomialAlgebraBasis(delta2, degree, xs, true));
+    }
+
+    sdp.blocks.push_back(blocks);
+
+    for (int s = 0; s < m->cols; s++) {
+      for (int r = 0; r <= s; r++) {
+        for (int k = 0; k <= degree; k++, p++) {
+          const Real xk = xs[k];
+          for (int n = 0; n < objDimension; n++)
+            sdp.polMatrixValues.set(p, n, (*m->get(r,s))[n](xk));
+        }
+      }
+    }
+  }
+  assert(p == numConstraints-1);
+
+  for (int n = 0; n < objDimension; n++)
+    sdp.polMatrixValues.set(numConstraints-1, n, normalization[n]);
 
   return sdp;
 }
@@ -665,7 +815,8 @@ SDP parseBootstrapSDP(XMLElement *sdpXml) {
                       parseVector(sdpXml->FirstChildElement("normalization")->FirstChildElement("vector")),
                       parseMany("polynomialVectorMatrix",
                                 parsePolynomialVectorMatrix,
-                                sdpXml->FirstChildElement("positiveMatrixPols")));
+                                sdpXml->FirstChildElement("positiveMatrixPols")),
+                      naturalNumbers(100));
 }
 
 SDP readBootstrapSDP(const char*file) {
@@ -675,23 +826,16 @@ SDP readBootstrapSDP(const char*file) {
 }
 
 void testSDP() {
-  SDP sdp = readBootstrapSDP("test.sdp");
+  const SDP sdp = readBootstrapSDP("test.sdp");
   cout << sdp << endl;
+  cout << "foobar!\n";
 
-  const vector<int> blockSizes = sdp.blockSizes();
+  const vector<int> blockSizes = sdp.binomialBasisDims();
   BlockDiagonalMatrix y(vector<Real>(sdp.objective.size(), 1), blockSizes);
   BlockDiagonalMatrix x(vector<Real>(sdp.objective.size(), 1), blockSizes);
   y.setIdentity();
   x.setIdentity();
-  //  for (int i = 0; i < sdp.algebraBasisVectors)
 
-// void schurComplement(const SDP &sdp,
-//                      const BlockDiagonalMatrix &y,
-//                      const BlockDiagonalMatrix &xInv,
-//                      vector<Matrix> &bilinearPairingsY,
-//                      vector<Matrix> &bilinearPairingsXInv,
-//                      vector<Matrix> &work,
-//                      Matrix &schur) {
 }
 
 void testBlockCongruence() {
@@ -750,4 +894,5 @@ int main(int argc, char** argv) {
   //testBlockDiagonalCholesky();
   testSDP();
 
+  return 0;
 }
