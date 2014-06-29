@@ -315,47 +315,6 @@ void inverseCholeskyAndInverse(BlockDiagonalMatrix &a,
   }
 }
 
-class SDPConstraint {
-public:
-  // A collection of vectors v_k for k=1,...,kmax
-  // For example, with vectors of polynomials P_n(x), diagonal Constraints would be
-  // {{P_1(x_1),...,P_n(x_1)},...,{P_1(x_kmax),...,P_n(x_kmax)}}
-  vector<vector<Real> > diagonalConstraints;
-  int row;
-  int col;
-  vector<int> blocks;
-
-  SDPConstraint(const vector<vector<Real> > &diagonalConstraints,
-                const int row,
-                const int col,
-                const vector<int> &blocks):
-    diagonalConstraints(diagonalConstraints),
-    row(row),
-    col(col),
-    blocks(blocks) {}
-
-  static inline SDPConstraint diagonal(const vector<Real> &vec) {
-    return SDPConstraint(vector<vector<Real> >(1, vec), 0, 0, vector<int>());
-  }
-
-  friend ostream& operator<<(ostream& os, const SDPConstraint& c);
-
-};
-
-ostream& operator<<(ostream& os, const SDPConstraint& c) {
-  os << "SDPConstraint(diagonalConstraints = {";
-  for (unsigned int i = 0; i < c.diagonalConstraints.size(); i++) {
-    printVector(os, c.diagonalConstraints[i]);
-    if (i < c.diagonalConstraints.size() - 1)
-      os << ", ";
-  }
-  os << "}, row = " << c.row << ", col = " << c.col << ", blocks = ";
-  printVector(os, c.blocks);
-  os << ")";
-
-  return os;
-}
-
 class SDP {
 public:
   vector<Matrix> binomialBases;
@@ -398,81 +357,6 @@ ostream& operator<<(ostream& os, const SDP& sdp) {
   return os;
 }
 
-
-class SDPOld {
-public:
-  // Each algebra basis vector matrix has columns of the form
-  // { q_1(x_k), q_2(x_k), ..., q_n(x_k) },
-  // with one column for each k = 1,...,kmax.
-  //
-  // Here, q_i are a bilinear basis for a positive function of some
-  // type, in the sense that q_i q_j span the space that the function
-  // lives in.  For example, our function might be a polynomial of
-  // degree d, in which case we can take the monomial basis q_i = x^i
-  // and kmax = d+1 (since we need d+1 values to determine a degree-d
-  // polynomial).  The number n of q's needed is d/2+1 if d is even.
-  vector<Matrix> algebraBasisVectors;
-
-  // The constraint matrices F_i, in a compressed form.  Each
-  // SDPConstraint c represents c.diagonalConstraints.size() different
-  // constraints
-  vector<SDPConstraint> constraints;
-
-  // The constants c_i on the right-hand side of the affine
-  // constraints Tr(F_i Y) = c_i.  We should have
-  // affineConstants.size() = =numConstraints()
-  vector<Real> affineConstants;
-  vector<Real> objective;
-
-  // Each SDP constraint c represents c.diagonalConstraints.size()
-  // different matrices F_i.  This function counts the total number of
-  // these matrices.
-  int numConstraints() const {
-    int result = 0;
-    for (unsigned int i = 0; i < constraints.size(); i++) {
-      result += constraints[i].diagonalConstraints.size();
-    }
-    return result;
-  }
-
-  // Each algebra basis has n elements, where n is the number of rows
-  // in a matrix of algebraBasis values.
-  vector<int> blockSizes() const {
-    vector<int> sizes;
-    for (vector<Matrix>::const_iterator m = algebraBasisVectors.begin();
-         m != algebraBasisVectors.end();
-         m++)
-      sizes.push_back(m->rows);
-    return sizes;
-  }
-
-  
-  // vector<int> () const {
-  //   vector<int> sizes;
-  //   for (vector<Matrix>::const_iterator m = algebraBasisVectors.begin();
-  //        m != algebraBasisVectors.end();
-  //        m++)
-  //     sizes.push_back(m->rows);
-  //   return sizes;
-  // }
-
-  friend ostream& operator<<(ostream& os, const SDPOld& sdp);
-};
-
-ostream& operator<<(ostream& os, const SDPOld& sdp) {
-  os << "SDP(algebraBasisVectors = ";
-  printVector(os, sdp.algebraBasisVectors);
-  os << ", constraints = ";
-  printVector(os, sdp.constraints);
-  os << ", affineConstants = ";
-  printVector(os, sdp.affineConstants);
-  os << ", objective = ";
-  printVector(os, sdp.objective);
-  os << ")";
-
-  return os;
-}
-
 inline Real quadDotProduct(const vector<Real> &v1,
                            const vector<Real> &v2,
                            const vector<Real> &v3,
@@ -481,71 +365,6 @@ inline Real quadDotProduct(const vector<Real> &v1,
   for (unsigned int i = 0; i < v1.size(); i++)
     result += v1[i]*v2[i]*v3[i]*v4[i];
   return result;
-}
-
-Real blockPairing(const SDPConstraint &f1,
-                  const SDPConstraint &f2,
-                  const unsigned int k1, 
-                  const unsigned int k2,
-                  const vector<Matrix> &bilinearPairingsY,
-                  const vector<Matrix> &bilinearPairingsXInv) {
-
-  int kMax  = f1.diagonalConstraints.size();
-  int kMax2 = f2.diagonalConstraints.size();
-  assert(kMax == kMax2);
-
-  int i1 = f1.row;
-  int j1 = f1.col;
-  int i2 = f2.row;
-  int j2 = f2.col;
-
-  Real tmp = 0;
-  for (vector<int>::const_iterator b1 = f1.blocks.begin(); b1 != f1.blocks.end(); b1++) {
-    for (vector<int>::const_iterator b2 = f2.blocks.begin(); b2 != f2.blocks.end(); b2++) {
-      if (*b1 == *b2) {
-        int b = *b1;
-        tmp += (bilinearPairingsY[b].get(i1*kMax+k1,i2*kMax+k2) * bilinearPairingsXInv[b].get(j2*kMax+k2,j1*kMax+k1) +
-                bilinearPairingsY[b].get(i1*kMax+k1,j2*kMax+k2) * bilinearPairingsXInv[b].get(i2*kMax+k2,j1*kMax+k1) +
-                bilinearPairingsY[b].get(j1*kMax+k1,j2*kMax+k2) * bilinearPairingsXInv[b].get(i2*kMax+k2,i1*kMax+k1) +
-                bilinearPairingsY[b].get(j1*kMax+k1,i2*kMax+k2) * bilinearPairingsXInv[b].get(j2*kMax+k2,i1*kMax+k1));
-      }
-    }
-  }
-  return tmp/4;
-}
-
-void schurComplement(const SDPOld &sdp,
-                     const BlockDiagonalMatrix &y,
-                     const BlockDiagonalMatrix &xInv,
-                     vector<Matrix> &bilinearPairingsY,
-                     vector<Matrix> &bilinearPairingsXInv,
-                     vector<Matrix> &work,
-                     Matrix &schur) {
-  assert(schur.rows == sdp.numConstraints());
-  assert(schur.rows == schur.cols);
-
-  for (unsigned int b = 0; b < sdp.algebraBasisVectors.size(); b++) {
-    blockMatrixCongruence(y.blocks[b],    sdp.algebraBasisVectors[b], work[b], bilinearPairingsY[b]);
-    blockMatrixCongruence(xInv.blocks[b], sdp.algebraBasisVectors[b], work[b], bilinearPairingsXInv[b]);
-  }
-
-  unsigned int r = 0;
-  for (vector<SDPConstraint>::const_iterator f1 = sdp.constraints.begin(); f1 != sdp.constraints.end(); f1++) {
-    for (unsigned int k1 = 0; k1 < f1->diagonalConstraints.size(); k1++, r++) {
-
-      unsigned int c = 0;
-      for (vector<SDPConstraint>::const_iterator f2 = sdp.constraints.begin(); f2 != sdp.constraints.end(); f2++) {
-        for (unsigned int k2 = 0; k2 < f2->diagonalConstraints.size(); k2++, c++) {
-
-          schur.set(r, c,
-                    blockPairing(*f1, *f2, k1, k2, bilinearPairingsY, bilinearPairingsXInv) +
-                    quadDotProduct(f1->diagonalConstraints[k1], y.diagonalPart,
-                                   f2->diagonalConstraints[k2], xInv.diagonalPart));
-
-        }
-      }
-    }
-  }
 }
 
 class Polynomial {
@@ -625,76 +444,6 @@ Matrix monomialAlgebraBasis(int d1, int d, const vector<Real> &xs, bool halfShif
     }
   }
   return basisMatrix;
-}
-
-vector<Real> mapPolynomial(const Polynomial &p, const vector<Real> &xs) {
-  vector<Real> ys(xs.size());
-  for (unsigned int i = 0; i < xs.size(); i++)
-    ys[i] = p(xs[i]);
-  return ys;
-}
-
-// Given a vector of polynomials {P_1,...,P_n}, and a constant x,
-// compute {P_1(x),...,P_n(x)}
-//
-vector<Real> evalPolVector(const vector<Polynomial> &v, const Real &x) {
-  vector<Real> ys(v.size());
-  for (unsigned int i = 0; i < v.size(); i++) {
-    ys[i] = v[i](x);
-  }
-  return ys;
-}
-
-// Given a vector of polynomials {P_1,...,P_n}, and a vector of
-// constants {x_1,...,x_k}, compute the vector of vectors
-// {{P_1(x_1),...,P_n(x_1)},...,{P_1(x_k),...,P_n(x_k)}}
-//
-vector<vector<Real> > evalPolVectors(const vector<Polynomial> &v, const vector<Real> &xs) {
-  vector<vector<Real> > ys;
-  for (unsigned int k = 0; k < xs.size(); k++) {
-    ys.push_back(evalPolVector(v, xs[k]));
-  }
-  return ys;
-}
-
-SDPOld bootstrapSDPOld(const vector<Real> &objective,
-                 const vector<Real> &normalization,
-                 const vector<PolynomialVectorMatrix> &positiveMatrixPols) {
-  SDPOld sdp;
-  sdp.objective = objective;
-  sdp.constraints.push_back(SDPConstraint::diagonal(normalization));
-  sdp.affineConstants.push_back(1);
-
-  for (vector<PolynomialVectorMatrix>::const_iterator m = positiveMatrixPols.begin();
-       m != positiveMatrixPols.end();
-       m++) {
-
-    int d  = m->degree();
-    int d1 = d/2;
-    int d2 = (d-1)/2;
-
-    vector<int> blocks;
-    vector<Real> xs = naturalNumbers(d+1);
-
-    blocks.push_back(sdp.algebraBasisVectors.size());
-    sdp.algebraBasisVectors.push_back(monomialAlgebraBasis(d1, d, xs, false));
-
-    if (d2 >= 0) {
-      blocks.push_back(sdp.algebraBasisVectors.size());
-      sdp.algebraBasisVectors.push_back(monomialAlgebraBasis(d2, d, xs, true));
-    }
-
-    for (int c = 0; c < m->cols; c++) {
-      for (int r = 0; r <= c; r++) {
-        for (unsigned int k = 0; k < xs.size(); k++)
-          sdp.affineConstants.push_back(0);
-        sdp.constraints.push_back(SDPConstraint(evalPolVectors(*m->get(r,c), xs), r, c, blocks));
-      }
-    }
-
-  }
-
-  return sdp;
 }
 
 SDP bootstrapSDP(const vector<Real> &objective,
