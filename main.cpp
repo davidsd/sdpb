@@ -230,13 +230,35 @@ void blockMatrixCongruence(const Matrix &a, const Matrix &b, Matrix &work, Matri
   }
 }
 
+void testBlockCongruence() {
+  Matrix a(4,4);
+  Matrix b(2,3);
+  Matrix result(6,6);
+  Matrix work(4,6);
+  a.setIdentity();
+  b.set(0,0,2);
+  b.set(1,0,3);
+  b.set(0,1,4);
+  b.set(1,1,5);
+  b.set(0,2,6);
+  b.set(1,2,7);
+
+  blockMatrixCongruence(a, b, work, result);
+
+  cout << a << endl;
+  cout << b << endl;
+  cout << work << endl;
+  cout << result << endl;
+  
+}
+
 class BlockDiagonalMatrix {
 public:
   vector<Real> diagonalPart;
   vector<Matrix> blocks;
 
-  BlockDiagonalMatrix(const vector<Real> &diagonalPart, const vector<int> &blockSizes):
-    diagonalPart(diagonalPart) {
+  BlockDiagonalMatrix(int diagonalSize, const vector<int> &blockSizes):
+    diagonalPart(vector<Real>(diagonalSize, 0)) {
     for (unsigned int i = 0; i < blockSizes.size(); i++) {
       blocks.push_back(Matrix(blockSizes[i], blockSizes[i]));
     }
@@ -315,9 +337,34 @@ void inverseCholeskyAndInverse(BlockDiagonalMatrix &a,
   }
 }
 
+void testBlockDiagonalCholesky() {
+  vector<int> sizes;
+  sizes.push_back(3);
+  sizes.push_back(4);
+
+  BlockDiagonalMatrix a(2, sizes);
+  a.setIdentity();
+  a.diagonalPart[0] = 2;
+  a.diagonalPart[1] = 3;
+  Real aBlock0[] = {14,3,8,3,10,9,8,9,14};
+  a.blocks[0].elements.insert(a.blocks[0].elements.begin(), aBlock0, aBlock0 + 9);
+
+  BlockDiagonalMatrix work(2, sizes);
+  BlockDiagonalMatrix invCholesky(2, sizes);
+  BlockDiagonalMatrix inverse(2, sizes);
+
+  inverseCholeskyAndInverse(a, work, invCholesky, inverse);
+
+  cout << a << endl;
+  cout << invCholesky << endl;
+  cout << inverse << endl;
+}
+
 class SDP {
 public:
-  vector<Matrix> binomialBases;
+  vector<Matrix> bilinearBases;
+  int numConstraints;
+  int objDimension;
   Matrix polMatrixValues;
   vector<Real> affineConstants;
   vector<Real> objective;
@@ -325,10 +372,19 @@ public:
   vector<int> degrees;
   vector<vector<int> > blocks;
 
-  vector<int> binomialBasisDims() const {
+  vector<int> psdMatrixBlockDims() const {
     vector<int> dims;
-    for (vector<Matrix>::const_iterator q = binomialBases.begin(); q != binomialBases.end(); q++)
-      dims.push_back(q->rows);
+    for (unsigned int j = 0; j < dimensions.size(); j++)
+      for (vector<int>::const_iterator b = blocks[j].begin(); b != blocks[j].end(); b++)
+        dims.push_back(bilinearBases[*b].rows * dimensions[j]);
+    return dims;
+  }
+
+  vector<int> bilinearPairingBlockDims() const {
+    vector<int> dims;
+    for (unsigned int j = 0; j < dimensions.size(); j++)
+      for (vector<int>::const_iterator b = blocks[j].begin(); b != blocks[j].end(); b++)
+        dims.push_back(bilinearBases[*b].cols * dimensions[j]);
     return dims;
   }
 
@@ -336,8 +392,8 @@ public:
 };
 
 ostream& operator<<(ostream& os, const SDP& sdp) {
-  os << "SDP(binomialBases = ";
-  printVector(os, sdp.binomialBases);
+  os << "SDP(bilinearBases = ";
+  printVector(os, sdp.bilinearBases);
   os << ", polMatrixValues = " << sdp.polMatrixValues;
   os << ", affineConstants = ";
   printVector(os, sdp.affineConstants);
@@ -355,16 +411,6 @@ ostream& operator<<(ostream& os, const SDP& sdp) {
   os << ")";
 
   return os;
-}
-
-inline Real quadDotProduct(const vector<Real> &v1,
-                           const vector<Real> &v2,
-                           const vector<Real> &v3,
-                           const vector<Real> &v4) {
-  Real result = 0;
-  for (unsigned int i = 0; i < v1.size(); i++)
-    result += v1[i]*v2[i]*v3[i]*v4[i];
-  return result;
 }
 
 class Polynomial {
@@ -453,8 +499,8 @@ SDP bootstrapSDP(const vector<Real> &objective,
   SDP sdp;
   sdp.objective = objective;
 
-  int objDimension = objective.size();
-  int numConstraints = 0;
+  sdp.objDimension = objective.size();
+  sdp.numConstraints = 0;
   for (vector<PolynomialVectorMatrix>::const_iterator m = positiveMatrixPols.begin();
        m != positiveMatrixPols.end();
        m++) {
@@ -463,19 +509,19 @@ SDP bootstrapSDP(const vector<Real> &objective,
 
     sdp.dimensions.push_back(dimension);
     sdp.degrees.push_back(degree);
-    numConstraints += (degree+1)*dimension*(dimension+1)/2;
+    sdp.numConstraints += (degree+1)*dimension*(dimension+1)/2;
   }
 
   // For the normalization constraint
   sdp.dimensions.push_back(1);
   sdp.degrees.push_back(0);
-  numConstraints += 1;
+  sdp.numConstraints += 1;
 
-  sdp.polMatrixValues = Matrix(numConstraints, objDimension);
-  sdp.affineConstants = vector<Real>(numConstraints, 0);
+  sdp.polMatrixValues = Matrix(sdp.numConstraints, sdp.objDimension);
+  sdp.affineConstants = vector<Real>(sdp.numConstraints, 0);
 
   // normalization constraint
-  sdp.affineConstants[numConstraints-1] = 1;
+  sdp.affineConstants[sdp.numConstraints-1] = 1;
 
   int p = 0;
   for (vector<PolynomialVectorMatrix>::const_iterator m = positiveMatrixPols.begin();
@@ -488,12 +534,12 @@ SDP bootstrapSDP(const vector<Real> &objective,
 
     vector<int> blocks;
 
-    blocks.push_back(sdp.binomialBases.size());
-    sdp.binomialBases.push_back(monomialAlgebraBasis(delta1, degree, xs, false));
+    blocks.push_back(sdp.bilinearBases.size());
+    sdp.bilinearBases.push_back(monomialAlgebraBasis(delta1, degree, xs, false));
 
     if (delta2 >= 0) {
-      blocks.push_back(sdp.binomialBases.size());
-      sdp.binomialBases.push_back(monomialAlgebraBasis(delta2, degree, xs, true));
+      blocks.push_back(sdp.bilinearBases.size());
+      sdp.bilinearBases.push_back(monomialAlgebraBasis(delta2, degree, xs, true));
     }
 
     sdp.blocks.push_back(blocks);
@@ -502,16 +548,16 @@ SDP bootstrapSDP(const vector<Real> &objective,
       for (int r = 0; r <= s; r++) {
         for (int k = 0; k <= degree; k++, p++) {
           const Real xk = xs[k];
-          for (int n = 0; n < objDimension; n++)
+          for (int n = 0; n < sdp.objDimension; n++)
             sdp.polMatrixValues.set(p, n, (*m->get(r,s))[n](xk));
         }
       }
     }
   }
-  assert(p == numConstraints-1);
+  assert(p == sdp.numConstraints-1);
 
-  for (int n = 0; n < objDimension; n++)
-    sdp.polMatrixValues.set(numConstraints-1, n, normalization[n]);
+  for (int n = 0; n < sdp.objDimension; n++)
+    sdp.polMatrixValues.set(sdp.numConstraints-1, n, normalization[n]);
 
   return sdp;
 }
@@ -579,63 +625,76 @@ void testSDP() {
   cout << sdp << endl;
   cout << "foobar!\n";
 
-  const vector<int> blockSizes = sdp.binomialBasisDims();
-  BlockDiagonalMatrix y(vector<Real>(sdp.objective.size(), 1), blockSizes);
-  BlockDiagonalMatrix x(vector<Real>(sdp.objective.size(), 1), blockSizes);
+  const vector<int> blockSizes = sdp.psdMatrixBlockDims();
+  BlockDiagonalMatrix y(sdp.objective.size(), blockSizes);
+  BlockDiagonalMatrix x(sdp.objective.size(), blockSizes);
   y.setIdentity();
   x.setIdentity();
 
 }
 
-void testBlockCongruence() {
-  Matrix a(4,4);
-  Matrix b(2,3);
-  Matrix result(6,6);
-  Matrix work(4,6);
-  a.setIdentity();
-  b.set(0,0,2);
-  b.set(1,0,3);
-  b.set(0,1,4);
-  b.set(1,1,5);
-  b.set(0,2,6);
-  b.set(1,2,7);
+class ConstraintIndices {
+public:
+  int r;
+  int s;
+  int k;
+  ConstraintIndices(int r, int s, int k): r(r), s(s), k(k) {}
+};
 
-  blockMatrixCongruence(a, b, work, result);
+class SDPSolver {
+public:
+  SDP sdp;
+  vector<ConstraintIndices> t;
+  vector<Real> r;
+  vector<Real> x;
+  vector<Real> dx;
+  vector<Real> XInvYDiag;
+  BlockDiagonalMatrix X;
+  BlockDiagonalMatrix XInv;
+  BlockDiagonalMatrix XInvCholesky;
+  BlockDiagonalMatrix Y;
+  BlockDiagonalMatrix Z;
+  BlockDiagonalMatrix dX;
+  BlockDiagonalMatrix dY;
+  BlockDiagonalMatrix Rc;
+  BlockDiagonalMatrix Rp;
+  BlockDiagonalMatrix S;
+  BlockDiagonalMatrix T;
+  Matrix B;
 
-  cout << a << endl;
-  cout << b << endl;
-  cout << work << endl;
-  cout << result << endl;
-  
-}
+  SDPSolver(const SDP &sdp):
+    sdp(sdp),
+    r(vector<Real>(sdp.numConstraints, 0)),
+    x(vector<Real>(sdp.numConstraints, 0)),
+    dx(vector<Real>(sdp.numConstraints, 0)),
+    XInvYDiag(vector<Real>(sdp.objDimension, 0)),
+    X(BlockDiagonalMatrix(sdp.objDimension, sdp.psdMatrixBlockDims())),
+    XInv(X),
+    XInvCholesky(X),
+    Y(X),
+    Z(X),
+    dX(X),
+    dY(X),
+    Rc(X),
+    Rp(X),
+    S(BlockDiagonalMatrix(0, sdp.bilinearPairingBlockDims())),
+    T(S),
+    B(Matrix(sdp.numConstraints, sdp.numConstraints))
+  {
+    // compute the constraint indices tuples...
+  }
 
-void testBlockDiagonalCholesky() {
-  vector<int> sizes;
-  sizes.push_back(3);
-  sizes.push_back(4);
-  vector<Real> diag(2, 0);
+  //void computeBilinearPairings();
 
-  BlockDiagonalMatrix a(diag, sizes);
-  a.setIdentity();
-  a.diagonalPart[0] = 2;
-  a.diagonalPart[1] = 3;
-  Real aBlock0[] = {14,3,8,3,10,9,8,9,14};
-  a.blocks[0].elements.insert(a.blocks[0].elements.begin(), aBlock0, aBlock0 + 9);
+};
 
-  BlockDiagonalMatrix work(diag, sizes);
-  BlockDiagonalMatrix invCholesky(diag, sizes);
-  BlockDiagonalMatrix inverse(diag, sizes);
+// SDPSolver::computeBilinearPairings() {
+//   for (unsigned int b = 0; b < sdp.bilinearBases.size(); b++) {
+//     blockMatrixCongruence(XInv.blocks[b], sdp.bilinearBases[b], pairingsWorkspace[b], S.blocks[b]) {
+//     blockMatrixCongruence(Y.blocks[b],    sdp.bilinearBases[b], pairingsWorkspace[b], T.blocks[b]) {
+//   }
+// }
 
-  inverseCholeskyAndInverse(a, work, invCholesky, inverse);
-
-  cout << a << endl;
-  cout << invCholesky << endl;
-  cout << inverse << endl;
-}
-
-void testSchurComplement() {
-  return;
-}
 
 int main(int argc, char** argv) {
 
