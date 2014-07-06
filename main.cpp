@@ -177,16 +177,16 @@ void inverseCholeskyAndInverse(Matrix &a, Matrix &work, Matrix &invCholesky, Mat
 
 // result = b'^T a b', where b' = b \otimes 1
 // Inputs:
-// - a      : d x d symmetric matrix
-// - b      : k x n matrix, where d = numBlocks*k, with numBlocks an integer
-// - work   : d x (n*numBlocks) matrix
-// - result : (n*numBlocks) x (n*numBlocks) symmetric matrix
+// - a      : l*m x l*m symmetric matrix
+// - b      : l   x n   matrix
+// - work   : l*m x n*m matrix
+// - result : n*m x n*m symmetric matrix
 //
-void blockMatrixCongruence(const Matrix &a, const Matrix &b, Matrix &work, Matrix &result) {
-  int numBlocks = a.rows / b.rows;
+void tensorMatrixCongruence(const Matrix &a, const Matrix &b, Matrix &work, Matrix &result) {
+  int m = a.rows / b.rows;
 
-  assert(result.rows == b.cols * numBlocks);
-  assert(result.cols == b.cols * numBlocks);
+  assert(result.rows == b.cols * m);
+  assert(result.cols == b.cols * m);
 
   assert(work.rows == a.rows);
   assert(work.cols == result.cols);
@@ -212,7 +212,7 @@ void blockMatrixCongruence(const Matrix &a, const Matrix &b, Matrix &work, Matri
 
     // since result is symmetric, only compute its upper triangle
     for (int r = 0; r <= c; r++) {
-      int bCol       = r % b.cols;
+      int bCol          = r % b.cols;
       int workRowOffset = (r / b.cols) * b.rows;
 
       Real tmp = 0;
@@ -230,7 +230,7 @@ void blockMatrixCongruence(const Matrix &a, const Matrix &b, Matrix &work, Matri
   }
 }
 
-void testBlockCongruence() {
+void testTensorCongruence() {
   Matrix a(4,4);
   Matrix b(2,3);
   Matrix result(6,6);
@@ -243,7 +243,7 @@ void testBlockCongruence() {
   b.set(0,2,6);
   b.set(1,2,7);
 
-  blockMatrixCongruence(a, b, work, result);
+  tensorMatrixCongruence(a, b, work, result);
 
   cout << a << endl;
   cout << b << endl;
@@ -404,10 +404,15 @@ ostream& operator<<(ostream& os, const SDP& sdp) {
   os << ", degrees = ";
   printVector(os, sdp.degrees);
   os << ", blocks = ";
+  os << "{";
   for (vector<vector<int> >::const_iterator b = sdp.blocks.begin();
        b != sdp.blocks.end();
-       b++)
+       b++) {
     printVector(os, *b);
+    if (b != sdp.blocks.end() - 1)
+      os << ", ";
+  }
+  os << "}";
   os << ")";
 
   return os;
@@ -556,8 +561,10 @@ SDP bootstrapSDP(const vector<Real> &objective,
   }
   assert(p == sdp.numConstraints-1);
 
+  // normalization constraint
   for (int n = 0; n < sdp.objDimension; n++)
-    sdp.polMatrixValues.set(sdp.numConstraints-1, n, normalization[n]);
+    sdp.polMatrixValues.set(p, n, normalization[n]);
+  sdp.blocks.push_back(vector<int>());
 
   return sdp;
 }
@@ -620,31 +627,19 @@ SDP readBootstrapSDP(const char*file) {
   return parseBootstrapSDP(doc.FirstChildElement("sdp"));
 }
 
-void testSDP() {
-  const SDP sdp = readBootstrapSDP("test.sdp");
-  cout << sdp << endl;
-  cout << "foobar!\n";
-
-  const vector<int> blockSizes = sdp.psdMatrixBlockDims();
-  BlockDiagonalMatrix y(sdp.objective.size(), blockSizes);
-  BlockDiagonalMatrix x(sdp.objective.size(), blockSizes);
-  y.setIdentity();
-  x.setIdentity();
-
-}
-
-class ConstraintIndices {
+class IndexTuple {
 public:
   int r;
   int s;
   int k;
-  ConstraintIndices(int r, int s, int k): r(r), s(s), k(k) {}
+  IndexTuple(int r, int s, int k): r(r), s(s), k(k) {}
+  IndexTuple() {}
 };
 
 class SDPSolver {
 public:
   SDP sdp;
-  vector<ConstraintIndices> t;
+  vector<vector<IndexTuple> > constraintIndexTuples;
   vector<Real> r;
   vector<Real> x;
   vector<Real> dx;
@@ -660,6 +655,9 @@ public:
   BlockDiagonalMatrix Rp;
   BlockDiagonalMatrix S;
   BlockDiagonalMatrix T;
+  // workspace variables
+  BlockDiagonalMatrix XInvWorkspace;
+  vector<Matrix> bilinearPairingsWorkspace;
   Matrix B;
 
   SDPSolver(const SDP &sdp):
@@ -679,28 +677,87 @@ public:
     Rp(X),
     S(BlockDiagonalMatrix(0, sdp.bilinearPairingBlockDims())),
     T(S),
+    XInvWorkspace(X),
     B(Matrix(sdp.numConstraints, sdp.numConstraints))
   {
-    // compute the constraint indices tuples...
-  }
+    // initialize constraintIndexTuples
+    for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
+      constraintIndexTuples.push_back(vector<IndexTuple>(0));
 
-  //void computeBilinearPairings();
+      for (int s = 0; s < sdp.dimensions[j]; s++) {
+        for (int r = 0; r <= s; r++) {
+          for (int k = 0; k <= sdp.degrees[j]; k++) {
+            constraintIndexTuples[j].push_back(IndexTuple(r, s, k));
+          }
+        }
+      }
+    }
+
+    // initialize bilinearPairingsWorkspace
+    for (unsigned int b = 0; b < sdp.bilinearBases.size(); b++)
+      bilinearPairingsWorkspace.push_back(Matrix(X.blocks[b].rows, S.blocks[b].cols));
+  }
 
 };
 
-// SDPSolver::computeBilinearPairings() {
-//   for (unsigned int b = 0; b < sdp.bilinearBases.size(); b++) {
-//     blockMatrixCongruence(XInv.blocks[b], sdp.bilinearBases[b], pairingsWorkspace[b], S.blocks[b]) {
-//     blockMatrixCongruence(Y.blocks[b],    sdp.bilinearBases[b], pairingsWorkspace[b], T.blocks[b]) {
-//   }
-// }
+void computeBilinearPairings(const BlockDiagonalMatrix &A,
+                             const vector<Matrix> &bilinearBases,
+                             vector<Matrix> &workspace,
+                             BlockDiagonalMatrix &result) {
+  for (unsigned int b = 0; b < bilinearBases.size(); b++)
+    tensorMatrixCongruence(A.blocks[b], bilinearBases[b], workspace[b], result.blocks[b]);
+}
+                           
+void componentProduct(const vector<Real> &u, const vector<Real> &v, vector<Real> &result) {
+  for (unsigned int i = 0; i < u.size(); i++)
+    result[i] = u[i] * v[i];
+}
 
+void diagonalCongruence(const vector<Real> &d, const Matrix &v, Matrix &result) {
+  assert(d.size() == v.cols);
+  assert(result.cols == v.rows);
+  assert(result.rows == v.rows);
+
+  for (int p = 0; p < v.rows; p++) {
+    for (int q = 0; q <= p; q++) {
+      Real tmp = 0;
+
+      for (int n = 0; n < v.cols; n++)
+        tmp += d[n]*v.get(p, n)*v.get(q, n);
+      
+      result.set(p, q, tmp);
+      if (p != q)
+        result.set(q, p, tmp);
+    }
+  }
+}
+
+void testSDPSolver() {
+  const SDP sdp = readBootstrapSDP("test.sdp");
+  cout << sdp << endl;
+
+  SDPSolver solver(sdp);
+  cout << "done." << endl;
+
+  solver.X.setIdentity();
+  solver.Y.setIdentity();
+
+  cout << solver.X << endl;
+  inverseCholeskyAndInverse(solver.X, solver.XInvWorkspace, solver.XInvCholesky, solver.XInv);
+
+  computeBilinearPairings(solver.XInv, sdp.bilinearBases, solver.bilinearPairingsWorkspace, solver.S);
+  computeBilinearPairings(solver.Y,    sdp.bilinearBases, solver.bilinearPairingsWorkspace, solver.T);
+  componentProduct(solver.XInv.diagonalPart, solver.Y.diagonalPart, solver.XInvYDiag);
+
+  cout << solver.S << endl;
+  cout << solver.T << endl;
+}
 
 int main(int argc, char** argv) {
 
   //testBlockCongruence();
   //testBlockDiagonalCholesky();
-  testSDP();
+  testSDPSolver();
 
   return 0;
 }
