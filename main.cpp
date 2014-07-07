@@ -46,6 +46,10 @@ class Matrix {
     elements[r + c*rows] = a;
   }
 
+  inline void addElt(int r, int c, const Real &a) {
+    elements[r + c*rows] += a;
+  }
+
   void setZero() {
     std::fill(elements.begin(), elements.end(), 0);
   }
@@ -97,6 +101,63 @@ ostream& operator<<(ostream& os, const Matrix& a) {
   os << "}";
   return os;
 }
+
+void matrixMultiply(Matrix &A, Matrix &B, Matrix &result) {
+  assert(A.cols == B.rows);
+  assert(A.rows == result.rows);
+  assert(B.cols == result.cols);
+
+  Rgemm("N", "N", A.rows, B.cols, A.cols, 1,
+        &A.elements[0], A.rows,
+        &B.elements[0], B.rows,
+        0,
+        &result.elements[0], result.rows);
+}
+
+Real dotProduct(const vector<Real> &u, const vector<Real> v) {
+  Real result = 0;
+  for (unsigned int i = 0; i < u.size(); i++)
+    result += u[i]*v[i];
+  return result;
+}
+
+Real frobeniusProduct(const Matrix &A, const Matrix &B) {
+  assert(A.rows == B.rows);
+  assert(A.cols == B.cols);
+  return dotProduct(A.elements, B.elements);
+}
+
+Real frobeniusProductSymmetric(const Matrix &A, const Matrix &B) {
+  assert(A.rows == B.rows);
+  assert(A.cols == B.cols);
+  assert(A.rows == A.cols);
+
+  Real result = 0;
+  for (int c = 0; c < A.cols; c++)
+    for (int r = 0; r < c ; r++)
+      result += A.get(r,c)*B.get(r,c);
+  result *= 2;
+
+  for (int r = 0; r < A.rows; r++)
+    result += A.get(r,r)*B.get(r,r);
+  
+  return result;
+}
+ 
+// Not currently supporting this.  Should probably switch to mpfr...
+//
+// void matrixMultiplyFirstSym(Matrix &A, Matrix &B, Matrix &result) {
+//   assert(A.cols == A.rows);
+//   assert(A.cols == B.rows);
+//   assert(B.rows == result.rows);
+//   assert(B.cols == result.cols);
+
+//   Rsymm("Left", "Upper", B.rows, B.cols, 1,
+//         &A.elements[0], A.rows,
+//         &B.elements[0], B.rows,
+//         0,
+//         &result.elements[0], result.rows);
+// }
 
 // result = choleskyDecomposition(a) (lower triangular)
 // Inputs:
@@ -230,6 +291,8 @@ void tensorMatrixCongruence(const Matrix &a, const Matrix &b, Matrix &work, Matr
   }
 }
 
+
+
 void testTensorCongruence() {
   Matrix a(4,4);
   Matrix b(2,3);
@@ -254,13 +317,17 @@ void testTensorCongruence() {
 
 class BlockDiagonalMatrix {
 public:
+  int dim;
   vector<Real> diagonalPart;
   vector<Matrix> blocks;
 
   BlockDiagonalMatrix(int diagonalSize, const vector<int> &blockSizes):
+    dim(diagonalSize),
     diagonalPart(vector<Real>(diagonalSize, 0)) {
+
     for (unsigned int i = 0; i < blockSizes.size(); i++) {
       blocks.push_back(Matrix(blockSizes[i], blockSizes[i]));
+      dim += blockSizes[i];
     }
   }
 
@@ -298,42 +365,63 @@ public:
   }
 
 
-  friend ostream& operator<<(ostream& os, const BlockDiagonalMatrix& a);
+  friend ostream& operator<<(ostream& os, const BlockDiagonalMatrix& A);
 
 };
 
-ostream& operator<<(ostream& os, const BlockDiagonalMatrix& a) {
+ostream& operator<<(ostream& os, const BlockDiagonalMatrix& A) {
 
   os << "{";
-  for (unsigned int i = 0; i < a.diagonalPart.size(); i++) {
-    os << a.diagonalPart[i] << ", ";
+  for (unsigned int i = 0; i < A.diagonalPart.size(); i++) {
+    os << A.diagonalPart[i] << ", ";
   }
 
-  for (unsigned int b = 0; b < a.blocks.size(); b++) {
-    os << a.blocks[b];
-    if (b < a.blocks.size() - 1)
+  for (unsigned int b = 0; b < A.blocks.size(); b++) {
+    os << A.blocks[b];
+    if (b < A.blocks.size() - 1)
       os << ", ";
   }
   os << "}";
   return os;
 }
 
-void inverseCholeskyAndInverse(BlockDiagonalMatrix &a,
-                               BlockDiagonalMatrix &work,
-                               BlockDiagonalMatrix &invCholesky,
-                               BlockDiagonalMatrix &inverse) {
+Real frobeniusProductSymmetric(const BlockDiagonalMatrix &A,
+                               const BlockDiagonalMatrix &B) {
+  Real result = dotProduct(A.diagonalPart, B.diagonalPart);
 
-  for (unsigned int i = 0; i < a.diagonalPart.size(); i++) {
-    Real d = a.diagonalPart[i];
-    invCholesky.diagonalPart[i] = 1/sqrt(d);
-    inverse.diagonalPart[i] = 1/d;
+  for (unsigned int b = 0; b < A.blocks.size(); b++)
+    result += frobeniusProductSymmetric(A.blocks[b], B.blocks[b]);
+
+  return result;
+}
+  
+
+void blockDiagonalMatrixMultiply(BlockDiagonalMatrix &A,
+                                 BlockDiagonalMatrix &B,
+                                 BlockDiagonalMatrix &result) {
+  for (unsigned int i = 0; i < A.diagonalPart.size(); i++)
+    result.diagonalPart[i] = A.diagonalPart[i] * B.diagonalPart[i];
+
+  for (unsigned int b = 0; b < A.blocks.size(); b++)
+    matrixMultiply(A.blocks[b], B.blocks[b], result.blocks[b]);
+}
+
+void inverseCholeskyAndInverse(BlockDiagonalMatrix &A,
+                               BlockDiagonalMatrix &work,
+                               BlockDiagonalMatrix &AInvCholesky,
+                               BlockDiagonalMatrix &AInv) {
+
+  for (unsigned int i = 0; i < A.diagonalPart.size(); i++) {
+    Real d = A.diagonalPart[i];
+    AInvCholesky.diagonalPart[i] = 1/sqrt(d);
+    AInv.diagonalPart[i] = 1/d;
   }
 
-  for (unsigned int b = 0; b < a.blocks.size(); b++) {
-    inverseCholeskyAndInverse(a.blocks[b],
+  for (unsigned int b = 0; b < A.blocks.size(); b++) {
+    inverseCholeskyAndInverse(A.blocks[b],
                               work.blocks[b],
-                              invCholesky.blocks[b],
-                              inverse.blocks[b]);
+                              AInvCholesky.blocks[b],
+                              AInv.blocks[b]);
   }
 }
 
@@ -629,18 +717,28 @@ SDP readBootstrapSDP(const char*file) {
 
 class IndexTuple {
 public:
+  int p;
   int r;
   int s;
   int k;
-  IndexTuple(int r, int s, int k): r(r), s(s), k(k) {}
+  IndexTuple(int p, int r, int s, int k): p(p), r(r), s(s), k(k) {}
   IndexTuple() {}
+};
+
+class SolverParameters {
+public:
+  Real beta;
+  SolverParameters(const Real &beta): beta(beta) {}
 };
 
 class SDPSolver {
 public:
   SDP sdp;
+  SolverParameters parameters;
   vector<vector<IndexTuple> > constraintIndexTuples;
+  Real mu;
   vector<Real> r;
+  vector<Real> d;
   vector<Real> x;
   vector<Real> dx;
   vector<Real> XInvYDiag;
@@ -655,16 +753,19 @@ public:
   BlockDiagonalMatrix Rp;
   BlockDiagonalMatrix S;
   BlockDiagonalMatrix T;
+  Matrix schurComplement;
   // workspace variables
   BlockDiagonalMatrix XInvWorkspace;
   vector<Matrix> bilinearPairingsWorkspace;
-  Matrix B;
 
-  SDPSolver(const SDP &sdp):
+  SDPSolver(const SDP &sdp, const SolverParameters &parameters):
     sdp(sdp),
+    parameters(parameters),
+    mu(0),
     r(vector<Real>(sdp.numConstraints, 0)),
-    x(vector<Real>(sdp.numConstraints, 0)),
-    dx(vector<Real>(sdp.numConstraints, 0)),
+    d(r),
+    x(r),
+    dx(r),
     XInvYDiag(vector<Real>(sdp.objDimension, 0)),
     X(BlockDiagonalMatrix(sdp.objDimension, sdp.psdMatrixBlockDims())),
     XInv(X),
@@ -677,17 +778,19 @@ public:
     Rp(X),
     S(BlockDiagonalMatrix(0, sdp.bilinearPairingBlockDims())),
     T(S),
-    XInvWorkspace(X),
-    B(Matrix(sdp.numConstraints, sdp.numConstraints))
+    schurComplement(Matrix(sdp.numConstraints, sdp.numConstraints)),
+    XInvWorkspace(X)
   {
     // initialize constraintIndexTuples
+    int p = 0;
     for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
       constraintIndexTuples.push_back(vector<IndexTuple>(0));
 
       for (int s = 0; s < sdp.dimensions[j]; s++) {
         for (int r = 0; r <= s; r++) {
           for (int k = 0; k <= sdp.degrees[j]; k++) {
-            constraintIndexTuples[j].push_back(IndexTuple(r, s, k));
+            constraintIndexTuples[j].push_back(IndexTuple(p, r, s, k));
+            p++;
           }
         }
       }
@@ -698,6 +801,8 @@ public:
       bilinearPairingsWorkspace.push_back(Matrix(X.blocks[b].rows, S.blocks[b].cols));
   }
 
+  void computeSearchDirection();
+
 };
 
 void computeBilinearPairings(const BlockDiagonalMatrix &A,
@@ -707,50 +812,169 @@ void computeBilinearPairings(const BlockDiagonalMatrix &A,
   for (unsigned int b = 0; b < bilinearBases.size(); b++)
     tensorMatrixCongruence(A.blocks[b], bilinearBases[b], workspace[b], result.blocks[b]);
 }
-                           
+           
+// result[i] = u[i] * v[i]
+//                
 void componentProduct(const vector<Real> &u, const vector<Real> &v, vector<Real> &result) {
   for (unsigned int i = 0; i < u.size(); i++)
     result[i] = u[i] * v[i];
 }
 
-void diagonalCongruence(const vector<Real> &d, const Matrix &v, Matrix &result) {
-  assert(d.size() == v.cols);
-  assert(result.cols == v.rows);
-  assert(result.rows == v.rows);
+// result = V^T D V, where D=diag(d) is a diagonal matrix
+//
+void diagonalCongruence(const vector<Real> &d,
+                        const Matrix &V,
+                        const int blockRow,
+                        const int blockCol,
+                        Matrix &result) {
+  int dim = d.size();
+  assert(dim == V.cols);
 
-  for (int p = 0; p < v.rows; p++) {
+  for (int p = 0; p < V.rows; p++) {
     for (int q = 0; q <= p; q++) {
       Real tmp = 0;
 
-      for (int n = 0; n < v.cols; n++)
-        tmp += d[n]*v.get(p, n)*v.get(q, n);
+      for (int n = 0; n < V.cols; n++)
+        tmp += d[n]*V.get(p, n)*V.get(q, n);
       
-      result.set(p, q, tmp);
+      result.set(blockRow*dim + p,blockCol*dim + q, tmp);
       if (p != q)
-        result.set(q, p, tmp);
+        result.set(blockRow*dim + q,blockCol*dim + p, tmp);
     }
   }
+}
+
+void addSchurBlocks(const SDP &sdp,
+                    const BlockDiagonalMatrix &S,
+                    const BlockDiagonalMatrix &T,
+                    const vector<vector<IndexTuple> > &constraintIndexTuples,
+                    Matrix &schurComplement) {
+
+  for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
+    const int mj = sdp.dimensions[j];
+
+    for (vector<IndexTuple>::const_iterator t1 = constraintIndexTuples[j].begin();
+         t1 != constraintIndexTuples[j].end();
+         t1++) {
+      const int p1 = t1->p;
+      const int mj_r1 = mj*t1->r;
+      const int mj_s1 = mj*t1->s;
+      const int k1 = t1->k;
+
+      for (vector<IndexTuple>::const_iterator t2 = constraintIndexTuples[j].begin();
+           t2->p <= t1->p && t2 != constraintIndexTuples[j].end();
+           t2++) {
+        const int p2 = t2->p;
+        const int mj_r2 = mj*t2->r;
+        const int mj_s2 = mj*t2->s;
+        const int k2 = t2->k;
+
+        Real tmp = 0;
+        for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
+          tmp += (S.blocks[*b].get(mj_s1 + k1, mj_r2 + k2) * T.blocks[*b].get(mj_s2 + k2, mj_r1 + k1) +
+                  S.blocks[*b].get(mj_r1 + k1, mj_r2 + k2) * T.blocks[*b].get(mj_s2 + k2, mj_s1 + k1) +
+                  S.blocks[*b].get(mj_s1 + k1, mj_s2 + k2) * T.blocks[*b].get(mj_r2 + k2, mj_r1 + k1) +
+                  S.blocks[*b].get(mj_r1 + k1, mj_s2 + k2) * T.blocks[*b].get(mj_r2 + k2, mj_s1 + k1))/4;
+        }
+        schurComplement.addElt(p1, p2, tmp);
+        if (p2 != p1)
+          schurComplement.addElt(p2, p1, tmp);
+      }
+    }
+  }
+}
+
+void computeRc(BlockDiagonalMatrix &X,
+               BlockDiagonalMatrix &Y,
+               const Real &beta,
+               const Real &mu,
+               BlockDiagonalMatrix &Rc) {
+  blockDiagonalMatrixMultiply(X, Y, Rc);
+  Rc.scalarMultiply(-1);
+  Rc.addIdentity(beta*mu);
+}
+
+void computeDVector(const SDP &sdp,
+                    const BlockDiagonalMatrix &T,
+                    const vector<vector<IndexTuple> > &constraintIndexTuples,
+                    vector<Real> &d) {
+  for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
+    const int mj = sdp.dimensions[j];
+
+    for (vector<IndexTuple>::const_iterator t = constraintIndexTuples[j].begin();
+         t != constraintIndexTuples[j].end();
+         t++) {
+      const int p = t->p;
+      const int mj_r = mj*t->r;
+      const int mj_s = mj*t->s;
+      const int k = t->k;
+
+      d[p] = 0;
+      for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
+        d[p] -= T.blocks[*b].get(mj_r+k, mj_s+k);
+        d[p] -= T.blocks[*b].get(mj_s+k, mj_r+k);
+      }
+      d[p] /= 2;
+      d[p] += sdp.affineConstants[p];
+    }
+  }
+}
+
+void weightedConstraintMatrixSum(const SDP &sdp,
+                                 const vector<Real> x,
+                                 BlockDiagonalMatrix &result)  {
+
+  for (unsigned int n = 0; n < result.diagonalPart.size(); n++) {
+    result.diagonalPart[n] = 0;
+    for (unsigned int p = 0; p < x.size(); p++)
+      result.diagonalPart[n] += x[p]*sdp.polMatrixValues.get(p, n);
+  }
+
+  for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
+    const int mj = sdp.dimensions[j];
+
+    for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
+      for (int s = 0; s < mj; s++) {
+        for (int r = 0; r <= s; r++) {
+          // diagonalCongruence(&x[p0], 
+        }
+      }
+      result.symmetrize();
+    }
+  }
+}
+
+void SDPSolver::computeSearchDirection() {
+
+  X.setIdentity();
+  Y.setIdentity();
+  mu = frobeniusProductSymmetric(X, Y)/X.dim;
+
+  inverseCholeskyAndInverse(X, XInvWorkspace, XInvCholesky, XInv);
+
+  computeBilinearPairings(XInv, sdp.bilinearBases, bilinearPairingsWorkspace, S);
+  computeBilinearPairings(Y,    sdp.bilinearBases, bilinearPairingsWorkspace, T);
+
+  componentProduct(XInv.diagonalPart, Y.diagonalPart, XInvYDiag);
+
+  diagonalCongruence(XInvYDiag, sdp.polMatrixValues, 0, 0, schurComplement);
+  addSchurBlocks(sdp, S, T, constraintIndexTuples, schurComplement);
+
+  computeRc(X, Y, parameters.beta, mu, Rc);
+  computeDVector(sdp, T, constraintIndexTuples, d);
 }
 
 void testSDPSolver() {
   const SDP sdp = readBootstrapSDP("test.sdp");
   cout << sdp << endl;
 
-  SDPSolver solver(sdp);
+  SDPSolver solver(sdp, SolverParameters(0.7));
+  solver.computeSearchDirection();
   cout << "done." << endl;
-
-  solver.X.setIdentity();
-  solver.Y.setIdentity();
-
-  cout << solver.X << endl;
-  inverseCholeskyAndInverse(solver.X, solver.XInvWorkspace, solver.XInvCholesky, solver.XInv);
-
-  computeBilinearPairings(solver.XInv, sdp.bilinearBases, solver.bilinearPairingsWorkspace, solver.S);
-  computeBilinearPairings(solver.Y,    sdp.bilinearBases, solver.bilinearPairingsWorkspace, solver.T);
-  componentProduct(solver.XInv.diagonalPart, solver.Y.diagonalPart, solver.XInvYDiag);
 
   cout << solver.S << endl;
   cout << solver.T << endl;
+  cout << solver.schurComplement << endl;
 }
 
 int main(int argc, char** argv) {
