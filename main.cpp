@@ -114,6 +114,8 @@ void matrixMultiply(Matrix &A, Matrix &B, Matrix &result) {
         &result.elements[0], result.rows);
 }
 
+//void matrixSubtractInplace(Matrix &A, Matrix &B) {
+
 Real dotProduct(const vector<Real> &u, const vector<Real> v) {
   Real result = 0;
   for (unsigned int i = 0; i < u.size(); i++)
@@ -822,20 +824,42 @@ void componentProduct(const vector<Real> &u, const vector<Real> &v, vector<Real>
 
 // result = V^T D V, where D=diag(d) is a diagonal matrix
 //
-void diagonalCongruence(const vector<Real> &d,
+void diagonalCongruence(Real const *d,
                         const Matrix &V,
                         const int blockRow,
                         const int blockCol,
                         Matrix &result) {
-  int dim = d.size();
-  assert(dim == V.cols);
+  int dim = V.cols;
 
   for (int p = 0; p < V.rows; p++) {
     for (int q = 0; q <= p; q++) {
       Real tmp = 0;
 
       for (int n = 0; n < V.cols; n++)
-        tmp += d[n]*V.get(p, n)*V.get(q, n);
+        tmp += *(d+n) * V.get(p, n)*V.get(q, n);
+      
+      result.set(blockRow*dim + p,blockCol*dim + q, tmp);
+      if (p != q)
+        result.set(blockRow*dim + q,blockCol*dim + p, tmp);
+    }
+  }
+}
+
+// result = V D V^T, where D=diag(d) is a diagonal matrix
+//
+void diagonalCongruenceTranspose(Real const *d,
+                                 const Matrix &V,
+                                 const int blockRow,
+                                 const int blockCol,
+                                 Matrix &result) {
+  int dim = V.rows;
+
+  for (int p = 0; p < V.cols; p++) {
+    for (int q = 0; q <= p; q++) {
+      Real tmp = 0;
+
+      for (int n = 0; n < V.rows; n++)
+        tmp += *(d+n) * V.get(n, p)*V.get(n, q);
       
       result.set(blockRow*dim + p,blockCol*dim + q, tmp);
       if (p != q)
@@ -920,9 +944,7 @@ void computeDVector(const SDP &sdp,
   }
 }
 
-void weightedConstraintMatrixSum(const SDP &sdp,
-                                 const vector<Real> x,
-                                 BlockDiagonalMatrix &result)  {
+void constraintMatrixWeightedSum(const SDP &sdp, const vector<Real> x, BlockDiagonalMatrix &result)  {
 
   for (unsigned int n = 0; n < result.diagonalPart.size(); n++) {
     result.diagonalPart[n] = 0;
@@ -930,18 +952,21 @@ void weightedConstraintMatrixSum(const SDP &sdp,
       result.diagonalPart[n] += x[p]*sdp.polMatrixValues.get(p, n);
   }
 
+  int p = 0;
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
-    const int mj = sdp.dimensions[j];
+    const int dj = sdp.degrees[j];
 
-    for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
-      for (int s = 0; s < mj; s++) {
-        for (int r = 0; r <= s; r++) {
-          // diagonalCongruence(&x[p0], 
-        }
+    for (int s = 0; s < sdp.dimensions[j]; s++) {
+      for (int r = 0; r <= s; r++) {
+        for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++)
+          diagonalCongruenceTranspose(&x[p], sdp.bilinearBases[*b], r, s, result.blocks[*b]);
+        p += dj;
       }
-      result.symmetrize();
     }
   }
+  assert(p == (int)x.size() - 1);
+
+  result.symmetrize();
 }
 
 void SDPSolver::computeSearchDirection() {
@@ -957,11 +982,14 @@ void SDPSolver::computeSearchDirection() {
 
   componentProduct(XInv.diagonalPart, Y.diagonalPart, XInvYDiag);
 
-  diagonalCongruence(XInvYDiag, sdp.polMatrixValues, 0, 0, schurComplement);
+  diagonalCongruence(&XInvYDiag[0], sdp.polMatrixValues, 0, 0, schurComplement);
   addSchurBlocks(sdp, S, T, constraintIndexTuples, schurComplement);
 
   computeRc(X, Y, parameters.beta, mu, Rc);
   computeDVector(sdp, T, constraintIndexTuples, d);
+
+  constraintMatrixWeightedSum(sdp, x, Rp);
+  //subtractInplace(Rp, X);
 }
 
 void testSDPSolver() {
