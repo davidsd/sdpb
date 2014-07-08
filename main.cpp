@@ -82,6 +82,19 @@ class Matrix {
     }
   }
 
+  void copyFrom(const Matrix &A) {
+    assert(rows == A.rows);
+    assert(cols == A.cols);
+
+    for (unsigned int i = 0; i < elements.size(); i++)
+      elements[i] = A.elements[i];
+  }
+
+  void operator-=(const Matrix &A) {
+    for (unsigned int i = 0; i < elements.size(); i++)
+      elements[i] -= A.elements[i];
+  }
+
   friend ostream& operator<<(ostream& os, const Matrix& a);
 };
 
@@ -113,8 +126,6 @@ void matrixMultiply(Matrix &A, Matrix &B, Matrix &result) {
         0,
         &result.elements[0], result.rows);
 }
-
-//void matrixSubtractInplace(Matrix &A, Matrix &B) {
 
 Real dotProduct(const vector<Real> &u, const vector<Real> v) {
   Real result = 0;
@@ -236,6 +247,26 @@ void inverseCholeskyAndInverse(Matrix &a, Matrix &work, Matrix &invCholesky, Mat
   Rtrmm("Left", "Lower", "Transpose", "NonUnitDiag", dim, dim, 1,
         &invCholesky.elements[0], dim,
         &inverse.elements[0], dim);
+}
+
+// X := AInvCholesky^T AInvCholesky X
+// Inputs:
+// - AInvCholesky : dim x dim lower triangular matrix
+// - X            : dim x dim matrix
+//
+void matrixSolveWithInverseCholesky(Matrix &AInvCholesky, Matrix &X) {
+  int dim = X.rows;
+  assert(X.cols == dim);
+  assert(AInvCholesky.rows == dim);
+  assert(AInvCholesky.cols == dim);
+
+  Rtrmm("Left", "Lower", "NoTranspose", "NonUnitDiag", dim, dim, 1,
+        &AInvCholesky.elements[0], dim,
+        &X.elements[0], dim);
+
+  Rtrmm("Left", "Lower", "Transpose", "NonUnitDiag", dim, dim, 1,
+        &AInvCholesky.elements[0], dim,
+        &X.elements[0], dim);
 }
 
 // result = b'^T a b', where b' = b \otimes 1
@@ -361,6 +392,26 @@ public:
       blocks[b].scalarMultiply(c);
   }
 
+  void subtractDiagonalPart(const vector<Real> &v) {
+    for (unsigned int i = 0; i < diagonalPart.size(); i++)
+      diagonalPart[i] -= v[i];
+  }
+
+  void operator-=(const BlockDiagonalMatrix &A) {
+    subtractDiagonalPart(A.diagonalPart);
+
+    for (unsigned int b = 0; b < blocks.size(); b++)
+      blocks[b] -= A.blocks[b];
+  }
+
+  void copyFrom(const BlockDiagonalMatrix &A) {
+    for (unsigned int i = 0; i < diagonalPart.size(); i++)
+      diagonalPart[i] = A.diagonalPart[i];
+    
+    for (unsigned int b = 0; b < blocks.size(); b++)
+      blocks[b].copyFrom(A.blocks[b]);
+  }
+
   void symmetrize() {
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b].symmetrize();
@@ -425,6 +476,15 @@ void inverseCholeskyAndInverse(BlockDiagonalMatrix &A,
                               AInvCholesky.blocks[b],
                               AInv.blocks[b]);
   }
+}
+
+void blockMatrixSolveWithInverseCholesky(BlockDiagonalMatrix &AInvCholesky,
+                                         BlockDiagonalMatrix &X) {
+  for (unsigned int i = 0; i < X.diagonalPart.size(); i++)
+    X.diagonalPart[i] *= AInvCholesky.diagonalPart[i] * AInvCholesky.diagonalPart[i];
+
+  for (unsigned int b = 0; b < X.blocks.size(); b++)
+    matrixSolveWithInverseCholesky(AInvCholesky.blocks[b], X.blocks[b]);
 }
 
 void testBlockDiagonalCholesky() {
@@ -982,14 +1042,41 @@ void SDPSolver::computeSearchDirection() {
 
   componentProduct(XInv.diagonalPart, Y.diagonalPart, XInvYDiag);
 
+  // compute schurComplement
   diagonalCongruence(&XInvYDiag[0], sdp.polMatrixValues, 0, 0, schurComplement);
   addSchurBlocks(sdp, S, T, constraintIndexTuples, schurComplement);
 
+  // Compute Rc
   computeRc(X, Y, parameters.beta, mu, Rc);
+
+  // Compute d
   computeDVector(sdp, T, constraintIndexTuples, d);
 
+  // Compute Rp
   constraintMatrixWeightedSum(sdp, x, Rp);
-  //subtractInplace(Rp, X);
+  Rp -= X;
+  Rp.subtractDiagonalPart(sdp.objective);
+
+  // Compute Z
+  blockDiagonalMatrixMultiply(Rp, Y, Z);
+  Z -= Rc;
+  blockMatrixSolveWithInverseCholesky(XInvCholesky, Z);
+
+  for (unsigned int p = 0; p < r.size(); p++) {
+    r[p] = -d[p];
+    for (unsigned int n = 0; n < Z.diagonalPart.size(); n++)
+      r[p] -= sdp.polMatrixValues.get(p, n)*Z.diagonalPart[n];
+  }
+  for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
+    for (vector<IndexTuple>::const_iterator t = constraintIndexTuples[j].begin();
+         t != constraintIndexTuples[j].end();
+         t++) {
+      for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
+        // bilinear pairing of q_bk with Z block
+      }      
+    }
+  }
+
 }
 
 void testSDPSolver() {
