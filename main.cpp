@@ -882,13 +882,13 @@ void componentProduct(const vector<Real> &u, const vector<Real> &v, vector<Real>
     result[i] = u[i] * v[i];
 }
 
-// result = V^T D V, where D=diag(d) is a diagonal matrix
+// result = V D V^T, where D=diag(d) is a diagonal matrix
 //
-void diagonalCongruence(Real const *d,
-                        const Matrix &V,
-                        const int blockRow,
-                        const int blockCol,
-                        Matrix &result) {
+void diagonalCongruenceTranspose(Real const *d,
+                                 const Matrix &V,
+                                 const int blockRow,
+                                 const int blockCol,
+                                 Matrix &result) {
   int dim = V.cols;
 
   for (int p = 0; p < V.rows; p++) {
@@ -898,35 +898,35 @@ void diagonalCongruence(Real const *d,
       for (int n = 0; n < V.cols; n++)
         tmp += *(d+n) * V.get(p, n)*V.get(q, n);
       
-      result.set(blockRow*dim + p,blockCol*dim + q, tmp);
+      result.set(blockRow*dim + p, blockCol*dim + q, tmp);
       if (p != q)
-        result.set(blockRow*dim + q,blockCol*dim + p, tmp);
+        result.set(blockRow*dim + q, blockCol*dim + p, tmp);
     }
   }
 }
 
-// result = V D V^T, where D=diag(d) is a diagonal matrix
+// result = V^T D V, where D=diag(d) is a diagonal matrix
 //
-void diagonalCongruenceTranspose(Real const *d,
-                                 const Matrix &V,
-                                 const int blockRow,
-                                 const int blockCol,
-                                 Matrix &result) {
-  int dim = V.rows;
-
-  for (int p = 0; p < V.cols; p++) {
-    for (int q = 0; q <= p; q++) {
-      Real tmp = 0;
-
-      for (int n = 0; n < V.rows; n++)
-        tmp += *(d+n) * V.get(n, p)*V.get(n, q);
-      
-      result.set(blockRow*dim + p,blockCol*dim + q, tmp);
-      if (p != q)
-        result.set(blockRow*dim + q,blockCol*dim + p, tmp);
-    }
-  }
-}
+// void diagonalCongruence(Real const *d,
+//                         const Matrix &V,
+//                         const int blockRow,
+//                         const int blockCol,
+//                         Matrix &result) {
+//   int dim = V.rows;
+//
+//   for (int p = 0; p < V.cols; p++) {
+//     for (int q = 0; q <= p; q++) {
+//       Real tmp = 0;
+//
+//       for (int n = 0; n < V.rows; n++)
+//         tmp += *(d+n) * V.get(n, p)*V.get(n, q);
+//      
+//       result.set(blockRow*dim + p, blockCol*dim + q, tmp);
+//       if (p != q)
+//         result.set(blockRow*dim + q, blockCol*dim + p, tmp);
+//     }
+//   }
+// }
 
 void addSchurBlocks(const SDP &sdp,
                     const BlockDiagonalMatrix &S,
@@ -1020,11 +1020,11 @@ void constraintMatrixWeightedSum(const SDP &sdp, const vector<Real> x, BlockDiag
       for (int r = 0; r <= s; r++) {
         for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++)
           diagonalCongruenceTranspose(&x[p], sdp.bilinearBases[*b], r, s, result.blocks[*b]);
-        p += dj;
+        p += dj + 1;
       }
     }
   }
-  assert(p == (int)x.size() - 1);
+  assert(p == (int)x.size());
 
   result.symmetrize();
 }
@@ -1043,7 +1043,7 @@ void SDPSolver::computeSearchDirection() {
   componentProduct(XInv.diagonalPart, Y.diagonalPart, XInvYDiag);
 
   // compute schurComplement
-  diagonalCongruence(&XInvYDiag[0], sdp.polMatrixValues, 0, 0, schurComplement);
+  diagonalCongruenceTranspose(&XInvYDiag[0], sdp.polMatrixValues, 0, 0, schurComplement);
   addSchurBlocks(sdp, S, T, constraintIndexTuples, schurComplement);
 
   // Compute Rc
