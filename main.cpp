@@ -55,12 +55,15 @@ class Matrix {
   }
 
   void addIdentity(const Real &c) {
+    assert(rows == cols);
+
     for (int i = 0; i < rows; i++)
       elements[i * (rows + 1)] += c;
   }
 
   void setIdentity() {
     assert(rows == cols);
+
     setZero();
     addIdentity(1);
   }
@@ -89,6 +92,11 @@ class Matrix {
     for (unsigned int i = 0; i < elements.size(); i++)
       elements[i] = A.elements[i];
   }
+
+  void operator+=(const Matrix &A) {
+    for (unsigned int i = 0; i < elements.size(); i++)
+      elements[i] += A.elements[i];
+  }    
 
   void operator-=(const Matrix &A) {
     for (unsigned int i = 0; i < elements.size(); i++)
@@ -192,11 +200,9 @@ void choleskyDecomposition(Matrix &a, Matrix &result) {
   Rpotrf("Lower", dim, resultArray, dim, &info);
 
   // Set the upper-triangular part of the result to zero
-  for (int j = 0; j < dim; j++) {
-    for (int i = 0; i < j; i++) {
+  for (int j = 0; j < dim; j++)
+    for (int i = 0; i < j; i++)
       result.elements[i + j*dim] = 0;
-    }
-  }
 }
 
 // result = a^-1
@@ -226,6 +232,24 @@ void inverseCholesky(Matrix &a, Matrix &work, Matrix &result) {
   inverseLowerTriangular(work, result);
 }
 
+// b := ACholesky^{-1 T} ACholesky^{-1} b = A^{-1} b
+//
+// Inputs:
+// - ACholesky : dim x dim lower triangular matrix, the Cholesky decomposition of a matrix A
+// - b         : vector of length dim (output)
+//
+void solveInplaceWithCholesky(Matrix &ACholesky, vector<Real> &b) {
+  int dim = ACholesky.rows;
+  assert(ACholesky.cols == dim);
+  assert((int) b.size() == dim);
+
+  Rtrsm("Left", "Lower", "NoTranspose", "NonUnitDiagonal",
+        dim, 1, 1, &ACholesky.elements[0], dim, &b[0], dim);
+
+  Rtrsm("Left", "Lower", "Transpose", "NonUnitDiagonal",
+        dim, 1, 1, &ACholesky.elements[0], dim, &b[0], dim);
+}
+
 // invCholesky = choleskyDecomposition(a)^-1
 // inverse = a^-1
 // Inputs:
@@ -233,6 +257,9 @@ void inverseCholesky(Matrix &a, Matrix &work, Matrix &result) {
 // - work        : dim x dim matrix
 // - invCholesky : dim x dim lower-triangular matrix
 // - inverse     : dim x dim symmetric matrix
+//
+// TODO: we can save memory by using inverse as the work matrix for
+// inverse cholesky
 //
 void inverseCholeskyAndInverse(Matrix &a, Matrix &work, Matrix &invCholesky, Matrix &inverse) {
   int dim = a.rows;
@@ -392,13 +419,20 @@ public:
       blocks[b].scalarMultiply(c);
   }
 
-  void subtractDiagonalPart(const vector<Real> &v) {
+  void addDiagonalPart(const vector<Real> &v, const Real &alpha) {
     for (unsigned int i = 0; i < diagonalPart.size(); i++)
-      diagonalPart[i] -= v[i];
+      diagonalPart[i] += alpha*v[i];
+  }
+
+  void operator+=(const BlockDiagonalMatrix &A) {
+    addDiagonalPart(A.diagonalPart, 1);
+
+    for (unsigned int b = 0; b < blocks.size(); b++)
+      blocks[b] += A.blocks[b];
   }
 
   void operator-=(const BlockDiagonalMatrix &A) {
-    subtractDiagonalPart(A.diagonalPart);
+    addDiagonalPart(A.diagonalPart, -1);
 
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b] -= A.blocks[b];
@@ -799,10 +833,9 @@ public:
   SolverParameters parameters;
   vector<vector<IndexTuple> > constraintIndexTuples;
   Real mu;
-  vector<Real> r;
-  vector<Real> d;
   vector<Real> x;
   vector<Real> dx;
+  vector<Real> d;
   vector<Real> XInvYDiag;
   BlockDiagonalMatrix X;
   BlockDiagonalMatrix XInv;
@@ -816,6 +849,7 @@ public:
   BlockDiagonalMatrix S;
   BlockDiagonalMatrix T;
   Matrix schurComplement;
+  Matrix schurComplementCholesky;
   // workspace variables
   BlockDiagonalMatrix XInvWorkspace;
   vector<Matrix> bilinearPairingsWorkspace;
@@ -824,10 +858,9 @@ public:
     sdp(sdp),
     parameters(parameters),
     mu(0),
-    r(vector<Real>(sdp.numConstraints, 0)),
-    d(r),
-    x(r),
-    dx(r),
+    x(vector<Real>(sdp.numConstraints, 0)),
+    dx(x),
+    d(x),
     XInvYDiag(vector<Real>(sdp.objDimension, 0)),
     X(BlockDiagonalMatrix(sdp.objDimension, sdp.psdMatrixBlockDims())),
     XInv(X),
@@ -841,6 +874,7 @@ public:
     S(BlockDiagonalMatrix(0, sdp.bilinearPairingBlockDims())),
     T(S),
     schurComplement(Matrix(sdp.numConstraints, sdp.numConstraints)),
+    schurComplementCholesky(schurComplement),
     XInvWorkspace(X)
   {
     // initialize constraintIndexTuples
@@ -903,6 +937,33 @@ void diagonalCongruenceTranspose(Real const *d,
         result.set(blockRow*dim + q, blockCol*dim + p, tmp);
     }
   }
+}
+
+// v^T A' v, where A' is the (blockRow,blockCol)-th dim x dim block
+// inside A.
+//
+// Input:
+// - v        : pointer to the beginning of a vector of length dim
+// - dim      : length of the vector v
+// - A        : (k*dim) x (k*dim) matrix, where k > blockRow, blockCol
+// - blockRow : integer labeling block of A
+// - blockCol : integer labeling block of A
+//
+Real bilinearBlockPairing(const Real *v,
+                          const int dim,
+                          const Matrix &A,
+                          const int blockRow,
+                          const int blockCol) {
+  Real result = 0;
+
+  for (int r = 0; r < dim; r++) {
+    Real tmp = 0;
+
+    for (int c = 0; c < dim; c++)
+      tmp += *(v+c) * A.get(blockRow*dim + r, blockCol*dim + c);
+    result += *(v+r) * tmp;
+  }
+  return result;
 }
 
 // result = V^T D V, where D=diag(d) is a diagonal matrix
@@ -968,16 +1029,6 @@ void addSchurBlocks(const SDP &sdp,
   }
 }
 
-void computeRc(BlockDiagonalMatrix &X,
-               BlockDiagonalMatrix &Y,
-               const Real &beta,
-               const Real &mu,
-               BlockDiagonalMatrix &Rc) {
-  blockDiagonalMatrixMultiply(X, Y, Rc);
-  Rc.scalarMultiply(-1);
-  Rc.addIdentity(beta*mu);
-}
-
 void computeDVector(const SDP &sdp,
                     const BlockDiagonalMatrix &T,
                     const vector<vector<IndexTuple> > &constraintIndexTuples,
@@ -1029,6 +1080,34 @@ void constraintMatrixWeightedSum(const SDP &sdp, const vector<Real> x, BlockDiag
   result.symmetrize();
 }
 
+void computeSchurRHS(const SDP &sdp,
+                     const vector<vector<IndexTuple> > &constraintIndexTuples,
+                     vector<Real> &d,
+                     BlockDiagonalMatrix &Z, 
+                     vector<Real> &r) {
+
+  for (unsigned int p = 0; p < r.size(); p++) {
+    r[p] = -d[p];
+    for (unsigned int n = 0; n < Z.diagonalPart.size(); n++)
+      r[p] -= sdp.polMatrixValues.get(p, n)*Z.diagonalPart[n];
+  }
+
+  for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
+    for (vector<IndexTuple>::const_iterator t = constraintIndexTuples[j].begin();
+         t != constraintIndexTuples[j].end();
+         t++) {
+      for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
+
+        const int delta = sdp.bilinearBases[*b].rows;
+        // Pointer to the k-th column of sdp.bilinearBases[*b]
+        const Real *q = &sdp.bilinearBases[*b].elements[(t->k) * delta];
+
+        r[t->p] -= bilinearBlockPairing(q, delta, Z.blocks[*b], t->r, t->s);
+      }      
+    }
+  }
+}
+
 void SDPSolver::computeSearchDirection() {
 
   X.setIdentity();
@@ -1037,45 +1116,50 @@ void SDPSolver::computeSearchDirection() {
 
   inverseCholeskyAndInverse(X, XInvWorkspace, XInvCholesky, XInv);
 
+  // schurComplement_{pq} = Tr(F_q X^{-1} F_p Y)
   computeBilinearPairings(XInv, sdp.bilinearBases, bilinearPairingsWorkspace, S);
   computeBilinearPairings(Y,    sdp.bilinearBases, bilinearPairingsWorkspace, T);
 
   componentProduct(XInv.diagonalPart, Y.diagonalPart, XInvYDiag);
 
-  // compute schurComplement
   diagonalCongruenceTranspose(&XInvYDiag[0], sdp.polMatrixValues, 0, 0, schurComplement);
   addSchurBlocks(sdp, S, T, constraintIndexTuples, schurComplement);
 
-  // Compute Rc
-  computeRc(X, Y, parameters.beta, mu, Rc);
+  choleskyDecomposition(schurComplement, schurComplementCholesky);
 
-  // Compute d
+  // Rc = beta mu I - X Y
+  blockDiagonalMatrixMultiply(X, Y, Rc);
+  Rc.scalarMultiply(-1);
+  Rc.addIdentity(parameters.beta*mu);
+
+  // d_k = c_k - Tr(F_k Y)
   computeDVector(sdp, T, constraintIndexTuples, d);
 
-  // Compute Rp
+  // Rp = sum_p F_p x_p - X - F_0
   constraintMatrixWeightedSum(sdp, x, Rp);
   Rp -= X;
-  Rp.subtractDiagonalPart(sdp.objective);
+  Rp.addDiagonalPart(sdp.objective, -1);
 
-  // Compute Z
+  // Z = Symmetrize(X^{-1} (Rp Y - Rc))
   blockDiagonalMatrixMultiply(Rp, Y, Z);
   Z -= Rc;
   blockMatrixSolveWithInverseCholesky(XInvCholesky, Z);
+  Z.symmetrize();
 
-  for (unsigned int p = 0; p < r.size(); p++) {
-    r[p] = -d[p];
-    for (unsigned int n = 0; n < Z.diagonalPart.size(); n++)
-      r[p] -= sdp.polMatrixValues.get(p, n)*Z.diagonalPart[n];
-  }
-  for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
-    for (vector<IndexTuple>::const_iterator t = constraintIndexTuples[j].begin();
-         t != constraintIndexTuples[j].end();
-         t++) {
-      for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
-        // bilinear pairing of q_bk with Z block
-      }      
-    }
-  }
+  // dx = schurComplement^-1 r
+  computeSchurRHS(sdp, constraintIndexTuples, d, Z, dx);
+  solveInplaceWithCholesky(schurComplementCholesky, dx);
+
+  // dX = R_p + sum_p F_p dx_p
+  constraintMatrixWeightedSum(sdp, dx, dX);
+  dX += Rp;
+  
+  // dY = Symmetrize(X^{-1} (Rc - dX Y))
+  blockDiagonalMatrixMultiply(dX, Y, dY);
+  dY -= Rc;
+  blockMatrixSolveWithInverseCholesky(XInvCholesky, dY);
+  dY.symmetrize();
+  dY.scalarMultiply(-1);
 
 }
 
@@ -1089,7 +1173,18 @@ void testSDPSolver() {
 
   cout << solver.S << endl;
   cout << solver.T << endl;
-  cout << solver.schurComplement << endl;
+  cout << "schurComplement: " << solver.schurComplement << endl;
+  cout << "Rc = " << solver.Rc << endl;
+  cout << "d = ";
+  printVector(cout, solver.d);
+  cout << endl;
+  cout << "Rp = " << solver.Rp << endl;
+  cout << "Z = " << solver.Z << endl;
+  cout << "dx = ";
+  printVector(cout, solver.dx);
+  cout << endl;
+  cout << "dX = " << solver.dX << endl;
+  cout << "dY = " << solver.dY << endl;
 }
 
 int main(int argc, char** argv) {
