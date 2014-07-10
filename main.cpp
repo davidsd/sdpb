@@ -1163,6 +1163,39 @@ void SDPSolver::computeSearchDirection() {
 
 }
 
+void printSDPData(const SDP &sdp, const vector<vector<IndexTuple> > &constraintIndexTuples) {
+  BlockDiagonalMatrix F(BlockDiagonalMatrix(sdp.objDimension, sdp.psdMatrixBlockDims()));
+  int p = 0;
+  for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
+    for (vector<IndexTuple>::const_iterator t = constraintIndexTuples[j].begin();
+         t != constraintIndexTuples[j].end();
+         t++) {
+      F.scalarMultiply(0);
+
+      for (int n = 0; n < sdp.polMatrixValues.cols; n++)
+        F.diagonalPart[n] = sdp.polMatrixValues.get(p, n);
+
+      for (vector<int>::const_iterator b = sdp.blocks[j].begin();
+           b != sdp.blocks[j].end();
+           b++) {
+        const int delta = sdp.bilinearBases[*b].rows;
+        const Real *q = &sdp.bilinearBases[*b].elements[(t->k) * delta];
+
+        for (int e = 0; e < delta; e++) {
+          for (int f = 0; f < delta; f++) {
+            F.blocks[*b].set((t->r)*delta + e, (t->s)*delta + f, (*(q+e)) * (*(q+f)));
+          }
+        }
+        F.blocks[*b].symmetrize();
+      }
+
+      cout << "F[" << p << "] = " << F << ";\n";
+
+      p++;
+    }
+  }
+}
+
 void testSDPSolver() {
   const SDP sdp = readBootstrapSDP("test.sdp");
   cout << sdp << endl;
@@ -1171,8 +1204,12 @@ void testSDPSolver() {
   solver.computeSearchDirection();
   cout << "done." << endl;
 
-  cout << solver.S << endl;
-  cout << solver.T << endl;
+  // cout << solver.S << endl;
+  // cout << solver.T << endl;
+  cout << "X = " << solver.X << endl;
+  cout << "Y = " << solver.Y << endl;
+  cout << "mu = " << solver.mu << endl;
+
   cout << "schurComplement: " << solver.schurComplement << endl;
   cout << "Rc = " << solver.Rc << endl;
   cout << "d = ";
@@ -1185,6 +1222,8 @@ void testSDPSolver() {
   cout << endl;
   cout << "dX = " << solver.dX << endl;
   cout << "dY = " << solver.dY << endl;
+
+  printSDPData(sdp, solver.constraintIndexTuples);
 }
 
 int main(int argc, char** argv) {
