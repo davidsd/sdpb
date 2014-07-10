@@ -242,6 +242,7 @@ void solveInplaceWithCholesky(Matrix &ACholesky, vector<Real> &b) {
   int dim = ACholesky.rows;
   assert(ACholesky.cols == dim);
   assert((int) b.size() == dim);
+  cout << "ACholesky = " << ACholesky << "\n";
 
   Rtrsm("Left", "Lower", "NoTranspose", "NonUnitDiagonal",
         dim, 1, 1, &ACholesky.elements[0], dim, &b[0], dim);
@@ -458,17 +459,20 @@ public:
 
 ostream& operator<<(ostream& os, const BlockDiagonalMatrix& A) {
 
-  os << "{";
+  os << "BlockDiagonalMatrix[{";
   for (unsigned int i = 0; i < A.diagonalPart.size(); i++) {
-    os << A.diagonalPart[i] << ", ";
+    os << A.diagonalPart[i];
+    if (i != A.diagonalPart.size() - 1)
+       os << ", ";
   }
+  os << "}, {";
 
   for (unsigned int b = 0; b < A.blocks.size(); b++) {
     os << A.blocks[b];
     if (b < A.blocks.size() - 1)
       os << ", ";
   }
-  os << "}";
+  os << "}]";
   return os;
 }
 
@@ -835,6 +839,7 @@ public:
   Real mu;
   vector<Real> x;
   vector<Real> dx;
+  vector<Real> r;
   vector<Real> d;
   vector<Real> XInvYDiag;
   BlockDiagonalMatrix X;
@@ -860,6 +865,7 @@ public:
     mu(0),
     x(vector<Real>(sdp.numConstraints, 0)),
     dx(x),
+    r(x),
     d(x),
     XInvYDiag(vector<Real>(sdp.objDimension, 0)),
     X(BlockDiagonalMatrix(sdp.objDimension, sdp.psdMatrixBlockDims())),
@@ -1030,6 +1036,7 @@ void addSchurBlocks(const SDP &sdp,
 }
 
 void computeDVector(const SDP &sdp,
+                    const BlockDiagonalMatrix &Y,
                     const BlockDiagonalMatrix &T,
                     const vector<vector<IndexTuple> > &constraintIndexTuples,
                     vector<Real> &d) {
@@ -1050,6 +1057,10 @@ void computeDVector(const SDP &sdp,
         d[p] -= T.blocks[*b].get(mj_s+k, mj_r+k);
       }
       d[p] /= 2;
+
+      for (int n = 0; n < sdp.polMatrixValues.cols; n++)
+        d[p] -= Y.diagonalPart[n] * sdp.polMatrixValues.get(p, n);
+
       d[p] += sdp.affineConstants[p];
     }
   }
@@ -1110,6 +1121,7 @@ void computeSchurRHS(const SDP &sdp,
 
 void SDPSolver::computeSearchDirection() {
 
+  std::fill(x.begin(), x.end(), 1);
   X.setIdentity();
   Y.setIdentity();
   mu = frobeniusProductSymmetric(X, Y)/X.dim;
@@ -1133,7 +1145,7 @@ void SDPSolver::computeSearchDirection() {
   Rc.addIdentity(parameters.beta*mu);
 
   // d_k = c_k - Tr(F_k Y)
-  computeDVector(sdp, T, constraintIndexTuples, d);
+  computeDVector(sdp, Y, T, constraintIndexTuples, d);
 
   // Rp = sum_p F_p x_p - X - F_0
   constraintMatrixWeightedSum(sdp, x, Rp);
@@ -1147,7 +1159,8 @@ void SDPSolver::computeSearchDirection() {
   Z.symmetrize();
 
   // dx = schurComplement^-1 r
-  computeSchurRHS(sdp, constraintIndexTuples, d, Z, dx);
+  computeSchurRHS(sdp, constraintIndexTuples, d, Z, r);
+  dx = r;
   solveInplaceWithCholesky(schurComplementCholesky, dx);
 
   // dX = R_p + sum_p F_p dx_p
@@ -1165,7 +1178,12 @@ void SDPSolver::computeSearchDirection() {
 
 void printSDPData(const SDP &sdp, const vector<vector<IndexTuple> > &constraintIndexTuples) {
   BlockDiagonalMatrix F(BlockDiagonalMatrix(sdp.objDimension, sdp.psdMatrixBlockDims()));
-  int p = 0;
+
+  F.scalarMultiply(0);
+  for (unsigned int n = 0; n < sdp.objective.size(); n++)
+    F.diagonalPart[n] = sdp.objective[n];
+  cout << "F[0] = " << F << ";\n";
+
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     for (vector<IndexTuple>::const_iterator t = constraintIndexTuples[j].begin();
          t != constraintIndexTuples[j].end();
@@ -1173,7 +1191,7 @@ void printSDPData(const SDP &sdp, const vector<vector<IndexTuple> > &constraintI
       F.scalarMultiply(0);
 
       for (int n = 0; n < sdp.polMatrixValues.cols; n++)
-        F.diagonalPart[n] = sdp.polMatrixValues.get(p, n);
+        F.diagonalPart[n] = sdp.polMatrixValues.get(t->p, n);
 
       for (vector<int>::const_iterator b = sdp.blocks[j].begin();
            b != sdp.blocks[j].end();
@@ -1189,11 +1207,18 @@ void printSDPData(const SDP &sdp, const vector<vector<IndexTuple> > &constraintI
         F.blocks[*b].symmetrize();
       }
 
-      cout << "F[" << p << "] = " << F << ";\n";
-
-      p++;
+      cout << "F[" << t->p + 1 << "] = " << F << ";\n";
     }
   }
+
+  cout << "c = {";
+  for (unsigned int q = 0; q < sdp.affineConstants.size(); q++) {
+    cout << sdp.affineConstants[q];
+    if (q != sdp.affineConstants.size() - 1)
+      cout << ", ";
+  }
+  cout << "};\n";
+
 }
 
 void testSDPSolver() {
@@ -1204,24 +1229,31 @@ void testSDPSolver() {
   solver.computeSearchDirection();
   cout << "done." << endl;
 
-  // cout << solver.S << endl;
-  // cout << solver.T << endl;
-  cout << "X = " << solver.X << endl;
-  cout << "Y = " << solver.Y << endl;
-  cout << "mu = " << solver.mu << endl;
+  cout << "X = " << solver.X << ";\n";
+  cout << "Y = " << solver.Y << ";\n";
+  cout << "x = ";
+  printVector(cout, solver.x);
+  cout << ";\n";
+  cout << "mu = " << solver.mu << ";\n";
+  cout << "beta = " << solver.parameters.beta << ";\n";
 
-  cout << "schurComplement: " << solver.schurComplement << endl;
-  cout << "Rc = " << solver.Rc << endl;
+  cout << "S = " << solver.S << endl;
+  cout << "T = " << solver.T << endl;
+  cout << "schurComplement = " << solver.schurComplement << ";\n";
+  cout << "Rc = " << solver.Rc << ";\n";
   cout << "d = ";
   printVector(cout, solver.d);
-  cout << endl;
-  cout << "Rp = " << solver.Rp << endl;
-  cout << "Z = " << solver.Z << endl;
+  cout << ";\n";
+  cout << "r = ";
+  printVector(cout, solver.r);
+  cout << ";\n";
+  cout << "Rp = " << solver.Rp << ";\n";
+  cout << "Z = " << solver.Z << ";\n";
   cout << "dx = ";
   printVector(cout, solver.dx);
-  cout << endl;
-  cout << "dX = " << solver.dX << endl;
-  cout << "dY = " << solver.dY << endl;
+  cout << ";\n";
+  cout << "dX = " << solver.dX << ";\n";
+  cout << "dY = " << solver.dY << ";\n";
 
   printSDPData(sdp, solver.constraintIndexTuples);
 }
