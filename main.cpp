@@ -242,7 +242,6 @@ void solveInplaceWithCholesky(Matrix &ACholesky, vector<Real> &b) {
   int dim = ACholesky.rows;
   assert(ACholesky.cols == dim);
   assert((int) b.size() == dim);
-  cout << "ACholesky = " << ACholesky << "\n";
 
   Rtrsm("Left", "Lower", "NoTranspose", "NonUnitDiagonal",
         dim, 1, 1, &ACholesky.elements[0], dim, &b[0], dim);
@@ -923,13 +922,18 @@ void componentProduct(const vector<Real> &u, const vector<Real> &v, vector<Real>
 }
 
 // result = V D V^T, where D=diag(d) is a diagonal matrix
+// Inputs:
+// - d        : pointer to beginning of a length-V.cols vector
+// - V        : V.rows x V.cols Matrix
+// - blockRow : integer < k
+// - blockCol : integer < k
+// - result   : (k*V.rows) x (k*V.rows) square Matrix
 //
 void diagonalCongruenceTranspose(Real const *d,
                                  const Matrix &V,
                                  const int blockRow,
                                  const int blockCol,
                                  Matrix &result) {
-  int dim = V.cols;
 
   for (int p = 0; p < V.rows; p++) {
     for (int q = 0; q <= p; q++) {
@@ -938,9 +942,9 @@ void diagonalCongruenceTranspose(Real const *d,
       for (int n = 0; n < V.cols; n++)
         tmp += *(d+n) * V.get(p, n)*V.get(q, n);
       
-      result.set(blockRow*dim + p, blockCol*dim + q, tmp);
+      result.set(blockRow*V.rows + p, blockCol*V.rows + q, tmp);
       if (p != q)
-        result.set(blockRow*dim + q, blockCol*dim + p, tmp);
+        result.set(blockRow*V.rows + q, blockCol*V.rows + p, tmp);
     }
   }
 }
@@ -1002,30 +1006,30 @@ void addSchurBlocks(const SDP &sdp,
                     Matrix &schurComplement) {
 
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
-    const int mj = sdp.dimensions[j];
+    const int ej = sdp.degrees[j] + 1;
 
     for (vector<IndexTuple>::const_iterator t1 = constraintIndexTuples[j].begin();
          t1 != constraintIndexTuples[j].end();
          t1++) {
-      const int p1 = t1->p;
-      const int mj_r1 = mj*t1->r;
-      const int mj_s1 = mj*t1->s;
-      const int k1 = t1->k;
+      const int p1    = t1->p;
+      const int ej_r1 = t1->r * ej;
+      const int ej_s1 = t1->s * ej;
+      const int k1    = t1->k;
 
       for (vector<IndexTuple>::const_iterator t2 = constraintIndexTuples[j].begin();
-           t2->p <= t1->p && t2 != constraintIndexTuples[j].end();
+           t2 != constraintIndexTuples[j].end() && t2->p <= t1->p;
            t2++) {
-        const int p2 = t2->p;
-        const int mj_r2 = mj*t2->r;
-        const int mj_s2 = mj*t2->s;
-        const int k2 = t2->k;
+        const int p2    = t2->p;
+        const int ej_r2 = t2->r * ej;
+        const int ej_s2 = t2->s * ej;
+        const int k2    = t2->k;
 
         Real tmp = 0;
         for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
-          tmp += (S.blocks[*b].get(mj_s1 + k1, mj_r2 + k2) * T.blocks[*b].get(mj_s2 + k2, mj_r1 + k1) +
-                  S.blocks[*b].get(mj_r1 + k1, mj_r2 + k2) * T.blocks[*b].get(mj_s2 + k2, mj_s1 + k1) +
-                  S.blocks[*b].get(mj_s1 + k1, mj_s2 + k2) * T.blocks[*b].get(mj_r2 + k2, mj_r1 + k1) +
-                  S.blocks[*b].get(mj_r1 + k1, mj_s2 + k2) * T.blocks[*b].get(mj_r2 + k2, mj_s1 + k1))/4;
+          tmp += (S.blocks[*b].get(ej_s1 + k1, ej_r2 + k2) * T.blocks[*b].get(ej_s2 + k2, ej_r1 + k1) +
+                  S.blocks[*b].get(ej_r1 + k1, ej_r2 + k2) * T.blocks[*b].get(ej_s2 + k2, ej_s1 + k1) +
+                  S.blocks[*b].get(ej_s1 + k1, ej_s2 + k2) * T.blocks[*b].get(ej_r2 + k2, ej_r1 + k1) +
+                  S.blocks[*b].get(ej_r1 + k1, ej_s2 + k2) * T.blocks[*b].get(ej_r2 + k2, ej_s1 + k1))/4;
         }
         schurComplement.addElt(p1, p2, tmp);
         if (p2 != p1)
@@ -1041,20 +1045,20 @@ void computeDVector(const SDP &sdp,
                     const vector<vector<IndexTuple> > &constraintIndexTuples,
                     vector<Real> &d) {
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
-    const int mj = sdp.dimensions[j];
+    const int ej = sdp.degrees[j] +1;
 
     for (vector<IndexTuple>::const_iterator t = constraintIndexTuples[j].begin();
          t != constraintIndexTuples[j].end();
          t++) {
-      const int p = t->p;
-      const int mj_r = mj*t->r;
-      const int mj_s = mj*t->s;
-      const int k = t->k;
+      const int p    = t->p;
+      const int ej_r = t->r * ej;
+      const int ej_s = t->s * ej;
+      const int k    = t->k;
 
       d[p] = 0;
       for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
-        d[p] -= T.blocks[*b].get(mj_r+k, mj_s+k);
-        d[p] -= T.blocks[*b].get(mj_s+k, mj_r+k);
+        d[p] -= T.blocks[*b].get(ej_r+k, ej_s+k);
+        d[p] -= T.blocks[*b].get(ej_s+k, ej_r+k);
       }
       d[p] /= 2;
 
@@ -1221,8 +1225,8 @@ void printSDPData(const SDP &sdp, const vector<vector<IndexTuple> > &constraintI
 
 }
 
-void testSDPSolver() {
-  const SDP sdp = readBootstrapSDP("test.sdp");
+void testSDPSolver(const char *file) {
+  const SDP sdp = readBootstrapSDP(file);
   cout << sdp << endl;
 
   SDPSolver solver(sdp, SolverParameters(0.7));
@@ -1260,9 +1264,11 @@ void testSDPSolver() {
 
 int main(int argc, char** argv) {
 
+  cout.precision(15);
+
   //testBlockCongruence();
   //testBlockDiagonalCholesky();
-  testSDPSolver();
+  testSDPSolver(argv[1]);
 
   return 0;
 }
