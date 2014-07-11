@@ -1126,7 +1126,16 @@ void computeSchurRHS(const SDP &sdp,
 void SDPSolver::computeSearchDirection() {
 
   std::fill(x.begin(), x.end(), 1);
-  X.setIdentity();
+  for (unsigned int b = 0; b < X.blocks.size(); b++) {
+    for (int c = 0; c < X.blocks[b].cols; c++) {
+      for (int r = 0; r <= c; r++) {
+        Real elt = Real(1)/(Real(1)+Real(r) + Real(c));
+        X.blocks[b].set(r, c, elt);
+        X.blocks[b].set(c, r, elt);
+      }
+    }
+  }
+  X.addIdentity(2);
   Y.setIdentity();
   mu = frobeniusProductSymmetric(X, Y)/X.dim;
 
@@ -1264,6 +1273,8 @@ void testSDPSolver(const char *file) {
 
 int main(int argc, char** argv) {
 
+  mpf_set_default_prec(100);
+  cout << "precision = " << mpf_get_default_prec() << endl;
   cout.precision(15);
 
   //testBlockCongruence();
