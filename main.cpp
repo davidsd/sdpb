@@ -27,6 +27,14 @@ void printVector(ostream& os, const vector<T> &v) {
   os << "}";
 }
 
+Real maxAbsVectorElement(const vector<Real> &v) {
+  Real max = abs(v[0]);
+  for (vector<Real>::const_iterator e = v.begin(); e != v.end(); e++)
+    if (abs(*e) > max)
+      max = abs(*e);
+  return max;
+}  
+
 class Matrix {
  public:
   int rows;
@@ -68,11 +76,6 @@ class Matrix {
     addIdentity(1);
   }
 
-  void scalarMultiply(const Real &c) {
-    for (unsigned int i = 0; i < elements.size(); i++)
-      elements[i] *= c;
-  }
-
   void symmetrize() {
     assert(rows == cols);
 
@@ -103,6 +106,15 @@ class Matrix {
       elements[i] -= A.elements[i];
   }
 
+  void operator*=(const Real &c) {
+    for (unsigned int i = 0; i < elements.size(); i++)
+      elements[i] *= c;
+  }
+
+  Real maxAbsElement() const {
+    return maxAbsVectorElement(elements);
+  }
+
   friend ostream& operator<<(ostream& os, const Matrix& a);
 };
 
@@ -123,16 +135,34 @@ ostream& operator<<(ostream& os, const Matrix& a) {
   return os;
 }
 
-void matrixMultiply(Matrix &A, Matrix &B, Matrix &result) {
-  assert(A.cols == B.rows);
+void matrixAdd(const Matrix &A, const Matrix &B, Matrix &result) {
+  assert(A.cols == B.cols);
+  assert(A.rows == B.rows);
+  assert(A.cols == result.cols);
   assert(A.rows == result.rows);
-  assert(B.cols == result.cols);
 
-  Rgemm("N", "N", A.rows, B.cols, A.cols, 1,
+  for (unsigned int i = 0; i < A.elements.size(); i++)
+    result.elements[i] = A.elements[i] + B.elements[i];
+}
+
+// C := alpha*A*B + beta*C
+//
+void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B, Real beta, Matrix &C) {
+  assert(A.cols == B.rows);
+  assert(A.rows == C.rows);
+  assert(B.cols == C.cols);
+
+  Rgemm("N", "N", A.rows, B.cols, A.cols, alpha,
         &A.elements[0], A.rows,
         &B.elements[0], B.rows,
-        0,
-        &result.elements[0], result.rows);
+        beta,
+        &C.elements[0], C.rows);
+}
+
+// C := A*B
+//
+void matrixMultiply(Matrix &A, Matrix &B, Matrix &C) {
+  matrixScaleMultiplyAdd(1, A, B, 0, C);
 }
 
 Real dotProduct(const vector<Real> &u, const vector<Real> v) {
@@ -411,14 +441,6 @@ public:
     addIdentity(1);
   }
 
-  void scalarMultiply(const Real &c) {
-    for (unsigned int i = 0; i < diagonalPart.size(); i++)
-      diagonalPart[i] *= c;
-
-    for (unsigned int b = 0; b < blocks.size(); b++)
-      blocks[b].scalarMultiply(c);
-  }
-
   void addDiagonalPart(const vector<Real> &v, const Real &alpha) {
     for (unsigned int i = 0; i < diagonalPart.size(); i++)
       diagonalPart[i] += alpha*v[i];
@@ -438,6 +460,14 @@ public:
       blocks[b] -= A.blocks[b];
   }
 
+  void operator*=(const Real &c) {
+    for (unsigned int i = 0; i < diagonalPart.size(); i++)
+      diagonalPart[i] *= c;
+
+    for (unsigned int b = 0; b < blocks.size(); b++)
+      blocks[b] *= c;
+  }
+
   void copyFrom(const BlockDiagonalMatrix &A) {
     for (unsigned int i = 0; i < diagonalPart.size(); i++)
       diagonalPart[i] = A.diagonalPart[i];
@@ -451,6 +481,15 @@ public:
       blocks[b].symmetrize();
   }
 
+  Real maxAbsElement() const {
+    Real max = maxAbsVectorElement(diagonalPart);
+    for (vector<Matrix>::const_iterator b = blocks.begin(); b != blocks.end(); b++) {
+      const Real tmp = b->maxAbsElement();
+      if (tmp > max)
+        max = tmp;
+    }
+    return max;
+  }
 
   friend ostream& operator<<(ostream& os, const BlockDiagonalMatrix& A);
 
@@ -485,15 +524,32 @@ Real frobeniusProductSymmetric(const BlockDiagonalMatrix &A,
   return result;
 }
   
+void blockDiagonalMatrixAdd(const BlockDiagonalMatrix &A,
+                            const BlockDiagonalMatrix &B,
+                            BlockDiagonalMatrix &result) {
+  for (unsigned int i = 0; i < A.diagonalPart.size(); i++)
+    result.diagonalPart[i] = A.diagonalPart[i] + B.diagonalPart[i];
+
+  for (unsigned int b = 0; b < A.blocks.size(); b++) 
+    matrixAdd(A.blocks[b], B.blocks[b], result.blocks[b]);
+}
+
+void blockDiagonalMatrixScaleMultiplyAdd(Real alpha,
+                                         BlockDiagonalMatrix &A,
+                                         BlockDiagonalMatrix &B,
+                                         Real beta,
+                                         BlockDiagonalMatrix &C) {
+  for (unsigned int i = 0; i < A.diagonalPart.size(); i++)
+    C.diagonalPart[i] = alpha*A.diagonalPart[i]*B.diagonalPart[i] + beta*C.diagonalPart[i];
+
+  for (unsigned int b = 0; b < A.blocks.size(); b++)
+    matrixScaleMultiplyAdd(alpha, A.blocks[b], B.blocks[b], beta, C.blocks[b]);
+}
 
 void blockDiagonalMatrixMultiply(BlockDiagonalMatrix &A,
                                  BlockDiagonalMatrix &B,
-                                 BlockDiagonalMatrix &result) {
-  for (unsigned int i = 0; i < A.diagonalPart.size(); i++)
-    result.diagonalPart[i] = A.diagonalPart[i] * B.diagonalPart[i];
-
-  for (unsigned int b = 0; b < A.blocks.size(); b++)
-    matrixMultiply(A.blocks[b], B.blocks[b], result.blocks[b]);
+                                 BlockDiagonalMatrix &C) {
+  blockDiagonalMatrixScaleMultiplyAdd(1, A, B, 0, C);
 }
 
 void inverseCholeskyAndInverse(BlockDiagonalMatrix &A,
@@ -826,8 +882,15 @@ public:
 
 class SolverParameters {
 public:
-  Real beta;
-  SolverParameters(const Real &beta): beta(beta) {}
+  Real betaStar;
+  Real betaBar;
+  Real epsilonStar;
+  Real epsilonBar;
+  SolverParameters():
+    betaStar(0.1),
+    betaBar(0.2),
+    epsilonStar(1e-7),
+    epsilonBar(1e-7) {}
 };
 
 class SDPSolver {
@@ -835,7 +898,6 @@ public:
   SDP sdp;
   SolverParameters parameters;
   vector<vector<IndexTuple> > constraintIndexTuples;
-  Real mu;
   vector<Real> x;
   vector<Real> dx;
   vector<Real> r;
@@ -856,12 +918,13 @@ public:
   Matrix schurComplementCholesky;
   // workspace variables
   BlockDiagonalMatrix XInvWorkspace;
+  BlockDiagonalMatrix XPlusDXWorkspace;
+  BlockDiagonalMatrix YPlusDYWorkspace;
   vector<Matrix> bilinearPairingsWorkspace;
 
   SDPSolver(const SDP &sdp, const SolverParameters &parameters):
     sdp(sdp),
     parameters(parameters),
-    mu(0),
     x(vector<Real>(sdp.numConstraints, 0)),
     dx(x),
     r(x),
@@ -880,7 +943,9 @@ public:
     T(S),
     schurComplement(Matrix(sdp.numConstraints, sdp.numConstraints)),
     schurComplementCholesky(schurComplement),
-    XInvWorkspace(X)
+    XInvWorkspace(X),
+    XPlusDXWorkspace(X),
+    YPlusDYWorkspace(X)
   {
     // initialize constraintIndexTuples
     int p = 0;
@@ -902,7 +967,10 @@ public:
       bilinearPairingsWorkspace.push_back(Matrix(X.blocks[b].rows, S.blocks[b].cols));
   }
 
+  void initialize();
   void computeSearchDirection();
+  void computeSchurComplementCholesky();
+  void computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R);
 
 };
 
@@ -1039,11 +1107,11 @@ void addSchurBlocks(const SDP &sdp,
   }
 }
 
-void computeDVector(const SDP &sdp,
-                    const BlockDiagonalMatrix &Y,
-                    const BlockDiagonalMatrix &T,
-                    const vector<vector<IndexTuple> > &constraintIndexTuples,
-                    vector<Real> &d) {
+void computeDualDifferenceVector(const SDP &sdp,
+                                 const BlockDiagonalMatrix &Y,
+                                 const BlockDiagonalMatrix &T,
+                                 const vector<vector<IndexTuple> > &constraintIndexTuples,
+                                 vector<Real> &d) {
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     const int ej = sdp.degrees[j] +1;
 
@@ -1123,7 +1191,7 @@ void computeSchurRHS(const SDP &sdp,
   }
 }
 
-void SDPSolver::computeSearchDirection() {
+void SDPSolver::initialize() {
 
   std::fill(x.begin(), x.end(), 1);
   for (unsigned int b = 0; b < X.blocks.size(); b++) {
@@ -1137,37 +1205,77 @@ void SDPSolver::computeSearchDirection() {
   }
   X.addIdentity(2);
   Y.setIdentity();
-  mu = frobeniusProductSymmetric(X, Y)/X.dim;
+}
 
-  inverseCholeskyAndInverse(X, XInvWorkspace, XInvCholesky, XInv);
-
-  // schurComplement_{pq} = Tr(F_q X^{-1} F_p Y)
-  computeBilinearPairings(XInv, sdp.bilinearBases, bilinearPairingsWorkspace, S);
-  computeBilinearPairings(Y,    sdp.bilinearBases, bilinearPairingsWorkspace, T);
-
-  componentProduct(XInv.diagonalPart, Y.diagonalPart, XInvYDiag);
-
-  diagonalCongruenceTranspose(&XInvYDiag[0], sdp.polMatrixValues, 0, 0, schurComplement);
-  addSchurBlocks(sdp, S, T, constraintIndexTuples, schurComplement);
-
-  choleskyDecomposition(schurComplement, schurComplementCholesky);
-
-  // Rc = beta mu I - X Y
-  blockDiagonalMatrixMultiply(X, Y, Rc);
-  Rc.scalarMultiply(-1);
-  Rc.addIdentity(parameters.beta*mu);
-
-  // d_k = c_k - Tr(F_k Y)
-  computeDVector(sdp, Y, T, constraintIndexTuples, d);
-
-  // Rp = sum_p F_p x_p - X - F_0
+// Rp = sum_p F_p x_p - X - F_0
+//
+void computePrimalDifferenceMatrix(const SDP &sdp,
+                                   const vector<Real> x,
+                                   const BlockDiagonalMatrix &X,
+                                   BlockDiagonalMatrix &Rp) {
   constraintMatrixWeightedSum(sdp, x, Rp);
   Rp -= X;
   Rp.addDiagonalPart(sdp.objective, -1);
+}
 
-  // Z = Symmetrize(X^{-1} (Rp Y - Rc))
+Real primalObjective(const SDP &sdp, const vector<Real> &x) {
+  return dotProduct(sdp.affineConstants, x);
+}
+
+Real dualObjective(const SDP &sdp, const BlockDiagonalMatrix &Y) {
+  return dotProduct(sdp.objective, Y.diagonalPart);
+}
+
+inline Real maxReal(const Real &a, const Real &b) {
+  return (a > b) ? a : b;
+}
+
+Real feasibilityError(const vector<Real> d, const BlockDiagonalMatrix &Rp) {
+  return maxReal(Rp.maxAbsElement(), maxAbsVectorElement(d));
+}
+
+Real dualityGap(const Real &objPrimal, const Real &objDual) {
+  return abs(objPrimal - objDual) / maxReal((abs(objPrimal)+abs(objDual))/2, 1);
+}
+
+Real betaAuxiliary(const BlockDiagonalMatrix &X,
+                   const BlockDiagonalMatrix &dX,
+                   const BlockDiagonalMatrix &Y,
+                   const BlockDiagonalMatrix &dY,
+                   BlockDiagonalMatrix &XPlusDXWorkspace,
+                   BlockDiagonalMatrix &YPlusDYWorkspace) {
+
+  blockDiagonalMatrixAdd(X, dX, XPlusDXWorkspace);
+  blockDiagonalMatrixAdd(Y, dY, YPlusDYWorkspace);
+
+  Real a = frobeniusProductSymmetric(XPlusDXWorkspace, YPlusDYWorkspace);
+  Real b = frobeniusProductSymmetric(X, Y);
+  return (a*a)/(b*b);
+}
+
+Real predictorCenteringParameter(const SolverParameters &params, 
+                                 const Real &feasibilityError) {
+  return (feasibilityError < params.epsilonBar) ? 0 : params.betaBar;
+}
+
+Real correctorCenteringParameter(const SolverParameters &params,
+                                 const Real &betaAux,
+                                 const Real &feasibilityError) {
+  if (betaAux > 1) {
+    return 1;
+  } else {
+    if (feasibilityError < params.epsilonBar)
+      return maxReal(params.betaStar, betaAux);
+    else
+      return maxReal(params.betaBar, betaAux);
+  }
+}
+
+void SDPSolver::computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R) {
+
+  // Z = Symmetrize(X^{-1} (Rp Y - R))
   blockDiagonalMatrixMultiply(Rp, Y, Z);
-  Z -= Rc;
+  Z -= R;
   blockMatrixSolveWithInverseCholesky(XInvCholesky, Z);
   Z.symmetrize();
 
@@ -1180,19 +1288,84 @@ void SDPSolver::computeSearchDirection() {
   constraintMatrixWeightedSum(sdp, dx, dX);
   dX += Rp;
   
-  // dY = Symmetrize(X^{-1} (Rc - dX Y))
+  // dY = Symmetrize(X^{-1} (R - dX Y))
   blockDiagonalMatrixMultiply(dX, Y, dY);
-  dY -= Rc;
+  dY -= R;
   blockMatrixSolveWithInverseCholesky(XInvCholesky, dY);
   dY.symmetrize();
-  dY.scalarMultiply(-1);
+  dY *= -1;
+}
+
+void SDPSolver::computeSchurComplementCholesky() {
+
+  inverseCholeskyAndInverse(X, XInvWorkspace, XInvCholesky, XInv);
+
+  computeBilinearPairings(XInv, sdp.bilinearBases, bilinearPairingsWorkspace, S);
+  computeBilinearPairings(Y,    sdp.bilinearBases, bilinearPairingsWorkspace, T);
+
+  // schurComplement_{pq} = Tr(F_q X^{-1} F_p Y)
+  componentProduct(XInv.diagonalPart, Y.diagonalPart, XInvYDiag);
+
+  diagonalCongruenceTranspose(&XInvYDiag[0], sdp.polMatrixValues, 0, 0, schurComplement);
+  addSchurBlocks(sdp, S, T, constraintIndexTuples, schurComplement);
+
+  choleskyDecomposition(schurComplement, schurComplementCholesky);
+
+}
+
+// R = beta mu I - X Y
+//
+void computePredictorRMatrix(const Real &beta,
+                             const Real &mu,
+                             BlockDiagonalMatrix &X,
+                             BlockDiagonalMatrix &Y,
+                             BlockDiagonalMatrix &R) {
+  blockDiagonalMatrixMultiply(X, Y, R);
+  R *= -1;
+  R.addIdentity(beta*mu);
+}
+
+// R = beta mu I - X Y - dX dY
+//
+void computeCorrectorRMatrix(const Real &beta,
+                             const Real &mu,
+                             BlockDiagonalMatrix &X,
+                             BlockDiagonalMatrix &dX,
+                             BlockDiagonalMatrix &Y,
+                             BlockDiagonalMatrix &dY,
+                             BlockDiagonalMatrix &R) {
+  blockDiagonalMatrixScaleMultiplyAdd(-1, X,  Y,  0, R);
+  blockDiagonalMatrixScaleMultiplyAdd(-1, dX, dY, 1, R);
+  R.addIdentity(beta*mu);
+}
+
+void SDPSolver::computeSearchDirection() {
+  computeSchurComplementCholesky();
+
+  // d_k = c_k - Tr(F_k Y)
+  computeDualDifferenceVector(sdp, Y, T, constraintIndexTuples, d);
+
+  // Rp = sum_p F_p x_p - X - F_0
+  computePrimalDifferenceMatrix(sdp, x, X, Rp);
+
+  Real mu = frobeniusProductSymmetric(X, Y)/X.dim;
+  Real feasErr = feasibilityError(d, Rp);
+
+  Real betaPredictor = predictorCenteringParameter(parameters, feasErr);
+  computePredictorRMatrix(betaPredictor, mu, X, Y, Rc);
+  computeSearchDirectionWithRMatrix(Rc);
+
+  Real betaAux = betaAuxiliary(X, dX, Y, dY, XPlusDXWorkspace, YPlusDYWorkspace);
+  Real betaCorrector = correctorCenteringParameter(parameters, betaAux, feasErr);
+  computeCorrectorRMatrix(betaCorrector, mu, X, dX, Y, dY, Rc);
+  computeSearchDirectionWithRMatrix(Rc);
 
 }
 
 void printSDPData(const SDP &sdp, const vector<vector<IndexTuple> > &constraintIndexTuples) {
   BlockDiagonalMatrix F(BlockDiagonalMatrix(sdp.objDimension, sdp.psdMatrixBlockDims()));
 
-  F.scalarMultiply(0);
+  F *= 0;
   for (unsigned int n = 0; n < sdp.objective.size(); n++)
     F.diagonalPart[n] = sdp.objective[n];
   cout << "F[0] = " << F << ";\n";
@@ -1201,7 +1374,7 @@ void printSDPData(const SDP &sdp, const vector<vector<IndexTuple> > &constraintI
     for (vector<IndexTuple>::const_iterator t = constraintIndexTuples[j].begin();
          t != constraintIndexTuples[j].end();
          t++) {
-      F.scalarMultiply(0);
+      F *= 0;
 
       for (int n = 0; n < sdp.polMatrixValues.cols; n++)
         F.diagonalPart[n] = sdp.polMatrixValues.get(t->p, n);
@@ -1238,8 +1411,10 @@ void testSDPSolver(const char *file) {
   const SDP sdp = readBootstrapSDP(file);
   cout << sdp << endl;
 
-  SDPSolver solver(sdp, SolverParameters(0.7));
+  SDPSolver solver(sdp, SolverParameters());
+  solver.initialize();
   solver.computeSearchDirection();
+
   cout << "done." << endl;
 
   cout << "X = " << solver.X << ";\n";
@@ -1247,8 +1422,6 @@ void testSDPSolver(const char *file) {
   cout << "x = ";
   printVector(cout, solver.x);
   cout << ";\n";
-  cout << "mu = " << solver.mu << ";\n";
-  cout << "beta = " << solver.parameters.beta << ";\n";
 
   cout << "S = " << solver.S << endl;
   cout << "T = " << solver.T << endl;
