@@ -17,34 +17,61 @@ using tinyxml2::XMLDocument;
 using tinyxml2::XMLElement;
 
 template <class T>
-void printVector(ostream& os, const vector<T> &v) {
+ostream& operator<<(ostream& os, const vector<T>& v) {
   os << "{";
-  for (unsigned int i = 0; i < v.size(); i++) {
-    os << v[i];
-    if (i < v.size() - 1)
-      os << ", ";
-  }
+  int last = v.size() - 1;
+  for (int i = 0; i < last; i++)
+    os << v[i] << ", ";
+  if (last > 0)
+    os << v[last];
   os << "}";
+  return os;
 }
 
-Real maxAbsVectorElement(const vector<Real> &v) {
+typedef vector<Real> Vector;
+
+Real maxAbsVectorElement(const Vector &v) {
   Real max = abs(v[0]);
-  for (vector<Real>::const_iterator e = v.begin(); e != v.end(); e++)
+  for (Vector::const_iterator e = v.begin(); e != v.end(); e++)
     if (abs(*e) > max)
       max = abs(*e);
   return max;
 }  
 
+void fillVector(Vector &v, const Real &a) {
+  std::fill(v.begin(), v.end(), a);
+}
+
+void rescaleVector(Vector &v, const Real &a) {
+  for (unsigned int i = 0; i < v.size(); i++)
+    v[i] *= a;
+}
+
+void rescaleVectorInto(const Vector &v, const Real &a, Vector u) {
+  for (unsigned int i = 0; i < v.size(); i++)
+    u[i] = v[i] * a;
+}
+
+// y := alpha*x + beta*y
+//
+void vectorScaleMultiplyAdd(const Real alpha, const Vector &x, const Real beta, Vector &y) {
+  assert(x.size() == y.size());
+  
+  for (unsigned int i = 0; i < x.size(); i++)
+    y[i] = alpha*x[i] + beta*y[i];
+}
+
+
 class Matrix {
  public:
   int rows;
   int cols;
-  vector<Real> elements;
+  Vector elements;
 
   Matrix(int rows = 0, int cols = 0):
     rows(rows),
     cols(cols),
-    elements(vector<Real>(rows*cols, 0)) {}
+    elements(Vector(rows*cols, 0)) {}
 
   inline Real get(int r, int c) const {
     return elements[r + c*rows];
@@ -59,10 +86,10 @@ class Matrix {
   }
 
   void setZero() {
-    std::fill(elements.begin(), elements.end(), 0);
+    fillVector(elements, 0);
   }
 
-  void addIdentity(const Real &c) {
+  void addDiagonal(const Real &c) {
     assert(rows == cols);
 
     for (int i = 0; i < rows; i++)
@@ -73,7 +100,7 @@ class Matrix {
     assert(rows == cols);
 
     setZero();
-    addIdentity(1);
+    addDiagonal(1);
   }
 
   void symmetrize() {
@@ -83,6 +110,17 @@ class Matrix {
       for (int c = 0; c < r; c++) {
         Real tmp = (get(r,c)+get(c,r))/2; 
         set(r, c, tmp);
+        set(c, r, tmp);
+      }
+    }
+  }
+
+  void transpose() {
+    assert (rows == cols);
+    for (int c = 0; c < cols; c++) {
+      for (int r = 0; r < c; r++) {
+        Real tmp = get(r, c);
+        set(r, c, get(c, r));
         set(c, r, tmp);
       }
     }
@@ -165,11 +203,39 @@ void matrixMultiply(Matrix &A, Matrix &B, Matrix &C) {
   matrixScaleMultiplyAdd(1, A, B, 0, C);
 }
 
-Real dotProduct(const vector<Real> &u, const vector<Real> v) {
+Real dotProduct(const Vector &u, const Vector v) {
   Real result = 0;
   for (unsigned int i = 0; i < u.size(); i++)
     result += u[i]*v[i];
   return result;
+}
+
+// y := alpha*A*x + beta*y
+//
+void vectorScaleMatrixMultiplyAdd(Real alpha, Matrix &A, Vector &x, Real beta, Vector &y) {
+  assert(A.cols == (int)x.size());
+  assert(A.rows == (int)y.size());
+
+  Rgemv("NoTranspose",
+        A.rows, A.cols, alpha,
+        &A.elements[0], A.rows,
+        &x[0], (int)x.size(),
+        beta,
+        &y[0], (int)y.size());
+}
+
+void lowerTriangularMatrixTimesVector(Matrix &A, Vector &v) {
+  int dim = A.rows;
+  assert(A.cols == dim);
+  assert((int)v.size() == dim);
+  Rtrmv("Lower", "NoTranspose", "NotUnitDiagonal", dim, &A.elements[0], dim, &v[0], 1);
+}
+
+void lowerTriangularMatrixTransposeTimesVector(Matrix &A, Vector &v) {
+  int dim = A.rows;
+  assert(A.cols == dim);
+  assert((int)v.size() == dim);
+  Rtrmv("Lower", "Transpose", "NotUnitDiagonal", dim, &A.elements[0], dim, &v[0], 1);
 }
 
 Real frobeniusProduct(const Matrix &A, const Matrix &B) {
@@ -286,7 +352,7 @@ void inverseCholesky(Matrix &a, Matrix &work, Matrix &result) {
 // - ACholesky : dim x dim lower triangular matrix, the Cholesky decomposition of a matrix A
 // - b         : vector of length dim (output)
 //
-void solveInplaceWithCholesky(Matrix &ACholesky, vector<Real> &b) {
+void solveInplaceWithCholesky(Matrix &ACholesky, Vector &b) {
   int dim = ACholesky.rows;
   assert(ACholesky.cols == dim);
   assert((int) b.size() == dim);
@@ -426,12 +492,12 @@ void testTensorCongruence() {
 class BlockDiagonalMatrix {
 public:
   int dim;
-  vector<Real> diagonalPart;
+  Vector diagonalPart;
   vector<Matrix> blocks;
 
   BlockDiagonalMatrix(int diagonalSize, const vector<int> &blockSizes):
     dim(diagonalSize),
-    diagonalPart(vector<Real>(diagonalSize, 0)) {
+    diagonalPart(Vector(diagonalSize, 0)) {
 
     for (unsigned int i = 0; i < blockSizes.size(); i++) {
       blocks.push_back(Matrix(blockSizes[i], blockSizes[i]));
@@ -440,26 +506,26 @@ public:
   }
 
   void setZero() {
-    std::fill(diagonalPart.begin(), diagonalPart.end(), 0);
+    fillVector(diagonalPart, 0);
 
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b].setZero();
   }
 
-  void addIdentity(const Real &c) {
+  void addDiagonal(const Real &c) {
     for (unsigned int i = 0; i < diagonalPart.size(); i++)
       diagonalPart[i] += c;
 
     for (unsigned int b = 0; b < blocks.size(); b++)
-      blocks[b].addIdentity(c);
+      blocks[b].addDiagonal(c);
   }
 
   void setIdentity() {
     setZero();
-    addIdentity(1);
+    addDiagonal(1);
   }
 
-  void addDiagonalPart(const vector<Real> &v, const Real &alpha) {
+  void addDiagonalPart(const Vector &v, const Real &alpha) {
     for (unsigned int i = 0; i < diagonalPart.size(); i++)
       diagonalPart[i] += alpha*v[i];
   }
@@ -644,8 +710,8 @@ public:
   int numConstraints;
   int objDimension;
   Matrix polMatrixValues;
-  vector<Real> affineConstants;
-  vector<Real> objective;
+  Vector affineConstants;
+  Vector objective;
   vector<int> dimensions;
   vector<int> degrees;
   vector<vector<int> > blocks;
@@ -670,37 +736,23 @@ public:
 };
 
 ostream& operator<<(ostream& os, const SDP& sdp) {
-  os << "SDP(bilinearBases = ";
-  printVector(os, sdp.bilinearBases);
-  os << ", polMatrixValues = " << sdp.polMatrixValues;
-  os << ", affineConstants = ";
-  printVector(os, sdp.affineConstants);
-  os << ", objective = ";
-  printVector(os, sdp.objective);
-  os << ", dimensions = ";
-  printVector(os, sdp.dimensions);
-  os << ", degrees = ";
-  printVector(os, sdp.degrees);
-  os << ", blocks = ";
-  os << "{";
-  for (vector<vector<int> >::const_iterator b = sdp.blocks.begin();
-       b != sdp.blocks.end();
-       b++) {
-    printVector(os, *b);
-    if (b != sdp.blocks.end() - 1)
-      os << ", ";
-  }
-  os << "}";
-  os << ")";
+  os << "SDP(bilinearBases = " << sdp.bilinearBases
+     << ", polMatrixValues = " << sdp.polMatrixValues
+     << ", affineConstants = " << sdp.affineConstants
+     << ", objective = " << sdp.objective
+     << ", dimensions = " << sdp.dimensions
+     << ", degrees = " << sdp.degrees
+     << ", blocks = " << sdp.blocks
+     << ")";
 
   return os;
 }
 
 class Polynomial {
 public:
-  vector<Real> coeffs;
+  Vector coeffs;
 
-  Polynomial(): coeffs(vector<Real>(1, 0)) {}
+  Polynomial(): coeffs(Vector(1, 0)) {}
 
   int degree() const {
     return coeffs.size() - 1;
@@ -751,14 +803,14 @@ public:
 
 };
 
-vector<Real> naturalNumbers(int n) {
-  vector<Real> xs(n);
+Vector naturalNumbers(int n) {
+  Vector xs(n);
   for (int i = 0; i < n; i++)
     xs[i] = Real(i+1);
   return xs;
 }
 
-Matrix monomialAlgebraBasis(int d1, int d, const vector<Real> &xs, bool halfShift) {
+Matrix monomialAlgebraBasis(int d1, int d, const Vector &xs, bool halfShift) {
   Matrix basisMatrix(d1+1, d+1);
   for (int k = 0; k < d+1; k++) {
     Real x = xs[k];
@@ -775,10 +827,10 @@ Matrix monomialAlgebraBasis(int d1, int d, const vector<Real> &xs, bool halfShif
   return basisMatrix;
 }
 
-SDP bootstrapSDP(const vector<Real> &objective,
-                 const vector<Real> &normalization,
+SDP bootstrapSDP(const Vector &objective,
+                 const Vector &normalization,
                  const vector<PolynomialVectorMatrix> &positiveMatrixPols,
-                 const vector<Real> &xs) {
+                 const Vector &xs) {
   SDP sdp;
   sdp.objective = objective;
 
@@ -801,7 +853,7 @@ SDP bootstrapSDP(const vector<Real> &objective,
   sdp.numConstraints += 1;
 
   sdp.polMatrixValues = Matrix(sdp.numConstraints, sdp.objDimension);
-  sdp.affineConstants = vector<Real>(sdp.numConstraints, 0);
+  sdp.affineConstants = Vector(sdp.numConstraints, 0);
 
   // normalization constraint
   sdp.affineConstants[sdp.numConstraints-1] = 1;
@@ -867,7 +919,7 @@ int parseInt(XMLElement *iXml) {
   return atoi(iXml->GetText());
 }
 
-vector<Real> parseVector(XMLElement *vecXml) {
+Vector parseVector(XMLElement *vecXml) {
   return parseMany("coord", parseReal, vecXml);
 }
 
@@ -933,10 +985,10 @@ public:
   SDP sdp;
   SolverParameters parameters;
   vector<vector<IndexTuple> > constraintIndexTuples;
-  vector<Real> x;
-  vector<Real> dx;
-  vector<Real> dualResidueVec;
-  vector<Real> XInvYDiag;
+  Vector x;
+  Vector dx;
+  Vector dualResidues;
+  Vector XInvYDiag;
   BlockDiagonalMatrix X;
   BlockDiagonalMatrix XInv;
   BlockDiagonalMatrix XInvCholesky;
@@ -945,7 +997,7 @@ public:
   BlockDiagonalMatrix dX;
   BlockDiagonalMatrix dY;
   BlockDiagonalMatrix Rc;
-  BlockDiagonalMatrix Rp;
+  BlockDiagonalMatrix primalResidues;
   BlockDiagonalMatrix bilinearPairingsXInv;
   BlockDiagonalMatrix bilinearPairingsY;
   Matrix schurComplement;
@@ -957,10 +1009,10 @@ public:
   SDPSolver(const SDP &sdp, const SolverParameters &parameters):
     sdp(sdp),
     parameters(parameters),
-    x(vector<Real>(sdp.numConstraints, 0)),
+    x(Vector(sdp.numConstraints, 0)),
     dx(x),
-    dualResidueVec(x),
-    XInvYDiag(vector<Real>(sdp.objDimension, 0)),
+    dualResidues(x),
+    XInvYDiag(Vector(sdp.objDimension, 0)),
     X(BlockDiagonalMatrix(sdp.objDimension, sdp.psdMatrixBlockDims())),
     XInv(X),
     XInvCholesky(X),
@@ -969,7 +1021,7 @@ public:
     dX(X),
     dY(X),
     Rc(X),
-    Rp(X),
+    primalResidues(X),
     bilinearPairingsXInv(BlockDiagonalMatrix(0, sdp.bilinearPairingBlockDims())),
     bilinearPairingsY(bilinearPairingsXInv),
     schurComplement(Matrix(sdp.numConstraints, sdp.numConstraints)),
@@ -1013,7 +1065,7 @@ void computeBilinearPairings(const BlockDiagonalMatrix &A,
            
 // result[i] = u[i] * v[i]
 //                
-void componentProduct(const vector<Real> &u, const vector<Real> &v, vector<Real> &result) {
+void componentProduct(const Vector &u, const Vector &v, Vector &result) {
   for (unsigned int i = 0; i < u.size(); i++)
     result[i] = u[i] * v[i];
 }
@@ -1136,11 +1188,11 @@ void addSchurBlocks(const SDP &sdp,
   }
 }
 
-void computeDualResidueVec(const SDP &sdp,
+void computeDualResidues(const SDP &sdp,
                            const BlockDiagonalMatrix &Y,
                            const BlockDiagonalMatrix &bilinearPairingsY,
                            const vector<vector<IndexTuple> > &constraintIndexTuples,
-                           vector<Real> &dualResidueVec) {
+                           Vector &dualResidues) {
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     const int ej = sdp.degrees[j] +1;
 
@@ -1152,22 +1204,22 @@ void computeDualResidueVec(const SDP &sdp,
       const int ej_s = t->s * ej;
       const int k    = t->k;
 
-      dualResidueVec[p] = 0;
+      dualResidues[p] = 0;
       for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
-        dualResidueVec[p] -= bilinearPairingsY.blocks[*b].get(ej_r+k, ej_s+k);
-        dualResidueVec[p] -= bilinearPairingsY.blocks[*b].get(ej_s+k, ej_r+k);
+        dualResidues[p] -= bilinearPairingsY.blocks[*b].get(ej_r+k, ej_s+k);
+        dualResidues[p] -= bilinearPairingsY.blocks[*b].get(ej_s+k, ej_r+k);
       }
-      dualResidueVec[p] /= 2;
+      dualResidues[p] /= 2;
 
       for (int n = 0; n < sdp.polMatrixValues.cols; n++)
-        dualResidueVec[p] -= Y.diagonalPart[n] * sdp.polMatrixValues.get(p, n);
+        dualResidues[p] -= Y.diagonalPart[n] * sdp.polMatrixValues.get(p, n);
 
-      dualResidueVec[p] += sdp.affineConstants[p];
+      dualResidues[p] += sdp.affineConstants[p];
     }
   }
 }
 
-void constraintMatrixWeightedSum(const SDP &sdp, const vector<Real> x, BlockDiagonalMatrix &result)  {
+void constraintMatrixWeightedSum(const SDP &sdp, const Vector x, BlockDiagonalMatrix &result)  {
 
   for (unsigned int n = 0; n < result.diagonalPart.size(); n++) {
     result.diagonalPart[n] = 0;
@@ -1194,12 +1246,12 @@ void constraintMatrixWeightedSum(const SDP &sdp, const vector<Real> x, BlockDiag
 
 void computeSchurRHS(const SDP &sdp,
                      const vector<vector<IndexTuple> > &constraintIndexTuples,
-                     vector<Real> &dualResidueVec,
+                     Vector &dualResidues,
                      BlockDiagonalMatrix &Z, 
-                     vector<Real> &r) {
+                     Vector &r) {
 
   for (unsigned int p = 0; p < r.size(); p++) {
-    r[p] = -dualResidueVec[p];
+    r[p] = -dualResidues[p];
     for (unsigned int n = 0; n < Z.diagonalPart.size(); n++)
       r[p] -= sdp.polMatrixValues.get(p, n)*Z.diagonalPart[n];
   }
@@ -1232,22 +1284,22 @@ void SDPSolver::initialize() {
       }
     }
   }
-  X.addIdentity(2);
+  X.addDiagonal(2);
   Y.setIdentity();
 }
 
-// Rp = sum_p F_p x_p - X - F_0
+// primalResidues = sum_p F_p x_p - X - F_0
 //
-void computePrimalDifferenceMatrix(const SDP &sdp,
-                                   const vector<Real> x,
-                                   const BlockDiagonalMatrix &X,
-                                   BlockDiagonalMatrix &Rp) {
-  constraintMatrixWeightedSum(sdp, x, Rp);
-  Rp -= X;
-  Rp.addDiagonalPart(sdp.objective, -1);
+void computePrimalResidues(const SDP &sdp,
+                           const Vector x,
+                           const BlockDiagonalMatrix &X,
+                           BlockDiagonalMatrix &primalResidues) {
+  constraintMatrixWeightedSum(sdp, x, primalResidues);
+  primalResidues -= X;
+  primalResidues.addDiagonalPart(sdp.objective, -1);
 }
 
-Real primalObjective(const SDP &sdp, const vector<Real> &x) {
+Real primalObjective(const SDP &sdp, const Vector &x) {
   return dotProduct(sdp.affineConstants, x);
 }
 
@@ -1259,8 +1311,8 @@ inline Real maxReal(const Real &a, const Real &b) {
   return (a > b) ? a : b;
 }
 
-Real feasibilityError(const vector<Real> dualResidueVec, const BlockDiagonalMatrix &Rp) {
-  return maxReal(Rp.maxAbsElement(), maxAbsVectorElement(dualResidueVec));
+Real feasibilityError(const Vector dualResidues, const BlockDiagonalMatrix &primalResidues) {
+  return maxReal(primalResidues.maxAbsElement(), maxAbsVectorElement(dualResidues));
 }
 
 Real dualityGap(const Real &objPrimal, const Real &objDual) {
@@ -1296,19 +1348,19 @@ Real correctorCenteringParameter(const SolverParameters &params,
 
 void SDPSolver::computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R) {
 
-  // Z = Symmetrize(X^{-1} (Rp Y - R))
-  blockDiagonalMatrixMultiply(Rp, Y, Z);
+  // Z = Symmetrize(X^{-1} (primalResidues Y - R))
+  blockDiagonalMatrixMultiply(primalResidues, Y, Z);
   Z -= R;
   blockMatrixSolveWithInverseCholesky(XInvCholesky, Z);
   Z.symmetrize();
 
   // dx = schurComplement^-1 r
-  computeSchurRHS(sdp, constraintIndexTuples, dualResidueVec, Z, dx);
+  computeSchurRHS(sdp, constraintIndexTuples, dualResidues, Z, dx);
   solveInplaceWithCholesky(schurComplementCholesky, dx);
 
   // dX = R_p + sum_p F_p dx_p
   constraintMatrixWeightedSum(sdp, dx, dX);
-  dX += Rp;
+  dX += primalResidues;
   
   // dY = Symmetrize(X^{-1} (R - dX Y))
   blockDiagonalMatrixMultiply(dX, Y, dY);
@@ -1344,7 +1396,7 @@ void computePredictorRMatrix(const Real &beta,
                              BlockDiagonalMatrix &R) {
   blockDiagonalMatrixMultiply(X, Y, R);
   R *= -1;
-  R.addIdentity(beta*mu);
+  R.addDiagonal(beta*mu);
 }
 
 // R = beta mu I - X Y - dX dY
@@ -1358,20 +1410,20 @@ void computeCorrectorRMatrix(const Real &beta,
                              BlockDiagonalMatrix &R) {
   blockDiagonalMatrixScaleMultiplyAdd(-1, X,  Y,  0, R);
   blockDiagonalMatrixScaleMultiplyAdd(-1, dX, dY, 1, R);
-  R.addIdentity(beta*mu);
+  R.addDiagonal(beta*mu);
 }
 
 void SDPSolver::computeSearchDirection() {
   computeSchurComplementCholesky();
 
   // d_k = c_k - Tr(F_k Y)
-  computeDualResidueVec(sdp, Y, bilinearPairingsY, constraintIndexTuples, dualResidueVec);
+  computeDualResidues(sdp, Y, bilinearPairingsY, constraintIndexTuples, dualResidues);
 
-  // Rp = sum_p F_p x_p - X - F_0
-  computePrimalDifferenceMatrix(sdp, x, X, Rp);
+  // primalResidues = sum_p F_p x_p - X - F_0
+  computePrimalResidues(sdp, x, X, primalResidues);
 
   Real mu = frobeniusProductSymmetric(X, Y)/X.dim;
-  Real feasErr = feasibilityError(dualResidueVec, Rp);
+  Real feasErr = feasibilityError(dualResidues, primalResidues);
 
   Real betaPredictor = predictorCenteringParameter(parameters, feasErr);
   computePredictorRMatrix(betaPredictor, mu, X, Y, Rc);
@@ -1381,6 +1433,183 @@ void SDPSolver::computeSearchDirection() {
   computeCorrectorRMatrix(betaCorrector, mu, X, dX, Y, dY, Rc);
   computeSearchDirectionWithRMatrix(Rc);
 
+}
+
+// Minimum eigenvalue of A, via the QR method
+// Inputs:
+// A           : n x n Matrix (will be overwritten)
+// eigenvalues : Vector of length n
+// workSpace   : Vector of lenfth 3*n-1 (temporary workspace)
+//
+Real minEigenvalueViaQR(Matrix &A, Vector &eigenvalues, Vector &workSpace) {
+  assert(A.rows == A.cols);
+  assert((int)eigenvalues.size() == A.rows);
+  assert((int)workSpace.size() == 3*A.rows - 1);
+
+  mpackint info;
+  mpackint workSize = workSpace.size();
+  Rsyev("NoEigenvectors", "LowerTriangular", A.rows, &A.elements[0], A.rows, &eigenvalues[0], &workSpace[0], &workSize, &info);
+  assert(info == 0);
+
+  // Eigenvalues are sorted in ascending order
+  return eigenvalues[0];
+}
+
+// Compute minimum eigenvalue of L X L^T using the Lanczos method.
+// Inputs:
+// L : dim x dim Matrix
+// X : dim x dim Matrix
+// Q : ?   x ?   Matrix
+// out     : dim-length Vector
+// b       : dim-length Vector
+// r       : dim-length Vector
+// q       : dim-length Vector
+// qold    : dim-length Vector
+// w       : dim-length Vector
+// tmp     : dim-length Vector
+// diagVec : dim-length Vector
+// diagVec2: dim-length Vector
+// workVec : dim-length Vector
+//
+Real minEigenvalueViaLanczos(Matrix &L,
+                             Matrix &X,
+                             Matrix &Q,
+                             Vector &out,
+                             Vector &b,
+                             Vector &r,
+                             Vector &q,
+                             Vector &qold,
+                             Vector &w,
+                             Vector &tmp,
+                             Vector &diagVec,
+                             Vector &diagVec2,
+                             Vector &workVec) {
+  Real alpha;
+  Real value;
+  Real min = 1.0e+51;
+  Real min_old = 1.0e+52;
+  Real min_min= 1.0e+50;
+  Real error = 1.0e+10;
+
+  int dim = X.rows;
+  int k = 0;
+  int kk = 0;
+  
+  fillVector(diagVec, min_min);
+  fillVector(diagVec2, 0);
+  fillVector(q, 0);
+  fillVector(r, 1);
+  
+  Real beta = sqrt(Real(dim));  // norm of "r"
+
+  // nakata 2004/12/12
+  while (k < dim
+         && k < sqrt(Real(dim)) + 10
+	 && beta > 1.0e-16
+	 && (abs(min-min_old) > (1.0e-5)*abs(min)+(1.0e-8)
+	     // && (fabs(min-min_old) > (1.0e-3)*fabs(min)+(1.0e-6)
+	     || abs(error*beta) > (1.0e-2)*abs(min)+(1.0e-4) )) {
+    cout << "k = " << k << endl;
+    cout << "kk = " << kk << endl;
+
+    qold = q;
+    value = 1/beta;
+    // q = value*r
+    rescaleVectorInto(r, value, q);
+
+    // w = L X L^T q
+    w = q;
+    // w = L^T q
+    lowerTriangularMatrixTransposeTimesVector(L, w);
+    // tmp = X w
+    vectorScaleMatrixMultiplyAdd(1, X, w, 0, tmp);
+    w = tmp;
+    // w = L tmp
+    lowerTriangularMatrixTimesVector(L, w);
+
+    alpha = dotProduct(q, w);
+    diagVec[k] = alpha;
+
+    // r = w - alpha q - beta qold
+    r = w;
+    vectorScaleMultiplyAdd(-alpha, q, 1, r);
+    vectorScaleMultiplyAdd(-beta, qold, 1, r);
+
+    if ( kk>=sqrt((mpf_class)k) || k==dim-1 || k>sqrt((mpf_class)dim+9) ) {
+      kk = 0;
+      out = diagVec;
+      b = diagVec2;
+
+      out[dim-1] = diagVec[k];
+      b[dim-1] = 0;
+
+      mpackint info;
+      int kp1 = k+1;
+      Rsteqr("I_withEigenvalues", kp1, &out[0], &b[0], &Q.elements[0], Q.rows, &workVec[0], &info);
+      
+      min_old = min;
+      // out have eigen values with ascending order.
+      min = out[0];
+      error = Q.elements[k];
+
+    }
+
+    value = dotProduct(r,r);
+    beta = sqrt(value);
+    diagVec2[k] = beta;
+    ++k;
+    ++kk;
+
+    cout << "beta = " << beta << endl;
+    cout << "value = " << value << endl;
+  }
+
+  return min - abs(error*beta);
+}
+
+void testMinEigenvalueViaLanczos() {
+  int dim = 3;
+
+  Matrix L(dim, dim);
+  Matrix X(dim, dim);
+
+  L.addDiagonal(1);
+  L.set(1,1,2);
+  L.set(2,2,3);
+  X.addDiagonal(3);
+  X.set(1,2,1);
+  X.set(2,1,1);
+
+  Matrix Q(dim, dim);
+  Vector out(dim);
+  Vector b(dim);
+  Vector r(dim);
+  Vector q(dim);
+  Vector qold(dim);
+  Vector w(dim);
+  Vector tmp(dim);
+  Vector diagVec(dim);
+  Vector diagVec2(dim);
+  Vector workVec(dim);
+
+  Real lambda = minEigenvalueViaLanczos(L, X, Q, out, b, r, q, qold, w, tmp, diagVec, diagVec2, workVec);
+  cout << "L = " << L << endl;
+  cout << "X = " << X << endl;
+  cout << "Q = " << Q << endl;
+  cout << "lambda = " << lambda << endl;
+
+  Matrix Y(dim, dim);
+  Matrix Work1(dim, dim);
+  Matrix Work2(dim, dim);
+  Work1 = L;
+  Work1.transpose();
+  matrixMultiply(X, Work1, Work2);
+  matrixMultiply(L, Work2, Y);
+  cout << "Y = " << Y << endl;
+
+  Vector Yeigenvalues(dim);
+  Vector Yworkspace(3*dim-1);
+  cout << "lambdaY = " << minEigenvalueViaQR(Y, Yeigenvalues, Yworkspace) << endl;
 }
 
 void printSDPData(const SDP &sdp, const vector<vector<IndexTuple> > &constraintIndexTuples) {
@@ -1440,22 +1669,15 @@ void testSDPSolver(const char *file) {
 
   cout << "X = " << solver.X << ";\n";
   cout << "Y = " << solver.Y << ";\n";
-  cout << "x = ";
-  printVector(cout, solver.x);
-  cout << ";\n";
-
+  cout << "x = " << solver.x << ";\n";
   cout << "bilinearPairingsXInv = " << solver.bilinearPairingsXInv << endl;
   cout << "bilinearPairingsY = " << solver.bilinearPairingsY << endl;
   cout << "schurComplement = " << solver.schurComplement << ";\n";
   cout << "Rc = " << solver.Rc << ";\n";
-  cout << "dualResidueVec = ";
-  printVector(cout, solver.dualResidueVec);
-  cout << ";\n";
-  cout << "Rp = " << solver.Rp << ";\n";
+  cout << "dualResidues = " << solver.dualResidues << ";\n";
+  cout << "primalResidues = " << solver.primalResidues << ";\n";
   cout << "Z = " << solver.Z << ";\n";
-  cout << "dx = ";
-  printVector(cout, solver.dx);
-  cout << ";\n";
+  cout << "dx = " << solver.dx << ";\n";
   cout << "dX = " << solver.dX << ";\n";
   cout << "dY = " << solver.dY << ";\n";
 
@@ -1471,6 +1693,8 @@ int main(int argc, char** argv) {
   //testBlockCongruence();
   //testBlockDiagonalCholesky();
   testSDPSolver(argv[1]);
+  //testMinEigenvalueViaLanczos();
+  
 
   return 0;
 }
