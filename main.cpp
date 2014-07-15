@@ -174,15 +174,16 @@ ostream& operator<<(ostream& os, const Matrix& a) {
   return os;
 }
 
-void matrixAdd(const Matrix &A, const Matrix &B, Matrix &result) {
-  assert(A.cols == B.cols);
-  assert(A.rows == B.rows);
-  assert(A.cols == result.cols);
-  assert(A.rows == result.rows);
+// result = A + B
+// void matrixAdd(const Matrix &A, const Matrix &B, Matrix &result) {
+//   assert(A.cols == B.cols);
+//   assert(A.rows == B.rows);
+//   assert(A.cols == result.cols);
+//   assert(A.rows == result.rows);
 
-  for (unsigned int i = 0; i < A.elements.size(); i++)
-    result.elements[i] = A.elements[i] + B.elements[i];
-}
+//   for (unsigned int i = 0; i < A.elements.size(); i++)
+//     result.elements[i] = A.elements[i] + B.elements[i];
+// }
 
 // C := alpha*A*B + beta*C
 //
@@ -329,6 +330,7 @@ void choleskyDecomposition(Matrix &a, Matrix &result) {
 
   // The lower-triangular part of result is now our cholesky matrix
   Rpotrf("Lower", dim, resultArray, dim, &info);
+  assert(info == 0);
 
   // Set the upper-triangular part of the result to zero
   for (int j = 0; j < dim; j++)
@@ -369,7 +371,7 @@ void inverseCholesky(Matrix &a, Matrix &work, Matrix &result) {
 // - ACholesky : dim x dim lower triangular matrix, the Cholesky decomposition of a matrix A
 // - b         : vector of length dim (output)
 //
-void solveInplaceWithCholesky(Matrix &ACholesky, Vector &b) {
+void vectorSolveWithCholesky(Matrix &ACholesky, Vector &b) {
   int dim = ACholesky.rows;
   assert(ACholesky.cols == dim);
   assert((int) b.size() == dim);
@@ -1012,12 +1014,16 @@ public:
   Real epsilonStar;
   Real epsilonBar;
   Real gammaStar;
+  Real alphaMax;
+  int maxIterations;
   SolverParameters():
     betaStar(0.1),
     betaBar(0.2),
     epsilonStar(1e-7),
     epsilonBar(1e-7),
-    gammaStar(0.7) {}
+    gammaStar(0.7),
+    alphaMax(100),
+    maxIterations(10) {}
 };
 
 class SDPSolver {
@@ -1098,10 +1104,9 @@ public:
   }
 
   void initialize();
-  void computeSearchDirection();
-  void computeSchurComplementCholesky();
+  void printInfo(Real primalObj, Real dualObj, bool primalFeasible, bool dualFeasible);
+  void run();
   void computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R);
-  std::pair<Real, Real> correctorStepLength(bool primalFeasible, bool dualFeasible);
 
 };
 
@@ -1357,10 +1362,6 @@ Real dualObjective(const SDP &sdp, const BlockDiagonalMatrix &Y) {
   return dotProduct(sdp.objective, Y.diagonalPart);
 }
 
-Real feasibilityError(const Vector dualResidues, const BlockDiagonalMatrix &primalResidues) {
-  return max(primalResidues.maxAbsElement(), maxAbsVectorElement(dualResidues));
-}
-
 // Implements SDPA's DirectionParameter::MehrotraPredictor
 Real predictorCenteringParameter(const SolverParameters &parameters, 
                                  bool primalFeasible,
@@ -1395,48 +1396,6 @@ Real correctorCenteringParameter(const SolverParameters &parameters,
     return max(parameters.betaBar, beta);
 }
 
-void SDPSolver::computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R) {
-
-  // Z = Symmetrize(X^{-1} (primalResidues Y - R))
-  blockDiagonalMatrixMultiply(primalResidues, Y, Z);
-  Z -= R;
-  blockMatrixSolveWithInverseCholesky(XInvCholesky, Z);
-  Z.symmetrize();
-
-  // dx = schurComplement^-1 r
-  computeSchurRHS(sdp, constraintIndexTuples, dualResidues, Z, dx);
-  solveInplaceWithCholesky(schurComplementCholesky, dx);
-
-  // dX = R_p + sum_p F_p dx_p
-  constraintMatrixWeightedSum(sdp, dx, dX);
-  dX += primalResidues;
-  
-  // dY = Symmetrize(X^{-1} (R - dX Y))
-  blockDiagonalMatrixMultiply(dX, Y, dY);
-  dY -= R;
-  blockMatrixSolveWithInverseCholesky(XInvCholesky, dY);
-  dY.symmetrize();
-  dY *= -1;
-}
-
-void SDPSolver::computeSchurComplementCholesky() {
-
-  inverseCholeskyAndInverse(X, XInvWorkspace, XInvCholesky, XInv);
-  inverseCholesky(Y, XInvWorkspace, YInvCholesky);
-
-  computeBilinearPairings(XInv, sdp.bilinearBases, bilinearPairingsWorkspace, bilinearPairingsXInv);
-  computeBilinearPairings(Y,    sdp.bilinearBases, bilinearPairingsWorkspace, bilinearPairingsY);
-
-  // schurComplement_{pq} = Tr(F_q X^{-1} F_p Y)
-  componentProduct(XInv.diagonalPart, Y.diagonalPart, XInvYDiag);
-
-  diagonalCongruence(&XInvYDiag[0], sdp.polMatrixValues, 0, 0, schurComplement);
-  addSchurBlocks(sdp, bilinearPairingsXInv, bilinearPairingsY, constraintIndexTuples, schurComplement);
-
-  choleskyDecomposition(schurComplement, schurComplementCholesky);
-
-}
-
 // R = beta mu I - X Y
 //
 void computePredictorRMatrix(const Real &beta,
@@ -1461,31 +1420,6 @@ void computeCorrectorRMatrix(const Real &beta,
   blockDiagonalMatrixScaleMultiplyAdd(-1, X,  Y,  0, R);
   blockDiagonalMatrixScaleMultiplyAdd(-1, dX, dY, 1, R);
   R.addDiagonal(beta*mu);
-}
-
-void SDPSolver::computeSearchDirection() {
-  computeSchurComplementCholesky();
-
-  // d_k = c_k - Tr(F_k Y)
-  computeDualResidues(sdp, Y, bilinearPairingsY, constraintIndexTuples, dualResidues);
-
-  // primalResidues = sum_p F_p x_p - X - F_0
-  computePrimalResidues(sdp, x, X, primalResidues);
-
-  Real mu = frobeniusProductSymmetric(X, Y)/X.dim;
-  bool primalFeasible = primalResidues.maxAbsElement()    < parameters.epsilonBar;
-  bool dualFeasible   = maxAbsVectorElement(dualResidues) < parameters.epsilonBar;
-  bool reductionSwitch = false;
-  //Real feasErr = feasibilityError(dualResidues, primalResidues);
-
-  Real betaPredictor = predictorCenteringParameter(parameters, primalFeasible, dualFeasible, reductionSwitch);
-  computePredictorRMatrix(betaPredictor, mu, X, Y, Rc);
-  computeSearchDirectionWithRMatrix(Rc);
-
-  Real betaCorrector = correctorCenteringParameter(parameters, X, dX, Y, dY, mu, primalFeasible, dualFeasible);
-  computeCorrectorRMatrix(betaCorrector, mu, X, dX, Y, dY, Rc);
-  computeSearchDirectionWithRMatrix(Rc);
-
 }
 
 // Minimum eigenvalue of A, via the QR method
@@ -1533,77 +1467,142 @@ Real stepLength(BlockDiagonalMatrix &XInvCholesky,
                 BlockDiagonalMatrix &XInvDX,
                 vector<Vector> &eigenvalues,
                 vector<Vector> &workspace,
-                const Real &alphaMax) {
+                const SolverParameters &parameters,
+                const bool feasible) {
 
   // XInvDX = L^{-1} dX L^{-1 T}, where X = L L^T
   XInvDX.copyFrom(dX);
   blockDiagonalMatrixLowerTriangularCongruence(XInvDX, XInvCholesky);
 
   Real lambda = minEigenvalueViaQR(XInvDX, eigenvalues, workspace);
-  if (lambda > -1/alphaMax)
-    return alphaMax;
-  else
-    return -1/lambda;
+  Real alpha = (lambda > -1/parameters.alphaMax) ? parameters.alphaMax : -1/lambda;
+  alpha *= parameters.gammaStar;
+  if (!feasible)
+    alpha = min(alpha, Real(1));
+  return alpha;
 }
 
-enum SolverPhase {
-  noINFO,
-  dFEAS,
-  pFEAS,
-  pdFEAS,
-  pdINF,
-  pdOPT
-};
+void computeSchurComplementCholesky(const BlockDiagonalMatrix &XInv,
+                                    const BlockDiagonalMatrix &bilinearPairingsXInv,
+                                    const BlockDiagonalMatrix &Y,
+                                    const BlockDiagonalMatrix &bilinearPairingsY,
+                                    const SDP &sdp,
+                                    const vector<vector<IndexTuple> > &constraintIndexTuples,
+                                    Vector &XInvYDiag,
+                                    Matrix &schurComplement,
+                                    Matrix &schurComplementCholesky) {
 
-std::pair<Real, Real> SDPSolver::correctorStepLength(bool primalFeasible,
-                                                     bool dualFeasible) {
+  // schurComplement_{pq} = Tr(F_q X^{-1} F_p Y)
+  componentProduct(XInv.diagonalPart, Y.diagonalPart, XInvYDiag);
 
-  Real alphaMax = 100;
+  diagonalCongruence(&XInvYDiag[0], sdp.polMatrixValues, 0, 0, schurComplement);
+  addSchurBlocks(sdp, bilinearPairingsXInv, bilinearPairingsY, constraintIndexTuples, schurComplement);
 
-  Real primal = parameters.gammaStar * stepLength(XInvCholesky, dX, StepMatrixWorkspace,
-                                                  eigenvaluesWorkspace, QRWorkspace, alphaMax);
-  Real dual   = parameters.gammaStar * stepLength(YInvCholesky, dY, StepMatrixWorkspace,
-                                                  eigenvaluesWorkspace, QRWorkspace, alphaMax);
+  choleskyDecomposition(schurComplement, schurComplementCholesky);
 
-  // if (!primalFeasible) {
-  //   if (primal > 1)
-  //     primal = 1;
-  // } else {
-  //   // when primal is feasible,
-  //   // check stepP1 is effective or not.
-  //   Real incPrimalObj = dotProduct(sdp.affineConstants, dx);
-  //   mpf_class incPrimalObj;
-  //   Lal::let(incPrimalObj,'=',C,'.',newton.DxMat);
-  //   if (incPrimalObj>0.0) {
-  //     if (primal>dual) {
-  //       primal = dual;
-  //     }
-  //     if (primal>1.0) {
-  //       primal = 1.0;
-  //     }
-  //   }
-  // }
-  // if (!dualFeasible) {
-  //   if (dual > 1)
-  //     dual = 1;
-  // } else {
-  //   // when dual is feasible
-  //   // check stepD1 is effective or not.
-  //   Real incDualObj = dotProduct(sdp.objective, dY.diagonalPart);
-  //   mpf_class incDualObj;
-  //   Lal::let(incDualObj,'=',b,'.',newton.DyVec);
-  //   if(incDualObj<0.0) {
-  //     if (dual>primal) {
-  //       dual = primal;
-  //     }
-  //     if (dual>1.0) {
-  //       dual = 1.0;
-  //     }
-  //   }
-  // }
+}
 
-  return pair<Real, Real>(primal, dual);
+void SDPSolver::printInfo(Real primalObj,
+                          Real dualObj,
+                          bool primalFeasible,
+                          bool dualFeasible) {
+  cout << "---------------------------------------" << endl;
+  cout << "primalObjective = " << primalObj << endl;
+  cout << "dualObjective   = " << dualObj << endl;
+  cout << "primalFeasible  = " << (primalFeasible ? "true" : "false") << endl;
+  cout << "dualFeasible    = " << (dualFeasible ? "true" : "false") << endl;
+}
+
+void SDPSolver::computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R) {
+
+  // Z = Symmetrize(X^{-1} (primalResidues Y - R))
+  blockDiagonalMatrixMultiply(primalResidues, Y, Z);
+  Z -= R;
+  blockMatrixSolveWithInverseCholesky(XInvCholesky, Z);
+  Z.symmetrize();
+
+  // dx = schurComplement^-1 r
+  computeSchurRHS(sdp, constraintIndexTuples, dualResidues, Z, dx);
+  vectorSolveWithCholesky(schurComplementCholesky, dx);
+
+  // dX = R_p + sum_p F_p dx_p
+  constraintMatrixWeightedSum(sdp, dx, dX);
+  dX += primalResidues;
   
+  // dY = Symmetrize(X^{-1} (R - dX Y))
+  blockDiagonalMatrixMultiply(dX, Y, dY);
+  dY -= R;
+  blockMatrixSolveWithInverseCholesky(XInvCholesky, dY);
+  dY.symmetrize();
+  dY *= -1;
+}
+
+Real dualityGap(Real p, Real d) {
+  Real t = (abs(p) + abs(d))/2;
+  return abs(p - d) / max(t, Real(1));
+}
+
+void SDPSolver::run() {
+  for (int iteration = 1; iteration <= parameters.maxIterations; iteration++) {
+    inverseCholeskyAndInverse(X, XInvWorkspace, XInvCholesky, XInv);
+    inverseCholesky(Y, XInvWorkspace, YInvCholesky);
+
+    computeBilinearPairings(XInv, sdp.bilinearBases, bilinearPairingsWorkspace, bilinearPairingsXInv);
+    computeBilinearPairings(Y,    sdp.bilinearBases, bilinearPairingsWorkspace, bilinearPairingsY);
+
+    // d_k = c_k - Tr(F_k Y)
+    computeDualResidues(sdp, Y, bilinearPairingsY, constraintIndexTuples, dualResidues);
+
+    // primalResidues = sum_p F_p x_p - X - F_0
+    computePrimalResidues(sdp, x, X, primalResidues);
+
+    bool primalFeasible = primalResidues.maxAbsElement()    < parameters.epsilonBar;
+    bool dualFeasible   = maxAbsVectorElement(dualResidues) < parameters.epsilonBar;
+    Real primalObj      = primalObjective(sdp, x);
+    Real dualObj        = dualObjective(sdp, Y);
+    bool optimal        = dualityGap(primalObj, dualObj) < parameters.epsilonStar;
+
+    bool reductionSwitch = false;
+
+    if (primalFeasible && dualFeasible && optimal)
+      return;
+
+    if (iteration % 1 == 0)
+      printInfo(primalObj, dualObj, primalFeasible, dualFeasible);
+
+    computeSchurComplementCholesky(XInv, bilinearPairingsXInv,
+                                   Y,    bilinearPairingsY,
+                                   sdp, constraintIndexTuples, XInvYDiag,
+                                   schurComplement,
+                                   schurComplementCholesky);
+
+    Real mu = frobeniusProductSymmetric(X, Y)/X.dim;
+
+    // Mehrotra predictor solution for (dx, dX, dY)
+    Real betaPredictor = predictorCenteringParameter(parameters, primalFeasible, dualFeasible, reductionSwitch);
+    computePredictorRMatrix(betaPredictor, mu, X, Y, Rc);
+    computeSearchDirectionWithRMatrix(Rc);
+
+    // Mehrotra corrector solution for (dx, dX, dY)
+    Real betaCorrector = correctorCenteringParameter(parameters, X, dX, Y, dY, mu, primalFeasible, dualFeasible);
+    computeCorrectorRMatrix(betaCorrector, mu, X, dX, Y, dY, Rc);
+    computeSearchDirectionWithRMatrix(Rc);
+
+    // Step length to preserve positive definiteness
+    Real alphaPrimal = stepLength(XInvCholesky, dX, StepMatrixWorkspace,
+                                  eigenvaluesWorkspace, QRWorkspace,
+                                  parameters, primalFeasible);
+    Real alphaDual   = stepLength(YInvCholesky, dY, StepMatrixWorkspace,
+                                  eigenvaluesWorkspace, QRWorkspace,
+                                  parameters, dualFeasible);
+
+    // Update current point
+    vectorScaleMultiplyAdd(alphaPrimal, dx, 1, x);  
+    dX *= alphaPrimal;
+    X += dX;
+    dY *= alphaDual;
+    Y += dY;
+  }
 }
 
 // Compute minimum eigenvalue of L X L^T using the Lanczos method.
@@ -1809,25 +1808,25 @@ void testSDPSolver(const char *file) {
 
   SDPSolver solver(sdp, SolverParameters());
   solver.initialize();
-  solver.computeSearchDirection();
+  solver.run();
 
   cout << "done." << endl;
 
-  cout << "X = " << solver.X << ";\n";
-  cout << "Y = " << solver.Y << ";\n";
-  cout << "x = " << solver.x << ";\n";
-  cout << "bilinearPairingsXInv = " << solver.bilinearPairingsXInv << endl;
-  cout << "bilinearPairingsY = " << solver.bilinearPairingsY << endl;
-  cout << "schurComplement = " << solver.schurComplement << ";\n";
-  cout << "Rc = " << solver.Rc << ";\n";
-  cout << "dualResidues = " << solver.dualResidues << ";\n";
-  cout << "primalResidues = " << solver.primalResidues << ";\n";
-  cout << "Z = " << solver.Z << ";\n";
-  cout << "dx = " << solver.dx << ";\n";
-  cout << "dX = " << solver.dX << ";\n";
-  cout << "dY = " << solver.dY << ";\n";
+  // cout << "X = " << solver.X << ";\n";
+  // cout << "Y = " << solver.Y << ";\n";
+  // cout << "x = " << solver.x << ";\n";
+  // cout << "bilinearPairingsXInv = " << solver.bilinearPairingsXInv << endl;
+  // cout << "bilinearPairingsY = " << solver.bilinearPairingsY << endl;
+  // cout << "schurComplement = " << solver.schurComplement << ";\n";
+  // cout << "Rc = " << solver.Rc << ";\n";
+  // cout << "dualResidues = " << solver.dualResidues << ";\n";
+  // cout << "primalResidues = " << solver.primalResidues << ";\n";
+  // cout << "Z = " << solver.Z << ";\n";
+  // cout << "dx = " << solver.dx << ";\n";
+  // cout << "dX = " << solver.dX << ";\n";
+  // cout << "dY = " << solver.dY << ";\n";
 
-  printSDPData(sdp, solver.constraintIndexTuples);
+  // printSDPData(sdp, solver.constraintIndexTuples);
 }
 
 int main(int argc, char** argv) {
@@ -1839,7 +1838,7 @@ int main(int argc, char** argv) {
   //testBlockCongruence();
   //testBlockDiagonalCholesky();
   testSDPSolver(argv[1]);
-  testMinEigenvalue();
+  //testMinEigenvalue();
   
 
   return 0;
