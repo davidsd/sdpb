@@ -1,5 +1,6 @@
 #include <iterator>
 #include <iostream>
+#include <fstream>
 #include <ostream>
 #include <vector>
 #include <assert.h>
@@ -13,6 +14,7 @@ using std::ostream;
 using std::max;
 using std::min;
 using std::pair;
+using std::ofstream;
 
 using tinyxml2::XMLDocument;
 using tinyxml2::XMLElement;
@@ -603,7 +605,7 @@ public:
 
 ostream& operator<<(ostream& os, const BlockDiagonalMatrix& A) {
 
-  os << "BlockDiagonalMatrix[{";
+  os << "{{";
   for (unsigned int i = 0; i < A.diagonalPart.size(); i++) {
     os << A.diagonalPart[i];
     if (i != A.diagonalPart.size() - 1)
@@ -616,7 +618,7 @@ ostream& operator<<(ostream& os, const BlockDiagonalMatrix& A) {
     if (b < A.blocks.size() - 1)
       os << ", ";
   }
-  os << "}]";
+  os << "}}";
   return os;
 }
 
@@ -1012,17 +1014,19 @@ public:
   Real betaStar;
   Real betaBar;
   Real epsilonStar;
-  Real epsilonBar;
+  Real epsilonDash;
   Real gammaStar;
   Real alphaMax;
+  Real lambdaStar;
   int maxIterations;
   SolverParameters():
     betaStar(0.1),
     betaBar(0.2),
     epsilonStar(1e-7),
-    epsilonBar(1e-7),
+    epsilonDash(1e-7),
     gammaStar(0.7),
     alphaMax(100),
+    lambdaStar(1000),
     maxIterations(10) {}
 };
 
@@ -1104,7 +1108,6 @@ public:
   }
 
   void initialize();
-  void printInfo(Real primalObj, Real dualObj, bool primalFeasible, bool dualFeasible);
   void run();
   void computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R);
 
@@ -1328,19 +1331,11 @@ void computeSchurRHS(const SDP &sdp,
 }
 
 void SDPSolver::initialize() {
-
-  std::fill(x.begin(), x.end(), 1);
-  for (unsigned int b = 0; b < X.blocks.size(); b++) {
-    for (int c = 0; c < X.blocks[b].cols; c++) {
-      for (int r = 0; r <= c; r++) {
-        Real elt = Real(1)/(Real(1)+Real(r) + Real(c));
-        X.blocks[b].set(r, c, elt);
-        X.blocks[b].set(c, r, elt);
-      }
-    }
-  }
-  X.addDiagonal(2);
-  Y.setIdentity();
+  fillVector(x, 0);
+  X.setZero();
+  X.addDiagonal(parameters.lambdaStar);
+  Y.setZero();
+  Y.addDiagonal(parameters.lambdaStar);
 }
 
 // primalResidues = sum_p F_p x_p - X - F_0
@@ -1502,15 +1497,21 @@ void computeSchurComplementCholesky(const BlockDiagonalMatrix &XInv,
 
 }
 
-void SDPSolver::printInfo(Real primalObj,
-                          Real dualObj,
-                          bool primalFeasible,
-                          bool dualFeasible) {
+void printInfo(Real mu,
+               Real primalObj,
+               Real dualObj,
+               bool primalFeasible,
+               bool dualFeasible,
+               Real alphaPrimal,
+               Real alphaDual) {
   cout << "---------------------------------------" << endl;
+  cout << "mu              = " << mu << endl;
   cout << "primalObjective = " << primalObj << endl;
   cout << "dualObjective   = " << dualObj << endl;
   cout << "primalFeasible  = " << (primalFeasible ? "true" : "false") << endl;
   cout << "dualFeasible    = " << (dualFeasible ? "true" : "false") << endl;
+  cout << "alphaPrimal     = " << alphaPrimal << endl;
+  cout << "alphaDual       = " << alphaDual << endl;
 }
 
 void SDPSolver::computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R) {
@@ -1556,8 +1557,8 @@ void SDPSolver::run() {
     // primalResidues = sum_p F_p x_p - X - F_0
     computePrimalResidues(sdp, x, X, primalResidues);
 
-    bool primalFeasible = primalResidues.maxAbsElement()    < parameters.epsilonBar;
-    bool dualFeasible   = maxAbsVectorElement(dualResidues) < parameters.epsilonBar;
+    bool primalFeasible = primalResidues.maxAbsElement()    < parameters.epsilonDash;
+    bool dualFeasible   = maxAbsVectorElement(dualResidues) < parameters.epsilonDash;
     Real primalObj      = primalObjective(sdp, x);
     Real dualObj        = dualObjective(sdp, Y);
     bool optimal        = dualityGap(primalObj, dualObj) < parameters.epsilonStar;
@@ -1566,9 +1567,6 @@ void SDPSolver::run() {
 
     if (primalFeasible && dualFeasible && optimal)
       return;
-
-    if (iteration % 1 == 0)
-      printInfo(primalObj, dualObj, primalFeasible, dualFeasible);
 
     computeSchurComplementCholesky(XInv, bilinearPairingsXInv,
                                    Y,    bilinearPairingsY,
@@ -1602,6 +1600,9 @@ void SDPSolver::run() {
     X += dX;
     dY *= alphaDual;
     Y += dY;
+
+    if (iteration % 1 == 0)
+      printInfo(mu, primalObj, dualObj, primalFeasible, dualFeasible, alphaPrimal, alphaDual);
   }
 }
 
@@ -1764,13 +1765,23 @@ void testMinEigenvalue() {
   cout << "lambdaY = " << minEigenvalueViaQR(Y, Yeigenvalues, Yworkspace) << endl;
 }
 
-void printSDPData(const SDP &sdp, const vector<vector<IndexTuple> > &constraintIndexTuples) {
+void printSDPDenseFormat(ostream& os, const SDP &sdp, const vector<vector<IndexTuple> > &constraintIndexTuples) {
   BlockDiagonalMatrix F(BlockDiagonalMatrix(sdp.objDimension, sdp.psdMatrixBlockDims()));
+
+  os << "* SDP dense format" << endl;
+  os << sdp.affineConstants.size() << " = mDIM" << endl;
+  os << F.blocks.size() + 1 << " = nBLOCK" << endl;
+  os << "{-" << F.diagonalPart.size();
+  for (unsigned int b = 0; b < F.blocks.size(); b++)
+    os << ", " << F.blocks[b].rows;
+  os << "} = bLOCKsTRUCT" << endl;
+
+  os << sdp.affineConstants << endl;
 
   F *= 0;
   for (unsigned int n = 0; n < sdp.objective.size(); n++)
     F.diagonalPart[n] = sdp.objective[n];
-  cout << "F[0] = " << F << ";\n";
+  os << F << endl;
 
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     for (vector<IndexTuple>::const_iterator t = constraintIndexTuples[j].begin();
@@ -1795,11 +1806,10 @@ void printSDPData(const SDP &sdp, const vector<vector<IndexTuple> > &constraintI
         F.blocks[*b].symmetrize();
       }
 
-      cout << "F[" << t->p + 1 << "] = " << F << ";\n";
+      os << F << endl;
     }
   }
 
-  cout << "c = " << sdp.affineConstants << ";\n";
 }
 
 void testSDPSolver(const char *file) {
@@ -1826,7 +1836,10 @@ void testSDPSolver(const char *file) {
   // cout << "dX = " << solver.dX << ";\n";
   // cout << "dY = " << solver.dY << ";\n";
 
-  // printSDPData(sdp, solver.constraintIndexTuples);
+  ofstream datfile;
+  datfile.open("sdp.dat");
+  printSDPDenseFormat(datfile, sdp, solver.constraintIndexTuples);
+  datfile.close();
 }
 
 int main(int argc, char** argv) {
