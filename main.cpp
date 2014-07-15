@@ -1357,22 +1357,9 @@ Real dualObjective(const SDP &sdp, const BlockDiagonalMatrix &Y) {
   return dotProduct(sdp.objective, Y.diagonalPart);
 }
 
-inline Real maxReal(const Real &a, const Real &b) {
-  return (a > b) ? a : b;
-}
-
-inline Real minReal(const Real &a, const Real &b) {
-  return (a < b) ? a : b;
-}
-
 Real feasibilityError(const Vector dualResidues, const BlockDiagonalMatrix &primalResidues) {
-  return maxReal(primalResidues.maxAbsElement(), maxAbsVectorElement(dualResidues));
+  return max(primalResidues.maxAbsElement(), maxAbsVectorElement(dualResidues));
 }
-
-Real dualityGap(const Real &objPrimal, const Real &objDual) {
-  return abs(objPrimal - objDual) / maxReal((abs(objPrimal)+abs(objDual))/2, 1);
-}
-
 
 // Implements SDPA's DirectionParameter::MehrotraPredictor
 Real predictorCenteringParameter(const SolverParameters &parameters, 
@@ -1397,17 +1384,15 @@ Real correctorCenteringParameter(const SolverParameters &parameters,
                                  bool primalFeasible,
                                  bool dualFeasible) {
 
-  Real beta = frobeniusProductOfSums(X, dX, Y, dY) * X.dim / mu;
+  Real beta = frobeniusProductOfSums(X, dX, Y, dY) / (mu * X.dim);
 
   if (beta < 1)
     beta *= beta;
 
   if (primalFeasible && dualFeasible)
-    beta = minReal(maxReal(parameters.betaStar, beta), 1);
+    return min(max(parameters.betaStar, beta), Real(1));
   else
-    beta = maxReal(parameters.betaBar, beta);
-
-  return beta;
+    return max(parameters.betaBar, beta);
 }
 
 void SDPSolver::computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R) {
@@ -1533,14 +1518,14 @@ Real minEigenvalueViaQR(BlockDiagonalMatrix &A, vector<Vector> &eigenvalues, vec
   assert(A.blocks.size() == eigenvalues.size());
   assert(A.blocks.size() == workspace.size());
 
-  Real min = Infinity;
+  Real lambdaMin = Infinity;
   for (unsigned int i = 0; i < A.diagonalPart.size(); i++)
-    min = minReal(min, A.diagonalPart[i]);
+    lambdaMin = min(lambdaMin, A.diagonalPart[i]);
 
   for (unsigned int b = 0; b < A.blocks.size(); b++)
-    min = minReal(min, minEigenvalueViaQR(A.blocks[b], eigenvalues[b], workspace[b]));
+    lambdaMin = min(lambdaMin, minEigenvalueViaQR(A.blocks[b], eigenvalues[b], workspace[b]));
 
-  return min;
+  return lambdaMin;
 }
 
 Real stepLength(BlockDiagonalMatrix &XInvCholesky,
