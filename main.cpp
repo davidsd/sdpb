@@ -35,11 +35,18 @@ ostream& operator<<(ostream& os, const vector<T>& v) {
 
 typedef vector<Real> Vector;
 
+Real totalVector(const Vector &v) {
+  Real total = 0;
+  for (Vector::const_iterator x = v.begin(); x != v.end(); x++)
+    total += *x;
+  return total;
+}
+
 Real maxAbsVectorElement(const Vector &v) {
   Real max = abs(v[0]);
-  for (Vector::const_iterator e = v.begin(); e != v.end(); e++)
-    if (abs(*e) > max)
-      max = abs(*e);
+  for (Vector::const_iterator x = v.begin(); x != v.end(); x++)
+    if (abs(*x) > max)
+      max = abs(*x);
   return max;
 }  
 
@@ -127,6 +134,11 @@ class Matrix {
         set(c, r, tmp);
       }
     }
+  }
+
+  void addColumn() {
+    cols += 1;
+    elements.resize(rows*cols);
   }
 
   void copyFrom(const Matrix &A) {
@@ -750,7 +762,6 @@ class SDP {
 public:
   vector<Matrix> bilinearBases;
   int numConstraints;
-  int objDimension;
   Matrix polMatrixValues;
   Vector affineConstants;
   Vector objective;
@@ -869,6 +880,17 @@ Matrix monomialAlgebraBasis(int d1, int d, const Vector &xs, bool halfShift) {
   return basisMatrix;
 }
 
+void addSlack(SDP &sdp) {
+  sdp.polMatrixValues.addColumn();
+  for (int r = 0; r < sdp.polMatrixValues.rows; r++) {
+    Real total = 0;
+    for (int c = 0; c < sdp.polMatrixValues.cols - 1; c++)
+      total += sdp.polMatrixValues.get(r, c);
+    sdp.polMatrixValues.set(r, sdp.polMatrixValues.cols - 1, -total);
+  }
+  sdp.objective.push_back(-totalVector(sdp.objective));
+}
+
 SDP bootstrapSDP(const Vector &objective,
                  const Vector &normalization,
                  const vector<PolynomialVectorMatrix> &positiveMatrixPols,
@@ -876,7 +898,6 @@ SDP bootstrapSDP(const Vector &objective,
   SDP sdp;
   sdp.objective = objective;
 
-  sdp.objDimension = objective.size();
   sdp.numConstraints = 0;
   for (vector<PolynomialVectorMatrix>::const_iterator m = positiveMatrixPols.begin();
        m != positiveMatrixPols.end();
@@ -894,7 +915,7 @@ SDP bootstrapSDP(const Vector &objective,
   sdp.degrees.push_back(0);
   sdp.numConstraints += 1;
 
-  sdp.polMatrixValues = Matrix(sdp.numConstraints, sdp.objDimension);
+  sdp.polMatrixValues = Matrix(sdp.numConstraints, sdp.objective.size());
   sdp.affineConstants = Vector(sdp.numConstraints, 0);
 
   // normalization constraint
@@ -925,8 +946,8 @@ SDP bootstrapSDP(const Vector &objective,
       for (int r = 0; r <= s; r++) {
         for (int k = 0; k <= degree; k++, p++) {
           const Real xk = xs[k];
-          for (int n = 0; n < sdp.objDimension; n++)
-            sdp.polMatrixValues.set(p, n, (*m->get(r,s))[n](xk));
+          for (unsigned int n = 0; n < sdp.objective.size(); n++)
+            sdp.polMatrixValues.set(p, n, -(*m->get(r,s))[n](xk));
         }
       }
     }
@@ -934,10 +955,11 @@ SDP bootstrapSDP(const Vector &objective,
   assert(p == sdp.numConstraints-1);
 
   // normalization constraint
-  for (int n = 0; n < sdp.objDimension; n++)
+  for (unsigned int n = 0; n < sdp.objective.size(); n++)
     sdp.polMatrixValues.set(p, n, normalization[n]);
   sdp.blocks.push_back(vector<int>());
 
+  addSlack(sdp);
   return sdp;
 }
 
@@ -1066,8 +1088,8 @@ public:
     x(Vector(sdp.numConstraints, 0)),
     dx(x),
     dualResidues(x),
-    XInvYDiag(Vector(sdp.objDimension, 0)),
-    X(BlockDiagonalMatrix(sdp.objDimension, sdp.psdMatrixBlockDims())),
+    XInvYDiag(Vector(sdp.objective.size(), 0)),
+    X(BlockDiagonalMatrix(sdp.objective.size(), sdp.psdMatrixBlockDims())),
     XInv(X),
     XInvCholesky(X),
     Y(X),
@@ -1563,7 +1585,7 @@ void SDPSolver::run() {
     Real dualObj        = dualObjective(sdp, Y);
     bool optimal        = dualityGap(primalObj, dualObj) < parameters.epsilonStar;
 
-    bool reductionSwitch = false;
+    bool reductionSwitch = true;
 
     if (primalFeasible && dualFeasible && optimal)
       return;
@@ -1766,7 +1788,7 @@ void testMinEigenvalue() {
 }
 
 void printSDPDenseFormat(ostream& os, const SDP &sdp, const vector<vector<IndexTuple> > &constraintIndexTuples) {
-  BlockDiagonalMatrix F(BlockDiagonalMatrix(sdp.objDimension, sdp.psdMatrixBlockDims()));
+  BlockDiagonalMatrix F(BlockDiagonalMatrix(sdp.objective.size(), sdp.psdMatrixBlockDims()));
 
   os << "* SDP dense format" << endl;
   os << sdp.affineConstants.size() << " = mDIM" << endl;
