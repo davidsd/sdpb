@@ -800,6 +800,7 @@ public:
         }
       }
     }
+    assert(p == numConstraints());
   }
 
   void addSlack() {
@@ -1064,25 +1065,36 @@ class SDPSolver {
 public:
   SDP sdp;
   SolverParameters parameters;
+
+  // current point
   Vector x;
-  Vector dx;
-  Vector dualResidues;
-  Vector XInvYDiag;
   BlockDiagonalMatrix X;
-  BlockDiagonalMatrix XInv;
-  BlockDiagonalMatrix XInvCholesky;
   BlockDiagonalMatrix Y;
-  BlockDiagonalMatrix YInvCholesky;
-  BlockDiagonalMatrix Z;
+
+  // search direction
+  Vector dx;
   BlockDiagonalMatrix dX;
   BlockDiagonalMatrix dY;
-  BlockDiagonalMatrix Rc;
+
+  // discrepancies in dual and primal equality constraints
+  Vector dualResidues;
   BlockDiagonalMatrix PrimalResidues;
-  BlockDiagonalMatrix BilinearPairingsXInv;
-  BlockDiagonalMatrix BilinearPairingsY;
+
+  // Schur complement for computing search direction
   Matrix schurComplement;
   Matrix schurComplementCholesky;
+
+  // intermediate computations
+  BlockDiagonalMatrix XInv;
+  BlockDiagonalMatrix XInvCholesky;
+  BlockDiagonalMatrix YInvCholesky;
+  BlockDiagonalMatrix Z;
+  BlockDiagonalMatrix R;
+  BlockDiagonalMatrix BilinearPairingsXInv;
+  BlockDiagonalMatrix BilinearPairingsY;
+
   // workspace variables
+  Vector XInvYDiagWorkspace;
   BlockDiagonalMatrix XInvWorkspace;
   BlockDiagonalMatrix StepMatrixWorkspace;
   vector<Matrix> bilinearPairingsWorkspace;
@@ -1093,23 +1105,23 @@ public:
     sdp(sdp),
     parameters(parameters),
     x(sdp.numConstraints(), 0),
-    dx(x),
-    dualResidues(x),
-    XInvYDiag(sdp.objective.size(), 0),
     X(sdp.objective.size(), sdp.psdMatrixBlockDims()),
-    XInv(X),
-    XInvCholesky(X),
     Y(X),
-    YInvCholesky(X),
-    Z(X),
+    dx(x),
     dX(X),
-    dY(X),
-    Rc(X),
+    dY(Y),
+    dualResidues(x),
     PrimalResidues(X),
-    BilinearPairingsXInv(0, sdp.bilinearPairingBlockDims()),
-    BilinearPairingsY(BilinearPairingsXInv),
     schurComplement(sdp.numConstraints(), sdp.numConstraints()),
     schurComplementCholesky(schurComplement),
+    XInv(X),
+    XInvCholesky(X),
+    YInvCholesky(X),
+    Z(X),
+    R(X),
+    BilinearPairingsXInv(0, sdp.bilinearPairingBlockDims()),
+    BilinearPairingsY(BilinearPairingsXInv),
+    XInvYDiagWorkspace(sdp.objective.size(), 0),
     XInvWorkspace(X),
     StepMatrixWorkspace(X)
   {
@@ -1494,14 +1506,14 @@ void computeSchurComplementCholesky(const BlockDiagonalMatrix &XInv,
                                     const BlockDiagonalMatrix &Y,
                                     const BlockDiagonalMatrix &BilinearPairingsY,
                                     const SDP &sdp,
-                                    Vector &XInvYDiag,
+                                    Vector &XInvYDiagWorkspace,
                                     Matrix &schurComplement,
                                     Matrix &schurComplementCholesky) {
 
   // schurComplement_{pq} = Tr(F_q X^{-1} F_p Y)
-  componentProduct(XInv.diagonalPart, Y.diagonalPart, XInvYDiag);
+  componentProduct(XInv.diagonalPart, Y.diagonalPart, XInvYDiagWorkspace);
 
-  diagonalCongruence(&XInvYDiag[0], sdp.polMatrixValues, 0, 0, schurComplement);
+  diagonalCongruence(&XInvYDiagWorkspace[0], sdp.polMatrixValues, 0, 0, schurComplement);
   addSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, schurComplement);
 
   choleskyDecomposition(schurComplement, schurComplementCholesky);
@@ -1597,7 +1609,7 @@ void SDPSolver::run() {
     computeSchurComplementCholesky(XInv, BilinearPairingsXInv,
                                    Y,    BilinearPairingsY,
                                    sdp,
-                                   XInvYDiag,
+                                   XInvYDiagWorkspace,
                                    schurComplement,
                                    schurComplementCholesky);
 
@@ -1606,8 +1618,8 @@ void SDPSolver::run() {
     // Mehrotra predictor solution for (dx, dX, dY)
     Real betaPredictor = predictorCenteringParameter(parameters, primalFeasible, dualFeasible, reductionSwitch);
     cout << "betaPredictor = " << betaPredictor << endl;
-    computePredictorRMatrix(betaPredictor, mu, X, Y, Rc);
-    computeSearchDirectionWithRMatrix(Rc, primalFeasible);
+    computePredictorRMatrix(betaPredictor, mu, X, Y, R);
+    computeSearchDirectionWithRMatrix(R, primalFeasible);
 
     cout << "dx_p = " << dx << endl;
     cout << "dX_p = " << dX << endl;
@@ -1616,8 +1628,8 @@ void SDPSolver::run() {
     // Mehrotra corrector solution for (dx, dX, dY)
     Real betaCorrector = correctorCenteringParameter(parameters, X, dX, Y, dY, mu, primalFeasible, dualFeasible);
     cout << "betaCorrector = " << betaCorrector << endl;
-    computeCorrectorRMatrix(betaCorrector, mu, X, dX, Y, dY, Rc);
-    computeSearchDirectionWithRMatrix(Rc, primalFeasible);
+    computeCorrectorRMatrix(betaCorrector, mu, X, dX, Y, dY, R);
+    computeSearchDirectionWithRMatrix(R, primalFeasible);
 
     cout << "dx_c = " << dx << endl;
     cout << "dX_c = " << dX << endl;
@@ -1868,7 +1880,7 @@ void testSDPSolver(const char *file) {
   // cout << "BilinearPairingsXInv = " << solver.BilinearPairingsXInv << endl;
   // cout << "BilinearPairingsY = " << solver.BilinearPairingsY << endl;
   // cout << "schurComplement = " << solver.schurComplement << ";\n";
-  // cout << "Rc = " << solver.Rc << ";\n";
+  // cout << "R = " << solver.R << ";\n";
   // cout << "dualResidues = " << solver.dualResidues << ";\n";
   // cout << "PrimalResidues = " << solver.PrimalResidues << ";\n";
   // cout << "Z = " << solver.Z << ";\n";
