@@ -745,16 +745,30 @@ void testBlockDiagonalCholesky() {
   cout << inverse << endl;
 }
 
+class IndexTuple {
+public:
+  int p;
+  int r;
+  int s;
+  int k;
+  IndexTuple(int p, int r, int s, int k): p(p), r(r), s(s), k(k) {}
+  IndexTuple() {}
+};
+
 class SDP {
 public:
   vector<Matrix> bilinearBases;
-  int numConstraints;
   Matrix polMatrixValues;
   Vector affineConstants;
   Vector objective;
   vector<int> dimensions;
   vector<int> degrees;
   vector<vector<int> > blocks;
+  vector<vector<IndexTuple> > constraintIndices;
+
+  int numConstraints() const {
+    return polMatrixValues.rows;
+  }
 
   vector<int> psdMatrixBlockDims() const {
     vector<int> dims;
@@ -770,6 +784,33 @@ public:
       for (vector<int>::const_iterator b = blocks[j].begin(); b != blocks[j].end(); b++)
         dims.push_back(bilinearBases[*b].cols * dimensions[j]);
     return dims;
+  }
+
+  void initializeConstraintIndices() {
+    int p = 0;
+    for (unsigned int j = 0; j < dimensions.size(); j++) {
+      constraintIndices.push_back(vector<IndexTuple>(0));
+
+      for (int s = 0; s < dimensions[j]; s++) {
+        for (int r = 0; r <= s; r++) {
+          for (int k = 0; k <= degrees[j]; k++) {
+            constraintIndices[j].push_back(IndexTuple(p, r, s, k));
+            p++;
+          }
+        }
+      }
+    }
+  }
+
+  void addSlack() {
+    polMatrixValues.addColumn();
+    for (int r = 0; r < polMatrixValues.rows; r++) {
+      Real total = 0;
+      for (int c = 0; c < polMatrixValues.cols - 1; c++)
+        total += polMatrixValues.get(r, c);
+      polMatrixValues.set(r, polMatrixValues.cols - 1, -total);
+    }
+    objective.push_back(-vectorTotal(objective));
   }
 
   friend ostream& operator<<(ostream& os, const SDP& sdp);
@@ -867,17 +908,6 @@ Matrix monomialAlgebraBasis(int d1, int d, const Vector &xs, bool halfShift) {
   return basisMatrix;
 }
 
-void addSlack(SDP &sdp) {
-  sdp.polMatrixValues.addColumn();
-  for (int r = 0; r < sdp.polMatrixValues.rows; r++) {
-    Real total = 0;
-    for (int c = 0; c < sdp.polMatrixValues.cols - 1; c++)
-      total += sdp.polMatrixValues.get(r, c);
-    sdp.polMatrixValues.set(r, sdp.polMatrixValues.cols - 1, -total);
-  }
-  sdp.objective.push_back(-vectorTotal(sdp.objective));
-}
-
 SDP bootstrapSDP(const Vector &objective,
                  const Vector &normalization,
                  const vector<PolynomialVectorMatrix> &positiveMatrixPols,
@@ -885,7 +915,7 @@ SDP bootstrapSDP(const Vector &objective,
   SDP sdp;
   sdp.objective = objective;
 
-  sdp.numConstraints = 0;
+  int numConstraints = 0;
   for (vector<PolynomialVectorMatrix>::const_iterator m = positiveMatrixPols.begin();
        m != positiveMatrixPols.end();
        m++) {
@@ -894,19 +924,19 @@ SDP bootstrapSDP(const Vector &objective,
 
     sdp.dimensions.push_back(dimension);
     sdp.degrees.push_back(degree);
-    sdp.numConstraints += (degree+1)*dimension*(dimension+1)/2;
+    numConstraints += (degree+1)*dimension*(dimension+1)/2;
   }
 
   // For the normalization constraint
   sdp.dimensions.push_back(1);
   sdp.degrees.push_back(0);
-  sdp.numConstraints += 1;
+  numConstraints += 1;
 
-  sdp.polMatrixValues = Matrix(sdp.numConstraints, sdp.objective.size());
-  sdp.affineConstants = Vector(sdp.numConstraints, 0);
+  sdp.polMatrixValues = Matrix(numConstraints, sdp.objective.size());
+  sdp.affineConstants = Vector(numConstraints, 0);
 
   // normalization constraint
-  sdp.affineConstants[sdp.numConstraints-1] = 1;
+  sdp.affineConstants[numConstraints-1] = 1;
 
   int p = 0;
   for (vector<PolynomialVectorMatrix>::const_iterator m = positiveMatrixPols.begin();
@@ -939,14 +969,15 @@ SDP bootstrapSDP(const Vector &objective,
       }
     }
   }
-  assert(p == sdp.numConstraints-1);
+  assert(p == numConstraints-1);
 
   // normalization constraint
   for (unsigned int n = 0; n < sdp.objective.size(); n++)
     sdp.polMatrixValues.set(p, n, normalization[n]);
   sdp.blocks.push_back(vector<int>());
 
-  addSlack(sdp);
+  sdp.addSlack();
+  sdp.initializeConstraintIndices();
   return sdp;
 }
 
@@ -1008,16 +1039,6 @@ SDP readBootstrapSDP(const char*file) {
   return parseBootstrapSDP(doc.FirstChildElement("sdp"));
 }
 
-class IndexTuple {
-public:
-  int p;
-  int r;
-  int s;
-  int k;
-  IndexTuple(int p, int r, int s, int k): p(p), r(r), s(s), k(k) {}
-  IndexTuple() {}
-};
-
 class SolverParameters {
 public:
   Real betaStar;
@@ -1043,7 +1064,6 @@ class SDPSolver {
 public:
   SDP sdp;
   SolverParameters parameters;
-  vector<vector<IndexTuple> > constraintIndexTuples;
   Vector x;
   Vector dx;
   Vector dualResidues;
@@ -1057,9 +1077,9 @@ public:
   BlockDiagonalMatrix dX;
   BlockDiagonalMatrix dY;
   BlockDiagonalMatrix Rc;
-  BlockDiagonalMatrix primalResidues;
-  BlockDiagonalMatrix bilinearPairingsXInv;
-  BlockDiagonalMatrix bilinearPairingsY;
+  BlockDiagonalMatrix PrimalResidues;
+  BlockDiagonalMatrix BilinearPairingsXInv;
+  BlockDiagonalMatrix BilinearPairingsY;
   Matrix schurComplement;
   Matrix schurComplementCholesky;
   // workspace variables
@@ -1072,7 +1092,7 @@ public:
   SDPSolver(const SDP &sdp, const SolverParameters &parameters):
     sdp(sdp),
     parameters(parameters),
-    x(sdp.numConstraints, 0),
+    x(sdp.numConstraints(), 0),
     dx(x),
     dualResidues(x),
     XInvYDiag(sdp.objective.size(), 0),
@@ -1085,32 +1105,17 @@ public:
     dX(X),
     dY(X),
     Rc(X),
-    primalResidues(X),
-    bilinearPairingsXInv(0, sdp.bilinearPairingBlockDims()),
-    bilinearPairingsY(bilinearPairingsXInv),
-    schurComplement(sdp.numConstraints, sdp.numConstraints),
+    PrimalResidues(X),
+    BilinearPairingsXInv(0, sdp.bilinearPairingBlockDims()),
+    BilinearPairingsY(BilinearPairingsXInv),
+    schurComplement(sdp.numConstraints(), sdp.numConstraints()),
     schurComplementCholesky(schurComplement),
     XInvWorkspace(X),
     StepMatrixWorkspace(X)
   {
-    // initialize constraintIndexTuples
-    int p = 0;
-    for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
-      constraintIndexTuples.push_back(vector<IndexTuple>(0));
-
-      for (int s = 0; s < sdp.dimensions[j]; s++) {
-        for (int r = 0; r <= s; r++) {
-          for (int k = 0; k <= sdp.degrees[j]; k++) {
-            constraintIndexTuples[j].push_back(IndexTuple(p, r, s, k));
-            p++;
-          }
-        }
-      }
-    }
-
     // initialize bilinearPairingsWorkspace, eigenvaluesWorkspace, QRWorkspace 
     for (unsigned int b = 0; b < sdp.bilinearBases.size(); b++) {
-      bilinearPairingsWorkspace.push_back(Matrix(X.blocks[b].rows, bilinearPairingsXInv.blocks[b].cols));
+      bilinearPairingsWorkspace.push_back(Matrix(X.blocks[b].rows, BilinearPairingsXInv.blocks[b].cols));
       eigenvaluesWorkspace.push_back(Vector(X.blocks[b].rows));
       QRWorkspace.push_back(Vector(3*X.blocks[b].rows - 1));
     }
@@ -1216,24 +1221,23 @@ Real bilinearBlockPairing(const Real *v,
 // }
 
 void addSchurBlocks(const SDP &sdp,
-                    const BlockDiagonalMatrix &bilinearPairingsXInv,
-                    const BlockDiagonalMatrix &bilinearPairingsY,
-                    const vector<vector<IndexTuple> > &constraintIndexTuples,
+                    const BlockDiagonalMatrix &BilinearPairingsXInv,
+                    const BlockDiagonalMatrix &BilinearPairingsY,
                     Matrix &schurComplement) {
 
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     const int ej = sdp.degrees[j] + 1;
 
-    for (vector<IndexTuple>::const_iterator t1 = constraintIndexTuples[j].begin();
-         t1 != constraintIndexTuples[j].end();
+    for (vector<IndexTuple>::const_iterator t1 = sdp.constraintIndices[j].begin();
+         t1 != sdp.constraintIndices[j].end();
          t1++) {
       const int p1    = t1->p;
       const int ej_r1 = t1->r * ej;
       const int ej_s1 = t1->s * ej;
       const int k1    = t1->k;
 
-      for (vector<IndexTuple>::const_iterator t2 = constraintIndexTuples[j].begin();
-           t2 != constraintIndexTuples[j].end() && t2->p <= t1->p;
+      for (vector<IndexTuple>::const_iterator t2 = sdp.constraintIndices[j].begin();
+           t2 != sdp.constraintIndices[j].end() && t2->p <= t1->p;
            t2++) {
         const int p2    = t2->p;
         const int ej_r2 = t2->r * ej;
@@ -1242,10 +1246,10 @@ void addSchurBlocks(const SDP &sdp,
 
         Real tmp = 0;
         for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
-          tmp += (bilinearPairingsXInv.blocks[*b].get(ej_s1 + k1, ej_r2 + k2) * bilinearPairingsY.blocks[*b].get(ej_s2 + k2, ej_r1 + k1) +
-                  bilinearPairingsXInv.blocks[*b].get(ej_r1 + k1, ej_r2 + k2) * bilinearPairingsY.blocks[*b].get(ej_s2 + k2, ej_s1 + k1) +
-                  bilinearPairingsXInv.blocks[*b].get(ej_s1 + k1, ej_s2 + k2) * bilinearPairingsY.blocks[*b].get(ej_r2 + k2, ej_r1 + k1) +
-                  bilinearPairingsXInv.blocks[*b].get(ej_r1 + k1, ej_s2 + k2) * bilinearPairingsY.blocks[*b].get(ej_r2 + k2, ej_s1 + k1))/4;
+          tmp += (BilinearPairingsXInv.blocks[*b].get(ej_s1 + k1, ej_r2 + k2) * BilinearPairingsY.blocks[*b].get(ej_s2 + k2, ej_r1 + k1) +
+                  BilinearPairingsXInv.blocks[*b].get(ej_r1 + k1, ej_r2 + k2) * BilinearPairingsY.blocks[*b].get(ej_s2 + k2, ej_s1 + k1) +
+                  BilinearPairingsXInv.blocks[*b].get(ej_s1 + k1, ej_s2 + k2) * BilinearPairingsY.blocks[*b].get(ej_r2 + k2, ej_r1 + k1) +
+                  BilinearPairingsXInv.blocks[*b].get(ej_r1 + k1, ej_s2 + k2) * BilinearPairingsY.blocks[*b].get(ej_r2 + k2, ej_s1 + k1))/4;
         }
         schurComplement.addElt(p1, p2, tmp);
         if (p2 != p1)
@@ -1256,15 +1260,14 @@ void addSchurBlocks(const SDP &sdp,
 }
 
 void computeDualResidues(const SDP &sdp,
-                           const BlockDiagonalMatrix &Y,
-                           const BlockDiagonalMatrix &bilinearPairingsY,
-                           const vector<vector<IndexTuple> > &constraintIndexTuples,
-                           Vector &dualResidues) {
+                         const BlockDiagonalMatrix &Y,
+                         const BlockDiagonalMatrix &BilinearPairingsY,
+                         Vector &dualResidues) {
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     const int ej = sdp.degrees[j] +1;
 
-    for (vector<IndexTuple>::const_iterator t = constraintIndexTuples[j].begin();
-         t != constraintIndexTuples[j].end();
+    for (vector<IndexTuple>::const_iterator t = sdp.constraintIndices[j].begin();
+         t != sdp.constraintIndices[j].end();
          t++) {
       const int p    = t->p;
       const int ej_r = t->r * ej;
@@ -1273,8 +1276,8 @@ void computeDualResidues(const SDP &sdp,
 
       dualResidues[p] = 0;
       for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
-        dualResidues[p] -= bilinearPairingsY.blocks[*b].get(ej_r+k, ej_s+k);
-        dualResidues[p] -= bilinearPairingsY.blocks[*b].get(ej_s+k, ej_r+k);
+        dualResidues[p] -= BilinearPairingsY.blocks[*b].get(ej_r+k, ej_s+k);
+        dualResidues[p] -= BilinearPairingsY.blocks[*b].get(ej_s+k, ej_r+k);
       }
       dualResidues[p] /= 2;
 
@@ -1312,7 +1315,6 @@ void constraintMatrixWeightedSum(const SDP &sdp, const Vector x, BlockDiagonalMa
 }
 
 void computeSchurRHS(const SDP &sdp,
-                     const vector<vector<IndexTuple> > &constraintIndexTuples,
                      Vector &dualResidues,
                      BlockDiagonalMatrix &Z, 
                      Vector &r) {
@@ -1324,8 +1326,8 @@ void computeSchurRHS(const SDP &sdp,
   }
 
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
-    for (vector<IndexTuple>::const_iterator t = constraintIndexTuples[j].begin();
-         t != constraintIndexTuples[j].end();
+    for (vector<IndexTuple>::const_iterator t = sdp.constraintIndices[j].begin();
+         t != sdp.constraintIndices[j].end();
          t++) {
       for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
 
@@ -1347,15 +1349,15 @@ void SDPSolver::initialize() {
   Y.addDiagonal(parameters.lambdaStar);
 }
 
-// primalResidues = sum_p F_p x_p - X - F_0
+// PrimalResidues = sum_p F_p x_p - X - F_0
 //
 void computePrimalResidues(const SDP &sdp,
                            const Vector x,
                            const BlockDiagonalMatrix &X,
-                           BlockDiagonalMatrix &primalResidues) {
-  constraintMatrixWeightedSum(sdp, x, primalResidues);
-  primalResidues -= X;
-  primalResidues.addDiagonalPart(sdp.objective, -1);
+                           BlockDiagonalMatrix &PrimalResidues) {
+  constraintMatrixWeightedSum(sdp, x, PrimalResidues);
+  PrimalResidues -= X;
+  PrimalResidues.addDiagonalPart(sdp.objective, -1);
 }
 
 Real primalObjective(const SDP &sdp, const Vector &x) {
@@ -1488,11 +1490,10 @@ Real stepLength(BlockDiagonalMatrix &XInvCholesky,
 }
 
 void computeSchurComplementCholesky(const BlockDiagonalMatrix &XInv,
-                                    const BlockDiagonalMatrix &bilinearPairingsXInv,
+                                    const BlockDiagonalMatrix &BilinearPairingsXInv,
                                     const BlockDiagonalMatrix &Y,
-                                    const BlockDiagonalMatrix &bilinearPairingsY,
+                                    const BlockDiagonalMatrix &BilinearPairingsY,
                                     const SDP &sdp,
-                                    const vector<vector<IndexTuple> > &constraintIndexTuples,
                                     Vector &XInvYDiag,
                                     Matrix &schurComplement,
                                     Matrix &schurComplementCholesky) {
@@ -1501,7 +1502,7 @@ void computeSchurComplementCholesky(const BlockDiagonalMatrix &XInv,
   componentProduct(XInv.diagonalPart, Y.diagonalPart, XInvYDiag);
 
   diagonalCongruence(&XInvYDiag[0], sdp.polMatrixValues, 0, 0, schurComplement);
-  addSchurBlocks(sdp, bilinearPairingsXInv, bilinearPairingsY, constraintIndexTuples, schurComplement);
+  addSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, schurComplement);
 
   choleskyDecomposition(schurComplement, schurComplementCholesky);
 
@@ -1527,10 +1528,10 @@ void printInfo(Real mu,
 void SDPSolver::computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R,
                                                   const bool primalFeasible) {
 
-  // Z = Symmetrize(X^{-1} (primalResidues Y - R)) if !primalFeasible
+  // Z = Symmetrize(X^{-1} (PrimalResidues Y - R)) if !primalFeasible
   // Z = Symmetrize(X^{-1} (-R))                   if primalFeasible
   if (!primalFeasible)
-    blockDiagonalMatrixMultiply(primalResidues, Y, Z);
+    blockDiagonalMatrixMultiply(PrimalResidues, Y, Z);
   else
     Z.setZero();
   Z -= R;
@@ -1538,14 +1539,14 @@ void SDPSolver::computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R,
   Z.symmetrize();
 
   // dx = schurComplement^-1 r
-  computeSchurRHS(sdp, constraintIndexTuples, dualResidues, Z, dx);
+  computeSchurRHS(sdp, dualResidues, Z, dx);
   vectorSolveWithCholesky(schurComplementCholesky, dx);
 
   // dX = R_p + sum_p F_p dx_p
   constraintMatrixWeightedSum(sdp, dx, dX);
   // This condition is in the SDPA code but not mentioned in the manual
   if (!primalFeasible)
-    dX += primalResidues;
+    dX += PrimalResidues;
   
   // dY = Symmetrize(X^{-1} (R - dX Y))
   blockDiagonalMatrixMultiply(dX, Y, dY);
@@ -1570,22 +1571,22 @@ void SDPSolver::run() {
     inverseCholeskyAndInverse(X, XInvWorkspace, XInvCholesky, XInv);
     inverseCholesky(Y, XInvWorkspace, YInvCholesky);
 
-    computeBilinearPairings(XInv, sdp.bilinearBases, bilinearPairingsWorkspace, bilinearPairingsXInv);
-    computeBilinearPairings(Y,    sdp.bilinearBases, bilinearPairingsWorkspace, bilinearPairingsY);
+    computeBilinearPairings(XInv, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsXInv);
+    computeBilinearPairings(Y,    sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsY);
 
     // d_k = c_k - Tr(F_k Y)
-    computeDualResidues(sdp, Y, bilinearPairingsY, constraintIndexTuples, dualResidues);
+    computeDualResidues(sdp, Y, BilinearPairingsY, dualResidues);
 
-    // primalResidues = sum_p F_p x_p - X - F_0
-    computePrimalResidues(sdp, x, X, primalResidues);
+    // PrimalResidues = sum_p F_p x_p - X - F_0
+    computePrimalResidues(sdp, x, X, PrimalResidues);
 
-    bool primalFeasible = primalResidues.maxAbsElement()    < parameters.epsilonDash;
+    bool primalFeasible = PrimalResidues.maxAbsElement()    < parameters.epsilonDash;
     bool dualFeasible   = maxAbsVectorElement(dualResidues) < parameters.epsilonDash;
     Real primalObj      = primalObjective(sdp, x);
     Real dualObj        = dualObjective(sdp, Y);
     bool optimal        = dualityGap(primalObj, dualObj) < parameters.epsilonStar;
 
-    cout << "primalResidues.maxAbsElement() = " << primalResidues.maxAbsElement() << endl;
+    cout << "PrimalResidues.maxAbsElement() = " << PrimalResidues.maxAbsElement() << endl;
     cout << "maxAbsVectorElement(dualResidues) = " << maxAbsVectorElement(dualResidues) << endl;
 
     bool reductionSwitch = true;
@@ -1593,9 +1594,10 @@ void SDPSolver::run() {
     if (primalFeasible && dualFeasible && optimal)
       return;
 
-    computeSchurComplementCholesky(XInv, bilinearPairingsXInv,
-                                   Y,    bilinearPairingsY,
-                                   sdp, constraintIndexTuples, XInvYDiag,
+    computeSchurComplementCholesky(XInv, BilinearPairingsXInv,
+                                   Y,    BilinearPairingsY,
+                                   sdp,
+                                   XInvYDiag,
                                    schurComplement,
                                    schurComplementCholesky);
 
@@ -1803,7 +1805,7 @@ void testMinEigenvalue() {
   cout << "lambdaY = " << minEigenvalueViaQR(Y, Yeigenvalues, Yworkspace) << endl;
 }
 
-void printSDPDenseFormat(ostream& os, const SDP &sdp, const vector<vector<IndexTuple> > &constraintIndexTuples) {
+void printSDPDenseFormat(ostream& os, const SDP &sdp) {
   BlockDiagonalMatrix F(BlockDiagonalMatrix(sdp.objective.size(), sdp.psdMatrixBlockDims()));
 
   os << "* SDP dense format" << endl;
@@ -1822,8 +1824,8 @@ void printSDPDenseFormat(ostream& os, const SDP &sdp, const vector<vector<IndexT
   os << F << endl;
 
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
-    for (vector<IndexTuple>::const_iterator t = constraintIndexTuples[j].begin();
-         t != constraintIndexTuples[j].end();
+    for (vector<IndexTuple>::const_iterator t = sdp.constraintIndices[j].begin();
+         t != sdp.constraintIndices[j].end();
          t++) {
       F *= 0;
 
@@ -1863,12 +1865,12 @@ void testSDPSolver(const char *file) {
   // cout << "X = " << solver.X << ";\n";
   // cout << "Y = " << solver.Y << ";\n";
   // cout << "x = " << solver.x << ";\n";
-  // cout << "bilinearPairingsXInv = " << solver.bilinearPairingsXInv << endl;
-  // cout << "bilinearPairingsY = " << solver.bilinearPairingsY << endl;
+  // cout << "BilinearPairingsXInv = " << solver.BilinearPairingsXInv << endl;
+  // cout << "BilinearPairingsY = " << solver.BilinearPairingsY << endl;
   // cout << "schurComplement = " << solver.schurComplement << ";\n";
   // cout << "Rc = " << solver.Rc << ";\n";
   // cout << "dualResidues = " << solver.dualResidues << ";\n";
-  // cout << "primalResidues = " << solver.primalResidues << ";\n";
+  // cout << "PrimalResidues = " << solver.PrimalResidues << ";\n";
   // cout << "Z = " << solver.Z << ";\n";
   // cout << "dx = " << solver.dx << ";\n";
   // cout << "dX = " << solver.dX << ";\n";
@@ -1876,7 +1878,7 @@ void testSDPSolver(const char *file) {
 
   ofstream datfile;
   datfile.open("sdp.dat");
-  printSDPDenseFormat(datfile, sdp, solver.constraintIndexTuples);
+  printSDPDenseFormat(datfile, sdp);
   datfile.close();
 }
 
