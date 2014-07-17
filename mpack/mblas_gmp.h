@@ -46,6 +46,8 @@
 _MPACK_EXTERN_ int mpack_errno;
 
 /* LEVEL 1 MBLAS */
+void Rrotg(mpf_class * da, mpf_class * db, mpf_class * c, mpf_class * s);
+void Rrot(mpackint n, mpf_class * dx, mpackint incx, mpf_class * dy, mpackint incy, mpf_class c, mpf_class s);
 mpf_class Rdot(mpackint n, mpf_class * dx, mpackint incx, mpf_class * dy,
     mpackint incy);
 void Rcopy(mpackint n, mpf_class * dx, mpackint incx, mpf_class * dy,

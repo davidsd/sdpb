@@ -1,4 +1,4 @@
-OBJECTS = main.o tinyxml2.o mpack/Rdot.o \
+OBJECTS = main.o tinyxml2.o mpack/Rrotg.o mpack/Rrot.o mpack/Rdot.o \
         mpack/Rtrsm.o mpack/Rsyrk.o mpack/Raxpy.o \
         mpack/Rgemm.o mpack/Rtrmm.o mpack/Rtrsv.o \
         mpack/iMlaenv.o mpack/Rlamch.o mpack/Rlascl.o \

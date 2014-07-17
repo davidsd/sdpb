@@ -19,8 +19,6 @@ using std::ofstream;
 using tinyxml2::XMLDocument;
 using tinyxml2::XMLElement;
 
-Real Infinity = 1e200;
-
 template <class T>
 ostream& operator<<(ostream& os, const vector<T>& v) {
   os << "{";
@@ -301,72 +299,89 @@ Real frobeniusProductOfSums(const Matrix &X, const Matrix &dX,
 
   return result;
 }
- 
-// Not currently supporting this.  Should probably switch to mpfr...
-//
-// void matrixMultiplyFirstSym(Matrix &A, Matrix &B, Matrix &result) {
-//   assert(A.cols == A.rows);
-//   assert(A.cols == B.rows);
-//   assert(B.rows == result.rows);
-//   assert(B.cols == result.cols);
 
-//   Rsymm("Left", "Upper", B.rows, B.cols, 1,
-//         &A.elements[0], A.rows,
-//         &B.elements[0], B.rows,
-//         0,
-//         &result.elements[0], result.rows);
-// }
-
-// result = choleskyDecomposition(a) (lower triangular)
+// L (lower triangular) such that A = L L^T
 // Inputs:
-// - a      : dim x dim symmetric matrix
-// - result : dim x dim lower-triangular matrix
+// - A : dim x dim symmetric matrix
+// - L : dim x dim lower-triangular matrix
 //
-void choleskyDecomposition(Matrix &a, Matrix &result) {
-  int dim = a.rows;
-  assert(a.cols == dim);
-  assert(result.rows == dim);
-  assert(result.cols == dim);
+void choleskyDecomposition(Matrix &A, Matrix &L) {
+  int dim = A.rows;
+  assert(A.cols == dim);
+  assert(L.rows == dim);
+  assert(L.cols == dim);
 
+  // Set lower-triangular part of L to cholesky decomposition
+  L.copyFrom(A);
   mpackint info;
-  Real *resultArray = &result.elements[0];
-
-  Rcopy(dim*dim, &a.elements[0], 1, resultArray, 1);
-
-  // The lower-triangular part of result is now our cholesky matrix
-  Rpotrf("Lower", dim, resultArray, dim, &info);
+  Rpotrf("Lower", dim, &L.elements[0], dim, &info);
   assert(info == 0);
 
-  // Set the upper-triangular part of the result to zero
+  // Set the upper-triangular part of the L to zero
   for (int j = 0; j < dim; j++)
     for (int i = 0; i < j; i++)
-      result.elements[i + j*dim] = 0;
+      L.elements[i + j*dim] = 0;
 }
 
-// result = a^-1
+// L' (lower triangular) such that L' L'^T = L L^T + v v^T. i.e., if L
+// is a cholesky decomposition of A, then L' is a cholesky
+// decomposition of A + v v^T
+// Inputs: 
+// - L : dim x dim lower-triangular matrix 
+// - v : pointer to the head of a length-dim vector
+// both L and v are modified in place
+//
+void choleskyUpdate(Matrix &L, Real *v) {
+  int dim = L.rows;
+  Real c, s, x, y;
+  for (int r = 0; r < dim; r++) {
+    x = L.get(r,r);
+    y = *(v+r);
+    Rrotg(&x, &y, &c, &s);
+    Rrot(dim - r, &L.elements[r*(dim+1)], 1, v+r, 1, c, s);
+  }
+}
+
+// L' (lower triangular) such that L' L'^T = L L^T + V V^T. i.e., if L
+// is a cholesky decomposition of A, then L' is a cholesky
+// decomposition of A + V V^T.  This is more efficient than directly
+// computing the cholesky decomposition of A + V V^T if V has a small
+// number of columns.
+// Inputs: 
+// - L : dim x dim lower-triangular matrix 
+// - V : dim x n matrix
+// both L and V are modified in place
+//
+void choleskyUpdate(Matrix &L, Matrix &V) {
+  assert(L.rows == V.rows);
+  for (int c = 0; c < V.cols; c++)
+    choleskyUpdate(L, &V.elements[c*V.rows]);
+}
+
+// result = A^-1
 // Inputs:
-// - a      : dim x dim lower-triangular matrix
+// - A      : dim x dim lower-triangular matrix
 // - result : dim x dim lower-triangular matrix
 //
-void inverseLowerTriangular(Matrix &a, Matrix &result) {
-  int dim = a.rows;
-  assert(a.cols == dim);
+void inverseLowerTriangular(Matrix &A, Matrix &result) {
+  int dim = A.rows;
+  assert(A.cols == dim);
   assert(result.rows == dim);
   assert(result.cols == dim);
 
   result.setIdentity();
   Rtrsm("Left", "Lower", "NoTranspose", "NonUnitDiagonal",
-        dim, dim, 1, &a.elements[0], dim, &result.elements[0], dim);
+        dim, dim, 1, &A.elements[0], dim, &result.elements[0], dim);
 }
 
-// result = choleskyDecomposition(a)^-1
+// result = choleskyDecomposition(A)^-1
 // Inputs:
-// - a      : dim x dim symmetric matrix
+// - A      : dim x dim symmetric matrix
 // - work   : dim x dim matrix
 // - result : dim x dim lower-triangular matrix
 //
-void inverseCholesky(Matrix &a, Matrix &work, Matrix &result) {
-  choleskyDecomposition(a, work);
+void inverseCholesky(Matrix &A, Matrix &work, Matrix &result) {
+  choleskyDecomposition(A, work);
   inverseLowerTriangular(work, result);
 }
 
@@ -1051,13 +1066,13 @@ public:
   Real lambdaStar;
   int maxIterations;
   SolverParameters():
-    betaStar(0.1),
-    betaBar(0.3),
-    epsilonStar(1e-30),
-    epsilonDash(1e-30),
-    gammaStar(0.9),
-    alphaMax(100),
-    lambdaStar(1e4),
+    betaStar("0.1"),
+    betaBar("0.3"),
+    epsilonStar("1e-30"),
+    epsilonDash("1e-30"),
+    gammaStar("0.9"),
+    alphaMax("100"),
+    lambdaStar("1e4"),
     maxIterations(100) {}
 };
 
@@ -1468,7 +1483,7 @@ Real minEigenvalueViaQR(BlockDiagonalMatrix &A, vector<Vector> &eigenvalues, vec
   assert(A.blocks.size() == eigenvalues.size());
   assert(A.blocks.size() == workspace.size());
 
-  Real lambdaMin = Infinity;
+  Real lambdaMin = A.diagonalPart[0];
   for (unsigned int i = 0; i < A.diagonalPart.size(); i++)
     lambdaMin = min(lambdaMin, A.diagonalPart[i]);
 
@@ -1894,6 +1909,43 @@ void testSDPSolver(const char *file) {
   datfile.close();
 }
 
+void testCholeskyUpdate() {
+  Matrix A(4,4);
+  Matrix B(A);
+  Matrix C(A);
+  Matrix L(A);
+  Matrix LT(L);
+  Matrix V(4, 2);
+  Matrix VT(V.cols, V.rows);
+  V.set(0,0,1);
+  V.set(1,0,2);
+  V.set(2,0,3);
+  V.set(3,0,4);
+  V.set(0,1,5);
+  V.set(1,1,4);
+  V.set(2,1,3);
+  V.set(3,1,2);
+  for (int r = 0; r < V.rows; r++)
+    for (int c = 0; c < V.cols; c++)
+      VT.set(c, r, V.get(r,c));
+  Matrix U(V);
+
+  A.addDiagonal(4);
+  cout << "A = " << A << endl;
+  cout << "V = " << V << endl;
+  choleskyDecomposition(A, L);
+  choleskyUpdate(L, U);
+  LT = L;
+  LT.transpose();
+
+  matrixMultiply(V, VT, B);
+  B += A;
+  matrixMultiply(L, LT, C);
+  C -= B;
+
+  cout << "L L^T - (A + V V^T) = " << C << endl;
+}
+
 int main(int argc, char** argv) {
 
   mpf_set_default_prec(200);
@@ -1902,7 +1954,8 @@ int main(int argc, char** argv) {
 
   //testBlockCongruence();
   //testBlockDiagonalCholesky();
-  testSDPSolver(argv[1]);
+  //testSDPSolver(argv[1]);
+  testCholeskyUpdate();
   //testMinEigenvalue();
   
 
