@@ -311,10 +311,18 @@ void choleskyDecomposition(Matrix &A, Matrix &L) {
   assert(L.rows == dim);
   assert(L.cols == dim);
 
+  if (dim == 1) {
+    L.set(0, 0, sqrt(A.get(0, 0)));
+    return;
+  }
+
   // Set lower-triangular part of L to cholesky decomposition
   L.copyFrom(A);
   mpackint info;
   Rpotrf("Lower", dim, &L.elements[0], dim, &info);
+  if (info != 0) {
+    cout << "A = " << A << endl;
+  }
   assert(info == 0);
 
   // Set the upper-triangular part of the L to zero
@@ -602,6 +610,23 @@ public:
       blocks[b].copyFrom(A.blocks[b]);
   }
 
+  // fill out a BlockDiagonalMatrix into a full Matrix A
+  void copyInto(Matrix &A) {
+    A.setZero();
+
+    int p = 0;
+    for(; p < (int)diagonalPart.size(); p++)
+      A.set(p, p, diagonalPart[p]);
+
+    for (unsigned int b = 0; b < blocks.size(); b++) {
+      int dim = blocks[b].cols;
+      for (int c = 0; c < dim; c++)
+        for (int r = 0; r < dim; r++)
+          A.set(p + r, p + c, blocks[b].get(r, c));
+      p += dim;
+    }
+  }
+
   void symmetrize() {
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b].symmetrize();
@@ -703,6 +728,15 @@ void lowerTriangularCongruence(BlockDiagonalMatrix &A, BlockDiagonalMatrix &L) {
     lowerTriangularCongruence(A.blocks[b], L.blocks[b]);
 }
 
+void choleskyDecomposition(BlockDiagonalMatrix &A,
+                           BlockDiagonalMatrix &L) {
+  for (unsigned int i = 0; i < A.diagonalPart.size(); i++)
+    L.diagonalPart[i] = sqrt(A.diagonalPart[i]);
+
+  for (unsigned int b = 0; b < A.blocks.size(); b++)
+    choleskyDecomposition(A.blocks[b], L.blocks[b]);
+}
+
 void inverseCholesky(BlockDiagonalMatrix &A,
                      BlockDiagonalMatrix &work,
                      BlockDiagonalMatrix &AInvCholesky) {
@@ -798,6 +832,13 @@ public:
     for (unsigned int j = 0; j < dimensions.size(); j++)
       for (vector<int>::const_iterator b = blocks[j].begin(); b != blocks[j].end(); b++)
         dims.push_back(bilinearBases[*b].cols * dimensions[j]);
+    return dims;
+  }
+
+  vector<int> schurBlockDims() const {
+    vector<int> dims;
+    for (unsigned int j = 0; j < dimensions.size(); j++)
+      dims.push_back(constraintIndices[j].size());
     return dims;
   }
 
@@ -1096,8 +1137,7 @@ public:
   BlockDiagonalMatrix PrimalResidues;
 
   // Schur complement for computing search direction
-  Matrix schurComplement;
-  Matrix schurComplementCholesky;
+  Matrix SchurComplementCholesky;
 
   // intermediate computations
   BlockDiagonalMatrix XInv;
@@ -1107,9 +1147,11 @@ public:
   BlockDiagonalMatrix R;
   BlockDiagonalMatrix BilinearPairingsXInv;
   BlockDiagonalMatrix BilinearPairingsY;
+  BlockDiagonalMatrix SchurBlocks;
+  BlockDiagonalMatrix SchurBlocksCholesky;
+  Matrix SchurUpdateLowRank;
 
   // workspace variables
-  Vector XInvYDiagWorkspace;
   BlockDiagonalMatrix XInvWorkspace;
   BlockDiagonalMatrix StepMatrixWorkspace;
   vector<Matrix> bilinearPairingsWorkspace;
@@ -1127,8 +1169,7 @@ public:
     dY(Y),
     dualResidues(x),
     PrimalResidues(X),
-    schurComplement(sdp.numConstraints(), sdp.numConstraints()),
-    schurComplementCholesky(schurComplement),
+    SchurComplementCholesky(sdp.numConstraints(), sdp.numConstraints()),
     XInv(X),
     XInvCholesky(X),
     YInvCholesky(X),
@@ -1136,7 +1177,9 @@ public:
     R(X),
     BilinearPairingsXInv(0, sdp.bilinearPairingBlockDims()),
     BilinearPairingsY(BilinearPairingsXInv),
-    XInvYDiagWorkspace(sdp.objective.size(), 0),
+    SchurBlocks(0, sdp.schurBlockDims()),
+    SchurBlocksCholesky(SchurBlocks),
+    SchurUpdateLowRank(sdp.polMatrixValues),
     XInvWorkspace(X),
     StepMatrixWorkspace(X)
   {
@@ -1247,29 +1290,23 @@ Real bilinearBlockPairing(const Real *v,
 //   }
 // }
 
-void addSchurBlocks(const SDP &sdp,
-                    const BlockDiagonalMatrix &BilinearPairingsXInv,
-                    const BlockDiagonalMatrix &BilinearPairingsY,
-                    Matrix &schurComplement) {
+void computeSchurBlocks(const SDP &sdp,
+                        const BlockDiagonalMatrix &BilinearPairingsXInv,
+                        const BlockDiagonalMatrix &BilinearPairingsY,
+                        BlockDiagonalMatrix &SchurBlocks) {
 
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     const int ej = sdp.degrees[j] + 1;
 
-    for (vector<IndexTuple>::const_iterator t1 = sdp.constraintIndices[j].begin();
-         t1 != sdp.constraintIndices[j].end();
-         t1++) {
-      const int p1    = t1->p;
-      const int ej_r1 = t1->r * ej;
-      const int ej_s1 = t1->s * ej;
-      const int k1    = t1->k;
+    for (unsigned int u1 = 0; u1 < sdp.constraintIndices[j].size(); u1++) {
+      const int ej_r1 = sdp.constraintIndices[j][u1].r * ej;
+      const int ej_s1 = sdp.constraintIndices[j][u1].s * ej;
+      const int k1    = sdp.constraintIndices[j][u1].k;
 
-      for (vector<IndexTuple>::const_iterator t2 = sdp.constraintIndices[j].begin();
-           t2 != sdp.constraintIndices[j].end() && t2->p <= t1->p;
-           t2++) {
-        const int p2    = t2->p;
-        const int ej_r2 = t2->r * ej;
-        const int ej_s2 = t2->s * ej;
-        const int k2    = t2->k;
+      for (unsigned int u2 = 0; u2 < sdp.constraintIndices[j].size(); u2++) {
+        const int ej_r2 = sdp.constraintIndices[j][u2].r * ej;
+        const int ej_s2 = sdp.constraintIndices[j][u2].s * ej;
+        const int k2    = sdp.constraintIndices[j][u2].k;
 
         Real tmp = 0;
         for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
@@ -1278,9 +1315,9 @@ void addSchurBlocks(const SDP &sdp,
                   BilinearPairingsXInv.blocks[*b].get(ej_s1 + k1, ej_s2 + k2) * BilinearPairingsY.blocks[*b].get(ej_r2 + k2, ej_r1 + k1) +
                   BilinearPairingsXInv.blocks[*b].get(ej_r1 + k1, ej_s2 + k2) * BilinearPairingsY.blocks[*b].get(ej_r2 + k2, ej_s1 + k1))/4;
         }
-        schurComplement.addElt(p1, p2, tmp);
-        if (p2 != p1)
-          schurComplement.addElt(p2, p1, tmp);
+        SchurBlocks.blocks[j].set(u1, u2, tmp);
+        if (u2 != u1)
+          SchurBlocks.blocks[j].set(u2, u1, tmp);
       }
     }
   }
@@ -1521,18 +1558,21 @@ void computeSchurComplementCholesky(const BlockDiagonalMatrix &XInv,
                                     const BlockDiagonalMatrix &Y,
                                     const BlockDiagonalMatrix &BilinearPairingsY,
                                     const SDP &sdp,
-                                    Vector &XInvYDiagWorkspace,
-                                    Matrix &schurComplement,
-                                    Matrix &schurComplementCholesky) {
+                                    BlockDiagonalMatrix &SchurBlocks,
+                                    BlockDiagonalMatrix &SchurBlocksCholesky,
+                                    Matrix &SchurUpdateLowRank,
+                                    Matrix &SchurComplementCholesky) {
 
-  // schurComplement_{pq} = Tr(F_q X^{-1} F_p Y)
-  componentProduct(XInv.diagonalPart, Y.diagonalPart, XInvYDiagWorkspace);
+  computeSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, SchurBlocks);
+  choleskyDecomposition(SchurBlocks, SchurBlocksCholesky);
+  SchurBlocksCholesky.copyInto(SchurComplementCholesky);
 
-  diagonalCongruence(&XInvYDiagWorkspace[0], sdp.polMatrixValues, 0, 0, schurComplement);
-  addSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, schurComplement);
-
-  choleskyDecomposition(schurComplement, schurComplementCholesky);
-
+  for (int n = 0; n < sdp.polMatrixValues.cols; n++) {
+    Real r = sqrt(XInv.diagonalPart[n]*Y.diagonalPart[n]);
+    for (int p = 0; p < sdp.polMatrixValues.rows; p++)
+      SchurUpdateLowRank.set(p, n, r*sdp.polMatrixValues.get(p, n));
+  }
+  choleskyUpdate(SchurComplementCholesky, SchurUpdateLowRank);
 }
 
 void printInfo(Real mu,
@@ -1567,7 +1607,7 @@ void SDPSolver::computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R,
 
   // dx = schurComplement^-1 r
   computeSchurRHS(sdp, dualResidues, Z, dx);
-  vectorSolveWithCholesky(schurComplementCholesky, dx);
+  vectorSolveWithCholesky(SchurComplementCholesky, dx);
 
   // dX = R_p + sum_p F_p dx_p
   constraintMatrixWeightedSum(sdp, dx, dX);
@@ -1622,11 +1662,12 @@ void SDPSolver::run() {
       return;
 
     computeSchurComplementCholesky(XInv, BilinearPairingsXInv,
-                                   Y,    BilinearPairingsY,
+                                   Y, BilinearPairingsY,
                                    sdp,
-                                   XInvYDiagWorkspace,
-                                   schurComplement,
-                                   schurComplementCholesky);
+                                   SchurBlocks,
+                                   SchurBlocksCholesky,
+                                   SchurUpdateLowRank,
+                                   SchurComplementCholesky);
 
     Real mu = frobeniusProductSymmetric(X, Y)/X.dim;
 
@@ -1954,8 +1995,8 @@ int main(int argc, char** argv) {
 
   //testBlockCongruence();
   //testBlockDiagonalCholesky();
-  //testSDPSolver(argv[1]);
-  testCholeskyUpdate();
+  testSDPSolver(argv[1]);
+  //testCholeskyUpdate();
   //testMinEigenvalue();
   
 
