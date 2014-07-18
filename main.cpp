@@ -6,11 +6,15 @@
 #include <assert.h>
 #include "types.h"
 #include "tinyxml2.h"
+#include "boost/filesystem.hpp"
+#include "boost/filesystem/fstream.hpp"
+#include "boost/optional.hpp"
 
 using std::vector;
 using std::cout;
 using std::endl;
 using std::ostream;
+using std::istream;
 using std::max;
 using std::min;
 using std::pair;
@@ -18,6 +22,10 @@ using std::ofstream;
 
 using tinyxml2::XMLDocument;
 using tinyxml2::XMLElement;
+
+using boost::filesystem::path;
+using boost::filesystem::ifstream;
+using boost::optional;
 
 template <class T>
 ostream& operator<<(ostream& os, const vector<T>& v) {
@@ -320,9 +328,6 @@ void choleskyDecomposition(Matrix &A, Matrix &L) {
   L.copyFrom(A);
   mpackint info;
   Rpotrf("Lower", dim, &L.elements[0], dim, &info);
-  if (info != 0) {
-    cout << "A = " << A << endl;
-  }
   assert(info == 0);
 
   // Set the upper-triangular part of the L to zero
@@ -1090,37 +1095,72 @@ SDP parseBootstrapSDP(XMLElement *sdpXml) {
                       naturalNumbers(100));
 }
 
-SDP readBootstrapSDP(const char*file) {
+SDP readBootstrapSDP(const path sdpFile) {
   XMLDocument doc;
-  doc.LoadFile(file);
+  doc.LoadFile(sdpFile.c_str());
   return parseBootstrapSDP(doc.FirstChildElement("sdp"));
 }
 
-class SolverParameters {
+class SDPSolverParameters {
 public:
-  Real betaStar;
-  Real betaBar;
-  Real epsilonStar;
-  Real epsilonDash;
-  Real gammaStar;
-  Real alphaMax;
-  Real lambdaStar;
   int maxIterations;
-  SolverParameters():
-    betaStar("0.1"),
-    betaBar("0.3"),
-    epsilonStar("1e-30"),
-    epsilonDash("1e-30"),
-    gammaStar("0.9"),
-    alphaMax("100"),
-    lambdaStar("1e4"),
-    maxIterations(100) {}
+  Real dualityGapThreshold;          // = epsilonStar
+  Real primalFeasibilityThreshold;   // = epsilonBar
+  Real dualFeasibilityThreshold;     // = epsilonBar
+  Real initialMatrixScale;           // = lambdaStar
+  Real feasibleCenteringParameter;   // = betaStar
+  Real infeasibleCenteringParameter; // = betaBar
+  Real stepLengthReduction;          // = gammaStar
+  Real maxStepLength;
+  int precision;
+
+  SDPSolverParameters():
+    maxIterations(100),
+    dualityGapThreshold("1e-30"),
+    primalFeasibilityThreshold("1e-30"),
+    dualFeasibilityThreshold("1e-30"),
+    initialMatrixScale("1e4"),
+    feasibleCenteringParameter("0.1"),
+    infeasibleCenteringParameter("0.3"),
+    stepLengthReduction("0.9"),
+    maxStepLength("100"),
+    precision(200) {}
+
+  SDPSolverParameters(const path paramFile) {
+    ifstream is(paramFile);
+    is >> maxIterations;                is.ignore(256, '\n');
+    is >> dualityGapThreshold;          is.ignore(256, '\n');
+    is >> primalFeasibilityThreshold;   is.ignore(256, '\n');
+    is >> dualFeasibilityThreshold;     is.ignore(256, '\n');
+    is >> initialMatrixScale;           is.ignore(256, '\n');
+    is >> feasibleCenteringParameter;   is.ignore(256, '\n');
+    is >> infeasibleCenteringParameter; is.ignore(256, '\n');
+    is >> stepLengthReduction;          is.ignore(256, '\n');
+    is >> maxStepLength;                is.ignore(256, '\n');
+    is >> precision;                    is.ignore(256, '\n');
+  }
+
+  friend ostream& operator<<(ostream& os, const SDPSolverParameters& p);
+
 };
+
+ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
+  os << "maxIterations                = " << p.maxIterations                << endl;
+  os << "dualityGapThreshold          = " << p.dualityGapThreshold          << endl;
+  os << "primalFeasibilityThreshold   = " << p.primalFeasibilityThreshold   << endl;
+  os << "dualFeasibilityThreshold     = " << p.dualFeasibilityThreshold     << endl;
+  os << "initialMatrixScale           = " << p.initialMatrixScale           << endl;
+  os << "feasibleCenteringParameter   = " << p.feasibleCenteringParameter   << endl;
+  os << "infeasibleCenteringParameter = " << p.infeasibleCenteringParameter << endl;
+  os << "stepLengthReduction          = " << p.stepLengthReduction          << endl;
+  os << "maxStepLength                = " << p.maxStepLength                << endl;
+  os << "precision                    = " << p.precision                    << endl;
+  return os;
+}
 
 class SDPSolver {
 public:
   SDP sdp;
-  SolverParameters parameters;
 
   // current point
   Vector x;
@@ -1158,9 +1198,8 @@ public:
   vector<Vector> eigenvaluesWorkspace;
   vector<Vector> QRWorkspace;
 
-  SDPSolver(const SDP &sdp, const SolverParameters &parameters):
+  SDPSolver(const SDP &sdp):
     sdp(sdp),
-    parameters(parameters),
     x(sdp.numConstraints(), 0),
     X(sdp.objective.size(), sdp.psdMatrixBlockDims()),
     Y(X),
@@ -1191,8 +1230,8 @@ public:
     }
   }
 
-  void initialize();
-  void run();
+  void initialize(const SDPSolverParameters &parameters);
+  void run(const SDPSolverParameters &parameters, const path outFile, const path checkpointFile);
   void computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R, const bool primalFeasible);
 
 };
@@ -1405,12 +1444,12 @@ void computeSchurRHS(const SDP &sdp,
   }
 }
 
-void SDPSolver::initialize() {
+void SDPSolver::initialize(const SDPSolverParameters &parameters) {
   fillVector(x, 0);
   X.setZero();
-  X.addDiagonal(parameters.lambdaStar);
+  X.addDiagonal(parameters.initialMatrixScale);
   Y.setZero();
-  Y.addDiagonal(parameters.lambdaStar);
+  Y.addDiagonal(parameters.initialMatrixScale);
 }
 
 // PrimalResidues = sum_p F_p x_p - X - F_0
@@ -1433,20 +1472,20 @@ Real dualObjective(const SDP &sdp, const BlockDiagonalMatrix &Y) {
 }
 
 // Implements SDPA's DirectionParameter::MehrotraPredictor
-Real predictorCenteringParameter(const SolverParameters &parameters, 
+Real predictorCenteringParameter(const SDPSolverParameters &parameters, 
                                  const bool primalFeasible,
                                  const bool dualFeasible,
                                  const bool reductionSwitch) {
   if (primalFeasible && dualFeasible)
     return 0;
   else if (reductionSwitch)
-    return parameters.betaBar;
+    return parameters.infeasibleCenteringParameter;
   else
     return 2;
 }
 
 // Implements SDPA's DirectionParameter::MehrotraCorrector
-Real correctorCenteringParameter(const SolverParameters &parameters,
+Real correctorCenteringParameter(const SDPSolverParameters &parameters,
                                  const BlockDiagonalMatrix &X,
                                  const BlockDiagonalMatrix &dX,
                                  const BlockDiagonalMatrix &Y,
@@ -1459,9 +1498,9 @@ Real correctorCenteringParameter(const SolverParameters &parameters,
   Real beta = r < 1 ? r*r : r;
 
   if (primalFeasible && dualFeasible)
-    return min(max(parameters.betaStar, beta), Real(1));
+    return min(max(parameters.feasibleCenteringParameter, beta), Real(1));
   else
-    return max(parameters.betaBar, beta);
+    return max(parameters.infeasibleCenteringParameter, beta);
 }
 
 // R = beta mu I - X Y
@@ -1535,29 +1574,26 @@ Real stepLength(BlockDiagonalMatrix &XInvCholesky,
                 BlockDiagonalMatrix &XInvDX,
                 vector<Vector> &eigenvalues,
                 vector<Vector> &workspace,
-                const SolverParameters &parameters,
+                const SDPSolverParameters &parameters,
                 const bool feasible) {
 
   // XInvDX = L^{-1} dX L^{-1 T}, where X = L L^T
   XInvDX.copyFrom(dX);
   lowerTriangularCongruence(XInvDX, XInvCholesky);
-  // cout << "XInvDX = " << XInvDX << endl;
 
   Real lambda = minEigenvalueViaQR(XInvDX, eigenvalues, workspace);
-  cout << "lambda = " << lambda << endl;
-
-  Real alpha = (lambda > -1/parameters.alphaMax) ? parameters.alphaMax : -1/lambda;
-  alpha *= parameters.gammaStar;
+  Real alpha = (lambda > -1/parameters.maxStepLength) ? parameters.maxStepLength : -1/lambda;
+  alpha *= parameters.stepLengthReduction;
   if (!feasible)
     alpha = min(alpha, Real(1));
   return alpha;
 }
 
-void computeSchurComplementCholesky(const BlockDiagonalMatrix &XInv,
+void computeSchurComplementCholesky(const SDP &sdp,
+                                    const BlockDiagonalMatrix &XInv,
                                     const BlockDiagonalMatrix &BilinearPairingsXInv,
                                     const BlockDiagonalMatrix &Y,
                                     const BlockDiagonalMatrix &BilinearPairingsY,
-                                    const SDP &sdp,
                                     BlockDiagonalMatrix &SchurBlocks,
                                     BlockDiagonalMatrix &SchurBlocksCholesky,
                                     Matrix &SchurUpdateLowRank,
@@ -1575,21 +1611,35 @@ void computeSchurComplementCholesky(const BlockDiagonalMatrix &XInv,
   choleskyUpdate(SchurComplementCholesky, SchurUpdateLowRank);
 }
 
-void printInfo(Real mu,
+void printInfoHeader() {
+  cout << "     mu        errP         errD        objP        objD      gap        alphaP   alphaD   beta\n";
+  cout << "---------------------------------------------------------------------------------------------------\n";
+}
+
+void printInfo(int iteration,
+               Real mu,
                Real primalObj,
                Real dualObj,
+               Real objGap,
+               Real primalErr,
+               Real dualErr,
                bool primalFeasible,
                bool dualFeasible,
                Real alphaPrimal,
-               Real alphaDual) {
-  // cout << "---------------------------------------" << endl;
-  cout << "mu              = " << mu << endl;
-  cout << "primalObjective = " << primalObj << endl;
-  cout << "dualObjective   = " << dualObj << endl;
-  cout << "primalFeasible  = " << (primalFeasible ? "true" : "false") << endl;
-  cout << "dualFeasible    = " << (dualFeasible ? "true" : "false") << endl;
-  cout << "alphaPrimal     = " << alphaPrimal << endl;
-  cout << "alphaDual       = " << alphaDual << endl;
+               Real alphaDual,
+               Real betaCorrector) {
+  gmp_fprintf(stdout,
+              "%3d  %4.1Fe  %s%+7.2Fe%s  %s%+7.2Fe%s  %+7.2Fe  %+7.2Fe  %+7.2Fe  %4.1Fe  %4.1Fe  %4.2Fe\n",
+              iteration,
+              mu.get_mpf_t(),
+              primalFeasible ? "|" : " ", primalErr.get_mpf_t(), primalFeasible ? "|" : " ",
+              dualFeasible   ? "|" : " ", dualErr.get_mpf_t(),   dualFeasible   ? "|" : " ",
+              primalObj.get_mpf_t(),
+              dualObj.get_mpf_t(),
+              objGap.get_mpf_t(),
+              alphaPrimal.get_mpf_t(),
+              alphaDual.get_mpf_t(),
+              betaCorrector.get_mpf_t());
 }
 
 void SDPSolver::computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R,
@@ -1623,18 +1673,12 @@ void SDPSolver::computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R,
   dY *= -1;
 }
 
-Real dualityGap(Real p, Real d) {
-  Real t = (abs(p) + abs(d))/2;
-  return abs(p - d) / max(t, Real(1));
-}
+void SDPSolver::run(const SDPSolverParameters &parameters,
+                    const path outFile,
+                    const path checkpointFile) {
+  printInfoHeader();
 
-void SDPSolver::run() {
   for (int iteration = 1; iteration <= parameters.maxIterations; iteration++) {
-    cout << "---------------------------------------" << endl;
-    cout << "x = " << x << endl;
-    cout << "X = " << X << endl;
-    cout << "Y = " << Y << endl;
-
     inverseCholeskyAndInverse(X, XInvWorkspace, XInvCholesky, XInv);
     inverseCholesky(Y, XInvWorkspace, YInvCholesky);
 
@@ -1647,23 +1691,23 @@ void SDPSolver::run() {
     // PrimalResidues = sum_p F_p x_p - X - F_0
     computePrimalResidues(sdp, x, X, PrimalResidues);
 
-    bool primalFeasible = PrimalResidues.maxAbsElement()    < parameters.epsilonDash;
-    bool dualFeasible   = maxAbsVectorElement(dualResidues) < parameters.epsilonDash;
+    Real primalErr      = PrimalResidues.maxAbsElement();
+    Real dualErr        = maxAbsVectorElement(dualResidues);
     Real primalObj      = primalObjective(sdp, x);
     Real dualObj        = dualObjective(sdp, Y);
-    bool optimal        = dualityGap(primalObj, dualObj) < parameters.epsilonStar;
+    Real dualityGap     = abs(primalObj - dualObj) / max(Real(abs(primalObj) + abs(dualObj)), Real(1));
 
-    cout << "PrimalResidues.maxAbsElement() = " << PrimalResidues.maxAbsElement() << endl;
-    cout << "maxAbsVectorElement(dualResidues) = " << maxAbsVectorElement(dualResidues) << endl;
-
+    bool primalFeasible = primalErr  < parameters.primalFeasibilityThreshold;
+    bool dualFeasible   = dualErr    < parameters.dualFeasibilityThreshold;
+    bool optimal        = dualityGap < parameters.dualityGapThreshold;
     bool reductionSwitch = true;
 
     if (primalFeasible && dualFeasible && optimal)
       return;
 
-    computeSchurComplementCholesky(XInv, BilinearPairingsXInv,
+    computeSchurComplementCholesky(sdp,
+                                   XInv, BilinearPairingsXInv,
                                    Y, BilinearPairingsY,
-                                   sdp,
                                    SchurBlocks,
                                    SchurBlocksCholesky,
                                    SchurUpdateLowRank,
@@ -1673,23 +1717,13 @@ void SDPSolver::run() {
 
     // Mehrotra predictor solution for (dx, dX, dY)
     Real betaPredictor = predictorCenteringParameter(parameters, primalFeasible, dualFeasible, reductionSwitch);
-    cout << "betaPredictor = " << betaPredictor << endl;
     computePredictorRMatrix(betaPredictor, mu, X, Y, R);
     computeSearchDirectionWithRMatrix(R, primalFeasible);
 
-    cout << "dx_p = " << dx << endl;
-    cout << "dX_p = " << dX << endl;
-    cout << "dY_p = " << dY << endl;
-
     // Mehrotra corrector solution for (dx, dX, dY)
     Real betaCorrector = correctorCenteringParameter(parameters, X, dX, Y, dY, mu, primalFeasible, dualFeasible);
-    cout << "betaCorrector = " << betaCorrector << endl;
     computeCorrectorRMatrix(betaCorrector, mu, X, dX, Y, dY, R);
     computeSearchDirectionWithRMatrix(R, primalFeasible);
-
-    cout << "dx_c = " << dx << endl;
-    cout << "dX_c = " << dX << endl;
-    cout << "dY_c = " << dY << endl;
 
     // Step length to preserve positive definiteness
     Real alphaPrimal = stepLength(XInvCholesky, dX, StepMatrixWorkspace,
@@ -1699,9 +1733,6 @@ void SDPSolver::run() {
                                   eigenvaluesWorkspace, QRWorkspace,
                                   parameters, dualFeasible);
 
-    cout << "alphaPrimal = " << alphaPrimal << endl;
-    cout << "alphaDual   = " << alphaDual << endl;
-
     // Update current point
     vectorScaleMultiplyAdd(alphaPrimal, dx, 1, x);  
     dX *= alphaPrimal;
@@ -1709,8 +1740,8 @@ void SDPSolver::run() {
     dY *= alphaDual;
     Y += dY;
 
-    if (iteration % 1 == 0)
-      printInfo(mu, primalObj, dualObj, primalFeasible, dualFeasible, alphaPrimal, alphaDual);
+    printInfo(iteration, mu, primalObj, dualObj, dualityGap, primalErr, dualErr,
+              primalFeasible, dualFeasible, alphaPrimal, alphaDual, betaCorrector);
   }
 }
 
@@ -1920,15 +1951,38 @@ void printSDPDenseFormat(ostream& os, const SDP &sdp) {
 
 }
 
-void testSDPSolver(const char *file) {
-  const SDP sdp = readBootstrapSDP(file);
-  cout << sdp << endl;
+void solveSDP(const path sdpFile,
+              const optional<path> outFileOption,
+              const optional<path> checkpointFileOption,
+              const optional<path> paramFileOption) {
 
-  SDPSolver solver(sdp, SolverParameters());
-  solver.initialize();
-  solver.run();
+  path outFile = sdpFile;
+  outFile.replace_extension("out");
+  if (outFileOption)
+    outFile = *outFileOption;
 
-  cout << "done." << endl;
+  path checkpointFile = sdpFile;
+  checkpointFile.replace_extension("ck");
+  if (checkpointFileOption)
+    checkpointFile = *checkpointFileOption;
+    
+  SDPSolverParameters parameters;
+  if (paramFileOption)
+    parameters = SDPSolverParameters(*paramFileOption);
+
+  mpf_set_default_prec(parameters.precision);
+  cout << "precision = " << mpf_get_default_prec() << endl;
+  cout.precision(200);
+
+  const SDP sdp = readBootstrapSDP(sdpFile);
+  
+  SDPSolver solver(sdp);
+  solver.initialize(parameters);
+  solver.run(parameters, outFile, checkpointFile);
+  
+
+  cout << "\nParameters:\n";
+  cout << parameters;
 
   // cout << "X = " << solver.X << ";\n";
   // cout << "Y = " << solver.Y << ";\n";
@@ -1944,10 +1998,10 @@ void testSDPSolver(const char *file) {
   // cout << "dX = " << solver.dX << ";\n";
   // cout << "dY = " << solver.dY << ";\n";
 
-  ofstream datfile;
-  datfile.open("sdp.dat");
-  printSDPDenseFormat(datfile, sdp);
-  datfile.close();
+  // ofstream datfile;
+  // datfile.open("sdp.dat");
+  // printSDPDenseFormat(datfile, sdp);
+  // datfile.close();
 }
 
 void testCholeskyUpdate() {
@@ -1987,18 +2041,47 @@ void testCholeskyUpdate() {
   cout << "L L^T - (A + V V^T) = " << C << endl;
 }
 
+const char *help(const char *cmd) {
+  return cmd;
+}
+
 int main(int argc, char** argv) {
 
-  mpf_set_default_prec(200);
-  cout << "precision = " << mpf_get_default_prec() << endl;
-  cout.precision(200);
+  path sdpFile;
+  optional<path> outFile;
+  optional<path> checkpointFile;
+  optional<path> paramFile;
+
+  int i = 1;
+  while (i < argc) {
+    const char *arg = argv[i];
+    if (!strcmp(arg, "-h") || !strcmp(arg, "--help")) {
+      cout << help(argv[0]);
+      return 0;
+    } else if ((!strcmp(arg, "-s") || !strcmp(arg, "--sdpFile"))        && i+1 < argc) {
+      sdpFile = path(argv[i+1]);
+      i += 2;
+    } else if ((!strcmp(arg, "-p") || !strcmp(arg, "--paramFile"))      && i+1 < argc) {
+      paramFile = path(argv[i+1]);
+      i += 2;
+    } else if ((!strcmp(arg, "-o") || !strcmp(arg, "--outFile"))        && i+1 < argc) {
+      outFile = path(argv[i+1]);
+      i += 2;
+    } else if ((!strcmp(arg, "-c") || !strcmp(arg, "--checkpointFile")) && i+1 < argc) {
+      checkpointFile = path(argv[i+1]);
+      i += 2;
+    } else {
+      cout << help(argv[0]);
+      return 1;
+    }
+  }
+
+  solveSDP(sdpFile, outFile, checkpointFile, paramFile);
+  return 0;
 
   //testBlockCongruence();
   //testBlockDiagonalCholesky();
-  testSDPSolver(argv[1]);
+  //testSDPSolver(argv[1], argv[2]);
   //testCholeskyUpdate();
   //testMinEigenvalue();
-  
-
-  return 0;
 }
