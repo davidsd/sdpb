@@ -948,34 +948,30 @@ public:
 
 };
 
-Vector naturalNumbers(int n) {
-  Vector xs(n);
-  for (int i = 0; i < n; i++)
-    xs[i] = Real(i+1);
-  return xs;
-}
+Matrix basisAtSamplePoints(int basisSize, int numPoints, bool withSqrt,
+                           const vector<Polynomial> &basisPols,
+                           const Vector &samplePoints) {
+  Matrix m(basisSize, numPoints);
+  for (int k = 0; k < numPoints; k++) {
+    Real x = samplePoints[k];
+    Real sqrtX = sqrt(x);
 
-Matrix monomialAlgebraBasis(int d1, int d, const Vector &xs, bool halfShift) {
-  Matrix basisMatrix(d1+1, d+1);
-  for (int k = 0; k < d+1; k++) {
-    Real x = xs[k];
-    
-    Real xToTheN = 1;
-    if (halfShift)
-      xToTheN = sqrt(x);
-
-    for (int n = 0; n < d1+1; n++) {
-      basisMatrix.set(n, k, xToTheN);
-      xToTheN *= x;
+    for (int n = 0; n < basisSize; n++) {
+      if (withSqrt)
+        m.set(n, k, basisPols[n](x)*sqrtX);
+      else
+        m.set(n, k, basisPols[n](x));
     }
   }
-  return basisMatrix;
+
+  return m;
 }
 
 SDP bootstrapSDP(const Vector &objective,
                  const Vector &normalization,
                  const vector<PolynomialVectorMatrix> &positiveMatrixPols,
-                 const Vector &xs) {
+                 const vector<Polynomial> &bilinearBasisPols,
+                 const Vector &polynomialSamplePoints) {
   SDP sdp;
   sdp.objective = objective;
 
@@ -1014,11 +1010,15 @@ SDP bootstrapSDP(const Vector &objective,
     vector<int> blocks;
 
     blocks.push_back(sdp.bilinearBases.size());
-    sdp.bilinearBases.push_back(monomialAlgebraBasis(delta1, degree, xs, false));
+    sdp.bilinearBases.push_back(basisAtSamplePoints(delta1+1, degree+1, false,
+                                                    bilinearBasisPols,
+                                                    polynomialSamplePoints));
 
     if (delta2 >= 0) {
       blocks.push_back(sdp.bilinearBases.size());
-      sdp.bilinearBases.push_back(monomialAlgebraBasis(delta2, degree, xs, true));
+      sdp.bilinearBases.push_back(basisAtSamplePoints(delta2+1, degree+1, true,
+                                                      bilinearBasisPols,
+                                                      polynomialSamplePoints));
     }
 
     sdp.blocks.push_back(blocks);
@@ -1026,7 +1026,7 @@ SDP bootstrapSDP(const Vector &objective,
     for (int s = 0; s < m->cols; s++) {
       for (int r = 0; r <= s; r++) {
         for (int k = 0; k <= degree; k++, p++) {
-          const Real xk = xs[k];
+          const Real xk = polynomialSamplePoints[k];
           for (unsigned int n = 0; n < sdp.objective.size(); n++)
             sdp.polMatrixValues.set(p, n, -(*m->get(r,s))[n](xk));
         }
@@ -1094,7 +1094,8 @@ SDP parseBootstrapSDP(XMLElement *sdpXml) {
                       parseMany("polynomialVectorMatrix",
                                 parsePolynomialVectorMatrix,
                                 sdpXml->FirstChildElement("positiveMatrixPols")),
-                      naturalNumbers(100));
+                      parsePolynomialVector(sdpXml->FirstChildElement("bilinearBasisPols")->FirstChildElement("polynomialVector")),
+                      parseVector(sdpXml->FirstChildElement("polynomialSamplePoints")->FirstChildElement("vector")));
 }
 
 SDP readBootstrapSDP(const path sdpFile) {
