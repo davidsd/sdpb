@@ -9,6 +9,7 @@
 #include "boost/filesystem.hpp"
 #include "boost/filesystem/fstream.hpp"
 #include "boost/optional.hpp"
+#include "boost/date_time/posix_time/posix_time.hpp"
 
 using std::vector;
 using std::cout;
@@ -26,6 +27,7 @@ using tinyxml2::XMLElement;
 using boost::filesystem::path;
 using boost::filesystem::ifstream;
 using boost::optional;
+using boost::posix_time::second_clock;
 
 template <class T>
 ostream& operator<<(ostream& os, const vector<T>& v) {
@@ -1115,7 +1117,7 @@ public:
   int precision;
 
   SDPSolverParameters():
-    maxIterations(100),
+    maxIterations(14),
     dualityGapThreshold("1e-30"),
     primalFeasibilityThreshold("1e-30"),
     dualFeasibilityThreshold("1e-30"),
@@ -1124,7 +1126,7 @@ public:
     infeasibleCenteringParameter("0.3"),
     stepLengthReduction("0.9"),
     maxStepLength("100"),
-    precision(256) {}
+    precision(512) {}
 
   SDPSolverParameters(const path paramFile) {
     ifstream ifs(paramFile);
@@ -2010,9 +2012,9 @@ void solveSDP(const path sdpFile,
   mpf_set_default_prec(parameters.precision);
   cout.precision(int(parameters.precision * 0.30102999566398114 + 5));
 
-  cout << "******* SDPB (B is for Bootstrap) *******\n";
-  cout << "SDP file        : "        << sdpFile        << endl;
-  cout << "out file        : "        << outFile        << endl;
+  cout << "SDPB started at " << second_clock::local_time() << endl;
+  cout << "SDP file        : " << sdpFile        << endl;
+  cout << "out file        : " << outFile        << endl;
   cout << "checkpoint file : " << checkpointFile << endl;
 
   cout << "\nParameters:\n";
@@ -2027,9 +2029,9 @@ void solveSDP(const path sdpFile,
   cout << "\nStatus:\n";
   cout << status << endl;
 
-  // cout << "X = " << solver.X << ";\n";
-  // cout << "Y = " << solver.Y << ";\n";
-  // cout << "x = " << solver.x << ";\n";
+  cout << "X = " << solver.X << ";\n";
+  cout << "Y = " << solver.Y << ";\n";
+  cout << "x = " << solver.x << ";\n";
   // cout << "BilinearPairingsXInv = " << solver.BilinearPairingsXInv << endl;
   // cout << "BilinearPairingsY = " << solver.BilinearPairingsY << endl;
   // cout << "schurComplement = " << solver.schurComplement << ";\n";
@@ -2041,10 +2043,13 @@ void solveSDP(const path sdpFile,
   // cout << "dX = " << solver.dX << ";\n";
   // cout << "dY = " << solver.dY << ";\n";
 
-  // ofstream datfile;
-  // datfile.open("sdp.dat");
-  // printSDPDenseFormat(datfile, sdp);
-  // datfile.close();
+  path datFile = sdpFile;
+  datFile.replace_extension("dat");
+  ofstream datStream;
+  datStream.open(datFile.c_str());
+  datStream.precision(parameters.precision);
+  printSDPDenseFormat(datStream, sdp);
+  datStream.close();
 }
 
 void testCholeskyUpdate() {

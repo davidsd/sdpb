@@ -21,7 +21,7 @@ SOURCES = $(OJBECTS:.o=.cpp)
 RESULT  = sdp-bootstrap
 
 CC = g++
-CFLAGS = -g -O2 -Wall -ansi -pedantic -L/home/dsd/lib -I./mpack -I/home/dsd/include -I/home/dsd/include/boost -fopenmp
+CFLAGS = -g -O2 -Wall -ansi -L/home/dsd/lib -I./mpack -I/home/dsd/include -I/home/dsd/include/boost -fopenmp
 RM = rm -f
 
 .SUFFIXES: .cpp .o
