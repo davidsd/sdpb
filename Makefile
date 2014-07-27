@@ -27,7 +27,7 @@ RM = rm -f
 .SUFFIXES: .cpp .o
 
 $(RESULT): $(OBJECTS)
-	$(CC) $(CFLAGS) -lgomp -lmblas_gmp -lmlapack_gmp -lgmp -lgmpxx -lmpc -lboost_serialization -lboost_system -lboost_filesystem -o $@ $(OBJECTS)
+	$(CC) $(CFLAGS) -lgomp -lmblas_gmp -lmlapack_gmp -lgmp -lgmpxx -lmpc -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -o $@ $(OBJECTS)
 
 .cpp.o:
 	$(CC) $(CFLAGS) -c $< -o $@

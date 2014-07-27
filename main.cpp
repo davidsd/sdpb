@@ -11,6 +11,7 @@
 #include "boost/filesystem/fstream.hpp"
 #include "boost/optional.hpp"
 #include "boost/date_time/posix_time/posix_time.hpp"
+#include "boost/timer/timer.hpp"
 
 using std::vector;
 using std::cout;
@@ -29,6 +30,48 @@ using boost::filesystem::path;
 using boost::filesystem::ifstream;
 using boost::optional;
 using boost::posix_time::second_clock;
+
+using boost::timer::cpu_timer;
+
+class Timers {
+public:
+  cpu_timer schurComplementCholesky;
+  cpu_timer predictorSolution;
+  cpu_timer correctorSolution;
+  cpu_timer bilinearPairings;
+  cpu_timer computeSchurBlocks;
+  cpu_timer schurBlocksCholesky;
+  cpu_timer schurCholeskyUpdate;
+  cpu_timer runSolver;
+
+  Timers() {
+    schurComplementCholesky.stop();
+    predictorSolution.stop();
+    correctorSolution.stop();
+    bilinearPairings.stop();
+    computeSchurBlocks.stop();
+    schurBlocksCholesky.stop();
+    schurCholeskyUpdate.stop();
+    runSolver.stop();
+  }    
+
+  friend ostream& operator<<(ostream& os, const Timers& t);
+};
+
+ostream& operator<<(ostream& os, const Timers& t) {
+  cout << "Time elapsed:" << endl;
+  cout << "  schurComplementCholesky: " << t.schurComplementCholesky.format();
+  cout << "  predictorSolution      : " << t.predictorSolution.format();
+  cout << "  correctorSolution      : " << t.correctorSolution.format();
+  cout << "  bilinearPairings       : " << t.bilinearPairings.format();
+  cout << "  computeSchurBlocks     : " << t.computeSchurBlocks.format();
+  cout << "  schurBlocksCholesky    : " << t.schurBlocksCholesky.format();
+  cout << "  schurCholeskyUpdate    : " << t.schurCholeskyUpdate.format();
+  cout << "  runSolver              : " << t.runSolver.format();
+  return os;
+}
+
+Timers timers;
 
 template <class T>
 ostream& operator<<(ostream& os, const vector<T>& v) {
@@ -341,7 +384,8 @@ void choleskyDecomposition(Matrix &A, Matrix &L) {
 
 // L' (lower triangular) such that L' L'^T = L L^T + v v^T. i.e., if L
 // is a cholesky decomposition of A, then L' is a cholesky
-// decomposition of A + v v^T
+// decomposition of A + v v^T.  This function dominates the running
+// time of this program.
 // Inputs: 
 // - L : dim x dim lower-triangular matrix 
 // - v : pointer to the head of a length-dim vector
@@ -354,7 +398,15 @@ void choleskyUpdate(Matrix &L, Real *v) {
     x = L.get(r,r);
     y = *(v+r);
     Rrotg(&x, &y, &c, &s);
-    Rrot(dim - r, &L.elements[r*(dim+1)], 1, v+r, 1, c, s);
+
+    Real *dx = &L.elements[r*(dim+1)];
+    Real *dy = v+r;
+    #pragma omp parallel for schedule(static)
+    for (int i = 0; i < dim - r; i++) {
+      const Real tmp = c*dx[i] + s*dy[i];
+      dy[i] = c*dy[i] - s*dx[i];
+      dx[i] = tmp;
+    }
   }
 }
 
@@ -574,7 +626,7 @@ public:
     for (unsigned int i = 0; i < diagonalPart.size(); i++)
       diagonalPart[i] += c;
 
-    //#pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b].addDiagonal(c);
   }
@@ -592,7 +644,7 @@ public:
   void operator+=(const BlockDiagonalMatrix &A) {
     addDiagonalPart(A.diagonalPart, 1);
 
-    //#pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b] += A.blocks[b];
   }
@@ -600,7 +652,7 @@ public:
   void operator-=(const BlockDiagonalMatrix &A) {
     addDiagonalPart(A.diagonalPart, -1);
 
-    //#pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b] -= A.blocks[b];
   }
@@ -609,7 +661,7 @@ public:
     for (unsigned int i = 0; i < diagonalPart.size(); i++)
       diagonalPart[i] *= c;
 
-    //#pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b] *= c;
   }
@@ -618,7 +670,7 @@ public:
     for (unsigned int i = 0; i < diagonalPart.size(); i++)
       diagonalPart[i] = A.diagonalPart[i];
     
-    //#pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b].copyFrom(A.blocks[b]);
   }
@@ -631,7 +683,7 @@ public:
     for(; p < (int)diagonalPart.size(); p++)
       A.set(p, p, diagonalPart[p]);
 
-    //#pragma omp parallel for schedule(static)
+    // TODO: parallelize this loop
     for (unsigned int b = 0; b < blocks.size(); b++) {
       int dim = blocks[b].cols;
       for (int c = 0; c < dim; c++)
@@ -642,7 +694,7 @@ public:
   }
 
   void symmetrize() {
-    //#pragma omp parallel for schedule(static)
+    #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b].symmetrize();
   }
@@ -684,7 +736,7 @@ Real frobeniusProductSymmetric(const BlockDiagonalMatrix &A,
                                const BlockDiagonalMatrix &B) {
   Real result = dotProduct(A.diagonalPart, B.diagonalPart);
 
-  //#pragma omp parallel for schedule(static)
+  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++)
     result += frobeniusProductSymmetric(A.blocks[b], B.blocks[b]);
 
@@ -702,7 +754,7 @@ Real frobeniusProductOfSums(const BlockDiagonalMatrix &X,
   for (unsigned int i = 0; i < X.diagonalPart.size(); i++)
     result += (X.diagonalPart[i] + dX.diagonalPart[i])*(Y.diagonalPart[i] + dY.diagonalPart[i]);
 
-  //#pragma omp parallel for schedule(static)
+  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < X.blocks.size(); b++)
     result += frobeniusProductOfSums(X.blocks[b], dX.blocks[b], Y.blocks[b], dY.blocks[b]);
 
@@ -727,7 +779,7 @@ void blockDiagonalMatrixScaleMultiplyAdd(Real alpha,
   for (unsigned int i = 0; i < A.diagonalPart.size(); i++)
     C.diagonalPart[i] = alpha*A.diagonalPart[i]*B.diagonalPart[i] + beta*C.diagonalPart[i];
 
-  //#pragma omp parallel for schedule(static)
+  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++)
     matrixScaleMultiplyAdd(alpha, A.blocks[b], B.blocks[b], beta, C.blocks[b]);
 }
@@ -742,7 +794,7 @@ void lowerTriangularCongruence(BlockDiagonalMatrix &A, BlockDiagonalMatrix &L) {
   for (unsigned int i = 0; i < A.diagonalPart.size(); i++)
     A.diagonalPart[i] *= L.diagonalPart[i]*L.diagonalPart[i];
 
-  //#pragma omp parallel for schedule(static)
+  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++)
     lowerTriangularCongruence(A.blocks[b], L.blocks[b]);
 }
@@ -752,7 +804,7 @@ void choleskyDecomposition(BlockDiagonalMatrix &A,
   for (unsigned int i = 0; i < A.diagonalPart.size(); i++)
     L.diagonalPart[i] = sqrt(A.diagonalPart[i]);
 
-  //#pragma omp parallel for schedule(static)
+  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++)
     choleskyDecomposition(A.blocks[b], L.blocks[b]);
 }
@@ -763,7 +815,7 @@ void inverseCholesky(BlockDiagonalMatrix &A,
   for (unsigned int i = 0; i < A.diagonalPart.size(); i++)
     AInvCholesky.diagonalPart[i] = 1/sqrt(A.diagonalPart[i]);
 
-  //#pragma omp parallel for schedule(static)
+  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++)
     inverseCholesky(A.blocks[b], work.blocks[b], AInvCholesky.blocks[b]);
 }
@@ -779,7 +831,7 @@ void inverseCholeskyAndInverse(BlockDiagonalMatrix &A,
     AInv.diagonalPart[i] = 1/d;
   }
 
-  //#pragma omp parallel for schedule(static)
+  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++)
     inverseCholeskyAndInverse(A.blocks[b], work.blocks[b], AInvCholesky.blocks[b], AInv.blocks[b]);
 }
@@ -789,7 +841,7 @@ void blockMatrixSolveWithInverseCholesky(BlockDiagonalMatrix &AInvCholesky,
   for (unsigned int i = 0; i < X.diagonalPart.size(); i++)
     X.diagonalPart[i] *= AInvCholesky.diagonalPart[i] * AInvCholesky.diagonalPart[i];
 
-  //#pragma omp parallel for schedule(static)
+  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < X.blocks.size(); b++)
     matrixSolveWithInverseCholesky(AInvCholesky.blocks[b], X.blocks[b]);
 }
@@ -1131,17 +1183,19 @@ public:
   Real infeasibleCenteringParameter; // = betaBar
   Real stepLengthReduction;          // = gammaStar
   int precision;
+  int maxThreads;
 
   SDPSolverParameters():
-    maxIterations(50),
-    dualityGapThreshold("1e-30"),
+    maxIterations(10),
+    dualityGapThreshold("1e-20"),
     primalFeasibilityThreshold("1e-30"),
-    dualFeasibilityThreshold("1e-60"),
-    initialMatrixScale("1e4"),
+    dualFeasibilityThreshold("1e-30"),
+    initialMatrixScale("1e20"),
     feasibleCenteringParameter("0.1"),
     infeasibleCenteringParameter("0.3"),
-    stepLengthReduction("0.9"),
-    precision(300) {}
+    stepLengthReduction("0.7"),
+    precision(500),
+    maxThreads(8) {}
 
   SDPSolverParameters(const path &paramFile) {
     ifstream ifs(paramFile);
@@ -1154,6 +1208,7 @@ public:
     ifs >> infeasibleCenteringParameter; ifs.ignore(256, '\n');
     ifs >> stepLengthReduction;          ifs.ignore(256, '\n');
     ifs >> precision;                    ifs.ignore(256, '\n');
+    ifs >> maxThreads;                   ifs.ignore(256, '\n');
   }
 
   friend ostream& operator<<(ostream& os, const SDPSolverParameters& p);
@@ -1169,8 +1224,8 @@ ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
   os << "feasibleCenteringParameter   = " << p.feasibleCenteringParameter   << endl;
   os << "infeasibleCenteringParameter = " << p.infeasibleCenteringParameter << endl;
   os << "stepLengthReduction          = " << p.stepLengthReduction          << endl;
-  os << "precision                    = " << p.precision                    << endl;
-  os << "actual precision             = " << mpf_get_default_prec()         << endl;
+  os << "precision(actual)            = " << p.precision << "(" << mpf_get_default_prec() << ")" << endl;
+  os << "maxThreads                   = " << p.maxThreads                   << endl;
   return os;
 }
 
@@ -1294,7 +1349,7 @@ void computeBilinearPairings(const BlockDiagonalMatrix &A,
                              const vector<Matrix> &bilinearBases,
                              vector<Matrix> &workspace,
                              BlockDiagonalMatrix &result) {
-  #pragma omp parallel for schedule(static)
+  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < bilinearBases.size(); b++)
     tensorMatrixCongruenceTranspose(A.blocks[b], bilinearBases[b], workspace[b], result.blocks[b]);
 }
@@ -1366,7 +1421,7 @@ void computeSchurBlocks(const SDP &sdp,
                         const BlockDiagonalMatrix &BilinearPairingsY,
                         BlockDiagonalMatrix &SchurBlocks) {
 
-  //#pragma omp parallel for schedule(static)
+  #pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     const int ej = sdp.degrees[j] + 1;
 
@@ -1399,7 +1454,7 @@ void computeDualResidues(const SDP &sdp,
                          const BlockDiagonalMatrix &Y,
                          const BlockDiagonalMatrix &BilinearPairingsY,
                          Vector &dualResidues) {
-  //#pragma omp parallel for schedule(static)
+  #pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     const int ej = sdp.degrees[j] +1;
 
@@ -1463,7 +1518,7 @@ void computeSchurRHS(const SDP &sdp,
       r[p] -= sdp.polMatrixValues.get(p, n)*Z.diagonalPart[n];
   }
 
-  //#pragma omp parallel for schedule(static)
+  #pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     for (vector<IndexTuple>::const_iterator t = sdp.constraintIndices[j].begin();
          t != sdp.constraintIndices[j].end();
@@ -1597,10 +1652,10 @@ Real minEigenvalueViaQR(BlockDiagonalMatrix &A, vector<Vector> &eigenvalues, vec
   for (unsigned int i = 0; i < A.diagonalPart.size(); i++)
     lambdaMin = min(lambdaMin, A.diagonalPart[i]);
 
-  //#pragma omp parallel for schedule(static)
+  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++) {
     Real minBlockLambda = minEigenvalueViaQR(A.blocks[b], eigenvalues[b], workspace[b]);
-    //#pragma omp critical
+    #pragma omp critical
     {
       lambdaMin = min(lambdaMin, minBlockLambda);
     }
@@ -1638,17 +1693,23 @@ void computeSchurComplementCholesky(const SDP &sdp,
                                     Matrix &SchurUpdateLowRank,
                                     Matrix &SchurComplementCholesky) {
 
+  timers.computeSchurBlocks.resume();
   computeSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, SchurBlocks);
+  timers.computeSchurBlocks.stop();
+  timers.schurBlocksCholesky.resume();
   choleskyDecomposition(SchurBlocks, SchurBlocksCholesky);
+  timers.schurBlocksCholesky.stop();
   SchurBlocksCholesky.copyInto(SchurComplementCholesky);
 
-  //#pragma omp parallel for schedule(static)
+  #pragma omp parallel for schedule(dynamic)
   for (int n = 0; n < sdp.polMatrixValues.cols; n++) {
     Real r = sqrt(XInv.diagonalPart[n]*Y.diagonalPart[n]);
     for (int p = 0; p < sdp.polMatrixValues.rows; p++)
       SchurUpdateLowRank.set(p, n, r*sdp.polMatrixValues.get(p, n));
   }
+  timers.schurCholeskyUpdate.resume();
   choleskyUpdate(SchurComplementCholesky, SchurUpdateLowRank);
+  timers.schurCholeskyUpdate.stop();
 }
 
 void printInfoHeader() {
@@ -1707,13 +1768,16 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
                                const path outFile,
                                const path checkpointFile) {
   printInfoHeader();
+  timers.runSolver.resume();
 
   for (int iteration = 1; iteration <= parameters.maxIterations; iteration++) {
     inverseCholeskyAndInverse(X, XInvWorkspace, XInvCholesky, XInv);
     inverseCholesky(Y, XInvWorkspace, YInvCholesky);
 
+    timers.bilinearPairings.resume();
     computeBilinearPairings(XInv, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsXInv);
     computeBilinearPairings(Y,    sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsY);
+    timers.bilinearPairings.stop();
 
     // d_k = c_k - Tr(F_k Y)
     computeDualResidues(sdp, Y, BilinearPairingsY, dualResidues);
@@ -1733,6 +1797,7 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
 
     if (isPrimalFeasible && isDualFeasible && isOptimal) break;
 
+    timers.schurComplementCholesky.resume();
     computeSchurComplementCholesky(sdp,
                                    XInv, BilinearPairingsXInv,
                                    Y, BilinearPairingsY,
@@ -1740,20 +1805,25 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
                                    SchurBlocksCholesky,
                                    SchurUpdateLowRank,
                                    SchurComplementCholesky);
+    timers.schurComplementCholesky.stop();
 
     Real mu = frobeniusProductSymmetric(X, Y)/X.dim;
 
     // Mehrotra predictor solution for (dx, dX, dY)
     Real betaPredictor = predictorCenteringParameter(parameters, reductionSwitch,
                                                      isPrimalFeasible && isDualFeasible);
+    timers.predictorSolution.resume();
     computePredictorRMatrix(betaPredictor, mu, X, Y, R);
     computeSearchDirectionWithRMatrix(R, isPrimalFeasible);
+    timers.predictorSolution.stop();
 
     // Mehrotra corrector solution for (dx, dX, dY)
     Real betaCorrector = correctorCenteringParameter(parameters, X, dX, Y, dY, mu,
                                                      isPrimalFeasible && isDualFeasible);
+    timers.correctorSolution.resume();
     computeCorrectorRMatrix(betaCorrector, mu, X, dX, Y, dY, R);
     computeSearchDirectionWithRMatrix(R, isPrimalFeasible);
+    timers.correctorSolution.stop();
 
     // Step length to preserve positive definiteness
     Real primalStepLength = stepLength(XInvCholesky, dX, StepMatrixWorkspace,
@@ -1772,6 +1842,7 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
               primalStepLength, dualStepLength, betaCorrector);
   }
 
+  timers.runSolver.stop();
   return status;
 }
 
@@ -2016,6 +2087,7 @@ void solveSDP(const path sdpFile,
 
   mpf_set_default_prec(parameters.precision);
   cout.precision(int(parameters.precision * 0.30102999566398114 + 5));
+  omp_set_num_threads(parameters.maxThreads);
 
   printSDPBHeader(sdpFile, outFile, checkpointFile, parameters);
 
@@ -2027,6 +2099,7 @@ void solveSDP(const path sdpFile,
   
   cout << "\nStatus:\n";
   cout << status << endl;
+  cout << timers << endl;
 
   // cout << "X = " << solver.X << ";\n";
   // cout << "Y = " << solver.Y << ";\n";
@@ -2049,6 +2122,17 @@ void solveSDP(const path sdpFile,
   // datStream.precision(parameters.precision);
   // printSDPDenseFormat(datStream, sdp);
   // datStream.close();
+}
+
+void testBilinearPairings(const path sdpFile) {
+  SDPSolverParameters parameters;
+  const SDP sdp = readBootstrapSDP(sdpFile);
+  SDPSolver solver(sdp);
+  solver.initialize(parameters);
+  for (int i = 0; i < 100; i++) {
+    cout << "i = " << i << endl;
+    computeBilinearPairings(solver.Y, sdp.bilinearBases, solver.bilinearPairingsWorkspace, solver.BilinearPairingsY);
+  }
 }
 
 void testCholeskyUpdate() {
@@ -2124,6 +2208,7 @@ int main(int argc, char** argv) {
   }
 
   solveSDP(sdpFile, outFile, checkpointFile, paramFile);
+  //testBilinearPairings(sdpFile);
   return 0;
 
   //testBlockCongruence();
