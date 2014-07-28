@@ -126,16 +126,12 @@ class Matrix {
     cols(cols),
     elements(Vector(rows*cols, 0)) {}
 
-  inline Real get(int r, int c) const {
+  inline const Real& elt(const int r, const int c) const {
     return elements[r + c*rows];
   }
 
-  inline void set(int r, int c, const Real &a) {
-    elements[r + c*rows] = a;
-  }
-
-  inline void addElt(int r, int c, const Real &a) {
-    elements[r + c*rows] += a;
+  inline Real& elt(const int r, const int c) {
+    return elements[r + c*rows];
   }
 
   void setZero() {
@@ -146,7 +142,7 @@ class Matrix {
     assert(rows == cols);
 
     for (int i = 0; i < rows; i++)
-      elements[i * (rows + 1)] += c;
+      elt(i,i) += c;
   }
 
   void setIdentity() {
@@ -161,9 +157,11 @@ class Matrix {
 
     for (int r = 0; r < rows; r++) {
       for (int c = 0; c < r; c++) {
-        Real tmp = (get(r,c)+get(c,r))/2; 
-        set(r, c, tmp);
-        set(c, r, tmp);
+        elt(r,c) /= 2;
+        elt(r,c) += elt(c,r)/2;
+        elt(c,r) = elt(r,c);
+        //set(r, c, tmp);
+        //set(c, r, tmp);
       }
     }
   }
@@ -172,9 +170,9 @@ class Matrix {
     assert (rows == cols);
     for (int c = 0; c < cols; c++) {
       for (int r = 0; r < c; r++) {
-        Real tmp = get(r, c);
-        set(r, c, get(c, r));
-        set(c, r, tmp);
+        Real tmp = elt(r, c);
+        elt(r, c) = elt(c, r);
+        elt(c, r) = tmp;
       }
     }
   }
@@ -219,7 +217,7 @@ ostream& operator<<(ostream& os, const Matrix& a) {
   for (int r = 0; r < a.rows; r++) {
     os << "{";
     for (int c = 0; c < a.cols; c++) {
-      os << a.get(r,c);
+      os << a.elt(r,c);
       if (c < a.cols-1)
         os << ", ";
     }
@@ -327,11 +325,11 @@ Real frobeniusProductSymmetric(const Matrix &A, const Matrix &B) {
   Real result = 0;
   for (int c = 0; c < A.cols; c++)
     for (int r = 0; r < c ; r++)
-      result += A.get(r,c)*B.get(r,c);
+      result += A.elt(r,c)*B.elt(r,c);
   result *= 2;
 
   for (int r = 0; r < A.rows; r++)
-    result += A.get(r,r)*B.get(r,r);
+    result += A.elt(r,r)*B.elt(r,r);
   
   return result;
 }
@@ -345,11 +343,11 @@ Real frobeniusProductOfSums(const Matrix &X, const Matrix &dX,
 
   for (int c = 0; c < X.cols; c++)
     for (int r = 0; r < c; r++)
-      result += (X.get(r,c) + dX.get(r,c)) * (Y.get(r,c) + dY.get(r,c));
+      result += (X.elt(r,c) + dX.elt(r,c)) * (Y.elt(r,c) + dY.elt(r,c));
   result *= 2;
 
   for (int r = 0; r < X.rows; r++)
-    result += (X.get(r,r) + dX.get(r,r)) * (Y.get(r,r) + dY.get(r,r));
+    result += (X.elt(r,r) + dX.elt(r,r)) * (Y.elt(r,r) + dY.elt(r,r));
 
   return result;
 }
@@ -366,7 +364,7 @@ void choleskyDecomposition(Matrix &A, Matrix &L) {
   assert(L.cols == dim);
 
   if (dim == 1) {
-    L.set(0, 0, sqrt(A.get(0, 0)));
+    L.elt(0, 0) = sqrt(A.elt(0, 0));
     return;
   }
 
@@ -395,7 +393,7 @@ void choleskyUpdate(Matrix &L, Real *v) {
   int dim = L.rows;
   Real c, s, x, y;
   for (int r = 0; r < dim; r++) {
-    x = L.get(r,r);
+    x = L.elt(r,r);
     y = *(v+r);
     Rrotg(&x, &y, &c, &s);
 
@@ -545,10 +543,10 @@ void tensorMatrixCongruenceTranspose(const Matrix &a,
 
       Real tmp = 0;
       for (int k = 0; k < b.rows; k++) {
-        tmp += a.get(r, aColOffset + k) * b.get(k, bCol);
+        tmp += a.elt(r, aColOffset + k) * b.elt(k, bCol);
       }
 
-      work.set(r, c, tmp);
+      work.elt(r, c) = tmp;
     }
   }
 
@@ -562,14 +560,14 @@ void tensorMatrixCongruenceTranspose(const Matrix &a,
 
       Real tmp = 0;
       for (int k = 0; k < b.rows; k++) {
-        tmp += b.get(k, bCol) * work.get(workRowOffset + k, c);
+        tmp += b.elt(k, bCol) * work.elt(workRowOffset + k, c);
       }
 
-      result.set(r, c, tmp);
+      result.elt(r, c) = tmp;
 
       // lower triangle is the same as upper triangle
       if (c != r) {
-        result.set(c, r, tmp);
+        result.elt(c, r) = tmp;
       }
     }
   }
@@ -583,12 +581,12 @@ void testTensorCongruence() {
   Matrix result(6,6);
   Matrix work(4,6);
   a.setIdentity();
-  b.set(0,0,2);
-  b.set(1,0,3);
-  b.set(0,1,4);
-  b.set(1,1,5);
-  b.set(0,2,6);
-  b.set(1,2,7);
+  b.elt(0,0) =2;
+  b.elt(1,0) =3;
+  b.elt(0,1) =4;
+  b.elt(1,1) =5;
+  b.elt(0,2) =6;
+  b.elt(1,2) =7;
 
   tensorMatrixCongruenceTranspose(a, b, work, result);
 
@@ -681,14 +679,14 @@ public:
 
     int p = 0;
     for(; p < (int)diagonalPart.size(); p++)
-      A.set(p, p, diagonalPart[p]);
+      A.elt(p, p) = diagonalPart[p];
 
     // TODO: parallelize this loop
     for (unsigned int b = 0; b < blocks.size(); b++) {
       int dim = blocks[b].cols;
       for (int c = 0; c < dim; c++)
         for (int r = 0; r < dim; r++)
-          A.set(p + r, p + c, blocks[b].get(r, c));
+          A.elt(p + r, p + c) = blocks[b].elt(r, c);
       p += dim;
     }
   }
@@ -939,8 +937,8 @@ public:
     for (int r = 0; r < polMatrixValues.rows; r++) {
       Real total = 0;
       for (int c = 0; c < polMatrixValues.cols - 1; c++)
-        total += polMatrixValues.get(r, c);
-      polMatrixValues.set(r, polMatrixValues.cols - 1, -total);
+        total += polMatrixValues.elt(r, c);
+      polMatrixValues.elt(r, polMatrixValues.cols - 1) = -total;
     }
     objective.push_back(-vectorTotal(objective));
   }
@@ -1001,9 +999,9 @@ public:
   int rows;
   int cols;
   vector<vector<Polynomial> > elements;
-
-  const vector<Polynomial> *get(int r, int c) const {
-    return &elements[r + c*rows];
+  
+  const vector<Polynomial>& elt(const int r, const int c) const {
+    return elements[r+c*rows];
   }
 
   int degree() const {
@@ -1026,9 +1024,9 @@ Matrix basisAtSamplePoints(int basisSize, int numPoints, bool withSqrt,
 
     for (int n = 0; n < basisSize; n++) {
       if (withSqrt)
-        m.set(n, k, basisPols[n](x)*sqrtX);
+        m.elt(n, k) = basisPols[n](x)*sqrtX;
       else
-        m.set(n, k, basisPols[n](x));
+        m.elt(n, k) = basisPols[n](x);
     }
   }
 
@@ -1096,7 +1094,7 @@ SDP bootstrapSDP(const Vector &objective,
         for (int k = 0; k <= degree; k++, p++) {
           const Real xk = polynomialSamplePoints[k];
           for (unsigned int n = 0; n < sdp.objective.size(); n++)
-            sdp.polMatrixValues.set(p, n, -(*m->get(r,s))[n](xk));
+            sdp.polMatrixValues.elt(p, n) = -m->elt(r,s)[n](xk);
         }
       }
     }
@@ -1105,7 +1103,7 @@ SDP bootstrapSDP(const Vector &objective,
 
   // normalization constraint
   for (unsigned int n = 0; n < sdp.objective.size(); n++)
-    sdp.polMatrixValues.set(p, n, normalization[n]);
+    sdp.polMatrixValues.elt(p, n) = normalization[n];
   sdp.blocks.push_back(vector<int>());
 
   sdp.addSlack();
@@ -1186,7 +1184,7 @@ public:
   int maxThreads;
 
   SDPSolverParameters():
-    maxIterations(10),
+    maxIterations(20),
     dualityGapThreshold("1e-20"),
     primalFeasibilityThreshold("1e-30"),
     dualFeasibilityThreshold("1e-30"),
@@ -1194,8 +1192,8 @@ public:
     feasibleCenteringParameter("0.1"),
     infeasibleCenteringParameter("0.3"),
     stepLengthReduction("0.7"),
-    precision(500),
-    maxThreads(8) {}
+    precision(400),
+    maxThreads(1) {}
 
   SDPSolverParameters(const path &paramFile) {
     ifstream ifs(paramFile);
@@ -1380,11 +1378,11 @@ void diagonalCongruence(Real const *d,
       Real tmp = 0;
 
       for (int n = 0; n < V.cols; n++)
-        tmp += *(d+n) * V.get(p, n)*V.get(q, n);
+        tmp += *(d+n) * V.elt(p, n)*V.elt(q, n);
       
-      result.set(blockRow*V.rows + p, blockCol*V.rows + q, tmp);
+      result.elt(blockRow*V.rows + p, blockCol*V.rows + q) = tmp;
       if (p != q)
-        result.set(blockRow*V.rows + q, blockCol*V.rows + p, tmp);
+        result.elt(blockRow*V.rows + q, blockCol*V.rows + p) = tmp;
     }
   }
 }
@@ -1410,7 +1408,7 @@ Real bilinearBlockPairing(const Real *v,
     Real tmp = 0;
 
     for (int c = 0; c < dim; c++)
-      tmp += *(v+c) * A.get(blockRow*dim + r, blockCol*dim + c);
+      tmp += *(v+c) * A.elt(blockRow*dim + r, blockCol*dim + c);
     result += *(v+r) * tmp;
   }
   return result;
@@ -1437,14 +1435,14 @@ void computeSchurBlocks(const SDP &sdp,
 
         Real tmp = 0;
         for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
-          tmp += (BilinearPairingsXInv.blocks[*b].get(ej_s1 + k1, ej_r2 + k2) * BilinearPairingsY.blocks[*b].get(ej_s2 + k2, ej_r1 + k1) +
-                  BilinearPairingsXInv.blocks[*b].get(ej_r1 + k1, ej_r2 + k2) * BilinearPairingsY.blocks[*b].get(ej_s2 + k2, ej_s1 + k1) +
-                  BilinearPairingsXInv.blocks[*b].get(ej_s1 + k1, ej_s2 + k2) * BilinearPairingsY.blocks[*b].get(ej_r2 + k2, ej_r1 + k1) +
-                  BilinearPairingsXInv.blocks[*b].get(ej_r1 + k1, ej_s2 + k2) * BilinearPairingsY.blocks[*b].get(ej_r2 + k2, ej_s1 + k1))/4;
+          tmp += (BilinearPairingsXInv.blocks[*b].elt(ej_s1 + k1, ej_r2 + k2) * BilinearPairingsY.blocks[*b].elt(ej_s2 + k2, ej_r1 + k1) +
+                  BilinearPairingsXInv.blocks[*b].elt(ej_r1 + k1, ej_r2 + k2) * BilinearPairingsY.blocks[*b].elt(ej_s2 + k2, ej_s1 + k1) +
+                  BilinearPairingsXInv.blocks[*b].elt(ej_s1 + k1, ej_s2 + k2) * BilinearPairingsY.blocks[*b].elt(ej_r2 + k2, ej_r1 + k1) +
+                  BilinearPairingsXInv.blocks[*b].elt(ej_r1 + k1, ej_s2 + k2) * BilinearPairingsY.blocks[*b].elt(ej_r2 + k2, ej_s1 + k1))/4;
         }
-        SchurBlocks.blocks[j].set(u1, u2, tmp);
+        SchurBlocks.blocks[j].elt(u1, u2) = tmp;
         if (u2 != u1)
-          SchurBlocks.blocks[j].set(u2, u1, tmp);
+          SchurBlocks.blocks[j].elt(u2, u1) = tmp;
       }
     }
   }
@@ -1468,13 +1466,13 @@ void computeDualResidues(const SDP &sdp,
 
       dualResidues[p] = 0;
       for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
-        dualResidues[p] -= BilinearPairingsY.blocks[*b].get(ej_r+k, ej_s+k);
-        dualResidues[p] -= BilinearPairingsY.blocks[*b].get(ej_s+k, ej_r+k);
+        dualResidues[p] -= BilinearPairingsY.blocks[*b].elt(ej_r+k, ej_s+k);
+        dualResidues[p] -= BilinearPairingsY.blocks[*b].elt(ej_s+k, ej_r+k);
       }
       dualResidues[p] /= 2;
 
       for (int n = 0; n < sdp.polMatrixValues.cols; n++)
-        dualResidues[p] -= Y.diagonalPart[n] * sdp.polMatrixValues.get(p, n);
+        dualResidues[p] -= Y.diagonalPart[n] * sdp.polMatrixValues.elt(p, n);
 
       dualResidues[p] += sdp.affineConstants[p];
     }
@@ -1486,7 +1484,7 @@ void constraintMatrixWeightedSum(const SDP &sdp, const Vector x, BlockDiagonalMa
   for (unsigned int n = 0; n < result.diagonalPart.size(); n++) {
     result.diagonalPart[n] = 0;
     for (unsigned int p = 0; p < x.size(); p++)
-      result.diagonalPart[n] += x[p]*sdp.polMatrixValues.get(p, n);
+      result.diagonalPart[n] += x[p]*sdp.polMatrixValues.elt(p, n);
   }
 
   // TODO: parallelize this loop
@@ -1515,7 +1513,7 @@ void computeSchurRHS(const SDP &sdp,
   for (unsigned int p = 0; p < r.size(); p++) {
     r[p] = -dualResidues[p];
     for (unsigned int n = 0; n < Z.diagonalPart.size(); n++)
-      r[p] -= sdp.polMatrixValues.get(p, n)*Z.diagonalPart[n];
+      r[p] -= sdp.polMatrixValues.elt(p, n)*Z.diagonalPart[n];
   }
 
   #pragma omp parallel for schedule(dynamic)
@@ -1705,11 +1703,31 @@ void computeSchurComplementCholesky(const SDP &sdp,
   for (int n = 0; n < sdp.polMatrixValues.cols; n++) {
     Real r = sqrt(XInv.diagonalPart[n]*Y.diagonalPart[n]);
     for (int p = 0; p < sdp.polMatrixValues.rows; p++)
-      SchurUpdateLowRank.set(p, n, r*sdp.polMatrixValues.get(p, n));
+      SchurUpdateLowRank.elt(p, n) = r*sdp.polMatrixValues.elt(p, n);
   }
   timers.schurCholeskyUpdate.resume();
   choleskyUpdate(SchurComplementCholesky, SchurUpdateLowRank);
   timers.schurCholeskyUpdate.stop();
+}
+
+void computeSchurComplementCholesky2(const SDP &sdp,
+                                     const BlockDiagonalMatrix &XInv,
+                                     const BlockDiagonalMatrix &BilinearPairingsXInv,
+                                     const BlockDiagonalMatrix &Y,
+                                     const BlockDiagonalMatrix &BilinearPairingsY,
+                                     BlockDiagonalMatrix &SchurBlocks,
+                                     BlockDiagonalMatrix &SchurBlocksCholesky) {
+  timers.computeSchurBlocks.resume();
+  computeSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, SchurBlocks);
+  timers.computeSchurBlocks.stop();
+
+  SchurBlocks.blocks.back() = 1;
+
+  timers.schurBlocksCholesky.resume();
+  choleskyDecomposition(SchurBlocks, SchurBlocksCholesky);
+  timers.schurBlocksCholesky.stop();
+  
+
 }
 
 void printInfoHeader() {
@@ -1965,13 +1983,13 @@ void testMinEigenvalue() {
   Matrix X(dim, dim);
 
   L.addDiagonal(1);
-  L.set(1,1,2);
-  L.set(2,2,3);
+  L.elt(1,1) =2;
+  L.elt(2,2) =3;
   X.addDiagonal(3);
-  X.set(1,2,1);
-  X.set(2,1,1);
-  X.set(0,1,2);
-  X.set(1,0,2);
+  X.elt(1,2) =1;
+  X.elt(2,1) =1;
+  X.elt(0,1) =2;
+  X.elt(1,0) =2;
 
   Matrix Q(dim, dim);
   Vector out(dim);
@@ -2030,7 +2048,7 @@ void printSDPDenseFormat(ostream& os, const SDP &sdp) {
       F *= 0;
 
       for (int n = 0; n < sdp.polMatrixValues.cols; n++)
-        F.diagonalPart[n] = sdp.polMatrixValues.get(t->p, n);
+        F.diagonalPart[n] = sdp.polMatrixValues.elt(t->p, n);
 
       for (vector<int>::const_iterator b = sdp.blocks[j].begin();
            b != sdp.blocks[j].end();
@@ -2040,7 +2058,7 @@ void printSDPDenseFormat(ostream& os, const SDP &sdp) {
 
         for (int e = 0; e < delta; e++) {
           for (int f = 0; f < delta; f++) {
-            F.blocks[*b].set((t->r)*delta + e, (t->s)*delta + f, (*(q+e)) * (*(q+f)));
+            F.blocks[*b].elt((t->r)*delta + e, (t->s)*delta + f) = (*(q+e)) * (*(q+f));
           }
         }
         F.blocks[*b].symmetrize();
@@ -2143,17 +2161,17 @@ void testCholeskyUpdate() {
   Matrix LT(L);
   Matrix V(4, 2);
   Matrix VT(V.cols, V.rows);
-  V.set(0,0,1);
-  V.set(1,0,2);
-  V.set(2,0,3);
-  V.set(3,0,4);
-  V.set(0,1,5);
-  V.set(1,1,4);
-  V.set(2,1,3);
-  V.set(3,1,2);
+  V.elt(0,0) =1;
+  V.elt(1,0) =2;
+  V.elt(2,0) =3;
+  V.elt(3,0) =4;
+  V.elt(0,1) =5;
+  V.elt(1,1) =4;
+  V.elt(2,1) =3;
+  V.elt(3,1) =2;
   for (int r = 0; r < V.rows; r++)
     for (int c = 0; c < V.cols; c++)
-      VT.set(c, r, V.get(r,c));
+      VT.elt(c, r) = V.elt(r,c);
   Matrix U(V);
 
   A.addDiagonal(4);
@@ -2170,6 +2188,15 @@ void testCholeskyUpdate() {
   C -= B;
 
   cout << "L L^T - (A + V V^T) = " << C << endl;
+}
+
+void testMatrix() {
+  Matrix A(3,3);
+  A.elt(0,0) = 1;
+  A.elt(1,0) = 2;
+  A.elt(2,0) = 3;
+  A.symmetrize();
+  cout << A << endl;
 }
 
 const char *help(const char *cmd) {
@@ -2208,6 +2235,7 @@ int main(int argc, char** argv) {
   }
 
   solveSDP(sdpFile, outFile, checkpointFile, paramFile);
+  //testMatrix();
   //testBilinearPairings(sdpFile);
   return 0;
 
