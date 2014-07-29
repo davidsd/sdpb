@@ -1663,13 +1663,13 @@ void computeCorrectorRMatrix(const Real &beta,
   R.addDiagonal(beta*mu);
 }
 
-// Minimum eigenvalue of A, via the QR method
+// Eigenvalues of A, via the QR method
 // Inputs:
 // A           : n x n Matrix (will be overwritten)
 // eigenvalues : Vector of length n
 // workspace   : Vector of lenfth 3*n-1 (temporary workspace)
 //
-Real minEigenvalueViaQR(Matrix &A, Vector &eigenvalues, Vector &workspace) {
+void eigenvaluesViaQR(Matrix &A, Vector &workspace, Vector &eigenvalues) {
   assert(A.rows == A.cols);
   assert((int)eigenvalues.size() == A.rows);
   assert((int)workspace.size() == 3*A.rows - 1);
@@ -1678,8 +1678,16 @@ Real minEigenvalueViaQR(Matrix &A, Vector &eigenvalues, Vector &workspace) {
   mpackint workSize = workspace.size();
   Rsyev("NoEigenvectors", "LowerTriangular", A.rows, &A.elements[0], A.rows, &eigenvalues[0], &workspace[0], &workSize, &info);
   assert(info == 0);
+}
 
-  // Eigenvalues are sorted in ascending order
+// Minimum eigenvalue of A, via the QR method
+// Inputs:
+// A           : n x n Matrix (will be overwritten)
+// eigenvalues : Vector of length n
+// workspace   : Vector of lenfth 3*n-1 (temporary workspace)
+//
+Real minEigenvalueViaQR(Matrix &A, Vector &workspace, Vector &eigenvalues) {
+  eigenvaluesViaQR(A, workspace, eigenvalues);
   return eigenvalues[0];
 }
 
@@ -1689,7 +1697,7 @@ Real minEigenvalueViaQR(Matrix &A, Vector &eigenvalues, Vector &workspace) {
 // eigenvalues : vector<Vector> of length A.blocks.size()
 // workspace   : vector<Vector> of length A.blocks.size()
 //
-Real minEigenvalueViaQR(BlockDiagonalMatrix &A, vector<Vector> &eigenvalues, vector<Vector> &workspace) {
+Real minEigenvalueViaQR(BlockDiagonalMatrix &A, vector<Vector> &workspace, vector<Vector> &eigenvalues) {
   assert(A.blocks.size() == eigenvalues.size());
   assert(A.blocks.size() == workspace.size());
 
@@ -1699,7 +1707,7 @@ Real minEigenvalueViaQR(BlockDiagonalMatrix &A, vector<Vector> &eigenvalues, vec
 
   #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++) {
-    Real minBlockLambda = minEigenvalueViaQR(A.blocks[b], eigenvalues[b], workspace[b]);
+    Real minBlockLambda = minEigenvalueViaQR(A.blocks[b], workspace[b], eigenvalues[b]);
     #pragma omp critical
     {
       lambdaMin = min(lambdaMin, minBlockLambda);
@@ -1720,7 +1728,7 @@ Real stepLength(BlockDiagonalMatrix &XInvCholesky,
   XInvDX.copyFrom(dX);
   lowerTriangularCongruence(XInvDX, XInvCholesky);
 
-  const Real lambda = minEigenvalueViaQR(XInvDX, eigenvalues, workspace);
+  const Real lambda = minEigenvalueViaQR(XInvDX, workspace, eigenvalues);
   const Real gamma  = parameters.stepLengthReduction;
   if (lambda > -gamma)
     return 1;
@@ -1736,11 +1744,15 @@ void computeSchurComplementCholesky(const SDP &sdp,
                                     BlockDiagonalMatrix &SchurBlocks,
                                     BlockDiagonalMatrix &SchurBlocksCholesky,
                                     Matrix &SchurUpdateLowRank,
-                                    Matrix &SchurComplementCholesky) {
+                                    Matrix &SchurComplementCholesky,
+                                    int i) {
 
   timers.computeSchurBlocks.resume();
   computeSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, SchurBlocks);
   timers.computeSchurBlocks.stop();
+
+  // cout << "SchurBlocks[" << i << "] = " << SchurBlocks << ";\n";
+
   timers.schurBlocksCholesky.resume();
   choleskyDecomposition(SchurBlocks, SchurBlocksCholesky);
   timers.schurBlocksCholesky.stop();
@@ -1752,6 +1764,9 @@ void computeSchurComplementCholesky(const SDP &sdp,
     for (int p = 0; p < sdp.polMatrixValues.rows; p++)
       SchurUpdateLowRank.elt(p, n) = r*sdp.polMatrixValues.elt(p, n);
   }
+
+  // cout << "SchurUpdateLowRank[" << i << "] = " << SchurUpdateLowRank << ";\n";
+
   timers.schurCholeskyUpdate.resume();
   choleskyUpdate(SchurComplementCholesky, SchurUpdateLowRank);
   timers.schurCholeskyUpdate.stop();
@@ -1954,7 +1969,8 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
                                    SchurBlocks,
                                    SchurBlocksCholesky,
                                    SchurUpdateLowRank,
-                                   SchurComplementCholesky);
+                                   SchurComplementCholesky,
+                                   iteration);
     // computeSchurComplementCholesky2(sdp,
     //                                 XInv,
     //                                 BilinearPairingsXInv,
@@ -2000,8 +2016,8 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
     dY *= dualStepLength;
     Y += dY;
 
-    printInfo(iteration, mu, status, isPrimalFeasible, isDualFeasible,
-              primalStepLength, dualStepLength, betaCorrector);
+    // printInfo(iteration, mu, status, isPrimalFeasible, isDualFeasible,
+    //           primalStepLength, dualStepLength, betaCorrector);
   }
 
   timers.runSolver.stop();
@@ -2254,6 +2270,9 @@ void solveSDP(const path sdpFile,
   printSDPBHeader(sdpFile, outFile, checkpointFile, parameters);
 
   const SDP sdp = readBootstrapSDP(sdpFile);
+
+  // cout << "polMatrixValues = " << sdp.polMatrixValues << ";\n";
+  // cout << "bilinearBases = " << sdp.bilinearBases << ";\n";
   
   SDPSolver solver(sdp);
   solver.initialize(parameters);
