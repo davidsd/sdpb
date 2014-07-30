@@ -272,6 +272,10 @@ Real dotProduct(const Vector &u, const Vector v) {
   return result;
 }
 
+Real norm(const Vector &v) {
+  return sqrt(dotProduct(v,v));
+}
+
 // y := alpha*A*x + beta*y
 //
 void vectorScaleMatrixMultiplyAdd(Real alpha, Matrix &A, Vector &x, Real beta, Vector &y) {
@@ -980,6 +984,27 @@ public:
     objective.push_back(-vectorTotal(objective));
   }
 
+  void rescale() {
+    Vector colWeightedNormSq(objective.size());
+    
+    for (int p = 0; p < polMatrixValues.rows; p++) {
+      Real rowNormSq = 0;
+      for (int n = 0; n < polMatrixValues.cols; n++)
+        rowNormSq += polMatrixValues.elt(p, n)*polMatrixValues.elt(p, n);
+
+      for (int n = 0; n < polMatrixValues.cols; n++)
+        colWeightedNormSq[n] += polMatrixValues.elt(p, n)*polMatrixValues.elt(p, n) / rowNormSq;
+    }
+
+    Vector rescaling(objective.size());
+    for (unsigned int n = 0; n < rescaling.size(); n++) {
+      rescaling[n] = polMatrixValues.rows/sqrt(colWeightedNormSq[n]);
+      objective[n] *= rescaling[n];
+      for (int p = 0; p < polMatrixValues.rows; p++)
+        polMatrixValues.elt(p, n) *= rescaling[n];
+    }
+  }
+
   friend ostream& operator<<(ostream& os, const SDP& sdp);
 };
 
@@ -1143,7 +1168,8 @@ SDP bootstrapSDP(const Vector &objective,
     sdp.polMatrixValues.elt(p, n) = normalization[n];
   sdp.blocks.push_back(vector<int>());
 
-  sdp.addSlack();
+  //sdp.rescale();
+  // sdp.addSlack();
   sdp.initializeConstraintIndices();
   return sdp;
 }
@@ -1169,7 +1195,102 @@ int parseInt(XMLElement *iXml) {
 }
 
 Vector parseVector(XMLElement *vecXml) {
-  return parseMany("coord", parseReal, vecXml);
+  return parseMany("elt", parseReal, vecXml);
+}
+
+Matrix parseMatrix(XMLElement *matXml) {
+  Matrix m;
+  m.rows     = parseInt(matXml->FirstChildElement("rows"));
+  m.cols     = parseInt(matXml->FirstChildElement("cols"));
+  m.elements = parseVector(matXml->FirstChildElement("elements"));
+  return m;
+}
+
+class SampledMatrixPolynomial {
+public:
+  int dim;
+  int degree;
+  Matrix samplesMatrix;
+  vector<Matrix> bilinearBases;
+};
+
+SampledMatrixPolynomial parseSampledMatrixPolynomial(XMLElement *smpXml) {
+  SampledMatrixPolynomial s;
+  s.dim    = parseInt(smpXml->FirstChildElement("dim"));
+  s.degree = parseInt(smpXml->FirstChildElement("degree"));
+  s.samplesMatrix = parseMatrix(smpXml->FirstChildElement("samplesMatrix"));
+  s.bilinearBases = parseMany("bilinearBasisMatrix", parseMatrix, smpXml->FirstChildElement("bilinearBases"));
+  return s;
+}
+
+SDP bootstrapSDP2(const Vector &objective,
+                  const Vector &normalization,
+                  const vector<SampledMatrixPolynomial> &sampledMatrixPols) {
+  SDP sdp;
+  sdp.objective = objective;
+
+  int numConstraints = 0;
+  for (vector<SampledMatrixPolynomial>::const_iterator s = sampledMatrixPols.begin();
+       s != sampledMatrixPols.end();
+       s++) {
+    int dimension = s->dim;
+    int degree    = s->degree;
+
+    sdp.dimensions.push_back(dimension);
+    sdp.degrees.push_back(degree);
+    numConstraints += (degree+1)*dimension*(dimension+1)/2;
+  }
+
+  // For the normalization constraint
+  sdp.dimensions.push_back(1);
+  sdp.degrees.push_back(0);
+  numConstraints += 1;
+
+  sdp.polMatrixValues = Matrix(numConstraints, sdp.objective.size());
+  sdp.affineConstants = Vector(numConstraints, 0);
+
+  // normalization constraint
+  sdp.affineConstants[numConstraints-1] = 1;
+
+  int p = 0;
+  for (vector<SampledMatrixPolynomial>::const_iterator s = sampledMatrixPols.begin();
+       s != sampledMatrixPols.end();
+       s++) {
+
+    vector<int> blocks;
+    for (vector<Matrix>::const_iterator b = s->bilinearBases.begin();
+         b != s->bilinearBases.end();
+         b++) {
+      assert(b->cols == s->degree + 1);
+      blocks.push_back(sdp.bilinearBases.size());
+      sdp.bilinearBases.push_back(*b);
+    }
+    sdp.blocks.push_back(blocks);
+
+    for (int k = 0; k < s->samplesMatrix.rows; k++, p++)
+      for (int n = 0; n < s->samplesMatrix.cols; n++)
+        sdp.polMatrixValues.elt(p, n) = -(s->samplesMatrix.elt(k, n));
+  }
+  assert(p == numConstraints - 1);
+
+  // normalization constraint
+  for (unsigned int n = 0; n < sdp.objective.size(); n++)
+    sdp.polMatrixValues.elt(p, n) = normalization[n];
+  sdp.blocks.push_back(vector<int>());
+
+  //sdp.rescale();
+  // sdp.addSlack();
+  sdp.initializeConstraintIndices();
+  return sdp;
+}
+
+
+SDP parseBootstrapSDP2(XMLElement *sdpXml) {
+  return bootstrapSDP2(parseVector(sdpXml->FirstChildElement("objective")),
+                       parseVector(sdpXml->FirstChildElement("normalization")),
+                       parseMany("sampledMatrixPolynomial",
+                                 parseSampledMatrixPolynomial,
+                                 sdpXml->FirstChildElement("sampledPositiveMatrices")));
 }
 
 Polynomial parsePolynomial(XMLElement *polXml) {
@@ -1204,7 +1325,7 @@ SDP parseBootstrapSDP(XMLElement *sdpXml) {
 SDP readBootstrapSDP(const path sdpFile) {
   XMLDocument doc;
   doc.LoadFile(sdpFile.c_str());
-  return parseBootstrapSDP(doc.FirstChildElement("sdp"));
+  return parseBootstrapSDP2(doc.FirstChildElement("sdp"));
 }
 
 class SDPSolverParameters {
@@ -1221,8 +1342,8 @@ public:
   int maxThreads;
 
   SDPSolverParameters():
-    maxIterations(100),
-    dualityGapThreshold("1e-20"),
+    maxIterations(500),
+    dualityGapThreshold("1e-100"),
     primalFeasibilityThreshold("1e-30"),
     dualFeasibilityThreshold("1e-30"),
     initialMatrixScale("1e20"),
@@ -1751,7 +1872,9 @@ void computeSchurComplementCholesky(const SDP &sdp,
   computeSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, SchurBlocks);
   timers.computeSchurBlocks.stop();
 
-  // cout << "SchurBlocks[" << i << "] = " << SchurBlocks << ";\n";
+  // cout << "XInvDiagonal[" << i << "] = " << XInv.diagonalPart << ";\n";
+  cout << "YDiagonal[" << i << "] = " << Y.diagonalPart << ";\n";
+  //  cout << "SchurBlocks[" << i << "] = " << SchurBlocks << ";\n";
 
   timers.schurBlocksCholesky.resume();
   choleskyDecomposition(SchurBlocks, SchurBlocksCholesky);
@@ -2016,171 +2139,12 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
     dY *= dualStepLength;
     Y += dY;
 
-    // printInfo(iteration, mu, status, isPrimalFeasible, isDualFeasible,
-    //           primalStepLength, dualStepLength, betaCorrector);
+    printInfo(iteration, mu, status, isPrimalFeasible, isDualFeasible,
+              primalStepLength, dualStepLength, betaCorrector);
   }
 
   timers.runSolver.stop();
   return status;
-}
-
-// Compute minimum eigenvalue of L X L^T using the Lanczos method.
-// Inputs:
-// L : dim x dim Matrix
-// X : dim x dim Matrix
-// Q : ?   x ?   Matrix
-// out     : dim-length Vector
-// b       : dim-length Vector
-// r       : dim-length Vector
-// q       : dim-length Vector
-// qold    : dim-length Vector
-// w       : dim-length Vector
-// tmp     : dim-length Vector
-// diagVec : dim-length Vector
-// diagVec2: dim-length Vector
-// workVec : dim-length Vector
-//
-Real minEigenvalueViaLanczos(Matrix &L,
-                             Matrix &X,
-                             Matrix &Q,
-                             Vector &out,
-                             Vector &b,
-                             Vector &r,
-                             Vector &q,
-                             Vector &qold,
-                             Vector &w,
-                             Vector &tmp,
-                             Vector &diagVec,
-                             Vector &diagVec2,
-                             Vector &workVec) {
-  Real alpha;
-  Real value;
-  Real min = 1.0e+51;
-  Real min_old = 1.0e+52;
-  Real min_min= 1.0e+50;
-  Real error = 1.0e+10;
-
-  int dim = X.rows;
-  int k = 0;
-  int kk = 0;
-  
-  fillVector(diagVec, min_min);
-  fillVector(diagVec2, 0);
-  fillVector(q, 0);
-  fillVector(r, 1);
-  
-  Real beta = sqrt(Real(dim));  // norm of "r"
-
-  // nakata 2004/12/12
-  while (k < dim
-         && k < sqrt(Real(dim)) + 10
-	 && beta > 1.0e-16
-	 && (abs(min-min_old) > (1.0e-5)*abs(min)+(1.0e-8)
-	     // && (fabs(min-min_old) > (1.0e-3)*fabs(min)+(1.0e-6)
-	     || abs(error*beta) > (1.0e-2)*abs(min)+(1.0e-4) )) {
-    cout << "k = " << k << endl;
-    cout << "kk = " << kk << endl;
-
-    qold = q;
-    value = 1/beta;
-    // q = value*r
-    vectorScaleMultiplyAdd(value, r, 0, q);
-
-    // w = L X L^T q
-    w = q;
-    // w = L^T q
-    lowerTriangularMatrixTransposeTimesVector(L, w);
-    // tmp = X w
-    vectorScaleMatrixMultiplyAdd(1, X, w, 0, tmp);
-    w = tmp;
-    // w = L tmp
-    lowerTriangularMatrixTimesVector(L, w);
-
-    alpha = dotProduct(q, w);
-    diagVec[k] = alpha;
-
-    // r = w - alpha q - beta qold
-    r = w;
-    vectorScaleMultiplyAdd(-alpha, q, 1, r);
-    vectorScaleMultiplyAdd(-beta, qold, 1, r);
-
-    if ( kk>=sqrt((mpf_class)k) || k==dim-1 || k>sqrt((mpf_class)dim+9) ) {
-      kk = 0;
-      out = diagVec;
-      b = diagVec2;
-
-      out[dim-1] = diagVec[k];
-      b[dim-1] = 0;
-
-      mpackint info;
-      int kp1 = k+1;
-      Rsteqr("I_withEigenvalues", kp1, &out[0], &b[0], &Q.elements[0], Q.rows, &workVec[0], &info);
-      
-      min_old = min;
-      // out have eigen values with ascending order.
-      min = out[0];
-      error = Q.elements[k];
-
-    }
-
-    value = dotProduct(r,r);
-    beta = sqrt(value);
-    diagVec2[k] = beta;
-    ++k;
-    ++kk;
-
-    cout << "beta = " << beta << endl;
-    cout << "value = " << value << endl;
-  }
-
-  return min - abs(error*beta);
-}
-
-void testMinEigenvalue() {
-  int dim = 3;
-
-  Matrix L(dim, dim);
-  Matrix X(dim, dim);
-
-  L.addDiagonal(1);
-  L.elt(1,1) =2;
-  L.elt(2,2) =3;
-  X.addDiagonal(3);
-  X.elt(1,2) =1;
-  X.elt(2,1) =1;
-  X.elt(0,1) =2;
-  X.elt(1,0) =2;
-
-  Matrix Q(dim, dim);
-  Vector out(dim);
-  Vector b(dim);
-  Vector r(dim);
-  Vector q(dim);
-  Vector qold(dim);
-  Vector w(dim);
-  Vector tmp(dim);
-  Vector diagVec(dim);
-  Vector diagVec2(dim);
-  Vector workVec(dim);
-
-  Real lambda = minEigenvalueViaLanczos(L, X, Q, out, b, r, q, qold, w, tmp, diagVec, diagVec2, workVec);
-  cout << "L = " << L << endl;
-  cout << "X = " << X << endl;
-  cout << "Q = " << Q << endl;
-  cout << "lambda = " << lambda << endl;
-
-  Matrix Y(dim, dim);
-  Matrix Work1(dim, dim);
-  Matrix Work2(dim, dim);
-  Work1 = L;
-  Work1.transpose();
-  matrixMultiply(X, Work1, Work2);
-  matrixMultiply(L, Work2, Y);
-  cout << "Y = " << Y << endl;
-
-  Vector Yeigenvalues(dim);
-  Vector Yworkspace(3*dim-1);
-  cout << "lambdaY = " << minEigenvalueViaQR(Y, Yeigenvalues, Yworkspace) << endl;
 }
 
 void printSDPDenseFormat(ostream& os, const SDP &sdp) {
@@ -2267,7 +2231,7 @@ void solveSDP(const path sdpFile,
   cout.precision(int(parameters.precision * 0.30102999566398114 + 5));
   omp_set_num_threads(parameters.maxThreads);
 
-  printSDPBHeader(sdpFile, outFile, checkpointFile, parameters);
+  // printSDPBHeader(sdpFile, outFile, checkpointFile, parameters);
 
   const SDP sdp = readBootstrapSDP(sdpFile);
 
