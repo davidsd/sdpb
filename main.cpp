@@ -1148,15 +1148,15 @@ SDP bootstrapSDP(const Vector &objective,
   }
 
   // For the normalization constraint
-  sdp.dimensions.push_back(1);
-  sdp.degrees.push_back(0);
-  numConstraints += 1;
+  // sdp.dimensions.push_back(1);
+  // sdp.degrees.push_back(0);
+  // numConstraints += 1;
 
   sdp.polMatrixValues = Matrix(numConstraints, sdp.objective.size());
   sdp.affineConstants = Vector(numConstraints, 0);
 
   // normalization constraint
-  sdp.affineConstants[numConstraints-1] = 1;
+  // sdp.affineConstants[numConstraints-1] = 1;
 
   int p = 0;
   for (vector<PolynomialVectorMatrix>::const_iterator m = positiveMatrixPols.begin();
@@ -1193,12 +1193,13 @@ SDP bootstrapSDP(const Vector &objective,
       }
     }
   }
-  assert(p == numConstraints-1);
+  // assert(p == numConstraints-1);
+  assert(p == numConstraints);
 
   // normalization constraint
-  for (unsigned int n = 0; n < sdp.objective.size(); n++)
-    sdp.polMatrixValues.elt(p, n) = normalization[n];
-  sdp.blocks.push_back(vector<int>());
+  // for (unsigned int n = 0; n < sdp.objective.size(); n++)
+  //   sdp.polMatrixValues.elt(p, n) = normalization[n];
+  // sdp.blocks.push_back(vector<int>());
 
   //sdp.rescale();
   // sdp.addSlack();
@@ -1274,15 +1275,15 @@ SDP bootstrapSDP2(const Vector &objective,
   }
 
   // For the normalization constraint
-  sdp.dimensions.push_back(1);
-  sdp.degrees.push_back(0);
-  numConstraints += 1;
+  // sdp.dimensions.push_back(1);
+  // sdp.degrees.push_back(0);
+  // numConstraints += 1;
 
   sdp.polMatrixValues = Matrix(numConstraints, sdp.objective.size());
   sdp.affineConstants = Vector(numConstraints, 0);
 
   // normalization constraint
-  sdp.affineConstants[numConstraints-1] = 1;
+  // sdp.affineConstants[numConstraints-1] = 1;
 
   int p = 0;
   for (vector<SampledMatrixPolynomial>::const_iterator s = sampledMatrixPols.begin();
@@ -1303,12 +1304,13 @@ SDP bootstrapSDP2(const Vector &objective,
       for (int n = 0; n < s->samplesMatrix.cols; n++)
         sdp.polMatrixValues.elt(p, n) = -(s->samplesMatrix.elt(k, n));
   }
-  assert(p == numConstraints - 1);
+  // assert(p == numConstraints - 1);
+  assert(p == numConstraints);
 
   // normalization constraint
-  for (unsigned int n = 0; n < sdp.objective.size(); n++)
-    sdp.polMatrixValues.elt(p, n) = normalization[n];
-  sdp.blocks.push_back(vector<int>());
+  // for (unsigned int n = 0; n < sdp.objective.size(); n++)
+  //   sdp.polMatrixValues.elt(p, n) = normalization[n];
+  // sdp.blocks.push_back(vector<int>());
 
   //sdp.rescale();
   // sdp.addSlack();
@@ -1477,19 +1479,19 @@ public:
   Matrix SchurComplementCholesky;
 
   // For free variable elimination
-  Matrix DBLU;
-  vector<mpackint> DBLUipiv;
   Matrix E;
-  Matrix EWork;
+  Matrix ET;
   Vector g;
+  Vector y;
+  Vector dualResiduesTilde;
   Real c0Tilde;
-  Vector cTilde;
+  //  Vector cTilde;
 
   // New variables for Schur complement calculation
-  Matrix schurComplementP;
-  Matrix schurComplementQ;
-  Vector schurComplementY;
-  Vector schurComplementWork;
+  // Matrix schurComplementP;
+  // Matrix schurComplementQ;
+  // Vector schurComplementY;
+  // Vector schurComplementWork;
 
   // intermediate computations
   BlockDiagonalMatrix XInv;
@@ -1513,7 +1515,7 @@ public:
   SDPSolver(const SDP &sdp):
     sdp(sdp),
     x(sdp.numConstraints(), 0),
-    X(sdp.objective.size(), sdp.psdMatrixBlockDims()),
+    X(0, sdp.psdMatrixBlockDims()),
     Y(X),
     dx(x),
     dX(X),
@@ -1521,16 +1523,16 @@ public:
     dualResidues(x),
     PrimalResidues(X),
     SchurComplementCholesky(sdp.numConstraints(), sdp.numConstraints()),
-    DBLU(sdp.objective.size(), sdp.objective.size()),
-    DBLUipiv(sdp.objective.size()),
     E(sdp.numConstraints() - sdp.objective.size(), sdp.objective.size()),
-    EWork(E.cols, E.rows),
+    ET(E.cols, E.rows),
     g(sdp.objective.size()),
-    cTilde(sdp.numConstraints() - sdp.objective.size()),
-    schurComplementP(sdp.polMatrixValues.cols, sdp.polMatrixValues.cols),
-    schurComplementQ(schurComplementP),
-    schurComplementY(sdp.polMatrixValues.rows),
-    schurComplementWork(schurComplementQ.rows),
+    y(x),
+    dualResiduesTilde(sdp.numConstraints() - sdp.objective.size()),
+    // cTilde(sdp.numConstraints() - sdp.objective.size()),
+    // schurComplementP(sdp.polMatrixValues.cols, sdp.polMatrixValues.cols),
+    // schurComplementQ(schurComplementP),
+    // schurComplementY(sdp.polMatrixValues.rows),
+    // schurComplementWork(schurComplementQ.rows),
     XInv(X),
     XInvCholesky(X),
     YInvCholesky(X),
@@ -1552,6 +1554,8 @@ public:
     }
 
     // Computations needed for free variable elimination
+    Matrix DBLU(sdp.objective.size(), sdp.objective.size());
+    vector<mpackint> DBLUipiv(sdp.objective.size());
 
     // LU Decomposition of D_B
     for (int n = 0; n < DBLU.cols; n++)
@@ -1561,14 +1565,14 @@ public:
 
     // Compute E = - D_N D_B^{-1}
     int nonBasicStart = sdp.objective.size();
-    // EWork = -D_N^T
-    for (int p = 0; p < EWork.cols; p++)
-      for (int n = 0; n < EWork.rows; n++)
-        EWork.elt(n, p) = -sdp.polMatrixValues.elt(p + nonBasicStart, n);
-    // EWork = D_B^{-1 T} EWork = -D_B^{-1 T} D_N^T
-    solveWithLUDecompositionTranspose(DBLU, DBLUipiv, &EWork.elements[0], EWork.cols, EWork.rows);
-    // E = EWork^T
-    transpose(EWork, E);
+    // ET = -D_N^T
+    for (int p = 0; p < ET.cols; p++)
+      for (int n = 0; n < ET.rows; n++)
+        ET.elt(n, p) = -sdp.polMatrixValues.elt(p + nonBasicStart, n);
+    // ET = D_B^{-1 T} ET = -D_B^{-1 T} D_N^T
+    solveWithLUDecompositionTranspose(DBLU, DBLUipiv, &ET.elements[0], ET.cols, ET.rows);
+    // E = ET^T
+    transpose(ET, E);
 
     // g = -D_B^{-T} f
     for (unsigned int n = 0; n < g.size(); n++)
@@ -1580,12 +1584,19 @@ public:
     for (unsigned int n = 0; n < g.size(); n++)
       c0Tilde -= g[n]*sdp.affineConstants[n];
 
+    // We don't actually need this, since it'll be included implicitly
+    // in later calculations
     // cTilde = c_N + E c_B
-    for (unsigned int p = 0; p < cTilde.size(); p++) {
-      cTilde[p] = sdp.affineConstants[p + nonBasicStart];
-      for (int n = 0; n < E.cols; n++)
-        cTilde[p] += E.elt(p, n) * sdp.affineConstants[n];
-    }
+    // for (unsigned int p = 0; p < cTilde.size(); p++) {
+    //   cTilde[p] = sdp.affineConstants[p + nonBasicStart];
+    //   for (int n = 0; n < E.cols; n++)
+    //     cTilde[p] += E.elt(p, n) * sdp.affineConstants[n];
+    // }
+
+    cout << "polMatrixValues = " << sdp.polMatrixValues << ";\n";
+    cout << "E = " << E << ";\n";
+    // cout << "cTilde = " << cTilde << ";\n";
+    cout << "c0Tilde = " << c0Tilde << ";\n";
     
   }
 
@@ -1700,6 +1711,16 @@ void computeSchurBlocks(const SDP &sdp,
   }
 }
 
+// xTilde_N = x_N + E x_B
+void nonBasicShift(const Matrix &E, const Vector &x, Vector &xTilde) {
+  int nonBasicStart = x.size() - xTilde.size();
+  for (unsigned int p = 0; p < xTilde.size(); p++) {
+    xTilde[p] = x[p + nonBasicStart];
+    for (int n = 0; n < E.cols; n++)
+      xTilde[p] += E.elt(p,n) * x[n];
+  }
+}
+
 void computeDualResidues(const SDP &sdp,
                          const BlockDiagonalMatrix &Y,
                          const BlockDiagonalMatrix &BilinearPairingsY,
@@ -1723,8 +1744,9 @@ void computeDualResidues(const SDP &sdp,
       }
       dualResidues[p] /= 2;
 
-      for (int n = 0; n < sdp.polMatrixValues.cols; n++)
-        dualResidues[p] -= Y.diagonalPart[n] * sdp.polMatrixValues.elt(p, n);
+      // Y no longer has a diagonal part
+      // for (int n = 0; n < sdp.polMatrixValues.cols; n++)
+      //   dualResidues[p] -= Y.diagonalPart[n] * sdp.polMatrixValues.elt(p, n);
 
       dualResidues[p] += sdp.affineConstants[p];
     }
@@ -1733,11 +1755,11 @@ void computeDualResidues(const SDP &sdp,
 
 void constraintMatrixWeightedSum(const SDP &sdp, const Vector x, BlockDiagonalMatrix &result)  {
 
-  for (unsigned int n = 0; n < result.diagonalPart.size(); n++) {
-    result.diagonalPart[n] = 0;
-    for (unsigned int p = 0; p < x.size(); p++)
-      result.diagonalPart[n] += x[p]*sdp.polMatrixValues.elt(p, n);
-  }
+  // for (unsigned int n = 0; n < result.diagonalPart.size(); n++) {
+  //   result.diagonalPart[n] = 0;
+  //   for (unsigned int p = 0; p < x.size(); p++)
+  //     result.diagonalPart[n] += x[p]*sdp.polMatrixValues.elt(p, n);
+  // }
 
   // TODO: parallelize this loop
   int p = 0;
@@ -1764,8 +1786,8 @@ void computeSchurRHS(const SDP &sdp,
 
   for (unsigned int p = 0; p < r.size(); p++) {
     r[p] = -dualResidues[p];
-    for (unsigned int n = 0; n < Z.diagonalPart.size(); n++)
-      r[p] -= sdp.polMatrixValues.elt(p, n)*Z.diagonalPart[n];
+    // for (unsigned int n = 0; n < Z.diagonalPart.size(); n++)
+    //   r[p] -= sdp.polMatrixValues.elt(p, n)*Z.diagonalPart[n];
   }
 
   #pragma omp parallel for schedule(dynamic)
@@ -1801,15 +1823,22 @@ void computePrimalResidues(const SDP &sdp,
                            BlockDiagonalMatrix &PrimalResidues) {
   constraintMatrixWeightedSum(sdp, x, PrimalResidues);
   PrimalResidues -= X;
-  PrimalResidues.addDiagonalPart(sdp.objective, -1);
+  // PrimalResidues.addDiagonalPart(sdp.objective, -1);
 }
 
 Real primalObjective(const SDP &sdp, const Vector &x) {
   return dotProduct(sdp.affineConstants, x);
 }
 
-Real dualObjective(const SDP &sdp, const BlockDiagonalMatrix &Y) {
-  return dotProduct(sdp.objective, Y.diagonalPart);
+// Real dualObjective(const SDP &sdp, const BlockDiagonalMatrix &Y) {
+//   return dotProduct(sdp.objective, Y.diagonalPart);
+// }
+
+Real dualObjective(const SDP &sdp, const Vector &g, const Vector &dualResidues) {
+  Real result = 0;
+  for (unsigned int i = 0; i < g.size(); i++)
+    result += g[i]*(sdp.affineConstants[i] - dualResidues[i]);
+  return result;
 }
 
 // Implements SDPA's DirectionParameter::MehrotraPredictor
@@ -1906,9 +1935,11 @@ Real minEigenvalueViaQR(BlockDiagonalMatrix &A, vector<Vector> &workspace, vecto
   assert(A.blocks.size() == eigenvalues.size());
   assert(A.blocks.size() == workspace.size());
 
-  Real lambdaMin = A.diagonalPart[0];
-  for (unsigned int i = 0; i < A.diagonalPart.size(); i++)
-    lambdaMin = min(lambdaMin, A.diagonalPart[i]);
+  // TODO: get rid of this hack
+  Real lambdaMin = 1e100;
+  // Real lambdaMin = A.diagonalPart[0];
+  // for (unsigned int i = 0; i < A.diagonalPart.size(); i++)
+  //   lambdaMin = min(lambdaMin, A.diagonalPart[i]);
 
   #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++) {
@@ -1957,7 +1988,7 @@ void computeSchurComplementCholesky(const SDP &sdp,
   timers.computeSchurBlocks.stop();
 
   // cout << "XInvDiagonal[" << i << "] = " << XInv.diagonalPart << ";\n";
-  cout << "YDiagonal[" << i << "] = " << Y.diagonalPart << ";\n";
+  // cout << "YDiagonal[" << i << "] = " << Y.diagonalPart << ";\n";
   //  cout << "SchurBlocks[" << i << "] = " << SchurBlocks << ";\n";
 
   timers.schurBlocksCholesky.resume();
@@ -1965,6 +1996,7 @@ void computeSchurComplementCholesky(const SDP &sdp,
   timers.schurBlocksCholesky.stop();
   SchurBlocksCholesky.copyInto(SchurComplementCholesky);
 
+  // TODO: Compute this properly!
   #pragma omp parallel for schedule(dynamic)
   for (int n = 0; n < sdp.polMatrixValues.cols; n++) {
     Real r = sqrt(XInv.diagonalPart[n]*Y.diagonalPart[n]);
@@ -2153,14 +2185,21 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
 
     // d_k = c_k - Tr(F_k Y)
     computeDualResidues(sdp, Y, BilinearPairingsY, dualResidues);
+    // dTilde_N = d_N + E d_B;
+    nonBasicShift(E, dualResidues, dualResiduesTilde);
 
+    // y = (x_B - g | x_N)^T
+    y = x;
+    for (unsigned int i = 0; i < g.size(); i++)
+      y[i] -= g[i];
     // PrimalResidues = sum_p F_p x_p - X - F_0
-    computePrimalResidues(sdp, x, X, PrimalResidues);
+    computePrimalResidues(sdp, y, X, PrimalResidues);
 
     status.primalError     = PrimalResidues.maxAbsElement();
     status.dualError       = maxAbsVectorElement(dualResidues);
     status.primalObjective = primalObjective(sdp, x);
-    status.dualObjective   = dualObjective(sdp, Y);
+    status.dualObjective   = dualObjective(sdp, g, dualResidues);
+    //status.dualObjective   = dualObjective(sdp, Y);
 
     const bool isPrimalFeasible = status.isPrimalFeasible(parameters);
     const bool isDualFeasible   = status.isDualFeasible(parameters);
@@ -2324,11 +2363,11 @@ void solveSDP(const path sdpFile,
   
   SDPSolver solver(sdp);
   solver.initialize(parameters);
-  SDPSolverStatus status = solver.run(parameters, outFile, checkpointFile);
+  // SDPSolverStatus status = solver.run(parameters, outFile, checkpointFile);
   
-  cout << "\nStatus:\n";
-  cout << status << endl;
-  cout << timers << endl;
+  // cout << "\nStatus:\n";
+  // cout << status << endl;
+  // cout << timers << endl;
 
   // cout << "X = " << solver.X << ";\n";
   // cout << "Y = " << solver.Y << ";\n";
