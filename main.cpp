@@ -166,7 +166,7 @@ class Matrix {
     }
   }
 
-  void transpose() {
+  void transposeInplace() {
     assert (rows == cols);
     for (int c = 0; c < cols; c++) {
       for (int r = 0; r < c; r++) {
@@ -227,6 +227,16 @@ ostream& operator<<(ostream& os, const Matrix& a) {
   }
   os << "}";
   return os;
+}
+
+// B := A^T
+void transpose(const Matrix &A, Matrix &B) {
+  assert(A.cols == B.rows);
+  assert(A.rows == B.cols);
+
+  for (int n = 0; n < A.cols; n++)
+    for (int m = 0; m < A.rows; m++)
+      B.elt(n,m) = A.elt(m,n);
 }
 
 // C := alpha*A*B + beta*C
@@ -343,6 +353,28 @@ Real frobeniusProductOfSums(const Matrix &X, const Matrix &dX,
     result += (X.elt(r,r) + dX.elt(r,r)) * (Y.elt(r,r) + dY.elt(r,r));
 
   return result;
+}
+
+void LUDecomposition(Matrix &A, vector<mpackint> &ipiv) {
+  int dim = A.rows;
+  assert(A.cols == dim);
+
+  mpackint info;
+  Rgetrf(dim, dim, &A.elements[0], dim, &ipiv[0], &info);
+  cout << info << endl;
+  assert(info == 0);
+}
+
+void solveWithLUDecomposition(Matrix &LU, vector<mpackint> &ipiv, Real *B, int bcols, int ldb) {
+  mpackint info;
+  Rgetrs("NoTranspose", LU.rows, bcols, &LU.elements[0], LU.rows, &ipiv[0], B, ldb, &info);
+  assert(info == 0);
+}
+
+void solveWithLUDecompositionTranspose(Matrix &LU, vector<mpackint> &ipiv, Real *B, int bcols, int ldb) {
+  mpackint info;
+  Rgetrs("Transpose", LU.rows, bcols, &LU.elements[0], LU.rows, &ipiv[0], B, ldb, &info);
+  assert(info == 0);
 }
 
 // L (lower triangular) such that A = L L^T
@@ -1444,6 +1476,15 @@ public:
   // Schur complement for computing search direction
   Matrix SchurComplementCholesky;
 
+  // For free variable elimination
+  Matrix DBLU;
+  vector<mpackint> DBLUipiv;
+  Matrix E;
+  Matrix EWork;
+  Vector g;
+  Real c0Tilde;
+  Vector cTilde;
+
   // New variables for Schur complement calculation
   Matrix schurComplementP;
   Matrix schurComplementQ;
@@ -1480,6 +1521,12 @@ public:
     dualResidues(x),
     PrimalResidues(X),
     SchurComplementCholesky(sdp.numConstraints(), sdp.numConstraints()),
+    DBLU(sdp.objective.size(), sdp.objective.size()),
+    DBLUipiv(sdp.objective.size()),
+    E(sdp.numConstraints() - sdp.objective.size(), sdp.objective.size()),
+    EWork(E.cols, E.rows),
+    g(sdp.objective.size()),
+    cTilde(sdp.numConstraints() - sdp.objective.size()),
     schurComplementP(sdp.polMatrixValues.cols, sdp.polMatrixValues.cols),
     schurComplementQ(schurComplementP),
     schurComplementY(sdp.polMatrixValues.rows),
@@ -1503,6 +1550,43 @@ public:
       eigenvaluesWorkspace.push_back(Vector(X.blocks[b].rows));
       QRWorkspace.push_back(Vector(3*X.blocks[b].rows - 1));
     }
+
+    // Computations needed for free variable elimination
+
+    // LU Decomposition of D_B
+    for (int n = 0; n < DBLU.cols; n++)
+      for (int m = 0; m < DBLU.rows; m++)
+        DBLU.elt(m,n) = sdp.polMatrixValues.elt(m,n);
+    LUDecomposition(DBLU, DBLUipiv);
+
+    // Compute E = - D_N D_B^{-1}
+    int nonBasicStart = sdp.objective.size();
+    // EWork = -D_N^T
+    for (int p = 0; p < EWork.cols; p++)
+      for (int n = 0; n < EWork.rows; n++)
+        EWork.elt(n, p) = -sdp.polMatrixValues.elt(p + nonBasicStart, n);
+    // EWork = D_B^{-1 T} EWork = -D_B^{-1 T} D_N^T
+    solveWithLUDecompositionTranspose(DBLU, DBLUipiv, &EWork.elements[0], EWork.cols, EWork.rows);
+    // E = EWork^T
+    transpose(EWork, E);
+
+    // g = -D_B^{-T} f
+    for (unsigned int n = 0; n < g.size(); n++)
+      g[n] = -sdp.objective[n];
+    solveWithLUDecompositionTranspose(DBLU, DBLUipiv, &g[0], 1, g.size());
+
+    // c0Tilde = - c_B^T g
+    c0Tilde = 0;
+    for (unsigned int n = 0; n < g.size(); n++)
+      c0Tilde -= g[n]*sdp.affineConstants[n];
+
+    // cTilde = c_N + E c_B
+    for (unsigned int p = 0; p < cTilde.size(); p++) {
+      cTilde[p] = sdp.affineConstants[p + nonBasicStart];
+      for (int n = 0; n < E.cols; n++)
+        cTilde[p] += E.elt(p, n) * sdp.affineConstants[n];
+    }
+    
   }
 
   void initialize(const SDPSolverParameters &parameters);
@@ -1797,7 +1881,7 @@ void eigenvaluesViaQR(Matrix &A, Vector &workspace, Vector &eigenvalues) {
 
   mpackint info;
   mpackint workSize = workspace.size();
-  Rsyev("NoEigenvectors", "LowerTriangular", A.rows, &A.elements[0], A.rows, &eigenvalues[0], &workspace[0], &workSize, &info);
+  Rsyev("NoEigenvectors", "LowerTriangular", A.rows, &A.elements[0], A.rows, &eigenvalues[0], &workspace[0], workSize, &info);
   assert(info == 0);
 }
 
@@ -2307,7 +2391,7 @@ void testCholeskyUpdate() {
   choleskyDecomposition(A, L);
   choleskyUpdate(L, U);
   LT = L;
-  LT.transpose();
+  LT.transposeInplace();
 
   matrixMultiply(V, VT, B);
   B += A;
