@@ -299,17 +299,27 @@ Real dotProduct(const Vector &u, const Vector v) {
   return result;
 }
 
-Real norm(const Vector &v) {
-  return sqrt(dotProduct(v,v));
-}
-
-// y := alpha*A*x + beta*y
+// y := alpha A x + beta y
 //
 void vectorScaleMatrixMultiplyAdd(Real alpha, Matrix &A, Vector &x, Real beta, Vector &y) {
   assert(A.cols == (int)x.size());
   assert(A.rows == (int)y.size());
 
   Rgemv("NoTranspose",
+        A.rows, A.cols, alpha,
+        &A.elements[0], A.rows,
+        &x[0], (int)x.size(),
+        beta,
+        &y[0], (int)y.size());
+}
+
+// y := alpha A^T x + beta y
+//
+void vectorScaleMatrixMultiplyTransposeAdd(Real alpha, Matrix &A, Vector &x, Real beta, Vector &y) {
+  assert(A.cols == (int)y.size());
+  assert(A.rows == (int)x.size());
+
+  Rgemv("Transpose",
         A.rows, A.cols, alpha,
         &A.elements[0], A.rows,
         &x[0], (int)x.size(),
@@ -1493,28 +1503,14 @@ public:
 
   // discrepancies in dual and primal equality constraints
   Vector dualResidues;
+  Vector dualResiduesTilde;
   BlockDiagonalMatrix PrimalResidues;
-
-  // Schur complement for computing search direction
-  Matrix SchurComplementCholesky;
-  Matrix SchurBasicCholesky;
-  // Right hand side of Schur complement equation
-  Vector r;
 
   // For free variable elimination
   Matrix E;
   Matrix ET;
   Vector g;
   Vector y;
-  Vector dualResiduesTilde;
-  Real c0Tilde;
-  //  Vector cTilde;
-
-  // New variables for Schur complement calculation
-  // Matrix schurComplementP;
-  // Matrix schurComplementQ;
-  // Vector schurComplementY;
-  // Vector schurComplementWork;
 
   // intermediate computations
   BlockDiagonalMatrix XInv;
@@ -1527,6 +1523,10 @@ public:
   BlockDiagonalMatrix SchurBlocks;
   BlockDiagonalMatrix SchurBlocksCholesky;
   Matrix SchurUpdateLowRank;
+  Matrix Q;
+  Matrix M;
+  Vector basicKernelCoords;
+  Matrix BasicKernelSpan;
 
   // additional workspace variables
   BlockDiagonalMatrix XInvWorkspace;
@@ -1544,22 +1544,12 @@ public:
     dX(X),
     dY(Y),
     dualResidues(x),
+    dualResiduesTilde(sdp.numConstraints() - sdp.objective.size()),
     PrimalResidues(X),
-    SchurComplementCholesky(sdp.numConstraints() - sdp.objective.size(),
-                            sdp.numConstraints() - sdp.objective.size()),
-    SchurBasicCholesky(sdp.objective.size(),
-                       sdp.objective.size()),
-    r(x),
     E(sdp.numConstraints() - sdp.objective.size(), sdp.objective.size()),
     ET(E.cols, E.rows),
     g(sdp.objective.size()),
     y(x),
-    dualResiduesTilde(sdp.numConstraints() - sdp.objective.size()),
-    // cTilde(sdp.numConstraints() - sdp.objective.size()),
-    // schurComplementP(sdp.polMatrixValues.cols, sdp.polMatrixValues.cols),
-    // schurComplementQ(schurComplementP),
-    // schurComplementY(sdp.polMatrixValues.rows),
-    // schurComplementWork(schurComplementQ.rows),
     XInv(X),
     XInvCholesky(X),
     YInvCholesky(X),
@@ -1569,7 +1559,11 @@ public:
     BilinearPairingsY(BilinearPairingsXInv),
     SchurBlocks(0, sdp.schurBlockDims()),
     SchurBlocksCholesky(SchurBlocks),
-    SchurUpdateLowRank(E),
+    SchurUpdateLowRank(sdp.polMatrixValues),
+    Q(sdp.polMatrixValues.cols, sdp.polMatrixValues.cols),
+    M(Q),
+    basicKernelCoords(Q.rows),
+    BasicKernelSpan(sdp.polMatrixValues),
     XInvWorkspace(X),
     StepMatrixWorkspace(X)
   {
@@ -1606,24 +1600,16 @@ public:
       g[n] = -sdp.objective[n];
     solveWithLUDecompositionTranspose(DBLU, DBLUipiv, &g[0], 1, g.size());
 
-    // c0Tilde = - c_B^T g
-    c0Tilde = 0;
-    for (unsigned int n = 0; n < g.size(); n++)
-      c0Tilde -= g[n]*sdp.affineConstants[n];
-
-    // We don't actually need this, since it'll be included implicitly
-    // in later calculations
-    // cTilde = c_N + E c_B
-    // for (unsigned int p = 0; p < cTilde.size(); p++) {
-    //   cTilde[p] = sdp.affineConstants[p + nonBasicStart];
-    //   for (int n = 0; n < E.cols; n++)
-    //     cTilde[p] += E.elt(p, n) * sdp.affineConstants[n];
-    // }
+    // BasicKernelSpan = ( -1 \\ E)
+    BasicKernelSpan.setZero();
+    for (int c = 0; c < E.cols; c++)
+      for (int r = 0; r < E.rows; r++)
+        BasicKernelSpan.elt(nonBasicStart + r, c) = E.elt(r, c);
+    for (int c = 0; c < E.cols; c++)
+      BasicKernelSpan.elt(c, c) = -1;
 
     cout << "polMatrixValues = " << sdp.polMatrixValues << ";\n";
     cout << "E = " << E << ";\n";
-    // cout << "cTilde = " << cTilde << ";\n";
-    cout << "c0Tilde = " << c0Tilde << ";\n";
     
   }
 
@@ -1738,19 +1724,6 @@ void computeSchurBlocks(const SDP &sdp,
   }
 }
 
-// xTilde_N = x_N + E x_B
-void nonBasicShift(const Matrix &E, const Vector &x, Vector &xTilde) {
-  int nonBasicStart = x.size() - xTilde.size();
-  assert(E.rows == (int)xTilde.size());
-  assert(E.cols == nonBasicStart);
-
-  for (unsigned int p = 0; p < xTilde.size(); p++) {
-    xTilde[p] = x[p + nonBasicStart];
-    for (int n = 0; n < E.cols; n++)
-      xTilde[p] += E.elt(p,n) * x[n];
-  }
-}
-
 // x_B = E^T x_N
 void basicCompletion(const Matrix &E, Vector &x) {
   int nonBasicStart = E.cols;
@@ -1760,6 +1733,19 @@ void basicCompletion(const Matrix &E, Vector &x) {
     x[n] = 0;
     for (int p = 0; p < E.rows; p++)
       x[n] += E.elt(p, n) * x[nonBasicStart + p];
+  }
+}
+
+// xTilde_N = x_N + E x_B
+void nonBasicShift(const Matrix &E, const Vector &x, Vector &xTilde) {
+  int nonBasicStart = x.size() - xTilde.size();
+  assert(E.rows == (int)xTilde.size());
+  assert(E.cols == nonBasicStart);
+  
+  for (unsigned int p = 0; p < xTilde.size(); p++) {
+    xTilde[p] = x[p + nonBasicStart];
+    for (int n = 0; n < E.cols; n++)
+      xTilde[p] += E.elt(p,n) * x[n];
   }
 }
 
@@ -1826,11 +1812,8 @@ void computeSchurRHS(const SDP &sdp,
                      BlockDiagonalMatrix &Z, 
                      Vector &r) {
 
-  for (unsigned int p = 0; p < r.size(); p++) {
+  for (unsigned int p = 0; p < r.size(); p++)
     r[p] = -dualResidues[p];
-    // for (unsigned int n = 0; n < Z.diagonalPart.size(); n++)
-    //   r[p] -= sdp.polMatrixValues.elt(p, n)*Z.diagonalPart[n];
-  }
 
   #pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
@@ -1872,15 +1855,11 @@ Real primalObjective(const SDP &sdp, const Vector &x) {
   return dotProduct(sdp.affineConstants, x);
 }
 
-// Real dualObjective(const SDP &sdp, const BlockDiagonalMatrix &Y) {
-//   return dotProduct(sdp.objective, Y.diagonalPart);
-// }
-
 Real dualObjective(const SDP &sdp, const Vector &g, const Vector &dualResidues) {
-  Real result = 0;
+  Real tmp = 0;
   for (unsigned int i = 0; i < g.size(); i++)
-    result += g[i]*(sdp.affineConstants[i] - dualResidues[i]);
-  return result;
+    tmp -= g[i]*dualResidues[i];
+  return -tmp;
 }
 
 // Implements SDPA's DirectionParameter::MehrotraPredictor
@@ -2019,10 +1998,10 @@ void computeSchurComplementCholesky(const SDP &sdp,
                                     const BlockDiagonalMatrix &BilinearPairingsXInv,
                                     const BlockDiagonalMatrix &Y,
                                     const BlockDiagonalMatrix &BilinearPairingsY,
-                                    const Matrix &E,
+                                    const Matrix &BasicKernelSpan,
                                     BlockDiagonalMatrix &SchurBlocks,
-                                    BlockDiagonalMatrix &L,
-                                    Matrix &V,
+                                    BlockDiagonalMatrix &SchurBlocksCholesky,
+                                    Matrix &SchurUpdateLowRank,
                                     Matrix &Q,
                                     Matrix &M) {
 
@@ -2031,137 +2010,26 @@ void computeSchurComplementCholesky(const SDP &sdp,
   timers.computeSchurBlocks.stop();
 
   timers.schurBlocksCholesky.resume();
-  choleskyDecomposition(SchurBlocks, L);
+  choleskyDecomposition(SchurBlocks, SchurBlocksCholesky);
   timers.schurBlocksCholesky.stop();
 
-  // We should probably precompute this
-  // V = ( -1 \\ E)
-  int nonBasicStart = E.cols;
-  V.setZero();
-  for (int c = 0; c < E.cols; c++)
-    for (int r = 0; r < E.rows; r++)
-      V.elt(nonBasicStart + r, c) = E.elt(r, c);
-  for (int c = 0; c < E.cols; c++)
-    V.elt(c, c) = -1;
+  // SchurUpdateLowRank = (-1 \\ E)
+  SchurUpdateLowRank.copyFrom(BasicKernelSpan);
 
-  // V = L^{-1} ( - 1 \\ E)
-  blockMatrixLowerTriangularSolve(L, V);
+  // SchurUpdateLowRank = SchurBlocksCholesky^{-1} ( - 1 \\ E)
+  blockMatrixLowerTriangularSolve(SchurBlocksCholesky, SchurUpdateLowRank);
 
-  // Q = V^T V
-  matrixSquare(V, Q);
+  // Q = SchurUpdateLowRank^T SchurUpdateLowRank
+  matrixSquare(SchurUpdateLowRank, Q);
 
   // Q = M M^T
   choleskyDecomposition(Q, M);
 
-  // V = V M^{-T}
+  // SchurUpdateLowRank = SchurUpdateLowRank M^{-T}
   Rtrsm("Right", "Lower", "Transpose", "NonUnitDiagonal",
-        V.rows, V.cols, 1,
+        SchurUpdateLowRank.rows, SchurUpdateLowRank.cols, 1,
         &M.elements[0], M.rows,
-        &V.elements[0], V.rows);
-}
-
-// v = L^{-1 T}(v - U Q^{-1 T} Q^{-1} U^T v)
-//
-void partialSchurSolve(BlockDiagonalMatrix &L,
-                       const Matrix &U,
-                       Matrix &Q,
-                       Vector &work,
-                       Vector &v) {
-
-  for (int n = 0; n < U.cols; n++) {
-    work[n] = 0;
-    for (int p = 0; p < U.rows; p++)
-      work[n] += U.elt(p, n)*v[p];
-  }
-
-  lowerTriangularSolve(Q, work);
-  lowerTriangularTransposeSolve(Q, work);
-
-  for (int p = 0; p < U.rows; p++)
-    for (int n = 0; n < U.cols; n++)
-      v[p] -= U.elt(p, n)*work[n];
-      
-  blockMatrixLowerTriangularTransposeSolve(L, v);
-}
-
-// void computeSchurComplementCholesky2(const SDP &sdp,
-//                                      const BlockDiagonalMatrix &XInv,
-//                                      const BlockDiagonalMatrix &BilinearPairingsXInv,
-//                                      const BlockDiagonalMatrix &Y,
-//                                      const BlockDiagonalMatrix &BilinearPairingsY,
-//                                      BlockDiagonalMatrix &SchurBlocks,
-//                                      BlockDiagonalMatrix &SchurBlocksCholesky,
-//                                      Matrix &SchurUpdateLowRank,
-//                                      Matrix &P,
-//                                      Matrix &Q,
-//                                      Vector &y,
-//                                      Vector &work) {
-//   timers.computeSchurBlocks.resume();
-//   computeSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, SchurBlocks);
-//   timers.computeSchurBlocks.stop();
-
-//   // temporarily make SchurBlocks full rank
-//   SchurBlocks.blocks.back().elt(0,0) = 1;
-
-//   timers.schurBlocksCholesky.resume();
-//   choleskyDecomposition(SchurBlocks, SchurBlocksCholesky);
-//   timers.schurBlocksCholesky.stop();
-
-//   // U = SchurBlocksCholesky^{-1} sdp.polMatrixValues
-//   SchurUpdateLowRank.copyFrom(sdp.polMatrixValues);
-//   blockMatrixLowerTriangularSolve(SchurBlocksCholesky, SchurUpdateLowRank);
-
-//   // P = U^T U
-//   for (int n = 0; n < P.rows; n++) {
-//     // Parallelize at this loop level because the work is
-//     // approximately constant size and there are no shared variables;
-//     #pragma omp parallel for schedule(static)
-//     for (int m = 0; m <= n; m++) {
-//       Real tmp = 0;
-
-//       for (int p = 0; p < SchurUpdateLowRank.rows; p++)
-//         tmp += SchurUpdateLowRank.elt(p, n)*SchurUpdateLowRank.elt(p,m);
-
-//       P.elt(m, n) = tmp;
-//       if (m != n)
-//         P.elt(n, m) = tmp;
-//     }
-//   }
-
-//   // P = D^{-1} + U^T U
-//   for (int n = 0; n < P.rows; n++)
-//     P.elt(n,n) += 1/(XInv.diagonalPart[n]*Y.diagonalPart[n]);
-
-//   // P = Q Q^T
-//   choleskyDecomposition(P, Q);
-
-//   // y = u = L^{-1} u = (0, 0, 0, ..., 1)
-//   fillVector(y, 0);
-//   y.back() = 1;
-
-//   // y = L^{-1 T} (y - U Q^{-1 T} Q^{-1} U^T y)
-//   partialSchurSolve(SchurBlocksCholesky, SchurUpdateLowRank, Q, work, y);
-
-// }
-
-void schurComplementSolve(BlockDiagonalMatrix &SchurBlocksCholesky,
-                          const Matrix &SchurUpdateLowRank,
-                          Matrix &Q,
-                          const Vector &y,
-                          Vector &work,
-                          Vector &x) {
-  // x = L^{-1} x
-  blockMatrixLowerTriangularSolve(SchurBlocksCholesky, x);
-
-  // x = L^{-1 T} (x - U Q^{-1 T} Q^{-1} U^T x)
-  partialSchurSolve(SchurBlocksCholesky, SchurUpdateLowRank, Q, work, x);
-
-  // alpha = (u . x) / (1 - u . y)
-  Real alpha = x.back() / (1 - y.back());
-
-  // x = x + alpha y
-  for (unsigned int p = 0; p < x.size(); p++)
-    x[p] += y[p]*alpha;
+        &SchurUpdateLowRank.elements[0], SchurUpdateLowRank.rows);
 }
 
 void printInfoHeader() {
@@ -2191,8 +2059,21 @@ void printInfo(int iteration,
               betaCorrector.get_mpf_t());
 }
 
-void solveSchurComplementEquation(Vector &dx) {
-  return;
+void solveSchurComplementEquation(BlockDiagonalMatrix &SchurBlocksCholesky,
+                                  Matrix &SchurUpdateLowRank,
+                                  Vector &k,
+                                  Vector &dx) {
+  // dx = SchurBlocksCholesky^{-1} dx
+  blockMatrixLowerTriangularSolve(SchurBlocksCholesky, dx);
+
+  // k = -SchurUpdateLowRank^T dx
+  vectorScaleMatrixMultiplyTransposeAdd(-1, SchurUpdateLowRank, dx, 0, k);
+
+  // dx = dx + SchurUpdateLowRank k
+  vectorScaleMatrixMultiplyAdd(1, SchurUpdateLowRank, k, 1, dx);
+
+  // dx = SchurBlocksCholesky^{-T} dx
+  blockMatrixLowerTriangularTransposeSolve(SchurBlocksCholesky, dx);
 }
 
 void SDPSolver::computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R,
@@ -2204,20 +2085,14 @@ void SDPSolver::computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R,
   blockMatrixSolveWithInverseCholesky(XInvCholesky, Z);
   Z.symmetrize();
 
-  // r_k = -d_k + Tr(F_k Z)
-  computeSchurRHS(sdp, dualResidues, Z, r);
-  // dx_N = r_N + E r_B
-  nonBasicShift(E, r, dx);
+  // dx_k = -d_k + Tr(F_k Z)
+  computeSchurRHS(sdp, dualResidues, Z, dx);
 
-  // dx_N = S^{-1} (r_N + E r_B)
-  int nonBasicStart = sdp.polMatrixValues.cols;
-  int nonBasicEnd   = sdp.numConstraints();
-  lowerTriangularSolve(SchurComplementCholesky, &dx[nonBasicStart], 1, nonBasicEnd - nonBasicStart);
-  lowerTriangularTransposeSolve(SchurComplementCholesky, &dx[nonBasicStart], 1, nonBasicEnd - nonBasicStart);
-  // dx_B = dx_N^T E
-
-  //vectorSolveWithCholesky(SchurComplementCholesky, dx);
-  //schurComplementSolve(SchurBlocksCholesky, SchurUpdateLowRank, schurComplementQ, schurComplementY, schurComplementWork, dx);
+  // dx_N = B_{NN}^{-1} dx_N
+  // dx_B = E^T dx_N
+  solveSchurComplementEquation(SchurBlocksCholesky,
+                               SchurUpdateLowRank,
+                               basicKernelCoords, dx);
 
   // dX = R_p + sum_p F_p dx_p
   constraintMatrixWeightedSum(sdp, dx, dX);
@@ -2248,21 +2123,19 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
 
     // d_k = c_k - Tr(F_k Y)
     computeDualResidues(sdp, Y, BilinearPairingsY, dualResidues);
-    // dTilde_N = d_N + E d_B;
     nonBasicShift(E, dualResidues, dualResiduesTilde);
 
     // y = (x_B - g | x_N)^T
     y = x;
     for (unsigned int i = 0; i < g.size(); i++)
       y[i] -= g[i];
-    // PrimalResidues = sum_p F_p x_p - X - F_0
+    // PrimalResidues = sum_p F_p y_p - X - F_0 (F_0 is zero for now)
     computePrimalResidues(sdp, y, X, PrimalResidues);
 
     status.primalError     = PrimalResidues.maxAbsElement();
-    status.dualError       = maxAbsVectorElement(dualResidues);
+    status.dualError       = maxAbsVectorElement(dualResiduesTilde);
     status.primalObjective = primalObjective(sdp, x);
     status.dualObjective   = dualObjective(sdp, g, dualResidues);
-    //status.dualObjective   = dualObjective(sdp, Y);
 
     const bool isPrimalFeasible = status.isPrimalFeasible(parameters);
     const bool isDualFeasible   = status.isDualFeasible(parameters);
@@ -2272,28 +2145,15 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
     if (isPrimalFeasible && isDualFeasible && isOptimal) break;
 
     timers.schurComplementCholesky.resume();
-    // computeSchurComplementCholesky(sdp,
-    //                                XInv, BilinearPairingsXInv,
-    //                                Y, BilinearPairingsY,
-    //                                E,
-    //                                SchurBlocks,
-    //                                SchurBlocksCholesky,
-    //                                SchurUpdateLowRank,
-    //                                SchurComplementCholesky,
-    //                                SchurBasicCholesky,
-    //                                iteration);
-    // computeSchurComplementCholesky2(sdp,
-    //                                 XInv,
-    //                                 BilinearPairingsXInv,
-    //                                 Y,
-    //                                 BilinearPairingsY,
-    //                                 SchurBlocks,
-    //                                 SchurBlocksCholesky,
-    //                                 SchurUpdateLowRank,
-    //                                 schurComplementP,
-    //                                 schurComplementQ,
-    //                                 schurComplementY,
-    //                                 schurComplementWork);
+    computeSchurComplementCholesky(sdp,
+                                   XInv, BilinearPairingsXInv,
+                                   Y, BilinearPairingsY,
+                                   BasicKernelSpan,
+                                   SchurBlocks,
+                                   SchurBlocksCholesky,
+                                   SchurUpdateLowRank,
+                                   Q,
+                                   M);
     timers.schurComplementCholesky.stop();
 
     Real mu = frobeniusProductSymmetric(X, Y)/X.dim;
@@ -2321,7 +2181,9 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
                                        eigenvaluesWorkspace, QRWorkspace, parameters);
 
     // Update current point
-    vectorScaleMultiplyAdd(primalStepLength, dx, 1, x);  
+    vectorScaleMultiplyAdd(primalStepLength, dx, 1, x);
+    // Maintain our invariant in a numerically stable way
+    basicCompletion(E, x);
     dX *= primalStepLength;
     X += dX;
     dY *= dualStepLength;
