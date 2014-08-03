@@ -259,6 +259,23 @@ void matrixMultiply(Matrix &A, Matrix &B, Matrix &C) {
   matrixScaleMultiplyAdd(1, A, B, 0, C);
 }
 
+// B = A^T A
+void matrixSquare(Matrix &A, Matrix &B) {
+  assert(A.cols == B.rows);
+  assert(B.cols == B.rows);
+
+  for (int c = 0; c < B.cols; c++) {
+    for (int r = 0; r <= c; r++) {
+      Real tmp = 0;
+      for (int p = 0; p < A.rows; p++)
+        tmp += A.elt(p,r) * A.elt(p,c);
+      B.elt(r,c) = tmp;
+      if (r != c)
+        B.elt(c,r) = tmp;
+    }
+  }
+}
+
 // A := L A L^T
 void lowerTriangularCongruence(Matrix &A, Matrix &L) {
   int dim = A.rows;
@@ -892,27 +909,29 @@ void blockMatrixSolveWithInverseCholesky(BlockDiagonalMatrix &AInvCholesky,
 }
 
 void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L, Matrix &B) {
-  // TODO: allow diagonal parts for completeness
-  assert(L.diagonalPart.size() == 0);
-
   #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < L.blocks.size(); b++)
     lowerTriangularSolve(L.blocks[b], &B.elt(L.blockStartIndices[b], 0), B.cols, B.rows);
 }
 
-void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L, Vector &v) {
-  // TODO: allow diagonal parts for completeness
-  assert(L.diagonalPart.size() == 0);
+void blockMatrixLowerTriangularTransposeSolve(BlockDiagonalMatrix &L, Matrix &B) {
+  #pragma omp parallel for schedule(dynamic)
+  for (unsigned int b = 0; b < L.blocks.size(); b++)
+    lowerTriangularTransposeSolve(L.blocks[b], &B.elt(L.blockStartIndices[b], 0), B.cols, B.rows);
+}
 
+// void blockMatrixSolveWithCholesky(BlockDiagonalMatrix &L, Matrix &B) {
+//   blockMatrixLowerTriangularSolve(L, B);
+//   blockMatrixLowerTriangularTransposeSolve(L, B);
+// }
+
+void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L, Vector &v) {
   #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < L.blocks.size(); b++)
     lowerTriangularSolve(L.blocks[b], &v[L.blockStartIndices[b]], 1, v.size());
 }
 
 void blockMatrixLowerTriangularTransposeSolve(BlockDiagonalMatrix &L, Vector &v) {
-  // TODO: allow diagonal parts for completeness
-  assert(L.diagonalPart.size() == 0);
-
   #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < L.blocks.size(); b++)
     lowerTriangularTransposeSolve(L.blocks[b], &v[L.blockStartIndices[b]], 1, v.size());
@@ -1735,12 +1754,13 @@ void nonBasicShift(const Matrix &E, const Vector &x, Vector &xTilde) {
 // x_B = E^T x_N
 void basicCompletion(const Matrix &E, Vector &x) {
   int nonBasicStart = E.cols;
-  assert(x.size() = E.cols + E.rows);
+  assert((int)x.size() == E.cols + E.rows);
   
   for (int n = 0; n < nonBasicStart; n++) {
     x[n] = 0;
     for (int p = 0; p < E.rows; p++)
       x[n] += E.elt(p, n) * x[nonBasicStart + p];
+  }
 }
 
 void computeDualResidues(const SDP &sdp,
@@ -2001,51 +2021,43 @@ void computeSchurComplementCholesky(const SDP &sdp,
                                     const BlockDiagonalMatrix &BilinearPairingsY,
                                     const Matrix &E,
                                     BlockDiagonalMatrix &SchurBlocks,
-                                    BlockDiagonalMatrix &SchurBlocksCholesky,
-                                    Matrix &SchurUpdateLowRank,
-                                    Matrix &SchurComplementCholesky,
-                                    Matrix &SchurBasicCholesky,
-                                    int i) {
+                                    BlockDiagonalMatrix &L,
+                                    Matrix &V,
+                                    Matrix &Q,
+                                    Matrix &M) {
 
   timers.computeSchurBlocks.resume();
   computeSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, SchurBlocks);
   timers.computeSchurBlocks.stop();
 
-  // cout << "XInvDiagonal[" << i << "] = " << XInv.diagonalPart << ";\n";
-  // cout << "YDiagonal[" << i << "] = " << Y.diagonalPart << ";\n";
-  // cout << "SchurBlocks[" << i << "] = " << SchurBlocks << ";\n";
-
   timers.schurBlocksCholesky.resume();
-  choleskyDecomposition(SchurBlocks, SchurBlocksCholesky);
+  choleskyDecomposition(SchurBlocks, L);
   timers.schurBlocksCholesky.stop();
 
-  // SchurComplementCholesky = L_NN
-  SchurBlocksCholesky.copySquareInto(sdp.objective.size(),
-                                     sdp.numConstraints(),
-                                     SchurComplementCholesky);
+  // We should probably precompute this
+  // V = ( -1 \\ E)
+  int nonBasicStart = E.cols;
+  V.setZero();
+  for (int c = 0; c < E.cols; c++)
+    for (int r = 0; r < E.rows; r++)
+      V.elt(nonBasicStart + r, c) = E.elt(r, c);
+  for (int c = 0; c < E.cols; c++)
+    V.elt(c, c) = -1;
 
-  // SchurBasicCholesky = L_{BB}
-  SchurBlocksCholesky.copySquareInto(0, sdp.objective.size(), SchurBasicCholesky);
+  // V = L^{-1} ( - 1 \\ E)
+  blockMatrixLowerTriangularSolve(L, V);
 
-  // SchurUpdateLowRank = E
-  SchurUpdateLowRank.copyFrom(E);
-  // SchurUpdateLowRank = E L_{BB}
-  Rtrmm("Right", "Lower", "NoTranspose", "NonUnitDiagonal",
-        SchurUpdateLowRank.rows,
-        SchurUpdateLowRank.cols,
-        1,
-        &SchurBasicCholesky.elements[0],
-        SchurBasicCholesky.rows,
-        &SchurUpdateLowRank.elements[0],
-        SchurUpdateLowRank.rows);
-  // SchurUpdateLowRank = E L_{BB} + L_{NB}
-  SchurBlocksCholesky.addSubmatrixTo(sdp.objective.size(), 0,
-                                     sdp.numConstraints(), sdp.objective.size(),
-                                     SchurUpdateLowRank);
-  
-  timers.schurCholeskyUpdate.resume();
-  choleskyUpdate(SchurComplementCholesky, SchurUpdateLowRank);
-  timers.schurCholeskyUpdate.stop();
+  // Q = V^T V
+  matrixSquare(V, Q);
+
+  // Q = M M^T
+  choleskyDecomposition(Q, M);
+
+  // V = V M^{-T}
+  Rtrsm("Right", "Lower", "Transpose", "NonUnitDiagonal",
+        V.rows, V.cols, 1,
+        &M.elements[0], M.rows,
+        &V.elements[0], V.rows);
 }
 
 // v = L^{-1 T}(v - U Q^{-1 T} Q^{-1} U^T v)
@@ -2260,16 +2272,16 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
     if (isPrimalFeasible && isDualFeasible && isOptimal) break;
 
     timers.schurComplementCholesky.resume();
-    computeSchurComplementCholesky(sdp,
-                                   XInv, BilinearPairingsXInv,
-                                   Y, BilinearPairingsY,
-                                   E,
-                                   SchurBlocks,
-                                   SchurBlocksCholesky,
-                                   SchurUpdateLowRank,
-                                   SchurComplementCholesky,
-                                   SchurBasicCholesky,
-                                   iteration);
+    // computeSchurComplementCholesky(sdp,
+    //                                XInv, BilinearPairingsXInv,
+    //                                Y, BilinearPairingsY,
+    //                                E,
+    //                                SchurBlocks,
+    //                                SchurBlocksCholesky,
+    //                                SchurUpdateLowRank,
+    //                                SchurComplementCholesky,
+    //                                SchurBasicCholesky,
+    //                                iteration);
     // computeSchurComplementCholesky2(sdp,
     //                                 XInv,
     //                                 BilinearPairingsXInv,
