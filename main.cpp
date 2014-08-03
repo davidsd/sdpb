@@ -95,7 +95,7 @@ Real vectorTotal(const Vector &v) {
 }
 
 Real maxAbsVectorElement(const Vector &v) {
-  Real max = abs(v[0]);
+  Real max = 0;
   for (Vector::const_iterator x = v.begin(); x != v.end(); x++)
     if (abs(*x) > max)
       max = abs(*x);
@@ -308,9 +308,9 @@ void vectorScaleMatrixMultiplyAdd(Real alpha, Matrix &A, Vector &x, Real beta, V
   Rgemv("NoTranspose",
         A.rows, A.cols, alpha,
         &A.elements[0], A.rows,
-        &x[0], (int)x.size(),
+        &x[0], 1,
         beta,
-        &y[0], (int)y.size());
+        &y[0], 1);
 }
 
 // y := alpha A^T x + beta y
@@ -322,9 +322,9 @@ void vectorScaleMatrixMultiplyTransposeAdd(Real alpha, Matrix &A, Vector &x, Rea
   Rgemv("Transpose",
         A.rows, A.cols, alpha,
         &A.elements[0], A.rows,
-        &x[0], (int)x.size(),
+        &x[0], 1,
         beta,
-        &y[0], (int)y.size());
+        &y[0], 1);
 }
 
 void lowerTriangularMatrixTimesVector(Matrix &A, Vector &v) {
@@ -388,7 +388,6 @@ void LUDecomposition(Matrix &A, vector<mpackint> &ipiv) {
 
   mpackint info;
   Rgetrf(dim, dim, &A.elements[0], dim, &ipiv[0], &info);
-  cout << info << endl;
   assert(info == 0);
 }
 
@@ -1406,7 +1405,7 @@ public:
   int maxThreads;
 
   SDPSolverParameters():
-    maxIterations(500),
+    maxIterations(30),
     dualityGapThreshold("1e-100"),
     primalFeasibilityThreshold("1e-30"),
     dualFeasibilityThreshold("1e-30"),
@@ -1607,10 +1606,6 @@ public:
         BasicKernelSpan.elt(nonBasicStart + r, c) = E.elt(r, c);
     for (int c = 0; c < E.cols; c++)
       BasicKernelSpan.elt(c, c) = -1;
-
-    cout << "polMatrixValues = " << sdp.polMatrixValues << ";\n";
-    cout << "E = " << E << ";\n";
-    
   }
 
   void initialize(const SDPSolverParameters &parameters);
@@ -2281,7 +2276,7 @@ void solveSDP(const path sdpFile,
   cout.precision(int(parameters.precision * 0.30102999566398114 + 5));
   omp_set_num_threads(parameters.maxThreads);
 
-  // printSDPBHeader(sdpFile, outFile, checkpointFile, parameters);
+  printSDPBHeader(sdpFile, outFile, checkpointFile, parameters);
 
   const SDP sdp = readBootstrapSDP(sdpFile);
 
@@ -2290,11 +2285,11 @@ void solveSDP(const path sdpFile,
   
   SDPSolver solver(sdp);
   solver.initialize(parameters);
-  // SDPSolverStatus status = solver.run(parameters, outFile, checkpointFile);
+  SDPSolverStatus status = solver.run(parameters, outFile, checkpointFile);
   
-  // cout << "\nStatus:\n";
-  // cout << status << endl;
-  // cout << timers << endl;
+  cout << "\nStatus:\n";
+  cout << status << endl;
+  cout << timers << endl;
 
   // cout << "X = " << solver.X << ";\n";
   // cout << "Y = " << solver.Y << ";\n";
