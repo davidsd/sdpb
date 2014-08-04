@@ -79,7 +79,7 @@ ostream& operator<<(ostream& os, const vector<T>& v) {
   int last = v.size() - 1;
   for (int i = 0; i < last; i++)
     os << v[i] << ", ";
-  if (last > 0)
+  if (last >= 0)
     os << v[last];
   os << "}";
   return os;
@@ -1156,85 +1156,87 @@ Matrix basisAtSamplePoints(int basisSize, int numPoints, bool withSqrt,
   return m;
 }
 
-SDP bootstrapSDP(const Vector &objective,
-                 const Vector &normalization,
-                 const vector<PolynomialVectorMatrix> &positiveMatrixPols,
-                 const vector<Polynomial> &bilinearBasisPols,
-                 const Vector &polynomialSamplePoints) {
-  SDP sdp;
-  sdp.objective = objective;
+// SDP bootstrapSDP(const Vector &objective,
+//                  const Vector &normalization,
+//                  const vector<PolynomialVectorMatrix> &positiveMatrixPols,
+//                  const vector<Polynomial> &bilinearBasisPols,
+//                  const Vector &polynomialSamplePoints) {
+//   SDP sdp;
+//   sdp.objective = objective;
 
-  int numConstraints = 0;
-  for (vector<PolynomialVectorMatrix>::const_iterator m = positiveMatrixPols.begin();
-       m != positiveMatrixPols.end();
-       m++) {
-    int dimension = m->cols;
-    int degree    = m->degree();
+//   int numConstraints = 0;
+//   for (vector<PolynomialVectorMatrix>::const_iterator m = positiveMatrixPols.begin();
+//        m != positiveMatrixPols.end();
+//        m++) {
+//     int dimension = m->cols;
+//     int degree    = m->degree();
 
-    sdp.dimensions.push_back(dimension);
-    sdp.degrees.push_back(degree);
-    numConstraints += (degree+1)*dimension*(dimension+1)/2;
-  }
+//     sdp.dimensions.push_back(dimension);
+//     sdp.degrees.push_back(degree);
+//     numConstraints += (degree+1)*dimension*(dimension+1)/2;
+//   }
 
-  // For the normalization constraint
-  // sdp.dimensions.push_back(1);
-  // sdp.degrees.push_back(0);
-  // numConstraints += 1;
+//   // For the normalization constraint
+//   // sdp.dimensions.push_back(1);
+//   // sdp.degrees.push_back(0);
+//   // numConstraints += 1;
 
-  sdp.polMatrixValues = Matrix(numConstraints, sdp.objective.size());
-  sdp.affineConstants = Vector(numConstraints, 0);
+//   sdp.polMatrixValues = Matrix(numConstraints, sdp.objective.size());
+//   // THIS IS A HACK! REMOVE IT!!!
+//   sdp.affineConstants = Vector(numConstraints, 1);
+//   // sdp.affineConstants = Vector(numConstraints, 0);
 
-  // normalization constraint
-  // sdp.affineConstants[numConstraints-1] = 1;
+//   // normalization constraint
+//   // sdp.affineConstants[numConstraints-1] = 1;
 
-  int p = 0;
-  for (vector<PolynomialVectorMatrix>::const_iterator m = positiveMatrixPols.begin();
-       m != positiveMatrixPols.end();
-       m++) {
+//   int p = 0;
+//   for (vector<PolynomialVectorMatrix>::const_iterator m = positiveMatrixPols.begin();
+//        m != positiveMatrixPols.end();
+//        m++) {
 
-    int degree = m->degree();
-    int delta1 = degree/2;
-    int delta2 = (degree-1)/2;
+//     int degree = m->degree();
+//     int delta1 = degree/2;
+//     int delta2 = (degree-1)/2;
 
-    vector<int> blocks;
+//     vector<int> blocks;
 
-    blocks.push_back(sdp.bilinearBases.size());
-    sdp.bilinearBases.push_back(basisAtSamplePoints(delta1+1, degree+1, false,
-                                                    bilinearBasisPols,
-                                                    polynomialSamplePoints));
+//     blocks.push_back(sdp.bilinearBases.size());
+//     sdp.bilinearBases.push_back(basisAtSamplePoints(delta1+1, degree+1, false,
+//                                                     bilinearBasisPols,
+//                                                     polynomialSamplePoints));
 
-    if (delta2 >= 0) {
-      blocks.push_back(sdp.bilinearBases.size());
-      sdp.bilinearBases.push_back(basisAtSamplePoints(delta2+1, degree+1, true,
-                                                      bilinearBasisPols,
-                                                      polynomialSamplePoints));
-    }
+//     if (delta2 >= 0) {
+//       blocks.push_back(sdp.bilinearBases.size());
+//       sdp.bilinearBases.push_back(basisAtSamplePoints(delta2+1, degree+1, true,
+//                                                       bilinearBasisPols,
+//                                                       polynomialSamplePoints));
+//     }
 
-    sdp.blocks.push_back(blocks);
+//     sdp.blocks.push_back(blocks);
 
-    for (int s = 0; s < m->cols; s++) {
-      for (int r = 0; r <= s; r++) {
-        for (int k = 0; k <= degree; k++, p++) {
-          const Real xk = polynomialSamplePoints[k];
-          for (unsigned int n = 0; n < sdp.objective.size(); n++)
-            sdp.polMatrixValues.elt(p, n) = -m->elt(r,s)[n](xk);
-        }
-      }
-    }
-  }
-  // assert(p == numConstraints-1);
-  assert(p == numConstraints);
+//     for (int s = 0; s < m->cols; s++) {
+//       for (int r = 0; r <= s; r++) {
+//         for (int k = 0; k <= degree; k++, p++) {
+//           const Real xk = polynomialSamplePoints[k];
+//           for (unsigned int n = 0; n < sdp.objective.size(); n++)
+//             sdp.polMatrixValues.elt(p, n) = -m->elt(r,s)[n](xk);
+//         }
+//       }
+//     }
+//   }
+//   // assert(p == numConstraints-1);
+//   assert(p == numConstraints);
 
-  // normalization constraint
-  // for (unsigned int n = 0; n < sdp.objective.size(); n++)
-  //   sdp.polMatrixValues.elt(p, n) = normalization[n];
-  // sdp.blocks.push_back(vector<int>());
+//   // normalization constraint
+//   // for (unsigned int n = 0; n < sdp.objective.size(); n++)
+//   //   sdp.polMatrixValues.elt(p, n) = normalization[n];
+//   // sdp.blocks.push_back(vector<int>());
 
-  //sdp.rescale();
-  // sdp.addSlack();
-  sdp.initializeConstraintIndices();
-  return sdp;
-}
+//   //sdp.rescale();
+//   // sdp.addSlack();
+//   sdp.initializeConstraintIndices();
+//   return sdp;
+// }
 
 template <class T>
 vector<T> parseMany(const char *name, T(*parse)(XMLElement *), XMLElement *elt) {
@@ -1309,7 +1311,9 @@ SDP bootstrapSDP2(const Vector &objective,
   // numConstraints += 1;
 
   sdp.polMatrixValues = Matrix(numConstraints, sdp.objective.size());
-  sdp.affineConstants = Vector(numConstraints, 0);
+  // sdp.affineConstants = Vector(numConstraints, 0);
+  // THIS IS A HACK!!!
+  sdp.affineConstants = Vector(numConstraints, 1);
 
   // normalization constraint
   // sdp.affineConstants[numConstraints-1] = 1;
@@ -1375,15 +1379,15 @@ PolynomialVectorMatrix parsePolynomialVectorMatrix(XMLElement *polVecMatrixXml) 
   return m;
 }
 
-SDP parseBootstrapSDP(XMLElement *sdpXml) {
-  return bootstrapSDP(parseVector(sdpXml->FirstChildElement("objective")->FirstChildElement("vector")),
-                      parseVector(sdpXml->FirstChildElement("normalization")->FirstChildElement("vector")),
-                      parseMany("polynomialVectorMatrix",
-                                parsePolynomialVectorMatrix,
-                                sdpXml->FirstChildElement("positiveMatrixPols")),
-                      parsePolynomialVector(sdpXml->FirstChildElement("bilinearBasisPols")->FirstChildElement("polynomialVector")),
-                      parseVector(sdpXml->FirstChildElement("polynomialSamplePoints")->FirstChildElement("vector")));
-}
+// SDP parseBootstrapSDP(XMLElement *sdpXml) {
+//   return bootstrapSDP(parseVector(sdpXml->FirstChildElement("objective")->FirstChildElement("vector")),
+//                       parseVector(sdpXml->FirstChildElement("normalization")->FirstChildElement("vector")),
+//                       parseMany("polynomialVectorMatrix",
+//                                 parsePolynomialVectorMatrix,
+//                                 sdpXml->FirstChildElement("positiveMatrixPols")),
+//                       parsePolynomialVector(sdpXml->FirstChildElement("bilinearBasisPols")->FirstChildElement("polynomialVector")),
+//                       parseVector(sdpXml->FirstChildElement("polynomialSamplePoints")->FirstChildElement("vector")));
+// }
 
 SDP readBootstrapSDP(const path sdpFile) {
   XMLDocument doc;
@@ -1405,7 +1409,7 @@ public:
   int maxThreads;
 
   SDPSolverParameters():
-    maxIterations(30),
+    maxIterations(130),
     dualityGapThreshold("1e-100"),
     primalFeasibilityThreshold("1e-30"),
     dualFeasibilityThreshold("1e-30"),
@@ -1509,7 +1513,6 @@ public:
   Matrix E;
   Matrix ET;
   Vector g;
-  Vector y;
 
   // intermediate computations
   BlockDiagonalMatrix XInv;
@@ -1548,7 +1551,6 @@ public:
     E(sdp.numConstraints() - sdp.objective.size(), sdp.objective.size()),
     ET(E.cols, E.rows),
     g(sdp.objective.size()),
-    y(x),
     XInv(X),
     XInvCholesky(X),
     YInvCholesky(X),
@@ -1594,9 +1596,9 @@ public:
     // E = ET^T
     transpose(ET, E);
 
-    // g = -D_B^{-T} f
+    // g = D_B^{-T} f
     for (unsigned int n = 0; n < g.size(); n++)
-      g[n] = -sdp.objective[n];
+      g[n] = sdp.objective[n];
     solveWithLUDecompositionTranspose(DBLU, DBLUipiv, &g[0], 1, g.size());
 
     // BasicKernelSpan = ( -1 \\ E)
@@ -1719,13 +1721,13 @@ void computeSchurBlocks(const SDP &sdp,
   }
 }
 
-// x_B = E^T x_N
-void basicCompletion(const Matrix &E, Vector &x) {
+// x_B = g + E^T x_N
+void basicCompletion(const Vector &g, const Matrix &E, Vector &x) {
   int nonBasicStart = E.cols;
   assert((int)x.size() == E.cols + E.rows);
   
   for (int n = 0; n < nonBasicStart; n++) {
-    x[n] = 0;
+    x[n] = g[n];
     for (int p = 0; p < E.rows; p++)
       x[n] += E.elt(p, n) * x[nonBasicStart + p];
   }
@@ -1853,8 +1855,8 @@ Real primalObjective(const SDP &sdp, const Vector &x) {
 Real dualObjective(const SDP &sdp, const Vector &g, const Vector &dualResidues) {
   Real tmp = 0;
   for (unsigned int i = 0; i < g.size(); i++)
-    tmp -= g[i]*dualResidues[i];
-  return -tmp;
+    tmp += g[i]*dualResidues[i];
+  return tmp;
 }
 
 // Implements SDPA's DirectionParameter::MehrotraPredictor
@@ -2108,6 +2110,9 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
   timers.runSolver.resume();
 
   for (int iteration = 1; iteration <= parameters.maxIterations; iteration++) {
+    // Maintain the invariant x_B = g + E^T x_N
+    basicCompletion(g, E, x);
+
     inverseCholeskyAndInverse(X, XInvWorkspace, XInvCholesky, XInv);
     inverseCholesky(Y, XInvWorkspace, YInvCholesky);
 
@@ -2120,12 +2125,8 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
     computeDualResidues(sdp, Y, BilinearPairingsY, dualResidues);
     nonBasicShift(E, dualResidues, dualResiduesTilde);
 
-    // y = (x_B - g | x_N)^T
-    y = x;
-    for (unsigned int i = 0; i < g.size(); i++)
-      y[i] -= g[i];
-    // PrimalResidues = sum_p F_p y_p - X - F_0 (F_0 is zero for now)
-    computePrimalResidues(sdp, y, X, PrimalResidues);
+    // PrimalResidues = sum_p F_p x_p - X - F_0 (F_0 is zero for now)
+    computePrimalResidues(sdp, x, X, PrimalResidues);
 
     status.primalError     = PrimalResidues.maxAbsElement();
     status.dualError       = maxAbsVectorElement(dualResiduesTilde);
@@ -2177,8 +2178,6 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
 
     // Update current point
     vectorScaleMultiplyAdd(primalStepLength, dx, 1, x);
-    // Maintain our invariant in a numerically stable way
-    basicCompletion(E, x);
     dX *= primalStepLength;
     X += dX;
     dY *= dualStepLength;
@@ -2193,21 +2192,24 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
 }
 
 void printSDPDenseFormat(ostream& os, const SDP &sdp) {
-  BlockDiagonalMatrix F(BlockDiagonalMatrix(sdp.objective.size(), sdp.psdMatrixBlockDims()));
+  BlockDiagonalMatrix F(BlockDiagonalMatrix(0, sdp.psdMatrixBlockDims()));
 
   os << "* SDP dense format" << endl;
   os << sdp.affineConstants.size() << " = mDIM" << endl;
   os << F.blocks.size() + 1 << " = nBLOCK" << endl;
-  os << "{-" << F.diagonalPart.size();
-  for (unsigned int b = 0; b < F.blocks.size(); b++)
-    os << ", " << F.blocks[b].rows;
+  os << "{";
+  for (unsigned int b = 0; b < F.blocks.size(); b++) {
+    os << F.blocks[b].rows;
+    if (b != F.blocks.size() - 1)
+      os << ", ";
+  }
   os << "} = bLOCKsTRUCT" << endl;
 
   os << sdp.affineConstants << endl;
 
   F *= 0;
-  for (unsigned int n = 0; n < sdp.objective.size(); n++)
-    F.diagonalPart[n] = sdp.objective[n];
+  // for (unsigned int n = 0; n < sdp.objective.size(); n++)
+  //   F.diagonalPart[n] = sdp.objective[n];
   os << F << endl;
 
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
@@ -2216,8 +2218,8 @@ void printSDPDenseFormat(ostream& os, const SDP &sdp) {
          t++) {
       F *= 0;
 
-      for (int n = 0; n < sdp.polMatrixValues.cols; n++)
-        F.diagonalPart[n] = sdp.polMatrixValues.elt(t->p, n);
+      // for (int n = 0; n < sdp.polMatrixValues.cols; n++)
+      //   F.diagonalPart[n] = sdp.polMatrixValues.elt(t->p, n);
 
       for (vector<int>::const_iterator b = sdp.blocks[j].begin();
            b != sdp.blocks[j].end();
@@ -2310,7 +2312,8 @@ void solveSDP(const path sdpFile,
   // ofstream datStream;
   // datStream.open(datFile.c_str());
   // datStream.precision(parameters.precision);
-  // printSDPDenseFormat(datStream, sdp);
+  cout << sdp;
+  printSDPDenseFormat(cout, sdp);
   // datStream.close();
 }
 
