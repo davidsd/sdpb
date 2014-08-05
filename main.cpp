@@ -498,9 +498,9 @@ void inverseLowerTriangular(Matrix &L, Matrix &result) {
 // - work   : dim x dim matrix
 // - result : dim x dim lower-triangular matrix
 //
-void inverseCholesky(Matrix &A, Matrix &work, Matrix &result) {
-  choleskyDecomposition(A, work);
-  inverseLowerTriangular(work, result);
+void inverseCholesky(Matrix &A, Matrix &ACholesky, Matrix &AInvCholesky) {
+  choleskyDecomposition(A, ACholesky);
+  inverseLowerTriangular(ACholesky, AInvCholesky);
 }
 
 // b := ACholesky^{-1 T} ACholesky^{-1} b = A^{-1} b
@@ -514,32 +514,6 @@ void vectorSolveWithCholesky(Matrix &ACholesky, Vector &b) {
 
   lowerTriangularSolve(ACholesky, &b[0], 1, b.size());
   lowerTriangularTransposeSolve(ACholesky, &b[0], 1, b.size());
-}
-
-// invCholesky = choleskyDecomposition(a)^-1
-// inverse = a^-1
-// Inputs:
-// - a           : dim x dim symmetric matrix
-// - work        : dim x dim matrix
-// - invCholesky : dim x dim lower-triangular matrix
-// - inverse     : dim x dim symmetric matrix
-//
-// TODO: we can save memory by using inverse as the work matrix for
-// inverse cholesky
-//
-void inverseCholeskyAndInverse(Matrix &a, Matrix &work, Matrix &invCholesky, Matrix &inverse) {
-  int dim = a.rows;
-  assert(a.cols == dim);
-  assert(work.rows        == dim && work.cols        == dim);
-  assert(invCholesky.rows == dim && invCholesky.cols == dim);
-  assert(inverse.rows     == dim && inverse.cols     == dim);
-
-  inverseCholesky(a, work, invCholesky);
-
-  inverse.elements = invCholesky.elements;
-  Rtrmm("Left", "Lower", "Transpose", "NonUnitDiag", dim, dim, 1,
-        &invCholesky.elements[0], dim,
-        &inverse.elements[0], dim);
 }
 
 // X := AInvCholesky^T AInvCholesky X
@@ -620,14 +594,56 @@ void tensorMatrixCongruenceTranspose(const Matrix &a,
   }
 }
 
+// result = B'^T A B', where B' = B \otimes 1
+// Inputs:
+// - L      : l*m x l*m cholesky decomposition of A
+// - B      : l   x n   matrix
+// - Work   : l*m x n*m matrix
+// - Result : n*m x n*m symmetric matrix
+//
+void tensorMatrixCongruenceTransposeWithInvCholesky(const Matrix &LInv,
+                                                    const Matrix &B,
+                                                    Matrix &Work,
+                                                    Matrix &Result) {
+  // Work = LInv (B \otimes 1)
+  for (int cw = 0; cw < Work.cols; cw++) {
+    int m  = cw / B.cols;
+    int cb = cw % B.cols;
 
+    for (int rw = m*B.rows; rw < Work.rows; rw++) {
+      Real tmp = 0;
+      for (int cl = m*B.rows; cl < min(rw+1, (m+1)*B.rows); cl++)
+        tmp += LInv.elt(rw, cl)*B.elt(cl % B.rows, cb);
+      Work.elt(rw, cw) = tmp;
+    }
+  }
+
+  // Result = Work^T Work
+  for (int cr = 0; cr < Result.cols; cr++) {
+    int mc = cr / B.cols;
+
+    for (int rr = 0; rr <= cr; rr++) {
+      int mr = rr / B.cols;
+
+      Real tmp = 0;
+      for (int rw = max(mr, mc)*B.rows; rw < Work.rows; rw++)
+        tmp += Work.elt(rw, cr)*Work.elt(rw, rr);
+
+      Result.elt(rr, cr) = tmp;
+      if (rr != cr)
+        Result.elt(cr, rr) = tmp;
+    }
+  }
+}
 
 void testTensorCongruence() {
   Matrix a(4,4);
+  Matrix L(a);
   Matrix b(2,3);
   Matrix result(6,6);
   Matrix work(4,6);
   a.setIdentity();
+  choleskyDecomposition(a,L);
   b.elt(0,0) =2;
   b.elt(1,0) =3;
   b.elt(0,1) =4;
@@ -636,12 +652,17 @@ void testTensorCongruence() {
   b.elt(1,2) =7;
 
   tensorMatrixCongruenceTranspose(a, b, work, result);
+  cout << "a = " << a << endl;
+  cout << "b = " << b << endl;
+  cout << "work = " << work << endl;
+  cout << "result = " << result << endl;
 
-  cout << a << endl;
-  cout << b << endl;
-  cout << work << endl;
-  cout << result << endl;
-  
+  tensorMatrixCongruenceTransposeWithInvCholesky(L, b, work, result);
+  cout << "a = " << a << endl;
+  cout << "b = " << b << endl;
+  cout << "work = " << work << endl;
+  cout << "result = " << result << endl;
+
 }
 
 class BlockDiagonalMatrix {
@@ -697,25 +718,6 @@ public:
     #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b].copyFrom(A.blocks[b]);
-  }
-
-  // Add the submatrix between (top, left) and (bot, right) to A
-  void addSubmatrixTo(const int top, const int left,
-                      const int bot, const int right,
-                      Matrix &A) {
-    for (unsigned int b = 0; b < blocks.size(); b++) {
-      int dim = blocks[b].cols;
-      int p0 = blockStartIndices[b];
-      for (int c = 0; c < dim && p0 + c > left && p0 + c < right; c++)
-        for (int r = 0; r < dim && p0 + r > top && p0 + r < bot; r++)
-          A.elt(p0 - top + r, p0 - left + c) += blocks[b].elt(r, c);
-    }
-  }
-
-  // fill out a BlockDiagonalMatrix into a full Matrix A
-  void copySquareInto(const int p, const int q, Matrix &A) {
-    A.setZero();
-    addSubmatrixTo(p, p, q, q, A);
   }
 
   void symmetrize() {
@@ -802,20 +804,11 @@ void choleskyDecomposition(BlockDiagonalMatrix &A,
 }
 
 void inverseCholesky(BlockDiagonalMatrix &A,
-                     BlockDiagonalMatrix &work,
+                     BlockDiagonalMatrix &ACholesky,
                      BlockDiagonalMatrix &AInvCholesky) {
   #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++)
-    inverseCholesky(A.blocks[b], work.blocks[b], AInvCholesky.blocks[b]);
-}
-
-void inverseCholeskyAndInverse(BlockDiagonalMatrix &A,
-                               BlockDiagonalMatrix &work,
-                               BlockDiagonalMatrix &AInvCholesky,
-                               BlockDiagonalMatrix &AInv) {
-  #pragma omp parallel for schedule(dynamic)
-  for (unsigned int b = 0; b < A.blocks.size(); b++)
-    inverseCholeskyAndInverse(A.blocks[b], work.blocks[b], AInvCholesky.blocks[b], AInv.blocks[b]);
+    inverseCholesky(A.blocks[b], ACholesky.blocks[b], AInvCholesky.blocks[b]);
 }
 
 void blockMatrixSolveWithInverseCholesky(BlockDiagonalMatrix &AInvCholesky,
@@ -861,13 +854,11 @@ void testBlockDiagonalCholesky() {
 
   BlockDiagonalMatrix work(sizes);
   BlockDiagonalMatrix invCholesky(sizes);
-  BlockDiagonalMatrix inverse(sizes);
 
-  inverseCholeskyAndInverse(a, work, invCholesky, inverse);
+  inverseCholesky(a, work, invCholesky);
 
   cout << a << endl;
   cout << invCholesky << endl;
-  cout << inverse << endl;
 }
 
 class IndexTuple {
@@ -1000,9 +991,9 @@ SampledMatrixPolynomial parseSampledMatrixPolynomial(XMLElement *smpXml) {
   return s;
 }
 
-SDP bootstrapSDP2(const Vector &objective,
-                  const Vector &normalization,
-                  const vector<SampledMatrixPolynomial> &sampledMatrixPols) {
+SDP bootstrapSDP(const Vector &objective,
+                 const Vector &normalization,
+                 const vector<SampledMatrixPolynomial> &sampledMatrixPols) {
   SDP sdp;
   sdp.objective = objective;
 
@@ -1065,18 +1056,18 @@ SDP bootstrapSDP2(const Vector &objective,
 }
 
 
-SDP parseBootstrapSDP2(XMLElement *sdpXml) {
-  return bootstrapSDP2(parseVector(sdpXml->FirstChildElement("objective")),
-                       parseVector(sdpXml->FirstChildElement("normalization")),
-                       parseMany("sampledMatrixPolynomial",
-                                 parseSampledMatrixPolynomial,
-                                 sdpXml->FirstChildElement("sampledPositiveMatrices")));
+SDP parseBootstrapSDP(XMLElement *sdpXml) {
+  return bootstrapSDP(parseVector(sdpXml->FirstChildElement("objective")),
+                      parseVector(sdpXml->FirstChildElement("normalization")),
+                      parseMany("sampledMatrixPolynomial",
+                                parseSampledMatrixPolynomial,
+                                sdpXml->FirstChildElement("sampledPositiveMatrices")));
 }
 
 SDP readBootstrapSDP(const path sdpFile) {
   XMLDocument doc;
   doc.LoadFile(sdpFile.c_str());
-  return parseBootstrapSDP2(doc.FirstChildElement("sdp"));
+  return parseBootstrapSDP(doc.FirstChildElement("sdp"));
 }
 
 class SDPSolverParameters {
@@ -1101,7 +1092,7 @@ public:
     feasibleCenteringParameter("0.1"),
     infeasibleCenteringParameter("0.3"),
     stepLengthReduction("0.7"),
-    precision(400),
+    precision(500),
     maxThreads(1) {}
 
   SDPSolverParameters(const path &paramFile) {
@@ -1195,12 +1186,12 @@ public:
 
   // For free variable elimination
   Matrix E;
-  Matrix ET;
   Vector g;
 
   // intermediate computations
-  BlockDiagonalMatrix XInv;
+  BlockDiagonalMatrix XCholesky;
   BlockDiagonalMatrix XInvCholesky;
+  BlockDiagonalMatrix YCholesky;
   BlockDiagonalMatrix YInvCholesky;
   BlockDiagonalMatrix Z;
   BlockDiagonalMatrix R;
@@ -1215,7 +1206,6 @@ public:
   Matrix BasicKernelSpan;
 
   // additional workspace variables
-  BlockDiagonalMatrix XInvWorkspace;
   BlockDiagonalMatrix StepMatrixWorkspace;
   vector<Matrix> bilinearPairingsWorkspace;
   vector<Vector> eigenvaluesWorkspace;
@@ -1233,10 +1223,10 @@ public:
     dualResiduesTilde(sdp.numConstraints() - sdp.objective.size()),
     PrimalResidues(X),
     E(sdp.numConstraints() - sdp.objective.size(), sdp.objective.size()),
-    ET(E.cols, E.rows),
     g(sdp.objective.size()),
-    XInv(X),
+    XCholesky(X),
     XInvCholesky(X),
+    YCholesky(X),
     YInvCholesky(X),
     Z(X),
     R(X),
@@ -1249,7 +1239,6 @@ public:
     M(Q),
     basicKernelCoords(Q.rows),
     BasicKernelSpan(sdp.polMatrixValues),
-    XInvWorkspace(X),
     StepMatrixWorkspace(X)
   {
     // initialize bilinearPairingsWorkspace, eigenvaluesWorkspace, QRWorkspace 
@@ -1272,6 +1261,7 @@ public:
     // Compute E = - D_N D_B^{-1}
     int nonBasicStart = sdp.objective.size();
     // ET = -D_N^T
+    Matrix ET(E.cols, E.rows);
     for (int p = 0; p < ET.cols; p++)
       for (int n = 0; n < ET.rows; n++)
         ET.elt(n, p) = -sdp.polMatrixValues.elt(p + nonBasicStart, n);
@@ -1308,7 +1298,16 @@ void computeBilinearPairings(const BlockDiagonalMatrix &A,
   for (unsigned int b = 0; b < bilinearBases.size(); b++)
     tensorMatrixCongruenceTranspose(A.blocks[b], bilinearBases[b], workspace[b], result.blocks[b]);
 }
-           
+
+void computeBilinearPairingsWithInvCholesky(const BlockDiagonalMatrix &LInv,
+                                            const vector<Matrix> &bilinearBases,
+                                            vector<Matrix> &workspace,
+                                            BlockDiagonalMatrix &result) {
+  #pragma omp parallel for schedule(dynamic)
+  for (unsigned int b = 0; b < bilinearBases.size(); b++)
+    tensorMatrixCongruenceTransposeWithInvCholesky(LInv.blocks[b], bilinearBases[b], workspace[b], result.blocks[b]);
+}
+
 // result = V D V^T, where D=diag(d) is a diagonal matrix
 // Inputs:
 // - d        : pointer to beginning of a length-V.cols vector
@@ -1652,9 +1651,7 @@ Real stepLength(BlockDiagonalMatrix &XInvCholesky,
 }
 
 void computeSchurComplementCholesky(const SDP &sdp,
-                                    const BlockDiagonalMatrix &XInv,
                                     const BlockDiagonalMatrix &BilinearPairingsXInv,
-                                    const BlockDiagonalMatrix &Y,
                                     const BlockDiagonalMatrix &BilinearPairingsY,
                                     const Matrix &BasicKernelSpan,
                                     BlockDiagonalMatrix &SchurBlocks,
@@ -1774,12 +1771,12 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
     // Maintain the invariant x_B = g + E^T x_N
     basicCompletion(g, E, x);
 
-    inverseCholeskyAndInverse(X, XInvWorkspace, XInvCholesky, XInv);
-    inverseCholesky(Y, XInvWorkspace, YInvCholesky);
+    inverseCholesky(X, XCholesky, XInvCholesky);
+    inverseCholesky(Y, YCholesky, YInvCholesky);
 
     timers.bilinearPairings.resume();
-    computeBilinearPairings(XInv, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsXInv);
-    computeBilinearPairings(Y,    sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsY);
+    computeBilinearPairingsWithInvCholesky(XInvCholesky, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsXInv);
+    computeBilinearPairings(Y, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsY);
     timers.bilinearPairings.stop();
 
     // d_k = c_k - Tr(F_k Y)
@@ -1803,8 +1800,8 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
 
     timers.schurComplementCholesky.resume();
     computeSchurComplementCholesky(sdp,
-                                   XInv, BilinearPairingsXInv,
-                                   Y, BilinearPairingsY,
+                                   BilinearPairingsXInv,
+                                   BilinearPairingsY,
                                    BasicKernelSpan,
                                    SchurBlocks,
                                    SchurBlocksCholesky,
@@ -1946,9 +1943,9 @@ void solveSDP(const path sdpFile,
   cout << status << endl;
   cout << timers << endl;
 
-  // cout << "X = " << solver.X << ";\n";
-  // cout << "Y = " << solver.Y << ";\n";
-  // cout << "x = " << solver.x << ";\n";
+  cout << "X = " << solver.X << ";\n";
+  cout << "Y = " << solver.Y << ";\n";
+  cout << "x = " << solver.x << ";\n";
   // cout << "BilinearPairingsXInv = " << solver.BilinearPairingsXInv << endl;
   // cout << "BilinearPairingsY = " << solver.BilinearPairingsY << endl;
   // cout << "schurComplement = " << solver.schurComplement << ";\n";
@@ -1965,8 +1962,8 @@ void solveSDP(const path sdpFile,
   // ofstream datStream;
   // datStream.open(datFile.c_str());
   // datStream.precision(parameters.precision);
-  cout << sdp;
-  printSDPDenseFormat(cout, sdp);
+  //cout << sdp;
+  //printSDPDenseFormat(cout, sdp);
   // datStream.close();
 }
 
@@ -2064,11 +2061,12 @@ int main(int argc, char** argv) {
   solveSDP(sdpFile, outFile, checkpointFile, paramFile);
   //testMatrix();
   //testBilinearPairings(sdpFile);
-  return 0;
 
   //testBlockCongruence();
   //testBlockDiagonalCholesky();
   //testSDPSolver(argv[1], argv[2]);
   //testCholeskyUpdate();
   //testMinEigenvalue();
+  //testTensorCongruence();
+  return 0;
 }
