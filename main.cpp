@@ -76,7 +76,7 @@ ostream& operator<<(ostream& os, const Timers& t) {
 Timers timers;
 
 template<class Iter, class T>
-Iter binary_find(Iter begin, Iter end, T val)
+Iter binaryFind(Iter begin, Iter end, T val)
 {
   // Finds the lower bound in at most log(last - first) + 1 comparisons
   Iter i = std::lower_bound(begin, end, val);
@@ -350,20 +350,6 @@ void vectorScaleMatrixMultiplyTransposeAdd(Real alpha, Matrix &A, Vector &x, Rea
         &y[0], 1);
 }
 
-void lowerTriangularMatrixTimesVector(Matrix &A, Vector &v) {
-  int dim = A.rows;
-  assert(A.cols == dim);
-  assert((int)v.size() == dim);
-  Rtrmv("Lower", "NoTranspose", "NotUnitDiagonal", dim, &A.elements[0], dim, &v[0], 1);
-}
-
-void lowerTriangularMatrixTransposeTimesVector(Matrix &A, Vector &v) {
-  int dim = A.rows;
-  assert(A.cols == dim);
-  assert((int)v.size() == dim);
-  Rtrmv("Lower", "Transpose", "NotUnitDiagonal", dim, &A.elements[0], dim, &v[0], 1);
-}
-
 Real frobeniusProduct(const Matrix &A, const Matrix &B) {
   assert(A.rows == B.rows);
   assert(A.cols == B.cols);
@@ -405,28 +391,56 @@ Real frobeniusProductOfSums(const Matrix &X, const Matrix &dX,
   return result;
 }
 
-void LUDecomposition(Matrix &A, vector<mpackint> &ipiv) {
+// Eigenvalues of A, via the QR method
+// Inputs:
+// A           : n x n Matrix (will be overwritten)
+// eigenvalues : Vector of length n
+// workspace   : Vector of lenfth 3*n-1 (temporary workspace)
+//
+void matrixEigenvalues(Matrix &A, Vector &workspace, Vector &eigenvalues) {
+  assert(A.rows == A.cols);
+  assert((int)eigenvalues.size() == A.rows);
+  assert((int)workspace.size() == 3*A.rows - 1);
+
+  Integer info;
+  Integer workSize = workspace.size();
+  Rsyev("NoEigenvectors", "LowerTriangular", A.rows, &A.elements[0], A.rows, &eigenvalues[0], &workspace[0], workSize, &info);
+  assert(info == 0);
+}
+
+// Minimum eigenvalue of A, via the QR method
+// Inputs:
+// A           : n x n Matrix (will be overwritten)
+// eigenvalues : Vector of length n
+// workspace   : Vector of lenfth 3*n-1 (temporary workspace)
+//
+Real minEigenvalue(Matrix &A, Vector &workspace, Vector &eigenvalues) {
+  matrixEigenvalues(A, workspace, eigenvalues);
+  return eigenvalues[0];
+}
+
+void LUDecomposition(Matrix &A, vector<Integer> &ipiv) {
   int dim = A.rows;
   assert(A.cols == dim);
 
-  mpackint info;
+  Integer info;
   Rgetrf(dim, dim, &A.elements[0], dim, &ipiv[0], &info);
   assert(info == 0);
 }
 
-void solveWithLUDecomposition(Matrix &LU, vector<mpackint> &ipiv, Real *B, int bcols, int ldb) {
-  mpackint info;
+void solveWithLUDecomposition(Matrix &LU, vector<Integer> &ipiv, Real *B, int bcols, int ldb) {
+  Integer info;
   Rgetrs("NoTranspose", LU.rows, bcols, &LU.elements[0], LU.rows, &ipiv[0], B, ldb, &info);
   assert(info == 0);
 }
 
-void solveWithLUDecompositionTranspose(Matrix &LU, vector<mpackint> &ipiv, Real *B, int bcols, int ldb) {
-  mpackint info;
+void solveWithLUDecompositionTranspose(Matrix &LU, vector<Integer> &ipiv, Real *B, int bcols, int ldb) {
+  Integer info;
   Rgetrs("Transpose", LU.rows, bcols, &LU.elements[0], LU.rows, &ipiv[0], B, ldb, &info);
   assert(info == 0);
 }
 
-void solveWithLUDecomposition(Matrix &LU, vector<mpackint> &ipiv, Vector &b) {
+void solveWithLUDecomposition(Matrix &LU, vector<Integer> &ipiv, Vector &b) {
   solveWithLUDecomposition(LU, ipiv, &b[0], 1, b.size());
 }
 
@@ -441,14 +455,9 @@ void choleskyDecomposition(Matrix &A, Matrix &L) {
   assert(L.rows == dim);
   assert(L.cols == dim);
 
-  if (dim == 1) {
-    L.elt(0, 0) = sqrt(A.elt(0, 0));
-    return;
-  }
-
   // Set lower-triangular part of L to cholesky decomposition
   L.copyFrom(A);
-  mpackint info;
+  Integer info;
   Rpotrf("Lower", dim, &L.elements[0], dim, &info);
   assert(info == 0);
 
@@ -476,22 +485,6 @@ void choleskyUpdate(Matrix &L, Real *v, int firstNonzeroIndex) {
     Rrotg(&x, &y, &c, &s);
     Rrot(dim - r, &L.elements[r*(dim+1)], 1, v+r, 1, c, s);
   }
-}
-
-// L' (lower triangular) such that L' L'^T = L L^T + V V^T. i.e., if L
-// is a cholesky decomposition of A, then L' is a cholesky
-// decomposition of A + V V^T.  This is more efficient than directly
-// computing the cholesky decomposition of A + V V^T if V has a small
-// number of columns.
-// Inputs: 
-// - L : dim x dim lower-triangular matrix 
-// - V : dim x n matrix
-// both L and V are modified in place
-//
-void choleskyUpdate(Matrix &L, Matrix &V) {
-  assert(L.rows == V.rows);
-  for (int c = 0; c < V.cols; c++)
-    choleskyUpdate(L, &V.elements[c*V.rows], 0);
 }
 
 const Real CHOLESKY_STABILIZE_THRESHOLD = 1e-8;
@@ -577,19 +570,6 @@ void lowerTriangularTransposeSolve(Matrix &L, Real *b, int bcols, int ldb) {
 void lowerTriangularTransposeSolve(Matrix &L, Vector &b) {
   assert((int) b.size() == L.rows);
   lowerTriangularTransposeSolve(L, &b[0], 1, b.size());
-}
-
-// b := ACholesky^{-1 T} ACholesky^{-1} b = A^{-1} b
-//
-// Inputs:
-// - ACholesky : dim x dim lower triangular matrix, the Cholesky decomposition of a matrix A
-// - b         : vector of length dim (output)
-//
-void vectorSolveWithCholesky(Matrix &ACholesky, Vector &b) {
-  assert((int) b.size() == ACholesky.rows);
-
-  lowerTriangularSolve(ACholesky, &b[0], 1, b.size());
-  lowerTriangularTransposeSolve(ACholesky, &b[0], 1, b.size());
 }
 
 // X := ACholesky^{-1 T} ACholesky^{-1} X = A^{-1} X
@@ -690,19 +670,6 @@ void tensorMatrixInvCongruenceTransposeWithCholesky(const Matrix &L,
       Work.elt(rw, cw) = tmp/L.elt(rw, rw);
     }
   }
-
-  // // Work = LInv (B \otimes 1)
-  // for (int cw = 0; cw < Work.cols; cw++) {
-  //   int m  = cw / B.cols;
-  //   int cb = cw % B.cols;
-
-  //   for (int rw = m*B.rows; rw < Work.rows; rw++) {
-  //     Real tmp = 0;
-  //     for (int cl = m*B.rows; cl < min(rw+1, (m+1)*B.rows); cl++)
-  //       tmp += LInv.elt(rw, cl)*B.elt(cl % B.rows, cb);
-  //     Work.elt(rw, cw) = tmp;
-  //   }
-  // }
 
   // Result = Work^T Work
   for (int cr = 0; cr < Result.cols; cr++) {
@@ -880,6 +847,30 @@ void lowerTriangularInverseCongruence(BlockDiagonalMatrix &A, BlockDiagonalMatri
   #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++)
     lowerTriangularInverseCongruence(A.blocks[b], L.blocks[b]);
+}
+
+// Minimum eigenvalue of A, via the QR method
+// Inputs:
+// A           : symmetric BlockDiagonalMatrix
+// eigenvalues : vector<Vector> of length A.blocks.size()
+// workspace   : vector<Vector> of length A.blocks.size()
+//
+Real minEigenvalue(BlockDiagonalMatrix &A, vector<Vector> &workspace, vector<Vector> &eigenvalues) {
+  assert(A.blocks.size() == eigenvalues.size());
+  assert(A.blocks.size() == workspace.size());
+
+  // TODO: get rid of this hack
+  Real lambdaMin = 1e100;
+  #pragma omp parallel for schedule(dynamic)
+  for (unsigned int b = 0; b < A.blocks.size(); b++) {
+    Real minBlockLambda = minEigenvalue(A.blocks[b], workspace[b], eigenvalues[b]);
+    #pragma omp critical
+    {
+      lambdaMin = min(lambdaMin, minBlockLambda);
+    }
+  }
+
+  return lambdaMin;
 }
 
 void choleskyDecomposition(BlockDiagonalMatrix &A,
@@ -1270,7 +1261,7 @@ public:
   vector<vector<int> > schurStabilizeIndices;
   vector<Real> schurStabilizeLambdas;
   vector<Vector> schurStabilizeVectors;
-  vector<mpackint> schurIpiv;
+  vector<Integer> schurIpiv;
 
   // additional workspace variables
   BlockDiagonalMatrix StepMatrixWorkspace;
@@ -1325,7 +1316,7 @@ public:
 
     // Computations needed for free variable elimination
     Matrix DBLU(sdp.objective.size(), sdp.objective.size());
-    vector<mpackint> DBLUipiv(sdp.objective.size());
+    vector<Integer> DBLUipiv(sdp.objective.size());
 
     // LU Decomposition of D_B
     for (int n = 0; n < DBLU.cols; n++)
@@ -1669,58 +1660,6 @@ void computeCorrectorRMatrix(const Real &beta,
   R.addDiagonal(beta*mu);
 }
 
-// Eigenvalues of A, via the QR method
-// Inputs:
-// A           : n x n Matrix (will be overwritten)
-// eigenvalues : Vector of length n
-// workspace   : Vector of lenfth 3*n-1 (temporary workspace)
-//
-void eigenvaluesViaQR(Matrix &A, Vector &workspace, Vector &eigenvalues) {
-  assert(A.rows == A.cols);
-  assert((int)eigenvalues.size() == A.rows);
-  assert((int)workspace.size() == 3*A.rows - 1);
-
-  mpackint info;
-  mpackint workSize = workspace.size();
-  Rsyev("NoEigenvectors", "LowerTriangular", A.rows, &A.elements[0], A.rows, &eigenvalues[0], &workspace[0], workSize, &info);
-  assert(info == 0);
-}
-
-// Minimum eigenvalue of A, via the QR method
-// Inputs:
-// A           : n x n Matrix (will be overwritten)
-// eigenvalues : Vector of length n
-// workspace   : Vector of lenfth 3*n-1 (temporary workspace)
-//
-Real minEigenvalueViaQR(Matrix &A, Vector &workspace, Vector &eigenvalues) {
-  eigenvaluesViaQR(A, workspace, eigenvalues);
-  return eigenvalues[0];
-}
-
-// Minimum eigenvalue of A, via the QR method
-// Inputs:
-// A           : symmetric BlockDiagonalMatrix
-// eigenvalues : vector<Vector> of length A.blocks.size()
-// workspace   : vector<Vector> of length A.blocks.size()
-//
-Real minEigenvalueViaQR(BlockDiagonalMatrix &A, vector<Vector> &workspace, vector<Vector> &eigenvalues) {
-  assert(A.blocks.size() == eigenvalues.size());
-  assert(A.blocks.size() == workspace.size());
-
-  // TODO: get rid of this hack
-  Real lambdaMin = 1e100;
-  #pragma omp parallel for schedule(dynamic)
-  for (unsigned int b = 0; b < A.blocks.size(); b++) {
-    Real minBlockLambda = minEigenvalueViaQR(A.blocks[b], workspace[b], eigenvalues[b]);
-    #pragma omp critical
-    {
-      lambdaMin = min(lambdaMin, minBlockLambda);
-    }
-  }
-
-  return lambdaMin;
-}
-
 Real stepLength(BlockDiagonalMatrix &XCholesky,
                 BlockDiagonalMatrix &dX,
                 BlockDiagonalMatrix &XInvDX,
@@ -1732,7 +1671,7 @@ Real stepLength(BlockDiagonalMatrix &XCholesky,
   XInvDX.copyFrom(dX);
   lowerTriangularInverseCongruence(XInvDX, XCholesky);
 
-  const Real lambda = minEigenvalueViaQR(XInvDX, workspace, eigenvalues);
+  const Real lambda = minEigenvalue(XInvDX, workspace, eigenvalues);
   const Real gamma  = parameters.stepLengthReduction;
   if (lambda > -gamma)
     return 1;
@@ -1749,7 +1688,7 @@ void addKernelColumn(const Matrix &E,
   K.addColumn();
   int c = K.cols - 1;
 
-  int j = binary_find(basicIndex.begin(), basicIndex.end(), i) - basicIndex.begin();
+  int j = binaryFind(basicIndex.begin(), basicIndex.end(), i) - basicIndex.begin();
   if (j < E.cols) {
     for (unsigned int r = 0; r < nonBasicIndex.size(); r++)
       K.elt(nonBasicIndex[r], c) = lambda * E.elt(r, j);
@@ -2113,7 +2052,6 @@ void testCholeskyUpdate() {
   cout << "A = " << A << endl;
   cout << "V = " << V << endl;
   choleskyDecomposition(A, L);
-  choleskyUpdate(L, U);
   transpose(L, LT);
 
   matrixMultiply(V, VT, B);
