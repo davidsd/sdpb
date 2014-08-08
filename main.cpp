@@ -612,12 +612,11 @@ Real BASIC_ROW_THRESHOLD = 1e-4;
 vector<int> linearlyIndependentRowIndices(const Matrix &M) {
   vector<int> rows;
   Matrix A(M);
-  Real averageElt = sqrt(frobeniusProduct(A, A))/A.elements.size();
 
   int c = 0;
   for (int r = 0; r < A.rows && c < A.cols; r++) {
     A.swapCols(maxColRightOf(A, r, c), c);
-    if (abs(A.elt(r, c)) > BASIC_ROW_THRESHOLD*averageElt) {
+    if (abs(A.elt(r, c)) > BASIC_ROW_THRESHOLD) {
       rows.push_back(r);
       // Add a multiple of column c to each column to the right so
       // that the entries to the right of (r,c) are zero.
@@ -1007,6 +1006,7 @@ public:
   Matrix FreeVarMatrix;
   Vector primalObjective;
   Vector dualObjective;
+  Real objectiveConst;
   vector<int> dimensions;
   vector<int> degrees;
   vector<vector<int> > blocks;
@@ -1120,9 +1120,11 @@ SampledMatrixPolynomial parseSampledMatrixPolynomial(XMLElement *xml) {
 }
 
 SDP bootstrapSDP(const Vector &objective,
+                 const Real &objectiveConst,
                  const vector<SampledMatrixPolynomial> &sampledMatrixPols) {
   SDP sdp;
-  sdp.dualObjective = objective;
+  sdp.dualObjective  = objective;
+  sdp.objectiveConst = objectiveConst;
 
   for (vector<SampledMatrixPolynomial>::const_iterator s = sampledMatrixPols.begin();
        s != sampledMatrixPols.end();
@@ -1161,11 +1163,12 @@ SDP bootstrapSDP(const Vector &objective,
 }
 
 
-SDP parseBootstrapSDP(XMLElement *sdpXml) {
-  return bootstrapSDP(parseVector(sdpXml->FirstChildElement("objective")),
+SDP parseBootstrapSDP(XMLElement *xml) {
+  return bootstrapSDP(parseVector(xml->FirstChildElement("objective")),
+                      parseReal(xml->FirstChildElement("objectiveConst")),
                       parseMany("sampledMatrixPolynomial",
                                 parseSampledMatrixPolynomial,
-                                sdpXml->FirstChildElement("sampledPositiveMatrices")));
+                                xml->FirstChildElement("sampledPositiveMatrices")));
 }
 
 SDP readBootstrapSDP(const path sdpFile) {
@@ -1233,14 +1236,14 @@ ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
 
 class SDPSolverStatus {
 public:
-  Real primalObjectiveValue;
-  Real dualObjectiveValue;
+  Real primalObjective;
+  Real dualObjective;
   Real primalError;
   Real dualError;
 
   Real dualityGap() const {
-    return abs(primalObjectiveValue - dualObjectiveValue) /
-      max(Real(abs(primalObjectiveValue) + abs(dualObjectiveValue)), Real(1));
+    return abs(primalObjective - dualObjective) /
+      max(Real(abs(primalObjective) + abs(dualObjective)), Real(1));
   }
 
   bool isPrimalFeasible(const SDPSolverParameters &p) {
@@ -1260,8 +1263,8 @@ public:
 };
 
 ostream& operator<<(ostream& os, const SDPSolverStatus& s) {
-  os << "primalObjective = " << s.primalObjectiveValue << endl;
-  os << "dualObjective   = " << s.dualObjectiveValue << endl;
+  os << "primalObjective = " << s.primalObjective << endl;
+  os << "dualObjective   = " << s.dualObjective << endl;
   os << "dualityGap      = " << s.dualityGap() << endl;
   os << "primalError     = " << s.primalError << endl;
   os << "dualError       = " << s.dualError << endl;
@@ -1305,7 +1308,7 @@ public:
   BlockDiagonalMatrix SchurBlocksCholesky;
   Matrix SchurUpdateLowRank;
   Matrix Q;
-  vector<Integer> Qpivot;
+  vector<Integer> Qpivots;
   Vector basicKernelCoords;
   Matrix BasicKernelSpan;
   vector<vector<int> > schurStabilizeIndices;
@@ -1341,7 +1344,7 @@ public:
     SchurBlocksCholesky(SchurBlocks),
     SchurUpdateLowRank(sdp.FreeVarMatrix),
     Q(sdp.FreeVarMatrix.cols, sdp.FreeVarMatrix.cols),
-    Qpivot(sdp.FreeVarMatrix.cols),
+    Qpivots(sdp.FreeVarMatrix.cols),
     basicKernelCoords(Q.rows),
     BasicKernelSpan(sdp.FreeVarMatrix),
     schurStabilizeIndices(SchurBlocks.blocks.size()),
@@ -1357,12 +1360,11 @@ public:
     }
 
     basicIndices = linearlyIndependentRowIndices(sdp.FreeVarMatrix);
-    for (int i = 0, p = 0; p < sdp.FreeVarMatrix.rows; p++) {
+    for (int i = 0, p = 0; p < sdp.FreeVarMatrix.rows; p++)
       if (p == basicIndices[i])
         i++;
       else
         nonBasicIndices.push_back(p);
-    }
 
     // Computations needed for free variable elimination
     Matrix DBLU(sdp.dualObjective.size(), sdp.dualObjective.size());
@@ -1646,8 +1648,13 @@ void computePrimalResidues(const SDP &sdp,
   PrimalResidues -= X;
 }
 
-Real dualObjectiveValue(const Vector &dualObjectiveReduced, const vector<int> &basicIndices, const Vector &dualResidues) {
-  Real tmp = 0;
+Real primalObjectiveValue(const SDP &sdp, const Vector &x) {
+  return sdp.objectiveConst + dotProduct(sdp.primalObjective, x);
+}
+
+Real dualObjectiveValue(const SDP &sdp, const Vector &dualObjectiveReduced,
+                        const vector<int> &basicIndices, const Vector &dualResidues) {
+  Real tmp = sdp.objectiveConst;
   for (unsigned int i = 0; i < dualObjectiveReduced.size(); i++)
     tmp += dualObjectiveReduced[i]*dualResidues[basicIndices[i]];
   return tmp;
@@ -1790,8 +1797,8 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   for (int i = stabilizerStart; i < Q.cols; i++)
     Q.elt(i,i) -= 1;
 
-  Qpivot.resize(Q.rows);
-  LUDecomposition(Q, Qpivot);
+  Qpivots.resize(Q.rows);
+  LUDecomposition(Q, Qpivots);
 }
 
 void printInfoHeader() {
@@ -1811,8 +1818,8 @@ void printInfo(int iteration,
               "%3d  %4.1Fe  %+7.2Fe  %+7.2Fe  %+7.2Fe  %s%+7.2Fe%s  %s%+7.2Fe%s  %4.1Fe  %4.1Fe  %4.2Fe\n",
               iteration,
               mu.get_mpf_t(),
-              status.primalObjectiveValue.get_mpf_t(),
-              status.dualObjectiveValue.get_mpf_t(),
+              status.primalObjective.get_mpf_t(),
+              status.dualObjective.get_mpf_t(),
               status.dualityGap().get_mpf_t(),
               isPrimalFeasible ? "|" : " ", status.primalError.get_mpf_t(), isPrimalFeasible ? "|" : " ",
               isDualFeasible   ? "|" : " ", status.dualError.get_mpf_t(),   isDualFeasible   ? "|" : " ",
@@ -1831,7 +1838,7 @@ void SDPSolver::solveSchurComplementEquation(Vector &dx) {
   vectorScaleMatrixMultiplyTransposeAdd(-1, SchurUpdateLowRank, dx, 0, basicKernelCoords);
 
   // k = Q^{-1} k
-  solveWithLUDecomposition(Q, Qpivot, basicKernelCoords);
+  solveWithLUDecomposition(Q, Qpivots, basicKernelCoords);
 
   // dx = dx + SchurUpdateLowRank k
   vectorScaleMatrixMultiplyAdd(1, SchurUpdateLowRank, basicKernelCoords, 1, dx);
@@ -1893,10 +1900,10 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
     // PrimalResidues = sum_p F_p x_p - X - F_0 (F_0 is zero for now)
     computePrimalResidues(sdp, x, X, PrimalResidues);
 
-    status.primalError          = PrimalResidues.maxAbs();
-    status.dualError            = maxAbsVector(dualResiduesReduced);
-    status.primalObjectiveValue = dotProduct(sdp.primalObjective, x);
-    status.dualObjectiveValue   = dualObjectiveValue(dualObjectiveReduced, basicIndices, dualResidues);
+    status.primalError     = PrimalResidues.maxAbs();
+    status.dualError       = maxAbsVector(dualResiduesReduced);
+    status.primalObjective = primalObjectiveValue(sdp, x);
+    status.dualObjective   = dualObjectiveValue(sdp, dualObjectiveReduced, basicIndices, dualResidues);
 
     const bool isPrimalFeasible = status.isPrimalFeasible(parameters);
     const bool isDualFeasible   = status.isDualFeasible(parameters);
