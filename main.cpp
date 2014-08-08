@@ -916,18 +916,14 @@ public:
 class SDP {
 public:
   vector<Matrix> bilinearBases;
-  Matrix polMatrixValues;
-  Vector affineConstants;
-  Vector objective;
+  Matrix freeVariableMatrix;
+  Vector primalObjective;
+  Vector dualObjective;
   vector<int> dimensions;
   vector<int> degrees;
   vector<vector<int> > blocks;
   vector<vector<IndexTuple> > constraintIndices;
   vector<int> basicIndices;
-
-  int numConstraints() const {
-    return polMatrixValues.rows;
-  }
 
   vector<int> psdMatrixBlockDims() const {
     vector<int> dims;
@@ -966,7 +962,7 @@ public:
         }
       }
     }
-    assert(p == numConstraints());
+    assert(p == (int)primalObjective.size());
   }
 
   friend ostream& operator<<(ostream& os, const SDP& sdp);
@@ -974,9 +970,9 @@ public:
 
 ostream& operator<<(ostream& os, const SDP& sdp) {
   os << "SDP(bilinearBases = " << sdp.bilinearBases
-     << ", polMatrixValues = " << sdp.polMatrixValues
-     << ", affineConstants = " << sdp.affineConstants
-     << ", objective = " << sdp.objective
+     << ", freeVariableMatrix = " << sdp.freeVariableMatrix
+     << ", primalObjective = " << sdp.primalObjective
+     << ", dualObjective = " << sdp.dualObjective
      << ", dimensions = " << sdp.dimensions
      << ", degrees = " << sdp.degrees
      << ", blocks = " << sdp.blocks
@@ -997,23 +993,23 @@ vector<T> parseMany(const char *name, T(*parse)(XMLElement *), XMLElement *elt) 
   return v;
 }
 
-Real parseReal(XMLElement *rXml) {
-  return Real(rXml->GetText());
+Real parseReal(XMLElement *xml) {
+  return Real(xml->GetText());
 }
 
-int parseInt(XMLElement *iXml) {
-  return atoi(iXml->GetText());
+int parseInt(XMLElement *xml) {
+  return atoi(xml->GetText());
 }
 
-Vector parseVector(XMLElement *vecXml) {
-  return parseMany("elt", parseReal, vecXml);
+Vector parseVector(XMLElement *xml) {
+  return parseMany("elt", parseReal, xml);
 }
 
-Matrix parseMatrix(XMLElement *matXml) {
+Matrix parseMatrix(XMLElement *xml) {
   Matrix m;
-  m.rows     = parseInt(matXml->FirstChildElement("rows"));
-  m.cols     = parseInt(matXml->FirstChildElement("cols"));
-  m.elements = parseVector(matXml->FirstChildElement("elements"));
+  m.rows     = parseInt(xml->FirstChildElement("rows"));
+  m.cols     = parseInt(xml->FirstChildElement("cols"));
+  m.elements = parseVector(xml->FirstChildElement("elements"));
   return m;
 }
 
@@ -1021,41 +1017,37 @@ class SampledMatrixPolynomial {
 public:
   int dim;
   int degree;
-  Matrix samplesMatrix;
+  Matrix constraintMatrix;
+  Vector constraintConstants;
   vector<Matrix> bilinearBases;
 };
 
-SampledMatrixPolynomial parseSampledMatrixPolynomial(XMLElement *smpXml) {
+SampledMatrixPolynomial parseSampledMatrixPolynomial(XMLElement *xml) {
   SampledMatrixPolynomial s;
-  s.dim    = parseInt(smpXml->FirstChildElement("dim"));
-  s.degree = parseInt(smpXml->FirstChildElement("degree"));
-  s.samplesMatrix = parseMatrix(smpXml->FirstChildElement("samplesMatrix"));
-  s.bilinearBases = parseMany("bilinearBasisMatrix", parseMatrix, smpXml->FirstChildElement("bilinearBases"));
+  s.dim                 = parseInt(xml->FirstChildElement("dim"));
+  s.degree              = parseInt(xml->FirstChildElement("degree"));
+  s.constraintMatrix    = parseMatrix(xml->FirstChildElement("constraintMatrix"));
+  s.constraintConstants = parseVector(xml->FirstChildElement("constraintConstants"));
+  s.bilinearBases       = parseMany("bilinearBasisMatrix", parseMatrix, xml->FirstChildElement("bilinearBases"));
   return s;
 }
 
-SDP bootstrapSDP(const Vector &objective,
+SDP bootstrapSDP(const Vector &dualObjective,
                  const Vector &normalization,
                  const vector<SampledMatrixPolynomial> &sampledMatrixPols) {
   SDP sdp;
-  sdp.objective = objective;
+  sdp.dualObjective = dualObjective;
 
-  int numConstraints = 0;
   for (vector<SampledMatrixPolynomial>::const_iterator s = sampledMatrixPols.begin();
        s != sampledMatrixPols.end();
        s++) {
-    int dimension = s->dim;
-    int degree    = s->degree;
-
-    sdp.dimensions.push_back(dimension);
-    sdp.degrees.push_back(degree);
-    numConstraints += (degree+1)*dimension*(dimension+1)/2;
+    sdp.dimensions.push_back(s->dim);
+    sdp.degrees.push_back(s->degree);
+    sdp.primalObjective.insert(sdp.primalObjective.end(),
+                               s->constraintConstants.begin(),
+                               s->constraintConstants.end());
   }
-
-  sdp.polMatrixValues = Matrix(numConstraints, sdp.objective.size());
-  // sdp.affineConstants = Vector(numConstraints, 0);
-  // THIS IS A HACK!!!
-  sdp.affineConstants = Vector(numConstraints, 1);
+  sdp.freeVariableMatrix = Matrix(sdp.primalObjective.size(), sdp.dualObjective.size());
 
   int p = 0;
   for (vector<SampledMatrixPolynomial>::const_iterator s = sampledMatrixPols.begin();
@@ -1072,14 +1064,14 @@ SDP bootstrapSDP(const Vector &objective,
     }
     sdp.blocks.push_back(blocks);
 
-    for (int k = 0; k < s->samplesMatrix.rows; k++, p++)
-      for (int n = 0; n < s->samplesMatrix.cols; n++)
-        sdp.polMatrixValues.elt(p, n) = -(s->samplesMatrix.elt(k, n));
+    for (int k = 0; k < s->constraintMatrix.rows; k++, p++)
+      for (int n = 0; n < s->constraintMatrix.cols; n++)
+        sdp.freeVariableMatrix.elt(p, n) = -(s->constraintMatrix.elt(k, n));
   }
-  assert(p == numConstraints);
+  assert(p == (int)sdp.primalObjective.size());
 
   // Later, read from a file
-  for (int i = 0; i < sdp.polMatrixValues.cols; i++)
+  for (int i = 0; i < sdp.freeVariableMatrix.cols; i++)
     sdp.basicIndices.push_back(i);
 
   sdp.initializeConstraintIndices();
@@ -1088,7 +1080,7 @@ SDP bootstrapSDP(const Vector &objective,
 
 
 SDP parseBootstrapSDP(XMLElement *sdpXml) {
-  return bootstrapSDP(parseVector(sdpXml->FirstChildElement("objective")),
+  return bootstrapSDP(parseVector(sdpXml->FirstChildElement("dualObjective")),
                       parseVector(sdpXml->FirstChildElement("normalization")),
                       parseMany("sampledMatrixPolynomial",
                                 parseSampledMatrixPolynomial,
@@ -1160,14 +1152,14 @@ ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
 
 class SDPSolverStatus {
 public:
-  Real primalObjective;
-  Real dualObjective;
+  Real primalObjectiveValue;
+  Real dualObjectiveValue;
   Real primalError;
   Real dualError;
 
   Real dualityGap() const {
-    return abs(primalObjective - dualObjective) /
-      max(Real(abs(primalObjective) + abs(dualObjective)), Real(1));
+    return abs(primalObjectiveValue - dualObjectiveValue) /
+      max(Real(abs(primalObjectiveValue) + abs(dualObjectiveValue)), Real(1));
   }
 
   bool isPrimalFeasible(const SDPSolverParameters &p) {
@@ -1187,8 +1179,8 @@ public:
 };
 
 ostream& operator<<(ostream& os, const SDPSolverStatus& s) {
-  os << "primalObjective = " << s.primalObjective << endl;
-  os << "dualObjective   = " << s.dualObjective << endl;
+  os << "primalObjective = " << s.primalObjectiveValue << endl;
+  os << "dualObjective   = " << s.dualObjectiveValue << endl;
   os << "dualityGap      = " << s.dualityGap() << endl;
   os << "primalError     = " << s.primalError << endl;
   os << "dualError       = " << s.dualError << endl;
@@ -1212,12 +1204,12 @@ public:
 
   // discrepancies in dual and primal equality constraints
   Vector dualResidues;
-  Vector dualResiduesTilde;
+  Vector dualResiduesReduced;
   BlockDiagonalMatrix PrimalResidues;
 
   // For free variable elimination
   Matrix E;
-  Vector g;
+  Vector dualObjectiveReduced;
   vector<int> basicIndices;
   vector<int> nonBasicIndices;
 
@@ -1247,17 +1239,17 @@ public:
 
   SDPSolver(const SDP &sdp):
     sdp(sdp),
-    x(sdp.numConstraints(), 0),
+    x(sdp.primalObjective.size(), 0),
     X(sdp.psdMatrixBlockDims()),
     Y(X),
     dx(x),
     dX(X),
     dY(Y),
     dualResidues(x),
-    dualResiduesTilde(sdp.numConstraints() - sdp.objective.size()),
+    dualResiduesReduced(sdp.primalObjective.size() - sdp.dualObjective.size()),
     PrimalResidues(X),
-    E(sdp.numConstraints() - sdp.objective.size(), sdp.objective.size()),
-    g(sdp.objective.size()),
+    E(sdp.primalObjective.size() - sdp.dualObjective.size(), sdp.dualObjective.size()),
+    dualObjectiveReduced(sdp.dualObjective.size()),
     XCholesky(X),
     YCholesky(X),
     Z(X),
@@ -1266,11 +1258,11 @@ public:
     BilinearPairingsY(BilinearPairingsXInv),
     SchurBlocks(sdp.schurBlockDims()),
     SchurBlocksCholesky(SchurBlocks),
-    SchurUpdateLowRank(sdp.polMatrixValues),
-    Q(sdp.polMatrixValues.cols, sdp.polMatrixValues.cols),
-    Qpivot(sdp.polMatrixValues.cols),
+    SchurUpdateLowRank(sdp.freeVariableMatrix),
+    Q(sdp.freeVariableMatrix.cols, sdp.freeVariableMatrix.cols),
+    Qpivot(sdp.freeVariableMatrix.cols),
     basicKernelCoords(Q.rows),
-    BasicKernelSpan(sdp.polMatrixValues),
+    BasicKernelSpan(sdp.freeVariableMatrix),
     schurStabilizeIndices(SchurBlocks.blocks.size()),
     schurStabilizeLambdas(SchurBlocks.blocks.size()),
     schurStabilizeVectors(SchurBlocks.blocks.size()),
@@ -1283,7 +1275,7 @@ public:
       QRWorkspace.push_back(Vector(3*X.blocks[b].rows - 1));
     }
 
-    for (int p = 0; p < sdp.polMatrixValues.rows; p++) {
+    for (int p = 0; p < sdp.freeVariableMatrix.rows; p++) {
       if (p == sdp.basicIndices[basicIndices.size()])
         basicIndices.push_back(p);
       else
@@ -1291,13 +1283,13 @@ public:
     }
 
     // Computations needed for free variable elimination
-    Matrix DBLU(sdp.objective.size(), sdp.objective.size());
-    vector<Integer> DBLUipiv(sdp.objective.size());
+    Matrix DBLU(sdp.dualObjective.size(), sdp.dualObjective.size());
+    vector<Integer> DBLUipiv(sdp.dualObjective.size());
 
     // LU Decomposition of D_B
     for (int n = 0; n < DBLU.cols; n++)
       for (int m = 0; m < DBLU.rows; m++)
-        DBLU.elt(m,n) = sdp.polMatrixValues.elt(basicIndices[m],n);
+        DBLU.elt(m,n) = sdp.freeVariableMatrix.elt(basicIndices[m],n);
     LUDecomposition(DBLU, DBLUipiv);
 
     // Compute E = - D_N D_B^{-1}
@@ -1305,16 +1297,16 @@ public:
     Matrix ET(E.cols, E.rows);
     for (int p = 0; p < ET.cols; p++)
       for (int n = 0; n < ET.rows; n++)
-        ET.elt(n, p) = -sdp.polMatrixValues.elt(nonBasicIndices[p], n);
+        ET.elt(n, p) = -sdp.freeVariableMatrix.elt(nonBasicIndices[p], n);
     // ET = D_B^{-1 T} ET = -D_B^{-1 T} D_N^T
     solveWithLUDecompositionTranspose(DBLU, DBLUipiv, &ET.elements[0], ET.cols, ET.rows);
     // E = ET^T
     transpose(ET, E);
 
-    // g = D_B^{-T} f
-    for (unsigned int n = 0; n < g.size(); n++)
-      g[n] = sdp.objective[n];
-    solveWithLUDecompositionTranspose(DBLU, DBLUipiv, &g[0], 1, g.size());
+    // dualObjectiveReduced = D_B^{-T} f
+    for (unsigned int n = 0; n < dualObjectiveReduced.size(); n++)
+      dualObjectiveReduced[n] = sdp.dualObjective[n];
+    solveWithLUDecompositionTranspose(DBLU, DBLUipiv, &dualObjectiveReduced[0], 1, dualObjectiveReduced.size());
 
     // BasicKernelSpan = ( -1 \\ E)
     BasicKernelSpan.setZero();
@@ -1446,7 +1438,7 @@ void computeSchurBlocks(const SDP &sdp,
 }
 
 // x_B = g + E^T x_N
-void basicCompletion(const Vector &g,
+void basicCompletion(const Vector &dualObjectiveReduced,
                      const Matrix &E,
                      const vector<int> &basicIndices,
                      const vector<int> &nonBasicIndices,
@@ -1456,27 +1448,27 @@ void basicCompletion(const Vector &g,
   assert((int)x.size()             == E.cols + E.rows);
   
   for (unsigned int n = 0; n < basicIndices.size(); n++) {
-    x[basicIndices[n]] = g[n];
+    x[basicIndices[n]] = dualObjectiveReduced[n];
     for (unsigned int p = 0; p < nonBasicIndices.size(); p++)
       x[basicIndices[n]] += E.elt(p, n) * x[nonBasicIndices[p]];
   }
 }
 
-// xTilde_N = x_N + E x_B
+// xReduced_N = x_N + E x_B
 void nonBasicShift(const Matrix &E,
                    const vector<int> &basicIndices,
                    const vector<int> &nonBasicIndices,
                    const Vector &x,
-                   Vector &xTilde) {
+                   Vector &xReduced) {
   assert((int)basicIndices.size()    == E.cols);
   assert((int)nonBasicIndices.size() == E.rows);
   assert((int)x.size()             == E.cols + E.rows);
-  assert(nonBasicIndices.size()      == xTilde.size());
+  assert(nonBasicIndices.size()      == xReduced.size());
   
   for (unsigned int p = 0; p < nonBasicIndices.size(); p++) {
-    xTilde[p] = x[nonBasicIndices[p]];
+    xReduced[p] = x[nonBasicIndices[p]];
     for (unsigned int n = 0; n < basicIndices.size(); n++)
-      xTilde[p] += E.elt(p,n) * x[basicIndices[n]];
+      xReduced[p] += E.elt(p,n) * x[basicIndices[n]];
   }
 }
 
@@ -1502,7 +1494,7 @@ void computeDualResidues(const SDP &sdp,
         dualResidues[p] -= BilinearPairingsY.blocks[*b].elt(ej_s+k, ej_r+k);
       }
       dualResidues[p] /= 2;
-      dualResidues[p] += sdp.affineConstants[p];
+      dualResidues[p] += sdp.primalObjective[p];
     }
   }
 }
@@ -1569,14 +1561,10 @@ void computePrimalResidues(const SDP &sdp,
   PrimalResidues -= X;
 }
 
-Real primalObjective(const SDP &sdp, const Vector &x) {
-  return dotProduct(sdp.affineConstants, x);
-}
-
-Real dualObjective(const SDP &sdp, const Vector &g, const vector<int> &basicIndices, const Vector &dualResidues) {
+Real dualObjectiveValue(const Vector &dualObjectiveReduced, const vector<int> &basicIndices, const Vector &dualResidues) {
   Real tmp = 0;
-  for (unsigned int i = 0; i < g.size(); i++)
-    tmp += g[i]*dualResidues[basicIndices[i]];
+  for (unsigned int i = 0; i < dualObjectiveReduced.size(); i++)
+    tmp += dualObjectiveReduced[i]*dualResidues[basicIndices[i]];
   return tmp;
 }
 
@@ -1733,8 +1721,8 @@ void printInfo(int iteration,
               "%3d  %4.1Fe  %+7.2Fe  %+7.2Fe  %+7.2Fe  %s%+7.2Fe%s  %s%+7.2Fe%s  %4.1Fe  %4.1Fe  %4.2Fe\n",
               iteration,
               mu.get_mpf_t(),
-              status.primalObjective.get_mpf_t(),
-              status.dualObjective.get_mpf_t(),
+              status.primalObjectiveValue.get_mpf_t(),
+              status.dualObjectiveValue.get_mpf_t(),
               status.dualityGap().get_mpf_t(),
               isPrimalFeasible ? "|" : " ", status.primalError.get_mpf_t(), isPrimalFeasible ? "|" : " ",
               isDualFeasible   ? "|" : " ", status.dualError.get_mpf_t(),   isDualFeasible   ? "|" : " ",
@@ -1798,7 +1786,7 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
 
   for (int iteration = 1; iteration <= parameters.maxIterations; iteration++) {
     // Maintain the invariant x_B = g + E^T x_N
-    basicCompletion(g, E, basicIndices, nonBasicIndices, x);
+    basicCompletion(dualObjectiveReduced, E, basicIndices, nonBasicIndices, x);
 
     choleskyDecomposition(X, XCholesky);
     choleskyDecomposition(Y, YCholesky);
@@ -1810,15 +1798,15 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
 
     // d_k = c_k - Tr(F_k Y)
     computeDualResidues(sdp, Y, BilinearPairingsY, dualResidues);
-    nonBasicShift(E, basicIndices, nonBasicIndices, dualResidues, dualResiduesTilde);
+    nonBasicShift(E, basicIndices, nonBasicIndices, dualResidues, dualResiduesReduced);
 
     // PrimalResidues = sum_p F_p x_p - X - F_0 (F_0 is zero for now)
     computePrimalResidues(sdp, x, X, PrimalResidues);
 
-    status.primalError     = PrimalResidues.maxAbs();
-    status.dualError       = maxAbsVector(dualResiduesTilde);
-    status.primalObjective = primalObjective(sdp, x);
-    status.dualObjective   = dualObjective(sdp, g, basicIndices, dualResidues);
+    status.primalError          = PrimalResidues.maxAbs();
+    status.dualError            = maxAbsVector(dualResiduesReduced);
+    status.primalObjectiveValue = dotProduct(sdp.primalObjective, x);
+    status.dualObjectiveValue   = dualObjectiveValue(dualObjectiveReduced, basicIndices, dualResidues);
 
     const bool isPrimalFeasible = status.isPrimalFeasible(parameters);
     const bool isDualFeasible   = status.isDualFeasible(parameters);
@@ -1875,7 +1863,7 @@ void printSDPDenseFormat(ostream& os, const SDP &sdp) {
   BlockDiagonalMatrix F(BlockDiagonalMatrix(sdp.psdMatrixBlockDims()));
 
   os << "* SDP dense format" << endl;
-  os << sdp.affineConstants.size() << " = mDIM" << endl;
+  os << sdp.primalObjective.size() << " = mDIM" << endl;
   os << F.blocks.size() + 1 << " = nBLOCK" << endl;
   os << "{";
   for (unsigned int b = 0; b < F.blocks.size(); b++) {
@@ -1885,7 +1873,7 @@ void printSDPDenseFormat(ostream& os, const SDP &sdp) {
   }
   os << "} = bLOCKsTRUCT" << endl;
 
-  os << sdp.affineConstants << endl;
+  os << sdp.primalObjective << endl;
 
   F *= 0;
   os << "F[0] = " << F << ";\n";
@@ -1971,7 +1959,7 @@ void solveSDP(const path sdpFile,
   // cout << "Y = " << solver.Y << ";\n";
   // cout << "x = " << solver.x << ";\n";
   // cout << "EE = " << solver.E << ";\n";
-  // cout << "g = " << solver.g << ";\n";
+  // cout << "dualObjectiveReduced = " << solver.dualObjectiveReduced << ";\n";
   // cout << "BilinearPairingsXInv = " << solver.BilinearPairingsXInv << endl;
   // cout << "BilinearPairingsY = " << solver.BilinearPairingsY << endl;
   // cout << "schurComplement = " << solver.schurComplement << ";\n";
