@@ -421,29 +421,29 @@ Real minEigenvalue(Matrix &A, Vector &workspace, Vector &eigenvalues) {
   return eigenvalues[0];
 }
 
-void LUDecomposition(Matrix &A, vector<Integer> &ipiv) {
+void LUDecomposition(Matrix &A, vector<Integer> &pivots) {
   int dim = A.rows;
   assert(A.cols == dim);
 
   Integer info;
-  Rgetrf(dim, dim, &A.elements[0], dim, &ipiv[0], &info);
+  Rgetrf(dim, dim, &A.elements[0], dim, &pivots[0], &info);
   assert(info == 0);
 }
 
-void solveWithLUDecomposition(Matrix &LU, vector<Integer> &ipiv, Real *B, int bcols, int ldb) {
+void solveWithLUDecomposition(Matrix &LU, vector<Integer> &pivots, Real *B, int bcols, int ldb) {
   Integer info;
-  Rgetrs("NoTranspose", LU.rows, bcols, &LU.elements[0], LU.rows, &ipiv[0], B, ldb, &info);
+  Rgetrs("NoTranspose", LU.rows, bcols, &LU.elements[0], LU.rows, &pivots[0], B, ldb, &info);
   assert(info == 0);
 }
 
-void solveWithLUDecompositionTranspose(Matrix &LU, vector<Integer> &ipiv, Real *B, int bcols, int ldb) {
+void solveWithLUDecompositionTranspose(Matrix &LU, vector<Integer> &pivots, Real *B, int bcols, int ldb) {
   Integer info;
-  Rgetrs("Transpose", LU.rows, bcols, &LU.elements[0], LU.rows, &ipiv[0], B, ldb, &info);
+  Rgetrs("Transpose", LU.rows, bcols, &LU.elements[0], LU.rows, &pivots[0], B, ldb, &info);
   assert(info == 0);
 }
 
-void solveWithLUDecomposition(Matrix &LU, vector<Integer> &ipiv, Vector &b) {
-  solveWithLUDecomposition(LU, ipiv, &b[0], 1, b.size());
+void solveWithLUDecomposition(Matrix &LU, vector<Integer> &pivots, Vector &b) {
+  solveWithLUDecomposition(LU, pivots, &b[0], 1, b.size());
 }
 
 // L (lower triangular) such that A = L L^T
@@ -604,17 +604,20 @@ int maxColRightOf(Matrix &A, int r, int c) {
   return cMax;
 }
 
+Real BASIC_ROW_THRESHOLD = 1e-4;
+
 // Return indices of a set of linearly independent rows of M, where
 // the basis matrix has eigenvalues whose absolute values exceed
 // thresh.
-vector<int> linearlyIndependentRowIndices(const Matrix &M, const Real thresh) {
+vector<int> linearlyIndependentRowIndices(const Matrix &M) {
   vector<int> rows;
   Matrix A(M);
+  Real averageElt = sqrt(frobeniusProduct(A, A))/A.elements.size();
 
   int c = 0;
   for (int r = 0; r < A.rows && c < A.cols; r++) {
     A.swapCols(maxColRightOf(A, r, c), c);
-    if (abs(A.elt(r, c)) > thresh) {
+    if (abs(A.elt(r, c)) > BASIC_ROW_THRESHOLD*averageElt) {
       rows.push_back(r);
       // Add a multiple of column c to each column to the right so
       // that the entries to the right of (r,c) are zero.
@@ -660,7 +663,7 @@ void testLinearlyIndependentRowIndices() {
 
   cout << "A = " << A << ";\n";
   
-  vector<int> rows = linearlyIndependentRowIndices(A, 0.1);
+  vector<int> rows = linearlyIndependentRowIndices(A);
   
   cout << "Aprime = " << A << ";\n";
   cout << "rows = " << rows << ";\n";
@@ -1008,7 +1011,6 @@ public:
   vector<int> degrees;
   vector<vector<int> > blocks;
   vector<vector<IndexTuple> > constraintIndices;
-  vector<int> basicIndices;
 
   vector<int> psdMatrixBlockDims() const {
     vector<int> dims;
@@ -1153,10 +1155,6 @@ SDP bootstrapSDP(const Vector &objective,
         sdp.FreeVarMatrix.elt(p, n) = s->constraintMatrix.elt(k, n);
   }
   assert(p == (int)sdp.primalObjective.size());
-
-  // Later, read from a file
-  for (int i = 0; i < sdp.FreeVarMatrix.cols; i++)
-    sdp.basicIndices.push_back(i);
 
   sdp.initializeConstraintIndices();
   return sdp;
@@ -1358,22 +1356,23 @@ public:
       QRWorkspace.push_back(Vector(3*X.blocks[b].rows - 1));
     }
 
-    for (int p = 0; p < sdp.FreeVarMatrix.rows; p++) {
-      if (p == sdp.basicIndices[basicIndices.size()])
-        basicIndices.push_back(p);
+    basicIndices = linearlyIndependentRowIndices(sdp.FreeVarMatrix);
+    for (int i = 0, p = 0; p < sdp.FreeVarMatrix.rows; p++) {
+      if (p == basicIndices[i])
+        i++;
       else
         nonBasicIndices.push_back(p);
     }
 
     // Computations needed for free variable elimination
     Matrix DBLU(sdp.dualObjective.size(), sdp.dualObjective.size());
-    vector<Integer> DBLUipiv(sdp.dualObjective.size());
+    vector<Integer> DBLUpivots(sdp.dualObjective.size());
 
     // LU Decomposition of D_B
     for (int n = 0; n < DBLU.cols; n++)
       for (int m = 0; m < DBLU.rows; m++)
         DBLU.elt(m,n) = sdp.FreeVarMatrix.elt(basicIndices[m],n);
-    LUDecomposition(DBLU, DBLUipiv);
+    LUDecomposition(DBLU, DBLUpivots);
 
     // Compute E = - D_N D_B^{-1}
     // ET = -D_N^T
@@ -1382,7 +1381,7 @@ public:
       for (int n = 0; n < FreeVarMatrixReducedT.rows; n++)
         FreeVarMatrixReducedT.elt(n, p) = -sdp.FreeVarMatrix.elt(nonBasicIndices[p], n);
     // ET = D_B^{-1 T} ET = -D_B^{-1 T} D_N^T
-    solveWithLUDecompositionTranspose(DBLU, DBLUipiv,
+    solveWithLUDecompositionTranspose(DBLU, DBLUpivots,
                                       &FreeVarMatrixReducedT.elements[0],
                                       FreeVarMatrixReducedT.cols,
                                       FreeVarMatrixReducedT.rows);
@@ -1392,7 +1391,7 @@ public:
     // dualObjectiveReduced = D_B^{-T} f
     for (unsigned int n = 0; n < dualObjectiveReduced.size(); n++)
       dualObjectiveReduced[n] = sdp.dualObjective[n];
-    solveWithLUDecompositionTranspose(DBLU, DBLUipiv, &dualObjectiveReduced[0], 1, dualObjectiveReduced.size());
+    solveWithLUDecompositionTranspose(DBLU, DBLUpivots, &dualObjectiveReduced[0], 1, dualObjectiveReduced.size());
 
     // BasicKernelSpan = ( -1 \\ E)
     BasicKernelSpan.setZero();
@@ -2162,8 +2161,8 @@ int main(int argc, char** argv) {
     }
   }
 
-  //solveSDP(sdpFile, outFile, checkpointFile, paramFile);
-  testLinearlyIndependentRowIndices();
+  solveSDP(sdpFile, outFile, checkpointFile, paramFile);
+  //testLinearlyIndependentRowIndices();
   //testMatrix();
   //testBilinearPairings(sdpFile);
 
