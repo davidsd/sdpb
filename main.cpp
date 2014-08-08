@@ -916,7 +916,7 @@ public:
 class SDP {
 public:
   vector<Matrix> bilinearBases;
-  Matrix freeVariableMatrix;
+  Matrix FreeVarMatrix;
   Vector primalObjective;
   Vector dualObjective;
   vector<int> dimensions;
@@ -970,7 +970,7 @@ public:
 
 ostream& operator<<(ostream& os, const SDP& sdp) {
   os << "SDP(bilinearBases = " << sdp.bilinearBases
-     << ", freeVariableMatrix = " << sdp.freeVariableMatrix
+     << ", FreeVarMatrix = " << sdp.FreeVarMatrix
      << ", primalObjective = " << sdp.primalObjective
      << ", dualObjective = " << sdp.dualObjective
      << ", dimensions = " << sdp.dimensions
@@ -1032,11 +1032,10 @@ SampledMatrixPolynomial parseSampledMatrixPolynomial(XMLElement *xml) {
   return s;
 }
 
-SDP bootstrapSDP(const Vector &dualObjective,
-                 const Vector &normalization,
+SDP bootstrapSDP(const Vector &objective,
                  const vector<SampledMatrixPolynomial> &sampledMatrixPols) {
   SDP sdp;
-  sdp.dualObjective = dualObjective;
+  sdp.dualObjective = objective;
 
   for (vector<SampledMatrixPolynomial>::const_iterator s = sampledMatrixPols.begin();
        s != sampledMatrixPols.end();
@@ -1047,7 +1046,7 @@ SDP bootstrapSDP(const Vector &dualObjective,
                                s->constraintConstants.begin(),
                                s->constraintConstants.end());
   }
-  sdp.freeVariableMatrix = Matrix(sdp.primalObjective.size(), sdp.dualObjective.size());
+  sdp.FreeVarMatrix = Matrix(sdp.primalObjective.size(), sdp.dualObjective.size());
 
   int p = 0;
   for (vector<SampledMatrixPolynomial>::const_iterator s = sampledMatrixPols.begin();
@@ -1066,12 +1065,12 @@ SDP bootstrapSDP(const Vector &dualObjective,
 
     for (int k = 0; k < s->constraintMatrix.rows; k++, p++)
       for (int n = 0; n < s->constraintMatrix.cols; n++)
-        sdp.freeVariableMatrix.elt(p, n) = -(s->constraintMatrix.elt(k, n));
+        sdp.FreeVarMatrix.elt(p, n) = s->constraintMatrix.elt(k, n);
   }
   assert(p == (int)sdp.primalObjective.size());
 
   // Later, read from a file
-  for (int i = 0; i < sdp.freeVariableMatrix.cols; i++)
+  for (int i = 0; i < sdp.FreeVarMatrix.cols; i++)
     sdp.basicIndices.push_back(i);
 
   sdp.initializeConstraintIndices();
@@ -1080,8 +1079,7 @@ SDP bootstrapSDP(const Vector &dualObjective,
 
 
 SDP parseBootstrapSDP(XMLElement *sdpXml) {
-  return bootstrapSDP(parseVector(sdpXml->FirstChildElement("dualObjective")),
-                      parseVector(sdpXml->FirstChildElement("normalization")),
+  return bootstrapSDP(parseVector(sdpXml->FirstChildElement("objective")),
                       parseMany("sampledMatrixPolynomial",
                                 parseSampledMatrixPolynomial,
                                 sdpXml->FirstChildElement("sampledPositiveMatrices")));
@@ -1208,7 +1206,7 @@ public:
   BlockDiagonalMatrix PrimalResidues;
 
   // For free variable elimination
-  Matrix E;
+  Matrix FreeVarMatrixReduced;
   Vector dualObjectiveReduced;
   vector<int> basicIndices;
   vector<int> nonBasicIndices;
@@ -1248,7 +1246,7 @@ public:
     dualResidues(x),
     dualResiduesReduced(sdp.primalObjective.size() - sdp.dualObjective.size()),
     PrimalResidues(X),
-    E(sdp.primalObjective.size() - sdp.dualObjective.size(), sdp.dualObjective.size()),
+    FreeVarMatrixReduced(sdp.primalObjective.size() - sdp.dualObjective.size(), sdp.dualObjective.size()),
     dualObjectiveReduced(sdp.dualObjective.size()),
     XCholesky(X),
     YCholesky(X),
@@ -1258,11 +1256,11 @@ public:
     BilinearPairingsY(BilinearPairingsXInv),
     SchurBlocks(sdp.schurBlockDims()),
     SchurBlocksCholesky(SchurBlocks),
-    SchurUpdateLowRank(sdp.freeVariableMatrix),
-    Q(sdp.freeVariableMatrix.cols, sdp.freeVariableMatrix.cols),
-    Qpivot(sdp.freeVariableMatrix.cols),
+    SchurUpdateLowRank(sdp.FreeVarMatrix),
+    Q(sdp.FreeVarMatrix.cols, sdp.FreeVarMatrix.cols),
+    Qpivot(sdp.FreeVarMatrix.cols),
     basicKernelCoords(Q.rows),
-    BasicKernelSpan(sdp.freeVariableMatrix),
+    BasicKernelSpan(sdp.FreeVarMatrix),
     schurStabilizeIndices(SchurBlocks.blocks.size()),
     schurStabilizeLambdas(SchurBlocks.blocks.size()),
     schurStabilizeVectors(SchurBlocks.blocks.size()),
@@ -1275,7 +1273,7 @@ public:
       QRWorkspace.push_back(Vector(3*X.blocks[b].rows - 1));
     }
 
-    for (int p = 0; p < sdp.freeVariableMatrix.rows; p++) {
+    for (int p = 0; p < sdp.FreeVarMatrix.rows; p++) {
       if (p == sdp.basicIndices[basicIndices.size()])
         basicIndices.push_back(p);
       else
@@ -1289,19 +1287,22 @@ public:
     // LU Decomposition of D_B
     for (int n = 0; n < DBLU.cols; n++)
       for (int m = 0; m < DBLU.rows; m++)
-        DBLU.elt(m,n) = sdp.freeVariableMatrix.elt(basicIndices[m],n);
+        DBLU.elt(m,n) = sdp.FreeVarMatrix.elt(basicIndices[m],n);
     LUDecomposition(DBLU, DBLUipiv);
 
     // Compute E = - D_N D_B^{-1}
     // ET = -D_N^T
-    Matrix ET(E.cols, E.rows);
-    for (int p = 0; p < ET.cols; p++)
-      for (int n = 0; n < ET.rows; n++)
-        ET.elt(n, p) = -sdp.freeVariableMatrix.elt(nonBasicIndices[p], n);
+    Matrix FreeVarMatrixReducedT(FreeVarMatrixReduced.cols, FreeVarMatrixReduced.rows);
+    for (int p = 0; p < FreeVarMatrixReducedT.cols; p++)
+      for (int n = 0; n < FreeVarMatrixReducedT.rows; n++)
+        FreeVarMatrixReducedT.elt(n, p) = -sdp.FreeVarMatrix.elt(nonBasicIndices[p], n);
     // ET = D_B^{-1 T} ET = -D_B^{-1 T} D_N^T
-    solveWithLUDecompositionTranspose(DBLU, DBLUipiv, &ET.elements[0], ET.cols, ET.rows);
+    solveWithLUDecompositionTranspose(DBLU, DBLUipiv,
+                                      &FreeVarMatrixReducedT.elements[0],
+                                      FreeVarMatrixReducedT.cols,
+                                      FreeVarMatrixReducedT.rows);
     // E = ET^T
-    transpose(ET, E);
+    transpose(FreeVarMatrixReducedT, FreeVarMatrixReduced);
 
     // dualObjectiveReduced = D_B^{-T} f
     for (unsigned int n = 0; n < dualObjectiveReduced.size(); n++)
@@ -1310,10 +1311,10 @@ public:
 
     // BasicKernelSpan = ( -1 \\ E)
     BasicKernelSpan.setZero();
-    for (int c = 0; c < E.cols; c++)
-      for (int r = 0; r < E.rows; r++)
-        BasicKernelSpan.elt(nonBasicIndices[r], c) = E.elt(r, c);
-    for (int c = 0; c < E.cols; c++)
+    for (int c = 0; c < FreeVarMatrixReduced.cols; c++)
+      for (int r = 0; r < FreeVarMatrixReduced.rows; r++)
+        BasicKernelSpan.elt(nonBasicIndices[r], c) = FreeVarMatrixReduced.elt(r, c);
+    for (int c = 0; c < FreeVarMatrixReduced.cols; c++)
       BasicKernelSpan.elt(basicIndices[c], c) = -1;
 
     for (unsigned int b = 0; b < SchurBlocks.blocks.size(); b++)
@@ -1439,36 +1440,36 @@ void computeSchurBlocks(const SDP &sdp,
 
 // x_B = g + E^T x_N
 void basicCompletion(const Vector &dualObjectiveReduced,
-                     const Matrix &E,
+                     const Matrix &FreeVarMatrixReduced,
                      const vector<int> &basicIndices,
                      const vector<int> &nonBasicIndices,
                      Vector &x) {
-  assert((int)basicIndices.size()    == E.cols);
-  assert((int)nonBasicIndices.size() == E.rows);
-  assert((int)x.size()             == E.cols + E.rows);
+  assert((int)basicIndices.size()    == FreeVarMatrixReduced.cols);
+  assert((int)nonBasicIndices.size() == FreeVarMatrixReduced.rows);
+  assert((int)x.size()               == FreeVarMatrixReduced.cols + FreeVarMatrixReduced.rows);
   
   for (unsigned int n = 0; n < basicIndices.size(); n++) {
     x[basicIndices[n]] = dualObjectiveReduced[n];
     for (unsigned int p = 0; p < nonBasicIndices.size(); p++)
-      x[basicIndices[n]] += E.elt(p, n) * x[nonBasicIndices[p]];
+      x[basicIndices[n]] += FreeVarMatrixReduced.elt(p, n) * x[nonBasicIndices[p]];
   }
 }
 
 // xReduced_N = x_N + E x_B
-void nonBasicShift(const Matrix &E,
+void nonBasicShift(const Matrix &FreeVarMatrixReduced,
                    const vector<int> &basicIndices,
                    const vector<int> &nonBasicIndices,
                    const Vector &x,
                    Vector &xReduced) {
-  assert((int)basicIndices.size()    == E.cols);
-  assert((int)nonBasicIndices.size() == E.rows);
-  assert((int)x.size()             == E.cols + E.rows);
+  assert((int)basicIndices.size()    == FreeVarMatrixReduced.cols);
+  assert((int)nonBasicIndices.size() == FreeVarMatrixReduced.rows);
+  assert((int)x.size()               == FreeVarMatrixReduced.cols + FreeVarMatrixReduced.rows);
   assert(nonBasicIndices.size()      == xReduced.size());
   
   for (unsigned int p = 0; p < nonBasicIndices.size(); p++) {
     xReduced[p] = x[nonBasicIndices[p]];
     for (unsigned int n = 0; n < basicIndices.size(); n++)
-      xReduced[p] += E.elt(p,n) * x[basicIndices[n]];
+      xReduced[p] += FreeVarMatrixReduced.elt(p,n) * x[basicIndices[n]];
   }
 }
 
@@ -1643,7 +1644,7 @@ Real stepLength(BlockDiagonalMatrix &XCholesky,
     return -gamma/lambda;
 }
 
-void addKernelColumn(const Matrix &E,
+void addKernelColumn(const Matrix &FreeVarMatrixReduced,
                      const vector<int> &basicIndices,
                      const vector<int> &nonBasicIndices,
                      const int i,
@@ -1653,9 +1654,9 @@ void addKernelColumn(const Matrix &E,
   int c = K.cols - 1;
 
   int j = binaryFind(basicIndices.begin(), basicIndices.end(), i) - basicIndices.begin();
-  if (j < E.cols) {
+  if (j < FreeVarMatrixReduced.cols) {
     for (unsigned int r = 0; r < nonBasicIndices.size(); r++)
-      K.elt(nonBasicIndices[r], c) = lambda * E.elt(r, j);
+      K.elt(nonBasicIndices[r], c) = lambda * FreeVarMatrixReduced.elt(r, j);
   } else {
     K.elt(i, c) = lambda;
   }
@@ -1685,7 +1686,12 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   for (unsigned int b = 0; b < SchurBlocks.blocks.size(); b++) {
     for (unsigned int i = 0; i < schurStabilizeIndices[b].size(); i++) {
       int fullIndex = SchurBlocks.blockStartIndices[b] + schurStabilizeIndices[b][i];
-      addKernelColumn(E, basicIndices, nonBasicIndices, fullIndex, schurStabilizeLambdas[b], SchurUpdateLowRank);
+      addKernelColumn(FreeVarMatrixReduced,
+                      basicIndices,
+                      nonBasicIndices,
+                      fullIndex,
+                      schurStabilizeLambdas[b],
+                      SchurUpdateLowRank);
     }
     schurStabilizeIndices[b].resize(0);
   }
@@ -1696,7 +1702,7 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   // Q = SchurUpdateLowRank^T SchurUpdateLowRank - {{0,0},{0,1}}
   Q.setRowsCols(SchurUpdateLowRank.cols, SchurUpdateLowRank.cols);
   matrixSquare(SchurUpdateLowRank, Q);
-  int stabilizerStart = E.cols;
+  int stabilizerStart = FreeVarMatrixReduced.cols;
   for (int i = stabilizerStart; i < Q.cols; i++)
     Q.elt(i,i) -= 1;
 
@@ -1786,7 +1792,7 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
 
   for (int iteration = 1; iteration <= parameters.maxIterations; iteration++) {
     // Maintain the invariant x_B = g + E^T x_N
-    basicCompletion(dualObjectiveReduced, E, basicIndices, nonBasicIndices, x);
+    basicCompletion(dualObjectiveReduced, FreeVarMatrixReduced, basicIndices, nonBasicIndices, x);
 
     choleskyDecomposition(X, XCholesky);
     choleskyDecomposition(Y, YCholesky);
@@ -1798,7 +1804,7 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
 
     // d_k = c_k - Tr(F_k Y)
     computeDualResidues(sdp, Y, BilinearPairingsY, dualResidues);
-    nonBasicShift(E, basicIndices, nonBasicIndices, dualResidues, dualResiduesReduced);
+    nonBasicShift(FreeVarMatrixReduced, basicIndices, nonBasicIndices, dualResidues, dualResiduesReduced);
 
     // PrimalResidues = sum_p F_p x_p - X - F_0 (F_0 is zero for now)
     computePrimalResidues(sdp, x, X, PrimalResidues);
@@ -1958,7 +1964,7 @@ void solveSDP(const path sdpFile,
   // cout << "X = " << solver.X << ";\n";
   // cout << "Y = " << solver.Y << ";\n";
   // cout << "x = " << solver.x << ";\n";
-  // cout << "EE = " << solver.E << ";\n";
+  // cout << "FreeVarMatrixReducedE = " << solver.FreeVarMatrixReduced << ";\n";
   // cout << "dualObjectiveReduced = " << solver.dualObjectiveReduced << ";\n";
   // cout << "BilinearPairingsXInv = " << solver.BilinearPairingsXInv << endl;
   // cout << "BilinearPairingsY = " << solver.BilinearPairingsY << endl;
