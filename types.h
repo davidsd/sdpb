@@ -4,7 +4,7 @@
 #include <mblas_gmp.h>
 #include <mlapack_gmp.h>
 
-typedef mpz_class Integer;
+typedef mpackint Integer;
 typedef mpf_class Real;
 
 double realToDouble(Real r) {

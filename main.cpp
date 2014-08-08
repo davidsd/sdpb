@@ -101,25 +101,28 @@ ostream& operator<<(ostream& os, const vector<T>& v) {
 
 typedef vector<Real> Vector;
 
-Real maxAbsVectorElement(const Vector &v) {
-  Real max = 0;
-  for (Vector::const_iterator x = v.begin(); x != v.end(); x++)
-    if (abs(*x) > max)
-      max = abs(*x);
-  return max;
+bool compareAbs(const Real &a, const Real &b) {
+  return abs(a) < abs(b);
+}
+
+Real maxAbsVector(const Vector &v) {
+  return abs(*std::max_element(v.begin(), v.end(), compareAbs));
 }  
 
 void fillVector(Vector &v, const Real &a) {
   std::fill(v.begin(), v.end(), a);
 }
 
-// y := alpha*x + beta*y
-//
-void vectorScaleMultiplyAdd(const Real alpha, const Vector &x, const Real beta, Vector &y) {
-  assert(x.size() == y.size());
-  
-  for (unsigned int i = 0; i < x.size(); i++)
-    y[i] = alpha*x[i] + beta*y[i];
+void scaleVector(Vector &v, const Real &a) {
+  for (unsigned int i = 0; i < v.size(); i++)
+    v[i] *= a;
+}
+
+void addVector(Vector &v, const Vector &u) {
+  assert(v.size() == u.size());
+
+  for (unsigned int i = 0; i < v.size(); i++)
+    v[i] += u[i];
 }
 
 class Matrix {
@@ -168,23 +171,14 @@ class Matrix {
     cols = c;
   }
 
-  void setIdentity() {
-    assert(rows == cols);
-
-    setZero();
-    addDiagonal(1);
-  }
-
   void symmetrize() {
     assert(rows == cols);
 
     for (int r = 0; r < rows; r++) {
       for (int c = 0; c < r; c++) {
-        elt(r,c) /= 2;
-        elt(r,c) += elt(c,r)/2;
-        elt(c,r) = elt(r,c);
-        //set(r, c, tmp);
-        //set(c, r, tmp);
+        Real tmp = (elt(r,c) + elt(c,r))/2;
+        elt(r,c) = tmp;
+        elt(c,r) = tmp;
       }
     }
   }
@@ -212,8 +206,8 @@ class Matrix {
       elements[i] *= c;
   }
 
-  Real maxAbsElement() const {
-    return maxAbsVectorElement(elements);
+  Real maxAbs() const {
+    return maxAbsVector(elements);
   }
 
   friend ostream& operator<<(ostream& os, const Matrix& a);
@@ -695,7 +689,10 @@ void testTensorCongruence() {
   Matrix b(2,3);
   Matrix result(6,6);
   Matrix work(4,6);
-  a.setIdentity();
+  a.elt(0,0) = 1;
+  a.elt(1,1) = 1;
+  a.elt(2,2) = 1;
+  a.elt(3,3) = 1;
   choleskyDecomposition(a,L);
   b.elt(0,0) =2;
   b.elt(1,0) =3;
@@ -744,11 +741,6 @@ public:
       blocks[b].addDiagonal(c);
   }
 
-  void setIdentity() {
-    setZero();
-    addDiagonal(1);
-  }
-
   void operator+=(const BlockDiagonalMatrix &A) {
     #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
@@ -779,10 +771,10 @@ public:
       blocks[b].symmetrize();
   }
 
-  Real maxAbsElement() const {
+  Real maxAbs() const {
     Real max = 0;
     for (vector<Matrix>::const_iterator b = blocks.begin(); b != blocks.end(); b++) {
-      const Real tmp = b->maxAbsElement();
+      const Real tmp = b->maxAbs();
       if (tmp > max)
         max = tmp;
     }
@@ -931,7 +923,7 @@ public:
   vector<int> degrees;
   vector<vector<int> > blocks;
   vector<vector<IndexTuple> > constraintIndices;
-  vector<int> basicIndex;
+  vector<int> basicIndices;
 
   int numConstraints() const {
     return polMatrixValues.rows;
@@ -1060,18 +1052,10 @@ SDP bootstrapSDP(const Vector &objective,
     numConstraints += (degree+1)*dimension*(dimension+1)/2;
   }
 
-  // For the normalization constraint
-  // sdp.dimensions.push_back(1);
-  // sdp.degrees.push_back(0);
-  // numConstraints += 1;
-
   sdp.polMatrixValues = Matrix(numConstraints, sdp.objective.size());
   // sdp.affineConstants = Vector(numConstraints, 0);
   // THIS IS A HACK!!!
   sdp.affineConstants = Vector(numConstraints, 1);
-
-  // normalization constraint
-  // sdp.affineConstants[numConstraints-1] = 1;
 
   int p = 0;
   for (vector<SampledMatrixPolynomial>::const_iterator s = sampledMatrixPols.begin();
@@ -1092,20 +1076,12 @@ SDP bootstrapSDP(const Vector &objective,
       for (int n = 0; n < s->samplesMatrix.cols; n++)
         sdp.polMatrixValues.elt(p, n) = -(s->samplesMatrix.elt(k, n));
   }
-  // assert(p == numConstraints - 1);
   assert(p == numConstraints);
 
   // Later, read from a file
   for (int i = 0; i < sdp.polMatrixValues.cols; i++)
-    sdp.basicIndex.push_back(i);
+    sdp.basicIndices.push_back(i);
 
-  // normalization constraint
-  // for (unsigned int n = 0; n < sdp.objective.size(); n++)
-  //   sdp.polMatrixValues.elt(p, n) = normalization[n];
-  // sdp.blocks.push_back(vector<int>());
-
-  //sdp.rescale();
-  // sdp.addSlack();
   sdp.initializeConstraintIndices();
   return sdp;
 }
@@ -1242,8 +1218,8 @@ public:
   // For free variable elimination
   Matrix E;
   Vector g;
-  vector<int> basicIndex;
-  vector<int> nonBasicIndex;
+  vector<int> basicIndices;
+  vector<int> nonBasicIndices;
 
   // intermediate computations
   BlockDiagonalMatrix XCholesky;
@@ -1256,12 +1232,12 @@ public:
   BlockDiagonalMatrix SchurBlocksCholesky;
   Matrix SchurUpdateLowRank;
   Matrix Q;
+  vector<Integer> Qpivot;
   Vector basicKernelCoords;
   Matrix BasicKernelSpan;
   vector<vector<int> > schurStabilizeIndices;
   vector<Real> schurStabilizeLambdas;
   vector<Vector> schurStabilizeVectors;
-  vector<Integer> schurIpiv;
 
   // additional workspace variables
   BlockDiagonalMatrix StepMatrixWorkspace;
@@ -1292,12 +1268,12 @@ public:
     SchurBlocksCholesky(SchurBlocks),
     SchurUpdateLowRank(sdp.polMatrixValues),
     Q(sdp.polMatrixValues.cols, sdp.polMatrixValues.cols),
+    Qpivot(sdp.polMatrixValues.cols),
     basicKernelCoords(Q.rows),
     BasicKernelSpan(sdp.polMatrixValues),
     schurStabilizeIndices(SchurBlocks.blocks.size()),
     schurStabilizeLambdas(SchurBlocks.blocks.size()),
     schurStabilizeVectors(SchurBlocks.blocks.size()),
-    schurIpiv(sdp.polMatrixValues.cols),
     StepMatrixWorkspace(X)
   {
     // initialize bilinearPairingsWorkspace, eigenvaluesWorkspace, QRWorkspace 
@@ -1308,10 +1284,10 @@ public:
     }
 
     for (int p = 0; p < sdp.polMatrixValues.rows; p++) {
-      if (p == sdp.basicIndex[basicIndex.size()])
-        basicIndex.push_back(p);
+      if (p == sdp.basicIndices[basicIndices.size()])
+        basicIndices.push_back(p);
       else
-        nonBasicIndex.push_back(p);
+        nonBasicIndices.push_back(p);
     }
 
     // Computations needed for free variable elimination
@@ -1321,7 +1297,7 @@ public:
     // LU Decomposition of D_B
     for (int n = 0; n < DBLU.cols; n++)
       for (int m = 0; m < DBLU.rows; m++)
-        DBLU.elt(m,n) = sdp.polMatrixValues.elt(basicIndex[m],n);
+        DBLU.elt(m,n) = sdp.polMatrixValues.elt(basicIndices[m],n);
     LUDecomposition(DBLU, DBLUipiv);
 
     // Compute E = - D_N D_B^{-1}
@@ -1329,7 +1305,7 @@ public:
     Matrix ET(E.cols, E.rows);
     for (int p = 0; p < ET.cols; p++)
       for (int n = 0; n < ET.rows; n++)
-        ET.elt(n, p) = -sdp.polMatrixValues.elt(nonBasicIndex[p], n);
+        ET.elt(n, p) = -sdp.polMatrixValues.elt(nonBasicIndices[p], n);
     // ET = D_B^{-1 T} ET = -D_B^{-1 T} D_N^T
     solveWithLUDecompositionTranspose(DBLU, DBLUipiv, &ET.elements[0], ET.cols, ET.rows);
     // E = ET^T
@@ -1344,9 +1320,9 @@ public:
     BasicKernelSpan.setZero();
     for (int c = 0; c < E.cols; c++)
       for (int r = 0; r < E.rows; r++)
-        BasicKernelSpan.elt(nonBasicIndex[r], c) = E.elt(r, c);
+        BasicKernelSpan.elt(nonBasicIndices[r], c) = E.elt(r, c);
     for (int c = 0; c < E.cols; c++)
-      BasicKernelSpan.elt(basicIndex[c], c) = -1;
+      BasicKernelSpan.elt(basicIndices[c], c) = -1;
 
     for (unsigned int b = 0; b < SchurBlocks.blocks.size(); b++)
       schurStabilizeVectors[b].resize(SchurBlocks.blocks[b].rows);
@@ -1472,35 +1448,35 @@ void computeSchurBlocks(const SDP &sdp,
 // x_B = g + E^T x_N
 void basicCompletion(const Vector &g,
                      const Matrix &E,
-                     const vector<int> &basicIndex,
-                     const vector<int> &nonBasicIndex,
+                     const vector<int> &basicIndices,
+                     const vector<int> &nonBasicIndices,
                      Vector &x) {
-  assert((int)basicIndex.size()    == E.cols);
-  assert((int)nonBasicIndex.size() == E.rows);
+  assert((int)basicIndices.size()    == E.cols);
+  assert((int)nonBasicIndices.size() == E.rows);
   assert((int)x.size()             == E.cols + E.rows);
   
-  for (unsigned int n = 0; n < basicIndex.size(); n++) {
-    x[basicIndex[n]] = g[n];
-    for (unsigned int p = 0; p < nonBasicIndex.size(); p++)
-      x[basicIndex[n]] += E.elt(p, n) * x[nonBasicIndex[p]];
+  for (unsigned int n = 0; n < basicIndices.size(); n++) {
+    x[basicIndices[n]] = g[n];
+    for (unsigned int p = 0; p < nonBasicIndices.size(); p++)
+      x[basicIndices[n]] += E.elt(p, n) * x[nonBasicIndices[p]];
   }
 }
 
 // xTilde_N = x_N + E x_B
 void nonBasicShift(const Matrix &E,
-                   const vector<int> &basicIndex,
-                   const vector<int> &nonBasicIndex,
+                   const vector<int> &basicIndices,
+                   const vector<int> &nonBasicIndices,
                    const Vector &x,
                    Vector &xTilde) {
-  assert((int)basicIndex.size()    == E.cols);
-  assert((int)nonBasicIndex.size() == E.rows);
+  assert((int)basicIndices.size()    == E.cols);
+  assert((int)nonBasicIndices.size() == E.rows);
   assert((int)x.size()             == E.cols + E.rows);
-  assert(nonBasicIndex.size()      == xTilde.size());
+  assert(nonBasicIndices.size()      == xTilde.size());
   
-  for (unsigned int p = 0; p < nonBasicIndex.size(); p++) {
-    xTilde[p] = x[nonBasicIndex[p]];
-    for (unsigned int n = 0; n < basicIndex.size(); n++)
-      xTilde[p] += E.elt(p,n) * x[basicIndex[n]];
+  for (unsigned int p = 0; p < nonBasicIndices.size(); p++) {
+    xTilde[p] = x[nonBasicIndices[p]];
+    for (unsigned int n = 0; n < basicIndices.size(); n++)
+      xTilde[p] += E.elt(p,n) * x[basicIndices[n]];
   }
 }
 
@@ -1597,10 +1573,10 @@ Real primalObjective(const SDP &sdp, const Vector &x) {
   return dotProduct(sdp.affineConstants, x);
 }
 
-Real dualObjective(const SDP &sdp, const Vector &g, const vector<int> &basicIndex, const Vector &dualResidues) {
+Real dualObjective(const SDP &sdp, const Vector &g, const vector<int> &basicIndices, const Vector &dualResidues) {
   Real tmp = 0;
   for (unsigned int i = 0; i < g.size(); i++)
-    tmp += g[i]*dualResidues[basicIndex[i]];
+    tmp += g[i]*dualResidues[basicIndices[i]];
   return tmp;
 }
 
@@ -1680,18 +1656,18 @@ Real stepLength(BlockDiagonalMatrix &XCholesky,
 }
 
 void addKernelColumn(const Matrix &E,
-                     const vector<int> &basicIndex,
-                     const vector<int> &nonBasicIndex,
+                     const vector<int> &basicIndices,
+                     const vector<int> &nonBasicIndices,
                      const int i,
                      const Real &lambda,
                      Matrix &K) {
   K.addColumn();
   int c = K.cols - 1;
 
-  int j = binaryFind(basicIndex.begin(), basicIndex.end(), i) - basicIndex.begin();
+  int j = binaryFind(basicIndices.begin(), basicIndices.end(), i) - basicIndices.begin();
   if (j < E.cols) {
-    for (unsigned int r = 0; r < nonBasicIndex.size(); r++)
-      K.elt(nonBasicIndex[r], c) = lambda * E.elt(r, j);
+    for (unsigned int r = 0; r < nonBasicIndices.size(); r++)
+      K.elt(nonBasicIndices[r], c) = lambda * E.elt(r, j);
   } else {
     K.elt(i, c) = lambda;
   }
@@ -1721,7 +1697,7 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   for (unsigned int b = 0; b < SchurBlocks.blocks.size(); b++) {
     for (unsigned int i = 0; i < schurStabilizeIndices[b].size(); i++) {
       int fullIndex = SchurBlocks.blockStartIndices[b] + schurStabilizeIndices[b][i];
-      addKernelColumn(E, basicIndex, nonBasicIndex, fullIndex, schurStabilizeLambdas[b], SchurUpdateLowRank);
+      addKernelColumn(E, basicIndices, nonBasicIndices, fullIndex, schurStabilizeLambdas[b], SchurUpdateLowRank);
     }
     schurStabilizeIndices[b].resize(0);
   }
@@ -1736,8 +1712,8 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   for (int i = stabilizerStart; i < Q.cols; i++)
     Q.elt(i,i) -= 1;
 
-  schurIpiv.resize(Q.rows);
-  LUDecomposition(Q, schurIpiv);
+  Qpivot.resize(Q.rows);
+  LUDecomposition(Q, Qpivot);
 }
 
 void printInfoHeader() {
@@ -1777,7 +1753,7 @@ void SDPSolver::solveSchurComplementEquation(Vector &dx) {
   vectorScaleMatrixMultiplyTransposeAdd(-1, SchurUpdateLowRank, dx, 0, basicKernelCoords);
 
   // k = Q^{-1} k
-  solveWithLUDecomposition(Q, schurIpiv, basicKernelCoords);
+  solveWithLUDecomposition(Q, Qpivot, basicKernelCoords);
 
   // dx = dx + SchurUpdateLowRank k
   vectorScaleMatrixMultiplyAdd(1, SchurUpdateLowRank, basicKernelCoords, 1, dx);
@@ -1822,7 +1798,7 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
 
   for (int iteration = 1; iteration <= parameters.maxIterations; iteration++) {
     // Maintain the invariant x_B = g + E^T x_N
-    basicCompletion(g, E, basicIndex, nonBasicIndex, x);
+    basicCompletion(g, E, basicIndices, nonBasicIndices, x);
 
     choleskyDecomposition(X, XCholesky);
     choleskyDecomposition(Y, YCholesky);
@@ -1834,15 +1810,15 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
 
     // d_k = c_k - Tr(F_k Y)
     computeDualResidues(sdp, Y, BilinearPairingsY, dualResidues);
-    nonBasicShift(E, basicIndex, nonBasicIndex, dualResidues, dualResiduesTilde);
+    nonBasicShift(E, basicIndices, nonBasicIndices, dualResidues, dualResiduesTilde);
 
     // PrimalResidues = sum_p F_p x_p - X - F_0 (F_0 is zero for now)
     computePrimalResidues(sdp, x, X, PrimalResidues);
 
-    status.primalError     = PrimalResidues.maxAbsElement();
-    status.dualError       = maxAbsVectorElement(dualResiduesTilde);
+    status.primalError     = PrimalResidues.maxAbs();
+    status.dualError       = maxAbsVector(dualResiduesTilde);
     status.primalObjective = primalObjective(sdp, x);
-    status.dualObjective   = dualObjective(sdp, g, basicIndex, dualResidues);
+    status.dualObjective   = dualObjective(sdp, g, basicIndices, dualResidues);
 
     const bool isPrimalFeasible = status.isPrimalFeasible(parameters);
     const bool isDualFeasible   = status.isDualFeasible(parameters);
@@ -1883,7 +1859,8 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
               primalStepLength, dualStepLength, betaCorrector);
 
     // Update current point
-    vectorScaleMultiplyAdd(primalStepLength, dx, 1, x);
+    scaleVector(dx, primalStepLength);
+    addVector(x, dx);
     dX *= primalStepLength;
     X += dX;
     dY *= dualStepLength;
