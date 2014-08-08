@@ -210,6 +210,14 @@ class Matrix {
     return maxAbsVector(elements);
   }
 
+  void swapCols(int c1, int c2) {
+    for (int r = 0; r < rows; r++) {
+      Real tmp = elt(r, c1);
+      elt(r,c1) = elt(r,c2);
+      elt(r,c1) = tmp;
+    }
+  }
+
   friend ostream& operator<<(ostream& os, const Matrix& a);
 };
 
@@ -579,6 +587,83 @@ void matrixSolveWithCholesky(Matrix &ACholesky, Matrix &X) {
 
   lowerTriangularSolve(ACholesky, &X.elements[0], X.cols, X.rows);
   lowerTriangularTransposeSolve(ACholesky, &X.elements[0], X.cols, X.rows);
+}
+
+// Find the column with the maximum absolute value entry to the right
+// of (r,c) (inclusive)
+int maxColRightOf(Matrix &A, int r, int c) {
+  int  cMax = 0;
+  Real aMax = 0;
+  for (int k = c; k < A.cols; k++) {
+    Real a = abs(A.elt(r,k));
+    if (a > aMax) {
+      cMax = k;
+      aMax = a;
+    }
+  }
+  return cMax;
+}
+
+// Return indices of a set of linearly independent rows of M, where
+// the basis matrix has eigenvalues whose absolute values exceed
+// thresh.
+vector<int> linearlyIndependentRowIndices(const Matrix &M, const Real thresh) {
+  vector<int> rows;
+  Matrix A(M);
+
+  int c = 0;
+  for (int r = 0; r < A.rows && c < A.cols; r++) {
+    A.swapCols(maxColRightOf(A, r, c), c);
+    if (abs(A.elt(r, c)) > thresh) {
+      rows.push_back(r);
+      // Add a multiple of column c to each column to the right so
+      // that the entries to the right of (r,c) are zero.
+      for (int k = c+1; k < A.cols; k++) {
+        Real x = A.elt(r,k)/A.elt(r,c);
+        for (int i = r; i < A.rows; i++)
+          A.elt(i,k) -= x*A.elt(i,c);
+      }
+      c++;
+    }
+  }
+  assert((int)rows.size() == A.cols);
+
+  return rows;
+}
+
+void testLinearlyIndependentRowIndices() {
+  Matrix A(8,3);
+  A.elt(0,0)=0;
+  A.elt(0,1)=0;
+  A.elt(0,2)=0;
+  A.elt(1,0)=1;
+  A.elt(1,1)=0;
+  A.elt(1,2)=1;
+  A.elt(2,0)=0;
+  A.elt(2,1)=1;
+  A.elt(2,2)=0;
+  A.elt(3,0)=0;
+  A.elt(3,1)=0;
+  A.elt(3,2)=0;
+  A.elt(4,0)=0;
+  A.elt(4,1)=1;
+  A.elt(4,2)=1;
+  A.elt(5,0)=1;
+  A.elt(5,1)=1;
+  A.elt(5,2)=0;
+  A.elt(6,0)=1;
+  A.elt(6,1)=0;
+  A.elt(6,2)=1;
+  A.elt(7,0)=1;
+  A.elt(7,1)=0;
+  A.elt(7,2)=1;
+
+  cout << "A = " << A << ";\n";
+  
+  vector<int> rows = linearlyIndependentRowIndices(A, 0.1);
+  
+  cout << "Aprime = " << A << ";\n";
+  cout << "rows = " << rows << ";\n";
 }
 
 // result = b'^T a b', where b' = b \otimes 1
@@ -2077,7 +2162,8 @@ int main(int argc, char** argv) {
     }
   }
 
-  solveSDP(sdpFile, outFile, checkpointFile, paramFile);
+  //solveSDP(sdpFile, outFile, checkpointFile, paramFile);
+  testLinearlyIndependentRowIndices();
   //testMatrix();
   //testBilinearPairings(sdpFile);
 
