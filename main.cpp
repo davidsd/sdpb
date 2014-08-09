@@ -1191,7 +1191,7 @@ public:
   int maxThreads;
 
   SDPSolverParameters():
-    maxIterations(167),
+    maxIterations(200),
     dualityGapThreshold("1e-100"),
     primalFeasibilityThreshold("1e-30"),
     dualFeasibilityThreshold("1e-30"),
@@ -1410,11 +1410,9 @@ public:
   void initialize(const SDPSolverParameters &parameters);
   SDPSolverStatus run(const SDPSolverParameters &parameters, const path outFile, const path checkpointFile);
   void initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
-                                       const BlockDiagonalMatrix &BilinearPairingsY,
-                                       int iteration);
+                                       const BlockDiagonalMatrix &BilinearPairingsY);
   void solveSchurComplementEquation(Vector &dx);
-  void computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R, const bool isPrimalFeasible);
-
+  void computeSearchDirection(const Real &beta, const Real &mu, const bool correctorPhase);
 };
 
 void computeBilinearPairings(const BlockDiagonalMatrix &A,
@@ -1690,32 +1688,6 @@ Real correctorCenteringParameter(const SDPSolverParameters &parameters,
     return max(parameters.infeasibleCenteringParameter, beta);
 }
 
-// R = beta mu I - X Y
-//
-void computePredictorRMatrix(const Real &beta,
-                             const Real &mu,
-                             BlockDiagonalMatrix &X,
-                             BlockDiagonalMatrix &Y,
-                             BlockDiagonalMatrix &R) {
-  blockDiagonalMatrixMultiply(X, Y, R);
-  R *= -1;
-  R.addDiagonal(beta*mu);
-}
-
-// R = beta mu I - X Y - dX dY
-//
-void computeCorrectorRMatrix(const Real &beta,
-                             const Real &mu,
-                             BlockDiagonalMatrix &X,
-                             BlockDiagonalMatrix &dX,
-                             BlockDiagonalMatrix &Y,
-                             BlockDiagonalMatrix &dY,
-                             BlockDiagonalMatrix &R) {
-  blockDiagonalMatrixScaleMultiplyAdd(-1, X,  Y,  0, R);
-  blockDiagonalMatrixScaleMultiplyAdd(-1, dX, dY, 1, R);
-  R.addDiagonal(beta*mu);
-}
-
 Real stepLength(BlockDiagonalMatrix &XCholesky,
                 BlockDiagonalMatrix &dX,
                 BlockDiagonalMatrix &XInvDX,
@@ -1754,8 +1726,7 @@ void addKernelColumn(const Matrix &FreeVarMatrixReduced,
 }
 
 void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
-                                                const BlockDiagonalMatrix &BilinearPairingsY,
-                                                int iteration) {
+                                                const BlockDiagonalMatrix &BilinearPairingsY) {
 
   timers.computeSchurBlocks.resume();
   computeSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, SchurBlocks);
@@ -1847,8 +1818,14 @@ void SDPSolver::solveSchurComplementEquation(Vector &dx) {
   blockMatrixLowerTriangularTransposeSolve(SchurBlocksCholesky, dx);
 }
 
-void SDPSolver::computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R,
-                                                  const bool isPrimalFeasible) {
+void SDPSolver::computeSearchDirection(const Real &beta,
+                                       const Real &mu,
+                                       const bool correctorPhase) {
+
+  blockDiagonalMatrixScaleMultiplyAdd(-1, X,  Y,  0, R);
+  if (correctorPhase)
+    blockDiagonalMatrixScaleMultiplyAdd(-1, dX, dY, 1, R);
+  R.addDiagonal(beta*mu);
 
   // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))
   blockDiagonalMatrixMultiply(PrimalResidues, Y, Z);
@@ -1859,8 +1836,7 @@ void SDPSolver::computeSearchDirectionWithRMatrix(const BlockDiagonalMatrix &R,
   // dx_k = -d_k + Tr(F_k Z)
   computeSchurRHS(sdp, dualResidues, Z, dx);
 
-  // dx_N = B_{NN}^{-1} dx_N
-  // dx_B = E^T dx_N
+  // dx_N = B_{NN}^{-1} dx_N, dx_B = E^T dx_N
   solveSchurComplementEquation(dx);
 
   // dX = R_p + sum_p F_p dx_p
@@ -1913,7 +1889,7 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
     if (isPrimalFeasible && isDualFeasible && isOptimal) break;
 
     timers.schurComplementCholesky.resume();
-    initializeSchurComplementSolver(BilinearPairingsXInv, BilinearPairingsY, iteration);
+    initializeSchurComplementSolver(BilinearPairingsXInv, BilinearPairingsY);
     timers.schurComplementCholesky.stop();
 
     Real mu = frobeniusProductSymmetric(X, Y)/X.dim;
@@ -1922,16 +1898,14 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
     Real betaPredictor = predictorCenteringParameter(parameters, reductionSwitch,
                                                      isPrimalFeasible && isDualFeasible);
     timers.predictorSolution.resume();
-    computePredictorRMatrix(betaPredictor, mu, X, Y, R);
-    computeSearchDirectionWithRMatrix(R, isPrimalFeasible);
+    computeSearchDirection(betaPredictor, mu, false);
     timers.predictorSolution.stop();
 
     // Mehrotra corrector solution for (dx, dX, dY)
     Real betaCorrector = correctorCenteringParameter(parameters, X, dX, Y, dY, mu,
                                                      isPrimalFeasible && isDualFeasible);
     timers.correctorSolution.resume();
-    computeCorrectorRMatrix(betaCorrector, mu, X, dX, Y, dY, R);
-    computeSearchDirectionWithRMatrix(R, isPrimalFeasible);
+    computeSearchDirection(betaCorrector, mu, true);
     timers.correctorSolution.stop();
 
     // Step length to preserve positive definiteness
