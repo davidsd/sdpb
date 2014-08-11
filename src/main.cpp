@@ -6,7 +6,7 @@
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "boost/program_options.hpp"
 #include "types.h"
-#include "Timer.h"
+#include "Timers.h"
 #include "SDP.h"
 #include "parse.h"
 #include "SDPSolver.h"
@@ -20,7 +20,7 @@ using boost::posix_time::second_clock;
 
 namespace po = boost::program_options;
 
-Timer timer;
+Timers timers;
 
 int solveSDP(const path &sdpFile,
              const path &outFile,
@@ -44,13 +44,18 @@ int solveSDP(const path &sdpFile,
   const SDP sdp = readBootstrapSDP(sdpFile);
 
   SDPSolver solver(sdp);
-  solver.initialize(parameters);
+
+  if (exists(checkpointFile))
+    solver.loadCheckpoint(checkpointFile);
+  else
+    solver.initialize(parameters);
+
   SDPSolverTerminateReason reason = solver.run(parameters, outFile, checkpointFile);
 
   cout << "\nTerminated: " << reason << endl;
   cout << "\nStatus:\n";
   cout << solver.status << endl;
-  cout << timer << endl;
+  cout << timers << endl;
 
   return 0;
 }
@@ -100,6 +105,9 @@ int main(int argc, char** argv) {
     ("maxIterations",
      po::value<int>(&parameters.maxIterations)->default_value(500),
      "Maximum number of iterations to run the solver.")
+    ("maxRuntime",
+     po::value<int>(&parameters.maxIterations)->default_value(86400),
+     "Maximum amount of time to run the solver in seconds.")
     ("dualityGapThreshold",
      po::value<Real>(&parameters.dualityGapThreshold)->default_value(Real("1e-30")),
      "Threshold for duality gap (roughly the difference in primal and dual "

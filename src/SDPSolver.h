@@ -19,6 +19,7 @@ using boost::filesystem::path;
 class SDPSolverParameters {
 public:
   int maxIterations;
+  int maxRuntime;
   int checkpointInterval;
   int precision;
   int maxThreads;
@@ -42,26 +43,13 @@ public:
     maxDualObjective            .set_prec(precision);
   }
 
-  friend ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
-    os << "maxIterations                = " << p.maxIterations                << endl;
-    os << "checkpointInterval           = " << p.checkpointInterval           << endl;
-    os << "precision(actual)            = " << p.precision << "(" << mpf_get_default_prec() << ")" << endl;
-    os << "maxThreads                   = " << p.maxThreads                   << endl;
-    os << "dualityGapThreshold          = " << p.dualityGapThreshold          << endl;
-    os << "primalErrorThreshold         = " << p.primalErrorThreshold         << endl;
-    os << "dualErrorThreshold           = " << p.dualErrorThreshold           << endl;
-    os << "initialMatrixScale           = " << p.initialMatrixScale           << endl;
-    os << "feasibleCenteringParameter   = " << p.feasibleCenteringParameter   << endl;
-    os << "infeasibleCenteringParameter = " << p.infeasibleCenteringParameter << endl;
-    os << "stepLengthReduction          = " << p.stepLengthReduction          << endl;
-    os << "maxDualObjective             = " << p.maxDualObjective             << endl;
-    return os;
-  }
+  friend ostream& operator<<(ostream& os, const SDPSolverParameters& p);
 };
 
 enum SDPSolverTerminateReason {
   PrimalDualOptimal,
   MaxIterationsExceeded,
+  MaxRuntimeExceeded,
   DualFeasibleMaxObjectiveExceeded,
 };
 
@@ -79,26 +67,7 @@ public:
       max(Real(abs(primalObjective) + abs(dualObjective)), Real(1));
   }
 
-  bool isPrimalFeasible(const SDPSolverParameters &p) {
-    return primalError < p.primalErrorThreshold;
-  }
-
-  bool isDualFeasible(const SDPSolverParameters &p) {
-    return dualError < p.dualErrorThreshold;
-  }
-
-  bool isOptimal(const SDPSolverParameters &p) {
-    return dualityGap() < p.dualityGapThreshold;
-  }
-
-  friend ostream& operator<<(ostream& os, const SDPSolverStatus& s) {
-    os << "primalObjective = " << s.primalObjective << endl;
-    os << "dualObjective   = " << s.dualObjective << endl;
-    os << "dualityGap      = " << s.dualityGap() << endl;
-    os << "primalError     = " << s.primalError << endl;
-    os << "dualError       = " << s.dualError << endl;
-    return os;
-  }
+  friend ostream& operator<<(ostream& os, const SDPSolverStatus& s);
 };
 
 class SDPSolver {
@@ -160,6 +129,8 @@ public:
                                        const BlockDiagonalMatrix &BilinearPairingsY);
   void solveSchurComplementEquation(Vector &dx);
   void computeSearchDirection(const Real &beta, const Real &mu, const bool correctorPhase);
+  void saveCheckpoint(const path &checkpointPath);
+  void loadCheckpoint(const path &checkpointPath);
 };
 
 #endif  // SDP_BOOTSTRAP_SDPSOLVER_H_
