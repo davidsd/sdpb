@@ -7,7 +7,7 @@
 typedef mpackint Integer;
 typedef mpf_class Real;
 
-double realToDouble(Real r) {
+inline double realToDouble(Real r) {
   return mpf_get_d(r.get_mpf_t());
 }
 

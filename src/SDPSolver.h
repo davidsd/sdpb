@@ -1,0 +1,165 @@
+#ifndef SDP_BOOTSTRAP_SDPSOLVER_H_
+#define SDP_BOOTSTRAP_SDPSOLVER_H_
+
+#include <iostream>
+#include <ostream>
+#include <vector>
+#include "boost/filesystem.hpp"
+#include "types.h"
+#include "Vector.h"
+#include "Matrix.h"
+#include "BlockDiagonalMatrix.h"
+#include "SDP.h"
+
+using std::vector;
+using std::ostream;
+using std::endl;
+using boost::filesystem::path;
+
+class SDPSolverParameters {
+public:
+  int maxIterations;
+  int checkpointInterval;
+  int precision;
+  int maxThreads;
+  Real dualityGapThreshold;
+  Real primalErrorThreshold;
+  Real dualErrorThreshold;
+  Real initialMatrixScale;
+  Real feasibleCenteringParameter;
+  Real infeasibleCenteringParameter;
+  Real stepLengthReduction;
+  Real maxDualObjective;
+
+  void resetPrecision() {
+    dualityGapThreshold         .set_prec(precision);
+    primalErrorThreshold        .set_prec(precision);
+    dualErrorThreshold          .set_prec(precision);
+    initialMatrixScale          .set_prec(precision);
+    feasibleCenteringParameter  .set_prec(precision);
+    infeasibleCenteringParameter.set_prec(precision);
+    stepLengthReduction         .set_prec(precision);
+    maxDualObjective            .set_prec(precision);
+  }
+
+  friend ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
+    os << "maxIterations                = " << p.maxIterations                << endl;
+    os << "checkpointInterval           = " << p.checkpointInterval           << endl;
+    os << "precision(actual)            = " << p.precision << "(" << mpf_get_default_prec() << ")" << endl;
+    os << "maxThreads                   = " << p.maxThreads                   << endl;
+    os << "dualityGapThreshold          = " << p.dualityGapThreshold          << endl;
+    os << "primalErrorThreshold         = " << p.primalErrorThreshold         << endl;
+    os << "dualErrorThreshold           = " << p.dualErrorThreshold           << endl;
+    os << "initialMatrixScale           = " << p.initialMatrixScale           << endl;
+    os << "feasibleCenteringParameter   = " << p.feasibleCenteringParameter   << endl;
+    os << "infeasibleCenteringParameter = " << p.infeasibleCenteringParameter << endl;
+    os << "stepLengthReduction          = " << p.stepLengthReduction          << endl;
+    os << "maxDualObjective             = " << p.maxDualObjective             << endl;
+    return os;
+  }
+};
+
+enum SDPSolverTerminateReason {
+  PrimalDualOptimal,
+  MaxIterationsExceeded,
+  DualFeasibleMaxObjectiveExceeded,
+};
+
+ostream &operator<<(ostream& os, const SDPSolverTerminateReason& r);
+
+class SDPSolverStatus {
+public:
+  Real primalObjective;
+  Real dualObjective;
+  Real primalError;
+  Real dualError;
+
+  Real dualityGap() const {
+    return abs(primalObjective - dualObjective) /
+      max(Real(abs(primalObjective) + abs(dualObjective)), Real(1));
+  }
+
+  bool isPrimalFeasible(const SDPSolverParameters &p) {
+    return primalError < p.primalErrorThreshold;
+  }
+
+  bool isDualFeasible(const SDPSolverParameters &p) {
+    return dualError < p.dualErrorThreshold;
+  }
+
+  bool isOptimal(const SDPSolverParameters &p) {
+    return dualityGap() < p.dualityGapThreshold;
+  }
+
+  friend ostream& operator<<(ostream& os, const SDPSolverStatus& s) {
+    os << "primalObjective = " << s.primalObjective << endl;
+    os << "dualObjective   = " << s.dualObjective << endl;
+    os << "dualityGap      = " << s.dualityGap() << endl;
+    os << "primalError     = " << s.primalError << endl;
+    os << "dualError       = " << s.dualError << endl;
+    return os;
+  }
+};
+
+class SDPSolver {
+public:
+  SDP sdp;
+  SDPSolverStatus status;
+
+  // current point
+  Vector x;
+  BlockDiagonalMatrix X;
+  BlockDiagonalMatrix Y;
+
+  // search direction
+  Vector dx;
+  BlockDiagonalMatrix dX;
+  BlockDiagonalMatrix dY;
+
+  // discrepancies in dual and primal equality constraints
+  Vector dualResidues;
+  Vector dualResiduesReduced;
+  BlockDiagonalMatrix PrimalResidues;
+
+  // For free variable elimination
+  Matrix FreeVarMatrixReduced;
+  Vector dualObjectiveReduced;
+  vector<int> basicIndices;
+  vector<int> nonBasicIndices;
+
+  // intermediate computations
+  BlockDiagonalMatrix XCholesky;
+  BlockDiagonalMatrix YCholesky;
+  BlockDiagonalMatrix Z;
+  BlockDiagonalMatrix R;
+  BlockDiagonalMatrix BilinearPairingsXInv;
+  BlockDiagonalMatrix BilinearPairingsY;
+  BlockDiagonalMatrix SchurBlocks;
+  BlockDiagonalMatrix SchurBlocksCholesky;
+  Matrix SchurUpdateLowRank;
+  Matrix Q;
+  vector<Integer> Qpivots;
+  Vector basicKernelCoords;
+  Matrix BasicKernelSpan;
+  vector<vector<int> > schurStabilizeIndices;
+  vector<Real> schurStabilizeLambdas;
+  vector<Vector> schurStabilizeVectors;
+
+  // additional workspace variables
+  BlockDiagonalMatrix StepMatrixWorkspace;
+  vector<Matrix> bilinearPairingsWorkspace;
+  vector<Vector> eigenvaluesWorkspace;
+  vector<Vector> QRWorkspace;
+
+  SDPSolver(const SDP &sdp);
+  void initialize(const SDPSolverParameters &parameters);
+  SDPSolverTerminateReason run(const SDPSolverParameters &parameters,
+                               const path outFile, 
+                               path checkpointFile);
+  void initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
+                                       const BlockDiagonalMatrix &BilinearPairingsY);
+  void solveSchurComplementEquation(Vector &dx);
+  void computeSearchDirection(const Real &beta, const Real &mu, const bool correctorPhase);
+};
+
+#endif  // SDP_BOOTSTRAP_SDPSOLVER_H_
