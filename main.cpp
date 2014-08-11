@@ -14,9 +14,11 @@
 #include "boost/optional.hpp"
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "boost/timer/timer.hpp"
+#include "boost/program_options.hpp"
 
 using std::vector;
 using std::cout;
+using std::cerr;
 using std::endl;
 using std::ostream;
 using std::istream;
@@ -32,7 +34,6 @@ using boost::filesystem::path;
 using boost::filesystem::ifstream;
 using boost::optional;
 using boost::posix_time::second_clock;
-
 using boost::timer::cpu_timer;
 
 class Timers {
@@ -1180,57 +1181,66 @@ SDP readBootstrapSDP(const path sdpFile) {
 class SDPSolverParameters {
 public:
   int maxIterations;
-  Real dualityGapThreshold;          // = epsilonStar
-  Real primalFeasibilityThreshold;   // = epsilonBar
-  Real dualFeasibilityThreshold;     // = epsilonBar
-  Real initialMatrixScale;           // = lambdaStar
-  Real feasibleCenteringParameter;   // = betaStar
-  Real infeasibleCenteringParameter; // = betaBar
-  Real stepLengthReduction;          // = gammaStar
+  int checkpointInterval;
   int precision;
   int maxThreads;
+  Real dualityGapThreshold;
+  Real primalErrorThreshold;
+  Real dualErrorThreshold;
+  Real initialMatrixScale;
+  Real feasibleCenteringParameter;
+  Real infeasibleCenteringParameter;
+  Real stepLengthReduction;
+  Real maxDualObjective;
 
-  SDPSolverParameters():
-    maxIterations(200),
-    dualityGapThreshold("1e-100"),
-    primalFeasibilityThreshold("1e-30"),
-    dualFeasibilityThreshold("1e-30"),
-    initialMatrixScale("1e4"),
-    feasibleCenteringParameter("0.1"),
-    infeasibleCenteringParameter("0.3"),
-    stepLengthReduction("0.7"),
-    precision(500),
-    maxThreads(1) {}
-
-  SDPSolverParameters(const path &paramFile) {
-    ifstream ifs(paramFile);
-    ifs >> maxIterations;                ifs.ignore(256, '\n');
-    ifs >> dualityGapThreshold;          ifs.ignore(256, '\n');
-    ifs >> primalFeasibilityThreshold;   ifs.ignore(256, '\n');
-    ifs >> dualFeasibilityThreshold;     ifs.ignore(256, '\n');
-    ifs >> initialMatrixScale;           ifs.ignore(256, '\n');
-    ifs >> feasibleCenteringParameter;   ifs.ignore(256, '\n');
-    ifs >> infeasibleCenteringParameter; ifs.ignore(256, '\n');
-    ifs >> stepLengthReduction;          ifs.ignore(256, '\n');
-    ifs >> precision;                    ifs.ignore(256, '\n');
-    ifs >> maxThreads;                   ifs.ignore(256, '\n');
+  void resetPrecision() {
+    dualityGapThreshold         .set_prec(precision);
+    primalErrorThreshold        .set_prec(precision);
+    dualErrorThreshold          .set_prec(precision);
+    initialMatrixScale          .set_prec(precision);
+    feasibleCenteringParameter  .set_prec(precision);
+    infeasibleCenteringParameter.set_prec(precision);
+    stepLengthReduction         .set_prec(precision);
+    maxDualObjective            .set_prec(precision);
   }
 
   friend ostream& operator<<(ostream& os, const SDPSolverParameters& p);
-
 };
 
 ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
   os << "maxIterations                = " << p.maxIterations                << endl;
+  os << "checkpointInterval           = " << p.checkpointInterval           << endl;
+  os << "precision(actual)            = " << p.precision << "(" << mpf_get_default_prec() << ")" << endl;
+  os << "maxThreads                   = " << p.maxThreads                   << endl;
   os << "dualityGapThreshold          = " << p.dualityGapThreshold          << endl;
-  os << "primalFeasibilityThreshold   = " << p.primalFeasibilityThreshold   << endl;
-  os << "dualFeasibilityThreshold     = " << p.dualFeasibilityThreshold     << endl;
+  os << "primalErrorThreshold         = " << p.primalErrorThreshold         << endl;
+  os << "dualErrorThreshold           = " << p.dualErrorThreshold           << endl;
   os << "initialMatrixScale           = " << p.initialMatrixScale           << endl;
   os << "feasibleCenteringParameter   = " << p.feasibleCenteringParameter   << endl;
   os << "infeasibleCenteringParameter = " << p.infeasibleCenteringParameter << endl;
   os << "stepLengthReduction          = " << p.stepLengthReduction          << endl;
-  os << "precision(actual)            = " << p.precision << "(" << mpf_get_default_prec() << ")" << endl;
-  os << "maxThreads                   = " << p.maxThreads                   << endl;
+  os << "maxDualObjective             = " << p.maxDualObjective             << endl;
+  return os;
+}
+
+enum SDPSolverTerminateReason {
+  PrimalDualOptimal,
+  MaxIterationsExceeded,
+  DualFeasibleMaxObjectiveExceeded,
+};
+
+ostream &operator<<(ostream& os, const SDPSolverTerminateReason& r) {
+  switch(r) {
+  case PrimalDualOptimal:
+    os << "found primal-dual optimal solution.";
+    break;
+  case MaxIterationsExceeded:
+    os << "maxIterations exceeded.";
+    break;
+  case DualFeasibleMaxObjectiveExceeded:
+    os << "found dual feasible solution with dualObjective exceeding maxDualObjective.";
+    break;
+  }
   return os;
 }
 
@@ -1247,11 +1257,11 @@ public:
   }
 
   bool isPrimalFeasible(const SDPSolverParameters &p) {
-    return primalError < p.primalFeasibilityThreshold;
+    return primalError < p.primalErrorThreshold;
   }
 
   bool isDualFeasible(const SDPSolverParameters &p) {
-    return dualError < p.dualFeasibilityThreshold;
+    return dualError < p.dualErrorThreshold;
   }
 
   bool isOptimal(const SDPSolverParameters &p) {
@@ -1269,6 +1279,33 @@ ostream& operator<<(ostream& os, const SDPSolverStatus& s) {
   os << "primalError     = " << s.primalError << endl;
   os << "dualError       = " << s.dualError << endl;
   return os;
+}
+
+void printSolverHeader() {
+  cout << "     mu       P-obj       D-obj     gap         P-err        D-err       P-step   D-step   beta\n";
+  cout << "---------------------------------------------------------------------------------------------------\n";
+}
+
+void printSolverInfo(int iteration,
+                     Real mu,
+                     SDPSolverStatus status,
+                     bool isPrimalFeasible,
+                     bool isDualFeasible,
+                     Real primalStepLength,
+                     Real dualStepLength,
+                     Real betaCorrector) {
+  gmp_fprintf(stdout,
+              "%3d  %4.1Fe  %+7.2Fe  %+7.2Fe  %+7.2Fe  %s%+7.2Fe%s  %s%+7.2Fe%s  %4.1Fe  %4.1Fe  %4.2Fe\n",
+              iteration,
+              mu.get_mpf_t(),
+              status.primalObjective.get_mpf_t(),
+              status.dualObjective.get_mpf_t(),
+              status.dualityGap().get_mpf_t(),
+              isPrimalFeasible ? "|" : " ", status.primalError.get_mpf_t(), isPrimalFeasible ? "|" : " ",
+              isDualFeasible   ? "|" : " ", status.dualError.get_mpf_t(),   isDualFeasible   ? "|" : " ",
+              primalStepLength.get_mpf_t(),
+              dualStepLength.get_mpf_t(),
+              betaCorrector.get_mpf_t());
 }
 
 class SDPSolver {
@@ -1408,7 +1445,7 @@ public:
   }
 
   void initialize(const SDPSolverParameters &parameters);
-  SDPSolverStatus run(const SDPSolverParameters &parameters, const path outFile, const path checkpointFile);
+  SDPSolverTerminateReason run(const SDPSolverParameters &parameters, const path outFile, const path checkpointFile);
   void initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
                                        const BlockDiagonalMatrix &BilinearPairingsY);
   void solveSchurComplementEquation(Vector &dx);
@@ -1509,10 +1546,14 @@ void computeSchurBlocks(const SDP &sdp,
 
         Real tmp = 0;
         for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
-          tmp += (BilinearPairingsXInv.blocks[*b].elt(ej_s1 + k1, ej_r2 + k2) * BilinearPairingsY.blocks[*b].elt(ej_s2 + k2, ej_r1 + k1) +
-                  BilinearPairingsXInv.blocks[*b].elt(ej_r1 + k1, ej_r2 + k2) * BilinearPairingsY.blocks[*b].elt(ej_s2 + k2, ej_s1 + k1) +
-                  BilinearPairingsXInv.blocks[*b].elt(ej_s1 + k1, ej_s2 + k2) * BilinearPairingsY.blocks[*b].elt(ej_r2 + k2, ej_r1 + k1) +
-                  BilinearPairingsXInv.blocks[*b].elt(ej_r1 + k1, ej_s2 + k2) * BilinearPairingsY.blocks[*b].elt(ej_r2 + k2, ej_s1 + k1))/4;
+          tmp += (BilinearPairingsXInv.blocks[*b].elt(ej_s1 + k1, ej_r2 + k2) *
+                  BilinearPairingsY   .blocks[*b].elt(ej_s2 + k2, ej_r1 + k1) +
+                  BilinearPairingsXInv.blocks[*b].elt(ej_r1 + k1, ej_r2 + k2) *
+                  BilinearPairingsY   .blocks[*b].elt(ej_s2 + k2, ej_s1 + k1) +
+                  BilinearPairingsXInv.blocks[*b].elt(ej_s1 + k1, ej_s2 + k2) *
+                  BilinearPairingsY   .blocks[*b].elt(ej_r2 + k2, ej_r1 + k1) +
+                  BilinearPairingsXInv.blocks[*b].elt(ej_r1 + k1, ej_s2 + k2) *
+                  BilinearPairingsY   .blocks[*b].elt(ej_r2 + k2, ej_s1 + k1))/4;
         }
         SchurBlocks.blocks[j].elt(u1, u2) = tmp;
         if (u2 != u1)
@@ -1772,33 +1813,6 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   LUDecomposition(Q, Qpivots);
 }
 
-void printInfoHeader() {
-  cout << "     mu       P-obj       D-obj     gap         P-err        D-err       P-step   D-step   beta\n";
-  cout << "---------------------------------------------------------------------------------------------------\n";
-}
-
-void printInfo(int iteration,
-               Real mu,
-               SDPSolverStatus status,
-               bool isPrimalFeasible,
-               bool isDualFeasible,
-               Real primalStepLength,
-               Real dualStepLength,
-               Real betaCorrector) {
-  gmp_fprintf(stdout,
-              "%3d  %4.1Fe  %+7.2Fe  %+7.2Fe  %+7.2Fe  %s%+7.2Fe%s  %s%+7.2Fe%s  %4.1Fe  %4.1Fe  %4.2Fe\n",
-              iteration,
-              mu.get_mpf_t(),
-              status.primalObjective.get_mpf_t(),
-              status.dualObjective.get_mpf_t(),
-              status.dualityGap().get_mpf_t(),
-              isPrimalFeasible ? "|" : " ", status.primalError.get_mpf_t(), isPrimalFeasible ? "|" : " ",
-              isDualFeasible   ? "|" : " ", status.dualError.get_mpf_t(),   isDualFeasible   ? "|" : " ",
-              primalStepLength.get_mpf_t(),
-              dualStepLength.get_mpf_t(),
-              betaCorrector.get_mpf_t());
-}
-
 void SDPSolver::solveSchurComplementEquation(Vector &dx) {
 
   // dx = SchurBlocksCholesky^{-1} dx
@@ -1851,10 +1865,10 @@ void SDPSolver::computeSearchDirection(const Real &beta,
   dY *= -1;
 }
 
-SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
-                               const path outFile,
-                               const path checkpointFile) {
-  printInfoHeader();
+SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
+                                        const path outFile,
+                                        const path checkpointFile) {
+  printSolverHeader();
   timers.runSolver.resume();
 
   for (int iteration = 1; iteration <= parameters.maxIterations; iteration++) {
@@ -1886,7 +1900,10 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
     const bool isOptimal        = status.isOptimal(parameters);
     const bool reductionSwitch  = true;
 
-    if (isPrimalFeasible && isDualFeasible && isOptimal) break;
+    if (isPrimalFeasible && isDualFeasible && isOptimal)
+      return PrimalDualOptimal;
+    else if (isDualFeasible && status.dualObjective > parameters.maxDualObjective)
+      return DualFeasibleMaxObjectiveExceeded;
 
     timers.schurComplementCholesky.resume();
     initializeSchurComplementSolver(BilinearPairingsXInv, BilinearPairingsY);
@@ -1914,8 +1931,8 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
     Real dualStepLength   = stepLength(YCholesky, dY, StepMatrixWorkspace,
                                        eigenvaluesWorkspace, QRWorkspace, parameters);
 
-    printInfo(iteration, mu, status, isPrimalFeasible, isDualFeasible,
-              primalStepLength, dualStepLength, betaCorrector);
+    printSolverInfo(iteration, mu, status, isPrimalFeasible, isDualFeasible,
+                    primalStepLength, dualStepLength, betaCorrector);
 
     // Update current point
     scaleVector(dx, primalStepLength);
@@ -1927,7 +1944,7 @@ SDPSolverStatus SDPSolver::run(const SDPSolverParameters &parameters,
   }
 
   timers.runSolver.stop();
-  return status;
+  return MaxIterationsExceeded;
 }
 
 void printSDPDenseFormat(ostream& os, const SDP &sdp) {
@@ -1991,28 +2008,10 @@ void printSDPBHeader(const path &sdpFile,
   cout << parameters << endl;
 }
 
-void solveSDP(const path sdpFile,
-              const optional<path> outFileOption,
-              const optional<path> checkpointFileOption,
-              const optional<path> paramFileOption) {
-
-  path outFile = sdpFile;
-  outFile.replace_extension("out");
-  if (outFileOption)
-    outFile = *outFileOption;
-
-  path checkpointFile = sdpFile;
-  checkpointFile.replace_extension("ck");
-  if (checkpointFileOption)
-    checkpointFile = *checkpointFileOption;
-    
-  SDPSolverParameters parameters;
-  if (paramFileOption)
-    parameters = SDPSolverParameters(*paramFileOption);
-
-  mpf_set_default_prec(parameters.precision);
-  cout.precision(int(parameters.precision * 0.30102999566398114 + 5));
-  omp_set_num_threads(parameters.maxThreads);
+void solveSDP(const path &sdpFile,
+              const path &outFile,
+              const path &checkpointFile,
+              const SDPSolverParameters &parameters) {
 
   printSDPBHeader(sdpFile, outFile, checkpointFile, parameters);
 
@@ -2020,10 +2019,11 @@ void solveSDP(const path sdpFile,
 
   SDPSolver solver(sdp);
   solver.initialize(parameters);
-  SDPSolverStatus status = solver.run(parameters, outFile, checkpointFile);
-  
+  SDPSolverTerminateReason reason = solver.run(parameters, outFile, checkpointFile);
+
+  cout << "\nTerminated: " << reason << endl;
   cout << "\nStatus:\n";
-  cout << status << endl;
+  cout << solver.status << endl;
   cout << timers << endl;
 
   // cout << "X = " << solver.X << ";\n";
@@ -2111,38 +2111,128 @@ const char *help(const char *cmd) {
   return cmd;
 }
 
+namespace po = boost::program_options;
+
 int main(int argc, char** argv) {
 
   path sdpFile;
-  optional<path> outFile;
-  optional<path> checkpointFile;
-  optional<path> paramFile;
+  path outFile;
+  path checkpointFile;
+  path paramFile;
 
-  int i = 1;
-  while (i < argc) {
-    const char *arg = argv[i];
-    if (!strcmp(arg, "-h") || !strcmp(arg, "--help")) {
-      cout << help(argv[0]);
+  SDPSolverParameters parameters;
+
+  po::options_description basicOptions("Basic options");
+  basicOptions.add_options()
+    ("help,h", "Show this helpful message.")
+    ("sdpFile,s",
+     po::value<path>(&sdpFile)->required(),
+     "SDP data file in XML format.")
+    ("paramFile,p",
+     po::value<path>(&paramFile),
+     "Any parameter can optionally be set via this file in key=value "
+     "format. Command line arguments override values in the parameter "
+     "file.")
+    ("outFile,o",
+     po::value<path>(&outFile),
+     "The optimal solution is saved to this file in Mathematica "
+     "format. Defaults to sdpFile with '.out' extension.")
+    ("checkpointFile,c",
+     po::value<path>(&checkpointFile),
+     "Checkpoints are saved to this file every checkpointInterval. Defaults "
+     "to sdpFile with '.ck' extension.")
+    ;
+
+  po::options_description solverParamsOptions("Solver parameters");
+  solverParamsOptions.add_options()
+    ("precision",
+     po::value<int>(&parameters.precision)->default_value(400),
+     "Precision in binary digits.  GMP will typically round up to a nearby "
+     "multiple of a power of 2.")
+    ("maxThreads",
+     po::value<int>(&parameters.maxThreads)->default_value(4),
+     "Maximum number of threads to use for parallel calculation.")
+    ("checkpointInterval",
+     po::value<int>(&parameters.checkpointInterval)->default_value(3600),
+     "Save checkpoints to checkpointFile every checkpointInterval seconds.")
+    ("maxIterations",
+     po::value<int>(&parameters.maxIterations)->default_value(500),
+     "Maximum number of iterations to run the solver.")
+    ("dualityGapThreshold",
+     po::value<Real>(&parameters.dualityGapThreshold)->default_value(Real("1e-30")),
+     "Threshold for duality gap (roughly the difference in primal and dual "
+     "objective) at which the solution is considered "
+     "optimal. Corresponds to SDPA's epsilonStar.")
+    ("primalErrorThreshold",
+     po::value<Real>(&parameters.primalErrorThreshold)->default_value(Real("1e-30")),
+     "Threshold for feasibility of the primal problem. Corresponds to SDPA's "
+     "epsilonBar.")
+    ("dualErrorThreshold",
+     po::value<Real>(&parameters.dualErrorThreshold)->default_value(Real("1e-30")),
+     "Threshold for feasibility of the dual problem. Corresponds to SDPA's epsilonBar.")
+    ("initialMatrixScale",
+     po::value<Real>(&parameters.initialMatrixScale)->default_value(Real("1e10")),
+     "The primal and dual matrices X,Y begin at initialMatrixScale times the "
+     "identity matrix. Corresponds to SDPA's lambdaStar.")
+    ("feasibleCenteringParameter",
+     po::value<Real>(&parameters.feasibleCenteringParameter)->default_value(Real("0.1")),
+     "Shrink the complementarity X Y by this factor when the primal and dual "
+     "problems are feasible. Corresponds to SDPA's betaStar.")
+    ("infeasibleCenteringParameter",
+     po::value<Real>(&parameters.infeasibleCenteringParameter)->default_value(Real("0.3")),
+     "Shrink the complementarity X Y by this factor when either the primal "
+     "or dual problems are infeasible. Corresponds to SDPA's betaBar.")
+    ("stepLengthReduction",
+     po::value<Real>(&parameters.stepLengthReduction)->default_value(Real("0.7")),
+     "Shrink each newton step by this factor (smaller means slower, more "
+     "stable convergence). Corresponds to SDPA's gammaStar.")
+    ("maxDualObjective",
+     po::value<Real>(&parameters.maxDualObjective)->default_value(Real("1e10")),
+     "Terminate if the dual objective exceeds this value.")
+    ;
+    
+  po::options_description cmdLineOptions;
+  cmdLineOptions.add(basicOptions).add(solverParamsOptions);
+
+  po::variables_map variablesMap;
+
+  try {
+    po::store(po::parse_command_line(argc, argv, cmdLineOptions), variablesMap);
+
+    if (variablesMap.count("help")) {
+      cout << cmdLineOptions << endl;
       return 0;
-    } else if ((!strcmp(arg, "-s") || !strcmp(arg, "--sdpFile"))        && i+1 < argc) {
-      sdpFile = path(argv[i+1]);
-      i += 2;
-    } else if ((!strcmp(arg, "-p") || !strcmp(arg, "--paramFile"))      && i+1 < argc) {
-      paramFile = path(argv[i+1]);
-      i += 2;
-    } else if ((!strcmp(arg, "-o") || !strcmp(arg, "--outFile"))        && i+1 < argc) {
-      outFile = path(argv[i+1]);
-      i += 2;
-    } else if ((!strcmp(arg, "-c") || !strcmp(arg, "--checkpointFile")) && i+1 < argc) {
-      checkpointFile = path(argv[i+1]);
-      i += 2;
-    } else {
-      cout << help(argv[0]);
-      return 1;
     }
-  }
 
-  solveSDP(sdpFile, outFile, checkpointFile, paramFile);
+    if (variablesMap.count("paramFile")) {
+      paramFile = variablesMap["paramFile"].as<path>();
+      std::ifstream ifs(paramFile.string().c_str());
+      po::store(po::parse_config_file(ifs, solverParamsOptions), variablesMap);
+    }
+
+    po::notify(variablesMap);
+
+    if (!variablesMap.count("outFile")) {
+      outFile = sdpFile;
+      outFile.replace_extension("out");
+    }
+
+    if (!variablesMap.count("checkpointFile")) {
+      checkpointFile = sdpFile;
+      checkpointFile.replace_extension("ck");
+    }
+  } catch(po::error& e) {
+    cerr << "ERROR: " << e.what() << endl;
+    cerr << cmdLineOptions << endl; 
+    return 1; 
+  } 
+
+  mpf_set_default_prec(parameters.precision);
+  cout.precision(int(parameters.precision * 0.30102999566398114 + 5));
+  parameters.resetPrecision();
+  omp_set_num_threads(parameters.maxThreads);
+
+  solveSDP(sdpFile, outFile, checkpointFile, parameters);
   //testLinearlyIndependentRowIndices();
   //testMatrix();
   //testBilinearPairings(sdpFile);
