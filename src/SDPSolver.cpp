@@ -100,7 +100,7 @@ SDPSolver::SDPSolver(const SDP &sdp):
 }
 
 void printSolverHeader() {
-  cout << "     mu       P-obj       D-obj     gap         P-err        D-err       P-step   D-step   beta\n";
+  cout << "\n     mu       P-obj       D-obj     gap         P-err        D-err       P-step   D-step   beta\n";
   cout << "---------------------------------------------------------------------------------------------------\n";
 }
 
@@ -630,7 +630,6 @@ void SDPSolver::computeSearchDirection(const Real &beta,
 }
 
 SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
-                                        const path outFile,
                                         const path checkpointFile) {
   printSolverHeader();
   timers["Run solver"].start();
@@ -773,7 +772,7 @@ ostream& operator<<(ostream& os, const SDPSolverStatus& s) {
 void backupCheckpointFile(path const& checkpointFile) {
   path backupFile(checkpointFile);
   backupFile.replace_extension(".ck.bk");
-  cout << "Saving checkpoint backup: " << backupFile << endl;
+  cout << "Backing up checkpoint to: " << backupFile << endl;
   copy_file(checkpointFile, backupFile, boost::filesystem::copy_option::overwrite_if_exists);
 }
 
@@ -782,7 +781,7 @@ void SDPSolver::saveCheckpoint(const path &checkpointFile) {
     backupCheckpointFile(checkpointFile);
   boost::filesystem::ofstream ofs(checkpointFile);
   boost::archive::text_oarchive ar(ofs);
-  cout << "Saving checkpoint       : " << checkpointFile << endl;
+  cout << "Saving checkpoint to    : " << checkpointFile << endl;
   boost::serialization::serializeSDPSolverState(ar, x, X, Y);
 }
 
@@ -799,4 +798,10 @@ void SDPSolver::initialize(const SDPSolverParameters &parameters) {
   X.addDiagonal(parameters.initialMatrixScale);
   Y.setZero();
   Y.addDiagonal(parameters.initialMatrixScale);
+}
+
+void SDPSolver::saveSolution(const path &outFile) {
+  boost::filesystem::ofstream ofs(outFile);
+  cout << "Saving solution to: " << outFile << endl;
+  ofs << "foo" << endl;
 }

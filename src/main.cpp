@@ -29,6 +29,7 @@ int solveSDP(const path &sdpFile,
 
   mpf_set_default_prec(parameters.precision);
   cout.precision(int(parameters.precision * 0.30102999566398114 + 5));
+  // Ensure all the Real parameters have the appropriate precision
   parameters.resetPrecision();
   omp_set_num_threads(parameters.maxThreads);
 
@@ -50,12 +51,14 @@ int solveSDP(const path &sdpFile,
   else
     solver.initialize(parameters);
 
-  SDPSolverTerminateReason reason = solver.run(parameters, outFile, checkpointFile);
-
+  SDPSolverTerminateReason reason = solver.run(parameters, checkpointFile);
   cout << "\nTerminated: " << reason << endl;
   cout << "\nStatus:\n";
   cout << solver.status << endl;
   cout << timers << endl;
+
+  if (reason == PrimalDualOptimal || reason == DualFeasibleMaxObjectiveExceeded)
+    solver.saveSolution(outFile);
 
   return 0;
 }

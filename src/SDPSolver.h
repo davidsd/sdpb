@@ -48,9 +48,9 @@ public:
 
 enum SDPSolverTerminateReason {
   PrimalDualOptimal,
+  DualFeasibleMaxObjectiveExceeded,
   MaxIterationsExceeded,
   MaxRuntimeExceeded,
-  DualFeasibleMaxObjectiveExceeded,
 };
 
 ostream &operator<<(ostream& os, const SDPSolverTerminateReason& r);
@@ -122,15 +122,14 @@ public:
 
   SDPSolver(const SDP &sdp);
   void initialize(const SDPSolverParameters &parameters);
-  SDPSolverTerminateReason run(const SDPSolverParameters &parameters,
-                               const path outFile, 
-                               path checkpointFile);
+  SDPSolverTerminateReason run(const SDPSolverParameters &parameters, const path checkpointFile);
   void initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
                                        const BlockDiagonalMatrix &BilinearPairingsY);
   void solveSchurComplementEquation(Vector &dx);
   void computeSearchDirection(const Real &beta, const Real &mu, const bool correctorPhase);
-  void saveCheckpoint(const path &checkpointPath);
-  void loadCheckpoint(const path &checkpointPath);
+  void saveCheckpoint(const path &checkpointFile);
+  void loadCheckpoint(const path &checkpointFile);
+  void saveSolution(const path &outFile);
 };
 
 #endif  // SDP_BOOTSTRAP_SDPSOLVER_H_
