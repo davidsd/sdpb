@@ -824,37 +824,37 @@ public:
   }
 
   void addDiagonal(const Real &c) {
-    #pragma omp parallel for schedule(dynamic)
+    // #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b].addDiagonal(c);
   }
 
   void operator+=(const BlockDiagonalMatrix &A) {
-    #pragma omp parallel for schedule(dynamic)
+    // #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b] += A.blocks[b];
   }
 
   void operator-=(const BlockDiagonalMatrix &A) {
-    #pragma omp parallel for schedule(dynamic)
+    // #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b] -= A.blocks[b];
   }
 
   void operator*=(const Real &c) {
-    #pragma omp parallel for schedule(dynamic)
+    // #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b] *= c;
   }
 
   void copyFrom(const BlockDiagonalMatrix &A) {
-    #pragma omp parallel for schedule(dynamic)
+    // #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b].copyFrom(A.blocks[b]);
   }
 
   void symmetrize() {
-    #pragma omp parallel for schedule(dynamic)
+    // #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b].symmetrize();
   }
@@ -887,9 +887,14 @@ ostream& operator<<(ostream& os, const BlockDiagonalMatrix& A) {
 Real frobeniusProductSymmetric(const BlockDiagonalMatrix &A,
                                const BlockDiagonalMatrix &B) {
   Real result = 0;
-  // TODO: Parallelize this loop
-  for (unsigned int b = 0; b < A.blocks.size(); b++)
-    result += frobeniusProductSymmetric(A.blocks[b], B.blocks[b]);
+  // #pragma omp parallel for schedule(dynamic)
+  for (unsigned int b = 0; b < A.blocks.size(); b++) {
+    Real f = frobeniusProductSymmetric(A.blocks[b], B.blocks[b]);
+    // #pragma omp critical
+    {
+      result += f;
+    }
+  }
   return result;
 }
   
@@ -901,9 +906,14 @@ Real frobeniusProductOfSums(const BlockDiagonalMatrix &X,
                             const BlockDiagonalMatrix &Y,
                             const BlockDiagonalMatrix &dY) {
   Real result = 0;
-  // TODO: Parallelize this loop
-  for (unsigned int b = 0; b < X.blocks.size(); b++)
-    result += frobeniusProductOfSums(X.blocks[b], dX.blocks[b], Y.blocks[b], dY.blocks[b]);
+  // #pragma omp parallel for schedule(dynamic)
+  for (unsigned int b = 0; b < X.blocks.size(); b++) {
+    Real f = frobeniusProductOfSums(X.blocks[b], dX.blocks[b], Y.blocks[b], dY.blocks[b]);
+    // #pragma omp critical
+    {
+      result += f;
+    }
+  }
   return result;
 }
 
@@ -912,7 +922,7 @@ void blockDiagonalMatrixScaleMultiplyAdd(Real alpha,
                                          BlockDiagonalMatrix &B,
                                          Real beta,
                                          BlockDiagonalMatrix &C) {
-  #pragma omp parallel for schedule(dynamic)
+  // #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++)
     matrixScaleMultiplyAdd(alpha, A.blocks[b], B.blocks[b], beta, C.blocks[b]);
 }
@@ -924,7 +934,7 @@ void blockDiagonalMatrixMultiply(BlockDiagonalMatrix &A,
 }
 
 void lowerTriangularInverseCongruence(BlockDiagonalMatrix &A, BlockDiagonalMatrix &L) {
-  #pragma omp parallel for schedule(dynamic)
+  // #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++)
     lowerTriangularInverseCongruence(A.blocks[b], L.blocks[b]);
 }
@@ -941,10 +951,10 @@ Real minEigenvalue(BlockDiagonalMatrix &A, vector<Vector> &workspace, vector<Vec
 
   // TODO: get rid of this hack
   Real lambdaMin = 1e100;
-  #pragma omp parallel for schedule(dynamic)
+  // #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++) {
     Real minBlockLambda = minEigenvalue(A.blocks[b], workspace[b], eigenvalues[b]);
-    #pragma omp critical
+    // #pragma omp critical
     {
       lambdaMin = min(lambdaMin, minBlockLambda);
     }
@@ -955,38 +965,38 @@ Real minEigenvalue(BlockDiagonalMatrix &A, vector<Vector> &workspace, vector<Vec
 
 void choleskyDecomposition(BlockDiagonalMatrix &A,
                            BlockDiagonalMatrix &L) {
-  #pragma omp parallel for schedule(dynamic)
+  // #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++)
     choleskyDecomposition(A.blocks[b], L.blocks[b]);
 }
 
 void blockMatrixSolveWithCholesky(BlockDiagonalMatrix &ACholesky,
                                   BlockDiagonalMatrix &X) {
-  #pragma omp parallel for schedule(dynamic)
+  // #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < X.blocks.size(); b++)
     matrixSolveWithCholesky(ACholesky.blocks[b], X.blocks[b]);
 }
 
 void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L, Matrix &B) {
-  #pragma omp parallel for schedule(dynamic)
+  // #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < L.blocks.size(); b++)
     lowerTriangularSolve(L.blocks[b], &B.elt(L.blockStartIndices[b], 0), B.cols, B.rows);
 }
 
 void blockMatrixLowerTriangularTransposeSolve(BlockDiagonalMatrix &L, Matrix &B) {
-  #pragma omp parallel for schedule(dynamic)
+  // #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < L.blocks.size(); b++)
     lowerTriangularTransposeSolve(L.blocks[b], &B.elt(L.blockStartIndices[b], 0), B.cols, B.rows);
 }
 
 void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L, Vector &v) {
-  #pragma omp parallel for schedule(dynamic)
+  // #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < L.blocks.size(); b++)
     lowerTriangularSolve(L.blocks[b], &v[L.blockStartIndices[b]], 1, v.size());
 }
 
 void blockMatrixLowerTriangularTransposeSolve(BlockDiagonalMatrix &L, Vector &v) {
-  #pragma omp parallel for schedule(dynamic)
+  // #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < L.blocks.size(); b++)
     lowerTriangularTransposeSolve(L.blocks[b], &v[L.blockStartIndices[b]], 1, v.size());
 }
@@ -1456,7 +1466,7 @@ void computeBilinearPairings(const BlockDiagonalMatrix &A,
                              const vector<Matrix> &bilinearBases,
                              vector<Matrix> &workspace,
                              BlockDiagonalMatrix &result) {
-  #pragma omp parallel for schedule(dynamic)
+  // #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < bilinearBases.size(); b++)
     tensorMatrixCongruenceTranspose(A.blocks[b], bilinearBases[b], workspace[b], result.blocks[b]);
 }
@@ -1465,7 +1475,7 @@ void computeInvBilinearPairingsWithCholesky(const BlockDiagonalMatrix &L,
                                             const vector<Matrix> &bilinearBases,
                                             vector<Matrix> &workspace,
                                             BlockDiagonalMatrix &result) {
-  #pragma omp parallel for schedule(dynamic)
+  // #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < bilinearBases.size(); b++)
     tensorMatrixInvCongruenceTransposeWithCholesky(L.blocks[b], bilinearBases[b], workspace[b], result.blocks[b]);
 }
@@ -1530,7 +1540,7 @@ void computeSchurBlocks(const SDP &sdp,
                         const BlockDiagonalMatrix &BilinearPairingsY,
                         BlockDiagonalMatrix &SchurBlocks) {
 
-  #pragma omp parallel for schedule(dynamic)
+  // #pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     const int ej = sdp.degrees[j] + 1;
 
@@ -1572,7 +1582,8 @@ void basicCompletion(const Vector &dualObjectiveReduced,
   assert((int)basicIndices.size()    == FreeVarMatrixReduced.cols);
   assert((int)nonBasicIndices.size() == FreeVarMatrixReduced.rows);
   assert((int)x.size()               == FreeVarMatrixReduced.cols + FreeVarMatrixReduced.rows);
-  
+
+  // #pragma omp parallel for schedule(static)
   for (unsigned int n = 0; n < basicIndices.size(); n++) {
     x[basicIndices[n]] = dualObjectiveReduced[n];
     for (unsigned int p = 0; p < nonBasicIndices.size(); p++)
@@ -1591,6 +1602,7 @@ void nonBasicShift(const Matrix &FreeVarMatrixReduced,
   assert((int)x.size()               == FreeVarMatrixReduced.cols + FreeVarMatrixReduced.rows);
   assert(nonBasicIndices.size()      == xReduced.size());
   
+  // #pragma omp parallel for schedule(static)
   for (unsigned int p = 0; p < nonBasicIndices.size(); p++) {
     xReduced[p] = x[nonBasicIndices[p]];
     for (unsigned int n = 0; n < basicIndices.size(); n++)
@@ -1602,7 +1614,7 @@ void computeDualResidues(const SDP &sdp,
                          const BlockDiagonalMatrix &Y,
                          const BlockDiagonalMatrix &BilinearPairingsY,
                          Vector &dualResidues) {
-  #pragma omp parallel for schedule(dynamic)
+  // #pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     const int ej = sdp.degrees[j] +1;
 
@@ -1652,7 +1664,7 @@ void computeSchurRHS(const SDP &sdp,
   for (unsigned int p = 0; p < r.size(); p++)
     r[p] = -dualResidues[p];
 
-  #pragma omp parallel for schedule(dynamic)
+  // #pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     for (vector<IndexTuple>::const_iterator t = sdp.constraintIndices[j].begin();
          t != sdp.constraintIndices[j].end();
@@ -2105,10 +2117,6 @@ void testMatrix() {
   A.elt(2,0) = 3;
   A.symmetrize();
   cout << A << endl;
-}
-
-const char *help(const char *cmd) {
-  return cmd;
 }
 
 namespace po = boost::program_options;
