@@ -6,6 +6,7 @@
 #include <vector>
 #include <assert.h>
 #include <math.h>
+#include <map>
 #include "omp.h"
 #include "types.h"
 #include "tinyxml2.h"
@@ -36,69 +37,31 @@ using boost::optional;
 using boost::posix_time::second_clock;
 using boost::timer::cpu_timer;
 
-class Timers {
+class Timer {
 public:
-  cpu_timer initializeSchurComplementSolver;
-  cpu_timer choleskyXY;
-  cpu_timer stepLength;
-  cpu_timer predictorSolution;
-  cpu_timer correctorSolution;
-  cpu_timer bilinearPairings;
-  cpu_timer computeSchurBlocks;
-  cpu_timer schurBlocksCholesky;
-  cpu_timer schurCholeskyUpdate;
-  cpu_timer runSolver;
-  cpu_timer csdComputeR;
-  cpu_timer csdComputeZ;
-  cpu_timer csdComputeSchurRHS;
-  cpu_timer csdSolveSchurComp;
-  cpu_timer csdComputedX;
-  cpu_timer csdComputedY;
+  std::map<std::string,cpu_timer> timers;
 
-  Timers() {
-    initializeSchurComplementSolver.stop();
-    choleskyXY.stop();
-    stepLength.stop();
-    predictorSolution.stop();
-    correctorSolution.stop();
-    bilinearPairings.stop();
-    computeSchurBlocks.stop();
-    schurBlocksCholesky.stop();
-    schurCholeskyUpdate.stop();
-    runSolver.stop();
-    csdComputeR.stop();
-    csdComputeZ.stop();
-    csdComputeSchurRHS.stop();
-    csdSolveSchurComp.stop();
-    csdComputedX.stop();
-    csdComputedY.stop();
-  }    
+  void start(const std::string &t) {
+    timers[t].resume();
+  }
 
-  friend ostream& operator<<(ostream& os, const Timers& t);
+  void stop(const std::string &t) {
+    timers[t].stop();
+  }
+
+  friend ostream& operator<<(ostream& os, const Timer& t);
 };
 
-ostream& operator<<(ostream& os, const Timers& t) {
-  cout << "Time elapsed:" << endl;
-  cout << "  initializeSchurComplementSolver: " << t.initializeSchurComplementSolver.format();
-  cout << "  choleskyXY             : " << t.choleskyXY.format();
-  cout << "  stepLength             : " << t.stepLength.format();
-  cout << "  predictorSolution      : " << t.predictorSolution.format();
-  cout << "  correctorSolution      : " << t.correctorSolution.format();
-  cout << "  bilinearPairings       : " << t.bilinearPairings.format();
-  cout << "  computeSchurBlocks     : " << t.computeSchurBlocks.format();
-  cout << "  schurBlocksCholesky    : " << t.schurBlocksCholesky.format();
-  cout << "  schurCholeskyUpdate    : " << t.schurCholeskyUpdate.format();
-  cout << "  csdComputeR            : " << t.csdComputeR.format();
-  cout << "  csdComputeZ            : " << t.csdComputeZ.format();
-  cout << "  csdComputeSchurRHS     : " << t.csdComputeSchurRHS.format();
-  cout << "  csdSolveSchurComp      : " << t.csdSolveSchurComp.format();
-  cout << "  csdComputedX           : " << t.csdComputedX.format();
-  cout << "  csdComputedY           : " << t.csdComputedY.format();
-  cout << "  runSolver              : " << t.runSolver.format();
+ostream& operator<<(ostream& os, const Timer& t) {
+  for (std::map<std::string,cpu_timer>::const_iterator it = t.timers.begin();
+       it != t.timers.end();
+       ++it) {
+    os << it->first << "\t:" << it->second.format();
+  }
   return os;
 }
 
-Timers timers;
+Timer timer;
 
 template<class Iter, class T>
 Iter binaryFind(Iter begin, Iter end, T val)
@@ -1801,13 +1764,13 @@ void addKernelColumn(const Matrix &FreeVarMatrixReduced,
 void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
                                                 const BlockDiagonalMatrix &BilinearPairingsY) {
 
-  timers.computeSchurBlocks.resume();
+  timer.start("computeSchurBlocks");
   computeSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, SchurBlocks);
-  timers.computeSchurBlocks.stop();
+  timer.stop("computeSchurBlocks");
 
-  timers.schurBlocksCholesky.resume();
+  timer.start("schurBlocksCholesky");
   choleskyDecomposition(SchurBlocks, SchurBlocksCholesky);
-  timers.schurBlocksCholesky.stop();
+  timer.stop("schurBlocksCholesky");
 
   for (unsigned int b = 0; b < SchurBlocks.blocks.size(); b++)
     stabilizeCholesky(SchurBlocksCholesky.blocks[b],
@@ -1868,66 +1831,66 @@ void SDPSolver::computeSearchDirection(const Real &beta,
                                        const Real &mu,
                                        const bool correctorPhase) {
 
-  timers.csdComputeR.resume();
+  timer.start("csdComputeR");
   blockDiagonalMatrixScaleMultiplyAdd(-1, X,  Y,  0, R);
   if (correctorPhase)
     blockDiagonalMatrixScaleMultiplyAdd(-1, dX, dY, 1, R);
   R.addDiagonal(beta*mu);
-  timers.csdComputeR.stop();
+  timer.stop("csdComputeR");
 
-  timers.csdComputeZ.resume();
+  timer.start("csdComputeZ");
   // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))
   blockDiagonalMatrixMultiply(PrimalResidues, Y, Z);
   Z -= R;
   blockMatrixSolveWithCholesky(XCholesky, Z);
   Z.symmetrize();
-  timers.csdComputeZ.stop();
+  timer.stop("csdComputeZ");
 
-  timers.csdComputeSchurRHS.resume();
+  timer.start("csdComputeSchurRHS");
   // dx_k = -d_k + Tr(F_k Z)
   computeSchurRHS(sdp, dualResidues, Z, dx);
-  timers.csdComputeSchurRHS.stop();
+  timer.stop("csdComputeSchurRHS");
 
-  timers.csdSolveSchurComp.resume();
+  timer.start("csdSolveSchurComp");
   // dx_N = B_{NN}^{-1} dx_N, dx_B = E^T dx_N
   solveSchurComplementEquation(dx);
-  timers.csdSolveSchurComp.stop();
+  timer.stop("csdSolveSchurComp");
 
-  timers.csdComputedX.resume();
+  timer.start("csdComputedX");
   // dX = R_p + sum_p F_p dx_p
   constraintMatrixWeightedSum(sdp, dx, dX);
   dX += PrimalResidues;
-  timers.csdComputedX.stop();
+  timer.stop("csdComputedX");
   
-  timers.csdComputedY.resume();
+  timer.start("csdComputedY");
   // dY = Symmetrize(X^{-1} (R - dX Y))
   blockDiagonalMatrixMultiply(dX, Y, dY);
   dY -= R;
   blockMatrixSolveWithCholesky(XCholesky, dY);
   dY.symmetrize();
   dY *= -1;
-  timers.csdComputedY.stop();
+  timer.stop("csdComputedY");
 }
 
 SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
                                         const path outFile,
                                         const path checkpointFile) {
   printSolverHeader();
-  timers.runSolver.resume();
+  timer.start("runSolver");
 
   for (int iteration = 1; iteration <= parameters.maxIterations; iteration++) {
     // Maintain the invariant x_B = g + E^T x_N
     basicCompletion(dualObjectiveReduced, FreeVarMatrixReduced, basicIndices, nonBasicIndices, x);
 
-    timers.choleskyXY.resume();
+    timer.start("choleskyXY");
     choleskyDecomposition(X, XCholesky);
     choleskyDecomposition(Y, YCholesky);
-    timers.choleskyXY.stop();
+    timer.stop("choleskyXY");
 
-    timers.bilinearPairings.resume();
+    timer.start("bilinearPairings");
     computeInvBilinearPairingsWithCholesky(XCholesky, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsXInv);
     computeBilinearPairings(Y, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsY);
-    timers.bilinearPairings.stop();
+    timer.stop("bilinearPairings");
 
     // d_k = c_k - Tr(F_k Y)
     computeDualResidues(sdp, Y, BilinearPairingsY, dualResidues);
@@ -1951,33 +1914,33 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     else if (isDualFeasible && status.dualObjective > parameters.maxDualObjective)
       return DualFeasibleMaxObjectiveExceeded;
 
-    timers.initializeSchurComplementSolver.resume();
+    timer.start("initializeSchurComplementSolver");
     initializeSchurComplementSolver(BilinearPairingsXInv, BilinearPairingsY);
-    timers.initializeSchurComplementSolver.stop();
+    timer.stop("initializeSchurComplementSolver");
 
     Real mu = frobeniusProductSymmetric(X, Y)/X.dim;
 
     // Mehrotra predictor solution for (dx, dX, dY)
     Real betaPredictor = predictorCenteringParameter(parameters, reductionSwitch,
                                                      isPrimalFeasible && isDualFeasible);
-    timers.predictorSolution.resume();
+    timer.start("predictorSolution");
     computeSearchDirection(betaPredictor, mu, false);
-    timers.predictorSolution.stop();
+    timer.stop("predictorSolution");
 
     // Mehrotra corrector solution for (dx, dX, dY)
     Real betaCorrector = correctorCenteringParameter(parameters, X, dX, Y, dY, mu,
                                                      isPrimalFeasible && isDualFeasible);
-    timers.correctorSolution.resume();
+    timer.start("correctorSolution");
     computeSearchDirection(betaCorrector, mu, true);
-    timers.correctorSolution.stop();
+    timer.stop("correctorSolution");
 
-    timers.stepLength.resume();
+    timer.start("stepLength");
     // Step length to preserve positive definiteness
     Real primalStepLength = stepLength(XCholesky, dX, StepMatrixWorkspace,
                                        eigenvaluesWorkspace, QRWorkspace, parameters);
     Real dualStepLength   = stepLength(YCholesky, dY, StepMatrixWorkspace,
                                        eigenvaluesWorkspace, QRWorkspace, parameters);
-    timers.stepLength.stop();
+    timer.stop("stepLength");
 
     printSolverInfo(iteration, mu, status, isPrimalFeasible, isDualFeasible,
                     primalStepLength, dualStepLength, betaCorrector);
@@ -1991,7 +1954,7 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     Y += dY;
   }
 
-  timers.runSolver.stop();
+  timer.stop("runSolver");
   return MaxIterationsExceeded;
 }
 
@@ -2072,7 +2035,7 @@ void solveSDP(const path &sdpFile,
   cout << "\nTerminated: " << reason << endl;
   cout << "\nStatus:\n";
   cout << solver.status << endl;
-  cout << timers << endl;
+  cout << timer << endl;
 
   // cout << "X = " << solver.X << ";\n";
   // cout << "Y = " << solver.Y << ";\n";
