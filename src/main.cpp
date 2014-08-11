@@ -38,7 +38,9 @@ using boost::timer::cpu_timer;
 
 class Timers {
 public:
-  cpu_timer schurComplementCholesky;
+  cpu_timer initializeSchurComplementSolver;
+  cpu_timer choleskyXY;
+  cpu_timer stepLength;
   cpu_timer predictorSolution;
   cpu_timer correctorSolution;
   cpu_timer bilinearPairings;
@@ -46,9 +48,17 @@ public:
   cpu_timer schurBlocksCholesky;
   cpu_timer schurCholeskyUpdate;
   cpu_timer runSolver;
+  cpu_timer csdComputeR;
+  cpu_timer csdComputeZ;
+  cpu_timer csdComputeSchurRHS;
+  cpu_timer csdSolveSchurComp;
+  cpu_timer csdComputedX;
+  cpu_timer csdComputedY;
 
   Timers() {
-    schurComplementCholesky.stop();
+    initializeSchurComplementSolver.stop();
+    choleskyXY.stop();
+    stepLength.stop();
     predictorSolution.stop();
     correctorSolution.stop();
     bilinearPairings.stop();
@@ -56,6 +66,12 @@ public:
     schurBlocksCholesky.stop();
     schurCholeskyUpdate.stop();
     runSolver.stop();
+    csdComputeR.stop();
+    csdComputeZ.stop();
+    csdComputeSchurRHS.stop();
+    csdSolveSchurComp.stop();
+    csdComputedX.stop();
+    csdComputedY.stop();
   }    
 
   friend ostream& operator<<(ostream& os, const Timers& t);
@@ -63,13 +79,21 @@ public:
 
 ostream& operator<<(ostream& os, const Timers& t) {
   cout << "Time elapsed:" << endl;
-  cout << "  schurComplementCholesky: " << t.schurComplementCholesky.format();
+  cout << "  initializeSchurComplementSolver: " << t.initializeSchurComplementSolver.format();
+  cout << "  choleskyXY             : " << t.choleskyXY.format();
+  cout << "  stepLength             : " << t.stepLength.format();
   cout << "  predictorSolution      : " << t.predictorSolution.format();
   cout << "  correctorSolution      : " << t.correctorSolution.format();
   cout << "  bilinearPairings       : " << t.bilinearPairings.format();
   cout << "  computeSchurBlocks     : " << t.computeSchurBlocks.format();
   cout << "  schurBlocksCholesky    : " << t.schurBlocksCholesky.format();
   cout << "  schurCholeskyUpdate    : " << t.schurCholeskyUpdate.format();
+  cout << "  csdComputeR            : " << t.csdComputeR.format();
+  cout << "  csdComputeZ            : " << t.csdComputeZ.format();
+  cout << "  csdComputeSchurRHS     : " << t.csdComputeSchurRHS.format();
+  cout << "  csdSolveSchurComp      : " << t.csdSolveSchurComp.format();
+  cout << "  csdComputedX           : " << t.csdComputedX.format();
+  cout << "  csdComputedY           : " << t.csdComputedY.format();
   cout << "  runSolver              : " << t.runSolver.format();
   return os;
 }
@@ -273,7 +297,8 @@ void matrixMultiply(Matrix &A, Matrix &B, Matrix &C) {
 void matrixSquare(Matrix &A, Matrix &B) {
   assert(A.cols == B.rows);
   assert(B.cols == B.rows);
-
+  
+  #pragma omp parallel for schedule(dynamic)
   for (int c = 0; c < B.cols; c++) {
     for (int r = 0; r <= c; r++) {
       Real tmp = 0;
@@ -331,12 +356,13 @@ void vectorScaleMatrixMultiplyAdd(Real alpha, Matrix &A, Vector &x, Real beta, V
   assert(A.cols == (int)x.size());
   assert(A.rows == (int)y.size());
 
-  Rgemv("NoTranspose",
-        A.rows, A.cols, alpha,
-        &A.elements[0], A.rows,
-        &x[0], 1,
-        beta,
-        &y[0], 1);
+  #pragma omp parallel for schedule(static)
+  for (int p = 0; p < A.rows; p++) {
+    Real tmp = 0;
+    for (int n = 0; n < A.cols; n++)
+      tmp += A.elt(p,n)*x[n];
+    y[p] = alpha*tmp + beta*y[p];
+  }
 }
 
 // y := alpha A^T x + beta y
@@ -345,18 +371,13 @@ void vectorScaleMatrixMultiplyTransposeAdd(Real alpha, Matrix &A, Vector &x, Rea
   assert(A.cols == (int)y.size());
   assert(A.rows == (int)x.size());
 
-  Rgemv("Transpose",
-        A.rows, A.cols, alpha,
-        &A.elements[0], A.rows,
-        &x[0], 1,
-        beta,
-        &y[0], 1);
-}
-
-Real frobeniusProduct(const Matrix &A, const Matrix &B) {
-  assert(A.rows == B.rows);
-  assert(A.cols == B.cols);
-  return dotProduct(A.elements, B.elements);
+  #pragma omp parallel for schedule(static)
+  for (int n = 0; n < A.cols; n++) {
+    Real tmp = 0;
+    for (int p = 0; p < A.rows; p++)
+      tmp += A.elt(p,n)*x[p];
+    y[n] = alpha*tmp + beta*y[n];
+  }
 }
 
 Real frobeniusProductSymmetric(const Matrix &A, const Matrix &B) {
@@ -1638,10 +1659,10 @@ void computeDualResidues(const SDP &sdp,
 }
 
 void constraintMatrixWeightedSum(const SDP &sdp, const Vector x, BlockDiagonalMatrix &result)  {
-  // TODO: parallelize this loop
-  int p = 0;
+  #pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     const int dj = sdp.degrees[j];
+    int p  = sdp.constraintIndices[j][0].p;
 
     for (int s = 0; s < sdp.dimensions[j]; s++) {
       for (int r = 0; r <= s; r++) {
@@ -1651,7 +1672,6 @@ void constraintMatrixWeightedSum(const SDP &sdp, const Vector x, BlockDiagonalMa
       }
     }
   }
-  assert(p == (int)x.size());
 
   result.symmetrize();
 }
@@ -1848,33 +1868,45 @@ void SDPSolver::computeSearchDirection(const Real &beta,
                                        const Real &mu,
                                        const bool correctorPhase) {
 
+  timers.csdComputeR.resume();
   blockDiagonalMatrixScaleMultiplyAdd(-1, X,  Y,  0, R);
   if (correctorPhase)
     blockDiagonalMatrixScaleMultiplyAdd(-1, dX, dY, 1, R);
   R.addDiagonal(beta*mu);
+  timers.csdComputeR.stop();
 
+  timers.csdComputeZ.resume();
   // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))
   blockDiagonalMatrixMultiply(PrimalResidues, Y, Z);
   Z -= R;
   blockMatrixSolveWithCholesky(XCholesky, Z);
   Z.symmetrize();
+  timers.csdComputeZ.stop();
 
+  timers.csdComputeSchurRHS.resume();
   // dx_k = -d_k + Tr(F_k Z)
   computeSchurRHS(sdp, dualResidues, Z, dx);
+  timers.csdComputeSchurRHS.stop();
 
+  timers.csdSolveSchurComp.resume();
   // dx_N = B_{NN}^{-1} dx_N, dx_B = E^T dx_N
   solveSchurComplementEquation(dx);
+  timers.csdSolveSchurComp.stop();
 
+  timers.csdComputedX.resume();
   // dX = R_p + sum_p F_p dx_p
   constraintMatrixWeightedSum(sdp, dx, dX);
   dX += PrimalResidues;
+  timers.csdComputedX.stop();
   
+  timers.csdComputedY.resume();
   // dY = Symmetrize(X^{-1} (R - dX Y))
   blockDiagonalMatrixMultiply(dX, Y, dY);
   dY -= R;
   blockMatrixSolveWithCholesky(XCholesky, dY);
   dY.symmetrize();
   dY *= -1;
+  timers.csdComputedY.stop();
 }
 
 SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
@@ -1887,8 +1919,10 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     // Maintain the invariant x_B = g + E^T x_N
     basicCompletion(dualObjectiveReduced, FreeVarMatrixReduced, basicIndices, nonBasicIndices, x);
 
+    timers.choleskyXY.resume();
     choleskyDecomposition(X, XCholesky);
     choleskyDecomposition(Y, YCholesky);
+    timers.choleskyXY.stop();
 
     timers.bilinearPairings.resume();
     computeInvBilinearPairingsWithCholesky(XCholesky, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsXInv);
@@ -1917,9 +1951,9 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     else if (isDualFeasible && status.dualObjective > parameters.maxDualObjective)
       return DualFeasibleMaxObjectiveExceeded;
 
-    timers.schurComplementCholesky.resume();
+    timers.initializeSchurComplementSolver.resume();
     initializeSchurComplementSolver(BilinearPairingsXInv, BilinearPairingsY);
-    timers.schurComplementCholesky.stop();
+    timers.initializeSchurComplementSolver.stop();
 
     Real mu = frobeniusProductSymmetric(X, Y)/X.dim;
 
@@ -1937,11 +1971,13 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     computeSearchDirection(betaCorrector, mu, true);
     timers.correctorSolution.stop();
 
+    timers.stepLength.resume();
     // Step length to preserve positive definiteness
     Real primalStepLength = stepLength(XCholesky, dX, StepMatrixWorkspace,
                                        eigenvaluesWorkspace, QRWorkspace, parameters);
     Real dualStepLength   = stepLength(YCholesky, dY, StepMatrixWorkspace,
                                        eigenvaluesWorkspace, QRWorkspace, parameters);
+    timers.stepLength.stop();
 
     printSolverInfo(iteration, mu, status, isPrimalFeasible, isDualFeasible,
                     primalStepLength, dualStepLength, betaCorrector);
