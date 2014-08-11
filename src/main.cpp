@@ -1764,13 +1764,8 @@ void addKernelColumn(const Matrix &FreeVarMatrixReduced,
 void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
                                                 const BlockDiagonalMatrix &BilinearPairingsY) {
 
-  timer.start("computeSchurBlocks");
   computeSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, SchurBlocks);
-  timer.stop("computeSchurBlocks");
-
-  timer.start("schurBlocksCholesky");
   choleskyDecomposition(SchurBlocks, SchurBlocksCholesky);
-  timer.stop("schurBlocksCholesky");
 
   for (unsigned int b = 0; b < SchurBlocks.blocks.size(); b++)
     stabilizeCholesky(SchurBlocksCholesky.blocks[b],
@@ -1831,45 +1826,33 @@ void SDPSolver::computeSearchDirection(const Real &beta,
                                        const Real &mu,
                                        const bool correctorPhase) {
 
-  timer.start("csdComputeR");
   blockDiagonalMatrixScaleMultiplyAdd(-1, X,  Y,  0, R);
   if (correctorPhase)
     blockDiagonalMatrixScaleMultiplyAdd(-1, dX, dY, 1, R);
   R.addDiagonal(beta*mu);
-  timer.stop("csdComputeR");
 
-  timer.start("csdComputeZ");
   // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))
   blockDiagonalMatrixMultiply(PrimalResidues, Y, Z);
   Z -= R;
   blockMatrixSolveWithCholesky(XCholesky, Z);
   Z.symmetrize();
-  timer.stop("csdComputeZ");
 
-  timer.start("csdComputeSchurRHS");
   // dx_k = -d_k + Tr(F_k Z)
   computeSchurRHS(sdp, dualResidues, Z, dx);
-  timer.stop("csdComputeSchurRHS");
 
-  timer.start("csdSolveSchurComp");
   // dx_N = B_{NN}^{-1} dx_N, dx_B = E^T dx_N
   solveSchurComplementEquation(dx);
-  timer.stop("csdSolveSchurComp");
 
-  timer.start("csdComputedX");
   // dX = R_p + sum_p F_p dx_p
   constraintMatrixWeightedSum(sdp, dx, dX);
   dX += PrimalResidues;
-  timer.stop("csdComputedX");
   
-  timer.start("csdComputedY");
   // dY = Symmetrize(X^{-1} (R - dX Y))
   blockDiagonalMatrixMultiply(dX, Y, dY);
   dY -= R;
   blockMatrixSolveWithCholesky(XCholesky, dY);
   dY.symmetrize();
   dY *= -1;
-  timer.stop("csdComputedY");
 }
 
 SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
@@ -1882,15 +1865,11 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     // Maintain the invariant x_B = g + E^T x_N
     basicCompletion(dualObjectiveReduced, FreeVarMatrixReduced, basicIndices, nonBasicIndices, x);
 
-    timer.start("choleskyXY");
     choleskyDecomposition(X, XCholesky);
     choleskyDecomposition(Y, YCholesky);
-    timer.stop("choleskyXY");
 
-    timer.start("bilinearPairings");
     computeInvBilinearPairingsWithCholesky(XCholesky, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsXInv);
     computeBilinearPairings(Y, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsY);
-    timer.stop("bilinearPairings");
 
     // d_k = c_k - Tr(F_k Y)
     computeDualResidues(sdp, Y, BilinearPairingsY, dualResidues);
@@ -1914,33 +1893,25 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     else if (isDualFeasible && status.dualObjective > parameters.maxDualObjective)
       return DualFeasibleMaxObjectiveExceeded;
 
-    timer.start("initializeSchurComplementSolver");
     initializeSchurComplementSolver(BilinearPairingsXInv, BilinearPairingsY);
-    timer.stop("initializeSchurComplementSolver");
 
     Real mu = frobeniusProductSymmetric(X, Y)/X.dim;
 
     // Mehrotra predictor solution for (dx, dX, dY)
     Real betaPredictor = predictorCenteringParameter(parameters, reductionSwitch,
                                                      isPrimalFeasible && isDualFeasible);
-    timer.start("predictorSolution");
     computeSearchDirection(betaPredictor, mu, false);
-    timer.stop("predictorSolution");
 
     // Mehrotra corrector solution for (dx, dX, dY)
     Real betaCorrector = correctorCenteringParameter(parameters, X, dX, Y, dY, mu,
                                                      isPrimalFeasible && isDualFeasible);
-    timer.start("correctorSolution");
     computeSearchDirection(betaCorrector, mu, true);
-    timer.stop("correctorSolution");
 
-    timer.start("stepLength");
     // Step length to preserve positive definiteness
     Real primalStepLength = stepLength(XCholesky, dX, StepMatrixWorkspace,
                                        eigenvaluesWorkspace, QRWorkspace, parameters);
     Real dualStepLength   = stepLength(YCholesky, dY, StepMatrixWorkspace,
                                        eigenvaluesWorkspace, QRWorkspace, parameters);
-    timer.stop("stepLength");
 
     printSolverInfo(iteration, mu, status, isPrimalFeasible, isDualFeasible,
                     primalStepLength, dualStepLength, betaCorrector);
@@ -2009,58 +1980,6 @@ void printSDPBHeader(const path &sdpFile,
                      const path &outFile,
                      const path &checkpointFile,
                      const SDPSolverParameters &parameters) {
-  cout << "SDPB started at " << second_clock::local_time() << endl;
-  cout << "SDP file        : " << sdpFile        << endl;
-  cout << "out file        : " << outFile        << endl;
-  cout << "checkpoint file : " << checkpointFile << endl;
-  cout << "using " << omp_get_max_threads() << " threads." << endl;
-
-  cout << "\nParameters:\n";
-  cout << parameters << endl;
-}
-
-void solveSDP(const path &sdpFile,
-              const path &outFile,
-              const path &checkpointFile,
-              const SDPSolverParameters &parameters) {
-
-  printSDPBHeader(sdpFile, outFile, checkpointFile, parameters);
-
-  const SDP sdp = readBootstrapSDP(sdpFile);
-
-  SDPSolver solver(sdp);
-  solver.initialize(parameters);
-  SDPSolverTerminateReason reason = solver.run(parameters, outFile, checkpointFile);
-
-  cout << "\nTerminated: " << reason << endl;
-  cout << "\nStatus:\n";
-  cout << solver.status << endl;
-  cout << timer << endl;
-
-  // cout << "X = " << solver.X << ";\n";
-  // cout << "Y = " << solver.Y << ";\n";
-  // cout << "x = " << solver.x << ";\n";
-  // cout << "FreeVarMatrixReducedE = " << solver.FreeVarMatrixReduced << ";\n";
-  // cout << "dualObjectiveReduced = " << solver.dualObjectiveReduced << ";\n";
-  // cout << "BilinearPairingsXInv = " << solver.BilinearPairingsXInv << endl;
-  // cout << "BilinearPairingsY = " << solver.BilinearPairingsY << endl;
-  // cout << "schurComplement = " << solver.schurComplement << ";\n";
-  // cout << "R = " << solver.R << ";\n";
-  // cout << "dualResidues = " << solver.dualResidues << ";\n";
-  // cout << "PrimalResidues = " << solver.PrimalResidues << ";\n";
-  // cout << "Z = " << solver.Z << ";\n";
-  // cout << "dx = " << solver.dx << ";\n";
-  // cout << "dX = " << solver.dX << ";\n";
-  // cout << "dY = " << solver.dY << ";\n";
-
-  // path datFile = sdpFile;
-  // datFile.replace_extension("dat");
-  // ofstream datStream;
-  // datStream.open(datFile.c_str());
-  // datStream.precision(parameters.precision);
-  //cout << sdp;
-  //printSDPDenseFormat(cout, sdp);
-  // datStream.close();
 }
 
 void testBilinearPairings(const path sdpFile) {
@@ -2116,6 +2035,39 @@ void testMatrix() {
   A.elt(2,0) = 3;
   A.symmetrize();
   cout << A << endl;
+}
+
+int solveSDP(const path &sdpFile,
+             const path &outFile,
+             const path &checkpointFile,
+             SDPSolverParameters parameters) {
+
+  mpf_set_default_prec(parameters.precision);
+  cout.precision(int(parameters.precision * 0.30102999566398114 + 5));
+  parameters.resetPrecision();
+  omp_set_num_threads(parameters.maxThreads);
+
+  cout << "SDPB started at " << second_clock::local_time() << endl;
+  cout << "SDP file        : " << sdpFile        << endl;
+  cout << "out file        : " << outFile        << endl;
+  cout << "checkpoint file : " << checkpointFile << endl;
+  cout << "using " << omp_get_max_threads() << " threads." << endl;
+
+  cout << "\nParameters:\n";
+  cout << parameters << endl;
+
+  const SDP sdp = readBootstrapSDP(sdpFile);
+
+  SDPSolver solver(sdp);
+  solver.initialize(parameters);
+  SDPSolverTerminateReason reason = solver.run(parameters, outFile, checkpointFile);
+
+  cout << "\nTerminated: " << reason << endl;
+  cout << "\nStatus:\n";
+  cout << solver.status << endl;
+  cout << timer << endl;
+
+  return 0;
 }
 
 namespace po = boost::program_options;
@@ -2234,22 +2186,5 @@ int main(int argc, char** argv) {
     return 1; 
   } 
 
-  mpf_set_default_prec(parameters.precision);
-  cout.precision(int(parameters.precision * 0.30102999566398114 + 5));
-  parameters.resetPrecision();
-  omp_set_num_threads(parameters.maxThreads);
-
-  solveSDP(sdpFile, outFile, checkpointFile, parameters);
-  //testLinearlyIndependentRowIndices();
-  //testMatrix();
-  //testBilinearPairings(sdpFile);
-
-  //testBlockCongruence();
-  //testBlockDiagonalCholesky();
-  //testSDPSolver(argv[1], argv[2]);
-  //testCholeskyUpdate();
-  //testMinEigenvalue();
-  //testTensorCongruence();
-  //testCholeskyStabilize();
-  return 0;
+  return solveSDP(sdpFile, outFile, checkpointFile, parameters);
 }
