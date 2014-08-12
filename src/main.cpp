@@ -52,8 +52,8 @@ int solveSDP(const path &sdpFile,
     solver.initialize(parameters);
 
   SDPSolverTerminateReason reason = solver.run(parameters, checkpointFile);
-  cout << "\nTerminated: " << reason << endl;
-  cout << "\nStatus:\n";
+  cout << "Terminated: " << reason << endl;
+  cout << endl;
   cout << solver.status << endl;
   cout << timers << endl;
 
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
      po::value<int>(&parameters.maxIterations)->default_value(500),
      "Maximum number of iterations to run the solver.")
     ("maxRuntime",
-     po::value<int>(&parameters.maxIterations)->default_value(86400),
+     po::value<int>(&parameters.maxRuntime)->default_value(86400),
      "Maximum amount of time to run the solver in seconds.")
     ("dualityGapThreshold",
      po::value<Real>(&parameters.dualityGapThreshold)->default_value(Real("1e-30")),
