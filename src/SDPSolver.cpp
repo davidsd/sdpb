@@ -100,7 +100,7 @@ SDPSolver::SDPSolver(const SDP &sdp):
 Vector SDPSolver::freeVariableSolution() {
   Vector solution(sdp.dualObjective.size());
   for (unsigned int n = 0; n < solution.size(); n++) {
-    solution[n] = x[basicIndices[n]];
+    solution[n] = dualResidues[basicIndices[n]];
   }
   solveWithLUDecomposition(FreeVarMatrixBasicLU, FreeVarMatrixBasicPivots, solution);
   return solution;
