@@ -619,7 +619,7 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
   SDPSolverTerminateReason finished = MaxIterationsExceeded;
 
   for (int iteration = 1;; iteration++) {
-    
+
     if (timers["Save checkpoint"].elapsed().wall >= checkpointNanoseconds) {
       saveCheckpoint(checkpointFile);
       timers["Save checkpoint"].start();

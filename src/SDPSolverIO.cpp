@@ -10,13 +10,11 @@
 #include "Timers.h"
 
 using boost::filesystem::path;
-using boost::timer::nanosecond_type;
 using std::cout;
 
-
 void printSolverHeader() {
-  cout << "\n     mu       P-obj       D-obj     gap         P-err        D-err       P-step   D-step   beta\n";
-  cout << "---------------------------------------------------------------------------------------------------\n";
+  cout << "\n     time    mu        P-obj       D-obj      gap         P-err         D-err       P-step   D-step   beta\n";
+  cout << "-----------------------------------------------------------------------------------------------------------\n";
 }
 
 void printSolverInfo(int iteration,
@@ -27,9 +25,11 @@ void printSolverInfo(int iteration,
                      Real primalStepLength,
                      Real dualStepLength,
                      Real betaCorrector) {
+  Real time = Real(timers["Run solver"].elapsed().wall)/1000000000;
   gmp_fprintf(stdout,
-              "%3d  %4.1Fe  %+7.2Fe  %+7.2Fe  %+7.2Fe  %s%+7.2Fe%s  %s%+7.2Fe%s  %4.1Fe  %4.1Fe  %4.2Fe\n",
+              "%3d  %-7.3Fg %-8.1Fe %-+11.2Fe %-+11.2Fe %-9.2Fe %s%-+10.2Fe%s  %s%-+10.2Fe%s  %-8.3Fg %-8.3Fg %-4.2Fg\n",
               iteration,
+              time.get_mpf_t(),
               mu.get_mpf_t(),
               status.primalObjective.get_mpf_t(),
               status.dualObjective.get_mpf_t(),
@@ -120,6 +120,14 @@ void SDPSolver::saveSolution(const path &outFile) {
   boost::filesystem::ofstream ofs(outFile);
   cout << "Saving solution to: " << outFile << endl;
   ofs.precision(int(status.primalObjective.get_prec() * 0.30102999566398114 + 5));
-  ofs << status << endl;
-  ofs << freeVariableSolution() << endl;
+  ofs << "primalObjective = " << status.primalObjective << ";\n";
+  ofs << "dualObjective   = " << status.dualObjective   << ";\n";
+  ofs << "dualityGap      = " << status.dualityGap()    << ";\n";
+  ofs << "primalError     = " << status.primalError     << ";\n";
+  ofs << "dualError       = " << status.dualError       << ";\n";
+  ofs << "runtime         = " << float(timers["Run solver"].elapsed().wall)/1000000000 << ";\n";
+  ofs << "freeVariables   = " << freeVariableSolution() << ";\n";
+  ofs << "x = " << x << ";\n";
+  ofs << "X = " << X << ";\n";
+  ofs << "Y = " << Y << ";\n";
 }
