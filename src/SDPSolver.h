@@ -92,6 +92,8 @@ public:
 
   // For free variable elimination
   Matrix FreeVarMatrixReduced;
+  Matrix FreeVarMatrixBasicLU;
+  vector<Integer> FreeVarMatrixBasicPivots;
   Vector dualObjectiveReduced;
   vector<int> basicIndices;
   vector<int> nonBasicIndices;
@@ -127,9 +129,14 @@ public:
                                        const BlockDiagonalMatrix &BilinearPairingsY);
   void solveSchurComplementEquation(Vector &dx);
   void computeSearchDirection(const Real &beta, const Real &mu, const bool correctorPhase);
+  Vector freeVariableSolution();
   void saveCheckpoint(const path &checkpointFile);
   void loadCheckpoint(const path &checkpointFile);
   void saveSolution(const path &outFile);
 };
+
+void printSolverHeader();
+void printSolverInfo(int iteration, Real mu, SDPSolverStatus status, bool isPrimalFeasible,
+                     bool isDualFeasible, Real primalStepLength, Real dualStepLength, Real betaCorrector);
 
 #endif  // SDP_BOOTSTRAP_SDPSOLVER_H_

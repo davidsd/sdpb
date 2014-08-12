@@ -1,12 +1,7 @@
 #include <iostream>
-#include <ostream>
 #include "omp.h"
-#include "boost/archive/text_oarchive.hpp"
-#include "boost/archive/text_iarchive.hpp"
 #include "boost/filesystem.hpp"
-#include "boost/filesystem/fstream.hpp"
 #include "SDPSolver.h"
-#include "serialize.h"
 #include "Timers.h"
 
 using boost::filesystem::path;
@@ -25,6 +20,8 @@ SDPSolver::SDPSolver(const SDP &sdp):
   dualResiduesReduced(sdp.primalObjective.size() - sdp.dualObjective.size()),
   PrimalResidues(X),
   FreeVarMatrixReduced(sdp.primalObjective.size() - sdp.dualObjective.size(), sdp.dualObjective.size()),
+  FreeVarMatrixBasicLU(sdp.dualObjective.size(), sdp.dualObjective.size()),
+  FreeVarMatrixBasicPivots(FreeVarMatrixBasicLU.rows),
   dualObjectiveReduced(sdp.dualObjective.size()),
   XCholesky(X),
   YCholesky(X),
@@ -59,14 +56,12 @@ SDPSolver::SDPSolver(const SDP &sdp):
       nonBasicIndices.push_back(p);
 
   // Computations needed for free variable elimination
-  Matrix DBLU(sdp.dualObjective.size(), sdp.dualObjective.size());
-  vector<Integer> DBLUpivots(sdp.dualObjective.size());
 
   // LU Decomposition of D_B
-  for (int n = 0; n < DBLU.cols; n++)
-    for (int m = 0; m < DBLU.rows; m++)
-      DBLU.elt(m,n) = sdp.FreeVarMatrix.elt(basicIndices[m],n);
-  LUDecomposition(DBLU, DBLUpivots);
+  for (int n = 0; n < FreeVarMatrixBasicLU.cols; n++)
+    for (int m = 0; m < FreeVarMatrixBasicLU.rows; m++)
+      FreeVarMatrixBasicLU.elt(m,n) = sdp.FreeVarMatrix.elt(basicIndices[m],n);
+  LUDecomposition(FreeVarMatrixBasicLU, FreeVarMatrixBasicPivots);
 
   // Compute E = - D_N D_B^{-1}
   // ET = -D_N^T
@@ -75,7 +70,7 @@ SDPSolver::SDPSolver(const SDP &sdp):
     for (int n = 0; n < FreeVarMatrixReducedT.rows; n++)
       FreeVarMatrixReducedT.elt(n, p) = -sdp.FreeVarMatrix.elt(nonBasicIndices[p], n);
   // ET = D_B^{-1 T} ET = -D_B^{-1 T} D_N^T
-  solveWithLUDecompositionTranspose(DBLU, DBLUpivots,
+  solveWithLUDecompositionTranspose(FreeVarMatrixBasicLU, FreeVarMatrixBasicPivots,
                                     &FreeVarMatrixReducedT.elements[0],
                                     FreeVarMatrixReducedT.cols,
                                     FreeVarMatrixReducedT.rows);
@@ -85,7 +80,10 @@ SDPSolver::SDPSolver(const SDP &sdp):
   // dualObjectiveReduced = D_B^{-T} f
   for (unsigned int n = 0; n < dualObjectiveReduced.size(); n++)
     dualObjectiveReduced[n] = sdp.dualObjective[n];
-  solveWithLUDecompositionTranspose(DBLU, DBLUpivots, &dualObjectiveReduced[0], 1, dualObjectiveReduced.size());
+  solveWithLUDecompositionTranspose(FreeVarMatrixBasicLU,
+                                    FreeVarMatrixBasicPivots,
+                                    &dualObjectiveReduced[0], 1,
+                                    dualObjectiveReduced.size());
 
   // BasicKernelSpan = ( -1 \\ E)
   BasicKernelSpan.setZero();
@@ -99,31 +97,13 @@ SDPSolver::SDPSolver(const SDP &sdp):
     schurStabilizeVectors[b].resize(SchurBlocks.blocks[b].rows);
 }
 
-void printSolverHeader() {
-  cout << "\n     mu       P-obj       D-obj     gap         P-err        D-err       P-step   D-step   beta\n";
-  cout << "---------------------------------------------------------------------------------------------------\n";
-}
-
-void printSolverInfo(int iteration,
-                     Real mu,
-                     SDPSolverStatus status,
-                     bool isPrimalFeasible,
-                     bool isDualFeasible,
-                     Real primalStepLength,
-                     Real dualStepLength,
-                     Real betaCorrector) {
-  gmp_fprintf(stdout,
-              "%3d  %4.1Fe  %+7.2Fe  %+7.2Fe  %+7.2Fe  %s%+7.2Fe%s  %s%+7.2Fe%s  %4.1Fe  %4.1Fe  %4.2Fe\n",
-              iteration,
-              mu.get_mpf_t(),
-              status.primalObjective.get_mpf_t(),
-              status.dualObjective.get_mpf_t(),
-              status.dualityGap().get_mpf_t(),
-              isPrimalFeasible ? "|" : " ", status.primalError.get_mpf_t(), isPrimalFeasible ? "|" : " ",
-              isDualFeasible   ? "|" : " ", status.dualError.get_mpf_t(),   isDualFeasible   ? "|" : " ",
-              primalStepLength.get_mpf_t(),
-              dualStepLength.get_mpf_t(),
-              betaCorrector.get_mpf_t());
+Vector SDPSolver::freeVariableSolution() {
+  Vector solution(sdp.dualObjective.size());
+  for (unsigned int n = 0; n < solution.size(); n++) {
+    solution[n] = x[basicIndices[n]];
+  }
+  solveWithLUDecomposition(FreeVarMatrixBasicLU, FreeVarMatrixBasicPivots, solution);
+  return solution;
 }
 
 // result = b'^T a b', where b' = b \otimes 1
@@ -723,85 +703,4 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
   saveCheckpoint(checkpointFile);
   timers["Save checkpoint"].start();
   return finished;
-}
-
-ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
-  os << "maxIterations                = " << p.maxIterations                << endl;
-  os << "maxRuntime                   = " << p.maxRuntime                   << endl;
-  os << "checkpointInterval           = " << p.checkpointInterval           << endl;
-  os << "precision(actual)            = " << p.precision << "(" << mpf_get_default_prec() << ")" << endl;
-  os << "maxThreads                   = " << p.maxThreads                   << endl;
-  os << "dualityGapThreshold          = " << p.dualityGapThreshold          << endl;
-  os << "primalErrorThreshold         = " << p.primalErrorThreshold         << endl;
-  os << "dualErrorThreshold           = " << p.dualErrorThreshold           << endl;
-  os << "initialMatrixScale           = " << p.initialMatrixScale           << endl;
-  os << "feasibleCenteringParameter   = " << p.feasibleCenteringParameter   << endl;
-  os << "infeasibleCenteringParameter = " << p.infeasibleCenteringParameter << endl;
-  os << "stepLengthReduction          = " << p.stepLengthReduction          << endl;
-  os << "maxDualObjective             = " << p.maxDualObjective             << endl;
-  return os;
-}
-
-ostream &operator<<(ostream& os, const SDPSolverTerminateReason& r) {
-  switch(r) {
-  case PrimalDualOptimal:
-    os << "found primal-dual optimal solution.";
-    break;
-  case MaxIterationsExceeded:
-    os << "maxIterations exceeded.";
-    break;
-  case MaxRuntimeExceeded:
-    os << "maxRuntime exceeded.";
-    break;
-  case DualFeasibleMaxObjectiveExceeded:
-    os << "found dual feasible solution with dualObjective exceeding maxDualObjective.";
-    break;
-  }
-  return os;
-}
-
-ostream& operator<<(ostream& os, const SDPSolverStatus& s) {
-  os << "primalObjective = " << s.primalObjective << endl;
-  os << "dualObjective   = " << s.dualObjective << endl;
-  os << "dualityGap      = " << s.dualityGap() << endl;
-  os << "primalError     = " << s.primalError << endl;
-  os << "dualError       = " << s.dualError << endl;
-  return os;
-}
-
-void backupCheckpointFile(path const& checkpointFile) {
-  path backupFile(checkpointFile);
-  backupFile.replace_extension(".ck.bk");
-  cout << "Backing up checkpoint to: " << backupFile << endl;
-  copy_file(checkpointFile, backupFile, boost::filesystem::copy_option::overwrite_if_exists);
-}
-
-void SDPSolver::saveCheckpoint(const path &checkpointFile) {
-  if (exists(checkpointFile))
-    backupCheckpointFile(checkpointFile);
-  boost::filesystem::ofstream ofs(checkpointFile);
-  boost::archive::text_oarchive ar(ofs);
-  cout << "Saving checkpoint to    : " << checkpointFile << endl;
-  boost::serialization::serializeSDPSolverState(ar, x, X, Y);
-}
-
-void SDPSolver::loadCheckpoint(const path &checkpointFile) {
-  boost::filesystem::ifstream ifs(checkpointFile);
-  boost::archive::text_iarchive ar(ifs);
-  cout << "Loading checkpoint from : " << checkpointFile << endl;
-  boost::serialization::serializeSDPSolverState(ar, x, X, Y);
-}
-
-void SDPSolver::initialize(const SDPSolverParameters &parameters) {
-  fillVector(x, 0);
-  X.setZero();
-  X.addDiagonal(parameters.initialMatrixScale);
-  Y.setZero();
-  Y.addDiagonal(parameters.initialMatrixScale);
-}
-
-void SDPSolver::saveSolution(const path &outFile) {
-  boost::filesystem::ofstream ofs(outFile);
-  cout << "Saving solution to: " << outFile << endl;
-  ofs << "foo" << endl;
 }

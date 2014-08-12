@@ -28,7 +28,7 @@ int solveSDP(const path &sdpFile,
              SDPSolverParameters parameters) {
 
   mpf_set_default_prec(parameters.precision);
-  cout.precision(int(parameters.precision * 0.30102999566398114 + 5));
+  cout.precision(min(int(parameters.precision * 0.30102999566398114 + 5), 30));
   // Ensure all the Real parameters have the appropriate precision
   parameters.resetPrecision();
   omp_set_num_threads(parameters.maxThreads);
