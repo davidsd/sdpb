@@ -528,17 +528,13 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
                       schurStabilizeLambdas[b]);
   
   // SchurUpdateLowRank = {{- 1, 0}, {E, G}}
-  SchurUpdateLowRank.setCols(BasicKernelSpan.cols);
-  SchurUpdateLowRank.copyFrom(BasicKernelSpan);
+  SchurUpdateLowRank.setCols(sdp.FreeVarMatrix.cols);
+  SchurUpdateLowRank.copyFrom(sdp.FreeVarMatrix);
   for (unsigned int b = 0; b < SchurBlocks.blocks.size(); b++) {
     for (unsigned int i = 0; i < schurStabilizeIndices[b].size(); i++) {
       int fullIndex = SchurBlocks.blockStartIndices[b] + schurStabilizeIndices[b][i];
-      addKernelColumn(FreeVarMatrixReduced,
-                      basicIndices,
-                      nonBasicIndices,
-                      fullIndex,
-                      schurStabilizeLambdas[b],
-                      SchurUpdateLowRank);
+      SchurUpdateLowRank.addColumn();
+      SchurUpdateLowRank.elt(fullIndex, SchurUpdateLowRank.cols - 1) = schurStabilizeLambdas[b];
     }
     schurStabilizeIndices[b].resize(0);
   }
@@ -686,6 +682,11 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
                                        eigenvaluesWorkspace, QRWorkspace, parameters);
     Real dualStepLength   = stepLength(YCholesky, dY, StepMatrixWorkspace,
                                        eigenvaluesWorkspace, QRWorkspace, parameters);
+
+    if (isPrimalFeasible && isDualFeasible) {
+      primalStepLength = min(primalStepLength, dualStepLength);
+      dualStepLength = primalStepLength;
+    }
 
     printSolverInfo(iteration, mu, status, isPrimalFeasible, isDualFeasible,
                     primalStepLength, dualStepLength, betaCorrector);
