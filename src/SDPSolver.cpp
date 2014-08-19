@@ -35,7 +35,6 @@ SDPSolver::SDPSolver(const SDP &sdp):
   Q(sdp.FreeVarMatrix.cols, sdp.FreeVarMatrix.cols),
   Qpivots(sdp.FreeVarMatrix.cols),
   basicKernelCoords(Q.rows),
-  BasicKernelSpan(sdp.FreeVarMatrix),
   schurStabilizeIndices(SchurBlocks.blocks.size()),
   schurStabilizeLambdas(SchurBlocks.blocks.size()),
   schurStabilizeVectors(SchurBlocks.blocks.size()),
@@ -84,14 +83,6 @@ SDPSolver::SDPSolver(const SDP &sdp):
                                     FreeVarMatrixBasicPivots,
                                     &dualObjectiveReduced[0], 1,
                                     dualObjectiveReduced.size());
-
-  // BasicKernelSpan = ( -1 \\ E)
-  BasicKernelSpan.setZero();
-  for (int c = 0; c < FreeVarMatrixReduced.cols; c++)
-    for (int r = 0; r < FreeVarMatrixReduced.rows; r++)
-      BasicKernelSpan.elt(nonBasicIndices[r], c) = FreeVarMatrixReduced.elt(r, c);
-  for (int c = 0; c < FreeVarMatrixReduced.cols; c++)
-    BasicKernelSpan.elt(basicIndices[c], c) = -1;
 
   for (unsigned int b = 0; b < SchurBlocks.blocks.size(); b++)
     schurStabilizeVectors[b].resize(SchurBlocks.blocks[b].rows);
@@ -448,19 +439,11 @@ Real dualObjectiveValue(const SDP &sdp, const Vector &dualObjectiveReduced,
   return tmp;
 }
 
-// Implements SDPA's DirectionParameter::MehrotraPredictor
 Real predictorCenteringParameter(const SDPSolverParameters &parameters, 
-                                 const bool reductionSwitch,
                                  const bool isPrimalDualFeasible) {
-  if (isPrimalDualFeasible)
-    return 0;
-  else if (reductionSwitch)
-    return parameters.infeasibleCenteringParameter;
-  else
-    return 2;
+  return isPrimalDualFeasible ? 0 : parameters.infeasibleCenteringParameter;
 }
 
-// Implements SDPA's DirectionParameter::MehrotraCorrector
 Real correctorCenteringParameter(const SDPSolverParameters &parameters,
                                  const BlockDiagonalMatrix &X,
                                  const BlockDiagonalMatrix &dX,
@@ -495,24 +478,6 @@ Real stepLength(BlockDiagonalMatrix &XCholesky,
     return 1;
   else
     return -gamma/lambda;
-}
-
-void addKernelColumn(const Matrix &FreeVarMatrixReduced,
-                     const vector<int> &basicIndices,
-                     const vector<int> &nonBasicIndices,
-                     const int i,
-                     const Real &lambda,
-                     Matrix &K) {
-  K.addColumn();
-  int c = K.cols - 1;
-
-  int j = binaryFind(basicIndices.begin(), basicIndices.end(), i) - basicIndices.begin();
-  if (j < FreeVarMatrixReduced.cols) {
-    for (unsigned int r = 0; r < nonBasicIndices.size(); r++)
-      K.elt(nonBasicIndices[r], c) = lambda * FreeVarMatrixReduced.elt(r, j);
-  } else {
-    K.elt(i, c) = lambda;
-  }
 }
 
 void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
@@ -653,7 +618,6 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     const bool isPrimalFeasible = status.primalError  < parameters.primalErrorThreshold;
     const bool isDualFeasible   = status.dualError    < parameters.dualErrorThreshold;
     const bool isOptimal        = status.dualityGap() < parameters.dualityGapThreshold;
-    const bool reductionSwitch  = true;
 
     if (isPrimalFeasible && isDualFeasible && isOptimal) {
       finished = PrimalDualOptimal;
@@ -668,8 +632,7 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     Real mu = frobeniusProductSymmetric(X, Y)/X.dim;
 
     // Mehrotra predictor solution for (dx, dX, dY)
-    Real betaPredictor = predictorCenteringParameter(parameters, reductionSwitch,
-                                                     isPrimalFeasible && isDualFeasible);
+    Real betaPredictor = predictorCenteringParameter(parameters, isPrimalFeasible && isDualFeasible);
     computeSearchDirection(betaPredictor, mu, false);
 
     // Mehrotra corrector solution for (dx, dX, dY)
