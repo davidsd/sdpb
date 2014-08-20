@@ -50,7 +50,7 @@ SDPSolver::SDPSolver(const SDP &sdp):
   // Computations needed for free variable elimination
   basicIndices = linearlyIndependentRowIndices(sdp.FreeVarMatrix);
   for (int i = 0, p = 0; p < sdp.FreeVarMatrix.rows; p++)
-    if (i < basicIndices.size() && p == basicIndices[i])
+    if (i < (int)basicIndices.size() && p == basicIndices[i])
       i++;
     else
       nonBasicIndices.push_back(p);
@@ -172,7 +172,7 @@ void tensorMatrixInvCongruenceTransposeWithCholesky(const Matrix &L,
     for (int rw = mc*B.rows; rw < Work.rows; rw++) {
       int mr = rw / B.cols;
 
-      Real tmp = (mr != mc) ? 0 : B.elt(rw % B.rows, cw % B.cols);
+      Real tmp = (mr != mc) ? Real(0) : B.elt(rw % B.rows, cw % B.cols);
       for (int cl = 0; cl < rw; cl++)
         tmp -= L.elt(rw, cl)*Work.elt(cl, cw);
 
@@ -440,7 +440,7 @@ Real dualObjectiveValue(const SDP &sdp, const Vector &dualObjectiveReduced,
 
 Real predictorCenteringParameter(const SDPSolverParameters &parameters, 
                                  const bool isPrimalDualFeasible) {
-  return isPrimalDualFeasible ? 0 : parameters.infeasibleCenteringParameter;
+  return isPrimalDualFeasible ? Real(0) : parameters.infeasibleCenteringParameter;
 }
 
 Real correctorCenteringParameter(const SDPSolverParameters &parameters,

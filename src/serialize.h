@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 #include <sstream>
-#include <gmpxx.h>
 #include "boost/serialization/serialization.hpp"
 #include "boost/serialization/base_object.hpp"
 #include "boost/serialization/utility.hpp"
@@ -28,16 +27,16 @@ namespace boost {
   namespace serialization {
 
     template<class Archive>
-    void load(Archive& ar, mpf_class& f, unsigned int version) {
+    void load(Archive& ar, Real& f, unsigned int version) {
       std::string s;
       ar & s;
-      f = mpf_class(s);
+      f = Real(s.c_str());
     }
 
     template<class Archive>
-    void save(Archive& ar, mpf_class const& f, unsigned int version) {
+    void save(Archive& ar, Real const& f, unsigned int version) {
       std::ostringstream os;
-      os.precision(f.get_prec());
+      os.precision(getPrecision(f));
       os << f;
       std::string s = os.str();
       ar & s;
@@ -68,8 +67,8 @@ namespace boost {
 } // namespace boost
 
 
-BOOST_SERIALIZATION_SPLIT_FREE(mpf_class)
-BOOST_CLASS_VERSION(mpf_class, 0)
+BOOST_SERIALIZATION_SPLIT_FREE(Real)
+BOOST_CLASS_VERSION(Real, 0)
 BOOST_CLASS_TRACKING(Matrix,              boost::serialization::track_never)
 BOOST_CLASS_TRACKING(BlockDiagonalMatrix, boost::serialization::track_never)
 

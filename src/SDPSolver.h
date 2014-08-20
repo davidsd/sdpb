@@ -33,14 +33,14 @@ public:
   Real maxDualObjective;
 
   void resetPrecision() {
-    dualityGapThreshold         .set_prec(precision);
-    primalErrorThreshold        .set_prec(precision);
-    dualErrorThreshold          .set_prec(precision);
-    initialMatrixScale          .set_prec(precision);
-    feasibleCenteringParameter  .set_prec(precision);
-    infeasibleCenteringParameter.set_prec(precision);
-    stepLengthReduction         .set_prec(precision);
-    maxDualObjective            .set_prec(precision);
+    setPrecision(dualityGapThreshold,          precision);
+    setPrecision(primalErrorThreshold,         precision);
+    setPrecision(dualErrorThreshold,           precision);
+    setPrecision(initialMatrixScale,           precision);
+    setPrecision(feasibleCenteringParameter,   precision);
+    setPrecision(infeasibleCenteringParameter, precision);
+    setPrecision(stepLengthReduction,          precision);
+    setPrecision(maxDualObjective,             precision);
   }
 
   friend ostream& operator<<(ostream& os, const SDPSolverParameters& p);

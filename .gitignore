@@ -22,6 +22,7 @@ obj
 */src/.deps
 */config.log
 */examples
-sdp-bootstrap
+sdpb
+tests
 
 .DS_Store

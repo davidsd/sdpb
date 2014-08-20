@@ -277,7 +277,7 @@ void stabilizeCholesky(Matrix &L,
 
   double averageLogLambda = 0;
   for (int i = 0; i < dim; i++) {
-    averageLogLambda += log(realToDouble(L.elt(i,i)));
+    averageLogLambda += log(cast2double(L.elt(i,i)));
   }
   lambdaGeometricMean = Real(exp(averageLogLambda/dim));
   

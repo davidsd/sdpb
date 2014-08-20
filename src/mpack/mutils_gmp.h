@@ -31,23 +31,8 @@
 using std::max;
 using std::min;
 
-mpf_class Msign(mpf_class a, mpf_class b);
-double cast2double(mpf_class a);
-int M2int(mpf_class a);
-void mpf_pow(mpf_t ans, mpf_t x, mpf_t y);
-mpf_class mpf_approx_log(mpf_class x);
-mpf_class mpf_approx_log2(mpf_class x);
-mpf_class mpf_approx_log10(mpf_class x);
-mpf_class mpf_approx_pow(mpf_class x, mpf_class y);
-mpf_class mpf_approx_cos(mpf_class x);
-mpf_class mpf_approx_sin(mpf_class x);
-mpf_class mpf_approx_exp(mpf_class x);
-mpf_class mpf_approx_pi();
-
 //implementation of sign transfer function.
-inline mpf_class
-Msign(mpf_class a, mpf_class b)
-{
+inline mpf_class Msign(mpf_class a, mpf_class b) {
     mpf_class mtmp;
     mpf_abs(mtmp.get_mpf_t(), a.get_mpf_t());
     if (b != 0.0) {
@@ -56,21 +41,9 @@ Msign(mpf_class a, mpf_class b)
     return mtmp;
 }
 
-inline double
-cast2double(mpf_class a)
+inline double cast2double(mpf_class a)
 {
     return a.get_d();
-}
-
-inline int
-M2int(mpf_class a)
-{
-    int i;
-    mpf_t tmp;
-    a = a + 0.5;
-    mpf_floor(tmp, a.get_mpf_t());
-    i = (int)mpf_get_si(tmp);
-    return i;
 }
 
 #endif

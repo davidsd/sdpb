@@ -27,7 +27,7 @@ int solveSDP(const path &sdpFile,
              const path &checkpointFile,
              SDPSolverParameters parameters) {
 
-  mpf_set_default_prec(parameters.precision);
+  setDefaultPrecision(parameters.precision);
   cout.precision(min(int(parameters.precision * 0.30102999566398114 + 5), 30));
   // Ensure all the Real parameters have the appropriate precision
   parameters.resetPrecision();
@@ -123,7 +123,7 @@ int main(int argc, char** argv) {
      po::value<Real>(&parameters.dualErrorThreshold)->default_value(Real("1e-30")),
      "Threshold for feasibility of the dual problem. Corresponds to SDPA's epsilonBar.")
     ("initialMatrixScale",
-     po::value<Real>(&parameters.initialMatrixScale)->default_value(Real("1e10")),
+     po::value<Real>(&parameters.initialMatrixScale)->default_value(Real("1e20")),
      "The primal and dual matrices X,Y begin at initialMatrixScale times the "
      "identity matrix. Corresponds to SDPA's lambdaStar.")
     ("feasibleCenteringParameter",
