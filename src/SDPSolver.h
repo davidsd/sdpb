@@ -111,7 +111,6 @@ public:
   Matrix Q;
   vector<Integer> Qpivots;
   Vector basicKernelCoords;
-  Matrix BasicKernelSpan;
   vector<vector<int> > schurStabilizeIndices;
   vector<Real> schurStabilizeLambdas;
   vector<Vector> schurStabilizeVectors;

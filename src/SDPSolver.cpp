@@ -47,14 +47,13 @@ SDPSolver::SDPSolver(const SDP &sdp):
     QRWorkspace.push_back(Vector(3*X.blocks[b].rows - 1));
   }
 
+  // Computations needed for free variable elimination
   basicIndices = linearlyIndependentRowIndices(sdp.FreeVarMatrix);
   for (int i = 0, p = 0; p < sdp.FreeVarMatrix.rows; p++)
-    if (p == basicIndices[i])
+    if (i < basicIndices.size() && p == basicIndices[i])
       i++;
     else
       nonBasicIndices.push_back(p);
-
-  // Computations needed for free variable elimination
 
   // LU Decomposition of D_B
   for (int n = 0; n < FreeVarMatrixBasicLU.cols; n++)

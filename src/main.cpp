@@ -43,7 +43,6 @@ int solveSDP(const path &sdpFile,
   cout << parameters << endl;
 
   const SDP sdp = readBootstrapSDP(sdpFile);
-
   SDPSolver solver(sdp);
 
   if (exists(checkpointFile))
