@@ -50,7 +50,8 @@ ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
   os << "dualityGapThreshold          = " << p.dualityGapThreshold          << endl;
   os << "primalErrorThreshold         = " << p.primalErrorThreshold         << endl;
   os << "dualErrorThreshold           = " << p.dualErrorThreshold           << endl;
-  os << "initialMatrixScale           = " << p.initialMatrixScale           << endl;
+  os << "initialMatrixScalePrimal     = " << p.initialMatrixScalePrimal     << endl;
+  os << "initialMatrixScaleDual       = " << p.initialMatrixScaleDual       << endl;
   os << "feasibleCenteringParameter   = " << p.feasibleCenteringParameter   << endl;
   os << "infeasibleCenteringParameter = " << p.infeasibleCenteringParameter << endl;
   os << "stepLengthReduction          = " << p.stepLengthReduction          << endl;
@@ -108,18 +109,11 @@ void SDPSolver::loadCheckpoint(const path &checkpointFile) {
   boost::serialization::serializeSDPSolverState(ar, x, X, Y);
 }
 
-void SDPSolver::initialize(const SDPSolverParameters &parameters) {
-  fillVector(x, 0);
-  X.setZero();
-  X.addDiagonal(parameters.initialMatrixScale);
-  Y.setZero();
-  Y.addDiagonal(parameters.initialMatrixScale);
-}
-
-void SDPSolver::saveSolution(const path &outFile) {
+void SDPSolver::saveSolution(const SDPSolverTerminateReason terminateReason, const path &outFile) {
   boost::filesystem::ofstream ofs(outFile);
   cout << "Saving solution to: " << outFile << endl;
   ofs.precision(int(status.primalObjective.get_prec() * 0.30102999566398114 + 5));
+  ofs << "terminateReason = \"" << terminateReason      << "\";\n";
   ofs << "primalObjective = " << status.primalObjective << ";\n";
   ofs << "dualObjective   = " << status.dualObjective   << ";\n";
   ofs << "dualityGap      = " << status.dualityGap()    << ";\n";

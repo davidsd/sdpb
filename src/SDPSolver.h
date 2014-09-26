@@ -26,7 +26,8 @@ public:
   Real dualityGapThreshold;
   Real primalErrorThreshold;
   Real dualErrorThreshold;
-  Real initialMatrixScale;
+  Real initialMatrixScalePrimal;
+  Real initialMatrixScaleDual;
   Real feasibleCenteringParameter;
   Real infeasibleCenteringParameter;
   Real stepLengthReduction;
@@ -36,7 +37,8 @@ public:
     setPrecision(dualityGapThreshold,          precision);
     setPrecision(primalErrorThreshold,         precision);
     setPrecision(dualErrorThreshold,           precision);
-    setPrecision(initialMatrixScale,           precision);
+    setPrecision(initialMatrixScalePrimal,     precision);
+    setPrecision(initialMatrixScaleDual,       precision);
     setPrecision(feasibleCenteringParameter,   precision);
     setPrecision(infeasibleCenteringParameter, precision);
     setPrecision(stepLengthReduction,          precision);
@@ -131,7 +133,7 @@ public:
   Vector freeVariableSolution();
   void saveCheckpoint(const path &checkpointFile);
   void loadCheckpoint(const path &checkpointFile);
-  void saveSolution(const path &outFile);
+  void saveSolution(const SDPSolverTerminateReason, const path &outFile);
 };
 
 void printSolverHeader();

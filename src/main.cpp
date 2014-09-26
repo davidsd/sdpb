@@ -57,7 +57,7 @@ int solveSDP(const path &sdpFile,
   cout << timers << endl;
 
   if (reason == PrimalDualOptimal || reason == DualFeasibleMaxObjectiveExceeded)
-    solver.saveSolution(outFile);
+    solver.saveSolution(reason, outFile);
 
   return 0;
 }
@@ -122,9 +122,13 @@ int main(int argc, char** argv) {
     ("dualErrorThreshold",
      po::value<Real>(&parameters.dualErrorThreshold)->default_value(Real("1e-30")),
      "Threshold for feasibility of the dual problem. Corresponds to SDPA's epsilonBar.")
-    ("initialMatrixScale",
-     po::value<Real>(&parameters.initialMatrixScale)->default_value(Real("1e20")),
-     "The primal and dual matrices X,Y begin at initialMatrixScale times the "
+    ("initialMatrixScalePrimal",
+     po::value<Real>(&parameters.initialMatrixScalePrimal)->default_value(Real("1e20")),
+     "The primal matrix X begins at initialMatrixScalePrimal times the "
+     "identity matrix. Corresponds to SDPA's lambdaStar.")
+    ("initialMatrixScaleDual",
+     po::value<Real>(&parameters.initialMatrixScaleDual)->default_value(Real("1e20")),
+     "The dual matrix Y begins at initialMatrixScaleDual times the "
      "identity matrix. Corresponds to SDPA's lambdaStar.")
     ("feasibleCenteringParameter",
      po::value<Real>(&parameters.feasibleCenteringParameter)->default_value(Real("0.1")),

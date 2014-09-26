@@ -569,6 +569,14 @@ void SDPSolver::computeSearchDirection(const Real &beta,
   dY *= -1;
 }
 
+void SDPSolver::initialize(const SDPSolverParameters &parameters) {
+  fillVector(x, 0);
+  X.setZero();
+  X.addDiagonal(parameters.initialMatrixScalePrimal);
+  Y.setZero();
+  Y.addDiagonal(parameters.initialMatrixScaleDual);
+}
+
 SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
                                         const path checkpointFile) {
   printSolverHeader();
