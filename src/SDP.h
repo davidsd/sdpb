@@ -8,6 +8,7 @@
 #include "util.h"
 #include "Vector.h"
 #include "Matrix.h"
+#include "Polynomial.h"
 
 using std::vector;
 using std::ostream;
@@ -97,8 +98,19 @@ public:
   vector<Matrix> bilinearBases;
 };
 
+SampledMatrixPolynomial samplePolynomialVectorMatrix(const PolynomialVectorMatrix &m,
+                                                     const vector<Polynomial> &bilinearBasis,
+                                                     const vector<Real> &samplePoints,
+                                                     const vector<Real> &rescalings);
+
 SDP bootstrapSDP(const Vector &objective,
                  const Real &objectiveConst,
                  const vector<SampledMatrixPolynomial> &sampledMatrixPols);
+
+SDP bootstrapPolynomialSDP(const Vector &affineObjective,
+                           const vector<PolynomialVectorMatrix> &polVectorMatrices,
+                           const vector<Polynomial> &bilinearBasis,
+                           const vector<Real> &samplePoints,
+                           const vector<Real> &sampleScalings);
 
 #endif  // SDP_BOOTSTRAP_SDP_H_

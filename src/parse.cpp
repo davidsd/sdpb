@@ -2,6 +2,7 @@
 #include "types.h"
 #include "parse.h"
 #include "tinyxml2.h"
+#include "Polynomial.h"
 #include "SDP.h"
 
 using std::vector;
@@ -51,6 +52,24 @@ SampledMatrixPolynomial parseSampledMatrixPolynomial(XMLElement *xml) {
   return s;
 }
 
+Polynomial parsePolynomial(XMLElement *polXml) {
+  Polynomial p;
+  p.coefficients = parseMany("coeff", parseReal, polXml);
+  return p;
+}
+
+vector<Polynomial> parsePolynomialVector(XMLElement *polVecXml) {
+  return parseMany("polynomial", parsePolynomial, polVecXml);
+}
+
+PolynomialVectorMatrix parsePolynomialVectorMatrix(XMLElement *polVecMatrixXml) {
+  PolynomialVectorMatrix m;
+  m.rows = parseInt(polVecMatrixXml->FirstChildElement("rows"));
+  m.cols = parseInt(polVecMatrixXml->FirstChildElement("cols"));
+  m.elements = parseMany("polynomialVector", parsePolynomialVector,
+                         polVecMatrixXml->FirstChildElement("elements"));
+  return m;
+}
 
 SDP parseBootstrapSDP(XMLElement *xml) {
   return bootstrapSDP(parseVector(xml->FirstChildElement("objective")),
@@ -60,8 +79,18 @@ SDP parseBootstrapSDP(XMLElement *xml) {
                                 xml->FirstChildElement("sampledPositiveMatrices")));
 }
 
+SDP parseBootstrapPolynomialSDP(XMLElement *xml) {
+  return bootstrapPolynomialSDP(parseVector(xml->FirstChildElement("objective")),
+                                parseMany("polynomialVectorMatrix",
+                                          parsePolynomialVectorMatrix,
+                                          xml->FirstChildElement("polynomialVectorMatrices")),
+                                parsePolynomialVector(xml->FirstChildElement("bilinearBasis")),
+                                parseVector(xml->FirstChildElement("samplePoints")),
+                                parseVector(xml->FirstChildElement("sampleScalings")));
+}
+
 SDP readBootstrapSDP(const path sdpFile) {
   XMLDocument doc;
   doc.LoadFile(sdpFile.c_str());
-  return parseBootstrapSDP(doc.FirstChildElement("sdp"));
+  return parseBootstrapPolynomialSDP(doc.FirstChildElement("sdp"));
 }

@@ -38,4 +38,11 @@ inline Real dotProduct(const Vector &u, const Vector v) {
   return result;
 }
 
+inline Vector multiplyVectors(const Vector &u, const Vector &v) {
+  Vector w(u.size());
+  for (unsigned int i = 0; i < w.size(); i++)
+    w[i] = u[i]*v[i];
+  return w;
+}
+
 #endif  // SDP_BOOTSTRAP_VECTOR_H_
