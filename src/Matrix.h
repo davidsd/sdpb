@@ -174,6 +174,8 @@ void solveWithLUDecomposition(Matrix &LU, vector<Integer> &pivots, Vector &b);
 // - L : dim x dim lower-triangular matrix
 void choleskyDecomposition(Matrix &A, Matrix &L);
 
+void choleskyDecompositionStabilized(Matrix &A, Matrix &L, vector<Integer> &stabilizeIndices, vector<Real> &stabilizeLambdas);
+
 // L' (lower triangular) such that L' L'^T = L L^T + v v^T. i.e., if L
 // is a cholesky decomposition of A, then L' is a cholesky
 // decomposition of A + v v^T.  This function dominates the running

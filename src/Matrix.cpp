@@ -238,6 +238,24 @@ void choleskyDecomposition(Matrix &A, Matrix &L) {
       L.elements[i + j*dim] = 0;
 }
 
+void choleskyDecompositionStabilized(Matrix &A, Matrix &L, vector<Integer> &stabilizeIndices, vector<Real> &stabilizeLambdas) {
+  int dim = A.rows;
+  assert(A.cols == dim);
+  assert(L.rows == dim);
+  assert(L.cols == dim);
+
+  // Set lower-triangular part of L to cholesky decomposition
+  L.copyFrom(A);
+  Integer info;
+  RpotrfStabilized("Lower", dim, &L.elements[0], dim, &info, stabilizeIndices, stabilizeLambdas);
+  assert(info == 0);
+
+  // Set the upper-triangular part of the L to zero
+  for (int j = 0; j < dim; j++)
+    for (int i = 0; i < j; i++)
+      L.elements[i + j*dim] = 0;
+}
+
 // L' (lower triangular) such that L' L'^T = L L^T + v v^T. i.e., if L
 // is a cholesky decomposition of A, then L' is a cholesky
 // decomposition of A + v v^T.  This function dominates the running

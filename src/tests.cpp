@@ -10,16 +10,17 @@ using std::cout;
 using std::endl;
 
 void testCholeskyStabilize() {
+  cout.precision(20);
   Matrix A(4,4);
   Matrix L(A);
-  A.elt(0,0) = 1e40;
-  A.elt(1,1) = 1e20;
-  A.elt(2,2) = 1;
-  A.elt(3,3) = 1e-20;
-  A.elt(1,0) = 1e15;
-  A.elt(0,1) = 1e15;
-  A.elt(1,2) = 2e8;
-  A.elt(2,1) = 2e8;
+  A.elt(0,0) = 1e20;
+  A.elt(1,1) = 2e18;
+  A.elt(2,2) = 1e-3;
+  A.elt(3,3) = 1e-5;
+  A.elt(1,0) = 1e2;
+  A.elt(0,1) = 1e2;
+  A.elt(1,2) = 2e2;
+  A.elt(2,1) = 2e2;
   vector<int> updateIndices;
   Vector updateVector(L.rows);
   Real lambdaGM;
@@ -30,6 +31,15 @@ void testCholeskyStabilize() {
   cout << "updateIndices = " << updateIndices << ";\n";
   cout << "L = " << L << "\n;";
   cout << "lambdaGM = " << lambdaGM << ";\n";
+
+
+  vector<Integer> stabilizeIndices;
+  vector<Real> stabilizeLambdas;
+  choleskyDecompositionStabilized(A, L, stabilizeIndices, stabilizeLambdas);
+  cout << "A = " << A << ";\n";
+  cout << "L = " << L << ";\n";
+  cout << "stabilizeIndices = " << stabilizeIndices << ";\n";
+  cout << "stabilizeLambdas = " << stabilizeLambdas << ";\n";
 }
 
 void testLinearlyIndependentRowIndices() {

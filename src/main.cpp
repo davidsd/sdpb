@@ -9,6 +9,7 @@
 #include "Timers.h"
 #include "SDP.h"
 #include "parse.h"
+#include "tests.h"
 #include "SDPSolver.h"
 
 using std::cout;
@@ -183,5 +184,6 @@ int main(int argc, char** argv) {
     return 1; 
   } 
 
-  return solveSDP(sdpFile, outFile, checkpointFile, parameters);
+  //return solveSDP(sdpFile, outFile, checkpointFile, parameters);
+  testCholeskyStabilize();
 }
