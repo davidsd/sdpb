@@ -1,15 +1,15 @@
 #include "SDP.h"
 
-Matrix sampleBilinearBasis(const int basisSize,
+Matrix sampleBilinearBasis(const int maxDegree,
                            const int numSamples,
                            const vector<Polynomial> &bilinearBasis,
                            const vector<Real> &samplePoints,
                            const vector<Real> &sampleScalings) {
-  Matrix b(basisSize, numSamples);
+  Matrix b(maxDegree + 1, numSamples);
   for (int k = 0; k < numSamples; k++) {
     Real x     = samplePoints[k];
     Real scale = sqrt(sampleScalings[k]);
-    for (int i = 0; i < basisSize; i++)
+    for (int i = 0; i <= maxDegree; i++)
       b.elt(i, k) = scale*bilinearBasis[i](x);
   }
   return b;
