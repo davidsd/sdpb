@@ -114,8 +114,8 @@ public:
   vector<Integer> Qpivots;
   Vector basicKernelCoords;
   vector<vector<int> > schurStabilizeIndices;
-  vector<Real> schurStabilizeLambdas;
-  vector<Vector> schurStabilizeVectors;
+  vector<vector<Real> > schurStabilizeLambdas;
+  //vector<Vector> schurStabilizeVectors;
 
   // additional workspace variables
   BlockDiagonalMatrix StepMatrixWorkspace;

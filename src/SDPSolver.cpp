@@ -37,7 +37,6 @@ SDPSolver::SDPSolver(const SDP &sdp):
   basicKernelCoords(Q.rows),
   schurStabilizeIndices(SchurBlocks.blocks.size()),
   schurStabilizeLambdas(SchurBlocks.blocks.size()),
-  schurStabilizeVectors(SchurBlocks.blocks.size()),
   StepMatrixWorkspace(X)
 {
   // initialize bilinearPairingsWorkspace, eigenvaluesWorkspace, QRWorkspace 
@@ -82,9 +81,6 @@ SDPSolver::SDPSolver(const SDP &sdp):
                                     FreeVarMatrixBasicPivots,
                                     &dualObjectiveReduced[0], 1,
                                     dualObjectiveReduced.size());
-
-  for (unsigned int b = 0; b < SchurBlocks.blocks.size(); b++)
-    schurStabilizeVectors[b].resize(SchurBlocks.blocks[b].rows);
 }
 
 Vector SDPSolver::freeVariableSolution() {
@@ -483,14 +479,8 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
                                                 const BlockDiagonalMatrix &BilinearPairingsY) {
 
   computeSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, SchurBlocks);
-  choleskyDecomposition(SchurBlocks, SchurBlocksCholesky);
+  choleskyDecompositionStabilized(SchurBlocks, SchurBlocksCholesky, schurStabilizeIndices, schurStabilizeLambdas);
 
-  for (unsigned int b = 0; b < SchurBlocks.blocks.size(); b++)
-    stabilizeCholesky(SchurBlocksCholesky.blocks[b],
-                      schurStabilizeVectors[b],
-                      schurStabilizeIndices[b],
-                      schurStabilizeLambdas[b]);
-  
   // SchurUpdateLowRank = {{- 1, 0}, {E, G}}
   SchurUpdateLowRank.setCols(sdp.FreeVarMatrix.cols);
   SchurUpdateLowRank.copyFrom(sdp.FreeVarMatrix);
@@ -498,9 +488,8 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
     for (unsigned int i = 0; i < schurStabilizeIndices[b].size(); i++) {
       int fullIndex = SchurBlocks.blockStartIndices[b] + schurStabilizeIndices[b][i];
       SchurUpdateLowRank.addColumn();
-      SchurUpdateLowRank.elt(fullIndex, SchurUpdateLowRank.cols - 1) = schurStabilizeLambdas[b];
+      SchurUpdateLowRank.elt(fullIndex, SchurUpdateLowRank.cols - 1) = schurStabilizeLambdas[b][i];
     }
-    schurStabilizeIndices[b].resize(0);
   }
 
   // SchurUpdateLowRank = SchurBlocksCholesky^{-1} {{- 1, 0}, {E, G}}
@@ -518,7 +507,6 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
 }
 
 void SDPSolver::solveSchurComplementEquation(Vector &dx) {
-
   // dx = SchurBlocksCholesky^{-1} dx
   blockMatrixLowerTriangularSolve(SchurBlocksCholesky, dx);
 
@@ -671,7 +659,7 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
   }
   
   timers["Run solver"].stop();
-  saveCheckpoint(checkpointFile);
-  timers["Save checkpoint"].start();
+  //saveCheckpoint(checkpointFile);
+  //timers["Save checkpoint"].start();
   return finished;
 }

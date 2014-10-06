@@ -76,6 +76,8 @@ void RpotrfStabilized(const char *uplo, INTEGER n, REAL * A, INTEGER lda, INTEGE
     INTEGER j, jb, nb;
     REAL One = 1.0;
     double totalLogLambda = 0;
+    stabilizeIndices.resize(0);
+    stabilizeLambdas.resize(0);
 
 //Test the input parameters.
     *info = 0;

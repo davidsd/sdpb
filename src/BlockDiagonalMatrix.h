@@ -101,6 +101,10 @@ void blockDiagonalMatrixMultiply(BlockDiagonalMatrix &A, BlockDiagonalMatrix &B,
 void lowerTriangularInverseCongruence(BlockDiagonalMatrix &A, BlockDiagonalMatrix &L);
 Real minEigenvalue(BlockDiagonalMatrix &A, vector<Vector> &workspace, vector<Vector> &eigenvalues);
 void choleskyDecomposition(BlockDiagonalMatrix &A, BlockDiagonalMatrix &L);
+void choleskyDecompositionStabilized(BlockDiagonalMatrix &A,
+                                     BlockDiagonalMatrix &L,
+                                     vector<vector<Integer> > &schurStabilizeIndices,
+                                     vector<vector<Real> > &schurStabilizeLambdas);
 void blockMatrixSolveWithCholesky(BlockDiagonalMatrix &ACholesky, BlockDiagonalMatrix &X);
 void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L, Matrix &B);
 void blockMatrixLowerTriangularTransposeSolve(BlockDiagonalMatrix &L, Matrix &B);

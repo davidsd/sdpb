@@ -184,6 +184,5 @@ int main(int argc, char** argv) {
     return 1; 
   } 
 
-  //return solveSDP(sdpFile, outFile, checkpointFile, parameters);
-  testCholeskyStabilize();
+  return solveSDP(sdpFile, outFile, checkpointFile, parameters);
 }

@@ -97,6 +97,15 @@ void choleskyDecomposition(BlockDiagonalMatrix &A,
     choleskyDecomposition(A.blocks[b], L.blocks[b]);
 }
 
+void choleskyDecompositionStabilized(BlockDiagonalMatrix &A,
+                                     BlockDiagonalMatrix &L,
+                                     vector<vector<Integer> > &schurStabilizeIndices,
+                                     vector<vector<Real> > &schurStabilizeLambdas) {
+  #pragma omp parallel for schedule(dynamic)
+  for (unsigned int b = 0; b < A.blocks.size(); b++)
+    choleskyDecompositionStabilized(A.blocks[b], L.blocks[b], schurStabilizeIndices[b], schurStabilizeLambdas[b]);
+}
+
 void blockMatrixSolveWithCholesky(BlockDiagonalMatrix &ACholesky,
                                   BlockDiagonalMatrix &X) {
   #pragma omp parallel for schedule(dynamic)

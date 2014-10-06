@@ -238,6 +238,14 @@ void choleskyDecomposition(Matrix &A, Matrix &L) {
       L.elements[i + j*dim] = 0;
 }
 
+// L (lower triangular) such that A = L L^T - \sum_i stabilizeLambdas_i^2 u_j u_j^T
+//                                where j = stabilizeIndices_i
+// Inputs:
+// - A : dim x dim symmetric matrix
+// - L : dim x dim lower-triangular matrix
+// - stabilizeIndices: vector to hold indices where small diagonal elements were compensated
+// - stabilizeLambdas: vector to hold values used to compensate small diagonal elements
+//
 void choleskyDecompositionStabilized(Matrix &A, Matrix &L, vector<Integer> &stabilizeIndices, vector<Real> &stabilizeLambdas) {
   int dim = A.rows;
   assert(A.cols == dim);
