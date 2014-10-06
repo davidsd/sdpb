@@ -56,9 +56,7 @@ int solveSDP(const path &sdpFile,
   cout << endl;
   cout << solver.status << endl;
   cout << timers << endl;
-
-  if (reason == PrimalDualOptimal || reason == DualFeasibleMaxObjectiveExceeded)
-    solver.saveSolution(reason, outFile);
+  solver.saveSolution(reason, outFile);
 
   return 0;
 }
@@ -146,6 +144,9 @@ int main(int argc, char** argv) {
     ("maxDualObjective",
      po::value<Real>(&parameters.maxDualObjective)->default_value(Real("1e10")),
      "Terminate if the dual objective exceeds this value.")
+    ("maxComplementarity",
+     po::value<Real>(&parameters.maxComplementarity)->default_value(Real("1e100")),
+     "Terminate if the complementarity mu = Tr(X Y)/dim(X) exceeds this value.")
     ;
     
   po::options_description cmdLineOptions;

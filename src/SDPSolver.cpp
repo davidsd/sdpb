@@ -625,6 +625,10 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     initializeSchurComplementSolver(BilinearPairingsXInv, BilinearPairingsY);
 
     Real mu = frobeniusProductSymmetric(X, Y)/X.dim;
+    if (mu > parameters.maxComplementarity) {
+      finished = MaxComplementarityExceeded;
+      break;
+    }
 
     // Mehrotra predictor solution for (dx, dX, dY)
     Real betaPredictor = predictorCenteringParameter(parameters, isPrimalFeasible && isDualFeasible);

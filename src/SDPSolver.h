@@ -32,6 +32,7 @@ public:
   Real infeasibleCenteringParameter;
   Real stepLengthReduction;
   Real maxDualObjective;
+  Real maxComplementarity;
 
   void resetPrecision() {
     setPrecision(dualityGapThreshold,          precision);
@@ -43,6 +44,7 @@ public:
     setPrecision(infeasibleCenteringParameter, precision);
     setPrecision(stepLengthReduction,          precision);
     setPrecision(maxDualObjective,             precision);
+    setPrecision(maxComplementarity,           precision);
   }
 
   friend ostream& operator<<(ostream& os, const SDPSolverParameters& p);
@@ -51,6 +53,7 @@ public:
 enum SDPSolverTerminateReason {
   PrimalDualOptimal,
   DualFeasibleMaxObjectiveExceeded,
+  MaxComplementarityExceeded,
   MaxIterationsExceeded,
   MaxRuntimeExceeded,
 };

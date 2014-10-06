@@ -56,6 +56,7 @@ ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
   os << "infeasibleCenteringParameter = " << p.infeasibleCenteringParameter << endl;
   os << "stepLengthReduction          = " << p.stepLengthReduction          << endl;
   os << "maxDualObjective             = " << p.maxDualObjective             << endl;
+  os << "maxComplementarity           = " << p.maxComplementarity           << endl;
   return os;
 }
 
@@ -72,6 +73,9 @@ ostream &operator<<(ostream& os, const SDPSolverTerminateReason& r) {
     break;
   case DualFeasibleMaxObjectiveExceeded:
     os << "found dual feasible solution with dualObjective exceeding maxDualObjective.";
+    break;
+  case MaxComplementarityExceeded:
+    os << "maxComplementarity exceeded.";
     break;
   }
   return os;
