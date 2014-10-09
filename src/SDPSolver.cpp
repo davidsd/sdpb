@@ -161,15 +161,15 @@ void tensorMatrixInvCongruenceTransposeWithCholesky(const Matrix &L,
                                                     const Matrix &B,
                                                     Matrix &Work,
                                                     Matrix &Result) {
-  // X = L^{-1} (B \otimes 1);
+  // Work = L^{-1} (B \otimes 1);
   for (int cw = 0; cw < Work.cols; cw++) {
     int mc  = cw / B.cols;
 
     for (int rw = mc*B.rows; rw < Work.rows; rw++) {
-      int mr = rw / B.cols;
+      int mr = rw / B.rows;
 
       Real tmp = (mr != mc) ? Real(0) : B.elt(rw % B.rows, cw % B.cols);
-      for (int cl = 0; cl < rw; cl++)
+      for (int cl = mc*B.rows; cl < rw; cl++)
         tmp -= L.elt(rw, cl)*Work.elt(cl, cw);
 
       Work.elt(rw, cw) = tmp/L.elt(rw, rw);
@@ -271,7 +271,6 @@ void computeSchurBlocks(const SDP &sdp,
                         const BlockDiagonalMatrix &BilinearPairingsXInv,
                         const BlockDiagonalMatrix &BilinearPairingsY,
                         BlockDiagonalMatrix &SchurBlocks) {
-
   #pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     const int ej = sdp.degrees[j] + 1;
@@ -281,21 +280,17 @@ void computeSchurBlocks(const SDP &sdp,
       const int ej_s1 = sdp.constraintIndices[j][u1].s * ej;
       const int k1    = sdp.constraintIndices[j][u1].k;
 
-      for (unsigned int u2 = 0; u2 < sdp.constraintIndices[j].size(); u2++) {
+      for (unsigned int u2 = 0; u2 <= u1; u2++) {
         const int ej_r2 = sdp.constraintIndices[j][u2].r * ej;
         const int ej_s2 = sdp.constraintIndices[j][u2].s * ej;
         const int k2    = sdp.constraintIndices[j][u2].k;
 
         Real tmp = 0;
         for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
-          tmp += (BilinearPairingsXInv.blocks[*b].elt(ej_s1 + k1, ej_r2 + k2) *
-                  BilinearPairingsY   .blocks[*b].elt(ej_s2 + k2, ej_r1 + k1) +
-                  BilinearPairingsXInv.blocks[*b].elt(ej_r1 + k1, ej_r2 + k2) *
-                  BilinearPairingsY   .blocks[*b].elt(ej_s2 + k2, ej_s1 + k1) +
-                  BilinearPairingsXInv.blocks[*b].elt(ej_s1 + k1, ej_s2 + k2) *
-                  BilinearPairingsY   .blocks[*b].elt(ej_r2 + k2, ej_r1 + k1) +
-                  BilinearPairingsXInv.blocks[*b].elt(ej_r1 + k1, ej_s2 + k2) *
-                  BilinearPairingsY   .blocks[*b].elt(ej_r2 + k2, ej_s1 + k1))/4;
+          tmp += (BilinearPairingsXInv.blocks[*b].elt(ej_s1 + k1, ej_r2 + k2)*BilinearPairingsY.blocks[*b].elt(ej_s2 + k2, ej_r1 + k1) +
+                  BilinearPairingsXInv.blocks[*b].elt(ej_r1 + k1, ej_r2 + k2)*BilinearPairingsY.blocks[*b].elt(ej_s2 + k2, ej_s1 + k1) +
+                  BilinearPairingsXInv.blocks[*b].elt(ej_s1 + k1, ej_s2 + k2)*BilinearPairingsY.blocks[*b].elt(ej_r2 + k2, ej_r1 + k1) +
+                  BilinearPairingsXInv.blocks[*b].elt(ej_r1 + k1, ej_s2 + k2)*BilinearPairingsY.blocks[*b].elt(ej_r2 + k2, ej_s1 + k1))/4;
         }
         SchurBlocks.blocks[j].elt(u1, u2) = tmp;
         if (u2 != u1)
