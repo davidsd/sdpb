@@ -343,7 +343,7 @@ void computeDualResidues(const SDP &sdp,
                          Vector &dualResidues) {
   #pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
-    const int ej = sdp.degrees[j] +1;
+    const int ej = sdp.degrees[j] + 1;
 
     for (vector<IndexTuple>::const_iterator t = sdp.constraintIndices[j].begin();
          t != sdp.constraintIndices[j].end();
@@ -367,19 +367,31 @@ void computeDualResidues(const SDP &sdp,
 void constraintMatrixWeightedSum(const SDP &sdp, const Vector x, BlockDiagonalMatrix &result)  {
   #pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
-    const int dj = sdp.degrees[j];
-    int p  = sdp.constraintIndices[j][0].p;
+    const int ej = sdp.degrees[j] + 1;
 
-    for (int s = 0; s < sdp.dimensions[j]; s++) {
-      for (int r = 0; r <= s; r++) {
-        for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++)
-          diagonalCongruence(&x[p], sdp.bilinearBases[*b], r, s, result.blocks[*b]);
-        p += dj + 1;
+    for (vector<IndexTuple>::const_iterator t = sdp.constraintIndices[j].begin();
+         t != sdp.constraintIndices[j].end();
+         t += ej) {
+      const int p = t->p;
+      const int r = t->r;
+      const int s = t->s;
+      assert(t->k == 0);
+
+      for (vector<int>::const_iterator b = sdp.blocks[j].begin(); b != sdp.blocks[j].end(); b++) {
+        diagonalCongruence(&x[p], sdp.bilinearBases[*b], r, s, result.blocks[*b]);
+        
+        if (r != s) {
+          const int u = sdp.bilinearBases[*b].rows;
+          for (int m = r*u; m < (r+1)*u; m++) {
+            for (int n = s*u; n < (s+1)*u; n++) {
+              result.blocks[*b].elt(m, n) /= 2;
+              result.blocks[*b].elt(n, m) = result.blocks[*b].elt(m, n);
+            }
+          }
+        }
       }
     }
   }
-
-  result.symmetrize();
 }
 
 void computeSchurRHS(const SDP &sdp,
