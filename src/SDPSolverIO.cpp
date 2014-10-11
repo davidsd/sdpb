@@ -1,41 +1,46 @@
 #include <iostream>
 #include <ostream>
+#include <sstream>
 #include "omp.h"
 #include "boost/archive/text_oarchive.hpp"
 #include "boost/archive/text_iarchive.hpp"
 #include "boost/filesystem.hpp"
 #include "boost/filesystem/fstream.hpp"
+#include "boost/date_time/posix_time/posix_time.hpp"
 #include "SDPSolver.h"
 #include "serialize.h"
 #include "Timers.h"
 
 using boost::filesystem::path;
+using boost::posix_time::time_duration;
+using boost::posix_time::microseconds;
 using std::cout;
 
 void printSolverHeader() {
-  cout << "\n     time    mu        P-obj       D-obj      gap         P-err         D-err       P-step   D-step   beta\n";
-  cout << "-----------------------------------------------------------------------------------------------------------\n";
+  cout << "\n     time      mu        P-obj       D-obj      gap         P-err       D-err      P-step   D-step   beta\n";
+  cout << "---------------------------------------------------------------------------------------------------------\n";
 }
 
 void printSolverInfo(int iteration,
                      Real mu,
                      SDPSolverStatus status,
-                     bool isPrimalFeasible,
-                     bool isDualFeasible,
                      Real primalStepLength,
                      Real dualStepLength,
                      Real betaCorrector) {
   Real time = Real(timers["Run solver"].elapsed().wall)/1000000000;
+  time_duration td(microseconds(timers["Run solver"].elapsed().wall)/1000);
+  std::stringstream ss;
+  ss << td;
   gmp_fprintf(stdout,
-              "%3d  %-7.3Fg %-8.1Fe %-+11.2Fe %-+11.2Fe %-9.2Fe %s%-+10.2Fe%s  %s%-+10.2Fe%s  %-8.3Fg %-8.3Fg %-4.2Fg\n",
+              "%3d  %s  %-8.1Fe %-+11.2Fe %-+11.2Fe %-9.2Fe  %-+10.2Fe  %-+10.2Fe  %-8.3Fg %-8.3Fg %-4.2Fg\n",
               iteration,
-              time.get_mpf_t(),
+              ss.str().substr(0,8).c_str(),
               mu.get_mpf_t(),
               status.primalObjective.get_mpf_t(),
               status.dualObjective.get_mpf_t(),
               status.dualityGap().get_mpf_t(),
-              isPrimalFeasible ? "|" : " ", status.primalError.get_mpf_t(), isPrimalFeasible ? "|" : " ",
-              isDualFeasible   ? "|" : " ", status.dualError.get_mpf_t(),   isDualFeasible   ? "|" : " ",
+              status.primalError.get_mpf_t(),
+              status.dualError.get_mpf_t(),
               primalStepLength.get_mpf_t(),
               dualStepLength.get_mpf_t(),
               betaCorrector.get_mpf_t());

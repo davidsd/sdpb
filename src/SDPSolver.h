@@ -140,7 +140,11 @@ public:
 };
 
 void printSolverHeader();
-void printSolverInfo(int iteration, Real mu, SDPSolverStatus status, bool isPrimalFeasible,
-                     bool isDualFeasible, Real primalStepLength, Real dualStepLength, Real betaCorrector);
+void printSolverInfo(int iteration,
+                     Real mu,
+                     SDPSolverStatus status,
+                     Real primalStepLength,
+                     Real dualStepLength,
+                     Real betaCorrector);
 
 #endif  // SDP_BOOTSTRAP_SDPSOLVER_H_

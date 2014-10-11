@@ -642,8 +642,7 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     computeSearchDirection(betaPredictor, mu, false);
 
     // Mehrotra corrector solution for (dx, dX, dY)
-    Real betaCorrector = correctorCenteringParameter(parameters, X, dX, Y, dY, mu,
-                                                     isPrimalFeasible && isDualFeasible);
+    Real betaCorrector = correctorCenteringParameter(parameters, X, dX, Y, dY, mu, isPrimalFeasible && isDualFeasible);
     computeSearchDirection(betaCorrector, mu, true);
 
     // Step length to preserve positive definiteness
@@ -657,8 +656,7 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
       dualStepLength = primalStepLength;
     }
 
-    printSolverInfo(iteration, mu, status, isPrimalFeasible, isDualFeasible,
-                    primalStepLength, dualStepLength, betaCorrector);
+    printSolverInfo(iteration, mu, status, primalStepLength, dualStepLength, betaCorrector);
 
     // Update current point
     scaleVector(dx, primalStepLength);
