@@ -65,6 +65,24 @@ void matrixSquare(Matrix &A, Matrix &B) {
   }
 }
 
+// Set block starting at (bRow, bCol) of B to A^T A
+void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol) {
+  assert(bRow + A.cols <= B.rows);
+  assert(bCol + A.cols <= B.cols);
+  
+  #pragma omp parallel for schedule(dynamic)
+  for (int c = 0; c < A.cols; c++) {
+    for (int r = 0; r <= c; r++) {
+      Real tmp = 0;
+      for (int p = 0; p < A.rows; p++)
+        tmp += A.elt(p,r) * A.elt(p,c);
+      B.elt(bRow + r, bCol + c) = tmp;
+      if (r != c)
+        B.elt(bRow + c, bCol + r) = tmp;
+    }
+  }
+}
+
 // A := L A L^T
 void lowerTriangularCongruence(Matrix &A, Matrix &L) {
   int dim = A.rows;
@@ -100,8 +118,8 @@ void lowerTriangularInverseCongruence(Matrix &A, Matrix &L) {
 // y := alpha A x + beta y
 //
 void vectorScaleMatrixMultiplyAdd(Real alpha, Matrix &A, Vector &x, Real beta, Vector &y) {
-  assert(A.cols == (int)x.size());
-  assert(A.rows == (int)y.size());
+  assert(A.cols <= (int)x.size());
+  assert(A.rows <= (int)y.size());
 
   #pragma omp parallel for schedule(static)
   for (int p = 0; p < A.rows; p++) {
@@ -115,8 +133,8 @@ void vectorScaleMatrixMultiplyAdd(Real alpha, Matrix &A, Vector &x, Real beta, V
 // y := alpha A^T x + beta y
 //
 void vectorScaleMatrixMultiplyTransposeAdd(Real alpha, Matrix &A, Vector &x, Real beta, Vector &y) {
-  assert(A.cols == (int)y.size());
-  assert(A.rows == (int)x.size());
+  assert(A.cols <= (int)y.size());
+  assert(A.rows <= (int)x.size());
 
   #pragma omp parallel for schedule(static)
   for (int n = 0; n < A.cols; n++) {

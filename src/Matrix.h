@@ -124,6 +124,9 @@ void matrixMultiply(Matrix &A, Matrix &B, Matrix &C);
 // B = A^T A
 void matrixSquare(Matrix &A, Matrix &B);
 
+// Set block starting at (bRow, bCol) of B to A^T A
+void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol);
+
 // A := L A L^T
 void lowerTriangularCongruence(Matrix &A, Matrix &L);
 

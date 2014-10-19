@@ -32,6 +32,7 @@ SDPSolver::SDPSolver(const SDP &sdp):
   SchurBlocks(sdp.schurBlockDims()),
   SchurBlocksCholesky(SchurBlocks),
   SchurUpdateLowRank(sdp.FreeVarMatrix),
+  stabilizeBlocks(SchurBlocks.blocks.size()),
   Q(sdp.FreeVarMatrix.cols, sdp.FreeVarMatrix.cols),
   Qpivots(sdp.FreeVarMatrix.cols),
   basicKernelCoords(Q.rows),
@@ -482,12 +483,17 @@ Real stepLength(BlockDiagonalMatrix &XCholesky,
     return -gamma/lambda;
 }
 
-void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
-                                                const BlockDiagonalMatrix &BilinearPairingsY) {
+void SDPSolver::initializeSchurComplementSolverOld(const BlockDiagonalMatrix &BilinearPairingsXInv,
+                                                   const BlockDiagonalMatrix &BilinearPairingsY) {
 
+  timers["computeSchurBlocks          "].resume();
   computeSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, SchurBlocks);
+  timers["computeSchurBlocks          "].stop();
+  timers["choleskyDecomposeSchurBlocks"].resume();
   choleskyDecompositionStabilized(SchurBlocks, SchurBlocksCholesky, schurStabilizeIndices, schurStabilizeLambdas);
+  timers["choleskyDecomposeSchurBlocks"].stop();
 
+  timers["prepare U                   "].resume();
   // SchurUpdateLowRank = {{- 1, 0}, {E, G}}
   SchurUpdateLowRank.setCols(sdp.FreeVarMatrix.cols);
   SchurUpdateLowRank.copyFrom(sdp.FreeVarMatrix);
@@ -500,20 +506,137 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   }
 
   // SchurUpdateLowRank = SchurBlocksCholesky^{-1} {{- 1, 0}, {E, G}}
+  timers["prepare U: schurblocksolve  "].resume();
   blockMatrixLowerTriangularSolve(SchurBlocksCholesky, SchurUpdateLowRank);
+  timers["prepare U: schurblocksolve  "].stop();
+  timers["prepare U                   "].stop();
 
+  timers["prepare Q                   "].resume();
+  timers["prepare Q: setRowsCols      "].resume();
   // Q = SchurUpdateLowRank^T SchurUpdateLowRank - {{0,0},{0,1}}
   Q.setRowsCols(SchurUpdateLowRank.cols, SchurUpdateLowRank.cols);
+  timers["prepare Q: setRowsCols      "].stop();
+  timers["prepare Q: matrixSquare     "].resume();
   matrixSquare(SchurUpdateLowRank, Q);
+  timers["prepare Q: matrixSquare     "].stop();
   int stabilizerStart = FreeVarMatrixReduced.cols;
   for (int i = stabilizerStart; i < Q.cols; i++)
     Q.elt(i,i) -= 1;
+  timers["prepare Q                   "].stop();
 
+  timers["LU decompose Q              "].resume();
   Qpivots.resize(Q.rows);
   LUDecomposition(Q, Qpivots);
+  timers["LU decompose Q              "].stop();
 }
 
-void SDPSolver::solveSchurComplementEquation(Vector &dx) {
+void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
+                                                const BlockDiagonalMatrix &BilinearPairingsY) {
+
+  timers["computeSchurBlocks          "].resume();
+  computeSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, SchurBlocks);
+  timers["computeSchurBlocks          "].stop();
+  timers["choleskyDecomposeSchurBlocks"].resume();
+  choleskyDecompositionStabilized(SchurBlocks, SchurBlocksCholesky, schurStabilizeIndices, schurStabilizeLambdas);
+  timers["choleskyDecomposeSchurBlocks"].stop();
+
+  timers["prepare U                   "].resume();
+  // SchurUpdateLowRank = {{- 1, 0}, {E, G}}
+  // Can probably remove this line eventually
+  SchurUpdateLowRank.setCols(sdp.FreeVarMatrix.cols);
+
+  SchurUpdateLowRank.copyFrom(sdp.FreeVarMatrix);
+  blockMatrixLowerTriangularSolve(SchurBlocksCholesky, SchurUpdateLowRank);
+  int updateColumns = SchurUpdateLowRank.cols;
+
+  stabilizeBlockIndices.resize(0);
+  stabilizeBlockUpdateRow.resize(0);
+  stabilizeBlockUpdateColumn.resize(0);
+
+  for (unsigned int b = 0; b < SchurBlocks.blocks.size(); b++) {
+    if (schurStabilizeIndices[b].size() > 0) {
+      int startIndex = schurStabilizeIndices[b][0];
+      int blockRows  = SchurBlocks.blocks[b].rows - startIndex;
+      int blockCols  = schurStabilizeIndices[b].size();
+
+      stabilizeBlockIndices.push_back(b);
+      stabilizeBlockUpdateRow.push_back(SchurBlocks.blockStartIndices[b] + startIndex);
+      stabilizeBlockUpdateColumn.push_back(updateColumns);
+      updateColumns += blockCols;
+
+      stabilizeBlocks[b].setRowsCols(blockRows, blockCols);
+      stabilizeBlocks[b].setZero();
+      for (unsigned int c = 0; c < schurStabilizeIndices[b].size(); c++) {
+        int r = schurStabilizeIndices[b][c] - startIndex;
+        stabilizeBlocks[b].elt(r, c) = schurStabilizeLambdas[b][c];
+      }
+    }
+  }
+
+  // G := SchurBlocksCholesky^{-1} G
+  #pragma omp parallel for schedule(dynamic)
+  for (unsigned int j = 0; j < stabilizeBlockIndices.size(); j++) {
+    int b = stabilizeBlockIndices[j];
+    int startIndex = schurStabilizeIndices[b][0];
+    Rtrsm("Left", "Lower", "NoTranspose", "NonUnitDiagonal",
+          stabilizeBlocks[b].rows, stabilizeBlocks[b].cols, 1,
+          &SchurBlocksCholesky.blocks[b].elt(startIndex, startIndex),
+          SchurBlocksCholesky.blocks[b].rows,
+          &stabilizeBlocks[b].elt(0, 0),
+          stabilizeBlocks[b].rows);
+  }
+  timers["prepare U                   "].stop();
+
+  timers["prepare Q                   "].resume();
+  // Q = SchurUpdateLowRank^T SchurUpdateLowRank - {{0,0},{0,1}}
+  Q.setRowsCols(updateColumns, updateColumns);
+  Q.setZero();
+
+  matrixSquareIntoBlock(SchurUpdateLowRank, Q, 0, 0);
+
+  // LowerRight(Q) = G^T G - 1
+  for (unsigned int j = 0; j < stabilizeBlockIndices.size(); j++) {
+    int b = stabilizeBlockIndices[j];
+    int c = stabilizeBlockUpdateColumn[j];
+    matrixSquareIntoBlock(stabilizeBlocks[b], Q, c, c);
+    for (int i = c; i < c + stabilizeBlocks[b].cols; i++)
+      Q.elt(i,i) -= 1;
+  }
+
+  // LowerLeft(Q) = G^T U
+  # pragma omp parallel for schedule(dynamic)
+  for (unsigned int j = 0; j < stabilizeBlockIndices.size(); j++) {
+    int b = stabilizeBlockIndices[j];
+    int p = stabilizeBlockUpdateRow[j];
+    int r = stabilizeBlockUpdateColumn[j];
+    Rgemm("Transpose", "NoTranspose",
+          stabilizeBlocks[b].cols,
+          SchurUpdateLowRank.cols,
+          stabilizeBlocks[b].rows,
+          1,
+          &stabilizeBlocks[b].elements[0],
+          stabilizeBlocks[b].rows,
+          &SchurUpdateLowRank.elt(p, 0),
+          SchurUpdateLowRank.rows,
+          0,
+          &Q.elt(r, 0),
+          Q.rows);
+  }
+
+  // UpperRight(Q) = LowerLeft(Q)^T
+  # pragma omp parallel for schedule(static)
+  for (int c = 0; c < SchurUpdateLowRank.cols; c++)
+    for (int r = SchurUpdateLowRank.cols; r < Q.rows; r++)
+      Q.elt(c,r) = Q.elt(r,c);
+  timers["prepare Q                   "].stop();
+
+  timers["LU decompose Q              "].resume();
+  Qpivots.resize(Q.rows);
+  LUDecomposition(Q, Qpivots);
+  timers["LU decompose Q              "].stop();
+}
+
+void SDPSolver::solveSchurComplementEquationOld(Vector &dx) {
   // dx = SchurBlocksCholesky^{-1} dx
   blockMatrixLowerTriangularSolve(SchurBlocksCholesky, dx);
 
@@ -531,11 +654,51 @@ void SDPSolver::solveSchurComplementEquation(Vector &dx) {
   blockMatrixLowerTriangularTransposeSolve(SchurBlocksCholesky, dx);
 }
 
+void SDPSolver::solveSchurComplementEquation(Vector &dx) {
+  // dx = SchurBlocksCholesky^{-1} dx
+  blockMatrixLowerTriangularSolve(SchurBlocksCholesky, dx);
+
+  basicKernelCoords.resize(Q.rows);
+  // k_1 = -SchurUpdateLowRank^T dx
+  vectorScaleMatrixMultiplyTransposeAdd(-1, SchurUpdateLowRank, dx, 0, basicKernelCoords);
+  // k_2 = -G^T dx
+  for (unsigned int j = 0; j < stabilizeBlockIndices.size(); j++) {
+    int b = stabilizeBlockIndices[j];
+    int pTopLeft = stabilizeBlockUpdateRow[j];
+    int cTopLeft = stabilizeBlockUpdateColumn[j];
+
+    for (int c = 0; c < stabilizeBlocks[b].cols; c++) {
+      basicKernelCoords[cTopLeft + c] = 0;
+      for (int r = 0; r < stabilizeBlocks[b].rows; r++)
+        basicKernelCoords[cTopLeft + c] -= dx[pTopLeft + r] * stabilizeBlocks[b].elt(r,c);
+    }
+  }
+
+  // k = Q^{-1} k
+  solveWithLUDecomposition(Q, Qpivots, basicKernelCoords);
+
+  // dx = dx + SchurUpdateLowRank k_1
+  vectorScaleMatrixMultiplyAdd(1, SchurUpdateLowRank, basicKernelCoords, 1, dx);
+  // dx += G k_2
+  for (unsigned int j = 0; j < stabilizeBlockIndices.size(); j++) {
+    int b = stabilizeBlockIndices[j];
+    int pTopLeft = stabilizeBlockUpdateRow[j];
+    int cTopLeft = stabilizeBlockUpdateColumn[j];
+
+    for (int c = 0; c < stabilizeBlocks[b].cols; c++)
+      for (int r = 0; r < stabilizeBlocks[b].rows; r++)
+        dx[pTopLeft + r] += basicKernelCoords[cTopLeft + c] * stabilizeBlocks[b].elt(r,c);
+  }
+
+  // dx = SchurBlocksCholesky^{-T} dx
+  blockMatrixLowerTriangularTransposeSolve(SchurBlocksCholesky, dx);
+}
+
 void SDPSolver::computeSearchDirection(const Real &beta,
                                        const Real &mu,
                                        const bool correctorPhase) {
 
-  blockDiagonalMatrixScaleMultiplyAdd(-1, X,  Y,  0, R);
+  blockDiagonalMatrixScaleMultiplyAdd(-1, X, Y, 0, R);
   if (correctorPhase)
     blockDiagonalMatrixScaleMultiplyAdd(-1, dX, dY, 1, R);
   R.addDiagonal(beta*mu);
@@ -596,14 +759,22 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
       break;
     }
 
+    timers["basic+choleskyDecomposition"].resume();
+
     // Maintain the invariant x_B = g + E^T x_N
     basicCompletion(dualObjectiveReduced, FreeVarMatrixReduced, basicIndices, nonBasicIndices, x);
 
     choleskyDecomposition(X, XCholesky);
     choleskyDecomposition(Y, YCholesky);
 
+    timers["basic+choleskyDecomposition"].stop();
+    timers["compute bilinear pairings  "].resume();
+
     computeInvBilinearPairingsWithCholesky(XCholesky, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsXInv);
     computeBilinearPairings(Y, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsY);
+
+    timers["compute bilinear pairings  "].stop();
+    timers["compute residues           "].resume();
 
     // d_k = c_k - Tr(F_k Y)
     computeDualResidues(sdp, Y, BilinearPairingsY, dualResidues);
@@ -629,7 +800,12 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
       break;
     }
 
+    timers["compute residues           "].stop();
+    timers["initialize SchurComplement "].resume();
+
     initializeSchurComplementSolver(BilinearPairingsXInv, BilinearPairingsY);
+
+    timers["initialize SchurComplement "].stop();
 
     Real mu = frobeniusProductSymmetric(X, Y)/X.dim;
     if (mu > parameters.maxComplementarity) {
@@ -637,13 +813,21 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
       break;
     }
 
+    timers["Mehrotra predictor solution"].resume();
+
     // Mehrotra predictor solution for (dx, dX, dY)
     Real betaPredictor = predictorCenteringParameter(parameters, isPrimalFeasible && isDualFeasible);
     computeSearchDirection(betaPredictor, mu, false);
 
+    timers["Mehrotra predictor solution"].stop();
+    timers["Mehrotra corrector solution"].resume();
+
     // Mehrotra corrector solution for (dx, dX, dY)
     Real betaCorrector = correctorCenteringParameter(parameters, X, dX, Y, dY, mu, isPrimalFeasible && isDualFeasible);
     computeSearchDirection(betaCorrector, mu, true);
+
+    timers["Mehrotra corrector solution"].stop();
+    timers["step length computation    "].resume();
 
     // Step length to preserve positive definiteness
     Real primalStepLength = stepLength(XCholesky, dX, StepMatrixWorkspace,
@@ -655,6 +839,8 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
       primalStepLength = min(primalStepLength, dualStepLength);
       dualStepLength = primalStepLength;
     }
+
+    timers["step length computation    "].stop();
 
     printSolverInfo(iteration, mu, status, primalStepLength, dualStepLength, betaCorrector);
 
