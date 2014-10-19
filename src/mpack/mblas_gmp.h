@@ -84,6 +84,9 @@ void Rtrsm(const char *side, const char *uplo, const char *transa,
 void Rgemm(const char *transa, const char *transb, mpackint m, mpackint n,
     mpackint k, mpf_class alpha, mpf_class * A, mpackint lda, mpf_class * B,
     mpackint ldb, mpf_class beta, mpf_class * C, mpackint ldc);
+void RgemmParallel(const char *transa, const char *transb, mpackint m, mpackint n,
+    mpackint k, mpf_class alpha, mpf_class * A, mpackint lda, mpf_class * B,
+    mpackint ldb, mpf_class beta, mpf_class * C, mpackint ldc);
 void Rsyr2k(const char *uplo, const char *trans, mpackint n, mpackint k,
     mpf_class alpha, mpf_class * A, mpackint lda, mpf_class * B, mpackint ldb,
     mpf_class beta, mpf_class * C, mpackint ldc);
