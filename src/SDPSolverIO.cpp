@@ -109,6 +109,7 @@ void SDPSolver::saveCheckpoint(const path &checkpointFile) {
   boost::archive::text_oarchive ar(ofs);
   cout << "Saving checkpoint to    : " << checkpointFile << endl;
   boost::serialization::serializeSDPSolverState(ar, x, X, Y);
+  timers["Save checkpoint"].start();
 }
 
 void SDPSolver::loadCheckpoint(const path &checkpointFile) {
