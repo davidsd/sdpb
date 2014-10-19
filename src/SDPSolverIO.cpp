@@ -50,6 +50,7 @@ ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
   os << "maxIterations                = " << p.maxIterations                << endl;
   os << "maxRuntime                   = " << p.maxRuntime                   << endl;
   os << "checkpointInterval           = " << p.checkpointInterval           << endl;
+  os << "saveFinalCheckpoint          = " << p.saveFinalCheckpoint          << endl;
   os << "precision(actual)            = " << p.precision << "(" << mpf_get_default_prec() << ")" << endl;
   os << "maxThreads                   = " << p.maxThreads                   << endl;
   os << "dualityGapThreshold          = " << p.dualityGapThreshold          << endl;
@@ -68,19 +69,19 @@ ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
 ostream &operator<<(ostream& os, const SDPSolverTerminateReason& r) {
   switch(r) {
   case PrimalDualOptimal:
-    os << "found primal-dual optimal solution.";
+    os << "found primal-dual optimal solution";
     break;
   case MaxIterationsExceeded:
-    os << "maxIterations exceeded.";
+    os << "maxIterations exceeded";
     break;
   case MaxRuntimeExceeded:
-    os << "maxRuntime exceeded.";
+    os << "maxRuntime exceeded";
     break;
   case DualFeasibleMaxObjectiveExceeded:
-    os << "found dual feasible solution with dualObjective exceeding maxDualObjective.";
+    os << "found dual feasible solution with dualObjective exceeding maxDualObjective";
     break;
   case MaxComplementarityExceeded:
-    os << "maxComplementarity exceeded.";
+    os << "maxComplementarity exceeded";
     break;
   }
   return os;
@@ -121,7 +122,7 @@ void SDPSolver::loadCheckpoint(const path &checkpointFile) {
 
 void SDPSolver::saveSolution(const SDPSolverTerminateReason terminateReason, const path &outFile) {
   boost::filesystem::ofstream ofs(outFile);
-  cout << "Saving solution to: " << outFile << endl;
+  cout << "Saving solution to      : " << outFile << endl;
   ofs.precision(int(status.primalObjective.get_prec() * 0.30102999566398114 + 5));
   ofs << "terminateReason = \"" << terminateReason      << "\";\n";
   ofs << "primalObjective = " << status.primalObjective << ";\n";

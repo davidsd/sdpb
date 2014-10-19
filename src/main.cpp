@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <ostream>
 #include "omp.h"
@@ -15,6 +16,8 @@
 using std::cout;
 using std::cerr;
 using std::endl;
+using std::setfill;
+using std::setw;
 
 using boost::filesystem::path;
 using boost::posix_time::second_clock;
@@ -51,11 +54,19 @@ int solveSDP(const path &sdpFile,
   else
     solver.initialize(parameters);
 
+  timers["Run solver"].start();
+  timers["Save checkpoint"].start();
+  printSolverHeader();
   SDPSolverTerminateReason reason = solver.run(parameters, checkpointFile);
-  cout << "Terminated: " << reason << endl;
-  cout << endl;
+  timers["Run solver"].stop();
+  timers["Save checkpoint"].stop();
+
+  cout << "-----" << setfill('-') << setw(100) << std::left << reason << endl << endl;
   cout << solver.status << endl;
   cout << timers << endl;
+
+  if (parameters.saveFinalCheckpoint)
+    solver.saveCheckpoint(checkpointFile);
   solver.saveSolution(reason, outFile);
 
   return 0;
@@ -103,6 +114,9 @@ int main(int argc, char** argv) {
     ("checkpointInterval",
      po::value<int>(&parameters.checkpointInterval)->default_value(3600),
      "Save checkpoints to checkpointFile every checkpointInterval seconds.")
+    ("saveFinalCheckpoint",
+     po::value<bool>(&parameters.saveFinalCheckpoint)->default_value(true),
+     "Save a final checkpoint after terminating (useful to turn off when debugging).")
     ("maxIterations",
      po::value<int>(&parameters.maxIterations)->default_value(500),
      "Maximum number of iterations to run the solver.")

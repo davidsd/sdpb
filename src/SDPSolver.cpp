@@ -32,12 +32,12 @@ SDPSolver::SDPSolver(const SDP &sdp):
   SchurBlocks(sdp.schurBlockDims()),
   SchurBlocksCholesky(SchurBlocks),
   SchurUpdateLowRank(sdp.FreeVarMatrix),
+  schurStabilizeIndices(SchurBlocks.blocks.size()),
+  schurStabilizeLambdas(SchurBlocks.blocks.size()),
   stabilizeBlocks(SchurBlocks.blocks.size()),
   Q(sdp.FreeVarMatrix.cols, sdp.FreeVarMatrix.cols),
   Qpivots(sdp.FreeVarMatrix.cols),
   basicKernelCoords(Q.rows),
-  schurStabilizeIndices(SchurBlocks.blocks.size()),
-  schurStabilizeLambdas(SchurBlocks.blocks.size()),
   StepMatrixWorkspace(X)
 {
   // initialize bilinearPairingsWorkspace, eigenvaluesWorkspace, QRWorkspace 
@@ -483,37 +483,6 @@ Real stepLength(BlockDiagonalMatrix &XCholesky,
     return -gamma/lambda;
 }
 
-void SDPSolver::initializeSchurComplementSolverOld(const BlockDiagonalMatrix &BilinearPairingsXInv,
-                                                   const BlockDiagonalMatrix &BilinearPairingsY) {
-
-  computeSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, SchurBlocks);
-  choleskyDecompositionStabilized(SchurBlocks, SchurBlocksCholesky, schurStabilizeIndices, schurStabilizeLambdas);
-
-  // SchurUpdateLowRank = {{- 1, 0}, {E, G}}
-  SchurUpdateLowRank.setCols(sdp.FreeVarMatrix.cols);
-  SchurUpdateLowRank.copyFrom(sdp.FreeVarMatrix);
-  for (unsigned int b = 0; b < SchurBlocks.blocks.size(); b++) {
-    for (unsigned int i = 0; i < schurStabilizeIndices[b].size(); i++) {
-      int fullIndex = SchurBlocks.blockStartIndices[b] + schurStabilizeIndices[b][i];
-      SchurUpdateLowRank.addColumn();
-      SchurUpdateLowRank.elt(fullIndex, SchurUpdateLowRank.cols - 1) = schurStabilizeLambdas[b][i];
-    }
-  }
-
-  // SchurUpdateLowRank = SchurBlocksCholesky^{-1} {{- 1, 0}, {E, G}}
-  blockMatrixLowerTriangularSolve(SchurBlocksCholesky, SchurUpdateLowRank);
-
-  // Q = SchurUpdateLowRank^T SchurUpdateLowRank - {{0,0},{0,1}}
-  Q.setRowsCols(SchurUpdateLowRank.cols, SchurUpdateLowRank.cols);
-  matrixSquare(SchurUpdateLowRank, Q);
-  int stabilizerStart = FreeVarMatrixReduced.cols;
-  for (int i = stabilizerStart; i < Q.cols; i++)
-    Q.elt(i,i) -= 1;
-
-  Qpivots.resize(Q.rows);
-  LUDecomposition(Q, Qpivots);
-}
-
 void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
                                                 const BlockDiagonalMatrix &BilinearPairingsY) {
 
@@ -608,24 +577,6 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   LUDecomposition(Q, Qpivots);
 }
 
-void SDPSolver::solveSchurComplementEquationOld(Vector &dx) {
-  // dx = SchurBlocksCholesky^{-1} dx
-  blockMatrixLowerTriangularSolve(SchurBlocksCholesky, dx);
-
-  // k = -SchurUpdateLowRank^T dx
-  basicKernelCoords.resize(SchurUpdateLowRank.cols);
-  vectorScaleMatrixMultiplyTransposeAdd(-1, SchurUpdateLowRank, dx, 0, basicKernelCoords);
-
-  // k = Q^{-1} k
-  solveWithLUDecomposition(Q, Qpivots, basicKernelCoords);
-
-  // dx = dx + SchurUpdateLowRank k
-  vectorScaleMatrixMultiplyAdd(1, SchurUpdateLowRank, basicKernelCoords, 1, dx);
-
-  // dx = SchurBlocksCholesky^{-T} dx
-  blockMatrixLowerTriangularTransposeSolve(SchurBlocksCholesky, dx);
-}
-
 void SDPSolver::solveSchurComplementEquation(Vector &dx) {
   // dx = SchurBlocksCholesky^{-1} dx
   blockMatrixLowerTriangularSolve(SchurBlocksCholesky, dx);
@@ -707,26 +658,14 @@ void SDPSolver::initialize(const SDPSolverParameters &parameters) {
   Y.addDiagonal(parameters.initialMatrixScaleDual);
 }
 
-SDPSolverTerminateReason finishWith(const SDPSolverTerminateReason reason) {
-  timers["Run solver"].stop();
-  //saveCheckpoint(checkpointFile);
-  return reason;
-}
-
 SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
                                         const path checkpointFile) {
-  printSolverHeader();
-  timers["Run solver"].start();
-  timers["Save checkpoint"].start();
-  nanosecond_type const checkpointNanoseconds = parameters.checkpointInterval * 1000000000LL;
-  nanosecond_type const maxRuntimeNanoseconds = parameters.maxRuntime * 1000000000LL;
-
   for (int iteration = 1; iteration <= parameters.maxIterations; iteration++) {
 
-    if (timers["Save checkpoint"].elapsed().wall >= checkpointNanoseconds)
+    if (timers["Save checkpoint"].elapsed().wall >= parameters.checkpointInterval * 1000000000LL)
       saveCheckpoint(checkpointFile);
-    if (timers["Run solver"].elapsed().wall >= maxRuntimeNanoseconds)
-      return finishWith(MaxRuntimeExceeded);
+    if (timers["Run solver"].elapsed().wall >= parameters.maxRuntime * 1000000000LL)
+      return MaxRuntimeExceeded;
 
     // Maintain the invariant x_B = g + E^T x_N
     basicCompletion(dualObjectiveReduced, FreeVarMatrixReduced, basicIndices, nonBasicIndices, x);
@@ -754,15 +693,15 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     const bool isOptimal        = status.dualityGap() < parameters.dualityGapThreshold;
 
     if (isPrimalFeasible && isDualFeasible && isOptimal)
-      return finishWith(PrimalDualOptimal);
+      return PrimalDualOptimal;
     else if (isDualFeasible && status.dualObjective > parameters.maxDualObjective)
-      return finishWith(DualFeasibleMaxObjectiveExceeded);
+      return DualFeasibleMaxObjectiveExceeded;
 
     initializeSchurComplementSolver(BilinearPairingsXInv, BilinearPairingsY);
 
     Real mu = frobeniusProductSymmetric(X, Y)/X.dim;
     if (mu > parameters.maxComplementarity)
-      return finishWith(MaxComplementarityExceeded);
+      return MaxComplementarityExceeded;
 
     // Mehrotra predictor solution for (dx, dX, dY)
     Real betaPredictor = predictorCenteringParameter(parameters, isPrimalFeasible && isDualFeasible);
@@ -794,5 +733,5 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     Y += dY;
   }
   
-  return finishWith(MaxIterationsExceeded);
+  return MaxIterationsExceeded;
 }

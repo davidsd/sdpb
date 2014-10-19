@@ -21,6 +21,7 @@ public:
   int maxIterations;
   int maxRuntime;
   int checkpointInterval;
+  bool saveFinalCheckpoint;
   int precision;
   int maxThreads;
   Real dualityGapThreshold;
@@ -114,6 +115,8 @@ public:
   BlockDiagonalMatrix SchurBlocksCholesky;
   Matrix SchurUpdateLowRank;
 
+  vector<vector<int> > schurStabilizeIndices;
+  vector<vector<Real> > schurStabilizeLambdas;
   vector<int> stabilizeBlockIndices;
   vector<int> stabilizeBlockUpdateRow;
   vector<int> stabilizeBlockUpdateColumn;
@@ -122,8 +125,6 @@ public:
   Matrix Q;
   vector<Integer> Qpivots;
   Vector basicKernelCoords;
-  vector<vector<int> > schurStabilizeIndices;
-  vector<vector<Real> > schurStabilizeLambdas;
 
   // additional workspace variables
   BlockDiagonalMatrix StepMatrixWorkspace;
@@ -137,9 +138,6 @@ public:
   void initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
                                        const BlockDiagonalMatrix &BilinearPairingsY);
   void solveSchurComplementEquation(Vector &dx);
-  void initializeSchurComplementSolverOld(const BlockDiagonalMatrix &BilinearPairingsXInv,
-                                          const BlockDiagonalMatrix &BilinearPairingsY);
-  void solveSchurComplementEquationOld(Vector &dx);
   void computeSearchDirection(const Real &beta, const Real &mu, const bool correctorPhase);
   Vector freeVariableSolution();
   void saveCheckpoint(const path &checkpointFile);
