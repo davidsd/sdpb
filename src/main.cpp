@@ -117,6 +117,9 @@ int main(int argc, char** argv) {
     ("saveFinalCheckpoint",
      po::value<bool>(&parameters.saveFinalCheckpoint)->default_value(true),
      "Save a final checkpoint after terminating (useful to turn off when debugging).")
+    ("findDualFeasible",
+     po::value<bool>(&parameters.findDualFeasible)->default_value(false),
+     "Terminate once a dual feasible solution is found.")
     ("maxIterations",
      po::value<int>(&parameters.maxIterations)->default_value(500),
      "Maximum number of iterations to run the solver.")
@@ -155,9 +158,6 @@ int main(int argc, char** argv) {
      po::value<Real>(&parameters.stepLengthReduction)->default_value(Real("0.7")),
      "Shrink each newton step by this factor (smaller means slower, more "
      "stable convergence). Corresponds to SDPA's gammaStar.")
-    ("maxDualObjective",
-     po::value<Real>(&parameters.maxDualObjective)->default_value(Real("1e10")),
-     "Terminate if the dual objective exceeds this value.")
     ("maxComplementarity",
      po::value<Real>(&parameters.maxComplementarity)->default_value(Real("1e100")),
      "Terminate if the complementarity mu = Tr(X Y)/dim(X) exceeds this value.")

@@ -27,11 +27,6 @@ void testCholeskyStabilize() {
   choleskyDecomposition(A,L);
   cout << "A = " << A << ";\n";
   cout << "L = " << L << ";\n";
-  stabilizeCholesky(L, updateVector, updateIndices, lambdaGM);
-  cout << "updateIndices = " << updateIndices << ";\n";
-  cout << "L = " << L << "\n;";
-  cout << "lambdaGM = " << lambdaGM << ";\n";
-
 
   vector<Integer> stabilizeIndices;
   vector<Real> stabilizeLambdas;
@@ -40,41 +35,6 @@ void testCholeskyStabilize() {
   cout << "L = " << L << ";\n";
   cout << "stabilizeIndices = " << stabilizeIndices << ";\n";
   cout << "stabilizeLambdas = " << stabilizeLambdas << ";\n";
-}
-
-void testLinearlyIndependentRowIndices() {
-  Matrix A(8,3);
-  A.elt(0,0)=0;
-  A.elt(0,1)=0;
-  A.elt(0,2)=0;
-  A.elt(1,0)=1;
-  A.elt(1,1)=0;
-  A.elt(1,2)=1;
-  A.elt(2,0)=0;
-  A.elt(2,1)=1;
-  A.elt(2,2)=0;
-  A.elt(3,0)=0;
-  A.elt(3,1)=0;
-  A.elt(3,2)=0;
-  A.elt(4,0)=0;
-  A.elt(4,1)=1;
-  A.elt(4,2)=1;
-  A.elt(5,0)=1;
-  A.elt(5,1)=1;
-  A.elt(5,2)=0;
-  A.elt(6,0)=1;
-  A.elt(6,1)=0;
-  A.elt(6,2)=1;
-  A.elt(7,0)=1;
-  A.elt(7,1)=0;
-  A.elt(7,2)=1;
-
-  cout << "A = " << A << ";\n";
-  
-  vector<int> rows = linearlyIndependentRowIndices(A);
-  
-  cout << "Aprime = " << A << ";\n";
-  cout << "rows = " << rows << ";\n";
 }
 
 void testCholeskyUpdate() {

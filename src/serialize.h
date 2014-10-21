@@ -57,9 +57,10 @@ namespace boost {
     }
 
     template<class Archive>
-    void serializeSDPSolverState(Archive& ar, Vector &x, BlockDiagonalMatrix &X, BlockDiagonalMatrix &Y) {
+    void serializeSDPSolverState(Archive& ar, Vector &x, BlockDiagonalMatrix &X, Vector &y, BlockDiagonalMatrix &Y) {
       ar & x;
       ar & X;
+      ar & y;
       ar & Y;
     }
 

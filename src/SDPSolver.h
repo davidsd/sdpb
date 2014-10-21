@@ -22,6 +22,7 @@ public:
   int maxRuntime;
   int checkpointInterval;
   bool saveFinalCheckpoint;
+  bool findDualFeasible;
   int precision;
   int maxThreads;
   Real dualityGapThreshold;
@@ -32,7 +33,6 @@ public:
   Real feasibleCenteringParameter;
   Real infeasibleCenteringParameter;
   Real stepLengthReduction;
-  Real maxDualObjective;
   Real maxComplementarity;
 
   void resetPrecision() {
@@ -44,7 +44,6 @@ public:
     setPrecision(feasibleCenteringParameter,   precision);
     setPrecision(infeasibleCenteringParameter, precision);
     setPrecision(stepLengthReduction,          precision);
-    setPrecision(maxDualObjective,             precision);
     setPrecision(maxComplementarity,           precision);
   }
 
@@ -53,7 +52,7 @@ public:
 
 enum SDPSolverTerminateReason {
   PrimalDualOptimal,
-  DualFeasibleMaxObjectiveExceeded,
+  DualFeasible,
   MaxComplementarityExceeded,
   MaxIterationsExceeded,
   MaxRuntimeExceeded,
@@ -84,25 +83,18 @@ public:
   // current point
   Vector x;
   BlockDiagonalMatrix X;
+  Vector y;
   BlockDiagonalMatrix Y;
 
   // search direction
   Vector dx;
   BlockDiagonalMatrix dX;
+  Vector dy;
   BlockDiagonalMatrix dY;
 
   // discrepancies in dual and primal equality constraints
   Vector dualResidues;
-  Vector dualResiduesReduced;
   BlockDiagonalMatrix PrimalResidues;
-
-  // For free variable elimination
-  Matrix FreeVarMatrixReduced;
-  Matrix FreeVarMatrixBasicLU;
-  vector<Integer> FreeVarMatrixBasicPivots;
-  Vector dualObjectiveReduced;
-  vector<int> basicIndices;
-  vector<int> nonBasicIndices;
 
   // intermediate computations
   BlockDiagonalMatrix XCholesky;
@@ -137,7 +129,7 @@ public:
   SDPSolverTerminateReason run(const SDPSolverParameters &parameters, const path checkpointFile);
   void initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
                                        const BlockDiagonalMatrix &BilinearPairingsY);
-  void solveSchurComplementEquation(Vector &dx);
+  void solveSchurComplementEquation(Vector &dx, Vector &dz);
   void computeSearchDirection(const Real &beta, const Real &mu, const bool correctorPhase);
   Vector freeVariableSolution();
   void saveCheckpoint(const path &checkpointFile);

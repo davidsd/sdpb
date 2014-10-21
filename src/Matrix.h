@@ -121,14 +121,8 @@ void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B, Real beta, Matrix 
 // C := A*B
 void matrixMultiply(Matrix &A, Matrix &B, Matrix &C);
 
-// B = A^T A
-void matrixSquare(Matrix &A, Matrix &B);
-
 // Set block starting at (bRow, bCol) of B to A^T A
 void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol);
-
-// A := L A L^T
-void lowerTriangularCongruence(Matrix &A, Matrix &L);
 
 // A := L^{-1} A L^{-T}
 void lowerTriangularInverseCongruence(Matrix &A, Matrix &L);
@@ -165,10 +159,6 @@ Real minEigenvalue(Matrix &A, Vector &workspace, Vector &eigenvalues);
 // for use with 'solveWithLUDecomposition'
 void LUDecomposition(Matrix &A, vector<Integer> &pivots);
 
-void solveWithLUDecomposition(Matrix &LU, vector<Integer> &pivots, Real *B, int bcols, int ldb);
-
-void solveWithLUDecompositionTranspose(Matrix &LU, vector<Integer> &pivots, Real *B, int bcols, int ldb);
-
 void solveWithLUDecomposition(Matrix &LU, vector<Integer> &pivots, Vector &b);
 
 // L (lower triangular) such that A = L L^T
@@ -178,27 +168,6 @@ void solveWithLUDecomposition(Matrix &LU, vector<Integer> &pivots, Vector &b);
 void choleskyDecomposition(Matrix &A, Matrix &L);
 
 void choleskyDecompositionStabilized(Matrix &A, Matrix &L, vector<Integer> &stabilizeIndices, vector<Real> &stabilizeLambdas);
-
-// L' (lower triangular) such that L' L'^T = L L^T + v v^T. i.e., if L
-// is a cholesky decomposition of A, then L' is a cholesky
-// decomposition of A + v v^T.  This function dominates the running
-// time of this program.
-// Inputs: 
-// - L : dim x dim lower-triangular matrix 
-// - v : pointer to the head of a length-dim vector
-// both L and v are modified in place
-void choleskyUpdate(Matrix &L, Real *v, int firstNonzeroIndex);
-
-// Let lambdaGeometricMean be the geometric mean of the diagonal
-// elements of L.  Whenever a diagonal element is less than
-// CHOLESKY_STABILIZE_THRESHOLD * lambdaGeometricMean, update the
-// cholesky decomposition L -> L' so that
-//
-// L' L'^T = L L^T + lambdaGeometricMean^2 u_i u_i^T
-//
-// where u is a unit vector in the i-th direction.  The index i is
-// stored in the vector updateIndices.
-void stabilizeCholesky(Matrix &L, Vector &updateVector, vector<int> &updateIndices, Real &lambdaGeometricMean);
 
 void lowerTriangularSolve(Matrix &L, Real *b, int bcols, int ldb);
 
@@ -213,10 +182,5 @@ void lowerTriangularTransposeSolve(Matrix &L, Vector &b);
 // - ACholesky : dim x dim lower triangular matrix
 // - X         : dim x dim matrix
 void matrixSolveWithCholesky(Matrix &ACholesky, Matrix &X);
-
-// Return indices of a set of linearly independent rows of M, where
-// the basis matrix has eigenvalues whose absolute values exceed
-// thresh.
-vector<int> linearlyIndependentRowIndices(const Matrix &M);
 
 #endif  // SDP_BOOTSTRAP_MATRIX_H_

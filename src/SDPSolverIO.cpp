@@ -52,6 +52,7 @@ ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
   os << "maxRuntime                   = " << p.maxRuntime                   << endl;
   os << "checkpointInterval           = " << p.checkpointInterval           << endl;
   os << "saveFinalCheckpoint          = " << p.saveFinalCheckpoint          << endl;
+  os << "findDualFeasible             = " << p.findDualFeasible             << endl;
   os << "precision(actual)            = " << p.precision << "(" << mpf_get_default_prec() << ")" << endl;
   os << "maxThreads                   = " << p.maxThreads                   << endl;
   os << "dualityGapThreshold          = " << p.dualityGapThreshold          << endl;
@@ -62,7 +63,6 @@ ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
   os << "feasibleCenteringParameter   = " << p.feasibleCenteringParameter   << endl;
   os << "infeasibleCenteringParameter = " << p.infeasibleCenteringParameter << endl;
   os << "stepLengthReduction          = " << p.stepLengthReduction          << endl;
-  os << "maxDualObjective             = " << p.maxDualObjective             << endl;
   os << "maxComplementarity           = " << p.maxComplementarity           << endl;
   return os;
 }
@@ -72,14 +72,14 @@ ostream &operator<<(ostream& os, const SDPSolverTerminateReason& r) {
   case PrimalDualOptimal:
     os << "found primal-dual optimal solution";
     break;
+  case DualFeasible:
+    os << "found dual feasible solution";
+    break;
   case MaxIterationsExceeded:
     os << "maxIterations exceeded";
     break;
   case MaxRuntimeExceeded:
     os << "maxRuntime exceeded";
-    break;
-  case DualFeasibleMaxObjectiveExceeded:
-    os << "found dual feasible solution with dualObjective exceeding maxDualObjective";
     break;
   case MaxComplementarityExceeded:
     os << "maxComplementarity exceeded";
@@ -110,7 +110,7 @@ void SDPSolver::saveCheckpoint(const path &checkpointFile) {
   boost::filesystem::ofstream ofs(checkpointFile);
   boost::archive::text_oarchive ar(ofs);
   cout << "Saving checkpoint to    : " << checkpointFile << endl;
-  boost::serialization::serializeSDPSolverState(ar, x, X, Y);
+  boost::serialization::serializeSDPSolverState(ar, x, X, y, Y);
   timers["Save checkpoint"].start();
 }
 
@@ -118,7 +118,7 @@ void SDPSolver::loadCheckpoint(const path &checkpointFile) {
   boost::filesystem::ifstream ifs(checkpointFile);
   boost::archive::text_iarchive ar(ifs);
   cout << "Loading checkpoint from : " << checkpointFile << endl;
-  boost::serialization::serializeSDPSolverState(ar, x, X, Y);
+  boost::serialization::serializeSDPSolverState(ar, x, X, y, Y);
 }
 
 void SDPSolver::saveSolution(const SDPSolverTerminateReason terminateReason, const path &outFile) {
@@ -132,8 +132,8 @@ void SDPSolver::saveSolution(const SDPSolverTerminateReason terminateReason, con
   ofs << "primalError     = " << status.primalError     << ";\n";
   ofs << "dualError       = " << status.dualError       << ";\n";
   ofs << "runtime         = " << float(timers["Run solver"].elapsed().wall)/1000000000 << ";\n";
-  ofs << "freeVariables   = " << freeVariableSolution() << ";\n";
+  ofs << "y = " << y << ";\n";
+  ofs << "Y = " << Y << ";\n";
   ofs << "x = " << x << ";\n";
   ofs << "X = " << X << ";\n";
-  ofs << "Y = " << Y << ";\n";
 }

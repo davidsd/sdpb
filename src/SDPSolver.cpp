@@ -12,17 +12,14 @@ SDPSolver::SDPSolver(const SDP &sdp):
   sdp(sdp),
   x(sdp.primalObjective.size(), 0),
   X(sdp.psdMatrixBlockDims()),
+  y(sdp.dualObjective.size(), 0),
   Y(X),
   dx(x),
   dX(X),
+  dy(y),
   dY(Y),
   dualResidues(x),
-  dualResiduesReduced(sdp.primalObjective.size() - sdp.dualObjective.size()),
   PrimalResidues(X),
-  FreeVarMatrixReduced(sdp.primalObjective.size() - sdp.dualObjective.size(), sdp.dualObjective.size()),
-  FreeVarMatrixBasicLU(sdp.dualObjective.size(), sdp.dualObjective.size()),
-  FreeVarMatrixBasicPivots(FreeVarMatrixBasicLU.rows),
-  dualObjectiveReduced(sdp.dualObjective.size()),
   XCholesky(X),
   YCholesky(X),
   Z(X),
@@ -46,51 +43,6 @@ SDPSolver::SDPSolver(const SDP &sdp):
     eigenvaluesWorkspace.push_back(Vector(X.blocks[b].rows));
     QRWorkspace.push_back(Vector(3*X.blocks[b].rows - 1));
   }
-
-  // Computations needed for free variable elimination
-  basicIndices = linearlyIndependentRowIndices(sdp.FreeVarMatrix);
-  for (int i = 0, p = 0; p < sdp.FreeVarMatrix.rows; p++)
-    if (i < (int)basicIndices.size() && p == basicIndices[i])
-      i++;
-    else
-      nonBasicIndices.push_back(p);
-
-  // LU Decomposition of D_B
-  for (int n = 0; n < FreeVarMatrixBasicLU.cols; n++)
-    for (int m = 0; m < FreeVarMatrixBasicLU.rows; m++)
-      FreeVarMatrixBasicLU.elt(m,n) = sdp.FreeVarMatrix.elt(basicIndices[m],n);
-  LUDecomposition(FreeVarMatrixBasicLU, FreeVarMatrixBasicPivots);
-
-  // Compute E = - D_N D_B^{-1}
-  // ET = -D_N^T
-  Matrix FreeVarMatrixReducedT(FreeVarMatrixReduced.cols, FreeVarMatrixReduced.rows);
-  for (int p = 0; p < FreeVarMatrixReducedT.cols; p++)
-    for (int n = 0; n < FreeVarMatrixReducedT.rows; n++)
-      FreeVarMatrixReducedT.elt(n, p) = -sdp.FreeVarMatrix.elt(nonBasicIndices[p], n);
-  // ET = D_B^{-1 T} ET = -D_B^{-1 T} D_N^T
-  solveWithLUDecompositionTranspose(FreeVarMatrixBasicLU, FreeVarMatrixBasicPivots,
-                                    &FreeVarMatrixReducedT.elements[0],
-                                    FreeVarMatrixReducedT.cols,
-                                    FreeVarMatrixReducedT.rows);
-  // E = ET^T
-  transpose(FreeVarMatrixReducedT, FreeVarMatrixReduced);
-
-  // dualObjectiveReduced = D_B^{-T} f
-  for (unsigned int n = 0; n < dualObjectiveReduced.size(); n++)
-    dualObjectiveReduced[n] = sdp.dualObjective[n];
-  solveWithLUDecompositionTranspose(FreeVarMatrixBasicLU,
-                                    FreeVarMatrixBasicPivots,
-                                    &dualObjectiveReduced[0], 1,
-                                    dualObjectiveReduced.size());
-}
-
-Vector SDPSolver::freeVariableSolution() {
-  Vector solution(sdp.dualObjective.size());
-  for (unsigned int n = 0; n < solution.size(); n++) {
-    solution[n] = dualResidues[basicIndices[n]];
-  }
-  solveWithLUDecomposition(FreeVarMatrixBasicLU, FreeVarMatrixBasicPivots, solution);
-  return solution;
 }
 
 // result = b'^T a b', where b' = b \otimes 1
@@ -301,45 +253,8 @@ void computeSchurBlocks(const SDP &sdp,
   }
 }
 
-// x_B = g + E^T x_N
-void basicCompletion(const Vector &dualObjectiveReduced,
-                     const Matrix &FreeVarMatrixReduced,
-                     const vector<int> &basicIndices,
-                     const vector<int> &nonBasicIndices,
-                     Vector &x) {
-  assert((int)basicIndices.size()    == FreeVarMatrixReduced.cols);
-  assert((int)nonBasicIndices.size() == FreeVarMatrixReduced.rows);
-  assert((int)x.size()               == FreeVarMatrixReduced.cols + FreeVarMatrixReduced.rows);
-
-  #pragma omp parallel for schedule(static)
-  for (unsigned int n = 0; n < basicIndices.size(); n++) {
-    x[basicIndices[n]] = dualObjectiveReduced[n];
-    for (unsigned int p = 0; p < nonBasicIndices.size(); p++)
-      x[basicIndices[n]] += FreeVarMatrixReduced.elt(p, n) * x[nonBasicIndices[p]];
-  }
-}
-
-// xReduced_N = x_N + E x_B
-void nonBasicShift(const Matrix &FreeVarMatrixReduced,
-                   const vector<int> &basicIndices,
-                   const vector<int> &nonBasicIndices,
-                   const Vector &x,
-                   Vector &xReduced) {
-  assert((int)basicIndices.size()    == FreeVarMatrixReduced.cols);
-  assert((int)nonBasicIndices.size() == FreeVarMatrixReduced.rows);
-  assert((int)x.size()               == FreeVarMatrixReduced.cols + FreeVarMatrixReduced.rows);
-  assert(nonBasicIndices.size()      == xReduced.size());
-  
-  #pragma omp parallel for schedule(static)
-  for (unsigned int p = 0; p < nonBasicIndices.size(); p++) {
-    xReduced[p] = x[nonBasicIndices[p]];
-    for (unsigned int n = 0; n < basicIndices.size(); n++)
-      xReduced[p] += FreeVarMatrixReduced.elt(p,n) * x[basicIndices[n]];
-  }
-}
-
 void computeDualResidues(const SDP &sdp,
-                         const BlockDiagonalMatrix &Y,
+                         const Vector &y,
                          const BlockDiagonalMatrix &BilinearPairingsY,
                          Vector &dualResidues) {
   #pragma omp parallel for schedule(dynamic)
@@ -360,6 +275,9 @@ void computeDualResidues(const SDP &sdp,
         dualResidues[p] -= BilinearPairingsY.blocks[*b].elt(ej_s+k, ej_r+k);
       }
       dualResidues[p] /= 2;
+      
+      for (int n = 0; n < sdp.FreeVarMatrix.cols; n++)
+        dualResidues[p] -= sdp.FreeVarMatrix.elt(p, n)*y[n];
       dualResidues[p] += sdp.primalObjective[p];
     }
   }
@@ -396,9 +314,11 @@ void constraintMatrixWeightedSum(const SDP &sdp, const Vector x, BlockDiagonalMa
 }
 
 void computeSchurRHS(const SDP &sdp,
-                     Vector &dualResidues,
-                     BlockDiagonalMatrix &Z, 
-                     Vector &r) {
+                     const Vector &dualResidues,
+                     const BlockDiagonalMatrix &Z,
+                     const Vector &x,
+                     Vector &r,
+                     Vector &s) {
 
   for (unsigned int p = 0; p < r.size(); p++)
     r[p] = -dualResidues[p];
@@ -418,6 +338,14 @@ void computeSchurRHS(const SDP &sdp,
       }      
     }
   }
+
+  #pragma omp parallel for schedule(static)
+  for (unsigned int n = 0; n < sdp.dualObjective.size(); n++) {
+    s[n] = sdp.dualObjective[n];
+    for (int p = 0; p < sdp.FreeVarMatrix.rows; p++) {
+      s[n] -= sdp.FreeVarMatrix.elt(p, n)*x[p];
+    }
+  }
 }
 
 // PrimalResidues = sum_p F_p x_p - X - F_0
@@ -428,18 +356,6 @@ void computePrimalResidues(const SDP &sdp,
                            BlockDiagonalMatrix &PrimalResidues) {
   constraintMatrixWeightedSum(sdp, x, PrimalResidues);
   PrimalResidues -= X;
-}
-
-Real primalObjectiveValue(const SDP &sdp, const Vector &x) {
-  return sdp.objectiveConst + dotProduct(sdp.primalObjective, x);
-}
-
-Real dualObjectiveValue(const SDP &sdp, const Vector &dualObjectiveReduced,
-                        const vector<int> &basicIndices, const Vector &dualResidues) {
-  Real tmp = sdp.objectiveConst;
-  for (unsigned int i = 0; i < dualObjectiveReduced.size(); i++)
-    tmp += dualObjectiveReduced[i]*dualResidues[basicIndices[i]];
-  return tmp;
 }
 
 Real predictorCenteringParameter(const SDPSolverParameters &parameters, 
@@ -577,13 +493,22 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   LUDecomposition(Q, Qpivots);
 }
 
-void SDPSolver::solveSchurComplementEquation(Vector &dx) {
+
+// As inputs, dx and dy are the residues r_x and r_y on the right-hand
+// side of the Schur complement equation. As outputs, they are the
+// values for dx and dy.
+//
+void SDPSolver::solveSchurComplementEquation(Vector &dx, Vector &dy) {
   // dx = SchurBlocksCholesky^{-1} dx
   blockMatrixLowerTriangularSolve(SchurBlocksCholesky, dx);
 
   basicKernelCoords.resize(Q.rows);
-  // k_1 = -SchurUpdateLowRank^T dx
-  vectorScaleMatrixMultiplyTransposeAdd(-1, SchurUpdateLowRank, dx, 0, basicKernelCoords);
+  // k_1 = r_y - SchurUpdateLowRank^T dx
+  for (unsigned int n = 0; n < dy.size(); n++)
+    basicKernelCoords[n] = dy[n];
+
+  vectorScaleMatrixMultiplyTransposeAdd(-1, SchurUpdateLowRank, dx, 1, basicKernelCoords);
+  
   // k_2 = -G^T dx
   for (unsigned int j = 0; j < stabilizeBlockIndices.size(); j++) {
     int b = stabilizeBlockIndices[j];
@@ -615,6 +540,9 @@ void SDPSolver::solveSchurComplementEquation(Vector &dx) {
 
   // dx = SchurBlocksCholesky^{-T} dx
   blockMatrixLowerTriangularTransposeSolve(SchurBlocksCholesky, dx);
+  // dy = k_1
+  for (unsigned int n = 0; n < dy.size(); n++)
+    dy[n] = basicKernelCoords[n];
 }
 
 void SDPSolver::computeSearchDirection(const Real &beta,
@@ -632,11 +560,12 @@ void SDPSolver::computeSearchDirection(const Real &beta,
   blockMatrixSolveWithCholesky(XCholesky, Z);
   Z.symmetrize();
 
-  // dx_k = -d_k + Tr(F_k Z)
-  computeSchurRHS(sdp, dualResidues, Z, dx);
+  // (dx_RHS)_k = -d_k + Tr(F_k Z)
+  // dz_RHS = f - D^T x
+  computeSchurRHS(sdp, dualResidues, Z, x, dx, dy);
 
   // dx_N = B_{NN}^{-1} dx_N, dx_B = E^T dx_N
-  solveSchurComplementEquation(dx);
+  solveSchurComplementEquation(dx, dy);
 
   // dX = R_p + sum_p F_p dx_p
   constraintMatrixWeightedSum(sdp, dx, dX);
@@ -654,6 +583,7 @@ void SDPSolver::initialize(const SDPSolverParameters &parameters) {
   fillVector(x, 0);
   X.setZero();
   X.addDiagonal(parameters.initialMatrixScalePrimal);
+  fillVector(y, 0);
   Y.setZero();
   Y.addDiagonal(parameters.initialMatrixScaleDual);
 }
@@ -667,26 +597,22 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     if (timers["Run solver"].elapsed().wall >= parameters.maxRuntime * 1000000000LL)
       return MaxRuntimeExceeded;
 
-    // Maintain the invariant x_B = g + E^T x_N
-    basicCompletion(dualObjectiveReduced, FreeVarMatrixReduced, basicIndices, nonBasicIndices, x);
-
     choleskyDecomposition(X, XCholesky);
     choleskyDecomposition(Y, YCholesky);
 
     computeInvBilinearPairingsWithCholesky(XCholesky, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsXInv);
     computeBilinearPairings(Y, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsY);
 
-    // d_k = c_k - Tr(F_k Y)
-    computeDualResidues(sdp, Y, BilinearPairingsY, dualResidues);
-    nonBasicShift(FreeVarMatrixReduced, basicIndices, nonBasicIndices, dualResidues, dualResiduesReduced);
+    // d_k = c_k - Tr(F_k Y) - (D y)_k
+    computeDualResidues(sdp, y, BilinearPairingsY, dualResidues);
 
     // PrimalResidues = sum_p F_p x_p - X - F_0 (F_0 is zero for now)
     computePrimalResidues(sdp, x, X, PrimalResidues);
 
     status.primalError     = PrimalResidues.maxAbs();
-    status.dualError       = maxAbsVector(dualResiduesReduced);
-    status.primalObjective = primalObjectiveValue(sdp, x);
-    status.dualObjective   = dualObjectiveValue(sdp, dualObjectiveReduced, basicIndices, dualResidues);
+    status.dualError       = maxAbsVector(dualResidues);
+    status.primalObjective = sdp.objectiveConst + dotProduct(sdp.primalObjective, x);
+    status.dualObjective   = sdp.objectiveConst + dotProduct(sdp.dualObjective, y);
 
     const bool isPrimalFeasible = status.primalError  < parameters.primalErrorThreshold;
     const bool isDualFeasible   = status.dualError    < parameters.dualErrorThreshold;
@@ -694,8 +620,8 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
 
     if (isPrimalFeasible && isDualFeasible && isOptimal)
       return PrimalDualOptimal;
-    else if (isDualFeasible && status.dualObjective > parameters.maxDualObjective)
-      return DualFeasibleMaxObjectiveExceeded;
+    else if (isDualFeasible && parameters.findDualFeasible)
+      return DualFeasible;
 
     initializeSchurComplementSolver(BilinearPairingsXInv, BilinearPairingsY);
 
@@ -729,6 +655,8 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     addVector(x, dx);
     dX *= primalStepLength;
     X += dX;
+    scaleVector(dy, dualStepLength);
+    addVector(y, dy);
     dY *= dualStepLength;
     Y += dY;
   }
