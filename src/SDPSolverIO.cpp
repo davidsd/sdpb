@@ -32,7 +32,7 @@ void printSolverInfo(int iteration,
   std::stringstream ss;
   ss << td;
   gmp_fprintf(stdout,
-              "%3d  %s  %-8.1Fe %-+11.2Fe %-+11.2Fe %-9.2Fe  %-+10.2Fe  %-+10.2Fe  %-8.3Fg %-8.3Fg %-4.2Fg\n",
+              "%3d  %s  %-8.1Fe %-+11.2Fe %-+11.2Fe %-9.2Fe  %-+10.2Fe  %-+10.2Fe  %-8.3Fg %-8.3Fg %-4.2Fg",
               iteration,
               ss.str().substr(0,8).c_str(),
               mu.get_mpf_t(),
@@ -44,6 +44,7 @@ void printSolverInfo(int iteration,
               primalStepLength.get_mpf_t(),
               dualStepLength.get_mpf_t(),
               betaCorrector.get_mpf_t());
+  cout << endl;
 }
 
 ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
