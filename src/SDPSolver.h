@@ -21,8 +21,9 @@ public:
   int maxIterations;
   int maxRuntime;
   int checkpointInterval;
-  bool saveFinalCheckpoint;
+  bool noFinalCheckpoint;
   bool findDualFeasible;
+  bool detectDualFeasibleJump;
   int precision;
   int maxThreads;
   Real dualityGapThreshold;
@@ -53,6 +54,7 @@ public:
 enum SDPSolverTerminateReason {
   PrimalDualOptimal,
   DualFeasible,
+  DualFeasibleJumpDetected,
   MaxComplementarityExceeded,
   MaxIterationsExceeded,
   MaxRuntimeExceeded,

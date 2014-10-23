@@ -65,7 +65,7 @@ int solveSDP(const path &sdpFile,
   cout << solver.status << endl;
   cout << timers << endl;
 
-  if (parameters.saveFinalCheckpoint)
+  if (!parameters.noFinalCheckpoint)
     solver.saveCheckpoint(checkpointFile);
   solver.saveSolution(reason, outFile);
 
@@ -106,20 +106,26 @@ int main(int argc, char** argv) {
   solverParamsOptions.add_options()
     ("precision",
      po::value<int>(&parameters.precision)->default_value(400),
-     "Precision in binary digits.  GMP will typically round up to a nearby "
-     "multiple of a power of 2.")
+     "Precision in binary digits.  GMP will round up to the nearest "
+     "multiple of 64.")
     ("maxThreads",
      po::value<int>(&parameters.maxThreads)->default_value(4),
      "Maximum number of threads to use for parallel calculation.")
     ("checkpointInterval",
      po::value<int>(&parameters.checkpointInterval)->default_value(3600),
      "Save checkpoints to checkpointFile every checkpointInterval seconds.")
-    ("saveFinalCheckpoint",
-     po::value<bool>(&parameters.saveFinalCheckpoint)->default_value(true),
-     "Save a final checkpoint after terminating (useful to turn off when debugging).")
+    ("noFinalCheckpoint",
+     po::bool_switch(&parameters.noFinalCheckpoint)->default_value(false),
+     "Don't save a final checkpoint after terminating (useful when debugging).")
     ("findDualFeasible",
-     po::value<bool>(&parameters.findDualFeasible)->default_value(false),
+     po::bool_switch(&parameters.findDualFeasible)->default_value(false),
      "Terminate once a dual feasible solution is found.")
+    ("detectDualFeasibleJump",
+     po::bool_switch(&parameters.detectDualFeasibleJump)->default_value(false),
+     "Terminate if a dual-step of 1 is taken. This often indicates that a "
+     "dual feasible solution would be found if the precision were high "
+     "enough. Try increasing either dualErrorThreshold or precision "
+     "and run from the latest checkpoint.")
     ("maxIterations",
      po::value<int>(&parameters.maxIterations)->default_value(500),
      "Maximum number of iterations to run the solver.")

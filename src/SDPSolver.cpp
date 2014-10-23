@@ -590,7 +590,10 @@ void SDPSolver::initialize(const SDPSolverParameters &parameters) {
 
 SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
                                         const path checkpointFile) {
-  for (int iteration = 1; iteration <= parameters.maxIterations; iteration++) {
+  Real primalStepLength;
+  Real dualStepLength;
+  
+  for (int iteration = 1;; iteration++) {
 
     if (timers["Save checkpoint"].elapsed().wall >= parameters.checkpointInterval * 1000000000LL)
       saveCheckpoint(checkpointFile);
@@ -622,6 +625,12 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
       return PrimalDualOptimal;
     else if (isDualFeasible && parameters.findDualFeasible)
       return DualFeasible;
+    else if (dualStepLength == 1 && parameters.detectDualFeasibleJump)
+      return DualFeasibleJumpDetected;
+    // Detect max iterations after computing errors and objective
+    // functions for the current point
+    else if (iteration > parameters.maxIterations)
+      return MaxIterationsExceeded;
 
     initializeSchurComplementSolver(BilinearPairingsXInv, BilinearPairingsY);
 
@@ -638,10 +647,10 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     computeSearchDirection(betaCorrector, mu, true);
 
     // Step length to preserve positive definiteness
-    Real primalStepLength = stepLength(XCholesky, dX, StepMatrixWorkspace,
-                                       eigenvaluesWorkspace, QRWorkspace, parameters);
-    Real dualStepLength   = stepLength(YCholesky, dY, StepMatrixWorkspace,
-                                       eigenvaluesWorkspace, QRWorkspace, parameters);
+    primalStepLength = stepLength(XCholesky, dX, StepMatrixWorkspace,
+                                  eigenvaluesWorkspace, QRWorkspace, parameters);
+    dualStepLength   = stepLength(YCholesky, dY, StepMatrixWorkspace,
+                                  eigenvaluesWorkspace, QRWorkspace, parameters);
 
     if (isPrimalFeasible && isDualFeasible) {
       primalStepLength = min(primalStepLength, dualStepLength);
@@ -661,5 +670,6 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     Y += dY;
   }
   
+  // Never reached
   return MaxIterationsExceeded;
 }
