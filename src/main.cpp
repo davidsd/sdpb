@@ -41,7 +41,6 @@ int solveSDP(const path &sdpFile,
   cout << "SDP file        : " << sdpFile        << endl;
   cout << "out file        : " << outFile        << endl;
   cout << "checkpoint file : " << checkpointFile << endl;
-  cout << "using " << omp_get_max_threads() << " threads." << endl;
 
   cout << "\nParameters:\n";
   cout << parameters << endl;
@@ -54,20 +53,21 @@ int solveSDP(const path &sdpFile,
   else
     solver.initialize(parameters);
 
-  timers["Run solver"].start();
-  timers["Save checkpoint"].start();
+  timers["Solver runtime"].start();
+  timers["Last checkpoint"].start();
   printSolverHeader();
   SDPSolverTerminateReason reason = solver.run(parameters, checkpointFile);
-  timers["Run solver"].stop();
-  timers["Save checkpoint"].stop();
+  timers["Solver runtime"].stop();
 
   cout << "-----" << setfill('-') << setw(100) << std::left << reason << endl << endl;
   cout << solver.status << endl;
-  cout << timers << endl;
 
   if (!parameters.noFinalCheckpoint)
     solver.saveCheckpoint(checkpointFile);
+  timers["Last checkpoint"].stop();
   solver.saveSolution(reason, outFile);
+
+  cout << endl << timers;
 
   return 0;
 }

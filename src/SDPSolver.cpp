@@ -595,9 +595,9 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
   
   for (int iteration = 1;; iteration++) {
 
-    if (timers["Save checkpoint"].elapsed().wall >= parameters.checkpointInterval * 1000000000LL)
+    if (timers["Last checkpoint"].elapsed().wall >= parameters.checkpointInterval * 1000000000LL)
       saveCheckpoint(checkpointFile);
-    if (timers["Run solver"].elapsed().wall >= parameters.maxRuntime * 1000000000LL)
+    if (timers["Solver runtime"].elapsed().wall >= parameters.maxRuntime * 1000000000LL)
       return MaxRuntimeExceeded;
 
     choleskyDecomposition(X, XCholesky);

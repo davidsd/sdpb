@@ -27,8 +27,8 @@ void printSolverInfo(int iteration,
                      Real primalStepLength,
                      Real dualStepLength,
                      Real betaCorrector) {
-  Real time = Real(timers["Run solver"].elapsed().wall)/1000000000;
-  time_duration td(microseconds(timers["Run solver"].elapsed().wall)/1000);
+  Real time = Real(timers["Solver runtime"].elapsed().wall)/1000000000;
+  time_duration td(microseconds(timers["Solver runtime"].elapsed().wall)/1000);
   std::stringstream ss;
   ss << td;
   gmp_fprintf(stdout,
@@ -48,6 +48,7 @@ void printSolverInfo(int iteration,
 }
 
 ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
+  os << std::boolalpha;
   os << "maxIterations                = " << p.maxIterations                << endl;
   os << "maxRuntime                   = " << p.maxRuntime                   << endl;
   os << "checkpointInterval           = " << p.checkpointInterval           << endl;
@@ -55,7 +56,7 @@ ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
   os << "findDualFeasible             = " << p.findDualFeasible             << endl;
   os << "detectDualFeasibleJump       = " << p.detectDualFeasibleJump       << endl;
   os << "precision(actual)            = " << p.precision << "(" << mpf_get_default_prec() << ")" << endl;
-  os << "maxThreads                   = " << p.maxThreads                   << endl;
+  os << "maxThreads(using)            = " << p.maxThreads << "(" << omp_get_max_threads() << ")" << endl;
   os << "dualityGapThreshold          = " << p.dualityGapThreshold          << endl;
   os << "primalErrorThreshold         = " << p.primalErrorThreshold         << endl;
   os << "dualErrorThreshold           = " << p.dualErrorThreshold           << endl;
@@ -115,7 +116,7 @@ void SDPSolver::saveCheckpoint(const path &checkpointFile) {
   boost::archive::text_oarchive ar(ofs);
   cout << "Saving checkpoint to    : " << checkpointFile << endl;
   boost::serialization::serializeSDPSolverState(ar, x, X, y, Y);
-  timers["Save checkpoint"].start();
+  timers["Last checkpoint"].start();
 }
 
 void SDPSolver::loadCheckpoint(const path &checkpointFile) {
@@ -135,7 +136,7 @@ void SDPSolver::saveSolution(const SDPSolverTerminateReason terminateReason, con
   ofs << "dualityGap      = " << status.dualityGap()    << ";\n";
   ofs << "primalError     = " << status.primalError     << ";\n";
   ofs << "dualError       = " << status.dualError       << ";\n";
-  ofs << "runtime         = " << float(timers["Run solver"].elapsed().wall)/1000000000 << ";\n";
+  ofs << "runtime         = " << float(timers["Solver runtime"].elapsed().wall)/1000000000 << ";\n";
   ofs << "y = " << y << ";\n";
   ofs << "Y = " << Y << ";\n";
   ofs << "x = " << x << ";\n";
