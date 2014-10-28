@@ -70,12 +70,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <vector>
 #include <assert.h>
-#include <iostream>
 
-using std::cout;
-using std::endl;
-
-const double CHOLESKY_STABILIZE_THRESHOLD = 1e-10;
+const double CHOLESKY_STABILIZE_THRESHOLD = 1e-60;
 
 REAL lambdaGeometricMean(double totalLogLambda, INTEGER numLambdas) {
   assert(numLambdas != 0);

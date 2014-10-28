@@ -52,22 +52,25 @@ SampledMatrixPolynomial parseSampledMatrixPolynomial(XMLElement *xml) {
   return s;
 }
 
-Polynomial parsePolynomial(XMLElement *polXml) {
+Polynomial parsePolynomial(XMLElement *xml) {
   Polynomial p;
-  p.coefficients = parseMany("coeff", parseReal, polXml);
+  p.coefficients = parseMany("coeff", parseReal, xml);
   return p;
 }
 
-vector<Polynomial> parsePolynomialVector(XMLElement *polVecXml) {
-  return parseMany("polynomial", parsePolynomial, polVecXml);
+vector<Polynomial> parsePolynomialVector(XMLElement *xml) {
+  return parseMany("polynomial", parsePolynomial, xml);
 }
 
-PolynomialVectorMatrix parsePolynomialVectorMatrix(XMLElement *polVecMatrixXml) {
+PolynomialVectorMatrix parsePolynomialVectorMatrix(XMLElement *xml) {
   PolynomialVectorMatrix m;
-  m.rows = parseInt(polVecMatrixXml->FirstChildElement("rows"));
-  m.cols = parseInt(polVecMatrixXml->FirstChildElement("cols"));
-  m.elements = parseMany("polynomialVector", parsePolynomialVector,
-                         polVecMatrixXml->FirstChildElement("elements"));
+  m.rows           = parseInt(xml->FirstChildElement("rows"));
+  m.cols           = parseInt(xml->FirstChildElement("cols"));
+  m.elements       = parseMany("polynomialVector", parsePolynomialVector,
+                               xml->FirstChildElement("elements"));
+  m.samplePoints   = parseVector(xml->FirstChildElement("samplePoints"));
+  m.sampleScalings = parseVector(xml->FirstChildElement("sampleScalings"));
+  m.bilinearBasis  = parsePolynomialVector(xml->FirstChildElement("bilinearBasis"));
   return m;
 }
 
@@ -83,10 +86,7 @@ SDP parseBootstrapPolynomialSDP(XMLElement *xml) {
   return bootstrapPolynomialSDP(parseVector(xml->FirstChildElement("objective")),
                                 parseMany("polynomialVectorMatrix",
                                           parsePolynomialVectorMatrix,
-                                          xml->FirstChildElement("polynomialVectorMatrices")),
-                                parsePolynomialVector(xml->FirstChildElement("bilinearBasis")),
-                                parseVector(xml->FirstChildElement("samplePoints")),
-                                parseVector(xml->FirstChildElement("sampleScalings")));
+                                          xml->FirstChildElement("polynomialVectorMatrices")));
 }
 
 SDP readBootstrapSDP(const path sdpFile) {

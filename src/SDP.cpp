@@ -15,10 +15,7 @@ Matrix sampleBilinearBasis(const int maxDegree,
   return b;
 }
 
-SampledMatrixPolynomial samplePolynomialVectorMatrix(const PolynomialVectorMatrix &m,
-                                                     const vector<Polynomial> &bilinearBasis,
-                                                     const vector<Real> &samplePoints,
-                                                     const vector<Real> &sampleScalings) {
+SampledMatrixPolynomial samplePolynomialVectorMatrix(const PolynomialVectorMatrix &m) {
   SampledMatrixPolynomial s;
 
   assert(m.rows == m.cols);
@@ -39,8 +36,8 @@ SampledMatrixPolynomial samplePolynomialVectorMatrix(const PolynomialVectorMatri
   for (int c = 0; c < s.dim; c++) {
     for (int r = c; r < s.dim; r++) {
       for (int k = 0; k < numSamples; k++) {
-        Real x     = samplePoints[k];
-        Real scale = sampleScalings[k];
+        Real x     = m.samplePoints[k];
+        Real scale = m.sampleScalings[k];
 
         s.constraintConstants[p] = scale*m.elt(r,c)[0](x);
         for (int n = 1; n < vectorDim; n++)
@@ -52,14 +49,14 @@ SampledMatrixPolynomial samplePolynomialVectorMatrix(const PolynomialVectorMatri
   }
 
   int delta1 = s.degree/2;
-  s.bilinearBases.push_back(sampleBilinearBasis(delta1, numSamples, bilinearBasis,
-                                                samplePoints,
-                                                sampleScalings));
+  s.bilinearBases.push_back(sampleBilinearBasis(delta1, numSamples, m.bilinearBasis,
+                                                m.samplePoints,
+                                                m.sampleScalings));
   int delta2 = (s.degree - 1)/2;
   if (delta2 >= 0)
-    s.bilinearBases.push_back(sampleBilinearBasis(delta2, numSamples, bilinearBasis,
-                                                  samplePoints,
-                                                  multiplyVectors(samplePoints, sampleScalings)));
+    s.bilinearBases.push_back(sampleBilinearBasis(delta2, numSamples, m.bilinearBasis,
+                                                  m.samplePoints,
+                                                  multiplyVectors(m.samplePoints, m.sampleScalings)));
 
   return s;
       
@@ -109,14 +106,11 @@ SDP bootstrapSDP(const Vector &objective,
 }
 
 SDP bootstrapPolynomialSDP(const Vector &affineObjective,
-                           const vector<PolynomialVectorMatrix> &polVectorMatrices,
-                           const vector<Polynomial> &bilinearBasis,
-                           const vector<Real> &samplePoints,
-                           const vector<Real> &sampleScalings) {
+                           const vector<PolynomialVectorMatrix> &polVectorMatrices) {
   vector<SampledMatrixPolynomial> sampledMatrixPols;
   for (vector<PolynomialVectorMatrix>::const_iterator m = polVectorMatrices.begin();
        m != polVectorMatrices.end(); m++)
-    sampledMatrixPols.push_back(samplePolynomialVectorMatrix(*m, bilinearBasis, samplePoints, sampleScalings));
+    sampledMatrixPols.push_back(samplePolynomialVectorMatrix(*m));
 
   Vector objective = affineObjective;
   objective.erase(objective.begin());
