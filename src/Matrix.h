@@ -167,7 +167,7 @@ void solveWithLUDecomposition(Matrix &LU, vector<Integer> &pivots, Vector &b);
 // - L : dim x dim lower-triangular matrix
 void choleskyDecomposition(Matrix &A, Matrix &L);
 
-void choleskyDecompositionStabilized(Matrix &A, Matrix &L, vector<Integer> &stabilizeIndices, vector<Real> &stabilizeLambdas);
+void choleskyDecompositionStabilized(Matrix &A, Matrix &L, vector<Integer> &stabilizeIndices, vector<Real> &stabilizeLambdas, const double stabilizeThreshold);
 
 void lowerTriangularSolve(Matrix &L, Real *b, int bcols, int ldb);
 

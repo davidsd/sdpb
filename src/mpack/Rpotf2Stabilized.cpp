@@ -71,26 +71,24 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <assert.h>
 
-const double CHOLESKY_STABILIZE_THRESHOLD = 1e-60;
-
-REAL lambdaGeometricMean(double totalLogLambda, INTEGER numLambdas) {
+REAL lambdaGeometricMean(const double totalLogLambda, const INTEGER numLambdas) {
   assert(numLambdas != 0);
   return REAL(exp(totalLogLambda/numLambdas));
 }
 
-bool isSmallDiagonal(const REAL &ajj, double totalLogLambda, INTEGER numLambdas) {
+bool isSmallDiagonal(const REAL &ajj, const double totalLogLambda, const INTEGER numLambdas, const double stabilizeThreshold) {
   double d = cast2double(ajj);
-  return (d <= 0) || (numLambdas != 0 && log(d)/2 < totalLogLambda/numLambdas + log(CHOLESKY_STABILIZE_THRESHOLD));
+  return (d <= 0) || (numLambdas != 0 && log(d)/2 < totalLogLambda/numLambdas + log(stabilizeThreshold));
 }
 
-void correctDiagonal(REAL &ajj, INTEGER jIndex, double totalLogLambda, vector<INTEGER> &stabilizeIndices, vector<REAL> &stabilizeLambdas) {
+void correctDiagonal(REAL &ajj, const INTEGER jIndex, const double totalLogLambda, vector<INTEGER> &stabilizeIndices, vector<REAL> &stabilizeLambdas) {
   REAL lambda = lambdaGeometricMean(totalLogLambda, jIndex);
   ajj += lambda * lambda;
   stabilizeIndices.push_back(jIndex);
   stabilizeLambdas.push_back(lambda);
 }
 
-void Rpotf2Stabilized(const char *uplo, INTEGER n, REAL * A, INTEGER lda, INTEGER * info, INTEGER indexStart, vector<INTEGER> &stabilizeIndices, vector<REAL> &stabilizeLambdas, double &totalLogLambda)
+void Rpotf2Stabilized(const char *uplo, INTEGER n, REAL * A, INTEGER lda, INTEGER * info, const INTEGER indexStart, const double stabilizeThreshold, vector<INTEGER> &stabilizeIndices, vector<REAL> &stabilizeLambdas, double &totalLogLambda)
 {
     INTEGER j, upper, success = 1;
     REAL ajj;
@@ -119,7 +117,7 @@ void Rpotf2Stabilized(const char *uplo, INTEGER n, REAL * A, INTEGER lda, INTEGE
 //Compute U(J,J) and test for non-positive-definiteness.
 	    ajj = A[j + j * lda] - Rdot(j, &A[j * lda], 1, &A[j * lda], 1);
 
-            if (isSmallDiagonal(ajj, totalLogLambda, indexStart + j))
+            if (isSmallDiagonal(ajj, totalLogLambda, indexStart + j, stabilizeThreshold))
               correctDiagonal(ajj, indexStart + j, totalLogLambda, stabilizeIndices, stabilizeLambdas);
 
 	    ajj = sqrt(ajj);
@@ -138,7 +136,7 @@ void Rpotf2Stabilized(const char *uplo, INTEGER n, REAL * A, INTEGER lda, INTEGE
 //Compute L(J,J) and test for non-positive-definiteness.
 	    ajj = A[j + j * lda] - Rdot(j, &A[j], lda, &A[j], lda);
 
-            if (isSmallDiagonal(ajj, totalLogLambda, indexStart + j))
+            if (isSmallDiagonal(ajj, totalLogLambda, indexStart + j, stabilizeThreshold))
               correctDiagonal(ajj, indexStart + j, totalLogLambda, stabilizeIndices, stabilizeLambdas);
 
 	    ajj = sqrt(ajj);

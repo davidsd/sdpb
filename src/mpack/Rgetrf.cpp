@@ -68,6 +68,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <mblas.h>
 #include <mlapack.h>
 
+#include "../Timers.h"
+
 void Rgetrf(INTEGER m, INTEGER n, REAL * A, INTEGER lda, INTEGER * ipiv, INTEGER * info)
 {
     INTEGER i, j, jb, nb, iinfo;
@@ -101,7 +103,9 @@ void Rgetrf(INTEGER m, INTEGER n, REAL * A, INTEGER lda, INTEGER * ipiv, INTEGER
 	    jb = min(min(m, n) - j + 1, nb);
 //Factor diagonal and subdiagonal blocks and test for exact
 //singularity.
+            timers["Rgetf2"].resume();
 	    Rgetf2(m - j + 1, jb, &A[(j - 1) + (j - 1) * lda], lda, &ipiv[j - 1], &iinfo);
+            timers["Rgetf2"].stop();
 //Adjust INFO and the pivot indices.
 	    if (*info == 0 && iinfo > 0) {
 		*info = iinfo + j - 1;
@@ -110,16 +114,24 @@ void Rgetrf(INTEGER m, INTEGER n, REAL * A, INTEGER lda, INTEGER * ipiv, INTEGER
 		ipiv[i - 1] = j - 1 + ipiv[i - 1];
 	    }
 //Apply interchanges to columns 1:J-one
+            timers["Rlaswp"].resume();
 	    Rlaswp(j - 1, A, lda, j, j + jb - 1, ipiv, 1);
+            timers["Rlaswp"].stop();
 	    if (j + jb <= n) {
 //Apply interchanges to columns J+JB:N.
+              timers["Rlaswp2"].resume();
 		Rlaswp(n - j - jb + 1, &A[0 + (j + jb - 1) * lda], lda, j, j + jb - 1, ipiv, 1);
+                timers["Rlaswp2"].stop();
 //Compute block row of U.
+                timers["Rtrsm"].resume();
 		Rtrsm("Left", "Lower", "No transpose", "Unit", jb, n - j - jb + 1, One, &A[(j - 1) + (j - 1) * lda], lda, &A[(j - 1) + (j + jb - 1) * lda], lda);
+                timers["Rtrsm"].stop();
 		if (j + jb <= m) {
 //Update trailing submatrix.
+                  timers["RgemmParallel"].resume();
 		    RgemmParallel("No transpose", "No transpose", m - j - jb + 1,
 			  n - j - jb + 1, jb, -One, &A[(j + jb - 1) + (j - 1) * lda], lda, &A[(j - 1) + (j + jb - 1) * lda], lda, One, &A[(j + jb - 1) + (j + jb - 1) * lda], lda);
+                    timers["RgemmParallel"].stop();
 		}
 	    }
 	}

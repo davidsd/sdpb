@@ -17,8 +17,8 @@ using boost::posix_time::microseconds;
 using std::cout;
 
 void printSolverHeader() {
-  cout << "\n     time      mu        P-obj       D-obj      gap         P-err       D-err      P-step   D-step   beta\n";
-  cout << "---------------------------------------------------------------------------------------------------------\n";
+  cout << "\n     time      mu        P-obj       D-obj      gap         P-err       D-err      P-step   D-step   beta  dim/stabilized\n";
+  cout << "-------------------------------------------------------------------------------------------------------------------------\n";
 }
 
 void printSolverInfo(int iteration,
@@ -26,13 +26,15 @@ void printSolverInfo(int iteration,
                      SDPSolverStatus status,
                      Real primalStepLength,
                      Real dualStepLength,
-                     Real betaCorrector) {
+                     Real betaCorrector,
+                     int dualObjectiveSize,
+                     int Qrows) {
   Real time = Real(timers["Solver runtime"].elapsed().wall)/1000000000;
   time_duration td(microseconds(timers["Solver runtime"].elapsed().wall)/1000);
   std::stringstream ss;
   ss << td;
   gmp_fprintf(stdout,
-              "%3d  %s  %-8.1Fe %-+11.2Fe %-+11.2Fe %-9.2Fe  %-+10.2Fe  %-+10.2Fe  %-8.3Fg %-8.3Fg %-4.2Fg",
+              "%3d  %s  %-8.1Fe %-+11.2Fe %-+11.2Fe %-9.2Fe  %-+10.2Fe  %-+10.2Fe  %-8.3Fg %-8.3Fg %-4.2Fg  %d/%d",
               iteration,
               ss.str().substr(0,8).c_str(),
               mu.get_mpf_t(),
@@ -43,7 +45,9 @@ void printSolverInfo(int iteration,
               status.dualError.get_mpf_t(),
               primalStepLength.get_mpf_t(),
               dualStepLength.get_mpf_t(),
-              betaCorrector.get_mpf_t());
+              betaCorrector.get_mpf_t(),
+              dualObjectiveSize,
+              Qrows);
   cout << endl;
 }
 
@@ -65,6 +69,7 @@ ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
   os << "feasibleCenteringParameter   = " << p.feasibleCenteringParameter   << endl;
   os << "infeasibleCenteringParameter = " << p.infeasibleCenteringParameter << endl;
   os << "stepLengthReduction          = " << p.stepLengthReduction          << endl;
+  os << "choleskyStabilizeThreshold   = " << p.choleskyStabilizeThreshold   << endl;
   os << "maxComplementarity           = " << p.maxComplementarity           << endl;
   return os;
 }

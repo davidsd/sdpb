@@ -59,7 +59,7 @@ int solveSDP(const path &sdpFile,
   SDPSolverTerminateReason reason = solver.run(parameters, checkpointFile);
   timers["Solver runtime"].stop();
 
-  cout << "-----" << setfill('-') << setw(100) << std::left << reason << endl << endl;
+  cout << "-----" << setfill('-') << setw(116) << std::left << reason << endl << endl;
   cout << solver.status << endl;
 
   if (!parameters.noFinalCheckpoint)
@@ -164,6 +164,13 @@ int main(int argc, char** argv) {
      po::value<Real>(&parameters.stepLengthReduction)->default_value(Real("0.7")),
      "Shrink each newton step by this factor (smaller means slower, more "
      "stable convergence). Corresponds to SDPA's gammaStar.")
+    ("choleskyStabilizeThreshold",
+     po::value<Real>(&parameters.choleskyStabilizeThreshold)->default_value(Real("1e-40")),
+     "Adds stabilizing terms to the cholesky decomposition of the schur complement "
+     "matrix for diagonal entries which are smaller than this threshold times the "
+     "geometric mean of other diagonal entries. Somewhat higher choleskyStabilizeThreshold "
+     "can improve numerical stability but if the threshold is large enough that a high "
+     "proportion of eigenvalues are being stabilized, the computation will slow substantially.")
     ("maxComplementarity",
      po::value<Real>(&parameters.maxComplementarity)->default_value(Real("1e100")),
      "Terminate if the complementarity mu = Tr(X Y)/dim(X) exceeds this value.")

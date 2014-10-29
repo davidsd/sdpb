@@ -34,6 +34,7 @@ public:
   Real feasibleCenteringParameter;
   Real infeasibleCenteringParameter;
   Real stepLengthReduction;
+  Real choleskyStabilizeThreshold;
   Real maxComplementarity;
 
   void resetPrecision() {
@@ -45,6 +46,7 @@ public:
     setPrecision(feasibleCenteringParameter,   precision);
     setPrecision(infeasibleCenteringParameter, precision);
     setPrecision(stepLengthReduction,          precision);
+    setPrecision(choleskyStabilizeThreshold,   precision);
     setPrecision(maxComplementarity,           precision);
   }
 
@@ -130,7 +132,8 @@ public:
   void initialize(const SDPSolverParameters &parameters);
   SDPSolverTerminateReason run(const SDPSolverParameters &parameters, const path checkpointFile);
   void initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
-                                       const BlockDiagonalMatrix &BilinearPairingsY);
+                                       const BlockDiagonalMatrix &BilinearPairingsY,
+                                       const Real &choleskyStabilizeThreshold);
   void solveSchurComplementEquation(Vector &dx, Vector &dz);
   void computeSearchDirection(const Real &beta, const Real &mu, const bool correctorPhase);
   Vector freeVariableSolution();
@@ -145,6 +148,8 @@ void printSolverInfo(int iteration,
                      SDPSolverStatus status,
                      Real primalStepLength,
                      Real dualStepLength,
-                     Real betaCorrector);
+                     Real betaCorrector,
+                     int dualObjectiveSize,
+                     int Qrows);
 
 #endif  // SDP_BOOTSTRAP_SDPSOLVER_H_

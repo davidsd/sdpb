@@ -220,7 +220,7 @@ void choleskyDecomposition(Matrix &A, Matrix &L) {
 // - stabilizeIndices: vector to hold indices where small diagonal elements were compensated
 // - stabilizeLambdas: vector to hold values used to compensate small diagonal elements
 //
-void choleskyDecompositionStabilized(Matrix &A, Matrix &L, vector<Integer> &stabilizeIndices, vector<Real> &stabilizeLambdas) {
+void choleskyDecompositionStabilized(Matrix &A, Matrix &L, vector<Integer> &stabilizeIndices, vector<Real> &stabilizeLambdas, const double stabilizeThreshold) {
   int dim = A.rows;
   assert(A.cols == dim);
   assert(L.rows == dim);
@@ -229,7 +229,7 @@ void choleskyDecompositionStabilized(Matrix &A, Matrix &L, vector<Integer> &stab
   // Set lower-triangular part of L to cholesky decomposition
   L.copyFrom(A);
   Integer info;
-  RpotrfStabilized("Lower", dim, &L.elements[0], dim, &info, stabilizeIndices, stabilizeLambdas);
+  RpotrfStabilized("Lower", dim, &L.elements[0], dim, &info, stabilizeIndices, stabilizeLambdas, stabilizeThreshold);
   assert(info == 0);
 
   // Set the upper-triangular part of the L to zero

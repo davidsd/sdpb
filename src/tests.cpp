@@ -30,7 +30,8 @@ void testCholeskyStabilize() {
 
   vector<Integer> stabilizeIndices;
   vector<Real> stabilizeLambdas;
-  choleskyDecompositionStabilized(A, L, stabilizeIndices, stabilizeLambdas);
+  double stabilizeThreshold = 1e-10;
+  choleskyDecompositionStabilized(A, L, stabilizeIndices, stabilizeLambdas, stabilizeThreshold);
   cout << "A = " << A << ";\n";
   cout << "L = " << L << ";\n";
   cout << "stabilizeIndices = " << stabilizeIndices << ";\n";

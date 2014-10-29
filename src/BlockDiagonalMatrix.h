@@ -104,7 +104,8 @@ void choleskyDecomposition(BlockDiagonalMatrix &A, BlockDiagonalMatrix &L);
 void choleskyDecompositionStabilized(BlockDiagonalMatrix &A,
                                      BlockDiagonalMatrix &L,
                                      vector<vector<Integer> > &schurStabilizeIndices,
-                                     vector<vector<Real> > &schurStabilizeLambdas);
+                                     vector<vector<Real> > &schurStabilizeLambdas,
+                                     const double stabilizeThreshold);
 void blockMatrixSolveWithCholesky(BlockDiagonalMatrix &ACholesky, BlockDiagonalMatrix &X);
 void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L, Matrix &B);
 void blockMatrixLowerTriangularTransposeSolve(BlockDiagonalMatrix &L, Matrix &B);

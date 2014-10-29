@@ -70,7 +70,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <vector>
 
-void RpotrfStabilized(const char *uplo, INTEGER n, REAL * A, INTEGER lda, INTEGER * info, vector<INTEGER> &stabilizeIndices, vector<REAL> &stabilizeLambdas)
+void RpotrfStabilized(const char *uplo, INTEGER n, REAL * A, INTEGER lda, INTEGER * info, vector<INTEGER> &stabilizeIndices, vector<REAL> &stabilizeLambdas, const double stabilizeThreshold)
 {
     INTEGER upper;
     INTEGER j, jb, nb;
@@ -101,7 +101,7 @@ void RpotrfStabilized(const char *uplo, INTEGER n, REAL * A, INTEGER lda, INTEGE
     nb = iMlaenv(1, "Rpotrf", uplo, n, -1, -1, -1);
     if (nb <= 1 || nb >= n) {
 //Use unblocked code.
-      Rpotf2Stabilized(uplo, n, A, lda, info, 0, stabilizeIndices, stabilizeLambdas, totalLogLambda);
+      Rpotf2Stabilized(uplo, n, A, lda, info, 0, stabilizeThreshold, stabilizeIndices, stabilizeLambdas, totalLogLambda);
     } else {
 //Use blocked code.
 	if (upper) {
@@ -111,7 +111,7 @@ void RpotrfStabilized(const char *uplo, INTEGER n, REAL * A, INTEGER lda, INTEGE
 //for non-positive-definiteness.
 		jb = min(nb, n - j + 1);
 		Rsyrk("Upper", "Transpose", jb, j - 1, -One, &A[0 + (j - 1) * lda], lda, One, &A[(j - 1) + (j - 1) * lda], lda);
-		Rpotf2Stabilized("Upper", jb, &A[(j - 1) + (j - 1) * lda], lda, info, j-1, stabilizeIndices, stabilizeLambdas, totalLogLambda);
+		Rpotf2Stabilized("Upper", jb, &A[(j - 1) + (j - 1) * lda], lda, info, j-1, stabilizeThreshold, stabilizeIndices, stabilizeLambdas, totalLogLambda);
 		if (*info != 0) {
 		    goto L30;
 		}
@@ -129,7 +129,7 @@ void RpotrfStabilized(const char *uplo, INTEGER n, REAL * A, INTEGER lda, INTEGE
 //for non-positive-definiteness.
 		jb = min(nb, n - j + 1);
 		Rsyrk("Lower", "No transpose", jb, j - 1, -One, &A[(j - 1) + 0 * lda], lda, One, &A[(j - 1) + (j - 1) * lda], lda);
-		Rpotf2Stabilized("Lower", jb, &A[(j - 1) + (j - 1) * lda], lda, info, j-1, stabilizeIndices, stabilizeLambdas, totalLogLambda);
+		Rpotf2Stabilized("Lower", jb, &A[(j - 1) + (j - 1) * lda], lda, info, j-1, stabilizeThreshold, stabilizeIndices, stabilizeLambdas, totalLogLambda);
 		if (*info != 0) {
 		    goto L30;
 		}

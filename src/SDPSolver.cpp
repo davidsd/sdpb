@@ -400,13 +400,17 @@ Real stepLength(BlockDiagonalMatrix &XCholesky,
 }
 
 void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
-                                                const BlockDiagonalMatrix &BilinearPairingsY) {
-
+                                                const BlockDiagonalMatrix &BilinearPairingsY,
+                                                const Real &choleskyStabilizeThreshold) {
+  timers["schurblocks/cholesky"].resume();
   computeSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, SchurBlocks);
-  choleskyDecompositionStabilized(SchurBlocks, SchurBlocksCholesky, schurStabilizeIndices, schurStabilizeLambdas);
-
+  choleskyDecompositionStabilized(SchurBlocks, SchurBlocksCholesky,
+                                  schurStabilizeIndices,
+                                  schurStabilizeLambdas,
+                                  cast2double(choleskyStabilizeThreshold));
+  timers["schurblocks/cholesky"].stop();
   // SchurUpdateLowRank = {{- 1, 0}, {E, G}}
-
+  timers["make schur update"].resume();
   SchurUpdateLowRank.copyFrom(sdp.FreeVarMatrix);  
   blockMatrixLowerTriangularSolve(SchurBlocksCholesky, SchurUpdateLowRank);
   int updateColumns = SchurUpdateLowRank.cols;
@@ -447,7 +451,8 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
           &stabilizeBlocks[b].elt(0, 0),
           stabilizeBlocks[b].rows);
   }
-
+  timers["make schur update"].stop();
+  timers["make Q"].resume();
   // Q = SchurUpdateLowRank^T SchurUpdateLowRank - {{0,0},{0,1}}
   Q.setRowsCols(updateColumns, updateColumns);
   Q.setZero();
@@ -488,9 +493,12 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   for (int c = 0; c < SchurUpdateLowRank.cols; c++)
     for (int r = SchurUpdateLowRank.cols; r < Q.rows; r++)
       Q.elt(c,r) = Q.elt(r,c);
+  timers["make Q"].stop();
 
+  timers["LU of Q"].resume();
   Qpivots.resize(Q.rows);
   LUDecomposition(Q, Qpivots);
+  timers["LU of Q"].stop();
 }
 
 
@@ -600,12 +608,14 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     if (timers["Solver runtime"].elapsed().wall >= parameters.maxRuntime * 1000000000LL)
       return MaxRuntimeExceeded;
 
+    timers["cholesky"].resume();
     choleskyDecomposition(X, XCholesky);
     choleskyDecomposition(Y, YCholesky);
-
+    timers["cholesky"].stop();
+    timers["bilinear pairings"].resume();
     computeInvBilinearPairingsWithCholesky(XCholesky, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsXInv);
     computeBilinearPairings(Y, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsY);
-
+    timers["bilinear pairings"].stop();
     // d_k = c_k - Tr(F_k Y) - (D y)_k
     computeDualResidues(sdp, y, BilinearPairingsY, dualResidues);
 
@@ -631,33 +641,36 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     // functions for the current point
     else if (iteration > parameters.maxIterations)
       return MaxIterationsExceeded;
-
-    initializeSchurComplementSolver(BilinearPairingsXInv, BilinearPairingsY);
+    timers["initialize schur solver"].resume();
+    initializeSchurComplementSolver(BilinearPairingsXInv, BilinearPairingsY, parameters.choleskyStabilizeThreshold);
+    timers["initialize schur solver"].stop();
 
     Real mu = frobeniusProductSymmetric(X, Y)/X.dim;
     if (mu > parameters.maxComplementarity)
       return MaxComplementarityExceeded;
-
+    timers["predictor"].resume();
     // Mehrotra predictor solution for (dx, dX, dY)
     Real betaPredictor = predictorCenteringParameter(parameters, isPrimalFeasible && isDualFeasible);
     computeSearchDirection(betaPredictor, mu, false);
-
+    timers["predictor"].stop();
+    timers["corrector"].resume();
     // Mehrotra corrector solution for (dx, dX, dY)
     Real betaCorrector = correctorCenteringParameter(parameters, X, dX, Y, dY, mu, isPrimalFeasible && isDualFeasible);
     computeSearchDirection(betaCorrector, mu, true);
-
+    timers["corrector"].stop();
+    timers["step length"].resume();
     // Step length to preserve positive definiteness
     primalStepLength = stepLength(XCholesky, dX, StepMatrixWorkspace,
                                   eigenvaluesWorkspace, QRWorkspace, parameters);
     dualStepLength   = stepLength(YCholesky, dY, StepMatrixWorkspace,
                                   eigenvaluesWorkspace, QRWorkspace, parameters);
-
+    timers["step length"].stop();
     if (isPrimalFeasible && isDualFeasible) {
       primalStepLength = min(primalStepLength, dualStepLength);
       dualStepLength = primalStepLength;
     }
 
-    printSolverInfo(iteration, mu, status, primalStepLength, dualStepLength, betaCorrector);
+    printSolverInfo(iteration, mu, status, primalStepLength, dualStepLength, betaCorrector, sdp.dualObjective.size(), Q.rows);
 
     // Update current point
     scaleVector(dx, primalStepLength);
