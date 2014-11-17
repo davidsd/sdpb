@@ -117,9 +117,18 @@ int main(int argc, char** argv) {
     ("noFinalCheckpoint",
      po::bool_switch(&parameters.noFinalCheckpoint)->default_value(false),
      "Don't save a final checkpoint after terminating (useful when debugging).")
+    ("findPrimalFeasible",
+     po::bool_switch(&parameters.findPrimalFeasible)->default_value(false),
+     "Terminate once a primal feasible solution is found.")
     ("findDualFeasible",
      po::bool_switch(&parameters.findDualFeasible)->default_value(false),
      "Terminate once a dual feasible solution is found.")
+    ("detectPrimalFeasibleJump",
+     po::bool_switch(&parameters.detectPrimalFeasibleJump)->default_value(false),
+     "Terminate if a primal-step of 1 is taken. This often indicates that a "
+     "primal feasible solution would be found if the precision were high "
+     "enough. Try increasing either primalErrorThreshold or precision "
+     "and run from the latest checkpoint.")
     ("detectDualFeasibleJump",
      po::bool_switch(&parameters.detectDualFeasibleJump)->default_value(false),
      "Terminate if a dual-step of 1 is taken. This often indicates that a "

@@ -22,7 +22,9 @@ public:
   int maxRuntime;
   int checkpointInterval;
   bool noFinalCheckpoint;
+  bool findPrimalFeasible;
   bool findDualFeasible;
+  bool detectPrimalFeasibleJump;
   bool detectDualFeasibleJump;
   int precision;
   int maxThreads;
@@ -55,7 +57,9 @@ public:
 
 enum SDPSolverTerminateReason {
   PrimalDualOptimal,
+  PrimalFeasible,
   DualFeasible,
+  PrimalFeasibleJumpDetected,
   DualFeasibleJumpDetected,
   MaxComplementarityExceeded,
   MaxIterationsExceeded,

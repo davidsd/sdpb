@@ -633,8 +633,12 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
 
     if (isPrimalFeasible && isDualFeasible && isOptimal)
       return PrimalDualOptimal;
+    else if (isPrimalFeasible && parameters.findPrimalFeasible)
+      return PrimalFeasible;
     else if (isDualFeasible && parameters.findDualFeasible)
       return DualFeasible;
+    else if (primalStepLength == 1 && parameters.detectPrimalFeasibleJump)
+      return PrimalFeasibleJumpDetected;
     else if (dualStepLength == 1 && parameters.detectDualFeasibleJump)
       return DualFeasibleJumpDetected;
     // Detect max iterations after computing errors and objective

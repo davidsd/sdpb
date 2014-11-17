@@ -57,7 +57,9 @@ ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
   os << "maxRuntime                   = " << p.maxRuntime                   << endl;
   os << "checkpointInterval           = " << p.checkpointInterval           << endl;
   os << "noFinalCheckpoint            = " << p.noFinalCheckpoint            << endl;
+  os << "findPrimalFeasible           = " << p.findPrimalFeasible           << endl;
   os << "findDualFeasible             = " << p.findDualFeasible             << endl;
+  os << "detectPrimalFeasibleJump     = " << p.detectPrimalFeasibleJump     << endl;
   os << "detectDualFeasibleJump       = " << p.detectDualFeasibleJump       << endl;
   os << "precision(actual)            = " << p.precision << "(" << mpf_get_default_prec() << ")" << endl;
   os << "maxThreads(using)            = " << p.maxThreads << "(" << omp_get_max_threads() << ")" << endl;
@@ -79,8 +81,14 @@ ostream &operator<<(ostream& os, const SDPSolverTerminateReason& r) {
   case PrimalDualOptimal:
     os << "found primal-dual optimal solution";
     break;
+  case PrimalFeasible:
+    os << "found primal feasible solution";
+    break;
   case DualFeasible:
     os << "found dual feasible solution";
+    break;
+  case PrimalFeasibleJumpDetected:
+    os << "primal feasible jump detected";
     break;
   case DualFeasibleJumpDetected:
     os << "dual feasible jump detected";
