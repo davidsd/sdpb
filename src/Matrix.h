@@ -12,15 +12,13 @@
 #include <assert.h>
 #include <iostream>
 #include <ostream>
+#include <vector>
 #include "omp.h"
 #include "types.h"
 #include "Vector.h"
 
 using std::ostream;
 using std::vector;
-
-const Real CHOLESKY_STABILIZE_THRESHOLD = 1e-8;
-const Real BASIC_ROW_THRESHOLD = 1e-4;
 
 class Matrix {
  public:
@@ -49,7 +47,7 @@ class Matrix {
     assert(rows == cols);
 
     for (int i = 0; i < rows; i++)
-      elt(i,i) += c;
+      elt(i, i) += c;
   }
 
   void addColumn() {
@@ -73,9 +71,9 @@ class Matrix {
 
     for (int r = 0; r < rows; r++) {
       for (int c = 0; c < r; c++) {
-        Real tmp = (elt(r,c) + elt(c,r))/2;
-        elt(r,c) = tmp;
-        elt(c,r) = tmp;
+        Real tmp = (elt(r, c) + elt(c, r))/2;
+        elt(r, c) = tmp;
+        elt(c, r) = tmp;
       }
     }
   }
@@ -91,7 +89,7 @@ class Matrix {
   void operator+=(const Matrix &A) {
     for (unsigned int i = 0; i < elements.size(); i++)
       elements[i] += A.elements[i];
-  }    
+  }
 
   void operator-=(const Matrix &A) {
     for (unsigned int i = 0; i < elements.size(); i++)
@@ -107,14 +105,6 @@ class Matrix {
     return maxAbsVector(elements);
   }
 
-  void swapCols(int c1, int c2) {
-    for (int r = 0; r < rows; r++) {
-      Real tmp = elt(r, c1);
-      elt(r,c1) = elt(r,c2);
-      elt(r,c1) = tmp;
-    }
-  }
-
   friend ostream& operator<<(ostream& os, const Matrix& a);
 };
 
@@ -124,7 +114,8 @@ ostream& operator<<(ostream& os, const Matrix& a);
 void transpose(const Matrix &A, Matrix &B);
 
 // C := alpha*A*B + beta*C
-void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B, Real beta, Matrix &C);
+void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B,
+                            Real beta, Matrix &C);
 
 // C := A*B
 void matrixMultiply(Matrix &A, Matrix &B, Matrix &C);
@@ -136,10 +127,12 @@ void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol);
 void lowerTriangularInverseCongruence(Matrix &A, Matrix &L);
 
 // y := alpha A x + beta y
-void vectorScaleMatrixMultiplyAdd(Real alpha, Matrix &A, Vector &x, Real beta, Vector &y);
+void vectorScaleMatrixMultiplyAdd(Real alpha, Matrix &A, Vector &x,
+                                  Real beta, Vector &y);
 
 // y := alpha A^T x + beta y
-void vectorScaleMatrixMultiplyTransposeAdd(Real alpha, Matrix &A, Vector &x, Real beta, Vector &y);
+void vectorScaleMatrixMultiplyTransposeAdd(Real alpha, Matrix &A, Vector &x,
+                                           Real beta, Vector &y);
 
 // Frobenius product Tr(A^T B) where A and B are symmetric matrices
 Real frobeniusProductSymmetric(const Matrix &A, const Matrix &B);
@@ -175,7 +168,10 @@ void solveWithLUDecomposition(Matrix &LU, vector<Integer> &pivots, Vector &b);
 // - L : dim x dim lower-triangular matrix
 void choleskyDecomposition(Matrix &A, Matrix &L);
 
-void choleskyDecompositionStabilized(Matrix &A, Matrix &L, vector<Integer> &stabilizeIndices, vector<Real> &stabilizeLambdas, const double stabilizeThreshold);
+void choleskyDecompositionStabilized(Matrix &A, Matrix &L,
+                                     vector<Integer> &stabilizeIndices,
+                                     vector<Real> &stabilizeLambdas,
+                                     const double stabilizeThreshold);
 
 void lowerTriangularSolve(Matrix &L, Real *b, int bcols, int ldb);
 

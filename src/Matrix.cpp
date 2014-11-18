@@ -6,6 +6,7 @@
 //=======================================================================
 
 
+#include <vector>
 #include "Matrix.h"
 
 ostream& operator<<(ostream& os, const Matrix& a) {
@@ -13,7 +14,7 @@ ostream& operator<<(ostream& os, const Matrix& a) {
   for (int r = 0; r < a.rows; r++) {
     os << "{";
     for (int c = 0; c < a.cols; c++) {
-      os << a.elt(r,c);
+      os << a.elt(r, c);
       if (c < a.cols-1)
         os << ", ";
     }
@@ -32,12 +33,13 @@ void transpose(const Matrix &A, Matrix &B) {
 
   for (int n = 0; n < A.cols; n++)
     for (int m = 0; m < A.rows; m++)
-      B.elt(n,m) = A.elt(m,n);
+      B.elt(n, m) = A.elt(m, n);
 }
 
 // C := alpha*A*B + beta*C
 //
-void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B, Real beta, Matrix &C) {
+void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B,
+                            Real beta, Matrix &C) {
   assert(A.cols == B.rows);
   assert(A.rows == C.rows);
   assert(B.cols == C.cols);
@@ -59,13 +61,13 @@ void matrixMultiply(Matrix &A, Matrix &B, Matrix &C) {
 void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol) {
   assert(bRow + A.cols <= B.rows);
   assert(bCol + A.cols <= B.cols);
-  
+
   #pragma omp parallel for schedule(dynamic)
   for (int c = 0; c < A.cols; c++) {
     for (int r = 0; r <= c; r++) {
       Real tmp = 0;
       for (int p = 0; p < A.rows; p++)
-        tmp += A.elt(p,r) * A.elt(p,c);
+        tmp += A.elt(p, r) * A.elt(p, c);
       B.elt(bRow + r, bCol + c) = tmp;
       if (r != c)
         B.elt(bRow + c, bCol + r) = tmp;
@@ -91,30 +93,32 @@ void lowerTriangularInverseCongruence(Matrix &A, Matrix &L) {
 
 // y := alpha A x + beta y
 //
-void vectorScaleMatrixMultiplyAdd(Real alpha, Matrix &A, Vector &x, Real beta, Vector &y) {
-  assert(A.cols <= (int)x.size());
-  assert(A.rows <= (int)y.size());
+void vectorScaleMatrixMultiplyAdd(Real alpha, Matrix &A, Vector &x,
+                                  Real beta, Vector &y) {
+  assert(A.cols <= static_cast<int>(x.size()));
+  assert(A.rows <= static_cast<int>(y.size()));
 
   #pragma omp parallel for schedule(static)
   for (int p = 0; p < A.rows; p++) {
     Real tmp = 0;
     for (int n = 0; n < A.cols; n++)
-      tmp += A.elt(p,n)*x[n];
+      tmp += A.elt(p, n)*x[n];
     y[p] = alpha*tmp + beta*y[p];
   }
 }
 
 // y := alpha A^T x + beta y
 //
-void vectorScaleMatrixMultiplyTransposeAdd(Real alpha, Matrix &A, Vector &x, Real beta, Vector &y) {
-  assert(A.cols <= (int)y.size());
-  assert(A.rows <= (int)x.size());
+void vectorScaleMatrixMultiplyTransposeAdd(Real alpha, Matrix &A, Vector &x,
+                                           Real beta, Vector &y) {
+  assert(A.cols <= static_cast<int>(y.size()));
+  assert(A.rows <= static_cast<int>(x.size()));
 
   #pragma omp parallel for schedule(static)
   for (int n = 0; n < A.cols; n++) {
     Real tmp = 0;
     for (int p = 0; p < A.rows; p++)
-      tmp += A.elt(p,n)*x[p];
+      tmp += A.elt(p, n)*x[p];
     y[n] = alpha*tmp + beta*y[n];
   }
 }
@@ -127,12 +131,12 @@ Real frobeniusProductSymmetric(const Matrix &A, const Matrix &B) {
   Real result = 0;
   for (int c = 0; c < A.cols; c++)
     for (int r = 0; r < c ; r++)
-      result += A.elt(r,c)*B.elt(r,c);
+      result += A.elt(r, c)*B.elt(r, c);
   result *= 2;
 
   for (int r = 0; r < A.rows; r++)
-    result += A.elt(r,r)*B.elt(r,r);
-  
+    result += A.elt(r, r)*B.elt(r, r);
+
   return result;
 }
 
@@ -145,11 +149,11 @@ Real frobeniusProductOfSums(const Matrix &X, const Matrix &dX,
 
   for (int c = 0; c < X.cols; c++)
     for (int r = 0; r < c; r++)
-      result += (X.elt(r,c) + dX.elt(r,c)) * (Y.elt(r,c) + dY.elt(r,c));
+      result += (X.elt(r, c) + dX.elt(r, c)) * (Y.elt(r, c) + dY.elt(r, c));
   result *= 2;
 
   for (int r = 0; r < X.rows; r++)
-    result += (X.elt(r,r) + dX.elt(r,r)) * (Y.elt(r,r) + dY.elt(r,r));
+    result += (X.elt(r, r) + dX.elt(r, r)) * (Y.elt(r, r) + dY.elt(r, r));
 
   return result;
 }
@@ -162,12 +166,13 @@ Real frobeniusProductOfSums(const Matrix &X, const Matrix &dX,
 //
 void matrixEigenvalues(Matrix &A, Vector &workspace, Vector &eigenvalues) {
   assert(A.rows == A.cols);
-  assert((int)eigenvalues.size() == A.rows);
-  assert((int)workspace.size() == 3*A.rows - 1);
+  assert(static_cast<int>(eigenvalues.size()) == A.rows);
+  assert(static_cast<int>(workspace.size()) == 3*A.rows - 1);
 
   Integer info;
   Integer workSize = workspace.size();
-  Rsyev("NoEigenvectors", "LowerTriangular", A.rows, &A.elements[0], A.rows, &eigenvalues[0], &workspace[0], workSize, &info);
+  Rsyev("NoEigenvectors", "LowerTriangular", A.rows, &A.elements[0],
+        A.rows, &eigenvalues[0], &workspace[0], workSize, &info);
   assert(info == 0);
 }
 
@@ -193,7 +198,8 @@ void LUDecomposition(Matrix &A, vector<Integer> &pivots) {
 
 void solveWithLUDecomposition(Matrix &LU, vector<Integer> &pivots, Vector &b) {
   Integer info;
-  Rgetrs("NoTranspose", LU.rows, 1, &LU.elements[0], LU.rows, &pivots[0], &b[0], b.size(), &info);
+  Rgetrs("NoTranspose", LU.rows, 1, &LU.elements[0], LU.rows,
+         &pivots[0], &b[0], b.size(), &info);
   assert(info == 0);
 }
 
@@ -220,15 +226,21 @@ void choleskyDecomposition(Matrix &A, Matrix &L) {
       L.elements[i + j*dim] = 0;
 }
 
-// L (lower triangular) such that A = L L^T - \sum_i stabilizeLambdas_i^2 u_j u_j^T
-//                                where j = stabilizeIndices_i
+// L (lower triangular) such that A = L L^T - \sum_i
+//                                stabilizeLambdas_i^2 u_j u_j^T where
+//                                j = stabilizeIndices_i
 // Inputs:
 // - A : dim x dim symmetric matrix
 // - L : dim x dim lower-triangular matrix
-// - stabilizeIndices: vector to hold indices where small diagonal elements were compensated
-// - stabilizeLambdas: vector to hold values used to compensate small diagonal elements
+// - stabilizeIndices: vector to hold indices where small diagonal
+//   elements were compensated
+// - stabilizeLambdas: vector to hold values used to compensate small
+//   diagonal elements
 //
-void choleskyDecompositionStabilized(Matrix &A, Matrix &L, vector<Integer> &stabilizeIndices, vector<Real> &stabilizeLambdas, const double stabilizeThreshold) {
+void choleskyDecompositionStabilized(Matrix &A, Matrix &L,
+                                     vector<Integer> &stabilizeIndices,
+                                     vector<Real> &stabilizeLambdas,
+                                     const double stabilizeThreshold) {
   int dim = A.rows;
   assert(A.cols == dim);
   assert(L.rows == dim);
@@ -237,7 +249,8 @@ void choleskyDecompositionStabilized(Matrix &A, Matrix &L, vector<Integer> &stab
   // Set lower-triangular part of L to cholesky decomposition
   L.copyFrom(A);
   Integer info;
-  RpotrfStabilized("Lower", dim, &L.elements[0], dim, &info, stabilizeIndices, stabilizeLambdas, stabilizeThreshold);
+  RpotrfStabilized("Lower", dim, &L.elements[0], dim, &info,
+                   stabilizeIndices, stabilizeLambdas, stabilizeThreshold);
   assert(info == 0);
 
   // Set the upper-triangular part of the L to zero
@@ -255,7 +268,7 @@ void lowerTriangularSolve(Matrix &L, Real *b, int bcols, int ldb) {
 }
 
 void lowerTriangularSolve(Matrix &L, Vector &b) {
-  assert((int) b.size() == L.rows);
+  assert(static_cast<int>(b.size()) == L.rows);
   lowerTriangularSolve(L, &b[0], 1, b.size());
 }
 
@@ -268,7 +281,7 @@ void lowerTriangularTransposeSolve(Matrix &L, Real *b, int bcols, int ldb) {
 }
 
 void lowerTriangularTransposeSolve(Matrix &L, Vector &b) {
-  assert((int) b.size() == L.rows);
+  assert(static_cast<int>(b.size()) == L.rows);
   lowerTriangularTransposeSolve(L, &b[0], 1, b.size());
 }
 

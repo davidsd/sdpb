@@ -19,7 +19,8 @@ using tinyxml2::XMLElement;
 using boost::filesystem::path;
 
 template <class T>
-vector<T> parseMany(const char *name, T(*parse)(XMLElement *), XMLElement *elt) {
+vector<T> parseMany(const char *name, T(*parse)(XMLElement *),
+                    XMLElement *elt) {
   XMLElement *e;
   vector<T> v;
   for (e = elt->FirstChildElement(name);
@@ -56,7 +57,9 @@ SampledMatrixPolynomial parseSampledMatrixPolynomial(XMLElement *xml) {
   s.degree              = parseInt(xml->FirstChildElement("degree"));
   s.constraintMatrix    = parseMatrix(xml->FirstChildElement("constraintMatrix"));
   s.constraintConstants = parseVector(xml->FirstChildElement("constraintConstants"));
-  s.bilinearBases       = parseMany("bilinearBasisMatrix", parseMatrix, xml->FirstChildElement("bilinearBases"));
+  s.bilinearBases       = parseMany("bilinearBasisMatrix",
+                                    parseMatrix,
+                                    xml->FirstChildElement("bilinearBases"));
   return s;
 }
 

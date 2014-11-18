@@ -6,6 +6,7 @@
 //=======================================================================
 
 
+#include <vector>
 #include "SDP.h"
 
 Matrix sampleBilinearBasis(const int maxDegree,
@@ -23,7 +24,8 @@ Matrix sampleBilinearBasis(const int maxDegree,
   return b;
 }
 
-SampledMatrixPolynomial samplePolynomialVectorMatrix(const PolynomialVectorMatrix &m) {
+SampledMatrixPolynomial
+samplePolynomialVectorMatrix(const PolynomialVectorMatrix &m) {
   SampledMatrixPolynomial s;
 
   assert(m.rows == m.cols);
@@ -32,14 +34,14 @@ SampledMatrixPolynomial samplePolynomialVectorMatrix(const PolynomialVectorMatri
 
   int numSamples     = s.degree + 1;
   int numConstraints = numSamples * s.dim * (s.dim + 1)/2;
-  int vectorDim      = m.elt(0,0).size();
+  int vectorDim      = m.elt(0, 0).size();
 
 
   // The first element of each vector multiplies the constant 1
   s.constraintConstants = Vector(numConstraints);
   // The rest multiply decision variables
   s.constraintMatrix    = Matrix(numConstraints, vectorDim - 1);
-  
+
   int p = 0;
   for (int c = 0; c < s.dim; c++) {
     for (int r = c; r < s.dim; r++) {
@@ -47,7 +49,7 @@ SampledMatrixPolynomial samplePolynomialVectorMatrix(const PolynomialVectorMatri
         Real x     = m.samplePoints[k];
         Real scale = m.sampleScalings[k];
 
-        s.constraintConstants[p] = scale*m.elt(r,c)[0](x);
+        s.constraintConstants[p] = scale*m.elt(r, c)[0](x);
         for (int n = 1; n < vectorDim; n++)
           s.constraintMatrix.elt(p, n-1) = -scale*m.elt(r, c)[n](x);
 
@@ -57,17 +59,19 @@ SampledMatrixPolynomial samplePolynomialVectorMatrix(const PolynomialVectorMatri
   }
 
   int delta1 = s.degree/2;
-  s.bilinearBases.push_back(sampleBilinearBasis(delta1, numSamples, m.bilinearBasis,
+  s.bilinearBases.push_back(sampleBilinearBasis(delta1, numSamples,
+                                                m.bilinearBasis,
                                                 m.samplePoints,
                                                 m.sampleScalings));
   int delta2 = (s.degree - 1)/2;
   if (delta2 >= 0)
-    s.bilinearBases.push_back(sampleBilinearBasis(delta2, numSamples, m.bilinearBasis,
+    s.bilinearBases.push_back(sampleBilinearBasis(delta2, numSamples,
+                                                  m.bilinearBasis,
                                                   m.samplePoints,
-                                                  multiplyVectors(m.samplePoints, m.sampleScalings)));
+                                                  multiplyVectors(m.samplePoints,
+                                                                  m.sampleScalings)));
 
   return s;
-      
 }
 
 SDP bootstrapSDP(const Vector &objective,
@@ -92,7 +96,6 @@ SDP bootstrapSDP(const Vector &objective,
   for (vector<SampledMatrixPolynomial>::const_iterator s = sampledMatrixPols.begin();
        s != sampledMatrixPols.end();
        s++) {
-
     vector<int> blocks;
     for (vector<Matrix>::const_iterator b = s->bilinearBases.begin();
          b != s->bilinearBases.end();
@@ -107,7 +110,7 @@ SDP bootstrapSDP(const Vector &objective,
       for (int n = 0; n < s->constraintMatrix.cols; n++)
         sdp.FreeVarMatrix.elt(p, n) = s->constraintMatrix.elt(k, n);
   }
-  assert(p == (int)sdp.primalObjective.size());
+  assert(p == static_cast<int>(sdp.primalObjective.size()));
 
   sdp.initializeConstraintIndices();
   return sdp;

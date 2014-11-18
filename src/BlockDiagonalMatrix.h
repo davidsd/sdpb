@@ -25,7 +25,7 @@ public:
   vector<Matrix> blocks;
   vector<int> blockStartIndices;
 
-  BlockDiagonalMatrix(const vector<int> &blockSizes):
+  explicit BlockDiagonalMatrix(const vector<int> &blockSizes):
     dim(0) {
     for (unsigned int i = 0; i < blockSizes.size(); i++) {
       blocks.push_back(Matrix(blockSizes[i], blockSizes[i]));
@@ -77,7 +77,9 @@ public:
 
   Real maxAbs() const {
     Real max = 0;
-    for (vector<Matrix>::const_iterator b = blocks.begin(); b != blocks.end(); b++) {
+    for (vector<Matrix>::const_iterator b = blocks.begin();
+         b != blocks.end();
+         b++) {
       const Real tmp = b->maxAbs();
       if (tmp > max)
         max = tmp;
@@ -86,12 +88,11 @@ public:
   }
 
   friend ostream& operator<<(ostream& os, const BlockDiagonalMatrix& A);
-
 };
 
 Real frobeniusProductSymmetric(const BlockDiagonalMatrix &A,
                                const BlockDiagonalMatrix &B);
-  
+
 // (X + dX) . (Y + dY), where X, dX, Y, dY are symmetric
 // BlockDiagonalMatrices and '.' is the Frobenius product.
 //
@@ -105,19 +106,37 @@ void blockDiagonalMatrixScaleMultiplyAdd(Real alpha,
                                          BlockDiagonalMatrix &B,
                                          Real beta,
                                          BlockDiagonalMatrix &C);
-void blockDiagonalMatrixMultiply(BlockDiagonalMatrix &A, BlockDiagonalMatrix &B, BlockDiagonalMatrix &C);
-void lowerTriangularInverseCongruence(BlockDiagonalMatrix &A, BlockDiagonalMatrix &L);
-Real minEigenvalue(BlockDiagonalMatrix &A, vector<Vector> &workspace, vector<Vector> &eigenvalues);
-void choleskyDecomposition(BlockDiagonalMatrix &A, BlockDiagonalMatrix &L);
+
+void blockDiagonalMatrixMultiply(BlockDiagonalMatrix &A,
+                                 BlockDiagonalMatrix &B,
+                                 BlockDiagonalMatrix &C);
+
+void lowerTriangularInverseCongruence(BlockDiagonalMatrix &A,
+                                      BlockDiagonalMatrix &L);
+
+Real minEigenvalue(BlockDiagonalMatrix &A,
+                   vector<Vector> &workspace,
+                   vector<Vector> &eigenvalues);
+
+void choleskyDecomposition(BlockDiagonalMatrix &A,
+                           BlockDiagonalMatrix &L);
+
 void choleskyDecompositionStabilized(BlockDiagonalMatrix &A,
                                      BlockDiagonalMatrix &L,
-                                     vector<vector<Integer> > &schurStabilizeIndices,
-                                     vector<vector<Real> > &schurStabilizeLambdas,
+                                     vector<vector<Integer> > &stabilizeIndices,
+                                     vector<vector<Real> > &stabilizeLambdas,
                                      const double stabilizeThreshold);
-void blockMatrixSolveWithCholesky(BlockDiagonalMatrix &ACholesky, BlockDiagonalMatrix &X);
-void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L, Matrix &B);
-void blockMatrixLowerTriangularTransposeSolve(BlockDiagonalMatrix &L, Matrix &B);
-void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L, Vector &v);
-void blockMatrixLowerTriangularTransposeSolve(BlockDiagonalMatrix &L, Vector &v);
 
-#endif  // SDPB_MATRIX_H_
+void blockMatrixSolveWithCholesky(BlockDiagonalMatrix &ACholesky,
+                                  BlockDiagonalMatrix &X);
+
+void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L,
+                                     Matrix &B);
+
+void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L,
+                                     Vector &v);
+
+void blockMatrixLowerTriangularTransposeSolve(BlockDiagonalMatrix &L,
+                                              Vector &v);
+
+#endif  // SDPB_BLOCKDIAGONALMATRIX_H_
