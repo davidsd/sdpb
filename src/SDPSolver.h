@@ -1,5 +1,13 @@
-#ifndef SDP_BOOTSTRAP_SDPSOLVER_H_
-#define SDP_BOOTSTRAP_SDPSOLVER_H_
+//=======================================================================
+// Copyright 2014 David Simmons-Duffin.
+// Distributed under the MIT License.
+// (See accompanying file LICENSE or copy at
+//  http://opensource.org/licenses/MIT)
+//=======================================================================
+
+
+#ifndef SDPB_SDPSOLVER_H_
+#define SDPB_SDPSOLVER_H_
 
 #include <iostream>
 #include <ostream>
@@ -156,4 +164,4 @@ void printSolverInfo(int iteration,
                      int dualObjectiveSize,
                      int Qrows);
 
-#endif  // SDP_BOOTSTRAP_SDPSOLVER_H_
+#endif  // SDPB_SDPSOLVER_H_

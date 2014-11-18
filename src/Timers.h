@@ -1,5 +1,13 @@
-#ifndef SDP_BOOTSTRAP_TIMERS_H_
-#define SDP_BOOTSTRAP_TIMERS_H_
+//=======================================================================
+// Copyright 2014 David Simmons-Duffin.
+// Distributed under the MIT License.
+// (See accompanying file LICENSE or copy at
+//  http://opensource.org/licenses/MIT)
+//=======================================================================
+
+
+#ifndef SDPB_TIMERS_H_
+#define SDPB_TIMERS_H_
 
 #include <iostream>
 #include <ostream>
@@ -25,4 +33,4 @@ public:
 
 extern Timers timers;
 
-#endif  // SDP_BOOTSTRAP_TIMERS_H_
+#endif  // SDPB_TIMERS_H_

@@ -1,5 +1,13 @@
-#ifndef SDP_BOOTSTRAP_TYPES_H_
-#define SDP_BOOTSTRAP_TYPES_H_
+//=======================================================================
+// Copyright 2014 David Simmons-Duffin.
+// Distributed under the MIT License.
+// (See accompanying file LICENSE or copy at
+//  http://opensource.org/licenses/MIT)
+//=======================================================================
+
+
+#ifndef SDPB_TYPES_H_
+#define SDPB_TYPES_H_
 
 #include <mblas.h>
 #include <mlapack.h>
@@ -46,4 +54,4 @@ inline int getPrecision(const Real &r) {
 }
 #endif
 
-#endif  // SDP_BOOTSTRAP_TYPES_H_
+#endif  // SDPB_TYPES_H_

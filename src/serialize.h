@@ -1,5 +1,13 @@
-#ifndef SDP_BOOTSTRAP_SERIALIZE_H_
-#define SDP_BOOTSTRAP_SERIALIZE_H_
+//=======================================================================
+// Copyright 2014 David Simmons-Duffin.
+// Distributed under the MIT License.
+// (See accompanying file LICENSE or copy at
+//  http://opensource.org/licenses/MIT)
+//=======================================================================
+
+
+#ifndef SDPB_SERIALIZE_H_
+#define SDPB_SERIALIZE_H_
 
 #include <string>
 #include <vector>
@@ -73,4 +81,4 @@ BOOST_CLASS_VERSION(Real, 0)
 BOOST_CLASS_TRACKING(Matrix,              boost::serialization::track_never)
 BOOST_CLASS_TRACKING(BlockDiagonalMatrix, boost::serialization::track_never)
 
-#endif  // SDP_BOOTSTRAP_SERIALIZE_H_
+#endif  // SDPB_SERIALIZE_H_

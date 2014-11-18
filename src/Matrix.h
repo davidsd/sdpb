@@ -1,5 +1,13 @@
-#ifndef SDP_BOOTSTRAP_MATRIX_H_
-#define SDP_BOOTSTRAP_MATRIX_H_
+//=======================================================================
+// Copyright 2014 David Simmons-Duffin.
+// Distributed under the MIT License.
+// (See accompanying file LICENSE or copy at
+//  http://opensource.org/licenses/MIT)
+//=======================================================================
+
+
+#ifndef SDPB_MATRIX_H_
+#define SDPB_MATRIX_H_
 
 #include <assert.h>
 #include <iostream>
@@ -183,4 +191,4 @@ void lowerTriangularTransposeSolve(Matrix &L, Vector &b);
 // - X         : dim x dim matrix
 void matrixSolveWithCholesky(Matrix &ACholesky, Matrix &X);
 
-#endif  // SDP_BOOTSTRAP_MATRIX_H_
+#endif  // SDPB_MATRIX_H_

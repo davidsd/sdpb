@@ -1,5 +1,13 @@
-#ifndef SDP_BOOTSTRAP_VECTOR_H_
-#define SDP_BOOTSTRAP_VECTOR_H_
+//=======================================================================
+// Copyright 2014 David Simmons-Duffin.
+// Distributed under the MIT License.
+// (See accompanying file LICENSE or copy at
+//  http://opensource.org/licenses/MIT)
+//=======================================================================
+
+
+#ifndef SDPB_VECTOR_H_
+#define SDPB_VECTOR_H_
 
 #include <algorithm>
 #include <vector>
@@ -45,4 +53,4 @@ inline Vector multiplyVectors(const Vector &u, const Vector &v) {
   return w;
 }
 
-#endif  // SDP_BOOTSTRAP_VECTOR_H_
+#endif  // SDPB_VECTOR_H_

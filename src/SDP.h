@@ -1,5 +1,13 @@
-#ifndef SDP_BOOTSTRAP_SDP_H_
-#define SDP_BOOTSTRAP_SDP_H_
+//=======================================================================
+// Copyright 2014 David Simmons-Duffin.
+// Distributed under the MIT License.
+// (See accompanying file LICENSE or copy at
+//  http://opensource.org/licenses/MIT)
+//=======================================================================
+
+
+#ifndef SDPB_SDP_H_
+#define SDPB_SDP_H_
 
 #include <vector>
 #include <iostream>
@@ -134,4 +142,4 @@ SDP bootstrapSDP(const Vector &objective,
 SDP bootstrapPolynomialSDP(const Vector &affineObjective,
                            const vector<PolynomialVectorMatrix> &polVectorMatrices);
 
-#endif  // SDP_BOOTSTRAP_SDP_H_
+#endif  // SDPB_SDP_H_

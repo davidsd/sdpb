@@ -1,5 +1,13 @@
-#ifndef SDP_BOOTSTRAP_BLOCKDIAGONALMATRIX_H_
-#define SDP_BOOTSTRAP_BLOCKDIAGONALMATRIX_H_
+//=======================================================================
+// Copyright 2014 David Simmons-Duffin.
+// Distributed under the MIT License.
+// (See accompanying file LICENSE or copy at
+//  http://opensource.org/licenses/MIT)
+//=======================================================================
+
+
+#ifndef SDPB_BLOCKDIAGONALMATRIX_H_
+#define SDPB_BLOCKDIAGONALMATRIX_H_
 
 #include <vector>
 #include <iostream>
@@ -112,4 +120,4 @@ void blockMatrixLowerTriangularTransposeSolve(BlockDiagonalMatrix &L, Matrix &B)
 void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L, Vector &v);
 void blockMatrixLowerTriangularTransposeSolve(BlockDiagonalMatrix &L, Vector &v);
 
-#endif  // SDP_BOOTSTRAP_MATRIX_H_
+#endif  // SDPB_MATRIX_H_

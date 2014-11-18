@@ -1,5 +1,13 @@
-#ifndef SDP_BOOTSTRAP_POLYNOMIAL_H_
-#define SDP_BOOTSTRAP_POLYNOMIAL_H_
+//=======================================================================
+// Copyright 2014 David Simmons-Duffin.
+// Distributed under the MIT License.
+// (See accompanying file LICENSE or copy at
+//  http://opensource.org/licenses/MIT)
+//=======================================================================
+
+
+#ifndef SDPB_POLYNOMIAL_H_
+#define SDPB_POLYNOMIAL_H_
 
 #include "types.h"
 #include "util.h"
@@ -38,4 +46,4 @@ public:
 
 };
 
-#endif  // SDP_BOOTSTRAP_POLYNOMIAL_H_
+#endif  // SDPB_POLYNOMIAL_H_

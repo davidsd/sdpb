@@ -67,6 +67,8 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 */
 
+// Modified 2014 by David Simmons-Duffin for SDPB
+
 /*
 Based on http://www.netlib.org/blas/dgemm.f
 Rgemm performs one of the matrix-matrix operations

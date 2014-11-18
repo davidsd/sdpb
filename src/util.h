@@ -1,5 +1,13 @@
-#ifndef SDP_BOOTSTRAP_UTIL_H_
-#define SDP_BOOTSTRAP_UTIL_H_
+//=======================================================================
+// Copyright 2014 David Simmons-Duffin.
+// Distributed under the MIT License.
+// (See accompanying file LICENSE or copy at
+//  http://opensource.org/licenses/MIT)
+//=======================================================================
+
+
+#ifndef SDPB_UTIL_H_
+#define SDPB_UTIL_H_
 
 #include <algorithm>
 #include <iostream>
@@ -38,4 +46,4 @@ Iter binaryFind(Iter begin, Iter end, T val)
     return end; // not found
 }
 
-#endif  // SDP_BOOTSTRAP_UTIL_H_
+#endif  // SDPB_UTIL_H_
