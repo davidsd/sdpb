@@ -1,5 +1,3 @@
-// Author(s): D. Simmons-Duffin, April-October 2013
-
 /*
 Original code by Lee Thomason (www.grinninglizard.com)
 
