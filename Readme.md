@@ -1,7 +1,20 @@
 # SDPB
 
 SDPB is a semidefinite programming solver designed specifically for
-application to the conformal bootstrap.
+application to the conformal bootstrap and featuring arbitrary precision arithmetic.
+
+It solves the following optimization problem
+
+```
+minimize \sum_n b_n z_n over vectors z=(z_1,...,z_N) such that
+
+\sum_n z_n M_{k,n}(x)
+
+is a positive semidefinite matrix for all k=1,...,K and all x >= 0.
+
+Here, for each k and n, M_{k,n}(x) is a matrix polynomial in x.  The matrix dimension
+of M_{k,n}(x) can depend on k but not n.
+```
 
 ## Installation and Requirements
 
