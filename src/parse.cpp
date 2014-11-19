@@ -9,9 +9,9 @@
 #include <vector>
 #include "types.h"
 #include "parse.h"
-#include "tinyxml2.h"
 #include "Polynomial.h"
 #include "SDP.h"
+#include "tinyxml2/tinyxml2.h"
 
 using std::vector;
 using tinyxml2::XMLDocument;

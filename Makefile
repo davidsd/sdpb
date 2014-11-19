@@ -1,5 +1,5 @@
-SOURCES := $(wildcard src/*.cpp) $(wildcard src/mpack/*.cpp)
-HEADERS := $(wildcard src/*.h) $(wildcard src/mpack/*.h)
+SOURCES := $(wildcard src/*.cpp) $(wildcard src/mpack/*.cpp) $(wildcard src/tinyxml2/*.cpp)
+HEADERS := $(wildcard src/*.h) $(wildcard src/mpack/*.h) $(wildcard src/tinyxml2/*.h)
 OBJECTS := $(patsubst src/%.cpp,obj/%.o,$(SOURCES))
 RESULT  = sdpb
 
@@ -22,6 +22,7 @@ clean:
 obj:
 	@mkdir -p $@
 	@mkdir -p $@/mpack
+	@mkdir -p $@/tinyxml2
 
 foo:
 	echo $(OBJECTS)
