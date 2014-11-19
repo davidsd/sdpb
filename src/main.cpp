@@ -20,7 +20,6 @@
 #include "Timers.h"
 #include "SDP.h"
 #include "parse.h"
-#include "tests.h"
 #include "SDPSolver.h"
 
 using std::cout;
