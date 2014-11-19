@@ -9,9 +9,9 @@
 #ifndef SDPB_VECTOR_H_
 #define SDPB_VECTOR_H_
 
+#include <assert.h>
 #include <algorithm>
 #include <vector>
-#include <assert.h>
 #include "types.h"
 #include "util.h"
 
@@ -19,9 +19,13 @@ using std::vector;
 
 typedef vector<Real> Vector;
 
+inline bool compareAbs(const Real &a, const Real &b) {
+  return abs(a) < abs(b);
+}
+
 inline Real maxAbsVector(const Vector &v) {
   return abs(*std::max_element(v.begin(), v.end(), compareAbs));
-}  
+}
 
 inline void fillVector(Vector &v, const Real &a) {
   std::fill(v.begin(), v.end(), a);

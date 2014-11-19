@@ -44,7 +44,7 @@ void printSolverInfo(int iteration,
   gmp_fprintf(stdout,
               "%3d  %s  %-8.1Fe %-+11.2Fe %-+11.2Fe %-9.2Fe  %-+10.2Fe  %-+10.2Fe  %-8.3Fg %-8.3Fg %-4.2Fg  %d/%d",
               iteration,
-              ss.str().substr(0,8).c_str(),
+              ss.str().substr(0, 8).c_str(),
               mu.get_mpf_t(),
               status.primalObjective.get_mpf_t(),
               status.dualObjective.get_mpf_t(),
@@ -85,7 +85,7 @@ ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
 }
 
 ostream &operator<<(ostream& os, const SDPSolverTerminateReason& r) {
-  switch(r) {
+  switch (r) {
   case PrimalDualOptimal:
     os << "found primal-dual optimal solution";
     break;
@@ -149,15 +149,16 @@ void SDPSolver::loadCheckpoint(const path &checkpointFile) {
 
 void SDPSolver::saveSolution(const SDPSolverTerminateReason terminateReason, const path &outFile) {
   boost::filesystem::ofstream ofs(outFile);
+  float runtime = static_cast<float>(timers["Solver runtime"].elapsed().wall)/1000000000;
   cout << "Saving solution to      : " << outFile << endl;
-  ofs.precision(int(status.primalObjective.get_prec() * 0.30102999566398114 + 5));
+  ofs.precision(static_cast<int>(status.primalObjective.get_prec() * 0.31 + 5));
   ofs << "terminateReason = \"" << terminateReason      << "\";\n";
   ofs << "primalObjective = " << status.primalObjective << ";\n";
   ofs << "dualObjective   = " << status.dualObjective   << ";\n";
   ofs << "dualityGap      = " << status.dualityGap()    << ";\n";
   ofs << "primalError     = " << status.primalError     << ";\n";
   ofs << "dualError       = " << status.dualError       << ";\n";
-  ofs << "runtime         = " << float(timers["Solver runtime"].elapsed().wall)/1000000000 << ";\n";
+  ofs << "runtime         = " << runtime                << ";\n";
   ofs << "y = " << y << ";\n";
   ofs << "Y = " << Y << ";\n";
   ofs << "x = " << x << ";\n";

@@ -14,7 +14,7 @@
 #include "Vector.h"
 
 class Polynomial {
-public:
+ public:
   Vector coefficients;
 
   Polynomial(): coefficients(1, 0) {}
@@ -43,7 +43,6 @@ public:
     }
     return os;
   }
-
 };
 
 #endif  // SDPB_POLYNOMIAL_H_

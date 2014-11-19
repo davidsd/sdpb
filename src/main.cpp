@@ -6,10 +6,12 @@
 //=======================================================================
 
 
+#include <algorithm>
 #include <iostream>
 #include <iomanip>
 #include <fstream>
 #include <ostream>
+#include <string>
 #include "omp.h"
 #include "boost/filesystem.hpp"
 #include "boost/date_time/posix_time/posix_time.hpp"
@@ -38,9 +40,8 @@ int solveSDP(const path &sdpFile,
              const path &outFile,
              const path &checkpointFile,
              SDPSolverParameters parameters) {
-
   setDefaultPrecision(parameters.precision);
-  cout.precision(min(int(parameters.precision * 0.30102999566398114 + 5), 30));
+  cout.precision(min(static_cast<int>(parameters.precision * 0.31 + 5), 30));
   // Ensure all the Real parameters have the appropriate precision
   parameters.resetPrecision();
   omp_set_num_threads(parameters.maxThreads);
@@ -67,8 +68,8 @@ int solveSDP(const path &sdpFile,
   SDPSolverTerminateReason reason = solver.run(parameters, checkpointFile);
   timers["Solver runtime"].stop();
 
-  cout << "-----" << setfill('-') << setw(116) << std::left << reason << endl << endl;
-  cout << solver.status << endl;
+  cout << "-----" << setfill('-') << setw(116) << std::left << reason << endl;
+  cout << endl << solver.status << endl;
 
   if (!parameters.noFinalCheckpoint)
     solver.saveCheckpoint(checkpointFile);
@@ -81,7 +82,6 @@ int solveSDP(const path &sdpFile,
 }
 
 int main(int argc, char** argv) {
-
   path sdpFile;
   path outFile;
   path checkpointFile;
@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
      po::value<Real>(&parameters.maxComplementarity)->default_value(Real("1e100")),
      "Terminate if the complementarity mu = Tr(X Y)/dim(X) exceeds this value.")
     ;
-    
+
   po::options_description cmdLineOptions;
   cmdLineOptions.add(basicOptions).add(solverParamsOptions);
 
@@ -225,9 +225,9 @@ int main(int argc, char** argv) {
     }
   } catch(po::error& e) {
     cerr << "ERROR: " << e.what() << endl;
-    cerr << cmdLineOptions << endl; 
-    return 1; 
-  } 
+    cerr << cmdLineOptions << endl;
+    return 1;
+  }
 
   return solveSDP(sdpFile, outFile, checkpointFile, parameters);
 }

@@ -9,6 +9,7 @@
 #ifndef SDPB_SDP_H_
 #define SDPB_SDP_H_
 
+#include <algorithm>
 #include <vector>
 #include <iostream>
 #include <ostream>
@@ -22,7 +23,7 @@ using std::vector;
 using std::ostream;
 
 class IndexTuple {
-public:
+ public:
   int p;
   int r;
   int s;
@@ -32,7 +33,7 @@ public:
 };
 
 class SDP {
-public:
+ public:
   vector<Matrix> bilinearBases;
   Matrix FreeVarMatrix;
   Vector primalObjective;
@@ -46,7 +47,8 @@ public:
   vector<int> psdMatrixBlockDims() const {
     vector<int> dims;
     for (unsigned int j = 0; j < dimensions.size(); j++)
-      for (vector<int>::const_iterator b = blocks[j].begin(); b != blocks[j].end(); b++)
+      for (vector<int>::const_iterator b = blocks[j].begin();
+           b != blocks[j].end(); b++)
         dims.push_back(bilinearBases[*b].rows * dimensions[j]);
     return dims;
   }
@@ -54,7 +56,8 @@ public:
   vector<int> bilinearPairingBlockDims() const {
     vector<int> dims;
     for (unsigned int j = 0; j < dimensions.size(); j++)
-      for (vector<int>::const_iterator b = blocks[j].begin(); b != blocks[j].end(); b++)
+      for (vector<int>::const_iterator b = blocks[j].begin();
+           b != blocks[j].end(); b++)
         dims.push_back(bilinearBases[*b].cols * dimensions[j]);
     return dims;
   }
@@ -80,7 +83,7 @@ public:
         }
       }
     }
-    assert(p == (int)primalObjective.size());
+    assert(p == static_cast<int>(primalObjective.size()));
   }
 
   friend ostream& operator<<(ostream& os, const SDP& sdp) {
@@ -92,13 +95,12 @@ public:
        << ", degrees = " << sdp.degrees
        << ", blocks = " << sdp.blocks
        << ")";
-    
     return os;
   }
 };
 
 class SampledMatrixPolynomial {
-public:
+ public:
   int dim;
   int degree;
   Matrix constraintMatrix;
@@ -107,7 +109,7 @@ public:
 };
 
 class PolynomialVectorMatrix {
-public:
+ public:
   int rows;
   int cols;
   vector<vector<Polynomial> > elements;
@@ -125,12 +127,13 @@ public:
 
   int degree() const {
     int d = 0;
-    for (vector<vector<Polynomial> >::const_iterator e = elements.begin(); e != elements.end(); e++)
-      for (vector<Polynomial>::const_iterator p = e->begin(); p != e->end(); p++)
+    for (vector<vector<Polynomial> >::const_iterator e = elements.begin();
+         e != elements.end(); e++)
+      for (vector<Polynomial>::const_iterator p = e->begin();
+           p != e->end(); p++)
         d = max(p->degree(), d);
     return d;
   }
-
 };
 
 SampledMatrixPolynomial samplePolynomialVectorMatrix(const PolynomialVectorMatrix &m);

@@ -11,6 +11,7 @@
 
 #include <iostream>
 #include <ostream>
+#include <string>
 #include <map>
 #include "boost/timer/timer.hpp"
 
@@ -19,10 +20,10 @@ using std::string;
 using std::ostream;
 using boost::timer::cpu_timer;
 
-class Timers : public map<string,cpu_timer> {
-public:
+class Timers : public map<string, cpu_timer> {
+ public:
   friend ostream& operator<<(ostream& os, const Timers& t) {
-    for (map<string,cpu_timer>::const_iterator it = t.begin();
+    for (map<string, cpu_timer>::const_iterator it = t.begin();
          it != t.end();
          ++it) {
       os << it->first << "\t:" << it->second.format();

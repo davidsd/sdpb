@@ -65,11 +65,12 @@ samplePolynomialVectorMatrix(const PolynomialVectorMatrix &m) {
                                                 m.sampleScalings));
   int delta2 = (s.degree - 1)/2;
   if (delta2 >= 0)
-    s.bilinearBases.push_back(sampleBilinearBasis(delta2, numSamples,
-                                                  m.bilinearBasis,
-                                                  m.samplePoints,
-                                                  multiplyVectors(m.samplePoints,
-                                                                  m.sampleScalings)));
+    s.bilinearBases
+      .push_back(sampleBilinearBasis(delta2, numSamples,
+                                     m.bilinearBasis,
+                                     m.samplePoints,
+                                     multiplyVectors(m.samplePoints,
+                                                     m.sampleScalings)));
 
   return s;
 }

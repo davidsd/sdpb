@@ -18,10 +18,6 @@
 using std::ostream;
 using std::vector;
 
-inline bool compareAbs(const Real &a, const Real &b) {
-  return abs(a) < abs(b);
-}
-
 template <class T>
 ostream& operator<<(ostream& os, const vector<T>& v) {
   os << "{";
@@ -32,18 +28,6 @@ ostream& operator<<(ostream& os, const vector<T>& v) {
     os << v[last];
   os << "}";
   return os;
-}
-
-template<class Iter, class T>
-Iter binaryFind(Iter begin, Iter end, T val)
-{
-  // Finds the lower bound in at most log(last - first) + 1 comparisons
-  Iter i = std::lower_bound(begin, end, val);
-
-  if (i != end && !(val < *i))
-    return i; // found
-  else
-    return end; // not found
 }
 
 #endif  // SDPB_UTIL_H_

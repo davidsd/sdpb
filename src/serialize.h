@@ -72,8 +72,8 @@ namespace boost {
       ar & Y;
     }
 
-  } // namespace serialization
-} // namespace boost
+  }  // namespace serialization
+}  // namespace boost
 
 
 BOOST_SERIALIZATION_SPLIT_FREE(Real)
