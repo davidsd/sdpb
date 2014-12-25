@@ -160,7 +160,7 @@ void SDPSolver::saveSolution(const SDPSolverTerminateReason terminateReason, con
   ofs << "dualError       = " << status.dualError       << ";\n";
   ofs << "runtime         = " << runtime                << ";\n";
   ofs << "y = " << y << ";\n";
-  ofs << "Y = " << Y << ";\n";
+  // ofs << "Y = " << Y << ";\n";
   ofs << "x = " << x << ";\n";
-  ofs << "X = " << X << ";\n";
+  // ofs << "X = " << X << ";\n";
 }

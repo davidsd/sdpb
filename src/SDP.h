@@ -22,6 +22,10 @@
 using std::vector;
 using std::ostream;
 
+// The constraint matrices A_* are labeled by tuples
+// (j_1,r_1,s_1,k_1), (j_2,r_2,s_2,k_2), ...
+// The corresponding IndexTuples are 
+// IndexTuple(p=1,r=r_1,s=s_1,k=k_1), IndexTuple(p=2,r=r_2,s=s_2,k=k_2), ...
 class IndexTuple {
  public:
   int p;
