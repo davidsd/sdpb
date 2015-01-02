@@ -51,18 +51,6 @@ Matrix parseMatrix(XMLElement *xml) {
   return m;
 }
 
-SampledMatrixPolynomial parseSampledMatrixPolynomial(XMLElement *xml) {
-  SampledMatrixPolynomial s;
-  s.dim                 = parseInt(xml->FirstChildElement("dim"));
-  s.degree              = parseInt(xml->FirstChildElement("degree"));
-  s.constraintMatrix    = parseMatrix(xml->FirstChildElement("constraintMatrix"));
-  s.constraintConstants = parseVector(xml->FirstChildElement("constraintConstants"));
-  s.bilinearBases       = parseMany("bilinearBasisMatrix",
-                                    parseMatrix,
-                                    xml->FirstChildElement("bilinearBases"));
-  return s;
-}
-
 Polynomial parsePolynomial(XMLElement *xml) {
   Polynomial p;
   p.coefficients = parseMany("coeff", parseReal, xml);
@@ -87,21 +75,36 @@ PolynomialVectorMatrix parsePolynomialVectorMatrix(XMLElement *xml) {
 
 SDP parseBootstrapSDP(XMLElement *xml) {
   return bootstrapSDP(parseVector(xml->FirstChildElement("objective")),
-                      parseReal(xml->FirstChildElement("objectiveConst")),
-                      parseMany("sampledMatrixPolynomial",
-                                parseSampledMatrixPolynomial,
-                                xml->FirstChildElement("sampledPositiveMatrices")));
-}
-
-SDP parseBootstrapPolynomialSDP(XMLElement *xml) {
-  return bootstrapPolynomialSDP(parseVector(xml->FirstChildElement("objective")),
-                                parseMany("polynomialVectorMatrix",
-                                          parsePolynomialVectorMatrix,
-                                          xml->FirstChildElement("polynomialVectorMatrices")));
+                      parseMany("polynomialVectorMatrix",
+                                parsePolynomialVectorMatrix,
+                                xml->FirstChildElement("polynomialVectorMatrices")));
 }
 
 SDP readBootstrapSDP(const path sdpFile) {
   XMLDocument doc;
   doc.LoadFile(sdpFile.c_str());
-  return parseBootstrapPolynomialSDP(doc.FirstChildElement("sdp"));
+  return parseBootstrapSDP(doc.FirstChildElement("sdp"));
 }
+
+// Reading SDPs defined by DualConstraintGroups is not necessary --
+// remove this functionality?
+
+// DualConstraintGroup parseDualConstraintGroup(XMLElement *xml) {
+//   DualConstraintGroup g;
+//   g.dim                 = parseInt(xml->FirstChildElement("dim"));
+//   g.degree              = parseInt(xml->FirstChildElement("degree"));
+//   g.constraintMatrix    = parseMatrix(xml->FirstChildElement("constraintMatrix"));
+//   g.constraintConstants = parseVector(xml->FirstChildElement("constraintConstants"));
+//   g.bilinearBases       = parseMany("bilinearBasisMatrix",
+//                                     parseMatrix,
+//                                     xml->FirstChildElement("bilinearBases"));
+//   return g;
+// }
+
+// SDP parseBootstrapSDP(XMLElement *xml) {
+//   return sdpFromConstraintGroups(parseVector(xml->FirstChildElement("objective")),
+//                                  parseReal(xml->FirstChildElement("objectiveConst")),
+//                                  parseMany("dualConstraintGroup",
+//                                            parseDualConstraintGroup,
+//                                            xml->FirstChildElement("dualConstraintGroups")));
+// }

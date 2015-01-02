@@ -24,69 +24,69 @@ Matrix sampleBilinearBasis(const int maxDegree,
   return b;
 }
 
-SampledMatrixPolynomial
-samplePolynomialVectorMatrix(const PolynomialVectorMatrix &m) {
-  SampledMatrixPolynomial s;
+DualConstraintGroup
+polVecMatToDualConstraintGroup(const PolynomialVectorMatrix &m) {
+  DualConstraintGroup g;
 
   assert(m.rows == m.cols);
-  s.dim    = m.rows;
-  s.degree = m.degree();
+  g.dim    = m.rows;
+  g.degree = m.degree();
 
-  int numSamples     = s.degree + 1;
-  int numConstraints = numSamples * s.dim * (s.dim + 1)/2;
+  int numSamples     = g.degree + 1;
+  int numConstraints = numSamples * g.dim * (g.dim + 1)/2;
   int vectorDim      = m.elt(0, 0).size();
 
 
   // The first element of each vector multiplies the constant 1
-  s.constraintConstants = Vector(numConstraints);
+  g.constraintConstants = Vector(numConstraints);
   // The rest multiply decision variables
-  s.constraintMatrix    = Matrix(numConstraints, vectorDim - 1);
+  g.constraintMatrix    = Matrix(numConstraints, vectorDim - 1);
 
   int p = 0;
-  for (int c = 0; c < s.dim; c++) {
-    for (int r = c; r < s.dim; r++) {
+  for (int c = 0; c < g.dim; c++) {
+    for (int r = c; r < g.dim; r++) {
       for (int k = 0; k < numSamples; k++) {
         Real x     = m.samplePoints[k];
         Real scale = m.sampleScalings[k];
 
-        s.constraintConstants[p] = scale*m.elt(r, c)[0](x);
+        g.constraintConstants[p] = scale*m.elt(r, c)[0](x);
         for (int n = 1; n < vectorDim; n++)
-          s.constraintMatrix.elt(p, n-1) = -scale*m.elt(r, c)[n](x);
+          g.constraintMatrix.elt(p, n-1) = -scale*m.elt(r, c)[n](x);
 
         p++;
       }
     }
   }
 
-  int delta1 = s.degree/2;
-  s.bilinearBases.push_back(sampleBilinearBasis(delta1, numSamples,
+  int delta1 = g.degree/2;
+  g.bilinearBases.push_back(sampleBilinearBasis(delta1, numSamples,
                                                 m.bilinearBasis,
                                                 m.samplePoints,
                                                 m.sampleScalings));
-  int delta2 = (s.degree - 1)/2;
+  int delta2 = (g.degree - 1)/2;
   if (delta2 >= 0)
-    s.bilinearBases
+    g.bilinearBases
       .push_back(sampleBilinearBasis(delta2, numSamples,
                                      m.bilinearBasis,
                                      m.samplePoints,
                                      multiplyVectors(m.samplePoints,
                                                      m.sampleScalings)));
 
-  return s;
+  return g;
 }
 
-SDP bootstrapSDP(const Vector &objective,
+SDP sdpFromConstraintGroups(const Vector &objective,
                  const Real &objectiveConst,
-                 const vector<SampledMatrixPolynomial> &sampledMatrixPols) {
+                 const vector<DualConstraintGroup> &dualConstraintGroups) {
   SDP sdp;
   sdp.dualObjective  = objective;
   sdp.objectiveConst = objectiveConst;
 
-  for (vector<SampledMatrixPolynomial>::const_iterator s = sampledMatrixPols.begin();
-       s != sampledMatrixPols.end();
-       s++) {
-    sdp.dimensions.push_back(s->dim);
-    sdp.degrees.push_back(s->degree);
+  for (vector<DualConstraintGroup>::const_iterator g = dualConstraintGroups.begin();
+       g != dualConstraintGroups.end();
+       g++) {
+    sdp.dimensions.push_back(g->dim);
+    sdp.degrees.push_back(g->degree);
     sdp.primalObjective.insert(sdp.primalObjective.end(),
                                s->constraintConstants.begin(),
                                s->constraintConstants.end());
@@ -94,22 +94,22 @@ SDP bootstrapSDP(const Vector &objective,
   sdp.FreeVarMatrix = Matrix(sdp.primalObjective.size(), sdp.dualObjective.size());
 
   int p = 0;
-  for (vector<SampledMatrixPolynomial>::const_iterator s = sampledMatrixPols.begin();
-       s != sampledMatrixPols.end();
-       s++) {
+  for (vector<DualConstraintGroup>::const_iterator g = dualConstraintGroups.begin();
+       g != dualConstraintGroups.end();
+       g++) {
     vector<int> blocks;
-    for (vector<Matrix>::const_iterator b = s->bilinearBases.begin();
-         b != s->bilinearBases.end();
+    for (vector<Matrix>::const_iterator b = g->bilinearBases.begin();
+         b != g->bilinearBases.end();
          b++) {
-      assert(b->cols == s->degree + 1);
+      assert(b->cols == g->degree + 1);
       blocks.push_back(sdp.bilinearBases.size());
       sdp.bilinearBases.push_back(*b);
     }
     sdp.blocks.push_back(blocks);
 
-    for (int k = 0; k < s->constraintMatrix.rows; k++, p++)
-      for (int n = 0; n < s->constraintMatrix.cols; n++)
-        sdp.FreeVarMatrix.elt(p, n) = s->constraintMatrix.elt(k, n);
+    for (int k = 0; k < g->constraintMatrix.rows; k++, p++)
+      for (int n = 0; n < g->constraintMatrix.cols; n++)
+        sdp.FreeVarMatrix.elt(p, n) = g->constraintMatrix.elt(k, n);
   }
   assert(p == static_cast<int>(sdp.primalObjective.size()));
 
@@ -117,17 +117,17 @@ SDP bootstrapSDP(const Vector &objective,
   return sdp;
 }
 
-SDP bootstrapPolynomialSDP(const Vector &affineObjective,
-                           const vector<PolynomialVectorMatrix> &polVectorMatrices) {
-  vector<SampledMatrixPolynomial> sampledMatrixPols;
+SDP bootstrapSDP(const Vector &affineObjective,
+                 const vector<PolynomialVectorMatrix> &polVectorMatrices) {
+  vector<DualConstraintGroup> dualConstraintGroups;
   for (vector<PolynomialVectorMatrix>::const_iterator m = polVectorMatrices.begin();
        m != polVectorMatrices.end(); m++)
-    sampledMatrixPols.push_back(samplePolynomialVectorMatrix(*m));
+    dualConstraintGroups.push_back(polVecMatToDualConstraintGroup(*m));
 
   Vector objective = affineObjective;
   objective.erase(objective.begin());
   Real objectiveConst = affineObjective[0];
 
-  return bootstrapSDP(objective, objectiveConst, sampledMatrixPols);
+  return sdpFromConstraintGroups(objective, objectiveConst, dualConstraintGroups);
 }
 
