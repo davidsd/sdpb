@@ -25,7 +25,7 @@ Matrix sampleBilinearBasis(const int maxDegree,
 }
 
 DualConstraintGroup
-polVecMatToDualConstraintGroup(const PolynomialVectorMatrix &m) {
+dualConstraintGroupFromPolVecMat(const PolynomialVectorMatrix &m) {
   DualConstraintGroup g;
 
   assert(m.rows == m.cols);
@@ -122,7 +122,7 @@ SDP bootstrapSDP(const Vector &affineObjective,
   vector<DualConstraintGroup> dualConstraintGroups;
   for (vector<PolynomialVectorMatrix>::const_iterator m = polVectorMatrices.begin();
        m != polVectorMatrices.end(); m++)
-    dualConstraintGroups.push_back(polVecMatToDualConstraintGroup(*m));
+    dualConstraintGroups.push_back(dualConstraintGroupFromPolVecMat(*m));
 
   Vector objective = affineObjective;
   objective.erase(objective.begin());

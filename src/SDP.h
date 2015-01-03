@@ -247,10 +247,13 @@ class DualConstraintGroup {
  public:
   int dim;
   int degree;
+
   // constraintMatrix = B, a P'xN Matrix
   Matrix constraintMatrix;
+
   // constraintConstants = c, a vector of length P'
   Vector constraintConstants;
+
   // bilinearBases is a vector of Matrices encoding the \chi_{b,k}
   // entering the constraint matrices A_p, as described
   // above. `bilinearBases' here has the structure of
@@ -269,8 +272,9 @@ class DualConstraintGroup {
 //   \vec P^{rs}(x) = (P^{rs}_{-1}(x), P^{rs}_0, ... , P^{rs}_{N-1}(x))
 //
 // Consider a vector y = (y_0, ..., y_{N-1}) of length N, and let
-// (1,y) denote the vector of length N+1 whose components are 1, given
-// by the components of y.  As explained in the manual, the constraint
+// (1,y) denote the vector of length N+1 whose components are 1,
+// followed by the components of y.  As explained in the manual, the
+// constraint
 //
 //   (1,y) . M(x) is positive semidefinite
 //
@@ -285,15 +289,18 @@ class PolynomialVectorMatrix {
  public:
   int rows; // rows of M
   int cols; // cols of M
+
   // elements of M, in row-major order
   vector<vector<Polynomial> > elements;
 
   // A list of real numbers x_k (0 <= k <= degree(M)) at which to
   // sample M(x) to construct the \chi_{b,k}.
   vector<Real> samplePoints;
+
   // A list of real numbers s_k (0 <= k <= degree(M)) to scale M(x_k)
   // and the corresponding \chi_{b,k}.
   vector<Real> sampleScalings;
+
   // bilinearBasis[m] = q_m(x) (0 <= m <= degree/2), where q_m is a
   // polynomial with degree deg(q_m) = m.
   vector<Polynomial> bilinearBasis;
@@ -318,7 +325,7 @@ class PolynomialVectorMatrix {
   }
 };
 
-DualConstraintGroup polVecMatToDualConstraintGroup(const PolynomialVectorMatrix &m);
+DualConstraintGroup dualConstraintGroupFromPolVecMat(const PolynomialVectorMatrix &m);
 
 SDP sdpFromConstraintGroups(const Vector &objective,
                             const Real &objectiveConst,
