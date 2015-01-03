@@ -238,7 +238,7 @@ class SDP {
 // DualConstraintGroup's are currently only used as an intermediate
 // data structure between the matrix polynomials defining an MPP and a
 // full SDP.  By directly combining DualConstraintGroups into an SDP
-// using sdpFromConstraintGroups, it is possible to define slightly
+// using sdpFromDualConstraintGroups, it is possible to define slightly
 // more general optimization problems than those produced by
 // bootstrapSDP.  Perhaps this level of generality will be useful in
 // the future.
@@ -324,12 +324,6 @@ class PolynomialVectorMatrix {
     return d;
   }
 };
-
-DualConstraintGroup dualConstraintGroupFromPolVecMat(const PolynomialVectorMatrix &m);
-
-SDP sdpFromConstraintGroups(const Vector &objective,
-                            const Real &objectiveConst,
-                            const vector<DualConstraintGroup> &dualConstraintGroups);
 
 SDP bootstrapSDP(const Vector &affineObjective,
                  const vector<PolynomialVectorMatrix> &polVectorMatrices);

@@ -75,9 +75,9 @@ dualConstraintGroupFromPolVecMat(const PolynomialVectorMatrix &m) {
   return g;
 }
 
-SDP sdpFromConstraintGroups(const Vector &objective,
-                 const Real &objectiveConst,
-                 const vector<DualConstraintGroup> &dualConstraintGroups) {
+SDP sdpFromDualConstraintGroups(const Vector &objective,
+                                const Real &objectiveConst,
+                                const vector<DualConstraintGroup> &dualConstraintGroups) {
   SDP sdp;
   sdp.dualObjective  = objective;
   sdp.objectiveConst = objectiveConst;
@@ -128,6 +128,6 @@ SDP bootstrapSDP(const Vector &affineObjective,
   objective.erase(objective.begin());
   Real objectiveConst = affineObjective[0];
 
-  return sdpFromConstraintGroups(objective, objectiveConst, dualConstraintGroups);
+  return sdpFromDualConstraintGroups(objective, objectiveConst, dualConstraintGroups);
 }
 

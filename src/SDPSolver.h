@@ -154,7 +154,7 @@ public:
   // BlockDiagonalMatrix with the same structure as X, called 'P' in
   // the manual:
   //
-  //   PrimalResidues = \sum_P A_p x_p - X
+  //   PrimalResidues = \sum_p A_p x_p - X
   //
   BlockDiagonalMatrix PrimalResidues;
 
@@ -272,7 +272,7 @@ public:
   // a vector of length N', needed for the LU decomposition of Q.
   vector<Integer> Qpivots;
 
-  // dyExtended = (dy z), where z are the extra coordinates introduced
+  // dyExtended = (dy, z), where z are the extra coordinates introduced
   // in the stabilized Schur complement equation.
   Vector dyExtended;
 
