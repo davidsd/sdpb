@@ -95,13 +95,17 @@ public:
   // SDP to solve.
   SDP sdp;
 
+  // parameters for initialization and iteration
+  SDPSolverParameters parameters;
+
   /********************************************/
   // Current point
 
   // a Vector of length P = sdp.primalObjective.size()
   Vector x;
 
-  // a BlockDiagonalMatrix with structure given by sdp.psdMatrixBlockDims()
+  // a BlockDiagonalMatrix with block sizes given by
+  // sdp.psdMatrixBlockDims()
   BlockDiagonalMatrix X;
 
   // a Vector of length N = sdp.dualObjective.size()
@@ -136,7 +140,7 @@ public:
   //   PrimalResidues = \sum_p A_p x_p - X
   //
   BlockDiagonalMatrix PrimalResidues;
-  Real primalError; // maxAbs(PrimalResidues)
+  Real primalError;  // maxAbs(PrimalResidues)
 
   // Discrepancy in the dual equality constraints, a Vector of length
   // P, called 'd' in the manual:
@@ -149,18 +153,18 @@ public:
   /********************************************/
   // Intermediate computations.
 
-  // the Cholesky decompositions of X and Y, each
-  // BlockDiagonalMatrices with the same structure as X and Y
+  // the Cholesky decompositions of X and Y, each lower-triangular
+  // BlockDiagonalMatrices with the same block sizes as X and Y
   BlockDiagonalMatrix XCholesky;
   BlockDiagonalMatrix YCholesky;
 
   // Z = X^{-1} (PrimalResidues Y - R), a BlockDiagonalMatrix with the
-  // same structure as X and Y
+  // same block sizes as X and Y
   BlockDiagonalMatrix Z;
 
   // R = mu I - X Y for the predictor step
   // R = mu I - X Y - dX dY for the corrector step
-  // R is a BlockDiagonalMatrix with the same structure as X and Y.
+  // R has the same block sizes as X and Y.
   BlockDiagonalMatrix R;
 
   // Bilinear pairings needed for computing the Schur complement
@@ -194,11 +198,11 @@ public:
   //
   BlockDiagonalMatrix SchurBlocks;
 
-  // SchurBlocksCholesky = L': the Cholesky decomposition of the
+  // SchurBlocksCholesky = L', the Cholesky decomposition of the
   // stabilized Schur complement matrix S' = S + U U^T.
   BlockDiagonalMatrix SchurBlocksCholesky;
 
-  // SchurOffDiagonal = L'^{-1} FreeVarMatrix: needed in solving the
+  // SchurOffDiagonal = L'^{-1} FreeVarMatrix, needed in solving the
   // Schur complement equation.
   Matrix SchurOffDiagonal;
 
@@ -272,20 +276,29 @@ public:
   // semidefiniteness.
   BlockDiagonalMatrix StepMatrixWorkspace;
 
-  // 
+  // Needed during the computation of BilinearPairingsY, BilinearPairingsXInv
   vector<Matrix> bilinearPairingsWorkspace;
+
+  // Needed during the step-length computation, where we must compute
+  // eigenvalues of a BlockDiagonalMatrix
   vector<Vector> eigenvaluesWorkspace;
+
+  // Needed during the step-length computation, where we must compute
+  // the QR decomposition of a BlockDiagonalMatrix
   vector<Vector> QRWorkspace;
 
-  SDPSolver(const SDP &sdp);
+  /********************************************/
+  // Methods
+
+  // Create a new solver for a given SDP
+  SDPSolver(const SDP &sdp, const SDPSolverParameters &parameters);
 
   Real dualityGap() const {
     return abs(primalObjective - dualObjective) /
       max(Real(abs(primalObjective) + abs(dualObjective)), Real(1));
   }
 
-  void initialize(const SDPSolverParameters &parameters);
-  SDPSolverTerminateReason run(const SDPSolverParameters &parameters, const path checkpointFile);
+  SDPSolverTerminateReason run(const path checkpointFile);
   void initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
                                        const BlockDiagonalMatrix &BilinearPairingsY,
                                        const Real &choleskyStabilizeThreshold);

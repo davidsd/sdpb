@@ -18,8 +18,9 @@ using boost::filesystem::path;
 using boost::timer::nanosecond_type;
 using std::cout;
 
-SDPSolver::SDPSolver(const SDP &sdp):
+SDPSolver::SDPSolver(const SDP &sdp, const SDPSolverParameters &parameters):
   sdp(sdp),
+  parameters(parameters),
   x(sdp.primalObjective.size(), 0),
   X(sdp.psdMatrixBlockDims()),
   y(sdp.dualObjective.size(), 0),
@@ -53,6 +54,11 @@ SDPSolver::SDPSolver(const SDP &sdp):
     eigenvaluesWorkspace.push_back(Vector(X.blocks[b].rows));
     QRWorkspace.push_back(Vector(3*X.blocks[b].rows - 1));
   }
+
+  // X = \Omega_p I
+  X.addDiagonal(parameters.initialMatrixScalePrimal);
+  // Y = \Omega_d I
+  Y.addDiagonal(parameters.initialMatrixScaleDual);
 }
 
 // result = b'^T a b', where b' = b \otimes 1
@@ -603,25 +609,20 @@ void SDPSolver::computeSearchDirection(const Real &beta,
   dY *= -1;
 }
 
-void SDPSolver::initialize(const SDPSolverParameters &parameters) {
-  fillVector(x, 0);
-  X.setZero();
-  X.addDiagonal(parameters.initialMatrixScalePrimal);
-  fillVector(y, 0);
-  Y.setZero();
-  Y.addDiagonal(parameters.initialMatrixScaleDual);
-}
-
-SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
-                                        const path checkpointFile) {
+SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
   Real primalStepLength;
   Real dualStepLength;
+
+  printSolverHeader();
 
   for (int iteration = 1;; iteration++) {
     if (timers["Last checkpoint"].elapsed().wall >= parameters.checkpointInterval * 1000000000LL)
       saveCheckpoint(checkpointFile);
     if (timers["Solver runtime"].elapsed().wall >= parameters.maxRuntime * 1000000000LL)
       return MaxRuntimeExceeded;
+
+    primalObjective = sdp.objectiveConst + dotProduct(sdp.primalObjective, x);
+    dualObjective   = sdp.objectiveConst + dotProduct(sdp.dualObjective, y);
 
     timers["cholesky"].resume();
     choleskyDecomposition(X, XCholesky);
@@ -637,14 +638,11 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     timers["bilinear pairings"].stop();
     // d_k = c_k - Tr(F_k Y) - (D y)_k
     computeDualResidues(sdp, y, BilinearPairingsY, dualResidues);
+    dualError = maxAbsVector(dualResidues);
 
     // PrimalResidues = sum_p F_p x_p - X - F_0 (F_0 is zero for now)
     computePrimalResidues(sdp, x, X, PrimalResidues);
-
-    primalError     = PrimalResidues.maxAbs();
-    dualError       = maxAbsVector(dualResidues);
-    primalObjective = sdp.objectiveConst + dotProduct(sdp.primalObjective, x);
-    dualObjective   = sdp.objectiveConst + dotProduct(sdp.dualObjective, y);
+    primalError = PrimalResidues.maxAbs();
 
     const bool isPrimalFeasible = primalError  < parameters.primalErrorThreshold;
     const bool isDualFeasible   = dualError    < parameters.dualErrorThreshold;

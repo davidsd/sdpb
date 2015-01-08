@@ -54,17 +54,14 @@ int solveSDP(const path &sdpFile,
   cout << parameters << endl;
 
   const SDP sdp = readBootstrapSDP(sdpFile);
-  SDPSolver solver(sdp);
+  SDPSolver solver(sdp, parameters);
 
   if (exists(checkpointFile))
     solver.loadCheckpoint(checkpointFile);
-  else
-    solver.initialize(parameters);
 
   timers["Solver runtime"].start();
   timers["Last checkpoint"].start();
-  printSolverHeader();
-  SDPSolverTerminateReason reason = solver.run(parameters, checkpointFile);
+  SDPSolverTerminateReason reason = solver.run(checkpointFile);
   timers["Solver runtime"].stop();
 
   cout << "-----" << setfill('-') << setw(116) << std::left << reason << endl;
