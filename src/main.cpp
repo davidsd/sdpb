@@ -68,7 +68,13 @@ int solveSDP(const path &sdpFile,
   timers["Solver runtime"].stop();
 
   cout << "-----" << setfill('-') << setw(116) << std::left << reason << endl;
-  cout << endl << solver.status << endl;
+  cout << endl;
+  cout << "primalObjective = " << solver.primalObjective << endl;
+  cout << "dualObjective   = " << solver.dualObjective   << endl;
+  cout << "dualityGap      = " << solver.dualityGap()    << endl;
+  cout << "primalError     = " << solver.primalError     << endl;
+  cout << "dualError       = " << solver.dualError       << endl;
+  cout << endl;
 
   if (!parameters.noFinalCheckpoint)
     solver.saveCheckpoint(checkpointFile);

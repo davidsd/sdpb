@@ -28,8 +28,8 @@ SDPSolver::SDPSolver(const SDP &sdp):
   dX(X),
   dy(y),
   dY(Y),
-  dualResidues(x),
   PrimalResidues(X),
+  dualResidues(x),
   XCholesky(X),
   YCholesky(X),
   Z(X),
@@ -641,14 +641,14 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
     // PrimalResidues = sum_p F_p x_p - X - F_0 (F_0 is zero for now)
     computePrimalResidues(sdp, x, X, PrimalResidues);
 
-    status.primalError     = PrimalResidues.maxAbs();
-    status.dualError       = maxAbsVector(dualResidues);
-    status.primalObjective = sdp.objectiveConst + dotProduct(sdp.primalObjective, x);
-    status.dualObjective   = sdp.objectiveConst + dotProduct(sdp.dualObjective, y);
+    primalError     = PrimalResidues.maxAbs();
+    dualError       = maxAbsVector(dualResidues);
+    primalObjective = sdp.objectiveConst + dotProduct(sdp.primalObjective, x);
+    dualObjective   = sdp.objectiveConst + dotProduct(sdp.dualObjective, y);
 
-    const bool isPrimalFeasible = status.primalError  < parameters.primalErrorThreshold;
-    const bool isDualFeasible   = status.dualError    < parameters.dualErrorThreshold;
-    const bool isOptimal        = status.dualityGap() < parameters.dualityGapThreshold;
+    const bool isPrimalFeasible = primalError  < parameters.primalErrorThreshold;
+    const bool isDualFeasible   = dualError    < parameters.dualErrorThreshold;
+    const bool isOptimal        = dualityGap() < parameters.dualityGapThreshold;
 
     if (isPrimalFeasible && isDualFeasible && isOptimal)
       return PrimalDualOptimal;
@@ -696,7 +696,7 @@ SDPSolverTerminateReason SDPSolver::run(const SDPSolverParameters &parameters,
       dualStepLength = primalStepLength;
     }
 
-    printSolverInfo(iteration, mu, status, primalStepLength, dualStepLength,
+    printSolverInfo(iteration, mu, primalObjective, dualObjective, primalError, dualError, primalStepLength, dualStepLength,
                     betaCorrector, sdp.dualObjective.size(), Q.rows);
 
     // Update current point

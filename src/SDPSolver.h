@@ -86,24 +86,6 @@ enum SDPSolverTerminateReason {
 
 ostream &operator<<(ostream& os, const SDPSolverTerminateReason& r);
 
-// SDPSolverStatus contains the information needed to determine
-// whether to terminate or not.
-//
-class SDPSolverStatus {
-public:
-  Real primalObjective; // f + c . x
-  Real dualObjective;   // f + b . y
-  Real primalError;     // maxAbs(PrimalResidues)
-  Real dualError;       // maxAbs(dualResidues)
-
-  Real dualityGap() const {
-    return abs(primalObjective - dualObjective) /
-      max(Real(abs(primalObjective) + abs(dualObjective)), Real(1));
-  }
-
-  friend ostream& operator<<(ostream& os, const SDPSolverStatus& s);
-};
-
 // SDPSolver contains the data structures needed during the running of
 // the interior point algorithm.  Each structure is allocated when an
 // SDPSolver is initialized, and reused in each iteration.
@@ -113,11 +95,8 @@ public:
   // SDP to solve.
   SDP sdp;
 
-  // Objective values and errors, re-evaluated each iteration
-  SDPSolverStatus status;
-
   /********************************************/
-  // The current point.
+  // Current point
 
   // a Vector of length P = sdp.primalObjective.size()
   Vector x;
@@ -132,7 +111,7 @@ public:
   BlockDiagonalMatrix Y;
 
   /********************************************/
-  // The search direction.
+  // Search direction
   //
   // These quantities have the same structure as (x, X, y, Y). They
   // are computed twice each iteration: once in the predictor step,
@@ -143,12 +122,12 @@ public:
   Vector dy;
   BlockDiagonalMatrix dY;
 
-  // Discrepancy in the dual equality constraints, a Vector of length
-  // P, called 'd' in the manual:
+
+  /********************************************/
+  // Solver status
   //
-  //   dualResidues = c - Tr(A_* Y) - B y
-  //
-  Vector dualResidues;
+  Real primalObjective; // f + c . x
+  Real dualObjective;   // f + b . y
 
   // Discrepancy in the primal equality constraints, a
   // BlockDiagonalMatrix with the same structure as X, called 'P' in
@@ -157,6 +136,15 @@ public:
   //   PrimalResidues = \sum_p A_p x_p - X
   //
   BlockDiagonalMatrix PrimalResidues;
+  Real primalError; // maxAbs(PrimalResidues)
+
+  // Discrepancy in the dual equality constraints, a Vector of length
+  // P, called 'd' in the manual:
+  //
+  //   dualResidues = c - Tr(A_* Y) - B y
+  //
+  Vector dualResidues;
+  Real dualError;  // maxAbs(dualResidues)
 
   /********************************************/
   // Intermediate computations.
@@ -290,6 +278,12 @@ public:
   vector<Vector> QRWorkspace;
 
   SDPSolver(const SDP &sdp);
+
+  Real dualityGap() const {
+    return abs(primalObjective - dualObjective) /
+      max(Real(abs(primalObjective) + abs(dualObjective)), Real(1));
+  }
+
   void initialize(const SDPSolverParameters &parameters);
   SDPSolverTerminateReason run(const SDPSolverParameters &parameters, const path checkpointFile);
   void initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
@@ -305,7 +299,10 @@ public:
 void printSolverHeader();
 void printSolverInfo(int iteration,
                      Real mu,
-                     SDPSolverStatus status,
+                     Real primalObjective,
+                     Real dualObjective,
+                     Real primalError,
+                     Real dualError,
                      Real primalStepLength,
                      Real dualStepLength,
                      Real betaCorrector,

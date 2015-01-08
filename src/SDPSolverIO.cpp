@@ -31,7 +31,10 @@ void printSolverHeader() {
 
 void printSolverInfo(int iteration,
                      Real mu,
-                     SDPSolverStatus status,
+                     Real primalObjective,
+                     Real dualObjective,
+                     Real primalError,
+                     Real dualError,
                      Real primalStepLength,
                      Real dualStepLength,
                      Real betaCorrector,
@@ -46,11 +49,11 @@ void printSolverInfo(int iteration,
               iteration,
               ss.str().substr(0, 8).c_str(),
               mu.get_mpf_t(),
-              status.primalObjective.get_mpf_t(),
-              status.dualObjective.get_mpf_t(),
-              status.dualityGap().get_mpf_t(),
-              status.primalError.get_mpf_t(),
-              status.dualError.get_mpf_t(),
+              primalObjective.get_mpf_t(),
+              dualObjective.get_mpf_t(),
+              dualityGap().get_mpf_t(),
+              primalError.get_mpf_t(),
+              dualError.get_mpf_t(),
               primalStepLength.get_mpf_t(),
               dualStepLength.get_mpf_t(),
               betaCorrector.get_mpf_t(),
@@ -114,15 +117,6 @@ ostream &operator<<(ostream& os, const SDPSolverTerminateReason& r) {
   return os;
 }
 
-ostream& operator<<(ostream& os, const SDPSolverStatus& s) {
-  os << "primalObjective = " << s.primalObjective << endl;
-  os << "dualObjective   = " << s.dualObjective << endl;
-  os << "dualityGap      = " << s.dualityGap() << endl;
-  os << "primalError     = " << s.primalError << endl;
-  os << "dualError       = " << s.dualError << endl;
-  return os;
-}
-
 void backupCheckpointFile(path const& checkpointFile) {
   path backupFile(checkpointFile);
   backupFile.replace_extension(".ck.bk");
@@ -151,14 +145,14 @@ void SDPSolver::saveSolution(const SDPSolverTerminateReason terminateReason, con
   boost::filesystem::ofstream ofs(outFile);
   float runtime = static_cast<float>(timers["Solver runtime"].elapsed().wall)/1000000000;
   cout << "Saving solution to      : " << outFile << endl;
-  ofs.precision(static_cast<int>(status.primalObjective.get_prec() * 0.31 + 5));
-  ofs << "terminateReason = \"" << terminateReason      << "\";\n";
-  ofs << "primalObjective = " << status.primalObjective << ";\n";
-  ofs << "dualObjective   = " << status.dualObjective   << ";\n";
-  ofs << "dualityGap      = " << status.dualityGap()    << ";\n";
-  ofs << "primalError     = " << status.primalError     << ";\n";
-  ofs << "dualError       = " << status.dualError       << ";\n";
-  ofs << "runtime         = " << runtime                << ";\n";
+  ofs.precision(static_cast<int>(primalObjective.get_prec() * 0.31 + 5));
+  ofs << "terminateReason = \"" << terminateReason << "\";\n";
+  ofs << "primalObjective = " << primalObjective   << ";\n";
+  ofs << "dualObjective   = " << dualObjective     << ";\n";
+  ofs << "dualityGap      = " << dualityGap()      << ";\n";
+  ofs << "primalError     = " << primalError       << ";\n";
+  ofs << "dualError       = " << dualError         << ";\n";
+  ofs << "runtime         = " << runtime           << ";\n";
   ofs << "y = " << y << ";\n";
   // ofs << "Y = " << Y << ";\n";
   ofs << "x = " << x << ";\n";
