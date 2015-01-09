@@ -68,7 +68,7 @@ int solveSDP(const path &sdpFile,
   cout << endl;
   cout << "primalObjective = " << solver.primalObjective << endl;
   cout << "dualObjective   = " << solver.dualObjective   << endl;
-  cout << "dualityGap      = " << solver.dualityGap()    << endl;
+  cout << "dualityGap      = " << solver.dualityGap      << endl;
   cout << "primalError     = " << solver.primalError     << endl;
   cout << "dualError       = " << solver.dualError       << endl;
   cout << endl;

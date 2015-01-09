@@ -132,6 +132,7 @@ public:
   //
   Real primalObjective; // f + c . x
   Real dualObjective;   // f + b . y
+  Real dualityGap;      // normalized difference of objectives
 
   // Discrepancy in the primal equality constraints, a
   // BlockDiagonalMatrix with the same structure as X, called 'P' in
@@ -290,15 +291,12 @@ public:
   /********************************************/
   // Methods
 
-  // Create a new solver for a given SDP
+  // Create a new solver for a given SDP, with the given parameters
   SDPSolver(const SDP &sdp, const SDPSolverParameters &parameters);
 
-  Real dualityGap() const {
-    return abs(primalObjective - dualObjective) /
-      max(Real(abs(primalObjective) + abs(dualObjective)), Real(1));
-  }
-
+  // Run the solver, backing up to checkpointFile
   SDPSolverTerminateReason run(const path checkpointFile);
+
   void initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
                                        const BlockDiagonalMatrix &BilinearPairingsY,
                                        const Real &choleskyStabilizeThreshold);
@@ -314,6 +312,7 @@ void printSolverInfo(int iteration,
                      Real mu,
                      Real primalObjective,
                      Real dualObjective,
+                     Real dualityGap,
                      Real primalError,
                      Real dualError,
                      Real primalStepLength,

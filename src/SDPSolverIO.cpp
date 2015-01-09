@@ -33,6 +33,7 @@ void printSolverInfo(int iteration,
                      Real mu,
                      Real primalObjective,
                      Real dualObjective,
+                     Real dualityGap,
                      Real primalError,
                      Real dualError,
                      Real primalStepLength,
@@ -51,7 +52,7 @@ void printSolverInfo(int iteration,
               mu.get_mpf_t(),
               primalObjective.get_mpf_t(),
               dualObjective.get_mpf_t(),
-              dualityGap().get_mpf_t(),
+              dualityGap.get_mpf_t(),
               primalError.get_mpf_t(),
               dualError.get_mpf_t(),
               primalStepLength.get_mpf_t(),
@@ -149,7 +150,7 @@ void SDPSolver::saveSolution(const SDPSolverTerminateReason terminateReason, con
   ofs << "terminateReason = \"" << terminateReason << "\";\n";
   ofs << "primalObjective = " << primalObjective   << ";\n";
   ofs << "dualObjective   = " << dualObjective     << ";\n";
-  ofs << "dualityGap      = " << dualityGap()      << ";\n";
+  ofs << "dualityGap      = " << dualityGap        << ";\n";
   ofs << "primalError     = " << primalError       << ";\n";
   ofs << "dualError       = " << dualError         << ";\n";
   ofs << "runtime         = " << runtime           << ";\n";

@@ -46,7 +46,8 @@ SDPSolver::SDPSolver(const SDP &sdp, const SDPSolverParameters &parameters):
   Q(sdp.FreeVarMatrix.cols, sdp.FreeVarMatrix.cols),
   Qpivots(sdp.FreeVarMatrix.cols),
   dyExtended(Q.rows),
-  StepMatrixWorkspace(X) {
+  StepMatrixWorkspace(X)
+{
   // initialize bilinearPairingsWorkspace, eigenvaluesWorkspace, QRWorkspace
   for (unsigned int b = 0; b < sdp.bilinearBases.size(); b++) {
     bilinearPairingsWorkspace.push_back(Matrix(X.blocks[b].rows,
@@ -425,15 +426,13 @@ Real stepLength(BlockDiagonalMatrix &XCholesky,
 void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
                                                 const BlockDiagonalMatrix &BilinearPairingsY,
                                                 const Real &choleskyStabilizeThreshold) {
-  timers["schurblocks/cholesky"].resume();
   computeSchurBlocks(sdp, BilinearPairingsXInv, BilinearPairingsY, SchurBlocks);
   choleskyDecompositionStabilized(SchurBlocks, SchurBlocksCholesky,
                                   schurStabilizeIndices,
                                   schurStabilizeLambdas,
                                   cast2double(choleskyStabilizeThreshold));
-  timers["schurblocks/cholesky"].stop();
+
   // SchurOffDiagonal = {{- 1, 0}, {E, G}}
-  timers["make schur update"].resume();
   SchurOffDiagonal.copyFrom(sdp.FreeVarMatrix);
   blockMatrixLowerTriangularSolve(SchurBlocksCholesky, SchurOffDiagonal);
   int updateColumns = SchurOffDiagonal.cols;
@@ -474,8 +473,7 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
           &stabilizeBlocks[b].elt(0, 0),
           stabilizeBlocks[b].rows);
   }
-  timers["make schur update"].stop();
-  timers["make Q"].resume();
+
   // Q = SchurOffDiagonal^T SchurOffDiagonal - {{0,0},{0,1}}
   Q.setRowsCols(updateColumns, updateColumns);
   Q.setZero();
@@ -516,12 +514,9 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   for (int c = 0; c < SchurOffDiagonal.cols; c++)
     for (int r = SchurOffDiagonal.cols; r < Q.rows; r++)
       Q.elt(c, r) = Q.elt(r, c);
-  timers["make Q"].stop();
 
-  timers["LU of Q"].resume();
   Qpivots.resize(Q.rows);
   LUDecomposition(Q, Qpivots);
-  timers["LU of Q"].stop();
 }
 
 
@@ -623,19 +618,19 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
 
     primalObjective = sdp.objectiveConst + dotProduct(sdp.primalObjective, x);
     dualObjective   = sdp.objectiveConst + dotProduct(sdp.dualObjective, y);
+    dualityGap      = abs(primalObjective - dualObjective) /
+      max(Real(abs(primalObjective) + abs(dualObjective)), Real(1));
 
-    timers["cholesky"].resume();
     choleskyDecomposition(X, XCholesky);
     choleskyDecomposition(Y, YCholesky);
-    timers["cholesky"].stop();
-    timers["bilinear pairings"].resume();
+
     computeInvBilinearPairingsWithCholesky(XCholesky, sdp.bilinearBases,
                                            bilinearPairingsWorkspace,
                                            BilinearPairingsXInv);
     computeBilinearPairings(Y, sdp.bilinearBases,
                             bilinearPairingsWorkspace,
                             BilinearPairingsY);
-    timers["bilinear pairings"].stop();
+
     // d_k = c_k - Tr(F_k Y) - (D y)_k
     computeDualResidues(sdp, y, BilinearPairingsY, dualResidues);
     dualError = maxAbsVector(dualResidues);
@@ -644,9 +639,9 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
     computePrimalResidues(sdp, x, X, PrimalResidues);
     primalError = PrimalResidues.maxAbs();
 
-    const bool isPrimalFeasible = primalError  < parameters.primalErrorThreshold;
-    const bool isDualFeasible   = dualError    < parameters.dualErrorThreshold;
-    const bool isOptimal        = dualityGap() < parameters.dualityGapThreshold;
+    const bool isPrimalFeasible = primalError < parameters.primalErrorThreshold;
+    const bool isDualFeasible   = dualError   < parameters.dualErrorThreshold;
+    const bool isOptimal        = dualityGap  < parameters.dualityGapThreshold;
 
     if (isPrimalFeasible && isDualFeasible && isOptimal)
       return PrimalDualOptimal;
@@ -662,39 +657,37 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
     // functions for the current point
     else if (iteration > parameters.maxIterations)
       return MaxIterationsExceeded;
-    timers["initialize schur solver"].resume();
+
     initializeSchurComplementSolver(BilinearPairingsXInv, BilinearPairingsY,
                                     parameters.choleskyStabilizeThreshold);
-    timers["initialize schur solver"].stop();
 
     Real mu = frobeniusProductSymmetric(X, Y)/X.dim;
     if (mu > parameters.maxComplementarity)
       return MaxComplementarityExceeded;
-    timers["predictor"].resume();
+
     // Mehrotra predictor solution for (dx, dX, dY)
     Real betaPredictor = predictorCenteringParameter(parameters,
                                                      isPrimalFeasible && isDualFeasible);
     computeSearchDirection(betaPredictor, mu, false);
-    timers["predictor"].stop();
-    timers["corrector"].resume();
+
     // Mehrotra corrector solution for (dx, dX, dY)
     Real betaCorrector = correctorCenteringParameter(parameters, X, dX, Y, dY, mu,
                                                      isPrimalFeasible && isDualFeasible);
     computeSearchDirection(betaCorrector, mu, true);
-    timers["corrector"].stop();
-    timers["step length"].resume();
+
     // Step length to preserve positive definiteness
     primalStepLength = stepLength(XCholesky, dX, StepMatrixWorkspace,
                                   eigenvaluesWorkspace, QRWorkspace, parameters);
     dualStepLength   = stepLength(YCholesky, dY, StepMatrixWorkspace,
                                   eigenvaluesWorkspace, QRWorkspace, parameters);
-    timers["step length"].stop();
+
     if (isPrimalFeasible && isDualFeasible) {
       primalStepLength = min(primalStepLength, dualStepLength);
       dualStepLength = primalStepLength;
     }
 
-    printSolverInfo(iteration, mu, primalObjective, dualObjective, primalError, dualError, primalStepLength, dualStepLength,
+    printSolverInfo(iteration, mu, primalObjective, dualObjective, dualityGap,
+                    primalError, dualError, primalStepLength, dualStepLength,
                     betaCorrector, sdp.dualObjective.size(), Q.rows);
 
     // Update current point
