@@ -18,6 +18,10 @@ using boost::filesystem::path;
 using boost::timer::nanosecond_type;
 using std::cout;
 
+/***********************************************************************/
+// Create and initialize an SDPSolver for the given SDP and
+// SDPSolverParameters
+
 SDPSolver::SDPSolver(const SDP &sdp, const SDPSolverParameters &parameters):
   sdp(sdp),
   parameters(parameters),
@@ -62,82 +66,94 @@ SDPSolver::SDPSolver(const SDP &sdp, const SDPSolverParameters &parameters):
   Y.addDiagonal(parameters.initialMatrixScaleDual);
 }
 
-// result = b'^T a b', where b' = b \otimes 1
+/***********************************************************************/
+// Specialized linear algebra helper functions needed for the solver.
+
+
+// Result = Q'^T A Q', where Q' = Q \otimes 1, where \otimes denotes
+// tensor product and 1 is an mxm identity matrix.
 // Inputs:
-// - a      : l*m x l*m symmetric matrix
-// - b      : l   x n   matrix
-// - work   : l*m x n*m matrix
-// - result : n*m x n*m symmetric matrix
+// - A      : l*m x l*m symmetric matrix
+// - Q      : l   x n   matrix
+// - Work   : l*m x n*m matrix, intermediate workspace (overwritten)
+// - Result : n*m x n*m symmetric matrix (overwritten)
 //
-void tensorMatrixCongruenceTranspose(const Matrix &a,
-                                     const Matrix &b,
-                                     Matrix &work,
-                                     Matrix &result) {
-  int m = a.rows / b.rows;
+// An explanation of the name: a 'congruence' refers to the action M
+// -> A M A^T.  We use 'congruence transpose' to refer to a congruence
+// with the transposed matrix M -> A^T M A.  'tensor' here refers to
+// the fact that we're performing a congruence with the tensor product
+// Q \otimes 1.
+//
+void tensorMatrixCongruenceTranspose(const Matrix &A,
+                                     const Matrix &Q,
+                                     Matrix &Work,
+                                     Matrix &Result) {
+  int m = A.rows / Q.rows;
 
-  assert(result.rows == b.cols * m);
-  assert(result.cols == b.cols * m);
+  assert(Result.rows == Q.cols * m);
+  assert(Result.cols == Q.cols * m);
 
-  assert(work.rows == a.rows);
-  assert(work.cols == result.cols);
+  assert(Work.rows == A.rows);
+  assert(Work.cols == Result.cols);
 
-  // work = a b'
-  for (int c = 0; c < work.cols; c++) {
-    int bCol       = c % b.cols;
-    int aColOffset = (c / b.cols) * b.rows;
+  // Work = A Q'
+  for (int c = 0; c < Work.cols; c++) {
+    int qCol       = c % Q.cols;
+    int aColOffset = (c / Q.cols) * Q.rows;
 
-    for (int r = 0; r < work.rows; r++) {
+    for (int r = 0; r < Work.rows; r++) {
       Real tmp = 0;
-      for (int k = 0; k < b.rows; k++) {
-        tmp += a.elt(r, aColOffset + k) * b.elt(k, bCol);
+      for (int k = 0; k < Q.rows; k++) {
+        tmp += A.elt(r, aColOffset + k) * Q.elt(k, qCol);
       }
 
-      work.elt(r, c) = tmp;
+      Work.elt(r, c) = tmp;
     }
   }
 
-  // result = b'^T work
-  for (int c = 0; c < result.cols; c++) {
-    // since result is symmetric, only compute its upper triangle
+  // Result = Q'^T Work
+  for (int c = 0; c < Result.cols; c++) {
+    // since Result is symmetric, only compute its upper triangle
     for (int r = 0; r <= c; r++) {
-      int bCol          = r % b.cols;
-      int workRowOffset = (r / b.cols) * b.rows;
+      int qCol          = r % Q.cols;
+      int workRowOffset = (r / Q.cols) * Q.rows;
 
       Real tmp = 0;
-      for (int k = 0; k < b.rows; k++) {
-        tmp += b.elt(k, bCol) * work.elt(workRowOffset + k, c);
+      for (int k = 0; k < Q.rows; k++) {
+        tmp += Q.elt(k, qCol) * Work.elt(workRowOffset + k, c);
       }
 
-      result.elt(r, c) = tmp;
+      Result.elt(r, c) = tmp;
 
       // lower triangle is the same as upper triangle
       if (c != r) {
-        result.elt(c, r) = tmp;
+        Result.elt(c, r) = tmp;
       }
     }
   }
 }
 
-// result = B'^T A^{-1} B', where B' = B \otimes 1
+// Result = Q'^T A^{-1} Q', where Q' = Q \otimes 1, where \otimes
+// denotes tensor product and 1 is an mxm idenity matrix.
 // Inputs:
 // - L      : l*m x l*m cholesky decomposition of A
-// - B      : l   x n   matrix
-// - Work   : l*m x n*m matrix
-// - Result : n*m x n*m symmetric matrix
+// - Q      : l   x n   matrix
+// - Work   : l*m x n*m matrix, intermediate workspace (overwritten)
+// - Result : n*m x n*m symmetric matrix (overwritten)
 //
 void tensorMatrixInvCongruenceTransposeWithCholesky(const Matrix &L,
-                                                    const Matrix &B,
+                                                    const Matrix &Q,
                                                     Matrix &Work,
                                                     Matrix &Result) {
-  // Work = L^{-1} (B \otimes 1);
+  // Work = L^{-1} (Q \otimes 1);
   for (int cw = 0; cw < Work.cols; cw++) {
-    int mc  = cw / B.cols;
+    int mc  = cw / Q.cols;
 
-    for (int rw = mc*B.rows; rw < Work.rows; rw++) {
-      int mr = rw / B.rows;
+    for (int rw = mc*Q.rows; rw < Work.rows; rw++) {
+      int mr = rw / Q.rows;
 
-      Real tmp = (mr != mc) ? Real(0) : B.elt(rw % B.rows, cw % B.cols);
-      for (int cl = mc*B.rows; cl < rw; cl++)
+      Real tmp = (mr != mc) ? Real(0) : Q.elt(rw % Q.rows, cw % Q.cols);
+      for (int cl = mc*Q.rows; cl < rw; cl++)
         tmp -= L.elt(rw, cl)*Work.elt(cl, cw);
 
       Work.elt(rw, cw) = tmp/L.elt(rw, rw);
@@ -146,13 +162,13 @@ void tensorMatrixInvCongruenceTransposeWithCholesky(const Matrix &L,
 
   // Result = Work^T Work
   for (int cr = 0; cr < Result.cols; cr++) {
-    int mc = cr / B.cols;
+    int mc = cr / Q.cols;
 
     for (int rr = 0; rr <= cr; rr++) {
-      int mr = rr / B.cols;
+      int mr = rr / Q.cols;
 
       Real tmp = 0;
-      for (int rw = max(mr, mc)*B.rows; rw < Work.rows; rw++)
+      for (int rw = max(mr, mc)*Q.rows; rw < Work.rows; rw++)
         tmp += Work.elt(rw, cr)*Work.elt(rw, rr);
 
       Result.elt(rr, cr) = tmp;
@@ -162,41 +178,27 @@ void tensorMatrixInvCongruenceTransposeWithCholesky(const Matrix &L,
   }
 }
 
-void computeBilinearPairings(const BlockDiagonalMatrix &A,
-                             const vector<Matrix> &bilinearBases,
-                             vector<Matrix> &workspace,
-                             BlockDiagonalMatrix &result) {
-  #pragma omp parallel for schedule(dynamic)
-  for (unsigned int b = 0; b < bilinearBases.size(); b++)
-    tensorMatrixCongruenceTranspose(A.blocks[b], bilinearBases[b],
-                                    workspace[b], result.blocks[b]);
-}
 
-void computeInvBilinearPairingsWithCholesky(const BlockDiagonalMatrix &L,
-                                            const vector<Matrix> &bilinearBases,
-                                            vector<Matrix> &workspace,
-                                            BlockDiagonalMatrix &result) {
-  #pragma omp parallel for schedule(dynamic)
-  for (unsigned int b = 0; b < bilinearBases.size(); b++)
-    tensorMatrixInvCongruenceTransposeWithCholesky(L.blocks[b],
-                                                   bilinearBases[b],
-                                                   workspace[b],
-                                                   result.blocks[b]);
-}
-
-// result = V D V^T, where D=diag(d) is a diagonal matrix
+// Result^(blockRow,blockCol) = V D V^T, where D=diag(d) is a diagonal
+// matrix.
+//
+// Here, we view Result as a matrix on the tensor product
+// R^V.rows \otimes R^k.  Result^(blockRow,blockCol) refers to the
+// block submatrix of size V.rows x V.rows at position (blockRow,
+// blockCol) in the second tensor factor.
+//
 // Inputs:
 // - d        : pointer to beginning of a length-V.cols vector
 // - V        : V.rows x V.cols Matrix
 // - blockRow : integer < k
 // - blockCol : integer < k
-// - result   : (k*V.rows) x (k*V.rows) square Matrix
+// - Result   : (k*V.rows) x (k*V.rows) square Matrix (overwritten)
 //
 void diagonalCongruence(Real const *d,
                         const Matrix &V,
                         const int blockRow,
                         const int blockCol,
-                        Matrix &result) {
+                        Matrix &Result) {
   for (int p = 0; p < V.rows; p++) {
     for (int q = 0; q <= p; q++) {
       Real tmp = 0;
@@ -204,9 +206,9 @@ void diagonalCongruence(Real const *d,
       for (int n = 0; n < V.cols; n++)
         tmp += *(d+n) * V.elt(p, n)*V.elt(q, n);
 
-      result.elt(blockRow*V.rows + p, blockCol*V.rows + q) = tmp;
+      Result.elt(blockRow*V.rows + p, blockCol*V.rows + q) = tmp;
       if (p != q)
-        result.elt(blockRow*V.rows + q, blockCol*V.rows + p) = tmp;
+        Result.elt(blockRow*V.rows + q, blockCol*V.rows + p) = tmp;
     }
   }
 }
@@ -236,6 +238,45 @@ Real bilinearBlockPairing(const Real *v,
     result += *(v+r) * tmp;
   }
   return result;
+}
+
+/***********************************************************************/
+// Subroutines needed for each iteration
+
+// Result_b = Q[b]'^T A_b Q[b]' for each block 0 <= b < Q.size()
+// - Result_b, A_b denote the b-th blocks of Result, A, resp.
+// - Q[b]' = Q[b] \otimes 1, where \otimes denotes tensor product
+//
+// This is just tensorMatrixCongruenceTranspose for each block of a
+// BlockDiagonalMatrix.
+//
+void computeBilinearPairings(const BlockDiagonalMatrix &A,
+                             const vector<Matrix> &Q,
+                             vector<Matrix> &workspace,
+                             BlockDiagonalMatrix &Result) {
+  #pragma omp parallel for schedule(dynamic)
+  for (unsigned int b = 0; b < Q.size(); b++)
+    tensorMatrixCongruenceTranspose(A.blocks[b], Q[b],
+                                    workspace[b], Result.blocks[b]);
+}
+
+// Result_b = Q[b]'^T A_b^{-1} Q[b]' for each block 0 <= b < Q.size()
+// - Result_b, A_b denote the b-th blocks of Result, A, resp.
+// - Q[b]' = Q[b] \otimes 1, where \otimes denotes tensor product
+// 
+// This is just tensorMatrixInvCongruenceTransposeWithCholesky for
+// each block of a BlockDiagonalMatrix.
+//
+void computeInvBilinearPairingsWithCholesky(const BlockDiagonalMatrix &L,
+                                            const vector<Matrix> &Q,
+                                            vector<Matrix> &workspace,
+                                            BlockDiagonalMatrix &Result) {
+  #pragma omp parallel for schedule(dynamic)
+  for (unsigned int b = 0; b < Q.size(); b++)
+    tensorMatrixInvCongruenceTransposeWithCholesky(L.blocks[b],
+                                                   Q[b],
+                                                   workspace[b],
+                                                   Result.blocks[b]);
 }
 
 void computeSchurBlocks(const SDP &sdp,

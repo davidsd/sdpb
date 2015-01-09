@@ -129,7 +129,11 @@ public:
 
   /********************************************/
   // Solver status
-  //
+
+  // NB: here, primalObjective and dualObjective refer to the current
+  // values of the objective functions.  In the class SDP, they refer
+  // to the vectors c and b.  Hopefully the name-clash won't cause
+  // confusion.
   Real primalObjective; // f + c . x
   Real dualObjective;   // f + b . y
   Real dualityGap;      // normalized difference of objectives
