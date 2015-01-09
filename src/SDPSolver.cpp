@@ -608,7 +608,7 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
   Real primalStepLength;
   Real dualStepLength;
 
-  printSolverHeader();
+  printHeader();
 
   for (int iteration = 1;; iteration++) {
     if (timers["Last checkpoint"].elapsed().wall >= parameters.checkpointInterval * 1000000000LL)
@@ -686,9 +686,7 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
       dualStepLength = primalStepLength;
     }
 
-    printSolverInfo(iteration, mu, primalObjective, dualObjective, dualityGap,
-                    primalError, dualError, primalStepLength, dualStepLength,
-                    betaCorrector, sdp.dualObjective.size(), Q.rows);
+    printIteration(iteration, mu, primalStepLength, dualStepLength, betaCorrector);
 
     // Update current point
     scaleVector(dx, primalStepLength);

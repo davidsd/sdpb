@@ -297,28 +297,33 @@ public:
   // Run the solver, backing up to checkpointFile
   SDPSolverTerminateReason run(const path checkpointFile);
 
-  void initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
-                                       const BlockDiagonalMatrix &BilinearPairingsY,
-                                       const Real &choleskyStabilizeThreshold);
-  void solveSchurComplementEquation(Vector &dx, Vector &dz);
-  void computeSearchDirection(const Real &beta, const Real &mu, const bool correctorPhase);
+  // Input/output
   void saveCheckpoint(const path &checkpointFile);
   void loadCheckpoint(const path &checkpointFile);
   void saveSolution(const SDPSolverTerminateReason, const path &outFile);
-};
+  void printHeader();
+  void printIteration(int iteration,
+                      Real mu,
+                      Real primalStepLength,
+                      Real dualStepLength,
+                      Real betaCorrector)
 
-void printSolverHeader();
-void printSolverInfo(int iteration,
-                     Real mu,
-                     Real primalObjective,
-                     Real dualObjective,
-                     Real dualityGap,
-                     Real primalError,
-                     Real dualError,
-                     Real primalStepLength,
-                     Real dualStepLength,
-                     Real betaCorrector,
-                     int dualObjectiveSize,
-                     int Qrows);
+ private:
+  // Compute data needed to solve the Schur complement equation
+  void initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
+                                       const BlockDiagonalMatrix &BilinearPairingsY,
+                                       const Real &choleskyStabilizeThreshold);
+
+  // Solve the Schur complement equation in-place for dx, dy.  dx and
+  // dy will initially be set to the right-hand side of the equation.
+  // This function replaces them with the corresponding solutions.
+  void solveSchurComplementEquation(Vector &dx, Vector &dy);
+
+  // Compute (dx, dX, dy, dY), given the current mu, a reduction
+  // parameter beta.  `correctorPhase' specifies whether to use the
+  // R-matrix corresponding to the corrector step (if false, we use
+  // the predictor R-matrix)
+  void computeSearchDirection(const Real &beta, const Real &mu, const bool correctorPhase);
+};
 
 #endif  // SDPB_SDPSOLVER_H_

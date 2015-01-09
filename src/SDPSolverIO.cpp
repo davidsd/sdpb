@@ -24,45 +24,6 @@ using boost::posix_time::time_duration;
 using boost::posix_time::microseconds;
 using std::cout;
 
-void printSolverHeader() {
-  cout << "\n     time      mu        P-obj       D-obj      gap         P-err       D-err      P-step   D-step   beta  dim/stabilized\n";
-  cout << "-------------------------------------------------------------------------------------------------------------------------\n";
-}
-
-void printSolverInfo(int iteration,
-                     Real mu,
-                     Real primalObjective,
-                     Real dualObjective,
-                     Real dualityGap,
-                     Real primalError,
-                     Real dualError,
-                     Real primalStepLength,
-                     Real dualStepLength,
-                     Real betaCorrector,
-                     int dualObjectiveSize,
-                     int Qrows) {
-  Real time = Real(timers["Solver runtime"].elapsed().wall)/1000000000;
-  time_duration td(microseconds(timers["Solver runtime"].elapsed().wall)/1000);
-  std::stringstream ss;
-  ss << td;
-  gmp_fprintf(stdout,
-              "%3d  %s  %-8.1Fe %-+11.2Fe %-+11.2Fe %-9.2Fe  %-+10.2Fe  %-+10.2Fe  %-8.3Fg %-8.3Fg %-4.2Fg  %d/%d",
-              iteration,
-              ss.str().substr(0, 8).c_str(),
-              mu.get_mpf_t(),
-              primalObjective.get_mpf_t(),
-              dualObjective.get_mpf_t(),
-              dualityGap.get_mpf_t(),
-              primalError.get_mpf_t(),
-              dualError.get_mpf_t(),
-              primalStepLength.get_mpf_t(),
-              dualStepLength.get_mpf_t(),
-              betaCorrector.get_mpf_t(),
-              dualObjectiveSize,
-              Qrows);
-  cout << endl;
-}
-
 ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
   os << std::boolalpha;
   os << "maxIterations                = " << p.maxIterations                << endl;
@@ -116,6 +77,38 @@ ostream &operator<<(ostream& os, const SDPSolverTerminateReason& r) {
     break;
   }
   return os;
+}
+
+void SDPSolver::printHeader() {
+  cout << "\n     time      mu        P-obj       D-obj      gap         P-err       D-err      P-step   D-step   beta  dim/stabilized\n";
+  cout << "-------------------------------------------------------------------------------------------------------------------------\n";
+}
+
+void SDPSolver::printIteration(int iteration,
+                               Real mu,
+                               Real primalStepLength,
+                               Real dualStepLength,
+                               Real betaCorrector) {
+  Real time = Real(timers["Solver runtime"].elapsed().wall)/1000000000;
+  time_duration td(microseconds(timers["Solver runtime"].elapsed().wall)/1000);
+  std::stringstream ss;
+  ss << td;
+  gmp_fprintf(stdout,
+              "%3d  %s  %-8.1Fe %-+11.2Fe %-+11.2Fe %-9.2Fe  %-+10.2Fe  %-+10.2Fe  %-8.3Fg %-8.3Fg %-4.2Fg  %d/%d",
+              iteration,
+              ss.str().substr(0, 8).c_str(),
+              mu.get_mpf_t(),
+              primalObjective.get_mpf_t(),
+              dualObjective.get_mpf_t(),
+              dualityGap.get_mpf_t(),
+              primalError.get_mpf_t(),
+              dualError.get_mpf_t(),
+              primalStepLength.get_mpf_t(),
+              dualStepLength.get_mpf_t(),
+              betaCorrector.get_mpf_t(),
+              static_cast<int>(sdp.dualObjective.size()),
+              Q.rows);
+  cout << endl;
 }
 
 void backupCheckpointFile(path const& checkpointFile) {
