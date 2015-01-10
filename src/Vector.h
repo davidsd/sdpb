@@ -11,13 +11,28 @@
 
 #include <assert.h>
 #include <algorithm>
+#include <iostream>
+#include <ostream>
 #include <vector>
 #include "types.h"
-#include "util.h"
 
+using std::ostream;
 using std::vector;
 
 typedef vector<Real> Vector;
+
+// print any vector<T>, including Vector
+template <class T>
+ostream& operator<<(ostream& os, const vector<T>& v) {
+  os << "{";
+  int last = v.size() - 1;
+  for (int i = 0; i < last; i++)
+    os << v[i] << ", ";
+  if (last >= 0)
+    os << v[last];
+  os << "}";
+  return os;
+}
 
 inline bool compareAbs(const Real &a, const Real &b) {
   return abs(a) < abs(b);

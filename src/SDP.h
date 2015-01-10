@@ -14,7 +14,6 @@
 #include <iostream>
 #include <ostream>
 #include "types.h"
-#include "util.h"
 #include "Vector.h"
 #include "Matrix.h"
 #include "Polynomial.h"

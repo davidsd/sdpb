@@ -114,8 +114,6 @@ class Matrix {
   friend ostream& operator<<(ostream& os, const Matrix& a);
 };
 
-ostream& operator<<(ostream& os, const Matrix& a);
-
 // C := alpha*A*B + beta*C
 void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B,
                             Real beta, Matrix &C);

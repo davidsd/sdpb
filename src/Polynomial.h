@@ -10,7 +10,6 @@
 #define SDPB_POLYNOMIAL_H_
 
 #include "types.h"
-#include "util.h"
 #include "Vector.h"
 
 // A univariate polynomial
