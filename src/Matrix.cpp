@@ -9,6 +9,20 @@
 #include <vector>
 #include "Matrix.h"
 
+// Most of the routines below are helpfully-named wrappers for
+// functions in MBLAS or MLAPACK.  See Matrix.h for a more detailed
+// description of the various input/output parameters.
+//
+// For a list of MBLAS routines with documentation, see
+// http://mplapack.sourceforge.net/mblas_routines.html
+//
+// For a list of MLAPACK routines with documentation, see
+// http://mplapack.sourceforge.net/mlapack_routines.html
+//
+// We have chosen not to parallelize the operations here that are used
+// within BlockDiagonalMatrices, since there parallelism can be
+// achieved by parallelizing loops over blocks.
+
 ostream& operator<<(ostream& os, const Matrix& a) {
   os << "{";
   for (int r = 0; r < a.rows; r++) {
@@ -26,18 +40,7 @@ ostream& operator<<(ostream& os, const Matrix& a) {
   return os;
 }
 
-// B := A^T
-void transpose(const Matrix &A, Matrix &B) {
-  assert(A.cols == B.rows);
-  assert(A.rows == B.cols);
-
-  for (int n = 0; n < A.cols; n++)
-    for (int m = 0; m < A.rows; m++)
-      B.elt(n, m) = A.elt(m, n);
-}
-
 // C := alpha*A*B + beta*C
-//
 void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B,
                             Real beta, Matrix &C) {
   assert(A.cols == B.rows);
@@ -52,7 +55,6 @@ void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B,
 }
 
 // C := A*B
-//
 void matrixMultiply(Matrix &A, Matrix &B, Matrix &C) {
   matrixScaleMultiplyAdd(1, A, B, 0, C);
 }
@@ -62,6 +64,11 @@ void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol) {
   assert(bRow + A.cols <= B.rows);
   assert(bCol + A.cols <= B.cols);
 
+  // This operation is not used within a BlockDiagonalMatrix, so it is
+  // worthwhile to parallelize.  In fact, this function, used in
+  // computing TopLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal (see
+  // SDPSolver.cpp) is one of the main performance bottlenecks in the
+  // solver.
   #pragma omp parallel for schedule(dynamic)
   for (int c = 0; c < A.cols; c++) {
     for (int r = 0; r <= c; r++) {
@@ -82,17 +89,18 @@ void lowerTriangularInverseCongruence(Matrix &A, Matrix &L) {
   assert(L.rows == dim);
   assert(L.cols == dim);
 
+  // A := A L^{-T}
   Rtrsm("Right", "Lower", "Transpose", "NonUnitDiagonal", dim, dim, 1,
         &L.elements[0], dim,
         &A.elements[0], dim);
 
+  // A := L^{-1} A
   Rtrsm("Left", "Lower", "NoTranspose", "NonUnitDiagonal", dim, dim, 1,
         &L.elements[0], dim,
         &A.elements[0], dim);
 }
 
 // y := alpha A x + beta y
-//
 void vectorScaleMatrixMultiplyAdd(Real alpha, Matrix &A, Vector &x,
                                   Real beta, Vector &y) {
   assert(A.cols <= static_cast<int>(x.size()));
@@ -108,7 +116,6 @@ void vectorScaleMatrixMultiplyAdd(Real alpha, Matrix &A, Vector &x,
 }
 
 // y := alpha A^T x + beta y
-//
 void vectorScaleMatrixMultiplyTransposeAdd(Real alpha, Matrix &A, Vector &x,
                                            Real beta, Vector &y) {
   assert(A.cols <= static_cast<int>(y.size()));
@@ -123,6 +130,7 @@ void vectorScaleMatrixMultiplyTransposeAdd(Real alpha, Matrix &A, Vector &x,
   }
 }
 
+// Tr(A B), where A and B are symmetric
 Real frobeniusProductSymmetric(const Matrix &A, const Matrix &B) {
   assert(A.rows == B.rows);
   assert(A.cols == B.cols);
@@ -158,12 +166,7 @@ Real frobeniusProductOfSums(const Matrix &X, const Matrix &dX,
   return result;
 }
 
-// Eigenvalues of A, via the QR method
-// Inputs:
-// A           : n x n Matrix (will be overwritten)
-// eigenvalues : Vector of length n
-// workspace   : Vector of lenfth 3*n-1 (temporary workspace)
-//
+// Compute the eigenvalues of A, via the QR method
 void matrixEigenvalues(Matrix &A, Vector &workspace, Vector &eigenvalues) {
   assert(A.rows == A.cols);
   assert(static_cast<int>(eigenvalues.size()) == A.rows);
@@ -177,16 +180,13 @@ void matrixEigenvalues(Matrix &A, Vector &workspace, Vector &eigenvalues) {
 }
 
 // Minimum eigenvalue of A, via the QR method
-// Inputs:
-// A           : n x n Matrix (will be overwritten)
-// eigenvalues : Vector of length n
-// workspace   : Vector of lenfth 3*n-1 (temporary workspace)
-//
 Real minEigenvalue(Matrix &A, Vector &workspace, Vector &eigenvalues) {
   matrixEigenvalues(A, workspace, eigenvalues);
   return eigenvalues[0];
 }
 
+// Compute an in-place LU decomposition of A, with pivots, suitable
+// for use with 'solveWithLUDecomposition'
 void LUDecomposition(Matrix &A, vector<Integer> &pivots) {
   int dim = A.rows;
   assert(A.cols == dim);
@@ -196,6 +196,7 @@ void LUDecomposition(Matrix &A, vector<Integer> &pivots) {
   assert(info == 0);
 }
 
+// b := A^{-1} b, where LU and pivots encode the LU decomposition of A
 void solveWithLUDecomposition(Matrix &LU, vector<Integer> &pivots, Vector &b) {
   Integer info;
   Rgetrs("NoTranspose", LU.rows, 1, &LU.elements[0], LU.rows,
@@ -204,10 +205,6 @@ void solveWithLUDecomposition(Matrix &LU, vector<Integer> &pivots, Vector &b) {
 }
 
 // L (lower triangular) such that A = L L^T
-// Inputs:
-// - A : dim x dim symmetric matrix
-// - L : dim x dim lower-triangular matrix
-//
 void choleskyDecomposition(Matrix &A, Matrix &L) {
   int dim = A.rows;
   assert(A.cols == dim);
@@ -226,17 +223,7 @@ void choleskyDecomposition(Matrix &A, Matrix &L) {
       L.elements[i + j*dim] = 0;
 }
 
-// L (lower triangular) such that A = L L^T - \sum_i
-//                                stabilizeLambdas_i^2 u_j u_j^T where
-//                                j = stabilizeIndices_i
-// Inputs:
-// - A : dim x dim symmetric matrix
-// - L : dim x dim lower-triangular matrix
-// - stabilizeIndices: vector to hold indices where small diagonal
-//   elements were compensated
-// - stabilizeLambdas: vector to hold values used to compensate small
-//   diagonal elements
-//
+// Compute L (lower triangular) such that A + U U^T = L L^T.
 void choleskyDecompositionStabilized(Matrix &A, Matrix &L,
                                      vector<Integer> &stabilizeIndices,
                                      vector<Real> &stabilizeLambdas,
@@ -259,6 +246,8 @@ void choleskyDecompositionStabilized(Matrix &A, Matrix &L,
       L.elements[i + j*dim] = 0;
 }
 
+// B := L^{-1} B, where L is lower-triangular and B is a matrix
+// pointed to by b
 void lowerTriangularSolve(Matrix &L, Real *b, int bcols, int ldb) {
   int dim = L.rows;
   assert(L.cols == dim);
@@ -267,11 +256,14 @@ void lowerTriangularSolve(Matrix &L, Real *b, int bcols, int ldb) {
         dim, bcols, 1, &L.elements[0], dim, b, ldb);
 }
 
+// b := L^{-1} b, where L is lower-triangular
 void lowerTriangularSolve(Matrix &L, Vector &b) {
   assert(static_cast<int>(b.size()) == L.rows);
   lowerTriangularSolve(L, &b[0], 1, b.size());
 }
 
+// B := L^{-T} B, where L is lower-triangular and B is a matrix
+// pointed to by b
 void lowerTriangularTransposeSolve(Matrix &L, Real *b, int bcols, int ldb) {
   int dim = L.rows;
   assert(L.cols == dim);
@@ -280,16 +272,13 @@ void lowerTriangularTransposeSolve(Matrix &L, Real *b, int bcols, int ldb) {
         dim, bcols, 1, &L.elements[0], dim, b, ldb);
 }
 
+// b := L^{-T} b, where L is lower-triangular
 void lowerTriangularTransposeSolve(Matrix &L, Vector &b) {
   assert(static_cast<int>(b.size()) == L.rows);
   lowerTriangularTransposeSolve(L, &b[0], 1, b.size());
 }
 
 // X := ACholesky^{-1 T} ACholesky^{-1} X = A^{-1} X
-// Inputs:
-// - ACholesky : dim x dim lower triangular matrix
-// - X         : dim x dim matrix
-//
 void matrixSolveWithCholesky(Matrix &ACholesky, Matrix &X) {
   int dim = X.rows;
   assert(X.cols == dim);

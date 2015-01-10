@@ -21,12 +21,16 @@ ostream& operator<<(ostream& os, const BlockDiagonalMatrix& A) {
   return os;
 }
 
+// Tr(A B), where A and B are symmetric
 Real frobeniusProductSymmetric(const BlockDiagonalMatrix &A,
                                const BlockDiagonalMatrix &B) {
   Real result = 0;
   #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++) {
     Real f = frobeniusProductSymmetric(A.blocks[b], B.blocks[b]);
+    // this pragma means that other threads should be stopped while
+    // this operation is performed (this prevents result from being
+    // modified by multiple threads simultaneously)
     #pragma omp critical
     {
       result += f;
@@ -55,6 +59,7 @@ Real frobeniusProductOfSums(const BlockDiagonalMatrix &X,
   return result;
 }
 
+// C := alpha*A*B + beta*C
 void blockDiagonalMatrixScaleMultiplyAdd(Real alpha,
                                          BlockDiagonalMatrix &A,
                                          BlockDiagonalMatrix &B,
@@ -65,12 +70,14 @@ void blockDiagonalMatrixScaleMultiplyAdd(Real alpha,
     matrixScaleMultiplyAdd(alpha, A.blocks[b], B.blocks[b], beta, C.blocks[b]);
 }
 
+// C := A*B
 void blockDiagonalMatrixMultiply(BlockDiagonalMatrix &A,
                                  BlockDiagonalMatrix &B,
                                  BlockDiagonalMatrix &C) {
   blockDiagonalMatrixScaleMultiplyAdd(1, A, B, 0, C);
 }
 
+// A := L^{-1} A L^{-T}
 void lowerTriangularInverseCongruence(BlockDiagonalMatrix &A,
                                       BlockDiagonalMatrix &L) {
   #pragma omp parallel for schedule(dynamic)
@@ -91,12 +98,13 @@ Real minEigenvalue(BlockDiagonalMatrix &A,
   assert(A.blocks.size() == workspace.size());
 
   // TODO(davidsd): get rid of this hack
-  Real lambdaMin = 1e100;
+  Real lambdaMin = 1e100; // we really want lambdaMin = infinity here
   #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++) {
     Real minBlockLambda = minEigenvalue(A.blocks[b],
                                         workspace[b],
                                         eigenvalues[b]);
+    // ensure only one thread modifies lambdaMin at a time
     #pragma omp critical
     {
       lambdaMin = min(lambdaMin, minBlockLambda);
@@ -106,6 +114,7 @@ Real minEigenvalue(BlockDiagonalMatrix &A,
   return lambdaMin;
 }
 
+// Compute L (lower triangular) such that A = L L^T
 void choleskyDecomposition(BlockDiagonalMatrix &A,
                            BlockDiagonalMatrix &L) {
   #pragma omp parallel for schedule(dynamic)
@@ -113,6 +122,8 @@ void choleskyDecomposition(BlockDiagonalMatrix &A,
     choleskyDecomposition(A.blocks[b], L.blocks[b]);
 }
 
+// Compute L (lower triangular) such that A + U U^T = L L^T, where U
+// is a low-rank update matrix.
 void choleskyDecompositionStabilized(BlockDiagonalMatrix &A,
                                      BlockDiagonalMatrix &L,
                                      vector<vector<Integer> > &stabilizeIndices,
@@ -126,6 +137,7 @@ void choleskyDecompositionStabilized(BlockDiagonalMatrix &A,
                                     stabilizeThreshold);
 }
 
+// X := ACholesky^{-T} ACholesky^{-1} X = A^{-1} X
 void blockMatrixSolveWithCholesky(BlockDiagonalMatrix &ACholesky,
                                   BlockDiagonalMatrix &X) {
   #pragma omp parallel for schedule(dynamic)
@@ -133,6 +145,7 @@ void blockMatrixSolveWithCholesky(BlockDiagonalMatrix &ACholesky,
     matrixSolveWithCholesky(ACholesky.blocks[b], X.blocks[b]);
 }
 
+// B := L^{-1} B, where L is lower-triangular
 void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L,
                                      Matrix &B) {
   #pragma omp parallel for schedule(dynamic)
@@ -141,6 +154,7 @@ void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L,
                          B.cols, B.rows);
 }
 
+// v := L^{-1} v, where L is lower-triangular
 void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L,
                                      Vector &v) {
   #pragma omp parallel for schedule(dynamic)
@@ -149,6 +163,7 @@ void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L,
                          1, v.size());
 }
 
+// v := L^{-T} v, where L is lower-triangular
 void blockMatrixLowerTriangularTransposeSolve(BlockDiagonalMatrix &L,
                                               Vector &v) {
   #pragma omp parallel for schedule(dynamic)

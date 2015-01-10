@@ -20,10 +20,18 @@
 using std::ostream;
 using std::vector;
 
+// A matrix M with Real entries
 class Matrix {
  public:
   int rows;
   int cols;
+  // Elements of M in row-major order:
+  //
+  //   elements = { M_{0,0}, ..., M_{cols-1,0},
+  //                M_{0,1}, ..., M_{cols-1,1},
+  //                ...
+  //                M_{0,rows-1}, ..., M_{cols-1,rows-1} }
+  //
   Vector elements;
 
   Matrix(int rows = 0, int cols = 0):
@@ -39,28 +47,21 @@ class Matrix {
     return elements[r + c*rows];
   }
 
+  // M := 0
   void setZero() {
     fillVector(elements, 0);
   }
 
+  // M += c*I, where I is the identity and c is a constant
   void addDiagonal(const Real &c) {
+    // ensure M is square
     assert(rows == cols);
 
     for (int i = 0; i < rows; i++)
       elt(i, i) += c;
   }
 
-  void addColumn() {
-    elements.resize(elements.size() + rows);
-    cols++;
-  }
-
-  void setCols(int c) {
-    elements.resize(rows*c);
-    cols = c;
-  }
-
-  void setRowsCols(int r, int c) {
+  void resize(int r, int c) {
     elements.resize(r*c);
     rows = r;
     cols = c;
@@ -78,6 +79,7 @@ class Matrix {
     }
   }
 
+  // M := A
   void copyFrom(const Matrix &A) {
     assert(rows == A.rows);
     assert(cols == A.cols);
@@ -86,21 +88,25 @@ class Matrix {
       elements[i] = A.elements[i];
   }
 
+  // M := M + A
   void operator+=(const Matrix &A) {
     for (unsigned int i = 0; i < elements.size(); i++)
       elements[i] += A.elements[i];
   }
 
+  // M := M - A
   void operator-=(const Matrix &A) {
     for (unsigned int i = 0; i < elements.size(); i++)
       elements[i] -= A.elements[i];
   }
 
+  // M := c*M, where c is a constant
   void operator*=(const Real &c) {
     for (unsigned int i = 0; i < elements.size(); i++)
       elements[i] *= c;
   }
 
+  // The maximum absolute value of the elemnts of M
   Real maxAbs() const {
     return maxAbsVector(elements);
   }
@@ -109,9 +115,6 @@ class Matrix {
 };
 
 ostream& operator<<(ostream& os, const Matrix& a);
-
-// B := A^T
-void transpose(const Matrix &A, Matrix &B);
 
 // C := alpha*A*B + beta*C
 void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B,
@@ -151,7 +154,7 @@ void matrixEigenvalues(Matrix &A, Vector &workspace, Vector &eigenvalues);
 
 // Minimum eigenvalue of A, via the QR method
 // Inputs:
-// A           : n x n Matrix (will be overwritten)
+// A           : n x n Matrix (overwritten)
 // eigenvalues : Vector of length n
 // workspace   : Vector of lenfth 3*n-1 (temporary workspace)
 Real minEigenvalue(Matrix &A, Vector &workspace, Vector &eigenvalues);
@@ -160,31 +163,89 @@ Real minEigenvalue(Matrix &A, Vector &workspace, Vector &eigenvalues);
 // for use with 'solveWithLUDecomposition'
 void LUDecomposition(Matrix &A, vector<Integer> &pivots);
 
+// b := A^{-1} b, where LU and pivots encode the LU decomposition of A
 void solveWithLUDecomposition(Matrix &LU, vector<Integer> &pivots, Vector &b);
 
 // L (lower triangular) such that A = L L^T
-// Inputs:
+// Input:
 // - A : dim x dim symmetric matrix
-// - L : dim x dim lower-triangular matrix
+// Output:
+// - L : dim x dim lower-triangular matrix (overwritten)
 void choleskyDecomposition(Matrix &A, Matrix &L);
 
+// Compute L (lower triangular) such that A + U U^T = L L^T.  Here,
+// the 'update' matrix U has columns given by
+//
+//   U = ( Lambda_{p_1} e_{p_1}, ..., Lambda_{p_M} e_{p_M} )
+//
+// where e_p is a unit vector in the p-th direction and the
+// Lambda_{p_m} are constants.  If p_m appears above, we say the
+// direction p_m has been `stabilized.'
+//
+// We choose which direction to stabilize by comparing diagonal
+// entries A_{ii} encountered during the Cholesky decomposition to
+// stabilizeThreshold*Lambda_GM, where Lambda_GM is the geometric mean
+// of the diagonal entries L computed so far.  Smaller
+// stabilizeThreshold means fewer directions will be stabilized.
+// Larger stabilizeThreshold means more directions will be stabilized.
+//
+// Input:
+// - A
+// - stabilizeThreshold: parameter for deciding which directions to
+//   stabilize
+// Output:
+// - L (overwritten)
+// - stabilizeIndices: a list of directions which have been
+//   stabilized (overwritten)
+// - stabilizeLambdas: a list of corresponding Lambdas (overwritten)
+//
 void choleskyDecompositionStabilized(Matrix &A, Matrix &L,
                                      vector<Integer> &stabilizeIndices,
                                      vector<Real> &stabilizeLambdas,
                                      const double stabilizeThreshold);
 
+// B := L^{-1} B, where L is lower-triangular and B is a matrix
+// pointed to by b
+//
+// Input:
+// - L
+// - b, a pointer to the top-left element of B
+// - bcols, the number of columns of B
+// - ldb, the distance in pointer-space between the first elements of
+//   each row of B
+// Output:
+// - elements of B, which are values pointed to by b are overwritten
+//
+// (The use of pointers and ldb is to allow using this function for
+// submatrices of a larger matrix.)
 void lowerTriangularSolve(Matrix &L, Real *b, int bcols, int ldb);
 
+// b := L^{-1} b, where L is lower-triangular
 void lowerTriangularSolve(Matrix &L, Vector &b);
 
+// B := L^{-T} B, where L is lower-triangular and B is a matrix
+// pointed to by b
+//
+// Input:
+// - L
+// - b, a pointer to the top-left element of B
+// - bcols, the number of columns of B
+// - ldb, the distance in pointer-space between the first elements of
+//   each row of B
+// Output:
+// - elements of B, which are values pointed to by b are overwritten
+//
 void lowerTriangularTransposeSolve(Matrix &L, Real *b, int bcols, int ldb);
 
+// b := L^{-T} b, where L is lower-triangular
 void lowerTriangularTransposeSolve(Matrix &L, Vector &b);
 
 // X := ACholesky^{-1 T} ACholesky^{-1} X = A^{-1} X
 // Inputs:
-// - ACholesky : dim x dim lower triangular matrix
-// - X         : dim x dim matrix
+// - ACholesky : dim x dim lower triangular matrix (constant)
+// Output:
+// - X         : dim x dim matrix (overwritten)
+//
 void matrixSolveWithCholesky(Matrix &ACholesky, Matrix &X);
 
 #endif  // SDPB_MATRIX_H_

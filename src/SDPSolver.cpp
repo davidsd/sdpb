@@ -565,7 +565,7 @@ Real correctorCenteringParameter(const SDPSolverParameters &parameters,
 // - MCholesky = L, the Cholesky decomposition of M (M itself is not needed)
 // - dM, a BlockDiagonalMatrix with the same structure as M
 // Workspace:
-// - MInvDM
+// - MInvDM (NB: overwritten when computing minEigenvalue)
 // - eigenvalues, a Vector of eigenvalues for each block of M
 // - workspace, a vector of Vectors needed by the minEigenvalue function
 // Output:
@@ -686,8 +686,8 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
       int startIndex = schurStabilizeIndices[j][0];
 
       // set the dimensions of U_j 
-      stabilizeBlocks[j].setRowsCols(SchurComplement.blocks[j].rows - startIndex,
-                                     schurStabilizeIndices[j].size());
+      stabilizeBlocks[j].resize(SchurComplement.blocks[j].rows - startIndex,
+                                schurStabilizeIndices[j].size());
       // set U_j = 0
       stabilizeBlocks[j].setZero();
       // for each column of U_j add Lambda_p in the row (p - startIndex)
@@ -727,19 +727,19 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   //
   //   Q = (L'^{-1} B')^T (L'^{-1} B') - {{0, 0}, {0, 1}}
   //
-  // Where B' = (B U).  We think of Q as containing four-blocks called
+  // Where B' = (B U).  We think of Q as containing four blocks called
   // Upper/Lower-Left/Right.
 
   // Set the dimensions of Q
-  Q.setRowsCols(offDiagonalColumns, offDiagonalColumns);
+  Q.resize(offDiagonalColumns, offDiagonalColumns);
   Q.setZero();
 
-  // At this point, SchurOffDiagonal = L'^{-1} B.
+  // Here, SchurOffDiagonal = L'^{-1} B.
   //
   // UpperLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal
   matrixSquareIntoBlock(SchurOffDiagonal, Q, 0, 0);
 
-  // At this point, stabilizeBlocks the blocks of V = L'^{-1} U.
+  // Here, stabilizeBlocks contains the blocks of V = L'^{-1} U.
   //
   // LowerRight(Q) = V^T V - 1
   for (unsigned int j = 0; j < stabilizeBlockIndices.size(); j++) {
@@ -893,6 +893,9 @@ void SDPSolver::computeSearchDirection(const Real &beta,
   dY.symmetrize();
   dY *= -1;
 }
+
+/***********************************************************************/
+// The main solver loop
 
 SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
   Real primalStepLength;

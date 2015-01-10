@@ -39,10 +39,17 @@ int solveSDP(const path &sdpFile,
              const path &outFile,
              const path &checkpointFile,
              SDPSolverParameters parameters) {
+  // Set the default precision of all Real numbers to that specified
+  // by the 'precision' parameter.
   setDefaultPrecision(parameters.precision);
+
+  // Set cout to print the appropriate number of digits
   cout.precision(min(static_cast<int>(parameters.precision * 0.31 + 5), 30));
+
   // Ensure all the Real parameters have the appropriate precision
   parameters.resetPrecision();
+
+  // Set the maximum number of threads for parallel loops
   omp_set_num_threads(parameters.maxThreads);
 
   cout << "SDPB started at " << second_clock::local_time() << endl;
@@ -53,8 +60,8 @@ int solveSDP(const path &sdpFile,
   cout << "\nParameters:\n";
   cout << parameters << endl;
 
-  const SDP sdp = readBootstrapSDP(sdpFile);
-  SDPSolver solver(sdp, parameters);
+  // Read an SDP from sdpFile and create a solver for it
+  SDPSolver solver(readBootstrapSDP(sdpFile), parameters);
 
   if (exists(checkpointFile))
     solver.loadCheckpoint(checkpointFile);
