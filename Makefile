@@ -1,10 +1,29 @@
+################ Modify these variables ################
+
+# directory containing the header files 'gmp.h' and 'gmpxx.h'
+GMPINCLUDEDIR = /home/dsd/include
+
+# directory containing boost header files, e.g. 'bind.hpp', etc.
+BOOSTINCLUDEDIR = /home/dsd/include/boost
+
+# directory containing library files, e.g.
+#   libboost_filesystem.a,
+#   libboost_filesystem.so,
+#   libboost_filesystem.so.1.54.0
+# as well as analogous files for 'boost_system',
+# 'boost_serialization', 'boost_timer', 'boost_program_options',
+# 'gmp', and 'gmpxx',
+LIBDIR = /home/dsd/lib
+
+################ End of modifications ################
+
 SOURCES := $(wildcard src/*.cpp) $(wildcard src/mpack/*.cpp) $(wildcard src/tinyxml2/*.cpp)
 HEADERS := $(wildcard src/*.h) $(wildcard src/mpack/*.h) $(wildcard src/tinyxml2/*.h)
 OBJECTS := $(patsubst src/%.cpp,obj/%.o,$(SOURCES))
 RESULT  = sdpb
 
 CC = g++
-CFLAGS = -g -O2 -Wall -ansi -L/home/dsd/lib -Isrc/mpack -I/home/dsd/include -I/home/dsd/include/boost -fopenmp -D___MPACK_BUILD_WITH_GMP___
+CFLAGS = -g -O2 -Wall -ansi -L${LIBDIR} -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
 LIBS = -lgomp -lgmp -lgmpxx -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options
 RM = rm -f
 
