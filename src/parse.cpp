@@ -6,6 +6,14 @@
 //=======================================================================
 
 
+// Currently, SDPB uses tinyxml2 to parse an input file into an XML
+// tree, which is stored entirely in memory.  This tree is then
+// transformed into the appropriate data structures using the parse
+// functions below.  In the future, this could be made more memory
+// efficient by avoiding building the XML tree in memory.
+
+// See the manual for a description of the correct XML input format.
+
 #include <vector>
 #include "types.h"
 #include "parse.h"
@@ -18,6 +26,8 @@ using tinyxml2::XMLDocument;
 using tinyxml2::XMLElement;
 using boost::filesystem::path;
 
+// parse a bunch of adjacent elements with tag `name' into a vector<T>
+// using the function `parse' for each element.
 template <class T>
 vector<T> parseMany(const char *name, T(*parse)(XMLElement *),
                     XMLElement *elt) {

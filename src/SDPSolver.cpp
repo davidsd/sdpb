@@ -956,12 +956,12 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
     if (mu > parameters.maxComplementarity)
       return MaxComplementarityExceeded;
 
-    // Mehrotra predictor solution for (dx, dX, dy, dY)
+    // Compute the predictor solution for (dx, dX, dy, dY)
     Real betaPredictor =
       predictorCenteringParameter(parameters, isPrimalFeasible && isDualFeasible);
     computeSearchDirection(betaPredictor, mu, false);
 
-    // Mehrotra corrector solution for (dx, dX, dy, dY)
+    // Compute the corrector solution for (dx, dX, dy, dY)
     Real betaCorrector =
       correctorCenteringParameter(parameters, X, dX, Y, dY, mu,
                                   isPrimalFeasible && isDualFeasible);
