@@ -49,7 +49,7 @@ class Matrix {
 
   // M := 0
   void setZero() {
-    fillVector(elements, 0);
+    std::fill(elements.begin(), elements.end(), 0);
   }
 
   // M += c*I, where I is the identity and c is a constant

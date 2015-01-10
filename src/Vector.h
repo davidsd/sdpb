@@ -19,6 +19,7 @@
 using std::ostream;
 using std::vector;
 
+// a Vector is just an STL vector of Real's
 typedef vector<Real> Vector;
 
 // print any vector<T>, including Vector
@@ -43,23 +44,12 @@ inline Real maxAbsVector(const Vector &v) {
   return abs(*std::max_element(v.begin(), v.end(), compareAbs));
 }
 
-// v := (a, a, ..., a)
-inline void fillVector(Vector &v, const Real &a) {
-  std::fill(v.begin(), v.end(), a);
-}
-
-// v := a*v, where a is a constant
-inline void scaleVector(Vector &v, const Real &a) {
-  for (unsigned int i = 0; i < v.size(); i++)
-    v[i] *= a;
-}
-
-// v := v + u
-inline void addVector(Vector &v, const Vector &u) {
+// v := v + a*u
+inline void addScaledVector(Vector &v, const Real &a, const Vector &u) {
   assert(v.size() == u.size());
 
   for (unsigned int i = 0; i < v.size(); i++)
-    v[i] += u[i];
+    v[i] += a * u[i];
 }
 
 // The smash product... just kidding. The dot product u.v.
@@ -70,9 +60,9 @@ inline Real dotProduct(const Vector &u, const Vector v) {
   return result;
 }
 
-// Return the component-wise product w = (v[0] u[0], ..., v[n] u[n])
-// This routine is used only once, so we needn't worry about memory
-// efficiency.
+// The component-wise product w = (v[0] u[0], ..., v[n] u[n])
+// This routine is used only once, so we needn't worry about
+// allocation.
 inline Vector multiplyVectors(const Vector &u, const Vector &v) {
   Vector w(u.size());
   for (unsigned int i = 0; i < w.size(); i++)

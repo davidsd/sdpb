@@ -19,9 +19,9 @@
 // For a list of MLAPACK routines with documentation, see
 // http://mplapack.sourceforge.net/mlapack_routines.html
 //
-// We have chosen not to parallelize the operations here that are used
-// within BlockDiagonalMatrices, since there parallelism can be
-// achieved by parallelizing loops over blocks.
+// We have chosen not to parallelize operations that are used in
+// BlockDiagonalMatrix, since there parallelism can be achieved by
+// parallelizing loops over blocks.
 
 ostream& operator<<(ostream& os, const Matrix& a) {
   os << "{";

@@ -984,15 +984,13 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
 
     printIteration(iteration, mu, primalStepLength, dualStepLength, betaCorrector);
 
-    // Update the primal point (x, X) += primalStepLength (dx, dX)
-    scaleVector(dx, primalStepLength);
-    addVector(x, dx);
+    // Update the primal point (x, X) += primalStepLength*(dx, dX)
+    addScaledVector(x, primalStepLength, dx);
     dX *= primalStepLength;
     X += dX;
 
-    // Update the dual point (y, Y) += dualStepLength (dy, dY)
-    scaleVector(dy, dualStepLength);
-    addVector(y, dy);
+    // Update the dual point (y, Y) += dualStepLength*(dy, dY)
+    addScaledVector(y, dualStepLength, dy);
     dY *= dualStepLength;
     Y += dY;
   }
