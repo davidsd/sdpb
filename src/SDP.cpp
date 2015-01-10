@@ -1,5 +1,5 @@
 //=======================================================================
-// Copyright 2014 David Simmons-Duffin.
+// Copyright 2014-2015 David Simmons-Duffin.
 // Distributed under the MIT License.
 // (See accompanying file LICENSE or copy at
 //  http://opensource.org/licenses/MIT)
@@ -88,8 +88,8 @@ SDP sdpFromDualConstraintGroups(const Vector &objective,
     sdp.dimensions.push_back(g->dim);
     sdp.degrees.push_back(g->degree);
     sdp.primalObjective.insert(sdp.primalObjective.end(),
-                               s->constraintConstants.begin(),
-                               s->constraintConstants.end());
+                               g->constraintConstants.begin(),
+                               g->constraintConstants.end());
   }
   sdp.FreeVarMatrix = Matrix(sdp.primalObjective.size(), sdp.dualObjective.size());
 
