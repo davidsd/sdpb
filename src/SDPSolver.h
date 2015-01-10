@@ -178,7 +178,7 @@ public:
   //   BilinearPairingsXInv.blocks[b].elt(
   //     (d_j+1) s + k1,
   //     (d_j+1) r + k2
-  //   ) = \chi_{b,k1}^T (X.blocks[b]^{-1})^{(s,r)} \chi_{b,k2}
+  //   ) = v_{b,k1}^T (X.blocks[b]^{-1})^{(s,r)} v_{b,k2}
   //
   //     0 <= k1,k2 <= sdp.degrees[j] = d_j
   //     0 <= s,r < sdp.dimensions[j] = m_j
@@ -198,14 +198,14 @@ public:
   BlockDiagonalMatrix BilinearPairingsY;
 
   // The Schur complement matrix S: a BlockDiagonalMatrix with one
-  // block for each 0 <= j < J.  SchurBlocks.blocks[j] has dimension
+  // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
   // (d_j+1)*m_j*(m_j+1)/2
   //
-  BlockDiagonalMatrix SchurBlocks;
+  BlockDiagonalMatrix SchurComplement;
 
-  // SchurBlocksCholesky = L', the Cholesky decomposition of the
+  // SchurComplementCholesky = L', the Cholesky decomposition of the
   // stabilized Schur complement matrix S' = S + U U^T.
-  BlockDiagonalMatrix SchurBlocksCholesky;
+  BlockDiagonalMatrix SchurComplementCholesky;
 
   // SchurOffDiagonal = L'^{-1} FreeVarMatrix, needed in solving the
   // Schur complement equation.
@@ -225,7 +225,7 @@ public:
   // Recall: S is block diagonal, with blocks labeled by 0 <= j < J.
   //
   // schurStabilizeIndices[j] = a list of which directions of
-  // SchurBlocks.blocks[j] have been stabilized (counting from 0 at
+  // SchurComplement.blocks[j] have been stabilized (counting from 0 at
   // the upper left of each block), for 0 <= j < J.
   vector<vector<int> > schurStabilizeIndices;
   //
@@ -241,20 +241,20 @@ public:
   //
   // For each 0 <= m < M, stabilizeBlockUpdateRow records the row of
   // U corresponding to the first stabilized direction in the j_m'th
-  // block of SchurBlocks:
+  // block of SchurComplement:
   //
   //   stabilizeBlockUpdateRow[m] = schurStabilizeIndices[j_m][0] +
-  //                                SchurBlocks.blockStartIndices[j_m]
+  //                                SchurComplement.blockStartIndices[j_m]
   // 
   vector<int> stabilizeBlockUpdateRow;
   //
   // For each 0 <= m < M, stabilizeBlockUpdateColumn records the
   // column of U corresponding to the first stabilized direction in
-  // the j_m'th block of SchurBlocks.
+  // the j_m'th block of SchurComplement.
   vector<int> stabilizeBlockUpdateColumn;
   //
   // For each 0 <= m < M, stabilizeBlocks is the submatrix of U
-  // corresponding to the j_m'th block of SchurBlocks.
+  // corresponding to the j_m'th block of SchurComplement.
   vector<Matrix> stabilizeBlocks;
 
   // Q = B' L'^{-T} L'^{-1} B' - {{0, 0}, {0, 1}}, where B' =

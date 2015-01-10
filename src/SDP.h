@@ -66,12 +66,12 @@ using std::ostream;
 //   constraint matrices A_p are given by
 //
 //   A_(j,r,s,k) = \sum_{b \in blocks[j]}
-//                     Block_b(\chi_{b,k} \chi_{b,k}^T \otimes E^{rs}),
+//                     Block_b(v_{b,k} v_{b,k}^T \otimes E^{rs}),
 //
 //   where
 //   - E^{rs} is the symmetrization of the m_j x m_j matrix with a
 //     1 in entry (r,s) and zeros elsewhere.
-//   - \chi_{b,k} is a vector of length (delta_b+1)
+//   - v_{b,k} is a vector of length (delta_b+1)
 //   - \otimes denotes a tensor product
 //   - each block above thus has dimension (delta_b+1)*m_j.
 //   - blocks[j_1] and blocks[j_2] are disjoint if j_1 != j_2.  Thus,
@@ -92,20 +92,20 @@ class IndexTuple {
   int p; // overall index of the constraint
   int r; // first index for E^{rs}
   int s; // second index for E^{rs}
-  int k; // index for \chi_{b,k}
+  int k; // index for v_{b,k}
   IndexTuple(int p, int r, int s, int k): p(p), r(r), s(s), k(k) {}
   IndexTuple() {}
 };
 
 class SDP {
  public:
-  // bilinearBases is a vector of Matrices encoding the \chi_{b,k}
-  // that enter the constraint matrices. Specifically, \chi_{b,k} are
+  // bilinearBases is a vector of Matrices encoding the v_{b,k}
+  // that enter the constraint matrices. Specifically, v_{b,k} are
   // the columns of bilinearBases[b],
   //
-  // bilinearBases[b].elt(m,k) = (\chi_{b,k})_m  (0 <= b < bMax,
-  //                                              0 <= k <= d_j,
-  //                                              0 <= m <= delta_b)
+  // bilinearBases[b].elt(m,k) = (v_{b,k})_m  (0 <= b < bMax,
+  //                                           0 <= k <= d_j,
+  //                                           0 <= m <= delta_b)
   //
   vector<Matrix> bilinearBases;
 
@@ -170,7 +170,7 @@ class SDP {
 
   // Dimensions of the blocks of X,Y (0 <= b < bMax)
   //
-  // psdMatrixBlockDims()[b] = (delta_b+1)*m_j = length(\chi_{b,*})*m_j
+  // psdMatrixBlockDims()[b] = (delta_b+1)*m_j = length(v_{b,*})*m_j
   //
   vector<int> psdMatrixBlockDims() const {
     vector<int> dims;
@@ -254,7 +254,7 @@ class DualConstraintGroup {
   // constraintConstants = c, a vector of length P'
   Vector constraintConstants;
 
-  // bilinearBases is a vector of Matrices encoding the \chi_{b,k}
+  // bilinearBases is a vector of Matrices encoding the v_{b,k}
   // entering the constraint matrices A_p, as described
   // above. `bilinearBases' here has the structure of
   // `bilinearBases[j]' above for some fixed j.
@@ -294,11 +294,11 @@ class PolynomialVectorMatrix {
   vector<vector<Polynomial> > elements;
 
   // A list of real numbers x_k (0 <= k <= degree(M)) at which to
-  // sample M(x) to construct the \chi_{b,k}.
+  // sample M(x) to construct the v_{b,k}.
   vector<Real> samplePoints;
 
   // A list of real numbers s_k (0 <= k <= degree(M)) to scale M(x_k)
-  // and the corresponding \chi_{b,k}.
+  // and the corresponding v_{b,k}.
   vector<Real> sampleScalings;
 
   // bilinearBasis[m] = q_m(x) (0 <= m <= degree/2), where q_m is a
