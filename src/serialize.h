@@ -44,7 +44,7 @@ namespace boost {
     template<class Archive>
     void save(Archive& ar, Real const& f, unsigned int version) {
       std::ostringstream os;
-      os.precision(getPrecision(f));
+      os.precision(f.get_prec());
       os << f;
       std::string s = os.str();
       ar & s;

@@ -55,16 +55,16 @@ public:
   // command line or a file) after initializing other parameters.
   //
   void resetPrecision() {
-    setPrecision(dualityGapThreshold,          precision);
-    setPrecision(primalErrorThreshold,         precision);
-    setPrecision(dualErrorThreshold,           precision);
-    setPrecision(initialMatrixScalePrimal,     precision);
-    setPrecision(initialMatrixScaleDual,       precision);
-    setPrecision(feasibleCenteringParameter,   precision);
-    setPrecision(infeasibleCenteringParameter, precision);
-    setPrecision(stepLengthReduction,          precision);
-    setPrecision(choleskyStabilizeThreshold,   precision);
-    setPrecision(maxComplementarity,           precision);
+    dualityGapThreshold.set_prec(precision);
+    primalErrorThreshold.set_prec(precision);
+    dualErrorThreshold.set_prec(precision);
+    initialMatrixScalePrimal.set_prec(precision);
+    initialMatrixScaleDual.set_prec(precision);
+    feasibleCenteringParameter.set_prec(precision);
+    infeasibleCenteringParameter.set_prec(precision);
+    stepLengthReduction.set_prec(precision);
+    choleskyStabilizeThreshold.set_prec(precision);
+    maxComplementarity.set_prec(precision);
   }
 
   friend ostream& operator<<(ostream& os, const SDPSolverParameters& p);

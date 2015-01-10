@@ -41,7 +41,7 @@ int solveSDP(const path &sdpFile,
              SDPSolverParameters parameters) {
   // Set the default precision of all Real numbers to that specified
   // by the 'precision' parameter.
-  setDefaultPrecision(parameters.precision);
+  mpf_set_default_prec(parameters.precision);
 
   // Set cout to print the appropriate number of digits
   cout.precision(min(static_cast<int>(parameters.precision * 0.31 + 5), 30));
