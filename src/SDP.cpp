@@ -74,7 +74,7 @@ dualConstraintGroupFromPolVecMat(const PolynomialVectorMatrix &m) {
   // The rest multiply decision variables y
   g.constraintMatrix    = Matrix(numConstraints, vectorDim - 1);
 
-  // Populate B and c by sampling the matrix polynomial
+  // Populate B and c by sampling the polynomial matrix
   int p = 0;
   for (int c = 0; c < g.dim; c++) {
     for (int r = c; r < g.dim; r++) {

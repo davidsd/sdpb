@@ -235,7 +235,7 @@ class SDP {
 // DualConstraintGroups labeled by 0<=j<J.
 //
 // DualConstraintGroup's are currently only used as an intermediate
-// data structure between the matrix polynomials defining an MPP and a
+// data structure between the polynomial matrices defining an PMP and a
 // full SDP.  By directly combining DualConstraintGroups into an SDP
 // using sdpFromDualConstraintGroups, it is possible to define slightly
 // more general optimization problems than those produced by
