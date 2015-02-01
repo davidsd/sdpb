@@ -1,0 +1,253 @@
+%%
+%%  `dsdshorthand.sty' -- Macros for everyday use, generally to improve
+%%  code readability with a consistent shorthand.  Macro names are
+%%  usually based more on the appearance of the symbol rather than the
+%%  meaning (e.g. \Z for \mathbb{Z}, instead of \Integers, or \cA for
+%%  \mathcal{A}).  Choices are geared towards mathematical physics,
+%%  sort of.
+%%
+%%  David Simmons-Duffin <davidsd@gmail.com>
+%%  Last modified May 17, 2006
+%%
+%%  Feel free to use this on the condition that you share any good
+%%  ideas of yours with me!
+%%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{dsdshorthand}[2006/05/17 David Simmons-Duffin's macros]
+\RequirePackage{amsmath, amssymb, amsthm}
+\RequirePackage{ifthen}  % LaTeX logic
+
+%%%%%%% Not Required, but Oft-Used Packages %%%%%%%
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{ifthen}
+\usepackage{graphicx}   % \includegraphics
+\usepackage{epstopdf}   % allow inclusion of eps files
+\usepackage{bm}         % access to bold math fonts, via \bm
+\usepackage{xspace}     % \xspace puts space where needed
+\usepackage{mathrsfs}   % fancy script: \mathscr
+
+\DeclareGraphicsRule{*}{mps}{*}{}  % not sure what this does, but it's
+                                % necessary to make feynmp work correctly
+
+%%%%%%% Argument-taking Macros, Size Control %%%%%%%
+\newcommand   \pdr  [2] {\frac{\partial #1}{\partial #2}}
+\newcommand   \pddr [3] {
+  \ifthenelse{\equal{#3}{}}
+    { \frac{\partial^2 #1}{\partial #2^2}           }
+    { \frac{\partial^2 #1}{\partial #2 \partial #3} }
+}
+\newcommand   \rdr  [2] {\frac{d #1}{d #2}}
+\newcommand   \rddr [3] {
+  \ifthenelse{\equal{#3}{}}
+    { \frac{d^2 #1}{d #2^2}    }
+    { \frac{d^2 #1}{d #2 d #3} }
+}
+
+\newcommand   \lr  [3] {\left #1 #2 \right #3}
+\newcommand   \p   [1] {\lr({#1})}
+\newcommand   \tl  [1] {\widetilde{#1}}
+\renewcommand \bar [1] {\overline{#1}}
+%\let \smallbar = \bar
+%\let \bar      = \overline
+%\let \smallhat = \hat
+%\let \hat      = \widehat
+
+%%%%%%% Notation Shortcuts %%%%%%%
+\newcommand   \<   {\langle}
+\renewcommand \>   {\rangle}
+\newcommand   \bra [1] {\< #1 |}
+\newcommand   \ket [1] {| #1 \>}
+\renewcommand \.   {\cdot}
+\newcommand   \inv {^{-1}}
+\newcommand   \x   {\times}
+\newcommand   \we  {\wedge}
+\newcommand   \oo  {\infty}
+\newcommand   \aeq {\thickapprox}
+\newcommand   \ptl {\partial}
+\newcommand   \grad {\nabla}
+\newcommand   \mto {\mapsto}
+\newcommand   \hc  {\mathrm{h.c.}}
+\newcommand   \half{\frac 1 2}
+\newcommand   \Id  {\mathbf{1}}
+\newcommand   \Dslash {\!\not\!\! D}
+\newcommand   \dslash {\!\not\! \ptl}
+\newcommand   \pslash {\!\not\! p}
+\newcommand   \qslash {\!\not\! q}
+\newcommand   \kslash {\!\not\! k}
+
+%%%%%%% Greek %%%%%%%
+\renewcommand \a  {\alpha}
+\renewcommand \b  {\beta}
+\newcommand   \g  {\gamma}
+\newcommand   \G  {\Gamma}
+\newcommand   \de {\delta}
+\newcommand   \De {\Delta}
+\newcommand   \e  {\epsilon}
+\renewcommand \l  {\lambda}
+\renewcommand \L  {\Lambda}
+\renewcommand \r  {\rho}
+\newcommand   \f  {\phi}
+\newcommand   \vf {\varphi}
+\newcommand   \s  {\sigma}
+\newcommand   \w  {\omega}
+\renewcommand \O  {\Omega}
+\renewcommand \th {\theta}
+\newcommand   \ka {\kappa}
+\newcommand   \z  {\zeta}
+
+%%%%%%% Spaces and Fields %%%%%%%
+\newcommand   \R  {\mathbb{R}}
+\newcommand   \Z  {\mathbb{Z}}
+\newcommand   \N  {\mathbb{N}}
+\newcommand   \C  {\mathbb{C}}
+\newcommand   \Q  {\mathbb{Q}}
+\newcommand   \Qp {\mathbb{Q}_p}
+\renewcommand \P  {\mathbb{P}}
+\newcommand   \A  {\mathbb{A}}
+
+%%%%%%% Multi-letter Functors/Functions %%%%%%%
+% how many of these should be mathops?
+\newcommand   \SU    {\mathrm{SU}}
+\newcommand   \SO    {\mathrm{SO}}
+\newcommand   \GL    {\mathrm{GL}}
+\newcommand   \SL    {\mathrm{SL}}
+\newcommand   \PSL   {\mathrm{PSL}}
+\newcommand   \PGL   {\mathrm{PGL}}
+\newcommand   \Sp    {\mathrm{Sp}}
+\newcommand   \Span  {\mathrm{Span}}
+\newcommand   \Aut   {\mathrm{Aut}}
+\newcommand   \Res   {\mathop{\mathrm{Res}}}
+\renewcommand \Re    {\mathop{\mathrm{Re}}}
+\renewcommand \Im    {\mathop{\mathrm{Im}}}
+\newcommand   \Tr    {\mathrm{Tr}}
+\newcommand   \Pf    {\mathrm{Pf}}
+\newcommand   \Ker   {\mathop{\mathrm{Ker}}}
+\newcommand   \Coker {\mathop{\mathrm{Coker}}}
+\newcommand   \Hom   {\mathrm{Hom}}
+\newcommand   \Mor   {\mathrm{Mor}}
+\newcommand   \Gal   {\mathrm{Gal}}
+\newcommand   \Sym   {\mathrm{Sym}}
+\newcommand   \codim {\mathop{\mathrm{codim}}}
+\newcommand   \ind   {\mathop{\mathrm{ind}}}
+
+%%%%%%% Single-letter Shortcuts %%%%%%%
+%% note: I've defined bold and caligraphed shortcuts only for the
+%% letters I used most often.  This is not the whole alphabet (and nor
+%% can it be -- consider, e.g., {\bf...})
+
+%%%%%%% Bold Letters %%%%%%%
+%% lowercase
+\newcommand   \ba {\mathbf{a}}
+\newcommand   \bi {\mathbf{i}}
+\newcommand   \bj {\mathbf{j}}
+\newcommand   \bk {\mathbf{k}}
+\newcommand   \bl {\mathbf{l}}
+\newcommand   \bn {\mathbf{n}}
+\newcommand   \bp {\mathbf{p}}
+\newcommand   \bq {\mathbf{q}}
+\newcommand   \br {\mathbf{r}}
+\newcommand   \bs {\mathbf{s}}
+\newcommand   \bt {\mathbf{t}}
+\newcommand   \bu {\mathbf{u}}
+\newcommand   \bv {\mathbf{v}}
+\newcommand   \bw {\mathbf{w}}
+\newcommand   \bx {\mathbf{x}}
+\newcommand   \by {\mathbf{y}}
+\newcommand   \bz {\mathbf{z}}
+%% Uppercase
+\newcommand   \bA {\mathbf{A}}
+\newcommand   \bB {\mathbf{B}}
+\newcommand   \bE {\mathbf{E}}
+\newcommand   \bF {\mathbf{F}}
+\newcommand   \bG {\mathbf{G}}
+\newcommand   \bH {\mathbf{H}}
+\newcommand   \bI {\mathbf{I}}
+\newcommand   \bJ {\mathbf{J}}
+\newcommand   \bK {\mathbf{K}}
+\newcommand   \bL {\mathbf{L}}
+\newcommand   \bP {\mathbf{P}}
+\newcommand   \bQ {\mathbf{Q}}
+\newcommand   \bR {\mathbf{R}}
+\newcommand   \bS {\mathbf{S}}
+
+%%%%%%% Caligraphic Letters %%%%%%%
+\newcommand   \cA {\mathcal{A}}
+\newcommand   \cB {\mathcal{B}}
+\newcommand   \cC {\mathcal{C}}
+\newcommand   \cD {\mathcal{D}}
+\newcommand   \cE {\mathcal{E}}
+\newcommand   \cF {\mathcal{F}}
+\newcommand   \cG {\mathcal{G}}
+\newcommand   \cH {\mathcal{H}}
+\newcommand   \cL {\mathcal{L}}
+\newcommand   \cM {\mathcal{M}}
+\newcommand   \cO {\mathcal{O}}
+\newcommand   \cP {\mathcal{P}}
+\newcommand   \cT {\mathcal{T}}
+\newcommand   \cZ {\mathcal{Z}}
+
+%%%%%%% Unit Vectors %%%%%%%
+\newcommand   \xhat {\hat{\bx}}
+\newcommand   \yhat {\hat{\by}}
+\newcommand   \zhat {\hat{\bz}}
+\newcommand   \rhat {\hat{\br}}
+\newcommand   \nhat {\hat{\bn}} 
+
+%%%%%%% General Environment Shortcuts %%%%%%%
+%\newcommand   \be     {\begin{align*}} % These are broken -- macros
+%\newcommand   \ee     {\end  {align*}} % for \end{..} don't work in align
+%\newcommand   \ben    {\begin{align}}
+%\newcommand   \een    {\end  {align}}
+\newcommand   \be     {\begin{eqnarray*}} % these should be replaced
+\newcommand   \ee     {\end  {eqnarray*}} % by align, but can't be...
+\newcommand   \ben    {\begin{eqnarray}}
+\newcommand   \een    {\end  {eqnarray}}
+\newcommand   \bitem  {\begin{itemize}}
+\newcommand   \eitem  {\end  {itemize}}
+\newcommand   \benum  {\begin{enumerate}}
+\newcommand   \eenum  {\end  {enumerate}}
+
+
+%%%%%%%% Theorem Types %%%%%%%%
+% last arg means number by sections (e.g. Theorem 2.3)
+\newtheorem  {theorem} {Theorem} [section]
+% the second arg means share the same counter with 'theorem'
+\newtheorem  {lemma}       [theorem] {Lemma}
+\newtheorem  {corollary}   [theorem] {Corollary}
+\newtheorem  {proposition} [theorem] {Proposition}
+% individually counted, for use in problem sets
+\newtheorem  {lemma*} {Lemma}
+
+% not numbered
+\newtheorem* {definition} {Definition}
+\newtheorem* {claim}      {Claim}
+\newtheorem* {remark}     {Remark}
+
+%%%%%%% Theorem Environment Shortcuts %%%%%%%
+\newcommand   \blem    {\begin{lemma}}
+\newcommand   \elem    {\end  {lemma}}
+\newcommand   \bpf     {\begin{proof}}
+\newcommand   \epf     {\end  {proof}}
+\newcommand   \bprop   {\begin{proposition}}
+\newcommand   \eprop   {\end  {proposition}}
+\newcommand   \bthm    {\begin{theorem}}
+\newcommand   \ethm    {\end  {theorem}}
+\newcommand   \bedef   {\begin{definition}}
+\newcommand   \stopdef {\end  {definition}}
+\newcommand   \bclaim  {\begin{claim}}
+\newcommand   \eclaim  {\end  {claim}}
+\newcommand   \bcor    {\begin{corollary}}
+\newcommand   \ecor    {\end  {corollary}}
+\newcommand   \brmk    {\begin{remark}}
+\newcommand   \ermk    {\end  {remark}}
+
+%%%%%%%%% new maketitle for problem sets %%%%%%%%%%%%
+\newcommand \makepsettitle {
+  \begin{center}
+    {\sc \@title } \\
+    \@date
+  \end{center}
+  \markright{ {\rm \@author} } % should probably be shipped out of this macro
+}
