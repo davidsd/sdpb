@@ -16,7 +16,6 @@
 \usepackage[margin=10pt,font=small,labelfont=bf]{caption}
 \geometry{verbose,letterpaper,tmargin=2.5cm,bmargin=2.5cm,lmargin=2.6cm,rmargin=2.6cm}
 \usepackage{dsdshorthand}
-\usepackage{simplewick}
 \usepackage{changepage}
 \usepackage{listings}
 \setlength{\parskip}{0.1in}
@@ -172,7 +171,7 @@ The options to \SDPB\ are described in detail in the help text, obtained by runn
 
 \subsection{\texttt{Mathematica} Interface}
 
-A \texttt{Mathematica} notebook \texttt{Examples.m}, included in the source distribution, generates files of the form in listing~\ref{xmlinputformat} starting from \texttt{Mathematica} data.  It automatically makes sensible choices for the bilinear bases $q_m^{(j)}(x)$, the sample points $x_k^{(j)}$ and the sample scalings $s_k^{(j)}$.
+A \texttt{Mathematica} notebook \texttt{SDPB.m}, included in the source distribution, generates files of the form in listing~\ref{xmlinputformat} starting from \texttt{Mathematica} data.  It automatically makes sensible choices for the bilinear bases $q_m^{(j)}(x)$, the sample points $x_k^{(j)}$ and the sample scalings $s_k^{(j)}$.
 
 The \texttt{Mathematica} definition of a PMP is slightly different but trivially equivalent.  It is:
 \be
@@ -185,10 +184,10 @@ The \texttt{Mathematica} definition of a PMP is slightly different but trivially
 \ee
 where $W_j^n(x)$ are matrix polynomials.  The normalization condition $n\.z=1$ can be used to solve for one of the components of $z$ in terms of the others.  Calling the remaining components $y\in \R^N$, we arrive at (\ref{eq:PMPconstraint}), where $M_j^n(x)$ are linear combinations of $W^n_j(x)$ and $b_0,b_n$ are linear combinations of the $a_n$.  This difference in convention is for convenient use in the conformal bootstrap.
 
-\texttt{Examples.m} defines a function \texttt{WriteBootstrapSDP[file, sdp]}, where \texttt{file} is the XML file to be written to, and \texttt{sdp} has the following form, where the polynomials $Q^n_{j,rs}(x)$ are the elements of $W_j^n(x)$.
+\texttt{SDPB.m} defines a function \texttt{WriteBootstrapSDP[file, sdp]}, where \texttt{file} is the XML file to be written to, and \texttt{sdp} has the following form, where the polynomials $Q^n_{j,rs}(x)$ are the elements of $W_j^n(x)$.
 
 \begin{lstlisting}[
-  caption={Input for \texttt{WriteBootstrapSDP} in \texttt{Examples.m}},
+  caption={Input for \texttt{WriteBootstrapSDP} in \texttt{SDPB.m}},
   mathescape,
   columns=fullflexible,
   frame=single,
@@ -229,11 +228,11 @@ where $W_j^n(x)$ are matrix polynomials.  The normalization condition $n\.z=1$ c
 \end{lstlisting}
 
 The prefactor in \texttt{PositiveMatrixWithPrefactor} is used for constructing bilinear bases and sample scalings.  Specifically, if the prefactor is $\chi(x)$, the bilinear basis is a set of orthogonal polynomials with respect to measure $\chi(x)dx$ on the positive real line, and sample scalings are $\chi(x_k)$, where the $x_k$ are sample points.
- The notebook \texttt{Examples.m} only deals with damped-rational prefactors because these are relevant to the conformal bootstrap.  These stand for
+ The notebook \texttt{SDPB.m} only deals with damped-rational prefactors because these are relevant to the conformal bootstrap.  These stand for
 \be
 \texttt{DampedRational[$c$, \{$p_1,\dots,p_k$\}, $b$, $x$]} &\to& c\frac{b^x}{\prod_{i=1}^k (x-p_i)}.
 \ee
-We do not use a \texttt{Mathematica} function directly because \texttt{DampedRational} makes it easier to extract information needed to construct a bilinear basis.  The notebook \texttt{Examples.m} makes a choice of sample points that are reasonable for conformal bootstrap applications.
+We do not use a \texttt{Mathematica} function directly because \texttt{DampedRational} makes it easier to extract information needed to construct a bilinear basis.  The notebook \texttt{SDPB.m} makes a choice of sample points that are reasonable for conformal bootstrap applications.
 
 \subsection{An Example}
 \label{sec:example}
