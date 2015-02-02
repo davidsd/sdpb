@@ -6,9 +6,9 @@ program solver, designed for the conformal bootstrap.
 It solves the following type of optimization problem
 
 ```
-maximize:  b_0+b.y over y \in \R^N,
+maximize:  b_0 + \sum_{n=1}^N b_n y_n  over (y_1,...,y_N),
 
-such that: M^0_j(x)+\sum_{n=1}^{N} y_n M^n_j(x) is positive semidefinite
+such that: M^0_j(x) + \sum_{n=1}^N y_n M^n_j(x)  is positive semidefinite
            for all x >= 0 and 1 <= j <= J,
 
 where each M^n_j(x) is a polynomial matrix in x.
