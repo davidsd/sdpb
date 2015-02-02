@@ -1,20 +1,20 @@
 # SDPB
 
-SDPB is a semidefinite programming solver designed specifically for
-application to the conformal bootstrap and featuring arbitrary precision arithmetic.
+SDPB is an open-source, arbitrary-precision, parallelized semidefinite
+program solver, designed for the conformal bootstrap.
 
-It solves the following optimization problem
+It solves the following type of optimization problem
 
 ```
-minimize \sum_n b_n z_n over vectors z=(z_1,...,z_N) such that
+maximize:  b_0+b.y over y \in \R^N,
 
-\sum_n z_n M_{k,n}(x)
+such that: M^0_j(x)+\sum_{n=1}^{N} y_n M^n_j(x) is positive semidefinite
+           for all x >= 0 and 1 <= j <= J,
 
-is a positive semidefinite matrix for all k=1,...,K and all x >= 0.
-
-Here, for each k and n, M_{k,n}(x) is a matrix polynomial in x.  The matrix dimension
-of M_{k,n}(x) can depend on k but not n.
+where each M^n_j(x) is a polynomial matrix in x.
 ```
+
+For more information, see the manual in the `docs` folder.
 
 ## Installation and Requirements
 
@@ -24,19 +24,17 @@ SDPB requires
 
 - [The GNU Multiprecision Library](https://gmplib.org/).
 
-To install, you must first edit the `Makefile` to replace `/home/dsd/lib`, `/home/dsd/include` and `/home/dsd/include/boost` with paths pointing to the appropriate places.  Then type `make` to build the `sdpb` executable.
+To install, you must first edit the `Makefile` to define the variables
+`GMPINCLUDEDIR`, `BOOSTINCLUDEDIR`, and `LIBDIR.` Then type `make` to
+build the `sdpb` executable.
 
 ## Usage
 
 Type `sdpb --help` for the syntax and a list of options.
 
-The input format for SDPB is XML-based and described in the manual.  The Mathematica file `Examples.m` includes code to export semidefinite programs in this format, along with some examples.
-
-## Algorithm
-
-SDPB uses a primal-dual interior point method based on...
-
-## The Conformal Bootstrap
+The input format for SDPB is XML-based and described in the manual.
+The Mathematica file `SDPB.m` includes code to export semidefinite
+programs in this format, along with some examples.
 
 ## Author
 
@@ -46,7 +44,7 @@ SDPB uses a primal-dual interior point method based on...
 
 If you use SDPB in work that results in publication, please cite
 
-- D. Simmons-Duffin, "SDPB: A Semidefinite Program Solver for the
+- D. Simmons-Duffin, "A Semidefinite Program Solver for the
   Conformal Bootstrap", arXiv:xxxx.xxxx \[hep-th\].
 
 Depending on how SDPB is used, please also consider the following sources:
@@ -76,8 +74,6 @@ systems of correlation functions:
 
 - The design of SDPB was partially based on the solver [SDPA](http://sdpa.sourceforge.net/), without which this software would never have been written.
 
-- Thanks to Filip Kos, David Poland, and Alessandro Vichi for collaboration in developing semidefinite programming methods for the conformal bootstrap.
+- Thanks to Filip Kos, David Poland, and Alessandro Vichi for collaboration in developing semidefinite programming methods for the conformal bootstrap and assistance testing SDPB.
 
 - Thanks to Amir Ali Ahmadi, Hande Benson, Pablo Parrilo, and Robert Vanderbei for advice and discussions about semidefinite programming.
-
-- Thanks to Luca Iliesiu, Filip Kos, Daliang Li, David Poland, Silviu Pufu, Alessandro Vichi, and Ran Yacoby for assistance testing SDPB.
