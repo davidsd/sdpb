@@ -456,7 +456,7 @@ void constraintMatrixWeightedSum(const SDP &sdp,
   }
 }
 
-// Compute the vectors r and s on the right-hand side of the Schur
+// Compute the vectors r_x and r_y on the right-hand side of the Schur
 // complement equation:
 //
 // {{S, -B}, {B^T, 0}} . {dx, dy} = {r_x, r_y}
@@ -475,7 +475,7 @@ void constraintMatrixWeightedSum(const SDP &sdp,
 // - x, a vector of length P
 // Outputs:
 // - r_x, a Vector of length P
-// - sy, a Vector of length N
+// - r_y, a Vector of length N
 //
 void computeSchurRHS(const SDP &sdp,
                      const Vector &dualResidues,
