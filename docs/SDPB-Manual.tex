@@ -368,12 +368,12 @@ d &\equiv& c - \Tr(A_* Y) - B y,
 \ee
 measure the failure of $x,X,y,Y$ to satisfy their constraints.  We say a point $q=(x,X,y,Y)$ is ``primal feasible" or ``dual feasible" if the residues are sufficiently small, 
 \be
-\begin{array}{rrcl}
-\textrm{primal feasible:} & \max_{i,j}\{|p_i|, |P_{ij}|\} &<& \texttt{primalFeasibleThreshold};\\
-\textrm{dual feasible:} & \max_i\{|d_i|\} &<& \texttt{dualFeasibleThreshold},
+\begin{array}{rrcccl}
+\textrm{primal feasible:} & \texttt{primalError} &\equiv& \max_{i,j}\{|p_i|, |P_{ij}|\} &<& \texttt{primalErrorThreshold};\\
+\textrm{dual feasible:} & \texttt{dualError} &\equiv&\max_i\{|d_i|\} &<& \texttt{dualErrorThreshold},\nn\\
 \end{array}
 \ee
-where $\texttt{primalFeasibleThreshold}\ll 1$ and $\texttt{dualFeasibleThreshold} \ll 1$ are parameters chosen by the user.
+where $\texttt{primalErrorThreshold}\ll 1$ and $\texttt{dualErrorThreshold} \ll 1$ are parameters chosen by the user.
 
 An optimal point should be both primal and dual feasible, and have (nearly) equal primal and dual objective values.  Specifically, let us define $\texttt{dualityGap}$ as the normalized difference between the primal and dual objective functions
 \be
@@ -555,8 +555,8 @@ systems of correlation functions \cite{Kos:2014bka}.
 
 \section{Acknowledgements}
 
-\SDPB\ Makes extensive use of \texttt{MPACK} \cite{MPACK}, the multiple precision linear algebra library written by Nakata Maho.  Several source files from \texttt{MPACK} are included in the \SDPB\ source tree (see the license at the top of those files). \SDPB\ uses Lee Thomason's \texttt{tinyxml2} library \cite{TINYXML2} for parsing.
-The design of \SDPB\ was partially based on the solvers \texttt{SDPA} and \texttt{SDPA-GMP} \cite{SDPA,SDPA2,SDPAGMP}, without which this software would never have been written.
+\SDPB\ Makes extensive use of \texttt{MPACK} \cite{MPACK}, the multiple precision linear algebra library written by Nakata Maho.  Several source files from \texttt{MPACK} are included in the \SDPB\ source tree (see the license at the top of those files). \SDPB\ uses the Boost C++ libraries \cite{BoostSite} and Lee Thomason's \texttt{tinyxml2} library \cite{TINYXML2} for parsing.
+\SDPB\ was partially based on the solvers \texttt{SDPA} and \texttt{SDPA-GMP} \cite{SDPA,SDPA2,SDPAGMP}, which were essential sources of inspiration and examples.
 
 Thanks to Filip Kos, David Poland, and Alessandro Vichi for collaboration in developing semidefinite programming methods for the conformal bootstrap and assistance testing \SDPB.  Thanks to Amir Ali Ahmadi, Hande Benson, Pablo Parrilo, and Robert Vanderbei for advice and discussions about semidefinite programming.
 
@@ -614,6 +614,11 @@ Thanks to Filip Kos, David Poland, and Alessandro Vichi for collaboration in dev
   ``The MPACK (MBLAS/MLAPACK); a multiple precision arithmetic version of BLAS and LAPACK,''
   2010
   \href{http://mplapack.sourceforge.net/}{http://mplapack.sourceforge.net/}.
+
+\bibitem{BoostSite}
+  C++ Standards Committee Library Working Group and other contributors,
+  ``BOOST C++ Libraries,''
+  \href{http://www.boost.org}{http://www.boost.org}.
 
 \bibitem{TINYXML2}
   L. Thomason,
