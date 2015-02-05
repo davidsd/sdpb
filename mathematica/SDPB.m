@@ -25,20 +25,42 @@ DampedRational[const_, poles_, base_, a_ /; FreeQ[a, x]] :=
 DampedRational/:x DampedRational[const_, poles_ /; MemberQ[poles, 0], base_, x] :=
     DampedRational[const, DeleteCases[poles, 0], base, x];
 
+DampedRational/:DampedRational[c1_,p1_,b1_,x] DampedRational[c2_,p2_,b2_,x] :=
+    DampedRational[c1 c2, Join[p1, p2], b1 b2, x];
 
 (* bilinearForm[f, m] = Integral[x^m f[x], {x, 0, Infinity}] *)
 (* The special case when f[x] has no poles *)
 bilinearForm[DampedRational[const_, {}, base_, x], m_] :=
     const Gamma[1+m] (-Log[base])^(-1-m);
 
-memoizeGamma[a_,b_]:=memoizeGamma[a,b]=Gamma[a,b];
+(*memoizeGamma[a_,b_]:=memoizeGamma[a,b]=Gamma[a,b];*)
 
-(* The general DampedRational case *)
-bilinearForm[DampedRational[const_, poles_, base_, x], m_] := 
+(* The case where f[x] has only single poles *)
+(*bilinearForm[DampedRational[const_, poles_, base_, x], m_] := 
     const Sum[
         ((-poles[[i]])^m) ( base^poles[[i]]) Gamma[1 + m] memoizeGamma[-m, poles[[i]] Log[base]]/
         Product[poles[[i]] - p, {p, Delete[poles, i]}],
-        {i, Length[poles]}];
+        {i, Length[poles]}];*)
+
+(* The case where f[x] can have single or double poles *)
+bilinearForm[DampedRational[c_, poles_, b_, x_], m_] := Module[
+    {
+        gatheredPoles = Gather[poles],
+        quotientCoeffs = CoefficientList[PolynomialQuotient[x^m, Product[x-p, {p, poles}], x], x],
+        integral, p, rest
+    },
+    integral[a_,1] := b^a Gamma[0, a Log[b]];
+    integral[a_,2] := -1/a + b^a Gamma[0, a Log[b]] Log[b];
+    c (Sum[
+        p = gatheredPoles[[n,1]];
+        rest = x^m / Product[x-q, {q, Join@@Delete[gatheredPoles, n]}];
+        Switch[Length[gatheredPoles[[n]]],
+               1, integral[p,1] rest /. x->p,
+               2, integral[p,2] rest + integral[p,1] D[rest, x] /. x->p],
+        {n, Length[gatheredPoles]}] + 
+       Sum[
+           quotientCoeffs[[n+1]] Gamma[1+n] (-Log[b])^(-1-n),
+           {n, 0, Length[quotientCoeffs]-1}])];
 
 (* orthogonalPolynomials[f, n] is a set of polynomials with degree 0
 through n which are orthogonal with respect to the measure f[x] dx *)
@@ -55,10 +77,10 @@ orthogonalPolynomials[DampedRational[const_, poles_, base_, x], degree_] :=
                       {m, 0, 2 degree}]]]];
 
 (* Preparing SDP for Export *)
-rho = SetPrecision[3-2 Sqrt[2], prec];
+rhoCrossing = SetPrecision[3-2 Sqrt[2], prec];
 
 rescaledLaguerreSamplePoints[n_] := Table[
-    SetPrecision[\[Pi]^2 (-1+4k)^2/(-64n Log[rho]), prec],
+    SetPrecision[\[Pi]^2 (-1+4k)^2/(-64n Log[rhoCrossing]), prec],
     {k,0,n-1}];
 
 maxIndexBy[l_,f_] := SortBy[
@@ -106,7 +128,6 @@ WriteBootstrapSDP[file_, SDP[objective_, normalization_, positiveMatricesWithPre
         samplePoints   = rescaledLaguerreSamplePoints[degree + 1];
         sampleScalings = Table[prefactor /. x -> a, {a, samplePoints}];
         bilinearBasis  = orthogonalPolynomials[prefactor, Floor[degree/2]];
-
         node["rows", int[Length[m]]];
         node["cols", int[Length[First[m]]]];
         node["elements", Function[
