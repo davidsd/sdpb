@@ -101,7 +101,7 @@ The notation $M\succeq 0$ means ``$M$ is positive semidefinite."
 \end{itemize}
 \item an objective function $b_0\in \R$ and $b\in \R^N$.
 \end{itemize}
-A bilinear basis is a collection of polynomials $q_m^{(j)}(x)$ such that $\deg q_m^{(j)} = m$, for example monomials $q_m^{(j)}(x)=x^m$.  (A better choice for numerical stability are usually orthogonal polynomials on the positive real line.)  The sample points and sample scalings determine how the PMP is represented internally as an SDP.  In principle, they don't affect the solution of the PMP, but in practice they can affect numerical stability.  The constant $b_0$ is completely irrelevant to the solution algorithm, but is included for convenience.  See \cite{DSD} for details.
+A bilinear basis is a collection of polynomials $q_m^{(j)}(x)$ such that $\deg q_m^{(j)} = m$, for example monomials $q_m^{(j)}(x)=x^m$.  (A better choice for numerical stability is usually orthogonal polynomials on the positive real line.)  The sample points and sample scalings determine how the PMP is represented internally as an SDP.  In principle, they do not affect the solution of the PMP, but in practice they can affect numerical stability.  The constant $b_0$ is completely irrelevant to the solution algorithm, but is included for convenience.  See \cite{DSD} for details.
 
 \subsection{Input Format}
 
@@ -232,7 +232,7 @@ where $W_j^n(x)$ are matrix polynomials.  The normalization condition $n\.z=1$ c
       },
       ...
       {
-        {$Q^0_{j,m_j1}(x)$, ..., $Q^N_{j,m_j1}(x)$},  ..., {$Q^0_{j,m_jm_j}(x)$, ..., $Q^N_{j,m_jm_j}(x)$}
+        {$Q^0_{j,1m_j}(x)$, ..., $Q^N_{j,1m_j}(x)$},  ..., {$Q^0_{j,m_jm_j}(x)$, ..., $Q^N_{j,m_jm_j}(x)$}
       },
     }
   ]
@@ -250,6 +250,8 @@ The prefactor in \texttt{PositiveMatrixWithPrefactor} is used for constructing b
 \ee
 We do not use an exponential-times-rational \texttt{Mathematica} function directly because the  \texttt{DampedRational} data structure makes it easier to extract information needed to construct a bilinear basis.  The notebook \texttt{SDPB.m} makes a choice of sample points that are reasonable for conformal bootstrap applications.
 
+As an example bootstrap application, the included notebook \texttt{Bootstrap2dExample.m} computes a single-correlator dimension bound for 2d CFTs with a $\Z_2$ symmetry, as in \cite{Rychkov:2009ij}.
+
 \subsection{An Example}
 \label{sec:example}
 
@@ -261,7 +263,7 @@ Let's look at an example.  Consider the following problem: maximize $-y$ such th
 This is an PMP with $1\x1$ positive-semidefiniteness constraints.  We will arbitrarily choose a prefactor of $e^{-x}=\texttt{DampedRational[1,\{\}, 1/E,x]}$, so that the bilinear basis consists of Laguerre polynomials.  The \texttt{Mathematica} code for this example is
 
 \begin{lstlisting}[
-  caption={Mathematica input for the example~\ref{eq:exampleproblem}},
+  caption={Mathematica input for the example~(\ref{eq:exampleproblem})},
   label=mathematicaexample,
   mathescape,
   columns=fullflexible,
@@ -337,7 +339,7 @@ The PMP (\ref{eq:PMPconstraint}) is translated into a dual pair of SDPs of the f
 \be
 \label{eq:traditionalSDP}
 \begin{array}{rll}
-\cD & \textrm{maximize} & \Tr(CY) + b_0 + b \. y \quad \textrm{over} \quad y\in \R^N,\ Y\in \cS^K, \\
+\cD: & \textrm{maximize} & \Tr(CY) + b_0 + b \. y \quad \textrm{over} \quad y\in \R^N,\ Y\in \cS^K, \\
 & \textrm{such that} & \Tr(A_* Y)+By = c,\ \textrm{and}\\
 & Y \succeq 0.
 \end{array}
@@ -357,7 +359,7 @@ c &\in& \R^P, \nn\\
 B &\in& \R^{P\x N}, \nn\\
 A_1,\dots,A_P,C &\in& \cS^K.
 \ee
-Here, $\cS^K$ is the space of $K\x K$ symmetric real matrices, and $\Tr(A_* Y)$ denotes the vector $(\Tr(A_1 Y),\dots,\Tr(A_P Y))\in\R^P$.  An optimal solution to \ref{eq:traditionalSDP} and \ref{eq:primaldualproblems} is characterized by $XY=0$ and also equality of the primal and dual objective functions $\Tr(CY)+b_0+b\.y=b_0+c\.x$.
+Here, $\cS^K$ is the space of $K\x K$ symmetric real matrices, and $\Tr(A_* Y)$ denotes the vector $(\Tr(A_1 Y),\dots,\Tr(A_P Y))\in\R^P$.  An optimal solution to (\ref{eq:traditionalSDP}) and (\ref{eq:primaldualproblems}) is characterized by $XY=0$ and also equality of the primal and dual objective functions $\Tr(CY)+b_0+b\.y=b_0+c\.x$.
 
 The residues
 \be
@@ -377,9 +379,9 @@ where $\texttt{primalErrorThreshold}\ll 1$ and $\texttt{dualErrorThreshold} \ll 
 
 An optimal point should be both primal and dual feasible, and have (nearly) equal primal and dual objective values.  Specifically, let us define $\texttt{dualityGap}$ as the normalized difference between the primal and dual objective functions
 \be
-\texttt{dualityGap} &\equiv& \frac{|\texttt{primalObjective} - \texttt{dualObjective}|}{\max\{1, |\texttt{primalObjective} + \texttt{dualObjective}|\}} \nn\\
-\texttt{primalObjective} &\equiv& b_0+c\. x \nn\\
-\texttt{dualObjective} &\equiv& \Tr(CY)+b_0+b\.y
+\texttt{dualityGap} &\equiv& \frac{|\texttt{primalObjective} - \texttt{dualObjective}|}{\max\{1, |\texttt{primalObjective} + \texttt{dualObjective}|\}}, \nn\\
+\texttt{primalObjective} &\equiv& b_0+c\. x, \nn\\
+\texttt{dualObjective} &\equiv& \Tr(CY)+b_0+b\.y.
 \ee
 A point is considered ``optimal" if
 \be
@@ -467,7 +469,7 @@ The output from running \SDPB\ on the example problem in section~\ref{sec:exampl
 \item[\texttt{dim/stabilized}:] $N$\texttt{/}$N'$, where $N$ is the dimension of the vector $y$, and $N'$ is the dimension of the matrix $Q'$ obtained after stabilizing the Schur complement matrix, described in \cite{DSD}.  A large $N'$ will generally cause a big slowdown, so it is best avoided.  $N'$ can be reduced by decreasing \texttt{choleskyStabilizeThreshold}, though this sometimes requires increasing \texttt{precision} to avoid numerical instabilities.
 \end{description}
 
-If an optimal solution exists, firstly the primal and dual error decrease until the problem becomes primal and dual feasible.  Then the primal and dual objective functions start to converge, and the complementarity $\mu$ decreases until the duality gap becomes smaller than \texttt{dualityGapThreshold}.
+If an optimal solution exists, the primal and dual error will decrease until the problem becomes primal and dual feasible.  Then the primal and dual objective functions start to converge, and the complementarity $\mu$ decreases until the duality gap becomes smaller than \texttt{dualityGapThreshold}.
 
 The terminal output ends with the final values of the primal/dual objectives, primal/dual errors and duality gap, together with the time since the last saved checkpoint and the total solver runtime.
 
@@ -555,7 +557,7 @@ systems of correlation functions \cite{Kos:2014bka}.
 
 \section{Acknowledgements}
 
-\SDPB\ Makes extensive use of \texttt{MPACK} \cite{MPACK}, the multiple precision linear algebra library written by Nakata Maho.  Several source files from \texttt{MPACK} are included in the \SDPB\ source tree (see the license at the top of those files). \SDPB\ uses the Boost C++ libraries \cite{BoostSite} and Lee Thomason's \texttt{tinyxml2} library \cite{TINYXML2} for parsing.
+\SDPB\ Makes extensive use of \texttt{MPACK} \cite{MPACK}, the multiple precision linear algebra library written by Maho Nakata.  Several source files from \texttt{MPACK} are included in the \SDPB\ source tree (see the license at the top of those files). \SDPB\ uses the Boost C++ libraries \cite{BoostSite} and Lee Thomason's \texttt{tinyxml2} library \cite{TINYXML2} for parsing.
 \SDPB\ was partially based on the solvers \texttt{SDPA} and \texttt{SDPA-GMP} \cite{SDPA,SDPA2,SDPAGMP}, which were essential sources of inspiration and examples.
 
 Thanks to Filip Kos, David Poland, and Alessandro Vichi for collaboration in developing semidefinite programming methods for the conformal bootstrap and assistance testing \SDPB.  Thanks to Amir Ali Ahmadi, Hande Benson, Pablo Parrilo, and Robert Vanderbei for advice and discussions about semidefinite programming.
@@ -566,6 +568,15 @@ Thanks to Filip Kos, David Poland, and Alessandro Vichi for collaboration in dev
   David Simmons-Duffin,
   ``A Semidefinite Program Solver for the Conformal Bootstrap,"
   \href{http://arXiv.org}{arXiv:1502.xxxxx [hep-th]}.
+
+%\cite{Rychkov:2009ij}
+\bibitem{Rychkov:2009ij} 
+  V.~S.~Rychkov and A.~Vichi,
+  ``Universal Constraints on Conformal Operator Dimensions,''
+  Phys.\ Rev.\ D {\bf 80}, 045006 (2009)
+  [arXiv:0905.2211 [hep-th]].
+  %%CITATION = ARXIV:0905.2211;%%
+  %82 citations counted in INSPIRE as of 05 Feb 2015
 
 %\cite{Poland:2011ey}
 \bibitem{Poland:2011ey} 
