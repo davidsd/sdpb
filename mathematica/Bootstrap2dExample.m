@@ -2,7 +2,7 @@
 
 <<"SDPB.m";
 
-half = SetPrecision[1/2,prec];
+half = SetPrecision[1/2, prec];
 
 rho[z_] := z/(1+Sqrt[1-z])^2;
 
@@ -56,24 +56,23 @@ withDeltaPhiDerivTable[deltaPhi_,order_] :=
             Derivative[j_][f][_] :> zDeriv[j],
             f[_] :> zDeriv[0]}];
 
-(* A list of derivative such that m >= n, m+n <= derivativeOrder, and
-m+n is odd *)
+(* Derivatives such that m >= n, m+n <= derivativeOrder, and m+n is odd *)
 oddDerivs[derivativeOrder_] :=
-    Flatten[Table[zzbDeriv[m,n], 
+    Flatten[Table[zzbDeriv[m,n]/(m! n!), 
                   {m,0,derivativeOrder},
                   {n, 1 - Mod[m,2], Min[m, derivativeOrder-m], 2}]
             ,1];
 
-(* Test whether the point (deltaPhiLowPrecision,
-deltaPhi2LowPrecision) is allowed in a Z_2-symmetric CFT.
-derivativeOrder gives the number of derivatives to use, keptPoleOrder
-controls the accuracy of the conformal block approximation, and Lmax
-sets the number of included spins *)
-singletAllowed2d[deltaPhiLowPrecision_, deltaPhi2LowPrecision_, derivativeOrder_, keptPoleOrder_, Lmax_] :=
+(* Test whether the point (deltaPhi, deltaPhiSqLowPrecision) is
+allowed in a Z_2-symmetric CFT.  derivativeOrder gives the number of
+derivatives to use, keptPoleOrder controls the accuracy of the
+conformal block approximation, and Lmax sets the number of included
+spins *)
+singletAllowed2d[deltaPhiLowPrecision_, deltaPhiSqLowPrecision_, derivativeOrder_, keptPoleOrder_, Lmax_] :=
     Module[
         {
             deltaPhi  = SetPrecision[deltaPhiLowPrecision,prec],
-            deltaPhi2 = SetPrecision[deltaPhi2LowPrecision,prec],
+            deltaPhiSq = SetPrecision[deltaPhiSqLowPrecision,prec],
             chiralBlocksPrefactor,
             chiralBlockPols,
             chiralBlocksWithDeltaPhi,
@@ -96,8 +95,8 @@ singletAllowed2d[deltaPhiLowPrecision_, deltaPhi2LowPrecision_, derivativeOrder_
                         (withDeltaPhiDeriv[m]/.chiralBlocksWithDeltaPhi))
                                               }//Expand}}],
             {L, 0, Lmax, 2}];
-        (* Replace x -> x + deltaPhi2 for scalar operators *)
-        pols = MapAt[# /. x -> x + deltaPhi2 &, pols, 1];
+        (* Replace x -> x + deltaPhiSq for scalar operators *)
+        pols = MapAt[# /. x -> x + deltaPhiSq &, pols, 1];
         unitOp = oddDerivs[derivativeOrder] /. {
             zzbDeriv[m_,n_] :> 2 withDeltaPhiDeriv[m] withDeltaPhiDeriv[n]
                                                } /. withDeltaPhiDerivTable[deltaPhi, derivativeOrder] /. {
@@ -109,7 +108,7 @@ singletAllowed2d[deltaPhiLowPrecision_, deltaPhi2LowPrecision_, derivativeOrder_
 (* This is not a recommended long-term solution for evaluating SDPs
 for the following reasons: 1) different sdpFiles should have unique
 names so that they can be sovled in parallel and so that their
-checkpoints and output files don't overwrite each other 2) The
+checkpoints and output files don't overwrite each other; 2) The
 Run[...] command forces Mathematica to be running until sdpb
 finishes. It is better to use WriteBootstrapSDP instead of
 SolveBootstrapSDP and run sdpb by hand or with an external script. *)
@@ -139,25 +138,37 @@ SolveBootstrapSDP[sdp_] := Module[
 
 (* For a binary-valued function f, find the value of x in the interval
 (true, false) where f changes from True to False, to within an error
-of thresh. *)
+of thresh. Returns the closest false value. *)
 binarySearch[f_, true_, false_, thresh_] := Module[
     {test = (true + false)/2},
     If[Abs[true - false] < thresh,
-       test,
+       false,
        WriteString["stdout", "> trying: ", test, "\n"];
        If[f[test],
           binarySearch[f, test, false, thresh],
           binarySearch[f, true, test,  thresh]]]];
 
-(* Compute an approximate upper bound on deltaPhi^2, as a function of
-deltaPhi.  This function takes a few minutes to run *)
-bootstrapBound2d[] = Table[
-    WriteString["stdout", "> deltaPhi = ", deltaPhi, "\n"];
-    {deltaPhi,
-     binarySearch[
-         singletAllowed2d[deltaPhi, #, 7, 10, 15] &, 
-         0.1,
-         2,
-         0.02]},
-    {deltaPhi, 0.01,0.25,0.01}];
+(* Compute an approximate upper bound on deltaPhi^2, as a function of deltaPhi. *)
+bootstrapBound2d[derivativeOrder_, keptPoleOrder_, Lmax_] :=
+    Table[
+        WriteString["stdout", "> deltaPhi = ", deltaPhi, "\n"];
+        {deltaPhi,
+         binarySearch[
+             singletAllowed2d[deltaPhi, #, derivativeOrder, keptPoleOrder, Lmax] &, 
+             0.1,
+             2,
+             0.01]},
+        {deltaPhi, 0.005,0.255,0.01}];
 
+(* Uncomment this line to run the above computation (~8
+minutes). Increase derivativeOrder to make a stronger bound, and be
+sure to increase keptPoleOrder and Lmax until the results
+stabilize. *)
+
+(*Print[myBootstrapBound = bootstrapBound2d[7, 10, 15]];*)
+
+(* Uncomment this line to plot the result.  It should display a kink
+that moves closer to the 2d Ising point as derivativeOrder is
+increased. *)
+
+(* ListPlot[myBootstrapBound, GridLines -> {{1/8}, {1}}] *)
