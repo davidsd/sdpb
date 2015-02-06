@@ -40,6 +40,10 @@ programs in this format, along with some examples.
 
 - David Simmons-Duffin (davidsd@gmail.com)
 
+As of February 2015, I am supported by DOE grant number DE-SC0009988
+and a William D. Loughlin Membership at the Institute for Advanced
+Study.
+
 ## Attribution
 
 If you use SDPB in work that results in publication, please cite
