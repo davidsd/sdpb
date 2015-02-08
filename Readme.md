@@ -28,6 +28,12 @@ To install, you must first edit the `Makefile` to define the variables
 `GMPINCLUDEDIR`, `BOOSTINCLUDEDIR`, and `LIBDIR.` Then type `make` to
 build the `sdpb` executable.
 
+SDPB has only been tested on Linux (and only on a small number of
+distrubtions). If you want to install SDPB on Mac OS X, be prepared
+for adventure. Please use the issue tracker if you encounter
+installation problems. For those with experience packaging software,
+I'd appreciate help making SDPB easier to install.
+
 ## Usage
 
 Type `sdpb --help` for the syntax and a list of options.
