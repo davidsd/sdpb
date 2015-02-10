@@ -14,7 +14,8 @@ such that: M_{0j}(x) + \sum_n y_n M_{nj}(x) is positive semidefinite
 where each M_{nj}(x) is a polynomial matrix in x.
 ```
 
-For more information, see the manual in the `docs` folder.
+For more information, see [A Semidefinite Program Solver for the Conformal Bootstrap](http://arxiv.org/abs/1502.02033)
+and the manual in the `docs` folder.
 
 ## Installation and Requirements
 
@@ -55,26 +56,26 @@ Study.
 If you use SDPB in work that results in publication, please cite
 
 - D. Simmons-Duffin, "A Semidefinite Program Solver for the
-  Conformal Bootstrap", arXiv:xxxx.xxxx \[hep-th\].
+  Conformal Bootstrap", [arXiv:1502.02033 \[hep-th\]](http://arxiv.org/abs/1502.02033).
 
 Depending on how SDPB is used, please also consider the following sources:
 
 The first use of semidefinite programming in the bootstrap:
 
 - D. Poland, D. Simmons-Duffin and A. Vichi, "Carving Out the Space of
-  4D CFTs," JHEP 1205, 110 (2012) [arXiv:1109.5176 \[hep-th\]](http://arxiv.org/abs/arXiv%3A1109.5176).
+  4D CFTs," JHEP 1205, 110 (2012) [arXiv:1109.5176 \[hep-th\]](http://arxiv.org/abs/1109.5176).
 
 The generalization of semidefinite programming methods to arbitrary
 spacetime dimension:
 
 - F. Kos, D. Poland and D. Simmons-Duffin, "Bootstrapping the O(N)
-  Vector Models," JHEP 1406, 091 (2014) [arXiv:1307.6856 \[hep-th\]](http://arxiv.org/abs/arXiv%3A1307.6856).
+  Vector Models," JHEP 1406, 091 (2014) [arXiv:1307.6856 \[hep-th\]](http://arxiv.org/abs/1307.6856).
 
 The generalization of semidefinite programming methods to arbitrary
 systems of correlation functions:
 
 - F. Kos, D. Poland and D. Simmons-Duffin, "Bootstrapping Mixed
-  Correlators in the 3D Ising Model," [arXiv:1406.4858 \[hep-th\]](http://arxiv.org/abs/arXiv%3A1406.4858).
+  Correlators in the 3D Ising Model," [arXiv:1406.4858 \[hep-th\]](http://arxiv.org/abs/1406.4858).
 
 ## Acknowledgements
 
