@@ -89,7 +89,6 @@ void SDPSolver::printIteration(int iteration,
                                Real primalStepLength,
                                Real dualStepLength,
                                Real betaCorrector) {
-  Real time = Real(timers["Solver runtime"].elapsed().wall)/1000000000;
   time_duration td(microseconds(timers["Solver runtime"].elapsed().wall)/1000);
   std::stringstream ss;
   ss << td;

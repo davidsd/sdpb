@@ -31,7 +31,6 @@ chiralBlockTable[derivativeOrder_, keptPoleOrder_] :=
     (chiralBlockTable[derivativeOrder, keptPoleOrder] =
      Module[
          {
-             approx,
              numerator,
              prefactor,
              poles,
