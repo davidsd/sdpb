@@ -30,7 +30,7 @@ RM = rm -f
 .SUFFIXES: .cpp .o
 
 $(RESULT): $(OBJECTS)
-	$(CC) $(CFLAGS) $(LIBS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
 
 obj/%.o: src/%.cpp
 	g++ $(CFLAGS) -c -o $@ $<
