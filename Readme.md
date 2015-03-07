@@ -35,6 +35,33 @@ for adventure. Please use the issue tracker if you encounter
 installation problems. For those with experience packaging software,
 I'd appreciate help making SDPB easier to install.
 
+### Mac OS X Installation
+
+The following instructions have been tested on Mac OS 10.10 Yosemite.  (Many thanks to Ying Lin.)
+
+1. Install Homebrew, for instance by running the following commands
+```
+# Install Homebrew
+ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)”
+
+# Update Ruby
+brew install ruby
+
+# Install the latest gcc as well as its dependencies
+brew install gcc
+```
+
+2. Install gcc-4.9.  Make sure SDPB will compile with g++-4.9, either
+by making it the default compiler or by modifying the SDPB Makefile so
+that `CC` points to `g++-4.9` in `/usr/local/bin`.
+
+3. Reinstall GMP by adding `--enable-cxx` to `configure`.
+
+4. Install the Boost libraries.
+
+5. Modify the SDPB Makefile by replacing all instances of `/home/dsd`
+with `/usr/local`.  SDPB should now compile successfully.
+
 ## Usage
 
 Type `sdpb --help` for the syntax and a list of options.
