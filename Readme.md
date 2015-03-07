@@ -21,7 +21,7 @@ and the manual in the `docs` folder.
 
 SDPB requires
 
-- [Boost C++ Libraries](http://www.boost.org/) (tested with Boost 1.54).
+- [Boost C++ Libraries](http://www.boost.org/) (version 1.54 or later).
 
 - [The GNU Multiprecision Library](https://gmplib.org/).
 
@@ -29,9 +29,8 @@ To install, you must first edit the `Makefile` to define the variables
 `GMPINCLUDEDIR`, `BOOSTINCLUDEDIR`, and `LIBDIR.` Then type `make` to
 build the `sdpb` executable.
 
-SDPB has only been tested on Linux (and only on a small number of
-distrubtions). If you want to install SDPB on Mac OS X, be prepared
-for adventure. Please use the issue tracker if you encounter
+SDPB has been tested on Red Hat Linux. Mac OS X installation instructions are below. Tips for Windows installation can be found [on the issue tracker](https://github.com/davidsd/sdpb/issues/1).
+Please use the issue tracker if you encounter
 installation problems. For those with experience packaging software,
 I'd appreciate help making SDPB easier to install.
 
@@ -39,21 +38,21 @@ I'd appreciate help making SDPB easier to install.
 
 The following instructions have been tested on Mac OS 10.10 Yosemite.  (Many thanks to Ying Lin.)
 
-1. Install Homebrew, for instance by running the following commands
-```
-# Install Homebrew
-ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)”
+1. Install Homebrew and `gcc-4.9` (or later), for instance by running the following commands
 
-# Update Ruby
-brew install ruby
+        # Install Homebrew
+        ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)”
 
-# Install the latest gcc as well as its dependencies
-brew install gcc
-```
+        # Update Ruby
+        brew install ruby
 
-2. Install gcc-4.9.  Make sure SDPB will compile with g++-4.9, either
-by making it the default compiler or by modifying the SDPB Makefile so
-that `CC` points to `g++-4.9` in `/usr/local/bin`.
+        # Install the latest gcc as well as its dependencies
+        brew install gcc
+
+2. Make `/usr/local/bin/g++-4.9` (or whatever version you have) the default compiler by renaming `gcc` and `g++` in `/usr/bin` and creating symlinks
+
+        ln -s /usr/local/bin/g++-4.9 /usr/local/bin/g++
+        ln -s /usr/local/bin/gcc-4.9 /usr/local/bin/gcc
 
 3. Reinstall GMP by adding `--enable-cxx` to `configure`.
 
