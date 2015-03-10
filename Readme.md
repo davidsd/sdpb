@@ -47,6 +47,7 @@ The following instructions have been tested on Mac OS 10.10 Yosemite.  (Many tha
         brew install ruby
 
         # Install the latest gcc as well as its dependencies
+        # the option --without-multilib avoids a bug in OpenMP support
         brew install gcc --without-multilib
 
 2. Make `/usr/local/bin/g++-4.9` (or whatever version you have) the default compiler by renaming `gcc` and `g++` in `/usr/bin` and creating symlinks
