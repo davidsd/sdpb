@@ -38,8 +38,8 @@ OBJECTS := $(patsubst src/%.cpp,obj/%.o,$(SOURCES))
 RESULT  = sdpb
 
 CC = g++
-CFLAGS = -g -O2 -Wall -ansi -L${LIBDIR} -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
-LIBS = -lgomp -lgmp -lgmpxx -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options
+CFLAGS = -g -O2 -Wall -ansi -std=c++0x -L${LIBDIR} -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
+LIBS = -lgomp -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options
 RM = rm -f
 
 .SUFFIXES: .cpp .o
