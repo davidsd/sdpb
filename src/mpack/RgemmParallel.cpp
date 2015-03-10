@@ -85,17 +85,17 @@ an m by k matrix, op(B) a k by n matrix and C an m by n matrix.
 void RgemmParallel(const char *transa, const char *transb, INTEGER m, INTEGER n, INTEGER k, REAL alpha, REAL * A, INTEGER lda, REAL * B,
 	   INTEGER ldb, REAL beta, REAL * C, INTEGER ldc)
 {
-    INTEGER nota, notb, nrowa, ncola, nrowb, info;
+    INTEGER nota, notb, nrowa, nrowb, info;
     REAL Zero = 0.0, One = 1.0;
 
     nota = Mlsame(transa, "N");
     notb = Mlsame(transb, "N");
     if (nota) {
 	nrowa = m;
-	ncola = k;
+	// ncola = k;
     } else {
 	nrowa = k;
-	ncola = m;
+	// ncola = m;
     }
     if (notb) {
 	nrowb = k;

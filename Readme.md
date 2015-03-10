@@ -25,14 +25,20 @@ SDPB requires
 
 - [The GNU Multiprecision Library](https://gmplib.org/).
 
-To install, you must first edit the `Makefile` to define the variables
-`GMPINCLUDEDIR`, `BOOSTINCLUDEDIR`, and `LIBDIR.` Then type `make` to
-build the `sdpb` executable.
+System-specific installation instructions are below.  Please use the
+issue tracker if you encounter installation problems. For those with
+experience packaging software, I'd appreciate help making SDPB easier
+to install.
 
-SDPB has been tested on Red Hat Linux. Mac OS X installation instructions are below. Tips for Windows installation can be found [on the issue tracker](https://github.com/davidsd/sdpb/issues/1).
-Please use the issue tracker if you encounter
-installation problems. For those with experience packaging software,
-I'd appreciate help making SDPB easier to install.
+### Linux Installation
+
+SDPB has been tested on Red Hat Linux. To install,
+
+1. Download Boost and GMP from the links above and build/install them.
+
+2. Edit the `Makefile` to define the variables `GMPINCLUDEDIR`,
+`BOOSTINCLUDEDIR`, and `LIBDIR.` Then type `make` to build the `sdpb`
+executable.
 
 ### Mac OS X Installation
 
@@ -67,8 +73,15 @@ The following instructions have been tested on Mac OS 10.10 Yosemite.  (Many tha
         ./b2
         sudo ./b2 install
         
-5. Modify the SDPB Makefile by replacing all instances of `/home/dsd`
-with `/usr/local`.  SDPB should now compile successfully.
+5. SDPB should now compile successfully. If you installed any of the
+above software in custom locations, you must modify variables in the
+`Makefile` as described in the Linux instructions.
+
+### Windows Installation
+
+Tips for Windows installation can be
+found [on the issue tracker](https://github.com/davidsd/sdpb/issues/1).
+I would appreciate if someone could send step-by-step instructions.
 
 ## Usage
 
