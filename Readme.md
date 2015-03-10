@@ -47,17 +47,25 @@ The following instructions have been tested on Mac OS 10.10 Yosemite.  (Many tha
         brew install ruby
 
         # Install the latest gcc as well as its dependencies
-        brew install gcc
+        brew install gcc --without-multilib
 
 2. Make `/usr/local/bin/g++-4.9` (or whatever version you have) the default compiler by renaming `gcc` and `g++` in `/usr/bin` and creating symlinks
 
         ln -s /usr/local/bin/g++-4.9 /usr/local/bin/g++
         ln -s /usr/local/bin/gcc-4.9 /usr/local/bin/gcc
 
-3. Reinstall GMP by adding `--enable-cxx` to `configure`.
+3. Unfortunately, Homebrew's versions of GMP and Boost will not work -- they must be compiled from source. Download the latest GMP from [the GMP website](https://gmplib.org/). Upack the tarball (you may need `lzip` which you can install with `brew install lzip`) and `cd` to the `gmp` directory.  Run
 
-4. Install the Boost libraries.
+        ./configure --enable-cxx
+        make
+        make install
 
+4. Download Boost from [the Boost website](http://www.boost.org/).  Unpack the tarball and `cd` to the `boost` directory. Run
+
+        ./bootstrap.sh
+        ./b2
+        sudo ./b2 install
+        
 5. Modify the SDPB Makefile by replacing all instances of `/home/dsd`
 with `/usr/local`.  SDPB should now compile successfully.
 
