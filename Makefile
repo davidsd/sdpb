@@ -1,7 +1,20 @@
+UNAME := $(shell uname)
+
 ################ Modify these variables ################
 
+ifeq ($(UNAME), Darwin)
+# Mac OS X Defaults, assuming Readme instructions.
+
+GMPINCLUDEDIR   = /usr/local/include
+BOOSTINCLUDEDIR = /usr/local/include/boost
+LIBDIR          = /usr/local/lib
+
+else
+# If you're using Linux or Windows or a nonstandard OS X setup, modify
+# these variables to point to the appropriate places.
+
 # directory containing the header files 'gmp.h' and 'gmpxx.h'
-GMPINCLUDEDIR = /home/dsd/include
+GMPINCLUDEDIR   = /home/dsd/include
 
 # directory containing boost header files, e.g. 'bind.hpp', etc.
 BOOSTINCLUDEDIR = /home/dsd/include/boost
@@ -13,7 +26,9 @@ BOOSTINCLUDEDIR = /home/dsd/include/boost
 # as well as analogous files for 'boost_system',
 # 'boost_serialization', 'boost_timer', 'boost_program_options',
 # 'gmp', and 'gmpxx',
-LIBDIR = /home/dsd/lib
+LIBDIR          = /home/dsd/lib
+
+endif
 
 ################ End of modifications ################
 
