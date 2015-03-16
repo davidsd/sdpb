@@ -32,13 +32,14 @@ to install.
 
 ### Linux Installation
 
-SDPB has been tested on Red Hat Linux. To install,
+SDPB has been tested on Red Hat Linux. (Many thanks to Chris Beem for helping with installation instructions.) To install,
 
-1. Download Boost and GMP from the links above and build/install them.
+1. Download Boost and GMP from the links above. Install GMP with the option `--enable-cxx` added to `./configure`. Install Boost.
 
 2. Edit the `Makefile` to define the variables `GMPINCLUDEDIR`,
-`BOOSTINCLUDEDIR`, and `LIBDIR.` Then type `make` to build the `sdpb`
-executable.
+`BOOSTINCLUDEDIR`, and `LIBDIR.` Ensure `LIBDIR` is in your `LD_LIBRARY_PATH`. 
+
+3. Type `make` to build the `sdpb` executable.
 
 ### Mac OS X Installation
 
