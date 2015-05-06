@@ -138,4 +138,4 @@ systems of correlation functions:
 
 - Thanks to Amir Ali Ahmadi, Hande Benson, Pablo Parrilo, and Robert Vanderbei for advice and discussions about semidefinite programming.
 
-- Thanks also to Noah Stein, who first suggested the idea of semidefinite programming to me in [this Stack Overflow question](http://mathoverflow.net/questions/33242/continuous-linear-programming-estimating-a-solution).
+- Thanks also to Noah Stein, who first suggested the idea of semidefinite programming to me in [this Math Overflow question](http://mathoverflow.net/questions/33242/continuous-linear-programming-estimating-a-solution).
