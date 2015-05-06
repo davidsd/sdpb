@@ -15,7 +15,7 @@ where each M_{nj}(x) is a polynomial matrix in x.
 ```
 
 For more information, see [A Semidefinite Program Solver for the Conformal Bootstrap](http://arxiv.org/abs/1502.02033)
-and the manual in the `docs` folder.
+and [the manual](https://github.com/davidsd/sdpb/blob/master/docs/SDPB-Manual.pdf).
 
 ## Installation and Requirements
 
