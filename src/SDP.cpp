@@ -77,7 +77,7 @@ dualConstraintGroupFromPolVecMat(const PolynomialVectorMatrix &m) {
   // Populate B and c by sampling the polynomial matrix
   int p = 0;
   for (int c = 0; c < g.dim; c++) {
-    for (int r = c; r < g.dim; r++) {
+    for (int r = 0; r <= c; r++) {
       for (int k = 0; k < numSamples; k++) {
         Real x     = m.samplePoints[k];
         Real scale = m.sampleScalings[k];
