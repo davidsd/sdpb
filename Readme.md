@@ -15,7 +15,7 @@ where each M_{nj}(x) is a polynomial matrix in x.
 ```
 
 For more information, see [A Semidefinite Program Solver for the Conformal Bootstrap](http://arxiv.org/abs/1502.02033)
-and the manual in the `docs` folder.
+and [the manual](https://github.com/davidsd/sdpb/blob/master/docs/SDPB-Manual.pdf).
 
 ## Installation and Requirements
 
@@ -143,3 +143,5 @@ systems of correlation functions:
 - Thanks to Filip Kos, David Poland, and Alessandro Vichi for collaboration in developing semidefinite programming methods for the conformal bootstrap and assistance testing SDPB.
 
 - Thanks to Amir Ali Ahmadi, Hande Benson, Pablo Parrilo, and Robert Vanderbei for advice and discussions about semidefinite programming.
+
+- Thanks also to Noah Stein, who first suggested the idea of semidefinite programming to me in [this Math Overflow question](http://mathoverflow.net/questions/33242/continuous-linear-programming-estimating-a-solution).
