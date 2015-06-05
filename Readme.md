@@ -48,7 +48,7 @@ The following instructions have been tested on Mac OS 10.10 Yosemite.  (Many tha
 1. Install Homebrew and `gcc-4.9` (or later), for instance by running the following commands
 
         # Install Homebrew
-        ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)”
+        ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
         # Update Ruby
         brew install ruby
