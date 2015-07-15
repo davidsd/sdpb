@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
     ("precision",
      po::value<int>(&parameters.precision)->default_value(400),
      "Precision in binary digits.  GMP will round up to the nearest "
-     "multiple of 64.")
+     "multiple of 64 (or 32 on older systems).")
     ("maxThreads",
      po::value<int>(&parameters.maxThreads)->default_value(4),
      "Maximum number of threads to use for parallel calculation.")
