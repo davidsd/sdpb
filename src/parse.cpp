@@ -92,10 +92,12 @@ SDP parseBootstrapSDP(XMLElement *xml) {
 
 SDP readBootstrapSDP(const path sdpFile) {
   XMLDocument doc;
+  
 #ifndef BOOST_WINDOWS_API
   doc.LoadFile(sdpFile.c_str());
 #else
   doc.LoadFile(sdpFile.string().c_str());
 #endif  
-return parseBootstrapSDP(doc.FirstChildElement("sdp"));
+
+  return parseBootstrapSDP(doc.FirstChildElement("sdp"));
 }
