@@ -74,8 +74,11 @@ The following instructions have been tested on Mac OS 10.10 Yosemite.  (Many tha
         ./b2
         sudo ./b2 install
         
-5. SDPB should now compile successfully. If you installed any of the
-above software in custom locations, you must modify variables in the
+   (Note that `bootstrap.sh` above is just an installation script and has absolutely nothing
+   to do with the conformal bootstrap -- lots of people like the name "bootstrap"!)
+        
+5. Type `make` in the `sdpb` directory to compile the `sdpb` executable. If you installed any of the
+above software in custom locations, you'll have to modify variables in the
 `Makefile` as described in the Linux instructions.
 
 ### Windows Installation
