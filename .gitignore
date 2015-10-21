@@ -24,6 +24,7 @@ obj
 */examples
 sdpb
 tests
+test.out
 
 .DS_Store
 docs/*.aux

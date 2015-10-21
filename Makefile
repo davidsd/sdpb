@@ -14,10 +14,10 @@ else
 # these variables to point to the appropriate places.
 
 # directory containing the header files 'gmp.h' and 'gmpxx.h'
-GMPINCLUDEDIR   = /home/dsd/include
+GMPINCLUDEDIR   = $(HOME)/include
 
 # directory containing boost header files, e.g. 'bind.hpp', etc.
-BOOSTINCLUDEDIR = /home/dsd/include/boost
+BOOSTINCLUDEDIR = $(HOME)/include/boost
 
 # directory containing library files, e.g.
 #   libboost_filesystem.a,
@@ -26,7 +26,7 @@ BOOSTINCLUDEDIR = /home/dsd/include/boost
 # as well as analogous files for 'boost_system',
 # 'boost_serialization', 'boost_timer', 'boost_program_options',
 # 'gmp', and 'gmpxx',
-LIBDIR          = /home/dsd/lib
+LIBDIR          = $(HOME)/lib
 
 endif
 
@@ -58,8 +58,8 @@ obj:
 	@mkdir -p $@/mpack
 	@mkdir -p $@/tinyxml2
 
-foo:
-	echo $(OBJECTS)
+test:
+	./sdpb -s test.xml --noFinalCheckpoint
 
 $(OBJECTS): $(HEADERS) | obj
 
