@@ -1,3 +1,16 @@
+## Contents
+
+* [SDPB](#sdpb)
+* [Installation and Requirements](#installation-and-requirements)
+  * [Linux Installation](#linux-installation)
+  * [Mac OS X Installation](#mac-os-x-installation)
+  * [Windows Installation](#windows-installation)
+* [Usage](#usage)
+* [Changelog](#changelog)
+* [Author](#author)
+* [Attribution](#attribution)
+* [Acknowledgements](#acknowledgements)
+
 # SDPB
 
 SDPB is an open-source, arbitrary-precision, parallelized semidefinite
