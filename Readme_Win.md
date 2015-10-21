@@ -12,7 +12,7 @@ It is not required to have any specific directory structure for the installation
   3. Choose appropriate proxy settings. If you don't know what it is, try `Direct Connection` or `Use Internet Explorer Proxy Settings`.
   4. Choose a download site. Any choice should work.
   5. Choose the packages for installation. You will need
-    * All the `Base` packages (choosen by defaul, no action should be required).
+    * All the `Base` packages (choosen by default, no action should be required).
     * `bzip2` and `lzip` in `Archive`.
     * `gcc-core`, `gcc-g++` and `make` under `Devel`
     * `m4` under `Interpreters`
@@ -38,7 +38,7 @@ It is not required to have any specific directory structure for the installation
      Note: Using `stage` target instead of `install` can save a lot of time by skipping the copying of Boost header files, which is done more efficiently by Windows methods.
            
 3. Dowload and build GMP from [the GMP website](https://gmplib.org). Download the latest version, and put the file in `C:\SDPB`.
-  1. In Cygwin terminal, navigate to `C:\SDPB` and upack the archive. For this, type
+  1. In Cygwin terminal, navigate to `C:\SDPB` and unpack the archive. For this, type
 
            cd /cygdrive/c/SDPB
            tar --lzip -xf gmp-6.0.0a.tar.lz
@@ -59,9 +59,9 @@ It is not required to have any specific directory structure for the installation
   2. Copy the contents of `C:\SDPB\boost_1_59_0\stage\lib` directory into `C:\SDPB\installation\lib`.
   3. (optional) Add `C:\SDPB\installation\lib` to your system `Path` variable.
 
-5. Download and build SDPB. Obtain the latest SDPB sources from github, for example, by dowloading the zip of the repository and unpacking the contents into `C:\SDPB`. As the result you should have the contents of the repository in `C:\SDPB\sdpb-master`.
+5. Download and build SDPB. Obtain the latest SDPB sources from github, for example, by downloading the zip of the repository and unpacking the contents into `C:\SDPB`. As the result you should have the contents of the repository in `C:\SDPB\sdpb-master`.
   1. Use any text-editing software to open `C:\SDPB\sdpb-master\Makefile`
-    * Follow the instructions in the file to locate the variables `GMPINCLUDEDIR` and `BOOSTINCLUDEDIR` as well as `LIBDIR`, which should be edited on a **Windows** system.
+    * Follow the instructions in the file to locate those instances of the variables `GMPINCLUDEDIR`, `BOOSTINCLUDEDIR` and `LIBDIR` which should be edited on a **Windows** system.
     * Edit the appropriate lines to look as follows
 
                       GMPINCLUDEDIR = /cygdrive/c/SDPB/installation/include
@@ -76,6 +76,6 @@ It is not required to have any specific directory structure for the installation
 
     After the process finishes, `sdpb.exe` should appear in `C:\SDPB\sdpb-master`
 
-6. If you have added all the suggested locations to your system `Path` variable, then you should be able to run sdpb.exe. If you have not, then you need to either modify `Path` variable or put copies of the `.dll` files from `C:\SDPB\installation\lib` and a copy of `cygwin1.dll` from `\bin` subdirectory of Cygwin installation in the directory where you would like to keep `sdpb.exe`. You then might want to add this directory to `Path` variable.
+6. If you have added all the suggested locations to your system `Path` variable, then you should be able to run `sdpb.exe`. If you have not, then you need to either modify `Path` variable or put copies of the `.dll` files from `C:\SDPB\installation\lib` and a copy of `cygwin1.dll` from `\bin` subdirectory of Cygwin installation into the directory where you would like to keep `sdpb.exe`. You then might want to add this directory to `Path` variable to be able to access SDPB from Windows Command Line at any time.
 
 
