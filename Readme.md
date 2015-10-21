@@ -30,11 +30,9 @@ where each M_{nj}(x) is a polynomial matrix in x.
 For more information, see [A Semidefinite Program Solver for the Conformal Bootstrap](http://arxiv.org/abs/1502.02033)
 and [the manual](https://github.com/davidsd/sdpb/blob/master/docs/SDPB-Manual.pdf).
 
-Author: David Simmons-Duffin (davidsd@gmail.com)
-
-As of February 2015, I am supported by DOE grant number DE-SC0009988
-and a William D. Loughlin Membership at the Institute for Advanced
-Study.
+Author: David Simmons-Duffin (davidsd@gmail.com). As of February 2015, I am
+supported by DOE grant number DE-SC0009988 and a William D. Loughlin Membership
+at the [Institute for Advanced Study](http://sns.ias.edu).
 
 ## Installation and Requirements
 
