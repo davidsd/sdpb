@@ -7,7 +7,6 @@
   * [Windows Installation](#windows-installation)
 * [Usage](#usage)
 * [Changelog](#changelog)
-* [Author](#author)
 * [Attribution](#attribution)
 * [Acknowledgements](#acknowledgements)
 
@@ -29,6 +28,12 @@ where each M_{nj}(x) is a polynomial matrix in x.
 
 For more information, see [A Semidefinite Program Solver for the Conformal Bootstrap](http://arxiv.org/abs/1502.02033)
 and [the manual](https://github.com/davidsd/sdpb/blob/master/docs/SDPB-Manual.pdf).
+
+Author: David Simmons-Duffin (davidsd@gmail.com)
+
+As of February 2015, I am supported by DOE grant number DE-SC0009988
+and a William D. Loughlin Membership at the Institute for Advanced
+Study.
 
 ## Installation and Requirements
 
@@ -114,14 +119,6 @@ programs in this format, along with some examples.
   matrices with dimensions larger than 2x2. (Thanks to Filip Kos for
   the fix.)
 - 10/20/15: Fixed a Windows incompatibility in the parser ([Pull request](https://github.com/davidsd/sdpb/pull/8))
-
-## Author
-
-- David Simmons-Duffin (davidsd@gmail.com)
-
-As of February 2015, I am supported by DOE grant number DE-SC0009988
-and a William D. Loughlin Membership at the Institute for Advanced
-Study.
 
 ## Attribution
 
