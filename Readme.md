@@ -110,9 +110,10 @@ programs in this format, along with some examples.
 
 ## Changelog
 
-- 5/29/15: Fixed a bug in SDP.cpp that caused SDPB to incorrectly load
+- 5/29/15: Fixed a bug in `SDP.cpp` that caused SDPB to incorrectly load
   matrices with dimensions larger than 2x2. (Thanks to Filip Kos for
   the fix.)
+- 10/20/15: Fixed a Windows incompatibility in the parser ([Pull request](https://github.com/davidsd/sdpb/pull/8))
 
 ## Author
 
