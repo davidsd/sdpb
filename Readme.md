@@ -9,6 +9,7 @@
 * [Changelog](#changelog)
 * [Attribution](#attribution)
 * [Acknowledgements](#acknowledgements)
+* [Works Using SDPB](#works-using-sdpb)
 
 # SDPB
 
@@ -159,3 +160,31 @@ systems of correlation functions:
 - Thanks to Amir Ali Ahmadi, Hande Benson, Pablo Parrilo, and Robert Vanderbei for advice and discussions about semidefinite programming.
 
 - Thanks also to Noah Stein, who first suggested the idea of semidefinite programming to me in [this Math Overflow question](http://mathoverflow.net/questions/33242/continuous-linear-programming-estimating-a-solution).
+
+## Works Using SDPB
+
+- F. Kos, D. Poland, D. Simmons-Duffin and A. Vichi,
+  "Bootstrapping the O(N) Archipelago,"
+  [arXiv:1504.07997 [hep-th]](http://arxiv.org/abs/1504.07997).
+
+- S. M. Chester, S. Giombi, L. V. Iliesiu, I. R. Klebanov, S. S. Pufu and R. Yacoby,
+  "Accidental Symmetries and the Conformal Bootstrap,"
+  [arXiv:1507.04424 [hep-th]](http://arxiv.org/abs/1507.04424).
+
+- C. Beem, M. Lemos, L. Rastelli and B. C. van Rees,
+  "The (2,0) superconformal bootstrap,"
+  [arXiv:1507.05637 [hep-th]](http://arxiv.org/abs/1507.05637).
+
+- L. Iliesiu, F. Kos, D. Poland, S. S. Pufu, D. Simmons-Duffin and R. Yacoby,
+  "Bootstrapping 3D Fermions,"
+  [arXiv:1508.00012 [hep-th]](http://arxiv.org/abs/1508.00012).
+
+- D. Poland and A. Stergiou,
+  "Exploring the Minimal 4D N=1 SCFT,"
+  [arXiv:1509.06368 [hep-th]](http://arxiv.org/abs/1509.06368).
+
+-  M. Lemos and P. Liendo,
+  "Bootstrapping N=2 chiral correlators,"
+  [arXiv:1510.03866 [hep-th]](http://arxiv.org/abs/1510.03866).
+
+(Please let me know if you would like your paper to be included in this list!)
