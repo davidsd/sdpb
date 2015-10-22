@@ -22,7 +22,9 @@ to install.
 
 ## Linux
 
-SDPB has been tested on Red Hat Linux. (Many thanks to Chris Beem for helping with installation instructions.) To install,
+(Thanks to Chris Beem for help with these instructions.)
+
+SDPB has been tested on Red Hat Linux. To install,
 
 1. Download Boost and GMP from the links above. Install GMP with the option `--enable-cxx` added to `./configure`. Install Boost.
 
@@ -33,7 +35,9 @@ SDPB has been tested on Red Hat Linux. (Many thanks to Chris Beem for helping wi
 
 ## Mac OS X
 
-The following instructions have been tested on Mac OS 10.10 Yosemite.  (Many thanks to Ying Lin.)
+(Thanks to Ying Lin for these instructions.)
+
+The following instructions have been tested on Mac OS 10.10 Yosemite.
 
 1. Install Homebrew and `gcc-4.9` (or later), for instance by running the following commands
 
@@ -72,6 +76,8 @@ above software in custom locations, you'll have to modify variables in the
 `Makefile` as described in the Linux instructions.
 
 ## Windows
+
+(Thanks to Peter Kravchuk for these instructions.)
 
 The following instructions have been tested on Windows 8.1 using Boost 1.59.0, GMP 6.0.0, Cygwin DLL ver. 2.2.1. These are written to be accessible to people with no Unix experience by a person with little Unix experience, so suggestions to improve are appreciated.
 
