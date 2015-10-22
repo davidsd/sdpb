@@ -1,4 +1,77 @@
-##Windows Installation
+
+* [Requirements](#requirements)
+* [Installation](#installation)
+  * [Linux](#linux)
+  * [Mac OS X](#mac-os-x)
+  * [Windows](#windows)
+
+# Requirements
+
+SDPB requires
+
+- [Boost C++ Libraries](http://www.boost.org/) (version 1.54 or later).
+
+- [The GNU Multiprecision Library](https://gmplib.org/).
+
+System-specific installation instructions are below.  Please use the
+issue tracker if you encounter installation problems. For those with
+experience packaging software, I'd appreciate help making SDPB easier
+to install.
+
+# Installation
+
+## Linux
+
+SDPB has been tested on Red Hat Linux. (Many thanks to Chris Beem for helping with installation instructions.) To install,
+
+1. Download Boost and GMP from the links above. Install GMP with the option `--enable-cxx` added to `./configure`. Install Boost.
+
+2. Edit the `Makefile` to define the variables `GMPINCLUDEDIR`,
+`BOOSTINCLUDEDIR`, and `LIBDIR.` Ensure `LIBDIR` is in your `LD_LIBRARY_PATH`. 
+
+3. Type `make` to build the `sdpb` executable.
+
+## Mac OS X
+
+The following instructions have been tested on Mac OS 10.10 Yosemite.  (Many thanks to Ying Lin.)
+
+1. Install Homebrew and `gcc-4.9` (or later), for instance by running the following commands
+
+        # Install Homebrew
+        ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+
+        # Update Ruby
+        brew install ruby
+
+        # Install the latest gcc as well as its dependencies
+        # the option --without-multilib avoids a bug in OpenMP support
+        brew install gcc --without-multilib
+
+2. Make `/usr/local/bin/g++-4.9` (or whatever version you have) the default compiler by renaming `gcc` and `g++` in `/usr/bin` and creating symlinks
+
+        ln -s /usr/local/bin/g++-4.9 /usr/local/bin/g++
+        ln -s /usr/local/bin/gcc-4.9 /usr/local/bin/gcc
+
+3. Unfortunately, Homebrew's versions of GMP and Boost will not work -- they must be compiled from source. Download the latest GMP from [the GMP website](https://gmplib.org/). Upack the tarball (you may need `lzip` which you can install with `brew install lzip`) and `cd` to the `gmp` directory.  Run
+
+        ./configure --enable-cxx
+        make
+        make install
+
+4. Download Boost from [the Boost website](http://www.boost.org/).  Unpack the tarball and `cd` to the `boost` directory. Run
+
+        ./bootstrap.sh
+        ./b2
+        sudo ./b2 install
+        
+   (Note that `bootstrap.sh` above is just an installation script and has absolutely nothing
+   to do with the conformal bootstrap -- lots of people like the name "bootstrap"!)
+        
+5. Type `make` in the `sdpb` directory to compile the `sdpb` executable. If you installed any of the
+above software in custom locations, you'll have to modify variables in the
+`Makefile` as described in the Linux instructions.
+
+## Windows
 
 The following instructions have been tested on Windows 8.1 using Boost 1.59.0, GMP 6.0.0, Cygwin DLL ver. 2.2.1. These are written to be accessible to people with no Unix experience by a person with little Unix experience, so suggestions to improve are appreciated.
 

@@ -1,11 +1,7 @@
 ## Contents
 
 * [SDPB](#sdpb)
-* [Installation and Requirements](#installation-and-requirements)
-  * [Linux Installation](#linux-installation)
-  * [Mac OS X Installation](#mac-os-x-installation)
-  * [Windows Installation](#windows-installation)
-* [Usage](#usage)
+* [Installation and Usage](#installation-and-usage)
 * [Changelog](#changelog)
 * [Attribution](#attribution)
 * [Acknowledgements](#acknowledgements)
@@ -34,81 +30,18 @@ Author: David Simmons-Duffin (davidsd@gmail.com). As of February 2015, I am
 supported by DOE grant number DE-SC0009988 and a William D. Loughlin Membership
 at the [Institute for Advanced Study](http://sns.ias.edu).
 
-## Installation and Requirements
+## Installation and Usage
 
-SDPB requires
-
-- [Boost C++ Libraries](http://www.boost.org/) (version 1.54 or later).
-
-- [The GNU Multiprecision Library](https://gmplib.org/).
-
-System-specific installation instructions are below.  Please use the
-issue tracker if you encounter installation problems. For those with
-experience packaging software, I'd appreciate help making SDPB easier
-to install.
-
-### Linux Installation
-
-SDPB has been tested on Red Hat Linux. (Many thanks to Chris Beem for helping with installation instructions.) To install,
-
-1. Download Boost and GMP from the links above. Install GMP with the option `--enable-cxx` added to `./configure`. Install Boost.
-
-2. Edit the `Makefile` to define the variables `GMPINCLUDEDIR`,
-`BOOSTINCLUDEDIR`, and `LIBDIR.` Ensure `LIBDIR` is in your `LD_LIBRARY_PATH`. 
-
-3. Type `make` to build the `sdpb` executable.
-
-### Mac OS X Installation
-
-The following instructions have been tested on Mac OS 10.10 Yosemite.  (Many thanks to Ying Lin.)
-
-1. Install Homebrew and `gcc-4.9` (or later), for instance by running the following commands
-
-        # Install Homebrew
-        ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-
-        # Update Ruby
-        brew install ruby
-
-        # Install the latest gcc as well as its dependencies
-        # the option --without-multilib avoids a bug in OpenMP support
-        brew install gcc --without-multilib
-
-2. Make `/usr/local/bin/g++-4.9` (or whatever version you have) the default compiler by renaming `gcc` and `g++` in `/usr/bin` and creating symlinks
-
-        ln -s /usr/local/bin/g++-4.9 /usr/local/bin/g++
-        ln -s /usr/local/bin/gcc-4.9 /usr/local/bin/gcc
-
-3. Unfortunately, Homebrew's versions of GMP and Boost will not work -- they must be compiled from source. Download the latest GMP from [the GMP website](https://gmplib.org/). Upack the tarball (you may need `lzip` which you can install with `brew install lzip`) and `cd` to the `gmp` directory.  Run
-
-        ./configure --enable-cxx
-        make
-        make install
-
-4. Download Boost from [the Boost website](http://www.boost.org/).  Unpack the tarball and `cd` to the `boost` directory. Run
-
-        ./bootstrap.sh
-        ./b2
-        sudo ./b2 install
-        
-   (Note that `bootstrap.sh` above is just an installation script and has absolutely nothing
-   to do with the conformal bootstrap -- lots of people like the name "bootstrap"!)
-        
-5. Type `make` in the `sdpb` directory to compile the `sdpb` executable. If you installed any of the
-above software in custom locations, you'll have to modify variables in the
-`Makefile` as described in the Linux instructions.
-
-### Windows Installation
-
-Details on Windows installation using Cygwin can be found [here](Readme_Win.md).
-
-## Usage
+Installation instructions for Linux, Mac OS X, and Windows (using Cygwin)
+ can be found in [Install.md](Install.md).
 
 Type `sdpb --help` for the syntax and a list of options.
 
-The input format for SDPB is XML-based and described in the manual.
+The input format for SDPB is XML-based and described in
+[the manual](https://github.com/davidsd/sdpb/blob/master/docs/SDPB-Manual.pdf).
 The Mathematica file `SDPB.m` includes code to export semidefinite
-programs in this format, along with some examples.
+programs in this format, along with some examples. An example input
+file `test.xml` is included with the source code.
 
 ## Changelog
 
