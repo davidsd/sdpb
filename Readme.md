@@ -10,9 +10,8 @@
 # SDPB
 
 SDPB is an open-source, arbitrary-precision, parallelized semidefinite
-program solver, designed for the conformal bootstrap.
+program solver, designed for the conformal bootstrap. It solves the following problem:
 
-It solves the following problem:
 ![maximize:  b_0 + \sum_n b_n y_n over (y_1,...,y_N), such that: M_{0j}(x) + \sum_n y_n M_{nj}(x) is positive semidefinite for all x >= 0 and 1 <= j <= J, where each M_{nj}(x) is a polynomial matrix in x.](/docs/SDPB-PMP-Description.png?raw=true)
 
 For more information, see [A Semidefinite Program Solver for the Conformal Bootstrap](http://arxiv.org/abs/1502.02033)
