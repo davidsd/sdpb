@@ -12,19 +12,11 @@
 SDPB is an open-source, arbitrary-precision, parallelized semidefinite
 program solver, designed for the conformal bootstrap.
 
-It solves the following type of optimization problem
-
-```
-maximize:  b_0 + \sum_n b_n y_n over (y_1,...,y_N),
-
-such that: M_{0j}(x) + \sum_n y_n M_{nj}(x) is positive semidefinite
-           for all x >= 0 and 1 <= j <= J,
-
-where each M_{nj}(x) is a polynomial matrix in x.
-```
+It solves the following problem:
+![maximize:  b_0 + \sum_n b_n y_n over (y_1,...,y_N), such that: M_{0j}(x) + \sum_n y_n M_{nj}(x) is positive semidefinite for all x >= 0 and 1 <= j <= J, where each M_{nj}(x) is a polynomial matrix in x.](/docs/SDPB-PMP-Description.png?raw=true)
 
 For more information, see [A Semidefinite Program Solver for the Conformal Bootstrap](http://arxiv.org/abs/1502.02033)
-and [the manual](https://github.com/davidsd/sdpb/blob/master/docs/SDPB-Manual.pdf).
+and [the manual](/docs/SDPB-Manual.pdf).
 
 Author: David Simmons-Duffin (davidsd@gmail.com). As of February 2015, I am
 supported by DOE grant number DE-SC0009988 and a William D. Loughlin Membership
@@ -38,7 +30,7 @@ Installation instructions for Linux, Mac OS X, and Windows (using Cygwin)
 Type `sdpb --help` for the syntax and a list of options.
 
 The input format for SDPB is XML-based and described in
-[the manual](https://github.com/davidsd/sdpb/blob/master/docs/SDPB-Manual.pdf).
+[the manual](/docs/SDPB-Manual.pdf).
 The Mathematica file `SDPB.m` includes code to export semidefinite
 programs in this format, along with some examples. An example input
 file `test.xml` is included with the source code.
