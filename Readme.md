@@ -107,4 +107,12 @@ systems of correlation functions:
   "Bootstrapping N=2 chiral correlators,"
   [arXiv:1510.03866 [hep-th]](http://arxiv.org/abs/1510.03866).
 
+- Y. H. Lin, S. H. Shao, D. Simmons-Duffin, Y. Wang and X. Yin,
+  "N=4 Superconformal Bootstrap of the K3 CFT,"
+  [arXiv:1511.04065 [hep-th]](http://arxiv.org/abs/arXiv:1511.04065)
+
+- S. M. Chester, L. V. Iliesiu, S. S. Pufu and R. Yacoby,
+  "Bootstrapping O(N) Vector Models with Four Supercharges in 3 <= d <= 4,"
+  [arXiv:1511.07552 [hep-th]](http://arxiv.org/abs/arXiv:1511.07552)
+
 (Please let me know if you would like your paper to be included in this list!)
