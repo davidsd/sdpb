@@ -115,4 +115,8 @@ systems of correlation functions:
   "Bootstrapping O(N) Vector Models with Four Supercharges in 3 <= d <= 4,"
   [arXiv:1511.07552 [hep-th]](http://arxiv.org/abs/arXiv:1511.07552)
 
+- S. M. Chester and S. S. Pufu,
+  "Towards Bootstrapping QED_3,"
+  [arXiv:1601.03476 [hep-th]](http://arxiv.org/abs/arXiv:1601.03476)
+
 (Please let me know if you would like your paper to be included in this list!)
