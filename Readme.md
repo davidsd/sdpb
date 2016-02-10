@@ -34,6 +34,8 @@ The Mathematica file `SDPB.m` includes code to export semidefinite
 programs in this format, along with some examples. An example input
 file `test.xml` is included with the source code.
 
+See also the user-friendly python wrapper [PyCFTBoot](https://github.com/cbehan/pycftboot) ([arXiv:1602.02810](http://arxiv.org/abs/arXiv:1602.02810)).
+
 ## Changelog
 
 - 5/29/15: Fixed a bug in `SDP.cpp` that caused SDPB to incorrectly load
