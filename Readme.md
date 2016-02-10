@@ -119,4 +119,9 @@ systems of correlation functions:
   "Towards Bootstrapping QED_3,"
   [arXiv:1601.03476 [hep-th]](http://arxiv.org/abs/arXiv:1601.03476)
 
+- C. Behan,
+  "PyCFTBoot: A flexible interface for the conformal bootstrap,"
+  [arXiv:1602.02810 [hep-th]](http://arxiv.org/abs/arXiv:1602.02810)
+
+
 (Please let me know if you would like your paper to be included in this list!)
