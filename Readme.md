@@ -34,7 +34,10 @@ The Mathematica file `SDPB.m` includes code to export semidefinite
 programs in this format, along with some examples. An example input
 file `test.xml` is included with the source code.
 
-See also the user-friendly python wrapper [PyCFTBoot](https://github.com/cbehan/pycftboot) ([arXiv:1602.02810](http://arxiv.org/abs/arXiv:1602.02810)).
+Two python wrappers for SDPB are also available:
+
+- [PyCFTBoot](https://github.com/cbehan/pycftboot) by Connor Behan ([arXiv:1602.02810](http://arxiv.org/abs/arXiv:1602.02810))
+- [cboot](https://github.com/tohtsky/cboot) by Tomoki Ohtsuki ([arXiv:1602.07295](http://arxiv.org/abs/arXiv:1602.07295)).
 
 ## Changelog
 
@@ -125,5 +128,8 @@ systems of correlation functions:
   "PyCFTBoot: A flexible interface for the conformal bootstrap,"
   [arXiv:1602.02810 [hep-th]](http://arxiv.org/abs/arXiv:1602.02810)
 
+- Y. Nakayama and T. Ohtsuki
+  "Conformal Bootstrap Dashing Hopes of Emergent Symmetry,"
+  [arXiv:1602.07295 [hep-th]](http://arxiv.org/abs/arXiv:1602.07295)
 
 (Please let me know if you would like your paper to be included in this list!)
