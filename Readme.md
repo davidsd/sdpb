@@ -130,6 +130,6 @@ systems of correlation functions:
 
 - Y. Nakayama and T. Ohtsuki
   "Conformal Bootstrap Dashing Hopes of Emergent Symmetry,"
-  [arXiv:1602.07295 [hep-th]](http://arxiv.org/abs/arXiv:1602.07295)
+  [arXiv:1602.07295 [cond-mat.str-el]](http://arxiv.org/abs/arXiv:1602.07295)
 
 (Please let me know if you would like your paper to be included in this list!)
