@@ -37,10 +37,19 @@ HEADERS := $(wildcard src/*.h) $(wildcard src/mpack/*.h) $(wildcard src/tinyxml2
 OBJECTS := $(patsubst src/%.cpp,obj/%.o,$(SOURCES))
 RESULT  = sdpb
 
+ifndef INTEL
+
 CC = g++
 CFLAGS = -g -O2 -Wall -ansi -std=c++0x -L${LIBDIR} -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
-LIBS = -lgomp -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options
-RM = rm -f
+LIBS = -lgomp -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lrt
+
+else
+
+CC = icpc
+CFLAGS = -g -O2 -ipo -xhost -Wall -ansi -std=c++0x -L${LIBDIR} -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -openmp -D___MPACK_BUILD_WITH_GMP___
+LIBS = -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lrt
+
+endif
 
 .SUFFIXES: .cpp .o
 
@@ -48,10 +57,10 @@ $(RESULT): $(OBJECTS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)
 
 obj/%.o: src/%.cpp
-	g++ $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
-	$(RM) -r obj
+	rm -rf obj
 
 obj:
 	@mkdir -p $@
