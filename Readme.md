@@ -132,4 +132,8 @@ systems of correlation functions:
   "Conformal Bootstrap Dashing Hopes of Emergent Symmetry,"
   [arXiv:1602.07295 [cond-mat.str-el]](http://arxiv.org/abs/arXiv:1602.07295)
 
+- H. Iha, H. Makino and H. Suzuki
+  "Upper bound on the mass anomalous dimension in many-flavor gauge theories -- a conformal bootstrap approach"
+  [arXiv:1603.01995 [hep-th]](http://arxiv.org/abs/1603.01995)
+
 (Please let me know if you would like your paper to be included in this list!)
