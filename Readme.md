@@ -136,4 +136,12 @@ systems of correlation functions:
   "Upper bound on the mass anomalous dimension in many-flavor gauge theories -- a conformal bootstrap approach"
   [arXiv:1603.01995 [hep-th]](http://arxiv.org/abs/1603.01995)
 
+- F. Kos, D. Poland, D. Simmons-Duffin, and A. Vichi
+  "Precision Islands in the Ising and O(N) Models"
+  [arXiv:1603.04436 [hep-th]](http://arxiv.org/abs/1603.04436)
+
+- Z. Komargodski and D. Simmons-Duffin
+  "The Random-Bond Ising Model in 2.01 and 3 Dimensions"
+  [arXiv:1603.04444 [hep-th]](http://arxiv.org/abs/1603.04444)
+
 (Please let me know if you would like your paper to be included in this list!)
