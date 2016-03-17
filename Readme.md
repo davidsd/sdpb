@@ -88,6 +88,10 @@ systems of correlation functions:
 
 ## Works Using SDPB
 
+- D. Simmons-Duffin,
+  "A Semidefinite Program Solver for the Conformal Bootstrap",
+  [arXiv:1502.02033 [hep-th]](http://arxiv.org/abs/1502.02033).
+
 - F. Kos, D. Poland, D. Simmons-Duffin and A. Vichi,
   "Bootstrapping the O(N) Archipelago,"
   [arXiv:1504.07997 [hep-th]](http://arxiv.org/abs/1504.07997).
