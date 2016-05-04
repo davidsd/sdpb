@@ -50,20 +50,24 @@ void toBit(const long long a) {
   std::cout << tmp << std::endl;
 }
 
-void generateLongsFromGMP(const mpf_class a, long long *&x, int &sizeOfArray, const int maxBits, const int maxExp) {
+// TODO: Eventually decouple allocation from calculation
+//
+void generateLongsFromGMP(const mpf_class a, long long *&x, int &sizeOfArray, const int ownLimbSize, const int padExp) {
   int size = a.get_mpf_t()->_mp_size; 
-  int realExp = a.get_mpf_t()->_mp_exp;
-  int padding = (maxExp - realExp) / maxBits;
-  int paddR = (maxExp - realExp) % maxBits;
+  // WARNING: _mp_exp is number of limbs, not actual exponent!
+  // TODO: Test the fix below
+  int realExp = a.get_mpf_t()->_mp_exp * INT64L;
+  int padding = (padExp - realExp) / ownLimbSize;
+  int padBitOffset = (padExp - realExp) % ownLimbSize;
   
   // Assert that the padding will work and that the maximumBitSize is given appropraitely 
-  assert(realExp <= maxExp);
-  assert(maxBits <= INT64L);
+  assert(realExp <= padExp);
+  assert(ownLimbSize <= INT64L);
 
   // Find size of needed 64-bit variable array with padding and allocate it in memory
-  sizeOfArray = (INT64L * size + (maxExp - realExp)) / maxBits;
+  sizeOfArray = (INT64L * size + (padExp - realExp)) / ownLimbSize;
   
-  if ((INT64L * size + (maxExp - realExp)) % maxBits != 0) sizeOfArray += 1; 
+  if ((INT64L * size + (padExp - realExp)) % ownLimbSize != 0) sizeOfArray += 1; 
   x = (long long *)malloc(sizeOfArray * sizeof(long long));
   
   // Add padding
@@ -72,32 +76,36 @@ void generateLongsFromGMP(const mpf_class a, long long *&x, int &sizeOfArray, co
   for (int i = 0; i < padding; i++) x[i] = 0; 
   
   long long tmp  = a.get_mpf_t()->_mp_d[size - 1];
-  x[padding] = getBitsFromOneLong(tmp, 0, maxBits - paddR);
+  x[padding] = getBitsFromOneLong(tmp, 0, ownLimbSize - padBitOffset);
   
   // Add all the elements in mpf_class to the result
   for (int i = padding + 1; i < sizeOfArray - 1; i++) {
-    int leftEl  = size - 1 - (((i - padding) * maxBits - paddR) / INT64L);
-    int left    = ((i - padding) * maxBits - paddR) % INT64L;
-    int rightEl = size - 1 - (((i - padding + 1) * maxBits - paddR) / INT64L);
-    int right   = ((i - padding + 1) * maxBits - paddR) % INT64L;
+    int leftGmpLimb  = size - 1 - (((i - padding) * ownLimbSize - padBitOffset) / INT64L);
+    int leftBit      = ((i - padding) * ownLimbSize - padBitOffset) % INT64L;
+    int rightGmpLimb = size - 1 - (((i - padding + 1) * ownLimbSize - padBitOffset) / INT64L);
+    int rightBit     = ((i - padding + 1) * ownLimbSize - padBitOffset) % INT64L;
     // If true it means that all the bits are in the same limb. If flase it means that all the 
     // bits are in consecutive limbs.
-    if (leftEl == rightEl) {
-      long long tmp  = a.get_mpf_t()->_mp_d[leftEl];
-      x[i] = getBitsFromOneLong(tmp, left, right);
+    if (leftGmpLimb == rightGmpLimb) {
+      long long tmp  = a.get_mpf_t()->_mp_d[leftGmpLimb];
+      x[i] = getBitsFromOneLong(tmp, leftBit, rightBit);
     } else {
-      long long tmpA = a.get_mpf_t()->_mp_d[leftEl];
-      long long tmpB = a.get_mpf_t()->_mp_d[rightEl];
-      x[i] = getBitsFromTwoLong(tmpA, tmpB, left, right);
+      long long tmpA = a.get_mpf_t()->_mp_d[leftGmpLimb];
+      long long tmpB = a.get_mpf_t()->_mp_d[rightGmpLimb];
+      x[i] = getBitsFromTwoLong(tmpA, tmpB, leftBit, rightBit);
     }
   }
-  int left = ((sizeOfArray - padding - 1) * maxBits + paddR) % INT64L;
+  int leftBit = ((sizeOfArray - padding - 1) * ownLimbSize + padBitOffset) % INT64L;
   tmp = a.get_mpf_t()->_mp_d[0];
-  x[sizeOfArray - 1] = getBitsFromOneLong(tmp, left, INT64L);
+  x[sizeOfArray - 1] = getBitsFromOneLong(tmp, leftBit, INT64L);
+
+  // TODO: Multiply longs by overall sign
 }
 
 // THIS HAS NOT BEEN TESTED YET
-void generateLongMatrixFromGMPMatrix(const mpf_class *a, const int nr_rows, const int nr_cols, long long **&x,  int &sizeOfArray, int &exp, const int maxBits) {
+// TODO: decouple memory allocation from calculation eventually
+
+void generateLongMatrixFromGMPMatrix(const mpf_class *a, const int nr_rows, const int nr_cols, long long **&x,  int &sizeOfArray, int &exp, const int ownLimbSize) {
   // Allocate memory for pointers that point to each element in matrix and to the array 
   // that gives the number of own limbs for each matrix element
   long long **tmpX;
@@ -118,7 +126,7 @@ void generateLongMatrixFromGMPMatrix(const mpf_class *a, const int nr_rows, cons
   long minLengthOwnLimbs = LLONG_MAX;
   for(int i = 0; i < nr_rows; ++i)
     for(int j = 0; j < nr_cols; ++j) {
-      generateLongsFromGMP(a[j * nr_rows + i], tmpX[j * nr_rows + i], lengthOwnLimbs[j * nr_rows + i], maxBits, maxExp); 
+      generateLongsFromGMP(a[j * nr_rows + i], tmpX[j * nr_rows + i], lengthOwnLimbs[j * nr_rows + i], ownLimbSize, maxExp); 
       if (minLengthOwnLimbs > lengthOwnLimbs[j * nr_rows + i]) minLengthOwnLimbs = lengthOwnLimbs[j * nr_rows + i];
     }
 
@@ -141,6 +149,9 @@ void generateLongMatrixFromGMPMatrix(const mpf_class *a, const int nr_rows, cons
 // This can be WAAAAAAY more optimized 
 // Right now I think it takes time d^2 N^2. 
 // It should take time N^2
+
+// TODO: Add initialization functions for mpf_t's
+// TODO: Maybe do bitwise operations and carry's by hand?
 void addToGMP(mpf_class &a, const long long toAdd, const int bitToAdd) {
   mpf_t tmpDiv;
   mpf_div_2exp(tmpDiv, a.get_mpf_t(), bitToAdd);
@@ -157,11 +168,11 @@ void addToGMP(mpf_class &a, const long long toAdd, const int bitToAdd) {
 }
 
 // NOT TESTED
-void longToGMP(mpf_class &a, const long long *toAdd, const int size_toAdd, const int maxBits, const int whereWeStart) {
+void longToGMP(mpf_class &a, const long long *toAdd, const int size_toAdd, const int ownLimbSize, const int whereWeStart) {
   // Is the precision a global variable?... I assume so?
   a = mpf_class("0");
   for (int i = 0; i < size_toAdd; i++) {
-    addToGMP(a, toAdd[i], whereWeStart - (i + 1) * maxBits)
+    addToGMP(a, toAdd[i], whereWeStart - (i + 1) * ownLimbSize)
   }
 }
 
@@ -178,10 +189,10 @@ void numberMultiplicationBasecase(mpf_class &c, const mpf_class a, const mpf_cla
   
   // Define the maximum no of bits we can store in a 64-bit variable 
   // and the exponent to which we should pad one (or none) of the no
-  int maxBits = DOUBLE_MANT/2;
+  int ownLimbSize = DOUBLE_MANT/2;
   int maxExp = max(a.get_mpf_t()->_m_exp, b.get_mpf_t()->_m_exp);
-  generateLongsFromGMP(a, aS, size_aS, maxBits, maxExp);
-  generateLongsFromGMP(b, bS, size_bS, maxBits, maxExp);
+  generateLongsFromGMP(a, aS, size_aS, ownLimbSize, maxExp);
+  generateLongsFromGMP(b, bS, size_bS, ownLimbSize, maxExp);
   int size = min(size_aS, size_bS);
 
   // Allocate memory to save the result in another array of 64-bit variables
