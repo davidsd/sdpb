@@ -143,14 +143,17 @@ void generateLongMatrixFromGMPMatrix(const mpf_class *a, const int nr_rows, cons
 // It should take time N^2
 void addToGMP(mpf_class &a, const long long toAdd, const int bitToAdd) {
   mpf_t tmpDiv;
+  mpf_init(tmpDiv);
   mpf_div_2exp(tmpDiv, a.get_mpf_t(), bitToAdd);
   mp_exp_t exp;
   std::cout << "Binary div..." << mpf_class(tmpDiv).get_str(exp, 2) << std::endl;
   std::cout << tmpDiv << std::endl;
   mpf_t tmpAdd;
+  mpf_init(tmpAdd);
   mpf_add_ui(tmpAdd, tmpDiv, toAdd);
   std::cout << "Binary add..." << mpf_class(tmpAdd).get_str(exp, 2) << std::endl;
   mpf_t tmpMul;
+  mpf_init(tmpMul);
   mpf_mul_2exp(tmpMul, tmpAdd, bitToAdd);
   std::cout << "Binary mul..." << mpf_class(tmpMul).get_str(exp, 2) << std::endl;
   a = mpf_class (tmpMul);
