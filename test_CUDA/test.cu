@@ -13,6 +13,7 @@
 #include <sys/time.h>
 #include "omp.h"
 #include <bitset>
+#include <math.h>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/operation.hpp>
 #include <boost/numeric/ublas/io.hpp> 
@@ -105,11 +106,11 @@ void generateLongsFromGMP(const mpf_class a, long long *&x, int &sizeOfArray, co
 // THIS HAS NOT BEEN TESTED YET
 // TODO: decouple memory allocation from calculation eventually
 
-void generateLongMatrixFromGMPMatrix(const mpf_class *a, const int nr_rows, const int nr_cols, long long **&x,  int &sizeOfArray, int &exp, const int ownLimbSize) {
+void generateLongMatrixFromGMPMatrix(const mpf_class *a, long long **&x,int &sizeOfArray, const int nr_rows, const int nr_cols, int &exp, const int ownLimbSize) {
   // Allocate memory for pointers that point to each element in matrix and to the array 
   // that gives the number of own limbs for each matrix element
   long long **tmpX;
-  int * lengthOwnLimbs; 
+  int *lengthOwnLimbs; 
   tmpX = (long long **) malloc( nr_rows * nr_cols * sizeof( long * ));
   lengthOwnLimbs = (int *) malloc( nr_rows * nr_cols * sizeof(int));
 
@@ -120,7 +121,8 @@ void generateLongMatrixFromGMPMatrix(const mpf_class *a, const int nr_rows, cons
       int toCmp =  a[j * nr_rows + i].get_mpf_t()->_mp_exp;
       if (toCmp > maxExp) maxExp = toCmp;
     }
-  exp = maxExp;
+  exp = maxExp * INT64L;
+  
   
   // Generate the array of 64-bit matrices
   long minLengthOwnLimbs = LLONG_MAX;
@@ -129,17 +131,19 @@ void generateLongMatrixFromGMPMatrix(const mpf_class *a, const int nr_rows, cons
       generateLongsFromGMP(a[j * nr_rows + i], tmpX[j * nr_rows + i], lengthOwnLimbs[j * nr_rows + i], ownLimbSize, maxExp); 
       if (minLengthOwnLimbs > lengthOwnLimbs[j * nr_rows + i]) minLengthOwnLimbs = lengthOwnLimbs[j * nr_rows + i];
     }
-
+  
   
   // Allocate the memory for the set of matrices (make all elements have the same length) such that 
   // elements of the matrices are closer in memory 
   // This might need to be rethough
-  x = (long long **) malloc(minLengthOwnLimbs * sizeof *x + (minLengthOwnLimbs * (nr_rows * nr_cols * sizeof **x)));
+  x = (long long **)malloc(minLengthOwnLimbs * sizeof *x);
+  for(int k = 0; k < sizeOfArray; k++)
+    x[k] = (long long *) malloc(nr_rows * nr_cols * sizeof **x);
   sizeOfArray = minLengthOwnLimbs;
   
   for(int k = 0; k < sizeOfArray; k++)
-    for(int i = 0; i < nr_rows; ++i)
-      for(int j = 0; j < nr_cols; ++j) {
+    for(int i = 0; i < nr_rows; i++)
+      for(int j = 0; j < nr_cols; j++) {
 	x[k][j * nr_rows + i] = tmpX[j * nr_rows + i][k];
       }
   free(tmpX);
@@ -152,34 +156,71 @@ void generateLongMatrixFromGMPMatrix(const mpf_class *a, const int nr_rows, cons
 
 // TODO: Add initialization functions for mpf_t's
 // TODO: Maybe do bitwise operations and carry's by hand?
-void addToGMP(mpf_class &a, const long long toAdd, const int bitToAdd) {
+// Now tested: Seems to work!
+mpf_class addToGMP(const mpf_class a, const long long toAdd, const int bitToAdd) {
   mpf_t tmpDiv;
   mpf_init(tmpDiv);
-  mpf_div_2exp(tmpDiv, a.get_mpf_t(), bitToAdd);
-  mp_exp_t exp;
-  std::cout << "Binary div..." << mpf_class(tmpDiv).get_str(exp, 2) << std::endl;
-  std::cout << tmpDiv << std::endl;
+  if(bitToAdd < 0) {
+    mpf_mul_2exp(tmpDiv, a.get_mpf_t(), abs(bitToAdd)); } else {
+    mpf_div_2exp(tmpDiv, a.get_mpf_t(), bitToAdd); }
   mpf_t tmpAdd;
   mpf_init(tmpAdd);
   mpf_add_ui(tmpAdd, tmpDiv, toAdd);
-  std::cout << "Binary add..." << mpf_class(tmpAdd).get_str(exp, 2) << std::endl;
   mpf_t tmpMul;
   mpf_init(tmpMul);
-  mpf_mul_2exp(tmpMul, tmpAdd, bitToAdd);
-  std::cout << "Binary mul..." << mpf_class(tmpMul).get_str(exp, 2) << std::endl;
-  a = mpf_class (tmpMul);
+  if (bitToAdd < 0) {
+    mpf_div_2exp(tmpMul, tmpAdd, abs(bitToAdd)); } else {
+    mpf_mul_2exp(tmpMul, tmpAdd, bitToAdd); }
+  return(mpf_class (tmpMul));
+}
+
+void addToGMPMatrix(mpf_class *a, const long long *toAdd, const int nr_rows, const int nr_cols, const int bitToAdd) {
+  for(int i = 0; i < nr_rows; ++i) {
+    for(int j = 0; j < nr_cols; ++j) {
+      a[j * nr_rows +  i] = addToGMP( a[j * nr_rows +  i], toAdd[j * nr_rows +  i], bitToAdd);
+    }
+  }
+}
+
+// TO BE WRITTEN
+void bitsToAddOneLong(unsigned long long &a, const unsigned long long b, const int bitToAdd) {
+}
+
+// TO BE WRITTEN
+void bitsToAddTwoLong(unsigned long long &a, unsigned long long &b, const unsigned long long c, const int bitToAdd) {
+}
+
+// TO BE WRITTEN
+void addRemainder_InPlace(mpf_class &a, const long long remainder, const int limbGMPToAdd) {
+}
+
+// TO BE WRITTEN
+void addToGMP_InPlace(mpf_class &a, const long long toAdd, const int bitToAdd) { 
+  // Compare if the long that we have to add could actually exceed 
 }
 
 // NOT TESTED
 void longToGMP(mpf_class &a, const long long *toAdd, const int size_toAdd, const int ownLimbSize, const int whereWeStart) {
   // Is the precision a global variable?... I assume so?
-  a = mpf_class("0");
+  a = mpf_class("0.0");
   for (int i = 0; i < size_toAdd; i++) {
-    addToGMP(a, toAdd[i], whereWeStart - (i + 1) * ownLimbSize)
+    a = addToGMP(a, toAdd[i], whereWeStart - (i + 1) * ownLimbSize);
   }
 }
 
-// NOT TESTED
+// TESTED
+void longToGMPMatrix(mpf_class *a, long long **toAdd, const int size_toAdd, const int nr_rows, const int nr_cols, const int ownLimbSize, const int whereWeStart) {
+  for(int i = 0; i < nr_rows; ++i){
+    for(int j = 0; j < nr_cols; ++j){
+      a[j * nr_rows +  i] = mpf_class("0.0");
+      for (int k = 0; k < size_toAdd; ++k) {
+	a[j * nr_rows +  i]  = addToGMP(a[j * nr_rows +  i], toAdd[k][j * nr_rows +  i], whereWeStart - (k + 1) * ownLimbSize);
+      }
+    }
+  }
+} 
+
+// Now tested
 void numberMultiplicationBasecase(mpf_class &c, const mpf_class a, const mpf_class b) {
   if(a.get_prec() != b.get_prec()) {
     std::cout << "numberMultiplication::Numbers have different precision and therefore we will use the lower precision when multiplying" << std::endl;
@@ -193,19 +234,101 @@ void numberMultiplicationBasecase(mpf_class &c, const mpf_class a, const mpf_cla
   // Define the maximum no of bits we can store in a 64-bit variable 
   // and the exponent to which we should pad one (or none) of the no
   int ownLimbSize = DOUBLE_MANT/2;
-  int maxExp = max(a.get_mpf_t()->_m_exp, b.get_mpf_t()->_m_exp);
+  int maxExp = max(a.get_mpf_t()->_mp_exp, b.get_mpf_t()->_mp_exp) * INT64L;
   generateLongsFromGMP(a, aS, size_aS, ownLimbSize, maxExp);
   generateLongsFromGMP(b, bS, size_bS, ownLimbSize, maxExp);
   int size = min(size_aS, size_bS);
-
+  
   // Allocate memory to save the result in another array of 64-bit variables
   long long *res = (long long *)malloc(size * sizeof(long long)); 
-  for (int i = 0; i < size; i++) {
+  for (int i = 0; i < size - 1; i++) {
     res[i] = 0;
     for (int j = 0; j < i + 1; j++) 
-      res[i] += a[j] * b[i-j];
+      res[i] += aS[j] * bS[i-j];
+  }
+  longToGMP(c, res, size - 1, ownLimbSize, 2 * maxExp - ownLimbSize);
+  free(res);
+}
+
+
+
+
+void matrixProduct(long long *C, const long long *A, const long long *B, const int nr_rowsA, const int nr_colsA, const int nr_colsB) {
+
+  // #pragma omp parallel for schedule(dynamic)                                                                                                                                 
+  for (int c = 0; c < nr_rowsA; c++) {
+    for (int r = 0; r < nr_colsB; r++) {
+      long long tmp = 0;
+      for (int p = 0; p < nr_colsA; p++)
+        tmp += A[p * nr_rowsA + c] * B[r * nr_colsA + p];
+      C[r * nr_rowsA + c] = tmp;
+    }
   }
 }
+
+
+
+void matrixMultiplicationBasecase(mpf_class *c, const mpf_class *a, const mpf_class *b, const int nr_rowsA, const int nr_colsA, const int nr_colsB) {
+  long long **aS; 
+  int size_aS;
+  long long **bS;
+  int size_bS;
+  int exp; 
+  
+  int ownLimbSize = DOUBLE_MANT/2 - ceil(log2((double) nr_colsA));
+  generateLongMatrixFromGMPMatrix(a, aS, size_aS, nr_rowsA, nr_colsA, exp, ownLimbSize);  
+  generateLongMatrixFromGMPMatrix(b, bS, size_bS, nr_colsA, nr_colsB, exp, ownLimbSize);
+  int size = min(size_aS, size_bS);
+  
+  for(int i = 0; i < nr_rowsA; ++i){
+    for(int j = 0; j < nr_colsB; ++j){
+      c[j * nr_rowsA +  i] = mpf_class("0.0");
+    }
+  }
+  
+  long long *tmp = (long long *)malloc(nr_rowsA * nr_colsB * sizeof(long long));
+  for (int i = 0; i < size - 1; i++) {
+    for (int j = 0; j < i + 1; j++) {
+      matrixProduct(tmp, aS[j], bS[i-j], nr_rowsA, nr_colsA, nr_colsB);
+      addToGMPMatrix(c, tmp, nr_rowsA, nr_colsB, exp - (i + 1) * ownLimbSize); 
+      }
+  }
+}
+
+
+void generateRandomGMPMatrix(mpf_class *&a, const int nr_rows, const int nr_cols) {
+  gmp_randclass rr(gmp_randinit_default);
+  rr.seed(time(NULL));
+  for(int i = 0; i < nr_rows; i++){
+    for(int j = 0; j < nr_cols; j++){
+      std::cout << j << " " << i << std::endl;
+      a[j * nr_rows +  i] = rr.get_f(500);
+    }
+  }
+}
+
+void printGMPMatrix(mpf_class *a, const int nr_rows, const int nr_cols) {
+  std::cout << "Printing GMP matrix..." << std::endl;
+  for(int i = 0; i < nr_rows; ++i){
+    for(int j = 0; j < nr_cols; ++j){
+      std::cout << a[j * nr_rows +  i] << " ";
+    }
+    std::cout << std::endl;
+  }
+  std::cout << std::endl;
+}
+
+void printGMPMatrixDiff(mpf_class *a, mpf_class *b, const int nr_rows, const int nr_cols) {
+  std::cout << "Printing GMP matrix difference..."<< std::endl;
+  for(int i = 0; i < nr_rows; ++i){
+    for(int j = 0; j < nr_cols; ++j){
+      std::cout << a[j * nr_rows +  i] - b[j * nr_rows +  i] << " ";
+    }
+    std::cout << std::endl;
+  }
+  std::cout << std::endl;
+}
+
 
 
 // Fill the array A(nr_rows_A, nr_cols_A) with random numbers on GPU
@@ -367,17 +490,18 @@ int main(int argc, char *argv[]) {
         }
 	if (iss2 >> val2)
 	  {
-            // Conversion successful                                                                                  
+            // Conversion successful                                     
 	  }
      }
-     mpf_set_default_prec(100);
-     mpf_class f("0.25");
-     
+     mpf_set_default_prec(500);
+     mpf_class f("3.23124");
+     mpf_class fCopy = f;
+     mp_exp_t exp;
      long long *mLimbs;
      int noOfmLimbs = 0;
-     generateLongsFromGMP(f, mLimbs, noOfmLimbs, 7, 0);
+     std::cout << "Res..." << f.get_str(exp, 10) << std::endl;
+     generateLongsFromGMP(f, mLimbs, noOfmLimbs, 7, 10);
      std::cout << "*****************************" << std::endl;
-     mp_exp_t exp;
      std::cout << "Binary..." << f.get_str(exp, 2) << std::endl;
      std::cout << " Number of my limbs... " << noOfmLimbs << std::endl;
      for(int i = 0; i < noOfmLimbs; i++) {
@@ -385,17 +509,59 @@ int main(int argc, char *argv[]) {
        std::cout<< tr << std::endl;
      }
      std::cout << "*****************************" << std::endl;
+     mpf_class getResBack;
+     longToGMP(getResBack, mLimbs, noOfmLimbs, 7, 10);
+     std::cout << getResBack.get_str(exp, 2) << std::endl;
+     std::cout << getResBack - f << std::endl;
+     std::cout << "*****************************" << std::endl;
      
      std::cout << "Binary..." << f.get_str(exp, 2) << std::endl;
-     long long toAdd = 12;
-     addToGMP(f, toAdd, -7);
-     std::cout << "Binary added..." << f.get_str(exp, 2) << std::endl;
+     long long toAdd = 11232145214524552;
+     mpf_class result = addToGMP(f, toAdd, -5);
+     std::cout << "Binary added..." << result.get_str(exp, 2) << std::endl;
      std::bitset<64> tr(toAdd);
      std::cout << "what to add ..." << tr << std::endl; 
+     std::cout << "Binary added..." << result.get_str(exp, 10) << std::endl;
+     std::cout << "*****************************" << std::endl;
+     std::cout << "Testing...";
+     mpf_class a1("0.23124");
+     mpf_class a2("0.251253124");
+     mpf_class a3; 
 
+     numberMultiplicationBasecase(a3, a2, a1);
+     std::cout << a3 << std::endl;
+     std::cout << a3 - (a1 * a2) << std::endl;
+     std::cout << "*****************************" << std::endl;
+     int nr_rows_A, nr_cols_A, nr_rows_B, nr_cols_B, nr_rows_C, nr_cols_C;
+     std::cout << "Generating random matrix" << std::endl;
+     nr_rows_A = nr_cols_B = nr_rows_C = nr_cols_C= val1;
+     nr_cols_A = nr_rows_B = val2;
+     std::cout << "Allocting..." << nr_rows_A << " " << nr_cols_A <<  std::endl;
+     std::cout << sizeof(mpf_class) << std::endl;
+     mpf_class *randA = new mpf_class[nr_rows_A * nr_cols_A];
+     mpf_class *randB = new mpf_class[nr_rows_B * nr_cols_B];
+     mpf_class *randC = new mpf_class[nr_rows_C * nr_cols_C];
+     std::cout << "Allocated..." << std::endl;
+     generateRandomGMPMatrix(randA, nr_rows_A, nr_cols_A);
+     generateRandomGMPMatrix(randB, nr_rows_B, nr_cols_B);
+     generateRandomGMPMatrix(randC, nr_rows_C, nr_cols_C);
+     printGMPMatrix(randA, nr_rows_A, nr_cols_A);
+     std::cout << "*****************************" << std::endl;
+     long long ** GMPtoLong;
+     int maxExpo = 0;
+     std::cout << "Generating an array of longs" << std::endl;
+     generateLongMatrixFromGMPMatrix(randA, GMPtoLong, noOfmLimbs, nr_rows_A, nr_cols_A, maxExpo, 7);
+     std::cout << "Generated..." << std::endl;
+     std::cout << "*****************************" << std::endl;
+     mpf_class *randACopy = new mpf_class[nr_rows_A * nr_cols_A];
+     longToGMPMatrix(randACopy, GMPtoLong, noOfmLimbs, nr_rows_A, nr_cols_A, 7, maxExpo);
+     printGMPMatrix(randACopy, nr_rows_A, nr_cols_A);
+     printGMPMatrixDiff(randACopy, randA, nr_rows_A, nr_cols_A);
+     std::cout << "*****************************" << std::endl;
+     matrixMultiplicationBasecase(randC, randA, randB, nr_rows_A, nr_cols_A, nr_colsB);
+     printGMPMatrix();
      std::cout << "*****************************" << std::endl;
      // Allocate 3 arrays on CPU     
-     int nr_rows_A, nr_cols_A, nr_rows_B, nr_cols_B, nr_rows_C, nr_cols_C;
      timeval t1, t2;
 
      // for simplicity we are going to use square arrays
