@@ -261,23 +261,23 @@ void bitsToAddOneLong(unsigned long long &a, const unsigned long long b,
 void bitsToAddTwoLong(unsigned long long &a, unsigned long long &b, const unsigned long long c, 
 		      const int bitToAdd, const int bitsToCopy) {
   unsigned long long mask1, mask2;
-  int ;
-  mask1 = ((1LL << ()) - 1);
-  mask2 = ((1LL << ()) - 1) << ();
-  a = ((mask2 & c) >> );
-  b = ((mask1 & c) << bitToAdd);
+  //int ;
+  //mask1 = ((1LL << ()) - 1);
+  //mask2 = ((1LL << ()) - 1) << ();
+  //a = ((mask2 & c) >> );
+  //b = ((mask1 & c) << bitToAdd);
 }
 
 // TO BE WRITTEN
 void addRemainder_InPlace(mpf_class &a, const long long remainder, const int limbGMPToAdd) {
-  if (limbGMPToAdd) {
-  }
-  if ( ) {
-    a.get_mpf_t()->_mp_d[limbGMPToAdd] += remainder; 
-  } else {
-    a.get_mpf_t()->_mp_d[limbGMPToAdd] += remainder; 
-    addRemainder_InPlace(a, 1, limbGMPToAdd + 1);
-  }
+  // if (limbGMPToAdd) {
+  // }
+  // if ( ) {
+  //   a.get_mpf_t()->_mp_d[limbGMPToAdd] += remainder; 
+  // } else {
+  //   a.get_mpf_t()->_mp_d[limbGMPToAdd] += remainder; 
+  //   addRemainder_InPlace(a, 1, limbGMPToAdd + 1);
+  // }
 }
 
 // TO BE WRITTEN
@@ -882,10 +882,6 @@ int testAddToMpf() {
   addToMpf(x.get_mpf_t(), a, 62);
   cout << x << endl;
 }
-
-int main(int argc, char *argv[]) {
-  testAddToMpf();
-}
  
 int lucaGiantTest(int argc, char *argv[]) {
     print_memory();
@@ -1239,3 +1235,9 @@ int lucaGiantTest(int argc, char *argv[]) {
      return 0;
 
  }
+
+
+int main(int argc, char *argv[]) {
+  // lucaGiantTest(argc, argv);
+  testAddToMpf();
+}
