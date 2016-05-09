@@ -211,8 +211,10 @@ mpf_class addToGMP(const mpf_class a, const long long toAdd, const int bitToAdd)
   return(mpf_class (tmpMul));
 }
 
+
+// Set a = a + b * 2^bitOffset. 
 void addToMpf(mpf_t a, const long long b, const int bitOffset) {
-  // bitOffset = limbOffset * 64 + bitShift
+  // bitOffset = limbOffset * GMP_NUMB_BITS + bitShift
   int limbOffset = bitOffset / GMP_NUMB_BITS;
   int bitShift   = bitOffset % GMP_NUMB_BITS;
   // ensure bitShift is positive
@@ -223,26 +225,42 @@ void addToMpf(mpf_t a, const long long b, const int bitOffset) {
 
   unsigned long long bAbs = abs(b);
 
-  // bAbs = (head * 2^GMP_NUMB_BITS + tail) * 2^(-bitShift)
+  // Let 2^GMP_NUMB_BITS = N. We would like to add/subtract
+  // 
+  //   bAbs * 2^bitOffset = (bAbs * 2^bitShift) * N^limbOffset
+  //
+  // So we write
+  // 
+  //   bAbs * 2^bitShift = head * 2^GMP_NUMB_BITS + tail
   unsigned long long head = bAbs >> (GMP_NUMB_BITS - bitShift);
   unsigned long long tail = bAbs << bitShift;
 
+  // We now set
+  //
+  // a = ((a * N^(-limbOffset - 1) + head) * N + tail) * N^limbOffset
+  //
+
+  // a *= N^(-limbOffset - 1)
   a->_mp_exp -= limbOffset + 1;
 
+  // a += head
   if (b > 0) {
     mpf_add_ui(a, a, head);
   } else {
     mpf_sub_ui(a, a, head);
   }
 
+  // a *= N
   a->_mp_exp += 1;
 
+  // a += tail
   if (b > 0) {
     mpf_add_ui(a, a, tail);
   } else {
     mpf_sub_ui(a, a, tail);
   }
 
+  // a *= N^limbOffset
   a->_mp_exp += limbOffset;
 }
 
