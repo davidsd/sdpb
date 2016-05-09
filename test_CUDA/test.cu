@@ -22,10 +22,15 @@
 
 typedef boost::numeric::ublas::matrix<double> matrix;
 
+using std::cout;
+using std::endl;
 
 const int INT64L = 64;
 const int DOUBLE_MANT = 53;
 
+// This is the name that GMP uses internally for the number of bits in
+// a limb, so let's use it too
+//const int GMP_NUMB_BITS = 64;
 
 int getSign(const mpf_class a) {
   if(a < 0) {return -1;}
@@ -193,17 +198,51 @@ mpf_class addToGMP(const mpf_class a, const long long toAdd, const int bitToAdd)
   mpf_t tmpDiv;
   mpf_init(tmpDiv);
   if(bitToAdd < 0) {
-    mpf_mul_2exp(tmpDiv, a.get_mpf_t(), abs(bitToAdd)); } else {
-    mpf_div_2exp(tmpDiv, a.get_mpf_t(), bitToAdd); }
+    mpf_mul_2exp(tmpDiv, a.get_mpf_t(), abs(bitToAdd));
+  } else {
+    mpf_div_2exp(tmpDiv, a.get_mpf_t(), bitToAdd);
+  }
   mpf_t tmpAdd;
   mpf_init(tmpAdd);
   mpf_add_ui(tmpAdd, tmpDiv, toAdd);
   mpf_t tmpMul;
   mpf_init(tmpMul);
   if (bitToAdd < 0) {
-    mpf_div_2exp(tmpMul, tmpAdd, abs(bitToAdd)); } else {
-    mpf_mul_2exp(tmpMul, tmpAdd, bitToAdd); }
+    mpf_div_2exp(tmpMul, tmpAdd, abs(bitToAdd));
+  } else {
+    mpf_mul_2exp(tmpMul, tmpAdd, bitToAdd);
+  }
   return(mpf_class (tmpMul));
+}
+
+void addToMpf(mpf_t a, const long long b, const int bitOffset) {
+  // bitOffset = limbOffset * 64 + bitShift
+  int limbOffset = bitOffset / GMP_NUMB_BITS;
+  int bitShift = bitOffset % GMP_NUMB_BITS;
+
+  unsigned long long bAbs = abs(b);
+
+  // bAbs = (head * 2^GMP_NUMB_BITS + tail) * 2^(-bitShift)
+  unsigned long long head = bAbs >> (GMP_NUMB_BITS - bitShift);
+  unsigned long long tail = bAbs << bitShift;
+
+  a->_mp_exp -= limbOffset + 1;
+
+  if (b > 0) {
+    mpf_add_ui(a, a, head);
+  } else {
+    mpf_sub_ui(a, a, head);
+  }
+
+  a->_mp_exp += 1;
+
+  if (b > 0) {
+    mpf_add_ui(a, a, tail);
+  } else {
+    mpf_sub_ui(a, a, tail);
+  }
+
+  a->_mp_exp += limbOffset;
 }
 
 void addToGMPMatrix(mpf_class *a, const long long *toAdd, const int nr_rows, const int nr_cols, const int bitToAdd) {
@@ -816,8 +855,22 @@ int estimateMaxGPUAllocation(double maxFrac, int nr_rows, int nr_cols) {
   return (int) (8 * free_db/(nr_rows * nr_cols * INT64L));
 }
 
- 
+
+int testAddToMpf() {
+  mpf_set_default_prec(300);
+  mpf_class x("3.14159265358");
+  long long a = 12345;
+  cout.precision(300);
+  cout << x << endl;
+  addToMpf(x.get_mpf_t(), a, 62);
+  cout << x << endl;
+}
+
 int main(int argc, char *argv[]) {
+  testAddToMpf();
+}
+ 
+int lucaGiantTest(int argc, char *argv[]) {
     print_memory();
     int val1, val2; 
 
@@ -881,7 +934,7 @@ int main(int argc, char *argv[]) {
      std::cout << "Generating random matrix" << std::endl;
      nr_rows_A = nr_cols_B = nr_rows_C = nr_cols_C= val1;
      nr_cols_A = nr_rows_B = val2;
-     std::cout << "Allocting..." << nr_rows_A << " " << nr_cols_A <<  std::endl;
+     std::cout << "Allocating..." << nr_rows_A << " " << nr_cols_A <<  std::endl;
      std::cout << sizeof(mpf_class) << std::endl;
      mpf_class *randA = new mpf_class[nr_rows_A * nr_cols_A];
      mpf_class *randB = new mpf_class[nr_rows_B * nr_cols_B];
