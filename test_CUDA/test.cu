@@ -214,7 +214,12 @@ mpf_class addToGMP(const mpf_class a, const long long toAdd, const int bitToAdd)
 void addToMpf(mpf_t a, const long long b, const int bitOffset) {
   // bitOffset = limbOffset * 64 + bitShift
   int limbOffset = bitOffset / GMP_NUMB_BITS;
-  int bitShift = bitOffset % GMP_NUMB_BITS;
+  int bitShift   = bitOffset % GMP_NUMB_BITS;
+  // ensure bitShift is positive
+  if (bitShift < 0) {
+    limbOffset -= 1;
+    bitShift += GMP_NUMB_BITS;
+  }
 
   unsigned long long bAbs = abs(b);
 
@@ -877,9 +882,12 @@ int testAddToMpf() {
   mpf_set_default_prec(300);
   mpf_class x("3.14159265358");
   long long a = 12345;
+  long long b = -4321899;
   cout.precision(300);
   cout << x << endl;
   addToMpf(x.get_mpf_t(), a, 62);
+  cout << x << endl;
+  addToMpf(x.get_mpf_t(), b, -4);
   cout << x << endl;
 }
  
