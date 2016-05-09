@@ -28,10 +28,6 @@ using std::endl;
 const int INT64L = 64;
 const int DOUBLE_MANT = 53;
 
-// This is the name that GMP uses internally for the number of bits in
-// a limb, so let's use it too
-//const int GMP_NUMB_BITS = 64;
-
 int getSign(const mpf_class a) {
   if(a < 0) {return -1;}
   else {return 1;}
@@ -254,20 +250,41 @@ void addToGMPMatrix(mpf_class *a, const long long *toAdd, const int nr_rows, con
 }
 
 // TO BE WRITTEN
-void bitsToAddOneLong(unsigned long long &a, const unsigned long long b, const int bitToAdd) {
+void bitsToAddOneLong(unsigned long long &a, const unsigned long long b, 
+		      const int bitToAdd, const int bitsToCopy) {
+  unsigned long long mask;
+  mask = ((1LL << (bitsToCopy)) - 1);
+  a = ((mask & b) << bitToAdd);
 }
 
 // TO BE WRITTEN
-void bitsToAddTwoLong(unsigned long long &a, unsigned long long &b, const unsigned long long c, const int bitToAdd) {
+void bitsToAddTwoLong(unsigned long long &a, unsigned long long &b, const unsigned long long c, 
+		      const int bitToAdd, const int bitsToCopy) {
+  unsigned long long mask1, mask2;
+  int ;
+  mask1 = ((1LL << ()) - 1);
+  mask2 = ((1LL << ()) - 1) << ();
+  a = ((mask2 & c) >> );
+  b = ((mask1 & c) << bitToAdd);
 }
 
 // TO BE WRITTEN
 void addRemainder_InPlace(mpf_class &a, const long long remainder, const int limbGMPToAdd) {
+  if (limbGMPToAdd) {
+  }
+  if ( ) {
+    a.get_mpf_t()->_mp_d[limbGMPToAdd] += remainder; 
+  } else {
+    a.get_mpf_t()->_mp_d[limbGMPToAdd] += remainder; 
+    addRemainder_InPlace(a, 1, limbGMPToAdd + 1);
+  }
 }
 
 // TO BE WRITTEN
 void addToGMP_InPlace(mpf_class &a, const long long toAdd, const int bitToAdd) { 
   // Compare if the long that we have to add could actually exceed 
+  int bitInLimb = bitToAdd % INT64L;
+  int whichLimb = bitToAdd / (INT64L);
 }
 
 // NOT TESTED
