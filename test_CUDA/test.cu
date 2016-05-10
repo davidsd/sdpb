@@ -29,9 +29,8 @@ const int INT64L = 64;
 const int DOUBLE_MANT = 53;
 
 int getSign(const mpf_class a) {
-  if(a < 0) {return -1;}
+  if((a.get_mpf_t()->_mp_size) < 0) {return -1;}
   else {return 1;}
-
 }
 
 //Print matrix A(nr_rows_A, nr_cols_A) storage in column-major format                                                 
@@ -265,9 +264,11 @@ void addToMpf(mpf_t a, const long long b, const int bitOffset) {
 }
 
 void addToGMPMatrix(mpf_class *a, const long long *toAdd, const int nr_rows, const int nr_cols, const int bitToAdd) {
+  #pragma omp parallel for schedule(dynamic)  
   for(int i = 0; i < nr_rows; ++i) {
     for(int j = 0; j < nr_cols; ++j) {
-      a[j * nr_rows +  i] = addToGMP( a[j * nr_rows +  i], toAdd[j * nr_rows +  i], bitToAdd);
+      addToMpf(a[j * nr_rows +  i].get_mpf_t(), toAdd[j * nr_rows +  i], bitToAdd);
+      //a[j * nr_rows +  i] = addToGMP( a[j * nr_rows +  i], toAdd[j * nr_rows +  i], bitToAdd);
     }
   }
 }
@@ -708,25 +709,54 @@ void estimateSize(const mpf_class *a, int &sizeOfArray, int &maxExp, const int n
 // nr_rows: number of matrix rows
 // nr_cols: number of matrix columns 
 // maxExp:  maximum power of 2 for the leading most limb among all the entries of the array *a 
-void generateLongMatrixFromGMPMatrix_GPU(const mpf_class *a, double *d_aS, double *tmpA, int &sizeOfArray, 
-					    const int nr_rows, const int nr_cols, int &maxExp, 
-					    const int ownLimbSize) {
+void generateLongMatrixFromGMPMatrix_GPU(const mpf_class *a, double *d_aS, double *tmpA, 
+					 int *sizeMatrix, int *realExpMatrix, int *signMatrix, int &sizeOfArray, 
+					 const int nr_rows, const int nr_cols, int &maxExp, 
+					 const int ownLimbSize) {
   assert(ownLimbSize <= INT64L);
-  timeval t1, t2;
+  timeval t1, t2, tA, tB;
   double etAlloc = 0;
-  for (int k = 0; k < sizeOfArray - 1; k++) {
+  double etAlgebra = 0;
+  double etComputingSizes = 0;
+  double etAddingLongs = 0;
+  double etAddTrivial = 0;
+  double etAccs = 0;
+  #pragma omp parallel for schedule(dynamic)
+  for(int j = 0; j < nr_cols; ++j) {
     for(int i = 0; i < nr_rows; ++i) {
-      for(int j = 0; j < nr_cols; ++j) {
-	int size = a[j * nr_rows + i].get_mpf_t()->_mp_size;
-	int realExp = a[j * nr_rows + i].get_mpf_t()->_mp_exp * INT64L;
+      sizeMatrix[j * nr_rows + i] = a[j * nr_rows + i].get_mpf_t()->_mp_size;
+      realExpMatrix[j * nr_rows + i] = a[j * nr_rows + i].get_mpf_t()->_mp_exp * INT64L;
+      signMatrix[j * nr_rows + i] =  getSign(a[j * nr_rows + i]);
+    }
+  }
+
+  for (int k = 0; k < sizeOfArray - 1; k++) {
+    gettimeofday(&t1, NULL);
+    #pragma omp parallel for schedule(dynamic)
+    for(int j = 0; j < nr_cols; ++j) {
+      for(int i = 0; i < nr_rows; ++i) {
+	//gettimeofday(&tA, NULL);
+	int size = sizeMatrix[j * nr_rows + i];
+	int realExp = realExpMatrix[j * nr_rows + i];
+	int sign  = signMatrix[j * nr_rows + i];
+	//gettimeofday(&tB, NULL);
+	//etAccs += (((tB.tv_sec*uS_PER_SEC)+tB.tv_usec) - ((tA.tv_sec*uS_PER_SEC)+tA.tv_usec))/(float)uS_PER_mS;
+	
+	//gettimeofday(&tA, NULL);
 	int padding = (maxExp - realExp) / ownLimbSize;
 	int padBitOffset = (maxExp - realExp) % ownLimbSize;
-	int sign  = getSign(a[j * nr_rows + i]);
+	//gettimeofday(&tB, NULL);
+	//etComputingSizes += (((tB.tv_sec*uS_PER_SEC)+tB.tv_usec) - ((tA.tv_sec*uS_PER_SEC)+tA.tv_usec))/(float)uS_PER_mSa;
+
 	if(k > padding) {
+	  //gettimeofday(&tA, NULL);
 	  int leftGmpLimb  = size - 1 - (((k - padding) * ownLimbSize - padBitOffset) / INT64L);
 	  int leftBit      = ((k - padding) * ownLimbSize - padBitOffset) % INT64L;
 	  int rightGmpLimb = size - 1 - (((k - padding + 1) * ownLimbSize - padBitOffset) / INT64L);
 	  int rightBit     = ((k - padding + 1) * ownLimbSize - padBitOffset) % INT64L;
+	  //gettimeofday(&tB, NULL);
+	  //etAddTrivial+= (((tB.tv_sec*uS_PER_SEC)+tB.tv_usec) - ((tA.tv_sec*uS_PER_SEC)+tA.tv_usec))/(float)uS_PER_mS;
+	  //gettimeofday(&tA, NULL);
 	  if (leftGmpLimb == rightGmpLimb) {
 	    long long tmp  = a[j * nr_rows + i].get_mpf_t()->_mp_d[leftGmpLimb];
 	    tmpA[j * nr_rows + i] = sign * getBitsFromOneLong(tmp, leftBit, rightBit);
@@ -741,16 +771,21 @@ void generateLongMatrixFromGMPMatrix_GPU(const mpf_class *a, double *d_aS, doubl
 	  long long tmp  = a[j * nr_rows + i].get_mpf_t()->_mp_d[size - 1];
 	  tmpA[j * nr_rows + i] = sign * getBitsFromOneLong(tmp, 0, ownLimbSize - padBitOffset);
 	}
+	//gettimeofday(&tB, NULL);
+	//etAddingLongs += (((tB.tv_sec*uS_PER_SEC)+tB.tv_usec) - ((tA.tv_sec*uS_PER_SEC)+tA.tv_usec))/(float)uS_PER_mS;
       } 
     }
+    gettimeofday(&t2, NULL);
+    etAlgebra +=  (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
     // Transfer matrix to memeory
-    gettimeofday(&t1, NULL);
+    //gettimeofday(&t1, NULL);
     cudaMemcpy(&d_aS[k * nr_rows * nr_cols], tmpA, nr_rows * nr_cols * sizeof(double), cudaMemcpyHostToDevice);
     cudaThreadSynchronize();
-    gettimeofday(&t2, NULL);
-    etAlloc +=  (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+    //gettimeofday(&t2, NULL);
+    //etAlloc +=  (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
   }
 
+  #pragma omp parallel for schedule(dynamic)
   for(int i = 0; i < nr_rows; ++i) {
     for(int j = 0; j < nr_cols; ++j) {
       int realExp = a[j * nr_rows + i].get_mpf_t()->_mp_exp * INT64L;
@@ -763,13 +798,15 @@ void generateLongMatrixFromGMPMatrix_GPU(const mpf_class *a, double *d_aS, doubl
     }
   }
   cudaMemcpy(&d_aS[(sizeOfArray - 1) * nr_cols * nr_rows], tmpA, nr_rows * nr_cols * sizeof(double),cudaMemcpyHostToDevice);
-  printf("Actual allocation time to GPU = %fms\n", etAlloc);
+  //printf("Actual allocation time to GPU = %fms\n", etAlloc);
+  printf("Algebra time in computing hands = %fms\n", etAlgebra);
+  //printf("Calculating sizes = %fms\n", etComputingSizes);
+  //printf("My function for obtaining the hands = %fms\n", etAddingLongs);
+  //printf("Trivial stuff = %fms\n", etAddTrivial);
+  //printf("Access time = %fms\n", etAccs);
 }
 
 
-
-void checkFit() {
-}
 
 // Returns matrix product c = a.b where each entry is of the type mpf_class
 //
@@ -796,7 +833,8 @@ void checkFit() {
 // nr_cols_B: number of columns for matrix B as well as for matrix C                                                                               
 // maxExp:  maximum power of 2 for the leading most limb among all the entries of the array *a 
 void matrixMultiplicationBasecase_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b, 
-					 double *d_aS, double *d_bS, double *tmpTransferLongToGMP, long long *tmp,   
+					 double *d_aS, double *d_bS, double *tmpTransferLongToGMP, 
+					 long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
 					 double *d_prodRes, long long *d_res,  //long long *d_rem, 
 					 const int nr_rowsA, const int nr_colsA, const int nr_colsB) {
   
@@ -811,8 +849,10 @@ void matrixMultiplicationBasecase_cuBlas(const cublasHandle_t handle, mpf_class 
   estimateSize(a, size_aS, expA, nr_rowsA, nr_colsA, ownLimbSize);
   estimateSize(b, size_bS, expB, nr_colsA, nr_colsB, ownLimbSize);
   
-  generateLongMatrixFromGMPMatrix_GPU(a, d_aS, tmpTransferLongToGMP, size_aS, nr_rowsA, nr_colsA, expA, ownLimbSize);
-  generateLongMatrixFromGMPMatrix_GPU(b, d_bS, tmpTransferLongToGMP, size_bS, nr_colsA, nr_colsB, expB, ownLimbSize);
+  generateLongMatrixFromGMPMatrix_GPU(a, d_aS, tmpTransferLongToGMP, sizeMatrix, realExpMatrix, signMatrix, 
+				      size_aS, nr_rowsA, nr_colsA, expA, ownLimbSize);
+  generateLongMatrixFromGMPMatrix_GPU(b, d_bS, tmpTransferLongToGMP, sizeMatrix, realExpMatrix, signMatrix,
+				      size_bS, nr_colsA, nr_colsB, expB, ownLimbSize);
   gettimeofday(&t2, NULL);
   double etTransfer = (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
   
@@ -1012,7 +1052,7 @@ int lucaGiantTest(int argc, char *argv[]) {
      //matrixMultiplicationBasecase(randC, randA, randB, GMPtoLongA, GMPtoLongB, nr_rows_A, nr_cols_A, nr_cols_B);
      //printGMPMatrix(randC, nr_rows_C, nr_cols_C);
      gettimeofday(&t1, NULL);
-     //matrixProductGMP(randCNaive, randA, randB, nr_rows_A, nr_cols_A, nr_cols_B);
+     matrixProductGMP(randCNaive, randA, randB, nr_rows_A, nr_cols_A, nr_cols_B);
      gettimeofday(&t2, NULL);
      double etCPU = (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
      //printGMPMatrixDiff(randC, randCNaive, nr_rows_C, nr_cols_C);
@@ -1094,10 +1134,13 @@ int lucaGiantTest(int argc, char *argv[]) {
      print_memory();
      // Allocate the memory for temporary arrays
      double * tmpTransferLongToGMP = (double *)malloc(max(nr_rows_A * nr_cols_A, nr_rows_B * nr_cols_B) * sizeof(double));
+     int * sizeMatrix = (int *)malloc(max(nr_rows_A * nr_cols_A, nr_rows_B * nr_cols_B) * sizeof(int)); 
+     int * realExpMatrix = (int *)malloc(max(nr_rows_A * nr_cols_A, nr_rows_B * nr_cols_B) * sizeof(int));
+     int * signMatrix = (int *)malloc(max(nr_rows_A * nr_cols_A, nr_rows_B * nr_cols_B) * sizeof(int));
      long long *tmp = (long long *)malloc(nr_rows_C * nr_cols_C * sizeof(long long));
      gettimeofday(&t1, NULL);
      matrixMultiplicationBasecase_cuBlas(handle, randCGPU, randA, randB,
-					 d_aS, d_bS, tmpTransferLongToGMP, tmp,
+					 d_aS, d_bS, tmpTransferLongToGMP, tmp, sizeMatrix, realExpMatrix, signMatrix,
 					 d_prodRes, d_res,  nr_rows_A, nr_cols_A, nr_cols_B);
      gettimeofday(&t2, NULL);
      double etGPU = (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
@@ -1105,7 +1148,7 @@ int lucaGiantTest(int argc, char *argv[]) {
 
    //printGMPMatrix(randCGPU, nr_rows_C, nr_cols_C);
      //printGMPMatrixDiff(randCGPU, randC, nr_rows_C, nr_cols_C);
-     //printGMPMatrixDiff(randCGPU, randCNaive, 10, 10);//nr_rows_C, nr_cols_C);
+     printGMPMatrixDiff(randCGPU, randCNaive, 10, 10);//nr_rows_C, nr_cols_C);
      std::cout << std::endl;
      printf("GPU optimized GMP = %fms\n", etGPU);
      printf("CPU naive GMP = %fms\n", etCPU);
@@ -1264,6 +1307,6 @@ int lucaGiantTest(int argc, char *argv[]) {
 
 
 int main(int argc, char *argv[]) {
-  // lucaGiantTest(argc, argv);
-  testAddToMpf();
+  lucaGiantTest(argc, argv);
+  //testAddToMpf();
 }
