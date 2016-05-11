@@ -602,6 +602,11 @@ void print_memory() {
 
 }
 
+__global__ void vecMult(long *a, long *b, long long res, int rem) {
+  int id = blockIdx.x*blockDim.x+threadIdx.x;
+  
+}
+
 // CUDA kernel. Each thread takes care of one element of c
 __global__ void vecAdd(unsigned long long *a, unsigned long long *b, unsigned long long *c, int size)
 {
