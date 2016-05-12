@@ -273,6 +273,16 @@ void addToGMPMatrix(mpf_class *a, const long long *toAdd, const int nr_rows, con
   }
 }
 
+void addToGMPMatrixSymm(mpf_class *a, const long long *toAdd, const int nr_rows, const int bitToAdd) {
+  #pragma omp parallel for schedule(dynamic)  
+  for(int i = 0; i < nr_rows; ++i) {
+    for(int j = 0; j <= i; ++j) {
+      addToMpf(a[j * nr_rows +  i].get_mpf_t(), toAdd[j * nr_rows +  i], bitToAdd);
+      //a[j * nr_rows +  i] = addToGMP( a[j * nr_rows +  i], toAdd[j * nr_rows +  i], bitToAdd);
+    }
+  }
+}
+
 // TO BE WRITTEN
 void bitsToAddOneLong(unsigned long long &a, const unsigned long long b, 
 		      const int bitToAdd, const int bitsToCopy) {
@@ -551,17 +561,33 @@ void gpu_blas_mmul(const cublasHandle_t handle, const double *A, const double *B
 
 // Multiply the array A with its transpse. 
 // B(n, n) =  A(n, k) A^T(k, n)
-void gpu_blas_mullWithTransp(const cublasHandle_t handle, const double *A, double *B, const int n, const int k) {
-     int lda = n;
-     const double alf = 1; 
-     const double bet = 0;
-     const double *alpha = &alf;
-     const double *beta = &bet;
+void gpu_blas_mulWithTransp(const cublasHandle_t handle, const double *A, double *B, const int n, const int k) {
+  int lda = n;
+  const double alf = 1; 
+  const double bet = 0;
+  const double *alpha = &alf;
+  const double *beta = &bet;
+  
+     
+  // Do the actual multiplication
+  cublasDsyrk(handle, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_N, n, k, alpha, A, lda, beta, B, lda);
+}
+
+
+// Multiply the array A with its transpse. 
+// B(n, n) =  A(n, k) A^T(k, n)
+void gpu_blas_mulWithTranspAndSum(const cublasHandle_t handle, const double *A, const double *B, double *C, const int m, const int k) {
+  int lda = n, ldb = k, ldc = k;
+  const double alf = 1; 
+  const double bet = 0;
+  const double *alpha = &alf;
+  const double *beta = &bet;
 
      
-     // Do the actual multiplication
-     cublasDsyrk(handle, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_N, n, k, alpha, A, lda, beta, B, lda);
+  // Do the actual multiplication
+  cublasDsyrk(handle, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_N, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
 }
+
 
 
 
@@ -580,9 +606,7 @@ void print_memory() {
  // show memory usage of GPU
 
      size_t free_byte ;
-
      size_t total_byte ;
-
      cudaError_t cuda_status = cudaMemGetInfo( &free_byte, &total_byte ) ;
 
      if ( cudaSuccess != cuda_status ){
@@ -813,6 +837,174 @@ void generateLongMatrixFromGMPMatrix_GPU(const mpf_class *a, double *d_aS, doubl
 
 
 
+int estimateMaxGPUAllocation(double maxFrac, int nr_rows, int nr_cols) {
+  size_t free_byte ;
+  size_t total_byte ;
+  cudaError_t cuda_status = cudaMemGetInfo( &free_byte, &total_byte ) ;
+  if ( cudaSuccess != cuda_status ){
+    printf("Error: cudaMemGetInfo fails, %s \n", cudaGetErrorString(cuda_status) );
+    exit(1);
+  }
+  double free_db = ((double)free_byte) * maxFrac;
+  return (int) (8 * free_db/(nr_rows * nr_cols * INT64L));
+}
+
+
+// Returns matrix product c = a.a^T where each entry is of the type mpf_class
+//
+// All arrays need to already have allocated memory:                                                                  
+// *c : array of mpf_class with size nr_rowsA * nr_rowsA                  
+// *a : array of mpf_class with size nr_rowsA * nr_colsA
+// *d_aS: array allocated in GPU with size sizeOfArray * nr_rowsA * nr_colsA. Note that we flatten this               
+//        array of matrices in order to speed up the access in the GPU.                                              
+//        Thus, to access the k-th limb from the (i, j) matrix entry one calls d_aS[k * nr_rowsA * nr_colsA + j * nr_rowsA + i]
+// *tmpTransferLongToGMP : temporary array of doubles used for transfers that needs nr_rowsA * nr_colsA entries                    
+// *tmp: temporary array of 64-bit vars used for transfers. Needs to be allocated nr_rowsA * nr_rowsA entries
+// *d_prodRes: temporary matrix allocated in GPU memory which handles individual multiplications of matrices
+// *d_res : temporary matrix allocated in GPU memory in which we sum up all individual multiplications of matrices
+// *d_rem : in case we encounter overflow in the matrix d_res we use the entries in the matrix d_rem to store the remainders. 
+//          Note that this matrix is only used when using the function vecAdd__wRem. When using vecAdd__wSign we assume that 
+//          overflow never occurs. This is the case if the number of own generated limbs is greater than 1024. This correpons 
+//          to a GMP precision ~20,000. For current bootstrap applications such precision is not needed.
+// nr_rows_A: number of rows for matrix A as well as for matrix C                                                                                
+// nr_cols_A: number of columns for matrix A as well as number of rows for matrix B
+// nr_cols_B: number of columns for matrix B as well as for matrix C                                                                               
+// maxExp:  maximum power of 2 for the leading most limb among all the entries of the array *a 
+void matrixMultSymmBasecase_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
+				   double *d_aS, double *tmpTransferLongToGMP, 
+				   long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
+				   double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, const float whatOrder) {
+  
+  int size = 0; 
+  int expA = 0;
+  timeval t1, t2;
+  
+  int ownLimbSize = DOUBLE_MANT/2 - ceil(log2((double) nr_colsA) / 2);
+  gettimeofday(&t1, NULL);
+  estimateSize(a, size_aS, expA, nr_rowsA, nr_colsA, ownLimbSize);
+  
+  generateLongMatrixFromGMPMatrix_GPU(a, d_aS, tmpTransferLongToGMP, sizeMatrix, realExpMatrix, signMatrix, 
+				      size, nr_rowsA, nr_colsA, expA, ownLimbSize);
+  gettimeofday(&t2, NULL);
+  double etTransfer = (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+  
+  std::cout << size << " " << expA << std::endl;
+
+  for(int i = 0; i < nr_rowsA; ++i){
+    for(int j = 0; j < nr_rowsA ++j){
+      c[j * nr_rowsA +  i] = mpf_class("0.0");
+      tmp[j * nr_rowsA +  i] = 0;
+    }
+  }
+
+  // Number of threads in each thread block                                                                          
+  int blockSize = 256; // Make sure this number is good? I don't know how
+  // Number of thread blocks in grid                                                                                 
+  int gridSize = (int)ceil((float)(nr_rowsA * nr_rowsA)/blockSize);
+  
+  double etMult = 0;
+  double etAdd = 0;
+  double etAlloc = 0;
+  double etBackAlloc = 0;
+  double etaddBack = 0;
+  
+  long sizeToCompute =  (whatOrder + maxExp) / ownLimbSize;
+  
+  for (int i = 0; i < min(size, sizeToCompute); i++) {
+    gettimeofday(&t1, NULL);
+    cudaMemcpy(d_res, tmp, nr_rowsA * nr_rowsA * sizeof(long long), cudaMemcpyHostToDevice);
+    gettimeofday(&t2, NULL);
+    etAlloc += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+    //cudaMemcpy(d_rem, tmp, nr_rowsA * nr_colsB * sizeof(long long), cudaMemcpyHostToDevice);
+    for (int j = 0; j < i + 1; j++) {
+      gettimeofday(&t1, NULL);
+      if (i - j != j)
+	gpu_blas_mulWithTranspAndSum(handle, &d_aS[j * nr_rowsA * nr_rowsA], &d_aS[(i - j) * nr_colsA * nr_colsB], d_prodRes, nr_rowsA, nr_colsA); 
+      else
+	gpu_blas_mulWithTransp(handle, &d_aS[j * nr_rowsA * nr_rowsA], d_prodRes, nr_rowsA, nr_colsA); 
+      cudaThreadSynchronize();
+      gettimeofday(&t2, NULL);
+      etMult += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+      
+      gettimeofday(&t1, NULL);
+      vecAdd__wSign<<<gridSize, blockSize>>>(d_prodRes, d_res,  nr_rowsA * nr_rowsA);
+      cudaThreaMdSynchronize();
+      gettimeofday(&t2, NULL);
+      etAdd += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+      // This is safe with overflow until there are 1024 of our own limbs that need to be summed up
+      // This case corresponds to a precision of ~20000 bits in GMP
+    }
+    gettimeofday(&t1, NULL);
+    cudaMemcpy(tmp, d_res, nr_rowsA * nr_rowsA * sizeof(long long), cudaMemcpyDeviceToHost);
+    gettimeofday(&t2, NULL);
+    etBackAlloc += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+    
+    gettimeofday(&t1, NULL);
+    addToGMPMatrixSymm(c, tmp, nr_rowsA, 2 * expA - (i + 2) * ownLimbSize);
+    gettimeofday(&t2, NULL);
+    etaddBack += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+    
+    #pragma omp parallel for schedule(dynamic)
+    for(int l = 0; l < nr_rowsA; ++l){
+      for(int k = 0; k < nr_rowsA; ++k){
+	tmp[l *  nr_rowsA + k] = 0;
+      }
+    }
+  }
+  
+   
+  for (int i = size; i < min(2 * size - 1, sizeToCompute); i++) {
+    gettimeofday(&t1, NULL);
+    cudaMemcpy(d_res, tmp, nr_rowsA * nr_rowsA * sizeof(long long), cudaMemcpyHostToDevice);
+    gettimeofday(&t2, NULL);
+    etAlloc += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+    //cudaMemcpy(d_rem, tmp, nr_rowsA * nr_colsB * sizeof(long long), cudaMemcpyHostToDevice);
+    for (int j = i - size + 1; j < size; j++) {
+      gettimeofday(&t1, NULL);
+      if (i - j != j)
+	gpu_blas_mulWithTranspAndSum(handle, &d_aS[j * nr_rowsA * nr_rowsA], &d_aS[(i - j) * nr_colsA * nr_colsB], d_prodRes, nr_rowsA, nr_colsA); 
+      else
+	gpu_blas_mulWithTransp(handle, &d_aS[j * nr_rowsA * nr_rowsA], d_prodRes, nr_rowsA, nr_colsA); 
+      cudaThreadSynchronize();
+      gettimeofday(&t2, NULL);
+      etMult += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+      
+      gettimeofday(&t1, NULL);
+      vecAdd__wSign<<<gridSize, blockSize>>>(d_prodRes, d_res,  nr_rowsA * nr_rowsA);
+      cudaThreaMdSynchronize();
+      gettimeofday(&t2, NULL);
+      etAdd += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+      // This is safe with overflow until there are 1024 of our own limbs that need to be summed up
+      // This case corresponds to a precision of ~20000 bits in GMP
+    }
+    gettimeofday(&t1, NULL);
+    cudaMemcpy(tmp, d_res, nr_rowsA * nr_rowsA * sizeof(long long), cudaMemcpyDeviceToHost);
+    gettimeofday(&t2, NULL);
+    etBackAlloc += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+    
+    gettimeofday(&t1, NULL);
+    addToGMPMatrixSymm(c, tmp, nr_rowsA, 2 * expA - (i + 2) * ownLimbSize);
+    gettimeofday(&t2, NULL);
+    etaddBack += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+    #pragma omp parallel for schedule(dynamic)
+    for(int l = 0; l < nr_rowsA; ++l){
+      for(int k = 0; k < nr_rowsA; ++k){
+	tmp[l *  nr_rowsA + k] = 0;
+      }
+    }
+  }
+ 
+  printf("Transfer GPU = %fms\n", etTransfer);
+  printf("Multiplication GPU = %fms\n", etMult);
+  printf("Addition GPU = %fms\n", etAdd);
+  printf("Alloc of zero to GPU = %fms\n", etAlloc);
+  printf("Transfer from GPU to host = %fms\n", etBackAlloc);
+  printf("Addition on CPU = %fms\n", etaddBack);
+}
+
+
+
+
 // Returns matrix product c = a.b where each entry is of the type mpf_class
 //
 // All arrays need to already have allocated memory:                                                                  
@@ -822,10 +1014,10 @@ void generateLongMatrixFromGMPMatrix_GPU(const mpf_class *a, double *d_aS, doubl
 // *d_aS: array allocated in GPU with size sizeOfArray * nr_rowsA * nr_colsA. Note that we flatten this               
 //        array of matrices in order to speed up the access in the GPU.                                              
 //        Thus, to access the k-th limb from the (i, j) matrix entry one calls d_aS[k * nr_rowsA * nr_colsA + j * nr_rowsA + i]
-// *d_bS: array allocated in GPU with size sizeOfArray * nr_colsA * nr_colsB. Note that we flatten this                                                              
-//        array of matrices in order to speed up the access in the GPU.                                                                                              
+// *d_bS: array allocated in GPU with size sizeOfArray * nr_colsA * nr_colsB. Note that we flatten this                                                      
+//        array of matrices in order to speed up the access in the GPU.                                                                                     
 //        Thus, to access the k-th limb from the (i, j) matrix entry one calls d_bS[k * nr_colsA * nr_colsB + j * nr_colsA + i] 
-// *tmpTransferLongToGMP : temporary array of doubles used for transfers that needs max(nr_rowsA * nr_colsA, nr_colsA * nr_colsB) entries                            
+// *tmpTransferLongToGMP : temporary array of doubles used for transfers that needs max(nr_rowsA * nr_colsA, nr_colsA * nr_colsB) entries                    
 // *tmp: temporary array of 64-bit vars used for transfers. Needs to be allocated nr_rowsA * nr_colsB entries
 // *d_prodRes: temporary matrix allocated in GPU memory which handles individual multiplications of matrices
 // *d_res : temporary matrix allocated in GPU memory in which we sum up all individual multiplications of matrices
@@ -913,6 +1105,7 @@ void matrixMultiplicationBasecase_cuBlas(const cublasHandle_t handle, mpf_class 
     etaddBack += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
     //cudaMemcpy(tmp, d_rem, nr_rowsA * nr_colsB * sizeof(long long),cudaMemcpyDeviceToHost);
     //addToGMPMatrix(c, tmp, nr_rowsA, nr_colsB, 2 * exp - (i + 2) * ownLimbSize + (INT64L - 1));
+    #pragma omp parallel for schedule(dynamic)
     for(int k = 0; k < nr_rowsA; ++k){
       for(int l = 0; l < nr_colsB; ++l){
 	tmp[l *  nr_rowsA + k] = 0;
