@@ -85,7 +85,7 @@ void toBit(const long long a) {
 // TODO: Eventually decouple allocation from calculation
 //
 void generateLongsFromGMP(const mpf_class a, long long *&x, int &sizeOfArray, const int ownLimbSize, const int padExp) {
-  int size = a.get_mpf_t()->_mp_size; 
+  int size = abs(a.get_mpf_t()->_mp_size); 
   // WARNING: _mp_exp is number of limbs, not actual exponent!
   // TODO: Test the fix below
   int realExp = a.get_mpf_t()->_mp_exp * INT64L;
@@ -694,7 +694,7 @@ void estimateSize(const mpf_class *a, int &sizeOfArray, int &maxExp, const int n
       int toCmp =  a[j * nr_rows + i].get_mpf_t()->_mp_exp;
       if (toCmp >= maxExp) {
         maxExp = toCmp;
-        minSize = a[j * nr_rows + i].get_mpf_t()->_mp_size;
+        minSize = abs(a[j * nr_rows + i].get_mpf_t()->_mp_size);
       }
     }
 
@@ -729,7 +729,7 @@ void generateLongMatrixFromGMPMatrix_GPU(const mpf_class *a, double *d_aS, doubl
   #pragma omp parallel for schedule(dynamic)
   for(int j = 0; j < nr_cols; ++j) {
     for(int i = 0; i < nr_rows; ++i) {
-      sizeMatrix[j * nr_rows + i] = a[j * nr_rows + i].get_mpf_t()->_mp_size;
+      sizeMatrix[j * nr_rows + i] = abs(a[j * nr_rows + i].get_mpf_t()->_mp_size);
       realExpMatrix[j * nr_rows + i] = a[j * nr_rows + i].get_mpf_t()->_mp_exp * INT64L;
       signMatrix[j * nr_rows + i] =  getSign(a[j * nr_rows + i]);
     }
@@ -849,7 +849,7 @@ void matrixMultiplicationBasecase_cuBlas(const cublasHandle_t handle, mpf_class 
   int expB = 0;
   timeval t1, t2;
   
-  int ownLimbSize = DOUBLE_MANT/2 - ceil(log2((double) nr_colsA));
+  int ownLimbSize = DOUBLE_MANT/2 - ceil(log2((double) nr_colsA) / 2);
   gettimeofday(&t1, NULL);
   estimateSize(a, size_aS, expA, nr_rowsA, nr_colsA, ownLimbSize);
   estimateSize(b, size_bS, expB, nr_colsA, nr_colsB, ownLimbSize);
@@ -896,7 +896,7 @@ void matrixMultiplicationBasecase_cuBlas(const cublasHandle_t handle, mpf_class 
       
       gettimeofday(&t1, NULL);
       vecAdd__wSign<<<gridSize, blockSize>>>(d_prodRes, d_res,  nr_rowsA * nr_colsB);
-      cudaThreadSynchronize();
+      cudaThreaMdSynchronize();
       gettimeofday(&t2, NULL);
       etAdd += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
       // This is safe with overflow until there are 1024 of our own limbs that need to be summed up

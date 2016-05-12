@@ -27,6 +27,60 @@ using std::endl;
 
 const int INT64L = 64;
 const int DOUBLE_MANT = 53;
+
+
+// Set a = a + b * 2^bitOffset.                                                                                                                             
+void addToMpf(mpf_t a, const long long b, const int bitOffset) {
+  // bitOffset = limbOffset * GMP_NUMB_BITS + bitShift                                                                                                      
+  int limbOffset = bitOffset / GMP_NUMB_BITS;
+  int bitShift   = bitOffset % GMP_NUMB_BITS;
+  // ensure bitShift is positive                                                                                                                            
+  if (bitShift < 0) {
+    limbOffset -= 1;
+    bitShift += GMP_NUMB_BITS;
+  }
+
+  unsigned long long bAbs = abs(b);
+  // Let 2^GMP_NUMB_BITS = N. We would like to add/subtract                                                                                                
+  //                                                                                                                                                       
+  //   bAbs * 2^bitOffset = (bAbs * 2^bitShift) * N^limbOffset                                                                                              
+  //                                                                                                                                                        
+  // So we write                                                                                                                                            
+  //                                                                                                                                                        
+  //   bAbs * 2^bitShift = head * 2^GMP_NUMB_BITS + tail                                                                                                   
+  
+  unsigned long long head = bAbs >> (GMP_NUMB_BITS - bitShift);
+  unsigned long long tail = bAbs << bitShift;
+
+  // We now set                                                                                                                                            
+  //                                                                                                                                                        
+  // a = ((a * N^(-limbOffset - 1) + head) * N + tail) * N^limbOffset                                                                                       
+  //                                                                                                                                                        
+  // a *= N^(-limbOffset - 1)                                                                                                                               
+  
+  a->_mp_exp -= limbOffset + 1;
+
+  // a += head                                                                                                                                             
+  
+  if (b > 0) {
+    mpf_add_ui(a, a, head);
+  } else {
+    mpf_sub_ui(a, a, head);
+  }
+
+  // a *= N                                                                                                                                                  
+  a->_mp_exp += 1;
+  // a += tail                                                                                                                                               
+  if (b > 0) {
+    mpf_add_ui(a, a, tail);
+  } else {
+    mpf_sub_ui(a, a, tail);
+  }
+
+  // a *= N^limbOffset                                                                                                                                      
+  a->_mp_exp += limbOffset;
+}
+
 // All arrays need to already have allocated memory:                                                                
 // *a : array of mpf_class with size nr_rows * nr_cols                                                              
 // *d_aS: array allocated in GPU with size sizeOfArray * nr_rows * nr_cols. Note that we flatten this               
@@ -138,6 +192,15 @@ __global__ void vecMult(long *a, long long *b,
   }
 }
 
+void subtractVector(long long *b, mpf_class *a, const int nr_el, const int sizeOfArray, const int maxExp, const int ownLimbSize) {
+  #pragma omp parallel for schedule(dynamic)
+  for (int i = 0; i < nr_el; ++i) {
+    for (int j = 0; j < sizeOfArray; ++j) {
+      addToMpf(a[i].get_mpf_t(), b[i * sizeOfArray + j], 2 * maxExp - (j + 2) * ownLimbSize);
+    }
+  } 
+}
+
 
 
 void cholesky_GPU(const cublasHandle_t handle, mpf_class *a, 
@@ -146,7 +209,16 @@ void cholesky_GPU(const cublasHandle_t handle, mpf_class *a,
 		  long long *d_res, long long *d_res,  
 		  const int nr_rowsA, const int nr_colsA, const int nr_colsB) {
   // Compute first column of L 
+  int sizeOfArray = 0;
+  int maxExp = 0;
+  int ownLimbSize = INT64L/2 - ceil(log2((double) nr_rows) / 2);
+  int tracker = 0;
+
+  estimateSize(a, sizeOfArray, maxExp, ownLimbSize);
+  
   mpf_sqrt(a[0], a[0]); 
+  
+  #pragma omp parallel for schedule(dynamic)
   for (int i = 1; i < nr_rows; ++i) {
     a[i] = a[i]/a[0];
   }
@@ -155,13 +227,47 @@ void cholesky_GPU(const cublasHandle_t handle, mpf_class *a,
 				      sizeVector, realExpVector, signVector, sizeOfArray,
 				      nr_rows  - 1, maxExp, ownLimbSize); 
 
+  // Number of threads in each thread block                                                                                                                 
+  int blockSize = 256; // Make sure this number is good? I don't know how                                                                                    
+
   for(int j = 1; j < nr_cols - GPU_THRESHOLD; ++j) {
-    for(int i = 0; i < nr_rows; ++i) {
-      
+    // Number of thread blocks in grid                                            
+    int size = sizeOfArray * nr_el;
+    size *= size;
+    long long gridSize = (long long)ceil((float)(size)/blockSize);
+    // Compute results of GPU
+    vecMult<<<gridSize, blockSize>>>(d_aS, &d_res[tracker * sizeOfArray],  
+				     nr_rows - j, sizeOfArray, nr_rows, size - 1);
+    // Copy results from GPU to host
+    tracker += nr_rows - j;
+    cudaMemcpy(tmp, &d_res[tracker * sizeOfArray], 
+	       (nr_rows - j) * sizeOfArray * sizeof(long long), cudaMemcpyDeviceToHost);
+    subtractVector(tmp, &a[nr_rows * j + j], nr_rows - j, sizeOfArray);
+    mpf_sqrt(a[nr_rows * j + j], a[nr_rows * j + j]);
+    
+    #pragma omp parallel for schedule(dynamic)
+    for(int i = j + 1; i < nr_rows; ++i) {
+      a[j * nr_rows + i] = a[j * nr_rows + i]/a[nr_rows * j + j];
     }
-    generateLongVectorFromGMPVector_GPU(&a[i * nr_rows + i + 1], d_aS, tmpTransferLongToGMP,
-					sizeVector, realExpVector, signVector, sizeOfArray,
-					nr_rows  - i - 1, maxExp, ownLimbSize);
+    if (j != nr_cols - GPU_THRESHOLD - 1)
+      generateLongVectorFromGMPVector_GPU(&a[j * nr_rows + j + 1], d_aS, tmpTransferLongToGMP,
+					  sizeVector, realExpVector, signVector, sizeOfArray,
+					  nr_rows  - i - 1, maxExp, ownLimbSize);
   }
 
+  // Copy the rest of the results
+  tracker += GPU_THRESHOLD;
+  cudaMemcpy(tmp, &d_res[tracker * sizeOfArray], (nr_rows * (nr_rows - 1) - tracker) * sizeOfArray * sizeof(long long), cudaMemcpyDeviceToHost);
+  for (int j = nr_cols - GPU_THRESHOLD; j < nr_cols; ++j) {
+    subtractVector(tmp, &a[j * nr_rows + j], nr_rows - j, sizeOfArray);
+    mpf_sqrt(a[j * nr_rows + j], a[j * nr_rows + j]);
+    long long diag = a[j * nr_rows + j];
+    #pragma omp parallel for schedule(dynamic)
+    for (int i = j + 1; i < nr_rows; i++) {
+      a[j * nr_rows + i] = a[j * nr_rows + i]/diag; 
+      for (int k = j + 1; k <= i; k++) {
+	a[k * nr_rows + i] -= a[j * nr_rows + k] * a[j * nr_rows + i];
+      }
+    }
+  }
 }
