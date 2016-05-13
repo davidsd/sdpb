@@ -403,7 +403,7 @@ void matrixProduct(long long *C, const long long *A, const long long *B, const i
 
 void matrixProductDouble(long long *C, const double *A, const double *B, const int nr_rowsA, const int nr_colsA, const int nr_colsB) {
 
-  // #pragma omp parallel for schedule(dynamic)                                                                                                                                       
+  // #pragma omp parallel for schedule(dynamic)                                                                                                          
   for (int c = 0; c < nr_rowsA; c++) {
     for (int r = 0; r < nr_colsB; r++) {
       long long tmp = 0;
@@ -728,6 +728,7 @@ void estimateSize(const mpf_class *a, int &sizeOfArray, int &maxExp, const int n
 }
 
 
+
 // All arrays need to already have allocated memory: 
 // *a : array of mpf_class with size nr_rows * nr_cols
 // *d_aS: array allocated in GPU with size sizeOfArray * nr_rows * nr_cols. Note that we flatten this 
@@ -836,7 +837,10 @@ void generateLongMatrixFromGMPMatrix_GPU(const mpf_class *a, double *d_aS, doubl
 }
 
 
-
+// Estimates 
+// maxFrac : 
+// nr_rows :
+// nr_cols :
 int estimateMaxGPUAllocation(double maxFrac, int nr_rows, int nr_cols) {
   size_t free_byte ;
   size_t total_byte ;
@@ -850,9 +854,94 @@ int estimateMaxGPUAllocation(double maxFrac, int nr_rows, int nr_cols) {
 }
 
 
+// Implements matrix multiplication c = a.b, and, according to whether or not the matrices fit 
+// in GPU memory. If it does not fit we either apply the Karatsuba algorithm or the Toom-3 
+// algorithm until all the matrices fit in GPU memory. 
+void matrixMult_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b, 
+		       double *d_aS, double *d_bS, double *tmpTransferLongToGMP, 
+		       long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
+		       double *d_prodRes, long long *d_res, 
+		       const int nr_rowsA, const int nr_colsA, const int nr_colsB) {
+  int maxNoMatrices = estimateMaxGPUAllocation(0.8, (nr_rowsA + nr_colsB), nr_colsA);
+  int size_aS = 0; 
+  int size_bS = 0;
+  int expA = 0;
+  int expB = 0;
+    
+  int ownLimbSize = DOUBLE_MANT/2 - ceil(log2((double) nr_colsA) / 2);
+  estimateSize(a, size_aS, expA, nr_rowsA, nr_colsA, ownLimbSize);
+  estimateSize(b, size_bS, expB, nr_colsA, nr_colsB, ownLimbSize);
+  
+  if (max(size_aS, size_bS) + 1 < maxNoMatrices) {
+    matrixMultiplicationBasecase_cuBlas(handle, c, a, b, d_aS, d_bS, tmpTransferLongToGMP, 
+					tmp, sizeMatrix, realExpMatrix, signMatrix,  
+					d_prodRes, d_res, nr_rowsA, nr_colsA, nr_colsB); 
+  } else {
+    toom2(handle, c, a, b, d_aS, d_bS, tmpTransferLongToGMP, 
+	  tmp, sizeMatrix, realExpMatrix, signMatrix,  
+	  d_prodRes, d_res, nr_rowsA, nr_colsA, nr_colsB);
+  }
+}
+
+void matrixMultSymm_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
+			   double *d_aS, double *tmpTransferLongToGMP, 
+			   long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
+			   double *d_prodRes, long long *d_res, 
+			   const int nr_rowsA, const int nr_colsA, const float whatOrder) {
+  int maxNoMatrices = estimateMaxGPUAllocation(0.8, nr_rowsA, nr_colsA);
+  int size = 0; 
+  int exp = 0;
+ 
+  int ownLimbSize = DOUBLE_MANT/2 - ceil(log2((double) nr_colsA) / 2);
+  
+  estimateSize(a, size, exp, nr_rowsA, nr_colsA, ownLimbSize);
+
+  if (size + 1 < maxNoMatrices) {
+    matrixMultSymmBasecase_cuBlas(handle, c, a, d_aS, tmpTransferLongToGMP, 
+				  tmp, sizeMatrix, realExpMatrix, signMatrix,  
+				  d_prodRes, d_res, nr_rowsA, nr_colsA, prec); 
+  } else {
+    toom2(handle, c, a, b, d_aS, d_bS, tmpTransferLongToGMP, 
+	  tmp, sizeMatrix, realExpMatrix, signMatrix,  
+	  d_prodRes, d_res, nr_rowsA, nr_colsA, nr_colsB);
+  }
+}
+
+// Implements Karatsuba algorithm for matrix multiplication c = a.b
+// We split each matrix element in two parts which are equal in length up to the size of one GMP limb. 
+void toom2(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b, 
+	   double *d_aS, double *d_bS, double *tmpTransferLongToGMP, 
+	   long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
+	   double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, const int nr_colsB) {
+}
+
+// Implements Toom-3 algorithm for matrix multiplciation c = a.b
+// We split each matrix element in three parts which are equal in length up to the size of one GMP limb.
+void toom3(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b, 
+	   double *d_aS, double *d_bS, double *tmpTransferLongToGMP, 
+	   long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
+	   double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, const int nr_colsB) {
+}
+
+// Implements Karatsuba algorithm for matrix multiplication c = a.a^T
+//      
+void toom2Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
+	       double *d_aS, double *tmpTransferLongToGMP, 
+	       long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
+	       double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, const float whatOrder) {
+}
+
+// Implements Toom-3 algorithm for matrix multiplication c = a.a^T
+void toom3Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
+	       double *d_aS, double *tmpTransferLongToGMP, 
+	       long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
+	       double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, const float whatOrder) {
+}
+
 // Returns matrix product c = a.a^T where each entry is of the type mpf_class
 //
-// All arrays need to already have allocated memory:                                                                  
+// All arrays need to already have allocated memory:
+// handle : Handle for cuBlas computations that needs to be previously allocated.                                                                   
 // *c : array of mpf_class with size nr_rowsA * nr_rowsA                  
 // *a : array of mpf_class with size nr_rowsA * nr_colsA
 // *d_aS: array allocated in GPU with size sizeOfArray * nr_rowsA * nr_colsA. Note that we flatten this               
@@ -868,7 +957,7 @@ int estimateMaxGPUAllocation(double maxFrac, int nr_rows, int nr_cols) {
 //          to a GMP precision ~20,000. For current bootstrap applications such precision is not needed.
 // nr_rows_A: number of rows for matrix A as well as for matrix C                                                                                
 // nr_cols_A: number of columns for matrix A as well as number of rows for matrix B
-// nr_cols_B: number of columns for matrix B as well as for matrix C                                                                               
+// nr_cols_B: number of columns for matrix B as well as for matrix C                                                                            
 // maxExp:  maximum power of 2 for the leading most limb among all the entries of the array *a 
 void matrixMultSymmBasecase_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
 				   double *d_aS, double *tmpTransferLongToGMP, 
@@ -1014,10 +1103,10 @@ void matrixMultSymmBasecase_cuBlas(const cublasHandle_t handle, mpf_class *c, mp
 // *d_aS: array allocated in GPU with size sizeOfArray * nr_rowsA * nr_colsA. Note that we flatten this               
 //        array of matrices in order to speed up the access in the GPU.                                              
 //        Thus, to access the k-th limb from the (i, j) matrix entry one calls d_aS[k * nr_rowsA * nr_colsA + j * nr_rowsA + i]
-// *d_bS: array allocated in GPU with size sizeOfArray * nr_colsA * nr_colsB. Note that we flatten this                                                      
-//        array of matrices in order to speed up the access in the GPU.                                                                                     
+// *d_bS: array allocated in GPU with size sizeOfArray * nr_colsA * nr_colsB. Note that we flatten this                                         
+//        array of matrices in order to speed up the access in the GPU.                                                                          
 //        Thus, to access the k-th limb from the (i, j) matrix entry one calls d_bS[k * nr_colsA * nr_colsB + j * nr_colsA + i] 
-// *tmpTransferLongToGMP : temporary array of doubles used for transfers that needs max(nr_rowsA * nr_colsA, nr_colsA * nr_colsB) entries                    
+// *tmpTransferLongToGMP : temporary array of doubles used for transfers that needs max(nr_rowsA * nr_colsA, nr_colsA * nr_colsB) entries        
 // *tmp: temporary array of 64-bit vars used for transfers. Needs to be allocated nr_rowsA * nr_colsB entries
 // *d_prodRes: temporary matrix allocated in GPU memory which handles individual multiplications of matrices
 // *d_res : temporary matrix allocated in GPU memory in which we sum up all individual multiplications of matrices
@@ -1027,7 +1116,7 @@ void matrixMultSymmBasecase_cuBlas(const cublasHandle_t handle, mpf_class *c, mp
 //          to a GMP precision ~20,000. For current bootstrap applications such precision is not needed.
 // nr_rows_A: number of rows for matrix A as well as for matrix C                                                                                
 // nr_cols_A: number of columns for matrix A as well as number of rows for matrix B
-// nr_cols_B: number of columns for matrix B as well as for matrix C                                                                               
+// nr_cols_B: number of columns for matrix B as well as for matrix C                                                                             
 // maxExp:  maximum power of 2 for the leading most limb among all the entries of the array *a 
 void matrixMultiplicationBasecase_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b, 
 					 double *d_aS, double *d_bS, double *tmpTransferLongToGMP, 
