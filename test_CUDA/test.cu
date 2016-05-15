@@ -283,44 +283,6 @@ void addToGMPMatrixSymm(mpf_class *a, const long long *toAdd, const int nr_rows,
   }
 }
 
-// TO BE WRITTEN
-void bitsToAddOneLong(unsigned long long &a, const unsigned long long b, 
-		      const int bitToAdd, const int bitsToCopy) {
-  unsigned long long mask;
-  mask = ((1LL << (bitsToCopy)) - 1);
-  a = ((mask & b) << bitToAdd);
-}
-
-// TO BE WRITTEN
-void bitsToAddTwoLong(unsigned long long &a, unsigned long long &b, const unsigned long long c, 
-		      const int bitToAdd, const int bitsToCopy) {
-  unsigned long long mask1, mask2;
-  //int ;
-  //mask1 = ((1LL << ()) - 1);
-  //mask2 = ((1LL << ()) - 1) << ();
-  //a = ((mask2 & c) >> );
-  //b = ((mask1 & c) << bitToAdd);
-}
-
-// TO BE WRITTEN
-void addRemainder_InPlace(mpf_class &a, const long long remainder, const int limbGMPToAdd) {
-  // if (limbGMPToAdd) {
-  // }
-  // if ( ) {
-  //   a.get_mpf_t()->_mp_d[limbGMPToAdd] += remainder; 
-  // } else {
-  //   a.get_mpf_t()->_mp_d[limbGMPToAdd] += remainder; 
-  //   addRemainder_InPlace(a, 1, limbGMPToAdd + 1);
-  // }
-}
-
-// TO BE WRITTEN
-void addToGMP_InPlace(mpf_class &a, const long long toAdd, const int bitToAdd) { 
-  // Compare if the long that we have to add could actually exceed 
-  int bitInLimb = bitToAdd % INT64L;
-  int whichLimb = bitToAdd / (INT64L);
-}
-
 // NOT TESTED
 void longToGMP(mpf_class &a, const long long *toAdd, const int size_toAdd, const int ownLimbSize, const int whereWeStart) {
   // Is the precision a global variable?... I assume so?
@@ -861,7 +823,7 @@ void matrixMult_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
 		       double *d_aS, double *d_bS, double *tmpTransferLongToGMP, 
 		       long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
 		       double *d_prodRes, long long *d_res, 
-		       const int nr_rowsA, const int nr_colsA, const int nr_colsB) {
+		       const int nr_rowsA, const int nr_colsA, const int nr_colsB, const int prec) {
   int maxNoMatrices = estimateMaxGPUAllocation(0.8, (nr_rowsA + nr_colsB), nr_colsA);
   int size_aS = 0; 
   int size_bS = 0;
@@ -873,21 +835,29 @@ void matrixMult_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
   estimateSize(b, size_bS, expB, nr_colsA, nr_colsB, ownLimbSize);
   
   if (max(size_aS, size_bS) + 1 < maxNoMatrices) {
-    matrixMultiplicationBasecase_cuBlas(handle, c, a, b, d_aS, d_bS, tmpTransferLongToGMP, 
-					tmp, sizeMatrix, realExpMatrix, signMatrix,  
-					d_prodRes, d_res, nr_rowsA, nr_colsA, nr_colsB); 
+    // We need to allocate the matrix in memory here. This should be made more efficiently
+    generateLongMatrixFromGMPMatrix_GPU(a, d_aS, tmpTransferLongToGMP, sizeMatrix, realExpMatrix, signMatrix, 
+					size_aS, nr_rowsA, nr_colsA, expA, ownLimbSize);
+    generateLongMatrixFromGMPMatrix_GPU(b, d_bS, tmpTransferLongToGMP, sizeMatrix, realExpMatrix, signMatrix,
+					size_bS, nr_colsA, nr_colsB, expB, ownLimbSize);
+    matixMultiplicationBasecaseArbPrec_cuBlas(handle, c, a, b, d_aS, d_bS, tmpTransferLongToGMP, 
+					      tmp, sizeMatrix, realExpMatrix, signMatrix,  
+					      d_prodRes, d_res, nr_rowsA, nr_colsA, nr_colsB, size_aS, size_bS, expA, expB, ownLimbSize, prec); 
   } else {
     toom2(handle, c, a, b, d_aS, d_bS, tmpTransferLongToGMP, 
 	  tmp, sizeMatrix, realExpMatrix, signMatrix,  
-	  d_prodRes, d_res, nr_rowsA, nr_colsA, nr_colsB);
+	  d_prodRes, d_res, nr_rowsA, nr_colsA, nr_colsB, size_aS, size_bS, prec);
   }
 }
+
+
+
 
 void matrixMultSymm_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
 			   double *d_aS, double *tmpTransferLongToGMP, 
 			   long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
 			   double *d_prodRes, long long *d_res, 
-			   const int nr_rowsA, const int nr_colsA, const float whatOrder) {
+			   const int nr_rowsA, const int nr_colsA, const float whatOrder, const int prec) {
   int maxNoMatrices = estimateMaxGPUAllocation(0.8, nr_rowsA, nr_colsA);
   int size = 0; 
   int exp = 0;
@@ -896,23 +866,90 @@ void matrixMultSymm_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class 
   
   estimateSize(a, size, exp, nr_rowsA, nr_colsA, ownLimbSize);
 
-  if (size + 1 < maxNoMatrices) {
-    matrixMultSymmBasecase_cuBlas(handle, c, a, d_aS, tmpTransferLongToGMP, 
-				  tmp, sizeMatrix, realExpMatrix, signMatrix,  
-				  d_prodRes, d_res, nr_rowsA, nr_colsA, prec); 
+  if (size + 1 < maxNoMatrices) {    
+    // We need to allocate the matrix in memory here. This should be made more efficiently
+    generateLongMatrixFromGMPMatrix_GPU(a, d_aS, tmpTransferLongToGMP, sizeMatrix, realExpMatrix, signMatrix, 
+					size, nr_rowsA, nr_colsA, exp, ownLimbSize);
+    matrixMultSymmBasecaseArbPrec_cuBlas(handle, c, a, d_aS, tmpTransferLongToGMP, 
+					 tmp, sizeMatrix, realExpMatrix, signMatrix,  
+					 d_prodRes, d_res, nr_rowsA, nr_colsA, size, exp, ownLimbSize, prec); 
   } else {
-    toom2(handle, c, a, b, d_aS, d_bS, tmpTransferLongToGMP, 
-	  tmp, sizeMatrix, realExpMatrix, signMatrix,  
-	  d_prodRes, d_res, nr_rowsA, nr_colsA, nr_colsB);
+    toom2Symm(handle, c, a, d_aS, tmpTransferLongToGMP, 
+	      tmp, sizeMatrix, realExpMatrix, signMatrix,  
+	      d_prodRes, d_res, nr_rowsA, nr_colsA, nr_colsB, prec);
   }
 }
 
 // Implements Karatsuba algorithm for matrix multiplication c = a.b
 // We split each matrix element in two parts which are equal in length up to the size of one GMP limb. 
 void toom2(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b, 
-	   double *d_aS, double *d_bS, double *tmpTransferLongToGMP, 
-	   long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
-	   double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, const int nr_colsB) {
+	   mpf_class *tmpC1, mpf_class *tmpC2, double *d_aS, double *d_bS, double *tmpTransferLongToGMP, 
+	   long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix, double *d_prodRes, 
+	   long long *d_res, const int nr_rowsA, const int nr_colsA, const int nr_colsB, 
+	   const int size_aS, const int size_bS, const int leadingExp, const int whatOrder) {
+  mpf_class *a1, *a2, *b1, *b2; 
+  
+  int sizeA1 = (size_aS / 2 + size_aS % 2), sizeA2 = size_aS / 2, sizeB1 = (size_bS / 2 + size_bS % 2), sizeB2 = size_bS / 2; 
+ 
+  for(int i = 0; i < nr_colsA; ++i){
+    for(int k = 0; k < nr_rowsA; ++k){
+      if (sizeA1 + sizeA2 != abs(a[i *  nr_rowsA + k].get_mpf_t()->_mp_size))
+	std::cout << "Error?" << std::endl;
+      int sign =  a[i *  nr_rowsA + k].get_mpf_t()->_mp_size /
+	abs(a[i *  nr_rowsA + k].get_mpf_t()->_mp_size);
+      a1[i *  nr_rowsA + k].get_mpf_t()->_mp_size = sign * sizeA1;
+      a2[i *  nr_rowsA + k].get_mpf_t()->_mp_size = sign * sizeA2;
+      a1[i *  nr_rowsA + k].get_mpf_t()->_mp_exp = a[i *  nr_rowsA + k].get_mpf_t()->_mp_exp; 
+      a2[i *  nr_rowsA + k].get_mpf_t()->_mp_exp = (a[i *  nr_rowsA + k].get_mpf_t()->_mp_exp) - sizeA1;
+      a1[i *  nr_rowsA + k].get_mpf_t()->_mp_d = &(a[i *  nr_rowsA + k].get_mpf_t()->_mp_d[sizeA2]); 
+      a2[i *  nr_rowsA + k].get_mpf_t()->_mp_d = &(a[i *  nr_rowsA + k].get_mpf_t()->_mp_d[0]);
+    }
+  }
+  
+  for(int i = 0; i < nr_colsB; ++i){
+    for(int k = 0; k < nr_colsA; ++k){
+      if (sizeB1 + sizeB2 != abs(b[i *  nr_rowsA + k].get_mpf_t()->_mp_size))
+	std::cout << "Error?" << std::endl;
+      int sign =  b[i *  nr_rowsA + k].get_mpf_t()->_mp_size /
+	abs(b[i *  nr_rowsA + k].get_mpf_t()->_mp_size);
+      b1[i *  nr_colsA + k].get_mpf_t()->_mp_size = sign * sizeB1; 
+      b2[i *  nr_colsA + k].get_mpf_t()->_mp_size = sign * sizeB2;
+      b1[i *  nr_colsA + k].get_mpf_t()->_mp_exo = b[i *  nr_rowsA + k].get_mpf_t()->_mp_exp; 
+      b2[i *  nr_colsA + k].get_mpf_t()->_mp_exp = b[i *  nr_rowsA + k].get_mpf_t()->_mp_exp;
+      b1[i *  nr_colsA + k].get_mpf_t()->_mp_d = &(b[i *  nr_rowsA + k].get_mpf_t()->_mp_d[sizeB2]); 
+      b2[i *  nr_colsA + k].get_mpf_t()->_mp_d = &(b[i *  nr_rowsA + k].get_mpf_t()->_mp_d[0]); 
+    }
+  }
+ 
+  matrixMult_cuBlas(handle, tmpC1, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
+		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
+		    nr_rowsA, nr_colsA, nr_colsB);
+  matrixMult_cuBlas(handle, tmpC2, a2, b2, d_aS, d_bS, tmpTransferLongToGMP,
+		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
+		    nr_rowsA, nr_colsA, nr_colsB);
+  for(int i = 0; i < nr_colsA; ++i){
+    for(int k = 0; k < nr_rowsA; ++k){
+      a1[i *  nr_rowsA + k] += a2[i *  nr_rowsA + k]; 
+    }
+  }
+  for(int i = 0; i < nr_colsB; ++i){
+    for(int k = 0; k < nr_colsA; ++k){
+      b1[i *  nr_colsA + k] += b2[i *  nr_rowsA + k]; 
+    }
+  }
+
+  matrixMult_cuBlas(handle, C, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
+		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
+		    nr_rowsA, nr_colsA, nr_colsB);
+  for (int i = 0; i < nr_colsB; ++i) {
+    for (int j = 0; j < nr_rowsA; ++j) {
+      C[i *  nr_rowsA + j] -= tmpC1[i *  nr_rowsA + j];
+      C[i *  nr_rowsA + j] -= tmpC2[i *  nr_rowsA + j];
+      C[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= sizeA1;
+      tmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= size;
+      C[i * nr_rowsA + j] += (tmpC1[i * nr_rowsA + j] + tmpC2[i * nr_rowsA + j]);
+    }
+  }  
 }
 
 // Implements Toom-3 algorithm for matrix multiplciation c = a.b
@@ -920,7 +957,122 @@ void toom2(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b
 void toom3(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b, 
 	   double *d_aS, double *d_bS, double *tmpTransferLongToGMP, 
 	   long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
-	   double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, const int nr_colsB) {
+	   double *d_prodRes, long long *d_res, 
+	   const int nr_rowsA, const int nr_colsA, const int nr_colsB, const int whatOrder) {
+  mpf_class *a1, *a2, *a3, *b1, *b2, *b3;
+  // We need to check that size_aS = size_bS are different by at most 1. Otherwise, this won't work. 
+  assert(size_aS == size_bS || size_aS + 1 == size_bS || size_aS + 2 == size_bS);
+  int sizeA1 = (size_aS / 3 + (size_aS % 3)), sizeA2 = (size_aS / 3), sizeA3 = size_aS / 3;
+  int sizeB1 = size_aS - sizeA2 - sizeA3, sizeB2 = sizeA2, sizeB3 = sizeA3;
+ 
+  for(int i = 0; i < nr_colsA; ++i){
+    for(int k = 0; k < nr_rowsA; ++k){
+      if (sizeA1 + sizeA2 + sizeA3 != abs(a[i *  nr_rowsA + k].get_mpf_t()->_mp_size))
+	std::cout << "Error?" << std::endl;
+      int sign =  a[i *  nr_rowsA + k].get_mpf_t()->_mp_size /
+	abs(a[i *  nr_rowsA + k].get_mpf_t()->_mp_size);
+      a1[i *  nr_rowsA + k].get_mpf_t()->_mp_size = sign * sizeA1;
+      a2[i *  nr_rowsA + k].get_mpf_t()->_mp_size = sign * sizeA2;
+      a3[i *  nr_rowsA + k].get_mpf_t()->_mp_size = sign * sizeA3;
+      
+      a1[i *  nr_rowsA + k].get_mpf_t()->_mp_exp = a[i *  nr_rowsA + k].get_mpf_t()->_mp_exp; 
+      a2[i *  nr_rowsA + k].get_mpf_t()->_mp_exp = (a[i *  nr_rowsA + k].get_mpf_t()->_mp_exp) - sizeA1;
+      a3[i *  nr_rowsA + k].get_mpf_t()->_mp_exp = (a[i *  nr_rowsA + k].get_mpf_t()->_mp_exp) - sizeA1 - sizeA2;
+      
+      
+      a1[i *  nr_rowsA + k].get_mpf_t()->_mp_d = &(a[i *  nr_rowsA + k].get_mpf_t()->_mp_d[sizeA2 + sizeA3]); 
+      a2[i *  nr_rowsA + k].get_mpf_t()->_mp_d = &(a[i *  nr_rowsA + k].get_mpf_t()->_mp_d[sizeA3]);
+      a3[i *  nr_rowsA + k].get_mpf_t()->_mp_d = &(a[i *  nr_rowsA + k].get_mpf_t()->_mp_d[0]);
+    }
+  }
+
+  for(int i = 0; i < nr_colsB; ++i){
+    for(int k = 0; k < nr_colsA; ++k){
+      if (sizeA1 + sizeA2 + sizeA3 != abs(a[i *  nr_rowsA + k].get_mpf_t()->_mp_size))
+	std::cout << "Error?" << std::endl;
+      int sign =  a[i *  nr_rowsA + k].get_mpf_t()->_mp_size /
+	abs(a[i *  nr_rowsA + k].get_mpf_t()->_mp_size);
+      b1[i *  nr_colsA + k].get_mpf_t()->_mp_size = sign * sizeB1;
+      b2[i *  nr_colsA + k].get_mpf_t()->_mp_size = sign * sizeB2;
+      b3[i *  nr_colsA + k].get_mpf_t()->_mp_size = sign * sizeB3;
+      
+      b1[i *  nr_colsA + k].get_mpf_t()->_mp_exp = (b[i *  nr_colsA + k].get_mpf_t()->_mp_exp); 
+      b2[i *  nr_colsA + k].get_mpf_t()->_mp_exp = (b[i *  nr_colsA + k].get_mpf_t()->_mp_exp) - sizeB1;
+      b3[i *  nr_colsA + k].get_mpf_t()->_mp_exp = (b[i *  nr_colsA + k].get_mpf_t()->_mp_exp) - sizeB1 - sizeB2;
+      
+      b1[i *  nr_colsA + k].get_mpf_t()->_mp_d = &(b[i *  nr_colsA + k].get_mpf_t()->_mp_d[sizeB2 + sizeB3]); 
+      b2[i *  nr_colsA + k].get_mpf_t()->_mp_d = &(b[i *  nr_colsA + k].get_mpf_t()->_mp_d[sizeB3]);
+      b3[i *  nr_colsA + k].get_mpf_t()->_mp_d = &(b[i *  nr_colsA + k].get_mpf_t()->_mp_d[0]);
+    }
+  }
+  matrixMult_cuBlas(handle, tmpC1, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
+		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
+		    nr_rowsA, nr_colsA, nr_colsB, prec);
+  matrixMult_cuBlas(handle, tmpC5, a3, b3, d_aS, d_bS, tmpTransferLongToGMP,
+		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
+		    nr_rowsA, nr_colsA, nr_colsB, prec);
+  for(int i = 0; i < nr_colsA; ++i){
+    for(int k = 0; k < nr_rowsA; ++k){
+      a1[i *  nr_rowsA + k] += (a2[i *  nr_rowsA + k] + a3[i *  nr_rowsA + k]); 
+    }
+  }
+  for(int i = 0; i < nr_colsB; ++i){
+    for(int k = 0; k < nr_colsA; ++k){
+      b1[i *  nr_rowsA + k] += (b2[i *  nr_rowsA + k] + b3[i *  nr_rowsA + k]); 
+    }
+  }
+  matrixMult_cuBlas(handle, tmpC2, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
+		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
+		    nr_rowsA, nr_colsA, nr_colsB, prec);
+  for(int i = 0; i < nr_colsA; ++i){
+    for(int k = 0; k < nr_rowsA; ++k){
+      a1[i *  nr_rowsA + k] -= (2 * a2[i *  nr_rowsA + k]); 
+    }
+  }
+  for(int i = 0; i < nr_colsB; ++i){
+    for(int k = 0; k < nr_colsA; ++k){
+      b1[i *  nr_rowsA + k] -= (2 * b2[i *  nr_rowsA + k]); 
+    }
+  }
+  matrixMult_cuBlas(handle, tmpC3, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
+		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
+		    nr_rowsA, nr_colsA, nr_colsB, prec);
+  for(int i = 0; i < nr_colsA; ++i){
+    for(int k = 0; k < nr_rowsA; ++k){
+      a1[i *  nr_rowsA + k] += 3 * (a2[i *  nr_rowsA + k] + a3[i * nr_rowsA + k]); 
+    }
+  }
+  for(int i = 0; i < nr_colsB; ++i){
+    for(int k = 0; k < nr_colsA; ++k){
+      b1[i *  nr_rowsA + k] += 3 * (b2[i *  nr_rowsA + k] + b3[i *  nr_rowsA + k]); 
+    }
+  }
+  matrixMult_cuBlas(handle, tmpC4, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
+		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
+		    nr_rowsA, nr_colsA, nr_colsB, prec);
+  
+  for (int i = 0; i < nr_colsB; ++i) {
+    for (int j = 0; j < nr_rowsA; ++j) {
+      tmpC2[i * nr_rowsA + j] = (- tmpC1[i * nr_rowsA + j] / 2 + tmpC2[i * nr_rowsA + j] 
+				 - tmpC3[i * nr_rowsA + j] /3 - tmpC4[i * nr_rowsA + j] / 6 
+				 + 2 * tmpC5[i * nr_rowsA + j]); 
+      tmpC3[i * nr_rowsA + j] = (-3/4 * tmpC1[i * nr_rowsA + j] + tmpC2[i * nr_rowsA + j] / 2 
+				 + 2/3 * tmpC3[i * nr_rowsA + j] + 1/12 * tmpC4[i * nr_rowsA + j] 
+				 - 2 * tmpC5[i * nr_rowsA + j]);
+      tmpC4[i * nr_rowsA + j] = (- tmpC1[i * nr_rowsA + j] / 8 - tmpC2[i * nr_rowsA + j] / 2 
+				 - tmpC3[i * nr_rowsA + j] / 4 + tmpC4[i * nr_rowsA + j] / 8 
+				 - 2 * tmpC5[i * nr_rowsA + j]);
+  
+      tmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= sizeA;
+      tmpC3[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 2 * sizeA;
+      tmpC4[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 3 * sizeA;
+      tmpC5[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 4 * sizeA;
+      
+      C[i *  nr_rowsA + j] = (tmpC1[i *  nr_rowsA + j] + tmpC2[i *  nr_rowsA + j] 
+			      + tmpC3[i *  nr_rowsA + j] + tmpC4[i *  nr_rowsA + j] 
+			      + tmpC5[i *  nr_rowsA + j]);
+    }
+  }
 }
 
 // Implements Karatsuba algorithm for matrix multiplication c = a.a^T
@@ -928,15 +1080,137 @@ void toom3(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b
 void toom2Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
 	       double *d_aS, double *tmpTransferLongToGMP, 
 	       long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
-	       double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, const float whatOrder) {
+	       double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, const int prec) {
+  mpf_class *a1, *a2;
+  int sizeA1 = (size_aS / 2 + size_aS % 2), sizeA2 = size_aS / 2; 
+ 
+  for(int i = 0; i < nr_colsA; ++i){
+    for(int k = 0; k < nr_rowsA; ++k){
+      if (sizeA1 + sizeA2 != abs(a[i *  nr_rowsA + k].get_mpf_t()->_mp_size))
+	std::cout << "Error?" << std::endl;
+      int sign =  a[i *  nr_rowsA + k].get_mpf_t()->_mp_size /
+	abs(a[i *  nr_rowsA + k].get_mpf_t()->_mp_size);
+      a1[i *  nr_rowsA + k].get_mpf_t()->_mp_size = sign * sizeA1;
+      a2[i *  nr_rowsA + k].get_mpf_t()->_mp_size = sign * sizeA2;
+      a1[i *  nr_rowsA + k].get_mpf_t()->_mp_exp = a[i *  nr_rowsA + k].get_mpf_t()->_mp_exp; 
+      a2[i *  nr_rowsA + k].get_mpf_t()->_mp_exp = (a[i *  nr_rowsA + k].get_mpf_t()->_mp_exp) - sizeA1;
+      a1[i *  nr_rowsA + k].get_mpf_t()->_mp_d = &(a[i *  nr_rowsA + k].get_mpf_t()->_mp_d[sizeA2]); 
+      a2[i *  nr_rowsA + k].get_mpf_t()->_mp_d = &(a[i *  nr_rowsA + k].get_mpf_t()->_mp_d[0]);
+    }
+  }
+  matrixMultSymm_cuBlas(handle, tmpC1, a1, d_aS, tmpTransferLongToGMP,
+			tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
+			nr_rowsA, nr_colsA, prec);
+  matrixMultSymm_cuBlas(handle, tmpC2, a2, d_aS, tmpTransferLongToGMP,
+                        tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
+                        nr_rowsA, nr_colsA, prec);
+  for(int i = 0; i < nr_colsA; ++i){
+    for(int k = 0; k < nr_rowsA; ++k){
+      a1[i *  nr_rowsA + k] += a2[i *  nr_rowsA + k]; 
+    }
+  }
+  
+  matrixMultSymm_cuBlas(handle, C, a1, d_aS, d_bS,  tmpTransferLongToGMP,
+			tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
+			nr_rowsA, nr_colsA, prec);
+  for (int i = 0; i < nr_rowsA; ++i) {
+    for (int j = 0; j < nr_rowsA; ++j) {
+      C[i *  nr_rowsA + j] -= tmpC1[i *  nr_rowsA + j];
+      C[i *  nr_rowsA + j] -= tmpC2[i *  nr_rowsA + j];
+      C[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= sizeA1;
+      tmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= size;
+      C[i * nr_rowsA + j] += (tmpC1[i * nr_rowsA + j] + tmpC2[i * nr_rowsA + j]);
+    }
+  }  
 }
 
 // Implements Toom-3 algorithm for matrix multiplication c = a.a^T
 void toom3Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
 	       double *d_aS, double *tmpTransferLongToGMP, 
 	       long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
-	       double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, const float whatOrder) {
+	       double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, const int prec) {
+  mpf_class *a1, *a2, *a3;
+  int sizeA1 = (size_aS / 3 + (size_aS % 3)), sizeA2 = (size_aS / 3), sizeA3 = size_aS / 3; 
+ 
+  for(int i = 0; i < nr_colsA; ++i){
+    for(int k = 0; k < nr_rowsA; ++k){
+      if (sizeA1 + sizeA2 + sizeA3 != abs(a[i *  nr_rowsA + k].get_mpf_t()->_mp_size))
+	std::cout << "Error?" << std::endl;
+      int sign =  a[i *  nr_rowsA + k].get_mpf_t()->_mp_size /
+	abs(a[i *  nr_rowsA + k].get_mpf_t()->_mp_size);
+      a1[i *  nr_rowsA + k].get_mpf_t()->_mp_size = sign * sizeA1;
+      a2[i *  nr_rowsA + k].get_mpf_t()->_mp_size = sign * sizeA2;
+      a3[i *  nr_rowsA + k].get_mpf_t()->_mp_size = sign * sizeA3;
+      
+      a1[i *  nr_rowsA + k].get_mpf_t()->_mp_exp = a[i *  nr_rowsA + k].get_mpf_t()->_mp_exp; 
+      a2[i *  nr_rowsA + k].get_mpf_t()->_mp_exp = (a[i *  nr_rowsA + k].get_mpf_t()->_mp_exp) - sizeA1;
+      a3[i *  nr_rowsA + k].get_mpf_t()->_mp_exp = (a[i *  nr_rowsA + k].get_mpf_t()->_mp_exp) - sizeA1 - sizeA2;
+      
+      
+      a1[i *  nr_rowsA + k].get_mpf_t()->_mp_d = &(a[i *  nr_rowsA + k].get_mpf_t()->_mp_d[sizeA2 + sizeA3]); 
+      a2[i *  nr_rowsA + k].get_mpf_t()->_mp_d = &(a[i *  nr_rowsA + k].get_mpf_t()->_mp_d[sizeA3]);
+      a3[i *  nr_rowsA + k].get_mpf_t()->_mp_d = &(a[i *  nr_rowsA + k].get_mpf_t()->_mp_d[0]);
+    }
+  }
+  
+  matrixMultSymm_cuBlas(handle, tmpC1, a1, d_aS, tmpTransferLongToGMP,
+			tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
+			nr_rowsA, nr_colsA, prec);
+  matrixMultSymm_cuBlas(handle, tmpC5, a3, d_aS, tmpTransferLongToGMP,
+                        tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
+                        nr_rowsA, nr_colsA, prec);
+  
+  for(int i = 0; i < nr_colsA; ++i){
+    for(int k = 0; k < nr_rowsA; ++k){
+      a1[i *  nr_rowsA + k] += (a2[i *  nr_rowsA + k] + a3[i *  nr_rowsA + k]); 
+    }
+  }
+  matrixMultSymm_cuBlas(handle, tmpC2, a1, d_aS, d_bS,  tmpTransferLongToGMP,
+			tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
+			nr_rowsA, nr_colsA, prec);
+ 
+  for(int i = 0; i < nr_colsA; ++i){
+    for(int k = 0; k < nr_rowsA; ++k){
+      a1[i *  nr_rowsA + k] -= (2 * a2[i *  nr_rowsA + k]); 
+    }
+  }
+  matrixMultSymm_cuBlas(handle, tmpC3, a1, d_aS, d_bS,  tmpTransferLongToGMP,
+			tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
+			nr_rowsA, nr_colsA, prec);
+  
+  for(int i = 0; i < nr_colsA; ++i){
+    for(int k = 0; k < nr_rowsA; ++k){
+      a1[i *  nr_rowsA + k] += 3 * (a2[i *  nr_rowsA + k] + a3[i * nr_rowsA + k]); 
+    }
+  }
+  matrixMultSymm_cuBlas(handle, tmpC4, a1, d_aS, d_bS,  tmpTransferLongToGMP,
+			tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
+			nr_rowsA, nr_colsA, prec);
+  
+  for (int i = 0; i < nr_rowsA; ++i) {
+    for (int j = 0; j < nr_rowsA; ++j) {
+      tmpC2[i * nr_rowsA + j] = (- tmpC1[i * nr_rowsA + j] / 2 + tmpC2[i * nr_rowsA + j] 
+				 - tmpC3[i * nr_rowsA + j] /3 - tmpC4[i * nr_rowsA + j] / 6 
+				 + 2 * tmpC5[i * nr_rowsA + j]); 
+      tmpC3[i * nr_rowsA + j] = (-3/4 * tmpC1[i * nr_rowsA + j] + tmpC2[i * nr_rowsA + j] / 2 
+				 + 2/3 * tmpC3[i * nr_rowsA + j] + 1/12 * tmpC4[i * nr_rowsA + j] 
+				 - 2 * tmpC5[i * nr_rowsA + j]);
+      tmpC4[i * nr_rowsA + j] = (- tmpC1[i * nr_rowsA + j] / 8 - tmpC2[i * nr_rowsA + j] / 2 
+				 - tmpC3[i * nr_rowsA + j] / 4 + tmpC4[i * nr_rowsA + j] / 8 
+				 - 2 * tmpC5[i * nr_rowsA + j]);
+  
+      tmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= sizeA;
+      tmpC3[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 2 * sizeA;
+      tmpC4[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 3 * sizeA;
+      tmpC5[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 4 * sizeA;
+      
+      C[i *  nr_rowsA + j] = (tmpC1[i *  nr_rowsA + j] + tmpC2[i *  nr_rowsA + j] 
+			      + tmpC3[i *  nr_rowsA + j] + tmpC4[i *  nr_rowsA + j] 
+			      + tmpC5[i *  nr_rowsA + j]);
+    }
+  }
 }
+
 
 // Returns matrix product c = a.a^T where each entry is of the type mpf_class
 //
@@ -959,26 +1233,13 @@ void toom3Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a,
 // nr_cols_A: number of columns for matrix A as well as number of rows for matrix B
 // nr_cols_B: number of columns for matrix B as well as for matrix C                                                                            
 // maxExp:  maximum power of 2 for the leading most limb among all the entries of the array *a 
-void matrixMultSymmBasecase_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
+void matrixMultSymmArbOrder_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
 				   double *d_aS, double *tmpTransferLongToGMP, 
 				   long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
-				   double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, const float whatOrder) {
-  
-  int size = 0; 
-  int expA = 0;
+				   double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, 
+				   const int size_aS, const int expA, const int ownLimbSize, const int prec) {
   timeval t1, t2;
   
-  int ownLimbSize = DOUBLE_MANT/2 - ceil(log2((double) nr_colsA) / 2);
-  gettimeofday(&t1, NULL);
-  estimateSize(a, size_aS, expA, nr_rowsA, nr_colsA, ownLimbSize);
-  
-  generateLongMatrixFromGMPMatrix_GPU(a, d_aS, tmpTransferLongToGMP, sizeMatrix, realExpMatrix, signMatrix, 
-				      size, nr_rowsA, nr_colsA, expA, ownLimbSize);
-  gettimeofday(&t2, NULL);
-  double etTransfer = (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
-  
-  std::cout << size << " " << expA << std::endl;
-
   for(int i = 0; i < nr_rowsA; ++i){
     for(int j = 0; j < nr_rowsA ++j){
       c[j * nr_rowsA +  i] = mpf_class("0.0");
@@ -997,7 +1258,7 @@ void matrixMultSymmBasecase_cuBlas(const cublasHandle_t handle, mpf_class *c, mp
   double etBackAlloc = 0;
   double etaddBack = 0;
   
-  long sizeToCompute =  (whatOrder + maxExp) / ownLimbSize;
+  long sizeToCompute =  (whatOrder + expA) / ownLimbSize;
   
   for (int i = 0; i < min(size, sizeToCompute); i++) {
     gettimeofday(&t1, NULL);
@@ -1083,6 +1344,261 @@ void matrixMultSymmBasecase_cuBlas(const cublasHandle_t handle, mpf_class *c, mp
     }
   }
  
+  printf("Transfer GPU = %fms\n", etTransfer);
+  printf("Multiplication GPU = %fms\n", etMult);
+  printf("Addition GPU = %fms\n", etAdd);
+  printf("Alloc of zero to GPU = %fms\n", etAlloc);
+  printf("Transfer from GPU to host = %fms\n", etBackAlloc);
+  printf("Addition on CPU = %fms\n", etaddBack);
+}
+
+
+// Returns matrix product c = a.a^T where each entry is of the type mpf_class
+//
+// All arrays need to already have allocated memory:
+// handle : Handle for cuBlas computations that needs to be previously allocated.                                                                   
+// *c : array of mpf_class with size nr_rowsA * nr_rowsA                  
+// *a : array of mpf_class with size nr_rowsA * nr_colsA
+// *d_aS: array allocated in GPU with size sizeOfArray * nr_rowsA * nr_colsA. Note that we flatten this               
+//        array of matrices in order to speed up the access in the GPU.                                              
+//        Thus, to access the k-th limb from the (i, j) matrix entry one calls d_aS[k * nr_rowsA * nr_colsA + j * nr_rowsA + i]
+// *tmpTransferLongToGMP : temporary array of doubles used for transfers that needs nr_rowsA * nr_colsA entries                    
+// *tmp: temporary array of 64-bit vars used for transfers. Needs to be allocated nr_rowsA * nr_rowsA entries
+// *d_prodRes: temporary matrix allocated in GPU memory which handles individual multiplications of matrices
+// *d_res : temporary matrix allocated in GPU memory in which we sum up all individual multiplications of matrices
+// *d_rem : in case we encounter overflow in the matrix d_res we use the entries in the matrix d_rem to store the remainders. 
+//          Note that this matrix is only used when using the function vecAdd__wRem. When using vecAdd__wSign we assume that 
+//          overflow never occurs. This is the case if the number of own generated limbs is greater than 1024. This correpons 
+//          to a GMP precision ~20,000. For current bootstrap applications such precision is not needed.
+// nr_rows_A: number of rows for matrix A as well as for matrix C                                                                                
+// nr_cols_A: number of columns for matrix A as well as number of rows for matrix B
+// nr_cols_B: number of columns for matrix B as well as for matrix C                                                                            
+// maxExp:  maximum power of 2 for the leading most limb among all the entries of the array *a 
+void matrixMultSymmBasecase_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
+				   double *d_aS, double *tmpTransferLongToGMP, 
+				   long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
+				   double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA) {
+  
+  int size = 0; 
+  int expA = 0;
+  timeval t1, t2;
+  
+  int ownLimbSize = DOUBLE_MANT/2 - ceil(log2((double) nr_colsA) / 2);
+  gettimeofday(&t1, NULL);
+  estimateSize(a, size_aS, expA, nr_rowsA, nr_colsA, ownLimbSize);
+  
+  generateLongMatrixFromGMPMatrix_GPU(a, d_aS, tmpTransferLongToGMP, sizeMatrix, realExpMatrix, signMatrix, 
+				      size, nr_rowsA, nr_colsA, expA, ownLimbSize);
+  gettimeofday(&t2, NULL);
+  double etTransfer = (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+  
+  std::cout << size << " " << expA << std::endl;
+
+  for(int i = 0; i < nr_rowsA; ++i){
+    for(int j = 0; j < nr_rowsA ++j){
+      c[j * nr_rowsA +  i] = mpf_class("0.0");
+      tmp[j * nr_rowsA +  i] = 0;
+    }
+  }
+
+  // Number of threads in each thread block                                                                          
+  int blockSize = 256; // Make sure this number is good? I don't know how
+  // Number of thread blocks in grid                                                                                 
+  int gridSize = (int)ceil((float)(nr_rowsA * nr_rowsA)/blockSize);
+  
+  double etMult = 0;
+  double etAdd = 0;
+  double etAlloc = 0;
+  double etBackAlloc = 0;
+  double etaddBack = 0;
+  
+  for (int i = 0; i < size; i++) {
+    gettimeofday(&t1, NULL);
+    cudaMemcpy(d_res, tmp, nr_rowsA * nr_rowsA * sizeof(long long), cudaMemcpyHostToDevice);
+    gettimeofday(&t2, NULL);
+    etAlloc += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+    //cudaMemcpy(d_rem, tmp, nr_rowsA * nr_colsB * sizeof(long long), cudaMemcpyHostToDevice);
+    for (int j = 0; j < i + 1; j++) {
+      gettimeofday(&t1, NULL);
+      if (i - j != j)
+	gpu_blas_mulWithTranspAndSum(handle, &d_aS[j * nr_rowsA * nr_rowsA], &d_aS[(i - j) * nr_colsA * nr_colsB], d_prodRes, nr_rowsA, nr_colsA); 
+      else
+	gpu_blas_mulWithTransp(handle, &d_aS[j * nr_rowsA * nr_rowsA], d_prodRes, nr_rowsA, nr_colsA); 
+      cudaThreadSynchronize();
+      gettimeofday(&t2, NULL);
+      etMult += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+      
+      gettimeofday(&t1, NULL);
+      vecAdd__wSign<<<gridSize, blockSize>>>(d_prodRes, d_res,  nr_rowsA * nr_rowsA);
+      cudaThreaMdSynchronize();
+      gettimeofday(&t2, NULL);
+      etAdd += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+      // This is safe with overflow until there are 1024 of our own limbs that need to be summed up
+      // This case corresponds to a precision of ~20000 bits in GMP
+    }
+    gettimeofday(&t1, NULL);
+    cudaMemcpy(tmp, d_res, nr_rowsA * nr_rowsA * sizeof(long long), cudaMemcpyDeviceToHost);
+    gettimeofday(&t2, NULL);
+    etBackAlloc += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+    
+    gettimeofday(&t1, NULL);
+    addToGMPMatrixSymm(c, tmp, nr_rowsA, 2 * expA - (i + 2) * ownLimbSize);
+    gettimeofday(&t2, NULL);
+    etaddBack += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+    
+    #pragma omp parallel for schedule(dynamic)
+    for(int l = 0; l < nr_rowsA; ++l){
+      for(int k = 0; k < nr_rowsA; ++k){
+	tmp[l *  nr_rowsA + k] = 0;
+      }
+    }
+  }
+  
+  printf("Transfer GPU = %fms\n", etTransfer);
+  printf("Multiplication GPU = %fms\n", etMult);
+  printf("Addition GPU = %fms\n", etAdd);
+  printf("Alloc of zero to GPU = %fms\n", etAlloc);
+  printf("Transfer from GPU to host = %fms\n", etBackAlloc);
+  printf("Addition on CPU = %fms\n", etaddBack);
+}
+
+
+
+
+// Returns matrix product c = a.b where each entry is of the type mpf_class
+//
+// All arrays need to already have allocated memory:                                                                  
+// *c : array of mpf_class with size nr_rowsA * nr_colsB                   
+// *a : array of mpf_class with size nr_rowsA * nr_colsA
+// *b : array of mpf_class with size nr_colsA * nr_colsB
+// *d_aS: array allocated in GPU with size sizeOfArray * nr_rowsA * nr_colsA. Note that we flatten this               
+//        array of matrices in order to speed up the access in the GPU.                                              
+//        Thus, to access the k-th limb from the (i, j) matrix entry one calls d_aS[k * nr_rowsA * nr_colsA + j * nr_rowsA + i]
+// *d_bS: array allocated in GPU with size sizeOfArray * nr_colsA * nr_colsB. Note that we flatten this                                         
+//        array of matrices in order to speed up the access in the GPU.                                                                          
+//        Thus, to access the k-th limb from the (i, j) matrix entry one calls d_bS[k * nr_colsA * nr_colsB + j * nr_colsA + i] 
+// *tmpTransferLongToGMP : temporary array of doubles used for transfers that needs max(nr_rowsA * nr_colsA, nr_colsA * nr_colsB) entries        
+// *tmp: temporary array of 64-bit vars used for transfers. Needs to be allocated nr_rowsA * nr_colsB entries
+// *d_prodRes: temporary matrix allocated in GPU memory which handles individual multiplications of matrices
+// *d_res : temporary matrix allocated in GPU memory in which we sum up all individual multiplications of matrices
+// *d_rem : in case we encounter overflow in the matrix d_res we use the entries in the matrix d_rem to store the remainders. 
+//          Note that this matrix is only used when using the function vecAdd__wRem. When using vecAdd__wSign we assume that 
+//          overflow never occurs. This is the case if the number of own generated limbs is greater than 1024. This correpons 
+//          to a GMP precision ~20,000. For current bootstrap applications such precision is not needed.
+// nr_rows_A: number of rows for matrix A as well as for matrix C                                                                                
+// nr_cols_A: number of columns for matrix A as well as number of rows for matrix B
+// nr_cols_B: number of columns for matrix B as well as for matrix C                                                                             
+// maxExp:  maximum power of 2 for the leading most limb among all the entries of the array *a 
+void matrixMultiplicationArbOrder_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b, 
+					 double *d_aS, double *d_bS, double *tmpTransferLongToGMP, 
+					 long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
+					 double *d_prodRes, long long *d_res,  //long long *d_rem, 
+					 const int nr_rowsA, const int nr_colsA, const int nr_colsB,
+					 const int size_aS, const int size_bS, const int expA, const int expB, const int ownLimbSize, const int prec) {
+  
+  timeval t1, t2;
+  
+  int size = min(size_aS, size_bS);
+  std::cout << size_aS << " " << size_bS << " " << expA << " " << expB << std::endl;
+
+  for(int i = 0; i < nr_rowsA; ++i){
+    for(int j = 0; j < nr_colsB; ++j){
+      c[j * nr_rowsA +  i] = mpf_class("0.0");
+      tmp[j * nr_rowsA +  i] = 0;
+    }
+  }
+
+  // Number of threads in each thread block                                                                          
+  int blockSize = 256; // Make sure this number is good? I don't know how
+  // Number of thread blocks in grid                                                                                 
+  int gridSize = (int)ceil((float)(nr_rowsA * nr_colsB)/blockSize);
+  
+  double etMult = 0;
+  double etAdd = 0;
+  double etAlloc = 0;
+  double etBackAlloc = 0;
+  double etaddBack = 0;
+  
+  long sizeToCompute =  (prec + maxExp) / ownLimbSize;
+  
+  for (int i = 0; i < min(size, sizeToCompute); i++) {
+    gettimeofday(&t1, NULL);
+    cudaMemcpy(d_res, tmp, nr_rowsA * nr_colsB * sizeof(long long), cudaMemcpyHostToDevice);
+    gettimeofday(&t2, NULL);
+    etAlloc += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+    //cudaMemcpy(d_rem, tmp, nr_rowsA * nr_colsB * sizeof(long long), cudaMemcpyHostToDevice);
+    for (int j = 0; j < i + 1; j++) {
+      gettimeofday(&t1, NULL);
+      gpu_blas_mmul(handle, &d_aS[j * nr_rowsA * nr_colsA], &d_bS[(i - j) * nr_colsA * nr_colsB], d_prodRes, nr_rowsA, nr_colsA, nr_colsB);
+      cudaThreadSynchronize();
+      gettimeofday(&t2, NULL);
+      etMult += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+      
+      gettimeofday(&t1, NULL);
+      vecAdd__wSign<<<gridSize, blockSize>>>(d_prodRes, d_res,  nr_rowsA * nr_colsB);
+      cudaThreaMdSynchronize();
+      gettimeofday(&t2, NULL);
+      etAdd += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+      // This is safe with overflow until there are 1024 of our own limbs that need to be summed up
+      // This case corresponds to a precision of ~20000 bits in GMP
+    }
+    gettimeofday(&t1, NULL);
+    cudaMemcpy(tmp, d_res, nr_rowsA * nr_colsB * sizeof(long long), cudaMemcpyDeviceToHost);
+    gettimeofday(&t2, NULL);
+    etBackAlloc += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+    
+    gettimeofday(&t1, NULL);
+    addToGMPMatrix(c, tmp, nr_rowsA, nr_colsB, expA + expB - (i + 2) * ownLimbSize);
+    gettimeofday(&t2, NULL);
+    etaddBack += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+    //cudaMemcpy(tmp, d_rem, nr_rowsA * nr_colsB * sizeof(long long),cudaMemcpyDeviceToHost);
+    //addToGMPMatrix(c, tmp, nr_rowsA, nr_colsB, 2 * exp - (i + 2) * ownLimbSize + (INT64L - 1));
+    #pragma omp parallel for schedule(dynamic)
+    for(int k = 0; k < nr_rowsA; ++k){
+      for(int l = 0; l < nr_colsB; ++l){
+	tmp[l *  nr_rowsA + k] = 0;
+      }
+    }
+  }
+
+   
+  for (int i = size; i < min(2 * size - 1, sizeToCompute); i++) {
+    gettimeofday(&t1, NULL);
+    cudaMemcpy(d_res, tmp, nr_rowsA * nr_colsB * sizeof(long long), cudaMemcpyHostToDevice);
+    gettimeofday(&t2, NULL);
+    etAlloc += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+    //cudaMemcpy(d_rem, tmp, nr_rowsA * nr_colsB * sizeof(long long), cudaMemcpyHostToDevice);
+    for (int j = i - size + 1; j < size; j++) {
+      gettimeofday(&t1, NULL);
+      gpu_blas_mmul(handle, &d_aS[j * nr_rowsA * nr_colsA], &d_bS[(i - j) * nr_colsA * nr_colsB], d_prodRes, nr_rowsA, nr_colsA, nr_colsB);
+      cudaThreadSynchronize();
+      gettimeofday(&t2, NULL);
+      etMult += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+      
+      gettimeofday(&t1, NULL);
+      vecAdd__wSign<<<gridSize, blockSize>>>(d_prodRes, d_res,  nr_rowsA * nr_colsB);
+      cudaThreaMdSynchronize();
+      gettimeofday(&t2, NULL);
+      etAdd += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+      // This is safe with overflow until there are 1024 of our own limbs that need to be summed up
+      // This case corresponds to a precision of ~20000 bits in GMP
+    }
+    gettimeofday(&t1, NULL);
+    cudaMemcpy(tmp, d_res, nr_rowsA * nr_colsB * sizeof(long long), cudaMemcpyDeviceToHost);
+    gettimeofday(&t2, NULL);
+    etBackAlloc += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+    
+    gettimeofday(&t1, NULL);
+    addToGMPMatrix(c, tmp, nr_rowsA, nr_colsB, expA + expB - (i + 2) * ownLimbSize);
+    gettimeofday(&t2, NULL);
+    etaddBack += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+    #pragma omp parallel for schedule(dynamic)
+    for(int k = 0; k < nr_rowsA; ++k){
+      for(int l = 0; l < nr_colsB; ++l){
+	tmp[l *  nr_rowsA + k] = 0;
+      }
+    }
+  }
   printf("Transfer GPU = %fms\n", etTransfer);
   printf("Multiplication GPU = %fms\n", etMult);
   printf("Addition GPU = %fms\n", etAdd);
