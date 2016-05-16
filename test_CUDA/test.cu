@@ -28,6 +28,8 @@ using std::endl;
 const int INT64L = 64;
 const int DOUBLE_MANT = 53;
 
+mpf_class *tmpC1, *tmpC2, *tmpC3, *tmpC4, *tmpC5;
+
 int getSign(const mpf_class a) {
   if((a.get_mpf_t()->_mp_size) < 0) {return -1;}
   else {return 1;}
@@ -444,7 +446,6 @@ void printGMPMatrix(mpf_class *a, const int nr_rows, const int nr_cols) {
 
 void printGMPMatrixDiff(mpf_class *a, mpf_class *b, const int nr_rows, const int nr_cols) {
   std::cout << "Printing GMP matrix difference..."<< std::endl;
-  mp_exp_t exp;
   for(int i = 0; i < nr_rows; ++i){
     for(int j = 0; j < nr_cols; ++j){
       mpf_class tmp = (a[j * nr_rows +  i] - b[j * nr_rows +  i]);
@@ -538,7 +539,7 @@ void gpu_blas_mulWithTransp(const cublasHandle_t handle, const double *A, double
 
 // Multiply the array A with its transpse. 
 // B(n, n) =  A(n, k) A^T(k, n)
-void gpu_blas_mulWithTranspAndSum(const cublasHandle_t handle, const double *A, const double *B, double *C, const int m, const int k) {
+void gpu_blas_mulWithTranspAndSum(const cublasHandle_t handle, const double *A, const double *B, double *C, const int n, const int k) {
   int lda = n, ldb = k, ldc = k;
   const double alf = 1; 
   const double bet = 0;
@@ -547,7 +548,7 @@ void gpu_blas_mulWithTranspAndSum(const cublasHandle_t handle, const double *A, 
 
      
   // Do the actual multiplication
-  cublasDsyrk(handle, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_N, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
+  cublasDsyr2k(handle, CUBLAS_FILL_MODE_LOWER, CUBLAS_OP_N, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
 }
 
 
@@ -586,11 +587,6 @@ void print_memory() {
      printf("GPU memory usage: used = %f, free = %f MB, total = %f MB\n",
                  used_db/1024.0/1024.0, free_db/1024.0/1024.0, total_db/1024.0/1024.0);
 
-}
-
-__global__ void vecMult(long *a, long *b, long long res, int rem) {
-  int id = blockIdx.x*blockDim.x+threadIdx.x;
-  
 }
 
 // CUDA kernel. Each thread takes care of one element of c
@@ -706,13 +702,15 @@ void generateLongMatrixFromGMPMatrix_GPU(const mpf_class *a, double *d_aS, doubl
 					 const int nr_rows, const int nr_cols, int &maxExp, 
 					 const int ownLimbSize) {
   assert(ownLimbSize <= INT64L);
-  timeval t1, t2, tA, tB;
-  double etAlloc = 0;
-  double etAlgebra = 0;
-  double etComputingSizes = 0;
-  double etAddingLongs = 0;
-  double etAddTrivial = 0;
-  double etAccs = 0;
+  // timeval t1, t2, tA, tB;
+  
+  // double etAlloc = 0;
+  // double etAlgebra = 0;
+  // double etComputingSizes = 0;
+  // double etAddingLongs = 0;
+  // double etAddTrivial = 0;
+  // double etAccs = 0;
+  
   #pragma omp parallel for schedule(dynamic)
   for(int j = 0; j < nr_cols; ++j) {
     for(int i = 0; i < nr_rows; ++i) {
@@ -723,7 +721,7 @@ void generateLongMatrixFromGMPMatrix_GPU(const mpf_class *a, double *d_aS, doubl
   }
 
   for (int k = 0; k < sizeOfArray - 1; k++) {
-    gettimeofday(&t1, NULL);
+    //gettimeofday(&t1, NULL);
     #pragma omp parallel for schedule(dynamic)
     for(int j = 0; j < nr_cols; ++j) {
       for(int i = 0; i < nr_rows; ++i) {
@@ -767,8 +765,8 @@ void generateLongMatrixFromGMPMatrix_GPU(const mpf_class *a, double *d_aS, doubl
 	//etAddingLongs += (((tB.tv_sec*uS_PER_SEC)+tB.tv_usec) - ((tA.tv_sec*uS_PER_SEC)+tA.tv_usec))/(float)uS_PER_mS;
       } 
     }
-    gettimeofday(&t2, NULL);
-    etAlgebra +=  (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+    //gettimeofday(&t2, NULL);
+    //etAlgebra +=  (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
     // Transfer matrix to memeory
     //gettimeofday(&t1, NULL);
     cudaMemcpy(&d_aS[k * nr_rows * nr_cols], tmpA, nr_rows * nr_cols * sizeof(double), cudaMemcpyHostToDevice);
@@ -791,7 +789,7 @@ void generateLongMatrixFromGMPMatrix_GPU(const mpf_class *a, double *d_aS, doubl
   }
   cudaMemcpy(&d_aS[(sizeOfArray - 1) * nr_cols * nr_rows], tmpA, nr_rows * nr_cols * sizeof(double),cudaMemcpyHostToDevice);
   //printf("Actual allocation time to GPU = %fms\n", etAlloc);
-  printf("Algebra time in computing hands = %fms\n", etAlgebra);
+  // printf("Algebra time in computing hands = %fms\n", etAlgebra);
   //printf("Calculating sizes = %fms\n", etComputingSizes);
   //printf("My function for obtaining the hands = %fms\n", etAddingLongs);
   //printf("Trivial stuff = %fms\n", etAddTrivial);
@@ -814,6 +812,50 @@ int estimateMaxGPUAllocation(double maxFrac, int nr_rows, int nr_cols) {
   double free_db = ((double)free_byte) * maxFrac;
   return (int) (8 * free_db/(nr_rows * nr_cols * INT64L));
 }
+
+
+void matrixMultiplicationArbOrder_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b, 
+					 double *d_aS, double *d_bS, double *tmpTransferLongToGMP, 
+					 long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
+					 double *d_prodRes, long long *d_res,  //long long *d_rem, 
+					 const int nr_rowsA, const int nr_colsA, const int nr_colsB,
+					 const int size_aS, const int size_bS, const int expA, const int expB, 
+					 const int ownLimbSize, const int prec);
+
+
+void matrixMultSymmArbOrder_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
+				   double *d_aS, double *tmpTransferLongToGMP, 
+				   long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
+				   double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, 
+				   const int size_aS, const int expA, const int ownLimbSize, const int prec);
+
+
+void toom2(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b, 
+	   double *d_aS, double *d_bS, double *tmpTransferLongToGMP, 
+	   long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix, double *d_prodRes, 
+	   long long *d_res, const int nr_rowsA, const int nr_colsA, const int nr_colsB, 
+	   const int size_aS, const int size_bS, const int leadingExp, const int whatOrder); 
+
+
+void toom3(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b, 
+	   double *d_aS, double *d_bS, double *tmpTransferLongToGMP, 
+	   long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
+	   double *d_prodRes, long long *d_res, 
+	   const int nr_rowsA, const int nr_colsA, const int nr_colsB, const int whatOrder);
+
+
+
+void toom2Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
+	       double *d_aS, double *tmpTransferLongToGMP, 
+	       long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
+	       double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, 
+	       const int size_aS, const int prec); 
+
+
+void toom3Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
+	       double *d_aS, double *tmpTransferLongToGMP, 
+	       long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
+	       double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, const int prec);
 
 
 // Implements matrix multiplication c = a.b, and, according to whether or not the matrices fit 
@@ -840,13 +882,13 @@ void matrixMult_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
 					size_aS, nr_rowsA, nr_colsA, expA, ownLimbSize);
     generateLongMatrixFromGMPMatrix_GPU(b, d_bS, tmpTransferLongToGMP, sizeMatrix, realExpMatrix, signMatrix,
 					size_bS, nr_colsA, nr_colsB, expB, ownLimbSize);
-    matixMultiplicationBasecaseArbPrec_cuBlas(handle, c, a, b, d_aS, d_bS, tmpTransferLongToGMP, 
+    matrixMultiplicationArbOrder_cuBlas(handle, c, a, b, d_aS, d_bS, tmpTransferLongToGMP, 
 					      tmp, sizeMatrix, realExpMatrix, signMatrix,  
 					      d_prodRes, d_res, nr_rowsA, nr_colsA, nr_colsB, size_aS, size_bS, expA, expB, ownLimbSize, prec); 
   } else {
     toom2(handle, c, a, b, d_aS, d_bS, tmpTransferLongToGMP, 
 	  tmp, sizeMatrix, realExpMatrix, signMatrix,  
-	  d_prodRes, d_res, nr_rowsA, nr_colsA, nr_colsB, size_aS, size_bS, prec);
+	  d_prodRes, d_res, nr_rowsA, nr_colsA, nr_colsB, size_aS, size_bS, max(expA, expB), prec);
   }
 }
 
@@ -857,7 +899,7 @@ void matrixMultSymm_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class 
 			   double *d_aS, double *tmpTransferLongToGMP, 
 			   long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
 			   double *d_prodRes, long long *d_res, 
-			   const int nr_rowsA, const int nr_colsA, const float whatOrder, const int prec) {
+			   const int nr_rowsA, const int nr_colsA, const int prec) {
   int maxNoMatrices = estimateMaxGPUAllocation(0.8, nr_rowsA, nr_colsA);
   int size = 0; 
   int exp = 0;
@@ -870,20 +912,20 @@ void matrixMultSymm_cuBlas(const cublasHandle_t handle, mpf_class *c, mpf_class 
     // We need to allocate the matrix in memory here. This should be made more efficiently
     generateLongMatrixFromGMPMatrix_GPU(a, d_aS, tmpTransferLongToGMP, sizeMatrix, realExpMatrix, signMatrix, 
 					size, nr_rowsA, nr_colsA, exp, ownLimbSize);
-    matrixMultSymmBasecaseArbPrec_cuBlas(handle, c, a, d_aS, tmpTransferLongToGMP, 
-					 tmp, sizeMatrix, realExpMatrix, signMatrix,  
-					 d_prodRes, d_res, nr_rowsA, nr_colsA, size, exp, ownLimbSize, prec); 
+    matrixMultSymmArbOrder_cuBlas(handle, c, a, d_aS, tmpTransferLongToGMP, 
+				  tmp, sizeMatrix, realExpMatrix, signMatrix,  
+				  d_prodRes, d_res, nr_rowsA, nr_colsA, size, exp, ownLimbSize, prec); 
   } else {
     toom2Symm(handle, c, a, d_aS, tmpTransferLongToGMP, 
 	      tmp, sizeMatrix, realExpMatrix, signMatrix,  
-	      d_prodRes, d_res, nr_rowsA, nr_colsA, nr_colsB, prec);
+	      d_prodRes, d_res, nr_rowsA, nr_colsA, size, prec);
   }
 }
 
 // Implements Karatsuba algorithm for matrix multiplication c = a.b
 // We split each matrix element in two parts which are equal in length up to the size of one GMP limb. 
 void toom2(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b, 
-	   mpf_class *tmpC1, mpf_class *tmpC2, double *d_aS, double *d_bS, double *tmpTransferLongToGMP, 
+	   double *d_aS, double *d_bS, double *tmpTransferLongToGMP, 
 	   long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix, double *d_prodRes, 
 	   long long *d_res, const int nr_rowsA, const int nr_colsA, const int nr_colsB, 
 	   const int size_aS, const int size_bS, const int leadingExp, const int whatOrder) {
@@ -914,7 +956,7 @@ void toom2(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b
 	abs(b[i *  nr_rowsA + k].get_mpf_t()->_mp_size);
       b1[i *  nr_colsA + k].get_mpf_t()->_mp_size = sign * sizeB1; 
       b2[i *  nr_colsA + k].get_mpf_t()->_mp_size = sign * sizeB2;
-      b1[i *  nr_colsA + k].get_mpf_t()->_mp_exo = b[i *  nr_rowsA + k].get_mpf_t()->_mp_exp; 
+      b1[i *  nr_colsA + k].get_mpf_t()->_mp_exp = b[i *  nr_rowsA + k].get_mpf_t()->_mp_exp; 
       b2[i *  nr_colsA + k].get_mpf_t()->_mp_exp = b[i *  nr_rowsA + k].get_mpf_t()->_mp_exp;
       b1[i *  nr_colsA + k].get_mpf_t()->_mp_d = &(b[i *  nr_rowsA + k].get_mpf_t()->_mp_d[sizeB2]); 
       b2[i *  nr_colsA + k].get_mpf_t()->_mp_d = &(b[i *  nr_rowsA + k].get_mpf_t()->_mp_d[0]); 
@@ -923,10 +965,10 @@ void toom2(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b
  
   matrixMult_cuBlas(handle, tmpC1, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
 		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
-		    nr_rowsA, nr_colsA, nr_colsB);
+		    nr_rowsA, nr_colsA, nr_colsB, whatOrder);
   matrixMult_cuBlas(handle, tmpC2, a2, b2, d_aS, d_bS, tmpTransferLongToGMP,
 		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
-		    nr_rowsA, nr_colsA, nr_colsB);
+		    nr_rowsA, nr_colsA, nr_colsB, whatOrder);
   for(int i = 0; i < nr_colsA; ++i){
     for(int k = 0; k < nr_rowsA; ++k){
       a1[i *  nr_rowsA + k] += a2[i *  nr_rowsA + k]; 
@@ -938,16 +980,16 @@ void toom2(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b
     }
   }
 
-  matrixMult_cuBlas(handle, C, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
+  matrixMult_cuBlas(handle, c, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
 		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
-		    nr_rowsA, nr_colsA, nr_colsB);
+		    nr_rowsA, nr_colsA, nr_colsB, whatOrder);
   for (int i = 0; i < nr_colsB; ++i) {
     for (int j = 0; j < nr_rowsA; ++j) {
-      C[i *  nr_rowsA + j] -= tmpC1[i *  nr_rowsA + j];
-      C[i *  nr_rowsA + j] -= tmpC2[i *  nr_rowsA + j];
-      C[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= sizeA1;
-      tmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= size;
-      C[i * nr_rowsA + j] += (tmpC1[i * nr_rowsA + j] + tmpC2[i * nr_rowsA + j]);
+      c[i *  nr_rowsA + j] -= tmpC1[i *  nr_rowsA + j];
+      c[i *  nr_rowsA + j] -= tmpC2[i *  nr_rowsA + j];
+      c[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= sizeA2;
+      tmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 2 * sizeA2;
+      c[i * nr_rowsA + j] += (tmpC1[i * nr_rowsA + j] + tmpC2[i * nr_rowsA + j]);
     }
   }  
 }
@@ -958,7 +1000,8 @@ void toom3(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b
 	   double *d_aS, double *d_bS, double *tmpTransferLongToGMP, 
 	   long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
 	   double *d_prodRes, long long *d_res, 
-	   const int nr_rowsA, const int nr_colsA, const int nr_colsB, const int whatOrder) {
+	   const int nr_rowsA, const int nr_colsA, const int nr_colsB, 
+	   const int size_aS, const int size_bS, const int whatOrder) {
   mpf_class *a1, *a2, *a3, *b1, *b2, *b3;
   // We need to check that size_aS = size_bS are different by at most 1. Otherwise, this won't work. 
   assert(size_aS == size_bS || size_aS + 1 == size_bS || size_aS + 2 == size_bS);
@@ -1007,10 +1050,10 @@ void toom3(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b
   }
   matrixMult_cuBlas(handle, tmpC1, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
 		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
-		    nr_rowsA, nr_colsA, nr_colsB, prec);
+		    nr_rowsA, nr_colsA, nr_colsB, whatOrder);
   matrixMult_cuBlas(handle, tmpC5, a3, b3, d_aS, d_bS, tmpTransferLongToGMP,
 		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
-		    nr_rowsA, nr_colsA, nr_colsB, prec);
+		    nr_rowsA, nr_colsA, nr_colsB, whatOrder);
   for(int i = 0; i < nr_colsA; ++i){
     for(int k = 0; k < nr_rowsA; ++k){
       a1[i *  nr_rowsA + k] += (a2[i *  nr_rowsA + k] + a3[i *  nr_rowsA + k]); 
@@ -1023,7 +1066,7 @@ void toom3(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b
   }
   matrixMult_cuBlas(handle, tmpC2, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
 		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
-		    nr_rowsA, nr_colsA, nr_colsB, prec);
+		    nr_rowsA, nr_colsA, nr_colsB, whatOrder);
   for(int i = 0; i < nr_colsA; ++i){
     for(int k = 0; k < nr_rowsA; ++k){
       a1[i *  nr_rowsA + k] -= (2 * a2[i *  nr_rowsA + k]); 
@@ -1036,7 +1079,7 @@ void toom3(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b
   }
   matrixMult_cuBlas(handle, tmpC3, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
 		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
-		    nr_rowsA, nr_colsA, nr_colsB, prec);
+		    nr_rowsA, nr_colsA, nr_colsB, whatOrder);
   for(int i = 0; i < nr_colsA; ++i){
     for(int k = 0; k < nr_rowsA; ++k){
       a1[i *  nr_rowsA + k] += 3 * (a2[i *  nr_rowsA + k] + a3[i * nr_rowsA + k]); 
@@ -1049,7 +1092,7 @@ void toom3(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b
   }
   matrixMult_cuBlas(handle, tmpC4, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
 		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
-		    nr_rowsA, nr_colsA, nr_colsB, prec);
+		    nr_rowsA, nr_colsA, nr_colsB, whatOrder);
   
   for (int i = 0; i < nr_colsB; ++i) {
     for (int j = 0; j < nr_rowsA; ++j) {
@@ -1063,12 +1106,12 @@ void toom3(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b
 				 - tmpC3[i * nr_rowsA + j] / 4 + tmpC4[i * nr_rowsA + j] / 8 
 				 - 2 * tmpC5[i * nr_rowsA + j]);
   
-      tmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= sizeA;
-      tmpC3[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 2 * sizeA;
-      tmpC4[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 3 * sizeA;
-      tmpC5[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 4 * sizeA;
+      tmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= sizeA2;
+      tmpC3[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 2 * sizeA2;
+      tmpC4[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 3 * sizeA2;
+      tmpC5[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 4 * sizeA2;
       
-      C[i *  nr_rowsA + j] = (tmpC1[i *  nr_rowsA + j] + tmpC2[i *  nr_rowsA + j] 
+      c[i *  nr_rowsA + j] = (tmpC1[i *  nr_rowsA + j] + tmpC2[i *  nr_rowsA + j] 
 			      + tmpC3[i *  nr_rowsA + j] + tmpC4[i *  nr_rowsA + j] 
 			      + tmpC5[i *  nr_rowsA + j]);
     }
@@ -1080,7 +1123,8 @@ void toom3(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b
 void toom2Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
 	       double *d_aS, double *tmpTransferLongToGMP, 
 	       long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
-	       double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, const int prec) {
+	       double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, 
+	       const int size_aS, const int prec) {
   mpf_class *a1, *a2;
   int sizeA1 = (size_aS / 2 + size_aS % 2), sizeA2 = size_aS / 2; 
  
@@ -1110,16 +1154,16 @@ void toom2Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a,
     }
   }
   
-  matrixMultSymm_cuBlas(handle, C, a1, d_aS, d_bS,  tmpTransferLongToGMP,
+  matrixMultSymm_cuBlas(handle, c, a1, d_aS,  tmpTransferLongToGMP,
 			tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
 			nr_rowsA, nr_colsA, prec);
   for (int i = 0; i < nr_rowsA; ++i) {
     for (int j = 0; j < nr_rowsA; ++j) {
-      C[i *  nr_rowsA + j] -= tmpC1[i *  nr_rowsA + j];
-      C[i *  nr_rowsA + j] -= tmpC2[i *  nr_rowsA + j];
-      C[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= sizeA1;
-      tmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= size;
-      C[i * nr_rowsA + j] += (tmpC1[i * nr_rowsA + j] + tmpC2[i * nr_rowsA + j]);
+      c[i *  nr_rowsA + j] -= tmpC1[i *  nr_rowsA + j];
+      c[i *  nr_rowsA + j] -= tmpC2[i *  nr_rowsA + j];
+      c[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= sizeA2;
+      tmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 2 * sizeA2;
+      c[i * nr_rowsA + j] += (tmpC1[i * nr_rowsA + j] + tmpC2[i * nr_rowsA + j]);
     }
   }  
 }
@@ -1128,7 +1172,8 @@ void toom2Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a,
 void toom3Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a, 
 	       double *d_aS, double *tmpTransferLongToGMP, 
 	       long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
-	       double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, const int prec) {
+	       double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, 
+	       const int size_aS, const int prec) {
   mpf_class *a1, *a2, *a3;
   int sizeA1 = (size_aS / 3 + (size_aS % 3)), sizeA2 = (size_aS / 3), sizeA3 = size_aS / 3; 
  
@@ -1165,7 +1210,7 @@ void toom3Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a,
       a1[i *  nr_rowsA + k] += (a2[i *  nr_rowsA + k] + a3[i *  nr_rowsA + k]); 
     }
   }
-  matrixMultSymm_cuBlas(handle, tmpC2, a1, d_aS, d_bS,  tmpTransferLongToGMP,
+  matrixMultSymm_cuBlas(handle, tmpC2, a1, d_aS,  tmpTransferLongToGMP,
 			tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
 			nr_rowsA, nr_colsA, prec);
  
@@ -1174,7 +1219,7 @@ void toom3Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a,
       a1[i *  nr_rowsA + k] -= (2 * a2[i *  nr_rowsA + k]); 
     }
   }
-  matrixMultSymm_cuBlas(handle, tmpC3, a1, d_aS, d_bS,  tmpTransferLongToGMP,
+  matrixMultSymm_cuBlas(handle, tmpC3, a1, d_aS,  tmpTransferLongToGMP,
 			tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
 			nr_rowsA, nr_colsA, prec);
   
@@ -1183,7 +1228,7 @@ void toom3Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a,
       a1[i *  nr_rowsA + k] += 3 * (a2[i *  nr_rowsA + k] + a3[i * nr_rowsA + k]); 
     }
   }
-  matrixMultSymm_cuBlas(handle, tmpC4, a1, d_aS, d_bS,  tmpTransferLongToGMP,
+  matrixMultSymm_cuBlas(handle, tmpC4, a1, d_aS,  tmpTransferLongToGMP,
 			tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
 			nr_rowsA, nr_colsA, prec);
   
@@ -1199,12 +1244,12 @@ void toom3Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a,
 				 - tmpC3[i * nr_rowsA + j] / 4 + tmpC4[i * nr_rowsA + j] / 8 
 				 - 2 * tmpC5[i * nr_rowsA + j]);
   
-      tmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= sizeA;
-      tmpC3[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 2 * sizeA;
-      tmpC4[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 3 * sizeA;
-      tmpC5[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 4 * sizeA;
+      tmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= sizeA2;
+      tmpC3[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 2 * sizeA2;
+      tmpC4[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 3 * sizeA2;
+      tmpC5[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 4 * sizeA2;
       
-      C[i *  nr_rowsA + j] = (tmpC1[i *  nr_rowsA + j] + tmpC2[i *  nr_rowsA + j] 
+      c[i *  nr_rowsA + j] = (tmpC1[i *  nr_rowsA + j] + tmpC2[i *  nr_rowsA + j] 
 			      + tmpC3[i *  nr_rowsA + j] + tmpC4[i *  nr_rowsA + j] 
 			      + tmpC5[i *  nr_rowsA + j]);
     }
@@ -1237,11 +1282,11 @@ void matrixMultSymmArbOrder_cuBlas(const cublasHandle_t handle, mpf_class *c, mp
 				   double *d_aS, double *tmpTransferLongToGMP, 
 				   long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
 				   double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA, 
-				   const int size_aS, const int expA, const int ownLimbSize, const int prec) {
+				   const int size, const int expA, const int ownLimbSize, const int prec) {
   timeval t1, t2;
   
   for(int i = 0; i < nr_rowsA; ++i){
-    for(int j = 0; j < nr_rowsA ++j){
+    for(int j = 0; j < nr_rowsA; ++j){
       c[j * nr_rowsA +  i] = mpf_class("0.0");
       tmp[j * nr_rowsA +  i] = 0;
     }
@@ -1258,7 +1303,7 @@ void matrixMultSymmArbOrder_cuBlas(const cublasHandle_t handle, mpf_class *c, mp
   double etBackAlloc = 0;
   double etaddBack = 0;
   
-  long sizeToCompute =  (whatOrder + expA) / ownLimbSize;
+  int sizeToCompute =  (prec + expA) / ownLimbSize;
   
   for (int i = 0; i < min(size, sizeToCompute); i++) {
     gettimeofday(&t1, NULL);
@@ -1269,16 +1314,16 @@ void matrixMultSymmArbOrder_cuBlas(const cublasHandle_t handle, mpf_class *c, mp
     for (int j = 0; j < i + 1; j++) {
       gettimeofday(&t1, NULL);
       if (i - j != j)
-	gpu_blas_mulWithTranspAndSum(handle, &d_aS[j * nr_rowsA * nr_rowsA], &d_aS[(i - j) * nr_colsA * nr_colsB], d_prodRes, nr_rowsA, nr_colsA); 
+	gpu_blas_mulWithTranspAndSum(handle, &d_aS[j * nr_rowsA * nr_colsA], &d_aS[(i - j) * nr_rowsA * nr_colsA], d_prodRes, nr_rowsA, nr_colsA); 
       else
-	gpu_blas_mulWithTransp(handle, &d_aS[j * nr_rowsA * nr_rowsA], d_prodRes, nr_rowsA, nr_colsA); 
+	gpu_blas_mulWithTransp(handle, &d_aS[j * nr_rowsA * nr_colsA], d_prodRes, nr_rowsA, nr_colsA); 
       cudaThreadSynchronize();
       gettimeofday(&t2, NULL);
       etMult += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
       
       gettimeofday(&t1, NULL);
       vecAdd__wSign<<<gridSize, blockSize>>>(d_prodRes, d_res,  nr_rowsA * nr_rowsA);
-      cudaThreaMdSynchronize();
+      cudaThreadSynchronize();
       gettimeofday(&t2, NULL);
       etAdd += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
       // This is safe with overflow until there are 1024 of our own limbs that need to be summed up
@@ -1312,16 +1357,16 @@ void matrixMultSymmArbOrder_cuBlas(const cublasHandle_t handle, mpf_class *c, mp
     for (int j = i - size + 1; j < size; j++) {
       gettimeofday(&t1, NULL);
       if (i - j != j)
-	gpu_blas_mulWithTranspAndSum(handle, &d_aS[j * nr_rowsA * nr_rowsA], &d_aS[(i - j) * nr_colsA * nr_colsB], d_prodRes, nr_rowsA, nr_colsA); 
+	gpu_blas_mulWithTranspAndSum(handle, &d_aS[j * nr_rowsA * nr_colsA], &d_aS[(i - j) * nr_rowsA * nr_colsA], d_prodRes, nr_rowsA, nr_colsA); 
       else
-	gpu_blas_mulWithTransp(handle, &d_aS[j * nr_rowsA * nr_rowsA], d_prodRes, nr_rowsA, nr_colsA); 
+	gpu_blas_mulWithTransp(handle, &d_aS[j * nr_rowsA * nr_colsA], d_prodRes, nr_rowsA, nr_colsA); 
       cudaThreadSynchronize();
       gettimeofday(&t2, NULL);
       etMult += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
       
       gettimeofday(&t1, NULL);
       vecAdd__wSign<<<gridSize, blockSize>>>(d_prodRes, d_res,  nr_rowsA * nr_rowsA);
-      cudaThreaMdSynchronize();
+      cudaThreadSynchronize();
       gettimeofday(&t2, NULL);
       etAdd += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
       // This is safe with overflow until there are 1024 of our own limbs that need to be summed up
@@ -1344,12 +1389,12 @@ void matrixMultSymmArbOrder_cuBlas(const cublasHandle_t handle, mpf_class *c, mp
     }
   }
  
-  printf("Transfer GPU = %fms\n", etTransfer);
-  printf("Multiplication GPU = %fms\n", etMult);
-  printf("Addition GPU = %fms\n", etAdd);
-  printf("Alloc of zero to GPU = %fms\n", etAlloc);
-  printf("Transfer from GPU to host = %fms\n", etBackAlloc);
-  printf("Addition on CPU = %fms\n", etaddBack);
+  // printf("Transfer GPU = %fms\n", etTransfer);
+  // printf("Multiplication GPU = %fms\n", etMult);
+  // printf("Addition GPU = %fms\n", etAdd);
+  // printf("Alloc of zero to GPU = %fms\n", etAlloc);
+  // printf("Transfer from GPU to host = %fms\n", etBackAlloc);
+  // printf("Addition on CPU = %fms\n", etaddBack);
 }
 
 
@@ -1379,7 +1424,7 @@ void matrixMultSymmBasecase_cuBlas(const cublasHandle_t handle, mpf_class *c, mp
 				   long long *tmp, int *sizeMatrix, int *realExpMatrix, int *signMatrix,  
 				   double *d_prodRes, long long *d_res, const int nr_rowsA, const int nr_colsA) {
   
-  int size = 0; 
+  int size_aS = 0; 
   int expA = 0;
   timeval t1, t2;
   
@@ -1388,14 +1433,14 @@ void matrixMultSymmBasecase_cuBlas(const cublasHandle_t handle, mpf_class *c, mp
   estimateSize(a, size_aS, expA, nr_rowsA, nr_colsA, ownLimbSize);
   
   generateLongMatrixFromGMPMatrix_GPU(a, d_aS, tmpTransferLongToGMP, sizeMatrix, realExpMatrix, signMatrix, 
-				      size, nr_rowsA, nr_colsA, expA, ownLimbSize);
+				      size_aS, nr_rowsA, nr_colsA, expA, ownLimbSize);
   gettimeofday(&t2, NULL);
   double etTransfer = (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
   
-  std::cout << size << " " << expA << std::endl;
+  std::cout << size_aS << " " << expA << std::endl;
 
   for(int i = 0; i < nr_rowsA; ++i){
-    for(int j = 0; j < nr_rowsA ++j){
+    for(int j = 0; j < nr_rowsA; ++j){
       c[j * nr_rowsA +  i] = mpf_class("0.0");
       tmp[j * nr_rowsA +  i] = 0;
     }
@@ -1412,7 +1457,7 @@ void matrixMultSymmBasecase_cuBlas(const cublasHandle_t handle, mpf_class *c, mp
   double etBackAlloc = 0;
   double etaddBack = 0;
   
-  for (int i = 0; i < size; i++) {
+  for (int i = 0; i < size_aS; i++) {
     gettimeofday(&t1, NULL);
     cudaMemcpy(d_res, tmp, nr_rowsA * nr_rowsA * sizeof(long long), cudaMemcpyHostToDevice);
     gettimeofday(&t2, NULL);
@@ -1421,16 +1466,16 @@ void matrixMultSymmBasecase_cuBlas(const cublasHandle_t handle, mpf_class *c, mp
     for (int j = 0; j < i + 1; j++) {
       gettimeofday(&t1, NULL);
       if (i - j != j)
-	gpu_blas_mulWithTranspAndSum(handle, &d_aS[j * nr_rowsA * nr_rowsA], &d_aS[(i - j) * nr_colsA * nr_colsB], d_prodRes, nr_rowsA, nr_colsA); 
+	gpu_blas_mulWithTranspAndSum(handle, &d_aS[j * nr_rowsA * nr_colsA], &d_aS[(i - j) * nr_rowsA * nr_colsA], d_prodRes, nr_rowsA, nr_colsA); 
       else
-	gpu_blas_mulWithTransp(handle, &d_aS[j * nr_rowsA * nr_rowsA], d_prodRes, nr_rowsA, nr_colsA); 
+	gpu_blas_mulWithTransp(handle, &d_aS[j * nr_rowsA * nr_colsA], d_prodRes, nr_rowsA, nr_colsA); 
       cudaThreadSynchronize();
       gettimeofday(&t2, NULL);
       etMult += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
       
       gettimeofday(&t1, NULL);
       vecAdd__wSign<<<gridSize, blockSize>>>(d_prodRes, d_res,  nr_rowsA * nr_rowsA);
-      cudaThreaMdSynchronize();
+      cudaThreadSynchronize();
       gettimeofday(&t2, NULL);
       etAdd += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
       // This is safe with overflow until there are 1024 of our own limbs that need to be summed up
@@ -1518,8 +1563,9 @@ void matrixMultiplicationArbOrder_cuBlas(const cublasHandle_t handle, mpf_class 
   double etAlloc = 0;
   double etBackAlloc = 0;
   double etaddBack = 0;
-  
-  long sizeToCompute =  (prec + maxExp) / ownLimbSize;
+  int maxExp = max(expA, expB);
+
+  int sizeToCompute =  (prec + maxExp) / ownLimbSize;
   
   for (int i = 0; i < min(size, sizeToCompute); i++) {
     gettimeofday(&t1, NULL);
@@ -1536,7 +1582,7 @@ void matrixMultiplicationArbOrder_cuBlas(const cublasHandle_t handle, mpf_class 
       
       gettimeofday(&t1, NULL);
       vecAdd__wSign<<<gridSize, blockSize>>>(d_prodRes, d_res,  nr_rowsA * nr_colsB);
-      cudaThreaMdSynchronize();
+      cudaThreadSynchronize();
       gettimeofday(&t2, NULL);
       etAdd += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
       // This is safe with overflow until there are 1024 of our own limbs that need to be summed up
@@ -1577,7 +1623,7 @@ void matrixMultiplicationArbOrder_cuBlas(const cublasHandle_t handle, mpf_class 
       
       gettimeofday(&t1, NULL);
       vecAdd__wSign<<<gridSize, blockSize>>>(d_prodRes, d_res,  nr_rowsA * nr_colsB);
-      cudaThreaMdSynchronize();
+      cudaThreadSynchronize();
       gettimeofday(&t2, NULL);
       etAdd += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
       // This is safe with overflow until there are 1024 of our own limbs that need to be summed up
@@ -1599,12 +1645,12 @@ void matrixMultiplicationArbOrder_cuBlas(const cublasHandle_t handle, mpf_class 
       }
     }
   }
-  printf("Transfer GPU = %fms\n", etTransfer);
-  printf("Multiplication GPU = %fms\n", etMult);
-  printf("Addition GPU = %fms\n", etAdd);
-  printf("Alloc of zero to GPU = %fms\n", etAlloc);
-  printf("Transfer from GPU to host = %fms\n", etBackAlloc);
-  printf("Addition on CPU = %fms\n", etaddBack);
+  // printf("Transfer GPU = %fms\n", etTransfer);
+  // printf("Multiplication GPU = %fms\n", etMult);
+  // printf("Addition GPU = %fms\n", etAdd);
+  // printf("Alloc of zero to GPU = %fms\n", etAlloc);
+  // printf("Transfer from GPU to host = %fms\n", etBackAlloc);
+  // printf("Addition on CPU = %fms\n", etaddBack);
 }
 
 
@@ -1693,7 +1739,7 @@ void matrixMultiplicationBasecase_cuBlas(const cublasHandle_t handle, mpf_class 
       
       gettimeofday(&t1, NULL);
       vecAdd__wSign<<<gridSize, blockSize>>>(d_prodRes, d_res,  nr_rowsA * nr_colsB);
-      cudaThreaMdSynchronize();
+      cudaThreadSynchronize();
       gettimeofday(&t2, NULL);
       etAdd += (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
       // This is safe with overflow until there are 1024 of our own limbs that need to be summed up
@@ -1725,18 +1771,6 @@ void matrixMultiplicationBasecase_cuBlas(const cublasHandle_t handle, mpf_class 
   printf("Addition on CPU = %fms\n", etaddBack);
 }
 
-
-int estimateMaxGPUAllocation(double maxFrac, int nr_rows, int nr_cols) {
-  size_t free_byte ;
-  size_t total_byte ;
-  cudaError_t cuda_status = cudaMemGetInfo( &free_byte, &total_byte ) ;
-  if ( cudaSuccess != cuda_status ){
-    printf("Error: cudaMemGetInfo fails, %s \n", cudaGetErrorString(cuda_status) );
-    exit(1);
-  }
-  double free_db = ((double)free_byte) * maxFrac;
-  return (int) (8 * free_db/(nr_rows * nr_cols * INT64L));
-}
 
 
 int testAddToMpf() {
@@ -2010,7 +2044,7 @@ int lucaGiantTest(int argc, char *argv[]) {
      // Starting the timer                                                                                           
      gettimeofday(&t1, NULL);
 
-     gpu_blas_mullWithTransp(handle, &d_A[5], d_C, nr_rows_A - 1, nr_cols_A);
+     gpu_blas_mulWithTransp(handle, &d_A[5], d_C, nr_rows_A - 1, nr_cols_A);
      cudaThreadSynchronize();
      //Ending the timer                                                                                              
      gettimeofday(&t2, NULL);
