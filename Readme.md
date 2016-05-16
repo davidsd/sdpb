@@ -132,23 +132,23 @@ systems of correlation functions:
   "PyCFTBoot: A flexible interface for the conformal bootstrap,"
   [arXiv:1602.02810 [hep-th]](http://arxiv.org/abs/arXiv:1602.02810)
 
-- Y. Nakayama and T. Ohtsuki
+- Y. Nakayama and T. Ohtsuki,
   "Conformal Bootstrap Dashing Hopes of Emergent Symmetry,"
   [arXiv:1602.07295 [cond-mat.str-el]](http://arxiv.org/abs/arXiv:1602.07295)
 
-- H. Iha, H. Makino and H. Suzuki
+- H. Iha, H. Makino and H. Suzuki,
   "Upper bound on the mass anomalous dimension in many-flavor gauge theories -- a conformal bootstrap approach"
   [arXiv:1603.01995 [hep-th]](http://arxiv.org/abs/1603.01995)
 
-- F. Kos, D. Poland, D. Simmons-Duffin, and A. Vichi
+- F. Kos, D. Poland, D. Simmons-Duffin, and A. Vichi,
   "Precision Islands in the Ising and O(N) Models"
   [arXiv:1603.04436 [hep-th]](http://arxiv.org/abs/1603.04436)
 
-- Z. Komargodski and D. Simmons-Duffin
+- Z. Komargodski and D. Simmons-Duffin,
   "The Random-Bond Ising Model in 2.01 and 3 Dimensions"
   [arXiv:1603.04444 [hep-th]](http://arxiv.org/abs/1603.04444)
 
-- Y. Nakayama
+- Y. Nakayama,
   "Bootstrap bound for conformal multi-flavor QCD on lattice"
   [arXiv:1605.04052 [hep-th]](https://arxiv.org/abs/1605.04052)
 
