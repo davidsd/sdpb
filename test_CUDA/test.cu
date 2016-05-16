@@ -1773,7 +1773,7 @@ void matrixMultiplicationBasecase_cuBlas(const cublasHandle_t handle, mpf_class 
 
 
 
-int testAddToMpf() {
+void testAddToMpf() {
   mpf_set_default_prec(300);
   mpf_class x("3.14159265358");
   long long a = 12345;
@@ -1786,55 +1786,202 @@ int testAddToMpf() {
   cout << x << endl;
 }
  
-void allocateAndGenerateRandomMatrix() {
+void allocateAndGenerateRandomMatrix(mpf_class *&randA, int nr_rowsA, int nr_colsA) {
+  randA = new mpf_class[nr_rowsA * nr_colsA];
+  generateRandomGMPMatrix(randA, nr_rowsA, nr_colsA);
 }
 
 void testGenerateLongsFromGMP() {
   std::cout << "*****************************" << std::endl;
   std::cout << "*** TESTING GENERATING LONGS FROM AN MPF_CLASS ***" << std::endl;
+  mpf_class f("-3.23124");
+  mpf_class fCopy = f;
+  long long *mLimbs;
+  int noOfmLimbs = 0;
+  generateLongsFromGMP(f, mLimbs, noOfmLimbs, 7, 10);    
   std::cout << "*****************************" << std::endl;
+}
+
+void testLongToGMP() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING GENERATING MPF_CLASS FROM LONGS ***" << std::endl;
+  mpf_class f("-3.23124");
+  mp_exp_t exp;
+  mpf_class getResBack;
+
+  long long *mLimbs;
+  int noOfmLimbs = 0;
+  generateLongsFromGMP(f, mLimbs, noOfmLimbs, 7, 10);
+
+  longToGMP(getResBack, mLimbs, noOfmLimbs, 7, 10);                                                                                                      
+  std::cout << getResBack.get_str(exp, 2) << std::endl;                                                                                                  
+  std::cout << getResBack - f << std::endl;                                                                                                              
+  std::cout << "*****************************" << std::endl;                                                                                             
 }
 
 void testAddToGMP() {
   std::cout << "*****************************" << std::endl;
   std::cout << "*** TESTING ADDITION BETWEEN MPF_CLASS AND INT64 ***" << std::endl;
+  mpf_class f("-3.23124");
+  mp_exp_t exp;
+  std::cout << "Binary..." << f.get_str(exp, 2) << std::endl;                                                                                            
+  long long toAdd = 11232145214524552;                                                                                                                   
+  mpf_class result = addToGMP(f, toAdd, -5);                                                                                                             
+  std::cout << "Binary added..." << result.get_str(exp, 2) << std::endl;                                                                                 
+  std::bitset<64> tr(toAdd);                                                                                                                             
+  std::cout << "what to add ..." << tr << std::endl;                                                                                                     
+  std::cout << "Binary added..." << result.get_str(exp, 10) << std::endl;   
   std::cout << "*****************************" << std::endl;
 }
 
 void testNumberMultiplicationBasecase() {
   std::cout << "*****************************" << std::endl;
   std::cout << "*** TESTING NUMBER MULTIPLICATION BETWEEN TWO MPF_CLASS VARS ***" << std::endl;
+  mpf_class a1("0.23124");                                                                                                                               
+  mpf_class a2("0.251253124");                                                                                                                           
+  mpf_class a3;                                                                                                                                          
+
+  numberMultiplicationBasecase(a3, a2, a1);                                                                                                              
+  std::cout << "This needs to be 0: " << a3 - (a1 * a2) << std::endl;            
   std::cout << "*****************************" << std::endl;
 }
 
-void testGenerateLongMatrixFromGMPMatrix() {
+void testGenerateLongMatrixFromGMPMatrix(mpf_class *&randA, long long **&GMPtoLong, 
+					 const int nr_rowsA, const int nr_colsA) {
   std::cout << "*****************************" << std::endl;
   std::cout << "*** TESTING GENERATING LONG MATRIX FROM MPF_CLASS MATRIX ***" << std::endl;
+  
+  allocateAndGenerateRandomMatrix(randA, nr_rowsA, nr_colsA);
+  
+  int maxExpo;
+  int noOfLimbs;
+  generateLongMatrixFromGMPMatrix(randA, GMPtoLong, noOfLimbs, nr_rowsA, nr_colsA, maxExpo, 7);
+  std::cout << "Generated. Number of limbs: " << noOfLimbs 
+	    << "  Maximum exponent: " << maxExpo << std::endl;
   std::cout << "*****************************" << std::endl;
 }
 
-void testLongToGMPMatrix() {
+void testLongToGMPMatrix(const int nr_rowsA, const int nr_colsA) {
   std::cout << "*****************************" << std::endl;
   std::cout << "*** TESTING GENERATING MPF_CLASS MATRIX FROM LONG MATRIX ***" << std::endl;
+  mpf_class *randA;
+  long long ** GMPtoLong;
+  testGenerateLongMatrixFromGMPMatrix(randA, GMPtoLong, nr_rowsA, nr_colsA);
+  mpf_class *randACopy = new mpf_class[nr_rowsA * nr_colsA];
+
+  int maxExpo = 0;
+  int noOfLimbs = 0;
+  longToGMPMatrix(randACopy, GMPtoLong, noOfLimbs, nr_rowsA, nr_colsA, 7, maxExpo);
+  
+  std::cout << "Matrix difference should be close to zero:" << std::endl;
+  printGMPMatrixDiff(randACopy, randA, nr_rowsA, nr_colsA);
   std::cout << "*****************************" << std::endl;
 }
 
-void testMatrixMultNoGPU() {
+void testMatrixMultNoGPU(const int nr_rowsA, const int nr_colsA, const int nr_colsB) {
   std::cout << "*****************************" << std::endl;
   std::cout << "*** TESTING GMP MATRIX MULTIPLICATION NO GPU ***" << std::endl;
+  mpf_class *randA, *randB;
+
+  allocateAndGenerateRandomMatrix(randA, nr_rowsA, nr_colsA);
+  allocateAndGenerateRandomMatrix(randB, nr_colsA, nr_colsB);
+  
+  mpf_class *randC = new mpf_class[nr_rowsA * nr_colsB];
+  mpf_class *randCNaive = new mpf_class[nr_rowsA * nr_colsB];
+  
+  long long ** GMPtoLongA;
+  long long ** GMPtoLongB;
+  matrixMultiplicationBasecase(randC, randA, randB, GMPtoLongA, GMPtoLongB, nr_rowsA, nr_colsA, nr_colsB);    
+  matrixProductGMP(randCNaive, randA, randB, nr_rowsA, nr_colsA, nr_colsB);
+  std::cout << "Matrix difference should be close to zero:" << std::endl;
+  printGMPMatrixDiff(randC, randCNaive, nr_rowsA, nr_colsB);
   std::cout << "*****************************" << std::endl;
 }
 
-void testVectorAddOnGPU() {
+void testVectorAddOnGPU(const int len) {
   std::cout << "*****************************" << std::endl;
   std::cout << "*** TESTING VECTOR ADDITION ON GPU ***" << std::endl;
+  unsigned long long *d_a;
+  unsigned long long *d_b;
+  unsigned long long *d_c;
+  
+  cudaMalloc(&d_a, len * sizeof(long long));                                                   
+  cudaMalloc(&d_b, len * sizeof(long long));                                                   
+  cudaMalloc(&d_c, len * sizeof(long long)); 
+  
+  GPU_fill_rand_vec(d_a, len);                                                                 
+  GPU_fill_rand_vec(d_b, len);
+
+  // Number of threads in each thread block                                                                        
+  int blockSize = 1024;                                                                                          
+  // Number of thread blocks in grid                                                                               
+  int gridSize = (int)ceil((float)(len)/blockSize);                                            
+
+  vecAdd<<<gridSize, blockSize>>>(d_a, d_b, d_c, len);                                         
   std::cout << "*****************************" << std::endl;
 }
 
 
-void testMatrixMult_cuBlas() {
+void testMatrixMult_cuBlas(const int nr_rowsA, const int nr_colsA, const int nr_colsB) {
   std::cout << "*****************************" << std::endl;
+  timeval t1, t2;
+  int nr_rowsB = nr_colsA, nr_rowsC = nr_rowsA, nr_colsC = nr_colsB;
   std::cout << "*** TESTING GMP MATRIX MULTIPLICATION ON GPU ***" << std::endl;
+  cublasHandle_t handle;
+  cublasCreate(&handle);
+  mpf_class *randA, *randB;
+
+  allocateAndGenerateRandomMatrix(randA, nr_rowsA, nr_colsA);
+  allocateAndGenerateRandomMatrix(randB, nr_colsA, nr_colsB);
+  
+  mpf_class *randC = new mpf_class[nr_rowsA * nr_colsB];
+  mpf_class *randCNaive = new mpf_class[nr_rowsA * nr_colsB];
+  
+  int ownLimbSize = DOUBLE_MANT/2 - ceil(log2((double) nr_colsA) / 2);
+  int size_aS = 0;
+  int size_bS = 0;
+  int expA = 0;
+  int expB = 0;
+
+  estimateSize(randA, size_aS, expA, nr_rowsA, nr_colsA, ownLimbSize);
+  estimateSize(randB, size_bS, expB, nr_colsA, nr_colsB, ownLimbSize);
+  
+  double *d_aS;
+  cudaMalloc(&d_aS, size_aS * nr_rowsB * nr_colsB * sizeof(double));
+  double *d_bS;                                                                                                    
+  cudaMalloc(&d_bS, size_bS * nr_rowsB * nr_colsB * sizeof(double));                                         
+  double *d_prodRes;                                                                                               
+  cudaMalloc(&d_prodRes, nr_rowsC * nr_colsC * sizeof(double));                                                  
+  long  long *d_res;                                                                                               
+  cudaMalloc(&d_res, nr_rowsC * nr_colsC * sizeof(long long));                                                   
+                                                                                                                      
+  print_memory();                                                                                                  
+  // Allocate the memory for temporary arrays                                                                      
+  double * tmpTransferLongToGMP = (double *)malloc(max(nr_rowsA * nr_colsA, nr_rowsB * nr_colsB) * sizeof(double));                                                                                                                 
+  int * sizeMatrix = (int *)malloc(max(nr_rowsA * nr_colsA, nr_rowsB * nr_colsB) * sizeof(int));               
+  int * realExpMatrix = (int *)malloc(max(nr_rowsA * nr_colsA, nr_rowsB * nr_colsB) * sizeof(int));            
+  int * signMatrix = (int *)malloc(max(nr_rowsA * nr_colsA, nr_rowsB * nr_colsB) * sizeof(int));               
+  long long *tmp = (long long *)malloc(nr_rowsC * nr_colsC * sizeof(long long));                                 
+  
+  gettimeofday(&t1, NULL);                                                                                         
+  matrixMultiplicationBasecase_cuBlas(handle, randC, randA, randB,                                              
+				      d_aS, d_bS, tmpTransferLongToGMP, tmp, sizeMatrix, realExpMatrix, signMatrix,                                          
+				      d_prodRes, d_res,  nr_rowsA, nr_colsA, nr_colsB);                         
+  gettimeofday(&t2, NULL);                                                                                         
+  double etGPU = (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;     
+ 
+  gettimeofday(&t1, NULL);                                                                                        
+  matrixProductGMP(randCNaive, randA, randB, nr_rowsA, nr_colsA, nr_colsB);
+  gettimeofday(&t2, NULL);
+  double etCPU = (((t2.tv_sec*uS_PER_SEC)+t2.tv_usec) - ((t1.tv_sec*uS_PER_SEC)+t1.tv_usec))/(float)uS_PER_mS;
+ 
+  printGMPMatrixDiff(randC, randCNaive, 10, 10);                                        
+  std::cout << std::endl;                                                                                          
+  printf("GPU optimized GMP = %fms\n", etGPU);                                                                     
+  printf("CPU naive GMP = %fms\n", etCPU);                                                                         
+  print_memory();
+  
+  cublasDestroy(handle);
   std::cout << "*****************************" << std::endl;
 }
 
