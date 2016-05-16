@@ -148,4 +148,9 @@ systems of correlation functions:
   "The Random-Bond Ising Model in 2.01 and 3 Dimensions"
   [arXiv:1603.04444 [hep-th]](http://arxiv.org/abs/1603.04444)
 
+- Y. Nakayama
+  "Bootstrap bound for conformal multi-flavor QCD on lattice"
+  [arXiv:1605.04052 [hep-th]](https://arxiv.org/abs/1605.04052)
+
+
 (Please let me know if you would like your paper to be included in this list!)
