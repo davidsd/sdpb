@@ -1786,6 +1786,125 @@ int testAddToMpf() {
   cout << x << endl;
 }
  
+void allocateAndGenerateRandomMatrix() {
+}
+
+void testGenerateLongsFromGMP() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING GENERATING LONGS FROM AN MPF_CLASS ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+void testAddToGMP() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING ADDITION BETWEEN MPF_CLASS AND INT64 ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+void testNumberMultiplicationBasecase() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING NUMBER MULTIPLICATION BETWEEN TWO MPF_CLASS VARS ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+void testGenerateLongMatrixFromGMPMatrix() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING GENERATING LONG MATRIX FROM MPF_CLASS MATRIX ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+void testLongToGMPMatrix() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING GENERATING MPF_CLASS MATRIX FROM LONG MATRIX ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+void testMatrixMultNoGPU() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING GMP MATRIX MULTIPLICATION NO GPU ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+void testVectorAddOnGPU() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING VECTOR ADDITION ON GPU ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+
+void testMatrixMult_cuBlas() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING GMP MATRIX MULTIPLICATION ON GPU ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+void testMatrixMultSymm_cuBlas() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING GMP SYMMETRIC MATRIX MULTIPLICATION ON GPU ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+void testCholeskyOnCPU () {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING CHOLESKY DECOMPOSITION NO GPU ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+void testCholeskyOnGPU() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING CHOLESKY DECOMPOSITION ON GPU ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+void testToom2() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING TOOM2 ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+void testToom2Symm() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING TOOM2SYMM ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+void testToom3() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING TOOM3 ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+void testToom3Symm() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING TOOM3SYMM ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+void testMatrixMultiplicationWithToom2() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING TOOM2 MATRIX MULTIPLICATION ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+void testMatrixMultiplicationSymmWithToom2() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING TOOM2 WITH SYMM MATRIX MULTIPLICATION ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+void testMatrixMultiplicationWithToom3() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING TOOM3 MATRIX MULTIPLICATION ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+void testMatrixMultiplicationSymmWithToom3() {
+  std::cout << "*****************************" << std::endl;
+  std::cout << "*** TESTING TOOM3 SYMM MATRIX MULTIPLICATION ***" << std::endl;
+  std::cout << "*****************************" << std::endl;
+}
+
+
 int lucaGiantTest(int argc, char *argv[]) {
     print_memory();
     int val1, val2; 
@@ -2142,6 +2261,10 @@ int lucaGiantTest(int argc, char *argv[]) {
 
  }
 
+
+void choleskyTest() {
+
+}
 
 int main(int argc, char *argv[]) {
   lucaGiantTest(argc, argv);
