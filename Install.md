@@ -64,7 +64,7 @@ The following instructions have been tested on Mac OS 10.10 Yosemite.
         lzip -d gmp-6.1.0.tar.lz
         tar -xvf gmp-6.1.0.tar
 
-and then `cd` to the `gmp` directory. Run
+   and then `cd` to the `gmp` directory. Run
 
         ./configure --enable-cxx
         make
