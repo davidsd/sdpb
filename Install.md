@@ -81,7 +81,7 @@ The following instructions have been tested on Mac OS 10.10 Yosemite.
 
 5. Type `make` in the `sdpb` directory to compile the `sdpb` executable. If you installed any of the
 above software in custom locations, you'll have to modify variables in the
-`Makefile` as described in the Linux instructions.
+`Makefile` as described in the Linux instructions. (Note: some users have had trouble with this last step on OS X El Capitan. The problem has something to do with `librt`. Per the suggestion [here](https://github.com/quixdb/squash/issues/50), try removing `-lrt` from the `Makefile`. I don't know a general solution for this problem.)
 
 ## Windows
 
