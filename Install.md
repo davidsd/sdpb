@@ -29,7 +29,7 @@ SDPB has been tested on Red Hat Linux. To install,
 1. Download Boost and GMP from the links above. Install GMP with the option `--enable-cxx` added to `./configure`. Install Boost.
 
 2. Edit the `Makefile` to define the variables `GMPINCLUDEDIR`,
-`BOOSTINCLUDEDIR`, and `LIBDIR.` Ensure `LIBDIR` is in your `LD_LIBRARY_PATH`. 
+`BOOSTINCLUDEDIR`, and `LIBDIR.` Ensure `LIBDIR` is in your `LD_LIBRARY_PATH`.
 
 3. Type `make` to build the `sdpb` executable.
 
@@ -39,7 +39,7 @@ SDPB has been tested on Red Hat Linux. To install,
 
 The following instructions have been tested on Mac OS 10.10 Yosemite.
 
-1. Install Homebrew and `gcc-4.9` (or later), for instance by running the following commands
+1. Install Homebrew and `gcc-6` (or later), for instance by running the following commands
 
         # Install Homebrew
         ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
@@ -47,16 +47,24 @@ The following instructions have been tested on Mac OS 10.10 Yosemite.
         # Update Ruby
         brew install ruby
 
+        # Run the following self-diagnosis to check any incompatibilities
+        brew doctor   
+
         # Install the latest gcc as well as its dependencies
         # the option --without-multilib avoids a bug in OpenMP support
         brew install gcc --without-multilib
 
-2. Make `/usr/local/bin/g++-4.9` (or whatever version you have) the default compiler by renaming `gcc` and `g++` in `/usr/bin` and creating symlinks
+2. Make `/usr/local/bin/g++-6` (or whatever version you have) the default compiler by renaming `gcc` and `g++` in `/usr/bin` and creating symlinks
 
-        ln -s /usr/local/bin/g++-4.9 /usr/local/bin/g++
-        ln -s /usr/local/bin/gcc-4.9 /usr/local/bin/gcc
+        ln -s /usr/local/bin/g++-6 /usr/local/bin/g++
+        ln -s /usr/local/bin/gcc-6 /usr/local/bin/gcc
 
-3. Unfortunately, Homebrew's versions of GMP and Boost will not work -- they must be compiled from source. Download the latest GMP from [the GMP website](https://gmplib.org/). Upack the tarball (you may need `lzip` which you can install with `brew install lzip`) and `cd` to the `gmp` directory.  Run
+3. Unfortunately, Homebrew's versions of GMP and Boost will not work -- they must be compiled from source. Download the latest GMP from [the GMP website](https://gmplib.org/). To unpack the tarball you may need `lzip` which you can install with `brew install lzip`. Run
+
+        lzip -d gmp-6.1.0.tar.lz
+        tar -xvf gmp-6.1.0.tar
+
+and then `cd` to the `gmp` directory. Run
 
         ./configure --enable-cxx
         make
@@ -67,10 +75,10 @@ The following instructions have been tested on Mac OS 10.10 Yosemite.
         ./bootstrap.sh
         ./b2
         sudo ./b2 install
-        
+
    (Note that `bootstrap.sh` above is just an installation script and has absolutely nothing
    to do with the conformal bootstrap -- lots of people like the name "bootstrap"!)
-        
+
 5. Type `make` in the `sdpb` directory to compile the `sdpb` executable. If you installed any of the
 above software in custom locations, you'll have to modify variables in the
 `Makefile` as described in the Linux instructions.
@@ -85,7 +93,7 @@ Below are the steps to build SDPB executable on your machine. These steps use Cy
 
 It is not required to have any specific directory structure for the installation. However, to be concrete, it is assumed in the instructions that you have created a directory `C:\SDPB`, where you are going to store files related to SDPB. The filenames used in the instructions are suitable for Boost 1.59.0 and GMP 6.0.0a. If you are using newer versions, you will have to use the appropriate file and directory names.
 
-1. Download and install Cygwin from [the Cygwin installation webpage](http://cygwin.com/install.html). Choose the appropriate version (32-bit or 64-bit) and run the dowloaded executable file (`setup-x86.exe` or `setup-x86_64.exe`). 
+1. Download and install Cygwin from [the Cygwin installation webpage](http://cygwin.com/install.html). Choose the appropriate version (32-bit or 64-bit) and run the dowloaded executable file (`setup-x86.exe` or `setup-x86_64.exe`).
   1. Choose `Install from Internet`.
   2. Choose the installation directory and the directory for storing the downloaded packages.
   3. Choose appropriate proxy settings. If you don't know what it is, try `Direct Connection` or `Use Internet Explorer Proxy Settings`.
@@ -113,26 +121,26 @@ It is not required to have any specific directory structure for the installation
            cd boost_1_59_0/
            ./bootstrap.sh --with-libraries=filesystem,serialization,program_options,date_time,timer
            ./b2 stage
-           
+
      Note: Using `stage` target instead of `install` can save a lot of time by skipping the copying of Boost header files, which is done more efficiently by Windows methods.
-           
+
 3. Dowload and build GMP from [the GMP website](https://gmplib.org). Download the latest version, and put the file in `C:\SDPB`.
   1. In Cygwin terminal, navigate to `C:\SDPB` and unpack the archive. For this, type
 
            cd /cygdrive/c/SDPB
            tar --lzip -xf gmp-6.0.0a.tar.lz
-           
+
   2. Build GMP libraries. For this, type
 
            mkdir installation
            cd gmp-6.0.0
            ./configure --enable-cxx --prefix=/cygdrive/c/SDPB/installation
            make install
-           
+
   3. Run GMP tests to make sure that everything is in order
 
            make check
-           
+
 4. Collect the header and lib files in one place
   1. Move `C:\SDPB\boost_1_59_0\boost` directory into `C:\SDPB\installation\include` (so you will now have `C:\SDPB\installation\include\boost` directory).
   2. Copy the contents of `C:\SDPB\boost_1_59_0\stage\lib` directory into `C:\SDPB\installation\lib`.
@@ -149,12 +157,10 @@ It is not required to have any specific directory structure for the installation
 
     * Save the file and exit
   2. In Cygwin terminal, navigate to `C:\SDPB\sdpb-master` and build SDPB
-  
+
            cd /cygdrive/c/SDPB/sdpb-master
            make
 
     After the process finishes, `sdpb.exe` should appear in `C:\SDPB\sdpb-master`
 
 6. If you have added all the suggested locations to your system `Path` variable, then you should be able to run `sdpb.exe`. If you have not, then you need to either modify `Path` variable or put copies of the `.dll` files from `C:\SDPB\installation\lib` and a copy of `cygwin1.dll` from `\bin` subdirectory of Cygwin installation into the directory where you would like to keep `sdpb.exe`. You then might want to add this directory to `Path` variable to be able to access SDPB from Windows Command Line at any time.
-
-
