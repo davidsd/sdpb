@@ -35,6 +35,8 @@ SDPB has been tested on Red Hat Linux. To install,
 
 ## Mac OS X
 
+(Thanks to Yuji Tachikawa for help setting up SDPB for OS X)
+
 The following instructions have been tested on Mac OS 10.11 El Capitan. 
 
 0. Install Xcode command line tools and Homebrew if you haven't.
@@ -55,7 +57,7 @@ The following instructions have been tested on Mac OS 10.11 El Capitan.
         brew install clang-omp
         brew install gmp
         brew install boost
-        git clone https://github.com/yujitach/sdpb
+        git clone https://github.com/davidsd/sdpb
         cd sdpb
         # make using clang-omp
         CLANG=1 make
