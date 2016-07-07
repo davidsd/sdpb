@@ -35,21 +35,25 @@ SDPB has been tested on Red Hat Linux. To install,
 
 ## Mac OS X
 
-The following instructions have been tested on Mac OS 10.11 El Capitan 
+The following instructions have been tested on Mac OS 10.11 El Capitan. 
 
-1. Install Homebrew, `clang-omp`, `GMP` and `boost`, for instance by running the following commands
+0. Install Homebrew if you haven't.
 
-        # Install Homebrew if you haven't
         ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
-        # Install the latest gcc as well as its dependencies
-        # the option --without-multilib avoids a bug in OpenMP support
+1. If you just want to use vanilla `sdpb` from the command line, just do
+
+        brew tap yujitach/tap
+        brew install sdpb
+
+2. If you want to develop `sdpb`, you should do the following instead.
+
+        #install dependencies
         brew install clang-omp
         brew install gmp
         brew install boost
-
-2. Type the following in the `sdpb` directory to compile the `sdpb` executable using `clang-omp`
- 
+        git clone https://github.com/yujitach/sdpb
+        cd sdpb
         # make using clang-omp
         CLANG=1 make
 
