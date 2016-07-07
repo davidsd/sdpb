@@ -37,8 +37,11 @@ SDPB has been tested on Red Hat Linux. To install,
 
 The following instructions have been tested on Mac OS 10.11 El Capitan. 
 
-0. Install Homebrew if you haven't.
+0. Install Xcode command line tools and Homebrew if you haven't.
 
+        # for Xcode commad line tools
+        xcode-select --install
+        # for Homebrew
         ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
 1. If you just want to use vanilla `sdpb` from the command line, just do
