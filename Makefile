@@ -37,19 +37,28 @@ HEADERS := $(wildcard src/*.h) $(wildcard src/mpack/*.h) $(wildcard src/tinyxml2
 OBJECTS := $(patsubst src/%.cpp,obj/%.o,$(SOURCES))
 RESULT  = sdpb
 
-ifndef INTEL
-
-CC = g++
-CFLAGS = -g -O2 -Wall -ansi -std=c++0x -L${LIBDIR} -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
-LIBS = -lgomp -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lrt
-
-else
+ifdef INTEL
 
 CC = icpc
 CFLAGS = -g -O2 -ipo -xhost -Wall -ansi -std=c++0x -L${LIBDIR} -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -openmp -D___MPACK_BUILD_WITH_GMP___
 LIBS = -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lrt
 
+else 
+ifdef CLANG
+
+CC = clang-omp
+CFLAGS = -g -O2 -Wall -ansi -std=c++0x -L${LIBDIR} -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
+LIBS =  -liomp5 -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lc++
+
+else
+
+CC = g++
+CFLAGS = -g -O2 -Wall -ansi -std=c++0x -L${LIBDIR} -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
+LIBS = -lgomp -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lrt
+
 endif
+endif
+
 
 .SUFFIXES: .cpp .o
 
