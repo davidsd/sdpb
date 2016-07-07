@@ -35,53 +35,23 @@ SDPB has been tested on Red Hat Linux. To install,
 
 ## Mac OS X
 
-(Thanks to Ying Lin for these instructions.)
+The following instructions have been tested on Mac OS 10.11 El Capitan 
 
-The following instructions have been tested on Mac OS 10.10 Yosemite.
+1. Install Homebrew, `clang-omp`, `GMP` and `boost`, for instance by running the following commands
 
-1. Install Homebrew and `gcc-6` (or later), for instance by running the following commands
-
-        # Install Homebrew
+        # Install Homebrew if you haven't
         ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-
-        # Update Ruby
-        brew install ruby
-
-        # Run the following self-diagnosis to check any incompatibilities
-        brew doctor   
 
         # Install the latest gcc as well as its dependencies
         # the option --without-multilib avoids a bug in OpenMP support
-        brew install gcc --without-multilib
+        brew install clang-omp
+        brew install gmp
+        brew install boost
 
-2. Make `/usr/local/bin/g++-6` (or whatever version you have) the default compiler by renaming `gcc` and `g++` in `/usr/bin` and creating symlinks
-
-        ln -s /usr/local/bin/g++-6 /usr/local/bin/g++
-        ln -s /usr/local/bin/gcc-6 /usr/local/bin/gcc
-
-3. Unfortunately, Homebrew's versions of GMP and Boost will not work -- they must be compiled from source. Download the latest GMP from [the GMP website](https://gmplib.org/). To unpack the tarball you may need `lzip` which you can install with `brew install lzip`. Run
-
-        lzip -d gmp-6.1.0.tar.lz
-        tar -xvf gmp-6.1.0.tar
-
-   and then `cd` to the `gmp` directory. Run
-
-        ./configure --enable-cxx
-        make
-        make install
-
-4. Download Boost from [the Boost website](http://www.boost.org/).  Unpack the tarball and `cd` to the `boost` directory. Run
-
-        ./bootstrap.sh
-        ./b2
-        sudo ./b2 install
-
-   (Note that `bootstrap.sh` above is just an installation script and has absolutely nothing
-   to do with the conformal bootstrap -- lots of people like the name "bootstrap"!)
-
-5. Type `make` in the `sdpb` directory to compile the `sdpb` executable. If you installed any of the
-above software in custom locations, you'll have to modify variables in the
-`Makefile` as described in the Linux instructions. (Note: some users have had trouble with this last step on OS X El Capitan. The problem has something to do with `librt`. Per the suggestion [here](https://github.com/quixdb/squash/issues/50), try removing `-lrt` from the `Makefile`. I don't know a general solution for this problem.)
+2. Type the following in the `sdpb` directory to compile the `sdpb` executable using `clang-omp`
+ 
+        # make using clang-omp
+        CLANG=1 make
 
 ## Windows
 
