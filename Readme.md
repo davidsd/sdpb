@@ -152,5 +152,8 @@ systems of correlation functions:
   "Bootstrap bound for conformal multi-flavor QCD on lattice"
   [arXiv:1605.04052 [hep-th]](https://arxiv.org/abs/1605.04052)
 
+- M. Paulos, J. Penedones, J. Toledo, B. van Rees, P. Vieira,
+  "The S-matrix Bootstrap I: QFT in AdS"
+  [arXiv:1607.06109 [hep-th]](http://arxiv.org/abs/1607.06109)
 
 (Please let me know if you would like your paper to be included in this list!)
