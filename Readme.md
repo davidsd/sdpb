@@ -156,4 +156,8 @@ systems of correlation functions:
   "The S-matrix Bootstrap I: QFT in AdS"
   [arXiv:1607.06109 [hep-th]](http://arxiv.org/abs/1607.06109)
 
+- Z. Li, N. Su,
+  "Bootstrapping Mixed Correlators in the Five Dimensional Critical O(N) Models"
+  [arXiv:1607.07077 [hep-th]](https://arxiv.org/abs/1607.07077)
+
 (Please let me know if you would like your paper to be included in this list!)
