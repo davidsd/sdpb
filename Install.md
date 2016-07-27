@@ -54,7 +54,7 @@ The following instructions have been tested on Mac OS 10.11 El Capitan.
 2. If you want to develop `sdpb`, you should do the following instead.
 
         #install dependencies
-        brew install clang-omp
+        brew install homebrew/boneyard/clang-omp
         brew install gmp
         brew install boost
         git clone https://github.com/davidsd/sdpb
