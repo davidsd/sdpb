@@ -160,4 +160,8 @@ systems of correlation functions:
   "Bootstrapping Mixed Correlators in the Five Dimensional Critical O(N) Models"
   [arXiv:1607.07077 [hep-th]](https://arxiv.org/abs/1607.07077)
 
+- S. Collier, Y.H. Lin, X. Yin,
+  "Modular Bootstrap Revisited"
+  [arXiv:1608.06241 [hep-th]](https://arxiv.org/abs/1608.06241)
+
 (Please let me know if you would like your paper to be included in this list!)
