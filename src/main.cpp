@@ -232,6 +232,13 @@ int main(int argc, char** argv) {
       checkpointFile = sdpFile;
       checkpointFile.replace_extension("ck");
     }
+
+    std::ofstream ofs(outFile.string().c_str());
+    ofs.close();
+    if (!ofs) {
+      cerr << "Cannot write to outFile." << endl;
+      return 1;
+    }
   } catch(po::error& e) {
     cerr << "ERROR: " << e.what() << endl;
     cerr << cmdLineOptions << endl;
