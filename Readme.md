@@ -164,4 +164,8 @@ systems of correlation functions:
   "Modular Bootstrap Revisited"
   [arXiv:1608.06241 [hep-th]](https://arxiv.org/abs/1608.06241)
 
+- Y. Pang, J. Rong, N. Su,
+  "φ3  theory with F4 flavor symmetry in 6−2ε dimensions: 3-loop renormalization and conformal bootstrap"
+  [arXiv:1609.03007 [hep-th]](https://arxiv.org/abs/1609.03007)
+
 (Please let me know if you would like your paper to be included in this list!)
