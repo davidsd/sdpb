@@ -53,7 +53,7 @@ If you use SDPB in work that results in publication, please cite
 - D. Simmons-Duffin, "A Semidefinite Program Solver for the
   Conformal Bootstrap", [arXiv:1502.02033 \[hep-th\]](http://arxiv.org/abs/1502.02033).
 
-Depending on how SDPB is used, please also consider the following sources:
+Depending on how SDPB is used, the following other sources might be relevant:
 
 The first use of semidefinite programming in the bootstrap:
 
