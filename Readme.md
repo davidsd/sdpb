@@ -168,4 +168,12 @@ systems of correlation functions:
   "φ3  theory with F4 flavor symmetry in 6−2ε dimensions: 3-loop renormalization and conformal bootstrap"
   [arXiv:1609.03007 [hep-th]](https://arxiv.org/abs/1609.03007)
 
+- Y.H. Lin, S.H. Shao, Y. Wang, X. Yin,
+  "(2,2) Superconformal Bootstrap in Two Dimensions"
+  [arXiv:1610.05371 [hep-th]](https://arxiv.org/abs/1610.05371)
+  
+- J.B. Bae, K. Lee, S. Lee,
+  "Bootstrapping Pure Quantum Gravity in AdS3"
+  [arXiv:1610.05814 [hep-th]](https://arxiv.org/abs/1610.05814)
+
 (Please let me know if you would like your paper to be included in this list!)
