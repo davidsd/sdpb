@@ -176,4 +176,8 @@ systems of correlation functions:
   "Bootstrapping Pure Quantum Gravity in AdS3"
   [arXiv:1610.05814 [hep-th]](https://arxiv.org/abs/1610.05814)
 
+- J.B. Bae, D. Gang, J. Lee,
+  "3d N=2 minimal SCFTs from Wrapped M5-branes"
+  [arXiv:1610.09259 [hep-th]](https://arxiv.org/abs/1610.09259)
+
 (Please let me know if you would like your paper to be included in this list!)
