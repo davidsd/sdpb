@@ -180,4 +180,17 @@ systems of correlation functions:
   "3d N=2 minimal SCFTs from Wrapped M5-branes"
   [arXiv:1610.09259 [hep-th]](https://arxiv.org/abs/1610.09259)
 
+- C. Beem, L. Rastelli, B. C. van Rees,
+  "More N=4 superconformal bootstrap"
+  [arXiv:1612.02363 [hep-th]](https://arxiv.org/abs/1612.02363)
+
+- M. Lemos, P. Liendo, C. Meneghelli, V. Mitev,
+  "Bootstrapping N=3 superconformal theories"
+  [arXiv:1612.01536 [hep-th]](https://arxiv.org/abs/1612.01536)
+
+- D. Simmons-Duffin,
+  "The Lightcone Bootstrap and the Spectrum of the 3d Ising CFT"
+  [arXiv:1612.08471 [hep-th]](https://arxiv.org/abs/1612.08471)
+
+
 (Please let me know if you would like your paper to be included in this list!)
