@@ -192,5 +192,12 @@ systems of correlation functions:
   "The Lightcone Bootstrap and the Spectrum of the 3d Ising CFT"
   [arXiv:1612.08471 [hep-th]](https://arxiv.org/abs/1612.08471)
 
+- D. Li, D. Meltzer, A. Stergiou,
+  "Bootstrapping Mixed Correlators in 4D N=1 SCFTs"
+  [arXiv:1702.00404 [hep-th]](https://arxiv.org/abs/1702.00404)
+  
+- S. Collier, P. Kravchuk, Y.-H. Lin, X. Yin,
+  "Bootstrapping the Spectral Function: On the Uniqueness of Liouville and the Universality of BTZ"
+  [arXiv:1702.00423 [hep-th]](https://arxiv.org/abs/1702.00423)
 
 (Please let me know if you would like your paper to be included in this list!)
