@@ -33,6 +33,14 @@ SDPB has been tested on Red Hat Linux. To install,
 
 3. Type `make` to build the `sdpb` executable.
 
+### Debian/Ubuntu
+
+SDPB was included in Debian and is expected to be part of stable releases starting from Debian 10 and Ubuntu 17.10.
+When using such a release, it is enough to install the package sdpb (and sdpb-doc for documentation).
+
+On Debian 9 and Ubuntu 17.04 one can try to download the package from [here](https://packages.debian.org/sid/sdpb)
+and install it manually. The package is not installable on older releases due to a mismatch in Boost versions.
+
 ## Mac OS X
 
 (Thanks to Yuji Tachikawa for help setting up SDPB for OS X)
