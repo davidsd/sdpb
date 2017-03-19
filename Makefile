@@ -41,6 +41,7 @@ RESULT  = sdpb
 
 ifeq ($(SHARED_TINYXML2), 1)
 LIBS = -ltinyxml2
+CFLAGS += -D___SHARED_TINYXML2___
 else
 SOURCES += $(wildcard src/tinyxml2/*.cpp)
 HEADERS += $(wildcard src/tinyxml2/*.h)

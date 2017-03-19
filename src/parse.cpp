@@ -19,7 +19,11 @@
 #include "parse.h"
 #include "Polynomial.h"
 #include "SDP.h"
+#ifdef ___SHARED_TINYXML2___
+#include <tinyxml2.h>
+#else
 #include "tinyxml2/tinyxml2.h"
+#endif
 
 using std::vector;
 using tinyxml2::XMLDocument;
