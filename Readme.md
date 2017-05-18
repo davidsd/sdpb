@@ -199,5 +199,29 @@ systems of correlation functions:
 - S. Collier, P. Kravchuk, Y.-H. Lin, X. Yin,
   "Bootstrapping the Spectral Function: On the Uniqueness of Liouville and the Universality of BTZ"
   [arXiv:1702.00423 [hep-th]](https://arxiv.org/abs/1702.00423)
+  
+- M. Cornagliotto, M. Lemos, V. Schomerus,
+  "Long Multiplet Bootstrap"
+  [arXiv:1702.05101 [hep-th]](https://arxiv.org/abs/1702.05101)
+
+- Y. Nakayama,
+  "Bootstrap experiments on higher dimensional CFTs"
+  [arXiv:1705.02744 [hep-th]](https://arxiv.org/abs/1705.02744)
+
+- L. Iliesiu, F. Kos, D. Poland, S. S. Pufu, D. Simmons-Duffin,
+  "Bootstrapping 3D Fermions with Global Symmetries"
+  [arXiv:1705.03484 [hep-th]](https://arxiv.org/abs/1705.03484)
+
+- A. Dymarsky, J. Penedones, E. Trevisani, A. Vichi,
+  "Charting the space of 3D CFTs with a continuous global symmetry"
+  [arXiv:1705.04278 [hep-th]](https://arxiv.org/abs/1705.04278)
+
+- C.-M. Chang, Y.-H. Lin,
+  "Carving Out the End of the World or (Superconformal Bootstrap in Six Dimensions)"
+  [arXiv:1705.05392 [hep-th]](https://arxiv.org/abs/1705.05392)
+
+- M. Cho, S. Collier, X. Yin,
+  "Genus Two Modular Bootstrap"
+  [arXiv:1705.05865 [hep-th]](https://arxiv.org/abs/1705.05865)
 
 (Please let me know if you would like your paper to be included in this list!)
