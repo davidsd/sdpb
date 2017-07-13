@@ -17,6 +17,6 @@
 
 using boost::filesystem::path;
 
-SDP readBootstrapSDP(const path sdpFile);
+SDP readBootstrapSDP(const vector<path> sdpFiles);
 
 #endif  // SDPB_PARSE_H_
