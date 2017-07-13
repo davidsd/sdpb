@@ -181,7 +181,9 @@ A bilinear basis is a collection of polynomials $q_m^{(j)}(x)$ such that $\deg q
   </polynomial>
 \end{lstlisting}
 
-Several aspects of this format are inefficient.  Because the matrices are symmetric, \texttt{rows} and \texttt{cols} are redundant, and most elements are listed twice.  Also, XML is extremely verbose.  The current choices are in the interest of simplicity and could obviously be changed in a future version.
+The data can be spread over multiple files. In such cases the different input files should all follow the above format except that $\langle${\it xml for objective}$\rangle$ should be omitted from all but one file. The parser will combine the constraints from all the polynomial vector matrices specified in the different files.
+
+Several aspects of the input format are inefficient.  Because the matrices are symmetric, \texttt{rows} and \texttt{cols} are redundant, and most elements are listed twice.  Also, XML is extremely verbose.  The current choices are in the interest of simplicity and could obviously be changed in a future version.
 
 The options to \SDPB\ are described in detail in the help text, obtained by running ``\texttt{sdpb --help}."
 
