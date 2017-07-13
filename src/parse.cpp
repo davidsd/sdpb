@@ -30,18 +30,28 @@ using tinyxml2::XMLDocument;
 using tinyxml2::XMLElement;
 using boost::filesystem::path;
 
-// parse a bunch of adjacent elements with tag `name' into a vector<T>
-// using the function `parse' for each element.
+// parse a bunch of adjacent elements with tag `name'
+// using the function `parse' for each element, and
+// append the result to returnvec.
 template <class T>
-vector<T> parseMany(const char *name, T(*parse)(XMLElement *),
-                    XMLElement *elt) {
+void parseAppendMany(const char *name,
+                     T(*parse)(XMLElement *),
+                     XMLElement *elt, 
+                     vector<T> &returnvec) {
   XMLElement *e;
-  vector<T> v;
   for (e = elt->FirstChildElement(name);
        e != NULL;
        e = e->NextSiblingElement(name)) {
-    v.push_back(parse(e));
+    returnvec.push_back(parse(e));
   }
+}
+
+template <class T>
+vector<T> parseMany(const char *name,
+                    T(*parse)(XMLElement *),
+                    XMLElement *elt) {
+  vector<T> v;
+  parseAppendMany(name, parse, elt, v);
   return v;
 }
 
@@ -87,15 +97,22 @@ PolynomialVectorMatrix parsePolynomialVectorMatrix(XMLElement *xml) {
   return m;
 }
 
-SDP parseBootstrapSDP(XMLElement *xml) {
-  return bootstrapSDP(parseVector(xml->FirstChildElement("objective")),
-                      parseMany("polynomialVectorMatrix",
-                                parsePolynomialVectorMatrix,
-                                xml->FirstChildElement("polynomialVectorMatrices")));
-}
-
-SDP readBootstrapSDP(const path sdpFile) {
-  XMLDocument doc;
-  doc.LoadFile(sdpFile.string().c_str());
-  return parseBootstrapSDP(doc.FirstChildElement("sdp"));
+SDP readBootstrapSDP(const vector<path> sdpFiles) {
+  Vector objective;
+  vector<PolynomialVectorMatrix> polynomialVectorMatrices;
+  for (auto const& sdpFile: sdpFiles) {
+    XMLDocument doc;
+    doc.LoadFile(sdpFile.c_str());
+    XMLElement* xml = doc.FirstChildElement("sdp");
+    if(xml->FirstChildElement("objective") != NULL) {
+      objective = parseVector(xml->FirstChildElement("objective"));
+    }
+    if(xml->FirstChildElement("polynomialVectorMatrices") != NULL) {
+      parseAppendMany("polynomialVectorMatrix",
+                      parsePolynomialVectorMatrix,
+                      xml->FirstChildElement("polynomialVectorMatrices"),
+                      polynomialVectorMatrices);
+    }
+  }
+  return bootstrapSDP(objective,polynomialVectorMatrices);
 }

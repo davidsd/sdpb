@@ -17,6 +17,7 @@
 #define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem.hpp>
 #undef BOOST_NO_CXX11_SCOPED_ENUMS
+#include "boost/filesystem.hpp"
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "boost/program_options.hpp"
 #include "types.h"
@@ -38,7 +39,7 @@ namespace po = boost::program_options;
 
 Timers timers;
 
-int solveSDP(const path &sdpFile,
+int solveSDP(const vector<path> &sdpFiles,
              const path &outFile,
              const path &checkpointFile,
              SDPSolverParameters parameters) {
@@ -56,7 +57,9 @@ int solveSDP(const path &sdpFile,
   omp_set_num_threads(parameters.maxThreads);
 
   cout << "SDPB started at " << second_clock::local_time() << endl;
-  cout << "SDP file        : " << sdpFile        << endl;
+  for (auto const& sdpFile: sdpFiles) {
+    cout << "SDP file        : " << sdpFile        << endl;
+  }
   cout << "out file        : " << outFile        << endl;
   cout << "checkpoint file : " << checkpointFile << endl;
 
@@ -64,7 +67,7 @@ int solveSDP(const path &sdpFile,
   cout << parameters << endl;
 
   // Read an SDP from sdpFile and create a solver for it
-  SDPSolver solver(readBootstrapSDP(sdpFile), parameters);
+  SDPSolver solver(readBootstrapSDP(sdpFiles), parameters);
 
   if (exists(checkpointFile))
     solver.loadCheckpoint(checkpointFile);
@@ -94,7 +97,7 @@ int solveSDP(const path &sdpFile,
 }
 
 int main(int argc, char** argv) {
-  path sdpFile;
+  vector<path> sdpFiles;
   path outFile;
   path checkpointFile;
   path paramFile;
@@ -105,8 +108,8 @@ int main(int argc, char** argv) {
   basicOptions.add_options()
     ("help,h", "Show this helpful message.")
     ("sdpFile,s",
-     po::value<path>(&sdpFile)->required(),
-     "SDP data file in XML format.")
+     po::value< vector<path> >(&sdpFiles)->required(),
+     "SDP data file(s) in XML format. Use this option repeatedly to specify multiple data files.")
     ("paramFile,p",
      po::value<path>(&paramFile),
      "Any parameter can optionally be set via this file in key=value "
@@ -227,12 +230,12 @@ int main(int argc, char** argv) {
     po::notify(variablesMap);
 
     if (!variablesMap.count("outFile")) {
-      outFile = sdpFile;
+      outFile = sdpFiles[0];
       outFile.replace_extension("out");
     }
 
     if (!variablesMap.count("checkpointFile")) {
-      checkpointFile = sdpFile;
+      checkpointFile = sdpFiles[0];
       checkpointFile.replace_extension("ck");
     }
 
@@ -248,5 +251,5 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  return solveSDP(sdpFile, outFile, checkpointFile, parameters);
+  return solveSDP(sdpFiles, outFile, checkpointFile, parameters);
 }
