@@ -13,6 +13,10 @@
 #include <ostream>
 #include <string>
 #include "omp.h"
+//Tweak to allow Ubuntu-14.04/gcc-4.8.4 and similar environments to compile
+#define BOOST_NO_CXX11_SCOPED_ENUMS
+#include <boost/filesystem.hpp>
+#undef BOOST_NO_CXX11_SCOPED_ENUMS
 #include "boost/filesystem.hpp"
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "boost/program_options.hpp"
@@ -35,7 +39,7 @@ namespace po = boost::program_options;
 
 Timers timers;
 
-int solveSDP(const path &sdpFile,
+int solveSDP(const vector<path> &sdpFiles,
              const path &outFile,
              const path &checkpointFileIn,
              const path &checkpointFileOut,
@@ -54,7 +58,9 @@ int solveSDP(const path &sdpFile,
   omp_set_num_threads(parameters.maxThreads);
 
   cout << "SDPB started at " << second_clock::local_time() << endl;
-  cout << "SDP file        : " << sdpFile        << endl;
+  for (auto const& sdpFile: sdpFiles) {
+    cout << "SDP file        : " << sdpFile        << endl;
+  }
   cout << "out file        : " << outFile        << endl;
   cout << "checkpoint in   : " << checkpointFileIn << endl;
   cout << "checkpoint out  : " << checkpointFileOut << endl;
@@ -63,7 +69,7 @@ int solveSDP(const path &sdpFile,
   cout << parameters << endl;
 
   // Read an SDP from sdpFile and create a solver for it
-  SDPSolver solver(readBootstrapSDP(sdpFile), parameters);
+  SDPSolver solver(readBootstrapSDP(sdpFiles), parameters);
 
   if (exists(checkpointFileIn))
     solver.loadCheckpoint(checkpointFileIn);
@@ -93,7 +99,7 @@ int solveSDP(const path &sdpFile,
 }
 
 int main(int argc, char** argv) {
-  path sdpFile;
+  vector<path> sdpFiles;
   path outFile;
   path checkpointFileIn;
   path checkpointFileOut;
@@ -105,8 +111,8 @@ int main(int argc, char** argv) {
   basicOptions.add_options()
     ("help,h", "Show this helpful message.")
     ("sdpFile,s",
-     po::value<path>(&sdpFile)->required(),
-     "SDP data file in XML format.")
+     po::value< vector<path> >(&sdpFiles)->required(),
+     "SDP data file(s) in XML format. Use this option repeatedly to specify multiple data files.")
     ("paramFile,p",
      po::value<path>(&paramFile),
      "Any parameter can optionally be set via this file in key=value "
@@ -230,12 +236,12 @@ int main(int argc, char** argv) {
     po::notify(variablesMap);
 
     if (!variablesMap.count("outFile")) {
-      outFile = sdpFile;
+      outFile = sdpFiles[0];
       outFile.replace_extension("out");
     }
 
     if (!variablesMap.count("checkpointFile")) {
-      checkpointFileOut = sdpFile;
+      checkpointFileOut = sdpFiles[0];
       checkpointFileOut.replace_extension("ck");
     }
 
@@ -255,5 +261,5 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  return solveSDP(sdpFile, outFile, checkpointFileIn, checkpointFileOut, parameters);
+  return solveSDP(sdpFiles, outFile, checkpointFileIn, checkpointFileOut, parameters);
 }

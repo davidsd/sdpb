@@ -168,4 +168,60 @@ systems of correlation functions:
   "φ3  theory with F4 flavor symmetry in 6−2ε dimensions: 3-loop renormalization and conformal bootstrap"
   [arXiv:1609.03007 [hep-th]](https://arxiv.org/abs/1609.03007)
 
+- Y.H. Lin, S.H. Shao, Y. Wang, X. Yin,
+  "(2,2) Superconformal Bootstrap in Two Dimensions"
+  [arXiv:1610.05371 [hep-th]](https://arxiv.org/abs/1610.05371)
+  
+- J.B. Bae, K. Lee, S. Lee,
+  "Bootstrapping Pure Quantum Gravity in AdS3"
+  [arXiv:1610.05814 [hep-th]](https://arxiv.org/abs/1610.05814)
+
+- J.B. Bae, D. Gang, J. Lee,
+  "3d N=2 minimal SCFTs from Wrapped M5-branes"
+  [arXiv:1610.09259 [hep-th]](https://arxiv.org/abs/1610.09259)
+
+- C. Beem, L. Rastelli, B. C. van Rees,
+  "More N=4 superconformal bootstrap"
+  [arXiv:1612.02363 [hep-th]](https://arxiv.org/abs/1612.02363)
+
+- M. Lemos, P. Liendo, C. Meneghelli, V. Mitev,
+  "Bootstrapping N=3 superconformal theories"
+  [arXiv:1612.01536 [hep-th]](https://arxiv.org/abs/1612.01536)
+
+- D. Simmons-Duffin,
+  "The Lightcone Bootstrap and the Spectrum of the 3d Ising CFT"
+  [arXiv:1612.08471 [hep-th]](https://arxiv.org/abs/1612.08471)
+
+- D. Li, D. Meltzer, A. Stergiou,
+  "Bootstrapping Mixed Correlators in 4D N=1 SCFTs"
+  [arXiv:1702.00404 [hep-th]](https://arxiv.org/abs/1702.00404)
+  
+- S. Collier, P. Kravchuk, Y.-H. Lin, X. Yin,
+  "Bootstrapping the Spectral Function: On the Uniqueness of Liouville and the Universality of BTZ"
+  [arXiv:1702.00423 [hep-th]](https://arxiv.org/abs/1702.00423)
+  
+- M. Cornagliotto, M. Lemos, V. Schomerus,
+  "Long Multiplet Bootstrap"
+  [arXiv:1702.05101 [hep-th]](https://arxiv.org/abs/1702.05101)
+
+- Y. Nakayama,
+  "Bootstrap experiments on higher dimensional CFTs"
+  [arXiv:1705.02744 [hep-th]](https://arxiv.org/abs/1705.02744)
+
+- L. Iliesiu, F. Kos, D. Poland, S. S. Pufu, D. Simmons-Duffin,
+  "Bootstrapping 3D Fermions with Global Symmetries"
+  [arXiv:1705.03484 [hep-th]](https://arxiv.org/abs/1705.03484)
+
+- A. Dymarsky, J. Penedones, E. Trevisani, A. Vichi,
+  "Charting the space of 3D CFTs with a continuous global symmetry"
+  [arXiv:1705.04278 [hep-th]](https://arxiv.org/abs/1705.04278)
+
+- C.-M. Chang, Y.-H. Lin,
+  "Carving Out the End of the World or (Superconformal Bootstrap in Six Dimensions)"
+  [arXiv:1705.05392 [hep-th]](https://arxiv.org/abs/1705.05392)
+
+- M. Cho, S. Collier, X. Yin,
+  "Genus Two Modular Bootstrap"
+  [arXiv:1705.05865 [hep-th]](https://arxiv.org/abs/1705.05865)
+
 (Please let me know if you would like your paper to be included in this list!)

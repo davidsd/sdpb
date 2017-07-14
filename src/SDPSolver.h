@@ -12,7 +12,10 @@
 #include <iostream>
 #include <ostream>
 #include <vector>
-#include "boost/filesystem.hpp"
+//Tweak to allow Ubuntu-14.04/gcc-4.8.4 and similar environments to compile
+#define BOOST_NO_CXX11_SCOPED_ENUMS
+#include <boost/filesystem.hpp>
+#undef BOOST_NO_CXX11_SCOPED_ENUMS
 #include "types.h"
 #include "Vector.h"
 #include "Matrix.h"
