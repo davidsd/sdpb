@@ -41,7 +41,8 @@ Timers timers;
 
 int solveSDP(const vector<path> &sdpFiles,
              const path &outFile,
-             const path &checkpointFile,
+             const path &checkpointFileIn,
+             const path &checkpointFileOut,
              SDPSolverParameters parameters) {
   // Set the default precision of all Real numbers to that specified
   // by the 'precision' parameter.
@@ -61,7 +62,8 @@ int solveSDP(const vector<path> &sdpFiles,
     cout << "SDP file        : " << sdpFile        << endl;
   }
   cout << "out file        : " << outFile        << endl;
-  cout << "checkpoint file : " << checkpointFile << endl;
+  cout << "checkpoint in   : " << checkpointFileIn << endl;
+  cout << "checkpoint out  : " << checkpointFileOut << endl;
 
   cout << "\nParameters:\n";
   cout << parameters << endl;
@@ -69,12 +71,12 @@ int solveSDP(const vector<path> &sdpFiles,
   // Read an SDP from sdpFile and create a solver for it
   SDPSolver solver(readBootstrapSDP(sdpFiles), parameters);
 
-  if (exists(checkpointFile))
-    solver.loadCheckpoint(checkpointFile);
+  if (exists(checkpointFileIn))
+    solver.loadCheckpoint(checkpointFileIn);
 
   timers["Solver runtime"].start();
   timers["Last checkpoint"].start();
-  SDPSolverTerminateReason reason = solver.run(checkpointFile);
+  SDPSolverTerminateReason reason = solver.run(checkpointFileOut);
   timers["Solver runtime"].stop();
 
   cout << "-----" << setfill('-') << setw(116) << std::left << reason << endl;
@@ -87,7 +89,7 @@ int solveSDP(const vector<path> &sdpFiles,
   cout << endl;
 
   if (!parameters.noFinalCheckpoint)
-    solver.saveCheckpoint(checkpointFile);
+    solver.saveCheckpoint(checkpointFileOut);
   timers["Last checkpoint"].stop();
   solver.saveSolution(reason, outFile);
 
@@ -99,7 +101,8 @@ int solveSDP(const vector<path> &sdpFiles,
 int main(int argc, char** argv) {
   vector<path> sdpFiles;
   path outFile;
-  path checkpointFile;
+  path checkpointFileIn;
+  path checkpointFileOut;
   path paramFile;
 
   SDPSolverParameters parameters;
@@ -120,9 +123,12 @@ int main(int argc, char** argv) {
      "The optimal solution is saved to this file in Mathematica "
      "format. Defaults to sdpFile with '.out' extension.")
     ("checkpointFile,c",
-     po::value<path>(&checkpointFile),
+     po::value<path>(&checkpointFileOut),
      "Checkpoints are saved to this file every checkpointInterval. Defaults "
      "to sdpFile with '.ck' extension.")
+    ("initialCheckpointFile,i",
+     po::value<path>(&checkpointFileIn),
+     "The initial checkpoint to load. Defaults to checkpointFile.")
     ;
 
   po::options_description solverParamsOptions("Solver parameters");
@@ -235,8 +241,12 @@ int main(int argc, char** argv) {
     }
 
     if (!variablesMap.count("checkpointFile")) {
-      checkpointFile = sdpFiles[0];
-      checkpointFile.replace_extension("ck");
+      checkpointFileOut = sdpFiles[0];
+      checkpointFileOut.replace_extension("ck");
+    }
+
+    if (!variablesMap.count("initialCheckpointFile")) {
+      checkpointFileIn = checkpointFileOut;
     }
 
     std::ofstream ofs(outFile.string().c_str());
@@ -251,5 +261,5 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  return solveSDP(sdpFiles, outFile, checkpointFile, parameters);
+  return solveSDP(sdpFiles, outFile, checkpointFileIn, checkpointFileOut, parameters);
 }

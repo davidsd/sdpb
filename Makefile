@@ -56,9 +56,9 @@ LIBS += -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -l
 else 
 ifdef CLANG
 
-CC = clang-omp
-CFLAGS += -g -O2 -Wall -ansi -std=c++0x -L${LIBDIR} -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
-LIBS +=  -liomp5 -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lc++
+CC = /usr/local/opt/llvm/bin/clang
+CFLAGS += -I/usr/local/opt/llvm/include -g -O2 -Wall -ansi -std=c++0x -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
+LIBS +=  -L/usr/local/opt/llvm/lib -liomp5 -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lc++
 
 else
 

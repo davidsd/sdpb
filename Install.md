@@ -44,7 +44,7 @@ manually. The package is not installable on older releases of Debian or Ubuntu d
 
 (Thanks to Yuji Tachikawa for help setting up SDPB for OS X)
 
-The following instructions have been tested on Mac OS 10.11 El Capitan. 
+The following instructions have been tested on Mac OS 10.12 Sierra. 
 
 0. Install Xcode command line tools and Homebrew if you haven't.
 
@@ -61,12 +61,12 @@ The following instructions have been tested on Mac OS 10.11 El Capitan.
 2. If you want to develop `sdpb`, you should do the following instead.
 
         #install dependencies
-        brew install homebrew/boneyard/clang-omp
+        brew install llvm
         brew install gmp
         brew install boost
         git clone https://github.com/davidsd/sdpb
         cd sdpb
-        # make using clang-omp
+        # make using clang in homebrew
         CLANG=1 make
 
 ## Windows
