@@ -39,13 +39,6 @@ Two python wrappers for SDPB are also available:
 - [PyCFTBoot](https://github.com/cbehan/pycftboot) by Connor Behan ([arXiv:1602.02810](http://arxiv.org/abs/arXiv:1602.02810))
 - [cboot](https://github.com/tohtsky/cboot) by Tomoki Ohtsuki ([arXiv:1602.07295](http://arxiv.org/abs/arXiv:1602.07295)).
 
-## Changelog
-
-- 5/29/15: Fixed a bug in `SDP.cpp` that caused SDPB to incorrectly load
-  matrices with dimensions larger than 2x2. (Thanks to Filip Kos for
-  the fix.)
-- 10/20/15: Fixed a Windows incompatibility in the parser ([Pull request](https://github.com/davidsd/sdpb/pull/8))
-
 ## Attribution
 
 If you use SDPB in work that results in publication, please cite
