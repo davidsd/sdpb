@@ -102,7 +102,7 @@ SDP readBootstrapSDP(const vector<path> sdpFiles) {
   vector<PolynomialVectorMatrix> polynomialVectorMatrices;
   for (auto const& sdpFile: sdpFiles) {
     XMLDocument doc;
-    doc.LoadFile(sdpFile.c_str());
+    doc.LoadFile(sdpFile.string().c_str());
     XMLElement* xml = doc.FirstChildElement("sdp");
     if(xml->FirstChildElement("objective") != NULL) {
       objective = parseVector(xml->FirstChildElement("objective"));
