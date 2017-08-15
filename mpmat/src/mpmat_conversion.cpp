@@ -6,6 +6,7 @@
 #include <cassert>
 #include <cstring>
 #include <cstdlib>
+#include <mkl.h>
 
 #include <iostream>
 #include <bitset>
@@ -186,13 +187,14 @@ void mpmatConvertDoubleToGMP(mpf_class & dest,
     int offset = mp_limb_bits - ( (MPMAT_DOUBLE_MANT_IMPLICIT + 1 + pad + mpmat_limb * mpmat_pos) % mp_limb_bits );
     offset = offset % mp_limb_bits;
 
+    // TODO : fix the bug below and maybe be more intelligent about loosing limbs if have a lot of leading zeroes
     // Find the overall sign of the expression
     mp_limb_signed_t tmp = static_cast<mp_limb_signed_t>( source[mpmat_pos] ); //SIGNS!
     for (int mpmat_pos_tmp = mpmat_pos-1; mpmat_pos_tmp >= 0; mpmat_pos_tmp --){
         tmp >>= mpmat_limb;
         tmp += static_cast<mp_limb_signed_t>(source[mpmat_pos_tmp]);
     }
-    mp_limb_signed_t mp_sign = tmp < 0 ? -1 : 1;
+    mp_limb_signed_t mp_sign = tmp < 0 ? -1 : 1; //BUG! If tmp == 0 then this may give a wrong sign.
 
     tmp = 0;
     if ( mpf_pos == -1 ) {
@@ -257,4 +259,37 @@ void mpmatConvertDoubleToGMP(mpf_class & dest,
             dest.get_mpf_t()->_mp_exp  = 0;
         }
     }
+}
+
+
+// Description in .h
+void mpmatConvertGMPToDoubleVector(const mpf_class * source,
+                                   const int source_len,
+                                   mpmat_double * dest,
+                                   const int mpmat_size,
+                                   const int mpmat_limb,
+                                   int & exp) {
+    exp = source->get_mpf_t()->_mp_exp * mp_bits_per_limb;
+
+    //Make first pass to determine the exponent to be used
+    for (int i = 1; i < source_len; i++) {
+        int current_exp = source[i].get_mpf_t()->_mp_exp * mp_bits_per_limb;
+        exp = current_exp > exp ? current_exp : exp;
+    }
+
+    //Make second pass to convert the GMPs to mpmat_doubles
+    for (int i = 0; i < source_len; i++) {
+        mpmatConvertGMPToDouble(source[i], dest + i*mpmat_size, mpmat_size, mpmat_limb, exp);
+    }
+
+    //Now transpose the array in-place to obtain limb-vectors
+    mkl_dimatcopy(
+            'r','t',
+            source_len,
+            mpmat_size,
+            1,
+            dest,
+            mpmat_size,
+            source_len
+    );
 }

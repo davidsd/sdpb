@@ -45,10 +45,6 @@ void mpmatConvertGMPToDouble(const mpf_class source,
                              const int size,
                              const int mpmat_limb,
                              const int exp);
-// TODO:                     const int stride=1); // in order to distribute into different matrices
-// TODO: If these conversion steps become critical, we may check whether we miss a lot of cache (we probably do, but who
-// TODO:   knows how clever the prefetching is). In a non-striding scenario we need a cache-friendly transposition code.
-// TODO: A better idea is probably to convert without transposition and then transpose using an efficient BLAS func
 
 // Converts an array of mpmat_double into mpf_class
 //
@@ -70,13 +66,12 @@ void mpmatConvertGMPToDouble(const mpf_class source,
 //   and no information is ever discarded.
 //   More generally, because to various exp-related paddings, one limb of precision on dest can be lost currently.
 //   TODO: do we need to change this behavior?
-//
+// * !!!!!! Currently contains a bug, see code
 void mpmatConvertDoubleToGMP(mpf_class & dest,
                              const mpmat_double * source,
                              const int size,
                              const int mpmat_limb,
                              const int exp);
-// TODO:                     const int stride=1); // in order to read from different matrices
 
 // Performs multilplication of GMP numbers a and b by converting to mpmat_double arrays, and stores result in dest.
 // Doesn't loose precision except as described in mpmatConvertDoubleToGMP
@@ -91,5 +86,44 @@ void mpmatMultiplyGMPBaseCase(mpf_class & dest,
                               const mpf_class  a,
                               const mpf_class  b);
 
+// Converts GMP vector to array of mpmat_double vectors; all operations are performed in-place over dest
+//
+// Arguments:
+// (in)  source     : the pointer to the first element in the GMP vector
+// (in)  source_len : the length of the GMP vector
+// (out) dest       : the pointer to the allocated array of mpmat_doubles
+// (in)  size       : number of mpmat_doubles to use per GMP entry
+// (in)  mpmat_limb : the bit limb size to use in mpmat_double array
+// (out) exp        : the exponent used in the output
+//
+// * The same exponent exp is used for all entries of the vector
+// * This function automatically detects the maximal exponent in source and sets exp accordingly
+// * This function internally uses mpmatConvertGMPToDouble
+//
+void mpmatConvertGMPToDoubleVector(const mpf_class * source,
+                                   const int source_len,
+                                   mpmat_double * dest,
+                                   const int mpmat_size,
+                                   const int mpmat_limb,
+                                   int & exp);
 
+// Converts an array of mpmat_double vectors into a GMP vector; in-place transforms the mpmat_double array
+//
+// Arguments:
+// (out)    dest       : the destination GMP vector; must be allocated & mpf's intialized
+// (in)     dest_len   : the length of the vector
+// (in/out) source     : the array of source vectors
+// (in)     mpmat_size : size of mpmat_double arrays
+// (in)     mpmat_limb : the original limb size of mpmat_double
+// (in)     exp        : the exponent to use for interpretation of source
+//
+// * Note that source is transposed in-place after the call
+// * This function internally uses mpmatConvertDoubleToGMP
+//
+void mpmatConvertDoubleToGMPVector(mpf_class * dest,
+                                   const int dest_len,
+                                   mpmat_double * source,
+                                   const int mpmat_size,
+                                   const int mpmat_limb,
+                                   int exp);
 #endif //MPMAT_MPMAT_H
