@@ -1,1 +1,9 @@
 *~
+.DS_Store
+mpmat/cmake-build-debug
+mpmat/obj
+mpmat/.idea
+mpmat/CMake*
+mpmat/*.dSYM
+mpmat/cachegrind*
+mpmat/mpmat_test
