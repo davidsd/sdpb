@@ -7,6 +7,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <mkl.h>
+#include "Timers.h"
 
 #include <iostream>
 #include <bitset>
@@ -168,36 +169,44 @@ void mpmatConvertDoubleToGMP(mpf_class & dest,
     // it is equal to the position of the least significant bit of source in dest's _mp_d (starting from 1)
     int max_bit_size = (size-1) * mpmat_limb + MPMAT_DOUBLE_MANT_IMPLICIT + 1 + pad;
 
-    //recall that gmp allocates _mp_prec + 1 bits
+    // recall that gmp allocates _mp_prec + 1 bits
     int mp_size    = dest.get_mpf_t()->_mp_prec + 1;
 
-    //assuming _mp_d is always pointing to the same place, i.e. _mp_d+_mp_prec is allocated
+    // assuming _mp_d is always pointing to the same place, i.e. _mp_d+_mp_prec is allocated
     mp_limb_t * mp_d = dest.get_mpf_t()->_mp_d;
     std::memset(mp_d, 0, static_cast<size_t>(mp_size)*sizeof(mp_limb_t));
 
     int mpf_pos, mpmat_pos;
     mpf_pos = mp_size - ceil_div(max_bit_size, mp_limb_bits);
+    // Assert that the full double array fits into the mpf_class
+    assert(mpf_pos>=0);
+    mpmat_pos = size - 1;
+
+    /*
     if ( mpf_pos < -1 ) {
         mpf_pos = -1;
         mpmat_pos = ceil_div(mp_size*mp_limb_bits - 1 - pad, mpmat_limb) - 1;
     } else {
         mpmat_pos = size - 1;
     }
+    */
 
     int offset = mp_limb_bits - ( (MPMAT_DOUBLE_MANT_IMPLICIT + 1 + pad + mpmat_limb * mpmat_pos) % mp_limb_bits );
     offset = offset % mp_limb_bits;
 
-    // TODO : fix the bug below and maybe be more intelligent about loosing limbs if have a lot of leading zeroes
     // Find the overall sign of the expression
-    mp_limb_signed_t tmp = static_cast<mp_limb_signed_t>( source[mpmat_pos] ); //SIGNS!
-    for (int mpmat_pos_tmp = mpmat_pos-1; mpmat_pos_tmp >= 0; mpmat_pos_tmp --){
+    mp_limb_signed_t tmp = 0; //static_cast<mp_limb_signed_t>( source[mpmat_pos] );
+    mp_limb_signed_t mp_sign = 0;
+    for (int mpmat_pos_tmp = mpmat_pos; mpmat_pos_tmp >= 0; mpmat_pos_tmp --) {
         tmp >>= mpmat_limb;
         tmp += static_cast<mp_limb_signed_t>(source[mpmat_pos_tmp]);
+
+        if(tmp != 0) mp_sign = tmp < 0 ? -1 : 1;
     }
-    mp_limb_signed_t mp_sign = tmp < 0 ? -1 : 1; //BUG! If tmp == 0 then this may give a wrong sign.
+    //mp_limb_signed_t mp_sign = tmp < 0 ? -1 : 1; //BUG! If tmp == 0 then this may give a wrong sign.
 
     tmp = 0;
-    if ( mpf_pos == -1 ) {
+    /* if ( mpf_pos == -1 ) {
         while(mpf_pos == -1 && mpmat_pos > 0) {
             tmp = mp_sign * static_cast<mp_limb_signed_t>( source[mpmat_pos] ); //SIGNS
             dumpBitsToHighLimb(mp_d + mpf_pos, *reinterpret_cast<mp_limb_t *>(&tmp), offset, mpmat_limb);
@@ -207,7 +216,7 @@ void mpmatConvertDoubleToGMP(mpf_class & dest,
             offset = mp_limb_bits - ((MPMAT_DOUBLE_MANT_IMPLICIT + 1 + pad + mpmat_limb * mpmat_pos) % mp_limb_bits);
             offset = offset % mp_limb_bits;
         }
-    }
+    } */
 
     while ( mpf_pos<mp_size-1 && mpmat_pos > 0 ) {
         tmp >>= mpmat_limb;
@@ -261,6 +270,67 @@ void mpmatConvertDoubleToGMP(mpf_class & dest,
     }
 }
 
+/*
+// Description in .h
+void mpmatConvertDoubleToGMP(mpf_class & dest,
+                             const mpmat_double * source,
+                             const int size,
+                             const int mpmat_limb,
+                             const int exp) {
+    // First pass: determine the sign by finding the sign of the most significant non-zero partial sum
+    mp_limb_signed_t tmp=0;
+    mp_limb_signed_t mp_sign = 0;
+    for (int i = size-1; i>=0; i--){
+        // Here we use that right shifts of signed 2's complement integers give floor[tmp*2^{-mpmat_limb}]
+        // As well as floor[tmp*2^{-mpmat_limb}] == floor[floor[tmp]*2^{-mpmat_limb}]
+        tmp >>= mpmat_limb;
+        tmp += static_cast<mp_limb_signed_t>( source[i] );
+        if (tmp != 0) mp_sign = tmp > 0 ? +1 : -1;
+    }
+
+    // If mp_sign is zero, the number is zero, set _mp_size = _mp_exp = 0 and return
+    if (mp_sign == 0) {
+        dest.get_mpf_t()->_mp_exp=0;
+        dest.get_mpf_t()->_mp_size=0;
+        return;
+    }
+
+    // Second pass: taking the sign into account, find the most significant mpmat_limb which is non-zero
+    tmp = 0;
+    mp_limb_t mask = (mp_limb_t(1) << mp_limb_bits) - 1;
+    int most_significant_mpmat_limb = size;
+    for (int i = size-1; i>=0; i--){
+        // Here we use that right shifts of signed 2's complement integers give floor[tmp*2^{-mpmat_limb}]
+        // As well as floor[tmp*2^{-mpmat_limb}] == floor[floor[tmp]*2^{-mpmat_limb}]
+        tmp >>= mpmat_limb;
+        tmp += mp_sign * static_cast<mp_limb_signed_t>( source[i] );
+        if ( *reinterpret_cast<mp_limb_t*>(&tmp) & mask !=0 ) most_significant_mpmat_limb = i;
+    }
+
+    int mp_exp = ceil_div(exp + MPMAT_DOUBLE_MANT_IMPLICIT - mpmat_limb + 1, mp_limb_bits);
+    int pad    = mp_exp * mp_limb_bits - exp - MPMAT_DOUBLE_MANT_IMPLICIT + mpmat_limb - 1;
+
+    // If tmp != 0 then there are essentially no special cancellations and we can procceed alomst as before
+    if (tmp != 0) {
+        assert(tmp>0); // We know it should be positive, just in case we made a mistake
+        mp_limb_t leading_sum = static_cast<mp_limb_t>(tmp);
+
+
+        if (pad + 1 + MPMAT_DOUBLE_MANT_IMPLICIT > mp_bits_per_limb) {
+            // We are padding with at most 63 bits to align with gmp 64x exponents. This often results in adding a zero limb
+            // It this condition is satisfied, there are bits of leading_sum outside of the leading limb, and so the above
+            // situation can happen. We check whether it is the case.
+            if ( leading_sum >> ( pad + 1 + MPMAT_DOUBLE_MANT_IMPLICIT - mp_bits_per_limb ) == 0 ) {
+                pad -= mp_bits_per_limb;
+            }
+        }
+
+
+    }
+
+
+} */
+
 
 // Description in .h
 void mpmatConvertGMPToDoubleVector(const mpf_class * source,
@@ -268,8 +338,11 @@ void mpmatConvertGMPToDoubleVector(const mpf_class * source,
                                    mpmat_double * dest,
                                    const int mpmat_size,
                                    const int mpmat_limb,
-                                   int & exp) {
+                                   int & exp,
+                                   mpmat_double * tmp) {
     exp = source->get_mpf_t()->_mp_exp * mp_bits_per_limb;
+
+    //mpmat_double * tmp = static_cast<mpmat_double *>( malloc(source_len * mpmat_size * sizeof(mpmat_double)) );
 
     //Make first pass to determine the exponent to be used
     for (int i = 1; i < source_len; i++) {
@@ -279,11 +352,12 @@ void mpmatConvertGMPToDoubleVector(const mpf_class * source,
 
     //Make second pass to convert the GMPs to mpmat_doubles
     for (int i = 0; i < source_len; i++) {
-        mpmatConvertGMPToDouble(source[i], dest + i*mpmat_size, mpmat_size, mpmat_limb, exp);
+        mpmatConvertGMPToDouble(source[i], tmp + i*mpmat_size, mpmat_size, mpmat_limb, exp);
     }
 
+    timers["Transposition direct"].start();
     //Now transpose the array in-place to obtain limb-vectors
-    mkl_dimatcopy(
+    /* mkl_dimatcopy(
             'r','t',
             source_len,
             mpmat_size,
@@ -291,5 +365,54 @@ void mpmatConvertGMPToDoubleVector(const mpf_class * source,
             dest,
             mpmat_size,
             source_len
+    ); */
+    mkl_domatcopy(
+            'r','t',
+            source_len,
+            mpmat_size,
+            1,
+            tmp,
+            mpmat_size,
+            dest,
+            source_len
     );
+    timers["Transposition direct"].stop();
+
+    //free(tmp);
+}
+
+// Description in .h
+void mpmatConvertDoubleToGMPVector(mpf_class * dest,
+                                   const int dest_len,
+                                   mpmat_double * source,
+                                   const int mpmat_size,
+                                   const int mpmat_limb,
+                                   int exp,
+                                   mpmat_double * tmp) {
+    //mpmat_double * tmp = static_cast<mpmat_double *>( malloc(dest_len * mpmat_size * sizeof(mpmat_double)) );
+    // Transpose out-of-place
+    timers["Transposition reverse"].start();
+    mkl_domatcopy(
+            'r','t',
+            mpmat_size,
+            dest_len,
+            1,
+            source,
+            dest_len,
+            tmp,
+            mpmat_size
+    );
+    timers["Transposition reverse"].stop();
+
+    for (int i = 0; i < dest_len; i++) {
+        mpmatConvertDoubleToGMP(
+                dest[i],
+                tmp + i * mpmat_size,
+                mpmat_size,
+                mpmat_limb,
+                exp
+        );
+    }
+
+    //free(tmp);
 }

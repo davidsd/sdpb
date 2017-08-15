@@ -258,10 +258,90 @@ bool test_mpmatScalarConversions() {
 
 }
 
-void test_run() {
+mpf_class * randomGMPVector(int size, int prec) {
+    gmp_randclass rr(gmp_randinit_default);
+    rr.seed(time(NULL));
 
+    //mpf_class * tmp = static_cast<mpf_class*> ( malloc(size * sizeof(mpf_class)) );
+
+    auto tmp = new mpf_class [size];
+
+    for (int i = 0; i < size; i++) {
+        //new(tmp+i) mpf_class("0",prec);
+        tmp[i].set_prec(prec);
+        tmp[i]=10*rr.get_f(prec)-5;
+    }
+
+    return tmp;
+}
+
+bool test_mpmatVectorConversions() {
+
+    cout << "GMP -> Double -> GMP (vec): ";
+
+    const int num_precs = 5;
+    const int precs [] = {100, 200, 500, 1000, 5000};
+
+    const int vec_size = 50;
+
+    const int mpmat_limb = 20;
+
+    for (int iprec = 0; iprec < num_precs; iprec++) {
+        int mpmat_size = ( ( (precs[iprec]/mp_bits_per_limb)+3 ) * mp_bits_per_limb ) / mpmat_limb + 1;
+
+        mpf_class * vector = randomGMPVector(vec_size, precs[iprec]);
+        mpf_class * vector2 = randomGMPVector(vec_size, precs[iprec]+128);
+
+        mpmat_double * double_vector = new mpmat_double [vec_size * mpmat_size];
+        mpmat_double * tmp           = new mpmat_double [vec_size * mpmat_size];
+
+        int exp;
+        mpmatConvertGMPToDoubleVector(
+                vector,
+                vec_size,
+                double_vector,
+                mpmat_size,
+                mpmat_limb,
+                exp,
+                tmp
+        );
+
+
+        mpmatConvertDoubleToGMPVector(
+                vector2,
+                vec_size,
+                double_vector,
+                mpmat_size,
+                mpmat_limb,
+                exp,
+                tmp
+        );
+
+        for (int i = 0; i < vec_size; i ++){
+            if (vector[i] != vector2[i]) {
+                cout << "FAIL in element " << i << endl;
+
+                print_mpf_bits(vector[i]);
+                print_mpf_bits(vector2[i]);
+
+                delete [] vector;
+                delete [] vector2;
+
+                return false;
+            }
+        }
+
+        delete [] vector;
+        delete [] vector2;
+        delete [] tmp;
+    }
+    cout << "PASS" << endl;
+    return true;
+}
+
+void test_run() {
     test_mpmatConvertGMPToDouble();
     test_mpmatConvertDoubleToGMP();
     test_mpmatScalarConversions();
-
+    test_mpmatVectorConversions();
 }

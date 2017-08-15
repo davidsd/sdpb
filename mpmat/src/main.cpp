@@ -4,6 +4,7 @@
 #include "Timers.h"
 #include "mpmat.h"
 #include "tests/mpmat_tests.h"
+#include "mblas.h"
 #include <mkl.h>
 #include <omp.h>
 
@@ -23,6 +24,7 @@ inline T ceil_div(T a, T b){
     return a / b + ( (a % b != 0) & (a > 0) );
 }
 
+
 int main() {
 
     cout << endl << "============================" << endl;
@@ -36,19 +38,53 @@ int main() {
 
     cout << "============================" << endl;
 
-    mpf_class a("3.1",1024);
-    mpf_class b("2.3",1024);
-    mpf_class c("0",1024);
+    mkl_set_num_threads(1);
+    omp_set_num_threads(1);
 
-    mpmatMultiplyGMPBaseCase(c,a,b);
+    for (int dim = 10; dim <= 10; dim +=500) {
 
-    cout << "a  : " << a << endl;
-    cout << "b  : " << b << endl;
-    cout << "a*b: " << c << endl;
+        cout << " >>>>> Doing dimension " << dim << "<<<<<" << endl;
 
-    cout << mkl_get_max_threads() << endl;
-    cout << omp_get_max_threads() << endl;
+        int prec = 500;
 
-    print_mpf_bits(a*b);
-    print_mpf_bits(c);
+        mpf_class *mat_a = randomGMPVector(dim * dim, prec);
+        mpf_class *mat_b = randomGMPVector(dim * dim, prec);
+        mpf_class *mat_c = randomGMPVector(dim * dim, prec+256);
+        mpf_class *mat_c2 = randomGMPVector(dim * dim, prec);
+        mpf_class alpha("1",prec);
+        mpf_class beta("0",prec);
+
+        mpmat_gemm_reduced(
+                CblasRowMajor, dim, dim, dim,
+                mat_a, mat_b,
+                mat_c
+        );
+
+        timers["RgemmParallel"].start();
+        RgemmParallel(
+                "N", "N", dim, dim, dim,
+                alpha,
+                mat_a, dim,
+                mat_b, dim,
+                beta,
+                mat_c2,
+                dim
+        );
+        timers["RgemmParallel"].stop();
+
+        cout << timers;
+
+        for (int i = 0; i < dim*dim; i++) {
+            cout << mat_c[i] - mat_c2[i] << endl;
+        }
+
+        cout << mat_c[0]-mat_c2[0] << endl;
+        print_mpf_bits(mat_c[0]);
+        print_mpf_bits(mat_c2[0]);
+
+        delete[] mat_a;
+        delete[] mat_b;
+        delete[] mat_c;
+        delete[] mat_c2;
+    }
 }

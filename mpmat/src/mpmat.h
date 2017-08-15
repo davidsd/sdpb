@@ -14,6 +14,7 @@
 #define MPMAT_MPMAT_H
 
 #include <gmpxx.h>
+#include <mkl.h>
 
 // The floating point type used to emulate integer arithmetic
 typedef double mpmat_double;
@@ -49,24 +50,20 @@ void mpmatConvertGMPToDouble(const mpf_class source,
 // Converts an array of mpmat_double into mpf_class
 //
 // Arguments:
-// (out) dest      : the destination mpf_variable
-// (in)  source    : pointer the start of the mpmat_double array
-// (in)  size      : length of source
-// (in)  mpmat_limb: the original limb size of the source
-// (in)  exp       : the exponent of the array, in bits
+// (out) dest       : the destination mpf_variable
+// (in)  source     : pointer the start of the mpmat_double array
+// (in)  size       : length of source
+// (in)  mpmat_limb : the original limb size of the source
+// (in)  exp        : the exponent of the array, in bits
 //
 // * mpmat_double in source can contain more bits then mpmat_limb, up to MPMAT_DOUBLE_MANT_IMPLICIT, they are extracted
 //   by static_cast<mp_limb_t>; mpmat_limb essentially gives the relative exponent of different mpmat_double's
-// * This function fills all limbs available in dest, padding by 0 or discarding the least significant limbs
-// * We assume that MPMAT_DOUBLE_MANT_IMPLICIT < 8*sizeof(mp_limb_t) and that mpmat_limb > 0 (strict inequalities)
-// * If some mpmat_double are negative, it may happen that some of the leading limbs of the result, which would be
-//   non-zero if all mpmat_double were positive and occupied MPMAT_DOUBLE_MANT_IMPLICIT bits, vanish. In this case the
-//   result is correctly shifted in order to produce a valid mpf_t, but the lower limbs which were discarded during the
-//   calculation, are not restored. This is not a problem if the precision of dest is enough to fit all limbs of source,
-//   and no information is ever discarded.
-//   More generally, because to various exp-related paddings, one limb of precision on dest can be lost currently.
-//   TODO: do we need to change this behavior?
-// * !!!!!! Currently contains a bug, see code
+// * We assume that MPMAT_DOUBLE_MANT_IMPLICIT < mp_bits_per_limb and that mpmat_limb > 0 (strict inequalities)
+// * Currently only works if dest has sufficiently many limbs for all bits in source
+//     This includes + mpmat_limb * size bits for the mpmat_limbs
+//                   + 1+MPMAT_DOUBLE_MANT_IMPLICIT-mpmat_limb bits for the possible overflow in the leading limb
+//                   + <64 bits of padding due to exponent in GMP being proportional to 64bits
+//
 void mpmatConvertDoubleToGMP(mpf_class & dest,
                              const mpmat_double * source,
                              const int size,
@@ -95,6 +92,7 @@ void mpmatMultiplyGMPBaseCase(mpf_class & dest,
 // (in)  size       : number of mpmat_doubles to use per GMP entry
 // (in)  mpmat_limb : the bit limb size to use in mpmat_double array
 // (out) exp        : the exponent used in the output
+// (in/out) tmp     : workplace the size of dest
 //
 // * The same exponent exp is used for all entries of the vector
 // * This function automatically detects the maximal exponent in source and sets exp accordingly
@@ -105,17 +103,19 @@ void mpmatConvertGMPToDoubleVector(const mpf_class * source,
                                    mpmat_double * dest,
                                    const int mpmat_size,
                                    const int mpmat_limb,
-                                   int & exp);
+                                   int & exp,
+                                   mpmat_double * tmp);
 
 // Converts an array of mpmat_double vectors into a GMP vector; in-place transforms the mpmat_double array
 //
 // Arguments:
 // (out)    dest       : the destination GMP vector; must be allocated & mpf's intialized
 // (in)     dest_len   : the length of the vector
-// (in/out) source     : the array of source vectors
+// (in)     source     : the array of source mpmat_double vectors
 // (in)     mpmat_size : size of mpmat_double arrays
 // (in)     mpmat_limb : the original limb size of mpmat_double
 // (in)     exp        : the exponent to use for interpretation of source
+// (in/out) tmp        : workplace the size of source
 //
 // * Note that source is transposed in-place after the call
 // * This function internally uses mpmatConvertDoubleToGMP
@@ -125,5 +125,25 @@ void mpmatConvertDoubleToGMPVector(mpf_class * dest,
                                    mpmat_double * source,
                                    const int mpmat_size,
                                    const int mpmat_limb,
-                                   int exp);
+                                   int exp,
+                                   mpmat_double * tmp);
+
+
+void mpmat_gemm_reduced(
+        const CBLAS_LAYOUT Layout,
+        //const CBLAS_TRANSPOSE transa,
+        //const CBLAS_TRANSPOSE transb,
+        const int m,
+        const int n,
+        const int k,
+        //const mpf_class alpha,
+        const mpf_class * a,
+        //const int lda,
+        const mpf_class * b,
+        //const int ldb,
+        //const mpf_class beta,
+        mpf_class * c
+        //const int ldc
+);
+
 #endif //MPMAT_MPMAT_H
