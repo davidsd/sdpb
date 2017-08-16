@@ -46,6 +46,7 @@ int main() {
         cout << " >>>>> Doing dimension " << dim << "<<<<<" << endl;
 
         int prec = 500;
+        mpf_set_default_prec(prec);
 
         mpf_class *mat_a = randomGMPVector(dim * dim, prec);
         mpf_class *mat_b = randomGMPVector(dim * dim, prec);
@@ -78,6 +79,8 @@ int main() {
             cout << mat_c[i] - mat_c2[i] << endl;
         }
 
+
+        cout << "Analysis of first element" << endl;
         cout << mat_c[0]-mat_c2[0] << endl;
         print_mpf_bits(mat_c[0]);
         print_mpf_bits(mat_c2[0]);

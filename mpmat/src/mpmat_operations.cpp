@@ -7,6 +7,7 @@
 #include <math.h>
 #include <cassert>
 #include <iostream>
+#include "tests/mpmat_tests.h"
 #include <mkl.h>
 #include "Timers.h"
 
@@ -35,6 +36,7 @@ void mpmatMultiplyGMPBaseCase(mpf_class & dest,
         mpmat_size_b = ceil_div( (b.get_mpf_t()->_mp_prec + 1) * mp_bits_per_limb, mpmat_limb );
     }
 
+    // Add some limbs for more reliable comparison with GMP. In principle we only now min(...) limbs of the result.
     int mpmat_size_c = min(mpmat_size_a, mpmat_size_b)+ceil_div(MPMAT_DOUBLE_MANT_IMPLICIT, mpmat_limb);
 
     assert(mpmat_limb > 0);
@@ -106,8 +108,9 @@ void mpmat_gemm_reduced(
     int mpmat_size_a = ceil_div( abs(a[0].get_mpf_t()->_mp_prec+1) * mp_bits_per_limb, mpmat_limb );
     int mpmat_size_b = ceil_div( abs(b[0].get_mpf_t()->_mp_prec+1) * mp_bits_per_limb, mpmat_limb );
 
+
     while ( 2 * mpmat_limb + ceil(log2(k+fmin(mpmat_size_a, mpmat_size_b))) > MPMAT_DOUBLE_MANT_IMPLICIT ) {
-        mpmat_limb = ( MPMAT_DOUBLE_MANT_IMPLICIT - ceil(log2(k+fmin(mpmat_size_a, mpmat_size_b))) ) / 2;
+        mpmat_limb = ( MPMAT_DOUBLE_MANT_IMPLICIT - ceil(log2(k*min(mpmat_size_a, mpmat_size_b))) ) / 2;
         mpmat_size_a = ceil_div( abs(a[0].get_mpf_t()->_mp_prec+1) * mp_bits_per_limb, mpmat_limb );
         mpmat_size_b = ceil_div( abs(b[0].get_mpf_t()->_mp_prec+1) * mp_bits_per_limb, mpmat_limb );
     }
@@ -131,7 +134,7 @@ void mpmat_gemm_reduced(
 
     auto tmp            = new mpmat_double [ max( max(mem_a,mem_b), mem_c) ];
 
-    memset(c_double_array, 0, mpmat_size_c * m *n * sizeof(mpmat_double));
+    memset(c_double_array, 0, mem_c * sizeof(mpmat_double));
 
     int expa, expb;
 
@@ -165,7 +168,7 @@ void mpmat_gemm_reduced(
     std::flush(std::cout);
     for (int i = 0; i < mpmat_size_c; i++) {
         for (int j = 0; j <= i; j++) {
-            /*cblas_dgemm(
+            cblas_dgemm(
                     Layout,
                     CblasNoTrans,
                     CblasNoTrans,
@@ -180,15 +183,15 @@ void mpmat_gemm_reduced(
                     1,
                     c_double_array+i*m*n,
                     Layout == CblasRowMajor ? n : m
-            );*/
-            cblas_dgemm_emulator(
+            );
+            /*cblas_dgemm_emulator(
                     m,
                     n,
                     k,
                     a_double_array+k*m*j,
                     b_double_array+(i-j)*k*n,
                     c_double_array+i*m*n
-            );
+            );*/
         }
     }
 
