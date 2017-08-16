@@ -15,21 +15,27 @@ inline T ceil_div(T a, T b) {
     return a / b + ( (a % b != 0) & (a > 0) );
 }
 
+template <typename T>
+inline T min(T a, T b) { return a < b ? a : b ; }
+
+template <typename T>
+inline T max (T a,T b) { return a>b ? a : b; }
+
 void mpmatMultiplyGMPBaseCase(mpf_class & dest,
                               const mpf_class  a,
                               const mpf_class  b) {
 
     int mpmat_limb = MPMAT_DOUBLE_MANT_IMPLICIT / 2;
-    int mpmat_size_a = ceil_div( abs(a.get_mpf_t()->_mp_size) * mp_bits_per_limb, mpmat_limb );
-    int mpmat_size_b = ceil_div( abs(b.get_mpf_t()->_mp_size) * mp_bits_per_limb, mpmat_limb );
+    int mpmat_size_a = ceil_div( (a.get_mpf_t()->_mp_prec + 1) * mp_bits_per_limb, mpmat_limb );
+    int mpmat_size_b = ceil_div( (b.get_mpf_t()->_mp_prec + 1) * mp_bits_per_limb, mpmat_limb );
 
     while ( 2 * mpmat_limb + ceil(log2(fmin(mpmat_size_a, mpmat_size_b))) > MPMAT_DOUBLE_MANT_IMPLICIT ) {
         mpmat_limb = ( MPMAT_DOUBLE_MANT_IMPLICIT - ceil(log2(fmin(mpmat_size_a, mpmat_size_b))) ) / 2;
-        mpmat_size_a = ceil_div( abs(a.get_mpf_t()->_mp_size) * mp_bits_per_limb, mpmat_limb );
-        mpmat_size_b = ceil_div( abs(b.get_mpf_t()->_mp_size) * mp_bits_per_limb, mpmat_limb );
+        mpmat_size_a = ceil_div( (a.get_mpf_t()->_mp_prec + 1) * mp_bits_per_limb, mpmat_limb );
+        mpmat_size_b = ceil_div( (b.get_mpf_t()->_mp_prec + 1) * mp_bits_per_limb, mpmat_limb );
     }
 
-    int mpmat_size_c = fmin(mpmat_size_a, mpmat_size_b);
+    int mpmat_size_c = min(mpmat_size_a, mpmat_size_b)+ceil_div(MPMAT_DOUBLE_MANT_IMPLICIT, mpmat_limb);
 
     assert(mpmat_limb > 0);
 
@@ -46,7 +52,9 @@ void mpmatMultiplyGMPBaseCase(mpf_class & dest,
     for(int i = 0; i< mpmat_size_c; i++) {
         c_double[i]=0;
         for(int k = 0; k<=i; k++) {
-            c_double[i] += a_double[i-k] * b_double[k];
+            if (i-k < mpmat_size_a && k < mpmat_size_b) {
+                c_double[i] += a_double[i - k] * b_double[k];
+            }
         }
     }
 
@@ -57,8 +65,6 @@ void mpmatMultiplyGMPBaseCase(mpf_class & dest,
     delete [] c_double;
 }
 
-template <typename T>
-inline T max (T a,T b) { return a>b ? a : b; }
 
 // Test for row-major matrices, not optimzied
 void cblas_dgemm_emulator(const int m,
@@ -106,7 +112,7 @@ void mpmat_gemm_reduced(
         mpmat_size_b = ceil_div( abs(b[0].get_mpf_t()->_mp_prec+1) * mp_bits_per_limb, mpmat_limb );
     }
 
-    int mpmat_size_c = fmin(mpmat_size_a, mpmat_size_b);
+    int mpmat_size_c = min(mpmat_size_a, mpmat_size_b);
 
     std::cout << "Allocating double sizes " << mpmat_size_a << " " << mpmat_size_b << " " << mpmat_size_c << std::endl;
     std::cout << mpmat_size_a * m * k << std::endl;
@@ -159,7 +165,7 @@ void mpmat_gemm_reduced(
     std::flush(std::cout);
     for (int i = 0; i < mpmat_size_c; i++) {
         for (int j = 0; j <= i; j++) {
-            cblas_dgemm(
+            /*cblas_dgemm(
                     Layout,
                     CblasNoTrans,
                     CblasNoTrans,
@@ -174,6 +180,14 @@ void mpmat_gemm_reduced(
                     1,
                     c_double_array+i*m*n,
                     Layout == CblasRowMajor ? n : m
+            );*/
+            cblas_dgemm_emulator(
+                    m,
+                    n,
+                    k,
+                    a_double_array+k*m*j,
+                    b_double_array+(i-j)*k*n,
+                    c_double_array+i*m*n
             );
         }
     }

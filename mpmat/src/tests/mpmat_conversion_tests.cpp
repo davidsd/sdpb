@@ -5,12 +5,20 @@
 #include <string>
 #include <iostream>
 #include "../mpmat.h"
+#include "mpmat_tests.h"
 #include <gmpxx.h>
 #include <bitset>
 #include <gmp.h>
 #include <time.h>
+#include <math.h>
 
 using namespace std;
+
+template <typename T>
+inline T mpmat_min(T a, T b) { return a < b ? a : b ; }
+
+template <typename T>
+inline T mpmat_max (T a,T b) { return a>b ? a : b; }
 
 int mpf_test_data_len = 18;
 mp_limb_t mpf_test_data [] = {0x3dce6d173c92c9b2, 0x705cc1f9ee6ada0e, 0xbf2e633afc521071, 0x4e537e5bfef78623, 0x1e511ba179a3b41f, 0x6d22a7088f692926, 0x78cadd5b07a608f9, 0xce6d4e0b7064c6ab, 0x8eae7fbce397242c, 0x7c2abfe0c1af9698, 0x5ace25e857cdc622, 0xb558356ae052abff, 0x98d0d40317232ea8, 0xf0b8cdd13d41bb16, 0x4451445d729c05e7, 0x103521440f392c8a, 0x318e60fdcebc4c9b, 0xad23654a1c68};
@@ -40,6 +48,29 @@ void print_mpf_bits(const mpf_class a) {
     for (int i = size-1; i>=0; i--) {
         cout << "limb " << i << " : " << bitset<64>(mp_d[i]) << endl;
     }
+}
+
+bool compare_mpf_bits(const mpf_class a, const mpf_class b) {
+    int mp_size_a = abs(a.get_mpf_t()->_mp_size);
+    int mp_size_b = abs(b.get_mpf_t()->_mp_size);
+    int mp_size = mpmat_min( mp_size_a, mp_size_b );
+
+    if ( a.get_mpf_t()->_mp_size * b.get_mpf_t()->_mp_size < 0 ){
+        cout << "FAIL sign mismatch" << endl;
+        print_mpf_bits(a);
+        print_mpf_bits(b);
+        return false;
+    }
+
+    for (int i = 0; i < mp_size; i++) {
+        if (a.get_mpf_t()->_mp_d[mp_size_a - 1 - i] != b.get_mpf_t()->_mp_d[mp_size_b - 1 - i]) {
+            cout << "FAIL during comparison of " << i << "-th limb" << endl;
+            print_mpf_bits(a);
+            print_mpf_bits(b);
+            return false;
+        }
+    }
+    return true;
 }
 
 void print_mpmat_double_array(const mpmat_double * array, int len) {
@@ -169,8 +200,6 @@ bool test_mpmatConvertDoubleToGMP(){
 
     return flag;
 }
-
-
 
 bool test_mpmatScalarConversions() {
 
@@ -344,4 +373,6 @@ void test_run() {
     test_mpmatConvertDoubleToGMP();
     test_mpmatScalarConversions();
     test_mpmatVectorConversions();
+
+    test_mpmatMultiplyGMPBaseCase();
 }
