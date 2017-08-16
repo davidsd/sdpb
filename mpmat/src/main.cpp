@@ -38,14 +38,14 @@ int main() {
 
     cout << "============================" << endl;
 
-    mkl_set_num_threads(1);
-    omp_set_num_threads(1);
+    mkl_set_num_threads(2);
+    omp_set_num_threads(2);
 
-    for (int dim = 10; dim <= 10; dim +=500) {
+    for (int dim = 100; dim <= 500; dim +=100) {
 
         cout << " >>>>> Doing dimension " << dim << "<<<<<" << endl;
 
-        int prec = 500;
+        int prec = 1000;
         mpf_set_default_prec(prec);
 
         mpf_class *mat_a = randomGMPVector(dim * dim, prec);
@@ -75,15 +75,15 @@ int main() {
 
         cout << timers;
 
-        for (int i = 0; i < dim*dim; i++) {
-            cout << mat_c[i] - mat_c2[i] << endl;
-        }
+//        for (int i = 0; i < dim*dim; i++) {
+//            cout << mat_c[i] - mat_c2[i] << endl;
+//        }
 
 
-        cout << "Analysis of first element" << endl;
-        cout << mat_c[0]-mat_c2[0] << endl;
-        print_mpf_bits(mat_c[0]);
-        print_mpf_bits(mat_c2[0]);
+//        cout << "Analysis of first element" << endl;
+//        cout << mat_c[0]-mat_c2[0] << endl;
+//        print_mpf_bits(mat_c[0]);
+//        print_mpf_bits(mat_c2[0]);
 
         delete[] mat_a;
         delete[] mat_b;
