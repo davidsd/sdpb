@@ -216,5 +216,9 @@ systems of correlation functions:
 - M. Cho, S. Collier, X. Yin,
   "Genus Two Modular Bootstrap"
   [arXiv:1705.05865 [hep-th]](https://arxiv.org/abs/1705.05865)
+  
+- A. Dymarsky, F. Kos, P. Kravchuk, D. Poland, D. Simmons-Duffin,
+  "The 3d Stress-Tensor Bootstrap"
+  [arXiv:1708.05718 [hep-th]](https://arxiv.org/abs/1708.05718)
 
 (Please let me know if you would like your paper to be included in this list!)
