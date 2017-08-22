@@ -7,3 +7,4 @@ mpmat/CMake*
 mpmat/*.dSYM
 mpmat/cachegrind*
 mpmat/mpmat_test
+*.idea*
