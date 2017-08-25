@@ -221,4 +221,8 @@ systems of correlation functions:
   "The 3d Stress-Tensor Bootstrap"
   [arXiv:1708.05718 [hep-th]](https://arxiv.org/abs/1708.05718)
 
+- M. F. Paulos, J. Penedones, J. Toledo, B. C. van Rees, P. Vieira,
+  "The S-matrix Bootstrap III: Higher Dimensional Amplitudes"
+  [arXiv:1708.06765 [hep-th]](https://arxiv.org/abs/1708.06765)
+
 (Please let me know if you would like your paper to be included in this list!)
