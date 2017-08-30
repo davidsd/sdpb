@@ -224,5 +224,9 @@ systems of correlation functions:
 - M. F. Paulos, J. Penedones, J. Toledo, B. C. van Rees, P. Vieira,
   "The S-matrix Bootstrap III: Higher Dimensional Amplitudes"
   [arXiv:1708.06765 [hep-th]](https://arxiv.org/abs/1708.06765)
+  
+- J.-B. Bae, S. Lee, J. Song,
+  "Modular Constraints on Conformal Field Theories with Currents"
+  [arXiv:1708.08815 [hep-th]](https://arxiv.org/abs/1708.08815)
 
 (Please let me know if you would like your paper to be included in this list!)
