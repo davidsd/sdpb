@@ -7,9 +7,11 @@
 #include <math.h>
 #include <cassert>
 #include <iostream>
-#include "tests/mpmat_tests.h"
+//#include "tests/mpmat_tests.h"
 #include <mkl.h>
 #include "Timers.h"
+
+//mpmat_double *a_double_array,*b_double_array,*c_double_array,*tmp;
 
 template <typename T>
 inline T ceil_div(T a, T b) {
@@ -22,7 +24,7 @@ inline T min(T a, T b) { return a < b ? a : b ; }
 template <typename T>
 inline T max (T a,T b) { return a>b ? a : b; }
 
-void mpmatMultiplyGMPBaseCase(mpf_class & dest,
+void mpmat::mpmatMultiplyGMPBaseCase(mpf_class & dest,
                               const mpf_class  a,
                               const mpf_class  b) {
 
@@ -69,7 +71,7 @@ void mpmatMultiplyGMPBaseCase(mpf_class & dest,
 
 
 // Test for row-major matrices, not optimzied
-void cblas_dgemm_emulator(const int m,
+/*void cblas_dgemm_emulator(const int m,
                           const int n,
                           const int k,
                           const mpmat_double * a,
@@ -82,10 +84,10 @@ void cblas_dgemm_emulator(const int m,
             }
         }
     }
-}
+    }*/
 
 
-void mpmat_gemm_reduced(
+void mpmat::gemm_reduced(
         const CBLAS_LAYOUT Layout,
         //const CBLAS_TRANSPOSE transa,
         //const CBLAS_TRANSPOSE transb,
@@ -101,6 +103,7 @@ void mpmat_gemm_reduced(
         mpf_class * c
         //const int ldc
         ) {
+  ////std::cout << "The non-c++ code is running, I swear\n";
 
     timers["mpmat_gemm_reduced.complete"].start();
 
@@ -117,28 +120,43 @@ void mpmat_gemm_reduced(
 
     int mpmat_size_c = min(mpmat_size_a, mpmat_size_b);
 
-    std::cout << "Allocating double sizes " << mpmat_size_a << " " << mpmat_size_b << " " << mpmat_size_c << std::endl;
-    std::cout << mpmat_size_a * m * k << std::endl;
-    std::cout << mpmat_size_b * n * k << std::endl;
-    std::cout << mpmat_size_c * m * n << std::endl;
+    //std::cout << "Allocating double sizes " << mpmat_size_a << " " << mpmat_size_b << " " << mpmat_size_c << std::endl;
+    //std::cout << mpmat_size_a * m * k << std::endl;
+    //std::cout << mpmat_size_b * n * k << std::endl;
+    //std::cout << mpmat_size_c * m * n << std::endl;
     std::flush(std::cout);
 
     int mem_a = mpmat_size_a * m * k;
     int mem_b = mpmat_size_b * n * k;
     int mem_c = mpmat_size_c * m * n;
+    int mem_t = max( max(mem_a,mem_b), mem_c);
 
-    auto a_double_array = new mpmat_double [mem_a];
-    auto b_double_array = new mpmat_double [mem_b];
-
-    auto c_double_array = new mpmat_double [mem_c];
-
-    auto tmp            = new mpmat_double [ max( max(mem_a,mem_b), mem_c) ];
+    if (mem_a > len_a){
+      if (len_a != 0) delete [] a_double_array;
+      a_double_array = new mpmat_double [mem_a];
+      len_a = mem_a;
+    }
+    if (mem_b > len_b){
+      if (len_b != 0) delete [] b_double_array;
+      b_double_array = new mpmat_double [mem_b];
+      len_b = mem_b;
+    }
+    if (mem_c > len_c){
+      if (len_c != 0) delete [] c_double_array;
+      c_double_array = new mpmat_double [mem_c];
+      len_c = mem_c;
+    }
+    if (mem_t > len_t){
+      if (len_t != 0) delete [] tmp;
+      tmp = new mpmat_double [mem_t];
+      len_t = mem_t;
+    }
 
     memset(c_double_array, 0, mem_c * sizeof(mpmat_double));
 
     int expa, expb;
 
-    std::cout << "Converting a to double" << std::endl;
+    //std::cout << "Converting a to double" << std::endl;
     std::flush(std::cout);
     mpmatConvertGMPToDoubleVector(
             a,
@@ -150,7 +168,7 @@ void mpmat_gemm_reduced(
             tmp
     );
 
-    std::cout << "Converting b to double" << std::endl;
+    //std::cout << "Converting b to double" << std::endl;
     std::flush(std::cout);
     mpmatConvertGMPToDoubleVector(
             b,
@@ -164,7 +182,7 @@ void mpmat_gemm_reduced(
 
     timers["mpmat_gemm_reduced.multiplication"].start();
 
-    std::cout << "Computing the product" << std::endl;
+    //std::cout << "Computing the product" << std::endl;
     std::flush(std::cout);
     for (int i = 0; i < mpmat_size_c; i++) {
         for (int j = 0; j <= i; j++) {
@@ -197,7 +215,7 @@ void mpmat_gemm_reduced(
 
     timers["mpmat_gemm_reduced.multiplication"].stop();
 
-    std::cout << "Converting back" << std::endl;
+    //std::cout << "Converting back" << std::endl;
     mpmatConvertDoubleToGMPVector(
             c,
             m*n,
@@ -208,15 +226,15 @@ void mpmat_gemm_reduced(
             tmp
     );
 
-    delete [] a_double_array;
+    /* delete [] a_double_array;
     delete [] b_double_array;
     delete [] c_double_array;
-    delete [] tmp;
+    delete [] tmp;*/
 
     timers["mpmat_gemm_reduced.complete"].stop();
 }
 
-void mpmat_syrk_reduced(
+void mpmat::syrk_reduced(
 			 const CBLAS_LAYOUT Layout,
 			 const CBLAS_UPLO uplo,
 			 const int n,
@@ -237,15 +255,15 @@ void mpmat_syrk_reduced(
 
   int mpmat_size_c = mpmat_size_a;
 
-  std::cout << "Allocating double sizes " << mpmat_size_a << " " << mpmat_size_c << std::endl;
-  std::cout << mpmat_size_a * n * k << std::endl;
-  std::cout << mpmat_size_c * n * n << std::endl;
+  //std::cout << "Allocating double sizes " << mpmat_size_a << " " << mpmat_size_c << std::endl;
+  //std::cout << mpmat_size_a * n * k << std::endl;
+  //std::cout << mpmat_size_c * n * n << std::endl;
   std::flush(std::cout);
 
   int mem_a = mpmat_size_a * n * k;
   int mem_c = mpmat_size_c * n * n;
 
-  //std::cout << "mema is " << mema << " while memc is " << memc << "\n";
+  ////std::cout << "mema is " << mema << " while memc is " << memc << "\n";
 
   auto a_double_array = new mpmat_double [mem_a];
 
@@ -255,7 +273,7 @@ void mpmat_syrk_reduced(
 
   int expa;
   
-  std::cout << "Converting a to double" << std::endl;
+  //std::cout << "Converting a to double" << std::endl;
   std::flush(std::cout);
   mpmatConvertGMPToDoubleVector(
 			   a,
@@ -269,8 +287,8 @@ void mpmat_syrk_reduced(
 
   timers["mpmat_syrk_reduced.multiplication"].start();
 
-  std::cout << "the exponent is " << expa << "\n";
-  std::cout << "Computing the product" << std::endl;
+  //std::cout << "the exponent is " << expa << "\n";
+  //std::cout << "Computing the product" << std::endl;
   std::flush(std::cout);
   for (int i = 0; i < mpmat_size_c; i++) {
     for (int j = 0; j <= i; j++) {
@@ -300,7 +318,7 @@ void mpmat_syrk_reduced(
 
   timers["mpmat_syrk_reduced.multiplication"].stop();
 
-  std::cout << "Converting back" << std::endl;
+  //std::cout << "Converting back" << std::endl;
   mpmatConvertDoubleToGMPVector(
 				c,
 				n*n,

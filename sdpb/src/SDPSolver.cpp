@@ -74,6 +74,7 @@ SDPSolver::SDPSolver(const SDP &sdp, const SDPSolverParameters &parameters):
   Qpivots(sdp.FreeVarMatrix.cols),
   dyExtended(Q.rows),
   StepMatrixWorkspace(X)
+  //myWorkspace(100,100,100,1000,1000,10)
 {
   // initialize bilinearPairingsWorkspace, eigenvaluesWorkspace, QRWorkspace
   for (unsigned int b = 0; b < sdp.bilinearBases.size(); b++) {
@@ -751,7 +752,7 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   // Here, SchurOffDiagonal = L'^{-1} B.
   //
   // UpperLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal
-  matrixSquareIntoBlock(SchurOffDiagonal, Q, 0, 0);
+  matrixSquareIntoBlockMpmat(myWorkspace,SchurOffDiagonal, Q, 0, 0);
 
   // Here, stabilizeBlocks contains the blocks of V = L'^{-1} U.
   //

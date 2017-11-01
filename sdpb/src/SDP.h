@@ -319,7 +319,7 @@ class PolynomialVectorMatrix {
          e != elements.end(); e++)
       for (vector<Polynomial>::const_iterator p = e->begin();
            p != e->end(); p++)
-        d = max(p->degree(), d);
+        d = std::max(p->degree(), d);
     return d;
   }
 };

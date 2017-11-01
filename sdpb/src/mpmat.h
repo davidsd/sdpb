@@ -15,6 +15,7 @@
 
 #include <gmpxx.h>
 #include <mkl.h>
+#include <iostream>
 
 // The floating point type used to emulate integer arithmetic
 typedef double mpmat_double;
@@ -41,6 +42,39 @@ typedef double mpmat_double;
 // * mpmat_limb should be no greater than the number of bits in mp_limb_t
 // * we assume that mpmat_double 0 is represented by a zero bitstring (i.e. IEEE754)
 //
+
+class mpmat{
+
+ private:
+  mpmat_double *a_double_array, *b_double_array, *c_double_array, *tmp;
+  int len_a, len_b, len_c, len_t;
+
+ public: 
+  mpmat(){
+    len_a = 0;
+    len_b = 0;
+    len_c = 0;
+    len_t = 0;
+  }
+  ~mpmat(){
+    if (len_a != 0){
+      std::cout << "deallocing a_double_array, length " << len_a << "\n";
+      delete [] a_double_array;
+    }
+    if (len_b != 0){
+      std::cout << "deallocing b_double_array, length " << len_b << "\n";
+      delete [] b_double_array;
+    }
+    if (len_c != 0){
+      std::cout << "deallocing c_double_array, length " << len_c << "\n";
+      delete [] c_double_array;
+    }
+    if (len_a != 0){
+      std::cout << "deallocing tmp, length " << len_t << "\n";
+      delete [] tmp;
+    }
+  }
+
 void mpmatConvertGMPToDouble(const mpf_class source,
                              mpmat_double * dest,
                              const int size,
@@ -129,7 +163,7 @@ void mpmatConvertDoubleToGMPVector(mpf_class * dest,
                                    mpmat_double * tmp);
 
 
-void mpmat_gemm_reduced(
+void gemm_reduced(
         const CBLAS_LAYOUT Layout,
         //const CBLAS_TRANSPOSE transa,
         //const CBLAS_TRANSPOSE transb,
@@ -146,7 +180,7 @@ void mpmat_gemm_reduced(
         //const int ldc
 );
 
-void mpmat_syrk_reduced(
+void syrk_reduced(
 			 const CBLAS_LAYOUT Layout,
 			 const CBLAS_UPLO uplo,
 			 const int n,
@@ -156,5 +190,6 @@ void mpmat_syrk_reduced(
 			);
 
 
+};
 
 #endif //MPMAT_MPMAT_H

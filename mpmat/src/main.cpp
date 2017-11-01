@@ -38,10 +38,10 @@ int main() {
 
     cout << "============================" << endl;
 
-    mkl_set_num_threads(2);
-    omp_set_num_threads(2);
+    mkl_set_num_threads(16);
+    omp_set_num_threads(16);
 
-    for (int dim = 100; dim <= 500; dim +=100) {
+    for (int dim = 2000; dim <= 3000; dim += 1000) {
 
         cout << " >>>>> Doing dimension " << dim << "<<<<<" << endl;
 
@@ -60,6 +60,8 @@ int main() {
                 mat_a, mat_b,
                 mat_c
         );
+
+	mpmat_syrk_reduced(CblasRowMajor, CblasUpper, dim, dim, mat_a, mat_c);
 
         timers["RgemmParallel"].start();
         RgemmParallel(

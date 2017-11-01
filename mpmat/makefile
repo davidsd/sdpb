@@ -1,24 +1,28 @@
 GMPINCLUDEDIR   = /usr/local/include
-BOOSTINCLUDEDIR = /usr/local/include/boost
-LIBDIR          = /usr/local/lib
-MKLROOT         = /opt/intel/mkl
+BOOSTINCLUDEDIR = /group/hepth/rajeeve/bootstrap/boost/
+#BOOSTINCLUDEDIR = /home/liliesiu/numerics/boost/
+#LIBDIR          = /usr/local/lib
+LIBDIR          = /group/hepth/rajeeve/bootstrap/boost/stage/lib/
+MKLROOT         = /opt/intel/compilers_and_libraries_2017.4.196/linux/mkl
 
 SOURCES = $(wildcard src/*.cpp) $(wildcard src/mpack/*.cpp) $(wildcard src/tests/*.cpp)
 HEADERS = $(wildcard src/*.h) $(wildcard src/mpack/*.h) $(wildcard src/tests/*.h)
 OBJECTS = $(patsubst src/%.cpp,obj/%.o,$(SOURCES))
 RESULT  = mpmat_test
 
+MPMAT_DEBUG = ""
+
 BINARY_DIR = .
 
-CC = /usr/local/opt/llvm/bin/clang
+CC = g++
 
 
-CFLAGS += -I/usr/local/opt/llvm/include \
-          -g \
-          -Wall -ansi -std=c++0x \
+CFLAGS += -g \
+          -Wall -ansi -std=c++0x\
           -Isrc/mpack \
-          -I${GMPINCLUDEDIR} \
           -I${BOOSTINCLUDEDIR} \
+	  -I${GMPINCLUDEDIR} \
+	  -L${LIBDIR}\
 	  -DMKL_ILP64 -m64 -I${MKLROOT}/include \
           -fopenmp \
           -D___MPACK_BUILD_WITH_GMP___
@@ -33,14 +37,17 @@ else
 
 endif
 
-LIBS +=  -L/usr/local/opt/llvm/lib \
-	 ${MKLROOT}/lib/libmkl_intel_ilp64.a ${MKLROOT}/lib/libmkl_intel_thread.a ${MKLROOT}/lib/libmkl_core.a \
-         -liomp5 -lgmpxx -lgmp \
-         -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono \
-         -lc++ \
+#${MKLROOT}/lib/intel64/libmkl_gnu_thread.a
+
+LIBS +=	 ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.so ${MKLROOT}/lib/intel64/libmkl_gnu_thread.so ${MKLROOT}/lib/intel64/libmkl_core.so \
+         -lgomp -lgmpxx -lgmp \
 	 -lpthread \
 	 -lm \
 	 -ldl \
+        -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono \
+	#/group/hepth/rajeeve/bootstrap/boost/stage/lib/libboost_serialization.so.1.61.0 -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono \
+         #
+
 
 .SUFFIXES: .cpp .o
 

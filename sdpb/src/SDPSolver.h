@@ -21,6 +21,7 @@
 #include "Matrix.h"
 #include "BlockDiagonalMatrix.h"
 #include "SDP.h"
+#include "mpmat.h"
 
 using std::vector;
 using std::ostream;
@@ -100,6 +101,9 @@ public:
 
   // parameters for initialization and iteration
   SDPSolverParameters parameters;
+
+  // the workspace in which matrix calculations will happen
+  // mpmat workspace;
 
   /********************************************/
   // Current point
@@ -294,6 +298,8 @@ public:
   // Needed during the step-length computation, where we must compute
   // the QR decomposition of a BlockDiagonalMatrix
   vector<Vector> QRWorkspace;
+
+  mpmat myWorkspace;
 
   /********************************************/
   // Methods

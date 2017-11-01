@@ -16,6 +16,7 @@
 #include "omp.h"
 #include "types.h"
 #include "Vector.h"
+#include "mpmat.h"
 
 using std::ostream;
 using std::vector;
@@ -123,6 +124,9 @@ void matrixMultiply(Matrix &A, Matrix &B, Matrix &C);
 
 // Set block starting at (bRow, bCol) of B to A^T A
 void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol);
+void matrixSquareIntoBlockGPU(Matrix &A, Matrix &B, int bRow, int bCol);
+
+void matrixSquareIntoBlockMpmat(mpmat &myWorkspace, Matrix &A, Matrix &B, int bRow, int bCol);
 
 // A := L^{-1} A L^{-T}
 void lowerTriangularInverseCongruence(Matrix &A, Matrix &L);

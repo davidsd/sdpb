@@ -298,7 +298,10 @@ mpf_class * randomGMPVector(int size, int prec) {
     for (int i = 0; i < size; i++) {
         //new(tmp+i) mpf_class("0",prec);
         tmp[i].set_prec(prec);
-        tmp[i]=10*rr.get_f(prec)-5;
+	//mpz_class z = rr.get_z_range(200);
+	tmp[i] = 10*rr.get_f(prec)-5;
+        //mpf_pow_ui(tmp[i].get_mpf_t(),tmp[i].get_mpf_t(), z.get_ui());
+	
     }
 
     return tmp;

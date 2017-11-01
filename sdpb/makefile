@@ -6,8 +6,8 @@ ifeq ($(UNAME), Darwin)
 # Mac OS X Defaults, assuming Readme instructions.
 
 GMPINCLUDEDIR   = /usr/local/include
-BOOSTINCLUDEDIR = /usr/local/include/boost
-LIBDIR          = /usr/local/lib
+BOOSTINCLUDEDIR = /group/hepth/rajeeve/bootstrap/boost/
+LIBDIR          = /usr/local/lib/group/hepth/rajeeve/bootstrap/boost/stage/lib/
 
 else
 # If you're using Linux or Windows or a nonstandard OS X setup, modify
@@ -19,7 +19,7 @@ BASEDIR := $(HOME)
 GMPINCLUDEDIR   = $(BASEDIR)/include
 
 # directory containing boost header files, e.g. 'bind.hpp', etc.
-BOOSTINCLUDEDIR = $(BASEDIR)/include/boost
+BOOSTINCLUDEDIR =  /group/hepth/rajeeve/bootstrap/boost/
 
 # directory containing library files, e.g.
 #   libboost_filesystem.a,
@@ -28,9 +28,11 @@ BOOSTINCLUDEDIR = $(BASEDIR)/include/boost
 # as well as analogous files for 'boost_system',
 # 'boost_serialization', 'boost_timer', 'boost_program_options',
 # 'gmp', and 'gmpxx',
-LIBDIR          = $(BASEDIR)/lib
+LIBDIR          = /group/hepth/rajeeve/bootstrap/boost/stage/lib/
 
 endif
+
+MKLROOT         = /opt/intel/compilers_and_libraries_2017.4.196/linux/mkl
 
 ################ End of modifications ################
 
@@ -57,21 +59,21 @@ endif
 ifdef INTEL
 
 CC = icpc
-CFLAGS += -g -O2 -ipo -xhost -Wall -ansi -std=c++0x -L${LIBDIR} -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -openmp -D___MPACK_BUILD_WITH_GMP___
+CFLAGS += -g -O0 -ipo -xhost -Wall -ansi -std=c++0x -L${LIBDIR} -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -openmp -D___MPACK_BUILD_WITH_GMP___
 LIBS += -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lrt
 
 else 
 ifdef CLANG
 
 CC = /usr/local/opt/llvm/bin/clang
-CFLAGS += -I/usr/local/opt/llvm/include -g -O2 -Wall -ansi -std=c++0x -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
+CFLAGS += -I/usr/local/opt/llvm/include -g -O0 -Wall -ansi -std=c++0x -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
 LIBS +=  -L/usr/local/opt/llvm/lib -liomp5 -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lc++
 
 else
 
 CC = g++
-CFLAGS += -g -O2 -Wall -ansi -std=c++0x -L${LIBDIR} -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
-LIBS += -lgomp -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lrt
+CFLAGS += -g -O0 -Wall -ansi -std=c++0x -L${LIBDIR} -DMKL_ILP64 -m64 -I${MKLROOT}/include  -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
+LIBS += ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.so ${MKLROOT}/lib/intel64/libmkl_gnu_thread.so ${MKLROOT}/lib/intel64/libmkl_core.so -lgomp -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lrt
 
 endif
 endif
