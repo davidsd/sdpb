@@ -45,6 +45,7 @@ LIBS +=	 ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.so ${MKLROOT}/lib/intel64/lib
 	 -lm \
 	 -ldl \
         -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono \
+	-lcudart -lcublas -lcurand
 	#/group/hepth/rajeeve/bootstrap/boost/stage/lib/libboost_serialization.so.1.61.0 -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono \
          #
 

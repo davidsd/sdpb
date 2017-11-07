@@ -16,6 +16,10 @@
 #include <gmpxx.h>
 #include <mkl.h>
 #include <iostream>
+#include <cuda_runtime.h>
+#include "cublas_v2.h"
+#include <cublasXt.h>
+#include <omp.h>
 
 // The floating point type used to emulate integer arithmetic
 typedef double mpmat_double;
@@ -46,35 +50,107 @@ typedef double mpmat_double;
 class mpmat{
 
  private:
-  mpmat_double *a_double_array, *b_double_array, *c_double_array, *tmp;
-  int len_a, len_b, len_c, len_t;
+  mpmat_double *a_double_array, *b_double_array, *c_double_array, *tmp, **d_a, **d_b, **d_c;
+  int len_a, len_b, len_c, len_t, gpu_count, cpu_count;
+
+  cublasHandle_t handle;
+  cublasHandle_t *handles;
 
  public: 
   mpmat(){
+    mpmat(1);
+  }
+  mpmat(int l){
     len_a = 0;
     len_b = 0;
     len_c = 0;
     len_t = 0;
+    cpu_count = omp_get_num_threads();
+
+    
+    cudaGetDeviceCount(&gpu_count);
+    d_a = new mpmat_double*[gpu_count];
+    d_b = new mpmat_double*[gpu_count];
+    d_c = new mpmat_double*[gpu_count];
+    realloc(l,l,l);
+    handles = new cublasHandle_t[gpu_count];
+
+    #pragma omp parallel for
+    for (int i = 0; i < gpu_count; ++i){
+      //handles = new cublasHandle_t[gpu_count];
+      cudaSetDevice(i);
+      cublasCreate(handles+i);
+    }
+    handle = handles[0];
+    /*const int nDevices = 4;
+    int deviceId[nDevices] = {0, 1,2,3};
+
+    cublasXtDeviceSelect(handle, nDevices, deviceId);
+    cublasXtSetPinningMemMode(handle,
+    CUBLASXT_PINNING_ENABLED);*/
   }
+  /*mpmat(int l){
+    cudaGetDeviceCount(&gpu_count);
+    /*len_a = l;
+    a_double_array = new mpmat_double[l];
+    cudaMalloc(&d_a,l*sizeof(mpmat_double));
+    len_b = l;
+    b_double_array = new mpmat_double[l];
+    cudaMalloc(&d_b,l*sizeof(mpmat_double));
+    len_c = l;
+    c_double_array = new mpmat_double[l];
+    cudaMalloc(&d_c,l*sizeof(mpmat_double));
+    len_t = l;
+    tmp = new mpmat_double[l];
+    realloc(l,l,l);
+
+    //handles = new cublasHandle_t[omp_get_num_threads()];
+     cublasCreate(&handle);
+
+    /*const int nDevices = 4;
+    int deviceId[nDevices] = {0, 1, 2, 3};
+
+    cublasXtDeviceSelect(handle, nDevices, deviceId);
+cublasXtSetPinningMemMode(handle,
+CUBLASXT_PINNING_ENABLED);
+  }*/
   ~mpmat(){
     if (len_a != 0){
       std::cout << "deallocing a_double_array, length " << len_a << "\n";
-      delete [] a_double_array;
+      cudaFreeHost(a_double_array);
+      for (int i = 0; i < gpu_count; ++i){
+	cudaSetDevice(i);
+	cudaFree(d_a);
+      }
     }
     if (len_b != 0){
       std::cout << "deallocing b_double_array, length " << len_b << "\n";
-      delete [] b_double_array;
+      cudaFreeHost(b_double_array);
+      for (int i = 0; i < gpu_count; ++i){
+	cudaSetDevice(i);
+	cudaFree(d_b);
+      }
     }
     if (len_c != 0){
       std::cout << "deallocing c_double_array, length " << len_c << "\n";
-      delete [] c_double_array;
+      cudaFreeHost(c_double_array);
+      for (int i = 0; i < gpu_count; ++i){
+	cudaSetDevice(i);
+	cudaFree(d_c);
+      }
     }
-    if (len_a != 0){
+    if (len_t != 0){
       std::cout << "deallocing tmp, length " << len_t << "\n";
       delete [] tmp;
     }
+    //#pragma omp parallel for
+    //for (int i = 0; i < omp_get_num_threads(); ++i)
+      cublasDestroy(handle);
+      //delete [] handles;
   }
 
+
+  void realloc(int mem_a, int mem_b, int mem_c);
 void mpmatConvertGMPToDouble(const mpf_class source,
                              mpmat_double * dest,
                              const int size,
@@ -162,6 +238,14 @@ void mpmatConvertDoubleToGMPVector(mpf_class * dest,
                                    int exp,
                                    mpmat_double * tmp);
 
+void mpmatConvertDoubleToGMPSymm(mpf_class * dest,
+                                   const int dest_dim,
+                                   mpmat_double * source,
+                                   const int mpmat_size,
+                                   const int mpmat_limb,
+                                   int exp,
+                                   mpmat_double * tmp);
+
 
 void gemm_reduced(
         const CBLAS_LAYOUT Layout,
@@ -175,6 +259,35 @@ void gemm_reduced(
         //const int lda,
         const mpf_class * b,
         //const int ldb,
+        //const mpf_class beta,
+        mpf_class * c
+        //const int ldc
+);
+
+void gemm_reduced_gpu(
+        const CBLAS_LAYOUT Layout,
+        const CBLAS_TRANSPOSE transa,
+        const CBLAS_TRANSPOSE transb,
+        const int m,
+        const int n,
+        const int k,
+        //const mpf_class alpha,
+        const mpf_class * a,
+        //const int lda,
+        const mpf_class * b,
+        //const int ldb,
+        //const mpf_class beta,
+        mpf_class * c
+        //const int ldc
+);
+void syrk_reduced_gpu(
+        const CBLAS_LAYOUT Layout,
+        const CBLAS_TRANSPOSE transa,
+        const int m,
+        const int k,
+        //const mpf_class alpha,
+        const mpf_class * a,
+        //const int lda,
         //const mpf_class beta,
         mpf_class * c
         //const int ldc

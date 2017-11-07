@@ -34,11 +34,15 @@ endif
 
 MKLROOT         = /opt/intel/compilers_and_libraries_2017.4.196/linux/mkl
 
+CUDAROOT	= /usr/local/cuda-7.5/lib64/
+
 ################ End of modifications ################
 
 SOURCES = $(wildcard src/*.cpp) $(wildcard src/mpack/*.cpp)
+CUDASOURCES = $(wildcard src/*.cu)
 HEADERS = $(wildcard src/*.h) $(wildcard src/mpack/*.h)
-OBJECTS = $(patsubst src/%.cpp,obj/%.o,$(SOURCES))
+OBJECTS = $(patsubst src/%.cpp,obj/%.o,$(SOURCES)) 
+CUDAOBJECTS = $(patsubst src/%.cu,obj/%.co,$(CUDASOURCES))
 RESULT  = sdpb
 
 ifeq ($(SHARED_TINYXML2), 1)
@@ -73,20 +77,23 @@ else
 
 CC = g++
 CFLAGS += -O3 -Wall -ansi -std=c++0x -L${LIBDIR} -DMKL_ILP64 -m64 -I${MKLROOT}/include  -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
-LIBS += ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.so ${MKLROOT}/lib/intel64/libmkl_gnu_thread.so ${MKLROOT}/lib/intel64/libmkl_core.so -lgomp -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lrt
+LIBS += ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.so ${MKLROOT}/lib/intel64/libmkl_gnu_thread.so ${MKLROOT}/lib/intel64/libmkl_core.so -lgomp -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lrt -lcublas -lcurand -lcudart
 
 endif
 endif
 
 
-.SUFFIXES: .cpp .o
+.SUFFIXES: .cpp .o .cu
 
 
-$(RESULT): $(OBJECTS)
+$(RESULT): $(OBJECTS) $(CUDAOBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $(BINARY_DIR)/$@ $^ $(LIBS)
 
 obj/%.o: src/%.cpp
 	$(CC) $(CFLAGS) -c -o $@ $<
+
+obj/%.co: src/%.cu
+	nvcc $< -c -I${GMPINCLUDEDIR} -I/group/hepth/rajeeve/bootstrap/boost -lgomp -lgmpxx -lgmp -lcublas -lcurand -lcuda -Xcompiler -fopenmp -DNDEBUG -DBOOST_UBLAS_NDEBUG -G -g -o $@
 
 clean:
 	rm -rf obj
@@ -98,9 +105,8 @@ obj:
 
 test:
 	./sdpb -s test.xml --noFinalCheckpoint
-	test -f test.out
-	grep "primalObjective = 1.84026576313204924668804017173" test.out > /dev/null || \
-	(echo "Test failed: primalObjective differs from 1.84026576313204924668804017173." && exit 1)
+	test -f test.out 
+	grep "primalObjective = 1.84026576313204924668804017173" test.out > /dev/null || (echo "Test failed: primalObjective differs from 1.84026576313204924668804017173." && exit 1)
 
 $(OBJECTS): $(HEADERS) | obj
 

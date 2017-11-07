@@ -338,21 +338,27 @@ void mpmat::mpmatConvertGMPToDoubleVector(const mpf_class * source,
                                    mpmat_double * dest,
                                    const int mpmat_size,
                                    const int mpmat_limb,
-                                   int & exp,
+                                   int & expo,
                                    mpmat_double * tmp) {
-    exp = source->get_mpf_t()->_mp_exp * mp_bits_per_limb;
+    expo = source->get_mpf_t()->_mp_exp * mp_bits_per_limb;
 
     //mpmat_double * tmp = static_cast<mpmat_double *>( malloc(source_len * mpmat_size * sizeof(mpmat_double)) );
 
     //Make first pass to determine the exponent to be used
+    //#pragma omp parallel for schedule(dynamic) shared(expo,source) reduction(max:expo)
+    double exponent = (double) expo;
+#pragma omp parallel for schedule(dynamic) shared(source) reduction(max:exponent)
     for (int i = 1; i < source_len; i++) {
-        int current_exp = source[i].get_mpf_t()->_mp_exp * mp_bits_per_limb;
-        exp = current_exp > exp ? current_exp : exp;
+      double current_exp = (double) source[i].get_mpf_t()->_mp_exp * mp_bits_per_limb;
+        exponent = current_exp > exponent ? current_exp : exponent;
+	//expo = max(expo,current_exp);
     }
+    expo = (int) exponent;
 
     //Make second pass to convert the GMPs to mpmat_doubles
+#pragma omp parallel for schedule(dynamic) shared(source,tmp)
     for (int i = 0; i < source_len; i++) {
-        mpmatConvertGMPToDouble(source[i], tmp + i*mpmat_size, mpmat_size, mpmat_limb, exp);
+        mpmatConvertGMPToDouble(source[i], tmp + i*mpmat_size, mpmat_size, mpmat_limb, expo);
     }
 
     timers["Transposition direct"].start();
@@ -404,6 +410,7 @@ void mpmat::mpmatConvertDoubleToGMPVector(mpf_class * dest,
     );
     timers["Transposition reverse"].stop();
 
+#pragma omp parallel for schedule(dynamic) shared(dest,tmp)
     for (int i = 0; i < dest_len; i++) {
         mpmatConvertDoubleToGMP(
                 dest[i],
@@ -412,6 +419,45 @@ void mpmat::mpmatConvertDoubleToGMPVector(mpf_class * dest,
                 mpmat_limb,
                 exp
         );
+    }
+
+    //free(tmp);
+}
+
+void mpmat::mpmatConvertDoubleToGMPSymm(mpf_class * dest,
+                                   const int dest_dim,
+                                   mpmat_double * source,
+                                   const int mpmat_size,
+                                   const int mpmat_limb,
+                                   int exp,
+                                   mpmat_double * tmp) {
+    //mpmat_double * tmp = static_cast<mpmat_double *>( malloc(dest_len * mpmat_size * sizeof(mpmat_double)) );
+    // Transpose out-of-place
+    timers["Transposition reverse"].start();
+    mkl_domatcopy(
+            'r','t',
+            mpmat_size,
+            dest_dim*dest_dim,
+            1,
+            source,
+            dest_dim*dest_dim,
+            tmp,
+            mpmat_size
+    );
+    timers["Transposition reverse"].stop();
+
+#pragma omp parallel for schedule(dynamic) shared(dest,tmp)
+    for (int r = 0; r < dest_dim; r++) {
+      for (int c = 0; c <= r; ++c){
+        mpmatConvertDoubleToGMP(
+                dest[r * dest_dim + c],
+                tmp + (r * dest_dim + c) * mpmat_size,
+                mpmat_size,
+                mpmat_limb,
+                exp
+        );
+	dest[c * dest_dim + r] = dest[r * dest_dim + c];
+      }
     }
 
     //free(tmp);

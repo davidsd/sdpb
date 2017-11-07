@@ -73,8 +73,8 @@ SDPSolver::SDPSolver(const SDP &sdp, const SDPSolverParameters &parameters):
   Q(sdp.FreeVarMatrix.cols, sdp.FreeVarMatrix.cols),
   Qpivots(sdp.FreeVarMatrix.cols),
   dyExtended(Q.rows),
-  StepMatrixWorkspace(X)
-  //myWorkspace(100,100,100,1000,1000,10)
+  StepMatrixWorkspace(X),
+  myWorkspace(10)
 {
   // initialize bilinearPairingsWorkspace, eigenvaluesWorkspace, QRWorkspace
   for (unsigned int b = 0; b < sdp.bilinearBases.size(); b++) {
@@ -752,7 +752,8 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   // Here, SchurOffDiagonal = L'^{-1} B.
   //
   // UpperLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal
-  matrixSquareIntoBlockMpmat(myWorkspace,SchurOffDiagonal, Q, 0, 0);
+   matrixSquareIntoBlockMpmat(myWorkspace,SchurOffDiagonal, Q, 0, 0);
+  //matrixSquareIntoBlockGPU(SchurOffDiagonal, Q, 0, 0);
 
   // Here, stabilizeBlocks contains the blocks of V = L'^{-1} U.
   //
@@ -760,7 +761,7 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   for (unsigned int j = 0; j < stabilizeBlockIndices.size(); j++) {
     int b = stabilizeBlockIndices[j];
     int c = stabilizeBlockUpdateColumn[j];
-    matrixSquareIntoBlock(stabilizeBlocks[b], Q, c, c);
+    matrixSquareIntoBlockMpmat(myWorkspace,stabilizeBlocks[b], Q, c, c);
     // subtract the identity matrix from this block
     for (int i = c; i < c + stabilizeBlocks[b].cols; i++)
       Q.elt(i, i) -= 1;
@@ -772,6 +773,17 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
     int b = stabilizeBlockIndices[j];
     int p = stabilizeBlockUpdateRow[j];
     int r = stabilizeBlockUpdateColumn[j];
+    /*myWorkspace.gemm_reduced_gpu(CblasRowMajor,CblasTrans,CblasNoTrans,
+          stabilizeBlocks[b].cols,
+          SchurOffDiagonal.cols,
+          stabilizeBlocks[b].rows,
+          &stabilizeBlocks[b].elements[0],
+    //stabilizeBlocks[b].rows,
+          &SchurOffDiagonal.elt(p, 0),
+    //SchurOffDiagonal.rows,
+          &Q.elt(r, 0)
+    //Q.rows
+    );*/
     Rgemm("Transpose", "NoTranspose",
           stabilizeBlocks[b].cols,
           SchurOffDiagonal.cols,
@@ -784,7 +796,7 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
           0,
           &Q.elt(r, 0),
           Q.rows);
-  }
+	  }
 
   // UpperRight(Q) = LowerLeft(Q)^T
   # pragma omp parallel for schedule(static)

@@ -41,7 +41,7 @@ int main() {
     mkl_set_num_threads(16);
     omp_set_num_threads(16);
 
-    for (int dim = 2000; dim <= 3000; dim += 1000) {
+    for (int dim = 100; dim <= 100; dim += 100) {
 
         cout << " >>>>> Doing dimension " << dim << "<<<<<" << endl;
 
@@ -55,13 +55,13 @@ int main() {
         mpf_class alpha("1",prec);
         mpf_class beta("0",prec);
 
-        mpmat_gemm_reduced(
+        mpmat_gemm_reduced_gpu(
                 CblasRowMajor, dim, dim, dim,
                 mat_a, mat_b,
                 mat_c
         );
 
-	mpmat_syrk_reduced(CblasRowMajor, CblasUpper, dim, dim, mat_a, mat_c);
+	//mpmat_syrk_reduced(CblasRowMajor, CblasUpper, dim, dim, mat_a, mat_c);
 
         timers["RgemmParallel"].start();
         RgemmParallel(

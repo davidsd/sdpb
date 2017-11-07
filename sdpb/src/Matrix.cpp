@@ -8,6 +8,9 @@
 
 #include <vector>
 #include "Matrix.h"
+#include "sdpc.h"
+
+#include "Timers.h"
 
 // Most of the routines below are helpfully-named wrappers for
 // functions in MBLAS or MLAPACK.  See Matrix.h for a more detailed
@@ -98,6 +101,69 @@ void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol) {
   // solver.
 
   //TODO make the block within B tractible
+  
+  timers["matrixSquareIntoBlockMpmat.complete"].resume();
+
+  Matrix AT(A.cols,A.rows);
+  
+  //std::cout << "Before I change the precision, a Real takes up " << sizeof(Real) << " bytes\n";
+  mpf_set_default_prec(mpf_get_default_prec()+512);
+  //std::cout << "And after: " << sizeof(Real) << "\n";
+  int maxsize = max(A.cols,A.cols);
+  //Vector block(maxsize*maxsize);
+  Real * block = new Real[maxsize*maxsize];
+  //std::cout << "allocated a block of " << maxsize*maxsize*sizeof(Real) << " bytes\n";
+  mpf_set_default_prec(mpf_get_default_prec()-512);
+
+  for (int c = 0; c < A.cols; ++c){
+    for (int r = 0; r < A.rows; ++r){
+  // std::cout << r << " " << c << "\n";
+      AT.elt(c,r) = A.elt(r,c);
+    }
+    }
+
+  for (int c = 0; c < A.cols; ++c){
+    for (int r = 0; r < A.cols; ++r){
+  //   std::cout << r << " " << c << "\n";
+      block[r*A.cols+c] = B.elt(bRow + r, bCol + c);
+    }
+   }
+
+  //std::cout << "A is " << A.rows << " by " << A.cols << "\n";
+  
+  //myWorkspace.gemm_reduced_gpu(CblasRowMajor,CblasNoTrans,CblasNoTrans,A.cols,A.cols,A.rows,AT.elements.data(),A.elements.data(),block);
+  //std::cout << "done multiplying\n";
+  myWorkspace.syrk_reduced_gpu(CblasRowMajor,CblasNoTrans,A.cols,A.rows,A.elements.data(),block);
+  //myWorkspace.gemm_reduced_gpu(CblasRowMajor,CblasNoTrans,CblasNoTrans,A.cols,A.cols,A.rows,AT.elements.data(),A.elements.data(),block);
+
+  for (int c = 0; c < A.cols; ++c)
+    for (int r = 0; r < A.cols; ++r){
+  // std::cout << "the block element at " << r << "," << c << " is " << block[r*A.cols+c] << "\n";
+      B.elt(bRow + r, bCol + c) = block[r*A.cols+c];
+}
+
+  //std::cout << "done copying back\n";
+
+  delete [] block;
+
+  //std::cout << "done cleaning up\n";
+
+  timers["matrixSquareIntoBlockMpmat.complete"].stop();
+  
+}
+
+// Set block starting at (bRow, bCol) of B to A^T A
+  void matrixSquareIntoBlockGPU(Matrix &A, Matrix &B, int bRow, int bCol) {
+  assert(bRow + A.cols <= B.rows);
+  assert(bCol + A.cols <= B.cols);
+
+  // This operation is not used within a BlockDiagonalMatrix, so it is
+  // worthwhile to parallelize.  In fact, this function, used in
+  // computing TopLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal (see
+  // SDPSolver.cpp) is one of the main performance bottlenecks in the
+  // solver.
+
+  //TODO make the block within B tractible
 
   for (int r = 0; r < A.rows; ++r){
     for (int c = 0; c < A.cols; ++c){
@@ -133,14 +199,15 @@ void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol) {
 
   //myWorkspace.syrk_reduced(CblasRowMajor,CblasUpper, A.cols, A.rows,A.elements.data(),block);
   //std::cout << "Oh boy, here I go multiplying again\n";
-  
-  myWorkspace.gemm_reduced(CblasRowMajor,A.cols,A.cols,A.rows,AT.elements.data(),A.elements.data(),block);
+
+  cublas_gmp_syrk(AT.elements.data(),AT.rows,AT.cols,block);
   //std::cout << "done multiplying\n";
 
-  for (int c = 0; c < A.cols; ++c)
-    for (int r = 0; r < A.cols; ++r){
+  for (int r = 0; r < A.cols; ++r)
+    for (int c = 0; c < r; ++c){
   // std::cout << "the block element at " << r << "," << c << " is " << block[r*A.cols+c] << "\n";
       B.elt(bRow + r, bCol + c) = block[r*A.cols+c];
+      B.elt(bRow + c, bCol + r) = block[r*A.cols+c];
 }
 
   //std::cout << "done copying back\n";

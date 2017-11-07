@@ -1,24 +1,5 @@
-#include <sstream>
-#include <iostream>
-#include <stdio.h>
-#include <cstdlib> 
-#include <cuda_runtime_api.h>
-#include <malloc.h>
-#include <curand.h>
-#include <cublas_v2.h>
-#include <gmp.h>
-#include <gmpxx.h>
-#include <cstdlib>
-#include <time.h>
-#include <sys/time.h>
-#include "omp.h"
-#include <bitset>
-#include <math.h>
-#include <boost/numeric/ublas/matrix.hpp>
-#include <boost/numeric/ublas/operation.hpp>
-#include <boost/numeric/ublas/io.hpp> 
-#define uS_PER_SEC 1000000
-#define uS_PER_mS 1000
+#include "sdpc.h"
+
 
 typedef boost::numeric::ublas::matrix<double> matrix;
 
@@ -28,7 +9,7 @@ using std::endl;
 const int INT64L = 64;
 const int DOUBLE_MANT = 53;
 
-mpf_class *tmpC1, *tmpC2, *tmpC3, *tmpC4, *tmpC5;
+mpf_class *ltmpC1, *ltmpC2, *ltmpC3, *ltmpC4, *ltmpC5;
 
 int getSign(const mpf_class a) {
   if((a.get_mpf_t()->_mp_size) < 0) {return -1;}
@@ -980,10 +961,10 @@ void toom2(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b
     }
   }
  
-  matrixMult_cuBlas(handle, tmpC1, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
+  matrixMult_cuBlas(handle, ltmpC1, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
 		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
 		    nr_rowsA, nr_colsA, nr_colsB, whatOrder);
-  matrixMult_cuBlas(handle, tmpC2, a2, b2, d_aS, d_bS, tmpTransferLongToGMP,
+  matrixMult_cuBlas(handle, ltmpC2, a2, b2, d_aS, d_bS, tmpTransferLongToGMP,
 		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
 		    nr_rowsA, nr_colsA, nr_colsB, whatOrder);
   for(int i = 0; i < nr_colsA; ++i){
@@ -1002,11 +983,11 @@ void toom2(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b
 		    nr_rowsA, nr_colsA, nr_colsB, whatOrder);
   for (int i = 0; i < nr_colsB; ++i) {
     for (int j = 0; j < nr_rowsA; ++j) {
-      c[i *  nr_rowsA + j] -= tmpC1[i *  nr_rowsA + j];
-      c[i *  nr_rowsA + j] -= tmpC2[i *  nr_rowsA + j];
+      c[i *  nr_rowsA + j] -= ltmpC1[i *  nr_rowsA + j];
+      c[i *  nr_rowsA + j] -= ltmpC2[i *  nr_rowsA + j];
       c[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= sizeA2;
-      tmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 2 * sizeA2;
-      c[i * nr_rowsA + j] += (tmpC1[i * nr_rowsA + j] + tmpC2[i * nr_rowsA + j]);
+      ltmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 2 * sizeA2;
+      c[i * nr_rowsA + j] += (ltmpC1[i * nr_rowsA + j] + ltmpC2[i * nr_rowsA + j]);
     }
   }  
 }
@@ -1065,10 +1046,10 @@ void toom3(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b
       b3[i *  nr_colsA + k].get_mpf_t()->_mp_d = &(b[i *  nr_colsA + k].get_mpf_t()->_mp_d[0]);
     }
   }
-  matrixMult_cuBlas(handle, tmpC1, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
+  matrixMult_cuBlas(handle, ltmpC1, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
 		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
 		    nr_rowsA, nr_colsA, nr_colsB, whatOrder);
-  matrixMult_cuBlas(handle, tmpC5, a3, b3, d_aS, d_bS, tmpTransferLongToGMP,
+  matrixMult_cuBlas(handle, ltmpC5, a3, b3, d_aS, d_bS, tmpTransferLongToGMP,
 		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
 		    nr_rowsA, nr_colsA, nr_colsB, whatOrder);
   for(int i = 0; i < nr_colsA; ++i){
@@ -1081,7 +1062,7 @@ void toom3(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b
       b1[i *  nr_rowsA + k] += (b2[i *  nr_rowsA + k] + b3[i *  nr_rowsA + k]); 
     }
   }
-  matrixMult_cuBlas(handle, tmpC2, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
+  matrixMult_cuBlas(handle, ltmpC2, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
 		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
 		    nr_rowsA, nr_colsA, nr_colsB, whatOrder);
   for(int i = 0; i < nr_colsA; ++i){
@@ -1094,7 +1075,7 @@ void toom3(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b
       b1[i *  nr_rowsA + k] -= (2 * b2[i *  nr_rowsA + k]); 
     }
   }
-  matrixMult_cuBlas(handle, tmpC3, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
+  matrixMult_cuBlas(handle, ltmpC3, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
 		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
 		    nr_rowsA, nr_colsA, nr_colsB, whatOrder);
   for(int i = 0; i < nr_colsA; ++i){
@@ -1107,30 +1088,30 @@ void toom3(const cublasHandle_t handle, mpf_class *c, mpf_class *a, mpf_class *b
       b1[i *  nr_rowsA + k] += 3 * (b2[i *  nr_rowsA + k] + b3[i *  nr_rowsA + k]); 
     }
   }
-  matrixMult_cuBlas(handle, tmpC4, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
+  matrixMult_cuBlas(handle, ltmpC4, a1, b1, d_aS, d_bS, tmpTransferLongToGMP,
 		    tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
 		    nr_rowsA, nr_colsA, nr_colsB, whatOrder);
   
   for (int i = 0; i < nr_colsB; ++i) {
     for (int j = 0; j < nr_rowsA; ++j) {
-      tmpC2[i * nr_rowsA + j] = (- tmpC1[i * nr_rowsA + j] / 2 + tmpC2[i * nr_rowsA + j] 
-				 - tmpC3[i * nr_rowsA + j] /3 - tmpC4[i * nr_rowsA + j] / 6 
-				 + 2 * tmpC5[i * nr_rowsA + j]); 
-      tmpC3[i * nr_rowsA + j] = (-3/4 * tmpC1[i * nr_rowsA + j] + tmpC2[i * nr_rowsA + j] / 2 
-				 + 2/3 * tmpC3[i * nr_rowsA + j] + 1/12 * tmpC4[i * nr_rowsA + j] 
-				 - 2 * tmpC5[i * nr_rowsA + j]);
-      tmpC4[i * nr_rowsA + j] = (- tmpC1[i * nr_rowsA + j] / 8 - tmpC2[i * nr_rowsA + j] / 2 
-				 - tmpC3[i * nr_rowsA + j] / 4 + tmpC4[i * nr_rowsA + j] / 8 
-				 - 2 * tmpC5[i * nr_rowsA + j]);
+      ltmpC2[i * nr_rowsA + j] = (- ltmpC1[i * nr_rowsA + j] / 2 + ltmpC2[i * nr_rowsA + j] 
+				 - ltmpC3[i * nr_rowsA + j] /3 - ltmpC4[i * nr_rowsA + j] / 6 
+				 + 2 * ltmpC5[i * nr_rowsA + j]); 
+      ltmpC3[i * nr_rowsA + j] = (-3/4 * ltmpC1[i * nr_rowsA + j] + ltmpC2[i * nr_rowsA + j] / 2 
+				 + 2/3 * ltmpC3[i * nr_rowsA + j] + 1/12 * ltmpC4[i * nr_rowsA + j] 
+				 - 2 * ltmpC5[i * nr_rowsA + j]);
+      ltmpC4[i * nr_rowsA + j] = (- ltmpC1[i * nr_rowsA + j] / 8 - ltmpC2[i * nr_rowsA + j] / 2 
+				 - ltmpC3[i * nr_rowsA + j] / 4 + ltmpC4[i * nr_rowsA + j] / 8 
+				 - 2 * ltmpC5[i * nr_rowsA + j]);
   
-      tmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= sizeA2;
-      tmpC3[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 2 * sizeA2;
-      tmpC4[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 3 * sizeA2;
-      tmpC5[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 4 * sizeA2;
+      ltmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= sizeA2;
+      ltmpC3[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 2 * sizeA2;
+      ltmpC4[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 3 * sizeA2;
+      ltmpC5[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 4 * sizeA2;
       
-      c[i *  nr_rowsA + j] = (tmpC1[i *  nr_rowsA + j] + tmpC2[i *  nr_rowsA + j] 
-			      + tmpC3[i *  nr_rowsA + j] + tmpC4[i *  nr_rowsA + j] 
-			      + tmpC5[i *  nr_rowsA + j]);
+      c[i *  nr_rowsA + j] = (ltmpC1[i *  nr_rowsA + j] + ltmpC2[i *  nr_rowsA + j] 
+			      + ltmpC3[i *  nr_rowsA + j] + ltmpC4[i *  nr_rowsA + j] 
+			      + ltmpC5[i *  nr_rowsA + j]);
     }
   }
 }
@@ -1159,10 +1140,10 @@ void toom2Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a,
       a2[i *  nr_rowsA + k].get_mpf_t()->_mp_d = &(a[i *  nr_rowsA + k].get_mpf_t()->_mp_d[0]);
     }
   }
-  matrixMultSymm_cuBlas(handle, tmpC1, a1, d_aS, tmpTransferLongToGMP,
+  matrixMultSymm_cuBlas(handle, ltmpC1, a1, d_aS, tmpTransferLongToGMP,
 			tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
 			nr_rowsA, nr_colsA, prec);
-  matrixMultSymm_cuBlas(handle, tmpC2, a2, d_aS, tmpTransferLongToGMP,
+  matrixMultSymm_cuBlas(handle, ltmpC2, a2, d_aS, tmpTransferLongToGMP,
                         tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
                         nr_rowsA, nr_colsA, prec);
   for(int i = 0; i < nr_colsA; ++i){
@@ -1176,11 +1157,11 @@ void toom2Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a,
 			nr_rowsA, nr_colsA, prec);
   for (int i = 0; i < nr_rowsA; ++i) {
     for (int j = 0; j < nr_rowsA; ++j) {
-      c[i *  nr_rowsA + j] -= tmpC1[i *  nr_rowsA + j];
-      c[i *  nr_rowsA + j] -= tmpC2[i *  nr_rowsA + j];
+      c[i *  nr_rowsA + j] -= ltmpC1[i *  nr_rowsA + j];
+      c[i *  nr_rowsA + j] -= ltmpC2[i *  nr_rowsA + j];
       c[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= sizeA2;
-      tmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 2 * sizeA2;
-      c[i * nr_rowsA + j] += (tmpC1[i * nr_rowsA + j] + tmpC2[i * nr_rowsA + j]);
+      ltmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 2 * sizeA2;
+      c[i * nr_rowsA + j] += (ltmpC1[i * nr_rowsA + j] + ltmpC2[i * nr_rowsA + j]);
     }
   }  
 }
@@ -1215,10 +1196,10 @@ void toom3Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a,
     }
   }
   
-  matrixMultSymm_cuBlas(handle, tmpC1, a1, d_aS, tmpTransferLongToGMP,
+  matrixMultSymm_cuBlas(handle, ltmpC1, a1, d_aS, tmpTransferLongToGMP,
 			tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
 			nr_rowsA, nr_colsA, prec);
-  matrixMultSymm_cuBlas(handle, tmpC5, a3, d_aS, tmpTransferLongToGMP,
+  matrixMultSymm_cuBlas(handle, ltmpC5, a3, d_aS, tmpTransferLongToGMP,
                         tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
                         nr_rowsA, nr_colsA, prec);
   
@@ -1227,7 +1208,7 @@ void toom3Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a,
       a1[i *  nr_rowsA + k] += (a2[i *  nr_rowsA + k] + a3[i *  nr_rowsA + k]); 
     }
   }
-  matrixMultSymm_cuBlas(handle, tmpC2, a1, d_aS,  tmpTransferLongToGMP,
+  matrixMultSymm_cuBlas(handle, ltmpC2, a1, d_aS,  tmpTransferLongToGMP,
 			tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
 			nr_rowsA, nr_colsA, prec);
  
@@ -1236,7 +1217,7 @@ void toom3Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a,
       a1[i *  nr_rowsA + k] -= (2 * a2[i *  nr_rowsA + k]); 
     }
   }
-  matrixMultSymm_cuBlas(handle, tmpC3, a1, d_aS,  tmpTransferLongToGMP,
+  matrixMultSymm_cuBlas(handle, ltmpC3, a1, d_aS,  tmpTransferLongToGMP,
 			tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
 			nr_rowsA, nr_colsA, prec);
   
@@ -1245,30 +1226,30 @@ void toom3Symm(const cublasHandle_t handle, mpf_class *c, mpf_class *a,
       a1[i *  nr_rowsA + k] += 3 * (a2[i *  nr_rowsA + k] + a3[i * nr_rowsA + k]); 
     }
   }
-  matrixMultSymm_cuBlas(handle, tmpC4, a1, d_aS,  tmpTransferLongToGMP,
+  matrixMultSymm_cuBlas(handle, ltmpC4, a1, d_aS,  tmpTransferLongToGMP,
 			tmp, sizeMatrix, realExpMatrix, signMatrix, d_prodRes, d_res,
 			nr_rowsA, nr_colsA, prec);
   
   for (int i = 0; i < nr_rowsA; ++i) {
     for (int j = 0; j < nr_rowsA; ++j) {
-      tmpC2[i * nr_rowsA + j] = (- tmpC1[i * nr_rowsA + j] / 2 + tmpC2[i * nr_rowsA + j] 
-				 - tmpC3[i * nr_rowsA + j] /3 - tmpC4[i * nr_rowsA + j] / 6 
-				 + 2 * tmpC5[i * nr_rowsA + j]); 
-      tmpC3[i * nr_rowsA + j] = (-3/4 * tmpC1[i * nr_rowsA + j] + tmpC2[i * nr_rowsA + j] / 2 
-				 + 2/3 * tmpC3[i * nr_rowsA + j] + 1/12 * tmpC4[i * nr_rowsA + j] 
-				 - 2 * tmpC5[i * nr_rowsA + j]);
-      tmpC4[i * nr_rowsA + j] = (- tmpC1[i * nr_rowsA + j] / 8 - tmpC2[i * nr_rowsA + j] / 2 
-				 - tmpC3[i * nr_rowsA + j] / 4 + tmpC4[i * nr_rowsA + j] / 8 
-				 - 2 * tmpC5[i * nr_rowsA + j]);
+      ltmpC2[i * nr_rowsA + j] = (- ltmpC1[i * nr_rowsA + j] / 2 + ltmpC2[i * nr_rowsA + j] 
+				 - ltmpC3[i * nr_rowsA + j] /3 - ltmpC4[i * nr_rowsA + j] / 6 
+				 + 2 * ltmpC5[i * nr_rowsA + j]); 
+      ltmpC3[i * nr_rowsA + j] = (-3/4 * ltmpC1[i * nr_rowsA + j] + ltmpC2[i * nr_rowsA + j] / 2 
+				 + 2/3 * ltmpC3[i * nr_rowsA + j] + 1/12 * ltmpC4[i * nr_rowsA + j] 
+				 - 2 * ltmpC5[i * nr_rowsA + j]);
+      ltmpC4[i * nr_rowsA + j] = (- ltmpC1[i * nr_rowsA + j] / 8 - ltmpC2[i * nr_rowsA + j] / 2 
+				 - ltmpC3[i * nr_rowsA + j] / 4 + ltmpC4[i * nr_rowsA + j] / 8 
+				 - 2 * ltmpC5[i * nr_rowsA + j]);
   
-      tmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= sizeA2;
-      tmpC3[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 2 * sizeA2;
-      tmpC4[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 3 * sizeA2;
-      tmpC5[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 4 * sizeA2;
+      ltmpC2[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= sizeA2;
+      ltmpC3[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 2 * sizeA2;
+      ltmpC4[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 3 * sizeA2;
+      ltmpC5[i *  nr_rowsA + j].get_mpf_t()->_mp_exp -= 4 * sizeA2;
       
-      c[i *  nr_rowsA + j] = (tmpC1[i *  nr_rowsA + j] + tmpC2[i *  nr_rowsA + j] 
-			      + tmpC3[i *  nr_rowsA + j] + tmpC4[i *  nr_rowsA + j] 
-			      + tmpC5[i *  nr_rowsA + j]);
+      c[i *  nr_rowsA + j] = (ltmpC1[i *  nr_rowsA + j] + ltmpC2[i *  nr_rowsA + j] 
+			      + ltmpC3[i *  nr_rowsA + j] + ltmpC4[i *  nr_rowsA + j] 
+			      + ltmpC5[i *  nr_rowsA + j]);
     }
   }
 }
@@ -2209,7 +2190,49 @@ void allTests(int argc, char *argv[]) {
      testMatrixMultSymm_cuBlas(nr_rowsA, nr_colsA);
  }
 
+void cublas_gmp_syrk(mpf_class *randA, int nr_rowsA, int nr_colsA, mpf_class *randC){
+int nr_rowsC = nr_rowsA, nr_colsC = nr_rowsA;
+  cublasHandle_t handle;
+  cublasCreate(&handle);
+  
+  int ownLimbSize = DOUBLE_MANT/2 - ceil(log2((double) nr_colsA) / 2);
+  int size_aS = 0;
+  int expA = 0;
+  estimateSize(randA, size_aS, expA, nr_rowsA, nr_colsA, ownLimbSize);
+  
+  double *d_aS;
+  cudaMalloc(&d_aS, size_aS * nr_rowsA * nr_colsA * sizeof(double));
+  double *d_prodRes;                                                                                               
+  cudaMalloc(&d_prodRes, nr_rowsC * nr_colsC * sizeof(double));                                                  
+  long  long *d_res;                                                                                               
+  cudaMalloc(&d_res, nr_rowsC * nr_colsC * sizeof(long long));                                                   
+ 
+  print_memory();
+                                                                                                  
+  // Allocate the memory for temporary arrays                                                                      
+  double * tmpTransferLongToGMP = (double *)malloc(nr_rowsA * nr_colsA * sizeof(double));                            
+                                                                                    
+/*int * sizeMatrix = (int *)malloc(nr_rowsA * nr_colsA * sizeof(int));               
+  int * realExpMatrix = (int *)malloc(nr_rowsA * nr_colsA * sizeof(int));            
+  int * signMatrix = (int *)malloc(nr_rowsA * nr_colsA * sizeof(int));               
+  long long *tmp = (long long *)malloc(nr_rowsC * nr_colsC * sizeof(long long)); */
 
-int main(int argc, char *argv[]) {
-  allTests(argc, argv);
+int * sizeMatrix = new int[nr_rowsA * nr_colsA];
+int * realExpMatrix = new int[nr_rowsA * nr_colsA];
+int * signMatrix = new int[nr_rowsA * nr_colsA];
+long long * tmp = new long long[nr_rowsC * nr_colsC];                                                                                       
+  matrixMultSymmBasecase_cuBlas(handle, randC, randA,                                              
+				d_aS, tmpTransferLongToGMP, tmp, sizeMatrix, realExpMatrix, signMatrix,        
+				d_prodRes, d_res, nr_rowsA, nr_colsA);
+  cudaFree(d_aS);
+cudaFree(d_prodRes);
+cudaFree(d_res);
+
+cublasDestroy(handle);
+
+delete [] sizeMatrix;
+delete [] realExpMatrix;
+delete [] signMatrix;
+delete [] tmp;
+
 }

@@ -146,6 +146,23 @@ void mpmat_gemm_reduced(
         //const int ldc
 );
 
+void mpmat_gemm_reduced_gpu(
+        const CBLAS_LAYOUT Layout,
+        //const CBLAS_TRANSPOSE transa,
+        //const CBLAS_TRANSPOSE transb,
+        const int m,
+        const int n,
+        const int k,
+        //const mpf_class alpha,
+        const mpf_class * a,
+        //const int lda,
+        const mpf_class * b,
+        //const int ldb,
+        //const mpf_class beta,
+        mpf_class * c
+        //const int ldc
+);
+
 void mpmat_syrk_reduced(
 			 const CBLAS_LAYOUT Layout,
 			 const CBLAS_UPLO uplo,
