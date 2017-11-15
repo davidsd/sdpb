@@ -13,6 +13,12 @@
 #include <cuda_runtime.h>
 #include "cublas_v2.h"
 
+mpmat_double *a_double_array, *b_double_array, *c_double_array, *tmp, **d_a, **d_b, **d_c;
+  int len_a, len_b, len_c, len_t, gpu_count, cpu_count;
+
+  cublasHandle_t handle;
+  cublasHandle_t *handles;
+
 template <typename T>
 inline T ceil_div(T a, T b) {
     return a / b + ( (a % b != 0) & (a > 0) );
@@ -23,6 +29,111 @@ inline T min(T a, T b) { return a < b ? a : b ; }
 
 template <typename T>
 inline T max (T a,T b) { return a>b ? a : b; }
+
+void realloc(int mem_a, int mem_b, int mem_c){
+  // std::cerr << "reallocing\n";
+ if (mem_a > len_a){
+   std::cerr << "reallocing a\n";
+      if (len_a != 0) {
+	//	std::cerr << "len_a!=0\n";
+	cudaFreeHost(a_double_array);
+	//std::cerr << "deleted the relevant bits for a\n";
+	for (int i = 0; i < gpu_count; ++i){
+	  cudaSetDevice(i);
+	  cudaFree(d_a[i]);
+	  //std::cerr << "deleted d_a["<<i<<"]\n";
+	}
+      }
+      //std::cerr << "allocing a\n";
+      cudaMallocHost(&a_double_array,mem_a*sizeof(mpmat_double),cudaHostAllocPortable);
+      //std::cerr << "alloc'd a\n";
+      for (int i = 0; i < gpu_count; ++i){
+	cudaSetDevice(i);
+	cudaMalloc(d_a+i,mem_a*sizeof(mpmat_double));
+      }
+      len_a = mem_a;
+    }
+ //std::cerr << "realloc'd a\n";
+ if (mem_b > len_b){
+
+   //std::cerr << "reallocing b\n";
+      if (len_b != 0) {
+	cudaFreeHost(b_double_array);
+	for (int i = 0; i < gpu_count; ++i){
+	  cudaSetDevice(i);
+	  cudaFree(d_b[i]);
+	}
+      }
+      cudaMallocHost(&b_double_array,mem_b*sizeof(mpmat_double),cudaHostAllocPortable);
+      for (int i = 0; i < gpu_count; ++i){
+	cudaSetDevice(i);
+	cudaMalloc(d_b+i,mem_b*sizeof(mpmat_double));
+      }
+      len_b = mem_b;
+    }
+ // std::cerr << "realloc'd b\n";
+  if (mem_c > len_c){
+    //std::cerr << "reallocing c\n";
+      if (len_c != 0) {
+	cudaFreeHost(c_double_array);
+	for (int i = 0; i < gpu_count; ++i){
+	  cudaSetDevice(i);
+	  cudaFree(d_c[i]);
+	}
+      }
+      cudaMallocHost(&c_double_array,mem_c*sizeof(mpmat_double),cudaHostAllocPortable);
+      for (int i = 0; i < gpu_count; ++i){
+	cudaSetDevice(i);
+	cudaMalloc(d_c+i,mem_c*sizeof(mpmat_double));
+      }
+      len_c = mem_c;
+    }
+  //std::cerr << "realloc'd c\n";
+    int mem_t = max(max(mem_a,mem_b),mem_c);
+    if (mem_t > len_t){
+      if (len_t != 0) delete [] tmp;
+      tmp = new mpmat_double [mem_t];
+      len_t = mem_t;
+    }
+}
+
+void dealloc(){
+  if (len_a != 0){
+      std::cout << "deallocing a_double_array, length " << len_a << "\n";
+      cudaFreeHost(a_double_array);
+      for (int i = 0; i < gpu_count; ++i){
+	cudaSetDevice(i);
+	cudaFree(d_a[i]);
+      }
+    }
+    if (len_b != 0){
+      std::cout << "deallocing b_double_array, length " << len_b << "\n";
+      cudaFreeHost(b_double_array);
+      for (int i = 0; i < gpu_count; ++i){
+	cudaSetDevice(i);
+	cudaFree(d_b[i]);
+      }
+    }
+    if (len_c != 0){
+      std::cout << "deallocing c_double_array, length " << len_c << "\n";
+      cudaFreeHost(c_double_array);
+      for (int i = 0; i < gpu_count; ++i){
+	cudaSetDevice(i);
+	cudaFree(d_c[i]);
+      }
+    }
+    if (len_t != 0){
+      std::cout << "deallocing tmp, length " << len_t << "\n";
+      delete [] tmp;
+    }
+    //#pragma omp parallel for
+    for (int i = 0; i < gpu_count; ++i)
+      cublasDestroy(handles[i]);
+    delete [] handles;
+    delete [] d_a;
+    delete [] d_b;
+    delete [] d_c;
+}
 
 void mpmatMultiplyGMPBaseCase(mpf_class & dest,
                               const mpf_class  a,
@@ -448,6 +559,8 @@ void mpmat_syrk_reduced(
 			 ) {
 
   timers["mpmat_syrk_reduced.complete"].start();
+
+   
   
   int mpmat_limb = ( MPMAT_DOUBLE_MANT_IMPLICIT - ceil(log2(k)) )/ 2;
   int mpmat_size_a = ceil_div( abs(a[0].get_mpf_t()->_mp_prec+1) * mp_bits_per_limb, mpmat_limb );
@@ -537,4 +650,272 @@ void mpmat_syrk_reduced(
   delete [] a_double_array;
   delete [] c_double_array;
   delete [] tmp;  
+}
+
+
+void mpmat_syrk_reduced_gpu(
+        const CBLAS_LAYOUT Layout,
+        const CBLAS_TRANSPOSE transa,
+        const int m,
+        const int k,
+        //const mpf_class alpha,
+        const mpf_class * a,
+        //const int lda,
+        mpf_class * c
+        //const int ldc
+        ) {
+  std::cout << "The non-c++ code is running, I swear\n";
+
+    timers["mpmat_syrk_reduced.complete"].resume();
+
+    timers["mpmat_syrk_reduced.precalculations"].resume();
+    len_a = 0;
+    len_b = 0;
+    len_c = 0;
+    len_t = 0;
+    cpu_count = omp_get_num_threads();
+
+    
+    cudaGetDeviceCount(&gpu_count);
+    std::cout << "there are " << gpu_count << " gpus\n";
+    d_a = new mpmat_double*[gpu_count];
+    d_b = new mpmat_double*[gpu_count];
+    d_c = new mpmat_double*[gpu_count];
+    handles = new cublasHandle_t[gpu_count];
+
+    #pragma omp parallel for
+    for (int i = 0; i < gpu_count; ++i){
+      //handles = new cublasHandle_t[gpu_count];
+      cudaSetDevice(i);
+      cublasCreate(handles+i);
+      std::cout << "made handle\n";
+    }
+    handle = handles[0];
+
+    int mpmat_limb = ( MPMAT_DOUBLE_MANT_IMPLICIT - ceil(log2(k)) )/ 2;
+    //int mpmat_limb = 1;
+    int mpmat_size_a = ceil_div( abs(a[0].get_mpf_t()->_mp_prec+1) * mp_bits_per_limb, mpmat_limb );
+
+
+    while ( 2 * mpmat_limb + ceil(log2(k*mpmat_size_a)) > MPMAT_DOUBLE_MANT_IMPLICIT ) {
+        mpmat_limb = ( MPMAT_DOUBLE_MANT_IMPLICIT - ceil(log2(k*mpmat_size_a)) ) / 2;
+        mpmat_size_a = ceil_div( abs(a[0].get_mpf_t()->_mp_prec+1) * mp_bits_per_limb, mpmat_limb );
+    }
+    std::cout << mpmat_limb << " is our limb for syrk\n";
+
+    int mpmat_size_c = mpmat_size_a;
+
+    //std::flush(std::cout);
+
+    int mem_a = mpmat_size_a * m * k;
+    int mem_c = mpmat_size_c * m * m;
+    std::cerr << "mem_a is " << mem_a << "\n";
+
+    realloc(mem_a,max(mem_a,mem_c),mem_c);
+    
+    memset(c_double_array, 0, mem_c * sizeof(mpmat_double));
+    std::cout << "resetting d_c[i]\n";
+#pragma omp parallel for
+    for (int i = 0; i < gpu_count; ++i){
+      cudaSetDevice(i);
+      cudaMemset(d_c[i], 0, mem_c * sizeof(mpmat_double));
+    }
+
+    timers["mpmat_syrk_reduced.precalculations"].stop();
+
+    timers["mpmat_syrk_reduced.GMPtoDouble"].resume();
+
+    int expa;
+
+    std::cout << "Converting a to double" << std::endl;
+    std::flush(std::cout);
+    mpmatConvertGMPToDoubleVector(
+            a,
+            m * k,
+            a_double_array,
+            mpmat_size_a,
+            mpmat_limb,
+            expa,
+            tmp
+    );
+    /*mpf_class * b = new mpf_class[m*k];
+
+mpmatConvertDoubleToGMPVector(
+            b,
+            m*k,
+            a_double_array,
+            mpmat_size_a,
+            mpmat_limb,
+            expa - mpmat_limb,
+            tmp
+    );
+
+ for (int i = 0; i < m; ++i){
+   for (int j = 0; j < k; ++j)
+     if (a[i*k + j] != b[i*k + j])
+       std::cout << "At position " << i << ", " << j << ", the conversion from " << a[i*k + j] << " resulted in " << b[i*k+j];
+ }
+ delete [] b;*/
+
+    timers["mpmat_syrk_reduced.GMPtoDouble"].stop();
+
+    timers["mpmat_syrk_reduced.gpu_copy_forward"].resume();
+
+    double alpha = 1.0, beta = 1.0;
+
+#pragma omp parallel for  
+    for (int i = 0; i < gpu_count; ++i){
+      cudaSetDevice(i);
+      cudaMemcpyAsync(d_a[i],a_double_array,mem_a*sizeof(mpmat_double),cudaMemcpyHostToDevice);
+    }
+    cudaThreadSynchronize();
+    //cudaMemcpy(d_c,c_double_array,mem_c*sizeof(mpmat_double),cudaMemcpyHostToDevice);
+    std::cout << "doing the GPU thing\n";
+
+    timers["mpmat_syrk_reduced.gpu_copy_forward"].stop();
+
+    //cublasHandle_t handle;
+    //cublasCreate(&handle);
+
+    timers["mpmat_syrk_reduced.multiplication"].resume();
+
+    //std::cout << "Computing the product" << std::endl;
+    std::flush(std::cout);
+
+
+
+    /*double testA[9] = {1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0}, *d_testA;
+    double testB[9] = {9.0,8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0}, *d_testB;
+    double testC[9], *d_testC, testC2[9];
+    cudaMalloc(&d_testA,9*sizeof(double));
+    cudaMalloc(&d_testB,9*sizeof(double));
+    cudaMalloc(&d_testC,9*sizeof(double));
+    cudaMemcpy(d_testA,testA,9*sizeof(double),cudaMemcpyHostToDevice);
+    cudaMemcpy(d_testB,testB,9*sizeof(double),cudaMemcpyHostToDevice);
+    cublasDgemm(handle,CUBLAS_OP_N,CUBLAS_OP_N,3,3,3,&alpha,d_testA,3,d_testB,3,&beta,d_testC,3);
+    cudaMemcpy(testC2,d_testC,9*sizeof(double),cudaMemcpyDeviceToHost);
+    for (int i = 0; i < 3; ++i){
+      for (int j = 0; j < 3; ++j){
+        double tmp = 0.0;
+	for (int k = 0; k < 3; ++k){
+	  tmp += testA[k*3 + i] * testB[j*3 + k];
+	}
+	testC[j*3 + i] = tmp;
+      }
+    }
+    for (int i = 0; i < 9; ++i)
+    std::cout << testC[i] << "\t" << testC2[i] << "\n";*/
+    
+
+    //#pragma omp parallel for
+    for (int i = 0; i < mpmat_size_c; i++) {
+      int gpu_id = i * gpu_count / mpmat_size_c;
+	cudaSetDevice(gpu_id);
+      for (int j = 0; j < i / 2 + i % 2; j++) {
+	
+	  cublasDgemm(handles[gpu_id],
+		      (Layout == CblasRowMajor) != (transa == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T,
+		      (Layout == CblasRowMajor) != (transa == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N,
+		       m,
+		       m,
+		       k,
+		       &alpha,
+		       d_a[gpu_id]+k*m*j,
+		       (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
+		       d_a[gpu_id]+(i-j)*k*m,
+		       (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
+		       &beta,
+		       d_c[gpu_id]+i*m*m,
+		       m
+		       );
+        }
+	cublasDcopy(handles[gpu_id],m*m,d_c[gpu_id]+i*m*m,1,d_b[gpu_id]+i*m*m,1);
+	cublasStatus_t add = cublasDgeam(handle,CUBLAS_OP_T,CUBLAS_OP_N,m,m,
+		    &alpha,d_b[gpu_id]+i*m*m,m,
+		    &beta,d_c[gpu_id]+i*m*m,m,
+		    d_c[gpu_id]+i*m*m,m);
+	if (add != CUBLAS_STATUS_SUCCESS && add == CUBLAS_STATUS_INVALID_VALUE)
+	  std::cerr << "Whoops, addition caused " << add << "\n";
+	//review this
+	if ( i % 2 == 0)
+	  cublasDsyrk(handles[gpu_id],CUBLAS_FILL_MODE_LOWER,(Layout == CblasRowMajor) != (transa == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T,
+		    m,k,
+		    &alpha, d_a[gpu_id]+k*m*(i/2), (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
+		    &beta, d_c[gpu_id]+m*m*i, m);
+	 cudaMemcpyAsync(c_double_array+i*m*m,d_c[gpu_id]+i*m*m,m*m*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
+    }
+
+
+    cudaThreadSynchronize();
+    std::cout << "done multiplying\n";
+    timers["mpmat_syrk_reduced.multiplication"].stop();
+
+    timers["mpmat_syrk_reduced.gpu_copy_back"].resume();
+
+    //mpmat_double * h_c = new mpmat_double[mem_c];
+
+    // cudaMemcpy(h_a,d_a,mem_a,cudaMemcpyDeviceToHost);
+    //cudaMemcpy(h_b,d_b,mem_b,cudaMemcpyDeviceToHost);
+
+    /*int gpu_imax[gpu_count+1];
+    int gpu_id = -1;
+    for (int i = 0; i < mpmat_size_c; ++i){
+      int gpu = i * gpu_count / mpmat_size_c;
+      if (gpu > gpu_id){
+	gpu_id = gpu;
+	gpu_imax[gpu] = i;
+      }
+    }
+    gpu_imax[gpu_count] = mpmat_size_c;
+#pragma omp parallel for shared(gpu_imax)
+    for (int i = 0; i < gpu_count; ++i){
+      cudaSetDevice(i);
+      cudaMemcpy(c_double_array+gpu_imax[i]*m*m,d_c[i]+gpu_imax[i]*m*m,(gpu_imax[i+1]-gpu_imax[i])*m*m*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
+      }*/
+    
+
+    /* cudaMemcpy(a_double_array,d_a,mem_a,cudaMemcpyDeviceToHost);
+    cudaMemcpy(b_double_array,d_b,mem_b,cudaMemcpyDeviceToHost);
+    cudaMemcpy(c_double_array,d_c,mem_c,cudaMemcpyDeviceToHost);
+
+    /*cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_c);*/
+
+    timers["mpmat_syrk_reduced.gpu_copy_back"].stop();
+
+    //for (int i = 0; i < mem_c; ++i){
+    //if (h_c[i] != c_double_array[i])
+    //	std::cout << "at position " << i << " expected " << c_double_array[i] << ", got " << h_c[i] << "\n";
+    //}
+
+    //delete [] h_c;
+
+    //cublasDestroy(handle);
+
+    timers["mpmat_syrk_reduced.DoubletoGMP"].resume();
+
+    //std::cout << "Converting back" << std::endl;
+    mpmatConvertDoubleToGMPVector(
+            c,
+            m*m,
+            c_double_array,
+            mpmat_size_c,
+            mpmat_limb,
+            expa+expa-mpmat_limb,
+            tmp);
+
+    for (int r = 0; r < m; ++r)
+      for (int col = 0; col < r; ++c)
+    	c[r*m + col] = c[col*m + r];
+
+    timers["mpmat_syrk_reduced.DoubletoGMP"].stop();
+
+    /* delete [] a_double_array;
+    delete [] b_double_array;
+    delete [] c_double_array;
+    delete [] tmp;*/
+    dealloc();
+
+    timers["mpmat_syrk_reduced.complete"].stop();
 }

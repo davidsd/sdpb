@@ -768,6 +768,7 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   }
 
   // LowerLeft(Q) = V^T SchurOffDiagonal
+  timers["Qcomputation.nonGPU"].resume();
   # pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < stabilizeBlockIndices.size(); j++) {
     int b = stabilizeBlockIndices[j];
@@ -797,6 +798,7 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
           &Q.elt(r, 0),
           Q.rows);
 	  }
+  timers["Qcomputation.nonGPU"].stop();
 
   // UpperRight(Q) = LowerLeft(Q)^T
   # pragma omp parallel for schedule(static)
@@ -808,8 +810,12 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   // Resize Qpivots appropriately and compute the LU decomposition of Q
 
   timers["initializeSchurComplementSolver.LUDecomposition"].resume();
+  timers["LUDecomposition.resizing"].resume();
   Qpivots.resize(Q.rows);
+  timers["LUDecomposition.resizing"].stop();
+  timers["LUDecomposition.actualLU"].resume();
   LUDecomposition(Q, Qpivots);
+  timers["LUDecomposition.actualLU"].stop();
   timers["initializeSchurComplementSolver.LUDecomposition"].stop();
 }
 
@@ -902,20 +908,32 @@ void SDPSolver::computeSearchDirection(const Real &beta,
   // R = beta mu I - X Y (predictor phase)
   // R = beta mu I - X Y - dX dY (corrector phase)
 
-  timers[timerName + ".R"].resume();
+  timers[timerName + ".R.XY"].resume();
   blockDiagonalMatrixScaleMultiplyAdd(-1, X, Y, 0, R);
-  if (correctorPhase)
+  timers[timerName + ".R.XY"].stop();
+  if (correctorPhase){
+  timers[timerName + ".R.dXdY"].resume();
     blockDiagonalMatrixScaleMultiplyAdd(-1, dX, dY, 1, R);
+  timers[timerName + ".R.dXdY"].stop();
+}
+  
+  timers[timerName + ".R.add"].resume();
   R.addDiagonal(beta*mu);
-  timers[timerName + ".R"].stop();
+  timers[timerName + ".R.add"].stop();
 
   // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))
-  timers[timerName + ".Z"].resume();
+  timers[timerName + ".Z.multiply"].resume();
   blockDiagonalMatrixMultiply(PrimalResidues, Y, Z);
+  timers[timerName + ".Z.multiply"].stop();
+  timers[timerName + ".Z.subtract"].resume();
   Z -= R;
+  timers[timerName + ".Z.subtract"].stop();
+  timers[timerName + ".Z.cholesky"].resume();
   blockMatrixSolveWithCholesky(XCholesky, Z);
+  timers[timerName + ".Z.cholesky"].stop();
+  timers[timerName + ".Z.symm"].resume();
   Z.symmetrize();
-  timers[timerName + ".Z"].stop();
+  timers[timerName + ".Z.symm"].stop();
 
   // r_x[p] = -dualResidues[p] - Tr(A_p Z)
   // r_y[n] = dualObjective[n] - (FreeVarMatrix^T x)_n
@@ -930,19 +948,27 @@ void SDPSolver::computeSearchDirection(const Real &beta,
   timers[timerName + ".dxdy"].stop();
 
   // dX = PrimalResidues + \sum_p A_p dx[p]
-  timers[timerName + ".dX"].resume();
+  timers[timerName + ".dX.weightedSum"].resume();
   constraintMatrixWeightedSum(sdp, dx, dX);
+  timers[timerName + ".dX.weightedSum"].stop();
+  timers[timerName + ".dX.primalRes"].resume();
   dX += PrimalResidues;
-  timers[timerName + ".dX"].stop();
+  timers[timerName + ".dX.primalRes"].stop();
 
   // dY = Symmetrize(X^{-1} (R - dX Y))
-  timers[timerName + ".dY"].resume();
+  timers[timerName + ".dY.multiply"].resume();
   blockDiagonalMatrixMultiply(dX, Y, dY);
+  timers[timerName + ".dY.multiply"].stop();
+  timers[timerName + ".dY.subtract"].resume();
   dY -= R;
+  timers[timerName + ".dY.subtract"].stop();
+  timers[timerName + ".dY.cholesky"].resume();
   blockMatrixSolveWithCholesky(XCholesky, dY);
+  timers[timerName + ".dY.cholesky"].stop();
+  timers[timerName + ".dY.symm"].resume();
   dY.symmetrize();
   dY *= -1;
-  timers[timerName + ".dY"].stop();
+  timers[timerName + ".dY.symm"].stop();
 }
 
 /***********************************************************************/
@@ -1078,4 +1104,26 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
 
   // Never reached
   return MaxIterationsExceeded;
+}
+
+
+ void SDPSolver::testMultiplication(const int m_init, const int m_fin, const int m_step){
+  int prec = 1024;
+  mpf_set_default_prec(1024);
+  for (int m = m_init; m <= m_fin; m *= m_step){
+  std::cout << "testing dimension " << m << "\n";
+  Real * a_tmp = randomGMPVector(m*m,prec);
+  Matrix A(m,m,a_tmp), C(m,m), C2(m,m);
+  delete [] a_tmp;
+  
+  matrixSquareIntoBlock(A,C,0,0);
+  matrixSquareIntoBlockMpmat(myWorkspace,A,C2,0,0);
+
+  if (C != C2){
+  std::cerr << "Error: multiplication failed at dimension " << m << ". Printing outputs:\n";
+  std::cerr << C << "\n\n\n";
+  std::cerr << C2 << "\n\n\n";
+  //break;
+}
+}
 }

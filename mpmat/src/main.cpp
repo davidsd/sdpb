@@ -41,11 +41,11 @@ int main() {
     mkl_set_num_threads(16);
     omp_set_num_threads(16);
 
-    for (int dim = 100; dim <= 100; dim += 100) {
+    for (int dim = 10; dim <= 10; dim += 10) {
 
         cout << " >>>>> Doing dimension " << dim << "<<<<<" << endl;
 
-        int prec = 1000;
+        int prec = 1024;
         mpf_set_default_prec(prec);
 
         mpf_class *mat_a = randomGMPVector(dim * dim, prec);
@@ -55,9 +55,9 @@ int main() {
         mpf_class alpha("1",prec);
         mpf_class beta("0",prec);
 
-        mpmat_gemm_reduced_gpu(
-                CblasRowMajor, dim, dim, dim,
-                mat_a, mat_b,
+        mpmat_syrk_reduced_gpu(
+			   CblasRowMajor, CblasNoTrans, dim, dim,
+                mat_a,
                 mat_c
         );
 
@@ -65,10 +65,10 @@ int main() {
 
         timers["RgemmParallel"].start();
         RgemmParallel(
-                "N", "N", dim, dim, dim,
+                "T", "N", dim, dim, dim,
                 alpha,
                 mat_a, dim,
-                mat_b, dim,
+                mat_a, dim,
                 beta,
                 mat_c2,
                 dim
@@ -77,15 +77,15 @@ int main() {
 
         cout << timers;
 
-//        for (int i = 0; i < dim*dim; i++) {
-//            cout << mat_c[i] - mat_c2[i] << endl;
-//        }
+	for (int i = 0; i < dim*dim; i++) {
+	  cout << mat_c[i] - mat_c2[i] << endl;
+        }
 
 
-//        cout << "Analysis of first element" << endl;
-//        cout << mat_c[0]-mat_c2[0] << endl;
-//        print_mpf_bits(mat_c[0]);
-//        print_mpf_bits(mat_c2[0]);
+        cout << "Analysis of first element" << endl;
+        cout << mat_c[0]-mat_c2[0] << endl;
+        print_mpf_bits(mat_c[0]);
+        print_mpf_bits(mat_c2[0]);
 
         delete[] mat_a;
         delete[] mat_b;

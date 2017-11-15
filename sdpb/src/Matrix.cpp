@@ -26,7 +26,25 @@
 // BlockDiagonalMatrix, since there parallelism can be achieved by
 // parallelizing loops over blocks.
 
+mpf_class * randomGMPVector2(int size, int prec) {
+    gmp_randclass rr(gmp_randinit_default);
+    rr.seed(time(NULL));
 
+    //mpf_class * tmp = static_cast<mpf_class*> ( malloc(size * sizeof(mpf_class)) );
+
+    auto tmp = new mpf_class [size];
+
+    for (int i = 0; i < size; i++) {
+        //new(tmp+i) mpf_class("0",prec);
+        tmp[i].set_prec(prec);
+	//mpz_class z = rr.get_z_range(200);
+	tmp[i] = 10*rr.get_f(prec)-5;
+        //mpf_pow_ui(tmp[i].get_mpf_t(),tmp[i].get_mpf_t(), z.get_ui());
+	
+    }
+
+    return tmp;
+    }
 
 ostream& operator<<(ostream& os, const Matrix& a) {
   os << "{";
@@ -99,54 +117,35 @@ void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol) {
   // computing TopLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal (see
   // SDPSolver.cpp) is one of the main performance bottlenecks in the
   // solver.
-
-  //TODO make the block within B tractible
   
   timers["matrixSquareIntoBlockMpmat.complete"].resume();
 
-  Matrix AT(A.cols,A.rows);
+  mpf_set_default_prec(mpf_get_default_prec()+256);
+  Real * block = new Real[A.cols*A.cols];
   
-  //std::cout << "Before I change the precision, a Real takes up " << sizeof(Real) << " bytes\n";
-  mpf_set_default_prec(mpf_get_default_prec()+512);
-  //std::cout << "And after: " << sizeof(Real) << "\n";
-  int maxsize = max(A.cols,A.cols);
-  //Vector block(maxsize*maxsize);
-  Real * block = new Real[maxsize*maxsize];
-  //std::cout << "allocated a block of " << maxsize*maxsize*sizeof(Real) << " bytes\n";
-  mpf_set_default_prec(mpf_get_default_prec()-512);
+  mpf_set_default_prec(mpf_get_default_prec()-256);
 
-  for (int c = 0; c < A.cols; ++c){
-    for (int r = 0; r < A.rows; ++r){
-  // std::cout << r << " " << c << "\n";
-      AT.elt(c,r) = A.elt(r,c);
-    }
-    }
+  
 
   for (int c = 0; c < A.cols; ++c){
     for (int r = 0; r < A.cols; ++r){
-  //   std::cout << r << " " << c << "\n";
       block[r*A.cols+c] = B.elt(bRow + r, bCol + c);
     }
    }
 
-  //std::cout << "A is " << A.rows << " by " << A.cols << "\n";
-  
-  //myWorkspace.gemm_reduced_gpu(CblasRowMajor,CblasNoTrans,CblasNoTrans,A.cols,A.cols,A.rows,AT.elements.data(),A.elements.data(),block);
-  //std::cout << "done multiplying\n";
-  myWorkspace.syrk_reduced_gpu(CblasRowMajor,CblasNoTrans,A.cols,A.rows,A.elements.data(),block);
-  //myWorkspace.gemm_reduced_gpu(CblasRowMajor,CblasNoTrans,CblasNoTrans,A.cols,A.cols,A.rows,AT.elements.data(),A.elements.data(),block);
+ 
 
-  for (int c = 0; c < A.cols; ++c)
+  
+  myWorkspace.syrk_reduced_gpu(CblasRowMajor,CblasTrans,A.cols,A.rows,A.elements.data(),block);
+ 
+
+  for (int c = 0; c < A.cols; ++c){
     for (int r = 0; r < A.cols; ++r){
-  // std::cout << "the block element at " << r << "," << c << " is " << block[r*A.cols+c] << "\n";
-      B.elt(bRow + r, bCol + c) = block[r*A.cols+c];
+    B.elt(bRow + r, bCol + c) = block[r*A.cols+c];
+}
 }
 
-  //std::cout << "done copying back\n";
-
   delete [] block;
-
-  //std::cout << "done cleaning up\n";
 
   timers["matrixSquareIntoBlockMpmat.complete"].stop();
   

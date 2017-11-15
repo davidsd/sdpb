@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <mkl.h>
 #include "Timers.h"
+#include <omp.h>
 
 #include <iostream>
 #include <bitset>
@@ -351,6 +352,7 @@ void mpmatConvertGMPToDoubleVector(const mpf_class * source,
     }
 
     //Make second pass to convert the GMPs to mpmat_doubles
+#pragma omp parallel for shared(source,tmp)
     for (int i = 0; i < source_len; i++) {
         mpmatConvertGMPToDouble(source[i], tmp + i*mpmat_size, mpmat_size, mpmat_limb, exp);
     }
@@ -403,7 +405,7 @@ void mpmatConvertDoubleToGMPVector(mpf_class * dest,
             mpmat_size
     );
     timers["Transposition reverse"].stop();
-
+#pragma omp parallel for shared(dest,tmp)
     for (int i = 0; i < dest_len; i++) {
         mpmatConvertDoubleToGMP(
                 dest[i],

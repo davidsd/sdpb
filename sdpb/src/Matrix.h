@@ -40,6 +40,11 @@ class Matrix {
     cols(cols),
     elements(Vector(rows*cols, 0)) {}
 
+ Matrix(int rows, int cols, Real * array):
+    rows(rows),
+      cols(cols),
+      elements(Vector(array, array + rows*cols)) {}
+
   inline const Real& elt(const int r, const int c) const {
     return elements[r + c*rows];
   }
@@ -105,6 +110,14 @@ class Matrix {
   void operator*=(const Real &c) {
     for (unsigned int i = 0; i < elements.size(); i++)
       elements[i] *= c;
+  }
+
+  bool operator==(const Matrix &other) {
+    return elements == other.elements;
+  }
+
+  bool operator!=(const Matrix &other) {
+    return elements != other.elements;
   }
 
   // The maximum absolute value of the elemnts of M

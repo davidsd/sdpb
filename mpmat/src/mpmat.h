@@ -15,6 +15,7 @@
 
 #include <gmpxx.h>
 #include <mkl.h>
+#include <omp.h>
 
 // The floating point type used to emulate integer arithmetic
 typedef double mpmat_double;
@@ -128,6 +129,14 @@ void mpmatConvertDoubleToGMPVector(mpf_class * dest,
                                    int exp,
                                    mpmat_double * tmp);
 
+void mpmatConvertDoubleToGMPSymm(mpf_class * dest,
+                                   const int dest_dim,
+                                   mpmat_double * source,
+                                   const int mpmat_size,
+                                   const int mpmat_limb,
+                                   int exp,
+				 mpmat_double * tmp);
+
 
 void mpmat_gemm_reduced(
         const CBLAS_LAYOUT Layout,
@@ -171,6 +180,18 @@ void mpmat_syrk_reduced(
 			 const mpf_class * a,
 			 mpf_class * c
 			);
+
+void mpmat_syrk_reduced_gpu(
+        const CBLAS_LAYOUT Layout,
+        const CBLAS_TRANSPOSE transa,
+        const int m,
+        const int k,
+        //const mpf_class alpha,
+        const mpf_class * a,
+        //const int lda,
+        mpf_class * c
+        //const int ldc
+			    );
 
 
 

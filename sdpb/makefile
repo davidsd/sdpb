@@ -76,7 +76,7 @@ LIBS +=  -L/usr/local/opt/llvm/lib -liomp5 -lgmpxx -lgmp -lboost_serialization -
 else
 
 CC = g++
-CFLAGS += -O3 -Wall -ansi -std=c++0x -L${LIBDIR} -DMKL_ILP64 -m64 -I${MKLROOT}/include  -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
+CFLAGS += -O0 -g -Wall -ansi -std=c++0x -L${LIBDIR} -DMKL_ILP64 -m64 -I${MKLROOT}/include  -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
 LIBS += ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.so ${MKLROOT}/lib/intel64/libmkl_gnu_thread.so ${MKLROOT}/lib/intel64/libmkl_core.so -lgomp -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lrt -lcublas -lcurand -lcudart
 
 endif

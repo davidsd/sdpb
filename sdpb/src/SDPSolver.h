@@ -321,6 +321,7 @@ public:
                       Real dualStepLength,
                       Real betaCorrector);
 
+ void testMultiplication(const int m_init, const int m_fin, const int m_step);
  private:
   // Compute data needed to solve the Schur complement equation
   void initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
@@ -337,6 +338,8 @@ public:
   // R-matrix corresponding to the corrector step (if false, we use
   // the predictor R-matrix)
   void computeSearchDirection(const Real &beta, const Real &mu, const bool correctorPhase);
+
+ 
 };
 
 #endif  // SDPB_SDPSOLVER_H_

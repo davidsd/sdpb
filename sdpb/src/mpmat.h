@@ -120,7 +120,7 @@ CUBLASXT_PINNING_ENABLED);
       cudaFreeHost(a_double_array);
       for (int i = 0; i < gpu_count; ++i){
 	cudaSetDevice(i);
-	cudaFree(d_a);
+	cudaFree(d_a[i]);
       }
     }
     if (len_b != 0){
@@ -128,7 +128,7 @@ CUBLASXT_PINNING_ENABLED);
       cudaFreeHost(b_double_array);
       for (int i = 0; i < gpu_count; ++i){
 	cudaSetDevice(i);
-	cudaFree(d_b);
+	cudaFree(d_b[i]);
       }
     }
     if (len_c != 0){
@@ -136,7 +136,7 @@ CUBLASXT_PINNING_ENABLED);
       cudaFreeHost(c_double_array);
       for (int i = 0; i < gpu_count; ++i){
 	cudaSetDevice(i);
-	cudaFree(d_c);
+	cudaFree(d_c[i]);
       }
     }
     if (len_t != 0){
@@ -144,9 +144,13 @@ CUBLASXT_PINNING_ENABLED);
       delete [] tmp;
     }
     //#pragma omp parallel for
-    //for (int i = 0; i < omp_get_num_threads(); ++i)
-      cublasDestroy(handle);
-      //delete [] handles;
+    for (int i = 0; i < gpu_count; ++i)
+      cublasDestroy(handles[i]);
+    delete [] handles;
+    delete [] d_a;
+    delete [] d_b;
+    delete [] d_c;
+    
   }
 
 
@@ -294,15 +298,19 @@ void syrk_reduced_gpu(
 );
 
 void syrk_reduced(
-			 const CBLAS_LAYOUT Layout,
-			 const CBLAS_UPLO uplo,
-			 const int n,
-			 const int k,
-			 const mpf_class * a,
-			 mpf_class * c
-			);
+        const CBLAS_LAYOUT Layout,
+        const CBLAS_TRANSPOSE transa,
+        const int m,
+        const int k,
+        //const mpf_class alpha,
+        const mpf_class * a,
+        //const int lda,
+        mpf_class * c
+        //const int ldc
+		  );
 
 
 };
+ mpf_class * randomGMPVector(int size, int prec);
 
 #endif //MPMAT_MPMAT_H
