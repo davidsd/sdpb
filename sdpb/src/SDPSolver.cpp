@@ -752,7 +752,11 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   // Here, SchurOffDiagonal = L'^{-1} B.
   //
   // UpperLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal
+#ifdef __SDPB_CUDA__
+  matrixSquareIntoBlockMpmat(myWorkspace,SchurOffDiagonal, Q, 0, 0,parameters.gpu);
+#else
    matrixSquareIntoBlockMpmat(myWorkspace,SchurOffDiagonal, Q, 0, 0);
+#endif
   //matrixSquareIntoBlockGPU(SchurOffDiagonal, Q, 0, 0);
 
   // Here, stabilizeBlocks contains the blocks of V = L'^{-1} U.
@@ -761,7 +765,11 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   for (unsigned int j = 0; j < stabilizeBlockIndices.size(); j++) {
     int b = stabilizeBlockIndices[j];
     int c = stabilizeBlockUpdateColumn[j];
+#ifdef __SDPB_CUDA__
+    matrixSquareIntoBlockMpmat(myWorkspace,stabilizeBlocks[b], Q, c, c,parameters.gpu);
+#else
     matrixSquareIntoBlockMpmat(myWorkspace,stabilizeBlocks[b], Q, c, c);
+#endif
     // subtract the identity matrix from this block
     for (int i = c; i < c + stabilizeBlocks[b].cols; i++)
       Q.elt(i, i) -= 1;
@@ -1117,7 +1125,7 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
   delete [] a_tmp;
   
   matrixSquareIntoBlock(A,C,0,0);
-  matrixSquareIntoBlockMpmat(myWorkspace,A,C2,0,0);
+  matrixSquareIntoBlockMpmat(myWorkspace,A,C2,0,0,parameters.gpu);
 
   if (C != C2){
   std::cerr << "Error: multiplication failed at dimension " << m << ". Printing outputs:\n";

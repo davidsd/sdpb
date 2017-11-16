@@ -63,28 +63,32 @@ endif
 ifdef INTEL
 
 CC = icpc
-CFLAGS += -g -O0 -ipo -xhost -Wall -ansi -std=c++0x -L${LIBDIR} -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -openmp -D___MPACK_BUILD_WITH_GMP___
+CFLAGS += -O3 -ipo -xhost -Wall -ansi -std=c++0x -L${LIBDIR} -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -openmp -D___MPACK_BUILD_WITH_GMP___
 LIBS += -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lrt
 
 else 
 ifdef CLANG
 
 CC = /usr/local/opt/llvm/bin/clang
-CFLAGS += -I/usr/local/opt/llvm/include -g -O0 -Wall -ansi -std=c++0x -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
+CFLAGS += -I/usr/local/opt/llvm/include -O3 -Wall -ansi -std=c++0x -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
 LIBS +=  -L/usr/local/opt/llvm/lib -liomp5 -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lc++
 
 else
 
 CC = g++
-CFLAGS += -O0 -g -Wall -ansi -std=c++0x -L${LIBDIR} -DMKL_ILP64 -m64 -I${MKLROOT}/include  -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
-LIBS += ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.so ${MKLROOT}/lib/intel64/libmkl_gnu_thread.so ${MKLROOT}/lib/intel64/libmkl_core.so -lgomp -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lrt -lcublas -lcurand -lcudart
+CFLAGS += -O3 -Wall -ansi -std=c++0x -L${LIBDIR} -DMKL_ILP64 -m64 -I${MKLROOT}/include  -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
+LIBS += ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.so ${MKLROOT}/lib/intel64/libmkl_gnu_thread.so ${MKLROOT}/lib/intel64/libmkl_core.so -lgomp -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lrt 
 
 endif
 endif
 
+
+cuda: LIBS += -lcublas -lcurand -lcudart
+cuda: CFLAGS += -D__SDPB_CUDA__
+
+.PHONY: cuda
 
 .SUFFIXES: .cpp .o .cu
-
 
 $(RESULT): $(OBJECTS) $(CUDAOBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $(BINARY_DIR)/$@ $^ $(LIBS)
@@ -98,13 +102,16 @@ obj/%.co: src/%.cu
 clean:
 	rm -rf obj
 
+cuda: $(OBJECTS) $(CUDAOBJECTS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $(BINARY_DIR)/$(RESULT) $^ $(LIBS)
+
 obj:
 	@mkdir -p $@
 	@mkdir -p $@/mpack
 	@mkdir -p $@/tinyxml2
 
 test:
-	./sdpb -s test.xml --noFinalCheckpoint
+	./sdpb -s test.xml --noFinalCheckpoint --maxThreads=16
 	test -f test.out 
 	grep "primalObjective = 1.84026576313204924668804017173" test.out > /dev/null || (echo "Test failed: primalObjective differs from 1.84026576313204924668804017173." && exit 1)
 

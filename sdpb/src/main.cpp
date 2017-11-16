@@ -71,7 +71,7 @@ int solveSDP(const vector<path> &sdpFiles,
   // Read an SDP from sdpFile and create a solver for it
   SDPSolver solver(readBootstrapSDP(sdpFiles), parameters);
 
-  //solver.testMultiplication(128,1024,2);
+  //solver.testMultiplication(16,16,2);
 
   if (exists(checkpointFileIn))
     solver.loadCheckpoint(checkpointFileIn);
@@ -216,6 +216,12 @@ int main(int argc, char** argv) {
     ("maxComplementarity",
      po::value<Real>(&parameters.maxComplementarity)->default_value(Real("1e100")),
      "Terminate if the complementarity mu = Tr(X Y)/dim(X) exceeds this value.")
+#ifdef __SDPB_CUDA__
+("gpu",
+     po::bool_switch(&parameters.gpu)->default_value(false),
+     "Turns on GPU-based acceleration. Warning: be sure to run this option only on "
+     "computers that are configured with CUDA.")
+#endif
     ;
 
   po::options_description cmdLineOptions;

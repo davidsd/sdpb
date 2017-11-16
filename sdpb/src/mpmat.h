@@ -16,10 +16,13 @@
 #include <gmpxx.h>
 #include <mkl.h>
 #include <iostream>
+#include <omp.h>
+
+#ifdef __SDPB_CUDA__
 #include <cuda_runtime.h>
 #include "cublas_v2.h"
 #include <cublasXt.h>
-#include <omp.h>
+#endif
 
 // The floating point type used to emulate integer arithmetic
 typedef double mpmat_double;
@@ -51,10 +54,12 @@ class mpmat{
 
  private:
   mpmat_double *a_double_array, *b_double_array, *c_double_array, *tmp, **d_a, **d_b, **d_c;
-  int len_a, len_b, len_c, len_t, gpu_count, cpu_count;
+  int len_a, len_b, len_c, len_t, cpu_count, gpu_count;
 
+  #ifdef __SDPB_CUDA__
   cublasHandle_t handle;
   cublasHandle_t *handles;
+  #endif
 
  public: 
   mpmat(){
@@ -68,52 +73,27 @@ class mpmat{
     cpu_count = omp_get_num_threads();
 
     
+    #ifdef __SDPB_CUDA__
     cudaGetDeviceCount(&gpu_count);
     d_a = new mpmat_double*[gpu_count];
     d_b = new mpmat_double*[gpu_count];
     d_c = new mpmat_double*[gpu_count];
-    realloc(l,l,l);
+
+    realloc_gpu(l,l,l);
     handles = new cublasHandle_t[gpu_count];
 
     #pragma omp parallel for
     for (int i = 0; i < gpu_count; ++i){
-      //handles = new cublasHandle_t[gpu_count];
       cudaSetDevice(i);
       cublasCreate(handles+i);
     }
     handle = handles[0];
-    /*const int nDevices = 4;
-    int deviceId[nDevices] = {0, 1,2,3};
-
-    cublasXtDeviceSelect(handle, nDevices, deviceId);
-    cublasXtSetPinningMemMode(handle,
-    CUBLASXT_PINNING_ENABLED);*/
-  }
-  /*mpmat(int l){
-    cudaGetDeviceCount(&gpu_count);
-    /*len_a = l;
-    a_double_array = new mpmat_double[l];
-    cudaMalloc(&d_a,l*sizeof(mpmat_double));
-    len_b = l;
-    b_double_array = new mpmat_double[l];
-    cudaMalloc(&d_b,l*sizeof(mpmat_double));
-    len_c = l;
-    c_double_array = new mpmat_double[l];
-    cudaMalloc(&d_c,l*sizeof(mpmat_double));
-    len_t = l;
-    tmp = new mpmat_double[l];
+    #else
     realloc(l,l,l);
-
-    //handles = new cublasHandle_t[omp_get_num_threads()];
-     cublasCreate(&handle);
-
-    /*const int nDevices = 4;
-    int deviceId[nDevices] = {0, 1, 2, 3};
-
-    cublasXtDeviceSelect(handle, nDevices, deviceId);
-cublasXtSetPinningMemMode(handle,
-CUBLASXT_PINNING_ENABLED);
-  }*/
+    gpu_count = 0;
+    #endif
+  }
+  #ifdef __SDPB_CUDA__
   ~mpmat(){
     if (len_a != 0){
       std::cout << "deallocing a_double_array, length " << len_a << "\n";
@@ -152,8 +132,31 @@ CUBLASXT_PINNING_ENABLED);
     delete [] d_c;
     
   }
+  void realloc_gpu(int mem_a, int mem_b, int mem_c);
+  #else
 
-
+~mpmat(){
+    if (len_a != 0){
+      std::cout << "deallocing a_double_array, length " << len_a << "\n";
+      delete [] a_double_array;
+    }
+    if (len_b != 0){
+      std::cout << "deallocing b_double_array, length " << len_b << "\n";
+      delete [] b_double_array;
+    }
+    if (len_c != 0){
+      std::cout << "deallocing c_double_array, length " << len_c << "\n";
+      delete [] c_double_array;
+    }
+    if (len_t != 0){
+      std::cout << "deallocing tmp, length " << len_t << "\n";
+      delete [] tmp;
+}
+   
+  }
+  
+  #endif
+  
   void realloc(int mem_a, int mem_b, int mem_c);
 void mpmatConvertGMPToDouble(const mpf_class source,
                              mpmat_double * dest,

@@ -139,7 +139,11 @@ void matrixMultiply(Matrix &A, Matrix &B, Matrix &C);
 void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol);
 void matrixSquareIntoBlockGPU(Matrix &A, Matrix &B, int bRow, int bCol);
 
+#ifdef __SDPB_CUDA__
+void matrixSquareIntoBlockMpmat(mpmat &myWorkspace, Matrix &A, Matrix &B, int bRow, int bCol, bool gpu);
+#else
 void matrixSquareIntoBlockMpmat(mpmat &myWorkspace, Matrix &A, Matrix &B, int bRow, int bCol);
+#endif
 
 // A := L^{-1} A L^{-T}
 void lowerTriangularInverseCongruence(Matrix &A, Matrix &L);
