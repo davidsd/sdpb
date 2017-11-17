@@ -53,10 +53,15 @@ typedef double mpmat_double;
 class mpmat{
 
  private:
+  //Workspace arrays for mpmat. The d_* arrays are actually arrays of pointers to the respective arrays on each GPU.
   mpmat_double *a_double_array, *b_double_array, *c_double_array, *tmp, **d_a, **d_b, **d_c;
+  //this is just to keep track and avoid a segfault
   int len_a, len_b, len_c, len_t, cpu_count, gpu_count;
 
   #ifdef __SDPB_CUDA__
+  //cuBLAS needs handles for its parameters.
+  //`handle' is just there for legacy code, should
+  // be removed
   cublasHandle_t handle;
   cublasHandle_t *handles;
   #endif
@@ -65,7 +70,7 @@ class mpmat{
   mpmat(){
     mpmat(1);
   }
-  mpmat(int l){
+ mpmat(int l){
     len_a = 0;
     len_b = 0;
     len_c = 0;

@@ -211,23 +211,6 @@ void mpmat::mpmatMultiplyGMPBaseCase(mpf_class & dest,
 }
 
 
-// Test for row-major matrices, not optimzied
-/*void cblas_dgemm_emulator(const int m,
-                          const int n,
-                          const int k,
-                          const mpmat_double * a,
-                          const mpmat_double * b,
-                          mpmat_double * c){
-    for (int ic = 0; ic < m; ic++) {
-        for(int jc = 0; jc < n; jc++) {
-            for(int l = 0; l < k; l++) {
-                c[ n*ic + jc ] += a[ k*ic + l ] * b[ n*l + jc ];
-            }
-        }
-    }
-    }*/
-
-
 void mpmat::gemm_reduced(
         const CBLAS_LAYOUT Layout,
         const CBLAS_TRANSPOSE transa,
