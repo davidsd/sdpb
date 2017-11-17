@@ -1125,7 +1125,11 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
   delete [] a_tmp;
   
   matrixSquareIntoBlock(A,C,0,0);
+#ifdef __SDPB_CUDA__
   matrixSquareIntoBlockMpmat(myWorkspace,A,C2,0,0,parameters.gpu);
+#else
+  matrixSquareIntoBlockMpmat(myWorkspace,A,C2,0,0);
+#endif
 
   if (C != C2){
   std::cerr << "Error: multiplication failed at dimension " << m << ". Printing outputs:\n";

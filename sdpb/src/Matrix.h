@@ -16,7 +16,7 @@
 #include "omp.h"
 #include "types.h"
 #include "Vector.h"
-#include "mpmat.h"
+#include "mpmat/mpmat.h"
 
 using std::ostream;
 using std::vector;

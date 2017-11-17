@@ -7,7 +7,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <mkl.h>
-#include "Timers.h"
+#include "../Timers.h"
 
 #include <iostream>
 #include <bitset>

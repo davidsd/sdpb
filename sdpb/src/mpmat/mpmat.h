@@ -256,8 +256,8 @@ void mpmatConvertDoubleToGMPSymm(mpf_class * dest,
 
 void gemm_reduced(
         const CBLAS_LAYOUT Layout,
-        //const CBLAS_TRANSPOSE transa,
-        //const CBLAS_TRANSPOSE transb,
+        const CBLAS_TRANSPOSE transa,
+        const CBLAS_TRANSPOSE transb,
         const int m,
         const int n,
         const int k,

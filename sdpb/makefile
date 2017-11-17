@@ -38,9 +38,9 @@ CUDAROOT	= /usr/local/cuda-7.5/lib64/
 
 ################ End of modifications ################
 
-SOURCES = $(wildcard src/*.cpp) $(wildcard src/mpack/*.cpp)
+SOURCES = $(wildcard src/*.cpp) $(wildcard src/mpack/*.cpp) $(wildcard src/mpmat/*.cpp)
 CUDASOURCES = $(wildcard src/*.cu)
-HEADERS = $(wildcard src/*.h) $(wildcard src/mpack/*.h)
+HEADERS = $(wildcard src/*.h) $(wildcard src/mpack/*.h) $(wildcard src/mpmat/*.h)
 OBJECTS = $(patsubst src/%.cpp,obj/%.o,$(SOURCES)) 
 CUDAOBJECTS = $(patsubst src/%.cu,obj/%.co,$(CUDASOURCES))
 RESULT  = sdpb
@@ -109,6 +109,7 @@ obj:
 	@mkdir -p $@
 	@mkdir -p $@/mpack
 	@mkdir -p $@/tinyxml2
+	@mkdir -p $@/mpmat
 
 test:
 	./sdpb -s test.xml --noFinalCheckpoint --maxThreads=16

@@ -8,7 +8,6 @@
 
 #include <vector>
 #include "Matrix.h"
-#include "sdpc.h"
 
 #include "Timers.h"
 

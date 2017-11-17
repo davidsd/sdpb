@@ -16,7 +16,7 @@
 #include <iostream>
 //#include "tests/mpmat_tests.h"
 #include <mkl.h>
-#include "Timers.h"
+#include "../Timers.h"
 #include <omp.h>
 
 template <typename T>
@@ -230,8 +230,8 @@ void mpmat::mpmatMultiplyGMPBaseCase(mpf_class & dest,
 
 void mpmat::gemm_reduced(
         const CBLAS_LAYOUT Layout,
-        //const CBLAS_TRANSPOSE transa,
-        //const CBLAS_TRANSPOSE transb,
+        const CBLAS_TRANSPOSE transa,
+        const CBLAS_TRANSPOSE transb,
         const int m,
         const int n,
         const int k,
@@ -244,7 +244,6 @@ void mpmat::gemm_reduced(
         mpf_class * c
         //const int ldc
         ) {
-  ////std::cout << "The non-c++ code is running, I swear\n";
 
     timers["mpmat_gemm_reduced.complete"].start();
 
@@ -261,43 +260,16 @@ void mpmat::gemm_reduced(
 
     int mpmat_size_c = min(mpmat_size_a, mpmat_size_b);
 
-    //std::cout << "Allocating double sizes " << mpmat_size_a << " " << mpmat_size_b << " " << mpmat_size_c << std::endl;
-    //std::cout << mpmat_size_a * m * k << std::endl;
-    //std::cout << mpmat_size_b * n * k << std::endl;
-    //std::cout << mpmat_size_c * m * n << std::endl;
-    std::flush(std::cout);
-
     int mem_a = mpmat_size_a * m * k;
     int mem_b = mpmat_size_b * n * k;
     int mem_c = mpmat_size_c * m * n;
-    int mem_t = max( max(mem_a,mem_b), mem_c);
-
-    if (mem_a > len_a){
-      if (len_a != 0) delete [] a_double_array;
-      a_double_array = new mpmat_double [mem_a];
-      len_a = mem_a;
-    }
-    if (mem_b > len_b){
-      if (len_b != 0) delete [] b_double_array;
-      b_double_array = new mpmat_double [mem_b];
-      len_b = mem_b;
-    }
-    if (mem_c > len_c){
-      if (len_c != 0) delete [] c_double_array;
-      c_double_array = new mpmat_double [mem_c];
-      len_c = mem_c;
-    }
-    if (mem_t > len_t){
-      if (len_t != 0) delete [] tmp;
-      tmp = new mpmat_double [mem_t];
-      len_t = mem_t;
-    }
+    
+    realloc(mem_a,mem_b,mem_c);
 
     memset(c_double_array, 0, mem_c * sizeof(mpmat_double));
 
     int expa, expb;
 
-    //std::cout << "Converting a to double" << std::endl;
     std::flush(std::cout);
     mpmatConvertGMPToDoubleVector(
             a,
@@ -309,8 +281,6 @@ void mpmat::gemm_reduced(
             tmp
     );
 
-    //std::cout << "Converting b to double" << std::endl;
-    std::flush(std::cout);
     mpmatConvertGMPToDoubleVector(
             b,
             n * k,
@@ -323,16 +293,14 @@ void mpmat::gemm_reduced(
 
     timers["mpmat_gemm_reduced.multiplication"].start();
 
-    //std::cout << "Computing the product" << std::endl;
-    std::flush(std::cout);
     
 #pragma omp parallel for
     for (int i = 0; i < mpmat_size_c; i++) {
         for (int j = 0; j <= i; j++) {
             cblas_dgemm(
                     Layout,
-                    CblasNoTrans,
-                    CblasNoTrans,
+                    transa,
+                    transb,
                     m,
                     n,
                     k,
@@ -345,20 +313,12 @@ void mpmat::gemm_reduced(
                     c_double_array+i*m*n,
                     Layout == CblasRowMajor ? n : m
             );
-            /*cblas_dgemm_emulator(
-                    m,
-                    n,
-                    k,
-                    a_double_array+k*m*j,
-                    b_double_array+(i-j)*k*n,
-                    c_double_array+i*m*n
-            );*/
+            
         }
     }
 
     timers["mpmat_gemm_reduced.multiplication"].stop();
 
-    //std::cout << "Converting back" << std::endl;
     mpmatConvertDoubleToGMPVector(
             c,
             m*n,
@@ -369,10 +329,6 @@ void mpmat::gemm_reduced(
             tmp
     );
 
-    /* delete [] a_double_array;
-    delete [] b_double_array;
-    delete [] c_double_array;
-    delete [] tmp;*/
 
     timers["mpmat_gemm_reduced.complete"].stop();
 }
@@ -394,7 +350,6 @@ void mpmat::gemm_reduced_gpu(
         mpf_class * c
         //const int ldc
         ) {
-  ////std::cout << "The non-c++ code is running, I swear\n";
 
     timers["mpmat_gemm_reduced.complete"].resume();
 
@@ -410,55 +365,14 @@ void mpmat::gemm_reduced_gpu(
         mpmat_size_a = ceil_div( abs(a[0].get_mpf_t()->_mp_prec+1) * mp_bits_per_limb, mpmat_limb );
         mpmat_size_b = ceil_div( abs(b[0].get_mpf_t()->_mp_prec+1) * mp_bits_per_limb, mpmat_limb );
     }
-
-    //std::cout << mpmat_limb << " is our limb for gemm\n";
-
     int mpmat_size_c = min(mpmat_size_a, mpmat_size_b);
 
-    //std::cout << "Allocating double sizes " << mpmat_size_a << " " << mpmat_size_b << " " << mpmat_size_c << std::endl;
-    //std::cout << mpmat_size_a * m * k << std::endl;
-    //std::cout << mpmat_size_b * n * k << std::endl;
-    //std::cout << mpmat_size_c * m * n << std::endl;
-    std::flush(std::cout);
 
     int mem_a = mpmat_size_a * m * k;
     int mem_b = mpmat_size_b * n * k;
     int mem_c = mpmat_size_c * m * n;
-    //int mem_t = max( max(mem_a,mem_b), mem_c);
 
-    /*if (mem_a > len_a){
-      if (len_a != 0) {
-	delete [] a_double_array;
-	cudaFree(d_a);
-      }
-      a_double_array = new mpmat_double [mem_a];
-      cudaMalloc(&d_a,mem_a*sizeof(mpmat_double));
-      len_a = mem_a;
-    }
-    if (mem_b > len_b){
-      if (len_b != 0) {
-	delete [] b_double_array;
-	cudaFree(d_b);
-      }
-      b_double_array = new mpmat_double [mem_b];
-      cudaMalloc(&d_b,mem_b*sizeof(mpmat_double));
-      len_b = mem_b;
-    }
-    if (mem_c > len_c){
-      if (len_c != 0) {
-	delete [] c_double_array;
-	cudaFree(d_c);
-      }
-      c_double_array = new mpmat_double [mem_c];
-      cudaMalloc(&d_c,mem_c*sizeof(mpmat_double));
-      len_c = mem_c;
-    }
-    if (mem_t > len_t){
-      if (len_t != 0) delete [] tmp;
-      tmp = new mpmat_double [mem_t];
-      len_t = mem_t;
-      }*/
-    realloc(mem_a,mem_b,mem_c);
+    realloc_gpu(mem_a,mem_b,mem_c);
 
     memset(c_double_array, 0, mem_c * sizeof(mpmat_double));
     cudaMemset(d_c, 0, mem_c * sizeof(mpmat_double));
@@ -469,7 +383,6 @@ void mpmat::gemm_reduced_gpu(
 
     int expa, expb;
 
-    //std::cout << "Converting a to double" << std::endl;
     std::flush(std::cout);
     mpmatConvertGMPToDoubleVector(
             a,
@@ -481,7 +394,6 @@ void mpmat::gemm_reduced_gpu(
             tmp
     );
 
-    //std::cout << "Converting b to double" << std::endl;
     std::flush(std::cout);
     mpmatConvertGMPToDoubleVector(
             b,
@@ -497,123 +409,55 @@ void mpmat::gemm_reduced_gpu(
 
     timers["mpmat_gemm_reduced.gpu_copy_forward"].resume();
 
-    //mpmat_double * d_a, * d_b, *d_c;
-
-    /*cudaMalloc(&d_a, mem_a*sizeof(mpmat_double));
-    cudaMalloc(&d_b, mem_b*sizeof(mpmat_double));
-    cudaMalloc(&d_c, mem_c*sizeof(mpmat_double));*/
-
     double alpha = 1.0, beta = 1.0;
 
-    cudaMemcpy(d_a[0],a_double_array,mem_a*sizeof(mpmat_double),cudaMemcpyHostToDevice);
-      cudaMemcpy(d_b[0],b_double_array,mem_b*sizeof(mpmat_double),cudaMemcpyHostToDevice);
-    //cudaMemcpy(d_c,c_double_array,mem_c*sizeof(mpmat_double),cudaMemcpyHostToDevice);
-    //std::cout << "doing the GPU thing\n";
+    #pragma omp parallel for 
+    for (int i = 0; i < gpu_count; ++i){
+      cudaSetDevice(i);
+      cudaMemcpyAsync(d_a[i],a_double_array,mem_a*sizeof(mpmat_double),cudaMemcpyHostToDevice);
+      cudaMemcpyAsync(d_b[i],b_double_array,mem_b*sizeof(mpmat_double),cudaMemcpyHostToDevice);
+    }
+    cudaThreadSynchronize();
 
     timers["mpmat_gemm_reduced.gpu_copy_forward"].stop();
 
-    //cublasHandle_t handle;
-    //cublasCreate(&handle);
-
     timers["mpmat_gemm_reduced.multiplication"].resume();
 
-    //std::cout << "Computing the product" << std::endl;
-    std::flush(std::cout);
 
 #pragma omp parallel for schedule(dynamic)
     for (int i = 0; i < mpmat_size_c; i++) {
-        for (int j = 0; j <= i; j++) {
-//cublasSetStream(handles[i],0);
-	  //std::cout << "Thread: " << omp_get_thread_num() << "\n";
-	  /* cublasXtDgemm(handle,
-		      transa == CblasTrans ? CUBLAS_OP_N : CUBLAS_OP_T,
-		      transb == CblasTrans ? CUBLAS_OP_N : CUBLAS_OP_T,
-		       m,
-		       n,
-		       k,
-		       &alpha,
-		       a_double_array+k*m*j,
-		       Layout == CblasRowMajor ? k : m,
-		       b_double_array+(i-j)*k*n,
-		       Layout == CblasRowMajor ? n : k,
-		       &beta,
-		       c_double_array+i*m*n,
-		       Layout == CblasRowMajor ? n : m
-		       );*/
-	  cublasDgemm(handle,
-		      (Layout == CblasRowMajor) != (transa == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N,
-		      (Layout == CblasRowMajor) != (transb == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N,
-		       m,
-		       n,
-		       k,
-		       &alpha,
-		       d_a[0]+k*m*j,
-		      (Layout == CblasRowMajor) != (transa == CblasTrans) ? k : m,
-						    d_b[0]+(i-j)*k*n,
-		      (Layout == CblasRowMajor) != (transb == CblasTrans) ? n : k,
-		       &beta,
-		       d_c[0]+i*m*n,
-		       Layout == CblasRowMajor ? n : m
-		       );
-	  /*cblas_dgemm(
-                    Layout,
-                    CblasNoTrans,
-                    CblasNoTrans,
-                    m,
-                    n,
-                    k,
-                    1,
-                    a_double_array+k*m*j,
-                    Layout == CblasRowMajor ? k : m,
-                    b_double_array+(i-j)*k*n,
-                    Layout == CblasRowMajor ? n : k,
-                    1,
-                    c_double_array+i*m*n,
-                    Layout == CblasRowMajor ? n : m
-		    );*/
-            /*cblas_dgemm_emulator(
-                    m,
-                    n,
-                    k,
-                    a_double_array+k*m*j,
-                    b_double_array+(i-j)*k*n,
-                    c_double_array+i*m*n
-            );*/
-        }
+      int gpu_id = i * gpu_count / mpmat_size_c;
+      cudaSetDevice(gpu_id);
+      for (int j = 0; j <= i; j++) {
+	cublasDgemm(handles[gpu_id],
+		    (Layout == CblasRowMajor) != (transa == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T,
+		    (Layout == CblasRowMajor) != (transb == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T,
+		    m,
+		    n,
+		    k,
+		    &alpha,
+		    d_a[gpu_id]+k*m*j,
+		    (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
+		    d_b[gpu_id]+(i-j)*k*n,
+		    (Layout == CblasRowMajor) != (transb == CblasTrans) ? k : n,
+		    &beta,
+		    d_c[gpu_id]+i*m*n,
+		    Layout == CblasRowMajor ? m : n
+		    );
+      }
+      cudaMemcpyAsync(c_double_array+i*m*n,d_c[gpu_id]+i*m*n,m*n*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
     }
-
+    cudaThreadSynchronize();
     timers["mpmat_gemm_reduced.multiplication"].stop();
 
     timers["mpmat_gemm_reduced.gpu_copy_back"].resume();
 
-    //mpmat_double * h_c = new mpmat_double[mem_c];
-
-    // cudaMemcpy(h_a,d_a,mem_a,cudaMemcpyDeviceToHost);
-    //cudaMemcpy(h_b,d_b,mem_b,cudaMemcpyDeviceToHost);
-    cudaMemcpy(c_double_array,d_c[0],mem_c*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
-
-    /* cudaMemcpy(a_double_array,d_a,mem_a,cudaMemcpyDeviceToHost);
-    cudaMemcpy(b_double_array,d_b,mem_b,cudaMemcpyDeviceToHost);
-    cudaMemcpy(c_double_array,d_c,mem_c,cudaMemcpyDeviceToHost);*/
-
-    /*cudaFree(d_a);
-    cudaFree(d_b);
-    cudaFree(d_c)*/;
+    //gpu copy back is done in parallel asynchronously with the multiplication
 
     timers["mpmat_gemm_reduced.gpu_copy_back"].stop();
 
-    //for (int i = 0; i < mem_c; ++i){
-    //if (h_c[i] != c_double_array[i])
-    //	std::cout << "at position " << i << " expected " << c_double_array[i] << ", got " << h_c[i] << "\n";
-    //}
-
-    //delete [] h_c;
-
-    //cublasDestroy(handle);
-
     timers["mpmat_gemm_reduced.DoubletoGMP"].resume();
 
-    //std::cout << "Converting back" << std::endl;
     mpmatConvertDoubleToGMPVector(
             c,
             m*n,
@@ -626,10 +470,6 @@ void mpmat::gemm_reduced_gpu(
 
     timers["mpmat_gemm_reduced.DoubletoGMP"].stop();
 
-    /* delete [] a_double_array;
-    delete [] b_double_array;
-    delete [] c_double_array;
-    delete [] tmp;*/
 
     timers["mpmat_gemm_reduced.complete"].stop();
 }
