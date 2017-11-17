@@ -25,25 +25,6 @@
 // BlockDiagonalMatrix, since there parallelism can be achieved by
 // parallelizing loops over blocks.
 
-mpf_class * randomGMPVector2(int size, int prec) {
-    gmp_randclass rr(gmp_randinit_default);
-    rr.seed(time(NULL));
-
-    //mpf_class * tmp = static_cast<mpf_class*> ( malloc(size * sizeof(mpf_class)) );
-
-    auto tmp = new mpf_class [size];
-
-    for (int i = 0; i < size; i++) {
-        //new(tmp+i) mpf_class("0",prec);
-        tmp[i].set_prec(prec);
-	//mpz_class z = rr.get_z_range(200);
-	tmp[i] = 10*rr.get_f(prec)-5;
-        //mpf_pow_ui(tmp[i].get_mpf_t(),tmp[i].get_mpf_t(), z.get_ui());
-	
-    }
-
-    return tmp;
-    }
 
 ostream& operator<<(ostream& os, const Matrix& a) {
   os << "{";
