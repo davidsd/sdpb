@@ -21,7 +21,7 @@
 #include "Matrix.h"
 #include "BlockDiagonalMatrix.h"
 #include "SDP.h"
-#include "mpmat.h"
+#include "mpmat/mpmat.h"
 
 using std::vector;
 using std::ostream;
