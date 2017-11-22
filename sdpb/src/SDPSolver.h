@@ -53,6 +53,7 @@ public:
   Real stepLengthReduction;
   Real choleskyStabilizeThreshold;
   Real maxComplementarity;
+  bool multTest;
 #ifdef __SDPB_CUDA__
   bool gpu;
 #endif

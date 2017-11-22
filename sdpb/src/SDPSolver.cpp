@@ -1122,17 +1122,19 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
   for (int m = m_init; m <= m_fin; m *= m_step){
   std::cout << "testing dimension " << m << "\n";
   Real * a_tmp = randomGMPVector(m*m,prec);
-  Matrix A(m,m,a_tmp), C(m,m), C2(m,m);
+  Matrix A(m,m,a_tmp), C(m,m), C2(m,m), C3(m,m);
   delete [] a_tmp;
   
   matrixSquareIntoBlock(A,C,0,0);
 #ifdef __SDPB_CUDA__
-  matrixSquareIntoBlockMpmat(myWorkspace,A,C2,0,0,parameters.gpu);
+  matrixSquareIntoBlockMpmat(myWorkspace,A,C2,0,0,false);
+  matrixSquareIntoBlockMpmat(myWorkspace,A,C3,0,0,true);
 #else
   matrixSquareIntoBlockMpmat(myWorkspace,A,C2,0,0);
 #endif
 
   Matrix diff = C - C2;
+  Matrix diff2 = C2 - C3;
 
   if (C != C2){
   std::cerr << "Error: multiplication failed at dimension " << m << ". Printing outputs:\n";
@@ -1146,6 +1148,25 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
       if (C2.elt(r,c) < -100000.0){
 	std::cout << C2.elt(r,c) << " has bits of:\n";
 	print_mpf_bits(C2.elt(r,c));
+      }
+    }
+  }
+
+if (C3 != C2){
+  std::cerr << "Error: multiplication failed at dimension " << m << ". Printing outputs:\n";
+  std::cerr << C3 << "\n\n\n";
+  std::cerr << C2 << "\n\n\n";
+  std::cerr << diff2 << "\n\n\n";
+  //break;
+}
+ else {
+   std::cout << "CPU and GPU are consistent\n";
+ }
+  for (int r = 0; r < C3.rows; ++r){
+    for (int c = 0; c < C3.cols; ++c){
+      if (C3.elt(r,c) < -100000.0){
+	std::cout << C3.elt(r,c) << " has bits of:\n";
+	print_mpf_bits(C3.elt(r,c));
       }
     }
   }
