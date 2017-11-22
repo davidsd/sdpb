@@ -113,11 +113,17 @@ class Matrix {
   }
 
   bool operator==(const Matrix &other) {
-    return elements == other.elements;
+    return std::equal(elements.begin(),elements.end(),other.elements.begin(),compare_mpf_bits);
   }
 
   bool operator!=(const Matrix &other) {
-    return elements != other.elements;
+    return !std::equal(elements.begin(),elements.end(),other.elements.begin(),compare_mpf_bits);
+  }
+
+  Matrix operator-(const Matrix &other) const{
+    Matrix out(rows,cols);
+    std::transform(elements.begin(),elements.end(),other.elements.begin(),out.elements.begin(),std::minus<Real>());
+    return out;
   }
 
   // The maximum absolute value of the elemnts of M

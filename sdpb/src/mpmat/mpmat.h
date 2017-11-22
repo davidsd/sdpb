@@ -320,5 +320,9 @@ void syrk_reduced(
 
 };
  mpf_class * randomGMPVector(int size, int prec);
+void print_mpf_bits(const mpf_class &a);
+bool compare_mpf_bits(const mpf_class &a, const mpf_class &b);
+
+void print_mpmat_double_array(const mpmat_double * array, int len);
 
 #endif //MPMAT_MPMAT_H

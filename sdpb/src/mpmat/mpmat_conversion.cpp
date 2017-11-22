@@ -14,6 +14,14 @@
 
 //using namespace std;
 
+template <typename T>
+inline T mpmat_min(T a, T b) { return a < b ? a : b ; }
+
+template <typename T>
+inline T mpmat_max (T a,T b) { return a>b ? a : b; }
+
+
+
 const int mp_limb_bits = sizeof(mp_limb_t) * 8;
 
 template <typename T>
@@ -462,3 +470,48 @@ void mpmat::mpmatConvertDoubleToGMPSymm(mpf_class * dest,
 
     //free(tmp);
 }
+std::bitset<64> print64bits(const void * a){
+  return std::bitset<64>(*static_cast<const long long*>(a));
+}
+
+void print_mpf_bits(const mpf_class &a) {
+    const mp_limb_t * mp_d = a.get_mpf_t() -> _mp_d;
+    int size = a.get_mpf_t()-> _mp_size;
+    size = size >= 0 ? size : -size;
+    std::cout << "mpf of " << size << " limbs with exp == " << a.get_mpf_t()->_mp_exp << " : " << std::endl;
+    std::cout << "mpf value: " << a << std::endl;
+    for (int i = size-1; i>=0; i--) {
+      std::cout << "limb " << i << " : " << std::bitset<64>(mp_d[i]) << std::endl;
+    }
+}
+bool compare_mpf_bits(const mpf_class &a, const mpf_class &b) {
+    int mp_size_a = abs(a.get_mpf_t()->_mp_size);
+    int mp_size_b = abs(b.get_mpf_t()->_mp_size);
+    int mp_size = mpmat_min( mp_size_a, mp_size_b );
+
+    if ( a.get_mpf_t()->_mp_size * b.get_mpf_t()->_mp_size < 0 ){
+      std::cout << "FAIL sign mismatch" << std::endl;
+        print_mpf_bits(a);
+        print_mpf_bits(b);
+        return false;
+    }
+
+    for (int i = 0; i < mp_size; i++) {
+        if (a.get_mpf_t()->_mp_d[mp_size_a - 1 - i] != b.get_mpf_t()->_mp_d[mp_size_b - 1 - i]) {
+	  std::cout << "FAIL during comparison of " << i << "-th limb" << std::endl;
+            print_mpf_bits(a);
+            print_mpf_bits(b);
+            return false;
+        }
+    }
+    return true;
+}
+
+void print_mpmat_double_array(const mpmat_double * array, int len) {
+  std::cout << "mpmat_double array of " << len << " limbs" << std::endl;
+    for (int i = 0; i < len; i++) {
+        mp_limb_t tmp = static_cast<mp_limb_t>(array[i]);
+	std::cout << "limb " << i << " : " << print64bits(&tmp) << std::endl;
+    }
+}
+

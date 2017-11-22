@@ -1131,10 +1131,13 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
   matrixSquareIntoBlockMpmat(myWorkspace,A,C2,0,0);
 #endif
 
+  Matrix diff = C - C2;
+
   if (C != C2){
   std::cerr << "Error: multiplication failed at dimension " << m << ". Printing outputs:\n";
   std::cerr << C << "\n\n\n";
   std::cerr << C2 << "\n\n\n";
+  std::cerr << diff << "\n\n\n";
   //break;
 }
 }
