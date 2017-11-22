@@ -1116,8 +1116,9 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
 
 
  void SDPSolver::testMultiplication(const int m_init, const int m_fin, const int m_step){
-  int prec = 1024;
-  mpf_set_default_prec(1024);
+   int prec = mpf_get_default_prec();
+   std::cout << "the precision of this mult test is " << prec << std::endl;
+   //mpf_set_default_prec(1024);
   for (int m = m_init; m <= m_fin; m *= m_step){
   std::cout << "testing dimension " << m << "\n";
   Real * a_tmp = randomGMPVector(m*m,prec);
@@ -1140,5 +1141,13 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
   std::cerr << diff << "\n\n\n";
   //break;
 }
+  for (int r = 0; r < C2.rows; ++r){
+    for (int c = 0; c < C2.cols; ++c){
+      if (C2.elt(r,c) < -100000.0){
+	std::cout << C2.elt(r,c) << " has bits of:\n";
+	print_mpf_bits(C2.elt(r,c));
+      }
+    }
+  }
 }
 }
