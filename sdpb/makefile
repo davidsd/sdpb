@@ -112,7 +112,7 @@ obj:
 	@mkdir -p $@/mpmat
 
 test:
-	./sdpb -s test.xml --noFinalCheckpoint --maxThreads=16
+	./sdpb -s test.xml --noFinalCheckpoint --maxThreads=16 --multTest
 	test -f test.out 
 	grep "primalObjective = 1.84026576313204924668804017173" test.out > /dev/null || (echo "Test failed: primalObjective differs from 1.84026576313204924668804017173." && exit 1)
 

@@ -493,6 +493,8 @@ bool compare_mpf_bits(const mpf_class &a, const mpf_class &b) {
       std::cout << "FAIL sign mismatch" << std::endl;
         print_mpf_bits(a);
         print_mpf_bits(b);
+	mpf_class c = a - b;
+	print_mpf_bits(c);
         return false;
     }
 
@@ -501,6 +503,8 @@ bool compare_mpf_bits(const mpf_class &a, const mpf_class &b) {
 	  std::cout << "FAIL during comparison of " << i << "-th limb" << std::endl;
             print_mpf_bits(a);
             print_mpf_bits(b);
+	    mpf_class c = a - b;
+	    print_mpf_bits(c);
             return false;
         }
     }

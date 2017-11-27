@@ -1117,16 +1117,17 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
 
  void SDPSolver::testMultiplication(const int m_init, const int m_fin, const int m_step){
    int prec = mpf_get_default_prec();
-   std::cout << "the precision of this mult test is " << prec << std::endl;
+   std::cerr << "the precision of this mult test is " << prec << std::endl;
    //mpf_set_default_prec(1024);
   for (int m = m_init; m <= m_fin; m *= m_step){
-  std::cout << "testing dimension " << m << "\n";
+  std::cerr << "testing dimension " << m << "\n";
   Real * a_tmp = randomGMPVector(m*m,prec);
   Matrix A(m,m,a_tmp), C(m,m), C2(m,m), C3(m,m);
   delete [] a_tmp;
   
   matrixSquareIntoBlock(A,C,0,0);
 #ifdef __SDPB_CUDA__
+  std::cerr << "testing with cpu and gpu\n";
   matrixSquareIntoBlockMpmat(myWorkspace,A,C2,0,0,false);
   matrixSquareIntoBlockMpmat(myWorkspace,A,C3,0,0,true);
 #else
@@ -1147,7 +1148,11 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
     for (int c = 0; c < C2.cols; ++c){
       if (C2.elt(r,c) < -100000.0){
 	std::cout << C2.elt(r,c) << " has bits of:\n";
-	print_mpf_bits(C2.elt(r,c));
+	//print_mpf_bits(C2.elt(r,c));
+	compare_mpf_bits(C2.elt(r,c),C.elt(r,c));
+       	std::cout << "\n";
+	//print_mpf_bits(C.elt(r,c));
+	std::cout << "\n\n\n";
       }
     }
   }
