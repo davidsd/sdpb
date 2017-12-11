@@ -82,6 +82,8 @@ SDPSolver::SDPSolver(const SDP &sdp, const SDPSolverParameters &parameters):
                                                BilinearPairingsXInv.blocks[b].cols));
     eigenvaluesWorkspace.push_back(Vector(X.blocks[b].rows));
     QRWorkspace.push_back(Vector(3*X.blocks[b].rows - 1));
+
+    //myWorkspace.mpmat_conversion_test(10,10000000000,-7);
   }
 
   // X = \Omega_p I
@@ -1139,9 +1141,9 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
 
   if (C != C2){
   std::cerr << "Error: multiplication failed at dimension " << m << ". Printing outputs:\n";
-  std::cerr << C << "\n\n\n";
-  std::cerr << C2 << "\n\n\n";
-  std::cerr << diff << "\n\n\n";
+  //std::cerr << C << "\n\n\n";
+  //std::cerr << C2 << "\n\n\n";
+  //std::cerr << diff << "\n\n\n";
   //break;
 }
   for (int r = 0; r < C2.rows; ++r){
@@ -1157,23 +1159,30 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
     }
   }
 
-if (C3 != C2){
-  std::cerr << "Error: multiplication failed at dimension " << m << ". Printing outputs:\n";
-  std::cerr << C3 << "\n\n\n";
-  std::cerr << C2 << "\n\n\n";
-  std::cerr << diff2 << "\n\n\n";
+  std::cerr << "about to test CPU vs GPU:\n\n\n";
+  /*if (C3 != C2){
+  std::cerr << "Error: multiplication between GPU and CPU failed at dimension " << m << "\n";
+  //std::cerr << C3 << "\n\n\n";
+  //std::cerr << C2 << "\n\n\n";
+  //std::cerr << diff2 << "\n\n\n";
   //break;
 }
  else {
    std::cout << "CPU and GPU are consistent\n";
  }
-  for (int r = 0; r < C3.rows; ++r){
-    for (int c = 0; c < C3.cols; ++c){
-      if (C3.elt(r,c) < -100000.0){
-	std::cout << C3.elt(r,c) << " has bits of:\n";
-	print_mpf_bits(C3.elt(r,c));
+ bool bigerr = false;
+  for (int r = 0; r < C2.rows; ++r){
+    for (int c = 0; c < C2.cols; ++c){
+      if (C2.elt(r,c) < -100000.0){
+	std::cout << C2.elt(r,c) << " has bits of:\n";
+	print_mpf_bits(C2.elt(r,c));
+	bigerr = true;
       }
     }
   }
+  if (bigerr){
+    std::cerr << "Big numerical error in conversion failed at dimension: " << m << "\n\n";
+    break;
+    }*/
 }
 }

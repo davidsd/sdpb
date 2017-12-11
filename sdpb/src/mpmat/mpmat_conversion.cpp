@@ -164,6 +164,30 @@ inline void dumpBitsToLowLimb(mp_limb_t * l, const mp_limb_t src, int offset, in
     *l |= (src & mask) << offset;
 }
 
+//Normalizes (carries over) doubles so that the mpmat_double array
+//(post-transposition) is all of the same sign, with each element
+//within the mpmat_limb.
+void mpmatNormalize(mpmat_double * source,
+		    const int size,
+		    const int mpmat_limb){
+  double base = 1 << mpmat_limb; 
+  int eff_size = 0;
+  int i;
+  for (i = size-1; i > 0; --i){
+    source[i-1] += (long long)(source[i] / base); //Carrying over
+    source[i] = fmod(source[i],base);
+  }
+  for (i = 0; source[i] == 0; ++i);
+  int mp_sign = source[i] < 0.0 ? -1 : 1;
+  for (; i < size-1; ++i){
+    if (source[i]/source[i+1] < 0){
+      source[i+1] += mp_sign*base; //negative carrying over
+      source[i] -= mp_sign;
+      if (source[i] == -mp_sign) i-=2;
+    }
+  }
+}
+
 // Description in .h
 void mpmat::mpmatConvertDoubleToGMP(mpf_class & dest,
                              const mpmat_double * source,
@@ -369,6 +393,13 @@ void mpmat::mpmatConvertGMPToDoubleVector(const mpf_class * source,
         mpmatConvertGMPToDouble(source[i], tmp + i*mpmat_size, mpmat_size, mpmat_limb, expo);
     }
 
+    /*for (int i = 0; i < mpmat_min(source_len,10); ++i){
+      std::cout << "\n\nAt position " << i << ": ";
+      print_mpmat_double_array(tmp+i*mpmat_size,mpmat_size);
+      std::cout << "corresponding to mpf value of: ";
+      print_mpf_bits(source[i]);
+    }
+    std::cout << "\n\n\n";*/
     timers["Transposition direct"].start();
     //Now transpose the array in-place to obtain limb-vectors
     /* mkl_dimatcopy(
@@ -420,6 +451,7 @@ void mpmat::mpmatConvertDoubleToGMPVector(mpf_class * dest,
 
 #pragma omp parallel for schedule(dynamic) shared(dest,tmp)
     for (int i = 0; i < dest_len; i++) {
+      mpmatNormalize(tmp + i * mpmat_size,mpmat_size,mpmat_limb);
         mpmatConvertDoubleToGMP(
                 dest[i],
                 tmp + i * mpmat_size,
@@ -442,6 +474,7 @@ void mpmat::mpmatConvertDoubleToGMPSymm(mpf_class * dest,
     //mpmat_double * tmp = static_cast<mpmat_double *>( malloc(dest_len * mpmat_size * sizeof(mpmat_double)) );
     // Transpose out-of-place
     timers["Transposition reverse"].start();
+    memset(tmp,0,len_t*sizeof(double));
     mkl_domatcopy(
             'r','t',
             mpmat_size,
@@ -454,9 +487,20 @@ void mpmat::mpmatConvertDoubleToGMPSymm(mpf_class * dest,
     );
     timers["Transposition reverse"].stop();
 
+    /*for (int r = 0; r < dest_dim*dest_dim; ++r){
+      std::cout << "{";
+      for (int i = 0; i < mpmat_size; ++i){
+	std::cout << tmp[i+r*mpmat_size] << ",";
+      }
+      std::cout << "}\n";
+      }*/
+
+    //std::cout << "mpmat_size is " << mpmat_size << "\n";
+
 #pragma omp parallel for schedule(dynamic) shared(dest,tmp)
     for (int r = 0; r < dest_dim; r++) {
       for (int c = 0; c <= r; ++c){
+	mpmatNormalize(tmp + (r * dest_dim + c) * mpmat_size,mpmat_size,mpmat_limb);
         mpmatConvertDoubleToGMP(
                 dest[r * dest_dim + c],
                 tmp + (r * dest_dim + c) * mpmat_size,
@@ -464,9 +508,14 @@ void mpmat::mpmatConvertDoubleToGMPSymm(mpf_class * dest,
                 mpmat_limb,
                 exp
         );
+	/*for (int i = 0; i < mpmat_size; ++i){
+	  tmp[(c*dest_dim + r)*mpmat_size + i] = tmp[(r*dest_dim + c)*mpmat_size + i];
+	  }*/
 	dest[c * dest_dim + r] = dest[r * dest_dim + c];
       }
     }
+    //print_mpf_bits(dest[0]);
+    //print_mpmat_double_array(tmp,mpmat_size);
 
     //free(tmp);
 }
@@ -514,8 +563,8 @@ bool compare_mpf_bits(const mpf_class &a, const mpf_class &b) {
 void print_mpmat_double_array(const mpmat_double * array, int len) {
   std::cout << "mpmat_double array of " << len << " limbs" << std::endl;
     for (int i = 0; i < len; i++) {
-        mp_limb_t tmp = static_cast<mp_limb_t>(array[i]);
-	std::cout << "limb " << i << " : " << print64bits(&tmp) << std::endl;
+      //mp_limb_t tmp = reinterpret_cast<mp_limb_t>(array[i]);
+	std::cout << "limb " << i << " : " << print64bits(array+i) << " : " << array[i] << std::endl;
     }
 }
 

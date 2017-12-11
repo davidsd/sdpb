@@ -54,7 +54,7 @@ class mpmat{
 
  private:
   //Workspace arrays for mpmat. The d_* arrays are actually arrays of pointers to the respective arrays on each GPU.
-  mpmat_double *a_double_array, *b_double_array, *c_double_array, *tmp, **d_a, **d_b, **d_c;
+  
   //this is just to keep track and avoid a segfault
   int len_a, len_b, len_c, len_t, cpu_count, gpu_count;
 
@@ -67,6 +67,7 @@ class mpmat{
   #endif
 
  public: 
+mpmat_double *a_double_array, *b_double_array, *c_double_array, *tmp, **d_a, **d_b, **d_c;
   mpmat(){
     mpmat(1);
   }
@@ -318,7 +319,10 @@ void syrk_reduced(
 		  );
 
 
+void mpmat_conversion_test(int i, int f, int d);
 };
+
+
  mpf_class * randomGMPVector(int size, int prec);
 void print_mpf_bits(const mpf_class &a);
 bool compare_mpf_bits(const mpf_class &a, const mpf_class &b);

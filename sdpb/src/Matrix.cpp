@@ -110,6 +110,7 @@ void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol) {
   mpf_set_default_prec(mpf_get_default_prec()-256);
 
   
+  //Matrix B2(A.cols,A.cols);
 
   for (int c = 0; c < A.cols; ++c){
     for (int r = 0; r < A.cols; ++r){
@@ -125,10 +126,36 @@ void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol) {
 #else
   myWorkspace.syrk_reduced(CblasRowMajor,CblasTrans,A.cols,A.rows,A.elements.data(),block);
 #endif
+  
+  // matrixSquareIntoBlock(A,B2,0,0);
  
 
   for (int c = 0; c < A.cols; ++c){
-    for (int r = 0; r < A.cols; ++r){
+  for (int r = 0; r < A.cols; ++r){
+  /*if (((block[r*A.cols+c] != 0)&&(B2.elt(r,c)/block[r*A.cols+c] < .9 || B2.elt(r,c)/block[r*A.cols+c] > 1.1))|| ((B2.elt(r,c) != 0)&&(block[r*A.cols+c]/B2.elt(r,c) < .9 || block[r*A.cols+c]/B2.elt(r,c) > 1.1)) ){
+  std::cerr << "Error: the answers are very inconsistent. \nAt location (" << r<< ", " << c << "), expected " << B2.elt(r,c) << ", got " << block[r*A.cols+c] << ".\n";
+  compare_mpf_bits(block[r*A.cols+c],B2.elt(r,c));
+
+  std::cout << "The doubles at this point are: \n";
+  std::cout << "{";
+      for (int i = 0; i < 34; ++i){
+  std::cout << myWorkspace.tmp[i+(r+c*A.cols)*34] << ",";
+      }
+      std::cout << "}\n";
+      print_mpmat_double_array(&myWorkspace.tmp[(r+c*A.cols)*34],34);
+      std::cout << "{";
+      for (int i = 0; i < 34; ++i){
+  std::cout << myWorkspace.tmp[i+(c+r*A.cols)*34] << ",";
+      }
+      std::cout << "}\n";
+      print_mpmat_double_array(&myWorkspace.tmp[(c+r*A.cols)*34],34);
+      }*/
+  /*if (block[r*A.cols+c] < 0){
+  std::cout << "This result is negative at location (" << r<< ", " << c << ").\n";
+  compare_mpf_bits(block[r*A.cols+c],B2.elt(r,c));
+  print_mpmat_double_array(&myWorkspace.tmp[(r+c*A.cols)*34],34);
+  std::cout << "\n\n\n";
+  }*/
     B.elt(bRow + r, bCol + c) = block[r*A.cols+c];
 }
 }
