@@ -923,7 +923,7 @@ void SDPSolver::computeSearchDirection(const Real &beta,
   timers[timerName + ".R.XY"].stop();
   if (correctorPhase){
   timers[timerName + ".R.dXdY"].resume();
-    blockDiagonalMatrixScaleMultiplyAdd(-1, dX, dY, 1, R);
+  blockDiagonalMatrixScaleMultiplyAdd(-1, dX, dY, 1, R);
   timers[timerName + ".R.dXdY"].stop();
 }
   
@@ -933,7 +933,11 @@ void SDPSolver::computeSearchDirection(const Real &beta,
 
   // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))
   timers[timerName + ".Z.multiply"].resume();
-  blockDiagonalMatrixMultiply(PrimalResidues, Y, Z);
+#ifdef __SDPB_CUDA__
+  blockDiagonalMatrixMultiplyMpmat(myWorkspace,PrimalResidues, Y, Z,parameters.gpu);
+#else
+   blockDiagonalMatrixMultiplyMpmat(myWorkspace,PrimalResidues, Y, Z);
+#endif
   timers[timerName + ".Z.multiply"].stop();
   timers[timerName + ".Z.subtract"].resume();
   Z -= R;
@@ -1123,27 +1127,27 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
    //mpf_set_default_prec(1024);
   for (int m = m_init; m <= m_fin; m *= m_step){
   std::cerr << "testing dimension " << m << "\n";
-  Real * a_tmp = randomGMPVector(m*m,prec);
-  Matrix A(m,m,a_tmp), C(m,m), C2(m,m), C3(m,m);
+  Real * a_tmp = randomGMPVector(m*m,prec), * b_tmp = randomGMPVector(m*m,prec), * c_tmp = randomGMPVector(m*m,prec);
+  Matrix A(m,m,a_tmp), B(m,m,b_tmp), C(m,m,c_tmp), C2(m,m,c_tmp), C3(m,m);
   delete [] a_tmp;
+  delete [] b_tmp;
+  delete [] c_tmp;
   
-  matrixSquareIntoBlock(A,C,0,0);
-#ifdef __SDPB_CUDA__
-  std::cerr << "testing with cpu and gpu\n";
-  matrixSquareIntoBlockMpmat(myWorkspace,A,C2,0,0,false);
-  matrixSquareIntoBlockMpmat(myWorkspace,A,C3,0,0,true);
-#else
-  matrixSquareIntoBlockMpmat(myWorkspace,A,C2,0,0);
-#endif
-
   Matrix diff = C - C2;
-  Matrix diff2 = C2 - C3;
+  //Matrix diff2 = C2 - C3;
+  matrixScaleMultiplyAdd(-1,A,B,1,C);
+#ifdef __SDPB_CUDA__
+  matrixScaleMultiplyAddMpmat(myWorkspace,-1,A,B,1,C2,parameters.gpu);
+#else
+  matrixScaleMultiplyAddMpmat(myWorkspace,-1,A,B,1,C2);
+#endif
+  std::cerr << "done multing\n";
 
   if (C != C2){
   std::cerr << "Error: multiplication failed at dimension " << m << ". Printing outputs:\n";
-  //std::cerr << C << "\n\n\n";
-  //std::cerr << C2 << "\n\n\n";
-  //std::cerr << diff << "\n\n\n";
+  std::cerr << C << "\n\n\n";
+  std::cerr << C2 << "\n\n\n";
+  std::cerr << diff << "\n\n\n";
   //break;
 }
   for (int r = 0; r < C2.rows; ++r){
@@ -1159,7 +1163,7 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
     }
   }
 
-  std::cerr << "about to test CPU vs GPU:\n\n\n";
+  //std::cerr << "about to test CPU vs GPU:\n\n\n";
   /*if (C3 != C2){
   std::cerr << "Error: multiplication between GPU and CPU failed at dimension " << m << "\n";
   //std::cerr << C3 << "\n\n\n";

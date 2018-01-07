@@ -131,10 +131,40 @@ void blockDiagonalMatrixScaleMultiplyAdd(Real alpha,
                                          Real beta,
                                          BlockDiagonalMatrix &C); // overwritten
 
+// C := alpha*A*B + beta*C
+#ifdef __SDPB_CUDA__
+void blockDiagonalMatrixScaleMultiplyAddMpmat(mpmat &myWorkspace, Real alpha,
+					      BlockDiagonalMatrix &A,  // constant
+					      BlockDiagonalMatrix &B,  // constant 
+					      Real beta,
+					      BlockDiagonalMatrix &C, // overwritten
+					      bool gpu);
+#else
+void blockDiagonalMatrixScaleMultiplyAddMpmat(mpmat &myWorkspace, Real alpha,
+                                         BlockDiagonalMatrix &A,  // constant
+                                         BlockDiagonalMatrix &B,  // constant 
+                                         Real beta,
+                                         BlockDiagonalMatrix &C); // overwritten
+#endif
+
 // C := A B
 void blockDiagonalMatrixMultiply(BlockDiagonalMatrix &A,  // constant
                                  BlockDiagonalMatrix &B,  // constant
                                  BlockDiagonalMatrix &C); // overwritten
+
+// C := A B
+#ifdef __SDPB_CUDA__
+void blockDiagonalMatrixMultiplyMpmat(mpmat &myWorkspace, 
+				      BlockDiagonalMatrix &A,  // constant
+				      BlockDiagonalMatrix &B,  // constant
+				      BlockDiagonalMatrix &C, // overwritten
+				      bool gpu);
+#else
+void blockDiagonalMatrixMultiplyMpmat(mpmat &myWorkspace, 
+				      BlockDiagonalMatrix &A,  // constant
+				      BlockDiagonalMatrix &B,  // constant
+				      BlockDiagonalMatrix &C); // overwritten
+#endif
 
 // A := L^{-1} A L^{-T}
 void lowerTriangularInverseCongruence(BlockDiagonalMatrix &A,  // overwritten

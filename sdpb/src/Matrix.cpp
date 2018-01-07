@@ -43,6 +43,21 @@ ostream& operator<<(ostream& os, const Matrix& a) {
   return os;
 }
 
+// C := alpha*A + beta*C
+void matrixScaleAdd(Real alpha, Matrix &A,
+		    Real beta, Matrix &C){
+  std::transform(A.elements.begin(),A.elements.end(),C.elements.begin(),C.elements.begin(),[alpha,beta](Real a, Real c){return alpha*a+beta*c;});
+}
+
+// C := alpha*A + beta*C
+void matrixScaleAdd(Real alpha, Real * A,
+		    Real beta, Matrix &C){
+  //std::transform(C.elements.begin(),C.elements.end(),A,C.elements.begin(),[alpha,beta](Real c, Real a){return alpha*a+beta*c;});
+  for (int r = 0; r < C.rows; ++r)
+    for (int c = 0; c < C.cols; ++c)
+      C.elt(r,c) = alpha*A[r+C.rows*c] + beta*C.elt(r,c);
+}
+
 // C := alpha*A*B + beta*C
 void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B,
                             Real beta, Matrix &C) {
@@ -57,10 +72,56 @@ void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B,
         &C.elements[0], C.rows);
 }
 
+//
+void matrixScaleMultiplyAddMpmat(mpmat &myWorkspace, Real alpha, Matrix &A,
+				 Matrix &B, Real beta, Matrix &C
+#ifdef __SDPB_CUDA__
+				 ,bool gpu
+#endif
+) {
+  assert(A.cols == B.rows);
+  assert(A.rows == C.rows);
+  assert(B.cols == C.cols);
+
+  mpf_set_default_prec(mpf_get_default_prec()+512);
+  Real * Ctmp = new Real[C.cols*C.rows];
+  mpf_set_default_prec(mpf_get_default_prec()-512);
+
+#ifdef __SDPB_CUDA__
+  if(gpu) myWorkspace.gemm_reduced_gpu(CblasRowMajor,CblasNoTrans,CblasNoTrans,
+				 A.rows, B.cols, A.cols,
+				 A.elements.data(), B.elements.data(),
+				 Ctmp);
+  else
+  myWorkspace.gemm_reduced(CblasRowMajor,CblasNoTrans,CblasNoTrans,
+			   A.rows, B.cols, A.cols,
+			   A.elements.data(), B.elements.data(),
+			   Ctmp);
+#else
+				 myWorkspace.gemm_reduced(CblasRowMajor,CblasNoTrans,CblasNoTrans,
+			   A.rows, B.cols, A.cols,
+			   A.elements.data(), B.elements.data(),
+			   Ctmp);
+#endif
+  matrixScaleAdd(alpha,Ctmp,beta,C);
+
+  delete [] Ctmp;
+}
+
 // C := A*B
 void matrixMultiply(Matrix &A, Matrix &B, Matrix &C) {
   matrixScaleMultiplyAdd(1, A, B, 0, C);
 }
+
+#ifdef __SDPB_CUDA__
+void matrixMultiplyMpmat(mpmat &myWorkspace, Matrix &A, Matrix &B, Matrix &C, bool gpu) {
+  matrixScaleMultiplyAddMpmat(myWorkspace,1, A, B, 0, C,gpu);
+}
+#else
+void matrixMultiplyMpmat(mpmat &myWorkspace, Matrix &A, Matrix &B, Matrix &C) {
+  matrixScaleMultiplyAddMpmat(myWorkspace,1, A, B, 0, C);
+}
+#endif
 
 // Set block starting at (bRow, bCol) of B to A^T A
 void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol) {

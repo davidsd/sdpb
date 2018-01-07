@@ -318,6 +318,10 @@ void syrk_reduced(
         //const int ldc
 		  );
 
+void karatsuba(int a_start, int b_start, int c_start, int c_max,
+                      CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE transa,
+                      CBLAS_TRANSPOSE transb, int m, int n, int k,
+                      const double alpha, const double beta);
 
 void mpmat_conversion_test(int i, int f, int d);
 };
@@ -328,5 +332,6 @@ void print_mpf_bits(const mpf_class &a);
 bool compare_mpf_bits(const mpf_class &a, const mpf_class &b);
 
 void print_mpmat_double_array(const mpmat_double * array, int len);
+
 
 #endif //MPMAT_MPMAT_H
