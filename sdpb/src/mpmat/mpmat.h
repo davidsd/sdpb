@@ -21,7 +21,6 @@
 #ifdef __SDPB_CUDA__
 #include <cuda_runtime.h>
 #include "cublas_v2.h"
-#include <cublasXt.h>
 #endif
 
 // The floating point type used to emulate integer arithmetic
@@ -67,11 +66,8 @@ class mpmat{
   #endif
 
  public: 
-mpmat_double *a_double_array, *b_double_array, *c_double_array, *tmp, **d_a, **d_b, **d_c;
-  mpmat(){
-    mpmat(1);
-  }
- mpmat(int l){
+  mpmat_double *a_double_array, *b_double_array, *c_double_array, *tmp, **d_a, **d_b, **d_c; 
+  mpmat(int l = 1){
     len_a = 0;
     len_b = 0;
     len_c = 0;
@@ -317,13 +313,45 @@ void syrk_reduced(
         mpf_class * c
         //const int ldc
 		  );
-
-void karatsuba(int a_start, int b_start, int c_start, int c_max,
+// Implements a recursive Karatsuba multiplication on an array of matrices with a cutoff c_max
+void karatsuba(const int & a_start, const int & b_start, const int & c_start, const int & c_max,
                       CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE transa,
-                      CBLAS_TRANSPOSE transb, int m, int n, int k,
-                      const double alpha, const double beta);
+                      CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k,
+                      const double alpha = 1.0, const double beta = 1.0);
+void karatsuba_bc(const int & a_start, const int & b_start, const int & c_start, const int & c_max,
+                      CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE transa,
+                      CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k,
+                      const double alpha = 1.0, const double beta = 1.0);
+
+// Implements a symmetric version of the above
+void karatsuba(const int & a_start, const int & c_start, const int & c_max,
+                      CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE trans,
+                       const int & n, const int & k,
+                      const double alpha = 1.0, const double beta = 1.0);
+
+// Implements a truncated recursive multiplication that maximises Karatsuba
+void gradeschool(const int & a_start, const int & b_start, const int & c_start, const int & c_max,
+                      CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE transa,
+                      CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k,
+                      const double alpha = 1.0, const double beta = 1.0);
+void gradeschool_bc(const int & a_start, const int & b_start,
+                    const int & c_start, const int & c_max,
+                    CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE transa,
+                    CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k,
+                    const double alpha = 1.0, const double beta = 1.0);
+
+// Implements a symmetric version of the above
+void gradeschool(const int & a_start, const int & c_start, const int & c_max,
+                      CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE trans,
+                      const int & n, const int & k,
+                      const double alpha = 1.0, const double beta = 1.0);
+
+void treecondense(double * c, int size, int l);
 
 void mpmat_conversion_test(int i, int f, int d);
+
+bool karatsuba_test(int m, int n, int k, int l);
+bool base_karatsuba_test();
 };
 
 

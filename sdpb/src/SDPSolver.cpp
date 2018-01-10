@@ -1163,6 +1163,17 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
     }
   }
 
+
+  for (int i = 1; i <= 1 << 4; i*=2){
+    if (!myWorkspace.karatsuba_test(1000,1000,1000,i)){ 
+      std::cerr << "karatsuba length " << i << " failed\n";
+      break;
+    }
+    std::cout << "karatsuba length " << i << " passed\n";
+  }
+  std::cout << "\n" << timers << "\n";
+  //myWorkspace.base_karatsuba_test();
+
   //std::cerr << "about to test CPU vs GPU:\n\n\n";
   /*if (C3 != C2){
   std::cerr << "Error: multiplication between GPU and CPU failed at dimension " << m << "\n";
