@@ -82,6 +82,7 @@ void mpmat::karatsuba(const int & a_start, const int & b_start, const int & c_st
   int diff = c_max - start;
   //std::cout << "\tkaratsuba start=(" << a_start << ", " << b_start << ") l=" << c_max << "\n";
   if(diff <= 2){ // base case, just multiply
+    //std::cout << "\t\t basecase'd out\n";
     cblas_dgemm(
             Layout,
             transa,
@@ -100,7 +101,7 @@ void mpmat::karatsuba(const int & a_start, const int & b_start, const int & c_st
     );
     //std::cout << "\t\tc = " << c_double_array[m*n*c_start] << "\n";
   }
-  else { //if we need all four quadrants, do full karatsuba
+  /*else { //if we need all four quadrants, do full karatsuba
     int len2 = pow(2,ceil(log2(diff))-2);
     int len3 = pow(3,ceil(log2(diff))-2);
     // C_0 = A_0 * B_0 // full karatsuba
@@ -125,6 +126,56 @@ void mpmat::karatsuba(const int & a_start, const int & b_start, const int & c_st
     cblas_daxpy(k*m*len2, -1.0, a_double_array+k*m*(a_start+len2), 1, a_double_array+k*m*a_start, 1);
     // B_0 -= B_1 // clean up
     cblas_daxpy(k*n*len2, -1.0, b_double_array+k*n*(b_start+len2), 1, b_double_array+k*n*b_start, 1);
+  }*/
+  else { //if we need all four quadrants, do full karatsuba
+    int len2 = pow(2,ceil(log2(diff))-2)+.1; // the "fundamental length" of a and b
+    int len3 = pow(3,ceil(log2(diff))-2)+.1; // the "fundamental length" of c for mult
+    int clen2 = len2 - 1; // the "fundamental length" of c one level below (post squishing)
+    int clen3 = len3/3; // the "fundamental length" of c one level below (pre-squishing)
+    //std::cout << "\t\tclen2=" << clen2 << ", diff=" << diff << "\n";
+
+    // C_0 = A_0 * B_0 // full karatsuba
+    karatsuba(a_start, b_start, c_start, 2*len2 + start, Layout, transa, transb, m, n, k);
+    
+    // A_0 += A_1
+    cblas_daxpy(k*m*len2, 1.0, a_double_array+k*m*(a_start+len2), 1, a_double_array+k*m*a_start, 1);
+    // B_0 += B_1
+    cblas_daxpy(k*n*len2, 1.0, b_double_array+k*n*(b_start+len2), 1, b_double_array+k*n*b_start, 1);
+    // C_1 = A_0 * B_0 // full karatsuba
+    karatsuba(a_start, b_start, c_start+(2*clen2+1), 2*len2 + start, Layout, transa, transb, m, n, k);
+    // A_0 -= A_1 // clean up
+    cblas_daxpy(k*m*len2, -1.0, a_double_array+k*m*(a_start+len2), 1, a_double_array+k*m*a_start, 1);
+    // B_0 -= B_1 // clean up
+    cblas_daxpy(k*n*len2, -1.0, b_double_array+k*n*(b_start+len2), 1, b_double_array+k*n*b_start, 1);
+    // C_1 -= C_0
+    //std::cout << "\t\t\tsubtract array of length " << (2*clen2+1) << " from " << c_start << " to " << (c_start+(2*clen2+1)) << "\n";
+    cblas_daxpy(m*n*(2*clen2+1), -1.0, c_double_array+m*n*c_start, 1, c_double_array+m*n*(c_start+(2*clen2+1)), 1);
+    // C_02 += C_10
+    //std::cout << "\t\t\tadd array of length " << clen2 << " from " << (c_start+2*clen2+1) << " to " << (c_start+clen2+1) << "\n";
+    if (clen2 != 0) cblas_daxpy(m*n*clen2, 1.0, c_double_array+m*n*(c_start+2*clen2+1), 1, c_double_array+m*n*(c_start+clen2+1), 1);
+    // squish the rest of C_1 against C_0
+    //std::cout << "\t\t\tcopy array of length " << clen2 << " from " << (c_start+3*clen2+1) << " to " << (c_start+2*clen2+1) << "\n";
+    if (clen2 != 0) cblas_dcopy(m*n*clen2, c_double_array+m*n*(c_start+3*clen2+1), 1, c_double_array+m*n*(c_start+2*clen2+1), 1);
+    //std::cout << "\t\t\tcopy array of length " << 1 << " from " << (c_start+4*clen2+1) << " to " << (c_start+3*clen2+1) << "\n";
+    cblas_dcopy(m*n, c_double_array+m*n*(c_start+4*clen2+1), 1, c_double_array+m*n*(c_start+3*clen2+1), 1);
+    if (clen2 != 0) memset(c_double_array+m*n*(c_start+3*clen2+2),0,m*n*clen2*sizeof(double));
+    // C_2 = A_1 * B_1 // conditional karatsuba
+    if (diff <= 3*len2) // if we need half or less of C_2, then just use grade school
+      gradeschool(a_start+len2, b_start+len2, c_start+(3*clen2+2), c_max, Layout, transa, transb, m, n, k);
+    else               // otherwise, we need all quadrants and therefore karatsuba
+      karatsuba(a_start+len2, b_start+len2, c_start+(3*clen2+2), c_max, Layout, transa, transb, m, n, k);
+    
+    // C_1 -= C_2
+    //std::cout << "\t\t\tsubtract array of length " << (2*clen2+1) << " from " << (c_start+(3*clen2+2)) << " to " << c_start+clen2+1 << "\n";
+    cblas_daxpy(m*n*(2*clen2+1), -1.0, c_double_array+m*n*(c_start+(3*clen2+2)), 1, c_double_array+m*n*(c_start+clen2+1), 1);
+    // C_12 += C_20
+    //std::cout << "\t\t\tadd array of length " << clen2 << " from " << (c_start+3*clen2+2) << " to " << (c_start+2*clen2+2) << "\n";
+    if (clen2 != 0) cblas_daxpy(m*n*clen2, 1.0, c_double_array+m*n*(c_start+3*clen2+2), 1, c_double_array+m*n*(c_start+2*clen2+2), 1);
+    // squish the rest
+    if (clen2 != 0) cblas_dcopy(m*n*clen2, c_double_array+m*n*(c_start+4*clen2+2), 1, c_double_array+m*n*(c_start+3*clen2+2), 1);
+    cblas_dcopy(m*n, c_double_array+m*n*(c_start+5*clen2+2), 1, c_double_array+m*n*(c_start+4*clen2+2), 1);
+    if (clen2 != 0) memset(c_double_array+m*n*(c_start+4*clen2+3),0,m*n*clen2*sizeof(double));
+    //std::cout << "\n";
   }
   
 }
@@ -176,6 +227,7 @@ void mpmat::gradeschool(const int & a_start, const int & b_start, const int & c_
   int diff = c_max - start;
   //std::cout << "\tgradeschool start=(" << a_start << ", " << b_start << ") l=" << c_max << "\n";
   if(diff < 2){ // base case, just multiply
+    //std::cout << "\t\tbasecase'd out\n";
     cblas_dgemm(
             Layout,
             transa,
@@ -195,19 +247,34 @@ void mpmat::gradeschool(const int & a_start, const int & b_start, const int & c_
     //std::cout << "\t\tc = " << c_double_array[m*n*c_start] << "\n";
   }
   else { //if we don't need all four, then just do grade school
-    int len2 = pow(2,ceil(log2(diff))-1);
-    int len3 = pow(3,ceil(log2(diff))-1);
+    int len2 = pow(2,ceil(log2(diff))-1)+.1;
+    int len3 = pow(3,ceil(log2(diff))-1)+.1;
+    int clen2 = len2 - 1; // the "fundamental length" of c one level below (post squishing)
+    int clen3 = len3/3; // the "fundamental length" of c one level below (pre-squishing)
+    //std::cout << "\t\tclen2=" << clen2 << ", diff=" << diff << "\n";
     // C_0 = A_0 * B_0 // karatsuba
-    karatsuba(a_start, b_start, c_start, 2*len2 + start, Layout, transa, transb, m, n, k);
+    karatsuba(a_start, b_start, c_start, c_max, Layout, transa, transb, m, n, k);
     // C_1 = A_1 * B_0 // grade school
-    gradeschool(a_start+len2, b_start, c_start+len3, c_max, Layout, transa, transb, m, n, k);
+    gradeschool(a_start+len2, b_start, c_start+(3*clen2+2), c_max, Layout, transa, transb, m, n, k);
+    //std::cout << "\t\t\tadd array of length " << (3*clen2+2) << " from " << (c_start+(2*clen2+1)) << " to " << (c_start+clen2+1) << "\n";
+    cblas_daxpy(m*n*(2*clen2+1), 1.0, c_double_array+m*n*(c_start+(3*clen2+2)), 1, c_double_array+m*n*(c_start+clen2+1), 1);
+    //std::cout << "\t\t\tadd array of length " << clen2 << " from " << (c_start+2*clen2+1) << " to " << (c_start+clen2+1) << "\n";
+    //cblas_daxpy(m*n*clen2, 1.0, c_double_array+m*n*(c_start+2*clen2+1), 1, c_double_array+m*n*(c_start+clen2+1), 1);
+    // // squish the rest of C_1 against C_0
+    //std::cout << "\t\t\tcopy array of length " << clen2 << " from " << c_start+3*clen2+1 << " to " << (c_start+2*clen2+1) << "\n";
+    //cblas_dcopy(m*n*clen2, c_double_array+m*n*(c_start+3*clen2+1), 1, c_double_array+m*n*(c_start+2*clen2+1), 1);
+    //std::cout << "\t\t\tcopy array of length " << clen2 << " from " << (c_start+4*clen2+1) << " to " << (c_start+3*clen2+1) << "\n";
+    //cblas_dcopy(m*n, c_double_array+m*n*(c_start+4*clen2+1), 1, c_double_array+m*n*(c_start+3*clen2+1), 1);
+    memset(c_double_array+m*n*(c_start+(3*clen2+2)),0,m*n*(2*clen2+1)*sizeof(double));
     // C_2 = A_0 * B_1 // grade school // stored in C_2 temporarily!
-    gradeschool(a_start, b_start+len2, c_start+2*len3, c_max, Layout, transa, transb, m, n, k);
+    gradeschool(a_start, b_start+len2, c_start+(3*clen2+2), c_max, Layout, transa, transb, m, n, k);
     //std::cout << "\n";
     // C_1 += C_2
-    cblas_daxpy(m*n*len3, 1.0, c_double_array+m*n*(c_start+2*len3), 1, c_double_array+m*n*(c_start+len3), 1);
+    //std::cout << "\t\t\tadd array of length " << (2*clen2+1) << " from " << (c_start+(3*clen2+2)) << " to " << (c_start+clen2+1) << "\n";
+    cblas_daxpy(m*n*(2*clen2+1), 1.0, c_double_array+m*n*(c_start+(3*clen2+2)), 1, c_double_array+m*n*(c_start+clen2+1), 1);
     // C_2 = 0
-    memset(c_double_array+m*n*(c_start+2*len3),0,m*n*len3*sizeof(double));
+    memset(c_double_array+m*n*(c_start+(3*clen2+2)),0,m*n*(2*clen2+1)*sizeof(double));
+    //std::cout << "\n";
   }
 }
 
@@ -219,6 +286,7 @@ void mpmat::gradeschool_bc(const int & a_start, const int & b_start, const int &
   int diff = c_max - start;
   //std::cout << "\tgradeschool_bc start=(" << a_start << ", " << b_start << ") l=" << c_max << "\n";
   if(diff < 2){ // base case, just multiply
+    std::cout << "\t\tbasecase'd out\n";
     cblas_dgemm(
             Layout,
             transa,

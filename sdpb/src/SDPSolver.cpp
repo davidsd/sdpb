@@ -1164,12 +1164,12 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
   }
 
 
-  for (int i = 1; i <= 1 << 4; i*=2){
-    if (!myWorkspace.karatsuba_test(1000,1000,1000,i)){ 
+  for (int i = 1 << 1; i <= 1 << 10; i*=2){
+    if (!myWorkspace.karatsuba_test(400,400,400,i)){ 
       std::cerr << "karatsuba length " << i << " failed\n";
       break;
     }
-    std::cout << "karatsuba length " << i << " passed\n";
+    std::cerr << "karatsuba length " << i << " passed\n";
   }
   std::cout << "\n" << timers << "\n";
   //myWorkspace.base_karatsuba_test();
