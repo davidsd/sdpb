@@ -46,21 +46,25 @@ mpf_class * randomGMPVector(int size, int prec) {
 
 #ifndef __SDPB_CUDA__
 void mpmat::realloc(int mem_a, int mem_b, int mem_c){
+
  if (mem_a > len_a){
+  std::cerr << "reallocing a\n";
       if (len_a != 0) {
-	delete [] a_double_array;
+        delete [] a_double_array;
       }
       a_double_array = new mpmat_double[mem_a];
       len_a = mem_a;
     }
  if (mem_b > len_b){
+   std::cerr << "reallocing b\n";
       if (len_b != 0) {
-	delete [] b_double_array;
+	       delete [] b_double_array;
       }
       b_double_array = new mpmat_double[mem_b];
       len_b = mem_b;
     }
   if (mem_c > len_c){
+    std::cerr << "reallocing c\n";
      if (len_c != 0) {
 	delete [] c_double_array;
       }
@@ -227,7 +231,7 @@ void mpmat::gemm_reduced(
         mpf_class * c
         //const int ldc
         ) {
-
+  std::cerr << "starting a mult\n";
     timers["mpmat_gemm_reduced.complete"].start();
 
     int mpmat_limb = ( MPMAT_DOUBLE_MANT_IMPLICIT - ceil(log2(k)) )/ 2;
@@ -245,7 +249,7 @@ void mpmat::gemm_reduced(
 
     int mem_a = mpmat_size_a * m * k;
     int mem_b = mpmat_size_b * n * k;
-    int mem_c = mpmat_size_c * m * n;
+    int mem_c = (3*mpmat_size_c) * m * n;
     
     realloc(mem_a,mem_b,mem_c);
 
@@ -277,28 +281,29 @@ void mpmat::gemm_reduced(
     timers["mpmat_gemm_reduced.multiplication"].start();
 
     
-#pragma omp parallel for
-    for (int i = 0; i < mpmat_size_c; i++) {
-        for (int j = 0; j <= i; j++) {
-            cblas_dgemm(
-                    Layout,
-                    transa,
-                    transb,
-                    m,
-                    n,
-                    k,
-                    1,
-                    a_double_array+k*m*j,
-                    Layout == CblasRowMajor ? k : m,
-                    b_double_array+(i-j)*k*n,
-                    Layout == CblasRowMajor ? n : k,
-                    1,
-                    c_double_array+i*m*n,
-                    Layout == CblasRowMajor ? n : m
-            );
+// #pragma omp parallel for
+//     for (int i = 0; i < mpmat_size_c; i++) {
+//         for (int j = 0; j <= i; j++) {
+//             cblas_dgemm(
+//                     Layout,
+//                     transa,
+//                     transb,
+//                     m,
+//                     n,
+//                     k,
+//                     1,
+//                     a_double_array+k*m*j,
+//                     Layout == CblasRowMajor ? k : m,
+//                     b_double_array+(i-j)*k*n,
+//                     Layout == CblasRowMajor ? n : k,
+//                     1,
+//                     c_double_array+i*m*n,
+//                     Layout == CblasRowMajor ? n : m
+//             );
             
-        }
-    }
+//         }
+//     }
+    karatsuba(mpmat_size_c, Layout, transa, transb, m, n, k);
 
     timers["mpmat_gemm_reduced.multiplication"].stop();
 
@@ -314,6 +319,8 @@ void mpmat::gemm_reduced(
 
 
     timers["mpmat_gemm_reduced.complete"].stop();
+
+    std::cerr << "ending a mult\n";
 }
 
 #ifdef __SDPB_CUDA__
@@ -630,7 +637,7 @@ void mpmat::syrk_reduced(
     int mpmat_size_c = mpmat_size_a;
 
     int mem_a = mpmat_size_a * m * k;
-    int mem_c = mpmat_size_c * m * m;
+    int mem_c = (6*mpmat_size_c - log2(mpmat_size_c) - 1)* m * m;
 
     realloc(mem_a,max(mem_a,mem_c),mem_c);
     
@@ -658,39 +665,41 @@ void mpmat::syrk_reduced(
 
     timers["mpmat_syrk_reduced.multiplication"].resume();
 
-#pragma omp parallel for schedule(dynamic)
-    for (int i = 0; i < mpmat_size_c; i++) {
-      for (int j = 0; j < i / 2 + i % 2; j++) {
-	cblas_dgemm(CblasColMajor,(Layout == CblasRowMajor) != (transa == CblasTrans) ? CblasNoTrans : CblasTrans,
-		      (Layout == CblasRowMajor) != (transa == CblasTrans) ? CblasTrans: CblasNoTrans,
-		    m,
-		    m,
-		    k,
-		    alpha,
-		    a_double_array+k*m*j,
-		    (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
-		    a_double_array+(i-j)*k*m,
-		    (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
-		    beta,
-		    c_double_array+i*m*m,
-		    m);
-        }
-      mkl_domatcopy('c','t',
-		    m,m,1,
-		    c_double_array+i*m*m,
-		    m,
-		    b_double_array+i*m*m,
-		    m
-		    );
-      cblas_daxpy(m*m,1.0,
-		  b_double_array+i*m*m,1,
-		  c_double_array+i*m*m,1);
-      // if significance of result is even, calculate the symmetric part
-	if ( i % 2 == 0)
-	  cblas_dsyrk(CblasColMajor,CblasUpper,(Layout == CblasRowMajor) != (transa == CblasTrans) ? CblasNoTrans : CblasTrans,
-		      m,k,alpha,a_double_array+k*m*(i/2),(Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
-		      beta,c_double_array+i*m*m,m);
-    }
+// #pragma omp parallel for schedule(dynamic)
+//     for (int i = 0; i < mpmat_size_c; i++) {
+//       for (int j = 0; j < i / 2 + i % 2; j++) {
+// 	cblas_dgemm(CblasColMajor,(Layout == CblasRowMajor) != (transa == CblasTrans) ? CblasNoTrans : CblasTrans,
+// 		      (Layout == CblasRowMajor) != (transa == CblasTrans) ? CblasTrans: CblasNoTrans,
+// 		    m,
+// 		    m,
+// 		    k,
+// 		    alpha,
+// 		    a_double_array+k*m*j,
+// 		    (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
+// 		    a_double_array+(i-j)*k*m,
+// 		    (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
+// 		    beta,
+// 		    c_double_array+i*m*m,
+// 		    m);
+//         }
+//       mkl_domatcopy('c','t',
+// 		    m,m,1,
+// 		    c_double_array+i*m*m,
+// 		    m,
+// 		    b_double_array+i*m*m,
+// 		    m
+// 		    );
+//       cblas_daxpy(m*m,1.0,
+// 		  b_double_array+i*m*m,1,
+// 		  c_double_array+i*m*m,1);
+//       // if significance of result is even, calculate the symmetric part
+// 	if ( i % 2 == 0)
+// 	  cblas_dsyrk(CblasColMajor,CblasUpper,(Layout == CblasRowMajor) != (transa == CblasTrans) ? CblasNoTrans : CblasTrans,
+// 		      m,k,alpha,a_double_array+k*m*(i/2),(Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
+// 		      beta,c_double_array+i*m*m,m);
+//     }
+    karatsuba(mpmat_size_c, Layout, transa,
+                     m, k);
 
 
     timers["mpmat_syrk_reduced.multiplication"].stop();

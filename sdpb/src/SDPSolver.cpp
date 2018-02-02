@@ -776,7 +776,7 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
     for (int i = c; i < c + stabilizeBlocks[b].cols; i++)
       Q.elt(i, i) -= 1;
   }
-
+  
   // LowerLeft(Q) = V^T SchurOffDiagonal
   timers["Qcomputation.nonGPU"].resume();
   # pragma omp parallel for schedule(dynamic)
@@ -784,7 +784,7 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
     int b = stabilizeBlockIndices[j];
     int p = stabilizeBlockUpdateRow[j];
     int r = stabilizeBlockUpdateColumn[j];
-    /*myWorkspace.gemm_reduced_gpu(CblasRowMajor,CblasTrans,CblasNoTrans,
+    myWorkspace.gemm_reduced(CblasRowMajor,CblasTrans,CblasNoTrans,
           stabilizeBlocks[b].cols,
           SchurOffDiagonal.cols,
           stabilizeBlocks[b].rows,
@@ -794,19 +794,19 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
     //SchurOffDiagonal.rows,
           &Q.elt(r, 0)
     //Q.rows
-    );*/
-    Rgemm("Transpose", "NoTranspose",
-          stabilizeBlocks[b].cols,
-          SchurOffDiagonal.cols,
-          stabilizeBlocks[b].rows,
-          1,
-          &stabilizeBlocks[b].elements[0],
-          stabilizeBlocks[b].rows,
-          &SchurOffDiagonal.elt(p, 0),
-          SchurOffDiagonal.rows,
-          0,
-          &Q.elt(r, 0),
-          Q.rows);
+    );
+   //  Rgemm("Transpose", "NoTranspose",
+   //        stabilizeBlocks[b].cols,
+   //        SchurOffDiagonal.cols,
+   //        stabilizeBlocks[b].rows,
+   //        1,
+   //        &stabilizeBlocks[b].elements[0],
+   //        stabilizeBlocks[b].rows,
+   //        &SchurOffDiagonal.elt(p, 0),
+   //        SchurOffDiagonal.rows,
+   //        0,
+   //        &Q.elt(r, 0),
+   //        Q.rows);
 	  }
   timers["Qcomputation.nonGPU"].stop();
 
@@ -933,11 +933,7 @@ void SDPSolver::computeSearchDirection(const Real &beta,
 
   // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))
   timers[timerName + ".Z.multiply"].resume();
-#ifdef __SDPB_CUDA__
-  blockDiagonalMatrixMultiplyMpmat(myWorkspace,PrimalResidues, Y, Z,parameters.gpu);
-#else
-   blockDiagonalMatrixMultiplyMpmat(myWorkspace,PrimalResidues, Y, Z);
-#endif
+  blockDiagonalMatrixMultiply(PrimalResidues, Y, Z);
   timers[timerName + ".Z.multiply"].stop();
   timers[timerName + ".Z.subtract"].resume();
   Z -= R;
@@ -1134,7 +1130,7 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
   delete [] c_tmp;
   
   Matrix diff = C - C2;
-  //Matrix diff2 = C2 - C3;
+  Matrix diff2 = C2 - C3;
   matrixScaleMultiplyAdd(-1,A,B,1,C);
 #ifdef __SDPB_CUDA__
   matrixScaleMultiplyAddMpmat(myWorkspace,-1,A,B,1,C2,parameters.gpu);
@@ -1164,14 +1160,15 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
   }
 
 
-  for (int i = 1 << 1; i <= 1 << 10; i*=2){
-    if (!myWorkspace.karatsuba_test(400,400,400,i)){ 
+  for (int i = 1 << 6; i <= 1 << 6; i*=2){
+    if (!myWorkspace.symm_karatsuba_test(m,m,i)){ 
       std::cerr << "karatsuba length " << i << " failed\n";
       break;
     }
     std::cerr << "karatsuba length " << i << " passed\n";
+    std::cout << "\n" << timers << "\n";
   }
-  std::cout << "\n" << timers << "\n";
+  //std::cout << "\n" << timers << "\n";
   //myWorkspace.base_karatsuba_test();
 
   //std::cerr << "about to test CPU vs GPU:\n\n\n";

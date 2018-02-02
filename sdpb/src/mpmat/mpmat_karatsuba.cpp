@@ -37,6 +37,7 @@ void mpmat::karatsuba(const int & c_max, CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE tr
   double * b_tmp = b_double_array;
   b_double_array = a_double_array;
   gradeschool(0, 0, c_max, Layout, trans, n, k);
+  //std::cerr << "really done with recursings\n";
   b_double_array = b_tmp;
 }
 
@@ -48,7 +49,9 @@ void mpmat::karatsuba(const int & a_start, const int & b_start, const int & c_st
   
   int start = a_start + b_start;
   int diff = c_max - start;
+  //std::cerr << "karatsuba (m,n,k)=(" << m << "," << n << "," << k << ") " << start << " " << c_start << " " << c_max << "\n";
   if(diff <= 2){ // base case, just multiply
+    //std::cerr << "attempt at gemm karatsuba\n";
     cblas_dgemm(
             Layout,
             transa,
@@ -58,9 +61,9 @@ void mpmat::karatsuba(const int & a_start, const int & b_start, const int & c_st
             k,
             alpha,
             a_double_array+k*m*a_start,
-            Layout == CblasRowMajor ? k : m,
+            ((Layout == CblasRowMajor) != (transa == CblasTrans)) ? k : m,
             b_double_array+k*n*b_start,
-            Layout == CblasRowMajor ? n : k,
+            ((Layout == CblasRowMajor) != (transb == CblasTrans)) ? n : k,
             beta,
             c_double_array+m*n*c_start,
             Layout == CblasRowMajor ? n : m
@@ -131,7 +134,8 @@ void mpmat::karatsuba(const int & a_start, const int & c_start, const int & c_ma
   
   int start = 2*a_start;
   int diff = c_max - start;
-  if(diff < 2){ // base case, just multiply
+  //std::cerr << "skaratsuba (n,k)=(" << n << "," << k << ") " << start << " " << c_start << " " << c_max << "\n";
+  if(diff <= 2){ // base case, just multiply
     cblas_dsyrk(CblasColMajor,
                 CblasUpper,(Layout == CblasRowMajor) != (trans == CblasTrans) ? CblasNoTrans : CblasTrans,
                 n,k,alpha,
@@ -140,6 +144,7 @@ void mpmat::karatsuba(const int & a_start, const int & c_start, const int & c_ma
                 beta,
                 c_double_array+n*n*c_start,
                 n);
+    //std::cerr << "basecase'd out\n";
   }
   else { //if we need all four quadrants, do full karatsuba
     int len2 = pow(2,ceil(log2(diff))-2)+.1; // the "fundamental length" of a and b
@@ -200,7 +205,10 @@ void mpmat::gradeschool(const int & a_start, const int & b_start, const int & c_
                       const double alpha, const double beta){
   int start = a_start + b_start;
   int diff = c_max - start;
+  //std::cerr << "gradeschool (m,n,k)=(" << m << "," << n << "," << k << ") " << start << " " << c_start << " " << c_max << "\n";
   if(diff < 2){ // base case, just multiply
+    //std::cerr << "attempt at gemm\n";
+    //std::cerr << "\tmultiplying a[" << a_start << "] * b[" << b_start << "] = c[" << c_start << "]\n";
     cblas_dgemm(
             Layout,
             transa,
@@ -210,9 +218,9 @@ void mpmat::gradeschool(const int & a_start, const int & b_start, const int & c_
             k,
             alpha,
             a_double_array+k*m*a_start,
-            Layout == CblasRowMajor ? k : m,
+            ((Layout == CblasRowMajor) != (transa == CblasTrans)) ? k : m,
             b_double_array+k*n*b_start,
-            Layout == CblasRowMajor ? n : k,
+            ((Layout == CblasRowMajor) != (transb == CblasTrans)) ? n : k,
             beta,
             c_double_array+m*n*c_start,
             Layout == CblasRowMajor ? n : m
@@ -253,8 +261,10 @@ void mpmat::gradeschool(const int & a_start, const int & c_start, const int & c_
                       const double alpha, const double beta){ 
   int start = 2*a_start;
   int diff = c_max - start;
+  //std::cerr << "sgradeschool (n,k)=(" << n << "," << k << ") " << start << " " << c_start << " " << c_max << "\n";
   if(diff < 2){ // base case, just multiply
-   cblas_dsyrk(CblasColMajor,
+    //std::cerr << "basecase'd out\n";
+    cblas_dsyrk(CblasColMajor,
                 CblasUpper,(Layout == CblasRowMajor) != (trans == CblasTrans) ? CblasNoTrans : CblasTrans,
                 n,k,alpha,
                 a_double_array+k*n*a_start,
@@ -269,25 +279,37 @@ void mpmat::gradeschool(const int & a_start, const int & c_start, const int & c_
     int clen2 = len2 - 1; // the "fundamental length" of c one level below (post squishing)
     int clen3 = len3/3; // the "fundamental length" of c one level below (pre-squishing)
     // C_0 = A_0 * A_0 // karatsuba
+    //std::cerr << "\tmultiplying a[" << a_start << ":" << a_start+len2 << "] -> c[" << c_start << ":" << c_start+ 2*clen2 + 1 << "]\n";
     karatsuba(a_start, c_start, c_max, Layout, trans, n, k);
     
     // C_1 = A_1 * A_0 // grade school
-    gradeschool(a_start+len2, a_start, c_start+(3*clen2+2), c_max, Layout, trans, trans == CblasTrans ? CblasNoTrans : CblasTrans, n, n, k);
+    //std::cerr << "\tmultiplying a[" << a_start + len2 << ":" << a_start+2*len2 << "] * a[" << a_start << ":" << a_start+len2 << "] -> c[" << c_start + (3*clen2+2)<< ":" <<  c_start + (3*clen2+2)+2*clen2 + 1 << "]\n";
+    gradeschool(a_start+len2, a_start, c_start+(3*clen2+2), c_max, Layout, trans == CblasTrans ? CblasNoTrans : CblasTrans, trans, n, n, k);
 
     // move over C_1, deal with the overlap
+    //std::cerr << "\tadding c[" << c_start+(3*clen2+2) << ":" << c_start+(3*clen2+2)+2*clen2+1 << "] -> c[" <<(c_start+clen2+1) << ":" << (c_start+3*clen2+2) <<"]\n";
     cblas_daxpy(n*n*(2*clen2+1), 1.0, c_double_array+n*n*(c_start+(3*clen2+2)), 1, c_double_array+n*n*(c_start+clen2+1), 1);
-    
+
+    // C_1 += (A_1 * A_0)T = A_0 * A_1
+    //std::cerr << "TRANSPOSING\n";
+    for (int i = 0; i < 2*clen2+1; ++i) // in place transpose
+      mkl_dimatcopy('r','t',n,n,1.0,c_double_array+n*n*(c_start+(3*clen2+2)+i),n,n);
+    //std::cerr << "TRANSPOSED\n";
+    //std::cerr << "\tadding c[" << c_start+(3*clen2+2) << ":" << c_start+(3*clen2+2)+2*clen2+1 << "]T -> c[" <<(c_start+clen2+1) << ":" << (c_start+3*clen2+2) <<"]\n";
+    cblas_daxpy(n*n*(2*clen2+1), 1.0, c_double_array+n*n*(c_start+(3*clen2+2)), 1, c_double_array+n*n*(c_start+clen2+1), 1);
+
     // clean up
     memset(c_double_array+n*n*(c_start+(3*clen2+2)),0,n*n*(2*clen2+1)*sizeof(double));
 
-    // C_2 = A_0 * A_1 // grade school // stored temporarily in C_2!
-    gradeschool(a_start, a_start+len2, c_start+(3*clen2+2), c_max, Layout, trans, trans == CblasTrans ? CblasNoTrans : CblasTrans, n, n, k);
+    // // C_2 = A_0 * A_1 // grade school // stored temporarily in C_2!
+    // gradeschool(a_start, a_start+len2, c_start+(3*clen2+2), c_max, Layout, trans, trans == CblasTrans ? CblasNoTrans : CblasTrans, n, n, k);
     
-    // C_1 += C_2 
-    cblas_daxpy(n*n*(2*clen2+1), 1.0, c_double_array+n*n*(c_start+(3*clen2+2)), 1, c_double_array+n*n*(c_start+clen2+1), 1);
+    // //std::cerr << "done with recursings\n";
+    // // C_1 += C_2 
+    // cblas_daxpy(n*n*(2*clen2+1), 1.0, c_double_array+n*n*(c_start+(3*clen2+2)), 1, c_double_array+n*n*(c_start+clen2+1), 1);
     
-    // C_2 = 0
-    memset(c_double_array+n*n*(c_start+(3*clen2+2)),0,n*n*(2*clen2+1)*sizeof(double));
+    // // C_2 = 0
+    // memset(c_double_array+n*n*(c_start+(3*clen2+2)),0,n*n*(2*clen2+1)*sizeof(double));
   }
 }
 
@@ -401,7 +423,7 @@ void mpmat::gradeschool_bc(const int & a_start, const int & b_start, const int &
   int diff = c_max - start;
   //std::cout << "\tgradeschool_bc start=(" << a_start << ", " << b_start << ") l=" << c_max << "\n";
   if(diff < 2){ // base case, just multiply
-    std::cout << "\t\tbasecase'd out\n";
+    //std::cout << "\t\tbasecase'd out\n";
     cblas_dgemm(
             Layout,
             transa,

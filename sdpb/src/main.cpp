@@ -72,7 +72,7 @@ int solveSDP(const vector<path> &sdpFiles,
   SDPSolver solver(readBootstrapSDP(sdpFiles), parameters);
   
   if(parameters.multTest)
-    solver.testMultiplication(16,16,2);
+    solver.testMultiplication(16,2048,2);
 
   if (exists(checkpointFileIn))
     solver.loadCheckpoint(checkpointFileIn);

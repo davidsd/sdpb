@@ -436,7 +436,7 @@ void mpmat::mpmatConvertDoubleToGMPVector(mpf_class * dest,
                                    mpmat_double * tmp) {
     //mpmat_double * tmp = static_cast<mpmat_double *>( malloc(dest_len * mpmat_size * sizeof(mpmat_double)) );
     // Transpose out-of-place
-    timers["Transposition reverse"].start();
+    //timers["Transposition reverse"].resume();
     mkl_domatcopy(
             'r','t',
             mpmat_size,
@@ -447,7 +447,7 @@ void mpmat::mpmatConvertDoubleToGMPVector(mpf_class * dest,
             tmp,
             mpmat_size
     );
-    timers["Transposition reverse"].stop();
+    //timers["Transposition reverse"].stop();
 
 #pragma omp parallel for schedule(dynamic) shared(dest,tmp)
     for (int i = 0; i < dest_len; i++) {

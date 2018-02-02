@@ -358,6 +358,7 @@ void treecondense(double * c, int size, int l);
 void mpmat_conversion_test(int i, int f, int d);
 
 bool karatsuba_test(int m, int n, int k, int l);
+bool symm_karatsuba_test(int n, int k, int l);
 bool base_karatsuba_test();
 };
 
