@@ -108,6 +108,41 @@ void matrixScaleMultiplyAddMpmat(mpmat &myWorkspace, Real alpha, Matrix &A,
   delete [] Ctmp;
 }
 
+void matrixScaleTransMultiplyAddMpmat(mpmat &myWorkspace, char ta, char tb, Real alpha, Matrix &A, int a_offset,
+         Matrix &B, int b_offset, Real beta, Matrix &C, int c_offset
+#ifdef __SDPB_CUDA__
+         ,bool gpu
+#endif
+) {
+  assert(A.cols == B.rows);
+  assert(A.rows == C.rows);
+  assert(B.cols == C.cols);
+
+  mpf_set_default_prec(mpf_get_default_prec()+512);
+  Real * Ctmp = new Real[C.cols*C.rows];
+  mpf_set_default_prec(mpf_get_default_prec()-512);
+
+#ifdef __SDPB_CUDA__
+  if(gpu) myWorkspace.gemm_reduced_gpu(CblasRowMajor,ta == 't' ? CblasTrans : CblasNoTrans,tb == 't' ? CblasTrans : CblasNoTrans,
+         A.rows, B.cols, A.cols,
+         A.elements.data()+a_offset, B.elements.data()+b_offset,
+         Ctmp+c_offset);
+  else
+  myWorkspace.gemm_reduced(CblasRowMajor,ta == 't' ? CblasTrans : CblasNoTrans,tb == 't' ? CblasTrans : CblasNoTrans,
+         A.rows, B.cols, A.cols,
+         A.elements.data()+a_offset, B.elements.data()+b_offset,
+         Ctmp+c_offset);
+#else
+         myWorkspace.gemm_reduced(CblasRowMajor,ta == 't' ? CblasTrans : CblasNoTrans,tb == 't' ? CblasTrans : CblasNoTrans,
+         A.rows, B.cols, A.cols,
+         A.elements.data()+a_offset, B.elements.data()+b_offset,
+         Ctmp+c_offset);
+#endif
+  matrixScaleAdd(alpha,Ctmp,beta,C);
+
+  delete [] Ctmp;
+}
+
 // C := A*B
 void matrixMultiply(Matrix &A, Matrix &B, Matrix &C) {
   matrixScaleMultiplyAdd(1, A, B, 0, C);

@@ -776,7 +776,7 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
     for (int i = c; i < c + stabilizeBlocks[b].cols; i++)
       Q.elt(i, i) -= 1;
   }
-  
+
   // LowerLeft(Q) = V^T SchurOffDiagonal
   timers["Qcomputation.nonGPU"].resume();
   # pragma omp parallel for schedule(dynamic)
@@ -784,29 +784,31 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
     int b = stabilizeBlockIndices[j];
     int p = stabilizeBlockUpdateRow[j];
     int r = stabilizeBlockUpdateColumn[j];
-    myWorkspace.gemm_reduced(CblasRowMajor,CblasTrans,CblasNoTrans,
+    // myWorkspace.gemm_reduced(CblasRowMajor,CblasTrans,CblasNoTrans,
+    //       stabilizeBlocks[b].cols,
+    //       SchurOffDiagonal.cols,
+    //       stabilizeBlocks[b].rows,
+    //       &stabilizeBlocks[b].elements[0],
+    // //stabilizeBlocks[b].rows,
+    //       &SchurOffDiagonal.elt(p, 0),
+    // //SchurOffDiagonal.rows,
+    //       &Q.elt(r, 0)
+    // //Q.rows
+    // );
+    //matrixScaleTransMultiplyAddMpmat(myWorkspace, 't', 'n', 1.0, stabilizeBlocks[b],
+        // Matrix &B, 0.0, Matrix &C);
+    Rgemm("Transpose", "NoTranspose",
           stabilizeBlocks[b].cols,
           SchurOffDiagonal.cols,
           stabilizeBlocks[b].rows,
+          1,
           &stabilizeBlocks[b].elements[0],
-    //stabilizeBlocks[b].rows,
+          stabilizeBlocks[b].rows,
           &SchurOffDiagonal.elt(p, 0),
-    //SchurOffDiagonal.rows,
-          &Q.elt(r, 0)
-    //Q.rows
-    );
-   //  Rgemm("Transpose", "NoTranspose",
-   //        stabilizeBlocks[b].cols,
-   //        SchurOffDiagonal.cols,
-   //        stabilizeBlocks[b].rows,
-   //        1,
-   //        &stabilizeBlocks[b].elements[0],
-   //        stabilizeBlocks[b].rows,
-   //        &SchurOffDiagonal.elt(p, 0),
-   //        SchurOffDiagonal.rows,
-   //        0,
-   //        &Q.elt(r, 0),
-   //        Q.rows);
+          SchurOffDiagonal.rows,
+          0,
+          &Q.elt(r, 0),
+          Q.rows);
 	  }
   timers["Qcomputation.nonGPU"].stop();
 
@@ -1129,35 +1131,35 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
   delete [] b_tmp;
   delete [] c_tmp;
   
-  Matrix diff = C - C2;
-  Matrix diff2 = C2 - C3;
-  matrixScaleMultiplyAdd(-1,A,B,1,C);
-#ifdef __SDPB_CUDA__
-  matrixScaleMultiplyAddMpmat(myWorkspace,-1,A,B,1,C2,parameters.gpu);
-#else
-  matrixScaleMultiplyAddMpmat(myWorkspace,-1,A,B,1,C2);
-#endif
-  std::cerr << "done multing\n";
+//   Matrix diff = C - C2;
+//   Matrix diff2 = C2 - C3;
+//   matrixScaleMultiplyAdd(-1,A,B,1,C);
+// #ifdef __SDPB_CUDA__
+//   matrixScaleMultiplyAddMpmat(myWorkspace,-1,A,B,1,C2,parameters.gpu);
+// #else
+//   matrixScaleMultiplyAddMpmat(myWorkspace,-1,A,B,1,C2);
+// #endif
+//   std::cerr << "done multing\n";
 
-  if (C != C2){
-  std::cerr << "Error: multiplication failed at dimension " << m << ". Printing outputs:\n";
-  std::cerr << C << "\n\n\n";
-  std::cerr << C2 << "\n\n\n";
-  std::cerr << diff << "\n\n\n";
-  //break;
-}
-  for (int r = 0; r < C2.rows; ++r){
-    for (int c = 0; c < C2.cols; ++c){
-      if (C2.elt(r,c) < -100000.0){
-	std::cout << C2.elt(r,c) << " has bits of:\n";
-	//print_mpf_bits(C2.elt(r,c));
-	compare_mpf_bits(C2.elt(r,c),C.elt(r,c));
-       	std::cout << "\n";
-	//print_mpf_bits(C.elt(r,c));
-	std::cout << "\n\n\n";
-      }
-    }
-  }
+//   if (C != C2){
+//   std::cerr << "Error: multiplication failed at dimension " << m << ". Printing outputs:\n";
+//   //std::cerr << C << "\n\n\n";
+//   //std::cerr << C2 << "\n\n\n";
+//   //std::cerr << diff << "\n\n\n";
+//   //break;
+// }
+//   for (int r = 0; r < C2.rows; ++r){
+//     for (int c = 0; c < C2.cols; ++c){
+//       if (C2.elt(r,c) < -100000.0){
+// 	std::cout << C2.elt(r,c) << " has bits of:\n";
+// 	//print_mpf_bits(C2.elt(r,c));
+// 	compare_mpf_bits(C2.elt(r,c),C.elt(r,c));
+//        	std::cout << "\n";
+// 	//print_mpf_bits(C.elt(r,c));
+// 	std::cout << "\n\n\n";
+//       }
+//     }
+//   }
 
 
   for (int i = 1 << 6; i <= 1 << 6; i*=2){

@@ -65,37 +65,64 @@ class mpmat{
   cublasHandle_t *handles;
   #endif
 
+  #ifdef __SDPB_CUDA__
+  void karatsuba_gpu(const int & a_start, const int & b_start, const int & c_start, const int & c_max,
+                      CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE transa,
+                      CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k,
+                      const double alpha = 1.0, const double beta = 1.0);
+  // Implements a symmetric version of the above
+  void karatsuba_gpu(const int & a_start, const int & c_start, const int & c_max,
+                      CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE trans,
+                       const int & n, const int & k,
+                      const double alpha = 1.0, const double beta = 1.0);
+  #endif
   void karatsuba(const int & a_start, const int & b_start, const int & c_start, const int & c_max,
                       CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE transa,
                       CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k,
                       const double alpha = 1.0, const double beta = 1.0);
+  // Implements a symmetric version of the above
+  void karatsuba(const int & a_start, const int & c_start, const int & c_max,
+                      CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE trans,
+                       const int & n, const int & k,
+                      const double alpha = 1.0, const double beta = 1.0);
+  
+
   void karatsuba_bc(const int & a_start, const int & b_start, const int & c_start, const int & c_max,
                       CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE transa,
                       CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k,
                       const double alpha = 1.0, const double beta = 1.0);
 
-// Implements a symmetric version of the above
-  void karatsuba(const int & a_start, const int & c_start, const int & c_max,
-                      CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE trans,
-                       const int & n, const int & k,
-                      const double alpha = 1.0, const double beta = 1.0);
 
-  // Implements a truncated recursive multiplication that maximises Karatsuba
+  #ifdef __SDPB_CUDA__
+  // Implements a truncated recursive multiplication that maximizes Karatsuba
+  void gradeschool_gpu(const int & a_start, const int & b_start, const int & c_start, const int & c_max,
+                      CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE transa,
+                      CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k,
+                      const double alpha = 1.0, const double beta = 1.0);
+  // Implements a symmetric version of the above
+  void gradeschool_gpu(const int & a_start, const int & c_start, const int & c_max,
+                      CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE trans,
+                      const int & n, const int & k,
+                      const double alpha = 1.0, const double beta = 1.0);
+  #endif
+  // Implements a truncated recursive multiplication that maximizes Karatsuba
   void gradeschool(const int & a_start, const int & b_start, const int & c_start, const int & c_max,
                       CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE transa,
                       CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k,
                       const double alpha = 1.0, const double beta = 1.0);
+  // Implements a symmetric version of the above
+  void gradeschool(const int & a_start, const int & c_start, const int & c_max,
+                      CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE trans,
+                      const int & n, const int & k,
+                      const double alpha = 1.0, const double beta = 1.0);
+
   void gradeschool_bc(const int & a_start, const int & b_start,
                     const int & c_start, const int & c_max,
                     CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE transa,
                     CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k,
                     const double alpha = 1.0, const double beta = 1.0);
 
-// Implements a symmetric version of the above
-  void gradeschool(const int & a_start, const int & c_start, const int & c_max,
-                      CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE trans,
-                      const int & n, const int & k,
-                      const double alpha = 1.0, const double beta = 1.0);
+
 
  public: 
   mpmat_double *a_double_array, *b_double_array, *c_double_array, *tmp, **d_a, **d_b, **d_c; 
@@ -346,11 +373,19 @@ void syrk_reduced(
         //const int ldc
 		  );
 // Implements a recursive Karatsuba multiplication on an array of matrices with a cutoff c_max
+#ifdef __SDPB_CUDA__
+void karatsuba(const int & c_max, CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE transa,
+               CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k, bool gpu = true);
+// symmetric case
+void karatsuba(const int & c_max, CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE trans,
+               const int & n, const int & k, bool gpu = true);
+#else
 void karatsuba(const int & c_max, CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE transa,
                CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k);
 // symmetric case
 void karatsuba(const int & c_max, CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE trans,
                const int & n, const int & k);
+#endif
 
 
 void treecondense(double * c, int size, int l);
@@ -359,6 +394,10 @@ void mpmat_conversion_test(int i, int f, int d);
 
 bool karatsuba_test(int m, int n, int k, int l);
 bool symm_karatsuba_test(int n, int k, int l);
+#ifdef __SDPB_CUDA__
+bool karatsuba_test_gpu(int m, int n, int k, int l);
+bool symm_karatsuba_test_gpu(int n, int k, int l);
+#endif
 bool base_karatsuba_test();
 };
 
@@ -368,6 +407,4 @@ void print_mpf_bits(const mpf_class &a);
 bool compare_mpf_bits(const mpf_class &a, const mpf_class &b);
 
 void print_mpmat_double_array(const mpmat_double * array, int len);
-
-
 #endif //MPMAT_MPMAT_H
