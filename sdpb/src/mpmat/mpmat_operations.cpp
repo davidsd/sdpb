@@ -48,7 +48,7 @@ mpf_class * randomGMPVector(int size, int prec) {
 void mpmat::realloc(int mem_a, int mem_b, int mem_c){
 
  if (mem_a > len_a){
-  std::cerr << "reallocing a\n";
+  std::cerr << "reallocing a to size " << mem_a/(1<<20) << "\n";
       if (len_a != 0) {
         delete [] a_double_array;
       }
@@ -56,7 +56,7 @@ void mpmat::realloc(int mem_a, int mem_b, int mem_c){
       len_a = mem_a;
     }
  if (mem_b > len_b){
-   std::cerr << "reallocing b\n";
+   std::cerr << "reallocing b to size " << mem_b/(1<<20) << "\n";
       if (len_b != 0) {
 	       delete [] b_double_array;
       }
@@ -64,7 +64,7 @@ void mpmat::realloc(int mem_a, int mem_b, int mem_c){
       len_b = mem_b;
     }
   if (mem_c > len_c){
-    std::cerr << "reallocing c\n";
+    std::cerr << "reallocing c to size " << mem_c/(1<<20) << "\n";
      if (len_c != 0) {
 	delete [] c_double_array;
       }
@@ -249,7 +249,7 @@ void mpmat::gemm_reduced(
 
     int mem_a = mpmat_size_a * m * k;
     int mem_b = mpmat_size_b * n * k;
-    int mem_c = (3*mpmat_size_c) * m * n;
+    int mem_c = (4*mpmat_size_c + 2) * m * n;
     
     realloc(mem_a,mem_b,mem_c);
 
@@ -635,9 +635,8 @@ void mpmat::syrk_reduced(
     //std::cerr << "mpmat_limb is " << mpmat_limb << "\n";
 
     int mpmat_size_c = mpmat_size_a;
-
     int mem_a = mpmat_size_a * m * k;
-    int mem_c = (6*mpmat_size_c - log2(mpmat_size_c) - 1)* m * m;
+    int mem_c = (6*mpmat_size_c + 2)* m * m;
 
     realloc(mem_a,max(mem_a,mem_c),mem_c);
     

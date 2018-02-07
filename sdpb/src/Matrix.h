@@ -148,9 +148,13 @@ void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B,
 #ifdef __SDPB_CUDA__
 void matrixScaleMultiplyAddMpmat(mpmat &myWorkspace, Real alpha, Matrix &A,
 				 Matrix &B, Real beta, Matrix &C, bool gpu);
+void matrixScaleTransMultiplyAddMpmat(mpmat &myWorkspace, char ta, char tb, Real alpha, Matrix &A, int a_offset,
+         Matrix &B, int b_offset, Real beta, Matrix &C, int c_offset, bool gpu);
 #else
 void matrixScaleMultiplyAddMpmat(mpmat &myWorkspace, Real alpha, Matrix &A,
 				 Matrix &B, Real beta, Matrix &C);
+void matrixScaleTransMultiplyAddMpmat(mpmat &myWorkspace, char ta, char tb, Real alpha, Matrix &A, int a_offset,
+         Matrix &B, int b_offset, Real beta, Matrix &C, int c_offset);
 #endif
 
 // C := A*B
