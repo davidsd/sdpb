@@ -14,9 +14,11 @@
 #define MPMAT_MPMAT_H
 
 #include <gmpxx.h>
-#include <mkl.h>
+//#include <mkl.h>
+#include <mkl_cblas.h>
 #include <iostream>
 #include <omp.h>
+#include <cmath>
 
 #ifdef __SDPB_CUDA__
 #include <cuda_runtime.h>

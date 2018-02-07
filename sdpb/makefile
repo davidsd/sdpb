@@ -16,11 +16,11 @@ else
 BASEDIR := $(HOME)
 
 # directory containing the header files 'gmp.h' and 'gmpxx.h'
-GMPINCLUDEDIR   = $(BASEDIR)/include
+GMPINCLUDEDIR   = /usr/include
 
 # directory containing boost header files, e.g. 'bind.hpp', etc.
-BOOSTINCLUDEDIR =  /group/hepth/rajeeve/bootstrap/boost/
-
+BOOSTINCLUDEDIR = /usr/local/boost/1.60.0/include
+BOOSTLIBDIR = /usr/local/boost/1.60.0/lib64
 # directory containing library files, e.g.
 #   libboost_filesystem.a,
 #   libboost_filesystem.so,
@@ -28,13 +28,13 @@ BOOSTINCLUDEDIR =  /group/hepth/rajeeve/bootstrap/boost/
 # as well as analogous files for 'boost_system',
 # 'boost_serialization', 'boost_timer', 'boost_program_options',
 # 'gmp', and 'gmpxx',
-LIBDIR          = /group/hepth/rajeeve/bootstrap/boost/stage/lib/
-
+LIBDIR          = /usr/lib64
+INTEL 		= yes
 endif
 
 MKLROOT         = /opt/intel/compilers_and_libraries_2017.4.196/linux/mkl
 
-CUDAROOT	= /usr/local/cuda-7.5/lib64/
+CUDAROOT	= /usr/local/cuda-7.5/lib64
 
 ################ End of modifications ################
 
@@ -63,8 +63,8 @@ endif
 ifdef INTEL
 
 CC = icpc
-CFLAGS += -O3 -ipo -xhost -Wall -ansi -std=c++0x -L${LIBDIR} -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -openmp -D___MPACK_BUILD_WITH_GMP___
-LIBS += -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lrt
+CFLAGS += -O3 -ipo -xhost -Wall -ansi -mkl -std=c++0x -L${LIBDIR} -DMKL_ILP64 -m64 -I${MKLROOT}/include -Isrc/mpack -I${BOOSTINCLUDEDIR} -I${GMPINCLUDEDIR} -qopenmp -D___MPACK_BUILD_WITH_GMP___
+LIBS += ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.so ${MKLROOT}/lib/intel64/libmkl_gnu_thread.so ${MKLROOT}/lib/intel64/libmkl_core.so -lgmpxx -lgmp ${BOOSTLIBDIR}/libboost_serialization.so ${BOOSTLIBDIR}/libboost_system.so ${BOOSTLIBDIR}/libboost_filesystem.so ${BOOSTLIBDIR}/libboost_timer.so ${BOOSTLIBDIR}/libboost_program_options.so ${BOOSTLIBDIR}/libboost_chrono.so -lrt
 
 else 
 ifdef CLANG
@@ -77,6 +77,7 @@ else
 
 CC = g++
 CFLAGS += -O3 -Wall -ansi -std=c++0x -L${LIBDIR} -DMKL_ILP64 -m64 -I${MKLROOT}/include  -Isrc/mpack -I${GMPINCLUDEDIR} -I${BOOSTINCLUDEDIR} -fopenmp -D___MPACK_BUILD_WITH_GMP___
+LIBS += ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.so ${MKLROOT}/lib/intel64/libmkl_gnu_thread.so ${MKLROOT}/lib/intel64/libmkl_core.so -lgomp -lgmpxx -lgmp ${BOOSTLIBDIR}/libboost_serialization.so ${BOOSTLIBDIR$
 LIBS += ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.so ${MKLROOT}/lib/intel64/libmkl_gnu_thread.so ${MKLROOT}/lib/intel64/libmkl_core.so -lgomp -lgmpxx -lgmp -lboost_serialization -lboost_system -lboost_filesystem -lboost_timer -lboost_program_options -lboost_chrono -lrt 
 
 endif
