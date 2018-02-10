@@ -1124,15 +1124,14 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
    std::cerr << "the precision of this mult test is " << prec << std::endl;
    //mpf_set_default_prec(1024);
   for (int m = m_init; m <= m_fin; m *= m_step){
-  std::cerr << "testing dimension " << m << "\n";
-  Real * a_tmp = randomGMPVector(m*m,prec), * b_tmp = randomGMPVector(m*m,prec), * c_tmp = randomGMPVector(m*m,prec);
-  Matrix A(m,m,a_tmp), B(m,m,b_tmp), C(m,m,c_tmp), C2(m,m,c_tmp), C3(m,m);
-  delete [] a_tmp;
-  delete [] b_tmp;
-  delete [] c_tmp;
+    std::cerr << "testing dimension " << m << "\n";
+  // Real * a_tmp = randomGMPVector(m*m,prec), * b_tmp = randomGMPVector(m*m,prec), * c_tmp = randomGMPVector(m*m,prec);
+  // Matrix A(m,m,a_tmp), B(m,m,b_tmp), C(m,m,c_tmp), C2(m,m,c_tmp), C3(m,m);
+  // delete [] a_tmp;
+  // delete [] b_tmp;
+  // delete [] c_tmp;
   
-//   Matrix diff = C - C2;
-//   Matrix diff2 = C2 - C3;
+  
 //   matrixScaleMultiplyAdd(-1,A,B,1,C);
 // #ifdef __SDPB_CUDA__
 //   matrixScaleMultiplyAddMpmat(myWorkspace,-1,A,B,1,C2,parameters.gpu);
@@ -1140,13 +1139,15 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
 //   matrixScaleMultiplyAddMpmat(myWorkspace,-1,A,B,1,C2);
 // #endif
 //   std::cerr << "done multing\n";
+//   Matrix diff = C - C2;
+//   Matrix diff2 = C2 - C3;
 
 //   if (C != C2){
 //   std::cerr << "Error: multiplication failed at dimension " << m << ". Printing outputs:\n";
-//   //std::cerr << C << "\n\n\n";
-//   //std::cerr << C2 << "\n\n\n";
-//   //std::cerr << diff << "\n\n\n";
-//   //break;
+//   std::cerr << C << "\n\n\n";
+//   std::cerr << C2 << "\n\n\n";
+//   std::cerr << diff << "\n\n\n";
+//   break;
 // }
 //   for (int r = 0; r < C2.rows; ++r){
 //     for (int c = 0; c < C2.cols; ++c){
@@ -1162,15 +1163,15 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
 //   }
 
 
-  for (int i = 1 << 6; i <= 1 << 6; i*=2){
-    if (!myWorkspace.symm_karatsuba_test(m,m,i)){ 
+  for (int i = 1 << 0; i <= 1 << 6; i*=2){
+    if (!myWorkspace.symm_karatsuba_test_gpu(m,m,i)){ 
       std::cerr << "karatsuba length " << i << " failed\n";
       break;
     }
     std::cerr << "karatsuba length " << i << " passed\n";
     std::cout << "\n" << timers << "\n";
   }
-  //std::cout << "\n" << timers << "\n";
+  std::cout << "\n" << timers << "\n";
   //myWorkspace.base_karatsuba_test();
 
   //std::cerr << "about to test CPU vs GPU:\n\n\n";

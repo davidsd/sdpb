@@ -659,7 +659,7 @@ void mpmat::karatsuba_bc(const int & a_start, const int & b_start, const int & c
   
   int start = a_start + b_start;
   int diff = c_max - start;
-  //std::cout << "\tkaratsuba_bc start=(" << a_start << ", " << b_start << ") l=" << c_max << "\n";
+  std::cout << "\tkaratsuba_bc start=(" << a_start << ", " << b_start << ") l=" << c_max << "\n";
   if(diff <= 2){ // base case, just multiply
     cblas_dgemm(
             Layout,

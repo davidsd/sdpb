@@ -228,13 +228,13 @@ void mpmat::mpmatConvertDoubleToGMP(mpf_class & dest,
 
     // Find the overall sign of the expression
     mp_limb_signed_t tmp = 0; //static_cast<mp_limb_signed_t>( source[mpmat_pos] );
-    mp_limb_signed_t mp_sign = 0;
-    for (int mpmat_pos_tmp = mpmat_pos; mpmat_pos_tmp >= 0; mpmat_pos_tmp --) {
-        tmp >>= mpmat_limb;
-        tmp += static_cast<mp_limb_signed_t>(source[mpmat_pos_tmp]);
+    mp_limb_signed_t mp_sign = static_cast<mp_limb_signed_t>(source[mpmat_pos]) < 0 ? -1 : 1;
+    // for (int mpmat_pos_tmp = mpmat_pos; mpmat_pos_tmp >= 0; mpmat_pos_tmp --) {
+    //     tmp >>= mpmat_limb;
+    //     tmp += static_cast<mp_limb_signed_t>(source[mpmat_pos_tmp]);
 
-        if(tmp != 0) mp_sign = tmp < 0 ? -1 : 1;
-    }
+    //     if(tmp != 0) mp_sign = tmp < 0 ? -1 : 1;
+    // }
     //mp_limb_signed_t mp_sign = tmp < 0 ? -1 : 1; //BUG! If tmp == 0 then this may give a wrong sign.
 
     tmp = 0;

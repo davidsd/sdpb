@@ -494,7 +494,7 @@ void mpmat::syrk_reduced_gpu(
     int mpmat_size_c = mpmat_size_a;
 
     int mem_a = mpmat_size_a * m * k;
-    int mem_c = mpmat_size_c * m * m;
+    int mem_c = (6*mpmat_size_c - (int)log2(mpmat_size_c) - 2)* m * m;
 
     realloc_gpu(mem_a,max(mem_a,mem_c),mem_c);
     
@@ -541,48 +541,52 @@ void mpmat::syrk_reduced_gpu(
     std::flush(std::cout);
     
 
-#pragma omp parallel for schedule(dynamic)
-    for (int i = 0; i < mpmat_size_c; i++) {
-      int gpu_id = i * gpu_count / mpmat_size_c;
-	cudaSetDevice(gpu_id);
-      for (int j = 0; j < i / 2 + i % 2; j++) {
+// #pragma omp parallel for schedule(dynamic)
+//     for (int i = 0; i < mpmat_size_c; i++) {
+//       int gpu_id = i * gpu_count / mpmat_size_c;
+// 	cudaSetDevice(gpu_id);
+//       for (int j = 0; j < i / 2 + i % 2; j++) {
 	
-	  cublasDgemm(handles[gpu_id],
-		      (Layout == CblasRowMajor) != (transa == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T,
-		      (Layout == CblasRowMajor) != (transa == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N,
-		       m,
-		       m,
-		       k,
-		       &alpha,
-		       d_a[gpu_id]+k*m*j,
-		       (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
-		       d_a[gpu_id]+(i-j)*k*m,
-		       (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
-		       &beta,
-		       d_c[gpu_id]+i*m*m,
-		       m
-		       );
-        }
-	cublasDcopy(handles[gpu_id],m*m,d_c[gpu_id]+i*m*m,1,d_b[gpu_id]+i*m*m,1);
-        cublasDgeam(handle,CUBLAS_OP_T,CUBLAS_OP_N,m,m,
-		    &alpha,d_b[gpu_id]+i*m*m,m,
-		    &beta,d_c[gpu_id]+i*m*m,m,
-		    d_c[gpu_id]+i*m*m,m);
-	// if significance of result is even, calculate the symmetric part
-	if ( i % 2 == 0)
-	  cublasDsyrk(handles[gpu_id],CUBLAS_FILL_MODE_UPPER,(Layout == CblasRowMajor) != (transa == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T,
-		    m,k,
-		    &alpha, d_a[gpu_id]+k*m*(i/2), (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
-		    &beta, d_c[gpu_id]+m*m*i, m);
-	 cudaMemcpyAsync(c_double_array+i*m*m,d_c[gpu_id]+i*m*m,m*m*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
-    }
-
+// 	  cublasDgemm(handles[gpu_id],
+// 		      (Layout == CblasRowMajor) != (transa == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T,
+// 		      (Layout == CblasRowMajor) != (transa == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N,
+// 		       m,
+// 		       m,
+// 		       k,
+// 		       &alpha,
+// 		       d_a[gpu_id]+k*m*j,
+// 		       (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
+// 		       d_a[gpu_id]+(i-j)*k*m,
+// 		       (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
+// 		       &beta,
+// 		       d_c[gpu_id]+i*m*m,
+// 		       m
+// 		       );
+//         }
+// 	cublasDcopy(handles[gpu_id],m*m,d_c[gpu_id]+i*m*m,1,d_b[gpu_id]+i*m*m,1);
+//         cublasDgeam(handle,CUBLAS_OP_T,CUBLAS_OP_N,m,m,
+// 		    &alpha,d_b[gpu_id]+i*m*m,m,
+// 		    &beta,d_c[gpu_id]+i*m*m,m,
+// 		    d_c[gpu_id]+i*m*m,m);
+// 	// if significance of result is even, calculate the symmetric part
+// 	if ( i % 2 == 0)
+// 	  cublasDsyrk(handles[gpu_id],CUBLAS_FILL_MODE_UPPER,(Layout == CblasRowMajor) != (transa == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T,
+// 		    m,k,
+// 		    &alpha, d_a[gpu_id]+k*m*(i/2), (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
+// 		    &beta, d_c[gpu_id]+m*m*i, m);
+// 	 cudaMemcpyAsync(c_double_array+i*m*m,d_c[gpu_id]+i*m*m,m*m*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
+//     }
+    memset(c_double_array, 0, mem_c * sizeof(mpmat_double));
+    karatsuba(mpmat_size_c, Layout, transa,
+                     m, k, true);
+    //cudaMemcpy(c_double_array,d_c[0],m*m*mpmat_size_c*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
+    
 
     cudaThreadSynchronize();
     timers["mpmat_syrk_reduced.multiplication"].stop();
 
     timers["mpmat_syrk_reduced.gpu_copy_back"].resume();
-
+    cudaMemcpy(c_double_array,d_c[0],mem_c*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
     // gpu copy back is actually happening asynchronously with the multiplications
     timers["mpmat_syrk_reduced.gpu_copy_back"].stop();
 
