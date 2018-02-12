@@ -19,6 +19,7 @@
 #include <iostream>
 #include <omp.h>
 #include <cmath>
+#include <cassert>
 
 #ifdef __SDPB_CUDA__
 #include <cuda_runtime.h>
@@ -57,12 +58,14 @@ class mpmat{
   //Workspace arrays for mpmat. The d_* arrays are actually arrays of pointers to the respective arrays on each GPU.
   
   //this is just to keep track and avoid a segfault
-  int len_a, len_b, len_c, len_t, cpu_count, gpu_count;
+  size_t len_a, len_b, len_c, len_t, *gpu_len_a, *gpu_len_b, *gpu_len_c;
+  int cpu_count, gpu_count;
 
   #ifdef __SDPB_CUDA__
   //cuBLAS needs handles for its parameters.
   //`handle' is just there for legacy code, should
   // be removed
+  size_t gpu_mem;
   cublasHandle_t handle;
   cublasHandle_t *handles;
   #endif
@@ -70,10 +73,19 @@ class mpmat{
   #ifdef __SDPB_CUDA__
   void karatsuba_gpu(const int & a_start, const int & b_start, const int & c_start, const int & c_max,
                       CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE transa,
-                      CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k,
+                      CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k, int device = 0,
                       const double alpha = 1.0, const double beta = 1.0);
   // Implements a symmetric version of the above
   void karatsuba_gpu(const int & a_start, const int & c_start, const int & c_max,
+                      CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE trans,
+                       const int & n, const int & k, int device = 0,
+                      const double alpha = 1.0, const double beta = 1.0);
+  void karatsuba_cpu(const int & a_start, const int & b_start, const int & c_start, const int & c_max,
+                      CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE transa,
+                      CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k,
+                      const double alpha = 1.0, const double beta = 1.0);
+  // Implements a symmetric version of the above
+  void karatsuba_cpu(const int & a_start, const int & c_start, const int & c_max,
                       CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE trans,
                        const int & n, const int & k,
                       const double alpha = 1.0, const double beta = 1.0);
@@ -99,10 +111,19 @@ class mpmat{
   // Implements a truncated recursive multiplication that maximizes Karatsuba
   void gradeschool_gpu(const int & a_start, const int & b_start, const int & c_start, const int & c_max,
                       CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE transa,
-                      CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k,
+                      CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k, int device = 0,
                       const double alpha = 1.0, const double beta = 1.0);
   // Implements a symmetric version of the above
   void gradeschool_gpu(const int & a_start, const int & c_start, const int & c_max,
+                      CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE trans,
+                      const int & n, const int & k, int device = 0,
+                      const double alpha = 1.0, const double beta = 1.0);
+  void gradeschool_cpu(const int & a_start, const int & b_start, const int & c_start, const int & c_max,
+                      CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE transa,
+                      CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k,
+                      const double alpha = 1.0, const double beta = 1.0);
+  // Implements a symmetric version of the above
+  void gradeschool_cpu(const int & a_start, const int & c_start, const int & c_max,
                       CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE trans,
                       const int & n, const int & k,
                       const double alpha = 1.0, const double beta = 1.0);
@@ -124,7 +145,7 @@ class mpmat{
                     CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k,
                     const double alpha = 1.0, const double beta = 1.0);
 
-
+  void clear_gpu(int device);
 
  public: 
   mpmat_double *a_double_array, *b_double_array, *c_double_array, *tmp, **d_a, **d_b, **d_c; 
@@ -141,15 +162,26 @@ class mpmat{
     d_a = new mpmat_double*[gpu_count];
     d_b = new mpmat_double*[gpu_count];
     d_c = new mpmat_double*[gpu_count];
+    gpu_len_a = new size_t[gpu_count];
+    gpu_len_b = new size_t[gpu_count];
+    gpu_len_c = new size_t[gpu_count];
 
     realloc_gpu(l,l,l);
     handles = new cublasHandle_t[gpu_count];
 
-    #pragma omp parallel for
+    size_t total;
+
     for (int i = 0; i < gpu_count; ++i){
       cudaSetDevice(i);
       cublasCreate(handles+i);
+      size_t tmp_free, tmp_total;
+      cudaMemGetInfo(&tmp_free,&tmp_total);
+      if (i==0) total=tmp_total;
+      else assert(tmp_total == total);
+      gpu_mem = tmp_free; //DANGEROUS: one GPU might randomly have significantly less GPU memory free.
     }
+    gpu_mem *= .75; //safety buffer
+    std::cerr << "there is " << gpu_mem / (1<<20) << " MiB of gpu memory available.\n";
     handle = handles[0];
     #else
     realloc(l,l,l);
@@ -162,24 +194,24 @@ class mpmat{
       std::cout << "deallocing a_double_array, length " << len_a << "\n";
       cudaFreeHost(a_double_array);
       for (int i = 0; i < gpu_count; ++i){
-	cudaSetDevice(i);
-	cudaFree(d_a[i]);
+	     cudaSetDevice(i);
+	     cudaFree(d_a[i]);
       }
     }
     if (len_b != 0){
       std::cout << "deallocing b_double_array, length " << len_b << "\n";
       cudaFreeHost(b_double_array);
       for (int i = 0; i < gpu_count; ++i){
-	cudaSetDevice(i);
-	cudaFree(d_b[i]);
+	     cudaSetDevice(i);
+	     cudaFree(d_b[i]);
       }
     }
     if (len_c != 0){
       std::cout << "deallocing c_double_array, length " << len_c << "\n";
       cudaFreeHost(c_double_array);
       for (int i = 0; i < gpu_count; ++i){
-	cudaSetDevice(i);
-	cudaFree(d_c[i]);
+	     cudaSetDevice(i);
+	     cudaFree(d_c[i]);
       }
     }
     if (len_t != 0){
@@ -193,9 +225,12 @@ class mpmat{
     delete [] d_a;
     delete [] d_b;
     delete [] d_c;
-    
+    delete [] gpu_len_a;
+    delete [] gpu_len_b;
+    delete [] gpu_len_c;
   }
-  void realloc_gpu(int mem_a, int mem_b, int mem_c);
+  void realloc_gpu(size_t mem_a, size_t mem_b, size_t mem_c);
+  void realloc_gpu_only(size_t mem_a, size_t mem_b, size_t mem_c, int device = 0);
   #else
 
 ~mpmat(){
@@ -220,7 +255,7 @@ class mpmat{
   
   #endif
   
-  void realloc(int mem_a, int mem_b, int mem_c);
+  void realloc(size_t mem_a, size_t mem_b, size_t mem_c);
 void mpmatConvertGMPToDouble(const mpf_class source,
                              mpmat_double * dest,
                              const int size,
@@ -403,7 +438,7 @@ bool symm_karatsuba_test_gpu(int n, int k, int l);
 bool base_karatsuba_test();
 };
 
-
+bool compareSymmMatrices(double * x, double * y, int n, int l, bool lower = true, bool rowmaj = true);
  mpf_class * randomGMPVector(int size, int prec);
 void print_mpf_bits(const mpf_class &a);
 bool compare_mpf_bits(const mpf_class &a, const mpf_class &b);

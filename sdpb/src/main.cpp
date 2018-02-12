@@ -72,16 +72,16 @@ int solveSDP(const vector<path> &sdpFiles,
   SDPSolver solver(readBootstrapSDP(sdpFiles), parameters);
   
   if(parameters.multTest)
-    solver.testMultiplication(1,1<<10,2);
+    solver.testMultiplication(1,1,5);
 
   if (exists(checkpointFileIn))
     solver.loadCheckpoint(checkpointFileIn);
 
   timers["Solver runtime"].start();
   timers["Last checkpoint"].start();
-  //SDPSolverTerminateReason reason = solver.run(checkpointFileOut);
+  SDPSolverTerminateReason reason = solver.run(checkpointFileOut);
   timers["Solver runtime"].stop();
-  SDPSolverTerminateReason reason;
+  //SDPSolverTerminateReason reason;
   cout << "-----" << setfill('-') << setw(116) << std::left << reason << endl;
   cout << endl;
   cout << "primalObjective = " << solver.primalObjective << endl;

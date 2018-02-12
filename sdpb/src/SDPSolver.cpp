@@ -74,7 +74,7 @@ SDPSolver::SDPSolver(const SDP &sdp, const SDPSolverParameters &parameters):
   Qpivots(sdp.FreeVarMatrix.cols),
   dyExtended(Q.rows),
   StepMatrixWorkspace(X),
-  myWorkspace(10)
+  myWorkspace(1)
 {
   // initialize bilinearPairingsWorkspace, eigenvaluesWorkspace, QRWorkspace
   for (unsigned int b = 0; b < sdp.bilinearBases.size(); b++) {
@@ -1162,16 +1162,18 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
 //     }
 //   }
 
-
-  for (int i = 1 << 0; i <= 1 << 6; i*=2){
-    if (!myWorkspace.symm_karatsuba_test_gpu(m,m,i)){ 
+  std::vector<int> v;
+  for (int i = 1 << 0; i <= 1 << 6; ++i){
+    if (!myWorkspace.symm_karatsuba_test_gpu(1,1,i)){ 
       std::cerr << "karatsuba length " << i << " failed\n";
+      v.push_back(i);
       break;
     }
-    std::cerr << "karatsuba length " << i << " passed\n";
-    std::cout << "\n" << timers << "\n";
+    //std::cerr << "karatsuba length " << i << " passed\n";
+    //std::cout << "\n" << timers << "\n";
   }
-  std::cout << "\n" << timers << "\n";
+  std::cout << v << "\n";
+  //std::cout << "\n" << timers << "\n";
   //myWorkspace.base_karatsuba_test();
 
   //std::cerr << "about to test CPU vs GPU:\n\n\n";

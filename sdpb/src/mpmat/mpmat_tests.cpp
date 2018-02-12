@@ -29,7 +29,7 @@ double * randomDoubleVector(int n){
   return out;
 }
 
-bool compareSymmMatrices(double * x, double * y, int n, int l, bool lower = true, bool rowmaj = true){
+bool compareSymmMatrices(double * x, double * y, int n, int l, bool lower, bool rowmaj){
   if (lower != !rowmaj){
     for (int i = 0; i < l; ++i){
       for (int j = 0; j < n; ++j){
@@ -347,15 +347,15 @@ bool mpmat::symm_karatsuba_test(int n, int k, int l){
 #ifdef __SDPB_CUDA__
 bool mpmat::karatsuba_test_gpu(int m, int n, int k, int l){
   double * tmp_a = a_double_array, * tmp_b = b_double_array, * tmp_c = c_double_array;
-  double * tmp_d_a = d_a[0], * tmp_d_b = d_b[0], * tmp_d_c = d_c[0];
+  //double * tmp_d_a = d_a[0], * tmp_d_b = d_b[0], * tmp_d_c = d_c[0];
   a_double_array = randomDoubleVector(m*k*l);
-  cudaMalloc(d_a,m*k*l*sizeof(mpmat_double));
+  //cudaMalloc(d_a,m*k*l*sizeof(mpmat_double));
   double * a2_double_array = new double[m*k*l];
   b_double_array = randomDoubleVector(n*k*l);
-  cudaMalloc(d_b,n*k*l*sizeof(mpmat_double));
+  //cudaMalloc(d_b,n*k*l*sizeof(mpmat_double));
   double * b2_double_array = new double[n*k*l];
   c_double_array = new double [m*n*(6*l - (int)log2(l) - 2)];
-  cudaMalloc(d_c,m*n*(6*l - (int)log2(l) - 2)*sizeof(mpmat_double));
+  //cudaMalloc(d_c,m*n*(6*l - (int)log2(l) - 2)*sizeof(mpmat_double));
   double * c2_double_array = new double [m*n*l];
   std::cerr << "estimated memory usage is " << m*n*(6*l - log2(l) - 2)*sizeof(double) / (1 << 20) << "\n";
 
@@ -413,26 +413,26 @@ bool mpmat::karatsuba_test_gpu(int m, int n, int k, int l){
   //memset(c_double_array, 0, m*n*(6*l - (int)log2(l) - 2)*sizeof(double));
 
   timers[std::string("karatsuba.l=")+std::to_string(l)].start();
-  cudaMemcpy(d_a[0],a_double_array,m*k*l*sizeof(mpmat_double),cudaMemcpyHostToDevice);
-  cudaMemcpy(d_b[0],b_double_array,n*k*l*sizeof(mpmat_double),cudaMemcpyHostToDevice);
+  // cudaMemcpy(d_a[0],a_double_array,m*k*l*sizeof(mpmat_double),cudaMemcpyHostToDevice);
+  // cudaMemcpy(d_b[0],b_double_array,n*k*l*sizeof(mpmat_double),cudaMemcpyHostToDevice);
 
-  cudaMemcpy(a_double_array,d_a[0],m*k*l*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
-  cudaMemcpy(b_double_array,d_b[0],n*k*l*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
-    std::cout << "\ta_double_array: ";
-  for (int i = 0; i < m*k*l; ++i)
-    std::cout << a_double_array[i] << " ";
-  std::cout << "\n";
+  // cudaMemcpy(a_double_array,d_a[0],m*k*l*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
+  // cudaMemcpy(b_double_array,d_b[0],n*k*l*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
+  //   std::cout << "\ta_double_array: ";
+  // for (int i = 0; i < m*k*l; ++i)
+  //   std::cout << a_double_array[i] << " ";
+  // std::cout << "\n";
 
-  std::cout << "\tb_double_array: ";
-  for (int i = 0; i < n*k*l; ++i)
-    std::cout << b_double_array[i] << " ";
-  std::cout << "\n";
+  // std::cout << "\tb_double_array: ";
+  // for (int i = 0; i < n*k*l; ++i)
+  //   std::cout << b_double_array[i] << " ";
+  // std::cout << "\n";
 
-  cudaMemset(d_c[0],0,m*n*(6*l - (int)log2(l) - 2)*sizeof(double));
+  // cudaMemset(d_c[0],0,m*n*(6*l - (int)log2(l) - 2)*sizeof(double));
 
   karatsuba(l, CblasRowMajor, CblasNoTrans, CblasNoTrans, m, n, k, true);
 
-  cudaMemcpy(c_double_array,d_c[0],m*n*(6*l - (int)log2(l) - 2)*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
+  //cudaMemcpy(c_double_array,d_c[0],m*n*(6*l - (int)log2(l) - 2)*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
 
   // std::cout << "\tbefore squish: ";
   //  for (int i = 0; i < m*n*(int)pow(3,ceil(log2(l))); ++i)
@@ -492,16 +492,16 @@ bool mpmat::karatsuba_test_gpu(int m, int n, int k, int l){
   delete [] b2_double_array;
   delete [] c2_double_array;
 
-  cudaFree(d_a[0]);
-  cudaFree(d_b[0]);
-  cudaFree(d_c[0]);
+  // cudaFree(d_a[0]);
+  // cudaFree(d_b[0]);
+  // cudaFree(d_c[0]);
 
   a_double_array = tmp_a;
   b_double_array = tmp_b;
   c_double_array = tmp_c;
-  d_a[0] = tmp_d_a;
-  d_b[0] = tmp_d_b;
-  d_c[0] = tmp_d_c;
+  // d_a[0] = tmp_d_a;
+  // d_b[0] = tmp_d_b;
+  // d_c[0] = tmp_d_c;
 
  
 
@@ -513,14 +513,14 @@ bool mpmat::symm_karatsuba_test_gpu(int n, int k, int l){
   std::cerr << "estimated memory usage is " << n*n*(6*l - log2(l) - 2)*sizeof(double) / (1 << 20) << "\n";
   timers[std::string("setup.l=")+std::to_string(n)].start();
   double * tmp_a = a_double_array, * tmp_c = c_double_array;
-  double * tmp_d_a = d_a[0], * tmp_d_b = d_b[0], * tmp_d_c = d_c[0];
+  // double * tmp_d_a = d_a[0], * tmp_d_b = d_b[0], * tmp_d_c = d_c[0];
   a_double_array = randomDoubleVector(n*k*l);
-  cudaMalloc(d_a,n*k*l*sizeof(mpmat_double));
-  cudaMalloc(d_b,n*k*l*sizeof(mpmat_double));
+  // cudaMalloc(d_a,n*k*l*sizeof(mpmat_double));
+  // cudaMalloc(d_b,n*k*l*sizeof(mpmat_double));
   double * a2_double_array = new double[n*k*l];
   double * b2_double_array = new double[n*n*l];
   c_double_array = new double [n*n*(6*l - (int)log2(l) - 2)];
-  cudaMalloc(d_c,n*n*(6*l - (int)log2(l) - 2)*sizeof(mpmat_double));
+  // cudaMalloc(d_c,n*n*(6*l - (int)log2(l) - 2)*sizeof(mpmat_double));
   double * c2_double_array = new double [n*n*l];
   
   
@@ -528,10 +528,10 @@ bool mpmat::symm_karatsuba_test_gpu(int n, int k, int l){
   std::copy(a_double_array,a_double_array+n*k*l,a2_double_array);
   //std::copy(b_double_array,b_double_array+n*k*l,b2_double_array);
 
-  // std::cout << "\ta_double_array: ";
-  // for (int i = 0; i < n*k*l; ++i)
-  //   std::cout << a_double_array[i] << " ";
-  // std::cout << "\n";
+  std::cout << "\ta_double_array: ";
+  for (int i = 0; i < n*k*l; ++i)
+    std::cout << a_double_array[i] << " ";
+  std::cout << "\n";
 
   // std::cout << "\tb_double_array: ";
   // for (int i = 0; i < n*k*l; ++i)
@@ -594,17 +594,16 @@ bool mpmat::symm_karatsuba_test_gpu(int n, int k, int l){
   memset(c_double_array, 0, n*n*(6*l - (int)log2(l) - 2)*sizeof(double));
   timers[std::string("karatsuba.l=")+std::to_string(n)].start();
 
-  cudaMemcpy(d_a[0],a_double_array,n*k*l*sizeof(mpmat_double),cudaMemcpyHostToDevice);
+  // cudaMemcpy(d_a[0],a_double_array,n*k*l*sizeof(mpmat_double),cudaMemcpyHostToDevice);
   // std::cout << "\ta_double_array: ";
   // for (int i = 0; i < n*k*l; ++i)
   //   std::cout << a_double_array[i] << " ";
   // std::cout << "\n";
 
-  cudaMemset(d_c[0],0,n*n*(6*l - (int)log2(l) - 2)*sizeof(double));
+  // cudaMemset(d_c[0],0,n*n*(6*l - (int)log2(l) - 2)*sizeof(double));
 
   karatsuba(l, CblasRowMajor, CblasTrans, n, k, true);
-
-  cudaMemcpy(c_double_array,d_c[0],n*n*(6*l - (int)log2(l) - 2)*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
+  //cudaMemcpy(c_double_array,d_c[0],n*n*(6*l - (int)log2(l) - 2)*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
 
   //std::cerr << "done with karatsuba test\n";
 
@@ -656,16 +655,16 @@ bool mpmat::symm_karatsuba_test_gpu(int n, int k, int l){
   delete [] b2_double_array;
   delete [] c2_double_array;
 
-  cudaFree(d_a[0]);
-  cudaFree(d_b[0]);
-  cudaFree(d_c[0]);
+  // cudaFree(d_a[0]);
+  // cudaFree(d_b[0]);
+  // cudaFree(d_c[0]);
 
   a_double_array = tmp_a;
   //b_double_array = tmp_b;
   c_double_array = tmp_c;
-  d_a[0] = tmp_d_a;
-  d_b[0] = tmp_d_b;
-  d_c[0] = tmp_d_c;
+  // d_a[0] = tmp_d_a;
+  // d_b[0] = tmp_d_b;
+  // d_c[0] = tmp_d_c;
 
  
   timers[std::string("cleanup.l=")+std::to_string(n)].stop();
