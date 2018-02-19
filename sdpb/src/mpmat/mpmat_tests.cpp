@@ -21,7 +21,7 @@ inline T ceil_div(T a, T b){
 
 double * randomDoubleVector(int n){
   auto out = new double [n];
-  std::uniform_real_distribution<double> unif(-10,10);
+  std::uniform_real_distribution<double> unif(1,5);
   std::random_device rd;
   #pragma omp parallel for
   for (int i = 0; i < n; ++i)
@@ -212,7 +212,7 @@ bool mpmat::symm_karatsuba_test(int n, int k, int l){
   double * tmp_a = a_double_array, * tmp_c = c_double_array;
   a_double_array = randomDoubleVector(n*k*l);
   double * a2_double_array = new double[n*k*l];
-  c_double_array = new double [n*n*(3*l - (int)log2(l) - 1)];
+  c_double_array = new double [n*n*(6*l+2)];
   double * b2_double_array = new double [n*n*l];
   double * c2_double_array = new double [n*n*l];
   
@@ -284,7 +284,7 @@ bool mpmat::symm_karatsuba_test(int n, int k, int l){
   // // std::cout << "\n";
 
   std::cerr << "starting karatsuba test\n";
-  memset(c_double_array, 0, n*n*(3*l - (int)log2(l) - 1)*sizeof(double));
+  memset(c_double_array, 0, n*n*(6*l - (int)log2(l) - 1)*sizeof(double));
   timers[std::string("karatsuba.l=")+std::to_string(n)].start();
   karatsuba(l, CblasRowMajor, CblasTrans, n, k);
   //std::cerr << "done with karatsuba test\n";

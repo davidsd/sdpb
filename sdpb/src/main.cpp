@@ -71,8 +71,8 @@ int solveSDP(const vector<path> &sdpFiles,
   // Read an SDP from sdpFile and create a solver for it
   SDPSolver solver(readBootstrapSDP(sdpFiles), parameters);
   
-  if(parameters.multTest)
-    solver.testMultiplication(1,1,5);
+  // if(parameters.multTest)
+  //   solver.testMultiplication(1,1,5);
 
   if (exists(checkpointFileIn))
     solver.loadCheckpoint(checkpointFileIn);

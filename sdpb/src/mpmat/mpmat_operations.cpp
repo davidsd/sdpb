@@ -529,8 +529,8 @@ void mpmat::syrk_reduced_gpu(
 		//std::cout << "mpmat_limb is " << mpmat_limb << "\n";
 	int mpmat_size_c = mpmat_size_a;
 
-	int mem_a = mpmat_size_a * m * k;
-	int mem_c = (6*mpmat_size_c - (int)log2(mpmat_size_c) - 2)* m * m;
+	int mem_a = pow(2,ceil(log2(mpmat_size_a))) * m * k;
+	int mem_c = (6*pow(2,ceil(log2(mpmat_size_c))) + 2)* m * m;
 
 	realloc(mem_a,0,mem_c);
 
@@ -578,62 +578,62 @@ void mpmat::syrk_reduced_gpu(
 	std::flush(std::cout);
 
 
-#pragma omp parallel for schedule(dynamic)
-    for (int i = 0; i < mpmat_size_c; i++) {
-      int gpu_id = i * gpu_count / mpmat_size_c;
-	cudaSetDevice(gpu_id);
-      for (int j = 0; j < i / 2 + i % 2; j++) {
+// #pragma omp parallel for schedule(dynamic)
+//     for (int i = 0; i < mpmat_size_c; i++) {
+//       int gpu_id = i * gpu_count / mpmat_size_c;
+// 	cudaSetDevice(gpu_id);
+//       for (int j = 0; j < i / 2 + i % 2; j++) {
 	
-	  cublasDgemm(handles[gpu_id],
-		      (Layout == CblasRowMajor) != (transa == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T,
-		      (Layout == CblasRowMajor) != (transa == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N,
-		       m,
-		       m,
-		       k,
-		       &alpha,
-		       d_a[gpu_id]+k*m*j,
-		       (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
-		       d_a[gpu_id]+(i-j)*k*m,
-		       (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
-		       &beta,
-		       d_c[gpu_id]+i*m*m,
-		       m
-		       );
-        }
-	cublasDcopy(handles[gpu_id],m*m,d_c[gpu_id]+i*m*m,1,d_b[gpu_id]+i*m*m,1);
-        cublasDgeam(handle,CUBLAS_OP_T,CUBLAS_OP_N,m,m,
-		    &alpha,d_b[gpu_id]+i*m*m,m,
-		    &beta,d_c[gpu_id]+i*m*m,m,
-		    d_c[gpu_id]+i*m*m,m);
-	// if significance of result is even, calculate the symmetric part
-	if ( i % 2 == 0)
-	  cublasDsyrk(handles[gpu_id],CUBLAS_FILL_MODE_UPPER,(Layout == CblasRowMajor) != (transa == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T,
-		    m,k,
-		    &alpha, d_a[gpu_id]+k*m*(i/2), (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
-		    &beta, d_c[gpu_id]+m*m*i, m);
-	 cudaMemcpyAsync(c2_double_array+i*m*m,d_c[gpu_id]+i*m*m,m*m*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
-    }
-    cudaThreadSynchronize();
+// 	  cublasDgemm(handles[gpu_id],
+// 		      (Layout == CblasRowMajor) != (transa == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T,
+// 		      (Layout == CblasRowMajor) != (transa == CblasTrans) ? CUBLAS_OP_T : CUBLAS_OP_N,
+// 		       m,
+// 		       m,
+// 		       k,
+// 		       &alpha,
+// 		       d_a[gpu_id]+k*m*j,
+// 		       (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
+// 		       d_a[gpu_id]+(i-j)*k*m,
+// 		       (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
+// 		       &beta,
+// 		       d_c[gpu_id]+i*m*m,
+// 		       m
+// 		       );
+//         }
+// 	cublasDcopy(handles[gpu_id],m*m,d_c[gpu_id]+i*m*m,1,d_b[gpu_id]+i*m*m,1);
+//         cublasDgeam(handle,CUBLAS_OP_T,CUBLAS_OP_N,m,m,
+// 		    &alpha,d_b[gpu_id]+i*m*m,m,
+// 		    &beta,d_c[gpu_id]+i*m*m,m,
+// 		    d_c[gpu_id]+i*m*m,m);
+// 	// if significance of result is even, calculate the symmetric part
+// 	if ( i % 2 == 0)
+// 	  cublasDsyrk(handles[gpu_id],CUBLAS_FILL_MODE_UPPER,(Layout == CblasRowMajor) != (transa == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T,
+// 		    m,k,
+// 		    &alpha, d_a[gpu_id]+k*m*(i/2), (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
+// 		    &beta, d_c[gpu_id]+m*m*i, m);
+// 	 cudaMemcpyAsync(c2_double_array+i*m*m,d_c[gpu_id]+i*m*m,m*m*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
+//     }
+//     cudaThreadSynchronize();
 	//memset(c_double_array, 0, mem_c * sizeof(mpmat_double));
-	karatsuba(mpmat_size_c, Layout, transa,
+	karatsuba(pow(2,ceil(log2(mpmat_size_c))), Layout, transa,
 		m, k, true);
 		
 
 	
 
-	if (!compareSymmMatrices(c_double_array,c2_double_array,m,mpmat_size_c)){//(!std::equal(c2_double_array,c2_double_array+n*n*l,c_double_array)){
-	    std::cerr << "c_double_array is incorrect\n";
-	    //result = false;
-	    for (int i = 0; i < m*m*(3*mpmat_size_c - (int)log2(mpmat_size_c) - 1); ++i)
-	      std::cout << c_double_array[i] << (i % (m*m) == m*m-1 ? "|" : (i % m == m-1 ? "," : " "));
-	    std::cout << "\n";
-	    for (int i = 0; i < m*m*mpmat_size_c; ++i)
-	      std::cout << c2_double_array[i] << (i % (m*m) == m*m-1 ? "|" : (i % m == m-1 ? "," : " "));
-	    std::cout << "\n";
-	    //print_mpmat_double_array(c_double_array,m*n*(int)pow(3,ceil(log2(l))));
-	    //print_mpmat_double_array(c2_double_array,m*n*l);
-  	}
-  	else std::cerr << "all good";
+	// if (!compareSymmMatrices(c_double_array,c2_double_array,m,mpmat_size_c)){//(!std::equal(c2_double_array,c2_double_array+n*n*l,c_double_array)){
+	//     std::cerr << "c_double_array is incorrect\n";
+	//     //result = false;
+	//     for (int i = 0; i < m*m*(3*mpmat_size_c - (int)log2(mpmat_size_c) - 1); ++i)
+	//       std::cout << c_double_array[i] << (i % (m*m) == m*m-1 ? "|" : (i % m == m-1 ? "," : " "));
+	//     std::cout << "\n";
+	//     for (int i = 0; i < m*m*mpmat_size_c; ++i)
+	//       std::cout << c2_double_array[i] << (i % (m*m) == m*m-1 ? "|" : (i % m == m-1 ? "," : " "));
+	//     std::cout << "\n";
+	//     //print_mpmat_double_array(c_double_array,m*n*(int)pow(3,ceil(log2(l))));
+	//     //print_mpmat_double_array(c2_double_array,m*n*l);
+ //  	}
+ //  	else std::cerr << "all good";
 	timers["mpmat_syrk_reduced.multiplication"].stop();
 
 	timers["mpmat_syrk_reduced.gpu_copy_back"].resume();
@@ -673,7 +673,7 @@ void mpmat::syrk_reduced(
 	mpf_class * c
 				//const int ldc
 	) {
-	std::cerr << m << " " << k << "\n";
+	//std::cerr << m << " " << k << "\n";
 
 	timers["mpmat_syrk_reduced.complete"].resume();
 
@@ -692,8 +692,8 @@ void mpmat::syrk_reduced(
 		//std::cerr << "mpmat_limb is " << mpmat_limb << "\n";
 
 	int mpmat_size_c = mpmat_size_a;
-	int mem_a = mpmat_size_a * m * k;
-	int mem_c = (6*mpmat_size_c + 2)* m * m;
+	int mem_a = pow(2,ceil(log2(mpmat_size_a))) * m * k;
+	int mem_c = (6*pow(2,ceil(log2(mpmat_size_c))) + 2)* m * m;
 
 	realloc(mem_a,max(mem_a,mem_c),mem_c);
 	double * c2_double_array = new double[mem_c];
@@ -721,56 +721,56 @@ void mpmat::syrk_reduced(
 
 	timers["mpmat_syrk_reduced.multiplication"].resume();
 
-#pragma omp parallel for schedule(dynamic)
-    for (int i = 0; i < mpmat_size_c; i++) {
-      for (int j = 0; j < i / 2 + i % 2; j++) {
-	cblas_dgemm(CblasColMajor,(Layout == CblasRowMajor) != (transa == CblasTrans) ? CblasNoTrans : CblasTrans,
-		      (Layout == CblasRowMajor) != (transa == CblasTrans) ? CblasTrans: CblasNoTrans,
-		    m,
-		    m,
-		    k,
-		    alpha,
-		    a_double_array+k*m*j,
-		    (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
-		    a_double_array+(i-j)*k*m,
-		    (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
-		    beta,
-		    c2_double_array+i*m*m,
-		    m);
-        }
-      mkl_domatcopy('c','t',
-		    m,m,1,
-		    c2_double_array+i*m*m,
-		    m,
-		    b_double_array+i*m*m,
-		    m
-		    );
-      cblas_daxpy(m*m,1.0,
-		  b_double_array+i*m*m,1,
-		  c2_double_array+i*m*m,1);
-      // if significance of result is even, calculate the symmetric part
-	if ( i % 2 == 0)
-	  cblas_dsyrk(CblasColMajor,CblasUpper,(Layout == CblasRowMajor) != (transa == CblasTrans) ? CblasNoTrans : CblasTrans,
-		      m,k,alpha,a_double_array+k*m*(i/2),(Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
-		      beta,c2_double_array+i*m*m,m);
-    }
-	std::cerr << "multing";
-	karatsuba(mpmat_size_c, Layout, transa,
-		m, k, true);
+// #pragma omp parallel for schedule(dynamic)
+//     for (int i = 0; i < mpmat_size_c; i++) {
+//       for (int j = 0; j < i / 2 + i % 2; j++) {
+// 	cblas_dgemm(CblasColMajor,(Layout == CblasRowMajor) != (transa == CblasTrans) ? CblasNoTrans : CblasTrans,
+// 		      (Layout == CblasRowMajor) != (transa == CblasTrans) ? CblasTrans: CblasNoTrans,
+// 		    m,
+// 		    m,
+// 		    k,
+// 		    alpha,
+// 		    a_double_array+k*m*j,
+// 		    (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
+// 		    a_double_array+(i-j)*k*m,
+// 		    (Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
+// 		    beta,
+// 		    c2_double_array+i*m*m,
+// 		    m);
+//         }
+//       mkl_domatcopy('c','t',
+// 		    m,m,1,
+// 		    c2_double_array+i*m*m,
+// 		    m,
+// 		    b_double_array+i*m*m,
+// 		    m
+// 		    );
+//       cblas_daxpy(m*m,1.0,
+// 		  b_double_array+i*m*m,1,
+// 		  c2_double_array+i*m*m,1);
+//       // if significance of result is even, calculate the symmetric part
+// 	if ( i % 2 == 0)
+// 	  cblas_dsyrk(CblasColMajor,CblasUpper,(Layout == CblasRowMajor) != (transa == CblasTrans) ? CblasNoTrans : CblasTrans,
+// 		      m,k,alpha,a_double_array+k*m*(i/2),(Layout == CblasRowMajor) != (transa == CblasTrans) ? m : k,
+// 		      beta,c2_double_array+i*m*m,m);
+//     }
+// 	std::cerr << "multing";
+	karatsuba(pow(2,ceil(log2(mpmat_size_c))), Layout, transa,
+		m, k);
 
-	if (!compareSymmMatrices(c_double_array,c2_double_array,m,mpmat_size_c)){//(!std::equal(c2_double_array,c2_double_array+n*n*l,c_double_array)){
-	    std::cerr << "c_double_array is incorrect\n";
-	    //result = false;
-	    for (int i = 0; i < m*m*(3*mpmat_size_c - (int)log2(mpmat_size_c) - 1); ++i)
-	      std::cout << c_double_array[i] << (i % (m*m) == m*m-1 ? "|" : (i % m == m-1 ? "," : " "));
-	    std::cout << "\n";
-	    for (int i = 0; i < m*m*mpmat_size_c; ++i)
-	      std::cout << c2_double_array[i] << (i % (m*m) == m*m-1 ? "|" : (i % m == m-1 ? "," : " "));
-	    std::cout << "\n";
-	    //print_mpmat_double_array(c_double_array,m*n*(int)pow(3,ceil(log2(l))));
-	    //print_mpmat_double_array(c2_double_array,m*n*l);
-  	}
-  	else std::cerr << "all good";
+	// if (!compareSymmMatrices(c_double_array,c2_double_array,m,mpmat_size_c)){//(!std::equal(c2_double_array,c2_double_array+n*n*l,c_double_array)){
+	//     std::cerr << "c_double_array is incorrect\n";
+	//     //result = false;
+	//     for (int i = 0; i < m*m*(3*mpmat_size_c - (int)log2(mpmat_size_c) - 1); ++i)
+	//       std::cout << c_double_array[i] << (i % (m*m) == m*m-1 ? "|" : (i % m == m-1 ? "," : " "));
+	//     std::cout << "\n";
+	//     for (int i = 0; i < m*m*mpmat_size_c; ++i)
+	//       std::cout << c2_double_array[i] << (i % (m*m) == m*m-1 ? "|" : (i % m == m-1 ? "," : " "));
+	//     std::cout << "\n";
+	//     //print_mpmat_double_array(c_double_array,m*n*(int)pow(3,ceil(log2(l))));
+	//     //print_mpmat_double_array(c2_double_array,m*n*l);
+ //  	}
+  	//else std::cerr << "all good";
 	timers["mpmat_syrk_reduced.multiplication"].stop();
 
 	timers["mpmat_syrk_reduced.DoubletoGMP"].resume();

@@ -26,14 +26,14 @@ template <typename T>
 inline T max (T a,T b) { return a>b ? a : b; }
 
 //  max(mem_t,pow(3,ceil(log2(mem_c))));
-
+#ifdef __SDPB_CUDA__
 void mpmat::clear_gpu(int device){
   cudaMemset(d_a[device],0,gpu_len_a[device]*sizeof(mpmat_double));
   cudaMemset(d_b[device],0,gpu_len_b[device]*sizeof(mpmat_double));
   cudaMemset(d_c[device],0,gpu_len_c[device]*sizeof(mpmat_double));
 }
 
-#ifdef __SDPB_CUDA__
+
 void mpmat::karatsuba(const int & c_max, CBLAS_LAYOUT Layout, CBLAS_TRANSPOSE transa,
                       CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k, bool gpu){
   if (gpu) {
@@ -224,10 +224,13 @@ void mpmat::karatsuba_cpu(const int & a_start, const int & b_start, const int & 
       #pragma omp section
       {
         cudaSetDevice(1);
-        if (diff <= 3*len2) // if we need half or less of C_2, then just use grade school
+        if (diff <= 3*len2){ // if we need half or less of C_2, then just use grade school
+          std::cerr << "gs ";
           gradeschool_gpu(0, 0, 0, diff - 2*len2, Layout, transa, transb, m, n, k, 1); //Maybe?
-        else               // otherwise, we need all quadrants and therefore karatsuba
+        } else {               // otherwise, we need all quadrants and therefore karatsuba
+          std::cerr << "ka ";
           karatsuba_gpu(0, 0, 0, diff - 2*len2, Layout, transa, transb, m, n, k, 1); //Maybe?
+        }
       }
       #pragma omp section
       {
@@ -338,7 +341,7 @@ void mpmat::karatsuba_gpu(const int & a_start, const int & b_start, const int & 
                       CBLAS_TRANSPOSE transb, const int & m, const int & n, const int & k, int device,
                       const double alpha, const double beta){
   cudaSetDevice(device);
-  // std::cerr << "karatsuba " << a_start << "," << b_start << "," << c_start << "," << c_max << "," << m << "," << n << "," << k << "," << device << "\n";
+  //std::cerr << "karatsuba " << a_start << "," << b_start << "," << c_start << "," << c_max << "," << m << "," << n << "," << k << "," << device << "\n";
   // std::cerr << (((transa == CblasTrans) != (Layout == CblasColMajor)) ? "CUBLAS_OP_N " : "CUBLAS_OP_T " )<< (((transb == CblasTrans) != (Layout == CblasColMajor)) ? "CUBLAS_OP_N\n" : "CUBLAS_OP_T\n");
   // std::cerr << (((Layout == CblasColMajor) != (transa == CblasTrans)) ? k : n) << " " << (((Layout == CblasColMajor) != (transb == CblasTrans)) ? m : k )<< "\n";
   int start = a_start + b_start;
@@ -368,7 +371,7 @@ void mpmat::karatsuba_gpu(const int & a_start, const int & b_start, const int & 
     int clen2 = len2 - 1; // the "fundamental length" of c one level below (post squishing)
     int clen3 = len3/3; // the "fundamental length" of c one level below (pre-squishing)
     double minus = -1.0;
-
+    //std::cerr << "len2 = " << len2 << "\n";
     // C_0 = A_0 * B_0 // full karatsuba
     karatsuba_gpu(a_start, b_start, c_start, 2*len2 + start, Layout, transa, transb, m, n, k, device);
     
@@ -538,10 +541,13 @@ void mpmat::karatsuba_cpu(const int & a_start, const int & c_start, const int & 
         cudaSetDevice(1);
         double * d_tmp_b = d_b[1];
         d_b[1] = d_a[1];
-        if (diff <= 3*len2) // if we need half or less of C_2, then just use grade school
+        if (diff <= 3*len2){ // if we need half or less of C_2, then just use grade school
+          std::cerr << "gs ";
           gradeschool_gpu(0, 0, diff - 2*len2, Layout, trans, n, k, 1); //Maybe?
-        else               // otherwise, we need all quadrants and therefore karatsuba
+        } else {        // otherwise, we need all quadrants and therefore karatsuba
+          std::cerr << "ka ";
           karatsuba_gpu(0, 0, diff - 2*len2, Layout, trans, n, k, 1); //Maybe?
+        }
         d_b[1] = d_tmp_b;
       }
       #pragma omp section
@@ -786,6 +792,7 @@ void mpmat::gradeschool_cpu(const int & a_start, const int & b_start, const int 
   int clen3 = len3/3; // the "fundamental length" of c one level below (pre-squishing)
   size_t mem = ( len2*m*k + len2*n*k + (6*len2+2)*m*n)*sizeof(mpmat_double);
   // std::cerr << "gradeschool (m,n,k)=(" << m << "," << n << "," << k << ") " << start << " " << c_start << " " << c_max << "\n";
+  // std::cerr << "len2 = " << len2 << "\n";
   if(diff < 2){ // base case, just multiply
     //std::cerr << "attempt at gemm\n";
     // std::cerr << "\tmultiplying a[" << a_start << "] * b[" << b_start << "] = c[" << c_start << "]\n";
@@ -832,21 +839,22 @@ void mpmat::gradeschool_cpu(const int & a_start, const int & b_start, const int 
       }
       #pragma omp section
       {
-        cudaSetDevice(0);
+        cudaSetDevice(1);
         gradeschool_gpu(0, 0, 0, diff - len2, Layout, transa, transb, m, n, k, 1); //Maybe?
-        cudaMemcpy(c_double_array+m*n*(c_start+3*clen2+2), d_c[1], (2*clen2+1)*m*n*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
+        //cudaMemcpy(c_double_array+m*n*(c_start+3*clen2+2), d_c[1], (2*clen2+1)*m*n*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
       }
       #pragma omp section
       {
-        cudaSetDevice(0);
+        cudaSetDevice(2);
         gradeschool_gpu(0, 0, 0, diff - len2, Layout, transa, transb, m, n, k, 2); //Maybe?
       }
     }
     cudaDeviceSynchronize();
-    // cudaSetDevice(0);
-    // cudaMemcpy(c_double_array+m*n*c_start, d_c[0], (2*clen2+1)*m*n*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
-    // cudaSetDevice(1);
-    // cudaMemcpy(c_double_array+m*n*(c_start+3*clen2+2), d_c[1], (2*clen2+1)*m*n*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
+    //cudaSetDevice(0);
+    //cudaMemcpy(c_double_array+m*n*c_start, d_c[0], (2*clen2+1)*m*n*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
+    memset(c_double_array+m*n*(c_max),0,m*n*(2*clen2+1)*sizeof(double));
+    cudaSetDevice(1);
+    cudaMemcpy(c_double_array+m*n*(c_start+3*clen2+2), d_c[1], (2*clen2+1)*m*n*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
 
     // move over C_1, deal with the overlap
     cblas_daxpy(m*n*(2*clen2+1), 1.0, c_double_array+m*n*(c_start+(3*clen2+2)), 1, c_double_array+m*n*(c_start+clen2+1), 1);
@@ -860,7 +868,7 @@ void mpmat::gradeschool_cpu(const int & a_start, const int & b_start, const int 
     // C_1 += C_2 
     cblas_daxpy(m*n*(2*clen2+1), 1.0, c_double_array+m*n*(c_start+(3*clen2+2)), 1, c_double_array+m*n*(c_start+clen2+1), 1);
     
-    // C_2 = 0
+    //C_2 = 0
     memset(c_double_array+m*n*(c_start+(3*clen2+2)),0,m*n*(2*clen2+1)*sizeof(double));
   } else { //if we don't need all four, then just do grade school
     
@@ -916,6 +924,7 @@ void mpmat::gradeschool_gpu(const int & a_start, const int & b_start, const int 
     );
   }
   else { //if we don't need all four, then just do grade school
+    //std::cerr << "testing\n";
     int len2 = pow(2,ceil(log2(diff))-1)+.1;
     int len3 = pow(3,ceil(log2(diff))-1)+.1;
     int clen2 = len2 - 1; // the "fundamental length" of c one level below (post squishing)
@@ -1037,21 +1046,21 @@ void mpmat::gradeschool_cpu(const int & a_start, const int & c_start, const int 
         d_b[3] = d_a[3];
         karatsuba_gpu(0, 0, 2*len2, Layout, trans, n, k, 3);
         d_b[3] = d_tmp_b;
-        
-        
+        cudaMemcpy(c_double_array+n*n*c_start, d_c[3], (2*clen2+1)*n*n*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
+        //memset(c_double_array+n*n*(c_max),0,n*n*(2*clen2+1)*sizeof(double));
       }
       #pragma omp section
-      { // do the rest in the next level down
-        gradeschool_cpu(a_start+len2, a_start, c_start+(3*clen2+2), c_max, Layout, trans == CblasTrans ? CblasNoTrans : CblasTrans, trans, n, n, k);
-      }
+       { // do the rest in the next level down
+         gradeschool_cpu(a_start+len2, a_start, c_start+(3*clen2+2), c_max, Layout, trans == CblasTrans ? CblasNoTrans : CblasTrans, trans, n, n, k);
+       }
     }
-    cudaSetDevice(3);
     // C_0 = A_0 * A_0 // karatsuba
-    cudaMemcpy(c_double_array+n*n*c_start, d_c[3], (2*clen2+1)*n*n*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
+    
+    memset(c_double_array+n*n*(c_max),0,n*n*(2*clen2+1)*sizeof(double));
     // happened already
-    //gradeschool happened already
+    // gradeschool happened already
 
-    // move over C_1, deal with the overlap
+    //move over C_1, deal with the overlap
     //std::cerr << "\tadding c[" << c_start+(3*clen2+2) << ":" << c_start+(3*clen2+2)+2*clen2+1 << "] -> c[" <<(c_start+clen2+1) << ":" << (c_start+3*clen2+2) <<"]\n";
     cblas_daxpy(n*n*(2*clen2+1), 1.0, c_double_array+n*n*(c_start+(3*clen2+2)), 1, c_double_array+n*n*(c_start+clen2+1), 1);
 
@@ -1100,7 +1109,7 @@ void mpmat::gradeschool_gpu(const int & a_start, const int & c_start, const int 
   cudaSetDevice(device);
   int start = 2*a_start;
   int diff = c_max - start;
-  std::cerr << "sgradeschool (n,k)=(" << n << "," << k << ") " << start << " " << c_start << " " << c_max << "\n";
+  //std::cerr << "sgradeschool (n,k)=(" << n << "," << k << ") " << start << " " << c_start << " " << c_max << "\n";
   if(diff < 2){ // base case, just multiply
     cublasDsyrk(handles[device],
                 CUBLAS_FILL_MODE_UPPER,(Layout == CblasRowMajor) != (trans == CblasTrans) ? CUBLAS_OP_N : CUBLAS_OP_T,

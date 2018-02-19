@@ -1,5 +1,6 @@
 //=======================================================================
 // Copyright 2014-2015 David Simmons-Duffin.
+// Modified in 2017-2018 by Rajeev Erramilli.
 // Distributed under the MIT License.
 // (See accompanying file LICENSE or copy at
 //  http://opensource.org/licenses/MIT)
@@ -1163,8 +1164,8 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
 //   }
 
   std::vector<int> v;
-  for (int i = 1 << 0; i <= 1 << 6; ++i){
-    if (!myWorkspace.symm_karatsuba_test_gpu(1,1,i)){ 
+  for (int i = 1; i <= 1 << 6; ++i){
+    if (!myWorkspace.symm_karatsuba_test(1,1,i)){ 
       std::cerr << "karatsuba length " << i << " failed\n";
       v.push_back(i);
       break;
