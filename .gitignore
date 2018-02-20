@@ -31,3 +31,13 @@ docs/*.aux
 docs/*.log
 docs/*.out
 docs/*.toc
+
+mpmat/cmake-build-debug
+mpmat/obj
+mpmat/.idea
+mpmat/CMake*
+mpmat/*.dSYM
+mpmat/cachegrind*
+mpmat/mpmat_test
+*.idea*
+

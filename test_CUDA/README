@@ -1,0 +1,1 @@
+nvcc test.cu -lcublas -lcurand -lcuda -Xcompiler -fopenmp -DNDEBUG -DBOOST_UBLAS_NDEBUG -o test
