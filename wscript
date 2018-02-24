@@ -1,20 +1,18 @@
 import os
 
 def options(opt):
-    opt.load(['compiler_cxx','gnu_dirs','boost','tinyxml2','gmpxx','openmp','cxx17','mkl'])
-    # opt.load(['compiler_cxx','gnu_dirs','boost','tinyxml2','gmpxx','openmp','cxx17','cblas'])
+    opt.load(['compiler_cxx','gnu_dirs','boost','tinyxml2','gmpxx','openmp','cxx17',
+              'cblas'])
 
 def configure(conf):
-    conf.load(['compiler_cxx','gnu_dirs','boost','tinyxml2','gmpxx','openmp','cxx17','mkl'])
-    # conf.load(['compiler_cxx','gnu_dirs','boost','tinyxml2','gmpxx','openmp','cxx17','cblas'])
+    conf.load(['compiler_cxx','gnu_dirs','boost','tinyxml2','gmpxx','openmp','cxx17',
+               'cblas'])
     conf.check_boost(lib='serialization system filesystem timer program_options chrono')
 
 def build(bld):
-    # default_flags=['-Wall', '-Wextra', '-g', '-O3', '-D___MPACK_BUILD_WITH_GMP___']
-    default_flags=['-g', '-Wall', '-Wextra', '-ansi', '-D___MPACK_BUILD_WITH_GMP___']
-    # default_flags=['-Wall', '-Wextra', '-g', '-O2', '-D___MPACK_BUILD_WITH_GMP___']
-    use_packages=['BOOST','tinyxml2','gmpxx','openmp','cxx17','mkl']
-    # use_packages=['BOOST','tinyxml2','gmpxx','openmp','cxx17','cblas']
+    default_flags=['-Wall', '-Wextra', '-g', '-O3', '-D___MPACK_BUILD_WITH_GMP___']
+    # default_flags=['-g', '-Wall', '-Wextra', '-ansi', '-D___MPACK_BUILD_WITH_GMP___']
+    use_packages=['BOOST','tinyxml2','gmpxx','openmp','cxx17','cblas']
     
     mpack_sources=['src/mpack/Rpotrf.cpp',
                    'src/mpack/Rgemm.cpp',
@@ -76,15 +74,6 @@ def build(bld):
                    'src/mpack/Rlassq.cpp',
                    'src/mpack/Rlarfg.cpp']
 
-    # bld.shlib(source=mpack_sources,
-    #           target='mpack',
-    #           name='mpack_sh',
-    #           includes=['src/mpack'],
-    #           cxxflags=default_flags,
-    #           install_path=bld.env.LIBDIR,
-    #           use=use_packages
-    #           )
-
     bld.stlib(source=mpack_sources,
               target='mpack',
               name='mpack_st',
@@ -109,16 +98,16 @@ def build(bld):
               )
 
     
-    sources=['src/SDPSolver.cpp',
-             'src/BlockDiagonalMatrix.cpp',
-             'src/SDPSolverIO.cpp',
-             'src/SDP.cpp',
-             'src/parse.cpp',
-             'src/main.cpp',
-             'src/Matrix.cpp']
+    # Main executable
+    sdpb_sources=['src/SDPSolver.cpp',
+                  'src/BlockDiagonalMatrix.cpp',
+                  'src/SDPSolverIO.cpp',
+                  'src/SDP.cpp',
+                  'src/parse.cpp',
+                  'src/main.cpp',
+                  'src/Matrix.cpp']
 
-    # Demo programs
-    bld.program(source=sources,
+    bld.program(source=sdpb_sources,
                 target='sdpb',
                 includes=['src/mpack'],
                 cxxflags=default_flags,

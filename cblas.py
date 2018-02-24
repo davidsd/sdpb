@@ -6,42 +6,51 @@ def configure(conf):
         return getattr(Options.options,varname,'')or default
 
     # Find CBLAS
-    if conf.options.cblas_dir:
-        if not conf.options.cblas_incdir:
-            conf.options.cblas_incdir=conf.options.cblas_dir + "/include"
-        if not conf.options.cblas_libdir:
-            conf.options.cblas_libdir=conf.options.cblas_dir + "/lib"
-
-    if conf.options.cblas_incdir:
-        cblas_incdir=[conf.options.cblas_incdir]
+    if(conf.options.cblas_use_mkl):
+        conf.load('mkl')
     else:
-        cblas_incdir=[]
-    if conf.options.cblas_libdir:
-        cblas_libdir=[conf.options.cblas_libdir]
-    else:
-        cblas_libdir=[]
+        if conf.options.cblas_dir:
+            if not conf.options.cblas_incdir:
+                conf.options.cblas_incdir=conf.options.cblas_dir + "/include"
+            if not conf.options.cblas_libdir:
+                conf.options.cblas_libdir=conf.options.cblas_dir + "/lib"
 
-    if conf.options.cblas_libs:
-        cblas_libs=conf.options.cblas_libs.split()
-    else:
-        cblas_libs=['blas']
+        if conf.options.cblas_incdir:
+            cblas_incdir=[conf.options.cblas_incdir]
+        else:
+            cblas_incdir=[]
+        if conf.options.cblas_libdir:
+            cblas_libdir=[conf.options.cblas_libdir]
+        else:
+            cblas_libdir=[]
 
-    conf.check_cxx(msg="Checking for Cblas",
-                   header_name='cblas.h',
-                   includes=cblas_incdir,
-                   uselib_store='cblas',
-                   libpath=cblas_libdir,
-                   rpath=cblas_libdir,
-                   lib=cblas_libs)
+        if conf.options.cblas_libs:
+            cblas_libs=conf.options.cblas_libs.split()
+        else:
+            cblas_libs=['blas']
+
+        conf.check_cxx(msg="Checking for Cblas",
+                       header_name='cblas.h',
+                       includes=cblas_incdir,
+                       uselib_store='cblas',
+                       libpath=cblas_libdir,
+                       rpath=cblas_libdir,
+                       lib=cblas_libs)
 
 def options(opt):
-    cblas=opt.add_option_group('Cblas Options')
+    cblas=opt.add_option_group('CBlas Options')
+    cblas.add_option('--cblas-use-mkl',
+                   help='Use Intel MKL defaults when looking for CBlas')
     cblas.add_option('--cblas-dir',
                    help='Base directory where cblas is installed')
     cblas.add_option('--cblas-incdir',
                    help='Directory where cblas include files are installed')
+    cblas.add_option('--cblas-cxxflags',
+                   help='Additional flags when compiling (e.g. -DMKL_ILP64 -m64)')
     cblas.add_option('--cblas-libdir',
                    help='Directory where cblas library files are installed')
     cblas.add_option('--cblas-libs',
                    help='Names of the cblas libraries without prefix or suffix\n'
                    '(e.g. "cblas")')
+    cblas.add_option('--cblas-linkflags',
+                   help='Additional flags when linking (e.g. -Wl,--no-as-needed)')
