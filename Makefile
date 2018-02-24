@@ -34,7 +34,7 @@ endif
 
 ################ End of modifications ################
 
-SOURCES = $(wildcard src/*.cpp) $(wildcard src/mpack/*.cpp)
+SOURCES = $(wildcard src/*.cpp) $(wildcard src/mpack/*.cpp) $(wildcard src/mpmat/*.cpp)
 HEADERS = $(wildcard src/*.h) $(wildcard src/mpack/*.h)
 OBJECTS = $(patsubst src/%.cpp,obj/%.o,$(SOURCES))
 RESULT  = sdpb

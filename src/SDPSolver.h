@@ -21,6 +21,7 @@
 #include "Matrix.h"
 #include "BlockDiagonalMatrix.h"
 #include "SDP.h"
+#include "mpmat/mpmat.h"
 
 using std::vector;
 using std::ostream;
@@ -52,7 +53,10 @@ public:
   Real stepLengthReduction;
   Real choleskyStabilizeThreshold;
   Real maxComplementarity;
-
+  bool multTest;
+#ifdef __SDPB_CUDA__
+  bool gpu;
+#endif
   // Set the precision of all Real parameters to equal 'precision'.
   // This is necessary because 'precision' might be set (via the
   // command line or a file) after initializing other parameters.
@@ -100,6 +104,9 @@ public:
 
   // parameters for initialization and iteration
   SDPSolverParameters parameters;
+
+  // the workspace in which matrix calculations will happen
+  // mpmat workspace;
 
   /********************************************/
   // Current point
@@ -295,6 +302,8 @@ public:
   // the QR decomposition of a BlockDiagonalMatrix
   vector<Vector> QRWorkspace;
 
+  mpmat myWorkspace;
+
   /********************************************/
   // Methods
 
@@ -315,6 +324,7 @@ public:
                       Real dualStepLength,
                       Real betaCorrector);
 
+ void testMultiplication(const int m_init, const int m_fin, const int m_step);
  private:
   // Compute data needed to solve the Schur complement equation
   void initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
@@ -331,6 +341,8 @@ public:
   // R-matrix corresponding to the corrector step (if false, we use
   // the predictor R-matrix)
   void computeSearchDirection(const Real &beta, const Real &mu, const bool correctorPhase);
+
+ 
 };
 
 #endif  // SDPB_SDPSOLVER_H_

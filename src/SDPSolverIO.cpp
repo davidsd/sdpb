@@ -9,7 +9,7 @@
 #include <iostream>
 #include <ostream>
 #include <sstream>
-#include "omp.h"
+#include <omp.h>
 #include "boost/archive/text_oarchive.hpp"
 #include "boost/archive/text_iarchive.hpp"
 //Tweak to allow Ubuntu-14.04/gcc-4.8.4 and similar environments to compile

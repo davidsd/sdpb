@@ -14,12 +14,13 @@
 
 // See the manual for a description of the correct XML input format.
 
+#include <string>
 #include <vector>
 #include "types.h"
 #include "parse.h"
 #include "Polynomial.h"
 #include "SDP.h"
-#ifdef ___SHARED_TINYXML2___
+#ifdef HAVE_TINYXML2_H
 #include <tinyxml2.h>
 #else
 #include "tinyxml2/tinyxml2.h"
@@ -97,11 +98,12 @@ PolynomialVectorMatrix parsePolynomialVectorMatrix(XMLElement *xml) {
   return m;
 }
 
-SDP readBootstrapSDP(const vector<path> sdpFiles) {
+SDP readBootstrapSDP(const vector<boost::filesystem::path> sdpFiles) {
   Vector objective;
   vector<PolynomialVectorMatrix> polynomialVectorMatrices;
-  for (auto const& sdpFile: sdpFiles) {
+  for (auto &sdpFile: sdpFiles) {
     XMLDocument doc;
+
     doc.LoadFile(sdpFile.string().c_str());
     XMLElement* xml = doc.FirstChildElement("sdp");
     if(xml->FirstChildElement("objective") != NULL) {

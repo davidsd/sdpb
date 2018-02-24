@@ -12,12 +12,11 @@
 #include <fstream>
 #include <ostream>
 #include <string>
-#include "omp.h"
+#include <omp.h>
 //Tweak to allow Ubuntu-14.04/gcc-4.8.4 and similar environments to compile
 #define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem.hpp>
 #undef BOOST_NO_CXX11_SCOPED_ENUMS
-#include "boost/filesystem.hpp"
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "boost/program_options.hpp"
 #include "types.h"
@@ -68,8 +67,13 @@ int solveSDP(const vector<path> &sdpFiles,
   cout << "\nParameters:\n";
   cout << parameters << endl;
 
+  readBootstrapSDP(sdpFiles);
+  
   // Read an SDP from sdpFile and create a solver for it
   SDPSolver solver(readBootstrapSDP(sdpFiles), parameters);
+  
+  // if(parameters.multTest)
+  //   solver.testMultiplication(1,1,5);
 
   if (exists(checkpointFileIn))
     solver.loadCheckpoint(checkpointFileIn);
@@ -78,7 +82,7 @@ int solveSDP(const vector<path> &sdpFiles,
   timers["Last checkpoint"].start();
   SDPSolverTerminateReason reason = solver.run(checkpointFileOut);
   timers["Solver runtime"].stop();
-
+  //SDPSolverTerminateReason reason;
   cout << "-----" << setfill('-') << setw(116) << std::left << reason << endl;
   cout << endl;
   cout << "primalObjective = " << solver.primalObjective << endl;
@@ -94,6 +98,8 @@ int solveSDP(const vector<path> &sdpFiles,
   solver.saveSolution(reason, outFile);
 
   cout << endl << timers;
+
+  timers.writeMFile( outFile.string()+".profiling" );
 
   return 0;
 }
@@ -212,6 +218,16 @@ int main(int argc, char** argv) {
     ("maxComplementarity",
      po::value<Real>(&parameters.maxComplementarity)->default_value(Real("1e100")),
      "Terminate if the complementarity mu = Tr(X Y)/dim(X) exceeds this value.")
+#ifdef __SDPB_CUDA__
+("gpu",
+     po::bool_switch(&parameters.gpu)->default_value(false),
+     "Turns on GPU-based acceleration. Warning: be sure to run this option only on "
+     "computers that are configured with CUDA.")
+#endif
+("multTest",
+     po::bool_switch(&parameters.multTest)->default_value(false),
+     "Turns on a matrix multiplication test. WARNING: can create inconsestent answers "
+     "in the main run.")
     ;
 
   po::options_description cmdLineOptions;

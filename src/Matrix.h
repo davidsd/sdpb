@@ -13,9 +13,10 @@
 #include <iostream>
 #include <ostream>
 #include <vector>
-#include "omp.h"
+#include <omp.h>
 #include "types.h"
 #include "Vector.h"
+#include "mpmat/mpmat.h"
 
 using std::ostream;
 using std::vector;
@@ -38,6 +39,11 @@ class Matrix {
     rows(rows),
     cols(cols),
     elements(Vector(rows*cols, 0)) {}
+
+ Matrix(int rows, int cols, Real * array):
+    rows(rows),
+      cols(cols),
+      elements(Vector(array, array + rows*cols)) {}
 
   inline const Real& elt(const int r, const int c) const {
     return elements[r + c*rows];
@@ -106,6 +112,20 @@ class Matrix {
       elements[i] *= c;
   }
 
+  bool operator==(const Matrix &other) {
+    return std::equal(elements.begin(),elements.end(),other.elements.begin(),compare_mpf_bits);
+  }
+
+  bool operator!=(const Matrix &other) {
+    return !std::equal(elements.begin(),elements.end(),other.elements.begin(),compare_mpf_bits);
+  }
+
+  Matrix operator-(const Matrix &other) const{
+    Matrix out(rows,cols);
+    std::transform(elements.begin(),elements.end(),other.elements.begin(),out.elements.begin(),std::minus<Real>());
+    return out;
+  }
+
   // The maximum absolute value of the elemnts of M
   Real maxAbs() const {
     return maxAbsVector(elements);
@@ -114,15 +134,47 @@ class Matrix {
   friend ostream& operator<<(ostream& os, const Matrix& a);
 };
 
+// C := alpha*A + beta*C
+void matrixScaleAdd(Real alpha, Matrix &A,
+		    Real beta, Matrix &C);
+
+// C := alpha*A + beta*C
+void matrixScaleAdd(Real alpha, Real * A,
+		    Real beta, Matrix &C);
+
 // C := alpha*A*B + beta*C
 void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B,
                             Real beta, Matrix &C);
+#ifdef __SDPB_CUDA__
+void matrixScaleMultiplyAddMpmat(mpmat &myWorkspace, Real alpha, Matrix &A,
+				 Matrix &B, Real beta, Matrix &C, bool gpu);
+void matrixScaleTransMultiplyAddMpmat(mpmat &myWorkspace, char ta, char tb, Real alpha, Matrix &A, int a_offset,
+         Matrix &B, int b_offset, Real beta, Matrix &C, int c_offset, bool gpu);
+#else
+void matrixScaleMultiplyAddMpmat(mpmat &myWorkspace, Real alpha, Matrix &A,
+				 Matrix &B, Real beta, Matrix &C);
+void matrixScaleTransMultiplyAddMpmat(mpmat &myWorkspace, char ta, char tb, Real alpha, Matrix &A, int a_offset,
+         Matrix &B, int b_offset, Real beta, Matrix &C, int c_offset);
+#endif
 
 // C := A*B
 void matrixMultiply(Matrix &A, Matrix &B, Matrix &C);
 
+#ifdef __SDPB_CUDA__
+void matrixMultiplyMpmat(mpmat &myWorkspace, Matrix &A, Matrix &B, Matrix &C, bool gpu);
+#else
+void matrixMultiplyMpmat(mpmat &myWorkspace, Matrix &A, Matrix &B, Matrix &C);
+#endif
+
 // Set block starting at (bRow, bCol) of B to A^T A
 void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol);
+void matrixSquareIntoBlockGPU(Matrix &A, Matrix &B, int bRow, int bCol);
+
+#ifdef __SDPB_CUDA__
+void matrixSquareIntoBlockMpmat(mpmat &myWorkspace, Matrix &A, Matrix &B, int bRow, int bCol, bool gpu);
+#else
+void matrixSquareIntoBlockMpmat(mpmat &myWorkspace, Matrix &A, Matrix &B, int bRow, int bCol);
+#endif
 
 // A := L^{-1} A L^{-T}
 void lowerTriangularInverseCongruence(Matrix &A, Matrix &L);

@@ -184,6 +184,7 @@ void Rtrsm(const char *side, const char *uplo, const char *transa, const char *d
 		    }
 		}
 	    } else {
+	      //#pragma omp parallel for
 		for (j = 0; j < n; j++) {
 		    for (i = m - 1; i >= 0; i--) {
 			temp = alpha * B[i + j * ldb];

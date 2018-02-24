@@ -1,5 +1,6 @@
 //=======================================================================
 // Copyright 2014-2015 David Simmons-Duffin.
+// Modified in 2017-2018 by Rajeev Erramilli.
 // Distributed under the MIT License.
 // (See accompanying file LICENSE or copy at
 //  http://opensource.org/licenses/MIT)
@@ -9,7 +10,7 @@
 #include <algorithm>
 #include <iostream>
 #include <vector>
-#include "omp.h"
+#include <omp.h>
 //Tweak to allow Ubuntu-14.04/gcc-4.8.4 and similar environments to compile
 #define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem.hpp>
@@ -73,7 +74,8 @@ SDPSolver::SDPSolver(const SDP &sdp, const SDPSolverParameters &parameters):
   Q(sdp.FreeVarMatrix.cols, sdp.FreeVarMatrix.cols),
   Qpivots(sdp.FreeVarMatrix.cols),
   dyExtended(Q.rows),
-  StepMatrixWorkspace(X)
+  StepMatrixWorkspace(X),
+  myWorkspace(1)
 {
   // initialize bilinearPairingsWorkspace, eigenvaluesWorkspace, QRWorkspace
   for (unsigned int b = 0; b < sdp.bilinearBases.size(); b++) {
@@ -81,6 +83,8 @@ SDPSolver::SDPSolver(const SDP &sdp, const SDPSolverParameters &parameters):
                                                BilinearPairingsXInv.blocks[b].cols));
     eigenvaluesWorkspace.push_back(Vector(X.blocks[b].rows));
     QRWorkspace.push_back(Vector(3*X.blocks[b].rows - 1));
+
+    //myWorkspace.mpmat_conversion_test(10,10000000000,-7);
   }
 
   // X = \Omega_p I
@@ -546,7 +550,9 @@ Real correctorCenteringParameter(const SDPSolverParameters &parameters,
                                  const BlockDiagonalMatrix &dY,
                                  const Real &mu,
                                  const bool isPrimalDualFeasible) {
+  timers["run.correctorStep.frobeniusProduct"].resume();
   Real r = frobeniusProductOfSums(X, dX, Y, dY) / (mu * X.dim);
+  timers["run.correctorStep.frobeniusProduct"].stop();
   Real beta = r < 1 ? r*r : r;
 
   if (isPrimalDualFeasible)
@@ -653,15 +659,19 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   // Lambda_{p_m} are constants. The p_i are given by
   // schurStabilizeIndices and the corresponding Lambda_i by
   // schurStabilizeLambdas.
-  // 
+  //
+  timers["initializeSchurComplementSolver.choleskyDecompositionStabilized"].resume();
   choleskyDecompositionStabilized(SchurComplement, SchurComplementCholesky,
                                   schurStabilizeIndices,
                                   schurStabilizeLambdas,
                                   cast2double(choleskyStabilizeThreshold));
+  timers["initializeSchurComplementSolver.choleskyDecompositionStabilized"].stop();
 
   // SchurOffDiagonal = L'^{-1} FreeVarMatrix
   SchurOffDiagonal.copyFrom(sdp.FreeVarMatrix);
+  timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"].resume();
   blockMatrixLowerTriangularSolve(SchurComplementCholesky, SchurOffDiagonal);
+  timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"].stop();
 
   // Next we compute L'^{-1} U, which is stored implicitly in terms of
   // its nonzero submatrices in the stabilizeBlock* variables.
@@ -675,6 +685,7 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   stabilizeBlockUpdateColumn.resize(0);
 
   // j runs over blocks of SchurComplement
+  timers["initializeSchurComplementSolver.stabilizeMagic"].resume();
   for (unsigned int j = 0; j < SchurComplement.blocks.size(); j++) {
     if (schurStabilizeIndices[j].size() > 0) {
       // the j-th block of S contains stabilized directions. We have a
@@ -707,6 +718,7 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
       offDiagonalColumns += stabilizeBlocks[j].cols;
     }
   }
+  timers["initializeSchurComplementSolver.stabilizeMagic"].stop();
 
   // Set U = L'^{-1} U
   //
@@ -714,6 +726,7 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   // in-place, multiplying by the inverse of the appropriate submatrix
   // of SchurComplementCholesky.  We henceforth refer to L'^{-1} U as
   // V to avoid confusion.
+  timers["initializeSchurComplementSolver.LinvU"].resume();
   #pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < stabilizeBlockIndices.size(); j++) {
     int b = stabilizeBlockIndices[j];
@@ -725,6 +738,7 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
           &stabilizeBlocks[b].elt(0, 0),
           stabilizeBlocks[b].rows);
   }
+  timers["initializeSchurComplementSolver.LinvU"].stop();
 
   // Next, we compute
   //
@@ -733,6 +747,7 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   // Where B' = (B U).  We think of Q as containing four blocks called
   // Upper/Lower-Left/Right.
 
+  timers["initializeSchurComplementSolver.Qcomputation"].resume();
   // Set the dimensions of Q
   Q.resize(offDiagonalColumns, offDiagonalColumns);
   Q.setZero();
@@ -740,7 +755,13 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   // Here, SchurOffDiagonal = L'^{-1} B.
   //
   // UpperLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal
+#ifdef __SDPB_CUDA__
+  matrixSquareIntoBlockMpmat(myWorkspace,SchurOffDiagonal, Q, 0, 0,parameters.gpu);
+#else
   matrixSquareIntoBlock(SchurOffDiagonal, Q, 0, 0);
+   // matrixSquareIntoBlockMpmat(myWorkspace,SchurOffDiagonal, Q, 0, 0);
+#endif
+  //matrixSquareIntoBlockGPU(SchurOffDiagonal, Q, 0, 0);
 
   // Here, stabilizeBlocks contains the blocks of V = L'^{-1} U.
   //
@@ -748,18 +769,37 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
   for (unsigned int j = 0; j < stabilizeBlockIndices.size(); j++) {
     int b = stabilizeBlockIndices[j];
     int c = stabilizeBlockUpdateColumn[j];
+#ifdef __SDPB_CUDA__
+    matrixSquareIntoBlockMpmat(myWorkspace,stabilizeBlocks[b], Q, c, c,parameters.gpu);
+#else
     matrixSquareIntoBlock(stabilizeBlocks[b], Q, c, c);
+    // matrixSquareIntoBlockMpmat(myWorkspace,stabilizeBlocks[b], Q, c, c);
+#endif
     // subtract the identity matrix from this block
     for (int i = c; i < c + stabilizeBlocks[b].cols; i++)
       Q.elt(i, i) -= 1;
   }
 
   // LowerLeft(Q) = V^T SchurOffDiagonal
+  timers["Qcomputation.nonGPU"].resume();
   # pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < stabilizeBlockIndices.size(); j++) {
     int b = stabilizeBlockIndices[j];
     int p = stabilizeBlockUpdateRow[j];
     int r = stabilizeBlockUpdateColumn[j];
+    // myWorkspace.gemm_reduced(CblasRowMajor,CblasTrans,CblasNoTrans,
+    //       stabilizeBlocks[b].cols,
+    //       SchurOffDiagonal.cols,
+    //       stabilizeBlocks[b].rows,
+    //       &stabilizeBlocks[b].elements[0],
+    // //stabilizeBlocks[b].rows,
+    //       &SchurOffDiagonal.elt(p, 0),
+    // //SchurOffDiagonal.rows,
+    //       &Q.elt(r, 0)
+    // //Q.rows
+    // );
+    //matrixScaleTransMultiplyAddMpmat(myWorkspace, 't', 'n', 1.0, stabilizeBlocks[b],
+        // Matrix &B, 0.0, Matrix &C);
     Rgemm("Transpose", "NoTranspose",
           stabilizeBlocks[b].cols,
           SchurOffDiagonal.cols,
@@ -772,17 +812,26 @@ void SDPSolver::initializeSchurComplementSolver(const BlockDiagonalMatrix &Bilin
           0,
           &Q.elt(r, 0),
           Q.rows);
-  }
+	  }
+  timers["Qcomputation.nonGPU"].stop();
 
   // UpperRight(Q) = LowerLeft(Q)^T
   # pragma omp parallel for schedule(static)
   for (int c = 0; c < SchurOffDiagonal.cols; c++)
     for (int r = SchurOffDiagonal.cols; r < Q.rows; r++)
       Q.elt(c, r) = Q.elt(r, c);
+  timers["initializeSchurComplementSolver.Qcomputation"].stop();
 
   // Resize Qpivots appropriately and compute the LU decomposition of Q
+
+  timers["initializeSchurComplementSolver.LUDecomposition"].resume();
+  timers["LUDecomposition.resizing"].resume();
   Qpivots.resize(Q.rows);
+  timers["LUDecomposition.resizing"].stop();
+  timers["LUDecomposition.actualLU"].resume();
   LUDecomposition(Q, Qpivots);
+  timers["LUDecomposition.actualLU"].stop();
+  timers["initializeSchurComplementSolver.LUDecomposition"].stop();
 }
 
 
@@ -864,41 +913,83 @@ void SDPSolver::solveSchurComplementEquation(Vector &dx, Vector &dy) {
 void SDPSolver::computeSearchDirection(const Real &beta,
                                        const Real &mu,
                                        const bool correctorPhase) {
+  string timerName = "computeSearchDirection(";
+  if (correctorPhase) {
+    timerName += "betaCorrector)";
+  } else {
+    timerName += "betaPredictor)";
+  }
+
   // R = beta mu I - X Y (predictor phase)
   // R = beta mu I - X Y - dX dY (corrector phase)
+
+  timers[timerName + ".R.XY"].resume();
   blockDiagonalMatrixScaleMultiplyAdd(-1, X, Y, 0, R);
-  if (correctorPhase)
-    blockDiagonalMatrixScaleMultiplyAdd(-1, dX, dY, 1, R);
+  timers[timerName + ".R.XY"].stop();
+  if (correctorPhase){
+  timers[timerName + ".R.dXdY"].resume();
+  blockDiagonalMatrixScaleMultiplyAdd(-1, dX, dY, 1, R);
+  timers[timerName + ".R.dXdY"].stop();
+}
+  
+  timers[timerName + ".R.add"].resume();
   R.addDiagonal(beta*mu);
+  timers[timerName + ".R.add"].stop();
 
   // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))
+  timers[timerName + ".Z.multiply"].resume();
   blockDiagonalMatrixMultiply(PrimalResidues, Y, Z);
+  timers[timerName + ".Z.multiply"].stop();
+  timers[timerName + ".Z.subtract"].resume();
   Z -= R;
+  timers[timerName + ".Z.subtract"].stop();
+  timers[timerName + ".Z.cholesky"].resume();
   blockMatrixSolveWithCholesky(XCholesky, Z);
+  timers[timerName + ".Z.cholesky"].stop();
+  timers[timerName + ".Z.symm"].resume();
   Z.symmetrize();
+  timers[timerName + ".Z.symm"].stop();
 
   // r_x[p] = -dualResidues[p] - Tr(A_p Z)
   // r_y[n] = dualObjective[n] - (FreeVarMatrix^T x)_n
   // Here, dx = r_x, dy = r_y.
+  timers[timerName + ".computeSchurRHS"].resume();
   computeSchurRHS(sdp, dualResidues, Z, x, dx, dy);
+  timers[timerName + ".computeSchurRHS"].stop();
 
   // Solve for dx, dy in-place
+  timers[timerName + ".dxdy"].resume();
   solveSchurComplementEquation(dx, dy);
+  timers[timerName + ".dxdy"].stop();
 
   // dX = PrimalResidues + \sum_p A_p dx[p]
+  timers[timerName + ".dX.weightedSum"].resume();
   constraintMatrixWeightedSum(sdp, dx, dX);
+  timers[timerName + ".dX.weightedSum"].stop();
+  timers[timerName + ".dX.primalRes"].resume();
   dX += PrimalResidues;
+  timers[timerName + ".dX.primalRes"].stop();
 
   // dY = Symmetrize(X^{-1} (R - dX Y))
+  timers[timerName + ".dY.multiply"].resume();
   blockDiagonalMatrixMultiply(dX, Y, dY);
+  timers[timerName + ".dY.multiply"].stop();
+  timers[timerName + ".dY.subtract"].resume();
   dY -= R;
+  timers[timerName + ".dY.subtract"].stop();
+  timers[timerName + ".dY.cholesky"].resume();
   blockMatrixSolveWithCholesky(XCholesky, dY);
+  timers[timerName + ".dY.cholesky"].stop();
+  timers[timerName + ".dY.symm"].resume();
   dY.symmetrize();
   dY *= -1;
+  timers[timerName + ".dY.symm"].stop();
 }
 
 /***********************************************************************/
 // The main solver loop
+// PROFILING : Using the somewhat weird convention to put timings outside the function.
+//             Its just simpler to see this way what's timed and what's not
 
 SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
   Real primalStepLength;
@@ -912,31 +1003,47 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
     if (timers["Solver runtime"].elapsed().wall >= parameters.maxRuntime * 1000000000LL)
       return MaxRuntimeExceeded;
 
+    timers["run.objectives"].resume();
     primalObjective = sdp.objectiveConst + dotProduct(sdp.primalObjective, x);
     dualObjective   = sdp.objectiveConst + dotProduct(sdp.dualObjective, y);
     dualityGap      = abs(primalObjective - dualObjective) /
       max(Real(abs(primalObjective) + abs(dualObjective)), Real(1));
+    timers["run.objectives"].stop();
 
+    timers["run.choleskyDecomposition(X,XCholesky)"].resume();
     choleskyDecomposition(X, XCholesky);
+    timers["run.choleskyDecomposition(X,XCholesky)"].stop();
+
+    timers["run.choleskyDecomposition(Y,YCholesky)"].resume();
     choleskyDecomposition(Y, YCholesky);
+    timers["run.choleskyDecomposition(Y,YCholesky)"].stop();
 
     // Compute the bilinear pairings BilinearPairingsXInv and
     // BilinearPairingsY needed for the dualResidues and the Schur
     // complement matrix
+    timers["run.blockTensorInvTransposeCongruenceWithCholesky"].resume();
     blockTensorInvTransposeCongruenceWithCholesky(XCholesky, sdp.bilinearBases,
                                                   bilinearPairingsWorkspace,
                                                   BilinearPairingsXInv);
+    timers["run.blockTensorInvTransposeCongruenceWithCholesky"].stop();
+
+    timers["run.blockTensorTransposeCongruence"].resume();
     blockTensorTransposeCongruence(Y, sdp.bilinearBases,
                                    bilinearPairingsWorkspace,
                                    BilinearPairingsY);
+    timers["run.blockTensorTransposeCongruence"].stop();
 
     // dualResidues[p] = primalObjective[p] - Tr(A_p Y) - (FreeVarMatrix y)_p,
+    timers["run.computeDualResidues"].resume();
     computeDualResidues(sdp, y, BilinearPairingsY, dualResidues);
     dualError = maxAbsVector(dualResidues);
+    timers["run.computeDualResidues"].stop();
 
+    timers["run.computePrimalResidues"].resume();
     // PrimalResidues = \sum_p A_p x[p] - X
     computePrimalResidues(sdp, x, X, PrimalResidues);
     primalError = PrimalResidues.maxAbs();
+    timers["run.computePrimalResidues"].stop();
 
     const bool isPrimalFeasible = primalError < parameters.primalErrorThreshold;
     const bool isDualFeasible   = dualError   < parameters.dualErrorThreshold;
@@ -951,8 +1058,10 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
 
     // Compute SchurComplement and prepare to solve the Schur
     // complement equation for dx, dy
+    timers["run.initializeSchurComplementSolver"].resume();
     initializeSchurComplementSolver(BilinearPairingsXInv, BilinearPairingsY,
                                     parameters.choleskyStabilizeThreshold);
+    timers["run.initializeSchurComplementSolver"].stop();
 
     // Compute the complementarity mu = Tr(X Y)/X.dim
     Real mu = frobeniusProductSymmetric(X, Y)/X.dim;
@@ -962,21 +1071,30 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
     // Compute the predictor solution for (dx, dX, dy, dY)
     Real betaPredictor =
       predictorCenteringParameter(parameters, isPrimalFeasible && isDualFeasible);
+    timers["run.computeSearchDirection(betaPredictor)"].resume();
     computeSearchDirection(betaPredictor, mu, false);
+    timers["run.computeSearchDirection(betaPredictor)"].stop();
 
     // Compute the corrector solution for (dx, dX, dy, dY)
     Real betaCorrector =
       correctorCenteringParameter(parameters, X, dX, Y, dY, mu,
                                   isPrimalFeasible && isDualFeasible);
+    timers["run.computeSearchDirection(betaCorrector)"].resume();
     computeSearchDirection(betaCorrector, mu, true);
+    timers["run.computeSearchDirection(betaCorrector)"].stop();
 
     // Compute step-lengths that preserve positive definiteness of X, Y
+    timers["run.stepLength(XCholesky)"].resume();
     primalStepLength = stepLength(XCholesky, dX, StepMatrixWorkspace,
                                   eigenvaluesWorkspace, QRWorkspace,
                                   parameters.stepLengthReduction);
+    timers["run.stepLength(XCholesky)"].stop();
+    timers["run.stepLength(YCholesky)"].resume();
     dualStepLength   = stepLength(YCholesky, dY, StepMatrixWorkspace,
                                   eigenvaluesWorkspace, QRWorkspace,
                                   parameters.stepLengthReduction);
+    timers["run.stepLength(YCholesky)"].stop();
+
 
     // If our problem is both dual-feasible and primal-feasible,
     // ensure we're following the true Newton direction.
@@ -996,8 +1114,95 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
     addScaledVector(y, dualStepLength, dy);
     dY *= dualStepLength;
     Y += dY;
+
   }
 
   // Never reached
   return MaxIterationsExceeded;
+}
+
+
+ void SDPSolver::testMultiplication(const int m_init, const int m_fin, const int m_step){
+   int prec = mpf_get_default_prec();
+   std::cerr << "the precision of this mult test is " << prec << std::endl;
+   //mpf_set_default_prec(1024);
+  for (int m = m_init; m <= m_fin; m *= m_step){
+    std::cerr << "testing dimension " << m << "\n";
+  // Real * a_tmp = randomGMPVector(m*m,prec), * b_tmp = randomGMPVector(m*m,prec), * c_tmp = randomGMPVector(m*m,prec);
+  // Matrix A(m,m,a_tmp), B(m,m,b_tmp), C(m,m,c_tmp), C2(m,m,c_tmp), C3(m,m);
+  // delete [] a_tmp;
+  // delete [] b_tmp;
+  // delete [] c_tmp;
+  
+  
+//   matrixScaleMultiplyAdd(-1,A,B,1,C);
+// #ifdef __SDPB_CUDA__
+//   matrixScaleMultiplyAddMpmat(myWorkspace,-1,A,B,1,C2,parameters.gpu);
+// #else
+//   matrixScaleMultiplyAddMpmat(myWorkspace,-1,A,B,1,C2);
+// #endif
+//   std::cerr << "done multing\n";
+//   Matrix diff = C - C2;
+//   Matrix diff2 = C2 - C3;
+
+//   if (C != C2){
+//   std::cerr << "Error: multiplication failed at dimension " << m << ". Printing outputs:\n";
+//   std::cerr << C << "\n\n\n";
+//   std::cerr << C2 << "\n\n\n";
+//   std::cerr << diff << "\n\n\n";
+//   break;
+// }
+//   for (int r = 0; r < C2.rows; ++r){
+//     for (int c = 0; c < C2.cols; ++c){
+//       if (C2.elt(r,c) < -100000.0){
+// 	std::cout << C2.elt(r,c) << " has bits of:\n";
+// 	//print_mpf_bits(C2.elt(r,c));
+// 	compare_mpf_bits(C2.elt(r,c),C.elt(r,c));
+//        	std::cout << "\n";
+// 	//print_mpf_bits(C.elt(r,c));
+// 	std::cout << "\n\n\n";
+//       }
+//     }
+//   }
+
+  std::vector<int> v;
+  for (int i = 1; i <= 1 << 6; ++i){
+    if (!myWorkspace.symm_karatsuba_test(1,1,i)){ 
+      std::cerr << "karatsuba length " << i << " failed\n";
+      v.push_back(i);
+      break;
+    }
+    //std::cerr << "karatsuba length " << i << " passed\n";
+    //std::cout << "\n" << timers << "\n";
+  }
+  std::cout << v << "\n";
+  //std::cout << "\n" << timers << "\n";
+  //myWorkspace.base_karatsuba_test();
+
+  //std::cerr << "about to test CPU vs GPU:\n\n\n";
+  /*if (C3 != C2){
+  std::cerr << "Error: multiplication between GPU and CPU failed at dimension " << m << "\n";
+  //std::cerr << C3 << "\n\n\n";
+  //std::cerr << C2 << "\n\n\n";
+  //std::cerr << diff2 << "\n\n\n";
+  //break;
+}
+ else {
+   std::cout << "CPU and GPU are consistent\n";
+ }
+ bool bigerr = false;
+  for (int r = 0; r < C2.rows; ++r){
+    for (int c = 0; c < C2.cols; ++c){
+      if (C2.elt(r,c) < -100000.0){
+	std::cout << C2.elt(r,c) << " has bits of:\n";
+	print_mpf_bits(C2.elt(r,c));
+	bigerr = true;
+      }
+    }
+  }
+  if (bigerr){
+    std::cerr << "Big numerical error in conversion failed at dimension: " << m << "\n\n";
+    break;
+    }*/
+}
 }
