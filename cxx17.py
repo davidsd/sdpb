@@ -6,11 +6,8 @@ def configure(conf):
         return getattr(Options.options,varname,'')or default
 
 
-    cxx17_fragment="int main() { }"
-    flags=['-std=c++0x','-std=c++17','-std=c++1y']
-
-    # cxx17_fragment="int main() { int a{1},b{2};switch(a){case 1: b=a;[[fallthrough]];default:break;}}"
-    # flags=['-std=c++17','-std=c++1y']
+    cxx17_fragment="int main() { int a{1},b{2};switch(a){case 1: b=a;[[fallthrough]];default:break;}}"
+    flags=['-std=c++17','-std=c++1y']
     if conf.options.cxx17_flag:
         flags=[conf.options.cxx17_flag]
     found_cxx17=False
