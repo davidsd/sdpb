@@ -27,4 +27,4 @@ def configure(conf):
 
 def options(opt):
     openmp=opt.add_option_group('OpenMP Options')
-    openmp.add_option('--openmp-flag', help='Flag to enable OpenMP (e.g. -fopenmp')
+    openmp.add_option('--openmp-flag', help='Flag to enable OpenMP (e.g. -fopenmp)')
