@@ -30,11 +30,11 @@ SDPB has been tested on Red Hat Linux. To install,
 
 1. Download Boost and GMP from the links above. Install GMP with the option `--enable-cxx` added to `./configure`. Install Boost.
 
-2. Configure the project using the included version of [waf.io](waf)
+2. Configure the project using the included version of [waf](https://waf.io)
 
-    `./waf configure --gmpxx-dir=$GMP_DIR --boost-includes=$BOOST_DIR/include --boost-libs=$BOOST_DIR/lib`
+    `python ./waf configure --gmpxx-dir=$GMP_DIR --boost-includes=$BOOST_DIR/include --boost-libs=$BOOST_DIR/lib`
 
-3. Type `./waf` to build the executable in `build/sdpb`.
+3. Type `python ./waf` to build the executable in `build/sdpb`.
 
 ### Debian/Ubuntu
 
@@ -69,8 +69,8 @@ The following instructions have been tested on Mac OS 10.12 Sierra.
         brew install boost
         git clone https://github.com/davidsd/sdpb
         cd sdpb
-        ./waf configure
-        ./waf
+        python ./waf configure
+        python ./waf
 
 ## Windows
 
