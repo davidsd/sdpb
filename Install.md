@@ -13,6 +13,8 @@ SDPB requires
 
 - [The GNU Multiprecision Library](https://gmplib.org/).
 
+- [Python](https://python.org) (2.7 or later).
+
 System-specific installation instructions are below.  Please use the
 issue tracker if you encounter installation problems. For those with
 experience packaging software, I'd appreciate help making SDPB easier
@@ -28,10 +30,11 @@ SDPB has been tested on Red Hat Linux. To install,
 
 1. Download Boost and GMP from the links above. Install GMP with the option `--enable-cxx` added to `./configure`. Install Boost.
 
-2. Edit the `Makefile` to define the variables `GMPINCLUDEDIR`,
-`BOOSTINCLUDEDIR`, and `LIBDIR.` Ensure `LIBDIR` is in your `LD_LIBRARY_PATH`.
+2. Configure the project using the included version of [waf.io](waf)
 
-3. Type `make` to build the `sdpb` executable.
+    `./waf configure --gmpxx-dir=$GMP_DIR --boost-includes=$BOOST_DIR/include --boost-libs=$BOOST_DIR/lib`
+
+3. Type `./waf` to build the executable in `build/sdpb`.
 
 ### Debian/Ubuntu
 
@@ -66,8 +69,8 @@ The following instructions have been tested on Mac OS 10.12 Sierra.
         brew install boost
         git clone https://github.com/davidsd/sdpb
         cd sdpb
-        # make using clang in homebrew
-        CLANG=1 make
+        ./waf configure
+        ./waf
 
 ## Windows
 
