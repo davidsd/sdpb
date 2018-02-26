@@ -26,16 +26,27 @@ def configure(conf):
     else:
         tinyxml2_libs=['tinyxml2']
 
-    conf.check_cxx(msg="Checking for Tinyxml2",
-                   header_name='tinyxml2.h',
-                   includes=tinyxml2_incdir,
-                   uselib_store='tinyxml2',
-                   libpath=tinyxml2_libdir,
-                   rpath=tinyxml2_libdir,
-                   lib=tinyxml2_libs)
+    found_tinyxml2=False
+    if not conf.options.tinyxml2_use_embedded_copy:
+        try:
+            conf.check_cxx(msg="Checking for Tinyxml2",
+                           header_name='tinyxml2.h',
+                           includes=tinyxml2_incdir,
+                           uselib_store='tinyxml2',
+                           libpath=tinyxml2_libdir,
+                           rpath=tinyxml2_libdir,
+                           lib=tinyxml2_libs)
+        except conf.errors.ConfigurationError:
+            pass
+        else:
+            found_tinyxml2=True
+    if not found_tinyxml2:
+        conf.env['TINYXML2_USE_EMBEDDED_COPY']=True
 
 def options(opt):
     tinyxml2=opt.add_option_group('Tinyxml2 Options')
+    tinyxml2.add_option('--tinyxml2-use-embedded-copy',
+                   help='Whether to use the embedded copy of tinyxml2')
     tinyxml2.add_option('--tinyxml2-dir',
                    help='Base directory where tinyxml2 is installed')
     tinyxml2.add_option('--tinyxml2-incdir',
@@ -45,3 +56,4 @@ def options(opt):
     tinyxml2.add_option('--tinyxml2-libs',
                    help='Names of the tinyxml2 libraries without prefix or suffix\n'
                    '(e.g. "tinyxml2")')
+    
