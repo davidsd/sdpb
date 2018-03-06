@@ -9,7 +9,9 @@
 #include <iostream>
 #include <ostream>
 #include <sstream>
+#ifdef HAVE_OMP_H
 #include <omp.h>
+#endif
 #include "boost/archive/text_oarchive.hpp"
 #include "boost/archive/text_iarchive.hpp"
 //Tweak to allow Ubuntu-14.04/gcc-4.8.4 and similar environments to compile
@@ -38,7 +40,9 @@ ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
   os << "detectPrimalFeasibleJump     = " << p.detectPrimalFeasibleJump     << endl;
   os << "detectDualFeasibleJump       = " << p.detectDualFeasibleJump       << endl;
   os << "precision(actual)            = " << p.precision << "(" << mpf_get_default_prec() << ")" << endl;
+#ifdef HAVE_OMP_H
   os << "maxThreads(using)            = " << p.maxThreads << "(" << omp_get_max_threads() << ")" << endl;
+#endif
   os << "dualityGapThreshold          = " << p.dualityGapThreshold          << endl;
   os << "primalErrorThreshold         = " << p.primalErrorThreshold         << endl;
   os << "dualErrorThreshold           = " << p.dualErrorThreshold           << endl;

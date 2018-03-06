@@ -17,7 +17,9 @@
 // #include <mkl.h>
 #include "../Timers.h"
 #include <limits.h>
+#ifdef HAVE_OMP_H
 #include <omp.h>
+#endif
 
 template <typename T> T min(T a, T b) { return a < b ? a : b; }
 
@@ -980,8 +982,10 @@ void mpmat::gradeschool_cpu(const int &a_start, const int &c_start,
     clear_gpu(3);
     cudaMemcpy(d_a[3], a_double_array + k * n * (a_start),
                len2 * n * k * sizeof(mpmat_double), cudaMemcpyHostToDevice);
+#ifdef HAVE_OMP_H
     omp_set_dynamic(1);
     omp_set_nested(1);
+#endif
 #pragma omp parallel sections
     {
 #pragma omp section

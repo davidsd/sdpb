@@ -12,7 +12,9 @@
 #include <vector>
 #include <iostream>
 #include <ostream>
+#ifdef HAVE_OMP_H
 #include <omp.h>
+#endif
 #include "types.h"
 #include "Matrix.h"
 

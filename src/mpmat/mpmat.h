@@ -24,7 +24,9 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
+#ifdef HAVE_OMP_H
 #include <omp.h>
+#endif
 
 #ifdef __SDPB_CUDA__
 #include "cublas_v2.h"
@@ -171,8 +173,12 @@ public:
     len_b = 0;
     len_c = 0;
     len_t = 0;
+#ifdef HAVE_OMP_H
     cpu_count = omp_get_num_threads();
-
+#else
+    cpu_count = 1;
+#endif
+    
 #ifdef __SDPB_CUDA__
     cudaGetDeviceCount(&gpu_count);
     d_a = new mpmat_double *[gpu_count];

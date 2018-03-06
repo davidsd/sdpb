@@ -17,7 +17,9 @@
 //#include "tests/mpmat_tests.h"
 // #include <mkl.h>
 #include "../Timers.h"
+#ifdef HAVE_OMP_H
 #include <omp.h>
+#endif
 
 template <typename T>
 inline T ceil_div(T a, T b) {

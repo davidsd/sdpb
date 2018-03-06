@@ -8,7 +8,9 @@
 
 #include <algorithm>
 #include <iostream>
+#ifdef HAVE_OMP_H
 #include <omp.h>
+#endif
 #include <vector>
 // Tweak to allow Ubuntu-14.04/gcc-4.8.4 and similar environments to compile
 #define BOOST_NO_CXX11_SCOPED_ENUMS

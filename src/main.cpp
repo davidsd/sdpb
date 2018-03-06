@@ -12,7 +12,9 @@
 #include <fstream>
 #include <ostream>
 #include <string>
+#ifdef HAVE_OMP_H
 #include <omp.h>
+#endif
 //Tweak to allow Ubuntu-14.04/gcc-4.8.4 and similar environments to compile
 #define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem.hpp>
@@ -53,9 +55,11 @@ int solveSDP(const vector<path> &sdpFiles,
   // Ensure all the Real parameters have the appropriate precision
   parameters.resetPrecision();
 
+#ifdef HAVE_OMP_H
   // Set the maximum number of threads for parallel loops
   omp_set_num_threads(parameters.maxThreads);
-
+#endif
+  
   cout << "SDPB started at " << second_clock::local_time() << endl;
   for (auto const& sdpFile: sdpFiles) {
     cout << "SDP file        : " << sdpFile        << endl;

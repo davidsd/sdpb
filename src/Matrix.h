@@ -13,7 +13,9 @@
 #include <iostream>
 #include <ostream>
 #include <vector>
+#ifdef HAVE_OMP_H
 #include <omp.h>
+#endif
 #include "types.h"
 #include "Vector.h"
 #include "mpmat/mpmat.h"

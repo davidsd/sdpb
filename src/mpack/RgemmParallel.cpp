@@ -80,7 +80,9 @@ an m by k matrix, op(B) a k by n matrix and C an m by n matrix.
 */
 
 #include <mblas.h>
+#ifdef HAVE_OMP_H
 #include <omp.h>
+#endif
 
 void RgemmParallel(const char *transa, const char *transb, INTEGER m, INTEGER n, INTEGER k, REAL alpha, REAL * A, INTEGER lda, REAL * B,
 	   INTEGER ldb, REAL beta, REAL * C, INTEGER ldc)
