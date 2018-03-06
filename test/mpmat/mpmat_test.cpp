@@ -7,7 +7,7 @@ Timers timers;
 
 int main() {
 
-  mp_bitcnt_t precision(1024);
+  mp_bitcnt_t precision(2048);
   mpf_set_default_prec(precision);
 
   std::cout.precision(static_cast<int>(precision * 0.31 + 5));
