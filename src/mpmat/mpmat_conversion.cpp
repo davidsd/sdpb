@@ -172,7 +172,6 @@ void mpmatNormalize(mpmat_double * source,
 		    const int size,
 		    const int mpmat_limb){
   double base = 1 << mpmat_limb; 
-  int eff_size = 0;
   int i;
   for (i = size-1; i > 0; --i){
     source[i-1] += (long long)(source[i] / base); //Carrying over

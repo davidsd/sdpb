@@ -78,7 +78,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //real and complex.  We assume that NB will take the same value in
 //single or double precision.
 
-INTEGER iMlaenv1(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, INTEGER n3, INTEGER n4)
+INTEGER iMlaenv1(const char *Mlaname, const char *, INTEGER , INTEGER , INTEGER , INTEGER )
 {
     INTEGER nb = 1;
 #if !defined (IMLAENV_DEBUG)
@@ -110,7 +110,7 @@ INTEGER iMlaenv1(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, 
 }
 
 //ISPEC = 2:  minimum block size
-INTEGER iMlaenv2(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, INTEGER n3, INTEGER n4)
+INTEGER iMlaenv2(const char *Mlaname, const char *, INTEGER , INTEGER , INTEGER , INTEGER )
 {
     INTEGER nbmin = 1;
     if (strcmp(&Mlaname[1], "orgqr") == 0)  { nbmin = 2; return nbmin; }
@@ -125,7 +125,7 @@ INTEGER iMlaenv2(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, 
 }
 
 //ISPEC = 3:  crossover point
-INTEGER iMlaenv3(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, INTEGER n3, INTEGER n4)
+INTEGER iMlaenv3(const char *Mlaname, const char *, INTEGER , INTEGER , INTEGER , INTEGER )
 {
     INTEGER nx = 1;
 #if !defined (IMLAENV_DEBUG)
@@ -146,67 +146,67 @@ INTEGER iMlaenv3(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, 
     return nx;
 }
 
-INTEGER iMlaenv4(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, INTEGER n3, INTEGER n4)
+INTEGER iMlaenv4(const char *, const char *, INTEGER , INTEGER , INTEGER , INTEGER )
 {
     return 1;
 }
 
-INTEGER iMlaenv5(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, INTEGER n3, INTEGER n4)
+INTEGER iMlaenv5(const char *, const char *, INTEGER , INTEGER , INTEGER , INTEGER )
 {
     return 1;
 }
 
-INTEGER iMlaenv6(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, INTEGER n3, INTEGER n4)
+INTEGER iMlaenv6(const char *, const char *, INTEGER , INTEGER , INTEGER , INTEGER )
 {
     return 1;
 }
 
-INTEGER iMlaenv7(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, INTEGER n3, INTEGER n4)
+INTEGER iMlaenv7(const char *, const char *, INTEGER , INTEGER , INTEGER , INTEGER )
 {
     return 1;
 }
 
-INTEGER iMlaenv8(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, INTEGER n3, INTEGER n4)
+INTEGER iMlaenv8(const char *, const char *, INTEGER , INTEGER , INTEGER , INTEGER )
 {
     return 1;
 }
 
-INTEGER iMlaenv9(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, INTEGER n3, INTEGER n4)
+INTEGER iMlaenv9(const char *, const char *, INTEGER , INTEGER , INTEGER , INTEGER )
 {
     return 1;
 }
 
-INTEGER iMlaenv10(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, INTEGER n3, INTEGER n4)
+INTEGER iMlaenv10(const char *, const char *, INTEGER , INTEGER , INTEGER , INTEGER )
 {
     return 1;
 }
 
-INTEGER iMlaenv11(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, INTEGER n3, INTEGER n4)
+INTEGER iMlaenv11(const char *, const char *, INTEGER , INTEGER , INTEGER , INTEGER )
 {
     return 1;
 }
 
-INTEGER iMlaenv12(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, INTEGER n3, INTEGER n4)
+INTEGER iMlaenv12(const char *, const char *, INTEGER , INTEGER , INTEGER , INTEGER )
 {
     return 1;
 }
 
-INTEGER iMlaenv13(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, INTEGER n3, INTEGER n4)
+INTEGER iMlaenv13(const char *, const char *, INTEGER , INTEGER , INTEGER , INTEGER )
 {
     return 1;
 }
 
-INTEGER iMlaenv14(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, INTEGER n3, INTEGER n4)
+INTEGER iMlaenv14(const char *, const char *, INTEGER , INTEGER , INTEGER , INTEGER )
 {
     return 1;
 }
 
-INTEGER iMlaenv15(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, INTEGER n3, INTEGER n4)
+INTEGER iMlaenv15(const char *, const char *, INTEGER , INTEGER , INTEGER , INTEGER )
 {
     return 1;
 }
 
-INTEGER iMlaenv16(const char *Mlaname, const char *opts, INTEGER n1, INTEGER n2, INTEGER n3, INTEGER n4)
+INTEGER iMlaenv16(const char *, const char *, INTEGER , INTEGER , INTEGER , INTEGER )
 {
     return 1;
 }

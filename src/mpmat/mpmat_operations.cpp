@@ -717,8 +717,6 @@ void mpmat::syrk_reduced(
 
 	timers["mpmat_syrk_reduced.GMPtoDouble"].stop();
 
-	double alpha = 1.0, beta = 1.0;
-
 	timers["mpmat_syrk_reduced.multiplication"].resume();
 
 // #pragma omp parallel for schedule(dynamic)
