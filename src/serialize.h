@@ -38,14 +38,14 @@ namespace boost {
   namespace serialization {
 
     template<class Archive>
-    void load(Archive& ar, Real& f, unsigned int version) {
+    void load(Archive& ar, Real& f, unsigned int) {
       std::string s;
       ar & s;
       f = Real(s.c_str());
     }
 
     template<class Archive>
-    void save(Archive& ar, Real const& f, unsigned int version) {
+    void save(Archive& ar, Real const& f, unsigned int) {
       std::ostringstream os;
       os.precision(f.get_prec());
       os << f;
@@ -54,14 +54,14 @@ namespace boost {
     }
 
     template<class Archive>
-    void serialize(Archive& ar, Matrix& m, const unsigned int version) {
+    void serialize(Archive& ar, Matrix& m, const unsigned int) {
       ar & m.rows;
       ar & m.cols;
       ar & m.elements;
     }
 
     template<class Archive>
-    void serialize(Archive& ar, BlockDiagonalMatrix& m, const unsigned int version) {
+    void serialize(Archive& ar, BlockDiagonalMatrix& m, const unsigned int) {
       ar & m.dim;
       ar & m.blocks;
       ar & m.blockStartIndices;

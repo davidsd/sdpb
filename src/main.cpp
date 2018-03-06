@@ -67,14 +67,9 @@ int solveSDP(const vector<path> &sdpFiles,
   cout << "\nParameters:\n";
   cout << parameters << endl;
 
-  readBootstrapSDP(sdpFiles);
-  
   // Read an SDP from sdpFile and create a solver for it
   SDPSolver solver(readBootstrapSDP(sdpFiles), parameters);
   
-  // if(parameters.multTest)
-  //   solver.testMultiplication(1,1,5);
-
   if (exists(checkpointFileIn))
     solver.loadCheckpoint(checkpointFileIn);
 
@@ -224,10 +219,6 @@ int main(int argc, char** argv) {
      "Turns on GPU-based acceleration. Warning: be sure to run this option only on "
      "computers that are configured with CUDA.")
 #endif
-("multTest",
-     po::bool_switch(&parameters.multTest)->default_value(false),
-     "Turns on a matrix multiplication test. WARNING: can create inconsestent answers "
-     "in the main run.")
     ;
 
   po::options_description cmdLineOptions;

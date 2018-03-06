@@ -78,10 +78,11 @@ void mpmat::mpmatConvertGMPToDouble(const mpf_class source,
                              const int size,
                              const int mpmat_limb,
                              const int exp) {
-
+  // FIXME: Use mpz_size(source.get_mpf_t())
     int mp_size    = abs(source.get_mpf_t()->_mp_size);
     int mp_bit_exp = source.get_mpf_t()->_mp_exp * mp_limb_bits;
 
+    // FIXME: Use mpf_sgn(source.get_mpf_t())
     int mp_sign    = source.get_mpf_t()->_mp_size > 0 ? 1 : -1;
 
     const mp_limb_t * mp_d = source.get_mpf_t()->_mp_d;
@@ -118,7 +119,7 @@ void mpmat::mpmatConvertGMPToDouble(const mpf_class source,
         mpf_pos    = mp_size - 1 - ( mpmat_pos * mpmat_limb - pad_exp ) / mp_limb_bits;
         highoffset = mpmat_pos*mpmat_limb - pad_exp - ( (mp_size-1-mpf_pos)*mp_limb_bits );
     }
-
+    // FIXME: Useless if().  Also, I think we can just change the 'mpf_pos > 0' above to 'mpf_pos >= 0' and remove this part
     if (mpf_pos == 0 && mpmat_pos < size)
     {
         while (mpf_pos == 0 && mpmat_pos < size) {
@@ -379,7 +380,7 @@ void mpmat::mpmatConvertGMPToDoubleVector(const mpf_class * source,
     //Make first pass to determine the exponent to be used
     //#pragma omp parallel for schedule(dynamic) shared(expo,source) reduction(max:expo)
     double exponent = (double) expo;
-#pragma omp parallel for schedule(dynamic) shared(source) reduction(max:exponent)
+// #pragma omp parallel for schedule(dynamic) shared(source) reduction(max:exponent)
     for (int i = 1; i < source_len; i++) {
       double current_exp = (double) source[i].get_mpf_t()->_mp_exp * mp_bits_per_limb;
         exponent = current_exp > exponent ? current_exp : exponent;
@@ -388,7 +389,7 @@ void mpmat::mpmatConvertGMPToDoubleVector(const mpf_class * source,
     expo = (int) exponent;
 
     //Make second pass to convert the GMPs to mpmat_doubles
-#pragma omp parallel for schedule(dynamic) shared(source,tmp)
+// #pragma omp parallel for schedule(dynamic) shared(source,tmp)
     for (int i = 0; i < source_len; i++) {
         mpmatConvertGMPToDouble(source[i], tmp + i*mpmat_size, mpmat_size, mpmat_limb, expo);
     }

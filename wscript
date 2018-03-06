@@ -10,8 +10,8 @@ def configure(conf):
     conf.check_boost(lib='serialization system filesystem timer program_options chrono')
 
 def build(bld):
-    default_flags=['-Wall', '-Wextra', '-g', '-O3', '-D___MPACK_BUILD_WITH_GMP___']
-    # default_flags=['-g', '-Wall', '-Wextra', '-ansi', '-D___MPACK_BUILD_WITH_GMP___']
+    # default_flags=['-Wall', '-Wextra', '-O3', '-D___MPACK_BUILD_WITH_GMP___']
+    default_flags=['-Wall', '-Wextra', '-g', '-ansi', '-D___MPACK_BUILD_WITH_GMP___']
     use_packages=['BOOST','tinyxml2','gmpxx','openmp','cxx17','cblas']
     
     mpack_sources=['src/mpack/Rpotrf.cpp',
@@ -85,6 +85,10 @@ def build(bld):
 
     mpmat_sources=['src/mpmat/mpmat_conversion.cpp',
                    'src/mpmat/mpmat_karatsuba.cpp',
+                   'src/mpmat/karatsuba_syrk.cpp',
+                   'src/mpmat/karatsuba_gemm.cpp',
+                   'src/mpmat/gradeschool_syrk.cpp',
+                   'src/mpmat/gradeschool_gemm.cpp',
                    'src/mpmat/mpmat_operations.cpp',
                    'src/mpmat/mpmat_tests.cpp']
 
@@ -103,7 +107,6 @@ def build(bld):
                   'src/SDPSolverIO.cpp',
                   'src/SDP.cpp',
                   'src/parse.cpp',
-                  'src/main.cpp',
                   'src/Matrix.cpp']
     sdpb_includes=['src/mpack']
 
@@ -111,10 +114,21 @@ def build(bld):
         sdpb_sources.append('src/tinyxml2/tinyxml2.cpp')
         sdpb_includes.append('src/tinyxml2')
         
-    bld.program(source=sdpb_sources,
+    bld.program(source=sdpb_sources + ['src/main.cpp'],
                 target='sdpb',
                 includes=sdpb_includes,
                 cxxflags=default_flags,
                 rpath=[bld.env.LIBDIR],
                 use=use_packages + ['mpack_st','mpmat_st'],
                 )
+
+    # mpmat test
+    bld.program(source=sdpb_sources + ['test/mpmat/mpmat_test.cpp'],
+                target='mpmat_test',
+                includes=sdpb_includes,
+                cxxflags=default_flags,
+                rpath=[bld.env.LIBDIR],
+                use=use_packages + ['mpack_st','mpmat_st'],
+                )
+    
+    

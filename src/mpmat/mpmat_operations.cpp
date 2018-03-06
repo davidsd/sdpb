@@ -36,7 +36,7 @@ mpf_class * randomGMPVector(size_t size, int prec) {
 
 	auto tmp = new mpf_class [size];
 
-	for (int i = 0; i < size; i++) {
+	for (size_t i = 0; i < size; i++) {
 		tmp[i].set_prec(prec);
 		tmp[i] = 10*rr.get_f(prec)-5;
 	}
@@ -48,7 +48,6 @@ mpf_class * randomGMPVector(size_t size, int prec) {
 void mpmat::realloc(size_t mem_a, size_t mem_b, size_t mem_c){
 
 	if (mem_a > len_a){
-		std::cerr << "reallocing a to size " << mem_a/(1<<20) << "\n";
 		if (len_a != 0) {
 			delete [] a_double_array;
 		}
@@ -56,7 +55,6 @@ void mpmat::realloc(size_t mem_a, size_t mem_b, size_t mem_c){
 		len_a = mem_a;
 	}
 	if (mem_b > len_b){
-		std::cerr << "reallocing b to size " << mem_b/(1<<20) << "\n";
 		if (len_b != 0) {
 			delete [] b_double_array;
 		}
@@ -64,14 +62,13 @@ void mpmat::realloc(size_t mem_a, size_t mem_b, size_t mem_c){
 		len_b = mem_b;
 	}
 	if (mem_c > len_c){
-		std::cerr << "reallocing c to size " << mem_c/(1<<20) << "\n";
 		if (len_c != 0) {
 			delete [] c_double_array;
 		}
 		c_double_array = new mpmat_double[mem_c];
 		len_c = mem_c;
 	}
-	int mem_t = max(max(mem_a,mem_b),mem_c);
+	size_t mem_t = max(max(mem_a,mem_b),mem_c);
 	if (mem_t > len_t){
 		if (len_t != 0) delete [] tmp;
 		tmp = new mpmat_double [mem_t];
@@ -340,7 +337,7 @@ void mpmat::gemm_reduced(
 
 //         }
 //     }
-	karatsuba(mpmat_size_c, Layout, transa, transb, m, n, k);
+	karatsuba_generic(mpmat_size_c, Layout, transa, transb, m, n, k);
 
 	timers["mpmat_gemm_reduced.multiplication"].stop();
 
@@ -679,6 +676,7 @@ void mpmat::syrk_reduced(
 
 	timers["mpmat_syrk_reduced.precalculations"].resume();
 
+        // FIXME: This should be mpmat_bits_per_limb and mpmat_num_limbs_a
 	int mpmat_limb = ( MPMAT_DOUBLE_MANT_IMPLICIT - ceil(log2(k)) )/ 2;
 	int mpmat_size_a = ceil_div( abs(a[0].get_mpf_t()->_mp_prec+1) * mp_bits_per_limb, mpmat_limb );
 
@@ -755,7 +753,8 @@ void mpmat::syrk_reduced(
 // 		      beta,c2_double_array+i*m*m,m);
 //     }
 // 	std::cerr << "multing";
-	karatsuba(pow(2,ceil(log2(mpmat_size_c))), Layout, transa,
+
+        karatsuba_symmetric(pow(2,ceil(log2(mpmat_size_c))), Layout, transa,
 		m, k);
 
 	// if (!compareSymmMatrices(c_double_array,c2_double_array,m,mpmat_size_c)){//(!std::equal(c2_double_array,c2_double_array+n*n*l,c_double_array)){
