@@ -28,9 +28,6 @@ void mpmat::gradeschool_syrk(const int &a_start, const int &c_start,
                         const int &c_max, CBLAS_ORDER Layout,
                         CBLAS_TRANSPOSE trans, const int &n, const int &k,
                         const double alpha, const double beta) {
-  std::cout << "gradeschool syrk: " << a_start << " " << c_start << " "
-            << c_max
-            << "\n";
   int start = 2 * a_start;
   int diff = c_max - start;
   if (diff <= 2)

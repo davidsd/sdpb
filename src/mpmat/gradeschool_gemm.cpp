@@ -26,30 +26,24 @@ void mpmat::gradeschool_gemm(const int &a_start, const int &b_start,
                         CBLAS_ORDER Layout, CBLAS_TRANSPOSE transa,
                         CBLAS_TRANSPOSE transb, const int &m, const int &n,
                         const int &k, const double alpha, const double beta) {
-  std::cout << "gradeschool gemm: " << a_start << " " << b_start << " "
-            << c_start << " "
-            << c_max
-            << "\n";
   int start = a_start + b_start;
   int diff = c_max - start;
-  // std::cerr << "gradeschool (m,n,k)=(" << m << "," << n << "," << k << ") "
-  // << start << " " << c_start << " " << c_max << "\n";
-  if (diff < 2) { // base case, just multiply
-    // std::cerr << "attempt at gemm\n";
-    // std::cerr << "\tmultiplying a[" << a_start << "] * b[" << b_start << "] =
-    // c[" << c_start << "]\n";
-    cblas_dgemm(Layout, transa, transb, m, n, k, alpha,
-                a_double_array + k * m * a_start,
-                ((Layout == CblasRowMajor) != (transa == CblasTrans)) ? k : m,
-                b_double_array + k * n * b_start,
-                ((Layout == CblasRowMajor) != (transb == CblasTrans)) ? n : k,
-                beta, c_double_array + m * n * c_start,
-                Layout == CblasRowMajor ? n : m);
-  } else { // if we don't need all four, then just do grade school
+  if (diff < 2)
+    {
+      // base case, just multiply
+      cblas_dgemm(Layout, transa, transb, m, n, k, alpha,
+                  a_double_array + k * m * a_start,
+                  ((Layout == CblasRowMajor) != (transa == CblasTrans)) ? k : m,
+                  b_double_array + k * n * b_start,
+                  ((Layout == CblasRowMajor) != (transb == CblasTrans)) ? n : k,
+                  beta, c_double_array + m * n * c_start,
+                  Layout == CblasRowMajor ? n : m);
+    }
+  else
+    {
+      // if we don't need all four, then just do grade school
     int len2 = pow(2, ceil(log2(diff)) - 1) + .1;
-    int clen2 =
-        len2 -
-        1; // the "fundamental length" of c one level below (post squishing)
+    int clen2 = len2 - 1; // the "fundamental length" of c one level below (post squishing)
     // C_0 = A_0 * B_0 // karatsuba
     karatsuba_gemm(a_start, b_start, c_start, c_max, Layout, transa, transb, m, n,
               k);

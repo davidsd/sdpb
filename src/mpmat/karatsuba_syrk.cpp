@@ -27,9 +27,6 @@ void mpmat::karatsuba_syrk(const int &a_start, const int &c_start, const int &c_
 
   int start = 2 * a_start;
   int diff = c_max - start;
-  std::cout << "karatsuba syrk: " << a_start << " " << c_start << " "
-            << c_max << " " << diff
-            << "\n";
   
   if (diff <= 2)
     {
@@ -51,8 +48,6 @@ void mpmat::karatsuba_syrk(const int &a_start, const int &c_start, const int &c_
     // C_0 = A_0 * A_0 // full karatsuba
     karatsuba_syrk(a_start, c_start, 2 * len2 + start, Layout, trans, n, k);
 
-    std::cout << "karatsuba syrk A_O+=A_1: " << a_start << " " << c_start << " "
-              << c_max << "\n";
     // A_0 += A_1
     cblas_daxpy(k * n * len2, 1.0, a_double_array + k * n * (a_start + len2), 1,
                 a_double_array + k * n * a_start, 1);
@@ -61,8 +56,6 @@ void mpmat::karatsuba_syrk(const int &a_start, const int &c_start, const int &c_
     karatsuba_syrk(a_start, c_start + (2 * clen2 + 1), 2 * len2 + start, Layout,
               trans, n, k);
 
-    std::cout << "karatsuba syrk A_O-=A_1: " << a_start << " " << c_start << " "
-              << c_max << "\n";
     // A_0 -= A_1 // clean up
     cblas_daxpy(k * n * len2, -1.0, a_double_array + k * n * (a_start + len2),
                 1, a_double_array + k * n * a_start, 1);
@@ -96,8 +89,6 @@ void mpmat::karatsuba_syrk(const int &a_start, const int &c_start, const int &c_
       karatsuba_syrk(a_start + len2, c_start + (3 * clen2 + 2), c_max, Layout, trans,
                 n, k);
 
-    std::cout << "karatsuba syrk C_1-=C_2: " << a_start << " " << c_start << " "
-              << c_max << "\n";
     // C_1 -= C_2
     cblas_daxpy(n * n * (2 * clen2 + 1), -1.0,
                 c_double_array + n * n * (c_start + (3 * clen2 + 2)), 1,

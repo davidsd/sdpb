@@ -26,21 +26,22 @@ void mpmat::karatsuba_gemm(const int &a_start, const int &b_start,
                       CBLAS_TRANSPOSE transa, CBLAS_TRANSPOSE transb,
                       const int &m, const int &n, const int &k,
                       const double alpha, const double beta) {
-  std::cout << "karatsuba gemm: " << a_start << " " << b_start << " "
-            << c_start << " "
-            << c_max
-            << "\n";
   int start = a_start + b_start;
   int diff = c_max - start;
-  if (diff <= 2) { // base case, just multiply
-    cblas_dgemm(Layout, transa, transb, m, n, k, alpha,
-                a_double_array + k * m * a_start,
-                ((Layout == CblasRowMajor) != (transa == CblasTrans)) ? k : m,
-                b_double_array + k * n * b_start,
-                ((Layout == CblasRowMajor) != (transb == CblasTrans)) ? n : k,
-                beta, c_double_array + m * n * c_start,
-                Layout == CblasRowMajor ? n : m);
-  } else { // if we need all four quadrants, do full karatsuba
+  if (diff <= 2)
+    {
+      // base case, just multiply
+      cblas_dgemm(Layout, transa, transb, m, n, k, alpha,
+                  a_double_array + k * m * a_start,
+                  ((Layout == CblasRowMajor) != (transa == CblasTrans)) ? k : m,
+                  b_double_array + k * n * b_start,
+                  ((Layout == CblasRowMajor) != (transb == CblasTrans)) ? n : k,
+                  beta, c_double_array + m * n * c_start,
+                  Layout == CblasRowMajor ? n : m);
+    }
+  else
+    {
+      // if we need all four quadrants, do full karatsuba
     int len2 = pow(2, ceil(log2(diff)) - 2) + .1; // the "fundamental length" of a and b
     int clen2 = len2 - 1; // the "fundamental length" of c one level below (post squishing)
 
