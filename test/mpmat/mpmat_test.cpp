@@ -16,16 +16,15 @@ int main() {
   Matrix matrix(N, N), square_gmp(N, N);
   for (size_t i = 0; i < N; ++i)
     for (size_t j = 0; j < N; ++j) {
-      Real ri(i + 1), rj(j + 1);
-      matrix.elt(i, j) = sqrt(ri+rj);
-      // matrix.elt(i, j) = ri / 3 + rj / 5 + (ri * rj) / 7;
+      Real ri(i + 1), rj(1e-300_mpf);
+      matrix.elt(i, j) = ri-rj;
     }
 
   std::cout << matrix.elt(0,0) << "\n";
   
   matrixSquareIntoBlock(matrix, square_gmp, 0, 0);
 
-  mpmat workspace(100);
+  mpmat workspace(1);
 
   mpf_set_default_prec(mpf_get_default_prec() + 256);
   Matrix square_mpmat(N, N);
