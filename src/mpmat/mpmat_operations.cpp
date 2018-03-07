@@ -679,17 +679,38 @@ void mpmat::syrk_reduced(
 	timers["mpmat_syrk_reduced.precalculations"].resume();
 
         // FIXME: This should be mpmat_bits_per_limb and mpmat_num_limbs_a
+        /// Use an initial guess for mpmat_limb that only works for small precision
 	int mpmat_limb = ( MPMAT_DOUBLE_MANT_IMPLICIT - ceil(log2(k)) )/ 2;
 	int mpmat_size_a = ceil_div( abs(a[0].get_mpf_t()->_mp_prec+1) * mp_bits_per_limb, mpmat_limb );
 
+        /// The Karatsuba algorithm has terms like (A0 + A1)*(B0 + B1).
+        /// A0, A1, B0, and B1 all use mpmat_limb bits.  So (A0 + A1) and (B0 + B1)
+        /// both need (mpmat_limb + 1) bits to store that expression.  Working
+        /// through all of the details, mantissa should be at least
+        ///
+        ///   2*mpmat_limb + 1 + log2(mpmat_size_a+1).
+        ///
+        /// Karatsuba also has a term that looks like
+        ///
+        ///   (A1 + A3 + A5 + A7 + ...)^2
+        ///
+        /// up to (mpmat_size_a - 1) if mpmat_size_a is a power of 2.
+        /// Representing this term requires
+        ///
+        ///   2*mpmat_limb + 2 log2(mpmat_size_a) - 2
+        ///
+        /// This term is equal to the above term around
+        ///
+        ///   mpmat_size_a ~ 8.9
+        ///
+        /// which, for MPMAT_DOUBLE_MANT_IMPLICIT=53, happens around
+        /// 128 bit precision.
 
-	while ( 2 * mpmat_limb + ceil(log2(k*mpmat_size_a)) > MPMAT_DOUBLE_MANT_IMPLICIT ) {
-		mpmat_limb = ( MPMAT_DOUBLE_MANT_IMPLICIT - ceil(log2(k*mpmat_size_a)) ) / 2;
-		mpmat_size_a = ceil_div( abs(a[0].get_mpf_t()->_mp_prec+1) * mp_bits_per_limb, mpmat_limb );
-	}
-		//mpmat_limb--;
-		//mpmat_size_a = ceil_div( abs(a[0].get_mpf_t()->_mp_prec+1) * mp_bits_per_limb, mpmat_limb );
-		//std::cerr << "mpmat_limb is " << mpmat_limb << "\n";
+	while ( 2 * mpmat_limb + 2*ceil(log2(k*mpmat_size_a)) - 2 > MPMAT_DOUBLE_MANT_IMPLICIT)
+          {
+            mpmat_limb =  MPMAT_DOUBLE_MANT_IMPLICIT/2 - ceil(log2(k*mpmat_size_a)) + 1;
+            mpmat_size_a = ceil_div( abs(a[0].get_mpf_t()->_mp_prec+1) * mp_bits_per_limb, mpmat_limb );
+          }
 
 	int mpmat_size_c = mpmat_size_a;
 	int mem_a = pow(2,ceil(log2(mpmat_size_a))) * m * k;
@@ -714,7 +735,7 @@ void mpmat::syrk_reduced(
 		expa,
 		tmp
 		);
-
+        
 	timers["mpmat_syrk_reduced.GMPtoDouble"].stop();
 
 	timers["mpmat_syrk_reduced.multiplication"].resume();
