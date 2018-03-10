@@ -731,11 +731,11 @@ void SDPSolver::initializeSchurComplementSolver(
 #ifdef __SDPB_CUDA__
   matrixSquareIntoBlockMpmat(myWorkspace, SchurOffDiagonal, Q, 0, 0,
                              parameters.gpu);
+  // matrixSquareIntoBlockGPU(SchurOffDiagonal, Q, 0, 0);
 #else
   matrixSquareIntoBlock(SchurOffDiagonal, Q, 0, 0);
   // matrixSquareIntoBlockMpmat(myWorkspace,SchurOffDiagonal, Q, 0, 0);
 #endif
-  // matrixSquareIntoBlockGPU(SchurOffDiagonal, Q, 0, 0);
 
   // Here, stabilizeBlocks contains the blocks of V = L'^{-1} U.
   //
