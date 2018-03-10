@@ -10,8 +10,8 @@ def configure(conf):
     conf.check_boost(lib='serialization system filesystem timer program_options chrono')
 
 def build(bld):
-    # default_flags=['-Wall', '-Wextra', '-O3', '-D___MPACK_BUILD_WITH_GMP___']
-    default_flags=['-Wall', '-Wextra', '-g', '-ansi', '-D___MPACK_BUILD_WITH_GMP___']
+    default_flags=['-Wall', '-Wextra', '-O3', '-D___MPACK_BUILD_WITH_GMP___']
+    # default_flags=['-Wall', '-Wextra', '-g', '-ansi', '-D___MPACK_BUILD_WITH_GMP___']
     use_packages=['BOOST','tinyxml2','gmpxx','openmp','cxx17','cblas']
     
     mpack_sources=['src/mpack/Rpotrf.cpp',
