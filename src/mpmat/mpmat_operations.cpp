@@ -546,8 +546,8 @@ void mpmat::syrk_reduced_gpu(
 void mpmat::syrk_reduced(
 	const CBLAS_ORDER Layout,
 	const CBLAS_TRANSPOSE transa,
-	const int m,
-	const int k,
+	const size_t m,
+	const size_t k,
 	const mpf_class * a,
 	mpf_class * c
 	) {
@@ -557,8 +557,9 @@ void mpmat::syrk_reduced(
 
         // FIXME: This should be mpmat_bits_per_limb and mpmat_num_limbs_a
         /// Use an initial guess for mpmat_limb that only works for small precision
-	int mpmat_limb = ( MPMAT_DOUBLE_MANT_IMPLICIT - ceil(log2(k)) )/ 2;
-	int mpmat_size_a = ceil_div( abs(a[0].get_mpf_t()->_mp_prec+1) * mp_bits_per_limb, mpmat_limb );
+	size_t mpmat_limb = ( MPMAT_DOUBLE_MANT_IMPLICIT - ceil(log2(k)) )/ 2;
+	size_t mpmat_size_a = ceil_div( static_cast<size_t>(abs(a[0].get_mpf_t()->_mp_prec+1) * mp_bits_per_limb),
+                                        mpmat_limb );
 
         /// The Karatsuba algorithm has terms like (A0 + A1)*(B0 + B1).
         /// A0, A1, B0, and B1 all use mpmat_limb bits.  So (A0 + A1) and (B0 + B1)
@@ -586,12 +587,13 @@ void mpmat::syrk_reduced(
 	while ( 2 * mpmat_limb + 2*ceil(log2(k*mpmat_size_a)) - 2 > MPMAT_DOUBLE_MANT_IMPLICIT)
           {
             mpmat_limb =  MPMAT_DOUBLE_MANT_IMPLICIT/2 - ceil(log2(k*mpmat_size_a)) + 1;
-            mpmat_size_a = ceil_div( abs(a[0].get_mpf_t()->_mp_prec+1) * mp_bits_per_limb, mpmat_limb );
+            mpmat_size_a = ceil_div( static_cast<size_t>(abs(a[0].get_mpf_t()->_mp_prec+1)
+                                                         * mp_bits_per_limb), mpmat_limb );
           }
 
-	int mpmat_size_c = mpmat_size_a;
-	int mem_a = pow(2,ceil(log2(mpmat_size_a))) * m * k;
-	int mem_c = (6*pow(2,ceil(log2(mpmat_size_c))) + 2)* m * m;
+	size_t mpmat_size_c = mpmat_size_a;
+	size_t mem_a = pow(2,ceil(log2(mpmat_size_a))) * m * k;
+	size_t mem_c = (6*pow(2,ceil(log2(mpmat_size_c))) + 2)* m * m;
 
 	realloc(mem_a,max(mem_a,mem_c),mem_c);
 	double * c2_double_array = new double[mem_c];

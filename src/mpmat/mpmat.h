@@ -400,7 +400,7 @@ public:
   );
 
   void syrk_reduced(const CBLAS_ORDER Layout, const CBLAS_TRANSPOSE transa,
-                    const int m, const int k,
+                    const size_t m, const size_t k,
                     // const mpf_class alpha,
                     const mpf_class *a,
                     // const int lda,
