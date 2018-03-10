@@ -7,36 +7,33 @@ Timers timers;
 
 int main() {
 
-  mp_bitcnt_t precision(2048);
+  mp_bitcnt_t precision(512);
   mpf_set_default_prec(precision);
 
   Real residue("10e-" + std::to_string(std::floor(precision/(log(10)/log(2)))));
   Real sqrt_residue(sqrt(residue));
   
-  const size_t N(1);
-  Matrix matrix(N, N), square_gmp(N, N);
-  for (size_t i = 0; i < N; ++i)
-    for (size_t j = 0; j < N; ++j) {
-      Real ri(i + 1);
-      matrix.elt(i, j) = ri-sqrt_residue;
+  const size_t Nx(9224), Ny(368);
+  Matrix matrix(Nx, Ny), square_gmp(Ny, Ny);
+  for (size_t i = 0; i < Nx; ++i)
+    for (size_t j = 0; j < Ny; ++j) {
+      Real ri(i + 1), rj(j+1);
+      matrix.elt(i, j) = ri + rj*rj - sqrt_residue;
     }
 
   matrixSquareIntoBlock(matrix, square_gmp, 0, 0);
 
   mpmat workspace(1);
   mpf_set_default_prec(mpf_get_default_prec() + 256);
-  Matrix square_mpmat(N, N);
+  Matrix square_mpmat(Ny, Ny);
   mpf_set_default_prec(mpf_get_default_prec() - 256);
 
-  workspace.syrk_reduced(CblasRowMajor, CblasTrans, matrix.cols, matrix.rows,
-                         matrix.elements.data(), square_mpmat.elements.data());
-
-  // matrixSquareIntoBlockMpmat(workspace, matrix, square_mpmat, 0, 0);
+  matrixSquareIntoBlockMpmat(workspace, matrix, square_mpmat, 0, 0);
 
   bool passed (true);
   std::cout.precision(static_cast<int>(precision * 0.31 + 5));
-  for (size_t i = 0; i < N; ++i) {
-    for (size_t j = 0; j < N; ++j) {
+  for (size_t i = 0; i < Ny; ++i) {
+    for (size_t j = 0; j < Ny; ++j) {
       if (abs((square_gmp.elt(i, j) - square_mpmat.elt(i, j)) /
               (square_gmp.elt(i, j) + square_mpmat.elt(i, j))) > residue)
         {
