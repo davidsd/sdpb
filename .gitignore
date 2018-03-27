@@ -5,3 +5,6 @@ docs/*.aux
 docs/*.log
 docs/*.out
 docs/*.toc
+
+.lock-waf_*
+cscope.*
