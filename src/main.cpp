@@ -59,6 +59,10 @@ int solveSDP(const vector<path> &sdpFiles,
   // Set the maximum number of threads for parallel loops
   omp_set_num_threads(parameters.maxThreads);
 #endif
+
+#ifdef HAVE_MKL_H
+  mkl_set_num_threads(parameters.maxThreads);
+#endif
   
   cout << "SDPB started at " << second_clock::local_time() << endl;
   for (auto const& sdpFile: sdpFiles) {
