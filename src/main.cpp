@@ -15,10 +15,7 @@
 #ifdef HAVE_OMP_H
 #include <omp.h>
 #endif
-//Tweak to allow Ubuntu-14.04/gcc-4.8.4 and similar environments to compile
-#define BOOST_NO_CXX11_SCOPED_ENUMS
 #include <boost/filesystem.hpp>
-#undef BOOST_NO_CXX11_SCOPED_ENUMS
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "boost/program_options.hpp"
 #include "types.h"
