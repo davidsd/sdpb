@@ -734,7 +734,7 @@ void SDPSolver::initializeSchurComplementSolver(
   // matrixSquareIntoBlockGPU(SchurOffDiagonal, Q, 0, 0);
 #else
   matrixSquareIntoBlock(SchurOffDiagonal, Q, 0, 0);
-  // matrixSquareIntoBlockMpmat(myWorkspace,SchurOffDiagonal, Q, 0, 0);
+  // matrixSquareIntoBlockMpmat(myWorkspace, SchurOffDiagonal, Q, 0, 0);
 #endif
 
   // Here, stabilizeBlocks contains the blocks of V = L'^{-1} U.
@@ -748,7 +748,7 @@ void SDPSolver::initializeSchurComplementSolver(
                                parameters.gpu);
 #else
     matrixSquareIntoBlock(stabilizeBlocks[b], Q, c, c);
-    // matrixSquareIntoBlockMpmat(myWorkspace,stabilizeBlocks[b], Q, c, c);
+    // matrixSquareIntoBlockMpmat(myWorkspace, stabilizeBlocks[b], Q, c, c);
 #endif
     // subtract the identity matrix from this block
     for (int i = c; i < c + stabilizeBlocks[b].cols; i++)
@@ -1136,11 +1136,11 @@ void SDPSolver::testMultiplication(const int m_init, const int m_fin,
     std::vector<int> v;
     for (int i = 1; i <= 1 << 6; ++i) {
       if (!myWorkspace.symm_karatsuba_test(1, 1, i)) {
-        std::cout << "FAIL: karatsuba dim " << m << " length " << i << "\n";;
+        std::cout << "FAIL: karatsuba dim " << m << " length " << i << "\n";
         v.push_back(i);
         break;
       }
-      std::cout << "PASS: karatsuba dim " << m << " length " << i << "\n";;
+      std::cout << "PASS: karatsuba dim " << m << " length " << i << "\n";
     }
     // std::cout << "\n" << timers << "\n";
     // myWorkspace.base_karatsuba_test();
