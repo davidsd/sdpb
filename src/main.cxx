@@ -207,12 +207,6 @@ int main(int argc, char** argv) {
     ("maxComplementarity",
      po::value<Real>(&parameters.maxComplementarity)->default_value(Real("1e100")),
      "Terminate if the complementarity mu = Tr(X Y)/dim(X) exceeds this value.")
-#ifdef __SDPB_CUDA__
-("gpu",
-     po::bool_switch(&parameters.gpu)->default_value(false),
-     "Turns on GPU-based acceleration. Warning: be sure to run this option only on "
-     "computers that are configured with CUDA.")
-#endif
     ;
 
   po::options_description cmdLineOptions;

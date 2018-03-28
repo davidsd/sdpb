@@ -49,9 +49,6 @@ public:
   Real stepLengthReduction;
   Real choleskyStabilizeThreshold;
   Real maxComplementarity;
-#ifdef __SDPB_CUDA__
-  bool gpu;
-#endif
   // Set the precision of all Real parameters to equal 'precision'.
   // This is necessary because 'precision' might be set (via the
   // command line or a file) after initializing other parameters.
