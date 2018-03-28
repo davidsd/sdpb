@@ -6,8 +6,7 @@
 //=======================================================================
 
 
-#ifndef SDPB_SDP_H_
-#define SDPB_SDP_H_
+#pragma once
 
 #include <algorithm>
 #include <vector>
@@ -327,4 +326,3 @@ class PolynomialVectorMatrix {
 SDP bootstrapSDP(const Vector &affineObjective,
                  const vector<PolynomialVectorMatrix> &polVectorMatrices);
 
-#endif  // SDPB_SDP_H_

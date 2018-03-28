@@ -6,8 +6,7 @@
 //=======================================================================
 
 
-#ifndef SDPB_MATRIX_H_
-#define SDPB_MATRIX_H_
+#pragma once
 
 #include <assert.h>
 #include <iostream>
@@ -264,4 +263,3 @@ void lowerTriangularTransposeSolve(Matrix &L, Vector &b);
 //
 void matrixSolveWithCholesky(Matrix &ACholesky, Matrix &X);
 
-#endif  // SDPB_MATRIX_H_

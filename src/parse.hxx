@@ -6,8 +6,7 @@
 //=======================================================================
 
 
-#ifndef SDPB_PARSE_H_
-#define SDPB_PARSE_H_
+#pragma once
 
 #include <boost/filesystem.hpp>
 #include "SDP.hxx"
@@ -16,4 +15,3 @@ using boost::filesystem::path;
 
 SDP readBootstrapSDP(const vector<path> sdpFiles);
 
-#endif  // SDPB_PARSE_H_

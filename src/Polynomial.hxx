@@ -6,8 +6,7 @@
 //=======================================================================
 
 
-#ifndef SDPB_POLYNOMIAL_H_
-#define SDPB_POLYNOMIAL_H_
+#pragma once
 
 #include "types.hxx"
 #include "Vector.hxx"
@@ -53,4 +52,3 @@ class Polynomial {
   }
 };
 
-#endif  // SDPB_POLYNOMIAL_H_

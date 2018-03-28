@@ -6,8 +6,7 @@
 //=======================================================================
 
 
-#ifndef SDPB_BLOCKDIAGONALMATRIX_H_
-#define SDPB_BLOCKDIAGONALMATRIX_H_
+#pragma once
 
 #include <vector>
 #include <iostream>
@@ -193,5 +192,3 @@ void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L, // constant
 // v := L^{-T} v, where L is lower-triangular
 void blockMatrixLowerTriangularTransposeSolve(BlockDiagonalMatrix &L, // constant
                                               Vector &v);             // overwritten
-
-#endif  // SDPB_BLOCKDIAGONALMATRIX_H_

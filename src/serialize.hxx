@@ -6,8 +6,7 @@
 //=======================================================================
 
 
-#ifndef SDPB_SERIALIZE_H_
-#define SDPB_SERIALIZE_H_
+#pragma once
 
 #include <string>
 #include <vector>
@@ -81,4 +80,3 @@ BOOST_CLASS_VERSION(Real, 0)
 BOOST_CLASS_TRACKING(Matrix,              boost::serialization::track_never)
 BOOST_CLASS_TRACKING(BlockDiagonalMatrix, boost::serialization::track_never)
 
-#endif  // SDPB_SERIALIZE_H_

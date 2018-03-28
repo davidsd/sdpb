@@ -6,8 +6,7 @@
 //=======================================================================
 
 
-#ifndef SDPB_SDPSOLVER_H_
-#define SDPB_SDPSOLVER_H_
+#pragma once
 
 #include <iostream>
 #include <ostream>
@@ -331,5 +330,3 @@ public:
 
  
 };
-
-#endif  // SDPB_SDPSOLVER_H_

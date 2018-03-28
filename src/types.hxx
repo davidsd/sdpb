@@ -6,8 +6,7 @@
 //=======================================================================
 
 
-#ifndef SDPB_TYPES_H_
-#define SDPB_TYPES_H_
+#pragma once
 
 #include <mblas.h>
 #include <mlapack.h>
@@ -15,4 +14,3 @@
 typedef mpackint Integer;
 typedef mpf_class Real;
 
-#endif  // SDPB_TYPES_H_

@@ -6,8 +6,7 @@
 //=======================================================================
 
 
-#ifndef SDPB_VECTOR_H_
-#define SDPB_VECTOR_H_
+#pragma once
 
 #include <assert.h>
 #include <algorithm>
@@ -70,4 +69,3 @@ inline Vector multiplyVectors(const Vector &u, const Vector &v) {
   return w;
 }
 
-#endif  // SDPB_VECTOR_H_

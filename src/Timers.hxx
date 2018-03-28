@@ -6,8 +6,7 @@
 //=======================================================================
 
 
-#ifndef SDPB_TIMERS_H_
-#define SDPB_TIMERS_H_
+#pragma once
 
 #include <iostream>
 #include <iomanip>
@@ -85,4 +84,3 @@ class Timers : public map<string, cpu_timer> {
 
 extern Timers timers;
 
-#endif  // SDPB_TIMERS_H_
