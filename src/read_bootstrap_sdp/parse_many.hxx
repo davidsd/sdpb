@@ -5,8 +5,7 @@
 template <class T>
 std::vector<T>
 parse_many(const std::string &name,
-           std::function<T(const boost::property_tree::ptree &)>
-           &parse_function,
+           T (*parse_function)(const boost::property_tree::ptree &),
            const boost::property_tree::ptree &tree)
 {
   std::vector<T> result;

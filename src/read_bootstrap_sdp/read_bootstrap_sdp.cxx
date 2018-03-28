@@ -46,10 +46,8 @@ SDP read_bootstrap_sdp(const std::vector<boost::filesystem::path> sdp_files)
       auto polynomialVectorMatrices_iterator (sdp.find("polynomialVectorMatrices"));
       if(polynomialVectorMatrices_iterator!=sdp.not_found())
         {
-          std::function<Polynomial_Vector_Matrix(const boost::property_tree::ptree &)>
-            p (parse_polynomial_vector_matrix);
           parse_append_many("polynomialVectorMatrix",
-                            p,
+                            parse_polynomial_vector_matrix,
                             polynomialVectorMatrices_iterator->second,
                             polynomialVectorMatrices);
                             

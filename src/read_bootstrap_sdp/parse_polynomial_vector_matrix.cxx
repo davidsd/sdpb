@@ -8,17 +8,14 @@ namespace
   Polynomial parse_polynomial(const boost::property_tree::ptree &tree)
   {
     Polynomial result;
-    std::function<Real(const boost::property_tree::ptree &)> p(parse_Real);
-    result.coefficients = parse_many("coeff", p, tree);
+    result.coefficients = parse_many("coeff", parse_Real, tree);
     return result;
   }
 
   std::vector<Polynomial>
   parse_polynomial_vector(const boost::property_tree::ptree &tree)
   {
-    std::function<Polynomial(const boost::property_tree::ptree &)> p(
-    parse_polynomial);
-    return parse_many("polynomial", p, tree);
+    return parse_many("polynomial", parse_polynomial, tree);
   }
 }
 
@@ -28,16 +25,12 @@ parse_polynomial_vector_matrix(const boost::property_tree::ptree &tree)
   Polynomial_Vector_Matrix result;
   result.rows = tree.get<int64_t>("rows");
   result.cols = tree.get<int64_t>("cols");
-  std::function<std::vector<Polynomial>(const boost::property_tree::ptree &)>
-  pv(parse_polynomial_vector);
 
-  result.elements
-  = parse_many("polynomialVector", pv, tree.get_child("elements"));
+  result.elements = parse_many("polynomialVector", parse_polynomial_vector,
+                               tree.get_child("elements"));
   result.samplePoints = parse_vector(tree.get_child("samplePoints"));
   result.sampleScalings = parse_vector(tree.get_child("sampleScalings"));
-  std::function<Polynomial(const boost::property_tree::ptree &)> pp(
-  parse_polynomial);
-  result.bilinearBasis
-  = parse_many("polynomial", pp, tree.get_child("bilinearBasis"));
+  result.bilinearBasis = parse_many("polynomial", parse_polynomial,
+                                    tree.get_child("bilinearBasis"));
   return result;
 }
