@@ -8,9 +8,6 @@
 
 #include <algorithm>
 #include <iostream>
-#ifdef HAVE_OMP_H
-#include <omp.h>
-#endif
 #include <vector>
 #include <boost/filesystem.hpp>
 #include "SDPSolver.h"
@@ -153,7 +150,6 @@ void blockTensorTransposeCongruence(const BlockDiagonalMatrix &A,
                                     const vector<Matrix> &Q,
                                     vector<Matrix> &Work,
                                     BlockDiagonalMatrix &Result) {
-#pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < Q.size(); b++)
     tensorTransposeCongruence(A.blocks[b], Q[b], Work[b], Result.blocks[b]);
 }
@@ -213,7 +209,6 @@ void tensorInvTransposeCongruenceWithCholesky(const Matrix &L, const Matrix &Q,
 void blockTensorInvTransposeCongruenceWithCholesky(
     const BlockDiagonalMatrix &L, const vector<Matrix> &Q, vector<Matrix> &Work,
     BlockDiagonalMatrix &Result) {
-#pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < Q.size(); b++)
     tensorInvTransposeCongruenceWithCholesky(L.blocks[b], Q[b], Work[b],
                                              Result.blocks[b]);
@@ -296,7 +291,6 @@ void computeSchurComplement(const SDP &sdp,
                             const BlockDiagonalMatrix &BilinearPairingsXInv,
                             const BlockDiagonalMatrix &BilinearPairingsY,
                             BlockDiagonalMatrix &SchurComplement) {
-#pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     const int ej = sdp.degrees[j] + 1;
 
@@ -348,7 +342,6 @@ void computeSchurComplement(const SDP &sdp,
 void computeDualResidues(const SDP &sdp, const Vector &y,
                          const BlockDiagonalMatrix &BilinearPairingsY,
                          Vector &dualResidues) {
-#pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     const int ej = sdp.degrees[j] + 1;
 
@@ -395,7 +388,6 @@ void computeDualResidues(const SDP &sdp, const Vector &y,
 //
 void constraintMatrixWeightedSum(const SDP &sdp, const Vector a,
                                  BlockDiagonalMatrix &Result) {
-#pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     const int ej = sdp.degrees[j] + 1;
 
@@ -466,7 +458,6 @@ void computeSchurRHS(const SDP &sdp, const Vector &dualResidues,
 // r_x[p] = -dualResidues[p] - Tr(A_p Z), where A_p are as described
 // in SDP.h.  The trace can be computed in terms of bilinearBases
 // using bilinearBlockPairing.
-#pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < sdp.dimensions.size(); j++) {
     for (vector<IndexTuple>::const_iterator t =
              sdp.constraintIndices[j].begin();
@@ -483,7 +474,6 @@ void computeSchurRHS(const SDP &sdp, const Vector &dualResidues,
   }
 
 // r_y[n] = dualObjective[n] - (FreeVarMatrix^T x)_n
-#pragma omp parallel for schedule(static)
   for (unsigned int n = 0; n < sdp.dualObjective.size(); n++) {
     r_y[n] = sdp.dualObjective[n];
     for (int p = 0; p < sdp.FreeVarMatrix.rows; p++) {
@@ -698,7 +688,6 @@ void SDPSolver::initializeSchurComplementSolver(
   // of SchurComplementCholesky.  We henceforth refer to L'^{-1} U as
   // V to avoid confusion.
   timers["initializeSchurComplementSolver.LinvU"].resume();
-#pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < stabilizeBlockIndices.size(); j++) {
     int b = stabilizeBlockIndices[j];
     int startIndex = schurStabilizeIndices[b][0];
@@ -754,7 +743,6 @@ void SDPSolver::initializeSchurComplementSolver(
 
   // LowerLeft(Q) = V^T SchurOffDiagonal
   timers["Qcomputation.nonGPU"].resume();
-#pragma omp parallel for schedule(dynamic)
   for (unsigned int j = 0; j < stabilizeBlockIndices.size(); j++) {
     int b = stabilizeBlockIndices[j];
     int p = stabilizeBlockUpdateRow[j];
@@ -782,7 +770,6 @@ void SDPSolver::initializeSchurComplementSolver(
   timers["Qcomputation.nonGPU"].stop();
 
 // UpperRight(Q) = LowerLeft(Q)^T
-#pragma omp parallel for schedule(static)
   for (int c = 0; c < SchurOffDiagonal.cols; c++)
     for (int r = SchurOffDiagonal.cols; r < Q.rows; r++)
       Q.elt(c, r) = Q.elt(r, c);

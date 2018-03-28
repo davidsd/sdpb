@@ -25,13 +25,11 @@ ostream& operator<<(ostream& os, const BlockDiagonalMatrix& A) {
 Real frobeniusProductSymmetric(const BlockDiagonalMatrix &A,
                                const BlockDiagonalMatrix &B) {
   Real result = 0;
-  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++) {
     Real f = frobeniusProductSymmetric(A.blocks[b], B.blocks[b]);
     // this pragma means that other threads should be stopped while
     // this operation is performed (this prevents result from being
     // modified by multiple threads simultaneously)
-    #pragma omp critical
     {
       result += f;
     }
@@ -47,11 +45,9 @@ Real frobeniusProductOfSums(const BlockDiagonalMatrix &X,
                             const BlockDiagonalMatrix &Y,
                             const BlockDiagonalMatrix &dY) {
   Real result = 0;
-  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < X.blocks.size(); b++) {
     Real f = frobeniusProductOfSums(X.blocks[b], dX.blocks[b],
                                     Y.blocks[b], dY.blocks[b]);
-    #pragma omp critical
     {
       result += f;
     }
@@ -65,7 +61,6 @@ void blockDiagonalMatrixScaleMultiplyAdd(Real alpha,
                                          BlockDiagonalMatrix &B,
                                          Real beta,
                                          BlockDiagonalMatrix &C) {
-  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++)
     matrixScaleMultiplyAdd(alpha, A.blocks[b], B.blocks[b], beta, C.blocks[b]);
 }
@@ -80,7 +75,6 @@ void blockDiagonalMatrixScaleMultiplyAdd(Real alpha,
 				      ,bool gpu
 #endif
 ) {
-  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++)
     matrixScaleMultiplyAddMpmat(myWorkspace,alpha, A.blocks[b], B.blocks[b], beta, C.blocks[b]
 #ifdef __SDPB_CUDA__
@@ -115,7 +109,6 @@ void blockDiagonalMatrixMultiplyMpmat(mpmat &myWorkspace,
 // A := L^{-1} A L^{-T}
 void lowerTriangularInverseCongruence(BlockDiagonalMatrix &A,
                                       BlockDiagonalMatrix &L) {
-  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++)
     lowerTriangularInverseCongruence(A.blocks[b], L.blocks[b]);
 }
@@ -134,13 +127,11 @@ Real minEigenvalue(BlockDiagonalMatrix &A,
 
   // TODO(davidsd): get rid of this hack
   Real lambdaMin = 1e100; // we really want lambdaMin = infinity here
-  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++) {
     Real minBlockLambda = minEigenvalue(A.blocks[b],
                                         workspace[b],
                                         eigenvalues[b]);
     // ensure only one thread modifies lambdaMin at a time
-    #pragma omp critical
     {
       lambdaMin = min(lambdaMin, minBlockLambda);
     }
@@ -152,7 +143,6 @@ Real minEigenvalue(BlockDiagonalMatrix &A,
 // Compute L (lower triangular) such that A = L L^T
 void choleskyDecomposition(BlockDiagonalMatrix &A,
                            BlockDiagonalMatrix &L) {
-  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++)
     choleskyDecomposition(A.blocks[b], L.blocks[b]);
 }
@@ -164,7 +154,6 @@ void choleskyDecompositionStabilized(BlockDiagonalMatrix &A,
                                      vector<vector<Integer> > &stabilizeIndices,
                                      vector<vector<Real> > &stabilizeLambdas,
                                      const double stabilizeThreshold) {
-  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < A.blocks.size(); b++)
     choleskyDecompositionStabilized(A.blocks[b], L.blocks[b],
                                     stabilizeIndices[b],
@@ -175,7 +164,6 @@ void choleskyDecompositionStabilized(BlockDiagonalMatrix &A,
 // X := ACholesky^{-T} ACholesky^{-1} X = A^{-1} X
 void blockMatrixSolveWithCholesky(BlockDiagonalMatrix &ACholesky,
                                   BlockDiagonalMatrix &X) {
-  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < X.blocks.size(); b++)
     matrixSolveWithCholesky(ACholesky.blocks[b], X.blocks[b]);
 }
@@ -183,7 +171,6 @@ void blockMatrixSolveWithCholesky(BlockDiagonalMatrix &ACholesky,
 // B := L^{-1} B, where L is lower-triangular
 void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L,
                                      Matrix &B) {
-  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < L.blocks.size(); b++)
     lowerTriangularSolve(L.blocks[b], &B.elt(L.blockStartIndices[b], 0),
                          B.cols, B.rows);
@@ -192,7 +179,6 @@ void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L,
 // v := L^{-1} v, where L is lower-triangular
 void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L,
                                      Vector &v) {
-  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < L.blocks.size(); b++)
     lowerTriangularSolve(L.blocks[b], &v[L.blockStartIndices[b]],
                          1, v.size());
@@ -201,7 +187,6 @@ void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L,
 // v := L^{-T} v, where L is lower-triangular
 void blockMatrixLowerTriangularTransposeSolve(BlockDiagonalMatrix &L,
                                               Vector &v) {
-  #pragma omp parallel for schedule(dynamic)
   for (unsigned int b = 0; b < L.blocks.size(); b++)
     lowerTriangularTransposeSolve(L.blocks[b], &v[L.blockStartIndices[b]],
                                   1, v.size());

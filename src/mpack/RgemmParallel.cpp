@@ -80,9 +80,6 @@ an m by k matrix, op(B) a k by n matrix and C an m by n matrix.
 */
 
 #include <mblas.h>
-#ifdef HAVE_OMP_H
-#include <omp.h>
-#endif
 
 void RgemmParallel(const char *transa, const char *transb, INTEGER m, INTEGER n, INTEGER k, REAL alpha, REAL * A, INTEGER lda, REAL * B,
 	   INTEGER ldb, REAL beta, REAL * C, INTEGER ldc)
@@ -133,14 +130,12 @@ void RgemmParallel(const char *transa, const char *transb, INTEGER m, INTEGER n,
 //And when alpha == 0.0
     if (alpha == Zero) {
 	if (beta == Zero) {
-            #pragma omp parallel for schedule(static)
 	    for (INTEGER j = 0; j < n; j++) {
 		for (INTEGER i = 0; i < m; i++) {
 		    C[i + j * ldc] = Zero;
 		}
 	    }
 	} else {
-            #pragma omp parallel for schedule(static)
 	    for (INTEGER j = 0; j < n; j++) {
 		for (INTEGER i = 0; i < m; i++) {
 		    C[i + j * ldc] = beta * C[i + j * ldc];
@@ -153,7 +148,6 @@ void RgemmParallel(const char *transa, const char *transb, INTEGER m, INTEGER n,
     if (notb) {
 	if (nota) {
 //Form C := alpha*A*B + beta*C.
-            #pragma omp parallel for schedule(static)
 	    for (INTEGER j = 0; j < n; j++) {
               REAL temp;
 		if (beta == Zero) {
@@ -176,7 +170,6 @@ void RgemmParallel(const char *transa, const char *transb, INTEGER m, INTEGER n,
 	    }
 	} else {
 //Form  C := alpha*A'*B + beta*C.
-            #pragma omp parallel for schedule(static)
 	    for (INTEGER j = 0; j < n; j++) {
               REAL temp;
 		for (INTEGER i = 0; i < m; i++) {
@@ -194,7 +187,6 @@ void RgemmParallel(const char *transa, const char *transb, INTEGER m, INTEGER n,
     } else {
 	if (nota) {
 //Form  C := alpha*A*B' + beta*C.
-            #pragma omp parallel for schedule(static)
 	    for (INTEGER j = 0; j < n; j++) {
               REAL temp;
 		if (beta == Zero) {
@@ -217,7 +209,6 @@ void RgemmParallel(const char *transa, const char *transb, INTEGER m, INTEGER n,
 	    }
 	} else {
 //Form  C := alpha*A'*B' + beta*C.
-            #pragma omp parallel for schedule(static)
 	    for (INTEGER j = 0; j < n; j++) {
               REAL temp;
 		for (INTEGER i = 0; i < m; i++) {

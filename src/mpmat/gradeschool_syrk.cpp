@@ -17,9 +17,6 @@
 // #include <mkl.h>
 #include "../Timers.h"
 #include <limits.h>
-#ifdef HAVE_OMP_H
-#include <omp.h>
-#endif
 
 // syrk gradeschool
 // IMPORTANT STEP: please make sure that a_double_array = b_double_array ahead

@@ -1,18 +1,18 @@
 import os
 
 def options(opt):
-    opt.load(['compiler_cxx','gnu_dirs','boost','tinyxml2','gmpxx','openmp','cxx17',
+    opt.load(['compiler_cxx','gnu_dirs','boost','tinyxml2','gmpxx','cxx17',
               'cblas'])
 
 def configure(conf):
-    conf.load(['compiler_cxx','gnu_dirs','boost','tinyxml2','gmpxx','openmp','cxx17',
+    conf.load(['compiler_cxx','gnu_dirs','boost','tinyxml2','gmpxx','cxx17',
                'cblas'])
     conf.check_boost(lib='serialization system filesystem timer program_options chrono')
 
 def build(bld):
     default_flags=['-Wall', '-Wextra', '-O3', '-D___MPACK_BUILD_WITH_GMP___']
     # default_flags=['-Wall', '-Wextra', '-g', '-ansi', '-D___MPACK_BUILD_WITH_GMP___']
-    use_packages=['BOOST','tinyxml2','gmpxx','openmp','cxx17','cblas']
+    use_packages=['BOOST','tinyxml2','gmpxx','cxx17','cblas']
     
     mpack_sources=['src/mpack/Rpotrf.cpp',
                    'src/mpack/Rgemm.cpp',

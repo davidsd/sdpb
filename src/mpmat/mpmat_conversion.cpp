@@ -461,7 +461,6 @@ void mpmat::mpmatConvertDoubleToGMPVector(mpf_class * dest,
     );
     //timers["Transposition reverse"].stop();
 
-#pragma omp parallel for schedule(dynamic) shared(dest,tmp)
     for (int i = 0; i < dest_len; i++) {
       mpmatNormalize(tmp + i * mpmat_size,mpmat_size,mpmat_limb);
         mpmatConvertDoubleToGMP(
@@ -514,7 +513,6 @@ void mpmat::mpmatConvertDoubleToGMPSymm(mpf_class * dest,
 
     //std::cout << "mpmat_size is " << mpmat_size << "\n";
 
-#pragma omp parallel for schedule(dynamic) shared(dest,tmp)
     for (int r = 0; r < dest_dim; r++) {
       for (int c = 0; c <= r; ++c){
 	mpmatNormalize(tmp + (r * dest_dim + c) * mpmat_size,mpmat_size,mpmat_limb);

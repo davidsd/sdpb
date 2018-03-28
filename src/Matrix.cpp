@@ -170,7 +170,6 @@ void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol) {
   // solver.
 
 
-  #pragma omp parallel for schedule(dynamic)
   for (int c = 0; c < A.cols; c++) {
     for (int r = 0; r <= c; r++) {
       Real tmp = 0;
@@ -287,7 +286,6 @@ void vectorScaleMatrixMultiplyAdd(Real alpha, Matrix &A, Vector &x,
   assert(A.cols <= static_cast<int>(x.size()));
   assert(A.rows <= static_cast<int>(y.size()));
 
-  #pragma omp parallel for schedule(static)
   for (int p = 0; p < A.rows; p++) {
     Real tmp = 0;
     for (int n = 0; n < A.cols; n++)
@@ -302,7 +300,6 @@ void vectorScaleMatrixMultiplyTransposeAdd(Real alpha, Matrix &A, Vector &x,
   assert(A.cols <= static_cast<int>(y.size()));
   assert(A.rows <= static_cast<int>(x.size()));
 
-  #pragma omp parallel for schedule(static)
   for (int n = 0; n < A.cols; n++) {
     Real tmp = 0;
     for (int p = 0; p < A.rows; p++)

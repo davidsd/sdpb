@@ -15,9 +15,6 @@
 #include <cassert>
 #include <iostream>
 #include "../Timers.h"
-#ifdef HAVE_OMP_H
-#include <omp.h>
-#endif
 
 template <typename T>
 inline T ceil_div(T a, T b) {
@@ -388,7 +385,6 @@ void mpmat::gemm_reduced_gpu(
 
 	double alpha = 1.0, beta = 1.0;
 
-		#pragma omp parallel for 
 	for (int i = 0; i < gpu_count; ++i){
 		cudaSetDevice(i);
 		cudaMemcpyAsync(d_a[i],a_double_array,mem_a*sizeof(mpmat_double),cudaMemcpyHostToDevice);
@@ -401,7 +397,6 @@ void mpmat::gemm_reduced_gpu(
 	timers["mpmat_gemm_reduced.multiplication"].resume();
 
 
-#pragma omp parallel for schedule(dynamic)
 	for (int i = 0; i < mpmat_size_c; i++) {
 		int gpu_id = i * gpu_count / mpmat_size_c;
 		cudaSetDevice(gpu_id);
@@ -483,7 +478,6 @@ void mpmat::syrk_reduced_gpu(
 
 	memset(c_double_array, 0, mem_c * sizeof(mpmat_double));
 	double * c2_double_array = new double[mem_c];
-#pragma omp parallel for
 	for (int i = 0; i < gpu_count; ++i){
 		cudaSetDevice(i);
 		cudaMemset(d_c[i], 0, mem_c * sizeof(mpmat_double));
@@ -511,7 +505,6 @@ void mpmat::syrk_reduced_gpu(
 
 	double alpha = 1.0, beta = 1.0;
 
-#pragma omp parallel for 
 	for (int i = 0; i < gpu_count; ++i){
 		cudaSetDevice(i);
 		cudaMemcpyAsync(d_a[i],a_double_array,mem_a*sizeof(mpmat_double),cudaMemcpyHostToDevice);

@@ -17,9 +17,6 @@
 // #include <mkl.h>
 #include "../Timers.h"
 #include <limits.h>
-#ifdef HAVE_OMP_H
-#include <omp.h>
-#endif
 
 void mpmat::karatsuba_syrk(const int &a_start, const int &c_start, const int &c_max,
                       CBLAS_ORDER Layout, CBLAS_TRANSPOSE trans, const int &n,

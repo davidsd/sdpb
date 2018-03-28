@@ -17,9 +17,6 @@
 // #include <mkl.h>
 #include "../Timers.h"
 #include <limits.h>
-#ifdef HAVE_OMP_H
-#include <omp.h>
-#endif
 
 template <typename T> T min(T a, T b) { return a < b ? a : b; }
 
@@ -118,7 +115,6 @@ void mpmat::karatsuba_cpu(const int &a_start, const int &b_start,
   } else if (mem < gpu_mem) { // if the problem can fit on the GPU in the next
                               // step, do so.
 
-#pragma omp parallel for
     for (int i = 0; i < 2; ++i) {
       realloc_gpu_only(len2 * m * k, len2 * n * k, (6 * len2 + 2) * m * n, i);
       clear_gpu(i);
@@ -134,14 +130,11 @@ void mpmat::karatsuba_cpu(const int &a_start, const int &b_start,
     // B_0 += B_1
     cblas_daxpy(k * n * len2, 1.0, b_double_array + k * n * (b_start + len2), 1,
                 b_double_array + k * n * b_start, 1);
-#pragma omp parallel sections
     {
-#pragma omp section
       { // C_0 = A_0 * B_0 // full karatsuba
         cudaSetDevice(0);
         karatsuba_gpu(0, 0, 0, 2 * len2, Layout, transa, transb, m, n, k, 0);
       }
-#pragma omp section
       {
         cudaSetDevice(1);
         if (diff <= 3 * len2) { // if we need half or less of C_2, then just use
@@ -155,7 +148,6 @@ void mpmat::karatsuba_cpu(const int &a_start, const int &b_start,
                         k, 1); // Maybe?
         }
       }
-#pragma omp section
       {
         realloc_gpu_only(len2 * m * k, len2 * n * k, (6 * len2 + 2) * m * n, 2);
         cudaMemcpy(d_a[2], a_double_array + k * m * (a_start),
@@ -450,7 +442,6 @@ void mpmat::karatsuba_cpu(const int &a_start, const int &c_start,
                 beta, c_double_array + n * n * c_start, n);
   } else if (mem < gpu_mem) {
 
-#pragma omp parallel for
     for (int i = 0; i < 3; ++i) {
       realloc_gpu_only(len2 * n * k, 0, (6 * len2 + 2) * n * n, i);
       clear_gpu(i);
@@ -461,9 +452,7 @@ void mpmat::karatsuba_cpu(const int &a_start, const int &c_start,
     cblas_daxpy(k * n * len2, 1.0, a_double_array + k * n * (a_start + len2), 1,
                 a_double_array + k * n * a_start, 1);
 
-#pragma omp parallel sections
     {
-#pragma omp section
       { // C_0 = A_0 * B_0 // full karatsuba
         cudaSetDevice(0);
         double *d_tmp_b = d_b[0];
@@ -471,7 +460,6 @@ void mpmat::karatsuba_cpu(const int &a_start, const int &c_start,
         karatsuba_gpu(0, 0, 2 * len2, Layout, trans, n, k, 0);
         d_b[0] = d_tmp_b;
       }
-#pragma omp section
       {
         cudaSetDevice(1);
         double *d_tmp_b = d_b[1];
@@ -487,7 +475,6 @@ void mpmat::karatsuba_cpu(const int &a_start, const int &c_start,
         }
         d_b[1] = d_tmp_b;
       }
-#pragma omp section
       {
         realloc_gpu_only(len2 * n * k, 0, (6 * len2 + 2) * n * n, 2);
         cudaMemcpy(d_a[2], a_double_array + k * n * (a_start),
@@ -760,7 +747,6 @@ void mpmat::gradeschool_cpu(const int &a_start, const int &b_start,
                 beta, c_double_array + m * n * c_start,
                 Layout == CblasRowMajor ? n : m);
   } else if (mem < gpu_mem) {
-#pragma omp parallel for
     for (int i = 0; i < 3; ++i) {
       realloc_gpu_only(len2 * m * k, len2 * n * k, (6 * len2 + 2) * m * n, i);
       clear_gpu(i);
@@ -778,9 +764,7 @@ void mpmat::gradeschool_cpu(const int &a_start, const int &b_start,
 //   cudaMemcpy(d_b[0],b_double_array+k*n*(b_start+(i / 2)*len2),
 //   len2*n*k*sizeof(mpmat_double),cudaMemcpyHostToDevice);
 // }
-#pragma omp parallel sections
     {
-#pragma omp section
       { // C_0 = A_0 * B_0 // full karatsuba
         cudaSetDevice(0);
         karatsuba_gpu(0, 0, 0, 2 * len2, Layout, transa, transb, m, n, k, 0);
@@ -789,7 +773,6 @@ void mpmat::gradeschool_cpu(const int &a_start, const int &b_start,
                    (2 * clen2 + 1) * m * n * sizeof(mpmat_double),
                    cudaMemcpyDeviceToHost);
       }
-#pragma omp section
       {
         cudaSetDevice(1);
         gradeschool_gpu(0, 0, 0, diff - len2, Layout, transa, transb, m, n, k,
@@ -797,7 +780,6 @@ void mpmat::gradeschool_cpu(const int &a_start, const int &b_start,
         // cudaMemcpy(c_double_array+m*n*(c_start+3*clen2+2), d_c[1],
         // (2*clen2+1)*m*n*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
       }
-#pragma omp section
       {
         cudaSetDevice(2);
         gradeschool_gpu(0, 0, 0, diff - len2, Layout, transa, transb, m, n, k,
@@ -982,13 +964,7 @@ void mpmat::gradeschool_cpu(const int &a_start, const int &c_start,
     clear_gpu(3);
     cudaMemcpy(d_a[3], a_double_array + k * n * (a_start),
                len2 * n * k * sizeof(mpmat_double), cudaMemcpyHostToDevice);
-#ifdef HAVE_OMP_H
-    omp_set_dynamic(1);
-    omp_set_nested(1);
-#endif
-#pragma omp parallel sections
     {
-#pragma omp section
       { // C_0 = A_0 * B_0 // full karatsuba
         cudaSetDevice(3);
         double *d_tmp_b = d_b[3];
@@ -1000,7 +976,6 @@ void mpmat::gradeschool_cpu(const int &a_start, const int &c_start,
                    cudaMemcpyDeviceToHost);
         // memset(c_double_array+n*n*(c_max),0,n*n*(2*clen2+1)*sizeof(double));
       }
-#pragma omp section
       { // do the rest in the next level down
         gradeschool_cpu(
             a_start + len2, a_start, c_start + (3 * clen2 + 2), c_max, Layout,

@@ -21,7 +21,6 @@ double *randomDoubleVector(int n) {
   auto out = new double[n];
   std::uniform_real_distribution<double> unif(1, 5);
   std::random_device rd;
-#pragma omp parallel for
   for (int i = 0; i < n; ++i)
     out[i] = floor(unif(rd));
   return out;

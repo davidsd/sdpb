@@ -12,9 +12,6 @@
 #include <fstream>
 #include <ostream>
 #include <string>
-#ifdef HAVE_OMP_H
-#include <omp.h>
-#endif
 #include <boost/filesystem.hpp>
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "boost/program_options.hpp"
@@ -52,10 +49,6 @@ int solveSDP(const vector<path> &sdpFiles,
   // Ensure all the Real parameters have the appropriate precision
   parameters.resetPrecision();
 
-#ifdef HAVE_OMP_H
-  // Set the maximum number of threads for parallel loops
-  omp_set_num_threads(parameters.maxThreads);
-#endif
 
 #ifdef HAVE_MKL_H
   mkl_set_num_threads(parameters.maxThreads);

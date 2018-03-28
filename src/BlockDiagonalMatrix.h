@@ -12,9 +12,6 @@
 #include <vector>
 #include <iostream>
 #include <ostream>
-#ifdef HAVE_OMP_H
-#include <omp.h>
-#endif
 #include "types.h"
 #include "Matrix.h"
 
@@ -58,42 +55,36 @@ public:
 
   // Add a constant c to each diagonal element
   void addDiagonal(const Real &c) {
-    #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b].addDiagonal(c);
   }
 
   // M = M + A
   void operator+=(const BlockDiagonalMatrix &A) {
-    #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b] += A.blocks[b];
   }
 
   // M = M - A
   void operator-=(const BlockDiagonalMatrix &A) {
-    #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b] -= A.blocks[b];
   }
 
   // M = c*M, where c is a constant
   void operator*=(const Real &c) {
-    #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b] *= c;
   }
 
   // M = A
   void copyFrom(const BlockDiagonalMatrix &A) {
-    #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b].copyFrom(A.blocks[b]);
   }
 
   // Symmetrize M in place
   void symmetrize() {
-    #pragma omp parallel for schedule(dynamic)
     for (unsigned int b = 0; b < blocks.size(); b++)
       blocks[b].symmetrize();
   }
