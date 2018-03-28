@@ -140,7 +140,6 @@ void SDPSolver::loadCheckpoint(const path &checkpointFile) {
 
 void SDPSolver::saveSolution(const SDPSolverTerminateReason terminateReason, const path &outFile) {
   boost::filesystem::ofstream ofs(outFile);
-  float runtime = static_cast<float>(timers["Solver runtime"].elapsed().wall)/1000000000;
   cout << "Saving solution to      : " << outFile << endl;
   ofs.precision(static_cast<int>(primalObjective.get_prec() * 0.31 + 5));
   ofs << "terminateReason = \"" << terminateReason << "\";\n";
@@ -149,7 +148,6 @@ void SDPSolver::saveSolution(const SDPSolverTerminateReason terminateReason, con
   ofs << "dualityGap      = " << dualityGap        << ";\n";
   ofs << "primalError     = " << primalError       << ";\n";
   ofs << "dualError       = " << dualError         << ";\n";
-  ofs << "runtime         = " << runtime           << ";\n";
   ofs << "y = " << y << ";\n";
   // ofs << "Y = " << Y << ";\n";
   ofs << "x = " << x << ";\n";
