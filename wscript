@@ -86,7 +86,7 @@ def build(bld):
                   'src/BlockDiagonalMatrix.cxx',
                   'src/SDPSolverIO.cxx',
                   'src/SDP.cxx',
-                  'src/readBootstrapSDP/readBootstrapSDP.cxx',
+                  'src/read_bootstrap_sdp/read_bootstrap_sdp.cxx',
                   'src/Matrix.cxx']
     sdpb_includes=['src/mpack']
 

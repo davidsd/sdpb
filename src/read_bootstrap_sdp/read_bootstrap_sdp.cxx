@@ -99,7 +99,7 @@ PolynomialVectorMatrix parsePolynomialVectorMatrix(XMLElement *xml) {
   return m;
 }
 
-SDP readBootstrapSDP(const vector<boost::filesystem::path> sdpFiles) {
+SDP read_bootstrap_sdp(const vector<boost::filesystem::path> sdpFiles) {
   Vector objective;
   vector<PolynomialVectorMatrix> polynomialVectorMatrices;
   for (auto &sdpFile: sdpFiles) {

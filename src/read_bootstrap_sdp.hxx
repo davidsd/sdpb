@@ -13,5 +13,5 @@
 
 using boost::filesystem::path;
 
-SDP readBootstrapSDP(const vector<path> sdpFiles);
+SDP read_bootstrap_sdp(const vector<path> sdpFiles);
 

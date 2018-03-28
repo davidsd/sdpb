@@ -18,7 +18,7 @@
 #include "types.hxx"
 #include "Timers.hxx"
 #include "SDP.hxx"
-#include "readBootstrapSDP.hxx"
+#include "read_bootstrap_sdp.hxx"
 #include "SDPSolver.hxx"
 
 using std::cout;
@@ -62,7 +62,7 @@ int solveSDP(const vector<path> &sdpFiles,
   cout << parameters << endl;
 
   // Read an SDP from sdpFile and create a solver for it
-  SDPSolver solver(readBootstrapSDP(sdpFiles), parameters);
+  SDPSolver solver(read_bootstrap_sdp(sdpFiles), parameters);
   
   if (exists(checkpointFileIn))
     solver.loadCheckpoint(checkpointFileIn);
