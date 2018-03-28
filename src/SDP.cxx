@@ -42,7 +42,7 @@ Matrix sampleBilinearBasis(const int maxDegree,
   return b;
 }
 
-// Convert a PolynomialVectorMatrix to a DualConstraint group by
+// Convert a Polynomial_Vector_Matrix to a DualConstraint group by
 // sampling the matrix at the appropriate number of points, as
 // described in SDP.h:
 //
@@ -55,7 +55,7 @@ Matrix sampleBilinearBasis(const int maxDegree,
 // for tuples p = (r,s,k).
 //
 DualConstraintGroup
-dualConstraintGroupFromPolVecMat(const PolynomialVectorMatrix &m) {
+dualConstraintGroupFromPolVecMat(const Polynomial_Vector_Matrix &m) {
   DualConstraintGroup g;
 
   assert(m.rows == m.cols);
@@ -104,7 +104,7 @@ dualConstraintGroupFromPolVecMat(const PolynomialVectorMatrix &m) {
                                                 m.samplePoints,
                                                 m.sampleScalings));
   int delta2 = (g.degree - 1)/2;
-  // a degree-0 PolynomialVectorMatrix only needs one block
+  // a degree-0 Polynomial_Vector_Matrix only needs one block
   if (delta2 >= 0)
     // The \sqrt(x) factors can be accounted for by replacing the
     // scale factors s_k with x_k s_k.
@@ -186,10 +186,10 @@ SDP sdpFromDualConstraintGroups(const Vector &dualObjective,
 // described in SDP.h.
 //
 SDP bootstrapSDP(const Vector &affineObjective,
-                 const vector<PolynomialVectorMatrix> &polVectorMatrices) {
+                 const vector<Polynomial_Vector_Matrix> &polVectorMatrices) {
   // Convert polVectorMatrices into DualConstraintGroup's
   vector<DualConstraintGroup> dualConstraintGroups;
-  for (vector<PolynomialVectorMatrix>::const_iterator m = polVectorMatrices.begin();
+  for (vector<Polynomial_Vector_Matrix>::const_iterator m = polVectorMatrices.begin();
        m != polVectorMatrices.end(); m++)
     dualConstraintGroups.push_back(dualConstraintGroupFromPolVecMat(*m));
 

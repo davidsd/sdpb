@@ -1,4 +1,4 @@
-#include "../PolynomialVectorMatrix.hxx"
+#include "../Polynomial_Vector_Matrix.hxx"
 #include "parse_Real.hxx"
 #include "parse_many.hxx"
 #include "parse_vector.hxx"
@@ -22,10 +22,10 @@ namespace
   }
 }
 
-PolynomialVectorMatrix
+Polynomial_Vector_Matrix
 parse_polynomial_vector_matrix(const boost::property_tree::ptree &tree)
 {
-  PolynomialVectorMatrix result;
+  Polynomial_Vector_Matrix result;
   result.rows = tree.get<int64_t>("rows");
   result.cols = tree.get<int64_t>("cols");
   std::function<std::vector<Polynomial>(const boost::property_tree::ptree &)>

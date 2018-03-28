@@ -25,12 +25,12 @@
 std::vector<Real>
 parse_vector(const boost::property_tree::ptree &tree);
 
-PolynomialVectorMatrix parse_polynomial_vector_matrix(const boost::property_tree::ptree &tree);
+Polynomial_Vector_Matrix parse_polynomial_vector_matrix(const boost::property_tree::ptree &tree);
 
 SDP read_bootstrap_sdp(const std::vector<boost::filesystem::path> sdp_files)
 {
   Vector objective;
-  std::vector<PolynomialVectorMatrix> polynomialVectorMatrices;
+  std::vector<Polynomial_Vector_Matrix> polynomialVectorMatrices;
   for (auto &sdp_file: sdp_files)
     {
       {
@@ -46,7 +46,7 @@ SDP read_bootstrap_sdp(const std::vector<boost::filesystem::path> sdp_files)
       auto polynomialVectorMatrices_iterator (sdp.find("polynomialVectorMatrices"));
       if(polynomialVectorMatrices_iterator!=sdp.not_found())
         {
-          std::function<PolynomialVectorMatrix(const boost::property_tree::ptree &)>
+          std::function<Polynomial_Vector_Matrix(const boost::property_tree::ptree &)>
             p (parse_polynomial_vector_matrix);
           parse_append_many("polynomialVectorMatrix",
                             p,

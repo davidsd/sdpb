@@ -26,7 +26,7 @@
 // A PolynomialVectorMatrix contains the data needed to construct this
 // DualConstraintGroup:  
 //
-class PolynomialVectorMatrix {
+class Polynomial_Vector_Matrix {
  public:
   int rows; // rows of M
   int cols; // cols of M

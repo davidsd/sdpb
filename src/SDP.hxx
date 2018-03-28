@@ -15,7 +15,7 @@
 #include "types.hxx"
 #include "Vector.hxx"
 #include "Matrix.hxx"
-#include "PolynomialVectorMatrix.hxx"
+#include "Polynomial_Vector_Matrix.hxx"
 
 using std::vector;
 using std::ostream;
@@ -261,5 +261,5 @@ class DualConstraintGroup {
 
 
 SDP bootstrapSDP(const Vector &affineObjective,
-                 const vector<PolynomialVectorMatrix> &polVectorMatrices);
+                 const vector<Polynomial_Vector_Matrix> &polVectorMatrices);
 
