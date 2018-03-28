@@ -14,108 +14,47 @@
 
 // See the manual for a description of the correct XML input format.
 
-#include "../types.hxx"
+#include "parse_append_many.hxx"
+
 #include "../Polynomial.hxx"
 #include "../SDP.hxx"
-#ifdef HAVE_TINYXML2_H
-#include <tinyxml2.h>
-#else
-#include "tinyxml2/tinyxml2.h"
-#endif
 
-#include <string>
-#include <vector>
 #include <boost/filesystem.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 
-using std::vector;
-using tinyxml2::XMLDocument;
-using tinyxml2::XMLElement;
-using boost::filesystem::path;
+std::vector<Real>
+parse_vector(const boost::property_tree::ptree &tree);
 
-// parse a bunch of adjacent elements with tag `name'
-// using the function `parse' for each element, and
-// append the result to returnvec.
-template <class T>
-void parseAppendMany(const char *name,
-                     T(*parse)(XMLElement *),
-                     XMLElement *elt, 
-                     vector<T> &returnvec) {
-  XMLElement *e;
-  for (e = elt->FirstChildElement(name);
-       e != NULL;
-       e = e->NextSiblingElement(name)) {
-    returnvec.push_back(parse(e));
-  }
-}
+PolynomialVectorMatrix parse_polynomial_vector_matrix(const boost::property_tree::ptree &tree);
 
-template <class T>
-vector<T> parseMany(const char *name,
-                    T(*parse)(XMLElement *),
-                    XMLElement *elt) {
-  vector<T> v;
-  parseAppendMany(name, parse, elt, v);
-  return v;
-}
-
-Real parseReal(XMLElement *xml) {
-  return Real(xml->GetText());
-}
-
-int parseInt(XMLElement *xml) {
-  return atoi(xml->GetText());
-}
-
-Vector parseVector(XMLElement *xml) {
-  return parseMany("elt", parseReal, xml);
-}
-
-Matrix parseMatrix(XMLElement *xml) {
-  Matrix m;
-  m.rows     = parseInt(xml->FirstChildElement("rows"));
-  m.cols     = parseInt(xml->FirstChildElement("cols"));
-  m.elements = parseVector(xml->FirstChildElement("elements"));
-  return m;
-}
-
-Polynomial parsePolynomial(XMLElement *xml) {
-  Polynomial p;
-  p.coefficients = parseMany("coeff", parseReal, xml);
-  return p;
-}
-
-vector<Polynomial> parsePolynomialVector(XMLElement *xml) {
-  return parseMany("polynomial", parsePolynomial, xml);
-}
-
-PolynomialVectorMatrix parsePolynomialVectorMatrix(XMLElement *xml) {
-  PolynomialVectorMatrix m;
-  m.rows           = parseInt(xml->FirstChildElement("rows"));
-  m.cols           = parseInt(xml->FirstChildElement("cols"));
-  m.elements       = parseMany("polynomialVector", parsePolynomialVector,
-                               xml->FirstChildElement("elements"));
-  m.samplePoints   = parseVector(xml->FirstChildElement("samplePoints"));
-  m.sampleScalings = parseVector(xml->FirstChildElement("sampleScalings"));
-  m.bilinearBasis  = parsePolynomialVector(xml->FirstChildElement("bilinearBasis"));
-  return m;
-}
-
-SDP read_bootstrap_sdp(const vector<boost::filesystem::path> sdpFiles) {
+SDP read_bootstrap_sdp(const std::vector<boost::filesystem::path> sdp_files)
+{
   Vector objective;
-  vector<PolynomialVectorMatrix> polynomialVectorMatrices;
-  for (auto &sdpFile: sdpFiles) {
-    XMLDocument doc;
+  std::vector<PolynomialVectorMatrix> polynomialVectorMatrices;
+  for (auto &sdp_file: sdp_files)
+    {
+      {
+      boost::property_tree::ptree tree;
+      boost::property_tree::read_xml (sdp_file.string(), tree);
+      
+      const auto sdp = tree.get_child ("sdp");
+      auto objective_iterator (sdp.find("objective"));
+      /// boost::property_tree uses not_found() instead of end() :(
+      if(objective_iterator!=sdp.not_found())
+        { objective=parse_vector(objective_iterator->second); }
 
-    doc.LoadFile(sdpFile.string().c_str());
-    XMLElement* xml = doc.FirstChildElement("sdp");
-    if(xml->FirstChildElement("objective") != NULL) {
-      objective = parseVector(xml->FirstChildElement("objective"));
+      auto polynomialVectorMatrices_iterator (sdp.find("polynomialVectorMatrices"));
+      if(polynomialVectorMatrices_iterator!=sdp.not_found())
+        {
+          std::function<PolynomialVectorMatrix(const boost::property_tree::ptree &)>
+            p (parse_polynomial_vector_matrix);
+          parse_append_many("polynomialVectorMatrix",
+                            p,
+                            polynomialVectorMatrices_iterator->second,
+                            polynomialVectorMatrices);
+                            
+        }
+      }
     }
-    if(xml->FirstChildElement("polynomialVectorMatrices") != NULL) {
-      parseAppendMany("polynomialVectorMatrix",
-                      parsePolynomialVectorMatrix,
-                      xml->FirstChildElement("polynomialVectorMatrices"),
-                      polynomialVectorMatrices);
-    }
-  }
   return bootstrapSDP(objective,polynomialVectorMatrices);
 }

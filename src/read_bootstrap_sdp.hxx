@@ -5,11 +5,9 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
-
 #pragma once
 
 #include "SDP.hxx"
 #include <boost/filesystem.hpp>
 
-SDP read_bootstrap_sdp(const std::vector<boost::filesystem::path> sdpFiles);
-
+SDP read_bootstrap_sdp(const std::vector<boost::filesystem::path> sdp_files);

@@ -87,6 +87,9 @@ def build(bld):
                   'src/SDPSolverIO.cxx',
                   'src/SDP.cxx',
                   'src/read_bootstrap_sdp/read_bootstrap_sdp.cxx',
+                  'src/read_bootstrap_sdp/parse_vector.cxx',
+                  'src/read_bootstrap_sdp/parse_Real.cxx',
+                  'src/read_bootstrap_sdp/parse_polynomial_vector_matrix/parse_polynomial_vector_matrix.cxx',
                   'src/Matrix.cxx']
     sdpb_includes=['src/mpack']
 

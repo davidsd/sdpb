@@ -15,7 +15,7 @@
 #include "types.hxx"
 #include "Vector.hxx"
 #include "Matrix.hxx"
-#include "Polynomial.hxx"
+#include "PolynomialVectorMatrix.hxx"
 
 using std::vector;
 using std::ostream;
@@ -259,69 +259,6 @@ class DualConstraintGroup {
   vector<Matrix> bilinearBases;
 };
 
-// Let M(x) be a matrix whose entries are vectors of polynomials:
-//
-//   M(x) = ( \vec P^{00}(x) ... \vec P^{m0}(x) )
-//          ( ...                               )
-//          ( \vec P^{0n}(x) ... \vec P^{mn}(x) )
-//
-// where each vector has length N+1:
-//
-//   \vec P^{rs}(x) = (P^{rs}_{-1}(x), P^{rs}_0, ... , P^{rs}_{N-1}(x))
-//
-// Consider a vector y = (y_0, ..., y_{N-1}) of length N, and let
-// (1,y) denote the vector of length N+1 whose components are 1,
-// followed by the components of y.  As explained in the manual, the
-// constraint
-//
-//   (1,y) . M(x) is positive semidefinite
-//
-// is equivalent to a DualConstraintGroup
-//
-//   Tr(A_p Y) + (B y)_p = c_p
-//
-// A PolynomialVectorMatrix contains the data needed to construct this
-// DualConstraintGroup:  
-//
-class PolynomialVectorMatrix {
- public:
-  int rows; // rows of M
-  int cols; // cols of M
-
-  // elements of M, in row-major order
-  vector<vector<Polynomial> > elements;
-
-  // A list of real numbers x_k (0 <= k <= degree(M)) at which to
-  // sample M(x) to construct the v_{b,k}.
-  vector<Real> samplePoints;
-
-  // A list of real numbers s_k (0 <= k <= degree(M)) to scale M(x_k)
-  // and the corresponding v_{b,k}.
-  vector<Real> sampleScalings;
-
-  // bilinearBasis[m] = q_m(x) (0 <= m <= degree/2), where q_m is a
-  // polynomial with degree deg(q_m) = m.
-  vector<Polynomial> bilinearBasis;
-
-  inline const vector<Polynomial>& elt(const int r, const int c) const {
-    return elements[r + c*rows];
-  }
-
-  inline vector<Polynomial>& elt(const int r, const int c) {
-    return elements[r + c*rows];
-  }
-
-  // The maximal degree of any of the components P^{rs}_n(x).
-  int degree() const {
-    int d = 0;
-    for (vector<vector<Polynomial> >::const_iterator e = elements.begin();
-         e != elements.end(); e++)
-      for (vector<Polynomial>::const_iterator p = e->begin();
-           p != e->end(); p++)
-        d = std::max(p->degree(), d);
-    return d;
-  }
-};
 
 SDP bootstrapSDP(const Vector &affineObjective,
                  const vector<PolynomialVectorMatrix> &polVectorMatrices);
