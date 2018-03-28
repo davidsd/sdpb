@@ -1,16 +1,16 @@
 import os
 
 def options(opt):
-    opt.load(['compiler_cxx','gnu_dirs','boost','tinyxml2','gmpxx','cxx17'])
+    opt.load(['compiler_cxx','gnu_dirs','boost','gmpxx','cxx17'])
 
 def configure(conf):
-    conf.load(['compiler_cxx','gnu_dirs','boost','tinyxml2','gmpxx','cxx17'])
+    conf.load(['compiler_cxx','gnu_dirs','boost','gmpxx','cxx17'])
     conf.check_boost(lib='serialization system filesystem timer program_options chrono')
 
 def build(bld):
     default_flags=['-Wall', '-Wextra', '-O3', '-D___MPACK_BUILD_WITH_GMP___']
     # default_flags=['-Wall', '-Wextra', '-g', '-ansi', '-D___MPACK_BUILD_WITH_GMP___']
-    use_packages=['BOOST','tinyxml2','gmpxx','cxx17']
+    use_packages=['BOOST','gmpxx','cxx17']
     
     mpack_sources=['src/mpack/Rpotrf.cpp',
                    'src/mpack/Rgemm.cpp',
@@ -93,10 +93,6 @@ def build(bld):
                   'src/Matrix.cxx']
     sdpb_includes=['src/mpack']
 
-    if bld.env.TINYXML2_USE_EMBEDDED_COPY:
-        sdpb_sources.append('src/tinyxml2/tinyxml2.cxx')
-        sdpb_includes.append('src/tinyxml2')
-        
     bld.program(source=sdpb_sources + ['src/main.cxx'],
                 target='sdpb',
                 includes=sdpb_includes,
