@@ -65,45 +65,11 @@ void blockDiagonalMatrixScaleMultiplyAdd(Real alpha,
     matrixScaleMultiplyAdd(alpha, A.blocks[b], B.blocks[b], beta, C.blocks[b]);
 }
 
-// C := alpha*A*B + beta*C
-  void blockDiagonalMatrixScaleMultiplyAddMpmat(mpmat &myWorkspace, Real alpha,
-                                         BlockDiagonalMatrix &A,
-                                         BlockDiagonalMatrix &B,
-                                         Real beta,
-                                         BlockDiagonalMatrix &C
-#ifdef __SDPB_CUDA__
-				      ,bool gpu
-#endif
-) {
-  for (unsigned int b = 0; b < A.blocks.size(); b++)
-    matrixScaleMultiplyAddMpmat(myWorkspace,alpha, A.blocks[b], B.blocks[b], beta, C.blocks[b]
-#ifdef __SDPB_CUDA__
-				      ,gpu
-#endif
-);
-}
-
 // C := A*B
 void blockDiagonalMatrixMultiply(BlockDiagonalMatrix &A,
                                  BlockDiagonalMatrix &B,
                                  BlockDiagonalMatrix &C) {
   blockDiagonalMatrixScaleMultiplyAdd(1, A, B, 0, C);
-}
-
-// C := A*B
-void blockDiagonalMatrixMultiplyMpmat(mpmat &myWorkspace, 
-				      BlockDiagonalMatrix &A,
-				      BlockDiagonalMatrix &B,
-				      BlockDiagonalMatrix &C
-#ifdef __SDPB_CUDA__
-				      ,bool gpu
-#endif
-) {
-  blockDiagonalMatrixScaleMultiplyAddMpmat(myWorkspace, 1, A, B, 0, C
-#ifdef __SDPB_CUDA__
-					   ,gpu
-#endif
-);
 }
 
 // A := L^{-1} A L^{-T}

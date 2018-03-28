@@ -83,24 +83,6 @@ def build(bld):
               use=use_packages
               )
 
-    mpmat_sources=['src/mpmat/mpmat_conversion.cpp',
-                   'src/mpmat/mpmat_karatsuba.cpp',
-                   'src/mpmat/karatsuba_syrk.cpp',
-                   'src/mpmat/karatsuba_gemm.cpp',
-                   'src/mpmat/gradeschool_syrk.cpp',
-                   'src/mpmat/gradeschool_gemm.cpp',
-                   'src/mpmat/mpmat_operations.cpp',
-                   'src/mpmat/mpmat_tests.cpp']
-
-    bld.stlib(source=mpmat_sources,
-              target='mpmat',
-              name='mpmat_st',
-              includes=['src/mpmat'],
-              cxxflags=default_flags,
-              install_path=bld.env.LIBDIR,
-              use=use_packages
-              )
-
     # Main executable
     sdpb_sources=['src/SDPSolver.cpp',
                   'src/BlockDiagonalMatrix.cpp',
@@ -119,16 +101,5 @@ def build(bld):
                 includes=sdpb_includes,
                 cxxflags=default_flags,
                 rpath=[bld.env.LIBDIR],
-                use=use_packages + ['mpack_st','mpmat_st'],
+                use=use_packages + ['mpack_st'],
                 )
-
-    # mpmat test
-    bld.program(source=sdpb_sources + ['test/mpmat/mpmat_test.cpp'],
-                target='mpmat_test',
-                includes=sdpb_includes,
-                cxxflags=default_flags,
-                rpath=[bld.env.LIBDIR],
-                use=use_packages + ['mpack_st','mpmat_st'],
-                )
-    
-    

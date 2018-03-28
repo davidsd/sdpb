@@ -72,91 +72,10 @@ void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B,
         &C.elements[0], C.rows);
 }
 
-//
-void matrixScaleMultiplyAddMpmat(mpmat &myWorkspace, Real alpha, Matrix &A,
-				 Matrix &B, Real beta, Matrix &C
-#ifdef __SDPB_CUDA__
-				 ,bool gpu
-#endif
-) {
-  assert(A.cols == B.rows);
-  assert(A.rows == C.rows);
-  assert(B.cols == C.cols);
-
-  mpf_set_default_prec(mpf_get_default_prec()+512);
-  Real * Ctmp = new Real[C.cols*C.rows];
-  mpf_set_default_prec(mpf_get_default_prec()-512);
-
-#ifdef __SDPB_CUDA__
-  if(gpu) myWorkspace.gemm_reduced_gpu(CblasRowMajor,CblasNoTrans,CblasNoTrans,
-				 A.rows, B.cols, A.cols,
-				 A.elements.data(), B.elements.data(),
-				 Ctmp);
-  else
-  myWorkspace.gemm_reduced(CblasRowMajor,CblasNoTrans,CblasNoTrans,
-			   A.rows, B.cols, A.cols,
-			   A.elements.data(), B.elements.data(),
-			   Ctmp);
-#else
-				 myWorkspace.gemm_reduced(CblasRowMajor,CblasNoTrans,CblasNoTrans,
-			   A.rows, B.cols, A.cols,
-			   A.elements.data(), B.elements.data(),
-			   Ctmp);
-#endif
-  matrixScaleAdd(alpha,Ctmp,beta,C);
-
-  delete [] Ctmp;
-}
-
-void matrixScaleTransMultiplyAddMpmat(mpmat &myWorkspace, char ta, char tb, Real alpha, Matrix &A, int a_offset,
-         Matrix &B, int b_offset, Real beta, Matrix &C, int c_offset
-#ifdef __SDPB_CUDA__
-         ,bool gpu
-#endif
-) {
-  assert(A.cols == B.rows);
-  assert(A.rows == C.rows);
-  assert(B.cols == C.cols);
-
-  mpf_set_default_prec(mpf_get_default_prec()+512);
-  Real * Ctmp = new Real[C.cols*C.rows];
-  mpf_set_default_prec(mpf_get_default_prec()-512);
-
-#ifdef __SDPB_CUDA__
-  if(gpu) myWorkspace.gemm_reduced_gpu(CblasRowMajor,ta == 't' ? CblasTrans : CblasNoTrans,tb == 't' ? CblasTrans : CblasNoTrans,
-         A.rows, B.cols, A.cols,
-         A.elements.data()+a_offset, B.elements.data()+b_offset,
-         Ctmp+c_offset);
-  else
-  myWorkspace.gemm_reduced(CblasRowMajor,ta == 't' ? CblasTrans : CblasNoTrans,tb == 't' ? CblasTrans : CblasNoTrans,
-         A.rows, B.cols, A.cols,
-         A.elements.data()+a_offset, B.elements.data()+b_offset,
-         Ctmp+c_offset);
-#else
-         myWorkspace.gemm_reduced(CblasRowMajor,ta == 't' ? CblasTrans : CblasNoTrans,tb == 't' ? CblasTrans : CblasNoTrans,
-         A.rows, B.cols, A.cols,
-         A.elements.data()+a_offset, B.elements.data()+b_offset,
-         Ctmp+c_offset);
-#endif
-  matrixScaleAdd(alpha,Ctmp,beta,C);
-
-  delete [] Ctmp;
-}
-
 // C := A*B
 void matrixMultiply(Matrix &A, Matrix &B, Matrix &C) {
   matrixScaleMultiplyAdd(1, A, B, 0, C);
 }
-
-#ifdef __SDPB_CUDA__
-void matrixMultiplyMpmat(mpmat &myWorkspace, Matrix &A, Matrix &B, Matrix &C, bool gpu) {
-  matrixScaleMultiplyAddMpmat(myWorkspace,1, A, B, 0, C,gpu);
-}
-#else
-void matrixMultiplyMpmat(mpmat &myWorkspace, Matrix &A, Matrix &B, Matrix &C) {
-  matrixScaleMultiplyAddMpmat(myWorkspace,1, A, B, 0, C);
-}
-#endif
 
 // Set block starting at (bRow, bCol) of B to A^T A
 void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol) {
@@ -181,86 +100,6 @@ void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol) {
     }
   }
 }
-
-// Set block starting at (bRow, bCol) of B to A^T A
-#ifdef __SDPB_CUDA__
-  void matrixSquareIntoBlockMpmat(mpmat &myWorkspace, Matrix &A, Matrix &B, int bRow, int bCol, bool gpu){
-#else
-  void matrixSquareIntoBlockMpmat(mpmat &myWorkspace, Matrix &A, Matrix &B, int bRow, int bCol){
-#endif 
-  assert(bRow + A.cols <= B.rows);
-  assert(bCol + A.cols <= B.cols);
-
-  // This operation is not used within a BlockDiagonalMatrix, so it is
-  // worthwhile to parallelize.  In fact, this function, used in
-  // computing TopLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal (see
-  // SDPSolver.cpp) is one of the main performance bottlenecks in the
-  // solver.
-  
-  timers["matrixSquareIntoBlockMpmat.complete"].resume();
-
-  mpf_set_default_prec(mpf_get_default_prec()+256);
-  Real * block = new Real[A.cols*A.cols];
-  
-  mpf_set_default_prec(mpf_get_default_prec()-256);
-
-  
-  //Matrix B2(A.cols,A.cols);
-
-  for (int c = 0; c < A.cols; ++c){
-    for (int r = 0; r < A.cols; ++r){
-      block[r*A.cols+c] = B.elt(bRow + r, bCol + c);
-    }
-   }
-  
-#ifdef __SDPB_CUDA__
-  if (gpu)
-    myWorkspace.syrk_reduced_gpu(CblasRowMajor,CblasTrans,A.cols,A.rows,A.elements.data(),block);
-  else
-    myWorkspace.syrk_reduced(CblasRowMajor,CblasTrans,A.cols,A.rows,A.elements.data(),block);
-#else
-  myWorkspace.syrk_reduced(CblasRowMajor,CblasTrans,A.cols,A.rows,A.elements.data(),block);
-#endif
-  
-  // matrixSquareIntoBlock(A,B2,0,0);
- 
-
-  for (int c = 0; c < A.cols; ++c){
-  for (int r = 0; r < A.cols; ++r){
-  /*if (((block[r*A.cols+c] != 0)&&(B2.elt(r,c)/block[r*A.cols+c] < .9 || B2.elt(r,c)/block[r*A.cols+c] > 1.1))|| ((B2.elt(r,c) != 0)&&(block[r*A.cols+c]/B2.elt(r,c) < .9 || block[r*A.cols+c]/B2.elt(r,c) > 1.1)) ){
-  std::cerr << "Error: the answers are very inconsistent. \nAt location (" << r<< ", " << c << "), expected " << B2.elt(r,c) << ", got " << block[r*A.cols+c] << ".\n";
-  compare_mpf_bits(block[r*A.cols+c],B2.elt(r,c));
-
-  std::cout << "The doubles at this point are: \n";
-  std::cout << "{";
-      for (int i = 0; i < 34; ++i){
-  std::cout << myWorkspace.tmp[i+(r+c*A.cols)*34] << ",";
-      }
-      std::cout << "}\n";
-      print_mpmat_double_array(&myWorkspace.tmp[(r+c*A.cols)*34],34);
-      std::cout << "{";
-      for (int i = 0; i < 34; ++i){
-  std::cout << myWorkspace.tmp[i+(c+r*A.cols)*34] << ",";
-      }
-      std::cout << "}\n";
-      print_mpmat_double_array(&myWorkspace.tmp[(c+r*A.cols)*34],34);
-      }*/
-  /*if (block[r*A.cols+c] < 0){
-  std::cout << "This result is negative at location (" << r<< ", " << c << ").\n";
-  compare_mpf_bits(block[r*A.cols+c],B2.elt(r,c));
-  print_mpmat_double_array(&myWorkspace.tmp[(r+c*A.cols)*34],34);
-  std::cout << "\n\n\n";
-  }*/
-    B.elt(bRow + r, bCol + c) = block[r*A.cols+c];
-}
-}
-
-  delete [] block;
-
-  timers["matrixSquareIntoBlockMpmat.complete"].stop();
-  
-}
-
 
 // A := L^{-1} A L^{-T}
 void lowerTriangularInverseCongruence(Matrix &A, Matrix &L) {

@@ -15,7 +15,6 @@
 #include <vector>
 #include "types.h"
 #include "Vector.h"
-#include "mpmat/mpmat.h"
 
 using std::ostream;
 using std::vector;
@@ -111,14 +110,6 @@ class Matrix {
       elements[i] *= c;
   }
 
-  bool operator==(const Matrix &other) {
-    return std::equal(elements.begin(),elements.end(),other.elements.begin(),compare_mpf_bits);
-  }
-
-  bool operator!=(const Matrix &other) {
-    return !std::equal(elements.begin(),elements.end(),other.elements.begin(),compare_mpf_bits);
-  }
-
   Matrix operator-(const Matrix &other) const{
     Matrix out(rows,cols);
     std::transform(elements.begin(),elements.end(),other.elements.begin(),out.elements.begin(),std::minus<Real>());
@@ -144,36 +135,12 @@ void matrixScaleAdd(Real alpha, Real * A,
 // C := alpha*A*B + beta*C
 void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B,
                             Real beta, Matrix &C);
-#ifdef __SDPB_CUDA__
-void matrixScaleMultiplyAddMpmat(mpmat &myWorkspace, Real alpha, Matrix &A,
-				 Matrix &B, Real beta, Matrix &C, bool gpu);
-void matrixScaleTransMultiplyAddMpmat(mpmat &myWorkspace, char ta, char tb, Real alpha, Matrix &A, int a_offset,
-         Matrix &B, int b_offset, Real beta, Matrix &C, int c_offset, bool gpu);
-#else
-void matrixScaleMultiplyAddMpmat(mpmat &myWorkspace, Real alpha, Matrix &A,
-				 Matrix &B, Real beta, Matrix &C);
-void matrixScaleTransMultiplyAddMpmat(mpmat &myWorkspace, char ta, char tb, Real alpha, Matrix &A, int a_offset,
-         Matrix &B, int b_offset, Real beta, Matrix &C, int c_offset);
-#endif
-
 // C := A*B
 void matrixMultiply(Matrix &A, Matrix &B, Matrix &C);
-
-#ifdef __SDPB_CUDA__
-void matrixMultiplyMpmat(mpmat &myWorkspace, Matrix &A, Matrix &B, Matrix &C, bool gpu);
-#else
-void matrixMultiplyMpmat(mpmat &myWorkspace, Matrix &A, Matrix &B, Matrix &C);
-#endif
 
 // Set block starting at (bRow, bCol) of B to A^T A
 void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol);
 void matrixSquareIntoBlockGPU(Matrix &A, Matrix &B, int bRow, int bCol);
-
-#ifdef __SDPB_CUDA__
-void matrixSquareIntoBlockMpmat(mpmat &myWorkspace, Matrix &A, Matrix &B, int bRow, int bCol, bool gpu);
-#else
-void matrixSquareIntoBlockMpmat(mpmat &myWorkspace, Matrix &A, Matrix &B, int bRow, int bCol);
-#endif
 
 // A := L^{-1} A L^{-T}
 void lowerTriangularInverseCongruence(Matrix &A, Matrix &L);

@@ -50,10 +50,6 @@ int solveSDP(const vector<path> &sdpFiles,
   parameters.resetPrecision();
 
 
-#ifdef HAVE_MKL_H
-  mkl_set_num_threads(parameters.maxThreads);
-#endif
-  
   cout << "SDPB started at " << second_clock::local_time() << endl;
   for (auto const& sdpFile: sdpFiles) {
     cout << "SDP file        : " << sdpFile        << endl;

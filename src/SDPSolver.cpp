@@ -56,15 +56,13 @@ SDPSolver::SDPSolver(const SDP &sdp, const SDPSolverParameters &parameters)
       stabilizeBlocks(SchurComplement.blocks.size()),
       Q(sdp.FreeVarMatrix.cols, sdp.FreeVarMatrix.cols),
       Qpivots(sdp.FreeVarMatrix.cols), dyExtended(Q.rows),
-      StepMatrixWorkspace(X), myWorkspace(1) {
+      StepMatrixWorkspace(X) {
   // initialize bilinearPairingsWorkspace, eigenvaluesWorkspace, QRWorkspace
   for (unsigned int b = 0; b < sdp.bilinearBases.size(); b++) {
     bilinearPairingsWorkspace.push_back(
         Matrix(X.blocks[b].rows, BilinearPairingsXInv.blocks[b].cols));
     eigenvaluesWorkspace.push_back(Vector(X.blocks[b].rows));
     QRWorkspace.push_back(Vector(3 * X.blocks[b].rows - 1));
-
-    // myWorkspace.mpmat_conversion_test(10,10000000000,-7);
   }
 
   // X = \Omega_p I
@@ -714,14 +712,7 @@ void SDPSolver::initializeSchurComplementSolver(
   // Here, SchurOffDiagonal = L'^{-1} B.
   //
   // UpperLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal
-#ifdef __SDPB_CUDA__
-  matrixSquareIntoBlockMpmat(myWorkspace, SchurOffDiagonal, Q, 0, 0,
-                             parameters.gpu);
-  // matrixSquareIntoBlockGPU(SchurOffDiagonal, Q, 0, 0);
-#else
   matrixSquareIntoBlock(SchurOffDiagonal, Q, 0, 0);
-  // matrixSquareIntoBlockMpmat(myWorkspace, SchurOffDiagonal, Q, 0, 0);
-#endif
 
   // Here, stabilizeBlocks contains the blocks of V = L'^{-1} U.
   //
@@ -729,13 +720,8 @@ void SDPSolver::initializeSchurComplementSolver(
   for (unsigned int j = 0; j < stabilizeBlockIndices.size(); j++) {
     int b = stabilizeBlockIndices[j];
     int c = stabilizeBlockUpdateColumn[j];
-#ifdef __SDPB_CUDA__
-    matrixSquareIntoBlockMpmat(myWorkspace, stabilizeBlocks[b], Q, c, c,
-                               parameters.gpu);
-#else
     matrixSquareIntoBlock(stabilizeBlocks[b], Q, c, c);
-    // matrixSquareIntoBlockMpmat(myWorkspace, stabilizeBlocks[b], Q, c, c);
-#endif
+
     // subtract the identity matrix from this block
     for (int i = c; i < c + stabilizeBlocks[b].cols; i++)
       Q.elt(i, i) -= 1;
@@ -747,20 +733,7 @@ void SDPSolver::initializeSchurComplementSolver(
     int b = stabilizeBlockIndices[j];
     int p = stabilizeBlockUpdateRow[j];
     int r = stabilizeBlockUpdateColumn[j];
-    // myWorkspace.gemm_reduced(CblasRowMajor,CblasTrans,CblasNoTrans,
-    //       stabilizeBlocks[b].cols,
-    //       SchurOffDiagonal.cols,
-    //       stabilizeBlocks[b].rows,
-    //       &stabilizeBlocks[b].elements[0],
-    // //stabilizeBlocks[b].rows,
-    //       &SchurOffDiagonal.elt(p, 0),
-    // //SchurOffDiagonal.rows,
-    //       &Q.elt(r, 0)
-    // //Q.rows
-    // );
-    // matrixScaleTransMultiplyAddMpmat(myWorkspace, 't', 'n', 1.0,
-    // stabilizeBlocks[b],
-    // Matrix &B, 0.0, Matrix &C);
+
     Rgemm("Transpose", "NoTranspose", stabilizeBlocks[b].cols,
           SchurOffDiagonal.cols, stabilizeBlocks[b].rows, 1,
           &stabilizeBlocks[b].elements[0], stabilizeBlocks[b].rows,
@@ -1079,81 +1052,4 @@ SDPSolverTerminateReason SDPSolver::run(const path checkpointFile) {
 
   // Never reached
   return MaxIterationsExceeded;
-}
-
-void SDPSolver::testMultiplication(const int m_init, const int m_fin,
-                                   const int m_step) {
-  for (int m = m_init; m <= m_fin; m *= m_step) {
-    // Real * a_tmp = randomGMPVector(m*m,prec), * b_tmp =
-    // randomGMPVector(m*m,prec), * c_tmp = randomGMPVector(m*m,prec); Matrix
-    // A(m,m,a_tmp), B(m,m,b_tmp), C(m,m,c_tmp), C2(m,m,c_tmp), C3(m,m); delete
-    // [] a_tmp; delete [] b_tmp; delete [] c_tmp;
-
-    //   matrixScaleMultiplyAdd(-1,A,B,1,C);
-    // #ifdef __SDPB_CUDA__
-    //   matrixScaleMultiplyAddMpmat(myWorkspace,-1,A,B,1,C2,parameters.gpu);
-    // #else
-    //   matrixScaleMultiplyAddMpmat(myWorkspace,-1,A,B,1,C2);
-    // #endif
-    //   std::cerr << "done multing\n";
-    //   Matrix diff = C - C2;
-    //   Matrix diff2 = C2 - C3;
-
-    //   if (C != C2){
-    //   std::cerr << "Error: multiplication failed at dimension " << m << ".
-    //   Printing outputs:\n"; std::cerr << C << "\n\n\n"; std::cerr << C2 <<
-    //   "\n\n\n"; std::cerr << diff << "\n\n\n"; break;
-    // }
-    //   for (int r = 0; r < C2.rows; ++r){
-    //     for (int c = 0; c < C2.cols; ++c){
-    //       if (C2.elt(r,c) < -100000.0){
-    // 	std::cout << C2.elt(r,c) << " has bits of:\n";
-    // 	//print_mpf_bits(C2.elt(r,c));
-    // 	compare_mpf_bits(C2.elt(r,c),C.elt(r,c));
-    //        	std::cout << "\n";
-    // 	//print_mpf_bits(C.elt(r,c));
-    // 	std::cout << "\n\n\n";
-    //       }
-    //     }
-    //   }
-
-    std::vector<int> v;
-    for (int i = 1; i <= 1 << 6; ++i) {
-      if (!myWorkspace.symm_karatsuba_test(1, 1, i)) {
-        std::cout << "FAIL: karatsuba dim " << m << " length " << i << "\n";
-        v.push_back(i);
-        break;
-      }
-      std::cout << "PASS: karatsuba dim " << m << " length " << i << "\n";
-    }
-    // std::cout << "\n" << timers << "\n";
-    // myWorkspace.base_karatsuba_test();
-
-    // std::cerr << "about to test CPU vs GPU:\n\n\n";
-    /*if (C3 != C2){
-    std::cerr << "Error: multiplication between GPU and CPU failed at dimension
-  " << m << "\n";
-    //std::cerr << C3 << "\n\n\n";
-    //std::cerr << C2 << "\n\n\n";
-    //std::cerr << diff2 << "\n\n\n";
-    //break;
-  }
-   else {
-     std::cout << "CPU and GPU are consistent\n";
-   }
-   bool bigerr = false;
-    for (int r = 0; r < C2.rows; ++r){
-      for (int c = 0; c < C2.cols; ++c){
-        if (C2.elt(r,c) < -100000.0){
-          std::cout << C2.elt(r,c) << " has bits of:\n";
-          print_mpf_bits(C2.elt(r,c));
-          bigerr = true;
-        }
-      }
-    }
-    if (bigerr){
-      std::cerr << "Big numerical error in conversion failed at dimension: " <<
-  m << "\n\n"; break;
-      }*/
-  }
 }
