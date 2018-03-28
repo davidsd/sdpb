@@ -13,10 +13,10 @@
 #include <vector>
 #include <iostream>
 #include <ostream>
-#include "types.h"
-#include "Vector.h"
-#include "Matrix.h"
-#include "Polynomial.h"
+#include "types.hxx"
+#include "Vector.hxx"
+#include "Matrix.hxx"
+#include "Polynomial.hxx"
 
 using std::vector;
 using std::ostream;

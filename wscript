@@ -82,19 +82,19 @@ def build(bld):
               )
 
     # Main executable
-    sdpb_sources=['src/SDPSolver.cpp',
-                  'src/BlockDiagonalMatrix.cpp',
-                  'src/SDPSolverIO.cpp',
-                  'src/SDP.cpp',
-                  'src/parse.cpp',
-                  'src/Matrix.cpp']
+    sdpb_sources=['src/SDPSolver.cxx',
+                  'src/BlockDiagonalMatrix.cxx',
+                  'src/SDPSolverIO.cxx',
+                  'src/SDP.cxx',
+                  'src/parse.cxx',
+                  'src/Matrix.cxx']
     sdpb_includes=['src/mpack']
 
     if bld.env.TINYXML2_USE_EMBEDDED_COPY:
-        sdpb_sources.append('src/tinyxml2/tinyxml2.cpp')
+        sdpb_sources.append('src/tinyxml2/tinyxml2.cxx')
         sdpb_includes.append('src/tinyxml2')
         
-    bld.program(source=sdpb_sources + ['src/main.cpp'],
+    bld.program(source=sdpb_sources + ['src/main.cxx'],
                 target='sdpb',
                 includes=sdpb_includes,
                 cxxflags=default_flags,

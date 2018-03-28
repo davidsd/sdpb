@@ -14,7 +14,7 @@
 #include <iostream>
 #include <ostream>
 #include <vector>
-#include "types.h"
+#include "types.hxx"
 
 using std::ostream;
 using std::vector;

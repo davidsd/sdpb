@@ -68,7 +68,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <mblas.h>
 #include <mlapack.h>
 
-#include "../Timers.h"
+#include "../Timers.hxx"
 
 void Rgetrf(INTEGER m, INTEGER n, REAL * A, INTEGER lda, INTEGER * ipiv, INTEGER * info)
 {

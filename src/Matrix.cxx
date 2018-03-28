@@ -7,9 +7,9 @@
 
 
 #include <vector>
-#include "Matrix.h"
+#include "Matrix.hxx"
 
-#include "Timers.h"
+#include "Timers.hxx"
 
 // Most of the routines below are helpfully-named wrappers for
 // functions in MBLAS or MLAPACK.  See Matrix.h for a more detailed

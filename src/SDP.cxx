@@ -7,7 +7,7 @@
 
 
 #include <vector>
-#include "SDP.h"
+#include "SDP.hxx"
 
 // Given a vector of polynomials {q_0(x), q_1(x), ..., q_n(x)} of
 // degree deg q_m(x) = m, a list of numSamples points x_k and scaling

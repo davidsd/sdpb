@@ -14,9 +14,9 @@
 #include <boost/filesystem.hpp>
 #include "boost/filesystem/fstream.hpp"
 #include "boost/date_time/posix_time/posix_time.hpp"
-#include "SDPSolver.h"
-#include "serialize.h"
-#include "Timers.h"
+#include "SDPSolver.hxx"
+#include "serialize.hxx"
+#include "Timers.hxx"
 
 using boost::filesystem::path;
 using boost::posix_time::time_duration;

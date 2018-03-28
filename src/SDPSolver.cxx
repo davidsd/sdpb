@@ -10,8 +10,8 @@
 #include <iostream>
 #include <vector>
 #include <boost/filesystem.hpp>
-#include "SDPSolver.h"
-#include "Timers.h"
+#include "SDPSolver.hxx"
+#include "Timers.hxx"
 
 using boost::filesystem::path;
 using boost::timer::nanosecond_type;

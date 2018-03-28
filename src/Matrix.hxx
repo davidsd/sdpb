@@ -13,8 +13,8 @@
 #include <iostream>
 #include <ostream>
 #include <vector>
-#include "types.h"
-#include "Vector.h"
+#include "types.hxx"
+#include "Vector.hxx"
 
 using std::ostream;
 using std::vector;

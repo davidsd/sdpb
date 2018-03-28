@@ -22,10 +22,10 @@
 #include "boost/archive/text_oarchive.hpp"
 #include <boost/filesystem.hpp>
 #include "boost/filesystem/fstream.hpp"
-#include "types.h"
-#include "Vector.h"
-#include "Matrix.h"
-#include "BlockDiagonalMatrix.h"
+#include "types.hxx"
+#include "Vector.hxx"
+#include "Matrix.hxx"
+#include "BlockDiagonalMatrix.hxx"
 
 using boost::filesystem::path;
 using boost::archive::text_iarchive;

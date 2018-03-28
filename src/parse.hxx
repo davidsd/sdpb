@@ -10,7 +10,7 @@
 #define SDPB_PARSE_H_
 
 #include <boost/filesystem.hpp>
-#include "SDP.h"
+#include "SDP.hxx"
 
 using boost::filesystem::path;
 

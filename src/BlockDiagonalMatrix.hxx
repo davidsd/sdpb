@@ -12,8 +12,8 @@
 #include <vector>
 #include <iostream>
 #include <ostream>
-#include "types.h"
-#include "Matrix.h"
+#include "types.hxx"
+#include "Matrix.hxx"
 
 using std::vector;
 using std::ostream;

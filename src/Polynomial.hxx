@@ -9,8 +9,8 @@
 #ifndef SDPB_POLYNOMIAL_H_
 #define SDPB_POLYNOMIAL_H_
 
-#include "types.h"
-#include "Vector.h"
+#include "types.hxx"
+#include "Vector.hxx"
 
 // A univariate polynomial
 // 

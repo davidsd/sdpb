@@ -15,11 +15,11 @@
 #include <boost/filesystem.hpp>
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "boost/program_options.hpp"
-#include "types.h"
-#include "Timers.h"
-#include "SDP.h"
-#include "parse.h"
-#include "SDPSolver.h"
+#include "types.hxx"
+#include "Timers.hxx"
+#include "SDP.hxx"
+#include "parse.hxx"
+#include "SDPSolver.hxx"
 
 using std::cout;
 using std::cerr;

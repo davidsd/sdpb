@@ -13,11 +13,11 @@
 #include <ostream>
 #include <vector>
 #include <boost/filesystem.hpp>
-#include "types.h"
-#include "Vector.h"
-#include "Matrix.h"
-#include "BlockDiagonalMatrix.h"
-#include "SDP.h"
+#include "types.hxx"
+#include "Vector.hxx"
+#include "Matrix.hxx"
+#include "BlockDiagonalMatrix.hxx"
+#include "SDP.hxx"
 
 using std::vector;
 using std::ostream;

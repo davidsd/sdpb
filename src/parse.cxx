@@ -16,10 +16,10 @@
 
 #include <string>
 #include <vector>
-#include "types.h"
-#include "parse.h"
-#include "Polynomial.h"
-#include "SDP.h"
+#include "types.hxx"
+#include "parse.hxx"
+#include "Polynomial.hxx"
+#include "SDP.hxx"
 #ifdef HAVE_TINYXML2_H
 #include <tinyxml2.h>
 #else

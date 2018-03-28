@@ -8,7 +8,7 @@
 
 #include <algorithm>
 #include <vector>
-#include "BlockDiagonalMatrix.h"
+#include "BlockDiagonalMatrix.hxx"
 
 ostream& operator<<(ostream& os, const BlockDiagonalMatrix& A) {
   os << "{";
