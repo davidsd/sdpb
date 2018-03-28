@@ -18,7 +18,7 @@
 #include "types.hxx"
 #include "Timers.hxx"
 #include "SDP.hxx"
-#include "parse.hxx"
+#include "readBootstrapSDP.hxx"
 #include "SDPSolver.hxx"
 
 using std::cout;

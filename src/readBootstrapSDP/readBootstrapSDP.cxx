@@ -14,17 +14,18 @@
 
 // See the manual for a description of the correct XML input format.
 
-#include <string>
-#include <vector>
-#include "types.hxx"
-#include "parse.hxx"
-#include "Polynomial.hxx"
-#include "SDP.hxx"
+#include "../types.hxx"
+#include "../Polynomial.hxx"
+#include "../SDP.hxx"
 #ifdef HAVE_TINYXML2_H
 #include <tinyxml2.h>
 #else
 #include "tinyxml2/tinyxml2.h"
 #endif
+
+#include <string>
+#include <vector>
+#include <boost/filesystem.hpp>
 
 using std::vector;
 using tinyxml2::XMLDocument;
