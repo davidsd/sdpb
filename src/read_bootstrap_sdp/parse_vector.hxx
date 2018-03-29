@@ -6,5 +6,4 @@
 
 #include <vector>
 
-std::vector<Real>
-parse_vector(const boost::property_tree::ptree &tree);
+std::vector<Real> parse_vector(const boost::property_tree::ptree &tree);
