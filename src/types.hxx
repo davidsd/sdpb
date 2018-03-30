@@ -10,5 +10,10 @@
 #include <mblas.h>
 #include <mlapack.h>
 
-typedef mpackint Integer;
-typedef mpf_class Real;
+using Integer = mpackint;
+using Real = mpf_class;
+
+inline bool compare_abs(const Real &a, const Real &b)
+{
+  return abs(a) < abs(b);
+}

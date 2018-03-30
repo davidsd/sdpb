@@ -18,7 +18,8 @@
 typedef std::vector<Real> Vector;
 
 // print any vector<T>, including Vector
-template <class T> std::ostream &operator<<(std::ostream &os, const std::vector<T> &v)
+template <class T>
+std::ostream &operator<<(std::ostream &os, const std::vector<T> &v)
 {
   os << "{";
   int last = v.size() - 1;
@@ -30,28 +31,25 @@ template <class T> std::ostream &operator<<(std::ostream &os, const std::vector<
   return os;
 }
 
-inline bool compareAbs(const Real &a, const Real &b)
-{
-  return abs(a) < abs(b);
-}
-
 // The maximal absolute value of the components of v
-inline Real maxAbsVector(const Vector &v)
+inline Real max_abs_vector(const Vector &v)
 {
-  return abs(*std::max_element(v.begin(), v.end(), compareAbs));
+  return abs(*std::max_element(v.begin(), v.end(), compare_abs));
 }
 
 // v := v + a*u
-inline void addScaledVector(Vector &v, const Real &a, const Vector &u)
+inline void add_scaled_vector(Vector &v, const Real &a, const Vector &u)
 {
   assert(v.size() == u.size());
 
-  for(unsigned int i = 0; i < v.size(); i++)
-    v[i] += a * u[i];
+  for(size_t i = 0; i < v.size(); i++)
+    {
+      v[i] += a * u[i];
+    }
 }
 
 // The smash product... just kidding. The dot product u.v.
-inline Real dotProduct(const Vector &u, const Vector v)
+inline Real dot_product(const Vector &u, const Vector v)
 {
   Real result = 0;
   for(unsigned int i = 0; i < u.size(); i++)
@@ -62,7 +60,7 @@ inline Real dotProduct(const Vector &u, const Vector v)
 // The component-wise product w = (v[0] u[0], ..., v[n] u[n])
 // This routine is used only once, so we needn't worry about
 // allocation.
-inline Vector multiplyVectors(const Vector &u, const Vector &v)
+inline Vector multiply_vectors(const Vector &u, const Vector &v)
 {
   Vector w(u.size());
   for(unsigned int i = 0; i < w.size(); i++)

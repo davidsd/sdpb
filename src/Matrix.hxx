@@ -114,7 +114,7 @@ public:
   }
 
   // The maximum absolute value of the elemnts of M
-  Real maxAbs() const { return maxAbsVector(elements); }
+  Real maxAbs() const { return max_abs_vector(elements); }
 
   friend std::ostream &operator<<(std::ostream &os, const Matrix &a);
 };

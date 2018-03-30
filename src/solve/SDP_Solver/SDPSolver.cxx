@@ -1009,8 +1009,8 @@ SDPSolverTerminateReason SDP_Solver::run(const path checkpointFile)
 
       timers["run.objectives"].resume();
       primalObjective
-        = sdp.objectiveConst + dotProduct(sdp.primalObjective, x);
-      dualObjective = sdp.objectiveConst + dotProduct(sdp.dualObjective, y);
+        = sdp.objectiveConst + dot_product(sdp.primalObjective, x);
+      dualObjective = sdp.objectiveConst + dot_product(sdp.dualObjective, y);
       dualityGap
         = abs(primalObjective - dualObjective)
           / max(Real(abs(primalObjective) + abs(dualObjective)), Real(1));
@@ -1041,7 +1041,7 @@ SDPSolverTerminateReason SDP_Solver::run(const path checkpointFile)
       // dualResidues[p] = primalObjective[p] - Tr(A_p Y) - (FreeVarMatrix y)_p,
       timers["run.computeDualResidues"].resume();
       computeDualResidues(sdp, y, BilinearPairingsY, dualResidues);
-      dualError = maxAbsVector(dualResidues);
+      dualError = max_abs_vector(dualResidues);
       timers["run.computeDualResidues"].stop();
 
       timers["run.computePrimalResidues"].resume();
@@ -1118,12 +1118,12 @@ SDPSolverTerminateReason SDP_Solver::run(const path checkpointFile)
                      betaCorrector);
 
       // Update the primal point (x, X) += primalStepLength*(dx, dX)
-      addScaledVector(x, primalStepLength, dx);
+      add_scaled_vector(x, primalStepLength, dx);
       dX *= primalStepLength;
       X += dX;
 
       // Update the dual point (y, Y) += dualStepLength*(dy, dY)
-      addScaledVector(y, dualStepLength, dy);
+      add_scaled_vector(y, dualStepLength, dy);
       dY *= dualStepLength;
       Y += dY;
     }

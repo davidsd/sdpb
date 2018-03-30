@@ -112,7 +112,7 @@ dualConstraintGroupFromPolVecMat(const Polynomial_Vector_Matrix &m)
     // scale factors s_k with x_k s_k.
     g.bilinearBases.push_back(
       sampleBilinearBasis(delta2, numSamples, m.bilinearBasis, m.samplePoints,
-                          multiplyVectors(m.samplePoints, m.sampleScalings)));
+                          multiply_vectors(m.samplePoints, m.sampleScalings)));
 
   return g;
 }
