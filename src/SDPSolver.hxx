@@ -5,28 +5,28 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
-
 #pragma once
 
+#include "BlockDiagonalMatrix.hxx"
+#include "Matrix.hxx"
+#include "SDP.hxx"
+#include "SDP_Solver_Parameters.hxx"
+#include "Vector.hxx"
+#include <boost/filesystem.hpp>
 #include <iostream>
 #include <ostream>
 #include <vector>
-#include <boost/filesystem.hpp>
-#include "Vector.hxx"
-#include "Matrix.hxx"
-#include "BlockDiagonalMatrix.hxx"
-#include "SDP.hxx"
-#include "SDP_Solver_Parameters.hxx"
 
-using std::vector;
-using std::ostream;
-using std::endl;
 using boost::filesystem::path;
+using std::endl;
+using std::ostream;
+using std::vector;
 
 // Reasons for terminating the solver.  See the manual for a detailed
 // description of each.
 //
-enum SDPSolverTerminateReason {
+enum SDPSolverTerminateReason
+{
   PrimalDualOptimal,
   PrimalFeasible,
   DualFeasible,
@@ -37,13 +37,14 @@ enum SDPSolverTerminateReason {
   MaxRuntimeExceeded,
 };
 
-ostream &operator<<(ostream& os, const SDPSolverTerminateReason& r);
+ostream &operator<<(ostream &os, const SDPSolverTerminateReason &r);
 
 // SDPSolver contains the data structures needed during the running of
 // the interior point algorithm.  Each structure is allocated when an
 // SDPSolver is initialized, and reused in each iteration.
 //
-class SDPSolver {
+class SDPSolver
+{
 public:
   // SDP to solve.
   SDP sdp;
@@ -79,7 +80,6 @@ public:
   Vector dy;
   BlockDiagonalMatrix dY;
 
-
   /********************************************/
   // Solver status
 
@@ -98,7 +98,7 @@ public:
   //   PrimalResidues = \sum_p A_p x_p - X
   //
   BlockDiagonalMatrix PrimalResidues;
-  Real primalError;  // maxAbs(PrimalResidues)
+  Real primalError; // maxAbs(PrimalResidues)
 
   // Discrepancy in the dual equality constraints, a Vector of length
   // P, called 'd' in the manual:
@@ -106,7 +106,7 @@ public:
   //   dualResidues = c - Tr(A_* Y) - B y
   //
   Vector dualResidues;
-  Real dualError;  // maxAbs(dualResidues)
+  Real dualError; // maxAbs(dualResidues)
 
   /********************************************/
   // Intermediate computations.
@@ -142,7 +142,7 @@ public:
   // BilinearPairingsXInv has one block for each block of X.  The
   // dimension of BilinearPairingsXInv.block[b] is (d_j+1)*m_j.  See
   // SDP.h for more information on d_j and m_j.
-  // 
+  //
   BlockDiagonalMatrix BilinearPairingsXInv;
   //
   // BilinearPairingsY is analogous to BilinearPairingsXInv, with
@@ -180,11 +180,11 @@ public:
   // schurStabilizeIndices[j] = a list of which directions of
   // SchurComplement.blocks[j] have been stabilized (counting from 0 at
   // the upper left of each block), for 0 <= j < J.
-  vector<vector<int> > schurStabilizeIndices;
+  vector<vector<int>> schurStabilizeIndices;
   //
   // schurStabilizeLambdas[j] = a list of constants Lambda for each
   // stabilized direction in schurStabilizeIndices[j], for 0 <= j < J.
-  vector<vector<Real> > schurStabilizeLambdas;
+  vector<vector<Real>> schurStabilizeLambdas;
   //
   // a list of block indices {j_0, j_1, ..., j_{M-1} } for blocks
   // which have at least one stabilized direction.  We say the blocks
@@ -198,7 +198,7 @@ public:
   //
   //   stabilizeBlockUpdateRow[m] = schurStabilizeIndices[j_m][0] +
   //                                SchurComplement.blockStartIndices[j_m]
-  // 
+  //
   vector<int> stabilizeBlockUpdateRow;
   //
   // For each 0 <= m < M, stabilizeBlockUpdateColumn records the
@@ -259,18 +259,17 @@ public:
   void loadCheckpoint(const path &checkpointFile);
   void saveSolution(const SDPSolverTerminateReason, const path &outFile);
   void printHeader();
-  void printIteration(int iteration,
-                      Real mu,
-                      Real primalStepLength,
-                      Real dualStepLength,
-                      Real betaCorrector);
+  void printIteration(int iteration, Real mu, Real primalStepLength,
+                      Real dualStepLength, Real betaCorrector);
 
- void testMultiplication(const int m_init, const int m_fin, const int m_step);
- private:
+  void testMultiplication(const int m_init, const int m_fin, const int m_step);
+
+private:
   // Compute data needed to solve the Schur complement equation
-  void initializeSchurComplementSolver(const BlockDiagonalMatrix &BilinearPairingsXInv,
-                                       const BlockDiagonalMatrix &BilinearPairingsY,
-                                       const Real &choleskyStabilizeThreshold);
+  void initializeSchurComplementSolver(
+  const BlockDiagonalMatrix &BilinearPairingsXInv,
+  const BlockDiagonalMatrix &BilinearPairingsY,
+  const Real &choleskyStabilizeThreshold);
 
   // Solve the Schur complement equation in-place for dx, dy.  dx and
   // dy will initially be set to the right-hand side of the equation.
@@ -281,7 +280,6 @@ public:
   // parameter beta.  `correctorPhase' specifies whether to use the
   // R-matrix corresponding to the corrector step (if false, we use
   // the predictor R-matrix)
-  void computeSearchDirection(const Real &beta, const Real &mu, const bool correctorPhase);
-
- 
+  void computeSearchDirection(const Real &beta, const Real &mu,
+                              const bool correctorPhase);
 };

@@ -24,15 +24,16 @@
 //   Tr(A_p Y) + (B y)_p = c_p
 //
 // A PolynomialVectorMatrix contains the data needed to construct this
-// DualConstraintGroup:  
+// DualConstraintGroup:
 //
-class Polynomial_Vector_Matrix {
- public:
+class Polynomial_Vector_Matrix
+{
+public:
   int rows; // rows of M
   int cols; // cols of M
 
   // elements of M, in row-major order
-  std::vector<std::vector<Polynomial> > elements;
+  std::vector<std::vector<Polynomial>> elements;
 
   // A list of real numbers x_k (0 <= k <= degree(M)) at which to
   // sample M(x) to construct the v_{b,k}.
@@ -46,21 +47,25 @@ class Polynomial_Vector_Matrix {
   // polynomial with degree deg(q_m) = m.
   std::vector<Polynomial> bilinearBasis;
 
-  inline const std::vector<Polynomial>& elt(const int r, const int c) const {
-    return elements[r + c*rows];
+  inline const std::vector<Polynomial> &elt(const int r, const int c) const
+  {
+    return elements[r + c * rows];
   }
 
-  inline std::vector<Polynomial>& elt(const int r, const int c) {
-    return elements[r + c*rows];
+  inline std::vector<Polynomial> &elt(const int r, const int c)
+  {
+    return elements[r + c * rows];
   }
 
   // The maximal degree of any of the components P^{rs}_n(x).
-  int degree() const {
+  int degree() const
+  {
     int d = 0;
-    for (std::vector<std::vector<Polynomial> >::const_iterator e = elements.begin();
-         e != elements.end(); e++)
-      for (std::vector<Polynomial>::const_iterator p = e->begin();
-           p != e->end(); p++)
+    for(std::vector<std::vector<Polynomial>>::const_iterator e
+        = elements.begin();
+        e != elements.end(); e++)
+      for(std::vector<Polynomial>::const_iterator p = e->begin();
+          p != e->end(); p++)
         d = std::max(p->degree(), d);
     return d;
   }

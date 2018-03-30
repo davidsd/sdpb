@@ -5,22 +5,22 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
-
 #pragma once
 
+#include "Vector.hxx"
+#include "types.hxx"
 #include <assert.h>
 #include <iostream>
 #include <ostream>
 #include <vector>
-#include "types.hxx"
-#include "Vector.hxx"
 
 using std::ostream;
 using std::vector;
 
 // A matrix M with Real entries
-class Matrix {
- public:
+class Matrix
+{
+public:
   int rows;
   int cols;
   // Elements of M in row-major order:
@@ -32,108 +32,108 @@ class Matrix {
   //
   Vector elements;
 
-  Matrix(int rows = 0, int cols = 0):
-    rows(rows),
-    cols(cols),
-    elements(Vector(rows*cols, 0)) {}
+  Matrix(int rows = 0, int cols = 0)
+      : rows(rows), cols(cols), elements(Vector(rows * cols, 0))
+  {}
 
- Matrix(int rows, int cols, Real * array):
-    rows(rows),
-      cols(cols),
-      elements(Vector(array, array + rows*cols)) {}
+  Matrix(int rows, int cols, Real *array)
+      : rows(rows), cols(cols), elements(Vector(array, array + rows * cols))
+  {}
 
-  inline const Real& elt(const int r, const int c) const {
-    return elements[r + c*rows];
+  inline const Real &elt(const int r, const int c) const
+  {
+    return elements[r + c * rows];
   }
 
-  inline Real& elt(const int r, const int c) {
-    return elements[r + c*rows];
-  }
+  inline Real &elt(const int r, const int c) { return elements[r + c * rows]; }
 
   // M := 0
-  void setZero() {
-    std::fill(elements.begin(), elements.end(), 0);
-  }
+  void setZero() { std::fill(elements.begin(), elements.end(), 0); }
 
   // M += c*I, where I is the identity and c is a constant
-  void addDiagonal(const Real &c) {
+  void addDiagonal(const Real &c)
+  {
     // ensure M is square
     assert(rows == cols);
 
-    for (int i = 0; i < rows; i++)
-      elt(i, i) += c;
+    for(int i = 0; i < rows; i++) elt(i, i) += c;
   }
 
-  void resize(int r, int c) {
-    elements.resize(r*c);
+  void resize(int r, int c)
+  {
+    elements.resize(r * c);
     rows = r;
     cols = c;
   }
 
-  void symmetrize() {
+  void symmetrize()
+  {
     assert(rows == cols);
 
-    for (int r = 0; r < rows; r++) {
-      for (int c = 0; c < r; c++) {
-        Real tmp = (elt(r, c) + elt(c, r))/2;
-        elt(r, c) = tmp;
-        elt(c, r) = tmp;
+    for(int r = 0; r < rows; r++)
+      {
+        for(int c = 0; c < r; c++)
+          {
+            Real tmp = (elt(r, c) + elt(c, r)) / 2;
+            elt(r, c) = tmp;
+            elt(c, r) = tmp;
+          }
       }
-    }
   }
 
   // M := A
-  void copyFrom(const Matrix &A) {
+  void copyFrom(const Matrix &A)
+  {
     assert(rows == A.rows);
     assert(cols == A.cols);
 
-    for (unsigned int i = 0; i < elements.size(); i++)
+    for(unsigned int i = 0; i < elements.size(); i++)
       elements[i] = A.elements[i];
   }
 
   // M := M + A
-  void operator+=(const Matrix &A) {
-    for (unsigned int i = 0; i < elements.size(); i++)
+  void operator+=(const Matrix &A)
+  {
+    for(unsigned int i = 0; i < elements.size(); i++)
       elements[i] += A.elements[i];
   }
 
   // M := M - A
-  void operator-=(const Matrix &A) {
-    for (unsigned int i = 0; i < elements.size(); i++)
+  void operator-=(const Matrix &A)
+  {
+    for(unsigned int i = 0; i < elements.size(); i++)
       elements[i] -= A.elements[i];
   }
 
   // M := c*M, where c is a constant
-  void operator*=(const Real &c) {
-    for (unsigned int i = 0; i < elements.size(); i++)
-      elements[i] *= c;
+  void operator*=(const Real &c)
+  {
+    for(unsigned int i = 0; i < elements.size(); i++) elements[i] *= c;
   }
 
-  Matrix operator-(const Matrix &other) const{
-    Matrix out(rows,cols);
-    std::transform(elements.begin(),elements.end(),other.elements.begin(),out.elements.begin(),std::minus<Real>());
+  Matrix operator-(const Matrix &other) const
+  {
+    Matrix out(rows, cols);
+    std::transform(elements.begin(), elements.end(), other.elements.begin(),
+                   out.elements.begin(), std::minus<Real>());
     return out;
   }
 
   // The maximum absolute value of the elemnts of M
-  Real maxAbs() const {
-    return maxAbsVector(elements);
-  }
+  Real maxAbs() const { return maxAbsVector(elements); }
 
-  friend ostream& operator<<(ostream& os, const Matrix& a);
+  friend ostream &operator<<(ostream &os, const Matrix &a);
 };
 
 // C := alpha*A + beta*C
-void matrixScaleAdd(Real alpha, Matrix &A,
-		    Real beta, Matrix &C);
+void matrixScaleAdd(Real alpha, Matrix &A, Real beta, Matrix &C);
 
 // C := alpha*A + beta*C
-void matrixScaleAdd(Real alpha, Real * A,
-		    Real beta, Matrix &C);
+void matrixScaleAdd(Real alpha, Real *A, Real beta, Matrix &C);
 
 // C := alpha*A*B + beta*C
-void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B,
-                            Real beta, Matrix &C);
+void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B, Real beta,
+                            Matrix &C);
 // C := A*B
 void matrixMultiply(Matrix &A, Matrix &B, Matrix &C);
 
@@ -145,8 +145,8 @@ void matrixSquareIntoBlockGPU(Matrix &A, Matrix &B, int bRow, int bCol);
 void lowerTriangularInverseCongruence(Matrix &A, Matrix &L);
 
 // y := alpha A x + beta y
-void vectorScaleMatrixMultiplyAdd(Real alpha, Matrix &A, Vector &x,
-                                  Real beta, Vector &y);
+void vectorScaleMatrixMultiplyAdd(Real alpha, Matrix &A, Vector &x, Real beta,
+                                  Vector &y);
 
 // y := alpha A^T x + beta y
 void vectorScaleMatrixMultiplyTransposeAdd(Real alpha, Matrix &A, Vector &x,
@@ -157,8 +157,8 @@ Real frobeniusProductSymmetric(const Matrix &A, const Matrix &B);
 
 // (X + dX) . (Y + dY), where X, dX, Y, dY are symmetric Matrices and
 // '.' is the Frobenius product.
-Real frobeniusProductOfSums(const Matrix &X, const Matrix &dX,
-                            const Matrix &Y, const Matrix &dY);
+Real frobeniusProductOfSums(const Matrix &X, const Matrix &dX, const Matrix &Y,
+                            const Matrix &dY);
 
 // Eigenvalues of A, via the QR method
 // Inputs:
@@ -262,4 +262,3 @@ void lowerTriangularTransposeSolve(Matrix &L, Vector &b);
 // - X         : dim x dim matrix (overwritten)
 //
 void matrixSolveWithCholesky(Matrix &ACholesky, Matrix &X);
-

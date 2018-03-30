@@ -5,20 +5,19 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
-
 #pragma once
 
-#include <algorithm>
-#include <vector>
-#include <iostream>
-#include <ostream>
-#include "types.hxx"
-#include "Vector.hxx"
 #include "Matrix.hxx"
 #include "Polynomial_Vector_Matrix.hxx"
+#include "Vector.hxx"
+#include "types.hxx"
+#include <algorithm>
+#include <iostream>
+#include <ostream>
+#include <vector>
 
-using std::vector;
 using std::ostream;
+using std::vector;
 
 // The class SDP encodes a semidefinite program of the following form
 //
@@ -54,7 +53,7 @@ using std::ostream;
 //
 // - The constraints labeled by 0 <= p < P are in 1-to-1
 //   correspondence with tuples
-//   
+//
 //   p <-> (j,r,s,k) where 0 <= j < J,
 //                         0 <= s < m_j,
 //                         0 <= r <= s,
@@ -85,18 +84,20 @@ using std::ostream;
 // IndexTuple is simply a named version of the 4-tuple (p,r,s,k).  A
 // given IndexTuple uniquely specifies a constraint matrix A_p.
 //
-class IndexTuple {
- public:
+class IndexTuple
+{
+public:
   int p; // overall index of the constraint
   int r; // first index for E^{rs}
   int s; // second index for E^{rs}
   int k; // index for v_{b,k}
-  IndexTuple(int p, int r, int s, int k): p(p), r(r), s(s), k(k) {}
+  IndexTuple(int p, int r, int s, int k) : p(p), r(r), s(s), k(k) {}
   IndexTuple() {}
 };
 
-class SDP {
- public:
+class SDP
+{
+public:
   // bilinearBases is a vector of Matrices encoding the v_{b,k}
   // that enter the constraint matrices. Specifically, v_{b,k} are
   // the columns of bilinearBases[b],
@@ -132,9 +133,9 @@ class SDP {
   // entering the constraint matrices A_p.  blocks[j1] and blocks[j2]
   // are disjoint unless j1==j2.
   //
-  vector<vector<int> > blocks;
+  vector<vector<int>> blocks;
 
-  // constraintIndices gives the 1-to-many mapping described above 
+  // constraintIndices gives the 1-to-many mapping described above
   //
   // constraintIndices[j] = { IndexTuple(p,r,s,k)
   //                          for 0 <= s < m_j,
@@ -145,24 +146,29 @@ class SDP {
   // This allows us to loop through the constraints A_p associated to
   // each j.
   //
-  vector<vector<IndexTuple> > constraintIndices;
+  vector<vector<IndexTuple>> constraintIndices;
 
   // create the mapping j -> { IndexTuple(p,r,s,k) } described above
   //
-  void initializeConstraintIndices() {
+  void initializeConstraintIndices()
+  {
     int p = 0;
-    for (unsigned int j = 0; j < dimensions.size(); j++) {
-      constraintIndices.push_back(vector<IndexTuple>(0));
+    for(unsigned int j = 0; j < dimensions.size(); j++)
+      {
+        constraintIndices.push_back(vector<IndexTuple>(0));
 
-      for (int s = 0; s < dimensions[j]; s++) {
-        for (int r = 0; r <= s; r++) {
-          for (int k = 0; k <= degrees[j]; k++) {
-            constraintIndices[j].push_back(IndexTuple(p, r, s, k));
-            p++;
+        for(int s = 0; s < dimensions[j]; s++)
+          {
+            for(int r = 0; r <= s; r++)
+              {
+                for(int k = 0; k <= degrees[j]; k++)
+                  {
+                    constraintIndices[j].push_back(IndexTuple(p, r, s, k));
+                    p++;
+                  }
+              }
           }
-        }
       }
-    }
     assert(p == static_cast<int>(primalObjective.size()));
   }
 
@@ -170,11 +176,12 @@ class SDP {
   //
   // psdMatrixBlockDims()[b] = (delta_b+1)*m_j = length(v_{b,*})*m_j
   //
-  vector<int> psdMatrixBlockDims() const {
+  vector<int> psdMatrixBlockDims() const
+  {
     vector<int> dims;
-    for (unsigned int j = 0; j < dimensions.size(); j++)
-      for (vector<int>::const_iterator b = blocks[j].begin();
-           b != blocks[j].end(); b++)
+    for(unsigned int j = 0; j < dimensions.size(); j++)
+      for(vector<int>::const_iterator b = blocks[j].begin();
+          b != blocks[j].end(); b++)
         dims.push_back(bilinearBases[*b].rows * dimensions[j]);
     return dims;
   }
@@ -183,11 +190,12 @@ class SDP {
   //
   // bilinearPairingBlockDims()[b] = (d_j + 1)*m_j
   //
-  vector<int> bilinearPairingBlockDims() const {
+  vector<int> bilinearPairingBlockDims() const
+  {
     vector<int> dims;
-    for (unsigned int j = 0; j < dimensions.size(); j++)
-      for (vector<int>::const_iterator b = blocks[j].begin();
-           b != blocks[j].end(); b++)
+    for(unsigned int j = 0; j < dimensions.size(); j++)
+      for(vector<int>::const_iterator b = blocks[j].begin();
+          b != blocks[j].end(); b++)
         dims.push_back(bilinearBases[*b].cols * dimensions[j]);
     return dims;
   }
@@ -197,23 +205,23 @@ class SDP {
   // schurBlockDims()[j] = (d_j+1)*m_j*(m_j+1)/2
   //                     = length(constraintIndices[j])
   //
-  vector<int> schurBlockDims() const {
+  vector<int> schurBlockDims() const
+  {
     vector<int> dims;
-    for (unsigned int j = 0; j < dimensions.size(); j++)
+    for(unsigned int j = 0; j < dimensions.size(); j++)
       dims.push_back(constraintIndices[j].size());
     return dims;
   }
 
   // Print an SDP, for debugging purposes
-  friend ostream& operator<<(ostream& os, const SDP& sdp) {
+  friend ostream &operator<<(ostream &os, const SDP &sdp)
+  {
     os << "SDP(bilinearBases = " << sdp.bilinearBases
        << ", FreeVarMatrix = " << sdp.FreeVarMatrix
        << ", primalObjective = " << sdp.primalObjective
        << ", dualObjective = " << sdp.dualObjective
-       << ", dimensions = " << sdp.dimensions
-       << ", degrees = " << sdp.degrees
-       << ", blocks = " << sdp.blocks
-       << ")";
+       << ", dimensions = " << sdp.dimensions << ", degrees = " << sdp.degrees
+       << ", blocks = " << sdp.blocks << ")";
     return os;
   }
 };
@@ -221,7 +229,7 @@ class SDP {
 // DualConstraintGroup represents a set of constraints of the form
 //
 //   Tr(A_p Y) + (B y)_p = c_p
-// 
+//
 // for a fixed j in the definition of SDP above. Here p corresponds to
 //
 //   p <-> (r,s,k) where 0 <= s < dim,
@@ -241,8 +249,9 @@ class SDP {
 // bootstrapSDP.  Perhaps this level of generality will be useful in
 // the future.
 //
-class DualConstraintGroup {
- public:
+class DualConstraintGroup
+{
+public:
   int dim;
   int degree;
 
@@ -259,7 +268,5 @@ class DualConstraintGroup {
   vector<Matrix> bilinearBases;
 };
 
-
 SDP bootstrapSDP(const Vector &affineObjective,
                  const vector<Polynomial_Vector_Matrix> &polVectorMatrices);
-

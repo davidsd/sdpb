@@ -16,6 +16,9 @@ parse_append_many(const std::string &name,
   for(auto &child : tree)
     {
       if(child.first == name)
-        { result.emplace_back(parse_function(child.second)); } }
+        {
+          result.emplace_back(parse_function(child.second));
+        }
+    }
   return result;
 }

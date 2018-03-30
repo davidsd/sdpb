@@ -5,7 +5,6 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
-
 #pragma once
 
 #include <mblas.h>
@@ -13,4 +12,3 @@
 
 typedef mpackint Integer;
 typedef mpf_class Real;
-
