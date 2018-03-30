@@ -10,4 +10,4 @@
 #include "SDP.hxx"
 #include <boost/filesystem.hpp>
 
-SDP read_bootstrap_sdp(const std::vector<boost::filesystem::path> sdp_files);
+SDP read_bootstrap_sdp(const std::vector<boost::filesystem::path> &sdp_files);
