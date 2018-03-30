@@ -19,7 +19,6 @@
 class Timers : public std::map<std::string, boost::timer::cpu_timer>
 {
 public:
-  // For printing out timing information
   friend std::ostream &operator<<(std::ostream &os, const Timers &timers)
   {
     unsigned long max_length = 0;
@@ -30,8 +29,7 @@ public:
     for(auto &timer : timers)
       {
         os << std::setw(max_length) << std::left << timer.first << " :"
-           << timer.second.format(); // should be replaced with more
-                                     // intelligent alignment
+           << timer.second.format();
       }
     return os;
   }
