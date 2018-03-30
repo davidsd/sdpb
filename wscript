@@ -87,7 +87,7 @@ def build(bld):
                         'src/solve/SDP_Solver/IO.cxx',
                         'src/solve/SDP_Solver/SDPSolver.cxx',
                         'src/solve/SDP_Solver/BlockDiagonalMatrix.cxx',
-                        'src/solve/SDP.cxx',
+                        'src/solve/SDP/SDP.cxx',
                         'src/solve/read_bootstrap_sdp/read_bootstrap_sdp.cxx',
                         'src/solve/read_bootstrap_sdp/parse_vector.cxx',
                         'src/solve/read_bootstrap_sdp/parse_Real.cxx',

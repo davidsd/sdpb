@@ -5,8 +5,8 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
-#include "SDP.hxx"
-#include <vector>
+#include "Dual_Constraint_Group.hxx"
+#include "../SDP.hxx"
 
 // Given a vector of polynomials {q_0(x), q_1(x), ..., q_n(x)} of
 // degree deg q_m(x) = m, a list of numSamples points x_k and scaling
@@ -54,10 +54,10 @@ Matrix sampleBilinearBasis(const int maxDegree, const int numSamples,
 //
 // for tuples p = (r,s,k).
 //
-DualConstraintGroup
+Dual_Constraint_Group
 dualConstraintGroupFromPolVecMat(const Polynomial_Vector_Matrix &m)
 {
-  DualConstraintGroup g;
+  Dual_Constraint_Group g;
 
   assert(m.rows == m.cols);
   g.dim = m.rows;
@@ -117,17 +117,17 @@ dualConstraintGroupFromPolVecMat(const Polynomial_Vector_Matrix &m)
   return g;
 }
 
-// Collect a bunch of DualConstraintGroup's and a dual objective
+// Collect a bunch of Dual_Constraint_Group's and a dual objective
 // function into an SDP.
 SDP sdpFromDualConstraintGroups(
   const Vector &dualObjective, const Real &objectiveConst,
-  const vector<DualConstraintGroup> &dualConstraintGroups)
+  const vector<Dual_Constraint_Group> &dualConstraintGroups)
 {
   SDP sdp;
   sdp.dualObjective = dualObjective;
   sdp.objectiveConst = objectiveConst;
 
-  for(vector<DualConstraintGroup>::const_iterator g
+  for(vector<Dual_Constraint_Group>::const_iterator g
       = dualConstraintGroups.begin();
       g != dualConstraintGroups.end(); g++)
     {
@@ -145,14 +145,14 @@ SDP sdpFromDualConstraintGroups(
 
   int p = 0;
   // Each g corresponds to an index 0 <= j < J (not used explicitly here)
-  for(vector<DualConstraintGroup>::const_iterator g
+  for(vector<Dual_Constraint_Group>::const_iterator g
       = dualConstraintGroups.begin();
       g != dualConstraintGroups.end(); g++)
     {
       // sdp.bilinearBases is the concatenation of the g.bilinearBases.
       // The matrix Y is a BlockDiagonalMatrix built from the
       // concatenation of the blocks for each individual
-      // DualConstraintGroup.  sdp.blocks[j] = {b1, b2, ... } contains
+      // Dual_Constraint_Group.  sdp.blocks[j] = {b1, b2, ... } contains
       // the indices for the blocks of Y corresponding to the j-th
       // group.
       vector<int> blocks;
@@ -191,8 +191,8 @@ SDP sdpFromDualConstraintGroups(
 SDP bootstrapSDP(const Vector &affineObjective,
                  const vector<Polynomial_Vector_Matrix> &polVectorMatrices)
 {
-  // Convert polVectorMatrices into DualConstraintGroup's
-  vector<DualConstraintGroup> dualConstraintGroups;
+  // Convert polVectorMatrices into Dual_Constraint_Group's
+  vector<Dual_Constraint_Group> dualConstraintGroups;
   for(vector<Polynomial_Vector_Matrix>::const_iterator m
       = polVectorMatrices.begin();
       m != polVectorMatrices.end(); m++)
