@@ -188,8 +188,8 @@ SDP sdpFromDualConstraintGroups(
 // with y the dual decision variables.  polVectorMatrices are
 // described in SDP.h.
 //
-SDP bootstrapSDP(const Vector &affineObjective,
-                 const vector<Polynomial_Vector_Matrix> &polVectorMatrices)
+SDP bootstrap_SDP(const Vector &affineObjective,
+                  const vector<Polynomial_Vector_Matrix> &polVectorMatrices)
 {
   // Convert polVectorMatrices into Dual_Constraint_Group's
   vector<Dual_Constraint_Group> dualConstraintGroups;

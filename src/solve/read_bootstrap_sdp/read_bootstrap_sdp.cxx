@@ -47,5 +47,5 @@ SDP read_bootstrap_sdp(const std::vector<boost::filesystem::path> &sdp_files)
                             polynomialVectorMatrices);
         }
     }
-  return bootstrapSDP(objective, polynomialVectorMatrices);
+  return bootstrap_SDP(objective, polynomialVectorMatrices);
 }

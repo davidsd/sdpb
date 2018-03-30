@@ -199,6 +199,6 @@ public:
 };
 
 
-SDP bootstrapSDP(
+SDP bootstrap_SDP(
   const Vector &affineObjective,
   const std::vector<Polynomial_Vector_Matrix> &polVectorMatrices);
