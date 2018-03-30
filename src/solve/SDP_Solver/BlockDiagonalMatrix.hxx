@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include "Matrix.hxx"
-#include "types.hxx"
+#include "../../Matrix.hxx"
+#include "../../types.hxx"
 #include <iostream>
 #include <ostream>
 #include <vector>

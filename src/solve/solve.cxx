@@ -5,11 +5,10 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
-#include "../SDP.hxx"
-#include "../SDPSolver.hxx"
+#include "SDP.hxx"
+#include "SDP_Solver.hxx"
 #include "../Timers.hxx"
-#include "../read_bootstrap_sdp.hxx"
-#include "../types.hxx"
+
 #include <algorithm>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/filesystem.hpp>
@@ -20,9 +19,11 @@
 #include <ostream>
 #include <string>
 
-namespace po = boost::program_options;
-
+// FIXME: Pass this around instead of having a global.
 Timers timers;
+
+SDP read_bootstrap_sdp(const std::vector<boost::filesystem::path> &sdp_files);
+
 
 int solve(const std::vector<boost::filesystem::path> &sdpFiles,
           const boost::filesystem::path &outFile,
@@ -53,7 +54,7 @@ int solve(const std::vector<boost::filesystem::path> &sdpFiles,
   std::cout << parameters << '\n';
 
   // Read an SDP from sdpFile and create a solver for it
-  SDPSolver solver(read_bootstrap_sdp(sdpFiles), parameters);
+  SDP_Solver solver(read_bootstrap_sdp(sdpFiles), parameters);
 
   if(exists(checkpointFileIn))
     solver.loadCheckpoint(checkpointFileIn);
@@ -62,7 +63,6 @@ int solve(const std::vector<boost::filesystem::path> &sdpFiles,
   timers["Last checkpoint"].start();
   SDPSolverTerminateReason reason = solver.run(checkpointFileOut);
   timers["Solver runtime"].stop();
-  // SDPSolverTerminateReason reason;
   std::cout << "-----" << std::setfill('-') << std::setw(116) << std::left
             << reason << '\n';
   std::cout << '\n';

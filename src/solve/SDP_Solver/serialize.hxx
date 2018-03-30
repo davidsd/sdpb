@@ -8,8 +8,8 @@
 #pragma once
 
 #include "BlockDiagonalMatrix.hxx"
-#include "Matrix.hxx"
-#include "Vector.hxx"
+#include "../../Matrix.hxx"
+#include "../../Vector.hxx"
 #include "boost/archive/text_iarchive.hpp"
 #include "boost/archive/text_oarchive.hpp"
 #include "boost/filesystem/fstream.hpp"
@@ -19,7 +19,6 @@
 #include "boost/serialization/string.hpp"
 #include "boost/serialization/utility.hpp"
 #include "boost/serialization/vector.hpp"
-#include "types.hxx"
 #include <boost/filesystem.hpp>
 #include <sstream>
 #include <string>

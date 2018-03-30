@@ -7,11 +7,11 @@
 
 #pragma once
 
-#include "BlockDiagonalMatrix.hxx"
-#include "Matrix.hxx"
+#include "SDP_Solver/BlockDiagonalMatrix.hxx"
+#include "../Matrix.hxx"
 #include "SDP.hxx"
-#include "SDP_Solver_Parameters.hxx"
-#include "Vector.hxx"
+#include "../SDP_Solver_Parameters.hxx"
+#include "../Vector.hxx"
 #include <boost/filesystem.hpp>
 #include <iostream>
 #include <ostream>
@@ -43,7 +43,7 @@ ostream &operator<<(ostream &os, const SDPSolverTerminateReason &r);
 // the interior point algorithm.  Each structure is allocated when an
 // SDPSolver is initialized, and reused in each iteration.
 //
-class SDPSolver
+class SDP_Solver
 {
 public:
   // SDP to solve.
@@ -249,7 +249,7 @@ public:
   // Methods
 
   // Create a new solver for a given SDP, with the given parameters
-  SDPSolver(const SDP &sdp, const SDP_Solver_Parameters &parameters);
+  SDP_Solver(const SDP &sdp, const SDP_Solver_Parameters &parameters);
 
   // Run the solver, backing up to checkpointFile
   SDPSolverTerminateReason run(const path checkpointFile);

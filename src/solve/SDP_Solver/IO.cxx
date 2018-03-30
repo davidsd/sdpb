@@ -5,13 +5,13 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
-#include "SDPSolver.hxx"
-#include "Timers.hxx"
-#include "boost/archive/text_iarchive.hpp"
-#include "boost/archive/text_oarchive.hpp"
-#include "boost/date_time/posix_time/posix_time.hpp"
-#include "boost/filesystem/fstream.hpp"
+#include "../SDP_Solver.hxx"
+#include "../Timers.hxx"
 #include "serialize.hxx"
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem.hpp>
 #include <iostream>
 #include <ostream>
@@ -73,7 +73,7 @@ ostream &operator<<(ostream &os, const SDPSolverTerminateReason &r)
   return os;
 }
 
-void SDPSolver::printHeader()
+void SDP_Solver::printHeader()
 {
   cout << "\n     time      mu        P-obj       D-obj      gap         "
           "P-err       D-err      P-step   D-step   beta  dim/stabilized\n";
@@ -81,7 +81,7 @@ void SDPSolver::printHeader()
           "------------------------------------------------------\n";
 }
 
-void SDPSolver::printIteration(int iteration, Real mu, Real primalStepLength,
+void SDP_Solver::printIteration(int iteration, Real mu, Real primalStepLength,
                                Real dualStepLength, Real betaCorrector)
 {
   time_duration td(microseconds(timers["Solver runtime"].elapsed().wall)
@@ -109,7 +109,7 @@ void backupCheckpointFile(path const &checkpointFile)
             boost::filesystem::copy_option::overwrite_if_exists);
 }
 
-void SDPSolver::saveCheckpoint(const path &checkpointFile)
+void SDP_Solver::saveCheckpoint(const path &checkpointFile)
 {
   if(exists(checkpointFile))
     backupCheckpointFile(checkpointFile);
@@ -120,7 +120,7 @@ void SDPSolver::saveCheckpoint(const path &checkpointFile)
   timers["Last checkpoint"].start();
 }
 
-void SDPSolver::loadCheckpoint(const path &checkpointFile)
+void SDP_Solver::loadCheckpoint(const path &checkpointFile)
 {
   boost::filesystem::ifstream ifs(checkpointFile);
   boost::archive::text_iarchive ar(ifs);
@@ -128,7 +128,7 @@ void SDPSolver::loadCheckpoint(const path &checkpointFile)
   boost::serialization::serializeSDPSolverState(ar, x, X, y, Y);
 }
 
-void SDPSolver::saveSolution(const SDPSolverTerminateReason terminateReason,
+void SDP_Solver::saveSolution(const SDPSolverTerminateReason terminateReason,
                              const path &outFile)
 {
   boost::filesystem::ofstream ofs(outFile);

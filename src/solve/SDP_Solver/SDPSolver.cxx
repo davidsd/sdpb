@@ -6,8 +6,8 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
-#include "SDPSolver.hxx"
-#include "Timers.hxx"
+#include "../SDP_Solver.hxx"
+#include "../Timers.hxx"
 #include <algorithm>
 #include <boost/filesystem.hpp>
 #include <iostream>
@@ -41,7 +41,7 @@ using std::cout;
 // Create and initialize an SDPSolver for the given SDP and
 // SDP_Solver_Parameters
 
-SDPSolver::SDPSolver(const SDP &sdp, const SDP_Solver_Parameters &parameters)
+SDP_Solver::SDP_Solver(const SDP &sdp, const SDP_Solver_Parameters &parameters)
     : sdp(sdp), parameters(parameters), x(sdp.primalObjective.size(), 0),
       X(sdp.psdMatrixBlockDims()), y(sdp.dualObjective.size(), 0), Y(X), dx(x),
       dX(X), dy(y), dY(Y), PrimalResidues(X), dualResidues(x), XCholesky(X),
@@ -646,7 +646,7 @@ Real stepLength(BlockDiagonalMatrix &MCholesky, BlockDiagonalMatrix &dM,
 // - stabilizeBlocks
 // - Q, Qpivots
 //
-void SDPSolver::initializeSchurComplementSolver(
+void SDP_Solver::initializeSchurComplementSolver(
 const BlockDiagonalMatrix &BilinearPairingsXInv,
 const BlockDiagonalMatrix &BilinearPairingsY,
 const Real &choleskyStabilizeThreshold)
@@ -828,7 +828,7 @@ const Real &choleskyStabilizeThreshold)
 // The equation is solved using the block-decomposition described in
 // the manual.
 //
-void SDPSolver::solveSchurComplementEquation(Vector &dx, Vector &dy)
+void SDP_Solver::solveSchurComplementEquation(Vector &dx, Vector &dy)
 {
   // dx = SchurComplementCholesky^{-1} dx
   blockMatrixLowerTriangularSolve(SchurComplementCholesky, dx);
@@ -898,7 +898,7 @@ void SDPSolver::solveSchurComplementEquation(Vector &dx, Vector &dy)
 // Outputs (members of SDPSolver which are modified in-place):
 // - dx, dX, dy, dY
 //
-void SDPSolver::computeSearchDirection(const Real &beta, const Real &mu,
+void SDP_Solver::computeSearchDirection(const Real &beta, const Real &mu,
                                        const bool correctorPhase)
 {
   string timerName = "computeSearchDirection(";
@@ -984,7 +984,7 @@ void SDPSolver::computeSearchDirection(const Real &beta, const Real &mu,
 // function.
 //             Its just simpler to see this way what's timed and what's not
 
-SDPSolverTerminateReason SDPSolver::run(const path checkpointFile)
+SDPSolverTerminateReason SDP_Solver::run(const path checkpointFile)
 {
   Real primalStepLength;
   Real dualStepLength;

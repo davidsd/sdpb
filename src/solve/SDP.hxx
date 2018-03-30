@@ -7,10 +7,10 @@
 
 #pragma once
 
-#include "Matrix.hxx"
-#include "Polynomial_Vector_Matrix.hxx"
-#include "Vector.hxx"
-#include "types.hxx"
+#include "../Matrix.hxx"
+#include "../Polynomial_Vector_Matrix.hxx"
+#include "../Vector.hxx"
+#include "../types.hxx"
 #include <algorithm>
 #include <iostream>
 #include <ostream>
