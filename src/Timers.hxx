@@ -20,60 +20,44 @@ class Timers : public std::map<std::string, boost::timer::cpu_timer>
 {
 public:
   // For printing out timing information
-  friend std::ostream &operator<<(std::ostream &os, const Timers &t)
+  friend std::ostream &operator<<(std::ostream &os, const Timers &timers)
   {
-    unsigned long maxLength = 0;
-    for(std::map<std::string, boost::timer::cpu_timer>::const_iterator it
-        = t.begin();
-        it != t.end(); ++it)
+    unsigned long max_length = 0;
+    for(auto &timer : timers)
       {
-        if(it->first.length() > maxLength)
-          {
-            maxLength = it->first.length();
-          }
+        max_length = std::max(max_length, timer.first.length());
       }
-    for(std::map<std::string, boost::timer::cpu_timer>::const_iterator it
-        = t.begin();
-        it != t.end(); ++it)
+    for(auto &timer : timers)
       {
-        os << std::setw(maxLength) << std::left << it->first << " :"
-           << it->second.format(); // should be replaced with more intelligent
-                                   // alignment
+        os << std::setw(max_length) << std::left << timer.first << " :"
+           << timer.second.format(); // should be replaced with more
+                                     // intelligent alignment
       }
     return os;
   }
 
-  void writeMFile(std::string filename)
+  void write_profile(std::string filename)
   {
-    std::ofstream f;
-    f.open(filename, std::ofstream::out | std::ofstream::trunc);
+    std::ofstream f(filename, std::ofstream::out | std::ofstream::trunc);
 
-    f << "{" << std::endl;
-
-    std::map<std::string, boost::timer::cpu_timer>::const_iterator final
-      = this->end();
-    --final;
-
-    for(std::map<std::string, boost::timer::cpu_timer>::const_iterator it
-        = this->begin();
-        it != this->end(); ++it)
+    f << "{" << '\n';
+    for(auto it(begin()); it != end();)
       {
         f << "    {\"" << it->first
           << it->second.format(10, "\", %w, %u, %s }");
-        if(it != final)
+
+        ++it;
+        if(it != end())
           {
             f << ",";
           }
-        f << std::endl;
+        f << '\n';
       }
-
-    f << "}" << std::endl;
-
-    f.close();
+    f << "}" << '\n';
   }
 };
 
-// A global Timers map for the whole program (defined in main.cpp).  A
+// A global Timers map for the whole program (defined in solve.cxx).  A
 // new timer is created by default whenever `timers' is accessed.  To
 // time something, simply replace
 //

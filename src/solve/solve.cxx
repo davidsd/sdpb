@@ -76,7 +76,7 @@ int solve(const std::vector<boost::filesystem::path> &sdp_files,
 
   std::cout << '\n' << timers;
 
-  timers.writeMFile(out_file.string() + ".profiling");
+  timers.write_profile(out_file.string() + ".profiling");
 
   return 0;
 }
