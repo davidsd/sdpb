@@ -12,39 +12,39 @@
 
 namespace po = boost::program_options;
 
-int solve(const std::vector<boost::filesystem::path> &sdpFiles,
-          const boost::filesystem::path &outFile,
-          const boost::filesystem::path &checkpointFileIn,
-          const boost::filesystem::path &checkpointFileOut,
+int solve(const std::vector<boost::filesystem::path> &sdp_files,
+          const boost::filesystem::path &out_file,
+          const boost::filesystem::path &checkpoint_file_in,
+          const boost::filesystem::path &checkpoint_file_out,
           SDP_Solver_Parameters parameters);
 
 int main(int argc, char **argv)
 {
-  std::vector<boost::filesystem::path> sdpFiles;
-  boost::filesystem::path outFile;
-  boost::filesystem::path checkpointFileIn;
-  boost::filesystem::path checkpointFileOut;
-  boost::filesystem::path paramFile;
+  std::vector<boost::filesystem::path> sdp_files;
+  boost::filesystem::path out_file;
+  boost::filesystem::path checkpoint_file_in;
+  boost::filesystem::path checkpoint_file_out;
+  boost::filesystem::path param_file;
 
   SDP_Solver_Parameters parameters;
 
   po::options_description basicOptions("Basic options");
   basicOptions.add_options()("help,h", "Show this helpful message.")(
   "sdpFile,s",
-  po::value<std::vector<boost::filesystem::path>>(&sdpFiles)->required(),
+  po::value<std::vector<boost::filesystem::path>>(&sdp_files)->required(),
   "SDP data file(s) in XML format. Use this option repeatedly to specify "
   "multiple data files.")(
-  "paramFile,p", po::value<boost::filesystem::path>(&paramFile),
+  "paramFile,p", po::value<boost::filesystem::path>(&param_file),
   "Any parameter can optionally be set via this file in key=value "
   "format. Command line arguments override values in the parameter "
-  "file.")("outFile,o", po::value<boost::filesystem::path>(&outFile),
+  "file.")("outFile,o", po::value<boost::filesystem::path>(&out_file),
            "The optimal solution is saved to this file in Mathematica "
            "format. Defaults to sdpFile with '.out' extension.")(
-  "checkpointFile,c", po::value<boost::filesystem::path>(&checkpointFileOut),
+  "checkpointFile,c", po::value<boost::filesystem::path>(&checkpoint_file_out),
   "Checkpoints are saved to this file every checkpointInterval. Defaults "
   "to sdpFile with '.ck' extension.")(
   "initialCheckpointFile,i",
-  po::value<boost::filesystem::path>(&checkpointFileIn),
+  po::value<boost::filesystem::path>(&checkpoint_file_in),
   "The initial checkpoint to load. Defaults to checkpointFile.");
 
   po::options_description solverParamsOptions("Solver parameters");
@@ -157,8 +157,8 @@ int main(int argc, char **argv)
 
       if(variablesMap.count("paramFile"))
         {
-          paramFile = variablesMap["paramFile"].as<boost::filesystem::path>();
-          std::ifstream ifs(paramFile.string().c_str());
+          param_file = variablesMap["paramFile"].as<boost::filesystem::path>();
+          std::ifstream ifs(param_file.string().c_str());
           po::store(po::parse_config_file(ifs, solverParamsOptions),
                     variablesMap);
         }
@@ -167,22 +167,22 @@ int main(int argc, char **argv)
 
       if(!variablesMap.count("outFile"))
         {
-          outFile = sdpFiles[0];
-          outFile.replace_extension("out");
+          out_file = sdp_files[0];
+          out_file.replace_extension("out");
         }
 
       if(!variablesMap.count("checkpointFile"))
         {
-          checkpointFileOut = sdpFiles[0];
-          checkpointFileOut.replace_extension("ck");
+          checkpoint_file_out = sdp_files[0];
+          checkpoint_file_out.replace_extension("ck");
         }
 
       if(!variablesMap.count("initialCheckpointFile"))
         {
-          checkpointFileIn = checkpointFileOut;
+          checkpoint_file_in = checkpoint_file_out;
         }
 
-      std::ofstream ofs(outFile.string().c_str());
+      std::ofstream ofs(out_file.string().c_str());
       ofs.close();
       if(!ofs)
         {
@@ -197,6 +197,6 @@ int main(int argc, char **argv)
       return 1;
     }
 
-  return solve(sdpFiles, outFile, checkpointFileIn, checkpointFileOut,
+  return solve(sdp_files, out_file, checkpoint_file_in, checkpoint_file_out,
                parameters);
 }

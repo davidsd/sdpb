@@ -5,9 +5,9 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
+#include "../Timers.hxx"
 #include "SDP.hxx"
 #include "SDP_Solver.hxx"
-#include "../Timers.hxx"
 
 #include <algorithm>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -24,11 +24,10 @@ Timers timers;
 
 SDP read_bootstrap_sdp(const std::vector<boost::filesystem::path> &sdp_files);
 
-
-int solve(const std::vector<boost::filesystem::path> &sdpFiles,
-          const boost::filesystem::path &outFile,
-          const boost::filesystem::path &checkpointFileIn,
-          const boost::filesystem::path &checkpointFileOut,
+int solve(const std::vector<boost::filesystem::path> &sdp_files,
+          const boost::filesystem::path &out_file,
+          const boost::filesystem::path &checkpoint_file_in,
+          const boost::filesystem::path &checkpoint_file_out,
           SDP_Solver_Parameters parameters)
 {
   // Set the default precision of all Real numbers to that specified
@@ -44,24 +43,24 @@ int solve(const std::vector<boost::filesystem::path> &sdpFiles,
 
   std::cout << "SDPB started at "
             << boost::posix_time::second_clock::local_time() << '\n';
-  for(auto const &sdpFile : sdpFiles)
+  for(auto const &sdpFile : sdp_files)
     { std::cout << "SDP file        : " << sdpFile << '\n'; }
-    std::cout << "out file        : " << outFile << '\n';
-  std::cout << "checkpoint in   : " << checkpointFileIn << '\n';
-  std::cout << "checkpoint out  : " << checkpointFileOut << '\n';
+    std::cout << "out file        : " << out_file << '\n';
+  std::cout << "checkpoint in   : " << checkpoint_file_in << '\n';
+  std::cout << "checkpoint out  : " << checkpoint_file_out << '\n';
 
   std::cout << "\nParameters:\n";
   std::cout << parameters << '\n';
 
   // Read an SDP from sdpFile and create a solver for it
-  SDP_Solver solver(read_bootstrap_sdp(sdpFiles), parameters);
+  SDP_Solver solver(read_bootstrap_sdp(sdp_files), parameters);
 
-  if(exists(checkpointFileIn))
-    solver.loadCheckpoint(checkpointFileIn);
+  if(exists(checkpoint_file_in))
+    solver.loadCheckpoint(checkpoint_file_in);
 
   timers["Solver runtime"].start();
   timers["Last checkpoint"].start();
-  SDPSolverTerminateReason reason = solver.run(checkpointFileOut);
+  SDPSolverTerminateReason reason = solver.run(checkpoint_file_out);
   timers["Solver runtime"].stop();
   std::cout << "-----" << std::setfill('-') << std::setw(116) << std::left
             << reason << '\n';
@@ -74,13 +73,13 @@ int solve(const std::vector<boost::filesystem::path> &sdpFiles,
   std::cout << '\n';
 
   if(!parameters.noFinalCheckpoint)
-    solver.saveCheckpoint(checkpointFileOut);
+    solver.saveCheckpoint(checkpoint_file_out);
   timers["Last checkpoint"].stop();
-  solver.saveSolution(reason, outFile);
+  solver.saveSolution(reason, out_file);
 
   std::cout << '\n' << timers;
 
-  timers.writeMFile(outFile.string() + ".profiling");
+  timers.writeMFile(out_file.string() + ".profiling");
 
   return 0;
 }
