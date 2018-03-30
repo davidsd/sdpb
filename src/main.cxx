@@ -28,8 +28,8 @@ int main(int argc, char **argv)
 
   SDP_Solver_Parameters parameters;
 
-  po::options_description basicOptions("Basic options");
-  basicOptions.add_options()("help,h", "Show this helpful message.")(
+  po::options_description basic_options("Basic options");
+  basic_options.add_options()("help,h", "Show this helpful message.")(
   "sdpFile,s",
   po::value<std::vector<boost::filesystem::path>>(&sdp_files)->required(),
   "SDP data file(s) in XML format. Use this option repeatedly to specify "
@@ -47,8 +47,8 @@ int main(int argc, char **argv)
   po::value<boost::filesystem::path>(&checkpoint_file_in),
   "The initial checkpoint to load. Defaults to checkpointFile.");
 
-  po::options_description solverParamsOptions("Solver parameters");
-  solverParamsOptions.add_options()(
+  po::options_description solver_params_options("Solver parameters");
+  solver_params_options.add_options()(
   "precision", po::value<int>(&parameters.precision)->default_value(400),
   "Precision in binary digits.  GMP will round up to the nearest "
   "multiple of 64 (or 32 on older systems).")(
@@ -139,45 +139,45 @@ int main(int argc, char **argv)
   po::value<Real>(&parameters.maxComplementarity)->default_value(Real("1e100")),
   "Terminate if the complementarity mu = Tr(X Y)/dim(X) exceeds this value.");
 
-  po::options_description cmdLineOptions;
-  cmdLineOptions.add(basicOptions).add(solverParamsOptions);
+  po::options_description cmd_line_options;
+  cmd_line_options.add(basic_options).add(solver_params_options);
 
-  po::variables_map variablesMap;
+  po::variables_map variables_map;
 
   try
     {
-      po::store(po::parse_command_line(argc, argv, cmdLineOptions),
-                variablesMap);
+      po::store(po::parse_command_line(argc, argv, cmd_line_options),
+                variables_map);
 
-      if(variablesMap.count("help"))
+      if(variables_map.count("help"))
         {
-          std::cout << cmdLineOptions << '\n';
+          std::cout << cmd_line_options << '\n';
           return 0;
         }
 
-      if(variablesMap.count("paramFile"))
+      if(variables_map.count("paramFile"))
         {
-          param_file = variablesMap["paramFile"].as<boost::filesystem::path>();
+          param_file = variables_map["paramFile"].as<boost::filesystem::path>();
           std::ifstream ifs(param_file.string().c_str());
-          po::store(po::parse_config_file(ifs, solverParamsOptions),
-                    variablesMap);
+          po::store(po::parse_config_file(ifs, solver_params_options),
+                    variables_map);
         }
 
-      po::notify(variablesMap);
+      po::notify(variables_map);
 
-      if(!variablesMap.count("outFile"))
+      if(!variables_map.count("outFile"))
         {
           out_file = sdp_files[0];
           out_file.replace_extension("out");
         }
 
-      if(!variablesMap.count("checkpointFile"))
+      if(!variables_map.count("checkpointFile"))
         {
           checkpoint_file_out = sdp_files[0];
           checkpoint_file_out.replace_extension("ck");
         }
 
-      if(!variablesMap.count("initialCheckpointFile"))
+      if(!variables_map.count("initialCheckpointFile"))
         {
           checkpoint_file_in = checkpoint_file_out;
         }
@@ -193,7 +193,7 @@ int main(int argc, char **argv)
   catch(po::error &e)
     {
       std::cerr << "ERROR: " << e.what() << '\n';
-      std::cerr << cmdLineOptions << '\n';
+      std::cerr << cmd_line_options << '\n';
       return 1;
     }
 
