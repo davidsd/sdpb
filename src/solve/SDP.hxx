@@ -9,15 +9,6 @@
 
 #include "../Matrix.hxx"
 #include "../Polynomial_Vector_Matrix.hxx"
-#include "../Vector.hxx"
-#include "../types.hxx"
-#include <algorithm>
-#include <iostream>
-#include <ostream>
-#include <vector>
-
-using std::ostream;
-using std::vector;
 
 // The class SDP encodes a semidefinite program of the following form
 //
@@ -106,7 +97,7 @@ public:
   //                                           0 <= k <= d_j,
   //                                           0 <= m <= delta_b)
   //
-  vector<Matrix> bilinearBases;
+  std::vector<Matrix> bilinearBases;
 
   // FreeVarMatrix = B, a PxN matrix
   Matrix FreeVarMatrix;
@@ -121,10 +112,10 @@ public:
   Real objectiveConst;
 
   // dimensions[j] = m_j  (0 <= j < J)
-  vector<int> dimensions;
+  std::vector<int> dimensions;
 
   // degrees[j] = d_j  (0 <= j < J)
-  vector<int> degrees;
+  std::vector<int> degrees;
 
   // blocks gives the 1-to-many mapping
   //
@@ -133,7 +124,7 @@ public:
   // entering the constraint matrices A_p.  blocks[j1] and blocks[j2]
   // are disjoint unless j1==j2.
   //
-  vector<vector<int>> blocks;
+  std::vector<std::vector<int>> blocks;
 
   // constraintIndices gives the 1-to-many mapping described above
   //
@@ -146,7 +137,7 @@ public:
   // This allows us to loop through the constraints A_p associated to
   // each j.
   //
-  vector<vector<IndexTuple>> constraintIndices;
+  std::vector<std::vector<IndexTuple>> constraintIndices;
 
   // create the mapping j -> { IndexTuple(p,r,s,k) } described above
   //
@@ -155,7 +146,7 @@ public:
     int p = 0;
     for(unsigned int j = 0; j < dimensions.size(); j++)
       {
-        constraintIndices.push_back(vector<IndexTuple>(0));
+        constraintIndices.push_back(std::vector<IndexTuple>(0));
 
         for(int s = 0; s < dimensions[j]; s++)
           {
@@ -176,11 +167,11 @@ public:
   //
   // psdMatrixBlockDims()[b] = (delta_b+1)*m_j = length(v_{b,*})*m_j
   //
-  vector<int> psdMatrixBlockDims() const
+  std::vector<int> psdMatrixBlockDims() const
   {
-    vector<int> dims;
+    std::vector<int> dims;
     for(unsigned int j = 0; j < dimensions.size(); j++)
-      for(vector<int>::const_iterator b = blocks[j].begin();
+      for(std::vector<int>::const_iterator b = blocks[j].begin();
           b != blocks[j].end(); b++)
         dims.push_back(bilinearBases[*b].rows * dimensions[j]);
     return dims;
@@ -190,11 +181,11 @@ public:
   //
   // bilinearPairingBlockDims()[b] = (d_j + 1)*m_j
   //
-  vector<int> bilinearPairingBlockDims() const
+  std::vector<int> bilinearPairingBlockDims() const
   {
-    vector<int> dims;
+    std::vector<int> dims;
     for(unsigned int j = 0; j < dimensions.size(); j++)
-      for(vector<int>::const_iterator b = blocks[j].begin();
+      for(std::vector<int>::const_iterator b = blocks[j].begin();
           b != blocks[j].end(); b++)
         dims.push_back(bilinearBases[*b].cols * dimensions[j]);
     return dims;
@@ -205,16 +196,16 @@ public:
   // schurBlockDims()[j] = (d_j+1)*m_j*(m_j+1)/2
   //                     = length(constraintIndices[j])
   //
-  vector<int> schurBlockDims() const
+  std::vector<int> schurBlockDims() const
   {
-    vector<int> dims;
+    std::vector<int> dims;
     for(unsigned int j = 0; j < dimensions.size(); j++)
       dims.push_back(constraintIndices[j].size());
     return dims;
   }
 
   // Print an SDP, for debugging purposes
-  friend ostream &operator<<(ostream &os, const SDP &sdp)
+  friend std::ostream &operator<<(std::ostream &os, const SDP &sdp)
   {
     os << "SDP(bilinearBases = " << sdp.bilinearBases
        << ", FreeVarMatrix = " << sdp.FreeVarMatrix
@@ -265,8 +256,9 @@ public:
   // entering the constraint matrices A_p, as described
   // above. `bilinearBases' here has the structure of
   // `bilinearBases[j]' above for some fixed j.
-  vector<Matrix> bilinearBases;
+  std::vector<Matrix> bilinearBases;
 };
 
-SDP bootstrapSDP(const Vector &affineObjective,
-                 const vector<Polynomial_Vector_Matrix> &polVectorMatrices);
+SDP bootstrapSDP(
+  const Vector &affineObjective,
+  const std::vector<Polynomial_Vector_Matrix> &polVectorMatrices);
