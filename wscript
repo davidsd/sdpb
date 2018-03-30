@@ -82,20 +82,19 @@ def build(bld):
               )
 
     # Main executable
-    sdpb_sources=['src/SDPSolver.cxx',
-                  'src/BlockDiagonalMatrix.cxx',
-                  'src/SDPSolverIO.cxx',
-                  'src/SDP.cxx',
-                  'src/read_bootstrap_sdp/read_bootstrap_sdp.cxx',
-                  'src/read_bootstrap_sdp/parse_vector.cxx',
-                  'src/read_bootstrap_sdp/parse_Real.cxx',
-                  'src/read_bootstrap_sdp/parse_polynomial_vector_matrix.cxx',
-                  'src/Matrix.cxx']
-    sdpb_includes=['src/mpack']
-
-    bld.program(source=sdpb_sources + ['src/main.cxx'],
+    bld.program(source=['src/main.cxx',
+                        'src/solve/solve.cxx',
+                        'src/SDPSolver.cxx',
+                        'src/BlockDiagonalMatrix.cxx',
+                        'src/SDPSolverIO.cxx',
+                        'src/SDP.cxx',
+                        'src/read_bootstrap_sdp/read_bootstrap_sdp.cxx',
+                        'src/read_bootstrap_sdp/parse_vector.cxx',
+                        'src/read_bootstrap_sdp/parse_Real.cxx',
+                        'src/read_bootstrap_sdp/parse_polynomial_vector_matrix.cxx',
+                        'src/Matrix.cxx'],
                 target='sdpb',
-                includes=sdpb_includes,
+                includes=['src/mpack'],
                 cxxflags=default_flags,
                 rpath=[bld.env.LIBDIR],
                 use=use_packages + ['mpack_st'],
