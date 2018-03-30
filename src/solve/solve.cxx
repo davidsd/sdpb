@@ -29,7 +29,7 @@ int solve(const std::vector<boost::filesystem::path> &sdpFiles,
           const boost::filesystem::path &outFile,
           const boost::filesystem::path &checkpointFileIn,
           const boost::filesystem::path &checkpointFileOut,
-          SDPSolverParameters parameters) {
+          SDP_Solver_Parameters parameters) {
   // Set the default precision of all Real numbers to that specified
   // by the 'precision' parameter.
   mpf_set_default_prec(parameters.precision);

@@ -5,6 +5,7 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
+#include "SDP_Solver_Parameters.hxx"
 
 #include <algorithm>
 #include <iostream>
@@ -15,11 +16,7 @@
 #include <boost/filesystem.hpp>
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include "boost/program_options.hpp"
-#include "types.hxx"
-#include "Timers.hxx"
-#include "SDP.hxx"
-#include "read_bootstrap_sdp.hxx"
-#include "SDPSolver.hxx"
+
 
 namespace po = boost::program_options;
 
@@ -27,38 +24,38 @@ int solve(const std::vector<boost::filesystem::path> &sdpFiles,
           const boost::filesystem::path &outFile,
           const boost::filesystem::path &checkpointFileIn,
           const boost::filesystem::path &checkpointFileOut,
-          SDPSolverParameters parameters);
+          SDP_Solver_Parameters parameters);
   
 int main(int argc, char** argv) {
-  vector<path> sdpFiles;
-  path outFile;
-  path checkpointFileIn;
-  path checkpointFileOut;
-  path paramFile;
+  std::vector<boost::filesystem::path> sdpFiles;
+  boost::filesystem::path outFile;
+  boost::filesystem::path checkpointFileIn;
+  boost::filesystem::path checkpointFileOut;
+  boost::filesystem::path paramFile;
 
-  SDPSolverParameters parameters;
+  SDP_Solver_Parameters parameters;
 
   po::options_description basicOptions("Basic options");
   basicOptions.add_options()
     ("help,h", "Show this helpful message.")
     ("sdpFile,s",
-     po::value< vector<path> >(&sdpFiles)->required(),
+     po::value<std::vector<boost::filesystem::path> >(&sdpFiles)->required(),
      "SDP data file(s) in XML format. Use this option repeatedly to specify multiple data files.")
     ("paramFile,p",
-     po::value<path>(&paramFile),
+     po::value<boost::filesystem::path>(&paramFile),
      "Any parameter can optionally be set via this file in key=value "
      "format. Command line arguments override values in the parameter "
      "file.")
     ("outFile,o",
-     po::value<path>(&outFile),
+     po::value<boost::filesystem::path>(&outFile),
      "The optimal solution is saved to this file in Mathematica "
      "format. Defaults to sdpFile with '.out' extension.")
     ("checkpointFile,c",
-     po::value<path>(&checkpointFileOut),
+     po::value<boost::filesystem::path>(&checkpointFileOut),
      "Checkpoints are saved to this file every checkpointInterval. Defaults "
      "to sdpFile with '.ck' extension.")
     ("initialCheckpointFile,i",
-     po::value<path>(&checkpointFileIn),
+     po::value<boost::filesystem::path>(&checkpointFileIn),
      "The initial checkpoint to load. Defaults to checkpointFile.")
     ;
 
@@ -159,7 +156,7 @@ int main(int argc, char** argv) {
     }
 
     if (variablesMap.count("paramFile")) {
-      paramFile = variablesMap["paramFile"].as<path>();
+      paramFile = variablesMap["paramFile"].as<boost::filesystem::path>();
       std::ifstream ifs(paramFile.string().c_str());
       po::store(po::parse_config_file(ifs, solverParamsOptions), variablesMap);
     }

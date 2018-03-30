@@ -39,9 +39,9 @@ using std::cout;
 
 /***********************************************************************/
 // Create and initialize an SDPSolver for the given SDP and
-// SDPSolverParameters
+// SDP_Solver_Parameters
 
-SDPSolver::SDPSolver(const SDP &sdp, const SDPSolverParameters &parameters)
+SDPSolver::SDPSolver(const SDP &sdp, const SDP_Solver_Parameters &parameters)
     : sdp(sdp), parameters(parameters), x(sdp.primalObjective.size(), 0),
       X(sdp.psdMatrixBlockDims()), y(sdp.dualObjective.size(), 0), Y(X), dx(x),
       dX(X), dy(y), dY(Y), PrimalResidues(X), dualResidues(x), XCholesky(X),
@@ -493,14 +493,14 @@ void computePrimalResidues(const SDP &sdp, const Vector x,
 }
 
 // Centering parameter \beta_p for the predictor step
-Real predictorCenteringParameter(const SDPSolverParameters &parameters,
+Real predictorCenteringParameter(const SDP_Solver_Parameters &parameters,
                                  const bool isPrimalDualFeasible) {
   return isPrimalDualFeasible ? Real(0)
                               : parameters.infeasibleCenteringParameter;
 }
 
 // Centering parameter \beta_c for the corrector step
-Real correctorCenteringParameter(const SDPSolverParameters &parameters,
+Real correctorCenteringParameter(const SDP_Solver_Parameters &parameters,
                                  const BlockDiagonalMatrix &X,
                                  const BlockDiagonalMatrix &dX,
                                  const BlockDiagonalMatrix &Y,

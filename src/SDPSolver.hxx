@@ -12,61 +12,16 @@
 #include <ostream>
 #include <vector>
 #include <boost/filesystem.hpp>
-#include "types.hxx"
 #include "Vector.hxx"
 #include "Matrix.hxx"
 #include "BlockDiagonalMatrix.hxx"
 #include "SDP.hxx"
+#include "SDP_Solver_Parameters.hxx"
 
 using std::vector;
 using std::ostream;
 using std::endl;
 using boost::filesystem::path;
-
-// Parameters to control the behavior of an SDPSolver. See the manual
-// for a detailed description of each.
-//
-class SDPSolverParameters {
-public:
-  int maxIterations;
-  int maxRuntime;
-  int checkpointInterval;
-  bool noFinalCheckpoint;
-  bool findPrimalFeasible;
-  bool findDualFeasible;
-  bool detectPrimalFeasibleJump;
-  bool detectDualFeasibleJump;
-  int precision;
-  int maxThreads;
-  Real dualityGapThreshold;
-  Real primalErrorThreshold;
-  Real dualErrorThreshold;
-  Real initialMatrixScalePrimal;
-  Real initialMatrixScaleDual;
-  Real feasibleCenteringParameter;
-  Real infeasibleCenteringParameter;
-  Real stepLengthReduction;
-  Real choleskyStabilizeThreshold;
-  Real maxComplementarity;
-  // Set the precision of all Real parameters to equal 'precision'.
-  // This is necessary because 'precision' might be set (via the
-  // command line or a file) after initializing other parameters.
-  //
-  void resetPrecision() {
-    dualityGapThreshold.set_prec(precision);
-    primalErrorThreshold.set_prec(precision);
-    dualErrorThreshold.set_prec(precision);
-    initialMatrixScalePrimal.set_prec(precision);
-    initialMatrixScaleDual.set_prec(precision);
-    feasibleCenteringParameter.set_prec(precision);
-    infeasibleCenteringParameter.set_prec(precision);
-    stepLengthReduction.set_prec(precision);
-    choleskyStabilizeThreshold.set_prec(precision);
-    maxComplementarity.set_prec(precision);
-  }
-
-  friend ostream& operator<<(ostream& os, const SDPSolverParameters& p);
-};
 
 // Reasons for terminating the solver.  See the manual for a detailed
 // description of each.
@@ -94,7 +49,7 @@ public:
   SDP sdp;
 
   // parameters for initialization and iteration
-  SDPSolverParameters parameters;
+  SDP_Solver_Parameters parameters;
 
   /********************************************/
   // Current point
@@ -294,7 +249,7 @@ public:
   // Methods
 
   // Create a new solver for a given SDP, with the given parameters
-  SDPSolver(const SDP &sdp, const SDPSolverParameters &parameters);
+  SDPSolver(const SDP &sdp, const SDP_Solver_Parameters &parameters);
 
   // Run the solver, backing up to checkpointFile
   SDPSolverTerminateReason run(const path checkpointFile);

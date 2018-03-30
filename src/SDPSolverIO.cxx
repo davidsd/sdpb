@@ -23,7 +23,7 @@ using boost::posix_time::time_duration;
 using boost::posix_time::microseconds;
 using std::cout;
 
-ostream& operator<<(ostream& os, const SDPSolverParameters& p) {
+ostream& operator<<(ostream& os, const SDP_Solver_Parameters& p) {
   os << std::boolalpha;
   os << "maxIterations                = " << p.maxIterations                << endl;
   os << "maxRuntime                   = " << p.maxRuntime                   << endl;
