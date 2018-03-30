@@ -102,7 +102,7 @@ Real minEigenvalue(BlockDiagonalMatrix &A, vector<Vector> &workspace,
   for(unsigned int b = 0; b < A.blocks.size(); b++)
     {
       Real minBlockLambda
-      = minEigenvalue(A.blocks[b], workspace[b], eigenvalues[b]);
+        = minEigenvalue(A.blocks[b], workspace[b], eigenvalues[b]);
       // ensure only one thread modifies lambdaMin at a time
       {
         lambdaMin = min(lambdaMin, minBlockLambda);

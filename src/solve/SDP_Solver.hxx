@@ -267,9 +267,9 @@ public:
 private:
   // Compute data needed to solve the Schur complement equation
   void initializeSchurComplementSolver(
-  const BlockDiagonalMatrix &BilinearPairingsXInv,
-  const BlockDiagonalMatrix &BilinearPairingsY,
-  const Real &choleskyStabilizeThreshold);
+    const BlockDiagonalMatrix &BilinearPairingsXInv,
+    const BlockDiagonalMatrix &BilinearPairingsY,
+    const Real &choleskyStabilizeThreshold);
 
   // Solve the Schur complement equation in-place for dx, dy.  dx and
   // dy will initially be set to the right-hand side of the equation.

@@ -62,7 +62,7 @@ SDP_Solver::SDP_Solver(const SDP &sdp, const SDP_Solver_Parameters &parameters)
   for(unsigned int b = 0; b < sdp.bilinearBases.size(); b++)
     {
       bilinearPairingsWorkspace.push_back(
-      Matrix(X.blocks[b].rows, BilinearPairingsXInv.blocks[b].cols));
+        Matrix(X.blocks[b].rows, BilinearPairingsXInv.blocks[b].cols));
       eigenvaluesWorkspace.push_back(Vector(X.blocks[b].rows));
       QRWorkspace.push_back(Vector(3 * X.blocks[b].rows - 1));
     }
@@ -113,9 +113,11 @@ void tensorTransposeCongruence(const Matrix &A, const Matrix &Q, Matrix &Work,
         {
           Real tmp = 0;
           for(int k = 0; k < Q.rows; k++)
-            { tmp += A.elt(r, aColOffset + k) * Q.elt(k, qCol); }
+            {
+              tmp += A.elt(r, aColOffset + k) * Q.elt(k, qCol);
+            }
 
-            Work.elt(r, c) = tmp;
+          Work.elt(r, c) = tmp;
         }
     }
 
@@ -130,9 +132,11 @@ void tensorTransposeCongruence(const Matrix &A, const Matrix &Q, Matrix &Work,
 
           Real tmp = 0;
           for(int k = 0; k < Q.rows; k++)
-            { tmp += Q.elt(k, qCol) * Work.elt(workRowOffset + k, c); }
+            {
+              tmp += Q.elt(k, qCol) * Work.elt(workRowOffset + k, c);
+            }
 
-            Result.elt(r, c) = tmp;
+          Result.elt(r, c) = tmp;
 
           // lower triangle is the same as upper triangle
           if(c != r)
@@ -217,8 +221,8 @@ void tensorInvTransposeCongruenceWithCholesky(const Matrix &L, const Matrix &Q,
 //   `tensorInvTransposeCongruenceWithCholesky'
 //
 void blockTensorInvTransposeCongruenceWithCholesky(
-const BlockDiagonalMatrix &L, const vector<Matrix> &Q, vector<Matrix> &Work,
-BlockDiagonalMatrix &Result)
+  const BlockDiagonalMatrix &L, const vector<Matrix> &Q, vector<Matrix> &Work,
+  BlockDiagonalMatrix &Result)
 {
   for(unsigned int b = 0; b < Q.size(); b++)
     tensorInvTransposeCongruenceWithCholesky(L.blocks[b], Q[b], Work[b],
@@ -330,20 +334,20 @@ void computeSchurComplement(const SDP &sdp,
                 {
                   tmp += (BilinearPairingsXInv.blocks[*b].elt(ej_s1 + k1,
                                                               ej_r2 + k2)
-                          * BilinearPairingsY.blocks[*b].elt(ej_s2 + k2,
-                                                             ej_r1 + k1)
-                          + BilinearPairingsXInv.blocks[*b].elt(ej_r1 + k1,
-                                                                ej_r2 + k2)
                             * BilinearPairingsY.blocks[*b].elt(ej_s2 + k2,
-                                                               ej_s1 + k1)
-                          + BilinearPairingsXInv.blocks[*b].elt(ej_s1 + k1,
-                                                                ej_s2 + k2)
-                            * BilinearPairingsY.blocks[*b].elt(ej_r2 + k2,
                                                                ej_r1 + k1)
                           + BilinearPairingsXInv.blocks[*b].elt(ej_r1 + k1,
+                                                                ej_r2 + k2)
+                              * BilinearPairingsY.blocks[*b].elt(ej_s2 + k2,
+                                                                 ej_s1 + k1)
+                          + BilinearPairingsXInv.blocks[*b].elt(ej_s1 + k1,
                                                                 ej_s2 + k2)
-                            * BilinearPairingsY.blocks[*b].elt(ej_r2 + k2,
-                                                               ej_s1 + k1))
+                              * BilinearPairingsY.blocks[*b].elt(ej_r2 + k2,
+                                                                 ej_r1 + k1)
+                          + BilinearPairingsXInv.blocks[*b].elt(ej_r1 + k1,
+                                                                ej_s2 + k2)
+                              * BilinearPairingsY.blocks[*b].elt(ej_r2 + k2,
+                                                                 ej_s1 + k1))
                          / 4;
                 }
               SchurComplement.blocks[j].elt(u1, u2) = tmp;
@@ -390,9 +394,9 @@ void computeDualResidues(const SDP &sdp, const Vector &y,
               b != sdp.blocks[j].end(); b++)
             {
               dualResidues[p]
-              -= BilinearPairingsY.blocks[*b].elt(ej_r + k, ej_s + k);
+                -= BilinearPairingsY.blocks[*b].elt(ej_r + k, ej_s + k);
               dualResidues[p]
-              -= BilinearPairingsY.blocks[*b].elt(ej_s + k, ej_r + k);
+                -= BilinearPairingsY.blocks[*b].elt(ej_s + k, ej_r + k);
             }
           dualResidues[p] /= 2;
 
@@ -460,7 +464,7 @@ void constraintMatrixWeightedSum(const SDP &sdp, const Vector a,
                         {
                           Result.blocks[*b].elt(m, n) /= 2;
                           Result.blocks[*b].elt(n, m)
-                          = Result.blocks[*b].elt(m, n);
+                            = Result.blocks[*b].elt(m, n);
                         }
                     }
                 }
@@ -495,7 +499,8 @@ void computeSchurRHS(const SDP &sdp, const Vector &dualResidues,
                      Vector &r_x, Vector &r_y)
 {
   // r_x[p] = -dualResidues[p]
-  for(unsigned int p = 0; p < r_x.size(); p++) r_x[p] = -dualResidues[p];
+  for(unsigned int p = 0; p < r_x.size(); p++)
+    r_x[p] = -dualResidues[p];
 
   // r_x[p] = -dualResidues[p] - Tr(A_p Z), where A_p are as described
   // in SDP.h.  The trace can be computed in terms of bilinearBases
@@ -514,7 +519,7 @@ void computeSchurRHS(const SDP &sdp, const Vector &dualResidues,
               const Real *q = &sdp.bilinearBases[*b].elements[(t->k) * h];
 
               r_x[t->p]
-              -= bilinearBlockPairing(q, h, Z.blocks[*b], t->r, t->s);
+                -= bilinearBlockPairing(q, h, Z.blocks[*b], t->r, t->s);
             }
         }
     }
@@ -524,7 +529,10 @@ void computeSchurRHS(const SDP &sdp, const Vector &dualResidues,
     {
       r_y[n] = sdp.dualObjective[n];
       for(int p = 0; p < sdp.FreeVarMatrix.rows; p++)
-        { r_y[n] -= sdp.FreeVarMatrix.elt(p, n) * x[p]; } }
+        {
+          r_y[n] -= sdp.FreeVarMatrix.elt(p, n) * x[p];
+        }
+    }
 }
 
 // PrimalResidues = \sum_p A_p x[p] - X
@@ -647,9 +655,9 @@ Real stepLength(BlockDiagonalMatrix &MCholesky, BlockDiagonalMatrix &dM,
 // - Q, Qpivots
 //
 void SDP_Solver::initializeSchurComplementSolver(
-const BlockDiagonalMatrix &BilinearPairingsXInv,
-const BlockDiagonalMatrix &BilinearPairingsY,
-const Real &choleskyStabilizeThreshold)
+  const BlockDiagonalMatrix &BilinearPairingsXInv,
+  const BlockDiagonalMatrix &BilinearPairingsY,
+  const Real &choleskyStabilizeThreshold)
 {
   computeSchurComplement(sdp, BilinearPairingsXInv, BilinearPairingsY,
                          SchurComplement);
@@ -668,20 +676,20 @@ const Real &choleskyStabilizeThreshold)
   // schurStabilizeLambdas.
   //
   timers["initializeSchurComplementSolver.choleskyDecompositionStabilized"]
-  .resume();
+    .resume();
   choleskyDecompositionStabilized(SchurComplement, SchurComplementCholesky,
                                   schurStabilizeIndices, schurStabilizeLambdas,
                                   cast2double(choleskyStabilizeThreshold));
   timers["initializeSchurComplementSolver.choleskyDecompositionStabilized"]
-  .stop();
+    .stop();
 
   // SchurOffDiagonal = L'^{-1} FreeVarMatrix
   SchurOffDiagonal.copyFrom(sdp.FreeVarMatrix);
   timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
-  .resume();
+    .resume();
   blockMatrixLowerTriangularSolve(SchurComplementCholesky, SchurOffDiagonal);
   timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
-  .stop();
+    .stop();
 
   // Next we compute L'^{-1} U, which is stored implicitly in terms of
   // its nonzero submatrices in the stabilizeBlock* variables.
@@ -713,7 +721,7 @@ const Real &choleskyStabilizeThreshold)
 
           // set the dimensions of U_j
           stabilizeBlocks[j].resize(SchurComplement.blocks[j].rows
-                                    - startIndex,
+                                      - startIndex,
                                     schurStabilizeIndices[j].size());
           // set U_j = 0
           stabilizeBlocks[j].setZero();
@@ -726,7 +734,7 @@ const Real &choleskyStabilizeThreshold)
 
           // append the row of U corresponding to the top-left of U_j
           stabilizeBlockUpdateRow.push_back(
-          SchurComplement.blockStartIndices[j] + startIndex);
+            SchurComplement.blockStartIndices[j] + startIndex);
           // append the column of U corresponding to the top-left of U_j
           stabilizeBlockUpdateColumn.push_back(offDiagonalColumns);
           // update the number of off-diagonal columns
@@ -781,7 +789,8 @@ const Real &choleskyStabilizeThreshold)
       matrixSquareIntoBlock(stabilizeBlocks[b], Q, c, c);
 
       // subtract the identity matrix from this block
-      for(int i = c; i < c + stabilizeBlocks[b].cols; i++) Q.elt(i, i) -= 1;
+      for(int i = c; i < c + stabilizeBlocks[b].cols; i++)
+        Q.elt(i, i) -= 1;
     }
 
   // LowerLeft(Q) = V^T SchurOffDiagonal
@@ -838,7 +847,8 @@ void SDP_Solver::solveSchurComplementEquation(Vector &dx, Vector &dy)
   dyExtended.resize(Q.rows);
 
   // dy = r_y - SchurOffDiagonal^T dx
-  for(unsigned int n = 0; n < dy.size(); n++) dyExtended[n] = dy[n];
+  for(unsigned int n = 0; n < dy.size(); n++)
+    dyExtended[n] = dy[n];
   vectorScaleMatrixMultiplyTransposeAdd(-1, SchurOffDiagonal, dx, 1,
                                         dyExtended);
 
@@ -854,7 +864,7 @@ void SDP_Solver::solveSchurComplementEquation(Vector &dx, Vector &dy)
           dyExtended[cTopLeft + c] = 0;
           for(int r = 0; r < stabilizeBlocks[b].rows; r++)
             dyExtended[cTopLeft + c]
-            -= dx[pTopLeft + r] * stabilizeBlocks[b].elt(r, c);
+              -= dx[pTopLeft + r] * stabilizeBlocks[b].elt(r, c);
         }
     }
 
@@ -874,14 +884,15 @@ void SDP_Solver::solveSchurComplementEquation(Vector &dx, Vector &dy)
       for(int c = 0; c < stabilizeBlocks[b].cols; c++)
         for(int r = 0; r < stabilizeBlocks[b].rows; r++)
           dx[pTopLeft + r]
-          += dyExtended[cTopLeft + c] * stabilizeBlocks[b].elt(r, c);
+            += dyExtended[cTopLeft + c] * stabilizeBlocks[b].elt(r, c);
     }
 
   // dx = SchurComplementCholesky^{-T} dx
   blockMatrixLowerTriangularTransposeSolve(SchurComplementCholesky, dx);
 
   // dy = first few entries of dyExtended
-  for(unsigned int n = 0; n < dy.size(); n++) dy[n] = dyExtended[n];
+  for(unsigned int n = 0; n < dy.size(); n++)
+    dy[n] = dyExtended[n];
 }
 
 // Compute the search direction (dx, dX, dy, dY) for the predictor and
@@ -899,7 +910,7 @@ void SDP_Solver::solveSchurComplementEquation(Vector &dx, Vector &dy)
 // - dx, dX, dy, dY
 //
 void SDP_Solver::computeSearchDirection(const Real &beta, const Real &mu,
-                                       const bool correctorPhase)
+                                        const bool correctorPhase)
 {
   string timerName = "computeSearchDirection(";
   if(correctorPhase)
@@ -1002,11 +1013,11 @@ SDPSolverTerminateReason SDP_Solver::run(const path checkpointFile)
 
       timers["run.objectives"].resume();
       primalObjective
-      = sdp.objectiveConst + dotProduct(sdp.primalObjective, x);
+        = sdp.objectiveConst + dotProduct(sdp.primalObjective, x);
       dualObjective = sdp.objectiveConst + dotProduct(sdp.dualObjective, y);
       dualityGap
-      = abs(primalObjective - dualObjective)
-        / max(Real(abs(primalObjective) + abs(dualObjective)), Real(1));
+        = abs(primalObjective - dualObjective)
+          / max(Real(abs(primalObjective) + abs(dualObjective)), Real(1));
       timers["run.objectives"].stop();
 
       timers["run.choleskyDecomposition(X,XCholesky)"].resume();
@@ -1022,13 +1033,13 @@ SDPSolverTerminateReason SDP_Solver::run(const path checkpointFile)
       // complement matrix
       timers["run.blockTensorInvTransposeCongruenceWithCholesky"].resume();
       blockTensorInvTransposeCongruenceWithCholesky(
-      XCholesky, sdp.bilinearBases, bilinearPairingsWorkspace,
-      BilinearPairingsXInv);
+        XCholesky, sdp.bilinearBases, bilinearPairingsWorkspace,
+        BilinearPairingsXInv);
       timers["run.blockTensorInvTransposeCongruenceWithCholesky"].stop();
 
       timers["run.blockTensorTransposeCongruence"].resume();
       blockTensorTransposeCongruence(
-      Y, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsY);
+        Y, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsY);
       timers["run.blockTensorTransposeCongruence"].stop();
 
       // dualResidues[p] = primalObjective[p] - Tr(A_p Y) - (FreeVarMatrix y)_p,
@@ -1044,7 +1055,7 @@ SDPSolverTerminateReason SDP_Solver::run(const path checkpointFile)
       timers["run.computePrimalResidues"].stop();
 
       const bool isPrimalFeasible
-      = primalError < parameters.primalErrorThreshold;
+        = primalError < parameters.primalErrorThreshold;
       const bool isDualFeasible = dualError < parameters.dualErrorThreshold;
       const bool isOptimal = dualityGap < parameters.dualityGapThreshold;
 
@@ -1075,14 +1086,14 @@ SDPSolverTerminateReason SDP_Solver::run(const path checkpointFile)
 
       // Compute the predictor solution for (dx, dX, dy, dY)
       Real betaPredictor = predictorCenteringParameter(
-      parameters, isPrimalFeasible && isDualFeasible);
+        parameters, isPrimalFeasible && isDualFeasible);
       timers["run.computeSearchDirection(betaPredictor)"].resume();
       computeSearchDirection(betaPredictor, mu, false);
       timers["run.computeSearchDirection(betaPredictor)"].stop();
 
       // Compute the corrector solution for (dx, dX, dy, dY)
       Real betaCorrector = correctorCenteringParameter(
-      parameters, X, dX, Y, dY, mu, isPrimalFeasible && isDualFeasible);
+        parameters, X, dX, Y, dY, mu, isPrimalFeasible && isDualFeasible);
       timers["run.computeSearchDirection(betaCorrector)"].resume();
       computeSearchDirection(betaCorrector, mu, true);
       timers["run.computeSearchDirection(betaCorrector)"].stop();
@@ -1090,13 +1101,13 @@ SDPSolverTerminateReason SDP_Solver::run(const path checkpointFile)
       // Compute step-lengths that preserve positive definiteness of X, Y
       timers["run.stepLength(XCholesky)"].resume();
       primalStepLength
-      = stepLength(XCholesky, dX, StepMatrixWorkspace, eigenvaluesWorkspace,
-                   QRWorkspace, parameters.stepLengthReduction);
+        = stepLength(XCholesky, dX, StepMatrixWorkspace, eigenvaluesWorkspace,
+                     QRWorkspace, parameters.stepLengthReduction);
       timers["run.stepLength(XCholesky)"].stop();
       timers["run.stepLength(YCholesky)"].resume();
       dualStepLength
-      = stepLength(YCholesky, dY, StepMatrixWorkspace, eigenvaluesWorkspace,
-                   QRWorkspace, parameters.stepLengthReduction);
+        = stepLength(YCholesky, dY, StepMatrixWorkspace, eigenvaluesWorkspace,
+                     QRWorkspace, parameters.stepLengthReduction);
       timers["run.stepLength(YCholesky)"].stop();
 
       // If our problem is both dual-feasible and primal-feasible,

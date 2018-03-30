@@ -82,7 +82,7 @@ void SDP_Solver::printHeader()
 }
 
 void SDP_Solver::printIteration(int iteration, Real mu, Real primalStepLength,
-                               Real dualStepLength, Real betaCorrector)
+                                Real dualStepLength, Real betaCorrector)
 {
   time_duration td(microseconds(timers["Solver runtime"].elapsed().wall)
                    / 1000);
@@ -129,7 +129,7 @@ void SDP_Solver::loadCheckpoint(const path &checkpointFile)
 }
 
 void SDP_Solver::saveSolution(const SDPSolverTerminateReason terminateReason,
-                             const path &outFile)
+                              const path &outFile)
 {
   boost::filesystem::ofstream ofs(outFile);
   cout << "Saving solution to      : " << outFile << endl;

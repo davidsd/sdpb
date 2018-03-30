@@ -104,15 +104,15 @@ dualConstraintGroupFromPolVecMat(const Polynomial_Vector_Matrix &m)
   //
   int delta1 = g.degree / 2;
   g.bilinearBases.push_back(sampleBilinearBasis(
-  delta1, numSamples, m.bilinearBasis, m.samplePoints, m.sampleScalings));
+    delta1, numSamples, m.bilinearBasis, m.samplePoints, m.sampleScalings));
   int delta2 = (g.degree - 1) / 2;
   // a degree-0 Polynomial_Vector_Matrix only needs one block
   if(delta2 >= 0)
     // The \sqrt(x) factors can be accounted for by replacing the
     // scale factors s_k with x_k s_k.
     g.bilinearBases.push_back(
-    sampleBilinearBasis(delta2, numSamples, m.bilinearBasis, m.samplePoints,
-                        multiplyVectors(m.samplePoints, m.sampleScalings)));
+      sampleBilinearBasis(delta2, numSamples, m.bilinearBasis, m.samplePoints,
+                          multiplyVectors(m.samplePoints, m.sampleScalings)));
 
   return g;
 }
@@ -120,8 +120,8 @@ dualConstraintGroupFromPolVecMat(const Polynomial_Vector_Matrix &m)
 // Collect a bunch of DualConstraintGroup's and a dual objective
 // function into an SDP.
 SDP sdpFromDualConstraintGroups(
-const Vector &dualObjective, const Real &objectiveConst,
-const vector<DualConstraintGroup> &dualConstraintGroups)
+  const Vector &dualObjective, const Real &objectiveConst,
+  const vector<DualConstraintGroup> &dualConstraintGroups)
 {
   SDP sdp;
   sdp.dualObjective = dualObjective;
@@ -141,7 +141,7 @@ const vector<DualConstraintGroup> &dualConstraintGroups)
                                  g->constraintConstants.end());
     }
   sdp.FreeVarMatrix
-  = Matrix(sdp.primalObjective.size(), sdp.dualObjective.size());
+    = Matrix(sdp.primalObjective.size(), sdp.dualObjective.size());
 
   int p = 0;
   // Each g corresponds to an index 0 <= j < J (not used explicitly here)

@@ -40,8 +40,8 @@ public:
         ++it)
       {
         os << std::setw(maxLength) << std::left << it->first << " :"
-           << it->second
-              .format(); // should be replaced with more intelligent alignment
+           << it->second.format(); // should be replaced with more intelligent
+                                   // alignment
       }
     return os;
   }

@@ -50,31 +50,36 @@ public:
   // M = 0
   void setZero()
   {
-    for(unsigned int b = 0; b < blocks.size(); b++) blocks[b].setZero();
+    for(unsigned int b = 0; b < blocks.size(); b++)
+      blocks[b].setZero();
   }
 
   // Add a constant c to each diagonal element
   void addDiagonal(const Real &c)
   {
-    for(unsigned int b = 0; b < blocks.size(); b++) blocks[b].addDiagonal(c);
+    for(unsigned int b = 0; b < blocks.size(); b++)
+      blocks[b].addDiagonal(c);
   }
 
   // M = M + A
   void operator+=(const BlockDiagonalMatrix &A)
   {
-    for(unsigned int b = 0; b < blocks.size(); b++) blocks[b] += A.blocks[b];
+    for(unsigned int b = 0; b < blocks.size(); b++)
+      blocks[b] += A.blocks[b];
   }
 
   // M = M - A
   void operator-=(const BlockDiagonalMatrix &A)
   {
-    for(unsigned int b = 0; b < blocks.size(); b++) blocks[b] -= A.blocks[b];
+    for(unsigned int b = 0; b < blocks.size(); b++)
+      blocks[b] -= A.blocks[b];
   }
 
   // M = c*M, where c is a constant
   void operator*=(const Real &c)
   {
-    for(unsigned int b = 0; b < blocks.size(); b++) blocks[b] *= c;
+    for(unsigned int b = 0; b < blocks.size(); b++)
+      blocks[b] *= c;
   }
 
   // M = A
@@ -87,7 +92,8 @@ public:
   // Symmetrize M in place
   void symmetrize()
   {
-    for(unsigned int b = 0; b < blocks.size(); b++) blocks[b].symmetrize();
+    for(unsigned int b = 0; b < blocks.size(); b++)
+      blocks[b].symmetrize();
   }
 
   // The maximal absolute value of the elements of M
@@ -192,5 +198,5 @@ void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L, // constant
 
 // v := L^{-T} v, where L is lower-triangular
 void blockMatrixLowerTriangularTransposeSolve(
-BlockDiagonalMatrix &L, // constant
-Vector &v);             // overwritten
+  BlockDiagonalMatrix &L, // constant
+  Vector &v);             // overwritten

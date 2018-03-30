@@ -47,9 +47,10 @@ ostream &operator<<(ostream &os, const Matrix &a)
 // C := alpha*A + beta*C
 void matrixScaleAdd(Real alpha, Matrix &A, Real beta, Matrix &C)
 {
-  std::transform(
-  A.elements.begin(), A.elements.end(), C.elements.begin(), C.elements.begin(),
-  [alpha, beta](Real a, Real c) { return alpha * a + beta * c; });
+  std::transform(A.elements.begin(), A.elements.end(), C.elements.begin(),
+                 C.elements.begin(), [alpha, beta](Real a, Real c) {
+                   return alpha * a + beta * c;
+                 });
 }
 
 // C := alpha*A + beta*C
@@ -97,7 +98,8 @@ void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol)
       for(int r = 0; r <= c; r++)
         {
           Real tmp = 0;
-          for(int p = 0; p < A.rows; p++) tmp += A.elt(p, r) * A.elt(p, c);
+          for(int p = 0; p < A.rows; p++)
+            tmp += A.elt(p, r) * A.elt(p, c);
           B.elt(bRow + r, bCol + c) = tmp;
           if(r != c)
             B.elt(bRow + c, bCol + r) = tmp;
@@ -132,7 +134,8 @@ void vectorScaleMatrixMultiplyAdd(Real alpha, Matrix &A, Vector &x, Real beta,
   for(int p = 0; p < A.rows; p++)
     {
       Real tmp = 0;
-      for(int n = 0; n < A.cols; n++) tmp += A.elt(p, n) * x[n];
+      for(int n = 0; n < A.cols; n++)
+        tmp += A.elt(p, n) * x[n];
       y[p] = alpha * tmp + beta * y[p];
     }
 }
@@ -147,7 +150,8 @@ void vectorScaleMatrixMultiplyTransposeAdd(Real alpha, Matrix &A, Vector &x,
   for(int n = 0; n < A.cols; n++)
     {
       Real tmp = 0;
-      for(int p = 0; p < A.rows; p++) tmp += A.elt(p, n) * x[p];
+      for(int p = 0; p < A.rows; p++)
+        tmp += A.elt(p, n) * x[p];
       y[n] = alpha * tmp + beta * y[n];
     }
 }
@@ -161,10 +165,12 @@ Real frobeniusProductSymmetric(const Matrix &A, const Matrix &B)
 
   Real result = 0;
   for(int c = 0; c < A.cols; c++)
-    for(int r = 0; r < c; r++) result += A.elt(r, c) * B.elt(r, c);
+    for(int r = 0; r < c; r++)
+      result += A.elt(r, c) * B.elt(r, c);
   result *= 2;
 
-  for(int r = 0; r < A.rows; r++) result += A.elt(r, r) * B.elt(r, r);
+  for(int r = 0; r < A.rows; r++)
+    result += A.elt(r, r) * B.elt(r, r);
 
   return result;
 }
@@ -246,7 +252,8 @@ void choleskyDecomposition(Matrix &A, Matrix &L)
 
   // Set the upper-triangular part of the L to zero
   for(int j = 0; j < dim; j++)
-    for(int i = 0; i < j; i++) L.elements[i + j * dim] = 0;
+    for(int i = 0; i < j; i++)
+      L.elements[i + j * dim] = 0;
 }
 
 // Compute L (lower triangular) such that A + U U^T = L L^T.
@@ -269,7 +276,8 @@ void choleskyDecompositionStabilized(Matrix &A, Matrix &L,
 
   // Set the upper-triangular part of the L to zero
   for(int j = 0; j < dim; j++)
-    for(int i = 0; i < j; i++) L.elements[i + j * dim] = 0;
+    for(int i = 0; i < j; i++)
+      L.elements[i + j * dim] = 0;
 }
 
 // B := L^{-1} B, where L is lower-triangular and B is a matrix

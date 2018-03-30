@@ -56,7 +56,8 @@ public:
     // ensure M is square
     assert(rows == cols);
 
-    for(int i = 0; i < rows; i++) elt(i, i) += c;
+    for(int i = 0; i < rows; i++)
+      elt(i, i) += c;
   }
 
   void resize(int r, int c)
@@ -108,7 +109,8 @@ public:
   // M := c*M, where c is a constant
   void operator*=(const Real &c)
   {
-    for(unsigned int i = 0; i < elements.size(); i++) elements[i] *= c;
+    for(unsigned int i = 0; i < elements.size(); i++)
+      elements[i] *= c;
   }
 
   Matrix operator-(const Matrix &other) const
