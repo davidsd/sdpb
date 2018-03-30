@@ -21,15 +21,6 @@
 #include "read_bootstrap_sdp.hxx"
 #include "SDPSolver.hxx"
 
-using std::cout;
-using std::cerr;
-using std::endl;
-using std::setfill;
-using std::setw;
-
-using boost::filesystem::path;
-using boost::posix_time::second_clock;
-
 namespace po = boost::program_options;
 
 int solve(const std::vector<boost::filesystem::path> &sdpFiles,
@@ -163,7 +154,7 @@ int main(int argc, char** argv) {
     po::store(po::parse_command_line(argc, argv, cmdLineOptions), variablesMap);
 
     if (variablesMap.count("help")) {
-      cout << cmdLineOptions << endl;
+      std::cout << cmdLineOptions << '\n';
       return 0;
     }
 
@@ -192,12 +183,12 @@ int main(int argc, char** argv) {
     std::ofstream ofs(outFile.string().c_str());
     ofs.close();
     if (!ofs) {
-      cerr << "Cannot write to outFile." << endl;
+      std::cerr << "Cannot write to outFile." << '\n';
       return 1;
     }
   } catch(po::error& e) {
-    cerr << "ERROR: " << e.what() << endl;
-    cerr << cmdLineOptions << endl;
+    std::cerr << "ERROR: " << e.what() << '\n';
+    std::cerr << cmdLineOptions << '\n';
     return 1;
   }
 

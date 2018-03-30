@@ -21,15 +21,6 @@
 #include "../read_bootstrap_sdp.hxx"
 #include "../SDPSolver.hxx"
 
-using std::cout;
-using std::cerr;
-using std::endl;
-using std::setfill;
-using std::setw;
-
-using boost::filesystem::path;
-using boost::posix_time::second_clock;
-
 namespace po = boost::program_options;
 
 Timers timers;
@@ -43,23 +34,23 @@ int solve(const std::vector<boost::filesystem::path> &sdpFiles,
   // by the 'precision' parameter.
   mpf_set_default_prec(parameters.precision);
 
-  // Set cout to print the appropriate number of digits
-  cout.precision(min(static_cast<int>(parameters.precision * 0.31 + 5), 30));
+  // Set std::cout to print the appropriate number of digits
+  std::cout.precision(min(static_cast<int>(parameters.precision * 0.31 + 5), 30));
 
   // Ensure all the Real parameters have the appropriate precision
   parameters.resetPrecision();
 
 
-  cout << "SDPB started at " << second_clock::local_time() << endl;
+  std::cout << "SDPB started at " << boost::posix_time::second_clock::local_time() << '\n';
   for (auto const& sdpFile: sdpFiles) {
-    cout << "SDP file        : " << sdpFile        << endl;
+    std::cout << "SDP file        : " << sdpFile        << '\n';
   }
-  cout << "out file        : " << outFile        << endl;
-  cout << "checkpoint in   : " << checkpointFileIn << endl;
-  cout << "checkpoint out  : " << checkpointFileOut << endl;
+  std::cout << "out file        : " << outFile        << '\n';
+  std::cout << "checkpoint in   : " << checkpointFileIn << '\n';
+  std::cout << "checkpoint out  : " << checkpointFileOut << '\n';
 
-  cout << "\nParameters:\n";
-  cout << parameters << endl;
+  std::cout << "\nParameters:\n";
+  std::cout << parameters << '\n';
 
   // Read an SDP from sdpFile and create a solver for it
   SDPSolver solver(read_bootstrap_sdp(sdpFiles), parameters);
@@ -72,21 +63,21 @@ int solve(const std::vector<boost::filesystem::path> &sdpFiles,
   SDPSolverTerminateReason reason = solver.run(checkpointFileOut);
   timers["Solver runtime"].stop();
   //SDPSolverTerminateReason reason;
-  cout << "-----" << setfill('-') << setw(116) << std::left << reason << endl;
-  cout << endl;
-  cout << "primalObjective = " << solver.primalObjective << endl;
-  cout << "dualObjective   = " << solver.dualObjective   << endl;
-  cout << "dualityGap      = " << solver.dualityGap      << endl;
-  cout << "primalError     = " << solver.primalError     << endl;
-  cout << "dualError       = " << solver.dualError       << endl;
-  cout << endl;
+  std::cout << "-----" << std::setfill('-') << std::setw(116) << std::left << reason << '\n';
+  std::cout << '\n';
+  std::cout << "primalObjective = " << solver.primalObjective << '\n';
+  std::cout << "dualObjective   = " << solver.dualObjective   << '\n';
+  std::cout << "dualityGap      = " << solver.dualityGap      << '\n';
+  std::cout << "primalError     = " << solver.primalError     << '\n';
+  std::cout << "dualError       = " << solver.dualError       << '\n';
+  std::cout << '\n';
 
   if (!parameters.noFinalCheckpoint)
     solver.saveCheckpoint(checkpointFileOut);
   timers["Last checkpoint"].stop();
   solver.saveSolution(reason, outFile);
 
-  cout << endl << timers;
+  std::cout << '\n' << timers;
 
   timers.writeMFile( outFile.string()+".profiling" );
 
