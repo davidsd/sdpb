@@ -912,7 +912,7 @@ void SDP_Solver::solveSchurComplementEquation(Vector &dx, Vector &dy)
 void SDP_Solver::computeSearchDirection(const Real &beta, const Real &mu,
                                         const bool correctorPhase)
 {
-  string timerName = "computeSearchDirection(";
+  std::string timerName = "computeSearchDirection(";
   if(correctorPhase)
     {
       timerName += "betaCorrector)";

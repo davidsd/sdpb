@@ -5,19 +5,12 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
-#include "../Timers.hxx"
 #include "SDP.hxx"
 #include "SDP_Solver.hxx"
+#include "../Timers.hxx"
 
-#include <algorithm>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/program_options.hpp>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <ostream>
-#include <string>
 
 // FIXME: Pass this around instead of having a global.
 Timers timers;
@@ -75,7 +68,9 @@ int solve(const std::vector<boost::filesystem::path> &sdp_files,
   std::cout << '\n';
 
   if(!parameters.noFinalCheckpoint)
-    solver.saveCheckpoint(checkpoint_file_out);
+    {
+      solver.saveCheckpoint(checkpoint_file_out);
+    }
   timers["Last checkpoint"].stop();
   solver.saveSolution(reason, out_file);
 

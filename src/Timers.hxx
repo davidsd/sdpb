@@ -7,37 +7,34 @@
 
 #pragma once
 
-#include "boost/timer/timer.hpp"
+#include <boost/timer/timer.hpp>
+
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <map>
-#include <ostream>
 #include <string>
 
-using boost::timer::cpu_timer;
-using std::map;
-using std::ostream;
-using std::string;
-
 // A map between strings and cpu timers
-class Timers : public map<string, cpu_timer>
+class Timers : public std::map<std::string, boost::timer::cpu_timer>
 {
 public:
   // For printing out timing information
-  friend ostream &operator<<(ostream &os, const Timers &t)
+  friend std::ostream &operator<<(std::ostream &os, const Timers &t)
   {
     unsigned long maxLength = 0;
-    for(map<string, cpu_timer>::const_iterator it = t.begin(); it != t.end();
-        ++it)
+    for(std::map<std::string, boost::timer::cpu_timer>::const_iterator it
+        = t.begin();
+        it != t.end(); ++it)
       {
         if(it->first.length() > maxLength)
           {
             maxLength = it->first.length();
           }
       }
-    for(map<string, cpu_timer>::const_iterator it = t.begin(); it != t.end();
-        ++it)
+    for(std::map<std::string, boost::timer::cpu_timer>::const_iterator it
+        = t.begin();
+        it != t.end(); ++it)
       {
         os << std::setw(maxLength) << std::left << it->first << " :"
            << it->second.format(); // should be replaced with more intelligent
@@ -46,17 +43,19 @@ public:
     return os;
   }
 
-  void writeMFile(string filename)
+  void writeMFile(std::string filename)
   {
     std::ofstream f;
     f.open(filename, std::ofstream::out | std::ofstream::trunc);
 
     f << "{" << std::endl;
 
-    map<string, cpu_timer>::const_iterator final = this->end();
+    std::map<std::string, boost::timer::cpu_timer>::const_iterator final
+      = this->end();
     --final;
 
-    for(map<string, cpu_timer>::const_iterator it = this->begin();
+    for(std::map<std::string, boost::timer::cpu_timer>::const_iterator it
+        = this->begin();
         it != this->end(); ++it)
       {
         f << "    {\"" << it->first
