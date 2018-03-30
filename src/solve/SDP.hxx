@@ -9,6 +9,7 @@
 
 #include "../Matrix.hxx"
 #include "../Polynomial_Vector_Matrix.hxx"
+#include "Index_Tuple.hxx"
 
 // The class SDP encodes a semidefinite program of the following form
 //
@@ -66,26 +67,6 @@
 //     the block index b determines a unique j, but not vice-versa.
 //
 
-// Instead of working with the 1 to 1 correspondence p <-> (j,r,s,k),
-// it is convenient to collect tuples with the same index j. This
-// gives a 1-to-many correspondence
-//
-// j <-> { list of IndexTuple(p,r,s,k) }
-//
-// IndexTuple is simply a named version of the 4-tuple (p,r,s,k).  A
-// given IndexTuple uniquely specifies a constraint matrix A_p.
-//
-class IndexTuple
-{
-public:
-  int p; // overall index of the constraint
-  int r; // first index for E^{rs}
-  int s; // second index for E^{rs}
-  int k; // index for v_{b,k}
-  IndexTuple(int p, int r, int s, int k) : p(p), r(r), s(s), k(k) {}
-  IndexTuple() {}
-};
-
 class SDP
 {
 public:
@@ -128,7 +109,7 @@ public:
 
   // constraintIndices gives the 1-to-many mapping described above
   //
-  // constraintIndices[j] = { IndexTuple(p,r,s,k)
+  // constraintIndices[j] = { Index_Tuple(p,r,s,k)
   //                          for 0 <= s < m_j,
   //                              0 <= r <= s,
   //                              0 <= k <= d_j,
@@ -137,16 +118,16 @@ public:
   // This allows us to loop through the constraints A_p associated to
   // each j.
   //
-  std::vector<std::vector<IndexTuple>> constraintIndices;
+  std::vector<std::vector<Index_Tuple>> constraintIndices;
 
-  // create the mapping j -> { IndexTuple(p,r,s,k) } described above
+  // create the mapping j -> { Index_Tuple(p,r,s,k) } described above
   //
   void initializeConstraintIndices()
   {
     int p = 0;
     for(unsigned int j = 0; j < dimensions.size(); j++)
       {
-        constraintIndices.push_back(std::vector<IndexTuple>(0));
+        constraintIndices.emplace_back(0);
 
         for(int s = 0; s < dimensions[j]; s++)
           {
@@ -154,7 +135,7 @@ public:
               {
                 for(int k = 0; k <= degrees[j]; k++)
                   {
-                    constraintIndices[j].push_back(IndexTuple(p, r, s, k));
+                    constraintIndices[j].emplace_back(p, r, s, k);
                     p++;
                   }
               }

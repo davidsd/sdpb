@@ -379,7 +379,7 @@ void computeDualResidues(const SDP &sdp, const Vector &y,
     {
       const int ej = sdp.degrees[j] + 1;
 
-      for(vector<IndexTuple>::const_iterator t
+      for(vector<Index_Tuple>::const_iterator t
           = sdp.constraintIndices[j].begin();
           t != sdp.constraintIndices[j].end(); t++)
         {
@@ -432,8 +432,8 @@ void constraintMatrixWeightedSum(const SDP &sdp, const Vector a,
     {
       const int ej = sdp.degrees[j] + 1;
 
-      // For each j, t points to the first IndexTuple corresponding to j
-      for(vector<IndexTuple>::const_iterator t
+      // For each j, t points to the first Index_Tuple corresponding to j
+      for(vector<Index_Tuple>::const_iterator t
           = sdp.constraintIndices[j].begin();
           t != sdp.constraintIndices[j].end(); t += ej)
         {
@@ -507,19 +507,15 @@ void computeSchurRHS(const SDP &sdp, const Vector &dualResidues,
   // using bilinearBlockPairing.
   for(unsigned int j = 0; j < sdp.dimensions.size(); j++)
     {
-      for(vector<IndexTuple>::const_iterator t
-          = sdp.constraintIndices[j].begin();
-          t != sdp.constraintIndices[j].end(); t++)
+      for(auto &t : sdp.constraintIndices[j])
         {
-          for(vector<int>::const_iterator b = sdp.blocks[j].begin();
-              b != sdp.blocks[j].end(); b++)
+          for(auto &b : sdp.blocks[j])
             {
-              const int h = sdp.bilinearBases[*b].rows;
-              // Pointer to the k-th column of sdp.bilinearBases[*b]
-              const Real *q = &sdp.bilinearBases[*b].elements[(t->k) * h];
+              const int h = sdp.bilinearBases[b].rows;
+              // Pointer to the k-th column of sdp.bilinearBases[b]
+              const Real *q = &sdp.bilinearBases[b].elements[(t.k) * h];
 
-              r_x[t->p]
-                -= bilinearBlockPairing(q, h, Z.blocks[*b], t->r, t->s);
+              r_x[t.p] -= bilinearBlockPairing(q, h, Z.blocks[b], t.r, t.s);
             }
         }
     }
