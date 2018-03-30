@@ -40,7 +40,7 @@ public:
   }
 
   // Print p(x), for debugging purposes
-  friend ostream &operator<<(ostream &os, const Polynomial &p)
+  friend std::ostream &operator<<(std::ostream &os, const Polynomial &p)
   {
     for(int i = p.degree(); i >= 0; i--)
       {

@@ -24,7 +24,7 @@
 // BlockDiagonalMatrix, since there parallelism can be achieved by
 // parallelizing loops over blocks.
 
-ostream &operator<<(ostream &os, const Matrix &a)
+std::ostream &operator<<(std::ostream &os, const Matrix &a)
 {
   os << "{";
   for(int r = 0; r < a.rows; r++)

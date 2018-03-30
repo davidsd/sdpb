@@ -8,14 +8,6 @@
 #pragma once
 
 #include "Vector.hxx"
-#include "types.hxx"
-#include <assert.h>
-#include <iostream>
-#include <ostream>
-#include <vector>
-
-using std::ostream;
-using std::vector;
 
 // A matrix M with Real entries
 class Matrix
@@ -124,7 +116,7 @@ public:
   // The maximum absolute value of the elemnts of M
   Real maxAbs() const { return maxAbsVector(elements); }
 
-  friend ostream &operator<<(ostream &os, const Matrix &a);
+  friend std::ostream &operator<<(std::ostream &os, const Matrix &a);
 };
 
 // C := alpha*A + beta*C
@@ -178,10 +170,11 @@ Real minEigenvalue(Matrix &A, Vector &workspace, Vector &eigenvalues);
 
 // Compute an in-place LU decomposition of A, with pivots, suitable
 // for use with 'solveWithLUDecomposition'
-void LUDecomposition(Matrix &A, vector<Integer> &pivots);
+void LUDecomposition(Matrix &A, std::vector<Integer> &pivots);
 
 // b := A^{-1} b, where LU and pivots encode the LU decomposition of A
-void solveWithLUDecomposition(Matrix &LU, vector<Integer> &pivots, Vector &b);
+void solveWithLUDecomposition(Matrix &LU, std::vector<Integer> &pivots,
+                              Vector &b);
 
 // L (lower triangular) such that A = L L^T
 // Input:
@@ -217,8 +210,8 @@ void choleskyDecomposition(Matrix &A, Matrix &L);
 // - stabilizeLambdas: a list of corresponding Lambdas (overwritten)
 //
 void choleskyDecompositionStabilized(Matrix &A, Matrix &L,
-                                     vector<Integer> &stabilizeIndices,
-                                     vector<Real> &stabilizeLambdas,
+                                     std::vector<Integer> &stabilizeIndices,
+                                     std::vector<Real> &stabilizeLambdas,
                                      const double stabilizeThreshold);
 
 // B := L^{-1} B, where L is lower-triangular and B is a matrix

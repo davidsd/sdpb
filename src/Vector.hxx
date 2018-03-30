@@ -14,14 +14,11 @@
 #include <ostream>
 #include <vector>
 
-using std::ostream;
-using std::vector;
-
 // a Vector is just an STL vector of Real's
-typedef vector<Real> Vector;
+typedef std::vector<Real> Vector;
 
 // print any vector<T>, including Vector
-template <class T> ostream &operator<<(ostream &os, const vector<T> &v)
+template <class T> std::ostream &operator<<(std::ostream &os, const std::vector<T> &v)
 {
   os << "{";
   int last = v.size() - 1;
