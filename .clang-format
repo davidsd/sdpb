@@ -4,10 +4,13 @@ AllowAllParametersOfDeclarationOnNextLine: false
 AllowShortBlocksOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: All
-AllowShortIfStatementsOnASingleLine: true
+# Uncommenting this tends to confuse the formatter, making it think
+# that any following lines are still inside the block.
+# AllowShortIfStatementsOnASingleLine: true
 AllowShortLoopsOnASingleLine: true
 AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakAfterReturnType: None
+BreakBeforeBraces: Custom
 BraceWrapping:
   AfterClass:      true
   AfterControlStatement: true
@@ -23,7 +26,6 @@ BraceWrapping:
   SplitEmptyFunction: false
   SplitEmptyRecord: false
   SplitEmptyNamespace: false
-BreakBeforeBraces: Custom
 ContinuationIndentWidth: 0
 Cpp11BracedListStyle: true
 KeepEmptyLinesAtTheStartOfBlocks: false
