@@ -44,25 +44,6 @@ std::ostream &operator<<(std::ostream &os, const Matrix &a)
   return os;
 }
 
-// C := alpha*A + beta*C
-void matrixScaleAdd(Real alpha, Matrix &A, Real beta, Matrix &C)
-{
-  std::transform(A.elements.begin(), A.elements.end(), C.elements.begin(),
-                 C.elements.begin(), [alpha, beta](Real a, Real c) {
-                   return alpha * a + beta * c;
-                 });
-}
-
-// C := alpha*A + beta*C
-void matrixScaleAdd(Real alpha, Real *A, Real beta, Matrix &C)
-{
-  // std::transform(C.elements.begin(),C.elements.end(),A,C.elements.begin(),[alpha,beta](Real
-  // c, Real a){return alpha*a+beta*c;});
-  for(int r = 0; r < C.rows; ++r)
-    for(int c = 0; c < C.cols; ++c)
-      C.elt(r, c) = alpha * A[r + C.rows * c] + beta * C.elt(r, c);
-}
-
 // C := alpha*A*B + beta*C
 void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B, Real beta,
                             Matrix &C)
@@ -73,12 +54,6 @@ void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B, Real beta,
 
   Rgemm("N", "N", A.rows, B.cols, A.cols, alpha, &A.elements[0], A.rows,
         &B.elements[0], B.rows, beta, &C.elements[0], C.rows);
-}
-
-// C := A*B
-void matrixMultiply(Matrix &A, Matrix &B, Matrix &C)
-{
-  matrixScaleMultiplyAdd(1, A, B, 0, C);
 }
 
 // Set block starting at (bRow, bCol) of B to A^T A

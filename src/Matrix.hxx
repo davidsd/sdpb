@@ -121,21 +121,12 @@ public:
   friend std::ostream &operator<<(std::ostream &os, const Matrix &a);
 };
 
-// C := alpha*A + beta*C
-void matrixScaleAdd(Real alpha, Matrix &A, Real beta, Matrix &C);
-
-// C := alpha*A + beta*C
-void matrixScaleAdd(Real alpha, Real *A, Real beta, Matrix &C);
-
 // C := alpha*A*B + beta*C
 void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B, Real beta,
                             Matrix &C);
-// C := A*B
-void matrixMultiply(Matrix &A, Matrix &B, Matrix &C);
 
 // Set block starting at (bRow, bCol) of B to A^T A
 void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol);
-void matrixSquareIntoBlockGPU(Matrix &A, Matrix &B, int bRow, int bCol);
 
 // A := L^{-1} A L^{-T}
 void lowerTriangularInverseCongruence(Matrix &A, Matrix &L);
