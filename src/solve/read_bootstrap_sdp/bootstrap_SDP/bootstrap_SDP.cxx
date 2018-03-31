@@ -8,114 +8,8 @@
 #include "Dual_Constraint_Group.hxx"
 #include "../../SDP.hxx"
 
-// Given a vector of polynomials {q_0(x), q_1(x), ..., q_n(x)} of
-// degree deg q_m(x) = m, a list of numSamples points x_k and scaling
-// factors s_k, form the (maxDegree+1) x numSamples Matrix
-//
-//   {{ \sqrt(s_0) q_0(x_0), ..., \sqrt(s_K) q_0(x_K) },
-//    { \sqrt(s_0) q_1(x_0), ..., \sqrt(s_K) q_1(x_K) },
-//    ...
-//    { \sqrt(s_0) q_M(x_0), ..., \sqrt(s_K) q_M(x_K) }}
-//
-// where maxDegree = M and numSamples = K+1.
-//
-// Input:
-// - maxDegree: the maximal degree of q_m(x) to include
-// - numSamples: number of sample points x_k
-// - bilinearBasis: the vector {q_0(x), q_1(x), ..., q_n(x)}
-// - samplePoints: the points {x_0, x_1, ... }
-// - sampleScalings: the scale factors {s_0, s_1, ... }
-//
-Matrix sampleBilinearBasis(const int maxDegree, const int numSamples,
-                           const vector<Polynomial> &bilinearBasis,
-                           const vector<Real> &samplePoints,
-                           const vector<Real> &sampleScalings)
-{
-  Matrix b(maxDegree + 1, numSamples);
-  for(int k = 0; k < numSamples; k++)
-    {
-      Real x = samplePoints[k];
-      Real scale = sqrt(sampleScalings[k]);
-      for(int i = 0; i <= maxDegree; i++)
-        b.elt(i, k) = scale * bilinearBasis[i](x);
-    }
-  return b;
-}
-
-// Convert a Polynomial_Vector_Matrix to a DualConstraint group by
-// sampling the matrix at the appropriate number of points, as
-// described in SDP.h:
-//
-//   (1,y) . M(x) is positive semidefinite
-//
-// is equivalent to
-//
-//   Tr(A_p Y) + (B y)_p = c_p
-//
-// for tuples p = (r,s,k).
-//
 Dual_Constraint_Group
-dualConstraintGroupFromPolVecMat(const Polynomial_Vector_Matrix &m)
-{
-  Dual_Constraint_Group g;
-
-  assert(m.rows == m.cols);
-  g.dim = m.rows;
-  g.degree = m.degree();
-
-  int numSamples = g.degree + 1;
-  int numConstraints = numSamples * g.dim * (g.dim + 1) / 2;
-  int vectorDim = m.elt(0, 0).size();
-
-  // Form the constraintMatrix B and constraintConstants c from the
-  // polynomials (1,y) . \vec P^{rs}(x)
-
-  // The first element of each vector \vec P^{rs}(x) multiplies the constant 1
-  g.constraintConstants = Vector(numConstraints);
-  // The rest multiply decision variables y
-  g.constraintMatrix = Matrix(numConstraints, vectorDim - 1);
-
-  // Populate B and c by sampling the polynomial matrix
-  int p = 0;
-  for(int c = 0; c < g.dim; c++)
-    {
-      for(int r = 0; r <= c; r++)
-        {
-          for(int k = 0; k < numSamples; k++)
-            {
-              Real x = m.samplePoints[k];
-              Real scale = m.sampleScalings[k];
-
-              g.constraintConstants[p] = scale * m.elt(r, c)[0](x);
-              for(int n = 1; n < vectorDim; n++)
-                g.constraintMatrix.elt(p, n - 1) = -scale * m.elt(r, c)[n](x);
-
-              p++;
-            }
-        }
-    }
-
-  // The matrix Y has two blocks Y_1, Y_2.  The bilinearBases for the
-  // constraint matrices A_p are given by sampling the following
-  // vectors for each block:
-  //
-  //   Y_1: {q_0(x), ..., q_delta1(x)}
-  //   Y_2: {\sqrt(x) q_0(x), ..., \sqrt(x) q_delta2(x)
-  //
-  int delta1 = g.degree / 2;
-  g.bilinearBases.push_back(sampleBilinearBasis(
-    delta1, numSamples, m.bilinearBasis, m.samplePoints, m.sampleScalings));
-  int delta2 = (g.degree - 1) / 2;
-  // a degree-0 Polynomial_Vector_Matrix only needs one block
-  if(delta2 >= 0)
-    // The \sqrt(x) factors can be accounted for by replacing the
-    // scale factors s_k with x_k s_k.
-    g.bilinearBases.push_back(
-      sampleBilinearBasis(delta2, numSamples, m.bilinearBasis, m.samplePoints,
-                          multiply_vectors(m.samplePoints, m.sampleScalings)));
-
-  return g;
-}
+dual_constraint_group_from_pol_vec_mat(const Polynomial_Vector_Matrix &m);
 
 // Collect a bunch of Dual_Constraint_Group's and a dual objective
 // function into an SDP.
@@ -196,7 +90,7 @@ SDP bootstrap_SDP(const Vector &affineObjective,
   for(vector<Polynomial_Vector_Matrix>::const_iterator m
       = polVectorMatrices.begin();
       m != polVectorMatrices.end(); m++)
-    dualConstraintGroups.push_back(dualConstraintGroupFromPolVecMat(*m));
+    dualConstraintGroups.push_back(dual_constraint_group_from_pol_vec_mat(*m));
 
   // Split affineObjective into objectiveConst f and dualObjective b
   Real objectiveConst = affineObjective[0];
