@@ -94,6 +94,7 @@ def build(bld):
                         'src/solve/read_bootstrap_sdp/bootstrap_SDP/bootstrap_SDP.cxx',
                         'src/solve/read_bootstrap_sdp/bootstrap_SDP/dual_constraint_group_from_pol_vec_mat/dual_constraint_group_from_pol_vec_mat.cxx',
                         'src/solve/read_bootstrap_sdp/bootstrap_SDP/dual_constraint_group_from_pol_vec_mat/sample_bilinear_basis.cxx',
+                        'src/solve/read_bootstrap_sdp/bootstrap_SDP/sdp_from_dual_constraint_groups.cxx',
                         'src/solve/Matrix.cxx'],
                 target='sdpb',
                 includes=['src/mpack'],
