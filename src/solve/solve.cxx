@@ -67,7 +67,7 @@ int solve(const std::vector<boost::filesystem::path> &sdp_files,
   std::cout << "dualError       = " << solver.dualError << '\n';
   std::cout << '\n';
 
-  if(!parameters.noFinalCheckpoint)
+  if(!parameters.no_final_checkpoint)
     {
       solver.saveCheckpoint(checkpoint_file_out);
     }

@@ -53,81 +53,80 @@ int main(int argc, char **argv)
     "precision", po::value<int>(&parameters.precision)->default_value(400),
     "Precision in binary digits.  GMP will round up to the nearest "
     "multiple of 64 (or 32 on older systems).")(
-    "maxThreads", po::value<int>(&parameters.maxThreads)->default_value(4),
-    "Maximum number of threads to use for parallel calculation.")(
     "checkpointInterval",
-    po::value<int>(&parameters.checkpointInterval)->default_value(3600),
+    po::value<int>(&parameters.checkpoint_interval)->default_value(3600),
     "Save checkpoints to checkpointFile every checkpointInterval seconds.")(
     "noFinalCheckpoint",
-    po::bool_switch(&parameters.noFinalCheckpoint)->default_value(false),
+    po::bool_switch(&parameters.no_final_checkpoint)->default_value(false),
     "Don't save a final checkpoint after terminating (useful when "
     "debugging).")(
     "findPrimalFeasible",
-    po::bool_switch(&parameters.findPrimalFeasible)->default_value(false),
+    po::bool_switch(&parameters.find_primal_feasible)->default_value(false),
     "Terminate once a primal feasible solution is found.")(
     "findDualFeasible",
-    po::bool_switch(&parameters.findDualFeasible)->default_value(false),
+    po::bool_switch(&parameters.find_dual_feasible)->default_value(false),
     "Terminate once a dual feasible solution is found.")(
     "detectPrimalFeasibleJump",
-    po::bool_switch(&parameters.detectPrimalFeasibleJump)->default_value(false),
+    po::bool_switch(&parameters.detect_primal_feasible_jump)->default_value(false),
     "Terminate if a primal-step of 1 is taken. This often indicates that a "
     "primal feasible solution would be found if the precision were high "
     "enough. Try increasing either primalErrorThreshold or precision "
     "and run from the latest checkpoint.")(
     "detectDualFeasibleJump",
-    po::bool_switch(&parameters.detectDualFeasibleJump)->default_value(false),
+    po::bool_switch(&parameters.detect_dual_feasible_jump)->default_value(false),
     "Terminate if a dual-step of 1 is taken. This often indicates that a "
     "dual feasible solution would be found if the precision were high "
     "enough. Try increasing either dualErrorThreshold or precision "
     "and run from the latest checkpoint.")(
     "maxIterations",
-    po::value<int>(&parameters.maxIterations)->default_value(500),
+    po::value<int>(&parameters.max_iterations)->default_value(500),
     "Maximum number of iterations to run the solver.")(
-    "maxRuntime", po::value<int>(&parameters.maxRuntime)->default_value(86400),
+    "maxRuntime",
+    po::value<int>(&parameters.max_runtime)->default_value(86400),
     "Maximum amount of time to run the solver in seconds.")(
     "dualityGapThreshold",
-    po::value<Real>(&parameters.dualityGapThreshold)
+    po::value<Real>(&parameters.duality_gap_threshold)
       ->default_value(Real("1e-30")),
     "Threshold for duality gap (roughly the difference in primal and dual "
     "objective) at which the solution is considered "
     "optimal. Corresponds to SDPA's epsilonStar.")(
     "primalErrorThreshold",
-    po::value<Real>(&parameters.primalErrorThreshold)
+    po::value<Real>(&parameters.primal_error_threshold)
       ->default_value(Real("1e-30")),
     "Threshold for feasibility of the primal problem. Corresponds to SDPA's "
     "epsilonBar.")(
     "dualErrorThreshold",
-    po::value<Real>(&parameters.dualErrorThreshold)
+    po::value<Real>(&parameters.dual_error_threshold)
       ->default_value(Real("1e-30")),
     "Threshold for feasibility of the dual problem. Corresponds to SDPA's "
     "epsilonBar.")(
     "initialMatrixScalePrimal",
-    po::value<Real>(&parameters.initialMatrixScalePrimal)
+    po::value<Real>(&parameters.initial_matrix_scale_primal)
       ->default_value(Real("1e20")),
     "The primal matrix X begins at initialMatrixScalePrimal times the "
     "identity matrix. Corresponds to SDPA's lambdaStar.")(
     "initialMatrixScaleDual",
-    po::value<Real>(&parameters.initialMatrixScaleDual)
+    po::value<Real>(&parameters.initial_matrix_scale_dual)
       ->default_value(Real("1e20")),
     "The dual matrix Y begins at initialMatrixScaleDual times the "
     "identity matrix. Corresponds to SDPA's lambdaStar.")(
     "feasibleCenteringParameter",
-    po::value<Real>(&parameters.feasibleCenteringParameter)
+    po::value<Real>(&parameters.feasible_centering_parameter)
       ->default_value(Real("0.1")),
     "Shrink the complementarity X Y by this factor when the primal and dual "
     "problems are feasible. Corresponds to SDPA's betaStar.")(
     "infeasibleCenteringParameter",
-    po::value<Real>(&parameters.infeasibleCenteringParameter)
+    po::value<Real>(&parameters.infeasible_centering_parameter)
       ->default_value(Real("0.3")),
     "Shrink the complementarity X Y by this factor when either the primal "
     "or dual problems are infeasible. Corresponds to SDPA's betaBar.")(
     "stepLengthReduction",
-    po::value<Real>(&parameters.stepLengthReduction)
+    po::value<Real>(&parameters.step_length_reduction)
       ->default_value(Real("0.7")),
     "Shrink each newton step by this factor (smaller means slower, more "
     "stable convergence). Corresponds to SDPA's gammaStar.")(
     "choleskyStabilizeThreshold",
-    po::value<Real>(&parameters.choleskyStabilizeThreshold)
+    po::value<Real>(&parameters.cholesky_stabilize_threshold)
       ->default_value(Real("1e-40")),
     "Adds stabilizing terms to the cholesky decomposition of the schur "
     "complement "
@@ -141,7 +140,7 @@ int main(int argc, char **argv)
     "proportion of eigenvalues are being stabilized, the computation will "
     "slow "
     "substantially.")("maxComplementarity",
-                      po::value<Real>(&parameters.maxComplementarity)
+                      po::value<Real>(&parameters.max_complementarity)
                         ->default_value(Real("1e100")),
                       "Terminate if the complementarity mu = Tr(X Y)/dim(X) "
                       "exceeds this value.");

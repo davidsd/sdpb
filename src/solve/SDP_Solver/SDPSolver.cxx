@@ -68,9 +68,9 @@ SDP_Solver::SDP_Solver(const SDP &sdp, const SDP_Solver_Parameters &parameters)
     }
 
   // X = \Omega_p I
-  X.add_diagonal(parameters.initialMatrixScalePrimal);
+  X.add_diagonal(parameters.initial_matrix_scale_primal);
   // Y = \Omega_d I
-  Y.add_diagonal(parameters.initialMatrixScaleDual);
+  Y.add_diagonal(parameters.initial_matrix_scale_dual);
 }
 
 /***********************************************************************/
@@ -543,7 +543,7 @@ Real predictorCenteringParameter(const SDP_Solver_Parameters &parameters,
                                  const bool isPrimalDualFeasible)
 {
   return isPrimalDualFeasible ? Real(0)
-                              : parameters.infeasibleCenteringParameter;
+                              : parameters.infeasible_centering_parameter;
 }
 
 // Centering parameter \beta_c for the corrector step
@@ -561,9 +561,9 @@ Real correctorCenteringParameter(const SDP_Solver_Parameters &parameters,
   Real beta = r < 1 ? r * r : r;
 
   if(isPrimalDualFeasible)
-    return min(max(parameters.feasibleCenteringParameter, beta), Real(1));
+    return min(max(parameters.feasible_centering_parameter, beta), Real(1));
   else
-    return max(parameters.infeasibleCenteringParameter, beta);
+    return max(parameters.infeasible_centering_parameter, beta);
 }
 
 // min(gamma \alpha(M, dM), 1), where \alpha(M, dM) denotes the
@@ -996,10 +996,10 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(const path checkpointFile)
   for(int iteration = 1;; iteration++)
     {
       if(timers["Last checkpoint"].elapsed().wall
-         >= parameters.checkpointInterval * 1000000000LL)
+         >= parameters.checkpoint_interval * 1000000000LL)
         saveCheckpoint(checkpointFile);
       if(timers["Solver runtime"].elapsed().wall
-         >= parameters.maxRuntime * 1000000000LL)
+         >= parameters.max_runtime * 1000000000LL)
         return SDP_Solver_Terminate_Reason::MaxRuntimeExceeded;
 
       timers["run.objectives"].resume();
@@ -1046,33 +1046,33 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(const path checkpointFile)
       timers["run.computePrimalResidues"].stop();
 
       const bool isPrimalFeasible
-        = primalError < parameters.primalErrorThreshold;
-      const bool isDualFeasible = dualError < parameters.dualErrorThreshold;
-      const bool isOptimal = dualityGap < parameters.dualityGapThreshold;
+        = primalError < parameters.primal_error_threshold;
+      const bool isDualFeasible = dualError < parameters.dual_error_threshold;
+      const bool isOptimal = dualityGap < parameters.duality_gap_threshold;
 
       if(isPrimalFeasible && isDualFeasible && isOptimal)
         return SDP_Solver_Terminate_Reason::PrimalDualOptimal;
-      else if(isPrimalFeasible && parameters.findPrimalFeasible)
+      else if(isPrimalFeasible && parameters.find_primal_feasible)
         return SDP_Solver_Terminate_Reason::PrimalFeasible;
-      else if(isDualFeasible && parameters.findDualFeasible)
+      else if(isDualFeasible && parameters.find_dual_feasible)
         return SDP_Solver_Terminate_Reason::DualFeasible;
-      else if(primalStepLength == 1 && parameters.detectPrimalFeasibleJump)
+      else if(primalStepLength == 1 && parameters.detect_primal_feasible_jump)
         return SDP_Solver_Terminate_Reason::PrimalFeasibleJumpDetected;
-      else if(dualStepLength == 1 && parameters.detectDualFeasibleJump)
+      else if(dualStepLength == 1 && parameters.detect_dual_feasible_jump)
         return SDP_Solver_Terminate_Reason::DualFeasibleJumpDetected;
-      else if(iteration > parameters.maxIterations)
+      else if(iteration > parameters.max_iterations)
         return SDP_Solver_Terminate_Reason::MaxIterationsExceeded;
 
       // Compute SchurComplement and prepare to solve the Schur
       // complement equation for dx, dy
       timers["run.initializeSchurComplementSolver"].resume();
       initializeSchurComplementSolver(BilinearPairingsXInv, BilinearPairingsY,
-                                      parameters.choleskyStabilizeThreshold);
+                                      parameters.cholesky_stabilize_threshold);
       timers["run.initializeSchurComplementSolver"].stop();
 
       // Compute the complementarity mu = Tr(X Y)/X.dim
       Real mu = frobeniusProductSymmetric(X, Y) / X.dim;
-      if(mu > parameters.maxComplementarity)
+      if(mu > parameters.max_complementarity)
         return SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
 
       // Compute the predictor solution for (dx, dX, dy, dY)
@@ -1093,12 +1093,12 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(const path checkpointFile)
       timers["run.stepLength(XCholesky)"].resume();
       primalStepLength
         = stepLength(XCholesky, dX, StepMatrixWorkspace, eigenvaluesWorkspace,
-                     QRWorkspace, parameters.stepLengthReduction);
+                     QRWorkspace, parameters.step_length_reduction);
       timers["run.stepLength(XCholesky)"].stop();
       timers["run.stepLength(YCholesky)"].resume();
       dualStepLength
         = stepLength(YCholesky, dY, StepMatrixWorkspace, eigenvaluesWorkspace,
-                     QRWorkspace, parameters.stepLengthReduction);
+                     QRWorkspace, parameters.step_length_reduction);
       timers["run.stepLength(YCholesky)"].stop();
 
       // If our problem is both dual-feasible and primal-feasible,

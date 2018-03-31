@@ -10,42 +10,41 @@
 class SDP_Solver_Parameters
 {
 public:
-  int maxIterations;
-  int maxRuntime;
-  int checkpointInterval;
-  bool noFinalCheckpoint;
-  bool findPrimalFeasible;
-  bool findDualFeasible;
-  bool detectPrimalFeasibleJump;
-  bool detectDualFeasibleJump;
+  int max_iterations;
+  int max_runtime;
+  int checkpoint_interval;
+  bool no_final_checkpoint;
+  bool find_primal_feasible;
+  bool find_dual_feasible;
+  bool detect_primal_feasible_jump;
+  bool detect_dual_feasible_jump;
   int precision;
-  int maxThreads;
-  Real dualityGapThreshold;
-  Real primalErrorThreshold;
-  Real dualErrorThreshold;
-  Real initialMatrixScalePrimal;
-  Real initialMatrixScaleDual;
-  Real feasibleCenteringParameter;
-  Real infeasibleCenteringParameter;
-  Real stepLengthReduction;
-  Real choleskyStabilizeThreshold;
-  Real maxComplementarity;
+  Real duality_gap_threshold;
+  Real primal_error_threshold;
+  Real dual_error_threshold;
+  Real initial_matrix_scale_primal;
+  Real initial_matrix_scale_dual;
+  Real feasible_centering_parameter;
+  Real infeasible_centering_parameter;
+  Real step_length_reduction;
+  Real cholesky_stabilize_threshold;
+  Real max_complementarity;
   // Set the precision of all Real parameters to equal 'precision'.
   // This is necessary because 'precision' might be set (via the
   // command line or a file) after initializing other parameters.
   //
   void resetPrecision()
   {
-    dualityGapThreshold.set_prec(precision);
-    primalErrorThreshold.set_prec(precision);
-    dualErrorThreshold.set_prec(precision);
-    initialMatrixScalePrimal.set_prec(precision);
-    initialMatrixScaleDual.set_prec(precision);
-    feasibleCenteringParameter.set_prec(precision);
-    infeasibleCenteringParameter.set_prec(precision);
-    stepLengthReduction.set_prec(precision);
-    choleskyStabilizeThreshold.set_prec(precision);
-    maxComplementarity.set_prec(precision);
+    duality_gap_threshold.set_prec(precision);
+    primal_error_threshold.set_prec(precision);
+    dual_error_threshold.set_prec(precision);
+    initial_matrix_scale_primal.set_prec(precision);
+    initial_matrix_scale_dual.set_prec(precision);
+    feasible_centering_parameter.set_prec(precision);
+    infeasible_centering_parameter.set_prec(precision);
+    step_length_reduction.set_prec(precision);
+    cholesky_stabilize_threshold.set_prec(precision);
+    max_complementarity.set_prec(precision);
   }
 
   friend std::ostream &
