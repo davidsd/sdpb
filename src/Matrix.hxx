@@ -40,16 +40,18 @@ public:
   inline Real &elt(const int r, const int c) { return elements[r + c * rows]; }
 
   // M := 0
-  void setZero() { std::fill(elements.begin(), elements.end(), 0); }
+  void set_zero() { std::fill(elements.begin(), elements.end(), 0); }
 
   // M += c*I, where I is the identity and c is a constant
-  void addDiagonal(const Real &c)
+  void add_diagonal(const Real &c)
   {
     // ensure M is square
     assert(rows == cols);
 
     for(int i = 0; i < rows; i++)
-      elt(i, i) += c;
+      {
+        elt(i, i) += c;
+      }
   }
 
   void resize(int r, int c)
@@ -114,7 +116,7 @@ public:
   }
 
   // The maximum absolute value of the elemnts of M
-  Real maxAbs() const { return max_abs_vector(elements); }
+  Real max_abs() const { return max_abs_vector(elements); }
 
   friend std::ostream &operator<<(std::ostream &os, const Matrix &a);
 };

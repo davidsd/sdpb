@@ -48,17 +48,21 @@ public:
   }
 
   // M = 0
-  void setZero()
+  void set_zero()
   {
     for(unsigned int b = 0; b < blocks.size(); b++)
-      blocks[b].setZero();
+      {
+        blocks[b].set_zero();
+      }
   }
 
   // Add a constant c to each diagonal element
-  void addDiagonal(const Real &c)
+  void add_diagonal(const Real &c)
   {
     for(unsigned int b = 0; b < blocks.size(); b++)
-      blocks[b].addDiagonal(c);
+      {
+        blocks[b].add_diagonal(c);
+      }
   }
 
   // M = M + A
@@ -97,13 +101,13 @@ public:
   }
 
   // The maximal absolute value of the elements of M
-  Real maxAbs() const
+  Real max_abs() const
   {
     Real max = 0;
     for(vector<Matrix>::const_iterator b = blocks.begin(); b != blocks.end();
         b++)
       {
-        const Real tmp = b->maxAbs();
+        const Real tmp = b->max_abs();
         if(tmp > max)
           max = tmp;
       }

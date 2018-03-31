@@ -68,9 +68,9 @@ SDP_Solver::SDP_Solver(const SDP &sdp, const SDP_Solver_Parameters &parameters)
     }
 
   // X = \Omega_p I
-  X.addDiagonal(parameters.initialMatrixScalePrimal);
+  X.add_diagonal(parameters.initialMatrixScalePrimal);
   // Y = \Omega_d I
-  Y.addDiagonal(parameters.initialMatrixScaleDual);
+  Y.add_diagonal(parameters.initialMatrixScaleDual);
 }
 
 /***********************************************************************/
@@ -720,7 +720,7 @@ void SDP_Solver::initializeSchurComplementSolver(
                                       - startIndex,
                                     schurStabilizeIndices[j].size());
           // set U_j = 0
-          stabilizeBlocks[j].setZero();
+          stabilizeBlocks[j].set_zero();
           // for each column of U_j add Lambda_p in the row (p - startIndex)
           for(unsigned int c = 0; c < schurStabilizeIndices[j].size(); c++)
             {
@@ -768,7 +768,7 @@ void SDP_Solver::initializeSchurComplementSolver(
   timers["initializeSchurComplementSolver.Qcomputation"].resume();
   // Set the dimensions of Q
   Q.resize(offDiagonalColumns, offDiagonalColumns);
-  Q.setZero();
+  Q.set_zero();
 
   // Here, SchurOffDiagonal = L'^{-1} B.
   //
@@ -932,7 +932,7 @@ void SDP_Solver::computeSearchDirection(const Real &beta, const Real &mu,
     }
 
   timers[timerName + ".R.add"].resume();
-  R.addDiagonal(beta * mu);
+  R.add_diagonal(beta * mu);
   timers[timerName + ".R.add"].stop();
 
   // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))
@@ -1047,7 +1047,7 @@ SDPSolverTerminateReason SDP_Solver::run(const path checkpointFile)
       timers["run.computePrimalResidues"].resume();
       // PrimalResidues = \sum_p A_p x[p] - X
       computePrimalResidues(sdp, x, X, PrimalResidues);
-      primalError = PrimalResidues.maxAbs();
+      primalError = PrimalResidues.max_abs();
       timers["run.computePrimalResidues"].stop();
 
       const bool isPrimalFeasible
