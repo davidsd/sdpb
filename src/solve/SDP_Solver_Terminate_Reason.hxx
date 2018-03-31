@@ -5,7 +5,7 @@
 // Reasons for terminating the solver.  See the manual for a detailed
 // description of each.
 //
-enum SDP_Solver_Terminate_Reason
+enum class SDP_Solver_Terminate_Reason
 {
   PrimalDualOptimal,
   PrimalFeasible,

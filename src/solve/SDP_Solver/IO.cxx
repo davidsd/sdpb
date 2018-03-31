@@ -52,16 +52,28 @@ ostream &operator<<(ostream &os, const SDP_Solver_Terminate_Reason &r)
 {
   switch(r)
     {
-    case PrimalDualOptimal: os << "found primal-dual optimal solution"; break;
-    case PrimalFeasible: os << "found primal feasible solution"; break;
-    case DualFeasible: os << "found dual feasible solution"; break;
-    case PrimalFeasibleJumpDetected:
+    case SDP_Solver_Terminate_Reason::PrimalDualOptimal:
+      os << "found primal-dual optimal solution";
+      break;
+    case SDP_Solver_Terminate_Reason::PrimalFeasible:
+      os << "found primal feasible solution";
+      break;
+    case SDP_Solver_Terminate_Reason::DualFeasible:
+      os << "found dual feasible solution";
+      break;
+    case SDP_Solver_Terminate_Reason::PrimalFeasibleJumpDetected:
       os << "primal feasible jump detected";
       break;
-    case DualFeasibleJumpDetected: os << "dual feasible jump detected"; break;
-    case MaxIterationsExceeded: os << "maxIterations exceeded"; break;
-    case MaxRuntimeExceeded: os << "maxRuntime exceeded"; break;
-    case MaxComplementarityExceeded:
+    case SDP_Solver_Terminate_Reason::DualFeasibleJumpDetected:
+      os << "dual feasible jump detected";
+      break;
+    case SDP_Solver_Terminate_Reason::MaxIterationsExceeded:
+      os << "maxIterations exceeded";
+      break;
+    case SDP_Solver_Terminate_Reason::MaxRuntimeExceeded:
+      os << "maxRuntime exceeded";
+      break;
+    case SDP_Solver_Terminate_Reason::MaxComplementarityExceeded:
       os << "maxComplementarity exceeded";
       break;
     }

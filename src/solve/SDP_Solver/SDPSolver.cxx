@@ -1005,7 +1005,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(const path checkpointFile)
         saveCheckpoint(checkpointFile);
       if(timers["Solver runtime"].elapsed().wall
          >= parameters.maxRuntime * 1000000000LL)
-        return MaxRuntimeExceeded;
+        return SDP_Solver_Terminate_Reason::MaxRuntimeExceeded;
 
       timers["run.objectives"].resume();
       primalObjective
@@ -1056,17 +1056,17 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(const path checkpointFile)
       const bool isOptimal = dualityGap < parameters.dualityGapThreshold;
 
       if(isPrimalFeasible && isDualFeasible && isOptimal)
-        return PrimalDualOptimal;
+        return SDP_Solver_Terminate_Reason::PrimalDualOptimal;
       else if(isPrimalFeasible && parameters.findPrimalFeasible)
-        return PrimalFeasible;
+        return SDP_Solver_Terminate_Reason::PrimalFeasible;
       else if(isDualFeasible && parameters.findDualFeasible)
-        return DualFeasible;
+        return SDP_Solver_Terminate_Reason::DualFeasible;
       else if(primalStepLength == 1 && parameters.detectPrimalFeasibleJump)
-        return PrimalFeasibleJumpDetected;
+        return SDP_Solver_Terminate_Reason::PrimalFeasibleJumpDetected;
       else if(dualStepLength == 1 && parameters.detectDualFeasibleJump)
-        return DualFeasibleJumpDetected;
+        return SDP_Solver_Terminate_Reason::DualFeasibleJumpDetected;
       else if(iteration > parameters.maxIterations)
-        return MaxIterationsExceeded;
+        return SDP_Solver_Terminate_Reason::MaxIterationsExceeded;
 
       // Compute SchurComplement and prepare to solve the Schur
       // complement equation for dx, dy
@@ -1078,7 +1078,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(const path checkpointFile)
       // Compute the complementarity mu = Tr(X Y)/X.dim
       Real mu = frobeniusProductSymmetric(X, Y) / X.dim;
       if(mu > parameters.maxComplementarity)
-        return MaxComplementarityExceeded;
+        return SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
 
       // Compute the predictor solution for (dx, dX, dy, dY)
       Real betaPredictor = predictorCenteringParameter(
@@ -1129,5 +1129,5 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(const path checkpointFile)
     }
 
   // Never reached
-  return MaxIterationsExceeded;
+  return SDP_Solver_Terminate_Reason::MaxIterationsExceeded;
 }
