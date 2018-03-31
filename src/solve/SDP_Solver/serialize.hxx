@@ -23,10 +23,6 @@
 #include <sstream>
 #include <string>
 
-using boost::archive::text_iarchive;
-using boost::filesystem::path;
-using std::vector;
-
 namespace boost
 {
   namespace serialization

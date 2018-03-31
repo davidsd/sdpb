@@ -111,16 +111,16 @@ void SDP_Solver::printIteration(int iteration, Real mu, Real primalStepLength,
   std::cout << '\n';
 }
 
-void backupCheckpointFile(path const &checkpointFile)
+void backupCheckpointFile(const boost::filesystem::path &checkpointFile)
 {
-  path backupFile(checkpointFile);
+  boost::filesystem::path backupFile(checkpointFile);
   backupFile.replace_extension(".ck.bk");
   std::cout << "Backing up checkpoint to: " << backupFile << '\n';
   copy_file(checkpointFile, backupFile,
             boost::filesystem::copy_option::overwrite_if_exists);
 }
 
-void SDP_Solver::saveCheckpoint(const path &checkpointFile)
+void SDP_Solver::saveCheckpoint(const boost::filesystem::path &checkpointFile)
 {
   if(exists(checkpointFile))
     backupCheckpointFile(checkpointFile);
@@ -131,7 +131,7 @@ void SDP_Solver::saveCheckpoint(const path &checkpointFile)
   timers["Last checkpoint"].start();
 }
 
-void SDP_Solver::loadCheckpoint(const path &checkpointFile)
+void SDP_Solver::loadCheckpoint(const boost::filesystem::path &checkpointFile)
 {
   boost::filesystem::ifstream ifs(checkpointFile);
   boost::archive::text_iarchive ar(ifs);
@@ -139,8 +139,8 @@ void SDP_Solver::loadCheckpoint(const path &checkpointFile)
   boost::serialization::serializeSDPSolverState(ar, x, X, y, Y);
 }
 
-void SDP_Solver::saveSolution(
-  const SDP_Solver_Terminate_Reason terminateReason, const path &outFile)
+void SDP_Solver::saveSolution(const SDP_Solver_Terminate_Reason terminateReason,
+                              const boost::filesystem::path &outFile)
 {
   boost::filesystem::ofstream ofs(outFile);
   std::cout << "Saving solution to      : " << outFile << '\n';
