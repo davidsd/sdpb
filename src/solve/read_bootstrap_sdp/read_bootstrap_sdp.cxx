@@ -20,6 +20,10 @@ std::vector<Real> parse_vector(const boost::property_tree::ptree &tree);
 Polynomial_Vector_Matrix
 parse_polynomial_vector_matrix(const boost::property_tree::ptree &tree);
 
+SDP bootstrap_SDP(
+  const Vector &affineObjective,
+  const std::vector<Polynomial_Vector_Matrix> &polVectorMatrices);
+
 SDP read_bootstrap_sdp(const std::vector<boost::filesystem::path> &sdp_files)
 {
   Vector objective;
