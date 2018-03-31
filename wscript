@@ -83,6 +83,7 @@ def build(bld):
 
     # Main executable
     bld.program(source=['src/main.cxx',
+                        'src/SDP_Solver_Parameters/ostream.cxx',
                         'src/solve/solve.cxx',
                         'src/solve/SDP_Solver/IO.cxx',
                         'src/solve/SDP_Solver/SDPSolver.cxx',
