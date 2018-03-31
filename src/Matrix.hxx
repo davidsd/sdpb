@@ -77,33 +77,35 @@ public:
   }
 
   // M := A
-  void copyFrom(const Matrix &A)
+
+  // The difference from the default assignment operator is that this
+  // never reallocates.  I am not sure it is really needed.
+  void copy_from(const Matrix &A)
   {
     assert(rows == A.rows);
     assert(cols == A.cols);
-
-    for(unsigned int i = 0; i < elements.size(); i++)
-      elements[i] = A.elements[i];
+    
+    std::copy(A.elements.begin(), A.elements.end(), elements.begin());
   }
 
   // M := M + A
   void operator+=(const Matrix &A)
   {
-    for(unsigned int i = 0; i < elements.size(); i++)
+    for(size_t i = 0; i < elements.size(); i++)
       elements[i] += A.elements[i];
   }
 
   // M := M - A
   void operator-=(const Matrix &A)
   {
-    for(unsigned int i = 0; i < elements.size(); i++)
+    for(size_t i = 0; i < elements.size(); i++)
       elements[i] -= A.elements[i];
   }
 
   // M := c*M, where c is a constant
   void operator*=(const Real &c)
   {
-    for(unsigned int i = 0; i < elements.size(); i++)
+    for(size_t i = 0; i < elements.size(); i++)
       elements[i] *= c;
   }
 

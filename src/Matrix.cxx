@@ -220,7 +220,7 @@ void choleskyDecomposition(Matrix &A, Matrix &L)
   assert(L.cols == dim);
 
   // Set lower-triangular part of L to cholesky decomposition
-  L.copyFrom(A);
+  L.copy_from(A);
   Integer info;
   Rpotrf("Lower", dim, &L.elements[0], dim, &info);
   assert(info == 0);
@@ -243,7 +243,7 @@ void choleskyDecompositionStabilized(Matrix &A, Matrix &L,
   assert(L.cols == dim);
 
   // Set lower-triangular part of L to cholesky decomposition
-  L.copyFrom(A);
+  L.copy_from(A);
   Integer info;
   RpotrfStabilized("Lower", dim, &L.elements[0], dim, &info, stabilizeIndices,
                    stabilizeLambdas, stabilizeThreshold);

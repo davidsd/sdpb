@@ -595,7 +595,7 @@ Real stepLength(BlockDiagonalMatrix &MCholesky, BlockDiagonalMatrix &dM,
                 vector<Vector> &workspace, const Real gamma)
 {
   // MInvDM = L^{-1} dM L^{-T}, where M = L L^T
-  MInvDM.copyFrom(dM);
+  MInvDM.copy_from(dM);
   lowerTriangularInverseCongruence(MInvDM, MCholesky);
 
   const Real lambda = minEigenvalue(MInvDM, workspace, eigenvalues);
@@ -680,7 +680,7 @@ void SDP_Solver::initializeSchurComplementSolver(
     .stop();
 
   // SchurOffDiagonal = L'^{-1} FreeVarMatrix
-  SchurOffDiagonal.copyFrom(sdp.FreeVarMatrix);
+  SchurOffDiagonal.copy_from(sdp.FreeVarMatrix);
   timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
     .resume();
   blockMatrixLowerTriangularSolve(SchurComplementCholesky, SchurOffDiagonal);

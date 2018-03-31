@@ -87,10 +87,12 @@ public:
   }
 
   // M = A
-  void copyFrom(const BlockDiagonalMatrix &A)
+  void copy_from(const BlockDiagonalMatrix &A)
   {
-    for(unsigned int b = 0; b < blocks.size(); b++)
-      blocks[b].copyFrom(A.blocks[b]);
+    for(size_t b = 0; b < blocks.size(); b++)
+      {
+        blocks[b].copy_from(A.blocks[b]);
+      }
   }
 
   // Symmetrize M in place
