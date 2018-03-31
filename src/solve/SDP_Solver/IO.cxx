@@ -17,7 +17,7 @@
 #include <ostream>
 #include <sstream>
 
-ostream &operator<<(ostream &os, const SDP_Solver_Parameters &p)
+std::ostream &operator<<(std::ostream &os, const SDP_Solver_Parameters &p)
 {
   os << std::boolalpha;
   os << "maxIterations                = " << p.maxIterations << '\n';
@@ -48,7 +48,8 @@ ostream &operator<<(ostream &os, const SDP_Solver_Parameters &p)
   return os;
 }
 
-ostream &operator<<(ostream &os, const SDP_Solver_Terminate_Reason &r)
+std::ostream &
+operator<<(std::ostream &os, const SDP_Solver_Terminate_Reason &r)
 {
   switch(r)
     {

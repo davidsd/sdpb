@@ -9,9 +9,6 @@
 
 #include "../Matrix.hxx"
 
-using std::ostream;
-using std::vector;
-
 // A block-diagonal square matrix
 //
 //   M = Diagonal(M_0, M_1, ..., M_{bMax-1})
@@ -25,15 +22,15 @@ public:
   int dim;
 
   // The blocks M_b for 0 <= b < bMax
-  vector<Matrix> blocks;
+  std::vector<Matrix> blocks;
 
   // The rows (or columns) of M corresponding to the top-left entry of
   // each block M_b
-  vector<int> blockStartIndices;
+  std::vector<int> blockStartIndices;
 
   // Construct a BlockDiagonalMatrix from a vector of dimensions {s_0,
   // ..., s_{bMax-1}} for each block.
-  explicit BlockDiagonalMatrix(const vector<int> &blockSizes) : dim(0)
+  explicit BlockDiagonalMatrix(const std::vector<int> &blockSizes) : dim(0)
   {
     for(unsigned int i = 0; i < blockSizes.size(); i++)
       {
@@ -102,8 +99,8 @@ public:
   Real max_abs() const
   {
     Real max = 0;
-    for(vector<Matrix>::const_iterator b = blocks.begin(); b != blocks.end();
-        b++)
+    for(std::vector<Matrix>::const_iterator b = blocks.begin();
+        b != blocks.end(); b++)
       {
         const Real tmp = b->max_abs();
         if(tmp > max)
@@ -112,7 +109,7 @@ public:
     return max;
   }
 
-  friend ostream &operator<<(ostream &os, const BlockDiagonalMatrix &A);
+  friend std::ostream &operator<<(std::ostream &os, const BlockDiagonalMatrix &A);
 };
 
 // Tr(A B), where A and B are symmetric
@@ -151,8 +148,8 @@ void lowerTriangularInverseCongruence(BlockDiagonalMatrix &A,  // overwritten
 // - workspace : vector of Vectors of lenfth 3*n_b-1 (0 <= b < bMax)
 //   (temporary workspace)
 //
-Real minEigenvalue(BlockDiagonalMatrix &A, vector<Vector> &workspace,
-                   vector<Vector> &eigenvalues);
+Real minEigenvalue(BlockDiagonalMatrix &A, std::vector<Vector> &workspace,
+                   std::vector<Vector> &eigenvalues);
 
 // Compute L (lower triangular) such that A = L L^T
 // Inputs:
@@ -175,11 +172,11 @@ void choleskyDecomposition(BlockDiagonalMatrix &A, BlockDiagonalMatrix &L);
 // - stabilizeLambdas: a list of corresponding Lambdas, for each block
 //   of A (overwritten)
 //
-void choleskyDecompositionStabilized(BlockDiagonalMatrix &A,
-                                     BlockDiagonalMatrix &L,
-                                     vector<vector<Integer>> &stabilizeIndices,
-                                     vector<vector<Real>> &stabilizeLambdas,
-                                     const double stabilizeThreshold);
+void choleskyDecompositionStabilized(
+  BlockDiagonalMatrix &A, BlockDiagonalMatrix &L,
+  std::vector<std::vector<Integer>> &stabilizeIndices,
+  std::vector<std::vector<Real>> &stabilizeLambdas,
+  const double stabilizeThreshold);
 
 // X := ACholesky^{-T} ACholesky^{-1} X = A^{-1} X
 // Input:

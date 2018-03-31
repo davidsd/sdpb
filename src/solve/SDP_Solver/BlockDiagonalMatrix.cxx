@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <vector>
 
-ostream &operator<<(ostream &os, const BlockDiagonalMatrix &A)
+std::ostream &operator<<(std::ostream &os, const BlockDiagonalMatrix &A)
 {
   os << "{";
   for(unsigned int b = 0; b < A.blocks.size(); b++)

@@ -19,4 +19,3 @@ enum class SDP_Solver_Terminate_Reason
 
 std::ostream &
 operator<<(std::ostream &os, const SDP_Solver_Terminate_Reason &r);
-
