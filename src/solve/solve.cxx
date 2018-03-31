@@ -55,7 +55,7 @@ int solve(const std::vector<boost::filesystem::path> &sdp_files,
 
   timers["Solver runtime"].start();
   timers["Last checkpoint"].start();
-  SDPSolverTerminateReason reason = solver.run(checkpoint_file_out);
+  SDP_Solver_Terminate_Reason reason = solver.run(checkpoint_file_out);
   timers["Solver runtime"].stop();
   std::cout << "-----" << std::setfill('-') << std::setw(116) << std::left
             << reason << '\n';

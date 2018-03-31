@@ -991,7 +991,7 @@ void SDP_Solver::computeSearchDirection(const Real &beta, const Real &mu,
 // function.
 //             Its just simpler to see this way what's timed and what's not
 
-SDPSolverTerminateReason SDP_Solver::run(const path checkpointFile)
+SDP_Solver_Terminate_Reason SDP_Solver::run(const path checkpointFile)
 {
   Real primalStepLength;
   Real dualStepLength;

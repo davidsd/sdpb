@@ -17,43 +17,38 @@
 #include <ostream>
 #include <sstream>
 
-using boost::filesystem::path;
-using boost::posix_time::microseconds;
-using boost::posix_time::time_duration;
-using std::cout;
-
 ostream &operator<<(ostream &os, const SDP_Solver_Parameters &p)
 {
   os << std::boolalpha;
-  os << "maxIterations                = " << p.maxIterations << endl;
-  os << "maxRuntime                   = " << p.maxRuntime << endl;
-  os << "checkpointInterval           = " << p.checkpointInterval << endl;
-  os << "noFinalCheckpoint            = " << p.noFinalCheckpoint << endl;
-  os << "findPrimalFeasible           = " << p.findPrimalFeasible << endl;
-  os << "findDualFeasible             = " << p.findDualFeasible << endl;
+  os << "maxIterations                = " << p.maxIterations << '\n';
+  os << "maxRuntime                   = " << p.maxRuntime << '\n';
+  os << "checkpointInterval           = " << p.checkpointInterval << '\n';
+  os << "noFinalCheckpoint            = " << p.noFinalCheckpoint << '\n';
+  os << "findPrimalFeasible           = " << p.findPrimalFeasible << '\n';
+  os << "findDualFeasible             = " << p.findDualFeasible << '\n';
   os << "detectPrimalFeasibleJump     = " << p.detectPrimalFeasibleJump
-     << endl;
-  os << "detectDualFeasibleJump       = " << p.detectDualFeasibleJump << endl;
+     << '\n';
+  os << "detectDualFeasibleJump       = " << p.detectDualFeasibleJump << '\n';
   os << "precision(actual)            = " << p.precision << "("
-     << mpf_get_default_prec() << ")" << endl;
-  os << "dualityGapThreshold          = " << p.dualityGapThreshold << endl;
-  os << "primalErrorThreshold         = " << p.primalErrorThreshold << endl;
-  os << "dualErrorThreshold           = " << p.dualErrorThreshold << endl;
+     << mpf_get_default_prec() << ")" << '\n';
+  os << "dualityGapThreshold          = " << p.dualityGapThreshold << '\n';
+  os << "primalErrorThreshold         = " << p.primalErrorThreshold << '\n';
+  os << "dualErrorThreshold           = " << p.dualErrorThreshold << '\n';
   os << "initialMatrixScalePrimal     = " << p.initialMatrixScalePrimal
-     << endl;
-  os << "initialMatrixScaleDual       = " << p.initialMatrixScaleDual << endl;
+     << '\n';
+  os << "initialMatrixScaleDual       = " << p.initialMatrixScaleDual << '\n';
   os << "feasibleCenteringParameter   = " << p.feasibleCenteringParameter
-     << endl;
+     << '\n';
   os << "infeasibleCenteringParameter = " << p.infeasibleCenteringParameter
-     << endl;
-  os << "stepLengthReduction          = " << p.stepLengthReduction << endl;
+     << '\n';
+  os << "stepLengthReduction          = " << p.stepLengthReduction << '\n';
   os << "choleskyStabilizeThreshold   = " << p.choleskyStabilizeThreshold
-     << endl;
-  os << "maxComplementarity           = " << p.maxComplementarity << endl;
+     << '\n';
+  os << "maxComplementarity           = " << p.maxComplementarity << '\n';
   return os;
 }
 
-ostream &operator<<(ostream &os, const SDPSolverTerminateReason &r)
+ostream &operator<<(ostream &os, const SDP_Solver_Terminate_Reason &r)
 {
   switch(r)
     {
@@ -75,17 +70,20 @@ ostream &operator<<(ostream &os, const SDPSolverTerminateReason &r)
 
 void SDP_Solver::printHeader()
 {
-  cout << "\n     time      mu        P-obj       D-obj      gap         "
-          "P-err       D-err      P-step   D-step   beta  dim/stabilized\n";
-  cout << "-------------------------------------------------------------------"
-          "------------------------------------------------------\n";
+  std::cout
+    << "\n     time      mu        P-obj       D-obj      gap         "
+       "P-err       D-err      P-step   D-step   beta  dim/stabilized\n";
+  std::cout
+    << "-------------------------------------------------------------------"
+       "------------------------------------------------------\n";
 }
 
 void SDP_Solver::printIteration(int iteration, Real mu, Real primalStepLength,
                                 Real dualStepLength, Real betaCorrector)
 {
-  time_duration td(microseconds(timers["Solver runtime"].elapsed().wall)
-                   / 1000);
+  boost::posix_time::time_duration td(
+    boost::posix_time::microseconds(timers["Solver runtime"].elapsed().wall)
+    / 1000);
   std::stringstream ss;
   ss << td;
   gmp_fprintf(stdout,
@@ -97,14 +95,14 @@ void SDP_Solver::printIteration(int iteration, Real mu, Real primalStepLength,
               dualError.get_mpf_t(), primalStepLength.get_mpf_t(),
               dualStepLength.get_mpf_t(), betaCorrector.get_mpf_t(),
               static_cast<int>(sdp.dualObjective.size()), Q.rows);
-  cout << endl;
+  std::cout << '\n';
 }
 
 void backupCheckpointFile(path const &checkpointFile)
 {
   path backupFile(checkpointFile);
   backupFile.replace_extension(".ck.bk");
-  cout << "Backing up checkpoint to: " << backupFile << endl;
+  std::cout << "Backing up checkpoint to: " << backupFile << '\n';
   copy_file(checkpointFile, backupFile,
             boost::filesystem::copy_option::overwrite_if_exists);
 }
@@ -115,7 +113,7 @@ void SDP_Solver::saveCheckpoint(const path &checkpointFile)
     backupCheckpointFile(checkpointFile);
   boost::filesystem::ofstream ofs(checkpointFile);
   boost::archive::text_oarchive ar(ofs);
-  cout << "Saving checkpoint to    : " << checkpointFile << endl;
+  std::cout << "Saving checkpoint to    : " << checkpointFile << '\n';
   boost::serialization::serializeSDPSolverState(ar, x, X, y, Y);
   timers["Last checkpoint"].start();
 }
@@ -124,15 +122,15 @@ void SDP_Solver::loadCheckpoint(const path &checkpointFile)
 {
   boost::filesystem::ifstream ifs(checkpointFile);
   boost::archive::text_iarchive ar(ifs);
-  cout << "Loading checkpoint from : " << checkpointFile << endl;
+  std::cout << "Loading checkpoint from : " << checkpointFile << '\n';
   boost::serialization::serializeSDPSolverState(ar, x, X, y, Y);
 }
 
-void SDP_Solver::saveSolution(const SDPSolverTerminateReason terminateReason,
-                              const path &outFile)
+void SDP_Solver::saveSolution(
+  const SDP_Solver_Terminate_Reason terminateReason, const path &outFile)
 {
   boost::filesystem::ofstream ofs(outFile);
-  cout << "Saving solution to      : " << outFile << endl;
+  std::cout << "Saving solution to      : " << outFile << '\n';
   ofs.precision(static_cast<int>(primalObjective.get_prec() * 0.31 + 5));
   ofs << "terminateReason = \"" << terminateReason << "\";\n";
   ofs << "primalObjective = " << primalObjective << ";\n";

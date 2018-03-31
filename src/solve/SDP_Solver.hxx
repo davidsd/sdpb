@@ -9,36 +9,11 @@
 
 #include "SDP_Solver/BlockDiagonalMatrix.hxx"
 #include "SDP.hxx"
+#include "SDP_Solver_Terminate_Reason.hxx"
 
 #include "../SDP_Solver_Parameters.hxx"
 
 #include <boost/filesystem.hpp>
-
-#include <iostream>
-#include <ostream>
-#include <vector>
-
-using boost::filesystem::path;
-using std::endl;
-using std::ostream;
-using std::vector;
-
-// Reasons for terminating the solver.  See the manual for a detailed
-// description of each.
-//
-enum SDPSolverTerminateReason
-{
-  PrimalDualOptimal,
-  PrimalFeasible,
-  DualFeasible,
-  PrimalFeasibleJumpDetected,
-  DualFeasibleJumpDetected,
-  MaxComplementarityExceeded,
-  MaxIterationsExceeded,
-  MaxRuntimeExceeded,
-};
-
-ostream &operator<<(ostream &os, const SDPSolverTerminateReason &r);
 
 // SDPSolver contains the data structures needed during the running of
 // the interior point algorithm.  Each structure is allocated when an
@@ -253,12 +228,14 @@ public:
   SDP_Solver(const SDP &sdp, const SDP_Solver_Parameters &parameters);
 
   // Run the solver, backing up to checkpointFile
-  SDPSolverTerminateReason run(const path checkpointFile);
+  SDP_Solver_Terminate_Reason
+  run(const boost::filesystem::path checkpointFile);
 
   // Input/output
-  void saveCheckpoint(const path &checkpointFile);
-  void loadCheckpoint(const path &checkpointFile);
-  void saveSolution(const SDPSolverTerminateReason, const path &outFile);
+  void saveCheckpoint(const boost::filesystem::path &checkpointFile);
+  void loadCheckpoint(const boost::filesystem::path &checkpointFile);
+  void saveSolution(const SDP_Solver_Terminate_Reason,
+                    const boost::filesystem::path &outFile);
   void printHeader();
   void printIteration(int iteration, Real mu, Real primalStepLength,
                       Real dualStepLength, Real betaCorrector);
