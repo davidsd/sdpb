@@ -61,12 +61,11 @@ public:
   int degree() const
   {
     int d = 0;
-    for(std::vector<std::vector<Polynomial>>::const_iterator e
-        = elements.begin();
-        e != elements.end(); e++)
-      for(std::vector<Polynomial>::const_iterator p = e->begin();
-          p != e->end(); p++)
-        d = std::max(p->degree(), d);
+    for(auto &e: elements)
+      for(auto &p:  e)
+        {
+          d = std::max(p.degree(), d);
+        }
     return d;
   }
 };

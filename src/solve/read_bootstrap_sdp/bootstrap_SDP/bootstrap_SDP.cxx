@@ -24,15 +24,17 @@ SDP sdp_from_dual_constraint_groups(
 // with y the dual decision variables.  polVectorMatrices are
 // described in SDP.h.
 //
-SDP bootstrap_SDP(const Vector &affineObjective,
-                  const std::vector<Polynomial_Vector_Matrix> &polVectorMatrices)
+SDP bootstrap_SDP(
+  const Vector &affineObjective,
+  const std::vector<Polynomial_Vector_Matrix> &polVectorMatrices)
 {
   // Convert polVectorMatrices into Dual_Constraint_Group's
   std::vector<Dual_Constraint_Group> dualConstraintGroups;
-  for(std::vector<Polynomial_Vector_Matrix>::const_iterator m
-      = polVectorMatrices.begin();
-      m != polVectorMatrices.end(); m++)
-    dualConstraintGroups.push_back(dual_constraint_group_from_pol_vec_mat(*m));
+  for(auto &m : polVectorMatrices)
+    {
+      dualConstraintGroups.push_back(
+        dual_constraint_group_from_pol_vec_mat(m));
+    }
 
   // Split affineObjective into objectiveConst f and dualObjective b
   Real objectiveConst = affineObjective[0];

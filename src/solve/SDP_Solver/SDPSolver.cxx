@@ -329,25 +329,24 @@ void computeSchurComplement(const SDP &sdp,
               const int k2 = sdp.constraintIndices[j][u2].k;
 
               Real tmp = 0;
-              for(vector<int>::const_iterator b = sdp.blocks[j].begin();
-                  b != sdp.blocks[j].end(); b++)
+              for(auto &b : sdp.blocks[j])
                 {
-                  tmp += (BilinearPairingsXInv.blocks[*b].elt(ej_s1 + k1,
-                                                              ej_r2 + k2)
-                            * BilinearPairingsY.blocks[*b].elt(ej_s2 + k2,
-                                                               ej_r1 + k1)
-                          + BilinearPairingsXInv.blocks[*b].elt(ej_r1 + k1,
-                                                                ej_r2 + k2)
-                              * BilinearPairingsY.blocks[*b].elt(ej_s2 + k2,
-                                                                 ej_s1 + k1)
-                          + BilinearPairingsXInv.blocks[*b].elt(ej_s1 + k1,
-                                                                ej_s2 + k2)
-                              * BilinearPairingsY.blocks[*b].elt(ej_r2 + k2,
-                                                                 ej_r1 + k1)
-                          + BilinearPairingsXInv.blocks[*b].elt(ej_r1 + k1,
-                                                                ej_s2 + k2)
-                              * BilinearPairingsY.blocks[*b].elt(ej_r2 + k2,
-                                                                 ej_s1 + k1))
+                  tmp += (BilinearPairingsXInv.blocks[b].elt(ej_s1 + k1,
+                                                             ej_r2 + k2)
+                            * BilinearPairingsY.blocks[b].elt(ej_s2 + k2,
+                                                              ej_r1 + k1)
+                          + BilinearPairingsXInv.blocks[b].elt(ej_r1 + k1,
+                                                               ej_r2 + k2)
+                              * BilinearPairingsY.blocks[b].elt(ej_s2 + k2,
+                                                                ej_s1 + k1)
+                          + BilinearPairingsXInv.blocks[b].elt(ej_s1 + k1,
+                                                               ej_s2 + k2)
+                              * BilinearPairingsY.blocks[b].elt(ej_r2 + k2,
+                                                                ej_r1 + k1)
+                          + BilinearPairingsXInv.blocks[b].elt(ej_r1 + k1,
+                                                               ej_s2 + k2)
+                              * BilinearPairingsY.blocks[b].elt(ej_r2 + k2,
+                                                                ej_s1 + k1))
                          / 4;
                 }
               SchurComplement.blocks[j].elt(u1, u2) = tmp;
@@ -379,24 +378,21 @@ void computeDualResidues(const SDP &sdp, const Vector &y,
     {
       const int ej = sdp.degrees[j] + 1;
 
-      for(vector<Index_Tuple>::const_iterator t
-          = sdp.constraintIndices[j].begin();
-          t != sdp.constraintIndices[j].end(); t++)
+      for(auto &t : sdp.constraintIndices[j])
         {
-          const int p = t->p;
-          const int ej_r = t->r * ej;
-          const int ej_s = t->s * ej;
-          const int k = t->k;
+          const int p = t.p;
+          const int ej_r = t.r * ej;
+          const int ej_s = t.s * ej;
+          const int k = t.k;
 
           // dualResidues[p] = -Tr(A_p Y)
           dualResidues[p] = 0;
-          for(vector<int>::const_iterator b = sdp.blocks[j].begin();
-              b != sdp.blocks[j].end(); b++)
+          for(auto &b : sdp.blocks[j])
             {
               dualResidues[p]
-                -= BilinearPairingsY.blocks[*b].elt(ej_r + k, ej_s + k);
+                -= BilinearPairingsY.blocks[b].elt(ej_r + k, ej_s + k);
               dualResidues[p]
-                -= BilinearPairingsY.blocks[*b].elt(ej_s + k, ej_r + k);
+                -= BilinearPairingsY.blocks[b].elt(ej_s + k, ej_r + k);
             }
           dualResidues[p] /= 2;
 
@@ -433,8 +429,7 @@ void constraintMatrixWeightedSum(const SDP &sdp, const Vector a,
       const int ej = sdp.degrees[j] + 1;
 
       // For each j, t points to the first Index_Tuple corresponding to j
-      for(vector<Index_Tuple>::const_iterator t
-          = sdp.constraintIndices[j].begin();
+      for(auto t(sdp.constraintIndices[j].begin());
           t != sdp.constraintIndices[j].end(); t += ej)
         {
           const int p = t->p;
@@ -442,29 +437,28 @@ void constraintMatrixWeightedSum(const SDP &sdp, const Vector a,
           const int s = t->s;
           assert(t->k == 0);
 
-          for(vector<int>::const_iterator b = sdp.blocks[j].begin();
-              b != sdp.blocks[j].end(); b++)
+          for(auto &b : sdp.blocks[j])
             {
               // Result.blocks[b]^(r,s) = V diag(a') V^T, where
               // V=sdp.bilinearBases[b], a' denotes the subvector of a
               // corresponding to j, and M^(r,s) denotes the (r,s)-th block
               // of M.
-              diagonalCongruence(&a[p], sdp.bilinearBases[*b], r, s,
-                                 Result.blocks[*b]);
+              diagonalCongruence(&a[p], sdp.bilinearBases[b], r, s,
+                                 Result.blocks[b]);
 
               // Result should be symmetric, so if r != s, we must divide
               // the (r,s)-th block of Result.blocks[b] by 2 and copy its
               // transpose to the (s,r)-th block.
               if(r != s)
                 {
-                  const int u = sdp.bilinearBases[*b].rows;
+                  const int u = sdp.bilinearBases[b].rows;
                   for(int m = r * u; m < (r + 1) * u; m++)
                     {
                       for(int n = s * u; n < (s + 1) * u; n++)
                         {
-                          Result.blocks[*b].elt(m, n) /= 2;
-                          Result.blocks[*b].elt(n, m)
-                            = Result.blocks[*b].elt(m, n);
+                          Result.blocks[b].elt(m, n) /= 2;
+                          Result.blocks[b].elt(n, m)
+                            = Result.blocks[b].elt(m, n);
                         }
                     }
                 }

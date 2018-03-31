@@ -151,10 +151,11 @@ public:
   std::vector<int> psdMatrixBlockDims() const
   {
     std::vector<int> dims;
-    for(unsigned int j = 0; j < dimensions.size(); j++)
-      for(std::vector<int>::const_iterator b = blocks[j].begin();
-          b != blocks[j].end(); b++)
-        dims.push_back(bilinearBases[*b].rows * dimensions[j]);
+    for(size_t j = 0; j < dimensions.size(); j++)
+      for(auto &b : blocks[j])
+        {
+          dims.push_back(bilinearBases[b].rows * dimensions[j]);
+        }
     return dims;
   }
 
@@ -165,10 +166,11 @@ public:
   std::vector<int> bilinearPairingBlockDims() const
   {
     std::vector<int> dims;
-    for(unsigned int j = 0; j < dimensions.size(); j++)
-      for(std::vector<int>::const_iterator b = blocks[j].begin();
-          b != blocks[j].end(); b++)
-        dims.push_back(bilinearBases[*b].cols * dimensions[j]);
+    for(size_t j = 0; j < dimensions.size(); j++)
+      for(auto &b : blocks[j])
+        {
+          dims.push_back(bilinearBases[b].cols * dimensions[j]);
+        }
     return dims;
   }
 
@@ -197,7 +199,6 @@ public:
     return os;
   }
 };
-
 
 SDP bootstrap_SDP(
   const Vector &affineObjective,
