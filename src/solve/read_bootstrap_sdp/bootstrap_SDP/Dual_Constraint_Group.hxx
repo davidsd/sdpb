@@ -24,7 +24,7 @@
 // the future.
 //
 
-#include "../../../Matrix.hxx"
+#include "../../Matrix.hxx"
 
 class Dual_Constraint_Group
 {

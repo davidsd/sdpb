@@ -8,11 +8,12 @@
 #pragma once
 
 #include "SDP_Solver/BlockDiagonalMatrix.hxx"
-#include "../Matrix.hxx"
 #include "SDP.hxx"
+
 #include "../SDP_Solver_Parameters.hxx"
-#include "../Vector.hxx"
+
 #include <boost/filesystem.hpp>
+
 #include <iostream>
 #include <ostream>
 #include <vector>

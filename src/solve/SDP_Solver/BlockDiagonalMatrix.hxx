@@ -7,11 +7,7 @@
 
 #pragma once
 
-#include "../../Matrix.hxx"
-#include "../../types.hxx"
-#include <iostream>
-#include <ostream>
-#include <vector>
+#include "../Matrix.hxx"
 
 using std::ostream;
 using std::vector;

@@ -7,7 +7,8 @@
 
 #pragma once
 
-#include "types.hxx"
+#include "../types.hxx"
+
 #include <algorithm>
 #include <assert.h>
 #include <iostream>

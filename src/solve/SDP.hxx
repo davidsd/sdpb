@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include "../Matrix.hxx"
-#include "../Polynomial_Vector_Matrix.hxx"
+#include "Matrix.hxx"
+#include "Polynomial_Vector_Matrix.hxx"
 #include "Index_Tuple.hxx"
 
 // The class SDP encodes a semidefinite program of the following form

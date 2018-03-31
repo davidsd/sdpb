@@ -8,7 +8,6 @@
 #pragma once
 
 #include "Vector.hxx"
-#include "types.hxx"
 
 // A univariate polynomial
 //

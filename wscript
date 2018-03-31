@@ -92,7 +92,7 @@ def build(bld):
                         'src/solve/read_bootstrap_sdp/parse_Real.cxx',
                         'src/solve/read_bootstrap_sdp/parse_polynomial_vector_matrix.cxx',
                         'src/solve/read_bootstrap_sdp/bootstrap_SDP/bootstrap_SDP.cxx',
-                        'src/Matrix.cxx'],
+                        'src/solve/Matrix.cxx'],
                 target='sdpb',
                 includes=['src/mpack'],
                 cxxflags=default_flags,
