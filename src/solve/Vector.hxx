@@ -23,11 +23,15 @@ template <class T>
 std::ostream &operator<<(std::ostream &os, const std::vector<T> &v)
 {
   os << "{";
-  int last = v.size() - 1;
-  for(int i = 0; i < last; i++)
-    os << v[i] << ", ";
-  if(last >= 0)
-    os << v[last];
+  for(auto element(v.begin()); element != v.end();)
+    {
+      os << *element;
+      ++element;
+      if(element != v.end())
+        {
+          os << ", ";
+        }
+    }
   os << "}";
   return os;
 }
@@ -49,11 +53,10 @@ inline void add_scaled_vector(Vector &v, const Real &a, const Vector &u)
     }
 }
 
-// The smash product... just kidding. The dot product u.v.
 inline Real dot_product(const Vector &u, const Vector v)
 {
   Real result = 0;
-  for(unsigned int i = 0; i < u.size(); i++)
+  for(size_t i = 0; i < u.size(); i++)
     result += u[i] * v[i];
   return result;
 }
@@ -64,7 +67,9 @@ inline Real dot_product(const Vector &u, const Vector v)
 inline Vector multiply_vectors(const Vector &u, const Vector &v)
 {
   Vector w(u.size());
-  for(unsigned int i = 0; i < w.size(); i++)
-    w[i] = u[i] * v[i];
+  for(size_t i = 0; i < w.size(); i++)
+    {
+      w[i] = u[i] * v[i];
+    }
   return w;
 }
