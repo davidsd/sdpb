@@ -7,17 +7,17 @@
 
 #pragma once
 
-#include "BlockDiagonalMatrix.hxx"
+#include "../Block_Diagonal_Matrix.hxx"
 
-#include "boost/archive/text_iarchive.hpp"
-#include "boost/archive/text_oarchive.hpp"
-#include "boost/filesystem/fstream.hpp"
-#include "boost/serialization/base_object.hpp"
-#include "boost/serialization/serialization.hpp"
-#include "boost/serialization/split_free.hpp"
-#include "boost/serialization/string.hpp"
-#include "boost/serialization/utility.hpp"
-#include "boost/serialization/vector.hpp"
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/split_free.hpp>
+#include <boost/serialization/string.hpp>
+#include <boost/serialization/utility.hpp>
+#include <boost/serialization/vector.hpp>
 #include <boost/filesystem.hpp>
 
 #include <sstream>
@@ -57,7 +57,7 @@ namespace boost
     }
 
     template <class Archive>
-    void serialize(Archive &ar, BlockDiagonalMatrix &m, const unsigned int)
+    void serialize(Archive &ar, Block_Diagonal_Matrix &m, const unsigned int)
     {
       ar &m.dim;
       ar &m.blocks;
@@ -66,8 +66,8 @@ namespace boost
 
     template <class Archive>
     void
-    serializeSDPSolverState(Archive &ar, Vector &x, BlockDiagonalMatrix &X,
-                            Vector &y, BlockDiagonalMatrix &Y)
+    serializeSDPSolverState(Archive &ar, Vector &x, Block_Diagonal_Matrix &X,
+                            Vector &y, Block_Diagonal_Matrix &Y)
     {
       ar &x;
       ar &X;
@@ -81,4 +81,4 @@ namespace boost
 BOOST_SERIALIZATION_SPLIT_FREE(Real)
 BOOST_CLASS_VERSION(Real, 0)
 BOOST_CLASS_TRACKING(Matrix, boost::serialization::track_never)
-BOOST_CLASS_TRACKING(BlockDiagonalMatrix, boost::serialization::track_never)
+BOOST_CLASS_TRACKING(Block_Diagonal_Matrix, boost::serialization::track_never)

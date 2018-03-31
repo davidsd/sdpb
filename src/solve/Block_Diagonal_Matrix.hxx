@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "../Matrix.hxx"
+#include "Matrix.hxx"
 
 // A block-diagonal square matrix
 //
@@ -15,7 +15,7 @@
 //
 // where each block M_b is a square-matrix (of possibly different
 // sizes).
-class BlockDiagonalMatrix
+class Block_Diagonal_Matrix
 {
 public:
   // The total number of rows (or columns) in M
@@ -28,9 +28,9 @@ public:
   // each block M_b
   std::vector<int> blockStartIndices;
 
-  // Construct a BlockDiagonalMatrix from a vector of dimensions {s_0,
+  // Construct a Block_Diagonal_Matrix from a vector of dimensions {s_0,
   // ..., s_{bMax-1}} for each block.
-  explicit BlockDiagonalMatrix(const std::vector<int> &blockSizes) : dim(0)
+  explicit Block_Diagonal_Matrix(const std::vector<int> &blockSizes) : dim(0)
   {
     for(unsigned int i = 0; i < blockSizes.size(); i++)
       {
@@ -59,14 +59,14 @@ public:
   }
 
   // M = M + A
-  void operator+=(const BlockDiagonalMatrix &A)
+  void operator+=(const Block_Diagonal_Matrix &A)
   {
     for(unsigned int b = 0; b < blocks.size(); b++)
       blocks[b] += A.blocks[b];
   }
 
   // M = M - A
-  void operator-=(const BlockDiagonalMatrix &A)
+  void operator-=(const Block_Diagonal_Matrix &A)
   {
     for(unsigned int b = 0; b < blocks.size(); b++)
       blocks[b] -= A.blocks[b];
@@ -80,7 +80,7 @@ public:
   }
 
   // M = A
-  void copy_from(const BlockDiagonalMatrix &A)
+  void copy_from(const Block_Diagonal_Matrix &A)
   {
     for(size_t b = 0; b < blocks.size(); b++)
       {
@@ -109,46 +109,46 @@ public:
     return max;
   }
 
-  friend std::ostream &operator<<(std::ostream &os, const BlockDiagonalMatrix &A);
+  friend std::ostream &operator<<(std::ostream &os, const Block_Diagonal_Matrix &A);
 };
 
 // Tr(A B), where A and B are symmetric
-Real frobeniusProductSymmetric(const BlockDiagonalMatrix &A,
-                               const BlockDiagonalMatrix &B);
+Real frobeniusProductSymmetric(const Block_Diagonal_Matrix &A,
+                               const Block_Diagonal_Matrix &B);
 
 // (X + dX) . (Y + dY), where X, dX, Y, dY are symmetric
 // BlockDiagonalMatrices and '.' is the Frobenius product.
 //
-Real frobeniusProductOfSums(const BlockDiagonalMatrix &X,
-                            const BlockDiagonalMatrix &dX,
-                            const BlockDiagonalMatrix &Y,
-                            const BlockDiagonalMatrix &dY);
+Real frobeniusProductOfSums(const Block_Diagonal_Matrix &X,
+                            const Block_Diagonal_Matrix &dX,
+                            const Block_Diagonal_Matrix &Y,
+                            const Block_Diagonal_Matrix &dY);
 
 // C := alpha*A*B + beta*C
 void blockDiagonalMatrixScaleMultiplyAdd(Real alpha,
-                                         BlockDiagonalMatrix &A, // constant
-                                         BlockDiagonalMatrix &B, // constant
+                                         Block_Diagonal_Matrix &A, // constant
+                                         Block_Diagonal_Matrix &B, // constant
                                          Real beta,
-                                         BlockDiagonalMatrix &C); // overwritten
+                                         Block_Diagonal_Matrix &C); // overwritten
 
 // C := A B
-void blockDiagonalMatrixMultiply(BlockDiagonalMatrix &A,  // constant
-                                 BlockDiagonalMatrix &B,  // constant
-                                 BlockDiagonalMatrix &C); // overwritten
+void blockDiagonalMatrixMultiply(Block_Diagonal_Matrix &A,  // constant
+                                 Block_Diagonal_Matrix &B,  // constant
+                                 Block_Diagonal_Matrix &C); // overwritten
 
 // A := L^{-1} A L^{-T}
-void lowerTriangularInverseCongruence(BlockDiagonalMatrix &A,  // overwritten
-                                      BlockDiagonalMatrix &L); // constant
+void lowerTriangularInverseCongruence(Block_Diagonal_Matrix &A,  // overwritten
+                                      Block_Diagonal_Matrix &L); // constant
 
 // Minimum eigenvalue of A, via the QR method
 // Inputs:
-// - A : BlockDiagonalMatrix with blocks of size n_b x n_b (will be
+// - A : Block_Diagonal_Matrix with blocks of size n_b x n_b (will be
 //   overwritten)
 // - eigenvalues : vector of Vectors of length n_b (0 <= b < bMax)
 // - workspace : vector of Vectors of lenfth 3*n_b-1 (0 <= b < bMax)
 //   (temporary workspace)
 //
-Real minEigenvalue(BlockDiagonalMatrix &A, std::vector<Vector> &workspace,
+Real minEigenvalue(Block_Diagonal_Matrix &A, std::vector<Vector> &workspace,
                    std::vector<Vector> &eigenvalues);
 
 // Compute L (lower triangular) such that A = L L^T
@@ -156,7 +156,7 @@ Real minEigenvalue(BlockDiagonalMatrix &A, std::vector<Vector> &workspace,
 // - A : dim x dim symmetric matrix (constant)
 // - L : dim x dim lower-triangular matrix (overwritten)
 //
-void choleskyDecomposition(BlockDiagonalMatrix &A, BlockDiagonalMatrix &L);
+void choleskyDecomposition(Block_Diagonal_Matrix &A, Block_Diagonal_Matrix &L);
 
 // Compute L (lower triangular) such that A + U U^T = L L^T, where U
 // is a low-rank update matrix. (See Matrix.h for details).
@@ -173,29 +173,29 @@ void choleskyDecomposition(BlockDiagonalMatrix &A, BlockDiagonalMatrix &L);
 //   of A (overwritten)
 //
 void choleskyDecompositionStabilized(
-  BlockDiagonalMatrix &A, BlockDiagonalMatrix &L,
+  Block_Diagonal_Matrix &A, Block_Diagonal_Matrix &L,
   std::vector<std::vector<Integer>> &stabilizeIndices,
   std::vector<std::vector<Real>> &stabilizeLambdas,
   const double stabilizeThreshold);
 
 // X := ACholesky^{-T} ACholesky^{-1} X = A^{-1} X
 // Input:
-// - ACholesky, a lower triangular BlockDiagonalMatrix such that A =
+// - ACholesky, a lower triangular Block_Diagonal_Matrix such that A =
 //   ACholesky ACholesky^T (constant)
 // Output:
 // - X (overwritten)
-void blockMatrixSolveWithCholesky(BlockDiagonalMatrix &ACholesky, // constant
-                                  BlockDiagonalMatrix &X); // overwritten
+void blockMatrixSolveWithCholesky(Block_Diagonal_Matrix &ACholesky, // constant
+                                  Block_Diagonal_Matrix &X); // overwritten
 
 // B := L^{-1} B, where L is lower-triangular
-void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L, // constant
+void blockMatrixLowerTriangularSolve(Block_Diagonal_Matrix &L, // constant
                                      Matrix &B);             // overwritten
 
 // v := L^{-1} v, where L is lower-triangular
-void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L, // constant
+void blockMatrixLowerTriangularSolve(Block_Diagonal_Matrix &L, // constant
                                      Vector &v);             // overwritten
 
 // v := L^{-T} v, where L is lower-triangular
 void blockMatrixLowerTriangularTransposeSolve(
-  BlockDiagonalMatrix &L, // constant
+  Block_Diagonal_Matrix &L, // constant
   Vector &v);             // overwritten

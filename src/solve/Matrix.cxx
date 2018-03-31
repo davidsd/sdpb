@@ -20,7 +20,7 @@
 // http://mplapack.sourceforge.net/mlapack_routines.html
 //
 // We have chosen not to parallelize operations that are used in
-// BlockDiagonalMatrix, since there parallelism can be achieved by
+// Block_Diagonal_Matrix, since there parallelism can be achieved by
 // parallelizing loops over blocks.
 
 std::ostream &operator<<(std::ostream &os, const Matrix &a)
@@ -61,7 +61,7 @@ void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol)
   assert(bRow + A.cols <= B.rows);
   assert(bCol + A.cols <= B.cols);
 
-  // This operation is not used within a BlockDiagonalMatrix, so it is
+  // This operation is not used within a Block_Diagonal_Matrix, so it is
   // worthwhile to parallelize.  In fact, this function, used in
   // computing TopLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal (see
   // SDPSolver.cpp) is one of the main performance bottlenecks in the

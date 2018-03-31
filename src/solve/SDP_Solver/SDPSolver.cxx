@@ -154,10 +154,10 @@ void tensorTransposeCongruence(const Matrix &A, const Matrix &Q, Matrix &Work,
 //   have the structure described above for
 //   `tensorTransposeCongruence'
 //
-void blockTensorTransposeCongruence(const BlockDiagonalMatrix &A,
+void blockTensorTransposeCongruence(const Block_Diagonal_Matrix &A,
                                     const vector<Matrix> &Q,
                                     vector<Matrix> &Work,
-                                    BlockDiagonalMatrix &Result)
+                                    Block_Diagonal_Matrix &Result)
 {
   for(unsigned int b = 0; b < Q.size(); b++)
     tensorTransposeCongruence(A.blocks[b], Q[b], Work[b], Result.blocks[b]);
@@ -221,8 +221,8 @@ void tensorInvTransposeCongruenceWithCholesky(const Matrix &L, const Matrix &Q,
 //   `tensorInvTransposeCongruenceWithCholesky'
 //
 void blockTensorInvTransposeCongruenceWithCholesky(
-  const BlockDiagonalMatrix &L, const vector<Matrix> &Q, vector<Matrix> &Work,
-  BlockDiagonalMatrix &Result)
+  const Block_Diagonal_Matrix &L, const vector<Matrix> &Q,
+  vector<Matrix> &Work, Block_Diagonal_Matrix &Result)
 {
   for(unsigned int b = 0; b < Q.size(); b++)
     tensorInvTransposeCongruenceWithCholesky(L.blocks[b], Q[b], Work[b],
@@ -308,9 +308,9 @@ Real bilinearBlockPairing(const Real *v, const int dim, const Matrix &A,
 // Output: SchurComplement (overwritten)
 //
 void computeSchurComplement(const SDP &sdp,
-                            const BlockDiagonalMatrix &BilinearPairingsXInv,
-                            const BlockDiagonalMatrix &BilinearPairingsY,
-                            BlockDiagonalMatrix &SchurComplement)
+                            const Block_Diagonal_Matrix &BilinearPairingsXInv,
+                            const Block_Diagonal_Matrix &BilinearPairingsY,
+                            Block_Diagonal_Matrix &SchurComplement)
 {
   for(unsigned int j = 0; j < sdp.dimensions.size(); j++)
     {
@@ -372,7 +372,7 @@ void computeSchurComplement(const SDP &sdp,
 // Output: dualResidues (overwriten)
 //
 void computeDualResidues(const SDP &sdp, const Vector &y,
-                         const BlockDiagonalMatrix &BilinearPairingsY,
+                         const Block_Diagonal_Matrix &BilinearPairingsY,
                          Vector &dualResidues)
 {
   for(unsigned int j = 0; j < sdp.dimensions.size(); j++)
@@ -426,7 +426,7 @@ void computeDualResidues(const SDP &sdp, const Vector &y,
 // Output: Result (overwritten)
 //
 void constraintMatrixWeightedSum(const SDP &sdp, const Vector a,
-                                 BlockDiagonalMatrix &Result)
+                                 Block_Diagonal_Matrix &Result)
 {
   for(unsigned int j = 0; j < sdp.dimensions.size(); j++)
     {
@@ -495,7 +495,7 @@ void constraintMatrixWeightedSum(const SDP &sdp, const Vector a,
 // - r_y, a Vector of length N
 //
 void computeSchurRHS(const SDP &sdp, const Vector &dualResidues,
-                     const BlockDiagonalMatrix &Z, const Vector &x,
+                     const Block_Diagonal_Matrix &Z, const Vector &x,
                      Vector &r_x, Vector &r_y)
 {
   // r_x[p] = -dualResidues[p]
@@ -537,8 +537,8 @@ void computeSchurRHS(const SDP &sdp, const Vector &dualResidues,
 // Output: PrimalResidues (overwritten)
 //
 void computePrimalResidues(const SDP &sdp, const Vector x,
-                           const BlockDiagonalMatrix &X,
-                           BlockDiagonalMatrix &PrimalResidues)
+                           const Block_Diagonal_Matrix &X,
+                           Block_Diagonal_Matrix &PrimalResidues)
 {
   constraintMatrixWeightedSum(sdp, x, PrimalResidues);
   PrimalResidues -= X;
@@ -554,10 +554,11 @@ Real predictorCenteringParameter(const SDP_Solver_Parameters &parameters,
 
 // Centering parameter \beta_c for the corrector step
 Real correctorCenteringParameter(const SDP_Solver_Parameters &parameters,
-                                 const BlockDiagonalMatrix &X,
-                                 const BlockDiagonalMatrix &dX,
-                                 const BlockDiagonalMatrix &Y,
-                                 const BlockDiagonalMatrix &dY, const Real &mu,
+                                 const Block_Diagonal_Matrix &X,
+                                 const Block_Diagonal_Matrix &dX,
+                                 const Block_Diagonal_Matrix &Y,
+                                 const Block_Diagonal_Matrix &dY,
+                                 const Real &mu,
                                  const bool isPrimalDualFeasible)
 {
   timers["run.correctorStep.frobeniusProduct"].resume();
@@ -582,7 +583,7 @@ Real correctorCenteringParameter(const SDP_Solver_Parameters &parameters,
 //
 // Inputs:
 // - MCholesky = L, the Cholesky decomposition of M (M itself is not needed)
-// - dM, a BlockDiagonalMatrix with the same structure as M
+// - dM, a Block_Diagonal_Matrix with the same structure as M
 // Workspace:
 // - MInvDM (NB: overwritten when computing minEigenvalue)
 // - eigenvalues, a Vector of eigenvalues for each block of M
@@ -590,8 +591,8 @@ Real correctorCenteringParameter(const SDP_Solver_Parameters &parameters,
 // Output:
 // - min(\gamma \alpha(M, dM), 1) (returned)
 //
-Real stepLength(BlockDiagonalMatrix &MCholesky, BlockDiagonalMatrix &dM,
-                BlockDiagonalMatrix &MInvDM, vector<Vector> &eigenvalues,
+Real stepLength(Block_Diagonal_Matrix &MCholesky, Block_Diagonal_Matrix &dM,
+                Block_Diagonal_Matrix &MInvDM, vector<Vector> &eigenvalues,
                 vector<Vector> &workspace, const Real gamma)
 {
   // MInvDM = L^{-1} dM L^{-T}, where M = L L^T
@@ -651,8 +652,8 @@ Real stepLength(BlockDiagonalMatrix &MCholesky, BlockDiagonalMatrix &dM,
 // - Q, Qpivots
 //
 void SDP_Solver::initializeSchurComplementSolver(
-  const BlockDiagonalMatrix &BilinearPairingsXInv,
-  const BlockDiagonalMatrix &BilinearPairingsY,
+  const Block_Diagonal_Matrix &BilinearPairingsXInv,
+  const Block_Diagonal_Matrix &BilinearPairingsY,
   const Real &choleskyStabilizeThreshold)
 {
   computeSchurComplement(sdp, BilinearPairingsXInv, BilinearPairingsY,

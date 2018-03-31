@@ -5,11 +5,11 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
-#include "BlockDiagonalMatrix.hxx"
+#include "Block_Diagonal_Matrix.hxx"
 #include <algorithm>
 #include <vector>
 
-std::ostream &operator<<(std::ostream &os, const BlockDiagonalMatrix &A)
+std::ostream &operator<<(std::ostream &os, const Block_Diagonal_Matrix &A)
 {
   os << "{";
   for(unsigned int b = 0; b < A.blocks.size(); b++)
@@ -23,8 +23,8 @@ std::ostream &operator<<(std::ostream &os, const BlockDiagonalMatrix &A)
 }
 
 // Tr(A B), where A and B are symmetric
-Real frobeniusProductSymmetric(const BlockDiagonalMatrix &A,
-                               const BlockDiagonalMatrix &B)
+Real frobeniusProductSymmetric(const Block_Diagonal_Matrix &A,
+                               const Block_Diagonal_Matrix &B)
 {
   Real result = 0;
   for(unsigned int b = 0; b < A.blocks.size(); b++)
@@ -43,10 +43,10 @@ Real frobeniusProductSymmetric(const BlockDiagonalMatrix &A,
 // (X + dX) . (Y + dY), where X, dX, Y, dY are symmetric
 // BlockDiagonalMatrices and '.' is the Frobenius product.
 //
-Real frobeniusProductOfSums(const BlockDiagonalMatrix &X,
-                            const BlockDiagonalMatrix &dX,
-                            const BlockDiagonalMatrix &Y,
-                            const BlockDiagonalMatrix &dY)
+Real frobeniusProductOfSums(const Block_Diagonal_Matrix &X,
+                            const Block_Diagonal_Matrix &dX,
+                            const Block_Diagonal_Matrix &Y,
+                            const Block_Diagonal_Matrix &dY)
 {
   Real result = 0;
   for(unsigned int b = 0; b < X.blocks.size(); b++)
@@ -61,25 +61,25 @@ Real frobeniusProductOfSums(const BlockDiagonalMatrix &X,
 }
 
 // C := alpha*A*B + beta*C
-void blockDiagonalMatrixScaleMultiplyAdd(Real alpha, BlockDiagonalMatrix &A,
-                                         BlockDiagonalMatrix &B, Real beta,
-                                         BlockDiagonalMatrix &C)
+void blockDiagonalMatrixScaleMultiplyAdd(Real alpha, Block_Diagonal_Matrix &A,
+                                         Block_Diagonal_Matrix &B, Real beta,
+                                         Block_Diagonal_Matrix &C)
 {
   for(unsigned int b = 0; b < A.blocks.size(); b++)
     matrixScaleMultiplyAdd(alpha, A.blocks[b], B.blocks[b], beta, C.blocks[b]);
 }
 
 // C := A*B
-void blockDiagonalMatrixMultiply(BlockDiagonalMatrix &A,
-                                 BlockDiagonalMatrix &B,
-                                 BlockDiagonalMatrix &C)
+void blockDiagonalMatrixMultiply(Block_Diagonal_Matrix &A,
+                                 Block_Diagonal_Matrix &B,
+                                 Block_Diagonal_Matrix &C)
 {
   blockDiagonalMatrixScaleMultiplyAdd(1, A, B, 0, C);
 }
 
 // A := L^{-1} A L^{-T}
-void lowerTriangularInverseCongruence(BlockDiagonalMatrix &A,
-                                      BlockDiagonalMatrix &L)
+void lowerTriangularInverseCongruence(Block_Diagonal_Matrix &A,
+                                      Block_Diagonal_Matrix &L)
 {
   for(unsigned int b = 0; b < A.blocks.size(); b++)
     lowerTriangularInverseCongruence(A.blocks[b], L.blocks[b]);
@@ -87,11 +87,11 @@ void lowerTriangularInverseCongruence(BlockDiagonalMatrix &A,
 
 // Minimum eigenvalue of A, via the QR method
 // Inputs:
-// A           : symmetric BlockDiagonalMatrix
+// A           : symmetric Block_Diagonal_Matrix
 // eigenvalues : vector<Vector> of length A.blocks.size()
 // workspace   : vector<Vector> of length A.blocks.size()
 //
-Real minEigenvalue(BlockDiagonalMatrix &A, vector<Vector> &workspace,
+Real minEigenvalue(Block_Diagonal_Matrix &A, vector<Vector> &workspace,
                    vector<Vector> &eigenvalues)
 {
   assert(A.blocks.size() == eigenvalues.size());
@@ -113,7 +113,7 @@ Real minEigenvalue(BlockDiagonalMatrix &A, vector<Vector> &workspace,
 }
 
 // Compute L (lower triangular) such that A = L L^T
-void choleskyDecomposition(BlockDiagonalMatrix &A, BlockDiagonalMatrix &L)
+void choleskyDecomposition(Block_Diagonal_Matrix &A, Block_Diagonal_Matrix &L)
 {
   for(unsigned int b = 0; b < A.blocks.size(); b++)
     choleskyDecomposition(A.blocks[b], L.blocks[b]);
@@ -121,8 +121,8 @@ void choleskyDecomposition(BlockDiagonalMatrix &A, BlockDiagonalMatrix &L)
 
 // Compute L (lower triangular) such that A + U U^T = L L^T, where U
 // is a low-rank update matrix.
-void choleskyDecompositionStabilized(BlockDiagonalMatrix &A,
-                                     BlockDiagonalMatrix &L,
+void choleskyDecompositionStabilized(Block_Diagonal_Matrix &A,
+                                     Block_Diagonal_Matrix &L,
                                      vector<vector<Integer>> &stabilizeIndices,
                                      vector<vector<Real>> &stabilizeLambdas,
                                      const double stabilizeThreshold)
@@ -134,15 +134,15 @@ void choleskyDecompositionStabilized(BlockDiagonalMatrix &A,
 }
 
 // X := ACholesky^{-T} ACholesky^{-1} X = A^{-1} X
-void blockMatrixSolveWithCholesky(BlockDiagonalMatrix &ACholesky,
-                                  BlockDiagonalMatrix &X)
+void blockMatrixSolveWithCholesky(Block_Diagonal_Matrix &ACholesky,
+                                  Block_Diagonal_Matrix &X)
 {
   for(unsigned int b = 0; b < X.blocks.size(); b++)
     matrixSolveWithCholesky(ACholesky.blocks[b], X.blocks[b]);
 }
 
 // B := L^{-1} B, where L is lower-triangular
-void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L, Matrix &B)
+void blockMatrixLowerTriangularSolve(Block_Diagonal_Matrix &L, Matrix &B)
 {
   for(unsigned int b = 0; b < L.blocks.size(); b++)
     lowerTriangularSolve(L.blocks[b], &B.elt(L.blockStartIndices[b], 0),
@@ -150,14 +150,14 @@ void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L, Matrix &B)
 }
 
 // v := L^{-1} v, where L is lower-triangular
-void blockMatrixLowerTriangularSolve(BlockDiagonalMatrix &L, Vector &v)
+void blockMatrixLowerTriangularSolve(Block_Diagonal_Matrix &L, Vector &v)
 {
   for(unsigned int b = 0; b < L.blocks.size(); b++)
     lowerTriangularSolve(L.blocks[b], &v[L.blockStartIndices[b]], 1, v.size());
 }
 
 // v := L^{-T} v, where L is lower-triangular
-void blockMatrixLowerTriangularTransposeSolve(BlockDiagonalMatrix &L,
+void blockMatrixLowerTriangularTransposeSolve(Block_Diagonal_Matrix &L,
                                               Vector &v)
 {
   for(unsigned int b = 0; b < L.blocks.size(); b++)
