@@ -51,7 +51,9 @@ int solve(const std::vector<boost::filesystem::path> &sdp_files,
   SDP_Solver solver(read_bootstrap_sdp(sdp_files), parameters);
 
   if(exists(checkpoint_file_in))
-    solver.loadCheckpoint(checkpoint_file_in);
+    {
+      solver.loadCheckpoint(checkpoint_file_in);
+    }
 
   timers["Solver runtime"].start();
   timers["Last checkpoint"].start();
