@@ -42,24 +42,24 @@ using std::cout;
 // SDP_Solver_Parameters
 
 SDP_Solver::SDP_Solver(const SDP &sdp, const SDP_Solver_Parameters &parameters)
-    : sdp(sdp), parameters(parameters), x(sdp.primalObjective.size(), 0),
-      X(sdp.psdMatrixBlockDims()), y(sdp.dualObjective.size(), 0), Y(X), dx(x),
+    : sdp(sdp), parameters(parameters), x(sdp.primal_objective.size(), 0),
+      X(sdp.psd_matrix_block_dims()), y(sdp.dual_objective.size(), 0), Y(X), dx(x),
       dX(X), dy(y), dY(Y), PrimalResidues(X), dualResidues(x), XCholesky(X),
       YCholesky(X), Z(X), R(X),
-      BilinearPairingsXInv(sdp.bilinearPairingBlockDims()),
+      BilinearPairingsXInv(sdp.bilinear_pairing_block_dims()),
       BilinearPairingsY(BilinearPairingsXInv),
-      SchurComplement(sdp.schurBlockDims()),
+      SchurComplement(sdp.schur_block_dims()),
       SchurComplementCholesky(SchurComplement),
-      SchurOffDiagonal(sdp.FreeVarMatrix),
+      SchurOffDiagonal(sdp.free_var_matrix),
       schurStabilizeIndices(SchurComplement.blocks.size()),
       schurStabilizeLambdas(SchurComplement.blocks.size()),
       stabilizeBlocks(SchurComplement.blocks.size()),
-      Q(sdp.FreeVarMatrix.cols, sdp.FreeVarMatrix.cols),
-      Qpivots(sdp.FreeVarMatrix.cols), dyExtended(Q.rows),
+      Q(sdp.free_var_matrix.cols, sdp.free_var_matrix.cols),
+      Qpivots(sdp.free_var_matrix.cols), dyExtended(Q.rows),
       StepMatrixWorkspace(X)
 {
   // initialize bilinearPairingsWorkspace, eigenvaluesWorkspace, QRWorkspace
-  for(unsigned int b = 0; b < sdp.bilinearBases.size(); b++)
+  for(unsigned int b = 0; b < sdp.bilinear_bases.size(); b++)
     {
       bilinearPairingsWorkspace.push_back(
         Matrix(X.blocks[b].rows, BilinearPairingsXInv.blocks[b].cols));
@@ -316,17 +316,17 @@ void computeSchurComplement(const SDP &sdp,
     {
       const int ej = sdp.degrees[j] + 1;
 
-      for(unsigned int u1 = 0; u1 < sdp.constraintIndices[j].size(); u1++)
+      for(unsigned int u1 = 0; u1 < sdp.constraint_indices[j].size(); u1++)
         {
-          const int ej_r1 = sdp.constraintIndices[j][u1].r * ej;
-          const int ej_s1 = sdp.constraintIndices[j][u1].s * ej;
-          const int k1 = sdp.constraintIndices[j][u1].k;
+          const int ej_r1 = sdp.constraint_indices[j][u1].r * ej;
+          const int ej_s1 = sdp.constraint_indices[j][u1].s * ej;
+          const int k1 = sdp.constraint_indices[j][u1].k;
 
           for(unsigned int u2 = 0; u2 <= u1; u2++)
             {
-              const int ej_r2 = sdp.constraintIndices[j][u2].r * ej;
-              const int ej_s2 = sdp.constraintIndices[j][u2].s * ej;
-              const int k2 = sdp.constraintIndices[j][u2].k;
+              const int ej_r2 = sdp.constraint_indices[j][u2].r * ej;
+              const int ej_s2 = sdp.constraint_indices[j][u2].s * ej;
+              const int k2 = sdp.constraint_indices[j][u2].k;
 
               Real tmp = 0;
               for(auto &b : sdp.blocks[j])
@@ -378,7 +378,7 @@ void computeDualResidues(const SDP &sdp, const Vector &y,
     {
       const int ej = sdp.degrees[j] + 1;
 
-      for(auto &t : sdp.constraintIndices[j])
+      for(auto &t : sdp.constraint_indices[j])
         {
           const int p = t.p;
           const int ej_r = t.r * ej;
@@ -397,12 +397,12 @@ void computeDualResidues(const SDP &sdp, const Vector &y,
           dualResidues[p] /= 2;
 
           // dualResidues[p] = -Tr(A_p Y) - (FreeVarMatrix y)_p
-          for(int n = 0; n < sdp.FreeVarMatrix.cols; n++)
-            dualResidues[p] -= sdp.FreeVarMatrix.elt(p, n) * y[n];
+          for(int n = 0; n < sdp.free_var_matrix.cols; n++)
+            dualResidues[p] -= sdp.free_var_matrix.elt(p, n) * y[n];
 
           // dualResidues[p] = primalObjective[p] - Tr(A_p Y) - (FreeVarMatrix
           // y)_p
-          dualResidues[p] += sdp.primalObjective[p];
+          dualResidues[p] += sdp.primal_objective[p];
         }
     }
 }
@@ -429,8 +429,8 @@ void constraintMatrixWeightedSum(const SDP &sdp, const Vector a,
       const int ej = sdp.degrees[j] + 1;
 
       // For each j, t points to the first Index_Tuple corresponding to j
-      for(auto t(sdp.constraintIndices[j].begin());
-          t != sdp.constraintIndices[j].end(); t += ej)
+      for(auto t(sdp.constraint_indices[j].begin());
+          t != sdp.constraint_indices[j].end(); t += ej)
         {
           const int p = t->p;
           const int r = t->r;
@@ -443,7 +443,7 @@ void constraintMatrixWeightedSum(const SDP &sdp, const Vector a,
               // V=sdp.bilinearBases[b], a' denotes the subvector of a
               // corresponding to j, and M^(r,s) denotes the (r,s)-th block
               // of M.
-              diagonalCongruence(&a[p], sdp.bilinearBases[b], r, s,
+              diagonalCongruence(&a[p], sdp.bilinear_bases[b], r, s,
                                  Result.blocks[b]);
 
               // Result should be symmetric, so if r != s, we must divide
@@ -451,7 +451,7 @@ void constraintMatrixWeightedSum(const SDP &sdp, const Vector a,
               // transpose to the (s,r)-th block.
               if(r != s)
                 {
-                  const int u = sdp.bilinearBases[b].rows;
+                  const int u = sdp.bilinear_bases[b].rows;
                   for(int m = r * u; m < (r + 1) * u; m++)
                     {
                       for(int n = s * u; n < (s + 1) * u; n++)
@@ -501,13 +501,13 @@ void computeSchurRHS(const SDP &sdp, const Vector &dualResidues,
   // using bilinearBlockPairing.
   for(unsigned int j = 0; j < sdp.dimensions.size(); j++)
     {
-      for(auto &t : sdp.constraintIndices[j])
+      for(auto &t : sdp.constraint_indices[j])
         {
           for(auto &b : sdp.blocks[j])
             {
-              const int h = sdp.bilinearBases[b].rows;
+              const int h = sdp.bilinear_bases[b].rows;
               // Pointer to the k-th column of sdp.bilinearBases[b]
-              const Real *q = &sdp.bilinearBases[b].elements[(t.k) * h];
+              const Real *q = &sdp.bilinear_bases[b].elements[(t.k) * h];
 
               r_x[t.p] -= bilinearBlockPairing(q, h, Z.blocks[b], t.r, t.s);
             }
@@ -515,12 +515,12 @@ void computeSchurRHS(const SDP &sdp, const Vector &dualResidues,
     }
 
   // r_y[n] = dualObjective[n] - (FreeVarMatrix^T x)_n
-  for(unsigned int n = 0; n < sdp.dualObjective.size(); n++)
+  for(unsigned int n = 0; n < sdp.dual_objective.size(); n++)
     {
-      r_y[n] = sdp.dualObjective[n];
-      for(int p = 0; p < sdp.FreeVarMatrix.rows; p++)
+      r_y[n] = sdp.dual_objective[n];
+      for(int p = 0; p < sdp.free_var_matrix.rows; p++)
         {
-          r_y[n] -= sdp.FreeVarMatrix.elt(p, n) * x[p];
+          r_y[n] -= sdp.free_var_matrix.elt(p, n) * x[p];
         }
     }
 }
@@ -675,7 +675,7 @@ void SDP_Solver::initializeSchurComplementSolver(
     .stop();
 
   // SchurOffDiagonal = L'^{-1} FreeVarMatrix
-  SchurOffDiagonal.copy_from(sdp.FreeVarMatrix);
+  SchurOffDiagonal.copy_from(sdp.free_var_matrix);
   timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
     .resume();
   blockMatrixLowerTriangularSolve(SchurComplementCholesky, SchurOffDiagonal);
@@ -1004,8 +1004,8 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(const path checkpointFile)
 
       timers["run.objectives"].resume();
       primalObjective
-        = sdp.objectiveConst + dot_product(sdp.primalObjective, x);
-      dualObjective = sdp.objectiveConst + dot_product(sdp.dualObjective, y);
+        = sdp.objective_const + dot_product(sdp.primal_objective, x);
+      dualObjective = sdp.objective_const + dot_product(sdp.dual_objective, y);
       dualityGap
         = abs(primalObjective - dualObjective)
           / max(Real(abs(primalObjective) + abs(dualObjective)), Real(1));
@@ -1024,13 +1024,13 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(const path checkpointFile)
       // complement matrix
       timers["run.blockTensorInvTransposeCongruenceWithCholesky"].resume();
       blockTensorInvTransposeCongruenceWithCholesky(
-        XCholesky, sdp.bilinearBases, bilinearPairingsWorkspace,
+        XCholesky, sdp.bilinear_bases, bilinearPairingsWorkspace,
         BilinearPairingsXInv);
       timers["run.blockTensorInvTransposeCongruenceWithCholesky"].stop();
 
       timers["run.blockTensorTransposeCongruence"].resume();
       blockTensorTransposeCongruence(
-        Y, sdp.bilinearBases, bilinearPairingsWorkspace, BilinearPairingsY);
+        Y, sdp.bilinear_bases, bilinearPairingsWorkspace, BilinearPairingsY);
       timers["run.blockTensorTransposeCongruence"].stop();
 
       // dualResidues[p] = primalObjective[p] - Tr(A_p Y) - (FreeVarMatrix y)_p,

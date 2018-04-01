@@ -78,19 +78,19 @@ public:
   //                                           0 <= k <= d_j,
   //                                           0 <= m <= delta_b)
   //
-  std::vector<Matrix> bilinearBases;
+  std::vector<Matrix> bilinear_bases;
 
   // FreeVarMatrix = B, a PxN matrix
-  Matrix FreeVarMatrix;
+  Matrix free_var_matrix;
 
   // primalObjective = c, a vector of length P
-  Vector primalObjective;
+  Vector primal_objective;
 
   // dualObjective = b, a vector of length N
-  Vector dualObjective;
+  Vector dual_objective;
 
   // objectiveConst = f
-  Real objectiveConst;
+  Real objective_const;
 
   // dimensions[j] = m_j  (0 <= j < J)
   std::vector<int> dimensions;
@@ -118,16 +118,16 @@ public:
   // This allows us to loop through the constraints A_p associated to
   // each j.
   //
-  std::vector<std::vector<Index_Tuple>> constraintIndices;
+  std::vector<std::vector<Index_Tuple>> constraint_indices;
 
   // create the mapping j -> { Index_Tuple(p,r,s,k) } described above
   //
-  void initializeConstraintIndices()
+  void initialize_constraint_indices()
   {
     int p = 0;
     for(unsigned int j = 0; j < dimensions.size(); j++)
       {
-        constraintIndices.emplace_back(0);
+        constraint_indices.emplace_back(0);
 
         for(int s = 0; s < dimensions[j]; s++)
           {
@@ -135,26 +135,26 @@ public:
               {
                 for(int k = 0; k <= degrees[j]; k++)
                   {
-                    constraintIndices[j].emplace_back(p, r, s, k);
+                    constraint_indices[j].emplace_back(p, r, s, k);
                     p++;
                   }
               }
           }
       }
-    assert(p == static_cast<int>(primalObjective.size()));
+    assert(p == static_cast<int>(primal_objective.size()));
   }
 
   // Dimensions of the blocks of X,Y (0 <= b < bMax)
   //
   // psdMatrixBlockDims()[b] = (delta_b+1)*m_j = length(v_{b,*})*m_j
   //
-  std::vector<int> psdMatrixBlockDims() const
+  std::vector<int> psd_matrix_block_dims() const
   {
     std::vector<int> dims;
     for(size_t j = 0; j < dimensions.size(); j++)
       for(auto &b : blocks[j])
         {
-          dims.push_back(bilinearBases[b].rows * dimensions[j]);
+          dims.push_back(bilinear_bases[b].rows * dimensions[j]);
         }
     return dims;
   }
@@ -163,13 +163,13 @@ public:
   //
   // bilinearPairingBlockDims()[b] = (d_j + 1)*m_j
   //
-  std::vector<int> bilinearPairingBlockDims() const
+  std::vector<int> bilinear_pairing_block_dims() const
   {
     std::vector<int> dims;
     for(size_t j = 0; j < dimensions.size(); j++)
       for(auto &b : blocks[j])
         {
-          dims.push_back(bilinearBases[b].cols * dimensions[j]);
+          dims.push_back(bilinear_bases[b].cols * dimensions[j]);
         }
     return dims;
   }
@@ -179,21 +179,21 @@ public:
   // schurBlockDims()[j] = (d_j+1)*m_j*(m_j+1)/2
   //                     = length(constraintIndices[j])
   //
-  std::vector<int> schurBlockDims() const
+  std::vector<int> schur_block_dims() const
   {
     std::vector<int> dims;
     for(unsigned int j = 0; j < dimensions.size(); j++)
-      dims.push_back(constraintIndices[j].size());
+      dims.push_back(constraint_indices[j].size());
     return dims;
   }
 
   // Print an SDP, for debugging purposes
   friend std::ostream &operator<<(std::ostream &os, const SDP &sdp)
   {
-    os << "SDP(bilinearBases = " << sdp.bilinearBases
-       << ", FreeVarMatrix = " << sdp.FreeVarMatrix
-       << ", primalObjective = " << sdp.primalObjective
-       << ", dualObjective = " << sdp.dualObjective
+    os << "SDP(bilinearBases = " << sdp.bilinear_bases
+       << ", FreeVarMatrix = " << sdp.free_var_matrix
+       << ", primalObjective = " << sdp.primal_objective
+       << ", dualObjective = " << sdp.dual_objective
        << ", dimensions = " << sdp.dimensions << ", degrees = " << sdp.degrees
        << ", blocks = " << sdp.blocks << ")";
     return os;
