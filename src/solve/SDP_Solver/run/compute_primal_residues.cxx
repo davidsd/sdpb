@@ -1,4 +1,4 @@
-#include "../constraint_matrix_weighted_sum.hxx"
+#include "constraint_matrix_weighted_sum.hxx"
 
 // PrimalResidues = \sum_p A_p x[p] - X
 //

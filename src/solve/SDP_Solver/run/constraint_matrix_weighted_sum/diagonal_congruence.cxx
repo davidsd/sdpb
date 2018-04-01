@@ -1,4 +1,4 @@
-#include "../../SDP_Solver.hxx"
+#include "../../../SDP_Solver.hxx"
 
 // Result^(blockRow,blockCol) = V D V^T, where D=diag(d) is a diagonal
 // matrix.

@@ -1,4 +1,4 @@
-#include "../../../SDP_Solver.hxx"
+#include "../../../../SDP_Solver.hxx"
 
 // Compute the vectors r_x and r_y on the right-hand side of the Schur
 // complement equation:

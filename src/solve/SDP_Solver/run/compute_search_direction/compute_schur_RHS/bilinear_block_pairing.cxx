@@ -1,4 +1,4 @@
-#include "../../../SDP_Solver.hxx"
+#include "../../../../SDP_Solver.hxx"
 
 // v^T A^(blockRow, blockCol) v, where A^(r,s) is the (r,s)-th dim x
 // dim block inside A.

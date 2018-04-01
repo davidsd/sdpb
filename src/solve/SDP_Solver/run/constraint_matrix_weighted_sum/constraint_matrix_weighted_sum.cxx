@@ -1,4 +1,4 @@
-#include "../../SDP_Solver.hxx"
+#include "../../../SDP_Solver.hxx"
 
 // Result = \sum_p a[p] A_p,
 //
