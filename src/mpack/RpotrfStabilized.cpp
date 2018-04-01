@@ -72,7 +72,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <vector>
 
-void RpotrfStabilized(const char *uplo, INTEGER n, REAL * A, INTEGER lda, INTEGER * info, vector<INTEGER> &stabilizeIndices, vector<REAL> &stabilizeLambdas, const double stabilizeThreshold)
+void RpotrfStabilized(const char *uplo, INTEGER n, REAL * A, INTEGER lda, INTEGER * info, std::vector<INTEGER> &stabilizeIndices, std::vector<REAL> &stabilizeLambdas, const double stabilizeThreshold)
 {
     INTEGER upper;
     INTEGER j, jb, nb;

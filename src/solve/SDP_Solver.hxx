@@ -156,17 +156,17 @@ public:
   // schurStabilizeIndices[j] = a list of which directions of
   // SchurComplement.blocks[j] have been stabilized (counting from 0 at
   // the upper left of each block), for 0 <= j < J.
-  vector<vector<int>> schurStabilizeIndices;
+  std::vector<std::vector<int>> schurStabilizeIndices;
   //
   // schurStabilizeLambdas[j] = a list of constants Lambda for each
   // stabilized direction in schurStabilizeIndices[j], for 0 <= j < J.
-  vector<vector<Real>> schurStabilizeLambdas;
+  std::vector<std::vector<Real>> schurStabilizeLambdas;
   //
   // a list of block indices {j_0, j_1, ..., j_{M-1} } for blocks
   // which have at least one stabilized direction.  We say the blocks
   // j_m have been `stabilized.'  Note that the number M of stabilized
   // blocks could change with each iteration.
-  vector<int> stabilizeBlockIndices;
+  std::vector<int> stabilizeBlockIndices;
   //
   // For each 0 <= m < M, stabilizeBlockUpdateRow records the row of
   // U corresponding to the first stabilized direction in the j_m'th
@@ -175,16 +175,16 @@ public:
   //   stabilizeBlockUpdateRow[m] = schurStabilizeIndices[j_m][0] +
   //                                SchurComplement.blockStartIndices[j_m]
   //
-  vector<int> stabilizeBlockUpdateRow;
+  std::vector<int> stabilizeBlockUpdateRow;
   //
   // For each 0 <= m < M, stabilizeBlockUpdateColumn records the
   // column of U corresponding to the first stabilized direction in
   // the j_m'th block of SchurComplement.
-  vector<int> stabilizeBlockUpdateColumn;
+  std::vector<int> stabilizeBlockUpdateColumn;
   //
   // For each 0 <= m < M, stabilizeBlocks is the submatrix of U
   // corresponding to the j_m'th block of SchurComplement.
-  vector<Matrix> stabilizeBlocks;
+  std::vector<Matrix> stabilizeBlocks;
 
   // Q = B' L'^{-T} L'^{-1} B' - {{0, 0}, {0, 1}}, where B' =
   // (FreeVarMatrix U).  Q is needed in the factorization of the Schur
@@ -196,7 +196,7 @@ public:
   // that N' could change with each iteration.
   Matrix Q;
   // a vector of length N', needed for the LU decomposition of Q.
-  vector<Integer> Qpivots;
+  std::vector<Integer> Qpivots;
 
   // dyExtended = (dy, z), where z are the extra coordinates introduced
   // in the stabilized Schur complement equation.
@@ -211,15 +211,15 @@ public:
   Block_Diagonal_Matrix StepMatrixWorkspace;
 
   // Needed during the computation of BilinearPairingsY, BilinearPairingsXInv
-  vector<Matrix> bilinearPairingsWorkspace;
+  std::vector<Matrix> bilinearPairingsWorkspace;
 
   // Needed during the step-length computation, where we must compute
   // eigenvalues of a Block_Diagonal_Matrix
-  vector<Vector> eigenvaluesWorkspace;
+  std::vector<Vector> eigenvaluesWorkspace;
 
   // Needed during the step-length computation, where we must compute
   // the QR decomposition of a Block_Diagonal_Matrix
-  vector<Vector> QRWorkspace;
+  std::vector<Vector> QRWorkspace;
 
   /********************************************/
   // Methods

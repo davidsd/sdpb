@@ -32,8 +32,6 @@
 
 #include <vector>
 
-using std::vector;
-
 /* this is a subset of mpack for SDPA-GMP only */
 /* http://mplapack.sourceforge.net/ */
 
@@ -44,7 +42,7 @@ void
     Rsyev(const char *jobz, const char *uplo, mpackint n, mpf_class * A,
     mpackint lda, mpf_class * w, mpf_class * work, mpackint lwork, mpackint *info);
 void Rpotrf(const char *uplo, mpackint n, mpf_class * A, mpackint lda, mpackint *info);
-void RpotrfStabilized(const char *uplo, mpackint n, mpf_class * A, mpackint lda, mpackint * info, vector<mpackint> &stabilizeIndices, vector<mpf_class> &stabilizeLambdas, const double stabilizeThreshold);
+void RpotrfStabilized(const char *uplo, mpackint n, mpf_class * A, mpackint lda, mpackint * info, std::vector<mpackint> &stabilizeIndices, std::vector<mpf_class> &stabilizeLambdas, const double stabilizeThreshold);
 mpackint iMlaenv_gmp(mpackint ispec, const char *name, const char *opts, mpackint n1, mpackint n2,
     mpackint n3, mpackint n4);
 mpf_class Rlamch_gmp(const char *cmach);
@@ -82,7 +80,7 @@ void Rorg2r(mpackint m, mpackint n, mpackint k, mpf_class * A, mpackint lda, mpf
 void Rlarf(const char *side, mpackint m, mpackint n, mpf_class * v, mpackint incv,
     mpf_class tau, mpf_class * C, mpackint ldc, mpf_class * work);
 void Rpotf2(const char *uplo, mpackint n, mpf_class * A, mpackint lda, mpackint *info);
-void Rpotf2Stabilized(const char *uplo, mpackint n, mpf_class * A, mpackint lda, mpackint * info, const mpackint indexStart, const double stabilizeThreshold, vector<mpackint> &stabilizeIndices, vector<mpf_class> &stabilizeLambdas, double &totalLogLambda);
+void Rpotf2Stabilized(const char *uplo, mpackint n, mpf_class * A, mpackint lda, mpackint * info, const mpackint indexStart, const double stabilizeThreshold, std::vector<mpackint> &stabilizeIndices, std::vector<mpf_class> &stabilizeLambdas, double &totalLogLambda);
 void Rlaset(const char *uplo, mpackint m, mpackint n, mpf_class alpha, mpf_class beta,
     mpf_class * A, mpackint lda);
 void Rlaev2(mpf_class a, mpf_class b, mpf_class c, mpf_class * rt1,

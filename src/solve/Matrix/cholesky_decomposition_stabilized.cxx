@@ -2,8 +2,8 @@
 
 // Compute L (lower triangular) such that A + U U^T = L L^T.
 void cholesky_decomposition_stabilized(Matrix &A, Matrix &L,
-                                       vector<Integer> &stabilize_indices,
-                                       vector<Real> &stabilize_lambdas,
+                                       std::vector<Integer> &stabilize_indices,
+                                       std::vector<Real> &stabilize_lambdas,
                                        const double stabilize_threshold)
 {
   int dim = A.rows;

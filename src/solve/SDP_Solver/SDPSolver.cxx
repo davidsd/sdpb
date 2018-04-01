@@ -43,9 +43,9 @@ using std::cout;
 
 SDP_Solver::SDP_Solver(const SDP &sdp, const SDP_Solver_Parameters &parameters)
     : sdp(sdp), parameters(parameters), x(sdp.primal_objective.size(), 0),
-      X(sdp.psd_matrix_block_dims()), y(sdp.dual_objective.size(), 0), Y(X), dx(x),
-      dX(X), dy(y), dY(Y), PrimalResidues(X), dualResidues(x), XCholesky(X),
-      YCholesky(X), Z(X), R(X),
+      X(sdp.psd_matrix_block_dims()), y(sdp.dual_objective.size(), 0), Y(X),
+      dx(x), dX(X), dy(y), dY(Y), PrimalResidues(X), dualResidues(x),
+      XCholesky(X), YCholesky(X), Z(X), R(X),
       BilinearPairingsXInv(sdp.bilinear_pairing_block_dims()),
       BilinearPairingsY(BilinearPairingsXInv),
       SchurComplement(sdp.schur_block_dims()),
@@ -155,8 +155,8 @@ void tensorTransposeCongruence(const Matrix &A, const Matrix &Q, Matrix &Work,
 //   `tensorTransposeCongruence'
 //
 void blockTensorTransposeCongruence(const Block_Diagonal_Matrix &A,
-                                    const vector<Matrix> &Q,
-                                    vector<Matrix> &Work,
+                                    const std::vector<Matrix> &Q,
+                                    std::vector<Matrix> &Work,
                                     Block_Diagonal_Matrix &Result)
 {
   for(unsigned int b = 0; b < Q.size(); b++)
@@ -221,8 +221,8 @@ void tensorInvTransposeCongruenceWithCholesky(const Matrix &L, const Matrix &Q,
 //   `tensorInvTransposeCongruenceWithCholesky'
 //
 void blockTensorInvTransposeCongruenceWithCholesky(
-  const Block_Diagonal_Matrix &L, const vector<Matrix> &Q,
-  vector<Matrix> &Work, Block_Diagonal_Matrix &Result)
+  const Block_Diagonal_Matrix &L, const std::vector<Matrix> &Q,
+  std::vector<Matrix> &Work, Block_Diagonal_Matrix &Result)
 {
   for(unsigned int b = 0; b < Q.size(); b++)
     tensorInvTransposeCongruenceWithCholesky(L.blocks[b], Q[b], Work[b],
@@ -586,8 +586,9 @@ Real correctorCenteringParameter(const SDP_Solver_Parameters &parameters,
 // - min(\gamma \alpha(M, dM), 1) (returned)
 //
 Real stepLength(Block_Diagonal_Matrix &MCholesky, Block_Diagonal_Matrix &dM,
-                Block_Diagonal_Matrix &MInvDM, vector<Vector> &eigenvalues,
-                vector<Vector> &workspace, const Real gamma)
+                Block_Diagonal_Matrix &MInvDM,
+                std::vector<Vector> &eigenvalues,
+                std::vector<Vector> &workspace, const Real gamma)
 {
   // MInvDM = L^{-1} dM L^{-T}, where M = L L^T
   MInvDM.copy_from(dM);
@@ -668,9 +669,9 @@ void SDP_Solver::initializeSchurComplementSolver(
   //
   timers["initializeSchurComplementSolver.choleskyDecompositionStabilized"]
     .resume();
-  cholesky_decomposition_stabilized(SchurComplement, SchurComplementCholesky,
-                                  schurStabilizeIndices, schurStabilizeLambdas,
-                                  cast2double(choleskyStabilizeThreshold));
+  cholesky_decomposition_stabilized(
+    SchurComplement, SchurComplementCholesky, schurStabilizeIndices,
+    schurStabilizeLambdas, cast2double(choleskyStabilizeThreshold));
   timers["initializeSchurComplementSolver.choleskyDecompositionStabilized"]
     .stop();
 
@@ -678,7 +679,8 @@ void SDP_Solver::initializeSchurComplementSolver(
   SchurOffDiagonal.copy_from(sdp.free_var_matrix);
   timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
     .resume();
-  block_matrix_lower_triangular_solve(SchurComplementCholesky, SchurOffDiagonal);
+  block_matrix_lower_triangular_solve(SchurComplementCholesky,
+                                      SchurOffDiagonal);
   timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
     .stop();
 
@@ -841,7 +843,7 @@ void SDP_Solver::solveSchurComplementEquation(Vector &dx, Vector &dy)
   for(unsigned int n = 0; n < dy.size(); n++)
     dyExtended[n] = dy[n];
   vector_scale_matrix_multiply_transpose_add(-1, SchurOffDiagonal, dx, 1,
-                                        dyExtended);
+                                             dyExtended);
 
   // z = -V^T dx
   for(unsigned int j = 0; j < stabilizeBlockIndices.size(); j++)

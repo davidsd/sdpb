@@ -1,7 +1,7 @@
 #include "../Matrix.hxx"
 
 // b := A^{-1} b, where LU and pivots encode the LU decomposition of A
-void solve_with_LU_decomposition(Matrix &LU, vector<Integer> &pivots,
+void solve_with_LU_decomposition(Matrix &LU, std::vector<Integer> &pivots,
                                  Vector &b)
 {
   Integer info;

@@ -17,5 +17,7 @@ void cholesky_decomposition(Matrix &A, Matrix &L)
   // Set the upper-triangular part of the L to zero
   for(int j = 0; j < dim; j++)
     for(int i = 0; i < j; i++)
-      L.elements[i + j * dim] = 0;
+      {
+        L.elements[i + j * dim] = 0;
+      }
 }
