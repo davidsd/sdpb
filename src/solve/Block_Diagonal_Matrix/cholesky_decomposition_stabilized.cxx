@@ -5,7 +5,8 @@
 void cholesky_decomposition_stabilized(
   Block_Diagonal_Matrix &A, Block_Diagonal_Matrix &L,
   std::vector<std::vector<Integer>> &stabilize_indices,
-  std::vector<std::vector<Real>> &stabilize_lambdas, const double stabilize_threshold)
+  std::vector<std::vector<Real>> &stabilize_lambdas,
+  const double stabilize_threshold)
 {
   for(size_t b = 0; b < A.blocks.size(); b++)
     {

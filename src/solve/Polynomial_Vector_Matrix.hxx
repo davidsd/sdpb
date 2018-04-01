@@ -61,8 +61,8 @@ public:
   int degree() const
   {
     int d = 0;
-    for(auto &e: elements)
-      for(auto &p:  e)
+    for(auto &e : elements)
+      for(auto &p : e)
         {
           d = std::max(p.degree(), d);
         }

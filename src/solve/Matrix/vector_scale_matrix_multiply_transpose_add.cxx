@@ -1,8 +1,9 @@
 #include "../Matrix.hxx"
 
 // y := alpha A^T x + beta y
-void vector_scale_matrix_multiply_transpose_add(Real alpha, Matrix &A, Vector &x,
-                                           Real beta, Vector &y)
+void vector_scale_matrix_multiply_transpose_add(Real alpha, Matrix &A,
+                                                Vector &x, Real beta,
+                                                Vector &y)
 {
   assert(A.cols <= static_cast<int>(y.size()));
   assert(A.rows <= static_cast<int>(x.size()));

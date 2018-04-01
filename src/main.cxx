@@ -67,13 +67,15 @@ int main(int argc, char **argv)
     po::bool_switch(&parameters.find_dual_feasible)->default_value(false),
     "Terminate once a dual feasible solution is found.")(
     "detectPrimalFeasibleJump",
-    po::bool_switch(&parameters.detect_primal_feasible_jump)->default_value(false),
+    po::bool_switch(&parameters.detect_primal_feasible_jump)
+      ->default_value(false),
     "Terminate if a primal-step of 1 is taken. This often indicates that a "
     "primal feasible solution would be found if the precision were high "
     "enough. Try increasing either primalErrorThreshold or precision "
     "and run from the latest checkpoint.")(
     "detectDualFeasibleJump",
-    po::bool_switch(&parameters.detect_dual_feasible_jump)->default_value(false),
+    po::bool_switch(&parameters.detect_dual_feasible_jump)
+      ->default_value(false),
     "Terminate if a dual-step of 1 is taken. This often indicates that a "
     "dual feasible solution would be found if the precision were high "
     "enough. Try increasing either dualErrorThreshold or precision "

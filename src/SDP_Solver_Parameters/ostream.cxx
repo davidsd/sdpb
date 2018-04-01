@@ -11,7 +11,8 @@ std::ostream &operator<<(std::ostream &os, const SDP_Solver_Parameters &p)
   os << "findDualFeasible             = " << p.find_dual_feasible << '\n';
   os << "detectPrimalFeasibleJump     = " << p.detect_primal_feasible_jump
      << '\n';
-  os << "detectDualFeasibleJump       = " << p.detect_dual_feasible_jump << '\n';
+  os << "detectDualFeasibleJump       = " << p.detect_dual_feasible_jump
+     << '\n';
   os << "precision(actual)            = " << p.precision << "("
      << mpf_get_default_prec() << ")" << '\n';
   os << "dualityGapThreshold          = " << p.duality_gap_threshold << '\n';
@@ -19,7 +20,8 @@ std::ostream &operator<<(std::ostream &os, const SDP_Solver_Parameters &p)
   os << "dualErrorThreshold           = " << p.dual_error_threshold << '\n';
   os << "initialMatrixScalePrimal     = " << p.initial_matrix_scale_primal
      << '\n';
-  os << "initialMatrixScaleDual       = " << p.initial_matrix_scale_dual << '\n';
+  os << "initialMatrixScaleDual       = " << p.initial_matrix_scale_dual
+     << '\n';
   os << "feasibleCenteringParameter   = " << p.feasible_centering_parameter
      << '\n';
   os << "infeasibleCenteringParameter = " << p.infeasible_centering_parameter
@@ -30,4 +32,3 @@ std::ostream &operator<<(std::ostream &os, const SDP_Solver_Parameters &p)
   os << "maxComplementarity           = " << p.max_complementarity << '\n';
   return os;
 }
-
