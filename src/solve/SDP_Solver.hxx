@@ -152,10 +152,6 @@ public:
   // a vector of length N', needed for the LU decomposition of Q.
   std::vector<Integer> Q_pivots;
 
-  // dyExtended = (dy, z), where z are the extra coordinates introduced
-  // in the stabilized Schur complement equation.
-  Vector dy_extended;
-
   /********************************************/
   // Additional workspace variables
 
