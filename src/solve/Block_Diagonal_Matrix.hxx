@@ -30,53 +30,59 @@ public:
 
   // Construct a Block_Diagonal_Matrix from a vector of dimensions {s_0,
   // ..., s_{bMax-1}} for each block.
-  explicit Block_Diagonal_Matrix(const std::vector<int> &blockSizes) : dim(0)
+  explicit Block_Diagonal_Matrix(const std::vector<int> &block_sizes) : dim(0)
   {
-    for(unsigned int i = 0; i < blockSizes.size(); i++)
+    for(auto &block_size : block_sizes)
       {
-        blocks.push_back(Matrix(blockSizes[i], blockSizes[i]));
+        blocks.push_back(Matrix(block_size, block_size));
         block_start_indices.push_back(dim);
-        dim += blockSizes[i];
+        dim += block_size;
       }
   }
 
   // M = 0
   void set_zero()
   {
-    for(unsigned int b = 0; b < blocks.size(); b++)
+    for(auto &block : blocks)
       {
-        blocks[b].set_zero();
+        block.set_zero();
       }
   }
 
   // Add a constant c to each diagonal element
   void add_diagonal(const Real &c)
   {
-    for(unsigned int b = 0; b < blocks.size(); b++)
+    for(auto &block : blocks)
       {
-        blocks[b].add_diagonal(c);
+        block.add_diagonal(c);
       }
   }
 
   // M = M + A
   void operator+=(const Block_Diagonal_Matrix &A)
   {
-    for(unsigned int b = 0; b < blocks.size(); b++)
-      blocks[b] += A.blocks[b];
+    for(size_t b = 0; b < blocks.size(); b++)
+      {
+        blocks[b] += A.blocks[b];
+      }
   }
 
   // M = M - A
   void operator-=(const Block_Diagonal_Matrix &A)
   {
-    for(unsigned int b = 0; b < blocks.size(); b++)
-      blocks[b] -= A.blocks[b];
+    for(size_t b = 0; b < blocks.size(); b++)
+      {
+        blocks[b] -= A.blocks[b];
+      }
   }
 
   // M = c*M, where c is a constant
   void operator*=(const Real &c)
   {
-    for(unsigned int b = 0; b < blocks.size(); b++)
-      blocks[b] *= c;
+    for(auto &block : blocks)
+      {
+        block *= c;
+      }
   }
 
   // M = A
@@ -91,25 +97,25 @@ public:
   // Symmetrize M in place
   void symmetrize()
   {
-    for(unsigned int b = 0; b < blocks.size(); b++)
-      blocks[b].symmetrize();
+    for(auto &block : blocks)
+      {
+        block.symmetrize();
+      }
   }
 
   // The maximal absolute value of the elements of M
   Real max_abs() const
   {
     Real max = 0;
-    for(std::vector<Matrix>::const_iterator b = blocks.begin();
-        b != blocks.end(); b++)
+    for(auto &block : blocks)
       {
-        const Real tmp = b->max_abs();
-        if(tmp > max)
-          max = tmp;
+        max=std::max(block.max_abs(),max);
       }
     return max;
   }
 
-  friend std::ostream &operator<<(std::ostream &os, const Block_Diagonal_Matrix &A);
+  friend std::ostream &
+  operator<<(std::ostream &os, const Block_Diagonal_Matrix &A);
 };
 
 // Tr(A B), where A and B are symmetric
@@ -125,11 +131,12 @@ Real frobeniusProductOfSums(const Block_Diagonal_Matrix &X,
                             const Block_Diagonal_Matrix &dY);
 
 // C := alpha*A*B + beta*C
-void blockDiagonalMatrixScaleMultiplyAdd(Real alpha,
-                                         Block_Diagonal_Matrix &A, // constant
-                                         Block_Diagonal_Matrix &B, // constant
-                                         Real beta,
-                                         Block_Diagonal_Matrix &C); // overwritten
+void blockDiagonalMatrixScaleMultiplyAdd(
+  Real alpha,
+  Block_Diagonal_Matrix &A, // constant
+  Block_Diagonal_Matrix &B, // constant
+  Real beta,
+  Block_Diagonal_Matrix &C); // overwritten
 
 // C := A B
 void blockDiagonalMatrixMultiply(Block_Diagonal_Matrix &A,  // constant
@@ -189,13 +196,13 @@ void blockMatrixSolveWithCholesky(Block_Diagonal_Matrix &ACholesky, // constant
 
 // B := L^{-1} B, where L is lower-triangular
 void blockMatrixLowerTriangularSolve(Block_Diagonal_Matrix &L, // constant
-                                     Matrix &B);             // overwritten
+                                     Matrix &B);               // overwritten
 
 // v := L^{-1} v, where L is lower-triangular
 void blockMatrixLowerTriangularSolve(Block_Diagonal_Matrix &L, // constant
-                                     Vector &v);             // overwritten
+                                     Vector &v);               // overwritten
 
 // v := L^{-T} v, where L is lower-triangular
 void blockMatrixLowerTriangularTransposeSolve(
   Block_Diagonal_Matrix &L, // constant
-  Vector &v);             // overwritten
+  Vector &v);               // overwritten
