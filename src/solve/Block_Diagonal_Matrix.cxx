@@ -145,7 +145,7 @@ void blockMatrixSolveWithCholesky(Block_Diagonal_Matrix &ACholesky,
 void blockMatrixLowerTriangularSolve(Block_Diagonal_Matrix &L, Matrix &B)
 {
   for(unsigned int b = 0; b < L.blocks.size(); b++)
-    lowerTriangularSolve(L.blocks[b], &B.elt(L.blockStartIndices[b], 0),
+    lowerTriangularSolve(L.blocks[b], &B.elt(L.block_start_indices[b], 0),
                          B.cols, B.rows);
 }
 
@@ -153,7 +153,8 @@ void blockMatrixLowerTriangularSolve(Block_Diagonal_Matrix &L, Matrix &B)
 void blockMatrixLowerTriangularSolve(Block_Diagonal_Matrix &L, Vector &v)
 {
   for(unsigned int b = 0; b < L.blocks.size(); b++)
-    lowerTriangularSolve(L.blocks[b], &v[L.blockStartIndices[b]], 1, v.size());
+    lowerTriangularSolve(L.blocks[b], &v[L.block_start_indices[b]], 1,
+                         v.size());
 }
 
 // v := L^{-T} v, where L is lower-triangular
@@ -161,6 +162,6 @@ void blockMatrixLowerTriangularTransposeSolve(Block_Diagonal_Matrix &L,
                                               Vector &v)
 {
   for(unsigned int b = 0; b < L.blocks.size(); b++)
-    lowerTriangularTransposeSolve(L.blocks[b], &v[L.blockStartIndices[b]], 1,
+    lowerTriangularTransposeSolve(L.blocks[b], &v[L.block_start_indices[b]], 1,
                                   v.size());
 }

@@ -5,7 +5,6 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
-#include "SDP.hxx"
 #include "SDP_Solver.hxx"
 #include "../Timers.hxx"
 

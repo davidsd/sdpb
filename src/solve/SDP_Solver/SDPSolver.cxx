@@ -725,7 +725,7 @@ void SDP_Solver::initializeSchurComplementSolver(
 
           // append the row of U corresponding to the top-left of U_j
           stabilizeBlockUpdateRow.push_back(
-            SchurComplement.blockStartIndices[j] + startIndex);
+            SchurComplement.block_start_indices[j] + startIndex);
           // append the column of U corresponding to the top-left of U_j
           stabilizeBlockUpdateColumn.push_back(offDiagonalColumns);
           // update the number of off-diagonal columns

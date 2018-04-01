@@ -57,7 +57,7 @@ namespace boost
     {
       ar &m.dim;
       ar &m.blocks;
-      ar &m.blockStartIndices;
+      ar &m.block_start_indices;
     }
 
     template <class Archive>

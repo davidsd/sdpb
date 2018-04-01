@@ -26,7 +26,7 @@ public:
 
   // The rows (or columns) of M corresponding to the top-left entry of
   // each block M_b
-  std::vector<int> blockStartIndices;
+  std::vector<int> block_start_indices;
 
   // Construct a Block_Diagonal_Matrix from a vector of dimensions {s_0,
   // ..., s_{bMax-1}} for each block.
@@ -35,7 +35,7 @@ public:
     for(unsigned int i = 0; i < blockSizes.size(); i++)
       {
         blocks.push_back(Matrix(blockSizes[i], blockSizes[i]));
-        blockStartIndices.push_back(dim);
+        block_start_indices.push_back(dim);
         dim += blockSizes[i];
       }
   }
