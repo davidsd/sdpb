@@ -167,26 +167,6 @@ Real min_eigenvalue(Block_Diagonal_Matrix &A, std::vector<Vector> &workspace,
 void cholesky_decomposition(Block_Diagonal_Matrix &A,
                             Block_Diagonal_Matrix &L);
 
-// Compute L (lower triangular) such that A + U U^T = L L^T, where U
-// is a low-rank update matrix. (See Matrix.h for details).
-//
-// Input:
-// - A
-// - stabilizeThreshold: parameter for deciding which directions to
-//   stabilize
-// Output:
-// - L (overwritten)
-// - stabilizeIndices: a list of directions which have been
-//   stabilized, for each block of A (overwritten)
-// - stabilizeLambdas: a list of corresponding Lambdas, for each block
-//   of A (overwritten)
-//
-void cholesky_decomposition_stabilized(
-  Block_Diagonal_Matrix &A, Block_Diagonal_Matrix &L,
-  std::vector<std::vector<Integer>> &stabilizeIndices,
-  std::vector<std::vector<Real>> &stabilizeLambdas,
-  const double stabilizeThreshold);
-
 // X := ACholesky^{-T} ACholesky^{-1} X = A^{-1} X
 // Input:
 // - ACholesky, a lower triangular Block_Diagonal_Matrix such that A =

@@ -199,37 +199,6 @@ void solve_with_LU_decomposition(Matrix &LU, std::vector<Integer> &pivots,
 // - L : dim x dim lower-triangular matrix (overwritten)
 void cholesky_decomposition(Matrix &A, Matrix &L);
 
-// Compute L (lower triangular) such that A + U U^T = L L^T.  Here,
-// the 'update' matrix U has columns given by
-//
-//   U = ( Lambda_{p_1} e_{p_1}, ..., Lambda_{p_M} e_{p_M} )
-//
-// where e_p is a unit vector in the p-th direction and the
-// Lambda_{p_m} are constants.  If p_m appears above, we say the
-// direction p_m has been `stabilized.'
-//
-// We choose which direction to stabilize by comparing diagonal
-// entries A_{ii} encountered during the Cholesky decomposition to
-// stabilizeThreshold*Lambda_GM, where Lambda_GM is the geometric mean
-// of the diagonal entries L computed so far.  Smaller
-// stabilizeThreshold means fewer directions will be stabilized.
-// Larger stabilizeThreshold means more directions will be stabilized.
-//
-// Input:
-// - A
-// - stabilizeThreshold: parameter for deciding which directions to
-//   stabilize
-// Output:
-// - L (overwritten)
-// - stabilizeIndices: a list of directions which have been
-//   stabilized (overwritten)
-// - stabilizeLambdas: a list of corresponding Lambdas (overwritten)
-//
-void cholesky_decomposition_stabilized(Matrix &A, Matrix &L,
-                                       std::vector<Integer> &stabilize_indices,
-                                       std::vector<Real> &stabilize_lambdas,
-                                       const double stabilize_threshold);
-
 // B := L^{-1} B, where L is lower-triangular and B is a matrix
 // pointed to by b
 //

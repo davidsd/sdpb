@@ -133,58 +133,12 @@ public:
   Block_Diagonal_Matrix schur_complement;
 
   // SchurComplementCholesky = L', the Cholesky decomposition of the
-  // stabilized Schur complement matrix S' = S + U U^T.
+  // Schur complement matrix S.
   Block_Diagonal_Matrix schur_complement_cholesky;
 
   // SchurOffDiagonal = L'^{-1} FreeVarMatrix, needed in solving the
   // Schur complement equation.
   Matrix schur_off_diagonal;
-
-  // As explained in the manual, we use the `stabilized' Schur
-  // complement matrix S' = S + U U^T.  Here, the 'update' matrix U
-  // has columns given by
-  //
-  //   U = ( Lambda_{p_1} e_{p_1}, ..., Lambda_{p_M} e_{p_M} )
-  //
-  // where e_p is a unit vector in the p-th direction and the
-  // Lambda_{p_m} are constants.  If p_m appears above, we say the
-  // direction p_m has been `stabilized.'  Because U is sparse, we
-  // encode it in the smaller data structures below.
-  //
-  // Recall: S is block diagonal, with blocks labeled by 0 <= j < J.
-  //
-  // schurStabilizeIndices[j] = a list of which directions of
-  // SchurComplement.blocks[j] have been stabilized (counting from 0 at
-  // the upper left of each block), for 0 <= j < J.
-  std::vector<std::vector<int>> schur_stabilize_indices;
-  //
-  // schurStabilizeLambdas[j] = a list of constants Lambda for each
-  // stabilized direction in schurStabilizeIndices[j], for 0 <= j < J.
-  std::vector<std::vector<Real>> schur_stabilize_lambdas;
-  //
-  // a list of block indices {j_0, j_1, ..., j_{M-1} } for blocks
-  // which have at least one stabilized direction.  We say the blocks
-  // j_m have been `stabilized.'  Note that the number M of stabilized
-  // blocks could change with each iteration.
-  std::vector<int> stabilize_block_indices;
-  //
-  // For each 0 <= m < M, stabilizeBlockUpdateRow records the row of
-  // U corresponding to the first stabilized direction in the j_m'th
-  // block of SchurComplement:
-  //
-  //   stabilizeBlockUpdateRow[m] = schurStabilizeIndices[j_m][0] +
-  //                                SchurComplement.blockStartIndices[j_m]
-  //
-  std::vector<int> stabilize_block_update_Row;
-  //
-  // For each 0 <= m < M, stabilizeBlockUpdateColumn records the
-  // column of U corresponding to the first stabilized direction in
-  // the j_m'th block of SchurComplement.
-  std::vector<int> stabilize_block_update_column;
-  //
-  // For each 0 <= m < M, stabilizeBlocks is the submatrix of U
-  // corresponding to the j_m'th block of SchurComplement.
-  std::vector<Matrix> stabilize_blocks;
 
   // Q = B' L'^{-T} L'^{-1} B' - {{0, 0}, {0, 1}}, where B' =
   // (FreeVarMatrix U).  Q is needed in the factorization of the Schur
@@ -247,8 +201,7 @@ private:
   // Compute data needed to solve the Schur complement equation
   void initialize_schur_complement_solver(
     const Block_Diagonal_Matrix &bilinear_pairings_X_Inv,
-    const Block_Diagonal_Matrix &bilinear_pairings_Y,
-    const Real &cholesky_stabilize_threshold);
+    const Block_Diagonal_Matrix &bilinear_pairings_Y);
 
   // Solve the Schur complement equation in-place for dx, dy.  dx and
   // dy will initially be set to the right-hand side of the equation.

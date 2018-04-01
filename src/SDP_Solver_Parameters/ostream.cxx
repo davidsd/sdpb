@@ -27,8 +27,6 @@ std::ostream &operator<<(std::ostream &os, const SDP_Solver_Parameters &p)
   os << "infeasibleCenteringParameter = " << p.infeasible_centering_parameter
      << '\n';
   os << "stepLengthReduction          = " << p.step_length_reduction << '\n';
-  os << "choleskyStabilizeThreshold   = " << p.cholesky_stabilize_threshold
-     << '\n';
   os << "maxComplementarity           = " << p.max_complementarity << '\n';
   return os;
 }

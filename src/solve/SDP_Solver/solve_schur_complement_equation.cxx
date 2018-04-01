@@ -27,40 +27,11 @@ void SDP_Solver::solve_schur_complement_equation(Vector &dx, Vector &dy)
   vector_scale_matrix_multiply_transpose_add(-1, schur_off_diagonal, dx, 1,
                                              dy_extended);
 
-  // z = -V^T dx
-  for(unsigned int j = 0; j < stabilize_block_indices.size(); j++)
-    {
-      int b = stabilize_block_indices[j];
-      int pTopLeft = stabilize_block_update_Row[j];
-      int cTopLeft = stabilize_block_update_column[j];
-
-      for(int c = 0; c < stabilize_blocks[b].cols; c++)
-        {
-          dy_extended[cTopLeft + c] = 0;
-          for(int r = 0; r < stabilize_blocks[b].rows; r++)
-            dy_extended[cTopLeft + c]
-              -= dx[pTopLeft + r] * stabilize_blocks[b].elt(r, c);
-        }
-    }
-
   // dyExtended = Q^{-1} dyExtended
   solve_with_LU_decomposition(Q, Q_pivots, dy_extended);
 
   // dx += SchurOffDiagonal dy
   vector_scale_matrix_multiply_add(1, schur_off_diagonal, dy_extended, 1, dx);
-
-  // dx += V z
-  for(unsigned int j = 0; j < stabilize_block_indices.size(); j++)
-    {
-      int b = stabilize_block_indices[j];
-      int pTopLeft = stabilize_block_update_Row[j];
-      int cTopLeft = stabilize_block_update_column[j];
-
-      for(int c = 0; c < stabilize_blocks[b].cols; c++)
-        for(int r = 0; r < stabilize_blocks[b].rows; r++)
-          dx[pTopLeft + r]
-            += dy_extended[cTopLeft + c] * stabilize_blocks[b].elt(r, c);
-    }
 
   // dx = SchurComplementCholesky^{-T} dx
   block_matrix_lower_triangular_transpose_solve(schur_complement_cholesky, dx);

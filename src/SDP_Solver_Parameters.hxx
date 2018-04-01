@@ -27,7 +27,6 @@ public:
   Real feasible_centering_parameter;
   Real infeasible_centering_parameter;
   Real step_length_reduction;
-  Real cholesky_stabilize_threshold;
   Real max_complementarity;
   // Set the precision of all Real parameters to equal 'precision'.
   // This is necessary because 'precision' might be set (via the
@@ -43,7 +42,6 @@ public:
     feasible_centering_parameter.set_prec(precision);
     infeasible_centering_parameter.set_prec(precision);
     step_length_reduction.set_prec(precision);
-    cholesky_stabilize_threshold.set_prec(precision);
     max_complementarity.set_prec(precision);
   }
 

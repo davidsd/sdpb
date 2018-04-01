@@ -124,9 +124,8 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       // Compute SchurComplement and prepare to solve the Schur
       // complement equation for dx, dy
       timers["run.initializeSchurComplementSolver"].resume();
-      initialize_schur_complement_solver(
-        bilinear_pairings_X_Inv, bilinear_pairings_Y,
-        parameters.cholesky_stabilize_threshold);
+      initialize_schur_complement_solver(bilinear_pairings_X_Inv,
+                                         bilinear_pairings_Y);
       timers["run.initializeSchurComplementSolver"].stop();
 
       // Compute the complementarity mu = Tr(X Y)/X.dim
