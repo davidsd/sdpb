@@ -11,7 +11,9 @@ void vector_scale_matrix_multiply_add(Real alpha, Matrix &A, Vector &x,
     {
       Real tmp = 0;
       for(int n = 0; n < A.cols; n++)
-        tmp += A.elt(p, n) * x[n];
+        {
+          tmp += A.elt(p, n) * x[n];
+        }
       y[p] = alpha * tmp + beta * y[p];
     }
 }

@@ -16,12 +16,8 @@ Real min_eigenvalue(Block_Diagonal_Matrix &A, std::vector<Vector> &workspace,
   Real lambda_min = 1e100; // we really want lambdaMin = infinity here
   for(size_t b = 0; b < A.blocks.size(); b++)
     {
-      Real min_block_lambda
-        = min_eigenvalue(A.blocks[b], workspace[b], eigenvalues[b]);
-      // ensure only one thread modifies lambdaMin at a time
-      {
-        lambda_min = min(lambda_min, min_block_lambda);
-      }
+      lambda_min = min(
+        lambda_min, min_eigenvalue(A.blocks[b], workspace[b], eigenvalues[b]));
     }
 
   return lambda_min;

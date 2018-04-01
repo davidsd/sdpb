@@ -9,13 +9,10 @@ Real frobenius_product_of_sums(const Block_Diagonal_Matrix &X,
                                const Block_Diagonal_Matrix &dY)
 {
   Real result = 0;
-  for(unsigned int b = 0; b < X.blocks.size(); b++)
+  for(size_t b = 0; b < X.blocks.size(); b++)
     {
-      Real f = frobenius_product_of_sums(X.blocks[b], dX.blocks[b],
-                                         Y.blocks[b], dY.blocks[b]);
-      {
-        result += f;
-      }
+      result += frobenius_product_of_sums(X.blocks[b], dX.blocks[b],
+                                          Y.blocks[b], dY.blocks[b]);
     }
   return result;
 }

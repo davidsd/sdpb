@@ -21,7 +21,9 @@ void matrix_square_into_block(Matrix &A, Matrix &B, int bRow, int bCol)
             tmp += A.elt(p, r) * A.elt(p, c);
           B.elt(bRow + r, bCol + c) = tmp;
           if(r != c)
-            B.elt(bRow + c, bCol + r) = tmp;
+            {
+              B.elt(bRow + c, bCol + r) = tmp;
+            }
         }
     }
 }

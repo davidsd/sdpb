@@ -10,11 +10,15 @@ std::ostream &operator<<(std::ostream &os, const Matrix &a)
         {
           os << a.elt(r, c);
           if(c < a.cols - 1)
-            os << ", ";
+            {
+              os << ", ";
+            }
         }
       os << "}";
       if(r < a.rows - 1)
-        os << ", ";
+        {
+          os << ", ";
+        }
     }
   os << "}";
   return os;

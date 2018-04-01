@@ -7,7 +7,7 @@ void block_diagonal_matrix_scale_multiply_add(Real alpha,
                                               Real beta,
                                               Block_Diagonal_Matrix &C)
 {
-  for(unsigned int b = 0; b < A.blocks.size(); b++)
+  for(size_t b = 0; b < A.blocks.size(); b++)
     {
       matrix_scale_multiply_add(alpha, A.blocks[b], B.blocks[b], beta,
                                 C.blocks[b]);
