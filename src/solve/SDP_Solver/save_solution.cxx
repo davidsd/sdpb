@@ -1,7 +1,8 @@
 #include "../SDP_Solver.hxx"
 
-void SDP_Solver::save_solution(const SDP_Solver_Terminate_Reason terminate_reason,
-                              const boost::filesystem::path &out_file)
+void SDP_Solver::save_solution(
+  const SDP_Solver_Terminate_Reason terminate_reason,
+  const boost::filesystem::path &out_file)
 {
   boost::filesystem::ofstream ofs(out_file);
   std::cout << "Saving solution to      : " << out_file << '\n';

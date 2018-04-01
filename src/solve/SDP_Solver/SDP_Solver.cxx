@@ -13,8 +13,7 @@ SDP_Solver::SDP_Solver(const SDP &sdp, const SDP_Solver_Parameters &parameters)
       schur_complement_cholesky(schur_complement),
       schur_off_diagonal(sdp.free_var_matrix),
       Q(sdp.free_var_matrix.cols, sdp.free_var_matrix.cols),
-      Q_pivots(sdp.free_var_matrix.cols),
-      step_matrix_workspace(X)
+      Q_pivots(sdp.free_var_matrix.cols), step_matrix_workspace(X)
 {
   // initialize bilinearPairingsWorkspace, eigenvaluesWorkspace, QRWorkspace
   for(unsigned int b = 0; b < sdp.bilinear_bases.size(); b++)

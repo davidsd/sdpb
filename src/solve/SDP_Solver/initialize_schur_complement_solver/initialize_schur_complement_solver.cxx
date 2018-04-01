@@ -54,11 +54,9 @@ void SDP_Solver::initialize_schur_complement_solver(
   //
   //   L' L'^T = S'
   //
-  timers["initializeSchurComplementSolver.choleskyDecomposition"]
-    .resume();
+  timers["initializeSchurComplementSolver.choleskyDecomposition"].resume();
   cholesky_decomposition(schur_complement, schur_complement_cholesky);
-  timers["initializeSchurComplementSolver.choleskyDecomposition"]
-    .stop();
+  timers["initializeSchurComplementSolver.choleskyDecomposition"].stop();
 
   // SchurOffDiagonal = L'^{-1} FreeVarMatrix
   schur_off_diagonal.copy_from(sdp.free_var_matrix);
