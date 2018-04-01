@@ -129,60 +129,75 @@ public:
   friend std::ostream &operator<<(std::ostream &os, const Matrix &a);
 };
 
+// Most of the routines below are helpfully-named wrappers for
+// functions in MBLAS or MLAPACK.  See Matrix.h for a more detailed
+// description of the various input/output parameters.
+//
+// For a list of MBLAS routines with documentation, see
+// http://mplapack.sourceforge.net/mblas_routines.html
+//
+// For a list of MLAPACK routines with documentation, see
+// http://mplapack.sourceforge.net/mlapack_routines.html
+//
+// We have chosen not to parallelize operations that are used in
+// Block_Diagonal_Matrix, since there parallelism can be achieved by
+// parallelizing loops over blocks.
+
 // C := alpha*A*B + beta*C
-void matrixScaleMultiplyAdd(Real alpha, Matrix &A, Matrix &B, Real beta,
-                            Matrix &C);
+void matrix_scale_multiply_add(Real alpha, Matrix &A, Matrix &B, Real beta,
+                               Matrix &C);
 
 // Set block starting at (bRow, bCol) of B to A^T A
-void matrixSquareIntoBlock(Matrix &A, Matrix &B, int bRow, int bCol);
+void matrix_square_into_block(Matrix &A, Matrix &B, int bRow, int bCol);
 
 // A := L^{-1} A L^{-T}
-void lowerTriangularInverseCongruence(Matrix &A, Matrix &L);
+void lower_triangular_inverse_congruence(Matrix &A, Matrix &L);
 
 // y := alpha A x + beta y
-void vectorScaleMatrixMultiplyAdd(Real alpha, Matrix &A, Vector &x, Real beta,
-                                  Vector &y);
+void vector_scale_matrix_multiply_add(Real alpha, Matrix &A, Vector &x,
+                                      Real beta, Vector &y);
 
 // y := alpha A^T x + beta y
-void vectorScaleMatrixMultiplyTransposeAdd(Real alpha, Matrix &A, Vector &x,
-                                           Real beta, Vector &y);
+void vector_scale_matrix_multiply_transpose_add(Real alpha, Matrix &A,
+                                                Vector &x, Real beta,
+                                                Vector &y);
 
 // Frobenius product Tr(A^T B) where A and B are symmetric matrices
-Real frobeniusProductSymmetric(const Matrix &A, const Matrix &B);
+Real frobenius_product_symmetric(const Matrix &A, const Matrix &B);
 
 // (X + dX) . (Y + dY), where X, dX, Y, dY are symmetric Matrices and
 // '.' is the Frobenius product.
-Real frobeniusProductOfSums(const Matrix &X, const Matrix &dX, const Matrix &Y,
-                            const Matrix &dY);
+Real frobenius_product_of_sums(const Matrix &X, const Matrix &dX,
+                               const Matrix &Y, const Matrix &dY);
 
 // Eigenvalues of A, via the QR method
 // Inputs:
 // A           : n x n Matrix (will be overwritten)
 // eigenvalues : Vector of length n
 // workspace   : Vector of lenfth 3*n-1 (temporary workspace)
-void matrixEigenvalues(Matrix &A, Vector &workspace, Vector &eigenvalues);
+void matrix_eigenvalues(Matrix &A, Vector &workspace, Vector &eigenvalues);
 
 // Minimum eigenvalue of A, via the QR method
 // Inputs:
 // A           : n x n Matrix (overwritten)
 // eigenvalues : Vector of length n
 // workspace   : Vector of lenfth 3*n-1 (temporary workspace)
-Real minEigenvalue(Matrix &A, Vector &workspace, Vector &eigenvalues);
+Real min_eigenvalue(Matrix &A, Vector &workspace, Vector &eigenvalues);
 
 // Compute an in-place LU decomposition of A, with pivots, suitable
 // for use with 'solveWithLUDecomposition'
-void LUDecomposition(Matrix &A, std::vector<Integer> &pivots);
+void LU_decomposition(Matrix &A, std::vector<Integer> &pivots);
 
 // b := A^{-1} b, where LU and pivots encode the LU decomposition of A
-void solveWithLUDecomposition(Matrix &LU, std::vector<Integer> &pivots,
-                              Vector &b);
+void solve_with_LU_decomposition(Matrix &LU, std::vector<Integer> &pivots,
+                                 Vector &b);
 
 // L (lower triangular) such that A = L L^T
 // Input:
 // - A : dim x dim symmetric matrix
 // Output:
 // - L : dim x dim lower-triangular matrix (overwritten)
-void choleskyDecomposition(Matrix &A, Matrix &L);
+void cholesky_decomposition(Matrix &A, Matrix &L);
 
 // Compute L (lower triangular) such that A + U U^T = L L^T.  Here,
 // the 'update' matrix U has columns given by
@@ -210,10 +225,10 @@ void choleskyDecomposition(Matrix &A, Matrix &L);
 //   stabilized (overwritten)
 // - stabilizeLambdas: a list of corresponding Lambdas (overwritten)
 //
-void choleskyDecompositionStabilized(Matrix &A, Matrix &L,
-                                     std::vector<Integer> &stabilizeIndices,
-                                     std::vector<Real> &stabilizeLambdas,
-                                     const double stabilizeThreshold);
+void cholesky_decomposition_stabilized(Matrix &A, Matrix &L,
+                                       std::vector<Integer> &stabilize_indices,
+                                       std::vector<Real> &stabilize_lambdas,
+                                       const double stabilize_threshold);
 
 // B := L^{-1} B, where L is lower-triangular and B is a matrix
 // pointed to by b
@@ -229,10 +244,10 @@ void choleskyDecompositionStabilized(Matrix &A, Matrix &L,
 //
 // (The use of pointers and ldb is to allow using this function for
 // submatrices of a larger matrix.)
-void lowerTriangularSolve(Matrix &L, Real *b, int bcols, int ldb);
+void lower_triangular_solve(Matrix &L, Real *b, int bcols, int ldb);
 
 // b := L^{-1} b, where L is lower-triangular
-void lowerTriangularSolve(Matrix &L, Vector &b);
+void lower_triangular_solve(Matrix &L, Vector &b);
 
 // B := L^{-T} B, where L is lower-triangular and B is a matrix
 // pointed to by b
@@ -246,10 +261,10 @@ void lowerTriangularSolve(Matrix &L, Vector &b);
 // Output:
 // - elements of B, which are values pointed to by b are overwritten
 //
-void lowerTriangularTransposeSolve(Matrix &L, Real *b, int bcols, int ldb);
+void lower_triangular_transpose_solve(Matrix &L, Real *b, int bcols, int ldb);
 
 // b := L^{-T} b, where L is lower-triangular
-void lowerTriangularTransposeSolve(Matrix &L, Vector &b);
+void lower_triangular_transpose_solve(Matrix &L, Vector &b);
 
 // X := ACholesky^{-1 T} ACholesky^{-1} X = A^{-1} X
 // Inputs:
@@ -257,4 +272,4 @@ void lowerTriangularTransposeSolve(Matrix &L, Vector &b);
 // Output:
 // - X         : dim x dim matrix (overwritten)
 //
-void matrixSolveWithCholesky(Matrix &ACholesky, Matrix &X);
+void matrix_solve_with_cholesky(Matrix &ACholesky, Matrix &X);

@@ -556,7 +556,7 @@ Real correctorCenteringParameter(const SDP_Solver_Parameters &parameters,
                                  const bool isPrimalDualFeasible)
 {
   timers["run.correctorStep.frobeniusProduct"].resume();
-  Real r = frobeniusProductOfSums(X, dX, Y, dY) / (mu * X.dim);
+  Real r = frobenius_product_of_sums(X, dX, Y, dY) / (mu * X.dim);
   timers["run.correctorStep.frobeniusProduct"].stop();
   Real beta = r < 1 ? r * r : r;
 
@@ -591,9 +591,9 @@ Real stepLength(Block_Diagonal_Matrix &MCholesky, Block_Diagonal_Matrix &dM,
 {
   // MInvDM = L^{-1} dM L^{-T}, where M = L L^T
   MInvDM.copy_from(dM);
-  lowerTriangularInverseCongruence(MInvDM, MCholesky);
+  lower_triangular_inverse_congruence(MInvDM, MCholesky);
 
-  const Real lambda = minEigenvalue(MInvDM, workspace, eigenvalues);
+  const Real lambda = min_eigenvalue(MInvDM, workspace, eigenvalues);
   if(lambda > -gamma)
     return 1;
   else
@@ -668,7 +668,7 @@ void SDP_Solver::initializeSchurComplementSolver(
   //
   timers["initializeSchurComplementSolver.choleskyDecompositionStabilized"]
     .resume();
-  choleskyDecompositionStabilized(SchurComplement, SchurComplementCholesky,
+  cholesky_decomposition_stabilized(SchurComplement, SchurComplementCholesky,
                                   schurStabilizeIndices, schurStabilizeLambdas,
                                   cast2double(choleskyStabilizeThreshold));
   timers["initializeSchurComplementSolver.choleskyDecompositionStabilized"]
@@ -678,7 +678,7 @@ void SDP_Solver::initializeSchurComplementSolver(
   SchurOffDiagonal.copy_from(sdp.free_var_matrix);
   timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
     .resume();
-  blockMatrixLowerTriangularSolve(SchurComplementCholesky, SchurOffDiagonal);
+  block_matrix_lower_triangular_solve(SchurComplementCholesky, SchurOffDiagonal);
   timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
     .stop();
 
@@ -768,7 +768,7 @@ void SDP_Solver::initializeSchurComplementSolver(
   // Here, SchurOffDiagonal = L'^{-1} B.
   //
   // UpperLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal
-  matrixSquareIntoBlock(SchurOffDiagonal, Q, 0, 0);
+  matrix_square_into_block(SchurOffDiagonal, Q, 0, 0);
 
   // Here, stabilizeBlocks contains the blocks of V = L'^{-1} U.
   //
@@ -777,7 +777,7 @@ void SDP_Solver::initializeSchurComplementSolver(
     {
       int b = stabilizeBlockIndices[j];
       int c = stabilizeBlockUpdateColumn[j];
-      matrixSquareIntoBlock(stabilizeBlocks[b], Q, c, c);
+      matrix_square_into_block(stabilizeBlocks[b], Q, c, c);
 
       // subtract the identity matrix from this block
       for(int i = c; i < c + stabilizeBlocks[b].cols; i++)
@@ -813,7 +813,7 @@ void SDP_Solver::initializeSchurComplementSolver(
   Qpivots.resize(Q.rows);
   timers["LUDecomposition.resizing"].stop();
   timers["LUDecomposition.actualLU"].resume();
-  LUDecomposition(Q, Qpivots);
+  LU_decomposition(Q, Qpivots);
   timers["LUDecomposition.actualLU"].stop();
   timers["initializeSchurComplementSolver.LUDecomposition"].stop();
 }
@@ -831,7 +831,7 @@ void SDP_Solver::initializeSchurComplementSolver(
 void SDP_Solver::solveSchurComplementEquation(Vector &dx, Vector &dy)
 {
   // dx = SchurComplementCholesky^{-1} dx
-  blockMatrixLowerTriangularSolve(SchurComplementCholesky, dx);
+  block_matrix_lower_triangular_solve(SchurComplementCholesky, dx);
 
   // extend dy by additional coordinates z needed for stabilizing
   // dyExtended = (dy, z)
@@ -840,7 +840,7 @@ void SDP_Solver::solveSchurComplementEquation(Vector &dx, Vector &dy)
   // dy = r_y - SchurOffDiagonal^T dx
   for(unsigned int n = 0; n < dy.size(); n++)
     dyExtended[n] = dy[n];
-  vectorScaleMatrixMultiplyTransposeAdd(-1, SchurOffDiagonal, dx, 1,
+  vector_scale_matrix_multiply_transpose_add(-1, SchurOffDiagonal, dx, 1,
                                         dyExtended);
 
   // z = -V^T dx
@@ -860,10 +860,10 @@ void SDP_Solver::solveSchurComplementEquation(Vector &dx, Vector &dy)
     }
 
   // dyExtended = Q^{-1} dyExtended
-  solveWithLUDecomposition(Q, Qpivots, dyExtended);
+  solve_with_LU_decomposition(Q, Qpivots, dyExtended);
 
   // dx += SchurOffDiagonal dy
-  vectorScaleMatrixMultiplyAdd(1, SchurOffDiagonal, dyExtended, 1, dx);
+  vector_scale_matrix_multiply_add(1, SchurOffDiagonal, dyExtended, 1, dx);
 
   // dx += V z
   for(unsigned int j = 0; j < stabilizeBlockIndices.size(); j++)
@@ -879,7 +879,7 @@ void SDP_Solver::solveSchurComplementEquation(Vector &dx, Vector &dy)
     }
 
   // dx = SchurComplementCholesky^{-T} dx
-  blockMatrixLowerTriangularTransposeSolve(SchurComplementCholesky, dx);
+  block_matrix_lower_triangular_transpose_solve(SchurComplementCholesky, dx);
 
   // dy = first few entries of dyExtended
   for(unsigned int n = 0; n < dy.size(); n++)
@@ -917,12 +917,12 @@ void SDP_Solver::computeSearchDirection(const Real &beta, const Real &mu,
   // R = beta mu I - X Y - dX dY (corrector phase)
 
   timers[timerName + ".R.XY"].resume();
-  blockDiagonalMatrixScaleMultiplyAdd(-1, X, Y, 0, R);
+  block_diagonal_matrix_scale_multiply_add(-1, X, Y, 0, R);
   timers[timerName + ".R.XY"].stop();
   if(correctorPhase)
     {
       timers[timerName + ".R.dXdY"].resume();
-      blockDiagonalMatrixScaleMultiplyAdd(-1, dX, dY, 1, R);
+      block_diagonal_matrix_scale_multiply_add(-1, dX, dY, 1, R);
       timers[timerName + ".R.dXdY"].stop();
     }
 
@@ -932,13 +932,13 @@ void SDP_Solver::computeSearchDirection(const Real &beta, const Real &mu,
 
   // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))
   timers[timerName + ".Z.multiply"].resume();
-  blockDiagonalMatrixMultiply(PrimalResidues, Y, Z);
+  block_diagonal_matrix_multiply(PrimalResidues, Y, Z);
   timers[timerName + ".Z.multiply"].stop();
   timers[timerName + ".Z.subtract"].resume();
   Z -= R;
   timers[timerName + ".Z.subtract"].stop();
   timers[timerName + ".Z.cholesky"].resume();
-  blockMatrixSolveWithCholesky(XCholesky, Z);
+  block_matrix_solve_with_cholesky(XCholesky, Z);
   timers[timerName + ".Z.cholesky"].stop();
   timers[timerName + ".Z.symm"].resume();
   Z.symmetrize();
@@ -966,13 +966,13 @@ void SDP_Solver::computeSearchDirection(const Real &beta, const Real &mu,
 
   // dY = Symmetrize(X^{-1} (R - dX Y))
   timers[timerName + ".dY.multiply"].resume();
-  blockDiagonalMatrixMultiply(dX, Y, dY);
+  block_diagonal_matrix_multiply(dX, Y, dY);
   timers[timerName + ".dY.multiply"].stop();
   timers[timerName + ".dY.subtract"].resume();
   dY -= R;
   timers[timerName + ".dY.subtract"].stop();
   timers[timerName + ".dY.cholesky"].resume();
-  blockMatrixSolveWithCholesky(XCholesky, dY);
+  block_matrix_solve_with_cholesky(XCholesky, dY);
   timers[timerName + ".dY.cholesky"].stop();
   timers[timerName + ".dY.symm"].resume();
   dY.symmetrize();
@@ -1012,11 +1012,11 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(const path checkpointFile)
       timers["run.objectives"].stop();
 
       timers["run.choleskyDecomposition(X,XCholesky)"].resume();
-      choleskyDecomposition(X, XCholesky);
+      cholesky_decomposition(X, XCholesky);
       timers["run.choleskyDecomposition(X,XCholesky)"].stop();
 
       timers["run.choleskyDecomposition(Y,YCholesky)"].resume();
-      choleskyDecomposition(Y, YCholesky);
+      cholesky_decomposition(Y, YCholesky);
       timers["run.choleskyDecomposition(Y,YCholesky)"].stop();
 
       // Compute the bilinear pairings BilinearPairingsXInv and
@@ -1071,7 +1071,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(const path checkpointFile)
       timers["run.initializeSchurComplementSolver"].stop();
 
       // Compute the complementarity mu = Tr(X Y)/X.dim
-      Real mu = frobeniusProductSymmetric(X, Y) / X.dim;
+      Real mu = frobenius_product_symmetric(X, Y) / X.dim;
       if(mu > parameters.max_complementarity)
         return SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
 
