@@ -37,15 +37,15 @@ public:
 
   // A list of real numbers x_k (0 <= k <= degree(M)) at which to
   // sample M(x) to construct the v_{b,k}.
-  std::vector<Real> samplePoints;
+  std::vector<Real> sample_points;
 
   // A list of real numbers s_k (0 <= k <= degree(M)) to scale M(x_k)
   // and the corresponding v_{b,k}.
-  std::vector<Real> sampleScalings;
+  std::vector<Real> sample_scalings;
 
   // bilinearBasis[m] = q_m(x) (0 <= m <= degree/2), where q_m is a
   // polynomial with degree deg(q_m) = m.
-  std::vector<Polynomial> bilinearBasis;
+  std::vector<Polynomial> bilinear_basis;
 
   inline const std::vector<Polynomial> &elt(const int r, const int c) const
   {

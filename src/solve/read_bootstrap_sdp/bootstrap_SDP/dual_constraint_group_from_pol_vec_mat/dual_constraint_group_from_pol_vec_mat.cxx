@@ -54,8 +54,8 @@ dual_constraint_group_from_pol_vec_mat(const Polynomial_Vector_Matrix &m)
         {
           for(int k = 0; k < numSamples; k++)
             {
-              Real x = m.samplePoints[k];
-              Real scale = m.sampleScalings[k];
+              Real x = m.sample_points[k];
+              Real scale = m.sample_scalings[k];
 
               g.constraintConstants[p] = scale * m.elt(r, c)[0](x);
               for(int n = 1; n < vectorDim; n++)
@@ -75,15 +75,15 @@ dual_constraint_group_from_pol_vec_mat(const Polynomial_Vector_Matrix &m)
   //
   int delta1 = g.degree / 2;
   g.bilinearBases.push_back(sample_bilinear_basis(
-    delta1, numSamples, m.bilinearBasis, m.samplePoints, m.sampleScalings));
+    delta1, numSamples, m.bilinear_basis, m.sample_points, m.sample_scalings));
   int delta2 = (g.degree - 1) / 2;
   // a degree-0 Polynomial_Vector_Matrix only needs one block
   if(delta2 >= 0)
     // The \sqrt(x) factors can be accounted for by replacing the
     // scale factors s_k with x_k s_k.
     g.bilinearBases.push_back(sample_bilinear_basis(
-      delta2, numSamples, m.bilinearBasis, m.samplePoints,
-      multiply_vectors(m.samplePoints, m.sampleScalings)));
+      delta2, numSamples, m.bilinear_basis, m.sample_points,
+      multiply_vectors(m.sample_points, m.sample_scalings)));
 
   return g;
 }

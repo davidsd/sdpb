@@ -28,9 +28,9 @@ parse_polynomial_vector_matrix(const boost::property_tree::ptree &tree)
 
   result.elements = parse_many("polynomialVector", parse_polynomial_vector,
                                tree.get_child("elements"));
-  result.samplePoints = parse_vector(tree.get_child("samplePoints"));
-  result.sampleScalings = parse_vector(tree.get_child("sampleScalings"));
-  result.bilinearBasis = parse_many("polynomial", parse_polynomial,
-                                    tree.get_child("bilinearBasis"));
+  result.sample_points = parse_vector(tree.get_child("samplePoints"));
+  result.sample_scalings = parse_vector(tree.get_child("sampleScalings"));
+  result.bilinear_basis = parse_many("polynomial", parse_polynomial,
+                                     tree.get_child("bilinearBasis"));
   return result;
 }
