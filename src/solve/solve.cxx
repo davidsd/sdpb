@@ -51,7 +51,7 @@ int solve(const std::vector<boost::filesystem::path> &sdp_files,
 
   if(exists(checkpoint_file_in))
     {
-      solver.loadCheckpoint(checkpoint_file_in);
+      solver.load_checkpoint(checkpoint_file_in);
     }
 
   timers["Solver runtime"].start();
@@ -61,19 +61,19 @@ int solve(const std::vector<boost::filesystem::path> &sdp_files,
   std::cout << "-----" << std::setfill('-') << std::setw(116) << std::left
             << reason << '\n';
   std::cout << '\n';
-  std::cout << "primalObjective = " << solver.primalObjective << '\n';
-  std::cout << "dualObjective   = " << solver.dualObjective << '\n';
-  std::cout << "dualityGap      = " << solver.dualityGap << '\n';
-  std::cout << "primalError     = " << solver.primalError << '\n';
-  std::cout << "dualError       = " << solver.dualError << '\n';
+  std::cout << "primalObjective = " << solver.primal_objective << '\n';
+  std::cout << "dualObjective   = " << solver.dual_objective << '\n';
+  std::cout << "dualityGap      = " << solver.duality_gap << '\n';
+  std::cout << "primalError     = " << solver.primal_error << '\n';
+  std::cout << "dualError       = " << solver.dual_error << '\n';
   std::cout << '\n';
 
   if(!parameters.no_final_checkpoint)
     {
-      solver.saveCheckpoint(checkpoint_file_out);
+      solver.save_checkpoint(checkpoint_file_out);
     }
   timers["Last checkpoint"].stop();
-  solver.saveSolution(reason, out_file);
+  solver.save_solution(reason, out_file);
 
   std::cout << '\n' << timers;
 

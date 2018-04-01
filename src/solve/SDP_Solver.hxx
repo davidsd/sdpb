@@ -63,9 +63,9 @@ public:
   // values of the objective functions.  In the class SDP, they refer
   // to the vectors c and b.  Hopefully the name-clash won't cause
   // confusion.
-  Real primalObjective; // f + c . x
-  Real dualObjective;   // f + b . y
-  Real dualityGap;      // normalized difference of objectives
+  Real primal_objective; // f + c . x
+  Real dual_objective;   // f + b . y
+  Real duality_gap;      // normalized difference of objectives
 
   // Discrepancy in the primal equality constraints, a
   // Block_Diagonal_Matrix with the same structure as X, called 'P' in
@@ -73,24 +73,24 @@ public:
   //
   //   PrimalResidues = \sum_p A_p x_p - X
   //
-  Block_Diagonal_Matrix PrimalResidues;
-  Real primalError; // maxAbs(PrimalResidues)
+  Block_Diagonal_Matrix primal_residues;
+  Real primal_error; // maxAbs(PrimalResidues)
 
   // Discrepancy in the dual equality constraints, a Vector of length
   // P, called 'd' in the manual:
   //
   //   dualResidues = c - Tr(A_* Y) - B y
   //
-  Vector dualResidues;
-  Real dualError; // maxAbs(dualResidues)
+  Vector dual_residues;
+  Real dual_error; // maxAbs(dualResidues)
 
   /********************************************/
   // Intermediate computations.
 
   // the Cholesky decompositions of X and Y, each lower-triangular
   // BlockDiagonalMatrices with the same block sizes as X and Y
-  Block_Diagonal_Matrix XCholesky;
-  Block_Diagonal_Matrix YCholesky;
+  Block_Diagonal_Matrix X_cholesky;
+  Block_Diagonal_Matrix Y_cholesky;
 
   // Z = X^{-1} (PrimalResidues Y - R), a Block_Diagonal_Matrix with the
   // same block sizes as X and Y
@@ -119,26 +119,26 @@ public:
   // dimension of BilinearPairingsXInv.block[b] is (d_j+1)*m_j.  See
   // SDP.h for more information on d_j and m_j.
   //
-  Block_Diagonal_Matrix BilinearPairingsXInv;
+  Block_Diagonal_Matrix bilinear_pairings_X_Inv;
   //
   // BilinearPairingsY is analogous to BilinearPairingsXInv, with
   // X^{-1} -> Y.
   //
-  Block_Diagonal_Matrix BilinearPairingsY;
+  Block_Diagonal_Matrix bilinear_pairings_Y;
 
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
   // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
   // (d_j+1)*m_j*(m_j+1)/2
   //
-  Block_Diagonal_Matrix SchurComplement;
+  Block_Diagonal_Matrix schur_complement;
 
   // SchurComplementCholesky = L', the Cholesky decomposition of the
   // stabilized Schur complement matrix S' = S + U U^T.
-  Block_Diagonal_Matrix SchurComplementCholesky;
+  Block_Diagonal_Matrix schur_complement_cholesky;
 
   // SchurOffDiagonal = L'^{-1} FreeVarMatrix, needed in solving the
   // Schur complement equation.
-  Matrix SchurOffDiagonal;
+  Matrix schur_off_diagonal;
 
   // As explained in the manual, we use the `stabilized' Schur
   // complement matrix S' = S + U U^T.  Here, the 'update' matrix U
@@ -156,17 +156,17 @@ public:
   // schurStabilizeIndices[j] = a list of which directions of
   // SchurComplement.blocks[j] have been stabilized (counting from 0 at
   // the upper left of each block), for 0 <= j < J.
-  std::vector<std::vector<int>> schurStabilizeIndices;
+  std::vector<std::vector<int>> schur_stabilize_indices;
   //
   // schurStabilizeLambdas[j] = a list of constants Lambda for each
   // stabilized direction in schurStabilizeIndices[j], for 0 <= j < J.
-  std::vector<std::vector<Real>> schurStabilizeLambdas;
+  std::vector<std::vector<Real>> schur_stabilize_lambdas;
   //
   // a list of block indices {j_0, j_1, ..., j_{M-1} } for blocks
   // which have at least one stabilized direction.  We say the blocks
   // j_m have been `stabilized.'  Note that the number M of stabilized
   // blocks could change with each iteration.
-  std::vector<int> stabilizeBlockIndices;
+  std::vector<int> stabilize_block_indices;
   //
   // For each 0 <= m < M, stabilizeBlockUpdateRow records the row of
   // U corresponding to the first stabilized direction in the j_m'th
@@ -175,16 +175,16 @@ public:
   //   stabilizeBlockUpdateRow[m] = schurStabilizeIndices[j_m][0] +
   //                                SchurComplement.blockStartIndices[j_m]
   //
-  std::vector<int> stabilizeBlockUpdateRow;
+  std::vector<int> stabilize_block_update_Row;
   //
   // For each 0 <= m < M, stabilizeBlockUpdateColumn records the
   // column of U corresponding to the first stabilized direction in
   // the j_m'th block of SchurComplement.
-  std::vector<int> stabilizeBlockUpdateColumn;
+  std::vector<int> stabilize_block_update_column;
   //
   // For each 0 <= m < M, stabilizeBlocks is the submatrix of U
   // corresponding to the j_m'th block of SchurComplement.
-  std::vector<Matrix> stabilizeBlocks;
+  std::vector<Matrix> stabilize_blocks;
 
   // Q = B' L'^{-T} L'^{-1} B' - {{0, 0}, {0, 1}}, where B' =
   // (FreeVarMatrix U).  Q is needed in the factorization of the Schur
@@ -196,11 +196,11 @@ public:
   // that N' could change with each iteration.
   Matrix Q;
   // a vector of length N', needed for the LU decomposition of Q.
-  std::vector<Integer> Qpivots;
+  std::vector<Integer> Q_pivots;
 
   // dyExtended = (dy, z), where z are the extra coordinates introduced
   // in the stabilized Schur complement equation.
-  Vector dyExtended;
+  Vector dy_extended;
 
   /********************************************/
   // Additional workspace variables
@@ -208,18 +208,18 @@ public:
   // A Block_Diagonal_Matrix with the same structure as X, Y.  Needed
   // for computing step lengths which preserve positive
   // semidefiniteness.
-  Block_Diagonal_Matrix StepMatrixWorkspace;
+  Block_Diagonal_Matrix step_matrix_workspace;
 
   // Needed during the computation of BilinearPairingsY, BilinearPairingsXInv
-  std::vector<Matrix> bilinearPairingsWorkspace;
+  std::vector<Matrix> bilinear_pairings_workspace;
 
   // Needed during the step-length computation, where we must compute
   // eigenvalues of a Block_Diagonal_Matrix
-  std::vector<Vector> eigenvaluesWorkspace;
+  std::vector<Vector> eigenvalues_workspace;
 
   // Needed during the step-length computation, where we must compute
   // the QR decomposition of a Block_Diagonal_Matrix
-  std::vector<Vector> QRWorkspace;
+  std::vector<Vector> QR_workspace;
 
   /********************************************/
   // Methods
@@ -229,35 +229,36 @@ public:
 
   // Run the solver, backing up to checkpointFile
   SDP_Solver_Terminate_Reason
-  run(const boost::filesystem::path checkpointFile);
+  run(const boost::filesystem::path checkpoint_file);
 
   // Input/output
-  void saveCheckpoint(const boost::filesystem::path &checkpointFile);
-  void loadCheckpoint(const boost::filesystem::path &checkpointFile);
-  void saveSolution(const SDP_Solver_Terminate_Reason,
-                    const boost::filesystem::path &outFile);
-  void printHeader();
-  void printIteration(int iteration, Real mu, Real primalStepLength,
-                      Real dualStepLength, Real betaCorrector);
+  void save_checkpoint(const boost::filesystem::path &checkpoint_file);
+  void load_checkpoint(const boost::filesystem::path &checkpoint_file);
+  void save_solution(const SDP_Solver_Terminate_Reason,
+                     const boost::filesystem::path &out_file);
+  void print_header();
+  void print_iteration(int iteration, Real mu, Real primal_step_length,
+                       Real dual_step_length, Real beta_corrector);
 
-  void testMultiplication(const int m_init, const int m_fin, const int m_step);
+  void
+  test_multiplication(const int m_init, const int m_fin, const int m_step);
 
 private:
   // Compute data needed to solve the Schur complement equation
-  void initializeSchurComplementSolver(
-    const Block_Diagonal_Matrix &BilinearPairingsXInv,
-    const Block_Diagonal_Matrix &BilinearPairingsY,
-    const Real &choleskyStabilizeThreshold);
+  void initialize_schur_complement_solver(
+    const Block_Diagonal_Matrix &bilinear_pairings_X_Inv,
+    const Block_Diagonal_Matrix &bilinear_pairings_Y,
+    const Real &cholesky_stabilize_threshold);
 
   // Solve the Schur complement equation in-place for dx, dy.  dx and
   // dy will initially be set to the right-hand side of the equation.
   // This function replaces them with the corresponding solutions.
-  void solveSchurComplementEquation(Vector &dx, Vector &dy);
+  void solve_schur_complement_equation(Vector &dx, Vector &dy);
 
   // Compute (dx, dX, dy, dY), given the current mu, a reduction
   // parameter beta.  `correctorPhase' specifies whether to use the
   // R-matrix corresponding to the corrector step (if false, we use
   // the predictor R-matrix)
-  void computeSearchDirection(const Real &beta, const Real &mu,
-                              const bool correctorPhase);
+  void compute_search_direction(const Real &beta, const Real &mu,
+                                const bool correctorPhase);
 };
