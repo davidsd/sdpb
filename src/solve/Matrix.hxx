@@ -84,7 +84,7 @@ public:
   {
     assert(rows == A.rows);
     assert(cols == A.cols);
-    
+
     std::copy(A.elements.begin(), A.elements.end(), elements.begin());
   }
 
@@ -92,21 +92,27 @@ public:
   void operator+=(const Matrix &A)
   {
     for(size_t i = 0; i < elements.size(); i++)
-      elements[i] += A.elements[i];
+      {
+        elements[i] += A.elements[i];
+      }
   }
 
   // M := M - A
   void operator-=(const Matrix &A)
   {
     for(size_t i = 0; i < elements.size(); i++)
-      elements[i] -= A.elements[i];
+      {
+        elements[i] -= A.elements[i];
+      }
   }
 
   // M := c*M, where c is a constant
   void operator*=(const Real &c)
   {
-    for(size_t i = 0; i < elements.size(); i++)
-      elements[i] *= c;
+    for(auto &element : elements)
+      {
+        element *= c;
+      }
   }
 
   Matrix operator-(const Matrix &other) const
