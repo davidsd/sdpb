@@ -9,8 +9,8 @@ def configure(conf):
 
 def build(bld):
     default_flags=['-Wall', '-Wextra', '-O3', '-D___MPACK_BUILD_WITH_GMP___']
-    # default_flags=['-Wall', '-Wextra', '-g', '-ansi', '-D___MPACK_BUILD_WITH_GMP___']
-    use_packages=['BOOST','gmpxx','cxx17']
+    # default_flags=['-Wall', '-Wextra', '-g', '-D___MPACK_BUILD_WITH_GMP___']
+    use_packages=['BOOST','gmpxx','cxx14']
     
     mpack_sources=['src/mpack/Rpotrf.cpp',
                    'src/mpack/Rgemm.cpp',
