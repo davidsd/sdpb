@@ -1,10 +1,10 @@
 import os
 
 def options(opt):
-    opt.load(['compiler_cxx','gnu_dirs','boost','gmpxx','cxx17'])
+    opt.load(['compiler_cxx','gnu_dirs','boost','gmpxx','cxx14'])
 
 def configure(conf):
-    conf.load(['compiler_cxx','gnu_dirs','boost','gmpxx','cxx17'])
+    conf.load(['compiler_cxx','gnu_dirs','boost','gmpxx','cxx14'])
     conf.check_boost(lib='serialization system filesystem timer program_options chrono')
 
 def build(bld):
