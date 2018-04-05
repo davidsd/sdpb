@@ -1,4 +1,4 @@
-#include "../SDP_Solver.hxx"
+#include "../../../SDP_Solver.hxx"
 
 // Solve the Schur complement equation for dx, dy.
 //
