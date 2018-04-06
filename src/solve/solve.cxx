@@ -15,8 +15,6 @@
 // FIXME: Pass this around instead of having a global.
 Timers timers;
 
-SDP read_bootstrap_sdp(const std::vector<boost::filesystem::path> &sdp_files);
-
 int solve(const std::vector<boost::filesystem::path> &sdp_files,
           const boost::filesystem::path &out_file,
           const boost::filesystem::path &checkpoint_file_in,
@@ -49,7 +47,7 @@ int solve(const std::vector<boost::filesystem::path> &sdp_files,
   std::cout << parameters << '\n';
 
   // Read an SDP from sdpFile and create a solver for it
-  SDP_Solver solver(read_bootstrap_sdp(sdp_files), parameters);
+  SDP_Solver solver(sdp_files, parameters);
 
   if(exists(checkpoint_file_in))
     {

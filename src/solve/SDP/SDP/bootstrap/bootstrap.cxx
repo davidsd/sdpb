@@ -6,14 +6,14 @@
 //=======================================================================
 
 #include "Dual_Constraint_Group.hxx"
-#include "../../SDP.hxx"
+#include "../../../SDP.hxx"
+
+void fill_from_dual_constraint_groups(
+  const Vector &dualObjective, const Real &objectiveConst,
+  const std::vector<Dual_Constraint_Group> &dualConstraintGroups, SDP &sdp);
 
 Dual_Constraint_Group
 dual_constraint_group_from_pol_vec_mat(const Polynomial_Vector_Matrix &m);
-
-SDP sdp_from_dual_constraint_groups(
-  const Vector &dualObjective, const Real &objectiveConst,
-  const std::vector<Dual_Constraint_Group> &dualConstraintGroups);
 
 // Form an SDP from an affineObjective and a list of
 // PolynomialVectorMatrices.  affineObjective is a vector of the form
@@ -24,9 +24,9 @@ SDP sdp_from_dual_constraint_groups(
 // with y the dual decision variables.  polVectorMatrices are
 // described in SDP.h.
 //
-SDP bootstrap_SDP(
-  const Vector &affineObjective,
-  const std::vector<Polynomial_Vector_Matrix> &polVectorMatrices)
+void bootstrap(const Vector &affineObjective,
+               const std::vector<Polynomial_Vector_Matrix> &polVectorMatrices,
+               SDP &sdp)
 {
   // Convert polVectorMatrices into Dual_Constraint_Group's
   std::vector<Dual_Constraint_Group> dualConstraintGroups;
@@ -41,6 +41,6 @@ SDP bootstrap_SDP(
   Vector dualObjective = affineObjective;
   dualObjective.erase(dualObjective.begin());
 
-  return sdp_from_dual_constraint_groups(dualObjective, objectiveConst,
-                                         dualConstraintGroups);
+  fill_from_dual_constraint_groups(dualObjective, objectiveConst,
+                                   dualConstraintGroups, sdp);
 }

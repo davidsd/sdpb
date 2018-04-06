@@ -1,14 +1,13 @@
 #include "Dual_Constraint_Group.hxx"
-#include "../../SDP.hxx"
+#include "../../../SDP.hxx"
 
 // Collect a bunch of Dual_Constraint_Group's and a dual objective
 // function into an SDP.
 
-SDP sdp_from_dual_constraint_groups(
+void fill_from_dual_constraint_groups(
   const Vector &dual_objective, const Real &objective_const,
-  const std::vector<Dual_Constraint_Group> &dualConstraintGroups)
+  const std::vector<Dual_Constraint_Group> &dualConstraintGroups, SDP &sdp)
 {
-  SDP sdp;
   sdp.dual_objective = dual_objective;
   sdp.objective_const = objective_const;
 
@@ -61,5 +60,4 @@ SDP sdp_from_dual_constraint_groups(
   assert(p == static_cast<int>(sdp.primal_objective.size()));
 
   sdp.initialize_constraint_indices();
-  return sdp;
 }

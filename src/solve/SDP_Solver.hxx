@@ -175,7 +175,8 @@ public:
   // Methods
 
   // Create a new solver for a given SDP, with the given parameters
-  SDP_Solver(const SDP &sdp, const SDP_Solver_Parameters &parameters);
+  SDP_Solver(const std::vector<boost::filesystem::path> &sdp_files,
+             const SDP_Solver_Parameters &parameters);
 
   // Run the solver, backing up to checkpointFile
   SDP_Solver_Terminate_Reason

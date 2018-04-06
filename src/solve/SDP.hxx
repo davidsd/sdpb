@@ -11,6 +11,8 @@
 #include "Polynomial_Vector_Matrix.hxx"
 #include "Index_Tuple.hxx"
 
+#include <boost/filesystem.hpp>
+
 // The class SDP encodes a semidefinite program of the following form
 //
 // Dual: maximize f + b.y over y,Y such that
@@ -119,6 +121,8 @@ public:
   // each j.
   //
   std::vector<std::vector<Index_Tuple>> constraint_indices;
+
+  SDP(const std::vector<boost::filesystem::path> &sdp_files);
 
   // create the mapping j -> { Index_Tuple(p,r,s,k) } described above
   //

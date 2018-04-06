@@ -6,7 +6,7 @@
 //=======================================================================
 
 #include "../Dual_Constraint_Group.hxx"
-#include "../../../SDP.hxx"
+#include "../../../../SDP.hxx"
 
 Matrix sample_bilinear_basis(const int maxDegree, const int numSamples,
                              const std::vector<Polynomial> &bilinearBasis,

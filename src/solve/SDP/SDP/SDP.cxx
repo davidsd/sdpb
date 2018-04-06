@@ -9,22 +9,22 @@
 
 #include "parse_append_many.hxx"
 
-#include "../Polynomial.hxx"
-#include "../SDP.hxx"
+#include "../../Polynomial.hxx"
+#include "../../SDP.hxx"
 
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
 std::vector<Real> parse_vector(const boost::property_tree::ptree &tree);
 
+void bootstrap(const Vector &affineObjective,
+               const std::vector<Polynomial_Vector_Matrix> &polVectorMatrices,
+               SDP &sdp);
+
 Polynomial_Vector_Matrix
 parse_polynomial_vector_matrix(const boost::property_tree::ptree &tree);
 
-SDP bootstrap_SDP(
-  const Vector &affineObjective,
-  const std::vector<Polynomial_Vector_Matrix> &polVectorMatrices);
-
-SDP read_bootstrap_sdp(const std::vector<boost::filesystem::path> &sdp_files)
+SDP::SDP(const std::vector<boost::filesystem::path> &sdp_files)
 {
   Vector objective;
   std::vector<Polynomial_Vector_Matrix> polynomialVectorMatrices;
@@ -51,5 +51,5 @@ SDP read_bootstrap_sdp(const std::vector<boost::filesystem::path> &sdp_files)
                             polynomialVectorMatrices);
         }
     }
-  return bootstrap_SDP(objective, polynomialVectorMatrices);
+  bootstrap(objective, polynomialVectorMatrices,*this);
 }
