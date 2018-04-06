@@ -8,6 +8,7 @@
 #include "SDP_Solver.hxx"
 #include "../Timers.hxx"
 
+#include <El.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/filesystem.hpp>
 
@@ -25,6 +26,7 @@ int solve(const std::vector<boost::filesystem::path> &sdp_files,
   // Set the default precision of all Real numbers to that specified
   // by the 'precision' parameter.
   mpf_set_default_prec(parameters.precision);
+  El::mpfr::SetPrecision(parameters.precision);
 
   // Set std::cout to print the appropriate number of digits
   std::cout.precision(
