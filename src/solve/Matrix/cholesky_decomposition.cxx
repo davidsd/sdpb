@@ -11,7 +11,7 @@ void cholesky_decomposition(Matrix &A, Matrix &L)
   // Set lower-triangular part of L to cholesky decomposition
   L.copy_from(A);
   Integer info;
-  Rpotrf("Lower", dim, &L.elements[0], dim, &info);
+  Rpotrf("Lower", dim, L.elements.data(), dim, &info);
   assert(info == 0);
 
   // Set the upper-triangular part of the L to zero

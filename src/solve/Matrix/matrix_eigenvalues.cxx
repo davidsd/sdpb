@@ -9,7 +9,7 @@ void matrix_eigenvalues(Matrix &A, Vector &workspace, Vector &eigenvalues)
 
   Integer info;
   Integer workSize = workspace.size();
-  Rsyev("NoEigenvectors", "LowerTriangular", A.rows, &A.elements[0], A.rows,
-        &eigenvalues[0], &workspace[0], workSize, &info);
+  Rsyev("NoEigenvectors", "LowerTriangular", A.rows, A.elements.data(), A.rows,
+        eigenvalues.data(), workspace.data(), workSize, &info);
   assert(info == 0);
 }

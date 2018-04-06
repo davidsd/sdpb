@@ -5,7 +5,7 @@ void solve_with_LU_decomposition(Matrix &LU, std::vector<Integer> &pivots,
                                  Vector &b)
 {
   Integer info;
-  Rgetrs("NoTranspose", LU.rows, 1, &LU.elements[0], LU.rows, &pivots[0],
-         &b[0], b.size(), &info);
+  Rgetrs("NoTranspose", LU.rows, 1, LU.elements.data(), LU.rows, pivots.data(),
+         b.data(), b.size(), &info);
   assert(info == 0);
 }

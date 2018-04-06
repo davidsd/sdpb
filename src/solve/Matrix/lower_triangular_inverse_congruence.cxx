@@ -10,9 +10,9 @@ void lower_triangular_inverse_congruence(Matrix &A, Matrix &L)
 
   // A := A L^{-T}
   Rtrsm("Right", "Lower", "Transpose", "NonUnitDiagonal", dim, dim, 1,
-        &L.elements[0], dim, &A.elements[0], dim);
+        L.elements.data(), dim, A.elements.data(), dim);
 
   // A := L^{-1} A
   Rtrsm("Left", "Lower", "NoTranspose", "NonUnitDiagonal", dim, dim, 1,
-        &L.elements[0], dim, &A.elements[0], dim);
+        L.elements.data(), dim, A.elements.data(), dim);
 }

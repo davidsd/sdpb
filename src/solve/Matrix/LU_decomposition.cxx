@@ -8,6 +8,6 @@ void LU_decomposition(Matrix &A, std::vector<Integer> &pivots)
   assert(A.cols == dim);
 
   Integer info;
-  Rgetrf(dim, dim, &A.elements[0], dim, &pivots[0], &info);
+  Rgetrf(dim, dim, A.elements.data(), dim, pivots.data(), &info);
   assert(info == 0);
 }

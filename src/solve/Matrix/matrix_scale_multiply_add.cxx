@@ -8,6 +8,6 @@ void matrix_scale_multiply_add(Real alpha, Matrix &A, Matrix &B, Real beta,
   assert(A.rows == C.rows);
   assert(B.cols == C.cols);
 
-  Rgemm("N", "N", A.rows, B.cols, A.cols, alpha, &A.elements[0], A.rows,
-        &B.elements[0], B.rows, beta, &C.elements[0], C.rows);
+  Rgemm("N", "N", A.rows, B.cols, A.cols, alpha, A.elements.data(), A.rows,
+        B.elements.data(), B.rows, beta, C.elements.data(), C.rows);
 }

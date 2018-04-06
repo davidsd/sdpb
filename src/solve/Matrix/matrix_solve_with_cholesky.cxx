@@ -8,6 +8,7 @@ void matrix_solve_with_cholesky(Matrix &ACholesky, Matrix &X)
   assert(ACholesky.rows == dim);
   assert(ACholesky.cols == dim);
 
-  lower_triangular_solve(ACholesky, &X.elements[0], X.cols, X.rows);
-  lower_triangular_transpose_solve(ACholesky, &X.elements[0], X.cols, X.rows);
+  lower_triangular_solve(ACholesky, X.elements.data(), X.cols, X.rows);
+  lower_triangular_transpose_solve(ACholesky, X.elements.data(), X.cols,
+                                   X.rows);
 }
