@@ -16,7 +16,7 @@
 #include <vector>
 
 // a Vector is just an STL vector of Real's
-typedef std::vector<Real> Vector;
+using Vector = std::vector<Real>;
 
 // print any vector<T>, including Vector
 template <class T>
