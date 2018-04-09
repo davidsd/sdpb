@@ -2,17 +2,17 @@ import os
 
 def options(opt):
     opt.load(['compiler_cxx','gnu_dirs','boost','tinyxml2','gmpxx','openmp','cxx17',
-              'cblas'])
+              'cblas','cuda'])
 
 def configure(conf):
     conf.load(['compiler_cxx','gnu_dirs','boost','tinyxml2','gmpxx','openmp','cxx17',
-               'cblas'])
+               'cblas','cuda'])
     conf.check_boost(lib='serialization system filesystem timer program_options chrono')
 
 def build(bld):
     default_flags=['-Wall', '-Wextra', '-O3', '-D___MPACK_BUILD_WITH_GMP___']
     # default_flags=['-Wall', '-Wextra', '-g', '-ansi', '-D___MPACK_BUILD_WITH_GMP___']
-    use_packages=['BOOST','tinyxml2','gmpxx','openmp','cxx17','cblas']
+    use_packages=['BOOST','tinyxml2','gmpxx','openmp','cxx17','cblas','cuda']
     
     mpack_sources=['src/mpack/Rpotrf.cpp',
                    'src/mpack/Rgemm.cpp',
@@ -113,6 +113,8 @@ def build(bld):
     if bld.env.TINYXML2_USE_EMBEDDED_COPY:
         sdpb_sources.append('src/tinyxml2/tinyxml2.cpp')
         sdpb_includes.append('src/tinyxml2')
+
+
         
     bld.program(source=sdpb_sources + ['src/main.cpp'],
                 target='sdpb',
