@@ -733,8 +733,8 @@ void SDPSolver::initializeSchurComplementSolver(
                              parameters.gpu);
   // matrixSquareIntoBlockGPU(SchurOffDiagonal, Q, 0, 0);
 #else
-  matrixSquareIntoBlock(SchurOffDiagonal, Q, 0, 0);
-  // matrixSquareIntoBlockMpmat(myWorkspace, SchurOffDiagonal, Q, 0, 0);
+  //matrixSquareIntoBlock(SchurOffDiagonal, Q, 0, 0);
+  matrixSquareIntoBlockMpmat(myWorkspace, SchurOffDiagonal, Q, 0, 0);
 #endif
 
   // Here, stabilizeBlocks contains the blocks of V = L'^{-1} U.
@@ -747,8 +747,8 @@ void SDPSolver::initializeSchurComplementSolver(
     matrixSquareIntoBlockMpmat(myWorkspace, stabilizeBlocks[b], Q, c, c,
                                parameters.gpu);
 #else
-    matrixSquareIntoBlock(stabilizeBlocks[b], Q, c, c);
-    // matrixSquareIntoBlockMpmat(myWorkspace, stabilizeBlocks[b], Q, c, c);
+    //matrixSquareIntoBlock(stabilizeBlocks[b], Q, c, c);
+    matrixSquareIntoBlockMpmat(myWorkspace, stabilizeBlocks[b], Q, c, c);
 #endif
     // subtract the identity matrix from this block
     for (int i = c; i < c + stabilizeBlocks[b].cols; i++)
