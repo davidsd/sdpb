@@ -407,7 +407,7 @@ bool mpmat::karatsuba_test_gpu(int m, int n, int k, int l) {
 
   // cudaMemset(d_c[0],0,m*n*(6*l - (int)log2(l) - 2)*sizeof(double));
 
-  karatsuba(l, CblasRowMajor, CblasNoTrans, CblasNoTrans, m, n, k, true);
+  karatsuba_generic(l, CblasRowMajor, CblasNoTrans, CblasNoTrans, m, n, k, true);
 
   // cudaMemcpy(c_double_array,d_c[0],m*n*(6*l - (int)log2(l) -
   // 2)*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
@@ -572,7 +572,7 @@ bool mpmat::symm_karatsuba_test_gpu(int n, int k, int l) {
 
   // cudaMemset(d_c[0],0,n*n*(6*l - (int)log2(l) - 2)*sizeof(double));
 
-  karatsuba(l, CblasRowMajor, CblasTrans, n, k, true);
+  karatsuba_symmetric(l, CblasRowMajor, CblasTrans, n, k, true);
   // cudaMemcpy(c_double_array,d_c[0],n*n*(6*l - (int)log2(l) -
   // 2)*sizeof(mpmat_double),cudaMemcpyDeviceToHost);
 

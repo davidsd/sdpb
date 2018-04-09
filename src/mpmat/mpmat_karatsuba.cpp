@@ -33,7 +33,7 @@ void mpmat::clear_gpu(int device) {
   cudaMemset(d_c[device], 0, gpu_len_c[device] * sizeof(mpmat_double));
 }
 
-void mpmat::karatsuba(const int &c_max, CBLAS_ORDER Layout,
+void mpmat::karatsuba_generic(const int &c_max, CBLAS_ORDER Layout,
                       CBLAS_TRANSPOSE transa, CBLAS_TRANSPOSE transb,
                       const int &m, const int &n, const int &k, bool gpu) {
   if (gpu) {
@@ -41,7 +41,7 @@ void mpmat::karatsuba(const int &c_max, CBLAS_ORDER Layout,
   }
   // gradeschool_gpu(0, 0, 0, c_max, Layout, transa, transb, m, n, k);
   else
-    gradeschool(0, 0, 0, c_max, Layout, transa, transb, m, n, k);
+    gradeschool_gemm(0, 0, 0, c_max, Layout, transa, transb, m, n, k);
 }
 #else
 void mpmat::karatsuba_generic(const int &c_max, CBLAS_ORDER Layout,
@@ -52,7 +52,7 @@ void mpmat::karatsuba_generic(const int &c_max, CBLAS_ORDER Layout,
 #endif
 
 #ifdef __SDPB_CUDA__
-void mpmat::karatsuba(const int &c_max, CBLAS_ORDER Layout,
+void mpmat::karatsuba_symmetric(const int &c_max, CBLAS_ORDER Layout,
                       CBLAS_TRANSPOSE trans, const int &n, const int &k,
                       bool gpu) {
   if (gpu) {
@@ -74,7 +74,7 @@ void mpmat::karatsuba(const int &c_max, CBLAS_ORDER Layout,
   else {
     double *b_tmp = b_double_array;
     b_double_array = a_double_array;
-    gradeschool(0, 0, c_max, Layout, trans, n, k);
+    gradeschool_syrk(0, 0, c_max, Layout, trans, n, k);
     // std::cerr << "really done with recursings\n";
     b_double_array = b_tmp;
   }

@@ -28,7 +28,11 @@ int main() {
   Matrix square_mpmat(Ny, Ny);
   mpf_set_default_prec(mpf_get_default_prec() - 256);
 
+  #ifdef __SDPB_CUDA__
+  matrixSquareIntoBlockMpmat(workspace, matrix, square_mpmat, 0, 0, true);
+  #else
   matrixSquareIntoBlockMpmat(workspace, matrix, square_mpmat, 0, 0);
+  #endif
 
   bool passed (true);
   std::cout.precision(static_cast<int>(precision * 0.31 + 5));

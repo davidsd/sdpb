@@ -511,16 +511,16 @@ void mpmat::syrk_reduced_gpu(
 
 	double alpha = 1.0, beta = 1.0;
 
-#pragma omp parallel for 
-	for (int i = 0; i < gpu_count; ++i){
-		cudaSetDevice(i);
-		cudaMemcpyAsync(d_a[i],a_double_array,mem_a*sizeof(mpmat_double),cudaMemcpyHostToDevice);
-	}
+// #pragma omp parallel for 
+// 	for (int i = 0; i < gpu_count; ++i){
+// 		cudaSetDevice(i);
+// 		cudaMemcpyAsync(d_a[i],a_double_array,mem_a*sizeof(mpmat_double),cudaMemcpyHostToDevice);
+// 	}
 	cudaThreadSynchronize();
 	timers["mpmat_syrk_reduced.gpu_copy_forward"].stop();
 
 	timers["mpmat_syrk_reduced.multiplication"].resume();
-	karatsuba(pow(2,ceil(log2(mpmat_size_c))), Layout, transa,
+	karatsuba_symmetric(pow(2,ceil(log2(mpmat_size_c))), Layout, transa,
 		m, k, true);
 	timers["mpmat_syrk_reduced.multiplication"].stop();
 

@@ -410,11 +410,11 @@ public:
 // Implements a recursive Karatsuba multiplication on an array of matrices with
 // a cutoff c_max
 #ifdef __SDPB_CUDA__
-  void karatsuba(const int &c_max, CBLAS_ORDER Layout, CBLAS_TRANSPOSE transa,
+  void karatsuba_generic(const int &c_max, CBLAS_ORDER Layout, CBLAS_TRANSPOSE transa,
                  CBLAS_TRANSPOSE transb, const int &m, const int &n,
                  const int &k, bool gpu = true);
   // symmetric case
-  void karatsuba(const int &c_max, CBLAS_ORDER Layout, CBLAS_TRANSPOSE trans,
+  void karatsuba_symmetric(const int &c_max, CBLAS_ORDER Layout, CBLAS_TRANSPOSE trans,
                  const int &n, const int &k, bool gpu = true);
 #else
   void karatsuba_generic(const int &c_max, CBLAS_ORDER Layout, CBLAS_TRANSPOSE transa,
