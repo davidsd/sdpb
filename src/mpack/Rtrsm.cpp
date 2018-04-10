@@ -79,7 +79,7 @@ The matrix X is overwritten on B.
 
 #include <mblas.h>
 
-void Rtrsm(const char *side, const char *uplo, const char *transa, const char *diag, INTEGER m, INTEGER n, REAL alpha, REAL * A,
+void Rtrsm(const char *side, const char *uplo, const char *transa, const char *diag, INTEGER m, INTEGER n, const REAL alpha, const REAL * A,
 	   INTEGER lda, REAL * B, INTEGER ldb)
 {
     INTEGER i, info, j, k, lside, nrowa, nounit, upper;

@@ -79,7 +79,7 @@ void Rtrmm(const char *side, const char *uplo, const char *transa,
     const char *diag, mpackint m, mpackint n, mpf_class alpha, mpf_class * A,
     mpackint lda, mpf_class * B, mpackint ldb);
 void Rtrsm(const char *side, const char *uplo, const char *transa,
-    const char *diag, mpackint m, mpackint n, mpf_class alpha, mpf_class * A,
+    const char *diag, mpackint m, mpackint n, const mpf_class alpha, const mpf_class * A,
     mpackint lda, mpf_class * B, mpackint ldb);
 void Rgemm(const char *transa, const char *transb, mpackint m, mpackint n,
     mpackint k, mpf_class alpha, mpf_class * A, mpackint lda, mpf_class * B,

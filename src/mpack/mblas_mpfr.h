@@ -78,7 +78,7 @@ void Rtrmm(const char *side, const char *uplo, const char *transa,
     const char *diag, mpackint m, mpackint n, mpreal alpha, mpreal * A,
     mpackint lda, mpreal * B, mpackint ldb);
 void Rtrsm(const char *side, const char *uplo, const char *transa,
-    const char *diag, mpackint m, mpackint n, mpreal alpha, mpreal * A,
+    const char *diag, mpackint m, mpackint n, const mpreal alpha, const mpreal * A,
     mpackint lda, mpreal * B, mpackint ldb);
 void Rgemm(const char *transa, const char *transb, mpackint m, mpackint n,
     mpackint k, mpreal alpha, mpreal * A, mpackint lda, mpreal * B,
