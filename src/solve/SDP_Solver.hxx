@@ -101,31 +101,6 @@ public:
   // R has the same block sizes as X and Y.
   Block_Diagonal_Matrix R;
 
-  // Bilinear pairings needed for computing the Schur complement
-  // matrix.  For example,
-  //
-  //   BilinearPairingsXInv.blocks[b].elt(
-  //     (d_j+1) s + k1,
-  //     (d_j+1) r + k2
-  //   ) = v_{b,k1}^T (X.blocks[b]^{-1})^{(s,r)} v_{b,k2}
-  //
-  //     0 <= k1,k2 <= sdp.degrees[j] = d_j
-  //     0 <= s,r < sdp.dimensions[j] = m_j
-  //
-  // where j corresponds to b and M^{(s,r)} denotes the (s,r)-th
-  // (d_j+1)x(d_j+1) block of M.
-  //
-  // BilinearPairingsXInv has one block for each block of X.  The
-  // dimension of BilinearPairingsXInv.block[b] is (d_j+1)*m_j.  See
-  // SDP.h for more information on d_j and m_j.
-  //
-  Block_Diagonal_Matrix bilinear_pairings_X_Inv;
-  //
-  // BilinearPairingsY is analogous to BilinearPairingsXInv, with
-  // X^{-1} -> Y.
-  //
-  Block_Diagonal_Matrix bilinear_pairings_Y;
-
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
   // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
   // (d_j+1)*m_j*(m_j+1)/2

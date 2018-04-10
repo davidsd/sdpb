@@ -45,6 +45,32 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
   Real primal_step_length(0);
   Real dual_step_length(0);
 
+  // Bilinear pairings needed for computing the Schur complement
+  // matrix.  For example,
+  //
+  //   BilinearPairingsXInv.blocks[b].elt(
+  //     (d_j+1) s + k1,
+  //     (d_j+1) r + k2
+  //   ) = v_{b,k1}^T (X.blocks[b]^{-1})^{(s,r)} v_{b,k2}
+  //
+  //     0 <= k1,k2 <= sdp.degrees[j] = d_j
+  //     0 <= s,r < sdp.dimensions[j] = m_j
+  //
+  // where j corresponds to b and M^{(s,r)} denotes the (s,r)-th
+  // (d_j+1)x(d_j+1) block of M.
+  //
+  // BilinearPairingsXInv has one block for each block of X.  The
+  // dimension of BilinearPairingsXInv.block[b] is (d_j+1)*m_j.  See
+  // SDP.h for more information on d_j and m_j.
+  //
+  Block_Diagonal_Matrix bilinear_pairings_X_Inv(
+    sdp.bilinear_pairing_block_dims());
+  //
+  // BilinearPairingsY is analogous to BilinearPairingsXInv, with
+  // X^{-1} -> Y.
+  //
+  Block_Diagonal_Matrix bilinear_pairings_Y(bilinear_pairings_X_Inv);
+
   // Additional workspace variables used in step_length()
   Block_Diagonal_Matrix step_matrix_workspace(X);
   std::vector<Matrix> bilinear_pairings_workspace;
