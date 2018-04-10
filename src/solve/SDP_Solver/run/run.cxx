@@ -169,32 +169,47 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       else if(iteration > parameters.max_iterations)
         return SDP_Solver_Terminate_Reason::MaxIterationsExceeded;
 
-      // Compute SchurComplement and prepare to solve the Schur
-      // complement equation for dx, dy
-      timers["run.initializeSchurComplementSolver"].resume();
-      initialize_schur_complement_solver(bilinear_pairings_X_Inv,
-                                         bilinear_pairings_Y);
-      timers["run.initializeSchurComplementSolver"].stop();
+      Real mu, beta_predictor, beta_corrector;
+      {
+        // SchurComplementCholesky = L', the Cholesky decomposition of the
+        // Schur complement matrix S.
+        Block_Diagonal_Matrix schur_complement_cholesky(
+          sdp.schur_block_dims());
 
-      // Compute the complementarity mu = Tr(X Y)/X.dim
-      Real mu = frobenius_product_symmetric(X, Y) / X.dim;
-      if(mu > parameters.max_complementarity)
-        return SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
+        // SchurOffDiagonal = L'^{-1} FreeVarMatrix, needed in solving the
+        // Schur complement equation.
+        Matrix schur_off_diagonal;
 
-      // Compute the predictor solution for (dx, dX, dy, dY)
-      Real beta_predictor = predictor_centering_parameter(
-        parameters, is_primal_feasible && is_dual_feasible);
-      timers["run.computeSearchDirection(betaPredictor)"].resume();
-      compute_search_direction(X_cholesky, beta_predictor, mu, false);
-      timers["run.computeSearchDirection(betaPredictor)"].stop();
+        // Compute SchurComplement and prepare to solve the Schur
+        // complement equation for dx, dy
+        timers["run.initializeSchurComplementSolver"].resume();
+        initialize_schur_complement_solver(
+          bilinear_pairings_X_Inv, bilinear_pairings_Y, sdp.schur_block_dims(),
+          schur_complement_cholesky, schur_off_diagonal);
+        timers["run.initializeSchurComplementSolver"].stop();
 
-      // Compute the corrector solution for (dx, dX, dy, dY)
-      Real beta_corrector = corrector_centering_parameter(
-        parameters, X, dX, Y, dY, mu, is_primal_feasible && is_dual_feasible);
-      timers["run.computeSearchDirection(betaCorrector)"].resume();
-      compute_search_direction(X_cholesky, beta_corrector, mu, true);
-      timers["run.computeSearchDirection(betaCorrector)"].stop();
+        // Compute the complementarity mu = Tr(X Y)/X.dim
+        mu = frobenius_product_symmetric(X, Y) / X.dim;
+        if(mu > parameters.max_complementarity)
+          return SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
 
+        // Compute the predictor solution for (dx, dX, dy, dY)
+        beta_predictor = predictor_centering_parameter(
+          parameters, is_primal_feasible && is_dual_feasible);
+        timers["run.computeSearchDirection(betaPredictor)"].resume();
+        compute_search_direction(schur_complement_cholesky, schur_off_diagonal,
+                                 X_cholesky, beta_predictor, mu, false);
+        timers["run.computeSearchDirection(betaPredictor)"].stop();
+
+        // Compute the corrector solution for (dx, dX, dy, dY)
+        beta_corrector = corrector_centering_parameter(
+          parameters, X, dX, Y, dY, mu,
+          is_primal_feasible && is_dual_feasible);
+        timers["run.computeSearchDirection(betaCorrector)"].resume();
+        compute_search_direction(schur_complement_cholesky, schur_off_diagonal,
+                                 X_cholesky, beta_corrector, mu, true);
+        timers["run.computeSearchDirection(betaCorrector)"].stop();
+      }
       // Compute step-lengths that preserve positive definiteness of X, Y
       timers["run.stepLength(XCholesky)"].resume();
       primal_step_length = step_length(X_cholesky, dX, step_matrix_workspace,

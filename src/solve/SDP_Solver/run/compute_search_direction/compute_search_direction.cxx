@@ -20,9 +20,10 @@ void compute_schur_RHS(const SDP &sdp, const Vector &dualResidues,
                        const Block_Diagonal_Matrix &Z, const Vector &x,
                        Vector &r_x, Vector &r_y);
 
-void SDP_Solver::compute_search_direction(const Block_Diagonal_Matrix &X_cholesky,
-                                          const Real &beta, const Real &mu,
-                                          const bool correctorPhase)
+void SDP_Solver::compute_search_direction(
+  const Block_Diagonal_Matrix &schur_complement_cholesky,
+  const Matrix &schur_off_diagonal, const Block_Diagonal_Matrix &X_cholesky,
+  const Real &beta, const Real &mu, const bool correctorPhase)
 {
   std::string timerName = "computeSearchDirection(";
   if(correctorPhase)
@@ -80,7 +81,8 @@ void SDP_Solver::compute_search_direction(const Block_Diagonal_Matrix &X_cholesk
 
   // Solve for dx, dy in-place
   timers[timerName + ".dxdy"].resume();
-  solve_schur_complement_equation(dx, dy);
+  solve_schur_complement_equation(schur_complement_cholesky,
+                                  schur_off_diagonal, dx, dy);
   timers[timerName + ".dxdy"].stop();
 
   // dX = PrimalResidues + \sum_p A_p dx[p]

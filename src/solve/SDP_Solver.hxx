@@ -87,20 +87,6 @@ public:
   /********************************************/
   // Intermediate computations.
 
-  // The Schur complement matrix S: a Block_Diagonal_Matrix with one
-  // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
-  // (d_j+1)*m_j*(m_j+1)/2
-  //
-  Block_Diagonal_Matrix schur_complement;
-
-  // SchurComplementCholesky = L', the Cholesky decomposition of the
-  // Schur complement matrix S.
-  Block_Diagonal_Matrix schur_complement_cholesky;
-
-  // SchurOffDiagonal = L'^{-1} FreeVarMatrix, needed in solving the
-  // Schur complement equation.
-  Matrix schur_off_diagonal;
-
   // Q = B' L'^{-T} L'^{-1} B' - {{0, 0}, {0, 1}}, where B' =
   // (FreeVarMatrix U).  Q is needed in the factorization of the Schur
   // complement equation.  Q has dimension N'xN', where
@@ -140,18 +126,24 @@ private:
   // Compute data needed to solve the Schur complement equation
   void initialize_schur_complement_solver(
     const Block_Diagonal_Matrix &bilinear_pairings_X_Inv,
-    const Block_Diagonal_Matrix &bilinear_pairings_Y);
+    const Block_Diagonal_Matrix &bilinear_pairings_Y,
+    const std::vector<int> &block_dims,
+    Block_Diagonal_Matrix &schur_complement_cholesky,
+    Matrix &schur_off_diagonal);
 
   // Solve the Schur complement equation in-place for dx, dy.  dx and
   // dy will initially be set to the right-hand side of the equation.
   // This function replaces them with the corresponding solutions.
-  void solve_schur_complement_equation(Vector &dx, Vector &dy);
+  void solve_schur_complement_equation(
+    const Block_Diagonal_Matrix &schur_complement_cholesky,
+    const Matrix &schur_off_diagonal, Vector &dx, Vector &dy);
 
   // Compute (dx, dX, dy, dY), given the current mu, a reduction
   // parameter beta.  `correctorPhase' specifies whether to use the
   // R-matrix corresponding to the corrector step (if false, we use
   // the predictor R-matrix)
-  void compute_search_direction(const Block_Diagonal_Matrix &X_cholesky,
-                                const Real &beta, const Real &mu,
-                                const bool correctorPhase);
+  void compute_search_direction(
+    const Block_Diagonal_Matrix &schur_complement_cholesky,
+    const Matrix &schur_off_diagonal, const Block_Diagonal_Matrix &X_cholesky,
+    const Real &beta, const Real &mu, const bool correctorPhase);
 };

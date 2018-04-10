@@ -1,6 +1,8 @@
 #include "../../SDP_Solver.hxx"
 #include "../../../Timers.hxx"
 
+#include <El.hpp>
+
 // Compute the quantities needed to solve the Schur complement
 // equation
 //
@@ -45,8 +47,16 @@ void compute_schur_complement(
 
 void SDP_Solver::initialize_schur_complement_solver(
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-  const Block_Diagonal_Matrix &bilinear_pairings_Y)
+  const Block_Diagonal_Matrix &bilinear_pairings_Y,
+  const std::vector<int> &block_dims,
+  Block_Diagonal_Matrix &schur_complement_cholesky, Matrix &schur_off_diagonal)
 {
+  // The Schur complement matrix S: a Block_Diagonal_Matrix with one
+  // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
+  // (d_j+1)*m_j*(m_j+1)/2
+  //
+  Block_Diagonal_Matrix schur_complement(block_dims);
+
   compute_schur_complement(sdp, bilinear_pairings_X_inv, bilinear_pairings_Y,
                            schur_complement);
 
@@ -59,7 +69,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   timers["initializeSchurComplementSolver.choleskyDecomposition"].stop();
 
   // SchurOffDiagonal = L'^{-1} FreeVarMatrix
-  schur_off_diagonal.copy_from(sdp.free_var_matrix);
+  schur_off_diagonal = sdp.free_var_matrix;
   timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
     .resume();
   block_matrix_lower_triangular_solve(schur_complement_cholesky,
@@ -88,10 +98,78 @@ void SDP_Solver::initialize_schur_complement_solver(
   // UpperLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal
   matrix_square_into_block(schur_off_diagonal, Q, 0, 0);
 
+  // const El::Grid grid(El::mpi::COMM_WORLD);
+  // El::DistMatrix<El::BigFloat> schur_off_diagonal_elemental(grid),
+  //   Q_elemental(grid);
+  // schur_off_diagonal_elemental.Resize(schur_off_diagonal.rows,
+  //                                     schur_off_diagonal.cols);
+  // Zeros(Q_elemental, schur_off_diagonal.cols, schur_off_diagonal.cols);
+
+  // const El::Int local_height(schur_off_diagonal_elemental.LocalHeight()),
+  //   local_width(schur_off_diagonal_elemental.LocalWidth());
+
+  // for(size_t row = 0; row < local_height; ++row)
+  //   {
+  //     El::Int global_row(schur_off_diagonal_elemental.GlobalRow(row));
+  //     for(size_t column = 0; column < local_width; ++column)
+  //       {
+  //         El::Int global_column(
+  //           schur_off_diagonal_elemental.GlobalCol(column));
+
+  //         std::stringstream ss;
+  //         ss.precision(1024 * 0.31 + 5);
+  //         ss << schur_off_diagonal.elt(global_row, global_column);
+  //         schur_off_diagonal_elemental.SetLocal(row, column,
+  //                                               El::BigFloat(ss.str(), 10));
+  //       }
+  //   }
+  // El::Syrk(El::UPPER, El::TRANSPOSE, El::BigFloat(1),
+  //          schur_off_diagonal_elemental, El::BigFloat(1), Q_elemental);
+
+  // const El::Int Q_height(Q_elemental.LocalHeight()),
+  //   Q_width(Q_elemental.LocalWidth());
+
+  // for(size_t row = 0; row < Q_height; ++row)
+  //   {
+  //     El::Int global_row(Q_elemental.GlobalRow(row));
+  //     for(size_t column = 0; column < Q_width; ++column)
+  //       {
+  //         El::Int global_column(Q_elemental.GlobalCol(column));
+
+  //         std::stringstream ss;
+  //         ss.precision(1024 * 0.31 + 5);
+  //         ss << Q_elemental.GetLocal(row, column);
+  //         Q.elt(global_row, global_column) = ss.str();
+  //       }
+  //   }
+
+  // std::cout.precision(1024 * 0.31 + 5);
+  // std::cout << "Qe: "
+  //           // << local_height << " " << local_width << " "
+  //           << Q_height << " " << Q_width << " " << Q.rows << " " << Q.cols
+  //           << " " << Q_elemental.GetLocal(0, 0) << " "
+  //           << "\n";
+  // std::cout << "Qe: "
+  //           // << local_height << " " << local_width << " "
+  //           << Q_height << " " << Q_width << " " << Q.rows << " " << Q.cols
+  //           << " " << Q.elt(0, 0) << " "
+  //           << "\n";
+  // std::cout << El::mpfr::Precision() << " "
+  //           << schur_off_diagonal.elt(0,0).get_prec() << " "
+  //           << Q.elt(0, 0).get_prec() << " "
+  //            << "\n";
+
+  // // std::cout << "Qm: " << Q_height << " " << Q_width << " " << Q.rows << "
+  // "
+  // //           << Q.cols << " " << Q.elt(0, 0) << " "
+  // //           << "\n";
+
   // UpperRight(Q) = LowerLeft(Q)^T
   for(int c = 0; c < schur_off_diagonal.cols; c++)
     for(int r = schur_off_diagonal.cols; r < Q.rows; r++)
-      Q.elt(c, r) = Q.elt(r, c);
+      {
+        Q.elt(c, r) = Q.elt(r, c);
+      }
   timers["initializeSchurComplementSolver.Qcomputation"].stop();
 
   // Resize Qpivots appropriately and compute the LU decomposition of Q

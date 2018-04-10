@@ -154,13 +154,15 @@ void matrix_square_into_block(Matrix &A, Matrix &B, int bRow, int bCol);
 void lower_triangular_inverse_congruence(Matrix &A, Matrix &L);
 
 // y := alpha A x + beta y
-void vector_scale_matrix_multiply_add(Real alpha, Matrix &A, Vector &x,
-                                      Real beta, Vector &y);
+void vector_scale_matrix_multiply_add(const Real alpha, const Matrix &A,
+                                      const Vector &x, const Real beta,
+                                      Vector &y);
 
 // y := alpha A^T x + beta y
-void vector_scale_matrix_multiply_transpose_add(Real alpha, Matrix &A,
-                                                Vector &x, Real beta,
-                                                Vector &y);
+void vector_scale_matrix_multiply_transpose_add(const Real alpha,
+                                                const Matrix &A,
+                                                const Vector &x,
+                                                const Real beta, Vector &y);
 
 // Frobenius product Tr(A^T B) where A and B are symmetric matrices
 Real frobenius_product_symmetric(const Matrix &A, const Matrix &B);

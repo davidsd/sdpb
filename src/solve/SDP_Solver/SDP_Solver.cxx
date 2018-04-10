@@ -8,9 +8,6 @@ SDP_Solver::SDP_Solver(const std::vector<boost::filesystem::path> &sdp_files,
       x(sdp.primal_objective.size(), 0), X(sdp.psd_matrix_block_dims()),
       y(sdp.dual_objective.size(), 0), Y(X), dx(x), dX(X), dy(y), dY(Y),
       primal_residues(X), dual_residues(x),
-      schur_complement(sdp.schur_block_dims()),
-      schur_complement_cholesky(schur_complement),
-      schur_off_diagonal(sdp.free_var_matrix),
       Q(sdp.free_var_matrix.cols, sdp.free_var_matrix.cols),
       Q_pivots(sdp.free_var_matrix.cols)
 {
