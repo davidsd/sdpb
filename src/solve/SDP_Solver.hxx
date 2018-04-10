@@ -87,11 +87,6 @@ public:
   /********************************************/
   // Intermediate computations.
 
-  // R = mu I - X Y for the predictor step
-  // R = mu I - X Y - dX dY for the corrector step
-  // R has the same block sizes as X and Y.
-  Block_Diagonal_Matrix R;
-
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
   // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
   // (d_j+1)*m_j*(m_j+1)/2

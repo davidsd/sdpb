@@ -36,6 +36,7 @@ void SDP_Solver::compute_search_direction(const Block_Diagonal_Matrix &X_cholesk
 
   // R = beta mu I - X Y (predictor phase)
   // R = beta mu I - X Y - dX dY (corrector phase)
+  Block_Diagonal_Matrix R(X);
 
   timers[timerName + ".R.XY"].resume();
   block_diagonal_matrix_scale_multiply_add(-1, X, Y, 0, R);
