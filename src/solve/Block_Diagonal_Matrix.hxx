@@ -174,18 +174,20 @@ void cholesky_decomposition(Block_Diagonal_Matrix &A,
 // Output:
 // - X (overwritten)
 void block_matrix_solve_with_cholesky(
-  Block_Diagonal_Matrix &ACholesky, // constant
-  Block_Diagonal_Matrix &X);        // overwritten
+  const Block_Diagonal_Matrix &ACholesky, // constant
+  Block_Diagonal_Matrix &X);              // overwritten
 
 // B := L^{-1} B, where L is lower-triangular
-void block_matrix_lower_triangular_solve(Block_Diagonal_Matrix &L, // constant
-                                         Matrix &B); // overwritten
+void block_matrix_lower_triangular_solve(
+  const Block_Diagonal_Matrix &L, // constant
+  Matrix &B);                     // overwritten
 
 // v := L^{-1} v, where L is lower-triangular
-void block_matrix_lower_triangular_solve(Block_Diagonal_Matrix &L, // constant
-                                         Vector &v); // overwritten
+void block_matrix_lower_triangular_solve(
+  const Block_Diagonal_Matrix &L, // constant
+  Vector &v);                     // overwritten
 
 // v := L^{-T} v, where L is lower-triangular
 void block_matrix_lower_triangular_transpose_solve(
-  Block_Diagonal_Matrix &L, // constant
-  Vector &v);               // overwritten
+  const Block_Diagonal_Matrix &L, // constant
+  Vector &v);                     // overwritten

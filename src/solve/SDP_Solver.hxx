@@ -87,11 +87,6 @@ public:
   /********************************************/
   // Intermediate computations.
 
-  // the Cholesky decompositions of X and Y, each lower-triangular
-  // BlockDiagonalMatrices with the same block sizes as X and Y
-  Block_Diagonal_Matrix X_cholesky;
-  Block_Diagonal_Matrix Y_cholesky;
-
   // Z = X^{-1} (PrimalResidues Y - R), a Block_Diagonal_Matrix with the
   // same block sizes as X and Y
   Block_Diagonal_Matrix Z;
@@ -165,6 +160,7 @@ private:
   // parameter beta.  `correctorPhase' specifies whether to use the
   // R-matrix corresponding to the corrector step (if false, we use
   // the predictor R-matrix)
-  void compute_search_direction(const Real &beta, const Real &mu,
+  void compute_search_direction(const Block_Diagonal_Matrix &X_cholesky,
+                                const Real &beta, const Real &mu,
                                 const bool correctorPhase);
 };

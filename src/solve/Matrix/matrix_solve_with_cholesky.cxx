@@ -1,7 +1,7 @@
 #include "../Matrix.hxx"
 
 // X := ACholesky^{-1 T} ACholesky^{-1} X = A^{-1} X
-void matrix_solve_with_cholesky(Matrix &ACholesky, Matrix &X)
+void matrix_solve_with_cholesky(const Matrix &ACholesky, Matrix &X)
 {
   int dim = X.rows;
   assert(X.cols == dim);

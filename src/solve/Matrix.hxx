@@ -213,10 +213,10 @@ void cholesky_decomposition(Matrix &A, Matrix &L);
 //
 // (The use of pointers and ldb is to allow using this function for
 // submatrices of a larger matrix.)
-void lower_triangular_solve(Matrix &L, Real *b, int bcols, int ldb);
+void lower_triangular_solve(const Matrix &L, Real *b, int bcols, int ldb);
 
 // b := L^{-1} b, where L is lower-triangular
-void lower_triangular_solve(Matrix &L, Vector &b);
+void lower_triangular_solve(const Matrix &L, Vector &b);
 
 // B := L^{-T} B, where L is lower-triangular and B is a matrix
 // pointed to by b
@@ -230,10 +230,11 @@ void lower_triangular_solve(Matrix &L, Vector &b);
 // Output:
 // - elements of B, which are values pointed to by b are overwritten
 //
-void lower_triangular_transpose_solve(Matrix &L, Real *b, int bcols, int ldb);
+void lower_triangular_transpose_solve(const Matrix &L, Real *b, int bcols,
+                                      int ldb);
 
 // b := L^{-T} b, where L is lower-triangular
-void lower_triangular_transpose_solve(Matrix &L, Vector &b);
+void lower_triangular_transpose_solve(const Matrix &L, Vector &b);
 
 // X := ACholesky^{-1 T} ACholesky^{-1} X = A^{-1} X
 // Inputs:
@@ -241,4 +242,4 @@ void lower_triangular_transpose_solve(Matrix &L, Vector &b);
 // Output:
 // - X         : dim x dim matrix (overwritten)
 //
-void matrix_solve_with_cholesky(Matrix &ACholesky, Matrix &X);
+void matrix_solve_with_cholesky(const Matrix &ACholesky, Matrix &X);

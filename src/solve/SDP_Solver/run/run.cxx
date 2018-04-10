@@ -45,6 +45,11 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
   Real primal_step_length(0);
   Real dual_step_length(0);
 
+  // the Cholesky decompositions of X and Y, each lower-triangular
+  // BlockDiagonalMatrices with the same block sizes as X and Y
+  Block_Diagonal_Matrix X_cholesky(X);
+  Block_Diagonal_Matrix Y_cholesky(X);
+
   // Bilinear pairings needed for computing the Schur complement
   // matrix.  For example,
   //
@@ -180,14 +185,14 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       Real beta_predictor = predictor_centering_parameter(
         parameters, is_primal_feasible && is_dual_feasible);
       timers["run.computeSearchDirection(betaPredictor)"].resume();
-      compute_search_direction(beta_predictor, mu, false);
+      compute_search_direction(X_cholesky, beta_predictor, mu, false);
       timers["run.computeSearchDirection(betaPredictor)"].stop();
 
       // Compute the corrector solution for (dx, dX, dy, dY)
       Real beta_corrector = corrector_centering_parameter(
         parameters, X, dX, Y, dY, mu, is_primal_feasible && is_dual_feasible);
       timers["run.computeSearchDirection(betaCorrector)"].resume();
-      compute_search_direction(beta_corrector, mu, true);
+      compute_search_direction(X_cholesky, beta_corrector, mu, true);
       timers["run.computeSearchDirection(betaCorrector)"].stop();
 
       // Compute step-lengths that preserve positive definiteness of X, Y

@@ -20,7 +20,8 @@ void compute_schur_RHS(const SDP &sdp, const Vector &dualResidues,
                        const Block_Diagonal_Matrix &Z, const Vector &x,
                        Vector &r_x, Vector &r_y);
 
-void SDP_Solver::compute_search_direction(const Real &beta, const Real &mu,
+void SDP_Solver::compute_search_direction(const Block_Diagonal_Matrix &X_cholesky,
+                                          const Real &beta, const Real &mu,
                                           const bool correctorPhase)
 {
   std::string timerName = "computeSearchDirection(";
