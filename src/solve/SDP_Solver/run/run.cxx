@@ -67,13 +67,13 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
   // BilinearPairingsXInv has one block for each block of X.  The
   // dimension of BilinearPairingsXInv.block[b] is (d_j+1)*m_j.  See
   // SDP.h for more information on d_j and m_j.
-  //
+
   Block_Diagonal_Matrix bilinear_pairings_X_Inv(
     sdp.bilinear_pairing_block_dims());
-  //
+
   // BilinearPairingsY is analogous to BilinearPairingsXInv, with
   // X^{-1} -> Y.
-  //
+
   Block_Diagonal_Matrix bilinear_pairings_Y(bilinear_pairings_X_Inv);
 
   // Additional workspace variables used in step_length()
