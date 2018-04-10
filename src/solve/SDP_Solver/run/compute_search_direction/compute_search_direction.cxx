@@ -52,6 +52,11 @@ void SDP_Solver::compute_search_direction(const Block_Diagonal_Matrix &X_cholesk
   timers[timerName + ".R.add"].stop();
 
   // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))
+
+  // FIXME: It has to have the same shape as X, but does not need to
+  // be a copy.
+  Block_Diagonal_Matrix Z(X);
+
   timers[timerName + ".Z.multiply"].resume();
   block_diagonal_matrix_multiply(primal_residues, Y, Z);
   timers[timerName + ".Z.multiply"].stop();

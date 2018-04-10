@@ -87,10 +87,6 @@ public:
   /********************************************/
   // Intermediate computations.
 
-  // Z = X^{-1} (PrimalResidues Y - R), a Block_Diagonal_Matrix with the
-  // same block sizes as X and Y
-  Block_Diagonal_Matrix Z;
-
   // R = mu I - X Y for the predictor step
   // R = mu I - X Y - dX dY for the corrector step
   // R has the same block sizes as X and Y.
