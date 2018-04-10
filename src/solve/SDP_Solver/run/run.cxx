@@ -51,10 +51,14 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
     {
       if(timers["Last checkpoint"].elapsed().wall
          >= parameters.checkpoint_interval * 1000000000LL)
-        save_checkpoint(checkpoint_file);
+        {
+          save_checkpoint(checkpoint_file);
+        }
       if(timers["Solver runtime"].elapsed().wall
          >= parameters.max_runtime * 1000000000LL)
-        return SDP_Solver_Terminate_Reason::MaxRuntimeExceeded;
+        {
+          return SDP_Solver_Terminate_Reason::MaxRuntimeExceeded;
+        }
 
       timers["run.objectives"].resume();
       primal_objective

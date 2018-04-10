@@ -134,16 +134,12 @@ public:
         constraint_indices.emplace_back(0);
 
         for(int s = 0; s < dimensions[j]; s++)
-          {
-            for(int r = 0; r <= s; r++)
+          for(int r = 0; r <= s; r++)
+            for(int k = 0; k <= degrees[j]; k++)
               {
-                for(int k = 0; k <= degrees[j]; k++)
-                  {
-                    constraint_indices[j].emplace_back(p, r, s, k);
-                    p++;
-                  }
+                constraint_indices[j].emplace_back(p, r, s, k);
+                p++;
               }
-          }
       }
     assert(p == static_cast<int>(primal_objective.size()));
   }
