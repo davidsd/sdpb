@@ -153,25 +153,6 @@ public:
   std::vector<Integer> Q_pivots;
 
   /********************************************/
-  // Additional workspace variables
-
-  // A Block_Diagonal_Matrix with the same structure as X, Y.  Needed
-  // for computing step lengths which preserve positive
-  // semidefiniteness.
-  Block_Diagonal_Matrix step_matrix_workspace;
-
-  // Needed during the computation of BilinearPairingsY, BilinearPairingsXInv
-  std::vector<Matrix> bilinear_pairings_workspace;
-
-  // Needed during the step-length computation, where we must compute
-  // eigenvalues of a Block_Diagonal_Matrix
-  std::vector<Vector> eigenvalues_workspace;
-
-  // Needed during the step-length computation, where we must compute
-  // the QR decomposition of a Block_Diagonal_Matrix
-  std::vector<Vector> QR_workspace;
-
-  /********************************************/
   // Methods
 
   // Create a new solver for a given SDP, with the given parameters

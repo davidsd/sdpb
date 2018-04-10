@@ -14,17 +14,8 @@ SDP_Solver::SDP_Solver(const std::vector<boost::filesystem::path> &sdp_files,
       schur_complement_cholesky(schur_complement),
       schur_off_diagonal(sdp.free_var_matrix),
       Q(sdp.free_var_matrix.cols, sdp.free_var_matrix.cols),
-      Q_pivots(sdp.free_var_matrix.cols), step_matrix_workspace(X)
+      Q_pivots(sdp.free_var_matrix.cols)
 {
-  // initialize bilinearPairingsWorkspace, eigenvaluesWorkspace, QRWorkspace
-  for(unsigned int b = 0; b < sdp.bilinear_bases.size(); b++)
-    {
-      bilinear_pairings_workspace.push_back(
-        Matrix(X.blocks[b].rows, bilinear_pairings_X_Inv.blocks[b].cols));
-      eigenvalues_workspace.push_back(Vector(X.blocks[b].rows));
-      QR_workspace.push_back(Vector(3 * X.blocks[b].rows - 1));
-    }
-
   // X = \Omega_p I
   X.add_diagonal(parameters.initial_matrix_scale_primal);
   // Y = \Omega_d I

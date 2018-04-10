@@ -42,8 +42,23 @@ Real step_length(Block_Diagonal_Matrix &MCholesky, Block_Diagonal_Matrix &dM,
 SDP_Solver_Terminate_Reason
 SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 {
-  Real primal_step_length;
-  Real dual_step_length;
+  Real primal_step_length(0);
+  Real dual_step_length(0);
+  // Additional workspace variables used in step_length()
+
+  Block_Diagonal_Matrix step_matrix_workspace(X);
+  std::vector<Matrix> bilinear_pairings_workspace;
+  std::vector<Vector> eigenvalues_workspace;
+  std::vector<Vector> QR_workspace;
+
+  // initialize bilinearPairingsWorkspace, eigenvaluesWorkspace, QRWorkspace
+  for(unsigned int b = 0; b < sdp.bilinear_bases.size(); b++)
+    {
+      bilinear_pairings_workspace.push_back(
+        Matrix(X.blocks[b].rows, bilinear_pairings_X_Inv.blocks[b].cols));
+      eigenvalues_workspace.push_back(Vector(X.blocks[b].rows));
+      QR_workspace.push_back(Vector(3 * X.blocks[b].rows - 1));
+    }
 
   print_header();
 
