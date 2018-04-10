@@ -94,7 +94,7 @@ void Rsterf(mpackint n, mpf_class * d, mpf_class * e, mpackint *info);
 void Rorgtr(const char *uplo, mpackint n, mpf_class * a, mpackint lda, mpf_class * tau,
     mpf_class * work, mpackint lwork, mpackint *info);
 void Rgetrf ( mpackint m, mpackint n, mpf_class * A, mpackint lda, mpackint *ipiv, mpackint *info );
-void Rgetrs ( const char *trans, mpackint n, mpackint nrhs, mpf_class * A, mpackint lda, mpackint *ipiv, mpf_class * B, mpackint ldb, mpackint *info );
-void Rlaswp ( mpackint n, mpf_class * A, mpackint lda, mpackint k1, mpackint k2, mpackint *ipiv, mpackint incx );
+void Rgetrs ( const char *trans, const mpackint n, const mpackint nrhs, const mpf_class * A, const mpackint lda, const mpackint *ipiv, mpf_class * B, const mpackint ldb, mpackint *info );
+void Rlaswp ( mpackint n, mpf_class * A, mpackint lda, mpackint k1, mpackint k2, const mpackint *ipiv, mpackint incx );
 void Rgetf2 ( mpackint m, mpackint n, mpf_class * A, mpackint lda, mpackint *ipiv, mpackint *info );
 #endif

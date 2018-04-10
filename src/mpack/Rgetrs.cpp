@@ -69,7 +69,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <mlapack.h>
 
 
-void Rgetrs(const char *trans, INTEGER n, INTEGER nrhs, REAL * A, INTEGER lda, INTEGER * ipiv, REAL * B, INTEGER ldb, INTEGER * info)
+void Rgetrs(const char *trans, const INTEGER n, const INTEGER nrhs, const REAL * A, const INTEGER lda, const INTEGER * ipiv, REAL * B, const INTEGER ldb, INTEGER * info)
 {
     INTEGER notran;
     REAL One = 1.0;

@@ -68,7 +68,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <mblas.h>
 #include <mlapack.h>
 
-void Rlaswp(INTEGER n, REAL * A, INTEGER lda, INTEGER k1, INTEGER k2, INTEGER * ipiv, INTEGER incx)
+void Rlaswp(INTEGER n, REAL * A, INTEGER lda, INTEGER k1, INTEGER k2, const INTEGER * ipiv, INTEGER incx)
 {
     INTEGER i, k, i1, i2, ip, ix, ix0, inc;
     REAL temp;
