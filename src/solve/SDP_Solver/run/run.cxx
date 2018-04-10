@@ -180,12 +180,24 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         // Schur complement equation.
         Matrix schur_off_diagonal;
 
+        // Q = B' L'^{-T} L'^{-1} B' - {{0, 0}, {0, 1}}, where B' =
+        // (FreeVarMatrix U).  Q is needed in the factorization of the Schur
+        // complement equation.  Q has dimension N'xN', where
+        //
+        //   N' = cols(B) + cols(U) = N + cols(U)
+        //
+        // where N is the dimension of the dual objective function.  Note
+        // that N' could change with each iteration.
+        Matrix Q(sdp.free_var_matrix.cols, sdp.free_var_matrix.cols);
+        // a vector of length N', needed for the LU decomposition of Q.
+        std::vector<Integer> Q_pivots(sdp.free_var_matrix.cols);
+
         // Compute SchurComplement and prepare to solve the Schur
         // complement equation for dx, dy
         timers["run.initializeSchurComplementSolver"].resume();
         initialize_schur_complement_solver(
           bilinear_pairings_X_Inv, bilinear_pairings_Y, sdp.schur_block_dims(),
-          schur_complement_cholesky, schur_off_diagonal);
+          schur_complement_cholesky, schur_off_diagonal, Q, Q_pivots);
         timers["run.initializeSchurComplementSolver"].stop();
 
         // Compute the complementarity mu = Tr(X Y)/X.dim
@@ -198,7 +210,8 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
           parameters, is_primal_feasible && is_dual_feasible);
         timers["run.computeSearchDirection(betaPredictor)"].resume();
         compute_search_direction(schur_complement_cholesky, schur_off_diagonal,
-                                 X_cholesky, beta_predictor, mu, false);
+                                 X_cholesky, beta_predictor, mu, false, Q,
+                                 Q_pivots);
         timers["run.computeSearchDirection(betaPredictor)"].stop();
 
         // Compute the corrector solution for (dx, dX, dy, dY)
@@ -207,7 +220,8 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
           is_primal_feasible && is_dual_feasible);
         timers["run.computeSearchDirection(betaCorrector)"].resume();
         compute_search_direction(schur_complement_cholesky, schur_off_diagonal,
-                                 X_cholesky, beta_corrector, mu, true);
+                                 X_cholesky, beta_corrector, mu, true, Q,
+                                 Q_pivots);
         timers["run.computeSearchDirection(betaCorrector)"].stop();
       }
       // Compute step-lengths that preserve positive definiteness of X, Y

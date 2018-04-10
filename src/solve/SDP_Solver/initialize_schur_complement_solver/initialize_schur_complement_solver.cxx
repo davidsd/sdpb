@@ -49,7 +49,8 @@ void SDP_Solver::initialize_schur_complement_solver(
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
   const std::vector<int> &block_dims,
-  Block_Diagonal_Matrix &schur_complement_cholesky, Matrix &schur_off_diagonal)
+  Block_Diagonal_Matrix &schur_complement_cholesky, Matrix &schur_off_diagonal,
+  Matrix &Q, std::vector<Integer> &Q_pivots)
 {
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
   // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension

@@ -191,7 +191,8 @@ Real min_eigenvalue(Matrix &A, Vector &workspace, Vector &eigenvalues);
 void LU_decomposition(Matrix &A, std::vector<Integer> &pivots);
 
 // b := A^{-1} b, where LU and pivots encode the LU decomposition of A
-void solve_with_LU_decomposition(Matrix &LU, std::vector<Integer> &pivots,
+void solve_with_LU_decomposition(const Matrix &LU,
+                                 const std::vector<Integer> &pivots,
                                  Vector &b);
 
 // L (lower triangular) such that A = L L^T

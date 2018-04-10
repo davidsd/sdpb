@@ -84,24 +84,6 @@ public:
   Vector dual_residues;
   Real dual_error; // maxAbs(dualResidues)
 
-  /********************************************/
-  // Intermediate computations.
-
-  // Q = B' L'^{-T} L'^{-1} B' - {{0, 0}, {0, 1}}, where B' =
-  // (FreeVarMatrix U).  Q is needed in the factorization of the Schur
-  // complement equation.  Q has dimension N'xN', where
-  //
-  //   N' = cols(B) + cols(U) = N + cols(U)
-  //
-  // where N is the dimension of the dual objective function.  Note
-  // that N' could change with each iteration.
-  Matrix Q;
-  // a vector of length N', needed for the LU decomposition of Q.
-  std::vector<Integer> Q_pivots;
-
-  /********************************************/
-  // Methods
-
   // Create a new solver for a given SDP, with the given parameters
   SDP_Solver(const std::vector<boost::filesystem::path> &sdp_files,
              const SDP_Solver_Parameters &parameters);
@@ -125,18 +107,11 @@ public:
 private:
   // Compute data needed to solve the Schur complement equation
   void initialize_schur_complement_solver(
-    const Block_Diagonal_Matrix &bilinear_pairings_X_Inv,
+    const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
     const Block_Diagonal_Matrix &bilinear_pairings_Y,
     const std::vector<int> &block_dims,
     Block_Diagonal_Matrix &schur_complement_cholesky,
-    Matrix &schur_off_diagonal);
-
-  // Solve the Schur complement equation in-place for dx, dy.  dx and
-  // dy will initially be set to the right-hand side of the equation.
-  // This function replaces them with the corresponding solutions.
-  void solve_schur_complement_equation(
-    const Block_Diagonal_Matrix &schur_complement_cholesky,
-    const Matrix &schur_off_diagonal, Vector &dx, Vector &dy);
+    Matrix &schur_off_diagonal, Matrix &Q, std::vector<Integer> &Q_pivots);
 
   // Compute (dx, dX, dy, dY), given the current mu, a reduction
   // parameter beta.  `correctorPhase' specifies whether to use the
@@ -145,5 +120,6 @@ private:
   void compute_search_direction(
     const Block_Diagonal_Matrix &schur_complement_cholesky,
     const Matrix &schur_off_diagonal, const Block_Diagonal_Matrix &X_cholesky,
-    const Real &beta, const Real &mu, const bool correctorPhase);
+    const Real &beta, const Real &mu, const bool correctorPhase,
+    const Matrix &Q, const std::vector<Integer> &Q_pivots);
 };

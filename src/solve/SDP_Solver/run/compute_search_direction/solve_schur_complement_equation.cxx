@@ -10,9 +10,10 @@
 // The equation is solved using the block-decomposition described in
 // the manual.
 //
-void SDP_Solver::solve_schur_complement_equation(
+void solve_schur_complement_equation(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
-  const Matrix &schur_off_diagonal, Vector &dx, Vector &dy)
+  const Matrix &schur_off_diagonal, const Matrix &Q,
+  const std::vector<Integer> &Q_pivots, Vector &dx, Vector &dy)
 {
   // dx = SchurComplementCholesky^{-1} dx
   block_matrix_lower_triangular_solve(schur_complement_cholesky, dx);
