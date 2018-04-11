@@ -170,7 +170,16 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         return SDP_Solver_Terminate_Reason::MaxIterationsExceeded;
 
       Real mu, beta_predictor, beta_corrector;
+
+      // Search direction: These quantities have the same structure
+      // as (x, X, y, Y). They are computed twice each iteration:
+      // once in the predictor step, and once in the corrector step.
+      Vector dx(x), dy(y);
+      Block_Diagonal_Matrix dX(X), dY(Y);
       {
+        // FIXME: It may be expensive to create these objects for each
+        // iteration.
+
         // SchurComplementCholesky = L', the Cholesky decomposition of the
         // Schur complement matrix S.
         Block_Diagonal_Matrix schur_complement_cholesky(
@@ -211,7 +220,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         timers["run.computeSearchDirection(betaPredictor)"].resume();
         compute_search_direction(schur_complement_cholesky, schur_off_diagonal,
                                  X_cholesky, beta_predictor, mu, false, Q,
-                                 Q_pivots);
+                                 Q_pivots, dx, dX, dy, dY);
         timers["run.computeSearchDirection(betaPredictor)"].stop();
 
         // Compute the corrector solution for (dx, dX, dy, dY)
@@ -221,7 +230,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         timers["run.computeSearchDirection(betaCorrector)"].resume();
         compute_search_direction(schur_complement_cholesky, schur_off_diagonal,
                                  X_cholesky, beta_corrector, mu, true, Q,
-                                 Q_pivots);
+                                 Q_pivots, dx, dX, dy, dY);
         timers["run.computeSearchDirection(betaCorrector)"].stop();
       }
       // Compute step-lengths that preserve positive definiteness of X, Y
