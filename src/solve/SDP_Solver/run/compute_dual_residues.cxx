@@ -45,7 +45,7 @@ void compute_dual_residues(const SDP &sdp, const Vector &y,
 
           // dualResidues[p] = primalObjective[p] - Tr(A_p Y) - (FreeVarMatrix
           // y)_p
-          dual_residues[p] += sdp.primal_objective[p];
+          dual_residues[p] += sdp.primal_objective_c[p];
         }
     }
 }

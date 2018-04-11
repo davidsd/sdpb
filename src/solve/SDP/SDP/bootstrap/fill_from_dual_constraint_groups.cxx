@@ -5,10 +5,10 @@
 // function into an SDP.
 
 void fill_from_dual_constraint_groups(
-  const Vector &dual_objective, const Real &objective_const,
+  const Vector &dual_objective_b, const Real &objective_const,
   const std::vector<Dual_Constraint_Group> &dualConstraintGroups, SDP &sdp)
 {
-  sdp.dual_objective = dual_objective;
+  sdp.dual_objective_b = dual_objective_b;
   sdp.objective_const = objective_const;
 
   for(std::vector<Dual_Constraint_Group>::const_iterator g
@@ -20,12 +20,12 @@ void fill_from_dual_constraint_groups(
 
       // sdp.primal_objective is the concatenation of the
       // g.constraintConstants
-      sdp.primal_objective.insert(sdp.primal_objective.end(),
-                                  g->constraintConstants.begin(),
-                                  g->constraintConstants.end());
+      sdp.primal_objective_c.insert(sdp.primal_objective_c.end(),
+                                    g->constraintConstants.begin(),
+                                    g->constraintConstants.end());
     }
   sdp.free_var_matrix
-    = Matrix(sdp.primal_objective.size(), sdp.dual_objective.size());
+    = Matrix(sdp.primal_objective_c.size(), sdp.dual_objective_b.size());
 
   int p = 0;
   // Each g corresponds to an index 0 <= j < J (not used explicitly here)
@@ -57,7 +57,7 @@ void fill_from_dual_constraint_groups(
         for(int n = 0; n < g->constraintMatrix.cols; n++)
           sdp.free_var_matrix.elt(p, n) = g->constraintMatrix.elt(k, n);
     }
-  assert(p == static_cast<int>(sdp.primal_objective.size()));
+  assert(p == static_cast<int>(sdp.primal_objective_c.size()));
 
   sdp.initialize_constraint_indices();
 }

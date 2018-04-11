@@ -5,8 +5,8 @@
 SDP_Solver::SDP_Solver(const std::vector<boost::filesystem::path> &sdp_files,
                        const SDP_Solver_Parameters &parameters)
     : sdp(sdp_files), parameters(parameters),
-      x(sdp.primal_objective.size(), 0), X(sdp.psd_matrix_block_dims()),
-      y(sdp.dual_objective.size(), 0), Y(X), primal_residues(X),
+      x(sdp.primal_objective_c.size(), 0), X(sdp.psd_matrix_block_dims()),
+      y(sdp.dual_objective_b.size(), 0), Y(X), primal_residues(X),
       dual_residues(x)
 {
   // X = \Omega_p I

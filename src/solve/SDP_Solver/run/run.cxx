@@ -106,9 +106,9 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 
       timers["run.objectives"].resume();
       primal_objective
-        = sdp.objective_const + dot_product(sdp.primal_objective, x);
+        = sdp.objective_const + dot_product(sdp.primal_objective_c, x);
       dual_objective
-        = sdp.objective_const + dot_product(sdp.dual_objective, y);
+        = sdp.objective_const + dot_product(sdp.dual_objective_b, y);
       duality_gap
         = abs(primal_objective - dual_objective)
           / max(Real(abs(primal_objective) + abs(dual_objective)), Real(1));

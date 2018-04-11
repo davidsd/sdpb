@@ -22,6 +22,6 @@ void SDP_Solver::print_iteration(int iteration, Real mu,
               duality_gap.get_mpf_t(), primal_error.get_mpf_t(),
               dual_error.get_mpf_t(), primal_step_length.get_mpf_t(),
               dual_step_length.get_mpf_t(), beta_corrector.get_mpf_t(),
-              static_cast<int>(sdp.dual_objective.size()));
+              static_cast<int>(sdp.dual_objective_b.size()));
   std::cout << '\n';
 }

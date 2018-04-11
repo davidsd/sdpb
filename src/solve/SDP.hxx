@@ -85,11 +85,11 @@ public:
   // FreeVarMatrix = B, a PxN matrix
   Matrix free_var_matrix;
 
-  // primalObjective = c, a vector of length P
-  Vector primal_objective;
+  // c, a vector of length P used with primal_objective
+  Vector primal_objective_c;
 
-  // dualObjective = b, a vector of length N
-  Vector dual_objective;
+  // b, a vector of length N used with dual_objective
+  Vector dual_objective_b;
 
   // objectiveConst = f
   Real objective_const;
@@ -141,7 +141,7 @@ public:
                 p++;
               }
       }
-    assert(p == static_cast<int>(primal_objective.size()));
+    assert(p == static_cast<int>(primal_objective_c.size()));
   }
 
   // Dimensions of the blocks of X,Y (0 <= b < bMax)
@@ -192,8 +192,8 @@ public:
   {
     os << "SDP(bilinearBases = " << sdp.bilinear_bases
        << ", FreeVarMatrix = " << sdp.free_var_matrix
-       << ", primalObjective = " << sdp.primal_objective
-       << ", dualObjective = " << sdp.dual_objective
+       << ", primalObjective = " << sdp.primal_objective_c
+       << ", dualObjective = " << sdp.dual_objective_b
        << ", dimensions = " << sdp.dimensions << ", degrees = " << sdp.degrees
        << ", blocks = " << sdp.blocks << ")";
     return os;
