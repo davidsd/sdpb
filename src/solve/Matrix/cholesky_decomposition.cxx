@@ -1,7 +1,7 @@
 #include "../Matrix.hxx"
 
 // L (lower triangular) such that A = L L^T
-void cholesky_decomposition(Matrix &A, Matrix &L)
+void cholesky_decomposition(const Matrix &A, Matrix &L)
 {
   int dim = A.rows;
   assert(A.cols == dim);

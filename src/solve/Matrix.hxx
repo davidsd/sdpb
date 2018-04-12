@@ -200,7 +200,7 @@ void solve_with_LU_decomposition(const Matrix &LU,
 // - A : dim x dim symmetric matrix
 // Output:
 // - L : dim x dim lower-triangular matrix (overwritten)
-void cholesky_decomposition(Matrix &A, Matrix &L);
+void cholesky_decomposition(const Matrix &A, Matrix &L);
 
 // B := L^{-1} B, where L is lower-triangular and B is a matrix
 // pointed to by b

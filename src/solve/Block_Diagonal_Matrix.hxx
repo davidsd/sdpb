@@ -164,7 +164,7 @@ Real min_eigenvalue(Block_Diagonal_Matrix &A, std::vector<Vector> &workspace,
 // - A : dim x dim symmetric matrix (constant)
 // - L : dim x dim lower-triangular matrix (overwritten)
 //
-void cholesky_decomposition(Block_Diagonal_Matrix &A,
+void cholesky_decomposition(const Block_Diagonal_Matrix &A,
                             Block_Diagonal_Matrix &L);
 
 // X := ACholesky^{-T} ACholesky^{-1} X = A^{-1} X
