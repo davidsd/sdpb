@@ -1,53 +1,53 @@
 #include "../../../SDP_Solver.hxx"
 
-// Result = Q'^T A^{-1} Q', where Q' = Q \otimes 1, where \otimes
-// denotes tensor product and 1 is an mxm idenity matrix.
-// Inputs:
+// result = (base)'^T A^{-1} (base)', where (base)' = base \otimes 1, where
+// \otimes denotes tensor product and 1 is an mxm idenity matrix. Inputs:
 // - L      : l*m x l*m cholesky decomposition of A
-// - Q      : l   x n   matrix
+// - base   : l   x n   matrix
 // Workspace:
-// - Work   : l*m x n*m matrix, intermediate workspace (overwritten)
+// - work   : l*m x n*m matrix, intermediate workspace (overwritten)
 // Output:
-// - Result : n*m x n*m symmetric matrix (overwritten)
+// - result : n*m x n*m symmetric matrix (overwritten)
 //
 void tensor_inv_transpose_congruence_with_cholesky(const Matrix &L,
-                                                   const Matrix &Q,
-                                                   Matrix &Work,
-                                                   Matrix &Result)
+                                                   const Matrix &base,
+                                                   Matrix &work,
+                                                   Matrix &result)
 {
-  // Work = L^{-1} (Q \otimes 1);
-  for(int cw = 0; cw < Work.cols; cw++)
+  // work = L^{-1} (base \otimes 1);
+  for(int cw = 0; cw < work.cols; cw++)
     {
-      int mc = cw / Q.cols;
+      int mc = cw / base.cols;
 
-      for(int rw = mc * Q.rows; rw < Work.rows; rw++)
+      for(int rw = mc * base.rows; rw < work.rows; rw++)
         {
-          int mr = rw / Q.rows;
+          int mr = rw / base.rows;
 
-          Real tmp = (mr != mc) ? Real(0) : Q.elt(rw % Q.rows, cw % Q.cols);
-          for(int cl = mc * Q.rows; cl < rw; cl++)
-            tmp -= L.elt(rw, cl) * Work.elt(cl, cw);
+          Real tmp
+            = (mr != mc) ? Real(0) : base.elt(rw % base.rows, cw % base.cols);
+          for(int cl = mc * base.rows; cl < rw; cl++)
+            tmp -= L.elt(rw, cl) * work.elt(cl, cw);
 
-          Work.elt(rw, cw) = tmp / L.elt(rw, rw);
+          work.elt(rw, cw) = tmp / L.elt(rw, rw);
         }
     }
 
-  // Result = Work^T Work
-  for(int cr = 0; cr < Result.cols; cr++)
+  // result = work^T work
+  for(int cr = 0; cr < result.cols; cr++)
     {
-      int mc = cr / Q.cols;
+      int mc = cr / base.cols;
 
       for(int rr = 0; rr <= cr; rr++)
         {
-          int mr = rr / Q.cols;
+          int mr = rr / base.cols;
 
           Real tmp = 0;
-          for(int rw = max(mr, mc) * Q.rows; rw < Work.rows; rw++)
-            tmp += Work.elt(rw, cr) * Work.elt(rw, rr);
+          for(int rw = max(mr, mc) * base.rows; rw < work.rows; rw++)
+            tmp += work.elt(rw, cr) * work.elt(rw, rr);
 
-          Result.elt(rr, cr) = tmp;
+          result.elt(rr, cr) = tmp;
           if(rr != cr)
-            Result.elt(cr, rr) = tmp;
+            result.elt(cr, rr) = tmp;
         }
     }
 }

@@ -1,71 +1,70 @@
 #include "../../../SDP_Solver.hxx"
 
-// Result = Q'^T A Q', where Q' = Q \otimes 1, where \otimes denotes
-// tensor product and 1 is an mxm identity matrix.
-// Inputs:
+// result = base'^T A base', where base' = base \otimes 1, where \otimes
+// denotes tensor product and 1 is an mxm identity matrix. Inputs:
 // - A      : l*m x l*m symmetric matrix
-// - Q      : l   x n   matrix
+// - base   : l   x n   matrix
 // Workspace:
-// - Work   : l*m x n*m matrix, intermediate workspace (overwritten)
+// - work   : l*m x n*m matrix, intermediate workspace (overwritten)
 // Output:
-// - Result : n*m x n*m symmetric matrix (overwritten)
+// - result : n*m x n*m symmetric matrix (overwritten)
 //
 // An explanation of the name: a 'congruence' refers to the action M
 // -> A M A^T.  We use 'transpose congruence' to refer to a congruence
 // with the transposed matrix M -> A^T M A.  'tensor' here refers to
 // the fact that we're performing a congruence with the tensor product
-// Q \otimes 1.
+// base \otimes 1.
 //
-void tensor_transpose_congruence(const Matrix &A, const Matrix &Q,
-                                 Matrix &Work, Matrix &Result)
+void tensor_transpose_congruence(const Matrix &A, const Matrix &base,
+                                 Matrix &work, Matrix &result)
 {
-  int m = A.rows / Q.rows;
+  int m = A.rows / base.rows;
 
-  assert(Result.rows == Q.cols * m);
-  assert(Result.cols == Q.cols * m);
+  assert(result.rows == base.cols * m);
+  assert(result.cols == base.cols * m);
 
-  assert(Work.rows == A.rows);
-  assert(Work.cols == Result.cols);
+  assert(work.rows == A.rows);
+  assert(work.cols == result.cols);
 
-  // Work = A Q'
-  for(int c = 0; c < Work.cols; c++)
+  // work = A base'
+  for(int c = 0; c < work.cols; c++)
     {
-      int qCol = c % Q.cols;
-      int aColOffset = (c / Q.cols) * Q.rows;
+      int qCol = c % base.cols;
+      int aColOffset = (c / base.cols) * base.rows;
 
-      for(int r = 0; r < Work.rows; r++)
+      for(int r = 0; r < work.rows; r++)
         {
           Real tmp = 0;
-          for(int k = 0; k < Q.rows; k++)
+          for(int k = 0; k < base.rows; k++)
             {
-              tmp += A.elt(r, aColOffset + k) * Q.elt(k, qCol);
+              tmp += A.elt(r, aColOffset + k) * base.elt(k, qCol);
             }
 
-          Work.elt(r, c) = tmp;
+          work.elt(r, c) = tmp;
         }
     }
 
-  // Result = Q'^T Work
-  for(int c = 0; c < Result.cols; c++)
+  // result = base'^T work
+  for(int c = 0; c < result.cols; c++)
     {
-      // since Result is symmetric, only compute its upper triangle
+      // since result is symmetric, only compute its upper triangle
       for(int r = 0; r <= c; r++)
         {
-          int qCol = r % Q.cols;
-          int workRowOffset = (r / Q.cols) * Q.rows;
+          int qCol = r % base.cols;
+          int workRowOffset = (r / base.cols) * base.rows;
 
           Real tmp = 0;
-          for(int k = 0; k < Q.rows; k++)
+          for(int k = 0; k < base.rows; k++)
             {
-              tmp += Q.elt(k, qCol) * Work.elt(workRowOffset + k, c);
+              tmp += base.elt(k, qCol) * work.elt(workRowOffset + k, c);
             }
 
-          Result.elt(r, c) = tmp;
+          result.elt(r, c) = tmp;
 
           // lower triangle is the same as upper triangle
           if(c != r)
             {
-              Result.elt(c, r) = tmp;
+              result.elt(c, r) = tmp;
             }
         }
     }

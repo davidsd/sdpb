@@ -1,6 +1,6 @@
 #include "../../../SDP_Solver.hxx"
 
-// Result = \sum_p a[p] A_p,
+// result = \sum_p a[p] A_p,
 //
 // where a[p] is a vector of length primalObjective.size() and the
 // constraint matrices A_p are given by
@@ -12,14 +12,14 @@
 // in SDP.h.
 //
 // Inputs: sdp, a
-// Output: Result (overwritten)
+// Output: result (overwritten)
 //
 
 void diagonal_congruence(Real const *d, const Matrix &V, const int blockRow,
-                         const int blockCol, Matrix &Result);
+                         const int blockCol, Matrix &result);
 
 void constraint_matrix_weighted_sum(const SDP &sdp, const Vector a,
-                                    Block_Diagonal_Matrix &Result)
+                                    Block_Diagonal_Matrix &result)
 {
   for(unsigned int j = 0; j < sdp.dimensions.size(); j++)
     {
@@ -36,15 +36,15 @@ void constraint_matrix_weighted_sum(const SDP &sdp, const Vector a,
 
           for(auto &b : sdp.blocks[j])
             {
-              // Result.blocks[b]^(r,s) = V diag(a') V^T, where
+              // result.blocks[b]^(r,s) = V diag(a') V^T, where
               // V=sdp.bilinearBases[b], a' denotes the subvector of a
               // corresponding to j, and M^(r,s) denotes the (r,s)-th block
               // of M.
               diagonal_congruence(&a[p], sdp.bilinear_bases[b], r, s,
-                                  Result.blocks[b]);
+                                  result.blocks[b]);
 
-              // Result should be symmetric, so if r != s, we must divide
-              // the (r,s)-th block of Result.blocks[b] by 2 and copy its
+              // result should be symmetric, so if r != s, we must divide
+              // the (r,s)-th block of result.blocks[b] by 2 and copy its
               // transpose to the (s,r)-th block.
               if(r != s)
                 {
@@ -53,9 +53,9 @@ void constraint_matrix_weighted_sum(const SDP &sdp, const Vector a,
                     {
                       for(int n = s * u; n < (s + 1) * u; n++)
                         {
-                          Result.blocks[b].elt(m, n) /= 2;
-                          Result.blocks[b].elt(n, m)
-                            = Result.blocks[b].elt(m, n);
+                          result.blocks[b].elt(m, n) /= 2;
+                          result.blocks[b].elt(n, m)
+                            = result.blocks[b].elt(m, n);
                         }
                     }
                 }

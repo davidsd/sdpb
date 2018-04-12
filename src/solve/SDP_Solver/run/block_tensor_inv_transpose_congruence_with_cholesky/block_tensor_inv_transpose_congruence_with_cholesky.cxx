@@ -9,15 +9,15 @@
 //
 
 void tensor_inv_transpose_congruence_with_cholesky(const Matrix &L,
-                                                   const Matrix &Q,
-                                                   Matrix &Work,
-                                                   Matrix &Result);
+                                                   const Matrix &base,
+                                                   Matrix &work,
+                                                   Matrix &result);
 
 void block_tensor_inv_transpose_congruence_with_cholesky(
-  const Block_Diagonal_Matrix &L, const std::vector<Matrix> &Q,
-  std::vector<Matrix> &Work, Block_Diagonal_Matrix &Result)
+  const Block_Diagonal_Matrix &L, const std::vector<Matrix> &bilinear_bases,
+  std::vector<Matrix> &work, Block_Diagonal_Matrix &result)
 {
-  for(unsigned int b = 0; b < Q.size(); b++)
-    tensor_inv_transpose_congruence_with_cholesky(L.blocks[b], Q[b], Work[b],
-                                                  Result.blocks[b]);
+  for(unsigned int b = 0; b < bilinear_bases.size(); b++)
+    tensor_inv_transpose_congruence_with_cholesky(
+      L.blocks[b], bilinear_bases[b], work[b], result.blocks[b]);
 }
