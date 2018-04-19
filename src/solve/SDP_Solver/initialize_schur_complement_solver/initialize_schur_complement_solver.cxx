@@ -50,7 +50,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
   const std::vector<int> &block_dims,
   Block_Diagonal_Matrix &schur_complement_cholesky, Matrix &schur_off_diagonal,
-  Matrix &Q, std::vector<Integer> &Q_pivots)
+  Matrix &Q)
 {
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
   // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
@@ -176,11 +176,10 @@ void SDP_Solver::initialize_schur_complement_solver(
   // Resize Qpivots appropriately and compute the LU decomposition of Q
 
   timers["initializeSchurComplementSolver.LUDecomposition"].resume();
-  timers["LUDecomposition.resizing"].resume();
-  Q_pivots.resize(Q.rows);
-  timers["LUDecomposition.resizing"].stop();
   timers["LUDecomposition.actualLU"].resume();
-  LU_decomposition(Q, Q_pivots);
+
+  Matrix Q_temp(Q);
+  cholesky_decomposition(Q_temp,Q);
   timers["LUDecomposition.actualLU"].stop();
   timers["initializeSchurComplementSolver.LUDecomposition"].stop();
 }

@@ -99,7 +99,7 @@ private:
     const Block_Diagonal_Matrix &bilinear_pairings_Y,
     const std::vector<int> &block_dims,
     Block_Diagonal_Matrix &schur_complement_cholesky,
-    Matrix &schur_off_diagonal, Matrix &Q, std::vector<Integer> &Q_pivots);
+    Matrix &schur_off_diagonal, Matrix &Q);
 
   // Compute (dx, dX, dy, dY), given the current mu, a reduction
   // parameter beta.  `correctorPhase' specifies whether to use the
@@ -109,6 +109,6 @@ private:
     const Block_Diagonal_Matrix &schur_complement_cholesky,
     const Matrix &schur_off_diagonal, const Block_Diagonal_Matrix &X_cholesky,
     const Real &beta, const Real &mu, const bool correctorPhase,
-    const Matrix &Q, const std::vector<Integer> &Q_pivots, Vector &dx,
-    Block_Diagonal_Matrix &dX, Vector &dy, Block_Diagonal_Matrix &dY);
+    const Matrix &Q, Vector &dx, Block_Diagonal_Matrix &dX, Vector &dy,
+    Block_Diagonal_Matrix &dY);
 };

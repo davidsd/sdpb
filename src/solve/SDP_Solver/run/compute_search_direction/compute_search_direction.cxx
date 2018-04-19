@@ -22,15 +22,13 @@ void compute_schur_RHS(const SDP &sdp, const Vector &dualResidues,
 
 void solve_schur_complement_equation(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
-  const Matrix &schur_off_diagonal, const Matrix &Q,
-  const std::vector<Integer> &Q_pivots, Vector &dx, Vector &dy);
+  const Matrix &schur_off_diagonal, const Matrix &Q, Vector &dx, Vector &dy);
 
 void SDP_Solver::compute_search_direction(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Matrix &schur_off_diagonal, const Block_Diagonal_Matrix &X_cholesky,
   const Real &beta, const Real &mu, const bool correctorPhase, const Matrix &Q,
-  const std::vector<Integer> &Q_pivots, Vector &dx, Block_Diagonal_Matrix &dX,
-  Vector &dy, Block_Diagonal_Matrix &dY)
+  Vector &dx, Block_Diagonal_Matrix &dX, Vector &dy, Block_Diagonal_Matrix &dY)
 {
   std::string timerName = "computeSearchDirection(";
   if(correctorPhase)
@@ -89,7 +87,7 @@ void SDP_Solver::compute_search_direction(
   // Solve for dx, dy in-place
   timers[timerName + ".dxdy"].resume();
   solve_schur_complement_equation(schur_complement_cholesky,
-                                  schur_off_diagonal, Q, Q_pivots, dx, dy);
+                                  schur_off_diagonal, Q, dx, dy);
   timers[timerName + ".dxdy"].stop();
 
   // dX = PrimalResidues + \sum_p A_p dx[p]
