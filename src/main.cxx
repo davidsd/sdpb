@@ -214,6 +214,42 @@ int main(int argc, char **argv)
       // Ensure all the Real parameters have the appropriate precision
       parameters.resetPrecision();
 
+      {
+        /// Set all of the _elemental parameters.  This should
+        /// disappear once the Real parameters are removed.
+        std::stringstream ss;
+        ss << parameters.duality_gap_threshold;
+        parameters.duality_gap_threshold_elemental = El::BigFloat(ss.str(), 10);
+        ss.str("");
+        ss << parameters.primal_error_threshold;
+        parameters.primal_error_threshold_elemental = El::BigFloat(ss.str(), 10);
+        ss.str("");
+        ss << parameters.dual_error_threshold;
+        parameters.dual_error_threshold_elemental = El::BigFloat(ss.str(), 10);
+        ss.str("");
+        ss << parameters.initial_matrix_scale_primal;
+        parameters.initial_matrix_scale_primal_elemental
+          = El::BigFloat(ss.str(), 10);
+        ss.str("");
+        ss << parameters.initial_matrix_scale_dual;
+        parameters.initial_matrix_scale_dual_elemental
+          = El::BigFloat(ss.str(), 10);
+        ss.str("");
+        ss << parameters.feasible_centering_parameter;
+        parameters.feasible_centering_parameter_elemental
+          = El::BigFloat(ss.str(), 10);
+        ss.str("");
+        ss << parameters.infeasible_centering_parameter;
+        parameters.infeasible_centering_parameter_elemental
+          = El::BigFloat(ss.str(), 10);
+        ss.str("");
+        ss << parameters.step_length_reduction;
+        parameters.step_length_reduction_elemental = El::BigFloat(ss.str(), 10);
+        ss.str("");
+        ss << parameters.max_complementarity;
+        parameters.max_complementarity_elemental = El::BigFloat(ss.str(), 10);
+      }
+      
       return solve(sdp_files, out_file, checkpoint_file_in,
                    checkpoint_file_out, parameters);
     }
