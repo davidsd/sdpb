@@ -19,20 +19,8 @@ int solve(const std::vector<boost::filesystem::path> &sdp_files,
           const boost::filesystem::path &out_file,
           const boost::filesystem::path &checkpoint_file_in,
           const boost::filesystem::path &checkpoint_file_out,
-          SDP_Solver_Parameters parameters)
+          const SDP_Solver_Parameters &parameters)
 {
-  // Set the default precision of all Real numbers to that specified
-  // by the 'precision' parameter.
-  mpf_set_default_prec(parameters.precision);
-  El::mpfr::SetPrecision(parameters.precision);
-
-  // Set std::cout to print the appropriate number of digits
-  std::cout.precision(
-    min(static_cast<int>(parameters.precision * 0.31 + 5), 30));
-
-  // Ensure all the Real parameters have the appropriate precision
-  parameters.resetPrecision();
-
   std::cout << "SDPB started at "
             << boost::posix_time::second_clock::local_time() << '\n';
   for(auto const &sdpFile : sdp_files)

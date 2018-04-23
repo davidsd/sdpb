@@ -18,7 +18,7 @@ int solve(const std::vector<boost::filesystem::path> &sdp_files,
           const boost::filesystem::path &out_file,
           const boost::filesystem::path &checkpoint_file_in,
           const boost::filesystem::path &checkpoint_file_out,
-          SDP_Solver_Parameters parameters);
+          const SDP_Solver_Parameters &parameters);
 
 int main(int argc, char **argv)
 {
@@ -201,6 +201,18 @@ int main(int argc, char **argv)
           std::cerr << cmd_line_options << '\n';
           return 1;
         }
+
+      // Set the default precision of all Real numbers to that specified
+      // by the 'precision' parameter.
+      mpf_set_default_prec(parameters.precision);
+      El::mpfr::SetPrecision(parameters.precision);
+
+      // Set std::cout to print the appropriate number of digits
+      std::cout.precision(
+        min(static_cast<int>(parameters.precision * 0.31 + 5), 30));
+
+      // Ensure all the Real parameters have the appropriate precision
+      parameters.resetPrecision();
 
       return solve(sdp_files, out_file, checkpoint_file_in,
                    checkpoint_file_out, parameters);
