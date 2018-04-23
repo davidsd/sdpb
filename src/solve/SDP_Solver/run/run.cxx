@@ -42,8 +42,8 @@ Real step_length(Block_Diagonal_Matrix &MCholesky, Block_Diagonal_Matrix &dM,
 SDP_Solver_Terminate_Reason
 SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 {
-  Real primal_step_length(0);
-  Real dual_step_length(0);
+  Real primal_step_length(0), dual_step_length(0);
+  El::BigFloat primal_step_length_elemental(0), dual_step_length_elemental(0);
 
   // the Cholesky decompositions of X and Y, each lower-triangular
   // BlockDiagonalMatrices with the same block sizes as X and Y
@@ -236,11 +236,21 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       primal_step_length = step_length(X_cholesky, dX, step_matrix_workspace,
                                        eigenvalues_workspace, QR_workspace,
                                        parameters.step_length_reduction);
+      {
+        std::stringstream ss;
+        ss << primal_step_length;
+        primal_step_length_elemental = El::BigFloat(ss.str(),10);
+      }
       timers["run.stepLength(XCholesky)"].stop();
       timers["run.stepLength(YCholesky)"].resume();
       dual_step_length = step_length(Y_cholesky, dY, step_matrix_workspace,
                                      eigenvalues_workspace, QR_workspace,
                                      parameters.step_length_reduction);
+      {
+        std::stringstream ss;
+        ss << dual_step_length;
+        dual_step_length_elemental = El::BigFloat(ss.str(),10);
+      }
       timers["run.stepLength(YCholesky)"].stop();
 
       // If our problem is both dual-feasible and primal-feasible,
@@ -249,6 +259,10 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         {
           primal_step_length = min(primal_step_length, dual_step_length);
           dual_step_length = primal_step_length;
+
+          primal_step_length_elemental
+            = min(primal_step_length_elemental, dual_step_length_elemental);
+          dual_step_length_elemental = primal_step_length_elemental;
         }
 
       print_iteration(iteration, mu, primal_step_length, dual_step_length,
@@ -257,11 +271,13 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       // Update the primal point (x, X) += primalStepLength*(dx, dX)
       add_scaled_vector(x, primal_step_length, dx);
       dX *= primal_step_length;
+      dX *= primal_step_length_elemental;
       X += dX;
 
       // Update the dual point (y, Y) += dualStepLength*(dy, dY)
       add_scaled_vector(y, dual_step_length, dy);
       dY *= dual_step_length;
+      dY *= dual_step_length_elemental;
       Y += dY;
     }
 
