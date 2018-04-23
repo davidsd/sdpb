@@ -8,6 +8,7 @@
 #pragma once
 
 #include "Matrix.hxx"
+#include <El.hpp>
 
 // A block-diagonal square matrix
 //
@@ -23,6 +24,7 @@ public:
 
   // The blocks M_b for 0 <= b < bMax
   std::vector<Matrix> blocks;
+  std::vector<El::DistMatrix<El::BigFloat>> blocks_elemental;
 
   // The rows (or columns) of M corresponding to the top-left entry of
   // each block M_b
@@ -35,6 +37,8 @@ public:
     for(auto &block_size : block_sizes)
       {
         blocks.push_back(Matrix(block_size, block_size));
+        blocks_elemental.emplace_back(block_size, block_size);
+
         block_start_indices.push_back(dim);
         dim += block_size;
       }
@@ -47,6 +51,10 @@ public:
       {
         block.set_zero();
       }
+    for(auto &block : blocks_elemental)
+      {
+        Zero(block);
+      }
   }
 
   // Add a constant c to each diagonal element
@@ -57,6 +65,13 @@ public:
         block.add_diagonal(c);
       }
   }
+  void add_diagonal(const El::BigFloat &c)
+  {
+    for(auto &block : blocks_elemental)
+      {
+        ShiftDiagonal(block, c);
+      }
+  }
 
   // M = M + A
   void operator+=(const Block_Diagonal_Matrix &A)
@@ -64,6 +79,8 @@ public:
     for(size_t b = 0; b < blocks.size(); b++)
       {
         blocks[b] += A.blocks[b];
+
+        blocks_elemental[b] += A.blocks_elemental[b];
       }
   }
 
@@ -73,6 +90,7 @@ public:
     for(size_t b = 0; b < blocks.size(); b++)
       {
         blocks[b] -= A.blocks[b];
+        blocks_elemental[b] -= A.blocks_elemental[b];
       }
   }
 
@@ -84,6 +102,13 @@ public:
         block *= c;
       }
   }
+  void operator*=(const El::BigFloat &c)
+  {
+    for(auto &block : blocks_elemental)
+      {
+        block *= c;
+      }
+  }
 
   // M = A
   void copy_from(const Block_Diagonal_Matrix &A)
@@ -91,6 +116,8 @@ public:
     for(size_t b = 0; b < blocks.size(); b++)
       {
         blocks[b].copy_from(A.blocks[b]);
+
+        El::Copy(A.blocks_elemental[b], blocks_elemental[b]);
       }
   }
 
@@ -100,6 +127,18 @@ public:
     for(auto &block : blocks)
       {
         block.symmetrize();
+      }
+    for(auto &block : blocks_elemental)
+      {
+        // FIXME: This feels expensive
+
+        // We can not use El::MakeSymmetric() because that just copies
+        // the lower part to the upper part.  We need to average the
+        // upper and lower parts.
+        block *= 0.5;
+        El::DistMatrix<El::BigFloat> transpose;
+        El::Transpose(block, transpose, false);
+        block += transpose;
       }
   }
 
@@ -112,6 +151,15 @@ public:
         max = std::max(block.max_abs(), max);
       }
     return max;
+
+    {
+      El::BigFloat max = 0;
+      for(auto &block : blocks_elemental)
+        {
+          max = std::max(El::MaxAbs(block), max);
+        }
+      // return max;
+    }
   }
 
   friend std::ostream &

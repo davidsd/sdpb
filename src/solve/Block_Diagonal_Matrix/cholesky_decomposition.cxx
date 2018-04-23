@@ -7,5 +7,8 @@ void cholesky_decomposition(const Block_Diagonal_Matrix &A,
   for(size_t b = 0; b < A.blocks.size(); b++)
     {
       cholesky_decomposition(A.blocks[b], L.blocks[b]);
+
+      L.blocks_elemental[b] = A.blocks_elemental[b];
+      Cholesky(El::UpperOrLowerNS::LOWER, L.blocks_elemental[b]);
     }
 }

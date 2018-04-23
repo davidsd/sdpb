@@ -13,3 +13,17 @@ void block_diagonal_matrix_scale_multiply_add(Real alpha,
                                 C.blocks[b]);
     }
 }
+
+void block_diagonal_matrix_scale_multiply_add(const El::BigFloat &alpha,
+                                              Block_Diagonal_Matrix &A,
+                                              Block_Diagonal_Matrix &B,
+                                              const El::BigFloat &beta,
+                                              Block_Diagonal_Matrix &C)
+{
+  for(size_t b = 0; b < A.blocks.size(); b++)
+    {
+      El::Gemm(El::OrientationNS::NORMAL, El::OrientationNS::NORMAL, alpha,
+               A.blocks_elemental[b], B.blocks_elemental[b], beta,
+               C.blocks_elemental[b]);
+    }
+}
