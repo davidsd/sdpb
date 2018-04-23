@@ -11,27 +11,23 @@ void fill_from_dual_constraint_groups(
   sdp.dual_objective_b = dual_objective_b;
   sdp.objective_const = objective_const;
 
-  for(std::vector<Dual_Constraint_Group>::const_iterator g
-      = dualConstraintGroups.begin();
-      g != dualConstraintGroups.end(); g++)
+  for(auto &g : dualConstraintGroups)
     {
-      sdp.dimensions.push_back(g->dim);
-      sdp.degrees.push_back(g->degree);
+      sdp.dimensions.push_back(g.dim);
+      sdp.degrees.push_back(g.degree);
 
       // sdp.primal_objective is the concatenation of the
       // g.constraintConstants
       sdp.primal_objective_c.insert(sdp.primal_objective_c.end(),
-                                    g->constraintConstants.begin(),
-                                    g->constraintConstants.end());
+                                    g.constraintConstants.begin(),
+                                    g.constraintConstants.end());
     }
   sdp.free_var_matrix
     = Matrix(sdp.primal_objective_c.size(), sdp.dual_objective_b.size());
 
   int p = 0;
   // Each g corresponds to an index 0 <= j < J (not used explicitly here)
-  for(std::vector<Dual_Constraint_Group>::const_iterator g
-      = dualConstraintGroups.begin();
-      g != dualConstraintGroups.end(); g++)
+  for(auto &g : dualConstraintGroups)
     {
       // sdp.bilinear_bases is the concatenation of the g.bilinearBases.
       // The matrix Y is a BlockDiagonalMatrix built from the
@@ -40,22 +36,23 @@ void fill_from_dual_constraint_groups(
       // the indices for the blocks of Y corresponding to the j-th
       // group.
       std::vector<int> blocks;
-      for(std::vector<Matrix>::const_iterator b = g->bilinearBases.begin();
-          b != g->bilinearBases.end(); b++)
+      for(auto &b : g.bilinearBases)
         {
           // Ensure that each bilinearBasis is sampled the correct number
           // of times
-          assert(b->cols == g->degree + 1);
+          assert(b.cols == g.degree + 1);
           blocks.push_back(sdp.bilinear_bases.size());
-          sdp.bilinear_bases.push_back(*b);
+          sdp.bilinear_bases.push_back(b);
         }
       sdp.blocks.push_back(blocks);
 
       // sdp.free_var_matrix is the block-wise concatenation of the
       // g.constraintMatrix's
-      for(int k = 0; k < g->constraintMatrix.rows; k++, p++)
-        for(int n = 0; n < g->constraintMatrix.cols; n++)
-          sdp.free_var_matrix.elt(p, n) = g->constraintMatrix.elt(k, n);
+      for(int k = 0; k < g.constraintMatrix.rows; k++, p++)
+        for(int n = 0; n < g.constraintMatrix.cols; n++)
+          {
+            sdp.free_var_matrix.elt(p, n) = g.constraintMatrix.elt(k, n);
+          }
     }
   assert(p == static_cast<int>(sdp.primal_objective_c.size()));
 
