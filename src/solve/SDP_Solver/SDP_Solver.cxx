@@ -11,6 +11,8 @@ SDP_Solver::SDP_Solver(const std::vector<boost::filesystem::path> &sdp_files,
 {
   // X = \Omega_p I
   X.add_diagonal(parameters.initial_matrix_scale_primal);
+  X.add_diagonal(parameters.initial_matrix_scale_primal_elemental);
   // Y = \Omega_d I
   Y.add_diagonal(parameters.initial_matrix_scale_dual);
+  Y.add_diagonal(parameters.initial_matrix_scale_dual_elemental);
 }

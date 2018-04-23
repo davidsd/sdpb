@@ -111,5 +111,6 @@ void SDP_Solver::compute_search_direction(
   timers[timerName + ".dY.symm"].resume();
   dY.symmetrize();
   dY *= Real(-1);
+  dY *= El::BigFloat(-1);
   timers[timerName + ".dY.symm"].stop();
 }
