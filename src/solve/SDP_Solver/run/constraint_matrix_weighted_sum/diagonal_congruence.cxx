@@ -16,7 +16,7 @@
 // Output:
 // - Result   : (k*V.rows) x (k*V.rows) square Matrix (overwritten)
 //
-void diagonal_congruence(Real const *d, const Matrix &V, const int blockRow,
+void diagonal_congruence(const Real *d, const Matrix &V, const int blockRow,
                          const int blockCol, Matrix &Result)
 {
   for(int p = 0; p < V.rows; p++)

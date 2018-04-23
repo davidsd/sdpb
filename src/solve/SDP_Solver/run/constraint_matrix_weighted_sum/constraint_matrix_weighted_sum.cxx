@@ -15,10 +15,10 @@
 // Output: result (overwritten)
 //
 
-void diagonal_congruence(Real const *d, const Matrix &V, const int blockRow,
+void diagonal_congruence(const Real *d, const Matrix &V, const int blockRow,
                          const int blockCol, Matrix &result);
 
-void constraint_matrix_weighted_sum(const SDP &sdp, const Vector a,
+void constraint_matrix_weighted_sum(const SDP &sdp, const Vector &a,
                                     Block_Diagonal_Matrix &result)
 {
   for(unsigned int j = 0; j < sdp.dimensions.size(); j++)
