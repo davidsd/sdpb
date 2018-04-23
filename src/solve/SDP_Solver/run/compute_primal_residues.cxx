@@ -5,7 +5,7 @@
 // Inputs: sdp, x, X
 // Output: PrimalResidues (overwritten)
 //
-void compute_primal_residues(const SDP &sdp, const Vector x,
+void compute_primal_residues(const SDP &sdp, const Vector &x,
                              const Block_Diagonal_Matrix &X,
                              Block_Diagonal_Matrix &primal_residues)
 {

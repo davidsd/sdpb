@@ -19,7 +19,7 @@ void compute_dual_residues(const SDP &sdp, const Vector &y,
                            const Block_Diagonal_Matrix &bilinear_pairings_Y,
                            Vector &dual_residues);
 
-void compute_primal_residues(const SDP &sdp, const Vector x,
+void compute_primal_residues(const SDP &sdp, const Vector &x,
                              const Block_Diagonal_Matrix &X,
                              Block_Diagonal_Matrix &primal_residues);
 
