@@ -29,7 +29,9 @@ Matrix sample_bilinear_basis(const int maxDegree, const int numSamples,
       Real x = samplePoints[k];
       Real scale = sqrt(sampleScalings[k]);
       for(int i = 0; i <= maxDegree; i++)
-        b.elt(i, k) = scale * bilinearBasis[i](x);
+        {
+          b.elt(i, k) = scale * bilinearBasis[i](x);
+        }
     }
   return b;
 }
