@@ -97,6 +97,7 @@ public:
   // dimensions[j] = m_j  (0 <= j < J)
   std::vector<int> dimensions;
 
+  El::BigFloat objective_const_elemental;
   // degrees[j] = d_j  (0 <= j < J)
   std::vector<int> degrees;
 

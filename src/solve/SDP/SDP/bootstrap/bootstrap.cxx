@@ -39,6 +39,11 @@ void bootstrap(const Vector &affineObjective,
   auto affine(affineObjective.begin());
   assert(affine != affineObjective.end());
   sdp.objective_const = *affine;
+  {
+    std::stringstream ss;
+    ss << sdp.objective_const;
+    sdp.objective_const_elemental = El::BigFloat(ss.str(), 10);
+  }
   ++affine;
   sdp.dual_objective_b.insert(sdp.dual_objective_b.end(), affine,
                               affineObjective.end());
