@@ -152,13 +152,13 @@ public:
   //
   std::vector<int> psd_matrix_block_dims() const
   {
-    std::vector<int> dims;
+    std::vector<int> result;
     for(size_t j = 0; j < dimensions.size(); j++)
       for(auto &b : blocks[j])
         {
-          dims.push_back(bilinear_bases[b].rows * dimensions[j]);
+          result.push_back(bilinear_bases[b].rows * dimensions[j]);
         }
-    return dims;
+    return result;
   }
 
   // Dimensions of the bilinear pairing matrices U^(b) and V^(b) (0 <= b < bMax)
