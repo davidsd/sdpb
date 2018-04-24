@@ -34,9 +34,9 @@ dual_constraint_group_from_pol_vec_mat(const Polynomial_Vector_Matrix &m)
   g.dim = m.rows;
   g.degree = m.degree();
 
-  int numSamples = g.degree + 1;
-  int numConstraints = numSamples * g.dim * (g.dim + 1) / 2;
-  int vectorDim = m.elt(0, 0).size();
+  size_t numSamples = g.degree + 1;
+  size_t numConstraints = numSamples * g.dim * (g.dim + 1) / 2;
+  size_t vectorDim = m.elt(0, 0).size();
 
   // Form the constraintMatrix B and constraintConstants c from the
   // polynomials (1,y) . \vec P^{rs}(x)
@@ -48,20 +48,22 @@ dual_constraint_group_from_pol_vec_mat(const Polynomial_Vector_Matrix &m)
 
   // Populate B and c by sampling the polynomial matrix
   int p = 0;
-  for(int c = 0; c < g.dim; c++)
+  for(size_t c = 0; c < g.dim; c++)
     {
-      for(int r = 0; r <= c; r++)
+      for(size_t r = 0; r <= c; r++)
         {
-          for(int k = 0; k < numSamples; k++)
+          for(size_t k = 0; k < numSamples; k++)
             {
               Real x = m.sample_points[k];
               Real scale = m.sample_scalings[k];
 
               g.constraintConstants[p] = scale * m.elt(r, c)[0](x);
-              for(int n = 1; n < vectorDim; n++)
-                g.constraintMatrix.elt(p, n - 1) = -scale * m.elt(r, c)[n](x);
-
-              p++;
+              for(size_t n = 1; n < vectorDim; n++)
+                {
+                  g.constraintMatrix.elt(p, n - 1)
+                    = -scale * m.elt(r, c)[n](x);
+                }
+              ++p;
             }
         }
     }

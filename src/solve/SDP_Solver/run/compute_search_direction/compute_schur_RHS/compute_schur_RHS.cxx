@@ -52,10 +52,10 @@ void compute_schur_RHS(const SDP &sdp, const Vector &dualResidues,
     }
 
   // r_y[n] = dualObjective[n] - (FreeVarMatrix^T x)_n
-  for(unsigned int n = 0; n < sdp.dual_objective_b.size(); n++)
+  for(size_t n = 0; n < sdp.dual_objective_b.size(); n++)
     {
       r_y[n] = sdp.dual_objective_b[n];
-      for(int p = 0; p < sdp.free_var_matrix.rows; p++)
+      for(size_t p = 0; p < sdp.free_var_matrix.rows; p++)
         {
           r_y[n] -= sdp.free_var_matrix.elt(p, n) * x[p];
         }

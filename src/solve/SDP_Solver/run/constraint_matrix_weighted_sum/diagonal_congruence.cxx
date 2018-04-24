@@ -19,13 +19,13 @@
 void diagonal_congruence(const Real *d, const Matrix &V, const int blockRow,
                          const int blockCol, Matrix &Result)
 {
-  for(int p = 0; p < V.rows; p++)
+  for(size_t p = 0; p < V.rows; p++)
     {
-      for(int q = 0; q <= p; q++)
+      for(size_t q = 0; q <= p; q++)
         {
           Real tmp = 0;
 
-          for(int n = 0; n < V.cols; n++)
+          for(size_t n = 0; n < V.cols; n++)
             {
               tmp += *(d + n) * V.elt(p, n) * V.elt(q, n);
             }

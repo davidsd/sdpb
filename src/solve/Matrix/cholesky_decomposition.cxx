@@ -3,7 +3,7 @@
 // L (lower triangular) such that A = L L^T
 void cholesky_decomposition(const Matrix &A, Matrix &L)
 {
-  int dim = A.rows;
+  size_t dim = A.rows;
   assert(A.cols == dim);
   assert(L.rows == dim);
   assert(L.cols == dim);
@@ -15,8 +15,8 @@ void cholesky_decomposition(const Matrix &A, Matrix &L)
   assert(info == 0);
 
   // Set the upper-triangular part of the L to zero
-  for(int j = 0; j < dim; j++)
-    for(int i = 0; i < j; i++)
+  for(size_t j = 0; j < dim; j++)
+    for(size_t i = 0; i < j; i++)
       {
         L.elements[i + j * dim] = 0;
       }

@@ -25,7 +25,7 @@ void fill_from_dual_constraint_groups(
   sdp.free_var_matrix
     = Matrix(sdp.primal_objective_c.size(), sdp.dual_objective_b.size());
 
-  int p = 0;
+  size_t row = 0;
   // Each g corresponds to an index 0 <= j < J (not used explicitly here)
   for(auto &g : dualConstraintGroups)
     {
@@ -48,13 +48,13 @@ void fill_from_dual_constraint_groups(
 
       // sdp.free_var_matrix is the block-wise concatenation of the
       // g.constraintMatrix's
-      for(int k = 0; k < g.constraintMatrix.rows; k++, p++)
-        for(int n = 0; n < g.constraintMatrix.cols; n++)
+      for(size_t k = 0; k < g.constraintMatrix.rows; ++k, ++row)
+        for(size_t n = 0; n < g.constraintMatrix.cols; ++n)
           {
-            sdp.free_var_matrix.elt(p, n) = g.constraintMatrix.elt(k, n);
+            sdp.free_var_matrix.elt(row, n) = g.constraintMatrix.elt(k, n);
           }
     }
-  assert(p == static_cast<int>(sdp.primal_objective_c.size()));
+  assert(row == sdp.primal_objective_c.size());
 
   sdp.initialize_constraint_indices();
 }

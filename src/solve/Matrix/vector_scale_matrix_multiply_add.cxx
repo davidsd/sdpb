@@ -5,13 +5,13 @@ void vector_scale_matrix_multiply_add(const Real alpha, const Matrix &A,
                                       const Vector &x, const Real beta,
                                       Vector &y)
 {
-  assert(A.cols <= static_cast<int>(x.size()));
-  assert(A.rows <= static_cast<int>(y.size()));
+  assert(A.cols <= x.size());
+  assert(A.rows <= y.size());
 
-  for(int p = 0; p < A.rows; p++)
+  for(size_t p = 0; p < A.rows; p++)
     {
       Real tmp = 0;
-      for(int n = 0; n < A.cols; n++)
+      for(size_t n = 0; n < A.cols; n++)
         {
           tmp += A.elt(p, n) * x[n];
         }

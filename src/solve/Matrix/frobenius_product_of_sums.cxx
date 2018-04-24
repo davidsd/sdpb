@@ -8,14 +8,14 @@ Real frobenius_product_of_sums(const Matrix &X, const Matrix &dX,
 {
   Real result = 0;
 
-  for(int c = 0; c < X.cols; c++)
-    for(int r = 0; r < c; r++)
+  for(size_t c = 0; c < X.cols; c++)
+    for(size_t r = 0; r < c; r++)
       {
         result += (X.elt(r, c) + dX.elt(r, c)) * (Y.elt(r, c) + dY.elt(r, c));
       }
   result *= 2;
 
-  for(int r = 0; r < X.rows; r++)
+  for(size_t r = 0; r < X.rows; r++)
     {
       result += (X.elt(r, r) + dX.elt(r, r)) * (Y.elt(r, r) + dY.elt(r, r));
     }

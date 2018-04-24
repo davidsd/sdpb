@@ -4,8 +4,8 @@
 void matrix_eigenvalues(Matrix &A, Vector &workspace, Vector &eigenvalues)
 {
   assert(A.rows == A.cols);
-  assert(static_cast<int>(eigenvalues.size()) == A.rows);
-  assert(static_cast<int>(workspace.size()) == 3 * A.rows - 1);
+  assert(eigenvalues.size() == A.rows);
+  assert(workspace.size() == 3 * A.rows - 1);
 
   Integer info;
   Integer workSize = workspace.size();

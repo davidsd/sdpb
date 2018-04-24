@@ -3,19 +3,19 @@
 std::ostream &operator<<(std::ostream &os, const Matrix &a)
 {
   os << "{";
-  for(int r = 0; r < a.rows; r++)
+  for(size_t r = 0; r < a.rows; r++)
     {
       os << "{";
-      for(int c = 0; c < a.cols; c++)
+      for(size_t c = 0; c < a.cols; c++)
         {
           os << a.elt(r, c);
-          if(c < a.cols - 1)
+          if(c + 1 < a.cols)
             {
               os << ", ";
             }
         }
       os << "}";
-      if(r < a.rows - 1)
+      if(r + 1 < a.rows)
         {
           os << ", ";
         }

@@ -17,7 +17,7 @@ void compute_dual_residues(const SDP &sdp, const Vector &y,
                            const Block_Diagonal_Matrix &bilinear_pairings_Y,
                            Vector &dual_residues)
 {
-  for(unsigned int j = 0; j < sdp.dimensions.size(); j++)
+  for(size_t j = 0; j < sdp.dimensions.size(); j++)
     {
       const int ej = sdp.degrees[j] + 1;
 
@@ -40,8 +40,10 @@ void compute_dual_residues(const SDP &sdp, const Vector &y,
           dual_residues[p] /= 2;
 
           // dualResidues[p] = -Tr(A_p Y) - (FreeVarMatrix y)_p
-          for(int n = 0; n < sdp.free_var_matrix.cols; n++)
-            dual_residues[p] -= sdp.free_var_matrix.elt(p, n) * y[n];
+          for(size_t n = 0; n < sdp.free_var_matrix.cols; n++)
+            {
+              dual_residues[p] -= sdp.free_var_matrix.elt(p, n) * y[n];
+            }
 
           // dualResidues[p] = primalObjective[p] - Tr(A_p Y) - (FreeVarMatrix
           // y)_p

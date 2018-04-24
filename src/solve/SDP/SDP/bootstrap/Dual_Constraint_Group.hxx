@@ -29,8 +29,8 @@
 class Dual_Constraint_Group
 {
 public:
-  int dim;
-  int degree;
+  size_t dim;
+  size_t degree;
 
   // constraintMatrix = B, a P'xN Matrix
   Matrix constraintMatrix;

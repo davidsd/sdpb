@@ -27,15 +27,15 @@ void tensor_transpose_congruence(const Matrix &A, const Matrix &base,
   assert(work.cols == result.cols);
 
   // work = A base'
-  for(int c = 0; c < work.cols; c++)
+  for(size_t c = 0; c < work.cols; c++)
     {
-      int qCol = c % base.cols;
-      int aColOffset = (c / base.cols) * base.rows;
+      size_t qCol = c % base.cols;
+      size_t aColOffset = (c / base.cols) * base.rows;
 
-      for(int r = 0; r < work.rows; r++)
+      for(size_t r = 0; r < work.rows; r++)
         {
           Real tmp = 0;
-          for(int k = 0; k < base.rows; k++)
+          for(size_t k = 0; k < base.rows; k++)
             {
               tmp += A.elt(r, aColOffset + k) * base.elt(k, qCol);
             }
@@ -45,16 +45,16 @@ void tensor_transpose_congruence(const Matrix &A, const Matrix &base,
     }
 
   // result = base'^T work
-  for(int c = 0; c < result.cols; c++)
+  for(size_t c = 0; c < result.cols; c++)
     {
       // since result is symmetric, only compute its upper triangle
-      for(int r = 0; r <= c; r++)
+      for(size_t r = 0; r <= c; r++)
         {
-          int qCol = r % base.cols;
-          int workRowOffset = (r / base.cols) * base.rows;
+          size_t qCol = r % base.cols;
+          size_t workRowOffset = (r / base.cols) * base.rows;
 
           Real tmp = 0;
-          for(int k = 0; k < base.rows; k++)
+          for(size_t k = 0; k < base.rows; k++)
             {
               tmp += base.elt(k, qCol) * work.elt(workRowOffset + k, c);
             }

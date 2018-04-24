@@ -13,8 +13,8 @@
 class Matrix
 {
 public:
-  int rows;
-  int cols;
+  size_t rows;
+  size_t cols;
   // Elements of M in row-major order:
   //
   //   elements = { M_{0,0}, ..., M_{cols-1,0},
@@ -48,7 +48,7 @@ public:
     // ensure M is square
     assert(rows == cols);
 
-    for(int i = 0; i < rows; i++)
+    for(size_t i = 0; i < rows; i++)
       {
         elt(i, i) += c;
       }
@@ -65,9 +65,9 @@ public:
   {
     assert(rows == cols);
 
-    for(int r = 0; r < rows; r++)
+    for(size_t r = 0; r < rows; r++)
       {
-        for(int c = 0; c < r; c++)
+        for(size_t c = 0; c < r; c++)
           {
             Real tmp = (elt(r, c) + elt(c, r)) / 2;
             elt(r, c) = tmp;

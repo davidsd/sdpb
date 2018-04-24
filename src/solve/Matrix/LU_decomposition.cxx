@@ -4,7 +4,7 @@
 // for use with 'solveWithLUDecomposition'
 void LU_decomposition(Matrix &A, std::vector<Integer> &pivots)
 {
-  int dim = A.rows;
+  size_t dim = A.rows;
   assert(A.cols == dim);
 
   Integer info;

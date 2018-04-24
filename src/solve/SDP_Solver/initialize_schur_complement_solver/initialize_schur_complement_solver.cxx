@@ -166,8 +166,8 @@ void SDP_Solver::initialize_schur_complement_solver(
   // //           << "\n";
 
   // UpperRight(Q) = LowerLeft(Q)^T
-  for(int c = 0; c < schur_off_diagonal.cols; c++)
-    for(int r = schur_off_diagonal.cols; r < Q.rows; r++)
+  for(size_t c = 0; c < schur_off_diagonal.cols; c++)
+    for(size_t r = schur_off_diagonal.cols; r < Q.rows; r++)
       {
         Q.elt(c, r) = Q.elt(r, c);
       }

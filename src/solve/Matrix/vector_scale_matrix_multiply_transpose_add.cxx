@@ -6,13 +6,13 @@ void vector_scale_matrix_multiply_transpose_add(const Real alpha,
                                                 const Vector &x,
                                                 const Real beta, Vector &y)
 {
-  assert(A.cols <= static_cast<int>(y.size()));
-  assert(A.rows <= static_cast<int>(x.size()));
+  assert(A.cols <= y.size());
+  assert(A.rows <= x.size());
 
-  for(int n = 0; n < A.cols; n++)
+  for(size_t n = 0; n < A.cols; n++)
     {
       Real tmp = 0;
-      for(int p = 0; p < A.rows; p++)
+      for(size_t p = 0; p < A.rows; p++)
         {
           tmp += A.elt(p, n) * x[p];
         }

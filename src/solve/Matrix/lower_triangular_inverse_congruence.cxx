@@ -3,7 +3,7 @@
 // A := L^{-1} A L^{-T}
 void lower_triangular_inverse_congruence(Matrix &A, Matrix &L)
 {
-  int dim = A.rows;
+  size_t dim = A.rows;
   assert(A.cols == dim);
   assert(L.rows == dim);
   assert(L.cols == dim);

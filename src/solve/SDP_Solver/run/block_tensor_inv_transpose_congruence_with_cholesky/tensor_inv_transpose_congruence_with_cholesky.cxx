@@ -15,35 +15,39 @@ void tensor_inv_transpose_congruence_with_cholesky(const Matrix &L,
                                                    Matrix &result)
 {
   // work = L^{-1} (base \otimes 1);
-  for(int cw = 0; cw < work.cols; cw++)
+  for(size_t cw = 0; cw < work.cols; cw++)
     {
-      int mc = cw / base.cols;
+      size_t mc = cw / base.cols;
 
-      for(int rw = mc * base.rows; rw < work.rows; rw++)
+      for(size_t rw = mc * base.rows; rw < work.rows; rw++)
         {
-          int mr = rw / base.rows;
+          size_t mr = rw / base.rows;
 
           Real tmp
             = (mr != mc) ? Real(0) : base.elt(rw % base.rows, cw % base.cols);
-          for(int cl = mc * base.rows; cl < rw; cl++)
-            tmp -= L.elt(rw, cl) * work.elt(cl, cw);
+          for(size_t cl = mc * base.rows; cl < rw; cl++)
+            {
+              tmp -= L.elt(rw, cl) * work.elt(cl, cw);
+            }
 
           work.elt(rw, cw) = tmp / L.elt(rw, rw);
         }
     }
 
   // result = work^T work
-  for(int cr = 0; cr < result.cols; cr++)
+  for(size_t cr = 0; cr < result.cols; cr++)
     {
-      int mc = cr / base.cols;
+      size_t mc = cr / base.cols;
 
-      for(int rr = 0; rr <= cr; rr++)
+      for(size_t rr = 0; rr <= cr; rr++)
         {
-          int mr = rr / base.cols;
+          size_t mr = rr / base.cols;
 
           Real tmp = 0;
-          for(int rw = max(mr, mc) * base.rows; rw < work.rows; rw++)
-            tmp += work.elt(rw, cr) * work.elt(rw, rr);
+          for(size_t rw = max(mr, mc) * base.rows; rw < work.rows; rw++)
+            {
+              tmp += work.elt(rw, cr) * work.elt(rw, rr);
+            }
 
           result.elt(rr, cr) = tmp;
           if(rr != cr)
