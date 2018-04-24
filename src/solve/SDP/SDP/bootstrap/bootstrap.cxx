@@ -37,9 +37,11 @@ void bootstrap(const Vector &affineObjective,
     }
 
   // Split affineObjective into objectiveConst f and dualObjective b
-  Real objectiveConst = affineObjective[0];
-  Vector dualObjective = affineObjective;
-  dualObjective.erase(dualObjective.begin());
+  auto affine(affineObjective.begin());
+  assert(affine != affineObjective.end());
+  Real objectiveConst(*affine);
+  ++affine;
+  Vector dualObjective(affine, affineObjective.end());
 
   fill_from_dual_constraint_groups(dualObjective, objectiveConst,
                                    dualConstraintGroups, sdp);
