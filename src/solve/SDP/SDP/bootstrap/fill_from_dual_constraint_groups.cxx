@@ -5,12 +5,8 @@
 // function into an SDP.
 
 void fill_from_dual_constraint_groups(
-  const Vector &dual_objective_b, const Real &objective_const,
   const std::vector<Dual_Constraint_Group> &dualConstraintGroups, SDP &sdp)
 {
-  sdp.dual_objective_b = dual_objective_b;
-  sdp.objective_const = objective_const;
-
   for(auto &g : dualConstraintGroups)
     {
       sdp.dimensions.push_back(g.dim);

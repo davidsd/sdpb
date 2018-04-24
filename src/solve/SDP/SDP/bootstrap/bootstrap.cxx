@@ -9,7 +9,6 @@
 #include "../../../SDP.hxx"
 
 void fill_from_dual_constraint_groups(
-  const Vector &dualObjective, const Real &objectiveConst,
   const std::vector<Dual_Constraint_Group> &dualConstraintGroups, SDP &sdp);
 
 Dual_Constraint_Group
@@ -39,10 +38,10 @@ void bootstrap(const Vector &affineObjective,
   // Split affineObjective into objectiveConst f and dualObjective b
   auto affine(affineObjective.begin());
   assert(affine != affineObjective.end());
-  Real objectiveConst(*affine);
+  sdp.objective_const = *affine;
   ++affine;
-  Vector dualObjective(affine, affineObjective.end());
+  sdp.dual_objective_b.insert(sdp.dual_objective_b.end(), affine,
+                              affineObjective.end());
 
-  fill_from_dual_constraint_groups(dualObjective, objectiveConst,
-                                   dualConstraintGroups, sdp);
+  fill_from_dual_constraint_groups(dualConstraintGroups, sdp);
 }
