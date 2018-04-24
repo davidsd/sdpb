@@ -18,8 +18,8 @@ void fill_from_dual_constraint_groups(
                                     g.constraintConstants.begin(),
                                     g.constraintConstants.end());
     }
-  sdp.free_var_matrix
-    = Matrix(sdp.primal_objective_c.size(), sdp.dual_objective_b.size());
+  sdp.free_var_matrix = Matrix(sdp.primal_objective_c.size(),
+                               sdp.dual_objective_b_elemental.Height());
 
   size_t row = 0;
   // Each g corresponds to an index 0 <= j < J (not used explicitly here)

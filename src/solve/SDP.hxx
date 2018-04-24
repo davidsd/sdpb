@@ -93,7 +93,8 @@ public:
 
   // objectiveConst = f
   Real objective_const;
-
+  El::DistMatrix<El::BigFloat> dual_objective_b_elemental;
+  
   // dimensions[j] = m_j  (0 <= j < J)
   std::vector<int> dimensions;
 

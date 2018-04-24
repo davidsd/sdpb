@@ -48,5 +48,17 @@ void bootstrap(const Vector &affineObjective,
   sdp.dual_objective_b.insert(sdp.dual_objective_b.end(), affine,
                               affineObjective.end());
 
+  sdp.dual_objective_b_elemental.Resize(affineObjective.size() - 1, 1);
+  size_t local_height(sdp.dual_objective_b_elemental.LocalHeight());
+  El::Int row_min(sdp.dual_objective_b_elemental.GlobalRow(0));
+
+  for(size_t hh = 0; hh < local_height; ++hh)
+    {
+      std::stringstream ss;
+      ss << affineObjective[row_min + hh];
+      sdp.dual_objective_b_elemental.SetLocal(hh, 0,
+                                              El::BigFloat(ss.str(), 10));
+    }
+
   fill_from_dual_constraint_groups(dualConstraintGroups, sdp);
 }
