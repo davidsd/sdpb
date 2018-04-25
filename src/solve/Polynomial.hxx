@@ -23,10 +23,10 @@ public:
   std::vector<El::BigFloat> coefficients_elemental;
 
   // The zero polynomial
-  Polynomial() : coefficients(1, 0) {}
+  Polynomial() : coefficients(1, 0), coefficients_elemental(1, 0) {}
 
   // Degree of p(x)
-  int degree() const { return coefficients.size() - 1; };
+  int degree() const { return coefficients_elemental.size() - 1; };
 
   // Evaluate p(x) for some x using horner's method
   Real operator()(const Real &x) const
@@ -61,11 +61,15 @@ public:
   {
     for(int i = p.degree(); i >= 0; i--)
       {
-        os << p.coefficients[i];
+        os << p.coefficients_elemental[i];
         if(i > 1)
-          os << "x^" << i << " + ";
+          {
+            os << "x^" << i << " + ";
+          }
         else if(i == 1)
-          os << "x + ";
+          {
+            os << "x + ";
+          }
       }
     return os;
   }
