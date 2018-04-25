@@ -17,13 +17,14 @@
 
 struct Block_Matrix
 {
-  std::vector<El::DistMatrix<El::BigFloat>> blocks_elemental;
+  std::vector<El::DistMatrix<El::BigFloat>> blocks;
 
   Block_Matrix(const std::vector<int> &block_heights, const size_t &width)
   {
     for(auto &block_height : block_heights)
       {
-        blocks_elemental.emplace_back(block_height, width);
+        blocks.emplace_back(block_height, width);
       }
   }
+  Block_Matrix() = default;
 };

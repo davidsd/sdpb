@@ -21,6 +21,6 @@ void block_matrix_lower_triangular_transpose_solve(
     {
       El::cholesky::SolveAfter(El::UpperOrLowerNS::UPPER,
                                El::OrientationNS::NORMAL,
-                               L.blocks_elemental[b], v.blocks_elemental[b]);
+                               L.blocks_elemental[b], v.blocks[b]);
     }
 }

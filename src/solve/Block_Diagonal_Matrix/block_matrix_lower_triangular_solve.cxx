@@ -33,6 +33,6 @@ void block_matrix_lower_triangular_solve(const Block_Diagonal_Matrix &L,
     {
       El::Trsm(El::LeftOrRightNS::LEFT, El::UpperOrLowerNS::LOWER,
                El::OrientationNS::NORMAL, El::UnitOrNonUnitNS::NON_UNIT,
-               El::BigFloat(1), L.blocks_elemental[b], B.blocks_elemental[b]);
+               El::BigFloat(1), L.blocks_elemental[b], B.blocks[b]);
     }
 }
