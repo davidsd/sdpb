@@ -7,24 +7,12 @@
 void fill_from_dual_constraint_groups(
   const std::vector<Dual_Constraint_Group> &dualConstraintGroups, SDP &sdp)
 {
+  // Each g corresponds to an index 0 <= j < J (not used explicitly here)
   for(auto &g : dualConstraintGroups)
     {
       sdp.dimensions.push_back(g.dim);
       sdp.degrees.push_back(g.degree);
 
-      // sdp.primal_objective is the concatenation of the
-      // g.constraintConstants
-      sdp.primal_objective_c.insert(sdp.primal_objective_c.end(),
-                                    g.constraintConstants.begin(),
-                                    g.constraintConstants.end());
-    }
-  sdp.free_var_matrix = Matrix(sdp.primal_objective_c.size(),
-                               sdp.dual_objective_b_elemental.Height());
-
-  size_t row = 0;
-  // Each g corresponds to an index 0 <= j < J (not used explicitly here)
-  for(auto &g : dualConstraintGroups)
-    {
       // sdp.bilinear_bases is the concatenation of the g.bilinearBases.
       // The matrix Y is a BlockDiagonalMatrix built from the
       // concatenation of the blocks for each individual
@@ -39,9 +27,33 @@ void fill_from_dual_constraint_groups(
           assert(b.cols == g.degree + 1);
           blocks.push_back(sdp.bilinear_bases.size());
           sdp.bilinear_bases.push_back(b);
+
+          sdp.primal_objective_c_elemental.blocks.emplace_back(b.rows * g.dim,
+                                                               1);
+          auto last_block(sdp.primal_objective_c_elemental.blocks.rbegin());
+          size_t local_height(last_block->LocalHeight());
+          El::Int row_min(last_block->GlobalRow(0));
+          for(size_t hh = 0; hh < local_height; ++hh)
+            {
+              std::stringstream ss;
+              ss << g.constraintConstants.at(row_min + hh);
+              last_block->SetLocal(hh, 0, El::BigFloat(ss.str(), 10));
+            }
         }
       sdp.blocks.push_back(blocks);
 
+      // sdp.primal_objective is the concatenation of the
+      // g.constraintConstants
+      sdp.primal_objective_c.insert(sdp.primal_objective_c.end(),
+                                    g.constraintConstants.begin(),
+                                    g.constraintConstants.end());
+    }
+
+  sdp.free_var_matrix = Matrix(sdp.primal_objective_c.size(),
+                               sdp.dual_objective_b_elemental.Height());
+  size_t row = 0;
+  for(auto &g : dualConstraintGroups)
+    {
       // sdp.free_var_matrix is the block-wise concatenation of the
       // g.constraintMatrix's
       for(size_t k = 0; k < g.constraintMatrix.rows; ++k, ++row)

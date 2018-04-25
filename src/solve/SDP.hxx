@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "Block_Matrix.hxx"
 #include "Matrix.hxx"
 #include "Polynomial_Vector_Matrix.hxx"
 #include "Index_Tuple.hxx"
@@ -84,21 +85,23 @@ public:
 
   // FreeVarMatrix = B, a PxN matrix
   Matrix free_var_matrix;
+  // Block_Matrix free_var_matrix_elemental;
 
   // c, a vector of length P used with primal_objective
   Vector primal_objective_c;
+  Block_Matrix primal_objective_c_elemental;
 
   // b, a vector of length N used with dual_objective
   Vector dual_objective_b;
-
-  // objectiveConst = f
-  Real objective_const;
   El::DistMatrix<El::BigFloat> dual_objective_b_elemental;
   
+  // objectiveConst = f
+  Real objective_const;
+  El::BigFloat objective_const_elemental;
+
   // dimensions[j] = m_j  (0 <= j < J)
   std::vector<int> dimensions;
 
-  El::BigFloat objective_const_elemental;
   // degrees[j] = d_j  (0 <= j < J)
   std::vector<int> degrees;
 

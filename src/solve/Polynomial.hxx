@@ -9,6 +9,8 @@
 
 #include "Vector.hxx"
 
+#include <El.hpp>
+
 // A univariate polynomial
 //
 //   p(x) = a_0 + a_1 x + a_2 x^2 + ... + a_n x^n
@@ -18,6 +20,7 @@ class Polynomial
 public:
   // Coefficients {a_0, a_1, ..., a_n} in increasing order of degree
   Vector coefficients;
+  std::vector<El::BigFloat> coefficients_elemental;
 
   // The zero polynomial
   Polynomial() : coefficients(1, 0) {}
@@ -28,12 +31,27 @@ public:
   // Evaluate p(x) for some x using horner's method
   Real operator()(const Real &x) const
   {
-    int deg = degree();
-    Real result = coefficients[deg];
-    for(int i = deg - 1; i >= 0; i--)
+    assert(!coefficients.empty());
+    auto coefficient(coefficients.rbegin());
+    Real result(*coefficient);
+    ++coefficient;
+    for(; coefficient != coefficients.rend(); ++coefficient)
       {
         result *= x;
-        result += coefficients[i];
+        result += *coefficient;
+      }
+    return result;
+  }
+  El::BigFloat operator()(const El::BigFloat &x) const
+  {
+    assert(!coefficients_elemental.empty());
+    auto coefficient(coefficients_elemental.rbegin());
+    El::BigFloat result(*coefficient);
+    ++coefficient;
+    for(; coefficient != coefficients_elemental.rend(); ++coefficient)
+      {
+        result *= x;
+        result += *coefficient;
       }
     return result;
   }

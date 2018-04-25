@@ -8,6 +8,7 @@
 #pragma once
 
 #include "Block_Diagonal_Matrix.hxx"
+#include "Block_Matrix.hxx"
 #include "SDP.hxx"
 #include "SDP_Solver_Terminate_Reason.hxx"
 
@@ -33,13 +34,15 @@ public:
 
   // a Vector of length P = sdp.primalObjective.size()
   Vector x;
-
+  // Block_Matrix x_elemental;
+  
   // a Block_Diagonal_Matrix with block sizes given by
   // sdp.psdMatrixBlockDims()
   Block_Diagonal_Matrix X;
 
   // a Vector of length N = sdp.dualObjective.size()
   Vector y;
+  // El::DistMatrix<El::BigFloat> y_elemental;
 
   // a Block_Diagonal_Matrix with the same structure as X
   Block_Diagonal_Matrix Y;
