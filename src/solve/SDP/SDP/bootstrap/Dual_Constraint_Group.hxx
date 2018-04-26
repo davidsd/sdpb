@@ -36,9 +36,11 @@ public:
 
   // constraintMatrix = B, a P'xN Matrix
   Matrix constraintMatrix;
+  El::Matrix<El::BigFloat> constraintMatrix_elemental;
 
   // constraintConstants = c, a vector of length P'
   Vector constraintConstants;
+  std::vector<El::BigFloat> constraintConstants_elemental;
 
   // bilinearBases is a vector of Matrices encoding the v_{b,k}
   // entering the constraint matrices A_p, as described

@@ -35,9 +35,8 @@ void fill_from_dual_constraint_groups(
           El::Int row_min(last_block->GlobalRow(0));
           for(size_t hh = 0; hh < local_height; ++hh)
             {
-              std::stringstream ss;
-              ss << g.constraintConstants.at(row_min + hh);
-              last_block->SetLocal(hh, 0, El::BigFloat(ss.str(), 10));
+              last_block->SetLocal(
+                hh, 0, g.constraintConstants_elemental.at(row_min + hh));
             }
         }
 

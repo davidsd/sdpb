@@ -49,8 +49,10 @@ dual_constraint_group_from_pol_vec_mat(const Polynomial_Vector_Matrix &m)
 
   // The first element of each vector \vec P^{rs}(x) multiplies the constant 1
   g.constraintConstants = Vector(numConstraints);
+  g.constraintConstants_elemental.resize(numConstraints);
   // The rest multiply decision variables y
   g.constraintMatrix = Matrix(numConstraints, vectorDim - 1);
+  g.constraintMatrix_elemental.Resize(numConstraints, vectorDim - 1);
 
   // Populate B and c by sampling the polynomial matrix
   int p = 0;
@@ -64,11 +66,22 @@ dual_constraint_group_from_pol_vec_mat(const Polynomial_Vector_Matrix &m)
               Real scale = m.sample_scalings[k];
 
               g.constraintConstants[p] = scale * m.elt(r, c)[0](x);
-              for(size_t n = 1; n < vectorDim; n++)
+              for(size_t n = 1; n < vectorDim; ++n)
                 {
                   g.constraintMatrix.elt(p, n - 1)
                     = -scale * m.elt(r, c)[n](x);
                 }
+
+              {
+                El::BigFloat x = m.sample_points_elemental[k];
+                El::BigFloat scale = m.sample_scalings_elemental[k];
+                g.constraintConstants_elemental[p] = scale * m.elt(r, c)[0](x);
+                for(size_t n = 1; n < vectorDim; ++n)
+                  {
+                    g.constraintMatrix_elemental.Set(
+                      p, n - 1, -scale * m.elt(r, c)[n](x));
+                  }
+              }
               ++p;
             }
         }
@@ -98,15 +111,15 @@ dual_constraint_group_from_pol_vec_mat(const Polynomial_Vector_Matrix &m)
         delta2, numSamples, m.bilinear_basis, m.sample_points,
         multiply_vectors(m.sample_points, m.sample_scalings)));
 
-      std::vector<El::BigFloat> scale;
+      std::vector<El::BigFloat> scaled_samples;
       for(size_t ii = 0; ii < m.sample_points_elemental.size(); ++ii)
         {
-          scale.emplace_back(m.sample_points_elemental[ii]
-                             * m.sample_scalings_elemental[ii]);
+          scaled_samples.emplace_back(m.sample_points_elemental[ii]
+                                      * m.sample_scalings_elemental[ii]);
         }
       g.bilinearBases_elemental.push_back(
         sample_bilinear_basis(delta2, numSamples, m.bilinear_basis,
-                              m.sample_points_elemental, scale));
+                              m.sample_points_elemental, scaled_samples));
     }
   return g;
 }
