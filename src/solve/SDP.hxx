@@ -134,20 +134,20 @@ public:
   //
   void initialize_constraint_indices()
   {
-    int p = 0;
-    for(unsigned int j = 0; j < dimensions.size(); j++)
+    size_t p (0);
+    for(size_t j = 0; j < dimensions.size(); j++)
       {
         constraint_indices.emplace_back(0);
 
-        for(int s = 0; s < dimensions[j]; s++)
-          for(int r = 0; r <= s; r++)
-            for(int k = 0; k <= degrees[j]; k++)
+        for(int s = 0; s < dimensions[j]; ++s)
+          for(int r = 0; r <= s; ++r)
+            for(int k = 0; k <= degrees[j]; ++k)
               {
                 constraint_indices[j].emplace_back(p, r, s, k);
-                p++;
+                ++p;
               }
       }
-    assert(p == static_cast<int>(primal_objective_c.size()));
+    assert(p == primal_objective_c.size());
   }
 
   // Dimensions of the blocks of X,Y (0 <= b < bMax)
@@ -157,7 +157,7 @@ public:
   std::vector<int> psd_matrix_block_dims() const
   {
     std::vector<int> result;
-    for(size_t j = 0; j < dimensions.size(); j++)
+    for(size_t j = 0; j < dimensions.size(); ++j)
       for(auto &b : blocks[j])
         {
           result.push_back(bilinear_bases[b].rows * dimensions[j]);
