@@ -20,16 +20,16 @@ void fill_from_dual_constraint_groups(
       // the indices for the blocks of Y corresponding to the j-th
       // group.
       std::vector<int> blocks;
-      for(auto &b : g.bilinearBases)
+      for(auto &b : g.bilinearBases_elemental)
         {
           // Ensure that each bilinearBasis is sampled the correct number
           // of times
-          assert(b.cols == g.degree + 1);
-          blocks.push_back(sdp.bilinear_bases.size());
-          sdp.bilinear_bases.push_back(b);
+          assert(static_cast<size_t>(b.Width()) == g.degree + 1);
+          blocks.push_back(sdp.bilinear_bases_elemental.size());
+          sdp.bilinear_bases_elemental.push_back(b);
 
-          sdp.primal_objective_c_elemental.blocks.emplace_back(b.rows * g.dim,
-                                                               1);
+          sdp.primal_objective_c_elemental.blocks.emplace_back(
+            b.Height() * g.dim, 1);
           auto last_block(sdp.primal_objective_c_elemental.blocks.rbegin());
           size_t local_height(last_block->LocalHeight());
           El::Int row_min(last_block->GlobalRow(0));
@@ -39,6 +39,14 @@ void fill_from_dual_constraint_groups(
               ss << g.constraintConstants.at(row_min + hh);
               last_block->SetLocal(hh, 0, El::BigFloat(ss.str(), 10));
             }
+        }
+
+      for(auto &b : g.bilinearBases)
+        {
+          // Ensure that each bilinearBasis is sampled the correct number
+          // of times
+          assert(b.cols == g.degree + 1);
+          sdp.bilinear_bases.push_back(b);
         }
       sdp.blocks.push_back(blocks);
 

@@ -82,6 +82,7 @@ public:
   //                                           0 <= m <= delta_b)
   //
   std::vector<Matrix> bilinear_bases;
+  std::vector<El::Matrix<El::BigFloat>> bilinear_bases_elemental;
 
   // FreeVarMatrix = B, a PxN matrix
   Matrix free_var_matrix;
