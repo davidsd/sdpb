@@ -26,6 +26,8 @@
 
 #include "../../../Matrix.hxx"
 
+#include <El.hpp>
+
 class Dual_Constraint_Group
 {
 public:
@@ -43,4 +45,5 @@ public:
   // above. `bilinearBases' here has the structure of
   // `bilinearBases[j]' above for some fixed j.
   std::vector<Matrix> bilinearBases;
+  std::vector<El::Matrix<El::BigFloat>> bilinearBases_elemental;
 };
