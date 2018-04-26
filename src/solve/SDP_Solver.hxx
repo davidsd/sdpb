@@ -34,15 +34,15 @@ public:
 
   // a Vector of length P = sdp.primalObjective.size()
   Vector x;
-  // Block_Matrix x_elemental;
-  
+  Block_Matrix x_elemental;
+
   // a Block_Diagonal_Matrix with block sizes given by
   // sdp.psdMatrixBlockDims()
   Block_Diagonal_Matrix X;
 
   // a Vector of length N = sdp.dualObjective.size()
   Vector y;
-  // El::DistMatrix<El::BigFloat> y_elemental;
+  El::DistMatrix<El::BigFloat> y_elemental;
 
   // a Block_Diagonal_Matrix with the same structure as X
   Block_Diagonal_Matrix Y;
@@ -57,6 +57,10 @@ public:
   Real primal_objective; // f + c . x
   Real dual_objective;   // f + b . y
   Real duality_gap;      // normalized difference of objectives
+
+  El::BigFloat primal_objective_elemental, // f + c . x
+    dual_objective_elemental,              // f + b . y
+    duality_gap_elemental; // normalized difference of objectives
 
   // Discrepancy in the primal equality constraints, a
   // Block_Diagonal_Matrix with the same structure as X, called 'P' in

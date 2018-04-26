@@ -6,6 +6,8 @@
 //             function. Its just simpler to see this way what's timed and
 //             what's not
 
+El::BigFloat dot(const Block_Matrix &a, const Block_Matrix &b);
+
 void block_tensor_inv_transpose_congruence_with_cholesky(
   const Block_Diagonal_Matrix &L, const std::vector<Matrix> &Q,
   std::vector<Matrix> &Work, Block_Diagonal_Matrix &Result);
@@ -112,6 +114,19 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       duality_gap
         = abs(primal_objective - dual_objective)
           / max(Real(abs(primal_objective) + abs(dual_objective)), Real(1));
+
+      primal_objective_elemental
+        = sdp.objective_const_elemental
+          + dot(sdp.primal_objective_c_elemental, x_elemental);
+      dual_objective_elemental
+        = sdp.objective_const_elemental
+        + El::Dotu(sdp.dual_objective_b_elemental, y_elemental);
+      duality_gap_elemental
+        = Abs(primal_objective_elemental - dual_objective_elemental)
+          / Max(Abs(primal_objective_elemental)
+                  + Abs(dual_objective_elemental),
+                El::BigFloat(1));
+
       timers["run.objectives"].stop();
 
       timers["run.choleskyDecomposition(X,XCholesky)"].resume();
@@ -239,7 +254,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       {
         std::stringstream ss;
         ss << primal_step_length;
-        primal_step_length_elemental = El::BigFloat(ss.str(),10);
+        primal_step_length_elemental = El::BigFloat(ss.str(), 10);
       }
       timers["run.stepLength(XCholesky)"].stop();
       timers["run.stepLength(YCholesky)"].resume();
@@ -249,7 +264,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       {
         std::stringstream ss;
         ss << dual_step_length;
-        dual_step_length_elemental = El::BigFloat(ss.str(),10);
+        dual_step_length_elemental = El::BigFloat(ss.str(), 10);
       }
       timers["run.stepLength(YCholesky)"].stop();
 
