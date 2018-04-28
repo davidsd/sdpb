@@ -79,6 +79,9 @@ public:
   Vector dual_residues;
   Real dual_error; // maxAbs(dualResidues)
 
+  Block_Matrix dual_residues_elemental;
+  El::BigFloat dual_error_elemental; // maxAbs(dualResidues)
+
   // Create a new solver for a given SDP, with the given parameters
   SDP_Solver(const std::vector<boost::filesystem::path> &sdp_files,
              const SDP_Solver_Parameters &parameters);
