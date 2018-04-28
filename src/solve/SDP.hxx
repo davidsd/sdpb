@@ -86,7 +86,7 @@ public:
 
   // FreeVarMatrix = B, a PxN matrix
   Matrix free_var_matrix;
-  // Block_Matrix free_var_matrix_elemental;
+  Block_Matrix free_var_matrix_elemental;
 
   // c, a vector of length P used with primal_objective
   Vector primal_objective_c;

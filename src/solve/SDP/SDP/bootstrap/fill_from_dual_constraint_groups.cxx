@@ -7,6 +7,7 @@
 void fill_from_dual_constraint_groups(
   const std::vector<Dual_Constraint_Group> &dualConstraintGroups, SDP &sdp)
 {
+  // First compute blocks
   // Each g corresponds to an index 0 <= j < J (not used explicitly here)
   for(auto &g : dualConstraintGroups)
     {
@@ -27,17 +28,6 @@ void fill_from_dual_constraint_groups(
           assert(static_cast<size_t>(b.Width()) == g.degree + 1);
           blocks.push_back(sdp.bilinear_bases_elemental.size());
           sdp.bilinear_bases_elemental.push_back(b);
-
-          sdp.primal_objective_c_elemental.blocks.emplace_back(
-            b.Height() * g.dim, 1);
-          auto last_block(sdp.primal_objective_c_elemental.blocks.rbegin());
-          size_t local_height(last_block->LocalHeight());
-          El::Int row_min(last_block->GlobalRow(0));
-          for(size_t hh = 0; hh < local_height; ++hh)
-            {
-              last_block->SetLocal(
-                hh, 0, g.constraintConstants_elemental.at(row_min + hh));
-            }
         }
 
       for(auto &b : g.bilinearBases)
@@ -58,6 +48,7 @@ void fill_from_dual_constraint_groups(
 
   sdp.free_var_matrix = Matrix(sdp.primal_objective_c.size(),
                                sdp.dual_objective_b_elemental.Height());
+
   size_t row = 0;
   for(auto &g : dualConstraintGroups)
     {
@@ -72,4 +63,50 @@ void fill_from_dual_constraint_groups(
   assert(row == sdp.primal_objective_c.size());
 
   sdp.initialize_constraint_indices();
+
+  // Then assign blocks
+  auto group(dualConstraintGroups.begin());
+  for(auto &block_size : sdp.schur_block_dims())
+    {
+      assert(group != dualConstraintGroups.end());
+      assert(group->constraintConstants_elemental.size() == block_size);
+      assert(group->constraintMatrix_elemental.Height() == block_size);
+      {
+        sdp.primal_objective_c_elemental.blocks.emplace_back(block_size, 1);
+        auto block(sdp.primal_objective_c_elemental.blocks.rbegin());
+        size_t local_height(block->LocalHeight());
+        El::Int row_begin(block->GlobalRow(0));
+        for(size_t hh = 0; hh < local_height; ++hh)
+          {
+            block->SetLocal(
+              hh, 0, group->constraintConstants_elemental.at(row_begin + hh));
+          }
+      }
+      {
+        sdp.free_var_matrix_elemental.blocks.emplace_back(
+          block_size, sdp.dual_objective_b_elemental.Height());
+        auto block(sdp.free_var_matrix_elemental.blocks.rbegin());
+        size_t local_height(block->LocalHeight()),
+          local_width(block->LocalWidth());
+        El::Int row_begin(block->GlobalRow(0)),
+          column_begin(block->GlobalCol(0));
+
+        for(size_t row = 0; row < local_height
+                            && row + row_begin
+                                 < group->constraintMatrix_elemental.Height();
+            ++row)
+          for(size_t column = 0;
+              column < local_width
+              && column + column_begin
+                   < group->constraintMatrix_elemental.Width();
+              ++column)
+            {
+              block->SetLocal(
+                row, column,
+                group->constraintMatrix_elemental.Get(
+                  row + row_begin, column + column_begin));
+            }
+      }
+      ++group;
+    }
 }
