@@ -160,7 +160,7 @@ public:
     for(size_t j = 0; j < dimensions.size(); ++j)
       for(auto &b : blocks[j])
         {
-          result.push_back(bilinear_bases[b].rows * dimensions[j]);
+          result.push_back(bilinear_bases_elemental[b].Height() * dimensions[j]);
         }
     return result;
   }
@@ -175,7 +175,7 @@ public:
     for(size_t j = 0; j < dimensions.size(); j++)
       for(auto &b : blocks[j])
         {
-          dims.push_back(bilinear_bases[b].cols * dimensions[j]);
+          dims.push_back(bilinear_bases_elemental[b].Width() * dimensions[j]);
         }
     return dims;
   }
