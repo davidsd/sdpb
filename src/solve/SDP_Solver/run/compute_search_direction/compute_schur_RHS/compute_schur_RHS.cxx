@@ -7,14 +7,14 @@
 //
 // where S = SchurComplement and B = FreeVarMatrix.  Specifically,
 //
-// r_x[p] = -dualResidues[p] - Tr(A_p Z)              for 0 <= p < P
+// r_x[p] = -dual_residues[p] - Tr(A_p Z)              for 0 <= p < P
 // r_y[n] = dualObjective[n] - (FreeVarMatrix^T x)_n  for 0 <= n < N
 //
 // where P = primalObjective.size(), N = dualObjective.size()
 //
 // Inputs:
 // - sdp, an SDP
-// - dualResidues, a Vector of length P
+// - dual_residues, a Vector of length P
 // - Z = X^{-1} (PrimalResidues Y - R)
 // - x, a vector of length P
 // Outputs:
@@ -25,15 +25,15 @@
 Real bilinear_block_pairing(const Real *v, const int dim, const Matrix &A,
                             const int blockRow, const int blockCol);
 
-void compute_schur_RHS(const SDP &sdp, const Vector &dualResidues,
+void compute_schur_RHS(const SDP &sdp, const Vector &dual_residues,
                        const Block_Diagonal_Matrix &Z, const Vector &x,
                        Vector &r_x, Vector &r_y)
 {
-  // r_x[p] = -dualResidues[p]
+  // r_x[p] = -dual_residues[p]
   for(unsigned int p = 0; p < r_x.size(); p++)
-    r_x[p] = -dualResidues[p];
+    r_x[p] = -dual_residues[p];
 
-  // r_x[p] = -dualResidues[p] - Tr(A_p Z), where A_p are as described
+  // r_x[p] = -dual_residues[p] - Tr(A_p Z), where A_p are as described
   // in SDP.h.  The trace can be computed in terms of bilinearBases
   // using bilinearBlockPairing.
   for(unsigned int j = 0; j < sdp.dimensions.size(); j++)

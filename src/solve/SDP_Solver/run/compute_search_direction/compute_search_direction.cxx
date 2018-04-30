@@ -16,7 +16,7 @@
 // - dx, dX, dy, dY
 //
 
-void compute_schur_RHS(const SDP &sdp, const Vector &dualResidues,
+void compute_schur_RHS(const SDP &sdp, const Vector &dual_residues,
                        const Block_Diagonal_Matrix &Z, const Vector &x,
                        Vector &r_x, Vector &r_y);
 
@@ -77,7 +77,7 @@ void SDP_Solver::compute_search_direction(
   Z.symmetrize();
   timers[timerName + ".Z.symm"].stop();
 
-  // r_x[p] = -dualResidues[p] - Tr(A_p Z)
+  // r_x[p] = -dual_residues[p] - Tr(A_p Z)
   // r_y[n] = dualObjective[n] - (FreeVarMatrix^T x)_n
   // Here, dx = r_x, dy = r_y.
   timers[timerName + ".computeSchurRHS"].resume();
