@@ -48,7 +48,7 @@ void compute_schur_complement(
 void SDP_Solver::initialize_schur_complement_solver(
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
-  const std::vector<int> &block_dims,
+  const std::vector<size_t> &block_dims,
   Block_Diagonal_Matrix &schur_complement_cholesky, Matrix &schur_off_diagonal,
   Matrix &Q)
 {

@@ -36,7 +36,7 @@ void compute_schur_RHS(const SDP &sdp, const Vector &dual_residues,
   // r_x[p] = -dual_residues[p] - Tr(A_p Z), where A_p are as described
   // in SDP.h.  The trace can be computed in terms of bilinearBases
   // using bilinearBlockPairing.
-  for(unsigned int j = 0; j < sdp.dimensions.size(); j++)
+  for(size_t j = 0; j < sdp.dimensions.size(); j++)
     {
       for(auto &t : sdp.constraint_indices[j])
         {
@@ -45,7 +45,6 @@ void compute_schur_RHS(const SDP &sdp, const Vector &dual_residues,
               const int h = sdp.bilinear_bases[b].rows;
               // Pointer to the k-th column of sdp.bilinearBases[b]
               const Real *q = &sdp.bilinear_bases[b].elements[(t.k) * h];
-
               r_x[t.p] -= bilinear_block_pairing(q, h, Z.blocks[b], t.r, t.s);
             }
         }

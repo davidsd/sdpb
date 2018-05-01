@@ -82,7 +82,8 @@ public:
   //                                           0 <= m <= delta_b)
   //
   std::vector<Matrix> bilinear_bases;
-  std::vector<El::Matrix<El::BigFloat>> bilinear_bases_elemental;
+  std::vector<El::Matrix<El::BigFloat>> bilinear_bases_elemental_local;
+  std::vector<El::DistMatrix<El::BigFloat>> bilinear_bases_elemental_dist;
 
   // FreeVarMatrix = B, a PxN matrix
   Matrix free_var_matrix;
@@ -95,16 +96,16 @@ public:
   // b, a vector of length N used with dual_objective
   Vector dual_objective_b;
   El::DistMatrix<El::BigFloat> dual_objective_b_elemental;
-  
+
   // objectiveConst = f
   Real objective_const;
   El::BigFloat objective_const_elemental;
 
   // dimensions[j] = m_j  (0 <= j < J)
-  std::vector<int> dimensions;
+  std::vector<size_t> dimensions;
 
   // degrees[j] = d_j  (0 <= j < J)
-  std::vector<int> degrees;
+  std::vector<size_t> degrees;
 
   // blocks gives the 1-to-many mapping
   //
@@ -113,7 +114,7 @@ public:
   // entering the constraint matrices A_p.  blocks[j1] and blocks[j2]
   // are disjoint unless j1==j2.
   //
-  std::vector<std::vector<int>> blocks;
+  std::vector<std::vector<size_t>> blocks;
 
   // constraintIndices gives the 1-to-many mapping described above
   //
@@ -134,14 +135,14 @@ public:
   //
   void initialize_constraint_indices()
   {
-    size_t p (0);
+    size_t p(0);
     for(size_t j = 0; j < dimensions.size(); j++)
       {
         constraint_indices.emplace_back(0);
 
-        for(int s = 0; s < dimensions[j]; ++s)
-          for(int r = 0; r <= s; ++r)
-            for(int k = 0; k <= degrees[j]; ++k)
+        for(size_t s = 0; s < dimensions[j]; ++s)
+          for(size_t r = 0; r <= s; ++r)
+            for(size_t k = 0; k <= degrees[j]; ++k)
               {
                 constraint_indices[j].emplace_back(p, r, s, k);
                 ++p;
@@ -154,13 +155,14 @@ public:
   //
   // psdMatrixBlockDims()[b] = (delta_b+1)*m_j = length(v_{b,*})*m_j
   //
-  std::vector<int> psd_matrix_block_dims() const
+  std::vector<size_t> psd_matrix_block_dims() const
   {
-    std::vector<int> result;
+    std::vector<size_t> result;
     for(size_t j = 0; j < dimensions.size(); ++j)
       for(auto &b : blocks[j])
         {
-          result.push_back(bilinear_bases_elemental[b].Height() * dimensions[j]);
+          result.push_back(bilinear_bases_elemental_local[b].Height()
+                           * dimensions[j]);
         }
     return result;
   }
@@ -169,15 +171,16 @@ public:
   //
   // bilinearPairingBlockDims()[b] = (d_j + 1)*m_j
   //
-  std::vector<int> bilinear_pairing_block_dims() const
+  std::vector<size_t> bilinear_pairing_block_dims() const
   {
-    std::vector<int> dims;
+    std::vector<size_t> result;
     for(size_t j = 0; j < dimensions.size(); j++)
       for(auto &b : blocks[j])
         {
-          dims.push_back(bilinear_bases_elemental[b].Width() * dimensions[j]);
+          result.push_back(bilinear_bases_elemental_local[b].Width()
+                           * dimensions[j]);
         }
-    return dims;
+    return result;
   }
 
   // Dimensions of the blocks S^(j) of the Schur complement matrix:
@@ -185,11 +188,13 @@ public:
   // schurBlockDims()[j] = (d_j+1)*m_j*(m_j+1)/2
   //                     = length(constraintIndices[j])
   //
-  std::vector<int> schur_block_dims() const
+  std::vector<size_t> schur_block_dims() const
   {
-    std::vector<int> dims;
-    for(unsigned int j = 0; j < dimensions.size(); j++)
-      dims.push_back(constraint_indices[j].size());
+    std::vector<size_t> dims;
+    for(size_t j = 0; j < dimensions.size(); j++)
+      {
+        dims.push_back(constraint_indices[j].size());
+      }
     return dims;
   }
 

@@ -28,11 +28,11 @@ public:
 
   // The rows (or columns) of M corresponding to the top-left entry of
   // each block M_b
-  std::vector<int> block_start_indices;
+  std::vector<size_t> block_start_indices;
 
   // Construct a Block_Diagonal_Matrix from a vector of dimensions {s_0,
   // ..., s_{bMax-1}} for each block.
-  explicit Block_Diagonal_Matrix(const std::vector<int> &block_sizes) : dim(0)
+  explicit Block_Diagonal_Matrix(const std::vector<size_t> &block_sizes) : dim(0)
   {
     for(auto &block_size : block_sizes)
       {

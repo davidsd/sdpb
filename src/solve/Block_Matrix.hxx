@@ -19,7 +19,7 @@ struct Block_Matrix
 {
   std::vector<El::DistMatrix<El::BigFloat>> blocks;
 
-  Block_Matrix(const std::vector<int> &block_heights, const size_t &width)
+  Block_Matrix(const std::vector<size_t> &block_heights, const size_t &width)
   {
     for(auto &block_height : block_heights)
       {
