@@ -13,8 +13,10 @@ SDP_Solver::SDP_Solver(const std::vector<boost::filesystem::path> &sdp_files,
       // FIXME: Maybe we can use schur_block_dims() instead of making a copy?
       dual_residues_elemental(x_elemental)
 {
+  X.set_zero();
+  Y.set_zero();
   Zero(y_elemental);
-  
+
   // X = \Omega_p I
   X.add_diagonal(parameters.initial_matrix_scale_primal);
   X.add_diagonal(parameters.initial_matrix_scale_primal_elemental);
