@@ -11,9 +11,12 @@ void block_tensor_inv_transpose_congruence_with_cholesky(
   const std::vector<Matrix> &bilinear_bases, std::vector<Matrix> &workspace,
   Block_Diagonal_Matrix &result)
 {
-  for(unsigned int b = 0; b < bilinear_bases.size(); b++)
-    tensor_inv_transpose_congruence_with_cholesky(
-      X_cholesky.blocks[b], bilinear_bases[b], workspace[b], result.blocks[b]);
+  for(size_t b = 0; b < bilinear_bases.size(); b++)
+    {
+      tensor_inv_transpose_congruence_with_cholesky(
+        X_cholesky.blocks[b], bilinear_bases[b], workspace[b],
+        result.blocks[b]);
+    }
 }
 
 void block_tensor_inv_transpose_congruence_with_cholesky(

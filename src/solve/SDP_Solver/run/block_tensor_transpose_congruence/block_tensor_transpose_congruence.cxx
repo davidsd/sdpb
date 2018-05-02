@@ -26,7 +26,7 @@ void block_tensor_transpose_congruence(
   std::vector<El::DistMatrix<El::BigFloat>> &workspace,
   Block_Diagonal_Matrix &result)
 {
-  for(unsigned int b = 0; b < bilinear_bases.size(); b++)
+  for(size_t b = 0; b < bilinear_bases.size(); b++)
     {
       Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL,
            El::BigFloat(1), Y.blocks_elemental[b], bilinear_bases[b], 
