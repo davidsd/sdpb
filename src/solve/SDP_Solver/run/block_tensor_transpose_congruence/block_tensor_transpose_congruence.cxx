@@ -19,3 +19,20 @@ void block_tensor_transpose_congruence(
     tensor_transpose_congruence(A.blocks[b], bilinear_bases[b], Work[b],
                                 result.blocks[b]);
 }
+
+void block_tensor_transpose_congruence(
+  const Block_Diagonal_Matrix &Y,
+  const std::vector<El::DistMatrix<El::BigFloat>> &bilinear_bases,
+  std::vector<El::DistMatrix<El::BigFloat>> &workspace,
+  Block_Diagonal_Matrix &result)
+{
+  for(unsigned int b = 0; b < bilinear_bases.size(); b++)
+    {
+      Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL,
+           El::BigFloat(1), Y.blocks_elemental[b], bilinear_bases[b], 
+           El::BigFloat(0), workspace[b]);
+      Gemm(El::Orientation::TRANSPOSE, El::Orientation::NORMAL,
+           El::BigFloat(1), bilinear_bases[b], workspace[b], 
+           El::BigFloat(0), result.blocks_elemental[b]);
+    }
+}

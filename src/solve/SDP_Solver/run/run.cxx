@@ -12,10 +12,21 @@ void block_tensor_inv_transpose_congruence_with_cholesky(
   const Block_Diagonal_Matrix &L, const std::vector<Matrix> &Q,
   std::vector<Matrix> &Work, Block_Diagonal_Matrix &Result);
 
+void block_tensor_inv_transpose_congruence_with_cholesky(
+  const Block_Diagonal_Matrix &X_cholesky,
+  const std::vector<El::DistMatrix<El::BigFloat>> &bilinear_bases,
+  std::vector<El::DistMatrix<El::BigFloat>> &workspace,
+  Block_Diagonal_Matrix &result);
+
 void block_tensor_transpose_congruence(const Block_Diagonal_Matrix &A,
                                        const std::vector<Matrix> &Q,
                                        std::vector<Matrix> &Work,
                                        Block_Diagonal_Matrix &Result);
+void block_tensor_transpose_congruence(
+  const Block_Diagonal_Matrix &Y,
+  const std::vector<El::DistMatrix<El::BigFloat>> &bilinear_bases,
+  std::vector<El::DistMatrix<El::BigFloat>> &workspace,
+  Block_Diagonal_Matrix &result);
 
 void compute_dual_residues(const SDP &sdp, const Vector &y,
                            const Block_Diagonal_Matrix &bilinear_pairings_Y,
@@ -81,11 +92,15 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
   // Additional workspace variables used in step_length()
   Block_Diagonal_Matrix step_matrix_workspace(X);
   std::vector<Matrix> bilinear_pairings_workspace;
+  std::vector<El::DistMatrix<El::BigFloat>>
+    bilinear_pairings_workspace_elemental;
   std::vector<Vector> eigenvalues_workspace;
   std::vector<Vector> QR_workspace;
   for(unsigned int b = 0; b < sdp.bilinear_bases.size(); b++)
     {
       bilinear_pairings_workspace.emplace_back(
+        X.blocks[b].rows, bilinear_pairings_X_Inv.blocks[b].cols);
+      bilinear_pairings_workspace_elemental.emplace_back(
         X.blocks[b].rows, bilinear_pairings_X_Inv.blocks[b].cols);
       eigenvalues_workspace.emplace_back(X.blocks[b].rows);
       QR_workspace.emplace_back(3 * X.blocks[b].rows - 1);
@@ -120,7 +135,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
           + dot(sdp.primal_objective_c_elemental, x_elemental);
       dual_objective_elemental
         = sdp.objective_const_elemental
-        + El::Dotu(sdp.dual_objective_b_elemental, y_elemental);
+          + El::Dotu(sdp.dual_objective_b_elemental, y_elemental);
       duality_gap_elemental
         = Abs(primal_objective_elemental - dual_objective_elemental)
           / Max(Abs(primal_objective_elemental)
@@ -144,11 +159,19 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       block_tensor_inv_transpose_congruence_with_cholesky(
         X_cholesky, sdp.bilinear_bases, bilinear_pairings_workspace,
         bilinear_pairings_X_Inv);
+
+      block_tensor_inv_transpose_congruence_with_cholesky(
+        X_cholesky, sdp.bilinear_bases_elemental_dist,
+        bilinear_pairings_workspace_elemental, bilinear_pairings_X_Inv);
       timers["run.blockTensorInvTransposeCongruenceWithCholesky"].stop();
 
       timers["run.blockTensorTransposeCongruence"].resume();
       block_tensor_transpose_congruence(Y, sdp.bilinear_bases,
                                         bilinear_pairings_workspace,
+                                        bilinear_pairings_Y);
+
+      block_tensor_transpose_congruence(Y, sdp.bilinear_bases_elemental_dist,
+                                        bilinear_pairings_workspace_elemental,
                                         bilinear_pairings_Y);
       timers["run.blockTensorTransposeCongruence"].stop();
 
