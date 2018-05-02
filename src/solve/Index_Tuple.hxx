@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 // Instead of working with the 1 to 1 correspondence p <-> (j,r,s,k),
 // it is convenient to collect tuples with the same index j. This
 // gives a 1-to-many correspondence
@@ -19,3 +21,13 @@ public:
   Index_Tuple(int p, int r, int s, int k) : p(p), r(r), s(s), k(k) {}
   Index_Tuple() {}
 };
+
+inline std::ostream & operator<<(std::ostream &os, const Index_Tuple &index_tuple)
+{
+  os << '{'
+     << index_tuple.p << ' '
+     << index_tuple.r << ' '
+     << index_tuple.s << ' '
+     << index_tuple.k << '}';
+  return os;
+}
