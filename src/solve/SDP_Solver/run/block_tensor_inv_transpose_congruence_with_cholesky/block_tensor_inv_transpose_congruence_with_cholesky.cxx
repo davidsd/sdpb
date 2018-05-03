@@ -32,8 +32,8 @@ void block_tensor_inv_transpose_congruence_with_cholesky(
       size_t row_offset(workspace[b].GlobalRow(0)),
         column_offset(workspace[b].GlobalCol(0));
 
-      for(size_t row = 0; row < workspace[b].LocalHeight(); ++row)
-        for(size_t column = 0; column < workspace[b].LocalWidth(); ++column)
+      for(int64_t row = 0; row < workspace[b].LocalHeight(); ++row)
+        for(int64_t column = 0; column < workspace[b].LocalWidth(); ++column)
           {
             size_t m_row((row + row_offset) / bilinear_bases[b].Height()),
               m_column((column + column_offset) / bilinear_bases[b].Width());

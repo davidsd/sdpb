@@ -83,7 +83,8 @@ void fill_from_dual_constraint_groups(
     {
       assert(group != dualConstraintGroups.end());
       assert(group->constraintConstants_elemental.size() == block_size);
-      assert(group->constraintMatrix_elemental.Height() == block_size);
+      assert(static_cast<size_t>(group->constraintMatrix_elemental.Height())
+             == block_size);
       {
         sdp.primal_objective_c_elemental.blocks.emplace_back(block_size, 1);
         auto block(sdp.primal_objective_c_elemental.blocks.rbegin());
@@ -99,16 +100,16 @@ void fill_from_dual_constraint_groups(
         sdp.free_var_matrix_elemental.blocks.emplace_back(
           block_size, sdp.dual_objective_b_elemental.Height());
         auto block(sdp.free_var_matrix_elemental.blocks.rbegin());
-        size_t local_height(block->LocalHeight()),
+        int64_t local_height(block->LocalHeight()),
           local_width(block->LocalWidth());
         El::Int row_begin(block->GlobalRow(0)),
           column_begin(block->GlobalCol(0));
 
-        for(size_t row = 0;
+        for(int64_t row = 0;
             row < local_height
             && row + row_begin < group->constraintMatrix_elemental.Height();
             ++row)
-          for(size_t column = 0;
+          for(int64_t column = 0;
               column < local_width
               && column + column_begin
                    < group->constraintMatrix_elemental.Width();
