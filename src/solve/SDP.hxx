@@ -109,12 +109,12 @@ public:
 
   // blocks gives the 1-to-many mapping
   //
-  // blocks[j] = {b_{j1}, b_{j2}, ...}  (0 <= j < J)
+  // blocks[j] = {2*j, 2*j+1}  (0 <= j < J)
   //
-  // entering the constraint matrices A_p.  blocks[j1] and blocks[j2]
-  // are disjoint unless j1==j2.
+  // entering the constraint matrices A_p.  There are always 2 blocks,
+  // one for even terms in the polynomial and the other for odd terms.
   //
-  std::vector<std::vector<size_t>> blocks;
+  std::vector<std::array<size_t,2>> blocks;
 
   // constraintIndices gives the 1-to-many mapping described above
   //

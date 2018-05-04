@@ -20,13 +20,20 @@ void fill_from_dual_constraint_groups(
       // Dual_Constraint_Group.  sdp.blocks[j] = {b1, b2, ... } contains
       // the indices for the blocks of Y corresponding to the j-th
       // group.
-      std::vector<size_t> blocks;
+      if(g.bilinearBases_elemental.size() != 2)
+        {
+          throw std::runtime_error(
+            "Wrong number of elements in dualConstraintGroups::bilinearBases.  "
+            "Expected 2 but found:"
+            + std::to_string(g.bilinearBases_elemental.size()));
+        }
+      sdp.blocks.push_back({sdp.bilinear_bases_elemental_local.size(),
+            sdp.bilinear_bases_elemental_local.size() + 1});
       for(auto &b : g.bilinearBases_elemental)
         {
           // Ensure that each bilinearBasis is sampled the correct number
           // of times
           assert(static_cast<size_t>(b.Width()) == g.degree + 1);
-          blocks.push_back(sdp.bilinear_bases_elemental_local.size());
           sdp.bilinear_bases_elemental_local.push_back(b);
           sdp.bilinear_bases_elemental_dist.emplace_back(b.Height(),
                                                          b.Width());
@@ -50,7 +57,6 @@ void fill_from_dual_constraint_groups(
           assert(b.cols == g.degree + 1);
           sdp.bilinear_bases.push_back(b);
         }
-      sdp.blocks.push_back(blocks);
 
       // sdp.primal_objective is the concatenation of the
       // g.constraintConstants
