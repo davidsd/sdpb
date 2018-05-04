@@ -43,9 +43,9 @@ void constraint_matrix_weighted_sum(const SDP &sdp, const Vector &a,
               diagonal_congruence(&a[p], sdp.bilinear_bases[b], r, s,
                                   result.blocks[b]);
 
-              // result should be symmetric, so if r != s, we must divide
-              // the (r,s)-th block of result.blocks[b] by 2 and copy its
-              // transpose to the (s,r)-th block.
+              // result should be symmetric, so if r != s, we must
+              // divide the (r,s)-th block of result.blocks[b] by 2
+              // and copy it to its transpose, the (s,r)-th block.
               if(r != s)
                 {
                   const int u = sdp.bilinear_bases[b].rows;

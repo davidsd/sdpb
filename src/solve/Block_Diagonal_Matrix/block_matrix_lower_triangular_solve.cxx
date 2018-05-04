@@ -24,8 +24,8 @@ void block_matrix_lower_triangular_solve(const Block_Diagonal_Matrix &L,
 }
 
 // B := L^{-1} B, where L is the result of a previous cholesky
-// factorization.  Note that this is different from computing the solution to A
-// B=(L L^T) B
+// factorization.  Note that this is different from computing the solution to
+// A B == (L L^T) B
 void block_matrix_lower_triangular_solve(const Block_Diagonal_Matrix &L,
                                          Block_Matrix &B)
 {

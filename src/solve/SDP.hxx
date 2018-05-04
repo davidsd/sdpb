@@ -136,7 +136,7 @@ public:
   void initialize_constraint_indices()
   {
     size_t p(0);
-    for(size_t j = 0; j < dimensions.size(); j++)
+    for(size_t j = 0; j < dimensions.size(); ++j)
       {
         constraint_indices.emplace_back(0);
 
