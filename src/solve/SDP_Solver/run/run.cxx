@@ -32,6 +32,11 @@ void compute_dual_residues(const SDP &sdp, const Vector &y,
                            const Block_Diagonal_Matrix &bilinear_pairings_Y,
                            Vector &dual_residues);
 
+void compute_dual_residues(const SDP &sdp,
+                           const El::DistMatrix<El::BigFloat> &y,
+                           const Block_Diagonal_Matrix &bilinear_pairings_Y,
+                           Block_Matrix &dual_residues);
+
 void compute_primal_residues(const SDP &sdp, const Vector &x,
                              const Block_Diagonal_Matrix &X,
                              Block_Diagonal_Matrix &primal_residues);
@@ -180,6 +185,14 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       timers["run.computeDualResidues"].resume();
       compute_dual_residues(sdp, y, bilinear_pairings_Y, dual_residues);
       dual_error = max_abs_vector(dual_residues);
+
+      compute_dual_residues(sdp, y_elemental, bilinear_pairings_Y,
+                            dual_residues_elemental);
+      dual_error_elemental = 0;
+      for(auto &block : dual_residues_elemental.blocks)
+        {
+          dual_error_elemental = Max(dual_error_elemental, El::MaxAbs(block));
+        }
       timers["run.computeDualResidues"].stop();
 
       timers["run.computePrimalResidues"].resume();
