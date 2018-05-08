@@ -61,8 +61,7 @@ void compute_dual_residues(const SDP &sdp,
   for(size_t jj = 0; jj < sdp.dimensions.size(); ++jj)
     {
       Zero(dual_residues.blocks[jj]);
-
-      const size_t block_size(sdp.degrees[jj]+1);
+      const size_t block_size(sdp.degrees[jj] + 1);
 
       // Not sure whether it is better to first loop over blocks in
       // the result or over sub-blocks in bilinear_pairings_Y
@@ -88,8 +87,11 @@ void compute_dual_residues(const SDP &sdp,
                   * block_size);
 
                 El::DistMatrix<El::BigFloat> residue_sub_block(
-                  El::View(dual_residues.blocks[jj], residue_row_offset, 0));
-                
+                  El::View(dual_residues.blocks[jj], residue_row_offset, 0,
+                           block_size, 1));
+
+                // FIXME: This does twice as much work as needed when
+                // column_block==row_block.
                 El::Axpy(El::BigFloat(-0.5), lower_diagonal,
                          residue_sub_block);
                 El::Axpy(El::BigFloat(-0.5), upper_diagonal,
