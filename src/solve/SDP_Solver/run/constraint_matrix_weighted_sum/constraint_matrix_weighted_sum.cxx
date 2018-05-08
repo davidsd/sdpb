@@ -63,3 +63,38 @@ void constraint_matrix_weighted_sum(const SDP &sdp, const Vector &a,
         }
     }
 }
+
+void constraint_matrix_weighted_sum(const SDP &sdp, const Block_Matrix &a,
+                                    Block_Diagonal_Matrix &result)
+{
+  for(size_t jj = 0; jj < sdp.dimensions.size(); ++jj)
+    {
+      const size_t block_size(sdp.degrees[jj] + 1);
+      for(size_t block_index(2 * jj); block_index < 2 * jj + 2; ++block_index)
+        {
+          El::Zero(result.blocks_elemental[block_index]);
+          for(size_t column_block = 0; column_block < sdp.dimensions[jj];
+              ++column_block)
+            for(size_t row_block = 0; row_block <= column_block; ++row_block)
+              {
+                size_t row_offset(
+                  ((column_block * (column_block + 1)) / 2 + row_block)
+                  * block_size);
+                El::DistMatrix<El::BigFloat> sub_vector(
+                  El::LockedView(a.blocks[jj], row_offset, 0, block_size, 1));
+                El::DistMatrix<El::BigFloat> scaled_bases(
+                  sdp.bilinear_bases_elemental_dist[block_index]);
+      
+                El::DiagonalScale(El::LeftOrRight::RIGHT,
+                                  El::Orientation::NORMAL, sub_vector,
+                                  scaled_bases);
+
+                El::Gemm(El::Orientation::NORMAL, El::Orientation::TRANSPOSE,
+                         El::BigFloat(1),
+                         sdp.bilinear_bases_elemental_dist[block_index],
+                         scaled_bases, El::BigFloat(0),
+                         result.blocks_elemental[block_index]);
+              }
+        }
+    }
+}
