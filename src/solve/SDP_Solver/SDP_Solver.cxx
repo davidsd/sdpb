@@ -15,6 +15,10 @@ SDP_Solver::SDP_Solver(const std::vector<boost::filesystem::path> &sdp_files,
 {
   X.set_zero();
   Y.set_zero();
+  for(auto &b : x_elemental.blocks)
+    {
+      Zero(b);
+    }
   Zero(y_elemental);
 
   // X = \Omega_p I
