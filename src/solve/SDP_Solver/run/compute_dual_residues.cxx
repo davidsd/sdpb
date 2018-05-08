@@ -100,12 +100,13 @@ void compute_dual_residues(const SDP &sdp,
         }
     }
 
-  // dualResidues += primalObjective - (FreeVarMatrix y)
   for(size_t b = 0; b < dual_residues.blocks.size(); ++b)
     {
+      // dualResidues -= FreeVarMatrix * y
       Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, El::BigFloat(-1),
            sdp.free_var_matrix_elemental.blocks[b], y, El::BigFloat(1),
            dual_residues.blocks[b]);
+      // dualResidues += primalObjective
       Axpy(El::BigFloat(1), sdp.primal_objective_c_elemental.blocks[b],
            dual_residues.blocks[b]);
     }
