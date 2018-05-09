@@ -8,6 +8,10 @@ void cholesky_decomposition(const Block_Diagonal_Matrix &A,
     {
       cholesky_decomposition(A.blocks[b], L.blocks[b]);
 
+      // FIXME: Use pivoting?
+      //
+      // Note: This only sets the lower triangular part and diagonal
+      // of L.  The upper triangular part of L is still equal to A.
       L.blocks_elemental[b] = A.blocks_elemental[b];
       Cholesky(El::UpperOrLowerNS::LOWER, L.blocks_elemental[b]);
     }
