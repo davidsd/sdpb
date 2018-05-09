@@ -45,9 +45,9 @@ void block_tensor_inv_transpose_congruence_with_cholesky(
                     (row + row_offset) % bilinear_bases[b].Height(),
                     (column + column_offset) % bilinear_bases[b].Width()));
           }
-      El::cholesky::SolveAfter(El::UpperOrLowerNS::LOWER,
-                               El::Orientation::NORMAL,
-                               X_cholesky.blocks_elemental[b], workspace[b]);
+      El::Trsm(El::LeftOrRight::LEFT, El::UpperOrLowerNS::LOWER,
+               El::Orientation::NORMAL, El::UnitOrNonUnit::NON_UNIT,
+               El::BigFloat(1), X_cholesky.blocks_elemental[b], workspace[b]);
 
       // We have to set this to zero because the values can be NaN.
       // Multiplying 0*NaN = NaN.
