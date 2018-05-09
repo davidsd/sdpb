@@ -109,7 +109,8 @@ private:
     const Block_Diagonal_Matrix &bilinear_pairings_Y,
     const std::vector<size_t> &block_dims,
     Block_Diagonal_Matrix &schur_complement_cholesky,
-    Matrix &schur_off_diagonal, Matrix &Q);
+    Matrix &schur_off_diagonal, Block_Matrix &schur_off_diagonal_elemental,
+    Matrix &Q, El::DistMatrix<El::BigFloat> &Q_elemental);
 
   // Compute (dx, dX, dy, dY), given the current mu, a reduction
   // parameter beta.  `correctorPhase' specifies whether to use the

@@ -1,7 +1,6 @@
+#include "../../lower_triangular_solve.hxx"
 #include "../../SDP_Solver.hxx"
 #include "../../../Timers.hxx"
-
-#include <El.hpp>
 
 // Compute the quantities needed to solve the Schur complement
 // equation
@@ -50,7 +49,8 @@ void SDP_Solver::initialize_schur_complement_solver(
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
   const std::vector<size_t> &block_dims,
   Block_Diagonal_Matrix &schur_complement_cholesky, Matrix &schur_off_diagonal,
-  Matrix &Q)
+  Block_Matrix &schur_off_diagonal_elemental, Matrix &Q,
+  El::DistMatrix<El::BigFloat> &Q_elemental)
 {
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
   // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
@@ -71,9 +71,12 @@ void SDP_Solver::initialize_schur_complement_solver(
 
   // SchurOffDiagonal = L'^{-1} FreeVarMatrix
   schur_off_diagonal = sdp.free_var_matrix;
+  schur_off_diagonal_elemental = sdp.free_var_matrix_elemental;
   timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
     .resume();
   lower_triangular_solve(schur_complement_cholesky, schur_off_diagonal);
+  lower_triangular_solve(schur_complement_cholesky,
+                         schur_off_diagonal_elemental);
   timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
     .stop();
 
