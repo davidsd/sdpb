@@ -36,7 +36,6 @@
 // used later):
 // - SchurComplementCholesky
 // - SchurOffDiagonal
-// - Q, Qpivots
 //
 
 void compute_schur_complement(
@@ -49,7 +48,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
   const std::vector<size_t> &block_dims,
   Block_Diagonal_Matrix &schur_complement_cholesky, Matrix &schur_off_diagonal,
-  Block_Matrix &schur_off_diagonal_elemental, Matrix &Q,
+  Block_Matrix &schur_off_diagonal_block, Matrix &Q,
   El::DistMatrix<El::BigFloat> &Q_elemental)
 {
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
@@ -71,12 +70,11 @@ void SDP_Solver::initialize_schur_complement_solver(
 
   // SchurOffDiagonal = L'^{-1} FreeVarMatrix
   schur_off_diagonal = sdp.free_var_matrix;
-  schur_off_diagonal_elemental = sdp.free_var_matrix_elemental;
+  schur_off_diagonal_block = sdp.free_var_matrix_elemental;
   timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
     .resume();
   lower_triangular_solve(schur_complement_cholesky, schur_off_diagonal);
-  lower_triangular_solve(schur_complement_cholesky,
-                         schur_off_diagonal_elemental);
+  lower_triangular_solve(schur_complement_cholesky, schur_off_diagonal_block);
   timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
     .stop();
 
@@ -96,76 +94,31 @@ void SDP_Solver::initialize_schur_complement_solver(
   Q.resize(off_diagonal_columns, off_diagonal_columns);
   Q.set_zero();
 
+  const size_t Q_size(schur_off_diagonal_block.blocks.at(0).Width());
+  Zeros(Q_elemental, Q_size, Q_size);
+
+  size_t schur_off_diagonal_total_rows(0);
+  for(auto &block : schur_off_diagonal_block.blocks)
+    {
+      schur_off_diagonal_total_rows += block.Height();
+    }
+  El::DistMatrix<El::BigFloat> schur_off_diagonal_dist(
+    schur_off_diagonal_total_rows, Q_size);
+
+  size_t row_offset(0);
+  for(auto &block : schur_off_diagonal_block.blocks)
+    {
+      El::DistMatrix<El::BigFloat> sub_matrix(
+        El::View(schur_off_diagonal_dist, row_offset, 0, block.Height(),
+                 block.Width()));
+      El::Copy(block, sub_matrix);
+      row_offset += block.Height();
+    }
+
   // Here, SchurOffDiagonal = L'^{-1} B.
   //
   // UpperLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal
   matrix_square_into_block(schur_off_diagonal, Q, 0, 0);
-
-  // const El::Grid grid(El::mpi::COMM_WORLD);
-  // El::DistMatrix<El::BigFloat> schur_off_diagonal_elemental(grid),
-  //   Q_elemental(grid);
-  // schur_off_diagonal_elemental.Resize(schur_off_diagonal.rows,
-  //                                     schur_off_diagonal.cols);
-  // Zeros(Q_elemental, schur_off_diagonal.cols, schur_off_diagonal.cols);
-
-  // const El::Int local_height(schur_off_diagonal_elemental.LocalHeight()),
-  //   local_width(schur_off_diagonal_elemental.LocalWidth());
-
-  // for(size_t row = 0; row < local_height; ++row)
-  //   {
-  //     El::Int global_row(schur_off_diagonal_elemental.GlobalRow(row));
-  //     for(size_t column = 0; column < local_width; ++column)
-  //       {
-  //         El::Int global_column(
-  //           schur_off_diagonal_elemental.GlobalCol(column));
-
-  //         std::stringstream ss;
-  //         ss.precision(1024 * 0.31 + 5);
-  //         ss << schur_off_diagonal.elt(global_row, global_column);
-  //         schur_off_diagonal_elemental.SetLocal(row, column,
-  //                                               El::BigFloat(ss.str(), 10));
-  //       }
-  //   }
-  // El::Syrk(El::UPPER, El::TRANSPOSE, El::BigFloat(1),
-  //          schur_off_diagonal_elemental, El::BigFloat(1), Q_elemental);
-
-  // const El::Int Q_height(Q_elemental.LocalHeight()),
-  //   Q_width(Q_elemental.LocalWidth());
-
-  // for(size_t row = 0; row < Q_height; ++row)
-  //   {
-  //     El::Int global_row(Q_elemental.GlobalRow(row));
-  //     for(size_t column = 0; column < Q_width; ++column)
-  //       {
-  //         El::Int global_column(Q_elemental.GlobalCol(column));
-
-  //         std::stringstream ss;
-  //         ss.precision(1024 * 0.31 + 5);
-  //         ss << Q_elemental.GetLocal(row, column);
-  //         Q.elt(global_row, global_column) = ss.str();
-  //       }
-  //   }
-
-  // std::cout.precision(1024 * 0.31 + 5);
-  // std::cout << "Qe: "
-  //           // << local_height << " " << local_width << " "
-  //           << Q_height << " " << Q_width << " " << Q.rows << " " << Q.cols
-  //           << " " << Q_elemental.GetLocal(0, 0) << " "
-  //           << "\n";
-  // std::cout << "Qe: "
-  //           // << local_height << " " << local_width << " "
-  //           << Q_height << " " << Q_width << " " << Q.rows << " " << Q.cols
-  //           << " " << Q.elt(0, 0) << " "
-  //           << "\n";
-  // std::cout << El::mpfr::Precision() << " "
-  //           << schur_off_diagonal.elt(0,0).get_prec() << " "
-  //           << Q.elt(0, 0).get_prec() << " "
-  //            << "\n";
-
-  // // std::cout << "Qm: " << Q_height << " " << Q_width << " " << Q.rows << "
-  // "
-  // //           << Q.cols << " " << Q.elt(0, 0) << " "
-  // //           << "\n";
 
   // UpperRight(Q) = LowerLeft(Q)^T
   for(size_t c = 0; c < schur_off_diagonal.cols; c++)
@@ -173,9 +126,12 @@ void SDP_Solver::initialize_schur_complement_solver(
       {
         Q.elt(c, r) = Q.elt(r, c);
       }
+  
+  El::Syrk(El::UpperOrLowerNS::UPPER, El::OrientationNS::TRANSPOSE,
+           El::BigFloat(1), schur_off_diagonal_dist, El::BigFloat(1),
+           Q_elemental);
+  El::MakeSymmetric(El::UpperOrLower::UPPER, Q_elemental);
   timers["initializeSchurComplementSolver.Qcomputation"].stop();
-
-  // Resize Qpivots appropriately and compute the LU decomposition of Q
 
   timers["initializeSchurComplementSolver.LUDecomposition"].resume();
   timers["LUDecomposition.actualLU"].resume();
