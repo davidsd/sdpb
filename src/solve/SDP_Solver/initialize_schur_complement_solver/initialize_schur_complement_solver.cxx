@@ -138,6 +138,7 @@ void SDP_Solver::initialize_schur_complement_solver(
 
   Matrix Q_temp(Q);
   cholesky_decomposition(Q_temp, Q);
+  Cholesky(El::UpperOrLowerNS::LOWER, Q_elemental);
   timers["LUDecomposition.actualLU"].stop();
   timers["initializeSchurComplementSolver.LUDecomposition"].stop();
 }
