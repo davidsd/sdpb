@@ -44,6 +44,8 @@ void compute_primal_residues(const SDP &sdp, const Vector &x,
 
 Real predictor_centering_parameter(const SDP_Solver_Parameters &parameters,
                                    const bool is_primal_dual_feasible);
+El::BigFloat predictor_centering_parameter_elemental(
+  const SDP_Solver_Parameters &parameters, const bool is_primal_dual_feasible);
 
 Real corrector_centering_parameter(const SDP_Solver_Parameters &parameters,
                                    const Block_Diagonal_Matrix &X,
@@ -223,11 +225,14 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         return SDP_Solver_Terminate_Reason::MaxIterationsExceeded;
 
       Real mu, beta_predictor, beta_corrector;
+      El::BigFloat mu_elemental, beta_predictor_elemental,
+        beta_corrector_elemental;
 
       // Search direction: These quantities have the same structure
       // as (x, X, y, Y). They are computed twice each iteration:
       // once in the predictor step, and once in the corrector step.
       Vector dx(x), dy(y);
+      // Block_Matrix dx_elemental(x_elemental), dy_elemental(y_elemental);
       Block_Diagonal_Matrix dX(X), dY(Y);
       {
         // FIXME: It may be expensive to create these objects for each
@@ -269,9 +274,19 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         if(mu > parameters.max_complementarity)
           return SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
 
+        mu_elemental = frobenius_product_symmetric_elemental(X, Y) / X.dim;
+        if(mu_elemental > parameters.max_complementarity_elemental)
+          {
+            return SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
+          }
+
         // Compute the predictor solution for (dx, dX, dy, dY)
         beta_predictor = predictor_centering_parameter(
           parameters, is_primal_feasible && is_dual_feasible);
+
+        beta_predictor_elemental = predictor_centering_parameter_elemental(
+          parameters, is_primal_feasible && is_dual_feasible);
+        
         timers["run.computeSearchDirection(betaPredictor)"].resume();
         compute_search_direction(schur_complement_cholesky, schur_off_diagonal,
                                  X_cholesky, beta_predictor, mu, false, Q, dx,

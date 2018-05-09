@@ -170,6 +170,9 @@ public:
 // Tr(A B), where A and B are symmetric
 Real frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
                                  const Block_Diagonal_Matrix &B);
+El::BigFloat
+frobenius_product_symmetric_elemental(const Block_Diagonal_Matrix &A,
+                                      const Block_Diagonal_Matrix &B);
 
 // (X + dX) . (Y + dY), where X, dX, Y, dY are symmetric
 // BlockDiagonalMatrices and '.' is the Frobenius product.
