@@ -28,7 +28,7 @@ void solve_schur_complement_equation(
   const Matrix &schur_off_diagonal, const Matrix &Q, Vector &dx, Vector &dy)
 {
   // dx = SchurComplementCholesky^{-1} dx
-  block_matrix_lower_triangular_solve(schur_complement_cholesky, dx);
+  lower_triangular_solve(schur_complement_cholesky, dx);
 
   vector_scale_matrix_multiply_transpose_add(-1, schur_off_diagonal, dx, 1,
                                              dy);
@@ -39,5 +39,5 @@ void solve_schur_complement_equation(
   vector_scale_matrix_multiply_add(1, schur_off_diagonal, dy, 1, dx);
 
   // dx = SchurComplementCholesky^{-T} dx
-  block_matrix_lower_triangular_transpose_solve(schur_complement_cholesky, dx);
+  lower_triangular_transpose_solve(schur_complement_cholesky, dx);
 }

@@ -73,8 +73,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   schur_off_diagonal = sdp.free_var_matrix;
   timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
     .resume();
-  block_matrix_lower_triangular_solve(schur_complement_cholesky,
-                                      schur_off_diagonal);
+  lower_triangular_solve(schur_complement_cholesky, schur_off_diagonal);
   timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
     .stop();
 
@@ -179,7 +178,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   timers["LUDecomposition.actualLU"].resume();
 
   Matrix Q_temp(Q);
-  cholesky_decomposition(Q_temp,Q);
+  cholesky_decomposition(Q_temp, Q);
   timers["LUDecomposition.actualLU"].stop();
   timers["initializeSchurComplementSolver.LUDecomposition"].stop();
 }

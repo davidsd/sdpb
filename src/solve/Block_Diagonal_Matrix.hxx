@@ -32,7 +32,8 @@ public:
 
   // Construct a Block_Diagonal_Matrix from a vector of dimensions {s_0,
   // ..., s_{bMax-1}} for each block.
-  explicit Block_Diagonal_Matrix(const std::vector<size_t> &block_sizes) : dim(0)
+  explicit Block_Diagonal_Matrix(const std::vector<size_t> &block_sizes)
+      : dim(0)
   {
     for(auto &block_size : block_sizes)
       {
@@ -226,16 +227,14 @@ void block_matrix_solve_with_cholesky(
   Block_Diagonal_Matrix &X);              // overwritten
 
 // B := L^{-1} B, where L is lower-triangular
-void block_matrix_lower_triangular_solve(
-  const Block_Diagonal_Matrix &L, // constant
-  Matrix &B);                     // overwritten
+void lower_triangular_solve(const Block_Diagonal_Matrix &L, // constant
+                            Matrix &B);                     // overwritten
 
 // v := L^{-1} v, where L is lower-triangular
-void block_matrix_lower_triangular_solve(
-  const Block_Diagonal_Matrix &L, // constant
-  Vector &v);                     // overwritten
+void lower_triangular_solve(const Block_Diagonal_Matrix &L, // constant
+                            Vector &v);                     // overwritten
 
 // v := L^{-T} v, where L is lower-triangular
-void block_matrix_lower_triangular_transpose_solve(
+void lower_triangular_transpose_solve(
   const Block_Diagonal_Matrix &L, // constant
   Vector &v);                     // overwritten

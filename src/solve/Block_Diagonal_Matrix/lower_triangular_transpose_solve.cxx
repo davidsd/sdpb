@@ -2,8 +2,8 @@
 #include "../Block_Matrix.hxx"
 
 // v := L^{-T} v, where L is lower-triangular
-void block_matrix_lower_triangular_transpose_solve(
-  const Block_Diagonal_Matrix &L, Vector &v)
+void lower_triangular_transpose_solve(const Block_Diagonal_Matrix &L,
+                                      Vector &v)
 {
   for(size_t b = 0; b < L.blocks.size(); b++)
     {
@@ -14,8 +14,8 @@ void block_matrix_lower_triangular_transpose_solve(
 
 // v := L^{-T} v, where L is the result of a previous cholesky
 // factorization
-void block_matrix_lower_triangular_transpose_solve(
-  const Block_Diagonal_Matrix &L, Block_Matrix &v)
+void lower_triangular_transpose_solve(const Block_Diagonal_Matrix &L,
+                                      Block_Matrix &v)
 {
   for(size_t b = 0; b < L.blocks.size(); b++)
     {
