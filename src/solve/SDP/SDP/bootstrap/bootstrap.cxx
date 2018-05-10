@@ -41,6 +41,7 @@ void bootstrap(const Vector &affineObjective,
   sdp.objective_const = *affine;
   {
     std::stringstream ss;
+    ss.precision(std::cout.precision());
     ss << sdp.objective_const;
     sdp.objective_const_elemental = El::BigFloat(ss.str(), 10);
   }
@@ -55,10 +56,10 @@ void bootstrap(const Vector &affineObjective,
   for(size_t hh = 0; hh < local_height; ++hh)
     {
       std::stringstream ss;
-      ss << affineObjective[row_min + hh];
+      ss.precision(std::cout.precision());
+      ss << affineObjective[row_min +1 + hh];
       sdp.dual_objective_b_elemental.SetLocal(hh, 0,
                                               El::BigFloat(ss.str(), 10));
     }
-
   fill_from_dual_constraint_groups(dualConstraintGroups, sdp);
 }

@@ -325,6 +325,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
                                        parameters.step_length_reduction);
       {
         std::stringstream ss;
+        ss.precision(std::cout.precision());
         ss << primal_step_length;
         primal_step_length_elemental = El::BigFloat(ss.str(), 10);
       }
@@ -335,6 +336,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
                                      parameters.step_length_reduction);
       {
         std::stringstream ss;
+        ss.precision(std::cout.precision());
         ss << dual_step_length;
         dual_step_length_elemental = El::BigFloat(ss.str(), 10);
       }
