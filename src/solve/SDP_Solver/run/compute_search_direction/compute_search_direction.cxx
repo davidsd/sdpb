@@ -17,8 +17,11 @@
 //
 
 void compute_schur_RHS(const SDP &sdp, const Vector &dual_residues,
+                       const Block_Matrix &dual_residues_elemental,
                        const Block_Diagonal_Matrix &Z, const Vector &x,
-                       Vector &r_x, Vector &r_y);
+                       const Block_Matrix &x_elemental, Vector &r_x,
+                       Block_Matrix &r_x_elemental, Vector &r_y,
+                       El::DistMatrix<El::BigFloat> &r_y_elemental);
 
 void solve_schur_complement_equation(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
@@ -91,7 +94,8 @@ void SDP_Solver::compute_search_direction(
   // r_y[n] = dualObjective[n] - (FreeVarMatrix^T x)_n
   // Here, dx = r_x, dy = r_y.
   timers[timerName + ".computeSchurRHS"].resume();
-  compute_schur_RHS(sdp, dual_residues, Z, x, dx, dy);
+  compute_schur_RHS(sdp, dual_residues, dual_residues_elemental, Z, x,
+                    x_elemental, dx, dx_elemental, dy, dy_elemental);
   timers[timerName + ".computeSchurRHS"].stop();
 
   // Solve for dx, dy in-place
