@@ -50,17 +50,22 @@ void SDP_Solver::compute_search_direction(
   Block_Diagonal_Matrix R(X);
 
   timers[timerName + ".R.XY"].resume();
-  block_diagonal_matrix_scale_multiply_add(-1, X, Y, 0, R);
+  block_diagonal_matrix_scale_multiply_add(Real(-1), X, Y, Real(0), R);
+  block_diagonal_matrix_scale_multiply_add(El::BigFloat(-1), X, Y,
+                                           El::BigFloat(0), R);
   timers[timerName + ".R.XY"].stop();
   if(correctorPhase)
     {
       timers[timerName + ".R.dXdY"].resume();
-      block_diagonal_matrix_scale_multiply_add(-1, dX, dY, 1, R);
+      block_diagonal_matrix_scale_multiply_add(Real(-1), dX, dY, Real(1), R);
+      block_diagonal_matrix_scale_multiply_add(El::BigFloat(-1), dX, dY,
+                                               El::BigFloat(1), R);
       timers[timerName + ".R.dXdY"].stop();
     }
 
   timers[timerName + ".R.add"].resume();
   R.add_diagonal(beta * mu);
+  R.add_diagonal(beta_elemental * mu_elemental);
   timers[timerName + ".R.add"].stop();
 
   // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))

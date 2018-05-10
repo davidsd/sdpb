@@ -188,12 +188,16 @@ frobenius_product_of_sums_elemental(const Block_Diagonal_Matrix &X,
                                     const Block_Diagonal_Matrix &dY);
 
 // C := alpha*A*B + beta*C
-void block_diagonal_matrix_scale_multiply_add(
-  Real alpha,
-  Block_Diagonal_Matrix &A, // constant
-  Block_Diagonal_Matrix &B, // constant
-  Real beta,
-  Block_Diagonal_Matrix &C); // overwritten
+void block_diagonal_matrix_scale_multiply_add(const Real &alpha,
+                                              Block_Diagonal_Matrix &A,
+                                              Block_Diagonal_Matrix &B,
+                                              const Real &beta,
+                                              Block_Diagonal_Matrix &C);
+void block_diagonal_matrix_scale_multiply_add(const El::BigFloat &alpha,
+                                              const Block_Diagonal_Matrix &A,
+                                              const Block_Diagonal_Matrix &B,
+                                              const El::BigFloat &beta,
+                                              Block_Diagonal_Matrix &C);
 
 // C := A B
 void block_diagonal_matrix_multiply(Block_Diagonal_Matrix &A,  // constant

@@ -1,10 +1,10 @@
 #include "../Block_Diagonal_Matrix.hxx"
 
 // C := alpha*A*B + beta*C
-void block_diagonal_matrix_scale_multiply_add(Real alpha,
+void block_diagonal_matrix_scale_multiply_add(const Real &alpha,
                                               Block_Diagonal_Matrix &A,
                                               Block_Diagonal_Matrix &B,
-                                              Real beta,
+                                              const Real &beta,
                                               Block_Diagonal_Matrix &C)
 {
   for(size_t b = 0; b < A.blocks.size(); b++)
@@ -15,8 +15,8 @@ void block_diagonal_matrix_scale_multiply_add(Real alpha,
 }
 
 void block_diagonal_matrix_scale_multiply_add(const El::BigFloat &alpha,
-                                              Block_Diagonal_Matrix &A,
-                                              Block_Diagonal_Matrix &B,
+                                              const Block_Diagonal_Matrix &A,
+                                              const Block_Diagonal_Matrix &B,
                                               const El::BigFloat &beta,
                                               Block_Diagonal_Matrix &C)
 {
