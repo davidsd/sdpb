@@ -26,9 +26,14 @@ void solve_schur_complement_equation(
 
 void SDP_Solver::compute_search_direction(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
-  const Matrix &schur_off_diagonal, const Block_Diagonal_Matrix &X_cholesky,
-  const Real &beta, const Real &mu, const bool correctorPhase, const Matrix &Q,
-  Vector &dx, Block_Diagonal_Matrix &dX, Vector &dy, Block_Diagonal_Matrix &dY)
+  const Matrix &schur_off_diagonal,
+  const Block_Matrix &schur_off_diagonal_elemental,
+  const Block_Diagonal_Matrix &X_cholesky, const Real &beta,
+  const El::BigFloat beta_elemental, const Real &mu,
+  const El::BigFloat &mu_elemental, const bool correctorPhase, const Matrix &Q,
+  const El::DistMatrix<El::BigFloat> &Q_elemental, Vector &dx,
+  Block_Matrix &dx_elemental, Block_Diagonal_Matrix &dX, Vector &dy,
+  El::DistMatrix<El::BigFloat> &dy_elemental, Block_Diagonal_Matrix &dY)
 {
   std::string timerName = "computeSearchDirection(";
   if(correctorPhase)

@@ -55,6 +55,12 @@ Real corrector_centering_parameter(const SDP_Solver_Parameters &parameters,
                                    const Real &mu,
                                    const bool is_primal_dual_feasible);
 
+El::BigFloat corrector_centering_parameter(
+  const SDP_Solver_Parameters &parameters, const Block_Diagonal_Matrix &X,
+  const Block_Diagonal_Matrix &dX, const Block_Diagonal_Matrix &Y,
+  const Block_Diagonal_Matrix &dY, const El::BigFloat &mu,
+  const bool is_primal_dual_feasible);
+
 Real step_length(Block_Diagonal_Matrix &MCholesky, Block_Diagonal_Matrix &dM,
                  Block_Diagonal_Matrix &MInvDM,
                  std::vector<Vector> &eigenvalues,
@@ -232,7 +238,8 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       // as (x, X, y, Y). They are computed twice each iteration:
       // once in the predictor step, and once in the corrector step.
       Vector dx(x), dy(y);
-      // Block_Matrix dx_elemental(x_elemental), dy_elemental(y_elemental);
+      Block_Matrix dx_elemental(x_elemental);
+      El::DistMatrix<El::BigFloat> dy_elemental(y_elemental);
       Block_Diagonal_Matrix dX(X), dY(Y);
       {
         // FIXME: It may be expensive to create these objects for each
@@ -286,21 +293,29 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 
         beta_predictor_elemental = predictor_centering_parameter_elemental(
           parameters, is_primal_feasible && is_dual_feasible);
-        
+
         timers["run.computeSearchDirection(betaPredictor)"].resume();
         compute_search_direction(schur_complement_cholesky, schur_off_diagonal,
-                                 X_cholesky, beta_predictor, mu, false, Q, dx,
-                                 dX, dy, dY);
+                                 schur_off_diagonal_elemental, X_cholesky,
+                                 beta_predictor, beta_predictor_elemental, mu,
+                                 mu_elemental, false, Q, Q_elemental, dx,
+                                 dx_elemental, dX, dy, dy_elemental, dY);
         timers["run.computeSearchDirection(betaPredictor)"].stop();
 
         // Compute the corrector solution for (dx, dX, dy, dY)
         beta_corrector = corrector_centering_parameter(
           parameters, X, dX, Y, dY, mu,
           is_primal_feasible && is_dual_feasible);
+
+        beta_corrector_elemental = corrector_centering_parameter(
+          parameters, X, dX, Y, dY, mu_elemental,
+          is_primal_feasible && is_dual_feasible);
         timers["run.computeSearchDirection(betaCorrector)"].resume();
         compute_search_direction(schur_complement_cholesky, schur_off_diagonal,
-                                 X_cholesky, beta_corrector, mu, true, Q, dx,
-                                 dX, dy, dY);
+                                 schur_off_diagonal_elemental, X_cholesky,
+                                 beta_corrector, beta_corrector_elemental, mu,
+                                 mu_elemental, true, Q, Q_elemental, dx,
+                                 dx_elemental, dX, dy, dy_elemental, dY);
         timers["run.computeSearchDirection(betaCorrector)"].stop();
       }
       // Compute step-lengths that preserve positive definiteness of X, Y
