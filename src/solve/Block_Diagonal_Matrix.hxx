@@ -77,7 +77,7 @@ public:
   // M = M + A
   void operator+=(const Block_Diagonal_Matrix &A)
   {
-    for(size_t b = 0; b < blocks.size(); b++)
+    for(size_t b = 0; b < blocks_elemental.size(); b++)
       {
         blocks[b] += A.blocks[b];
 
@@ -88,7 +88,7 @@ public:
   // M = M - A
   void operator-=(const Block_Diagonal_Matrix &A)
   {
-    for(size_t b = 0; b < blocks.size(); b++)
+    for(size_t b = 0; b < blocks_elemental.size(); b++)
       {
         blocks[b] -= A.blocks[b];
         blocks_elemental[b] -= A.blocks_elemental[b];
