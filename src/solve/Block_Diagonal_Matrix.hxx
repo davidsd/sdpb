@@ -181,6 +181,11 @@ Real frobenius_product_of_sums(const Block_Diagonal_Matrix &X,
                                const Block_Diagonal_Matrix &dX,
                                const Block_Diagonal_Matrix &Y,
                                const Block_Diagonal_Matrix &dY);
+El::BigFloat
+frobenius_product_of_sums_elemental(const Block_Diagonal_Matrix &X,
+                                    const Block_Diagonal_Matrix &dX,
+                                    const Block_Diagonal_Matrix &Y,
+                                    const Block_Diagonal_Matrix &dY);
 
 // C := alpha*A*B + beta*C
 void block_diagonal_matrix_scale_multiply_add(
