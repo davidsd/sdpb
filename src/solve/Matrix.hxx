@@ -144,8 +144,8 @@ public:
 // parallelizing loops over blocks.
 
 // C := alpha*A*B + beta*C
-void matrix_scale_multiply_add(Real alpha, Matrix &A, Matrix &B, Real beta,
-                               Matrix &C);
+void matrix_scale_multiply_add(const Real &alpha, Matrix &A, Matrix &B,
+                               const Real &beta, Matrix &C);
 
 // Set block starting at (bRow, bCol) of B to A^T A
 void matrix_square_into_block(Matrix &A, Matrix &B, int bRow, int bCol);

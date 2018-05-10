@@ -1,8 +1,8 @@
 #include "../Matrix.hxx"
 
 // C := alpha*A*B + beta*C
-void matrix_scale_multiply_add(Real alpha, Matrix &A, Matrix &B, Real beta,
-                               Matrix &C)
+void matrix_scale_multiply_add(const Real &alpha, Matrix &A,
+                               Matrix &B, const Real &beta, Matrix &C)
 {
   assert(A.cols == B.rows);
   assert(A.rows == C.rows);
