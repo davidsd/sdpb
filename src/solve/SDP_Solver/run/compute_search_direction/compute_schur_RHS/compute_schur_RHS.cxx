@@ -62,4 +62,12 @@ void compute_schur_RHS(const SDP &sdp, const Vector &dual_residues,
           r_y[n] -= sdp.free_var_matrix.elt(p, n) * x[p];
         }
     }
+
+  r_y_elemental = sdp.dual_objective_b_elemental;
+  for(size_t b = 0; b < sdp.free_var_matrix_elemental.blocks.size(); ++b)
+    {
+      El::Gemv(El::OrientationNS::TRANSPOSE, El::BigFloat(-1),
+               sdp.free_var_matrix_elemental.blocks[b], x_elemental.blocks[b],
+               El::BigFloat(1), r_y_elemental);
+    }
 }
