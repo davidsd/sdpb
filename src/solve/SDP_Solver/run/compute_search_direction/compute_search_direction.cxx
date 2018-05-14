@@ -17,10 +17,10 @@
 //
 
 void compute_schur_RHS(const SDP &sdp, const Vector &dual_residues,
-                       const Block_Matrix &dual_residues_elemental,
+                       const Block_Vector &dual_residues_elemental,
                        const Block_Diagonal_Matrix &Z, const Vector &x,
-                       const Block_Matrix &x_elemental, Vector &r_x,
-                       Block_Matrix &r_x_elemental, Vector &r_y,
+                       const Block_Vector &x_elemental, Vector &r_x,
+                       Block_Vector &r_x_elemental, Vector &r_y,
                        El::DistMatrix<El::BigFloat> &r_y_elemental);
 
 void solve_schur_complement_equation(
@@ -35,7 +35,7 @@ void SDP_Solver::compute_search_direction(
   const El::BigFloat beta_elemental, const Real &mu,
   const El::BigFloat &mu_elemental, const bool correctorPhase, const Matrix &Q,
   const El::DistMatrix<El::BigFloat> &Q_elemental, Vector &dx,
-  Block_Matrix &dx_elemental, Block_Diagonal_Matrix &dX, Vector &dy,
+  Block_Vector &dx_elemental, Block_Diagonal_Matrix &dX, Vector &dy,
   El::DistMatrix<El::BigFloat> &dy_elemental, Block_Diagonal_Matrix &dY)
 {
   std::string timerName = "computeSearchDirection(";

@@ -8,6 +8,7 @@
 #pragma once
 
 #include "Block_Matrix.hxx"
+#include "Block_Vector.hxx"
 #include "Matrix.hxx"
 #include "Polynomial_Vector_Matrix.hxx"
 #include "Index_Tuple.hxx"
@@ -91,7 +92,7 @@ public:
 
   // c, a vector of length P used with primal_objective
   Vector primal_objective_c;
-  Block_Matrix primal_objective_c_elemental;
+  Block_Vector primal_objective_c_elemental;
 
   // b, a vector of length N used with dual_objective
   Vector dual_objective_b;

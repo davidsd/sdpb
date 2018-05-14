@@ -6,7 +6,7 @@
 // Output: PrimalResidues (overwritten)
 //
 void compute_primal_residues(const SDP &sdp, const Vector &x,
-                             const Block_Matrix &x_elemental,
+                             const Block_Vector &x_elemental,
                              const Block_Diagonal_Matrix &X,
                              Block_Diagonal_Matrix &primal_residues)
 {

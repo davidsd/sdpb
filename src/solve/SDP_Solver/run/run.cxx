@@ -6,7 +6,7 @@
 //             function. Its just simpler to see this way what's timed and
 //             what's not
 
-El::BigFloat dot(const Block_Matrix &a, const Block_Matrix &b);
+El::BigFloat dot(const Block_Vector &a, const Block_Vector &b);
 
 void block_tensor_inv_transpose_congruence_with_cholesky(
   const Block_Diagonal_Matrix &L, const std::vector<Matrix> &Q,
@@ -35,10 +35,10 @@ void compute_dual_residues(const SDP &sdp, const Vector &y,
 void compute_dual_residues(const SDP &sdp,
                            const El::DistMatrix<El::BigFloat> &y,
                            const Block_Diagonal_Matrix &bilinear_pairings_Y,
-                           Block_Matrix &dual_residues);
+                           Block_Vector &dual_residues);
 
 void compute_primal_residues(const SDP &sdp, const Vector &x,
-                             const Block_Matrix &x_elemental,
+                             const Block_Vector &x_elemental,
                              const Block_Diagonal_Matrix &X,
                              Block_Diagonal_Matrix &primal_residues);
 
@@ -238,7 +238,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       // as (x, X, y, Y). They are computed twice each iteration:
       // once in the predictor step, and once in the corrector step.
       Vector dx(x), dy(y);
-      Block_Matrix dx_elemental(x_elemental);
+      Block_Vector dx_elemental(x_elemental);
       El::DistMatrix<El::BigFloat> dy_elemental(y_elemental);
       Block_Diagonal_Matrix dX(X), dY(Y);
       {

@@ -26,10 +26,10 @@ Real bilinear_block_pairing(const Real *v, const int dim, const Matrix &A,
                             const int blockRow, const int blockCol);
 
 void compute_schur_RHS(const SDP &sdp, const Vector &dual_residues,
-                       const Block_Matrix &dual_residues_elemental,
+                       const Block_Vector &dual_residues_elemental,
                        const Block_Diagonal_Matrix &Z, const Vector &x,
-                       const Block_Matrix &x_elemental, Vector &r_x,
-                       Block_Matrix &r_x_elemental, Vector &r_y,
+                       const Block_Vector &x_elemental, Vector &r_x,
+                       Block_Vector &r_x_elemental, Vector &r_y,
                        El::DistMatrix<El::BigFloat> &r_y_elemental)
 {
   // r_x[p] = -dual_residues[p]

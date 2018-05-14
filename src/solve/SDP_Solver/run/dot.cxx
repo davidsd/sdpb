@@ -1,7 +1,7 @@
-#include "../../Block_Matrix.hxx"
+#include "../../Block_Vector.hxx"
 #include <cassert>
 
-El::BigFloat dot(const Block_Matrix &a, const Block_Matrix &b)
+El::BigFloat dot(const Block_Vector &a, const Block_Vector &b)
 {
   assert(a.blocks.size() == b.blocks.size());
   El::BigFloat result(0);

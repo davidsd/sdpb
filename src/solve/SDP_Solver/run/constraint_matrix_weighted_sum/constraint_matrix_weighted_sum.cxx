@@ -64,7 +64,7 @@ void constraint_matrix_weighted_sum(const SDP &sdp, const Vector &a,
     }
 }
 
-void constraint_matrix_weighted_sum(const SDP &sdp, const Block_Matrix &a,
+void constraint_matrix_weighted_sum(const SDP &sdp, const Block_Vector &a,
                                     Block_Diagonal_Matrix &result)
 {
   for(size_t jj = 0; jj < sdp.dimensions.size(); ++jj)

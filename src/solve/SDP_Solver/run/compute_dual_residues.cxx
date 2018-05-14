@@ -55,7 +55,7 @@ void compute_dual_residues(const SDP &sdp, const Vector &y,
 void compute_dual_residues(const SDP &sdp,
                            const El::DistMatrix<El::BigFloat> &y,
                            const Block_Diagonal_Matrix &bilinear_pairings_Y,
-                           Block_Matrix &dual_residues)
+                           Block_Vector &dual_residues)
 {
   // dualResidues[p] = -Tr(A_p Y)
   for(size_t jj = 0; jj < sdp.dimensions.size(); ++jj)

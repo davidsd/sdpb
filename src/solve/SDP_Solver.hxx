@@ -9,6 +9,7 @@
 
 #include "Block_Diagonal_Matrix.hxx"
 #include "Block_Matrix.hxx"
+#include "Block_Vector.hxx"
 #include "SDP.hxx"
 #include "SDP_Solver_Terminate_Reason.hxx"
 
@@ -34,7 +35,7 @@ public:
 
   // a Vector of length P = sdp.primalObjective.size()
   Vector x;
-  Block_Matrix x_elemental;
+  Block_Vector x_elemental;
 
   // a Block_Diagonal_Matrix with block sizes given by
   // sdp.psdMatrixBlockDims()
@@ -79,7 +80,7 @@ public:
   Vector dual_residues;
   Real dual_error; // maxAbs(dualResidues)
 
-  Block_Matrix dual_residues_elemental;
+  Block_Vector dual_residues_elemental;
   El::BigFloat dual_error_elemental; // maxAbs(dualResidues)
 
   // Create a new solver for a given SDP, with the given parameters
@@ -124,7 +125,7 @@ private:
     const El::BigFloat beta_elemental, const Real &mu,
     const El::BigFloat &mu_elemental, const bool correctorPhase,
     const Matrix &Q, const El::DistMatrix<El::BigFloat> &Q_elemental,
-    Vector &dx, Block_Matrix &dx_elemental, Block_Diagonal_Matrix &dX,
+    Vector &dx, Block_Vector &dx_elemental, Block_Diagonal_Matrix &dX,
     Vector &dy, El::DistMatrix<El::BigFloat> &dy_elemental,
     Block_Diagonal_Matrix &dY);
 };
