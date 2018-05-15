@@ -96,9 +96,10 @@ void compute_schur_RHS(const SDP &sdp, const Vector &dual_residues,
 
                 const size_t r_x_row_offset(
                   ((column_block * (column_block + 1)) / 2 + row_block)
-                  * Z_block_size);
-                El::DistMatrix<El::BigFloat> r_x_sub_block(El::View(
-                  r_x_elemental.blocks[jj], r_x_row_offset, 0, r_x_block_size, 1));
+                  * r_x_block_size);
+                El::DistMatrix<El::BigFloat> r_x_sub_block(
+                  El::View(r_x_elemental.blocks[jj], r_x_row_offset, 0,
+                           r_x_block_size, 1));
 
                 El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(-1), q_Z_q,
                          ones, El::BigFloat(1), r_x_sub_block);
