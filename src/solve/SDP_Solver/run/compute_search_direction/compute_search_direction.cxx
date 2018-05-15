@@ -27,6 +27,12 @@ void solve_schur_complement_equation(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Matrix &schur_off_diagonal, const Matrix &Q, Vector &dx, Vector &dy);
 
+void solve_schur_complement_equation(
+  const Block_Diagonal_Matrix &schur_complement_cholesky,
+  const Block_Matrix &schur_off_diagonal,
+  const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx,
+  El::DistMatrix<El::BigFloat> &dy);
+
 void SDP_Solver::compute_search_direction(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Matrix &schur_off_diagonal,
@@ -102,6 +108,9 @@ void SDP_Solver::compute_search_direction(
   timers[timerName + ".dxdy"].resume();
   solve_schur_complement_equation(schur_complement_cholesky,
                                   schur_off_diagonal, Q, dx, dy);
+  solve_schur_complement_equation(schur_complement_cholesky,
+                                  schur_off_diagonal_elemental, Q_elemental,
+                                  dx_elemental, dy_elemental);
   timers[timerName + ".dxdy"].stop();
 
   // dX = PrimalResidues + \sum_p A_p dx[p]

@@ -122,6 +122,7 @@ def build(bld):
                         'src/solve/SDP_Solver/print_header.cxx',
                         'src/solve/SDP_Solver_Terminate_Reason/ostream.cxx',
                         'src/solve/lower_triangular_solve.cxx',
+                        'src/solve/lower_triangular_transpose_solve.cxx',
                         'src/solve/Block_Diagonal_Matrix/block_diagonal_matrix_multiply.cxx',
                         'src/solve/Block_Diagonal_Matrix/block_diagonal_matrix_scale_multiply_add.cxx',
                         'src/solve/Block_Diagonal_Matrix/lower_triangular_solve.cxx',
