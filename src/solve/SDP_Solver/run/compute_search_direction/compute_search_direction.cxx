@@ -116,6 +116,7 @@ void SDP_Solver::compute_search_direction(
   // dX = PrimalResidues + \sum_p A_p dx[p]
   timers[timerName + ".dX.weightedSum"].resume();
   constraint_matrix_weighted_sum(sdp, dx, dX);
+  constraint_matrix_weighted_sum(sdp, dx_elemental, dX);
   timers[timerName + ".dX.weightedSum"].stop();
   timers[timerName + ".dX.primalRes"].resume();
   dX += primal_residues;
