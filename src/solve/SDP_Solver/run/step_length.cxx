@@ -34,3 +34,22 @@ Real step_length(Block_Diagonal_Matrix &MCholesky, Block_Diagonal_Matrix &dM,
   else
     return -gamma / lambda;
 }
+
+El::BigFloat
+step_length(Block_Diagonal_Matrix &MCholesky, Block_Diagonal_Matrix &dM,
+            Block_Diagonal_Matrix &MInvDM, const El::BigFloat &gamma)
+{
+  // MInvDM = L^{-1} dM L^{-T}, where M = L L^T
+  MInvDM.copy_from(dM);
+  lower_triangular_inverse_congruence(MInvDM, MCholesky);
+
+  const El::BigFloat lambda(min_eigenvalue(MInvDM));
+  if(lambda > -gamma)
+    {
+      return 1;
+    }
+  else
+    {
+      return -gamma / lambda;
+    }
+}
