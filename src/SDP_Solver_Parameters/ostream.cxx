@@ -17,7 +17,6 @@ std::ostream &operator<<(std::ostream &os, const SDP_Solver_Parameters &p)
      << mpf_get_default_prec() << ")" << '\n';
   os << "dualityGapThreshold          = " << p.duality_gap_threshold << '\n';
 
-  os << "dualErrorThreshold           = " << p.dual_error_threshold << '\n';
   os << "initialMatrixScalePrimal     = " << p.initial_matrix_scale_primal
      << '\n';
   os << "initialMatrixScaleDual       = " << p.initial_matrix_scale_dual

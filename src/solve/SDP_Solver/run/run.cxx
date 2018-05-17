@@ -307,10 +307,6 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         timers["run.computeSearchDirection(betaPredictor)"].stop();
 
         // Compute the corrector solution for (dx, dX, dy, dY)
-        beta_corrector = corrector_centering_parameter(
-          parameters, X, dX, Y, dY, mu,
-          is_primal_feasible && is_dual_feasible);
-
         beta_corrector_elemental = corrector_centering_parameter(
           parameters, X, dX, Y, dY, mu_elemental,
           is_primal_feasible && is_dual_feasible);
@@ -324,18 +320,12 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       }
       // Compute step-lengths that preserve positive definiteness of X, Y
       timers["run.stepLength(XCholesky)"].resume();
-      primal_step_length = step_length(X_cholesky, dX, step_matrix_workspace,
-                                       eigenvalues_workspace, QR_workspace,
-                                       parameters.step_length_reduction);
       primal_step_length_elemental
         = step_length(X_cholesky, dX, step_matrix_workspace,
                       parameters.step_length_reduction_elemental);
 
       timers["run.stepLength(XCholesky)"].stop();
       timers["run.stepLength(YCholesky)"].resume();
-      dual_step_length = step_length(Y_cholesky, dY, step_matrix_workspace,
-                                     eigenvalues_workspace, QR_workspace,
-                                     parameters.step_length_reduction);
       dual_step_length_elemental
         = step_length(Y_cholesky, dY, step_matrix_workspace,
                       parameters.step_length_reduction_elemental);
@@ -345,9 +335,6 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       // ensure we're following the true Newton direction.
       if(is_primal_feasible && is_dual_feasible)
         {
-          primal_step_length = min(primal_step_length, dual_step_length);
-          dual_step_length = primal_step_length;
-
           primal_step_length_elemental
             = min(primal_step_length_elemental, dual_step_length_elemental);
           dual_step_length_elemental = primal_step_length_elemental;
@@ -356,9 +343,6 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       print_iteration(iteration, mu_elemental, primal_step_length_elemental,
                       dual_step_length_elemental, beta_corrector_elemental);
       // Update the primal point (x, X) += primalStepLength*(dx, dX)
-      add_scaled_vector(x, primal_step_length, dx);
-      dX *= primal_step_length;
-
       for(size_t block = 0; block < x_elemental.blocks.size(); ++block)
         {
           El::Axpy(primal_step_length_elemental, dx_elemental.blocks[block],
@@ -369,9 +353,6 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       X += dX;
 
       // Update the dual point (y, Y) += dualStepLength*(dy, dY)
-      add_scaled_vector(y, dual_step_length, dy);
-      dY *= dual_step_length;
-
       El::Axpy(dual_step_length_elemental, dy_elemental, y_elemental);
       dY *= dual_step_length_elemental;
 

@@ -13,9 +13,6 @@ void block_tensor_inv_transpose_congruence_with_cholesky(
 {
   for(size_t b = 0; b < bilinear_bases.size(); b++)
     {
-      tensor_inv_transpose_congruence_with_cholesky(
-        X_cholesky.blocks[b], bilinear_bases[b], workspace[b],
-        result.blocks[b]);
     }
 }
 

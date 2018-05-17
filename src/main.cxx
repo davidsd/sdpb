@@ -95,51 +95,54 @@ int main(int argc, char **argv)
         po::value<int>(&parameters.max_runtime)->default_value(86400),
         "Maximum amount of time to run the solver in seconds.")(
         "dualityGapThreshold",
-        po::value<Real>(&parameters.duality_gap_threshold)
-          ->default_value(Real("1e-30")),
+        po::value<El::BigFloat>(&parameters.duality_gap_threshold_elemental)
+          ->default_value(1e-30),
         "Threshold for duality gap (roughly the difference in primal and dual "
         "objective) at which the solution is considered "
         "optimal. Corresponds to SDPA's epsilonStar.")(
         "primalErrorThreshold",
         po::value<El::BigFloat>(&parameters.primal_error_threshold_elemental)
-          ->default_value(El::BigFloat("1.0e-30", 10)),
-        // po::value<El::BigFloat>()->default_value(El::BigFloat("1.0e-30", 10)),
+          ->default_value(1e-30),
         "Threshold for feasibility of the primal problem. Corresponds to "
         "SDPA's epsilonBar.")(
         "dualErrorThreshold",
-        po::value<Real>(&parameters.dual_error_threshold)
-          ->default_value(Real("1e-30")),
+        po::value<El::BigFloat>(&parameters.dual_error_threshold_elemental)
+          ->default_value(1e-30),
         "Threshold for feasibility of the dual problem. Corresponds to SDPA's "
         "epsilonBar.")(
         "initialMatrixScalePrimal",
-        po::value<Real>(&parameters.initial_matrix_scale_primal)
-          ->default_value(Real("1e20")),
+        po::value<El::BigFloat>(
+          &parameters.initial_matrix_scale_primal_elemental)
+          ->default_value(1e20),
         "The primal matrix X begins at initialMatrixScalePrimal times the "
         "identity matrix. Corresponds to SDPA's lambdaStar.")(
         "initialMatrixScaleDual",
-        po::value<Real>(&parameters.initial_matrix_scale_dual)
-          ->default_value(Real("1e20")),
+        po::value<El::BigFloat>(
+          &parameters.initial_matrix_scale_dual_elemental)
+          ->default_value(1e20),
         "The dual matrix Y begins at initialMatrixScaleDual times the "
         "identity matrix. Corresponds to SDPA's lambdaStar.")(
         "feasibleCenteringParameter",
-        po::value<Real>(&parameters.feasible_centering_parameter)
-          ->default_value(Real("0.1")),
+        po::value<El::BigFloat>(
+          &parameters.feasible_centering_parameter_elemental)
+          ->default_value(0.1),
         "Shrink the complementarity X Y by this factor when the primal and "
         "dual "
         "problems are feasible. Corresponds to SDPA's betaStar.")(
         "infeasibleCenteringParameter",
-        po::value<Real>(&parameters.infeasible_centering_parameter)
-          ->default_value(Real("0.3")),
+        po::value<El::BigFloat>(
+          &parameters.infeasible_centering_parameter_elemental)
+          ->default_value(0.3),
         "Shrink the complementarity X Y by this factor when either the primal "
         "or dual problems are infeasible. Corresponds to SDPA's betaBar.")(
         "stepLengthReduction",
-        po::value<Real>(&parameters.step_length_reduction)
-          ->default_value(Real("0.7")),
+        po::value<El::BigFloat>(&parameters.step_length_reduction_elemental)
+          ->default_value(0.7),
         "Shrink each newton step by this factor (smaller means slower, more "
         "stable convergence). Corresponds to SDPA's gammaStar.")(
         "maxComplementarity",
-        po::value<Real>(&parameters.max_complementarity)
-          ->default_value(Real("1e100")),
+        po::value<El::BigFloat>(&parameters.max_complementarity_elemental)
+          ->default_value(1e100),
         "Terminate if the complementarity mu = Tr(X Y)/dim(X) "
         "exceeds this value.");
 
@@ -214,40 +217,6 @@ int main(int argc, char **argv)
       // Ensure all the Real parameters have the appropriate precision
       parameters.resetPrecision();
 
-      {
-        /// Set all of the _elemental parameters.  This should
-        /// disappear once the Real parameters are removed.
-        std::stringstream ss;
-        ss << parameters.duality_gap_threshold;
-        parameters.duality_gap_threshold_elemental
-          = El::BigFloat(ss.str(), 10);
-        ss.str("");
-        ss << parameters.dual_error_threshold;
-        parameters.dual_error_threshold_elemental = El::BigFloat(ss.str(), 10);
-        ss.str("");
-        ss << parameters.initial_matrix_scale_primal;
-        parameters.initial_matrix_scale_primal_elemental
-          = El::BigFloat(ss.str(), 10);
-        ss.str("");
-        ss << parameters.initial_matrix_scale_dual;
-        parameters.initial_matrix_scale_dual_elemental
-          = El::BigFloat(ss.str(), 10);
-        ss.str("");
-        ss << parameters.feasible_centering_parameter;
-        parameters.feasible_centering_parameter_elemental
-          = El::BigFloat(ss.str(), 10);
-        ss.str("");
-        ss << parameters.infeasible_centering_parameter;
-        parameters.infeasible_centering_parameter_elemental
-          = El::BigFloat(ss.str(), 10);
-        ss.str("");
-        ss << parameters.step_length_reduction;
-        parameters.step_length_reduction_elemental
-          = El::BigFloat(ss.str(), 10);
-        ss.str("");
-        ss << parameters.max_complementarity;
-        parameters.max_complementarity_elemental = El::BigFloat(ss.str(), 10);
-      }
       return solve(sdp_files, out_file, checkpoint_file_in,
                    checkpoint_file_out, parameters);
     }

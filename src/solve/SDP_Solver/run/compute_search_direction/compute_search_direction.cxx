@@ -107,8 +107,6 @@ void SDP_Solver::compute_search_direction(
   // Solve for dx, dy in-place
   timers[timerName + ".dxdy"].resume();
   solve_schur_complement_equation(schur_complement_cholesky,
-                                  schur_off_diagonal, Q, dx, dy);
-  solve_schur_complement_equation(schur_complement_cholesky,
                                   schur_off_diagonal_elemental, Q_elemental,
                                   dx_elemental, dy_elemental);
   timers[timerName + ".dxdy"].stop();
