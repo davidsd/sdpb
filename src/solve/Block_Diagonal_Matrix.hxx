@@ -219,6 +219,7 @@ void lower_triangular_inverse_congruence(
 //
 Real min_eigenvalue(Block_Diagonal_Matrix &A, std::vector<Vector> &workspace,
                     std::vector<Vector> &eigenvalues);
+El::BigFloat min_eigenvalue(Block_Diagonal_Matrix &A);
 
 // Compute L (lower triangular) such that A = L L^T
 // Inputs:
