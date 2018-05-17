@@ -65,6 +65,9 @@ Real step_length(Block_Diagonal_Matrix &MCholesky, Block_Diagonal_Matrix &dM,
                  Block_Diagonal_Matrix &MInvDM,
                  std::vector<Vector> &eigenvalues,
                  std::vector<Vector> &workspace, const Real gamma);
+El::BigFloat
+step_length(Block_Diagonal_Matrix &MCholesky, Block_Diagonal_Matrix &dM,
+            Block_Diagonal_Matrix &MInvDM, const El::BigFloat &gamma);
 
 SDP_Solver_Terminate_Reason
 SDP_Solver::run(const boost::filesystem::path checkpoint_file)
@@ -323,23 +326,21 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       primal_step_length = step_length(X_cholesky, dX, step_matrix_workspace,
                                        eigenvalues_workspace, QR_workspace,
                                        parameters.step_length_reduction);
-      {
-        std::stringstream ss;
-        ss.precision(std::cout.precision());
-        ss << primal_step_length;
-        primal_step_length_elemental = El::BigFloat(ss.str(), 10);
-      }
+      primal_step_length_elemental
+        = step_length(X_cholesky, dX, step_matrix_workspace,
+                      parameters.step_length_reduction_elemental);
+
+      std::cout << "primal: \n\t" << primal_step_length << "\n\t"
+                << primal_step_length_elemental << "\n";
+      
       timers["run.stepLength(XCholesky)"].stop();
       timers["run.stepLength(YCholesky)"].resume();
       dual_step_length = step_length(Y_cholesky, dY, step_matrix_workspace,
                                      eigenvalues_workspace, QR_workspace,
                                      parameters.step_length_reduction);
-      {
-        std::stringstream ss;
-        ss.precision(std::cout.precision());
-        ss << dual_step_length;
-        dual_step_length_elemental = El::BigFloat(ss.str(), 10);
-      }
+      dual_step_length_elemental
+        = step_length(Y_cholesky, dY, step_matrix_workspace,
+                      parameters.step_length_reduction_elemental);
       timers["run.stepLength(YCholesky)"].stop();
 
       // If our problem is both dual-feasible and primal-feasible,
@@ -360,13 +361,23 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       // Update the primal point (x, X) += primalStepLength*(dx, dX)
       add_scaled_vector(x, primal_step_length, dx);
       dX *= primal_step_length;
+
+      for(size_t block = 0; block < x_elemental.blocks.size(); ++block)
+        {
+          El::Axpy(primal_step_length_elemental, dx_elemental.blocks[block],
+                   x_elemental.blocks[block]);
+        }
       dX *= primal_step_length_elemental;
+
       X += dX;
 
       // Update the dual point (y, Y) += dualStepLength*(dy, dY)
       add_scaled_vector(y, dual_step_length, dy);
       dY *= dual_step_length;
+
+      El::Axpy(dual_step_length_elemental, dy_elemental, y_elemental);
       dY *= dual_step_length_elemental;
+
       Y += dY;
     }
 
