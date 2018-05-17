@@ -16,11 +16,11 @@
 // - dx, dX, dy, dY
 //
 
-void compute_schur_RHS(const SDP &sdp, const Vector &dual_residues,
+void compute_schur_RHS(const SDP &sdp,
                        const Block_Vector &dual_residues_elemental,
-                       const Block_Diagonal_Matrix &Z, const Vector &x,
-                       const Block_Vector &x_elemental, Vector &r_x,
-                       Block_Vector &r_x_elemental, Vector &r_y,
+                       const Block_Diagonal_Matrix &Z,
+                       const Block_Vector &x_elemental,
+                       Block_Vector &r_x_elemental,
                        El::DistMatrix<El::BigFloat> &r_y_elemental);
 
 void solve_schur_complement_equation(
@@ -34,9 +34,9 @@ void SDP_Solver::compute_search_direction(
   const Block_Matrix &schur_off_diagonal_elemental,
   const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta_elemental,
   const El::BigFloat &mu_elemental, const bool correctorPhase,
-  const El::DistMatrix<El::BigFloat> &Q_elemental, Vector &dx,
-  Block_Vector &dx_elemental, Block_Diagonal_Matrix &dX, Vector &dy,
-  El::DistMatrix<El::BigFloat> &dy_elemental, Block_Diagonal_Matrix &dY)
+  const El::DistMatrix<El::BigFloat> &Q_elemental, Block_Vector &dx_elemental,
+  Block_Diagonal_Matrix &dX, El::DistMatrix<El::BigFloat> &dy_elemental,
+  Block_Diagonal_Matrix &dY)
 {
   std::string timerName = "computeSearchDirection(";
   if(correctorPhase)
@@ -93,8 +93,8 @@ void SDP_Solver::compute_search_direction(
   // r_y[n] = dualObjective[n] - (FreeVarMatrix^T x)_n
   // Here, dx = r_x, dy = r_y.
   timers[timerName + ".computeSchurRHS"].resume();
-  compute_schur_RHS(sdp, dual_residues, dual_residues_elemental, Z, x,
-                    x_elemental, dx, dx_elemental, dy, dy_elemental);
+  compute_schur_RHS(sdp, dual_residues_elemental, Z, x_elemental, dx_elemental,
+                    dy_elemental);
   timers[timerName + ".computeSchurRHS"].stop();
 
   // Solve for dx, dy in-place
@@ -106,7 +106,6 @@ void SDP_Solver::compute_search_direction(
 
   // dX = PrimalResidues + \sum_p A_p dx[p]
   timers[timerName + ".dX.weightedSum"].resume();
-  constraint_matrix_weighted_sum(sdp, dx, dX);
   constraint_matrix_weighted_sum(sdp, dx_elemental, dX);
   timers[timerName + ".dX.weightedSum"].stop();
   timers[timerName + ".dX.primalRes"].resume();

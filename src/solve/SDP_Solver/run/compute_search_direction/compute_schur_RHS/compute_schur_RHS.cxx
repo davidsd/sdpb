@@ -25,34 +25,13 @@
 Real bilinear_block_pairing(const Real *v, const int dim, const Matrix &A,
                             const int blockRow, const int blockCol);
 
-void compute_schur_RHS(const SDP &sdp, const Vector &dual_residues,
+void compute_schur_RHS(const SDP &sdp,
                        const Block_Vector &dual_residues_elemental,
-                       const Block_Diagonal_Matrix &Z, const Vector &x,
-                       const Block_Vector &x_elemental, Vector &r_x,
-                       Block_Vector &r_x_elemental, Vector &r_y,
+                       const Block_Diagonal_Matrix &Z,
+                       const Block_Vector &x_elemental,
+                       Block_Vector &r_x_elemental,
                        El::DistMatrix<El::BigFloat> &r_y_elemental)
 {
-  // r_x[p] = -dual_residues[p]
-  for(unsigned int p = 0; p < r_x.size(); p++)
-    r_x[p] = -dual_residues[p];
-
-  // r_x[p] -= Tr(A_p Z), where A_p are as described
-  // in SDP.h.  The trace can be computed in terms of bilinearBases
-  // using bilinearBlockPairing.
-  for(size_t j = 0; j < sdp.dimensions.size(); j++)
-    {
-      for(auto &t : sdp.constraint_indices[j])
-        {
-          for(auto &b : sdp.blocks[j])
-            {
-              const int h = sdp.bilinear_bases[b].rows;
-              // Pointer to the k-th column of sdp.bilinearBases[b]
-              const Real *q = &sdp.bilinear_bases[b].elements[(t.k) * h];
-              r_x[t.p] -= bilinear_block_pairing(q, h, Z.blocks[b], t.r, t.s);
-            }
-        }
-    }
-
   for(size_t jj = 0; jj < sdp.dimensions.size(); ++jj)
     {
       // r_x = -dual_residues
@@ -108,15 +87,6 @@ void compute_schur_RHS(const SDP &sdp, const Vector &dual_residues,
     }
 
   // r_y = dualObjective - (FreeVarMatrix^T x)
-  for(int n = 0; n < sdp.dual_objective_b_elemental.Height(); n++)
-    {
-      r_y[n] = sdp.dual_objective_b[n];
-      for(size_t p = 0; p < sdp.free_var_matrix.rows; p++)
-        {
-          r_y[n] -= sdp.free_var_matrix.elt(p, n) * x[p];
-        }
-    }
-
   r_y_elemental = sdp.dual_objective_b_elemental;
   for(size_t b = 0; b < sdp.free_var_matrix_elemental.blocks.size(); ++b)
     {

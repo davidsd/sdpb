@@ -125,7 +125,7 @@ private:
     const Block_Matrix &schur_off_diagonal_elemental,
     const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta_elemental,
     const El::BigFloat &mu_elemental, const bool correctorPhase,
-    const El::DistMatrix<El::BigFloat> &Q_elemental, Vector &dx,
-    Block_Vector &dx_elemental, Block_Diagonal_Matrix &dX, Vector &dy,
+    const El::DistMatrix<El::BigFloat> &Q_elemental,
+    Block_Vector &dx_elemental, Block_Diagonal_Matrix &dX,
     El::DistMatrix<El::BigFloat> &dy_elemental, Block_Diagonal_Matrix &dY);
 };

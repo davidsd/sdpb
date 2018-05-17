@@ -293,8 +293,8 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         timers["run.computeSearchDirection(betaPredictor)"].resume();
         compute_search_direction(
           schur_complement_cholesky, schur_off_diagonal_elemental, X_cholesky,
-          beta_predictor_elemental, mu_elemental, false, Q_elemental, dx,
-          dx_elemental, dX, dy, dy_elemental, dY);
+          beta_predictor_elemental, mu_elemental, false, Q_elemental,
+          dx_elemental, dX, dy_elemental, dY);
         timers["run.computeSearchDirection(betaPredictor)"].stop();
 
         // Compute the corrector solution for (dx, dX, dy, dY)
@@ -304,8 +304,8 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         timers["run.computeSearchDirection(betaCorrector)"].resume();
         compute_search_direction(
           schur_complement_cholesky, schur_off_diagonal_elemental, X_cholesky,
-          beta_corrector_elemental, mu_elemental, true, Q_elemental, dx,
-          dx_elemental, dX, dy, dy_elemental, dY);
+          beta_corrector_elemental, mu_elemental, true, Q_elemental,
+          dx_elemental, dX, dy_elemental, dY);
         timers["run.computeSearchDirection(betaCorrector)"].stop();
       }
       // Compute step-lengths that preserve positive definiteness of X, Y
