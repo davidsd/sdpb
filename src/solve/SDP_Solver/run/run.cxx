@@ -330,9 +330,6 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         = step_length(X_cholesky, dX, step_matrix_workspace,
                       parameters.step_length_reduction_elemental);
 
-      std::cout << "primal: \n\t" << primal_step_length << "\n\t"
-                << primal_step_length_elemental << "\n";
-      
       timers["run.stepLength(XCholesky)"].stop();
       timers["run.stepLength(YCholesky)"].resume();
       dual_step_length = step_length(Y_cholesky, dY, step_matrix_workspace,
