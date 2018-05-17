@@ -57,16 +57,6 @@ public:
     infeasible_centering_parameter.set_prec(precision);
     step_length_reduction.set_prec(precision);
     max_complementarity.set_prec(precision);
-
-    duality_gap_threshold_elemental.SetPrecision(precision);
-    primal_error_threshold_elemental.SetPrecision(precision);
-    dual_error_threshold_elemental.SetPrecision(precision);
-    initial_matrix_scale_primal_elemental.SetPrecision(precision);
-    initial_matrix_scale_dual_elemental.SetPrecision(precision);
-    feasible_centering_parameter_elemental.SetPrecision(precision);
-    infeasible_centering_parameter_elemental.SetPrecision(precision);
-    step_length_reduction_elemental.SetPrecision(precision);
-    max_complementarity_elemental.SetPrecision(precision);
   }
 
   friend std::ostream &
