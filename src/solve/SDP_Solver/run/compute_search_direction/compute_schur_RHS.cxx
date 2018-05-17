@@ -1,4 +1,4 @@
-#include "../../../../SDP_Solver.hxx"
+#include "../../../SDP_Solver.hxx"
 
 // Compute the vectors r_x and r_y on the right-hand side of the Schur
 // complement equation:
@@ -21,9 +21,6 @@
 // - r_x, a Vector of length P
 // - r_y, a Vector of length N
 //
-
-Real bilinear_block_pairing(const Real *v, const int dim, const Matrix &A,
-                            const int blockRow, const int blockCol);
 
 void compute_schur_RHS(const SDP &sdp,
                        const Block_Vector &dual_residues_elemental,
