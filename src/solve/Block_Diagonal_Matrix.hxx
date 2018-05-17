@@ -144,23 +144,14 @@ public:
   }
 
   // The maximal absolute value of the elements of M
-  Real max_abs() const
+  El::BigFloat max_abs() const
   {
-    Real max = 0;
-    for(auto &block : blocks)
+    El::BigFloat max = 0;
+    for(auto &block : blocks_elemental)
       {
-        max = std::max(block.max_abs(), max);
+        max = std::max(El::MaxAbs(block), max);
       }
     return max;
-
-    {
-      El::BigFloat max = 0;
-      for(auto &block : blocks_elemental)
-        {
-          max = std::max(El::MaxAbs(block), max);
-        }
-      // return max;
-    }
   }
 
   friend std::ostream &

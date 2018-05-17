@@ -70,7 +70,7 @@ public:
   //   PrimalResidues = \sum_p A_p x_p - X
   //
   Block_Diagonal_Matrix primal_residues;
-  Real primal_error; // maxAbs(PrimalResidues)
+  El::BigFloat primal_error_elemental; // maxAbs(PrimalResidues)
 
   // Discrepancy in the dual equality constraints, a Vector of length
   // P, called 'd' in the manual:
@@ -97,8 +97,11 @@ public:
   void save_solution(const SDP_Solver_Terminate_Reason,
                      const boost::filesystem::path &out_file);
   void print_header();
-  void print_iteration(int iteration, Real mu, Real primal_step_length,
-                       Real dual_step_length, Real beta_corrector);
+
+  void print_iteration(const int &iteration, El::BigFloat &mu,
+                       const El::BigFloat &primal_step_length,
+                       const El::BigFloat &dual_step_length,
+                       const El::BigFloat &beta_corrector);
 
   void
   test_multiplication(const int m_init, const int m_fin, const int m_step);

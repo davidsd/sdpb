@@ -5,23 +5,47 @@
 
 #include <iostream>
 
-void SDP_Solver::print_iteration(int iteration, Real mu,
-                                 Real primal_step_length,
-                                 Real dual_step_length, Real beta_corrector)
+void SDP_Solver::print_iteration(const int &iteration, El::BigFloat &mu,
+                                 const El::BigFloat &primal_step_length,
+                                 const El::BigFloat &dual_step_length,
+                                 const El::BigFloat &beta_corrector)
 {
   boost::posix_time::time_duration td(
     boost::posix_time::microseconds(timers["Solver runtime"].elapsed().wall)
     / 1000);
+
   std::stringstream ss;
   ss << td;
-  gmp_fprintf(stdout,
-              "%3d  %s  %-8.1Fe %-+11.2Fe %-+11.2Fe %-9.2Fe  %-+10.2Fe  "
-              "%-+10.2Fe  %-8.3Fg %-8.3Fg %-4.2Fg  %d",
-              iteration, ss.str().substr(0, 8).c_str(), mu.get_mpf_t(),
-              primal_objective.get_mpf_t(), dual_objective.get_mpf_t(),
-              duality_gap.get_mpf_t(), primal_error.get_mpf_t(),
-              dual_error.get_mpf_t(), primal_step_length.get_mpf_t(),
-              dual_step_length.get_mpf_t(), beta_corrector.get_mpf_t(),
-              sdp.dual_objective_b_elemental.Height());
-  std::cout << '\n';
+
+  std::cout << std::setw(3) << iteration << "  " << ss.str().substr(0, 8)
+            << "  "
+
+            << std::left << std::setw(8) << std::setprecision(2)
+            << std::showpoint << static_cast<double>(mu) << " "
+
+            << std::showpos << std::setw(11) << std::setprecision(3)
+            << static_cast<double>(primal_objective_elemental) << " "
+
+            << std::setw(11) << std::setprecision(3)
+            << static_cast<double>(dual_objective_elemental) << " "
+
+            << std::noshowpos << std::setw(10) << std::setprecision(3)
+            << static_cast<double>(duality_gap_elemental) << " "
+
+            << std::showpos << std::setw(11) << std::setprecision(3)
+            << static_cast<double>(primal_error_elemental) << " "
+
+            << std::setw(11) << std::setprecision(3)
+            << static_cast<double>(dual_error_elemental) << " "
+
+            << std::noshowpos << std::setw(8) << std::setprecision(3)
+            << static_cast<double>(primal_step_length) << " "
+
+            << std::setw(8) << std::setprecision(3)
+            << static_cast<double>(dual_step_length) << " "
+
+            << std::setw(4) << std::setprecision(3)
+            << static_cast<double>(beta_corrector) << "  "
+
+            << sdp.dual_objective_b_elemental.Height() << "\n";
 }

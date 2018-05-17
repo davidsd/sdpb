@@ -210,14 +210,15 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       timers["run.computePrimalResidues"].resume();
       // PrimalResidues = \sum_p A_p x[p] - X
       compute_primal_residues(sdp, x, x_elemental, X, primal_residues);
-      primal_error = primal_residues.max_abs();
+      primal_error_elemental = primal_residues.max_abs();
       timers["run.computePrimalResidues"].stop();
 
-      const bool is_primal_feasible
-        = primal_error < parameters.primal_error_threshold;
-      const bool is_dual_feasible
-        = dual_error < parameters.dual_error_threshold;
-      const bool is_optimal = duality_gap < parameters.duality_gap_threshold;
+      const bool is_primal_feasible(
+        primal_error_elemental < parameters.primal_error_threshold_elemental);
+      const bool is_dual_feasible(dual_error_elemental
+                                  < parameters.dual_error_threshold_elemental);
+      const bool is_optimal(duality_gap_elemental
+                            < parameters.duality_gap_threshold_elemental);
 
       if(is_primal_feasible && is_dual_feasible && is_optimal)
         return SDP_Solver_Terminate_Reason::PrimalDualOptimal;
@@ -352,9 +353,8 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
           dual_step_length_elemental = primal_step_length_elemental;
         }
 
-      print_iteration(iteration, mu, primal_step_length, dual_step_length,
-                      beta_corrector);
-
+      print_iteration(iteration, mu_elemental, primal_step_length_elemental,
+                      dual_step_length_elemental, beta_corrector_elemental);
       // Update the primal point (x, X) += primalStepLength*(dx, dX)
       add_scaled_vector(x, primal_step_length, dx);
       dX *= primal_step_length;
