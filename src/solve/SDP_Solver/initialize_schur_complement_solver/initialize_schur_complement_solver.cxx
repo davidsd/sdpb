@@ -47,8 +47,8 @@ void SDP_Solver::initialize_schur_complement_solver(
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
   const std::vector<size_t> &block_dims,
-  Block_Diagonal_Matrix &schur_complement_cholesky, Matrix &schur_off_diagonal,
-  Block_Matrix &schur_off_diagonal_block, Matrix &Q,
+  Block_Diagonal_Matrix &schur_complement_cholesky,
+  Block_Matrix &schur_off_diagonal_block,
   El::DistMatrix<El::BigFloat> &Q_elemental)
 {
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
@@ -69,18 +69,12 @@ void SDP_Solver::initialize_schur_complement_solver(
   timers["initializeSchurComplementSolver.choleskyDecomposition"].stop();
 
   // SchurOffDiagonal = L'^{-1} FreeVarMatrix
-  schur_off_diagonal = sdp.free_var_matrix;
   schur_off_diagonal_block = sdp.free_var_matrix_elemental;
   timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
     .resume();
-  lower_triangular_solve(schur_complement_cholesky, schur_off_diagonal);
   lower_triangular_solve(schur_complement_cholesky, schur_off_diagonal_block);
   timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
     .stop();
-
-  // total number of columns in the off-diagonal part B' = (B U)
-  // (currently just B; will accumulate the rest shortly)
-  int off_diagonal_columns = schur_off_diagonal.cols;
 
   // Next, we compute
   //
@@ -90,10 +84,6 @@ void SDP_Solver::initialize_schur_complement_solver(
   // Upper/Lower-Left/Right.
 
   timers["initializeSchurComplementSolver.Qcomputation"].resume();
-  // Set the dimensions of Q
-  Q.resize(off_diagonal_columns, off_diagonal_columns);
-  Q.set_zero();
-
   const size_t Q_size(schur_off_diagonal_block.blocks.at(0).Width());
   Zeros(Q_elemental, Q_size, Q_size);
 
@@ -118,26 +108,15 @@ void SDP_Solver::initialize_schur_complement_solver(
   // Here, SchurOffDiagonal = L'^{-1} B.
   //
   // UpperLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal
-  matrix_square_into_block(schur_off_diagonal, Q, 0, 0);
-
-  // UpperRight(Q) = LowerLeft(Q)^T
-  for(size_t c = 0; c < schur_off_diagonal.cols; c++)
-    for(size_t r = schur_off_diagonal.cols; r < Q.rows; r++)
-      {
-        Q.elt(c, r) = Q.elt(r, c);
-      }
-  
   El::Syrk(El::UpperOrLowerNS::UPPER, El::OrientationNS::TRANSPOSE,
            El::BigFloat(1), schur_off_diagonal_dist, El::BigFloat(1),
            Q_elemental);
+
   El::MakeSymmetric(El::UpperOrLower::UPPER, Q_elemental);
   timers["initializeSchurComplementSolver.Qcomputation"].stop();
 
   timers["initializeSchurComplementSolver.LUDecomposition"].resume();
   timers["LUDecomposition.actualLU"].resume();
-
-  Matrix Q_temp(Q);
-  cholesky_decomposition(Q_temp, Q);
   Cholesky(El::UpperOrLowerNS::LOWER, Q_elemental);
   timers["LUDecomposition.actualLU"].stop();
   timers["initializeSchurComplementSolver.LUDecomposition"].stop();

@@ -125,8 +125,6 @@ def build(bld):
                         'src/solve/lower_triangular_transpose_solve.cxx',
                         'src/solve/Block_Diagonal_Matrix/block_diagonal_matrix_multiply.cxx',
                         'src/solve/Block_Diagonal_Matrix/block_diagonal_matrix_scale_multiply_add.cxx',
-                        'src/solve/Block_Diagonal_Matrix/lower_triangular_solve.cxx',
-                        'src/solve/Block_Diagonal_Matrix/lower_triangular_transpose_solve.cxx',
                         'src/solve/Block_Diagonal_Matrix/block_matrix_solve_with_cholesky.cxx',
                         'src/solve/Block_Diagonal_Matrix/cholesky_decomposition.cxx',
                         'src/solve/Block_Diagonal_Matrix/frobenius_product_of_sums.cxx',

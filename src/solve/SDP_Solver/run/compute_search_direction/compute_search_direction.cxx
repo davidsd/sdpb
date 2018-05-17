@@ -25,21 +25,15 @@ void compute_schur_RHS(const SDP &sdp, const Vector &dual_residues,
 
 void solve_schur_complement_equation(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
-  const Matrix &schur_off_diagonal, const Matrix &Q, Vector &dx, Vector &dy);
-
-void solve_schur_complement_equation(
-  const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
   const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx,
   El::DistMatrix<El::BigFloat> &dy);
 
 void SDP_Solver::compute_search_direction(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
-  const Matrix &schur_off_diagonal,
   const Block_Matrix &schur_off_diagonal_elemental,
-  const Block_Diagonal_Matrix &X_cholesky, const Real &beta,
-  const El::BigFloat beta_elemental, const Real &mu,
-  const El::BigFloat &mu_elemental, const bool correctorPhase, const Matrix &Q,
+  const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta_elemental,
+  const El::BigFloat &mu_elemental, const bool correctorPhase,
   const El::DistMatrix<El::BigFloat> &Q_elemental, Vector &dx,
   Block_Vector &dx_elemental, Block_Diagonal_Matrix &dX, Vector &dy,
   El::DistMatrix<El::BigFloat> &dy_elemental, Block_Diagonal_Matrix &dY)
@@ -73,7 +67,6 @@ void SDP_Solver::compute_search_direction(
     }
 
   timers[timerName + ".R.add"].resume();
-  R.add_diagonal(beta * mu);
   R.add_diagonal(beta_elemental * mu_elemental);
   timers[timerName + ".R.add"].stop();
 

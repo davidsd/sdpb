@@ -113,8 +113,8 @@ private:
     const Block_Diagonal_Matrix &bilinear_pairings_Y,
     const std::vector<size_t> &block_dims,
     Block_Diagonal_Matrix &schur_complement_cholesky,
-    Matrix &schur_off_diagonal, Block_Matrix &schur_off_diagonal_elemental,
-    Matrix &Q, El::DistMatrix<El::BigFloat> &Q_elemental);
+    Block_Matrix &schur_off_diagonal_elemental,
+    El::DistMatrix<El::BigFloat> &Q_elemental);
 
   // Compute (dx, dX, dy, dY), given the current mu, a reduction
   // parameter beta.  `correctorPhase' specifies whether to use the
@@ -122,13 +122,10 @@ private:
   // the predictor R-matrix)
   void compute_search_direction(
     const Block_Diagonal_Matrix &schur_complement_cholesky,
-    const Matrix &schur_off_diagonal,
     const Block_Matrix &schur_off_diagonal_elemental,
-    const Block_Diagonal_Matrix &X_cholesky, const Real &beta,
-    const El::BigFloat beta_elemental, const Real &mu,
+    const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta_elemental,
     const El::BigFloat &mu_elemental, const bool correctorPhase,
-    const Matrix &Q, const El::DistMatrix<El::BigFloat> &Q_elemental,
-    Vector &dx, Block_Vector &dx_elemental, Block_Diagonal_Matrix &dX,
-    Vector &dy, El::DistMatrix<El::BigFloat> &dy_elemental,
-    Block_Diagonal_Matrix &dY);
+    const El::DistMatrix<El::BigFloat> &Q_elemental, Vector &dx,
+    Block_Vector &dx_elemental, Block_Diagonal_Matrix &dX, Vector &dy,
+    El::DistMatrix<El::BigFloat> &dy_elemental, Block_Diagonal_Matrix &dY);
 };

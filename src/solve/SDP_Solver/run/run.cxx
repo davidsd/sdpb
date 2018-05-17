@@ -9,10 +9,6 @@
 El::BigFloat dot(const Block_Vector &a, const Block_Vector &b);
 
 void block_tensor_inv_transpose_congruence_with_cholesky(
-  const Block_Diagonal_Matrix &L, const std::vector<Matrix> &Q,
-  std::vector<Matrix> &Work, Block_Diagonal_Matrix &Result);
-
-void block_tensor_inv_transpose_congruence_with_cholesky(
   const Block_Diagonal_Matrix &X_cholesky,
   const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases,
   std::vector<El::DistMatrix<El::BigFloat>> &workspace,
@@ -175,10 +171,6 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       // complement matrix
       timers["run.blockTensorInvTransposeCongruenceWithCholesky"].resume();
       block_tensor_inv_transpose_congruence_with_cholesky(
-        X_cholesky, sdp.bilinear_bases, bilinear_pairings_workspace,
-        bilinear_pairings_X_Inv);
-
-      block_tensor_inv_transpose_congruence_with_cholesky(
         X_cholesky, sdp.bilinear_bases_elemental_local,
         bilinear_pairings_workspace_elemental, bilinear_pairings_X_Inv);
       timers["run.blockTensorInvTransposeCongruenceWithCholesky"].stop();
@@ -276,8 +268,8 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         timers["run.initializeSchurComplementSolver"].resume();
         initialize_schur_complement_solver(
           bilinear_pairings_X_Inv, bilinear_pairings_Y, sdp.schur_block_dims(),
-          schur_complement_cholesky, schur_off_diagonal,
-          schur_off_diagonal_elemental, Q, Q_elemental);
+          schur_complement_cholesky, schur_off_diagonal_elemental,
+          Q_elemental);
         timers["run.initializeSchurComplementSolver"].stop();
 
         // Compute the complementarity mu = Tr(X Y)/X.dim
@@ -299,11 +291,10 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
           parameters, is_primal_feasible && is_dual_feasible);
 
         timers["run.computeSearchDirection(betaPredictor)"].resume();
-        compute_search_direction(schur_complement_cholesky, schur_off_diagonal,
-                                 schur_off_diagonal_elemental, X_cholesky,
-                                 beta_predictor, beta_predictor_elemental, mu,
-                                 mu_elemental, false, Q, Q_elemental, dx,
-                                 dx_elemental, dX, dy, dy_elemental, dY);
+        compute_search_direction(
+          schur_complement_cholesky, schur_off_diagonal_elemental, X_cholesky,
+          beta_predictor_elemental, mu_elemental, false, Q_elemental, dx,
+          dx_elemental, dX, dy, dy_elemental, dY);
         timers["run.computeSearchDirection(betaPredictor)"].stop();
 
         // Compute the corrector solution for (dx, dX, dy, dY)
@@ -311,11 +302,10 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
           parameters, X, dX, Y, dY, mu_elemental,
           is_primal_feasible && is_dual_feasible);
         timers["run.computeSearchDirection(betaCorrector)"].resume();
-        compute_search_direction(schur_complement_cholesky, schur_off_diagonal,
-                                 schur_off_diagonal_elemental, X_cholesky,
-                                 beta_corrector, beta_corrector_elemental, mu,
-                                 mu_elemental, true, Q, Q_elemental, dx,
-                                 dx_elemental, dX, dy, dy_elemental, dY);
+        compute_search_direction(
+          schur_complement_cholesky, schur_off_diagonal_elemental, X_cholesky,
+          beta_corrector_elemental, mu_elemental, true, Q_elemental, dx,
+          dx_elemental, dX, dy, dy_elemental, dY);
         timers["run.computeSearchDirection(betaCorrector)"].stop();
       }
       // Compute step-lengths that preserve positive definiteness of X, Y

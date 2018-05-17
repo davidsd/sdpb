@@ -8,16 +8,6 @@ void tensor_inv_transpose_congruence_with_cholesky(
 
 void block_tensor_inv_transpose_congruence_with_cholesky(
   const Block_Diagonal_Matrix &X_cholesky,
-  const std::vector<Matrix> &bilinear_bases, std::vector<Matrix> &workspace,
-  Block_Diagonal_Matrix &result)
-{
-  for(size_t b = 0; b < bilinear_bases.size(); b++)
-    {
-    }
-}
-
-void block_tensor_inv_transpose_congruence_with_cholesky(
-  const Block_Diagonal_Matrix &X_cholesky,
   const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases,
   std::vector<El::DistMatrix<El::BigFloat>> &workspace,
   Block_Diagonal_Matrix &result)
