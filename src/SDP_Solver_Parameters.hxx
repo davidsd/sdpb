@@ -23,7 +23,6 @@ public:
   int precision;
 
   Real duality_gap_threshold;
-  Real primal_error_threshold;
   Real dual_error_threshold;
   Real initial_matrix_scale_primal;
   Real initial_matrix_scale_dual;
@@ -49,7 +48,6 @@ public:
   void resetPrecision()
   {
     duality_gap_threshold.set_prec(precision);
-    primal_error_threshold.set_prec(precision);
     dual_error_threshold.set_prec(precision);
     initial_matrix_scale_primal.set_prec(precision);
     initial_matrix_scale_dual.set_prec(precision);

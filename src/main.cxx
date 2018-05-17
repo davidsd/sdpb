@@ -101,11 +101,11 @@ int main(int argc, char **argv)
         "objective) at which the solution is considered "
         "optimal. Corresponds to SDPA's epsilonStar.")(
         "primalErrorThreshold",
-        po::value<Real>(&parameters.primal_error_threshold)
-          ->default_value(Real("1e-30")),
+        po::value<El::BigFloat>(&parameters.primal_error_threshold_elemental)
+          ->default_value(El::BigFloat("1.0e-30", 10)),
+        // po::value<El::BigFloat>()->default_value(El::BigFloat("1.0e-30", 10)),
         "Threshold for feasibility of the primal problem. Corresponds to "
-        "SDPA's "
-        "epsilonBar.")(
+        "SDPA's epsilonBar.")(
         "dualErrorThreshold",
         po::value<Real>(&parameters.dual_error_threshold)
           ->default_value(Real("1e-30")),
@@ -219,10 +219,8 @@ int main(int argc, char **argv)
         /// disappear once the Real parameters are removed.
         std::stringstream ss;
         ss << parameters.duality_gap_threshold;
-        parameters.duality_gap_threshold_elemental = El::BigFloat(ss.str(), 10);
-        ss.str("");
-        ss << parameters.primal_error_threshold;
-        parameters.primal_error_threshold_elemental = El::BigFloat(ss.str(), 10);
+        parameters.duality_gap_threshold_elemental
+          = El::BigFloat(ss.str(), 10);
         ss.str("");
         ss << parameters.dual_error_threshold;
         parameters.dual_error_threshold_elemental = El::BigFloat(ss.str(), 10);
@@ -244,12 +242,12 @@ int main(int argc, char **argv)
           = El::BigFloat(ss.str(), 10);
         ss.str("");
         ss << parameters.step_length_reduction;
-        parameters.step_length_reduction_elemental = El::BigFloat(ss.str(), 10);
+        parameters.step_length_reduction_elemental
+          = El::BigFloat(ss.str(), 10);
         ss.str("");
         ss << parameters.max_complementarity;
         parameters.max_complementarity_elemental = El::BigFloat(ss.str(), 10);
       }
-      
       return solve(sdp_files, out_file, checkpoint_file_in,
                    checkpoint_file_out, parameters);
     }
