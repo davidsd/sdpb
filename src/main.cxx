@@ -53,7 +53,12 @@ int main(int argc, char **argv)
         "initialCheckpointFile,i",
         po::value<boost::filesystem::path>(&checkpoint_file_in),
         "The initial checkpoint to load. Defaults to checkpointFile.");
-
+      
+      // We set default parameters using El::BigFloat("1e-10",10)
+      // rather than a straight double precision 1e-10 so that results
+      // are more reproducible at high precision.  Using double
+      // precision defaults results in differences of about 1e-15 in
+      // primalObjective after one step.
       po::options_description solver_params_options("Solver parameters");
       solver_params_options.add_options()(
         "precision", po::value<int>(&parameters.precision)->default_value(400),
@@ -96,53 +101,53 @@ int main(int argc, char **argv)
         "Maximum amount of time to run the solver in seconds.")(
         "dualityGapThreshold",
         po::value<El::BigFloat>(&parameters.duality_gap_threshold_elemental)
-          ->default_value(1e-30),
+          ->default_value(El::BigFloat("1e-30", 10)),
         "Threshold for duality gap (roughly the difference in primal and dual "
         "objective) at which the solution is considered "
         "optimal. Corresponds to SDPA's epsilonStar.")(
         "primalErrorThreshold",
         po::value<El::BigFloat>(&parameters.primal_error_threshold_elemental)
-          ->default_value(1e-30),
+          ->default_value(El::BigFloat("1e-30", 10)),
         "Threshold for feasibility of the primal problem. Corresponds to "
         "SDPA's epsilonBar.")(
         "dualErrorThreshold",
         po::value<El::BigFloat>(&parameters.dual_error_threshold_elemental)
-          ->default_value(1e-30),
+          ->default_value(El::BigFloat("1e-30", 10)),
         "Threshold for feasibility of the dual problem. Corresponds to SDPA's "
         "epsilonBar.")(
         "initialMatrixScalePrimal",
         po::value<El::BigFloat>(
           &parameters.initial_matrix_scale_primal_elemental)
-          ->default_value(1e20),
+          ->default_value(El::BigFloat("1e20", 10)),
         "The primal matrix X begins at initialMatrixScalePrimal times the "
         "identity matrix. Corresponds to SDPA's lambdaStar.")(
         "initialMatrixScaleDual",
         po::value<El::BigFloat>(
           &parameters.initial_matrix_scale_dual_elemental)
-          ->default_value(1e20),
+          ->default_value(El::BigFloat("1e20", 10)),
         "The dual matrix Y begins at initialMatrixScaleDual times the "
         "identity matrix. Corresponds to SDPA's lambdaStar.")(
         "feasibleCenteringParameter",
         po::value<El::BigFloat>(
           &parameters.feasible_centering_parameter_elemental)
-          ->default_value(0.1),
+          ->default_value(El::BigFloat("0.1", 10)),
         "Shrink the complementarity X Y by this factor when the primal and "
         "dual "
         "problems are feasible. Corresponds to SDPA's betaStar.")(
         "infeasibleCenteringParameter",
         po::value<El::BigFloat>(
           &parameters.infeasible_centering_parameter_elemental)
-          ->default_value(0.3),
+          ->default_value(El::BigFloat("0.3", 10)),
         "Shrink the complementarity X Y by this factor when either the primal "
         "or dual problems are infeasible. Corresponds to SDPA's betaBar.")(
         "stepLengthReduction",
         po::value<El::BigFloat>(&parameters.step_length_reduction_elemental)
-          ->default_value(0.7),
+          ->default_value(El::BigFloat("0.7", 10)),
         "Shrink each newton step by this factor (smaller means slower, more "
         "stable convergence). Corresponds to SDPA's gammaStar.")(
         "maxComplementarity",
         po::value<El::BigFloat>(&parameters.max_complementarity_elemental)
-          ->default_value(1e100),
+          ->default_value(El::BigFloat("1e100", 10)),
         "Terminate if the complementarity mu = Tr(X Y)/dim(X) "
         "exceeds this value.");
 
