@@ -97,10 +97,15 @@ void constraint_matrix_weighted_sum(const SDP &sdp, const Block_Vector &a,
                   result.blocks_elemental[block_index], row_offset,
                   column_offset, result_block_size, result_block_size));
                 El::Gemm(El::Orientation::NORMAL, El::Orientation::TRANSPOSE,
-                         El::BigFloat(1),
+                         El::BigFloat(column_block == row_block ? 1 : 0.5),
                          sdp.bilinear_bases_elemental_dist[block_index],
                          scaled_bases, El::BigFloat(0), result_sub_block);
               }
+          if(sdp.dimensions[jj] > 1)
+            {
+              El::MakeSymmetric(El::UpperOrLowerNS::UPPER,
+                                result.blocks_elemental[block_index]);
+            }
         }
     }
 }
