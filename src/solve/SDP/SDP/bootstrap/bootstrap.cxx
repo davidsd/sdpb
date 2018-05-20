@@ -23,7 +23,8 @@ dual_constraint_group_from_pol_vec_mat(const Polynomial_Vector_Matrix &m);
 // with y the dual decision variables.  polVectorMatrices are
 // described in SDP.h.
 //
-void bootstrap(const Vector &affineObjective,
+void bootstrap(const Vector &affine_objective,
+               const std::vector<El::BigFloat> &affine_objective_elemental,
                const std::vector<Polynomial_Vector_Matrix> &polVectorMatrices,
                SDP &sdp)
 {
@@ -35,31 +36,32 @@ void bootstrap(const Vector &affineObjective,
         dual_constraint_group_from_pol_vec_mat(m));
     }
 
-  // Split affineObjective into objectiveConst f and dualObjective b
-  auto affine(affineObjective.begin());
-  assert(affine != affineObjective.end());
-  sdp.objective_const = *affine;
   {
-    std::stringstream ss;
-    ss.precision(std::cout.precision());
-    ss << sdp.objective_const;
-    sdp.objective_const_elemental = El::BigFloat(ss.str(), 10);
+    // Split affine_objective into objectiveConst f and dualObjective b
+    auto affine(affine_objective.begin());
+    assert(affine != affine_objective.end());
+    sdp.objective_const = *affine;
+    ++affine;
+    sdp.dual_objective_b.insert(sdp.dual_objective_b.end(), affine,
+                                affine_objective.end());
   }
-  ++affine;
-  sdp.dual_objective_b.insert(sdp.dual_objective_b.end(), affine,
-                              affineObjective.end());
+  {
+    // Split affine_objective into objectiveConst f and dualObjective b
+    auto affine(affine_objective_elemental.begin());
+    assert(affine != affine_objective_elemental.end());
+    sdp.objective_const_elemental = *affine;
+    ++affine;
 
-  sdp.dual_objective_b_elemental.Resize(affineObjective.size() - 1, 1);
-  size_t local_height(sdp.dual_objective_b_elemental.LocalHeight());
-  El::Int row_min(sdp.dual_objective_b_elemental.GlobalRow(0));
+    sdp.dual_objective_b_elemental.Resize(affine_objective.size() - 1, 1);
+    size_t local_height(sdp.dual_objective_b_elemental.LocalHeight());
+    El::Int row_offset(sdp.dual_objective_b_elemental.GlobalRow(0));
 
-  for(size_t hh = 0; hh < local_height; ++hh)
-    {
-      std::stringstream ss;
-      ss.precision(std::cout.precision());
-      ss << affineObjective[row_min +1 + hh];
-      sdp.dual_objective_b_elemental.SetLocal(hh, 0,
-                                              El::BigFloat(ss.str(), 10));
-    }
+    for(size_t hh = 0; hh < local_height; ++hh)
+      {
+        sdp.dual_objective_b_elemental.SetLocal(
+          hh, 0, affine_objective_elemental[row_offset + 1 + hh]);
+      }
+  }
+
   fill_from_dual_constraint_groups(dualConstraintGroups, sdp);
 }
