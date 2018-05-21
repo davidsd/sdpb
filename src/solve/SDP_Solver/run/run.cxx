@@ -202,7 +202,6 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 
         // SchurOffDiagonal = L'^{-1} FreeVarMatrix, needed in solving the
         // Schur complement equation.
-        Matrix schur_off_diagonal;
         Block_Matrix schur_off_diagonal_elemental;
 
         // Q = B' L'^{-T} L'^{-1} B' - {{0, 0}, {0, 1}}, where B' =
@@ -272,8 +271,8 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       // ensure we're following the true Newton direction.
       if(is_primal_feasible && is_dual_feasible)
         {
-          primal_step_length_elemental
-            = min(primal_step_length_elemental, dual_step_length_elemental);
+          primal_step_length_elemental = El::Min(primal_step_length_elemental,
+                                                 dual_step_length_elemental);
           dual_step_length_elemental = primal_step_length_elemental;
         }
 

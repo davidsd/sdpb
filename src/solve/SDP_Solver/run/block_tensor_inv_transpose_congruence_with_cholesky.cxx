@@ -1,10 +1,6 @@
-#include "../../../SDP_Solver.hxx"
+#include "../../SDP_Solver.hxx"
 
 // result = bilinear_base^T X^{-1} bilinear_base for each block
-
-void tensor_inv_transpose_congruence_with_cholesky(
-  const Matrix &X_cholesky_block, const Matrix &bilinear_base_block,
-  Matrix &workspace_block, Matrix &result);
 
 void block_tensor_inv_transpose_congruence_with_cholesky(
   const Block_Diagonal_Matrix &X_cholesky,

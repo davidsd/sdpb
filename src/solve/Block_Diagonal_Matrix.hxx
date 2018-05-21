@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include "Matrix.hxx"
 #include <El.hpp>
 
 // A block-diagonal square matrix
