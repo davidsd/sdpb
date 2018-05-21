@@ -4,7 +4,7 @@
 void cholesky_decomposition(const Block_Diagonal_Matrix &A,
                             Block_Diagonal_Matrix &L)
 {
-  for(size_t b = 0; b < A.blocks.size(); b++)
+  for(size_t b = 0; b < A.blocks_elemental.size(); b++)
     {
       // FIXME: Use pivoting?
       //

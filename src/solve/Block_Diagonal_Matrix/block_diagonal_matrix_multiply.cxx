@@ -5,7 +5,6 @@ void block_diagonal_matrix_multiply(Block_Diagonal_Matrix &A,
                                     Block_Diagonal_Matrix &B,
                                     Block_Diagonal_Matrix &C)
 {
-  block_diagonal_matrix_scale_multiply_add(Real(1), A, B, Real(0), C);
   block_diagonal_matrix_scale_multiply_add(El::BigFloat(1), A, B,
                                            El::BigFloat(0), C);
 }

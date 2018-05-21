@@ -1,5 +1,3 @@
-#include "serialize.hxx"
-
 #include "../SDP_Solver.hxx"
 #include "../Timers.hxx"
 

@@ -11,7 +11,7 @@ namespace
   template <class T>
   void lower_triangular_solve_internal(const Block_Diagonal_Matrix &L, T &B)
   {
-    for(size_t b = 0; b < L.blocks.size(); b++)
+    for(size_t b = 0; b < L.blocks_elemental.size(); b++)
       {
         El::Trsm(El::LeftOrRightNS::LEFT, El::UpperOrLowerNS::LOWER,
                  El::OrientationNS::NORMAL, El::UnitOrNonUnitNS::NON_UNIT,

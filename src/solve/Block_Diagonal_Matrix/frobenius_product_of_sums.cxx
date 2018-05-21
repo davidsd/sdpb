@@ -3,20 +3,6 @@
 // (X + dX) . (Y + dY), where X, dX, Y, dY are symmetric
 // BlockDiagonalMatrices and '.' is the Frobenius product.
 //
-Real frobenius_product_of_sums(const Block_Diagonal_Matrix &X,
-                               const Block_Diagonal_Matrix &dX,
-                               const Block_Diagonal_Matrix &Y,
-                               const Block_Diagonal_Matrix &dY)
-{
-  Real result = 0;
-  for(size_t b = 0; b < X.blocks.size(); b++)
-    {
-      result += frobenius_product_of_sums(X.blocks[b], dX.blocks[b],
-                                          Y.blocks[b], dY.blocks[b]);
-    }
-  return result;
-}
-
 El::BigFloat
 frobenius_product_of_sums_elemental(const Block_Diagonal_Matrix &X,
                                     const Block_Diagonal_Matrix &dX,

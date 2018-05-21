@@ -4,7 +4,7 @@
 void lower_triangular_inverse_congruence(Block_Diagonal_Matrix &A,
                                          Block_Diagonal_Matrix &L)
 {
-  for(size_t b = 0; b < A.blocks.size(); b++)
+  for(size_t b = 0; b < A.blocks_elemental.size(); b++)
     {
       El::Trsm(El::LeftOrRight::RIGHT, El::UpperOrLowerNS::LOWER,
                El::Orientation::TRANSPOSE, El::UnitOrNonUnit::NON_UNIT,

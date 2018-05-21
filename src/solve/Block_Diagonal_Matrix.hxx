@@ -23,7 +23,6 @@ public:
   int dim;
 
   // The blocks M_b for 0 <= b < bMax
-  std::vector<Matrix> blocks;
   std::vector<El::DistMatrix<El::BigFloat>> blocks_elemental;
 
   // The rows (or columns) of M corresponding to the top-left entry of
@@ -37,7 +36,6 @@ public:
   {
     for(auto &block_size : block_sizes)
       {
-        blocks.push_back(Matrix(block_size, block_size));
         blocks_elemental.emplace_back(block_size, block_size);
 
         block_start_indices.push_back(dim);
@@ -48,10 +46,6 @@ public:
   // M = 0
   void set_zero()
   {
-    for(auto &block : blocks)
-      {
-        block.set_zero();
-      }
     for(auto &block : blocks_elemental)
       {
         Zero(block);
@@ -59,13 +53,6 @@ public:
   }
 
   // Add a constant c to each diagonal element
-  void add_diagonal(const Real &c)
-  {
-    for(auto &block : blocks)
-      {
-        block.add_diagonal(c);
-      }
-  }
   void add_diagonal(const El::BigFloat &c)
   {
     for(auto &block : blocks_elemental)
@@ -79,8 +66,6 @@ public:
   {
     for(size_t b = 0; b < blocks_elemental.size(); b++)
       {
-        blocks[b] += A.blocks[b];
-
         blocks_elemental[b] += A.blocks_elemental[b];
       }
   }
@@ -90,19 +75,11 @@ public:
   {
     for(size_t b = 0; b < blocks_elemental.size(); b++)
       {
-        blocks[b] -= A.blocks[b];
         blocks_elemental[b] -= A.blocks_elemental[b];
       }
   }
 
   // M = c*M, where c is a constant
-  void operator*=(const Real &c)
-  {
-    for(auto &block : blocks)
-      {
-        block *= c;
-      }
-  }
   void operator*=(const El::BigFloat &c)
   {
     for(auto &block : blocks_elemental)
@@ -114,10 +91,8 @@ public:
   // M = A
   void copy_from(const Block_Diagonal_Matrix &A)
   {
-    for(size_t b = 0; b < blocks.size(); b++)
+    for(size_t b = 0; b < blocks_elemental.size(); b++)
       {
-        blocks[b].copy_from(A.blocks[b]);
-
         El::Copy(A.blocks_elemental[b], blocks_elemental[b]);
       }
   }
@@ -125,10 +100,6 @@ public:
   // Symmetrize M in place
   void symmetrize()
   {
-    for(auto &block : blocks)
-      {
-        block.symmetrize();
-      }
     for(auto &block : blocks_elemental)
       {
         // FIXME: This feels expensive
@@ -159,8 +130,6 @@ public:
 };
 
 // Tr(A B), where A and B are symmetric
-Real frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
-                                 const Block_Diagonal_Matrix &B);
 El::BigFloat
 frobenius_product_symmetric_elemental(const Block_Diagonal_Matrix &A,
                                       const Block_Diagonal_Matrix &B);
@@ -168,10 +137,6 @@ frobenius_product_symmetric_elemental(const Block_Diagonal_Matrix &A,
 // (X + dX) . (Y + dY), where X, dX, Y, dY are symmetric
 // BlockDiagonalMatrices and '.' is the Frobenius product.
 //
-Real frobenius_product_of_sums(const Block_Diagonal_Matrix &X,
-                               const Block_Diagonal_Matrix &dX,
-                               const Block_Diagonal_Matrix &Y,
-                               const Block_Diagonal_Matrix &dY);
 El::BigFloat
 frobenius_product_of_sums_elemental(const Block_Diagonal_Matrix &X,
                                     const Block_Diagonal_Matrix &dX,
@@ -179,11 +144,6 @@ frobenius_product_of_sums_elemental(const Block_Diagonal_Matrix &X,
                                     const Block_Diagonal_Matrix &dY);
 
 // C := alpha*A*B + beta*C
-void block_diagonal_matrix_scale_multiply_add(const Real &alpha,
-                                              Block_Diagonal_Matrix &A,
-                                              Block_Diagonal_Matrix &B,
-                                              const Real &beta,
-                                              Block_Diagonal_Matrix &C);
 void block_diagonal_matrix_scale_multiply_add(const El::BigFloat &alpha,
                                               const Block_Diagonal_Matrix &A,
                                               const Block_Diagonal_Matrix &B,
@@ -208,8 +168,6 @@ void lower_triangular_inverse_congruence(
 // - workspace : vector of Vectors of lenfth 3*n_b-1 (0 <= b < bMax)
 //   (temporary workspace)
 //
-Real min_eigenvalue(Block_Diagonal_Matrix &A, std::vector<Vector> &workspace,
-                    std::vector<Vector> &eigenvalues);
 El::BigFloat min_eigenvalue(Block_Diagonal_Matrix &A);
 
 // Compute L (lower triangular) such that A = L L^T

@@ -3,11 +3,12 @@
 std::ostream &operator<<(std::ostream &os, const Block_Diagonal_Matrix &A)
 {
   os << "{";
-  for(auto block(A.blocks.begin()); block != A.blocks.end();)
+  for(auto block(A.blocks_elemental.begin());
+      block != A.blocks_elemental.end();)
     {
-      os << *block;
+      El::Print(*block,"",os);
       ++block;
-      if(block != A.blocks.end())
+      if(block != A.blocks_elemental.end())
         {
           os << ", ";
         }

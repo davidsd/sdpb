@@ -53,14 +53,12 @@ void SDP_Solver::compute_search_direction(
   Block_Diagonal_Matrix R(X);
 
   timers[timerName + ".R.XY"].resume();
-  block_diagonal_matrix_scale_multiply_add(Real(-1), X, Y, Real(0), R);
   block_diagonal_matrix_scale_multiply_add(El::BigFloat(-1), X, Y,
                                            El::BigFloat(0), R);
   timers[timerName + ".R.XY"].stop();
   if(correctorPhase)
     {
       timers[timerName + ".R.dXdY"].resume();
-      block_diagonal_matrix_scale_multiply_add(Real(-1), dX, dY, Real(1), R);
       block_diagonal_matrix_scale_multiply_add(El::BigFloat(-1), dX, dY,
                                                El::BigFloat(1), R);
       timers[timerName + ".R.dXdY"].stop();
@@ -124,7 +122,6 @@ void SDP_Solver::compute_search_direction(
   timers[timerName + ".dY.cholesky"].stop();
   timers[timerName + ".dY.symm"].resume();
   dY.symmetrize();
-  dY *= Real(-1);
   dY *= El::BigFloat(-1);
   timers[timerName + ".dY.symm"].stop();
 }

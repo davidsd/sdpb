@@ -1,4 +1,3 @@
-#include "serialize.hxx"
 #include "../SDP_Solver.hxx"
 
 #include <boost/archive/text_iarchive.hpp>
