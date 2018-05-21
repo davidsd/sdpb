@@ -27,4 +27,14 @@ struct Block_Matrix
       }
   }
   Block_Matrix() = default;
+
+  size_t width() const
+  {
+    size_t result(0);
+    if(!blocks.empty())
+      {
+        result = blocks[0].Width();
+      }
+    return result;
+  }
 };
