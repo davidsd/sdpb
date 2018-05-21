@@ -219,9 +219,6 @@ int main(int argc, char **argv)
       std::cout.precision(
         min(static_cast<int>(parameters.precision * 0.31 + 5), 30));
 
-      // Ensure all the Real parameters have the appropriate precision
-      parameters.resetPrecision();
-
       return solve(sdp_files, out_file, checkpoint_file_in,
                    checkpoint_file_out, parameters);
     }

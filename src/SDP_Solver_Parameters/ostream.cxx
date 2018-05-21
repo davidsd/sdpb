@@ -15,18 +15,6 @@ std::ostream &operator<<(std::ostream &os, const SDP_Solver_Parameters &p)
      << '\n';
   os << "precision(actual)            = " << p.precision << "("
      << mpf_get_default_prec() << ")" << '\n';
-  os << "dualityGapThreshold          = " << p.duality_gap_threshold << '\n';
-
-  os << "initialMatrixScalePrimal     = " << p.initial_matrix_scale_primal
-     << '\n';
-  os << "initialMatrixScaleDual       = " << p.initial_matrix_scale_dual
-     << '\n';
-  os << "feasibleCenteringParameter   = " << p.feasible_centering_parameter
-     << '\n';
-  os << "infeasibleCenteringParameter = " << p.infeasible_centering_parameter
-     << '\n';
-  os << "stepLengthReduction          = " << p.step_length_reduction << '\n';
-  os << "maxComplementarity           = " << p.max_complementarity << '\n';
 
   os << "dualityGapThreshold          = " << p.duality_gap_threshold_elemental << '\n';
   os << "primalErrorThreshold         = " << p.primal_error_threshold_elemental << '\n';
