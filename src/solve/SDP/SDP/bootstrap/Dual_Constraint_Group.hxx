@@ -24,9 +24,9 @@
 // the future.
 //
 
-#include "../../../Matrix.hxx"
-
 #include <El.hpp>
+
+#include <vector>
 
 class Dual_Constraint_Group
 {
@@ -35,17 +35,14 @@ public:
   size_t degree;
 
   // constraintMatrix = B, a P'xN Matrix
-  Matrix constraintMatrix;
   El::Matrix<El::BigFloat> constraintMatrix_elemental;
 
   // constraintConstants = c, a vector of length P'
-  Vector constraintConstants;
   std::vector<El::BigFloat> constraintConstants_elemental;
 
   // bilinearBases is a vector of Matrices encoding the v_{b,k}
   // entering the constraint matrices A_p, as described
   // above. `bilinearBases' here has the structure of
   // `bilinearBases[j]' above for some fixed j.
-  std::vector<Matrix> bilinearBases;
   std::vector<El::Matrix<El::BigFloat>> bilinearBases_elemental;
 };
