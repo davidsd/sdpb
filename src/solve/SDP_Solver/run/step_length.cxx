@@ -18,22 +18,6 @@
 // - workspace, a vector of Vectors needed by the minEigenvalue function
 // Output:
 // - min(\gamma \alpha(M, dM), 1) (returned)
-//
-Real step_length(Block_Diagonal_Matrix &MCholesky, Block_Diagonal_Matrix &dM,
-                 Block_Diagonal_Matrix &MInvDM,
-                 std::vector<Vector> &eigenvalues,
-                 std::vector<Vector> &workspace, const Real gamma)
-{
-  // MInvDM = L^{-1} dM L^{-T}, where M = L L^T
-  MInvDM.copy_from(dM);
-  lower_triangular_inverse_congruence(MInvDM, MCholesky);
-
-  const Real lambda = min_eigenvalue(MInvDM, workspace, eigenvalues);
-  if(lambda > -gamma)
-    return 1;
-  else
-    return -gamma / lambda;
-}
 
 El::BigFloat
 step_length(Block_Diagonal_Matrix &MCholesky, Block_Diagonal_Matrix &dM,

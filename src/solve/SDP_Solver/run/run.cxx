@@ -29,8 +29,7 @@ void compute_dual_residues(const SDP &sdp,
                            const Block_Diagonal_Matrix &bilinear_pairings_Y,
                            Block_Vector &dual_residues);
 
-void compute_primal_residues(const SDP &sdp,
-                             const Block_Vector &x_elemental,
+void compute_primal_residues(const SDP &sdp, const Block_Vector &x_elemental,
                              const Block_Diagonal_Matrix &X,
                              Block_Diagonal_Matrix &primal_residues);
 
@@ -53,10 +52,6 @@ El::BigFloat corrector_centering_parameter(
   const Block_Diagonal_Matrix &dY, const El::BigFloat &mu,
   const bool is_primal_dual_feasible);
 
-Real step_length(Block_Diagonal_Matrix &MCholesky, Block_Diagonal_Matrix &dM,
-                 Block_Diagonal_Matrix &MInvDM,
-                 std::vector<Vector> &eigenvalues,
-                 std::vector<Vector> &workspace, const Real gamma);
 El::BigFloat
 step_length(Block_Diagonal_Matrix &MCholesky, Block_Diagonal_Matrix &dM,
             Block_Diagonal_Matrix &MInvDM, const El::BigFloat &gamma);
@@ -64,7 +59,6 @@ step_length(Block_Diagonal_Matrix &MCholesky, Block_Diagonal_Matrix &dM,
 SDP_Solver_Terminate_Reason
 SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 {
-  Real primal_step_length(0), dual_step_length(0);
   El::BigFloat primal_step_length_elemental(0), dual_step_length_elemental(0);
 
   // the Cholesky decompositions of X and Y, each lower-triangular
@@ -211,10 +205,11 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         return SDP_Solver_Terminate_Reason::PrimalFeasible;
       else if(is_dual_feasible && parameters.find_dual_feasible)
         return SDP_Solver_Terminate_Reason::DualFeasible;
-      else if(primal_step_length == 1
+      else if(primal_step_length_elemental == El::BigFloat(1)
               && parameters.detect_primal_feasible_jump)
         return SDP_Solver_Terminate_Reason::PrimalFeasibleJumpDetected;
-      else if(dual_step_length == 1 && parameters.detect_dual_feasible_jump)
+      else if(dual_step_length_elemental == El::BigFloat(1)
+              && parameters.detect_dual_feasible_jump)
         return SDP_Solver_Terminate_Reason::DualFeasibleJumpDetected;
       else if(iteration > parameters.max_iterations)
         return SDP_Solver_Terminate_Reason::MaxIterationsExceeded;
@@ -226,7 +221,6 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       // Search direction: These quantities have the same structure
       // as (x, X, y, Y). They are computed twice each iteration:
       // once in the predictor step, and once in the corrector step.
-      Vector dx(x), dy(y);
       Block_Vector dx_elemental(x_elemental);
       El::DistMatrix<El::BigFloat> dy_elemental(y_elemental);
       Block_Diagonal_Matrix dX(X), dY(Y);
