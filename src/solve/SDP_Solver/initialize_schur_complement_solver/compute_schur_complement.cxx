@@ -45,52 +45,6 @@ void compute_schur_complement(
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
   Block_Diagonal_Matrix &schur_complement)
 {
-  for(unsigned int j = 0; j < sdp.dimensions.size(); j++)
-    {
-      const int ej = sdp.degrees[j] + 1;
-
-      for(unsigned int u1 = 0; u1 < sdp.constraint_indices[j].size(); u1++)
-        {
-          const int ej_r1 = sdp.constraint_indices[j][u1].r * ej;
-          const int ej_s1 = sdp.constraint_indices[j][u1].s * ej;
-          const int k1 = sdp.constraint_indices[j][u1].k;
-
-          for(unsigned int u2 = 0; u2 <= u1; u2++)
-            {
-              const int ej_r2 = sdp.constraint_indices[j][u2].r * ej;
-              const int ej_s2 = sdp.constraint_indices[j][u2].s * ej;
-              const int k2 = sdp.constraint_indices[j][u2].k;
-
-              Real tmp = 0;
-              for(auto &b : sdp.blocks[j])
-                {
-                  tmp += (bilinear_pairings_X_inv.blocks[b].elt(ej_s1 + k1,
-                                                                ej_r2 + k2)
-                            * bilinear_pairings_Y.blocks[b].elt(ej_s2 + k2,
-                                                                ej_r1 + k1)
-                          + bilinear_pairings_X_inv.blocks[b].elt(ej_r1 + k1,
-                                                                  ej_r2 + k2)
-                              * bilinear_pairings_Y.blocks[b].elt(ej_s2 + k2,
-                                                                  ej_s1 + k1)
-                          + bilinear_pairings_X_inv.blocks[b].elt(ej_s1 + k1,
-                                                                  ej_s2 + k2)
-                              * bilinear_pairings_Y.blocks[b].elt(ej_r2 + k2,
-                                                                  ej_r1 + k1)
-                          + bilinear_pairings_X_inv.blocks[b].elt(ej_r1 + k1,
-                                                                  ej_s2 + k2)
-                              * bilinear_pairings_Y.blocks[b].elt(ej_r2 + k2,
-                                                                  ej_s1 + k1))
-                         / 4;
-                }
-              schur_complement.blocks[j].elt(u1, u2) = tmp;
-              if(u2 != u1)
-                {
-                  schur_complement.blocks[j].elt(u2, u1) = tmp;
-                }
-            }
-        }
-    }
-
   for(size_t jj = 0; jj < sdp.dimensions.size(); ++jj)
     {
       const size_t block_size(sdp.degrees[jj] + 1);
