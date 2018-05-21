@@ -7,9 +7,9 @@
 
 #pragma once
 
-#include "Vector.hxx"
-
 #include <El.hpp>
+
+#include <cassert>
 
 // A univariate polynomial
 //
@@ -19,29 +19,15 @@ class Polynomial
 {
 public:
   // Coefficients {a_0, a_1, ..., a_n} in increasing order of degree
-  Vector coefficients;
   std::vector<El::BigFloat> coefficients_elemental;
 
   // The zero polynomial
-  Polynomial() : coefficients(1, 0), coefficients_elemental(1, 0) {}
+  Polynomial() : coefficients_elemental(1, 0) {}
 
   // Degree of p(x)
   int degree() const { return coefficients_elemental.size() - 1; };
 
   // Evaluate p(x) for some x using horner's method
-  Real operator()(const Real &x) const
-  {
-    assert(!coefficients.empty());
-    auto coefficient(coefficients.rbegin());
-    Real result(*coefficient);
-    ++coefficient;
-    for(; coefficient != coefficients.rend(); ++coefficient)
-      {
-        result *= x;
-        result += *coefficient;
-      }
-    return result;
-  }
   El::BigFloat operator()(const El::BigFloat &x) const
   {
     assert(!coefficients_elemental.empty());

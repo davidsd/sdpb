@@ -7,52 +7,15 @@
 
 #pragma once
 
+#include "ostream.hxx"
 #include "../types.hxx"
 
 #include <algorithm>
 #include <assert.h>
 #include <iostream>
-#include <ostream>
-#include <vector>
-#include <array>
 
 // a Vector is just an STL vector of Real's
 using Vector = std::vector<Real>;
-
-template <class T>
-std::ostream &operator<<(std::ostream &os, const std::array<T,2> &v)
-{
-  os << "{";
-  for(auto element(v.begin()); element != v.end();)
-    {
-      os << *element;
-      ++element;
-      if(element != v.end())
-        {
-          os << ", ";
-        }
-    }
-  os << "}";
-  return os;
-}
-
-// print any vector<T>, including Vector
-template <class T>
-std::ostream &operator<<(std::ostream &os, const std::vector<T> &v)
-{
-  os << "{";
-  for(auto element(v.begin()); element != v.end();)
-    {
-      os << *element;
-      ++element;
-      if(element != v.end())
-        {
-          os << ", ";
-        }
-    }
-  os << "}";
-  return os;
-}
 
 // The maximal absolute value of the components of v
 inline Real max_abs_vector(const Vector &v)

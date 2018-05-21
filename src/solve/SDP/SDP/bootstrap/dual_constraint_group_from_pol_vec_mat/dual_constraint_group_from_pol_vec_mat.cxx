@@ -43,10 +43,8 @@ dual_constraint_group_from_pol_vec_mat(const Polynomial_Vector_Matrix &m)
   // polynomials (1,y) . \vec P^{rs}(x)
 
   // The first element of each vector \vec P^{rs}(x) multiplies the constant 1
-  g.constraintConstants = Vector(numConstraints);
   g.constraintConstants_elemental.resize(numConstraints);
   // The rest multiply decision variables y
-  g.constraintMatrix = Matrix(numConstraints, vectorDim - 1);
   g.constraintMatrix_elemental.Resize(numConstraints, vectorDim - 1);
 
   // Populate B and c by sampling the polynomial matrix
@@ -57,26 +55,14 @@ dual_constraint_group_from_pol_vec_mat(const Polynomial_Vector_Matrix &m)
         {
           for(size_t k = 0; k < numSamples; k++)
             {
-              Real x = m.sample_points[k];
-              Real scale = m.sample_scalings[k];
-
-              g.constraintConstants[p] = scale * m.elt(r, c)[0](x);
+              El::BigFloat x = m.sample_points_elemental[k];
+              El::BigFloat scale = m.sample_scalings_elemental[k];
+              g.constraintConstants_elemental[p] = scale * m.elt(r, c)[0](x);
               for(size_t n = 1; n < vectorDim; ++n)
                 {
-                  g.constraintMatrix.elt(p, n - 1)
-                    = -scale * m.elt(r, c)[n](x);
+                  g.constraintMatrix_elemental.Set(p, n - 1,
+                                                   -scale * m.elt(r, c)[n](x));
                 }
-
-              {
-                El::BigFloat x = m.sample_points_elemental[k];
-                El::BigFloat scale = m.sample_scalings_elemental[k];
-                g.constraintConstants_elemental[p] = scale * m.elt(r, c)[0](x);
-                for(size_t n = 1; n < vectorDim; ++n)
-                  {
-                    g.constraintMatrix_elemental.Set(
-                      p, n - 1, -scale * m.elt(r, c)[n](x));
-                  }
-              }
               ++p;
             }
         }

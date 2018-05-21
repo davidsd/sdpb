@@ -26,7 +26,6 @@ parse_polynomial_vector_matrix(const boost::property_tree::ptree &tree);
 
 SDP::SDP(const std::vector<boost::filesystem::path> &sdp_files)
 {
-  Vector objective;
   std::vector<El::BigFloat> objective_elemental;
 
   std::vector<Polynomial_Vector_Matrix> polynomialVectorMatrices;
@@ -40,7 +39,6 @@ SDP::SDP(const std::vector<boost::filesystem::path> &sdp_files)
       /// boost::property_tree uses not_found() instead of end() :(
       if(objective_iterator != sdp.not_found())
         {
-          objective = parse_vector(objective_iterator->second);
           objective_elemental
             = parse_vector_elemental(objective_iterator->second);
         }
