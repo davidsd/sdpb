@@ -24,10 +24,6 @@ void block_tensor_transpose_congruence(
   std::vector<El::DistMatrix<El::BigFloat>> &workspace,
   Block_Diagonal_Matrix &result);
 
-void compute_dual_residues(const SDP &sdp, const Vector &y,
-                           const Block_Diagonal_Matrix &bilinear_pairings_Y,
-                           Vector &dual_residues);
-
 void compute_dual_residues(const SDP &sdp,
                            const El::DistMatrix<El::BigFloat> &y,
                            const Block_Diagonal_Matrix &bilinear_pairings_Y,
@@ -187,9 +183,6 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 
       // dualResidues[p] = primalObjective[p] - Tr(A_p Y) - (FreeVarMatrix y)_p,
       timers["run.computeDualResidues"].resume();
-      compute_dual_residues(sdp, y, bilinear_pairings_Y, dual_residues);
-      dual_error = max_abs_vector(dual_residues);
-
       compute_dual_residues(sdp, y_elemental, bilinear_pairings_Y,
                             dual_residues_elemental);
       dual_error_elemental = 0;
