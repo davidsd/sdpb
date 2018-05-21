@@ -29,7 +29,7 @@ void compute_dual_residues(const SDP &sdp,
                            const Block_Diagonal_Matrix &bilinear_pairings_Y,
                            Block_Vector &dual_residues);
 
-void compute_primal_residues(const SDP &sdp, const Vector &x,
+void compute_primal_residues(const SDP &sdp,
                              const Block_Vector &x_elemental,
                              const Block_Diagonal_Matrix &X,
                              Block_Diagonal_Matrix &primal_residues);
@@ -194,7 +194,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 
       timers["run.computePrimalResidues"].resume();
       // PrimalResidues = \sum_p A_p x[p] - X
-      compute_primal_residues(sdp, x, x_elemental, X, primal_residues);
+      compute_primal_residues(sdp, x_elemental, X, primal_residues);
       primal_error_elemental = primal_residues.max_abs();
       timers["run.computePrimalResidues"].stop();
 

@@ -5,12 +5,11 @@
 // Inputs: sdp, x, X
 // Output: PrimalResidues (overwritten)
 //
-void compute_primal_residues(const SDP &sdp, const Vector &x,
+void compute_primal_residues(const SDP &sdp,
                              const Block_Vector &x_elemental,
                              const Block_Diagonal_Matrix &X,
                              Block_Diagonal_Matrix &primal_residues)
 {
-  constraint_matrix_weighted_sum(sdp, x, primal_residues);
   constraint_matrix_weighted_sum(sdp, x_elemental, primal_residues);
   primal_residues -= X;
 }
