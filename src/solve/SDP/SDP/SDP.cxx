@@ -8,7 +8,6 @@
 // See the manual for a description of the correct XML input format.
 
 #include "parse_append_many.hxx"
-#include "parse_vector.hxx"
 #include "parse_vector_elemental.hxx"
 
 #include "../../Polynomial.hxx"

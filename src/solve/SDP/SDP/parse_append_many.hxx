@@ -1,7 +1,5 @@
 #pragma once
 
-#include "../types.hxx"
-
 #include <boost/property_tree/ptree.hpp>
 
 #include <vector>
