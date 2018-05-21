@@ -8,11 +8,6 @@
 #include "../Dual_Constraint_Group.hxx"
 #include "../../../../SDP.hxx"
 
-Matrix sample_bilinear_basis(const int maxDegree, const int numSamples,
-                             const std::vector<Polynomial> &bilinearBasis,
-                             const std::vector<Real> &samplePoints,
-                             const std::vector<Real> &sampleScalings);
-
 El::Matrix<El::BigFloat>
 sample_bilinear_basis(const int maxDegree, const int numSamples,
                       const std::vector<Polynomial> &bilinearBasis,
@@ -95,8 +90,6 @@ dual_constraint_group_from_pol_vec_mat(const Polynomial_Vector_Matrix &m)
   //   Y_2: {\sqrt(x) q_0(x), ..., \sqrt(x) q_delta2(x)
   //
   int delta1 = g.degree / 2;
-  g.bilinearBases.push_back(sample_bilinear_basis(
-    delta1, numSamples, m.bilinear_basis, m.sample_points, m.sample_scalings));
   g.bilinearBases_elemental.push_back(sample_bilinear_basis(
     delta1, numSamples, m.bilinear_basis, m.sample_points_elemental,
     m.sample_scalings_elemental));
@@ -107,10 +100,6 @@ dual_constraint_group_from_pol_vec_mat(const Polynomial_Vector_Matrix &m)
     {
       // The \sqrt(x) factors can be accounted for by replacing the
       // scale factors s_k with x_k s_k.
-      g.bilinearBases.push_back(sample_bilinear_basis(
-        delta2, numSamples, m.bilinear_basis, m.sample_points,
-        multiply_vectors(m.sample_points, m.sample_scalings)));
-
       std::vector<El::BigFloat> scaled_samples;
       for(size_t ii = 0; ii < m.sample_points_elemental.size(); ++ii)
         {

@@ -18,24 +18,6 @@
 // - samplePoints: the points {x_0, x_1, ... }
 // - sampleScalings: the scale factors {s_0, s_1, ... }
 //
-Matrix sample_bilinear_basis(const int maxDegree, const int numSamples,
-                             const std::vector<Polynomial> &bilinearBasis,
-                             const std::vector<Real> &samplePoints,
-                             const std::vector<Real> &sampleScalings)
-{
-  Matrix b(maxDegree + 1, numSamples);
-  for(int k = 0; k < numSamples; k++)
-    {
-      Real x = samplePoints[k];
-      Real scale = sqrt(sampleScalings[k]);
-      for(int i = 0; i <= maxDegree; i++)
-        {
-          b.elt(i, k) = scale * bilinearBasis[i](x);
-        }
-    }
-  return b;
-}
-
 El::Matrix<El::BigFloat>
 sample_bilinear_basis(const int maxDegree, const int numSamples,
                       const std::vector<Polynomial> &bilinearBasis,

@@ -17,8 +17,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
-void bootstrap(const Vector &affineObjective,
-               const std::vector<El::BigFloat> &objective_elemental,
+void bootstrap(const std::vector<El::BigFloat> &objective_elemental,
                const std::vector<Polynomial_Vector_Matrix> &polVectorMatrices,
                SDP &sdp);
 
@@ -56,5 +55,5 @@ SDP::SDP(const std::vector<boost::filesystem::path> &sdp_files)
                             polynomialVectorMatrices);
         }
     }
-  bootstrap(objective, objective_elemental, polynomialVectorMatrices, *this);
+  bootstrap(objective_elemental, polynomialVectorMatrices, *this);
 }

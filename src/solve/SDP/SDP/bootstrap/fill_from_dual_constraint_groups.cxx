@@ -49,40 +49,10 @@ void fill_from_dual_constraint_groups(
                   b.Get(row + row_offset, column + column_offset));
               }
         }
-
-      for(auto &b : g.bilinearBases)
-        {
-          // Ensure that each bilinearBasis is sampled the correct number
-          // of times
-          assert(b.cols == g.degree + 1);
-          sdp.bilinear_bases.push_back(b);
-        }
-
-      // sdp.primal_objective is the concatenation of the
-      // g.constraintConstants
-      sdp.primal_objective_c.insert(sdp.primal_objective_c.end(),
-                                    g.constraintConstants.begin(),
-                                    g.constraintConstants.end());
     }
-
-  sdp.free_var_matrix = Matrix(sdp.primal_objective_c.size(),
-                               sdp.dual_objective_b_elemental.Height());
-
-  size_t row = 0;
-  for(auto &g : dualConstraintGroups)
-    {
-      // sdp.free_var_matrix is the block-wise concatenation of the
-      // g.constraintMatrix's
-      for(size_t k = 0; k < g.constraintMatrix.rows; ++k, ++row)
-        for(size_t n = 0; n < g.constraintMatrix.cols; ++n)
-          {
-            sdp.free_var_matrix.elt(row, n) = g.constraintMatrix.elt(k, n);
-          }
-    }
-  assert(row == sdp.primal_objective_c.size());
 
   sdp.initialize_constraint_indices();
-
+  
   // Then assign blocks
   auto group(dualConstraintGroups.begin());
   for(auto &block_size : sdp.schur_block_dims())

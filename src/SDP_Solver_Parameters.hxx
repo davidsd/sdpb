@@ -3,8 +3,6 @@
 // for a detailed description of each.
 //
 
-#include "types.hxx"
-
 #include <El.hpp>
 
 #include <iostream>

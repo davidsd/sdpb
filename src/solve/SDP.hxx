@@ -9,7 +9,6 @@
 
 #include "Block_Matrix.hxx"
 #include "Block_Vector.hxx"
-#include "Matrix.hxx"
 #include "Polynomial_Vector_Matrix.hxx"
 #include "Index_Tuple.hxx"
 
@@ -82,24 +81,19 @@ public:
   //                                           0 <= k <= d_j,
   //                                           0 <= m <= delta_b)
   //
-  std::vector<Matrix> bilinear_bases;
   std::vector<El::Matrix<El::BigFloat>> bilinear_bases_elemental_local;
   std::vector<El::DistMatrix<El::BigFloat>> bilinear_bases_elemental_dist;
 
   // FreeVarMatrix = B, a PxN matrix
-  Matrix free_var_matrix;
   Block_Matrix free_var_matrix_elemental;
 
   // c, a vector of length P used with primal_objective
-  Vector primal_objective_c;
   Block_Vector primal_objective_c_elemental;
 
   // b, a vector of length N used with dual_objective
-  Vector dual_objective_b;
   El::DistMatrix<El::BigFloat> dual_objective_b_elemental;
 
   // objectiveConst = f
-  Real objective_const;
   El::BigFloat objective_const_elemental;
 
   // dimensions[j] = m_j  (0 <= j < J)
@@ -115,7 +109,7 @@ public:
   // entering the constraint matrices A_p.  There are always 2 blocks,
   // one for even terms in the polynomial and the other for odd terms.
   //
-  std::vector<std::array<size_t,2>> blocks;
+  std::vector<std::array<size_t, 2>> blocks;
 
   // constraintIndices gives the 1-to-many mapping described above
   //
@@ -128,6 +122,8 @@ public:
   // This allows us to loop through the constraints A_p associated to
   // each j.
   //
+
+  // FIXME: Is this still needed?
   std::vector<std::vector<Index_Tuple>> constraint_indices;
 
   SDP(const std::vector<boost::filesystem::path> &sdp_files);
@@ -149,7 +145,6 @@ public:
                 ++p;
               }
       }
-    assert(p == primal_objective_c.size());
   }
 
   // Dimensions of the blocks of X,Y (0 <= b < bMax)
@@ -202,12 +197,23 @@ public:
   // Print an SDP, for debugging purposes
   friend std::ostream &operator<<(std::ostream &os, const SDP &sdp)
   {
-    os << "SDP(bilinearBases = " << sdp.bilinear_bases
-       << ", FreeVarMatrix = " << sdp.free_var_matrix
-       << ", primalObjective = " << sdp.primal_objective_c
-       << ", dualObjective = " << sdp.dual_objective_b
-       << ", dimensions = " << sdp.dimensions << ", degrees = " << sdp.degrees
-       << ", blocks = " << sdp.blocks << ")";
+    os << "SDP(";
+    El::Print(sdp.bilinear_bases_elemental_local, "bilinearBases", os);
+    os << "FreeVarMatrix = ";
+    for (auto &block: sdp.free_var_matrix_elemental.blocks)
+      {
+        El::Print(block, "", os);
+      }
+    os << "primalObjective = ";
+    for (auto &block: sdp.primal_objective_c_elemental.blocks)
+      {
+        El::Print(block, "", os);
+      }
+    El::Print(sdp.dual_objective_b_elemental, "dualObjective", os);
+    os << "dimensions = " << sdp.dimensions << "\n"
+       << "degrees = " << sdp.degrees << "\n"
+       << "blocks" << sdp.blocks << "\n"
+       << ")";
     return os;
   }
 };

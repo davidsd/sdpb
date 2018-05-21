@@ -82,11 +82,12 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
   Block_Diagonal_Matrix step_matrix_workspace(X);
   std::vector<El::DistMatrix<El::BigFloat>>
     bilinear_pairings_workspace_elemental;
-  for(unsigned int b = 0; b < sdp.bilinear_bases.size(); b++)
+  for(size_t block = 0; block < sdp.bilinear_bases_elemental_local.size();
+      block++)
     {
       bilinear_pairings_workspace_elemental.emplace_back(
-        X.blocks_elemental[b].Height(),
-        bilinear_pairings_X_Inv.blocks_elemental[b].Width());
+        X.blocks_elemental[block].Height(),
+        bilinear_pairings_X_Inv.blocks_elemental[block].Width());
     }
 
   print_header();
@@ -212,9 +213,9 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         //
         // where N is the dimension of the dual objective function.  Note
         // that N' could change with each iteration.
-        Matrix Q(sdp.free_var_matrix.cols, sdp.free_var_matrix.cols);
-        El::DistMatrix<El::BigFloat> Q_elemental(sdp.free_var_matrix.cols,
-                                                 sdp.free_var_matrix.cols);
+        El::DistMatrix<El::BigFloat> Q_elemental(
+          sdp.free_var_matrix_elemental.width(),
+          sdp.free_var_matrix_elemental.width());
 
         // Compute SchurComplement and prepare to solve the Schur
         // complement equation for dx, dy

@@ -34,7 +34,6 @@ public:
   // Current point
 
   // a Vector of length P = sdp.primalObjective.size()
-  Vector x;
   Block_Vector x_elemental;
 
   // a Block_Diagonal_Matrix with block sizes given by
@@ -42,7 +41,6 @@ public:
   Block_Diagonal_Matrix X;
 
   // a Vector of length N = sdp.dualObjective.size()
-  Vector y;
   El::DistMatrix<El::BigFloat> y_elemental;
 
   // a Block_Diagonal_Matrix with the same structure as X
