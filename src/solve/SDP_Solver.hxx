@@ -53,10 +53,6 @@ public:
   // values of the objective functions.  In the class SDP, they refer
   // to the vectors c and b.  Hopefully the name-clash won't cause
   // confusion.
-  Real primal_objective; // f + c . x
-  Real dual_objective;   // f + b . y
-  Real duality_gap;      // normalized difference of objectives
-
   El::BigFloat primal_objective_elemental, // f + c . x
     dual_objective_elemental,              // f + b . y
     duality_gap_elemental; // normalized difference of objectives
@@ -75,9 +71,6 @@ public:
   //
   //   dualResidues = c - Tr(A_* Y) - B y
   //
-  Vector dual_residues;
-  Real dual_error; // maxAbs(dualResidues)
-
   Block_Vector dual_residues_elemental;
   El::BigFloat dual_error_elemental; // maxAbs(dualResidues)
 

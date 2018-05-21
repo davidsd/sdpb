@@ -6,7 +6,6 @@ void SDP_Solver::save_solution(
 {
   boost::filesystem::ofstream ofs(out_file);
   std::cout << "Saving solution to      : " << out_file << '\n';
-  ofs.precision(static_cast<int>(primal_objective.get_prec() * 0.31 + 5));
   ofs << "terminateReason = \"" << terminate_reason << "\";\n"
       << "primalObjective = " << primal_objective_elemental << ";\n"
       << "dualObjective   = " << dual_objective_elemental << ";\n"
