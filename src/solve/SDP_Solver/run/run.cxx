@@ -29,18 +29,8 @@ void compute_primal_residues(const SDP &sdp, const Block_Vector &x_elemental,
                              const Block_Diagonal_Matrix &X,
                              Block_Diagonal_Matrix &primal_residues);
 
-Real predictor_centering_parameter(const SDP_Solver_Parameters &parameters,
-                                   const bool is_primal_dual_feasible);
 El::BigFloat predictor_centering_parameter_elemental(
   const SDP_Solver_Parameters &parameters, const bool is_primal_dual_feasible);
-
-Real corrector_centering_parameter(const SDP_Solver_Parameters &parameters,
-                                   const Block_Diagonal_Matrix &X,
-                                   const Block_Diagonal_Matrix &dX,
-                                   const Block_Diagonal_Matrix &Y,
-                                   const Block_Diagonal_Matrix &dY,
-                                   const Real &mu,
-                                   const bool is_primal_dual_feasible);
 
 El::BigFloat corrector_centering_parameter(
   const SDP_Solver_Parameters &parameters, const Block_Diagonal_Matrix &X,
@@ -90,20 +80,13 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 
   // Additional workspace variables used in step_length()
   Block_Diagonal_Matrix step_matrix_workspace(X);
-  std::vector<Matrix> bilinear_pairings_workspace;
   std::vector<El::DistMatrix<El::BigFloat>>
     bilinear_pairings_workspace_elemental;
-  std::vector<Vector> eigenvalues_workspace;
-  std::vector<Vector> QR_workspace;
   for(unsigned int b = 0; b < sdp.bilinear_bases.size(); b++)
     {
-      bilinear_pairings_workspace.emplace_back(
-        X.blocks[b].rows, bilinear_pairings_X_Inv.blocks[b].cols);
       bilinear_pairings_workspace_elemental.emplace_back(
         X.blocks_elemental[b].Height(),
         bilinear_pairings_X_Inv.blocks_elemental[b].Width());
-      eigenvalues_workspace.emplace_back(X.blocks[b].rows);
-      QR_workspace.emplace_back(3 * X.blocks[b].rows - 1);
     }
 
   print_header();
@@ -122,14 +105,6 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         }
 
       timers["run.objectives"].resume();
-      primal_objective
-        = sdp.objective_const + dot_product(sdp.primal_objective_c, x);
-      dual_objective
-        = sdp.objective_const + dot_product(sdp.dual_objective_b, y);
-      duality_gap
-        = abs(primal_objective - dual_objective)
-          / max(Real(abs(primal_objective) + abs(dual_objective)), Real(1));
-
       primal_objective_elemental
         = sdp.objective_const_elemental
           + dot(sdp.primal_objective_c_elemental, x_elemental);
@@ -206,7 +181,6 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       else if(iteration > parameters.max_iterations)
         return SDP_Solver_Terminate_Reason::MaxIterationsExceeded;
 
-      Real mu, beta_predictor, beta_corrector;
       El::BigFloat mu_elemental, beta_predictor_elemental,
         beta_corrector_elemental;
 
@@ -252,10 +226,6 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         timers["run.initializeSchurComplementSolver"].stop();
 
         // Compute the complementarity mu = Tr(X Y)/X.dim
-        mu = frobenius_product_symmetric(X, Y) / X.dim;
-        if(mu > parameters.max_complementarity)
-          return SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
-
         mu_elemental = frobenius_product_symmetric_elemental(X, Y) / X.dim;
         if(mu_elemental > parameters.max_complementarity_elemental)
           {
@@ -263,9 +233,6 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
           }
 
         // Compute the predictor solution for (dx, dX, dy, dY)
-        beta_predictor = predictor_centering_parameter(
-          parameters, is_primal_feasible && is_dual_feasible);
-
         beta_predictor_elemental = predictor_centering_parameter_elemental(
           parameters, is_primal_feasible && is_dual_feasible);
 
