@@ -23,12 +23,13 @@ void fill_from_dual_constraint_groups(
       if(g.bilinearBases_elemental.size() != 2)
         {
           throw std::runtime_error(
-            "Wrong number of elements in dualConstraintGroups::bilinearBases.  "
+            "Wrong number of elements in dualConstraintGroups::bilinearBases. "
+            " "
             "Expected 2 but found:"
             + std::to_string(g.bilinearBases_elemental.size()));
         }
       sdp.blocks.push_back({sdp.bilinear_bases_elemental_local.size(),
-            sdp.bilinear_bases_elemental_local.size() + 1});
+                            sdp.bilinear_bases_elemental_local.size() + 1});
       for(auto &b : g.bilinearBases_elemental)
         {
           // Ensure that each bilinearBasis is sampled the correct number
@@ -52,7 +53,7 @@ void fill_from_dual_constraint_groups(
     }
 
   sdp.initialize_constraint_indices();
-  
+
   // Then assign blocks
   auto group(dualConstraintGroups.begin());
   for(auto &block_size : sdp.schur_block_dims())
@@ -66,10 +67,14 @@ void fill_from_dual_constraint_groups(
         auto block(sdp.primal_objective_c_elemental.blocks.rbegin());
         size_t local_height(block->LocalHeight());
         El::Int row_begin(block->GlobalRow(0));
-        for(size_t hh = 0; hh < local_height; ++hh)
+        if(block->GlobalCol(0) == 0)
           {
-            block->SetLocal(
-              hh, 0, group->constraintConstants_elemental.at(row_begin + hh));
+            for(size_t hh = 0; hh < local_height; ++hh)
+              {
+                block->SetLocal(
+                  hh, 0,
+                  group->constraintConstants_elemental.at(row_begin + hh));
+              }
           }
       }
       {
