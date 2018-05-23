@@ -8,8 +8,8 @@ def configure(conf):
     conf.check_boost(lib='serialization system filesystem timer program_options chrono')
 
 def build(bld):
-    default_flags=['-Wall', '-Wextra', '-O3', '-D___MPACK_BUILD_WITH_GMP___']
-    # default_flags=['-Wall', '-Wextra', '-g', '-D___MPACK_BUILD_WITH_GMP___']
+    default_flags=['-Wall', '-Wextra', '-O3']
+    # default_flags=['-Wall', '-Wextra', '-g']
     use_packages=['BOOST','gmpxx','cxx14','elemental']
     
     # Main executable
