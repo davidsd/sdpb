@@ -87,15 +87,6 @@ public:
       }
   }
 
-  // M = A
-  void copy_from(const Block_Diagonal_Matrix &A)
-  {
-    for(size_t b = 0; b < blocks_elemental.size(); b++)
-      {
-        El::Copy(A.blocks_elemental[b], blocks_elemental[b]);
-      }
-  }
-
   // Symmetrize M in place
   void symmetrize()
   {
@@ -155,9 +146,8 @@ void block_diagonal_matrix_multiply(Block_Diagonal_Matrix &A,  // constant
                                     Block_Diagonal_Matrix &C); // overwritten
 
 // A := L^{-1} A L^{-T}
-void lower_triangular_inverse_congruence(
-  Block_Diagonal_Matrix &A,  // overwritten
-  Block_Diagonal_Matrix &L); // constant
+void lower_triangular_inverse_congruence(const Block_Diagonal_Matrix &L,
+                                         Block_Diagonal_Matrix &A);
 
 // Minimum eigenvalue of A, via the QR method
 // Inputs:

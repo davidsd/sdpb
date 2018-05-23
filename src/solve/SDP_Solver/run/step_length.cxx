@@ -15,18 +15,16 @@
 // Workspace:
 // - MInvDM (NB: overwritten when computing minEigenvalue)
 // - eigenvalues, a Vector of eigenvalues for each block of M
-// - workspace, a vector of Vectors needed by the minEigenvalue function
 // Output:
 // - min(\gamma \alpha(M, dM), 1) (returned)
 
-El::BigFloat
-step_length(Block_Diagonal_Matrix &MCholesky, Block_Diagonal_Matrix &dM,
-            Block_Diagonal_Matrix &MInvDM, const El::BigFloat &gamma)
+El::BigFloat step_length(const Block_Diagonal_Matrix &MCholesky,
+                         const Block_Diagonal_Matrix &dM,
+                         const El::BigFloat &gamma)
 {
   // MInvDM = L^{-1} dM L^{-T}, where M = L L^T
-  MInvDM.copy_from(dM);
-  lower_triangular_inverse_congruence(MInvDM, MCholesky);
-
+  Block_Diagonal_Matrix MInvDM(dM);
+  lower_triangular_inverse_congruence(MCholesky, MInvDM);
   const El::BigFloat lambda(min_eigenvalue(MInvDM));
   if(lambda > -gamma)
     {

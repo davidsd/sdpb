@@ -1,8 +1,8 @@
 #include "../Block_Diagonal_Matrix.hxx"
 
 // A := L^{-1} A L^{-T}
-void lower_triangular_inverse_congruence(Block_Diagonal_Matrix &A,
-                                         Block_Diagonal_Matrix &L)
+void lower_triangular_inverse_congruence(const Block_Diagonal_Matrix &L,
+                                         Block_Diagonal_Matrix &A)
 {
   for(size_t b = 0; b < A.blocks_elemental.size(); b++)
     {

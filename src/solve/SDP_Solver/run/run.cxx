@@ -39,8 +39,8 @@ El::BigFloat corrector_centering_parameter(
   const bool is_primal_dual_feasible);
 
 El::BigFloat
-step_length(Block_Diagonal_Matrix &MCholesky, Block_Diagonal_Matrix &dM,
-            Block_Diagonal_Matrix &MInvDM, const El::BigFloat &gamma);
+step_length(const Block_Diagonal_Matrix &MCholesky,
+            const Block_Diagonal_Matrix &dM, const El::BigFloat &gamma);
 
 SDP_Solver_Terminate_Reason
 SDP_Solver::run(const boost::filesystem::path checkpoint_file)
@@ -79,7 +79,6 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
   Block_Diagonal_Matrix bilinear_pairings_Y(bilinear_pairings_X_Inv);
 
   // Additional workspace variables used in step_length()
-  Block_Diagonal_Matrix step_matrix_workspace(X);
   std::vector<El::DistMatrix<El::BigFloat>>
     bilinear_pairings_workspace_elemental;
   for(size_t block = 0; block < sdp.bilinear_bases_elemental_local.size();
@@ -256,15 +255,13 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       }
       // Compute step-lengths that preserve positive definiteness of X, Y
       timers["run.stepLength(XCholesky)"].resume();
-      primal_step_length_elemental
-        = step_length(X_cholesky, dX, step_matrix_workspace,
-                      parameters.step_length_reduction_elemental);
+      primal_step_length_elemental = step_length(
+        X_cholesky, dX, parameters.step_length_reduction_elemental);
 
       timers["run.stepLength(XCholesky)"].stop();
       timers["run.stepLength(YCholesky)"].resume();
-      dual_step_length_elemental
-        = step_length(Y_cholesky, dY, step_matrix_workspace,
-                      parameters.step_length_reduction_elemental);
+      dual_step_length_elemental = step_length(
+        Y_cholesky, dY, parameters.step_length_reduction_elemental);
       timers["run.stepLength(YCholesky)"].stop();
 
       // If our problem is both dual-feasible and primal-feasible,
