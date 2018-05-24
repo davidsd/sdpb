@@ -70,13 +70,13 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
   // dimension of BilinearPairingsXInv.block[b] is (d_j+1)*m_j.  See
   // SDP.h for more information on d_j and m_j.
 
-  Block_Diagonal_Matrix bilinear_pairings_X_Inv(
+  Block_Diagonal_Matrix bilinear_pairings_X_inv(
     sdp.bilinear_pairing_block_dims());
 
   // BilinearPairingsY is analogous to BilinearPairingsXInv, with
   // X^{-1} -> Y.
 
-  Block_Diagonal_Matrix bilinear_pairings_Y(bilinear_pairings_X_Inv);
+  Block_Diagonal_Matrix bilinear_pairings_Y(bilinear_pairings_X_inv);
 
   // Additional workspace variables used in step_length()
   std::vector<El::DistMatrix<El::BigFloat>>
@@ -86,13 +86,15 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
     {
       bilinear_pairings_workspace_elemental.emplace_back(
         X.blocks_elemental[block].Height(),
-        bilinear_pairings_X_Inv.blocks_elemental[block].Width());
+        bilinear_pairings_X_inv.blocks_elemental[block].Width());
     }
 
   print_header();
 
   for(int iteration = 1;; iteration++)
     {
+      /// FIXME: This has to use something that is guaranteed to be
+      /// the same for all processors.
       if(timers["Last checkpoint"].elapsed().wall
          >= parameters.checkpoint_interval * 1000000000LL)
         {
@@ -133,7 +135,8 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       timers["run.blockTensorInvTransposeCongruenceWithCholesky"].resume();
       block_tensor_inv_transpose_congruence_with_cholesky(
         X_cholesky, sdp.bilinear_bases_elemental_local,
-        bilinear_pairings_workspace_elemental, bilinear_pairings_X_Inv);
+        bilinear_pairings_workspace_elemental, bilinear_pairings_X_inv);
+
       timers["run.blockTensorInvTransposeCongruenceWithCholesky"].stop();
 
       timers["run.blockTensorTransposeCongruence"].resume();
@@ -219,7 +222,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         // complement equation for dx, dy
         timers["run.initializeSchurComplementSolver"].resume();
         initialize_schur_complement_solver(
-          bilinear_pairings_X_Inv, bilinear_pairings_Y, sdp.schur_block_dims(),
+          bilinear_pairings_X_inv, bilinear_pairings_Y, sdp.schur_block_dims(),
           schur_complement_cholesky, schur_off_diagonal_elemental,
           Q_elemental);
         timers["run.initializeSchurComplementSolver"].stop();
