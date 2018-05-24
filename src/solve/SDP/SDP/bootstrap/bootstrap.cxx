@@ -44,14 +44,14 @@ void bootstrap(const std::vector<El::BigFloat> &affine_objective_elemental,
   sdp.dual_objective_b_elemental.Resize(affine_objective_elemental.size() - 1,
                                         1);
   size_t local_height(sdp.dual_objective_b_elemental.LocalHeight());
-  El::Int row_offset(sdp.dual_objective_b_elemental.GlobalRow(0));
 
   if(sdp.dual_objective_b_elemental.GlobalCol(0) == 0)
     {
-      for(size_t hh = 0; hh < local_height; ++hh)
+      for(size_t row = 0; row < local_height; ++row)
         {
+          size_t global_row(sdp.dual_objective_b_elemental.GlobalRow(row));
           sdp.dual_objective_b_elemental.SetLocal(
-            hh, 0, affine_objective_elemental[row_offset + 1 + hh]);
+            row, 0, affine_objective_elemental[global_row + 1]);
         }
     }
   fill_from_dual_constraint_groups(dualConstraintGroups, sdp);

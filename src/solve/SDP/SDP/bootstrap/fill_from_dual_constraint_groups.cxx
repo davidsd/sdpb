@@ -40,15 +40,16 @@ void fill_from_dual_constraint_groups(
                                                          b.Width());
 
           auto dist(sdp.bilinear_bases_elemental_dist.rbegin());
-          El::Int row_offset(dist->GlobalRow(0)),
-            column_offset(dist->GlobalCol(0));
           for(int64_t row = 0; row < dist->LocalHeight(); ++row)
-            for(int64_t column = 0; column < dist->LocalWidth(); ++column)
-              {
-                dist->SetLocal(
-                  row, column,
-                  b.Get(row + row_offset, column + column_offset));
-              }
+            {
+              El::Int global_row(dist->GlobalRow(row));
+              for(int64_t column = 0; column < dist->LocalWidth(); ++column)
+                {
+                  El::Int global_column(dist->GlobalCol(column));
+                  dist->SetLocal(row, column,
+                                 b.Get(global_row, global_column));
+                }
+            }
         }
     }
 
@@ -66,14 +67,13 @@ void fill_from_dual_constraint_groups(
         sdp.primal_objective_c_elemental.blocks.emplace_back(block_size, 1);
         auto block(sdp.primal_objective_c_elemental.blocks.rbegin());
         size_t local_height(block->LocalHeight());
-        El::Int row_begin(block->GlobalRow(0));
         if(block->GlobalCol(0) == 0)
           {
-            for(size_t hh = 0; hh < local_height; ++hh)
+            for(size_t row = 0; row < local_height; ++row)
               {
+                size_t global_row(block->GlobalRow(row));
                 block->SetLocal(
-                  hh, 0,
-                  group->constraintConstants_elemental.at(row_begin + hh));
+                  row, 0, group->constraintConstants_elemental.at(global_row));
               }
           }
       }
@@ -83,23 +83,25 @@ void fill_from_dual_constraint_groups(
         auto block(sdp.free_var_matrix_elemental.blocks.rbegin());
         int64_t local_height(block->LocalHeight()),
           local_width(block->LocalWidth());
-        El::Int row_begin(block->GlobalRow(0)),
-          column_begin(block->GlobalCol(0));
 
-        for(int64_t row = 0;
-            row < local_height
-            && row + row_begin < group->constraintMatrix_elemental.Height();
-            ++row)
-          for(int64_t column = 0;
-              column < local_width
-              && column + column_begin
-                   < group->constraintMatrix_elemental.Width();
-              ++column)
-            {
-              block->SetLocal(row, column,
-                              group->constraintMatrix_elemental.Get(
-                                row + row_begin, column + column_begin));
-            }
+        for(int64_t row = 0; row < local_height; ++row)
+          {
+            El::Int global_row(block->GlobalRow(row));
+            if(global_row < group->constraintMatrix_elemental.Height())
+              {
+                for(int64_t column = 0; column < local_width; ++column)
+                  {
+                    El::Int global_column(block->GlobalCol(column));
+                    if(global_column
+                       < group->constraintMatrix_elemental.Width())
+                      {
+                        block->SetLocal(row, column,
+                                        group->constraintMatrix_elemental.Get(
+                                          global_row, global_column));
+                      }
+                  }
+              }
+          }
       }
       ++group;
     }

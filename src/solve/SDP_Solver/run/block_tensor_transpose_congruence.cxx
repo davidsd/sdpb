@@ -22,29 +22,30 @@ void block_tensor_transpose_congruence(
       // FIXME: This should be a constant, not computed over and over.
       // Set up the workspace[b] to have copies of bilinear_bases[b]
       // along the diagonal
-      size_t row_offset(workspace[b].GlobalRow(0)),
-        column_offset(workspace[b].GlobalCol(0));
-
       for(int64_t row = 0; row < workspace[b].LocalHeight(); ++row)
-        for(int64_t column = 0; column < workspace[b].LocalWidth(); ++column)
-          {
-            size_t m_row((row + row_offset) / bilinear_bases[b].Height()),
-              m_column((column + column_offset) / bilinear_bases[b].Width());
-            workspace[b].SetLocal(
-              row, column,
-              m_row != m_column
-                ? El::BigFloat(0)
-                : bilinear_bases[b].Get(
-                    (row + row_offset) % bilinear_bases[b].Height(),
-                    (column + column_offset) % bilinear_bases[b].Width()));
-          }
-      
+        {
+          size_t global_row(workspace[b].GlobalRow(row));
+
+          for(int64_t column = 0; column < workspace[b].LocalWidth(); ++column)
+            {
+              size_t global_column(workspace[b].GlobalCol(column));
+
+              size_t row_block(global_row / bilinear_bases[b].Height()),
+                column_block(global_column / bilinear_bases[b].Width());
+              workspace[b].SetLocal(
+                row, column,
+                row_block != column_block
+                  ? El::BigFloat(0)
+                  : bilinear_bases[b].Get(
+                      global_row % bilinear_bases[b].Height(),
+                      global_column % bilinear_bases[b].Width()));
+            }
+        }
       auto temp_space(workspace[b]);
-      Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL,
-           El::BigFloat(1), Y.blocks_elemental[b], workspace[b], 
-           El::BigFloat(0), temp_space);
+      Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, El::BigFloat(1),
+           Y.blocks_elemental[b], workspace[b], El::BigFloat(0), temp_space);
       Gemm(El::Orientation::TRANSPOSE, El::Orientation::NORMAL,
-           El::BigFloat(1), workspace[b], temp_space, 
-           El::BigFloat(0), result.blocks_elemental[b]);
+           El::BigFloat(1), workspace[b], temp_space, El::BigFloat(0),
+           result.blocks_elemental[b]);
     }
 }
