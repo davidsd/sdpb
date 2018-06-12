@@ -16,7 +16,7 @@ void block_tensor_inv_transpose_congruence_with_cholesky(
 
 void block_tensor_transpose_congruence(
   const Block_Diagonal_Matrix &Y,
-  const std::vector<El::DistMatrix<El::BigFloat>> &bilinear_bases,
+  const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases,
   std::vector<El::DistMatrix<El::BigFloat>> &workspace,
   Block_Diagonal_Matrix &result);
 
@@ -140,7 +140,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       timers["run.blockTensorInvTransposeCongruenceWithCholesky"].stop();
 
       timers["run.blockTensorTransposeCongruence"].resume();
-      block_tensor_transpose_congruence(Y, sdp.bilinear_bases_elemental_dist,
+      block_tensor_transpose_congruence(Y, sdp.bilinear_bases_elemental_local,
                                         bilinear_pairings_workspace_elemental,
                                         bilinear_pairings_Y);
       timers["run.blockTensorTransposeCongruence"].stop();

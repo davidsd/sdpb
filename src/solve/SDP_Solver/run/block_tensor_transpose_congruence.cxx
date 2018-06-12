@@ -13,7 +13,7 @@
 // be no communication required.
 void block_tensor_transpose_congruence(
   const Block_Diagonal_Matrix &Y,
-  const std::vector<El::DistMatrix<El::BigFloat>> &bilinear_bases,
+  const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases,
   std::vector<El::DistMatrix<El::BigFloat>> &workspace,
   Block_Diagonal_Matrix &result)
 {
