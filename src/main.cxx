@@ -213,6 +213,7 @@ int main(int argc, char **argv)
       // Set the default precision of all Real numbers to that specified
       // by the 'precision' parameter.
       mpf_set_default_prec(parameters.precision);
+      El::gmp::SetPrecision(1024);
       El::mpfr::SetPrecision(parameters.precision);
 
       // Set std::cout to print the appropriate number of digits
