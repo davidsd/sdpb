@@ -45,6 +45,7 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
 SDP_Solver_Terminate_Reason
 SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 {
+  timers["run.initialize"].resume();
   El::BigFloat primal_step_length_elemental(0), dual_step_length_elemental(0);
 
   // the Cholesky decompositions of X and Y, each lower-triangular
@@ -91,6 +92,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 
   print_header();
 
+  timers["run.initialize"].stop();
   for(int iteration = 1;; iteration++)
     {
       /// FIXME: This has to use something that is guaranteed to be
@@ -107,17 +109,23 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         }
 
       timers["run.objectives"].resume();
+      timers["run.objectives.primal"].resume();
       primal_objective_elemental
         = sdp.objective_const_elemental
           + dot(sdp.primal_objective_c_elemental, x_elemental);
+      timers["run.objectives.primal"].stop();
+      timers["run.objectives.dual"].resume();
       dual_objective_elemental
         = sdp.objective_const_elemental
           + El::Dotu(sdp.dual_objective_b_elemental, y_elemental);
+      timers["run.objectives.dual"].stop();
+      timers["run.objectives.gap"].resume();
       duality_gap_elemental
         = Abs(primal_objective_elemental - dual_objective_elemental)
           / Max(Abs(primal_objective_elemental)
                   + Abs(dual_objective_elemental),
                 El::BigFloat(1));
+      timers["run.objectives.gap"].stop();
 
       timers["run.objectives"].stop();
 
@@ -184,6 +192,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       else if(iteration > parameters.max_iterations)
         return SDP_Solver_Terminate_Reason::MaxIterationsExceeded;
 
+      timers["run.step"].resume();
       El::BigFloat mu_elemental, beta_predictor_elemental,
         beta_corrector_elemental;
 
@@ -220,52 +229,58 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 
         // Compute SchurComplement and prepare to solve the Schur
         // complement equation for dx, dy
-        timers["run.initializeSchurComplementSolver"].resume();
+        timers["run.step.initializeSchurComplementSolver"].resume();
         initialize_schur_complement_solver(
           bilinear_pairings_X_inv, bilinear_pairings_Y, sdp.schur_block_dims(),
           schur_complement_cholesky, schur_off_diagonal_elemental,
           Q_elemental);
-        timers["run.initializeSchurComplementSolver"].stop();
+        timers["run.step.initializeSchurComplementSolver"].stop();
 
         // Compute the complementarity mu = Tr(X Y)/X.dim
+        timers["run.step.frobenius_product_symmetric"].resume();
         mu_elemental = frobenius_product_symmetric_elemental(X, Y) / X.dim;
+        timers["run.step.frobenius_product_symmetric"].stop();
         if(mu_elemental > parameters.max_complementarity_elemental)
           {
             return SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
           }
 
+        timers["run.step.predictor_centering_parameter"].resume();
         // Compute the predictor solution for (dx, dX, dy, dY)
         beta_predictor_elemental = predictor_centering_parameter_elemental(
           parameters, is_primal_feasible && is_dual_feasible);
+        timers["run.step.predictor_centering_parameter"].stop();
 
-        timers["run.computeSearchDirection(betaPredictor)"].resume();
+        timers["run.step.computeSearchDirection(betaPredictor)"].resume();
         compute_search_direction(
           schur_complement_cholesky, schur_off_diagonal_elemental, X_cholesky,
           beta_predictor_elemental, mu_elemental, false, Q_elemental,
           dx_elemental, dX, dy_elemental, dY);
-        timers["run.computeSearchDirection(betaPredictor)"].stop();
+        timers["run.step.computeSearchDirection(betaPredictor)"].stop();
 
         // Compute the corrector solution for (dx, dX, dy, dY)
+        timers["run.step.corrector_centering_parameter"].resume();
         beta_corrector_elemental = corrector_centering_parameter(
           parameters, X, dX, Y, dY, mu_elemental,
           is_primal_feasible && is_dual_feasible);
-        timers["run.computeSearchDirection(betaCorrector)"].resume();
+        timers["run.step.corrector_centering_parameter"].stop();
+        timers["run.step.computeSearchDirection(betaCorrector)"].resume();
         compute_search_direction(
           schur_complement_cholesky, schur_off_diagonal_elemental, X_cholesky,
           beta_corrector_elemental, mu_elemental, true, Q_elemental,
           dx_elemental, dX, dy_elemental, dY);
-        timers["run.computeSearchDirection(betaCorrector)"].stop();
+        timers["run.step.computeSearchDirection(betaCorrector)"].stop();
       }
       // Compute step-lengths that preserve positive definiteness of X, Y
-      timers["run.stepLength(XCholesky)"].resume();
+      timers["run.step.stepLength(XCholesky)"].resume();
       primal_step_length_elemental = step_length(
         X_cholesky, dX, parameters.step_length_reduction_elemental);
 
-      timers["run.stepLength(XCholesky)"].stop();
-      timers["run.stepLength(YCholesky)"].resume();
+      timers["run.step.stepLength(XCholesky)"].stop();
+      timers["run.step.stepLength(YCholesky)"].resume();
       dual_step_length_elemental = step_length(
         Y_cholesky, dY, parameters.step_length_reduction_elemental);
-      timers["run.stepLength(YCholesky)"].stop();
+      timers["run.step.stepLength(YCholesky)"].stop();
 
       // If our problem is both dual-feasible and primal-feasible,
       // ensure we're following the true Newton direction.
@@ -293,6 +308,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       dY *= dual_step_length_elemental;
 
       Y += dY;
+      timers["run.step"].stop();
     }
 
   // Never reached

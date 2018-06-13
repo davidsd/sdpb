@@ -64,16 +64,16 @@ void SDP_Solver::initialize_schur_complement_solver(
   //
   //   L' L'^T = S'
   //
-  timers["initializeSchurComplementSolver.choleskyDecomposition"].resume();
+  timers["run.step.initializeSchurComplementSolver.choleskyDecomposition"].resume();
   cholesky_decomposition(schur_complement, schur_complement_cholesky);
-  timers["initializeSchurComplementSolver.choleskyDecomposition"].stop();
+  timers["run.step.initializeSchurComplementSolver.choleskyDecomposition"].stop();
 
   // SchurOffDiagonal = L'^{-1} FreeVarMatrix
   schur_off_diagonal_block = sdp.free_var_matrix_elemental;
-  timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
+  timers["run.step.initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
     .resume();
   lower_triangular_solve(schur_complement_cholesky, schur_off_diagonal_block);
-  timers["initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
+  timers["run.step.initializeSchurComplementSolver.blockMatrixLowerTriangularSolve"]
     .stop();
 
   // Next, we compute
@@ -83,7 +83,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   // Where B' = (B U).  We think of Q as containing four blocks called
   // Upper/Lower-Left/Right.
 
-  timers["initializeSchurComplementSolver.Qcomputation"].resume();
+  timers["run.step.initializeSchurComplementSolver.Qcomputation"].resume();
   const size_t Q_size(schur_off_diagonal_block.blocks.at(0).Width());
   Zeros(Q_elemental, Q_size, Q_size);
 
@@ -113,11 +113,9 @@ void SDP_Solver::initialize_schur_complement_solver(
            Q_elemental);
 
   El::MakeSymmetric(El::UpperOrLower::UPPER, Q_elemental);
-  timers["initializeSchurComplementSolver.Qcomputation"].stop();
+  timers["run.step.initializeSchurComplementSolver.Qcomputation"].stop();
 
-  timers["initializeSchurComplementSolver.LUDecomposition"].resume();
-  timers["LUDecomposition.actualLU"].resume();
+  timers["run.step.initializeSchurComplementSolver.LUDecomposition"].resume();
   Cholesky(El::UpperOrLowerNS::LOWER, Q_elemental);
-  timers["LUDecomposition.actualLU"].stop();
-  timers["initializeSchurComplementSolver.LUDecomposition"].stop();
+  timers["run.step.initializeSchurComplementSolver.LUDecomposition"].stop();
 }

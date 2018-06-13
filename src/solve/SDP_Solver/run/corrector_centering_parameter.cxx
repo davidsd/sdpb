@@ -8,10 +8,8 @@ El::BigFloat corrector_centering_parameter(
   const Block_Diagonal_Matrix &dY, const El::BigFloat &mu,
   const bool is_primal_dual_feasible)
 {
-  timers["run.correctorStep.frobeniusProduct"].resume();
   El::BigFloat r = frobenius_product_of_sums_elemental(X, dX, Y, dY)
                    / (mu * X.dim);
-  timers["run.correctorStep.frobeniusProduct"].stop();
   El::BigFloat beta = r < 1 ? r * r : r;
 
   if(is_primal_dual_feasible)

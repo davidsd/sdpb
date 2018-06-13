@@ -38,35 +38,19 @@ void SDP_Solver::compute_search_direction(
   Block_Diagonal_Matrix &dX, El::DistMatrix<El::BigFloat> &dy_elemental,
   Block_Diagonal_Matrix &dY)
 {
-  std::string timerName = "computeSearchDirection(";
-  if(correctorPhase)
-    {
-      timerName += "betaCorrector)";
-    }
-  else
-    {
-      timerName += "betaPredictor)";
-    }
-
   // R = beta mu I - X Y (predictor phase)
   // R = beta mu I - X Y - dX dY (corrector phase)
   Block_Diagonal_Matrix R(X);
 
-  timers[timerName + ".R.XY"].resume();
   block_diagonal_matrix_scale_multiply_add(El::BigFloat(-1), X, Y,
                                            El::BigFloat(0), R);
-  timers[timerName + ".R.XY"].stop();
   if(correctorPhase)
     {
-      timers[timerName + ".R.dXdY"].resume();
       block_diagonal_matrix_scale_multiply_add(El::BigFloat(-1), dX, dY,
                                                El::BigFloat(1), R);
-      timers[timerName + ".R.dXdY"].stop();
     }
 
-  timers[timerName + ".R.add"].resume();
   R.add_diagonal(beta_elemental * mu_elemental);
-  timers[timerName + ".R.add"].stop();
 
   // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))
 
@@ -74,54 +58,30 @@ void SDP_Solver::compute_search_direction(
   // be a copy.
   Block_Diagonal_Matrix Z(X);
 
-  timers[timerName + ".Z.multiply"].resume();
   block_diagonal_matrix_multiply(primal_residues, Y, Z);
-  timers[timerName + ".Z.multiply"].stop();
-  timers[timerName + ".Z.subtract"].resume();
   Z -= R;
-  timers[timerName + ".Z.subtract"].stop();
-  timers[timerName + ".Z.cholesky"].resume();
   block_matrix_solve_with_cholesky(X_cholesky, Z);
-  timers[timerName + ".Z.cholesky"].stop();
-  timers[timerName + ".Z.symm"].resume();
   Z.symmetrize();
-  timers[timerName + ".Z.symm"].stop();
 
   // r_x[p] = -dual_residues[p] - Tr(A_p Z)
   // r_y[n] = dualObjective[n] - (FreeVarMatrix^T x)_n
   // Here, dx = r_x, dy = r_y.
-  timers[timerName + ".computeSchurRHS"].resume();
   compute_schur_RHS(sdp, dual_residues_elemental, Z, x_elemental, dx_elemental,
                     dy_elemental);
-  timers[timerName + ".computeSchurRHS"].stop();
 
   // Solve for dx, dy in-place
-  timers[timerName + ".dxdy"].resume();
   solve_schur_complement_equation(schur_complement_cholesky,
                                   schur_off_diagonal_elemental, Q_elemental,
                                   dx_elemental, dy_elemental);
-  timers[timerName + ".dxdy"].stop();
 
   // dX = PrimalResidues + \sum_p A_p dx[p]
-  timers[timerName + ".dX.weightedSum"].resume();
   constraint_matrix_weighted_sum(sdp, dx_elemental, dX);
-  timers[timerName + ".dX.weightedSum"].stop();
-  timers[timerName + ".dX.primalRes"].resume();
   dX += primal_residues;
-  timers[timerName + ".dX.primalRes"].stop();
 
   // dY = Symmetrize(X^{-1} (R - dX Y))
-  timers[timerName + ".dY.multiply"].resume();
   block_diagonal_matrix_multiply(dX, Y, dY);
-  timers[timerName + ".dY.multiply"].stop();
-  timers[timerName + ".dY.subtract"].resume();
   dY -= R;
-  timers[timerName + ".dY.subtract"].stop();
-  timers[timerName + ".dY.cholesky"].resume();
   block_matrix_solve_with_cholesky(X_cholesky, dY);
-  timers[timerName + ".dY.cholesky"].stop();
-  timers[timerName + ".dY.symm"].resume();
   dY.symmetrize();
   dY *= El::BigFloat(-1);
-  timers[timerName + ".dY.symm"].stop();
 }
