@@ -216,10 +216,6 @@ int main(int argc, char **argv)
       El::gmp::SetPrecision(1024);
       El::mpfr::SetPrecision(parameters.precision);
 
-      // Set std::cout to print the appropriate number of digits
-      std::cout.precision(
-        std::min(static_cast<int>(parameters.precision * 0.31 + 5), 30));
-
       return solve(sdp_files, out_file, checkpoint_file_in,
                    checkpoint_file_out, parameters);
     }
