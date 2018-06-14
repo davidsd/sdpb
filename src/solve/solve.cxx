@@ -50,6 +50,8 @@ int solve(const std::vector<boost::filesystem::path> &sdp_files,
 
   if(El::mpi::Rank() == 0)
     {
+      std::cout.precision(
+        std::ceil(El::gmp::Precision() * std::log(2.0) / std::log(10.0)));
       std::cout << "-----" << std::setfill('-') << std::setw(116) << std::left
                 << reason << '\n'
                 << '\n'

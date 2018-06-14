@@ -9,6 +9,8 @@ void SDP_Solver::save_solution(
   // FIXME: Write separate files for each rank.
 
   boost::filesystem::ofstream ofs(out_file);
+  ofs.precision(
+    std::ceil(El::gmp::Precision() * std::log(2.0) / std::log(10.0)));
   if(El::mpi::Rank() == 0)
     {
       std::cout << "Saving solution to      : " << out_file << '\n';
