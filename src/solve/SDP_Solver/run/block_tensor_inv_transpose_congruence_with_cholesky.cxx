@@ -41,5 +41,6 @@ void block_tensor_inv_transpose_congruence_with_cholesky(
       Syrk(El::UpperOrLowerNS::LOWER, El::Orientation::TRANSPOSE,
            El::BigFloat(1), workspace[b], El::BigFloat(0),
            result.blocks_elemental[b]);
+      El::MakeSymmetric(El::UpperOrLower::LOWER, result.blocks_elemental[b]);
     }
 }

@@ -47,5 +47,6 @@ void block_tensor_transpose_congruence(
       Gemm(El::Orientation::TRANSPOSE, El::Orientation::NORMAL,
            El::BigFloat(1), workspace[b], temp_space, El::BigFloat(0),
            result.blocks_elemental[b]);
+      El::MakeSymmetric(El::UpperOrLower::LOWER, result.blocks_elemental[b]);
     }
 }
