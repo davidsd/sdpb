@@ -1,12 +1,13 @@
 #include "../../SDP_Solver.hxx"
 
-// result[b] = Q[b]'^T A[b] Q[b]' for each block 0 <= b < Q.size()
-// result[b], A[b] denote the b-th blocks of result, A, resp.
+// bilinear_pairings_Y[b] = Q[b]'^T A[b] Q[b]' for each block 0 <= b < Q.size()
+// bilinear_pairings_Y[b], A[b] denote the b-th blocks of bilinear_pairings_Y,
+// A, resp.
 
 // Q[b]' = Q[b] \otimes 1, where \otimes denotes tensor product
 
-// for each b, L.blocks[b], Q[b], Work[b], and result.blocks[b] must
-// have the structure described above for `tensorTransposeCongruence'
+// for each b, L.blocks[b], Q[b], Work[b], and bilinear_pairings_Y.blocks[b]
+// must have the structure described above for `tensorTransposeCongruence'
 
 // FIXME: Why am I using the DistMatrix version of bilinear_bases
 // instead of the local version?  With the local version, there would
@@ -15,7 +16,7 @@ void block_tensor_transpose_congruence(
   const Block_Diagonal_Matrix &Y,
   const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases,
   std::vector<El::DistMatrix<El::BigFloat>> &workspace,
-  Block_Diagonal_Matrix &result)
+  Block_Diagonal_Matrix &bilinear_pairings_Y)
 {
   for(size_t b = 0; b < bilinear_bases.size(); b++)
     {
@@ -46,7 +47,8 @@ void block_tensor_transpose_congruence(
            Y.blocks[b], workspace[b], El::BigFloat(0), temp_space);
       Gemm(El::Orientation::TRANSPOSE, El::Orientation::NORMAL,
            El::BigFloat(1), workspace[b], temp_space, El::BigFloat(0),
-           result.blocks[b]);
-      El::MakeSymmetric(El::UpperOrLower::LOWER, result.blocks[b]);
+           bilinear_pairings_Y.blocks[b]);
+      El::MakeSymmetric(El::UpperOrLower::LOWER,
+                        bilinear_pairings_Y.blocks[b]);
     }
 }

@@ -1,12 +1,12 @@
 #include "../../SDP_Solver.hxx"
 
-// result = bilinear_base^T X^{-1} bilinear_base for each block
+// bilinear_pairings_X_inv = bilinear_base^T X^{-1} bilinear_base for each block
 
 void block_tensor_inv_transpose_congruence_with_cholesky(
   const Block_Diagonal_Matrix &X_cholesky,
   const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases,
   std::vector<El::DistMatrix<El::BigFloat>> &workspace,
-  Block_Diagonal_Matrix &result)
+  Block_Diagonal_Matrix &bilinear_pairings_X_inv)
 {
   for(size_t b = 0; b < bilinear_bases.size(); b++)
     {
@@ -37,10 +37,11 @@ void block_tensor_inv_transpose_congruence_with_cholesky(
 
       // We have to set this to zero because the values can be NaN.
       // Multiplying 0*NaN = NaN.
-      Zero(result.blocks[b]);
+      Zero(bilinear_pairings_X_inv.blocks[b]);
       Syrk(El::UpperOrLowerNS::LOWER, El::Orientation::TRANSPOSE,
            El::BigFloat(1), workspace[b], El::BigFloat(0),
-           result.blocks[b]);
-      El::MakeSymmetric(El::UpperOrLower::LOWER, result.blocks[b]);
+           bilinear_pairings_X_inv.blocks[b]);
+      El::MakeSymmetric(El::UpperOrLower::LOWER,
+                        bilinear_pairings_X_inv.blocks[b]);
     }
 }
