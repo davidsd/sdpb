@@ -22,7 +22,7 @@ public:
   int dim;
 
   // The blocks M_b for 0 <= b < bMax
-  std::vector<El::DistMatrix<El::BigFloat>> blocks_elemental;
+  std::vector<El::DistMatrix<El::BigFloat>> blocks;
 
   // The rows (or columns) of M corresponding to the top-left entry of
   // each block M_b
@@ -35,7 +35,7 @@ public:
   {
     for(auto &block_size : block_sizes)
       {
-        blocks_elemental.emplace_back(block_size, block_size);
+        blocks.emplace_back(block_size, block_size);
 
         block_start_indices.push_back(dim);
         dim += block_size;
@@ -45,7 +45,7 @@ public:
   // M = 0
   void set_zero()
   {
-    for(auto &block : blocks_elemental)
+    for(auto &block : blocks)
       {
         Zero(block);
       }
@@ -54,7 +54,7 @@ public:
   // Add a constant c to each diagonal element
   void add_diagonal(const El::BigFloat &c)
   {
-    for(auto &block : blocks_elemental)
+    for(auto &block : blocks)
       {
         ShiftDiagonal(block, c);
       }
@@ -63,25 +63,25 @@ public:
   // M = M + A
   void operator+=(const Block_Diagonal_Matrix &A)
   {
-    for(size_t b = 0; b < blocks_elemental.size(); b++)
+    for(size_t b = 0; b < blocks.size(); b++)
       {
-        blocks_elemental[b] += A.blocks_elemental[b];
+        blocks[b] += A.blocks[b];
       }
   }
 
   // M = M - A
   void operator-=(const Block_Diagonal_Matrix &A)
   {
-    for(size_t b = 0; b < blocks_elemental.size(); b++)
+    for(size_t b = 0; b < blocks.size(); b++)
       {
-        blocks_elemental[b] -= A.blocks_elemental[b];
+        blocks[b] -= A.blocks[b];
       }
   }
 
   // M = c*M, where c is a constant
   void operator*=(const El::BigFloat &c)
   {
-    for(auto &block : blocks_elemental)
+    for(auto &block : blocks)
       {
         block *= c;
       }
@@ -90,7 +90,7 @@ public:
   // Symmetrize M in place
   void symmetrize()
   {
-    for(auto &block : blocks_elemental)
+    for(auto &block : blocks)
       {
         // FIXME: This feels expensive
 
@@ -108,7 +108,7 @@ public:
   El::BigFloat max_abs() const
   {
     El::BigFloat max = 0;
-    for(auto &block : blocks_elemental)
+    for(auto &block : blocks)
       {
         max = std::max(El::MaxAbs(block), max);
       }
@@ -120,18 +120,16 @@ public:
 };
 
 // Tr(A B), where A and B are symmetric
-El::BigFloat
-frobenius_product_symmetric_elemental(const Block_Diagonal_Matrix &A,
-                                      const Block_Diagonal_Matrix &B);
+El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
+                                         const Block_Diagonal_Matrix &B);
 
 // (X + dX) . (Y + dY), where X, dX, Y, dY are symmetric
 // BlockDiagonalMatrices and '.' is the Frobenius product.
 //
-El::BigFloat
-frobenius_product_of_sums_elemental(const Block_Diagonal_Matrix &X,
-                                    const Block_Diagonal_Matrix &dX,
-                                    const Block_Diagonal_Matrix &Y,
-                                    const Block_Diagonal_Matrix &dY);
+El::BigFloat frobenius_product_of_sums(const Block_Diagonal_Matrix &X,
+                                       const Block_Diagonal_Matrix &dX,
+                                       const Block_Diagonal_Matrix &Y,
+                                       const Block_Diagonal_Matrix &dY);
 
 // C := alpha*A*B + beta*C
 void block_diagonal_matrix_scale_multiply_add(const El::BigFloat &alpha,

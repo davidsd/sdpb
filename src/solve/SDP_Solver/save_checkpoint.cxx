@@ -22,7 +22,7 @@ void SDP_Solver::save_checkpoint(const boost::filesystem::path &checkpoint_file)
     {
       std::cout << "Saving checkpoint to    : " << checkpoint_file << '\n';
     }
-  // boost::serialization::serialize_SDP_solver_state(ar, x_elemental, X,
-  //                                                  y_elemental, Y);
+  // boost::serialization::serialize_SDP_solver_state(ar, x, X,
+  //                                                  y, Y);
   timers["Last checkpoint"].start();
 }

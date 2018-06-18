@@ -20,7 +20,7 @@ def build(bld):
                         'src/solve/SDP_Solver/load_checkpoint.cxx',
                         'src/solve/SDP_Solver/SDP_Solver.cxx',
                         'src/solve/SDP/SDP/SDP.cxx',
-                        'src/solve/SDP/SDP/parse_vector_elemental.cxx',
+                        'src/solve/SDP/SDP/parse_vector.cxx',
                         'src/solve/SDP/SDP/parse_BigFloat.cxx',
                         'src/solve/SDP/SDP/parse_polynomial_vector_matrix.cxx',
                         'src/solve/SDP/SDP/bootstrap/bootstrap.cxx',

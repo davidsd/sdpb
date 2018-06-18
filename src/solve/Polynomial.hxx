@@ -19,22 +19,22 @@ class Polynomial
 {
 public:
   // Coefficients {a_0, a_1, ..., a_n} in increasing order of degree
-  std::vector<El::BigFloat> coefficients_elemental;
+  std::vector<El::BigFloat> coefficients;
 
   // The zero polynomial
-  Polynomial() : coefficients_elemental(1, 0) {}
+  Polynomial() : coefficients(1, 0) {}
 
   // Degree of p(x)
-  int degree() const { return coefficients_elemental.size() - 1; };
+  int degree() const { return coefficients.size() - 1; };
 
   // Evaluate p(x) for some x using horner's method
   El::BigFloat operator()(const El::BigFloat &x) const
   {
-    assert(!coefficients_elemental.empty());
-    auto coefficient(coefficients_elemental.rbegin());
+    assert(!coefficients.empty());
+    auto coefficient(coefficients.rbegin());
     El::BigFloat result(*coefficient);
     ++coefficient;
-    for(; coefficient != coefficients_elemental.rend(); ++coefficient)
+    for(; coefficient != coefficients.rend(); ++coefficient)
       {
         result *= x;
         result += *coefficient;
@@ -47,7 +47,7 @@ public:
   {
     for(int i = p.degree(); i >= 0; i--)
       {
-        os << p.coefficients_elemental[i];
+        os << p.coefficients[i];
         if(i > 1)
           {
             os << "x^" << i << " + ";

@@ -20,12 +20,10 @@ public:
   bool detect_dual_feasible_jump;
   int precision;
 
-  El::BigFloat duality_gap_threshold_elemental, primal_error_threshold_elemental,
-    dual_error_threshold_elemental, initial_matrix_scale_primal_elemental,
-    initial_matrix_scale_dual_elemental,
-    feasible_centering_parameter_elemental,
-    infeasible_centering_parameter_elemental, step_length_reduction_elemental,
-    max_complementarity_elemental;
+  El::BigFloat duality_gap_threshold, primal_error_threshold,
+    dual_error_threshold, initial_matrix_scale_primal,
+    initial_matrix_scale_dual, feasible_centering_parameter,
+    infeasible_centering_parameter, step_length_reduction, max_complementarity;
 
   friend std::ostream &
   operator<<(std::ostream &os, const SDP_Solver_Parameters &p);

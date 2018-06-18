@@ -22,18 +22,15 @@
 // - r_y, a Vector of length N
 //
 
-void compute_schur_RHS(const SDP &sdp,
-                       const Block_Vector &dual_residues_elemental,
-                       const Block_Diagonal_Matrix &Z,
-                       const Block_Vector &x_elemental,
-                       Block_Vector &r_x_elemental,
-                       El::DistMatrix<El::BigFloat> &r_y_elemental)
+void compute_schur_RHS(const SDP &sdp, const Block_Vector &dual_residues,
+                       const Block_Diagonal_Matrix &Z, const Block_Vector &x,
+                       Block_Vector &r_x, El::DistMatrix<El::BigFloat> &r_y)
 {
   for(size_t jj = 0; jj < sdp.dimensions.size(); ++jj)
     {
       // r_x = -dual_residues
-      r_x_elemental.blocks[jj] = dual_residues_elemental.blocks[jj];
-      r_x_elemental.blocks[jj] *= -1;
+      r_x.blocks[jj] = dual_residues.blocks[jj];
+      r_x.blocks[jj] *= -1;
       const size_t r_x_block_size(sdp.degrees[jj] + 1);
 
       // r_x[p] -= Tr(A_p Z)
@@ -42,7 +39,7 @@ void compute_schur_RHS(const SDP &sdp,
       for(size_t block_index = 2 * jj; block_index < 2 * jj + 2; ++block_index)
         {
           const size_t Z_block_size(
-            sdp.bilinear_bases_elemental_dist[block_index].Height());
+            sdp.bilinear_bases_dist[block_index].Height());
           El::DistMatrix<El::BigFloat> ones;
           El::Ones(ones, Z_block_size, 1);
 
@@ -54,7 +51,7 @@ void compute_schur_RHS(const SDP &sdp,
                   row_offset(row_block * Z_block_size);
 
                 El::DistMatrix<El::BigFloat> Z_sub_block(
-                  El::LockedView(Z.blocks_elemental[block_index], row_offset,
+                  El::LockedView(Z.blocks[block_index], row_offset,
                                  column_offset, Z_block_size, Z_block_size)),
                   Z_times_q(Z_block_size, r_x_block_size),
                   q_Z_q(Z_block_size, r_x_block_size);
@@ -63,19 +60,17 @@ void compute_schur_RHS(const SDP &sdp,
 
                 El::Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL,
                          El::BigFloat(1), Z_sub_block,
-                         sdp.bilinear_bases_elemental_dist[block_index],
-                         El::BigFloat(0), Z_times_q);
+                         sdp.bilinear_bases_dist[block_index], El::BigFloat(0),
+                         Z_times_q);
 
-                El::Hadamard(Z_times_q,
-                             sdp.bilinear_bases_elemental_dist[block_index],
+                El::Hadamard(Z_times_q, sdp.bilinear_bases_dist[block_index],
                              q_Z_q);
 
                 const size_t r_x_row_offset(
                   ((column_block * (column_block + 1)) / 2 + row_block)
                   * r_x_block_size);
-                El::DistMatrix<El::BigFloat> r_x_sub_block(
-                  El::View(r_x_elemental.blocks[jj], r_x_row_offset, 0,
-                           r_x_block_size, 1));
+                El::DistMatrix<El::BigFloat> r_x_sub_block(El::View(
+                  r_x.blocks[jj], r_x_row_offset, 0, r_x_block_size, 1));
 
                 El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(-1), q_Z_q,
                          ones, El::BigFloat(1), r_x_sub_block);
@@ -84,11 +79,11 @@ void compute_schur_RHS(const SDP &sdp,
     }
 
   // r_y = dualObjective - (FreeVarMatrix^T x)
-  r_y_elemental = sdp.dual_objective_b_elemental;
-  for(size_t b = 0; b < sdp.free_var_matrix_elemental.blocks.size(); ++b)
+  r_y = sdp.dual_objective_b;
+  for(size_t b = 0; b < sdp.free_var_matrix.blocks.size(); ++b)
     {
       El::Gemv(El::OrientationNS::TRANSPOSE, El::BigFloat(-1),
-               sdp.free_var_matrix_elemental.blocks[b], x_elemental.blocks[b],
-               El::BigFloat(1), r_y_elemental);
+               sdp.free_var_matrix.blocks[b], x.blocks[b], El::BigFloat(1),
+               r_y);
     }
 }

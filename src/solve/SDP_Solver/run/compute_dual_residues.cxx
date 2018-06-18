@@ -35,13 +35,13 @@ void compute_dual_residues(const SDP &sdp,
                 size_t column_offset(column_block * block_size),
                   row_offset(row_block * block_size);
 
-                El::DistMatrix<El::BigFloat> lower_diagonal(
-                  El::GetDiagonal(El::LockedView(
-                    bilinear_pairings_Y.blocks_elemental[block_index],
-                    row_offset, column_offset, block_size, block_size))),
+                El::DistMatrix<El::BigFloat> lower_diagonal(El::GetDiagonal(
+                  El::LockedView(bilinear_pairings_Y.blocks[block_index],
+                                 row_offset, column_offset, block_size,
+                                 block_size))),
                   upper_diagonal(El::GetDiagonal(El::LockedView(
-                    bilinear_pairings_Y.blocks_elemental[block_index],
-                    column_offset, row_offset, block_size, block_size)));
+                    bilinear_pairings_Y.blocks[block_index], column_offset,
+                    row_offset, block_size, block_size)));
 
                 size_t residue_row_offset(
                   ((column_block * (column_block + 1)) / 2 + row_block)
@@ -65,10 +65,10 @@ void compute_dual_residues(const SDP &sdp,
     {
       // dualResidues -= FreeVarMatrix * y
       Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, El::BigFloat(-1),
-           sdp.free_var_matrix_elemental.blocks[b], y, El::BigFloat(1),
+           sdp.free_var_matrix.blocks[b], y, El::BigFloat(1),
            dual_residues.blocks[b]);
       // dualResidues += primalObjective
-      Axpy(El::BigFloat(1), sdp.primal_objective_c_elemental.blocks[b],
+      Axpy(El::BigFloat(1), sdp.primal_objective_c.blocks[b],
            dual_residues.blocks[b]);
     }
 }

@@ -25,12 +25,13 @@ void compute_dual_residues(const SDP &sdp,
                            const Block_Diagonal_Matrix &bilinear_pairings_Y,
                            Block_Vector &dual_residues);
 
-void compute_primal_residues(const SDP &sdp, const Block_Vector &x_elemental,
+void compute_primal_residues(const SDP &sdp, const Block_Vector &x,
                              const Block_Diagonal_Matrix &X,
                              Block_Diagonal_Matrix &primal_residues);
 
-El::BigFloat predictor_centering_parameter_elemental(
-  const SDP_Solver_Parameters &parameters, const bool is_primal_dual_feasible);
+El::BigFloat
+predictor_centering_parameter(const SDP_Solver_Parameters &parameters,
+                              const bool is_primal_dual_feasible);
 
 El::BigFloat corrector_centering_parameter(
   const SDP_Solver_Parameters &parameters, const Block_Diagonal_Matrix &X,
@@ -46,7 +47,7 @@ SDP_Solver_Terminate_Reason
 SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 {
   timers["run.initialize"].resume();
-  El::BigFloat primal_step_length_elemental(0), dual_step_length_elemental(0);
+  El::BigFloat primal_step_length(0), dual_step_length(0);
 
   // the Cholesky decompositions of X and Y, each lower-triangular
   // BlockDiagonalMatrices with the same block sizes as X and Y
@@ -80,14 +81,12 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
   Block_Diagonal_Matrix bilinear_pairings_Y(bilinear_pairings_X_inv);
 
   // Additional workspace variables used in step_length()
-  std::vector<El::DistMatrix<El::BigFloat>>
-    bilinear_pairings_workspace_elemental;
-  for(size_t block = 0; block < sdp.bilinear_bases_elemental_local.size();
-      block++)
+  std::vector<El::DistMatrix<El::BigFloat>> bilinear_pairings_workspace;
+  for(size_t block = 0; block < sdp.bilinear_bases_local.size(); block++)
     {
-      bilinear_pairings_workspace_elemental.emplace_back(
-        X.blocks_elemental[block].Height(),
-        bilinear_pairings_X_inv.blocks_elemental[block].Width());
+      bilinear_pairings_workspace.emplace_back(
+        X.blocks[block].Height(),
+        bilinear_pairings_X_inv.blocks[block].Width());
     }
 
   print_header();
@@ -108,23 +107,18 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
           return SDP_Solver_Terminate_Reason::MaxRuntimeExceeded;
         }
 
+
       timers["run.objectives"].resume();
       timers["run.objectives.primal"].resume();
-      primal_objective_elemental
-        = sdp.objective_const_elemental
-          + dot(sdp.primal_objective_c_elemental, x_elemental);
+      primal_objective = sdp.objective_const + dot(sdp.primal_objective_c, x);
       timers["run.objectives.primal"].stop();
       timers["run.objectives.dual"].resume();
-      dual_objective_elemental
-        = sdp.objective_const_elemental
-          + El::Dotu(sdp.dual_objective_b_elemental, y_elemental);
+      dual_objective = sdp.objective_const + El::Dotu(sdp.dual_objective_b, y);
       timers["run.objectives.dual"].stop();
       timers["run.objectives.gap"].resume();
-      duality_gap_elemental
-        = Abs(primal_objective_elemental - dual_objective_elemental)
-          / Max(Abs(primal_objective_elemental)
-                  + Abs(dual_objective_elemental),
-                El::BigFloat(1));
+      duality_gap
+        = Abs(primal_objective - dual_objective)
+          / Max(Abs(primal_objective) + Abs(dual_objective), El::BigFloat(1));
       timers["run.objectives.gap"].stop();
 
       timers["run.objectives"].stop();
@@ -142,40 +136,38 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       // complement matrix
       timers["run.blockTensorInvTransposeCongruenceWithCholesky"].resume();
       block_tensor_inv_transpose_congruence_with_cholesky(
-        X_cholesky, sdp.bilinear_bases_elemental_local,
-        bilinear_pairings_workspace_elemental, bilinear_pairings_X_inv);
+        X_cholesky, sdp.bilinear_bases_local, bilinear_pairings_workspace,
+        bilinear_pairings_X_inv);
 
       timers["run.blockTensorInvTransposeCongruenceWithCholesky"].stop();
 
       timers["run.blockTensorTransposeCongruence"].resume();
-      block_tensor_transpose_congruence(Y, sdp.bilinear_bases_elemental_local,
-                                        bilinear_pairings_workspace_elemental,
+      block_tensor_transpose_congruence(Y, sdp.bilinear_bases_local,
+                                        bilinear_pairings_workspace,
                                         bilinear_pairings_Y);
       timers["run.blockTensorTransposeCongruence"].stop();
 
       // dualResidues[p] = primalObjective[p] - Tr(A_p Y) - (FreeVarMatrix y)_p,
       timers["run.computeDualResidues"].resume();
-      compute_dual_residues(sdp, y_elemental, bilinear_pairings_Y,
-                            dual_residues_elemental);
-      dual_error_elemental = 0;
-      for(auto &block : dual_residues_elemental.blocks)
+      compute_dual_residues(sdp, y, bilinear_pairings_Y, dual_residues);
+      dual_error = 0;
+      for(auto &block : dual_residues.blocks)
         {
-          dual_error_elemental = Max(dual_error_elemental, El::MaxAbs(block));
+          dual_error = Max(dual_error, El::MaxAbs(block));
         }
       timers["run.computeDualResidues"].stop();
 
       timers["run.computePrimalResidues"].resume();
       // PrimalResidues = \sum_p A_p x[p] - X
-      compute_primal_residues(sdp, x_elemental, X, primal_residues);
-      primal_error_elemental = primal_residues.max_abs();
+      compute_primal_residues(sdp, x, X, primal_residues);
+      primal_error = primal_residues.max_abs();
       timers["run.computePrimalResidues"].stop();
 
-      const bool is_primal_feasible(
-        primal_error_elemental < parameters.primal_error_threshold_elemental);
-      const bool is_dual_feasible(dual_error_elemental
-                                  < parameters.dual_error_threshold_elemental);
-      const bool is_optimal(duality_gap_elemental
-                            < parameters.duality_gap_threshold_elemental);
+      const bool is_primal_feasible(primal_error
+                                    < parameters.primal_error_threshold);
+      const bool is_dual_feasible(dual_error
+                                  < parameters.dual_error_threshold);
+      const bool is_optimal(duality_gap < parameters.duality_gap_threshold);
 
       if(is_primal_feasible && is_dual_feasible && is_optimal)
         return SDP_Solver_Terminate_Reason::PrimalDualOptimal;
@@ -183,24 +175,23 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         return SDP_Solver_Terminate_Reason::PrimalFeasible;
       else if(is_dual_feasible && parameters.find_dual_feasible)
         return SDP_Solver_Terminate_Reason::DualFeasible;
-      else if(primal_step_length_elemental == El::BigFloat(1)
+      else if(primal_step_length == El::BigFloat(1)
               && parameters.detect_primal_feasible_jump)
         return SDP_Solver_Terminate_Reason::PrimalFeasibleJumpDetected;
-      else if(dual_step_length_elemental == El::BigFloat(1)
+      else if(dual_step_length == El::BigFloat(1)
               && parameters.detect_dual_feasible_jump)
         return SDP_Solver_Terminate_Reason::DualFeasibleJumpDetected;
       else if(iteration > parameters.max_iterations)
         return SDP_Solver_Terminate_Reason::MaxIterationsExceeded;
 
       timers["run.step"].resume();
-      El::BigFloat mu_elemental, beta_predictor_elemental,
-        beta_corrector_elemental;
+      El::BigFloat mu, beta_predictor, beta_corrector;
 
       // Search direction: These quantities have the same structure
       // as (x, X, y, Y). They are computed twice each iteration:
       // once in the predictor step, and once in the corrector step.
-      Block_Vector dx_elemental(x_elemental);
-      El::DistMatrix<El::BigFloat> dy_elemental(y_elemental);
+      Block_Vector dx(x);
+      El::DistMatrix<El::BigFloat> dy(y);
       Block_Diagonal_Matrix dX(X), dY(Y);
       {
         // FIXME: It may be expensive to create these objects for each
@@ -213,7 +204,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 
         // SchurOffDiagonal = L'^{-1} FreeVarMatrix, needed in solving the
         // Schur complement equation.
-        Block_Matrix schur_off_diagonal_elemental;
+        Block_Matrix schur_off_diagonal;
 
         // Q = B' L'^{-T} L'^{-1} B' - {{0, 0}, {0, 1}}, where B' =
         // (FreeVarMatrix U).  Q is needed in the factorization of the Schur
@@ -223,89 +214,83 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         //
         // where N is the dimension of the dual objective function.  Note
         // that N' could change with each iteration.
-        El::DistMatrix<El::BigFloat> Q_elemental(
-          sdp.free_var_matrix_elemental.width(),
-          sdp.free_var_matrix_elemental.width());
+        El::DistMatrix<El::BigFloat> Q(sdp.free_var_matrix.width(),
+                                       sdp.free_var_matrix.width());
 
         // Compute SchurComplement and prepare to solve the Schur
         // complement equation for dx, dy
         timers["run.step.initializeSchurComplementSolver"].resume();
         initialize_schur_complement_solver(
           bilinear_pairings_X_inv, bilinear_pairings_Y, sdp.schur_block_dims(),
-          schur_complement_cholesky, schur_off_diagonal_elemental,
-          Q_elemental);
+          schur_complement_cholesky, schur_off_diagonal, Q);
         timers["run.step.initializeSchurComplementSolver"].stop();
 
         // Compute the complementarity mu = Tr(X Y)/X.dim
         timers["run.step.frobenius_product_symmetric"].resume();
-        mu_elemental = frobenius_product_symmetric_elemental(X, Y) / X.dim;
+        mu = frobenius_product_symmetric(X, Y) / X.dim;
         timers["run.step.frobenius_product_symmetric"].stop();
-        if(mu_elemental > parameters.max_complementarity_elemental)
+        if(mu > parameters.max_complementarity)
           {
             return SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
           }
 
         timers["run.step.predictor_centering_parameter"].resume();
         // Compute the predictor solution for (dx, dX, dy, dY)
-        beta_predictor_elemental = predictor_centering_parameter_elemental(
+        beta_predictor = predictor_centering_parameter(
           parameters, is_primal_feasible && is_dual_feasible);
         timers["run.step.predictor_centering_parameter"].stop();
 
         timers["run.step.computeSearchDirection(betaPredictor)"].resume();
-        compute_search_direction(
-          schur_complement_cholesky, schur_off_diagonal_elemental, X_cholesky,
-          beta_predictor_elemental, mu_elemental, false, Q_elemental,
-          dx_elemental, dX, dy_elemental, dY);
+        compute_search_direction(schur_complement_cholesky, schur_off_diagonal,
+                                 X_cholesky, beta_predictor, mu, false, Q, dx,
+                                 dX, dy, dY);
         timers["run.step.computeSearchDirection(betaPredictor)"].stop();
 
         // Compute the corrector solution for (dx, dX, dy, dY)
         timers["run.step.corrector_centering_parameter"].resume();
-        beta_corrector_elemental = corrector_centering_parameter(
-          parameters, X, dX, Y, dY, mu_elemental,
+        beta_corrector = corrector_centering_parameter(
+          parameters, X, dX, Y, dY, mu,
           is_primal_feasible && is_dual_feasible);
         timers["run.step.corrector_centering_parameter"].stop();
         timers["run.step.computeSearchDirection(betaCorrector)"].resume();
-        compute_search_direction(
-          schur_complement_cholesky, schur_off_diagonal_elemental, X_cholesky,
-          beta_corrector_elemental, mu_elemental, true, Q_elemental,
-          dx_elemental, dX, dy_elemental, dY);
+        compute_search_direction(schur_complement_cholesky, schur_off_diagonal,
+                                 X_cholesky, beta_corrector, mu, true, Q, dx,
+                                 dX, dy, dY);
         timers["run.step.computeSearchDirection(betaCorrector)"].stop();
       }
       // Compute step-lengths that preserve positive definiteness of X, Y
       timers["run.step.stepLength(XCholesky)"].resume();
-      primal_step_length_elemental = step_length(
-        X_cholesky, dX, parameters.step_length_reduction_elemental);
+      primal_step_length
+        = step_length(X_cholesky, dX, parameters.step_length_reduction);
 
       timers["run.step.stepLength(XCholesky)"].stop();
       timers["run.step.stepLength(YCholesky)"].resume();
-      dual_step_length_elemental = step_length(
-        Y_cholesky, dY, parameters.step_length_reduction_elemental);
+      dual_step_length
+        = step_length(Y_cholesky, dY, parameters.step_length_reduction);
       timers["run.step.stepLength(YCholesky)"].stop();
 
       // If our problem is both dual-feasible and primal-feasible,
       // ensure we're following the true Newton direction.
       if(is_primal_feasible && is_dual_feasible)
         {
-          primal_step_length_elemental = El::Min(primal_step_length_elemental,
-                                                 dual_step_length_elemental);
-          dual_step_length_elemental = primal_step_length_elemental;
+          primal_step_length = El::Min(primal_step_length, dual_step_length);
+          dual_step_length = primal_step_length;
         }
 
-      print_iteration(iteration, mu_elemental, primal_step_length_elemental,
-                      dual_step_length_elemental, beta_corrector_elemental);
+      print_iteration(iteration, mu, primal_step_length, dual_step_length,
+                      beta_corrector);
       // Update the primal point (x, X) += primalStepLength*(dx, dX)
-      for(size_t block = 0; block < x_elemental.blocks.size(); ++block)
+      for(size_t block = 0; block < x.blocks.size(); ++block)
         {
-          El::Axpy(primal_step_length_elemental, dx_elemental.blocks[block],
-                   x_elemental.blocks[block]);
+          El::Axpy(primal_step_length, dx.blocks[block], x.blocks[block]);
         }
-      dX *= primal_step_length_elemental;
+      dX *= primal_step_length;
 
       X += dX;
 
       // Update the dual point (y, Y) += dualStepLength*(dy, dY)
-      El::Axpy(dual_step_length_elemental, dy_elemental, y_elemental);
-      dY *= dual_step_length_elemental;
+      El::Axpy(dual_step_length, dy, y);
+      dY *= dual_step_length;
 
       Y += dY;
       timers["run.step"].stop();

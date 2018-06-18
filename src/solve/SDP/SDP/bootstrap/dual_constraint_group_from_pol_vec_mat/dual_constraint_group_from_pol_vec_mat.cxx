@@ -43,9 +43,9 @@ dual_constraint_group_from_pol_vec_mat(const Polynomial_Vector_Matrix &m)
   // polynomials (1,y) . \vec P^{rs}(x)
 
   // The first element of each vector \vec P^{rs}(x) multiplies the constant 1
-  g.constraintConstants_elemental.resize(numConstraints);
+  g.constraintConstants.resize(numConstraints);
   // The rest multiply decision variables y
-  g.constraintMatrix_elemental.Resize(numConstraints, vectorDim - 1);
+  g.constraintMatrix.Resize(numConstraints, vectorDim - 1);
 
   // Populate B and c by sampling the polynomial matrix
   int p = 0;
@@ -55,13 +55,12 @@ dual_constraint_group_from_pol_vec_mat(const Polynomial_Vector_Matrix &m)
         {
           for(size_t k = 0; k < numSamples; k++)
             {
-              El::BigFloat x = m.sample_points_elemental[k];
-              El::BigFloat scale = m.sample_scalings_elemental[k];
-              g.constraintConstants_elemental[p] = scale * m.elt(r, c)[0](x);
+              El::BigFloat x = m.sample_points[k];
+              El::BigFloat scale = m.sample_scalings[k];
+              g.constraintConstants[p] = scale * m.elt(r, c)[0](x);
               for(size_t n = 1; n < vectorDim; ++n)
                 {
-                  g.constraintMatrix_elemental.Set(p, n - 1,
-                                                   -scale * m.elt(r, c)[n](x));
+                  g.constraintMatrix.Set(p, n - 1, -scale * m.elt(r, c)[n](x));
                 }
               ++p;
             }
@@ -76,9 +75,8 @@ dual_constraint_group_from_pol_vec_mat(const Polynomial_Vector_Matrix &m)
   //   Y_2: {\sqrt(x) q_0(x), ..., \sqrt(x) q_delta2(x)
   //
   int delta1 = g.degree / 2;
-  g.bilinearBases_elemental.push_back(sample_bilinear_basis(
-    delta1, numSamples, m.bilinear_basis, m.sample_points_elemental,
-    m.sample_scalings_elemental));
+  g.bilinearBases.push_back(sample_bilinear_basis(
+    delta1, numSamples, m.bilinear_basis, m.sample_points, m.sample_scalings));
 
   int delta2 = (g.degree - 1) / 2;
   // a degree-0 Polynomial_Vector_Matrix only needs one block
@@ -87,14 +85,14 @@ dual_constraint_group_from_pol_vec_mat(const Polynomial_Vector_Matrix &m)
       // The \sqrt(x) factors can be accounted for by replacing the
       // scale factors s_k with x_k s_k.
       std::vector<El::BigFloat> scaled_samples;
-      for(size_t ii = 0; ii < m.sample_points_elemental.size(); ++ii)
+      for(size_t ii = 0; ii < m.sample_points.size(); ++ii)
         {
-          scaled_samples.emplace_back(m.sample_points_elemental[ii]
-                                      * m.sample_scalings_elemental[ii]);
+          scaled_samples.emplace_back(m.sample_points[ii]
+                                      * m.sample_scalings[ii]);
         }
-      g.bilinearBases_elemental.push_back(
+      g.bilinearBases.push_back(
         sample_bilinear_basis(delta2, numSamples, m.bilinear_basis,
-                              m.sample_points_elemental, scaled_samples));
+                              m.sample_points, scaled_samples));
     }
   return g;
 }

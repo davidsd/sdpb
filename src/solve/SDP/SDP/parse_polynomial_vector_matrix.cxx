@@ -1,14 +1,14 @@
 #include "../../Polynomial_Vector_Matrix.hxx"
 #include "parse_BigFloat.hxx"
 #include "parse_many.hxx"
-#include "parse_vector_elemental.hxx"
+#include "parse_vector.hxx"
 
 namespace
 {
   Polynomial parse_polynomial(const boost::property_tree::ptree &tree)
   {
     Polynomial result;
-    result.coefficients_elemental = parse_many("coeff", parse_BigFloat, tree);
+    result.coefficients = parse_many("coeff", parse_BigFloat, tree);
     return result;
   }
 
@@ -28,10 +28,8 @@ parse_polynomial_vector_matrix(const boost::property_tree::ptree &tree)
 
   result.elements = parse_many("polynomialVector", parse_polynomial_vector,
                                tree.get_child("elements"));
-  result.sample_points_elemental
-    = parse_vector_elemental(tree.get_child("samplePoints"));
-  result.sample_scalings_elemental
-    = parse_vector_elemental(tree.get_child("sampleScalings"));
+  result.sample_points = parse_vector(tree.get_child("samplePoints"));
+  result.sample_scalings = parse_vector(tree.get_child("sampleScalings"));
   result.bilinear_basis = parse_many("polynomial", parse_polynomial,
                                      tree.get_child("bilinearBasis"));
   return result;

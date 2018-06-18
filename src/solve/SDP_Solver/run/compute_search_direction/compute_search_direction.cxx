@@ -16,12 +16,9 @@
 // - dx, dX, dy, dY
 //
 
-void compute_schur_RHS(const SDP &sdp,
-                       const Block_Vector &dual_residues_elemental,
-                       const Block_Diagonal_Matrix &Z,
-                       const Block_Vector &x_elemental,
-                       Block_Vector &r_x_elemental,
-                       El::DistMatrix<El::BigFloat> &r_y_elemental);
+void compute_schur_RHS(const SDP &sdp, const Block_Vector &dual_residues,
+                       const Block_Diagonal_Matrix &Z, const Block_Vector &x,
+                       Block_Vector &r_x, El::DistMatrix<El::BigFloat> &r_y);
 
 void solve_schur_complement_equation(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
@@ -31,11 +28,11 @@ void solve_schur_complement_equation(
 
 void SDP_Solver::compute_search_direction(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
-  const Block_Matrix &schur_off_diagonal_elemental,
-  const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta_elemental,
-  const El::BigFloat &mu_elemental, const bool correctorPhase,
-  const El::DistMatrix<El::BigFloat> &Q_elemental, Block_Vector &dx_elemental,
-  Block_Diagonal_Matrix &dX, El::DistMatrix<El::BigFloat> &dy_elemental,
+  const Block_Matrix &schur_off_diagonal,
+  const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
+  const El::BigFloat &mu, const bool correctorPhase,
+  const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx,
+  Block_Diagonal_Matrix &dX, El::DistMatrix<El::BigFloat> &dy,
   Block_Diagonal_Matrix &dY)
 {
   // R = beta mu I - X Y (predictor phase)
@@ -50,7 +47,7 @@ void SDP_Solver::compute_search_direction(
                                                El::BigFloat(1), R);
     }
 
-  R.add_diagonal(beta_elemental * mu_elemental);
+  R.add_diagonal(beta * mu);
 
   // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))
 
@@ -66,16 +63,14 @@ void SDP_Solver::compute_search_direction(
   // r_x[p] = -dual_residues[p] - Tr(A_p Z)
   // r_y[n] = dualObjective[n] - (FreeVarMatrix^T x)_n
   // Here, dx = r_x, dy = r_y.
-  compute_schur_RHS(sdp, dual_residues_elemental, Z, x_elemental, dx_elemental,
-                    dy_elemental);
+  compute_schur_RHS(sdp, dual_residues, Z, x, dx, dy);
 
   // Solve for dx, dy in-place
   solve_schur_complement_equation(schur_complement_cholesky,
-                                  schur_off_diagonal_elemental, Q_elemental,
-                                  dx_elemental, dy_elemental);
+                                  schur_off_diagonal, Q, dx, dy);
 
   // dX = PrimalResidues + \sum_p A_p dx[p]
-  constraint_matrix_weighted_sum(sdp, dx_elemental, dX);
+  constraint_matrix_weighted_sum(sdp, dx, dX);
   dX += primal_residues;
 
   // dY = Symmetrize(X^{-1} (R - dX Y))

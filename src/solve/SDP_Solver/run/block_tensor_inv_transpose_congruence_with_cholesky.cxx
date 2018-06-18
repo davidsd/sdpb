@@ -33,14 +33,14 @@ void block_tensor_inv_transpose_congruence_with_cholesky(
         }
       El::Trsm(El::LeftOrRight::LEFT, El::UpperOrLowerNS::LOWER,
                El::Orientation::NORMAL, El::UnitOrNonUnit::NON_UNIT,
-               El::BigFloat(1), X_cholesky.blocks_elemental[b], workspace[b]);
+               El::BigFloat(1), X_cholesky.blocks[b], workspace[b]);
 
       // We have to set this to zero because the values can be NaN.
       // Multiplying 0*NaN = NaN.
-      Zero(result.blocks_elemental[b]);
+      Zero(result.blocks[b]);
       Syrk(El::UpperOrLowerNS::LOWER, El::Orientation::TRANSPOSE,
            El::BigFloat(1), workspace[b], El::BigFloat(0),
-           result.blocks_elemental[b]);
-      El::MakeSymmetric(El::UpperOrLower::LOWER, result.blocks_elemental[b]);
+           result.blocks[b]);
+      El::MakeSymmetric(El::UpperOrLower::LOWER, result.blocks[b]);
     }
 }

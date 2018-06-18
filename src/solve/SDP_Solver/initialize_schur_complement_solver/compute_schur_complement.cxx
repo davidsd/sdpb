@@ -78,10 +78,9 @@ void compute_schur_complement(
                          + row_block_1)
                         * block_size);
 
-                      El::DistMatrix<El::BigFloat> result_sub_matrix(
-                        El::View(schur_complement.blocks_elemental[jj],
-                                 result_row_offset, result_column_offset,
-                                 block_size, block_size));
+                      El::DistMatrix<El::BigFloat> result_sub_matrix(El::View(
+                        schur_complement.blocks[jj], result_row_offset,
+                        result_column_offset, block_size, block_size));
                       Zero(result_sub_matrix);
 
                       El::DistMatrix<El::BigFloat> temp(block_size,
@@ -90,30 +89,26 @@ void compute_schur_complement(
                           ++block_index)
                         {
                           multiply_submatrices(
-                            bilinear_pairings_X_inv
-                              .blocks_elemental[block_index],
-                            bilinear_pairings_Y.blocks_elemental[block_index],
+                            bilinear_pairings_X_inv.blocks[block_index],
+                            bilinear_pairings_Y.blocks[block_index],
                             block_size, column_offset_0, row_offset_1,
                             column_offset_1, row_offset_0, temp,
                             result_sub_matrix);
                           multiply_submatrices(
-                            bilinear_pairings_X_inv
-                              .blocks_elemental[block_index],
-                            bilinear_pairings_Y.blocks_elemental[block_index],
+                            bilinear_pairings_X_inv.blocks[block_index],
+                            bilinear_pairings_Y.blocks[block_index],
                             block_size, row_offset_0, row_offset_1,
                             column_offset_1, column_offset_0, temp,
                             result_sub_matrix);
                           multiply_submatrices(
-                            bilinear_pairings_X_inv
-                              .blocks_elemental[block_index],
-                            bilinear_pairings_Y.blocks_elemental[block_index],
+                            bilinear_pairings_X_inv.blocks[block_index],
+                            bilinear_pairings_Y.blocks[block_index],
                             block_size, column_offset_0, column_offset_1,
                             row_offset_1, row_offset_0, temp,
                             result_sub_matrix);
                           multiply_submatrices(
-                            bilinear_pairings_X_inv
-                              .blocks_elemental[block_index],
-                            bilinear_pairings_Y.blocks_elemental[block_index],
+                            bilinear_pairings_X_inv.blocks[block_index],
+                            bilinear_pairings_Y.blocks[block_index],
                             block_size, row_offset_0, column_offset_1,
                             row_offset_1, column_offset_0, temp,
                             result_sub_matrix);
@@ -123,7 +118,6 @@ void compute_schur_complement(
             }
         }
 
-      El::MakeSymmetric(El::UpperOrLower::LOWER,
-                        schur_complement.blocks_elemental[jj]);
+      El::MakeSymmetric(El::UpperOrLower::LOWER, schur_complement.blocks[jj]);
     }
 }

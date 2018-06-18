@@ -4,10 +4,10 @@
 void cholesky_decomposition(const Block_Diagonal_Matrix &A,
                             Block_Diagonal_Matrix &L)
 {
-  for(size_t b = 0; b < A.blocks_elemental.size(); b++)
+  for(size_t b = 0; b < A.blocks.size(); b++)
     {
       // FIXME: Use pivoting?
-      L.blocks_elemental[b] = A.blocks_elemental[b];
-      Cholesky(El::UpperOrLowerNS::LOWER, L.blocks_elemental[b]);
+      L.blocks[b] = A.blocks[b];
+      Cholesky(El::UpperOrLowerNS::LOWER, L.blocks[b]);
     }
 }

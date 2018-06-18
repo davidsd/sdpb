@@ -82,20 +82,20 @@ public:
   //                                           0 <= k <= d_j,
   //                                           0 <= m <= delta_b)
   //
-  std::vector<El::Matrix<El::BigFloat>> bilinear_bases_elemental_local;
-  std::vector<El::DistMatrix<El::BigFloat>> bilinear_bases_elemental_dist;
+  std::vector<El::Matrix<El::BigFloat>> bilinear_bases_local;
+  std::vector<El::DistMatrix<El::BigFloat>> bilinear_bases_dist;
 
   // FreeVarMatrix = B, a PxN matrix
-  Block_Matrix free_var_matrix_elemental;
+  Block_Matrix free_var_matrix;
 
   // c, a vector of length P used with primal_objective
-  Block_Vector primal_objective_c_elemental;
+  Block_Vector primal_objective_c;
 
   // b, a vector of length N used with dual_objective
-  El::DistMatrix<El::BigFloat> dual_objective_b_elemental;
+  El::DistMatrix<El::BigFloat> dual_objective_b;
 
   // objectiveConst = f
-  El::BigFloat objective_const_elemental;
+  El::BigFloat objective_const;
 
   // dimensions[j] = m_j  (0 <= j < J)
   std::vector<size_t> dimensions;
@@ -158,8 +158,7 @@ public:
     for(size_t j = 0; j < dimensions.size(); ++j)
       for(auto &b : blocks[j])
         {
-          result.push_back(bilinear_bases_elemental_local[b].Height()
-                           * dimensions[j]);
+          result.push_back(bilinear_bases_local[b].Height() * dimensions[j]);
         }
     return result;
   }
@@ -174,8 +173,7 @@ public:
     for(size_t j = 0; j < dimensions.size(); j++)
       for(auto &b : blocks[j])
         {
-          result.push_back(bilinear_bases_elemental_local[b].Width()
-                           * dimensions[j]);
+          result.push_back(bilinear_bases_local[b].Width() * dimensions[j]);
         }
     return result;
   }
@@ -199,18 +197,18 @@ public:
   friend std::ostream &operator<<(std::ostream &os, const SDP &sdp)
   {
     os << "SDP(";
-    El::Print(sdp.bilinear_bases_elemental_local, "bilinearBases", os);
+    El::Print(sdp.bilinear_bases_local, "bilinearBases", os);
     os << "FreeVarMatrix = ";
-    for (auto &block: sdp.free_var_matrix_elemental.blocks)
+    for(auto &block : sdp.free_var_matrix.blocks)
       {
         El::Print(block, "", os);
       }
     os << "primalObjective = ";
-    for (auto &block: sdp.primal_objective_c_elemental.blocks)
+    for(auto &block : sdp.primal_objective_c.blocks)
       {
         El::Print(block, "", os);
       }
-    El::Print(sdp.dual_objective_b_elemental, "dualObjective", os);
+    El::Print(sdp.dual_objective_b, "dualObjective", os);
     os << "dimensions = " << sdp.dimensions << "\n"
        << "degrees = " << sdp.degrees << "\n"
        << "blocks" << sdp.blocks << "\n"

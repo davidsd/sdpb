@@ -4,10 +4,10 @@
 void block_matrix_solve_with_cholesky(const Block_Diagonal_Matrix &ACholesky,
                                       Block_Diagonal_Matrix &X)
 {
-  for(size_t b = 0; b < X.blocks_elemental.size(); b++)
+  for(size_t b = 0; b < X.blocks.size(); b++)
     {
-      El::cholesky::SolveAfter(
-        El::UpperOrLowerNS::LOWER, El::OrientationNS::NORMAL,
-        ACholesky.blocks_elemental[b], X.blocks_elemental[b]);
+      El::cholesky::SolveAfter(El::UpperOrLowerNS::LOWER,
+                               El::OrientationNS::NORMAL, ACholesky.blocks[b],
+                               X.blocks[b]);
     }
 }

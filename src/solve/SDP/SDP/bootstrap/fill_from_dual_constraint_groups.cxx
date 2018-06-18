@@ -20,26 +20,25 @@ void fill_from_dual_constraint_groups(
       // Dual_Constraint_Group.  sdp.blocks[j] = {b1, b2, ... } contains
       // the indices for the blocks of Y corresponding to the j-th
       // group.
-      if(g.bilinearBases_elemental.size() != 2)
+      if(g.bilinearBases.size() != 2)
         {
           throw std::runtime_error(
             "Wrong number of elements in dualConstraintGroups::bilinearBases. "
             " "
             "Expected 2 but found:"
-            + std::to_string(g.bilinearBases_elemental.size()));
+            + std::to_string(g.bilinearBases.size()));
         }
-      sdp.blocks.push_back({sdp.bilinear_bases_elemental_local.size(),
-                            sdp.bilinear_bases_elemental_local.size() + 1});
-      for(auto &b : g.bilinearBases_elemental)
+      sdp.blocks.push_back({sdp.bilinear_bases_local.size(),
+                            sdp.bilinear_bases_local.size() + 1});
+      for(auto &b : g.bilinearBases)
         {
           // Ensure that each bilinearBasis is sampled the correct number
           // of times
           assert(static_cast<size_t>(b.Width()) == g.degree + 1);
-          sdp.bilinear_bases_elemental_local.push_back(b);
-          sdp.bilinear_bases_elemental_dist.emplace_back(b.Height(),
-                                                         b.Width());
+          sdp.bilinear_bases_local.push_back(b);
+          sdp.bilinear_bases_dist.emplace_back(b.Height(), b.Width());
 
-          auto dist(sdp.bilinear_bases_elemental_dist.rbegin());
+          auto dist(sdp.bilinear_bases_dist.rbegin());
           for(int64_t row = 0; row < dist->LocalHeight(); ++row)
             {
               El::Int global_row(dist->GlobalRow(row));
@@ -60,43 +59,42 @@ void fill_from_dual_constraint_groups(
   for(auto &block_size : sdp.schur_block_dims())
     {
       assert(group != dualConstraintGroups.end());
-      assert(group->constraintConstants_elemental.size() == block_size);
-      assert(static_cast<size_t>(group->constraintMatrix_elemental.Height())
+      assert(group->constraintConstants.size() == block_size);
+      assert(static_cast<size_t>(group->constraintMatrix.Height())
              == block_size);
       {
-        sdp.primal_objective_c_elemental.blocks.emplace_back(block_size, 1);
-        auto block(sdp.primal_objective_c_elemental.blocks.rbegin());
+        sdp.primal_objective_c.blocks.emplace_back(block_size, 1);
+        auto block(sdp.primal_objective_c.blocks.rbegin());
         size_t local_height(block->LocalHeight());
         if(block->GlobalCol(0) == 0)
           {
             for(size_t row = 0; row < local_height; ++row)
               {
                 size_t global_row(block->GlobalRow(row));
-                block->SetLocal(
-                  row, 0, group->constraintConstants_elemental.at(global_row));
+                block->SetLocal(row, 0,
+                                group->constraintConstants.at(global_row));
               }
           }
       }
       {
-        sdp.free_var_matrix_elemental.blocks.emplace_back(
-          block_size, sdp.dual_objective_b_elemental.Height());
-        auto block(sdp.free_var_matrix_elemental.blocks.rbegin());
+        sdp.free_var_matrix.blocks.emplace_back(block_size,
+                                                sdp.dual_objective_b.Height());
+        auto block(sdp.free_var_matrix.blocks.rbegin());
         int64_t local_height(block->LocalHeight()),
           local_width(block->LocalWidth());
 
         for(int64_t row = 0; row < local_height; ++row)
           {
             El::Int global_row(block->GlobalRow(row));
-            if(global_row < group->constraintMatrix_elemental.Height())
+            if(global_row < group->constraintMatrix.Height())
               {
                 for(int64_t column = 0; column < local_width; ++column)
                   {
                     El::Int global_column(block->GlobalCol(column));
-                    if(global_column
-                       < group->constraintMatrix_elemental.Width())
+                    if(global_column < group->constraintMatrix.Width())
                       {
                         block->SetLocal(row, column,
-                                        group->constraintMatrix_elemental.Get(
+                                        group->constraintMatrix.Get(
                                           global_row, global_column));
                       }
                   }

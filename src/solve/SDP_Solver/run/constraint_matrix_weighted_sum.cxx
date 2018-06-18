@@ -23,13 +23,13 @@ void constraint_matrix_weighted_sum(const SDP &sdp, const Block_Vector &a,
       const size_t block_size(sdp.degrees[jj] + 1);
       for(size_t block_index(2 * jj); block_index < 2 * jj + 2; ++block_index)
         {
-          El::Zero(result.blocks_elemental[block_index]);
+          El::Zero(result.blocks[block_index]);
           for(size_t column_block = 0; column_block < sdp.dimensions[jj];
               ++column_block)
             for(size_t row_block = 0; row_block <= column_block; ++row_block)
               {
                 const size_t result_block_size(
-                  sdp.bilinear_bases_elemental_dist[block_index].Height());
+                  sdp.bilinear_bases_dist[block_index].Height());
                 const size_t column_offset(column_block * result_block_size),
                   row_offset(row_block * result_block_size);
                 size_t vector_offset(
@@ -38,24 +38,24 @@ void constraint_matrix_weighted_sum(const SDP &sdp, const Block_Vector &a,
                 El::DistMatrix<El::BigFloat> sub_vector(El::LockedView(
                   a.blocks[jj], vector_offset, 0, block_size, 1));
                 El::DistMatrix<El::BigFloat> scaled_bases(
-                  sdp.bilinear_bases_elemental_dist[block_index]);
+                  sdp.bilinear_bases_dist[block_index]);
 
                 El::DiagonalScale(El::LeftOrRight::RIGHT,
                                   El::Orientation::NORMAL, sub_vector,
                                   scaled_bases);
 
                 El::DistMatrix<El::BigFloat> result_sub_block(El::View(
-                  result.blocks_elemental[block_index], row_offset,
-                  column_offset, result_block_size, result_block_size));
+                  result.blocks[block_index], row_offset, column_offset,
+                  result_block_size, result_block_size));
                 El::Gemm(El::Orientation::NORMAL, El::Orientation::TRANSPOSE,
                          El::BigFloat(column_block == row_block ? 1 : 0.5),
-                         sdp.bilinear_bases_elemental_dist[block_index],
-                         scaled_bases, El::BigFloat(0), result_sub_block);
+                         sdp.bilinear_bases_dist[block_index], scaled_bases,
+                         El::BigFloat(0), result_sub_block);
               }
           if(sdp.dimensions[jj] > 1)
             {
               El::MakeSymmetric(El::UpperOrLowerNS::UPPER,
-                                result.blocks_elemental[block_index]);
+                                result.blocks[block_index]);
             }
         }
     }

@@ -8,7 +8,7 @@
 // See the manual for a description of the correct XML input format.
 
 #include "parse_append_many.hxx"
-#include "parse_vector_elemental.hxx"
+#include "parse_vector.hxx"
 
 #include "../../Polynomial.hxx"
 #include "../../SDP.hxx"
@@ -16,7 +16,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
-void bootstrap(const std::vector<El::BigFloat> &objective_elemental,
+void bootstrap(const std::vector<El::BigFloat> &objective,
                const std::vector<Polynomial_Vector_Matrix> &polVectorMatrices,
                SDP &sdp);
 
@@ -25,7 +25,7 @@ parse_polynomial_vector_matrix(const boost::property_tree::ptree &tree);
 
 SDP::SDP(const std::vector<boost::filesystem::path> &sdp_files)
 {
-  std::vector<El::BigFloat> objective_elemental;
+  std::vector<El::BigFloat> objective;
 
   std::vector<Polynomial_Vector_Matrix> polynomialVectorMatrices;
   for(auto &sdp_file : sdp_files)
@@ -38,8 +38,8 @@ SDP::SDP(const std::vector<boost::filesystem::path> &sdp_files)
       /// boost::property_tree uses not_found() instead of end() :(
       if(objective_iterator != sdp.not_found())
         {
-          objective_elemental
-            = parse_vector_elemental(objective_iterator->second);
+          objective
+            = parse_vector(objective_iterator->second);
         }
 
       auto polynomialVectorMatrices_iterator(
@@ -52,5 +52,5 @@ SDP::SDP(const std::vector<boost::filesystem::path> &sdp_files)
                             polynomialVectorMatrices);
         }
     }
-  bootstrap(objective_elemental, polynomialVectorMatrices, *this);
+  bootstrap(objective, polynomialVectorMatrices, *this);
 }

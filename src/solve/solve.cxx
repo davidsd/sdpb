@@ -55,14 +55,11 @@ int solve(const std::vector<boost::filesystem::path> &sdp_files,
       std::cout << "-----" << std::setfill('-') << std::setw(116) << std::left
                 << reason << '\n'
                 << '\n'
-                << "primalObjective = " << solver.primal_objective_elemental
-                << '\n'
-                << "dualObjective   = " << solver.dual_objective_elemental
-                << '\n'
-                << "dualityGap      = " << solver.duality_gap_elemental << '\n'
-                << "primalError     = " << solver.primal_error_elemental
-                << '\n'
-                << "dualError       = " << solver.dual_error_elemental << '\n'
+                << "primalObjective = " << solver.primal_objective << '\n'
+                << "dualObjective   = " << solver.dual_objective << '\n'
+                << "dualityGap      = " << solver.duality_gap << '\n'
+                << "primalError     = " << solver.primal_error << '\n'
+                << "dualError       = " << solver.dual_error << '\n'
                 << '\n';
     }
 

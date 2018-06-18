@@ -27,19 +27,19 @@ void SDP_Solver::print_iteration(const int &iteration, El::BigFloat &mu,
                 << std::showpoint << static_cast<double>(mu) << " "
 
                 << std::showpos << std::setw(11) << std::setprecision(3)
-                << static_cast<double>(primal_objective_elemental) << " "
+                << static_cast<double>(primal_objective) << " "
 
                 << std::setw(11) << std::setprecision(3)
-                << static_cast<double>(dual_objective_elemental) << " "
+                << static_cast<double>(dual_objective) << " "
 
                 << std::noshowpos << std::setw(10) << std::setprecision(3)
-                << static_cast<double>(duality_gap_elemental) << " "
+                << static_cast<double>(duality_gap) << " "
 
                 << std::showpos << std::setw(11) << std::setprecision(3)
-                << static_cast<double>(primal_error_elemental) << " "
+                << static_cast<double>(primal_error) << " "
 
                 << std::setw(11) << std::setprecision(3)
-                << static_cast<double>(dual_error_elemental) << " "
+                << static_cast<double>(dual_error) << " "
 
                 << std::noshowpos << std::setw(8) << std::setprecision(3)
                 << static_cast<double>(primal_step_length) << " "
@@ -50,6 +50,6 @@ void SDP_Solver::print_iteration(const int &iteration, El::BigFloat &mu,
                 << std::setw(4) << std::setprecision(3)
                 << static_cast<double>(beta_corrector) << "  "
 
-                << sdp.dual_objective_b_elemental.Height() << "\n";
+                << sdp.dual_objective_b.Height() << "\n";
     }
 }

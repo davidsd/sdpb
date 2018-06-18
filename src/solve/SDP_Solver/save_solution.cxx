@@ -15,21 +15,21 @@ void SDP_Solver::save_solution(
     {
       std::cout << "Saving solution to      : " << out_file << '\n';
       ofs << "terminateReason = \"" << terminate_reason << "\";\n"
-          << "primalObjective = " << primal_objective_elemental << ";\n"
-          << "dualObjective   = " << dual_objective_elemental << ";\n"
-          << "dualityGap      = " << duality_gap_elemental << ";\n"
-          << "primalError     = " << primal_error_elemental << ";\n"
-          << "dualError       = " << dual_error_elemental << ";\n"
+          << "primalObjective = " << primal_objective << ";\n"
+          << "dualObjective   = " << dual_objective << ";\n"
+          << "dualityGap      = " << duality_gap << ";\n"
+          << "primalError     = " << primal_error << ";\n"
+          << "dualError       = " << dual_error << ";\n"
           << "y = {";
     }
-  El::Print(y_elemental, "", ofs);
+  El::Print(y, "", ofs);
 
   if(El::mpi::Rank() == 0)
     {
       ofs << "};\nx = {";
     }
 
-  for(auto &block : x_elemental.blocks)
+  for(auto &block : x.blocks)
     {
       El::Print(block, "", ofs);
     }

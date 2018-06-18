@@ -8,17 +8,16 @@ El::BigFloat corrector_centering_parameter(
   const Block_Diagonal_Matrix &dY, const El::BigFloat &mu,
   const bool is_primal_dual_feasible)
 {
-  El::BigFloat r = frobenius_product_of_sums_elemental(X, dX, Y, dY)
-                   / (mu * X.dim);
+  El::BigFloat r = frobenius_product_of_sums(X, dX, Y, dY) / (mu * X.dim);
   El::BigFloat beta = r < 1 ? r * r : r;
 
   if(is_primal_dual_feasible)
     {
-      return Min(Max(parameters.feasible_centering_parameter_elemental, beta),
+      return Min(Max(parameters.feasible_centering_parameter, beta),
                  El::BigFloat(1));
     }
   else
     {
-      return Max(parameters.infeasible_centering_parameter_elemental, beta);
+      return Max(parameters.infeasible_centering_parameter, beta);
     }
 }

@@ -34,14 +34,14 @@ public:
   // Current point
 
   // a Vector of length P = sdp.primalObjective.size()
-  Block_Vector x_elemental;
+  Block_Vector x;
 
   // a Block_Diagonal_Matrix with block sizes given by
   // sdp.psdMatrixBlockDims()
   Block_Diagonal_Matrix X;
 
   // a Vector of length N = sdp.dualObjective.size()
-  El::DistMatrix<El::BigFloat> y_elemental;
+  El::DistMatrix<El::BigFloat> y;
 
   // a Block_Diagonal_Matrix with the same structure as X
   Block_Diagonal_Matrix Y;
@@ -53,9 +53,9 @@ public:
   // values of the objective functions.  In the class SDP, they refer
   // to the vectors c and b.  Hopefully the name-clash won't cause
   // confusion.
-  El::BigFloat primal_objective_elemental, // f + c . x
-    dual_objective_elemental,              // f + b . y
-    duality_gap_elemental; // normalized difference of objectives
+  El::BigFloat primal_objective, // f + c . x
+    dual_objective,              // f + b . y
+    duality_gap;                 // normalized difference of objectives
 
   // Discrepancy in the primal equality constraints, a
   // Block_Diagonal_Matrix with the same structure as X, called 'P' in
@@ -64,15 +64,15 @@ public:
   //   PrimalResidues = \sum_p A_p x_p - X
   //
   Block_Diagonal_Matrix primal_residues;
-  El::BigFloat primal_error_elemental; // maxAbs(PrimalResidues)
+  El::BigFloat primal_error; // maxAbs(PrimalResidues)
 
   // Discrepancy in the dual equality constraints, a Vector of length
   // P, called 'd' in the manual:
   //
   //   dualResidues = c - Tr(A_* Y) - B y
   //
-  Block_Vector dual_residues_elemental;
-  El::BigFloat dual_error_elemental; // maxAbs(dualResidues)
+  Block_Vector dual_residues;
+  El::BigFloat dual_error; // maxAbs(dualResidues)
 
   // Create a new solver for a given SDP, with the given parameters
   SDP_Solver(const std::vector<boost::filesystem::path> &sdp_files,
@@ -104,8 +104,7 @@ private:
     const Block_Diagonal_Matrix &bilinear_pairings_Y,
     const std::vector<size_t> &block_dims,
     Block_Diagonal_Matrix &schur_complement_cholesky,
-    Block_Matrix &schur_off_diagonal_elemental,
-    El::DistMatrix<El::BigFloat> &Q_elemental);
+    Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q);
 
   // Compute (dx, dX, dy, dY), given the current mu, a reduction
   // parameter beta.  `correctorPhase' specifies whether to use the
@@ -113,10 +112,10 @@ private:
   // the predictor R-matrix)
   void compute_search_direction(
     const Block_Diagonal_Matrix &schur_complement_cholesky,
-    const Block_Matrix &schur_off_diagonal_elemental,
-    const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta_elemental,
-    const El::BigFloat &mu_elemental, const bool correctorPhase,
-    const El::DistMatrix<El::BigFloat> &Q_elemental,
-    Block_Vector &dx_elemental, Block_Diagonal_Matrix &dX,
-    El::DistMatrix<El::BigFloat> &dy_elemental, Block_Diagonal_Matrix &dY);
+    const Block_Matrix &schur_off_diagonal,
+    const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
+    const El::BigFloat &mu, const bool correctorPhase,
+    const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx,
+    Block_Diagonal_Matrix &dX, El::DistMatrix<El::BigFloat> &dy,
+    Block_Diagonal_Matrix &dY);
 };

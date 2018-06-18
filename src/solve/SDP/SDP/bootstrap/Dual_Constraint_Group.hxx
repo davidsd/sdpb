@@ -35,14 +35,14 @@ public:
   size_t degree;
 
   // constraintMatrix = B, a P'xN Matrix
-  El::Matrix<El::BigFloat> constraintMatrix_elemental;
+  El::Matrix<El::BigFloat> constraintMatrix;
 
   // constraintConstants = c, a vector of length P'
-  std::vector<El::BigFloat> constraintConstants_elemental;
+  std::vector<El::BigFloat> constraintConstants;
 
   // bilinearBases is a vector of Matrices encoding the v_{b,k}
   // entering the constraint matrices A_p, as described
   // above. `bilinearBases' here has the structure of
   // `bilinearBases[j]' above for some fixed j.
-  std::vector<El::Matrix<El::BigFloat>> bilinearBases_elemental;
+  std::vector<El::Matrix<El::BigFloat>> bilinearBases;
 };
