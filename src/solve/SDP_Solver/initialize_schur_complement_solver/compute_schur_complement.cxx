@@ -34,12 +34,16 @@ namespace
     El::DistMatrix<El::BigFloat> X_submatrix(El::LockedView(
       bilinear_X_inv, column_offset_X, row_offset_X, block_size, block_size)),
       Y_submatrix(El::LockedView(bilinear_Y, column_offset_Y, row_offset_Y,
-                                 block_size, block_size));
+                                 block_size, block_size)),
+      Y_transpose;
 
-    // FIXME: The result is symmetric, so we really only need to
-    // multiply the lower half.  Elemental does not seem to have an
-    // appropriate routine.
-    El::Hadamard(X_submatrix, Y_submatrix, temp);
+    // The overall result is symmetric, but this particular block may
+    // not be because it is offset from the diagonal.
+    
+    // It does not help to use TransposeAxpy().  Hadamard() sets the
+    // result, it does not add it in.
+    El::Transpose(Y_submatrix, Y_transpose);
+    El::Hadamard(X_submatrix, Y_transpose, temp);
     Axpy(El::BigFloat(0.25), temp, result_submatrix);
   }
 }
