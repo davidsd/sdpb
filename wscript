@@ -28,6 +28,7 @@ def build(bld):
                         'src/solve/SDP/SDP/bootstrap/dual_constraint_group_from_pol_vec_mat/sample_bilinear_basis.cxx',
                         'src/solve/SDP/SDP/bootstrap/fill_from_dual_constraint_groups/fill_from_dual_constraint_groups.cxx',
                         'src/solve/SDP/SDP/bootstrap/fill_from_dual_constraint_groups/set_block_sizes_and_bilinear.cxx',
+                        'src/solve/SDP/SDP/bootstrap/fill_from_dual_constraint_groups/assign_blocks.cxx',
                         'src/solve/SDP_Solver/run/constraint_matrix_weighted_sum.cxx',
                         'src/solve/SDP_Solver/run/compute_dual_residues.cxx',
                         'src/solve/SDP_Solver/run/dot.cxx',
