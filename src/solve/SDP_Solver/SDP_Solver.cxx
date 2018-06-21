@@ -5,10 +5,8 @@
 SDP_Solver::SDP_Solver(const std::vector<boost::filesystem::path> &sdp_files,
                        const SDP_Solver_Parameters &parameters)
     : sdp(sdp_files), parameters(parameters), x(sdp.schur_block_sizes),
-      X(sdp.psd_matrix_block_sizes), y(sdp.dual_objective_b.Height(), 1),
-      Y(X), primal_residues(X),
-      // FIXME: Maybe we can use schur_block_sizes() instead of making a copy?
-      dual_residues(x)
+      X(sdp.psd_matrix_block_sizes), y(sdp.dual_objective_b.Height(), 1), Y(X),
+      primal_residues(X), dual_residues(sdp.schur_block_sizes)
 {
   X.set_zero();
   Y.set_zero();
