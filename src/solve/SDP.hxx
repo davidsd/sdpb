@@ -85,7 +85,7 @@ public:
   std::vector<El::Matrix<El::BigFloat>> bilinear_bases_local;
   std::vector<El::DistMatrix<El::BigFloat>> bilinear_bases_dist;
 
-  // FreeVarMatrix = B, a PxN matrix
+  // free_var_matrix = B, a PxN matrix
   Block_Matrix free_var_matrix;
 
   // c, a vector of length P used with primal_objective
