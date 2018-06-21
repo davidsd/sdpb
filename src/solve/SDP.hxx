@@ -106,10 +106,12 @@ public:
   SDP(const std::vector<boost::filesystem::path> &sdp_files);
 
   std::vector<size_t> schur_block_sizes,
-    // Dimensions of the blocks of X,Y (0 <= b < bMax)
-    // psdMatrixBlockSizes()[b] = (delta_b+1)*m_j = length(v_{b,*})*m_j
+    // Dimensions of the blocks of X,Y
+    // psd_matrix_block_sizes[b] = (delta_b+1)*m_j = length(v_{b,*})*m_j
+    // (0 <= b < bMax)
     psd_matrix_block_sizes,
-    // Dimensions of the bilinear pairing matrices U^(b) and V^(b) (0 <= b <
-    // bMax) bilinearPairingBlockSizes()[b] = (d_j + 1)*m_j
+    // Dimensions of the bilinear pairing matrices U and V
+    // bilinear_pairing_block_sizes[b] = (d_j + 1)*m_j
+    // (0 <= b < bMax)
     bilinear_pairing_block_sizes;
 };
