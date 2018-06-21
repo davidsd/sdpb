@@ -22,8 +22,6 @@ void fill_bilinear_bases(
                                    "Expected 2 but found:"
                                    + std::to_string(g.bilinearBases.size()));
         }
-      sdp.blocks.push_back({sdp.bilinear_bases_local.size(),
-                            sdp.bilinear_bases_local.size() + 1});
       for(auto &b : g.bilinearBases)
         {
           // Ensure that each bilinearBasis is sampled the correct number

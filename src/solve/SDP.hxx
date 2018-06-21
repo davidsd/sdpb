@@ -103,15 +103,6 @@ public:
   // degrees[j] = d_j  (0 <= j < J)
   std::vector<size_t> degrees;
 
-  // blocks gives the 1-to-many mapping
-  //
-  // blocks[j] = {2*j, 2*j+1}  (0 <= j < J)
-  //
-  // entering the constraint matrices A_p.  There are always 2 blocks,
-  // one for even terms in the polynomial and the other for odd terms.
-  //
-  std::vector<std::array<size_t, 2>> blocks;
-
   SDP(const std::vector<boost::filesystem::path> &sdp_files);
 
   std::vector<size_t> schur_block_sizes;
@@ -127,30 +118,32 @@ public:
   // Dimensions of the blocks of X,Y (0 <= b < bMax)
   //
   // psdMatrixBlockSizes()[b] = (delta_b+1)*m_j = length(v_{b,*})*m_j
-  //
   std::vector<size_t> psd_matrix_block_sizes() const
   {
     std::vector<size_t> result;
-    for(size_t j = 0; j < dimensions.size(); ++j)
-      for(auto &b : blocks[j])
-        {
-          result.push_back(bilinear_bases_local[b].Height() * dimensions[j]);
-        }
+    for(size_t jj = 0; jj < dimensions.size(); ++jj)
+      {
+        result.push_back(bilinear_bases_local[2 * jj].Height()
+                         * dimensions[jj]);
+        result.push_back(bilinear_bases_local[2 * jj + 1].Height()
+                         * dimensions[jj]);
+      }
     return result;
   }
 
   // Dimensions of the bilinear pairing matrices U^(b) and V^(b) (0 <= b < bMax)
   //
   // bilinearPairingBlockSizes()[b] = (d_j + 1)*m_j
-  //
   std::vector<size_t> bilinear_pairing_block_sizes() const
   {
     std::vector<size_t> result;
-    for(size_t j = 0; j < dimensions.size(); j++)
-      for(auto &b : blocks[j])
-        {
-          result.push_back(bilinear_bases_local[b].Width() * dimensions[j]);
-        }
+    for(size_t jj = 0; jj < dimensions.size(); jj++)
+      {
+        result.push_back(bilinear_bases_local[2 * jj].Width()
+                         * dimensions[jj]);
+        result.push_back(bilinear_bases_local[2 * jj + 1].Width()
+                         * dimensions[jj]);
+      }
     return result;
   }
 
@@ -172,7 +165,6 @@ public:
     El::Print(sdp.dual_objective_b, "dualObjective", os);
     os << "dimensions = " << sdp.dimensions << "\n"
        << "degrees = " << sdp.degrees << "\n"
-       << "blocks" << sdp.blocks << "\n"
        << ")";
     return os;
   }
