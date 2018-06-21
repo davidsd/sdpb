@@ -24,6 +24,7 @@ int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
 
+  int result(0);
   try
     {
       std::vector<boost::filesystem::path> sdp_files;
@@ -212,12 +213,13 @@ int main(int argc, char **argv)
       El::gmp::SetPrecision(1024);
       El::mpfr::SetPrecision(parameters.precision);
 
-      return solve(sdp_files, out_file, checkpoint_file_in,
-                   checkpoint_file_out, parameters);
+      result = solve(sdp_files, out_file, checkpoint_file_in,
+                     checkpoint_file_out, parameters);
     }
   catch(std::exception &e)
     {
       El::ReportException(e);
+      result = 1;
     }
-  return 1;
+  return result;
 }
