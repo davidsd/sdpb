@@ -114,21 +114,21 @@ public:
 
   SDP(const std::vector<boost::filesystem::path> &sdp_files);
 
-  std::vector<size_t> schur_block_dims;
-  void initialize_schur_block_dims()
+  std::vector<size_t> schur_block_sizes;
+  void initialize_schur_block_sizes()
   {
     for(size_t j = 0; j < dimensions.size(); ++j)
       {
-        schur_block_dims.push_back((dimensions[j] * (dimensions[j] + 1) / 2)
-                                   * (degrees[j] + 1));
+        schur_block_sizes.push_back((dimensions[j] * (dimensions[j] + 1) / 2)
+                                    * (degrees[j] + 1));
       }
   }
 
   // Dimensions of the blocks of X,Y (0 <= b < bMax)
   //
-  // psdMatrixBlockDims()[b] = (delta_b+1)*m_j = length(v_{b,*})*m_j
+  // psdMatrixBlockSizes()[b] = (delta_b+1)*m_j = length(v_{b,*})*m_j
   //
-  std::vector<size_t> psd_matrix_block_dims() const
+  std::vector<size_t> psd_matrix_block_sizes() const
   {
     std::vector<size_t> result;
     for(size_t j = 0; j < dimensions.size(); ++j)
@@ -141,9 +141,9 @@ public:
 
   // Dimensions of the bilinear pairing matrices U^(b) and V^(b) (0 <= b < bMax)
   //
-  // bilinearPairingBlockDims()[b] = (d_j + 1)*m_j
+  // bilinearPairingBlockSizes()[b] = (d_j + 1)*m_j
   //
-  std::vector<size_t> bilinear_pairing_block_dims() const
+  std::vector<size_t> bilinear_pairing_block_sizes() const
   {
     std::vector<size_t> result;
     for(size_t j = 0; j < dimensions.size(); j++)

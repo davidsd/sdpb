@@ -73,7 +73,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
   // SDP.h for more information on d_j and m_j.
 
   Block_Diagonal_Matrix bilinear_pairings_X_inv(
-    sdp.bilinear_pairing_block_dims());
+    sdp.bilinear_pairing_block_sizes());
 
   // BilinearPairingsY is analogous to BilinearPairingsXInv, with
   // X^{-1} -> Y.
@@ -198,7 +198,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 
         // SchurComplementCholesky = L', the Cholesky decomposition of the
         // Schur complement matrix S.
-        Block_Diagonal_Matrix schur_complement_cholesky(sdp.schur_block_dims);
+        Block_Diagonal_Matrix schur_complement_cholesky(sdp.schur_block_sizes);
 
         // SchurOffDiagonal = L'^{-1} FreeVarMatrix, needed in solving the
         // Schur complement equation.
@@ -219,7 +219,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         // complement equation for dx, dy
         timers["run.step.initializeSchurComplementSolver"].resume();
         initialize_schur_complement_solver(
-          bilinear_pairings_X_inv, bilinear_pairings_Y, sdp.schur_block_dims,
+          bilinear_pairings_X_inv, bilinear_pairings_Y, sdp.schur_block_sizes,
           schur_complement_cholesky, schur_off_diagonal, Q);
         timers["run.step.initializeSchurComplementSolver"].stop();
 

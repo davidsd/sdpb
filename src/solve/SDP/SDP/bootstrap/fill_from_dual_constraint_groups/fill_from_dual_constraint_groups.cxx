@@ -11,11 +11,11 @@ void fill_from_dual_constraint_groups(
   const std::vector<Dual_Constraint_Group> &dualConstraintGroups, SDP &sdp)
 {
   fill_bilinear_bases(dualConstraintGroups, sdp);
-  sdp.initialize_schur_block_dims();
+  sdp.initialize_schur_block_sizes();
 
   // Then assign blocks
   auto group(dualConstraintGroups.begin());
-  for(auto &block_size : sdp.schur_block_dims)
+  for(auto &block_size : sdp.schur_block_sizes)
     {
       assert(group != dualConstraintGroups.end());
       assert(group->constraintConstants.size() == block_size);
