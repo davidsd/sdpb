@@ -106,14 +106,6 @@ public:
   SDP(const std::vector<boost::filesystem::path> &sdp_files);
 
   std::vector<size_t> schur_block_sizes;
-  void initialize_schur_block_sizes()
-  {
-    for(size_t j = 0; j < dimensions.size(); ++j)
-      {
-        schur_block_sizes.push_back((dimensions[j] * (dimensions[j] + 1) / 2)
-                                    * (degrees[j] + 1));
-      }
-  }
 
   // Dimensions of the blocks of X,Y (0 <= b < bMax)
   //
