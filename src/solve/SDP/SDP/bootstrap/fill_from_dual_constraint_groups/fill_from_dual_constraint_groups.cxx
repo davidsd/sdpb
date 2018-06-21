@@ -1,7 +1,7 @@
 #include "../Dual_Constraint_Group.hxx"
 #include "../../../../SDP.hxx"
 
-void fill_bilinear_bases(
+void set_block_sizes_and_bilinear(
   const std::vector<Dual_Constraint_Group> &dualConstraintGroups, SDP &sdp);
 
 // Collect a bunch of Dual_Constraint_Group's and a dual objective
@@ -10,7 +10,7 @@ void fill_bilinear_bases(
 void fill_from_dual_constraint_groups(
   const std::vector<Dual_Constraint_Group> &dualConstraintGroups, SDP &sdp)
 {
-  fill_bilinear_bases(dualConstraintGroups, sdp);
+  set_block_sizes_and_bilinear(dualConstraintGroups, sdp);
 
   // Then assign blocks
   auto group(dualConstraintGroups.begin());

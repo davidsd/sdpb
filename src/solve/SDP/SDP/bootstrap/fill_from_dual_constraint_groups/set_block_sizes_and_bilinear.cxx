@@ -1,7 +1,7 @@
 #include "../Dual_Constraint_Group.hxx"
 #include "../../../../SDP.hxx"
 
-void fill_bilinear_bases(
+void set_block_sizes_and_bilinear(
   const std::vector<Dual_Constraint_Group> &dualConstraintGroups, SDP &sdp)
 {
   for(auto &g : dualConstraintGroups)
