@@ -9,6 +9,9 @@ void fill_bilinear_bases(
       sdp.dimensions.push_back(g.dim);
       sdp.degrees.push_back(g.degree);
 
+      sdp.schur_block_sizes.push_back((g.dim * (g.dim + 1) / 2)
+                                      * (g.degree + 1));
+
       // sdp.bilinear_bases is the concatenation of the g.bilinearBases.
       // The matrix Y is a BlockDiagonalMatrix built from the
       // concatenation of the blocks for each individual
@@ -41,6 +44,8 @@ void fill_bilinear_bases(
                                  b.Get(global_row, global_column));
                 }
             }
+          sdp.psd_matrix_block_sizes.push_back(b.Height() * g.dim);
+          sdp.bilinear_pairing_block_sizes.push_back(b.Width() * g.dim);
         }
     }
 }

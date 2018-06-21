@@ -73,7 +73,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
   // SDP.h for more information on d_j and m_j.
 
   Block_Diagonal_Matrix bilinear_pairings_X_inv(
-    sdp.bilinear_pairing_block_sizes());
+    sdp.bilinear_pairing_block_sizes);
 
   // BilinearPairingsY is analogous to BilinearPairingsXInv, with
   // X^{-1} -> Y.
