@@ -112,39 +112,15 @@ public:
   //
   std::vector<std::array<size_t, 2>> blocks;
 
-  // constraintIndices gives the 1-to-many mapping described above
-  //
-  // constraintIndices[j] = { Index_Tuple(p,r,s,k)
-  //                          for 0 <= s < m_j,
-  //                              0 <= r <= s,
-  //                              0 <= k <= d_j,
-  //                          with p the overall constraint index }
-  //
-  // This allows us to loop through the constraints A_p associated to
-  // each j.
-  //
-
-  // FIXME: Is this still needed?
-  std::vector<std::vector<Index_Tuple>> constraint_indices;
-
   SDP(const std::vector<boost::filesystem::path> &sdp_files);
 
-  // create the mapping j -> { Index_Tuple(p,r,s,k) } described above
-  //
-  void initialize_constraint_indices()
+  std::vector<size_t> schur_block_dims;
+  void initialize_schur_block_dims()
   {
-    size_t p(0);
     for(size_t j = 0; j < dimensions.size(); ++j)
       {
-        constraint_indices.emplace_back(0);
-
-        for(size_t s = 0; s < dimensions[j]; ++s)
-          for(size_t r = 0; r <= s; ++r)
-            for(size_t k = 0; k <= degrees[j]; ++k)
-              {
-                constraint_indices[j].emplace_back(p, r, s, k);
-                ++p;
-              }
+        schur_block_dims.push_back((dimensions[j] * (dimensions[j] + 1) / 2)
+                                   * (degrees[j] + 1));
       }
   }
 
@@ -176,21 +152,6 @@ public:
           result.push_back(bilinear_bases_local[b].Width() * dimensions[j]);
         }
     return result;
-  }
-
-  // Dimensions of the blocks S^(j) of the Schur complement matrix:
-  //
-  // schurBlockDims()[j] = (d_j+1)*m_j*(m_j+1)/2
-  //                     = length(constraintIndices[j])
-  //
-  std::vector<size_t> schur_block_dims() const
-  {
-    std::vector<size_t> dims;
-    for(size_t j = 0; j < dimensions.size(); j++)
-      {
-        dims.push_back(constraint_indices[j].size());
-      }
-    return dims;
   }
 
   // Print an SDP, for debugging purposes

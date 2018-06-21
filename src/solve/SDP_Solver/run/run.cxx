@@ -107,7 +107,6 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
           return SDP_Solver_Terminate_Reason::MaxRuntimeExceeded;
         }
 
-
       timers["run.objectives"].resume();
       timers["run.objectives.primal"].resume();
       primal_objective = sdp.objective_const + dot(sdp.primal_objective_c, x);
@@ -199,8 +198,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 
         // SchurComplementCholesky = L', the Cholesky decomposition of the
         // Schur complement matrix S.
-        Block_Diagonal_Matrix schur_complement_cholesky(
-          sdp.schur_block_dims());
+        Block_Diagonal_Matrix schur_complement_cholesky(sdp.schur_block_dims);
 
         // SchurOffDiagonal = L'^{-1} FreeVarMatrix, needed in solving the
         // Schur complement equation.
@@ -221,7 +219,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         // complement equation for dx, dy
         timers["run.step.initializeSchurComplementSolver"].resume();
         initialize_schur_complement_solver(
-          bilinear_pairings_X_inv, bilinear_pairings_Y, sdp.schur_block_dims(),
+          bilinear_pairings_X_inv, bilinear_pairings_Y, sdp.schur_block_dims,
           schur_complement_cholesky, schur_off_diagonal, Q);
         timers["run.step.initializeSchurComplementSolver"].stop();
 
