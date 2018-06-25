@@ -225,7 +225,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 
         // Compute the complementarity mu = Tr(X Y)/X.dim
         timers["run.step.frobenius_product_symmetric"].resume();
-        mu = frobenius_product_symmetric(X, Y) / X.dim;
+        mu = frobenius_product_symmetric(X, Y) / X.total_num_rows;
         timers["run.step.frobenius_product_symmetric"].stop();
         if(mu > parameters.max_complementarity)
           {

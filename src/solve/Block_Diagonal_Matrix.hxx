@@ -19,7 +19,7 @@ class Block_Diagonal_Matrix
 {
 public:
   // The total number of rows (or columns) in M
-  int dim;
+  int total_num_rows;
 
   // The blocks M_b for 0 <= b < bMax
   std::vector<El::DistMatrix<El::BigFloat>> blocks;
@@ -31,14 +31,14 @@ public:
   // Construct a Block_Diagonal_Matrix from a vector of dimensions {s_0,
   // ..., s_{bMax-1}} for each block.
   explicit Block_Diagonal_Matrix(const std::vector<size_t> &block_sizes)
-      : dim(0)
+      : total_num_rows(0)
   {
     for(auto &block_size : block_sizes)
       {
         blocks.emplace_back(block_size, block_size);
 
-        block_start_indices.push_back(dim);
-        dim += block_size;
+        block_start_indices.push_back(total_num_rows);
+        total_num_rows += block_size;
       }
   }
 

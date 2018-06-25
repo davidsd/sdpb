@@ -8,7 +8,7 @@ El::BigFloat corrector_centering_parameter(
   const Block_Diagonal_Matrix &dY, const El::BigFloat &mu,
   const bool is_primal_dual_feasible)
 {
-  El::BigFloat r = frobenius_product_of_sums(X, dX, Y, dY) / (mu * X.dim);
+  El::BigFloat r = frobenius_product_of_sums(X, dX, Y, dY) / (mu * X.total_num_rows);
   El::BigFloat beta = r < 1 ? r * r : r;
 
   if(is_primal_dual_feasible)
