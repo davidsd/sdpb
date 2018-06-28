@@ -35,11 +35,11 @@ namespace
       bilinear_X_inv, column_offset_X, row_offset_X, block_size, block_size)),
       Y_submatrix(El::LockedView(bilinear_Y, column_offset_Y, row_offset_Y,
                                  block_size, block_size)),
-      Y_transpose;
+      Y_transpose(block_size, block_size, bilinear_Y.Grid());
 
     // The overall result is symmetric, but this particular block may
     // not be because it is offset from the diagonal.
-    
+
     // It does not help to use TransposeAxpy().  Hadamard() sets the
     // result, it does not add it in.
     El::Transpose(Y_submatrix, Y_transpose);
@@ -87,8 +87,8 @@ void compute_schur_complement(
                         result_column_offset, block_size, block_size));
                       Zero(result_sub_matrix);
 
-                      El::DistMatrix<El::BigFloat> temp(block_size,
-                                                        block_size);
+                      El::DistMatrix<El::BigFloat> temp(
+                        block_size, block_size, result_sub_matrix.Grid());
                       for(size_t block_index(2 * jj); block_index < 2 * jj + 2;
                           ++block_index)
                         {

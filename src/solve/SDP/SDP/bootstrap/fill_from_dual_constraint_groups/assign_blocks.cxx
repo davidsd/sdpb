@@ -2,8 +2,10 @@
 #include "../../../../SDP.hxx"
 
 void assign_blocks(
-  const std::vector<Dual_Constraint_Group> &dualConstraintGroups, SDP &sdp)
+  const std::vector<Dual_Constraint_Group> &dualConstraintGroups,
+  const std::list<El::Grid> &block_grid_mapping, SDP &sdp)
 {
+  auto grid(block_grid_mapping.begin());
   auto group(dualConstraintGroups.begin());
   for(auto &block_size : sdp.schur_block_sizes)
     {
@@ -12,7 +14,8 @@ void assign_blocks(
       assert(static_cast<size_t>(group->constraintMatrix.Height())
              == block_size);
       {
-        sdp.primal_objective_c.blocks.emplace_back(block_size, 1);
+        // sdp.primal_objective_c.blocks.emplace_back(block_size, 1);
+        sdp.primal_objective_c.blocks.emplace_back(block_size, 1, *grid);
         auto block(sdp.primal_objective_c.blocks.rbegin());
         size_t local_height(block->LocalHeight());
         if(block->GlobalCol(0) == 0)
@@ -26,8 +29,10 @@ void assign_blocks(
           }
       }
       {
-        sdp.free_var_matrix.blocks.emplace_back(block_size,
-                                                sdp.dual_objective_b.Height());
+        // sdp.free_var_matrix.blocks.emplace_back(
+        //   block_size, sdp.dual_objective_b.Height());
+        sdp.free_var_matrix.blocks.emplace_back(
+          block_size, sdp.dual_objective_b.Height(), *grid);
         auto block(sdp.free_var_matrix.blocks.rbegin());
         int64_t local_height(block->LocalHeight()),
           local_width(block->LocalWidth());
@@ -51,5 +56,6 @@ void assign_blocks(
           }
       }
       ++group;
+      ++grid;
     }
 }

@@ -92,6 +92,7 @@ public:
   Block_Vector primal_objective_c;
 
   // b, a vector of length N used with dual_objective
+  // It is duplicated amongst all the blocks
   El::DistMatrix<El::BigFloat> dual_objective_b;
 
   // objectiveConst = f
@@ -114,4 +115,6 @@ public:
     // bilinear_pairing_block_sizes[b] = (d_j + 1)*m_j
     // (0 <= b < bMax)
     bilinear_pairing_block_sizes;
+
+  std::list<El::Grid> block_grid_mapping;
 };

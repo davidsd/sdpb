@@ -13,8 +13,7 @@
 // Inputs: sdp, y, BilinearPairingsY
 // Output: dualResidues (overwriten)
 //
-void compute_dual_residues(const SDP &sdp,
-                           const El::DistMatrix<El::BigFloat> &y,
+void compute_dual_residues(const SDP &sdp, const Block_Vector &y,
                            const Block_Diagonal_Matrix &bilinear_pairings_Y,
                            Block_Vector &dual_residues)
 {
@@ -61,14 +60,14 @@ void compute_dual_residues(const SDP &sdp,
         }
     }
 
-  for(size_t b = 0; b < dual_residues.blocks.size(); ++b)
+  for(size_t block = 0; block < dual_residues.blocks.size(); ++block)
     {
       // dualResidues -= FreeVarMatrix * y
       Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, El::BigFloat(-1),
-           sdp.free_var_matrix.blocks[b], y, El::BigFloat(1),
-           dual_residues.blocks[b]);
+           sdp.free_var_matrix.blocks[block], y.blocks[block], El::BigFloat(1),
+           dual_residues.blocks[block]);
       // dualResidues += primalObjective
-      Axpy(El::BigFloat(1), sdp.primal_objective_c.blocks[b],
-           dual_residues.blocks[b]);
+      Axpy(El::BigFloat(1), sdp.primal_objective_c.blocks[block],
+           dual_residues.blocks[block]);
     }
 }

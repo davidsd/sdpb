@@ -41,7 +41,7 @@ public:
   Block_Diagonal_Matrix X;
 
   // a Vector of length N = sdp.dualObjective.size()
-  El::DistMatrix<El::BigFloat> y;
+  Block_Vector y;
 
   // a Block_Diagonal_Matrix with the same structure as X
   Block_Diagonal_Matrix Y;
@@ -102,7 +102,8 @@ private:
   void initialize_schur_complement_solver(
     const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
     const Block_Diagonal_Matrix &bilinear_pairings_Y,
-    const std::vector<size_t> &block_dims,
+    const std::vector<size_t> &block_sizes,
+    const std::list<El::Grid> &block_grid_mapping,
     Block_Diagonal_Matrix &schur_complement_cholesky,
     Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q);
 
@@ -116,6 +117,6 @@ private:
     const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
     const El::BigFloat &mu, const bool correctorPhase,
     const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx,
-    Block_Diagonal_Matrix &dX, El::DistMatrix<El::BigFloat> &dy,
+    Block_Diagonal_Matrix &dX, Block_Vector &dy,
     Block_Diagonal_Matrix &dY);
 };

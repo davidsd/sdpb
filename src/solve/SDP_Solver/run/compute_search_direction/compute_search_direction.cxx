@@ -18,13 +18,12 @@
 
 void compute_schur_RHS(const SDP &sdp, const Block_Vector &dual_residues,
                        const Block_Diagonal_Matrix &Z, const Block_Vector &x,
-                       Block_Vector &r_x, El::DistMatrix<El::BigFloat> &r_y);
+                       Block_Vector &dx, Block_Vector &dy);
 
 void solve_schur_complement_equation(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
-  const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx,
-  El::DistMatrix<El::BigFloat> &dy);
+  const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx, Block_Vector &dy);
 
 void SDP_Solver::compute_search_direction(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
@@ -32,8 +31,7 @@ void SDP_Solver::compute_search_direction(
   const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
   const El::BigFloat &mu, const bool correctorPhase,
   const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx,
-  Block_Diagonal_Matrix &dX, El::DistMatrix<El::BigFloat> &dy,
-  Block_Diagonal_Matrix &dY)
+  Block_Diagonal_Matrix &dX, Block_Vector &dy, Block_Diagonal_Matrix &dY)
 {
   // R = beta mu I - X Y (predictor phase)
   // R = beta mu I - X Y - dX dY (corrector phase)
@@ -60,9 +58,8 @@ void SDP_Solver::compute_search_direction(
   block_matrix_solve_with_cholesky(X_cholesky, Z);
   Z.symmetrize();
 
-  // r_x[p] = -dual_residues[p] - Tr(A_p Z)
-  // r_y[n] = dualObjective[n] - (FreeVarMatrix^T x)_n
-  // Here, dx = r_x, dy = r_y.
+  // dx[p] = -dual_residues[p] - Tr(A_p Z)
+  // dy[n] = dualObjective[n] - (FreeVarMatrix^T x)_n
   compute_schur_RHS(sdp, dual_residues, Z, x, dx, dy);
 
   // Solve for dx, dy in-place

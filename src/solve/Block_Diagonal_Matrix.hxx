@@ -9,6 +9,8 @@
 
 #include <El.hpp>
 
+#include <list>
+
 // A block-diagonal square matrix
 //
 //   M = Diagonal(M_0, M_1, ..., M_{bMax-1})
@@ -30,15 +32,32 @@ public:
 
   // Construct a Block_Diagonal_Matrix from a vector of dimensions {s_0,
   // ..., s_{bMax-1}} for each block.
-  explicit Block_Diagonal_Matrix(const std::vector<size_t> &block_sizes)
+  explicit Block_Diagonal_Matrix(const std::vector<size_t> &block_sizes,
+                                 const std::list<El::Grid> &block_grid_mapping)
       : total_num_rows(0)
   {
+    bool same_size(block_grid_mapping.size() == block_sizes.size()),
+      skip_increment(true);
+
+    auto grid(block_grid_mapping.begin());
     for(auto &block_size : block_sizes)
       {
-        blocks.emplace_back(block_size, block_size);
+        blocks.emplace_back(block_size, block_size, *grid);
 
         block_start_indices.push_back(total_num_rows);
         total_num_rows += block_size;
+        if(same_size)
+          {
+            ++grid;
+          }
+        else if(!same_size)
+          {
+            if(!skip_increment)
+              {
+                ++grid;
+              }
+            skip_increment = !skip_increment;
+          }
       }
   }
 
@@ -98,7 +117,7 @@ public:
         // the lower part to the upper part.  We need to average the
         // upper and lower parts.
         block *= 0.5;
-        El::DistMatrix<El::BigFloat> transpose;
+        El::DistMatrix<El::BigFloat> transpose(block.Grid());
         El::Transpose(block, transpose, false);
         block += transpose;
       }

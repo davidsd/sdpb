@@ -1,7 +1,7 @@
 #include "../Dual_Constraint_Group.hxx"
 #include "../../../../SDP.hxx"
 
-void set_block_sizes_and_bilinear(
+void set_block_sizes(
   const std::vector<Dual_Constraint_Group> &dualConstraintGroups, SDP &sdp)
 {
   for(auto &g : dualConstraintGroups)
@@ -22,28 +22,11 @@ void set_block_sizes_and_bilinear(
         {
           throw std::runtime_error("Wrong number of elements in "
                                    "dualConstraintGroups::bilinearBases.  "
-                                   "Expected 2 but found:"
+                                   "Expected 2 but found: "
                                    + std::to_string(g.bilinearBases.size()));
         }
       for(auto &b : g.bilinearBases)
         {
-          // Ensure that each bilinearBasis is sampled the correct number
-          // of times
-          assert(static_cast<size_t>(b.Width()) == g.degree + 1);
-          sdp.bilinear_bases_local.push_back(b);
-          sdp.bilinear_bases_dist.emplace_back(b.Height(), b.Width());
-
-          auto dist(sdp.bilinear_bases_dist.rbegin());
-          for(int64_t row = 0; row < dist->LocalHeight(); ++row)
-            {
-              El::Int global_row(dist->GlobalRow(row));
-              for(int64_t column = 0; column < dist->LocalWidth(); ++column)
-                {
-                  El::Int global_column(dist->GlobalCol(column));
-                  dist->SetLocal(row, column,
-                                 b.Get(global_row, global_column));
-                }
-            }
           sdp.psd_matrix_block_sizes.push_back(b.Height() * g.dim);
           sdp.bilinear_pairing_block_sizes.push_back(b.Width() * g.dim);
         }

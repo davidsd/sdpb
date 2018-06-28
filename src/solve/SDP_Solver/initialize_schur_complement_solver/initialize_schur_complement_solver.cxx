@@ -46,7 +46,8 @@ void compute_schur_complement(
 void SDP_Solver::initialize_schur_complement_solver(
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
-  const std::vector<size_t> &block_dims,
+  const std::vector<size_t> &block_sizes,
+  const std::list<El::Grid> &block_grid_mapping,
   Block_Diagonal_Matrix &schur_complement_cholesky,
   Block_Matrix &schur_off_diagonal_block, El::DistMatrix<El::BigFloat> &Q)
 {
@@ -54,7 +55,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
   // (d_j+1)*m_j*(m_j+1)/2
   //
-  Block_Diagonal_Matrix schur_complement(block_dims);
+  Block_Diagonal_Matrix schur_complement(block_sizes, block_grid_mapping);
 
   compute_schur_complement(sdp, bilinear_pairings_X_inv, bilinear_pairings_Y,
                            schur_complement);
@@ -66,7 +67,8 @@ void SDP_Solver::initialize_schur_complement_solver(
   timers["run.step.initializeSchurComplementSolver.choleskyDecomposition"]
     .resume();
   cholesky_decomposition(schur_complement, schur_complement_cholesky);
-  timers["run.step.initializeSchurComplementSolver.choleskyDecomposition"].stop();
+  timers["run.step.initializeSchurComplementSolver.choleskyDecomposition"]
+    .stop();
 
   // SchurOffDiagonal = L'^{-1} FreeVarMatrix
   schur_off_diagonal_block = sdp.free_var_matrix;

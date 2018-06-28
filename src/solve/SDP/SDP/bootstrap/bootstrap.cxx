@@ -9,6 +9,7 @@
 #include "../../../SDP.hxx"
 
 void fill_from_dual_constraint_groups(
+  const std::vector<El::BigFloat> &affine_objective,
   const std::vector<Dual_Constraint_Group> &dualConstraintGroups, SDP &sdp);
 
 Dual_Constraint_Group
@@ -34,25 +35,6 @@ void bootstrap(const std::vector<El::BigFloat> &affine_objective,
       dualConstraintGroups.push_back(
         dual_constraint_group_from_pol_vec_mat(m));
     }
-
-  // Split affine_objective into objectiveConst f and dualObjective b
-  auto affine(affine_objective.begin());
-  assert(affine != affine_objective.end());
-  sdp.objective_const = *affine;
-  ++affine;
-
-  sdp.dual_objective_b.Resize(affine_objective.size() - 1,
-                                        1);
-  size_t local_height(sdp.dual_objective_b.LocalHeight());
-
-  if(sdp.dual_objective_b.GlobalCol(0) == 0)
-    {
-      for(size_t row = 0; row < local_height; ++row)
-        {
-          size_t global_row(sdp.dual_objective_b.GlobalRow(row));
-          sdp.dual_objective_b.SetLocal(
-            row, 0, affine_objective[global_row + 1]);
-        }
-    }
-  fill_from_dual_constraint_groups(dualConstraintGroups, sdp);
+  fill_from_dual_constraint_groups(affine_objective, dualConstraintGroups,
+                                   sdp);
 }

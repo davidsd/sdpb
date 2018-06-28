@@ -1,14 +1,14 @@
 #include "../../../SDP_Solver.hxx"
 
-// Compute the vectors r_x and r_y on the right-hand side of the Schur
+// Compute the vectors dx and dy on the right-hand side of the Schur
 // complement equation:
 //
-// {{S, -B}, {B^T, 0}} . {dx, dy} = {r_x, r_y}
+// {{S, -B}, {B^T, 0}} . {dx, dy} = {dx, dy}
 //
 // where S = SchurComplement and B = FreeVarMatrix.  Specifically,
 //
-// r_x[p] = -dual_residues[p] - Tr(A_p Z)              for 0 <= p < P
-// r_y[n] = dualObjective[n] - (FreeVarMatrix^T x)_n  for 0 <= n < N
+// dx[p] = -dual_residues[p] - Tr(A_p Z)              for 0 <= p < P
+// dy[n] = dualObjective[n] - (FreeVarMatrix^T x)_n  for 0 <= n < N
 //
 // where P = primalObjective.size(), N = dualObjective.size()
 //
@@ -18,29 +18,29 @@
 // - Z = X^{-1} (PrimalResidues Y - R)
 // - x, a vector of length P
 // Outputs:
-// - r_x, a Vector of length P
-// - r_y, a Vector of length N
+// - dx, a Vector of length P
+// - dy, a Vector of length N
 //
 
 void compute_schur_RHS(const SDP &sdp, const Block_Vector &dual_residues,
                        const Block_Diagonal_Matrix &Z, const Block_Vector &x,
-                       Block_Vector &r_x, El::DistMatrix<El::BigFloat> &r_y)
+                       Block_Vector &dx, Block_Vector &dy)
 {
   for(size_t jj = 0; jj < sdp.dimensions.size(); ++jj)
     {
-      // r_x = -dual_residues
-      r_x.blocks[jj] = dual_residues.blocks[jj];
-      r_x.blocks[jj] *= -1;
-      const size_t r_x_block_size(sdp.degrees[jj] + 1);
+      // dx = -dual_residues
+      dx.blocks[jj] = dual_residues.blocks[jj];
+      dx.blocks[jj] *= -1;
+      const size_t dx_block_size(sdp.degrees[jj] + 1);
 
-      // r_x[p] -= Tr(A_p Z)
+      // dx[p] -= Tr(A_p Z)
       // Not sure whether it is better to first loop over blocks in
       // the result or over sub-blocks in Z
       for(size_t block_index = 2 * jj; block_index < 2 * jj + 2; ++block_index)
         {
           const size_t Z_block_size(
             sdp.bilinear_bases_dist[block_index].Height());
-          El::DistMatrix<El::BigFloat> ones;
+          El::DistMatrix<El::BigFloat> ones(Z.blocks[block_index].Grid());
           El::Ones(ones, Z_block_size, 1);
 
           for(size_t column_block = 0; column_block < sdp.dimensions[jj];
@@ -53,9 +53,10 @@ void compute_schur_RHS(const SDP &sdp, const Block_Vector &dual_residues,
                 El::DistMatrix<El::BigFloat> Z_sub_block(
                   El::LockedView(Z.blocks[block_index], row_offset,
                                  column_offset, Z_block_size, Z_block_size)),
-                  Z_times_q(Z_block_size, r_x_block_size),
-                  q_Z_q(Z_block_size, r_x_block_size);
+                  Z_times_q(Z_block_size, dx_block_size,
+                            Z.blocks[block_index].Grid());
                 El::Zero(Z_times_q);
+                El::DistMatrix<El::BigFloat> q_Z_q(Z_times_q);
                 El::Zero(q_Z_q);
 
                 El::Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL,
@@ -66,24 +67,28 @@ void compute_schur_RHS(const SDP &sdp, const Block_Vector &dual_residues,
                 El::Hadamard(Z_times_q, sdp.bilinear_bases_dist[block_index],
                              q_Z_q);
 
-                const size_t r_x_row_offset(
+                const size_t dx_row_offset(
                   ((column_block * (column_block + 1)) / 2 + row_block)
-                  * r_x_block_size);
-                El::DistMatrix<El::BigFloat> r_x_sub_block(El::View(
-                  r_x.blocks[jj], r_x_row_offset, 0, r_x_block_size, 1));
+                  * dx_block_size);
+                El::DistMatrix<El::BigFloat> dx_sub_block(
+                  El::View(dx.blocks[jj], dx_row_offset, 0, dx_block_size, 1));
 
                 El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(-1), q_Z_q,
-                         ones, El::BigFloat(1), r_x_sub_block);
+                         ones, El::BigFloat(1), dx_sub_block);
               }
         }
     }
 
-  // r_y = dualObjective - (FreeVarMatrix^T x)
-  r_y = sdp.dual_objective_b;
-  for(size_t b = 0; b < sdp.free_var_matrix.blocks.size(); ++b)
+  // dy = dualObjective - (FreeVarMatrix^T x)
+  for(size_t block = 0; block < sdp.free_var_matrix.blocks.size(); ++block)
     {
       El::Gemv(El::OrientationNS::TRANSPOSE, El::BigFloat(-1),
-               sdp.free_var_matrix.blocks[b], x.blocks[b], El::BigFloat(1),
-               r_y);
+               sdp.free_var_matrix.blocks[block], x.blocks[block],
+               El::BigFloat(0), dy.blocks[block]);
+
+      if(block == 0)
+        {
+          El::Axpy(El::BigFloat(1), sdp.dual_objective_b, dy.blocks[block]);
+        }
     }
 }
