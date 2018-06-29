@@ -14,7 +14,6 @@ void assign_blocks(
       assert(static_cast<size_t>(group->constraintMatrix.Height())
              == block_size);
       {
-        // sdp.primal_objective_c.blocks.emplace_back(block_size, 1);
         sdp.primal_objective_c.blocks.emplace_back(block_size, 1, *grid);
         auto block(sdp.primal_objective_c.blocks.rbegin());
         size_t local_height(block->LocalHeight());
@@ -29,8 +28,6 @@ void assign_blocks(
           }
       }
       {
-        // sdp.free_var_matrix.blocks.emplace_back(
-        //   block_size, sdp.dual_objective_b.Height());
         sdp.free_var_matrix.blocks.emplace_back(
           block_size, sdp.dual_objective_b.Height(), *grid);
         auto block(sdp.free_var_matrix.blocks.rbegin());
