@@ -1,15 +1,19 @@
 #include "../../Block_Vector.hxx"
 #include <cassert>
 
-El::BigFloat dot(const Block_Vector &a, const Block_Vector &b)
+El::BigFloat dot(const Block_Vector &A, const Block_Vector &B)
 {
-  assert(a.blocks.size() == b.blocks.size());
-  El::BigFloat result(0);
-  for(size_t ii=0; ii!=a.blocks.size(); ++ii)
+  assert(A.blocks.size() == B.blocks.size());
+  El::BigFloat local_sum(0);
+  for(size_t ii = 0; ii != A.blocks.size(); ++ii)
     {
       // FIXME: This feels slow.  It has to wait for each block
       // computation to be done before it can go to the next.
-      result+=Dotu(a.blocks[ii],b.blocks[ii]);
+      local_sum += Dotu(A.blocks[ii], B.blocks[ii]);
     }
-  return result;
+  if(!A.blocks.empty() && A.blocks.front().Grid().Rank() != 0)
+    {
+      local_sum = 0;
+    }
+  return El::mpi::AllReduce(local_sum, El::mpi::COMM_WORLD);
 }

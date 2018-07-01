@@ -20,45 +20,34 @@
 class Block_Diagonal_Matrix
 {
 public:
-  // The total number of rows (or columns) in M
-  int total_num_rows;
-
   // The blocks M_b for 0 <= b < bMax
   std::vector<El::DistMatrix<El::BigFloat>> blocks;
-
-  // The rows (or columns) of M corresponding to the top-left entry of
-  // each block M_b
-  std::vector<size_t> block_start_indices;
 
   // Construct a Block_Diagonal_Matrix from a vector of dimensions {s_0,
   // ..., s_{bMax-1}} for each block.
   explicit Block_Diagonal_Matrix(const std::vector<size_t> &block_sizes,
-                                 const std::list<El::Grid> &block_grid_mapping)
-      : total_num_rows(0)
+                                 const std::vector<size_t> &block_indices,
+                                 const size_t &num_schur_blocks,
+                                 const El::Grid &grid)
   {
-    bool same_size(block_grid_mapping.size() == block_sizes.size()),
-      skip_increment(true);
-
-    auto grid(block_grid_mapping.begin());
-    for(auto &block_size : block_sizes)
+    bool scale_index(num_schur_blocks != block_sizes.size());
+    for(auto &block_index : block_indices)
       {
-        blocks.emplace_back(block_size, block_size, *grid);
-
-        block_start_indices.push_back(total_num_rows);
-        total_num_rows += block_size;
-        if(same_size)
+        if(scale_index)
           {
-            ++grid;
+            add_block(block_sizes.at(block_index * 2), grid);
+            add_block(block_sizes.at(block_index * 2 + 1), grid);
           }
-        else if(!same_size)
+        else
           {
-            if(!skip_increment)
-              {
-                ++grid;
-              }
-            skip_increment = !skip_increment;
+            add_block(block_sizes.at(block_index), grid);
           }
       }
+  }
+
+  void add_block(const size_t &block_size, const El::Grid &grid)
+  {
+    blocks.emplace_back(block_size, block_size, grid);
   }
 
   // M = 0

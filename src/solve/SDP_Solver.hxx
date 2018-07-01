@@ -103,7 +103,8 @@ private:
     const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
     const Block_Diagonal_Matrix &bilinear_pairings_Y,
     const std::vector<size_t> &block_sizes,
-    const std::list<El::Grid> &block_grid_mapping,
+    const std::vector<size_t> &block_indices, const size_t &num_schur_blocks,
+    const El::Grid &block_grid, const std::vector<size_t> &schur_offsets,
     Block_Diagonal_Matrix &schur_complement_cholesky,
     Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q);
 
@@ -117,6 +118,5 @@ private:
     const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
     const El::BigFloat &mu, const bool correctorPhase,
     const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx,
-    Block_Diagonal_Matrix &dX, Block_Vector &dy,
-    Block_Diagonal_Matrix &dY);
+    Block_Diagonal_Matrix &dX, Block_Vector &dy, Block_Diagonal_Matrix &dY);
 };

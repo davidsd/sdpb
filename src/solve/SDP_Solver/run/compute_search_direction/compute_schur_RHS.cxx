@@ -26,69 +26,78 @@ void compute_schur_RHS(const SDP &sdp, const Block_Vector &dual_residues,
                        const Block_Diagonal_Matrix &Z, const Block_Vector &x,
                        Block_Vector &dx, Block_Vector &dy)
 {
-  for(size_t jj = 0; jj < sdp.dimensions.size(); ++jj)
+  auto free_var_matrix_block(sdp.free_var_matrix.blocks.begin());
+  auto dual_residues_block(dual_residues.blocks.begin());
+  auto x_block(x.blocks.begin());
+  auto dx_block(dx.blocks.begin());
+  auto dy_block(dy.blocks.begin());
+
+  auto Z_block(Z.blocks.begin());
+  for(auto &block_index : sdp.block_indices)
     {
       // dx = -dual_residues
-      dx.blocks[jj] = dual_residues.blocks[jj];
-      dx.blocks[jj] *= -1;
-      const size_t dx_block_size(sdp.degrees[jj] + 1);
+      *dx_block = *dual_residues_block;
+      *dx_block *= -1;
+      const size_t dx_block_size(sdp.degrees[block_index] + 1);
 
       // dx[p] -= Tr(A_p Z)
       // Not sure whether it is better to first loop over blocks in
       // the result or over sub-blocks in Z
-      for(size_t block_index = 2 * jj; block_index < 2 * jj + 2; ++block_index)
+      for(size_t bb = 2 * block_index; bb < 2 * block_index + 2; ++bb)
         {
-          const size_t Z_block_size(
-            sdp.bilinear_bases_dist[block_index].Height());
-          El::DistMatrix<El::BigFloat> ones(Z.blocks[block_index].Grid());
+          const size_t Z_block_size(sdp.bilinear_bases_dist[bb].Height());
+          El::DistMatrix<El::BigFloat> ones(Z_block->Grid());
           El::Ones(ones, Z_block_size, 1);
 
-          for(size_t column_block = 0; column_block < sdp.dimensions[jj];
-              ++column_block)
+          for(size_t column_block = 0;
+              column_block < sdp.dimensions[block_index]; ++column_block)
             for(size_t row_block = 0; row_block <= column_block; ++row_block)
               {
                 size_t column_offset(column_block * Z_block_size),
                   row_offset(row_block * Z_block_size);
 
                 El::DistMatrix<El::BigFloat> Z_sub_block(
-                  El::LockedView(Z.blocks[block_index], row_offset,
-                                 column_offset, Z_block_size, Z_block_size)),
-                  Z_times_q(Z_block_size, dx_block_size,
-                            Z.blocks[block_index].Grid());
+                  El::LockedView(*Z_block, row_offset, column_offset,
+                                 Z_block_size, Z_block_size)),
+                  Z_times_q(Z_block_size, dx_block_size, Z_block->Grid());
                 El::Zero(Z_times_q);
                 El::DistMatrix<El::BigFloat> q_Z_q(Z_times_q);
                 El::Zero(q_Z_q);
 
                 El::Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL,
                          El::BigFloat(1), Z_sub_block,
-                         sdp.bilinear_bases_dist[block_index], El::BigFloat(0),
+                         sdp.bilinear_bases_dist[bb], El::BigFloat(0),
                          Z_times_q);
 
-                El::Hadamard(Z_times_q, sdp.bilinear_bases_dist[block_index],
-                             q_Z_q);
+                El::Hadamard(Z_times_q, sdp.bilinear_bases_dist[bb], q_Z_q);
 
                 const size_t dx_row_offset(
                   ((column_block * (column_block + 1)) / 2 + row_block)
                   * dx_block_size);
                 El::DistMatrix<El::BigFloat> dx_sub_block(
-                  El::View(dx.blocks[jj], dx_row_offset, 0, dx_block_size, 1));
+                  El::View(*dx_block, dx_row_offset, 0, dx_block_size, 1));
 
                 El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(-1), q_Z_q,
                          ones, El::BigFloat(1), dx_sub_block);
               }
+          ++Z_block;
         }
-    }
 
-  // dy = dualObjective - (FreeVarMatrix^T x)
-  for(size_t block = 0; block < sdp.free_var_matrix.blocks.size(); ++block)
-    {
+      // dy = dualObjective - (FreeVarMatrix^T x)
       El::Gemv(El::OrientationNS::TRANSPOSE, El::BigFloat(-1),
-               sdp.free_var_matrix.blocks[block], x.blocks[block],
-               El::BigFloat(0), dy.blocks[block]);
+               *free_var_matrix_block, *x_block, El::BigFloat(0), *dy_block);
 
-      if(block == 0)
+      // The dy.blocks each only have part of the entire dy vector.
+      // It will later all get summed together, so add
+      // dual_objective_b to only the first block.
+      if(block_index == 0)
         {
-          El::Axpy(El::BigFloat(1), sdp.dual_objective_b, dy.blocks[block]);
+          El::Axpy(El::BigFloat(1), sdp.dual_objective_b, *dy_block);
         }
+      ++free_var_matrix_block;
+      ++dual_residues_block;
+      ++x_block;
+      ++dx_block;
+      ++dy_block;
     }
 }

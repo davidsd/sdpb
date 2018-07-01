@@ -116,5 +116,25 @@ public:
     // (0 <= b < bMax)
     bilinear_pairing_block_sizes;
 
-  std::list<El::Grid> block_grid_mapping;
+  std::vector<size_t> block_indices;
+  El::Grid grid;
+
+  size_t total_psd_rows() const
+  {
+    return std::accumulate(psd_matrix_block_sizes.begin(),
+                           psd_matrix_block_sizes.end(), 0);
+  }
+
+  std::vector<size_t> schur_offsets() const
+  {
+    size_t current_offset(0);
+    std::vector<size_t> result;
+    for(auto &size : schur_block_sizes)
+      {
+        result.push_back(current_offset);
+        current_offset += size;
+      }
+    result.push_back(current_offset);
+    return result;
+  }
 };

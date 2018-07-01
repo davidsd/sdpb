@@ -11,12 +11,14 @@ El::BigFloat dot(const Block_Vector &a, const Block_Vector &b);
 void block_tensor_inv_transpose_congruence_with_cholesky(
   const Block_Diagonal_Matrix &X_cholesky,
   const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases,
+  const std::vector<size_t> &block_indices,
   std::vector<El::DistMatrix<El::BigFloat>> &workspace,
   Block_Diagonal_Matrix &result);
 
 void block_tensor_transpose_congruence(
   const Block_Diagonal_Matrix &Y,
   const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases,
+  const std::vector<size_t> &block_indices,
   std::vector<El::DistMatrix<El::BigFloat>> &workspace,
   Block_Diagonal_Matrix &result);
 
@@ -36,7 +38,7 @@ El::BigFloat corrector_centering_parameter(
   const SDP_Solver_Parameters &parameters, const Block_Diagonal_Matrix &X,
   const Block_Diagonal_Matrix &dX, const Block_Diagonal_Matrix &Y,
   const Block_Diagonal_Matrix &dY, const El::BigFloat &mu,
-  const bool is_primal_dual_feasible);
+  const bool is_primal_dual_feasible, const size_t &total_num_rows);
 
 El::BigFloat
 step_length(const Block_Diagonal_Matrix &MCholesky,
@@ -72,7 +74,8 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
   // SDP.h for more information on d_j and m_j.
 
   Block_Diagonal_Matrix bilinear_pairings_X_inv(
-    sdp.bilinear_pairing_block_sizes, sdp.block_grid_mapping);
+    sdp.bilinear_pairing_block_sizes, sdp.block_indices,
+    sdp.schur_block_sizes.size(), sdp.grid);
 
   // BilinearPairingsY is analogous to BilinearPairingsXInv, with
   // X^{-1} -> Y.
@@ -82,19 +85,12 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
   // Additional workspace variables used in step_length()
   std::vector<El::DistMatrix<El::BigFloat>> bilinear_pairings_workspace;
   {
-    auto grid(sdp.block_grid_mapping.begin());
-    bool skip_increment(true);
-
-    for(size_t block = 0; block < sdp.bilinear_bases_local.size(); block++)
+    auto bilinear_pairings_X_inv_block(bilinear_pairings_X_inv.blocks.begin());
+    for(auto &X_block : X.blocks)
       {
         bilinear_pairings_workspace.emplace_back(
-          X.blocks[block].Height(),
-          bilinear_pairings_X_inv.blocks[block].Width(), *grid);
-        if(!skip_increment)
-          {
-            ++grid;
-          }
-        skip_increment = !skip_increment;
+          X_block.Height(), bilinear_pairings_X_inv_block->Width(), sdp.grid);
+        ++bilinear_pairings_X_inv_block;
       }
   }
   print_header();
@@ -120,10 +116,19 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       primal_objective = sdp.objective_const + dot(sdp.primal_objective_c, x);
       timers["run.objectives.primal"].stop();
       timers["run.objectives.dual"].resume();
-      // dual_objective_b and y are duplicated amongst the blocks, so
-      // we only need to compute the dot product on the first block.
-      dual_objective
-        = sdp.objective_const + El::Dotu(sdp.dual_objective_b, y.blocks.at(0));
+      // dual_objective_b is duplicated amongst the processors.  y is
+      // duplicated amongst the blocks, but it is possible for some
+      // processors to have no blocks.  In principle, we only need to
+      // compute the dot product on the first block, but then we would
+      // have to make sure that we compute that product over all
+      // processors that own that block.
+      if(!y.blocks.empty())
+        {
+          dual_objective = sdp.objective_const
+                           + El::Dotu(sdp.dual_objective_b, y.blocks.front());
+        }
+      El::mpi::Broadcast(&dual_objective, 1, 0, El::mpi::COMM_WORLD);
+
       timers["run.objectives.dual"].stop();
       timers["run.objectives.gap"].resume();
       duality_gap
@@ -146,25 +151,30 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       // complement matrix
       timers["run.blockTensorInvTransposeCongruenceWithCholesky"].resume();
       block_tensor_inv_transpose_congruence_with_cholesky(
-        X_cholesky, sdp.bilinear_bases_local, bilinear_pairings_workspace,
-        bilinear_pairings_X_inv);
+        X_cholesky, sdp.bilinear_bases_local, sdp.block_indices,
+        bilinear_pairings_workspace, bilinear_pairings_X_inv);
 
       timers["run.blockTensorInvTransposeCongruenceWithCholesky"].stop();
 
       timers["run.blockTensorTransposeCongruence"].resume();
-      block_tensor_transpose_congruence(Y, sdp.bilinear_bases_local,
-                                        bilinear_pairings_workspace,
-                                        bilinear_pairings_Y);
+      block_tensor_transpose_congruence(
+        Y, sdp.bilinear_bases_local, sdp.block_indices,
+        bilinear_pairings_workspace, bilinear_pairings_Y);
       timers["run.blockTensorTransposeCongruence"].stop();
 
       // dualResidues[p] = primalObjective[p] - Tr(A_p Y) - (FreeVarMatrix y)_p,
       timers["run.computeDualResidues"].resume();
       compute_dual_residues(sdp, y, bilinear_pairings_Y, dual_residues);
-      dual_error = 0;
-      for(auto &block : dual_residues.blocks)
-        {
-          dual_error = Max(dual_error, El::MaxAbs(block));
-        }
+      {
+        dual_error = 0;
+        El::BigFloat local_max(0);
+        for(auto &block : dual_residues.blocks)
+          {
+            local_max = Max(local_max, El::MaxAbs(block));
+          }
+        dual_error
+          = El::mpi::AllReduce(local_max, El::mpi::MAX, El::mpi::COMM_WORLD);
+      }
       timers["run.computeDualResidues"].stop();
 
       timers["run.computePrimalResidues"].resume();
@@ -209,7 +219,8 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         // SchurComplementCholesky = L', the Cholesky decomposition of the
         // Schur complement matrix S.
         Block_Diagonal_Matrix schur_complement_cholesky(
-          sdp.schur_block_sizes, sdp.block_grid_mapping);
+          sdp.schur_block_sizes, sdp.block_indices,
+          sdp.schur_block_sizes.size(), sdp.grid);
 
         // SchurOffDiagonal = L'^{-1} FreeVarMatrix, needed in solving the
         // Schur complement equation.
@@ -223,21 +234,22 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         //
         // where N is the dimension of the dual objective function.  Note
         // that N' could change with each iteration.
-        El::DistMatrix<El::BigFloat> Q(sdp.free_var_matrix.width(),
-                                       sdp.free_var_matrix.width());
+        El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
+                                       sdp.dual_objective_b.Height());
 
         // Compute SchurComplement and prepare to solve the Schur
         // complement equation for dx, dy
         timers["run.step.initializeSchurComplementSolver"].resume();
         initialize_schur_complement_solver(
           bilinear_pairings_X_inv, bilinear_pairings_Y, sdp.schur_block_sizes,
-          sdp.block_grid_mapping, schur_complement_cholesky,
-          schur_off_diagonal, Q);
+          sdp.block_indices, sdp.schur_block_sizes.size(), sdp.grid,
+          sdp.schur_offsets(), schur_complement_cholesky, schur_off_diagonal,
+          Q);
         timers["run.step.initializeSchurComplementSolver"].stop();
 
         // Compute the complementarity mu = Tr(X Y)/X.dim
         timers["run.step.frobenius_product_symmetric"].resume();
-        mu = frobenius_product_symmetric(X, Y) / X.total_num_rows;
+        mu = frobenius_product_symmetric(X, Y) / sdp.total_psd_rows();
         timers["run.step.frobenius_product_symmetric"].stop();
         if(mu > parameters.max_complementarity)
           {
@@ -259,8 +271,8 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         // Compute the corrector solution for (dx, dX, dy, dY)
         timers["run.step.corrector_centering_parameter"].resume();
         beta_corrector = corrector_centering_parameter(
-          parameters, X, dX, Y, dY, mu,
-          is_primal_feasible && is_dual_feasible);
+          parameters, X, dX, Y, dY, mu, is_primal_feasible && is_dual_feasible,
+          sdp.total_psd_rows());
         timers["run.step.corrector_centering_parameter"].stop();
         timers["run.step.computeSearchDirection(betaCorrector)"].resume();
         compute_search_direction(schur_complement_cholesky, schur_off_diagonal,
@@ -274,6 +286,7 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         = step_length(X_cholesky, dX, parameters.step_length_reduction);
 
       timers["run.step.stepLength(XCholesky)"].stop();
+
       timers["run.step.stepLength(YCholesky)"].resume();
       dual_step_length
         = step_length(Y_cholesky, dY, parameters.step_length_reduction);

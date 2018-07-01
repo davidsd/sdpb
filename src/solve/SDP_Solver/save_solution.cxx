@@ -22,7 +22,10 @@ void SDP_Solver::save_solution(
           << "dualError       = " << dual_error << ";\n"
           << "y = {";
     }
-  El::Print(y.blocks.at(0), "", ofs);
+  if(!y.blocks.empty())
+    {
+      El::Print(y.blocks.at(0), "", ofs);
+    }
 
   if(El::mpi::Rank() == 0)
     {

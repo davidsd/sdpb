@@ -47,7 +47,8 @@ void SDP_Solver::initialize_schur_complement_solver(
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
   const std::vector<size_t> &block_sizes,
-  const std::list<El::Grid> &block_grid_mapping,
+  const std::vector<size_t> &block_indices, const size_t &num_schur_blocks,
+  const El::Grid &block_grid, const std::vector<size_t> &schur_offsets,
   Block_Diagonal_Matrix &schur_complement_cholesky,
   Block_Matrix &schur_off_diagonal_block, El::DistMatrix<El::BigFloat> &Q)
 {
@@ -55,7 +56,8 @@ void SDP_Solver::initialize_schur_complement_solver(
   // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
   // (d_j+1)*m_j*(m_j+1)/2
   //
-  Block_Diagonal_Matrix schur_complement(block_sizes, block_grid_mapping);
+  Block_Diagonal_Matrix schur_complement(block_sizes, block_indices,
+                                         num_schur_blocks, block_grid);
 
   compute_schur_complement(sdp, bilinear_pairings_X_inv, bilinear_pairings_Y,
                            schur_complement);
@@ -88,32 +90,43 @@ void SDP_Solver::initialize_schur_complement_solver(
   // Upper/Lower-Left/Right.
 
   timers["run.step.initializeSchurComplementSolver.Qcomputation"].resume();
-  const size_t Q_size(schur_off_diagonal_block.blocks.at(0).Width());
-  Zeros(Q, Q_size, Q_size);
-
-  size_t schur_off_diagonal_total_rows(0);
-  for(auto &block : schur_off_diagonal_block.blocks)
-    {
-      schur_off_diagonal_total_rows += block.Height();
-    }
-  El::DistMatrix<El::BigFloat> schur_off_diagonal_dist(
-    schur_off_diagonal_total_rows, Q_size);
-
-  size_t row_offset(0);
-  for(auto &block : schur_off_diagonal_block.blocks)
-    {
-      El::DistMatrix<El::BigFloat> sub_matrix(
-        El::View(schur_off_diagonal_dist, row_offset, 0, block.Height(),
-                 block.Width()));
-      El::Copy(block, sub_matrix);
-      row_offset += block.Height();
-    }
+  El::Zero(Q);
+  El::DistMatrix<El::BigFloat> schur_off_diagonal_dist(schur_offsets.back(),
+                                                       Q.Width());
+  Zero(schur_off_diagonal_dist);
+  {
+    size_t num_updates(0);
+    for(auto &block : schur_off_diagonal_block.blocks)
+      {
+        num_updates += block.Height() * block.Width();
+      }
+    schur_off_diagonal_dist.Reserve(num_updates);
+  }
+  {
+    auto schur_off_diagonal_block_block(
+      schur_off_diagonal_block.blocks.begin());
+    for(auto &block_index : block_indices)
+      {
+        for(size_t row = 0; row < schur_off_diagonal_block_block->Height();
+            ++row)
+          for(size_t column = 0;
+              column < schur_off_diagonal_block_block->Width(); ++column)
+            {
+              schur_off_diagonal_dist.QueueUpdate(
+                row + schur_offsets.at(block_index), column,
+                schur_off_diagonal_block_block->GetLocal(row, column));
+            }
+        ++schur_off_diagonal_block_block;
+      }
+    schur_off_diagonal_dist.ProcessQueues();
+  }
 
   // Here, SchurOffDiagonal = L'^{-1} B.
   //
   // UpperLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal
   El::Syrk(El::UpperOrLowerNS::UPPER, El::OrientationNS::TRANSPOSE,
            El::BigFloat(1), schur_off_diagonal_dist, El::BigFloat(1), Q);
+
   El::MakeSymmetric(El::UpperOrLower::UPPER, Q);
   timers["run.step.initializeSchurComplementSolver.Qcomputation"].stop();
 

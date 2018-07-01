@@ -53,12 +53,15 @@ void compute_schur_complement(
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
   Block_Diagonal_Matrix &schur_complement)
 {
-  for(size_t jj = 0; jj < sdp.dimensions.size(); ++jj)
+  auto schur_complement_block(schur_complement.blocks.begin());
+  auto bilinear_pairings_X_inv_block(bilinear_pairings_X_inv.blocks.begin());
+  auto bilinear_pairings_Y_block(bilinear_pairings_Y.blocks.begin());
+  for(auto &block_index : sdp.block_indices)
     {
-      const size_t block_size(sdp.degrees[jj] + 1);
+      const size_t block_size(sdp.degrees[block_index] + 1);
 
-      for(size_t column_block_0 = 0; column_block_0 < sdp.dimensions[jj];
-          ++column_block_0)
+      for(size_t column_block_0 = 0;
+          column_block_0 < sdp.dimensions[block_index]; ++column_block_0)
         {
           const size_t column_offset_0(column_block_0 * block_size);
           for(size_t row_block_0 = 0; row_block_0 <= column_block_0;
@@ -70,7 +73,8 @@ void compute_schur_complement(
                 * block_size);
 
               for(size_t column_block_1 = 0;
-                  column_block_1 < sdp.dimensions[jj]; ++column_block_1)
+                  column_block_1 < sdp.dimensions[block_index];
+                  ++column_block_1)
                 {
                   const size_t column_offset_1(column_block_1 * block_size);
                   for(size_t row_block_1 = 0; row_block_1 <= column_block_1;
@@ -83,45 +87,47 @@ void compute_schur_complement(
                         * block_size);
 
                       El::DistMatrix<El::BigFloat> result_sub_matrix(El::View(
-                        schur_complement.blocks[jj], result_row_offset,
+                        *schur_complement_block, result_row_offset,
                         result_column_offset, block_size, block_size));
                       Zero(result_sub_matrix);
 
                       El::DistMatrix<El::BigFloat> temp(
                         block_size, block_size, result_sub_matrix.Grid());
-                      for(size_t block_index(2 * jj); block_index < 2 * jj + 2;
-                          ++block_index)
+
+                      auto bilinear_X_inv(bilinear_pairings_X_inv_block);
+                      auto bilinear_Y(bilinear_pairings_Y_block);
+                      for(size_t bb(2 * block_index); bb < 2 * block_index + 2;
+                          ++bb)
                         {
                           multiply_submatrices(
-                            bilinear_pairings_X_inv.blocks[block_index],
-                            bilinear_pairings_Y.blocks[block_index],
-                            block_size, column_offset_0, row_offset_1,
-                            column_offset_1, row_offset_0, temp,
-                            result_sub_matrix);
+                            *bilinear_X_inv, *bilinear_Y, block_size,
+                            column_offset_0, row_offset_1, column_offset_1,
+                            row_offset_0, temp, result_sub_matrix);
                           multiply_submatrices(
-                            bilinear_pairings_X_inv.blocks[block_index],
-                            bilinear_pairings_Y.blocks[block_index],
-                            block_size, row_offset_0, row_offset_1,
-                            column_offset_1, column_offset_0, temp,
-                            result_sub_matrix);
+                            *bilinear_X_inv, *bilinear_Y, block_size,
+                            row_offset_0, row_offset_1, column_offset_1,
+                            column_offset_0, temp, result_sub_matrix);
                           multiply_submatrices(
-                            bilinear_pairings_X_inv.blocks[block_index],
-                            bilinear_pairings_Y.blocks[block_index],
-                            block_size, column_offset_0, column_offset_1,
-                            row_offset_1, row_offset_0, temp,
-                            result_sub_matrix);
+                            *bilinear_X_inv, *bilinear_Y, block_size,
+                            column_offset_0, column_offset_1, row_offset_1,
+                            row_offset_0, temp, result_sub_matrix);
                           multiply_submatrices(
-                            bilinear_pairings_X_inv.blocks[block_index],
-                            bilinear_pairings_Y.blocks[block_index],
-                            block_size, row_offset_0, column_offset_1,
-                            row_offset_1, column_offset_0, temp,
-                            result_sub_matrix);
+                            *bilinear_X_inv, *bilinear_Y, block_size,
+                            row_offset_0, column_offset_1, row_offset_1,
+                            column_offset_0, temp, result_sub_matrix);
+                          ++bilinear_X_inv;
+                          ++bilinear_Y;
                         }
                     }
                 }
             }
         }
 
-      El::MakeSymmetric(El::UpperOrLower::LOWER, schur_complement.blocks[jj]);
+      El::MakeSymmetric(El::UpperOrLower::LOWER, *schur_complement_block);
+      ++schur_complement_block;
+      ++bilinear_pairings_X_inv_block;
+      ++bilinear_pairings_X_inv_block;
+      ++bilinear_pairings_Y_block;
+      ++bilinear_pairings_Y_block;
     }
 }

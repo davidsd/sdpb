@@ -15,40 +15,50 @@
 void block_tensor_transpose_congruence(
   const Block_Diagonal_Matrix &Y,
   const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases,
+  const std::vector<size_t> &block_indices,
   std::vector<El::DistMatrix<El::BigFloat>> &workspace,
   Block_Diagonal_Matrix &bilinear_pairings_Y)
 {
-  for(size_t b = 0; b < bilinear_bases.size(); b++)
+  auto work(workspace.begin());
+  auto Y_block(Y.blocks.begin());
+  auto bilinear_pairings_Y_block(bilinear_pairings_Y.blocks.begin());
+  for(auto &block_index : block_indices)
     {
-      // FIXME: This should be a constant, not computed over and over.
-      // Set up the workspace[b] to have copies of bilinear_bases[b]
-      // along the diagonal
-      for(int64_t row = 0; row < workspace[b].LocalHeight(); ++row)
+      for(size_t b = 2 * block_index; b < 2 * block_index + 2; b++)
         {
-          size_t global_row(workspace[b].GlobalRow(row));
-
-          for(int64_t column = 0; column < workspace[b].LocalWidth(); ++column)
+          // FIXME: This should be a constant, not computed over and over.
+          // Set up the workspace to have copies of bilinear_bases
+          // along the diagonal
+          for(int64_t row = 0; row < work->LocalHeight(); ++row)
             {
-              size_t global_column(workspace[b].GlobalCol(column));
+              size_t global_row(work->GlobalRow(row));
 
-              size_t row_block(global_row / bilinear_bases[b].Height()),
-                column_block(global_column / bilinear_bases[b].Width());
-              workspace[b].SetLocal(
-                row, column,
-                row_block != column_block
-                  ? El::BigFloat(0)
-                  : bilinear_bases[b].Get(
-                      global_row % bilinear_bases[b].Height(),
-                      global_column % bilinear_bases[b].Width()));
+              for(int64_t column = 0; column < work->LocalWidth(); ++column)
+                {
+                  size_t global_column(work->GlobalCol(column));
+
+                  size_t row_block(global_row / bilinear_bases[b].Height()),
+                    column_block(global_column / bilinear_bases[b].Width());
+                  work->SetLocal(
+                    row, column,
+                    row_block != column_block
+                      ? El::BigFloat(0)
+                      : bilinear_bases[b].Get(
+                          global_row % bilinear_bases[b].Height(),
+                          global_column % bilinear_bases[b].Width()));
+                }
             }
+          auto temp_space(*work);
+          Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL,
+               El::BigFloat(1), *Y_block, *work, El::BigFloat(0), temp_space);
+          Gemm(El::Orientation::TRANSPOSE, El::Orientation::NORMAL,
+               El::BigFloat(1), *work, temp_space, El::BigFloat(0),
+               *bilinear_pairings_Y_block);
+          El::MakeSymmetric(El::UpperOrLower::LOWER,
+                            *bilinear_pairings_Y_block);
+          ++work;
+          ++Y_block;
+          ++bilinear_pairings_Y_block;
         }
-      auto temp_space(workspace[b]);
-      Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, El::BigFloat(1),
-           Y.blocks[b], workspace[b], El::BigFloat(0), temp_space);
-      Gemm(El::Orientation::TRANSPOSE, El::Orientation::NORMAL,
-           El::BigFloat(1), workspace[b], temp_space, El::BigFloat(0),
-           bilinear_pairings_Y.blocks[b]);
-      El::MakeSymmetric(El::UpperOrLower::LOWER,
-                        bilinear_pairings_Y.blocks[b]);
     }
 }

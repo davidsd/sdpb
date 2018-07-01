@@ -7,13 +7,13 @@
 // Still ugly.
 El::BigFloat min_eigenvalue(Block_Diagonal_Matrix &A)
 {
-  El::BigFloat lambda_min(El::limits::Max<El::BigFloat>());
+  El::BigFloat local_min(El::limits::Max<El::BigFloat>());
 
   for(auto &block : A.blocks)
     {
       El::DistMatrix<El::BigFloat, El::VR, El::STAR> eigenvalues(block.Grid());
       El::HermitianEig(El::UpperOrLowerNS::LOWER, block, eigenvalues);
-      lambda_min = El::Min(lambda_min, El::Min(eigenvalues));
+      local_min = El::Min(local_min, El::Min(eigenvalues));
     }
-  return lambda_min;
+  return El::mpi::AllReduce(local_min, El::mpi::MIN, El::mpi::COMM_WORLD);
 }

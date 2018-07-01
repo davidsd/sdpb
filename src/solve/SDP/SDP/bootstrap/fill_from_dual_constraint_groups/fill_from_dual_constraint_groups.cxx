@@ -6,10 +6,9 @@ void set_block_sizes(
 void set_bilinear(
   const std::vector<Dual_Constraint_Group> &dualConstraintGroups, SDP &sdp);
 void compute_block_grid_mapping(const size_t &num_blocks,
-                                std::list<El::Grid> &mapping);
+                                std::vector<size_t> &block_indices);
 void assign_blocks(
-  const std::vector<Dual_Constraint_Group> &dualConstraintGroups,
-  const std::list<El::Grid> &block_grid_mapping, SDP &sdp);
+  const std::vector<Dual_Constraint_Group> &dualConstraintGroups, SDP &sdp);
 
 // Collect a bunch of Dual_Constraint_Group's and a dual objective
 // function into an SDP.
@@ -19,14 +18,14 @@ void fill_from_dual_constraint_groups(
   const std::vector<Dual_Constraint_Group> &dualConstraintGroups, SDP &sdp)
 {
   set_block_sizes(dualConstraintGroups, sdp);
-  compute_block_grid_mapping(sdp.dimensions.size(), sdp.block_grid_mapping);
+  compute_block_grid_mapping(sdp.dimensions.size(), sdp.block_indices);
   set_bilinear(dualConstraintGroups, sdp);
 
   // Split affine_objective into objectiveConst f and dualObjective b
   sdp.objective_const = affine_objective.at(0);
 
   // SetGrid() must happen before Resize()
-  sdp.dual_objective_b.SetGrid(sdp.block_grid_mapping.front());
+  sdp.dual_objective_b.SetGrid(sdp.grid);
   sdp.dual_objective_b.Resize(affine_objective.size() - 1, 1);
   if(sdp.dual_objective_b.GlobalCol(0) == 0)
     {
@@ -38,5 +37,5 @@ void fill_from_dual_constraint_groups(
                                         affine_objective[global_row + 1]);
         }
     }
-  assign_blocks(dualConstraintGroups, sdp.block_grid_mapping, sdp);
+  assign_blocks(dualConstraintGroups, sdp);
 }

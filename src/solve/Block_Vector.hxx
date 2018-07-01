@@ -21,25 +21,21 @@ struct Block_Vector
   std::vector<El::DistMatrix<El::BigFloat>> blocks;
 
   Block_Vector(const std::vector<size_t> &block_heights,
-               const std::list<El::Grid> &block_grid_mapping)
+               const std::vector<size_t> &block_indices,
+               const size_t &num_schur_blocks, const El::Grid &grid)
   {
-    bool same_size(block_grid_mapping.size() == block_heights.size()),
-      skip_increment(true);
-    auto grid(block_grid_mapping.begin());
-    for(auto &block_height : block_heights)
+    bool scale_index(num_schur_blocks != block_heights.size());
+    for(auto &block_index : block_indices)
       {
-        blocks.emplace_back(block_height, 1, *grid);
-        if(same_size)
+        if(scale_index)
           {
-            ++grid;
+            blocks.emplace_back(block_heights.at(2 * block_index), 1, grid);
+            blocks.emplace_back(block_heights.at(2 * block_index + 1), 1,
+                                grid);
           }
-        else if(!same_size)
+        else
           {
-            if(!skip_increment)
-              {
-                ++grid;
-              }
-            skip_increment = !skip_increment;
+            blocks.emplace_back(block_heights.at(block_index), 1, grid);
           }
       }
   }

@@ -6,10 +6,10 @@ El::BigFloat corrector_centering_parameter(
   const SDP_Solver_Parameters &parameters, const Block_Diagonal_Matrix &X,
   const Block_Diagonal_Matrix &dX, const Block_Diagonal_Matrix &Y,
   const Block_Diagonal_Matrix &dY, const El::BigFloat &mu,
-  const bool is_primal_dual_feasible)
+  const bool is_primal_dual_feasible, const size_t &total_psd_rows)
 {
   El::BigFloat r
-    = frobenius_product_of_sums(X, dX, Y, dY) / (mu * X.total_num_rows);
+    = frobenius_product_of_sums(X, dX, Y, dY) / (mu * total_psd_rows);
   El::BigFloat beta = r < 1 ? r * r : r;
 
   if(is_primal_dual_feasible)

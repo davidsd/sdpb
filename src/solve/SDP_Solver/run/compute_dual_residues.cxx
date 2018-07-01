@@ -17,38 +17,41 @@ void compute_dual_residues(const SDP &sdp, const Block_Vector &y,
                            const Block_Diagonal_Matrix &bilinear_pairings_Y,
                            Block_Vector &dual_residues)
 {
+  auto dual_residues_block(dual_residues.blocks.begin());
+  auto primal_objective_c_block(sdp.primal_objective_c.blocks.begin());
+  auto y_block(y.blocks.begin());
+  auto free_var_matrix_block(sdp.free_var_matrix.blocks.begin());
+  auto bilinear_pairings_Y_block(bilinear_pairings_Y.blocks.begin());
   // dualResidues[p] = -Tr(A_p Y)
-  for(size_t jj = 0; jj < sdp.dimensions.size(); ++jj)
+  for(auto &block_index : sdp.block_indices)
     {
-      Zero(dual_residues.blocks[jj]);
-      const size_t block_size(sdp.degrees[jj] + 1);
+      Zero(*dual_residues_block);
+      const size_t block_size(sdp.degrees[block_index] + 1);
 
       // Not sure whether it is better to first loop over blocks in
       // the result or over sub-blocks in bilinear_pairings_Y
-      for(size_t block_index = 2 * jj; block_index < 2 * jj + 2; ++block_index)
+      for(size_t bb = 2 * block_index; bb < 2 * block_index + 2; ++bb)
         {
-          for(size_t column_block = 0; column_block < sdp.dimensions[jj];
-              ++column_block)
+          for(size_t column_block = 0;
+              column_block < sdp.dimensions[block_index]; ++column_block)
             for(size_t row_block = 0; row_block <= column_block; ++row_block)
               {
                 size_t column_offset(column_block * block_size),
                   row_offset(row_block * block_size);
 
                 El::DistMatrix<El::BigFloat> lower_diagonal(El::GetDiagonal(
-                  El::LockedView(bilinear_pairings_Y.blocks[block_index],
-                                 row_offset, column_offset, block_size,
-                                 block_size))),
-                  upper_diagonal(El::GetDiagonal(El::LockedView(
-                    bilinear_pairings_Y.blocks[block_index], column_offset,
-                    row_offset, block_size, block_size)));
+                  El::LockedView(*bilinear_pairings_Y_block, row_offset,
+                                 column_offset, block_size, block_size))),
+                  upper_diagonal(El::GetDiagonal(
+                    El::LockedView(*bilinear_pairings_Y_block, column_offset,
+                                   row_offset, block_size, block_size)));
 
                 size_t residue_row_offset(
                   ((column_block * (column_block + 1)) / 2 + row_block)
                   * block_size);
 
-                El::DistMatrix<El::BigFloat> residue_sub_block(
-                  El::View(dual_residues.blocks[jj], residue_row_offset, 0,
-                           block_size, 1));
+                El::DistMatrix<El::BigFloat> residue_sub_block(El::View(
+                  *dual_residues_block, residue_row_offset, 0, block_size, 1));
 
                 // FIXME: This does twice as much work as needed when
                 // column_block==row_block.
@@ -57,17 +60,18 @@ void compute_dual_residues(const SDP &sdp, const Block_Vector &y,
                 El::Axpy(El::BigFloat(-0.5), upper_diagonal,
                          residue_sub_block);
               }
+          ++bilinear_pairings_Y_block;
         }
-    }
-
-  for(size_t block = 0; block < dual_residues.blocks.size(); ++block)
-    {
       // dualResidues -= FreeVarMatrix * y
       Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, El::BigFloat(-1),
-           sdp.free_var_matrix.blocks[block], y.blocks[block], El::BigFloat(1),
-           dual_residues.blocks[block]);
+           *free_var_matrix_block, *y_block, El::BigFloat(1),
+           *dual_residues_block);
       // dualResidues += primalObjective
-      Axpy(El::BigFloat(1), sdp.primal_objective_c.blocks[block],
-           dual_residues.blocks[block]);
+      Axpy(El::BigFloat(1), *primal_objective_c_block, *dual_residues_block);
+
+      ++primal_objective_c_block;
+      ++y_block;
+      ++free_var_matrix_block;
+      ++dual_residues_block;
     }
 }

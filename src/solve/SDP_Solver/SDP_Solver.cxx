@@ -5,13 +5,16 @@
 SDP_Solver::SDP_Solver(const std::vector<boost::filesystem::path> &sdp_files,
                        const SDP_Solver_Parameters &parameters)
     : sdp(sdp_files), parameters(parameters),
-      x(sdp.schur_block_sizes, sdp.block_grid_mapping),
-      X(sdp.psd_matrix_block_sizes, sdp.block_grid_mapping),
-      y(std::vector<size_t>(sdp.block_grid_mapping.size(),
+      x(sdp.schur_block_sizes, sdp.block_indices, sdp.schur_block_sizes.size(),
+        sdp.grid),
+      X(sdp.psd_matrix_block_sizes, sdp.block_indices,
+        sdp.schur_block_sizes.size(), sdp.grid),
+      y(std::vector<size_t>(sdp.schur_block_sizes.size(),
                             sdp.dual_objective_b.Height()),
-        sdp.block_grid_mapping),
+        sdp.block_indices, sdp.schur_block_sizes.size(), sdp.grid),
       Y(X), primal_residues(X),
-      dual_residues(sdp.schur_block_sizes, sdp.block_grid_mapping)
+      dual_residues(sdp.schur_block_sizes, sdp.block_indices,
+                    sdp.schur_block_sizes.size(), sdp.grid)
 {
   X.set_zero();
   Y.set_zero();
