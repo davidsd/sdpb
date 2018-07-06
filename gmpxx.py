@@ -47,7 +47,7 @@ def configure(conf):
     else:
         gmpxx_libs=['gmpxx','gmp']
 
-    conf.check_cxx(msg="Checking for Gmpxx",
+    conf.check_cxx(msg="Checking for GMPXX",
                    header_name='gmpxx.h',
                    includes=gmpxx_incdir,
                    uselib_store='gmpxx',
@@ -56,7 +56,7 @@ def configure(conf):
                    lib=gmpxx_libs)
 
 def options(opt):
-    gmpxx=opt.add_option_group('Gmpxx Options')
+    gmpxx=opt.add_option_group('GMPXX Options')
     gmpxx.add_option('--gmpxx-dir',
                    help='Base directory where gmpxx is installed')
     gmpxx.add_option('--gmpxx-incdir',
