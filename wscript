@@ -4,8 +4,8 @@ def options(opt):
     opt.load(['compiler_cxx','gnu_dirs','boost','gmpxx','cxx14','elemental'])
 
 def configure(conf):
-    if not conf.env['CXX']:
-        conf.env['CXX']='mpicxx'
+    if not os.environ['CXX'] or os.environ['CXX']=='g++' or os.environ['CXX']=='icpc':
+        conf.environ['CXX']='mpicxx'
 
     conf.load(['compiler_cxx','gnu_dirs','boost','gmpxx','cxx14','elemental'])
     conf.check_boost(lib='serialization system filesystem timer program_options chrono')
