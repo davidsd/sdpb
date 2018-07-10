@@ -1,9 +1,8 @@
 #pragma once
 
-#include <libxml++/libxml++.h>
+#include "glib_equals_string.hxx"
 
 #include <vector>
-#include <string>
 
 template <typename T> class Vector_State
 {
@@ -33,7 +32,7 @@ public:
                                      + "', but found '" + element_name + "'");
           }
       }
-    else if(element_name == name)
+    else if(glib_equals_string(element_name, name))
       {
         inside = true;
         value.clear();
@@ -51,7 +50,7 @@ public:
             value.emplace_back();
             std::swap(value.back(),element_state.value);
           }
-        else if(element_name == name)
+        else if(glib_equals_string(element_name, name))
           {
             inside = false;
             result = true;

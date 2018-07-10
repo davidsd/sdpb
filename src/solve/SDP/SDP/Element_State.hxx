@@ -1,8 +1,6 @@
 #pragma once
 
-#include <libxml++/libxml++.h>
-
-#include <string>
+#include "glib_equals_string.hxx"
 
 class Element_State
 {
@@ -29,7 +27,7 @@ public:
         throw std::runtime_error("Invalid input file.  Unexpected element '"
                                  + element_name + "' inside '" + name + "'");
       }
-    else if(element_name == name)
+    else if(glib_equals_string(element_name,name))
       {
         inside = true;
         string_value.clear();
@@ -37,17 +35,14 @@ public:
     return inside;
   }
 
-  bool on_end_element(const Glib::ustring &element_name)
+  bool on_end_element(const Glib::ustring &)
   {
     bool result(false);
     if(inside)
       {
-        if(element_name == name)
-          {
-            inside = false;
-            result = true;
-            value = El::BigFloat(string_value, 10);
-          }
+        inside = false;
+        result = true;
+        value = El::BigFloat(string_value, 10);
       }
     return result;
   }

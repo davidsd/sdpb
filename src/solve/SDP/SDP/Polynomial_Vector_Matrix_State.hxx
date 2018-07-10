@@ -34,6 +34,7 @@ class Polynomial_Vector_Matrix_State
 {
 public:
   std::string name;
+  std::string rows_name = "rows", columns_name = "cols";
   bool inside = false, inside_rows = false, inside_columns = false;
   Polynomial_Vector_Matrix value;
 
@@ -59,11 +60,11 @@ public:
   {
     if(inside)
       {
-        if(element_name == "rows")
+        if(glib_equals_string(element_name, rows_name))
           {
             inside_rows = true;
           }
-        else if(element_name == "cols")
+        else if(glib_equals_string(element_name, columns_name))
           {
             inside_columns = true;
           }
@@ -82,7 +83,7 @@ public:
               + element_name + "'");
           }
       }
-    else if(element_name == name)
+    else if(glib_equals_string(element_name, name))
       {
         inside = true;
         elements_state.value.clear();
@@ -99,16 +100,16 @@ public:
 
     if(inside)
       {
-        if(element_name == name)
+        if(glib_equals_string(element_name, name))
           {
             inside = false;
             result = true;
           }
-        else if(element_name == "rows")
+        else if(glib_equals_string(element_name, rows_name))
           {
             inside_rows = false;
           }
-        else if(element_name == "cols")
+        else if(glib_equals_string(element_name, columns_name))
           {
             inside_columns = false;
           }

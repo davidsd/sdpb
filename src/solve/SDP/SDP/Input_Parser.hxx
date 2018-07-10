@@ -6,6 +6,7 @@ using namespace std::string_literals;
 class Input_Parser : public xmlpp::SaxParser
 {
 public:
+  std::string sdp_name="sdp";
   bool inside_sdp = false, finished_objective = false,
        finished_polynomial_vector_matrices = false;
 
