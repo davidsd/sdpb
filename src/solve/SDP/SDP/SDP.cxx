@@ -7,13 +7,8 @@
 
 // See the manual for a description of the correct XML input format.
 
-#include "parse_append_many.hxx"
-#include "parse_vector.hxx"
-
-#include "../../Polynomial.hxx"
-#include "../../SDP.hxx"
-
 #include "Input_Parser.hxx"
+#include "../../SDP.hxx"
 
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/xml_parser.hpp>
