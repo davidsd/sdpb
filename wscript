@@ -1,19 +1,21 @@
 import os
 
 def options(opt):
-    opt.load(['compiler_cxx','gnu_dirs','boost','gmpxx','cxx14','elemental'])
+    opt.load(['compiler_cxx','gnu_dirs','boost','gmpxx','cxx14','elemental',
+              'libxmlxx'])
 
 def configure(conf):
-    if not os.environ['CXX'] or os.environ['CXX']=='g++' or os.environ['CXX']=='icpc':
+    if not 'CXX' in os.environ or os.environ['CXX']=='g++' or os.environ['CXX']=='icpc':
         conf.environ['CXX']='mpicxx'
 
-    conf.load(['compiler_cxx','gnu_dirs','boost','gmpxx','cxx14','elemental'])
+    conf.load(['compiler_cxx','gnu_dirs','boost','gmpxx','cxx14','elemental',
+               'libxmlxx'])
     conf.check_boost(lib='serialization system filesystem timer program_options chrono')
 
 def build(bld):
-    default_flags=['-Wall', '-Wextra', '-O3']
-    # default_flags=['-Wall', '-Wextra', '-g']
-    use_packages=['BOOST','gmpxx','cxx14','elemental']
+    default_flags=['-Wall', '-Wextra', '-O3', '-Wno-deprecated']
+    # default_flags=['-Wall', '-Wextra', '-g', '-Wno-deprecated']
+    use_packages=['BOOST','gmpxx','cxx14','elemental','libxmlxx']
     
     # Main executable
     bld.program(source=['src/main.cxx',
@@ -23,6 +25,9 @@ def build(bld):
                         'src/solve/SDP_Solver/load_checkpoint.cxx',
                         'src/solve/SDP_Solver/SDP_Solver.cxx',
                         'src/solve/SDP/SDP/SDP.cxx',
+                        'src/solve/SDP/SDP/Input_Parser/on_start_element.cxx',
+                        'src/solve/SDP/SDP/Input_Parser/on_end_element.cxx',
+                        'src/solve/SDP/SDP/Input_Parser/on_characters.cxx',
                         'src/solve/SDP/SDP/parse_vector.cxx',
                         'src/solve/SDP/SDP/parse_BigFloat.cxx',
                         'src/solve/SDP/SDP/parse_polynomial_vector_matrix.cxx',
