@@ -2,20 +2,20 @@ import os
 
 def options(opt):
     opt.load(['compiler_cxx','gnu_dirs','boost','gmpxx','cxx14','elemental',
-              'libxmlxx'])
+              'libxml2'])
 
 def configure(conf):
     if not 'CXX' in os.environ or os.environ['CXX']=='g++' or os.environ['CXX']=='icpc':
         conf.environ['CXX']='mpicxx'
 
     conf.load(['compiler_cxx','gnu_dirs','boost','gmpxx','cxx14','elemental',
-               'libxmlxx'])
+               'libxml2'])
     conf.check_boost(lib='serialization system filesystem timer program_options chrono')
 
 def build(bld):
     default_flags=['-Wall', '-Wextra', '-O3', '-Wno-deprecated']
     # default_flags=['-Wall', '-Wextra', '-g', '-Wno-deprecated']
-    use_packages=['BOOST','gmpxx','cxx14','elemental','libxmlxx']
+    use_packages=['BOOST','gmpxx','cxx14','elemental','libxml2']
     
     # Main executable
     bld.program(source=['src/main.cxx',
