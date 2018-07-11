@@ -55,26 +55,22 @@ public:
         bilinear_basis_state({"bilinearBasis"s, "polynomial"s, "coeff"s})
   {}
 
-  bool on_start_element(const Glib::ustring &element_name,
-                        const xmlpp::SaxParser::AttributeList &attributes)
+  bool on_start_element(const std::string &element_name)
   {
     if(inside)
       {
-        if(glib_equals_string(element_name, rows_name))
+        if(element_name == rows_name)
           {
             inside_rows = true;
           }
-        else if(glib_equals_string(element_name, columns_name))
+        else if(element_name == columns_name)
           {
             inside_columns = true;
           }
-        else if(!(elements_state.on_start_element(element_name, attributes)
-                  || sample_points_state.on_start_element(element_name,
-                                                          attributes)
-                  || sample_scalings_state.on_start_element(element_name,
-                                                            attributes)
-                  || bilinear_basis_state.on_start_element(element_name,
-                                                           attributes)))
+        else if(!(elements_state.on_start_element(element_name)
+                  || sample_points_state.on_start_element(element_name)
+                  || sample_scalings_state.on_start_element(element_name)
+                  || bilinear_basis_state.on_start_element(element_name)))
           {
             throw std::runtime_error(
               "Inside polynomialVectorMatrix, expected 'rows', 'cols', "
@@ -83,7 +79,7 @@ public:
               + element_name + "'");
           }
       }
-    else if(glib_equals_string(element_name, name))
+    else if(element_name == name)
       {
         inside = true;
         elements_state.value.clear();
@@ -94,22 +90,22 @@ public:
     return inside;
   }
 
-  bool on_end_element(const Glib::ustring &element_name)
+  bool on_end_element(const std::string &element_name)
   {
     bool result(false);
 
     if(inside)
       {
-        if(glib_equals_string(element_name, name))
+        if(element_name == name)
           {
             inside = false;
             result = true;
           }
-        else if(glib_equals_string(element_name, rows_name))
+        else if(element_name == rows_name)
           {
             inside_rows = false;
           }
-        else if(glib_equals_string(element_name, columns_name))
+        else if(element_name == columns_name)
           {
             inside_columns = false;
           }
@@ -133,24 +129,27 @@ public:
     return result;
   }
 
-  bool on_characters(const Glib::ustring &characters)
+  bool on_characters(const xmlChar *characters, int length)
   {
     if(inside)
       {
         if(inside_rows)
           {
-            value.rows = std::stoi(characters);
+            // Use std::stoi() in case the number is invalid
+            value.rows = std::stoi(
+              std::string(reinterpret_cast<const char *>(characters), length));
           }
         else if(inside_columns)
           {
-            value.cols = std::stoi(characters);
+            value.cols = std::stoi(
+              std::string(reinterpret_cast<const char *>(characters), length));
           }
         else
           {
-            elements_state.on_characters(characters)
-              || sample_points_state.on_characters(characters)
-              || sample_scalings_state.on_characters(characters)
-              || bilinear_basis_state.on_characters(characters);
+            elements_state.on_characters(characters, length)
+              || sample_points_state.on_characters(characters, length)
+              || sample_scalings_state.on_characters(characters, length)
+              || bilinear_basis_state.on_characters(characters, length);
           }
       }
     return inside;

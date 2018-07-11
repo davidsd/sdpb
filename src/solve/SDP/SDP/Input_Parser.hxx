@@ -3,10 +3,10 @@
 #include "Polynomial_Vector_Matrix_State.hxx"
 
 using namespace std::string_literals;
-class Input_Parser : public xmlpp::SaxParser
+class Input_Parser
 {
 public:
-  std::string sdp_name="sdp";
+  std::string sdp_name = "sdp";
   bool inside_sdp = false, finished_objective = false,
        finished_polynomial_vector_matrices = false;
 
@@ -18,11 +18,9 @@ public:
         polynomial_vector_matrices_state(
           {"polynomialVectorMatrices"s, "polynomialVectorMatrix"s})
   {}
-  ~Input_Parser() override = default;
 
-protected:
-  void on_start_element(const Glib::ustring &name,
-                        const AttributeList &properties) override;
-  void on_end_element(const Glib::ustring &name) override;
-  void on_characters(const Glib::ustring &characters) override;
+  // protected:
+  void on_start_element(const std::string &element_name);
+  void on_end_element(const std::string &element_name);
+  void on_characters(const xmlChar *characters, int length);
 };

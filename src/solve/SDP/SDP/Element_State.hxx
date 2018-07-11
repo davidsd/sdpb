@@ -1,6 +1,7 @@
 #pragma once
 
-#include "glib_equals_string.hxx"
+#include <libxml2/libxml/parser.h>
+#include <string>
 
 class Element_State
 {
@@ -19,15 +20,14 @@ public:
   {}
   Element_State() = delete;
 
-  bool on_start_element(const Glib::ustring &element_name,
-                        const xmlpp::SaxParser::AttributeList &)
+  bool on_start_element(const std::string &element_name)
   {
     if(inside)
       {
         throw std::runtime_error("Invalid input file.  Unexpected element '"
                                  + element_name + "' inside '" + name + "'");
       }
-    else if(glib_equals_string(element_name,name))
+    else if(element_name == name)
       {
         inside = true;
         string_value.clear();
@@ -35,7 +35,7 @@ public:
     return inside;
   }
 
-  bool on_end_element(const Glib::ustring &)
+  bool on_end_element(const std::string &)
   {
     bool result(false);
     if(inside)
@@ -47,11 +47,12 @@ public:
     return result;
   }
 
-  bool on_characters(const Glib::ustring &characters)
+  bool on_characters(const xmlChar *characters, int length)
   {
     if(inside)
       {
-        string_value += characters.data();
+        string_value.append(reinterpret_cast<const char *>(characters),
+                            length);
       }
     return inside;
   }
