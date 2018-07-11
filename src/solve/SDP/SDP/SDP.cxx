@@ -34,6 +34,23 @@ namespace
     Input_Parser *input_parser = static_cast<Input_Parser *>(user_data);
     input_parser->on_characters(characters, length);
   }
+
+  void warning_callback(void *, const char *msg, ...)
+  {
+    va_list args;
+    va_start(args, msg);
+    vprintf(msg, args);
+    va_end(args);
+  }
+
+  void error_callback(void *, const char *msg, ...)
+  {
+    va_list args;
+    va_start(args, msg);
+    vprintf(msg, args);
+    va_end(args);
+    throw std::runtime_error("Invalid Input file");
+  }
 }
 
 void bootstrap(const std::vector<El::BigFloat> &objective,
@@ -57,10 +74,14 @@ SDP::SDP(const std::vector<boost::filesystem::path> &sdp_files)
     {
       Input_Parser input_parser;
 
-      xmlSAXHandler xml_handlers = {0};
+      xmlSAXHandler xml_handlers;
+      // This feels unclean.
+      memset(&xml_handlers, 0, sizeof(xml_handlers));
       xml_handlers.startElement = start_element_callback;
       xml_handlers.endElement = end_element_callback;
       xml_handlers.characters = characters_callback;
+      xml_handlers.warning = warning_callback;
+      xml_handlers.error = error_callback;
 
       if(xmlSAXUserParseFile(&xml_handlers, &input_parser, sdp_file.c_str())
          < 0)
