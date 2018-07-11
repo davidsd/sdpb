@@ -30,8 +30,8 @@ void solve_schur_complement_equation(
            schur_off_diagonal.blocks[block], dx.blocks[block], El::BigFloat(1),
            dy.blocks[block]);
 
-      for(size_t row = 0; row < dy.blocks[block].Height(); ++row)
-        for(size_t column = 0; column < dy.blocks[block].Width(); ++column)
+      for(int64_t row = 0; row < dy.blocks[block].Height(); ++row)
+        for(int64_t column = 0; column < dy.blocks[block].Width(); ++column)
           {
             // FIXME: This assumes that there is only one processor
             // per grid.  When fixing this, remember to also fix the
@@ -50,8 +50,8 @@ void solve_schur_complement_equation(
   // dx += SchurOffDiagonal dy
   for(size_t block = 0; block < schur_off_diagonal.blocks.size(); ++block)
     {
-      for(size_t row = 0; row < dy.blocks[block].Height(); ++row)
-        for(size_t column = 0; column < dy.blocks[block].Width(); ++column)
+      for(int64_t row = 0; row < dy.blocks[block].Height(); ++row)
+        for(int64_t column = 0; column < dy.blocks[block].Width(); ++column)
           {
             dy.blocks[block].SetLocal(row, column,
                                       dy_local.GetLocal(row, column));

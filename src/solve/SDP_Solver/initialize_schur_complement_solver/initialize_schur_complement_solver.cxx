@@ -107,9 +107,9 @@ void SDP_Solver::initialize_schur_complement_solver(
       schur_off_diagonal_block.blocks.begin());
     for(auto &block_index : block_indices)
       {
-        for(size_t row = 0; row < schur_off_diagonal_block_block->Height();
+        for(int64_t row = 0; row < schur_off_diagonal_block_block->Height();
             ++row)
-          for(size_t column = 0;
+          for(int64_t column = 0;
               column < schur_off_diagonal_block_block->Width(); ++column)
             {
               schur_off_diagonal_dist.QueueUpdate(
