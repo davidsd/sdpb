@@ -27,6 +27,7 @@ def build(bld):
                         'src/solve/SDP/SDP/read_objectives.cxx',
                         'src/solve/SDP/SDP/read_bilinear_bases.cxx',
                         'src/solve/SDP/SDP/read_primal_objective_c.cxx',
+                        'src/solve/SDP/SDP/read_free_var_matrix.cxx',
                         'src/solve/SDP_Solver/save_checkpoint.cxx',
                         'src/solve/SDP_Solver/load_checkpoint.cxx',
                         'src/solve/SDP_Solver/SDP_Solver.cxx',
