@@ -2,6 +2,7 @@
 
 #include <El.hpp>
 #include <cmath>
+#include <iostream>
 
 inline void set_stream_precision(std::ofstream &ofs)
 {
