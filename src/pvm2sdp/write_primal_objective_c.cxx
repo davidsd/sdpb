@@ -2,7 +2,7 @@
 #include "Dual_Constraint_Group.hxx"
 #include "write_vector.hxx"
 
-void write_primal_objective(
+void write_primal_objective_c(
   const boost::filesystem::path &output_dir,
   const std::vector<Dual_Constraint_Group> &dual_constraint_groups)
 {
@@ -14,7 +14,7 @@ void write_primal_objective(
              == group.constraintConstants.size());
 
       boost::filesystem::ofstream output_stream(
-        output_dir / ("primal_objective." + std::to_string(block_index)));
+        output_dir / ("primal_objective_c." + std::to_string(block_index)));
       set_stream_precision(output_stream);
       write_vector(output_stream, group.constraintConstants);
       ++block_index;

@@ -24,7 +24,7 @@ void write_blocks(
   const boost::filesystem::path &output_dir,
   const std::vector<Dual_Constraint_Group> &dual_constraint_groups);
 
-void write_primal_objective(
+void write_primal_objective_c(
   const boost::filesystem::path &output_dir,
   const std::vector<Dual_Constraint_Group> &dual_constraint_groups);
 
@@ -66,7 +66,7 @@ int main(int argc, char **argv)
       write_objectives(output_dir, objective_const, dual_objective_b);
       write_bilinear_bases(output_dir, dual_constraint_groups);
       write_blocks(output_dir, dual_constraint_groups);
-      write_primal_objective(output_dir, dual_constraint_groups);
+      write_primal_objective_c(output_dir, dual_constraint_groups);
       write_free_var_matrix(output_dir, dual_objective_b.size(),
                             dual_constraint_groups);
     }

@@ -75,7 +75,7 @@ def build(bld):
                         'src/pvm2sdp/write_objectives.cxx',
                         'src/pvm2sdp/write_bilinear_bases.cxx',
                         'src/pvm2sdp/write_blocks.cxx',
-                        'src/pvm2sdp/write_primal_objective.cxx',
+                        'src/pvm2sdp/write_primal_objective_c.cxx',
                         'src/pvm2sdp/write_free_var_matrix.cxx'],
                 target='pvm2sdp',
                 cxxflags=default_flags,
