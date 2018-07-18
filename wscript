@@ -68,6 +68,11 @@ def build(bld):
                         'src/solve/Block_Diagonal_Matrix/ostream.cxx'],
                 target='sdpb',
                 cxxflags=default_flags,
-                rpath=[bld.env.LIBDIR],
+                use=use_packages
+                )
+    
+    bld.program(source=['src/pvm2sdp/main.cxx'],
+                target='pvm2sdp',
+                cxxflags=default_flags,
                 use=use_packages
                 )
