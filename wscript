@@ -67,7 +67,7 @@ def build(bld):
                         'src/pvm2sdp/read_input_files/Input_Parser/on_characters.cxx',
                         'src/pvm2sdp/Dual_Constraint_Group/Dual_Constraint_Group/Dual_Constraint_Group.cxx',
                         'src/pvm2sdp/Dual_Constraint_Group/Dual_Constraint_Group/sample_bilinear_basis.cxx',
-                        # ,
+                        'src/pvm2sdp/write_objective.cxx',
                         # 'src/solve/SDP/SDP/bootstrap/bootstrap.cxx',
                         # 'src/solve/SDP/SDP/bootstrap/dual_constraint_group_from_pol_vec_mat/dual_constraint_group_from_pol_vec_mat.cxx',
                         # 'src/solve/SDP/SDP/bootstrap/dual_constraint_group_from_pol_vec_mat/sample_bilinear_basis.cxx',

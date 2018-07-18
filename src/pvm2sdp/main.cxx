@@ -13,6 +13,9 @@ void read_input_files(
   std::vector<El::BigFloat> &objective,
   std::vector<Polynomial_Vector_Matrix> &polynomial_vector_matrices);
 
+void write_objective(const boost::filesystem::path &output_dir,
+                     const std::vector<El::BigFloat> &objective);
+
 int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
@@ -39,7 +42,9 @@ int main(int argc, char **argv)
             dual_constraint_groups.emplace_back(m);
           }
       }
-      // write_objective(output_dir, objective);
+
+      boost::filesystem::create_directories(output_dir);
+      write_objective(output_dir, objective);
       // write_bilinear_bases(output_dir, dual_constraint_groups);
       // write_blocks(output_dir, dual_constraint_groups);
 
