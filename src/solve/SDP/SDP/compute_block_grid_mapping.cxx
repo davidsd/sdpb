@@ -1,4 +1,4 @@
-#include "../../../../SDP.hxx"
+#include "../../SDP.hxx"
 
 void compute_block_grid_mapping(const size_t &num_blocks,
                                 std::vector<size_t> &block_indices)
@@ -21,15 +21,15 @@ void compute_block_grid_mapping(const size_t &num_blocks,
 
   for(size_t jj = 0; jj < num_blocks; ++jj)
     {
-      if(El::mpi::Rank()==0)
-        {
-          block_indices.push_back(jj);
-        }
-      
-      // int processor(jj % num_procs);
-      // if(processor == El::mpi::Rank())
+      // if(El::mpi::Rank()==0)
       //   {
       //     block_indices.push_back(jj);
       //   }
+      
+      int processor(jj % num_procs);
+      if(processor == El::mpi::Rank())
+        {
+          block_indices.push_back(jj);
+        }
     }
 }

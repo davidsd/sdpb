@@ -22,6 +22,7 @@ def build(bld):
                         'src/SDP_Solver_Parameters/ostream.cxx',
                         'src/solve/solve.cxx',
                         'src/solve/SDP/SDP/SDP.cxx',
+                        'src/solve/SDP/SDP/compute_block_grid_mapping.cxx',
                         'src/solve/SDP_Solver/save_checkpoint.cxx',
                         'src/solve/SDP_Solver/load_checkpoint.cxx',
                         'src/solve/SDP_Solver/SDP_Solver.cxx',
