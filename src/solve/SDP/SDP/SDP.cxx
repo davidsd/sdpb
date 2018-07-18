@@ -13,6 +13,12 @@ void read_bilinear_bases(
   std::vector<El::Matrix<El::BigFloat>> &bilinear_bases_local,
   std::vector<El::DistMatrix<El::BigFloat>> &bilinear_bases_dist);
 
+void read_primal_objective_c(const boost::filesystem::path &sdp_directory,
+                             const std::vector<size_t> &block_indices,
+                             const El::Grid &grid,
+                             Block_Vector &primal_objective_c);
+
+
 SDP::SDP(const boost::filesystem::path &sdp_directory)
     : grid(El::mpi::COMM_SELF)
 
@@ -22,8 +28,8 @@ SDP::SDP(const boost::filesystem::path &sdp_directory)
   read_objectives(sdp_directory, objective_const, dual_objective_b);
   read_bilinear_bases(sdp_directory, grid, bilinear_bases_local,
                       bilinear_bases_dist);
-  // read_primal_objective(output_dir, primal_objective);
-  // read_free_var_matrix(output_dir, free_var_matrix);
+  read_primal_objective_c(sdp_directory, block_indices, grid, primal_objective_c);
+  // read_free_var_matrix(sdp_directory, free_var_matrix);
 
   El::mpi::Finalize();
   exit(0);
