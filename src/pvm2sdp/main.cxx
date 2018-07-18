@@ -2,7 +2,6 @@
 
 #include <boost/filesystem.hpp>
 #include <vector>
-#include <iostream>
 
 void parse_command_line(int argc, char **argv, int &precision,
                         std::vector<boost::filesystem::path> &input_files,
@@ -15,6 +14,10 @@ void read_input_files(
 
 void write_objective(const boost::filesystem::path &output_dir,
                      const std::vector<El::BigFloat> &objective);
+
+void write_bilinear_bases(
+  const boost::filesystem::path &output_dir,
+  const std::vector<Dual_Constraint_Group> &dual_constraint_groups);
 
 int main(int argc, char **argv)
 {
@@ -45,7 +48,7 @@ int main(int argc, char **argv)
 
       boost::filesystem::create_directories(output_dir);
       write_objective(output_dir, objective);
-      // write_bilinear_bases(output_dir, dual_constraint_groups);
+      write_bilinear_bases(output_dir, dual_constraint_groups);
       // write_blocks(output_dir, dual_constraint_groups);
 
       // write_primal_objective(output_dir, dual_constraint_groups);
