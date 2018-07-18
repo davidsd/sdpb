@@ -24,6 +24,7 @@ def build(bld):
                         'src/solve/SDP/SDP/SDP.cxx',
                         'src/solve/SDP/SDP/read_blocks.cxx',
                         'src/solve/SDP/SDP/compute_block_grid_mapping.cxx',
+                        'src/solve/SDP/SDP/read_objectives.cxx',
                         'src/solve/SDP_Solver/save_checkpoint.cxx',
                         'src/solve/SDP_Solver/load_checkpoint.cxx',
                         'src/solve/SDP_Solver/SDP_Solver.cxx',

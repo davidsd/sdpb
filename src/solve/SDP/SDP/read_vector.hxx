@@ -8,6 +8,7 @@ void read_vector(std::ifstream &input_stream, std::vector<T> &v)
 {
   size_t size;
   input_stream >> size;
+  v.reserve(size);
   T element;
   for(size_t row=0; row<size; ++row)
     {
