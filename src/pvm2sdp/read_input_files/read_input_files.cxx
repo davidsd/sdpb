@@ -46,7 +46,7 @@ namespace
 
 void read_input_files(
   const std::vector<boost::filesystem::path> &input_files,
-  std::vector<El::BigFloat> &objective,
+  El::BigFloat &objective_const, std::vector<El::BigFloat> &dual_objectives_b,
   std::vector<Polynomial_Vector_Matrix> &polynomial_vector_matrices)
 {
   LIBXML_TEST_VERSION;
@@ -71,12 +71,19 @@ void read_input_files(
                                    + input_file.string());
         }
 
-      // This overwrites the objective with whatever is in the last
-      // file that has an objective
-      if(!input_parser.objective_state.value.empty())
+      // Overwrite the objective with whatever is in the last file
+      // that has an objective, but polynomial_vector_matrices get
+      // appended.
+      auto iterator(input_parser.objective_state.value.begin()),
+        end(input_parser.objective_state.value.end());
+      if(iterator != end)
         {
-          std::swap(input_parser.objective_state.value, objective);
+          objective_const = *iterator;
+          ++iterator;
+          dual_objectives_b.clear();
+          dual_objectives_b.insert(dual_objectives_b.end(), iterator, end);
         }
+
       polynomial_vector_matrices.insert(
         polynomial_vector_matrices.end(),
         input_parser.polynomial_vector_matrices_state.value.begin(),
