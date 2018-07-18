@@ -1,5 +1,7 @@
 #include "read_vector.hxx"
-#include "../../SDP.hxx"
+
+#include <El.hpp>
+#include <boost/filesystem.hpp>
 
 void read_objectives(const boost::filesystem::path &sdp_directory,
                      El::BigFloat &objective_const,
