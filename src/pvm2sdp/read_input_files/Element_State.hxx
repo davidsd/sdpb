@@ -1,7 +1,9 @@
 #pragma once
 
 #include <libxml2/libxml/parser.h>
+#include <vector>
 #include <string>
+#include <stdexcept>
 
 class Element_State
 {

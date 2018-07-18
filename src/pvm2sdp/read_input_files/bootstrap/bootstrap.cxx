@@ -35,6 +35,8 @@ void bootstrap(const std::vector<El::BigFloat> &affine_objective,
       dualConstraintGroups.push_back(
         dual_constraint_group_from_pol_vec_mat(m));
     }
+
+  
   fill_from_dual_constraint_groups(affine_objective, dualConstraintGroups,
                                    sdp);
 }

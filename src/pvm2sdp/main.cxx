@@ -1,59 +1,50 @@
+#include "Dual_Constraint_Group.hxx"
+
 #include <boost/filesystem.hpp>
 #include <vector>
 #include <iostream>
 
-using namespace std::literals;
+void parse_command_line(int argc, char **argv, int &precision,
+                        std::vector<boost::filesystem::path> &input_files,
+                        boost::filesystem::path &output_dir);
+
+void read_input_files(
+  const std::vector<boost::filesystem::path> &input_files,
+  std::vector<El::BigFloat> &objective,
+  std::vector<Polynomial_Vector_Matrix> &polynomial_vector_matrices);
 
 int main(int argc, char **argv)
 {
+  El::Environment env(argc, argv);
+
   int result(0);
   try
     {
-      std::string usage("pvm2sdp [PRECISION] [INPUT]... [OUTPUT_DIR]\n");
-      if(argc < 4)
-        {
-          std::cerr << "Wrong number of arguments\n" << usage;
-          return 1;
-        }
+      int precision;
+      std::vector<boost::filesystem::path> input_files;
+      boost::filesystem::path output_dir;
 
-      for(int arg = 1; arg < argc; ++arg)
-        {
-          if(argv[arg] == "-h"s || argv[arg] == "--help"s)
-            {
-              std::cerr << usage;
-              return 1;
-            }
-        }
+      parse_command_line(argc, argv, precision, input_files, output_dir);
+      mpf_set_default_prec(precision);
+      El::gmp::SetPrecision(precision);
+      El::mpfr::SetPrecision(precision);
 
-      int precision([&]() {
-        std::string precision_string(argv[1]);
-        size_t pos;
-        int precision;
-        try
+      std::vector<El::BigFloat> objective;
+      std::vector<Dual_Constraint_Group> dual_constraint_groups;
+      {
+        std::vector<Polynomial_Vector_Matrix> polynomial_vector_matrices;
+        read_input_files(input_files, objective, polynomial_vector_matrices);
+        for(auto &m : polynomial_vector_matrices)
           {
-            precision = (std::stoi(precision_string, &pos));
+            dual_constraint_groups.emplace_back(m);
           }
-        catch(std::logic_error &e)
-          {
-            throw std::runtime_error("Invalid precision: '" + precision_string
-                                     + "'");
-          }
-        if(pos != precision_string.size())
-          {
-            throw std::runtime_error("Precision has trailing characters: '"
-                                     + precision_string.substr(pos) + "'");
-          }
-        return precision;
-      }());
-      std::vector<boost::filesystem::path> input_files(argv + 2,
-                                                       argv + argc - 2);
-      boost::filesystem::path output_dir(argv[argc - 1]);
-      if(boost::filesystem::exists(output_dir)
-         && !boost::filesystem::is_directory(output_dir))
-        {
-          throw std::runtime_error("Output directory '" + output_dir.string()
-                                   + "' exists but is not a directory.");
-        }
+      }
+      // write_objective(output_dir, objective);
+      // write_bilinear_bases(output_dir, dual_constraint_groups);
+      // write_blocks(output_dir, dual_constraint_groups);
+
+      // write_primal_objective(output_dir, dual_constraint_groups);
+      // write_free_var_matrix(output_dir, dual_constraint_groups);
     }
   catch(std::runtime_error &e)
     {

@@ -24,9 +24,7 @@
 // the future.
 //
 
-#include <El.hpp>
-
-#include <vector>
+#include "../Polynomial_Vector_Matrix.hxx"
 
 class Dual_Constraint_Group
 {
@@ -45,4 +43,6 @@ public:
   // above. `bilinearBases' here has the structure of
   // `bilinearBases[j]' above for some fixed j.
   std::vector<El::Matrix<El::BigFloat>> bilinearBases;
+
+  explicit Dual_Constraint_Group(const Polynomial_Vector_Matrix &m);
 };

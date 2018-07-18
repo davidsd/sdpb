@@ -1,6 +1,9 @@
 #pragma once
 
+#include <libxml2/libxml/parser.h>
 #include <vector>
+#include <string>
+#include <stdexcept>
 
 template <typename T> class Vector_State
 {

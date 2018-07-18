@@ -1,17 +1,8 @@
-//=======================================================================
-// Copyright 2014-2015 David Simmons-Duffin.
-// Distributed under the MIT License.
-// (See accompanying file LICENSE or copy at
-//  http://opensource.org/licenses/MIT)
-//=======================================================================
-
 // See the manual for a description of the correct XML input format.
 
 #include "Input_Parser.hxx"
-#include "../../SDP.hxx"
 
 #include <boost/filesystem.hpp>
-#include <boost/property_tree/xml_parser.hpp>
 
 namespace
 {
@@ -53,24 +44,14 @@ namespace
   }
 }
 
-void bootstrap(const std::vector<El::BigFloat> &objective,
-               const std::vector<Polynomial_Vector_Matrix> &polVectorMatrices,
-               SDP &sdp);
-
-Polynomial_Vector_Matrix
-parse_polynomial_vector_matrix(const boost::property_tree::ptree &tree);
-
-SDP::SDP(const std::vector<boost::filesystem::path> &sdp_files)
-    // FIXME: This assigns one core per block.  We may want to do
-    // something more sophisticated for larger blocks.
-    : grid(El::mpi::COMM_SELF)
+void read_input_files(
+  const std::vector<boost::filesystem::path> &input_files,
+  std::vector<El::BigFloat> &objective,
+  std::vector<Polynomial_Vector_Matrix> &polynomial_vector_matrices)
 {
   LIBXML_TEST_VERSION;
 
-  std::vector<El::BigFloat> objective;
-
-  std::vector<Polynomial_Vector_Matrix> polynomialVectorMatrices;
-  for(auto &sdp_file : sdp_files)
+  for(auto &input_file : input_files)
     {
       Input_Parser input_parser;
 
@@ -83,16 +64,22 @@ SDP::SDP(const std::vector<boost::filesystem::path> &sdp_files)
       xml_handlers.warning = warning_callback;
       xml_handlers.error = error_callback;
 
-      if(xmlSAXUserParseFile(&xml_handlers, &input_parser, sdp_file.c_str())
+      if(xmlSAXUserParseFile(&xml_handlers, &input_parser, input_file.c_str())
          < 0)
         {
-          throw std::runtime_error("Ill-formed input file: "
-                                   + sdp_file.string());
+          throw std::runtime_error("Unable to parse input file: "
+                                   + input_file.string());
         }
 
-      std::swap(input_parser.objective_state.value, objective);
-      std::swap(input_parser.polynomial_vector_matrices_state.value,
-                polynomialVectorMatrices);
+      // This overwrites the objective with whatever is in the last
+      // file that has an objective
+      if(!input_parser.objective_state.value.empty())
+        {
+          std::swap(input_parser.objective_state.value, objective);
+        }
+      polynomial_vector_matrices.insert(
+        polynomial_vector_matrices.end(),
+        input_parser.polynomial_vector_matrices_state.value.begin(),
+        input_parser.polynomial_vector_matrices_state.value.end());
     }
-  bootstrap(objective, polynomialVectorMatrices, *this);
 }

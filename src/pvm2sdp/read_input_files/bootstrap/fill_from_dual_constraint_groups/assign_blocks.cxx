@@ -4,6 +4,9 @@
 void assign_blocks(
   const std::vector<Dual_Constraint_Group> &dualConstraintGroups, SDP &sdp)
 {
+  sdp.primal_objective_c.blocks.reserve(sdp.block_indices.size());
+  sdp.free_var_matrix.blocks.reserve(sdp.block_indices.size());
+  
   for(auto &block_index : sdp.block_indices)
     {
       const auto &block_size(sdp.schur_block_sizes.at(block_index));

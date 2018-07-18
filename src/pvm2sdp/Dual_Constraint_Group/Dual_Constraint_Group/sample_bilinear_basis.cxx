@@ -1,5 +1,3 @@
-#include "../../../../SDP.hxx"
-
 // Given a vector of polynomials {q_0(x), q_1(x), ..., q_n(x)} of
 // degree deg q_m(x) = m, a list of numSamples points x_k and scaling
 // factors s_k, form the (maxDegree+1) x numSamples Matrix
@@ -18,6 +16,10 @@
 // - samplePoints: the points {x_0, x_1, ... }
 // - sampleScalings: the scale factors {s_0, s_1, ... }
 //
+
+#include "../../../Polynomial.hxx"
+
+
 El::Matrix<El::BigFloat>
 sample_bilinear_basis(const int maxDegree, const int numSamples,
                       const std::vector<Polynomial> &bilinearBasis,

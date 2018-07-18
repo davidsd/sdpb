@@ -10,6 +10,8 @@
 #include <El.hpp>
 
 #include <cassert>
+#include <iostream>
+#include <vector>
 
 // A univariate polynomial
 //
