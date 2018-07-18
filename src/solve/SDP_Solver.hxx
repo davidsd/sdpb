@@ -75,7 +75,7 @@ public:
   El::BigFloat dual_error; // maxAbs(dualResidues)
 
   // Create a new solver for a given SDP, with the given parameters
-  SDP_Solver(const std::vector<boost::filesystem::path> &sdp_files,
+  SDP_Solver(const boost::filesystem::path &sdp_directory,
              const SDP_Solver_Parameters &parameters);
 
   // Run the solver, backing up to checkpointFile

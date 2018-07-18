@@ -14,7 +14,7 @@
 
 namespace po = boost::program_options;
 
-int solve(const std::vector<boost::filesystem::path> &sdp_files,
+int solve(const boost::filesystem::path &sdp_directory,
           const boost::filesystem::path &out_file,
           const boost::filesystem::path &checkpoint_file_in,
           const boost::filesystem::path &checkpoint_file_out,
@@ -27,7 +27,7 @@ int main(int argc, char **argv)
   int result(0);
   try
     {
-      std::vector<boost::filesystem::path> sdp_files;
+      boost::filesystem::path sdp_directory;
       boost::filesystem::path out_file, checkpoint_file_in,
         checkpoint_file_out, param_file;
 
@@ -36,10 +36,8 @@ int main(int argc, char **argv)
       po::options_description basic_options("Basic options");
       basic_options.add_options()("help,h", "Show this helpful message.")(
         "sdpFile,s",
-        po::value<std::vector<boost::filesystem::path>>(&sdp_files)->required(),
-        "SDP data file(s) in XML format. Use this option repeatedly to "
-        "specify "
-        "multiple data files.")(
+        po::value<boost::filesystem::path>(&sdp_directory)->required(),
+        "Directory containing preprocessed SDP data files.")(
         "paramFile,p", po::value<boost::filesystem::path>(&param_file),
         "Any parameter can optionally be set via this file in key=value "
         "format. Command line arguments override values in the parameter "
@@ -177,13 +175,13 @@ int main(int argc, char **argv)
 
           if(!variables_map.count("outFile"))
             {
-              out_file = sdp_files[0];
+              out_file = sdp_directory;
               out_file.replace_extension("out");
             }
 
           if(!variables_map.count("checkpointFile"))
             {
-              checkpoint_file_out = sdp_files[0];
+              checkpoint_file_out = sdp_directory;
               checkpoint_file_out.replace_extension("ck");
             }
 
@@ -192,12 +190,14 @@ int main(int argc, char **argv)
               checkpoint_file_in = checkpoint_file_out;
             }
 
-          std::ofstream ofs(out_file.string().c_str());
-          ofs.close();
-          if(!ofs)
+          if(El::mpi::Rank() == 0)
             {
-              std::cerr << "Cannot write to outFile." << '\n';
-              return 1;
+              std::ofstream ofs(out_file.string().c_str());
+              if(!ofs)
+                {
+                  std::cerr << "Cannot write to outFile." << '\n';
+                  return 1;
+                }
             }
         }
       catch(po::error &e)
@@ -213,7 +213,7 @@ int main(int argc, char **argv)
       El::gmp::SetPrecision(parameters.precision);
       El::mpfr::SetPrecision(parameters.precision);
 
-      result = solve(sdp_files, out_file, checkpoint_file_in,
+      result = solve(sdp_directory, out_file, checkpoint_file_in,
                      checkpoint_file_out, parameters);
     }
   catch(std::exception &e)

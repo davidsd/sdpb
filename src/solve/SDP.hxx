@@ -9,7 +9,7 @@
 
 #include "Block_Matrix.hxx"
 #include "Block_Vector.hxx"
-#include "Polynomial_Vector_Matrix.hxx"
+#include "../Polynomial_Vector_Matrix.hxx"
 #include "Index_Tuple.hxx"
 #include "ostream.hxx"
 
@@ -104,7 +104,7 @@ public:
   // degrees[j] = d_j  (0 <= j < J)
   std::vector<size_t> degrees;
 
-  SDP(const std::vector<boost::filesystem::path> &sdp_files);
+  SDP(const boost::filesystem::path &sdp_directory);
 
   std::vector<size_t> schur_block_sizes,
     // Dimensions of the blocks of X,Y

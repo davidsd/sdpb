@@ -2,9 +2,9 @@
 
 // Create and initialize an SDPSolver for the given SDP and
 // SDP_Solver_Parameters
-SDP_Solver::SDP_Solver(const std::vector<boost::filesystem::path> &sdp_files,
+SDP_Solver::SDP_Solver(const boost::filesystem::path &sdp_directory,
                        const SDP_Solver_Parameters &parameters)
-    : sdp(sdp_files), parameters(parameters),
+    : sdp(sdp_directory), parameters(parameters),
       x(sdp.schur_block_sizes, sdp.block_indices, sdp.schur_block_sizes.size(),
         sdp.grid),
       X(sdp.psd_matrix_block_sizes, sdp.block_indices,
