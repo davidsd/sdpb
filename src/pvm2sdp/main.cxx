@@ -23,6 +23,10 @@ void write_blocks(
   const boost::filesystem::path &output_dir,
   const std::vector<Dual_Constraint_Group> &dual_constraint_groups);
 
+void write_primal_objective(
+  const boost::filesystem::path &output_dir,
+  const std::vector<Dual_Constraint_Group> &dual_constraint_groups);
+
 int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
@@ -54,8 +58,7 @@ int main(int argc, char **argv)
       write_objective(output_dir, objective);
       write_bilinear_bases(output_dir, dual_constraint_groups);
       write_blocks(output_dir, dual_constraint_groups);
-
-      // write_primal_objective(output_dir, dual_constraint_groups);
+      write_primal_objective(output_dir, dual_constraint_groups);
       // write_free_var_matrix(output_dir, dual_constraint_groups);
     }
   catch(std::runtime_error &e)

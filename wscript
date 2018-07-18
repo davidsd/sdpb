@@ -70,6 +70,7 @@ def build(bld):
                         'src/pvm2sdp/write_objective.cxx',
                         'src/pvm2sdp/write_bilinear_bases.cxx',
                         'src/pvm2sdp/write_blocks.cxx',
+                        'src/pvm2sdp/write_primal_objective.cxx',
                         # 'src/solve/SDP/SDP/bootstrap/bootstrap.cxx',
                         # 'src/solve/SDP/SDP/bootstrap/dual_constraint_group_from_pol_vec_mat/dual_constraint_group_from_pol_vec_mat.cxx',
                         # 'src/solve/SDP/SDP/bootstrap/dual_constraint_group_from_pol_vec_mat/sample_bilinear_basis.cxx',
