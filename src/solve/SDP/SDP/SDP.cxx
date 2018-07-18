@@ -25,5 +25,6 @@ SDP::SDP(const boost::filesystem::path &sdp_directory)
   // read_primal_objective(output_dir, primal_objective);
   // read_free_var_matrix(output_dir, free_var_matrix);
 
+  El::mpi::Finalize();
   exit(0);
 }
