@@ -75,19 +75,16 @@ Dual_Constraint_Group::Dual_Constraint_Group(const Polynomial_Vector_Matrix &m)
     delta1, numSamples, m.bilinear_basis, m.sample_points, m.sample_scalings));
 
   int delta2 = (degree - 1) / 2;
-  // a degree-0 Polynomial_Vector_Matrix only needs one block
-  if(delta2 >= 0)
+  // a degree-0 Polynomial_Vector_Matrix only needs one block, so this
+  // will create an empty block.
+
+  // The \sqrt(x) factors can be accounted for by replacing the
+  // scale factors s_k with x_k s_k.
+  std::vector<El::BigFloat> scaled_samples;
+  for(size_t ii = 0; ii < m.sample_points.size(); ++ii)
     {
-      // The \sqrt(x) factors can be accounted for by replacing the
-      // scale factors s_k with x_k s_k.
-      std::vector<El::BigFloat> scaled_samples;
-      for(size_t ii = 0; ii < m.sample_points.size(); ++ii)
-        {
-          scaled_samples.emplace_back(m.sample_points[ii]
-                                      * m.sample_scalings[ii]);
-        }
-      bilinearBases.push_back(
-        sample_bilinear_basis(delta2, numSamples, m.bilinear_basis,
-                              m.sample_points, scaled_samples));
+      scaled_samples.emplace_back(m.sample_points[ii] * m.sample_scalings[ii]);
     }
+  bilinearBases.push_back(sample_bilinear_basis(
+    delta2, numSamples, m.bilinear_basis, m.sample_points, scaled_samples));
 }
