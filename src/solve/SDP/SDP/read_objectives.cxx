@@ -4,7 +4,7 @@
 #include <boost/filesystem.hpp>
 
 void read_objectives(const boost::filesystem::path &sdp_directory,
-                     El::BigFloat &objective_const,
+                     const El::Grid &grid, El::BigFloat &objective_const,
                      El::DistMatrix<El::BigFloat> &dual_objective_b)
 {
   boost::filesystem::ifstream objectives_stream(sdp_directory / "objectives");
@@ -12,6 +12,7 @@ void read_objectives(const boost::filesystem::path &sdp_directory,
 
   std::vector<El::BigFloat> temp;
   read_vector(objectives_stream, temp);
+  dual_objective_b.SetGrid(grid);
   dual_objective_b.Resize(temp.size(), 1);
   if(dual_objective_b.GlobalCol(0) == 0)
     {
