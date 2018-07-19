@@ -33,7 +33,4 @@ SDP::SDP(const boost::filesystem::path &sdp_directory)
   read_primal_objective_c(sdp_directory, block_indices, grid,
                           primal_objective_c);
   read_free_var_matrix(sdp_directory, block_indices, grid, free_var_matrix);
-
-  El::mpi::Finalize();
-  exit(0);
 }
