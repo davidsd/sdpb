@@ -176,12 +176,20 @@ int main(int argc, char **argv)
           if(!variables_map.count("outFile"))
             {
               out_file = sdp_directory;
+              if(out_file.filename()==".")
+                {
+                  out_file = out_file.parent_path();
+                }
               out_file.replace_extension("out");
             }
 
           if(!variables_map.count("checkpointFile"))
             {
               checkpoint_file_out = sdp_directory;
+              if(checkpoint_file_out.filename()==".")
+                {
+                  checkpoint_file_out = checkpoint_file_out.parent_path();
+                }
               checkpoint_file_out.replace_extension("ck");
             }
 
