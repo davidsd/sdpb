@@ -12,6 +12,16 @@ El::BigFloat min_eigenvalue(Block_Diagonal_Matrix &A)
   for(auto &block : A.blocks)
     {
       El::DistMatrix<El::BigFloat, El::VR, El::STAR> eigenvalues(block.Grid());
+      /// There is a bug in El::HermitianEig when there is more than
+      /// one level of recursion when computing eigenvalues.  One fix
+      /// is to increase the cutoff so that there is no more than one
+      /// level of recursion.
+
+      /// An alternate workaround is to compute both eigenvalues and
+      /// eigenvectors, but that seems to be significantly slower.
+      El::HermitianEigCtrl<El::BigFloat> hermitian_eig_ctrl;
+      hermitian_eig_ctrl.tridiagEigCtrl.dcCtrl.cutoff=block.Height()/2+1;
+
       El::HermitianEig(El::UpperOrLowerNS::LOWER, block, eigenvalues);
       local_min = El::Min(local_min, El::Min(eigenvalues));
     }
