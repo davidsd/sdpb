@@ -22,7 +22,8 @@ El::BigFloat min_eigenvalue(Block_Diagonal_Matrix &A)
       El::HermitianEigCtrl<El::BigFloat> hermitian_eig_ctrl;
       hermitian_eig_ctrl.tridiagEigCtrl.dcCtrl.cutoff=block.Height()/2+1;
 
-      El::HermitianEig(El::UpperOrLowerNS::LOWER, block, eigenvalues);
+      El::HermitianEig(El::UpperOrLowerNS::LOWER, block, eigenvalues,
+                       hermitian_eig_ctrl);
       local_min = El::Min(local_min, El::Min(eigenvalues));
     }
   return El::mpi::AllReduce(local_min, El::mpi::MIN, El::mpi::COMM_WORLD);
