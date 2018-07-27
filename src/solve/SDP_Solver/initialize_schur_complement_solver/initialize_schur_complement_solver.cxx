@@ -69,7 +69,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   if(debug)
     {
       El::Output(El::mpi::Rank(),
-        "run.step.initializeSchurComplementSolver.choleskyDecomposition");
+        " run.step.initializeSchurComplementSolver.choleskyDecomposition");
     }
   timers["run.step.initializeSchurComplementSolver.choleskyDecomposition"]
     .resume();
@@ -81,7 +81,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   schur_off_diagonal_block = sdp.free_var_matrix;
   if(debug)
     {
-      El::Output(El::mpi::Rank(),"run.step.initializeSchurComplementSolver."
+      El::Output(El::mpi::Rank()," run.step.initializeSchurComplementSolver."
                          "blockMatrixLowerTriangularSolve");
     }
   timers["run.step.initializeSchurComplementSolver."
@@ -102,7 +102,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   if(debug)
     {
       El::Output(El::mpi::Rank(),
-        "run.step.initializeSchurComplementSolver.Qcomputation");
+        " run.step.initializeSchurComplementSolver.Qcomputation");
     }
   timers["run.step.initializeSchurComplementSolver.Qcomputation"].resume();
   El::Zero(Q);
@@ -141,7 +141,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   // UpperLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal
   if(debug)
     {
-      El::Output(El::mpi::Rank(),"run.step.initializeSchurComplementSolver.Syrk");
+      El::Output(El::mpi::Rank()," run.step.initializeSchurComplementSolver.Syrk");
     }
   El::Syrk(El::UpperOrLowerNS::UPPER, El::OrientationNS::TRANSPOSE,
            El::BigFloat(1), schur_off_diagonal_dist, El::BigFloat(1), Q);
@@ -152,7 +152,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   if(debug)
     {
       El::Output(El::mpi::Rank(),
-        "run.step.initializeSchurComplementSolver.LUDecomposition");
+        " run.step.initializeSchurComplementSolver.LUDecomposition");
     }
   timers["run.step.initializeSchurComplementSolver.LUDecomposition"].resume();
   Cholesky(El::UpperOrLowerNS::LOWER, Q);
