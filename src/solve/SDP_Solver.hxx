@@ -80,7 +80,7 @@ public:
 
   // Run the solver, backing up to checkpointFile
   SDP_Solver_Terminate_Reason
-  run(const boost::filesystem::path checkpoint_file);
+  run(const boost::filesystem::path checkpoint_file, const bool &debug);
 
   // Input/output
   void save_checkpoint(const boost::filesystem::path &checkpoint_file);
@@ -105,7 +105,7 @@ private:
     const std::vector<size_t> &block_sizes,
     const std::vector<size_t> &block_indices, const size_t &num_schur_blocks,
     const El::Grid &block_grid, const std::vector<size_t> &schur_offsets,
-    Block_Diagonal_Matrix &schur_complement_cholesky,
+    const bool &debug, Block_Diagonal_Matrix &schur_complement_cholesky,
     Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q);
 
   // Compute (dx, dX, dy, dY), given the current mu, a reduction

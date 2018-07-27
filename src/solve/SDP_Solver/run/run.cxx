@@ -45,7 +45,8 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
             const Block_Diagonal_Matrix &dM, const El::BigFloat &gamma);
 
 SDP_Solver_Terminate_Reason
-SDP_Solver::run(const boost::filesystem::path checkpoint_file)
+SDP_Solver::run(const boost::filesystem::path checkpoint_file,
+                const bool &debug)
 {
   timers["run.initialize"].resume();
   El::BigFloat primal_step_length(0), dual_step_length(0);
@@ -111,10 +112,22 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
           return SDP_Solver_Terminate_Reason::MaxRuntimeExceeded;
         }
 
+      if(debug)
+        {
+          El::Output(El::mpi::Rank(), "run.objectives");
+        }
       timers["run.objectives"].resume();
+      if(debug)
+        {
+          El::Output(El::mpi::Rank(), "run.objectives.primal");
+        }
       timers["run.objectives.primal"].resume();
       primal_objective = sdp.objective_const + dot(sdp.primal_objective_c, x);
       timers["run.objectives.primal"].stop();
+      if(debug)
+        {
+          El::Output(El::mpi::Rank(), "run.objectives.dual");
+        }
       timers["run.objectives.dual"].resume();
       // dual_objective_b is duplicated amongst the processors.  y is
       // duplicated amongst the blocks, but it is possible for some
@@ -130,6 +143,10 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       El::mpi::Broadcast(&dual_objective, 1, 0, El::mpi::COMM_WORLD);
 
       timers["run.objectives.dual"].stop();
+      if(debug)
+        {
+          El::Output(El::mpi::Rank(), "run.objectives.gap");
+        }
       timers["run.objectives.gap"].resume();
       duality_gap
         = Abs(primal_objective - dual_objective)
@@ -138,10 +155,20 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 
       timers["run.objectives"].stop();
 
+      if(debug)
+        {
+          El::Output(El::mpi::Rank(),
+                     "run.choleskyDecomposition(X,XCholesky)");
+        }
       timers["run.choleskyDecomposition(X,XCholesky)"].resume();
       cholesky_decomposition(X, X_cholesky);
       timers["run.choleskyDecomposition(X,XCholesky)"].stop();
 
+      if(debug)
+        {
+          El::Output(El::mpi::Rank(),
+                     "run.choleskyDecomposition(Y,YCholesky)");
+        }
       timers["run.choleskyDecomposition(Y,YCholesky)"].resume();
       cholesky_decomposition(Y, Y_cholesky);
       timers["run.choleskyDecomposition(Y,YCholesky)"].stop();
@@ -149,6 +176,11 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       // Compute the bilinear pairings BilinearPairingsXInv and
       // BilinearPairingsY needed for the dualResidues and the Schur
       // complement matrix
+      if(debug)
+        {
+          El::Output(El::mpi::Rank(),
+                     "run.blockTensorInvTransposeCongruenceWithCholesky");
+        }
       timers["run.blockTensorInvTransposeCongruenceWithCholesky"].resume();
       block_tensor_inv_transpose_congruence_with_cholesky(
         X_cholesky, sdp.bilinear_bases_local, sdp.block_indices,
@@ -156,6 +188,10 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 
       timers["run.blockTensorInvTransposeCongruenceWithCholesky"].stop();
 
+      if(debug)
+        {
+          El::Output(El::mpi::Rank(), "run.blockTensorTransposeCongruence");
+        }
       timers["run.blockTensorTransposeCongruence"].resume();
       block_tensor_transpose_congruence(
         Y, sdp.bilinear_bases_local, sdp.block_indices,
@@ -163,6 +199,10 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       timers["run.blockTensorTransposeCongruence"].stop();
 
       // dualResidues[p] = primalObjective[p] - Tr(A_p Y) - (FreeVarMatrix y)_p,
+      if(debug)
+        {
+          El::Output(El::mpi::Rank(), "run.computeDualResidues");
+        }
       timers["run.computeDualResidues"].resume();
       compute_dual_residues(sdp, y, bilinear_pairings_Y, dual_residues);
       {
@@ -177,6 +217,10 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       }
       timers["run.computeDualResidues"].stop();
 
+      if(debug)
+        {
+          El::Output(El::mpi::Rank(), "run.computePrimalResidues");
+        }
       timers["run.computePrimalResidues"].resume();
       // PrimalResidues = \sum_p A_p x[p] - X
       compute_primal_residues(sdp, x, X, primal_residues);
@@ -204,6 +248,10 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
       else if(iteration > parameters.max_iterations)
         return SDP_Solver_Terminate_Reason::MaxIterationsExceeded;
 
+      if(debug)
+        {
+          El::Output(El::mpi::Rank(), "run.step");
+        }
       timers["run.step"].resume();
       El::BigFloat mu, beta_predictor, beta_corrector;
 
@@ -239,15 +287,25 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
 
         // Compute SchurComplement and prepare to solve the Schur
         // complement equation for dx, dy
+        if(debug)
+          {
+            El::Output(El::mpi::Rank(),
+                       "run.step.initializeSchurComplementSolver");
+          }
         timers["run.step.initializeSchurComplementSolver"].resume();
         initialize_schur_complement_solver(
           bilinear_pairings_X_inv, bilinear_pairings_Y, sdp.schur_block_sizes,
           sdp.block_indices, sdp.schur_block_sizes.size(), sdp.grid,
-          sdp.schur_offsets(), schur_complement_cholesky, schur_off_diagonal,
-          Q);
+          sdp.schur_offsets(), debug, schur_complement_cholesky,
+          schur_off_diagonal, Q);
         timers["run.step.initializeSchurComplementSolver"].stop();
 
         // Compute the complementarity mu = Tr(X Y)/X.dim
+        if(debug)
+          {
+            El::Output(El::mpi::Rank(),
+                       "run.step.frobenius_product_symmetric");
+          }
         timers["run.step.frobenius_product_symmetric"].resume();
         mu = frobenius_product_symmetric(X, Y) / sdp.total_psd_rows();
         timers["run.step.frobenius_product_symmetric"].stop();
@@ -256,12 +314,22 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
             return SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
           }
 
+        if(debug)
+          {
+            El::Output(El::mpi::Rank(),
+                       "run.step.predictor_centering_parameter");
+          }
         timers["run.step.predictor_centering_parameter"].resume();
         // Compute the predictor solution for (dx, dX, dy, dY)
         beta_predictor = predictor_centering_parameter(
           parameters, is_primal_feasible && is_dual_feasible);
         timers["run.step.predictor_centering_parameter"].stop();
 
+        if(debug)
+          {
+            El::Output(El::mpi::Rank(),
+                       "run.step.computeSearchDirection(betaPredictor)");
+          }
         timers["run.step.computeSearchDirection(betaPredictor)"].resume();
         compute_search_direction(schur_complement_cholesky, schur_off_diagonal,
                                  X_cholesky, beta_predictor, mu, false, Q, dx,
@@ -269,11 +337,21 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         timers["run.step.computeSearchDirection(betaPredictor)"].stop();
 
         // Compute the corrector solution for (dx, dX, dy, dY)
+        if(debug)
+          {
+            El::Output(El::mpi::Rank(),
+                       "run.step.corrector_centering_parameter");
+          }
         timers["run.step.corrector_centering_parameter"].resume();
         beta_corrector = corrector_centering_parameter(
           parameters, X, dX, Y, dY, mu, is_primal_feasible && is_dual_feasible,
           sdp.total_psd_rows());
         timers["run.step.corrector_centering_parameter"].stop();
+        if(debug)
+          {
+            El::Output(El::mpi::Rank(),
+                       "run.step.computeSearchDirection(betaCorrector)");
+          }
         timers["run.step.computeSearchDirection(betaCorrector)"].resume();
         compute_search_direction(schur_complement_cholesky, schur_off_diagonal,
                                  X_cholesky, beta_corrector, mu, true, Q, dx,
@@ -281,12 +359,20 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file)
         timers["run.step.computeSearchDirection(betaCorrector)"].stop();
       }
       // Compute step-lengths that preserve positive definiteness of X, Y
+      if(debug)
+        {
+          El::Output(El::mpi::Rank(), "run.step.stepLength(XCholesky)");
+        }
       timers["run.step.stepLength(XCholesky)"].resume();
       primal_step_length
         = step_length(X_cholesky, dX, parameters.step_length_reduction);
 
       timers["run.step.stepLength(XCholesky)"].stop();
 
+      if(debug)
+        {
+          El::Output(El::mpi::Rank(), "run.step.stepLength(YCholesky)");
+        }
       timers["run.step.stepLength(YCholesky)"].resume();
       dual_step_length
         = step_length(Y_cholesky, dY, parameters.step_length_reduction);

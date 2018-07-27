@@ -49,7 +49,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   const std::vector<size_t> &block_sizes,
   const std::vector<size_t> &block_indices, const size_t &num_schur_blocks,
   const El::Grid &block_grid, const std::vector<size_t> &schur_offsets,
-  Block_Diagonal_Matrix &schur_complement_cholesky,
+  const bool &debug, Block_Diagonal_Matrix &schur_complement_cholesky,
   Block_Matrix &schur_off_diagonal_block, El::DistMatrix<El::BigFloat> &Q)
 {
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
@@ -66,6 +66,11 @@ void SDP_Solver::initialize_schur_complement_solver(
   //
   //   L' L'^T = S'
   //
+  if(debug)
+    {
+      El::Output(El::mpi::Rank(),
+        "run.step.initializeSchurComplementSolver.choleskyDecomposition");
+    }
   timers["run.step.initializeSchurComplementSolver.choleskyDecomposition"]
     .resume();
   cholesky_decomposition(schur_complement, schur_complement_cholesky);
@@ -74,6 +79,11 @@ void SDP_Solver::initialize_schur_complement_solver(
 
   // SchurOffDiagonal = L'^{-1} FreeVarMatrix
   schur_off_diagonal_block = sdp.free_var_matrix;
+  if(debug)
+    {
+      El::Output(El::mpi::Rank(),"run.step.initializeSchurComplementSolver."
+                         "blockMatrixLowerTriangularSolve");
+    }
   timers["run.step.initializeSchurComplementSolver."
          "blockMatrixLowerTriangularSolve"]
     .resume();
@@ -89,6 +99,11 @@ void SDP_Solver::initialize_schur_complement_solver(
   // Where B' = (B U).  We think of Q as containing four blocks called
   // Upper/Lower-Left/Right.
 
+  if(debug)
+    {
+      El::Output(El::mpi::Rank(),
+        "run.step.initializeSchurComplementSolver.Qcomputation");
+    }
   timers["run.step.initializeSchurComplementSolver.Qcomputation"].resume();
   El::Zero(Q);
   El::DistMatrix<El::BigFloat> schur_off_diagonal_dist(schur_offsets.back(),
@@ -124,12 +139,21 @@ void SDP_Solver::initialize_schur_complement_solver(
   // Here, SchurOffDiagonal = L'^{-1} B.
   //
   // UpperLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal
+  if(debug)
+    {
+      El::Output(El::mpi::Rank(),"run.step.initializeSchurComplementSolver.Syrk");
+    }
   El::Syrk(El::UpperOrLowerNS::UPPER, El::OrientationNS::TRANSPOSE,
            El::BigFloat(1), schur_off_diagonal_dist, El::BigFloat(1), Q);
 
   El::MakeSymmetric(El::UpperOrLower::UPPER, Q);
   timers["run.step.initializeSchurComplementSolver.Qcomputation"].stop();
 
+  if(debug)
+    {
+      El::Output(El::mpi::Rank(),
+        "run.step.initializeSchurComplementSolver.LUDecomposition");
+    }
   timers["run.step.initializeSchurComplementSolver.LUDecomposition"].resume();
   Cholesky(El::UpperOrLowerNS::LOWER, Q);
   timers["run.step.initializeSchurComplementSolver.LUDecomposition"].stop();

@@ -18,7 +18,7 @@ int solve(const boost::filesystem::path &sdp_directory,
           const boost::filesystem::path &out_file,
           const boost::filesystem::path &checkpoint_file_in,
           const boost::filesystem::path &checkpoint_file_out,
-          const SDP_Solver_Parameters &parameters);
+          const bool &debug, const SDP_Solver_Parameters &parameters);
 
 int main(int argc, char **argv)
 {
@@ -30,7 +30,8 @@ int main(int argc, char **argv)
       boost::filesystem::path sdp_directory;
       boost::filesystem::path out_file, checkpoint_file_in,
         checkpoint_file_out, param_file;
-
+      bool debug(false);
+      
       SDP_Solver_Parameters parameters;
 
       po::options_description basic_options("Basic options");
@@ -51,7 +52,9 @@ int main(int argc, char **argv)
         "to sdpFile with '.ck' extension.")(
         "initialCheckpointFile,i",
         po::value<boost::filesystem::path>(&checkpoint_file_in),
-        "The initial checkpoint to load. Defaults to checkpointFile.");
+        "The initial checkpoint to load. Defaults to checkpointFile.")(
+        "debug", po::value<bool>(&debug)->default_value(false),
+        "Write out debugging output.");
 
       // We set default parameters using El::BigFloat("1e-10",10)
       // rather than a straight double precision 1e-10 so that results
@@ -176,7 +179,7 @@ int main(int argc, char **argv)
           if(!variables_map.count("outFile"))
             {
               out_file = sdp_directory;
-              if(out_file.filename()==".")
+              if(out_file.filename() == ".")
                 {
                   out_file = out_file.parent_path();
                 }
@@ -186,7 +189,7 @@ int main(int argc, char **argv)
           if(!variables_map.count("checkpointFile"))
             {
               checkpoint_file_out = sdp_directory;
-              if(checkpoint_file_out.filename()==".")
+              if(checkpoint_file_out.filename() == ".")
                 {
                   checkpoint_file_out = checkpoint_file_out.parent_path();
                 }
@@ -222,7 +225,7 @@ int main(int argc, char **argv)
       El::mpfr::SetPrecision(parameters.precision);
 
       result = solve(sdp_directory, out_file, checkpoint_file_in,
-                     checkpoint_file_out, parameters);
+                     checkpoint_file_out, debug, parameters);
     }
   catch(std::exception &e)
     {
