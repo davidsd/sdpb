@@ -103,45 +103,73 @@ void SDP_Solver::initialize_schur_complement_solver(
   if(debug)
     {
       El::Output(El::mpi::Rank(),
-                 " run.step.initializeSchurComplementSolver.Qcomputation");
+                 " run.step.initializeSchurComplementSolver.Q_Syrk");
     }
-  timers["run.step.initializeSchurComplementSolver.Qcomputation"].resume();
+  timers["run.step.initializeSchurComplementSolver.Q_Syrk"].resume();
 
-  {
-    // FIXME: This breaks if no blocks are assigned to this processor
-    El::DistMatrix<El::BigFloat> Q_local(
-      Q.Height(), Q.Width(), schur_off_diagonal_block.blocks.front().Grid());
-    El::Zero(Q_local);
-    for(auto &block : schur_off_diagonal_block.blocks)
-      {
-        El::DistMatrix<El::BigFloat> Q_local_view(
-          El::View(Q_local, 0, 0, block.Width(), block.Width()));
-        El::Syrk(El::UpperOrLowerNS::UPPER, El::OrientationNS::TRANSPOSE,
-                 El::BigFloat(1), block, El::BigFloat(1), Q_local_view);
-      }
-    El::MakeSymmetric(El::UpperOrLower::UPPER, Q_local);
-    El::AllReduce(Q_local, El::mpi::COMM_WORLD);
+  // FIXME: This breaks if no blocks are assigned to this processor
+  El::DistMatrix<El::BigFloat> Q_local(
+    Q.Height(), Q.Width(), schur_off_diagonal_block.blocks.front().Grid());
+  El::Zero(Q_local);
+  for(auto &block : schur_off_diagonal_block.blocks)
+    {
+      El::DistMatrix<El::BigFloat> Q_local_view(
+        El::View(Q_local, 0, 0, block.Width(), block.Width()));
+      El::Syrk(El::UpperOrLowerNS::UPPER, El::OrientationNS::TRANSPOSE,
+               El::BigFloat(1), block, El::BigFloat(1), Q_local_view);
+    }
+  El::MakeSymmetric(El::UpperOrLower::UPPER, Q_local);
+  El::AllReduce(Q_local, El::mpi::COMM_WORLD);
 
-    for(int64_t row = 0; row < Q.LocalHeight(); ++row)
-      {
-        int64_t global_row(Q.GlobalRow(row));
-        for(int64_t column = 0; column < Q.LocalWidth(); ++column)
-          {
-            int64_t global_column(Q.GlobalCol(column));
-            // FIXME: This assumes that there is one process per block.
-            Q.SetLocal(row, column,
-                       Q_local.GetLocal(global_row, global_column));
-          }
-      }
-  }
-  timers["run.step.initializeSchurComplementSolver.Qcomputation"].stop();
+  for(int64_t row = 0; row < Q.LocalHeight(); ++row)
+    {
+      int64_t global_row(Q.GlobalRow(row));
+      for(int64_t column = 0; column < Q.LocalWidth(); ++column)
+        {
+          int64_t global_column(Q.GlobalCol(column));
+          // FIXME: This assumes that there is one process per block.
+          Q.SetLocal(row, column, Q_local.GetLocal(global_row, global_column));
+        }
+    }
+
+  timers["run.step.initializeSchurComplementSolver.Q_Syrk"].stop();
 
   if(debug)
     {
       El::Output(El::mpi::Rank(),
-                 " run.step.initializeSchurComplementSolver.LUDecomposition");
+                 " run.step.initializeSchurComplementSolver.Q_Cholesky");
     }
-  timers["run.step.initializeSchurComplementSolver.LUDecomposition"].resume();
+  timers["run.step.initializeSchurComplementSolver.Q_Cholesky"].resume();
   Cholesky(El::UpperOrLowerNS::LOWER, Q);
-  timers["run.step.initializeSchurComplementSolver.LUDecomposition"].stop();
+  timers["run.step.initializeSchurComplementSolver.Q_Cholesky"].stop();
+  if(debug)
+    {
+      El::Output(El::mpi::Rank(),
+                 " run.step.initializeSchurComplementSolver.Q_copy");
+    }
+  timers["run.step.initializeSchurComplementSolver.Q_copy"].resume();
+
+  Q.ReservePulls(Q_local.LocalHeight() * Q_local.LocalWidth());
+  for(int64_t row = 0; row < Q_local.LocalHeight(); ++row)
+    {
+      int64_t global_row(Q_local.GlobalRow(row));
+      for(int64_t column = 0; column < Q_local.LocalWidth(); ++column)
+        {
+          int64_t global_column(Q_local.GlobalCol(column));
+          Q.QueuePull(global_row, global_column);
+        }
+    }
+  std::vector<El::BigFloat> pulls;
+  Q.ProcessPullQueue(pulls);
+
+  auto pull(pulls.begin());
+  for(int64_t row = 0; row < Q_local.LocalHeight(); ++row)
+    {
+      for(int64_t column = 0; column < Q_local.LocalWidth(); ++column)
+        {
+          Q_local.SetLocal(row, column, *pull);
+          ++pull;
+        }
+    }
+  timers["run.step.initializeSchurComplementSolver.Q_copy"].stop();
 }
