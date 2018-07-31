@@ -124,17 +124,4 @@ public:
     return std::accumulate(psd_matrix_block_sizes.begin(),
                            psd_matrix_block_sizes.end(), 0);
   }
-
-  std::vector<size_t> schur_offsets() const
-  {
-    size_t current_offset(0);
-    std::vector<size_t> result;
-    for(auto &size : schur_block_sizes)
-      {
-        result.push_back(current_offset);
-        current_offset += size;
-      }
-    result.push_back(current_offset);
-    return result;
-  }
 };

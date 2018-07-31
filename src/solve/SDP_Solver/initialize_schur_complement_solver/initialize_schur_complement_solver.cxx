@@ -48,8 +48,8 @@ void SDP_Solver::initialize_schur_complement_solver(
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
   const std::vector<size_t> &block_sizes,
   const std::vector<size_t> &block_indices, const size_t &num_schur_blocks,
-  const El::Grid &block_grid, const std::vector<size_t> &schur_offsets,
-  const bool &debug, Block_Diagonal_Matrix &schur_complement_cholesky,
+  const El::Grid &block_grid, const bool &debug,
+  Block_Diagonal_Matrix &schur_complement_cholesky,
   Block_Matrix &schur_off_diagonal_block, El::DistMatrix<El::BigFloat> &Q)
 {
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
@@ -68,7 +68,8 @@ void SDP_Solver::initialize_schur_complement_solver(
   //
   if(debug)
     {
-      El::Output(El::mpi::Rank(),
+      El::Output(
+        El::mpi::Rank(),
         " run.step.initializeSchurComplementSolver.choleskyDecomposition");
     }
   timers["run.step.initializeSchurComplementSolver.choleskyDecomposition"]
@@ -81,8 +82,8 @@ void SDP_Solver::initialize_schur_complement_solver(
   schur_off_diagonal_block = sdp.free_var_matrix;
   if(debug)
     {
-      El::Output(El::mpi::Rank()," run.step.initializeSchurComplementSolver."
-                         "blockMatrixLowerTriangularSolve");
+      El::Output(El::mpi::Rank(), " run.step.initializeSchurComplementSolver."
+                                  "blockMatrixLowerTriangularSolve");
     }
   timers["run.step.initializeSchurComplementSolver."
          "blockMatrixLowerTriangularSolve"]
@@ -102,57 +103,43 @@ void SDP_Solver::initialize_schur_complement_solver(
   if(debug)
     {
       El::Output(El::mpi::Rank(),
-        " run.step.initializeSchurComplementSolver.Qcomputation");
+                 " run.step.initializeSchurComplementSolver.Qcomputation");
     }
   timers["run.step.initializeSchurComplementSolver.Qcomputation"].resume();
-  El::Zero(Q);
-  El::DistMatrix<El::BigFloat> schur_off_diagonal_dist(schur_offsets.back(),
-                                                       Q.Width());
-  Zero(schur_off_diagonal_dist);
+
   {
-    size_t num_updates(0);
+    // FIXME: This breaks if no blocks are assigned to this processor
+    El::DistMatrix<El::BigFloat> Q_local(
+      Q.Height(), Q.Width(), schur_off_diagonal_block.blocks.front().Grid());
+    El::Zero(Q_local);
     for(auto &block : schur_off_diagonal_block.blocks)
       {
-        num_updates += block.Height() * block.Width();
+        El::DistMatrix<El::BigFloat> Q_local_view(
+          El::View(Q_local, 0, 0, block.Width(), block.Width()));
+        El::Syrk(El::UpperOrLowerNS::UPPER, El::OrientationNS::TRANSPOSE,
+                 El::BigFloat(1), block, El::BigFloat(1), Q_local_view);
       }
-    schur_off_diagonal_dist.Reserve(num_updates);
-  }
-  {
-    auto schur_off_diagonal_block_block(
-      schur_off_diagonal_block.blocks.begin());
-    for(auto &block_index : block_indices)
+    El::MakeSymmetric(El::UpperOrLower::UPPER, Q_local);
+    El::AllReduce(Q_local, El::mpi::COMM_WORLD);
+
+    for(int64_t row = 0; row < Q.LocalHeight(); ++row)
       {
-        for(int64_t row = 0; row < schur_off_diagonal_block_block->Height();
-            ++row)
-          for(int64_t column = 0;
-              column < schur_off_diagonal_block_block->Width(); ++column)
-            {
-              schur_off_diagonal_dist.QueueUpdate(
-                row + schur_offsets.at(block_index), column,
-                schur_off_diagonal_block_block->GetLocal(row, column));
-            }
-        ++schur_off_diagonal_block_block;
+        int64_t global_row(Q.GlobalRow(row));
+        for(int64_t column = 0; column < Q.LocalWidth(); ++column)
+          {
+            int64_t global_column(Q.GlobalCol(column));
+            // FIXME: This assumes that there is one process per block.
+            Q.SetLocal(row, column,
+                       Q_local.GetLocal(global_row, global_column));
+          }
       }
-    schur_off_diagonal_dist.ProcessQueues();
   }
-
-  // Here, SchurOffDiagonal = L'^{-1} B.
-  //
-  // UpperLeft(Q) = SchurOffDiagonal^T SchurOffDiagonal
-  if(debug)
-    {
-      El::Output(El::mpi::Rank()," run.step.initializeSchurComplementSolver.Syrk");
-    }
-  El::Syrk(El::UpperOrLowerNS::UPPER, El::OrientationNS::TRANSPOSE,
-           El::BigFloat(1), schur_off_diagonal_dist, El::BigFloat(1), Q);
-
-  El::MakeSymmetric(El::UpperOrLower::UPPER, Q);
   timers["run.step.initializeSchurComplementSolver.Qcomputation"].stop();
 
   if(debug)
     {
       El::Output(El::mpi::Rank(),
-        " run.step.initializeSchurComplementSolver.LUDecomposition");
+                 " run.step.initializeSchurComplementSolver.LUDecomposition");
     }
   timers["run.step.initializeSchurComplementSolver.LUDecomposition"].resume();
   Cholesky(El::UpperOrLowerNS::LOWER, Q);

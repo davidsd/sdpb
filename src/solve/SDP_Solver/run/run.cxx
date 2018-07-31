@@ -295,9 +295,8 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file,
         timers["run.step.initializeSchurComplementSolver"].resume();
         initialize_schur_complement_solver(
           bilinear_pairings_X_inv, bilinear_pairings_Y, sdp.schur_block_sizes,
-          sdp.block_indices, sdp.schur_block_sizes.size(), sdp.grid,
-          sdp.schur_offsets(), debug, schur_complement_cholesky,
-          schur_off_diagonal, Q);
+          sdp.block_indices, sdp.schur_block_sizes.size(), sdp.grid, debug,
+          schur_complement_cholesky, schur_off_diagonal, Q);
         timers["run.step.initializeSchurComplementSolver"].stop();
 
         // Compute the complementarity mu = Tr(X Y)/X.dim

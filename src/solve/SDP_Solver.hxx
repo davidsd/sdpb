@@ -104,7 +104,7 @@ private:
     const Block_Diagonal_Matrix &bilinear_pairings_Y,
     const std::vector<size_t> &block_sizes,
     const std::vector<size_t> &block_indices, const size_t &num_schur_blocks,
-    const El::Grid &block_grid, const std::vector<size_t> &schur_offsets,
+    const El::Grid &block_grid,
     const bool &debug, Block_Diagonal_Matrix &schur_complement_cholesky,
     Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q);
 
