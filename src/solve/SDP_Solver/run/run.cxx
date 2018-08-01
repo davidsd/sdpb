@@ -283,7 +283,8 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file,
         // where N is the dimension of the dual objective function.  Note
         // that N' could change with each iteration.
         El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
-                                       sdp.dual_objective_b.Height());
+                                       sdp.dual_objective_b.Height(),
+                                       sdp.grid);
 
         // Compute SchurComplement and prepare to solve the Schur
         // complement equation for dx, dy

@@ -107,28 +107,26 @@ void SDP_Solver::initialize_schur_complement_solver(
     }
   timers["run.step.initializeSchurComplementSolver.Q_Syrk"].resume();
 
-  // FIXME: This breaks if no blocks are assigned to this processor
-  El::DistMatrix<El::BigFloat> Q_local(
-    Q.Height(), Q.Width(), schur_off_diagonal_block.blocks.front().Grid());
-  El::Zero(Q_local);
+  El::DistMatrix<El::BigFloat> Q_dist(Q.Height(), Q.Width());
+  El::Zero(Q);
   for(auto &block : schur_off_diagonal_block.blocks)
     {
-      El::DistMatrix<El::BigFloat> Q_local_view(
-        El::View(Q_local, 0, 0, block.Width(), block.Width()));
+      El::DistMatrix<El::BigFloat> Q_view(
+        El::View(Q, 0, 0, block.Width(), block.Width()));
       El::Syrk(El::UpperOrLowerNS::UPPER, El::OrientationNS::TRANSPOSE,
-               El::BigFloat(1), block, El::BigFloat(1), Q_local_view);
+               El::BigFloat(1), block, El::BigFloat(1), Q_view);
     }
-  El::MakeSymmetric(El::UpperOrLower::UPPER, Q_local);
-  El::AllReduce(Q_local, El::mpi::COMM_WORLD);
+  El::MakeSymmetric(El::UpperOrLower::UPPER, Q);
+  El::AllReduce(Q, El::mpi::COMM_WORLD);
 
-  for(int64_t row = 0; row < Q.LocalHeight(); ++row)
+  for(int64_t row = 0; row < Q_dist.LocalHeight(); ++row)
     {
-      int64_t global_row(Q.GlobalRow(row));
-      for(int64_t column = 0; column < Q.LocalWidth(); ++column)
+      int64_t global_row(Q_dist.GlobalRow(row));
+      for(int64_t column = 0; column < Q_dist.LocalWidth(); ++column)
         {
-          int64_t global_column(Q.GlobalCol(column));
+          int64_t global_column(Q_dist.GlobalCol(column));
           // FIXME: This assumes that there is one process per block.
-          Q.SetLocal(row, column, Q_local.GetLocal(global_row, global_column));
+          Q_dist.SetLocal(row, column, Q.GetLocal(global_row, global_column));
         }
     }
 
@@ -140,7 +138,7 @@ void SDP_Solver::initialize_schur_complement_solver(
                  " run.step.initializeSchurComplementSolver.Q_Cholesky");
     }
   timers["run.step.initializeSchurComplementSolver.Q_Cholesky"].resume();
-  Cholesky(El::UpperOrLowerNS::LOWER, Q);
+  Cholesky(El::UpperOrLowerNS::LOWER, Q_dist);
   timers["run.step.initializeSchurComplementSolver.Q_Cholesky"].stop();
   if(debug)
     {
@@ -149,25 +147,25 @@ void SDP_Solver::initialize_schur_complement_solver(
     }
   timers["run.step.initializeSchurComplementSolver.Q_copy"].resume();
 
-  Q.ReservePulls(Q_local.LocalHeight() * Q_local.LocalWidth());
-  for(int64_t row = 0; row < Q_local.LocalHeight(); ++row)
+  Q_dist.ReservePulls(Q.LocalHeight() * Q.LocalWidth());
+  for(int64_t row = 0; row < Q.LocalHeight(); ++row)
     {
-      int64_t global_row(Q_local.GlobalRow(row));
-      for(int64_t column = 0; column < Q_local.LocalWidth(); ++column)
+      int64_t global_row(Q.GlobalRow(row));
+      for(int64_t column = 0; column < Q.LocalWidth(); ++column)
         {
-          int64_t global_column(Q_local.GlobalCol(column));
-          Q.QueuePull(global_row, global_column);
+          int64_t global_column(Q.GlobalCol(column));
+          Q_dist.QueuePull(global_row, global_column);
         }
     }
   std::vector<El::BigFloat> pulls;
-  Q.ProcessPullQueue(pulls);
+  Q_dist.ProcessPullQueue(pulls);
 
   auto pull(pulls.begin());
-  for(int64_t row = 0; row < Q_local.LocalHeight(); ++row)
+  for(int64_t row = 0; row < Q.LocalHeight(); ++row)
     {
-      for(int64_t column = 0; column < Q_local.LocalWidth(); ++column)
+      for(int64_t column = 0; column < Q.LocalWidth(); ++column)
         {
-          Q_local.SetLocal(row, column, *pull);
+          Q.SetLocal(row, column, *pull);
           ++pull;
         }
     }
