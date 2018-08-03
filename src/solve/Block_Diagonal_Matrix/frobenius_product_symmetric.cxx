@@ -9,6 +9,9 @@ El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
     {
       local_sum += El::Dotu(A.blocks[b], B.blocks[b]);
     }
+  // Make sure not to double count if blocks are distributed over more
+  // than one processor.  We could also divide the sum by
+  // X.blocks.front().Size().
   if(!A.blocks.empty() && A.blocks.front().Grid().Rank() != 0)
     {
       local_sum = 0;

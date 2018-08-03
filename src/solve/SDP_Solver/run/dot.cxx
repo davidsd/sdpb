@@ -11,6 +11,9 @@ El::BigFloat dot(const Block_Vector &A, const Block_Vector &B)
       // computation to be done before it can go to the next.
       local_sum += Dotu(A.blocks[ii], B.blocks[ii]);
     }
+  // Make sure not to double count if blocks are distributed over more
+  // than one processor.  We could also divide the sum by
+  // X.blocks.front().Size().
   if(!A.blocks.empty() && A.blocks.front().Grid().Rank() != 0)
     {
       local_sum = 0;
