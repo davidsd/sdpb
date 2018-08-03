@@ -23,22 +23,23 @@ void solve_schur_complement_equation(
   El::DistMatrix<El::BigFloat> dy_dist;
   Zeros(dy_dist, Q.Height(), 1);
 
-  dy_dist.Reserve(schur_off_diagonal.blocks.size() * dy_dist.Height());
   for(size_t block = 0; block < schur_off_diagonal.blocks.size(); ++block)
     {
       Gemv(El::OrientationNS::TRANSPOSE, El::BigFloat(-1),
            schur_off_diagonal.blocks[block], dx.blocks[block], El::BigFloat(1),
            dy.blocks[block]);
 
-      for(int64_t row = 0; row < dy.blocks[block].Height(); ++row)
-        for(int64_t column = 0; column < dy.blocks[block].Width(); ++column)
-          {
-            // FIXME: This assumes that there is only one processor
-            // per grid.  When fixing this, remember to also fix the
-            // Reserve() call.
-            dy_dist.QueueUpdate(row, column,
-                                dy.blocks[block].GetLocal(row, column));
-          }
+      for(int64_t row = 0; row < dy.blocks[block].LocalHeight(); ++row)
+        {
+          int64_t global_row(dy.blocks[block].GlobalRow(row));
+          for(int64_t column = 0; column < dy.blocks[block].LocalWidth();
+              ++column)
+            {
+              int64_t global_column(dy.blocks[block].GlobalCol(column));
+              dy_dist.QueueUpdate(global_row, global_column,
+                                  dy.blocks[block].GetLocal(row, column));
+            }
+        }
     }
   dy_dist.ProcessQueues();
 
