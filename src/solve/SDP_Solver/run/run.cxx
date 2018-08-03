@@ -261,9 +261,6 @@ SDP_Solver::run(const boost::filesystem::path checkpoint_file,
       Block_Vector dx(x), dy(y);
       Block_Diagonal_Matrix dX(X), dY(Y);
       {
-        // FIXME: It may be expensive to create these objects for each
-        // iteration.
-
         // SchurComplementCholesky = L', the Cholesky decomposition of the
         // Schur complement matrix S.
         Block_Diagonal_Matrix schur_complement_cholesky(
