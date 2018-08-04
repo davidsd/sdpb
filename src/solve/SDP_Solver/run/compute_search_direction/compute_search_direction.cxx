@@ -47,12 +47,9 @@ void SDP_Solver::compute_search_direction(
 
   R.add_diagonal(beta * mu);
 
-  // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))
-
-  // FIXME: It has to have the same shape as X, but does not need to
-  // be a copy.
   Block_Diagonal_Matrix Z(X);
 
+  // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))
   block_diagonal_matrix_multiply(primal_residues, Y, Z);
   Z -= R;
   block_matrix_solve_with_cholesky(X_cholesky, Z);
