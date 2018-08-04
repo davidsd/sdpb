@@ -108,9 +108,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   timers["run.step.initializeSchurComplementSolver.Qcomputation"].resume();
 
   {
-    // FIXME: This breaks if no blocks are assigned to this processor
-    El::DistMatrix<El::BigFloat> Q_local(
-      Q.Height(), Q.Width(), schur_off_diagonal_block.blocks.front().Grid());
+    El::DistMatrix<El::BigFloat> Q_local(Q.Height(), Q.Width(), block_grid);
     El::Zero(Q_local);
     for(auto &block : schur_off_diagonal_block.blocks)
       {
@@ -122,15 +120,31 @@ void SDP_Solver::initialize_schur_complement_solver(
     El::MakeSymmetric(El::UpperOrLower::UPPER, Q_local);
     El::AllReduce(Q_local, El::mpi::COMM_WORLD);
 
-    for(int64_t row = 0; row < Q.LocalHeight(); ++row)
+    // One version optimized for when Q_local is on a single processor
+    if(Q_local.Grid().Size() == 1)
       {
-        int64_t global_row(Q.GlobalRow(row));
-        for(int64_t column = 0; column < Q.LocalWidth(); ++column)
+        for(int64_t row = 0; row < Q.LocalHeight(); ++row)
           {
-            int64_t global_column(Q.GlobalCol(column));
-            // FIXME: This assumes that there is one process per block.
-            Q.SetLocal(row, column,
-                       Q_local.GetLocal(global_row, global_column));
+            int64_t global_row(Q.GlobalRow(row));
+            for(int64_t column = 0; column < Q.LocalWidth(); ++column)
+              {
+                int64_t global_column(Q.GlobalCol(column));
+                Q.SetLocal(row, column,
+                           Q_local.GetLocal(global_row, global_column));
+              }
+          }
+      }
+    else
+      {
+        for(int64_t row = 0; row < Q.LocalHeight(); ++row)
+          {
+            int64_t global_row(Q.GlobalRow(row));
+            for(int64_t column = 0; column < Q.LocalWidth(); ++column)
+              {
+                int64_t global_column(Q.GlobalCol(column));
+                Q.SetLocal(row, column,
+                           Q_local.Get(global_row, global_column));
+              }
           }
       }
   }

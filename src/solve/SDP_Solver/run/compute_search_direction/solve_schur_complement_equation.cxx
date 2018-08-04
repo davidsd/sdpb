@@ -51,13 +51,18 @@ void solve_schur_complement_equation(
   // dx += SchurOffDiagonal dy
   for(size_t block = 0; block < schur_off_diagonal.blocks.size(); ++block)
     {
-      for(int64_t row = 0; row < dy.blocks[block].Height(); ++row)
-        for(int64_t column = 0; column < dy.blocks[block].Width(); ++column)
-          {
-            dy.blocks[block].SetLocal(row, column,
-                                      dy_local.GetLocal(row, column));
-          }
+      for(int64_t row = 0; row < dy.blocks[block].LocalHeight(); ++row)
+        {
+          int64_t global_row(dy.blocks[block].GlobalRow(row));
 
+          for(int64_t column = 0; column < dy.blocks[block].LocalWidth();
+              ++column)
+            {
+              int64_t global_column(dy.blocks[block].GlobalCol(column));
+              dy.blocks[block].SetLocal(
+                row, column, dy_local.GetLocal(global_row, global_column));
+            }
+        }
       Gemv(El::OrientationNS::NORMAL, El::BigFloat(1),
            schur_off_diagonal.blocks[block], dy.blocks[block], El::BigFloat(1),
            dx.blocks[block]);
