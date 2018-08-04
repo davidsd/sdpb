@@ -136,16 +136,25 @@ void SDP_Solver::initialize_schur_complement_solver(
       }
     else
       {
+        std::vector<El::BigFloat> buffer;
+        Q_local.ReservePulls(Q.LocalHeight()*Q.LocalWidth());
         for(int64_t row = 0; row < Q.LocalHeight(); ++row)
           {
             int64_t global_row(Q.GlobalRow(row));
             for(int64_t column = 0; column < Q.LocalWidth(); ++column)
               {
                 int64_t global_column(Q.GlobalCol(column));
-                Q.SetLocal(row, column,
-                           Q_local.Get(global_row, global_column));
+                Q_local.QueuePull(global_row, global_column);
               }
           }
+        Q_local.ProcessPullQueue(buffer);
+        auto element(buffer.begin());
+        for(int64_t row = 0; row < Q.LocalHeight(); ++row)
+          for(int64_t column = 0; column < Q.LocalWidth(); ++column)
+            {
+              Q.SetLocal(row, column, *element);
+              ++element;
+            }
       }
   }
   timers["run.step.initializeSchurComplementSolver.Qcomputation"].stop();
