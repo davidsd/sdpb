@@ -176,6 +176,19 @@ int main(int argc, char **argv)
 
           po::notify(variables_map);
 
+          if(!boost::filesystem::exists(sdp_directory))
+            {
+              throw std::runtime_error("sdp directory '"
+                                       + sdp_directory.string()
+                                       + "' does not exist");
+            }
+          if(!boost::filesystem::is_directory(sdp_directory))
+            {
+              throw std::runtime_error("sdp directory '"
+                                       + sdp_directory.string()
+                                       + "' is not a directory");
+            }
+          
           if(!variables_map.count("outFile"))
             {
               out_file = sdp_directory;
