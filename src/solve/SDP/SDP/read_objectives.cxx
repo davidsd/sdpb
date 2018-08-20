@@ -8,6 +8,11 @@ void read_objectives(const boost::filesystem::path &sdp_directory,
                      El::DistMatrix<El::BigFloat> &dual_objective_b)
 {
   boost::filesystem::ifstream objectives_stream(sdp_directory / "objectives");
+  if(!objectives_stream.good())
+    {
+      throw std::runtime_error(
+        "Could not open '" + (sdp_directory / "objectives").string() + "'");
+    }
   objectives_stream >> objective_const;
 
   std::vector<El::BigFloat> temp;

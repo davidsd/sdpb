@@ -4,13 +4,18 @@
 #include <boost/filesystem.hpp>
 
 void read_bilinear_bases(
-  const boost::filesystem::path &sdp_directory,
-  const El::Grid &grid,
+  const boost::filesystem::path &sdp_directory, const El::Grid &grid,
   std::vector<El::Matrix<El::BigFloat>> &bilinear_bases_local,
   std::vector<El::DistMatrix<El::BigFloat>> &bilinear_bases_dist)
 {
   boost::filesystem::ifstream bilinear_stream(sdp_directory
                                               / "bilinear_bases");
+  if(!bilinear_stream.good())
+    {
+      throw std::runtime_error("Could not open '"
+                               + (sdp_directory / "bilinear_bases").string()
+                               + "'");
+    }
 
   size_t size;
   bilinear_stream >> size;

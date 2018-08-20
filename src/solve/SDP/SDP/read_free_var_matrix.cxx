@@ -10,6 +10,15 @@ void read_free_var_matrix(const boost::filesystem::path &sdp_directory,
     {
       boost::filesystem::ifstream free_var_matrix_stream(
         sdp_directory / ("free_var_matrix." + std::to_string(block_index)));
+      if(!free_var_matrix_stream.good())
+        {
+          throw std::runtime_error(
+            "Could not open '"
+            + (sdp_directory
+               / ("free_var_matrix." + std::to_string(block_index)))
+                .string()
+            + "'");
+        }
 
       size_t height, width;
       free_var_matrix_stream >> height >> width;

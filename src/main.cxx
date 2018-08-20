@@ -170,6 +170,12 @@ int main(int argc, char **argv)
               param_file
                 = variables_map["paramFile"].as<boost::filesystem::path>();
               std::ifstream ifs(param_file.string().c_str());
+              if(!ifs.good())
+                {
+                  throw std::runtime_error("Could not open '"
+                                           + param_file.string() + "'");
+                }
+                
               po::store(po::parse_config_file(ifs, solver_params_options),
                         variables_map);
             }
