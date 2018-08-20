@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 
       po::options_description basic_options("Basic options");
       basic_options.add_options()("help,h", "Show this helpful message.")(
-        "sdpFile,s",
+        "sdpDir,s",
         po::value<boost::filesystem::path>(&sdp_directory)->required(),
         "Directory containing preprocessed SDP data files.")(
         "paramFile,p", po::value<boost::filesystem::path>(&param_file),
