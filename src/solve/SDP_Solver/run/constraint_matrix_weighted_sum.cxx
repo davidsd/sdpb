@@ -10,24 +10,22 @@
 //
 // where v_{b,k} is the k-th column of bilinearBases[b], as described
 // in SDP.h.
-//
-// Inputs: sdp, a
-// Output: result (overwritten)
-//
 
-void constraint_matrix_weighted_sum(const SDP &sdp, const Block_Vector &a,
+void constraint_matrix_weighted_sum(const Block_Info &block_info,
+                                    const SDP &sdp, const Block_Vector &a,
                                     Block_Diagonal_Matrix &result)
 {
   auto a_block(a.blocks.begin());
   auto result_block(result.blocks.begin());
-  for(auto &block_index : sdp.block_indices)
+  for(auto &block_index : block_info.block_indices)
     {
-      const size_t block_size(sdp.degrees[block_index] + 1);
+      const size_t block_size(block_info.degrees[block_index] + 1);
       for(size_t bb(2 * block_index); bb < 2 * block_index + 2; ++bb)
         {
           El::Zero(*result_block);
           for(size_t column_block = 0;
-              column_block < sdp.dimensions[block_index]; ++column_block)
+              column_block < block_info.dimensions[block_index];
+              ++column_block)
             for(size_t row_block = 0; row_block <= column_block; ++row_block)
               {
                 const size_t result_block_size(
@@ -54,7 +52,7 @@ void constraint_matrix_weighted_sum(const SDP &sdp, const Block_Vector &a,
                          sdp.bilinear_bases_dist[bb], scaled_bases,
                          El::BigFloat(0), result_sub_block);
               }
-          if(sdp.dimensions[block_index] > 1)
+          if(block_info.dimensions[block_index] > 1)
             {
               El::MakeSymmetric(El::UpperOrLowerNS::UPPER, *result_block);
             }

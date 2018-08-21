@@ -24,13 +24,6 @@
 class SDP_Solver
 {
 public:
-  // SDP to solve.
-  SDP sdp;
-
-  // parameters for initialization and iteration
-  SDP_Solver_Parameters parameters;
-
-  /********************************************/
   // Current point
 
   // a Vector of length P = sdp.primalObjective.size()
@@ -75,12 +68,16 @@ public:
   El::BigFloat dual_error; // maxAbs(dualResidues)
 
   // Create a new solver for a given SDP, with the given parameters
-  SDP_Solver(const boost::filesystem::path &sdp_directory,
-             const SDP_Solver_Parameters &parameters);
+  SDP_Solver(const SDP_Solver_Parameters &parameters,
+             const Block_Info &block_info, const El::Grid &grid,
+             const size_t &dual_objective_b_height);
 
   // Run the solver, backing up to checkpointFile
   SDP_Solver_Terminate_Reason
-  run(const boost::filesystem::path checkpoint_file, const bool &debug);
+  run(const SDP_Solver_Parameters &parameters,
+      const boost::filesystem::path checkpoint_file,
+      const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
+      const bool &debug);
 
   // Input/output
   void save_checkpoint(const boost::filesystem::path &checkpoint_file);
@@ -92,7 +89,8 @@ public:
   void print_iteration(const int &iteration, El::BigFloat &mu,
                        const El::BigFloat &primal_step_length,
                        const El::BigFloat &dual_step_length,
-                       const El::BigFloat &beta_corrector);
+                       const El::BigFloat &beta_corrector,
+                       const size_t &dual_objective_b_height);
 
   void
   test_multiplication(const int m_init, const int m_fin, const int m_step);
@@ -100,19 +98,19 @@ public:
 private:
   // Compute data needed to solve the Schur complement equation
   void initialize_schur_complement_solver(
+    const Block_Info &block_info, const SDP &sdp,
     const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
     const Block_Diagonal_Matrix &bilinear_pairings_Y,
-    const std::vector<size_t> &block_sizes,
-    const std::vector<size_t> &block_indices, const size_t &num_schur_blocks,
-    const El::Grid &block_grid,
-    const bool &debug, Block_Diagonal_Matrix &schur_complement_cholesky,
-    Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q);
+    const El::Grid &block_grid, const bool &debug,
+    Block_Diagonal_Matrix &schur_complement_cholesky,
+    Block_Matrix &schur_off_diagonal_block, El::DistMatrix<El::BigFloat> &Q);
 
   // Compute (dx, dX, dy, dY), given the current mu, a reduction
   // parameter beta.  `correctorPhase' specifies whether to use the
   // R-matrix corresponding to the corrector step (if false, we use
   // the predictor R-matrix)
   void compute_search_direction(
+    const Block_Info &block_info, const SDP &sdp,
     const Block_Diagonal_Matrix &schur_complement_cholesky,
     const Block_Matrix &schur_off_diagonal,
     const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,

@@ -22,7 +22,8 @@
 // - dy, a Vector of length N
 //
 
-void compute_schur_RHS(const SDP &sdp, const Block_Vector &dual_residues,
+void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
+                       const Block_Vector &dual_residues,
                        const Block_Diagonal_Matrix &Z, const Block_Vector &x,
                        Block_Vector &dx, Block_Vector &dy)
 {
@@ -33,12 +34,12 @@ void compute_schur_RHS(const SDP &sdp, const Block_Vector &dual_residues,
   auto dy_block(dy.blocks.begin());
 
   auto Z_block(Z.blocks.begin());
-  for(auto &block_index : sdp.block_indices)
+  for(auto &block_index : block_info.block_indices)
     {
       // dx = -dual_residues
       *dx_block = *dual_residues_block;
       *dx_block *= -1;
-      const size_t dx_block_size(sdp.degrees[block_index] + 1);
+      const size_t dx_block_size(block_info.degrees[block_index] + 1);
 
       // dx[p] -= Tr(A_p Z)
       // Not sure whether it is better to first loop over blocks in
@@ -50,7 +51,8 @@ void compute_schur_RHS(const SDP &sdp, const Block_Vector &dual_residues,
           El::Ones(ones, Z_block_size, 1);
 
           for(size_t column_block = 0;
-              column_block < sdp.dimensions[block_index]; ++column_block)
+              column_block < block_info.dimensions[block_index];
+              ++column_block)
             for(size_t row_block = 0; row_block <= column_block; ++row_block)
               {
                 size_t column_offset(column_block * Z_block_size),

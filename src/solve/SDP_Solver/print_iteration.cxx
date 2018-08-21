@@ -8,7 +8,8 @@
 void SDP_Solver::print_iteration(const int &iteration, El::BigFloat &mu,
                                  const El::BigFloat &primal_step_length,
                                  const El::BigFloat &dual_step_length,
-                                 const El::BigFloat &beta_corrector)
+                                 const El::BigFloat &beta_corrector,
+                                 const size_t &dual_objective_b_height)
 {
   if(El::mpi::Rank() == 0)
     {
@@ -50,6 +51,6 @@ void SDP_Solver::print_iteration(const int &iteration, El::BigFloat &mu,
                 << std::setw(4) << std::setprecision(3)
                 << static_cast<double>(beta_corrector) << "  "
 
-                << sdp.dual_objective_b.Height() << "\n";
+                << dual_objective_b_height << "\n";
     }
 }

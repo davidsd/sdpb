@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "Block_Info.hxx"
 #include "Block_Matrix.hxx"
 #include "Block_Vector.hxx"
 #include "../Polynomial_Vector_Matrix.hxx"
@@ -98,30 +99,6 @@ public:
   // objectiveConst = f
   El::BigFloat objective_const;
 
-  // dimensions[j] = m_j  (0 <= j < J)
-  std::vector<size_t> dimensions;
-
-  // degrees[j] = d_j  (0 <= j < J)
-  std::vector<size_t> degrees;
-
-  SDP(const boost::filesystem::path &sdp_directory);
-
-  std::vector<size_t> schur_block_sizes,
-    // Dimensions of the blocks of X,Y
-    // psd_matrix_block_sizes[b] = (delta_b+1)*m_j = length(v_{b,*})*m_j
-    // (0 <= b < bMax)
-    psd_matrix_block_sizes,
-    // Dimensions of the bilinear pairing matrices U and V
-    // bilinear_pairing_block_sizes[b] = (d_j + 1)*m_j
-    // (0 <= b < bMax)
-    bilinear_pairing_block_sizes;
-
-  std::vector<size_t> block_indices;
-  El::Grid grid;
-
-  size_t total_psd_rows() const
-  {
-    return std::accumulate(psd_matrix_block_sizes.begin(),
-                           psd_matrix_block_sizes.end(), 0);
-  }
+  SDP(const boost::filesystem::path &sdp_directory,
+      const Block_Info &block_info, const El::Grid &grid);
 };

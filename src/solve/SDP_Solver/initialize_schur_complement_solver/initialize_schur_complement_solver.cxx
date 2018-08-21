@@ -39,28 +39,28 @@
 //
 
 void compute_schur_complement(
-  const SDP &sdp, const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
+  const Block_Info &block_info,
+  const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
   Block_Diagonal_Matrix &schur_complement);
 
 void SDP_Solver::initialize_schur_complement_solver(
+  const Block_Info &block_info, const SDP &sdp,
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-  const Block_Diagonal_Matrix &bilinear_pairings_Y,
-  const std::vector<size_t> &block_sizes,
-  const std::vector<size_t> &block_indices, const size_t &num_schur_blocks,
-  const El::Grid &block_grid, const bool &debug,
-  Block_Diagonal_Matrix &schur_complement_cholesky,
+  const Block_Diagonal_Matrix &bilinear_pairings_Y, const El::Grid &block_grid,
+  const bool &debug, Block_Diagonal_Matrix &schur_complement_cholesky,
   Block_Matrix &schur_off_diagonal_block, El::DistMatrix<El::BigFloat> &Q)
 {
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
   // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
   // (d_j+1)*m_j*(m_j+1)/2
   //
-  Block_Diagonal_Matrix schur_complement(block_sizes, block_indices,
-                                         num_schur_blocks, block_grid);
+  Block_Diagonal_Matrix schur_complement(
+    block_info.schur_block_sizes, block_info.block_indices,
+    block_info.schur_block_sizes.size(), block_grid);
 
-  compute_schur_complement(sdp, bilinear_pairings_X_inv, bilinear_pairings_Y,
-                           schur_complement);
+  compute_schur_complement(block_info, bilinear_pairings_X_inv,
+                           bilinear_pairings_Y, schur_complement);
 
   // compute SchurComplementCholesky = L', where
   //
@@ -137,7 +137,7 @@ void SDP_Solver::initialize_schur_complement_solver(
     else
       {
         std::vector<El::BigFloat> buffer;
-        Q_local.ReservePulls(Q.LocalHeight()*Q.LocalWidth());
+        Q_local.ReservePulls(Q.LocalHeight() * Q.LocalWidth());
         for(int64_t row = 0; row < Q.LocalHeight(); ++row)
           {
             int64_t global_row(Q.GlobalRow(row));

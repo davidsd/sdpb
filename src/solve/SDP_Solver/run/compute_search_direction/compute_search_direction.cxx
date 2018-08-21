@@ -16,7 +16,8 @@
 // - dx, dX, dy, dY
 //
 
-void compute_schur_RHS(const SDP &sdp, const Block_Vector &dual_residues,
+void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
+                       const Block_Vector &dual_residues,
                        const Block_Diagonal_Matrix &Z, const Block_Vector &x,
                        Block_Vector &dx, Block_Vector &dy);
 
@@ -26,6 +27,7 @@ void solve_schur_complement_equation(
   const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx, Block_Vector &dy);
 
 void SDP_Solver::compute_search_direction(
+  const Block_Info &block_info, const SDP &sdp,
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
   const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
@@ -57,14 +59,14 @@ void SDP_Solver::compute_search_direction(
 
   // dx[p] = -dual_residues[p] - Tr(A_p Z)
   // dy[n] = dualObjective[n] - (FreeVarMatrix^T x)_n
-  compute_schur_RHS(sdp, dual_residues, Z, x, dx, dy);
+  compute_schur_RHS(block_info, sdp, dual_residues, Z, x, dx, dy);
 
   // Solve for dx, dy in-place
   solve_schur_complement_equation(schur_complement_cholesky,
                                   schur_off_diagonal, Q, dx, dy);
 
   // dX = PrimalResidues + \sum_p A_p dx[p]
-  constraint_matrix_weighted_sum(sdp, dx, dX);
+  constraint_matrix_weighted_sum(block_info, sdp, dx, dX);
   dX += primal_residues;
 
   // dY = Symmetrize(X^{-1} (R - dX Y))

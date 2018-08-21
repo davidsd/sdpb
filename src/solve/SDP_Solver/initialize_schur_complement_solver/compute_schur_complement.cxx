@@ -9,10 +9,6 @@
 //                 swaps (r1 <-> s1) and (r2 <-> s2))
 //
 // where ej = d_j + 1.
-//
-// Inputs: sdp, BilinearPairingsXInv, BilinearPairingsY
-// Output: SchurComplement (overwritten)
-//
 
 namespace
 {
@@ -49,19 +45,19 @@ namespace
 }
 
 void compute_schur_complement(
-  const SDP &sdp, const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
+  const Block_Info &block_info, const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
   Block_Diagonal_Matrix &schur_complement)
 {
   auto schur_complement_block(schur_complement.blocks.begin());
   auto bilinear_pairings_X_inv_block(bilinear_pairings_X_inv.blocks.begin());
   auto bilinear_pairings_Y_block(bilinear_pairings_Y.blocks.begin());
-  for(auto &block_index : sdp.block_indices)
+  for(auto &block_index : block_info.block_indices)
     {
-      const size_t block_size(sdp.degrees[block_index] + 1);
+      const size_t block_size(block_info.degrees[block_index] + 1);
 
       for(size_t column_block_0 = 0;
-          column_block_0 < sdp.dimensions[block_index]; ++column_block_0)
+          column_block_0 < block_info.dimensions[block_index]; ++column_block_0)
         {
           const size_t column_offset_0(column_block_0 * block_size);
           for(size_t row_block_0 = 0; row_block_0 <= column_block_0;
@@ -73,7 +69,7 @@ void compute_schur_complement(
                 * block_size);
 
               for(size_t column_block_1 = 0;
-                  column_block_1 < sdp.dimensions[block_index];
+                  column_block_1 < block_info.dimensions[block_index];
                   ++column_block_1)
                 {
                   const size_t column_offset_1(column_block_1 * block_size);

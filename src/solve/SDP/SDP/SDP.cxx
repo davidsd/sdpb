@@ -21,16 +21,14 @@ void read_free_var_matrix(const boost::filesystem::path &sdp_directory,
                           const std::vector<size_t> &block_indices,
                           const El::Grid &grid, Block_Matrix &free_var_matrix);
 
-SDP::SDP(const boost::filesystem::path &sdp_directory)
-    : grid(El::mpi::COMM_SELF)
-
+SDP::SDP(const boost::filesystem::path &sdp_directory,
+         const Block_Info &block_info, const El::Grid &grid)
 {
-  read_blocks(sdp_directory, *this);
-  compute_block_grid_mapping(dimensions.size(), block_indices);
   read_objectives(sdp_directory, grid, objective_const, dual_objective_b);
   read_bilinear_bases(sdp_directory, grid, bilinear_bases_local,
                       bilinear_bases_dist);
-  read_primal_objective_c(sdp_directory, block_indices, grid,
+  read_primal_objective_c(sdp_directory, block_info.block_indices, grid,
                           primal_objective_c);
-  read_free_var_matrix(sdp_directory, block_indices, grid, free_var_matrix);
+  read_free_var_matrix(sdp_directory, block_info.block_indices, grid,
+                       free_var_matrix);
 }

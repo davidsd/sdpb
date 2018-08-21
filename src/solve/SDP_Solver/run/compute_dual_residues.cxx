@@ -13,7 +13,8 @@
 // Inputs: sdp, y, BilinearPairingsY
 // Output: dualResidues (overwriten)
 //
-void compute_dual_residues(const SDP &sdp, const Block_Vector &y,
+void compute_dual_residues(const Block_Info &block_info, const SDP &sdp,
+                           const Block_Vector &y,
                            const Block_Diagonal_Matrix &bilinear_pairings_Y,
                            Block_Vector &dual_residues)
 {
@@ -23,17 +24,18 @@ void compute_dual_residues(const SDP &sdp, const Block_Vector &y,
   auto free_var_matrix_block(sdp.free_var_matrix.blocks.begin());
   auto bilinear_pairings_Y_block(bilinear_pairings_Y.blocks.begin());
   // dualResidues[p] = -Tr(A_p Y)
-  for(auto &block_index : sdp.block_indices)
+  for(auto &block_index : block_info.block_indices)
     {
       Zero(*dual_residues_block);
-      const size_t block_size(sdp.degrees[block_index] + 1);
+      const size_t block_size(block_info.degrees[block_index] + 1);
 
       // Not sure whether it is better to first loop over blocks in
       // the result or over sub-blocks in bilinear_pairings_Y
       for(size_t bb = 2 * block_index; bb < 2 * block_index + 2; ++bb)
         {
           for(size_t column_block = 0;
-              column_block < sdp.dimensions[block_index]; ++column_block)
+              column_block < block_info.dimensions[block_index];
+              ++column_block)
             for(size_t row_block = 0; row_block <= column_block; ++row_block)
               {
                 size_t column_offset(column_block * block_size),
