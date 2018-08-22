@@ -34,7 +34,7 @@ int solve(const boost::filesystem::path &sdp_directory,
     }
   // Read an SDP from sdpFile and create a solver for it
   Block_Info block_info(sdp_directory);
-  El::Grid grid(block_info.comm);
+  El::Grid grid(block_info.mpi_comm);
   SDP sdp(sdp_directory, block_info, grid);
   SDP_Solver solver(parameters, block_info, grid,
                     sdp.dual_objective_b.Height());

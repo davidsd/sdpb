@@ -25,25 +25,9 @@ public:
     bilinear_pairing_block_sizes;
 
   std::vector<size_t> block_indices;
-  El::mpi::Group group;
-  El::mpi::Comm comm;
+  El::mpi::Group mpi_group;
+  El::mpi::Comm mpi_comm;
 
   Block_Info() = delete;
-  Block_Info(const boost::filesystem::path &sdp_directory)
-  {
-    boost::filesystem::ifstream block_stream(sdp_directory / "blocks");
-    if(!block_stream.good())
-      {
-        throw std::runtime_error("Could not open '"
-                                 + (sdp_directory / "blocks").string() + "'");
-      }
-    read_vector(block_stream, dimensions);
-    read_vector(block_stream, degrees);
-    read_vector(block_stream, schur_block_sizes);
-    read_vector(block_stream, psd_matrix_block_sizes);
-    read_vector(block_stream, bilinear_pairing_block_sizes);
-
-    compute_block_grid_mapping();
-  }
-  void compute_block_grid_mapping();
+  Block_Info(const boost::filesystem::path &sdp_directory);
 };

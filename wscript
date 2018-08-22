@@ -21,7 +21,8 @@ def build(bld):
     bld.program(source=['src/main.cxx',
                         'src/SDP_Solver_Parameters/ostream.cxx',
                         'src/solve/solve.cxx',
-                        'src/solve/Block_Info/compute_block_grid_mapping.cxx',
+                        'src/compute_block_grid_mapping.cxx',
+                        'src/solve/Block_Info/Block_Info.cxx',
                         'src/solve/SDP/SDP/SDP.cxx',
                         'src/solve/SDP/SDP/read_objectives.cxx',
                         'src/solve/SDP/SDP/read_bilinear_bases.cxx',
@@ -82,3 +83,13 @@ def build(bld):
                 cxxflags=default_flags,
                 use=use_packages
                 )
+
+    bld.program(source=['src/block_grid_mapping/main.cxx',
+                        'src/compute_block_grid_mapping.cxx'],
+                target='block_grid_mapping',
+                cxxflags=default_flags,
+                use=use_packages
+                )
+                
+                        
+    
