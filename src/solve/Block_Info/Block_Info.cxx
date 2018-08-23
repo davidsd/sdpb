@@ -2,7 +2,8 @@
 
 #include "../../compute_block_grid_mapping.hxx"
 
-Block_Info::Block_Info(const boost::filesystem::path &sdp_directory)
+Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
+                       const size_t &procs_per_node)
 {
   boost::filesystem::ifstream block_stream(sdp_directory / "blocks");
   if(!block_stream.good())
@@ -16,7 +17,7 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory)
   read_vector(block_stream, psd_matrix_block_sizes);
   read_vector(block_stream, bilinear_pairing_block_sizes);
 
-  size_t num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
+  const size_t num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
   std::vector<Block_Cost> block_costs;
   // Assume that the cost of a block is about N^3
   for(size_t ii = 0; ii < schur_block_sizes.size(); ++ii)
@@ -27,8 +28,17 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory)
     }
   // Reverse sort, with largest first
   std::sort(block_costs.rbegin(), block_costs.rend());
-  std::vector<Block_Map> mapping(
-    compute_block_grid_mapping(num_procs, block_costs));
+  if(num_procs % procs_per_node != 0)
+    {
+      throw std::runtime_error(
+        "Incompatible number of processes and processes per node.  "
+        "procs_per_node must evenly divide num_procs:\n\tnum_procs: "
+        + std::to_string(num_procs)
+        + "\n\tprocs_per_node: " + std::to_string(procs_per_node));
+    }
+  const size_t num_nodes(num_procs / procs_per_node);
+  std::vector<std::vector<Block_Map>> mapping(
+    compute_block_grid_mapping(procs_per_node, num_nodes, block_costs));
 
   // Create an mpi::Group for each set of processors.
 
@@ -37,19 +47,26 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory)
 
   int rank(El::mpi::Rank(El::mpi::COMM_WORLD));
   int current_rank(0);
-  for(auto &block_map : mapping)
+  for(auto &block_vector : mapping)
     {
-      current_rank += block_map.num_procs;
-      if(current_rank > rank)
+      for(auto &block_map : block_vector)
         {
-          block_indices = block_map.block_indices;
+          current_rank += block_map.num_procs;
+          if(current_rank > rank)
+            {
+              block_indices = block_map.block_indices;
+              break;
+            }
+        }
+      if(!block_indices.empty())
+        {
           break;
         }
     }
   {
     // MPI wants 'int' arrays, not 'size_t' arrays
     std::vector<int> int_indices;
-    std::copy(block_indices.begin(),block_indices.end(),int_indices.begin());
+    std::copy(block_indices.begin(), block_indices.end(), int_indices.begin());
     El::mpi::Incl(default_mpi_group, int_indices.size(), int_indices.data(),
                   mpi_group);
   }

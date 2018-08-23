@@ -29,5 +29,6 @@ public:
   El::mpi::Comm mpi_comm;
 
   Block_Info() = delete;
-  Block_Info(const boost::filesystem::path &sdp_directory);
+  Block_Info(const boost::filesystem::path &sdp_directory,
+             const size_t &procs_per_node);
 };
