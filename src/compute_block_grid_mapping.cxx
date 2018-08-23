@@ -100,11 +100,12 @@ compute_block_grid_mapping(const size_t &procs_per_node,
       block_map.block_indices.push_back(block.index);
     }
   result[max_available_node].push_back(block_map);
+  available_procs[max_available_node] -= block_map.num_procs;
 
   // Assign left over procs
   for(size_t node = 0; node < num_nodes; ++node)
     {
-      while(available_procs[node] != 0)
+      while(available_procs[node] != 0 && !result[node].empty())
         {
           // Within a node, assign left over procs to the block_map
           // with the highest cost.

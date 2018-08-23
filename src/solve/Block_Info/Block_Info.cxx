@@ -41,18 +41,18 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
     compute_block_grid_mapping(procs_per_node, num_nodes, block_costs));
 
   // Create an mpi::Group for each set of processors.
-
   El::mpi::Group default_mpi_group;
   El::mpi::CommGroup(El::mpi::COMM_WORLD, default_mpi_group);
 
   int rank(El::mpi::Rank(El::mpi::COMM_WORLD));
-  int current_rank(0);
+  int rank_begin(0), rank_end(0);
   for(auto &block_vector : mapping)
     {
       for(auto &block_map : block_vector)
         {
-          current_rank += block_map.num_procs;
-          if(current_rank > rank)
+          rank_begin = rank_end;
+          rank_end += block_map.num_procs;
+          if(rank_end > rank)
             {
               block_indices = block_map.block_indices;
               break;
@@ -63,11 +63,17 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
           break;
         }
     }
+  // If we have more nodes than blocks, we can end up with empty
+  // nodes.  In that case, assign that node to a group by itself.
+  if (!(rank_end > rank))
+    {
+      rank_begin=rank;
+      rank_end=rank+1;
+    }
   {
-    // MPI wants 'int' arrays, not 'size_t' arrays
-    std::vector<int> int_indices;
-    std::copy(block_indices.begin(), block_indices.end(), int_indices.begin());
-    El::mpi::Incl(default_mpi_group, int_indices.size(), int_indices.data(),
+    std::vector<int> group_ranks(rank_end - rank_begin);
+    std::iota(group_ranks.begin(), group_ranks.end(), rank_begin);
+    El::mpi::Incl(default_mpi_group, group_ranks.size(), group_ranks.data(),
                   mpi_group);
   }
   El::mpi::Create(El::mpi::COMM_WORLD, mpi_group, mpi_comm);
