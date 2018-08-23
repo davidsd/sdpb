@@ -4,6 +4,8 @@
 
 struct Block_Map
 {
+  // Either of num_procs>1 or block_indices.size()>1 can be true, but
+  // not both.
   size_t num_procs=0;
   size_t cost=0;
   std::vector<size_t> block_indices;
