@@ -102,7 +102,7 @@ int main(int argc, char **argv)
         po::value<int>(&parameters.max_runtime)->default_value(86400),
         "Maximum amount of time to run the solver in seconds.")(
         "procsPerNode",
-        po::value<int>(&parameters.procs_per_node),
+        po::value<int>(&parameters.procs_per_node)->required(),
         "Number of processers per node.  This is used for load balancing.")(
         "dualityGapThreshold",
         po::value<El::BigFloat>(&parameters.duality_gap_threshold)
