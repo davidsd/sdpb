@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <cstdio>
 
 struct Block_Cost
 {
