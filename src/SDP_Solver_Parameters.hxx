@@ -20,7 +20,8 @@ public:
   bool detect_dual_feasible_jump;
   int precision;
   int procs_per_node;
-
+  bool debug;
+  
   El::BigFloat duality_gap_threshold, primal_error_threshold,
     dual_error_threshold, initial_matrix_scale_primal,
     initial_matrix_scale_dual, feasible_centering_parameter,

@@ -18,7 +18,7 @@ int solve(const boost::filesystem::path &sdp_directory,
           const boost::filesystem::path &out_file,
           const boost::filesystem::path &checkpoint_file_in,
           const boost::filesystem::path &checkpoint_file_out,
-          const bool &debug, const SDP_Solver_Parameters &parameters);
+          const SDP_Solver_Parameters &parameters);
 
 int main(int argc, char **argv)
 {
@@ -30,8 +30,7 @@ int main(int argc, char **argv)
       boost::filesystem::path sdp_directory;
       boost::filesystem::path out_file, checkpoint_file_in,
         checkpoint_file_out, param_file;
-      bool debug(false);
-      
+
       SDP_Solver_Parameters parameters;
 
       po::options_description basic_options("Basic options");
@@ -53,7 +52,7 @@ int main(int argc, char **argv)
         "initialCheckpointFile,i",
         po::value<boost::filesystem::path>(&checkpoint_file_in),
         "The initial checkpoint to load. Defaults to checkpointFile.")(
-        "debug", po::value<bool>(&debug)->default_value(false),
+        "debug", po::value<bool>(&parameters.debug)->default_value(false),
         "Write out debugging output.");
 
       // We set default parameters using El::BigFloat("1e-10",10)
@@ -247,7 +246,7 @@ int main(int argc, char **argv)
       El::mpfr::SetPrecision(parameters.precision);
 
       result = solve(sdp_directory, out_file, checkpoint_file_in,
-                     checkpoint_file_out, debug, parameters);
+                     checkpoint_file_out, parameters);
     }
   catch(std::exception &e)
     {

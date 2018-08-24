@@ -76,8 +76,7 @@ public:
   SDP_Solver_Terminate_Reason
   run(const SDP_Solver_Parameters &parameters,
       const boost::filesystem::path checkpoint_file,
-      const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
-      const bool &debug);
+      const Block_Info &block_info, const SDP &sdp, const El::Grid &grid);
 
   // Input/output
   void save_checkpoint(const boost::filesystem::path &checkpoint_file);

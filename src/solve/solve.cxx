@@ -19,7 +19,7 @@ int solve(const boost::filesystem::path &sdp_directory,
           const boost::filesystem::path &out_file,
           const boost::filesystem::path &checkpoint_file_in,
           const boost::filesystem::path &checkpoint_file_out,
-          const bool &debug, const SDP_Solver_Parameters &parameters)
+          const SDP_Solver_Parameters &parameters)
 {
   if(El::mpi::Rank() == 0)
     {
@@ -33,7 +33,7 @@ int solve(const boost::filesystem::path &sdp_directory,
                 << parameters << '\n';
     }
   // Read an SDP from sdpFile and create a solver for it
-  Block_Info block_info(sdp_directory,parameters.procs_per_node);
+  Block_Info block_info(sdp_directory, parameters.procs_per_node);
   El::Grid grid(block_info.mpi_comm);
   SDP sdp(sdp_directory, block_info, grid);
   SDP_Solver solver(parameters, block_info, grid,
@@ -46,8 +46,8 @@ int solve(const boost::filesystem::path &sdp_directory,
 
   timers["Solver runtime"].start();
   timers["Last checkpoint"].start();
-  SDP_Solver_Terminate_Reason reason = solver.run(
-    parameters, checkpoint_file_out, block_info, sdp, grid, debug);
+  SDP_Solver_Terminate_Reason reason
+    = solver.run(parameters, checkpoint_file_out, block_info, sdp, grid);
   timers["Solver runtime"].stop();
 
   if(El::mpi::Rank() == 0)
