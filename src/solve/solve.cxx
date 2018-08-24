@@ -75,7 +75,8 @@ int solve(const boost::filesystem::path &sdp_directory,
     {
       std::cout << '\n' << timers;
     }
-  timers.write_profile(out_file.string() + ".profiling");
+  timers.write_profile(out_file.string() + ".profiling."
+                       + std::to_string(El::mpi::Rank()));
 
   return 0;
 }

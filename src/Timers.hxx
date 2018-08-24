@@ -48,7 +48,7 @@ public:
 
   void write_profile(std::string filename)
   {
-    std::ofstream f(filename, std::ofstream::out | std::ofstream::trunc);
+    std::ofstream f(filename);
 
     f << "{" << '\n';
     for(auto it(begin()); it != end();)
