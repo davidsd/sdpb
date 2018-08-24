@@ -107,56 +107,65 @@ void SDP_Solver::initialize_schur_complement_solver(
     }
   timers["run.step.initializeSchurComplementSolver.Qcomputation"].resume();
 
-  {
-    El::DistMatrix<El::BigFloat> Q_local(Q.Height(), Q.Width(), block_grid);
-    El::Zero(Q_local);
-    for(auto &block : schur_off_diagonal_block.blocks)
-      {
-        El::DistMatrix<El::BigFloat> Q_local_view(
-          El::View(Q_local, 0, 0, block.Width(), block.Width()));
-        El::Syrk(El::UpperOrLowerNS::UPPER, El::OrientationNS::TRANSPOSE,
-                 El::BigFloat(1), block, El::BigFloat(1), Q_local_view);
-      }
-    El::MakeSymmetric(El::UpperOrLower::UPPER, Q_local);
-    El::AllReduce(Q_local, El::mpi::COMM_WORLD);
+  El::DistMatrix<El::BigFloat> Q_group(Q.Height(), Q.Width(), block_grid);
+  El::Zero(Q_group);
+  for(auto &block : schur_off_diagonal_block.blocks)
+    {
+      El::DistMatrix<El::BigFloat> Q_group_view(
+        El::View(Q_group, 0, 0, block.Width(), block.Width()));
+      El::Syrk(El::UpperOrLowerNS::UPPER, El::OrientationNS::TRANSPOSE,
+               El::BigFloat(1), block, El::BigFloat(1), Q_group_view);
+    }
 
-    // One version optimized for when Q_local is on a single processor
-    if(Q_local.Grid().Size() == 1)
-      {
-        for(int64_t row = 0; row < Q.LocalHeight(); ++row)
-          {
-            int64_t global_row(Q.GlobalRow(row));
-            for(int64_t column = 0; column < Q.LocalWidth(); ++column)
-              {
-                int64_t global_column(Q.GlobalCol(column));
-                Q.SetLocal(row, column,
-                           Q_local.GetLocal(global_row, global_column));
-              }
-          }
-      }
-    else
-      {
-        std::vector<El::BigFloat> buffer;
-        Q_local.ReservePulls(Q.LocalHeight() * Q.LocalWidth());
-        for(int64_t row = 0; row < Q.LocalHeight(); ++row)
-          {
-            int64_t global_row(Q.GlobalRow(row));
-            for(int64_t column = 0; column < Q.LocalWidth(); ++column)
-              {
-                int64_t global_column(Q.GlobalCol(column));
-                Q_local.QueuePull(global_row, global_column);
-              }
-          }
-        Q_local.ProcessPullQueue(buffer);
-        auto element(buffer.begin());
-        for(int64_t row = 0; row < Q.LocalHeight(); ++row)
+  // Synchronize the results back to the global Q.
+  
+  // Optimize for when Q_group is on a single processor
+  if(Q_group.Grid().Size() == 1)
+    {
+      El::AllReduce(Q_group, El::mpi::COMM_WORLD);
+      El::MakeSymmetric(El::UpperOrLower::UPPER, Q_group);
+
+      for(int64_t row = 0; row < Q.LocalHeight(); ++row)
+        {
+          int64_t global_row(Q.GlobalRow(row));
           for(int64_t column = 0; column < Q.LocalWidth(); ++column)
             {
-              Q.SetLocal(row, column, *element);
-              ++element;
+              int64_t global_column(Q.GlobalCol(column));
+              Q.SetLocal(row, column,
+                         Q_group.GetLocal(global_row, global_column));
             }
-      }
-  }
+        }
+    }
+  else
+    {
+      El::Matrix<El::BigFloat> Q_local(Q.Height(), Q.Width());
+      El::Zero(Q_local);
+
+      for(int64_t row = 0; row < Q_group.LocalHeight(); ++row)
+        {
+          int64_t global_row(Q_group.GlobalRow(row));
+          for(int64_t column = 0; column < Q_group.LocalWidth(); ++column)
+            {
+              int64_t global_column(Q.GlobalCol(column));
+              Q_local(global_row, global_column)
+                = Q_group.GetLocal(row, column);
+            }
+        }
+
+      El::AllReduce(Q_local, El::mpi::COMM_WORLD);
+      El::MakeSymmetric(El::UpperOrLower::UPPER, Q_local);
+
+      for(int64_t row = 0; row < Q.LocalHeight(); ++row)
+        {
+          int64_t global_row(Q.GlobalRow(row));
+          for(int64_t column = 0; column < Q.LocalWidth(); ++column)
+            {
+              int64_t global_column(Q.GlobalCol(column));
+              Q.SetLocal(row, column,
+                         Q_local(global_row, global_column));
+            }
+        }
+    }
   timers["run.step.initializeSchurComplementSolver.Qcomputation"].stop();
 
   if(debug)
