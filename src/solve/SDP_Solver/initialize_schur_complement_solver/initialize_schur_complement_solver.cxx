@@ -73,11 +73,10 @@ void SDP_Solver::initialize_schur_complement_solver(
         El::mpi::Rank(),
         " run.step.initializeSchurComplementSolver.choleskyDecomposition");
     }
-  timers["run.step.initializeSchurComplementSolver.choleskyDecomposition"]
-    .resume();
+  auto &cholesky_timer(timers.add_and_start(
+    "run.step.initializeSchurComplementSolver.choleskyDecomposition"));
   cholesky_decomposition(schur_complement, schur_complement_cholesky);
-  timers["run.step.initializeSchurComplementSolver.choleskyDecomposition"]
-    .stop();
+  cholesky_timer.stop();
 
   // SchurOffDiagonal = L'^{-1} FreeVarMatrix
   schur_off_diagonal_block = sdp.free_var_matrix;
@@ -86,13 +85,11 @@ void SDP_Solver::initialize_schur_complement_solver(
       El::Output(El::mpi::Rank(), " run.step.initializeSchurComplementSolver."
                                   "blockMatrixLowerTriangularSolve");
     }
-  timers["run.step.initializeSchurComplementSolver."
-         "blockMatrixLowerTriangularSolve"]
-    .resume();
+  auto &triangular_timer(
+    timers.add_and_start("run.step.initializeSchurComplementSolver."
+                         "blockMatrixLowerTriangularSolve"));
   lower_triangular_solve(schur_complement_cholesky, schur_off_diagonal_block);
-  timers["run.step.initializeSchurComplementSolver."
-         "blockMatrixLowerTriangularSolve"]
-    .stop();
+  triangular_timer.stop();
 
   // Next, we compute
   //
@@ -106,7 +103,9 @@ void SDP_Solver::initialize_schur_complement_solver(
       El::Output(El::mpi::Rank(),
                  " run.step.initializeSchurComplementSolver.Qcomputation");
     }
-  timers["run.step.initializeSchurComplementSolver.Qcomputation"].resume();
+  auto &Q_computation_timer(
+    timers.add_and_start("run.step.initializeSchurComplementSolver."
+                         "Qcomputation"));
 
   El::DistMatrix<El::BigFloat> Q_group(Q.Height(), Q.Width(), block_grid);
   El::Zero(Q_group);
@@ -166,14 +165,16 @@ void SDP_Solver::initialize_schur_complement_solver(
             }
         }
     }
-  timers["run.step.initializeSchurComplementSolver.Qcomputation"].stop();
+  Q_computation_timer.stop();
 
   if(debug)
     {
       El::Output(El::mpi::Rank(),
                  " run.step.initializeSchurComplementSolver.LUDecomposition");
     }
-  timers["run.step.initializeSchurComplementSolver.LUDecomposition"].resume();
+  auto &LU_decomposition_timer(
+    timers.add_and_start("run.step.initializeSchurComplementSolver."
+                         "LUDecomposition"));
   Cholesky(El::UpperOrLowerNS::LOWER, Q);
-  timers["run.step.initializeSchurComplementSolver.LUDecomposition"].stop();
+  LU_decomposition_timer.stop();
 }

@@ -10,18 +10,12 @@ void SDP_Solver::print_iteration(const int &iteration, const El::BigFloat &mu,
                                  const El::BigFloat &dual_step_length,
                                  const El::BigFloat &beta_corrector,
                                  const size_t &dual_objective_b_height,
-                                 const Timers &timers)
+                                 const boost::timer::cpu_timer &solver_runtime)
 {
   if(El::mpi::Rank() == 0)
     {
-      auto solver_timer(timers.find("Solver runtime"));
-      if(solver_timer == timers.end())
-        {
-          throw std::runtime_error(
-            "INTERNAL ERROR: Could not find 'Solver runtime' in timers");
-        }
       boost::posix_time::time_duration td(
-        boost::posix_time::microseconds(solver_timer->second.elapsed().wall)
+        boost::posix_time::microseconds(solver_runtime.elapsed().wall)
         / 1000);
 
       std::stringstream ss;

@@ -3,8 +3,7 @@
 
 #include <boost/archive/text_oarchive.hpp>
 
-void SDP_Solver::save_checkpoint(
-  const boost::filesystem::path &checkpoint_file, Timers &timers)
+void SDP_Solver::save_checkpoint(const boost::filesystem::path &checkpoint_file)
 {
   if(exists(checkpoint_file))
     {
@@ -25,5 +24,4 @@ void SDP_Solver::save_checkpoint(
     }
   // boost::serialization::serialize_SDP_solver_state(ar, x, X,
   //                                                  y, Y);
-  timers["Last checkpoint"].start();
 }

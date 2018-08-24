@@ -81,19 +81,18 @@ public:
       Timers &timers);
 
   // Input/output
-  void save_checkpoint(const boost::filesystem::path &checkpoint_file,
-                       Timers &timers);
+  void save_checkpoint(const boost::filesystem::path &checkpoint_file);
   void load_checkpoint(const boost::filesystem::path &checkpoint_file);
   void save_solution(const SDP_Solver_Terminate_Reason,
                      const boost::filesystem::path &out_file);
   void print_header();
 
-  void
-  print_iteration(const int &iteration, const El::BigFloat &mu,
-                  const El::BigFloat &primal_step_length,
-                  const El::BigFloat &dual_step_length,
-                  const El::BigFloat &beta_corrector,
-                  const size_t &dual_objective_b_height, const Timers &timers);
+  void print_iteration(const int &iteration, const El::BigFloat &mu,
+                       const El::BigFloat &primal_step_length,
+                       const El::BigFloat &dual_step_length,
+                       const El::BigFloat &beta_corrector,
+                       const size_t &dual_objective_b_height,
+                       const boost::timer::cpu_timer &solver_runtime);
 
   void
   test_multiplication(const int m_init, const int m_fin, const int m_step);

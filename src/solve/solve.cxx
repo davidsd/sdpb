@@ -43,11 +43,8 @@ int solve(const boost::filesystem::path &sdp_directory,
       solver.load_checkpoint(checkpoint_file_in);
     }
 
-  timers["Solver runtime"].start();
-  timers["Last checkpoint"].start();
   SDP_Solver_Terminate_Reason reason = solver.run(
     parameters, checkpoint_file_out, block_info, sdp, grid, timers);
-  timers["Solver runtime"].stop();
 
   if(El::mpi::Rank() == 0)
     {
@@ -66,17 +63,11 @@ int solve(const boost::filesystem::path &sdp_directory,
 
   if(!parameters.no_final_checkpoint)
     {
-      solver.save_checkpoint(checkpoint_file_out, timers);
+      solver.save_checkpoint(checkpoint_file_out);
     }
-  timers["Last checkpoint"].stop();
   solver.save_solution(reason, out_file);
 
-  if(El::mpi::Rank() == 0)
-    {
-      std::cout << '\n' << timers;
-    }
   timers.write_profile(out_file.string() + ".profiling."
                        + std::to_string(El::mpi::Rank()));
-
   return 0;
 }

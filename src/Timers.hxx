@@ -28,9 +28,16 @@
 // use .resume() to accumulate time (can be used also on creation)
 
 // A map between strings and cpu timers
-class Timers : public std::map<std::string, boost::timer::cpu_timer>
+class Timers
+    : public std::list<std::pair<std::string, boost::timer::cpu_timer>>
 {
 public:
+  boost::timer::cpu_timer &add_and_start(const std::string &name)
+  {
+    emplace_back(name, boost::timer::cpu_timer());
+    return back().second;
+  }
+
   friend std::ostream &operator<<(std::ostream &os, const Timers &timers)
   {
     unsigned long max_length = 0;

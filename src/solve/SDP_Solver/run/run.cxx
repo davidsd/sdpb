@@ -52,7 +52,11 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
                 const Block_Info &block_info, const SDP &sdp,
                 const El::Grid &grid, Timers &timers)
 {
-  timers["run.initialize"].resume();
+  SDP_Solver_Terminate_Reason result(
+    SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
+  auto &solver_timer(timers.add_and_start("Solver runtime"));
+  auto &initialize_timer(timers.add_and_start("run.initialize"));
+
   El::BigFloat primal_step_length(0), dual_step_length(0);
 
   // the Cholesky decompositions of X and Y, each lower-triangular
@@ -104,39 +108,41 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
     std::accumulate(block_info.psd_matrix_block_sizes.begin(),
                     block_info.psd_matrix_block_sizes.end(), size_t(0)));
 
-  timers["run.initialize"].stop();
+  initialize_timer.stop();
+  boost::timer::cpu_timer checkpoint_timer;
   for(int iteration = 1;; iteration++)
     {
       /// FIXME: This has to use something that is guaranteed to be
       /// the same for all processors.
-      if(timers["Last checkpoint"].elapsed().wall
+      if(checkpoint_timer.elapsed().wall
          >= parameters.checkpoint_interval * 1000000000LL)
         {
-          save_checkpoint(checkpoint_file, timers);
+          save_checkpoint(checkpoint_file);
+          checkpoint_timer.start();
         }
-      if(timers["Solver runtime"].elapsed().wall
-         >= parameters.max_runtime * 1000000000LL)
+      if(solver_timer.elapsed().wall >= parameters.max_runtime * 1000000000LL)
         {
-          return SDP_Solver_Terminate_Reason::MaxRuntimeExceeded;
+          result = SDP_Solver_Terminate_Reason::MaxRuntimeExceeded;
         }
 
       if(parameters.debug)
         {
           El::Output(El::mpi::Rank(), " run.objectives");
         }
-      timers["run.objectives"].resume();
+      auto &objectives_timer(timers.add_and_start("run.objectives"));
       if(parameters.debug)
         {
           El::Output(El::mpi::Rank(), " run.objectives.primal");
         }
-      timers["run.objectives.primal"].resume();
+      auto &objectives_primal_timer(
+        timers.add_and_start("run.objectives.primal"));
       primal_objective = sdp.objective_const + dot(sdp.primal_objective_c, x);
-      timers["run.objectives.primal"].stop();
+      objectives_primal_timer.stop();
       if(parameters.debug)
         {
           El::Output(El::mpi::Rank(), " run.objectives.dual");
         }
-      timers["run.objectives.dual"].resume();
+      auto &objectives_dual_timer(timers.add_and_start("run.objectives.dual"));
       // dual_objective_b is duplicated amongst the processors.  y is
       // duplicated amongst the blocks, but it is possible for some
       // processors to have no blocks.  In principle, we only need to
@@ -150,36 +156,38 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
         }
       El::mpi::Broadcast(&dual_objective, 1, 0, El::mpi::COMM_WORLD);
 
-      timers["run.objectives.dual"].stop();
+      objectives_dual_timer.stop();
       if(parameters.debug)
         {
           El::Output(El::mpi::Rank(), " run.objectives.gap");
         }
-      timers["run.objectives.gap"].resume();
+      auto &objectives_gap_timer(timers.add_and_start("run.objectives.gap"));
       duality_gap
         = Abs(primal_objective - dual_objective)
           / Max(Abs(primal_objective) + Abs(dual_objective), El::BigFloat(1));
-      timers["run.objectives.gap"].stop();
+      objectives_gap_timer.stop();
 
-      timers["run.objectives"].stop();
+      objectives_timer.stop();
 
       if(parameters.debug)
         {
           El::Output(El::mpi::Rank(),
                      " run.choleskyDecomposition(X,XCholesky)");
         }
-      timers["run.choleskyDecomposition(X,XCholesky)"].resume();
+      auto &cholesky_decomposition_X_timer(
+        timers.add_and_start("run.choleskyDecomposition(X,XCholesky)"));
       cholesky_decomposition(X, X_cholesky);
-      timers["run.choleskyDecomposition(X,XCholesky)"].stop();
+      cholesky_decomposition_X_timer.stop();
 
       if(parameters.debug)
         {
           El::Output(El::mpi::Rank(),
                      " run.choleskyDecomposition(Y,YCholesky)");
         }
-      timers["run.choleskyDecomposition(Y,YCholesky)"].resume();
+      auto &cholesky_decomposition_Y_timer(
+        timers.add_and_start("run.choleskyDecomposition(Y,YCholesky)"));
       cholesky_decomposition(Y, Y_cholesky);
-      timers["run.choleskyDecomposition(Y,YCholesky)"].stop();
+      cholesky_decomposition_Y_timer.stop();
 
       // Compute the bilinear pairings BilinearPairingsXInv and
       // BilinearPairingsY needed for the dualResidues and the Schur
@@ -189,29 +197,31 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
           El::Output(El::mpi::Rank(),
                      " run.blockTensorInvTransposeCongruenceWithCholesky");
         }
-      timers["run.blockTensorInvTransposeCongruenceWithCholesky"].resume();
+      auto &inv_transpose_congruence_timer(timers.add_and_start(
+        "run.blockTensorInvTransposeCongruenceWithCholesky"));
       block_tensor_inv_transpose_congruence_with_cholesky(
         X_cholesky, sdp.bilinear_bases_local, block_info.block_indices,
         bilinear_pairings_workspace, bilinear_pairings_X_inv);
-
-      timers["run.blockTensorInvTransposeCongruenceWithCholesky"].stop();
+      inv_transpose_congruence_timer.stop();
 
       if(parameters.debug)
         {
           El::Output(El::mpi::Rank(), " run.blockTensorTransposeCongruence");
         }
-      timers["run.blockTensorTransposeCongruence"].resume();
+      auto &transpose_congruence_timer(
+        timers.add_and_start("run.blockTensorTransposeCongruence"));
       block_tensor_transpose_congruence(
         Y, sdp.bilinear_bases_local, block_info.block_indices,
         bilinear_pairings_workspace, bilinear_pairings_Y);
-      timers["run.blockTensorTransposeCongruence"].stop();
+      transpose_congruence_timer.stop();
 
       // dualResidues[p] = primalObjective[p] - Tr(A_p Y) - (FreeVarMatrix y)_p,
       if(parameters.debug)
         {
           El::Output(El::mpi::Rank(), " run.computeDualResidues");
         }
-      timers["run.computeDualResidues"].resume();
+      auto &dual_residues_timer(
+        timers.add_and_start("run.computeDualResidues"));
       compute_dual_residues(block_info, sdp, y, bilinear_pairings_Y,
                             dual_residues);
       {
@@ -224,17 +234,18 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
         dual_error
           = El::mpi::AllReduce(local_max, El::mpi::MAX, El::mpi::COMM_WORLD);
       }
-      timers["run.computeDualResidues"].stop();
+      dual_residues_timer.stop();
 
       if(parameters.debug)
         {
           El::Output(El::mpi::Rank(), " run.computePrimalResidues");
         }
-      timers["run.computePrimalResidues"].resume();
+      auto &primal_residues_timer(
+        timers.add_and_start("run.computePrimalResidues"));
       // PrimalResidues = \sum_p A_p x[p] - X
       compute_primal_residues(block_info, sdp, x, X, primal_residues);
       primal_error = primal_residues.max_abs();
-      timers["run.computePrimalResidues"].stop();
+      primal_residues_timer.stop();
 
       const bool is_primal_feasible(primal_error
                                     < parameters.primal_error_threshold);
@@ -243,25 +254,43 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
       const bool is_optimal(duality_gap < parameters.duality_gap_threshold);
 
       if(is_primal_feasible && is_dual_feasible && is_optimal)
-        return SDP_Solver_Terminate_Reason::PrimalDualOptimal;
+        {
+          result = SDP_Solver_Terminate_Reason::PrimalDualOptimal;
+          break;
+        }
       else if(is_primal_feasible && parameters.find_primal_feasible)
-        return SDP_Solver_Terminate_Reason::PrimalFeasible;
+        {
+          result = SDP_Solver_Terminate_Reason::PrimalFeasible;
+          break;
+        }
       else if(is_dual_feasible && parameters.find_dual_feasible)
-        return SDP_Solver_Terminate_Reason::DualFeasible;
+        {
+          result = SDP_Solver_Terminate_Reason::DualFeasible;
+          break;
+        }
       else if(primal_step_length == El::BigFloat(1)
               && parameters.detect_primal_feasible_jump)
-        return SDP_Solver_Terminate_Reason::PrimalFeasibleJumpDetected;
+        {
+          result = SDP_Solver_Terminate_Reason::PrimalFeasibleJumpDetected;
+          break;
+        }
       else if(dual_step_length == El::BigFloat(1)
               && parameters.detect_dual_feasible_jump)
-        return SDP_Solver_Terminate_Reason::DualFeasibleJumpDetected;
+        {
+          result = SDP_Solver_Terminate_Reason::DualFeasibleJumpDetected;
+          break;
+        }
       else if(iteration > parameters.max_iterations)
-        return SDP_Solver_Terminate_Reason::MaxIterationsExceeded;
+        {
+          result = SDP_Solver_Terminate_Reason::MaxIterationsExceeded;
+          break;
+        }
 
       if(parameters.debug)
         {
           El::Output(El::mpi::Rank(), " run.step");
         }
-      timers["run.step"].resume();
+      auto &step_timer(timers.add_and_start("run.step"));
       El::BigFloat mu, beta_predictor, beta_corrector;
 
       // Search direction: These quantities have the same structure
@@ -298,12 +327,12 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
             El::Output(El::mpi::Rank(),
                        " run.step.initializeSchurComplementSolver");
           }
-        timers["run.step.initializeSchurComplementSolver"].resume();
+        auto &initialize_timer(timers.add_and_start("run.step.initializeSchurComplementSolver"));
         initialize_schur_complement_solver(
           block_info, sdp, bilinear_pairings_X_inv, bilinear_pairings_Y, grid,
           parameters.debug, schur_complement_cholesky, schur_off_diagonal, Q,
           timers);
-        timers["run.step.initializeSchurComplementSolver"].stop();
+        initialize_timer.stop();
 
         // Compute the complementarity mu = Tr(X Y)/X.dim
         if(parameters.debug)
@@ -311,12 +340,13 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
             El::Output(El::mpi::Rank(),
                        " run.step.frobenius_product_symmetric");
           }
-        timers["run.step.frobenius_product_symmetric"].resume();
+        auto &frobenius_timer(timers.add_and_start("run.step.frobenius_product_symmetric"));
         mu = frobenius_product_symmetric(X, Y) / total_psd_rows;
-        timers["run.step.frobenius_product_symmetric"].stop();
+        frobenius_timer.stop();
         if(mu > parameters.max_complementarity)
           {
-            return SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
+            result = SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
+            break;
           }
 
         if(parameters.debug)
@@ -324,22 +354,22 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
             El::Output(El::mpi::Rank(),
                        " run.step.predictor_centering_parameter");
           }
-        timers["run.step.predictor_centering_parameter"].resume();
+        auto &predictor_timer(timers.add_and_start("run.step.predictor_centering_parameter"));
         // Compute the predictor solution for (dx, dX, dy, dY)
         beta_predictor = predictor_centering_parameter(
           parameters, is_primal_feasible && is_dual_feasible);
-        timers["run.step.predictor_centering_parameter"].stop();
+        predictor_timer.stop();
 
         if(parameters.debug)
           {
             El::Output(El::mpi::Rank(),
                        " run.step.computeSearchDirection(betaPredictor)");
           }
-        timers["run.step.computeSearchDirection(betaPredictor)"].resume();
+        auto &search_predictor_timer(timers.add_and_start("run.step.computeSearchDirection(betaPredictor)"));
         compute_search_direction(block_info, sdp, schur_complement_cholesky,
                                  schur_off_diagonal, X_cholesky,
                                  beta_predictor, mu, false, Q, dx, dX, dy, dY);
-        timers["run.step.computeSearchDirection(betaPredictor)"].stop();
+        search_predictor_timer.stop();
 
         // Compute the corrector solution for (dx, dX, dy, dY)
         if(parameters.debug)
@@ -347,41 +377,40 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
             El::Output(El::mpi::Rank(),
                        " run.step.corrector_centering_parameter");
           }
-        timers["run.step.corrector_centering_parameter"].resume();
+        auto &corrector_timer(timers.add_and_start("run.step.corrector_centering_parameter"));
         beta_corrector = corrector_centering_parameter(
           parameters, X, dX, Y, dY, mu, is_primal_feasible && is_dual_feasible,
           total_psd_rows);
-        timers["run.step.corrector_centering_parameter"].stop();
+        corrector_timer.stop();
         if(parameters.debug)
           {
             El::Output(El::mpi::Rank(),
                        " run.step.computeSearchDirection(betaCorrector)");
           }
-        timers["run.step.computeSearchDirection(betaCorrector)"].resume();
+        auto &search_corrector_timer(timers.add_and_start("run.step.computeSearchDirection(betaCorrector)"));
         compute_search_direction(block_info, sdp, schur_complement_cholesky,
                                  schur_off_diagonal, X_cholesky,
                                  beta_corrector, mu, true, Q, dx, dX, dy, dY);
-        timers["run.step.computeSearchDirection(betaCorrector)"].stop();
+        search_corrector_timer.stop();
       }
       // Compute step-lengths that preserve positive definiteness of X, Y
       if(parameters.debug)
         {
           El::Output(El::mpi::Rank(), " run.step.stepLength(XCholesky)");
         }
-      timers["run.step.stepLength(XCholesky)"].resume();
+      auto &step_length_X_timer(timers.add_and_start("run.step.stepLength(XCholesky)"));
       primal_step_length
         = step_length(X_cholesky, dX, parameters.step_length_reduction);
-
-      timers["run.step.stepLength(XCholesky)"].stop();
+      step_length_X_timer.stop();
 
       if(parameters.debug)
         {
           El::Output(El::mpi::Rank(), " run.step.stepLength(YCholesky)");
         }
-      timers["run.step.stepLength(YCholesky)"].resume();
+      auto &step_length_Y_timer(timers.add_and_start("run.step.stepLength(YCholesky)"));
       dual_step_length
         = step_length(Y_cholesky, dY, parameters.step_length_reduction);
-      timers["run.step.stepLength(YCholesky)"].stop();
+      step_length_Y_timer.stop();
 
       // If our problem is both dual-feasible and primal-feasible,
       // ensure we're following the true Newton direction.
@@ -392,7 +421,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
         }
 
       print_iteration(iteration, mu, primal_step_length, dual_step_length,
-                      beta_corrector, sdp.dual_objective_b.Height(), timers);
+                      beta_corrector, sdp.dual_objective_b.Height(),
+                      solver_timer);
       // Update the primal point (x, X) += primalStepLength*(dx, dX)
       for(size_t block = 0; block < x.blocks.size(); ++block)
         {
@@ -410,9 +440,10 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
       dY *= dual_step_length;
 
       Y += dY;
-      timers["run.step"].stop();
+      step_timer.stop();
     }
 
   // Never reached
-  return SDP_Solver_Terminate_Reason::MaxIterationsExceeded;
+  solver_timer.stop();
+  return result;
 }
