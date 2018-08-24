@@ -107,6 +107,10 @@ void SDP_Solver::initialize_schur_complement_solver(
     timers.add_and_start("run.step.initializeSchurComplementSolver."
                          "Qcomputation"));
 
+  auto &syrk_timer(
+    timers.add_and_start("run.step.initializeSchurComplementSolver."
+                         "Qcomputation.Syrk"));
+  
   El::DistMatrix<El::BigFloat> Q_group(Q.Height(), Q.Width(), block_grid);
   El::Zero(Q_group);
   for(auto &block : schur_off_diagonal_block.blocks)
@@ -117,8 +121,12 @@ void SDP_Solver::initialize_schur_complement_solver(
                El::BigFloat(1), block, El::BigFloat(1), Q_group_view);
     }
 
+  syrk_timer.stop();
   // Synchronize the results back to the global Q.
 
+  auto &synchronize_timer(
+    timers.add_and_start("run.step.initializeSchurComplementSolver."
+                         "Qcomputation.synchronize"));
   // Optimize for when Q_group is on a single processor
   if(Q_group.Grid().Size() == 1)
     {
@@ -165,6 +173,7 @@ void SDP_Solver::initialize_schur_complement_solver(
             }
         }
     }
+  synchronize_timer.stop();
   Q_computation_timer.stop();
 
   if(debug)
