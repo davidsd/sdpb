@@ -15,6 +15,18 @@
 #include <map>
 #include <string>
 
+// Timers map.  To time something, simply replace
+//
+//   myComputation();
+//
+// with
+//
+//   timers["my computation"].start();
+//   myComputation();
+//   timers["my computation"].stop();
+//
+// use .resume() to accumulate time (can be used also on creation)
+
 // A map between strings and cpu timers
 class Timers : public std::map<std::string, boost::timer::cpu_timer>
 {
@@ -54,19 +66,3 @@ public:
     f << "}" << '\n';
   }
 };
-
-// A global Timers map for the whole program (defined in solve.cxx).  A
-// new timer is created by default whenever `timers' is accessed.  To
-// time something, simply replace
-//
-//   myComputation();
-//
-// with
-//
-//   timers["my computation"].start();
-//   myComputation();
-//   timers["my computation"].stop();
-//
-// use .resume() to accumulate time (can be used also on creation)
-
-extern Timers timers;

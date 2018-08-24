@@ -14,6 +14,7 @@
 #include "SDP_Solver_Terminate_Reason.hxx"
 
 #include "../SDP_Solver_Parameters.hxx"
+#include "../Timers.hxx"
 
 #include <boost/filesystem.hpp>
 
@@ -76,20 +77,23 @@ public:
   SDP_Solver_Terminate_Reason
   run(const SDP_Solver_Parameters &parameters,
       const boost::filesystem::path checkpoint_file,
-      const Block_Info &block_info, const SDP &sdp, const El::Grid &grid);
+      const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
+      Timers &timers);
 
   // Input/output
-  void save_checkpoint(const boost::filesystem::path &checkpoint_file);
+  void save_checkpoint(const boost::filesystem::path &checkpoint_file,
+                       Timers &timers);
   void load_checkpoint(const boost::filesystem::path &checkpoint_file);
   void save_solution(const SDP_Solver_Terminate_Reason,
                      const boost::filesystem::path &out_file);
   void print_header();
 
-  void print_iteration(const int &iteration, El::BigFloat &mu,
-                       const El::BigFloat &primal_step_length,
-                       const El::BigFloat &dual_step_length,
-                       const El::BigFloat &beta_corrector,
-                       const size_t &dual_objective_b_height);
+  void
+  print_iteration(const int &iteration, const El::BigFloat &mu,
+                  const El::BigFloat &primal_step_length,
+                  const El::BigFloat &dual_step_length,
+                  const El::BigFloat &beta_corrector,
+                  const size_t &dual_objective_b_height, const Timers &timers);
 
   void
   test_multiplication(const int m_init, const int m_fin, const int m_step);
@@ -102,7 +106,8 @@ private:
     const Block_Diagonal_Matrix &bilinear_pairings_Y,
     const El::Grid &block_grid, const bool &debug,
     Block_Diagonal_Matrix &schur_complement_cholesky,
-    Block_Matrix &schur_off_diagonal_block, El::DistMatrix<El::BigFloat> &Q);
+    Block_Matrix &schur_off_diagonal_block, El::DistMatrix<El::BigFloat> &Q,
+    Timers &timers);
 
   // Compute (dx, dX, dy, dY), given the current mu, a reduction
   // parameter beta.  `correctorPhase' specifies whether to use the

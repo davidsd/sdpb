@@ -12,15 +12,14 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/filesystem.hpp>
 
-// FIXME: Pass this around instead of having a global.
-Timers timers;
-
 int solve(const boost::filesystem::path &sdp_directory,
           const boost::filesystem::path &out_file,
           const boost::filesystem::path &checkpoint_file_in,
           const boost::filesystem::path &checkpoint_file_out,
           const SDP_Solver_Parameters &parameters)
 {
+  Timers timers;
+
   if(El::mpi::Rank() == 0)
     {
       std::cout << "SDPB started at "
@@ -46,8 +45,8 @@ int solve(const boost::filesystem::path &sdp_directory,
 
   timers["Solver runtime"].start();
   timers["Last checkpoint"].start();
-  SDP_Solver_Terminate_Reason reason
-    = solver.run(parameters, checkpoint_file_out, block_info, sdp, grid);
+  SDP_Solver_Terminate_Reason reason = solver.run(
+    parameters, checkpoint_file_out, block_info, sdp, grid, timers);
   timers["Solver runtime"].stop();
 
   if(El::mpi::Rank() == 0)
@@ -67,7 +66,7 @@ int solve(const boost::filesystem::path &sdp_directory,
 
   if(!parameters.no_final_checkpoint)
     {
-      solver.save_checkpoint(checkpoint_file_out);
+      solver.save_checkpoint(checkpoint_file_out, timers);
     }
   timers["Last checkpoint"].stop();
   solver.save_solution(reason, out_file);

@@ -49,7 +49,8 @@ void SDP_Solver::initialize_schur_complement_solver(
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
   const Block_Diagonal_Matrix &bilinear_pairings_Y, const El::Grid &block_grid,
   const bool &debug, Block_Diagonal_Matrix &schur_complement_cholesky,
-  Block_Matrix &schur_off_diagonal_block, El::DistMatrix<El::BigFloat> &Q)
+  Block_Matrix &schur_off_diagonal_block, El::DistMatrix<El::BigFloat> &Q,
+  Timers &timers)
 {
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
   // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
@@ -118,7 +119,7 @@ void SDP_Solver::initialize_schur_complement_solver(
     }
 
   // Synchronize the results back to the global Q.
-  
+
   // Optimize for when Q_group is on a single processor
   if(Q_group.Grid().Size() == 1)
     {
@@ -161,8 +162,7 @@ void SDP_Solver::initialize_schur_complement_solver(
           for(int64_t column = 0; column < Q.LocalWidth(); ++column)
             {
               int64_t global_column(Q.GlobalCol(column));
-              Q.SetLocal(row, column,
-                         Q_local(global_row, global_column));
+              Q.SetLocal(row, column, Q_local(global_row, global_column));
             }
         }
     }

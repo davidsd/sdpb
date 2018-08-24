@@ -50,7 +50,7 @@ SDP_Solver_Terminate_Reason
 SDP_Solver::run(const SDP_Solver_Parameters &parameters,
                 const boost::filesystem::path checkpoint_file,
                 const Block_Info &block_info, const SDP &sdp,
-                const El::Grid &grid)
+                const El::Grid &grid, Timers &timers)
 {
   timers["run.initialize"].resume();
   El::BigFloat primal_step_length(0), dual_step_length(0);
@@ -112,7 +112,7 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
       if(timers["Last checkpoint"].elapsed().wall
          >= parameters.checkpoint_interval * 1000000000LL)
         {
-          save_checkpoint(checkpoint_file);
+          save_checkpoint(checkpoint_file, timers);
         }
       if(timers["Solver runtime"].elapsed().wall
          >= parameters.max_runtime * 1000000000LL)
@@ -301,7 +301,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
         timers["run.step.initializeSchurComplementSolver"].resume();
         initialize_schur_complement_solver(
           block_info, sdp, bilinear_pairings_X_inv, bilinear_pairings_Y, grid,
-          parameters.debug, schur_complement_cholesky, schur_off_diagonal, Q);
+          parameters.debug, schur_complement_cholesky, schur_off_diagonal, Q,
+          timers);
         timers["run.step.initializeSchurComplementSolver"].stop();
 
         // Compute the complementarity mu = Tr(X Y)/X.dim
@@ -391,7 +392,7 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
         }
 
       print_iteration(iteration, mu, primal_step_length, dual_step_length,
-                      beta_corrector, sdp.dual_objective_b.Height());
+                      beta_corrector, sdp.dual_objective_b.Height(), timers);
       // Update the primal point (x, X) += primalStepLength*(dx, dX)
       for(size_t block = 0; block < x.blocks.size(); ++block)
         {
