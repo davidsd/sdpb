@@ -45,6 +45,34 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
   El::mpi::CommGroup(El::mpi::COMM_WORLD, default_mpi_group);
 
   int rank(El::mpi::Rank(El::mpi::COMM_WORLD));
+
+  if(rank==0)
+    {
+      std::stringstream ss;
+      ss << "Block Grid Mapping\n"
+         << "Node\tNum Procs\tCost\t\tBlock List\n"
+         << "==================================================\n";
+      for(size_t node = 0; node < mapping.size(); ++node)
+        {
+          for(auto &m : mapping[node])
+            {
+              ss << node << "\t" << m.num_procs << "\t\t"
+                 << m.cost / static_cast<double>(m.num_procs) << "\t{";
+              for(size_t ii = 0; ii < m.block_indices.size(); ++ii)
+                {
+                  if(ii != 0)
+                    {
+                      ss << ",";
+                    }
+                  ss << m.block_indices[ii];
+                }
+              ss << "}\n";
+            }
+          ss << "\n";
+        }
+      El::Output(ss.str());
+    }
+  
   int rank_begin(0), rank_end(0);
   for(auto &block_vector : mapping)
     {
@@ -65,10 +93,10 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
     }
   // If we have more nodes than blocks, we can end up with empty
   // nodes.  In that case, assign that node to a group by itself.
-  if (!(rank_end > rank))
+  if(!(rank_end > rank))
     {
-      rank_begin=rank;
-      rank_end=rank+1;
+      rank_begin = rank;
+      rank_end = rank + 1;
     }
   {
     std::vector<int> group_ranks(rank_end - rank_begin);
