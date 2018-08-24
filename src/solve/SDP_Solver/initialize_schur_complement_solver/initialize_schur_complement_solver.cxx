@@ -146,7 +146,7 @@ void SDP_Solver::initialize_schur_complement_solver(
           int64_t global_row(Q_group.GlobalRow(row));
           for(int64_t column = 0; column < Q_group.LocalWidth(); ++column)
             {
-              int64_t global_column(Q.GlobalCol(column));
+              int64_t global_column(Q_group.GlobalCol(column));
               Q_local(global_row, global_column)
                 = Q_group.GetLocal(row, column);
             }
