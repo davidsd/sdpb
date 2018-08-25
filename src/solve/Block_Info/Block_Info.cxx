@@ -19,13 +19,33 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
 
   const size_t num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
   std::vector<Block_Cost> block_costs;
-  // Assume that the cost of a block is about N^3
+  // The dominant cost is squaring schur_off_diag to compute Q.  Each
+  // block of schur_off_diag has dimensions
+  //
+  //   schur_block_sizes[ii] * Q.Height()
+  //
+  // So the total cost for squaring that particular block is
+  //
+  //   schur_block_sizes[ii] * (schur_block_sizes[ii] * Q.Height())
+  //
+  // Q.Height() is the same for all blocks, so we can factor it out.
+  // This means that the cost scales as the square of the size of the
+  // block.
+
   for(size_t ii = 0; ii < schur_block_sizes.size(); ++ii)
     {
-      block_costs.emplace_back(schur_block_sizes[ii] * schur_block_sizes[ii]
-                                 * schur_block_sizes[ii],
+      block_costs.emplace_back(schur_block_sizes[ii] * schur_block_sizes[ii],
                                ii);
     }
+
+  // for(size_t rank = 0; rank < num_procs; ++rank)
+  //   {
+  //     for(size_t ii = rank; ii < schur_block_sizes.size(); ii += num_procs)
+  //       {
+  //         block_costs.emplace_back(1, ii);
+  //       }
+  //   }
+
   // Reverse sort, with largest first
   std::sort(block_costs.rbegin(), block_costs.rend());
   if(num_procs % procs_per_node != 0)
@@ -46,7 +66,7 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
 
   int rank(El::mpi::Rank(El::mpi::COMM_WORLD));
 
-  if(rank==0)
+  if(rank == 0)
     {
       std::stringstream ss;
       ss << "Block Grid Mapping\n"
@@ -72,7 +92,7 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
         }
       El::Output(ss.str());
     }
-  
+
   int rank_begin(0), rank_end(0);
   for(auto &block_vector : mapping)
     {
