@@ -52,6 +52,8 @@ void SDP_Solver::initialize_schur_complement_solver(
   Block_Matrix &schur_off_diagonal_block, El::DistMatrix<El::BigFloat> &Q,
   Timers &timers)
 {
+  auto &schur_complement_timer(timers.add_and_start(
+    "run.step.initializeSchurComplementSolver.schur_complement"));
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
   // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
   // (d_j+1)*m_j*(m_j+1)/2
@@ -62,6 +64,7 @@ void SDP_Solver::initialize_schur_complement_solver(
 
   compute_schur_complement(block_info, bilinear_pairings_X_inv,
                            bilinear_pairings_Y, schur_complement);
+  schur_complement_timer.stop();
 
   // compute SchurComplementCholesky = L', where
   //
@@ -79,7 +82,10 @@ void SDP_Solver::initialize_schur_complement_solver(
   cholesky_timer.stop();
 
   // SchurOffDiagonal = L'^{-1} FreeVarMatrix
+  auto &free_var_matrix_timer(timers.add_and_start(
+    "run.step.initializeSchurComplementSolver.free_var_matrix"));
   schur_off_diagonal_block = sdp.free_var_matrix;
+  free_var_matrix_timer.stop();
   if(debug)
     {
       El::Output(El::mpi::Rank(), " run.step.initializeSchurComplementSolver."
@@ -110,7 +116,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   auto &syrk_timer(
     timers.add_and_start("run.step.initializeSchurComplementSolver."
                          "Qcomputation.Syrk"));
-  
+
   El::DistMatrix<El::BigFloat> Q_group(Q.Height(), Q.Width(), block_grid);
   El::Zero(Q_group);
   for(auto &block : schur_off_diagonal_block.blocks)
