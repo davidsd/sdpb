@@ -17,32 +17,63 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
   read_vector(block_stream, psd_matrix_block_sizes);
   read_vector(block_stream, bilinear_pairing_block_sizes);
 
-  const size_t num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
-  std::vector<Block_Cost> block_costs;
-  // The dominant cost is squaring schur_off_diag to compute Q.  Each
-  // block of schur_off_diag has dimensions
-  //
-  //   schur_block_sizes[ii] * Q.Height()
-  //
-  // So the total cost for squaring that particular block is
-  //
-  //   schur_block_sizes[ii] * (schur_block_sizes[ii] * Q.Height())
-  //
-  // Q.Height() is the same for all blocks, so we can factor it out.
-  // This means that the cost scales as the square of the size of the
-  // block.
-
-  for(size_t ii = 0; ii < schur_block_sizes.size(); ++ii)
+  boost::filesystem::ifstream objective_stream(sdp_directory / "objectives");
+  double temp;
+  size_t q;
+  objective_stream >> temp >> q;
+  if(!objective_stream.good())
     {
-      block_costs.emplace_back(schur_block_sizes[ii] * schur_block_sizes[ii],
-                               ii);
+      throw std::runtime_error(
+        "Could not read the size of the dual objective from '"
+        + (sdp_directory / "objectives").string() + "'");
     }
 
+  const size_t num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
+  std::vector<Block_Cost> block_costs;
+  // Two large costs are
+  // 1) Solving for schur_off_diag.
+  // 2) Squaring schur_off_diag to compute Q.
+  //
+  // If 'n' is the size o3 the schur block, and 'q' is the size of Q,
+  // then the cost of 1) is
+  //
+  //   alpha*n*n*q
+  //
+  // while the cost of 2) is proportional to
+  //
+  //   beta*n*q*q
+  //
+  // where alpha and beta are scaling constants.  The total cost is then
+  //
+  //   q*n*(beta*q + alpha*n)
+  //
+  // We are only interested in the cost of blocks relative to each
+  // other, so we can ignore the overall scaling of q
+  //
+  //   n*(beta*q + alpha*n)
+  //
+  // The ratio of beta/alpha depends on things like the precision and
+  // the exact CPU being used.  Empirically, I have measured values
+  // for beta/alpha between 1.05 and 1.17, so we use 1.1.  To keep
+  // everything as integers, we set beta=11, alpha=10.
+
+  const size_t beta(11), alpha(10);
+  for(size_t block = 0; block < schur_block_sizes.size(); ++block)
+    {
+      block_costs.emplace_back(
+        schur_block_sizes[block]
+          * (beta * q + alpha * schur_block_sizes[block]),
+        block);
+    }
+
+  // This simulates round-robin by making everything cost the same but
+  // with a round-robin order.
   // for(size_t rank = 0; rank < num_procs; ++rank)
   //   {
-  //     for(size_t ii = rank; ii < schur_block_sizes.size(); ii += num_procs)
+  //     for(size_t block = rank; block < schur_block_sizes.size(); block +=
+  //     num_procs)
   //       {
-  //         block_costs.emplace_back(1, ii);
+  //         block_costs.emplace_back(1, block);
   //       }
   //   }
 
