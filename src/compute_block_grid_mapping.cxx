@@ -69,8 +69,6 @@ compute_block_grid_mapping(const size_t &procs_per_node,
 
   std::vector<size_t> available_procs(num_nodes, procs_per_node);
 
-  std::cout << available_procs.size() << "\n" << available_procs[0] << "\n";
-
   std::vector<std::vector<Block_Map>> result(num_nodes);
 
   auto multi_proc_end(std::find_if(
@@ -79,7 +77,6 @@ compute_block_grid_mapping(const size_t &procs_per_node,
 
   for(auto block(block_costs.begin()); block != multi_proc_end; ++block)
     {
-      std::cout << "blocking: " << block->cost << " " << block->index << "\n";
       // Always add block_map's to the node with the most available
       // procs.  This is Worst Fit First.
 
@@ -95,30 +92,15 @@ compute_block_grid_mapping(const size_t &procs_per_node,
       available_procs[max_available_node] -= num_procs;
     }
 
-  // size_t total_available_procs(std::accumulate(
-  //   available_procs.begin(), available_procs.end(), size_t(0)));
-  // size_t total_cost_left(
-  //   std::accumulate(block_costs.begin(), block_costs.end(), size_t(0),
-  //                   [](size_t &total, const Block_Cost &block) {
-  //                     return total + block.cost;
-  //                   }));
-
-  // size_t block_maps_to_use(total_cost_left / available_procs);
-
-  std::cout << "procs: " << available_procs.size() << " " << available_procs[0] << "\n";
-
   std::vector<std::vector<Block_Map>> available_block_maps(num_nodes);
   for(size_t node = 0; node < num_nodes; ++node)
     {
       available_block_maps[node].resize(available_procs[node]);
-      for(auto &block: available_block_maps[node])
+      for(auto &block : available_block_maps[node])
         {
-          block.num_procs=1;
+          block.num_procs = 1;
         }
     }
-
-  std::cout << "maps: " << available_block_maps.size() << " "
-            << available_block_maps[0].size() << "\n";
 
   for(auto block(multi_proc_end); block != block_costs.end(); ++block)
     {
@@ -138,71 +120,9 @@ compute_block_grid_mapping(const size_t &procs_per_node,
       min_block->block_indices.push_back(block->index);
     }
   for(size_t node = 0; node < num_nodes; ++node)
-    {
-      for(auto &available : available_block_maps[node])
-        {
-          std::cout << "result: " << node << " "
-                    << available.num_procs << " "
-                    << available.cost << "\n";
-          result[node].push_back(available);
-        }
-    }
-
-  std::cout << result.size() << "\n" << result[0].size() << "\n";
-  // // Assign left over procs
-  // for(size_t node = 0; node < num_nodes; ++node)
-  //   {
-  //     while(available_procs[node] != 0 && !result[node].empty())
-  //       {
-  //         // Within a node, assign left over procs to the block_map
-  //         // with the highest cost.
-  //         auto max_element(
-  //           std::max_element(result[node].begin(), result[node].end()));
-  //         if(max_element->block_indices.size() == 1)
-  //           {
-  //             ++(max_element->num_procs);
-  //             --(available_procs[node]);
-  //           }
-  //         else
-  //           // If a block_map has multiple blocks, just reassign
-  //           // blocks to the new proc.
-  //           {
-  //             size_t half_cost(max_element->cost / 2);
-  //             std::vector<size_t> old_indices;
-  //             std::swap(max_element->block_indices, old_indices);
-  //             max_element->cost = 0;
-
-  //             Block_Map new_element;
-  //             new_element.num_procs = 1;
-  //             --(available_procs[node]);
-
-  //             for(auto &index : old_indices)
-  //               {
-  //                 auto cost_index(std::find_if(
-  //                   block_costs.begin(), block_costs.end(),
-  //                   [&](const Block_Cost &a) { return a.index == index; }));
-  //                 if(cost_index == block_costs.end())
-  //                   {
-  //                     throw std::runtime_error(
-  //                       "INTERNAL ERROR: Could not find index "
-  //                       + std::to_string(index) + " in the block_costs
-  //                       array");
-  //                   }
-  //                 const size_t block_cost(cost_index->cost);
-  //                 if(max_element->cost + block_cost <= half_cost)
-  //                   {
-  //                     max_element->block_indices.push_back(index);
-  //                     max_element->cost += block_cost;
-  //                   }
-  //                 else
-  //                   {
-  //                     new_element.block_indices.push_back(index);
-  //                     new_element.cost += block_cost;
-  //                   }
-  //               }
-  //             result[node].push_back(new_element);
-  //           }
-  //       }
-  //   }
+    for(auto &available : available_block_maps[node])
+      {
+        result[node].push_back(available);
+      }
   return result;
 }
