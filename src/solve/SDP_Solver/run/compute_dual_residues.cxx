@@ -43,10 +43,7 @@ void compute_dual_residues(const Block_Info &block_info, const SDP &sdp,
 
                 El::DistMatrix<El::BigFloat> lower_diagonal(El::GetDiagonal(
                   El::LockedView(*bilinear_pairings_Y_block, row_offset,
-                                 column_offset, block_size, block_size))),
-                  upper_diagonal(El::GetDiagonal(
-                    El::LockedView(*bilinear_pairings_Y_block, column_offset,
-                                   row_offset, block_size, block_size)));
+                                 column_offset, block_size, block_size)));
 
                 size_t residue_row_offset(
                   ((column_block * (column_block + 1)) / 2 + row_block)
@@ -55,12 +52,25 @@ void compute_dual_residues(const Block_Info &block_info, const SDP &sdp,
                 El::DistMatrix<El::BigFloat> residue_sub_block(El::View(
                   *dual_residues_block, residue_row_offset, 0, block_size, 1));
 
-                // FIXME: This does twice as much work as needed when
-                // column_block==row_block.
-                El::Axpy(El::BigFloat(-0.5), lower_diagonal,
-                         residue_sub_block);
-                El::Axpy(El::BigFloat(-0.5), upper_diagonal,
-                         residue_sub_block);
+                // Do a little less work when on a diagonal block.
+                if(column_offset == row_offset)
+                  {
+                    El::Axpy(El::BigFloat(-1.0), lower_diagonal,
+                             residue_sub_block);
+                  }
+                else
+                  {
+                    El::Axpy(El::BigFloat(-0.5), lower_diagonal,
+                             residue_sub_block);
+
+                    El::DistMatrix<El::BigFloat> upper_diagonal(
+                      El::GetDiagonal(El::LockedView(
+                        *bilinear_pairings_Y_block, column_offset, row_offset,
+                        block_size, block_size)));
+
+                    El::Axpy(El::BigFloat(-0.5), upper_diagonal,
+                             residue_sub_block);
+                  }
               }
           ++bilinear_pairings_Y_block;
         }
