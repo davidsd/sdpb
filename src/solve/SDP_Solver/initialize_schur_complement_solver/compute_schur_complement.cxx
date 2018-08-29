@@ -39,13 +39,26 @@ namespace
     // It does not help to use TransposeAxpy().  Hadamard() sets the
     // result, it does not add it in.
     El::Transpose(Y_submatrix, Y_transpose);
-    El::Hadamard(X_submatrix, Y_transpose, temp);
+    if(X_submatrix.ColAlign() == Y_transpose.ColAlign()
+       && X_submatrix.RowAlign() == Y_transpose.RowAlign())
+      {
+        El::Hadamard(X_submatrix, Y_transpose, temp);
+      }
+    else
+      {
+        El::DistMatrix<El::BigFloat> Y_transpose_aligned(
+          block_size, block_size, Y_transpose.Grid());
+        Y_transpose_aligned.AlignWith(X_submatrix);
+        El::Copy(Y_transpose,Y_transpose_aligned);
+        El::Hadamard(X_submatrix, Y_transpose_aligned, temp);
+      }
     Axpy(El::BigFloat(0.25), temp, result_submatrix);
   }
 }
 
 void compute_schur_complement(
-  const Block_Info &block_info, const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
+  const Block_Info &block_info,
+  const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
   Block_Diagonal_Matrix &schur_complement)
 {
@@ -57,7 +70,8 @@ void compute_schur_complement(
       const size_t block_size(block_info.degrees[block_index] + 1);
 
       for(size_t column_block_0 = 0;
-          column_block_0 < block_info.dimensions[block_index]; ++column_block_0)
+          column_block_0 < block_info.dimensions[block_index];
+          ++column_block_0)
         {
           const size_t column_offset_0(column_block_0 * block_size);
           for(size_t row_block_0 = 0; row_block_0 <= column_block_0;
