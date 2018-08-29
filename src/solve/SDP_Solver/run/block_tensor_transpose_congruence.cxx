@@ -31,13 +31,12 @@ void block_tensor_transpose_congruence(
           // along the diagonal
           for(int64_t row = 0; row < work->LocalHeight(); ++row)
             {
-              size_t global_row(work->GlobalRow(row));
+              size_t global_row(work->GlobalRow(row)),
+                row_block(global_row / bilinear_bases[b].Height());
 
               for(int64_t column = 0; column < work->LocalWidth(); ++column)
                 {
-                  size_t global_column(work->GlobalCol(column));
-
-                  size_t row_block(global_row / bilinear_bases[b].Height()),
+                  size_t global_column(work->GlobalCol(column)),
                     column_block(global_column / bilinear_bases[b].Width());
                   work->SetLocal(
                     row, column,

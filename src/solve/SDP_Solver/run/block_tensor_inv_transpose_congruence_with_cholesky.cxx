@@ -16,6 +16,7 @@ void block_tensor_inv_transpose_congruence_with_cholesky(
     {
       for(size_t b = 2 * block_index; b < 2 * block_index + 2; b++)
         {
+          // FIXME: This should be a constant, not computed over and over.
           // Set up the workspace to have copies of bilinear_bases[b]
           // along the diagonal
           for(int64_t row = 0; row < work->LocalHeight(); ++row)
