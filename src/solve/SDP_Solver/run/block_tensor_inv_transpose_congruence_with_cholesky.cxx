@@ -34,7 +34,7 @@ void block_tensor_inv_transpose_congruence_with_cholesky(
                     row, column,
                     row_block != column_block
                       ? El::BigFloat(0)
-                      : bilinear_bases[b].Get(
+                      : bilinear_bases[b](
                           global_row % bilinear_bases[b].Height(),
                           global_column % bilinear_bases[b].Width()));
                 }

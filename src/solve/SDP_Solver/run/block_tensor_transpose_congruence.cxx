@@ -9,9 +9,6 @@
 // for each b, L.blocks[b], Q[b], Work[b], and bilinear_pairings_Y.blocks[b]
 // must have the structure described above for `tensorTransposeCongruence'
 
-// FIXME: Why am I using the DistMatrix version of bilinear_bases
-// instead of the local version?  With the local version, there would
-// be no communication required.
 void block_tensor_transpose_congruence(
   const Block_Diagonal_Matrix &Y,
   const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases,
@@ -42,7 +39,7 @@ void block_tensor_transpose_congruence(
                     row, column,
                     row_block != column_block
                       ? El::BigFloat(0)
-                      : bilinear_bases[b].Get(
+                      : bilinear_bases[b](
                           global_row % bilinear_bases[b].Height(),
                           global_column % bilinear_bases[b].Width()));
                 }
