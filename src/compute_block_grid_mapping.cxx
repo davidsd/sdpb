@@ -59,22 +59,24 @@ compute_block_grid_mapping(const size_t &procs_per_node,
                            const size_t &num_nodes,
                            const std::vector<Block_Cost> &block_costs)
 {
-  const double total_cost(
-    std::accumulate(block_costs.begin(), block_costs.end(), 0.0,
-                    [](const double &cost, const Block_Cost &element) {
+  // We do computations in integers to make sure that the results are
+  // the same in different processers.
+  const size_t total_cost(
+    std::accumulate(block_costs.begin(), block_costs.end(), size_t(0),
+                    [](const size_t &cost, const Block_Cost &element) {
                       return cost + element.cost;
                     }));
   const size_t num_procs(procs_per_node * num_nodes);
-  const double average_cost(total_cost / num_procs);
-
   std::vector<size_t> available_procs(num_nodes, procs_per_node);
 
   std::vector<std::vector<Block_Map>> result(num_nodes);
 
   auto multi_proc_end(std::find_if(
-    block_costs.begin(), block_costs.end(),
-    [&](const Block_Cost &block) { return block.cost <= average_cost; }));
+    block_costs.begin(), block_costs.end(), [&](const Block_Cost &block) {
+      return num_procs * block.cost <= total_cost;
+    }));
 
+  size_t remaining_cost(total_cost), remaining_procs(num_procs);
   for(auto block(block_costs.begin()); block != multi_proc_end; ++block)
     {
       // Always add block_map's to the node with the most available
@@ -84,14 +86,51 @@ compute_block_grid_mapping(const size_t &procs_per_node,
         available_procs.begin(),
         std::max_element(available_procs.begin(), available_procs.end())));
 
-      size_t num_procs
-        = std::min(available_procs[max_available_node],
-                   std::max(size_t(1), size_t(block->cost / average_cost)));
-      Block_Map block_map(num_procs, block->cost, {block->index});
+      size_t procs_for_block = std::min(
+        available_procs[max_available_node],
+        std::max(size_t(1), size_t(block->cost * num_procs / total_cost)));
+      Block_Map block_map(procs_for_block, block->cost, {block->index});
       result[max_available_node].push_back(block_map);
-      available_procs[max_available_node] -= num_procs;
+      available_procs[max_available_node] -= procs_for_block;
+      remaining_cost -= block->cost;
+      remaining_procs -= procs_for_block;
     }
 
+  if(remaining_procs != num_procs)
+    {
+      size_t required_procs((remaining_cost * num_procs + (total_cost - 1))
+                            / total_cost);
+      size_t extra_procs(remaining_procs - required_procs);
+      while(extra_procs > 0)
+        {
+          std::vector<Block_Map>::iterator max_element(result.front().end());
+          size_t max_node;
+          for(size_t node = 0; node < result.size(); ++node)
+            {
+              if(available_procs[node] > 0 && !result[node].empty())
+                {
+                  auto max_element_on_node(std::max_element(
+                    result[node].begin(), result[node].end()));
+                  if(max_element == result.front().end()
+                     || *max_element < *max_element_on_node)
+                    {
+                      max_element = max_element_on_node;
+                      max_node = node;
+                    }
+                }
+            }
+          if(max_element != result.front().end())
+            {
+              max_element->num_procs += 1;
+              --available_procs[max_node];
+              --extra_procs;
+            }
+          else
+            {
+              break;
+            }
+        }
+    }
   std::vector<std::vector<Block_Map>> available_block_maps(num_nodes);
   for(size_t node = 0; node < num_nodes; ++node)
     {
@@ -108,12 +147,15 @@ compute_block_grid_mapping(const size_t &procs_per_node,
       auto min_block(available_block_maps.at(0).end());
       for(size_t node(0); node < num_nodes; ++node)
         {
-          auto block = std::min_element(available_block_maps[node].begin(),
-                                        available_block_maps[node].end());
-          if(block->cost < min_cost)
+          if(!available_block_maps[node].empty())
             {
-              min_block = block;
-              min_cost = block->cost;
+              auto block = std::min_element(available_block_maps[node].begin(),
+                                            available_block_maps[node].end());
+              if(block->cost < min_cost)
+                {
+                  min_block = block;
+                  min_cost = block->cost;
+                }
             }
         }
       min_block->cost += block->cost;
