@@ -33,7 +33,16 @@ int main(int argc, char *argv[])
                 {
                   std::cout << ",";
                 }
-              std::cout << m.block_indices[ii];
+              std::cout << "(" << m.block_indices[ii] << ",";
+              for(auto &cost: costs)
+                {
+                  if(cost.index==m.block_indices[ii])
+                    {
+                      std::cout << cost.cost;
+                      break;
+                    }
+                }
+              std::cout << ")";
             }
           std::cout << "}\n";
         }
