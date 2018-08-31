@@ -121,10 +121,15 @@ void SDP_Solver::initialize_schur_complement_solver(
   El::Zero(Q_group);
   for(auto &block : schur_off_diagonal_block.blocks)
     {
+      auto &block_timer(
+        timers.add_and_start("run.step.initializeSchurComplementSolver."
+                             "Qcomputation.Syrk.block_"
+                             + std::to_string(block.Height())));
       El::DistMatrix<El::BigFloat> Q_group_view(
         El::View(Q_group, 0, 0, block.Width(), block.Width()));
       El::Syrk(El::UpperOrLowerNS::UPPER, El::OrientationNS::TRANSPOSE,
                El::BigFloat(1), block, El::BigFloat(1), Q_group_view);
+      block_timer.stop();
     }
 
   syrk_timer.stop();
