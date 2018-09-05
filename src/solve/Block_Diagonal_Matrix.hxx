@@ -50,7 +50,6 @@ public:
     blocks.emplace_back(block_size, block_size, grid);
   }
 
-  // M = 0
   void set_zero()
   {
     for(auto &block : blocks)
@@ -68,7 +67,6 @@ public:
       }
   }
 
-  // M = M + A
   void operator+=(const Block_Diagonal_Matrix &A)
   {
     for(size_t b = 0; b < blocks.size(); b++)
@@ -77,7 +75,6 @@ public:
       }
   }
 
-  // M = M - A
   void operator-=(const Block_Diagonal_Matrix &A)
   {
     for(size_t b = 0; b < blocks.size(); b++)
@@ -86,7 +83,6 @@ public:
       }
   }
 
-  // M = c*M, where c is a constant
   void operator*=(const El::BigFloat &c)
   {
     for(auto &block : blocks)
@@ -95,7 +91,6 @@ public:
       }
   }
 
-  // Symmetrize M in place
   void symmetrize()
   {
     for(auto &block : blocks)
@@ -155,30 +150,12 @@ void block_diagonal_matrix_multiply(Block_Diagonal_Matrix &A,  // constant
 void lower_triangular_inverse_congruence(const Block_Diagonal_Matrix &L,
                                          Block_Diagonal_Matrix &A);
 
-// Minimum eigenvalue of A, via the QR method
-// Inputs:
-// - A : Block_Diagonal_Matrix with blocks of size n_b x n_b (will be
-//   overwritten)
-// - eigenvalues : vector of Vectors of length n_b (0 <= b < bMax)
-// - workspace : vector of Vectors of lenfth 3*n_b-1 (0 <= b < bMax)
-//   (temporary workspace)
-//
 El::BigFloat min_eigenvalue(Block_Diagonal_Matrix &A);
 
-// Compute L (lower triangular) such that A = L L^T
-// Inputs:
-// - A : dim x dim symmetric matrix (constant)
-// - L : dim x dim lower-triangular matrix (overwritten)
-//
 void cholesky_decomposition(const Block_Diagonal_Matrix &A,
                             Block_Diagonal_Matrix &L);
 
 // X := ACholesky^{-T} ACholesky^{-1} X = A^{-1} X
-// Input:
-// - ACholesky, a lower triangular Block_Diagonal_Matrix such that A =
-//   ACholesky ACholesky^T (constant)
-// Output:
-// - X (overwritten)
 void block_matrix_solve_with_cholesky(
-  const Block_Diagonal_Matrix &ACholesky, // constant
-  Block_Diagonal_Matrix &X);              // overwritten
+  const Block_Diagonal_Matrix &ACholesky,
+  Block_Diagonal_Matrix &X);
