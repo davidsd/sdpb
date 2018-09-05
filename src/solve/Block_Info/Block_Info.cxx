@@ -115,7 +115,9 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
                     {
                       ss << ",";
                     }
-                  ss << m.block_indices[ii];
+                  ss << "(" << m.block_indices[ii]
+                     << "," << schur_block_sizes[m.block_indices[ii]]
+                     << ")";
                 }
               ss << "}\n";
             }
