@@ -1,6 +1,6 @@
 #include "../Block_Info.hxx"
 
-#include "../../compute_block_grid_mapping.hxx"
+#include "../../../compute_block_grid_mapping.hxx"
 
 Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
                        const size_t &procs_per_node)
