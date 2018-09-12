@@ -24,7 +24,7 @@
 // the future.
 //
 
-#include "../Polynomial_Vector_Matrix.hxx"
+#include "Polynomial_Vector_Matrix.hxx"
 
 class Dual_Constraint_Group
 {

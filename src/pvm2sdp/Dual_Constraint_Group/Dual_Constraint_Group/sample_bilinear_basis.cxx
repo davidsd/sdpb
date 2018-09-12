@@ -17,7 +17,7 @@
 // - sampleScalings: the scale factors {s_0, s_1, ... }
 //
 
-#include "../../../Polynomial.hxx"
+#include "../../Polynomial.hxx"
 
 
 El::Matrix<El::BigFloat>
