@@ -81,7 +81,6 @@ void SDP_Solver::initialize_schur_complement_solver(
   cholesky_decomposition(schur_complement, schur_complement_cholesky);
   cholesky_timer.stop();
 
-  // SchurOffDiagonal = L'^{-1} FreeVarMatrix
   auto &free_var_matrix_timer(timers.add_and_start(
     "run.step.initializeSchurComplementSolver.free_var_matrix"));
   schur_off_diagonal_block = sdp.free_var_matrix;
@@ -89,58 +88,53 @@ void SDP_Solver::initialize_schur_complement_solver(
   if(debug)
     {
       El::Output(El::mpi::Rank(), " run.step.initializeSchurComplementSolver."
-                                  "blockMatrixLowerTriangularSolve");
+                                  "solveSyrk");
     }
-  auto &triangular_timer(
-    timers.add_and_start("run.step.initializeSchurComplementSolver."
-                         "blockMatrixLowerTriangularSolve"));
-  // FIXME: combine the solve and syrk together
-  lower_triangular_solve(schur_complement_cholesky, schur_off_diagonal_block);
-  triangular_timer.stop();
-
-  // Next, we compute
-  //
-  //   Q = (L'^{-1} B')^T (L'^{-1} B') - {{0, 0}, {0, 1}}
-  //
-  // Where B' = (B U).  We think of Q as containing four blocks called
-  // Upper/Lower-Left/Right.
-
-  if(debug)
-    {
-      El::Output(El::mpi::Rank(),
-                 " run.step.initializeSchurComplementSolver.Qcomputation");
-    }
-  auto &Q_computation_timer(
-    timers.add_and_start("run.step.initializeSchurComplementSolver."
-                         "Qcomputation"));
-
-  auto &syrk_timer(
-    timers.add_and_start("run.step.initializeSchurComplementSolver."
-                         "Qcomputation.Syrk"));
-
+  auto &Q_computation_timer(timers.add_and_start(
+    "run.step.initializeSchurComplementSolver.Qcomputation"));
   El::DistMatrix<El::BigFloat> Q_group(Q.Height(), Q.Width(), block_grid);
   El::Zero(Q_group);
-  auto block_index(block_info.block_indices.begin());
-  for(auto &block : schur_off_diagonal_block.blocks)
+  for(size_t block = 0; block < schur_complement_cholesky.blocks.size();
+      block++)
     {
-      auto &block_timer(
-        timers.add_and_start("run.step.initializeSchurComplementSolver."
-                             "Qcomputation.Syrk.block_"
-                             + std::to_string(*block_index)));
+      // SchurOffDiagonal = L'^{-1} FreeVarMatrix
+      auto &solve_timer(timers.add_and_start(
+        "run.step.initializeSchurComplementSolver."
+        "Qcomputation.solve_"
+        + std::to_string(block_info.block_indices[block])));
+
+      El::Trsm(El::LeftOrRightNS::LEFT, El::UpperOrLowerNS::LOWER,
+               El::OrientationNS::NORMAL, El::UnitOrNonUnitNS::NON_UNIT,
+               El::BigFloat(1), schur_complement_cholesky.blocks[block],
+               schur_off_diagonal_block.blocks[block]);
+
+      solve_timer.stop();
+
+      // Next, we compute
+      //
+      //   Q = (L'^{-1} B')^T (L'^{-1} B') - {{0, 0}, {0, 1}}
+      //
+      // Where B' = (B U).  We think of Q as containing four blocks
+      // called Upper/Lower-Left/Right.
+
+      auto &syrk_timer(timers.add_and_start(
+        "run.step.initializeSchurComplementSolver."
+        "Qcomputation.syrk_"
+        + std::to_string(block_info.block_indices[block])));
       El::DistMatrix<El::BigFloat> Q_group_view(
-        El::View(Q_group, 0, 0, block.Width(), block.Width()));
+        El::View(Q_group, 0, 0, schur_off_diagonal_block.blocks[block].Width(),
+                 schur_off_diagonal_block.blocks[block].Width()));
       El::Syrk(El::UpperOrLowerNS::UPPER, El::OrientationNS::TRANSPOSE,
-               El::BigFloat(1), block, El::BigFloat(1), Q_group_view);
-      block_timer.stop();
-      ++block_index;
+               El::BigFloat(1), schur_off_diagonal_block.blocks[block],
+               El::BigFloat(1), Q_group_view);
+      syrk_timer.stop();
     }
 
-  syrk_timer.stop();
   // Synchronize the results back to the global Q.
 
-  auto &synchronize_timer(
-    timers.add_and_start("run.step.initializeSchurComplementSolver."
-                         "Qcomputation.synchronize"));
+  auto &synchronize_timer(timers.add_and_start(
+    "run.step.initializeSchurComplementSolver.Qcomputation."
+    "synchronize"));
   // Optimize for when Q_group is on a single processor
   if(Q_group.Grid().Size() == 1)
     {

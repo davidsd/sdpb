@@ -21,11 +21,11 @@ void write_timing(const boost::filesystem::path &out_file,
           // integers.
           block_timings(index,0)
             = (timers.elapsed("run.step.initializeSchurComplementSolver."
-                             "Qcomputation.Syrk.block_"
-                              + std::to_string(index)))/1000000;
-          // + timers.elapsed("run.step.initializeSchurComplementSolver."
-          //                                     "Qcomputation.Syrk.block_" +
-          //                                     std::to_string(index));
+                             "Qcomputation.syrk_"
+                              + std::to_string(index))
+               + timers.elapsed("run.step.initializeSchurComplementSolver."
+                                "Qcomputation.solve_" +
+                                std::to_string(index)))/1000000;
         }
       El::AllReduce(block_timings, El::mpi::COMM_WORLD);
       if(El::mpi::Rank() == 0)
