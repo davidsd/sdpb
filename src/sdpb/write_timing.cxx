@@ -19,20 +19,21 @@ void write_timing(const boost::filesystem::path &out_file,
           // cpu_timer's native resolution is nanoseconds.  We round
           // to milliseconds so that we are only dealing with
           // integers.
-          block_timings(index,0)
+          block_timings(index, 0)
             = (timers.elapsed("run.step.initializeSchurComplementSolver."
-                             "Qcomputation.syrk_"
+                              "Qcomputation.syrk_"
                               + std::to_string(index))
                + timers.elapsed("run.step.initializeSchurComplementSolver."
-                                "Qcomputation.solve_" +
-                                std::to_string(index)))/1000000;
+                                "Qcomputation.solve_"
+                                + std::to_string(index)))
+              / 1000000;
         }
       El::AllReduce(block_timings, El::mpi::COMM_WORLD);
       if(El::mpi::Rank() == 0)
         {
           boost::filesystem::ofstream block_timings_file(
             block_timings_filename);
-          for(size_t row = 0; row < block_timings.Height(); ++row)
+          for(int64_t row = 0; row < block_timings.Height(); ++row)
             {
               block_timings_file << block_timings(row, 0) << "\n";
             }
