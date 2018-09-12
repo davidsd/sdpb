@@ -49,7 +49,7 @@ namespace
         El::DistMatrix<El::BigFloat> Y_transpose_aligned(
           block_size, block_size, Y_transpose.Grid());
         Y_transpose_aligned.AlignWith(X_submatrix);
-        El::Copy(Y_transpose,Y_transpose_aligned);
+        El::Copy(Y_transpose, Y_transpose_aligned);
         El::Hadamard(X_submatrix, Y_transpose_aligned, temp);
       }
     Axpy(El::BigFloat(0.25), temp, result_submatrix);
