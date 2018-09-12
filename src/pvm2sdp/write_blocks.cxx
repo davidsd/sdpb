@@ -1,4 +1,3 @@
-#include "../set_stream_precision.hxx"
 #include "Dual_Constraint_Group.hxx"
 #include "write_vector.hxx"
 
