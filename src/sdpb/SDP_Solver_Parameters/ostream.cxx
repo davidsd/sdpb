@@ -29,6 +29,7 @@ std::ostream &operator<<(std::ostream &os, const SDP_Solver_Parameters &p)
      << '\n'
      << "stepLengthReduction          = " << p.step_length_reduction << '\n'
      << "maxComplementarity           = " << p.max_complementarity << '\n'
-     << "procsPerNode                 = " << p.procs_per_node << '\n';
+     << "procsPerNode                 = " << p.procs_per_node << '\n'
+     << "debug                        = " << p.debug << '\n';
   return os;
 }
