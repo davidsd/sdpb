@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "Block_Info.hxx"
+#include "../Block_Info.hxx"
 #include "Block_Matrix.hxx"
 #include "Block_Vector.hxx"
 #include "Index_Tuple.hxx"

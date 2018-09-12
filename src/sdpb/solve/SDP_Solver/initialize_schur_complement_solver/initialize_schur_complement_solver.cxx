@@ -94,6 +94,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   auto &triangular_timer(
     timers.add_and_start("run.step.initializeSchurComplementSolver."
                          "blockMatrixLowerTriangularSolve"));
+  // FIXME: combine the solve and syrk together
   lower_triangular_solve(schur_complement_cholesky, schur_off_diagonal_block);
   triangular_timer.stop();
 
@@ -119,17 +120,19 @@ void SDP_Solver::initialize_schur_complement_solver(
 
   El::DistMatrix<El::BigFloat> Q_group(Q.Height(), Q.Width(), block_grid);
   El::Zero(Q_group);
+  auto block_index(block_info.block_indices.begin());
   for(auto &block : schur_off_diagonal_block.blocks)
     {
       auto &block_timer(
         timers.add_and_start("run.step.initializeSchurComplementSolver."
                              "Qcomputation.Syrk.block_"
-                             + std::to_string(block.Height())));
+                             + std::to_string(*block_index)));
       El::DistMatrix<El::BigFloat> Q_group_view(
         El::View(Q_group, 0, 0, block.Width(), block.Width()));
       El::Syrk(El::UpperOrLowerNS::UPPER, El::OrientationNS::TRANSPOSE,
                El::BigFloat(1), block, El::BigFloat(1), Q_group_view);
       block_timer.stop();
+      ++block_index;
     }
 
   syrk_timer.stop();

@@ -14,6 +14,8 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <list>
+#include <algorithm>
 
 // Timers map.  To time something, simply replace
 //
@@ -53,7 +55,7 @@ public:
     return os;
   }
 
-  void write_profile(std::string filename)
+  void write_profile(std::string filename) const
   {
     std::ofstream f(filename);
 
@@ -71,5 +73,19 @@ public:
         f << '\n';
       }
     f << "}" << '\n';
+  }
+
+  int64_t elapsed(const std::string &s) const
+  {
+    auto iter(std::find_if(
+      rbegin(), rend(),
+      [&s](const std::pair<std::string, boost::timer::cpu_timer> &timer) {
+        return timer.first == s;
+      }));
+    if(iter == rend())
+      {
+        throw std::runtime_error("Could not find timing for " + s);
+      }
+    return iter->second.elapsed().wall;
   }
 };

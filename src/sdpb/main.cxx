@@ -6,6 +6,8 @@
 //=======================================================================
 
 #include "SDP_Solver_Parameters.hxx"
+#include "Block_Info.hxx"
+#include "Timers.hxx"
 
 #include <El.hpp>
 
@@ -14,11 +16,16 @@
 
 namespace po = boost::program_options;
 
-int solve(const boost::filesystem::path &sdp_directory,
-          const boost::filesystem::path &out_file,
-          const boost::filesystem::path &checkpoint_file_in,
-          const boost::filesystem::path &checkpoint_file_out,
-          const SDP_Solver_Parameters &parameters);
+Timers
+solve(const boost::filesystem::path &sdp_directory,
+      const boost::filesystem::path &out_file,
+      const boost::filesystem::path &checkpoint_file_in,
+      const boost::filesystem::path &checkpoint_file_out,
+      const Block_Info &block_info, const SDP_Solver_Parameters &parameters);
+
+void write_timing(const boost::filesystem::path &out_file,
+                  const boost::filesystem::path &block_timings_filename,
+                  const Block_Info &block_info, const Timers &timers);
 
 int main(int argc, char **argv)
 {
@@ -27,9 +34,8 @@ int main(int argc, char **argv)
   int result(0);
   try
     {
-      boost::filesystem::path sdp_directory;
-      boost::filesystem::path out_file, checkpoint_file_in,
-        checkpoint_file_out, param_file;
+      boost::filesystem::path sdp_directory, out_file, checkpoint_file_in,
+        checkpoint_file_out, param_file, block_timing_filename;
 
       SDP_Solver_Parameters parameters;
 
@@ -53,7 +59,11 @@ int main(int argc, char **argv)
         po::value<boost::filesystem::path>(&checkpoint_file_in),
         "The initial checkpoint to load. Defaults to checkpointFile.")(
         "debug", po::value<bool>(&parameters.debug)->default_value(false),
-        "Write out debugging output.");
+        "Write out debugging output.")(
+        "blockTimingFile",
+        po::value<boost::filesystem::path>(&block_timing_filename),
+        "File to write per-block timing info for use when distributing "
+        "blocks over MPI.");
 
       // We set default parameters using El::BigFloat("1e-10",10)
       // rather than a straight double precision 1e-10 so that results
@@ -100,8 +110,7 @@ int main(int argc, char **argv)
         "maxRuntime",
         po::value<int>(&parameters.max_runtime)->default_value(86400),
         "Maximum amount of time to run the solver in seconds.")(
-        "procsPerNode",
-        po::value<int>(&parameters.procs_per_node)->required(),
+        "procsPerNode", po::value<int>(&parameters.procs_per_node)->required(),
         "Number of processers per node.  This is used for load balancing.")(
         "dualityGapThreshold",
         po::value<El::BigFloat>(&parameters.duality_gap_threshold)
@@ -177,7 +186,7 @@ int main(int argc, char **argv)
                   throw std::runtime_error("Could not open '"
                                            + param_file.string() + "'");
                 }
-                
+
               po::store(po::parse_config_file(ifs, solver_params_options),
                         variables_map);
             }
@@ -196,7 +205,7 @@ int main(int argc, char **argv)
                                        + sdp_directory.string()
                                        + "' is not a directory");
             }
-          
+
           if(!variables_map.count("outFile"))
             {
               out_file = sdp_directory;
@@ -245,8 +254,11 @@ int main(int argc, char **argv)
       El::gmp::SetPrecision(parameters.precision);
       El::mpfr::SetPrecision(parameters.precision);
 
-      result = solve(sdp_directory, out_file, checkpoint_file_in,
-                     checkpoint_file_out, parameters);
+      Block_Info block_info(sdp_directory, parameters.procs_per_node);
+      Timers timers(solve(sdp_directory, out_file, checkpoint_file_in,
+                          checkpoint_file_out, block_info, parameters));
+
+      write_timing(out_file, block_timing_filename, block_info, timers);
     }
   catch(std::exception &e)
     {
