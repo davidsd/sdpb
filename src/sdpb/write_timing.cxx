@@ -12,14 +12,17 @@ void write_timing(const boost::filesystem::path &out_file,
                        + std::to_string(El::mpi::Rank()));
   if(!block_timings_filename.empty())
     {
-      El::Matrix<double> block_timings(block_info.dimensions.size(), 1);
+      El::Matrix<int32_t> block_timings(block_info.dimensions.size(), 1);
       El::Zero(block_timings);
       for(auto &index : block_info.block_indices)
         {
-          block_timings(index, 0)
-            = timers.elapsed("run.step.initializeSchurComplementSolver."
+          // cpu_timer's native resolution is nanoseconds.  We round
+          // to milliseconds so that we are only dealing with
+          // integers.
+          block_timings(index,0)
+            = (timers.elapsed("run.step.initializeSchurComplementSolver."
                              "Qcomputation.Syrk.block_"
-                             + std::to_string(index));
+                              + std::to_string(index)))/1000000;
           // + timers.elapsed("run.step.initializeSchurComplementSolver."
           //                                     "Qcomputation.Syrk.block_" +
           //                                     std::to_string(index));
