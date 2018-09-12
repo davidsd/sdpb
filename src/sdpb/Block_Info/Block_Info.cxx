@@ -29,54 +29,43 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
     }
 
   const size_t num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
+  const boost::filesystem::path block_costs_file(sdp_directory/"block_timings");
   std::vector<Block_Cost> block_costs;
-  // Two large costs are
-  // 1) Solving for schur_off_diag.
-  // 2) Squaring schur_off_diag to compute Q.
-  //
-  // If 'n' is the size o3 the schur block, and 'q' is the size of Q,
-  // then the cost of 1) is
-  //
-  //   alpha*n*n*q
-  //
-  // while the cost of 2) is proportional to
-  //
-  //   beta*n*q*q
-  //
-  // where alpha and beta are scaling constants.  The total cost is then
-  //
-  //   q*n*(beta*q + alpha*n)
-  //
-  // We are only interested in the cost of blocks relative to each
-  // other, so we can ignore the overall scaling of q
-  //
-  //   n*(beta*q + alpha*n)
-  //
-  // The ratio of beta/alpha depends on things like the precision and
-  // the exact CPU being used.  Empirically, I have measured values
-  // for beta/alpha between 1.05 and 1.17, so we use 1.1.  To keep
-  // everything as integers, we set beta=11, alpha=10.
-
-  const size_t beta(11), alpha(10);
-  for(size_t block = 0; block < schur_block_sizes.size(); ++block)
+  if(boost::filesystem::exists(block_costs_file))
     {
-      block_costs.emplace_back(
-        schur_block_sizes[block]
-          * (beta * q + alpha * schur_block_sizes[block]),
-        block);
+      size_t index(0), cost;
+      boost::filesystem::ifstream costs(block_costs_file);
+      costs >> cost;
+      while(costs.good())
+        {
+          block_costs.emplace_back(cost,index);
+          ++index;
+          costs >> cost;
+        }
+      if(block_costs.size()!=schur_block_sizes.size())
+        {
+          throw std::runtime_error("Incompatible number of entries in '"
+                                   + (sdp_directory/"costs").string()
+                                   + "'. Expected "
+                                   + std::to_string(schur_block_sizes.size())
+                                   + " but found "
+                                   + std::to_string(block_costs.size()));
+        }
     }
-
-  // This simulates round-robin by making everything cost the same but
-  // with a round-robin order.
-  // for(size_t rank = 0; rank < num_procs; ++rank)
-  //   {
-  //     for(size_t block = rank; block < schur_block_sizes.size(); block +=
-  //     num_procs)
-  //       {
-  //         block_costs.emplace_back(1, block);
-  //       }
-  //   }
-
+  else
+    {
+      // This simulates round-robin by making everything cost the same
+      // but with a round-robin order.
+      for(size_t rank = 0; rank < num_procs; ++rank)
+        {
+          for(size_t block = rank; block < schur_block_sizes.size(); block +=
+                num_procs)
+            {
+              block_costs.emplace_back(1, block);
+            }
+        }
+    }
+  
   // Reverse sort, with largest first
   std::sort(block_costs.rbegin(), block_costs.rend());
   if(num_procs % procs_per_node != 0)
