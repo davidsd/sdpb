@@ -65,43 +65,34 @@ void SDP_Solver::initialize_schur_complement_solver(
                            bilinear_pairings_Y, schur_complement);
   schur_complement_timer.stop();
 
-  // compute SchurComplementCholesky = L', where
-  //
-  //   L' L'^T = S'
-  //
-  if(debug)
-    {
-      El::Output(
-        El::mpi::Rank(),
-        " run.step.initializeSchurComplementSolver.choleskyDecomposition");
-    }
-  auto &cholesky_timer(timers.add_and_start(
-    "run.step.initializeSchurComplementSolver.choleskyDecomposition"));
-  cholesky_decomposition(schur_complement, schur_complement_cholesky);
-  cholesky_timer.stop();
-
-  auto &free_var_matrix_timer(timers.add_and_start(
-    "run.step.initializeSchurComplementSolver.free_var_matrix"));
-  schur_off_diagonal = sdp.free_var_matrix;
-  free_var_matrix_timer.stop();
   if(debug)
     {
       El::Output(El::mpi::Rank(), " run.step.initializeSchurComplementSolver."
-                                  "solveSyrk");
+                                  "Qcomputation");
     }
   auto &Q_computation_timer(timers.add_and_start(
     "run.step.initializeSchurComplementSolver.Qcomputation"));
+  schur_off_diagonal.blocks.clear();
   El::DistMatrix<El::BigFloat> Q_group(Q.Height(), Q.Width(), block_grid);
   El::Zero(Q_group);
   for(size_t block = 0; block < schur_complement_cholesky.blocks.size();
       block++)
     {
+      auto &cholesky_timer(timers.add_and_start(
+        "run.step.initializeSchurComplementSolver.Qcomputation.cholesky_"
+        + std::to_string(block_info.block_indices[block])));
+      schur_complement_cholesky.blocks[block] = schur_complement.blocks[block];
+      Cholesky(El::UpperOrLowerNS::LOWER,
+               schur_complement_cholesky.blocks[block]);
+      cholesky_timer.stop();
+
       // SchurOffDiagonal = L'^{-1} FreeVarMatrix
       auto &solve_timer(timers.add_and_start(
         "run.step.initializeSchurComplementSolver."
         "Qcomputation.solve_"
         + std::to_string(block_info.block_indices[block])));
 
+      schur_off_diagonal.blocks.push_back(sdp.free_var_matrix.blocks[block]);
       El::Trsm(El::LeftOrRightNS::LEFT, El::UpperOrLowerNS::LOWER,
                El::OrientationNS::NORMAL, El::UnitOrNonUnitNS::NON_UNIT,
                El::BigFloat(1), schur_complement_cholesky.blocks[block],
