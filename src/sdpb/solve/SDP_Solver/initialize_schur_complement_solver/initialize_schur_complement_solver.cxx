@@ -1,4 +1,3 @@
-#include "../../lower_triangular_solve.hxx"
 #include "../../SDP_Solver.hxx"
 #include "../../../Timers.hxx"
 
