@@ -14,8 +14,9 @@ void SDP_Solver::print_iteration(
 {
   if(El::mpi::Rank() == 0)
     {
-      std::cout << std::left << std::setw(3) << iteration << "  "
-                << std::setw(8)
+      std::cout << std::left << std::setw(4) << iteration << "  "
+
+                << std::right << std::setw(8)
                 << std::chrono::duration_cast<std::chrono::seconds>(
                      std::chrono::high_resolution_clock::now()
                      - solver_start_time)

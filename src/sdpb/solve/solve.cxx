@@ -12,12 +12,12 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/filesystem.hpp>
 
-Timers solve(const boost::filesystem::path &sdp_directory,
-             const boost::filesystem::path &out_file,
-             const boost::filesystem::path &checkpoint_file_in,
-             const boost::filesystem::path &checkpoint_file_out,
-             const Block_Info &block_info,
-             const SDP_Solver_Parameters &parameters)
+Timers
+solve(const boost::filesystem::path &sdp_directory,
+      const boost::filesystem::path &out_file,
+      const boost::filesystem::path &checkpoint_file_in,
+      const boost::filesystem::path &checkpoint_file_out,
+      const Block_Info &block_info, const SDP_Solver_Parameters &parameters)
 {
   if(El::mpi::Rank() == 0)
     {
@@ -49,8 +49,7 @@ Timers solve(const boost::filesystem::path &sdp_directory,
     {
       std::cout.precision(
         std::ceil(El::gmp::Precision() * std::log(2.0) / std::log(10.0)));
-      std::cout << "-----" << std::setfill('-') << std::setw(116) << std::left
-                << reason << '\n'
+      std::cout << "-----" << reason << "-----\n"
                 << '\n'
                 << "primalObjective = " << solver.primal_objective << '\n'
                 << "dualObjective   = " << solver.dual_objective << '\n'

@@ -26,6 +26,6 @@ struct Timer
 
 inline std::ostream &operator<<(std::ostream &os, const Timer &timer)
 {
-  os << timer.elapsed_seconds();
+  os << (timer.elapsed_milliseconds()/1000.0);
   return os;
 }
