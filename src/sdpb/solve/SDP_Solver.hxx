@@ -106,7 +106,7 @@ private:
     const Block_Diagonal_Matrix &bilinear_pairings_Y,
     const El::Grid &block_grid, const bool &debug,
     Block_Diagonal_Matrix &schur_complement_cholesky,
-    Block_Matrix &schur_off_diagonal_block, El::DistMatrix<El::BigFloat> &Q,
+    Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
     Timers &timers);
 
   // Compute (dx, dX, dy, dY), given the current mu, a reduction

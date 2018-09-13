@@ -48,7 +48,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
   const Block_Diagonal_Matrix &bilinear_pairings_Y, const El::Grid &block_grid,
   const bool &debug, Block_Diagonal_Matrix &schur_complement_cholesky,
-  Block_Matrix &schur_off_diagonal_block, El::DistMatrix<El::BigFloat> &Q,
+  Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
   Timers &timers)
 {
   auto &schur_complement_timer(timers.add_and_start(
@@ -82,7 +82,7 @@ void SDP_Solver::initialize_schur_complement_solver(
 
   auto &free_var_matrix_timer(timers.add_and_start(
     "run.step.initializeSchurComplementSolver.free_var_matrix"));
-  schur_off_diagonal_block = sdp.free_var_matrix;
+  schur_off_diagonal = sdp.free_var_matrix;
   free_var_matrix_timer.stop();
   if(debug)
     {
@@ -105,7 +105,7 @@ void SDP_Solver::initialize_schur_complement_solver(
       El::Trsm(El::LeftOrRightNS::LEFT, El::UpperOrLowerNS::LOWER,
                El::OrientationNS::NORMAL, El::UnitOrNonUnitNS::NON_UNIT,
                El::BigFloat(1), schur_complement_cholesky.blocks[block],
-               schur_off_diagonal_block.blocks[block]);
+               schur_off_diagonal.blocks[block]);
 
       solve_timer.stop();
 
@@ -121,10 +121,10 @@ void SDP_Solver::initialize_schur_complement_solver(
         "Qcomputation.syrk_"
         + std::to_string(block_info.block_indices[block])));
       El::DistMatrix<El::BigFloat> Q_group_view(
-        El::View(Q_group, 0, 0, schur_off_diagonal_block.blocks[block].Width(),
-                 schur_off_diagonal_block.blocks[block].Width()));
+        El::View(Q_group, 0, 0, schur_off_diagonal.blocks[block].Width(),
+                 schur_off_diagonal.blocks[block].Width()));
       El::Syrk(El::UpperOrLowerNS::UPPER, El::OrientationNS::TRANSPOSE,
-               El::BigFloat(1), schur_off_diagonal_block.blocks[block],
+               El::BigFloat(1), schur_off_diagonal.blocks[block],
                El::BigFloat(1), Q_group_view);
       syrk_timer.stop();
     }
