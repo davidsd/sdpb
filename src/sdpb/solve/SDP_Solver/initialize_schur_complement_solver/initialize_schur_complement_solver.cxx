@@ -177,11 +177,11 @@ void SDP_Solver::initialize_schur_complement_solver(
   if(debug)
     {
       El::Output(El::mpi::Rank(),
-                 " run.step.initializeSchurComplementSolver.LUDecomposition");
+                 " run.step.initializeSchurComplementSolver.Cholesky");
     }
-  auto &LU_decomposition_timer(
+  auto &Cholesky_timer(
     timers.add_and_start("run.step.initializeSchurComplementSolver."
-                         "LUDecomposition"));
+                         "Cholesky"));
   Cholesky(El::UpperOrLowerNS::LOWER, Q);
-  LU_decomposition_timer.stop();
+  Cholesky_timer.stop();
 }
