@@ -109,18 +109,23 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
                     block_info.psd_matrix_block_sizes.end(), size_t(0)));
 
   initialize_timer.stop();
-  boost::timer::cpu_timer checkpoint_timer;
+  auto last_checkpoint_time(std::chrono::high_resolution_clock::now());
   for(int iteration = 1;; iteration++)
     {
       /// FIXME: This has to use something that is guaranteed to be
       /// the same for all processors.
-      if(checkpoint_timer.elapsed().wall
-         >= parameters.checkpoint_interval * 1000000000LL)
+      if(std::chrono::duration_cast<std::chrono::seconds>(
+           std::chrono::high_resolution_clock::now() - last_checkpoint_time)
+           .count()
+         >= parameters.checkpoint_interval)
         {
           save_checkpoint(checkpoint_file);
-          checkpoint_timer.start();
+          last_checkpoint_time = std::chrono::high_resolution_clock::now();
         }
-      if(solver_timer.elapsed().wall >= parameters.max_runtime * 1000000000LL)
+      if(std::chrono::duration_cast<std::chrono::seconds>(
+           std::chrono::high_resolution_clock::now() - solver_timer.start_time)
+           .count()
+         >= parameters.max_runtime)
         {
           result = SDP_Solver_Terminate_Reason::MaxRuntimeExceeded;
         }
@@ -327,7 +332,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
             El::Output(El::mpi::Rank(),
                        " run.step.initializeSchurComplementSolver");
           }
-        auto &initialize_timer(timers.add_and_start("run.step.initializeSchurComplementSolver"));
+        auto &initialize_timer(
+          timers.add_and_start("run.step.initializeSchurComplementSolver"));
         initialize_schur_complement_solver(
           block_info, sdp, bilinear_pairings_X_inv, bilinear_pairings_Y, grid,
           parameters.debug, schur_complement_cholesky, schur_off_diagonal, Q,
@@ -340,7 +346,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
             El::Output(El::mpi::Rank(),
                        " run.step.frobenius_product_symmetric");
           }
-        auto &frobenius_timer(timers.add_and_start("run.step.frobenius_product_symmetric"));
+        auto &frobenius_timer(
+          timers.add_and_start("run.step.frobenius_product_symmetric"));
         mu = frobenius_product_symmetric(X, Y) / total_psd_rows;
         frobenius_timer.stop();
         if(mu > parameters.max_complementarity)
@@ -354,7 +361,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
             El::Output(El::mpi::Rank(),
                        " run.step.predictor_centering_parameter");
           }
-        auto &predictor_timer(timers.add_and_start("run.step.predictor_centering_parameter"));
+        auto &predictor_timer(
+          timers.add_and_start("run.step.predictor_centering_parameter"));
         // Compute the predictor solution for (dx, dX, dy, dY)
         beta_predictor = predictor_centering_parameter(
           parameters, is_primal_feasible && is_dual_feasible);
@@ -365,7 +373,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
             El::Output(El::mpi::Rank(),
                        " run.step.computeSearchDirection(betaPredictor)");
           }
-        auto &search_predictor_timer(timers.add_and_start("run.step.computeSearchDirection(betaPredictor)"));
+        auto &search_predictor_timer(timers.add_and_start(
+          "run.step.computeSearchDirection(betaPredictor)"));
         compute_search_direction(block_info, sdp, schur_complement_cholesky,
                                  schur_off_diagonal, X_cholesky,
                                  beta_predictor, mu, false, Q, dx, dX, dy, dY);
@@ -377,7 +386,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
             El::Output(El::mpi::Rank(),
                        " run.step.corrector_centering_parameter");
           }
-        auto &corrector_timer(timers.add_and_start("run.step.corrector_centering_parameter"));
+        auto &corrector_timer(
+          timers.add_and_start("run.step.corrector_centering_parameter"));
         beta_corrector = corrector_centering_parameter(
           parameters, X, dX, Y, dY, mu, is_primal_feasible && is_dual_feasible,
           total_psd_rows);
@@ -387,7 +397,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
             El::Output(El::mpi::Rank(),
                        " run.step.computeSearchDirection(betaCorrector)");
           }
-        auto &search_corrector_timer(timers.add_and_start("run.step.computeSearchDirection(betaCorrector)"));
+        auto &search_corrector_timer(timers.add_and_start(
+          "run.step.computeSearchDirection(betaCorrector)"));
         compute_search_direction(block_info, sdp, schur_complement_cholesky,
                                  schur_off_diagonal, X_cholesky,
                                  beta_corrector, mu, true, Q, dx, dX, dy, dY);
@@ -398,7 +409,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
         {
           El::Output(El::mpi::Rank(), " run.step.stepLength(XCholesky)");
         }
-      auto &step_length_X_timer(timers.add_and_start("run.step.stepLength(XCholesky)"));
+      auto &step_length_X_timer(
+        timers.add_and_start("run.step.stepLength(XCholesky)"));
       primal_step_length
         = step_length(X_cholesky, dX, parameters.step_length_reduction);
       step_length_X_timer.stop();
@@ -407,7 +419,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
         {
           El::Output(El::mpi::Rank(), " run.step.stepLength(YCholesky)");
         }
-      auto &step_length_Y_timer(timers.add_and_start("run.step.stepLength(YCholesky)"));
+      auto &step_length_Y_timer(
+        timers.add_and_start("run.step.stepLength(YCholesky)"));
       dual_step_length
         = step_length(Y_cholesky, dY, parameters.step_length_reduction);
       step_length_Y_timer.stop();
@@ -422,7 +435,7 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
 
       print_iteration(iteration, mu, primal_step_length, dual_step_length,
                       beta_corrector, sdp.dual_objective_b.Height(),
-                      solver_timer);
+                      solver_timer.start_time);
       // Update the primal point (x, X) += primalStepLength*(dx, dX)
       for(size_t block = 0; block < x.blocks.size(); ++block)
         {

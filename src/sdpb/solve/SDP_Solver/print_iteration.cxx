@@ -5,24 +5,22 @@
 
 #include <iostream>
 
-void SDP_Solver::print_iteration(const int &iteration, const El::BigFloat &mu,
-                                 const El::BigFloat &primal_step_length,
-                                 const El::BigFloat &dual_step_length,
-                                 const El::BigFloat &beta_corrector,
-                                 const size_t &dual_objective_b_height,
-                                 const boost::timer::cpu_timer &solver_runtime)
+void SDP_Solver::print_iteration(
+  const int &iteration, const El::BigFloat &mu,
+  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
+  const El::BigFloat &beta_corrector, const size_t &dual_objective_b_height,
+  const std::chrono::time_point<std::chrono::high_resolution_clock>
+    &solver_start_time)
 {
   if(El::mpi::Rank() == 0)
     {
-      boost::posix_time::time_duration td(
-        boost::posix_time::microseconds(solver_runtime.elapsed().wall)
-        / 1000);
-
-      std::stringstream ss;
-      ss << td;
-
       std::cout << std::left << std::setw(3) << iteration << "  "
-                << ss.str().substr(0, 8) << "  "
+                << std::setw(8)
+                << std::chrono::duration_cast<std::chrono::seconds>(
+                     std::chrono::high_resolution_clock::now()
+                     - solver_start_time)
+                     .count()
+                << " "
 
                 << std::left << std::setw(8) << std::setprecision(2)
                 << std::showpoint << static_cast<double>(mu) << " "

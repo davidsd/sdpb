@@ -87,12 +87,13 @@ public:
                      const boost::filesystem::path &out_file);
   void print_header();
 
-  void print_iteration(const int &iteration, const El::BigFloat &mu,
-                       const El::BigFloat &primal_step_length,
-                       const El::BigFloat &dual_step_length,
-                       const El::BigFloat &beta_corrector,
-                       const size_t &dual_objective_b_height,
-                       const boost::timer::cpu_timer &solver_runtime);
+  void print_iteration(
+    const int &iteration, const El::BigFloat &mu,
+    const El::BigFloat &primal_step_length,
+    const El::BigFloat &dual_step_length, const El::BigFloat &beta_corrector,
+    const size_t &dual_objective_b_height,
+    const std::chrono::time_point<std::chrono::high_resolution_clock>
+      &solver_start_time);
 
   void
   test_multiplication(const int m_init, const int m_fin, const int m_step);
