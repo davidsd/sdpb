@@ -9,7 +9,8 @@ void read_objectives(const boost::filesystem::path &sdp_directory,
                      const El::Grid &grid, El::BigFloat &objective_const,
                      El::DistMatrix<El::BigFloat> &dual_objective_b);
 void read_bilinear_bases(
-  const boost::filesystem::path &sdp_directory, const El::Grid &grid,
+  const boost::filesystem::path &sdp_directory,
+  const std::vector<size_t> &block_indices, const El::Grid &grid,
   std::vector<El::Matrix<El::BigFloat>> &bilinear_bases_local,
   std::vector<El::DistMatrix<El::BigFloat>> &bilinear_bases_dist);
 
@@ -25,8 +26,8 @@ SDP::SDP(const boost::filesystem::path &sdp_directory,
          const Block_Info &block_info, const El::Grid &grid)
 {
   read_objectives(sdp_directory, grid, objective_const, dual_objective_b);
-  read_bilinear_bases(sdp_directory, grid, bilinear_bases_local,
-                      bilinear_bases_dist);
+  read_bilinear_bases(sdp_directory, block_info.block_indices, grid,
+                      bilinear_bases_local, bilinear_bases_dist);
   read_primal_objective_c(sdp_directory, block_info.block_indices, grid,
                           primal_objective_c);
   read_free_var_matrix(sdp_directory, block_info.block_indices, grid,

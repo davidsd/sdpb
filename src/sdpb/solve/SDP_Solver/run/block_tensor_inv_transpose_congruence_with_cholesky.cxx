@@ -12,9 +12,11 @@ void block_tensor_inv_transpose_congruence_with_cholesky(
   auto work(workspace.begin());
   auto X_cholesky_block(X_cholesky.blocks.begin());
   auto bilinear_pairings_X_inv_block(bilinear_pairings_X_inv.blocks.begin());
+  auto bilinear_bases_block(bilinear_bases.begin());
+
   for(auto &block_index : block_indices)
     {
-      for(size_t b = 2 * block_index; b < 2 * block_index + 2; b++)
+      for(size_t parity = 0; parity < 2; ++parity)
         {
           // FIXME: This should be a constant, not computed over and over.
           // Set up the workspace to have copies of bilinear_bases[b]
@@ -22,21 +24,20 @@ void block_tensor_inv_transpose_congruence_with_cholesky(
           for(int64_t row = 0; row < work->LocalHeight(); ++row)
             {
               size_t global_row(work->GlobalRow(row));
-              size_t row_block(global_row / bilinear_bases[b].Height());
+              size_t row_block(global_row / bilinear_bases_block->Height());
 
               for(int64_t column = 0; column < work->LocalWidth(); ++column)
                 {
                   size_t global_column(work->GlobalCol(column));
                   size_t column_block(global_column
-                                      / bilinear_bases[b].Width());
-
+                                      / bilinear_bases_block->Width());
                   work->SetLocal(
                     row, column,
                     row_block != column_block
                       ? El::BigFloat(0)
-                      : bilinear_bases[b](
-                          global_row % bilinear_bases[b].Height(),
-                          global_column % bilinear_bases[b].Width()));
+                      : (*bilinear_bases_block)(
+                          global_row % bilinear_bases_block->Height(),
+                          global_column % bilinear_bases_block->Width()));
                 }
             }
 
@@ -55,6 +56,7 @@ void block_tensor_inv_transpose_congruence_with_cholesky(
           ++work;
           ++X_cholesky_block;
           ++bilinear_pairings_X_inv_block;
+          ++bilinear_bases_block;
         }
     }
 }

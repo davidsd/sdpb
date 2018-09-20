@@ -34,6 +34,7 @@ void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
   auto dy_block(dy.blocks.begin());
 
   auto Z_block(Z.blocks.begin());
+  auto bilinear_bases_block(sdp.bilinear_bases_dist.begin());
   for(auto &block_index : block_info.block_indices)
     {
       // dx = -dual_residues
@@ -44,9 +45,9 @@ void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
       // dx[p] -= Tr(A_p Z)
       // Not sure whether it is better to first loop over blocks in
       // the result or over sub-blocks in Z
-      for(size_t bb = 2 * block_index; bb < 2 * block_index + 2; ++bb)
+      for(size_t parity = 0; parity < 2; ++parity)
         {
-          const size_t Z_block_size(sdp.bilinear_bases_dist[bb].Height());
+          const size_t Z_block_size(bilinear_bases_block->Height());
           El::DistMatrix<El::BigFloat> ones(Z_block->Grid());
           El::Ones(ones, Z_block_size, 1);
 
@@ -68,10 +69,10 @@ void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
 
                 El::Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL,
                          El::BigFloat(1), Z_sub_block,
-                         sdp.bilinear_bases_dist[bb], El::BigFloat(0),
+                         *bilinear_bases_block, El::BigFloat(0),
                          Z_times_q);
 
-                El::Hadamard(Z_times_q, sdp.bilinear_bases_dist[bb], q_Z_q);
+                El::Hadamard(Z_times_q, *bilinear_bases_block, q_Z_q);
 
                 const size_t dx_row_offset(
                   ((column_block * (column_block + 1)) / 2 + row_block)
@@ -83,6 +84,7 @@ void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
                          ones, El::BigFloat(1), dx_sub_block);
               }
           ++Z_block;
+          ++bilinear_bases_block;
         }
 
       // dy = dualObjective - (FreeVarMatrix^T x)
