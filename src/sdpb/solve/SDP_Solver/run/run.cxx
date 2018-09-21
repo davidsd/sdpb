@@ -11,14 +11,12 @@ El::BigFloat dot(const Block_Vector &a, const Block_Vector &b);
 void block_tensor_inv_transpose_congruence_with_cholesky(
   const Block_Diagonal_Matrix &X_cholesky,
   const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases,
-  const std::vector<size_t> &block_indices,
   std::vector<El::DistMatrix<El::BigFloat>> &workspace,
   Block_Diagonal_Matrix &result);
 
 void block_tensor_transpose_congruence(
   const Block_Diagonal_Matrix &Y,
   const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases,
-  const std::vector<size_t> &block_indices,
   std::vector<El::DistMatrix<El::BigFloat>> &workspace,
   Block_Diagonal_Matrix &result);
 
@@ -206,8 +204,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
       auto &inv_transpose_congruence_timer(timers.add_and_start(
         "run.blockTensorInvTransposeCongruenceWithCholesky"));
       block_tensor_inv_transpose_congruence_with_cholesky(
-        X_cholesky, sdp.bilinear_bases_local, block_info.block_indices,
-        bilinear_pairings_workspace, bilinear_pairings_X_inv);
+        X_cholesky, sdp.bilinear_bases_local, bilinear_pairings_workspace,
+        bilinear_pairings_X_inv);
       inv_transpose_congruence_timer.stop();
 
       if(parameters.debug)
@@ -216,9 +214,9 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
         }
       auto &transpose_congruence_timer(
         timers.add_and_start("run.blockTensorTransposeCongruence"));
-      block_tensor_transpose_congruence(
-        Y, sdp.bilinear_bases_local, block_info.block_indices,
-        bilinear_pairings_workspace, bilinear_pairings_Y);
+      block_tensor_transpose_congruence(Y, sdp.bilinear_bases_local,
+                                        bilinear_pairings_workspace,
+                                        bilinear_pairings_Y);
       transpose_congruence_timer.stop();
 
       // dualResidues[p] = primalObjective[p] - Tr(A_p Y) - (FreeVarMatrix y)_p,
