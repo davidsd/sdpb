@@ -31,6 +31,7 @@ public:
                                  const El::Grid &grid)
   {
     bool scale_index(num_schur_blocks != block_sizes.size());
+    blocks.reserve(block_indices.size() * (scale_index ? 2 : 1));
     for(auto &block_index : block_indices)
       {
         if(scale_index)

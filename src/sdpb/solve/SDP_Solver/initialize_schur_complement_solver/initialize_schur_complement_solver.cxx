@@ -72,7 +72,10 @@ void SDP_Solver::initialize_schur_complement_solver(
     }
   auto &Q_computation_timer(timers.add_and_start(
     "run.step.initializeSchurComplementSolver.Qcomputation"));
+
   schur_off_diagonal.blocks.clear();
+  schur_off_diagonal.blocks.reserve(schur_complement_cholesky.blocks.size());
+
   El::DistMatrix<El::BigFloat> Q_group(Q.Height(), Q.Width(), block_grid);
   El::Zero(Q_group);
   for(size_t block = 0; block < schur_complement_cholesky.blocks.size();

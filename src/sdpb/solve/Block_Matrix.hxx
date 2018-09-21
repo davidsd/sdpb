@@ -25,6 +25,7 @@ struct Block_Matrix
                const size_t &num_schur_blocks, const El::Grid &grid)
   {
     bool scale_index(num_schur_blocks != block_heights.size());
+    blocks.reserve(block_indices.size() * (scale_index ? 2 : 1));
     for(auto &block_index : block_indices)
       {
         if(scale_index)

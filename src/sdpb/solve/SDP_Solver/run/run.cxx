@@ -93,6 +93,7 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
 
   // Additional workspace variables used in step_length()
   std::vector<El::DistMatrix<El::BigFloat>> bilinear_pairings_workspace;
+  bilinear_pairings_workspace.reserve(X.blocks.size());
   {
     auto bilinear_pairings_X_inv_block(bilinear_pairings_X_inv.blocks.begin());
     for(auto &X_block : X.blocks)

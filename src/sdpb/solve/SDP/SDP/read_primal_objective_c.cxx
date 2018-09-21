@@ -8,6 +8,7 @@ void read_primal_objective_c(const boost::filesystem::path &sdp_directory,
                              const El::Grid &grid,
                              Block_Vector &primal_objective_c)
 {
+  primal_objective_c.blocks.reserve(block_indices.size());
   for(auto &block_index : block_indices)
     {
       boost::filesystem::ifstream primal_stream(

@@ -53,6 +53,7 @@ void read_bilinear_bases(
           }
       }
 
+  bilinear_bases_dist.reserve(bilinear_bases_local.size());
   for(auto &local : bilinear_bases_local)
     {
       bilinear_bases_dist.emplace_back(local.Height(), local.Width(), grid);
