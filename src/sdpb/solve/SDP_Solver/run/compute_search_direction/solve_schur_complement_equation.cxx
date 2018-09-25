@@ -44,7 +44,7 @@ void solve_schur_complement_equation(
   dy_dist.ProcessQueues();
 
   // dyExtended = Q^{-1} dyExtended
-  El::cholesky::SolveAfter(El::UpperOrLowerNS::LOWER,
+  El::cholesky::SolveAfter(El::UpperOrLowerNS::UPPER,
                            El::OrientationNS::NORMAL, Q, dy_dist);
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> dy_local(dy_dist);
 

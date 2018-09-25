@@ -143,9 +143,6 @@ void SDP_Solver::initialize_schur_complement_solver(
     timers.add_and_start("run.step.initializeSchurComplementSolver."
                          "Cholesky"));
 
-  // FIXME: This seems superfluous.  We should be able to run Cholesky
-  // with just the upper without a symmetrizing step.
-  El::MakeSymmetric(El::UpperOrLower::UPPER, Q);
-  Cholesky(El::UpperOrLowerNS::LOWER, Q);
+  Cholesky(El::UpperOrLowerNS::UPPER, Q);
   Cholesky_timer.stop();
 }
