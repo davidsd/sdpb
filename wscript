@@ -44,6 +44,8 @@ def build(bld):
                         'src/sdpb/solve/SDP_Solver/run/block_tensor_transpose_congruence.cxx',
                         'src/sdpb/solve/SDP_Solver/initialize_schur_complement_solver/initialize_schur_complement_solver.cxx',
                         'src/sdpb/solve/SDP_Solver/initialize_schur_complement_solver/compute_schur_complement.cxx',
+                        'src/sdpb/solve/SDP_Solver/initialize_schur_complement_solver/synchronize/synchronize.cxx',
+                        'src/sdpb/solve/SDP_Solver/initialize_schur_complement_solver/synchronize/reduce_and_scatter.cxx',
                         'src/sdpb/solve/SDP_Solver/print_iteration.cxx',
                         'src/sdpb/solve/SDP_Solver/save_solution.cxx',
                         'src/sdpb/solve/SDP_Solver/run/compute_search_direction/compute_search_direction.cxx',

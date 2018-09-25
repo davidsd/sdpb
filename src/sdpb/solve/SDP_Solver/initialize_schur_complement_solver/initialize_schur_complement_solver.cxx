@@ -43,6 +43,9 @@ void compute_schur_complement(
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
   Block_Diagonal_Matrix &schur_complement);
 
+void synchronize(const El::DistMatrix<El::BigFloat> &Q_group,
+                 El::DistMatrix<El::BigFloat> &Q, Timers &timers);
+  
 void SDP_Solver::initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
@@ -123,58 +126,12 @@ void SDP_Solver::initialize_schur_complement_solver(
       syrk_timer.stop();
     }
 
-  // Synchronize the results back to the global Q.
-
-  auto &synchronize_timer(timers.add_and_start(
-    "run.step.initializeSchurComplementSolver.Qcomputation."
-    "synchronize"));
-  // Optimize for when Q_group is on a single processor
-  if(Q_group.Grid().Size() == 1)
+  if(debug)
     {
-      El::AllReduce(Q_group, El::mpi::COMM_WORLD);
-      El::MakeSymmetric(El::UpperOrLower::UPPER, Q_group);
-
-      for(int64_t row = 0; row < Q.LocalHeight(); ++row)
-        {
-          int64_t global_row(Q.GlobalRow(row));
-          for(int64_t column = 0; column < Q.LocalWidth(); ++column)
-            {
-              int64_t global_column(Q.GlobalCol(column));
-              Q.SetLocal(row, column,
-                         Q_group.GetLocal(global_row, global_column));
-            }
-        }
+      El::Output(El::mpi::Rank(), " run.step.initializeSchurComplementSolver."
+                                  "Qcomputation.synchronize");
     }
-  else
-    {
-      El::Matrix<El::BigFloat> Q_local(Q.Height(), Q.Width());
-      El::Zero(Q_local);
-
-      for(int64_t row = 0; row < Q_group.LocalHeight(); ++row)
-        {
-          int64_t global_row(Q_group.GlobalRow(row));
-          for(int64_t column = 0; column < Q_group.LocalWidth(); ++column)
-            {
-              int64_t global_column(Q_group.GlobalCol(column));
-              Q_local(global_row, global_column)
-                = Q_group.GetLocal(row, column);
-            }
-        }
-
-      El::AllReduce(Q_local, El::mpi::COMM_WORLD);
-      El::MakeSymmetric(El::UpperOrLower::UPPER, Q_local);
-
-      for(int64_t row = 0; row < Q.LocalHeight(); ++row)
-        {
-          int64_t global_row(Q.GlobalRow(row));
-          for(int64_t column = 0; column < Q.LocalWidth(); ++column)
-            {
-              int64_t global_column(Q.GlobalCol(column));
-              Q.SetLocal(row, column, Q_local(global_row, global_column));
-            }
-        }
-    }
-  synchronize_timer.stop();
+  synchronize(Q_group, Q, timers);
   Q_computation_timer.stop();
 
   if(debug)
@@ -185,6 +142,10 @@ void SDP_Solver::initialize_schur_complement_solver(
   auto &Cholesky_timer(
     timers.add_and_start("run.step.initializeSchurComplementSolver."
                          "Cholesky"));
+
+  // FIXME: This seems superfluous.  We should be able to run Cholesky
+  // with just the upper without a symmetrizing step.
+  El::MakeSymmetric(El::UpperOrLower::UPPER, Q);
   Cholesky(El::UpperOrLowerNS::LOWER, Q);
   Cholesky_timer.stop();
 }
