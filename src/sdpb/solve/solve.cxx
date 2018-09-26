@@ -15,8 +15,8 @@
 Timers
 solve(const boost::filesystem::path &sdp_directory,
       const boost::filesystem::path &out_file,
-      const boost::filesystem::path &checkpoint_file_in,
-      const boost::filesystem::path &checkpoint_file_out,
+      const boost::filesystem::path &checkpoint_in,
+      const boost::filesystem::path &checkpoint_out,
       const Block_Info &block_info, const SDP_Solver_Parameters &parameters)
 {
   if(El::mpi::Rank() == 0)
@@ -25,8 +25,8 @@ solve(const boost::filesystem::path &sdp_directory,
                 << boost::posix_time::second_clock::local_time() << '\n';
       std::cout << "SDP directory   : " << sdp_directory << '\n';
       std::cout << "out file        : " << out_file << '\n'
-                << "checkpoint in   : " << checkpoint_file_in << '\n'
-                << "checkpoint out  : " << checkpoint_file_out << '\n'
+                << "checkpoint in   : " << checkpoint_in << '\n'
+                << "checkpoint out  : " << checkpoint_out << '\n'
                 << "\nParameters:\n"
                 << parameters << '\n';
     }
@@ -36,14 +36,14 @@ solve(const boost::filesystem::path &sdp_directory,
   SDP_Solver solver(parameters, block_info, grid,
                     sdp.dual_objective_b.Height());
 
-  if(exists(checkpoint_file_in))
+  if(exists(checkpoint_in))
     {
-      solver.load_checkpoint(checkpoint_file_in);
+      solver.load_checkpoint(checkpoint_in);
     }
 
   Timers timers;
   SDP_Solver_Terminate_Reason reason = solver.run(
-    parameters, checkpoint_file_out, block_info, sdp, grid, timers);
+    parameters, checkpoint_out, block_info, sdp, grid, timers);
 
   if(El::mpi::Rank() == 0)
     {
@@ -61,7 +61,7 @@ solve(const boost::filesystem::path &sdp_directory,
 
   if(!parameters.no_final_checkpoint)
     {
-      solver.save_checkpoint(checkpoint_file_out);
+      solver.save_checkpoint(checkpoint_out);
     }
   solver.save_solution(reason, out_file);
   return timers;

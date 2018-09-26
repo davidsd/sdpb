@@ -1,6 +1,6 @@
-#include "set_stream_precision.hxx"
 #include "Dual_Constraint_Group.hxx"
 #include "write_vector.hxx"
+#include "../set_stream_precision.hxx"
 
 void write_free_var_matrix(
   const boost::filesystem::path &output_dir,

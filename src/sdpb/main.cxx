@@ -19,8 +19,8 @@ namespace po = boost::program_options;
 Timers
 solve(const boost::filesystem::path &sdp_directory,
       const boost::filesystem::path &out_file,
-      const boost::filesystem::path &checkpoint_file_in,
-      const boost::filesystem::path &checkpoint_file_out,
+      const boost::filesystem::path &checkpoint_in,
+      const boost::filesystem::path &checkpoint_out,
       const Block_Info &block_info, const SDP_Solver_Parameters &parameters);
 
 void write_timing(const boost::filesystem::path &out_file,
@@ -34,8 +34,8 @@ int main(int argc, char **argv)
   int result(0);
   try
     {
-      boost::filesystem::path sdp_directory, out_file, checkpoint_file_in,
-        checkpoint_file_out, param_file, block_timing_filename;
+      boost::filesystem::path sdp_directory, out_file, checkpoint_in,
+        checkpoint_out, param_file, block_timing_filename;
 
       SDP_Solver_Parameters parameters;
 
@@ -49,15 +49,14 @@ int main(int argc, char **argv)
         "format. Command line arguments override values in the parameter "
         "file.")("outFile,o", po::value<boost::filesystem::path>(&out_file),
                  "The optimal solution is saved to this file in Mathematica "
-                 "format. Defaults to sdpFile with '.out' extension.")(
-        "checkpointFile,c",
-        po::value<boost::filesystem::path>(&checkpoint_file_out),
-        "Checkpoints are saved to this file every checkpointInterval. "
-        "Defaults "
-        "to sdpFile with '.ck' extension.")(
+                 "format. Defaults to sdpDir with '.out' extension.")(
+        "checkpointDir,c", po::value<boost::filesystem::path>(&checkpoint_out),
+        "Checkpoints are saved to this directory every checkpointInterval. "
+        "Defaults to sdpDir with '.ck' extension.")(
         "initialCheckpointFile,i",
-        po::value<boost::filesystem::path>(&checkpoint_file_in),
-        "The initial checkpoint to load. Defaults to checkpointFile.")(
+        po::value<boost::filesystem::path>(&checkpoint_in),
+        "The initial checkpoint directory to load. Defaults to "
+        "checkpointDir.")(
         "debug", po::value<bool>(&parameters.debug)->default_value(false),
         "Write out debugging output.")(
         "blockTimingFile",
@@ -218,17 +217,17 @@ int main(int argc, char **argv)
 
           if(!variables_map.count("checkpointFile"))
             {
-              checkpoint_file_out = sdp_directory;
-              if(checkpoint_file_out.filename() == ".")
+              checkpoint_out = sdp_directory;
+              if(checkpoint_out.filename() == ".")
                 {
-                  checkpoint_file_out = checkpoint_file_out.parent_path();
+                  checkpoint_out = checkpoint_out.parent_path();
                 }
-              checkpoint_file_out.replace_extension("ck");
+              checkpoint_out.replace_extension("ck");
             }
 
           if(!variables_map.count("initialCheckpointFile"))
             {
-              checkpoint_file_in = checkpoint_file_out;
+              checkpoint_in = checkpoint_out;
             }
 
           if(El::mpi::Rank() == 0)
@@ -255,8 +254,8 @@ int main(int argc, char **argv)
       El::mpfr::SetPrecision(parameters.precision);
 
       Block_Info block_info(sdp_directory, parameters.procs_per_node);
-      Timers timers(solve(sdp_directory, out_file, checkpoint_file_in,
-                          checkpoint_file_out, block_info, parameters));
+      Timers timers(solve(sdp_directory, out_file, checkpoint_in,
+                          checkpoint_out, block_info, parameters));
 
       write_timing(out_file, block_timing_filename, block_info, timers);
     }
