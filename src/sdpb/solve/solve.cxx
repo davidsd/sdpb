@@ -41,7 +41,7 @@ solve(const boost::filesystem::path &sdp_directory,
       solver.load_checkpoint(checkpoint_in);
     }
 
-  Timers timers;
+  Timers timers(parameters.debug);
   SDP_Solver_Terminate_Reason reason = solver.run(
     parameters, checkpoint_out, block_info, sdp, grid, timers);
 

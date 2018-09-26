@@ -95,7 +95,7 @@ private:
     const Block_Info &block_info, const SDP &sdp,
     const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
     const Block_Diagonal_Matrix &bilinear_pairings_Y,
-    const El::Grid &block_grid, const bool &debug,
+    const El::Grid &block_grid,
     Block_Diagonal_Matrix &schur_complement_cholesky,
     Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
     Timers &timers);

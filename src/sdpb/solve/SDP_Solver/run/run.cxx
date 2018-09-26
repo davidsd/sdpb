@@ -26,15 +26,17 @@ void block_tensor_transpose_congruence(
   std::vector<El::DistMatrix<El::BigFloat>> &workspace,
   Block_Diagonal_Matrix &result);
 
-void compute_dual_residues(const Block_Info &block_info, const SDP &sdp,
-                           const Block_Vector &y,
-                           const Block_Diagonal_Matrix &bilinear_pairings_Y,
-                           Block_Vector &dual_residues);
+void compute_dual_residues_and_error(
+  const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
+  const Block_Diagonal_Matrix &bilinear_pairings_Y,
+  Block_Vector &dual_residues, El::BigFloat &dual_error, Timers &timers);
 
-void compute_primal_residues(const Block_Info &block_info, const SDP &sdp,
-                             const Block_Vector &x,
-                             const Block_Diagonal_Matrix &X,
-                             Block_Diagonal_Matrix &primal_residues);
+void compute_primal_residues_and_error(const Block_Info &block_info,
+                                       const SDP &sdp, const Block_Vector &x,
+                                       const Block_Diagonal_Matrix &X,
+                                       Block_Diagonal_Matrix &primal_residues,
+                                       El::BigFloat &primal_error,
+                                       Timers &timers);
 
 El::BigFloat
 predictor_centering_parameter(const SDP_Solver_Parameters &parameters,
@@ -58,9 +60,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
 {
   SDP_Solver_Terminate_Reason result(
     SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
-  auto &solver_timer(timers.add_and_start("Solver runtime", parameters.debug));
-  auto &initialize_timer(
-    timers.add_and_start("run.initialize", parameters.debug));
+  auto &solver_timer(timers.add_and_start("Solver runtime"));
+  auto &initialize_timer(timers.add_and_start("run.initialize"));
 
   El::BigFloat primal_step_length(0), dual_step_length(0);
 
@@ -136,14 +137,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
           result = SDP_Solver_Terminate_Reason::MaxRuntimeExceeded;
         }
 
-      auto &objectives_timer(
-        timers.add_and_start("run.objectives", parameters.debug));
-      auto &objectives_primal_timer(
-        timers.add_and_start("run.objectives.primal", parameters.debug));
+      auto &objectives_timer(timers.add_and_start("run.objectives"));
       primal_objective = sdp.objective_const + dot(sdp.primal_objective_c, x);
-      objectives_primal_timer.stop();
-      auto &objectives_dual_timer(
-        timers.add_and_start("run.objectives.dual", parameters.debug));
       // dual_objective_b is duplicated amongst the processors.  y is
       // duplicated amongst the blocks, but it is possible for some
       // processors to have no blocks.  In principle, we only need to
@@ -157,67 +152,35 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
         }
       El::mpi::Broadcast(&dual_objective, 1, 0, El::mpi::COMM_WORLD);
 
-      objectives_dual_timer.stop();
-      auto &objectives_gap_timer(
-        timers.add_and_start("run.objectives.gap", parameters.debug));
       duality_gap
         = Abs(primal_objective - dual_objective)
           / Max(Abs(primal_objective) + Abs(dual_objective), El::BigFloat(1));
-      objectives_gap_timer.stop();
 
       objectives_timer.stop();
 
-      auto &cholesky_decomposition_X_timer(timers.add_and_start(
-        "run.choleskyDecomposition(X,XCholesky)", parameters.debug));
+      auto &cholesky_decomposition_timer(
+        timers.add_and_start("run.choleskyDecomposition"));
       cholesky_decomposition(X, X_cholesky);
-      cholesky_decomposition_X_timer.stop();
-
-      auto &cholesky_decomposition_Y_timer(timers.add_and_start(
-        "run.choleskyDecomposition(Y,YCholesky)", parameters.debug));
       cholesky_decomposition(Y, Y_cholesky);
-      cholesky_decomposition_Y_timer.stop();
+      cholesky_decomposition_timer.stop();
 
       // Compute the bilinear pairings BilinearPairingsXInv and
       // BilinearPairingsY needed for the dualResidues and the Schur
       // complement matrix
-      auto &inv_transpose_congruence_timer(timers.add_and_start(
-        "run.blockTensorInvTransposeCongruenceWithCholesky",
-        parameters.debug));
+      auto &congruence_timer(timers.add_and_start("run.Congruence"));
       block_tensor_inv_transpose_congruence_with_cholesky(
         X_cholesky, sdp.bilinear_bases_local, bilinear_pairings_workspace,
         bilinear_pairings_X_inv);
-      inv_transpose_congruence_timer.stop();
 
-      auto &transpose_congruence_timer(timers.add_and_start(
-        "run.blockTensorTransposeCongruence", parameters.debug));
       block_tensor_transpose_congruence(Y, sdp.bilinear_bases_local,
                                         bilinear_pairings_workspace,
                                         bilinear_pairings_Y);
-      transpose_congruence_timer.stop();
+      congruence_timer.stop();
 
-      // dualResidues[p] = primalObjective[p] - Tr(A_p Y) - (FreeVarMatrix y)_p,
-      auto &dual_residues_timer(
-        timers.add_and_start("run.computeDualResidues", parameters.debug));
-      compute_dual_residues(block_info, sdp, y, bilinear_pairings_Y,
-                            dual_residues);
-      {
-        dual_error = 0;
-        El::BigFloat local_max(0);
-        for(auto &block : dual_residues.blocks)
-          {
-            local_max = Max(local_max, El::MaxAbs(block));
-          }
-        dual_error
-          = El::mpi::AllReduce(local_max, El::mpi::MAX, El::mpi::COMM_WORLD);
-      }
-      dual_residues_timer.stop();
-
-      auto &primal_residues_timer(
-        timers.add_and_start("run.computePrimalResidues", parameters.debug));
-      // PrimalResidues = \sum_p A_p x[p] - X
-      compute_primal_residues(block_info, sdp, x, X, primal_residues);
-      primal_error = primal_residues.max_abs();
-      primal_residues_timer.stop();
+      compute_dual_residues_and_error(block_info, sdp, y, bilinear_pairings_Y,
+                                      dual_residues, dual_error, timers);
+      compute_primal_residues_and_error(block_info, sdp, x, X, primal_residues,
+                                        primal_error, timers);
 
       const bool is_primal_feasible(primal_error
                                     < parameters.primal_error_threshold);
@@ -258,7 +221,7 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
           break;
         }
 
-      auto &step_timer(timers.add_and_start("run.step", parameters.debug));
+      auto &step_timer(timers.add_and_start("run.step"));
       El::BigFloat mu, beta_predictor, beta_corrector;
 
       // Search direction: These quantities have the same structure
@@ -290,17 +253,17 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
 
         // Compute SchurComplement and prepare to solve the Schur
         // complement equation for dx, dy
-        auto &initialize_timer(timers.add_and_start(
-          "run.step.initializeSchurComplementSolver", parameters.debug));
+        auto &initialize_timer(
+          timers.add_and_start("run.step.initializeSchurComplementSolver"));
         initialize_schur_complement_solver(
           block_info, sdp, bilinear_pairings_X_inv, bilinear_pairings_Y, grid,
-          parameters.debug, schur_complement_cholesky, schur_off_diagonal, Q,
+          schur_complement_cholesky, schur_off_diagonal, Q,
           timers);
         initialize_timer.stop();
 
         // Compute the complementarity mu = Tr(X Y)/X.dim
-        auto &frobenius_timer(timers.add_and_start(
-          "run.step.frobenius_product_symmetric", parameters.debug));
+        auto &frobenius_timer(
+          timers.add_and_start("run.step.frobenius_product_symmetric"));
         mu = frobenius_product_symmetric(X, Y) / total_psd_rows;
         frobenius_timer.stop();
         if(mu > parameters.max_complementarity)
@@ -309,43 +272,43 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
             break;
           }
 
-        auto &predictor_timer(timers.add_and_start(
-          "run.step.predictor_centering_parameter", parameters.debug));
+        auto &predictor_timer(
+          timers.add_and_start("run.step.predictor_centering_parameter"));
         // Compute the predictor solution for (dx, dX, dy, dY)
         beta_predictor = predictor_centering_parameter(
           parameters, is_primal_feasible && is_dual_feasible);
         predictor_timer.stop();
 
         auto &search_predictor_timer(timers.add_and_start(
-          "run.step.computeSearchDirection(betaPredictor)", parameters.debug));
+          "run.step.computeSearchDirection(betaPredictor)"));
         compute_search_direction(block_info, sdp, schur_complement_cholesky,
                                  schur_off_diagonal, X_cholesky,
                                  beta_predictor, mu, false, Q, dx, dX, dy, dY);
         search_predictor_timer.stop();
 
         // Compute the corrector solution for (dx, dX, dy, dY)
-        auto &corrector_timer(timers.add_and_start(
-          "run.step.corrector_centering_parameter", parameters.debug));
+        auto &corrector_timer(
+          timers.add_and_start("run.step.corrector_centering_parameter"));
         beta_corrector = corrector_centering_parameter(
           parameters, X, dX, Y, dY, mu, is_primal_feasible && is_dual_feasible,
           total_psd_rows);
         corrector_timer.stop();
         auto &search_corrector_timer(timers.add_and_start(
-          "run.step.computeSearchDirection(betaCorrector)", parameters.debug));
+          "run.step.computeSearchDirection(betaCorrector)"));
         compute_search_direction(block_info, sdp, schur_complement_cholesky,
                                  schur_off_diagonal, X_cholesky,
                                  beta_corrector, mu, true, Q, dx, dX, dy, dY);
         search_corrector_timer.stop();
       }
       // Compute step-lengths that preserve positive definiteness of X, Y
-      auto &step_length_X_timer(timers.add_and_start(
-        "run.step.stepLength(XCholesky)", parameters.debug));
+      auto &step_length_X_timer(
+        timers.add_and_start("run.step.stepLength(XCholesky)"));
       primal_step_length
         = step_length(X_cholesky, dX, parameters.step_length_reduction);
       step_length_X_timer.stop();
 
-      auto &step_length_Y_timer(timers.add_and_start(
-        "run.step.stepLength(YCholesky)", parameters.debug));
+      auto &step_length_Y_timer(
+        timers.add_and_start("run.step.stepLength(YCholesky)"));
       dual_step_length
         = step_length(Y_cholesky, dY, parameters.step_length_reduction);
       step_length_Y_timer.stop();

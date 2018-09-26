@@ -9,21 +9,21 @@
 //                       (1/2) (BilinearPairingsY_{ej r + k, ej s + k} +
 //                              swap (r <-> s))
 // where ej = d_j + 1.
-//
-// Inputs: sdp, y, BilinearPairingsY
-// Output: dualResidues (overwriten)
-//
-void compute_dual_residues(const Block_Info &block_info, const SDP &sdp,
-                           const Block_Vector &y,
-                           const Block_Diagonal_Matrix &bilinear_pairings_Y,
-                           Block_Vector &dual_residues)
+
+void compute_dual_residues_and_error(
+  const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
+  const Block_Diagonal_Matrix &bilinear_pairings_Y,
+  Block_Vector &dual_residues, El::BigFloat &dual_error, Timers &timers)
 {
+  auto &dual_residues_timer(timers.add_and_start("run.computeDualResidues"));
+
   auto dual_residues_block(dual_residues.blocks.begin());
   auto primal_objective_c_block(sdp.primal_objective_c.blocks.begin());
   auto y_block(y.blocks.begin());
   auto free_var_matrix_block(sdp.free_var_matrix.blocks.begin());
   auto bilinear_pairings_Y_block(bilinear_pairings_Y.blocks.begin());
-  // dualResidues[p] = -Tr(A_p Y)
+
+  El::BigFloat local_max(0);
   for(auto &block_index : block_info.block_indices)
     {
       Zero(*dual_residues_block);
@@ -81,9 +81,14 @@ void compute_dual_residues(const Block_Info &block_info, const SDP &sdp,
       // dualResidues += primalObjective
       Axpy(El::BigFloat(1), *primal_objective_c_block, *dual_residues_block);
 
+      local_max = Max(local_max, El::MaxAbs(*dual_residues_block));
+
       ++primal_objective_c_block;
       ++y_block;
       ++free_var_matrix_block;
       ++dual_residues_block;
     }
+  dual_error
+    = El::mpi::AllReduce(local_max, El::mpi::MAX, El::mpi::COMM_WORLD);
+  dual_residues_timer.stop();
 }

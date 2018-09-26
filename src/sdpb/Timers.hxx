@@ -18,7 +18,10 @@
 
 struct Timers : public std::list<std::pair<std::string, Timer>>
 {
-  Timer &add_and_start(const std::string &name, const bool &debug)
+  bool debug = false;
+  Timers(const bool &Debug) : debug(Debug) {}
+  
+  Timer &add_and_start(const std::string &name)
   {
     if(debug)
       {
