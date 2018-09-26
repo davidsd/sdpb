@@ -90,16 +90,6 @@ public:
   test_multiplication(const int m_init, const int m_fin, const int m_step);
 
 private:
-  // Compute data needed to solve the Schur complement equation
-  void initialize_schur_complement_solver(
-    const Block_Info &block_info, const SDP &sdp,
-    const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-    const Block_Diagonal_Matrix &bilinear_pairings_Y,
-    const El::Grid &block_grid,
-    Block_Diagonal_Matrix &schur_complement_cholesky,
-    Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
-    Timers &timers);
-
   // Compute (dx, dX, dy, dY), given the current mu, a reduction
   // parameter beta.  `correctorPhase' specifies whether to use the
   // R-matrix corresponding to the corrector step (if false, we use

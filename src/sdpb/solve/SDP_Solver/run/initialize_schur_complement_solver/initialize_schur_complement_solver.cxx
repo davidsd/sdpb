@@ -1,5 +1,6 @@
-#include "../../SDP_Solver.hxx"
-#include "../../../Timers.hxx"
+#include "../../../SDP.hxx"
+#include "../../../Block_Diagonal_Matrix.hxx"
+#include "../../../../Timers.hxx"
 
 // Compute the quantities needed to solve the Schur complement
 // equation
@@ -46,10 +47,10 @@ void compute_schur_complement(
 void synchronize(const El::DistMatrix<El::BigFloat> &Q_group,
                  El::DistMatrix<El::BigFloat> &Q, Timers &timers);
 
-void SDP_Solver::initialize_schur_complement_solver(
+void initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-  const Block_Diagonal_Matrix &bilinear_pairings_Y, const El::Grid &block_grid,
+  const Block_Diagonal_Matrix &bilinear_pairings_Y, const El::Grid &group_grid,
   Block_Diagonal_Matrix &schur_complement_cholesky,
   Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
   Timers &timers)
@@ -60,7 +61,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   //
   Block_Diagonal_Matrix schur_complement(
     block_info.schur_block_sizes, block_info.block_indices,
-    block_info.schur_block_sizes.size(), block_grid);
+    block_info.schur_block_sizes.size(), group_grid);
 
   compute_schur_complement(block_info, bilinear_pairings_X_inv,
                            bilinear_pairings_Y, schur_complement, timers);
@@ -71,7 +72,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   schur_off_diagonal.blocks.clear();
   schur_off_diagonal.blocks.reserve(schur_complement_cholesky.blocks.size());
 
-  El::DistMatrix<El::BigFloat> Q_group(Q.Height(), Q.Width(), block_grid);
+  El::DistMatrix<El::BigFloat> Q_group(Q.Height(), Q.Width(), group_grid);
   El::Zero(Q_group);
   for(size_t block = 0; block < schur_complement_cholesky.blocks.size();
       block++)

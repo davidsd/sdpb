@@ -46,6 +46,14 @@ void compute_primal_residues_and_error(const Block_Info &block_info,
                                        El::BigFloat &primal_error,
                                        Timers &timers);
 
+void initialize_schur_complement_solver(
+  const Block_Info &block_info, const SDP &sdp,
+  const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
+  const Block_Diagonal_Matrix &bilinear_pairings_Y, const El::Grid &block_grid,
+  Block_Diagonal_Matrix &schur_complement_cholesky,
+  Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
+  Timers &timers);
+
 El::BigFloat
 predictor_centering_parameter(const SDP_Solver_Parameters &parameters,
                               const bool is_primal_dual_feasible);
@@ -132,7 +140,7 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
         >= parameters.checkpoint_interval);
       // Time varies between cores, so follow the decision of the root.
       El::mpi::Broadcast(checkpoint_now, 0, El::mpi::COMM_WORLD);
-      if(checkpoint_now==true)
+      if(checkpoint_now == true)
         {
           save_checkpoint(checkpoint_directory);
           last_checkpoint_time = std::chrono::high_resolution_clock::now();

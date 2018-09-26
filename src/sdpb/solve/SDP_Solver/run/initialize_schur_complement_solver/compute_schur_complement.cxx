@@ -1,4 +1,6 @@
-#include "../../SDP_Solver.hxx"
+#include "../../../Block_Diagonal_Matrix.hxx"
+#include "../../../../Block_Info.hxx"
+#include "../../../../Timers.hxx"
 
 // Compute the SchurComplement matrix using BilinearPairingsXInv and
 // BilinearPairingsY and the formula
