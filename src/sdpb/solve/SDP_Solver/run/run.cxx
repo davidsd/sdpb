@@ -12,7 +12,10 @@ void print_iteration(
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time);
 
-El::BigFloat dot(const Block_Vector &a, const Block_Vector &b);
+void compute_objectives(const SDP &sdp, const Block_Vector &x,
+                        const Block_Vector &y, El::BigFloat &primal_objective,
+                        El::BigFloat &dual_objective,
+                        El::BigFloat &duality_gap, Timers &timers);
 
 void block_tensor_inv_transpose_congruence_with_cholesky(
   const Block_Diagonal_Matrix &X_cholesky,
@@ -65,8 +68,6 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
 
   El::BigFloat primal_step_length(0), dual_step_length(0);
 
-  // the Cholesky decompositions of X and Y, each lower-triangular
-  // BlockDiagonalMatrices with the same block sizes as X and Y
   Block_Diagonal_Matrix X_cholesky(X);
   Block_Diagonal_Matrix Y_cholesky(X);
 
@@ -137,26 +138,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
           result = SDP_Solver_Terminate_Reason::MaxRuntimeExceeded;
         }
 
-      auto &objectives_timer(timers.add_and_start("run.objectives"));
-      primal_objective = sdp.objective_const + dot(sdp.primal_objective_c, x);
-      // dual_objective_b is duplicated amongst the processors.  y is
-      // duplicated amongst the blocks, but it is possible for some
-      // processors to have no blocks.  In principle, we only need to
-      // compute the dot product on the first block, but then we would
-      // have to make sure that we compute that product over all
-      // processors that own that block.
-      if(!y.blocks.empty())
-        {
-          dual_objective = sdp.objective_const
-                           + El::Dotu(sdp.dual_objective_b, y.blocks.front());
-        }
-      El::mpi::Broadcast(&dual_objective, 1, 0, El::mpi::COMM_WORLD);
-
-      duality_gap
-        = Abs(primal_objective - dual_objective)
-          / Max(Abs(primal_objective) + Abs(dual_objective), El::BigFloat(1));
-
-      objectives_timer.stop();
+      compute_objectives(sdp, x, y, primal_objective, dual_objective,
+                         duality_gap, timers);
 
       auto &cholesky_decomposition_timer(
         timers.add_and_start("run.choleskyDecomposition"));
@@ -257,8 +240,7 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
           timers.add_and_start("run.step.initializeSchurComplementSolver"));
         initialize_schur_complement_solver(
           block_info, sdp, bilinear_pairings_X_inv, bilinear_pairings_Y, grid,
-          schur_complement_cholesky, schur_off_diagonal, Q,
-          timers);
+          schur_complement_cholesky, schur_off_diagonal, Q, timers);
         initialize_timer.stop();
 
         // Compute the complementarity mu = Tr(X Y)/X.dim
