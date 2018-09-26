@@ -24,6 +24,13 @@ void compute_bilinear_pairings(
   Block_Diagonal_Matrix &bilinear_pairings_X_inv,
   Block_Diagonal_Matrix &bilinear_pairings_Y, Timers &timers);
 
+void compute_feasible_and_termination(
+  const SDP_Solver_Parameters &parameters, const El::BigFloat &primal_error,
+  const El::BigFloat &dual_error, const El::BigFloat &duality_gap,
+  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
+  const int &iteration, bool &is_primal_and_dual_feasible,
+  SDP_Solver_Terminate_Reason &result, bool &terminate_now);
+
 void compute_dual_residues_and_error(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
@@ -151,41 +158,13 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
       compute_primal_residues_and_error(block_info, sdp, x, X, primal_residues,
                                         primal_error, timers);
 
-      const bool is_primal_feasible(primal_error
-                                    < parameters.primal_error_threshold),
-        is_dual_feasible(dual_error < parameters.dual_error_threshold),
-        is_optimal(duality_gap < parameters.duality_gap_threshold);
-
-      if(is_primal_feasible && is_dual_feasible && is_optimal)
+      bool is_primal_and_dual_feasible, terminate_now;
+      compute_feasible_and_termination(
+        parameters, primal_error, dual_error, duality_gap, primal_step_length,
+        dual_step_length, iteration, is_primal_and_dual_feasible, result,
+        terminate_now);
+      if(terminate_now)
         {
-          result = SDP_Solver_Terminate_Reason::PrimalDualOptimal;
-          break;
-        }
-      else if(is_primal_feasible && parameters.find_primal_feasible)
-        {
-          result = SDP_Solver_Terminate_Reason::PrimalFeasible;
-          break;
-        }
-      else if(is_dual_feasible && parameters.find_dual_feasible)
-        {
-          result = SDP_Solver_Terminate_Reason::DualFeasible;
-          break;
-        }
-      else if(primal_step_length == El::BigFloat(1)
-              && parameters.detect_primal_feasible_jump)
-        {
-          result = SDP_Solver_Terminate_Reason::PrimalFeasibleJumpDetected;
-          break;
-        }
-      else if(dual_step_length == El::BigFloat(1)
-              && parameters.detect_dual_feasible_jump)
-        {
-          result = SDP_Solver_Terminate_Reason::DualFeasibleJumpDetected;
-          break;
-        }
-      else if(iteration > parameters.max_iterations)
-        {
-          result = SDP_Solver_Terminate_Reason::MaxIterationsExceeded;
           break;
         }
 
@@ -243,7 +222,7 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
           timers.add_and_start("run.step.predictor_centering_parameter"));
         // Compute the predictor solution for (dx, dX, dy, dY)
         beta_predictor = predictor_centering_parameter(
-          parameters, is_primal_feasible && is_dual_feasible);
+          parameters, is_primal_and_dual_feasible);
         predictor_timer.stop();
 
         auto &search_predictor_timer(timers.add_and_start(
@@ -257,7 +236,7 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
         auto &corrector_timer(
           timers.add_and_start("run.step.corrector_centering_parameter"));
         beta_corrector = corrector_centering_parameter(
-          parameters, X, dX, Y, dY, mu, is_primal_feasible && is_dual_feasible,
+          parameters, X, dX, Y, dY, mu, is_primal_and_dual_feasible,
           total_psd_rows);
         corrector_timer.stop();
         auto &search_corrector_timer(timers.add_and_start(
@@ -282,7 +261,7 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
 
       // If our problem is both dual-feasible and primal-feasible,
       // ensure we're following the true Newton direction.
-      if(is_primal_feasible && is_dual_feasible)
+      if(is_primal_and_dual_feasible)
         {
           primal_step_length = El::Min(primal_step_length, dual_step_length);
           dual_step_length = primal_step_length;

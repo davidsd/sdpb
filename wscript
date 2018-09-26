@@ -40,6 +40,7 @@ def build(bld):
                         'src/sdpb/solve/SDP_Solver/run/compute_bilinear_pairings/compute_bilinear_pairings.cxx',
                         'src/sdpb/solve/SDP_Solver/run/compute_bilinear_pairings/compute_bilinear_pairings_X_inv.cxx',
                         'src/sdpb/solve/SDP_Solver/run/compute_bilinear_pairings/compute_bilinear_pairings_Y.cxx',
+                        'src/sdpb/solve/SDP_Solver/run/compute_feasible_and_termination.cxx',
                         'src/sdpb/solve/SDP_Solver/run/corrector_centering_parameter.cxx',
                         'src/sdpb/solve/SDP_Solver/run/predictor_centering_parameter.cxx',
                         'src/sdpb/solve/SDP_Solver/run/run.cxx',
