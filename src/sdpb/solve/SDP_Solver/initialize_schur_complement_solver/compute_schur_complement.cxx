@@ -60,8 +60,11 @@ void compute_schur_complement(
   const Block_Info &block_info,
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
-  Block_Diagonal_Matrix &schur_complement)
+  Block_Diagonal_Matrix &schur_complement, Timers &timers)
 {
+  auto &schur_complement_timer(timers.add_and_start(
+    "run.step.initializeSchurComplementSolver.schur_complement"));
+
   auto schur_complement_block(schur_complement.blocks.begin());
   auto bilinear_pairings_X_inv_block(bilinear_pairings_X_inv.blocks.begin());
   auto bilinear_pairings_Y_block(bilinear_pairings_Y.blocks.begin());
@@ -140,4 +143,5 @@ void compute_schur_complement(
       ++bilinear_pairings_Y_block;
       ++bilinear_pairings_Y_block;
     }
+  schur_complement_timer.stop();
 }

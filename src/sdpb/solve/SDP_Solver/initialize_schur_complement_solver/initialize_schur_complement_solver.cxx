@@ -41,7 +41,7 @@ void compute_schur_complement(
   const Block_Info &block_info,
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
-  Block_Diagonal_Matrix &schur_complement);
+  Block_Diagonal_Matrix &schur_complement, Timers &timers);
 
 void synchronize(const El::DistMatrix<El::BigFloat> &Q_group,
                  El::DistMatrix<El::BigFloat> &Q, Timers &timers);
@@ -54,8 +54,6 @@ void SDP_Solver::initialize_schur_complement_solver(
   Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
   Timers &timers)
 {
-  auto &schur_complement_timer(timers.add_and_start(
-    "run.step.initializeSchurComplementSolver.schur_complement"));
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
   // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
   // (d_j+1)*m_j*(m_j+1)/2
@@ -65,8 +63,7 @@ void SDP_Solver::initialize_schur_complement_solver(
     block_info.schur_block_sizes.size(), block_grid);
 
   compute_schur_complement(block_info, bilinear_pairings_X_inv,
-                           bilinear_pairings_Y, schur_complement);
-  schur_complement_timer.stop();
+                           bilinear_pairings_Y, schur_complement, timers);
 
   auto &Q_computation_timer(timers.add_and_start(
     "run.step.initializeSchurComplementSolver.Qcomputation"));
@@ -127,7 +124,6 @@ void SDP_Solver::initialize_schur_complement_solver(
   auto &Cholesky_timer(
     timers.add_and_start("run.step.initializeSchurComplementSolver."
                          "Cholesky"));
-
   Cholesky(El::UpperOrLowerNS::UPPER, Q);
   Cholesky_timer.stop();
 }
