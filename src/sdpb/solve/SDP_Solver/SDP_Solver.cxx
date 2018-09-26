@@ -4,7 +4,8 @@
 // SDP_Solver_Parameters
 SDP_Solver::SDP_Solver(const SDP_Solver_Parameters &parameters,
                        const Block_Info &block_info, const El::Grid &grid,
-                       const size_t &dual_objective_b_height)
+                       const size_t &dual_objective_b_height,
+                       const boost::filesystem::path &checkpoint_directory)
     : x(block_info.schur_block_sizes, block_info.block_indices,
         block_info.schur_block_sizes.size(), grid),
       X(block_info.psd_matrix_block_sizes, block_info.block_indices,
@@ -16,19 +17,22 @@ SDP_Solver::SDP_Solver(const SDP_Solver_Parameters &parameters,
       dual_residues(block_info.schur_block_sizes, block_info.block_indices,
                     block_info.schur_block_sizes.size(), grid)
 {
-  X.set_zero();
-  Y.set_zero();
-  for(auto &block : x.blocks)
+  if(!load_checkpoint(checkpoint_directory))
     {
-      Zero(block);
-    }
-  for(auto &block : y.blocks)
-    {
-      Zero(block);
-    }
+      X.set_zero();
+      Y.set_zero();
+      for(auto &block : x.blocks)
+        {
+          Zero(block);
+        }
+      for(auto &block : y.blocks)
+        {
+          Zero(block);
+        }
 
-  // X = \Omega_p I
-  X.add_diagonal(parameters.initial_matrix_scale_primal);
-  // Y = \Omega_d I
-  Y.add_diagonal(parameters.initial_matrix_scale_dual);
+      // X = \Omega_p I
+      X.add_diagonal(parameters.initial_matrix_scale_primal);
+      // Y = \Omega_d I
+      Y.add_diagonal(parameters.initial_matrix_scale_dual);
+    }
 }

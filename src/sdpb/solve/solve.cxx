@@ -34,16 +34,11 @@ solve(const boost::filesystem::path &sdp_directory,
   El::Grid grid(block_info.mpi_comm);
   SDP sdp(sdp_directory, block_info, grid);
   SDP_Solver solver(parameters, block_info, grid,
-                    sdp.dual_objective_b.Height());
-
-  if(exists(checkpoint_in))
-    {
-      solver.load_checkpoint(checkpoint_in);
-    }
+                    sdp.dual_objective_b.Height(), checkpoint_in);
 
   Timers timers(parameters.debug);
-  SDP_Solver_Terminate_Reason reason = solver.run(
-    parameters, checkpoint_out, block_info, sdp, grid, timers);
+  SDP_Solver_Terminate_Reason reason
+    = solver.run(parameters, checkpoint_out, block_info, sdp, grid, timers);
 
   if(El::mpi::Rank() == 0)
     {

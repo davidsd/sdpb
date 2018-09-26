@@ -31,7 +31,7 @@ void read_local_blocks(T &t,
     }
 }
 
-void SDP_Solver::load_checkpoint(
+bool SDP_Solver::load_checkpoint(
   const boost::filesystem::path &checkpoint_directory)
 {
   boost::filesystem::path checkpoint_filename(
@@ -39,7 +39,7 @@ void SDP_Solver::load_checkpoint(
 
   if(!exists(checkpoint_filename))
     {
-      return;
+      return false;
     }
 
   boost::filesystem::ifstream checkpoint_stream(checkpoint_filename);
@@ -52,4 +52,5 @@ void SDP_Solver::load_checkpoint(
   read_local_blocks(X, checkpoint_stream);
   read_local_blocks(y, checkpoint_stream);
   read_local_blocks(Y, checkpoint_stream);
+  return true;
 }

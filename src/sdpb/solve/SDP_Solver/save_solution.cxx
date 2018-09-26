@@ -2,7 +2,7 @@
 
 void SDP_Solver::save_solution(
   const SDP_Solver_Terminate_Reason terminate_reason,
-  const boost::filesystem::path &out_file)
+  const boost::filesystem::path &out_file) const
 {
   // El::Print requires all processors, but we do not want all processors
   // writing header information.

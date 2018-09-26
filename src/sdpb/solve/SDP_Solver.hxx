@@ -25,8 +25,6 @@
 class SDP_Solver
 {
 public:
-  // Current point
-
   // a Vector of length P = sdp.primalObjective.size()
   Block_Vector x;
 
@@ -71,7 +69,8 @@ public:
   // Create a new solver for a given SDP, with the given parameters
   SDP_Solver(const SDP_Solver_Parameters &parameters,
              const Block_Info &block_info, const El::Grid &grid,
-             const size_t &dual_objective_b_height);
+             const size_t &dual_objective_b_height,
+             const boost::filesystem::path &checkpoint_directory);
 
   // Run the solver, backing up to checkpointFile
   SDP_Solver_Terminate_Reason
@@ -81,8 +80,8 @@ public:
       Timers &timers);
 
   // Input/output
-  void save_checkpoint(const boost::filesystem::path &checkpoint_directory);
-  void load_checkpoint(const boost::filesystem::path &checkpoint_directory);
+  void save_checkpoint(const boost::filesystem::path &checkpoint_directory) const;
+  bool load_checkpoint(const boost::filesystem::path &checkpoint_directory);
   void save_solution(const SDP_Solver_Terminate_Reason,
-                     const boost::filesystem::path &out_file);
+                     const boost::filesystem::path &out_file) const;
 };

@@ -21,7 +21,7 @@ void write_local_blocks(const T &t,
 }
 
 void SDP_Solver::save_checkpoint(
-  const boost::filesystem::path &checkpoint_directory)
+  const boost::filesystem::path &checkpoint_directory) const
 {
   boost::filesystem::path checkpoint_filename(
     checkpoint_directory / ("checkpoint." + std::to_string(El::mpi::Rank())));
