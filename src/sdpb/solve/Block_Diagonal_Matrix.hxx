@@ -143,9 +143,9 @@ void block_diagonal_matrix_scale_multiply_add(const El::BigFloat &alpha,
                                               Block_Diagonal_Matrix &C);
 
 // C := A B
-void block_diagonal_matrix_multiply(Block_Diagonal_Matrix &A,  // constant
-                                    Block_Diagonal_Matrix &B,  // constant
-                                    Block_Diagonal_Matrix &C); // overwritten
+void block_diagonal_matrix_multiply(const Block_Diagonal_Matrix &A,
+                                    const Block_Diagonal_Matrix &B,
+                                    Block_Diagonal_Matrix &C);
 
 // A := L^{-1} A L^{-T}
 void lower_triangular_inverse_congruence(const Block_Diagonal_Matrix &L,
