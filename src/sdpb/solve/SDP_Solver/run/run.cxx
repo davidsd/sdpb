@@ -17,17 +17,12 @@ void compute_objectives(const SDP &sdp, const Block_Vector &x,
                         El::BigFloat &dual_objective,
                         El::BigFloat &duality_gap, Timers &timers);
 
-void block_tensor_inv_transpose_congruence_with_cholesky(
-  const Block_Diagonal_Matrix &X_cholesky,
+void compute_bilinear_pairings(
+  const Block_Diagonal_Matrix &X_cholesky, const Block_Diagonal_Matrix &Y,
   const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases,
   std::vector<El::DistMatrix<El::BigFloat>> &workspace,
-  Block_Diagonal_Matrix &result);
-
-void block_tensor_transpose_congruence(
-  const Block_Diagonal_Matrix &Y,
-  const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases,
-  std::vector<El::DistMatrix<El::BigFloat>> &workspace,
-  Block_Diagonal_Matrix &result);
+  Block_Diagonal_Matrix &bilinear_pairings_X_inv,
+  Block_Diagonal_Matrix &bilinear_pairings_Y, Timers &timers);
 
 void compute_dual_residues_and_error(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
@@ -147,18 +142,9 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
       cholesky_decomposition(Y, Y_cholesky);
       cholesky_decomposition_timer.stop();
 
-      // Compute the bilinear pairings BilinearPairingsXInv and
-      // BilinearPairingsY needed for the dualResidues and the Schur
-      // complement matrix
-      auto &congruence_timer(timers.add_and_start("run.Congruence"));
-      block_tensor_inv_transpose_congruence_with_cholesky(
-        X_cholesky, sdp.bilinear_bases_local, bilinear_pairings_workspace,
-        bilinear_pairings_X_inv);
-
-      block_tensor_transpose_congruence(Y, sdp.bilinear_bases_local,
-                                        bilinear_pairings_workspace,
-                                        bilinear_pairings_Y);
-      congruence_timer.stop();
+      compute_bilinear_pairings(
+        X_cholesky, Y, sdp.bilinear_bases_local, bilinear_pairings_workspace,
+        bilinear_pairings_X_inv, bilinear_pairings_Y, timers);
 
       compute_dual_residues_and_error(block_info, sdp, y, bilinear_pairings_Y,
                                       dual_residues, dual_error, timers);
@@ -166,10 +152,9 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
                                         primal_error, timers);
 
       const bool is_primal_feasible(primal_error
-                                    < parameters.primal_error_threshold);
-      const bool is_dual_feasible(dual_error
-                                  < parameters.dual_error_threshold);
-      const bool is_optimal(duality_gap < parameters.duality_gap_threshold);
+                                    < parameters.primal_error_threshold),
+        is_dual_feasible(dual_error < parameters.dual_error_threshold),
+        is_optimal(duality_gap < parameters.duality_gap_threshold);
 
       if(is_primal_feasible && is_dual_feasible && is_optimal)
         {

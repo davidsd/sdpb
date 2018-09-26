@@ -1,4 +1,4 @@
-#include "../../SDP_Solver.hxx"
+#include "../../../Block_Diagonal_Matrix.hxx"
 
 // bilinear_pairings_Y[b] = Q[b]'^T A[b] Q[b]' for each block 0 <= b < Q.size()
 // bilinear_pairings_Y[b], A[b] denote the b-th blocks of bilinear_pairings_Y,
@@ -9,7 +9,7 @@
 // for each b, L.blocks[b], Q[b], Work[b], and bilinear_pairings_Y.blocks[b]
 // must have the structure described above for `tensorTransposeCongruence'
 
-void block_tensor_transpose_congruence(
+void compute_bilinear_pairings_Y(
   const Block_Diagonal_Matrix &Y,
   const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases,
   std::vector<El::DistMatrix<El::BigFloat>> &workspace,

@@ -1,8 +1,8 @@
-#include "../../SDP_Solver.hxx"
+#include "../../../Block_Diagonal_Matrix.hxx"
 
 // bilinear_pairings_X_inv = bilinear_base^T X^{-1} bilinear_base for each block
 
-void block_tensor_inv_transpose_congruence_with_cholesky(
+void compute_bilinear_pairings_X_inv(
   const Block_Diagonal_Matrix &X_cholesky,
   const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases,
   std::vector<El::DistMatrix<El::BigFloat>> &workspace,
