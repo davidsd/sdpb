@@ -75,7 +75,8 @@ El::BigFloat corrector_centering_parameter(
 
 El::BigFloat
 step_length(const Block_Diagonal_Matrix &MCholesky,
-            const Block_Diagonal_Matrix &dM, const El::BigFloat &gamma);
+            const Block_Diagonal_Matrix &dM, const El::BigFloat &gamma,
+            const std::string &timer_name, Timers &timers);
 
 SDP_Solver_Terminate_Reason
 SDP_Solver::run(const SDP_Solver_Parameters &parameters,
@@ -215,12 +216,9 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
 
         // Compute SchurComplement and prepare to solve the Schur
         // complement equation for dx, dy
-        auto &initialize_timer(
-          timers.add_and_start("run.step.initializeSchurComplementSolver"));
         initialize_schur_complement_solver(
           block_info, sdp, bilinear_pairings_X_inv, bilinear_pairings_Y, grid,
           schur_complement_cholesky, schur_off_diagonal, Q, timers);
-        initialize_timer.stop();
 
         // Compute the complementarity mu = Tr(X Y)/X.dim
         auto &frobenius_timer(
@@ -233,48 +231,38 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
             break;
           }
 
-        auto &predictor_timer(
-          timers.add_and_start("run.step.predictor_centering_parameter"));
+        auto &predictor_timer(timers.add_and_start(
+          "run.step.computeSearchDirection(betaPredictor)"));
         // Compute the predictor solution for (dx, dX, dy, dY)
         beta_predictor = predictor_centering_parameter(
           parameters, is_primal_and_dual_feasible);
-        predictor_timer.stop();
 
-        auto &search_predictor_timer(timers.add_and_start(
-          "run.step.computeSearchDirection(betaPredictor)"));
         compute_search_direction(block_info, sdp, *this,
                                  schur_complement_cholesky, schur_off_diagonal,
                                  X_cholesky, beta_predictor, mu, false, Q, dx,
                                  dX, dy, dY);
-        search_predictor_timer.stop();
+        predictor_timer.stop();
 
         // Compute the corrector solution for (dx, dX, dy, dY)
-        auto &corrector_timer(
-          timers.add_and_start("run.step.corrector_centering_parameter"));
+        auto &corrector_timer(timers.add_and_start(
+          "run.step.computeSearchDirection(betaCorrector)"));
         beta_corrector = corrector_centering_parameter(
           parameters, X, dX, Y, dY, mu, is_primal_and_dual_feasible,
           total_psd_rows);
-        corrector_timer.stop();
-        auto &search_corrector_timer(timers.add_and_start(
-          "run.step.computeSearchDirection(betaCorrector)"));
         compute_search_direction(block_info, sdp, *this,
                                  schur_complement_cholesky, schur_off_diagonal,
                                  X_cholesky, beta_corrector, mu, true, Q, dx,
                                  dX, dy, dY);
-        search_corrector_timer.stop();
+        corrector_timer.stop();
       }
       // Compute step-lengths that preserve positive definiteness of X, Y
-      auto &step_length_X_timer(
-        timers.add_and_start("run.step.stepLength(XCholesky)"));
       primal_step_length
-        = step_length(X_cholesky, dX, parameters.step_length_reduction);
-      step_length_X_timer.stop();
+        = step_length(X_cholesky, dX, parameters.step_length_reduction,
+                      "run.step.stepLength(XCholesky)", timers);
 
-      auto &step_length_Y_timer(
-        timers.add_and_start("run.step.stepLength(YCholesky)"));
       dual_step_length
-        = step_length(Y_cholesky, dY, parameters.step_length_reduction);
-      step_length_Y_timer.stop();
+        = step_length(Y_cholesky, dY, parameters.step_length_reduction,
+                      "run.step.stepLength(YCholesky)", timers);
 
       // If our problem is both dual-feasible and primal-feasible,
       // ensure we're following the true Newton direction.

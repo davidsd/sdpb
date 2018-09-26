@@ -55,6 +55,8 @@ void initialize_schur_complement_solver(
   Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
   Timers &timers)
 {
+  auto &initialize_timer(
+    timers.add_and_start("run.step.initializeSchurComplementSolver"));
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
   // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
   // (d_j+1)*m_j*(m_j+1)/2
@@ -127,4 +129,5 @@ void initialize_schur_complement_solver(
                          "Cholesky"));
   Cholesky(El::UpperOrLowerNS::UPPER, Q);
   Cholesky_timer.stop();
+  initialize_timer.stop();
 }
