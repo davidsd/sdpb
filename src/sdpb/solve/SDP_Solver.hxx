@@ -99,7 +99,7 @@ private:
     const Block_Diagonal_Matrix &schur_complement_cholesky,
     const Block_Matrix &schur_off_diagonal,
     const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
-    const El::BigFloat &mu, const bool correctorPhase,
+    const El::BigFloat &mu, const bool &is_corrector_phase,
     const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx,
     Block_Diagonal_Matrix &dX, Block_Vector &dy, Block_Diagonal_Matrix &dY);
 };

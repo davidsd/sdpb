@@ -31,7 +31,7 @@ void SDP_Solver::compute_search_direction(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
   const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
-  const El::BigFloat &mu, const bool correctorPhase,
+  const El::BigFloat &mu, const bool &is_corrector_phase,
   const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx,
   Block_Diagonal_Matrix &dX, Block_Vector &dy, Block_Diagonal_Matrix &dY)
 {
@@ -41,7 +41,7 @@ void SDP_Solver::compute_search_direction(
 
   block_diagonal_matrix_scale_multiply_add(El::BigFloat(-1), X, Y,
                                            El::BigFloat(0), R);
-  if(correctorPhase)
+  if(is_corrector_phase)
     {
       block_diagonal_matrix_scale_multiply_add(El::BigFloat(-1), dX, dY,
                                                El::BigFloat(1), R);
