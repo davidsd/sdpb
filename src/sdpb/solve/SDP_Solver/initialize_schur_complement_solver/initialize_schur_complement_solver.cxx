@@ -44,8 +44,9 @@ void compute_schur_complement(
   Block_Diagonal_Matrix &schur_complement);
 
 void synchronize(const El::DistMatrix<El::BigFloat> &Q_group,
-                 El::DistMatrix<El::BigFloat> &Q, Timers &timers);
-  
+                 const bool &debug, El::DistMatrix<El::BigFloat> &Q,
+                 Timers &timers);
+
 void SDP_Solver::initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
@@ -55,7 +56,7 @@ void SDP_Solver::initialize_schur_complement_solver(
   Timers &timers)
 {
   auto &schur_complement_timer(timers.add_and_start(
-    "run.step.initializeSchurComplementSolver.schur_complement"));
+    "run.step.initializeSchurComplementSolver.schur_complement", debug));
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
   // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
   // (d_j+1)*m_j*(m_j+1)/2
@@ -68,13 +69,8 @@ void SDP_Solver::initialize_schur_complement_solver(
                            bilinear_pairings_Y, schur_complement);
   schur_complement_timer.stop();
 
-  if(debug)
-    {
-      El::Output(El::mpi::Rank(), " run.step.initializeSchurComplementSolver."
-                                  "Qcomputation");
-    }
   auto &Q_computation_timer(timers.add_and_start(
-    "run.step.initializeSchurComplementSolver.Qcomputation"));
+    "run.step.initializeSchurComplementSolver.Qcomputation", debug));
 
   schur_off_diagonal.blocks.clear();
   schur_off_diagonal.blocks.reserve(schur_complement_cholesky.blocks.size());
@@ -86,7 +82,7 @@ void SDP_Solver::initialize_schur_complement_solver(
     {
       auto &cholesky_timer(timers.add_and_start(
         "run.step.initializeSchurComplementSolver.Qcomputation.cholesky_"
-        + std::to_string(block_info.block_indices[block])));
+        + std::to_string(block_info.block_indices[block]),debug));
       schur_complement_cholesky.blocks[block] = schur_complement.blocks[block];
       Cholesky(El::UpperOrLowerNS::LOWER,
                schur_complement_cholesky.blocks[block]);
@@ -96,7 +92,7 @@ void SDP_Solver::initialize_schur_complement_solver(
       auto &solve_timer(timers.add_and_start(
         "run.step.initializeSchurComplementSolver."
         "Qcomputation.solve_"
-        + std::to_string(block_info.block_indices[block])));
+        + std::to_string(block_info.block_indices[block]),debug));
 
       schur_off_diagonal.blocks.push_back(sdp.free_var_matrix.blocks[block]);
       El::Trsm(El::LeftOrRightNS::LEFT, El::UpperOrLowerNS::LOWER,
@@ -116,7 +112,7 @@ void SDP_Solver::initialize_schur_complement_solver(
       auto &syrk_timer(timers.add_and_start(
         "run.step.initializeSchurComplementSolver."
         "Qcomputation.syrk_"
-        + std::to_string(block_info.block_indices[block])));
+        + std::to_string(block_info.block_indices[block]),debug));
       El::DistMatrix<El::BigFloat> Q_group_view(
         El::View(Q_group, 0, 0, schur_off_diagonal.blocks[block].Width(),
                  schur_off_diagonal.blocks[block].Width()));
@@ -126,22 +122,13 @@ void SDP_Solver::initialize_schur_complement_solver(
       syrk_timer.stop();
     }
 
-  if(debug)
-    {
-      El::Output(El::mpi::Rank(), " run.step.initializeSchurComplementSolver."
-                                  "Qcomputation.synchronize");
-    }
-  synchronize(Q_group, Q, timers);
+  synchronize(Q_group, debug, Q, timers);
   Q_computation_timer.stop();
 
-  if(debug)
-    {
-      El::Output(El::mpi::Rank(),
-                 " run.step.initializeSchurComplementSolver.Cholesky");
-    }
   auto &Cholesky_timer(
     timers.add_and_start("run.step.initializeSchurComplementSolver."
-                         "Cholesky"));
+                         "Cholesky",
+                         debug));
 
   Cholesky(El::UpperOrLowerNS::UPPER, Q);
   Cholesky_timer.stop();

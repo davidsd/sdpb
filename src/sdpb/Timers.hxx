@@ -9,6 +9,8 @@
 
 #include "Timer.hxx"
 
+#include <El.hpp>
+
 #include <fstream>
 #include <string>
 #include <list>
@@ -16,8 +18,12 @@
 
 struct Timers : public std::list<std::pair<std::string, Timer>>
 {
-  Timer &add_and_start(const std::string &name)
+  Timer &add_and_start(const std::string &name, const bool &debug)
   {
+    if(debug)
+      {
+        El::Output(El::mpi::Rank(), " ", name);
+      }
     emplace_back(name, Timer());
     return back().second;
   }
