@@ -28,8 +28,11 @@ void compute_feasible_and_termination(
   const SDP_Solver_Parameters &parameters, const El::BigFloat &primal_error,
   const El::BigFloat &dual_error, const El::BigFloat &duality_gap,
   const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
-  const int &iteration, bool &is_primal_and_dual_feasible,
-  SDP_Solver_Terminate_Reason &result, bool &terminate_now);
+  const int &iteration,
+  const std::chrono::time_point<std::chrono::high_resolution_clock>
+    &solver_start_time,
+  bool &is_primal_and_dual_feasible, SDP_Solver_Terminate_Reason &result,
+  bool &terminate_now);
 
 void compute_dual_residues_and_error(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
@@ -122,22 +125,17 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
   auto last_checkpoint_time(std::chrono::high_resolution_clock::now());
   for(int iteration = 1;; iteration++)
     {
-      /// FIXME: This has to use something that is guaranteed to be
-      /// the same for all processors.
-      if(std::chrono::duration_cast<std::chrono::seconds>(
-           std::chrono::high_resolution_clock::now() - last_checkpoint_time)
-           .count()
-         >= parameters.checkpoint_interval)
+      El::byte checkpoint_now(
+        std::chrono::duration_cast<std::chrono::seconds>(
+          std::chrono::high_resolution_clock::now() - last_checkpoint_time)
+          .count()
+        >= parameters.checkpoint_interval);
+      // Time varies between cores, so follow the decision of the root.
+      El::mpi::Broadcast(checkpoint_now, 0, El::mpi::COMM_WORLD);
+      if(checkpoint_now==true)
         {
           save_checkpoint(checkpoint_file);
           last_checkpoint_time = std::chrono::high_resolution_clock::now();
-        }
-      if(std::chrono::duration_cast<std::chrono::seconds>(
-           std::chrono::high_resolution_clock::now() - solver_timer.start_time)
-           .count()
-         >= parameters.max_runtime)
-        {
-          result = SDP_Solver_Terminate_Reason::MaxRuntimeExceeded;
         }
 
       compute_objectives(sdp, x, y, primal_objective, dual_objective,
@@ -161,8 +159,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
       bool is_primal_and_dual_feasible, terminate_now;
       compute_feasible_and_termination(
         parameters, primal_error, dual_error, duality_gap, primal_step_length,
-        dual_step_length, iteration, is_primal_and_dual_feasible, result,
-        terminate_now);
+        dual_step_length, iteration, solver_timer.start_time,
+        is_primal_and_dual_feasible, result, terminate_now);
       if(terminate_now)
         {
           break;

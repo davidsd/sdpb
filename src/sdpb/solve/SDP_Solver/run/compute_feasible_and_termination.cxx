@@ -5,15 +5,18 @@ void compute_feasible_and_termination(
   const SDP_Solver_Parameters &parameters, const El::BigFloat &primal_error,
   const El::BigFloat &dual_error, const El::BigFloat &duality_gap,
   const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
-  const int &iteration, bool &is_primal_and_dual_feasible,
-  SDP_Solver_Terminate_Reason &result, bool &terminate_now)
+  const int &iteration,
+  const std::chrono::time_point<std::chrono::high_resolution_clock>
+    &solver_start_time,
+  bool &is_primal_and_dual_feasible, SDP_Solver_Terminate_Reason &result,
+  bool &terminate_now)
 {
   const bool is_primal_feasible(primal_error
                                 < parameters.primal_error_threshold),
     is_dual_feasible(dual_error < parameters.dual_error_threshold),
     is_optimal(duality_gap < parameters.duality_gap_threshold);
 
-  terminate_now=true;
+  terminate_now = true;
   if(is_primal_feasible && is_dual_feasible && is_optimal)
     {
       result = SDP_Solver_Terminate_Reason::PrimalDualOptimal;
@@ -40,10 +43,21 @@ void compute_feasible_and_termination(
     {
       result = SDP_Solver_Terminate_Reason::MaxIterationsExceeded;
     }
+  else if(std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::high_resolution_clock::now() - solver_start_time)
+            .count()
+          >= parameters.max_runtime)
+    {
+      result = SDP_Solver_Terminate_Reason::MaxRuntimeExceeded;
+    }
   else
     {
-      terminate_now=false;
+      terminate_now = false;
     }
-
+  El::byte terminate_byte(terminate_now);
+  // Time varies between cores, so follow the decision of the root.
+  El::mpi::Broadcast(terminate_byte, 0, El::mpi::COMM_WORLD);
+  terminate_now=static_cast<bool>(terminate_byte);
+  
   is_primal_and_dual_feasible = (is_primal_feasible && is_dual_feasible);
 }
