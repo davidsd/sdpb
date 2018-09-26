@@ -85,7 +85,6 @@ public:
   void load_checkpoint(const boost::filesystem::path &checkpoint_file);
   void save_solution(const SDP_Solver_Terminate_Reason,
                      const boost::filesystem::path &out_file);
-  void print_header();
 
   void print_iteration(
     const int &iteration, const El::BigFloat &mu,

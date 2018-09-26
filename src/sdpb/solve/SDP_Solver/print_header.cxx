@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-void SDP_Solver::print_header()
+void print_header()
 {
   if(El::mpi::Rank() == 0)
     {

@@ -6,6 +6,7 @@
 //             function. Its just simpler to see this way what's timed and
 //             what's not
 
+void print_header();
 El::BigFloat dot(const Block_Vector &a, const Block_Vector &b);
 
 void block_tensor_inv_transpose_congruence_with_cholesky(
