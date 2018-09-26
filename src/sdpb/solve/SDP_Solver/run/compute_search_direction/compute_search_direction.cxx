@@ -26,38 +26,37 @@ void solve_schur_complement_equation(
   const Block_Matrix &schur_off_diagonal,
   const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx, Block_Vector &dy);
 
-void SDP_Solver::compute_search_direction(
-  const Block_Info &block_info, const SDP &sdp,
+void compute_search_direction(
+  const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
   const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
   const El::BigFloat &mu, const bool &is_corrector_phase,
   const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx,
-  Block_Diagonal_Matrix &dX, Block_Vector &dy, Block_Diagonal_Matrix &dY) const
+  Block_Diagonal_Matrix &dX, Block_Vector &dy, Block_Diagonal_Matrix &dY)
 {
   // R = beta mu I - X Y (predictor phase)
   // R = beta mu I - X Y - dX dY (corrector phase)
-  Block_Diagonal_Matrix R(X);
+  Block_Diagonal_Matrix R(solver.X);
 
-  scale_multiply_add(El::BigFloat(-1), X, Y, El::BigFloat(0), R);
+  scale_multiply_add(El::BigFloat(-1), solver.X, solver.Y, El::BigFloat(0), R);
   if(is_corrector_phase)
     {
       scale_multiply_add(El::BigFloat(-1), dX, dY, El::BigFloat(1), R);
     }
-
   R.add_diagonal(beta * mu);
 
-  Block_Diagonal_Matrix Z(X);
-
   // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))
-  multiply(primal_residues, Y, Z);
+  Block_Diagonal_Matrix Z(solver.X);
+  multiply(solver.primal_residues, solver.Y, Z);
   Z -= R;
   cholesky_solve(X_cholesky, Z);
   Z.symmetrize();
 
   // dx[p] = -dual_residues[p] - Tr(A_p Z)
   // dy[n] = dualObjective[n] - (FreeVarMatrix^T x)_n
-  compute_schur_RHS(block_info, sdp, dual_residues, Z, x, dx, dy);
+  compute_schur_RHS(block_info, sdp, solver.dual_residues, Z, solver.x, dx,
+                    dy);
 
   // Solve for dx, dy in-place
   solve_schur_complement_equation(schur_complement_cholesky,
@@ -65,10 +64,10 @@ void SDP_Solver::compute_search_direction(
 
   // dX = PrimalResidues + \sum_p A_p dx[p]
   constraint_matrix_weighted_sum(block_info, sdp, dx, dX);
-  dX += primal_residues;
+  dX += solver.primal_residues;
 
   // dY = Symmetrize(X^{-1} (R - dX Y))
-  multiply(dX, Y, dY);
+  multiply(dX, solver.Y, dY);
   dY -= R;
   cholesky_solve(X_cholesky, dY);
   dY.symmetrize();

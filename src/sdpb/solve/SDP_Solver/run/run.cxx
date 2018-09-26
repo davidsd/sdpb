@@ -54,6 +54,15 @@ void initialize_schur_complement_solver(
   Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
   Timers &timers);
 
+void compute_search_direction(
+  const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
+  const Block_Diagonal_Matrix &schur_complement_cholesky,
+  const Block_Matrix &schur_off_diagonal,
+  const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
+  const El::BigFloat &mu, const bool &is_corrector_phase,
+  const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx,
+  Block_Diagonal_Matrix &dX, Block_Vector &dy, Block_Diagonal_Matrix &dY);
+
 El::BigFloat
 predictor_centering_parameter(const SDP_Solver_Parameters &parameters,
                               const bool is_primal_dual_feasible);
@@ -233,9 +242,10 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
 
         auto &search_predictor_timer(timers.add_and_start(
           "run.step.computeSearchDirection(betaPredictor)"));
-        compute_search_direction(block_info, sdp, schur_complement_cholesky,
-                                 schur_off_diagonal, X_cholesky,
-                                 beta_predictor, mu, false, Q, dx, dX, dy, dY);
+        compute_search_direction(block_info, sdp, *this,
+                                 schur_complement_cholesky, schur_off_diagonal,
+                                 X_cholesky, beta_predictor, mu, false, Q, dx,
+                                 dX, dy, dY);
         search_predictor_timer.stop();
 
         // Compute the corrector solution for (dx, dX, dy, dY)
@@ -247,9 +257,10 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
         corrector_timer.stop();
         auto &search_corrector_timer(timers.add_and_start(
           "run.step.computeSearchDirection(betaCorrector)"));
-        compute_search_direction(block_info, sdp, schur_complement_cholesky,
-                                 schur_off_diagonal, X_cholesky,
-                                 beta_corrector, mu, true, Q, dx, dX, dy, dY);
+        compute_search_direction(block_info, sdp, *this,
+                                 schur_complement_cholesky, schur_off_diagonal,
+                                 X_cholesky, beta_corrector, mu, true, Q, dx,
+                                 dX, dy, dY);
         search_corrector_timer.stop();
       }
       // Compute step-lengths that preserve positive definiteness of X, Y

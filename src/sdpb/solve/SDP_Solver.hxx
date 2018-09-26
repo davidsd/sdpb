@@ -85,18 +85,4 @@ public:
   void load_checkpoint(const boost::filesystem::path &checkpoint_directory);
   void save_solution(const SDP_Solver_Terminate_Reason,
                      const boost::filesystem::path &out_file);
-
-private:
-  // Compute (dx, dX, dy, dY), given the current mu, a reduction
-  // parameter beta.  `correctorPhase' specifies whether to use the
-  // R-matrix corresponding to the corrector step (if false, we use
-  // the predictor R-matrix)
-  void compute_search_direction(
-    const Block_Info &block_info, const SDP &sdp,
-    const Block_Diagonal_Matrix &schur_complement_cholesky,
-    const Block_Matrix &schur_off_diagonal,
-    const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
-    const El::BigFloat &mu, const bool &is_corrector_phase,
-    const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx,
-    Block_Diagonal_Matrix &dX, Block_Vector &dy, Block_Diagonal_Matrix &dY) const;
 };
