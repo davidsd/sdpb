@@ -2,11 +2,16 @@
 #include "../../../Timers.hxx"
 
 // The main solver loop
-// PROFILING : Using the somewhat weird convention to put timings outside the
-//             function. Its just simpler to see this way what's timed and
-//             what's not
 
 void print_header();
+void print_iteration(
+  const int &iteration, const El::BigFloat &mu,
+  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
+  const El::BigFloat &beta_corrector, const size_t &dual_objective_b_height,
+  const SDP_Solver &sdp_solver,
+  const std::chrono::time_point<std::chrono::high_resolution_clock>
+    &solver_start_time);
+
 El::BigFloat dot(const Block_Vector &a, const Block_Vector &b);
 
 void block_tensor_inv_transpose_congruence_with_cholesky(
@@ -435,7 +440,7 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
 
       print_iteration(iteration, mu, primal_step_length, dual_step_length,
                       beta_corrector, sdp.dual_objective_b.Height(),
-                      solver_timer.start_time);
+                      *this, solver_timer.start_time);
       // Update the primal point (x, X) += primalStepLength*(dx, dX)
       for(size_t block = 0; block < x.blocks.size(); ++block)
         {

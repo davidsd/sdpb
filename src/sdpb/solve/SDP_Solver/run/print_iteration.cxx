@@ -1,14 +1,15 @@
-#include "../SDP_Solver.hxx"
-#include "../../Timers.hxx"
+#include "../../SDP_Solver.hxx"
+#include "../../../Timers.hxx"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <iostream>
 
-void SDP_Solver::print_iteration(
+void print_iteration(
   const int &iteration, const El::BigFloat &mu,
   const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
   const El::BigFloat &beta_corrector, const size_t &dual_objective_b_height,
+  const SDP_Solver &sdp_solver,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time)
 {
@@ -27,19 +28,19 @@ void SDP_Solver::print_iteration(
                 << std::showpoint << static_cast<double>(mu) << " "
 
                 << std::showpos << std::setw(11) << std::setprecision(3)
-                << static_cast<double>(primal_objective) << " "
+                << static_cast<double>(sdp_solver.primal_objective) << " "
 
                 << std::setw(11) << std::setprecision(3)
-                << static_cast<double>(dual_objective) << " "
+                << static_cast<double>(sdp_solver.dual_objective) << " "
 
                 << std::noshowpos << std::setw(10) << std::setprecision(3)
-                << static_cast<double>(duality_gap) << " "
+                << static_cast<double>(sdp_solver.duality_gap) << " "
 
                 << std::showpos << std::setw(11) << std::setprecision(3)
-                << static_cast<double>(primal_error) << " "
+                << static_cast<double>(sdp_solver.primal_error) << " "
 
                 << std::setw(11) << std::setprecision(3)
-                << static_cast<double>(dual_error) << " "
+                << static_cast<double>(sdp_solver.dual_error) << " "
 
                 << std::noshowpos << std::setw(8) << std::setprecision(3)
                 << static_cast<double>(primal_step_length) << " "
