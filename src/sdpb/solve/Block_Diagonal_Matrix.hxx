@@ -136,16 +136,17 @@ El::BigFloat frobenius_product_of_sums(const Block_Diagonal_Matrix &X,
                                        const Block_Diagonal_Matrix &dY);
 
 // C := alpha*A*B + beta*C
-void block_diagonal_matrix_scale_multiply_add(const El::BigFloat &alpha,
-                                              const Block_Diagonal_Matrix &A,
-                                              const Block_Diagonal_Matrix &B,
-                                              const El::BigFloat &beta,
-                                              Block_Diagonal_Matrix &C);
+void scale_multiply_add(const El::BigFloat &alpha,
+                        const Block_Diagonal_Matrix &A,
+                        const Block_Diagonal_Matrix &B,
+                        const El::BigFloat &beta, Block_Diagonal_Matrix &C);
 
 // C := A B
-void block_diagonal_matrix_multiply(const Block_Diagonal_Matrix &A,
-                                    const Block_Diagonal_Matrix &B,
-                                    Block_Diagonal_Matrix &C);
+inline void multiply(const Block_Diagonal_Matrix &A,
+                     const Block_Diagonal_Matrix &B, Block_Diagonal_Matrix &C)
+{
+  scale_multiply_add(El::BigFloat(1), A, B, El::BigFloat(0), C);
+}
 
 // A := L^{-1} A L^{-T}
 void lower_triangular_inverse_congruence(const Block_Diagonal_Matrix &L,
@@ -157,6 +158,5 @@ void cholesky_decomposition(const Block_Diagonal_Matrix &A,
                             Block_Diagonal_Matrix &L);
 
 // X := ACholesky^{-T} ACholesky^{-1} X = A^{-1} X
-void block_matrix_solve_with_cholesky(
-  const Block_Diagonal_Matrix &ACholesky,
-  Block_Diagonal_Matrix &X);
+void cholesky_solve(const Block_Diagonal_Matrix &ACholesky,
+                    Block_Diagonal_Matrix &X);

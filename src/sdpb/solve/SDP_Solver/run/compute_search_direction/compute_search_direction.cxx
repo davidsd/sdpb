@@ -39,12 +39,10 @@ void SDP_Solver::compute_search_direction(
   // R = beta mu I - X Y - dX dY (corrector phase)
   Block_Diagonal_Matrix R(X);
 
-  block_diagonal_matrix_scale_multiply_add(El::BigFloat(-1), X, Y,
-                                           El::BigFloat(0), R);
+  scale_multiply_add(El::BigFloat(-1), X, Y, El::BigFloat(0), R);
   if(is_corrector_phase)
     {
-      block_diagonal_matrix_scale_multiply_add(El::BigFloat(-1), dX, dY,
-                                               El::BigFloat(1), R);
+      scale_multiply_add(El::BigFloat(-1), dX, dY, El::BigFloat(1), R);
     }
 
   R.add_diagonal(beta * mu);
@@ -52,9 +50,9 @@ void SDP_Solver::compute_search_direction(
   Block_Diagonal_Matrix Z(X);
 
   // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))
-  block_diagonal_matrix_multiply(primal_residues, Y, Z);
+  multiply(primal_residues, Y, Z);
   Z -= R;
-  block_matrix_solve_with_cholesky(X_cholesky, Z);
+  cholesky_solve(X_cholesky, Z);
   Z.symmetrize();
 
   // dx[p] = -dual_residues[p] - Tr(A_p Z)
@@ -70,9 +68,9 @@ void SDP_Solver::compute_search_direction(
   dX += primal_residues;
 
   // dY = Symmetrize(X^{-1} (R - dX Y))
-  block_diagonal_matrix_multiply(dX, Y, dY);
+  multiply(dX, Y, dY);
   dY -= R;
-  block_matrix_solve_with_cholesky(X_cholesky, dY);
+  cholesky_solve(X_cholesky, dY);
   dY.symmetrize();
   dY *= El::BigFloat(-1);
 }
