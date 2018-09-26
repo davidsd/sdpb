@@ -86,9 +86,6 @@ public:
   void save_solution(const SDP_Solver_Terminate_Reason,
                      const boost::filesystem::path &out_file);
 
-  void
-  test_multiplication(const int m_init, const int m_fin, const int m_step);
-
 private:
   // Compute (dx, dX, dy, dY), given the current mu, a reduction
   // parameter beta.  `correctorPhase' specifies whether to use the
