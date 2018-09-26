@@ -21,7 +21,7 @@ void compute_objectives(const SDP &sdp, const Block_Vector &x,
       dual_objective = sdp.objective_const
                        + El::Dotu(sdp.dual_objective_b, y.blocks.front());
     }
-  El::mpi::Broadcast(&dual_objective, 1, 0, El::mpi::COMM_WORLD);
+  El::mpi::Broadcast(dual_objective, 0, El::mpi::COMM_WORLD);
 
   duality_gap
     = Abs(primal_objective - dual_objective)
