@@ -1,6 +1,4 @@
 #include "../SDP_Solver.hxx"
-#include "../../Timers.hxx"
-#include "../../../set_stream_precision.hxx"
 
 #include <boost/filesystem.hpp>
 
@@ -8,14 +6,25 @@ template <typename T>
 void write_local_blocks(const T &t,
                         boost::filesystem::ofstream &checkpoint_stream)
 {
+  El::BigFloat zero(0);
+  const size_t serialized_size(zero.SerializedSize());
+  std::vector<uint8_t> local_array(serialized_size);
+
   for(auto &block : t.blocks)
     {
-      checkpoint_stream << block.LocalHeight() << " " << block.LocalWidth()
-                        << "\n";
-      for(int64_t row = 0; row < block.LocalHeight(); ++row)
-        for(int64_t column = 0; column < block.LocalWidth(); ++column)
+      int64_t local_height(block.LocalHeight()),
+        local_width(block.LocalWidth());
+      checkpoint_stream.write(reinterpret_cast<char *>(&local_height),
+                              sizeof(int64_t));
+      checkpoint_stream.write(reinterpret_cast<char *>(&local_width),
+                              sizeof(int64_t));
+      for(int64_t row = 0; row < local_height; ++row)
+        for(int64_t column = 0; column < local_width; ++column)
           {
-            checkpoint_stream << block.GetLocal(row, column) << "\n";
+            block.GetLocal(row, column).Serialize(local_array.data());
+            checkpoint_stream.write(
+              reinterpret_cast<char *>(local_array.data()),
+              std::streamsize(local_array.size()));
           }
     }
 }
@@ -42,7 +51,8 @@ void SDP_Solver::save_checkpoint(
         {
           std::cout << "Backing up checkpoint\n";
         }
-      boost::filesystem::path backup_filename(checkpoint_filename.string() + ".bk");
+      boost::filesystem::path backup_filename(checkpoint_filename.string()
+                                              + ".bk");
       remove(backup_filename);
       rename(checkpoint_filename, backup_filename);
     }
@@ -52,7 +62,6 @@ void SDP_Solver::save_checkpoint(
       std::cout << "Saving checkpoint to    : " << checkpoint_directory
                 << '\n';
     }
-  set_stream_precision(checkpoint_stream);
   write_local_blocks(x, checkpoint_stream);
   write_local_blocks(X, checkpoint_stream);
   write_local_blocks(y, checkpoint_stream);

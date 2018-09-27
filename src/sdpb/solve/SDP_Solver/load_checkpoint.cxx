@@ -1,15 +1,21 @@
 #include "../SDP_Solver.hxx"
 
-#include <boost/archive/text_iarchive.hpp>
+#include <boost/filesystem.hpp>
 
 template <typename T>
-void read_local_blocks(T &t,
-                       boost::filesystem::ifstream &checkpoint_stream)
+void read_local_blocks(T &t, boost::filesystem::ifstream &checkpoint_stream)
 {
+  El::BigFloat zero(0);
+  const size_t serialized_size(zero.SerializedSize());
+  std::vector<uint8_t> local_array(serialized_size);
+
   for(auto &block : t.blocks)
     {
       int64_t local_height, local_width;
-      checkpoint_stream >> local_height >> local_width;
+      checkpoint_stream.read(reinterpret_cast<char *>(&local_height),
+                             sizeof(int64_t));
+      checkpoint_stream.read(reinterpret_cast<char *>(&local_width),
+                             sizeof(int64_t));
       if(local_height != block.LocalHeight()
          || local_width != block.LocalWidth())
         {
@@ -25,7 +31,11 @@ void read_local_blocks(T &t,
         for(int64_t column = 0; column < local_width; ++column)
           {
             El::BigFloat input;
-            checkpoint_stream >> input;
+            checkpoint_stream.read(
+              reinterpret_cast<char *>(local_array.data()),
+              std::streamsize(local_array.size()));
+            input.Deserialize(local_array.data());
+
             block.SetLocal(row, column, input);
           }
     }
