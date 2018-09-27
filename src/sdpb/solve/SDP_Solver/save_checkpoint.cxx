@@ -2,6 +2,9 @@
 
 #include <boost/filesystem.hpp>
 
+// We use binary checkpointing because writing text does not write all
+// of the necessary digits.  The GMP library sets it to one less than
+// required for round-tripping.
 template <typename T>
 void write_local_blocks(const T &t,
                         boost::filesystem::ofstream &checkpoint_stream)
