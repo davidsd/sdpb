@@ -8,6 +8,8 @@
 #include "SDP_Solver.hxx"
 #include "../Timers.hxx"
 
+#include "../../set_stream_precision.hxx"
+
 #include <El.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/filesystem.hpp>
@@ -42,8 +44,7 @@ solve(const boost::filesystem::path &sdp_directory,
 
   if(El::mpi::Rank() == 0)
     {
-      std::cout.precision(
-        std::ceil(El::gmp::Precision() * std::log(2.0) / std::log(10.0)));
+      set_stream_precision(std::cout);
       std::cout << "-----" << reason << "-----\n"
                 << '\n'
                 << "primalObjective = " << solver.primal_objective << '\n'
