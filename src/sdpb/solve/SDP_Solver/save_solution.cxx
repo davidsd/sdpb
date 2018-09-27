@@ -1,4 +1,5 @@
 #include "../SDP_Solver.hxx"
+#include "../../../set_stream_precision.hxx"
 
 void SDP_Solver::save_solution(
   const SDP_Solver_Terminate_Reason terminate_reason,
@@ -9,8 +10,7 @@ void SDP_Solver::save_solution(
   // FIXME: Write separate files for each rank.
 
   boost::filesystem::ofstream ofs(out_file);
-  ofs.precision(
-    std::ceil(El::gmp::Precision() * std::log(2.0) / std::log(10.0)));
+  set_stream_precision(ofs);
   if(El::mpi::Rank() == 0)
     {
       std::cout << "Saving solution to      : " << out_file << '\n';
