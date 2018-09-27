@@ -4,8 +4,7 @@
 #include <cmath>
 #include <iostream>
 
-inline void set_stream_precision(std::ofstream &ofs)
+inline void set_stream_precision(std::ostream &os)
 {
-  ofs.precision(
-    std::ceil(El::gmp::Precision() * std::log(2.0) / std::log(10.0)));
+  os.precision(std::ceil(El::gmp::Precision() * std::log10(2.0)) + 1);
 }
