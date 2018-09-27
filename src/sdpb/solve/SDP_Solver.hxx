@@ -66,22 +66,34 @@ public:
   Block_Vector dual_residues;
   El::BigFloat dual_error; // maxAbs(dualResidues)
 
-  // Create a new solver for a given SDP, with the given parameters
   SDP_Solver(const SDP_Solver_Parameters &parameters,
              const Block_Info &block_info, const El::Grid &grid,
              const size_t &dual_objective_b_height,
              const boost::filesystem::path &checkpoint_directory);
 
-  // Run the solver, backing up to checkpointFile
   SDP_Solver_Terminate_Reason
   run(const SDP_Solver_Parameters &parameters,
       const boost::filesystem::path &checkpoint_directory,
       const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
       Timers &timers);
 
-  // Input/output
-  void save_checkpoint(const boost::filesystem::path &checkpoint_directory) const;
-  bool load_checkpoint(const boost::filesystem::path &checkpoint_directory);
+  void step(const SDP_Solver_Parameters &parameters, const size_t &iteration,
+            const std::chrono::time_point<std::chrono::high_resolution_clock>
+              &solver_start_time,
+            const std::size_t &total_psd_rows,
+            const bool &is_primal_and_dual_feasible,
+            const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
+            const Block_Diagonal_Matrix &X_cholesky,
+            const Block_Diagonal_Matrix &Y_cholesky,
+            const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
+            const Block_Diagonal_Matrix &bilinear_pairings_Y,
+            El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
+            SDP_Solver_Terminate_Reason &terminate_reason, bool &terminate_now,
+            Timers &timers);
+
   void save_solution(const SDP_Solver_Terminate_Reason,
                      const boost::filesystem::path &out_file) const;
+  void
+  save_checkpoint(const boost::filesystem::path &checkpoint_directory) const;
+  bool load_checkpoint(const boost::filesystem::path &checkpoint_directory);
 };
