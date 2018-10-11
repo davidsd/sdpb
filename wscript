@@ -10,7 +10,7 @@ def configure(conf):
 
     conf.load(['compiler_cxx','gnu_dirs','boost','gmpxx','cxx14','elemental',
                'libxml2'])
-    conf.check_boost(lib='serialization system filesystem timer program_options chrono')
+    conf.check_boost(lib='system filesystem date_time program_options')
 
 def build(bld):
     default_flags=['-Wall', '-Wextra', '-O3', '-Wno-deprecated']
