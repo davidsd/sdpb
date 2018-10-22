@@ -38,9 +38,9 @@ manager such as [Homebrew](https://brew.sh).
 
 # Installation
 
-1. Download the `no-warnings` branch of the fork of [Elemental](https://gitlab.com/bootstrapcollaboration/elemental)
+1. Download the `no_warnings` branch of the fork of [Elemental](https://gitlab.com/bootstrapcollaboration/elemental)
 
-    `git clone --branch no-warnings https://gitlab.com/bootstrapcollaboration/elemental`
+    `git clone --branch no_warnings https://gitlab.com/bootstrapcollaboration/elemental`
     
 2. Make the build directory and cd into it.
 
