@@ -31,6 +31,7 @@ def configure(conf):
 
     conf.check_cxx(msg="Checking for Elemental",
                    header_name='El.hpp',
+                   fragment="#include <El.hpp>\nint main(int argc, char* argv[]) {El::Environment env( argc, argv ); El::BigFloat big;}\n",
                    includes=elemental_incdir,
                    uselib_store='elemental',
                    libpath=elemental_libdir,
