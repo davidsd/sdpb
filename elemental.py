@@ -5,7 +5,7 @@ def configure(conf):
     def get_param(varname,default):
         return getattr(Options.options,varname,'')or default
 
-    conf.load('compiler_cxx cxx14')
+    conf.load('compiler_cxx cxx14 gmpxx')
     
     # Find Elemental
     if conf.options.elemental_dir:
@@ -26,8 +26,7 @@ def configure(conf):
     if conf.options.elemental_libs:
         elemental_libs=conf.options.elemental_libs.split()
     else:
-        elemental_libs=['El', 'pmrrr', 'ElSuiteSparse', 'pthread', 'm', 'mpc',
-                        'mpfr', 'gmp', 'metis' ]
+        elemental_libs=['El', 'pmrrr', 'ElSuiteSparse', 'pthread', 'm', 'metis' ]
 
     conf.check_cxx(msg="Checking for Elemental",
                    header_name='El.hpp',
@@ -37,7 +36,7 @@ def configure(conf):
                    libpath=elemental_libdir,
                    rpath=elemental_libdir,
                    lib=elemental_libs,
-                   use='cxx14')
+                   use=['cxx14','gmpxx'])
 
 def options(opt):
     elemental=opt.add_option_group('Elemental Options')

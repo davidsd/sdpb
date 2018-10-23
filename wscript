@@ -8,7 +8,7 @@ def configure(conf):
     if not 'CXX' in os.environ or os.environ['CXX']=='g++' or os.environ['CXX']=='icpc':
         conf.environ['CXX']='mpicxx'
 
-    conf.load(['compiler_cxx','gnu_dirs','boost','gmpxx','cxx14','elemental',
+    conf.load(['compiler_cxx','gnu_dirs','boost','cxx14','elemental',
                'libxml2'])
     conf.check_boost(lib='system filesystem date_time program_options')
 

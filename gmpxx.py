@@ -45,7 +45,7 @@ def configure(conf):
     if conf.options.gmpxx_libs:
         gmpxx_libs=conf.options.gmpxx_libs.split()
     else:
-        gmpxx_libs=['gmpxx','gmp']
+        gmpxx_libs=['gmpxx','gmp', 'mpc', 'mpfr']
 
     conf.check_cxx(msg="Checking for GMPXX",
                    header_name='gmpxx.h',
