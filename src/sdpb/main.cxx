@@ -25,7 +25,8 @@ solve(const boost::filesystem::path &sdp_directory,
 
 void write_timing(const boost::filesystem::path &out_file,
                   const boost::filesystem::path &block_timings_filename,
-                  const Block_Info &block_info, const Timers &timers);
+                  const bool &write_block_timing, const Block_Info &block_info,
+                  const Timers &timers);
 
 int main(int argc, char **argv)
 {
@@ -35,7 +36,8 @@ int main(int argc, char **argv)
   try
     {
       boost::filesystem::path sdp_directory, out_file, checkpoint_in,
-        checkpoint_out, param_file, block_timing_filename;
+        checkpoint_out, param_file;
+      bool write_block_timing(false);
 
       SDP_Solver_Parameters parameters;
 
@@ -59,9 +61,9 @@ int main(int argc, char **argv)
         "checkpointDir.")(
         "debug", po::value<bool>(&parameters.debug)->default_value(false),
         "Write out debugging output.")(
-        "blockTimingFile",
-        po::value<boost::filesystem::path>(&block_timing_filename),
-        "File to write per-block timing info for use when distributing "
+        "writeBlockTiming",
+        po::bool_switch(&write_block_timing)->default_value(false),
+        "Write per-block timing info for use when distributing "
         "blocks over MPI.");
 
       // We set default parameters using El::BigFloat("1e-10",10)
@@ -257,7 +259,8 @@ int main(int argc, char **argv)
       Timers timers(solve(sdp_directory, out_file, checkpoint_in,
                           checkpoint_out, block_info, parameters));
 
-      write_timing(out_file, block_timing_filename, block_info, timers);
+      write_timing(out_file, sdp_directory, write_block_timing, block_info,
+                   timers);
     }
   catch(std::exception &e)
     {

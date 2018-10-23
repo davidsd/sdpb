@@ -5,12 +5,13 @@
 #include <boost/filesystem/fstream.hpp>
 
 void write_timing(const boost::filesystem::path &out_file,
-                  const boost::filesystem::path &block_timings_filename,
-                  const Block_Info &block_info, const Timers &timers)
+                  const boost::filesystem::path &sdp_directory,
+                  const bool &write_block_timing, const Block_Info &block_info,
+                  const Timers &timers)
 {
   timers.write_profile(out_file.string() + ".profiling."
                        + std::to_string(El::mpi::Rank()));
-  if(!block_timings_filename.empty())
+  if(write_block_timing)
     {
       El::Matrix<int32_t> block_timings(block_info.dimensions.size(), 1);
       El::Zero(block_timings);
@@ -33,8 +34,8 @@ void write_timing(const boost::filesystem::path &out_file,
       El::AllReduce(block_timings, El::mpi::COMM_WORLD);
       if(El::mpi::Rank() == 0)
         {
-          boost::filesystem::ofstream block_timings_file(
-            block_timings_filename);
+          boost::filesystem::ofstream block_timings_file(sdp_directory
+                                                         / "block_timings");
           for(int64_t row = 0; row < block_timings.Height(); ++row)
             {
               block_timings_file << block_timings(row, 0) << "\n";
