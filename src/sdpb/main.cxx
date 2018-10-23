@@ -74,8 +74,10 @@ int main(int argc, char **argv)
       po::options_description solver_params_options("Solver parameters");
       solver_params_options.add_options()(
         "precision", po::value<int>(&parameters.precision)->default_value(400),
-        "Precision in binary digits.  GMP will round up to the nearest "
-        "multiple of 64 (or 32 on older systems).")(
+        "The precision, in the number of bits, for numbers in the simulation. "
+        " This should be less than or equal to the precision used when "
+        "preprocessing the XML input files with 'pvm2sdp'.  GMP will round "
+        "this up to a multiple of 32 or 64, depending on the system.")(
         "checkpointInterval",
         po::value<int>(&parameters.checkpoint_interval)->default_value(3600),
         "Save checkpoints to checkpointFile every checkpointInterval "
@@ -112,7 +114,16 @@ int main(int argc, char **argv)
         po::value<int>(&parameters.max_runtime)->default_value(86400),
         "Maximum amount of time to run the solver in seconds.")(
         "procsPerNode", po::value<int>(&parameters.procs_per_node)->required(),
-        "Number of processers per node.  This is used for load balancing.")(
+        "This option is **required**.\n\n"
+        "The number of processes that can run on a node.  When running on "
+        "more "
+        "than one node, the load balancer needs to know how many processes "
+        "are assigned to each node.  On a laptop or desktop, this would be "
+        "the number of physical cores on your machine, not including "
+        "hyperthreaded cores.  For current laptops (2018), this is probably "
+        "2 or 4.\n\n"
+        "If you are using the Slurm workload manager, this should be set to "
+        "'$SLURM_NTASKS_PER_NODE'.")(
         "dualityGapThreshold",
         po::value<El::BigFloat>(&parameters.duality_gap_threshold)
           ->default_value(El::BigFloat("1e-30", 10)),
