@@ -12,37 +12,46 @@ def configure(conf):
                   'GMPXX_INCLUDE_DIR','GMP_INC_DIR','GMPXX_INC_DIR']:
             env_dir=os.getenv(d)
             if env_dir:
+                conf.to_log('Setting gmpxx_incdir using environment variable: ' + d + '=' + env_dir)
                 conf.options.gmpxx_incdir=env_dir
                 
     if not conf.options.gmpxx_libdir:
         for d in ['GMP_LIB','GMPXX_LIB','GMP_LIB_DIR','GMPXX_LIB_DIR']:
             env_dir=os.getenv(d)
             if env_dir:
-                conf.options.gmpxx_incdir=env_dir
+                conf.to_log('Setting gmpxx_libdir using environment variable: ' + d + '=' + env_dir)
+                conf.options.gmpxx_libdir=env_dir
 
     if not conf.options.gmpxx_dir:
         for d in ['GMP_DIR','GMPXX_DIR']:
             env_dir=os.getenv(d)
             if env_dir:
-                conf.options.gmpxx_incdir=env_dir
+                conf.to_log('Setting gmpxx_dir using environment variable: ' + d + '=' + env_dir)
+                conf.options.gmpxx_dir=env_dir
                 
     # Find GMPXX
     if conf.options.gmpxx_dir:
+        conf.to_log('Using gmpxx_dir: ' + conf.options.gmpxx_dir)
         if not conf.options.gmpxx_incdir:
+            conf.to_log('Setting gmpxx_incdir using gmpxx_dir: ' + conf.options.gmpxx_dir)
             conf.options.gmpxx_incdir=conf.options.gmpxx_dir + "/include"
         if not conf.options.gmpxx_libdir:
+            conf.to_log('Setting gmpxx_libdir using gmpxx_dir: ' + conf.options.gmpxx_dir)
             conf.options.gmpxx_libdir=conf.options.gmpxx_dir + "/lib"
 
     if conf.options.gmpxx_incdir:
+        conf.to_log('Using gmpxx_incdir: ' + conf.options.gmpxx_incdir)
         gmpxx_incdir=conf.options.gmpxx_incdir.split()
     else:
         gmpxx_incdir=[]
     if conf.options.gmpxx_libdir:
+        conf.to_log('Using gmpxx_libdir: ' + conf.options.gmpxx_libdir)
         gmpxx_libdir=conf.options.gmpxx_libdir.split()
     else:
         gmpxx_libdir=[]
 
     if conf.options.gmpxx_libs:
+        conf.to_log('Using gmpxx_libs: ' + conf.options.gmpxx_libs)
         gmpxx_libs=conf.options.gmpxx_libs.split()
     else:
         gmpxx_libs=['gmpxx','gmp', 'mpc', 'mpfr']
