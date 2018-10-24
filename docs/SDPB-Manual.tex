@@ -183,9 +183,11 @@ A bilinear basis is a collection of polynomials $q_m^{(j)}(x)$ such that $\deg q
 
 The data can be spread over multiple files. In such cases the different input files should all follow the above format except that $\langle${\it xml for objective}$\rangle$ should be omitted from all but one file. The parser will combine the constraints from all the polynomial vector matrices specified in the different files.
 
-Several aspects of the input format are inefficient.  Because the matrices are symmetric, \texttt{rows} and \texttt{cols} are redundant, and most elements are listed twice.  Also, XML is extremely verbose.  The current choices are in the interest of simplicity and could obviously be changed in a future version.
+Several aspects of the input format are inefficient.  Because the matrices are symmetric, \texttt{rows} and \texttt{cols} are redundant, and most elements are listed twice.  Also, XML is extremely verbose.
 
-The options to \SDPB\ are described in detail in the help text, obtained by running ``\texttt{sdpb --help}."
+To improve performance for large inputs, the XML files must first be
+preprocessed into a more efficient format.  Instructions on how to
+preprocess the input and run SDPB are in \texttt{docs/Usage.md}.
 
 \subsection{\texttt{Mathematica} Interface}
 
@@ -404,11 +406,18 @@ where $\texttt{dualityGapThreshold} \ll 1$ is chosen by the user.
   frame=single,
   basicstyle=\scriptsize\ttfamily\selectfont,
 ]
-$ sdpb -s test.xml --stepLengthReduction=0.9 --noFinalCheckpoint --dualityGapThreshold=1e-10
-SDPB started at 2015-Jan-31 21:57:21
-SDP file        : "test.xml"
-out file        : "test.out"
-checkpoint file : "test.ck"
+$ ./build/sdpb -s test/test --noFinalCheckpoint --dualityGapThreshold=1e-10 --procsPerNode=1
+Block Grid Mapping
+Node	Num Procs	Cost		Block List
+==================================================
+0	1		0	{(0,5)}
+
+
+SDPB started at 2018-Oct-23 15:01:09
+SDP directory   : "test/test"
+out file        : "test/test.out"
+checkpoint in   : "test/test.ck"
+checkpoint out  : "test/test.ck"
 
 Parameters:
 maxIterations                = 500
@@ -420,45 +429,47 @@ findDualFeasible             = false
 detectPrimalFeasibleJump     = false
 detectDualFeasibleJump       = false
 precision(actual)            = 400(448)
-maxThreads(using)            = 4(4)
 dualityGapThreshold          = 1e-10
 primalErrorThreshold         = 1e-30
 dualErrorThreshold           = 1e-30
-initialMatrixScalePrimal     = 100000000000000000000
-initialMatrixScaleDual       = 100000000000000000000
+initialMatrixScalePrimal     = 1e+20
+initialMatrixScaleDual       = 1e+20
 feasibleCenteringParameter   = 0.1
 infeasibleCenteringParameter = 0.3
 stepLengthReduction          = 0.9
-choleskyStabilizeThreshold   = 1e-40
 maxComplementarity           = 1e+100
+procsPerNode                 = 1
+debug                        = false
 
 
-   time     mu       P-obj     D-obj    gap       P-err      D-err     P-step D-step beta dim/stabilized
---------------------------------------------------------------------------------------------------------
- 1 00:00:00 1.0e+40 +0.00e+00 +0.00e+00 0.00e+00 +1.00e+20  +2.88e+20  0.811  0.832  0.3  1/1
- 2 00:00:00 2.7e+39 +1.22e+20 -2.11e+20 1.00e+00 +1.89e+19  +4.84e+19  0.786  0.807  0.3  1/1
- 3 00:00:00 8.4e+38 +1.27e+20 -3.52e+20 1.00e+00 +4.03e+18  +9.36e+18  0.777  0.794  0.3  1/1
-...
-82 00:00:00 2.4e-08 +1.84e+00 +1.84e+00 3.22e-08 +5.40e-136 +1.70e-134 1      1      0.1  1/1
-83 00:00:00 2.4e-09 +1.84e+00 +1.84e+00 3.22e-09 +7.90e-136 +1.83e-134 1      1      0.1  1/1
-84 00:00:00 2.4e-10 +1.84e+00 +1.84e+00 3.22e-10 +2.57e-136 +1.01e-133 1      1      0.1  1/1
------found primal-dual optimal solution-----------------------------------------------------------------
+          time    mu     P-obj       D-obj      gap         P-err       D-err      P-step   D-step   beta  dim
+---------------------------------------------------------------------------------------------------------------
+1            0 1.0e+40  +0.00       +0.00       0.00       +1.00e+20   +2.88e+20   0.811    0.832    0.300  1
+2            0 2.7e+39  +1.22e+20   -2.11e+20   1.00       +1.89e+19   +4.84e+19   0.786    0.807    0.300  1
+3            0 8.4e+38  +1.27e+20   -3.52e+20   1.00       +4.03e+18   +9.36e+18   0.777    0.794    0.300  1
+....
+82           0 2.4e-08  +1.84       +1.84       3.22e-08   +4.33e-136  +1.79e-134  1.00     1.00     0.100  1
+83           0 2.4e-09  +1.84       +1.84       3.22e-09   +6.99e-136  +4.27e-134  1.00     1.00     0.100  1
+84           0 2.4e-10  +1.84       +1.84       3.22e-10   +3.13e-136  +2.20e-134  1.00     1.00     0.100  1
+-----found primal-dual optimal solution-----
 
-primalObjective = 1.84026576320318090039117617247
-dualObjective   = 1.84026576308462848033006313255
-dualityGap      = 3.22106791408699658310926876654e-11
-primalError     = 4.26325166997944952057867662787e-136
-dualError       = 1.42154001133123757956323785185e-133
+primalObjective = 1.84026576320318090039117617247403804326445555507439934672628612807738555109679854789376606
+1435193498261234053161410573076634281729848342
+dualObjective   = 1.84026576308462848033006313255001428991959547020992950642901598201900422505389883109900102
+0847250942430618468768821243142382243330096089
+dualityGap      = 3.22106791408699658310926876653734497767736974296331635819280399407159685692585961407171090
+6339045160904020559956169061628872411051464635e-11
+primalError     = 5.00037755305806798164436957351900929576913325025196268071859152540745147053008175998854705
+8919012324798467335629270560162565523345346961e-136
+dualError       = 1.19696429334187360543910708477679566903833954579370699383899312769928337120183911303802430
+2618468190683390894684227272207711446465027672e-133
 
-Saving solution to      : "test.out"
-
-Last checkpoint	: 0.161299s wall, 0.630000s user + 0.010000s system = 0.640000s CPU (396.8%)
-Solver runtime	: 0.161224s wall, 0.630000s user + 0.010000s system = 0.640000s CPU (397.0%)
+Saving solution to      : "test/test.out"
 \end{lstlisting}
 
 The output from running \SDPB\ on the example problem in section~\ref{sec:example} is in listing~\ref{listing:exampleoutput}.  The input, output, and checkpoint files are listed first, followed by various parameters.  After each iteration, \SDPB\ prints the following:
 \begin{description}
-\item[\texttt{time}:] The current solver runtime in \texttt{hh:mm:ss}.
+\item[\texttt{time}:] The current solver runtime in seconds.
 \item[\texttt{mu}:] The value of the complementarity $\Tr(XY)/K$.
 \item[\texttt{P-obj}:] The primal objective value $b_0+c\.x$.
 \item[\texttt{D-obj}:] The dual objective value $\Tr(CY)+b_0+b\.y$.
@@ -468,12 +479,12 @@ The output from running \SDPB\ on the example problem in section~\ref{sec:exampl
 \item[\texttt{P-step}:] The primal step length $\alpha_\cP$ described in \cite{DSD}.
 \item[\texttt{D-step}:] The dual step length $\alpha_\cD$ described in \cite{DSD}.
 \item[\texttt{beta}:]  The corrector centering parameter $\beta_c$ described in \cite{DSD}.
-\item[\texttt{dim/stabilized}:] $N$\texttt{/}$N'$, where $N$ is the dimension of the vector $y$, and $N'$ is the dimension of the matrix $Q'$ obtained after stabilizing the Schur complement matrix, described in \cite{DSD}.  A large $N'$ will generally cause a big slowdown, so it is best avoided.  $N'$ can be reduced by decreasing \texttt{choleskyStabilizeThreshold}, though this sometimes requires increasing \texttt{precision} to avoid numerical instabilities.
+\item[\texttt{dim}:] The dimension of the vector $y$.
 \end{description}
 
 If an optimal solution exists, the primal and dual error will decrease until the problem becomes primal and dual feasible.  Then the primal and dual objective functions start to converge, and the complementarity $\mu$ decreases until the duality gap becomes smaller than \texttt{dualityGapThreshold}.
 
-The terminal output ends with the final values of the primal/dual objectives, primal/dual errors and duality gap, together with the time since the last saved checkpoint and the total solver runtime.
+The terminal output ends with the final values of the primal/dual objectives, primal/dual errors and duality gap.
 
 \subsection{Termination}
 
@@ -486,9 +497,9 @@ Found a solution for $x,X$ that is primal feasible.  \SDPB\ will only terminate 
 \item[\texttt{found dual feasible solution}] \hfill\\
 Found a solution for $y,Y$ that is dual feasible.  \SDPB\ will only terminate with this result if the option \texttt{--findDualFeasible} is specified.
 \item[\texttt{primal feasible jump detected}] \hfill\\
-A Newton step with primal step length $\alpha_\cP$ just occurred, without resulting in a primal feasible solution.  (Usually this means one should increase \texttt{precision} and resume from the latest checkpoint.)
+A Newton step with primal step length $\alpha_\cP$ just occurred, without resulting in a primal feasible solution.  (Usually this means one should increase \texttt{precision}.)
 \item[\texttt{dual feasible jump detected}] \hfill\\
-A Newton step with dual step length $\alpha_\cD$ just occurred, without resulting in a dual feasible solution.  (Usually this means one should increase \texttt{precision} and resume from the latest checkpoint.)
+A Newton step with dual step length $\alpha_\cD$ just occurred, without resulting in a dual feasible solution.  (Usually this means one should increase \texttt{precision}.)
 \item[\texttt{maxIterations exceeded}] \hfill\\
 \SDPB\ has run for more iterations than specified by the option \texttt{--maxIterations}.
 \item[\texttt{maxRuntime exceeded}] \hfill\\
@@ -497,7 +508,7 @@ A Newton step with dual step length $\alpha_\cD$ just occurred, without resultin
 $\mu=\Tr(XY)/\dim(X)$ exceeded the value specified by \texttt{--maxComplementarity}.  This might indicate that the problem is unbounded and no optimal solution will be found.
 \end{description}
 
-When using \SDPB\ to determine primal or dual feasibility, one can specify the options \texttt{--findPrimalFeasible} or \texttt{--findDualFeasible}.  This will cause the solver to terminate immediately once the primal or dual errors are sufficiently small.  This often occurs immediately after the primal or dual step lengths become equal to $1$.  A step length of $1$ means that the solver has found a Newton step that exactly solves the primal or dual constraints, while preserving positive-semidefiniteness of $X,Y$.  Sometimes a step length of $1$ does not result in sufficiently small primal/dual errors.  This is indicative of numerical instabilities and usually means \texttt{precision} should be increased.  The options \texttt{--detectPrimalFeasibleJump} and \texttt{--detectPrimalFeasibleJump} cause \SDPB\ to terminate if a step length of 1 occurs without resulting in primal/dual feasibility.  If desired, one can then restart the solver from the most recent checkpoint, with a higher value of \texttt{precision}.
+When using \SDPB\ to determine primal or dual feasibility, one can specify the options \texttt{--findPrimalFeasible} or \texttt{--findDualFeasible}.  This will cause the solver to terminate immediately once the primal or dual errors are sufficiently small.  This often occurs immediately after the primal or dual step lengths become equal to $1$.  A step length of $1$ means that the solver has found a Newton step that exactly solves the primal or dual constraints, while preserving positive-semidefiniteness of $X,Y$.  Sometimes a step length of $1$ does not result in sufficiently small primal/dual errors.  This is indicative of numerical instabilities and usually means \texttt{precision} should be increased.  The options \texttt{--detectPrimalFeasibleJump} and \texttt{--detectPrimalFeasibleJump} cause \SDPB\ to terminate if a step length of 1 occurs without resulting in primal/dual feasibility.  If desired, one can then restart the solver with a higher value of \texttt{precision}.
 
 
 \subsection{Output File}
@@ -540,7 +551,7 @@ is plotted in figure~\ref{fig:plot}.  The zero near $x=1$ shows that $y$ is opti
 
 \subsection{Checkpoints}
 
-Every \texttt{checkpointInterval}, \SDPB\ saves a new checkpoint file with a \texttt{.ck} extension and backs up the old checkpoint file to a \texttt{.ck.bk} extension.  \SDPB\ also saves a checkpoint after termination, provided the option \texttt{--noFinalCheckpoint} is not specified.  
+Every \texttt{checkpointInterval}, \SDPB\ saves a new checkpoint in a directory with the \texttt{.ck} extension.  \SDPB\ also saves a checkpoint after termination, provided the option \texttt{--noFinalCheckpoint} is not specified.  
 
 A checkpoint file encodes the values of $x,X,y,Y$.  If \SDPB\ detects an existing checkpoint file on startup, it will use those values of $x,X,y,Y$ as initial conditions in the solver.  Thus, \SDPB\ can be stopped and started at will without losing progress.
 
@@ -559,8 +570,16 @@ systems of correlation functions \cite{Kos:2014bka}.
 
 \section{Acknowledgements}
 
-\SDPB\ Makes extensive use of \texttt{MPACK} \cite{MPACK}, the multiple precision linear algebra library written by Maho Nakata.  Several source files from \texttt{MPACK} are included in the \SDPB\ source tree (see the license at the top of those files). \SDPB\ uses the Boost C++ libraries \cite{BoostSite} and Lee Thomason's \texttt{tinyxml2} library \cite{TINYXML2} for parsing.
-\SDPB\ was partially based on the solvers \texttt{SDPA} and \texttt{SDPA-GMP} \cite{SDPA,SDPA2,SDPAGMP}, which were essential sources of inspiration and examples.
+\SDPB\ makes extensive use of the parallel linear algebra library
+\texttt{Elemental} \cite{Elemental}, the Boost C++
+libraries \cite{BoostSite}, the \texttt{libxml2} library
+\cite{libxml2}, and the multiprecision libraries \texttt{GMP}
+\cite{GMP}, \texttt{MPC} \cite{MPC}, and \texttt{MPFR}
+\cite{MPFR}.
+
+\SDPB\ was partially based on the solvers \texttt{SDPA} and
+\texttt{SDPA-GMP} \cite{SDPA,SDPA2,SDPAGMP}, which were essential
+sources of inspiration and examples.
 
 Thanks to Filip Kos, David Poland, and Alessandro Vichi for collaboration in developing semidefinite programming methods for the conformal bootstrap and assistance testing \SDPB.  Thanks to Amir Ali Ahmadi, Hande Benson, Pablo Parrilo, and Robert Vanderbei for advice and discussions about semidefinite programming.
 
@@ -625,22 +644,34 @@ I am supported by DOE grant number DE-SC0009988 and a William D. Loughlin Member
   ``A numerical evaluation of highly accurate multiple-precision arithmetic version of semidefinite programming solver: SDPA-GMP, -QD and -DD.,''
   2010 IEEE International Symposium on Computer-Aided Control System Design (CACSD), 29-34 Sept 2010.
 
-\bibitem{MPACK}
-  M. Nakata,
-  ``The MPACK (MBLAS/MLAPACK); a multiple precision arithmetic version of BLAS and LAPACK,''
-  2010
-  \href{http://mplapack.sourceforge.net/}{http://mplapack.sourceforge.net/}.
-
 \bibitem{BoostSite}
   C++ Standards Committee Library Working Group and other contributors,
   ``BOOST C++ Libraries,''
   \href{http://www.boost.org}{http://www.boost.org}.
 
-\bibitem{TINYXML2}
-  L. Thomason,
-  TinyXML2,
-  \href{http://www.grinninglizard.com/tinyxml2docs/index.html}{http://www.grinninglizard.com/tinyxml2docs/index.html}
+\bibitem{libxml2}
+  Gnome Project,
+  Libxml2,
+  \href{http://www.xmlsoft.org/}{http://www.xmlsoft.org/}
 
+\bibitem{Elemental}
+  J. Poulson, B. Marker, R. van de Geijn, J. Hammond, and N. Romero,
+  ``Elemental: A new framework for distributed memory dense matrix computations, ACM Transactions on Mathematical Software,''
+  ACM Trans. Math. Softw. 39 2 13:1-24 (2013),
+  doi:10.1145/2427023.2427030
+  
+\bibitem{GMP}
+  The GNU Multiprecision Library,
+  \href{https://gmplib.org/}{https://gmplib.org/}
+
+\bibitem{MPFR}
+  The GNU MPFR Library,
+  \href{https://www.mpfr.org/}{https://www.mpfr.org/}
+
+\bibitem{MPC}
+  The GNU MPC Library,
+  \href{http://www.multiprecision.org/mpc}{http://www.multiprecision.org/mpc}
+  
 \end{thebibliography}
 
 \end{document}

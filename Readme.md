@@ -23,16 +23,9 @@ at the [Institute for Advanced Study](http://sns.ias.edu).
 
 ## Installation and Usage
 
-Installation instructions for Linux, Mac OS X, and Windows (using Cygwin)
- can be found in [Install.md](Install.md).
+Installation instructions are detailed in [Install.md](Install.md).
 
-Type `sdpb --help` for the syntax and a list of options.
-
-The input format for SDPB is XML-based and described in
-[the manual](/docs/SDPB-Manual.pdf).
-The Mathematica file `SDPB.m` includes code to export semidefinite
-programs in this format, along with some examples. An example input
-file `test.xml` is included with the source code.
+Usage instructions are detailed in [Usage.md](docs/Usage.md).
 
 Two python wrappers for SDPB are also available:
 

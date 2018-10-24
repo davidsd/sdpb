@@ -105,5 +105,12 @@ manager such as [Homebrew](https://brew.sh).
     `python ./waf configure --elemental-dir=$HOME/elemental/libelemental_bin`
     
 
-3. Type `python ./waf` to build the executable in `build/sdpb`.
-
+7. Type `python ./waf` to build the executable in `build/sdpb`.  This
+   will create three executables in the `build/` directory:
+   `pvm2sdp`, `block_grid_mapping`, and `sdpb`. Running
+   
+     `./build/sdpb --help`
+   
+   should give you a usage message.  HPC systems may require you to
+   run all jobs through a batch system.  You will need to consult the
+   documentation for your individual system.
