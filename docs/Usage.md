@@ -1,4 +1,4 @@
-#Usage
+# Usage
 
 The input format for SDPB is XML-based and described in
 [the manual](SDPB-Manual.pdf).
@@ -14,7 +14,7 @@ build directory.  There are three steps when running SDPB.
 XML files with polynomial vector matrices must first be converted with
 `pvm2sdp` into a format that SDPB can quickly load.  The usage is
 
-  `build/pvm2sdp [PRECISION] [INPUT] ... [OUTPUT]`
+    build/pvm2sdp [PRECISION] [INPUT] ... [OUTPUT]
 
 `[PRECISION]` is the number of bits of precision used in the
 conversion.  `[INPUT] ...` is a list of one or more xml
@@ -24,7 +24,7 @@ For example, the command to convert the file `test/test.xml`, using
 1024 bits of precision, and store the result in the directory
 `test/test/`, is
 
-  `build/pvm2sdp 1024 test/test.xml test/test`
+    build/pvm2sdp 1024 test/test.xml test/test
   
 `pvm2sdp` writes the output in a text format, so it is perfectly OK to
 use a larger precision with `pvm2sdp` than when running `sdpb`.
@@ -57,7 +57,7 @@ use for the final runs.
 As an example, the command to measure timings for `test/test` using a
 single core and store the result in `test/test/block_timings` is
 
-  `build/sdpb --precision=1024 --maxIterations=2 --noFinalCheckpoint --procsPerNode=1 -s test/test/ --writeBlockTiming`
+    build/sdpb --precision=1024 --maxIterations=2 --noFinalCheckpoint --procsPerNode=1 -s test/test/ --writeBlockTiming
 
 The test input only has a single block, so there should be a single number
 in `test/test/block_timings`.
@@ -81,16 +81,16 @@ launch it.  For example, if you compiled the code on your own laptop,
 you will probably use `mpirun` to invoke SDPB.  If you have 4 physical
 cores on your machine, the command is
 
-    `mpirun -n 4 build/sdpb --precision=1024 --procsPerNode=4 -s test/test/`
+    mpirun -n 4 build/sdpb --precision=1024 --procsPerNode=4 -s test/test/
 
 On the Yale Grace cluster, the command used in the Slurm batch file is
 
-    `mpirun build/sdpb --precision=1024 --procsPerNode=$SLURM_NTASKS_PER_NODE -s test/test/`
+    mpirun build/sdpb --precision=1024 --procsPerNode=$SLURM_NTASKS_PER_NODE -s test/test/
 
 In contrast, the Harvard Odyssey 3 cluster, which also uses Slurm,
 uses the srun command
 
-    `srun -n $SLURM_NTASKS --mpi=pmi2 build/sdpb --precision=1024 --procsPerNode=$SLURM_NTASKS_PER_NODE -s test/test`
+    srun -n $SLURM_NTASKS --mpi=pmi2 build/sdpb --precision=1024 --procsPerNode=$SLURM_NTASKS_PER_NODE -s test/test
 
 The documentation for your HPC system will tell you how to write a
 batch script and invoke MPI programs.
