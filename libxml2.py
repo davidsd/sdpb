@@ -2,8 +2,6 @@
 # encoding: utf-8
 
 def configure(conf):
-    conf.load('compiler_cxx cxx14')
-    
     # Find Libxml2
     if conf.options.libxml2_dir:
         if not conf.options.libxml2_incdir:

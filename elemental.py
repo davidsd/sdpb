@@ -5,8 +5,6 @@ def configure(conf):
     def get_param(varname,default):
         return getattr(Options.options,varname,'')or default
 
-    conf.load('compiler_cxx cxx14 gmpxx')
-    
     # Find Elemental
     if conf.options.elemental_dir:
         if not conf.options.elemental_incdir:
