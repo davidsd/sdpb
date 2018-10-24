@@ -27,7 +27,6 @@ def configure(conf):
         elemental_libs=['El', 'pmrrr', 'ElSuiteSparse', 'pthread', 'm', 'metis' ]
 
     conf.check_cxx(msg="Checking for Elemental",
-                   header_name='El.hpp',
                    fragment="#include <El.hpp>\nint main(int argc, char* argv[]) {El::Environment env( argc, argv ); El::BigFloat big;}\n",
                    includes=elemental_incdir,
                    uselib_store='elemental',
