@@ -5,11 +5,12 @@ def options(opt):
               'libxml2'])
 
 def configure(conf):
-    if not 'CXX' in os.environ or os.environ['CXX']=='g++' or os.environ['CXX']=='icpc':
-        conf.environ['CXX']='mpicxx'
+    if not conf.env.CXX or conf.env.CXX=='g++' or conf.env.CXX=='icpc':
+        conf.env.CXX='mpicxx'
 
     conf.load(['compiler_cxx','gnu_dirs','boost','cxx14','gmpxx','elemental',
                'libxml2'])
+    # FIXME: This does not use the C++14 flag when checking boost
     conf.check_boost(lib='system filesystem date_time program_options')
 
 def build(bld):
