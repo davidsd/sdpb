@@ -9,6 +9,12 @@ void write_timing(const boost::filesystem::path &out_file,
                   const bool &write_block_timing, const Block_Info &block_info,
                   const Timers &timers)
 {
+  if(El::mpi::Rank() == 0)
+    {
+      std::cout << timers.front().first << ": "
+                << timers.front().second.elapsed_seconds() << "s\n";
+    }
+
   timers.write_profile(out_file.string() + ".profiling."
                        + std::to_string(El::mpi::Rank()));
   if(write_block_timing)
