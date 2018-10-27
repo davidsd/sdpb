@@ -55,7 +55,7 @@ int main(int argc, char **argv)
         "checkpointDir,c", po::value<boost::filesystem::path>(&checkpoint_out),
         "Checkpoints are saved to this directory every checkpointInterval. "
         "Defaults to sdpDir with '.ck' extension.")(
-        "initialCheckpointFile,i",
+        "initialCheckpointDir,i",
         po::value<boost::filesystem::path>(&checkpoint_in),
         "The initial checkpoint directory to load. Defaults to "
         "checkpointDir.")(
@@ -80,7 +80,7 @@ int main(int argc, char **argv)
         "this up to a multiple of 32 or 64, depending on the system.")(
         "checkpointInterval",
         po::value<int>(&parameters.checkpoint_interval)->default_value(3600),
-        "Save checkpoints to checkpointFile every checkpointInterval "
+        "Save checkpoints to checkpointDir every checkpointInterval "
         "seconds.")(
         "noFinalCheckpoint",
         po::bool_switch(&parameters.no_final_checkpoint)->default_value(false),
@@ -228,7 +228,7 @@ int main(int argc, char **argv)
               out_file.replace_extension("out");
             }
 
-          if(!variables_map.count("checkpointFile"))
+          if(!variables_map.count("checkpointDir"))
             {
               checkpoint_out = sdp_directory;
               if(checkpoint_out.filename() == ".")
@@ -238,7 +238,7 @@ int main(int argc, char **argv)
               checkpoint_out.replace_extension("ck");
             }
 
-          if(!variables_map.count("initialCheckpointFile"))
+          if(!variables_map.count("initialCheckpointDir"))
             {
               checkpoint_in = checkpoint_out;
             }
