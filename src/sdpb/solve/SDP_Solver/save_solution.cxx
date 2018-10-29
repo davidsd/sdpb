@@ -1,8 +1,11 @@
 #include "../SDP_Solver.hxx"
 #include "../../../set_stream_precision.hxx"
 
+#include <iomanip>
+
 void SDP_Solver::save_solution(
   const SDP_Solver_Terminate_Reason terminate_reason,
+  const std::pair<std::string, Timer> &timer_pair,
   const boost::filesystem::path &out_file) const
 {
   // Internally, El::Print() sync's everything to the root core and
@@ -21,6 +24,8 @@ void SDP_Solver::save_solution(
                  << "dualityGap      = " << duality_gap << ";\n"
                  << "primalError     = " << primal_error << ";\n"
                  << "dualError       = " << dual_error << ";\n"
+                 << std::setw(16) << std::left << timer_pair.first << "= "
+                 << timer_pair.second.elapsed_seconds() << ";\n"
                  << "y = {";
     }
   if(!y.blocks.empty())

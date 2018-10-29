@@ -59,6 +59,6 @@ solve(const boost::filesystem::path &sdp_directory,
     {
       solver.save_checkpoint(checkpoint_out);
     }
-  solver.save_solution(reason, out_file);
+  solver.save_solution(reason, timers.front(), out_file);
   return timers;
 }

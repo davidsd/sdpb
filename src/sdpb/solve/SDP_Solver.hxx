@@ -92,6 +92,7 @@ public:
             Timers &timers);
 
   void save_solution(const SDP_Solver_Terminate_Reason,
+                     const std::pair<std::string, Timer> &timer_pair,
                      const boost::filesystem::path &out_file) const;
   void
   save_checkpoint(const boost::filesystem::path &checkpoint_directory) const;
