@@ -4,8 +4,7 @@
 void print_iteration(
   const int &iteration, const El::BigFloat &mu,
   const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
-  const El::BigFloat &beta_corrector, const size_t &dual_objective_b_height,
-  const SDP_Solver &sdp_solver,
+  const El::BigFloat &beta_corrector, const SDP_Solver &sdp_solver,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time);
 
@@ -144,8 +143,7 @@ void SDP_Solver::step(
     }
 
   print_iteration(iteration, mu, primal_step_length, dual_step_length,
-                  beta_corrector, sdp.dual_objective_b.Height(), *this,
-                  solver_start_time);
+                  beta_corrector, *this, solver_start_time);
   // Update the primal point (x, X) += primalStepLength*(dx, dX)
   for(size_t block = 0; block < x.blocks.size(); ++block)
     {

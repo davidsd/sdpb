@@ -8,8 +8,7 @@
 void print_iteration(
   const int &iteration, const El::BigFloat &mu,
   const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
-  const El::BigFloat &beta_corrector, const size_t &dual_objective_b_height,
-  const SDP_Solver &sdp_solver,
+  const El::BigFloat &beta_corrector, const SDP_Solver &sdp_solver,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time)
 {
@@ -49,8 +48,6 @@ void print_iteration(
                 << static_cast<double>(dual_step_length) << " "
 
                 << std::setw(4) << std::setprecision(3)
-                << static_cast<double>(beta_corrector) << "  "
-
-                << dual_objective_b_height << "\n";
+                << static_cast<double>(beta_corrector) << "\n";
     }
 }
