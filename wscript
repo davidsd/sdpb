@@ -5,8 +5,8 @@ def options(opt):
               'libxml2'])
 
 def configure(conf):
-    if not conf.env.CXX or conf.env.CXX=='g++' or conf.env.CXX=='icpc':
-        conf.env.CXX='mpicxx'
+    if not 'CXX' in os.environ or os.environ['CXX']=='g++' or os.environ['CXX']=='icpc':
+        conf.environ['CXX']='mpicxx'
 
     conf.load(['compiler_cxx','gnu_dirs','boost','cxx14','gmpxx','elemental',
                'libxml2'])
