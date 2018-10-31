@@ -83,7 +83,7 @@ manager such as [Homebrew](https://brew.sh).
 5. Download the Elemental version of SDPB
 
     `cd ../..`
-    `git clone --branch elemental https://wlandry:chie6ieM@github.com/davidsd/sdpb`
+    `git clone --branch elemental https://github.com/davidsd/sdpb`
     `cd sdpb`
 
 6. Configure the project using the included version of
