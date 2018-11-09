@@ -2,6 +2,7 @@
 #include "../set_stream_precision.hxx"
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <vector>
 
 void write_bilinear_bases(
