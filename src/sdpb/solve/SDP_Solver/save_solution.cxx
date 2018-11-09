@@ -1,6 +1,8 @@
 #include "../SDP_Solver.hxx"
 #include "../../../set_stream_precision.hxx"
 
+#include <boost/filesystem/fstream.hpp>
+
 #include <iomanip>
 
 void SDP_Solver::save_solution(

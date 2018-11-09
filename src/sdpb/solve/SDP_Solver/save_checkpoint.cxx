@@ -1,6 +1,7 @@
 #include "../SDP_Solver.hxx"
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 // We use binary checkpointing because writing text does not write all
 // of the necessary digits.  The GMP library sets it to one less than

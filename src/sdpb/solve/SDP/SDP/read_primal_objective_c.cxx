@@ -2,6 +2,7 @@
 #include "../../Block_Vector.hxx"
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 void read_primal_objective_c(const boost::filesystem::path &sdp_directory,
                              const std::vector<size_t> &block_indices,

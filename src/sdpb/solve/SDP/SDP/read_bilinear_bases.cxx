@@ -2,6 +2,7 @@
 
 #include <El.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 void read_bilinear_bases(
   const boost::filesystem::path &sdp_directory,

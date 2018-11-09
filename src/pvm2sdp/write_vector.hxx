@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <vector>
 
 template<typename T>

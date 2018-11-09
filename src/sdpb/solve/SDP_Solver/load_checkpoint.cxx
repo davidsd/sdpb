@@ -1,6 +1,7 @@
 #include "../SDP_Solver.hxx"
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 template <typename T>
 void read_local_blocks(T &t, boost::filesystem::ifstream &checkpoint_stream)

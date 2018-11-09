@@ -2,6 +2,7 @@
 
 #include <El.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 void read_objectives(const boost::filesystem::path &sdp_directory,
                      const El::Grid &grid, El::BigFloat &objective_const,

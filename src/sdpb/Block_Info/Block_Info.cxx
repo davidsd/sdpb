@@ -2,6 +2,8 @@
 
 #include "../../compute_block_grid_mapping.hxx"
 
+#include <boost/filesystem/fstream.hpp>
+
 Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
                        const size_t &procs_per_node)
 {

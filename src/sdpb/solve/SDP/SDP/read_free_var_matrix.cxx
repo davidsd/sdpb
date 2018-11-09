@@ -1,6 +1,7 @@
 #include "../../Block_Matrix.hxx"
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 void read_free_var_matrix(const boost::filesystem::path &sdp_directory,
                           const std::vector<size_t> &block_indices,
