@@ -26,7 +26,7 @@ solve(const boost::filesystem::path &sdp_directory,
 void write_timing(const boost::filesystem::path &out_file,
                   const boost::filesystem::path &block_timings_filename,
                   const bool &write_block_timing, const Block_Info &block_info,
-                  const Timers &timers);
+                  const Timers &timers, const bool &debug);
 
 int main(int argc, char **argv)
 {
@@ -271,7 +271,7 @@ int main(int argc, char **argv)
                           checkpoint_out, block_info, parameters));
 
       write_timing(out_file, sdp_directory, write_block_timing, block_info,
-                   timers);
+                   timers, parameters.debug);
     }
   catch(std::exception &e)
     {

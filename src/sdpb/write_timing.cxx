@@ -7,7 +7,7 @@
 void write_timing(const boost::filesystem::path &out_file,
                   const boost::filesystem::path &sdp_directory,
                   const bool &write_block_timing, const Block_Info &block_info,
-                  const Timers &timers)
+                  const Timers &timers, const bool &debug)
 {
   if(El::mpi::Rank() == 0)
     {
@@ -15,8 +15,11 @@ void write_timing(const boost::filesystem::path &out_file,
                 << timers.front().second.elapsed_seconds() << "s\n";
     }
 
-  timers.write_profile(out_file.string() + ".profiling."
-                       + std::to_string(El::mpi::Rank()));
+  if(debug)
+    {
+      timers.write_profile(out_file.string() + ".profiling."
+                           + std::to_string(El::mpi::Rank()));
+    }
   if(write_block_timing)
     {
       El::Matrix<int32_t> block_timings(block_info.dimensions.size(), 1);
