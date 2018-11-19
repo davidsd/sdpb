@@ -29,6 +29,14 @@ For example, the command to convert the file `test/test.xml`, using
 `pvm2sdp` writes the output in a text format, so it is perfectly OK to
 use a larger precision with `pvm2sdp` than when running `sdpb`.
 
+`pvm2sdp` is a serial program, so you should not run it with multiple
+cores.  `pvm2sdp` checks that it is run with only one core when it
+starts.
+
+If you have an existing script that generates XML files, you can run
+`pvm2sdp` in the same script.  `pvm2sdp` becomes just another step in
+the pipeline to create input files.
+
 ## [Optional] Measure time to evaluate each block.
 
 To efficiently run large MPI jobs, SDPB needs an accurate measurement
