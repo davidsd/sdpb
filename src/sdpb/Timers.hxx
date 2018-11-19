@@ -31,7 +31,7 @@ struct Timers : public std::list<std::pair<std::string, Timer>>
     return back().second;
   }
 
-  void write_profile(std::string filename) const
+  void write_profile(const std::string &filename) const
   {
     std::ofstream f(filename);
 
