@@ -48,6 +48,8 @@ void print_iteration(
                 << static_cast<double>(dual_step_length) << " "
 
                 << std::setw(4) << std::setprecision(3)
-                << static_cast<double>(beta_corrector) << "\n";
+                << static_cast<double>(beta_corrector) << "\n"
+
+                << std::flush;
     }
 }
