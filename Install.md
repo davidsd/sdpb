@@ -44,13 +44,16 @@ manually. The package is not installable on older releases of Debian or Ubuntu d
 
 (Thanks to Yuji Tachikawa for help setting up SDPB for OS X)
 
-The following instructions have been tested on Mac OS 10.12 Sierra. 
+The following instructions have been tested on macOS 10.14 Mojave.
 
 0. Install Xcode command line tools and Homebrew if you haven't.
 
-        # for Xcode commad line tools
+        # Install Xcode commad line tools
         xcode-select --install
-        # for Homebrew
+        # If you're on macOS 10.14 Mojave, you need to run the following line too.
+        # If you're on an earlier macOS, skip this installer line.
+        sudo installer -pkg /Library/Developer/CommandLineTools/Packages/macOS_SDK_headers_for_macOS_10.14.pkg -target /
+        # Install Homebrew
         ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
 1. If you just want to use vanilla `sdpb` from the command line, just do
