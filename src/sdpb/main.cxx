@@ -74,7 +74,7 @@ int main(int argc, char **argv)
       po::options_description solver_params_options("Solver parameters");
       solver_params_options.add_options()(
         "precision", po::value<int>(&parameters.precision)->default_value(400),
-        "The precision, in the number of bits, for numbers in the simulation. "
+        "The precision, in the number of bits, for numbers in the computation. "
         " This should be less than or equal to the precision used when "
         "preprocessing the XML input files with 'pvm2sdp'.  GMP will round "
         "this up to a multiple of 32 or 64, depending on the system.")(
