@@ -32,7 +32,6 @@ int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
 
-  int result(0);
   try
     {
       boost::filesystem::path sdp_directory, out_file, checkpoint_in,
@@ -74,7 +73,8 @@ int main(int argc, char **argv)
       po::options_description solver_params_options("Solver parameters");
       solver_params_options.add_options()(
         "precision", po::value<int>(&parameters.precision)->default_value(400),
-        "The precision, in the number of bits, for numbers in the computation. "
+        "The precision, in the number of bits, for numbers in the "
+        "computation. "
         " This should be less than or equal to the precision used when "
         "preprocessing the XML input files with 'pvm2sdp'.  GMP will round "
         "this up to a multiple of 32 or 64, depending on the system.")(
@@ -276,7 +276,10 @@ int main(int argc, char **argv)
   catch(std::exception &e)
     {
       El::ReportException(e);
-      result = 1;
+      El::mpi::Abort(El::mpi::COMM_WORLD, 1);
     }
-  return result;
+  catch(...)
+    {
+      El::mpi::Abort(El::mpi::COMM_WORLD, 1);
+    }
 }
