@@ -47,10 +47,9 @@ int main(int argc, char **argv)
                     << std::flush;
         }
       El::Finalize();
-      exit(-1);
+      El::mpi::Abort(El::mpi::COMM_WORLD, 1);
     }
 
-  int result(0);
   try
     {
       int precision;
@@ -86,12 +85,11 @@ int main(int argc, char **argv)
   catch(std::runtime_error &e)
     {
       std::cerr << "Error: " << e.what() << "\n" << std::flush;
-      result = 1;
+      El::mpi::Abort(El::mpi::COMM_WORLD, 1);
     }
   catch(...)
     {
       std::cerr << "Unknown Error\n" << std::flush;
-      result = 1;
+      El::mpi::Abort(El::mpi::COMM_WORLD, 1);
     }
-  return result;
 }
