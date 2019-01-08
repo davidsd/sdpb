@@ -73,7 +73,7 @@ def build(bld):
                 )
     
     bld.program(source=['src/pvm2sdp/main.cxx',
-                        'src/pvm2sdp/parse_command_line.cxx',
+                        'src/parse_simple_command_line.cxx',
                         'src/pvm2sdp/read_input_files/read_input_files.cxx',
                         'src/pvm2sdp/read_input_files/Input_Parser/on_start_element.cxx',
                         'src/pvm2sdp/read_input_files/Input_Parser/on_end_element.cxx',

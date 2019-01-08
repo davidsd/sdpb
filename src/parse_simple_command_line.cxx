@@ -5,11 +5,12 @@
 
 using namespace std::literals;
 
-void parse_command_line(int argc, char **argv, int &precision,
-                        std::vector<boost::filesystem::path> &input_files,
-                        boost::filesystem::path &output_dir)
+void parse_simple_command_line(
+  const std::string &program_name, int argc, char **argv, int &precision,
+  std::vector<boost::filesystem::path> &input_files,
+  boost::filesystem::path &output_dir)
 {
-  std::string usage("pvm2sdp [PRECISION] [INPUT]... [OUTPUT_DIR]\n");
+  std::string usage(program_name + " [PRECISION] [INPUT]... [OUTPUT_DIR]\n");
   if(argc < 4)
     {
       std::cerr << "Wrong number of arguments\n" << usage;
