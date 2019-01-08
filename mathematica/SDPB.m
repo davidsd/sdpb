@@ -28,6 +28,8 @@ DampedRational/:x DampedRational[const_, poles_ /; MemberQ[poles, 0], base_, x] 
 DampedRational/:DampedRational[c1_,p1_,b1_,x] DampedRational[c2_,p2_,b2_,x] :=
     DampedRational[c1 c2, Join[p1, p2], b1 b2, x];
 
+DampedRational/:a_ DampedRational[c_,p_,b_,x] /; FreeQ[a,x] := DampedRational[a c, p, b, x];
+
 (* bilinearForm[f, m] = Integral[x^m f[x], {x, 0, Infinity}] *)
 (* The special case when f[x] has no poles *)
 bilinearForm[DampedRational[const_, {}, base_, x], m_] :=
@@ -43,7 +45,7 @@ bilinearForm[DampedRational[const_, {}, base_, x], m_] :=
         {i, Length[poles]}];*)
 
 (* The case where f[x] can have single or double poles *)
-bilinearForm[DampedRational[c_, poles_, b_, x_], m_] := Module[
+(*bilinearForm[DampedRational[c_, poles_, b_, x_], m_] := Module[
     {
         gatheredPoles = Gather[poles],
         quotientCoeffs = CoefficientList[PolynomialQuotient[x^m, Product[x-p, {p, poles}], x], x],
@@ -60,7 +62,36 @@ bilinearForm[DampedRational[c_, poles_, b_, x_], m_] := Module[
         {n, Length[gatheredPoles]}] + 
        Sum[
            quotientCoeffs[[n+1]] Gamma[1+n] (-Log[b])^(-1-n),
-           {n, 0, Length[quotientCoeffs]-1}])];
+           {n, 0, Length[quotientCoeffs]-1}])];*)
+
+(* A bilinearForm that allows for arbitrary collections of poles *)
+bilinearForm[DampedRational[c_, poles_, b_, x_], m_] := Module[
+    {
+        gatheredPoles = GatherBy[poles, Round[#, 10^(-prec/2)]&],
+        quotientCoeffs = CoefficientList[PolynomialQuotient[x^m,Product[x-p,{p,poles}],x],x],
+        integral,
+        rest,
+        logRest,
+        p,
+        otherPoles,
+        l
+    },
+    integral[0] := b^x Gamma[0,x Log[b]];
+    integral[k_] := integral[k] = Simplify[D[integral[k-1],x]/k];
+    dExp[k_] := dExp[k] = Expand[E^(-f[x])D[E^(f[x]),{x,k}]];
+    c (
+        Sum[
+            p = gatheredPoles[[n,1]];
+            l = Length[gatheredPoles[[n]]];
+            Clear[otherPoles, logRest, rest];
+            otherPoles = Join@@Delete[gatheredPoles, n];
+            logRest[k_] := logRest[k] = (k-1)! (-1)^(k-1) (m / p^k - Sum[1/(p - q)^k, {q, otherPoles}]);
+            rest[k_] := (dExp[k] /. { Derivative[n_][f][x] :> logRest[n] }) / k!;
+            p^m / Product[p-q, {q, otherPoles}] * Sum[(integral[l-k-1]/.x->p) * rest[k], {k,0,l-1}],
+            {n, Length[gatheredPoles]}] +
+        Sum[quotientCoeffs[[n+1]] Gamma[1+n] (-Log[b])^(-1-n),
+            {n,0,Length[quotientCoeffs]-1}]
+      )];
 
 (* orthogonalPolynomials[f, n] is a set of polynomials with degree 0
 through n which are orthogonal with respect to the measure f[x] dx *)
@@ -101,7 +132,10 @@ safeCoefficientList[p_, x_] := Module[
     {coeffs = CoefficientList[p, x]},
     If[Length[coeffs] > 0, coeffs, {0}]];
 
-WriteBootstrapSDP[file_, SDP[objective_, normalization_, positiveMatricesWithPrefactors_]] := Module[
+WriteBootstrapSDP[
+    file_,
+    SDP[objective_, normalization_, positiveMatricesWithPrefactors_],
+    samplePointsFn_ : rescaledLaguerreSamplePoints] := Module[
     {
         stream = OpenWrite[file],
         node, real, int, vector, polynomial,
@@ -125,7 +159,7 @@ WriteBootstrapSDP[file_, SDP[objective_, normalization_, positiveMatricesWithPre
     polynomialVectorMatrix[PositiveMatrixWithPrefactor[prefactor_, m_]][] := Module[
         {degree = Max[Exponent[m, x]], samplePoints, sampleScalings, bilinearBasis},
 
-        samplePoints   = rescaledLaguerreSamplePoints[degree + 1];
+        samplePoints   = samplePointsFn[degree + 1];
         sampleScalings = Table[prefactor /. x -> a, {a, samplePoints}];
         bilinearBasis  = orthogonalPolynomials[prefactor, Floor[degree/2]];
         node["rows", int[Length[m]]];
@@ -149,6 +183,6 @@ WriteBootstrapSDP[file_, SDP[objective_, normalization_, positiveMatricesWithPre
             Do[node["polynomialVectorMatrix", polynomialVectorMatrix[pvm]], {pvm, positiveMatricesWithPrefactors}];
         ]];
     ]];                                          
-
+        
     Close[stream];
 ];
