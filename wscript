@@ -90,6 +90,13 @@ def build(bld):
                 use=use_packages
                 )
 
+    bld.program(source=['src/sdp2blocks/main.cxx',
+                        'src/parse_simple_command_line.cxx'],
+                target='sdp2blocks',
+                cxxflags=default_flags,
+                use=use_packages
+                )
+
     bld.program(source=['src/block_grid_mapping/main.cxx',
                         'src/compute_block_grid_mapping.cxx'],
                 target='block_grid_mapping',
