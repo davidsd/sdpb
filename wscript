@@ -90,8 +90,7 @@ def build(bld):
                 use=use_packages
                 )
 
-    bld.program(source=['src/sdp2blocks/main.cxx',
-                        'src/parse_simple_command_line.cxx'],
+    bld.program(source=['src/sdp2blocks/main.cxx'],
                 target='sdp2blocks',
                 cxxflags=default_flags,
                 use=use_packages
