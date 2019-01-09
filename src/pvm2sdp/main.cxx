@@ -1,5 +1,11 @@
 #include "Dual_Constraint_Group.hxx"
-#include "../parse_simple_command_line.hxx"
+
+#include <boost/filesystem.hpp>
+#include <vector>
+
+void parse_command_line(int argc, char **argv, int &precision,
+                        std::vector<boost::filesystem::path> &input_files,
+                        boost::filesystem::path &output_dir);
 
 void read_input_files(
   const std::vector<boost::filesystem::path> &input_files,
@@ -50,8 +56,7 @@ int main(int argc, char **argv)
       std::vector<boost::filesystem::path> input_files;
       boost::filesystem::path output_dir;
 
-      parse_simple_command_line("pvs2sdp", argc, argv, precision, input_files,
-                                output_dir);
+      parse_command_line(argc, argv, precision, input_files, output_dir);
       mpf_set_default_prec(precision);
       El::gmp::SetPrecision(precision);
       El::mpfr::SetPrecision(precision);
