@@ -90,7 +90,11 @@ def build(bld):
                 use=use_packages
                 )
 
-    bld.program(source=['src/sdp2blocks/main.cxx'],
+    bld.program(source=['src/sdp2blocks/main.cxx',
+                        'src/sdp2blocks/read_input/read_input.cxx',
+                        'src/sdp2blocks/read_input/Input_Parser/on_start_element.cxx',
+                        'src/sdp2blocks/read_input/Input_Parser/on_end_element.cxx',
+                        'src/sdp2blocks/read_input/Input_Parser/on_characters.cxx'],
                 target='sdp2blocks',
                 cxxflags=default_flags,
                 use=use_packages

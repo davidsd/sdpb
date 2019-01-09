@@ -4,10 +4,7 @@
 
 namespace po = boost::program_options;
 
-// void read_input_files(
-//   const std::vector<boost::filesystem::path> &input_files,
-//   El::BigFloat &objective_const, std::vector<El::BigFloat> &dual_objective_b,
-//   std::vector<Polynomial_Vector_Matrix> &polynomial_vector_matrices);
+void read_input(const boost::filesystem::path &input_file);
 
 int main(int argc, char **argv)
 {
@@ -84,28 +81,7 @@ int main(int argc, char **argv)
       El::gmp::SetPrecision(precision);
       El::mpfr::SetPrecision(precision);
 
-      // read_input_files();
-
-      // El::BigFloat objective_const;
-      // std::vector<El::BigFloat> dual_objective_b;
-      // std::vector<Dual_Constraint_Group> dual_constraint_groups;
-      // {
-      //   std::vector<Polynomial_Vector_Matrix> polynomial_vector_matrices;
-      //   read_input_files(input_files, objective_const, dual_objective_b,
-      //                    polynomial_vector_matrices);
-      //   for(auto &m : polynomial_vector_matrices)
-      //     {
-      //       dual_constraint_groups.emplace_back(m);
-      //     }
-      // }
-
-      // boost::filesystem::create_directories(output_dir);
-      // write_objectives(output_dir, objective_const, dual_objective_b);
-      // write_bilinear_bases(output_dir, dual_constraint_groups);
-      // write_blocks(output_dir, dual_constraint_groups);
-      // write_primal_objective_c(output_dir, dual_constraint_groups);
-      // write_free_var_matrix(output_dir, dual_objective_b.size(),
-      //                       dual_constraint_groups);
+      read_input(input_file);
     }
   catch(std::runtime_error &e)
     {
