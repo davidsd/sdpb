@@ -182,13 +182,13 @@ int main(int argc, char **argv)
           po::store(po::parse_command_line(argc, argv, cmd_line_options),
                     variables_map);
 
-          if(variables_map.count("help"))
+          if(variables_map.count("help")!=0)
             {
               std::cout << cmd_line_options << '\n';
               return 0;
             }
 
-          if(variables_map.count("paramFile"))
+          if(variables_map.count("paramFile")!=0)
             {
               param_file
                 = variables_map["paramFile"].as<boost::filesystem::path>();
@@ -218,7 +218,7 @@ int main(int argc, char **argv)
                                        + "' is not a directory");
             }
 
-          if(!variables_map.count("outFile"))
+          if(variables_map.count("outFile")==0)
             {
               out_file = sdp_directory;
               if(out_file.filename() == ".")
@@ -228,7 +228,7 @@ int main(int argc, char **argv)
               out_file.replace_extension("out");
             }
 
-          if(!variables_map.count("checkpointDir"))
+          if(variables_map.count("checkpointDir")==0)
             {
               checkpoint_out = sdp_directory;
               if(checkpoint_out.filename() == ".")
@@ -238,7 +238,7 @@ int main(int argc, char **argv)
               checkpoint_out.replace_extension("ck");
             }
 
-          if(!variables_map.count("initialCheckpointDir"))
+          if(variables_map.count("initialCheckpointDir")==0)
             {
               checkpoint_in = checkpoint_out;
             }
