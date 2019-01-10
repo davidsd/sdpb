@@ -6,9 +6,15 @@ void Input_Parser::on_end_element(const std::string &element_name)
     {
       if(inside_sdp)
         {
-          if(objective_state.on_end_element(element_name))
+          if(!finished_objective
+             && objective_state.on_end_element(element_name))
             {
               finished_objective = true;
+            }
+          else if(!finished_normalization
+                  && normalization_state.on_end_element(element_name))
+            {
+              finished_normalization = true;
             }
           else if(element_name == sdp_name)
             {
@@ -17,7 +23,7 @@ void Input_Parser::on_end_element(const std::string &element_name)
         }
       else if(element_name == expression_name)
         {
-          inside_expression=false;
+          inside_expression = false;
         }
     }
 }

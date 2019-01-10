@@ -63,7 +63,15 @@ void read_input(const boost::filesystem::path &input_file)
                                + input_file.string());
     }
 
-  std::cout << "Objective: " << input_parser.objective_state.value.size() << "\n";
+
+  for(auto &o: input_parser.objective_state.value)
+    std::cout << "Objective: " << o << "\n";
+  for(auto &o: input_parser.normalization_state.value)
+    std::cout << "Normalization: " << o << "\n";
+  
+  // std::cout << "Objective: " << input_parser.objective_state.value.size() << " "
+  //           << input_parser.normalization_state.value.size() << " "
+  //           << "\n";
   // for(auto &objective: input_parser.objective_state
   
   // // Overwrite the objective with whatever is in the last file
