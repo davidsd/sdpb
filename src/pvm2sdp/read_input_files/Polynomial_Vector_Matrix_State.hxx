@@ -34,7 +34,8 @@ class Polynomial_Vector_Matrix_State
 {
 public:
   std::string name;
-  std::string rows_name = "rows", columns_name = "cols";
+  std::string rows_name = "rows", columns_name = "cols", rows_string,
+              columns_string;
   bool inside = false, inside_rows = false, inside_columns = false;
   Polynomial_Vector_Matrix value;
 
@@ -86,6 +87,8 @@ public:
         sample_points_state.value.clear();
         sample_scalings_state.value.clear();
         bilinear_basis_state.value.clear();
+        rows_string.clear();
+        columns_string.clear();
       }
     return inside;
   }
@@ -101,29 +104,43 @@ public:
             inside = false;
             result = true;
           }
-        else if(element_name == rows_name)
+        else if(inside_rows && element_name == rows_name)
           {
             inside_rows = false;
+            value.rows = std::stoi(rows_string);
           }
-        else if(element_name == columns_name)
+        else if(inside_columns && element_name == columns_name)
           {
             inside_columns = false;
+            value.cols = std::stoi(columns_string);
           }
         else if(elements_state.on_end_element(element_name))
           {
-            swap(value.elements, elements_state.value);
+            if(!elements_state.inside)
+              {
+                swap(value.elements, elements_state.value);
+              }
           }
         else if(sample_points_state.on_end_element(element_name))
           {
-            std::swap(value.sample_points, sample_points_state.value);
+            if(!sample_points_state.inside)
+              {
+                std::swap(value.sample_points, sample_points_state.value);
+              }
           }
         else if(sample_scalings_state.on_end_element(element_name))
           {
-            std::swap(value.sample_scalings, sample_scalings_state.value);
+            if(!sample_scalings_state.inside)
+              {
+                std::swap(value.sample_scalings, sample_scalings_state.value);
+              }
           }
         else if(bilinear_basis_state.on_end_element(element_name))
           {
-            swap(value.bilinear_basis, bilinear_basis_state.value);
+            if(!bilinear_basis_state.inside)
+              {
+                swap(value.bilinear_basis, bilinear_basis_state.value);
+              }
           }
       }
     return result;
@@ -135,14 +152,13 @@ public:
       {
         if(inside_rows)
           {
-            // Use std::stoi() in case the number is invalid
-            value.rows = std::stoi(
-              std::string(reinterpret_cast<const char *>(characters), length));
+            rows_string.append(reinterpret_cast<const char *>(characters),
+                               length);
           }
         else if(inside_columns)
           {
-            value.cols = std::stoi(
-              std::string(reinterpret_cast<const char *>(characters), length));
+            columns_string.append(reinterpret_cast<const char *>(characters),
+                                  length);
           }
         else
           {
