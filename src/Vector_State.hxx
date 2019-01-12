@@ -31,28 +31,33 @@ public:
                                      + "', but found '" + element_name + "'");
           }
       }
-    else if(element_name == name)
+    else
       {
-        inside = true;
-        value.clear();
+        inside = (element_name == name);
+        if(inside)
+          {
+            value.clear();
+          }
       }
     return inside;
   }
 
   bool on_end_element(const std::string &element_name)
   {
-    bool result(false);
+    bool result(inside);
     if(inside)
       {
         if(element_state.on_end_element(element_name))
           {
-            value.emplace_back();
-            std::swap(value.back(), element_state.value);
+            if(!element_state.inside)
+              {
+                value.emplace_back();
+                std::swap(value.back(), element_state.value);
+              }
           }
-        else if(element_name == name)
+        else
           {
-            inside = false;
-            result = true;
+            inside = (element_name != name);
           }
       }
     return result;

@@ -6,11 +6,12 @@ void Input_Parser::on_end_element(const std::string &element_name)
     {
       if(objective_state.on_end_element(element_name))
         {
-          finished_objective = true;
+          finished_objective = !objective_state.inside;
         }
       else if(polynomial_vector_matrices_state.on_end_element(element_name))
         {
-          finished_polynomial_vector_matrices = true;
+          finished_polynomial_vector_matrices
+            = !polynomial_vector_matrices_state.inside;
         }
       else if(element_name == sdp_name)
         {

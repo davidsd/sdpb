@@ -95,14 +95,12 @@ public:
 
   bool on_end_element(const std::string &element_name)
   {
-    bool result(false);
-
+    bool result(inside);
     if(inside)
       {
         if(element_name == name)
           {
             inside = false;
-            result = true;
           }
         else if(inside_rows && element_name == rows_name)
           {

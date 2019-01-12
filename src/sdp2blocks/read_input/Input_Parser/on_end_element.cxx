@@ -6,24 +6,25 @@ void Input_Parser::on_end_element(const std::string &element_name)
     {
       if(inside_sdp)
         {
-          if(!finished_objective
-             && objective_state.on_end_element(element_name))
+          if(element_name != "Symbol")
             {
-              finished_objective = true;
-            }
-          else if(!finished_normalization
-                  && normalization_state.on_end_element(element_name))
-            {
-              finished_normalization = true;
-            }
-          else if(element_name == sdp_name)
-            {
-              inside_sdp = false;
+              if(objective_state.on_end_element(element_name))
+                {
+                  finished_objective = !objective_state.inside;
+                }
+              else if(normalization_state.on_end_element(element_name))
+                {
+                  finished_normalization = !normalization_state.inside;
+                }
+              else
+                {
+                  inside_sdp = (element_name != sdp_name);
+                }
             }
         }
-      else if(element_name == expression_name)
+      else
         {
-          inside_expression = false;
+          inside_expression = (element_name != expression_name);
         }
     }
 }
