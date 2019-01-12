@@ -31,21 +31,23 @@ public:
         throw std::runtime_error("Invalid input file.  Unexpected element '"
                                  + element_name + "' inside '" + name + "'");
       }
-    else if(element_name == name)
+    else
       {
-        inside = true;
-        string_value.clear();
+        inside = (element_name == name);
+        if(inside)
+          {
+            string_value.clear();
+          }
       }
     return inside;
   }
 
   bool on_end_element(const std::string &)
   {
-    bool result(false);
+    bool result(inside);
     if(inside)
       {
         inside = false;
-        result = true;
         value = El::BigFloat(string_value, 10);
       }
     return result;
