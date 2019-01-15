@@ -1,33 +1,8 @@
 #pragma once
 
 #include "../Polynomial_Vector_Matrix.hxx"
-#include "../../Element_State.hxx"
+#include "../../Number_State.hxx"
 #include "../../Vector_State.hxx"
-
-namespace
-{
-  // Convenience functions to avoid copies
-  void swap(std::vector<Polynomial> &polynomials,
-            std::vector<std::vector<El::BigFloat>> &elements_vector)
-  {
-    for(auto &elements : elements_vector)
-      {
-        polynomials.emplace_back();
-        std::swap(polynomials.back().coefficients, elements);
-      }
-  }
-
-  void swap(std::vector<std::vector<Polynomial>> &polynomials_vector,
-            std::vector<std::vector<std::vector<El::BigFloat>>>
-              &elements_vector_vector)
-  {
-    for(auto &elements_vector : elements_vector_vector)
-      {
-        polynomials_vector.emplace_back();
-        swap(polynomials_vector.back(), elements_vector);
-      }
-  }
-}
 
 using namespace std::string_literals;
 class Polynomial_Vector_Matrix_State
@@ -39,11 +14,11 @@ public:
   bool inside = false, inside_rows = false, inside_columns = false;
   Polynomial_Vector_Matrix value;
 
-  using Polynomial_State = Vector_State<Element_State>;
+  using Polynomial_State = Vector_State<Number_State>;
   using Polynomial_Vector_State = Vector_State<Polynomial_State>;
   Vector_State<Polynomial_Vector_State> elements_state;
-  Vector_State<Element_State> sample_points_state;
-  Vector_State<Element_State> sample_scalings_state;
+  Vector_State<Number_State> sample_points_state;
+  Vector_State<Number_State> sample_scalings_state;
   Vector_State<Polynomial_State> bilinear_basis_state;
 
   Polynomial_Vector_Matrix_State(const std::vector<std::string> &names,

@@ -7,7 +7,7 @@
 #include <string>
 #include <stdexcept>
 
-class Element_State
+class Number_State
 {
 public:
   bool inside = false;
@@ -18,11 +18,11 @@ public:
   El::BigFloat value;
   std::string name;
 
-  Element_State(const std::string &Name) : name(Name) {}
-  Element_State(const std::vector<std::string> &names, const size_t &offset)
-      : Element_State(names.at(offset))
+  Number_State(const std::string &Name) : name(Name) {}
+  Number_State(const std::vector<std::string> &names, const size_t &offset)
+      : Number_State(names.at(offset))
   {}
-  Element_State() = delete;
+  Number_State() = delete;
 
   bool on_start_element(const std::string &element_name)
   {

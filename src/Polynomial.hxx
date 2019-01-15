@@ -62,3 +62,25 @@ public:
     return os;
   }
 };
+
+// Convenience functions to avoid copies
+inline void swap(std::vector<Polynomial> &polynomials,
+                 std::vector<std::vector<El::BigFloat>> &elements_vector)
+{
+  for(auto &elements : elements_vector)
+    {
+      polynomials.emplace_back();
+      std::swap(polynomials.back().coefficients, elements);
+    }
+}
+
+inline void swap(
+  std::vector<std::vector<Polynomial>> &polynomials_vector,
+  std::vector<std::vector<std::vector<El::BigFloat>>> &elements_vector_vector)
+{
+  for(auto &elements_vector : elements_vector_vector)
+    {
+      polynomials_vector.emplace_back();
+      swap(polynomials_vector.back(), elements_vector);
+    }
+}
