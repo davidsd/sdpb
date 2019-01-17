@@ -5,6 +5,8 @@
 #include <string>
 #include <stdexcept>
 
+// #include <iostream>
+
 template <typename T> class Vector_State
 {
 public:
@@ -27,7 +29,7 @@ public:
         if(!element_state.on_start_element(element_name))
           {
             throw std::runtime_error("Invalid input file.  Expected '"
-                                     + element_state.name + "' inside '" + name
+                                     + element_state.name + "' inside Vector '" + name
                                      + "', but found '" + element_name + "'");
           }
       }
@@ -39,6 +41,10 @@ public:
             value.clear();
           }
       }
+    // std::cout << "Vector start: " << std::boolalpha
+    //           << inside << " "
+    //           << element_state.inside << " "
+    //           << "\n";
     return inside;
   }
 
@@ -60,6 +66,10 @@ public:
             inside = (element_name != name);
           }
       }
+    // std::cout << "Vector end: " << std::boolalpha
+    //           << inside << " "
+    //           << element_state.inside << " "
+    //           << "\n";
     return result;
   }
 

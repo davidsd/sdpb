@@ -60,19 +60,28 @@ struct Damped_Rational_State
             if(constant_state.on_end_element(element_name))
               {
                 finished_constant = !constant_state.inside;
-                using namespace std;
-                swap(value.constant, constant_state.value);
+                if(finished_constant)
+                  {
+                    using namespace std;
+                    swap(value.constant, constant_state.value);
+                  }
               }
             else if(polynomial_state.on_end_element(element_name))
               {
-                using namespace std;
-                swap(value.poles, polynomial_state.value);
+                if(!polynomial_state.inside)
+                  {
+                    using namespace std;
+                    swap(value.poles, polynomial_state.value);
+                  }
               }
             else if(base_state.on_end_element(element_name))
               {
                 finished_base = !base_state.inside;
-                using namespace std;
-                swap(value.base, base_state.value);
+                if(finished_base)
+                  {
+                    using namespace std;
+                    swap(value.base, base_state.value);
+                  }
               }
             else
               {

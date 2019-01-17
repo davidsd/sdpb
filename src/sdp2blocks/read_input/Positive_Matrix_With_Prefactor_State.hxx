@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Damped_Rational_State.hxx"
+#include "Polynomial_Term_State.hxx"
 #include "../Positive_Matrix_With_Prefactor.hxx"
 
 #include <libxml2/libxml/parser.h>
@@ -11,12 +12,11 @@
 struct Positive_Matrix_With_Prefactor_State
 {
   std::string name;
-  bool inside = false;
+  bool inside = false, finished_damped_rational = false;
   Positive_Matrix_With_Prefactor value;
 
   Damped_Rational_State damped_rational_state;
-  using Polynomial_State = Vector_State<Number_State>;
-  // using Polynomial_State = Vector_State<Polynomial_Term_State>;
+  using Polynomial_State = Vector_State<Polynomial_Term_State>;
   Vector_State<Vector_State<Vector_State<Polynomial_State>>> polynomials_state;
 
   Positive_Matrix_With_Prefactor_State(const std::vector<std::string> &names,
@@ -34,7 +34,8 @@ struct Positive_Matrix_With_Prefactor_State
     if(inside)
       {
         if(element_name != "Symbol"
-           && !damped_rational_state.on_start_element(element_name)
+           && (finished_damped_rational
+               || !damped_rational_state.on_start_element(element_name))
            && !polynomials_state.on_start_element(element_name))
           {
             throw std::runtime_error(
@@ -47,6 +48,9 @@ struct Positive_Matrix_With_Prefactor_State
       {
         inside = (element_name == name);
       }
+    // std::cout << "Positive start: " << inside << " "
+    //           << damped_rational_state.inside << " "
+    //           << polynomials_state.inside << "\n";
     return inside;
   }
 
@@ -57,20 +61,49 @@ struct Positive_Matrix_With_Prefactor_State
       {
         if(damped_rational_state.on_end_element(element_name))
           {
-            using namespace std;
-            swap(damped_rational_state.value, value.damped_rational);
+            finished_damped_rational = !damped_rational_state.inside;
+            if(finished_damped_rational)
+              {
+                using namespace std;
+                swap(damped_rational_state.value, value.damped_rational);
+              }
           }
         else if(polynomials_state.on_end_element(element_name))
           {
-            using namespace std;
-            swap(value.polynomials,
-                 polynomials_state.element_state.element_state.value);
+            if(!polynomials_state.inside)
+              {
+                // std::cout
+                //   << "sizes: "
+                //   << polynomials_state.value.front().front().front().size()
+                //   << " " << polynomials_state.value.front().front().size()
+                //   << " " << polynomials_state.value.front().size() << " "
+                //   << polynomials_state.value.size() << " "
+                //   << "\n";
+                for(auto &polynomial : polynomials_state.value.front().front())
+                  {
+                    std::vector<El::BigFloat> coefficients(polynomial.size(),
+                                                           0);
+                    for(auto &term : polynomial)
+                      {
+                        if(coefficients.size() < term.first + 1)
+                          {
+                            coefficients.resize(term.first + 1, 0);
+                          }
+                        coefficients[term.first] = term.second;
+                      }
+                    value.polynomials.emplace_back();
+                    swap(value.polynomials.back().coefficients, coefficients);
+                  }
+              }
           }
         else
           {
             inside = (element_name != name);
           }
       }
+    // std::cout << "Positive end: " << inside << " "
+    //           << damped_rational_state.inside << " "
+    //           << polynomials_state.inside << "\n";
     return result;
   }
 

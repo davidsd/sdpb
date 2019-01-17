@@ -4,6 +4,7 @@
 
 void Input_Parser::on_start_element(const std::string &element_name)
 {
+  // std::cout << "start: " << element_name << "\n";
   if(inside_expression)
     {
       if(inside_sdp)
@@ -12,7 +13,9 @@ void Input_Parser::on_start_element(const std::string &element_name)
              && (finished_objective
                  || !objective_state.on_start_element(element_name))
              && (finished_normalization
-                 || !normalization_state.on_start_element(element_name)))
+                 || !normalization_state.on_start_element(element_name))
+             && !positive_matrix_with_prefactor_state.on_start_element(
+                  element_name))
             {
               throw std::runtime_error(
                 "Invalid input file.  Expected 'Function' inside "
@@ -20,15 +23,16 @@ void Input_Parser::on_start_element(const std::string &element_name)
                 + element_name + "'");
             }
         }
-      else if(element_name == "Function")
-        {
-          inside_sdp = true;
-        }
       else
         {
-          throw std::runtime_error(
-            "Invalid input file.  Expected 'Function' but found '"
-            + element_name + "'");
+          inside_sdp = (element_name == sdp_name);
+          if(!inside_sdp)
+            {
+              throw std::runtime_error(
+                "Invalid input file.  Expected 'Function' inside "
+                "'Expression', but found '"
+                + element_name + "'");
+            }
         }
     }
   else if(element_name == expression_name)
