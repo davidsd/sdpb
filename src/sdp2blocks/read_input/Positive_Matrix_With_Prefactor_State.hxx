@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Damped_Rational_State.hxx"
-#include "Polynomial_Term_State.hxx"
+#include "Polynomial_State.hxx"
 #include "../Positive_Matrix_With_Prefactor.hxx"
 
 #include <libxml2/libxml/parser.h>
@@ -16,7 +16,6 @@ struct Positive_Matrix_With_Prefactor_State
   Positive_Matrix_With_Prefactor value;
 
   Damped_Rational_State damped_rational_state;
-  using Polynomial_State = Vector_State<Polynomial_Term_State>;
   Vector_State<Vector_State<Vector_State<Polynomial_State>>> polynomials_state;
 
   Positive_Matrix_With_Prefactor_State(const std::vector<std::string> &names,
