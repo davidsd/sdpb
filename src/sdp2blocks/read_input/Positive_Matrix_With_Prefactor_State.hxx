@@ -51,9 +51,6 @@ struct Positive_Matrix_With_Prefactor_State
             finished_damped_rational = false;
           }
       }
-    // std::cout << "Positive start: " << inside << " "
-    //           << damped_rational_state.inside << " "
-    //           << polynomials_state.inside << "\n";
     return inside;
   }
 
@@ -75,13 +72,6 @@ struct Positive_Matrix_With_Prefactor_State
           {
             if(!polynomials_state.inside)
               {
-                // std::cout
-                //   << "sizes: "
-                //   << polynomials_state.value.front().front().front().size()
-                //   << " " << polynomials_state.value.front().front().size()
-                //   << " " << polynomials_state.value.front().size() << " "
-                //   << polynomials_state.value.size() << " "
-                //   << "\n";
                 for(auto &polynomial : polynomials_state.value.front().front())
                   {
                     std::vector<El::BigFloat> coefficients(polynomial.size(),
@@ -104,9 +94,6 @@ struct Positive_Matrix_With_Prefactor_State
             inside = (element_name != name);
           }
       }
-    // std::cout << "Positive end: " << inside << " "
-    //           << damped_rational_state.inside << " "
-    //           << polynomials_state.inside << "\n";
     return result;
   }
 

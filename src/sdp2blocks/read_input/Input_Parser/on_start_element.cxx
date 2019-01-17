@@ -4,7 +4,6 @@
 
 void Input_Parser::on_start_element(const std::string &element_name)
 {
-  // std::cout << "start: " << element_name << "\n";
   if(inside_expression)
     {
       if(inside_sdp)

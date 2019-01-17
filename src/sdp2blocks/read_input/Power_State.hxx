@@ -29,8 +29,6 @@ struct Power_State
       {
         inside = (element_name == name);
       }
-    // std::cout << "Power start: " << std::boolalpha << inside << " "
-    //           << number_state.inside << "\n";
     return inside;
   }
 
@@ -51,8 +49,6 @@ struct Power_State
             inside = (element_name != name);
           }
       }
-    // std::cout << "Power end: " << std::boolalpha << inside << " "
-    //           << number_state.inside << "\n";
     return result;
   }
 

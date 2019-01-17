@@ -2,7 +2,6 @@
 
 void Input_Parser::on_end_element(const std::string &element_name)
 {
-  // std::cout << "end: " << element_name << "\n";
   if(inside_expression)
     {
       if(inside_sdp)

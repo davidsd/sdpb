@@ -30,10 +30,6 @@ struct Polynomial_Term_State
           + element_name + "'");
       }
     inside = (number_state.inside || times_state.inside);
-
-    // std::cout << "Polynomial_Term start: " << std::boolalpha << inside << " "
-    //           << number_state.inside << " " << times_state.inside << "\n";
-
     return inside;
   }
 
@@ -49,10 +45,6 @@ struct Polynomial_Term_State
                 value.first = 0;
                 using namespace std;
                 swap(number_state.value, value.second);
-
-                // std::cout << "Polynomial Number: "
-                //           << value.first << " "
-                //           << value.second << "\n";
               }
           }
         else if(times_state.on_end_element(element_name))
@@ -61,17 +53,10 @@ struct Polynomial_Term_State
               {
                 using namespace std;
                 swap(value, times_state.value);
-
-                // std::cout << "Polynomial Times: "
-                //           << value.first << " "
-                //           << value.second << "\n";
               }
           }
         inside = (number_state.inside || times_state.inside);
       }
-
-    // std::cout << "Polynomial_Term end: " << std::boolalpha << inside << " "
-    //           << number_state.inside << " " << times_state.inside << "\n";
     return result;
   }
 
