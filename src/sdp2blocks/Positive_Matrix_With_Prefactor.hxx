@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Damped_Rational.hxx"
 #include "../Polynomial.hxx"
 
 struct Positive_Matrix_With_Prefactor
