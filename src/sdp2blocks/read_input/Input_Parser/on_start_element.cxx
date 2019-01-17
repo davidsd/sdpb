@@ -13,7 +13,7 @@ void Input_Parser::on_start_element(const std::string &element_name)
                  || !objective_state.on_start_element(element_name))
              && (finished_normalization
                  || !normalization_state.on_start_element(element_name))
-             && !positive_matrix_with_prefactor_state.on_start_element(
+             && !positive_matrices_with_prefactor_state.on_start_element(
                   element_name))
             {
               throw std::runtime_error(

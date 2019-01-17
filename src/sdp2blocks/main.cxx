@@ -1,10 +1,15 @@
+#include "Positive_Matrix_With_Prefactor.hxx"
+
 #include <El.hpp>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
 namespace po = boost::program_options;
 
-void read_input(const boost::filesystem::path &input_file);
+void read_input(const boost::filesystem::path &input_file,
+                std::vector<El::BigFloat> &objectives,
+                std::vector<El::BigFloat> &normalization,
+                std::vector<Positive_Matrix_With_Prefactor> &matrices);
 
 int main(int argc, char **argv)
 {
@@ -81,7 +86,9 @@ int main(int argc, char **argv)
       El::gmp::SetPrecision(precision);
       El::mpfr::SetPrecision(precision);
 
-      read_input(input_file);
+      std::vector<El::BigFloat> objectives,normalization;
+      std::vector<Positive_Matrix_With_Prefactor> matrices;
+      read_input(input_file, objectives, normalization, matrices);
     }
   catch(std::runtime_error &e)
     {

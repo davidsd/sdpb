@@ -42,7 +42,10 @@ namespace
   }
 }
 
-void read_input(const boost::filesystem::path &input_file)
+void read_input(const boost::filesystem::path &input_file,
+                std::vector<El::BigFloat> &objectives,
+                std::vector<El::BigFloat> &normalization,
+                std::vector<Positive_Matrix_With_Prefactor> &matrices)
 {
   LIBXML_TEST_VERSION;
 
@@ -63,32 +66,22 @@ void read_input(const boost::filesystem::path &input_file)
                                + input_file.string());
     }
 
+  std::swap(objectives, input_parser.objective_state.value);
+  std::swap(normalization, input_parser.normalization_state.value);
+  std::swap(matrices,
+            input_parser.positive_matrices_with_prefactor_state.value);
 
-  for(auto &o: input_parser.objective_state.value)
-    std::cout << "Objective: " << o << "\n";
-  for(auto &o: input_parser.normalization_state.value)
-    std::cout << "Normalization: " << o << "\n";
-  
-  // std::cout << "Objective: " << input_parser.objective_state.value.size() << " "
-  //           << input_parser.normalization_state.value.size() << " "
-  //           << "\n";
-  // for(auto &objective: input_parser.objective_state
-  
-  // // Overwrite the objective with whatever is in the last file
-  // // that has an objective, but polynomial_vector_matrices get
-  // // appended.
-  // auto iterator(input_parser.objective_state.value.begin()),
-  //   end(input_parser.objective_state.value.end());
-  // if(iterator != end)
+  // for(auto &o : objectives)
+  //   std::cout << "Objective: " << o << "\n";
+  // for(auto &o : normalization)
+  //   std::cout << "Normalization: " << o << "\n";
+  // for(auto &o : matrices)
   //   {
-  //     objective_const = *iterator;
-  //     ++iterator;
-  //     dual_objectives_b.clear();
-  //     dual_objectives_b.insert(dual_objectives_b.end(), iterator, end);
+  //     std::cout << "Damped: " << o.damped_rational.constant << " "
+  //               << o.damped_rational.base << "\n";
+  //     // for(auto &pole: o.damped_rational.poles)
+  //     //   std::cout << "\t" << pole << "\n";
+  //     // for(auto &polynomial: o.polynomials)
+  //     //   std::cout << polynomial << "\n";
   //   }
-
-  // polynomial_vector_matrices.insert(
-  //   polynomial_vector_matrices.end(),
-  //   input_parser.polynomial_vector_matrices_state.value.begin(),
-  //   input_parser.polynomial_vector_matrices_state.value.end());
 }

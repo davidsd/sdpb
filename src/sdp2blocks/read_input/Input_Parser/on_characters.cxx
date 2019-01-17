@@ -6,6 +6,7 @@ void Input_Parser::on_characters(const xmlChar *characters, int length)
     {
       objective_state.on_characters(characters, length)
         || normalization_state.on_characters(characters, length)
-        || positive_matrix_with_prefactor_state.on_characters(characters, length);
+        || positive_matrices_with_prefactor_state.on_characters(characters,
+                                                                length);
     }
 }

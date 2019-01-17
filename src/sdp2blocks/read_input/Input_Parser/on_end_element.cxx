@@ -16,7 +16,7 @@ void Input_Parser::on_end_element(const std::string &element_name)
                 {
                   finished_normalization = !normalization_state.inside;
                 }
-              else if(positive_matrix_with_prefactor_state.on_end_element(
+              else if(positive_matrices_with_prefactor_state.on_end_element(
                         element_name))
                 {}
               else
