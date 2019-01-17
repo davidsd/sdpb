@@ -46,6 +46,10 @@ struct Positive_Matrix_With_Prefactor_State
     else
       {
         inside = (element_name == name);
+        if(inside)
+          {
+            finished_damped_rational = false;
+          }
       }
     // std::cout << "Positive start: " << inside << " "
     //           << damped_rational_state.inside << " "

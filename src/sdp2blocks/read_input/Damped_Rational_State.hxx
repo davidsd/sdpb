@@ -46,6 +46,11 @@ struct Damped_Rational_State
     else
       {
         inside = (element_name == name);
+        if(inside)
+          {
+            finished_constant = false;
+            finished_base = false;
+          }
       }
     return inside;
   }
