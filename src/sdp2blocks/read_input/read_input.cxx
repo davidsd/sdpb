@@ -70,18 +70,4 @@ void read_input(const boost::filesystem::path &input_file,
   std::swap(normalization, input_parser.normalization_state.value);
   std::swap(matrices,
             input_parser.positive_matrices_with_prefactor_state.value);
-
-  // for(auto &o : objectives)
-  //   std::cout << "Objective: " << o << "\n";
-  // for(auto &o : normalization)
-  //   std::cout << "Normalization: " << o << "\n";
-  // for(auto &o : matrices)
-  //   {
-  //     std::cout << "Damped: " << o.damped_rational.constant << " "
-  //               << o.damped_rational.base << "\n";
-  //     // for(auto &pole: o.damped_rational.poles)
-  //     //   std::cout << "\t" << pole << "\n";
-  //     // for(auto &polynomial: o.polynomials)
-  //     //   std::cout << polynomial << "\n";
-  //   }
 }
