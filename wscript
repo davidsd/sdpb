@@ -94,7 +94,8 @@ def build(bld):
                         'src/sdp2blocks/read_input/read_input.cxx',
                         'src/sdp2blocks/read_input/Input_Parser/on_start_element.cxx',
                         'src/sdp2blocks/read_input/Input_Parser/on_end_element.cxx',
-                        'src/sdp2blocks/read_input/Input_Parser/on_characters.cxx'],
+                        'src/sdp2blocks/read_input/Input_Parser/on_characters.cxx',
+                        'src/sdp2blocks/write_output_files/write_output_files.cxx'],
                 target='sdp2blocks',
                 cxxflags=default_flags,
                 use=use_packages
