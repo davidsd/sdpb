@@ -14,11 +14,11 @@ public:
   bool inside = false, inside_rows = false, inside_columns = false;
   Polynomial_Vector_Matrix value;
 
-  using Polynomial_State = Vector_State<Number_State>;
+  using Polynomial_State = Vector_State<Number_State<El::BigFloat>>;
   using Polynomial_Vector_State = Vector_State<Polynomial_State>;
   Vector_State<Polynomial_Vector_State> elements_state;
-  Vector_State<Number_State> sample_points_state;
-  Vector_State<Number_State> sample_scalings_state;
+  Vector_State<Number_State<El::BigFloat>> sample_points_state;
+  Vector_State<Number_State<El::BigFloat>> sample_scalings_state;
   Vector_State<Polynomial_State> bilinear_basis_state;
 
   Polynomial_Vector_Matrix_State(const std::vector<std::string> &names,

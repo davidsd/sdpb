@@ -8,7 +8,7 @@ struct Polynomial_State
   bool inside = false;
   std::vector<std::pair<size_t, El::BigFloat>> value;
 
-  Number_State number_state;
+  Number_State<El::BigFloat> number_state;
   Vector_State<Polynomial_Term_State> vector_polynomial_term_state;
 
   Polynomial_State(const std::vector<std::string> &names, const size_t &offset)

@@ -8,7 +8,7 @@ struct Times_State
   bool inside = false;
   std::pair<size_t, El::BigFloat> value;
 
-  Number_State number_state;
+  Number_State<El::BigFloat> number_state;
   Power_State power_state;
 
   Times_State(const std::string &Name)

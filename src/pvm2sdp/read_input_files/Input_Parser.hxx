@@ -10,7 +10,7 @@ public:
   bool inside_sdp = false, finished_objective = false,
        finished_polynomial_vector_matrices = false;
 
-  Vector_State<Number_State> objective_state;
+  Vector_State<Number_State<El::BigFloat>> objective_state;
   Vector_State<Polynomial_Vector_Matrix_State> polynomial_vector_matrices_state;
 
   Input_Parser()

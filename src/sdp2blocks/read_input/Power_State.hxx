@@ -8,7 +8,7 @@ struct Power_State
   bool inside = false;
   size_t value;
 
-  Number_State number_state;
+  Number_State<El::BigFloat> number_state;
 
   Power_State(const std::string &Name) : name(Name), number_state("Number"s) {}
   Power_State() = delete;

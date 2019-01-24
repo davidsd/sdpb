@@ -10,7 +10,7 @@ public:
   bool inside_expression = false, inside_sdp = false,
        finished_objective = false, finished_normalization = false;
 
-  Vector_State<Number_State> objective_state, normalization_state;
+  Vector_State<Number_State<El::BigFloat>> objective_state, normalization_state;
   Vector_State<Positive_Matrix_With_Prefactor_State>
     positive_matrices_with_prefactor_state;
 

@@ -7,6 +7,7 @@
 #include <sstream>
 #include <stdexcept>
 
+template<typename Float_Type>
 class Number_State
 {
 public:
@@ -15,7 +16,7 @@ public:
   // element in chunks.  We need to concatenate them together
   // ourselves.
   std::stringstream string_value;
-  El::BigFloat value;
+  Float_Type value;
   std::string name;
 
   Number_State(const std::string &Name) : name(Name) {}
