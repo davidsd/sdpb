@@ -90,6 +90,8 @@ int main(int argc, char **argv)
       mpf_set_default_prec(precision);
       El::gmp::SetPrecision(precision);
       El::mpfr::SetPrecision(precision);
+      using Boost_Float = boost::multiprecision::mpfr_float;
+      Boost_Float::default_precision(El::gmp::Precision());
 
       std::vector<El::BigFloat> objectives, normalization;
       std::vector<Positive_Matrix_With_Prefactor> matrices;

@@ -1,12 +1,14 @@
 #pragma once
 
 #include <El.hpp>
+#include <boost/multiprecision/mpfr.hpp>
 #include <vector>
 
+using Boost_Float = boost::multiprecision::mpfr_float;
 struct Damped_Rational
 {
-  El::BigFloat constant, base;
-  std::vector<El::BigFloat> poles;
+  Boost_Float constant, base;
+  std::vector<Boost_Float> poles;
   std::string variable;
 };
 

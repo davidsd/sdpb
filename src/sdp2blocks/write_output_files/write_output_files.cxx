@@ -1,9 +1,11 @@
 #include "../Positive_Matrix_With_Prefactor.hxx"
 
+#include <boost/multiprecision/gmp.hpp>
 #include <boost/filesystem.hpp>
 #include <algorithm>
 
-std::vector<El::BigFloat> sample_points(const size_t &num_points);
+using Boost_Float = boost::multiprecision::mpfr_float;
+std::vector<Boost_Float> sample_points(const size_t &num_points);
 
 void write_output_files(
   const boost::filesystem::path &outdir,
@@ -14,6 +16,7 @@ void write_output_files(
   auto max_normalization(
     std::max_element(normalization.begin(), normalization.end()));
   size_t max_index(std::distance(normalization.begin(), max_normalization));
+
   El::BigFloat objective_const(objectives.at(max_index)
                                / normalization.at(max_index));
   std::vector<El::BigFloat> dual_objective_b;
@@ -31,12 +34,22 @@ void write_output_files(
     {
       const size_t degree(matrix.polynomials.front().degree());
       size_t rows(matrix.polynomials.size()), cols(degree + 1);
-      std::vector<El::BigFloat> points(sample_points(degree+1));
+      std::vector<Boost_Float> points(sample_points(degree + 1)),
+        sample_scalings;
 
-      std::cout.precision(El::gmp::Precision());
-      std::cout << degree+1 << "\n";
-      for(auto &point: points)
-        std::cout << point << "\n";
+      sample_scalings.reserve(points.size());
+      for(auto &point : points)
+        {
+          Boost_Float numerator(matrix.damped_rational.constant
+                                 * pow(matrix.damped_rational.base, point));
+          Boost_Float denominator(1);
+          for(auto &pole : matrix.damped_rational.poles)
+            {
+              denominator *= (point - pole);
+            }
+          sample_scalings.push_back(numerator / denominator);
+          std::cout << sample_scalings.back() << "\n";
+        }
     }
 
   std::cout << "Objective: " << objective_const << "\n";

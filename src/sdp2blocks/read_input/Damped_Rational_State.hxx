@@ -15,8 +15,9 @@ struct Damped_Rational_State
   std::string name;
   bool inside = false, finished_constant = false, finished_base = false;
   Damped_Rational value;
-  Number_State<El::BigFloat> constant_state, base_state;
-  Vector_State<Number_State<El::BigFloat>> polynomial_state;
+  using Boost_Float = boost::multiprecision::mpfr_float;
+  Number_State<Boost_Float> constant_state, base_state;
+  Vector_State<Number_State<Boost_Float>> polynomial_state;
 
   Damped_Rational_State(const std::vector<std::string> &names,
                         const size_t &offset)
