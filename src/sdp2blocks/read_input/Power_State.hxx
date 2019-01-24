@@ -41,7 +41,7 @@ struct Power_State
           {
             if(!number_state.inside)
               {
-                value = std::stoul(number_state.string_value);
+                number_state.string_value >> value;
               }
           }
         else

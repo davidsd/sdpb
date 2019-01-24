@@ -4,7 +4,7 @@
 
 #include <libxml2/libxml/parser.h>
 #include <vector>
-#include <string>
+#include <sstream>
 #include <stdexcept>
 
 class Number_State
@@ -14,7 +14,7 @@ public:
   // Need a string intermediate value because the parser may give the
   // element in chunks.  We need to concatenate them together
   // ourselves.
-  std::string string_value;
+  std::stringstream string_value;
   El::BigFloat value;
   std::string name;
 
@@ -36,6 +36,7 @@ public:
         inside = (element_name == name);
         if(inside)
           {
+            string_value.str("");
             string_value.clear();
           }
       }
@@ -48,7 +49,7 @@ public:
     if(inside)
       {
         inside = false;
-        value = El::BigFloat(string_value, 10);
+        string_value >> value;
       }
     return result;
   }
@@ -57,8 +58,7 @@ public:
   {
     if(inside)
       {
-        string_value.append(reinterpret_cast<const char *>(characters),
-                            length);
+        string_value.write(reinterpret_cast<const char *>(characters), length);
       }
     return inside;
   }
