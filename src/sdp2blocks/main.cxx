@@ -98,12 +98,7 @@ int main(int argc, char **argv)
       read_input(input_file, objectives, normalization, matrices);
       write_output_files(output_dir, objectives, normalization, matrices);
     }
-  catch(std::runtime_error &e)
-    {
-      std::cerr << "Error: " << e.what() << "\n" << std::flush;
-      El::mpi::Abort(El::mpi::COMM_WORLD, 1);
-    }
-  catch(po::error &e)
+  catch(std::exception &e)
     {
       std::cerr << "Error: " << e.what() << "\n" << std::flush;
       El::mpi::Abort(El::mpi::COMM_WORLD, 1);

@@ -82,7 +82,7 @@ int main(int argc, char **argv)
       write_free_var_matrix(output_dir, dual_objective_b.size(),
                             dual_constraint_groups);
     }
-  catch(std::runtime_error &e)
+  catch(std::exception &e)
     {
       std::cerr << "Error: " << e.what() << "\n" << std::flush;
       El::mpi::Abort(El::mpi::COMM_WORLD, 1);
