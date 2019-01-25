@@ -32,17 +32,14 @@ void write_output_files(
 
   for(auto &matrix : matrices)
     {
-      auto max_polynomial(
-        std::max_element(matrix.polynomials.begin(), matrix.polynomials.end(),
-                         [](const Polynomial &a, const Polynomial &b) {
-                           return a.degree() < b.degree();
-                         }));
-      if(max_polynomial == matrix.polynomials.end())
-        {
-          throw std::runtime_error("No polynomials in the Positive Matrix");
-        }
-
-      const size_t max_degree(max_polynomial->degree());
+      const size_t max_degree([&]() {
+        int64_t result(0);
+        for(auto &polynomial : matrix.polynomials)
+          {
+            result = std::max(result, polynomial.degree());
+          }
+        return result;
+      }());
       size_t rows(matrix.polynomials.size()), cols(max_degree + 1);
       std::vector<Boost_Float> points(sample_points(max_degree + 1)),
         sample_scalings;

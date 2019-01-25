@@ -58,9 +58,9 @@ public:
   }
 
   // The maximal degree of any of the components P^{rs}_n(x).
-  int degree() const
+  int64_t degree() const
   {
-    int d = 0;
+    int64_t d = 0;
     for(auto &e : elements)
       for(auto &p : e)
         {

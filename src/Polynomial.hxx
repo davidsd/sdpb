@@ -27,7 +27,7 @@ public:
   Polynomial() : coefficients(1, 0) {}
 
   // Degree of p(x)
-  int degree() const { return coefficients.size() - 1; };
+  int64_t degree() const { return coefficients.size() - 1; };
 
   // Evaluate p(x) for some x using horner's method
   El::BigFloat operator()(const El::BigFloat &x) const
