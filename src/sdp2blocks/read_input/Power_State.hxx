@@ -41,6 +41,7 @@ struct Power_State
           {
             if(!number_state.inside)
               {
+                number_state.string_value.seekg(0);
                 number_state.string_value >> value;
               }
           }
