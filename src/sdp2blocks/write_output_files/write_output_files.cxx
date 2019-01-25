@@ -32,27 +32,41 @@ void write_output_files(
 
   for(auto &matrix : matrices)
     {
-      const size_t degree(matrix.polynomials.front().degree());
-      size_t rows(matrix.polynomials.size()), cols(degree + 1);
-      std::vector<Boost_Float> points(sample_points(degree + 1)),
+      auto max_polynomial(
+        std::max_element(matrix.polynomials.begin(), matrix.polynomials.end(),
+                         [](const Polynomial &a, const Polynomial &b) {
+                           return a.degree() < b.degree();
+                         }));
+      if(max_polynomial == matrix.polynomials.end())
+        {
+          throw std::runtime_error("No polynomials in the Positive Matrix");
+        }
+
+      const size_t max_degree(max_polynomial->degree());
+      size_t rows(matrix.polynomials.size()), cols(max_degree + 1);
+      std::vector<Boost_Float> points(sample_points(max_degree + 1)),
         sample_scalings;
+
+      std::cout << "Points: " << (max_degree + 1) << " " << points[0] << "\n";
 
       sample_scalings.reserve(points.size());
       for(auto &point : points)
         {
           Boost_Float numerator(matrix.damped_rational.constant
-                                 * pow(matrix.damped_rational.base, point));
+                                * pow(matrix.damped_rational.base, point));
           Boost_Float denominator(1);
+          std::cout << "Const: " << matrix.damped_rational.constant << " "
+                    << matrix.damped_rational.base << " " << point << "\n";
           for(auto &pole : matrix.damped_rational.poles)
             {
               denominator *= (point - pole);
             }
           sample_scalings.push_back(numerator / denominator);
-          std::cout << sample_scalings.back() << "\n";
+          std::cout << "Scaling: " << sample_scalings.back() << "\n";
         }
     }
 
-  std::cout << "Objective: " << objective_const << "\n";
-  for(auto &o : dual_objective_b)
-    std::cout << " " << o << "\n";
+  // std::cout << "Objective: " << objective_const << "\n";
+  // for(auto &o : dual_objective_b)
+  //   std::cout << " " << o << "\n";
 }
