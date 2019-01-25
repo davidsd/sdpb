@@ -21,9 +21,6 @@ struct Polynomial_State
 
   bool on_start_element(const std::string &element_name)
   {
-    // if(element_name=="Number")
-    //   std::cout << "Polynomial Starting\n";
-    
     if((vector_polynomial_term_state.inside
         || !number_state.on_start_element(element_name))
        && !vector_polynomial_term_state.on_start_element(element_name))
@@ -34,9 +31,6 @@ struct Polynomial_State
           + element_name + "'");
       }
     inside = (number_state.inside || vector_polynomial_term_state.inside);
-
-    // if(element_name=="Number")
-    //   std::cout << "Polynomial Started\n";
     return inside;
   }
 

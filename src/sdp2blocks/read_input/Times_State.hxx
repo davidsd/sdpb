@@ -24,8 +24,6 @@ struct Times_State
         if(element_name != "Symbol"
            && (power_state.inside
                || !number_state.on_start_element(element_name))
-           // && (!power_state.inside
-           //     && !number_state.on_start_element(element_name))
            && !power_state.on_start_element(element_name))
           {
             throw std::runtime_error(
