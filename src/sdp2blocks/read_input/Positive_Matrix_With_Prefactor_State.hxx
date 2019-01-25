@@ -72,7 +72,7 @@ struct Positive_Matrix_With_Prefactor_State
           {
             if(!polynomials_state.inside)
               {
-                for(auto &polynomial : polynomials_state.value.front().front())
+                for(auto &polynomial : polynomials_state.value.at(0).at(0))
                   {
                     std::vector<El::BigFloat> coefficients(polynomial.size(),
                                                            0);
