@@ -1,11 +1,10 @@
+#include "../Boost_Float.hxx"
+
 #include <El.hpp>
 
 #include <boost/math/constants/constants.hpp>
-#include <boost/multiprecision/mpfr.hpp>
 
 #include <vector>
-
-using Boost_Float = boost::multiprecision::mpfr_float;
 
 // Rescaled Laguerre
 std::vector<Boost_Float> sample_points(const size_t &num_points)

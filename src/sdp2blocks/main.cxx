@@ -1,3 +1,4 @@
+#include "Boost_Float.hxx"
 #include "Positive_Matrix_With_Prefactor.hxx"
 
 #include <boost/program_options.hpp>
@@ -90,7 +91,6 @@ int main(int argc, char **argv)
       mpf_set_default_prec(precision);
       El::gmp::SetPrecision(precision);
       El::mpfr::SetPrecision(precision);
-      using Boost_Float = boost::multiprecision::mpfr_float;
       Boost_Float::default_precision(El::gmp::Precision());
 
       std::vector<El::BigFloat> objectives, normalization;

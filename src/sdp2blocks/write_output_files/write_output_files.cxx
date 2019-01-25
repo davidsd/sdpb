@@ -1,10 +1,10 @@
 #include "../Positive_Matrix_With_Prefactor.hxx"
 
-#include <boost/multiprecision/gmp.hpp>
+#include "../Boost_Float.hxx"
+
 #include <boost/filesystem.hpp>
 #include <algorithm>
 
-using Boost_Float = boost::multiprecision::mpfr_float;
 std::vector<Boost_Float> sample_points(const size_t &num_points);
 
 void write_output_files(

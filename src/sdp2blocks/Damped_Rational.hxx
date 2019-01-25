@@ -1,10 +1,9 @@
 #pragma once
 
+#include "Boost_Float.hxx"
 #include <El.hpp>
-#include <boost/multiprecision/mpfr.hpp>
 #include <vector>
 
-using Boost_Float = boost::multiprecision::mpfr_float;
 struct Damped_Rational
 {
   Boost_Float constant, base;
