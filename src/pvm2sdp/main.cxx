@@ -57,9 +57,7 @@ int main(int argc, char **argv)
       boost::filesystem::path output_dir;
 
       parse_command_line(argc, argv, precision, input_files, output_dir);
-      mpf_set_default_prec(precision);
       El::gmp::SetPrecision(precision);
-      El::mpfr::SetPrecision(precision);
 
       El::BigFloat objective_const;
       std::vector<El::BigFloat> dual_objective_b;

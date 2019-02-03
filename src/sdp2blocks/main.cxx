@@ -88,9 +88,8 @@ int main(int argc, char **argv)
                                    + "' exists and is not a directory");
         }
 
-      mpf_set_default_prec(precision);
       El::gmp::SetPrecision(precision);
-      El::mpfr::SetPrecision(precision);
+      // FIXME: This should be in base 10, not base 2.
       Boost_Float::default_precision(El::gmp::Precision());
 
       std::vector<El::BigFloat> objectives, normalization;

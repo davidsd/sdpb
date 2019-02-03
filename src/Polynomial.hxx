@@ -25,6 +25,9 @@ public:
 
   // The zero polynomial
   Polynomial() : coefficients(1, 0) {}
+  Polynomial(const size_t &size, const El::BigFloat &default_element)
+      : coefficients(size, default_element)
+  {}
 
   // Degree of p(x)
   int64_t degree() const { return coefficients.size() - 1; };

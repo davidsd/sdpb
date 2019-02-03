@@ -54,7 +54,7 @@ def configure(conf):
         conf.to_log('Using gmpxx_libs: ' + conf.options.gmpxx_libs)
         gmpxx_libs=conf.options.gmpxx_libs.split()
     else:
-        gmpxx_libs=['gmpxx','gmp', 'mpc', 'mpfr']
+        gmpxx_libs=['gmpxx','gmp']
 
     conf.check_cxx(msg="Checking for GMPXX",
                    header_name='gmpxx.h',

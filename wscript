@@ -1,22 +1,22 @@
 import os
 
 def options(opt):
-    opt.load(['compiler_cxx','gnu_dirs','boost','cxx14','gmpxx','elemental',
-              'libxml2'])
+    opt.load(['compiler_cxx','gnu_dirs','boost','cxx14','gmpxx','mpfr',
+              'elemental','libxml2'])
 
 def configure(conf):
     if not 'CXX' in os.environ or os.environ['CXX']=='g++' or os.environ['CXX']=='icpc':
         conf.environ['CXX']='mpicxx'
 
-    conf.load(['compiler_cxx','gnu_dirs','boost','cxx14','gmpxx','elemental',
-               'libxml2'])
+    conf.load(['compiler_cxx','gnu_dirs','boost','cxx14','gmpxx','mpfr',
+               'elemental','libxml2'])
     # FIXME: This does not use the C++14 flag when checking boost
     conf.check_boost(lib='system filesystem date_time program_options')
 
 def build(bld):
     default_flags=['-Wall', '-Wextra', '-O3', '-Wno-deprecated']
     # default_flags=['-Wall', '-Wextra', '-g', '-Wno-deprecated']
-    use_packages=['BOOST','gmpxx','cxx14','elemental','libxml2']
+    use_packages=['BOOST','gmpxx','mpfr','cxx14','elemental','libxml2']
     
     # Main executable
     bld.program(source=['src/sdpb/main.cxx',
@@ -96,7 +96,9 @@ def build(bld):
                         'src/sdp2blocks/read_input/Input_Parser/on_end_element.cxx',
                         'src/sdp2blocks/read_input/Input_Parser/on_characters.cxx',
                         'src/sdp2blocks/write_output_files/write_output_files.cxx',
-                        'src/sdp2blocks/write_output_files/sample_points.cxx'],
+                        'src/sdp2blocks/write_output_files/sample_points.cxx',
+                        'src/sdp2blocks/write_output_files/bilinear_basis/Derivative_Term/derivative.cxx',
+                        'src/sdp2blocks/write_output_files/bilinear_basis/operator_plus_vector_Derivative_Term.cxx'],
                 target='sdp2blocks',
                 cxxflags=default_flags,
                 use=use_packages
