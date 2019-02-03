@@ -1,22 +1,20 @@
 import os
 
 def options(opt):
-    opt.load(['compiler_cxx','gnu_dirs','boost','cxx14','gmpxx','mpfr',
+    opt.load(['compiler_cxx','gnu_dirs','cxx14','boost','gmpxx','mpfr',
               'elemental','libxml2'])
 
 def configure(conf):
     if not 'CXX' in os.environ or os.environ['CXX']=='g++' or os.environ['CXX']=='icpc':
         conf.environ['CXX']='mpicxx'
 
-    conf.load(['compiler_cxx','gnu_dirs','boost','cxx14','gmpxx','mpfr',
+    conf.load(['compiler_cxx','gnu_dirs','cxx14','boost','gmpxx','mpfr',
                'elemental','libxml2'])
-    # FIXME: This does not use the C++14 flag when checking boost
-    conf.check_boost(lib='system filesystem date_time program_options')
 
 def build(bld):
     default_flags=['-Wall', '-Wextra', '-O3', '-Wno-deprecated']
     # default_flags=['-Wall', '-Wextra', '-g', '-Wno-deprecated']
-    use_packages=['BOOST','gmpxx','mpfr','cxx14','elemental','libxml2']
+    use_packages=['cxx14','boost','gmpxx','mpfr','elemental','libxml2']
     
     # Main executable
     bld.program(source=['src/sdpb/main.cxx',

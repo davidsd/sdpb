@@ -3,6 +3,21 @@
 
 def configure(conf):
     # Find Libxml2
+    import os
+    if not conf.options.libxml2_incdir:
+        for d in ['LIBXML2_INCLUDE','LIBXML2_INCLUDE_DIR','LIBXML2_INC_DIR']:
+            env_dir=os.getenv(d)
+            if env_dir:
+                conf.to_log('Setting libxml2_incdir using environment variable: ' + d + '=' + env_dir)
+                conf.options.libxml2_incdir=env_dir
+                
+    if not conf.options.libxml2_libdir:
+        for d in ['LIBXML2_LIB','LIBXML2_LIB_DIR']:
+            env_dir=os.getenv(d)
+            if env_dir:
+                conf.to_log('Setting libxml2_libdir using environment variable: ' + d + '=' + env_dir)
+                conf.options.libxml2_libdir=env_dir
+
     if conf.options.libxml2_dir:
         if not conf.options.libxml2_incdir:
             conf.options.libxml2_incdir=conf.options.libxml2_dir + "/include"
