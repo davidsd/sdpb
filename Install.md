@@ -41,7 +41,6 @@ manager such as [Homebrew](https://brew.sh).
 
         git clone https://gitlab.com/bootstrapcollaboration/elemental.git
 
-    
 2. Make the build directory and cd into it.
 
         mkdir -p elemental/build
@@ -54,9 +53,11 @@ manager such as [Homebrew](https://brew.sh).
         export CC=mpicc
         cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/project/install
 
-    On Harvard's Odyssey3 cluster, the commands that work are
+    On Harvard's Odyssey3 cluster, the default Boost module does not
+    work with the most up-to-date compiler.  Using a different
+    compiler with a different Boost module does work.
     
-        module load cmake gcc/7.1.0-fasrc01 openmpi OpenBLAS boost libxml2/2.7.8-fasrc03
+        module load cmake gcc/7.1.0-fasrc01 openmpi OpenBLAS boost/1.63.0-fasrc02 libxml2/2.7.8-fasrc03
         export CXX=mpicxx
         export CC=mpicc
         cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/install
