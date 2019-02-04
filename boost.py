@@ -18,6 +18,13 @@ def configure(conf):
                 conf.to_log('Setting boost_libdir using environment variable: ' + d + '=' + env_dir)
                 conf.options.boost_libdir=env_dir
 
+    if not conf.options.boost_dir:
+        for d in ['BOOST_HOME','BOOST_DIR']:
+            env_dir=os.getenv(d)
+            if env_dir:
+                conf.to_log('Setting boost_dir using environment variable: ' + d + '=' + env_dir)
+                conf.options.boost_dir=env_dir
+                
     if conf.options.boost_dir:
         if not conf.options.boost_incdir:
             conf.options.boost_incdir=conf.options.boost_dir + "/include"
