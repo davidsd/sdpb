@@ -16,7 +16,10 @@ def configure(conf):
                 conf.options.elemental_libdir=lib
             lib64=conf.options.elemental_dir + "/lib64"
             if os.path.isdir(lib64):
-                conf.options.elemental_libdir+=" " + lib64
+                if conf.options.elemental_libdir:
+                    conf.options.elemental_libdir+=" " + lib64
+                else:
+                    conf.options.elemental_libdir=lib64
 
     if conf.options.elemental_incdir:
         elemental_incdir=conf.options.elemental_incdir.split()
