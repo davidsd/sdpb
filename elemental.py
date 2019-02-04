@@ -5,12 +5,18 @@ def configure(conf):
     def get_param(varname,default):
         return getattr(Options.options,varname,'')or default
 
+    import os
     # Find Elemental
     if conf.options.elemental_dir:
         if not conf.options.elemental_incdir:
             conf.options.elemental_incdir=conf.options.elemental_dir + "/include"
         if not conf.options.elemental_libdir:
-            conf.options.elemental_libdir=conf.options.elemental_dir + "/lib"
+            lib=conf.options.elemental_dir + "/lib"
+            if os.path.isdir(lib):
+                conf.options.elemental_libdir=lib
+            lib64=conf.options.elemental_dir + "/lib64"
+            if os.path.isdir(lib64):
+                conf.options.elemental_libdir+=" " + lib64
 
     if conf.options.elemental_incdir:
         elemental_incdir=conf.options.elemental_incdir.split()
