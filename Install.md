@@ -69,9 +69,7 @@ manager such as [Homebrew](https://brew.sh).
     
     and then configure as a normal user
     
-        export CXX=mpicxx
-        export CC=mpicc
-        cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/install
+        cmake .. -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DCMAKE_INSTALL_PREFIX=/home/boo/qft/src/elemental/install
 
 4. Build and install Elemental
 
