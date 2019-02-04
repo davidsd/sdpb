@@ -33,7 +33,7 @@ def configure(conf):
     if conf.options.elemental_libs:
         elemental_libs=conf.options.elemental_libs.split()
     else:
-        elemental_libs=['El', 'pmrrr', 'ElSuiteSparse', 'pthread', 'm', 'metis' ]
+        elemental_libs=['El', 'pmrrr', 'ElSuiteSparse' ]
 
     conf.check_cxx(msg="Checking for Elemental",
                    fragment="#include <El.hpp>\nint main(int argc, char* argv[]) {El::Environment env( argc, argv ); El::BigFloat big;}\n",
