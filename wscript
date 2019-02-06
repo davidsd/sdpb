@@ -95,8 +95,10 @@ def build(bld):
                         'src/sdp2blocks/read_input/Input_Parser/on_characters.cxx',
                         'src/sdp2blocks/write_output_files/write_output_files.cxx',
                         'src/sdp2blocks/write_output_files/sample_points.cxx',
-                        'src/sdp2blocks/write_output_files/bilinear_basis/Derivative_Term/derivative.cxx',
-                        'src/sdp2blocks/write_output_files/bilinear_basis/operator_plus_vector_Derivative_Term.cxx'],
+                        'src/sdp2blocks/write_output_files/bilinear_basis/bilinear_basis.cxx',
+                        'src/sdp2blocks/write_output_files/bilinear_basis/dExp.cxx',
+                        'src/sdp2blocks/write_output_files/bilinear_basis/derivative.cxx',
+                        'src/sdp2blocks/write_output_files/bilinear_basis/operator_plus_set_Derivative_Term.cxx'],
                 target='sdp2blocks',
                 cxxflags=default_flags,
                 use=use_packages

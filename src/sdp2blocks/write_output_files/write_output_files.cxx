@@ -5,6 +5,10 @@
 #include <boost/filesystem.hpp>
 #include <algorithm>
 
+std::vector<Polynomial> bilinear_basis(const Damped_Rational &damped_rational,
+                                       const size_t &half_max_degree);
+
+
 std::vector<Boost_Float> sample_points(const size_t &num_points);
 
 void write_output_files(
@@ -44,23 +48,20 @@ void write_output_files(
       std::vector<Boost_Float> points(sample_points(max_degree + 1)),
         sample_scalings;
 
-      std::cout << "Points: " << (max_degree + 1) << " " << points[0] << "\n";
-
       sample_scalings.reserve(points.size());
       for(auto &point : points)
         {
           Boost_Float numerator(matrix.damped_rational.constant
                                 * pow(matrix.damped_rational.base, point));
           Boost_Float denominator(1);
-          std::cout << "Const: " << matrix.damped_rational.constant << " "
-                    << matrix.damped_rational.base << " " << point << "\n";
           for(auto &pole : matrix.damped_rational.poles)
             {
               denominator *= (point - pole);
             }
           sample_scalings.push_back(numerator / denominator);
-          std::cout << "Scaling: " << sample_scalings.back() << "\n";
         }
+
+      bilinear_basis(matrix.damped_rational,max_degree/2);
     }
 
   // std::cout << "Objective: " << objective_const << "\n";
