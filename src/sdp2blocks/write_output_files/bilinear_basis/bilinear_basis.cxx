@@ -1,11 +1,8 @@
 #include "../../../Polynomial.hxx"
 #include "../../Damped_Rational.hxx"
 
-#include "Derivative_Term.hxx"
-
-#include <set>
-
-std::set<Derivative_Term> dExp(const int64_t &k);
+Boost_Float
+bilinear_form(const Damped_Rational &damped_rational, const int64_t &m);
 
 std::vector<Polynomial> bilinear_basis(const Damped_Rational &damped_rational,
                                        const size_t &half_max_degree)
@@ -14,12 +11,7 @@ std::vector<Polynomial> bilinear_basis(const Damped_Rational &damped_rational,
 
   Polynomial polynomial(half_max_degree, 1);
 
-  std::cout << "About to Exp\n";
-  for(auto &d : dExp(10))
-    {
-      std::cout << d << "\n";
-    }
-  std::cout << std::flush;
-
+  bilinear_form(damped_rational,2*half_max_degree);
+  
   return result;
 }
