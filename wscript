@@ -97,6 +97,7 @@ def build(bld):
                         'src/sdp2blocks/write_output_files/sample_points.cxx',
                         'src/sdp2blocks/write_output_files/bilinear_basis/bilinear_basis.cxx',
                         'src/sdp2blocks/write_output_files/bilinear_basis/bilinear_form/bilinear_form.cxx',
+                        'src/sdp2blocks/write_output_files/bilinear_basis/bilinear_form/integral.cxx',
                         'src/sdp2blocks/write_output_files/bilinear_basis/bilinear_form/rest.cxx',
                         'src/sdp2blocks/write_output_files/bilinear_basis/bilinear_form/dExp.cxx',
                         'src/sdp2blocks/write_output_files/bilinear_basis/bilinear_form/derivative.cxx',

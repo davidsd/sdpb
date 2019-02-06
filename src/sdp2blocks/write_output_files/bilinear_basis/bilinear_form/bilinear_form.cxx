@@ -3,6 +3,9 @@
 #include "../../../../Polynomial.hxx"
 
 Boost_Float
+integral(const Boost_Float &b, const Boost_Float &x, const int64_t &k);
+
+Boost_Float
 rest(const int64_t &m, const Boost_Float &p,
      const std::vector<Boost_Float> &sorted_poles,
      const std::pair<std::vector<Boost_Float>::const_iterator,
@@ -34,13 +37,13 @@ bilinear_form(const Damped_Rational &damped_rational, const int64_t &m)
           return product * (p - q);
         }));
 
+      if(p==-2)
       std::cout << "p: " << p << "\n"
                 << "l: " << l << "\n"
+                << "b: " << damped_rational.base << "\n"
                 << "m: " << m << "\n"
-                << "rest: " << rest(m, p, sorted_poles, equal_range, 0) << "\n"
-                << "rest: " << rest(m, p, sorted_poles, equal_range, l - 1)
-                << "\n";
-
+                << "integral0: " << integral(damped_rational.base, p, 0) << "\n"
+                << "integral1: " << integral(damped_rational.base, p, 10) << "\n";
       do
         {
           ++pole;
