@@ -11,7 +11,11 @@ std::vector<Polynomial> bilinear_basis(const Damped_Rational &damped_rational,
 
   Polynomial polynomial(half_max_degree, 1);
 
-  bilinear_form(damped_rational,2*half_max_degree);
+  std::vector<Boost_Float> bilinear_table;
+  for(int64_t m = 0; m <= 2 * half_max_degree; ++m)
+    {
+      bilinear_table.push_back(bilinear_form(damped_rational, m));
+    }
   
   return result;
 }
