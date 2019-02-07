@@ -13,6 +13,8 @@
 #include <iostream>
 #include <vector>
 
+// FIXME: Use boost::math::tools::polynomial instead
+
 // A univariate polynomial
 //
 //   p(x) = a_0 + a_1 x + a_2 x^2 + ... + a_n x^n
