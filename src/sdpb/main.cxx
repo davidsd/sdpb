@@ -7,7 +7,7 @@
 
 #include "SDP_Solver_Parameters.hxx"
 #include "Block_Info.hxx"
-#include "Timers.hxx"
+#include "../Timers.hxx"
 
 #include <El.hpp>
 
