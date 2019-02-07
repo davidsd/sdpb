@@ -23,6 +23,8 @@ bilinear_form(const Damped_Rational &damped_rational, const int64_t &m)
                    [](const Boost_Float &a) { return a >= 0; }),
     sorted_poles.end());
   std::sort(sorted_poles.begin(), sorted_poles.end());
+
+  Boost_Float pole_sum(0);
   for(auto pole(sorted_poles.begin()); pole != sorted_poles.end();)
     {
       Boost_Float &p(*pole);
@@ -37,17 +39,21 @@ bilinear_form(const Damped_Rational &damped_rational, const int64_t &m)
           return product * (p - q);
         }));
 
-      if(p==-2)
-      std::cout << "p: " << p << "\n"
-                << "l: " << l << "\n"
-                << "b: " << damped_rational.base << "\n"
-                << "m: " << m << "\n"
-                << "integral0: " << integral(damped_rational.base, p, 0) << "\n"
-                << "integral1: " << integral(damped_rational.base, p, 10) << "\n";
+      Boost_Float integral_sum(0);
+      for(int64_t k = 0; k < l; ++k)
+        {
+          integral_sum += integral(damped_rational.base, p, l-k-1)
+                          * rest(m, p, sorted_poles, equal_range, k);
+        }
+      pole_sum += (pow(p, m) / product) * integral_sum;
       do
         {
           ++pole;
         }
-      while(abs(p - *pole) < 1.0e-2);
+      while(pole!=sorted_poles.end() && abs(p - *pole) < 1.0e-2);
     }
+  std::cout << "b: " << damped_rational.base << "\n"
+            << "m: " << m << "\n"
+            << "pole_sum: " << pole_sum << "\n"
+            << std::flush;
 }
