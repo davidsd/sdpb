@@ -68,7 +68,7 @@ bilinear_form(const Damped_Rational &damped_rational, const int64_t &m)
   for(int64_t n = 0; n < int64_t(quotient.size()); ++n)
     {
       result += quotient[n] * factorial(n)
-        * pow(-log(damped_rational.base), -1 - n);
+                * pow(-log(damped_rational.base), -1 - n);
     }
   return result * damped_rational.constant;
 }
