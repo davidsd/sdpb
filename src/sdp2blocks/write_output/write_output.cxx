@@ -11,7 +11,7 @@ std::vector<Polynomial> bilinear_basis(const Damped_Rational &damped_rational,
 
 std::vector<Boost_Float> sample_points(const size_t &num_points);
 
-void write_output_files(
+void write_output(
   const boost::filesystem::path &outdir,
   const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,

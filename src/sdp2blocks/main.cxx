@@ -12,11 +12,10 @@ void read_input(const boost::filesystem::path &input_file,
                 std::vector<El::BigFloat> &normalization,
                 std::vector<Positive_Matrix_With_Prefactor> &matrices);
 
-void write_output_files(
-  const boost::filesystem::path &outdir,
-  const std::vector<El::BigFloat> &objectives,
-  const std::vector<El::BigFloat> &normalization,
-  const std::vector<Positive_Matrix_With_Prefactor> &matrices);
+void write_output(const boost::filesystem::path &outdir,
+                  const std::vector<El::BigFloat> &objectives,
+                  const std::vector<El::BigFloat> &normalization,
+                  const std::vector<Positive_Matrix_With_Prefactor> &matrices);
 
 int main(int argc, char **argv)
 {
@@ -55,9 +54,9 @@ int main(int argc, char **argv)
         "precision", po::value<int>(&precision)->required(),
         "The precision, in the number of bits, for numbers in the "
         "computation. ");
-      options.add_options()(
-        "debug", po::value<bool>(&debug)->default_value(false),
-        "Write out debugging output.");
+      options.add_options()("debug",
+                            po::value<bool>(&debug)->default_value(false),
+                            "Write out debugging output.");
 
       po::positional_options_description positional;
       positional.add("precision", 1);
@@ -104,7 +103,7 @@ int main(int argc, char **argv)
       read_input(input_file, objectives, normalization, matrices);
       read_input_timer.stop();
       auto &write_output_timer(timers.add_and_start("write_output"));
-      write_output_files(output_dir, objectives, normalization, matrices);
+      write_output(output_dir, objectives, normalization, matrices);
       write_output_timer.stop();
       if(debug)
         {
