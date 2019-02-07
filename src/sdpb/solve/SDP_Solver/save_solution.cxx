@@ -32,7 +32,7 @@ void SDP_Solver::save_solution(
     }
   if(!y.blocks.empty())
     {
-      El::Print(y.blocks.at(0), "", ",", out_stream);
+      El::Print(y.blocks.at(0), "", ",\n", out_stream);
     }
 
   if(El::mpi::Rank() == 0)
@@ -40,9 +40,13 @@ void SDP_Solver::save_solution(
       out_stream << "};\nx = {";
     }
 
-  for(auto &block : x.blocks)
+  for(size_t block = 0; block != x.blocks.size(); ++block)
     {
-      El::Print(block, "", ",", out_stream);
+      if(block != 0)
+        {
+          out_stream << ",\n";
+        }
+      El::Print(x.blocks[block], "", ",\n", out_stream);
     }
 
   if(El::mpi::Rank() == 0)
