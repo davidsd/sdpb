@@ -5,8 +5,10 @@
 #include <boost/filesystem.hpp>
 #include <algorithm>
 
-std::vector<Polynomial> bilinear_basis(const Damped_Rational &damped_rational,
-                                       const size_t &half_max_degree);
+std::vector<Polynomial>
+bilinear_basis(const Damped_Rational &damped_rational,
+               const size_t &half_max_degree, const std::string &timer_prefix,
+               Timers &timers);
 
 std::vector<Boost_Float> sample_points(const size_t &num_points);
 
@@ -37,10 +39,10 @@ void write_output(const boost::filesystem::path &outdir,
   objectives_timer.stop();
 
   auto &matrices_timer(timers.add_and_start("write_output.matrices"));
-  for(size_t index=0; index!=matrices.size(); ++index)
+  for(size_t index = 0; index != matrices.size(); ++index)
     {
-      auto &scalings_timer(timers.add_and_start("write_output.matrices.scalings_"
-                                                + std::to_string(index)));
+      auto &scalings_timer(timers.add_and_start(
+        "write_output.matrices.scalings_" + std::to_string(index)));
       const size_t max_degree([&]() {
         int64_t result(0);
         for(auto &polynomial : matrices[index].polynomials)
@@ -56,8 +58,9 @@ void write_output(const boost::filesystem::path &outdir,
       sample_scalings.reserve(points.size());
       for(auto &point : points)
         {
-          Boost_Float numerator(matrices[index].damped_rational.constant
-                                * pow(matrices[index].damped_rational.base, point));
+          Boost_Float numerator(
+            matrices[index].damped_rational.constant
+            * pow(matrices[index].damped_rational.base, point));
           Boost_Float denominator(1);
           for(auto &pole : matrices[index].damped_rational.poles)
             {
@@ -67,13 +70,16 @@ void write_output(const boost::filesystem::path &outdir,
         }
       scalings_timer.stop();
 
-      auto &bilinear_basis_timer(timers.add_and_start("write_output.matrices.bilinear_basis_"
-                                                      + std::to_string(index)));
-      bilinear_basis(matrices[index].damped_rational, max_degree / 2);
+      const std::string bilinear_basis_timer_name(
+        "write_output.matrices.bilinear_basis_" + std::to_string(index));
+      auto &bilinear_basis_timer(
+        timers.add_and_start(bilinear_basis_timer_name));
+      bilinear_basis(matrices[index].damped_rational, max_degree / 2,
+                     bilinear_basis_timer_name, timers);
       bilinear_basis_timer.stop();
     }
   matrices_timer.stop();
-  
+
   // std::cout << "Objective: " << objective_const << "\n";
   // for(auto &o : dual_objective_b)
   //   std::cout << " " << o << "\n";
