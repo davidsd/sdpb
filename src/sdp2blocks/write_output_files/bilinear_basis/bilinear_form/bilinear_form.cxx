@@ -3,10 +3,11 @@
 #include "../../../Damped_Rational.hxx"
 #include "../../../../Polynomial.hxx"
 
+#include <boost/math/special_functions/expint.hpp>
 #include <boost/math/tools/polynomial.hpp>
 
-Boost_Float
-integral(const Boost_Float &b, const Boost_Float &x, const int64_t &k);
+Boost_Float integral(const Boost_Float &prefactor, const Boost_Float &b,
+                     const Boost_Float &x, const int64_t &k);
 
 Boost_Float
 rest(const int64_t &m, const Boost_Float &p,
@@ -42,10 +43,14 @@ bilinear_form(const Damped_Rational &damped_rational, const int64_t &m)
         }));
 
       Boost_Float integral_sum(0);
+      Boost_Float integral_prefactor(
+        -boost::math::expint(-p * log(damped_rational.base))
+        * pow(damped_rational.base, p));
       for(int64_t k = 0; k < l; ++k)
         {
-          integral_sum += integral(damped_rational.base, p, l - k - 1)
-                          * rest(m, p, sorted_poles, equal_range, k);
+          integral_sum
+            += integral(integral_prefactor, damped_rational.base, p, l - k - 1)
+               * rest(m, p, sorted_poles, equal_range, k);
         }
       result += (pow(p, m) / product) * integral_sum;
       do
