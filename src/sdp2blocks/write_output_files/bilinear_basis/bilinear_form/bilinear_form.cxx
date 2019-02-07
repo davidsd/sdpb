@@ -2,6 +2,8 @@
 #include "../../../Damped_Rational.hxx"
 #include "../../../../Polynomial.hxx"
 
+#include <boost/math/tools/polynomial.hpp>
+
 Boost_Float
 integral(const Boost_Float &b, const Boost_Float &x, const int64_t &k);
 
@@ -52,8 +54,23 @@ bilinear_form(const Damped_Rational &damped_rational, const int64_t &m)
         }
       while(pole != sorted_poles.end() && abs(p - *pole) < 1.0e-2);
     }
+
+  boost::math::tools::polynomial<Boost_Float> numerator(
+    pow(boost::math::tools::polynomial<Boost_Float>({0, 1}), m)),
+    divisor({1});
+  for(auto &pole : sorted_poles)
+    {
+      divisor *= boost::math::tools::polynomial<Boost_Float>({-pole, 1});
+    }
+  boost::math::tools::polynomial<Boost_Float> quotient(
+    boost::math::tools::quotient_remainder(numerator, divisor).first);
+
   std::cout << "b: " << damped_rational.base << "\n"
             << "m: " << m << "\n"
             << "pole_sum: " << pole_sum << "\n"
+            << quotient << "\n"
+            << quotient_remainder.second << "\n"
+            << numerator << "\n"
+            << divisor << "\n"
             << std::flush;
 }
