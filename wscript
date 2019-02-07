@@ -12,8 +12,8 @@ def configure(conf):
                'elemental','libxml2'])
 
 def build(bld):
-    default_flags=['-Wall', '-Wextra', '-O3', '-Wno-deprecated']
-    # default_flags=['-Wall', '-Wextra', '-g', '-Wno-deprecated']
+    default_flags=['-Wall', '-Wextra', '-O3']
+    # default_flags=['-Wall', '-Wextra', '-g']
     use_packages=['cxx14','boost','gmpxx','mpfr','elemental','libxml2']
     
     # Main executable
