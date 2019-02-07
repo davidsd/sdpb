@@ -1,3 +1,4 @@
+#include "factorial.hxx"
 #include "accumulate_over_others.hxx"
 #include "../../../Damped_Rational.hxx"
 #include "../../../../Polynomial.hxx"
@@ -17,7 +18,6 @@ rest(const int64_t &m, const Boost_Float &p,
 Boost_Float
 bilinear_form(const Damped_Rational &damped_rational, const int64_t &m)
 {
-  Boost_Float result(damped_rational.constant);
   std::vector<Boost_Float> sorted_poles(damped_rational.poles);
 
   sorted_poles.erase(
@@ -26,7 +26,7 @@ bilinear_form(const Damped_Rational &damped_rational, const int64_t &m)
     sorted_poles.end());
   std::sort(sorted_poles.begin(), sorted_poles.end());
 
-  Boost_Float pole_sum(0);
+  Boost_Float result(0);
   for(auto pole(sorted_poles.begin()); pole != sorted_poles.end();)
     {
       Boost_Float &p(*pole);
@@ -47,7 +47,7 @@ bilinear_form(const Damped_Rational &damped_rational, const int64_t &m)
           integral_sum += integral(damped_rational.base, p, l - k - 1)
                           * rest(m, p, sorted_poles, equal_range, k);
         }
-      pole_sum += (pow(p, m) / product) * integral_sum;
+      result += (pow(p, m) / product) * integral_sum;
       do
         {
           ++pole;
@@ -65,12 +65,10 @@ bilinear_form(const Damped_Rational &damped_rational, const int64_t &m)
   boost::math::tools::polynomial<Boost_Float> quotient(
     boost::math::tools::quotient_remainder(numerator, divisor).first);
 
-  std::cout << "b: " << damped_rational.base << "\n"
-            << "m: " << m << "\n"
-            << "pole_sum: " << pole_sum << "\n"
-            << quotient << "\n"
-            << quotient_remainder.second << "\n"
-            << numerator << "\n"
-            << divisor << "\n"
-            << std::flush;
+  for(int64_t n = 0; n < int64_t(quotient.size()); ++n)
+    {
+      result += quotient[n] * factorial(n)
+        * pow(-log(damped_rational.base), -1 - n);
+    }
+  return result * damped_rational.constant;
 }
