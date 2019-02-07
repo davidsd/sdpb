@@ -2,6 +2,7 @@
 #include "accumulate_over_others.hxx"
 #include "../../../Damped_Rational.hxx"
 #include "../../../../Polynomial.hxx"
+#include "../../../../Timers.hxx"
 
 #include <boost/math/special_functions/expint.hpp>
 #include <boost/math/tools/polynomial.hpp>
@@ -17,7 +18,8 @@ rest(const int64_t &m, const Boost_Float &p,
      const int64_t &k);
 
 Boost_Float
-bilinear_form(const Damped_Rational &damped_rational, const int64_t &m)
+bilinear_form(const Damped_Rational &damped_rational, const int64_t &m,
+              const std::string &timer_prefix, Timers &timers)
 {
   std::vector<Boost_Float> sorted_poles(damped_rational.poles);
 
@@ -30,6 +32,10 @@ bilinear_form(const Damped_Rational &damped_rational, const int64_t &m)
   Boost_Float result(0);
   for(auto pole(sorted_poles.begin()); pole != sorted_poles.end();)
     {
+      const std::string pole_timer_name(
+        timer_prefix + ".pole_"
+        + std::to_string(std::distance(sorted_poles.begin(), pole)));
+      auto &pole_timer(timers.add_and_start(pole_timer_name));
       Boost_Float &p(*pole);
       const std::pair<std::vector<Boost_Float>::const_iterator,
                       std::vector<Boost_Float>::const_iterator>
@@ -42,22 +48,29 @@ bilinear_form(const Damped_Rational &damped_rational, const int64_t &m)
           return product * (p - q);
         }));
 
+      const std::string integral_timer_name(pole_timer_name + ".integral");
+      auto &integral_timer(timers.add_and_start(integral_timer_name));
       Boost_Float integral_sum(0);
+      auto &integral_prefactor_timer(timers.add_and_start(integral_timer_name + ".prefactor"));
       Boost_Float integral_prefactor(
         -boost::math::expint(-p * log(damped_rational.base))
         * pow(damped_rational.base, p));
+      integral_prefactor_timer.stop();
       for(int64_t k = 0; k < l; ++k)
         {
           integral_sum
             += integral(integral_prefactor, damped_rational.base, p, l - k - 1)
                * rest(m, p, sorted_poles, equal_range, k);
         }
+      integral_timer.stop();
+
       result += (pow(p, m) / product) * integral_sum;
       do
         {
           ++pole;
         }
       while(pole != sorted_poles.end() && abs(p - *pole) < 1.0e-2);
+      pole_timer.stop();
     }
 
   boost::math::tools::polynomial<Boost_Float> numerator(
