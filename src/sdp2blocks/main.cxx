@@ -15,7 +15,8 @@ void read_input(const boost::filesystem::path &input_file,
 void write_output(const boost::filesystem::path &outdir,
                   const std::vector<El::BigFloat> &objectives,
                   const std::vector<El::BigFloat> &normalization,
-                  const std::vector<Positive_Matrix_With_Prefactor> &matrices);
+                  const std::vector<Positive_Matrix_With_Prefactor> &matrices,
+                  Timers &timers);
 
 int main(int argc, char **argv)
 {
@@ -103,11 +104,12 @@ int main(int argc, char **argv)
       read_input(input_file, objectives, normalization, matrices);
       read_input_timer.stop();
       auto &write_output_timer(timers.add_and_start("write_output"));
-      write_output(output_dir, objectives, normalization, matrices);
+      write_output(output_dir, objectives, normalization, matrices, timers);
       write_output_timer.stop();
       if(debug)
         {
-          timers.write_profile(output_dir.string() + "/profile");
+          timers.write_profile(output_dir.string() + "/profiling."
+                               + std::to_string(El::mpi::Rank()));
         }
     }
   catch(std::exception &e)
