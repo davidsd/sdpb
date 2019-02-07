@@ -1,5 +1,6 @@
 #include "Boost_Float.hxx"
 #include "Positive_Matrix_With_Prefactor.hxx"
+#include "../Timers.hxx"
 
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
@@ -39,6 +40,7 @@ int main(int argc, char **argv)
     {
       int precision;
       boost::filesystem::path input_file, output_dir;
+      bool debug(false);
 
       po::options_description options("Basic options");
       options.add_options()("help,h", "Show this helpful message.");
@@ -53,6 +55,9 @@ int main(int argc, char **argv)
         "precision", po::value<int>(&precision)->required(),
         "The precision, in the number of bits, for numbers in the "
         "computation. ");
+      options.add_options()(
+        "debug", po::value<bool>(&debug)->default_value(false),
+        "Write out debugging output.");
 
       po::positional_options_description positional;
       positional.add("precision", 1);
@@ -94,8 +99,17 @@ int main(int argc, char **argv)
 
       std::vector<El::BigFloat> objectives, normalization;
       std::vector<Positive_Matrix_With_Prefactor> matrices;
+      Timers timers(debug);
+      auto &read_input_timer(timers.add_and_start("read_input"));
       read_input(input_file, objectives, normalization, matrices);
+      read_input_timer.stop();
+      auto &write_output_timer(timers.add_and_start("write_output"));
       write_output_files(output_dir, objectives, normalization, matrices);
+      write_output_timer.stop();
+      if(debug)
+        {
+          timers.write_profile(output_dir.string() + "/profile");
+        }
     }
   catch(std::exception &e)
     {
