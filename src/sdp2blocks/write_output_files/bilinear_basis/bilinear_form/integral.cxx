@@ -7,7 +7,7 @@
 //
 // In closed form
 //
-// integral(k) = (b^x Gamma(0, x log(b)) * (log(b))^k
+// integral(k) = -(b^x expint(0, -x log(b)) * (log(b))^k
 //                + Sum(i={1..=k}) {(-1)^k * (i-1)! (-log(b))^(k-i) / x^i})/k!
 
 Boost_Float
