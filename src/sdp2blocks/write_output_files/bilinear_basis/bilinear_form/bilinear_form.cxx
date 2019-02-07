@@ -42,7 +42,7 @@ bilinear_form(const Damped_Rational &damped_rational, const int64_t &m)
       Boost_Float integral_sum(0);
       for(int64_t k = 0; k < l; ++k)
         {
-          integral_sum += integral(damped_rational.base, p, l-k-1)
+          integral_sum += integral(damped_rational.base, p, l - k - 1)
                           * rest(m, p, sorted_poles, equal_range, k);
         }
       pole_sum += (pow(p, m) / product) * integral_sum;
@@ -50,7 +50,7 @@ bilinear_form(const Damped_Rational &damped_rational, const int64_t &m)
         {
           ++pole;
         }
-      while(pole!=sorted_poles.end() && abs(p - *pole) < 1.0e-2);
+      while(pole != sorted_poles.end() && abs(p - *pole) < 1.0e-2);
     }
   std::cout << "b: " << damped_rational.base << "\n"
             << "m: " << m << "\n"
