@@ -21,13 +21,11 @@ Boost_Float bilinear_form(
   const std::vector<std::vector<Boost_Float>> &integral_matrix,
   const int64_t &m);
 
-std::vector<Polynomial>
+El::Matrix<El::BigFloat>
 bilinear_basis(const Damped_Rational &damped_rational,
                const size_t &half_max_degree, const std::string &timer_prefix,
                Timers &timers)
 {
-  std::vector<Polynomial> result;
-
   Polynomial polynomial(half_max_degree, 1);
 
   std::vector<Boost_Float> sorted_poles(damped_rational.poles);
@@ -49,21 +47,14 @@ bilinear_basis(const Damped_Rational &damped_rational,
         timers.add_and_start(bilinear_form_timer_name));
 
       // Using a stringstream seems to the best way to convert between
-      // MPFR and GMP.  It may lose a bit or two since it does not
-      // round-trip.
+      // MPFR and GMP.  It may lose a bit or two since string
+      // conversion is not sufficient for round-tripping.
       std::stringstream ss;
       ss.precision(Boost_Float::default_precision());
       ss << bilinear_form(damped_rational, sorted_poles, equal_ranges, lengths,
                           products, integral_matrix, m);
       bilinear_table.emplace_back(ss.str());
-
       bilinear_form_timer.stop();
-
-      if(m == 38)
-        {
-          std::cout.precision(Boost_Float::default_precision());
-          std::cout << "m: " << m << " " << bilinear_table.back() << "\n";
-        }
     }
 
   El::Matrix<El::BigFloat> anti_band_matrix(half_max_degree + 1,
@@ -80,10 +71,16 @@ bilinear_basis(const Damped_Rational &damped_rational,
           }
       }
 
-  std::cout << "Anti: " << anti_band_matrix.Get(0, 0) << "\n"
-            << "Anti: " << anti_band_matrix.Get(12, 5) << "\n"
-            << "Anti: " << anti_band_matrix.Get(5, 12) << "\n"
-            << "Anti: " << anti_band_matrix.Get(5, 5) << "\n"
-            << "Anti: " << anti_band_matrix.Get(12, 12) << "\n";
+  Cholesky(El::UpperOrLowerNS::UPPER, anti_band_matrix);
+
+  El::Matrix<El::BigFloat> result(half_max_degree + 1, half_max_degree + 1);
+
+  El::Fill(result, El::BigFloat(0));
+  El::FillDiagonal(result, El::BigFloat(1));
+
+  El::Trsm(El::LeftOrRight::LEFT, El::UpperOrLowerNS::UPPER,
+           El::OrientationNS::NORMAL, El::UnitOrNonUnit::NON_UNIT,
+           El::BigFloat(1), anti_band_matrix, result);
+
   return result;
 }
