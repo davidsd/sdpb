@@ -1,4 +1,4 @@
-#include "factorial.hxx"
+#include "../factorial.hxx"
 
 // integral(0) = base^x tgamma(0,x*log(base))
 //             = -(base^x) expint(0, -x log(base))
