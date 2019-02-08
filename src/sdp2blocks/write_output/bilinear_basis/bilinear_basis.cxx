@@ -21,7 +21,7 @@ Boost_Float bilinear_form(
   const std::vector<std::vector<Boost_Float>> &integral_matrix,
   const int64_t &m);
 
-El::Matrix<El::BigFloat>
+std::vector<Polynomial>
 bilinear_basis(const Damped_Rational &damped_rational,
                const size_t &half_max_degree, const std::string &timer_prefix,
                Timers &timers)
@@ -73,14 +73,24 @@ bilinear_basis(const Damped_Rational &damped_rational,
 
   Cholesky(El::UpperOrLowerNS::UPPER, anti_band_matrix);
 
-  El::Matrix<El::BigFloat> result(half_max_degree + 1, half_max_degree + 1);
+  El::Matrix<El::BigFloat> basis(half_max_degree + 1, half_max_degree + 1);
 
-  El::Fill(result, El::BigFloat(0));
-  El::FillDiagonal(result, El::BigFloat(1));
+  El::Fill(basis, El::BigFloat(0));
+  El::FillDiagonal(basis, El::BigFloat(1));
 
   El::Trsm(El::LeftOrRight::LEFT, El::UpperOrLowerNS::UPPER,
            El::OrientationNS::NORMAL, El::UnitOrNonUnit::NON_UNIT,
-           El::BigFloat(1), anti_band_matrix, result);
+           El::BigFloat(1), anti_band_matrix, basis);
 
+  std::vector<Polynomial> result(basis.Height());
+  for(int64_t row=0; row<basis.Height(); ++row)
+    for(int64_t column=0; column<basis.Width(); ++column)
+        {
+          if(basis(column,row)!=El::BigFloat(0))
+            {
+              result[row].coefficients.resize(column+1,0);
+              result[row].coefficients[column]=basis(column,row);
+            }
+      }
   return result;
 }

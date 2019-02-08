@@ -5,7 +5,7 @@
 #include <boost/filesystem.hpp>
 #include <algorithm>
 
-El::Matrix<El::BigFloat>
+std::vector<Polynomial>
 bilinear_basis(const Damped_Rational &damped_rational,
                const size_t &half_max_degree, const std::string &timer_prefix,
                Timers &timers);
