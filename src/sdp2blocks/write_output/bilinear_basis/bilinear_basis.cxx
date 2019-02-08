@@ -40,7 +40,7 @@ bilinear_basis(const Damped_Rational &damped_rational,
   precompute(damped_rational.base, sorted_poles, equal_ranges, lengths,
              products, integral_matrix);
 
-  std::vector<Boost_Float> bilinear_table;
+  std::vector<El::BigFloat> bilinear_table;
   for(int64_t m = 0; m <= int64_t(2 * half_max_degree); ++m)
     {
       const std::string bilinear_form_timer_name(
@@ -48,9 +48,14 @@ bilinear_basis(const Damped_Rational &damped_rational,
       auto &bilinear_form_timer(
         timers.add_and_start(bilinear_form_timer_name));
 
-      bilinear_table.push_back(bilinear_form(damped_rational, sorted_poles,
-                                             equal_ranges, lengths, products,
-                                             integral_matrix, m));
+      // Using a stringstream seems to the best way to convert between
+      // MPFR and GMP.  It may lose a bit or two since it does not
+      // round-trip.
+      std::stringstream ss;
+      ss.precision(Boost_Float::default_precision());
+      ss << bilinear_form(damped_rational, sorted_poles, equal_ranges, lengths,
+                          products, integral_matrix, m);
+      bilinear_table.emplace_back(ss.str());
 
       bilinear_form_timer.stop();
 
@@ -60,5 +65,25 @@ bilinear_basis(const Damped_Rational &damped_rational,
           std::cout << "m: " << m << " " << bilinear_table.back() << "\n";
         }
     }
+
+  El::Matrix<El::BigFloat> anti_band_matrix(half_max_degree + 1,
+                                            half_max_degree + 1);
+  for(size_t i = 0; i < half_max_degree + 1; ++i)
+    for(size_t j = i; j < half_max_degree + 1; ++j)
+      {
+        anti_band_matrix.Set(half_max_degree - j, j - i,
+                             bilinear_table[half_max_degree - i]);
+        if(i > 0)
+          {
+            anti_band_matrix.Set(half_max_degree - (j - i), j,
+                                 bilinear_table[half_max_degree + i]);
+          }
+      }
+
+  std::cout << "Anti: " << anti_band_matrix.Get(0, 0) << "\n"
+            << "Anti: " << anti_band_matrix.Get(12, 5) << "\n"
+            << "Anti: " << anti_band_matrix.Get(5, 12) << "\n"
+            << "Anti: " << anti_band_matrix.Get(5, 5) << "\n"
+            << "Anti: " << anti_band_matrix.Get(12, 12) << "\n";
   return result;
 }
