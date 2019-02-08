@@ -1,5 +1,5 @@
-#include "factorial.hxx"
-#include "accumulate_over_others.hxx"
+#include "../factorial.hxx"
+#include "../accumulate_over_others.hxx"
 #include "../../../Damped_Rational.hxx"
 #include "../../../../Polynomial.hxx"
 #include "../../../../Timers.hxx"
@@ -17,60 +17,38 @@ rest(const int64_t &m, const Boost_Float &p,
                      std::vector<Boost_Float>::const_iterator> &equal_range,
      const int64_t &k);
 
-Boost_Float
-bilinear_form(const Damped_Rational &damped_rational, const int64_t &m,
-              const std::string &timer_prefix, Timers &timers)
+Boost_Float bilinear_form(
+  const Damped_Rational &damped_rational,
+  const std::vector<Boost_Float> &sorted_poles,
+  const std::vector<std::pair<std::vector<Boost_Float>::const_iterator,
+                              std::vector<Boost_Float>::const_iterator>>
+    &equal_ranges,
+  const std::vector<int64_t> &lengths,
+  const std::vector<Boost_Float> &products,
+  const std::vector<std::vector<Boost_Float>> &integral_matrix,
+  const int64_t &m)
 {
-  std::vector<Boost_Float> sorted_poles(damped_rational.poles);
-
-  sorted_poles.erase(
-    std::remove_if(sorted_poles.begin(), sorted_poles.end(),
-                   [](const Boost_Float &a) { return a >= 0; }),
-    sorted_poles.end());
-  std::sort(sorted_poles.begin(), sorted_poles.end());
-
   Boost_Float result(0);
+
+  size_t index(0);
   for(auto pole(sorted_poles.begin()); pole != sorted_poles.end();)
     {
-      const std::string pole_timer_name(
-        timer_prefix + ".pole_"
-        + std::to_string(std::distance(sorted_poles.begin(), pole)));
-      auto &pole_timer(timers.add_and_start(pole_timer_name));
-      Boost_Float &p(*pole);
-      const std::pair<std::vector<Boost_Float>::const_iterator,
-                      std::vector<Boost_Float>::const_iterator>
-        equal_range(std::equal_range(pole, sorted_poles.end(), p));
-      auto l(std::distance(equal_range.first, equal_range.second));
+      const Boost_Float &p(*pole);
+      auto &equal_range(equal_ranges.at(index));
+      auto &l(lengths.at(index));
+      auto &product(products.at(index));
 
-      Boost_Float product(accumulate_over_others(
-        sorted_poles, equal_range, Boost_Float(1),
-        [&](const Boost_Float &product, const Boost_Float &q) {
-          return product * (p - q);
-        }));
-
-      const std::string integral_timer_name(pole_timer_name + ".integral");
-      auto &integral_timer(timers.add_and_start(integral_timer_name));
       Boost_Float integral_sum(0);
-      auto &integral_prefactor_timer(timers.add_and_start(integral_timer_name + ".prefactor"));
-      Boost_Float integral_prefactor(
-        -boost::math::expint(-p * log(damped_rational.base))
-        * pow(damped_rational.base, p));
-      integral_prefactor_timer.stop();
+      auto &integrals(integral_matrix.at(index));
       for(int64_t k = 0; k < l; ++k)
         {
           integral_sum
-            += integral(integral_prefactor, damped_rational.base, p, l - k - 1)
-               * rest(m, p, sorted_poles, equal_range, k);
+            += integrals.at(k) * rest(m, p, sorted_poles, equal_range, k);
         }
-      integral_timer.stop();
+      result += (pow(p, m) * product) * integral_sum;
 
-      result += (pow(p, m) / product) * integral_sum;
-      do
-        {
-          ++pole;
-        }
-      while(pole != sorted_poles.end() && abs(p - *pole) < 1.0e-2);
-      pole_timer.stop();
+      std::advance(pole, l);
+      ++index;
     }
 
   boost::math::tools::polynomial<Boost_Float> numerator(

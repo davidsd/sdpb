@@ -1,6 +1,6 @@
-#include "factorial.hxx"
-#include "accumulate_over_others.hxx"
 #include "Derivative_Term.hxx"
+#include "../factorial.hxx"
+#include "../accumulate_over_others.hxx"
 
 #include <set>
 
