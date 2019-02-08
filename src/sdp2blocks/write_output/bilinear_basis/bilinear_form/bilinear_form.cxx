@@ -1,10 +1,8 @@
 #include "../factorial.hxx"
-#include "../accumulate_over_others.hxx"
 #include "../../../Damped_Rational.hxx"
 #include "../../../../Polynomial.hxx"
 #include "../../../../Timers.hxx"
 
-#include <boost/math/special_functions/expint.hpp>
 #include <boost/math/tools/polynomial.hpp>
 
 Boost_Float integral(const Boost_Float &prefactor, const Boost_Float &b,
