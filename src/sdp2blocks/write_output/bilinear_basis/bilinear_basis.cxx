@@ -1,6 +1,5 @@
 #include "../../Damped_Rational.hxx"
 #include "../../../Polynomial.hxx"
-#include "../../../Timers.hxx"
 
 void precompute(
   const Boost_Float &base, std::vector<Boost_Float> &sorted_poles,
@@ -23,13 +22,10 @@ Boost_Float bilinear_form(
 
 std::vector<Polynomial>
 bilinear_basis(const Damped_Rational &damped_rational,
-               const size_t &half_max_degree, const std::string &timer_prefix,
-               Timers &timers)
+               const size_t &half_max_degree)
 {
   Polynomial polynomial(half_max_degree, 1);
 
-  auto &precompute_timer(timers.add_and_start(timer_prefix + ".precompute"));
-  
   std::vector<Boost_Float> sorted_poles(damped_rational.poles);
   std::vector<std::pair<std::vector<Boost_Float>::const_iterator,
                         std::vector<Boost_Float>::const_iterator>>
@@ -40,9 +36,6 @@ bilinear_basis(const Damped_Rational &damped_rational,
   precompute(damped_rational.base, sorted_poles, equal_ranges, lengths,
              products, integral_matrix);
 
-  precompute_timer.stop();
-  auto &bilinear_form_timer(timers.add_and_start(timer_prefix + ".bilinear_form"));
-
   std::vector<El::BigFloat> bilinear_table;
   for(int64_t m = 0; m <= int64_t(2 * half_max_degree); ++m)
     {
@@ -50,9 +43,6 @@ bilinear_basis(const Damped_Rational &damped_rational,
         to_string(bilinear_form(damped_rational, sorted_poles, equal_ranges,
                                 lengths, products, integral_matrix, m)));
     }
-
-  bilinear_form_timer.stop();
-  auto &cholesky_timer(timers.add_and_start(timer_prefix + ".cholesky"));
 
   El::Matrix<El::BigFloat> anti_band_matrix(half_max_degree + 1,
                                             half_max_degree + 1);
@@ -79,9 +69,6 @@ bilinear_basis(const Damped_Rational &damped_rational,
            El::OrientationNS::NORMAL, El::UnitOrNonUnit::NON_UNIT,
            El::BigFloat(1), anti_band_matrix, basis);
 
-  cholesky_timer.stop();
-  auto &convert_timer(timers.add_and_start(timer_prefix + ".convert"));
-    
   std::vector<Polynomial> result(basis.Height());
   for(int64_t row = 0; row < basis.Height(); ++row)
     for(int64_t column = 0; column < basis.Width(); ++column)
@@ -92,6 +79,5 @@ bilinear_basis(const Damped_Rational &damped_rational,
             result[row].coefficients[column] = basis(column, row);
           }
       }
-  convert_timer.stop();
   return result;
 }
