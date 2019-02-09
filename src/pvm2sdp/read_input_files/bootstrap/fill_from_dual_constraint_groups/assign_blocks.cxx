@@ -1,4 +1,4 @@
-#include "../Dual_Constraint_Group.hxx"
+#include "../../../../sdp_convert.hxx"
 #include "../../../../SDP.hxx"
 
 void assign_blocks(

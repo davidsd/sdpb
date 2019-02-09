@@ -5,7 +5,7 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
-#include "Dual_Constraint_Group.hxx"
+#include "../../../sdp_convert.hxx"
 #include "../../../SDP.hxx"
 
 void fill_from_dual_constraint_groups(

@@ -70,22 +70,28 @@ def build(bld):
                 use=use_packages
                 )
     
+    library_sources=['src/sdp_convert/Dual_Constraint_Group/Dual_Constraint_Group/Dual_Constraint_Group.cxx',
+                     'src/sdp_convert/Dual_Constraint_Group/Dual_Constraint_Group/sample_bilinear_basis.cxx',
+                     'src/sdp_convert/write_objectives.cxx',
+                     'src/sdp_convert/write_bilinear_bases.cxx',
+                     'src/sdp_convert/write_blocks.cxx',
+                     'src/sdp_convert/write_primal_objective_c.cxx',
+                     'src/sdp_convert/write_free_var_matrix.cxx']
+
+    bld.stlib(source=library_sources,
+              target='sdp_convert',
+              cxxflags=default_flags,
+              use=use_packages)
+
     bld.program(source=['src/pvm2sdp/main.cxx',
                         'src/pvm2sdp/parse_command_line.cxx',
                         'src/pvm2sdp/read_input_files/read_input_files.cxx',
                         'src/pvm2sdp/read_input_files/Input_Parser/on_start_element.cxx',
                         'src/pvm2sdp/read_input_files/Input_Parser/on_end_element.cxx',
-                        'src/pvm2sdp/read_input_files/Input_Parser/on_characters.cxx',
-                        'src/pvm2sdp/Dual_Constraint_Group/Dual_Constraint_Group/Dual_Constraint_Group.cxx',
-                        'src/pvm2sdp/Dual_Constraint_Group/Dual_Constraint_Group/sample_bilinear_basis.cxx',
-                        'src/pvm2sdp/write_objectives.cxx',
-                        'src/pvm2sdp/write_bilinear_bases.cxx',
-                        'src/pvm2sdp/write_blocks.cxx',
-                        'src/pvm2sdp/write_primal_objective_c.cxx',
-                        'src/pvm2sdp/write_free_var_matrix.cxx'],
+                        'src/pvm2sdp/read_input_files/Input_Parser/on_characters.cxx'],
                 target='pvm2sdp',
                 cxxflags=default_flags,
-                use=use_packages
+                use=use_packages + ['sdp_convert']
                 )
 
     bld.program(source=['src/sdp2blocks/main.cxx',

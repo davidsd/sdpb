@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Polynomial_Vector_Matrix.hxx"
+#include "../../sdp_convert.hxx"
 #include "../../Number_State.hxx"
 #include "../../Vector_State.hxx"
 
