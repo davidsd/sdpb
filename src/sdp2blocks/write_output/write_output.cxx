@@ -146,6 +146,8 @@ void write_output(const boost::filesystem::path &output_dir,
     }
   matrices_timer.stop();
 
+  auto &write_timer(timers.add_and_start("write_output.write"));
+
   boost::filesystem::create_directories(output_dir);
   write_objectives(output_dir, objective_const, dual_objective_b);
   write_bilinear_bases(output_dir, dual_constraint_groups);
@@ -153,4 +155,5 @@ void write_output(const boost::filesystem::path &output_dir,
   write_primal_objective_c(output_dir, dual_constraint_groups);
   write_free_var_matrix(output_dir, dual_objective_b.size(),
                         dual_constraint_groups);
+  write_timer.stop();
 }
