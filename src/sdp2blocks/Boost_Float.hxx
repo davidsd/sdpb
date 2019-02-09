@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../set_stream_precision.hxx"
+
 #include <boost/multiprecision/mpfr.hpp>
 #include <sstream>
 
@@ -11,7 +13,7 @@ inline std::string to_string(const Boost_Float &boost_float)
   // MPFR and GMP.  It may lose a bit or two since string
   // conversion is not sufficient for round-tripping.
   std::stringstream ss;
-  ss.precision(Boost_Float::default_precision());
+  set_stream_precision(ss);
   ss << boost_float;
   return ss.str();
 }
