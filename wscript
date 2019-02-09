@@ -111,7 +111,7 @@ def build(bld):
                         'src/sdp2blocks/write_output/bilinear_basis/bilinear_form/operator_plus_set_Derivative_Term.cxx'],
                 target='sdp2blocks',
                 cxxflags=default_flags,
-                use=use_packages
+                use=use_packages + ['sdp_convert']
                 )
 
     bld.program(source=['src/block_grid_mapping/main.cxx',

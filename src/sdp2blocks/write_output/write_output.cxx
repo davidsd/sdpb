@@ -13,7 +13,7 @@ bilinear_basis(const Damped_Rational &damped_rational,
 
 std::vector<Boost_Float> sample_points(const size_t &num_points);
 
-void write_output(const boost::filesystem::path &outdir,
+void write_output(const boost::filesystem::path &output_dir,
                   const std::vector<El::BigFloat> &objectives,
                   const std::vector<El::BigFloat> &normalization,
                   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
@@ -40,6 +40,7 @@ void write_output(const boost::filesystem::path &outdir,
   objectives_timer.stop();
 
   auto &matrices_timer(timers.add_and_start("write_output.matrices"));
+  std::vector<Dual_Constraint_Group> dual_constraint_groups;
   for(size_t index = 0; index != matrices.size(); ++index)
     {
       auto &scalings_timer(timers.add_and_start(
@@ -141,17 +142,15 @@ void write_output(const boost::filesystem::path &outdir,
                   }
               }
           }
-      std::cout << "matrix: " << pvm.rows << " " << pvm.cols << " "
-                << max_index << " " << pvm.elements.size() << " "
-                << matrices[index].polynomials.size() << " "
-                << matrices[index].polynomials.at(0).size() << " "
-                << pvm.elt(0, 0).at(0) << "\n\t"
-                << pvm.elt(0, 0).at(pvm.elt(0, 0).size()*3/4) << " "
-                << "\n";
+      dual_constraint_groups.emplace_back(pvm);
     }
   matrices_timer.stop();
 
-  // std::cout << "Objective: " << objective_const << "\n";
-  // for(auto &o : dual_objective_b)
-  //   std::cout << " " << o << "\n";
+  boost::filesystem::create_directories(output_dir);
+  write_objectives(output_dir, objective_const, dual_objective_b);
+  write_bilinear_bases(output_dir, dual_constraint_groups);
+  write_blocks(output_dir, dual_constraint_groups);
+  write_primal_objective_c(output_dir, dual_constraint_groups);
+  write_free_var_matrix(output_dir, dual_objective_b.size(),
+                        dual_constraint_groups);
 }

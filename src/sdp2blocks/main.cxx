@@ -12,7 +12,7 @@ void read_input(const boost::filesystem::path &input_file,
                 std::vector<El::BigFloat> &normalization,
                 std::vector<Positive_Matrix_With_Prefactor> &matrices);
 
-void write_output(const boost::filesystem::path &outdir,
+void write_output(const boost::filesystem::path &output_dir,
                   const std::vector<El::BigFloat> &objectives,
                   const std::vector<El::BigFloat> &normalization,
                   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
