@@ -46,14 +46,9 @@ bilinear_basis(const Damped_Rational &damped_rational,
       auto &bilinear_form_timer(
         timers.add_and_start(bilinear_form_timer_name));
 
-      // Using a stringstream seems to the best way to convert between
-      // MPFR and GMP.  It may lose a bit or two since string
-      // conversion is not sufficient for round-tripping.
-      std::stringstream ss;
-      ss.precision(Boost_Float::default_precision());
-      ss << bilinear_form(damped_rational, sorted_poles, equal_ranges, lengths,
-                          products, integral_matrix, m);
-      bilinear_table.emplace_back(ss.str());
+      bilinear_table.emplace_back(
+        to_string(bilinear_form(damped_rational, sorted_poles, equal_ranges,
+                                lengths, products, integral_matrix, m)));
       bilinear_form_timer.stop();
     }
 
@@ -83,14 +78,14 @@ bilinear_basis(const Damped_Rational &damped_rational,
            El::BigFloat(1), anti_band_matrix, basis);
 
   std::vector<Polynomial> result(basis.Height());
-  for(int64_t row=0; row<basis.Height(); ++row)
-    for(int64_t column=0; column<basis.Width(); ++column)
-        {
-          if(basis(column,row)!=El::BigFloat(0))
-            {
-              result[row].coefficients.resize(column+1,0);
-              result[row].coefficients[column]=basis(column,row);
-            }
+  for(int64_t row = 0; row < basis.Height(); ++row)
+    for(int64_t column = 0; column < basis.Width(); ++column)
+      {
+        if(basis(column, row) != El::BigFloat(0))
+          {
+            result[row].coefficients.resize(column + 1, 0);
+            result[row].coefficients[column] = basis(column, row);
+          }
       }
   return result;
 }
