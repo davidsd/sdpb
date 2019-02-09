@@ -1,6 +1,7 @@
 #include "../Positive_Matrix_With_Prefactor.hxx"
 #include "../Boost_Float.hxx"
 #include "../../Timers.hxx"
+#include "../../sdp_convert.hxx"
 
 #include <boost/filesystem.hpp>
 #include <algorithm>
@@ -45,13 +46,14 @@ void write_output(const boost::filesystem::path &outdir,
         "write_output.matrices.scalings_" + std::to_string(index)));
       const size_t max_degree([&]() {
         int64_t result(0);
-        for(auto &polynomial : matrices[index].polynomials)
-          {
-            result = std::max(result, polynomial.degree());
-          }
+        for(auto &pvv : matrices[index].polynomials)
+          for(auto &pv : pvv)
+            for(auto &polynomial : pv)
+              {
+                result = std::max(result, polynomial.degree());
+              }
         return result;
       }());
-      size_t rows(matrices[index].polynomials.size()), cols(max_degree + 1);
       std::vector<Boost_Float> points(sample_points(max_degree + 1)),
         sample_scalings;
 
@@ -70,13 +72,82 @@ void write_output(const boost::filesystem::path &outdir,
         }
       scalings_timer.stop();
 
+      Polynomial_Vector_Matrix pvm;
+      pvm.rows = matrices[index].polynomials.size();
+      pvm.cols = matrices[index].polynomials.front().size();
+
       const std::string bilinear_basis_timer_name(
         "write_output.matrices.bilinear_basis_" + std::to_string(index));
       auto &bilinear_basis_timer(
         timers.add_and_start(bilinear_basis_timer_name));
-      bilinear_basis(matrices[index].damped_rational, max_degree / 2,
-                     bilinear_basis_timer_name, timers);
+
+      pvm.bilinear_basis
+        = bilinear_basis(matrices[index].damped_rational, max_degree / 2,
+                         bilinear_basis_timer_name, timers);
+
       bilinear_basis_timer.stop();
+
+      pvm.sample_points.reserve(points.size());
+      for(auto &point : points)
+        {
+          pvm.sample_points.emplace_back(to_string(point));
+        }
+      pvm.sample_scalings.reserve(sample_scalings.size());
+      for(auto &scaling : sample_scalings)
+        {
+          pvm.sample_scalings.emplace_back(to_string(scaling));
+        }
+
+      pvm.elements.reserve(pvm.rows * pvm.cols);
+      for(auto &pvv : matrices[index].polynomials)
+        for(auto &pv : pvv)
+          {
+            pvm.elements.emplace_back();
+            auto &pvm_polynomials(pvm.elements.back());
+            pvm_polynomials.reserve(pv.size());
+            pvm_polynomials.push_back(pv.at(max_index)
+                                      / normalization.at(max_index));
+            auto &pvm_constant(pvm_polynomials.back());
+            for(size_t index = 0; index < normalization.size(); ++index)
+              {
+                if(index != max_index)
+                  {
+                    pvm_polynomials.emplace_back(0, 0);
+                    auto &pvm_poly(pvm_polynomials.back());
+                    pvm_poly.coefficients.reserve(pv.at(index).degree() + 1);
+                    size_t coefficient(0);
+                    for(; coefficient < pv.at(index).coefficients.size()
+                          && coefficient < pvm_constant.coefficients.size();
+                        ++coefficient)
+                      {
+                        pvm_poly.coefficients.push_back(
+                          pv.at(index).coefficients[coefficient]
+                          - normalization.at(index)
+                              * pvm_constant.coefficients[coefficient]);
+                      }
+                    for(; coefficient < pv.at(index).coefficients.size();
+                        ++coefficient)
+                      {
+                        pvm_poly.coefficients.push_back(
+                          pv.at(index).coefficients[coefficient]);
+                      }
+                    for(; coefficient < pvm_constant.coefficients.size();
+                        ++coefficient)
+                      {
+                        pvm_poly.coefficients.push_back(
+                          -normalization.at(index)
+                          * pvm_polynomials.at(0).coefficients[coefficient]);
+                      }
+                  }
+              }
+          }
+      std::cout << "matrix: " << pvm.rows << " " << pvm.cols << " "
+                << max_index << " " << pvm.elements.size() << " "
+                << matrices[index].polynomials.size() << " "
+                << matrices[index].polynomials.at(0).size() << " "
+                << pvm.elt(0, 0).at(0) << "\n\t"
+                << pvm.elt(0, 0).at(pvm.elt(0, 0).size()*3/4) << " "
+                << "\n";
     }
   matrices_timer.stop();
 

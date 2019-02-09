@@ -6,7 +6,7 @@
 struct Positive_Matrix_With_Prefactor
 {
   Damped_Rational damped_rational;
-  std::vector<Polynomial> polynomials;
+  std::vector<std::vector<std::vector<Polynomial>>> polynomials;
 };
 
 inline void
