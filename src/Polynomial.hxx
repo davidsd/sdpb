@@ -68,6 +68,18 @@ public:
   }
 };
 
+inline Polynomial operator/(const Polynomial &a, const El::BigFloat &b)
+{
+  Polynomial result(0, 0);
+  result.coefficients.reserve(a.degree() + 1);
+  const El::BigFloat inverse(1 / b);
+  for(auto &coefficient : a.coefficients)
+    {
+      result.coefficients.emplace_back(coefficient * inverse);
+    }
+  return result;
+}
+
 // Convenience functions to avoid copies
 inline void swap(std::vector<Polynomial> &polynomials,
                  std::vector<std::vector<El::BigFloat>> &elements_vector)
