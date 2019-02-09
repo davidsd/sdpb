@@ -35,13 +35,13 @@ Dual_Constraint_Group::Dual_Constraint_Group(const Polynomial_Vector_Matrix &m)
   size_t numConstraints = numSamples * dim * (dim + 1) / 2;
   size_t vectorDim = m.elt(0, 0).size();
 
-  // Form the constraintMatrix B and constraintConstants c from the
+  // Form the constraint_matrix B and constraint_constants c from the
   // polynomials (1,y) . \vec P^{rs}(x)
 
   // The first element of each vector \vec P^{rs}(x) multiplies the constant 1
-  constraintConstants.resize(numConstraints);
+  constraint_constants.resize(numConstraints);
   // The rest multiply decision variables y
-  constraintMatrix.Resize(numConstraints, vectorDim - 1);
+  constraint_matrix.Resize(numConstraints, vectorDim - 1);
 
   // Populate B and c by sampling the polynomial matrix
   int p = 0;
@@ -53,17 +53,17 @@ Dual_Constraint_Group::Dual_Constraint_Group(const Polynomial_Vector_Matrix &m)
             {
               El::BigFloat x = m.sample_points[k];
               El::BigFloat scale = m.sample_scalings[k];
-              constraintConstants[p] = scale * m.elt(r, c)[0](x);
+              constraint_constants[p] = scale * m.elt(r, c)[0](x);
               for(size_t n = 1; n < vectorDim; ++n)
                 {
-                  constraintMatrix.Set(p, n - 1, -scale * m.elt(r, c)[n](x));
+                  constraint_matrix.Set(p, n - 1, -scale * m.elt(r, c)[n](x));
                 }
               ++p;
             }
         }
     }
 
-  // The matrix Y has two blocks Y_1, Y_2.  The bilinearBases for the
+  // The matrix Y has two blocks Y_1, Y_2.  The bilinear_bases for the
   // constraint matrices A_p are given by sampling the following
   // vectors for each block:
   //
@@ -71,7 +71,7 @@ Dual_Constraint_Group::Dual_Constraint_Group(const Polynomial_Vector_Matrix &m)
   //   Y_2: {\sqrt(x) q_0(x), ..., \sqrt(x) q_delta2(x)
   //
   const size_t delta1 (degree / 2);
-  bilinearBases.push_back(sample_bilinear_basis(
+  bilinear_bases.push_back(sample_bilinear_basis(
     delta1, numSamples, m.bilinear_basis, m.sample_points, m.sample_scalings));
 
   const size_t delta2 (degree==0 ? 0 : (degree - 1) / 2);
@@ -85,6 +85,6 @@ Dual_Constraint_Group::Dual_Constraint_Group(const Polynomial_Vector_Matrix &m)
     {
       scaled_samples.emplace_back(m.sample_points[ii] * m.sample_scalings[ii]);
     }
-  bilinearBases.push_back(sample_bilinear_basis(
+  bilinear_bases.push_back(sample_bilinear_basis(
     delta2, numSamples, m.bilinear_basis, m.sample_points, scaled_samples));
 }

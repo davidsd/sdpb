@@ -8,7 +8,7 @@
 //   A_(j,r,s,k) = \sum_{b \in blocks[j]}
 //                     Block_b(v_{b,k} v_{b,k}^T \otimes E^{rs}),
 //
-// where v_{b,k} is the k-th column of bilinearBases[b], as described
+// where v_{b,k} is the k-th column of bilinear_bases[b], as described
 // in SDP.h.
 
 void constraint_matrix_weighted_sum(const Block_Info &block_info,

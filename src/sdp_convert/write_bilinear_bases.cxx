@@ -13,7 +13,7 @@ void write_bilinear_bases(
 
   for(auto &group : dual_constraint_groups)
     {
-      num_bases += group.bilinearBases.size();
+      num_bases += group.bilinear_bases.size();
     }
 
   boost::filesystem::ofstream output_stream(output_dir / "bilinear_bases");
@@ -22,7 +22,7 @@ void write_bilinear_bases(
 
   for(auto &group : dual_constraint_groups)
     {
-      for(auto &basis : group.bilinearBases)
+      for(auto &basis : group.bilinear_bases)
         {
           // Ensure that each bilinearBasis is sampled the correct number
           // of times

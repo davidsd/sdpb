@@ -6,7 +6,7 @@ void set_bilinear(
 {
   for(auto &g : dualConstraintGroups)
     {
-      for(auto &b : g.bilinearBases)
+      for(auto &b : g.bilinear_bases)
         {
           // Ensure that each bilinearBasis is sampled the correct number
           // of times

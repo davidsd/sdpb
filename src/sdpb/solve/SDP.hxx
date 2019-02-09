@@ -74,11 +74,11 @@
 class SDP
 {
 public:
-  // bilinearBases is a vector of Matrices encoding the v_{b,k}
+  // bilinear_bases is a vector of Matrices encoding the v_{b,k}
   // that enter the constraint matrices. Specifically, v_{b,k} are
-  // the columns of bilinearBases[b],
+  // the columns of bilinear_bases[b],
   //
-  // bilinearBases[b].elt(m,k) = (v_{b,k})_m  (0 <= b < bMax,
+  // bilinear_bases[b].elt(m,k) = (v_{b,k})_m  (0 <= b < bMax,
   //                                           0 <= k <= d_j,
   //                                           0 <= m <= delta_b)
   //

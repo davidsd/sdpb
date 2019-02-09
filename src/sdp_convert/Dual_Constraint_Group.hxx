@@ -32,17 +32,17 @@ public:
   size_t dim;
   size_t degree;
 
-  // constraintMatrix = B, a P'xN Matrix
-  El::Matrix<El::BigFloat> constraintMatrix;
+  // constraint_matrix = B, a P'xN Matrix
+  El::Matrix<El::BigFloat> constraint_matrix;
 
-  // constraintConstants = c, a vector of length P'
-  std::vector<El::BigFloat> constraintConstants;
+  // constraint_constants = c, a vector of length P'
+  std::vector<El::BigFloat> constraint_constants;
 
-  // bilinearBases is a vector of Matrices encoding the v_{b,k}
+  // bilinear_bases is a vector of Matrices encoding the v_{b,k}
   // entering the constraint matrices A_p, as described
-  // above. `bilinearBases' here has the structure of
-  // `bilinearBases[j]' above for some fixed j.
-  std::vector<El::Matrix<El::BigFloat>> bilinearBases;
+  // above. `bilinear_bases' here has the structure of
+  // `bilinear_bases[j]' above for some fixed j.
+  std::vector<El::Matrix<El::BigFloat>> bilinear_bases;
 
   explicit Dual_Constraint_Group(const Polynomial_Vector_Matrix &m);
 };
