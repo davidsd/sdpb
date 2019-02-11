@@ -36,7 +36,7 @@ public:
   El::Matrix<El::BigFloat> constraint_matrix;
 
   // constraint_constants = c, a vector of length P'
-  std::vector<El::BigFloat> constraint_constants;
+  El::Matrix<El::BigFloat> constraint_constants;
 
   // bilinear_bases is a vector of Matrices encoding the v_{b,k}
   // entering the constraint matrices A_p, as described

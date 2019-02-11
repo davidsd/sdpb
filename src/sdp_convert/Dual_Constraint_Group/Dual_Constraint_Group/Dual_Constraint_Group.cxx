@@ -39,7 +39,7 @@ Dual_Constraint_Group::Dual_Constraint_Group(const Polynomial_Vector_Matrix &m)
   // polynomials (1,y) . \vec P^{rs}(x)
 
   // The first element of each vector \vec P^{rs}(x) multiplies the constant 1
-  constraint_constants.resize(numConstraints);
+  constraint_constants.Resize(numConstraints,1);
   // The rest multiply decision variables y
   constraint_matrix.Resize(numConstraints, vectorDim - 1);
 
@@ -53,7 +53,7 @@ Dual_Constraint_Group::Dual_Constraint_Group(const Polynomial_Vector_Matrix &m)
             {
               El::BigFloat x = m.sample_points[k];
               El::BigFloat scale = m.sample_scalings[k];
-              constraint_constants[p] = scale * m.elt(r, c)[0](x);
+              constraint_constants.Set(p,0, scale * m.elt(r, c)[0](x));
               for(size_t n = 1; n < vectorDim; ++n)
                 {
                   constraint_matrix.Set(p, n - 1, -scale * m.elt(r, c)[n](x));

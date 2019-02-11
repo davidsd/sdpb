@@ -11,12 +11,16 @@ void write_primal_objective_c(
   for(auto &group : dual_constraint_groups)
     {
       assert(static_cast<size_t>(group.constraint_matrix.Height())
-             == group.constraint_constants.size());
+             == group.constraint_constants.Height());
 
       boost::filesystem::ofstream output_stream(
         output_dir / ("primal_objective_c." + std::to_string(block_index)));
       set_stream_precision(output_stream);
-      write_vector(output_stream, group.constraint_constants);
+      output_stream << group.constraint_constants.Height() << "\n";
+      for(size_t row = 0; row < group.constraint_constants.Height(); ++row)
+        {
+          output_stream << group.constraint_constants(row,0) << "\n";
+        }
       ++block_index;
     }
 }
