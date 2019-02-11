@@ -42,9 +42,10 @@ int main(int argc, char **argv)
         std::vector<Polynomial_Vector_Matrix> polynomial_vector_matrices;
         read_input_files(input_files, objective_const, dual_objective_b,
                          polynomial_vector_matrices);
+        // FIXME: Make this work with multiple MPI processes.
         for(auto &m : polynomial_vector_matrices)
           {
-            dual_constraint_groups.emplace_back(m);
+            dual_constraint_groups.emplace_back(El::mpi::Rank(), m);
           }
       }
 

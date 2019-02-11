@@ -39,8 +39,14 @@ void write_output(const boost::filesystem::path &output_dir,
 
   auto &matrices_timer(timers.add_and_start("write_output.matrices"));
   std::vector<Dual_Constraint_Group> dual_constraint_groups;
-  for(size_t index = 0; index != matrices.size(); ++index)
+  int rank(El::mpi::Rank(El::mpi::COMM_WORLD)),
+    num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
+  // Preferentially give less work to rank=0, since that has lots of
+  // communication going to it at the end.
+  for(size_t index = 0; index < matrices.size(); ++index)
     {
+      int owning_rank(index % num_procs);
+
       auto &scalings_timer(timers.add_and_start(
         "write_output.matrices.scalings_" + std::to_string(index)));
       const size_t max_degree([&]() {
@@ -106,34 +112,36 @@ void write_output(const boost::filesystem::path &output_dir,
             pvm_polynomials.push_back(pv.at(max_index)
                                       / normalization.at(max_index));
             auto &pvm_constant(pvm_polynomials.back());
-            for(size_t index = 0; index < normalization.size(); ++index)
+            for(size_t pvm_index = 0; pvm_index < normalization.size();
+                ++pvm_index)
               {
-                if(index != max_index)
+                if(pvm_index != max_index)
                   {
                     pvm_polynomials.emplace_back(0, 0);
                     auto &pvm_poly(pvm_polynomials.back());
-                    pvm_poly.coefficients.reserve(pv.at(index).degree() + 1);
+                    pvm_poly.coefficients.reserve(pv.at(pvm_index).degree()
+                                                  + 1);
                     size_t coefficient(0);
-                    for(; coefficient < pv.at(index).coefficients.size()
+                    for(; coefficient < pv.at(pvm_index).coefficients.size()
                           && coefficient < pvm_constant.coefficients.size();
                         ++coefficient)
                       {
                         pvm_poly.coefficients.push_back(
-                          pv.at(index).coefficients[coefficient]
-                          - normalization.at(index)
+                          pv.at(pvm_index).coefficients[coefficient]
+                          - normalization.at(pvm_index)
                               * pvm_constant.coefficients[coefficient]);
                       }
-                    for(; coefficient < pv.at(index).coefficients.size();
+                    for(; coefficient < pv.at(pvm_index).coefficients.size();
                         ++coefficient)
                       {
                         pvm_poly.coefficients.push_back(
-                          pv.at(index).coefficients[coefficient]);
+                          pv.at(pvm_index).coefficients[coefficient]);
                       }
                     for(; coefficient < pvm_constant.coefficients.size();
                         ++coefficient)
                       {
                         pvm_poly.coefficients.push_back(
-                          -normalization.at(index)
+                          -normalization.at(pvm_index)
                           * pvm_polynomials.at(0).coefficients[coefficient]);
                       }
                   }
@@ -143,7 +151,7 @@ void write_output(const boost::filesystem::path &output_dir,
 
       auto &dual_constraint_timer(timers.add_and_start(
         "write_output.matrices.dual_constraint_" + std::to_string(index)));
-      dual_constraint_groups.emplace_back(pvm);
+      dual_constraint_groups.emplace_back(owning_rank, pvm);
       dual_constraint_timer.stop();
     }
   matrices_timer.stop();

@@ -19,14 +19,16 @@
 
 #include "../../../Polynomial.hxx"
 
-
-El::DistMatrix<El::BigFloat,El::CIRC,El::CIRC>
-sample_bilinear_basis(const int maxDegree, const int numSamples,
+El::DistMatrix<El::BigFloat, El::CIRC, El::CIRC>
+sample_bilinear_basis(const int &owning_rank, const int maxDegree,
+                      const int numSamples,
                       const std::vector<Polynomial> &bilinearBasis,
                       const std::vector<El::BigFloat> &samplePoints,
                       const std::vector<El::BigFloat> &sampleScalings)
 {
-  El::DistMatrix<El::BigFloat,El::CIRC,El::CIRC> b(maxDegree + 1, numSamples);
+  El::DistMatrix<El::BigFloat, El::CIRC, El::CIRC> b(maxDegree + 1,
+                                                     numSamples);
+  b.SetRoot(owning_rank);
   for(int k = 0; k < numSamples; k++)
     {
       El::BigFloat x = samplePoints[k];
