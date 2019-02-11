@@ -20,20 +20,20 @@
 #include "../../../Polynomial.hxx"
 
 
-El::Matrix<El::BigFloat>
+El::DistMatrix<El::BigFloat,El::CIRC,El::CIRC>
 sample_bilinear_basis(const int maxDegree, const int numSamples,
                       const std::vector<Polynomial> &bilinearBasis,
                       const std::vector<El::BigFloat> &samplePoints,
                       const std::vector<El::BigFloat> &sampleScalings)
 {
-  El::Matrix<El::BigFloat> b(maxDegree + 1, numSamples);
+  El::DistMatrix<El::BigFloat,El::CIRC,El::CIRC> b(maxDegree + 1, numSamples);
   for(int k = 0; k < numSamples; k++)
     {
       El::BigFloat x = samplePoints[k];
       El::BigFloat scale = Sqrt(sampleScalings[k]);
       for(int i = 0; i <= maxDegree; i++)
         {
-          b.Set(i, k, scale * bilinearBasis[i](x));
+          b.SetLocal(i, k, scale * bilinearBasis[i](x));
         }
     }
   return b;
