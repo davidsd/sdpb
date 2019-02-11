@@ -33,37 +33,16 @@ public:
   size_t degree;
 
   // constraint_matrix = B, a P'xN Matrix
-  El::DistMatrix<El::BigFloat, El::CIRC, El::CIRC> constraint_matrix;
+  El::Matrix<El::BigFloat> constraint_matrix;
 
   // constraint_constants = c, a vector of length P'
-  El::DistMatrix<El::BigFloat, El::CIRC, El::CIRC> constraint_constants;
+  std::vector<El::BigFloat> constraint_constants;
 
   // bilinear_bases is a vector of Matrices encoding the v_{b,k}
   // entering the constraint matrices A_p, as described
   // above. `bilinear_bases' here has the structure of
   // `bilinear_bases[j]' above for some fixed j.
-  std::vector<El::DistMatrix<El::BigFloat, El::CIRC, El::CIRC>> bilinear_bases;
+  std::vector<El::Matrix<El::BigFloat>> bilinear_bases;
 
-  Dual_Constraint_Group(const int &owning_rank,
-                        const Polynomial_Vector_Matrix &m);
-  explicit Dual_Constraint_Group(const int &owning_rank)
-  {
-    constraint_matrix.SetRoot(owning_rank);
-    constraint_constants.SetRoot(owning_rank);
-  }
-  void operator=(const Dual_Constraint_Group &b)
-  {
-    dim=b.dim;
-    degree=b.degree;
-    
-    int owning_rank(constraint_matrix.Root());
-    constraint_matrix=b.constraint_matrix;
-    constraint_constants=b.constraint_constants;
-    for(auto &basis: b.bilinear_bases)
-      {
-        bilinear_bases.emplace_back();
-        bilinear_bases.back().SetRoot(owning_rank);
-        bilinear_bases.back()=basis;
-      }
-  }
+  explicit Dual_Constraint_Group(const Polynomial_Vector_Matrix &m);
 };

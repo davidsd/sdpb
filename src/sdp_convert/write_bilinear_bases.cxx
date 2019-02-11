@@ -26,12 +26,12 @@ void write_bilinear_bases(
         {
           // Ensure that each bilinearBasis is sampled the correct number
           // of times
-          assert(static_cast<size_t>(basis.LocalWidth()) == group.degree + 1);
-          output_stream << basis.LocalHeight() << " " << basis.LocalWidth() << "\n";
-          for(int64_t row = 0; row < basis.LocalHeight(); ++row)
+          assert(static_cast<size_t>(basis.Width()) == group.degree + 1);
+          output_stream << basis.Height() << " " << basis.Width() << "\n";
+          for(int64_t row = 0; row < basis.Height(); ++row)
             for(int64_t column = 0; column < basis.Width(); ++column)
               {
-                output_stream << basis.GetLocal(row, column) << "\n";
+                output_stream << basis(row, column) << "\n";
               }
         }
     }

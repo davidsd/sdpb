@@ -11,7 +11,7 @@ void write_free_var_matrix(
 
   for(auto &group : dual_constraint_groups)
     {
-      size_t block_size(group.constraint_matrix.LocalHeight());
+      size_t block_size(group.constraint_matrix.Height());
 
       boost::filesystem::ofstream output_stream(
         output_dir / ("free_var_matrix." + std::to_string(block_index)));
@@ -21,8 +21,7 @@ void write_free_var_matrix(
       for(size_t row = 0; row < block_size; ++row)
         for(size_t column = 0; column < dual_objectives_b_size; ++column)
           {
-            output_stream << group.constraint_matrix.GetLocal(row, column)
-                          << "\n";
+            output_stream << group.constraint_matrix(row, column) << "\n";
           }
 
       ++block_index;
