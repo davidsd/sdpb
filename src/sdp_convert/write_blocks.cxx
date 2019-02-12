@@ -2,7 +2,8 @@
 #include "write_vector.hxx"
 
 void write_blocks(
-  const boost::filesystem::path &output_dir,
+  const boost::filesystem::path &output_dir, const int &rank,
+  const int &num_procs, const std::vector<size_t> &indices,
   const std::vector<Dual_Constraint_Group> &dual_constraint_groups)
 {
   std::vector<size_t> dimensions, degrees, schur_block_sizes,
@@ -34,7 +35,10 @@ void write_blocks(
         }
     }
 
-  boost::filesystem::ofstream output_stream(output_dir / "blocks");
+  boost::filesystem::ofstream output_stream(
+    output_dir / ("blocks." + std::to_string(rank)));
+  output_stream << num_procs << "\n";
+  write_vector(output_stream, indices);
   write_vector(output_stream, dimensions);
   write_vector(output_stream, degrees);
   write_vector(output_stream, schur_block_sizes);

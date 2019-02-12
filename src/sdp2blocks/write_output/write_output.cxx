@@ -39,7 +39,14 @@ void write_output(const boost::filesystem::path &output_dir,
 
   auto &matrices_timer(timers.add_and_start("write_output.matrices"));
   std::vector<Dual_Constraint_Group> dual_constraint_groups;
-  for(size_t index = 0; index != matrices.size(); ++index)
+  int rank(El::mpi::Rank(El::mpi::COMM_WORLD)),
+    num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
+  std::vector<size_t> indices;
+  for(size_t index = rank; index < matrices.size(); index += num_procs)
+    {
+      indices.push_back(index);
+    }
+  for(auto &index : indices)
     {
       auto &scalings_timer(timers.add_and_start(
         "write_output.matrices.scalings_" + std::to_string(index)));
@@ -151,11 +158,14 @@ void write_output(const boost::filesystem::path &output_dir,
   auto &write_timer(timers.add_and_start("write_output.write"));
 
   boost::filesystem::create_directories(output_dir);
-  write_objectives(output_dir, objective_const, dual_objective_b);
-  write_bilinear_bases(output_dir, dual_constraint_groups);
-  write_blocks(output_dir, dual_constraint_groups);
-  write_primal_objective_c(output_dir, dual_constraint_groups);
-  write_free_var_matrix(output_dir, dual_objective_b.size(),
+  if(rank == 0)
+    {
+      write_objectives(output_dir, objective_const, dual_objective_b);
+    }
+  write_bilinear_bases(output_dir, rank, dual_constraint_groups);
+  write_blocks(output_dir, rank, num_procs, indices, dual_constraint_groups);
+  write_primal_objective_c(output_dir, indices, dual_constraint_groups);
+  write_free_var_matrix(output_dir, indices, dual_objective_b.size(),
                         dual_constraint_groups);
   write_timer.stop();
 }

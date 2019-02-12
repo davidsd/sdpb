@@ -22,20 +22,6 @@ int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
 
-  if(El::mpi::Size(El::mpi::COMM_WORLD) != 1)
-    {
-      if(El::mpi::Rank() == 0)
-        {
-          std::cerr
-            << "sdp2blocks can only be run with a single MPI task, but "
-               "was invoked with "
-            << El::mpi::Size(El::mpi::COMM_WORLD) << " tasks.\n"
-            << std::flush;
-        }
-      El::Finalize();
-      exit(-1);
-    }
-
   try
     {
       int precision;

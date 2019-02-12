@@ -13,9 +13,11 @@ int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
 
-  if(El::mpi::Size(El::mpi::COMM_WORLD) != 1)
+  const int rank(El::mpi::Rank()),
+    num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
+  if(num_procs != 1)
     {
-      if(El::mpi::Rank() == 0)
+      if(rank == 0)
         {
           std::cerr << "pvm2sdp can only be run with a single MPI task, but "
                        "was invoked with "
@@ -47,13 +49,19 @@ int main(int argc, char **argv)
             dual_constraint_groups.emplace_back(m);
           }
       }
+      std::vector<size_t> indices;
+      for(size_t index = 0; index < dual_constraint_groups.size(); ++index)
+        {
+          indices.push_back(index);
+        }
 
       boost::filesystem::create_directories(output_dir);
       write_objectives(output_dir, objective_const, dual_objective_b);
-      write_bilinear_bases(output_dir, dual_constraint_groups);
-      write_blocks(output_dir, dual_constraint_groups);
-      write_primal_objective_c(output_dir, dual_constraint_groups);
-      write_free_var_matrix(output_dir, dual_objective_b.size(),
+      write_bilinear_bases(output_dir, rank, dual_constraint_groups);
+      write_blocks(output_dir, rank, num_procs, indices,
+                   dual_constraint_groups);
+      write_primal_objective_c(output_dir, indices, dual_constraint_groups);
+      write_free_var_matrix(output_dir, indices, dual_objective_b.size(),
                             dual_constraint_groups);
     }
   catch(std::exception &e)
