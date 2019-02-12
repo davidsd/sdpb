@@ -15,18 +15,6 @@ int main(int argc, char **argv)
 
   const int rank(El::mpi::Rank()),
     num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
-  if(num_procs != 1)
-    {
-      if(rank == 0)
-        {
-          std::cerr << "pvm2sdp can only be run with a single MPI task, but "
-                       "was invoked with "
-                    << El::mpi::Size(El::mpi::COMM_WORLD) << " tasks.\n"
-                    << std::flush;
-        }
-      El::Finalize();
-      El::mpi::Abort(El::mpi::COMM_WORLD, 1);
-    }
 
   try
     {
@@ -37,6 +25,7 @@ int main(int argc, char **argv)
       parse_command_line(argc, argv, precision, input_files, output_dir);
       El::gmp::SetPrecision(precision);
 
+      std::vector<size_t> indices;
       El::BigFloat objective_const;
       std::vector<El::BigFloat> dual_objective_b;
       std::vector<Dual_Constraint_Group> dual_constraint_groups;
@@ -44,16 +33,18 @@ int main(int argc, char **argv)
         std::vector<Polynomial_Vector_Matrix> polynomial_vector_matrices;
         read_input_files(input_files, objective_const, dual_objective_b,
                          polynomial_vector_matrices);
-        for(auto &m : polynomial_vector_matrices)
+
+        for(size_t index = rank; index < polynomial_vector_matrices.size();
+            index += num_procs)
           {
-            dual_constraint_groups.emplace_back(m);
+            indices.push_back(index);
+          }
+        for(auto &index : indices)
+          {
+            dual_constraint_groups.emplace_back(
+              polynomial_vector_matrices[index]);
           }
       }
-      std::vector<size_t> indices;
-      for(size_t index = 0; index < dual_constraint_groups.size(); ++index)
-        {
-          indices.push_back(index);
-        }
       write_sdpb_input_files(output_dir, rank, num_procs, indices,
                              objective_const, dual_objective_b,
                              dual_constraint_groups);
