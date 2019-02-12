@@ -54,15 +54,9 @@ int main(int argc, char **argv)
         {
           indices.push_back(index);
         }
-
-      boost::filesystem::create_directories(output_dir);
-      write_objectives(output_dir, objective_const, dual_objective_b);
-      write_bilinear_bases(output_dir, rank, dual_constraint_groups);
-      write_blocks(output_dir, rank, num_procs, indices,
-                   dual_constraint_groups);
-      write_primal_objective_c(output_dir, indices, dual_constraint_groups);
-      write_free_var_matrix(output_dir, indices, dual_objective_b.size(),
-                            dual_constraint_groups);
+      write_sdpb_input_files(output_dir, rank, num_procs, indices,
+                             objective_const, dual_objective_b,
+                             dual_constraint_groups);
     }
   catch(std::exception &e)
     {

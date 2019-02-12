@@ -76,7 +76,8 @@ def build(bld):
                      'src/sdp_convert/write_bilinear_bases.cxx',
                      'src/sdp_convert/write_blocks.cxx',
                      'src/sdp_convert/write_primal_objective_c.cxx',
-                     'src/sdp_convert/write_free_var_matrix.cxx']
+                     'src/sdp_convert/write_free_var_matrix.cxx',
+                     'src/sdp_convert/write_sdpb_input_files.cxx']
 
     bld.stlib(source=library_sources,
               target='sdp_convert',
