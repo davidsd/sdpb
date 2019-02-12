@@ -4,20 +4,59 @@
 
 #include <boost/filesystem/fstream.hpp>
 
+namespace
+{
+  void
+  read_vector_with_index(std::ifstream &input_stream,
+                         const std::vector<size_t> &indices,
+                         const size_t &index_scale, std::vector<size_t> &v)
+  {
+    std::vector<size_t> file_v;
+    read_vector(input_stream, file_v);
+    for(size_t index = 0; index < file_v.size(); ++index)
+      {
+        const size_t mapped_index(index_scale * indices[index / index_scale]
+                                  + index % index_scale);
+        if(mapped_index >= v.size())
+          {
+            v.resize(mapped_index + 1);
+          }
+        v[mapped_index] = file_v[index];
+      }
+  }
+}
+
 Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
                        const size_t &procs_per_node)
 {
-  boost::filesystem::ifstream block_stream(sdp_directory / "blocks");
-  if(!block_stream.good())
+  size_t file_rank(0);
+  do
     {
-      throw std::runtime_error("Could not open '"
-                               + (sdp_directory / "blocks").string() + "'");
+      boost::filesystem::ifstream block_stream(
+        sdp_directory / ("blocks." + std::to_string(file_rank)));
+      if(!block_stream.good())
+        {
+          throw std::runtime_error(
+            "Could not open '"
+            + (sdp_directory / ("blocks." + std::to_string(file_rank))).string()
+            + "'");
+        }
+      block_stream >> file_num_procs;
+      file_block_indices.emplace_back();
+      auto &file_block_index(file_block_indices.back());
+      read_vector(block_stream, file_block_index);
+
+      read_vector_with_index(block_stream, file_block_index, 1, dimensions);
+      read_vector_with_index(block_stream, file_block_index, 1, degrees);
+      read_vector_with_index(block_stream, file_block_index, 1,
+                             schur_block_sizes);
+      read_vector_with_index(block_stream, file_block_index, 2,
+                             psd_matrix_block_sizes);
+      read_vector_with_index(block_stream, file_block_index, 2,
+                             bilinear_pairing_block_sizes);
+      ++file_rank;
     }
-  read_vector(block_stream, dimensions);
-  read_vector(block_stream, degrees);
-  read_vector(block_stream, schur_block_sizes);
-  read_vector(block_stream, psd_matrix_block_sizes);
-  read_vector(block_stream, bilinear_pairing_block_sizes);
+  while(file_rank < file_num_procs);
 
   boost::filesystem::ifstream objective_stream(sdp_directory / "objectives");
   double temp;
@@ -31,7 +70,8 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
     }
 
   const size_t num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
-  const boost::filesystem::path block_costs_file(sdp_directory/"block_timings");
+  const boost::filesystem::path block_costs_file(sdp_directory
+                                                 / "block_timings");
   std::vector<Block_Cost> block_costs;
   if(boost::filesystem::exists(block_costs_file))
     {
@@ -40,18 +80,17 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
       costs >> cost;
       while(costs.good())
         {
-          block_costs.emplace_back(cost,index);
+          block_costs.emplace_back(cost, index);
           ++index;
           costs >> cost;
         }
-      if(block_costs.size()!=schur_block_sizes.size())
+      if(block_costs.size() != schur_block_sizes.size())
         {
-          throw std::runtime_error("Incompatible number of entries in '"
-                                   + (sdp_directory/"costs").string()
-                                   + "'. Expected "
-                                   + std::to_string(schur_block_sizes.size())
-                                   + " but found "
-                                   + std::to_string(block_costs.size()));
+          throw std::runtime_error(
+            "Incompatible number of entries in '"
+            + (sdp_directory / "costs").string() + "'. Expected "
+            + std::to_string(schur_block_sizes.size()) + " but found "
+            + std::to_string(block_costs.size()));
         }
     }
   else
@@ -60,14 +99,14 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
       // but with a round-robin order.
       for(size_t rank = 0; rank < num_procs; ++rank)
         {
-          for(size_t block = rank; block < schur_block_sizes.size(); block +=
-                num_procs)
+          for(size_t block = rank; block < schur_block_sizes.size();
+              block += num_procs)
             {
               block_costs.emplace_back(1, block);
             }
         }
     }
-  
+
   // Reverse sort, with largest first
   std::sort(block_costs.rbegin(), block_costs.rend());
   if(num_procs % procs_per_node != 0)
@@ -106,9 +145,8 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
                     {
                       ss << ",";
                     }
-                  ss << "(" << m.block_indices[ii]
-                     << "," << schur_block_sizes[m.block_indices[ii]]
-                     << ")";
+                  ss << "(" << m.block_indices[ii] << ","
+                     << schur_block_sizes[m.block_indices[ii]] << ")";
                 }
               ss << "}\n";
             }

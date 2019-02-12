@@ -9,17 +9,10 @@ void write_bilinear_bases(
   const boost::filesystem::path &output_dir, const int &rank,
   const std::vector<Dual_Constraint_Group> &dual_constraint_groups)
 {
-  size_t num_bases(0);
-
-  for(auto &group : dual_constraint_groups)
-    {
-      num_bases += group.bilinear_bases.size();
-    }
-
   boost::filesystem::ofstream output_stream(
     output_dir / ("bilinear_bases." + std::to_string(rank)));
   set_stream_precision(output_stream);
-  output_stream << num_bases << "\n";
+  output_stream << dual_constraint_groups.size() << "\n";
 
   for(auto &group : dual_constraint_groups)
     {

@@ -21,13 +21,6 @@ void write_blocks(
       // Dual_Constraint_Group.  sdp.blocks[j] = {b1, b2, ... } contains
       // the indices for the blocks of Y corresponding to the j-th
       // group.
-      if(g.bilinear_bases.size() != 2)
-        {
-          throw std::runtime_error("Wrong number of elements in "
-                                   "dualConstraintGroups::bilinear_bases.  "
-                                   "Expected 2 but found: "
-                                   + std::to_string(g.bilinear_bases.size()));
-        }
       for(auto &b : g.bilinear_bases)
         {
           psd_matrix_block_sizes.push_back(b.Height() * g.dim);

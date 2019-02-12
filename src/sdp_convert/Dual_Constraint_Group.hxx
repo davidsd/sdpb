@@ -42,7 +42,7 @@ public:
   // entering the constraint matrices A_p, as described
   // above. `bilinear_bases' here has the structure of
   // `bilinear_bases[j]' above for some fixed j.
-  std::vector<El::Matrix<El::BigFloat>> bilinear_bases;
+  std::array<El::Matrix<El::BigFloat>,2> bilinear_bases;
 
   explicit Dual_Constraint_Group(const Polynomial_Vector_Matrix &m);
 };

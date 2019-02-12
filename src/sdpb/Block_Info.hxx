@@ -8,6 +8,9 @@
 class Block_Info
 {
 public:
+  size_t file_num_procs;
+  std::vector<std::vector<size_t>> file_block_indices;
+
   // dimensions[j] = m_j  (0 <= j < J)
   std::vector<size_t> dimensions;
 

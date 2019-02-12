@@ -1,3 +1,4 @@
+#include "../../SDP.hxx"
 #include "../../../read_vector.hxx"
 
 #include <El.hpp>
@@ -5,54 +6,67 @@
 #include <boost/filesystem/fstream.hpp>
 
 void read_bilinear_bases(
-  const boost::filesystem::path &sdp_directory,
-  const std::vector<size_t> &block_indices, const El::Grid &grid,
+  const boost::filesystem::path &sdp_directory, const Block_Info &block_info,
+  const El::Grid &grid,
   std::vector<El::Matrix<El::BigFloat>> &bilinear_bases_local,
   std::vector<El::DistMatrix<El::BigFloat>> &bilinear_bases_dist)
 {
-  boost::filesystem::ifstream bilinear_stream(sdp_directory
-                                              / "bilinear_bases");
-  if(!bilinear_stream.good())
-    {
-      throw std::runtime_error("Could not open '"
-                               + (sdp_directory / "bilinear_bases").string()
-                               + "'");
-    }
-
-  size_t size;
-  bilinear_stream >> size;
+  auto &block_indices(block_info.block_indices);
   bilinear_bases_local.resize(2 * block_indices.size());
-  // bilinear_bases is in numerical order, but block_indices is not.
-  // So we have to take care when placing blocks
-  for(size_t block = 0; block < size; ++block)
-    for(size_t parity = 0; parity < 2; ++parity)
-      {
-        size_t height, width;
-        bilinear_stream >> height >> width;
-        auto block_iter(
-          std::find(block_indices.begin(), block_indices.end(), block));
-        if(block_iter != block_indices.end())
+  
+  for(size_t file_rank(0); file_rank < block_info.file_num_procs; ++file_rank)
+    {
+      boost::filesystem::ifstream bilinear_stream(
+        sdp_directory / ("bilinear_bases." + std::to_string(file_rank)));
+      if(!bilinear_stream.good())
+        {
+          throw std::runtime_error(
+            "Could not open '"
+            + (sdp_directory / ("bilinear_bases." + std::to_string(file_rank)))
+                .string()
+            + "'");
+        }
+
+      size_t file_num_bases;
+      bilinear_stream >> file_num_bases;
+
+      // The index of bilinear_bases in each file is described by
+      // file_block_indices.  However, block_indices is not in
+      // numerical order.  So we have to take care when placing blocks
+      for(size_t block = 0; block < file_num_bases; ++block)
+        for(size_t parity = 0; parity < 2; ++parity)
           {
-            size_t block_index(
-              2 * std::distance(block_indices.begin(), block_iter) + parity);
-            auto &local(bilinear_bases_local.at(block_index));
-            local.Resize(height, width);
-            for(size_t row = 0; row < height; ++row)
-              for(size_t column = 0; column < width; ++column)
-                {
-                  bilinear_stream >> local(row, column);
-                }
-          }
-        else
-          {
-            // Add one to get the initial newline after 'width'.
-            for(size_t line = 0; line < height * width + 1; ++line)
+            size_t height, width;
+            bilinear_stream >> height >> width;
+            
+            auto block_iter(std::find(
+              block_indices.begin(), block_indices.end(),
+              block_info.file_block_indices.at(file_rank).at(block)));
+
+            if(block_iter != block_indices.end())
               {
-                bilinear_stream.ignore(
-                  std::numeric_limits<std::streamsize>::max(), '\n');
+                size_t block_index(
+                  2 * std::distance(block_indices.begin(), block_iter)
+                  + parity);
+                auto &local(bilinear_bases_local.at(block_index));
+                local.Resize(height, width);
+                for(size_t row = 0; row < height; ++row)
+                  for(size_t column = 0; column < width; ++column)
+                    {
+                      bilinear_stream >> local(row, column);
+                    }
+              }
+            else
+              {
+                // Add one to get the initial newline after 'width'.
+                for(size_t line = 0; line < height * width + 1; ++line)
+                  {
+                    bilinear_stream.ignore(
+                      std::numeric_limits<std::streamsize>::max(), '\n');
+                  }
               }
           }
-      }
+    }
 
   bilinear_bases_dist.reserve(bilinear_bases_local.size());
   for(auto &local : bilinear_bases_local)

@@ -70,11 +70,11 @@ Dual_Constraint_Group::Dual_Constraint_Group(const Polynomial_Vector_Matrix &m)
   //   Y_1: {q_0(x), ..., q_delta1(x)}
   //   Y_2: {\sqrt(x) q_0(x), ..., \sqrt(x) q_delta2(x)
   //
-  const size_t delta1 (degree / 2);
-  bilinear_bases.push_back(sample_bilinear_basis(
-    delta1, numSamples, m.bilinear_basis, m.sample_points, m.sample_scalings));
+  const size_t delta1(degree / 2);
+  bilinear_bases[0] = sample_bilinear_basis(
+    delta1, numSamples, m.bilinear_basis, m.sample_points, m.sample_scalings);
 
-  const size_t delta2 (degree==0 ? 0 : (degree - 1) / 2);
+  const size_t delta2(degree == 0 ? 0 : (degree - 1) / 2);
   // a degree-0 Polynomial_Vector_Matrix should only need one block,
   // but this duplicates the block.
 
@@ -85,6 +85,6 @@ Dual_Constraint_Group::Dual_Constraint_Group(const Polynomial_Vector_Matrix &m)
     {
       scaled_samples.emplace_back(m.sample_points[ii] * m.sample_scalings[ii]);
     }
-  bilinear_bases.push_back(sample_bilinear_basis(
-    delta2, numSamples, m.bilinear_basis, m.sample_points, scaled_samples));
+  bilinear_bases[1] = sample_bilinear_basis(
+    delta2, numSamples, m.bilinear_basis, m.sample_points, scaled_samples);
 }
