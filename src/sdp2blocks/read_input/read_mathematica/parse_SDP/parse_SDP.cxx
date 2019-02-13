@@ -29,13 +29,18 @@ parse_SDP(const std::vector<char>::const_iterator &begin,
       throw std::runtime_error("Missing comma after objective");
     }
 
-  // auto end_normalization(parse_normalization(std::next(comma, 1), end));
+  auto end_normalization(parse_vector(std::next(comma, 1), end, normalization));
 
-  // comma = std::find(end_objective, end, ',');
-  // if(comma == end)
-  //   {
-  //     throw std::runtime_error("Missing comma after normalization");
-  //   }
+  comma = std::find(end_objective, end, ',');
+  if(comma == end)
+    {
+      throw std::runtime_error("Missing comma after normalization");
+    }
+
+  std::cout.precision(std::ceil(El::gmp::Precision() * std::log10(2.0)) + 1);
+  for(auto &n: normalization)
+    std::cout << "n: " << n << "\n";
+  
   // auto end_matrices(parse_matrices(std::next(comma, 1), end));
   // const auto close_bracket(std::find(std::next(end_matrices, 1), end, ']'));
   // if(close_bracket == end)
