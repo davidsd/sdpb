@@ -2,6 +2,11 @@
 
 #include <boost/filesystem.hpp>
 
+void read_mathematica(const boost::filesystem::path &input_path,
+                      std::vector<El::BigFloat> &objectives,
+                      std::vector<El::BigFloat> &normalization,
+                      std::vector<Positive_Matrix_With_Prefactor> &matrices);
+
 namespace
 {
   void start_element_callback(void *user_data, const xmlChar *name,
@@ -47,27 +52,34 @@ void read_input(const boost::filesystem::path &input_file,
                 std::vector<El::BigFloat> &normalization,
                 std::vector<Positive_Matrix_With_Prefactor> &matrices)
 {
-  LIBXML_TEST_VERSION;
-
-  Input_Parser input_parser;
-
-  xmlSAXHandler xml_handlers;
-  // This feels unclean.
-  memset(&xml_handlers, 0, sizeof(xml_handlers));
-  xml_handlers.startElement = start_element_callback;
-  xml_handlers.endElement = end_element_callback;
-  xml_handlers.characters = characters_callback;
-  xml_handlers.warning = warning_callback;
-  xml_handlers.error = error_callback;
-
-  if(xmlSAXUserParseFile(&xml_handlers, &input_parser, input_file.c_str()) < 0)
+  if(input_file.extension() == ".xml")
     {
-      throw std::runtime_error("Unable to parse input file: "
-                               + input_file.string());
-    }
+      LIBXML_TEST_VERSION;
 
-  std::swap(objectives, input_parser.objective_state.value);
-  std::swap(normalization, input_parser.normalization_state.value);
-  std::swap(matrices,
-            input_parser.positive_matrices_with_prefactor_state.value);
+      xmlSAXHandler xml_handlers;
+      // This feels unclean.
+      memset(&xml_handlers, 0, sizeof(xml_handlers));
+      xml_handlers.startElement = start_element_callback;
+      xml_handlers.endElement = end_element_callback;
+      xml_handlers.characters = characters_callback;
+      xml_handlers.warning = warning_callback;
+      xml_handlers.error = error_callback;
+
+      Input_Parser input_parser;
+      if(xmlSAXUserParseFile(&xml_handlers, &input_parser, input_file.c_str())
+         < 0)
+        {
+          throw std::runtime_error("Unable to parse input file: "
+                                   + input_file.string());
+        }
+
+      std::swap(objectives, input_parser.objective_state.value);
+      std::swap(normalization, input_parser.normalization_state.value);
+      std::swap(matrices,
+                input_parser.positive_matrices_with_prefactor_state.value);
+    }
+  else
+    {
+      read_mathematica(input_file, objectives, normalization, matrices);
+    }
 }
