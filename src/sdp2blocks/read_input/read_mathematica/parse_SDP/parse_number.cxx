@@ -1,15 +1,8 @@
+#include "is_valid_char.hxx"
+
 #include <algorithm>
 #include <vector>
-#include <cctype>
 #include <string>
-
-namespace
-{
-  inline bool is_valid_char(const char &c)
-  {
-    return !std::isspace(c) && c != '\\';
-  }
-}
 
 std::string parse_number(const std::vector<char>::const_iterator &begin,
                          const std::vector<char>::const_iterator &end)

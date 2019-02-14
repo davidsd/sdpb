@@ -1,6 +1,6 @@
-#include "../../parse_vector.hxx"
-#include "../../parse_number.hxx"
-#include "../../../../../Damped_Rational.hxx"
+#include "../parse_vector.hxx"
+#include "../parse_number.hxx"
+#include "../../../../Damped_Rational.hxx"
 
 #include <boost/algorithm/string.hpp>
 
@@ -29,7 +29,7 @@ parse_damped_rational(const std::vector<char>::const_iterator &begin,
   auto constant_start(std::next(damped_start, damped_literal.size()));
   damped_rational.constant = Boost_Float(parse_number(constant_start, comma));
 
-  auto start_poles(std::next(comma, 1));
+  auto start_poles(std::next(comma));
   auto end_poles(parse_vector(start_poles, end, damped_rational.poles));
 
   comma = std::find(end_poles, end, ',');
@@ -38,7 +38,7 @@ parse_damped_rational(const std::vector<char>::const_iterator &begin,
       throw std::runtime_error("Missing comma after DampedRational.poles");
     }
 
-  auto start_base(std::next(comma, 1));
+  auto start_base(std::next(comma));
   comma = std::find(start_base, end, ',');
   if(comma == end)
     {
@@ -46,7 +46,7 @@ parse_damped_rational(const std::vector<char>::const_iterator &begin,
     }
   damped_rational.base = Boost_Float(parse_number(start_base, comma));
 
-  auto start_variable(std::next(comma, 1));
+  auto start_variable(std::next(comma));
   const auto close_bracket(std::find(start_variable, end, ']'));
   if(close_bracket == end)
     {
@@ -55,5 +55,5 @@ parse_damped_rational(const std::vector<char>::const_iterator &begin,
   damped_rational.variable
     = boost::trim_copy(std::string(start_variable, close_bracket));
 
-  return std::next(close_bracket, 1);
+  return std::next(close_bracket);
 }

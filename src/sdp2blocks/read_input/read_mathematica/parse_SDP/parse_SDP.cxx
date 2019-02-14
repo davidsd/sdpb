@@ -1,14 +1,10 @@
 #include "parse_vector.hxx"
+#include "parse_generic.hxx"
 #include "../../Positive_Matrix_With_Prefactor_State.hxx"
 
 #include <algorithm>
 #include <iterator>
 #include <string>
-
-std::vector<char>::const_iterator
-parse_matrices(const std::vector<char>::const_iterator &begin,
-               const std::vector<char>::const_iterator &end,
-               std::vector<Positive_Matrix_With_Prefactor> &matrices);
 
 std::vector<char>::const_iterator
 parse_SDP(const std::vector<char>::const_iterator &begin,
@@ -42,7 +38,7 @@ parse_SDP(const std::vector<char>::const_iterator &begin,
       throw std::runtime_error("Missing comma after normalization");
     }
 
-  auto end_matrices(parse_matrices(std::next(comma, 1), end, matrices));
+  auto end_matrices(parse_generic(std::next(comma), end, matrices));
   const auto close_bracket(std::find(end_matrices, end, ']'));
   if(close_bracket == end)
     {

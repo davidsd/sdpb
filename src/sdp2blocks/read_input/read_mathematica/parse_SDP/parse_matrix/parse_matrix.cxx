@@ -1,4 +1,5 @@
-#include "../../../../Positive_Matrix_With_Prefactor_State.hxx"
+#include "../parse_generic.hxx"
+#include "../../../Positive_Matrix_With_Prefactor_State.hxx"
 
 #include <algorithm>
 #include <iterator>
@@ -32,21 +33,13 @@ parse_matrix(const std::vector<char>::const_iterator &begin,
       throw std::runtime_error("Missing comma after DampedRational");
     }
 
-  // std::cout << "damped: " << matrix.damped_rational.constant << "\n\t"
-  //           << matrix.damped_rational.base << "\n";
-  // for(auto &p: matrix.damped_rational.poles)
-  //   std::cout << " " << p;
-  // std::cout << "\n";
-  
-  // auto end_polynomials(
-  //   parse_polynomials(std::next(comma, 1), end, matrix.polynomials));
+  auto end_polynomials(
+    parse_generic(std::next(comma), end, matrix.polynomials));
 
-  // const auto close_bracket(std::find(end_polynomials, end, ']'));
-  // if(close_bracket == end)
-  //   {
-  //     throw std::runtime_error("Missing ']' at end of SDP");
-  //   }
-  // return std::next(close_bracket, 1);
-
-  return end;
+  const auto close_bracket(std::find(end_polynomials, end, ']'));
+  if(close_bracket == end)
+    {
+      throw std::runtime_error("Missing ']' at end of SDP");
+    }
+  return std::next(close_bracket);
 }
