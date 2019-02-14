@@ -28,7 +28,7 @@ std::string parse_number(const std::vector<char>::const_iterator &begin,
   if(carat != end)
     {
       cleaned_string.push_back('e');
-      for(auto c(std::next(carat, 1)); c != end; ++c)
+      for(auto c(std::next(carat)); c != end; ++c)
         {
           if(is_valid_char(*c))
             {

@@ -25,7 +25,7 @@ parse_matrices(const std::vector<char>::const_iterator &begin,
   const std::vector<char> delimiters({',', '}'});
   do
     {
-      auto start_matrix(std::next(delimiter, 1));
+      auto start_matrix(std::next(delimiter));
       matrices.emplace_back();
       auto end_matrix(parse_matrix(start_matrix, end, matrices.back()));
       delimiter = std::find_first_of(end_matrix, end, delimiters.begin(),

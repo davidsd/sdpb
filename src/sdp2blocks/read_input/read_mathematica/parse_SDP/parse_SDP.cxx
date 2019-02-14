@@ -34,7 +34,7 @@ parse_SDP(const std::vector<char>::const_iterator &begin,
       throw std::runtime_error("Missing comma after objective");
     }
 
-  auto end_normalization(parse_vector(std::next(comma, 1), end, normalization));
+  auto end_normalization(parse_vector(std::next(comma), end, normalization));
 
   comma = std::find(end_objective, end, ',');
   if(comma == end)
@@ -48,5 +48,5 @@ parse_SDP(const std::vector<char>::const_iterator &begin,
     {
       throw std::runtime_error("Missing ']' at end of SDP");
     }
-  return std::next(close_bracket, 1);
+  return std::next(close_bracket);
 }

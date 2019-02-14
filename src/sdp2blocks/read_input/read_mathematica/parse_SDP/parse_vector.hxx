@@ -17,7 +17,7 @@ parse_vector(const std::vector<char>::const_iterator &begin,
     {
       throw std::runtime_error("Missing '{' at beginning of array of numbers");
     }
-  auto start_element(std::next(open_brace, 1));
+  auto start_element(std::next(open_brace));
 
   const auto close_brace(std::find(start_element, end, '}'));
   if(close_brace == end)
@@ -31,9 +31,9 @@ parse_vector(const std::vector<char>::const_iterator &begin,
   {
     
     result_vector.emplace_back(parse_number(start_element, comma));
-    start_element = std::next(comma, 1);
+    start_element = std::next(comma);
     comma = std::find(start_element, close_brace, ',');
   }
 
-  return std::next(close_brace, 1);
+  return std::next(close_brace);
 }
