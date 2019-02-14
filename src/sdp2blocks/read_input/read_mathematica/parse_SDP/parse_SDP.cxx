@@ -6,6 +6,11 @@
 #include <string>
 
 std::vector<char>::const_iterator
+parse_matrices(const std::vector<char>::const_iterator &begin,
+               const std::vector<char>::const_iterator &end,
+               std::vector<Positive_Matrix_With_Prefactor> &matrices);
+
+std::vector<char>::const_iterator
 parse_SDP(const std::vector<char>::const_iterator &begin,
           const std::vector<char>::const_iterator &end,
           std::vector<El::BigFloat> &objectives,
@@ -37,17 +42,11 @@ parse_SDP(const std::vector<char>::const_iterator &begin,
       throw std::runtime_error("Missing comma after normalization");
     }
 
-  std::cout.precision(std::ceil(El::gmp::Precision() * std::log10(2.0)) + 1);
-  for(auto &n: normalization)
-    std::cout << "n: " << n << "\n";
-  
-  // auto end_matrices(parse_matrices(std::next(comma, 1), end));
-  // const auto close_bracket(std::find(std::next(end_matrices, 1), end, ']'));
-  // if(close_bracket == end)
-  //   {
-  //     throw std::runtime_error("Missing ']' at end of SDP");
-  //   }
-  // return std::next(close_bracket, 1);
-
-  return end;
+  auto end_matrices(parse_matrices(std::next(comma, 1), end, matrices));
+  const auto close_bracket(std::find(end_matrices, end, ']'));
+  if(close_bracket == end)
+    {
+      throw std::runtime_error("Missing ']' at end of SDP");
+    }
+  return std::next(close_bracket, 1);
 }

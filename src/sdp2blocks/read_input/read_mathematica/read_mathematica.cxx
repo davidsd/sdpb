@@ -25,6 +25,14 @@ void read_mathematica(const boost::filesystem::path &input_path,
   input_string.resize(boost::filesystem::file_size(input_path));
   input_stream.read(input_string.data(), input_string.size());
 
-  parse_SDP(input_string.cbegin(), input_string.cend(), objectives,
-            normalization, matrices);
+  try
+    {
+      parse_SDP(input_string.cbegin(), input_string.cend(), objectives,
+                normalization, matrices);
+    }
+  catch(std::exception &e)
+    {
+      throw std::runtime_error("Error when parsing " + input_path.string() + ": "
+                               + e.what());
+    }
 }

@@ -1,5 +1,4 @@
-#include <El.hpp>
-
+#include <algorithm>
 #include <vector>
 #include <cctype>
 #include <string>
@@ -12,8 +11,8 @@ namespace
   }
 }
 
-El::BigFloat parse_number(const std::vector<char>::const_iterator &begin,
-                          const std::vector<char>::const_iterator &end)
+std::string parse_number(const std::vector<char>::const_iterator &begin,
+                         const std::vector<char>::const_iterator &end)
 {
   std::string cleaned_string;
   cleaned_string.reserve(end - begin);
@@ -37,5 +36,5 @@ El::BigFloat parse_number(const std::vector<char>::const_iterator &begin,
             }
         }
     }
-  return El::BigFloat(cleaned_string);
+  return cleaned_string;
 }
