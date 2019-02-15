@@ -1,20 +1,42 @@
 # Usage
 
-The input format for SDPB is XML-based and described in
-[the manual](SDPB-Manual.pdf).
-The Mathematica file [SDPB.m](../mathematica/SDPB.m) includes code to export semidefinite
-programs in this format, along with some examples. An example input
-file [test.xml](../test/test.xml) is included with the source code.
+Details of how SDPB works are described in the [the
+manual](SDPB-Manual.pdf).  An example input file
+[test.xml](../test/test.xml) is included with the source code.
 
-The build system creates the executables `pvm2sdp` and `sdpb` in the
-build directory.  There are three steps when running SDPB.
+The build system creates the executables `pvm2sdp`, `sdp2input`, and
+`sdpb` in the `build` directory.  There are three steps when running
+SDPB.
 
-## Converting XML files
+## Create input files
 
-XML files with polynomial vector matrices must first be converted with
-`pvm2sdp` into a format that SDPB can quickly load.  The usage is
+You will normally start with either a Mathematica file with an SDP, or
+an XML file with Polynomial Vector Matrices.  These must first be
+converted, using `sdp2input` or `pvm2sdp`, into a format that SDPB can
+quickly load.  When creating these input files, you must choose a
+working precision.  In general, you should use the same precision as
+when you run `sdpb`, though you may also use a larger precision.  Both
+`sdp2input` and `pvm2sdp` will run faster in parallel.
 
-    build/pvm2sdp [PRECISION] [INPUT] ... [OUTPUT]
+### Converting SDP Mathematica files
+
+Use `sdp2input` to create input from Mathematica files with an SDP.
+The format for these Mathematica files is described in Section 3.2 of
+the [the manual](SDPB-Manual.pdf).  The usage is
+
+    sdp2input --precision=[PRECISION] --input=[INPUT] --output=[OUTPUT]
+
+`[PRECISION]` is the number of bits of precision used in the
+conversion.  `[INPUT]` is a Mathematica file with an SDP. `[OUTPUT]`
+is an output directory.
+
+### Converting XML files
+
+Use `pvm2sdp` to create input files from XML with polynomial vector
+matrices.  The format for these XML files is described in Section 3.1
+of [the manual](SDPB-Manual.pdf).  The usage is
+
+    pvm2sdp [PRECISION] [INPUT] ... [OUTPUT]
 
 `[PRECISION]` is the number of bits of precision used in the
 conversion.  `[INPUT] ...` is a list of one or more xml
@@ -24,18 +46,7 @@ For example, the command to convert the file `test/test.xml`, using
 1024 bits of precision, and store the result in the directory
 `test/test/`, is
 
-    build/pvm2sdp 1024 test/test.xml test/test
-  
-`pvm2sdp` writes the output in a text format, so it is perfectly OK to
-use a larger precision with `pvm2sdp` than when running `sdpb`.
-
-`pvm2sdp` is a serial program, so you should not run it with multiple
-cores.  `pvm2sdp` checks that it is run with only one core when it
-starts.
-
-If you have an existing script that generates XML files, you can run
-`pvm2sdp` in the same script.  `pvm2sdp` becomes just another step in
-the pipeline to create input files.
+    pvm2sdp 1024 test/test.xml test/test
 
 ## [Optional] Measure time to evaluate each block.
 

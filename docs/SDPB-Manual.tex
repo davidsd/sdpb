@@ -191,7 +191,12 @@ preprocess the input and run SDPB are in \texttt{docs/Usage.md}.
 
 \subsection{\texttt{Mathematica} Interface}
 
-A \texttt{Mathematica} notebook \texttt{SDPB.m}, included in the source distribution, generates files of the form in listing~\ref{xmlinputformat} starting from \texttt{Mathematica} data.  It automatically makes sensible choices for the bilinear bases $q_m^{(j)}(x)$, the sample points $x_k^{(j)}$ and the sample scalings $s_k^{(j)}$.
+The program \texttt{sdp2input} generates files of the form in
+listing~\ref{xmlinputformat} starting from \texttt{Mathematica} data.
+It automatically makes sensible choices for the bilinear bases
+$q_m^{(j)}(x)$, the sample points $x_k^{(j)}$ and the sample scalings
+$s_k^{(j)}$.  If you wish to experiment with these choices, there is
+also an included \texttt{Mathematica} notebook \texttt{SDPB.m}.
 
 The \texttt{Mathematica} definition of a PMP is slightly different but trivially equivalent to (\ref{eq:PMPconstraint}).  It is:
 \be
