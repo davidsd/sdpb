@@ -42,8 +42,7 @@
 // the block_maps.
 //
 // 2) When large blocks are forced to fit into a node, there is no
-// sharing of procs to between the existing block_maps and the new
-// entry.
+// sharing of procs between the existing block_maps and the new entry.
 
 #include "Block_Cost.hxx"
 #include "Block_Map.hxx"
@@ -60,7 +59,7 @@ compute_block_grid_mapping(const size_t &procs_per_node,
                            const std::vector<Block_Cost> &block_costs)
 {
   // We do computations in integers to make sure that the results are
-  // the same in different processers.
+  // the same on different processers.
   const size_t total_cost(
     std::accumulate(block_costs.begin(), block_costs.end(), size_t(0),
                     [](const size_t &cost, const Block_Cost &element) {
