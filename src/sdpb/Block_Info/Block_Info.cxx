@@ -168,17 +168,22 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
               break;
             }
         }
-      if(!block_indices.empty())
+      if(rank_end > rank)
         {
           break;
         }
     }
-  // If we have more nodes than blocks, we can end up with empty
-  // nodes.  In that case, assign that node to a group by itself.
-  if(!(rank_end > rank))
+  // We should be generating blocks to cover all of the processors,
+  // even if there are more nodes than procs.  So this is a sanity
+  // check in case we messed up something in
+  // compute_block_grid_mapping.
+  if(rank_end <= rank)
     {
-      rank_begin = rank;
-      rank_end = rank + 1;
+      throw std::runtime_error("INTERNAL ERROR: Some procs were not covered "
+                               "by compute_block_grid_mapping.\n"
+                               "\trank = "
+                               + std::to_string(rank) + "\n"
+                               + "\trank_end = " + std::to_string(rank_end));
     }
   {
     std::vector<int> group_ranks(rank_end - rank_begin);
