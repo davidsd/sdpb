@@ -1,6 +1,6 @@
 #include "../../../../SDP_Solver.hxx"
 
-// Compute the vectors dx and dy on the right-hand side of the Schur
+// Compute the vectors dx on the right-hand side of the Schur
 // complement equation:
 //
 // {{S, -B}, {B^T, 0}} . {dx, dy} = {dx, dy}
@@ -8,33 +8,27 @@
 // where S = SchurComplement and B = FreeVarMatrix.  Specifically,
 //
 // dx[p] = -dual_residues[p] - Tr(A_p Z)              for 0 <= p < P
-// dy[n] = dualObjective[n] - (FreeVarMatrix^T x)_n  for 0 <= n < N
 //
-// where P = primalObjective.size(), N = dualObjective.size()
+// where P = primalObjective.size()
 //
 // Inputs:
 // - sdp, an SDP
 // - dual_residues, a Vector of length P
 // - Z = X^{-1} (PrimalResidues Y - R)
-// - x, a vector of length P
 // Outputs:
 // - dx, a Vector of length P
-// - dy, a Vector of length N
-//
 
 void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
                        const Block_Vector &dual_residues,
-                       const Block_Diagonal_Matrix &Z, const Block_Vector &x,
-                       Block_Vector &dx, Block_Vector &dy)
+                       const Block_Diagonal_Matrix &Z,
+                       Block_Vector &dx)
 {
-  auto free_var_matrix_block(sdp.free_var_matrix.blocks.begin());
   auto dual_residues_block(dual_residues.blocks.begin());
-  auto x_block(x.blocks.begin());
   auto dx_block(dx.blocks.begin());
-  auto dy_block(dy.blocks.begin());
 
   auto Z_block(Z.blocks.begin());
   auto bilinear_bases_block(sdp.bilinear_bases_dist.begin());
+
   for(auto &block_index : block_info.block_indices)
     {
       // dx = -dual_residues
@@ -68,9 +62,8 @@ void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
                 El::Zero(q_Z_q);
 
                 El::Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL,
-                         El::BigFloat(1), Z_sub_block,
-                         *bilinear_bases_block, El::BigFloat(0),
-                         Z_times_q);
+                         El::BigFloat(1), Z_sub_block, *bilinear_bases_block,
+                         El::BigFloat(0), Z_times_q);
 
                 El::Hadamard(Z_times_q, *bilinear_bases_block, q_Z_q);
 
@@ -87,21 +80,7 @@ void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
           ++bilinear_bases_block;
         }
 
-      // dy = dualObjective - (FreeVarMatrix^T x)
-      El::Gemv(El::OrientationNS::TRANSPOSE, El::BigFloat(-1),
-               *free_var_matrix_block, *x_block, El::BigFloat(0), *dy_block);
-
-      // The dy.blocks each only have part of the entire dy vector.
-      // It will later all get summed together, so add
-      // dual_objective_b to only the first block.
-      if(block_index == 0)
-        {
-          El::Axpy(El::BigFloat(1), sdp.dual_objective_b, *dy_block);
-        }
-      ++free_var_matrix_block;
       ++dual_residues_block;
-      ++x_block;
       ++dx_block;
-      ++dy_block;
     }
 }

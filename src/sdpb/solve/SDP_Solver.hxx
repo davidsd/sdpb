@@ -56,7 +56,9 @@ public:
   //   PrimalResidues = \sum_p A_p x_p - X
   //
   Block_Diagonal_Matrix primal_residues;
-  El::BigFloat primal_error; // maxAbs(PrimalResidues)
+
+  // primal_error is max of both primal_residues and p=(b - B^T x)
+  El::BigFloat primal_error; // max(|P|,|p|)
 
   // Discrepancy in the dual equality constraints, a Vector of length
   // P, called 'd' in the manual:
@@ -77,19 +79,19 @@ public:
       const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
       Timers &timers);
 
-  void step(const SDP_Solver_Parameters &parameters, const size_t &iteration,
-            const std::chrono::time_point<std::chrono::high_resolution_clock>
-              &solver_start_time,
-            const std::size_t &total_psd_rows,
-            const bool &is_primal_and_dual_feasible,
-            const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
-            const Block_Diagonal_Matrix &X_cholesky,
-            const Block_Diagonal_Matrix &Y_cholesky,
-            const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-            const Block_Diagonal_Matrix &bilinear_pairings_Y,
-            El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
-            SDP_Solver_Terminate_Reason &terminate_reason, bool &terminate_now,
-            Timers &timers);
+  void
+  step(const SDP_Solver_Parameters &parameters, const size_t &iteration,
+       const std::chrono::time_point<std::chrono::high_resolution_clock>
+         &solver_start_time,
+       const std::size_t &total_psd_rows, const bool &is_dual_feasible,
+       const bool &is_optimal, const Block_Info &block_info, const SDP &sdp,
+       const El::Grid &grid, const Block_Diagonal_Matrix &X_cholesky,
+       const Block_Diagonal_Matrix &Y_cholesky,
+       const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
+       const Block_Diagonal_Matrix &bilinear_pairings_Y,
+       El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
+       SDP_Solver_Terminate_Reason &terminate_reason, bool &terminate_now,
+       Timers &timers);
 
   void save_solution(const SDP_Solver_Terminate_Reason,
                      const std::pair<std::string, Timer> &timer_pair,

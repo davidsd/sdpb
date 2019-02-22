@@ -2,30 +2,20 @@
 #include "../../../SDP_Solver_Parameters.hxx"
 
 void compute_feasible_and_termination(
-  const SDP_Solver_Parameters &parameters, const El::BigFloat &primal_error,
+  const SDP_Solver_Parameters &parameters,
   const El::BigFloat &dual_error, const El::BigFloat &duality_gap,
   const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
   const int &iteration,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time,
-  bool &is_primal_and_dual_feasible, SDP_Solver_Terminate_Reason &result,
-  bool &terminate_now)
+  bool &is_dual_feasible, bool &is_optimal,
+  SDP_Solver_Terminate_Reason &result, bool &terminate_now)
 {
-  const bool is_primal_feasible(primal_error
-                                < parameters.primal_error_threshold),
-    is_dual_feasible(dual_error < parameters.dual_error_threshold),
-    is_optimal(duality_gap < parameters.duality_gap_threshold);
+  is_dual_feasible = dual_error < parameters.dual_error_threshold;
+  is_optimal = duality_gap < parameters.duality_gap_threshold;
 
   terminate_now = true;
-  if(is_primal_feasible && is_dual_feasible && is_optimal)
-    {
-      result = SDP_Solver_Terminate_Reason::PrimalDualOptimal;
-    }
-  else if(is_primal_feasible && parameters.find_primal_feasible)
-    {
-      result = SDP_Solver_Terminate_Reason::PrimalFeasible;
-    }
-  else if(is_dual_feasible && parameters.find_dual_feasible)
+  if(is_dual_feasible && parameters.find_dual_feasible)
     {
       result = SDP_Solver_Terminate_Reason::DualFeasible;
     }
@@ -57,7 +47,5 @@ void compute_feasible_and_termination(
   El::byte terminate_byte(terminate_now);
   // Time varies between cores, so follow the decision of the root.
   El::mpi::Broadcast(terminate_byte, 0, El::mpi::COMM_WORLD);
-  terminate_now=static_cast<bool>(terminate_byte);
-  
-  is_primal_and_dual_feasible = (is_primal_feasible && is_dual_feasible);
+  terminate_now = static_cast<bool>(terminate_byte);
 }

@@ -18,26 +18,23 @@ void compute_bilinear_pairings(
   Block_Diagonal_Matrix &bilinear_pairings_Y, Timers &timers);
 
 void compute_feasible_and_termination(
-  const SDP_Solver_Parameters &parameters, const El::BigFloat &primal_error,
-  const El::BigFloat &dual_error, const El::BigFloat &duality_gap,
-  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
-  const int &iteration,
+  const SDP_Solver_Parameters &parameters, const El::BigFloat &dual_error,
+  const El::BigFloat &duality_gap, const El::BigFloat &primal_step_length,
+  const El::BigFloat &dual_step_length, const int &iteration,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time,
-  bool &is_primal_and_dual_feasible, SDP_Solver_Terminate_Reason &result,
-  bool &terminate_now);
+  bool &is_dual_feasible, bool &is_optimal,
+  SDP_Solver_Terminate_Reason &result, bool &terminate_now);
 
 void compute_dual_residues_and_error(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
   Block_Vector &dual_residues, El::BigFloat &dual_error, Timers &timers);
 
-void compute_primal_residues_and_error(const Block_Info &block_info,
-                                       const SDP &sdp, const Block_Vector &x,
-                                       const Block_Diagonal_Matrix &X,
-                                       Block_Diagonal_Matrix &primal_residues,
-                                       El::BigFloat &primal_error,
-                                       Timers &timers);
+void compute_primal_residues_and_error_P(
+  const Block_Info &block_info, const SDP &sdp, const Block_Vector &x,
+  const Block_Diagonal_Matrix &X, Block_Diagonal_Matrix &primal_residues,
+  El::BigFloat &primal_error, Timers &timers);
 
 SDP_Solver_Terminate_Reason
 SDP_Solver::run(const SDP_Solver_Parameters &parameters,
@@ -131,20 +128,20 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
 
       compute_dual_residues_and_error(block_info, sdp, y, bilinear_pairings_Y,
                                       dual_residues, dual_error, timers);
-      compute_primal_residues_and_error(block_info, sdp, x, X, primal_residues,
-                                        primal_error, timers);
+      compute_primal_residues_and_error_P(
+        block_info, sdp, x, X, primal_residues, primal_error, timers);
 
-      bool is_primal_and_dual_feasible, terminate_now;
+      bool terminate_now, is_dual_feasible, is_optimal;
       compute_feasible_and_termination(
-        parameters, primal_error, dual_error, duality_gap, primal_step_length,
-        dual_step_length, iteration, solver_timer.start_time,
-        is_primal_and_dual_feasible, result, terminate_now);
+        parameters, dual_error, duality_gap, primal_step_length,
+        dual_step_length, iteration, solver_timer.start_time, is_dual_feasible,
+        is_optimal, result, terminate_now);
       if(terminate_now)
         {
           break;
         }
       step(parameters, iteration, solver_timer.start_time, total_psd_rows,
-           is_primal_and_dual_feasible, block_info, sdp, grid, X_cholesky,
+           is_dual_feasible, is_optimal, block_info, sdp, grid, X_cholesky,
            Y_cholesky, bilinear_pairings_X_inv, bilinear_pairings_Y,
            primal_step_length, dual_step_length, result, terminate_now,
            timers);

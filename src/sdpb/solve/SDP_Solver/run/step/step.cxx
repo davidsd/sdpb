@@ -16,14 +16,21 @@ void initialize_schur_complement_solver(
   Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
   Timers &timers);
 
+void
+compute_primal_residues_and_error_p(const Block_Info &block_info,
+                                    const SDP &sdp, const Block_Vector &x,
+                                    Block_Vector &primal_residue_p,
+                                    El::BigFloat &primal_error);
+
 void compute_search_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
   const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
-  const El::BigFloat &mu, const bool &is_corrector_phase,
-  const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx,
-  Block_Diagonal_Matrix &dX, Block_Vector &dy, Block_Diagonal_Matrix &dY);
+  const El::BigFloat &mu, const Block_Vector &primal_residue_p,
+  const bool &is_corrector_phase, const El::DistMatrix<El::BigFloat> &Q,
+  Block_Vector &dx, Block_Diagonal_Matrix &dX, Block_Vector &dy,
+  Block_Diagonal_Matrix &dY);
 
 El::BigFloat
 predictor_centering_parameter(const SDP_Solver_Parameters &parameters,
@@ -44,9 +51,9 @@ void SDP_Solver::step(
   const SDP_Solver_Parameters &parameters, const size_t &iteration,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time,
-  const std::size_t &total_psd_rows, const bool &is_primal_and_dual_feasible,
-  const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
-  const Block_Diagonal_Matrix &X_cholesky,
+  const std::size_t &total_psd_rows, const bool &is_dual_feasible,
+  const bool &is_optimal, const Block_Info &block_info, const SDP &sdp,
+  const El::Grid &grid, const Block_Diagonal_Matrix &X_cholesky,
   const Block_Diagonal_Matrix &Y_cholesky,
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
@@ -62,6 +69,7 @@ void SDP_Solver::step(
   // once in the predictor step, and once in the corrector step.
   Block_Vector dx(x), dy(y);
   Block_Diagonal_Matrix dX(X), dY(Y);
+  bool is_primal_and_dual_feasible;
   {
     // SchurComplementCholesky = L', the Cholesky decomposition of the
     // Schur complement matrix S.
@@ -105,13 +113,39 @@ void SDP_Solver::step(
 
     auto &predictor_timer(
       timers.add_and_start("run.step.computeSearchDirection(betaPredictor)"));
+
+    // use dy to set the sizes of primal_residue_p.  The data is
+    // overwritten in compute_primal_residues_and_error_p.
+    Block_Vector primal_residue_p(dy);
+    // std::cout << "preprimal error: " << El::mpi::Rank() << " " << primal_error
+    //           << "\n";
+    compute_primal_residues_and_error_p(block_info, sdp, x, primal_residue_p,
+                                        primal_error);
+    // std::cout << "primal error: " << El::mpi::Rank() << " " << primal_error
+    //           << "\n";
+    const bool is_primal_feasible(primal_error
+                                  < parameters.primal_error_threshold);
+
+    is_primal_and_dual_feasible = (is_primal_feasible && is_dual_feasible);
+    if(is_primal_and_dual_feasible && is_optimal)
+      {
+        terminate_reason = SDP_Solver_Terminate_Reason::PrimalDualOptimal;
+        terminate_now = true;
+        return;
+      }
+    else if(is_primal_feasible && parameters.find_primal_feasible)
+      {
+        terminate_reason = SDP_Solver_Terminate_Reason::PrimalFeasible;
+        terminate_now = true;
+        return;
+      }
+
     // Compute the predictor solution for (dx, dX, dy, dY)
     beta_predictor
       = predictor_centering_parameter(parameters, is_primal_and_dual_feasible);
-
     compute_search_direction(block_info, sdp, *this, schur_complement_cholesky,
                              schur_off_diagonal, X_cholesky, beta_predictor,
-                             mu, false, Q, dx, dX, dy, dY);
+                             mu, primal_residue_p, false, Q, dx, dX, dy, dY);
     predictor_timer.stop();
 
     // Compute the corrector solution for (dx, dX, dy, dY)
@@ -120,9 +154,10 @@ void SDP_Solver::step(
     beta_corrector = corrector_centering_parameter(
       parameters, X, dX, Y, dY, mu, is_primal_and_dual_feasible,
       total_psd_rows);
+
     compute_search_direction(block_info, sdp, *this, schur_complement_cholesky,
                              schur_off_diagonal, X_cholesky, beta_corrector,
-                             mu, true, Q, dx, dX, dy, dY);
+                             mu, primal_residue_p, true, Q, dx, dX, dy, dY);
     corrector_timer.stop();
   }
   // Compute step-lengths that preserve positive definiteness of X, Y
