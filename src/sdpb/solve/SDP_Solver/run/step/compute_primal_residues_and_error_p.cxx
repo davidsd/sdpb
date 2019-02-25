@@ -6,11 +6,10 @@
 //
 // and the corresponding primal error max(|p_i|)
 
-void
-compute_primal_residues_and_error_p(const Block_Info &block_info,
-                                    const SDP &sdp, const Block_Vector &x,
-                                    Block_Vector &primal_residue_p,
-                                    El::BigFloat &primal_error)
+void compute_primal_residues_and_error_p(const Block_Info &block_info,
+                                         const SDP &sdp, const Block_Vector &x,
+                                         Block_Vector &primal_residue_p,
+                                         El::BigFloat &primal_error)
 {
   auto free_var_matrix_block(sdp.free_var_matrix.blocks.begin());
   auto x_block(x.blocks.begin());
@@ -44,6 +43,6 @@ compute_primal_residues_and_error_p(const Block_Info &block_info,
       ++x_block;
       ++primal_residue_p_block;
     }
-  primal_error= El::mpi::AllReduce(local_primal_error, El::mpi::MAX,
-                            El::mpi::COMM_WORLD);
+  primal_error = El::mpi::AllReduce(local_primal_error, El::mpi::MAX,
+                                    El::mpi::COMM_WORLD);
 }
