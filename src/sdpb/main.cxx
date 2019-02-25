@@ -255,9 +255,8 @@ int main(int argc, char **argv)
         }
       catch(po::error &e)
         {
-          std::cerr << "ERROR: " << e.what() << '\n';
-          std::cerr << cmd_line_options << '\n';
-          return 1;
+          El::ReportException(e);
+          El::mpi::Abort(El::mpi::COMM_WORLD, 1);
         }
 
       // Set the default precision of all Real numbers to that specified
