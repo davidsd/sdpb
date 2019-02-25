@@ -65,7 +65,7 @@ manager such as [Homebrew](https://brew.sh).
     On a Debian Buster laptop, use sudo or the root account to
     install these packages
     
-        apt-get install cmake, libopenblas-dev, openmpi-bin, libgmp-dev, libmpfr-dev, libboost-dev, libxml2-dev
+        apt-get install openmpi-bin libopenmpi-dev libgmp-dev libmpfr-dev libmpfrc++-dev libboost-all-dev g++ cmake libopenblas-dev libxml2-dev git libmetis-dev pkg-config
     
     and then configure as a normal user
     
