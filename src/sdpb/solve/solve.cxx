@@ -49,7 +49,7 @@ solve(const boost::filesystem::path &sdp_directory,
                 << "primalObjective = " << solver.primal_objective << '\n'
                 << "dualObjective   = " << solver.dual_objective << '\n'
                 << "dualityGap      = " << solver.duality_gap << '\n'
-                << "primalError     = " << solver.primal_error << '\n'
+                << "primalError     = " << solver.primal_error() << '\n'
                 << "dualError       = " << solver.dual_error << '\n'
                 << '\n';
     }

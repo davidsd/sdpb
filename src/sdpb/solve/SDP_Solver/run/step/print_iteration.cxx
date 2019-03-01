@@ -36,7 +36,9 @@ void print_iteration(
                 << static_cast<double>(sdp_solver.duality_gap) << " "
 
                 << std::showpos << std::setw(11) << std::setprecision(3)
-                << static_cast<double>(sdp_solver.primal_error) << " "
+                << static_cast<double>(sdp_solver.primal_error_P) << " "
+                << std::showpos << std::setw(11) << std::setprecision(3)
+                << static_cast<double>(sdp_solver.primal_error_p) << " "
 
                 << std::setw(11) << std::setprecision(3)
                 << static_cast<double>(sdp_solver.dual_error) << " "

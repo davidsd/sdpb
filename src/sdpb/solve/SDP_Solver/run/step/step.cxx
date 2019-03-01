@@ -16,11 +16,10 @@ void initialize_schur_complement_solver(
   Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
   Timers &timers);
 
-void
-compute_primal_residues_and_error_p(const Block_Info &block_info,
-                                    const SDP &sdp, const Block_Vector &x,
-                                    Block_Vector &primal_residue_p,
-                                    El::BigFloat &primal_error);
+void compute_primal_residues_and_error_p(const Block_Info &block_info,
+                                         const SDP &sdp, const Block_Vector &x,
+                                         Block_Vector &primal_residue_p,
+                                         El::BigFloat &primal_error_p);
 
 void compute_search_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
@@ -117,13 +116,9 @@ void SDP_Solver::step(
     // use dy to set the sizes of primal_residue_p.  The data is
     // overwritten in compute_primal_residues_and_error_p.
     Block_Vector primal_residue_p(dy);
-    // std::cout << "preprimal error: " << El::mpi::Rank() << " " << primal_error
-    //           << "\n";
     compute_primal_residues_and_error_p(block_info, sdp, x, primal_residue_p,
-                                        primal_error);
-    // std::cout << "primal error: " << El::mpi::Rank() << " " << primal_error
-    //           << "\n";
-    const bool is_primal_feasible(primal_error
+                                        primal_error_p);
+    const bool is_primal_feasible(primal_error()
                                   < parameters.primal_error_threshold);
 
     is_primal_and_dual_feasible = (is_primal_feasible && is_dual_feasible);

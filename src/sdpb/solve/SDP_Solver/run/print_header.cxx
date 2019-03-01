@@ -8,7 +8,7 @@ void print_header()
     {
       std::cout << "\n"
                 << "          time    mu     P-obj       D-obj      gap     "
-                   "    P-err       D-err      P-step   D-step   beta\n"
+                   "    P-err       p-err       D-err      P-step   D-step   beta\n"
                 << "--------------------------------------------------------"
                    "-------------------------------------------------\n";
     }

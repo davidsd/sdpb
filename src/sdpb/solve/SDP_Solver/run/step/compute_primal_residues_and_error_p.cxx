@@ -15,7 +15,7 @@ void compute_primal_residues_and_error_p(const Block_Info &block_info,
   auto x_block(x.blocks.begin());
   auto primal_residue_p_block(primal_residue_p.blocks.begin());
 
-  El::BigFloat local_primal_error(primal_error);
+  El::BigFloat local_primal_error(0);
   for(auto &block_index : block_info.block_indices)
     {
       El::Gemv(El::OrientationNS::TRANSPOSE, El::BigFloat(-1),

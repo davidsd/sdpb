@@ -58,7 +58,11 @@ public:
   Block_Diagonal_Matrix primal_residues;
 
   // primal_error is max of both primal_residues and p=(b - B^T x)
-  El::BigFloat primal_error; // max(|P|,|p|)
+  El::BigFloat primal_error_P, primal_error_p; // |P| and |p|
+  El::BigFloat primal_error() const
+  {
+    return std::max(primal_error_P, primal_error_p);
+  }
 
   // Discrepancy in the dual equality constraints, a Vector of length
   // P, called 'd' in the manual:

@@ -34,7 +34,7 @@ void compute_dual_residues_and_error(
 void compute_primal_residues_and_error_P(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &x,
   const Block_Diagonal_Matrix &X, Block_Diagonal_Matrix &primal_residues,
-  El::BigFloat &primal_error, Timers &timers);
+  El::BigFloat &primal_error_P, Timers &timers);
 
 SDP_Solver_Terminate_Reason
 SDP_Solver::run(const SDP_Solver_Parameters &parameters,
@@ -128,9 +128,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
 
       compute_dual_residues_and_error(block_info, sdp, y, bilinear_pairings_Y,
                                       dual_residues, dual_error, timers);
-      El::BigFloat temp_primal_error(0);
       compute_primal_residues_and_error_P(
-        block_info, sdp, x, X, primal_residues, temp_primal_error, timers);
+        block_info, sdp, x, X, primal_residues, primal_error_P, timers);
 
       bool terminate_now, is_dual_feasible, is_optimal;
       compute_feasible_and_termination(
@@ -141,7 +140,6 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
         {
           break;
         }
-      primal_error=temp_primal_error;
       step(parameters, iteration, solver_timer.start_time, total_psd_rows,
            is_dual_feasible, is_optimal, block_info, sdp, grid, X_cholesky,
            Y_cholesky, bilinear_pairings_X_inv, bilinear_pairings_Y,

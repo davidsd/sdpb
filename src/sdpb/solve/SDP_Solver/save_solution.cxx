@@ -24,7 +24,7 @@ void SDP_Solver::save_solution(
                  << "primalObjective = " << primal_objective << ";\n"
                  << "dualObjective   = " << dual_objective << ";\n"
                  << "dualityGap      = " << duality_gap << ";\n"
-                 << "primalError     = " << primal_error << ";\n"
+                 << "primalError     = " << primal_error() << ";\n"
                  << "dualError       = " << dual_error << ";\n"
                  << std::setw(16) << std::left << timer_pair.first << "= "
                  << timer_pair.second.elapsed_seconds() << ";\n"
