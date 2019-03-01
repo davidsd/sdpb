@@ -33,5 +33,6 @@ public:
 
   Block_Info() = delete;
   Block_Info(const boost::filesystem::path &sdp_directory,
+             const boost::filesystem::path &checkpoint_in,
              const size_t &procs_per_node);
 };

@@ -27,6 +27,7 @@ namespace
 }
 
 Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
+                       const boost::filesystem::path &checkpoint_in,
                        const size_t &procs_per_node)
 {
   size_t file_rank(0);
@@ -70,13 +71,30 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
     }
 
   const size_t num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
-  const boost::filesystem::path block_costs_file(sdp_directory
-                                                 / "block_timings");
   std::vector<Block_Cost> block_costs;
-  if(boost::filesystem::exists(block_costs_file))
+  const boost::filesystem::path sdp_block_timings_name(sdp_directory
+                                                       / "block_timings"),
+    checkpoint_block_timings_name(checkpoint_in / "block_timings");
+
+  bool sdp_block_timings_exists(
+    boost::filesystem::exists(sdp_block_timings_name)),
+    checkpoint_block_timings_exists(
+      boost::filesystem::exists(checkpoint_block_timings_name));
+
+  if(sdp_block_timings_exists && checkpoint_block_timings_exists)
+    {
+      throw std::runtime_error("Ambiguous block_timings files: Both \n\t'"
+                               + sdp_block_timings_name.string() + "' and \n\t'"
+                               + checkpoint_block_timings_name.string()
+                               + "' exist.\n\tDelete one before restarting.");
+    }
+
+  if(sdp_block_timings_exists || checkpoint_block_timings_exists)
     {
       size_t index(0), cost;
-      boost::filesystem::ifstream costs(block_costs_file);
+      boost::filesystem::ifstream costs(sdp_block_timings_exists
+                                          ? sdp_block_timings_name
+                                          : checkpoint_block_timings_name);
       costs >> cost;
       while(costs.good())
         {

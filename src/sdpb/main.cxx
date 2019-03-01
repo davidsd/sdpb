@@ -262,7 +262,7 @@ int main(int argc, char **argv)
       // Set the default precision of all Real numbers to that specified
       // by the 'precision' parameter.
       El::gmp::SetPrecision(parameters.precision);
-      Block_Info block_info(sdp_directory, parameters.procs_per_node);
+      Block_Info block_info(sdp_directory, checkpoint_in, parameters.procs_per_node);
       Timers timers(solve(sdp_directory, out_file, checkpoint_in,
                           checkpoint_out, block_info, parameters));
 
