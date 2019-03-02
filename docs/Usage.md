@@ -5,7 +5,7 @@ manual](SDPB-Manual.pdf).  An example input file
 [test.xml](../test/test.xml) is included with the source code.
 
 The build system creates the executables `pvm2sdp`, `sdp2input`, and
-`sdpb` in the `build` directory.  There are three steps when running
+`sdpb` in the `build` directory.  There are two steps when running
 SDPB.
 
 ## Create input files
@@ -48,44 +48,6 @@ For example, the command to convert the file `test/test.xml`, using
 
     pvm2sdp 1024 test/test.xml test/test
 
-## [Optional] Measure time to evaluate each block.
-
-To efficiently run large MPI jobs, SDPB needs an accurate measurement
-of the time to evaluate each block.  You may skip this step if you
-have many, many more blocks than cores.
-
-To measure the timings, run SDPB on your input for two steps.  Two
-steps is required because the first step may have very different
-performance characteristics.  During the first step, many quantities
-may be zero.  Adding and multiplying zero is much faster with extended
-precision.
-
-For the measurements, you should run with the number of cores less
-than or equal to the number of blocks.  Otherwise, SDPB will attempt
-to split the blocks between cores, which will result in inaccurate
-timings.  Once you have timings, you can then run SDPB on as many
-cores as you like.
-
-This also means that the measurement run should generally not
-checkpoint the results.  Checkpoints are not usable when running
-with a different number of cores.
-
-For accurate timings, you should use the same precision as you will
-use for the final runs.
-
-As an example, the command to measure timings for `test/test` using a
-single core and store the result in `test/test/block_timings` is
-
-    build/sdpb --precision=1024 --maxIterations=2 --noFinalCheckpoint --procsPerNode=1 -s test/test/ --writeBlockTiming
-
-The test input only has a single block, so there should be a single number
-in `test/test/block_timings`.
-
-If you are running a large family of input files with the same
-structure but different numbers, the measurements are unlikely to
-differ.  In that case, you can reuse timings from previous inputs by
-copying the `block_timings` file to other input directories.
-
 ## Running SDPB.
 
 The options to SDPB are described in detail in the help text, obtained
@@ -114,3 +76,16 @@ uses the srun command
 The documentation for your HPC system will tell you how to write a
 batch script and invoke MPI programs.
 
+To efficiently run large MPI jobs, SDPB needs an accurate measurement
+of the time to evaluate each block.  If a `block_timings` does not
+already exists in the input directory or a checkpoint directory, SDPB
+will create one.  SDPB will run for 2 iterations and write the time to
+evaluate each block into `block_timings`.  SDPB has to run for 2
+iterations because measuring first step generally gives a poor
+estimate.  During the first step, many quantities may be zero.
+Adding and multiplying zero is much faster with extended precision.
+
+If you are running a large family of input files with the same
+structure but different numbers, the measurements are unlikely to
+differ.  In that case, you can reuse timings from previous inputs by
+copying the `block_timings` file to other input directories.
