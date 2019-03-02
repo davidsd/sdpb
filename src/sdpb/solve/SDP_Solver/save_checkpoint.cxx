@@ -41,7 +41,7 @@ void SDP_Solver::save_checkpoint(
 
   if(!exists(checkpoint_directory))
     {
-      create_directory(checkpoint_directory);
+      create_directories(checkpoint_directory);
     }
   else if(!is_directory(checkpoint_directory))
     {

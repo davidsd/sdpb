@@ -23,10 +23,9 @@ solve(const boost::filesystem::path &sdp_directory,
       const boost::filesystem::path &checkpoint_out,
       const Block_Info &block_info, const SDP_Solver_Parameters &parameters);
 
-void write_timing(const boost::filesystem::path &out_file,
-                  const boost::filesystem::path &block_timings_filename,
-                  const bool &write_block_timing, const Block_Info &block_info,
-                  const Timers &timers, const bool &debug);
+void write_timing(const boost::filesystem::path &checkpoint_out,
+                  const Block_Info &block_info, const Timers &timers,
+                  const bool &debug);
 
 int main(int argc, char **argv)
 {
@@ -36,7 +35,6 @@ int main(int argc, char **argv)
     {
       boost::filesystem::path sdp_directory, out_file, checkpoint_in,
         checkpoint_out, param_file;
-      bool write_block_timing(false);
 
       SDP_Solver_Parameters parameters;
 
@@ -59,11 +57,7 @@ int main(int argc, char **argv)
         "The initial checkpoint directory to load. Defaults to "
         "checkpointDir.")(
         "debug", po::value<bool>(&parameters.debug)->default_value(false),
-        "Write out debugging output.")(
-        "writeBlockTiming",
-        po::bool_switch(&write_block_timing)->default_value(false),
-        "Write per-block timing info for use when distributing "
-        "blocks over MPI.");
+        "Write out debugging output.");
 
       // We set default parameters using El::BigFloat("1e-10",10)
       // rather than a straight double precision 1e-10 so that results
@@ -182,13 +176,16 @@ int main(int argc, char **argv)
           po::store(po::parse_command_line(argc, argv, cmd_line_options),
                     variables_map);
 
-          if(variables_map.count("help")!=0)
+          if(variables_map.count("help") != 0)
             {
-              std::cout << cmd_line_options << '\n';
+              if(El::mpi::Rank() == 0)
+                {
+                  std::cout << cmd_line_options << '\n';
+                }
               return 0;
             }
 
-          if(variables_map.count("paramFile")!=0)
+          if(variables_map.count("paramFile") != 0)
             {
               param_file
                 = variables_map["paramFile"].as<boost::filesystem::path>();
@@ -218,7 +215,7 @@ int main(int argc, char **argv)
                                        + "' is not a directory");
             }
 
-          if(variables_map.count("outFile")==0)
+          if(variables_map.count("outFile") == 0)
             {
               out_file = sdp_directory;
               if(out_file.filename() == ".")
@@ -228,7 +225,7 @@ int main(int argc, char **argv)
               out_file.replace_extension("out");
             }
 
-          if(variables_map.count("checkpointDir")==0)
+          if(variables_map.count("checkpointDir") == 0)
             {
               checkpoint_out = sdp_directory;
               if(checkpoint_out.filename() == ".")
@@ -238,7 +235,7 @@ int main(int argc, char **argv)
               checkpoint_out.replace_extension("ck");
             }
 
-          if(variables_map.count("initialCheckpointDir")==0)
+          if(variables_map.count("initialCheckpointDir") == 0)
             {
               checkpoint_in = checkpoint_out;
             }
@@ -259,15 +256,47 @@ int main(int argc, char **argv)
           El::mpi::Abort(El::mpi::COMM_WORLD, 1);
         }
 
-      // Set the default precision of all Real numbers to that specified
-      // by the 'precision' parameter.
       El::gmp::SetPrecision(parameters.precision);
-      Block_Info block_info(sdp_directory, checkpoint_in, parameters.procs_per_node);
-      Timers timers(solve(sdp_directory, out_file, checkpoint_in,
-                          checkpoint_out, block_info, parameters));
+      Block_Info block_info(sdp_directory, checkpoint_in,
+                            parameters.procs_per_node);
+      // Only generate a block_timings file if
+      // 1) We are running in parallel
+      // 2) We did not load a block_timings file
+      // 3) We are not going to load a checkpoint.
+      if(El::mpi::Size(El::mpi::COMM_WORLD) > 1
+         && block_info.block_timings_filename.empty()
+         && !exists(checkpoint_in
+                    / ("checkpoint." + std::to_string(El::mpi::Rank()))))
+        {
+          if(El::mpi::Rank() == 0)
+            {
+              std::cout << "Performing a timing run\n";
+            }
+          SDP_Solver_Parameters timing_parameters(parameters);
+          timing_parameters.max_iterations = 2;
+          timing_parameters.no_final_checkpoint = true;
+          Timers timers(solve(sdp_directory, out_file, checkpoint_in,
+                              checkpoint_out, block_info, timing_parameters));
 
-      write_timing(out_file, sdp_directory, write_block_timing, block_info,
-                   timers, parameters.debug);
+          write_timing(checkpoint_out, block_info, timers,
+                       timing_parameters.debug);
+          El::mpi::Barrier(El::mpi::COMM_WORLD);
+          block_info = Block_Info(sdp_directory, checkpoint_out,
+                                  parameters.procs_per_node);
+        }
+      else if(!block_info.block_timings_filename.empty()
+              && block_info.block_timings_filename
+                   != (checkpoint_out / "block_timings"))
+        {
+          if(El::mpi::Rank() == 0)
+            {
+              create_directories(checkpoint_out);
+              copy_file(block_info.block_timings_filename,
+                        checkpoint_out / "block_timings");
+            }
+        }
+      solve(sdp_directory, out_file, checkpoint_in, checkpoint_out, block_info,
+            parameters);
     }
   catch(std::exception &e)
     {

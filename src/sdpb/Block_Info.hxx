@@ -8,6 +8,7 @@
 class Block_Info
 {
 public:
+  boost::filesystem::path block_timings_filename;
   size_t file_num_procs;
   std::vector<std::vector<size_t>> file_block_indices;
 

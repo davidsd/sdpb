@@ -76,25 +76,25 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
                                                        / "block_timings"),
     checkpoint_block_timings_name(checkpoint_in / "block_timings");
 
-  bool sdp_block_timings_exists(
-    boost::filesystem::exists(sdp_block_timings_name)),
-    checkpoint_block_timings_exists(
-      boost::filesystem::exists(checkpoint_block_timings_name));
-
-  if(sdp_block_timings_exists && checkpoint_block_timings_exists)
+  if(exists(checkpoint_in / ("checkpoint." + std::to_string(El::mpi::Rank()))))
     {
-      throw std::runtime_error("Ambiguous block_timings files: Both \n\t'"
-                               + sdp_block_timings_name.string() + "' and \n\t'"
-                               + checkpoint_block_timings_name.string()
-                               + "' exist.\n\tDelete one before restarting.");
+      if(exists(checkpoint_block_timings_name))
+        {
+          block_timings_filename = checkpoint_block_timings_name;
+        }
+    }
+  else
+    {
+      block_timings_filename
+        = (exists(checkpoint_block_timings_name)
+           ? checkpoint_block_timings_name
+           : (exists(sdp_block_timings_name) ? sdp_block_timings_name : ""));
     }
 
-  if(sdp_block_timings_exists || checkpoint_block_timings_exists)
+  if(!block_timings_filename.empty())
     {
       size_t index(0), cost;
-      boost::filesystem::ifstream costs(sdp_block_timings_exists
-                                          ? sdp_block_timings_name
-                                          : checkpoint_block_timings_name);
+      boost::filesystem::ifstream costs(block_timings_filename);
       costs >> cost;
       while(costs.good())
         {
@@ -106,7 +106,7 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
         {
           throw std::runtime_error(
             "Incompatible number of entries in '"
-            + (sdp_directory / "costs").string() + "'. Expected "
+            + block_timings_filename.string() + "'. Expected "
             + std::to_string(schur_block_sizes.size()) + " but found "
             + std::to_string(block_costs.size()));
         }
