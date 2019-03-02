@@ -57,7 +57,7 @@ int main(int argc, char **argv)
         "The initial checkpoint directory to load. Defaults to "
         "checkpointDir.")("verbosity",
                           po::value<int>(&verbosity)->default_value(1),
-                          "Verbosity.  0 -> minimal output, 1 -> regular "
+                          "Verbosity.  0 -> no output, 1 -> regular "
                           "output, 2 -> debug output");
 
       // We set default parameters using El::BigFloat("1e-10",10)
