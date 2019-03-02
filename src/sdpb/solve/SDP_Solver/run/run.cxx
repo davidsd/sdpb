@@ -3,7 +3,7 @@
 
 // The main solver loop
 
-void print_header();
+void print_header(const Verbosity &verbosity);
 
 void compute_objectives(const SDP &sdp, const Block_Vector &x,
                         const Block_Vector &y, El::BigFloat &primal_objective,
@@ -90,7 +90,7 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
         ++bilinear_pairings_X_inv_block;
       }
   }
-  print_header();
+  print_header(parameters.verbosity);
 
   std::size_t total_psd_rows(
     std::accumulate(block_info.psd_matrix_block_sizes.begin(),
@@ -109,7 +109,7 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
       El::mpi::Broadcast(checkpoint_now, 0, El::mpi::COMM_WORLD);
       if(checkpoint_now == true)
         {
-          save_checkpoint(checkpoint_directory);
+          save_checkpoint(checkpoint_directory, parameters.verbosity);
           last_checkpoint_time = std::chrono::high_resolution_clock::now();
         }
 

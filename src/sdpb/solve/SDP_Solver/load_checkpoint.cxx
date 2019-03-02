@@ -43,7 +43,8 @@ void read_local_blocks(T &t, boost::filesystem::ifstream &checkpoint_stream)
 }
 
 bool SDP_Solver::load_checkpoint(
-  const boost::filesystem::path &checkpoint_directory)
+  const boost::filesystem::path &checkpoint_directory,
+  const Verbosity &verbosity)
 {
   boost::filesystem::path checkpoint_filename(
     checkpoint_directory / ("checkpoint." + std::to_string(El::mpi::Rank())));
@@ -54,7 +55,7 @@ bool SDP_Solver::load_checkpoint(
     }
 
   boost::filesystem::ifstream checkpoint_stream(checkpoint_filename);
-  if(El::mpi::Rank() == 0)
+  if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
       std::cout << "Loading checkpoint from : " << checkpoint_directory
                 << '\n';

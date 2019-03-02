@@ -8,7 +8,7 @@
 void SDP_Solver::save_solution(
   const SDP_Solver_Terminate_Reason terminate_reason,
   const std::pair<std::string, Timer> &timer_pair,
-  const boost::filesystem::path &out_file) const
+  const boost::filesystem::path &out_file, const Verbosity &verbosity) const
 {
   // Internally, El::Print() sync's everything to the root core and
   // outputs it from there.  So do not actually open the file on
@@ -17,7 +17,10 @@ void SDP_Solver::save_solution(
   boost::filesystem::ofstream out_stream;
   if(El::mpi::Rank() == 0)
     {
-      std::cout << "Saving solution to      : " << out_file << '\n';
+      if(verbosity >= Verbosity::regular)
+        {
+          std::cout << "Saving solution to      : " << out_file << '\n';
+        }
       out_stream.open(out_file);
       set_stream_precision(out_stream);
       out_stream << "terminateReason = \"" << terminate_reason << "\";\n"

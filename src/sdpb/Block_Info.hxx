@@ -1,6 +1,7 @@
 #pragma once
 
 #include "read_vector.hxx"
+#include "Verbosity.hxx"
 
 #include <El.hpp>
 #include <boost/filesystem.hpp>
@@ -35,5 +36,5 @@ public:
   Block_Info() = delete;
   Block_Info(const boost::filesystem::path &sdp_directory,
              const boost::filesystem::path &checkpoint_in,
-             const size_t &procs_per_node);
+             const size_t &procs_per_node, const Verbosity &verbosity);
 };

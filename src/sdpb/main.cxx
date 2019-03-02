@@ -35,7 +35,7 @@ int main(int argc, char **argv)
     {
       boost::filesystem::path sdp_directory, out_file, checkpoint_in,
         checkpoint_out, param_file;
-
+      int verbosity;
       SDP_Solver_Parameters parameters;
 
       po::options_description basic_options("Basic options");
@@ -55,9 +55,10 @@ int main(int argc, char **argv)
         "initialCheckpointDir,i",
         po::value<boost::filesystem::path>(&checkpoint_in),
         "The initial checkpoint directory to load. Defaults to "
-        "checkpointDir.")(
-        "debug", po::value<bool>(&parameters.debug)->default_value(false),
-        "Write out debugging output.");
+        "checkpointDir.")("verbosity",
+                          po::value<int>(&verbosity)->default_value(1),
+                          "Verbosity.  0 -> minimal output, 1 -> regular "
+                          "output, 2 -> debug output");
 
       // We set default parameters using El::BigFloat("1e-10",10)
       // rather than a straight double precision 1e-10 so that results
@@ -249,6 +250,17 @@ int main(int argc, char **argv)
                   return 1;
                 }
             }
+
+          if(verbosity != 0 && verbosity != 1 && verbosity != 2)
+            {
+              std::cerr << "Invalid number for Verbosity.  Only 0, 1 or 2 are "
+                           "allowed\n";
+              return 1;
+            }
+          else
+            {
+              parameters.verbosity = static_cast<Verbosity>(verbosity);
+            }
         }
       catch(po::error &e)
         {
@@ -258,7 +270,7 @@ int main(int argc, char **argv)
 
       El::gmp::SetPrecision(parameters.precision);
       Block_Info block_info(sdp_directory, checkpoint_in,
-                            parameters.procs_per_node);
+                            parameters.procs_per_node, parameters.verbosity);
       // Only generate a block_timings file if
       // 1) We are running in parallel
       // 2) We did not load a block_timings file
@@ -268,21 +280,24 @@ int main(int argc, char **argv)
          && !exists(checkpoint_in
                     / ("checkpoint." + std::to_string(El::mpi::Rank()))))
         {
-          if(El::mpi::Rank() == 0)
+          if(parameters.verbosity >= Verbosity::regular
+             && El::mpi::Rank() == 0)
             {
               std::cout << "Performing a timing run\n";
             }
           SDP_Solver_Parameters timing_parameters(parameters);
           timing_parameters.max_iterations = 2;
           timing_parameters.no_final_checkpoint = true;
+          timing_parameters.verbosity = Verbosity::none;
           Timers timers(solve(sdp_directory, out_file, checkpoint_in,
                               checkpoint_out, block_info, timing_parameters));
 
           write_timing(checkpoint_out, block_info, timers,
-                       timing_parameters.debug);
+                       timing_parameters.verbosity >= Verbosity::debug);
           El::mpi::Barrier(El::mpi::COMM_WORLD);
-          block_info = Block_Info(sdp_directory, checkpoint_out,
-                                  parameters.procs_per_node);
+          block_info
+            = Block_Info(sdp_directory, checkpoint_out,
+                         parameters.procs_per_node, parameters.verbosity);
         }
       else if(!block_info.block_timings_filename.empty()
               && block_info.block_timings_filename

@@ -99,8 +99,10 @@ public:
 
   void save_solution(const SDP_Solver_Terminate_Reason,
                      const std::pair<std::string, Timer> &timer_pair,
-                     const boost::filesystem::path &out_file) const;
-  void
-  save_checkpoint(const boost::filesystem::path &checkpoint_directory) const;
-  bool load_checkpoint(const boost::filesystem::path &checkpoint_directory);
+                     const boost::filesystem::path &out_file,
+                     const Verbosity &verbosity) const;
+  void save_checkpoint(const boost::filesystem::path &checkpoint_directory,
+                       const Verbosity &verbosity) const;
+  bool load_checkpoint(const boost::filesystem::path &checkpoint_directory,
+                       const Verbosity &verbosity);
 };

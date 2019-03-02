@@ -20,12 +20,12 @@ solve(const boost::filesystem::path &sdp_directory,
       const boost::filesystem::path &checkpoint_out,
       const Block_Info &block_info, const SDP_Solver_Parameters &parameters)
 {
-  if(El::mpi::Rank() == 0)
+  if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
       std::cout << "SDPB started at "
-                << boost::posix_time::second_clock::local_time() << '\n';
-      std::cout << "SDP directory   : " << sdp_directory << '\n';
-      std::cout << "out file        : " << out_file << '\n'
+                << boost::posix_time::second_clock::local_time() << '\n'
+                << "SDP directory   : " << sdp_directory << '\n'
+                << "out file        : " << out_file << '\n'
                 << "checkpoint in   : " << checkpoint_in << '\n'
                 << "checkpoint out  : " << checkpoint_out << '\n'
                 << "\nParameters:\n"
@@ -37,11 +37,11 @@ solve(const boost::filesystem::path &sdp_directory,
   SDP_Solver solver(parameters, block_info, grid,
                     sdp.dual_objective_b.Height(), checkpoint_in);
 
-  Timers timers(parameters.debug);
+  Timers timers(parameters.verbosity >= Verbosity::debug);
   SDP_Solver_Terminate_Reason reason
     = solver.run(parameters, checkpoint_out, block_info, sdp, grid, timers);
 
-  if(El::mpi::Rank() == 0)
+  if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
       set_stream_precision(std::cout);
       std::cout << "-----" << reason << "-----\n"
@@ -56,8 +56,8 @@ solve(const boost::filesystem::path &sdp_directory,
 
   if(!parameters.no_final_checkpoint)
     {
-      solver.save_checkpoint(checkpoint_out);
+      solver.save_checkpoint(checkpoint_out, parameters.verbosity);
     }
-  solver.save_solution(reason, timers.front(), out_file);
+  solver.save_solution(reason, timers.front(), out_file, parameters.verbosity);
   return timers;
 }

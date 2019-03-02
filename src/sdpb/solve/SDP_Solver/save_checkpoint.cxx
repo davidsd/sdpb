@@ -34,7 +34,8 @@ void write_local_blocks(const T &t,
 }
 
 void SDP_Solver::save_checkpoint(
-  const boost::filesystem::path &checkpoint_directory) const
+  const boost::filesystem::path &checkpoint_directory,
+  const Verbosity &verbosity) const
 {
   boost::filesystem::path checkpoint_filename(
     checkpoint_directory / ("checkpoint." + std::to_string(El::mpi::Rank())));
@@ -51,7 +52,7 @@ void SDP_Solver::save_checkpoint(
     }
   if(exists(checkpoint_directory / checkpoint_filename))
     {
-      if(El::mpi::Rank() == 0)
+      if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {
           std::cout << "Backing up checkpoint\n";
         }
@@ -61,7 +62,7 @@ void SDP_Solver::save_checkpoint(
       rename(checkpoint_filename, backup_filename);
     }
   boost::filesystem::ofstream checkpoint_stream(checkpoint_filename);
-  if(El::mpi::Rank() == 0)
+  if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
       std::cout << "Saving checkpoint to    : " << checkpoint_directory
                 << '\n';

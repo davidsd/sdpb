@@ -28,7 +28,8 @@ namespace
 
 Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
                        const boost::filesystem::path &checkpoint_in,
-                       const size_t &procs_per_node)
+                       const size_t &procs_per_node,
+                       const Verbosity &verbosity)
 {
   size_t file_rank(0);
   do
@@ -87,8 +88,8 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
     {
       block_timings_filename
         = (exists(checkpoint_block_timings_name)
-           ? checkpoint_block_timings_name
-           : (exists(sdp_block_timings_name) ? sdp_block_timings_name : ""));
+             ? checkpoint_block_timings_name
+             : (exists(sdp_block_timings_name) ? sdp_block_timings_name : ""));
     }
 
   if(!block_timings_filename.empty())
@@ -145,7 +146,7 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
 
   int rank(El::mpi::Rank(El::mpi::COMM_WORLD));
 
-  if(rank == 0)
+  if(verbosity >= Verbosity::regular && rank == 0)
     {
       std::stringstream ss;
       ss << "Block Grid Mapping\n"

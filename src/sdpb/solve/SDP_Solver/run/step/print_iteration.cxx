@@ -10,9 +10,10 @@ void print_iteration(
   const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
   const El::BigFloat &beta_corrector, const SDP_Solver &sdp_solver,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
-    &solver_start_time)
+  &solver_start_time,
+                     const Verbosity &verbosity)
 {
-  if(El::mpi::Rank() == 0)
+  if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
       std::cout << std::left << std::setw(4) << iteration << "  "
 

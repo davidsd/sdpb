@@ -2,9 +2,9 @@
 
 #include <iostream>
 
-void print_header()
+void print_header(const Verbosity &verbosity)
 {
-  if(El::mpi::Rank() == 0)
+  if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
       std::cout << "\n"
                 << "          time    mu     P-obj       D-obj      gap     "

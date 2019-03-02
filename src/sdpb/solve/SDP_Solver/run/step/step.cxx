@@ -6,7 +6,8 @@ void print_iteration(
   const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
   const El::BigFloat &beta_corrector, const SDP_Solver &sdp_solver,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
-    &solver_start_time);
+    &solver_start_time,
+  const Verbosity &verbosity);
 
 void initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
@@ -173,7 +174,8 @@ void SDP_Solver::step(
     }
 
   print_iteration(iteration, mu, primal_step_length, dual_step_length,
-                  beta_corrector, *this, solver_start_time);
+                  beta_corrector, *this, solver_start_time,
+                  parameters.verbosity);
   // Update the primal point (x, X) += primalStepLength*(dx, dX)
   for(size_t block = 0; block < x.blocks.size(); ++block)
     {
