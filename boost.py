@@ -4,14 +4,14 @@
 def configure(conf):
     # Find Boost
     import os
-    if not conf.options.boost_incdir:
+    if not conf.options.boost_incdir and not conf.options.boost_dir:
         for d in ['BOOST_INCLUDE','BOOST_INCLUDE_DIR','BOOST_INC_DIR']:
             env_dir=os.getenv(d)
             if env_dir:
                 conf.to_log('Setting boost_incdir using environment variable: ' + d + '=' + env_dir)
                 conf.options.boost_incdir=env_dir
                 
-    if not conf.options.boost_libdir:
+    if not conf.options.boost_libdir and not conf.options.boost_dir:
         for d in ['BOOST_LIB','BOOST_LIB_DIR']:
             env_dir=os.getenv(d)
             if env_dir:
