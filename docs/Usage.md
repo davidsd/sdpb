@@ -54,9 +54,6 @@ The options to SDPB are described in detail in the help text, obtained
 by running `build/sdpb --help`.  The most important options are `-s [--sdpDir]`,
 `--precision`, and `--procsPerNode`.
 
-When using checkpoints, you can only load checkpoints that use the
-same `precision`, `procsPerNode`, and number of cores.
-
 SDPB uses MPI to run in parallel, so you may need a special syntax to
 launch it.  For example, if you compiled the code on your own laptop,
 you will probably use `mpirun` to invoke SDPB.  If you have 4 physical
@@ -89,3 +86,14 @@ If you are running a large family of input files with the same
 structure but different numbers, the measurements are unlikely to
 differ.  In that case, you can reuse timings from previous inputs by
 copying the `block_timings` file to other input directories.
+
+If different runs have the same block structure, you can also reuse
+checkpoints from other inputs. For example, if you have a previous
+checkpoint in `test/test.ck`, you can reuse it for a different input
+in `test/test2` with a command like
+
+    mpirun -n 4 build/sdpb --precision=1024 --procsPerNode=4 -s test/test2/ -i test/test.ck
+
+In addition to having the same block structure, the runs must also use
+the same `precision`, `procsPerNode`, and number and distribution of
+cores.

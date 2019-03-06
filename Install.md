@@ -1,3 +1,5 @@
+This guide is for building SDPB.  To just run SDPB, it may be easier
+to use [Docker](docs/Docker.md) or [Singularity](docs/Singularity.md).
 
 * [Requirements](#requirements)
 * [Installation](#installation)
