@@ -74,7 +74,7 @@ The documentation for your HPC system will tell you how to write a
 batch script and invoke MPI programs.
 
 To efficiently run large MPI jobs, SDPB needs an accurate measurement
-of the time to evaluate each block.  If a `block_timings` does not
+of the time to evaluate each block.  If `block_timings` does not
 already exists in the input directory or a checkpoint directory, SDPB
 will create one.  SDPB will run for 2 iterations and write the time to
 evaluate each block into `block_timings`.  SDPB has to run for 2
