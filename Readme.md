@@ -25,7 +25,7 @@ at the [Institute for Advanced Study](http://sns.ias.edu).
 
 The easiest way to run SDPB on a desktop or laptop is to follow
 the [Docker instructions](docs/Docker.md).  For HPC centers, the
-[Singularity](docs/Singularity.hd) instructions will probably work better.
+[Singularity](docs/Singularity.md) instructions will probably work better.
 If you want to build it yourself, there are detailed instructions in
 [Install.md](Install.md).
 
