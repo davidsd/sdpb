@@ -11,6 +11,7 @@
 
 #include <El.hpp>
 
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
@@ -268,6 +269,18 @@ int main(int argc, char **argv)
           El::mpi::Abort(El::mpi::COMM_WORLD, 1);
         }
 
+      if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
+        {
+          std::cout << "SDPB started at "
+                    << boost::posix_time::second_clock::local_time() << '\n'
+                    << "SDP directory   : " << sdp_directory << '\n'
+                    << "out file        : " << out_file << '\n'
+                    << "checkpoint in   : " << checkpoint_in << '\n'
+                    << "checkpoint out  : " << checkpoint_out << '\n'
+                    << "\nParameters:\n"
+                    << parameters << '\n';
+        }
+
       El::gmp::SetPrecision(parameters.precision);
       Block_Info block_info(sdp_directory, checkpoint_in,
                             parameters.procs_per_node, parameters.verbosity);
@@ -298,6 +311,8 @@ int main(int argc, char **argv)
           block_info
             = Block_Info(sdp_directory, checkpoint_out,
                          parameters.procs_per_node, parameters.verbosity);
+
+          parameters.max_runtime-=timers.front().second.elapsed_seconds();
         }
       else if(!block_info.block_timings_filename.empty()
               && block_info.block_timings_filename
