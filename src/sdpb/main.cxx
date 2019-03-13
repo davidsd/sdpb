@@ -269,6 +269,7 @@ int main(int argc, char **argv)
           El::mpi::Abort(El::mpi::COMM_WORLD, 1);
         }
 
+      El::gmp::SetPrecision(parameters.precision);
       if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {
           std::cout << "SDPB started at "
@@ -281,7 +282,6 @@ int main(int argc, char **argv)
                     << parameters << '\n';
         }
 
-      El::gmp::SetPrecision(parameters.precision);
       Block_Info block_info(sdp_directory, checkpoint_in,
                             parameters.procs_per_node, parameters.verbosity);
       // Only generate a block_timings file if
