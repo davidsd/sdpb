@@ -20,10 +20,18 @@ Boost_Float bilinear_form(
   const std::vector<std::vector<Boost_Float>> &integral_matrix,
   const int64_t &m);
 
-std::vector<Polynomial>
-bilinear_basis(const Damped_Rational &damped_rational,
-               const size_t &half_max_degree)
+std::vector<Polynomial> bilinear_basis(const Damped_Rational &damped_rational,
+                                       const size_t &half_max_degree)
 {
+  // Exit early if damped_rational is a constant
+  if(damped_rational.is_constant())
+    {
+      std::vector<Polynomial> result;
+      result.emplace_back(
+        1, El::BigFloat(to_string(1 / sqrt(damped_rational.constant))));
+      return result;
+    }
+
   Polynomial polynomial(half_max_degree, 1);
 
   std::vector<Boost_Float> sorted_poles(damped_rational.poles);
