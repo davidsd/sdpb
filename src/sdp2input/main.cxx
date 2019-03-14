@@ -32,7 +32,7 @@ int main(int argc, char **argv)
       options.add_options()("help,h", "Show this helpful message.");
       options.add_options()(
         "input,i", po::value<boost::filesystem::path>(&input_file)->required(),
-        "XML file with SDP definition");
+        "Mathematica or XML file with SDP definition");
       options.add_options()(
         "output,o",
         po::value<boost::filesystem::path>(&output_dir)->required(),
