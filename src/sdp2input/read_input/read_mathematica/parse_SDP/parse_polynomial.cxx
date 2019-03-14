@@ -111,7 +111,7 @@ parse_polynomial(const std::vector<char>::const_iterator &begin,
             = El::BigFloat(mantissa + exponent);
           mantissa.clear();
         }
-      else if(!mantissa.empty() && (*c == '-' || *c == '+'))
+      else if(!mantissa.empty() && (*c == '-' || *c == '+' || c == delimiter))
         {
           if(polynomial.coefficients.size() < 1)
             {
