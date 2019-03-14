@@ -1,3 +1,4 @@
+#include "../is_valid_char.hxx"
 #include "../parse_vector.hxx"
 #include "../parse_number.hxx"
 #include "../../../../Damped_Rational.hxx"
@@ -14,6 +15,30 @@ parse_damped_rational(const std::vector<char>::const_iterator &begin,
                       Damped_Rational &damped_rational)
 {
   const std::string damped_literal("DampedRational[");
+
+  // Parse constant numbers
+  for(auto current = begin; current != end; ++current)
+    {
+      if(*current == damped_literal.front())
+        {
+          break;
+        }
+      if(is_valid_char(*current))
+        {
+          damped_rational.base = 1;
+          auto comma(std::find(current, end, ','));
+          if(comma == end)
+            {
+              throw std::runtime_error(
+                "Missing a comma when parsing a constant as a DampedRational. "
+                " The parsed string is\n\t'"
+                + std::string(current, end) + "'");
+            }
+          damped_rational.constant = Boost_Float(parse_number(current, comma));
+          return comma;
+        }
+    }
+
   auto damped_start(
     std::search(begin, end, damped_literal.begin(), damped_literal.end()));
   if(damped_start == end)
