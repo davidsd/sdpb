@@ -121,27 +121,6 @@ void write_output(const boost::filesystem::path &output_dir,
                                       / normalization.at(max_index));
             auto &pvm_constant(pvm_polynomials.back());
 
-            // if(pvm.elements.size() == 5)
-            //   {
-            //     std::cout.precision(50);
-            //     std::cout << "elements: " << max_index << " "
-            //               << normalization.size() << " "
-            //               << pv.at(0).coefficients[0] << " "
-            //               << normalization.at(0) << " "
-            //               << pvm_constant.coefficients[0] << " "
-            //               << pv.at(0).coefficients.size() << " "
-            //               << pvm_constant.coefficients.size() << " "
-            //               << (pv.at(0).coefficients[0]
-            //                   - normalization.at(0)
-            //                       * pvm_constant.coefficients[0])
-            //               << " "
-            //               << (pv.at(max_index)
-            //                   / normalization.at(max_index)) << " "
-            //               << pv.at(max_index) << " "
-            //               << normalization.at(max_index) << " "
-            //               << "\n";
-            //   }
-
             for(size_t index = 0; index < normalization.size(); ++index)
               {
                 if(index != max_index)
@@ -158,31 +137,16 @@ void write_output(const boost::filesystem::path &output_dir,
                           pv.at(index).coefficients[coefficient]
                           - normalization.at(index)
                               * pvm_constant.coefficients[coefficient]);
-                        // if(index==0 && pvm.elements.size() == 5)
-                        //   {
-                        //     std::cout << "diff: " << pvm_polynomials.size() << " "
-                        //               << coefficient << " "
-                        //               << pvm_poly.coefficients.back()
-                        //               << "\n";
-                        //   }
                       }
                     for(; coefficient < pv.at(index).coefficients.size();
                         ++coefficient)
                       {
-                        // if(index==0 && pvm.elements.size() == 5)
-                        //   {
-                        //     std::cout << "first: " << coefficient << "\n";
-                        //   }
                         pvm_poly.coefficients.push_back(
                           pv.at(index).coefficients[coefficient]);
                       }
                     for(; coefficient < pvm_constant.coefficients.size();
                         ++coefficient)
                       {
-                        // if(index==0 && pvm.elements.size() == 5)
-                        //   {
-                        //     std::cout << "second: " << coefficient << "\n";
-                        //   }
                         pvm_poly.coefficients.push_back(
                           -normalization.at(index)
                           * pvm_polynomials.at(0).coefficients[coefficient]);
@@ -191,24 +155,6 @@ void write_output(const boost::filesystem::path &output_dir,
               }
           }
       pvm_timer.stop();
-
-      // std::cout.precision(50);
-
-      // // for(auto &p: pvm.elt(0,0))
-      // //   std::cout << "poly 0 0: " << p.coefficients.at(0) << "\n";
-      // // for(auto &p: pvm.elt(0,1))
-      // //   std::cout << "poly 0 1: " << p.coefficients.at(0) << "\n";
-      // // for(auto &p: pvm.elt(0,2))
-      // //   std::cout << "poly 0 2: " << p.coefficients.at(0) << "\n";
-      // // for(auto &p: pvm.elt(1,0))
-      // //   std::cout << "poly 1 0: " << p.coefficients.at(0) << "\n";
-      // // for(auto &p : pvm.elt(1, 1))
-      // //   std::cout << "poly 1 1: " << p.coefficients.at(0) << "\n";
-      // std::cout << "poly 1 1: " << pvm.elt(1, 1).front().coefficients.at(0) << "\n";
-      // std::cout << "poly 1 1: " << pvm.elements.at(4).at(1).coefficients.at(0) << "\n";
-
-      // exit(0);
-
       auto &dual_constraint_timer(timers.add_and_start(
         "write_output.matrices.dual_constraint_" + std::to_string(index)));
       dual_constraint_groups.emplace_back(pvm);
