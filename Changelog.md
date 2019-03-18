@@ -2,8 +2,9 @@
 
 ## sdp2input
 
-- Fix parsing of constant polynomials in Mathematica input
-- sdp2input: Handle DampedRational's that are just a constant
+- Fix a bug when computing normalization
+- Handle parsing of constant polynomials in Mathematica input
+- Handle DampedRational's that are just a constant
 
 # Version 2.0.1
 
