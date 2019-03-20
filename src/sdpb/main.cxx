@@ -301,6 +301,7 @@ int main(int argc, char **argv)
           SDP_Solver_Parameters timing_parameters(parameters);
           timing_parameters.max_iterations = 2;
           timing_parameters.no_final_checkpoint = true;
+          timing_parameters.checkpoint_interval=std::numeric_limits<int>::max();
           timing_parameters.verbosity = Verbosity::none;
           Timers timers(solve(sdp_directory, out_file, checkpoint_in,
                               checkpoint_out, block_info, timing_parameters));
