@@ -1,5 +1,10 @@
 # Version 2.0.2
 
+## sdpb
+
+- Fix a bug that was erroneously writing checkpoints during timing
+  runs
+
 ## sdp2input
 
 - Fix a bug when computing normalization
