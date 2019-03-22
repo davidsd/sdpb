@@ -1,13 +1,13 @@
 #include "../../../../SDP_Solver.hxx"
 
-// Compute the vectors dx on the right-hand side of the Schur
+// Compute the vector r_x on the right-hand side of the Schur
 // complement equation:
 //
-// {{S, -B}, {B^T, 0}} . {dx, dy} = {dx, dy}
+// {{S, -B}, {B^T, 0}} . {dx, dy} = {r_x, r_y}
 //
 // where S = SchurComplement and B = FreeVarMatrix.  Specifically,
 //
-// dx[p] = -dual_residues[p] - Tr(A_p Z)              for 0 <= p < P
+// r_x[p] = -dual_residues[p] - Tr(A_p Z)              for 0 <= p < P
 //
 // where P = primalObjective.size()
 //
@@ -16,7 +16,7 @@
 // - dual_residues, a Vector of length P
 // - Z = X^{-1} (PrimalResidues Y - R)
 // Outputs:
-// - dx, a Vector of length P
+// - r_x, a Vector of length P
 
 void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
                        const Block_Vector &dual_residues,
