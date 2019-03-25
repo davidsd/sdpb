@@ -5,9 +5,11 @@ void parse_command_line(int argc, char **argv, int &precision,
                         boost::filesystem::path &output_dir);
 
 void read_input_files(
-  const std::vector<boost::filesystem::path> &input_files,
-  El::BigFloat &objective_const, std::vector<El::BigFloat> &dual_objective_b,
-  std::vector<Polynomial_Vector_Matrix> &polynomial_vector_matrices);
+  const std::vector<boost::filesystem::path> &input_files, const int &rank,
+  const int &num_procs, El::BigFloat &objective_const,
+  std::vector<El::BigFloat> &dual_objectives_b,
+  std::vector<Polynomial_Vector_Matrix> &local_polynomial_vector_matrices,
+  std::vector<size_t> &indices);
 
 int main(int argc, char **argv)
 {
@@ -30,19 +32,13 @@ int main(int argc, char **argv)
       std::vector<El::BigFloat> dual_objective_b;
       std::vector<Dual_Constraint_Group> dual_constraint_groups;
       {
-        std::vector<Polynomial_Vector_Matrix> polynomial_vector_matrices;
-        read_input_files(input_files, objective_const, dual_objective_b,
-                         polynomial_vector_matrices);
-
-        for(size_t index = rank; index < polynomial_vector_matrices.size();
-            index += num_procs)
+        std::vector<Polynomial_Vector_Matrix> local_polynomial_vector_matrices;
+        read_input_files(input_files, rank, num_procs, objective_const,
+                         dual_objective_b, local_polynomial_vector_matrices,
+                         indices);
+        for(auto &pvm : local_polynomial_vector_matrices)
           {
-            indices.push_back(index);
-          }
-        for(auto &index : indices)
-          {
-            dual_constraint_groups.emplace_back(
-              polynomial_vector_matrices[index]);
+            dual_constraint_groups.emplace_back(pvm);
           }
       }
       write_sdpb_input_files(output_dir, rank, num_procs, indices,
