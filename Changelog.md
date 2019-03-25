@@ -1,3 +1,9 @@
+# Version 2.0.3
+
+## sdpb
+
+- Fix computation of the primal error
+
 # Version 2.0.2
 
 ## sdpb
