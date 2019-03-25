@@ -48,7 +48,7 @@ void read_input_files(
   const std::vector<boost::filesystem::path> &input_files, const int &rank,
   const int &num_procs, El::BigFloat &objective_const,
   std::vector<El::BigFloat> &dual_objectives_b,
-  std::vector<Polynomial_Vector_Matrix> &local_polynomial_vector_matrices,
+  std::vector<Dual_Constraint_Group> &dual_constraint_groups,
   std::vector<size_t> &indices)
 {
   LIBXML_TEST_VERSION;
@@ -91,7 +91,7 @@ void read_input_files(
         {
           if(pvm_index % num_procs == rank)
             {
-              local_polynomial_vector_matrices.push_back(input);
+              dual_constraint_groups.emplace_back(input);
               indices.push_back(pvm_index);
             }
           ++pvm_index;
