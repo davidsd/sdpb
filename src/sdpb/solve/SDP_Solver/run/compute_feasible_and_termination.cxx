@@ -18,28 +18,28 @@ void compute_feasible_and_termination(
   const bool is_optimal(duality_gap < parameters.duality_gap_threshold);
 
   terminate_now = true;
-  if(is_primal_feasible && parameters.find_primal_feasible)
+  if(is_primal_and_dual_feasible && is_optimal)
     {
-      terminate_reason = SDP_Solver_Terminate_Reason::PrimalFeasible;
+      terminate_reason = SDP_Solver_Terminate_Reason::PrimalDualOptimal;
     }
   else if(is_dual_feasible && parameters.find_dual_feasible)
     {
       terminate_reason = SDP_Solver_Terminate_Reason::DualFeasible;
     }
-  else if(primal_step_length == El::BigFloat(1)
-          && parameters.detect_primal_feasible_jump)
+  else if(is_primal_feasible && parameters.find_primal_feasible)
     {
-      terminate_reason
-        = SDP_Solver_Terminate_Reason::PrimalFeasibleJumpDetected;
+      terminate_reason = SDP_Solver_Terminate_Reason::PrimalFeasible;
     }
   else if(dual_step_length == El::BigFloat(1)
           && parameters.detect_dual_feasible_jump)
     {
       terminate_reason = SDP_Solver_Terminate_Reason::DualFeasibleJumpDetected;
     }
-  else if(is_primal_and_dual_feasible && is_optimal)
+  else if(primal_step_length == El::BigFloat(1)
+          && parameters.detect_primal_feasible_jump)
     {
-      terminate_reason = SDP_Solver_Terminate_Reason::PrimalDualOptimal;
+      terminate_reason
+        = SDP_Solver_Terminate_Reason::PrimalFeasibleJumpDetected;
     }
   else if(iteration > parameters.max_iterations)
     {
