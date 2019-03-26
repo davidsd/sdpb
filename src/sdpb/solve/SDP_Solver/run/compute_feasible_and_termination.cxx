@@ -2,19 +2,27 @@
 #include "../../../SDP_Solver_Parameters.hxx"
 
 void compute_feasible_and_termination(
-  const SDP_Solver_Parameters &parameters, const El::BigFloat &dual_error,
-  const El::BigFloat &duality_gap, const El::BigFloat &primal_step_length,
-  const El::BigFloat &dual_step_length, const int &iteration,
+  const SDP_Solver_Parameters &parameters, const El::BigFloat &primal_error,
+  const El::BigFloat &dual_error, const El::BigFloat &duality_gap,
+  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
+  const int &iteration,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time,
-  bool &is_dual_feasible, bool &is_optimal,
+  bool &is_primal_and_dual_feasible,
   SDP_Solver_Terminate_Reason &terminate_reason, bool &terminate_now)
 {
-  is_dual_feasible = dual_error < parameters.dual_error_threshold;
-  is_optimal = duality_gap < parameters.duality_gap_threshold;
+  const bool is_dual_feasible(dual_error < parameters.dual_error_threshold),
+    is_primal_feasible(primal_error < parameters.primal_error_threshold);
+  is_primal_and_dual_feasible = (is_primal_feasible && is_dual_feasible);
+
+  const bool is_optimal(duality_gap < parameters.duality_gap_threshold);
 
   terminate_now = true;
-  if(is_dual_feasible && parameters.find_dual_feasible)
+  if(is_primal_feasible && parameters.find_primal_feasible)
+    {
+      terminate_reason = SDP_Solver_Terminate_Reason::PrimalFeasible;
+    }
+  else if(is_dual_feasible && parameters.find_dual_feasible)
     {
       terminate_reason = SDP_Solver_Terminate_Reason::DualFeasible;
     }
@@ -28,6 +36,10 @@ void compute_feasible_and_termination(
           && parameters.detect_dual_feasible_jump)
     {
       terminate_reason = SDP_Solver_Terminate_Reason::DualFeasibleJumpDetected;
+    }
+  else if(is_primal_and_dual_feasible && is_optimal)
+    {
+      terminate_reason = SDP_Solver_Terminate_Reason::PrimalDualOptimal;
     }
   else if(iteration > parameters.max_iterations)
     {

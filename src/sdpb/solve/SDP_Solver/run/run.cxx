@@ -28,12 +28,13 @@ void compute_bilinear_pairings(
   Block_Diagonal_Matrix &bilinear_pairings_Y, Timers &timers);
 
 void compute_feasible_and_termination(
-  const SDP_Solver_Parameters &parameters, const El::BigFloat &dual_error,
-  const El::BigFloat &duality_gap, const El::BigFloat &primal_step_length,
-  const El::BigFloat &dual_step_length, const int &iteration,
+  const SDP_Solver_Parameters &parameters, const El::BigFloat &primal_error,
+  const El::BigFloat &dual_error, const El::BigFloat &duality_gap,
+  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
+  const int &iteration,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time,
-  bool &is_dual_feasible, bool &is_optimal,
+  bool &is_primal_and_dual_feasible,
   SDP_Solver_Terminate_Reason &terminate_reason, bool &terminate_now);
 
 void compute_dual_residues_and_error(
@@ -146,33 +147,20 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
       compute_primal_residues_and_error_P(
         block_info, sdp, x, X, primal_residues, primal_error_P, timers);
 
-      bool terminate_now, is_dual_feasible, is_optimal;
-      compute_feasible_and_termination(
-        parameters, dual_error, duality_gap, primal_step_length,
-        dual_step_length, iteration, solver_timer.start_time, is_dual_feasible,
-        is_optimal, terminate_reason, terminate_now);
-      if(terminate_now)
-        {
-          break;
-        }
       // use y to set the sizes of primal_residue_p.  The data is
       // overwritten in compute_primal_residues_and_error_p.
       Block_Vector primal_residue_p(y);
       compute_primal_residues_and_error_p(block_info, sdp, x, primal_residue_p,
                                           primal_error_p);
-      const bool is_primal_feasible(primal_error()
-                                    < parameters.primal_error_threshold);
 
-      const bool is_primal_and_dual_feasible(is_primal_feasible
-                                             && is_dual_feasible);
-      if(is_primal_and_dual_feasible && is_optimal)
+      bool terminate_now, is_primal_and_dual_feasible;
+      compute_feasible_and_termination(
+        parameters, primal_error(), dual_error, duality_gap,
+        primal_step_length, dual_step_length, iteration,
+        solver_timer.start_time, is_primal_and_dual_feasible, terminate_reason,
+        terminate_now);
+      if(terminate_now)
         {
-          terminate_reason = SDP_Solver_Terminate_Reason::PrimalDualOptimal;
-          break;
-        }
-      else if(is_primal_feasible && parameters.find_primal_feasible)
-        {
-          terminate_reason = SDP_Solver_Terminate_Reason::PrimalFeasible;
           break;
         }
 
