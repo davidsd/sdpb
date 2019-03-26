@@ -1,4 +1,4 @@
-#include "../../../SDP_Solver.hxx"
+#include "../../../../SDP_Solver.hxx"
 
 // min(gamma \alpha(M, dM), 1), where \alpha(M, dM) denotes the
 // largest positive real number such that M + \alpha dM is positive
@@ -17,6 +17,12 @@
 // - eigenvalues, a Vector of eigenvalues for each block of M
 // Output:
 // - min(\gamma \alpha(M, dM), 1) (returned)
+
+// A := L^{-1} A L^{-T}
+void lower_triangular_inverse_congruence(const Block_Diagonal_Matrix &L,
+                                         Block_Diagonal_Matrix &A);
+
+El::BigFloat min_eigenvalue(Block_Diagonal_Matrix &A);
 
 El::BigFloat step_length(const Block_Diagonal_Matrix &MCholesky,
                          const Block_Diagonal_Matrix &dM,

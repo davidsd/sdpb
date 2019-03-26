@@ -1,5 +1,13 @@
-#include "../../../SDP_Solver.hxx"
-#include "../../../../../Timers.hxx"
+#include "../../../../SDP_Solver.hxx"
+#include "../../../../../../Timers.hxx"
+
+// (X + dX) . (Y + dY), where X, dX, Y, dY are symmetric
+// BlockDiagonalMatrices and '.' is the Frobenius product.
+//
+El::BigFloat frobenius_product_of_sums(const Block_Diagonal_Matrix &X,
+                                       const Block_Diagonal_Matrix &dX,
+                                       const Block_Diagonal_Matrix &Y,
+                                       const Block_Diagonal_Matrix &dY);
 
 // Centering parameter \beta_c for the corrector step
 El::BigFloat corrector_centering_parameter(

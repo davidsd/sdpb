@@ -16,6 +16,23 @@
 // - dx, dX, dy, dY
 //
 
+// C := alpha*A*B + beta*C
+void scale_multiply_add(const El::BigFloat &alpha,
+                        const Block_Diagonal_Matrix &A,
+                        const Block_Diagonal_Matrix &B,
+                        const El::BigFloat &beta, Block_Diagonal_Matrix &C);
+
+// C := A B
+inline void multiply(const Block_Diagonal_Matrix &A,
+                     const Block_Diagonal_Matrix &B, Block_Diagonal_Matrix &C)
+{
+  scale_multiply_add(El::BigFloat(1), A, B, El::BigFloat(0), C);
+}
+
+// X := ACholesky^{-T} ACholesky^{-1} X = A^{-1} X
+void cholesky_solve(const Block_Diagonal_Matrix &ACholesky,
+                    Block_Diagonal_Matrix &X);
+
 void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
                        const Block_Vector &dual_residues,
                        const Block_Diagonal_Matrix &Z,

@@ -3,6 +3,9 @@
 
 // The main solver loop
 
+void cholesky_decomposition(const Block_Diagonal_Matrix &A,
+                            Block_Diagonal_Matrix &L);
+
 void print_header(const Verbosity &verbosity);
 
 void compute_objectives(const SDP &sdp, const Block_Vector &x,

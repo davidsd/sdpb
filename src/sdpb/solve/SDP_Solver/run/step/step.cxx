@@ -1,6 +1,10 @@
 #include "../../../SDP_Solver.hxx"
 #include "../../../../../Timers.hxx"
 
+// Tr(A B), where A and B are symmetric
+El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
+                                         const Block_Diagonal_Matrix &B);
+
 void print_iteration(
   const int &iteration, const El::BigFloat &mu,
   const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,

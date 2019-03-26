@@ -1,4 +1,4 @@
-#include "../Block_Diagonal_Matrix.hxx"
+#include "../../../../Block_Diagonal_Matrix.hxx"
 
 // A := L^{-1} A L^{-T}
 void lower_triangular_inverse_congruence(const Block_Diagonal_Matrix &L,

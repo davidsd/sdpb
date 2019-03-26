@@ -1,4 +1,4 @@
-#include "../Block_Diagonal_Matrix.hxx"
+#include "../../../../Block_Diagonal_Matrix.hxx"
 
 // C := alpha*A*B + beta*C
 void scale_multiply_add(const El::BigFloat &alpha,

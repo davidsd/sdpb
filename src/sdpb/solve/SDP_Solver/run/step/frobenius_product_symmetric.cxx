@@ -1,4 +1,4 @@
-#include "../Block_Diagonal_Matrix.hxx"
+#include "../../../Block_Diagonal_Matrix.hxx"
 
 // Tr(A B), where A and B are symmetric
 El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
