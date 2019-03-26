@@ -34,7 +34,7 @@ void compute_feasible_and_termination(
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time,
   bool &is_dual_feasible, bool &is_optimal,
-  SDP_Solver_Terminate_Reason &result, bool &terminate_now);
+  SDP_Solver_Terminate_Reason &terminate_reason, bool &terminate_now);
 
 void compute_dual_residues_and_error(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
@@ -57,7 +57,7 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
                 const Block_Info &block_info, const SDP &sdp,
                 const El::Grid &grid, Timers &timers)
 {
-  SDP_Solver_Terminate_Reason result(
+  SDP_Solver_Terminate_Reason terminate_reason(
     SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
   auto &solver_timer(timers.add_and_start("Solver runtime"));
   auto &initialize_timer(timers.add_and_start("run.initialize"));
@@ -150,7 +150,7 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
       compute_feasible_and_termination(
         parameters, dual_error, duality_gap, primal_step_length,
         dual_step_length, iteration, solver_timer.start_time, is_dual_feasible,
-        is_optimal, result, terminate_now);
+        is_optimal, terminate_reason, terminate_now);
       if(terminate_now)
         {
           break;
@@ -167,12 +167,12 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
                                              && is_dual_feasible);
       if(is_primal_and_dual_feasible && is_optimal)
         {
-          result = SDP_Solver_Terminate_Reason::PrimalDualOptimal;
+          terminate_reason = SDP_Solver_Terminate_Reason::PrimalDualOptimal;
           break;
         }
       else if(is_primal_feasible && parameters.find_primal_feasible)
         {
-          result = SDP_Solver_Terminate_Reason::PrimalFeasible;
+          terminate_reason = SDP_Solver_Terminate_Reason::PrimalFeasible;
           break;
         }
 
@@ -183,7 +183,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
            primal_step_length, dual_step_length, terminate_now, timers);
       if(terminate_now)
         {
-          result = SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
+          terminate_reason
+            = SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
           break;
         }
       print_iteration(iteration, mu, primal_step_length, dual_step_length,
@@ -193,5 +194,5 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
 
   // Never reached
   solver_timer.stop();
-  return result;
+  return terminate_reason;
 }
