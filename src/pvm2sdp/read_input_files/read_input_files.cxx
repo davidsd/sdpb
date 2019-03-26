@@ -45,18 +45,16 @@ namespace
 }
 
 void read_input_files(
-  const std::vector<boost::filesystem::path> &input_files, const int &rank,
-  const int &num_procs, El::BigFloat &objective_const,
-  std::vector<El::BigFloat> &dual_objectives_b,
+  const std::vector<boost::filesystem::path> &input_files,
+  El::BigFloat &objective_const, std::vector<El::BigFloat> &dual_objectives_b,
   std::vector<Dual_Constraint_Group> &dual_constraint_groups,
   std::vector<size_t> &indices)
 {
   LIBXML_TEST_VERSION;
 
-  size_t pvm_index(0);
   for(auto &input_file : input_files)
     {
-      Input_Parser input_parser;
+      Input_Parser input_parser(dual_constraint_groups, indices);
 
       xmlSAXHandler xml_handlers;
       // This feels unclean.
@@ -85,16 +83,6 @@ void read_input_files(
           ++iterator;
           dual_objectives_b.clear();
           dual_objectives_b.insert(dual_objectives_b.end(), iterator, end);
-        }
-
-      for(auto &input : input_parser.polynomial_vector_matrices_state.value)
-        {
-          if(pvm_index % num_procs == rank)
-            {
-              dual_constraint_groups.emplace_back(input);
-              indices.push_back(pvm_index);
-            }
-          ++pvm_index;
         }
     }
 }

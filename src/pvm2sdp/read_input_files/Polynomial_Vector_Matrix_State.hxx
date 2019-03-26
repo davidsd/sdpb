@@ -13,6 +13,11 @@ public:
               columns_string;
   bool inside = false, inside_rows = false, inside_columns = false;
   Polynomial_Vector_Matrix value;
+  std::vector<Dual_Constraint_Group> &dual_constraint_groups;
+  std::vector<size_t> &indices;
+  const int rank = El::mpi::Rank(),
+            num_procs = El::mpi::Size(El::mpi::COMM_WORLD);
+  size_t num_processed = 0;
 
   using Polynomial_State = Vector_State<Number_State<El::BigFloat>>;
   using Polynomial_Vector_State = Vector_State<Polynomial_State>;
@@ -21,11 +26,13 @@ public:
   Vector_State<Number_State<El::BigFloat>> sample_scalings_state;
   Vector_State<Polynomial_State> bilinear_basis_state;
 
-  Polynomial_Vector_Matrix_State(const std::vector<std::string> &names,
-                                 const size_t &offset)
-      : name(names.at(offset)),
-        elements_state(
-          {"elements"s, "polynomialVector"s, "polynomial"s, "coeff"s}),
+  Polynomial_Vector_Matrix_State(
+    const std::vector<std::string> &names, const size_t &offset,
+    std::vector<Dual_Constraint_Group> &Dual_constraint_groups,
+    std::vector<size_t> &Indices)
+      : name(names.at(offset)), dual_constraint_groups(Dual_constraint_groups),
+        indices(Indices), elements_state({"elements"s, "polynomialVector"s,
+                                          "polynomial"s, "coeff"s}),
         sample_points_state({"samplePoints"s, "elt"s}),
         sample_scalings_state({"sampleScalings"s, "elt"s}),
         bilinear_basis_state({"bilinearBasis"s, "polynomial"s, "coeff"s})
@@ -76,6 +83,17 @@ public:
         if(element_name == name)
           {
             inside = false;
+            // Jump through hoops so that we immediately clear the
+            // polynomial_vector_matrix after constructing any needed
+            // dual_constraint_groups.  This significantly reduces the
+            // memory usage, but does complicate the code.
+            if(num_processed % num_procs == rank)
+              {
+                dual_constraint_groups.emplace_back(value);
+                indices.push_back(num_processed);
+              }
+            ++num_processed;
+            value.clear();
           }
         else if(inside_rows && element_name == rows_name)
           {

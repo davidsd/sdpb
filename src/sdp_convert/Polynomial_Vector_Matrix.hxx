@@ -57,6 +57,14 @@ public:
     return elements[r + c * rows];
   }
 
+  inline void clear()
+  {
+    elements.clear();
+    sample_points.clear();
+    sample_scalings.clear();
+    bilinear_basis.clear();
+  }
+  
   // The maximal degree of any of the components P^{rs}_n(x).
   int64_t degree() const
   {
