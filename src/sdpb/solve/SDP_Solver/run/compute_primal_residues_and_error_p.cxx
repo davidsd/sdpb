@@ -1,4 +1,4 @@
-#include "../../../SDP_Solver.hxx"
+#include "../../SDP_Solver.hxx"
 
 // Compute the residue
 //

@@ -85,16 +85,16 @@ public:
 
   void
   step(const SDP_Solver_Parameters &parameters,
-       const std::size_t &total_psd_rows, const bool &is_dual_feasible,
-       const bool &is_optimal, const Block_Info &block_info, const SDP &sdp,
-       const El::Grid &grid, const Block_Diagonal_Matrix &X_cholesky,
+       const std::size_t &total_psd_rows,
+       const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
+       const SDP &sdp, const El::Grid &grid,
+       const Block_Diagonal_Matrix &X_cholesky,
        const Block_Diagonal_Matrix &Y_cholesky,
        const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-       const Block_Diagonal_Matrix &bilinear_pairings_Y, El::BigFloat &mu,
+       const Block_Diagonal_Matrix &bilinear_pairings_Y,
+       const Block_Vector &primal_residue_p, El::BigFloat &mu,
        El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
-       El::BigFloat &dual_step_length,
-       SDP_Solver_Terminate_Reason &terminate_reason, bool &terminate_now,
-       Timers &timers);
+       El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers);
 
   void save_solution(const SDP_Solver_Terminate_Reason,
                      const std::pair<std::string, Timer> &timer_pair,

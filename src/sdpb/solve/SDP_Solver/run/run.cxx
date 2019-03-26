@@ -46,6 +46,11 @@ void compute_primal_residues_and_error_P(
   const Block_Diagonal_Matrix &X, Block_Diagonal_Matrix &primal_residues,
   El::BigFloat &primal_error_P, Timers &timers);
 
+void compute_primal_residues_and_error_p(const Block_Info &block_info,
+                                         const SDP &sdp, const Block_Vector &x,
+                                         Block_Vector &primal_residue_p,
+                                         El::BigFloat &primal_error_p);
+
 SDP_Solver_Terminate_Reason
 SDP_Solver::run(const SDP_Solver_Parameters &parameters,
                 const boost::filesystem::path &checkpoint_directory,
@@ -150,14 +155,35 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
         {
           break;
         }
+      // use y to set the sizes of primal_residue_p.  The data is
+      // overwritten in compute_primal_residues_and_error_p.
+      Block_Vector primal_residue_p(y);
+      compute_primal_residues_and_error_p(block_info, sdp, x, primal_residue_p,
+                                          primal_error_p);
+      const bool is_primal_feasible(primal_error()
+                                    < parameters.primal_error_threshold);
+
+      const bool is_primal_and_dual_feasible(is_primal_feasible
+                                             && is_dual_feasible);
+      if(is_primal_and_dual_feasible && is_optimal)
+        {
+          result = SDP_Solver_Terminate_Reason::PrimalDualOptimal;
+          break;
+        }
+      else if(is_primal_feasible && parameters.find_primal_feasible)
+        {
+          result = SDP_Solver_Terminate_Reason::PrimalFeasible;
+          break;
+        }
+
       El::BigFloat mu, beta_corrector;
-      step(parameters, total_psd_rows, is_dual_feasible, is_optimal,
-           block_info, sdp, grid, X_cholesky, Y_cholesky,
-           bilinear_pairings_X_inv, bilinear_pairings_Y, mu, beta_corrector,
-           primal_step_length, dual_step_length, result, terminate_now,
-           timers);
+      step(parameters, total_psd_rows, is_primal_and_dual_feasible, block_info,
+           sdp, grid, X_cholesky, Y_cholesky, bilinear_pairings_X_inv,
+           bilinear_pairings_Y, primal_residue_p, mu, beta_corrector,
+           primal_step_length, dual_step_length, terminate_now, timers);
       if(terminate_now)
         {
+          result = SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
           break;
         }
       print_iteration(iteration, mu, primal_step_length, dual_step_length,

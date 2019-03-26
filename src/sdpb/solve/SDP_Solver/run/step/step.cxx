@@ -13,11 +13,6 @@ void initialize_schur_complement_solver(
   Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
   Timers &timers);
 
-void compute_primal_residues_and_error_p(const Block_Info &block_info,
-                                         const SDP &sdp, const Block_Vector &x,
-                                         Block_Vector &primal_residue_p,
-                                         El::BigFloat &primal_error_p);
-
 void compute_search_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
   const Block_Diagonal_Matrix &schur_complement_cholesky,
@@ -43,18 +38,20 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
             const Block_Diagonal_Matrix &dM, const El::BigFloat &gamma,
             const std::string &timer_name, Timers &timers);
 
-void SDP_Solver::step(
-  const SDP_Solver_Parameters &parameters,
-  const std::size_t &total_psd_rows, const bool &is_dual_feasible,
-  const bool &is_optimal, const Block_Info &block_info, const SDP &sdp,
-  const El::Grid &grid, const Block_Diagonal_Matrix &X_cholesky,
-  const Block_Diagonal_Matrix &Y_cholesky,
-  const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-  const Block_Diagonal_Matrix &bilinear_pairings_Y, El::BigFloat &mu,
-  El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
-  El::BigFloat &dual_step_length,
-  SDP_Solver_Terminate_Reason &terminate_reason, bool &terminate_now,
-  Timers &timers)
+void SDP_Solver::step(const SDP_Solver_Parameters &parameters,
+                      const std::size_t &total_psd_rows,
+                      const bool &is_primal_and_dual_feasible,
+                      const Block_Info &block_info, const SDP &sdp,
+                      const El::Grid &grid,
+                      const Block_Diagonal_Matrix &X_cholesky,
+                      const Block_Diagonal_Matrix &Y_cholesky,
+                      const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
+                      const Block_Diagonal_Matrix &bilinear_pairings_Y,
+                      const Block_Vector &primal_residue_p, El::BigFloat &mu,
+                      El::BigFloat &beta_corrector,
+                      El::BigFloat &primal_step_length,
+                      El::BigFloat &dual_step_length,
+                      bool &terminate_now, Timers &timers)
 {
   auto &step_timer(timers.add_and_start("run.step"));
   El::BigFloat beta_predictor;
@@ -64,7 +61,6 @@ void SDP_Solver::step(
   // once in the predictor step, and once in the corrector step.
   Block_Vector dx(x), dy(y);
   Block_Diagonal_Matrix dX(X), dY(Y);
-  bool is_primal_and_dual_feasible;
   {
     // SchurComplementCholesky = L', the Cholesky decomposition of the
     // Schur complement matrix S.
@@ -100,36 +96,12 @@ void SDP_Solver::step(
     frobenius_timer.stop();
     if(mu > parameters.max_complementarity)
       {
-        terminate_reason
-          = SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
         terminate_now = true;
         return;
       }
 
     auto &predictor_timer(
       timers.add_and_start("run.step.computeSearchDirection(betaPredictor)"));
-
-    // use dy to set the sizes of primal_residue_p.  The data is
-    // overwritten in compute_primal_residues_and_error_p.
-    Block_Vector primal_residue_p(dy);
-    compute_primal_residues_and_error_p(block_info, sdp, x, primal_residue_p,
-                                        primal_error_p);
-    const bool is_primal_feasible(primal_error()
-                                  < parameters.primal_error_threshold);
-
-    is_primal_and_dual_feasible = (is_primal_feasible && is_dual_feasible);
-    if(is_primal_and_dual_feasible && is_optimal)
-      {
-        terminate_reason = SDP_Solver_Terminate_Reason::PrimalDualOptimal;
-        terminate_now = true;
-        return;
-      }
-    else if(is_primal_feasible && parameters.find_primal_feasible)
-      {
-        terminate_reason = SDP_Solver_Terminate_Reason::PrimalFeasible;
-        terminate_now = true;
-        return;
-      }
 
     // Compute the predictor solution for (dx, dX, dy, dY)
     beta_predictor
