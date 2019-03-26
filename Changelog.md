@@ -1,3 +1,15 @@
+# Version 2.0.4
+
+## sdpb
+
+- Reordered how stopping conditions are checked.  The most visible
+  change is that SDPB now checks for primal solutions before primal
+  jumps.
+
+## pvm2sdp
+
+- Significantly reduced memory usage.
+
 # Version 2.0.3
 
 ## sdpb
