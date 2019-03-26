@@ -15,8 +15,8 @@ public:
   Polynomial_Vector_Matrix value;
   std::vector<Dual_Constraint_Group> &dual_constraint_groups;
   std::vector<size_t> &indices;
-  const int rank = El::mpi::Rank(),
-            num_procs = El::mpi::Size(El::mpi::COMM_WORLD);
+  const size_t rank = El::mpi::Rank(),
+               num_procs = El::mpi::Size(El::mpi::COMM_WORLD);
   size_t num_processed = 0;
 
   using Polynomial_State = Vector_State<Number_State<El::BigFloat>>;
