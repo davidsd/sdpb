@@ -84,16 +84,15 @@ public:
       Timers &timers);
 
   void
-  step(const SDP_Solver_Parameters &parameters, const size_t &iteration,
-       const std::chrono::time_point<std::chrono::high_resolution_clock>
-         &solver_start_time,
+  step(const SDP_Solver_Parameters &parameters,
        const std::size_t &total_psd_rows, const bool &is_dual_feasible,
        const bool &is_optimal, const Block_Info &block_info, const SDP &sdp,
        const El::Grid &grid, const Block_Diagonal_Matrix &X_cholesky,
        const Block_Diagonal_Matrix &Y_cholesky,
        const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-       const Block_Diagonal_Matrix &bilinear_pairings_Y,
-       El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
+       const Block_Diagonal_Matrix &bilinear_pairings_Y, El::BigFloat &mu,
+       El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
+       El::BigFloat &dual_step_length,
        SDP_Solver_Terminate_Reason &terminate_reason, bool &terminate_now,
        Timers &timers);
 

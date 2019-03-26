@@ -5,14 +5,6 @@
 El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
                                          const Block_Diagonal_Matrix &B);
 
-void print_iteration(
-  const int &iteration, const El::BigFloat &mu,
-  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
-  const El::BigFloat &beta_corrector, const SDP_Solver &sdp_solver,
-  const std::chrono::time_point<std::chrono::high_resolution_clock>
-    &solver_start_time,
-  const Verbosity &verbosity);
-
 void initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
@@ -52,21 +44,20 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
             const std::string &timer_name, Timers &timers);
 
 void SDP_Solver::step(
-  const SDP_Solver_Parameters &parameters, const size_t &iteration,
-  const std::chrono::time_point<std::chrono::high_resolution_clock>
-    &solver_start_time,
+  const SDP_Solver_Parameters &parameters,
   const std::size_t &total_psd_rows, const bool &is_dual_feasible,
   const bool &is_optimal, const Block_Info &block_info, const SDP &sdp,
   const El::Grid &grid, const Block_Diagonal_Matrix &X_cholesky,
   const Block_Diagonal_Matrix &Y_cholesky,
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-  const Block_Diagonal_Matrix &bilinear_pairings_Y,
-  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
+  const Block_Diagonal_Matrix &bilinear_pairings_Y, El::BigFloat &mu,
+  El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
+  El::BigFloat &dual_step_length,
   SDP_Solver_Terminate_Reason &terminate_reason, bool &terminate_now,
   Timers &timers)
 {
   auto &step_timer(timers.add_and_start("run.step"));
-  El::BigFloat mu, beta_predictor, beta_corrector;
+  El::BigFloat beta_predictor;
 
   // Search direction: These quantities have the same structure
   // as (x, X, y, Y). They are computed twice each iteration:
@@ -177,9 +168,6 @@ void SDP_Solver::step(
       dual_step_length = primal_step_length;
     }
 
-  print_iteration(iteration, mu, primal_step_length, dual_step_length,
-                  beta_corrector, *this, solver_start_time,
-                  parameters.verbosity);
   // Update the primal point (x, X) += primalStepLength*(dx, dX)
   for(size_t block = 0; block < x.blocks.size(); ++block)
     {

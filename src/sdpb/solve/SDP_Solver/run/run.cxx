@@ -7,6 +7,13 @@ void cholesky_decomposition(const Block_Diagonal_Matrix &A,
                             Block_Diagonal_Matrix &L);
 
 void print_header(const Verbosity &verbosity);
+void print_iteration(
+  const int &iteration, const El::BigFloat &mu,
+  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
+  const El::BigFloat &beta_corrector, const SDP_Solver &sdp_solver,
+  const std::chrono::time_point<std::chrono::high_resolution_clock>
+    &solver_start_time,
+  const Verbosity &verbosity);
 
 void compute_objectives(const SDP &sdp, const Block_Vector &x,
                         const Block_Vector &y, El::BigFloat &primal_objective,
@@ -143,15 +150,19 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
         {
           break;
         }
-      step(parameters, iteration, solver_timer.start_time, total_psd_rows,
-           is_dual_feasible, is_optimal, block_info, sdp, grid, X_cholesky,
-           Y_cholesky, bilinear_pairings_X_inv, bilinear_pairings_Y,
+      El::BigFloat mu, beta_corrector;
+      step(parameters, total_psd_rows, is_dual_feasible, is_optimal,
+           block_info, sdp, grid, X_cholesky, Y_cholesky,
+           bilinear_pairings_X_inv, bilinear_pairings_Y, mu, beta_corrector,
            primal_step_length, dual_step_length, result, terminate_now,
            timers);
       if(terminate_now)
         {
           break;
         }
+      print_iteration(iteration, mu, primal_step_length, dual_step_length,
+                      beta_corrector, *this, solver_timer.start_time,
+                      parameters.verbosity);
     }
 
   // Never reached
