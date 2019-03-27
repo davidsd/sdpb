@@ -17,7 +17,7 @@ public:
   std::vector<size_t> &indices;
   const size_t rank = El::mpi::Rank(),
                num_procs = El::mpi::Size(El::mpi::COMM_WORLD);
-  size_t num_processed = 0;
+  size_t &num_processed;
 
   using Polynomial_State = Vector_State<Number_State<El::BigFloat>>;
   using Polynomial_Vector_State = Vector_State<Polynomial_State>;
@@ -29,10 +29,11 @@ public:
   Polynomial_Vector_Matrix_State(
     const std::vector<std::string> &names, const size_t &offset,
     std::vector<Dual_Constraint_Group> &Dual_constraint_groups,
-    std::vector<size_t> &Indices)
+    std::vector<size_t> &Indices, size_t &Num_processed)
       : name(names.at(offset)), dual_constraint_groups(Dual_constraint_groups),
-        indices(Indices), elements_state({"elements"s, "polynomialVector"s,
-                                          "polynomial"s, "coeff"s}),
+        indices(Indices), num_processed(Num_processed),
+        elements_state(
+          {"elements"s, "polynomialVector"s, "polynomial"s, "coeff"s}),
         sample_points_state({"samplePoints"s, "elt"s}),
         sample_scalings_state({"sampleScalings"s, "elt"s}),
         bilinear_basis_state({"bilinearBasis"s, "polynomial"s, "coeff"s})

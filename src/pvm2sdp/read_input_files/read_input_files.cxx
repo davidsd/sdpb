@@ -52,9 +52,10 @@ void read_input_files(
 {
   LIBXML_TEST_VERSION;
 
+  size_t num_processed(0);
   for(auto &input_file : input_files)
     {
-      Input_Parser input_parser(dual_constraint_groups, indices);
+      Input_Parser input_parser(dual_constraint_groups, indices, num_processed);
 
       xmlSAXHandler xml_handlers;
       // This feels unclean.

@@ -14,11 +14,11 @@ public:
   Vector_State<Polynomial_Vector_Matrix_State> polynomial_vector_matrices_state;
 
   Input_Parser(std::vector<Dual_Constraint_Group> &dual_constraint_groups,
-               std::vector<size_t> &indices)
+               std::vector<size_t> &indices, size_t &num_processed)
       : objective_state({"objective"s, "elt"s}),
         polynomial_vector_matrices_state(
           {"polynomialVectorMatrices"s, "polynomialVectorMatrix"s},
-          dual_constraint_groups, indices)
+          dual_constraint_groups, indices, num_processed)
   {}
 
   // protected:
