@@ -54,7 +54,6 @@ void compute_primal_residues_and_error_p(const Block_Info &block_info,
 
 SDP_Solver_Terminate_Reason
 SDP_Solver::run(const SDP_Solver_Parameters &parameters,
-                const boost::filesystem::path &checkpoint_directory,
                 const Block_Info &block_info, const SDP &sdp,
                 const El::Grid &grid, Timers &timers)
 {
@@ -125,7 +124,7 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
       El::mpi::Broadcast(checkpoint_now, 0, El::mpi::COMM_WORLD);
       if(checkpoint_now == true)
         {
-          save_checkpoint(checkpoint_directory, parameters.verbosity);
+          save_checkpoint(parameters.checkpoint_out, parameters.verbosity);
           last_checkpoint_time = std::chrono::high_resolution_clock::now();
         }
 

@@ -18,6 +18,7 @@ def build(bld):
     
     # Main executable
     bld.program(source=['src/sdpb/main.cxx',
+                        'src/sdpb/SDP_Solver_Parameters/SDP_Solver_Parameters.cxx',
                         'src/sdpb/SDP_Solver_Parameters/ostream.cxx',
                         'src/sdpb/solve/solve.cxx',
                         'src/compute_block_grid_mapping.cxx',

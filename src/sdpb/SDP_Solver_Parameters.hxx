@@ -3,11 +3,13 @@
 // for a detailed description of each.
 //
 
+#include "Verbosity.hxx"
+
 #include <El.hpp>
+#include <boost/filesystem.hpp>
 
 #include <iostream>
 
-#include "Verbosity.hxx"
 
 class SDP_Solver_Parameters
 {
@@ -29,6 +31,14 @@ public:
     initial_matrix_scale_dual, feasible_centering_parameter,
     infeasible_centering_parameter, step_length_reduction, max_complementarity;
 
-  friend std::ostream &
-  operator<<(std::ostream &os, const SDP_Solver_Parameters &p);
+  boost::filesystem::path sdp_directory, out_file, checkpoint_in,
+    checkpoint_out, param_file;
+  
+  SDP_Solver_Parameters(int argc, char *argv[]);
+  bool is_valid() const
+  {
+    return !sdp_directory.empty();
+  }
 };
+
+std::ostream &operator<<(std::ostream &os, const SDP_Solver_Parameters &p);

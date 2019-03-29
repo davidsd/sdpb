@@ -2,7 +2,12 @@
 
 std::ostream &operator<<(std::ostream &os, const SDP_Solver_Parameters &p)
 {
-  os << std::boolalpha << "maxIterations                = " << p.max_iterations
+  os << "SDP directory   : " << p.sdp_directory << '\n'
+     << "out file        : " << p.out_file << '\n'
+     << "checkpoint in   : " << p.checkpoint_in << '\n'
+     << "checkpoint out  : " << p.checkpoint_out << '\n'
+     << "\nParameters:\n"
+     << std::boolalpha << "maxIterations                = " << p.max_iterations
      << '\n'
      << "maxRuntime                   = " << p.max_runtime << '\n'
      << "checkpointInterval           = " << p.checkpoint_interval << '\n'
@@ -30,6 +35,7 @@ std::ostream &operator<<(std::ostream &os, const SDP_Solver_Parameters &p)
      << "stepLengthReduction          = " << p.step_length_reduction << '\n'
      << "maxComplementarity           = " << p.max_complementarity << '\n'
      << "procsPerNode                 = " << p.procs_per_node << '\n'
-     << "verbosity                    = " << static_cast<int>(p.verbosity) << '\n';
+     << "verbosity                    = " << static_cast<int>(p.verbosity)
+     << '\n';
   return os;
 }

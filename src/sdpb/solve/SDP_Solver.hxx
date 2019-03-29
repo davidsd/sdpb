@@ -74,14 +74,11 @@ public:
 
   SDP_Solver(const SDP_Solver_Parameters &parameters,
              const Block_Info &block_info, const El::Grid &grid,
-             const size_t &dual_objective_b_height,
-             const boost::filesystem::path &checkpoint_directory);
+             const size_t &dual_objective_b_height);
 
   SDP_Solver_Terminate_Reason
-  run(const SDP_Solver_Parameters &parameters,
-      const boost::filesystem::path &checkpoint_directory,
-      const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
-      Timers &timers);
+  run(const SDP_Solver_Parameters &parameters, const Block_Info &block_info,
+      const SDP &sdp, const El::Grid &grid, Timers &timers);
 
   void
   step(const SDP_Solver_Parameters &parameters,

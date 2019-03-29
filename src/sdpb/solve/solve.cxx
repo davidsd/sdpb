@@ -14,21 +14,17 @@
 #include <boost/filesystem.hpp>
 
 Timers
-solve(const boost::filesystem::path &sdp_directory,
-      const boost::filesystem::path &out_file,
-      const boost::filesystem::path &checkpoint_in,
-      const boost::filesystem::path &checkpoint_out,
-      const Block_Info &block_info, const SDP_Solver_Parameters &parameters)
+solve(const Block_Info &block_info, const SDP_Solver_Parameters &parameters)
 {
   // Read an SDP from sdpFile and create a solver for it
   El::Grid grid(block_info.mpi_comm);
-  SDP sdp(sdp_directory, block_info, grid);
+  SDP sdp(parameters.sdp_directory, block_info, grid);
   SDP_Solver solver(parameters, block_info, grid,
-                    sdp.dual_objective_b.Height(), checkpoint_in);
+                    sdp.dual_objective_b.Height());
 
   Timers timers(parameters.verbosity >= Verbosity::debug);
   SDP_Solver_Terminate_Reason reason
-    = solver.run(parameters, checkpoint_out, block_info, sdp, grid, timers);
+    = solver.run(parameters, block_info, sdp, grid, timers);
 
   if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
@@ -45,8 +41,9 @@ solve(const boost::filesystem::path &sdp_directory,
 
   if(!parameters.no_final_checkpoint)
     {
-      solver.save_checkpoint(checkpoint_out, parameters.verbosity);
+      solver.save_checkpoint(parameters.checkpoint_out, parameters.verbosity);
     }
-  solver.save_solution(reason, timers.front(), out_file, parameters.verbosity);
+  solver.save_solution(reason, timers.front(), parameters.out_file,
+                       parameters.verbosity);
   return timers;
 }

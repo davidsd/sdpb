@@ -4,8 +4,7 @@
 // SDP_Solver_Parameters
 SDP_Solver::SDP_Solver(const SDP_Solver_Parameters &parameters,
                        const Block_Info &block_info, const El::Grid &grid,
-                       const size_t &dual_objective_b_height,
-                       const boost::filesystem::path &checkpoint_directory)
+                       const size_t &dual_objective_b_height)
     : x(block_info.schur_block_sizes, block_info.block_indices,
         block_info.schur_block_sizes.size(), grid),
       X(block_info.psd_matrix_block_sizes, block_info.block_indices,
@@ -17,7 +16,7 @@ SDP_Solver::SDP_Solver(const SDP_Solver_Parameters &parameters,
       dual_residues(block_info.schur_block_sizes, block_info.block_indices,
                     block_info.schur_block_sizes.size(), grid)
 {
-  if(!load_checkpoint(checkpoint_directory, parameters.verbosity))
+  if(!load_checkpoint(parameters.checkpoint_in, parameters.verbosity))
     {
       X.set_zero();
       Y.set_zero();
