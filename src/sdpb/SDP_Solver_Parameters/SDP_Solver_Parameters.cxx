@@ -175,6 +175,17 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
               std::cout << cmd_line_options << '\n';
             }
         }
+      else if(variables_map.count("version") != 0)
+        {
+          if(El::mpi::Rank() == 0)
+            {
+              std::cout << "SDPB " << SDPB_VERSION_STRING << "\n";
+            }
+          El::PrintVersion();
+          El::PrintConfig();
+          El::PrintCCompilerInfo();
+          El::PrintCxxCompilerInfo();
+        }
       else
         {
           if(variables_map.count("paramFile") != 0)

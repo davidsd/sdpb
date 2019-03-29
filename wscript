@@ -1,4 +1,4 @@
-import os
+import os, subprocess
 
 def options(opt):
     opt.load(['compiler_cxx','gnu_dirs','cxx14','boost','gmpxx','mpfr',
@@ -11,8 +11,10 @@ def configure(conf):
     conf.load(['compiler_cxx','gnu_dirs','cxx14','boost','gmpxx','mpfr',
                'elemental','libxml2'])
 
+    conf.env.git_version=subprocess.run('git describe --dirty', shell=True, check=False, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout.rstrip()
+    
 def build(bld):
-    default_flags=['-Wall', '-Wextra', '-O3']
+    default_flags=['-Wall', '-Wextra', '-O3', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
     # default_flags=['-Wall', '-Wextra', '-g']
     use_packages=['cxx14','boost','gmpxx','mpfr','elemental','libxml2']
     
