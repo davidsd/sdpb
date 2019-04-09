@@ -225,7 +225,7 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
                 {
                   out_file = out_file.parent_path();
                 }
-              out_file.replace_extension("out");
+              out_file+=".out";
             }
 
           if(variables_map.count("checkpointDir") == 0)
@@ -235,7 +235,7 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
                 {
                   checkpoint_out = checkpoint_out.parent_path();
                 }
-              checkpoint_out.replace_extension("ck");
+              checkpoint_out+=".ck";
             }
 
           if(variables_map.count("initialCheckpointDir") == 0)
