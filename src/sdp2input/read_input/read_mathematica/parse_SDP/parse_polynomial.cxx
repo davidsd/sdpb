@@ -5,12 +5,17 @@
 #include <iterator>
 #include <string>
 
-inline void check_iterator(const std::vector<char>::const_iterator &iterator,
+using namespace std::literals;
+
+inline void check_iterator(const char character,
+                           const std::vector<char>::const_iterator &begin,
+                           const std::vector<char>::const_iterator &iterator,
                            const std::vector<char>::const_iterator &end)
 {
   if(iterator == end)
     {
-      throw std::runtime_error("Invalid polynomial string");
+      throw std::runtime_error("Invalid polynomial string after '"s + character + "': "
+                               + std::string(begin,end));
     }
 }
 
@@ -45,7 +50,7 @@ parse_polynomial(const std::vector<char>::const_iterator &begin,
           do
             {
               ++c;
-              check_iterator(c, delimiter);
+              check_iterator('*',begin, c, delimiter);
             }
           while(!is_valid_char(*c));
 
@@ -54,8 +59,8 @@ parse_polynomial(const std::vector<char>::const_iterator &begin,
             {
               exponent = "E";
               ++c;
-              check_iterator(c, delimiter);
-              while((exponent.size() == 1 && (*c == '-' || *c == '+'))
+              check_iterator('^', begin, c, delimiter);
+              while(c!=delimiter && (exponent.size() == 1 && (*c == '-' || *c == '+'))
                     || std::isdigit(*c) || !is_valid_char(*c))
                 {
                   if(is_valid_char(*c))
@@ -63,7 +68,6 @@ parse_polynomial(const std::vector<char>::const_iterator &begin,
                       exponent.push_back(*c);
                     }
                   ++c;
-                  check_iterator(c, delimiter);
                 }
               while(c != delimiter && (!is_valid_char(*c) || *c == '*'))
                 {
@@ -80,7 +84,7 @@ parse_polynomial(const std::vector<char>::const_iterator &begin,
               while(!is_valid_char(*c))
                 {
                   ++c;
-                  check_iterator(c, delimiter);
+                  check_iterator('x', begin, c, delimiter);
                 }
               if(*c != '^')
                 {
