@@ -11,7 +11,7 @@ def configure(conf):
     conf.load(['compiler_cxx','gnu_dirs','cxx14','boost','gmpxx','mpfr',
                'elemental','libxml2'])
 
-    conf.env.git_version=subprocess.check_output('git describe --dirty', shell=True).rstrip()
+    conf.env.git_version=subprocess.check_output('git describe --dirty', universal_newlines=True, shell=True).rstrip()
     
 def build(bld):
     default_flags=['-Wall', '-Wextra', '-O3', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
