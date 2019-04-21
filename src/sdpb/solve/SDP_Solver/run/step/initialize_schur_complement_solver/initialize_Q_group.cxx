@@ -13,7 +13,7 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
       block++)
     {
       auto &cholesky_timer(timers.add_and_start(
-        "run.step.initializeSchurComplementSolver.Qcomputation.cholesky_"
+        "run.step.initializeSchurComplementSolver.Q.cholesky_"
         + std::to_string(block_info.block_indices[block])));
       schur_complement_cholesky.blocks[block] = schur_complement.blocks[block];
       Cholesky(El::UpperOrLowerNS::LOWER,
@@ -22,8 +22,7 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
 
       // SchurOffDiagonal = L'^{-1} FreeVarMatrix
       auto &solve_timer(timers.add_and_start(
-        "run.step.initializeSchurComplementSolver."
-        "Qcomputation.solve_"
+        "run.step.initializeSchurComplementSolver.Q.solve_"
         + std::to_string(block_info.block_indices[block])));
 
       schur_off_diagonal.blocks.push_back(sdp.free_var_matrix.blocks[block]);
@@ -42,8 +41,7 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
       // called Upper/Lower-Left/Right.
 
       auto &syrk_timer(timers.add_and_start(
-        "run.step.initializeSchurComplementSolver."
-        "Qcomputation.syrk_"
+        "run.step.initializeSchurComplementSolver.Q.syrk_"
         + std::to_string(block_info.block_indices[block])));
       El::DistMatrix<El::BigFloat> Q_group_view(
         El::View(Q_group, 0, 0, schur_off_diagonal.blocks[block].Width(),

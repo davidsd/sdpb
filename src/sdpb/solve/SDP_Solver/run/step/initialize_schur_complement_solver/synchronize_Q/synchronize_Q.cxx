@@ -10,13 +10,11 @@ void reduce_and_scatter(const El::mpi::Comm &comm,
                         std::vector<int> &rank_sizes);
 
 void synchronize_Q(std::vector<El::byte> &send_buffer,
-                   std::vector<int> &rank_sizes,
-                   const size_t &serialized_size,
+                   std::vector<int> &rank_sizes, const size_t &serialized_size,
                    El::DistMatrix<El::BigFloat> &Q, Timers &timers)
 {
   auto &synchronize_Q_timer(timers.add_and_start(
-    "run.step.initializeSchurComplementSolver.Qcomputation."
-    "synchronize_Q"));
+    "run.step.initializeSchurComplementSolver.Q.synchronize_Q"));
   const int rank(El::mpi::Rank());
   const size_t total_receiving(rank_sizes.at(rank) * serialized_size);
   std::vector<El::byte> receive_buffer(total_receiving);

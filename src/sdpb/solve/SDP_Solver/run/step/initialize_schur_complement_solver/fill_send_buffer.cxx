@@ -11,11 +11,10 @@ void fill_send_buffer(const El::DistMatrix<El::BigFloat> &Q,
                       Timers &timers)
 {
   auto &fill_send_buffers_timer(timers.add_and_start(
-    "run.step.initializeSchurComplementSolver.Qcomputation."
-    "fill_send_buffers"));
+    "run.step.initializeSchurComplementSolver.Q.fill_send_buffers"));
 
   El::BigFloat zero(0);
-  serialized_size=zero.SerializedSize();
+  serialized_size = zero.SerializedSize();
   std::vector<uint8_t> serialized_zero(serialized_size);
   zero.Serialize(serialized_zero.data());
 

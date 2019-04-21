@@ -20,15 +20,15 @@ void write_timing(const boost::filesystem::path &checkpoint_out,
     {
       block_timings(index, 0) = timers.elapsed_milliseconds(
                                   "run.step.initializeSchurComplementSolver."
-                                  "Qcomputation.syrk_"
+                                  "Q.syrk_"
                                   + std::to_string(index))
                                 + timers.elapsed_milliseconds(
                                     "run.step.initializeSchurComplementSolver."
-                                    "Qcomputation.solve_"
+                                    "Q.solve_"
                                     + std::to_string(index))
                                 + timers.elapsed_milliseconds(
                                     "run.step.initializeSchurComplementSolver."
-                                    "Qcomputation.cholesky_"
+                                    "Q.cholesky_"
                                     + std::to_string(index));
     }
   El::AllReduce(block_timings, El::mpi::COMM_WORLD);

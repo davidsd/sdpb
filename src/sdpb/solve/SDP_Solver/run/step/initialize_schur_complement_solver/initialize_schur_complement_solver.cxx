@@ -43,8 +43,6 @@ void reduce_and_scatter(const El::mpi::Comm &comm,
                         std::vector<El::byte> &receive_buffer,
                         std::vector<int> &rank_sizes);
 
-
-
 void compute_schur_complement(
   const Block_Info &block_info,
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
@@ -88,8 +86,8 @@ void initialize_schur_complement_solver(
   compute_schur_complement(block_info, bilinear_pairings_X_inv,
                            bilinear_pairings_Y, schur_complement, timers);
 
-  auto &Q_computation_timer(timers.add_and_start(
-    "run.step.initializeSchurComplementSolver.Qcomputation"));
+  auto &Q_computation_timer(
+    timers.add_and_start("run.step.initializeSchurComplementSolver.Q"));
 
   schur_off_diagonal.blocks.clear();
   schur_off_diagonal.blocks.reserve(schur_complement_cholesky.blocks.size());
