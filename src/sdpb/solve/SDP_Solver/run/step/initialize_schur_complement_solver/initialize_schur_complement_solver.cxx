@@ -89,9 +89,6 @@ void initialize_schur_complement_solver(
   auto &Q_computation_timer(
     timers.add_and_start("run.step.initializeSchurComplementSolver.Q"));
 
-  schur_off_diagonal.blocks.clear();
-  schur_off_diagonal.blocks.reserve(schur_complement_cholesky.blocks.size());
-
   std::vector<El::byte> send_buffer;
   std::vector<int> rank_sizes(El::mpi::Size(El::mpi::COMM_WORLD));
   size_t serialized_size;

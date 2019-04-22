@@ -8,7 +8,9 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
                         Block_Diagonal_Matrix &schur_complement_cholesky,
                         El::DistMatrix<El::BigFloat> &Q_group, Timers &timers)
 {
-  El::Zero(Q_group);
+  schur_off_diagonal.blocks.clear();
+  schur_off_diagonal.blocks.reserve(schur_complement_cholesky.blocks.size());
+
   for(size_t block = 0; block < schur_complement_cholesky.blocks.size();
       block++)
     {
