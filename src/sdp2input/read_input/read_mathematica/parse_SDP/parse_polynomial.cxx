@@ -14,8 +14,8 @@ inline void check_iterator(const char character,
 {
   if(iterator == end)
     {
-      throw std::runtime_error("Invalid polynomial string after '"s + character + "': "
-                               + std::string(begin,end));
+      throw std::runtime_error("Invalid polynomial string after '"s + character
+                               + "': " + std::string(begin, end));
     }
 }
 
@@ -50,7 +50,7 @@ parse_polynomial(const std::vector<char>::const_iterator &begin,
           do
             {
               ++c;
-              check_iterator('*',begin, c, delimiter);
+              check_iterator('*', begin, c, delimiter);
             }
           while(!is_valid_char(*c));
 
