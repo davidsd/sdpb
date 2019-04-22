@@ -2,13 +2,24 @@
 
 ## sdpb
 
+- Significantly reduced memory usage for large parallel jobs.
+
 - Reordered how stopping conditions are checked.  The most visible
   change is that SDPB now checks for primal solutions before primal
   jumps.
 
+- Changed the logic for how output and checkpoint directory names are
+  generated.  Instead of replacing any extension on sdpDir, sdpb now
+  unconditionally adds ".out" or ".ck".  This prevents problems when,
+  for example, there is a decimal number in sdpDir.
+
 ## pvm2sdp
 
 - Significantly reduced memory usage.
+
+## sdp2input
+
+- Fixed a corner case that was rejecting valid polynomials.
 
 # Version 2.0.3
 
