@@ -60,8 +60,9 @@ parse_polynomial(const std::vector<char>::const_iterator &begin,
               exponent = "E";
               ++c;
               check_iterator('^', begin, c, delimiter);
-              while(c!=delimiter && (exponent.size() == 1 && (*c == '-' || *c == '+'))
-                    || std::isdigit(*c) || !is_valid_char(*c))
+              while(c != delimiter
+                    && ((exponent.size() == 1 && (*c == '-' || *c == '+'))
+                        || std::isdigit(*c) || !is_valid_char(*c)))
                 {
                   if(is_valid_char(*c))
                     {
