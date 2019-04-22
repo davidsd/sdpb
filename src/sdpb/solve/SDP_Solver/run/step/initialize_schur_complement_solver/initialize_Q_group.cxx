@@ -8,6 +8,19 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
                         Block_Diagonal_Matrix &schur_complement_cholesky,
                         El::DistMatrix<El::BigFloat> &Q_group, Timers &timers)
 {
+  // Explicitly deallocate the lower half of Q_group.  This
+  // significantly reduces the total amount of memory required.
+  El::Matrix<El::BigFloat> &local(Q_group.Matrix());
+  for(int64_t row = 0; row < Q_group.Height(); ++row)
+    for(int64_t column = 0; column < row;  ++column)
+      {
+        if(Q_group.IsLocal(row, column))
+          {
+            mpf_clear(local(Q_group.LocalRow(row), Q_group.LocalCol(column)).gmp_float.get_mpf_t());
+            local(Q_group.LocalRow(row), Q_group.LocalCol(column)).gmp_float.get_mpf_t()[0]._mp_d=nullptr;
+          }
+      }
+  
   schur_off_diagonal.blocks.clear();
   schur_off_diagonal.blocks.reserve(schur_complement_cholesky.blocks.size());
 
