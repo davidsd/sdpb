@@ -43,33 +43,33 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
   // are more reproducible at high precision.  Using double
   // precision defaults results in differences of about 1e-15 in
   // primalObjective after one step.
-  po::options_description solver_params_options("Solver parameters");
-  solver_params_options.add_options()(
+  po::options_description solver_options("Solver parameters");
+  solver_options.add_options()(
     "precision", po::value<int>(&precision)->default_value(400),
     "The precision, in the number of bits, for numbers in the "
     "computation. "
     " This should be less than or equal to the precision used when "
     "preprocessing the XML input files with 'pvm2sdp'.  GMP will round "
     "this up to a multiple of 32 or 64, depending on the system.");
-  solver_params_options.add_options()(
+  solver_options.add_options()(
     "checkpointInterval",
     po::value<int>(&checkpoint_interval)->default_value(3600),
     "Save checkpoints to checkpointDir every checkpointInterval "
     "seconds.");
-  solver_params_options.add_options()(
+  solver_options.add_options()(
     "noFinalCheckpoint",
     po::bool_switch(&no_final_checkpoint)->default_value(false),
     "Don't save a final checkpoint after terminating (useful when "
     "debugging).");
-  solver_params_options.add_options()(
+  solver_options.add_options()(
     "findPrimalFeasible",
     po::bool_switch(&find_primal_feasible)->default_value(false),
     "Terminate once a primal feasible solution is found.");
-  solver_params_options.add_options()(
+  solver_options.add_options()(
     "findDualFeasible",
     po::bool_switch(&find_dual_feasible)->default_value(false),
     "Terminate once a dual feasible solution is found.");
-  solver_params_options.add_options()(
+  solver_options.add_options()(
     "detectPrimalFeasibleJump",
     po::bool_switch(&detect_primal_feasible_jump)->default_value(false),
     "Terminate if a primal-step of 1 is taken. This often indicates that "
@@ -77,20 +77,20 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
     "primal feasible solution would be found if the precision were high "
     "enough. Try increasing either primalErrorThreshold or precision "
     "and run from the latest checkpoint.");
-  solver_params_options.add_options()(
+  solver_options.add_options()(
     "detectDualFeasibleJump",
     po::bool_switch(&detect_dual_feasible_jump)->default_value(false),
     "Terminate if a dual-step of 1 is taken. This often indicates that a "
     "dual feasible solution would be found if the precision were high "
     "enough. Try increasing either dualErrorThreshold or precision "
     "and run from the latest checkpoint.");
-  solver_params_options.add_options()(
+  solver_options.add_options()(
     "maxIterations", po::value<int>(&max_iterations)->default_value(500),
     "Maximum number of iterations to run the solver.");
-  solver_params_options.add_options()(
+  solver_options.add_options()(
     "maxRuntime", po::value<int>(&max_runtime)->default_value(86400),
     "Maximum amount of time to run the solver in seconds.");
-  solver_params_options.add_options()(
+  solver_options.add_options()(
     "procsPerNode", po::value<int>(&procs_per_node)->required(),
     "This option is **required**.\n\n"
     "The number of processes that can run on a node.  When running on "
@@ -102,57 +102,57 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
     "2 or 4.\n\n"
     "If you are using the Slurm workload manager, this should be set to "
     "'$SLURM_NTASKS_PER_NODE'.");
-  solver_params_options.add_options()(
+  solver_options.add_options()(
     "dualityGapThreshold",
     po::value<El::BigFloat>(&duality_gap_threshold)
       ->default_value(El::BigFloat("1e-30", 10)),
     "Threshold for duality gap (roughly the difference in primal and dual "
     "objective) at which the solution is considered "
     "optimal. Corresponds to SDPA's epsilonStar.");
-  solver_params_options.add_options()(
+  solver_options.add_options()(
     "primalErrorThreshold",
     po::value<El::BigFloat>(&primal_error_threshold)
       ->default_value(El::BigFloat("1e-30", 10)),
     "Threshold for feasibility of the primal problem. Corresponds to "
     "SDPA's epsilonBar.");
-  solver_params_options.add_options()(
+  solver_options.add_options()(
     "dualErrorThreshold",
     po::value<El::BigFloat>(&dual_error_threshold)
       ->default_value(El::BigFloat("1e-30", 10)),
     "Threshold for feasibility of the dual problem. Corresponds to SDPA's "
     "epsilonBar.");
-  solver_params_options.add_options()(
+  solver_options.add_options()(
     "initialMatrixScalePrimal",
     po::value<El::BigFloat>(&initial_matrix_scale_primal)
       ->default_value(El::BigFloat("1e20", 10)),
     "The primal matrix X begins at initialMatrixScalePrimal times the "
     "identity matrix. Corresponds to SDPA's lambdaStar.");
-  solver_params_options.add_options()(
+  solver_options.add_options()(
     "initialMatrixScaleDual",
     po::value<El::BigFloat>(&initial_matrix_scale_dual)
       ->default_value(El::BigFloat("1e20", 10)),
     "The dual matrix Y begins at initialMatrixScaleDual times the "
     "identity matrix. Corresponds to SDPA's lambdaStar.");
-  solver_params_options.add_options()(
+  solver_options.add_options()(
     "feasibleCenteringParameter",
     po::value<El::BigFloat>(&feasible_centering_parameter)
       ->default_value(El::BigFloat("0.1", 10)),
     "Shrink the complementarity X Y by this factor when the primal and "
     "dual "
     "problems are feasible. Corresponds to SDPA's betaStar.");
-  solver_params_options.add_options()(
+  solver_options.add_options()(
     "infeasibleCenteringParameter",
     po::value<El::BigFloat>(&infeasible_centering_parameter)
       ->default_value(El::BigFloat("0.3", 10)),
     "Shrink the complementarity X Y by this factor when either the primal "
     "or dual problems are infeasible. Corresponds to SDPA's betaBar.");
-  solver_params_options.add_options()(
+  solver_options.add_options()(
     "stepLengthReduction",
     po::value<El::BigFloat>(&step_length_reduction)
       ->default_value(El::BigFloat("0.7", 10)),
     "Shrink each newton step by this factor (smaller means slower, more "
     "stable convergence). Corresponds to SDPA's gammaStar.");
-  solver_params_options.add_options()(
+  solver_options.add_options()(
     "maxComplementarity",
     po::value<El::BigFloat>(&max_complementarity)
       ->default_value(El::BigFloat("1e100", 10)),
@@ -160,7 +160,7 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
     "exceeds this value.");
 
   po::options_description cmd_line_options;
-  cmd_line_options.add(basic_options).add(solver_params_options);
+  cmd_line_options.add(basic_options).add(solver_options);
 
   po::variables_map variables_map;
   try
@@ -199,7 +199,7 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
                                            + param_file.string() + "'");
                 }
 
-              po::store(po::parse_config_file(ifs, solver_params_options),
+              po::store(po::parse_config_file(ifs, solver_options),
                         variables_map);
             }
 
