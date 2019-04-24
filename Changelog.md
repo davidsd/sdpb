@@ -6,7 +6,8 @@
 
 - Reordered how stopping conditions are checked.  The most visible
   change is that SDPB now checks for primal solutions before primal
-  jumps.
+  jumps.  This also fixes a bug where SDPB would hang with the option
+  --findPrimalFeasible.
 
 - Changed the logic for how output and checkpoint directory names are
   generated.  Instead of replacing any extension on sdpDir, sdpb now
