@@ -17,6 +17,8 @@
   unconditionally adds ".out" or ".ck".  This prevents problems when,
   for example, there is a decimal number in sdpDir.
 
+- Added a --version option.
+
 ## pvm2sdp
 
 - Significantly reduced memory usage.
