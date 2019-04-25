@@ -97,3 +97,17 @@ in `test/test2` with a command like
 In addition to having the same block structure, the runs must also use
 the same `precision`, `procsPerNode`, and number and distribution of
 cores.
+
+## Optimizing Memory Use
+
+SDPB's defaults are set for optimal performance.  This may result in
+using more memory than is available.  Running SDPB on more nodes will
+reduce the amount of memory required on each node.  If this is not
+sufficient, you can also also use the option `--procGranularity`.
+This option sets minimum number of processes that a block group can
+have, so it must evenly divide the `--procsPerNode` option.  Using a
+larger granularity will result in less memory use (up to a point)
+because SDPB will make fewer local copies of the matrix Q.  However,
+larger granularity is also slower because even small blocks will be
+distributed among multiple cores.  So you should use
+`--procGranularity` only when absolutely needed.
