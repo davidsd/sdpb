@@ -78,7 +78,7 @@ of the time to evaluate each block.  If `block_timings` does not
 already exists in the input directory or a checkpoint directory, SDPB
 will create one.  SDPB will run for 2 iterations and write the time to
 evaluate each block into `block_timings`.  SDPB has to run for 2
-iterations because measuring first step generally gives a poor
+iterations because measuring the first step generally gives a poor
 estimate.  During the first step, many quantities may be zero.
 Adding and multiplying zero is much faster with extended precision.
 
