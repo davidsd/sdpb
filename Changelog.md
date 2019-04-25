@@ -2,7 +2,10 @@
 
 ## sdpb
 
-- Significantly reduced memory usage for large parallel jobs.
+- Significantly reduced memory usage for large parallel jobs.  In
+  addition to ordinary improvements in memory use, there is a new
+  option: procGranularity.  This option can further reduce memory use at
+  the cost of slower performance.
 
 - Reordered how stopping conditions are checked.  The most visible
   change is that SDPB now checks for primal solutions before primal
