@@ -29,6 +29,7 @@ namespace
 Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
                        const boost::filesystem::path &checkpoint_in,
                        const size_t &procs_per_node,
+                       const size_t &proc_granularity,
                        const Verbosity &verbosity)
 {
   size_t file_rank(0);
@@ -131,14 +132,29 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
   if(num_procs % procs_per_node != 0)
     {
       throw std::runtime_error(
-        "Incompatible number of processes and processes per node.  "
-        "procs_per_node must evenly divide num_procs:\n\tnum_procs: "
+        "Incompatible number of MPI processes and processes per node.  "
+        "procsPerNode must evenly divide to total number of MPI "
+        "processes:\n\tMPI processes: "
         + std::to_string(num_procs)
-        + "\n\tprocs_per_node: " + std::to_string(procs_per_node));
+        + "\n\tprocsPerNode: " + std::to_string(procs_per_node));
+    }
+  if(procs_per_node % proc_granularity != 0)
+    {
+      throw std::runtime_error(
+        "Incompatible number of processes per node and process granularity.  "
+        "procGranularity mush evenly divide procsPerNode:\n\tprocsPerNode: "
+        + std::to_string(procs_per_node)
+        + "\n\tprocGranularity: " + std::to_string(proc_granularity));
     }
   const size_t num_nodes(num_procs / procs_per_node);
-  std::vector<std::vector<Block_Map>> mapping(
-    compute_block_grid_mapping(procs_per_node, num_nodes, block_costs));
+  std::vector<std::vector<Block_Map>> mapping(compute_block_grid_mapping(
+    procs_per_node / proc_granularity, num_nodes, block_costs));
+
+  for(auto &block_vector : mapping)
+    for(auto &block_map : block_vector)
+      {
+        block_map.num_procs *= proc_granularity;
+      }
 
   // Create an mpi::Group for each set of processors.
   El::mpi::Group default_mpi_group;

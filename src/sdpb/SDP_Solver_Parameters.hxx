@@ -10,20 +10,16 @@
 
 #include <iostream>
 
-
 class SDP_Solver_Parameters
 {
 public:
-  int max_iterations;
-  int max_runtime;
-  int checkpoint_interval;
+  size_t max_iterations, max_runtime, checkpoint_interval;
   bool no_final_checkpoint;
   bool find_primal_feasible;
   bool find_dual_feasible;
   bool detect_primal_feasible_jump;
   bool detect_dual_feasible_jump;
-  int precision;
-  int procs_per_node;
+  size_t precision, procs_per_node, proc_granularity;
   Verbosity verbosity;
 
   El::BigFloat duality_gap_threshold, primal_error_threshold,
@@ -33,12 +29,9 @@ public:
 
   boost::filesystem::path sdp_directory, out_file, checkpoint_in,
     checkpoint_out, param_file;
-  
+
   SDP_Solver_Parameters(int argc, char *argv[]);
-  bool is_valid() const
-  {
-    return !sdp_directory.empty();
-  }
+  bool is_valid() const { return !sdp_directory.empty(); }
 };
 
 std::ostream &operator<<(std::ostream &os, const SDP_Solver_Parameters &p);

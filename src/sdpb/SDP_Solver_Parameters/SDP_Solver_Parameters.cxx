@@ -45,7 +45,7 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
   // primalObjective after one step.
   po::options_description solver_options("Solver parameters");
   solver_options.add_options()(
-    "precision", po::value<int>(&precision)->default_value(400),
+    "precision", po::value<size_t>(&precision)->default_value(400),
     "The precision, in the number of bits, for numbers in the "
     "computation. "
     " This should be less than or equal to the precision used when "
@@ -53,7 +53,7 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
     "this up to a multiple of 32 or 64, depending on the system.");
   solver_options.add_options()(
     "checkpointInterval",
-    po::value<int>(&checkpoint_interval)->default_value(3600),
+    po::value<size_t>(&checkpoint_interval)->default_value(3600),
     "Save checkpoints to checkpointDir every checkpointInterval "
     "seconds.");
   solver_options.add_options()(
@@ -85,13 +85,13 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
     "enough. Try increasing either dualErrorThreshold or precision "
     "and run from the latest checkpoint.");
   solver_options.add_options()(
-    "maxIterations", po::value<int>(&max_iterations)->default_value(500),
+    "maxIterations", po::value<size_t>(&max_iterations)->default_value(500),
     "Maximum number of iterations to run the solver.");
   solver_options.add_options()(
-    "maxRuntime", po::value<int>(&max_runtime)->default_value(86400),
+    "maxRuntime", po::value<size_t>(&max_runtime)->default_value(86400),
     "Maximum amount of time to run the solver in seconds.");
   solver_options.add_options()(
-    "procsPerNode", po::value<int>(&procs_per_node)->required(),
+    "procsPerNode", po::value<size_t>(&procs_per_node)->required(),
     "This option is **required**.\n\n"
     "The number of processes that can run on a node.  When running on "
     "more "
@@ -102,6 +102,12 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
     "2 or 4.\n\n"
     "If you are using the Slurm workload manager, this should be set to "
     "'$SLURM_NTASKS_PER_NODE'.");
+  solver_options.add_options()(
+    "procGranularity", po::value<size_t>(&proc_granularity)->default_value(1),
+    "procGranularity must evenly divide procsPerNode.\n\n"
+    "The minimum number of cores in a group, used during load balancing.  "
+    "Setting it to anything larger than 1 will make the solution take longer.  "
+    "This option is generally useful only when trying to fit a large problem in a small machine.");
   solver_options.add_options()(
     "dualityGapThreshold",
     po::value<El::BigFloat>(&duality_gap_threshold)

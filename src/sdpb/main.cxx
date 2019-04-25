@@ -41,7 +41,8 @@ int main(int argc, char **argv)
         }
 
       Block_Info block_info(parameters.sdp_directory, parameters.checkpoint_in,
-                            parameters.procs_per_node, parameters.verbosity);
+                            parameters.procs_per_node,
+                            parameters.proc_granularity, parameters.verbosity);
       // Only generate a block_timings file if
       // 1) We are running in parallel
       // 2) We did not load a block_timings file
@@ -69,7 +70,8 @@ int main(int argc, char **argv)
           El::mpi::Barrier(El::mpi::COMM_WORLD);
           block_info
             = Block_Info(parameters.sdp_directory, parameters.checkpoint_out,
-                         parameters.procs_per_node, parameters.verbosity);
+                         parameters.procs_per_node,
+                         parameters.proc_granularity, parameters.verbosity);
 
           parameters.max_runtime -= timers.front().second.elapsed_seconds();
         }
