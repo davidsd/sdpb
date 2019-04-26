@@ -67,6 +67,8 @@ systems of correlation functions:
 
 ## Acknowledgements
 
+- Version 2.0 of SDPB was made possible by the [Simons Collaboration on the Nonperturbative Bootstrap](http://bootstrapcollaboration.com/).
+
 - The design of SDPB was partially based on the solvers [SDPA](http://sdpa.sourceforge.net/) and SDPA-GMP, which were essential sources of inspiration and examples.
 
 - Thanks to Filip Kos, David Poland, and Alessandro Vichi for collaboration in developing semidefinite programming methods for the conformal bootstrap and assistance testing SDPB.
