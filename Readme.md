@@ -2,7 +2,6 @@
 
 * [SDPB](#sdpb)
 * [Installation and Usage](#installation-and-usage)
-* [Changelog](#changelog)
 * [Attribution](#attribution)
 * [Acknowledgements](#acknowledgements)
 * [Works Using SDPB](#works-using-sdpb)
