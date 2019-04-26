@@ -17,9 +17,9 @@ program solver, designed for the conformal bootstrap. It solves the following pr
 For more information, see [A Semidefinite Program Solver for the Conformal Bootstrap](http://arxiv.org/abs/1502.02033)
 and [the manual](/docs/SDPB-Manual.pdf).
 
-Author: David Simmons-Duffin (davidsd@gmail.com). As of February 2015, I am
-supported by DOE grant number DE-SC0009988 and a William D. Loughlin Membership
-at the [Institute for Advanced Study](http://sns.ias.edu).
+Authors: David Simmons-Duffin (dsd@caltech.edu), Walter Landry (wlandry@caltech.edu).
+
+On April 25, 2019, the main branch of this repository was updated to SDPB 2.0 which has very different performane characteristics and somewhat different usage instructions from version 1.0. Please see the changelog and other documentation for details.
 
 ## Installation and Usage
 
@@ -31,14 +31,18 @@ If you want to build it yourself, there are detailed instructions in
 
 Usage instructions are detailed in [Usage.md](docs/Usage.md).
 
-Two python wrappers for SDPB are also available:
+Two python wrappers for SDPB are available:
 
 - [PyCFTBoot](https://github.com/cbehan/pycftboot) by Connor Behan ([arXiv:1602.02810](http://arxiv.org/abs/arXiv:1602.02810))
 - [cboot](https://github.com/tohtsky/cboot) by Tomoki Ohtsuki ([arXiv:1602.07295](http://arxiv.org/abs/arXiv:1602.07295)).
 
+An unofficial Haskell wrapper is available:
+
+- [sdpb-haskell](https://gitlab.com/davidsd/sdpb-haskell) by David Simmons-Duffin
+
 ## Attribution
 
-If you use SDPB in work that results in publication, please cite
+If you use SDPB in work that results in publication, consider citing
 
 - D. Simmons-Duffin, "A Semidefinite Program Solver for the
   Conformal Bootstrap", [arXiv:1502.02033 \[hep-th\]](http://arxiv.org/abs/1502.02033).
@@ -64,10 +68,6 @@ systems of correlation functions:
 
 ## Acknowledgements
 
-- SDPB Makes extensive use of [MPACK](http://mplapack.sourceforge.net/), the multiple precision linear algebra library written by Nakata Maho.  Several source files from MPACK are included in the SDPB source tree (see the license at the top of those files).
-
-- SDPB uses Lee Thomason's [tinyxml2](http://www.grinninglizard.com/tinyxml2/) library (included in the source tree) for parsing.
-
 - The design of SDPB was partially based on the solvers [SDPA](http://sdpa.sourceforge.net/) and SDPA-GMP, which were essential sources of inspiration and examples.
 
 - Thanks to Filip Kos, David Poland, and Alessandro Vichi for collaboration in developing semidefinite programming methods for the conformal bootstrap and assistance testing SDPB.
@@ -78,152 +78,4 @@ systems of correlation functions:
 
 ## Works Using SDPB
 
-- D. Simmons-Duffin,
-  "A Semidefinite Program Solver for the Conformal Bootstrap",
-  [arXiv:1502.02033 [hep-th]](http://arxiv.org/abs/1502.02033).
-
-- F. Kos, D. Poland, D. Simmons-Duffin and A. Vichi,
-  "Bootstrapping the O(N) Archipelago,"
-  [arXiv:1504.07997 [hep-th]](http://arxiv.org/abs/1504.07997).
-
-- S. M. Chester, S. Giombi, L. V. Iliesiu, I. R. Klebanov, S. S. Pufu and R. Yacoby,
-  "Accidental Symmetries and the Conformal Bootstrap,"
-  [arXiv:1507.04424 [hep-th]](http://arxiv.org/abs/1507.04424).
-
-- C. Beem, M. Lemos, L. Rastelli and B. C. van Rees,
-  "The (2,0) superconformal bootstrap,"
-  [arXiv:1507.05637 [hep-th]](http://arxiv.org/abs/1507.05637).
-
-- L. Iliesiu, F. Kos, D. Poland, S. S. Pufu, D. Simmons-Duffin and R. Yacoby,
-  "Bootstrapping 3D Fermions,"
-  [arXiv:1508.00012 [hep-th]](http://arxiv.org/abs/1508.00012).
-
-- D. Poland and A. Stergiou,
-  "Exploring the Minimal 4D N=1 SCFT,"
-  [arXiv:1509.06368 [hep-th]](http://arxiv.org/abs/1509.06368).
-
--  M. Lemos and P. Liendo,
-  "Bootstrapping N=2 chiral correlators,"
-  [arXiv:1510.03866 [hep-th]](http://arxiv.org/abs/1510.03866).
-
-- Y. H. Lin, S. H. Shao, D. Simmons-Duffin, Y. Wang and X. Yin,
-  "N=4 Superconformal Bootstrap of the K3 CFT,"
-  [arXiv:1511.04065 [hep-th]](http://arxiv.org/abs/arXiv:1511.04065)
-
-- S. M. Chester, L. V. Iliesiu, S. S. Pufu and R. Yacoby,
-  "Bootstrapping O(N) Vector Models with Four Supercharges in 3 <= d <= 4,"
-  [arXiv:1511.07552 [hep-th]](http://arxiv.org/abs/arXiv:1511.07552)
-
-- S. M. Chester and S. S. Pufu,
-  "Towards Bootstrapping QED_3,"
-  [arXiv:1601.03476 [hep-th]](http://arxiv.org/abs/arXiv:1601.03476)
-
-- C. Behan,
-  "PyCFTBoot: A flexible interface for the conformal bootstrap,"
-  [arXiv:1602.02810 [hep-th]](http://arxiv.org/abs/arXiv:1602.02810)
-
-- Y. Nakayama and T. Ohtsuki,
-  "Conformal Bootstrap Dashing Hopes of Emergent Symmetry,"
-  [arXiv:1602.07295 [cond-mat.str-el]](http://arxiv.org/abs/arXiv:1602.07295)
-
-- H. Iha, H. Makino and H. Suzuki,
-  "Upper bound on the mass anomalous dimension in many-flavor gauge theories -- a conformal bootstrap approach"
-  [arXiv:1603.01995 [hep-th]](http://arxiv.org/abs/1603.01995)
-
-- F. Kos, D. Poland, D. Simmons-Duffin, and A. Vichi,
-  "Precision Islands in the Ising and O(N) Models"
-  [arXiv:1603.04436 [hep-th]](http://arxiv.org/abs/1603.04436)
-
-- Z. Komargodski and D. Simmons-Duffin,
-  "The Random-Bond Ising Model in 2.01 and 3 Dimensions"
-  [arXiv:1603.04444 [hep-th]](http://arxiv.org/abs/1603.04444)
-
-- Y. Nakayama,
-  "Bootstrap bound for conformal multi-flavor QCD on lattice"
-  [arXiv:1605.04052 [hep-th]](https://arxiv.org/abs/1605.04052)
-
-- M. Paulos, J. Penedones, J. Toledo, B. van Rees, P. Vieira,
-  "The S-matrix Bootstrap I: QFT in AdS"
-  [arXiv:1607.06109 [hep-th]](http://arxiv.org/abs/1607.06109)
-
-- Z. Li, N. Su,
-  "Bootstrapping Mixed Correlators in the Five Dimensional Critical O(N) Models"
-  [arXiv:1607.07077 [hep-th]](https://arxiv.org/abs/1607.07077)
-
-- S. Collier, Y.H. Lin, X. Yin,
-  "Modular Bootstrap Revisited"
-  [arXiv:1608.06241 [hep-th]](https://arxiv.org/abs/1608.06241)
-
-- Y. Pang, J. Rong, N. Su,
-  "φ3  theory with F4 flavor symmetry in 6−2ε dimensions: 3-loop renormalization and conformal bootstrap"
-  [arXiv:1609.03007 [hep-th]](https://arxiv.org/abs/1609.03007)
-
-- Y.H. Lin, S.H. Shao, Y. Wang, X. Yin,
-  "(2,2) Superconformal Bootstrap in Two Dimensions"
-  [arXiv:1610.05371 [hep-th]](https://arxiv.org/abs/1610.05371)
-  
-- J.B. Bae, K. Lee, S. Lee,
-  "Bootstrapping Pure Quantum Gravity in AdS3"
-  [arXiv:1610.05814 [hep-th]](https://arxiv.org/abs/1610.05814)
-
-- J.B. Bae, D. Gang, J. Lee,
-  "3d N=2 minimal SCFTs from Wrapped M5-branes"
-  [arXiv:1610.09259 [hep-th]](https://arxiv.org/abs/1610.09259)
-
-- C. Beem, L. Rastelli, B. C. van Rees,
-  "More N=4 superconformal bootstrap"
-  [arXiv:1612.02363 [hep-th]](https://arxiv.org/abs/1612.02363)
-
-- M. Lemos, P. Liendo, C. Meneghelli, V. Mitev,
-  "Bootstrapping N=3 superconformal theories"
-  [arXiv:1612.01536 [hep-th]](https://arxiv.org/abs/1612.01536)
-
-- D. Simmons-Duffin,
-  "The Lightcone Bootstrap and the Spectrum of the 3d Ising CFT"
-  [arXiv:1612.08471 [hep-th]](https://arxiv.org/abs/1612.08471)
-
-- D. Li, D. Meltzer, A. Stergiou,
-  "Bootstrapping Mixed Correlators in 4D N=1 SCFTs"
-  [arXiv:1702.00404 [hep-th]](https://arxiv.org/abs/1702.00404)
-  
-- S. Collier, P. Kravchuk, Y.-H. Lin, X. Yin,
-  "Bootstrapping the Spectral Function: On the Uniqueness of Liouville and the Universality of BTZ"
-  [arXiv:1702.00423 [hep-th]](https://arxiv.org/abs/1702.00423)
-  
-- M. Cornagliotto, M. Lemos, V. Schomerus,
-  "Long Multiplet Bootstrap"
-  [arXiv:1702.05101 [hep-th]](https://arxiv.org/abs/1702.05101)
-
-- Y. Nakayama,
-  "Bootstrap experiments on higher dimensional CFTs"
-  [arXiv:1705.02744 [hep-th]](https://arxiv.org/abs/1705.02744)
-
-- L. Iliesiu, F. Kos, D. Poland, S. S. Pufu, D. Simmons-Duffin,
-  "Bootstrapping 3D Fermions with Global Symmetries"
-  [arXiv:1705.03484 [hep-th]](https://arxiv.org/abs/1705.03484)
-
-- A. Dymarsky, J. Penedones, E. Trevisani, A. Vichi,
-  "Charting the space of 3D CFTs with a continuous global symmetry"
-  [arXiv:1705.04278 [hep-th]](https://arxiv.org/abs/1705.04278)
-
-- C.-M. Chang, Y.-H. Lin,
-  "Carving Out the End of the World or (Superconformal Bootstrap in Six Dimensions)"
-  [arXiv:1705.05392 [hep-th]](https://arxiv.org/abs/1705.05392)
-
-- M. Cho, S. Collier, X. Yin,
-  "Genus Two Modular Bootstrap"
-  [arXiv:1705.05865 [hep-th]](https://arxiv.org/abs/1705.05865)
-  
-- A. Dymarsky, F. Kos, P. Kravchuk, D. Poland, D. Simmons-Duffin,
-  "The 3d Stress-Tensor Bootstrap"
-  [arXiv:1708.05718 [hep-th]](https://arxiv.org/abs/1708.05718)
-
-- M. F. Paulos, J. Penedones, J. Toledo, B. C. van Rees, P. Vieira,
-  "The S-matrix Bootstrap III: Higher Dimensional Amplitudes"
-  [arXiv:1708.06765 [hep-th]](https://arxiv.org/abs/1708.06765)
-  
-- J.-B. Bae, S. Lee, J. Song,
-  "Modular Constraints on Conformal Field Theories with Currents"
-  [arXiv:1708.08815 [hep-th]](https://arxiv.org/abs/1708.08815)
-
-(Please let me know if you would like your paper to be included in this list!)
+As of April 2019, SDPB has been used in approximately 60 works. Here is [a list of papers citing SDPB](http://inspirehep.net/search?ln=en&p=refersto%3Arecid%3A1343540&sf=earliestdate).
