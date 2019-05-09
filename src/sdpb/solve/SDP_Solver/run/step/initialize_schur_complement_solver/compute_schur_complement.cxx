@@ -16,8 +16,8 @@ namespace
 {
   // Elementwise multiplication of two submatrices.
   //
-  // result(i,j)=bilinear_X_inv(column_offset_X+i,row_offset_X+j)
-  //             + bilinear_Y_inv(column_offset_Y+i,row_offset_Y+j)
+  // result(i,j)=(bilinear_X_inv(column_offset_X+i,row_offset_X+j)
+  //              * bilinear_Y_inv(column_offset_Y+i,row_offset_Y+j))/4
 
   void
   multiply_submatrices(const El::DistMatrix<El::BigFloat> &bilinear_X_inv,
