@@ -21,9 +21,9 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
     "format. Command line arguments override values in the parameter "
     "file.");
   basic_options.add_options()(
-    "outFile,o", po::value<boost::filesystem::path>(&out_file),
-    "The optimal solution is saved to this file in Mathematica "
-    "format. Defaults to sdpDir with '.out' extension.");
+    "outDir,o", po::value<boost::filesystem::path>(&out_directory),
+    "The optimal solution is saved to this directory in Mathematica "
+    "format. Defaults to sdpDir with '_out' appended.");
   basic_options.add_options()(
     "checkpointDir,c", po::value<boost::filesystem::path>(&checkpoint_out),
     "Checkpoints are saved to this directory every checkpointInterval. "
@@ -224,14 +224,14 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
                                        + "' is not a directory");
             }
 
-          if(variables_map.count("outFile") == 0)
+          if(variables_map.count("outDir") == 0)
             {
-              out_file = sdp_directory;
-              if(out_file.filename() == ".")
+              out_directory = sdp_directory;
+              if(out_directory.filename() == ".")
                 {
-                  out_file = out_file.parent_path();
+                  out_directory = out_directory.parent_path();
                 }
-              out_file+=".out";
+              out_directory+="_out";
             }
 
           if(variables_map.count("checkpointDir") == 0)
@@ -251,11 +251,12 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
 
           if(El::mpi::Rank() == 0)
             {
-              std::ofstream ofs(out_file.string().c_str());
+              boost::filesystem::create_directories(out_directory);
+              boost::filesystem::ofstream ofs(out_directory/"out.txt");
               if(!ofs)
                 {
-                  throw std::runtime_error("Cannot write to outFile: "
-                                           + out_file.string());
+                  throw std::runtime_error("Cannot write to outDir: "
+                                           + out_directory.string());
                 }
             }
 

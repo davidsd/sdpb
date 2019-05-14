@@ -3,7 +3,7 @@
 std::ostream &operator<<(std::ostream &os, const SDP_Solver_Parameters &p)
 {
   os << "SDP directory   : " << p.sdp_directory << '\n'
-     << "out file        : " << p.out_file << '\n'
+     << "out directory   : " << p.out_directory << '\n'
      << "checkpoint in   : " << p.checkpoint_in << '\n'
      << "checkpoint out  : " << p.checkpoint_out << '\n'
      << "\nParameters:\n"

@@ -27,7 +27,7 @@ public:
     initial_matrix_scale_dual, feasible_centering_parameter,
     infeasible_centering_parameter, step_length_reduction, max_complementarity;
 
-  boost::filesystem::path sdp_directory, out_file, checkpoint_in,
+  boost::filesystem::path sdp_directory, out_directory, checkpoint_in,
     checkpoint_out, param_file;
 
   SDP_Solver_Parameters(int argc, char *argv[]);
