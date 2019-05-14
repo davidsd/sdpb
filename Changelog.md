@@ -1,3 +1,12 @@
+# Version 2.0.5
+
+## sdpb
+
+- Fixed the output of the `x` vector.  This required splitting up the
+  `x` vector into separate files, so now all of the output goes into an
+  output directory rather than an output file.  In line with that, the
+  option `outFile` has been changed to `outDir`.
+
 # Version 2.0.4
 
 ## sdpb
