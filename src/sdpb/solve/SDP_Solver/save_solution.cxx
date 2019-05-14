@@ -5,6 +5,18 @@
 
 #include <iomanip>
 
+namespace
+{
+  void write_psd_block(const boost::filesystem::path &outfile,
+                       const El::DistMatrix<El::BigFloat> &block)
+  {
+    boost::filesystem::ofstream stream(outfile);
+    stream << block.Height() << " " << block.Width() << "\n";
+    El::Print(block, "", "\n", stream);
+    stream << "\n";
+  }
+}
+
 void SDP_Solver::save_solution(
   const SDP_Solver_Terminate_Reason terminate_reason,
   const std::pair<std::string, Timer> &timer_pair,
@@ -49,9 +61,21 @@ void SDP_Solver::save_solution(
   for(size_t block = 0; block != x.blocks.size(); ++block)
     {
       size_t block_index(block_indices.at(block));
+
       boost::filesystem::ofstream x_stream(
         out_directory / ("x_" + std::to_string(block_index) + ".txt"));
-      El::Print(x.blocks[block], "", "\n", x_stream);
+      El::Print(x.blocks.at(block), "", "\n", x_stream);
       x_stream << "\n";
+
+      for(size_t psd_block(0); psd_block < 2; ++psd_block)
+        {
+          std::string suffix(std::to_string(2 * block_index + psd_block)
+                             + ".txt");
+
+          write_psd_block(out_directory / ("X_matrix_" + suffix),
+                          X.blocks.at(2 * block + psd_block));
+          write_psd_block(out_directory / ("Y_matrix_" + suffix),
+                          Y.blocks.at(2 * block + psd_block));
+        }
     }
 }
