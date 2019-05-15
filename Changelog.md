@@ -1,11 +1,18 @@
-# Version 2.0.5
+# Version 2.1.0
 
 ## sdpb
 
-- Fixed the output of the `x` vector.  This required splitting up the
-  `x` vector into separate files, so now all of the output goes into an
-  output directory rather than an output file.  In line with that, the
-  option `outFile` has been changed to `outDir`.
+- Fixed the final solution output of the `x` vector, and added plain
+  text output of the `X` and `Y` diagonal block matrices.  This
+  required splitting up these vectors and matrices into separate
+  files.  So the option `outFile` has been changed to `outDir`, and
+  all of the plain text solution output goes into `outDir`.
+  
+- Added the ability to restart from plain text output.  This is useful
+  if restarting using different precision or a different number of
+  cores.  Due to limitations in GMP, a few bits of precision are lost
+  during the translation to and from plain text.  So a run restarted
+  from plain text will not be bitwise identical.
 
 # Version 2.0.4
 
