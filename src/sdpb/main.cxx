@@ -61,7 +61,7 @@ int main(int argc, char **argv)
           timing_parameters.max_iterations = 2;
           timing_parameters.no_final_checkpoint = true;
           timing_parameters.checkpoint_interval
-            = std::numeric_limits<int64_t>::max();
+            = std::numeric_limits<size_t>::max();
           timing_parameters.verbosity = Verbosity::none;
           Timers timers(solve(block_info, timing_parameters));
 

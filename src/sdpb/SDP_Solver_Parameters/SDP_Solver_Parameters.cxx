@@ -85,10 +85,10 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
     "enough. Try increasing either dualErrorThreshold or precision "
     "and run from the latest checkpoint.");
   solver_options.add_options()(
-    "maxIterations", po::value<size_t>(&max_iterations)->default_value(500),
+    "maxIterations", po::value<int64_t>(&max_iterations)->default_value(500),
     "Maximum number of iterations to run the solver.");
   solver_options.add_options()(
-    "maxRuntime", po::value<size_t>(&max_runtime)->default_value(86400),
+    "maxRuntime", po::value<int64_t>(&max_runtime)->default_value(86400),
     "Maximum amount of time to run the solver in seconds.");
   solver_options.add_options()(
     "procsPerNode", po::value<size_t>(&procs_per_node)->required(),
