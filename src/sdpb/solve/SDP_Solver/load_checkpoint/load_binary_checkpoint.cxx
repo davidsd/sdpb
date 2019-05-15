@@ -1,10 +1,10 @@
-#include "../SDP_Solver.hxx"
+#include "../../SDP_Solver.hxx"
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
 template <typename T>
-void read_local_blocks(T &t, boost::filesystem::ifstream &checkpoint_stream)
+void read_local_binary_blocks(T &t, boost::filesystem::ifstream &checkpoint_stream)
 {
   El::BigFloat zero(0);
   const size_t serialized_size(zero.SerializedSize());
@@ -42,9 +42,8 @@ void read_local_blocks(T &t, boost::filesystem::ifstream &checkpoint_stream)
     }
 }
 
-bool SDP_Solver::load_checkpoint(
-  const boost::filesystem::path &checkpoint_directory,
-  const Verbosity &verbosity)
+bool load_binary_checkpoint(const boost::filesystem::path &checkpoint_directory,
+                            const Verbosity &verbosity, SDP_Solver &solver)
 {
   boost::filesystem::path checkpoint_filename(
     checkpoint_directory / ("checkpoint." + std::to_string(El::mpi::Rank())));
@@ -57,12 +56,12 @@ bool SDP_Solver::load_checkpoint(
   boost::filesystem::ifstream checkpoint_stream(checkpoint_filename);
   if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
-      std::cout << "Loading checkpoint from : " << checkpoint_directory
+      std::cout << "Loading binary checkpoint from : " << checkpoint_directory
                 << '\n';
     }
-  read_local_blocks(x, checkpoint_stream);
-  read_local_blocks(X, checkpoint_stream);
-  read_local_blocks(y, checkpoint_stream);
-  read_local_blocks(Y, checkpoint_stream);
+  read_local_binary_blocks(solver.x, checkpoint_stream);
+  read_local_binary_blocks(solver.X, checkpoint_stream);
+  read_local_binary_blocks(solver.y, checkpoint_stream);
+  read_local_binary_blocks(solver.Y, checkpoint_stream);
   return true;
 }

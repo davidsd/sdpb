@@ -100,6 +100,7 @@ public:
                      const Verbosity &verbosity) const;
   void save_checkpoint(const boost::filesystem::path &checkpoint_directory,
                        const Verbosity &verbosity) const;
-  bool load_checkpoint(const boost::filesystem::path &checkpoint_directory,
-                       const Verbosity &verbosity);
+  bool
+  load_checkpoint(const boost::filesystem::path &checkpoint_directory,
+                  const Block_Info &block_info, const Verbosity &verbosity);
 };

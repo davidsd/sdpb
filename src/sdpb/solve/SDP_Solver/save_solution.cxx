@@ -11,8 +11,10 @@ namespace
                        const El::DistMatrix<El::BigFloat> &block)
   {
     boost::filesystem::ofstream stream(outfile);
-    stream << block.Height() << " " << block.Width() << "\n";
-    El::Print(block, "", "\n", stream);
+    El::Print(block,
+              std::to_string(block.Height()) + " "
+                + std::to_string(block.Width()),
+              "\n", stream);
     stream << "\n";
   }
 }
@@ -43,29 +45,28 @@ void SDP_Solver::save_solution(
                  << "primalError     = " << primal_error() << ";\n"
                  << "dualError       = " << dual_error << ";\n"
                  << std::setw(16) << std::left << timer_pair.first << "= "
-                 << timer_pair.second.elapsed_seconds() << ";\n"
-                 << "y = {";
+                 << timer_pair.second.elapsed_seconds() << ";\n";
     }
   // y is duplicated among cores, so only need to print out copy on
   // the root node.
   if(!y.blocks.empty())
     {
-      El::Print(y.blocks.at(0), "", ",\n", out_stream);
-    }
-
-  if(El::mpi::Rank() == 0)
-    {
-      out_stream << "};\n";
+      boost::filesystem::ofstream y_stream(out_directory / ("y.txt"));
+      El::Print(y.blocks.at(0),
+                std::to_string(y.blocks.at(0).Height()) + " "
+                  + std::to_string(y.blocks.at(0).Width()),
+                "\n", y_stream);
     }
 
   for(size_t block = 0; block != x.blocks.size(); ++block)
     {
       size_t block_index(block_indices.at(block));
-
       boost::filesystem::ofstream x_stream(
         out_directory / ("x_" + std::to_string(block_index) + ".txt"));
-      El::Print(x.blocks.at(block), "", "\n", x_stream);
-      x_stream << "\n";
+      El::Print(x.blocks.at(block),
+                std::to_string(x.blocks.at(block).Height()) + " "
+                  + std::to_string(x.blocks.at(block).Width()),
+                "\n", x_stream);
 
       for(size_t psd_block(0); psd_block < 2; ++psd_block)
         {
