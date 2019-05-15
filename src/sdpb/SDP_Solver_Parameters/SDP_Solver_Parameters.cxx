@@ -106,8 +106,10 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
     "procGranularity", po::value<size_t>(&proc_granularity)->default_value(1),
     "procGranularity must evenly divide procsPerNode.\n\n"
     "The minimum number of cores in a group, used during load balancing.  "
-    "Setting it to anything larger than 1 will make the solution take longer.  "
-    "This option is generally useful only when trying to fit a large problem in a small machine.");
+    "Setting it to anything larger than 1 will make the solution take "
+    "longer.  "
+    "This option is generally useful only when trying to fit a large problem "
+    "in a small machine.");
   solver_options.add_options()(
     "dualityGapThreshold",
     po::value<El::BigFloat>(&duality_gap_threshold)
@@ -231,7 +233,7 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
                 {
                   out_directory = out_directory.parent_path();
                 }
-              out_directory+="_out";
+              out_directory += "_out";
             }
 
           if(variables_map.count("checkpointDir") == 0)
@@ -241,7 +243,7 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
                 {
                   checkpoint_out = checkpoint_out.parent_path();
                 }
-              checkpoint_out+=".ck";
+              checkpoint_out += ".ck";
             }
 
           if(variables_map.count("initialCheckpointDir") == 0)
@@ -252,7 +254,7 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
           if(El::mpi::Rank() == 0)
             {
               boost::filesystem::create_directories(out_directory);
-              boost::filesystem::ofstream ofs(out_directory/"out.txt");
+              boost::filesystem::ofstream ofs(out_directory / "out.txt");
               if(!ofs)
                 {
                   throw std::runtime_error("Cannot write to outDir: "
