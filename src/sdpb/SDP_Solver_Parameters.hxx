@@ -13,7 +13,8 @@
 class SDP_Solver_Parameters
 {
 public:
-  size_t max_iterations, max_runtime, checkpoint_interval;
+  size_t max_iterations, max_runtime;
+  int64_t checkpoint_interval;
   bool no_final_checkpoint;
   bool find_primal_feasible;
   bool find_dual_feasible;

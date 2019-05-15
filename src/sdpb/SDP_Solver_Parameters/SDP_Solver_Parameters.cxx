@@ -53,7 +53,7 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
     "this up to a multiple of 32 or 64, depending on the system.");
   solver_options.add_options()(
     "checkpointInterval",
-    po::value<size_t>(&checkpoint_interval)->default_value(3600),
+    po::value<int64_t>(&checkpoint_interval)->default_value(3600),
     "Save checkpoints to checkpointDir every checkpointInterval "
     "seconds.");
   solver_options.add_options()(
