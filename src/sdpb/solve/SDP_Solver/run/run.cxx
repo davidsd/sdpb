@@ -42,15 +42,16 @@ void compute_dual_residues_and_error(
   const Block_Diagonal_Matrix &bilinear_pairings_Y,
   Block_Vector &dual_residues, El::BigFloat &dual_error, Timers &timers);
 
-void compute_primal_residues_and_error_P(
+void compute_primal_residues_and_error_P_Ax_X(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &x,
   const Block_Diagonal_Matrix &X, Block_Diagonal_Matrix &primal_residues,
   El::BigFloat &primal_error_P, Timers &timers);
 
-void compute_primal_residues_and_error_p(const Block_Info &block_info,
-                                         const SDP &sdp, const Block_Vector &x,
-                                         Block_Vector &primal_residue_p,
-                                         El::BigFloat &primal_error_p);
+void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
+                                              const SDP &sdp,
+                                              const Block_Vector &x,
+                                              Block_Vector &primal_residue_p,
+                                              El::BigFloat &primal_error_p);
 
 SDP_Solver_Terminate_Reason
 SDP_Solver::run(const SDP_Solver_Parameters &parameters,
@@ -143,14 +144,14 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
 
       compute_dual_residues_and_error(block_info, sdp, y, bilinear_pairings_Y,
                                       dual_residues, dual_error, timers);
-      compute_primal_residues_and_error_P(
+      compute_primal_residues_and_error_P_Ax_X(
         block_info, sdp, x, X, primal_residues, primal_error_P, timers);
 
       // use y to set the sizes of primal_residue_p.  The data is
       // overwritten in compute_primal_residues_and_error_p.
       Block_Vector primal_residue_p(y);
-      compute_primal_residues_and_error_p(block_info, sdp, x, primal_residue_p,
-                                          primal_error_p);
+      compute_primal_residues_and_error_p_b_Bx(
+        block_info, sdp, x, primal_residue_p, primal_error_p);
 
       bool terminate_now, is_primal_and_dual_feasible;
       compute_feasible_and_termination(

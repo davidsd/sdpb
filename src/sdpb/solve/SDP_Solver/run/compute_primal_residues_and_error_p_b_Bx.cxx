@@ -6,10 +6,11 @@
 //
 // and the corresponding primal error max(|p_i|)
 
-void compute_primal_residues_and_error_p(const Block_Info &block_info,
-                                         const SDP &sdp, const Block_Vector &x,
-                                         Block_Vector &primal_residue_p,
-                                         El::BigFloat &primal_error)
+void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
+                                              const SDP &sdp,
+                                              const Block_Vector &x,
+                                              Block_Vector &primal_residue_p,
+                                              El::BigFloat &primal_error)
 {
   auto free_var_matrix_block(sdp.free_var_matrix.blocks.begin());
   auto x_block(x.blocks.begin());
