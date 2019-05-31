@@ -18,7 +18,7 @@ and [the manual](/docs/SDPB-Manual.pdf).
 
 Authors: David Simmons-Duffin (dsd@caltech.edu), Walter Landry (wlandry@caltech.edu).
 
-On April 25, 2019, the main branch of this repository was updated to SDPB 2.0 which has very different performane characteristics and somewhat different usage instructions from version 1.0. Please see the changelog and other documentation for details.
+On April 25, 2019, the main branch of this repository was updated to SDPB 2 which has very different performane characteristics and somewhat different usage instructions from version 1.0. Please see the changelog and other documentation for details.
 
 ## Installation and Usage
 
@@ -67,7 +67,7 @@ systems of correlation functions:
 
 ## Acknowledgements
 
-- Version 2.0 of SDPB was made possible by the [Simons Collaboration on the Nonperturbative Bootstrap](http://bootstrapcollaboration.com/).
+- Version 2 of SDPB was made possible by the [Simons Collaboration on the Nonperturbative Bootstrap](http://bootstrapcollaboration.com/).
 
 - The design of SDPB was partially based on the solvers [SDPA](http://sdpa.sourceforge.net/) and SDPA-GMP, which were essential sources of inspiration and examples.
 
