@@ -401,9 +401,9 @@ where $\texttt{dualityGapThreshold} \ll 1$ is chosen by the user.
   basicstyle=\scriptsize\ttfamily\selectfont,
 ]
 $ ./build/sdpb -s test/test --noFinalCheckpoint --dualityGapThreshold=1e-10 --procsPerNode=1
-SDPB started at 2019-Apr-25 12:23:18
+SDPB started at 2019-May-31 16:02:24
 SDP directory   : "test/test"
-out file        : "test/test.out"
+out directory   : "test/test_out"
 checkpoint in   : "test/test.ck"
 checkpoint out  : "test/test.ck"
 
@@ -412,6 +412,7 @@ maxIterations                = 500
 maxRuntime                   = 86400
 checkpointInterval           = 3600
 noFinalCheckpoint            = true
+writeMatrices                = false
 findPrimalFeasible           = false
 findDualFeasible             = false
 detectPrimalFeasibleJump     = false
@@ -433,12 +434,12 @@ verbosity                    = 1
 Block Grid Mapping
 Node	Num Procs	Cost		Block List
 ==================================================
-0	1		0	{(0,5)}
+0	1		1	{(0,5)}
 
 
 
           time    mu     P-obj       D-obj      gap         P-err       p-err       D-err      P-step   D-step   beta
----------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------
 1            0 1.0e+40  +0.00       +0.00       0.00       +1.00e+20   +1.00       +2.88e+20   0.631    0.647    0.300
 2            0 5.0e+39  +9.49e+19   -1.64e+20   1.00       +3.69e+19   +0.369      +1.02e+20   0.653    0.639    0.300
 3            0 2.5e+39  +1.04e+20   -2.92e+20   1.00       +1.28e+19   +0.128      +3.68e+19   0.660    0.639    0.300
@@ -448,13 +449,13 @@ Node	Num Procs	Cost		Block List
 121          0 2.2e-10  +1.84       +1.84       2.92e-10   +8.56e-136  +3.81e-136  +2.03e-128  0.778    0.778    0.100
 -----found primal-dual optimal solution-----
 
-primalObjective = 1.84026576332565631672146583965018699100561508337587536862181886454778342190286...
-dualObjective   = 1.84026576300280820778202539281040733206073516552048575998570210089386246651374...
-dualityGap      = 8.77177947342566148425099002608861975016831751942152108097889259749697696949146...e-11
-primalError     = 7.51089556348181064823326744803610384655868046068280268129841794327987708071831...e-136
-dualError       = 4.52140604256445920848680126808710487519284312016881665078606873831191841279523...e-129
+primalObjective = 1.840265763325656316721465839650186991005615083375875368621818864547783421902868047585544187478123641932355584089868937130913524423369433
+dualObjective   = 1.840265763002808207782025392810407332060735165520485759985702100893862466513748758967640110009456743390105281470739846700192118052221076
+dualityGap      = 8.771779473425661484250990026088619750168317519421521080978892597496976969491467586975026650723472822568936581124429322170946055180285756e-11
+primalError     = 7.510895563481810648233267448036103846558680460682802681298417943279877080718313104566720361801941532782563025583711409060504906911206168e-136
+dualError       = 4.521406042564459208486801268087104875192843120168816650786068738311918412795233951571941977582825775279448332299196165696764345972130786e-129
 
-Saving solution to      : "test/test.out"
+Saving solution to      : "test/test_out"
 \end{lstlisting}
 
 The output from running \SDPB\ on the example problem in section~\ref{sec:example} is in listing~\ref{listing:exampleoutput}.  The input, output, and checkpoint files are listed first, followed by various parameters.  After each iteration, \SDPB\ prints the following:
@@ -504,7 +505,7 @@ When using \SDPB\ to determine primal or dual feasibility, one can specify the o
 \subsection{Output File}
 
 \begin{lstlisting}[
-  caption={Contents of the output file \texttt{test.out} corresponding to listing~\ref{exampleinputfile}. Decimal expansions have been truncated for brevity.  \texttt{Mathematica} uses \texttt{*\^} instead of the character \texttt{e} for scientific notation.  Thus, the output format is not quite suitable for import into \texttt{Mathematica} without modification.  This could be changed in future versions.},
+  caption={Contents of the output file \texttt{test\_out/out.txt} corresponding to listing~\ref{exampleinputfile}. Decimal expansions have been truncated for brevity.  \texttt{Mathematica} uses \texttt{*\^} instead of the character \texttt{e} for scientific notation.  Thus, the output format is not quite suitable for import into \texttt{Mathematica} without modification.  This could be changed in future versions.},
   columns=fullflexible,
   label=listing:exampleoutputfile,
   keepspaces=true,
@@ -518,16 +519,18 @@ dualityGap      = 8.7717794734256614842509900260886197501683175194215210809...e-
 primalError     = 7.5108955634818106482332674480361038465586804606828026812...e-136;
 dualError       = 4.5214060425644592084868012680871048751928431201688166507...e-129;
 Solver runtime  = 0;
-y = {-1.8402657630028082077820253928104073320607351655204857599857021008938...};
-x = {0.45235388517599804101179283021820554809723746409784887565601505409384...,
--0.803480865321175475886992833324383405612029199153172036749206463646738031...,
-2.4605425257111091566205141423092901410376650969271170556521234717534790434...,
-0.3612401619720735833442253228466060906418650015142066401971633310627641114...,
--0.094037216349651828374999504940144225750640700363863727424347919061297995...};
 \end{lstlisting}
 
 
-The output file \texttt{test.out} corresponding to listing~\ref{exampleinputfile} is shown in listing~\ref{listing:exampleoutputfile}. It includes the reason for termination, the final primal/dual objective values, the final duality gap, the final primal/dual errors, the total runtime, and the vectors $y$ and $x$.\footnote{To include the matrices $X,Y$ as well, uncomment the lines ``\texttt{// ofs << "Y = " << Y << ";\textbackslash n";}" and ``\texttt{// ofs << "X = " << X << ";\textbackslash n";}" in the source file \texttt{SDPSolverIO.cpp}, and recompile \SDPB.}
+The output file \texttt{test\_out/out.txt} corresponding to
+listing~\ref{exampleinputfile} is shown in
+listing~\ref{listing:exampleoutputfile}. It includes the reason for
+termination, the final primal/dual objective values, the final duality
+gap, the final primal/dual errors, and the total runtime. The vector
+$y$ is saved in \texttt{test\_out/y.txt}, and the two blocks of the $x$ vector
+are saved in \texttt{test\_out/x\_0.txt} and
+\texttt{test\_out/x\_1.txt}.  To include the matrices $X$ and $Y,$ add the
+option \texttt{--writeMatrices}.
 
 The value of $y$ gives the solution to our optimization problem.  The function
 \be
@@ -550,6 +553,30 @@ Every \texttt{checkpointInterval}, \SDPB\ saves a new checkpoint in a directory 
 A checkpoint file encodes the values of $x,X,y,Y$.  If \SDPB\ detects an existing checkpoint file on startup, it will use those values of $x,X,y,Y$ as initial conditions in the solver.  Thus, \SDPB\ can be stopped and started at will without losing progress.
 
 A typical workflow for long-running computations on shared machines is to specify a moderate \texttt{checkpointInterval} (e.g. one hour) and a somewhat larger \texttt{maxRuntime} (e.g. 12 hours).  \SDPB\ will terminate after 12 hours and can then be restarted without losing progress.  If \SDPB\ is killed prematurely, then at most 1 hour of progress will be lost.  This pattern of restarting gives other users chances to run their processes.  It can be sustained indefinitely, allowing extremely long computations.
+
+Checkpoints are written in binary format to conserve space and speed
+up loading and unloading.  If you specify the \texttt{--writeMatrices}
+option, the output directory can also be used to restart a computation
+with the \texttt{-i} option.  It will not be bitwise identical to
+restarting from a binary checkpoint, but it should be very, very, very
+close.
+
+Text checkpoints can be useful if you want to solve a different system
+by starting closer to previously solved system.  You can also use it
+to continue a calculation with a different number of cores, or even on
+a different machine.  Using the previous input as an example,
+
+\begin{lstlisting}[
+  columns=fullflexible,
+  label=listing:textcheckpoint,
+  keepspaces=true,
+  basicstyle=\scriptsize\ttfamily\selectfont,
+]
+$ ./build/sdpb -s test/test --noFinalCheckpoint --dualityGapThreshold=1e-10 --procsPerNode=1 --writeMatrices
+$ ./build/sdpb -s test/test --noFinalCheckpoint --dualityGapThreshold=1e-10 --procsPerNode=1 -i test/test\_out
+\end{lstlisting}
+
+the second calculation will start from the end of the first calculation.
 
 \section{Attribution}
 
