@@ -8,13 +8,26 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
 {
   int int_verbosity;
 
+  po::options_description required_options("Required options");
+  required_options.add_options()(
+    "sdpDir,s", po::value<boost::filesystem::path>(&sdp_directory)->required(),
+    "Directory containing preprocessed SDP data files.");
+  required_options.add_options()(
+    "procsPerNode", po::value<size_t>(&procs_per_node)->required(),
+    "The number of processes that can run on a node.  When running on "
+    "more "
+    "than one node, the load balancer needs to know how many processes "
+    "are assigned to each node.  On a laptop or desktop, this would be "
+    "the number of physical cores on your machine, not including "
+    "hyperthreaded cores.  For current laptops (2018), this is probably "
+    "2 or 4.\n\n"
+    "If you are using the Slurm workload manager, this should be set to "
+    "'$SLURM_NTASKS_PER_NODE'.");
+
   po::options_description basic_options("Basic options");
   basic_options.add_options()("help,h", "Show this helpful message.");
   basic_options.add_options()("version",
                               "Show version and configuration info.");
-  basic_options.add_options()(
-    "sdpDir,s", po::value<boost::filesystem::path>(&sdp_directory)->required(),
-    "Directory containing preprocessed SDP data files.");
   basic_options.add_options()(
     "paramFile,p", po::value<boost::filesystem::path>(&param_file),
     "Any parameter can optionally be set via this file in key=value "
@@ -33,6 +46,30 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
     po::value<boost::filesystem::path>(&checkpoint_in),
     "The initial checkpoint directory to load. Defaults to "
     "checkpointDir.");
+  basic_options.add_options()(
+    "checkpointInterval",
+    po::value<int64_t>(&checkpoint_interval)->default_value(3600),
+    "Save checkpoints to checkpointDir every checkpointInterval "
+    "seconds.");
+  basic_options.add_options()(
+    "noFinalCheckpoint",
+    po::bool_switch(&no_final_checkpoint)->default_value(false),
+    "Don't save a final checkpoint after terminating (useful when "
+    "debugging).");
+  basic_options.add_options()(
+    "writeMatrices", po::bool_switch(&write_matrices)->default_value(false),
+    "Write the 'X' and 'Y' matrices into the output directory.  With these "
+    "matrices, the output directory can be used as a final text checkpoint.  "
+    "Runs started from text checkpoints will very close to, but not bitwise "
+    "identical to, the original run.");
+  basic_options.add_options()(
+    "procGranularity", po::value<size_t>(&proc_granularity)->default_value(1),
+    "procGranularity must evenly divide procsPerNode.\n\n"
+    "The minimum number of cores in a group, used during load balancing.  "
+    "Setting it to anything larger than 1 will make the solution take "
+    "longer.  "
+    "This option is generally useful only when trying to fit a large problem "
+    "in a small machine.");
   basic_options.add_options()("verbosity",
                               po::value<int>(&int_verbosity)->default_value(1),
                               "Verbosity.  0 -> no output, 1 -> regular "
@@ -51,16 +88,6 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
     " This should be less than or equal to the precision used when "
     "preprocessing the XML input files with 'pvm2sdp'.  GMP will round "
     "this up to a multiple of 32 or 64, depending on the system.");
-  solver_options.add_options()(
-    "checkpointInterval",
-    po::value<int64_t>(&checkpoint_interval)->default_value(3600),
-    "Save checkpoints to checkpointDir every checkpointInterval "
-    "seconds.");
-  solver_options.add_options()(
-    "noFinalCheckpoint",
-    po::bool_switch(&no_final_checkpoint)->default_value(false),
-    "Don't save a final checkpoint after terminating (useful when "
-    "debugging).");
   solver_options.add_options()(
     "findPrimalFeasible",
     po::bool_switch(&find_primal_feasible)->default_value(false),
@@ -90,26 +117,6 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
   solver_options.add_options()(
     "maxRuntime", po::value<int64_t>(&max_runtime)->default_value(86400),
     "Maximum amount of time to run the solver in seconds.");
-  solver_options.add_options()(
-    "procsPerNode", po::value<size_t>(&procs_per_node)->required(),
-    "This option is **required**.\n\n"
-    "The number of processes that can run on a node.  When running on "
-    "more "
-    "than one node, the load balancer needs to know how many processes "
-    "are assigned to each node.  On a laptop or desktop, this would be "
-    "the number of physical cores on your machine, not including "
-    "hyperthreaded cores.  For current laptops (2018), this is probably "
-    "2 or 4.\n\n"
-    "If you are using the Slurm workload manager, this should be set to "
-    "'$SLURM_NTASKS_PER_NODE'.");
-  solver_options.add_options()(
-    "procGranularity", po::value<size_t>(&proc_granularity)->default_value(1),
-    "procGranularity must evenly divide procsPerNode.\n\n"
-    "The minimum number of cores in a group, used during load balancing.  "
-    "Setting it to anything larger than 1 will make the solution take "
-    "longer.  "
-    "This option is generally useful only when trying to fit a large problem "
-    "in a small machine.");
   solver_options.add_options()(
     "dualityGapThreshold",
     po::value<El::BigFloat>(&duality_gap_threshold)
@@ -168,7 +175,7 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
     "exceeds this value.");
 
   po::options_description cmd_line_options;
-  cmd_line_options.add(basic_options).add(solver_options);
+  cmd_line_options.add(required_options).add(basic_options).add(solver_options);
 
   po::variables_map variables_map;
   try

@@ -22,7 +22,7 @@ namespace
 void SDP_Solver::save_solution(
   const SDP_Solver_Terminate_Reason terminate_reason,
   const std::pair<std::string, Timer> &timer_pair,
-  const boost::filesystem::path &out_directory,
+  const boost::filesystem::path &out_directory, const bool &write_matrices,
   const std::vector<size_t> &block_indices, const Verbosity &verbosity) const
 {
   // Internally, El::Print() sync's everything to the root core and
@@ -68,15 +68,18 @@ void SDP_Solver::save_solution(
                   + std::to_string(x.blocks.at(block).Width()),
                 "\n", x_stream);
 
-      for(size_t psd_block(0); psd_block < 2; ++psd_block)
+      if(write_matrices)
         {
-          std::string suffix(std::to_string(2 * block_index + psd_block)
-                             + ".txt");
+          for(size_t psd_block(0); psd_block < 2; ++psd_block)
+            {
+              std::string suffix(std::to_string(2 * block_index + psd_block)
+                                 + ".txt");
 
-          write_psd_block(out_directory / ("X_matrix_" + suffix),
-                          X.blocks.at(2 * block + psd_block));
-          write_psd_block(out_directory / ("Y_matrix_" + suffix),
-                          Y.blocks.at(2 * block + psd_block));
+              write_psd_block(out_directory / ("X_matrix_" + suffix),
+                              X.blocks.at(2 * block + psd_block));
+              write_psd_block(out_directory / ("Y_matrix_" + suffix),
+                              Y.blocks.at(2 * block + psd_block));
+            }
         }
     }
 }
