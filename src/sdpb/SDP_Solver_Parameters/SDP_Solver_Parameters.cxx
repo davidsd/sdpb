@@ -214,7 +214,7 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
                                            + param_file.string() + "'");
                 }
 
-              po::store(po::parse_config_file(ifs, solver_options),
+              po::store(po::parse_config_file(ifs, cmd_line_options),
                         variables_map);
             }
 
