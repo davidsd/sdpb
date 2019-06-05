@@ -1,3 +1,10 @@
+# Version 2.1.1
+
+## sdpb
+
+- Fixed a bug that was erroneously rejecting options in parameter
+  files.
+
 # Version 2.1.0
 
 ## sdpb
