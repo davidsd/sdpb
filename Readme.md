@@ -22,11 +22,11 @@ On April 25, 2019, the main branch of this repository was updated to SDPB 2 whic
 
 ## Installation and Usage
 
-The easiest way to run SDPB on a desktop or laptop is to follow
-the [Docker instructions](docs/Docker.md).  For HPC centers, the
-[Singularity](docs/Singularity.md) instructions will probably work better.
-If you want to build it yourself, there are detailed instructions in
-[Install.md](Install.md).
+The easiest way to run SDPB on a Windows or Mac machine is to follow
+the [Docker instructions](docs/Docker.md).  For Linux and HPC centers,
+the [Singularity](docs/Singularity.md) instructions will probably work
+better.  If you want to build it yourself, there are detailed
+instructions in [Install.md](Install.md).
 
 Usage instructions are detailed in [Usage.md](docs/Usage.md).
 
