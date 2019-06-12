@@ -6,18 +6,6 @@
 // equation
 //
 // {{S, -B}, {B^T, 0}} . {dx, dy} = {r, s}
-//
-// using the method described in the manual:
-//
-// - S = Tr(A_X_Inv A_Y)
-//
-// - Cholesky decomposition S = L L^T.
-//
-// - L_inv_B = L^{-1} B
-//
-// - Q = L_inv_B^T L_inv_B
-//
-// - Cholesky decomposition of Q.
 
 void reduce_and_scatter(const El::mpi::Comm &comm,
                         std::vector<El::byte> &send_buffer,
@@ -48,13 +36,14 @@ void initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
   const Block_Diagonal_Matrix &A_X_inv, const Block_Diagonal_Matrix &A_Y,
   const El::Grid &group_grid, Block_Diagonal_Matrix &L, Block_Matrix &L_inv_B,
-  El::DistMatrix<El::BigFloat> &Q, Timers &timers)
+  El::DistMatrix<El::BigFloat> &Q_cholesky, Timers &timers)
 {
   auto &initialize_timer(
     timers.add_and_start("run.step.initializeSchurComplementSolver"));
   Block_Diagonal_Matrix S(block_info.schur_block_sizes,
                           block_info.block_indices,
                           block_info.schur_block_sizes.size(), group_grid);
+  // S = Tr(A_X_Inv A_Y)
   compute_S(block_info, A_X_inv, A_Y, S, timers);
 
   auto &Q_computation_timer(
@@ -64,18 +53,22 @@ void initialize_schur_complement_solver(
   std::vector<int> rank_sizes(El::mpi::Size(El::mpi::COMM_WORLD));
   size_t serialized_size;
   {
-    El::DistMatrix<El::BigFloat> Q_group(Q.Height(), Q.Width(), group_grid);
+    // Cholesky decompose S = L L^T.
+    // L_inv_B = L^-1 B
+    // Q = L_inv_B^T L_inv_B
+    El::DistMatrix<El::BigFloat> Q_group(Q_cholesky.Height(),
+                                         Q_cholesky.Width(), group_grid);
     initialize_Q_group(sdp, block_info, S, L_inv_B, L, Q_group, timers);
-    fill_send_buffer(Q, Q_group, send_buffer, rank_sizes, serialized_size,
-                     timers);
+    fill_send_buffer(Q_cholesky, Q_group, send_buffer, rank_sizes,
+                     serialized_size, timers);
   }
-  synchronize_Q(send_buffer, rank_sizes, serialized_size, Q, timers);
+  synchronize_Q(send_buffer, rank_sizes, serialized_size, Q_cholesky, timers);
   Q_computation_timer.stop();
 
   auto &Cholesky_timer(
     timers.add_and_start("run.step.initializeSchurComplementSolver."
                          "Cholesky"));
-  Cholesky(El::UpperOrLowerNS::UPPER, Q);
+  Cholesky(El::UpperOrLowerNS::UPPER, Q_cholesky);
   Cholesky_timer.stop();
   initialize_timer.stop();
 }
