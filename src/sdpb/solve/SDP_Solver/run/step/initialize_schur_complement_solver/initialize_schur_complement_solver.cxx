@@ -9,19 +9,15 @@
 //
 // using the method described in the manual:
 //
-// - Compute S = Tr(A_X_Inv A_Y)
+// - S = Tr(A_X_Inv A_Y)
 //
-// - Cholesky decompose S = L L^T.
+// - Cholesky decomposition S = L L^T.
 //
-// - Compute
+// - L_inv_B = L^{-1} B
 //
-//   - L_inv_B = L^{-1} B
-//   - Q = B^T L^-T L^-1 B = L_inv_B^T L_inv_B
+// - Q = L_inv_B^T L_inv_B
 //
-// - Compute the Cholesky decomposition of Q.
-//
-// This data is sufficient to efficiently solve the above equation for
-// a given r,s.
+// - Cholesky decomposition of Q.
 
 void reduce_and_scatter(const El::mpi::Comm &comm,
                         std::vector<El::byte> &send_buffer,
@@ -56,7 +52,6 @@ void initialize_schur_complement_solver(
 {
   auto &initialize_timer(
     timers.add_and_start("run.step.initializeSchurComplementSolver"));
-  // S.blocks[j] has dimension (d_j+1)*m_j*(m_j+1)/2
   Block_Diagonal_Matrix S(block_info.schur_block_sizes,
                           block_info.block_indices,
                           block_info.schur_block_sizes.size(), group_grid);
