@@ -8,15 +8,16 @@ El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
 void initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
   const Block_Diagonal_Matrix &A_X_inv, const Block_Diagonal_Matrix &A_Y,
-  const El::Grid &block_grid, Block_Diagonal_Matrix &L, Block_Matrix &L_inv_B,
+  const El::Grid &block_grid, Block_Diagonal_Matrix &eigenvectors,
+  Block_Diagonal_Matrix &L, Block_Matrix &L_inv_B,
   El::DistMatrix<El::BigFloat> &Q_cholesky, Timers &timers);
 
 void compute_search_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
-  const Block_Diagonal_Matrix &L, const Block_Matrix &L_inv_B,
-  const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
-  const El::BigFloat &mu, const Block_Vector &primal_residue_p,
-  const bool &is_corrector_phase,
+  const Block_Diagonal_Matrix &eigenvectors, const Block_Diagonal_Matrix &L,
+  const Block_Matrix &L_inv_B, const Block_Diagonal_Matrix &X_cholesky,
+  const El::BigFloat beta, const El::BigFloat &mu,
+  const Block_Vector &primal_residue_p, const bool &is_corrector_phase,
   const El::DistMatrix<El::BigFloat> &Q_cholesky, Block_Vector &dx,
   Block_Diagonal_Matrix &dX, Block_Vector &dy, Block_Diagonal_Matrix &dY);
 
@@ -59,6 +60,7 @@ void SDP_Solver::step(
     Block_Diagonal_Matrix L(block_info.schur_block_sizes,
                             block_info.block_indices,
                             block_info.schur_block_sizes.size(), grid);
+    Block_Diagonal_Matrix eigenvectors(L);
     Block_Matrix L_inv_B;
 
     // Q = B L^-T L^-1 B
@@ -66,8 +68,9 @@ void SDP_Solver::step(
     El::DistMatrix<El::BigFloat> Q_cholesky(sdp.dual_objective_b.Height(),
                                             sdp.dual_objective_b.Height());
 
-    initialize_schur_complement_solver(block_info, sdp, A_X_inv, A_Y, grid, L,
-                                       L_inv_B, Q_cholesky, timers);
+    initialize_schur_complement_solver(block_info, sdp, A_X_inv, A_Y, grid,
+                                       eigenvectors, L, L_inv_B, Q_cholesky,
+                                       timers);
 
     // Compute the complementarity mu = Tr(X Y)/X.dim
     auto &frobenius_timer(
@@ -86,9 +89,9 @@ void SDP_Solver::step(
     // Compute the predictor solution for (dx, dX, dy, dY)
     beta_predictor
       = predictor_centering_parameter(parameters, is_primal_and_dual_feasible);
-    compute_search_direction(block_info, sdp, *this, L, L_inv_B, X_cholesky,
-                             beta_predictor, mu, primal_residue_p, false,
-                             Q_cholesky, dx, dX, dy, dY);
+    compute_search_direction(block_info, sdp, *this, eigenvectors, L, L_inv_B,
+                             X_cholesky, beta_predictor, mu, primal_residue_p,
+                             false, Q_cholesky, dx, dX, dy, dY);
     predictor_timer.stop();
 
     // Compute the corrector solution for (dx, dX, dy, dY)
@@ -98,9 +101,9 @@ void SDP_Solver::step(
       parameters, X, dX, Y, dY, mu, is_primal_and_dual_feasible,
       total_psd_rows);
 
-    compute_search_direction(block_info, sdp, *this, L, L_inv_B, X_cholesky,
-                             beta_corrector, mu, primal_residue_p, true,
-                             Q_cholesky, dx, dX, dy, dY);
+    compute_search_direction(block_info, sdp, *this, eigenvectors, L, L_inv_B,
+                             X_cholesky, beta_corrector, mu, primal_residue_p,
+                             true, Q_cholesky, dx, dX, dy, dY);
     corrector_timer.stop();
   }
   // Compute step-lengths that preserve positive definiteness of X, Y

@@ -5,7 +5,8 @@
 void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
                         const Block_Diagonal_Matrix &S, Block_Matrix &L_inv_B,
                         Block_Diagonal_Matrix &L,
-                        El::DistMatrix<El::BigFloat> &Q_group, Timers &timers)
+                        El::DistMatrix<El::BigFloat> &Q_group,
+                        Block_Diagonal_Matrix &eigenvectors, Timers &timers)
 {
   // Explicitly deallocate the lower half of Q_group.  This
   // significantly reduces the total amount of memory required.
@@ -26,6 +27,13 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
 
   L_inv_B.blocks.clear();
   L_inv_B.blocks.reserve(L.blocks.size());
+  eigenvectors.blocks.clear();
+  eigenvectors.blocks.reserve(S.blocks.size());
+
+  El::HermitianEigCtrl<El::BigFloat> hermitian_eig_ctrl;
+  /// The default number of iterations is 40.  That is sometimes
+  /// not enough, so we bump it up significantly.
+  hermitian_eig_ctrl.tridiagEigCtrl.dcCtrl.secularCtrl.maxIterations = 512;
 
   for(size_t block = 0; block < L.blocks.size(); block++)
     {
@@ -33,6 +41,31 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
         "run.step.initializeSchurComplementSolver.Q.cholesky_"
         + std::to_string(block_info.block_indices[block])));
       L.blocks[block] = S.blocks[block];
+
+      El::DistMatrix<El::BigFloat> eigenvalues(S.blocks[block].Grid());
+      eigenvectors.blocks.emplace_back(S.blocks[block].Grid());
+      auto block_copy(S.blocks[block]);
+      hermitian_eig_ctrl.tridiagEigCtrl.dcCtrl.cutoff
+        = S.blocks[block].Height() / 2 + 1;
+      El::HermitianEig(El::UpperOrLowerNS::LOWER, block_copy, eigenvalues,
+                       eigenvectors.blocks.back(), hermitian_eig_ctrl);
+
+      El::BigFloat max_eigenvalue(El::Max(eigenvalues));
+      const El::BigFloat eigenvalue_cutoff(
+        1e-50 * max_eigenvalue); // FIXME: This is totally arbitrary
+      for(int64_t row = 0; row < eigenvalues.LocalHeight(); ++row)
+        for(int64_t column = 0; column < eigenvalues.LocalWidth(); ++column)
+          {
+            El::BigFloat local_value(eigenvalues.GetLocal(row, column));
+            if(local_value < eigenvalue_cutoff)
+              {
+                eigenvalues.SetLocal(row, column, El::BigFloat(0));
+              }
+            else
+              {
+                eigenvalues.SetLocal(row, column, El::Sqrt(local_value));
+              }
+          }
 
       Cholesky(El::UpperOrLowerNS::LOWER, L.blocks[block]);
       cholesky_timer.stop();

@@ -20,7 +20,9 @@ void compute_S(const Block_Info &block_info,
 void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
                         const Block_Diagonal_Matrix &S, Block_Matrix &L_inv_B,
                         Block_Diagonal_Matrix &L,
-                        El::DistMatrix<El::BigFloat> &Q_group, Timers &timers);
+                        El::DistMatrix<El::BigFloat> &Q_group,
+                        Block_Diagonal_Matrix &eigenvectors,
+                        Timers &timers);
 
 void fill_send_buffer(const El::DistMatrix<El::BigFloat> &Q,
                       const El::DistMatrix<El::BigFloat> &Q_group,
@@ -35,7 +37,9 @@ void synchronize_Q(std::vector<El::byte> &sending_buffer,
 void initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
   const Block_Diagonal_Matrix &A_X_inv, const Block_Diagonal_Matrix &A_Y,
-  const El::Grid &group_grid, Block_Diagonal_Matrix &L, Block_Matrix &L_inv_B,
+  const El::Grid &group_grid,
+  Block_Diagonal_Matrix &eigenvectors,
+  Block_Diagonal_Matrix &L, Block_Matrix &L_inv_B,
   El::DistMatrix<El::BigFloat> &Q_cholesky, Timers &timers)
 {
   auto &initialize_timer(
@@ -58,7 +62,8 @@ void initialize_schur_complement_solver(
     // Q = L_inv_B^T L_inv_B
     El::DistMatrix<El::BigFloat> Q_group(Q_cholesky.Height(),
                                          Q_cholesky.Width(), group_grid);
-    initialize_Q_group(sdp, block_info, S, L_inv_B, L, Q_group, timers);
+    initialize_Q_group(sdp, block_info, S, L_inv_B, L, Q_group,
+                       eigenvectors,timers);
     fill_send_buffer(Q_cholesky, Q_group, send_buffer, rank_sizes,
                      serialized_size, timers);
   }

@@ -32,16 +32,16 @@ void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
                        const Block_Diagonal_Matrix &Z, Block_Vector &dx);
 
 void solve_schur_complement_equation(
-  const Block_Diagonal_Matrix &L, const Block_Matrix &L_inv_B,
-  const El::DistMatrix<El::BigFloat> &Q_cholesky, Block_Vector &dx,
-  Block_Vector &dy);
+  const Block_Diagonal_Matrix &eigenvectors, const Block_Diagonal_Matrix &L,
+  const Block_Matrix &L_inv_B, const El::DistMatrix<El::BigFloat> &Q_cholesky,
+  Block_Vector &dx, Block_Vector &dy);
 
 void compute_search_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
-  const Block_Diagonal_Matrix &L, const Block_Matrix &L_inv_B,
-  const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
-  const El::BigFloat &mu, const Block_Vector &primal_residue_p,
-  const bool &is_corrector_phase,
+  const Block_Diagonal_Matrix &eigenvectors, const Block_Diagonal_Matrix &L,
+  const Block_Matrix &L_inv_B, const Block_Diagonal_Matrix &X_cholesky,
+  const El::BigFloat beta, const El::BigFloat &mu,
+  const Block_Vector &primal_residue_p, const bool &is_corrector_phase,
   const El::DistMatrix<El::BigFloat> &Q_cholesky, Block_Vector &dx,
   Block_Diagonal_Matrix &dX, Block_Vector &dy, Block_Diagonal_Matrix &dY)
 {
@@ -69,7 +69,8 @@ void compute_search_direction(
   dy = primal_residue_p;
 
   // Solve for dx, dy in-place
-  solve_schur_complement_equation(L, L_inv_B, Q_cholesky, dx, dy);
+  solve_schur_complement_equation(eigenvectors, L, L_inv_B, Q_cholesky, dx,
+                                  dy);
 
   // dX = PrimalResidues + \sum_p A_p dx[p]
   constraint_matrix_weighted_sum(block_info, sdp, dx, dX);

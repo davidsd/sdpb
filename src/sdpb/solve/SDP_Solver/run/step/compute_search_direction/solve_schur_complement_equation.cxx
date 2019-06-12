@@ -13,9 +13,9 @@
 // the manual.
 //
 void solve_schur_complement_equation(
-  const Block_Diagonal_Matrix &L, const Block_Matrix &L_inv_B,
-  const El::DistMatrix<El::BigFloat> &Q_cholesky, Block_Vector &dx,
-  Block_Vector &dy)
+  const Block_Diagonal_Matrix &eigenvectors, const Block_Diagonal_Matrix &L,
+  const Block_Matrix &L_inv_B, const El::DistMatrix<El::BigFloat> &Q_cholesky,
+  Block_Vector &dx, Block_Vector &dy)
 {
   // Set dx=L^-1 dx
   lower_triangular_solve(L, dx);
