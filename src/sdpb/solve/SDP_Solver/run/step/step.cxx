@@ -55,29 +55,18 @@ void SDP_Solver::step(
   Block_Vector dx(x), dy(y);
   Block_Diagonal_Matrix dX(X), dY(Y);
   {
-    // SchurComplementCholesky = L', the Cholesky decomposition of the
-    // Schur complement matrix S.
+    // L = Cholesky decomposition of S.
     Block_Diagonal_Matrix L(block_info.schur_block_sizes,
                             block_info.block_indices,
                             block_info.schur_block_sizes.size(), grid);
-
-    // SchurOffDiagonal = L'^{-1} FreeVarMatrix, needed in solving the
-    // Schur complement equation.
     Block_Matrix L_inv_B;
 
-    // Q = B' L'^{-T} L'^{-1} B' - {{0, 0}, {0, 1}}, where B' =
-    // (FreeVarMatrix U).  Q is needed in the factorization of the Schur
-    // complement equation.  Q has dimension N'xN', where
-    //
-    //   N' = cols(B) + cols(U) = N + cols(U)
-    //
-    // where N is the dimension of the dual objective function.  Note
-    // that N' could change with each iteration.
+    // Q = B L^-T L^-1 B 
+    // Q has dimension NxN, where N = cols(B)
+    // N is the dimension of the dual objective function.
     El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
                                    sdp.dual_objective_b.Height());
 
-    // Compute SchurComplement and prepare to solve the Schur
-    // complement equation for dx, dy
     initialize_schur_complement_solver(block_info, sdp, A_X_inv, A_Y, grid, L,
                                        L_inv_B, Q, timers);
 

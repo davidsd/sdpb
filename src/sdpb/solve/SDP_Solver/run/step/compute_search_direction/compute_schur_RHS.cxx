@@ -5,7 +5,7 @@
 //
 // {{S, -B}, {B^T, 0}} . {dx, dy} = {r_x, r_y}
 //
-// where S = SchurComplement and B = FreeVarMatrix.  Specifically,
+// Specifically,
 //
 // r_x[p] = -dual_residues[p] - Tr(A_p Z)              for 0 <= p < P
 //

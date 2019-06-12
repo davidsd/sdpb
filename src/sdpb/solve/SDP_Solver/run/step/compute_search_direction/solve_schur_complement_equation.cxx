@@ -17,7 +17,7 @@ void solve_schur_complement_equation(const Block_Diagonal_Matrix &L,
                                      const El::DistMatrix<El::BigFloat> &Q,
                                      Block_Vector &dx, Block_Vector &dy)
 {
-  // Set dx to L^-1 dx
+  // Set dx=L^-1 dx
   lower_triangular_solve(L, dx);
 
   El::DistMatrix<El::BigFloat> dy_dist;
@@ -64,7 +64,7 @@ void solve_schur_complement_equation(const Block_Diagonal_Matrix &L,
                            El::OrientationNS::NORMAL, Q, dy_dist);
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> dy_local(dy_dist);
 
-  // dx += SchurOffDiagonal dy
+  // dx += L_inv_B dy
   for(size_t block = 0; block < L_inv_B.blocks.size(); ++block)
     {
       for(int64_t row = 0; row < dy.blocks[block].LocalHeight(); ++row)
@@ -83,6 +83,6 @@ void solve_schur_complement_equation(const Block_Diagonal_Matrix &L,
            dy.blocks[block], El::BigFloat(1), dx.blocks[block]);
     }
 
-  // dx = SchurComplementCholesky^{-T} dx
+  // dx = L^{-T} dx
   lower_triangular_transpose_solve(L, dx);
 }
