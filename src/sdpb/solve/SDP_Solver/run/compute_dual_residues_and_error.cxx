@@ -20,7 +20,7 @@ void compute_dual_residues_and_error(
   auto dual_residues_block(dual_residues.blocks.begin());
   auto primal_objective_c_block(sdp.primal_objective_c.blocks.begin());
   auto y_block(y.blocks.begin());
-  auto free_var_matrix_block(sdp.free_var_matrix.blocks.begin());
+  auto B_block(sdp.B.blocks.begin());
   auto bilinear_pairings_Y_block(bilinear_pairings_Y.blocks.begin());
 
   El::BigFloat local_max(0);
@@ -76,8 +76,7 @@ void compute_dual_residues_and_error(
         }
       // dualResidues -= FreeVarMatrix * y
       Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, El::BigFloat(-1),
-           *free_var_matrix_block, *y_block, El::BigFloat(1),
-           *dual_residues_block);
+           *B_block, *y_block, El::BigFloat(1), *dual_residues_block);
       // dualResidues += primalObjective
       Axpy(El::BigFloat(1), *primal_objective_c_block, *dual_residues_block);
 
@@ -85,7 +84,7 @@ void compute_dual_residues_and_error(
 
       ++primal_objective_c_block;
       ++y_block;
-      ++free_var_matrix_block;
+      ++B_block;
       ++dual_residues_block;
     }
   dual_error

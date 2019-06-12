@@ -20,16 +20,15 @@ void read_primal_objective_c(const boost::filesystem::path &sdp_directory,
                              Block_Vector &primal_objective_c);
 void read_free_var_matrix(const boost::filesystem::path &sdp_directory,
                           const std::vector<size_t> &block_indices,
-                          const El::Grid &grid, Block_Matrix &free_var_matrix);
+                          const El::Grid &grid, Block_Matrix &B);
 
 SDP::SDP(const boost::filesystem::path &sdp_directory,
          const Block_Info &block_info, const El::Grid &grid)
 {
   read_objectives(sdp_directory, grid, objective_const, dual_objective_b);
-  read_bilinear_bases(sdp_directory, block_info, grid,
-                      bilinear_bases_local, bilinear_bases_dist);
+  read_bilinear_bases(sdp_directory, block_info, grid, bilinear_bases_local,
+                      bilinear_bases_dist);
   read_primal_objective_c(sdp_directory, block_info.block_indices, grid,
                           primal_objective_c);
-  read_free_var_matrix(sdp_directory, block_info.block_indices, grid,
-                       free_var_matrix);
+  read_free_var_matrix(sdp_directory, block_info.block_indices, grid, B);
 }

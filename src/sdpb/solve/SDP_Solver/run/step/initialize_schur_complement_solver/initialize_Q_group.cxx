@@ -42,7 +42,7 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
         "run.step.initializeSchurComplementSolver.Q.solve_"
         + std::to_string(block_info.block_indices[block])));
 
-      L_inv_B.blocks.push_back(sdp.free_var_matrix.blocks[block]);
+      L_inv_B.blocks.push_back(sdp.B.blocks[block]);
       El::Trsm(El::LeftOrRightNS::LEFT, El::UpperOrLowerNS::LOWER,
                El::OrientationNS::NORMAL, El::UnitOrNonUnitNS::NON_UNIT,
                El::BigFloat(1), L.blocks[block], L_inv_B.blocks[block]);
