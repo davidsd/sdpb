@@ -12,13 +12,13 @@
 // The equation is solved using the block-decomposition described in
 // the manual.
 //
-void solve_schur_complement_equation(
-  const Block_Diagonal_Matrix &schur_complement_cholesky,
-  const Block_Matrix &L_inv_B, const El::DistMatrix<El::BigFloat> &Q,
-  Block_Vector &dx, Block_Vector &dy)
+void solve_schur_complement_equation(const Block_Diagonal_Matrix &L,
+                                     const Block_Matrix &L_inv_B,
+                                     const El::DistMatrix<El::BigFloat> &Q,
+                                     Block_Vector &dx, Block_Vector &dy)
 {
-  // Set dx to SchurComplementCholesky^{-1} dx
-  lower_triangular_solve(schur_complement_cholesky, dx);
+  // Set dx to L^-1 dx
+  lower_triangular_solve(L, dx);
 
   El::DistMatrix<El::BigFloat> dy_dist;
   Zeros(dy_dist, Q.Height(), 1);
@@ -84,5 +84,5 @@ void solve_schur_complement_equation(
     }
 
   // dx = SchurComplementCholesky^{-T} dx
-  lower_triangular_transpose_solve(schur_complement_cholesky, dx);
+  lower_triangular_transpose_solve(L, dx);
 }
