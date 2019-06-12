@@ -14,8 +14,8 @@
 //
 void solve_schur_complement_equation(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
-  const Block_Matrix &schur_off_diagonal,
-  const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx, Block_Vector &dy)
+  const Block_Matrix &L_inv_B, const El::DistMatrix<El::BigFloat> &Q,
+  Block_Vector &dx, Block_Vector &dy)
 {
   // Set dx to SchurComplementCholesky^{-1} dx
   lower_triangular_solve(schur_complement_cholesky, dx);
@@ -26,11 +26,11 @@ void solve_schur_complement_equation(
     El::Matrix<El::BigFloat> dy_sum;
     Zeros(dy_sum, Q.Height(), 1);
 
-    for(size_t block = 0; block < schur_off_diagonal.blocks.size(); ++block)
+    for(size_t block = 0; block < L_inv_B.blocks.size(); ++block)
       {
         Gemv(El::OrientationNS::TRANSPOSE, El::BigFloat(-1),
-             schur_off_diagonal.blocks[block], dx.blocks[block],
-             El::BigFloat(1), dy.blocks[block]);
+             L_inv_B.blocks[block], dx.blocks[block], El::BigFloat(1),
+             dy.blocks[block]);
 
         // Locally sum contributions to dy
         for(int64_t row = 0; row < dy.blocks[block].LocalHeight(); ++row)
@@ -51,7 +51,7 @@ void solve_schur_complement_equation(
     for(int64_t row = 0; row < dy_sum.Height(); ++row)
       for(int64_t column = 0; column < dy_sum.Width(); ++column)
         {
-          if(dy_sum(row, column)!=zero)
+          if(dy_sum(row, column) != zero)
             {
               dy_dist.QueueUpdate(row, column, dy_sum(row, column));
             }
@@ -65,7 +65,7 @@ void solve_schur_complement_equation(
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> dy_local(dy_dist);
 
   // dx += SchurOffDiagonal dy
-  for(size_t block = 0; block < schur_off_diagonal.blocks.size(); ++block)
+  for(size_t block = 0; block < L_inv_B.blocks.size(); ++block)
     {
       for(int64_t row = 0; row < dy.blocks[block].LocalHeight(); ++row)
         {
@@ -79,9 +79,8 @@ void solve_schur_complement_equation(
                 row, column, dy_local.GetLocal(global_row, global_column));
             }
         }
-      Gemv(El::OrientationNS::NORMAL, El::BigFloat(1),
-           schur_off_diagonal.blocks[block], dy.blocks[block], El::BigFloat(1),
-           dx.blocks[block]);
+      Gemv(El::OrientationNS::NORMAL, El::BigFloat(1), L_inv_B.blocks[block],
+           dy.blocks[block], El::BigFloat(1), dx.blocks[block]);
     }
 
   // dx = SchurComplementCholesky^{-T} dx

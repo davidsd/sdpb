@@ -7,21 +7,18 @@ El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
 
 void initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
-  const Block_Diagonal_Matrix &A_X_inv,
-  const Block_Diagonal_Matrix &A_Y, const El::Grid &block_grid,
-  Block_Diagonal_Matrix &schur_complement_cholesky,
-  Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
-  Timers &timers);
+  const Block_Diagonal_Matrix &A_X_inv, const Block_Diagonal_Matrix &A_Y,
+  const El::Grid &block_grid, Block_Diagonal_Matrix &schur_complement_cholesky,
+  Block_Matrix &L_inv_B, El::DistMatrix<El::BigFloat> &Q, Timers &timers);
 
 void compute_search_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
   const Block_Diagonal_Matrix &schur_complement_cholesky,
-  const Block_Matrix &schur_off_diagonal,
-  const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
-  const El::BigFloat &mu, const Block_Vector &primal_residue_p,
-  const bool &is_corrector_phase, const El::DistMatrix<El::BigFloat> &Q,
-  Block_Vector &dx, Block_Diagonal_Matrix &dX, Block_Vector &dy,
-  Block_Diagonal_Matrix &dY);
+  const Block_Matrix &L_inv_B, const Block_Diagonal_Matrix &X_cholesky,
+  const El::BigFloat beta, const El::BigFloat &mu,
+  const Block_Vector &primal_residue_p, const bool &is_corrector_phase,
+  const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx,
+  Block_Diagonal_Matrix &dX, Block_Vector &dy, Block_Diagonal_Matrix &dY);
 
 El::BigFloat
 predictor_centering_parameter(const SDP_Solver_Parameters &parameters,
@@ -38,20 +35,16 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
             const Block_Diagonal_Matrix &dM, const El::BigFloat &gamma,
             const std::string &timer_name, Timers &timers);
 
-void SDP_Solver::step(const SDP_Solver_Parameters &parameters,
-                      const std::size_t &total_psd_rows,
-                      const bool &is_primal_and_dual_feasible,
-                      const Block_Info &block_info, const SDP &sdp,
-                      const El::Grid &grid,
-                      const Block_Diagonal_Matrix &X_cholesky,
-                      const Block_Diagonal_Matrix &Y_cholesky,
-                      const Block_Diagonal_Matrix &A_X_inv,
-                      const Block_Diagonal_Matrix &A_Y,
-                      const Block_Vector &primal_residue_p, El::BigFloat &mu,
-                      El::BigFloat &beta_corrector,
-                      El::BigFloat &primal_step_length,
-                      El::BigFloat &dual_step_length,
-                      bool &terminate_now, Timers &timers)
+void SDP_Solver::step(
+  const SDP_Solver_Parameters &parameters, const std::size_t &total_psd_rows,
+  const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
+  const SDP &sdp, const El::Grid &grid,
+  const Block_Diagonal_Matrix &X_cholesky,
+  const Block_Diagonal_Matrix &Y_cholesky,
+  const Block_Diagonal_Matrix &A_X_inv, const Block_Diagonal_Matrix &A_Y,
+  const Block_Vector &primal_residue_p, El::BigFloat &mu,
+  El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
+  El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers)
 {
   auto &step_timer(timers.add_and_start("run.step"));
   El::BigFloat beta_predictor;
@@ -70,7 +63,7 @@ void SDP_Solver::step(const SDP_Solver_Parameters &parameters,
 
     // SchurOffDiagonal = L'^{-1} FreeVarMatrix, needed in solving the
     // Schur complement equation.
-    Block_Matrix schur_off_diagonal;
+    Block_Matrix L_inv_B;
 
     // Q = B' L'^{-T} L'^{-1} B' - {{0, 0}, {0, 1}}, where B' =
     // (FreeVarMatrix U).  Q is needed in the factorization of the Schur
@@ -85,9 +78,9 @@ void SDP_Solver::step(const SDP_Solver_Parameters &parameters,
 
     // Compute SchurComplement and prepare to solve the Schur
     // complement equation for dx, dy
-    initialize_schur_complement_solver(
-      block_info, sdp, A_X_inv, A_Y, grid,
-      schur_complement_cholesky, schur_off_diagonal, Q, timers);
+    initialize_schur_complement_solver(block_info, sdp, A_X_inv, A_Y, grid,
+                                       schur_complement_cholesky, L_inv_B, Q,
+                                       timers);
 
     // Compute the complementarity mu = Tr(X Y)/X.dim
     auto &frobenius_timer(
@@ -107,8 +100,8 @@ void SDP_Solver::step(const SDP_Solver_Parameters &parameters,
     beta_predictor
       = predictor_centering_parameter(parameters, is_primal_and_dual_feasible);
     compute_search_direction(block_info, sdp, *this, schur_complement_cholesky,
-                             schur_off_diagonal, X_cholesky, beta_predictor,
-                             mu, primal_residue_p, false, Q, dx, dX, dy, dY);
+                             L_inv_B, X_cholesky, beta_predictor, mu,
+                             primal_residue_p, false, Q, dx, dX, dy, dY);
     predictor_timer.stop();
 
     // Compute the corrector solution for (dx, dX, dy, dY)
@@ -119,8 +112,8 @@ void SDP_Solver::step(const SDP_Solver_Parameters &parameters,
       total_psd_rows);
 
     compute_search_direction(block_info, sdp, *this, schur_complement_cholesky,
-                             schur_off_diagonal, X_cholesky, beta_corrector,
-                             mu, primal_residue_p, true, Q, dx, dX, dy, dY);
+                             L_inv_B, X_cholesky, beta_corrector, mu,
+                             primal_residue_p, true, Q, dx, dX, dy, dY);
     corrector_timer.stop();
   }
   // Compute step-lengths that preserve positive definiteness of X, Y
