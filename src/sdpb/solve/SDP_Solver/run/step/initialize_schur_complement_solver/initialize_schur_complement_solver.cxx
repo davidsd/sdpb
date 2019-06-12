@@ -7,52 +7,35 @@
 //
 // {{S, -B}, {B^T, 0}} . {dx, dy} = {r, s}
 //
-// (where S = SchurComplement, B = FreeVarMatrix), using the method
-// described in the manual:
+// using the method described in the manual:
 //
-// - Compute S using BilinearPairingsXInv and BilinearPairingsY.
+// - Compute S = Tr(A_X_Inv A_Y)
 //
-// - Compute the Cholesky decomposition S' = L' L'^T.
+// - Cholesky decompose S = L L^T.
 //
-// - Form B' = (B U) and compute
+// - Compute
 //
-//   - SchurOffDiagonal = L'^{-1} B
-//   - L'^{-1} U
-//   - Q = (L'^{-1} B')^T (L'^{-1} B') - {{0, 0}, {0, 1}}
+//   - L_inv_B = L^{-1} B
+//   - Q = B^T L^-T L^-1 B = L_inv_B^T L_inv_B
 //
-// - Compute the LU decomposition of Q.
+// - Compute the Cholesky decomposition of Q.
 //
 // This data is sufficient to efficiently solve the above equation for
 // a given r,s.
-//
-// Inputs:
-// - BilinearPairingsXInv, BilinearPairingsY (these are members of
-//   SDPSolver, but we include them as arguments to emphasize that
-//   they must be computed first)
-// Workspace (members of SDPSolver which are modified by this method
-// and not used later):
-// - SchurComplement
-// Outputs (members of SDPSolver which are modified by this method and
-// used later):
-// - SchurComplementCholesky
-// - SchurOffDiagonal
-//
 
 void reduce_and_scatter(const El::mpi::Comm &comm,
                         std::vector<El::byte> &send_buffer,
                         std::vector<El::byte> &receive_buffer,
                         std::vector<int> &rank_sizes);
 
-void compute_schur_complement(
-  const Block_Info &block_info,
-  const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-  const Block_Diagonal_Matrix &bilinear_pairings_Y,
-  Block_Diagonal_Matrix &schur_complement, Timers &timers);
+void compute_S(const Block_Info &block_info,
+               const Block_Diagonal_Matrix &A_X_inv,
+               const Block_Diagonal_Matrix &A_Y, Block_Diagonal_Matrix &S,
+               Timers &timers);
 
 void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
-                        const Block_Diagonal_Matrix &schur_complement,
-                        Block_Matrix &schur_off_diagonal,
-                        Block_Diagonal_Matrix &schur_complement_cholesky,
+                        const Block_Diagonal_Matrix &S, Block_Matrix &L_inv_B,
+                        Block_Diagonal_Matrix &L,
                         El::DistMatrix<El::BigFloat> &Q_group, Timers &timers);
 
 void fill_send_buffer(const El::DistMatrix<El::BigFloat> &Q,
@@ -67,24 +50,17 @@ void synchronize_Q(std::vector<El::byte> &sending_buffer,
 
 void initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
-  const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-  const Block_Diagonal_Matrix &bilinear_pairings_Y, const El::Grid &group_grid,
-  Block_Diagonal_Matrix &schur_complement_cholesky,
-  Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
-  Timers &timers)
+  const Block_Diagonal_Matrix &A_X_inv, const Block_Diagonal_Matrix &A_Y,
+  const El::Grid &group_grid, Block_Diagonal_Matrix &L, Block_Matrix &L_inv_B,
+  El::DistMatrix<El::BigFloat> &Q, Timers &timers)
 {
   auto &initialize_timer(
     timers.add_and_start("run.step.initializeSchurComplementSolver"));
-  // The Schur complement matrix S: a Block_Diagonal_Matrix with one
-  // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
-  // (d_j+1)*m_j*(m_j+1)/2
-  //
-  Block_Diagonal_Matrix schur_complement(
-    block_info.schur_block_sizes, block_info.block_indices,
-    block_info.schur_block_sizes.size(), group_grid);
-
-  compute_schur_complement(block_info, bilinear_pairings_X_inv,
-                           bilinear_pairings_Y, schur_complement, timers);
+  // S.blocks[j] has dimension (d_j+1)*m_j*(m_j+1)/2
+  Block_Diagonal_Matrix S(block_info.schur_block_sizes,
+                          block_info.block_indices,
+                          block_info.schur_block_sizes.size(), group_grid);
+  compute_S(block_info, A_X_inv, A_Y, S, timers);
 
   auto &Q_computation_timer(
     timers.add_and_start("run.step.initializeSchurComplementSolver.Q"));
@@ -94,8 +70,7 @@ void initialize_schur_complement_solver(
   size_t serialized_size;
   {
     El::DistMatrix<El::BigFloat> Q_group(Q.Height(), Q.Width(), group_grid);
-    initialize_Q_group(sdp, block_info, schur_complement, schur_off_diagonal,
-                       schur_complement_cholesky, Q_group, timers);
+    initialize_Q_group(sdp, block_info, S, L_inv_B, L, Q_group, timers);
     fill_send_buffer(Q, Q_group, send_buffer, rank_sizes, serialized_size,
                      timers);
   }

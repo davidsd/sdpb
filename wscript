@@ -53,7 +53,7 @@ def build(bld):
                         'src/sdpb/solve/SDP_Solver/run/print_iteration.cxx',
                         'src/sdpb/solve/SDP_Solver/run/step/step.cxx',
                         'src/sdpb/solve/SDP_Solver/run/step/initialize_schur_complement_solver/initialize_schur_complement_solver.cxx',
-                        'src/sdpb/solve/SDP_Solver/run/step/initialize_schur_complement_solver/compute_schur_complement.cxx',
+                        'src/sdpb/solve/SDP_Solver/run/step/initialize_schur_complement_solver/compute_S.cxx',
                         'src/sdpb/solve/SDP_Solver/run/step/initialize_schur_complement_solver/initialize_Q_group.cxx',
                         'src/sdpb/solve/SDP_Solver/run/step/initialize_schur_complement_solver/fill_send_buffer.cxx',
                         'src/sdpb/solve/SDP_Solver/run/step/initialize_schur_complement_solver/synchronize_Q/synchronize_Q.cxx',
