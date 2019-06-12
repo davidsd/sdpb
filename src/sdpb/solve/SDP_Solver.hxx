@@ -87,8 +87,7 @@ public:
        const SDP &sdp, const El::Grid &grid,
        const Block_Diagonal_Matrix &X_cholesky,
        const Block_Diagonal_Matrix &Y_cholesky,
-       const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-       const Block_Diagonal_Matrix &bilinear_pairings_Y,
+       const Block_Diagonal_Matrix &A_X_inv, const Block_Diagonal_Matrix &A_Y,
        const Block_Vector &primal_residue_p, El::BigFloat &mu,
        El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
        El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers);

@@ -20,12 +20,11 @@ void compute_objectives(const SDP &sdp, const Block_Vector &x,
                         El::BigFloat &dual_objective,
                         El::BigFloat &duality_gap, Timers &timers);
 
-void compute_bilinear_pairings(
+void compute_A_X_inv_A_Y(
   const Block_Diagonal_Matrix &X_cholesky, const Block_Diagonal_Matrix &Y,
   const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases,
   std::vector<El::DistMatrix<El::BigFloat>> &workspace,
-  Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-  Block_Diagonal_Matrix &bilinear_pairings_Y, Timers &timers);
+  Block_Diagonal_Matrix &A_X_inv, Block_Diagonal_Matrix &A_Y, Timers &timers);
 
 void compute_feasible_and_termination(
   const SDP_Solver_Parameters &parameters, const El::BigFloat &primal_error,
@@ -37,10 +36,11 @@ void compute_feasible_and_termination(
   bool &is_primal_and_dual_feasible,
   SDP_Solver_Terminate_Reason &terminate_reason, bool &terminate_now);
 
-void compute_dual_residues_and_error(
-  const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
-  const Block_Diagonal_Matrix &bilinear_pairings_Y,
-  Block_Vector &dual_residues, El::BigFloat &dual_error, Timers &timers);
+void compute_dual_residues_and_error(const Block_Info &block_info,
+                                     const SDP &sdp, const Block_Vector &y,
+                                     const Block_Diagonal_Matrix &A_Y,
+                                     Block_Vector &dual_residues,
+                                     El::BigFloat &dual_error, Timers &timers);
 
 void compute_primal_residues_and_error_P_Ax_X(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &x,
@@ -85,25 +85,24 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
   // dimension of BilinearPairingsXInv.block[b] is (d_j+1)*m_j.  See
   // SDP.h for more information on d_j and m_j.
 
-  Block_Diagonal_Matrix bilinear_pairings_X_inv(
-    block_info.bilinear_pairing_block_sizes, block_info.block_indices,
-    block_info.schur_block_sizes.size(), grid);
+  Block_Diagonal_Matrix A_X_inv(block_info.bilinear_pairing_block_sizes,
+                                block_info.block_indices,
+                                block_info.schur_block_sizes.size(), grid);
 
   // BilinearPairingsY is analogous to BilinearPairingsXInv, with
   // X^{-1} -> Y.
 
-  Block_Diagonal_Matrix bilinear_pairings_Y(bilinear_pairings_X_inv);
+  Block_Diagonal_Matrix A_Y(A_X_inv);
 
   // Additional workspace variables used in step_length()
-  std::vector<El::DistMatrix<El::BigFloat>> bilinear_pairings_workspace;
-  bilinear_pairings_workspace.reserve(X.blocks.size());
+  std::vector<El::DistMatrix<El::BigFloat>> workspace;
+  workspace.reserve(X.blocks.size());
   {
-    auto bilinear_pairings_X_inv_block(bilinear_pairings_X_inv.blocks.begin());
+    auto A_X_inv_block(A_X_inv.blocks.begin());
     for(auto &X_block : X.blocks)
       {
-        bilinear_pairings_workspace.emplace_back(
-          X_block.Height(), bilinear_pairings_X_inv_block->Width(), grid);
-        ++bilinear_pairings_X_inv_block;
+        workspace.emplace_back(X_block.Height(), A_X_inv_block->Width(), grid);
+        ++A_X_inv_block;
       }
   }
   print_header(parameters.verbosity);
@@ -138,12 +137,11 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
       cholesky_decomposition(Y, Y_cholesky);
       cholesky_decomposition_timer.stop();
 
-      compute_bilinear_pairings(
-        X_cholesky, Y, sdp.bilinear_bases_local, bilinear_pairings_workspace,
-        bilinear_pairings_X_inv, bilinear_pairings_Y, timers);
+      compute_A_X_inv_A_Y(X_cholesky, Y, sdp.bilinear_bases_local, workspace,
+                          A_X_inv, A_Y, timers);
 
-      compute_dual_residues_and_error(block_info, sdp, y, bilinear_pairings_Y,
-                                      dual_residues, dual_error, timers);
+      compute_dual_residues_and_error(block_info, sdp, y, A_Y, dual_residues,
+                                      dual_error, timers);
       compute_primal_residues_and_error_P_Ax_X(
         block_info, sdp, x, X, primal_residues, primal_error_P, timers);
 
@@ -166,9 +164,9 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
 
       El::BigFloat mu, beta_corrector;
       step(parameters, total_psd_rows, is_primal_and_dual_feasible, block_info,
-           sdp, grid, X_cholesky, Y_cholesky, bilinear_pairings_X_inv,
-           bilinear_pairings_Y, primal_residue_p, mu, beta_corrector,
-           primal_step_length, dual_step_length, terminate_now, timers);
+           sdp, grid, X_cholesky, Y_cholesky, A_X_inv, A_Y, primal_residue_p,
+           mu, beta_corrector, primal_step_length, dual_step_length,
+           terminate_now, timers);
       if(terminate_now)
         {
           terminate_reason

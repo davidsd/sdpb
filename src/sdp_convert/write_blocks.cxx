@@ -16,7 +16,7 @@ void write_blocks(
       schur_block_sizes.push_back((g.dim * (g.dim + 1) / 2) * (g.degree + 1));
 
       // sdp.bilinear_bases is the concatenation of the g.bilinear_bases.
-      // The matrix Y is a BlockDiagonalMatrix built from the
+      // The matrix Y is built from the
       // concatenation of the blocks for each individual
       // Dual_Constraint_Group.  sdp.blocks[j] = {b1, b2, ... } contains
       // the indices for the blocks of Y corresponding to the j-th
