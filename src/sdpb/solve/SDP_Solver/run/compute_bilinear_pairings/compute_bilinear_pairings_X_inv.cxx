@@ -43,6 +43,7 @@ void compute_bilinear_pairings_X_inv(
 
       // We have to set this to zero because the values can be NaN.
       // Multiplying 0*NaN = NaN.
+      // FIXME: GMP does not have NaN.  So remove?
       Zero(*bilinear_pairings_X_inv_block);
       Syrk(El::UpperOrLowerNS::LOWER, El::Orientation::TRANSPOSE,
            El::BigFloat(1), work, El::BigFloat(0),
