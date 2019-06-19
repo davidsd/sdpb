@@ -18,7 +18,7 @@ and [the manual](/docs/SDPB-Manual.pdf).
 
 Authors: David Simmons-Duffin (dsd@caltech.edu), Walter Landry (wlandry@caltech.edu).
 
-On April 25, 2019, the main branch of this repository was updated to SDPB 2 which has very different performane characteristics and somewhat different usage instructions from version 1.0. Please see the changelog and other documentation for details.
+On April 25, 2019, the main branch of this repository was updated to SDPB 2 which has very different performance characteristics and somewhat different usage instructions from version 1.0. Please see the changelog and other documentation for details.
 
 ## Installation and Usage
 
