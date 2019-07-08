@@ -83,7 +83,8 @@ int main(int argc, char **argv)
             {
               create_directories(parameters.checkpoint_out);
               copy_file(block_info.block_timings_filename,
-                        parameters.checkpoint_out / "block_timings");
+                        parameters.checkpoint_out / "block_timings",
+                        boost::filesystem::copy_option::overwrite_if_exists);
             }
         }
       solve(block_info, parameters);
