@@ -38,11 +38,6 @@
 // - SchurOffDiagonal
 //
 
-void reduce_and_scatter(const El::mpi::Comm &comm,
-                        std::vector<El::byte> &send_buffer,
-                        std::vector<El::byte> &receive_buffer,
-                        std::vector<int> &rank_sizes);
-
 void compute_schur_complement(
   const Block_Info &block_info,
   const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
@@ -55,15 +50,9 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
                         Block_Diagonal_Matrix &schur_complement_cholesky,
                         El::DistMatrix<El::BigFloat> &Q_group, Timers &timers);
 
-void fill_send_buffer(const El::DistMatrix<El::BigFloat> &Q,
-                      const El::DistMatrix<El::BigFloat> &Q_group,
-                      std::vector<El::byte> &send_buffer,
-                      std::vector<int> &rank_sizes, size_t &serialized_size,
-                      Timers &timers);
-
-void synchronize_Q(std::vector<El::byte> &sending_buffer,
-                   std::vector<int> &rank_sizes, const size_t &serialized_size,
-                   El::DistMatrix<El::BigFloat> &Q, Timers &timers);
+void synchronize_Q(El::DistMatrix<El::BigFloat> &Q,
+                   const El::DistMatrix<El::BigFloat> &Q_group,
+                   Timers &timers);
 
 void initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
@@ -89,17 +78,14 @@ void initialize_schur_complement_solver(
   auto &Q_computation_timer(
     timers.add_and_start("run.step.initializeSchurComplementSolver.Q"));
 
-  std::vector<El::byte> send_buffer;
-  std::vector<int> rank_sizes(El::mpi::Size(El::mpi::COMM_WORLD));
-  size_t serialized_size;
   {
+    // FIXME: Change initialize_Q_group to initialize_Q and
+    // synchronize inside.
     El::DistMatrix<El::BigFloat> Q_group(Q.Height(), Q.Width(), group_grid);
     initialize_Q_group(sdp, block_info, schur_complement, schur_off_diagonal,
                        schur_complement_cholesky, Q_group, timers);
-    fill_send_buffer(Q, Q_group, send_buffer, rank_sizes, serialized_size,
-                     timers);
+    synchronize_Q(Q, Q_group, timers);
   }
-  synchronize_Q(send_buffer, rank_sizes, serialized_size, Q, timers);
   Q_computation_timer.stop();
 
   auto &Cholesky_timer(

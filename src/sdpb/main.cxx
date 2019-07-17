@@ -62,7 +62,10 @@ int main(int argc, char **argv)
           timing_parameters.no_final_checkpoint = true;
           timing_parameters.checkpoint_interval
             = std::numeric_limits<int64_t>::max();
-          timing_parameters.verbosity = Verbosity::none;
+          if(timing_parameters.verbosity != Verbosity::debug)
+            {
+              timing_parameters.verbosity = Verbosity::none;
+            }
           Timers timers(solve(block_info, timing_parameters));
 
           write_timing(timing_parameters.checkpoint_out, block_info, timers,
