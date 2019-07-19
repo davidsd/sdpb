@@ -1,3 +1,9 @@
+# Version 2.1.2
+
+## sdpb
+
+- Significantly reduced memory use for large runs with many cores.
+
 # Version 2.1.1
 
 ## sdpb
