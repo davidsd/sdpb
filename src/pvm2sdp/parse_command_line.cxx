@@ -10,19 +10,19 @@ void parse_command_line(int argc, char **argv, int &precision,
                         boost::filesystem::path &output_dir)
 {
   std::string usage("pvm2sdp [PRECISION] [INPUT]... [OUTPUT_DIR]\n");
-  if(argc < 4)
-    {
-      std::cerr << "Wrong number of arguments\n" << usage;
-      exit(1);
-    }
-
   for(int arg = 1; arg < argc; ++arg)
     {
       if((argv[arg] == "-h"s) || argv[arg] == "--help"s)
         {
           std::cerr << usage;
-          exit(1);
+          exit(0);
         }
+    }
+
+  if(argc < 4)
+    {
+      std::cerr << "Wrong number of arguments\n" << usage;
+      exit(1);
     }
 
   std::string precision_string(argv[1]);
