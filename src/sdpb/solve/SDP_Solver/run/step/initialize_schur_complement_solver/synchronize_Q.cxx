@@ -1,6 +1,6 @@
 // Synchronize the results back to the global Q.
 
-#include "../../../../../../../Timers.hxx"
+#include "../../../../../../Timers.hxx"
 
 #include <El.hpp>
 
@@ -70,7 +70,7 @@ void synchronize_Q(El::DistMatrix<El::BigFloat> &Q,
 
   const int rank(El::mpi::Rank(El::mpi::COMM_WORLD));
   const int send_to_rank((rank + 1) % total_ranks),
-    receive_from_rank((rank - 1) % total_ranks);
+    receive_from_rank((total_ranks + rank - 1) % total_ranks);
 
   // Initial async receive
   int final_receive_destination((total_ranks + rank - 2) % total_ranks);
