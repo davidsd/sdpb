@@ -1,6 +1,7 @@
 #include "../SDP_Solver_Parameters.hxx"
 
 #include <boost/program_options.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 namespace po = boost::program_options;
 
