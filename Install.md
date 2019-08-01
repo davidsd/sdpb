@@ -80,7 +80,7 @@ manager such as [Homebrew](https://brew.sh).
 5. Download the Elemental version of SDPB
 
         cd ../..
-        git clone --branch elemental https://github.com/davidsd/sdpb
+        git clone https://github.com/davidsd/sdpb
         cd sdpb
 
 6. Configure the project using the included version of [waf](https://waf.io).  Waf can usually find libraries that are in system directories or have corresponding environment variables.  You may have to explicitly tell it where other libraries are.  If you are having problems, running `./waf --help` will give you a list of options.
