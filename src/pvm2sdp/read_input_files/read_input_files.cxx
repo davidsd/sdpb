@@ -1,10 +1,5 @@
 #include "../../sdp_convert.hxx"
 
-#include <boost/filesystem.hpp>
-
-std::vector<boost::filesystem::path>
-read_file_list(const boost::filesystem::path &input_file);
-
 void read_xml_input(const boost::filesystem::path &input_file,
                     El::BigFloat &objective_const,
                     std::vector<El::BigFloat> &dual_objectives_b,

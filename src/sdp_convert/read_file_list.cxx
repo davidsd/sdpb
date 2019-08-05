@@ -2,6 +2,8 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include <iostream>
+
 std::vector<boost::filesystem::path>
 read_file_list(const boost::filesystem::path &filename)
 {
@@ -11,7 +13,8 @@ read_file_list(const boost::filesystem::path &filename)
   boost::filesystem::ifstream infile(filename);
   infile.read(file_contents.data(),file_size);
   std::vector<boost::filesystem::path> result;
-  boost::split(result,file_contents,boost::is_any_of("\0"));
+  using namespace std::literals;
+  boost::split(result,file_contents,boost::is_any_of("\0"s));
   return result;
 }
 

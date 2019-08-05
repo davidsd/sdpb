@@ -14,8 +14,8 @@ def configure(conf):
     conf.env.git_version=subprocess.check_output('git describe --dirty', universal_newlines=True, shell=True).rstrip()
     
 def build(bld):
-    default_flags=['-Wall', '-Wextra', '-O3', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
-    # default_flags=['-Wall', '-Wextra', '-g', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
+    # default_flags=['-Wall', '-Wextra', '-O3', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
+    default_flags=['-Wall', '-Wextra', '-g', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
     use_packages=['cxx14','boost','gmpxx','mpfr','elemental','libxml2']
     
     # Main executable
@@ -83,7 +83,8 @@ def build(bld):
                      'src/sdp_convert/write_blocks.cxx',
                      'src/sdp_convert/write_primal_objective_c.cxx',
                      'src/sdp_convert/write_free_var_matrix.cxx',
-                     'src/sdp_convert/write_sdpb_input_files.cxx']
+                     'src/sdp_convert/write_sdpb_input_files.cxx',
+                     'src/sdp_convert/read_file_list.cxx']
 
     bld.stlib(source=library_sources,
               target='sdp_convert',
@@ -93,7 +94,6 @@ def build(bld):
     bld.program(source=['src/pvm2sdp/main.cxx',
                         'src/pvm2sdp/parse_command_line.cxx',
                         'src/pvm2sdp/read_input_files/read_input_files.cxx',
-                        'src/pvm2sdp/read_input_files/read_file_list.cxx',
                         'src/pvm2sdp/read_input_files/read_xml_input/read_xml_input.cxx',
                         'src/pvm2sdp/read_input_files/read_xml_input/Input_Parser/on_start_element.cxx',
                         'src/pvm2sdp/read_input_files/read_xml_input/Input_Parser/on_end_element.cxx',
