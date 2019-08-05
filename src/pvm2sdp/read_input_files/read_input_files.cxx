@@ -1,48 +1,21 @@
-// See the manual for a description of the correct XML input format.
-
-#include "Input_Parser.hxx"
+#include "../../sdp_convert.hxx"
 
 #include <boost/filesystem.hpp>
 
-namespace
-{
-  void start_element_callback(void *user_data, const xmlChar *name,
-                              const xmlChar **)
-  {
-    Input_Parser *input_parser = static_cast<Input_Parser *>(user_data);
-    input_parser->on_start_element(reinterpret_cast<const char *>(name));
-  }
+std::vector<boost::filesystem::path>
+read_file_list(const boost::filesystem::path &input_file);
 
-  void end_element_callback(void *user_data, const xmlChar *name)
-  {
-    Input_Parser *input_parser = static_cast<Input_Parser *>(user_data);
-    input_parser->on_end_element(reinterpret_cast<const char *>(name));
-  }
+void read_xml_input(const boost::filesystem::path &input_file,
+                    El::BigFloat &objective_const,
+                    std::vector<El::BigFloat> &dual_objectives_b,
+                    std::vector<Dual_Constraint_Group> &dual_constraint_groups,
+                    std::vector<size_t> &indices, size_t &num_processed);
 
-  void
-  characters_callback(void *user_data, const xmlChar *characters, int length)
-  {
-    Input_Parser *input_parser = static_cast<Input_Parser *>(user_data);
-    input_parser->on_characters(characters, length);
-  }
-
-  void warning_callback(void *, const char *msg, ...)
-  {
-    va_list args;
-    va_start(args, msg);
-    vprintf(msg, args);
-    va_end(args);
-  }
-
-  void error_callback(void *, const char *msg, ...)
-  {
-    va_list args;
-    va_start(args, msg);
-    vprintf(msg, args);
-    va_end(args);
-    throw std::runtime_error("Invalid Input file");
-  }
-}
+void read_input_files(
+  const std::vector<boost::filesystem::path> &input_files,
+  El::BigFloat &objective_const, std::vector<El::BigFloat> &dual_objectives_b,
+  std::vector<Dual_Constraint_Group> &dual_constraint_groups,
+  std::vector<size_t> &indices, size_t &num_processed);
 
 void read_input_files(
   const std::vector<boost::filesystem::path> &input_files,
@@ -50,40 +23,34 @@ void read_input_files(
   std::vector<Dual_Constraint_Group> &dual_constraint_groups,
   std::vector<size_t> &indices)
 {
-  LIBXML_TEST_VERSION;
-
   size_t num_processed(0);
+
+  read_input_files(input_files, objective_const, dual_objectives_b,
+                   dual_constraint_groups, indices, num_processed);
+}
+
+void read_input_files(
+  const std::vector<boost::filesystem::path> &input_files,
+  El::BigFloat &objective_const, std::vector<El::BigFloat> &dual_objectives_b,
+  std::vector<Dual_Constraint_Group> &dual_constraint_groups,
+  std::vector<size_t> &indices, size_t &num_processed)
+{
   for(auto &input_file : input_files)
     {
-      Input_Parser input_parser(dual_constraint_groups, indices, num_processed);
-
-      xmlSAXHandler xml_handlers;
-      // This feels unclean.
-      memset(&xml_handlers, 0, sizeof(xml_handlers));
-      xml_handlers.startElement = start_element_callback;
-      xml_handlers.endElement = end_element_callback;
-      xml_handlers.characters = characters_callback;
-      xml_handlers.warning = warning_callback;
-      xml_handlers.error = error_callback;
-
-      if(xmlSAXUserParseFile(&xml_handlers, &input_parser, input_file.c_str())
-         < 0)
+      if(input_file.empty())
         {
-          throw std::runtime_error("Unable to parse input file: "
-                                   + input_file.string());
+          continue;
         }
-
-      // Overwrite the objective with whatever is in the last file
-      // that has an objective, but polynomial_vector_matrices get
-      // appended.
-      auto iterator(input_parser.objective_state.value.begin()),
-        end(input_parser.objective_state.value.end());
-      if(iterator != end)
+      if(input_file.extension() == ".nsv")
         {
-          objective_const = *iterator;
-          ++iterator;
-          dual_objectives_b.clear();
-          dual_objectives_b.insert(dual_objectives_b.end(), iterator, end);
+          read_input_files(read_file_list(input_file), objective_const,
+                           dual_objectives_b, dual_constraint_groups, indices,
+                           num_processed);
+        }
+      else
+        {
+          read_xml_input(input_file, objective_const, dual_objectives_b,
+                         dual_constraint_groups, indices, num_processed);
         }
     }
 }
