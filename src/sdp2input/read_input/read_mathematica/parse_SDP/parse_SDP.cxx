@@ -22,7 +22,13 @@ parse_SDP(const std::vector<char>::const_iterator &begin,
       throw std::runtime_error("Could not find 'SDP['");
     }
 
-  auto end_objective(parse_vector(SDP_start, end, objectives));
+  std::vector<El::BigFloat> temp_vector;
+  auto end_objective(parse_vector(SDP_start, end, temp_vector));
+  if(!temp_vector.empty())
+    {
+      std::swap(objectives,temp_vector);
+      temp_vector.clear();
+    }
 
   auto comma(std::find(end_objective, end, ','));
   if(comma == end)
@@ -30,7 +36,12 @@ parse_SDP(const std::vector<char>::const_iterator &begin,
       throw std::runtime_error("Missing comma after objective");
     }
 
-  auto end_normalization(parse_vector(std::next(comma), end, normalization));
+  auto end_normalization(parse_vector(std::next(comma), end, temp_vector));
+  if(!temp_vector.empty())
+    {
+      std::swap(normalization,temp_vector);
+      temp_vector.clear();
+    }
 
   comma = std::find(end_objective, end, ',');
   if(comma == end)
@@ -38,7 +49,16 @@ parse_SDP(const std::vector<char>::const_iterator &begin,
       throw std::runtime_error("Missing comma after normalization");
     }
 
-  auto end_matrices(parse_generic(std::next(comma), end, matrices));
+  std::vector<Positive_Matrix_With_Prefactor> temp_matrices;
+  auto end_matrices(parse_generic(std::next(comma), end, temp_matrices));
+  {
+    size_t offset(matrices.size());
+    matrices.resize(matrices.size() + temp_matrices.size());
+    for(size_t index=0; index<temp_matrices.size(); ++index)
+      {
+        std::swap(matrices[offset+index],temp_matrices[index]);
+      }
+  }  
   const auto close_bracket(std::find(end_matrices, end, ']'));
   if(close_bracket == end)
     {

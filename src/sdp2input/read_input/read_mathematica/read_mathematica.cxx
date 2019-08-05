@@ -21,6 +21,7 @@ void read_mathematica(const boost::filesystem::path &input_path,
     {
       throw std::runtime_error("Unable to open input: " + input_path.string());
     }
+  // TODO: Use mmap
   std::vector<char> input_string;
   input_string.resize(boost::filesystem::file_size(input_path));
   input_stream.read(input_string.data(), input_string.size());

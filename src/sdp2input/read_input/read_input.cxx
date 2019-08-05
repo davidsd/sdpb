@@ -81,20 +81,13 @@ void read_input(const boost::filesystem::path &input_file,
         {
           std::swap(normalization, input_parser.normalization_state.value);
         }
-      if(matrices.empty())
+      size_t offset(matrices.size());
+      auto &temp_matrices(
+        input_parser.positive_matrices_with_prefactor_state.value);
+      matrices.resize(matrices.size() + temp_matrices.size());
+      for(size_t index = 0; index < temp_matrices.size(); ++index)
         {
-          std::swap(matrices,
-                    input_parser.positive_matrices_with_prefactor_state.value);
-        }
-      else
-        {
-          size_t offset(matrices.size());
-          auto &new_matrices(input_parser.positive_matrices_with_prefactor_state.value);
-          matrices.resize(matrices.size() + new_matrices.size());
-          for(size_t index=0; index<new_matrices.size(); ++index)
-            {
-              std::swap(matrices[offset+index],new_matrices[index]);
-            }
+          std::swap(matrices[offset + index], temp_matrices[index]);
         }
     }
   else
