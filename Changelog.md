@@ -2,15 +2,17 @@
 
 ## sdpb
 
-Fixed a bug in load balancing that caused jobs to crash.
+- Fixed a bug in load balancing that caused jobs to crash.
 
 ## pvm2sdp
 
-Added the ability to read lists of input files from a file.
+- Added the ability to read lists of input files from a file.
 
 ## sdp2input
 
-Added the ability to read lists of input files from a file.
+- Added the ability to read lists of input files from a file.
+
+- Significantly reduced memory use for runs with many cores.
 
 # Version 2.1.2
 
