@@ -27,8 +27,17 @@ the [the manual](SDPB-Manual.pdf).  The usage is
     sdp2input --precision=[PRECISION] --input=[INPUT] --output=[OUTPUT]
 
 `[PRECISION]` is the number of bits of precision used in the
-conversion.  `[INPUT]` is a Mathematica file with an SDP. `[OUTPUT]`
-is an output directory.
+conversion.  `[INPUT]` is a either a Mathematica file with an SDP or a
+null separated list of files.  There is an example Mathematica in
+`test/sdp2input_test.m`.  There is a null separated list file example
+in `test/sdp2input_split.nsv`.  Null separated list files must end
+with `.nsv`.
+
+`[OUTPUT]` is an output directory.  Two examples that create
+the same output are
+
+    sdp2input --precision=1024 --input=test/sdp2input_test.m --output=sdp2input_test
+    sdp2input --precision=1024 --input=test/sdp2input_split.nsv --output=sdp2input_test
 
 ### Converting XML files
 

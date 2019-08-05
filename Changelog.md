@@ -8,6 +8,10 @@ Fixed a bug in load balancing that caused jobs to crash.
 
 Added the ability to read lists of input files from a file.
 
+## sdp2input
+
+Added the ability to read lists of input files from a file.
+
 # Version 2.1.2
 
 ## sdpb
