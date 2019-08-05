@@ -73,10 +73,29 @@ void read_input(const boost::filesystem::path &input_file,
                                    + input_file.string());
         }
 
-      std::swap(objectives, input_parser.objective_state.value);
-      std::swap(normalization, input_parser.normalization_state.value);
-      std::swap(matrices,
-                input_parser.positive_matrices_with_prefactor_state.value);
+      if(!input_parser.objective_state.value.empty())
+        {
+          std::swap(objectives, input_parser.objective_state.value);
+        }
+      if(!input_parser.normalization_state.value.empty())
+        {
+          std::swap(normalization, input_parser.normalization_state.value);
+        }
+      if(matrices.empty())
+        {
+          std::swap(matrices,
+                    input_parser.positive_matrices_with_prefactor_state.value);
+        }
+      else
+        {
+          size_t offset(matrices.size());
+          auto &new_matrices(input_parser.positive_matrices_with_prefactor_state.value);
+          matrices.resize(matrices.size() + new_matrices.size());
+          for(size_t index=0; index<new_matrices.size(); ++index)
+            {
+              std::swap(matrices[offset+index],new_matrices[index]);
+            }
+        }
     }
   else
     {
