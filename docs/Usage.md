@@ -39,14 +39,40 @@ of [the manual](SDPB-Manual.pdf).  The usage is
     pvm2sdp [PRECISION] [INPUT] ... [OUTPUT]
 
 `[PRECISION]` is the number of bits of precision used in the
-conversion.  `[INPUT] ...` is a list of one or more xml
-files. `[OUTPUT]` is an output directory.
+conversion.  `[INPUT] ...` is a list of one or more files that can
+either be an xml input file, or a file with a list of files. `[OUTPUT]`
+is an output directory.
 
 For example, the command to convert the file `test/test.xml`, using
 1024 bits of precision, and store the result in the directory
 `test/test/`, is
 
     pvm2sdp 1024 test/test.xml test/test
+
+For input, you can also use a file that has a list of file names
+separated by null.  There is an example in `test/file_list.nsv`.
+Using it is similar to the xml files
+
+    pvm2sdp 1024 test/file_list.nsv test/test
+
+One way to generate this file list is with the `find` command.  For
+example,
+
+    find test -print0 -name "test.xml" > test/file_list.nsv
+    
+will regenerate `test/file_list.nsv`.  If you have a directory `input`
+with many xml files, you could generate a file list with the command
+
+    find input/ -print0 -name "*.xml" > file_list.nsv
+
+`pvm2sdp` assumes that anything with the `.nsv` extension is a null
+separated file list, and everything else is an xml file.  File lists
+can also recursively reference other file lists.  So running
+
+    find test -print0 -name "*.nsv" > file_list_list.nsv
+    pvm2sdp 1024 file_list_list.nsv test/test
+
+will also work.
 
 ## Running SDPB.
 

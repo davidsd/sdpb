@@ -1,3 +1,13 @@
+# Version 2.1.3
+
+## sdpb
+
+Fixed a bug in load balancing that caused jobs to crash.
+
+## pvm2sdp
+
+Added the ability to read lists of input files from a file.
+
 # Version 2.1.2
 
 ## sdpb
