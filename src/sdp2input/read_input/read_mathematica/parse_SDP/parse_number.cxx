@@ -4,8 +4,7 @@
 #include <vector>
 #include <string>
 
-std::string parse_number(const std::vector<char>::const_iterator &begin,
-                         const std::vector<char>::const_iterator &end)
+std::string parse_number(const char *begin, const char *end)
 {
   std::string cleaned_string;
   cleaned_string.reserve(end - begin);

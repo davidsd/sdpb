@@ -5,15 +5,11 @@
 #include <iterator>
 #include <string>
 
-std::vector<char>::const_iterator
-parse_damped_rational(const std::vector<char>::const_iterator &begin,
-                      const std::vector<char>::const_iterator &end,
-                      Damped_Rational &damped_rational);
+const char *parse_damped_rational(const char *begin, const char *end,
+                                  Damped_Rational &damped_rational);
 
-std::vector<char>::const_iterator
-parse_matrix(const std::vector<char>::const_iterator &begin,
-             const std::vector<char>::const_iterator &end,
-             Positive_Matrix_With_Prefactor &matrix)
+const char *parse_matrix(const char *begin, const char *end,
+                         Positive_Matrix_With_Prefactor &matrix)
 {
   const std::string matrix_literal("PositiveMatrixWithPrefactor[");
   auto matrix_start(
@@ -33,10 +29,10 @@ parse_matrix(const std::vector<char>::const_iterator &begin,
       throw std::runtime_error("Missing comma after DampedRational");
     }
 
-  auto end_polynomials(
+  const char *end_polynomials(
     parse_generic(std::next(comma), end, matrix.polynomials));
 
-  const auto close_bracket(std::find(end_polynomials, end, ']'));
+  const char *close_bracket(std::find(end_polynomials, end, ']'));
   if(close_bracket == end)
     {
       throw std::runtime_error("Missing ']' at end of SDP");

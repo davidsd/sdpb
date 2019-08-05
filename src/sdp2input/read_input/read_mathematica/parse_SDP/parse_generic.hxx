@@ -4,37 +4,27 @@
 #include <iterator>
 #include <string>
 
-std::vector<char>::const_iterator
-parse_matrix(const std::vector<char>::const_iterator &begin,
-             const std::vector<char>::const_iterator &end,
-             Positive_Matrix_With_Prefactor &matrix);
+const char *parse_matrix(const char *begin, const char *end,
+                         Positive_Matrix_With_Prefactor &matrix);
 
-std::vector<char>::const_iterator
-parse_polynomial(const std::vector<char>::const_iterator &begin,
-                 const std::vector<char>::const_iterator &end,
-                 Polynomial &polynomial);
+const char *
+parse_polynomial(const char *begin, const char *end, Polynomial &polynomial);
 
-inline std::vector<char>::const_iterator
-parse_generic(const std::vector<char>::const_iterator &begin,
-              const std::vector<char>::const_iterator &end,
-              Polynomial &polynomial)
+inline const char *
+parse_generic(const char *begin, const char *end, Polynomial &polynomial)
 {
   return parse_polynomial(begin, end, polynomial);
 }
 
-inline std::vector<char>::const_iterator
-parse_generic(const std::vector<char>::const_iterator &begin,
-              const std::vector<char>::const_iterator &end,
-              Positive_Matrix_With_Prefactor &matrix)
+inline const char *parse_generic(const char *begin, const char *end,
+                                 Positive_Matrix_With_Prefactor &matrix)
 {
   return parse_matrix(begin, end, matrix);
 }
 
 template <typename T>
-std::vector<char>::const_iterator
-parse_generic(const std::vector<char>::const_iterator &begin,
-              const std::vector<char>::const_iterator &end,
-              std::vector<T> &result_vector)
+const char *parse_generic(const char *begin, const char *end,
+                          std::vector<T> &result_vector)
 {
   const auto open_brace(std::find(begin, end, '{'));
   if(open_brace == end)

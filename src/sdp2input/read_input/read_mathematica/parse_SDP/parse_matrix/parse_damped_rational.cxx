@@ -9,10 +9,8 @@
 #include <iterator>
 #include <string>
 
-std::vector<char>::const_iterator
-parse_damped_rational(const std::vector<char>::const_iterator &begin,
-                      const std::vector<char>::const_iterator &end,
-                      Damped_Rational &damped_rational)
+const char *parse_damped_rational(const char *begin, const char *end,
+                                  Damped_Rational &damped_rational)
 {
   const std::string damped_literal("DampedRational[");
 

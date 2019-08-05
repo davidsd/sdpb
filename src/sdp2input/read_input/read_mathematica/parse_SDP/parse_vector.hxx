@@ -6,11 +6,9 @@
 
 #include <iterator>
 
-template<typename T>
-std::vector<char>::const_iterator
-parse_vector(const std::vector<char>::const_iterator &begin,
-             const std::vector<char>::const_iterator &end,
-             std::vector<T> &result_vector)
+template <typename T>
+const char *
+parse_vector(const char *begin, const char *end, std::vector<T> &result_vector)
 {
   const auto open_brace(std::find(begin, end, '{'));
   if(open_brace == end)
@@ -28,12 +26,11 @@ parse_vector(const std::vector<char>::const_iterator &begin,
   auto comma(open_brace);
   comma = std::find(start_element, close_brace, ',');
   while(start_element < close_brace)
-  {
-    
-    result_vector.emplace_back(parse_number(start_element, comma));
-    start_element = std::next(comma);
-    comma = std::find(start_element, close_brace, ',');
-  }
+    {
+      result_vector.emplace_back(parse_number(start_element, comma));
+      start_element = std::next(comma);
+      comma = std::find(start_element, close_brace, ',');
+    }
 
   return std::next(close_brace);
 }

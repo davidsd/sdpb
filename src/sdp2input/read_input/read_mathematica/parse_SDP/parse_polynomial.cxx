@@ -7,10 +7,8 @@
 
 using namespace std::literals;
 
-inline void check_iterator(const char character,
-                           const std::vector<char>::const_iterator &begin,
-                           const std::vector<char>::const_iterator &iterator,
-                           const std::vector<char>::const_iterator &end)
+inline void check_iterator(const char character, const char *begin,
+                           const char *iterator, const char *end)
 {
   if(iterator == end)
     {
@@ -19,10 +17,8 @@ inline void check_iterator(const char character,
     }
 }
 
-std::vector<char>::const_iterator
-parse_polynomial(const std::vector<char>::const_iterator &begin,
-                 const std::vector<char>::const_iterator &end,
-                 Polynomial &polynomial)
+const char *
+parse_polynomial(const char *begin, const char *end, Polynomial &polynomial)
 {
   const std::vector<char> delimiters({',', '}'});
   const auto delimiter(
