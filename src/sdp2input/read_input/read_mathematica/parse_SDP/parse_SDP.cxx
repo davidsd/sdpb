@@ -10,7 +10,6 @@ const char *parse_SDP(const char *begin, const char *end,
                       std::vector<El::BigFloat> &objectives,
                       std::vector<El::BigFloat> &normalization,
                       std::vector<Positive_Matrix_With_Prefactor> &matrices)
-
 {
   const std::string SDP_literal("SDP[");
   auto SDP_start(
@@ -47,6 +46,8 @@ const char *parse_SDP(const char *begin, const char *end,
       throw std::runtime_error("Missing comma after normalization");
     }
 
+  // TODO: create dual_constraint_groups directly.  Maybe even write
+  // everything but the objectives directly.
   std::vector<Positive_Matrix_With_Prefactor> temp_matrices;
   const char *end_matrices(
     parse_generic(std::next(comma), end, temp_matrices));
