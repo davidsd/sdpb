@@ -82,7 +82,7 @@ int main(int argc, char **argv)
       El::gmp::SetPrecision(precision);
       // El::gmp wants base-2 bits, but boost::multiprecision want
       // base-10 digits.
-      Boost_Float::default_precision(precision*log(2)/log(10));
+      Boost_Float::default_precision(precision * log(2) / log(10));
 
       std::vector<El::BigFloat> objectives, normalization;
       std::vector<Positive_Matrix_With_Prefactor> matrices;
