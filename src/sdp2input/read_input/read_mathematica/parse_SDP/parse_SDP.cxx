@@ -6,6 +6,11 @@
 #include <iterator>
 #include <string>
 
+const char *
+parse_matrices(const char *begin, const char *end, const int &rank,
+               const int &num_procs, const size_t &num_matrices,
+               std::vector<Positive_Matrix_With_Prefactor> &matrices);
+
 const char *parse_SDP(const char *begin, const char *end,
                       std::vector<El::BigFloat> &objectives,
                       std::vector<El::BigFloat> &normalization,
@@ -46,15 +51,10 @@ const char *parse_SDP(const char *begin, const char *end,
       throw std::runtime_error("Missing comma after normalization");
     }
 
-  // TODO: Create dual_constraint_groups directly.  After some
-  // experiments, this does not seem to help with memory.
-
-  // TODO: Write everything but the objectives directly.  This would
-  // help significantly with memory, but it requires having the global
-  // normalization available in the first file we read.
   std::vector<Positive_Matrix_With_Prefactor> temp_matrices;
-  const char *end_matrices(
-    parse_generic(std::next(comma), end, temp_matrices));
+  const int rank(El::mpi::Rank()), num_procs(El::mpi::Size());
+  const char *end_matrices(parse_matrices(
+    std::next(comma), end, rank, num_procs, matrices.size(), temp_matrices));
   {
     size_t offset(matrices.size());
     matrices.resize(matrices.size() + temp_matrices.size());

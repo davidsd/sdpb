@@ -110,6 +110,7 @@ def build(bld):
                         'src/sdp2input/read_input/Input_Parser/on_characters.cxx',
                         'src/sdp2input/read_input/read_mathematica/read_mathematica.cxx',
                         'src/sdp2input/read_input/read_mathematica/parse_SDP/parse_SDP.cxx',
+                        'src/sdp2input/read_input/read_mathematica/parse_SDP/parse_matrices.cxx',
                         'src/sdp2input/read_input/read_mathematica/parse_SDP/parse_number.cxx',
                         'src/sdp2input/read_input/read_mathematica/parse_SDP/parse_polynomial.cxx',
                         'src/sdp2input/read_input/read_mathematica/parse_SDP/parse_matrix/parse_matrix.cxx',
