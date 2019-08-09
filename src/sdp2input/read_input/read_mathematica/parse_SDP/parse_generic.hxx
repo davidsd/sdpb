@@ -43,8 +43,7 @@ const char *parse_generic(const char *begin, const char *end,
                                      delimiters.end());
       if(delimiter == end)
         {
-          throw std::runtime_error(
-            "Missing '}' at end of array of PositiveMatrixWithPrefactor");
+          throw std::runtime_error("Missing '}' at end of array");
         }
     }
   while(*delimiter != '}');
