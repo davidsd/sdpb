@@ -4,6 +4,8 @@
 
 - Fixed a bug in load balancing that caused jobs to crash.
 
+- Made some very, very small problems run faster.
+
 ## pvm2sdp
 
 - Added the ability to read lists of input files from a file.
