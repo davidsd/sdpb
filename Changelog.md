@@ -2,7 +2,8 @@
 
 ## sdpb
 
-- Fixed a bug in load balancing that caused jobs to crash.
+- Fixed a bug in load balancing that caused jobs to crash on some
+  machines.
 
 - Made some very, very small problems run faster.
 
