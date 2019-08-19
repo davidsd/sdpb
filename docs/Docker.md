@@ -9,7 +9,7 @@ than Docker, so you should read the guide for
 it on Windows, Mac, or Linux.
 
 There is a docker image on [Docker Hub](https://hub.docker.com/) named
-`wlandry/sdpb:2.1.2` containing binaries for `scalar_blocks`,
+`wlandry/sdpb:2.1.3` containing binaries for `scalar_blocks`,
 `pvm2sdp`, `sdp2input`, and `sdpb`.
 
 Suppose you have an input file `/my/project/input.xml`. To use this
@@ -27,7 +27,7 @@ place that docker will see it.
     
 `<image>` is the image name.
 
-        wlandry/sdpb:2.1.2
+        wlandry/sdpb:2.1.3
 
 `<command>` is the command that you would normally use to run the SDPB
 commands (see [Usage.md](Usage.md)).  The directory containing the
@@ -43,12 +43,12 @@ container.  To allow mpirun to run as root, we add the option
 can change that number to match your own machine.  Putting it all
 together on a single line
 
-    docker run -v /my/project/:/usr/local/share/sdpb wlandry/sdpb:2.1.2 mpirun --allow-run-as-root -n 4 pvm2sdp 1024 /usr/local/share/sdpb/input.xml /usr/local/share/sdpb/input
+    docker run -v /my/project/:/usr/local/share/sdpb wlandry/sdpb:2.1.3 mpirun --allow-run-as-root -n 4 pvm2sdp 1024 /usr/local/share/sdpb/input.xml /usr/local/share/sdpb/input
 
 Running this command will populate the directory `/my/project/input`.
 To search for primal-dual solutions
 
-    docker run -v /my/project/:/usr/local/share/sdpb wlandry/sdpb:2.1.2 mpirun --allow-run-as-root -n 4 sdpb --precision=1024 --procsPerNode=4 -s /usr/local/share/sdpb/input
+    docker run -v /my/project/:/usr/local/share/sdpb wlandry/sdpb:2.1.3 mpirun --allow-run-as-root -n 4 sdpb --precision=1024 --procsPerNode=4 -s /usr/local/share/sdpb/input
 
 The results will be in `/my/project/`.  Note that the files may be
 owned by root.
