@@ -62,6 +62,11 @@ int main(int argc, char **argv)
           timing_parameters.no_final_checkpoint = true;
           timing_parameters.checkpoint_interval
             = std::numeric_limits<int64_t>::max();
+          timing_parameters.max_runtime
+            = std::numeric_limits<int64_t>::max();
+          timing_parameters.duality_gap_threshold=0;
+          timing_parameters.primal_error_threshold=0;
+          timing_parameters.dual_error_threshold=0;
           if(timing_parameters.verbosity != Verbosity::debug)
             {
               timing_parameters.verbosity = Verbosity::none;
