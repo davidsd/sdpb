@@ -28,12 +28,33 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
   schur_off_diagonal.blocks.clear();
   schur_off_diagonal.blocks.reserve(schur_complement_cholesky.blocks.size());
 
+  El::HermitianEigCtrl<El::BigFloat> hermitian_eig_ctrl;
+  /// The default number of iterations is 40.  That is sometimes
+  /// not enough, so we bump it up significantly.
+  hermitian_eig_ctrl.tridiagEigCtrl.dcCtrl.secularCtrl.maxIterations = 512;
+  
   for(size_t block = 0; block < schur_complement_cholesky.blocks.size();
       block++)
     {
       auto &cholesky_timer(timers.add_and_start(
         "run.step.initializeSchurComplementSolver.Q.cholesky_"
         + std::to_string(block_info.block_indices[block])));
+
+      {
+      El::DistMatrix<El::BigFloat> eigenvalues(schur_complement.blocks[block].Grid());
+      auto block_copy(schur_complement.blocks[block]);
+      hermitian_eig_ctrl.tridiagEigCtrl.dcCtrl.cutoff
+        = schur_complement.blocks[block].Height() / 2 + 1;
+      El::HermitianEig(El::UpperOrLowerNS::LOWER, block_copy, eigenvalues,
+                       hermitian_eig_ctrl);
+      std::ofstream eigvals("eigvals_" + std::to_string(block_info.block_indices[block]) + ".txt");
+      El::Print(eigenvalues,"","\n",eigvals);
+      // std::cout << "eigvals: " << El::mpi::Rank() << " "
+      //           << El::Max(eigenvalues)/El::Min(eigenvalues) << " "
+      //           << "\n";
+      }
+
+      
       schur_complement_cholesky.blocks[block] = schur_complement.blocks[block];
       Cholesky(El::UpperOrLowerNS::LOWER,
                schur_complement_cholesky.blocks[block]);
