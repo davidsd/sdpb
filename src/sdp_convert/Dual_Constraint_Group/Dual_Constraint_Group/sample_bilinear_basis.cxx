@@ -17,23 +17,38 @@
 // - sampleScalings: the scale factors {s_0, s_1, ... }
 //
 
-#include "../../../Polynomial.hxx"
 
+#include "../../../sdp2input/write_output/bilinear_basis/factorial.hxx"
+
+#include "../../../sdp2input/Boost_Float.hxx"
+#include <boost/math/special_functions.hpp>
+
+template Boost_Float
+boost::math::chebyshev_clenshaw_recurrence<Boost_Float, Boost_Float>(
+  const Boost_Float *c, size_t length, const Boost_Float &x);
 
 El::Matrix<El::BigFloat>
-sample_bilinear_basis(const int maxDegree, const int numSamples,
-                      const std::vector<Polynomial> &bilinearBasis,
-                      const std::vector<El::BigFloat> &samplePoints,
-                      const std::vector<El::BigFloat> &sampleScalings)
+sample_bilinear_basis(const int max_degree, const int num_samples,
+                      const std::vector<Boost_Float> &sample_points,
+                      const std::vector<Boost_Float> &sample_scalings)
 {
-  El::Matrix<El::BigFloat> b(maxDegree + 1, numSamples);
-  for(int k = 0; k < numSamples; k++)
+  Boost_Float::default_precision(El::gmp::Precision() * log(2) / log(10));
+
+  El::Matrix<El::BigFloat> b(max_degree + 1, num_samples);
+  for(int k = 0; k < num_samples; k++)
     {
-      El::BigFloat x = samplePoints[k];
-      El::BigFloat scale = Sqrt(sampleScalings[k]);
-      for(int i = 0; i <= maxDegree; i++)
+      Boost_Float x(sample_points[k]);
+      Boost_Float scale(sqrt(sample_scalings[k]));
+
+      for(int i = 0; i <= max_degree; i++)
         {
-          b.Set(i, k, scale * bilinearBasis[i](x));
+          std::vector<Boost_Float> cheb_polynomial(i + 1, Boost_Float(0));
+          cheb_polynomial.back() = 1;
+          Boost_Float b_boost(
+            scale
+            * boost::math::chebyshev_clenshaw_recurrence(
+                cheb_polynomial.data(), cheb_polynomial.size(), x));
+          b.Set(i, k, El::BigFloat(to_string(b_boost)));
         }
     }
   return b;

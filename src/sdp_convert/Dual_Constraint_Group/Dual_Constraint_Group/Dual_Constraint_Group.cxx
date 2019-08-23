@@ -7,11 +7,13 @@
 
 #include "../../Dual_Constraint_Group.hxx"
 
+#include "../../../sdp2input/Boost_Float.hxx"
+#include <boost/math/special_functions.hpp>
+
 El::Matrix<El::BigFloat>
-sample_bilinear_basis(const int maxDegree, const int numSamples,
-                      const std::vector<Polynomial> &bilinearBasis,
-                      const std::vector<El::BigFloat> &samplePoints,
-                      const std::vector<El::BigFloat> &sampleScalings);
+sample_bilinear_basis(const int max_degree, const int num_samples,
+                      const std::vector<Boost_Float> &sample_points,
+                      const std::vector<Boost_Float> &sample_scalings);
 
 // Construct a Dual_Constraint_Group from a Polynomial_Vector_Matrix by
 // sampling the matrix at the appropriate number of points, as
@@ -35,6 +37,24 @@ Dual_Constraint_Group::Dual_Constraint_Group(const Polynomial_Vector_Matrix &m)
   size_t numConstraints = numSamples * dim * (dim + 1) / 2;
   size_t vectorDim = m.elt(0, 0).size();
 
+  const size_t num_points(m.sample_points.size());
+  Boost_Float::default_precision(El::gmp::Precision() * log(2) / log(10));
+
+  const double x_scale(m.sample_points.back());
+
+  std::vector<Boost_Float> cheb_points(num_points);
+  for(size_t point = 0; point < cheb_points.size(); ++point)
+    {
+      cheb_points[point] = boost::math::cos_pi(
+        Boost_Float(2 * (num_points - point) - 1) / (2 * num_points));
+    }
+
+  std::vector<Boost_Float> points(num_points);
+  for(size_t point = 0; point < points.size(); ++point)
+    {
+      points[point] = x_scale * (Boost_Float(1) + cheb_points[point]);
+    }
+
   // Form the constraint_matrix B and constraint_constants c from the
   // polynomials (1,y) . \vec P^{rs}(x)
 
@@ -44,6 +64,7 @@ Dual_Constraint_Group::Dual_Constraint_Group(const Polynomial_Vector_Matrix &m)
   constraint_matrix.Resize(numConstraints, vectorDim - 1);
 
   // Populate B and c by sampling the polynomial matrix
+
   int p = 0;
   for(size_t c = 0; c < dim; c++)
     {
@@ -51,12 +72,11 @@ Dual_Constraint_Group::Dual_Constraint_Group(const Polynomial_Vector_Matrix &m)
         {
           for(size_t k = 0; k < numSamples; k++)
             {
-              El::BigFloat x = m.sample_points[k];
-              El::BigFloat scale = m.sample_scalings[k];
-              constraint_constants[p] = scale * m.elt(r, c)[0](x);
+              El::BigFloat x(to_string(points[k]));
+              constraint_constants[p] = m.elt(r, c)[0](x);
               for(size_t n = 1; n < vectorDim; ++n)
                 {
-                  constraint_matrix.Set(p, n - 1, -scale * m.elt(r, c)[n](x));
+                  constraint_matrix.Set(p, n - 1, -m.elt(r, c)[n](x));
                 }
               ++p;
             }
@@ -71,20 +91,15 @@ Dual_Constraint_Group::Dual_Constraint_Group(const Polynomial_Vector_Matrix &m)
   //   Y_2: {\sqrt(x) q_0(x), ..., \sqrt(x) q_delta2(x)
   //
   const size_t delta1(degree / 2);
+
   bilinear_bases[0] = sample_bilinear_basis(
-    delta1, numSamples, m.bilinear_basis, m.sample_points, m.sample_scalings);
+    delta1, numSamples, cheb_points, std::vector<Boost_Float>(num_points, 1));
 
   const size_t delta2(degree == 0 ? 0 : (degree - 1) / 2);
   // a degree-0 Polynomial_Vector_Matrix should only need one block,
   // but this duplicates the block.
 
-  // The \sqrt(x) factors can be accounted for by replacing the
-  // scale factors s_k with x_k s_k.
-  std::vector<El::BigFloat> scaled_samples;
-  for(size_t ii = 0; ii < m.sample_points.size(); ++ii)
-    {
-      scaled_samples.emplace_back(m.sample_points[ii] * m.sample_scalings[ii]);
-    }
-  bilinear_bases[1] = sample_bilinear_basis(
-    delta2, numSamples, m.bilinear_basis, m.sample_points, scaled_samples);
+  // Scale the second second of bases by the coordinate 'x'
+  bilinear_bases[1]
+    = sample_bilinear_basis(delta2, numSamples, cheb_points, points);
 }
