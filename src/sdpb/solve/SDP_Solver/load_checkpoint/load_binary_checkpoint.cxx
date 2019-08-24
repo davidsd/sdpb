@@ -22,8 +22,7 @@ void read_local_binary_blocks(T &t,
          || local_width != block.LocalWidth())
         {
           std::stringstream ss;
-          ss << El::mpi::Rank()
-             << ": Incompatible binary checkpoint file.  For block with "
+          ss << "Incompatible binary checkpoint file.  For block with "
              << "global size (" << block.Height() << "," << block.Width()
              << "), expected local dimensions (" << block.LocalHeight() << ","
              << block.LocalWidth() << "), but found (" << local_height << ","

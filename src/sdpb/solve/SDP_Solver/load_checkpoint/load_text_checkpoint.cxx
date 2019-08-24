@@ -17,11 +17,10 @@ void read_text_block(El::DistMatrix<El::BigFloat> &block,
   if(file_height != block.Height() || file_width != block.Width())
     {
       std::stringstream ss;
-      ss << El::mpi::Rank()
-         << ": Incompatible checkpoint file: '" << block_path.string()
-         << "'.  Expected dimensions ("
-         << block.Height() << "," << block.Width() << "), but found ("
-         << file_height << "," << file_width << ")";
+      ss << "Incompatible checkpoint file: '" << block_path.string()
+         << "'.  Expected dimensions (" << block.Height() << ","
+         << block.Width() << "), but found (" << file_height << ","
+         << file_width << ")";
       throw std::runtime_error(ss.str());
     }
 
