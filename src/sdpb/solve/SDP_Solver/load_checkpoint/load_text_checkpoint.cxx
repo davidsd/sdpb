@@ -17,8 +17,9 @@ void read_text_block(El::DistMatrix<El::BigFloat> &block,
   if(file_height != block.Height() || file_width != block.Width())
     {
       std::stringstream ss;
-      ss << "Incompatible checkpoint file: '" + block_path.string()
-              + "'.  Expected dimensions ("
+      ss << El::mpi::Rank()
+         << ": Incompatible checkpoint file: '" << block_path.string()
+         << "'.  Expected dimensions ("
          << block.Height() << "," << block.Width() << "), but found ("
          << file_height << "," << file_width << ")";
       throw std::runtime_error(ss.str());
@@ -59,10 +60,10 @@ bool load_text_checkpoint(const boost::filesystem::path &checkpoint_directory,
 
   boost::filesystem::ifstream checkpoint_stream(checkpoint_filename);
   if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
-  {
-    std::cout << "Loading text checkpoint from : " << checkpoint_directory
-              << '\n';
-  }
+    {
+      std::cout << "Loading text checkpoint from : " << checkpoint_directory
+                << '\n';
+    }
 
   for(size_t block = 0; block != block_indices.size(); ++block)
     {

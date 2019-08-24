@@ -4,7 +4,8 @@
 #include <boost/filesystem/fstream.hpp>
 
 template <typename T>
-void read_local_binary_blocks(T &t, boost::filesystem::ifstream &checkpoint_stream)
+void read_local_binary_blocks(T &t,
+                              boost::filesystem::ifstream &checkpoint_stream)
 {
   El::BigFloat zero(0);
   const size_t serialized_size(zero.SerializedSize());
@@ -21,9 +22,12 @@ void read_local_binary_blocks(T &t, boost::filesystem::ifstream &checkpoint_stre
          || local_width != block.LocalWidth())
         {
           std::stringstream ss;
-          ss << "Incompatible checkpoint file.  Expected dimensions ("
-             << block.LocalHeight() << "," << block.LocalWidth()
-             << "), but found (" << local_height << "," << local_width << ")";
+          ss << El::mpi::Rank()
+             << ": Incompatible binary checkpoint file.  For block with "
+             << "global size (" << block.Height() << "," << block.Width()
+             << "), expected local dimensions (" << block.LocalHeight() << ","
+             << block.LocalWidth() << "), but found (" << local_height << ","
+             << local_width << ")";
 
           throw std::runtime_error(ss.str());
         }
