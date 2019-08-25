@@ -18,6 +18,17 @@ void read_local_binary_blocks(T &t,
                              sizeof(int64_t));
       checkpoint_stream.read(reinterpret_cast<char *>(&local_width),
                              sizeof(int64_t));
+
+      if(!checkpoint_stream.good())
+        {
+          std::stringstream ss;
+          ss << "Corrupted binary checkpoint file.  For block with "
+             << "global size (" << block.Height() << "," << block.Width()
+             << ") and local dimensions (" << block.LocalHeight() << ","
+             << block.LocalWidth() << "), error when reading height and width";
+          throw std::runtime_error(ss.str());
+        }
+
       if(local_height != block.LocalHeight()
          || local_width != block.LocalWidth())
         {
@@ -38,6 +49,16 @@ void read_local_binary_blocks(T &t,
             checkpoint_stream.read(
               reinterpret_cast<char *>(local_array.data()),
               std::streamsize(local_array.size()));
+            if(!checkpoint_stream.good())
+              {
+                std::stringstream ss;
+                ss << "Corrupted binary checkpoint file.  For block with "
+                   << "global size (" << block.Height() << "," << block.Width()
+                   << ") and local dimensions (" << block.LocalHeight() << ","
+                   << block.LocalWidth() << "), error when reading element ("
+                   << row << "," << column << ")";
+                throw std::runtime_error(ss.str());
+              }
             input.Deserialize(local_array.data());
 
             block.SetLocal(row, column, input);
