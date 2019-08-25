@@ -61,14 +61,39 @@ void SDP_Solver::save_checkpoint(
       remove(backup_filename);
       rename(checkpoint_filename, backup_filename);
     }
-  boost::filesystem::ofstream checkpoint_stream(checkpoint_filename);
-  if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
+
+  const size_t max_retries(10);
+  bool wrote_successfully(false);
+  for(size_t attempt=0; attempt<max_retries && !wrote_successfully; ++attempt)
     {
-      std::cout << "Saving checkpoint to    : " << checkpoint_directory
-                << '\n';
+      boost::filesystem::ofstream checkpoint_stream(checkpoint_filename);
+      if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
+        {
+          std::cout << "Saving checkpoint to    : " << checkpoint_directory
+                    << '\n';
+        }
+      write_local_blocks(x, checkpoint_stream);
+      write_local_blocks(X, checkpoint_stream);
+      write_local_blocks(y, checkpoint_stream);
+      write_local_blocks(Y, checkpoint_stream);
+      wrote_successfully=checkpoint_stream.good();
+      if(!wrote_successfully)
+        {
+          if(attempt+1<max_retries)
+            {
+              std::stringstream ss;
+              ss << "Error writing checkpoint file '"
+                 << checkpoint_filename << "'.  Retrying "
+                 << (attempt+2) << "/" << max_retries << "\n";
+              std::cerr << ss.str() << std::flush;
+            }
+          else
+            {
+              std::stringstream ss;
+              ss << "Error writing checkpoint file '"
+                 << checkpoint_filename << "'.  Exceeded max retries.\n";
+              throw std::runtime_error(ss.str());
+            }
+        }
     }
-  write_local_blocks(x, checkpoint_stream);
-  write_local_blocks(X, checkpoint_stream);
-  write_local_blocks(y, checkpoint_stream);
-  write_local_blocks(Y, checkpoint_stream);
 }
