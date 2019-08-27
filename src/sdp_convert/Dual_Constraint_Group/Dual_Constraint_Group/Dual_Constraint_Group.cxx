@@ -59,24 +59,24 @@ Dual_Constraint_Group::Dual_Constraint_Group(
   // polynomials (1,y) . \vec P^{rs}(x)
 
   // The first element of each vector \vec P^{rs}(x) multiplies the constant 1
-  constraint_constants.resize(numConstraints);
+  c.resize(numConstraints);
   // The rest multiply decision variables y
-  constraint_matrix.Resize(numConstraints, vectorDim - 1);
+  B.Resize(numConstraints, vectorDim - 1);
 
   // Populate B and c by sampling the polynomial matrix
 
   int p = 0;
-  for(size_t c = 0; c < dim; c++)
+  for(size_t s = 0; s < dim; s++)
     {
-      for(size_t r = 0; r <= c; r++)
+      for(size_t r = 0; r <= s; r++)
         {
           for(size_t k = 0; k < num_samples; k++)
             {
               El::BigFloat x(to_string(points[k]));
-              constraint_constants[p] = pvm.element(r, c)[0](x);
+              c[p] = pvm.element(r, s)[0](x);
               for(size_t n = 1; n < vectorDim; ++n)
                 {
-                  constraint_matrix.Set(p, n - 1, -pvm.element(r, c)[n](x));
+                  B.Set(p, n - 1, -pvm.element(r, s)[n](x));
                 }
               ++p;
             }

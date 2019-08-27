@@ -4,15 +4,14 @@
 
 void write_free_var_matrix(
   const boost::filesystem::path &output_dir,
-  const std::vector<size_t> &indices,
-  const size_t &dual_objectives_b_size,
+  const std::vector<size_t> &indices, const size_t &dual_objectives_b_size,
   const std::vector<Dual_Constraint_Group> &dual_constraint_groups)
 {
   auto block_index(indices.begin());
 
   for(auto &group : dual_constraint_groups)
     {
-      size_t block_size(group.constraint_matrix.Height());
+      size_t block_size(group.B.Height());
 
       boost::filesystem::ofstream output_stream(
         output_dir / ("free_var_matrix." + std::to_string(*block_index)));
@@ -22,7 +21,7 @@ void write_free_var_matrix(
       for(size_t row = 0; row < block_size; ++row)
         for(size_t column = 0; column < dual_objectives_b_size; ++column)
           {
-            output_stream << group.constraint_matrix(row, column) << "\n";
+            output_stream << group.B(row, column) << "\n";
           }
 
       ++block_index;
