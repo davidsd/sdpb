@@ -29,14 +29,13 @@ sample_bilinear_basis(const int max_degree, const int num_samples,
 //
 Dual_Constraint_Group::Dual_Constraint_Group(
   const Polynomial_Vector_Matrix &pvm)
+    : dim(pvm.rows), degree(pvm.degree())
 {
   assert(pvm.rows == pvm.cols);
-  dim = pvm.rows;
-  degree = pvm.degree();
 
-  size_t numSamples = degree + 1;
-  size_t numConstraints = numSamples * dim * (dim + 1) / 2;
-  size_t vectorDim = pvm.elt(0, 0).size();
+  size_t num_samples = degree + 1;
+  size_t numConstraints = num_samples * dim * (dim + 1) / 2;
+  size_t vectorDim = pvm.element(0, 0).size();
 
   const size_t num_points(pvm.sample_points.size());
   Boost_Float::default_precision(El::gmp::Precision() * log(2) / log(10));
@@ -71,13 +70,13 @@ Dual_Constraint_Group::Dual_Constraint_Group(
     {
       for(size_t r = 0; r <= c; r++)
         {
-          for(size_t k = 0; k < numSamples; k++)
+          for(size_t k = 0; k < num_samples; k++)
             {
               El::BigFloat x(to_string(points[k]));
-              constraint_constants[p] = pvm.elt(r, c)[0](x);
+              constraint_constants[p] = pvm.element(r, c)[0](x);
               for(size_t n = 1; n < vectorDim; ++n)
                 {
-                  constraint_matrix.Set(p, n - 1, -pvm.elt(r, c)[n](x));
+                  constraint_matrix.Set(p, n - 1, -pvm.element(r, c)[n](x));
                 }
               ++p;
             }
@@ -94,7 +93,7 @@ Dual_Constraint_Group::Dual_Constraint_Group(
   const size_t delta1(degree / 2);
 
   bilinear_bases[0] = sample_bilinear_basis(
-    delta1, numSamples, cheb_points, std::vector<Boost_Float>(num_points, 1));
+    delta1, num_samples, cheb_points, std::vector<Boost_Float>(num_points, 1));
 
   const size_t delta2(degree == 0 ? 0 : (degree - 1) / 2);
   // a degree-0 Polynomial_Vector_Matrix should only need one block,
@@ -102,5 +101,5 @@ Dual_Constraint_Group::Dual_Constraint_Group(
 
   // Scale the second second of bases by the coordinate 'x'
   bilinear_bases[1]
-    = sample_bilinear_basis(delta2, numSamples, cheb_points, points);
+    = sample_bilinear_basis(delta2, num_samples, cheb_points, points);
 }

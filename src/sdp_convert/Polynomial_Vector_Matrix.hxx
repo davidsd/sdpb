@@ -47,12 +47,12 @@ public:
   // polynomial with degree deg(q_m) = m.
   std::vector<Polynomial> bilinear_basis;
 
-  inline const std::vector<Polynomial> &elt(const int r, const int c) const
+  inline const std::vector<Polynomial> &element(const int r, const int c) const
   {
     return elements[r + c * rows];
   }
 
-  inline std::vector<Polynomial> &elt(const int r, const int c)
+  inline std::vector<Polynomial> &element(const int r, const int c)
   {
     return elements[r + c * rows];
   }
@@ -64,16 +64,16 @@ public:
     sample_scalings.clear();
     bilinear_basis.clear();
   }
-  
+
   // The maximal degree of any of the components P^{rs}_n(x).
   int64_t degree() const
   {
-    int64_t d = 0;
-    for(auto &e : elements)
-      for(auto &p : e)
+    int64_t result(0);
+    for(auto &element : elements)
+      for(auto &polynomial : element)
         {
-          d = std::max(p.degree(), d);
+          result = std::max(polynomial.degree(), result);
         }
-    return d;
+    return result;
   }
 };
