@@ -27,20 +27,21 @@ sample_bilinear_basis(const int max_degree, const int num_samples,
 //
 // for tuples p = (r,s,k).
 //
-Dual_Constraint_Group::Dual_Constraint_Group(const Polynomial_Vector_Matrix &m)
+Dual_Constraint_Group::Dual_Constraint_Group(
+  const Polynomial_Vector_Matrix &pvm)
 {
-  assert(m.rows == m.cols);
-  dim = m.rows;
-  degree = m.degree();
+  assert(pvm.rows == pvm.cols);
+  dim = pvm.rows;
+  degree = pvm.degree();
 
   size_t numSamples = degree + 1;
   size_t numConstraints = numSamples * dim * (dim + 1) / 2;
-  size_t vectorDim = m.elt(0, 0).size();
+  size_t vectorDim = pvm.elt(0, 0).size();
 
-  const size_t num_points(m.sample_points.size());
+  const size_t num_points(pvm.sample_points.size());
   Boost_Float::default_precision(El::gmp::Precision() * log(2) / log(10));
 
-  const double x_scale(m.sample_points.back());
+  const double x_scale(pvm.sample_points.back());
 
   std::vector<Boost_Float> cheb_points(num_points);
   for(size_t point = 0; point < cheb_points.size(); ++point)
@@ -73,10 +74,10 @@ Dual_Constraint_Group::Dual_Constraint_Group(const Polynomial_Vector_Matrix &m)
           for(size_t k = 0; k < numSamples; k++)
             {
               El::BigFloat x(to_string(points[k]));
-              constraint_constants[p] = m.elt(r, c)[0](x);
+              constraint_constants[p] = pvm.elt(r, c)[0](x);
               for(size_t n = 1; n < vectorDim; ++n)
                 {
-                  constraint_matrix.Set(p, n - 1, -m.elt(r, c)[n](x));
+                  constraint_matrix.Set(p, n - 1, -pvm.elt(r, c)[n](x));
                 }
               ++p;
             }
