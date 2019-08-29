@@ -50,7 +50,7 @@ void SDP_Solver::save_checkpoint(
                                + checkpoint_directory.string()
                                + "'already exists, but is not a directory");
     }
-  if(exists(checkpoint_directory / checkpoint_filename))
+  if(exists(checkpoint_filename))
     {
       if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {
