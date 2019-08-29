@@ -263,7 +263,7 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
             {
               boost::filesystem::create_directories(out_directory);
               boost::filesystem::ofstream ofs(out_directory / "out.txt");
-              if(!ofs)
+              if(!ofs.good())
                 {
                   throw std::runtime_error("Cannot write to outDir: "
                                            + out_directory.string());

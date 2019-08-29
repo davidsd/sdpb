@@ -28,8 +28,9 @@ void write_blocks(
         }
     }
 
-  boost::filesystem::ofstream output_stream(
+  const boost::filesystem::path output_path(
     output_dir / ("blocks." + std::to_string(rank)));
+  boost::filesystem::ofstream output_stream(output_path);
   output_stream << num_procs << "\n";
   write_vector(output_stream, indices);
   write_vector(output_stream, dimensions);
@@ -37,4 +38,9 @@ void write_blocks(
   write_vector(output_stream, schur_block_sizes);
   write_vector(output_stream, psd_matrix_block_sizes);
   write_vector(output_stream, bilinear_pairing_block_sizes);
+  if(!output_stream.good())
+    {
+      throw std::runtime_error("Error when writing to: "
+                               + output_path.string());
+    }
 }

@@ -9,8 +9,9 @@ void write_bilinear_bases(
   const boost::filesystem::path &output_dir, const int &rank,
   const std::vector<Dual_Constraint_Group> &dual_constraint_groups)
 {
-  boost::filesystem::ofstream output_stream(
+  const boost::filesystem::path output_path(
     output_dir / ("bilinear_bases." + std::to_string(rank)));
+  boost::filesystem::ofstream output_stream(output_path);
   set_stream_precision(output_stream);
   output_stream << dual_constraint_groups.size() << "\n";
 
@@ -28,5 +29,10 @@ void write_bilinear_bases(
                 output_stream << basis(row, column) << "\n";
               }
         }
+    }
+  if(!output_stream.good())
+    {
+      throw std::runtime_error("Error when writing to: "
+                               + output_path.string());
     }
 }

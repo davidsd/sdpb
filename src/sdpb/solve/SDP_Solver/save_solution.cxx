@@ -16,6 +16,10 @@ namespace
                 + std::to_string(block.Width()),
               "\n", stream);
     stream << "\n";
+    if(!stream.good())
+      {
+        throw std::runtime_error("Error when writing to: " + outfile.string());
+      }
   }
 }
 
@@ -36,7 +40,8 @@ void SDP_Solver::save_solution(
         {
           std::cout << "Saving solution to      : " << out_directory << '\n';
         }
-      out_stream.open(out_directory / "out.txt");
+      const boost::filesystem::path output_path(out_directory / "out.txt");
+      out_stream.open(output_path);
       set_stream_precision(out_stream);
       out_stream << "terminateReason = \"" << terminate_reason << "\";\n"
                  << "primalObjective = " << primal_objective << ";\n"
@@ -46,27 +51,44 @@ void SDP_Solver::save_solution(
                  << "dualError       = " << dual_error << ";\n"
                  << std::setw(16) << std::left << timer_pair.first << "= "
                  << timer_pair.second.elapsed_seconds() << ";\n";
+      if(!out_stream.good())
+        {
+          throw std::runtime_error("Error when writing to: "
+                                   + output_path.string());
+        }
     }
   // y is duplicated among cores, so only need to print out copy on
   // the root node.
   if(!y.blocks.empty())
     {
-      boost::filesystem::ofstream y_stream(out_directory / ("y.txt"));
+      const boost::filesystem::path y_path(out_directory / "y.txt");
+      boost::filesystem::ofstream y_stream(y_path);
       El::Print(y.blocks.at(0),
                 std::to_string(y.blocks.at(0).Height()) + " "
                   + std::to_string(y.blocks.at(0).Width()),
                 "\n", y_stream);
+      if(!y_stream.good())
+        {
+          throw std::runtime_error("Error when writing to: "
+                                   + y_path.string());
+        }
     }
 
   for(size_t block = 0; block != x.blocks.size(); ++block)
     {
       size_t block_index(block_indices.at(block));
-      boost::filesystem::ofstream x_stream(
+      const boost::filesystem::path x_path(
         out_directory / ("x_" + std::to_string(block_index) + ".txt"));
+      boost::filesystem::ofstream x_stream(x_path);
       El::Print(x.blocks.at(block),
                 std::to_string(x.blocks.at(block).Height()) + " "
                   + std::to_string(x.blocks.at(block).Width()),
                 "\n", x_stream);
+      if(!x_stream.good())
+        {
+          throw std::runtime_error("Error when writing to: "
+                                   + x_path.string());
+        }
 
       if(write_matrices)
         {

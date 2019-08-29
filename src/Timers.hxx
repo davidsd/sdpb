@@ -20,14 +20,14 @@ struct Timers : public std::list<std::pair<std::string, Timer>>
 {
   bool debug = false;
   Timers(const bool &Debug) : debug(Debug) {}
-  
+
   Timer &add_and_start(const std::string &name)
   {
     if(debug)
       {
         std::ifstream stat_file("/proc/self/statm");
         std::string stats;
-        std::getline(stat_file,stats);
+        std::getline(stat_file, stats);
         El::Output(El::mpi::Rank(), " ", name, " ", stats);
       }
     emplace_back(name, Timer());
@@ -50,6 +50,11 @@ struct Timers : public std::list<std::pair<std::string, Timer>>
         f << '\n';
       }
     f << "}" << '\n';
+
+    if(!f.good())
+      {
+        throw std::runtime_error("Error when writing to: " + filename);
+      }
   }
 
   int64_t elapsed_milliseconds(const std::string &s) const

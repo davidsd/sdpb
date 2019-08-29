@@ -14,10 +14,16 @@ void write_primal_objective_c(
       assert(static_cast<size_t>(group.constraint_matrix.Height())
              == group.constraint_constants.size());
 
-      boost::filesystem::ofstream output_stream(
+      const boost::filesystem::path output_path(
         output_dir / ("primal_objective_c." + std::to_string(*block_index)));
+      boost::filesystem::ofstream output_stream(output_path);
       set_stream_precision(output_stream);
       write_vector(output_stream, group.constraint_constants);
+      if(!output_stream.good())
+        {
+          throw std::runtime_error("Error when writing to: "
+                                   + output_path.string());
+        }
       ++block_index;
     }
 }
