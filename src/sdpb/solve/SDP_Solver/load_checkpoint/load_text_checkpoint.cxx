@@ -16,7 +16,7 @@ void read_text_block(El::DistMatrix<El::BigFloat> &block,
   block_stream >> file_height >> file_width;
   if(!block_stream.good())
     {
-      throw std::runtime_error("Corrupted file: " + block_path.string());
+      throw std::runtime_error("Corrupted header in file: " + block_path.string());
     }
   if(file_height != block.Height() || file_width != block.Width())
     {
@@ -41,7 +41,7 @@ void read_text_block(El::DistMatrix<El::BigFloat> &block,
       }
   if(!block_stream.good())
     {
-      throw std::runtime_error("Corrupted file: " + block_path.string());
+      throw std::runtime_error("Corrupted data in file: " + block_path.string());
     }
 }
 
