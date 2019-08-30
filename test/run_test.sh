@@ -303,4 +303,44 @@ else
 fi
 rm -rf test/io_tests
 
+mkdir -p test/io_tests
+cp -r test/test test/io_tests
+chmod a-r test/io_tests/test/free_var_matrix.0
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+if [ $? != 0 ]
+then
+    echo "PASS free_var_matrix read"
+else
+    echo "FAIL free_var_matrix read"
+    result=1
+fi
+rm -rf test/io_tests
+
+mkdir -p test/io_tests
+cp -r test/test test/io_tests
+rm test/io_tests/test/free_var_matrix.0
+touch test/io_tests/test/free_var_matrix.0
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+if [ $? != 0 ]
+then
+    echo "PASS free_var_matrix header"
+else
+    echo "FAIL free_var_matrix header"
+    result=1
+fi
+rm -rf test/io_tests
+
+mkdir -p test/io_tests
+cp -r test/test test/io_tests
+head -n 2 test/io_tests/test/free_var_matrix.0 > test/io_tests/test/free_var_matrix.0
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+if [ $? != 0 ]
+then
+    echo "PASS free_var_matrix data"
+else
+    echo "FAIL free_var_matrix data"
+    result=1
+fi
+rm -rf test/io_tests
+
 exit $result
