@@ -67,6 +67,7 @@ void SDP_Solver::save_solution(
                 std::to_string(y.blocks.at(0).Height()) + " "
                   + std::to_string(y.blocks.at(0).Width()),
                 "\n", y_stream);
+      y_stream << "\n";
       if(!y_stream.good())
         {
           throw std::runtime_error("Error when writing to: "
@@ -84,6 +85,7 @@ void SDP_Solver::save_solution(
                 std::to_string(x.blocks.at(block).Height()) + " "
                   + std::to_string(x.blocks.at(block).Width()),
                 "\n", x_stream);
+      x_stream << "\n";
       if(!x_stream.good())
         {
           throw std::runtime_error("Error when writing to: "
