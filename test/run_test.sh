@@ -1,17 +1,26 @@
 #!/bin/bash
 
 # Run this from the top level directory
+result=0
 
+rm -rf test/test/
 ./build/pvm2sdp 1024 test/file_list.nsv test/test/
+if [ $? == 0 ]
+then
+    echo "PASS pvm2sdp"
+else
+    echo "FAIL pvm2sdp"
+    result=1
+fi
+
 rm -f test/test.out
 ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test/ > /dev/null
 diff test/test_out test/test_out_orig
-result=0
 if [ $? == 0 ]
 then
-    echo "PASS Smoke test"
+    echo "PASS SDPB"
 else
-    echo "FAIL Smoke test"
+    echo "FAIL SDPB"
     result=1
 fi
     
@@ -171,6 +180,19 @@ then
     echo "PASS file_list.nsv"
 else
     echo "FAIL file_list.nsv"
+    result=1
+fi
+rm -rf test/io_tests
+
+mkdir -p test/io_tests
+cp -r test/test test/io_tests
+chmod a-r test/io_tests/test/blocks.0
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+if [ $? != 0 ]
+then
+    echo "PASS blocks"
+else
+    echo "FAIL blocks"
     result=1
 fi
 rm -rf test/io_tests
