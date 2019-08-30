@@ -80,8 +80,8 @@ void SDP_Solver::step(const SDP_Solver_Parameters &parameters,
     //
     // where N is the dimension of the dual objective function.  Note
     // that N' could change with each iteration.
-    El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
-                                   sdp.dual_objective_b.Height());
+    El::DistMatrix<El::BigFloat> Q(sdp.dual_objectives_b.Height(),
+                                   sdp.dual_objectives_b.Height());
 
     // Compute SchurComplement and prepare to solve the Schur
     // complement equation for dx, dy

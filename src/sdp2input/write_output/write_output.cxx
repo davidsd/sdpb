@@ -31,13 +31,13 @@ void write_output(const boost::filesystem::path &output_dir,
 
   El::BigFloat objective_const(objectives.at(max_index)
                                / normalization.at(max_index));
-  std::vector<El::BigFloat> dual_objective_b;
-  dual_objective_b.reserve(normalization.size() - 1);
+  std::vector<El::BigFloat> dual_objectives_b;
+  dual_objectives_b.reserve(normalization.size() - 1);
   for(size_t index = 0; index < normalization.size(); ++index)
     {
       if(index != max_index)
         {
-          dual_objective_b.push_back(
+          dual_objectives_b.push_back(
             objectives.at(index) - normalization.at(index) * objective_const);
         }
     }
@@ -164,6 +164,6 @@ void write_output(const boost::filesystem::path &output_dir,
 
   auto &write_timer(timers.add_and_start("write_output.write"));
   write_sdpb_input_files(output_dir, rank, num_procs, indices, objective_const,
-                         dual_objective_b, dual_constraint_groups);
+                         dual_objectives_b, dual_constraint_groups);
   write_timer.stop();
 }

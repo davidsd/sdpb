@@ -10,7 +10,7 @@ void compute_objectives(const SDP &sdp, const Block_Vector &x,
 {
   auto &objectives_timer(timers.add_and_start("run.objectives"));
   primal_objective = sdp.objective_const + dot(sdp.primal_objective_c, x);
-  // dual_objective_b is duplicated amongst the processors.  y is
+  // dual_objectives_b is duplicated amongst the processors.  y is
   // duplicated amongst the blocks, but it is possible for some
   // processors to have no blocks.  In principle, we only need to
   // compute the dot product on the first block, but then we would
@@ -19,7 +19,7 @@ void compute_objectives(const SDP &sdp, const Block_Vector &x,
   if(!y.blocks.empty())
     {
       dual_objective = sdp.objective_const
-                       + El::Dotu(sdp.dual_objective_b, y.blocks.front());
+                       + El::Dotu(sdp.dual_objectives_b, y.blocks.front());
     }
   El::mpi::Broadcast(dual_objective, 0, El::mpi::COMM_WORLD);
 

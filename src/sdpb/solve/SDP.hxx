@@ -93,7 +93,7 @@ public:
 
   // b, a vector of length N used with dual_objective
   // It is duplicated amongst all the blocks
-  El::DistMatrix<El::BigFloat> dual_objective_b;
+  El::DistMatrix<El::BigFloat> dual_objectives_b;
 
   // objectiveConst = f
   El::BigFloat objective_const;

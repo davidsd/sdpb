@@ -74,7 +74,7 @@ public:
 
   SDP_Solver(const SDP_Solver_Parameters &parameters,
              const Block_Info &block_info, const El::Grid &grid,
-             const size_t &dual_objective_b_height);
+             const size_t &dual_objectives_b_height);
 
   SDP_Solver_Terminate_Reason
   run(const SDP_Solver_Parameters &parameters, const Block_Info &block_info,

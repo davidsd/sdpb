@@ -28,13 +28,13 @@ int main(int argc, char **argv)
 
       std::vector<size_t> indices;
       El::BigFloat objective_const;
-      std::vector<El::BigFloat> dual_objective_b;
+      std::vector<El::BigFloat> dual_objectives_b;
       std::vector<Dual_Constraint_Group> dual_constraint_groups;
-      read_input_files(input_files, objective_const, dual_objective_b,
+      read_input_files(input_files, objective_const, dual_objectives_b,
                        dual_constraint_groups, indices);
 
       write_sdpb_input_files(output_dir, rank, num_procs, indices,
-                             objective_const, dual_objective_b,
+                             objective_const, dual_objectives_b,
                              dual_constraint_groups);
     }
   catch(std::exception &e)

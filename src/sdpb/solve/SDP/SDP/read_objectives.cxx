@@ -6,7 +6,7 @@
 
 void read_objectives(const boost::filesystem::path &sdp_directory,
                      const El::Grid &grid, El::BigFloat &objective_const,
-                     El::DistMatrix<El::BigFloat> &dual_objective_b)
+                     El::DistMatrix<El::BigFloat> &dual_objectives_b)
 {
   const boost::filesystem::path objectives_path(sdp_directory / "objectives");
   boost::filesystem::ifstream objectives_stream(objectives_path);
@@ -23,15 +23,15 @@ void read_objectives(const boost::filesystem::path &sdp_directory,
 
   std::vector<El::BigFloat> temp;
   read_vector(objectives_stream, temp);
-  dual_objective_b.SetGrid(grid);
-  dual_objective_b.Resize(temp.size(), 1);
-  if(dual_objective_b.GlobalCol(0) == 0)
+  dual_objectives_b.SetGrid(grid);
+  dual_objectives_b.Resize(temp.size(), 1);
+  if(dual_objectives_b.GlobalCol(0) == 0)
     {
-      size_t local_height(dual_objective_b.LocalHeight());
+      size_t local_height(dual_objectives_b.LocalHeight());
       for(size_t row = 0; row < local_height; ++row)
         {
-          size_t global_row(dual_objective_b.GlobalRow(row));
-          dual_objective_b.SetLocal(row, 0, temp[global_row]);
+          size_t global_row(dual_objectives_b.GlobalRow(row));
+          dual_objectives_b.SetLocal(row, 0, temp[global_row]);
         }
     }
 }

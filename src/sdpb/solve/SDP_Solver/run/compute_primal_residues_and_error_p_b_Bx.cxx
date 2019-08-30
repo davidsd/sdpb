@@ -17,8 +17,8 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
   auto primal_residue_p_block(primal_residue_p.blocks.begin());
 
   El::Matrix<El::BigFloat> primal_residue_local;
-  Zeros(primal_residue_local, sdp.dual_objective_b.Height(),
-        sdp.dual_objective_b.Width());
+  Zeros(primal_residue_local, sdp.dual_objectives_b.Height(),
+        sdp.dual_objectives_b.Width());
 
   for(auto &block_index : block_info.block_indices)
     {
@@ -28,21 +28,21 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
 
       // The total primal error is the sum of all of the different
       // blocks.  So to prevent double counting, only add
-      // dual_objective_b to one of the residue blocks.
+      // dual_objectives_b to one of the residue blocks.
       if(block_index == 0)
         {
-          El::Axpy(El::BigFloat(1), sdp.dual_objective_b,
+          El::Axpy(El::BigFloat(1), sdp.dual_objectives_b,
                    *primal_residue_p_block);
         }
 
       // Locally sum contributions to the primal errror
-      for(int64_t row = 0; row < sdp.dual_objective_b.LocalHeight(); ++row)
+      for(int64_t row = 0; row < sdp.dual_objectives_b.LocalHeight(); ++row)
         {
-          int64_t global_row(sdp.dual_objective_b.GlobalRow(row));
-          for(int64_t column = 0; column < sdp.dual_objective_b.LocalWidth();
+          int64_t global_row(sdp.dual_objectives_b.GlobalRow(row));
+          for(int64_t column = 0; column < sdp.dual_objectives_b.LocalWidth();
               ++column)
             {
-              int64_t global_column(sdp.dual_objective_b.GlobalCol(column));
+              int64_t global_column(sdp.dual_objectives_b.GlobalCol(column));
               primal_residue_local(global_row, global_column)
                 += primal_residue_p_block->GetLocal(row, column);
             }

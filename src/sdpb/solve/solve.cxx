@@ -20,7 +20,7 @@ solve(const Block_Info &block_info, const SDP_Solver_Parameters &parameters)
   El::Grid grid(block_info.mpi_comm);
   SDP sdp(parameters.sdp_directory, block_info, grid);
   SDP_Solver solver(parameters, block_info, grid,
-                    sdp.dual_objective_b.Height());
+                    sdp.dual_objectives_b.Height());
 
   Timers timers(parameters.verbosity >= Verbosity::debug);
   SDP_Solver_Terminate_Reason reason
