@@ -383,4 +383,47 @@ else
 fi
 rm -rf test/io_tests
 
+mkdir -p test/io_tests
+cp -r test/test test/io_tests
+mpirun -n 1 ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 --writeMatrices
+chmod a-r test/io_tests/out/X_matrix_0.txt
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/out -o test/io_tests/out_new --maxIterations=1 --verbosity=0 2>/dev/null
+if [ $? != 0 ]
+then
+    echo "PASS text checkpoint read"
+else
+    echo "FAIL text checkpoint read"
+    result=1
+fi
+rm -rf test/io_tests
+
+mkdir -p test/io_tests
+cp -r test/test test/io_tests
+mpirun -n 1 ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 --writeMatrices
+rm test/io_tests/out/X_matrix_0.txt
+touch test/io_tests/out/X_matrix_0.txt
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/out -o test/io_tests/out_new --maxIterations=1 --verbosity=0 2>/dev/null
+if [ $? != 0 ]
+then
+    echo "PASS text checkpoint header"
+else
+    echo "FAIL text checkpoint header"
+    result=1
+fi
+rm -rf test/io_tests
+
+mkdir -p test/io_tests
+cp -r test/test test/io_tests
+mpirun -n 1 ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 --writeMatrices
+head -n 2 test/io_tests/out/X_matrix_0.txt > test/io_tests/out/X_matrix_0.txt
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/out -o test/io_tests/out_new --maxIterations=1 --verbosity=0 2>/dev/null
+if [ $? != 0 ]
+then
+    echo "PASS text checkpoint data"
+else
+    echo "FAIL text checkpoint data"
+    result=1
+fi
+rm -rf test/io_tests
+
 exit $result
