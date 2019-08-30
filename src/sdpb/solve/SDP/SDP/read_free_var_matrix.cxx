@@ -23,7 +23,7 @@ void read_free_var_matrix(const boost::filesystem::path &sdp_directory,
       free_var_matrix_stream >> height >> width;
       if(!free_var_matrix_stream.good())
         {
-          throw std::runtime_error("Corrupted file: "
+          throw std::runtime_error("Corrupted header in file: "
                                    + free_var_matrix_path.string());
         }
       free_var_matrix.blocks.emplace_back(height, width, grid);
@@ -41,7 +41,7 @@ void read_free_var_matrix(const boost::filesystem::path &sdp_directory,
           }
       if(!free_var_matrix_stream.good())
         {
-          throw std::runtime_error("Corrupted file: "
+          throw std::runtime_error("Corrupted data in file: "
                                    + free_var_matrix_path.string());
         }
     }
