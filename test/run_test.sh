@@ -14,7 +14,7 @@ else
 fi
 
 rm -f test/test.out
-./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test/ > /dev/null
+./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test/ --verbosity=0
 diff test/test_out test/test_out_orig
 if [ $? == 0 ]
 then
@@ -23,7 +23,8 @@ else
     echo "FAIL SDPB"
     result=1
 fi
-    
+rm -rf test/io_tests
+
 mkdir -p test/io_tests
 touch test/io_tests/profile_error.profiling.0
 chmod a-w test/io_tests/profile_error.profiling.0
@@ -40,7 +41,7 @@ rm -rf test/io_tests
 mkdir -p test/io_tests
 touch test/io_tests/bilinear_bases.0
 chmod a-w test/io_tests/bilinear_bases.0
-mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS bilinear_bases"
@@ -53,7 +54,7 @@ rm -rf test/io_tests
 mkdir -p test/io_tests
 touch test/io_tests/blocks.0
 chmod a-w test/io_tests/blocks.0
-mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS blocks"
@@ -66,7 +67,7 @@ rm -rf test/io_tests
 mkdir -p test/io_tests
 touch test/io_tests/free_var_matrix.0
 chmod a-w test/io_tests/free_var_matrix.0
-mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS free_var_matrix"
@@ -79,7 +80,7 @@ rm -rf test/io_tests
 mkdir -p test/io_tests
 touch test/io_tests/objectives
 chmod a-w test/io_tests/objectives
-mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS objectives"
@@ -92,7 +93,7 @@ rm -rf test/io_tests
 mkdir -p test/io_tests
 touch test/io_tests/primal_objective_c.0
 chmod a-w test/io_tests/primal_objective_c.0
-mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS primal_objective_c"
@@ -106,7 +107,7 @@ mkdir -p test/io_tests
 mkdir test/io_tests/out
 touch test/io_tests/out/out.txt
 chmod a-w test/io_tests/out/out.txt
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test/ -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test/ -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS out.txt"
@@ -120,7 +121,7 @@ mkdir -p test/io_tests
 mkdir test/io_tests/out
 touch test/io_tests/out/x_0.txt
 chmod a-w test/io_tests/out/x_0.txt
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test/ -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test/ -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS x_0.txt"
@@ -134,7 +135,7 @@ mkdir -p test/io_tests
 mkdir test/io_tests/out
 touch test/io_tests/out/y.txt
 chmod a-w test/io_tests/out/y.txt
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test/ -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test/ -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS y.txt"
@@ -148,7 +149,7 @@ mkdir -p test/io_tests
 mkdir test/io_tests/out
 touch test/io_tests/out/X_matrix_0.txt
 chmod a-w test/io_tests/out/X_matrix_0.txt
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test/ -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --writeMatrices 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test/ -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --writeMatrices --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS X_matrix_0.txt"
@@ -162,7 +163,7 @@ mkdir -p test/io_tests
 mkdir test/io_tests/out
 touch test/io_tests/out/Y_matrix_0.txt
 chmod a-w test/io_tests/out/Y_matrix_0.txt
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test/ -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --writeMatrices 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test/ -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --writeMatrices --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS Y_matrix_0.txt"
@@ -174,7 +175,7 @@ rm -rf test/io_tests
 
 mkdir -p test/io_tests
 echo "file_does_not_exist" > test/io_tests/file_list.nsv
-mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/io_tests/file_list.nsv test/io_tests 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/io_tests/file_list.nsv test/io_tests 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS file_list.nsv"
@@ -187,7 +188,7 @@ rm -rf test/io_tests
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
 chmod a-r test/io_tests/test/blocks.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS blocks"
@@ -200,7 +201,7 @@ rm -rf test/io_tests
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
 chmod a-r test/io_tests/test/blocks.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS blocks"
@@ -214,7 +215,7 @@ mkdir -p test/io_tests
 cp -r test/test test/io_tests
 rm test/io_tests/test/blocks.0
 touch test/io_tests/test/blocks.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS blocks corruption"
@@ -227,7 +228,7 @@ rm -rf test/io_tests
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
 head -n 1 test/io_tests/test/blocks.0 > test/io_tests/test/blocks.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS vector size"
@@ -240,7 +241,7 @@ rm -rf test/io_tests
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
 head -n 2 test/io_tests/test/blocks.0 > test/io_tests/test/blocks.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS vector element"
@@ -253,7 +254,7 @@ rm -rf test/io_tests
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
 chmod a-r test/io_tests/test/bilinear_bases.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS bilinear read"
@@ -267,7 +268,7 @@ mkdir -p test/io_tests
 cp -r test/test test/io_tests
 rm test/io_tests/test/bilinear_bases.0
 touch test/io_tests/test/bilinear_bases.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS bilinear empty"
@@ -280,7 +281,7 @@ rm -rf test/io_tests
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
 head -n 2 test/io_tests/test/bilinear_bases.0 > test/io_tests/test/bilinear_bases.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS bilinear header"
@@ -293,7 +294,7 @@ rm -rf test/io_tests
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
 head -n 26 test/io_tests/test/bilinear_bases.0 > test/io_tests/test/bilinear_bases.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS bilinear data"
@@ -306,7 +307,7 @@ rm -rf test/io_tests
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
 chmod a-r test/io_tests/test/free_var_matrix.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS free_var_matrix read"
@@ -320,7 +321,7 @@ mkdir -p test/io_tests
 cp -r test/test test/io_tests
 rm test/io_tests/test/free_var_matrix.0
 touch test/io_tests/test/free_var_matrix.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS free_var_matrix header"
@@ -333,7 +334,7 @@ rm -rf test/io_tests
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
 head -n 2 test/io_tests/test/free_var_matrix.0 > test/io_tests/test/free_var_matrix.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS free_var_matrix data"
@@ -346,7 +347,7 @@ rm -rf test/io_tests
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
 chmod a-r test/io_tests/test/objectives
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS objectives read"
@@ -360,7 +361,7 @@ mkdir -p test/io_tests
 cp -r test/test test/io_tests
 rm test/io_tests/test/objectives
 touch test/io_tests/test/objectives
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS objectives corrupted"
@@ -373,7 +374,7 @@ rm -rf test/io_tests
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
 chmod a-r test/io_tests/test/primal_objective_c.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS primal_objective_c"
