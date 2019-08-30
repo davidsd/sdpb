@@ -343,4 +343,44 @@ else
 fi
 rm -rf test/io_tests
 
+mkdir -p test/io_tests
+cp -r test/test test/io_tests
+chmod a-r test/io_tests/test/objectives
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+if [ $? != 0 ]
+then
+    echo "PASS objectives read"
+else
+    echo "FAIL objectives read"
+    result=1
+fi
+rm -rf test/io_tests
+
+mkdir -p test/io_tests
+cp -r test/test test/io_tests
+rm test/io_tests/test/objectives
+touch test/io_tests/test/objectives
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+if [ $? != 0 ]
+then
+    echo "PASS objectives corrupted"
+else
+    echo "FAIL objectives corrupted"
+    result=1
+fi
+rm -rf test/io_tests
+
+mkdir -p test/io_tests
+cp -r test/test test/io_tests
+chmod a-r test/io_tests/test/primal_objective_c.0
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+if [ $? != 0 ]
+then
+    echo "PASS primal_objective_c"
+else
+    echo "FAIL primal_objective_c"
+    result=1
+fi
+rm -rf test/io_tests
+
 exit $result
