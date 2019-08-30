@@ -163,4 +163,16 @@ else
 fi
 rm -rf test/io_tests
 
+mkdir -p test/io_tests
+echo "file_does_not_exist" > test/io_tests/file_list.nsv
+mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/io_tests/file_list.nsv test/io_tests 2>/dev/null > /dev/null
+if [ $? != 0 ]
+then
+    echo "PASS file_list.nsv"
+else
+    echo "FAIL file_list.nsv"
+    result=1
+fi
+rm -rf test/io_tests
+
 exit $result
