@@ -28,7 +28,7 @@ void read_bilinear_bases(
       bilinear_stream >> file_num_bases;
       if(!bilinear_stream.good())
         {
-          throw std::runtime_error("Corrupted file: "
+          throw std::runtime_error("Corrupted or empty file: "
                                    + bilinear_path.string());
         }
 
@@ -42,7 +42,7 @@ void read_bilinear_bases(
             bilinear_stream >> height >> width;
             if(!bilinear_stream.good())
               {
-                throw std::runtime_error("Corrupted file: "
+                throw std::runtime_error("Corrupted header in file: "
                                          + bilinear_path.string());
               }
 
@@ -75,7 +75,7 @@ void read_bilinear_bases(
           }
       if(!bilinear_stream.good())
         {
-          throw std::runtime_error("Corrupted file: "
+          throw std::runtime_error("Corrupted data in file: "
                                    + bilinear_path.string());
         }
     }
