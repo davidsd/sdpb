@@ -10,20 +10,22 @@ void read_free_var_matrix(const boost::filesystem::path &sdp_directory,
   free_var_matrix.blocks.reserve(block_indices.size());
   for(auto &block_index : block_indices)
     {
-      boost::filesystem::ifstream free_var_matrix_stream(
+      const boost::filesystem::path free_var_matrix_path(
         sdp_directory / ("free_var_matrix." + std::to_string(block_index)));
+      boost::filesystem::ifstream free_var_matrix_stream(free_var_matrix_path);
       if(!free_var_matrix_stream.good())
         {
-          throw std::runtime_error(
-            "Could not open '"
-            + (sdp_directory
-               / ("free_var_matrix." + std::to_string(block_index)))
-                .string()
-            + "'");
+          throw std::runtime_error("Could not open '"
+                                   + free_var_matrix_path.string() + "'");
         }
 
       size_t height, width;
       free_var_matrix_stream >> height >> width;
+      if(!free_var_matrix_stream.good())
+        {
+          throw std::runtime_error("Corrupted file: "
+                                   + free_var_matrix_path.string());
+        }
       free_var_matrix.blocks.emplace_back(height, width, grid);
       auto &block(free_var_matrix.blocks.back());
       for(size_t row = 0; row < height; ++row)
@@ -37,5 +39,10 @@ void read_free_var_matrix(const boost::filesystem::path &sdp_directory,
                                input_num);
               }
           }
+      if(!free_var_matrix_stream.good())
+        {
+          throw std::runtime_error("Corrupted file: "
+                                   + free_var_matrix_path.string());
+        }
     }
 }

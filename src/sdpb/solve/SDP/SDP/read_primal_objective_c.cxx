@@ -12,16 +12,13 @@ void read_primal_objective_c(const boost::filesystem::path &sdp_directory,
   primal_objective_c.blocks.reserve(block_indices.size());
   for(auto &block_index : block_indices)
     {
-      boost::filesystem::ifstream primal_stream(
+      const boost::filesystem::path primal_path(
         sdp_directory / ("primal_objective_c." + std::to_string(block_index)));
+      boost::filesystem::ifstream primal_stream(primal_path);
       if(!primal_stream.good())
         {
-          throw std::runtime_error(
-            "Could not open '"
-            + (sdp_directory
-               / ("primal_objective_c." + std::to_string(block_index)))
-                .string()
-            + "'");
+          throw std::runtime_error("Could not open '" + primal_path.string()
+                                   + "'");
         }
 
       std::vector<El::BigFloat> temp;

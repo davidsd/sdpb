@@ -14,6 +14,10 @@ void read_text_block(El::DistMatrix<El::BigFloat> &block,
     }
   int64_t file_height, file_width;
   block_stream >> file_height >> file_width;
+  if(!block_stream.good())
+    {
+      throw std::runtime_error("Corrupted file: " + block_path.string());
+    }
   if(file_height != block.Height() || file_width != block.Width())
     {
       std::stringstream ss;
@@ -35,6 +39,10 @@ void read_text_block(El::DistMatrix<El::BigFloat> &block,
                            El::BigFloat(element));
           }
       }
+  if(!block_stream.good())
+    {
+      throw std::runtime_error("Corrupted file: " + block_path.string());
+    }
 }
 
 void read_text_block(El::DistMatrix<El::BigFloat> &block,
@@ -49,15 +57,11 @@ bool load_text_checkpoint(const boost::filesystem::path &checkpoint_directory,
                           const std::vector<size_t> &block_indices,
                           const Verbosity &verbosity, SDP_Solver &solver)
 {
-  boost::filesystem::path checkpoint_filename(
-    checkpoint_directory / ("checkpoint." + std::to_string(El::mpi::Rank())));
-
   if(!exists(checkpoint_directory / "x_0.txt"))
     {
       return false;
     }
 
-  boost::filesystem::ifstream checkpoint_stream(checkpoint_filename);
   if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
       std::cout << "Loading text checkpoint from : " << checkpoint_directory

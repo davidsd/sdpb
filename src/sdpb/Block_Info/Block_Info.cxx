@@ -35,16 +35,19 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
   size_t file_rank(0);
   do
     {
-      boost::filesystem::ifstream block_stream(
+      const boost::filesystem::path block_path(
         sdp_directory / ("blocks." + std::to_string(file_rank)));
+      boost::filesystem::ifstream block_stream(block_path);
       if(!block_stream.good())
         {
-          throw std::runtime_error(
-            "Could not open '"
-            + (sdp_directory / ("blocks." + std::to_string(file_rank))).string()
-            + "'");
+          throw std::runtime_error("Could not open '" + block_path.string()
+                                   + "'");
         }
       block_stream >> file_num_procs;
+      if(!block_stream.good())
+        {
+          throw std::runtime_error("Corrupted file: " + block_path.string());
+        }
       file_block_indices.emplace_back();
       auto &file_block_index(file_block_indices.back());
       read_vector(block_stream, file_block_index);
@@ -61,36 +64,25 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
     }
   while(file_rank < file_num_procs);
 
-  boost::filesystem::ifstream objective_stream(sdp_directory / "objectives");
-  double temp;
-  size_t q;
-  objective_stream >> temp >> q;
-  if(!objective_stream.good())
-    {
-      throw std::runtime_error(
-        "Could not read the size of the dual objective from '"
-        + (sdp_directory / "objectives").string() + "'");
-    }
-
   const size_t num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
   std::vector<Block_Cost> block_costs;
-  const boost::filesystem::path sdp_block_timings_name(sdp_directory
+  const boost::filesystem::path sdp_block_timings_path(sdp_directory
                                                        / "block_timings"),
-    checkpoint_block_timings_name(checkpoint_in / "block_timings");
+    checkpoint_block_timings_path(checkpoint_in / "block_timings");
 
   if(exists(checkpoint_in / ("checkpoint." + std::to_string(El::mpi::Rank()))))
     {
-      if(exists(checkpoint_block_timings_name))
+      if(exists(checkpoint_block_timings_path))
         {
-          block_timings_filename = checkpoint_block_timings_name;
+          block_timings_filename = checkpoint_block_timings_path;
         }
     }
   else
     {
       block_timings_filename
-        = (exists(checkpoint_block_timings_name)
-             ? checkpoint_block_timings_name
-             : (exists(sdp_block_timings_name) ? sdp_block_timings_name : ""));
+        = (exists(checkpoint_block_timings_path)
+             ? checkpoint_block_timings_path
+             : (exists(sdp_block_timings_path) ? sdp_block_timings_path : ""));
     }
 
   if(!block_timings_filename.empty())

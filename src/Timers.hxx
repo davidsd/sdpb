@@ -26,9 +26,12 @@ struct Timers : public std::list<std::pair<std::string, Timer>>
     if(debug)
       {
         std::ifstream stat_file("/proc/self/statm");
-        std::string stats;
-        std::getline(stat_file, stats);
-        El::Output(El::mpi::Rank(), " ", name, " ", stats);
+        if(stat_file.good())
+          {
+            std::string stats;
+            std::getline(stat_file, stats);
+            El::Output(El::mpi::Rank(), " ", name, " ", stats);
+          }
       }
     emplace_back(name, Timer());
     return back().second;
