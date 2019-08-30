@@ -49,8 +49,7 @@ int main(int argc, char **argv)
       // 3) We are not going to load a checkpoint.
       if(El::mpi::Size(El::mpi::COMM_WORLD) > 1
          && block_info.block_timings_filename.empty()
-         && !exists(parameters.checkpoint_in
-                    / ("checkpoint." + std::to_string(El::mpi::Rank()))))
+         && !exists(parameters.checkpoint_in / "checkpoint.0"))
         {
           if(parameters.verbosity >= Verbosity::regular
              && El::mpi::Rank() == 0)
@@ -62,11 +61,10 @@ int main(int argc, char **argv)
           timing_parameters.no_final_checkpoint = true;
           timing_parameters.checkpoint_interval
             = std::numeric_limits<int64_t>::max();
-          timing_parameters.max_runtime
-            = std::numeric_limits<int64_t>::max();
-          timing_parameters.duality_gap_threshold=0;
-          timing_parameters.primal_error_threshold=0;
-          timing_parameters.dual_error_threshold=0;
+          timing_parameters.max_runtime = std::numeric_limits<int64_t>::max();
+          timing_parameters.duality_gap_threshold = 0;
+          timing_parameters.primal_error_threshold = 0;
+          timing_parameters.dual_error_threshold = 0;
           if(timing_parameters.verbosity != Verbosity::debug)
             {
               timing_parameters.verbosity = Verbosity::none;
