@@ -197,4 +197,57 @@ else
 fi
 rm -rf test/io_tests
 
+mkdir -p test/io_tests
+cp -r test/test test/io_tests
+chmod a-r test/io_tests/test/blocks.0
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+if [ $? != 0 ]
+then
+    echo "PASS blocks"
+else
+    echo "FAIL blocks"
+    result=1
+fi
+rm -rf test/io_tests
+
+mkdir -p test/io_tests
+cp -r test/test test/io_tests
+rm test/io_tests/test/blocks.0
+touch test/io_tests/test/blocks.0
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+if [ $? != 0 ]
+then
+    echo "PASS blocks corruption"
+else
+    echo "FAIL blocks corruption"
+    result=1
+fi
+rm -rf test/io_tests
+
+mkdir -p test/io_tests
+cp -r test/test test/io_tests
+head -n 1 test/io_tests/test/blocks.0 > test/io_tests/test/blocks.0
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+if [ $? != 0 ]
+then
+    echo "PASS vector size"
+else
+    echo "FAIL vector size"
+    result=1
+fi
+rm -rf test/io_tests
+
+mkdir -p test/io_tests
+cp -r test/test test/io_tests
+head -n 2 test/io_tests/test/blocks.0 > test/io_tests/test/blocks.0
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 2>/dev/null > /dev/null
+if [ $? != 0 ]
+then
+    echo "PASS vector element"
+else
+    echo "FAIL vector element"
+    result=1
+fi
+rm -rf test/io_tests
+
 exit $result
