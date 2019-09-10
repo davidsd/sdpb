@@ -258,7 +258,11 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
             {
               checkpoint_in = checkpoint_out;
             }
-
+          else
+            {
+              require_initial_checkpoint=true;
+            }              
+          
           if(El::mpi::Rank() == 0)
             {
               boost::filesystem::create_directories(out_directory);

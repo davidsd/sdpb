@@ -16,6 +16,7 @@ public:
   int64_t max_iterations, max_runtime, checkpoint_interval;
   bool no_final_checkpoint, find_primal_feasible, find_dual_feasible,
     detect_primal_feasible_jump, detect_dual_feasible_jump, write_matrices;
+  bool require_initial_checkpoint = false;
   size_t precision, procs_per_node, proc_granularity;
   Verbosity verbosity;
 

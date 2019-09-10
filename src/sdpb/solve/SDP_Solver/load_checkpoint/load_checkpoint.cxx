@@ -9,9 +9,17 @@ bool load_text_checkpoint(const boost::filesystem::path &checkpoint_directory,
 
 bool SDP_Solver::load_checkpoint(
   const boost::filesystem::path &checkpoint_directory,
-  const Block_Info &block_info, const Verbosity &verbosity)
+  const Block_Info &block_info, const Verbosity &verbosity,
+  const bool &require_initial_checkpoint)
 {
-  return load_binary_checkpoint(checkpoint_directory, verbosity, *this)
-         || load_text_checkpoint(checkpoint_directory,
-                                 block_info.block_indices, verbosity, *this);
+  bool valid_checkpoint(
+    load_binary_checkpoint(checkpoint_directory, verbosity, *this)
+    || load_text_checkpoint(checkpoint_directory, block_info.block_indices,
+                            verbosity, *this));
+  if(!valid_checkpoint && require_initial_checkpoint)
+    {
+      throw std::runtime_error("Unable to load checkpoint from directory: "
+                               + checkpoint_directory.string());
+    }
+  return valid_checkpoint;
 }

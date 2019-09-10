@@ -16,7 +16,9 @@ SDP_Solver::SDP_Solver(const SDP_Solver_Parameters &parameters,
       dual_residues(block_info.schur_block_sizes, block_info.block_indices,
                     block_info.schur_block_sizes.size(), grid)
 {
-  if(!load_checkpoint(parameters.checkpoint_in, block_info, parameters.verbosity))
+  if(!load_checkpoint(parameters.checkpoint_in, block_info,
+                      parameters.verbosity,
+                      parameters.require_initial_checkpoint))
     {
       X.set_zero();
       Y.set_zero();
