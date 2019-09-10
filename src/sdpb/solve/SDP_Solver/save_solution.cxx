@@ -10,15 +10,23 @@ namespace
   void write_psd_block(const boost::filesystem::path &outfile,
                        const El::DistMatrix<El::BigFloat> &block)
   {
-    boost::filesystem::ofstream stream(outfile);
+    boost::filesystem::ofstream stream;
+    if(block.DistRank() == block.Root())
+      {
+        stream.open(outfile);
+      }
     El::Print(block,
               std::to_string(block.Height()) + " "
                 + std::to_string(block.Width()),
               "\n", stream);
-    stream << "\n";
-    if(!stream.good())
+    if(block.DistRank() == block.Root())
       {
-        throw std::runtime_error("Error when writing to: " + outfile.string());
+        stream << "\n";
+        if(!stream.good())
+          {
+            throw std::runtime_error("Error when writing to: "
+                                     + outfile.string());
+          }
       }
   }
 }
@@ -62,16 +70,23 @@ void SDP_Solver::save_solution(
   if(!y.blocks.empty())
     {
       const boost::filesystem::path y_path(out_directory / "y.txt");
-      boost::filesystem::ofstream y_stream(y_path);
+      boost::filesystem::ofstream y_stream;
+      if(El::mpi::Rank() == 0)
+        {
+          y_stream.open(y_path);
+        }
       El::Print(y.blocks.at(0),
                 std::to_string(y.blocks.at(0).Height()) + " "
                   + std::to_string(y.blocks.at(0).Width()),
                 "\n", y_stream);
-      y_stream << "\n";
-      if(!y_stream.good())
+      if(El::mpi::Rank() == 0)
         {
-          throw std::runtime_error("Error when writing to: "
-                                   + y_path.string());
+          y_stream << "\n";
+          if(!y_stream.good())
+            {
+              throw std::runtime_error("Error when writing to: "
+                                       + y_path.string());
+            }
         }
     }
 
@@ -80,18 +95,24 @@ void SDP_Solver::save_solution(
       size_t block_index(block_indices.at(block));
       const boost::filesystem::path x_path(
         out_directory / ("x_" + std::to_string(block_index) + ".txt"));
-      boost::filesystem::ofstream x_stream(x_path);
+      boost::filesystem::ofstream x_stream;
+      if(x.blocks.at(block).DistRank() == x.blocks.at(block).Root())
+        {
+          x_stream.open(x_path);
+        }
       El::Print(x.blocks.at(block),
                 std::to_string(x.blocks.at(block).Height()) + " "
                   + std::to_string(x.blocks.at(block).Width()),
                 "\n", x_stream);
-      x_stream << "\n";
-      if(!x_stream.good())
+      if(x.blocks.at(block).DistRank() == x.blocks.at(block).Root())
         {
-          throw std::runtime_error("Error when writing to: "
-                                   + x_path.string());
+          x_stream << "\n";
+          if(!x_stream.good())
+            {
+              throw std::runtime_error("Error when writing to: "
+                                       + x_path.string());
+            }
         }
-
       if(write_matrices)
         {
           for(size_t psd_block(0); psd_block < 2; ++psd_block)
