@@ -62,6 +62,47 @@ Dual_Constraint_Group::Dual_Constraint_Group(
   // The rest multiply decision variables y
   B.Resize(numConstraints, vectorDim - 1);
 
+  std::vector<El::BigFloat> scaling(num_points, El::BigFloat(0));
+
+  for(size_t s = 0; s < dim; ++s)
+    {
+      for(size_t r = 0; r <= s; ++r)
+        {
+          for(size_t k = 0; k < num_samples; ++k)
+            {
+              El::BigFloat x(to_string(points[k]));
+              for(size_t n = 0; n < vectorDim; ++n)
+                {
+                  scaling[k]
+                    = std::max(scaling[k], El::Abs(pvm.element(r, s)[n](x)));
+                }
+            }
+        }
+    }
+
+  El::BigFloat max_scale(0);
+  for(auto &scale : scaling)
+    {
+      max_scale = std::max(scale, max_scale);
+      scale = 1 / scale;
+    }
+
+  std::vector<Boost_Float> cheb_scaling;
+  for(auto &scale : scaling)
+    {
+      std::stringstream ss;
+      set_stream_precision(ss);
+      ss << max_scale*scale;
+      Boost_Float cheb_scale(ss.str());
+      cheb_scaling.emplace_back(cheb_scale);
+    }
+
+  // for(size_t ii = 0; ii < scaling.size(); ++ii)
+  //   {
+  //     std::cout << "scaling " << ii << " " << scaling[ii] << " " << cheb_scaling[ii] << "\n"
+  //               << std::flush;
+  //   }
+
   // Populate B and c by sampling the polynomial matrix
 
   int p = 0;
@@ -72,10 +113,10 @@ Dual_Constraint_Group::Dual_Constraint_Group(
           for(size_t k = 0; k < num_samples; k++)
             {
               El::BigFloat x(to_string(points[k]));
-              c[p] = pvm.element(r, s)[0](x);
+              c[p] = scaling[k] * pvm.element(r, s)[0](x);
               for(size_t n = 1; n < vectorDim; ++n)
                 {
-                  B.Set(p, n - 1, -pvm.element(r, s)[n](x));
+                  B.Set(p, n - 1, -scaling[k] * pvm.element(r, s)[n](x));
                 }
               ++p;
             }
@@ -89,16 +130,49 @@ Dual_Constraint_Group::Dual_Constraint_Group(
   //   Y_1: {q_0(x), ..., q_delta1(x)}
   //   Y_2: {\sqrt(x) q_0(x), ..., \sqrt(x) q_delta2(x)
   //
-  const size_t delta1(degree / 2);
 
-  bilinear_bases[0] = sample_bilinear_basis(
-    delta1, num_samples, cheb_points, std::vector<Boost_Float>(num_points, 1));
+  const size_t delta1(degree / 2);
+  // for(size_t n = 0; n < num_samples; ++n)
+  //   {
+  //     // std::cout << "coeffs\n" << std::flush;
+  //     Boost_Float coeffs(0);
+  //     for(size_t k = 0; k < num_samples; ++k)
+  //       {
+  //         std::stringstream ss;
+  //         set_stream_precision(ss);
+  //         ss << scaling[k];
+  //         Boost_Float scale(ss.str());
+
+  //         // std::cout << "coeff: " << n << " "
+  //         //           << k << " "
+  //         //           << Boost_Float(n * 2 * Boost_Float(num_samples - k) - 1) << " "
+  //         //           << scale << " "
+  //         //           << "\n";
+  //         coeffs
+  //           += boost::math::cos_pi((n * 2 * Boost_Float(num_samples - k) - 1)
+  //                                  / (2 * num_samples))
+  //              / scale;
+  //       }
+  //     // std::cout << "coeffs: " << n << " " << coeffs / delta1 << "\n" << std::flush;
+  //   }
+
+  bilinear_bases[0]
+    = sample_bilinear_basis(delta1, num_samples, cheb_points, cheb_scaling);
 
   const size_t delta2(degree == 0 ? 0 : (degree - 1) / 2);
   // a degree-0 Polynomial_Vector_Matrix should only need one block,
   // but this duplicates the block.
 
   // Scale the second second of bases by the coordinate 'x'
+  std::vector<Boost_Float> point_scaled;
+  for(size_t point = 0; point < cheb_points.size(); ++point)
+    {
+      // std::cout << "cheb: " << cheb_points[point] << " " << points[point]
+      //           << " "
+      //           << "\n";
+      point_scaled.emplace_back((cheb_points[point] + 1)
+                                * cheb_scaling[point]);
+    }
   bilinear_bases[1]
-    = sample_bilinear_basis(delta2, num_samples, cheb_points, points);
+    = sample_bilinear_basis(delta2, num_samples, cheb_points, point_scaled);
 }
