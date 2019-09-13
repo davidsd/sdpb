@@ -12,8 +12,8 @@
 
 El::Matrix<El::BigFloat>
 sample_bilinear_basis(const int max_degree, const int num_samples,
-                      const std::vector<Boost_Float> &sample_points,
-                      const std::vector<Boost_Float> &sample_scalings);
+                      const std::vector<Boost_Float> &cheb_points,
+                      const std::vector<Boost_Float> &scalings);
 
 // Construct a Dual_Constraint_Group from a Polynomial_Vector_Matrix by
 // sampling the matrix at the appropriate number of points, as

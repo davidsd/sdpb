@@ -29,16 +29,16 @@ boost::math::chebyshev_clenshaw_recurrence<Boost_Float, Boost_Float>(
 
 El::Matrix<El::BigFloat>
 sample_bilinear_basis(const int max_degree, const int num_samples,
-                      const std::vector<Boost_Float> &sample_points,
-                      const std::vector<Boost_Float> &sample_scalings)
+                      const std::vector<Boost_Float> &cheb_points,
+                      const std::vector<Boost_Float> &scalings)
 {
   Boost_Float::default_precision(El::gmp::Precision() * log(2) / log(10));
 
   El::Matrix<El::BigFloat> b(max_degree + 1, num_samples);
   for(int k = 0; k < num_samples; k++)
     {
-      Boost_Float x(sample_points[k]);
-      Boost_Float scale(sqrt(sample_scalings[k]));
+      Boost_Float x(cheb_points[k]);
+      Boost_Float scale(sqrt(scalings[k]));
 
       for(int i = 0; i <= max_degree; i++)
         {
