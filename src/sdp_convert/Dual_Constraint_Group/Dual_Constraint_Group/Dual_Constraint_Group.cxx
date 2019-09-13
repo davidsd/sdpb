@@ -38,10 +38,9 @@ Dual_Constraint_Group::Dual_Constraint_Group(
   size_t vectorDim = pvm.element(0, 0).size();
 
   const size_t num_points(pvm.sample_points.size());
-  Boost_Float::default_precision(El::gmp::Precision() * log(2) / log(10));
-
   const double x_scale(pvm.sample_points.back());
 
+  Boost_Float::default_precision(El::gmp::Precision() * log(2) / log(10));
   std::vector<Boost_Float> cheb_points(num_points);
   for(size_t point = 0; point < cheb_points.size(); ++point)
     {
