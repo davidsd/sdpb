@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <vector>
+#include <stdexcept>
 
 template <typename T>
 void read_vector(std::ifstream &input_stream, std::vector<T> &v)

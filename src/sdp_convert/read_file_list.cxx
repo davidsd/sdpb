@@ -3,6 +3,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include <iostream>
+#include <stdexcept>
 
 std::vector<boost::filesystem::path>
 read_file_list(const boost::filesystem::path &filename)
