@@ -1,3 +1,18 @@
+# Version 2.2.0
+
+## sdpb
+
+- Fixed some race conditions when writing files and running on large
+  numbers of cores.
+
+- Added a number of checks for errors when reading and writing files.
+  This required modifying the text checkpoints format to include a
+  newline at the end, so text checkpoint written with older versions
+  of SDPB will not load with this new version.  Binary checkpoints are
+  unaffected and will continue to work.
+
+- Require a valid checkpoint if the initialCheckpointDir option is set.
+
 # Version 2.1.3
 
 ## sdpb
