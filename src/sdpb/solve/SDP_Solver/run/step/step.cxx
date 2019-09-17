@@ -38,20 +38,17 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
             const Block_Diagonal_Matrix &dM, const El::BigFloat &gamma,
             const std::string &timer_name, Timers &timers);
 
-void SDP_Solver::step(const SDP_Solver_Parameters &parameters,
-                      const std::size_t &total_psd_rows,
-                      const bool &is_primal_and_dual_feasible,
-                      const Block_Info &block_info, const SDP &sdp,
-                      const El::Grid &grid,
-                      const Block_Diagonal_Matrix &X_cholesky,
-                      const Block_Diagonal_Matrix &Y_cholesky,
-                      const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-                      const Block_Diagonal_Matrix &bilinear_pairings_Y,
-                      const Block_Vector &primal_residue_p, El::BigFloat &mu,
-                      El::BigFloat &beta_corrector,
-                      El::BigFloat &primal_step_length,
-                      El::BigFloat &dual_step_length,
-                      bool &terminate_now, Timers &timers)
+void SDP_Solver::step(
+  const SDP_Solver_Parameters &parameters, const std::size_t &total_psd_rows,
+  const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
+  const SDP &sdp, const El::Grid &grid,
+  const Block_Diagonal_Matrix &X_cholesky,
+  const Block_Diagonal_Matrix &Y_cholesky,
+  const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
+  const Block_Diagonal_Matrix &bilinear_pairings_Y,
+  const Block_Vector &primal_residue_p, El::BigFloat &mu,
+  El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
+  El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers)
 {
   auto &step_timer(timers.add_and_start("run.step"));
   El::BigFloat beta_predictor;
@@ -143,6 +140,15 @@ void SDP_Solver::step(const SDP_Solver_Parameters &parameters,
   // Update the primal point (x, X) += primalStepLength*(dx, dX)
   for(size_t block = 0; block < x.blocks.size(); ++block)
     {
+      {
+        std::ofstream dx_file(
+          "eigs/dx_" + std::to_string(block_info.block_indices[block]) + ".txt");
+        dx_file << dx.blocks[block].Height() << " " << dx.blocks[block].Width()
+                << "\n";
+
+        El::Print(dx.blocks[block], "", "\n", dx_file);
+      }
+
       El::Axpy(primal_step_length, dx.blocks[block], x.blocks[block]);
     }
   dX *= primal_step_length;

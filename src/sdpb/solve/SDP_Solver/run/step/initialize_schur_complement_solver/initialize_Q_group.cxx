@@ -41,20 +41,34 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
         + std::to_string(block_info.block_indices[block])));
 
       {
-      El::DistMatrix<El::BigFloat> eigenvalues(schur_complement.blocks[block].Grid());
-      auto block_copy(schur_complement.blocks[block]);
-      hermitian_eig_ctrl.tridiagEigCtrl.dcCtrl.cutoff
-        = schur_complement.blocks[block].Height() / 2 + 1;
-      El::HermitianEig(El::UpperOrLowerNS::LOWER, block_copy, eigenvalues,
-                       hermitian_eig_ctrl);
-      std::ofstream eigvals("eigvals_" + std::to_string(block_info.block_indices[block]) + ".txt");
-      El::Print(eigenvalues,"","\n",eigvals);
-      // std::cout << "eigvals: " << El::mpi::Rank() << " "
-      //           << El::Max(eigenvalues)/El::Min(eigenvalues) << " "
-      //           << "\n";
+        El::DistMatrix<El::BigFloat> eigenvalues(
+          schur_complement.blocks[block].Grid());
+        El::DistMatrix<El::BigFloat> eigenvectors(eigenvalues.Grid());
+
+        auto block_copy(schur_complement.blocks[block]);
+        hermitian_eig_ctrl.tridiagEigCtrl.dcCtrl.cutoff
+          = schur_complement.blocks[block].Height() / 2 + 1;
+        El::HermitianEig(El::UpperOrLowerNS::LOWER, block_copy, eigenvalues,
+                         eigenvectors, hermitian_eig_ctrl);
+        std::ofstream eigvals_file(
+          "eigs/eigvals_" + std::to_string(block_info.block_indices[block])
+          + ".txt");
+        El::Print(eigenvalues, "", "\n", eigvals_file);
+        std::ofstream eigvecs_file(
+          "eigs/eigvecs_" + std::to_string(block_info.block_indices[block])
+          + ".txt");
+        eigvecs_file << eigenvectors.Width() << " " << eigenvectors.Height()
+                     << "\n";
+        El::Print(eigenvectors, "", "\n", eigvecs_file);
+
+        std::ofstream blocks_file(
+          "eigs/blocks_" + std::to_string(block_info.block_indices[block])
+          + ".txt");
+        blocks_file << schur_complement.blocks[block].Width() << " "
+                    << schur_complement.blocks[block].Height() << "\n";
+        El::Print(schur_complement.blocks[block], "", "\n", blocks_file);
       }
 
-      
       schur_complement_cholesky.blocks[block] = schur_complement.blocks[block];
       Cholesky(El::UpperOrLowerNS::LOWER,
                schur_complement_cholesky.blocks[block]);
