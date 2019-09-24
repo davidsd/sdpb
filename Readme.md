@@ -44,7 +44,9 @@ An unofficial Haskell wrapper is available:
 If you use SDPB in work that results in publication, consider citing
 
 - D. Simmons-Duffin, "A Semidefinite Program Solver for the
-  Conformal Bootstrap", [arXiv:1502.02033 \[hep-th\]](http://arxiv.org/abs/1502.02033).
+  Conformal Bootstrap", JHEP 1506, 174 (2015) [arXiv:1502.02033 \[hep-th\]](http://arxiv.org/abs/1502.02033).
+- W. Landry and D. Simmons-Duffin, "Scaling the semidefinite program solver SDPB"
+  [arXiv:1909.09745 \[hep-th\]](https://arxiv.org/abs/1909.09745).
 
 Depending on how SDPB is used, the following other sources might be relevant:
 
@@ -63,7 +65,7 @@ The generalization of semidefinite programming methods to arbitrary
 systems of correlation functions:
 
 - F. Kos, D. Poland and D. Simmons-Duffin, "Bootstrapping Mixed
-  Correlators in the 3D Ising Model," [arXiv:1406.4858 \[hep-th\]](http://arxiv.org/abs/1406.4858).
+  Correlators in the 3D Ising Model," JHEP 1411, 109 (2014) [arXiv:1406.4858 \[hep-th\]](http://arxiv.org/abs/1406.4858).
 
 ## Acknowledgements
 
