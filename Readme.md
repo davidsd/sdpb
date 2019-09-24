@@ -81,4 +81,4 @@ systems of correlation functions:
 
 ## Works Using SDPB
 
-As of April 2019, SDPB has been used in approximately 60 works. Here is [a list of papers citing SDPB](http://inspirehep.net/search?ln=en&p=refersto%3Arecid%3A1343540&sf=earliestdate).
+As of April 2019, SDPB has been used in approximately 70 works. Here is [a list of papers citing SDPB](http://inspirehep.net/search?ln=en&p=refersto%3Arecid%3A1343540&sf=earliestdate).
