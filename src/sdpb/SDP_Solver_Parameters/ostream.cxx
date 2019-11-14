@@ -12,7 +12,7 @@ std::ostream &operator<<(std::ostream &os, const SDP_Solver_Parameters &p)
      << "maxRuntime                   = " << p.max_runtime << '\n'
      << "checkpointInterval           = " << p.checkpoint_interval << '\n'
      << "noFinalCheckpoint            = " << p.no_final_checkpoint << '\n'
-     << "writeMatrices                = " << p.write_matrices << '\n'
+     << "writeSolution                = " << p.write_solution << '\n'
      << "findPrimalFeasible           = " << p.find_primal_feasible << '\n'
      << "findDualFeasible             = " << p.find_dual_feasible << '\n'
      << "detectPrimalFeasibleJump     = " << p.detect_primal_feasible_jump

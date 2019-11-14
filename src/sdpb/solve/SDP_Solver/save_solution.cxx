@@ -34,7 +34,8 @@ namespace
 void SDP_Solver::save_solution(
   const SDP_Solver_Terminate_Reason terminate_reason,
   const std::pair<std::string, Timer> &timer_pair,
-  const boost::filesystem::path &out_directory, const bool &write_matrices,
+  const boost::filesystem::path &out_directory,
+  const Write_Solution &write_solution,
   const std::vector<size_t> &block_indices, const Verbosity &verbosity) const
 {
   // Internally, El::Print() sync's everything to the root core and
@@ -67,7 +68,7 @@ void SDP_Solver::save_solution(
     }
   // y is duplicated among cores, so only need to print out copy on
   // the root node.
-  if(!y.blocks.empty())
+  if(write_solution.vector_y && !y.blocks.empty())
     {
       const boost::filesystem::path y_path(out_directory / "y.txt");
       boost::filesystem::ofstream y_stream;
@@ -93,35 +94,41 @@ void SDP_Solver::save_solution(
   for(size_t block = 0; block != x.blocks.size(); ++block)
     {
       size_t block_index(block_indices.at(block));
-      const boost::filesystem::path x_path(
-        out_directory / ("x_" + std::to_string(block_index) + ".txt"));
-      boost::filesystem::ofstream x_stream;
-      if(x.blocks.at(block).DistRank() == x.blocks.at(block).Root())
+      if(write_solution.vector_x)
         {
-          x_stream.open(x_path);
-        }
-      El::Print(x.blocks.at(block),
-                std::to_string(x.blocks.at(block).Height()) + " "
-                  + std::to_string(x.blocks.at(block).Width()),
-                "\n", x_stream);
-      if(x.blocks.at(block).DistRank() == x.blocks.at(block).Root())
-        {
-          x_stream << "\n";
-          if(!x_stream.good())
+          const boost::filesystem::path x_path(
+            out_directory / ("x_" + std::to_string(block_index) + ".txt"));
+          boost::filesystem::ofstream x_stream;
+          if(x.blocks.at(block).DistRank() == x.blocks.at(block).Root())
             {
-              throw std::runtime_error("Error when writing to: "
-                                       + x_path.string());
+              x_stream.open(x_path);
+            }
+          El::Print(x.blocks.at(block),
+                    std::to_string(x.blocks.at(block).Height()) + " "
+                      + std::to_string(x.blocks.at(block).Width()),
+                    "\n", x_stream);
+          if(x.blocks.at(block).DistRank() == x.blocks.at(block).Root())
+            {
+              x_stream << "\n";
+              if(!x_stream.good())
+                {
+                  throw std::runtime_error("Error when writing to: "
+                                           + x_path.string());
+                }
             }
         }
-      if(write_matrices)
+      for(size_t psd_block(0); psd_block < 2; ++psd_block)
         {
-          for(size_t psd_block(0); psd_block < 2; ++psd_block)
-            {
-              std::string suffix(std::to_string(2 * block_index + psd_block)
-                                 + ".txt");
+          std::string suffix(std::to_string(2 * block_index + psd_block)
+                             + ".txt");
 
+          if(write_solution.matrix_X)
+            {
               write_psd_block(out_directory / ("X_matrix_" + suffix),
                               X.blocks.at(2 * block + psd_block));
+            }
+          if(write_solution.matrix_Y)
+            {
               write_psd_block(out_directory / ("Y_matrix_" + suffix),
                               Y.blocks.at(2 * block + psd_block));
             }

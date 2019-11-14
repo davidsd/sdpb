@@ -96,7 +96,7 @@ public:
   void save_solution(const SDP_Solver_Terminate_Reason,
                      const std::pair<std::string, Timer> &timer_pair,
                      const boost::filesystem::path &out_directory,
-                     const bool &write_matrices,
+                     const Write_Solution &write_solution,
                      const std::vector<size_t> &block_indices,
                      const Verbosity &verbosity) const;
   void save_checkpoint(const boost::filesystem::path &checkpoint_directory,

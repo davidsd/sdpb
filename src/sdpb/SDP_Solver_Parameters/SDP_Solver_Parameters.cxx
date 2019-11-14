@@ -8,6 +8,8 @@ namespace po = boost::program_options;
 SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
 {
   int int_verbosity;
+  std::string write_solution_string;
+  using namespace std::string_literals;
 
   po::options_description required_options("Required options");
   required_options.add_options()(
@@ -58,11 +60,16 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
     "Don't save a final checkpoint after terminating (useful when "
     "debugging).");
   basic_options.add_options()(
-    "writeMatrices", po::bool_switch(&write_matrices)->default_value(false),
-    "Write the 'X' and 'Y' matrices into the output directory.  With these "
-    "matrices, the output directory can be used as a final text checkpoint.  "
-    "Runs started from text checkpoints will very close to, but not bitwise "
-    "identical to, the original run.");
+    "writeSolution",
+    po::value<std::string>(&write_solution_string)->default_value("x,y"s),
+    "A comma separated list of vectors and matrices to write into the output "
+    "directory.  The default only writes the vectors 'x' and 'y'.  If you add "
+    "the 'X' and 'Y' matrices, then the output directory can be used as a "
+    "final text "
+    "checkpoint.  Runs started from text checkpoints will very close to, but "
+    "not bitwise identical to, the original run.  To only output the result "
+    "(because, for example, you only want to know if SDPB found a primal "
+    "feasible point), set this to an empty string.");
   basic_options.add_options()(
     "procGranularity", po::value<size_t>(&proc_granularity)->default_value(1),
     "procGranularity must evenly divide procsPerNode.\n\n"
@@ -260,8 +267,10 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
             }
           else
             {
-              require_initial_checkpoint=true;
-            }              
+              require_initial_checkpoint = true;
+            }
+
+          write_solution=Write_Solution(write_solution_string);
           
           if(El::mpi::Rank() == 0)
             {

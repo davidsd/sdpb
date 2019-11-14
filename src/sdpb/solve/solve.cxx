@@ -44,7 +44,7 @@ solve(const Block_Info &block_info, const SDP_Solver_Parameters &parameters)
       solver.save_checkpoint(parameters.checkpoint_out, parameters.verbosity);
     }
   solver.save_solution(reason, timers.front(), parameters.out_directory,
-                       parameters.write_matrices,
+                       parameters.write_solution,
                        block_info.block_indices,
                        parameters.verbosity);
   return timers;

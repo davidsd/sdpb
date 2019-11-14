@@ -1,0 +1,40 @@
+#include "Write_Solution.hxx"
+
+#include <boost/algorithm/string.hpp>
+
+#include <stdexcept>
+
+Write_Solution::Write_Solution(const std::string &input)
+    : input_string(input)
+{
+  std::vector<std::string> solutions;
+  using namespace std::string_literals;
+  boost::split(solutions, input_string, boost::is_any_of(", "s));
+  for(auto &solution : solutions)
+    {
+      switch(solution.size())
+        {
+        case 0: break;
+        case 1:
+          switch(solution.front())
+            {
+            case 'x': vector_x = true; break;
+            case 'y': vector_y = true; break;
+            case 'X': matrix_X = true; break;
+            case 'Y': matrix_Y = true; break;
+            default:
+              throw std::runtime_error(
+                "Invalid argument for writeSolution.  Expected a comma "
+                "separated list containing x, y, X, and/or Y, but found: "
+                + solution);
+            }
+          break;
+        default:
+          throw std::runtime_error(
+            "Invalid argument for writeSolution.  Expected a comma "
+            "separated list containing x, y, X, and/or Y, but found: "
+            + solution);
+          break;
+        }
+    }
+}
