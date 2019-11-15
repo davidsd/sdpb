@@ -7,8 +7,7 @@
 #include <sstream>
 #include <stdexcept>
 
-template<typename Float_Type>
-class Number_State
+template <typename Float_Type> class Number_State
 {
 public:
   bool inside = false;
@@ -50,7 +49,15 @@ public:
     if(inside)
       {
         inside = false;
-        string_value >> value;
+        try
+          {
+            value = Float_Type(string_value.str());
+          }
+        catch(...)
+          {
+            throw std::runtime_error("Invalid number: '" + string_value.str()
+                                     + "'");
+          }
       }
     return result;
   }
