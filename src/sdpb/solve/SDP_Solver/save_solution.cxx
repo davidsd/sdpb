@@ -122,12 +122,14 @@ void SDP_Solver::save_solution(
           std::string suffix(std::to_string(2 * block_index + psd_block)
                              + ".txt");
 
-          if(write_solution.matrix_X)
+          if(write_solution.matrix_X
+             && X.blocks.at(2 * block + psd_block).Height() != 0)
             {
               write_psd_block(out_directory / ("X_matrix_" + suffix),
                               X.blocks.at(2 * block + psd_block));
             }
-          if(write_solution.matrix_Y)
+          if(write_solution.matrix_Y
+             && Y.blocks.at(2 * block + psd_block).Height() != 0)
             {
               write_psd_block(out_directory / ("Y_matrix_" + suffix),
                               Y.blocks.at(2 * block + psd_block));

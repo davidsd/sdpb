@@ -16,7 +16,8 @@ void read_text_block(El::DistMatrix<El::BigFloat> &block,
   block_stream >> file_height >> file_width;
   if(!block_stream.good())
     {
-      throw std::runtime_error("Corrupted header in file: " + block_path.string());
+      throw std::runtime_error("Corrupted header in file: "
+                               + block_path.string());
     }
   if(file_height != block.Height() || file_width != block.Width())
     {
@@ -41,7 +42,8 @@ void read_text_block(El::DistMatrix<El::BigFloat> &block,
       }
   if(!block_stream.good())
     {
-      throw std::runtime_error("Corrupted data in file: " + block_path.string());
+      throw std::runtime_error("Corrupted data in file: "
+                               + block_path.string());
     }
 }
 
@@ -78,11 +80,16 @@ bool load_text_checkpoint(const boost::filesystem::path &checkpoint_directory,
 
       for(size_t psd_block(0); psd_block < 2; ++psd_block)
         {
-          const size_t psd_index(2 * block_index + psd_block);
-          read_text_block(solver.X.blocks.at(2 * block + psd_block),
-                          checkpoint_directory, "X_matrix_", psd_index);
-          read_text_block(solver.Y.blocks.at(2 * block + psd_block),
-                          checkpoint_directory, "Y_matrix_", psd_index);
+          // Constant constraints have empty odd parity blocks, so we do not
+          // need to load them.
+          if(solver.X.blocks.at(2 * block + psd_block).Height() != 0)
+            {
+              const size_t psd_index(2 * block_index + psd_block);
+              read_text_block(solver.X.blocks.at(2 * block + psd_block),
+                              checkpoint_directory, "X_matrix_", psd_index);
+              read_text_block(solver.Y.blocks.at(2 * block + psd_block),
+                              checkpoint_directory, "Y_matrix_", psd_index);
+            }
         }
     }
   return true;
