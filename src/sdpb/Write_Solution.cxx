@@ -3,6 +3,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include <stdexcept>
+#include <vector>
 
 Write_Solution::Write_Solution(const std::string &input)
     : input_string(input)
