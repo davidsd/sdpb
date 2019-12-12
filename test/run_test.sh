@@ -149,7 +149,7 @@ mkdir -p test/io_tests
 mkdir test/io_tests/out
 touch test/io_tests/out/X_matrix_0.txt
 chmod a-w test/io_tests/out/X_matrix_0.txt
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test/ -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --writeMatrices --verbosity=0 2>/dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test/ -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --writeSolution=x,y,X,Y --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS X_matrix_0.txt"
@@ -163,7 +163,7 @@ mkdir -p test/io_tests
 mkdir test/io_tests/out
 touch test/io_tests/out/Y_matrix_0.txt
 chmod a-w test/io_tests/out/Y_matrix_0.txt
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test/ -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --writeMatrices --verbosity=0 2>/dev/null
+mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test/ -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --writeSolution=x,y,X,Y --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS Y_matrix_0.txt"
@@ -386,7 +386,7 @@ rm -rf test/io_tests
 
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
-mpirun -n 1 ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 --writeMatrices
+mpirun -n 1 ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 --writeSolution=x,y,X,Y
 chmod a-r test/io_tests/out/X_matrix_0.txt
 mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/out -o test/io_tests/out_new --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
@@ -400,7 +400,7 @@ rm -rf test/io_tests
 
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
-mpirun -n 1 ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 --writeMatrices
+mpirun -n 1 ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 --writeSolution=x,y,X,Y
 rm test/io_tests/out/X_matrix_0.txt
 touch test/io_tests/out/X_matrix_0.txt
 mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/out -o test/io_tests/out_new --maxIterations=1 --verbosity=0 2>/dev/null
@@ -415,7 +415,7 @@ rm -rf test/io_tests
 
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
-mpirun -n 1 ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 --writeMatrices
+mpirun -n 1 ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 --writeSolution=x,y,X,Y
 head -n 2 test/io_tests/out/X_matrix_0.txt > test/io_tests/out/X_matrix_0.txt
 mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/out -o test/io_tests/out_new --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
