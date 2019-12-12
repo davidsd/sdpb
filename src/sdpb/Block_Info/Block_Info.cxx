@@ -107,15 +107,13 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
     }
   else
     {
-      // This simulates round-robin by making everything cost the same
-      // but with a round-robin order.
-      for(size_t rank = 0; rank < num_procs; ++rank)
+      // If no information, assign a cost proportional to the matrix
+      // size.  This should balance out memory use when doing a timing
+      // run.
+      for(size_t block = 0; block < schur_block_sizes.size(); ++block)
         {
-          for(size_t block = rank; block < schur_block_sizes.size();
-              block += num_procs)
-            {
-              block_costs.emplace_back(1, block);
-            }
+          block_costs.emplace_back(
+            schur_block_sizes[block] * schur_block_sizes[block], block);
         }
     }
 
