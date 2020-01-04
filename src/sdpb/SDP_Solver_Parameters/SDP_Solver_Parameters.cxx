@@ -123,7 +123,9 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
     "maxIterations", po::value<int64_t>(&max_iterations)->default_value(500),
     "Maximum number of iterations to run the solver.");
   solver_options.add_options()(
-    "maxRuntime", po::value<int64_t>(&max_runtime)->default_value(86400),
+    "maxRuntime",
+    po::value<int64_t>(&max_runtime)
+      ->default_value(std::numeric_limits<int64_t>::max()),
     "Maximum amount of time to run the solver in seconds.");
   solver_options.add_options()(
     "dualityGapThreshold",
@@ -270,8 +272,8 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
               require_initial_checkpoint = true;
             }
 
-          write_solution=Write_Solution(write_solution_string);
-          
+          write_solution = Write_Solution(write_solution_string);
+
           if(El::mpi::Rank() == 0)
             {
               boost::filesystem::create_directories(out_directory);
