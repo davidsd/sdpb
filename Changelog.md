@@ -1,3 +1,26 @@
+# Version 2.3.0
+
+## sdpb
+
+- Replaced the option --writeMatrices with a more general option
+  --writeSolution.  This enables fine grained control over which output
+  files to write.
+
+- Changed the default for --maxRuntime to effectively infinite (2^63
+  seconds)
+
+- Write fewer files when there are constant constraints.
+
+- Fix a corner case when running a small problem on many cores
+
+## pvm2sdp
+
+- Implemented a better check for bad elements when reading in data.
+  This also happened to speed it up by about 15%.
+
+- No longer needlessly promote constant constraints to linear
+  constraints.
+
 # Version 2.2.0
 
 ## sdpb
