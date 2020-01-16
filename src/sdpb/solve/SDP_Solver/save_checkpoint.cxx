@@ -72,6 +72,7 @@ void SDP_Solver::save_checkpoint(
           std::cout << "Saving checkpoint to    : " << checkpoint_directory
                     << '\n';
         }
+      // TODO: Write and read precision, num of mpi procs, and procs_per_node.
       write_local_blocks(x, checkpoint_stream);
       write_local_blocks(X, checkpoint_stream);
       write_local_blocks(y, checkpoint_stream);
