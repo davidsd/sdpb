@@ -67,7 +67,7 @@ SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
     "the 'X' and 'Y' matrices, then the output directory can be used as a "
     "final text "
     "checkpoint.  Runs started from text checkpoints will very close to, but "
-    "not bitwise identical to, the original run.  To only output the result "
+    "not bitwise identical to, the original run.\nTo only output the result "
     "(because, for example, you only want to know if SDPB found a primal "
     "feasible point), set this to an empty string.");
   basic_options.add_options()(
