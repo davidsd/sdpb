@@ -9,6 +9,10 @@
 - Changed the default for --maxRuntime to effectively infinite (2^63
   seconds)
 
+- Use matrix size as a heuristic when allocating cores for a timing
+  run.  This significantly decreases memory used during the timing
+  run, making it more comparable to the regular solver run.
+
 - Write fewer files when there are constant constraints.
 
 - Fix a corner case when running a small problem on many cores
