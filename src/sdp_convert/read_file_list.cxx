@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <stdexcept>
+#include <vector>
 
 std::vector<boost::filesystem::path>
 read_file_list(const boost::filesystem::path &filename)
