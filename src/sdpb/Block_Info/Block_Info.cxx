@@ -216,5 +216,16 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
     El::mpi::Incl(default_mpi_group, group_ranks.size(), group_ranks.data(),
                   mpi_group);
   }
-  El::mpi::Create(El::mpi::COMM_WORLD, mpi_group, mpi_comm);
+  // A little song-and-dance to delete mpi_group if creating mpi_comm
+  // fails.
+  // Ideally, MPI_Comm and MPI_Group would clean up by themselves.
+  try
+    {
+      El::mpi::Create(El::mpi::COMM_WORLD, mpi_group, mpi_comm);
+    }
+  catch(...)
+    {
+      El::mpi::Free(mpi_group);
+      throw;
+    }
 }

@@ -38,4 +38,9 @@ public:
              const boost::filesystem::path &checkpoint_in,
              const size_t &procs_per_node, const size_t &proc_granularity,
              const Verbosity &verbosity);
+  ~Block_Info()
+  {
+    El::mpi::Free(mpi_comm);
+    El::mpi::Free(mpi_group);
+  }
 };
