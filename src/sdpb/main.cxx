@@ -74,10 +74,12 @@ int main(int argc, char **argv)
           write_timing(timing_parameters.checkpoint_out, block_info, timers,
                        timing_parameters.verbosity >= Verbosity::debug);
           El::mpi::Barrier(El::mpi::COMM_WORLD);
-          block_info
-            = Block_Info(parameters.sdp_directory, parameters.checkpoint_out,
-                         parameters.procs_per_node,
-                         parameters.proc_granularity, parameters.verbosity);
+          Block_Info new_info(parameters.sdp_directory,
+                                      parameters.checkpoint_out,
+                                      parameters.procs_per_node,
+                                      parameters.proc_granularity,
+                              parameters.verbosity);
+          std::swap(block_info, new_info);
 
           parameters.max_runtime -= timers.front().second.elapsed_seconds();
         }

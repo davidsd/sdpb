@@ -17,7 +17,7 @@ Timers
 solve(const Block_Info &block_info, const SDP_Solver_Parameters &parameters)
 {
   // Read an SDP from sdpFile and create a solver for it
-  El::Grid grid(block_info.mpi_comm);
+  El::Grid grid(block_info.mpi_comm.value);
   SDP sdp(parameters.sdp_directory, block_info, grid);
   SDP_Solver solver(parameters, block_info, grid,
                     sdp.dual_objective_b.Height());

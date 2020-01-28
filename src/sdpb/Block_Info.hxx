@@ -6,6 +6,26 @@
 #include <El.hpp>
 #include <boost/filesystem.hpp>
 
+#include <algorithm>
+
+struct MPI_Comm_Wrapper
+{
+  El::mpi::Comm value;
+  MPI_Comm_Wrapper() = default;
+  MPI_Comm_Wrapper(const MPI_Comm_Wrapper &) = delete;
+  void operator=(const MPI_Comm_Wrapper &) = delete;
+  ~MPI_Comm_Wrapper() { El::mpi::Free(value); }
+};
+
+struct MPI_Group_Wrapper
+{
+  El::mpi::Group value;
+  MPI_Group_Wrapper() = default;
+  MPI_Group_Wrapper(const MPI_Group_Wrapper &) = delete;
+  void operator=(const MPI_Group_Wrapper &) = delete;
+  ~MPI_Group_Wrapper() { El::mpi::Free(value); }
+};
+
 class Block_Info
 {
 public:
@@ -30,17 +50,40 @@ public:
     bilinear_pairing_block_sizes;
 
   std::vector<size_t> block_indices;
-  El::mpi::Group mpi_group;
-  El::mpi::Comm mpi_comm;
+  MPI_Group_Wrapper mpi_group;
+  MPI_Comm_Wrapper mpi_comm;
 
   Block_Info() = delete;
   Block_Info(const boost::filesystem::path &sdp_directory,
              const boost::filesystem::path &checkpoint_in,
              const size_t &procs_per_node, const size_t &proc_granularity,
              const Verbosity &verbosity);
-  ~Block_Info()
-  {
-    El::mpi::Free(mpi_comm);
-    El::mpi::Free(mpi_group);
-  }
 };
+
+namespace std
+{
+  inline void swap(MPI_Comm_Wrapper &a, MPI_Comm_Wrapper &b)
+  {
+    swap(a.value,b.value);
+  }
+  inline void swap(MPI_Group_Wrapper &a, MPI_Group_Wrapper &b)
+  {
+    swap(a.value,b.value);
+  }
+
+  inline void swap(Block_Info &a, Block_Info &b)
+  {
+    swap(a.block_timings_filename,b.block_timings_filename);
+    swap(a.file_num_procs,b.file_num_procs);
+    swap(a.file_block_indices,b.file_block_indices);
+    swap(a.dimensions,b.dimensions);
+    swap(a.degrees,b.degrees);
+    swap(a.schur_block_sizes,b.schur_block_sizes);
+    swap(a.psd_matrix_block_sizes,b.psd_matrix_block_sizes);
+    swap(a.bilinear_pairing_block_sizes,b.bilinear_pairing_block_sizes);
+    swap(a.block_indices,b.block_indices);
+    swap(a.mpi_group,b.mpi_group);
+    swap(a.mpi_comm,b.mpi_comm);
+  }
+}
+

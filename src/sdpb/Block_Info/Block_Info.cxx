@@ -214,18 +214,7 @@ Block_Info::Block_Info(const boost::filesystem::path &sdp_directory,
     std::vector<int> group_ranks(rank_end - rank_begin);
     std::iota(group_ranks.begin(), group_ranks.end(), rank_begin);
     El::mpi::Incl(default_mpi_group, group_ranks.size(), group_ranks.data(),
-                  mpi_group);
+                  mpi_group.value);
   }
-  // A little song-and-dance to delete mpi_group if creating mpi_comm
-  // fails.
-  // Ideally, MPI_Comm and MPI_Group would clean up by themselves.
-  try
-    {
-      El::mpi::Create(El::mpi::COMM_WORLD, mpi_group, mpi_comm);
-    }
-  catch(...)
-    {
-      El::mpi::Free(mpi_group);
-      throw;
-    }
+  El::mpi::Create(El::mpi::COMM_WORLD, mpi_group.value, mpi_comm.value);
 }
