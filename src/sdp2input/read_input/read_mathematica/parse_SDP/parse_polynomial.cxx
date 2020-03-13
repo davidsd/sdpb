@@ -121,10 +121,18 @@ parse_polynomial(const char *begin, const char *end, Polynomial &polynomial)
           polynomial.coefficients.at(0) = El::BigFloat(mantissa);
           mantissa.clear();
         }
-      if(is_valid_char(*c) && *c != '+')
+      if(c!=delimiter && is_valid_char(*c) && *c != '+')
         {
           mantissa.push_back(*c);
         }
+    }
+  if(!mantissa.empty())
+    {
+      if(polynomial.coefficients.size() < 1)
+        {
+          polynomial.coefficients.resize(1);
+        }
+      polynomial.coefficients.at(0) = El::BigFloat(mantissa);
     }
   return delimiter;
 }
