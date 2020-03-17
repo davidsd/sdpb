@@ -18,7 +18,7 @@ solve(const Block_Info &block_info, const SDP_Solver_Parameters &parameters);
 
 void write_timing(const boost::filesystem::path &checkpoint_out,
                   const Block_Info &block_info, const Timers &timers,
-                  const bool &debug);
+                  const bool &debug, El::Matrix<int32_t> &block_timings);
 
 int main(int argc, char **argv)
 {
@@ -71,14 +71,15 @@ int main(int argc, char **argv)
             }
           Timers timers(solve(block_info, timing_parameters));
 
+          El::Matrix<int32_t> block_timings(block_info.dimensions.size(), 1);
           write_timing(timing_parameters.checkpoint_out, block_info, timers,
-                       timing_parameters.verbosity >= Verbosity::debug);
+                       timing_parameters.verbosity >= Verbosity::debug,
+                       block_timings);
           El::mpi::Barrier(El::mpi::COMM_WORLD);
-          Block_Info new_info(parameters.sdp_directory,
-                                      parameters.checkpoint_out,
-                                      parameters.procs_per_node,
-                                      parameters.proc_granularity,
-                              parameters.verbosity);
+          Block_Info new_info(
+            parameters.sdp_directory, parameters.checkpoint_out,
+            parameters.procs_per_node, parameters.proc_granularity,
+            parameters.verbosity);
           std::swap(block_info, new_info);
 
           parameters.max_runtime -= timers.front().second.elapsed_seconds();

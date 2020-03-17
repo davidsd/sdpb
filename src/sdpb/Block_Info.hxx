@@ -2,6 +2,7 @@
 
 #include "read_vector.hxx"
 #include "Verbosity.hxx"
+#include "../Block_Cost.hxx"
 
 #include <El.hpp>
 #include <boost/filesystem.hpp>
@@ -58,32 +59,40 @@ public:
              const boost::filesystem::path &checkpoint_in,
              const size_t &procs_per_node, const size_t &proc_granularity,
              const Verbosity &verbosity);
+  void read_block_info(const boost::filesystem::path &sdp_directory,
+                       const boost::filesystem::path &checkpoint_in);
+  std::vector<Block_Cost>
+  read_block_costs(const boost::filesystem::path &sdp_directory,
+                   const boost::filesystem::path &checkpoint_in);
+  void
+  allocate_blocks(const std::vector<Block_Cost> &block_costs,
+                  const size_t &procs_per_node, const size_t &proc_granularity,
+                  const Verbosity &verbosity);
 };
 
 namespace std
 {
   inline void swap(MPI_Comm_Wrapper &a, MPI_Comm_Wrapper &b)
   {
-    swap(a.value,b.value);
+    swap(a.value, b.value);
   }
   inline void swap(MPI_Group_Wrapper &a, MPI_Group_Wrapper &b)
   {
-    swap(a.value,b.value);
+    swap(a.value, b.value);
   }
 
   inline void swap(Block_Info &a, Block_Info &b)
   {
-    swap(a.block_timings_filename,b.block_timings_filename);
-    swap(a.file_num_procs,b.file_num_procs);
-    swap(a.file_block_indices,b.file_block_indices);
-    swap(a.dimensions,b.dimensions);
-    swap(a.degrees,b.degrees);
-    swap(a.schur_block_sizes,b.schur_block_sizes);
-    swap(a.psd_matrix_block_sizes,b.psd_matrix_block_sizes);
-    swap(a.bilinear_pairing_block_sizes,b.bilinear_pairing_block_sizes);
-    swap(a.block_indices,b.block_indices);
-    swap(a.mpi_group,b.mpi_group);
-    swap(a.mpi_comm,b.mpi_comm);
+    swap(a.block_timings_filename, b.block_timings_filename);
+    swap(a.file_num_procs, b.file_num_procs);
+    swap(a.file_block_indices, b.file_block_indices);
+    swap(a.dimensions, b.dimensions);
+    swap(a.degrees, b.degrees);
+    swap(a.schur_block_sizes, b.schur_block_sizes);
+    swap(a.psd_matrix_block_sizes, b.psd_matrix_block_sizes);
+    swap(a.bilinear_pairing_block_sizes, b.bilinear_pairing_block_sizes);
+    swap(a.block_indices, b.block_indices);
+    swap(a.mpi_group, b.mpi_group);
+    swap(a.mpi_comm, b.mpi_comm);
   }
 }
-

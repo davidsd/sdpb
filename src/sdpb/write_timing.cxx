@@ -6,7 +6,7 @@
 
 void write_timing(const boost::filesystem::path &checkpoint_out,
                   const Block_Info &block_info, const Timers &timers,
-                  const bool &debug)
+                  const bool &debug, El::Matrix<int32_t> &block_timings)
 {
   if(debug)
     {
@@ -14,7 +14,6 @@ void write_timing(const boost::filesystem::path &checkpoint_out,
                            + std::to_string(El::mpi::Rank()));
     }
 
-  El::Matrix<int32_t> block_timings(block_info.dimensions.size(), 1);
   El::Zero(block_timings);
   for(auto &index : block_info.block_indices)
     {
