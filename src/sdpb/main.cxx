@@ -77,7 +77,7 @@ int main(int argc, char **argv)
                        block_timings);
           El::mpi::Barrier(El::mpi::COMM_WORLD);
           Block_Info new_info(
-            parameters.sdp_directory, parameters.checkpoint_out,
+            parameters.sdp_directory, parameters.checkpoint_out, block_timings,
             parameters.procs_per_node, parameters.proc_granularity,
             parameters.verbosity);
           std::swap(block_info, new_info);
