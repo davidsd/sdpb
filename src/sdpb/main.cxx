@@ -77,9 +77,8 @@ int main(int argc, char **argv)
                        block_timings);
           El::mpi::Barrier(El::mpi::COMM_WORLD);
           Block_Info new_info(
-            parameters.sdp_directory, parameters.checkpoint_out, block_timings,
-            parameters.procs_per_node, parameters.proc_granularity,
-            parameters.verbosity);
+            parameters.sdp_directory, block_timings, parameters.procs_per_node,
+            parameters.proc_granularity, parameters.verbosity);
           std::swap(block_info, new_info);
 
           parameters.max_runtime -= timers.front().second.elapsed_seconds();

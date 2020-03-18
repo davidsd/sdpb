@@ -60,12 +60,10 @@ public:
              const size_t &procs_per_node, const size_t &proc_granularity,
              const Verbosity &verbosity);
   Block_Info(const boost::filesystem::path &sdp_directory,
-             const boost::filesystem::path &checkpoint_in,
              const El::Matrix<int32_t> &block_timings,
              const size_t &procs_per_node, const size_t &proc_granularity,
              const Verbosity &verbosity);
-  void read_block_info(const boost::filesystem::path &sdp_directory,
-                       const boost::filesystem::path &checkpoint_in);
+  void read_block_info(const boost::filesystem::path &sdp_directory);
   std::vector<Block_Cost>
   read_block_costs(const boost::filesystem::path &sdp_directory,
                    const boost::filesystem::path &checkpoint_in);

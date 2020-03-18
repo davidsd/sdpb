@@ -26,8 +26,7 @@ namespace
   }
 }
 
-void Block_Info::read_block_info(const boost::filesystem::path &sdp_directory,
-                                 const boost::filesystem::path &checkpoint_in)
+void Block_Info::read_block_info(const boost::filesystem::path &sdp_directory)
 {
   size_t file_rank(0);
   do
