@@ -1,3 +1,18 @@
+# Version 2.3.1
+
+## sdpb
+
+- Fixed a race condition when performing a timing run that caused
+  incorrect answers.
+
+- Fixed leaks of MPI communicators SDPB and Elemental that caused
+  crashes when running long jobs with Intel's MPI.
+
+## sdp2input
+
+- Fixed a corner case when reading Mathematica files that do not have
+  precision markers.
+
 # Version 2.3.0
 
 ## sdpb
