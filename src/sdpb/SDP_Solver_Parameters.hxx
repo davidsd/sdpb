@@ -8,6 +8,7 @@
 
 #include <El.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <iostream>
 
@@ -34,3 +35,5 @@ struct SDP_Solver_Parameters
 };
 
 std::ostream &operator<<(std::ostream &os, const SDP_Solver_Parameters &p);
+
+boost::property_tree::ptree to_property_tree(const SDP_Solver_Parameters &p);

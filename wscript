@@ -23,6 +23,7 @@ def build(bld):
                         'src/sdpb/Write_Solution.cxx',
                         'src/sdpb/SDP_Solver_Parameters/SDP_Solver_Parameters.cxx',
                         'src/sdpb/SDP_Solver_Parameters/ostream.cxx',
+                        'src/sdpb/SDP_Solver_Parameters/to_property_tree.cxx',
                         'src/sdpb/solve/solve.cxx',
                         'src/compute_block_grid_mapping.cxx',
                         'src/sdpb/Block_Info/Block_Info.cxx',

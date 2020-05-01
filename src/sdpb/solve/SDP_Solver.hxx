@@ -72,6 +72,8 @@ public:
   Block_Vector dual_residues;
   El::BigFloat dual_error; // maxAbs(dualResidues)
 
+  std::set<int64_t> old_generations;
+  
   SDP_Solver(const SDP_Solver_Parameters &parameters,
              const Block_Info &block_info, const El::Grid &grid,
              const size_t &dual_objective_b_height);
@@ -99,8 +101,7 @@ public:
                      const Write_Solution &write_solution,
                      const std::vector<size_t> &block_indices,
                      const Verbosity &verbosity) const;
-  void save_checkpoint(const boost::filesystem::path &checkpoint_directory,
-                       const Verbosity &verbosity) const;
+  void save_checkpoint(const SDP_Solver_Parameters &parameters);
   bool
   load_checkpoint(const boost::filesystem::path &checkpoint_directory,
                   const Block_Info &block_info, const Verbosity &verbosity,

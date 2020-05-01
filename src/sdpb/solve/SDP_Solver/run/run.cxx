@@ -125,7 +125,7 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
       El::mpi::Broadcast(checkpoint_now, 0, El::mpi::COMM_WORLD);
       if(checkpoint_now == true)
         {
-          save_checkpoint(parameters.checkpoint_out, parameters.verbosity);
+          save_checkpoint(parameters);
           last_checkpoint_time = std::chrono::high_resolution_clock::now();
         }
 

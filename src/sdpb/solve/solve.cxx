@@ -41,7 +41,7 @@ solve(const Block_Info &block_info, const SDP_Solver_Parameters &parameters)
 
   if(!parameters.no_final_checkpoint)
     {
-      solver.save_checkpoint(parameters.checkpoint_out, parameters.verbosity);
+      solver.save_checkpoint(parameters);
     }
   solver.save_solution(reason, timers.front(), parameters.out_directory,
                        parameters.write_solution,

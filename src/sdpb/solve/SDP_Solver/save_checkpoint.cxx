@@ -2,6 +2,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 // We use binary checkpointing because writing text does not write all
 // of the necessary digits.  The GMP library sets it to one less than
@@ -33,12 +34,10 @@ void write_local_blocks(const T &t,
     }
 }
 
-void SDP_Solver::save_checkpoint(
-  const boost::filesystem::path &checkpoint_directory,
-  const Verbosity &verbosity) const
+void SDP_Solver::save_checkpoint(const SDP_Solver_Parameters &parameters)
 {
-  boost::filesystem::path checkpoint_filename(
-    checkpoint_directory / ("checkpoint." + std::to_string(El::mpi::Rank())));
+  const boost::filesystem::path &checkpoint_directory(
+    parameters.checkpoint_out);
 
   if(!exists(checkpoint_directory))
     {
@@ -50,24 +49,34 @@ void SDP_Solver::save_checkpoint(
                                + checkpoint_directory.string()
                                + "'already exists, but is not a directory");
     }
-  if(exists(checkpoint_filename))
+  int64_t new_generation(0);
+  std::set<int64_t> saved_generations;
+  auto old_generation(old_generations.rbegin());
+  if(old_generation != old_generations.rend())
     {
-      if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
+      new_generation = *old_generation + 1;
+      saved_generations.insert(*old_generation);
+      ++old_generation;
+      // Delete all but the largest generation
+      for(; old_generation != old_generations.rend(); ++old_generation)
         {
-          std::cout << "Backing up checkpoint\n";
+          remove(checkpoint_directory
+                 / ("checkpoint_" + std::to_string(*old_generation) + "_"
+                    + std::to_string(El::mpi::Rank())));
         }
-      boost::filesystem::path backup_filename(checkpoint_filename.string()
-                                              + ".bk");
-      remove(backup_filename);
-      rename(checkpoint_filename, backup_filename);
     }
+  boost::filesystem::path checkpoint_filename(
+    checkpoint_directory
+    / ("checkpoint_" + std::to_string(new_generation) + "_"
+       + std::to_string(El::mpi::Rank())));
 
   const size_t max_retries(10);
   bool wrote_successfully(false);
-  for(size_t attempt=0; attempt<max_retries && !wrote_successfully; ++attempt)
+  for(size_t attempt = 0; attempt < max_retries && !wrote_successfully;
+      ++attempt)
     {
       boost::filesystem::ofstream checkpoint_stream(checkpoint_filename);
-      if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
+      if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {
           std::cout << "Saving checkpoint to    : " << checkpoint_directory
                     << '\n';
@@ -77,24 +86,50 @@ void SDP_Solver::save_checkpoint(
       write_local_blocks(X, checkpoint_stream);
       write_local_blocks(y, checkpoint_stream);
       write_local_blocks(Y, checkpoint_stream);
-      wrote_successfully=checkpoint_stream.good();
+      wrote_successfully = checkpoint_stream.good();
       if(!wrote_successfully)
         {
-          if(attempt+1<max_retries)
+          if(attempt + 1 < max_retries)
             {
               std::stringstream ss;
-              ss << "Error writing checkpoint file '"
-                 << checkpoint_filename << "'.  Retrying "
-                 << (attempt+2) << "/" << max_retries << "\n";
+              ss << "Error writing checkpoint file '" << checkpoint_filename
+                 << "'.  Retrying " << (attempt + 2) << "/" << max_retries
+                 << "\n";
               std::cerr << ss.str() << std::flush;
             }
           else
             {
               std::stringstream ss;
-              ss << "Error writing checkpoint file '"
-                 << checkpoint_filename << "'.  Exceeded max retries.\n";
+              ss << "Error writing checkpoint file '" << checkpoint_filename
+                 << "'.  Exceeded max retries.\n";
               throw std::runtime_error(ss.str());
             }
         }
     }
+  if(El::mpi::Rank() == 0)
+    {
+      boost::filesystem::ofstream metadata(checkpoint_directory
+                                           / "checkpoint_new.json");
+      metadata << "{\n    \"current\": " << new_generation
+               << ",\n    \"backup\": [ ";
+      if(!saved_generations.empty())
+        {
+          metadata << *saved_generations.begin();
+        }
+      metadata << " ],\n"
+               << "    \"version\": \"" << SDPB_VERSION_STRING
+               << "\",\n    \"options\": \n";
+
+      boost::property_tree::write_json(metadata, to_property_tree(parameters));
+      metadata << "}\n";
+    }
+  El::mpi::Barrier(El::mpi::COMM_WORLD);
+  if(El::mpi::Rank() == 0)
+    {
+      rename(checkpoint_directory / "checkpoint_new.json",
+             checkpoint_directory / "checkpoint.json");
+    }
+  
+  saved_generations.insert(new_generation);
+  old_generations.swap(saved_generations);
 }
