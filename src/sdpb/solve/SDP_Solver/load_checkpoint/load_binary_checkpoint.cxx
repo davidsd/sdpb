@@ -99,11 +99,17 @@ bool load_binary_checkpoint(const boost::filesystem::path &checkpoint_directory,
             }
         }
     }
-  El::mpi::Broadcast(current_generation, 0, El::mpi::COMM_WORLD);
+
+  // We cast to El::byte.  Trying to use El::mpi::Broadcast() directly
+  // with an int64_t leads to weird memory errors.  Perhaps it calls
+  // the Broadcast() with int32_t instead of int64_t?
+  El::mpi::Broadcast(reinterpret_cast<El::byte *>(&current_generation),
+                     sizeof(current_generation) / sizeof(El::byte), 0,
+                     El::mpi::COMM_WORLD);
   boost::filesystem::path checkpoint_filename;
   if(current_generation != -1)
     {
-      solver.current_generation=current_generation;
+      solver.current_generation = current_generation;
       checkpoint_filename
         = checkpoint_directory
           / ("checkpoint_" + std::to_string(current_generation) + "_"
@@ -113,11 +119,10 @@ bool load_binary_checkpoint(const boost::filesystem::path &checkpoint_directory,
           throw std::runtime_error("Missing checkpoint file: "
                                    + checkpoint_filename.string());
         }
-      El::mpi::Broadcast(backup_generation, 0, El::mpi::COMM_WORLD);
-      if(backup_generation != -1)
-        {
-          solver.backup_generation=backup_generation;
-        }
+      // See note above about Broadcast()
+      El::mpi::Broadcast(reinterpret_cast<El::byte *>(&backup_generation),
+                         sizeof(current_generation) / sizeof(El::byte), 0,
+                         El::mpi::COMM_WORLD);
     }
   else
     {
