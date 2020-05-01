@@ -2,6 +2,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 template <typename T>
 void read_local_binary_blocks(T &t,
@@ -69,12 +70,65 @@ void read_local_binary_blocks(T &t,
 bool load_binary_checkpoint(const boost::filesystem::path &checkpoint_directory,
                             const Verbosity &verbosity, SDP_Solver &solver)
 {
-  boost::filesystem::path checkpoint_filename(
-    checkpoint_directory / ("checkpoint." + std::to_string(El::mpi::Rank())));
-
-  if(!exists(checkpoint_filename))
+  int64_t current_generation(-1), backup_generation(-1);
+  if(El::mpi::Rank() == 0)
     {
-      return false;
+      boost::filesystem::path metadata(checkpoint_directory
+                                       / "checkpoint.json");
+      if(exists(metadata))
+        {
+          boost::property_tree::ptree tree;
+          boost::property_tree::read_json(metadata.string(), tree);
+          boost::optional<int64_t> current(
+            tree.get_optional<int64_t>("current"));
+          if(current)
+            {
+              current_generation = current.value();
+            }
+          else
+            {
+              throw std::runtime_error(
+                "Invalid or missing element 'current' in "
+                + metadata.string());
+            }
+          boost::optional<int64_t> backup(
+            tree.get_optional<int64_t>("backup"));
+          if(backup)
+            {
+              backup_generation = backup.value();
+            }
+        }
+    }
+  El::mpi::Broadcast(current_generation, 0, El::mpi::COMM_WORLD);
+  boost::filesystem::path checkpoint_filename;
+  if(current_generation != -1)
+    {
+      solver.current_generation=current_generation;
+      checkpoint_filename
+        = checkpoint_directory
+          / ("checkpoint_" + std::to_string(current_generation) + "_"
+             + std::to_string(El::mpi::Rank()));
+      if(!exists(checkpoint_filename))
+        {
+          throw std::runtime_error("Missing checkpoint file: "
+                                   + checkpoint_filename.string());
+        }
+      El::mpi::Broadcast(backup_generation, 0, El::mpi::COMM_WORLD);
+      if(backup_generation != -1)
+        {
+          solver.backup_generation=backup_generation;
+        }
+    }
+  else
+    {
+      checkpoint_filename
+        = checkpoint_directory
+          / ("checkpoint." + std::to_string(El::mpi::Rank()));
+      if(!exists(checkpoint_filename))
+        {
+          return false;
+        }
+      current_generation = 0;
     }
 
   boost::filesystem::ifstream checkpoint_stream(checkpoint_filename);
@@ -87,5 +141,10 @@ bool load_binary_checkpoint(const boost::filesystem::path &checkpoint_directory,
   read_local_binary_blocks(solver.X, checkpoint_stream);
   read_local_binary_blocks(solver.y, checkpoint_stream);
   read_local_binary_blocks(solver.Y, checkpoint_stream);
+  solver.current_generation = current_generation;
+  if(backup_generation != -1)
+    {
+      solver.backup_generation = backup_generation;
+    }
   return true;
 }

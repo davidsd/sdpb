@@ -72,7 +72,8 @@ public:
   Block_Vector dual_residues;
   El::BigFloat dual_error; // maxAbs(dualResidues)
 
-  std::set<int64_t> old_generations;
+  int64_t current_generation;
+  boost::optional<int64_t> backup_generation;
   
   SDP_Solver(const SDP_Solver_Parameters &parameters,
              const Block_Info &block_info, const El::Grid &grid,

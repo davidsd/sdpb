@@ -49,25 +49,17 @@ void SDP_Solver::save_checkpoint(const SDP_Solver_Parameters &parameters)
                                + checkpoint_directory.string()
                                + "'already exists, but is not a directory");
     }
-  int64_t new_generation(0);
-  std::set<int64_t> saved_generations;
-  auto old_generation(old_generations.rbegin());
-  if(old_generation != old_generations.rend())
+  if(backup_generation)
     {
-      new_generation = *old_generation + 1;
-      saved_generations.insert(*old_generation);
-      ++old_generation;
-      // Delete all but the largest generation
-      for(; old_generation != old_generations.rend(); ++old_generation)
-        {
-          remove(checkpoint_directory
-                 / ("checkpoint_" + std::to_string(*old_generation) + "_"
-                    + std::to_string(El::mpi::Rank())));
-        }
+      remove(checkpoint_directory
+             / ("checkpoint_" + std::to_string(backup_generation.value()) + "_"
+                + std::to_string(El::mpi::Rank())));
     }
+  backup_generation = current_generation;
+  current_generation += 1;
   boost::filesystem::path checkpoint_filename(
     checkpoint_directory
-    / ("checkpoint_" + std::to_string(new_generation) + "_"
+    / ("checkpoint_" + std::to_string(current_generation) + "_"
        + std::to_string(El::mpi::Rank())));
 
   const size_t max_retries(10);
@@ -110,13 +102,8 @@ void SDP_Solver::save_checkpoint(const SDP_Solver_Parameters &parameters)
     {
       boost::filesystem::ofstream metadata(checkpoint_directory
                                            / "checkpoint_new.json");
-      metadata << "{\n    \"current\": " << new_generation
-               << ",\n    \"backup\": [ ";
-      if(!saved_generations.empty())
-        {
-          metadata << *saved_generations.begin();
-        }
-      metadata << " ],\n"
+      metadata << "{\n    \"current\": " << current_generation << ",\n"
+               << "    \"backup\": " << backup_generation.value() << ",\n"
                << "    \"version\": \"" << SDPB_VERSION_STRING
                << "\",\n    \"options\": \n";
 
@@ -129,7 +116,4 @@ void SDP_Solver::save_checkpoint(const SDP_Solver_Parameters &parameters)
       rename(checkpoint_directory / "checkpoint_new.json",
              checkpoint_directory / "checkpoint.json");
     }
-  
-  saved_generations.insert(new_generation);
-  old_generations.swap(saved_generations);
 }
