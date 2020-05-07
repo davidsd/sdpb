@@ -15,7 +15,13 @@ struct MPI_Comm_Wrapper
   MPI_Comm_Wrapper() = default;
   MPI_Comm_Wrapper(const MPI_Comm_Wrapper &) = delete;
   void operator=(const MPI_Comm_Wrapper &) = delete;
-  ~MPI_Comm_Wrapper() { El::mpi::Free(value); }
+  ~MPI_Comm_Wrapper()
+  {
+    if(value!=El::mpi::COMM_WORLD)
+      {
+        El::mpi::Free(value);
+      }
+  }
 };
 
 struct MPI_Group_Wrapper
@@ -24,7 +30,13 @@ struct MPI_Group_Wrapper
   MPI_Group_Wrapper() = default;
   MPI_Group_Wrapper(const MPI_Group_Wrapper &) = delete;
   void operator=(const MPI_Group_Wrapper &) = delete;
-  ~MPI_Group_Wrapper() { El::mpi::Free(value); }
+  ~MPI_Group_Wrapper()
+  {
+    if(value!=El::mpi::GROUP_NULL)
+      {
+        El::mpi::Free(value);
+      }
+  }
 };
 
 class Block_Info
