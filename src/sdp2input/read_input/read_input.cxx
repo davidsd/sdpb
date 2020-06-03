@@ -1,4 +1,4 @@
-#include "Input_Parser.hxx"
+#include "XML_Parser.hxx"
 #include "../../sdp_convert.hxx"
 
 #include <boost/filesystem.hpp>
@@ -13,20 +13,20 @@ namespace
   void start_element_callback(void *user_data, const xmlChar *name,
                               const xmlChar **)
   {
-    Input_Parser *input_parser = static_cast<Input_Parser *>(user_data);
+    XML_Parser *input_parser = static_cast<XML_Parser *>(user_data);
     input_parser->on_start_element(reinterpret_cast<const char *>(name));
   }
 
   void end_element_callback(void *user_data, const xmlChar *name)
   {
-    Input_Parser *input_parser = static_cast<Input_Parser *>(user_data);
+    XML_Parser *input_parser = static_cast<XML_Parser *>(user_data);
     input_parser->on_end_element(reinterpret_cast<const char *>(name));
   }
 
   void
   characters_callback(void *user_data, const xmlChar *characters, int length)
   {
-    Input_Parser *input_parser = static_cast<Input_Parser *>(user_data);
+    XML_Parser *input_parser = static_cast<XML_Parser *>(user_data);
     input_parser->on_characters(characters, length);
   }
 
@@ -76,7 +76,7 @@ void read_input(const boost::filesystem::path &input_file,
       xml_handlers.warning = warning_callback;
       xml_handlers.error = error_callback;
 
-      Input_Parser input_parser;
+      XML_Parser input_parser;
       if(xmlSAXUserParseFile(&xml_handlers, &input_parser, input_file.c_str())
          < 0)
         {

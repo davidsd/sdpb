@@ -3,18 +3,19 @@
 #include "Positive_Matrix_With_Prefactor_State.hxx"
 
 using namespace std::string_literals;
-class Input_Parser
+class XML_Parser
 {
 public:
   std::string expression_name = "Expression", sdp_name = "Function";
   bool inside_expression = false, inside_sdp = false,
        finished_objective = false, finished_normalization = false;
 
-  Vector_State<Number_State<El::BigFloat>> objective_state, normalization_state;
+  Vector_State<Number_State<El::BigFloat>> objective_state,
+    normalization_state;
   Vector_State<Positive_Matrix_With_Prefactor_State>
     positive_matrices_with_prefactor_state;
 
-  Input_Parser()
+  XML_Parser()
       : objective_state({"Function"s, "Number"s}),
         normalization_state({"Function"s, "Number"s}),
         positive_matrices_with_prefactor_state(

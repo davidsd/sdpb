@@ -1,6 +1,6 @@
-#include "../Input_Parser.hxx"
+#include "../XML_Parser.hxx"
 
-void Input_Parser::on_characters(const xmlChar *characters, int length)
+void XML_Parser::on_characters(const xmlChar *characters, int length)
 {
   if(inside_expression && inside_sdp)
     {

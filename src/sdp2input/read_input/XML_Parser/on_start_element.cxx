@@ -1,8 +1,8 @@
-#include "../Input_Parser.hxx"
+#include "../XML_Parser.hxx"
 
 #include <stdexcept>
 
-void Input_Parser::on_start_element(const std::string &element_name)
+void XML_Parser::on_start_element(const std::string &element_name)
 {
   if(inside_expression)
     {

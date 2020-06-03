@@ -110,9 +110,9 @@ def build(bld):
 
     bld.program(source=['src/sdp2input/main.cxx',
                         'src/sdp2input/read_input/read_input.cxx',
-                        'src/sdp2input/read_input/Input_Parser/on_start_element.cxx',
-                        'src/sdp2input/read_input/Input_Parser/on_end_element.cxx',
-                        'src/sdp2input/read_input/Input_Parser/on_characters.cxx',
+                        'src/sdp2input/read_input/XML_Parser/on_start_element.cxx',
+                        'src/sdp2input/read_input/XML_Parser/on_end_element.cxx',
+                        'src/sdp2input/read_input/XML_Parser/on_characters.cxx',
                         'src/sdp2input/read_input/read_mathematica/read_mathematica.cxx',
                         'src/sdp2input/read_input/read_mathematica/parse_SDP/parse_SDP.cxx',
                         'src/sdp2input/read_input/read_mathematica/parse_SDP/parse_matrices.cxx',
