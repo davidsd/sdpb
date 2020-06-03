@@ -75,8 +75,6 @@ const char *parse_damped_rational(const char *begin, const char *end,
     {
       throw std::runtime_error("Missing ']' at end of DampedRational");
     }
-  damped_rational.variable
-    = boost::trim_copy(std::string(start_variable, close_bracket));
 
   return std::next(close_bracket);
 }

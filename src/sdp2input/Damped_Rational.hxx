@@ -8,7 +8,6 @@ struct Damped_Rational
 {
   Boost_Float constant, base;
   std::vector<Boost_Float> poles;
-  std::string variable;
 
   bool is_constant() const
   {
@@ -22,5 +21,4 @@ inline void swap(Damped_Rational &a, Damped_Rational &b)
   swap(a.constant, b.constant);
   swap(a.base, b.base);
   swap(a.poles, b.poles);
-  swap(a.variable, b.variable);
 }
