@@ -16,13 +16,14 @@ struct Polynomial_Term_State
       : name(names.at(offset)), number_state("Number"), times_state("Function")
   {}
 
-  bool on_start_element(const std::string &element_name)
+  bool xml_on_start_element(const std::string &element_name)
   {
     // Have to check times_state before number_state, because inside
     // times_state there is a valid Number.
     if(element_name != "Symbol"
-       && (times_state.inside || !number_state.on_start_element(element_name))
-       && !times_state.on_start_element(element_name))
+       && (times_state.inside
+           || !number_state.xml_on_start_element(element_name))
+       && !times_state.xml_on_start_element(element_name))
       {
         throw std::runtime_error(
           "Invalid input file.  Expected 'Number' or 'Function' inside "
@@ -33,12 +34,12 @@ struct Polynomial_Term_State
     return inside;
   }
 
-  bool on_end_element(const std::string &element_name)
+  bool xml_on_end_element(const std::string &element_name)
   {
     bool result(inside);
     if(inside)
       {
-        if(number_state.on_end_element(element_name))
+        if(number_state.xml_on_end_element(element_name))
           {
             if(!number_state.inside)
               {
@@ -47,7 +48,7 @@ struct Polynomial_Term_State
                 swap(number_state.value, value.second);
               }
           }
-        else if(times_state.on_end_element(element_name))
+        else if(times_state.xml_on_end_element(element_name))
           {
             if(!times_state.inside)
               {
@@ -60,12 +61,12 @@ struct Polynomial_Term_State
     return result;
   }
 
-  bool on_characters(const xmlChar *characters, int length)
+  bool xml_on_characters(const xmlChar *characters, int length)
   {
     if(inside)
       {
-        number_state.on_characters(characters, length)
-          || times_state.on_characters(characters, length);
+        number_state.xml_on_characters(characters, length)
+          || times_state.xml_on_characters(characters, length);
       }
     return inside;
   }

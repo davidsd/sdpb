@@ -27,15 +27,17 @@ struct Damped_Rational_State
       : Damped_Rational_State(names, 0)
   {}
 
-  bool on_start_element(const std::string &element_name)
+  // XML Functions
+  bool xml_on_start_element(const std::string &element_name)
   {
     if(inside)
       {
         if(element_name != "Symbol"
            && (finished_constant
-               || !constant_state.on_start_element(element_name))
-           && !polynomial_state.on_start_element(element_name)
-           && (finished_base || !base_state.on_start_element(element_name)))
+               || !constant_state.xml_on_start_element(element_name))
+           && !polynomial_state.xml_on_start_element(element_name)
+           && (finished_base
+               || !base_state.xml_on_start_element(element_name)))
           {
             throw std::runtime_error(
               "Invalid input file.  Expected '" + constant_state.name
@@ -55,14 +57,14 @@ struct Damped_Rational_State
     return inside;
   }
 
-  bool on_end_element(const std::string &element_name)
+  bool xml_on_end_element(const std::string &element_name)
   {
     bool result(inside);
     if(inside)
       {
         if(element_name != "Symbol")
           {
-            if(constant_state.on_end_element(element_name))
+            if(constant_state.xml_on_end_element(element_name))
               {
                 finished_constant = !constant_state.inside;
                 if(finished_constant)
@@ -71,7 +73,7 @@ struct Damped_Rational_State
                     swap(value.constant, constant_state.value);
                   }
               }
-            else if(polynomial_state.on_end_element(element_name))
+            else if(polynomial_state.xml_on_end_element(element_name))
               {
                 if(!polynomial_state.inside)
                   {
@@ -79,7 +81,7 @@ struct Damped_Rational_State
                     swap(value.poles, polynomial_state.value);
                   }
               }
-            else if(base_state.on_end_element(element_name))
+            else if(base_state.xml_on_end_element(element_name))
               {
                 finished_base = !base_state.inside;
                 if(finished_base)
@@ -97,13 +99,13 @@ struct Damped_Rational_State
     return result;
   }
 
-  bool on_characters(const xmlChar *characters, int length)
+  bool xml_on_characters(const xmlChar *characters, int length)
   {
     if(inside)
       {
-        constant_state.on_characters(characters, length)
-          || polynomial_state.on_characters(characters, length)
-          || base_state.on_characters(characters, length);
+        constant_state.xml_on_characters(characters, length)
+          || polynomial_state.xml_on_characters(characters, length)
+          || base_state.xml_on_characters(characters, length);
       }
     return inside;
   }

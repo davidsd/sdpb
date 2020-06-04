@@ -28,94 +28,14 @@ struct Positive_Matrix_With_Prefactor_State
       : Positive_Matrix_With_Prefactor_State(names, 0)
   {}
 
-  bool on_start_element(const std::string &element_name)
-  {
-    if(inside)
-      {
-        if(element_name != "Symbol"
-           && (finished_damped_rational
-               || !damped_rational_state.on_start_element(element_name))
-           && !polynomials_state.on_start_element(element_name))
-          {
-            throw std::runtime_error(
-              "Invalid input file.  Expected 'Function' inside "
-              "PositiveMatrixWithPrefactor, but found '"
-              + element_name + "'");
-          }
-      }
-    else
-      {
-        inside = (element_name == name);
-        if(inside)
-          {
-            finished_damped_rational = false;
-          }
-      }
-    return inside;
-  }
+  bool xml_on_start_element(const std::string &element_name);
+  bool xml_on_end_element(const std::string &element_name);
+  bool xml_on_characters(const xmlChar *characters, int length);
 
-  bool on_end_element(const std::string &element_name)
-  {
-    bool result(inside);
-    if(inside)
-      {
-        if(damped_rational_state.on_end_element(element_name))
-          {
-            finished_damped_rational = !damped_rational_state.inside;
-            if(finished_damped_rational)
-              {
-                using namespace std;
-                swap(damped_rational_state.value, value.damped_rational);
-              }
-          }
-        else if(polynomials_state.on_end_element(element_name))
-          {
-            if(!polynomials_state.inside)
-              {
-                value.polynomials.reserve(polynomials_state.value.size());
-                for(auto &polynomial_vector_vector : polynomials_state.value)
-                  {
-                    value.polynomials.emplace_back();
-                    auto &vector_vector_poly(value.polynomials.back());
-                    vector_vector_poly.reserve(polynomial_vector_vector.size());
-                    for(auto &polynomial_vector: polynomial_vector_vector)
-                      {
-                        vector_vector_poly.emplace_back();
-                        auto &vector_poly(vector_vector_poly.back());
-                        vector_poly.reserve(polynomial_vector.size());
-                        for(auto &polynomial: polynomial_vector)
-                          {
-                            vector_poly.emplace_back();
-                            auto &poly(vector_poly.back());
-                            poly.coefficients.resize(polynomial.size(),0);
-                            for(auto &term : polynomial)
-                              {
-                                if(poly.coefficients.size() < term.first + 1)
-                                  {
-                                    poly.coefficients.resize(term.first + 1, 0);
-                                  }
-                                poly.coefficients[term.first] = term.second;
-                              }
-                          }
-                      }
-                  }
-              }
-          }
-        else
-          {
-            inside = (element_name != name);
-          }
-      }
-    return result;
-  }
-
-  bool on_characters(const xmlChar *characters, int length)
-  {
-    if(inside)
-      {
-        damped_rational_state.on_characters(characters, length)
-          || polynomials_state.on_characters(characters, length);
-      }
-    return inside;
-  }
+  void json_key(const std::string &key);
+  void json_string(const std::string &s);
+  void json_start_array();
+  void json_end_array();
+  void json_start_object();
+  void json_end_object();
 };

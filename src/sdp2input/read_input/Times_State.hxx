@@ -15,7 +15,7 @@ struct Times_State
       : name(Name), number_state("Number"), power_state("Function")
   {}
 
-  bool on_start_element(const std::string &element_name)
+  bool xml_on_start_element(const std::string &element_name)
   {
     if(inside)
       {
@@ -23,8 +23,8 @@ struct Times_State
         // power_state there is a valid Number.
         if(element_name != "Symbol"
            && (power_state.inside
-               || !number_state.on_start_element(element_name))
-           && !power_state.on_start_element(element_name))
+               || !number_state.xml_on_start_element(element_name))
+           && !power_state.xml_on_start_element(element_name))
           {
             throw std::runtime_error(
               "Invalid input file.  Unexpected element '" + element_name
@@ -42,12 +42,12 @@ struct Times_State
     return inside;
   }
 
-  bool on_end_element(const std::string &element_name)
+  bool xml_on_end_element(const std::string &element_name)
   {
     bool result(inside);
     if(inside)
       {
-        if(number_state.on_end_element(element_name))
+        if(number_state.xml_on_end_element(element_name))
           {
             if(!number_state.inside)
               {
@@ -55,7 +55,7 @@ struct Times_State
                 swap(value.second, number_state.value);
               }
           }
-        else if(power_state.on_end_element(element_name))
+        else if(power_state.xml_on_end_element(element_name))
           {
             if(!power_state.inside)
               {
@@ -70,12 +70,12 @@ struct Times_State
     return result;
   }
 
-  bool on_characters(const xmlChar *characters, int length)
+  bool xml_on_characters(const xmlChar *characters, int length)
   {
     if(inside)
       {
-        number_state.on_characters(characters, length)
-          || power_state.on_characters(characters, length);
+        number_state.xml_on_characters(characters, length)
+          || power_state.xml_on_characters(characters, length);
       }
     return inside;
   }

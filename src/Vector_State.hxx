@@ -31,11 +31,12 @@ public:
       : Vector_State(names, 0, u, v, w)
   {}
 
-  bool on_start_element(const std::string &element_name)
+  // XML Functions
+  bool xml_on_start_element(const std::string &element_name)
   {
     if(inside)
       {
-        if(!element_state.on_start_element(element_name))
+        if(!element_state.xml_on_start_element(element_name))
           {
             throw std::runtime_error("Invalid input file.  Expected '"
                                      + element_state.name + "' inside Vector '"
@@ -54,12 +55,12 @@ public:
     return inside;
   }
 
-  bool on_end_element(const std::string &element_name)
+  bool xml_on_end_element(const std::string &element_name)
   {
     bool result(inside);
     if(inside)
       {
-        if(element_state.on_end_element(element_name))
+        if(element_state.xml_on_end_element(element_name))
           {
             if(!element_state.inside)
               {
@@ -75,12 +76,45 @@ public:
     return result;
   }
 
-  bool on_characters(const xmlChar *characters, int length)
+  bool xml_on_characters(const xmlChar *characters, int length)
   {
     if(inside)
       {
-        element_state.on_characters(characters, length);
+        element_state.xml_on_characters(characters, length);
       }
     return inside;
   }
+
+  // JSON Functions
+  void json_key(const std::string &key) { element_state.json_key(key); }
+
+  void json_string(const std::string &s) { element_state.json_string(s); }
+
+  void json_start_array()
+  {
+    if(inside)
+      {
+        element_state.json_start_array();
+      }
+    else
+      {
+        inside = true;
+      }
+  }
+
+  void json_end_array()
+  {
+    if(element_state.inside)
+      {
+        element_state.json_end_array();
+      }
+    else
+      {
+        inside = false;
+      }
+  }
+
+  void json_start_object() { element_state.StartObject(); }
+
+  void json_end_object() { element_state.EndObject(); }
 };

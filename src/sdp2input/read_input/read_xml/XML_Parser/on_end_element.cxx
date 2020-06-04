@@ -8,15 +8,15 @@ void XML_Parser::on_end_element(const std::string &element_name)
         {
           if(element_name != "Symbol")
             {
-              if(objective_state.on_end_element(element_name))
+              if(objective_state.xml_on_end_element(element_name))
                 {
                   finished_objective = !objective_state.inside;
                 }
-              else if(normalization_state.on_end_element(element_name))
+              else if(normalization_state.xml_on_end_element(element_name))
                 {
                   finished_normalization = !normalization_state.inside;
                 }
-              else if(positive_matrices_with_prefactor_state.on_end_element(
+              else if(positive_matrices_with_prefactor_state.xml_on_end_element(
                         element_name))
                 {}
               else

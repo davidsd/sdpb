@@ -21,7 +21,6 @@ public:
           dual_constraint_groups, indices, num_processed)
   {}
 
-  // protected:
   void on_start_element(const std::string &element_name);
   void on_end_element(const std::string &element_name);
   void on_characters(const xmlChar *characters, int length);

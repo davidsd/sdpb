@@ -13,17 +13,21 @@ struct Polynomial_State
 
   Polynomial_State(const std::vector<std::string> &names, const size_t &offset)
       : name(names.at(offset)), number_state("Number"s),
-        vector_polynomial_term_state({"Function"s,"Function"s,})
+        vector_polynomial_term_state({
+          "Function"s,
+          "Function"s,
+        })
   {}
   Polynomial_State(const std::initializer_list<std::string> &names)
       : Polynomial_State(names, 0)
   {}
 
-  bool on_start_element(const std::string &element_name)
+  // XML Functions
+  bool xml_on_start_element(const std::string &element_name)
   {
     if((vector_polynomial_term_state.inside
-        || !number_state.on_start_element(element_name))
-       && !vector_polynomial_term_state.on_start_element(element_name))
+        || !number_state.xml_on_start_element(element_name))
+       && !vector_polynomial_term_state.xml_on_start_element(element_name))
       {
         throw std::runtime_error(
           "Invalid input file.  Expected '" + vector_polynomial_term_state.name
@@ -34,19 +38,19 @@ struct Polynomial_State
     return inside;
   }
 
-  bool on_end_element(const std::string &element_name)
+  bool xml_on_end_element(const std::string &element_name)
   {
     bool result(inside);
     if(inside)
       {
-        if(number_state.on_end_element(element_name))
+        if(number_state.xml_on_end_element(element_name))
           {
             if(!number_state.inside)
               {
                 value.emplace_back(0, number_state.value);
               }
           }
-        else if(vector_polynomial_term_state.on_end_element(element_name))
+        else if(vector_polynomial_term_state.xml_on_end_element(element_name))
           {
             if(!vector_polynomial_term_state.inside)
               {
@@ -59,12 +63,13 @@ struct Polynomial_State
     return result;
   }
 
-  bool on_characters(const xmlChar *characters, int length)
+  bool xml_on_characters(const xmlChar *characters, int length)
   {
     if(inside)
       {
-        number_state.on_characters(characters, length)
-          || vector_polynomial_term_state.on_characters(characters, length);
+        number_state.xml_on_characters(characters, length)
+          || vector_polynomial_term_state.xml_on_characters(characters,
+                                                            length);
       }
     return inside;
   }

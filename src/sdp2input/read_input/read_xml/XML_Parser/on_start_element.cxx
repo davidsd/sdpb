@@ -10,10 +10,10 @@ void XML_Parser::on_start_element(const std::string &element_name)
         {
           if(element_name != "Symbol"
              && (finished_objective
-                 || !objective_state.on_start_element(element_name))
+                 || !objective_state.xml_on_start_element(element_name))
              && (finished_normalization
-                 || !normalization_state.on_start_element(element_name))
-             && !positive_matrices_with_prefactor_state.on_start_element(
+                 || !normalization_state.xml_on_start_element(element_name))
+             && !positive_matrices_with_prefactor_state.xml_on_start_element(
                   element_name))
             {
               throw std::runtime_error(

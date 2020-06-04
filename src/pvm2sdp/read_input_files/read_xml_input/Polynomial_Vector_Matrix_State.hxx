@@ -39,7 +39,7 @@ public:
         bilinear_basis_state({"bilinearBasis"s, "polynomial"s, "coeff"s})
   {}
 
-  bool on_start_element(const std::string &element_name)
+  bool xml_on_start_element(const std::string &element_name)
   {
     if(inside)
       {
@@ -51,10 +51,10 @@ public:
           {
             inside_columns = true;
           }
-        else if(!(elements_state.on_start_element(element_name)
-                  || sample_points_state.on_start_element(element_name)
-                  || sample_scalings_state.on_start_element(element_name)
-                  || bilinear_basis_state.on_start_element(element_name)))
+        else if(!(elements_state.xml_on_start_element(element_name)
+                  || sample_points_state.xml_on_start_element(element_name)
+                  || sample_scalings_state.xml_on_start_element(element_name)
+                  || bilinear_basis_state.xml_on_start_element(element_name)))
           {
             throw std::runtime_error(
               "Inside polynomialVectorMatrix, expected 'rows', 'cols', "
@@ -76,7 +76,7 @@ public:
     return inside;
   }
 
-  bool on_end_element(const std::string &element_name)
+  bool xml_on_end_element(const std::string &element_name)
   {
     bool result(inside);
     if(inside)
@@ -106,28 +106,28 @@ public:
             inside_columns = false;
             value.cols = std::stoi(columns_string);
           }
-        else if(elements_state.on_end_element(element_name))
+        else if(elements_state.xml_on_end_element(element_name))
           {
             if(!elements_state.inside)
               {
                 swap(value.elements, elements_state.value);
               }
           }
-        else if(sample_points_state.on_end_element(element_name))
+        else if(sample_points_state.xml_on_end_element(element_name))
           {
             if(!sample_points_state.inside)
               {
                 std::swap(value.sample_points, sample_points_state.value);
               }
           }
-        else if(sample_scalings_state.on_end_element(element_name))
+        else if(sample_scalings_state.xml_on_end_element(element_name))
           {
             if(!sample_scalings_state.inside)
               {
                 std::swap(value.sample_scalings, sample_scalings_state.value);
               }
           }
-        else if(bilinear_basis_state.on_end_element(element_name))
+        else if(bilinear_basis_state.xml_on_end_element(element_name))
           {
             if(!bilinear_basis_state.inside)
               {
@@ -138,7 +138,7 @@ public:
     return result;
   }
 
-  bool on_characters(const xmlChar *characters, int length)
+  bool xml_on_characters(const xmlChar *characters, int length)
   {
     if(inside)
       {
@@ -154,10 +154,10 @@ public:
           }
         else
           {
-            elements_state.on_characters(characters, length)
-              || sample_points_state.on_characters(characters, length)
-              || sample_scalings_state.on_characters(characters, length)
-              || bilinear_basis_state.on_characters(characters, length);
+            elements_state.xml_on_characters(characters, length)
+              || sample_points_state.xml_on_characters(characters, length)
+              || sample_scalings_state.xml_on_characters(characters, length)
+              || bilinear_basis_state.xml_on_characters(characters, length);
           }
       }
     return inside;

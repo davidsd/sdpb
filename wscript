@@ -110,6 +110,9 @@ def build(bld):
 
     bld.program(source=['src/sdp2input/main.cxx',
                         'src/sdp2input/read_input/read_input.cxx',
+                        'src/sdp2input/read_input/Positive_Matrix_With_Prefactor_State/xml_on_characters.cxx',
+                        'src/sdp2input/read_input/Positive_Matrix_With_Prefactor_State/xml_on_start_element.cxx',
+                        'src/sdp2input/read_input/Positive_Matrix_With_Prefactor_State/xml_on_end_element.cxx',
                         'src/sdp2input/read_input/read_xml/read_xml.cxx',
                         'src/sdp2input/read_input/read_xml/XML_Parser/on_start_element.cxx',
                         'src/sdp2input/read_input/read_xml/XML_Parser/on_end_element.cxx',

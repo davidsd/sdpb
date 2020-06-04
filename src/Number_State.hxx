@@ -24,7 +24,8 @@ public:
   {}
   Number_State() = delete;
 
-  bool on_start_element(const std::string &element_name)
+  // XML Functions
+  bool xml_on_start_element(const std::string &element_name)
   {
     if(inside)
       {
@@ -43,7 +44,7 @@ public:
     return inside;
   }
 
-  bool on_end_element(const std::string &)
+  bool xml_on_end_element(const std::string &)
   {
     bool result(inside);
     if(inside)
@@ -62,12 +63,55 @@ public:
     return result;
   }
 
-  bool on_characters(const xmlChar *characters, int length)
+  bool xml_on_characters(const xmlChar *characters, int length)
   {
     if(inside)
       {
         string_value.write(reinterpret_cast<const char *>(characters), length);
       }
     return inside;
+  }
+
+  // JSON Functions
+  void json_key(const std::string &key)
+  {
+    throw std::runtime_error("Invalid input file.  Found the key '" + key
+                             + "' when expecting a number.");
+  }
+
+  void json_string(const std::string &s)
+  {
+    try
+      {
+        value = Float_Type(s);
+      }
+    catch(...)
+      {
+        throw std::runtime_error("Invalid number: '" + s + "'");
+      }
+  }
+
+  void json_start_array()
+  {
+    throw std::runtime_error(
+      "Invalid input file.  Found an array when expecting a number.");
+  }
+
+  void json_end_array()
+  {
+    throw std::runtime_error(
+      "Invalid input file.  Found an array end when parsing a number.");
+  }
+
+  void json_start_object()
+  {
+    throw std::runtime_error(
+      "Invalid input file.  Found an object when expecting a number.");
+  }
+
+  void json_end_object()
+  {
+    throw std::runtime_error(
+      "Invalid input file.  Found an object end when parsing a number.");
   }
 };
