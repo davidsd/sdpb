@@ -114,7 +114,7 @@ public:
       }
   }
 
-  void json_start_object() { element_state.StartObject(); }
+  void json_start_object() { element_state.json_start_object(); }
 
-  void json_end_object() { element_state.EndObject(); }
+  void json_end_object() { element_state.json_end_object(); }
 };

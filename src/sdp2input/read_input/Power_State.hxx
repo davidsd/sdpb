@@ -2,6 +2,7 @@
 
 #include "../../Number_State.hxx"
 
+using namespace std::string_literals;
 struct Power_State
 {
   std::string name;

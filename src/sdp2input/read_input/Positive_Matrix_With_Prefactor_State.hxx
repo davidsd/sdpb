@@ -12,7 +12,12 @@
 struct Positive_Matrix_With_Prefactor_State
 {
   std::string name;
-  bool inside = false, finished_damped_rational = false;
+  bool inside = false;
+  // TODO: Remove duplication
+  // For XML
+  bool finished_damped_rational = false;
+  // For JSON
+  bool parsing_damped_rational = false, parsing_polynomials = false;
   Positive_Matrix_With_Prefactor value;
 
   Damped_Rational_State damped_rational_state;

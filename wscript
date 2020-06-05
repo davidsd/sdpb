@@ -2,21 +2,21 @@ import os, subprocess
 
 def options(opt):
     opt.load(['compiler_cxx','gnu_dirs','cxx14','boost','gmpxx','mpfr',
-              'elemental','libxml2'])
+              'elemental','libxml2', 'rapidjson'])
 
 def configure(conf):
     if not 'CXX' in os.environ or os.environ['CXX']=='g++' or os.environ['CXX']=='icpc':
         conf.environ['CXX']='mpicxx'
 
     conf.load(['compiler_cxx','gnu_dirs','cxx14','boost','gmpxx','mpfr',
-               'elemental','libxml2'])
+               'elemental','libxml2', 'rapidjson'])
 
     conf.env.git_version=subprocess.check_output('git describe --dirty', universal_newlines=True, shell=True).rstrip()
     
 def build(bld):
     default_flags=['-Wall', '-Wextra', '-O3', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
     # default_flags=['-Wall', '-Wextra', '-g', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
-    use_packages=['cxx14','boost','gmpxx','mpfr','elemental','libxml2']
+    use_packages=['cxx14','boost','gmpxx','mpfr','elemental','libxml2', 'rapidjson']
     
     # Main executable
     bld.program(source=['src/sdpb/main.cxx',
@@ -113,13 +113,37 @@ def build(bld):
                         'src/sdp2input/read_input/Positive_Matrix_With_Prefactor_State/xml_on_characters.cxx',
                         'src/sdp2input/read_input/Positive_Matrix_With_Prefactor_State/xml_on_start_element.cxx',
                         'src/sdp2input/read_input/Positive_Matrix_With_Prefactor_State/xml_on_end_element.cxx',
+                        'src/sdp2input/read_input/Positive_Matrix_With_Prefactor_State/json_key.cxx',
+                        'src/sdp2input/read_input/Positive_Matrix_With_Prefactor_State/json_string.cxx',
+                        'src/sdp2input/read_input/Positive_Matrix_With_Prefactor_State/json_start_array.cxx',
+                        'src/sdp2input/read_input/Positive_Matrix_With_Prefactor_State/json_end_array.cxx',
+                        'src/sdp2input/read_input/Positive_Matrix_With_Prefactor_State/json_start_object.cxx',
+                        'src/sdp2input/read_input/Positive_Matrix_With_Prefactor_State/json_end_object.cxx',
+                        'src/sdp2input/read_input/Polynomial_State/json_key.cxx',
+                        'src/sdp2input/read_input/Polynomial_State/json_string.cxx',
+                        'src/sdp2input/read_input/Polynomial_State/json_start_array.cxx',
+                        'src/sdp2input/read_input/Polynomial_State/json_end_array.cxx',
+                        'src/sdp2input/read_input/Polynomial_State/json_start_object.cxx',
+                        'src/sdp2input/read_input/Polynomial_State/json_end_object.cxx',
                         'src/sdp2input/read_input/Damped_Rational_State/xml_on_characters.cxx',
                         'src/sdp2input/read_input/Damped_Rational_State/xml_on_start_element.cxx',
                         'src/sdp2input/read_input/Damped_Rational_State/xml_on_end_element.cxx',
+                        'src/sdp2input/read_input/Damped_Rational_State/json_key.cxx',
+                        'src/sdp2input/read_input/Damped_Rational_State/json_string.cxx',
+                        'src/sdp2input/read_input/Damped_Rational_State/json_start_array.cxx',
+                        'src/sdp2input/read_input/Damped_Rational_State/json_end_array.cxx',
+                        'src/sdp2input/read_input/Damped_Rational_State/json_start_object.cxx',
+                        'src/sdp2input/read_input/Damped_Rational_State/json_end_object.cxx',
                         'src/sdp2input/read_input/read_xml/read_xml.cxx',
                         'src/sdp2input/read_input/read_xml/XML_Parser/on_start_element.cxx',
                         'src/sdp2input/read_input/read_xml/XML_Parser/on_end_element.cxx',
                         'src/sdp2input/read_input/read_xml/XML_Parser/on_characters.cxx',
+                        'src/sdp2input/read_input/read_json/JSON_Parser/Key.cxx',
+                        'src/sdp2input/read_input/read_json/JSON_Parser/String.cxx',
+                        'src/sdp2input/read_input/read_json/JSON_Parser/StartArray.cxx',
+                        'src/sdp2input/read_input/read_json/JSON_Parser/EndArray.cxx',
+                        'src/sdp2input/read_input/read_json/JSON_Parser/StartObject.cxx',
+                        'src/sdp2input/read_input/read_json/JSON_Parser/EndObject.cxx',
                         'src/sdp2input/read_input/read_mathematica/read_mathematica.cxx',
                         'src/sdp2input/read_input/read_mathematica/parse_SDP/parse_SDP.cxx',
                         'src/sdp2input/read_input/read_mathematica/parse_SDP/parse_matrices.cxx',

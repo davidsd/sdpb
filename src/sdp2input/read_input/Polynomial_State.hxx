@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Polynomial_Term_State.hxx"
+#include "../../Vector_State.hxx"
 
+using namespace std::string_literals;
 struct Polynomial_State
 {
   std::string name;
@@ -73,4 +75,11 @@ struct Polynomial_State
       }
     return inside;
   }
+
+  void json_key(const std::string &key);
+  void json_string(const std::string &s);
+  void json_start_array();
+  void json_end_array();
+  void json_start_object();
+  void json_end_object();
 };

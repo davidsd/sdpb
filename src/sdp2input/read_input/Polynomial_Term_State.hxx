@@ -70,4 +70,31 @@ struct Polynomial_Term_State
       }
     return inside;
   }
+
+  void json_key(const std::string &key)
+  {
+    throw std::runtime_error("Invalid input file.  Unexpected key '" + key
+                             + "' inside '" + name + "'.");
+  }
+  void json_string(const std::string &s);
+  void json_start_array()
+  {
+    throw std::runtime_error("Invalid input file.  Unexpected array inside '"
+                             + name + "'.");
+  }
+  void json_end_array()
+  {
+    throw std::runtime_error(
+      "Invalid input file.  Unexpected array end inside '" + name + "'.");
+  }
+  void json_start_object()
+  {
+    throw std::runtime_error("Invalid input file.  Unexpected object inside '"
+                             + name + "'.");
+  }
+  void json_end_object()
+  {
+    throw std::runtime_error(
+      "Invalid input file.  Unexpected object end inside '" + name + "'.");
+  }
 };
