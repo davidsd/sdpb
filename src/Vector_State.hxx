@@ -88,7 +88,15 @@ public:
   // JSON Functions
   void json_key(const std::string &key) { element_state.json_key(key); }
 
-  void json_string(const std::string &s) { element_state.json_string(s); }
+  void json_string(const std::string &s)
+  {
+    element_state.json_string(s);
+    if(!element_state.inside)
+      {
+        value.emplace_back();
+        std::swap(value.back(), element_state.value);
+      }
+  }
 
   void json_start_array()
   {
@@ -99,6 +107,7 @@ public:
     else
       {
         inside = true;
+        value.clear();
       }
   }
 
@@ -107,6 +116,11 @@ public:
     if(element_state.inside)
       {
         element_state.json_end_array();
+        if(!element_state.inside)
+          {
+            value.emplace_back();
+            std::swap(value.back(), element_state.value);
+          }
       }
     else
       {
@@ -116,5 +130,13 @@ public:
 
   void json_start_object() { element_state.json_start_object(); }
 
-  void json_end_object() { element_state.json_end_object(); }
+  void json_end_object()
+  {
+    element_state.json_end_object();
+    if(!element_state.inside)
+      {
+        value.emplace_back();
+        std::swap(value.back(), element_state.value);
+      }
+  }
 };

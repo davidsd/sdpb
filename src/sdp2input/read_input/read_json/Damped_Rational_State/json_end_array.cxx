@@ -14,10 +14,14 @@ void Damped_Rational_State::json_end_array()
         "Invalid input file.  Unexpected array end inside '" + name + "."
         + base_state.name + "'.");
     }
-  else if(parsing_polynomial)
+  else if(parsing_poles)
     {
-      polynomial_state.json_end_array();
-      parsing_polynomial = polynomial_state.inside;
+      poles_state.json_end_array();
+      parsing_poles = poles_state.inside;
+      if(!poles_state.inside)
+        {
+          std::swap(value.poles,poles_state.value);
+        }
     }
   else
     {

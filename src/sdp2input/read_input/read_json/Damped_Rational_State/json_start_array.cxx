@@ -12,9 +12,9 @@ void Damped_Rational_State::json_start_array()
       throw std::runtime_error("Invalid input file.  Unexpected array inside '"
                                + name + "." + base_state.name + "'.");
     }
-  else if(parsing_polynomial)
+  else if(parsing_poles)
     {
-      polynomial_state.json_start_array();
+      poles_state.json_start_array();
     }
   else
     {

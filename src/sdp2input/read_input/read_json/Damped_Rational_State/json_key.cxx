@@ -11,14 +11,14 @@ void Damped_Rational_State::json_key(const std::string &key)
   else if(parsing_base)
     {
       throw std::runtime_error("Invalid input file.  Unexpected key '" + key
-                               + "' inside '" + name + "."
-                               + base_state.name + "'.");
+                               + "' inside '" + name + "." + base_state.name
+                               + "'.");
     }
-  else if(parsing_polynomial)
+  else if(parsing_poles)
     {
       throw std::runtime_error("Invalid input file.  Unexpected key '" + key
-                               + "' inside '" + name + "."
-                               + polynomial_state.name + "'.");
+                               + "' inside '" + name + "." + poles_state.name
+                               + "'.");
     }
   else if(key == constant_state.name)
     {
@@ -28,9 +28,9 @@ void Damped_Rational_State::json_key(const std::string &key)
     {
       parsing_base = true;
     }
-  else if(key == polynomial_state.name)
+  else if(key == poles_state.name)
     {
-      parsing_polynomial = true;
+      parsing_poles = true;
     }
   else
     {
