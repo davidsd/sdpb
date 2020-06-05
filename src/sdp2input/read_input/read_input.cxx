@@ -8,11 +8,6 @@ void read_mathematica(const boost::filesystem::path &input_path,
                       std::vector<El::BigFloat> &normalization,
                       std::vector<Positive_Matrix_With_Prefactor> &matrices);
 
-void read_xml(const boost::filesystem::path &input_file,
-              std::vector<El::BigFloat> &objectives,
-              std::vector<El::BigFloat> &normalization,
-              std::vector<Positive_Matrix_With_Prefactor> &matrices);
-
 void read_input(const boost::filesystem::path &input_file,
                 std::vector<El::BigFloat> &objectives,
                 std::vector<El::BigFloat> &normalization,
@@ -27,10 +22,6 @@ void read_input(const boost::filesystem::path &input_file,
               read_input(filename, objectives, normalization, matrices);
             }
         }
-    }
-  else if(input_file.extension() == ".xml")
-    {
-      read_xml(input_file, objectives, normalization, matrices);
     }
   else
     {

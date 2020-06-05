@@ -13,12 +13,7 @@ using namespace std::string_literals;
 struct Damped_Rational_State
 {
   std::string name;
-  bool inside = false;
-  // TODO: Fix duplication
-  // XML
-  bool finished_constant = false, finished_base = false;
-  // JSON
-  bool parsing_constant = false, parsing_base = false,
+  bool inside = false, parsing_constant = false, parsing_base = false,
        parsing_polynomial = false;
   Damped_Rational value;
   Number_State<Boost_Float> constant_state, base_state;
@@ -32,10 +27,6 @@ struct Damped_Rational_State
   Damped_Rational_State(const std::initializer_list<std::string> &names)
       : Damped_Rational_State(names, 0)
   {}
-
-  bool xml_on_start_element(const std::string &element_name);
-  bool xml_on_end_element(const std::string &element_name);
-  bool xml_on_characters(const xmlChar *characters, int length);
 
   void json_key(const std::string &key);
   void json_string(const std::string &s);
