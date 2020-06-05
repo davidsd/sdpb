@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Damped_Rational_State.hxx"
-#include "../Positive_Matrix_With_Prefactor.hxx"
+#include "../../Positive_Matrix_With_Prefactor.hxx"
 
 #include <libxml2/libxml/parser.h>
 #include <vector>

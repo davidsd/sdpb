@@ -1,4 +1,4 @@
-#include "../../Positive_Matrix_With_Prefactor_State.hxx"
+#include "../../../Positive_Matrix_With_Prefactor.hxx"
 
 #include <algorithm>
 #include <iterator>

@@ -1,11 +1,12 @@
 #pragma once
 
-#include "../Positive_Matrix_With_Prefactor_State.hxx"
+#include "Positive_Matrix_With_Prefactor_State.hxx"
 
 #include <rapidjson/reader.h>
 
 using namespace std::string_literals;
-struct JSON_Parser : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, JSON_Parser>
+struct JSON_Parser
+    : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, JSON_Parser>
 {
   bool inside = false, parsing_objective = false,
        parsing_normalization = false,

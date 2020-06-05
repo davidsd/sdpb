@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../../Vector_State.hxx"
-#include "../../Number_State.hxx"
-#include "../Damped_Rational.hxx"
+#include "../../../Vector_State.hxx"
+#include "../../../Number_State.hxx"
+#include "../../Damped_Rational.hxx"
 
 #include <libxml2/libxml/parser.h>
 #include <vector>
