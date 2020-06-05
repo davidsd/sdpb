@@ -181,9 +181,10 @@ To improve performance for large inputs, the XML files must first be
 preprocessed into a more efficient format.  Instructions on how to
 preprocess the input and run SDPB are in \texttt{docs/Usage.md}.
 
-\subsection{\texttt{Mathematica} Interface}
+\subsection{\texttt{JSON} and \texttt{Mathematica} Interface}
 
-The program \texttt{sdp2input} generates preprocessed input files from \texttt{Mathematica} data.
+The program \texttt{sdp2input} generates preprocessed input files from
+\texttt{JSON} or \texttt{Mathematica} data.
 It automatically makes sensible choices for the bilinear bases
 $q_m^{(j)}(x)$, the sample points $x_k^{(j)}$ and the sample scalings
 $s_k^{(j)}$.  If you wish to experiment with these choices, there is
@@ -251,6 +252,8 @@ The prefactor in \texttt{PositiveMatrixWithPrefactor} is used for constructing b
 We do not use an exponential-times-rational \texttt{Mathematica} function directly because the  \texttt{DampedRational} data structure makes it easier to extract information needed to construct a bilinear basis.  The notebook \texttt{SDPB.m} makes a choice of sample points that are reasonable for conformal bootstrap applications.
 
 As an example bootstrap application, the included notebook \texttt{Bootstrap2dExample.m} computes a single-correlator dimension bound for 2d CFTs with a $\Z_2$ symmetry, as in \cite{Rychkov:2009ij}.
+
+The \texttt{JSON} format is described by the schema in \texttt{docs/sdp2input\_schema.json}.
 
 \subsection{An Example}
 \label{sec:example}

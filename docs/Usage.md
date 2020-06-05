@@ -20,9 +20,9 @@ when you run `sdpb`, though you may also use a larger precision.  Both
 
 ### Converting SDP Mathematica files
 
-Use `sdp2input` to create input from Mathematica files with an SDP.
-The format for these Mathematica files is described in Section 3.2 of
-the [the manual](SDPB-Manual.pdf).  The usage is
+Use `sdp2input` to create input from Mathematica or JSON files with an
+SDP.  The format for these Mathematica files is described in Section
+3.2 of the [the manual](SDPB-Manual.pdf).  The usage is
 
     sdp2input --precision=[PRECISION] --input=[INPUT] --output=[OUTPUT]
 
