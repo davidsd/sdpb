@@ -101,3 +101,15 @@ inline void swap(
       swap(polynomials_vector.back(), elements_vector);
     }
 }
+
+inline void swap(
+  std::vector<std::vector<std::vector<Polynomial>>> &polynomials_vector_vector,
+  std::vector<std::vector<std::vector<std::vector<El::BigFloat>>>>
+    &elements_vector_vector_vector)
+{
+  for(auto &elements_vector_vector : elements_vector_vector_vector)
+    {
+      polynomials_vector_vector.emplace_back();
+      swap(polynomials_vector_vector.back(), elements_vector_vector);
+    }
+}

@@ -16,7 +16,7 @@ struct Positive_Matrix_With_Prefactor_State
 
   Damped_Rational_State damped_rational_state;
   Vector_State<
-    Vector_State<Vector_State<Vector_State<Number_State<Boost_Float>>>>>
+    Vector_State<Vector_State<Vector_State<Number_State<El::BigFloat>>>>>
     polynomials_state;
 
   Positive_Matrix_With_Prefactor_State(const std::vector<std::string> &names,

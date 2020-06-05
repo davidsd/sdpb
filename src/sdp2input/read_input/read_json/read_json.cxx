@@ -14,13 +14,22 @@ void read_json(const boost::filesystem::path &input_path,
   rapidjson::IStreamWrapper wrapper(input_file);
   JSON_Parser parser;
   rapidjson::Reader reader;
-  reader.Parse(wrapper,parser);
+  reader.Parse(wrapper, parser);
 
-  std::cout << parser.objective_state.value << "\n";
-  std::cout << parser.normalization_state.value << "\n";
-  std::cout << parser.positive_matrices_with_prefactor_state.element_state.damped_rational_state.value.constant << "\n";
-  std::cout << parser.positive_matrices_with_prefactor_state.element_state.damped_rational_state.value.base << "\n";
-  std::cout << parser.positive_matrices_with_prefactor_state.element_state.damped_rational_state.value.poles << "\n";
-  exit(0);
+  if(!parser.objective_state.value.empty())
+    {
+      std::swap(objectives, parser.objective_state.value);
+    }
+  if(!parser.normalization_state.value.empty())
+    {
+      std::swap(normalization, parser.normalization_state.value);
+    }
+  size_t offset(matrices.size());
+  auto &temp_matrices(
+    parser.positive_matrices_with_prefactor_state.value);
+  matrices.resize(matrices.size() + temp_matrices.size());
+  for(size_t index = 0; index < temp_matrices.size(); ++index)
+    {
+      std::swap(matrices[offset + index], temp_matrices[index]);
+    }
 }
-
