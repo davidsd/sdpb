@@ -110,6 +110,7 @@ def build(bld):
 
     bld.program(source=['src/sdp2input/main.cxx',
                         'src/sdp2input/read_input/read_input.cxx',
+                        'src/sdp2input/read_input/read_json/read_json.cxx',
                         'src/sdp2input/read_input/read_json/Positive_Matrix_With_Prefactor_State/json_key.cxx',
                         'src/sdp2input/read_input/read_json/Positive_Matrix_With_Prefactor_State/json_string.cxx',
                         'src/sdp2input/read_input/read_json/Positive_Matrix_With_Prefactor_State/json_start_array.cxx',
