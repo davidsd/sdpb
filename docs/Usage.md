@@ -10,47 +10,67 @@ SDPB.
 
 ## Create input files
 
-You will normally start with either a Mathematica file with an SDP, or
-an XML file with Polynomial Vector Matrices.  These must first be
+You will normally start with either an SDP file in Mathematica or JSON format, or
+a Polynomial Vector Matrices file in XML format.  These must first be
 converted, using `sdp2input` or `pvm2sdp`, into a format that SDPB can
 quickly load.  When creating these input files, you must choose a
 working precision.  In general, you should use the same precision as
 when you run `sdpb`, though you may also use a larger precision.  Both
 `sdp2input` and `pvm2sdp` will run faster in parallel.
 
-### Converting SDP Mathematica files
+### Converting an SDP
 
-Use `sdp2input` to create input from Mathematica or JSON files with an
-SDP.  The format for these Mathematica files is described in Section
-3.2 of the [the manual](SDPB-Manual.pdf).  The usage is
+Use `sdp2input` to create input from files with an SDP.  The usage is
 
     sdp2input --precision=[PRECISION] --input=[INPUT] --output=[OUTPUT]
 
 `[PRECISION]` is the number of bits of precision used in the
-conversion.  `[INPUT]` is a either a Mathematica file with an SDP or a
-null separated list of files.  There is an example Mathematica in
-`test/sdp2input_test.m`.  There is a null separated list file example
-in `test/sdp2input_split.nsv`.  Null separated list files must end
-with `.nsv`.
+conversion.  `[INPUT]` is a single Mathematica, JSON, or NSV
+(Null Separated Value) file.  `[OUTPUT]` is an output directory.
 
-`[OUTPUT]` is an output directory.  Two examples that create
-the same output are
+The single file Mathematica and JSON formats are described in Section
+3.2 of the [the manual](SDPB-Manual.pdf).  In addition, for JSON there
+is a [schema](sdp2input_schema.json).
 
-    sdp2input --precision=1024 --input=test/sdp2input_test.m --output=sdp2input_test
-    sdp2input --precision=1024 --input=test/sdp2input_split.nsv --output=sdp2input_test
+The NSV format allows you to load an SDP from multiple JSON and/or
+Mathematica files.  NSV files contain a list of files, separated by
+null's.  When using multiple files, each component is optional.  If
+there are multiple versions of `normalization` or `objective`,
+`sdp2input` will use the last one it sees.  Multiple elements of
+`PositiveMatrixWithPrefactor` will be concatenated together.
 
-### Converting XML files
+One way to generate NSV files is with the `find` command.  For
+example, if you have a directory `input` with many files, you can
+generate an NSV file with the command
 
-Use `pvm2sdp` to create input files from XML with polynomial vector
-matrices.  The format for these XML files is described in Section 3.1
-of [the manual](SDPB-Manual.pdf).  The usage is
+    find input/ -print0 -name "*.m" > file_list.nsv
+
+`sdp2input` assumes that files ending with `.nsv` are NSV,
+files ending with `.json` are JSON, and everything else is
+Mathematica.  NSV files can also recursively reference other NSV
+files.
+
+There are example input files in
+[Mathematica](../test/sdp2input_test.m),
+[JSON](../test/sdp2input_test.json), and
+[NSV](../test/sdp2input_split.nsv) format.  They all define the same
+SDP, with the NSV example loading the SDP from two Mathematica files:
+[sdp2input\_split1.m](../test/sdp2input_split1.m) and
+[sdp2input\_split2.m](../test/sdp2input_split2.m).
+
+### Converting Polynomial Vector Matrices
+
+Use `pvm2sdp` to create input files from Polynomial Vector Matrix files
+in XML.  The format for these XML files is described in Section 3.1 of
+[the manual](SDPB-Manual.pdf).  The usage is
 
     pvm2sdp [PRECISION] [INPUT] ... [OUTPUT]
 
 `[PRECISION]` is the number of bits of precision used in the
-conversion.  `[INPUT] ...` is a list of one or more files that can
-either be an xml input file, or a file with a list of files. `[OUTPUT]`
-is an output directory.
+conversion.  `[INPUT] ...` is a list of one or more files.  Each of
+those input files can be either an XML file with Polynomial Vector
+Matrices, or an Null Separated Value (NSV) file with a list of
+files. `[OUTPUT]` is an output directory.
 
 For example, the command to convert the file `test/test.xml`, using
 1024 bits of precision, and store the result in the directory
@@ -58,8 +78,8 @@ For example, the command to convert the file `test/test.xml`, using
 
     pvm2sdp 1024 test/test.xml test/test
 
-For input, you can also use a file that has a list of file names
-separated by null.  There is an example in `test/file_list.nsv`.
+For input, you can also use an NSV file containing a list of file names
+separated by nulls.  There is an example in `test/file_list.nsv`.
 Using it is similar to the xml files
 
     pvm2sdp 1024 test/file_list.nsv test/test
@@ -70,7 +90,7 @@ example,
     find test -print0 -name "test.xml" > test/file_list.nsv
     
 will regenerate `test/file_list.nsv`.  If you have a directory `input`
-with many xml files, you could generate a file list with the command
+with many xml files, you can generate a file list with the command
 
     find input/ -print0 -name "*.xml" > file_list.nsv
 
