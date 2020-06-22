@@ -1,3 +1,21 @@
+# Version 2.4.0
+
+## sdpb
+
+- Made checkpointing more robust.  This required a modification to the
+  checkpoint format.  Old checkpoints can still be read in, but new
+  checkpoints will be written out in the new format.  Old checkpoints
+  will not be automatically deleted.
+
+- Better handle errors when reading blocks.  SDPB now gives
+  informative error messages instead of inscrutable MPI crash reports.
+
+## sdp2input
+
+- Added support for JSON input and removed support for XML input.
+  Mathematica input is still supported.  As a result,
+  [RapidJSON](http://rapidjson.org/) is now a build requirement.
+
 # Version 2.3.1
 
 ## sdpb

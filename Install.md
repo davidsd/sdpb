@@ -9,7 +9,7 @@ to use [Docker](docs/Docker.md) or [Singularity](docs/Singularity.md).
 SDPB requires
 
 - A modern C++ compiler with C++ 14 support.  SDPB has been tested with
-  GCC 5.2.0, 7.1.0, and 8.2.0.
+  GCC versions 5 through 9.
 
 - An MPI implementation such as [OpenMPI](https://www.open-mpi.org/) or [MPICH](https://www.mpich.org/)
 
@@ -52,16 +52,16 @@ manager such as [Homebrew](https://brew.sh).
 
 3. Configure Elemental.  This can be rather tricky.  You may have to specify where the Boost, GMP, and BLAS libraries are.  If you are using [modules](http://modules.sourceforge.net/), you may have to load modules.  If these define appropriate environment variables, then the configure should be relatively easy.  For example, on Yale's Grace cluster, commands that work are
    
-        module load Langs/GCC/5.2.0 Libs/Boost Libs/OpenBLAS MPI/OpenMPI/1.8.1-gcc Tools/Cmake
+        module load git CMake GCCcore/6.4.0 OpenMPI/2.1.2-GCC-6.4.0-2.28 Boost/1.66.0-foss-2018a OpenBLAS/0.2.20-GCC-6.4.0-2.28 GMP/6.1.2-GCCcore-6.4.0 MPFR/4.0.1-GCCcore-6.4.0 Python/3.6.4-foss-2018a
         export CXX=mpicxx
         export CC=mpicc
         cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/project/install
 
     On Harvard's Odyssey3 cluster, the default Boost module does not
-    work with the most up-to-date compiler.  Using a different
-    compiler with a different Boost module does work.
+    work with the most up-to-date compiler.
     
-        module load cmake gcc/7.1.0-fasrc01 openmpi OpenBLAS boost/1.63.0-fasrc02 libxml2/2.7.8-fasrc03
+        module load gcc/9.2.0-fasrc01 cmake/3.16.1-fasrc01 OpenBLAS/0.3.7-fasrc02 openmpi/4.0.2-fasrc01 eigen/3.3.7-fasrc02 libxml2/2.7.8-fasrc02 metis/5.1.0-fasrc01
+        module unload boost
         export CXX=mpicxx
         export CC=mpicc
         cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/install
