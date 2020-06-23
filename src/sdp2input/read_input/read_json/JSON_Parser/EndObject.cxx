@@ -1,6 +1,6 @@
 #include "../JSON_Parser.hxx"
 
-bool JSON_Parser::EndObject(rapidjson::SizeType memberCount)
+bool JSON_Parser::EndObject(rapidjson::SizeType)
 {
   if(inside)
     {
