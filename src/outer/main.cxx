@@ -68,9 +68,9 @@ int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
 
-  const El::Int m = El::Input("--m","height of A",7);
-  const El::Int n = El::Input("--n","width of A",8);
-  const El::Int k = El::Input("--k","height of G",9);
+  const El::Int m = El::Input("--m","height of A",70);
+  const El::Int n = El::Input("--n","width of A",80);
+  const El::Int k = El::Input("--k","height of G",90);
   El::ProcessInput();
 
   // RandomFeasibleLP<float>( m, n, k );
