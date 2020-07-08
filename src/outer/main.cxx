@@ -1,101 +1,89 @@
 #include <El.hpp>
 
-El::BigFloat solve_LP(const El::Matrix<El::BigFloat> &A,
-                      const El::Matrix<El::BigFloat> &b,
-                      const El::Matrix<El::BigFloat> &c);
+void eval(const El::BigFloat &x, El::BigFloat &f0, El::BigFloat &f1)
+{
+  const El::BigFloat pow2(x * x), pow4(pow2 * pow2);
+  f0 = 1 + pow4;
+  f1 = pow2 + pow4 / 12;
+}
+
+std::vector<El::BigFloat>
+get_new_points(const std::vector<El::BigFloat> &points);
+
+El::BigFloat
+solve_LP(const El::Matrix<El::BigFloat> &A, const El::Matrix<El::BigFloat> &b,
+         const El::Matrix<El::BigFloat> &c);
 
 int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
   El::gmp::SetPrecision(256);
-  
-  {
-    const int64_t n(3), m(1);
-    El::Matrix<El::BigFloat> b(m,1);
-    El::Matrix<El::BigFloat> A(m,n), c(n,1);
 
-    c(0)=1;
-    c(1)=-1;
-    c(2)=0;
+  El::Matrix<El::BigFloat> b(1, 1);
+  El::Matrix<El::BigFloat> A(1, 3), c(3, 1);
 
-    A(0,0)="-8.34333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333e6";
-    A(0,1)=-A(0,0);
-    A(0,2)=1;
+  c(0) = 1;
+  c(1) = -1;
 
-    b(0)="1.00000001e8";
+  std::vector<El::BigFloat> points;
 
-    std::cout << "solve: "
-              << solve_LP(A,b,c)
-              << "\n";
-  }
+  std::vector<El::BigFloat> new_points(get_new_points(points));
+  while(!new_points.empty())
+    {
+      const size_t old_size(points.size()), delta(new_points.size()),
+        new_size(old_size + delta);
+      points.reserve(new_size);
+      {
+        El::Matrix<El::BigFloat> b_new(new_size,1);
+        El::Matrix<El::BigFloat> A_new(new_size, new_size + 2), c_new(new_size + 2,1);
 
-  {
-    const int64_t n(4), m(2);
-    El::Matrix<El::BigFloat> b(m,1);
-    El::Matrix<El::BigFloat> A(m,n), c(n,1);
+        for(size_t index_0(0); index_0<old_size; ++index_0)
+          {
+            b_new(index_0)=b(index_0);
 
-    c(0)=1;
-    c(1)=-1;
-    c(2)=0;
-    c(3)=0;
+          }
+        for(size_t index_0(0); index_0<old_size; ++index_0)
+          for(size_t index_1(0); index_1<old_size+2; ++index_1)
+            {
+              A_new(index_0,index_1)=A(index_0,index_1);
+            }
+        for(size_t index_1(0); index_1<old_size+2; ++index_1)
+          {
+            c_new(index_1)=c(index_1);
+          }
+        A=A_new;
+        b=b_new;
+        c=c_new;
+      }
+      for(size_t d(0); d != delta; ++d)
+        {
+          c(old_size + d + 2) = 0;
+          for(size_t index(0); index != old_size; ++index)
+            {
+              A(index, old_size + d + 2) = 0;
+            }
 
-    A(0,0)="-8.34333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333e6";
-    A(0,1)=-A(0,0);
-    A(0,2)=1;
-    A(0,3)=0;
+          eval(new_points[d], b(old_size + d), A(old_size + d, 1));
+          A(old_size + d, 0) = -A(old_size + d, 1);
 
-    b(0)="1.00000001e8";
+          for(size_t index(2); index != old_size + d + 2; ++index)
+            {
+              A(old_size + d, index) = 0;
+            }
+          A(old_size + d, old_size + d + 2) = 1;
+          points.emplace_back(new_points[d]);
+        }
+      new_points = get_new_points(points);
 
-    A(1,0)="-2.0883681393738418786521971610157869999564952571145363799181069183090349103427762822892226369869922745782002357632815274877025509325687194149604661156665774994079238964936547103062281911314159394645950806565436291836646e6";
-    A(1,1)=-A(1,0);
-    A(1,2)=0;
-    A(1,3)=1;
+      // El::Print(A, "A");
+      // std::cout << "\n";
+      // El::Print(b, "b");
+      // std::cout << "\n";
+      // El::Print(c, "c");
+      // std::cout << "\n";
 
-    b(1)="2.500041817188193259583610690651477602462222452320541114185075697450625764505571202951722797034907521311172640839539068960526921868899591722427115600132424981324576028654978230857101759743577309108511615671925085573048409e7";
-    
-    std::cout << "solve: "
-              << solve_LP(A,b,c)
-              << "\n";
-  }
-
-  {
-    const int64_t n(5), m(3);
-    El::Matrix<El::BigFloat> b(m,1);
-    El::Matrix<El::BigFloat> A(m,n), c(n,1);
-
-    c(0)=1;
-    c(1)=-1;
-    c(2)=0;
-    c(3)=0;
-    c(4)=0;
-
-    A(0,0)="-8.34333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333e6";
-    A(0,1)=-A(0,0);
-    A(0,2)=1;
-    A(0,3)=0;
-    A(0,4)=0;
-
-    b(0)="1.00000001e8";
-
-    A(1,0)="-2.0883681393738418786521971610157869999564952571145363799181069183090349103427762822892226369869922745782002357632815274877025509325687194149604661156665774994079238964936547103062281911314159394645950806565436291836646e6";
-    A(1,1)=-A(1,0);
-    A(1,2)=0;
-    A(1,3)=1;
-    A(1,4)=0;
-
-    b(1)="2.500041817188193259583610690651477602462222452320541114185075697450625764505571202951722797034907521311172640839539068960526921868899591722427115600132424981324576028654978230857101759743577309108511615671925085573048409e7";
-
-    A(2,0)="-523359.49039448594574060530655172286187090378437496537397484654111114679353770021695730603264685384461177908057073681681768485010274393686753539800942415710439431439847258920370816312326141491421457729752660492298893732";
-    A(2,1)=-A(2,0);
-    A(2,2)=0;
-    A(2,3)=0;
-    A(2,4)=1;
-
-    b(2)="6.2503141332235077264522964494075174019801929035358155014826774648939365836286594330371275920790232914052411157897491638288477145045802473293978949526674980879470479960005412142141993037669145499508595145049713993404956e6";
-
-    std::cout << "solve: "
-              << solve_LP(A,b,c)
-              << "\n";
-  }
-  
+      std::cout << "solve: "
+                << solve_LP(A,b,c)
+                << "\n";
+    }
 }
