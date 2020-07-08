@@ -18,7 +18,8 @@ def build(bld):
     # default_flags=['-Wall', '-Wextra', '-g', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
     use_packages=['cxx14','boost','gmpxx','mpfr','elemental','libxml2', 'rapidjson']
     
-    bld.program(source=['src/outer/main.cxx'],
+    bld.program(source=['src/outer/main.cxx',
+                        'src/outer/solve_LP.cxx'],
                 target='outer',
                 cxxflags=default_flags,
                 use=use_packages
