@@ -25,7 +25,10 @@ int main(int argc, char **argv)
   c(0) = 1;
   c(1) = -1;
 
-  std::vector<El::BigFloat> points;
+  std::vector<El::BigFloat> points({0.0});
+  eval(points[0], b(0), A(0, 1));
+  A(0, 0) = -A(0, 1);
+  A(0, 2) = 1;
 
   std::vector<El::BigFloat> new_points(get_new_points(points));
   while(!new_points.empty())
@@ -34,26 +37,26 @@ int main(int argc, char **argv)
         new_size(old_size + delta);
       points.reserve(new_size);
       {
-        El::Matrix<El::BigFloat> b_new(new_size,1);
-        El::Matrix<El::BigFloat> A_new(new_size, new_size + 2), c_new(new_size + 2,1);
+        El::Matrix<El::BigFloat> b_new(new_size, 1);
+        El::Matrix<El::BigFloat> A_new(new_size, new_size + 2),
+          c_new(new_size + 2, 1);
 
-        for(size_t index_0(0); index_0<old_size; ++index_0)
+        for(size_t index_0(0); index_0 < old_size; ++index_0)
           {
-            b_new(index_0)=b(index_0);
-
+            b_new(index_0) = b(index_0);
           }
-        for(size_t index_0(0); index_0<old_size; ++index_0)
-          for(size_t index_1(0); index_1<old_size+2; ++index_1)
+        for(size_t index_0(0); index_0 < old_size; ++index_0)
+          for(size_t index_1(0); index_1 < old_size + 2; ++index_1)
             {
-              A_new(index_0,index_1)=A(index_0,index_1);
+              A_new(index_0, index_1) = A(index_0, index_1);
             }
-        for(size_t index_1(0); index_1<old_size+2; ++index_1)
+        for(size_t index_1(0); index_1 < old_size + 2; ++index_1)
           {
-            c_new(index_1)=c(index_1);
+            c_new(index_1) = c(index_1);
           }
-        A=A_new;
-        b=b_new;
-        c=c_new;
+        A = A_new;
+        b = b_new;
+        c = c_new;
       }
       for(size_t d(0); d != delta; ++d)
         {
@@ -82,8 +85,6 @@ int main(int argc, char **argv)
       // El::Print(c, "c");
       // std::cout << "\n";
 
-      std::cout << "solve: "
-                << solve_LP(A,b,c)
-                << "\n";
+      std::cout << "solve: " << solve_LP(A, b, c) << "\n";
     }
 }
