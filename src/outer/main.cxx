@@ -18,90 +18,44 @@ solve_LP(const El::Matrix<El::BigFloat> &A, const El::Matrix<El::BigFloat> &b,
 int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
-  El::gmp::SetPrecision(256);
+  El::gmp::SetPrecision(1024);
 
-  El::Matrix<El::BigFloat> b(1, 1);
-  El::Matrix<El::BigFloat> A(1, 3), c(3, 1);
-
-  c(0) = 1;
-  c(1) = -1;
-
-  std::vector<El::BigFloat> points({0.0});
-  eval(points[0], b(0), A(0, 1));
-  A(0, 0) = -A(0, 1);
-  A(0, 2) = 1;
-
-  std::vector<El::BigFloat> new_points({100.0});
+  std::vector<El::BigFloat> points({0.0}), new_points({100.0});
 
   while(!new_points.empty())
     {
-      const size_t old_size(points.size()), delta(new_points.size()),
-        new_size(old_size + delta);
-      points.reserve(new_size);
-      {
-        El::Matrix<El::BigFloat> b_new(new_size, 1);
-        El::Matrix<El::BigFloat> A_new(new_size, new_size + 2),
-          c_new(new_size + 2, 1);
-
-        for(size_t index_0(0); index_0 < old_size; ++index_0)
-          {
-            b_new(index_0) = b(index_0);
-          }
-        for(size_t index_0(0); index_0 < old_size; ++index_0)
-          for(size_t index_1(0); index_1 < old_size + 2; ++index_1)
-            {
-              A_new(index_0, index_1) = A(index_0, index_1);
-            }
-        for(size_t index_1(0); index_1 < old_size + 2; ++index_1)
-          {
-            c_new(index_1) = c(index_1);
-          }
-        A = A_new;
-        b = b_new;
-        c = c_new;
-      }
-      for(size_t d(0); d != delta; ++d)
+      for(auto &point : new_points)
         {
-          c(old_size + d + 2) = 0;
-          for(size_t index(0); index != old_size; ++index)
-            {
-              A(index, old_size + d + 2) = 0;
-            }
-
-          eval(new_points[d], b(old_size + d), A(old_size + d, 1));
-          A(old_size + d, 0) = -A(old_size + d, 1);
-
-          for(size_t index(2); index != old_size + d + 2; ++index)
-            {
-              A(old_size + d, index) = 0;
-            }
-          A(old_size + d, old_size + d + 2) = 1;
-          points.emplace_back(new_points[d]);
+          points.emplace_back(point);
         }
+      El::Matrix<El::BigFloat> b(points.size(), 1),
+        A(points.size(), points.size() + 2), c(points.size() + 2, 1);
+      c(0) = 1;
+      c(1) = -1;
 
-      // El::Print(A, "A");
-      // std::cout << "\n";
-      // El::Print(b, "b");
-      // std::cout << "\n";
-      // El::Print(c, "c");
-      // std::cout << "\n";
+      for(size_t point(0); point != points.size(); ++point)
+        {
+          c(point + 2) = 0;
+          for(size_t index(0); index != points.size(); ++index)
+            {
+              A(index, point + 2) = 0;
+            }
+          A(point, point + 2) = 1;
 
-      // std::cout << "solve: " << solve_LP(A, b, c) << "\n";
-
+          eval(points[point], b(point), A(point, 1));
+          A(point, 0) = -A(point, 1);
+        }
       El::BigFloat optimal(solve_LP(A, b, c));
+      std::cout.precision(1024 / 3.3);
       std::cout << "solve: " << optimal << "\n";
-      Mesh mesh(points[0],points[1],[=](const El::BigFloat &x)
-                          {
-                            El::BigFloat f0,f1;
-                            eval(x,f0,f1);
-                            return f0 + optimal * f1;
-                          },
-        0.01);
-      // std::cout << "mesh: "
-      //           << mesh << "\n";
-
+      Mesh mesh(points[0], points[1],
+                [=](const El::BigFloat &x) {
+                  El::BigFloat f0, f1;
+                  eval(x, f0, f1);
+                  return f0 + optimal * f1;
+                },
+                0.01);
       new_points = get_new_points(mesh);
-
       std::cout << "new: " << new_points << "\n";
     }
 }
