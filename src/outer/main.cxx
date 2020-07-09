@@ -1,5 +1,7 @@
 #include "Mesh.hxx"
 
+#include "../ostream_vector.hxx"
+
 void eval(const El::BigFloat &x, El::BigFloat &f0, El::BigFloat &f1)
 {
   const El::BigFloat pow2(x * x), pow4(pow2 * pow2);
@@ -7,8 +9,7 @@ void eval(const El::BigFloat &x, El::BigFloat &f0, El::BigFloat &f1)
   f1 = pow2 + pow4 / 12;
 }
 
-std::vector<El::BigFloat>
-get_new_points(const std::vector<El::BigFloat> &points);
+std::vector<El::BigFloat> get_new_points(const Mesh &mesh);
 
 El::BigFloat
 solve_LP(const El::Matrix<El::BigFloat> &A, const El::Matrix<El::BigFloat> &b,
@@ -30,7 +31,7 @@ int main(int argc, char **argv)
   A(0, 0) = -A(0, 1);
   A(0, 2) = 1;
 
-  std::vector<El::BigFloat> new_points(get_new_points(points));
+  std::vector<El::BigFloat> new_points({100.0});
 
   while(!new_points.empty())
     {
@@ -77,7 +78,6 @@ int main(int argc, char **argv)
           A(old_size + d, old_size + d + 2) = 1;
           points.emplace_back(new_points[d]);
         }
-      new_points = get_new_points(points);
 
       // El::Print(A, "A");
       // std::cout << "\n";
@@ -97,7 +97,11 @@ int main(int argc, char **argv)
                             return f0 + optimal * f1;
                           },
         0.01);
-      std::cout << "mesh: "
-                << mesh << "\n";
+      // std::cout << "mesh: "
+      //           << mesh << "\n";
+
+      new_points = get_new_points(mesh);
+
+      std::cout << "new: " << new_points << "\n";
     }
 }
