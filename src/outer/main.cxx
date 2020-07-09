@@ -10,6 +10,7 @@ void eval(const El::BigFloat &x, El::BigFloat &f0, El::BigFloat &f1)
 }
 
 std::vector<El::BigFloat> get_new_points(const Mesh &mesh);
+El::BigFloat max_value(const Mesh &mesh);
 
 El::BigFloat
 solve_LP(const El::Matrix<El::BigFloat> &A, const El::Matrix<El::BigFloat> &b,
@@ -18,12 +19,42 @@ solve_LP(const El::Matrix<El::BigFloat> &A, const El::Matrix<El::BigFloat> &b,
 int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
-  El::gmp::SetPrecision(1024);
+  const int64_t precision(1024);
+  El::gmp::SetPrecision(precision);
 
-  std::vector<El::BigFloat> points({0.0}), new_points({100.0});
+  const El::BigFloat min_x(0.0), max_x(100.0);
+  std::vector<El::BigFloat> points({min_x}), new_points({max_x});
 
+  El::BigFloat f0, f1, scale;
+  eval(min_x, f0, f1);
+  scale = Max(Abs(f0), Abs(f1));
+  eval(max_x, f0, f1);
+  scale = Max(scale, Max(Abs(f0), Abs(f1)));
+
+  El::BigFloat optimal(0);
   while(!new_points.empty())
     {
+      // 0.01 is completely arbitrary.  We want it big enough to not
+      // rule out points that might provide a limit, but not so big to
+      // not rule out any points.
+
+      // For the toy example, this eliminates almost all of the
+      // points.  It feels dangerous.
+      El::BigFloat tolerance(
+        scale * Sqrt(Sqrt(El::limits::Epsilon<El::BigFloat>())));
+      {
+        std::vector<El::BigFloat> temp_points;
+        El::BigFloat f0, f1;
+        for(auto &point : points)
+          {
+            eval(point, f0, f1);
+            if(f0 + optimal * f1 < tolerance)
+              {
+                temp_points.emplace_back(point);
+              }
+          }
+        std::swap(points, temp_points);
+      }
       for(auto &point : new_points)
         {
           points.emplace_back(point);
@@ -45,10 +76,13 @@ int main(int argc, char **argv)
           eval(points[point], b(point), A(point, 1));
           A(point, 0) = -A(point, 1);
         }
-      El::BigFloat optimal(solve_LP(A, b, c));
-      std::cout.precision(1024 / 3.3);
-      std::cout << "solve: " << optimal << "\n";
-      Mesh mesh(points[0], points[1],
+      optimal = solve_LP(A, b, c);
+      std::cout.precision(precision / 3.3);
+      std::cout << "solve: " << points.size() << " " << optimal << "\n";
+      // 0.01 should be a small enough relative error so that we are
+      // in the regime of convergence.  Then the error estimates will
+      // work
+      Mesh mesh(min_x, max_x,
                 [=](const El::BigFloat &x) {
                   El::BigFloat f0, f1;
                   eval(x, f0, f1);
@@ -56,6 +90,9 @@ int main(int argc, char **argv)
                 },
                 0.01);
       new_points = get_new_points(mesh);
-      std::cout << "new: " << new_points << "\n";
+      // std::cout << "new: " << new_points << "\n";
+      scale = max_value(mesh);
     }
+  std::cout.precision(precision / 3.3);
+  std::cout << "optimal: " << optimal << "\n";
 }

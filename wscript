@@ -22,7 +22,8 @@ def build(bld):
                         'src/outer/solve_LP.cxx',
                         'src/outer/get_new_points.cxx',
                         'src/outer/Mesh/Mesh.cxx',
-                        'src/outer/Mesh/ostream.cxx'],
+                        'src/outer/Mesh/ostream.cxx',
+                        'src/outer/max_value.cxx'],
                 target='outer',
                 cxxflags=default_flags,
                 use=use_packages
