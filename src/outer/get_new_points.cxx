@@ -9,17 +9,6 @@ void maybe_add_point(const El::BigFloat &x_minus, const El::BigFloat &x_bar,
   const El::BigFloat a(f_x_bar), b((f_x_plus - f_x_minus) / dx),
     c((f_x_plus - 2 * f_x_bar + f_x_minus) / (dx * dx / 4));
 
-  // std::cout << "maybe:\n  "
-  //           << x_minus << "\n  "
-  //           << x_bar << "\n  "
-  //           << x_plus << "\n  "
-  //           << f_x_minus << "\n  "
-  //           << f_x_bar << "\n  "
-  //           << f_x_plus << "\n  "
-  //           << dx << "\n  "
-  //           << a << "\n  "
-  //           << b << "\n  "
-  //           << c << "\n";
   if(c > 0)
     {
       const El::BigFloat x_min(-b / c + x_bar);
@@ -28,7 +17,6 @@ void maybe_add_point(const El::BigFloat &x_minus, const El::BigFloat &x_bar,
       if(x_min >= x_minus && x_min <= x_plus && f_x_min < Abs(f_x_bar - f_bar))
         {
           points.push_back(x_min);
-          // std::cout << "add: " << points << "\n";
         }
     }
 }
