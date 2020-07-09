@@ -20,7 +20,9 @@ def build(bld):
     
     bld.program(source=['src/outer/main.cxx',
                         'src/outer/solve_LP.cxx',
-                        'src/outer/get_new_points.cxx'],
+                        'src/outer/get_new_points.cxx',
+                        'src/outer/Mesh/Mesh.cxx',
+                        'src/outer/Mesh/ostream.cxx'],
                 target='outer',
                 cxxflags=default_flags,
                 use=use_packages

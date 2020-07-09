@@ -1,4 +1,4 @@
-#include <El.hpp>
+#include "Mesh.hxx"
 
 void eval(const El::BigFloat &x, El::BigFloat &f0, El::BigFloat &f1)
 {
@@ -31,6 +31,7 @@ int main(int argc, char **argv)
   A(0, 2) = 1;
 
   std::vector<El::BigFloat> new_points(get_new_points(points));
+
   while(!new_points.empty())
     {
       const size_t old_size(points.size()), delta(new_points.size()),
@@ -85,6 +86,18 @@ int main(int argc, char **argv)
       // El::Print(c, "c");
       // std::cout << "\n";
 
-      std::cout << "solve: " << solve_LP(A, b, c) << "\n";
+      // std::cout << "solve: " << solve_LP(A, b, c) << "\n";
+
+      El::BigFloat optimal(solve_LP(A, b, c));
+      std::cout << "solve: " << optimal << "\n";
+      Mesh mesh(points[0],points[1],[=](const El::BigFloat &x)
+                          {
+                            El::BigFloat f0,f1;
+                            eval(x,f0,f1);
+                            return f0 + optimal * f1;
+                          },
+        0.01);
+      std::cout << "mesh: "
+                << mesh << "\n";
     }
 }
