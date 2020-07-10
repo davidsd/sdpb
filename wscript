@@ -23,7 +23,9 @@ def build(bld):
                         'src/outer/get_new_points.cxx',
                         'src/outer/Mesh/Mesh.cxx',
                         'src/outer/Mesh/ostream.cxx',
-                        'src/outer/max_value.cxx'],
+                        'src/outer/max_value.cxx',
+                        'src/outer/Functional/Functional.cxx',
+                        'src/outer/Functional/eval.cxx'],
                 target='outer',
                 cxxflags=default_flags,
                 use=use_packages

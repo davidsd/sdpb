@@ -1,4 +1,5 @@
 #include "Mesh.hxx"
+#include "Functional.hxx"
 
 #include "../ostream_vector.hxx"
 
@@ -31,6 +32,23 @@ int main(int argc, char **argv)
   eval(max_x, f0, f1);
   scale = Max(scale, Max(Abs(f0), Abs(f1)));
 
+  // {
+  //   Functional functional("test/toy_polys","",false);
+
+  //   std::vector<std::vector<El::BigFloat>> optimals(1);
+  //   optimals[0].resize(2);
+  //   optimals[0][0]=1;
+  //   optimals[0][1]=1;
+
+  //   std::vector<El::BigFloat> coords(1);
+  //   coords[0]=min_x;
+  //   std::vector<El::BigFloat> result(functional.eval(coords,optimals));
+  //   std::cout << "functional: " << result[0] << "\n";
+  //   coords[0]=max_x;
+  //   std::cout << "functional: " << functional.eval(coords,optimals)[0] << "\n";
+  //   exit(0);
+  // }
+  
   El::BigFloat optimal(0);
   while(!new_points.empty())
     {
