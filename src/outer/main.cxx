@@ -38,68 +38,74 @@ int main(int argc, char **argv)
     new_points(scale.size(), {max_x});
 
   El::BigFloat optimal(0);
-  while(!new_points.front().empty())
+  bool has_new_points(true);
+  while(has_new_points)
     {
-      // 0.01 is completely arbitrary.  We want it big enough to not
-      // rule out points that might provide a limit, but not so big to
-      // not rule out any points.
+      has_new_points = false;
+      for(size_t index(0); index != scale.size(); ++index)
+        {
+          // 0.01 is completely arbitrary.  We want it big enough to not
+          // rule out points that might provide a limit, but not so big to
+          // not rule out any points.
 
-      // For the toy example, this eliminates almost all of the
-      // points.  It feels dangerous.
-      El::BigFloat tolerance(
-        scale.front() * Sqrt(Sqrt(El::limits::Epsilon<El::BigFloat>())));
-      {
-        std::vector<El::BigFloat> temp_points;
-        El::BigFloat f0, f1;
-        for(auto &point : points.front())
+          // For the toy example, this eliminates almost all of the
+          // points.  It feels dangerous.
+          El::BigFloat tolerance(
+            scale.at(index) * Sqrt(Sqrt(El::limits::Epsilon<El::BigFloat>())));
           {
-            eval(point, f0, f1);
-            if(f0 + optimal * f1 < tolerance)
+            std::vector<El::BigFloat> temp_points;
+            El::BigFloat f0, f1;
+            for(auto &point : points.at(index))
               {
-                temp_points.emplace_back(point);
+                eval(point, f0, f1);
+                if(f0 + optimal * f1 < tolerance)
+                  {
+                    temp_points.emplace_back(point);
+                  }
               }
+            std::swap(points.at(index), temp_points);
           }
-        std::swap(points.front(), temp_points);
-      }
-      for(auto &point : new_points.front())
-        {
-          points.front().emplace_back(point);
-        }
-      El::Matrix<El::BigFloat> b(points.front().size(), 1),
-        A(points.front().size(), points.front().size() + 2),
-        c(points.front().size() + 2, 1);
-      c(0) = 1;
-      c(1) = -1;
-
-      for(size_t point(0); point != points.front().size(); ++point)
-        {
-          c(point + 2) = 0;
-          for(size_t index(0); index != points.front().size(); ++index)
+          for(auto &point : new_points.at(index))
             {
-              A(index, point + 2) = 0;
+              points.at(index).emplace_back(point);
             }
-          A(point, point + 2) = 1;
+          El::Matrix<El::BigFloat> b(points.at(index).size(), 1),
+            A(points.at(index).size(), points.at(index).size() + 2),
+            c(points.at(index).size() + 2, 1);
+          c(0) = 1;
+          c(1) = -1;
 
-          eval(points.front()[point], b(point), A(point, 1));
-          A(point, 0) = -A(point, 1);
+          for(size_t point(0); point != points.at(index).size(); ++point)
+            {
+              c(point + 2) = 0;
+              for(size_t row(0); row != points.at(index).size(); ++row)
+                {
+                  A(row, point + 2) = 0;
+                }
+              A(point, point + 2) = 1;
+
+              eval(points.at(index)[point], b(point), A(point, 1));
+              A(point, 0) = -A(point, 1);
+            }
+          optimal = solve_LP(A, b, c);
+          std::cout.precision(precision / 3.3);
+          std::cout << "solve: " << points.at(index).size() << " " << optimal
+                    << "\n";
+          // 0.01 should be a small enough relative error so that we are
+          // in the regime of convergence.  Then the error estimates will
+          // work
+          Mesh mesh(min_x, max_x,
+                    [=](const El::BigFloat &x) {
+                      El::BigFloat f0, f1;
+                      eval(x, f0, f1);
+                      return f0 + optimal * f1;
+                    },
+                    0.01);
+          new_points.at(index) = get_new_points(mesh);
+          // std::cout << "new: " << new_points.at(index) << "\n";
+          scale.at(index) = max_value(mesh);
+          has_new_points = has_new_points || !new_points.at(index).empty();
         }
-      optimal = solve_LP(A, b, c);
-      std::cout.precision(precision / 3.3);
-      std::cout << "solve: " << points.front().size() << " " << optimal
-                << "\n";
-      // 0.01 should be a small enough relative error so that we are
-      // in the regime of convergence.  Then the error estimates will
-      // work
-      Mesh mesh(min_x, max_x,
-                [=](const El::BigFloat &x) {
-                  El::BigFloat f0, f1;
-                  eval(x, f0, f1);
-                  return f0 + optimal * f1;
-                },
-                0.01);
-      new_points.front() = get_new_points(mesh);
-      // std::cout << "new: " << new_points.front() << "\n";
-      scale.front() = max_value(mesh);
     }
   std::cout.precision(precision / 3.3);
   std::cout << "optimal: " << optimal << "\n";
