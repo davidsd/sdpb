@@ -37,7 +37,6 @@ int main(int argc, char **argv)
   std::vector<std::vector<El::BigFloat>> points(scale.size(), {min_x}),
     new_points(scale.size(), {max_x});
 
-  El::BigFloat optimal(0);
   bool has_new_points(true);
   while(has_new_points)
     {
@@ -57,8 +56,8 @@ int main(int argc, char **argv)
             El::BigFloat f0, f1;
             for(auto &point : points.at(index))
               {
-                eval(point, f0, f1);
-                if(f0 + optimal * f1 < tolerance)
+                if(functional.blocks.at(index).eval(point, weights.at(index))
+                   < tolerance)
                   {
                     temp_points.emplace_back(point);
                   }
@@ -87,18 +86,17 @@ int main(int argc, char **argv)
               eval(points.at(index)[point], b(point), A(point, 1));
               A(point, 0) = -A(point, 1);
             }
-          optimal = solve_LP(A, b, c);
+          weights.at(index)[1] = solve_LP(A, b, c);
           std::cout.precision(precision / 3.3);
-          std::cout << "solve: " << points.at(index).size() << " " << optimal
-                    << "\n";
+          std::cout << "solve: " << points.at(index).size() << " "
+                    << weights.at(index)[1] << "\n";
           // 0.01 should be a small enough relative error so that we are
           // in the regime of convergence.  Then the error estimates will
           // work
           Mesh mesh(min_x, max_x,
-                    [=](const El::BigFloat &x) {
-                      El::BigFloat f0, f1;
-                      eval(x, f0, f1);
-                      return f0 + optimal * f1;
+                    [&](const El::BigFloat &x) {
+                      return functional.blocks.at(index).eval(
+                        x, weights.at(index));
                     },
                     0.01);
           new_points.at(index) = get_new_points(mesh);
@@ -108,5 +106,5 @@ int main(int argc, char **argv)
         }
     }
   std::cout.precision(precision / 3.3);
-  std::cout << "optimal: " << optimal << "\n";
+  std::cout << "weights: " << weights << "\n";
 }
