@@ -1,0 +1,39 @@
+Bootstrap: localimage
+From: ./base.sif
+
+%runscript
+sdpb $@
+
+%files
+../ /src
+
+%environment
+export SHELL=/bin/bash
+export SDPB_PVM2SDP=pvm2sdp
+export SDPB_SDPB=sdpb
+source /base/python/bin/activate
+source /usr/share/Modules/init/bash
+module load mpi
+
+
+%labels
+
+%test
+# Container dirs are immutable after bootstrap
+cp -n -r /src/test test
+SDPB_TESTPREFIX=test
+test/run_test.sh
+
+%post
+# HACK: Since the build is in-tree we end up copying various build outputs
+rm -rf /src/singularity
+
+source /usr/share/Modules/init/bash
+module load mpi
+
+source /base/python/bin/activate
+
+cd /src
+CXX=mpicxx ./waf configure --elemental-dir=/usr/local/
+./waf -j$(nproc)
+./waf install
