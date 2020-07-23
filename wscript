@@ -25,7 +25,7 @@ def build(bld):
                         'src/outer/Mesh/ostream.cxx',
                         'src/outer/max_value.cxx',
                         'src/outer/Functional/Functional.cxx',
-                        'src/outer/Functional/eval.cxx'],
+                        'src/outer/Functional/prefactor.cxx'],
                 target='outer',
                 cxxflags=default_flags,
                 use=use_packages

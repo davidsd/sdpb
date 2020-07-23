@@ -15,4 +15,6 @@ struct Functional
   std::vector<El::BigFloat>
   eval(const std::vector<El::BigFloat> &coords,
        const std::vector<std::vector<El::BigFloat>> &optimals);
+
+  El::BigFloat prefactor(const El::BigFloat &x);
 };
