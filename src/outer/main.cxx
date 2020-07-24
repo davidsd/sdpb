@@ -108,8 +108,9 @@ int main(int argc, char **argv)
             }
           num_constraints += points.at(block).size();
         }
-      const size_t num_rows(num_constraints+1),
-      // const size_t num_rows(num_constraints),
+      
+      const size_t num_rows(num_constraints + 1),
+        // const size_t num_rows(num_constraints),
         num_columns(2 * weights.size() + num_constraints + 1);
 
       El::Matrix<El::BigFloat> A(num_rows, num_columns);
@@ -138,12 +139,12 @@ int main(int argc, char **argv)
               ++row;
             }
         }
-      A(num_rows-1,1)=1;
-      A(num_rows-1,2)=1;
-      
+      A(num_rows - 1, 1) = 1;
+      A(num_rows - 1, 2) = 1;
+
       El::Matrix<El::BigFloat> b(num_rows, 1), c(num_columns, 1);
       El::Zero(b);
-      b(num_rows-1,0)=1;
+      b(num_rows - 1, 0) = 1;
       El::Zero(c);
       c(0, 0) = 1;
 
@@ -163,14 +164,13 @@ int main(int argc, char **argv)
 
       solve_LP(A, b, c, weights);
 
-      // std::cout << "weight: "
-      //           << weights << "\n";
+      std::cout << "weight: " << weights << "\n";
       for(size_t block(0); block != num_blocks; ++block)
         {
           // std::cout.precision(precision / 3.3);
           // std::cout << "solve: " << points.at(block).size() << " " << weights
           //           << "\n";
-          
+
           // 0.01 should be a small enough relative error so that we are
           // in the regime of convergence.  Then the error estimates will
           // work
