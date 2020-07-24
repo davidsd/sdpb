@@ -44,20 +44,13 @@
 // => num_rows == num_constraints
 // => num_columns == 2*num_weights + num_constraints + 1
 
-void eval(const El::BigFloat &x, El::BigFloat &f0, El::BigFloat &f1)
-{
-  const El::BigFloat pow2(x * x), pow4(pow2 * pow2);
-  f0 = 1 + pow4;
-  f1 = pow2 + pow4 / 12;
-}
-
 std::vector<El::BigFloat> get_new_points(const Mesh &mesh);
 El::BigFloat max_value(const Mesh &mesh);
 
-void
-solve_LP(const El::Matrix<El::BigFloat> &A, const El::Matrix<El::BigFloat> &b,
-         const El::Matrix<El::BigFloat> &c,
-         std::vector<El::BigFloat> &weights);
+void solve_LP(const El::Matrix<El::BigFloat> &A,
+              const El::Matrix<El::BigFloat> &b,
+              const El::Matrix<El::BigFloat> &c,
+              std::vector<El::BigFloat> &weights);
 
 int main(int argc, char **argv)
 {
