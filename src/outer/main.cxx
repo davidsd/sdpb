@@ -81,27 +81,6 @@ int main(int argc, char **argv)
       size_t num_constraints(0);
       for(size_t block(0); block != num_blocks; ++block)
         {
-          // 0.01 is completely arbitrary.  We want it big enough to not
-          // rule out points that might provide a limit, but not so big to
-          // not rule out any points.
-
-          // For the toy example, this eliminates almost all of the
-          // points.  It feels dangerous.
-          El::BigFloat tolerance(
-            scale.at(block) * Sqrt(Sqrt(El::limits::Epsilon<El::BigFloat>())));
-          {
-            std::vector<El::BigFloat> temp_points;
-            El::BigFloat f0, f1;
-            for(auto &point : points.at(block))
-              {
-                // if(functional.blocks.at(block).eval_weighted(point, weights)
-                //    < tolerance)
-                  {
-                    temp_points.emplace_back(point);
-                  }
-              }
-            std::swap(points.at(block), temp_points);
-          }
           for(auto &point : new_points.at(block))
             {
               points.at(block).emplace_back(point);
