@@ -88,8 +88,7 @@ int main(int argc, char **argv)
           num_constraints += points.at(block).size();
         }
       
-      const size_t num_rows(num_constraints + 1),
-        // const size_t num_rows(num_constraints),
+      const size_t num_rows(num_constraints),
         num_columns(2 * weights.size() + num_constraints + 1);
 
       El::Matrix<El::BigFloat> A(num_rows, num_columns);
@@ -118,12 +117,9 @@ int main(int argc, char **argv)
               ++row;
             }
         }
-      A(num_rows - 1, 1) = 1;
-      A(num_rows - 1, 2) = 1;
 
       El::Matrix<El::BigFloat> b(num_rows, 1), c(num_columns, 1);
       El::Zero(b);
-      b(num_rows - 1, 0) = 1;
       El::Zero(c);
       c(0, 0) = 1;
 
