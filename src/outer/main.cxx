@@ -58,20 +58,50 @@ int main(int argc, char **argv)
   const int64_t precision(1024);
   El::gmp::SetPrecision(precision);
 
-  Functional functional("test/toy_polys", "", false);
+  // Functional functional("polys", "test/single_corr_poles");
+  // Functional functional("test/single_corr_polys", "test/single_corr_poles");
+  Functional functional("test/toy_polys", "");
   size_t num_weights(functional.blocks.at(0).polys.size());
+
+  // for(auto &pole: functional.blocks[0].poles)
+  //   {
+  //     std::cout << "pole: " << pole << "\n";
+  //   }
+
+  // std::cout << "prefactor: "
+  //           << (functional.prefactor(1.44) *
+  //           functional.blocks[0].pole_prefactor(1.44)) << " "
+  //           << functional.blocks.at(0).polys.at(0)(1.44) << " "
+  //           << "\n";
+  // // std::cout << functional.blocks.at(0).polys.at(0) << "\n";
+
+  // for(size_t index(0); index<functional.blocks[0].polys.size(); ++index)
+  //   {
+  //     std::cout << index << " "
+  //               << (functional.blocks.at(0).polys.at(index)(0.0)
+  //                   * functional.prefactor(0.0)
+  //                   * functional.blocks[0].pole_prefactor(0.0))
+  //               << "\n";
+  //   }
+  // exit(0);
 
   const size_t num_blocks(functional.blocks.size());
   const El::BigFloat min_x(0.0), max_x(100.0);
   std::vector<El::BigFloat> scale(num_blocks);
   std::vector<El::BigFloat> weights(num_weights, 1);
+
+  const El::BigFloat prefactor(functional.prefactor(max_x));
   for(size_t block(0); block != num_blocks; ++block)
     {
-      scale[block]
-        = Abs(functional.blocks[block].eval_weighted(max_x, weights));
+      scale[block] = Abs(
+        prefactor * functional.blocks[block].eval_weighted(max_x, weights));
     }
 
-  std::vector<std::vector<El::BigFloat>> points(num_blocks, {min_x}),
+  // const El::BigFloat scalar_gap(1.44);
+  // std::vector<std::vector<El::BigFloat>> points(num_blocks,
+  //                                               {min_x, scalar_gap}),
+  std::vector<std::vector<El::BigFloat>> points(num_blocks,
+                                                {min_x}),
     new_points(num_blocks, {max_x});
 
   bool has_new_points(true);
@@ -87,7 +117,7 @@ int main(int argc, char **argv)
             }
           num_constraints += points.at(block).size();
         }
-      
+
       const size_t num_rows(num_constraints),
         num_columns(2 * weights.size() + num_constraints + 1);
 
@@ -106,12 +136,16 @@ int main(int argc, char **argv)
               A(row, 2 * weights.size() + row + 1) = -1;
 
               const El::BigFloat &x(points.at(block)[point]);
+              const El::BigFloat prefactor(
+                functional.prefactor(x)
+                * functional.blocks.at(block).pole_prefactor(x));
               for(size_t poly_index(0);
                   poly_index != functional.blocks.at(block).polys.size();
                   ++poly_index)
                 {
                   A(row, 2 * poly_index + 1)
-                    = functional.blocks.at(block).polys.at(poly_index)(x);
+                    = prefactor
+                      * functional.blocks.at(block).polys.at(poly_index)(x);
                   A(row, 2 * poly_index + 2) = -A(row, 2 * poly_index + 1);
                 }
               ++row;
@@ -151,12 +185,13 @@ int main(int argc, char **argv)
           // work
           Mesh mesh(min_x, max_x,
                     [&](const El::BigFloat &x) {
-                      return functional.blocks.at(block).eval_weighted(
-                        x, weights);
+                      return functional.prefactor(x)
+                             * functional.blocks.at(block).eval_weighted(
+                                 x, weights);
                     },
                     0.01);
           new_points.at(block) = get_new_points(mesh);
-          std::cout << "new: " << new_points.at(block) << "\n";
+          std::cout << "new: " << block << " " << new_points.at(block) << "\n";
           scale.at(block) = max_value(mesh);
           has_new_points = has_new_points || !new_points.at(block).empty();
         }
