@@ -10,8 +10,7 @@ struct Functional
   bool has_prefactor;
 
   Functional(const boost::filesystem::path &polynomials_path,
-             const boost::filesystem::path &poles_path,
-             const bool &Has_prefactor);
+             const boost::filesystem::path &poles_path);
   std::vector<El::BigFloat>
   eval(const std::vector<El::BigFloat> &coords,
        const std::vector<std::vector<El::BigFloat>> &optimals);
