@@ -14,5 +14,5 @@ El::BigFloat Functional::prefactor(const El::BigFloat &x)
   set_stream_precision(ss);
   ss << x;
   Boost_Float x_mpfr(ss.str());
-  return to_string(pow(4 * (3 - sqrt(Boost_Float(2.0))), x_mpfr));
+  return to_string(pow(4 * (3 - 2 * sqrt(Boost_Float(2.0))), x_mpfr));
 }
