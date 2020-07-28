@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Polynomial.hxx"
-#include "../ostream_vector.hxx"
+#include "../ostream_sequence.hxx"
 
 struct Block
 {

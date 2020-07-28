@@ -1,7 +1,7 @@
 #include "Mesh.hxx"
 #include "Functional.hxx"
 
-#include "../ostream_vector.hxx"
+#include "../ostream_sequence.hxx"
 
 // We convert the optimization problem into a regular linear
 // programming problem.
