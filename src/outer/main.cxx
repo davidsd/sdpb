@@ -58,28 +58,25 @@ int main(int argc, char **argv)
   const int64_t precision(256);
   El::gmp::SetPrecision(precision);
 
-  // Functional functional("test/single_corr_polys", "test/single_corr_poles");
-  Functional functional("test/toy_polys", "");
+  Functional functional("test/single_corr_polys", "test/single_corr_poles");
+  // Functional functional("test/toy_polys", "");
   size_t num_weights(functional.blocks.at(0).polys.size());
 
   const size_t num_blocks(functional.blocks.size());
-  const El::BigFloat min_x(0.0), max_x(100.0);
-  std::vector<El::BigFloat> scale(num_blocks);
   std::vector<El::BigFloat> weights(num_weights, 1);
 
-  const El::BigFloat prefactor(functional.prefactor(max_x));
-  for(size_t block(0); block != num_blocks; ++block)
-    {
-      scale[block] = Abs(
-        prefactor * functional.blocks[block].eval_weighted(max_x, weights));
-    }
+  std::vector<std::set<El::BigFloat>> points(num_blocks);
+  std::vector<std::vector<El::BigFloat>> new_points(num_blocks);
 
   const El::BigFloat scalar_gap(1.44);
-  // std::vector<std::vector<El::BigFloat>> points(num_blocks,
-  //                                               {min_x, scalar_gap}),
-    std::vector<std::vector<El::BigFloat>> points(num_blocks,
-                                                  {min_x}),
-    new_points(num_blocks, {max_x});
+  const int64_t max_twist(50), spacetime_dim(3);
+  points.at(0).emplace(scalar_gap);
+  new_points.at(0).emplace_back(max_twist);
+  for(size_t block(1); block < num_blocks; ++block)
+    {
+      points.at(block).emplace(2 * block + spacetime_dim - 2);
+      new_points.at(block).emplace_back(2 * block + max_twist);
+    }
 
   bool has_new_points(true);
   while(has_new_points)
@@ -90,10 +87,9 @@ int main(int argc, char **argv)
         {
           for(auto &point : new_points.at(block))
             {
-              points.at(block).emplace_back(point);
+              points.at(block).emplace(point);
             }
           num_constraints += points.at(block).size();
-          std::sort(points.at(block).begin(), points.at(block).end());
           std::cout << "points: " << block << " " << points.at(block) << "\n";
         }
 
@@ -107,14 +103,13 @@ int main(int argc, char **argv)
       for(size_t block(0); block != num_blocks; ++block)
         {
           // One constraint per point
-          for(size_t point(0); point != points.at(block).size(); ++point)
+          for(auto &x : points.at(block))
             {
               // delta term
               A(row, 0) = 1;
               // slack term
               A(row, 2 * weights.size() + row + 1) = -1;
 
-              const El::BigFloat &x(points.at(block)[point]);
               const El::BigFloat prefactor(
                 functional.prefactor(x)
                 * functional.blocks.at(block).pole_prefactor(x));
@@ -141,53 +136,24 @@ int main(int argc, char **argv)
       A(num_rows - 1, 2) = -1;
       b(num_rows - 1) = 1;
 
-      // std::cout << "A: "
-      //           << A.Height() << " "
-      //           << A.Width() << " "
-      //           << b.Height() << " "
-      //           << b.Width() << " "
-      //           << c.Height() << " "
-      //           << c.Width() << " "
-      //           << "\n";
-
-      // for(size_t row(0); row!=A.Height(); ++row)
-      // for(size_t column(0); column!=A.Width(); ++column)
-      //   {
-      //     size_t row(0);
-      //     std::cout << "A: "
-      //               << row << " "
-      //               << column << " "
-      //               << A(row,column) << "\n";
-      //   }
-      // El::Print(A, "A");
-      // El::Print(b, "\nb");
-      // El::Print(c, "\nc");
-      // std::cout << "\n";
-
       solve_LP(A, b, c, weights);
 
       std::cout << "weight: " << weights << "\n";
       for(size_t block(0); block != num_blocks; ++block)
         {
-          // std::cout.precision(precision / 3.3);
-          // std::cout << "solve: " << points.at(block).size() << " " << weights
-          //           << "\n";
-
           // 0.01 should be a small enough relative error so that we are
           // in the regime of convergence.  Then the error estimates will
           // work
-          Mesh mesh(min_x, max_x,
-                    [&](const El::BigFloat &x) {
-                      return functional.prefactor(x)
-                             * functional.blocks.at(block).eval_weighted(
-                                 x, weights);
-                    },
-                    0.01);
+          Mesh mesh(
+            *(points.at(block).begin()), *(points.at(block).rbegin()),
+            [&](const El::BigFloat &x) {
+              return functional.prefactor(x)
+                     * functional.blocks.at(block).eval_weighted(x, weights);
+            },
+            0.01);
           new_points.at(block) = get_new_points(mesh);
-          std::cout.precision(precision/3.3);
-          std::cout << "new: " << block << " " << new_points.at(block) << "\n";
-          std::cout.precision(6);
-          scale.at(block) = max_value(mesh);
+          // std::cout << "new: " << block << " " << new_points.at(block) <<
+          // "\n";
           has_new_points = has_new_points || !new_points.at(block).empty();
         }
     }
