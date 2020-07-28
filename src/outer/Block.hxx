@@ -39,7 +39,10 @@ struct Block
   {
     if(weights.size() != polys.size())
       {
-        throw std::runtime_error("INTERNAL ERROR mismatch");
+        throw std::runtime_error("INTERNAL ERROR mismatch: "
+                                 + std::to_string(weights.size())
+                                 + " "
+                                 + std::to_string(polys.size()));
       }
 
     El::BigFloat result(0);
