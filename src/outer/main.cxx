@@ -75,10 +75,10 @@ int main(int argc, char **argv)
     }
 
   const El::BigFloat scalar_gap(1.44);
-  std::vector<std::vector<El::BigFloat>> points(num_blocks,
-                                                {min_x, scalar_gap}),
-    // std::vector<std::vector<El::BigFloat>> points(num_blocks,
-    //                                               {min_x}),
+  // std::vector<std::vector<El::BigFloat>> points(num_blocks,
+  //                                               {min_x, scalar_gap}),
+    std::vector<std::vector<El::BigFloat>> points(num_blocks,
+                                                  {min_x}),
     new_points(num_blocks, {max_x});
 
   bool has_new_points(true);
