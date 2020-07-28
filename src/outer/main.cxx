@@ -58,32 +58,9 @@ int main(int argc, char **argv)
   const int64_t precision(256);
   El::gmp::SetPrecision(precision);
 
-  // Functional functional("polys", "test/single_corr_poles");
-  Functional functional("test/single_corr_polys", "test/single_corr_poles");
-  // Functional functional("test/toy_polys", "");
+  // Functional functional("test/single_corr_polys", "test/single_corr_poles");
+  Functional functional("test/toy_polys", "");
   size_t num_weights(functional.blocks.at(0).polys.size());
-
-  // for(auto &pole: functional.blocks[0].poles)
-  //   {
-  //     std::cout << "pole: " << pole << "\n";
-  //   }
-
-  // std::cout << "prefactor: "
-  //           << (functional.prefactor(1.44) *
-  //           functional.blocks[0].pole_prefactor(1.44)) << " "
-  //           << functional.blocks.at(0).polys.at(0)(1.44) << " "
-  //           << "\n";
-  // // std::cout << functional.blocks.at(0).polys.at(0) << "\n";
-
-  // for(size_t index(0); index<functional.blocks[0].polys.size(); ++index)
-  //   {
-  //     std::cout << index << " "
-  //               << (functional.blocks.at(0).polys.at(index)(0.0)
-  //                   * functional.prefactor(0.0)
-  //                   * functional.blocks[0].pole_prefactor(0.0))
-  //               << "\n";
-  //   }
-  // exit(0);
 
   const size_t num_blocks(functional.blocks.size());
   const El::BigFloat min_x(0.0), max_x(100.0);
