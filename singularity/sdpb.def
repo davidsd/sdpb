@@ -1,39 +1,76 @@
-Bootstrap: localimage
-From: ./base.sif
+Bootstrap: docker
+From: debian:10
 
 %runscript
-sdpb $@
+    sdpb $@
 
 %files
-../ /src
+    ../ /src
 
 %environment
-export SHELL=/bin/bash
-export SDPB_PVM2SDP=pvm2sdp
-export SDPB_SDPB=sdpb
-source /base/python/bin/activate
-source /usr/share/Modules/init/bash
-module load mpi
-
+    export SHELL=/bin/bash
+    export SDPB_PVM2SDP=pvm2sdp
+    export SDPB_SDPB=sdpb
 
 %labels
 
 %test
-# Container dirs are immutable after bootstrap
-cp -n -r /src/test test
-SDPB_TESTPREFIX=test
-test/run_test.sh
+    # Container dirs are immutable after bootstrap so we use the current working directory
+    cp -n -r /src/test test
+    SDPB_TESTPREFIX=test
+    test/run_test.sh
 
 %post
-# HACK: Since the build is in-tree we end up copying various build outputs
-rm -rf /src/singularity
+    # HACK: Since the build is in-tree we end up copying various build outputs
+    rm -rf /src/singularity
 
-source /usr/share/Modules/init/bash
-module load mpi
+    #  ========= Repo Software =========
 
-source /base/python/bin/activate
+    echo "deb http://mirrors.kernel.org/debian/ buster main non-free contrib" > /etc/apt/sources.list
+    echo "deb http://security.debian.org/debian-security buster/updates main contrib non-free" >> /etc/apt/sources.list
+    apt update && apt -y dist-upgrade
+    apt -y install openmpi-bin libopenmpi-dev libgmp-dev libmpfr-dev libmpfrc++-dev libboost-all-dev g++ cmake libopenblas-dev libxml2-dev git libmetis-dev pkg-config libeigen3-dev libtrilinos-sacado-dev libtrilinos-kokkos-dev libtrilinos-teuchos-dev rapidjson-dev
 
-cd /src
-CXX=mpicxx ./waf configure --elemental-dir=/usr/local/
-./waf -j$(nproc)
-./waf install
+
+    # ========= Source Builds =========
+    mkdir -p /base/scratch
+
+    # ========== Elemental =========
+
+    cd /base/scratch
+
+    export CXX=mpicxx
+    export CC=mpicc
+    git clone https://gitlab.com/bootstrapcollaboration/elemental.git
+
+    mkdir -p elemental/build
+    cd elemental/build
+
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DCMAKE_INSTALL_PREFIX=/usr/local/
+    make -j$(nproc)
+    make install
+
+    # ========== Scalar Blocks =========
+    # Not necessary but bonus
+
+    cd /base/scratch
+
+    git clone https://gitlab.com/bootstrapcollaboration/scalar_blocks.git
+    cd scalar_blocks
+    CXX=mpicxx ./waf configure --prefix=/usr/local
+    ./waf install
+
+    # ======== Cleanup ======
+
+    apt clean all
+    rm -rf /var/cache/yum
+    rm -rf /base/scratch
+
+    # ======== SDPB Build ========
+
+    cd /src
+    CXX=mpicxx ./waf configure --elemental-dir=/usr/local/ --prefix=/usr/local
+    ./waf -j$(nproc)
+    ./waf install
+
+
