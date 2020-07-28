@@ -55,12 +55,12 @@ void solve_LP(const El::Matrix<El::BigFloat> &A,
 int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
-  const int64_t precision(1024);
+  const int64_t precision(256);
   El::gmp::SetPrecision(precision);
 
   // Functional functional("polys", "test/single_corr_poles");
-  // Functional functional("test/single_corr_polys", "test/single_corr_poles");
-  Functional functional("test/toy_polys", "");
+  Functional functional("test/single_corr_polys", "test/single_corr_poles");
+  // Functional functional("test/toy_polys", "");
   size_t num_weights(functional.blocks.at(0).polys.size());
 
   // for(auto &pole: functional.blocks[0].poles)
@@ -97,11 +97,11 @@ int main(int argc, char **argv)
         prefactor * functional.blocks[block].eval_weighted(max_x, weights));
     }
 
-  // const El::BigFloat scalar_gap(1.44);
-  // std::vector<std::vector<El::BigFloat>> points(num_blocks,
-  //                                               {min_x, scalar_gap}),
+  const El::BigFloat scalar_gap(1.44);
   std::vector<std::vector<El::BigFloat>> points(num_blocks,
-                                                {min_x}),
+                                                {min_x, scalar_gap}),
+    // std::vector<std::vector<El::BigFloat>> points(num_blocks,
+    //                                               {min_x}),
     new_points(num_blocks, {max_x});
 
   bool has_new_points(true);
@@ -116,6 +116,8 @@ int main(int argc, char **argv)
               points.at(block).emplace_back(point);
             }
           num_constraints += points.at(block).size();
+          std::sort(points.at(block).begin(), points.at(block).end());
+          std::cout << "points: " << block << " " << points.at(block) << "\n";
         }
 
       const size_t num_rows(num_constraints),
@@ -166,6 +168,15 @@ int main(int argc, char **argv)
       //           << c.Width() << " "
       //           << "\n";
 
+      // for(size_t row(0); row!=A.Height(); ++row)
+      // for(size_t column(0); column!=A.Width(); ++column)
+      //   {
+      //     size_t row(0);
+      //     std::cout << "A: "
+      //               << row << " "
+      //               << column << " "
+      //               << A(row,column) << "\n";
+      //   }
       // El::Print(A, "A");
       // El::Print(b, "\nb");
       // El::Print(c, "\nc");
@@ -191,7 +202,9 @@ int main(int argc, char **argv)
                     },
                     0.01);
           new_points.at(block) = get_new_points(mesh);
+          std::cout.precision(precision/3.3);
           std::cout << "new: " << block << " " << new_points.at(block) << "\n";
+          std::cout.precision(6);
           scale.at(block) = max_value(mesh);
           has_new_points = has_new_points || !new_points.at(block).empty();
         }
