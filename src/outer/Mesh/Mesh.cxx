@@ -20,7 +20,7 @@ Mesh::Mesh(const El::BigFloat &x_0, const El::BigFloat &x_2,
       f({f_0, fn(x[1]), f_2, fn(x[3]), f_4})
 {
   // Stop refining if we can not really resolve differences in the coordinates
-  if(Abs(x[0] - x[1]) < Sqrt(El::limits::Epsilon<El::BigFloat>()))
+  if(Abs(x[0] - x[1]) < Sqrt(Sqrt(El::limits::Epsilon<El::BigFloat>())))
     {
       return;
     }
