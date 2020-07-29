@@ -5,7 +5,7 @@ From: debian:10
     sdpb $@
 
 %files
-    ../ /src
+    ../ /usr/local/src/sdpb
 
 %environment
     export SHELL=/bin/bash
@@ -16,7 +16,7 @@ From: debian:10
 
 %test
     # Container dirs are immutable after bootstrap so we use the current working directory
-    cp -n -r /src/test test
+    cp -n -r /usr/local/src/sdpb/test test
     SDPB_TESTPREFIX=test
     test/run_test.sh
 
@@ -33,11 +33,11 @@ From: debian:10
 
 
     # ========= Source Builds =========
-    mkdir -p /base/scratch
+    mkdir -p /local/src
 
     # ========== Elemental =========
 
-    cd /base/scratch
+    cd /local/src/
 
     export CXX=mpicxx
     export CC=mpicc
@@ -53,7 +53,7 @@ From: debian:10
     # ========== Scalar Blocks =========
     # Not necessary but bonus
 
-    cd /base/scratch
+    cd /usr/local/src/
 
     git clone https://gitlab.com/bootstrapcollaboration/scalar_blocks.git
     cd scalar_blocks
@@ -68,7 +68,7 @@ From: debian:10
 
     # ======== SDPB Build ========
 
-    cd /src
+    cd /usr/local/src/sdpb
     CXX=mpicxx ./waf configure --elemental-dir=/usr/local/ --prefix=/usr/local
     ./waf -j$(nproc)
     ./waf install
