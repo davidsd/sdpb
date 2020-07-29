@@ -94,7 +94,7 @@ int main(int argc, char **argv)
           std::cout << "points: " << block << " " << points.at(block) << "\n";
         }
 
-      const size_t num_rows(num_constraints + 1),
+      const size_t num_rows(num_constraints),
         num_columns(2 * weights.size() + num_constraints + 1);
 
       El::Matrix<El::BigFloat> A(num_rows, num_columns);
@@ -131,11 +131,6 @@ int main(int argc, char **argv)
       El::Zero(b);
       El::Zero(c);
       c(0, 0) = 1;
-
-      // Set the first coefficient to 1
-      A(num_rows - 1, 1) = 1;
-      A(num_rows - 1, 2) = -1;
-      b(num_rows - 1) = 1;
 
       solve_LP(A, b, c, weights);
 
