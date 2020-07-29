@@ -9,6 +9,7 @@ struct Functional
   std::vector<Block> blocks;
   bool has_prefactor;
 
+  Functional(const boost::filesystem::path &polynomials_path);
   Functional(const boost::filesystem::path &polynomials_path,
              const boost::filesystem::path &poles_path);
   std::vector<El::BigFloat>

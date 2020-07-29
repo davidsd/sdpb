@@ -60,7 +60,7 @@ int main(int argc, char **argv)
   El::gmp::SetPrecision(precision);
 
   Functional functional("test/single_corr_polys", "test/single_corr_poles");
-  // Functional functional("test/toy_polys", "");
+  // Functional functional("test/toy_polys");
   size_t num_weights(functional.blocks.at(0).polys.size());
 
   const size_t num_blocks(functional.blocks.size());
