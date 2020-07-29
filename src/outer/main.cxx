@@ -70,6 +70,7 @@ int main(int argc, char **argv)
 
   const El::BigFloat scalar_gap(1.44);
   const int64_t max_twist(50), spacetime_dim(3);
+  points.at(0).emplace(0);
   points.at(0).emplace(scalar_gap);
   new_points.at(0).emplace_back(max_twist);
   for(size_t block(1); block < num_blocks; ++block)
@@ -141,11 +142,13 @@ int main(int argc, char **argv)
       std::cout << "weight: " << weights << "\n";
       for(size_t block(0); block != num_blocks; ++block)
         {
+          const El::BigFloat min_x(block==0 ? scalar_gap : *(points.at(block).begin()));
           // 0.01 should be a small enough relative error so that we are
           // in the regime of convergence.  Then the error estimates will
           // work
           Mesh mesh(
-            *(points.at(block).begin()), *(points.at(block).rbegin()),
+            min_x, *(points.at(block).rbegin()),
+            // *(points.at(block).begin()), *(points.at(block).rbegin()),
             [&](const El::BigFloat &x) {
               return functional.prefactor(x)
                      * functional.blocks.at(block).eval_weighted(x, weights);
