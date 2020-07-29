@@ -39,7 +39,8 @@
 //
 // There is a constraint for every point that is sampled.  At the
 // beginning, we sample the min and max for each block, so there are
-// 2*num_blocks constraints.  In general
+// 2*num_blocks constraints.  For the single correlator example, there
+// is an additional constraint on the first block at x=0.  In general
 //
 // => num_rows == num_constraints
 // => num_columns == 2*num_weights + num_constraints + 1
