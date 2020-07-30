@@ -59,12 +59,12 @@ int main(int argc, char **argv)
   const int64_t precision(64);
   El::gmp::SetPrecision(precision);
 
-  // {
-  //   Functional functional("test/single_corr_polys", "test/single_corr_poles");
-  //   const bool is_single_corr_feasible(is_feasible(functional));
-  //   std::cout << "feasible: " << std::boolalpha << is_single_corr_feasible
-  //             << "\n";
-  // }
+  {
+    Functional functional("test/single_corr_polys", "test/single_corr_poles");
+    const bool is_single_corr_feasible(is_feasible(functional));
+    std::cout << "feasible: " << std::boolalpha << is_single_corr_feasible
+              << "\n";
+  }
   {
     Functional functional("test/toy_polys");
     std::vector<El::BigFloat> objective(load_vector("test/toy_objective"));

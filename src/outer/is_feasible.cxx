@@ -54,7 +54,7 @@ bool is_feasible(const Functional &functional)
           for(auto &x : points.at(block))
             {
               // delta term
-              A(row, 0) = 1;
+              A(row, 2 * weights.size()) = 1;
               // slack term
               A(row, 2 * weights.size() + row + 1) = -1;
 
@@ -65,10 +65,10 @@ bool is_feasible(const Functional &functional)
                   poly_index != functional.blocks.at(block).polys.size();
                   ++poly_index)
                 {
-                  A(row, 2 * poly_index + 1)
+                  A(row, 2 * poly_index)
                     = prefactor
                       * functional.blocks.at(block).polys.at(poly_index)(x);
-                  A(row, 2 * poly_index + 2) = -A(row, 2 * poly_index + 1);
+                  A(row, 2 * poly_index + 1) = -A(row, 2 * poly_index);
                 }
               ++row;
             }
@@ -77,7 +77,7 @@ bool is_feasible(const Functional &functional)
       El::Matrix<El::BigFloat> b(num_rows, 1), c(num_columns, 1);
       El::Zero(b);
       El::Zero(c);
-      c(0, 0) = 1;
+      c(2 * weights.size(), 0) = 1;
 
       solve_LP(A, b, c, weights);
 
