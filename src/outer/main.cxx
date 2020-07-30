@@ -56,7 +56,7 @@ compute_optimal(const Functional &functional,
 int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
-  const int64_t precision(64);
+  const int64_t precision(256);
   El::gmp::SetPrecision(precision);
 
   {
