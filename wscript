@@ -20,9 +20,10 @@ def build(bld):
     
     bld.program(source=['src/outer/main.cxx',
                         'src/outer/is_feasible.cxx',
+                        'src/outer/compute_optimal.cxx',
                         'src/outer/solve_LP.cxx',
                         'src/outer/get_new_points.cxx',
-                        'src/outer/load_objective.cxx',
+                        'src/outer/load_vector.cxx',
                         'src/outer/Mesh/Mesh.cxx',
                         'src/outer/Mesh/ostream.cxx',
                         'src/outer/Functional/Functional.cxx',

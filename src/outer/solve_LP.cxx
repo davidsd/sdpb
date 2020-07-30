@@ -11,10 +11,13 @@ void solve_LP(const El::Matrix<El::BigFloat> &A,
   // ctrl.mehrotraCtrl.maxIts=10;
   El::LP(A, b, c, x, y, z, ctrl);
 
+  // std::cout << "max min: " << x(0) << "\n";
   // W = w_+ - w_-
   for(size_t weight_index(0); weight_index != weights.size(); ++weight_index)
     {
       weights[weight_index]
-        = x(2 * weight_index + 1, 0) - x(2 * weight_index + 2, 0);
+        = x(2 * weight_index, 0) - x(2 * weight_index + 1, 0);
+      // weights[weight_index]
+      //   = x(2 * weight_index + 1, 0) - x(2 * weight_index + 2, 0);
     }
 }

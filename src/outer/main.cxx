@@ -45,33 +45,39 @@
 // => num_rows == num_constraints
 // => num_columns == 2*num_weights + num_constraints + 1
 
+std::vector<El::BigFloat>
+load_vector(const boost::filesystem::path &vector_path);
 bool is_feasible(const Functional &functional);
+std::vector<El::BigFloat>
+compute_optimal(const Functional &functional,
+                const std::vector<El::BigFloat> &normalization,
+                const std::vector<El::BigFloat> &objective);
 
 int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
-  const int64_t precision(256);
+  const int64_t precision(64);
   El::gmp::SetPrecision(precision);
 
-  {
-    Functional functional("test/single_corr_polys", "test/single_corr_poles");
-    const bool is_single_corr_feasible(is_feasible(functional));
-    std::cout << "feasible: "
-              << std::boolalpha
-              << is_single_corr_feasible
-              << "\n";
-  }
   // {
-  //   Functional functional("test/toy_polys");
-  //   std::vector<El::BigFloat> objective(load_objective("test/toy_objective"));
-  //   std::vector<El::BigFloat> weights(compute_optimal(functional,objective));
-  //   El::BigFloat optimal(0);
-  //   for(size_t index(0); index<objective.size(); ++index)
-  //     {
-  //       optimal += objective[index] * weights[index];
-  //     }
-  //   std::cout << "optimal: "
-  //             << optimal << " "
-  //             << weights << "\n";
+  //   Functional functional("test/single_corr_polys", "test/single_corr_poles");
+  //   const bool is_single_corr_feasible(is_feasible(functional));
+  //   std::cout << "feasible: " << std::boolalpha << is_single_corr_feasible
+  //             << "\n";
   // }
+  {
+    Functional functional("test/toy_polys");
+    std::vector<El::BigFloat> objective(load_vector("test/toy_objective"));
+    std::vector<El::BigFloat> normalization(
+      load_vector("test/toy_normalization"));
+    std::vector<El::BigFloat> weights(
+      compute_optimal(functional, normalization, objective));
+    El::BigFloat optimal(0);
+    for(size_t index(0); index < objective.size(); ++index)
+      {
+        optimal += objective[index] * weights[index];
+      }
+    std::cout.precision(precision / 3.3);
+    std::cout << "optimal: " << optimal << " " << weights << "\n";
+  }
 }

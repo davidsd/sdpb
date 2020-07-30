@@ -1,5 +1,10 @@
+#include "Functional.hxx"
+#include "get_new_points.hxx"
+#include "solve_LP.hxx"
+
 std::vector<El::BigFloat>
 compute_optimal(const Functional &functional,
+                const std::vector<El::BigFloat> &normalization,
                 const std::vector<El::BigFloat> &objective)
 {
   size_t num_weights(functional.blocks.at(0).polys.size());
@@ -10,15 +15,12 @@ compute_optimal(const Functional &functional,
   std::vector<std::set<El::BigFloat>> points(num_blocks);
   std::vector<std::vector<El::BigFloat>> new_points(num_blocks);
 
-  const El::BigFloat scalar_gap(1.44);
-  const int64_t max_twist(50), spacetime_dim(3);
-  points.at(0).emplace(0);
-  points.at(0).emplace(scalar_gap);
-  new_points.at(0).emplace_back(max_twist);
-  for(size_t block(1); block < num_blocks; ++block)
+  std::cout << "blocks: " << num_blocks << "\n";
+  const El::BigFloat min_x(0), max_x(10);
+  for(size_t block(0); block < num_blocks; ++block)
     {
-      points.at(block).emplace(2 * block + spacetime_dim - 2);
-      new_points.at(block).emplace_back(2 * block + max_twist);
+      points.at(block).emplace(min_x);
+      new_points.at(block).emplace_back(max_x);
     }
 
   bool has_new_points(true);
@@ -37,7 +39,7 @@ compute_optimal(const Functional &functional,
         }
 
       std::cout << "num_constraints: " << num_constraints << "\n";
-      const size_t num_rows(num_constraints),
+      const size_t num_rows(num_constraints + 1),
         num_columns(2 * weights.size() + num_constraints);
 
       El::Matrix<El::BigFloat> A(num_rows, num_columns);
@@ -68,27 +70,39 @@ compute_optimal(const Functional &functional,
             }
         }
 
-      El::Matrix<El::BigFloat> b(num_rows, 1), c(num_columns, 1);
+      for(size_t index(0); index != normalization.size(); ++index)
+        {
+          A(num_rows - 1, 2 * index) = normalization[index];
+          A(num_rows - 1, 2 * index + 1) = -normalization[index];
+        }
+
+      El::Matrix<El::BigFloat> b(num_rows, 1);
       El::Zero(b);
+      b(num_rows - 1, 0) = 1;
+
+      El::Matrix<El::BigFloat> c(num_columns, 1);
       El::Zero(c);
       for(size_t index(0); index != objective.size(); ++index)
         {
-          c(2 * index, 0) = objective[index];
-          c(2 * index + 1, 0) = -objective[index];
+          c(2 * index, 0) = -objective[index];
+          c(2 * index + 1, 0) = objective[index];
         }
 
+      // El::Print(A,"A");
+      // El::Print(b,"\nb");
+      // El::Print(c,"\nc");
+      // std::cout << "\n";
+      
       solve_LP(A, b, c, weights);
 
       // std::cout << "weight: " << weights << "\n";
       for(size_t block(0); block != num_blocks; ++block)
         {
-          const El::BigFloat min_x(block == 0 ? scalar_gap
-                                              : *(points.at(block).begin()));
           // 0.01 should be a small enough relative error so that we are
           // in the regime of convergence.  Then the error estimates will
           // work
           Mesh mesh(
-            min_x, *(points.at(block).rbegin()),
+            *(points.at(block).begin()), *(points.at(block).rbegin()),
             // *(points.at(block).begin()), *(points.at(block).rbegin()),
             [&](const El::BigFloat &x) {
               return functional.prefactor(x)
@@ -103,4 +117,5 @@ compute_optimal(const Functional &functional,
     }
   // std::cout.precision(precision / 3.3);
   std::cout << "weights: " << weights << "\n";
+  return weights;
 }
