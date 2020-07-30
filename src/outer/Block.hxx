@@ -24,7 +24,7 @@ struct Block
     polys[poly_index].coefficients[degree_index] = coefficient_string;
   }
 
-  El::BigFloat pole_prefactor(const El::BigFloat &x)
+  El::BigFloat pole_prefactor(const El::BigFloat &x) const
   {
     El::BigFloat pole_product(1);
     for(auto &pole : poles)
@@ -35,13 +35,12 @@ struct Block
   }
 
   El::BigFloat eval_weighted(const El::BigFloat &x,
-                             const std::vector<El::BigFloat> &weights)
+                             const std::vector<El::BigFloat> &weights) const
   {
     if(weights.size() != polys.size())
       {
         throw std::runtime_error("INTERNAL ERROR mismatch: "
-                                 + std::to_string(weights.size())
-                                 + " "
+                                 + std::to_string(weights.size()) + " "
                                  + std::to_string(polys.size()));
       }
 
@@ -58,7 +57,7 @@ struct Block
   }
 };
 
-inline std::ostream & operator<<(std::ostream &os, const Block &block)
+inline std::ostream &operator<<(std::ostream &os, const Block &block)
 {
   os << block.polys;
   return os;

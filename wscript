@@ -19,16 +19,15 @@ def build(bld):
     use_packages=['cxx17','boost','gmpxx','mpfr','elemental','libxml2', 'rapidjson']
     
     bld.program(source=['src/outer/main.cxx',
+                        'src/outer/is_feasible.cxx',
                         'src/outer/solve_LP.cxx',
                         'src/outer/get_new_points.cxx',
+                        'src/outer/load_objective.cxx',
                         'src/outer/Mesh/Mesh.cxx',
                         'src/outer/Mesh/ostream.cxx',
-                        'src/outer/max_value.cxx',
                         'src/outer/Functional/Functional.cxx',
                         'src/outer/Functional/prefactor.cxx'],
                 target='outer',
                 cxxflags=default_flags,
                 use=use_packages
                 )
-
-    

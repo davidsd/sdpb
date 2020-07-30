@@ -3,7 +3,7 @@
 
 #include "../../sdp2input/Boost_Float.hxx"
 
-El::BigFloat Functional::prefactor(const El::BigFloat &x)
+El::BigFloat Functional::prefactor(const El::BigFloat &x) const
 {
   if(!has_prefactor)
     {

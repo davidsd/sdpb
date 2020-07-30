@@ -14,7 +14,7 @@ struct Functional
              const boost::filesystem::path &poles_path);
   std::vector<El::BigFloat>
   eval(const std::vector<El::BigFloat> &coords,
-       const std::vector<std::vector<El::BigFloat>> &optimals);
+       const std::vector<std::vector<El::BigFloat>> &optimals) const;
 
-  El::BigFloat prefactor(const El::BigFloat &x);
+  El::BigFloat prefactor(const El::BigFloat &x) const;
 };
