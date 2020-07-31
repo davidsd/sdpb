@@ -87,11 +87,6 @@ compute_optimal(const Functional &functional,
           c(2 * index, 0) = -objective[index];
           c(2 * index + 1, 0) = objective[index];
         }
-
-      // El::Print(A,"A");
-      // El::Print(b,"\nb");
-      // El::Print(c,"\nc");
-      // std::cout << "\n";
       
       solve_LP(A, b, c, weights);
 
