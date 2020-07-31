@@ -1,16 +1,19 @@
 #pragma once
 
 #include "Block.hxx"
+#include "../sdp2input/Boost_Float.hxx"
 
 #include <boost/filesystem.hpp>
 
 struct Functional
 {
   std::vector<Block> blocks;
-  bool has_prefactor;
+  Boost_Float prefactor_power;
 
-  Functional(const boost::filesystem::path &polynomials_path);
   Functional(const boost::filesystem::path &polynomials_path,
+             const boost::filesystem::path &prefactor_path);
+  Functional(const boost::filesystem::path &polynomials_path,
+             const boost::filesystem::path &prefactor_path,
              const boost::filesystem::path &poles_path);
   std::vector<El::BigFloat>
   eval(const std::vector<El::BigFloat> &coords,

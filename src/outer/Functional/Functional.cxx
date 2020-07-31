@@ -2,8 +2,8 @@
 
 #include <boost/filesystem/fstream.hpp>
 
-Functional::Functional(const boost::filesystem::path &polynomials_path)
-    : has_prefactor(false)
+Functional::Functional(const boost::filesystem::path &polynomials_path,
+                       const boost::filesystem::path &prefactor_path)
 {
   boost::filesystem::ifstream polynomials_file(polynomials_path);
   size_t block_index, poly_index, degree_index;
@@ -21,13 +21,16 @@ Functional::Functional(const boost::filesystem::path &polynomials_path)
       polynomials_file >> block_index >> poly_index >> degree_index
         >> coefficient_string;
     }
+
+  boost::filesystem::ifstream prefactor_file(prefactor_path);
+  prefactor_file >> prefactor_power;
 }
 
 Functional::Functional(const boost::filesystem::path &polynomials_path,
+                       const boost::filesystem::path &prefactor_path,
                        const boost::filesystem::path &poles_path)
-    : Functional(polynomials_path)
+    : Functional(polynomials_path, prefactor_path)
 {
-  has_prefactor=true;
   boost::filesystem::ifstream poles_file(poles_path);
   size_t block_index;
   std::string coefficient_string;

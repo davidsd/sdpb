@@ -58,15 +58,20 @@ int main(int argc, char **argv)
   El::Environment env(argc, argv);
   const int64_t precision(256);
   El::gmp::SetPrecision(precision);
+  // El::gmp wants base-2 bits, but boost::multiprecision wants
+  // base-10 digits.
+  Boost_Float::default_precision(precision * log(2) / log(10));
 
   {
-    Functional functional("test/single_corr_polys", "test/single_corr_poles");
+    Functional functional("test/single_corr_polys",
+                          "test/single_corr_prefactor",
+                          "test/single_corr_poles");
     const bool is_single_corr_feasible(is_feasible(functional));
     std::cout << "feasible: " << std::boolalpha << is_single_corr_feasible
               << "\n";
   }
   {
-    Functional functional("test/toy_polys");
+    Functional functional("test/toy_polys", "test/toy_prefactor");
     std::vector<El::BigFloat> objective(load_vector("test/toy_objective"));
     std::vector<El::BigFloat> normalization(
       load_vector("test/toy_normalization"));
