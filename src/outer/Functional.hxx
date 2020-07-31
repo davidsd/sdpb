@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Block.hxx"
-#include "../sdp2input/Boost_Float.hxx"
+#include "../Boost_Float.hxx"
 
 #include <boost/filesystem.hpp>
 
