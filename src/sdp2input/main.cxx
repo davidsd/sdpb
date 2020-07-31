@@ -80,7 +80,7 @@ int main(int argc, char **argv)
         }
 
       El::gmp::SetPrecision(precision);
-      // El::gmp wants base-2 bits, but boost::multiprecision want
+      // El::gmp wants base-2 bits, but boost::multiprecision wants
       // base-10 digits.
       Boost_Float::default_precision(precision * log(2) / log(10));
 
