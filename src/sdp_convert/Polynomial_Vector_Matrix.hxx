@@ -64,16 +64,4 @@ public:
     sample_scalings.clear();
     bilinear_basis.clear();
   }
-  
-  // The maximal degree of any of the components P^{rs}_n(x).
-  int64_t degree() const
-  {
-    int64_t d = 0;
-    for(auto &e : elements)
-      for(auto &p : e)
-        {
-          d = std::max(p.degree(), d);
-        }
-    return d;
-  }
 };

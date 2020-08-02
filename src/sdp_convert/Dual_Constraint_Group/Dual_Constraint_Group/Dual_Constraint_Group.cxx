@@ -26,14 +26,13 @@ sample_bilinear_basis(const int maxDegree, const int numSamples,
 // for tuples p = (r,s,k).
 //
 Dual_Constraint_Group::Dual_Constraint_Group(const Polynomial_Vector_Matrix &m)
+  : dim(m.rows), degree(m.sample_points.size() - 1)
 {
   assert(m.rows == m.cols);
-  dim = m.rows;
-  degree = m.degree();
 
-  size_t numSamples = degree + 1;
-  size_t numConstraints = numSamples * dim * (dim + 1) / 2;
-  size_t vectorDim = m.elt(0, 0).size();
+  const size_t numSamples(degree + 1),
+    numConstraints(numSamples * dim * (dim + 1) / 2),
+    vectorDim(m.elt(0, 0).size());
 
   // Form the constraint_matrix B and constraint_constants c from the
   // polynomials (1,y) . \vec P^{rs}(x)
@@ -51,8 +50,8 @@ Dual_Constraint_Group::Dual_Constraint_Group(const Polynomial_Vector_Matrix &m)
         {
           for(size_t k = 0; k < numSamples; k++)
             {
-              El::BigFloat x = m.sample_points[k];
-              El::BigFloat scale = m.sample_scalings[k];
+              El::BigFloat x(m.sample_points.at(k));
+              El::BigFloat scale(m.sample_scalings.at(k));
               constraint_constants[p] = scale * m.elt(r, c)[0](x);
               for(size_t n = 1; n < vectorDim; ++n)
                 {
