@@ -1,6 +1,5 @@
 #include "../factorial.hxx"
-#include "../../../Damped_Rational.hxx"
-#include "../../../../Polynomial.hxx"
+#include "../../../../sdp_read.hxx"
 #include "../../../../Timers.hxx"
 
 #include <boost/math/tools/polynomial.hpp>

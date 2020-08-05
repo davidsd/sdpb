@@ -1,5 +1,4 @@
-#include "../../Damped_Rational.hxx"
-#include "../../../Polynomial.hxx"
+#include "../../../sdp_read.hxx"
 
 void precompute(
   const Boost_Float &base, std::vector<Boost_Float> &sorted_poles,
