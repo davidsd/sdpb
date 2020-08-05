@@ -3,14 +3,12 @@
 #include <El.hpp>
 
 #include <array>
-#include <optional>
 #include <memory>
 #include <iostream>
 
 struct Mesh
 {
   std::array<El::BigFloat, 5> x, f;
-  // Can not use std::optional because it needs the sizeof(Mesh)
   std::unique_ptr<Mesh> lower, upper;
 
   Mesh(const El::BigFloat &x_0, const El::BigFloat &x_3,
