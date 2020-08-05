@@ -1,7 +1,5 @@
 #include "JSON_Parser.hxx"
 
-#include "../../../ostream_vector.hxx"
-
 #include <rapidjson/istreamwrapper.h>
 #include <boost/filesystem/fstream.hpp>
 
