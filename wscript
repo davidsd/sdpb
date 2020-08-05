@@ -178,5 +178,5 @@ def build(bld):
                         'src/outer_limits/Functional/prefactor.cxx'],
                 target='outer_limits',
                 cxxflags=default_flags,
-                use=use_packages
+                use=use_packages + ['sdp_read']
                 )

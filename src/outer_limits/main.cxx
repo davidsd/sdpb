@@ -1,7 +1,8 @@
 #include "Mesh.hxx"
 #include "Functional.hxx"
+#include "../sdp_read.hxx"
 
-#include "../ostream_sequence.hxx"
+#include "../ostream_vector.hxx"
 
 // We convert the optimization problem into a regular linear
 // programming problem.
@@ -62,27 +63,41 @@ int main(int argc, char **argv)
   // base-10 digits.
   Boost_Float::default_precision(precision * log(2) / log(10));
 
+  // {
+  //   Functional functional("test/single_corr_polys",
+  //                         "test/single_corr_prefactor",
+  //                         "test/single_corr_poles");
+  //   const bool is_single_corr_feasible(is_feasible(functional));
+  //   std::cout << "feasible: " << std::boolalpha << is_single_corr_feasible
+  //             << "\n";
+  // }
   {
-    Functional functional("test/single_corr_polys",
-                          "test/single_corr_prefactor",
-                          "test/single_corr_poles");
-    const bool is_single_corr_feasible(is_feasible(functional));
-    std::cout << "feasible: " << std::boolalpha << is_single_corr_feasible
-              << "\n";
+    std::vector<El::BigFloat> objectives, normalization;
+    std::vector<Positive_Matrix_With_Prefactor> matrices;
+    read_input("test/toy_damped.json", objectives, normalization, matrices);
+
+    std::cout << "objective: "
+              << objectives << "\n";
+    std::cout << "normalization: "
+              << normalization << "\n";
+    std::cout << "matrices: "
+              << matrices.front().damped_rational << "\n";
+    std::cout << "polynomials: "
+              << matrices.front().polynomials << "\n";
   }
-  {
-    Functional functional("test/toy_polys", "test/toy_prefactor");
-    std::vector<El::BigFloat> objective(load_vector("test/toy_objective"));
-    std::vector<El::BigFloat> normalization(
-      load_vector("test/toy_normalization"));
-    std::vector<El::BigFloat> weights(
-      compute_optimal(functional, normalization, objective));
-    El::BigFloat optimal(0);
-    for(size_t index(0); index < objective.size(); ++index)
-      {
-        optimal += objective[index] * weights[index];
-      }
-    std::cout.precision(precision / 3.3);
-    std::cout << "optimal: " << optimal << " " << weights << "\n";
-  }
+  // {
+  //   Functional functional("test/toy_polys", "test/toy_prefactor");
+  //   std::vector<El::BigFloat> objective(load_vector("test/toy_objective"));
+  //   std::vector<El::BigFloat> normalization(
+  //     load_vector("test/toy_normalization"));
+  //   std::vector<El::BigFloat> weights(
+  //     compute_optimal(functional, normalization, objective));
+  //   El::BigFloat optimal(0);
+  //   for(size_t index(0); index < objective.size(); ++index)
+  //     {
+  //       optimal += objective[index] * weights[index];
+  //     }
+  //   std::cout.precision(precision / 3.3);
+  //   std::cout << "optimal: " << optimal << " " << weights << "\n";
+  // }
 }
