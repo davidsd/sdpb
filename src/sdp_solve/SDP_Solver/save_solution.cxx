@@ -1,5 +1,5 @@
 #include "../SDP_Solver.hxx"
-#include "../../../set_stream_precision.hxx"
+#include "../../set_stream_precision.hxx"
 
 #include <boost/filesystem/fstream.hpp>
 

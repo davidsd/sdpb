@@ -1,6 +1,6 @@
 #include "../../../../SDP.hxx"
 #include "../../../../Block_Diagonal_Matrix.hxx"
-#include "../../../../../../Timers.hxx"
+#include "../../../../../Timers.hxx"
 
 // Compute the quantities needed to solve the Schur complement
 // equation

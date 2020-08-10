@@ -5,9 +5,9 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
-#include "SDP_Solver.hxx"
-#include "../../Timers.hxx"
-#include "../../set_stream_precision.hxx"
+#include "../sdp_solve.hxx"
+#include "../Timers.hxx"
+#include "../set_stream_precision.hxx"
 
 #include <El.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>

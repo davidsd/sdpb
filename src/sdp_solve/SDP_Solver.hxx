@@ -13,8 +13,8 @@
 #include "SDP.hxx"
 #include "SDP_Solver_Terminate_Reason.hxx"
 
-#include "../SDP_Solver_Parameters.hxx"
-#include "../../Timers.hxx"
+#include "SDP_Solver_Parameters.hxx"
+#include "../Timers.hxx"
 
 #include <boost/filesystem.hpp>
 

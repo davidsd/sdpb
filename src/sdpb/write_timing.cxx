@@ -1,5 +1,4 @@
-#include "Block_Info.hxx"
-#include "../Timers.hxx"
+#include "../sdp_solve.hxx"
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>

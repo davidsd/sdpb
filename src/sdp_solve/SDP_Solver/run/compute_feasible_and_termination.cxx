@@ -1,5 +1,5 @@
 #include "../../SDP_Solver_Terminate_Reason.hxx"
-#include "../../../SDP_Solver_Parameters.hxx"
+#include "../../SDP_Solver_Parameters.hxx"
 
 void compute_feasible_and_termination(
   const SDP_Solver_Parameters &parameters, const El::BigFloat &primal_error,

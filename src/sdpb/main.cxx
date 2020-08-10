@@ -5,9 +5,7 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
-#include "SDP_Solver_Parameters.hxx"
-#include "Block_Info.hxx"
-#include "../Timers.hxx"
+#include "../sdp_solve.hxx"
 
 #include <El.hpp>
 
