@@ -1,5 +1,4 @@
 #include "Mesh.hxx"
-#include "Functional.hxx"
 #include "../sdp_read.hxx"
 
 #include "../ostream_vector.hxx"
@@ -48,9 +47,10 @@
 
 std::vector<El::BigFloat>
 load_vector(const boost::filesystem::path &vector_path);
-bool is_feasible(const Functional &functional);
+// bool is_feasible(const Functional &functional);
+
 std::vector<El::BigFloat>
-compute_optimal(const Functional &functional,
+compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                 const std::vector<El::BigFloat> &normalization,
                 const std::vector<El::BigFloat> &objective);
 
@@ -76,14 +76,15 @@ int main(int argc, char **argv)
     std::vector<Positive_Matrix_With_Prefactor> matrices;
     read_input("test/toy_damped.json", objectives, normalization, matrices);
 
-    std::cout << "objective: "
-              << objectives << "\n";
-    std::cout << "normalization: "
-              << normalization << "\n";
-    std::cout << "matrices: "
-              << matrices.front().damped_rational << "\n";
-    std::cout << "polynomials: "
-              << matrices.front().polynomials << "\n";
+    std::vector<El::BigFloat> weights(
+      compute_optimal(matrices, normalization, objectives));
+    El::BigFloat optimal(0);
+    for(size_t index(0); index < objectives.size(); ++index)
+      {
+        optimal += objectives[index] * weights[index];
+      }
+    std::cout.precision(precision / 3.3);
+    std::cout << "optimal: " << optimal << " " << weights << "\n";
   }
   // {
   //   Functional functional("test/toy_polys", "test/toy_prefactor");

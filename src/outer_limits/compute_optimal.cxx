@@ -1,15 +1,18 @@
-#include "Functional.hxx"
 #include "get_new_points.hxx"
 #include "solve_LP.hxx"
 
+#include "eval_weighted.hxx"
+#include "poles_prefactor.hxx"
+#include "power_prefactor.hxx"
+
 std::vector<El::BigFloat>
-compute_optimal(const Functional &functional,
+compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                 const std::vector<El::BigFloat> &normalization,
                 const std::vector<El::BigFloat> &objective)
 {
-  size_t num_weights(functional.blocks.at(0).polys.size());
+  size_t num_weights(normalization.size());
 
-  const size_t num_blocks(functional.blocks.size());
+  const size_t num_blocks(matrices.size());
   std::vector<El::BigFloat> weights(num_weights, 1);
 
   std::vector<std::set<El::BigFloat>> points(num_blocks);
@@ -51,22 +54,37 @@ compute_optimal(const Functional &functional,
           // One constraint per point
           for(auto &x : points.at(block))
             {
-              // slack term
-              A(row, 2 * weights.size() + row) = -1;
-
               const El::BigFloat prefactor(
-                functional.prefactor(x)
-                * functional.blocks.at(block).pole_prefactor(x));
-              for(size_t poly_index(0);
-                  poly_index != functional.blocks.at(block).polys.size();
-                  ++poly_index)
-                {
-                  A(row, 2 * poly_index)
-                    = prefactor
-                      * functional.blocks.at(block).polys.at(poly_index)(x);
-                  A(row, 2 * poly_index + 1) = -A(row, 2 * poly_index);
-                }
-              ++row;
+                power_prefactor(matrices[block].damped_rational.base, x)
+                * poles_prefactor(matrices[block].damped_rational.poles, x));
+
+              for(size_t matrix_row(0);
+                  matrix_row < matrices[block].polynomials.size();
+                  ++matrix_row)
+                for(size_t matrix_column(0);
+                    matrix_column
+                    < matrices[block].polynomials[matrix_row].size();
+                    ++matrix_column)
+                  {
+                    // slack term
+                    A(row, 2 * weights.size() + row) = -1;
+
+                    for(size_t poly_index(0);
+                        poly_index
+                        != matrices[block]
+                             .polynomials[matrix_row][matrix_column]
+                             .size();
+                        ++poly_index)
+                      {
+                        A(row, 2 * poly_index)
+                          = prefactor
+                            * matrices[block]
+                                .polynomials[matrix_row][matrix_column]
+                                            [poly_index](x);
+                        A(row, 2 * poly_index + 1) = -A(row, 2 * poly_index);
+                      }
+                    ++row;
+                  }
             }
         }
 
@@ -87,7 +105,12 @@ compute_optimal(const Functional &functional,
           c(2 * index, 0) = -objective[index];
           c(2 * index + 1, 0) = objective[index];
         }
-      
+
+      El::Print(A, "A");
+      El::Print(b, "\nb");
+      El::Print(c, "\nc");
+      std::cout << "\n";
+
       solve_LP(A, b, c, weights);
 
       // std::cout << "weight: " << weights << "\n";
@@ -96,17 +119,13 @@ compute_optimal(const Functional &functional,
           // 0.01 should be a small enough relative error so that we are
           // in the regime of convergence.  Then the error estimates will
           // work
-          Mesh mesh(
-            *(points.at(block).begin()), *(points.at(block).rbegin()),
-            // *(points.at(block).begin()), *(points.at(block).rbegin()),
-            [&](const El::BigFloat &x) {
-              return functional.prefactor(x)
-                     * functional.blocks.at(block).eval_weighted(x, weights);
-            },
-            0.01);
+          Mesh mesh(*(points.at(block).begin()), *(points.at(block).rbegin()),
+                    [&](const El::BigFloat &x) {
+                      return eval_weighted(matrices[block], x, weights);
+                    },
+                    0.01);
           new_points.at(block) = get_new_points(mesh);
-          // std::cout << "new: " << block << " " << new_points.at(block) <<
-          // "\n";
+          std::cout << "new: " << block << " " << new_points.at(block) << "\n";
           has_new_points = has_new_points || !new_points.at(block).empty();
         }
     }

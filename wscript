@@ -167,15 +167,16 @@ def build(bld):
                 )
                 
     bld.program(source=['src/outer_limits/main.cxx',
-                        'src/outer_limits/is_feasible.cxx',
+                        # 'src/outer_limits/is_feasible.cxx',
                         'src/outer_limits/compute_optimal.cxx',
                         'src/outer_limits/solve_LP.cxx',
                         'src/outer_limits/get_new_points.cxx',
                         'src/outer_limits/load_vector.cxx',
                         'src/outer_limits/Mesh/Mesh.cxx',
                         'src/outer_limits/Mesh/ostream.cxx',
-                        'src/outer_limits/Functional/Functional.cxx',
-                        'src/outer_limits/Functional/prefactor.cxx'],
+                        'src/outer_limits/power_prefactor.cxx',
+                        'src/outer_limits/poles_prefactor.cxx',
+                        'src/outer_limits/eval_weighted.cxx'],
                 target='outer_limits',
                 cxxflags=default_flags,
                 use=use_packages + ['sdp_read']
