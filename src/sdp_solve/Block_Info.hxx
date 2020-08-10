@@ -17,7 +17,7 @@ struct MPI_Comm_Wrapper
   void operator=(const MPI_Comm_Wrapper &) = delete;
   ~MPI_Comm_Wrapper()
   {
-    if(value!=El::mpi::COMM_WORLD)
+    if(value != El::mpi::COMM_WORLD)
       {
         El::mpi::Free(value);
       }
@@ -32,7 +32,7 @@ struct MPI_Group_Wrapper
   void operator=(const MPI_Group_Wrapper &) = delete;
   ~MPI_Group_Wrapper()
   {
-    if(value!=El::mpi::GROUP_NULL)
+    if(value != El::mpi::GROUP_NULL)
       {
         El::mpi::Free(value);
       }
@@ -75,6 +75,8 @@ public:
              const El::Matrix<int32_t> &block_timings,
              const size_t &procs_per_node, const size_t &proc_granularity,
              const Verbosity &verbosity);
+  Block_Info(const size_t &num_constraints, const size_t &procs_per_node,
+             const size_t &proc_granularity, const Verbosity &verbosity);
   void read_block_info(const boost::filesystem::path &sdp_directory);
   std::vector<Block_Cost>
   read_block_costs(const boost::filesystem::path &sdp_directory,

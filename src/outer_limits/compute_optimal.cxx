@@ -5,6 +5,7 @@
 #include "poles_prefactor.hxx"
 #include "power_prefactor.hxx"
 
+#include "../sdp_solve.hxx"
 #include "../ostream_set.hxx"
 
 std::vector<El::BigFloat>
@@ -29,6 +30,9 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
     }
 
   bool has_new_points(true);
+
+  const size_t procs_per_node(1), proc_granularity(1);
+  const Verbosity verbosity(Verbosity::regular);
   while(has_new_points)
     {
       has_new_points = false;
@@ -44,6 +48,10 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
         }
 
       std::cout << "num_constraints: " << num_constraints << "\n";
+
+      Block_Info block_info(num_constraints, procs_per_node, proc_granularity,
+                            verbosity);
+
       const size_t num_rows(num_constraints + 1),
         num_columns(2 * weights.size() + num_constraints);
 
@@ -122,7 +130,8 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                     },
                     0.01);
           new_points.at(block) = get_new_points(mesh);
-          // std::cout << "new: " << block << " " << new_points.at(block) << "\n";
+          // std::cout << "new: " << block << " " << new_points.at(block) <<
+          // "\n";
           has_new_points = has_new_points || !new_points.at(block).empty();
         }
     }

@@ -1,6 +1,11 @@
-#include "../Block_Info.hxx"
+#include "../../../Block_Cost.hxx"
+#include "../../../Block_Map.hxx"
+#include "../../Block_Info.hxx"
 
-#include "../../compute_block_grid_mapping.hxx"
+std::vector<std::vector<Block_Map>>
+compute_block_grid_mapping(const size_t &procs_per_node,
+                           const size_t &num_nodes,
+                           const std::vector<Block_Cost> &block_costs);
 
 void Block_Info::allocate_blocks(const std::vector<Block_Cost> &block_costs,
                                  const size_t &procs_per_node,

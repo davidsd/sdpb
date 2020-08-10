@@ -24,7 +24,8 @@ def build(bld):
                        'src/sdp_solve/Block_Info/Block_Info.cxx',
                        'src/sdp_solve/Block_Info/read_block_info.cxx',
                        'src/sdp_solve/Block_Info/read_block_costs.cxx',
-                       'src/sdp_solve/Block_Info/allocate_blocks.cxx',
+                       'src/sdp_solve/Block_Info/allocate_blocks/allocate_blocks.cxx',
+                       'src/sdp_solve/Block_Info/allocate_blocks/compute_block_grid_mapping.cxx',
                        'src/sdp_solve/SDP/SDP/SDP.cxx',
                        'src/sdp_solve/SDP/SDP/read_objectives.cxx',
                        'src/sdp_solve/SDP/SDP/read_bilinear_bases.cxx',
@@ -80,7 +81,6 @@ def build(bld):
     # SDPB executable
     bld.program(source=['src/sdpb/main.cxx',
                         'src/sdpb/solve.cxx',
-                        'src/compute_block_grid_mapping.cxx',
                         'src/sdpb/write_timing.cxx'],
                 target='sdpb',
                 cxxflags=default_flags,
@@ -164,13 +164,6 @@ def build(bld):
                 use=use_packages + ['sdp_read']
                 )
 
-    bld.program(source=['src/block_grid_mapping/main.cxx',
-                        'src/compute_block_grid_mapping.cxx'],
-                target='block_grid_mapping',
-                cxxflags=default_flags,
-                use=use_packages
-                )
-                
     bld.program(source=['src/outer_limits/main.cxx',
                         # 'src/outer_limits/is_feasible.cxx',
                         'src/outer_limits/compute_optimal.cxx',
@@ -183,5 +176,5 @@ def build(bld):
                         'src/outer_limits/eval_weighted.cxx'],
                 target='outer_limits',
                 cxxflags=default_flags,
-                use=use_packages + ['sdp_read']
+                use=use_packages + ['sdp_read','sdp_solve']
                 )

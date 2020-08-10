@@ -1,7 +1,5 @@
 #include "../Block_Info.hxx"
 
-#include "../../compute_block_grid_mapping.hxx"
-
 #include <boost/filesystem/fstream.hpp>
 
 namespace

@@ -3,8 +3,6 @@
 #include <boost/filesystem.hpp>
 
 void read_blocks(const boost::filesystem::path &sdp_directory, SDP &sdp);
-void compute_block_grid_mapping(const size_t &num_blocks,
-                                std::vector<size_t> &block_indices);
 void read_objectives(const boost::filesystem::path &sdp_directory,
                      const El::Grid &grid, El::BigFloat &objective_const,
                      El::DistMatrix<El::BigFloat> &dual_objective_b);

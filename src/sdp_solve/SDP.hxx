@@ -11,7 +11,6 @@
 #include "Block_Matrix.hxx"
 #include "Block_Vector.hxx"
 #include "Index_Tuple.hxx"
-#include "ostream.hxx"
 
 #include <boost/filesystem.hpp>
 
