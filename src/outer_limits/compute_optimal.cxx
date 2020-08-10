@@ -51,6 +51,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
 
       Block_Info block_info(num_constraints, procs_per_node, proc_granularity,
                             verbosity);
+      El::Grid grid(block_info.mpi_comm.value);
 
       const size_t num_rows(num_constraints + 1),
         num_columns(2 * weights.size() + num_constraints);
