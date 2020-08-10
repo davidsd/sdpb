@@ -171,7 +171,6 @@ def build(bld):
                         'src/outer_limits/compute_optimal.cxx',
                         'src/outer_limits/solve_LP.cxx',
                         'src/outer_limits/get_new_points.cxx',
-                        'src/outer_limits/load_vector.cxx',
                         'src/outer_limits/Mesh/Mesh.cxx',
                         'src/outer_limits/Mesh/ostream.cxx',
                         'src/outer_limits/power_prefactor.cxx',
