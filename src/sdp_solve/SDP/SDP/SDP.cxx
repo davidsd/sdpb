@@ -1,4 +1,5 @@
 #include "../../SDP.hxx"
+#include "set_dual_objective_b.hxx"
 
 #include <boost/filesystem.hpp>
 
@@ -24,10 +25,17 @@ SDP::SDP(const boost::filesystem::path &sdp_directory,
          const Block_Info &block_info, const El::Grid &grid)
 {
   read_objectives(sdp_directory, grid, objective_const, dual_objective_b);
-  read_bilinear_bases(sdp_directory, block_info, grid,
-                      bilinear_bases_local, bilinear_bases_dist);
+  read_bilinear_bases(sdp_directory, block_info, grid, bilinear_bases_local,
+                      bilinear_bases_dist);
   read_primal_objective_c(sdp_directory, block_info.block_indices, grid,
                           primal_objective_c);
   read_free_var_matrix(sdp_directory, block_info.block_indices, grid,
                        free_var_matrix);
+}
+
+SDP::SDP(const std::vector<El::BigFloat> &objective_input,
+         const Block_Info &block_info, const El::Grid &grid)
+    : objective_const(0)
+{
+  set_dual_objective_b(objective_input, grid, dual_objective_b);
 }

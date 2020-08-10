@@ -28,6 +28,7 @@ def build(bld):
                        'src/sdp_solve/Block_Info/allocate_blocks/compute_block_grid_mapping.cxx',
                        'src/sdp_solve/SDP/SDP/SDP.cxx',
                        'src/sdp_solve/SDP/SDP/read_objectives.cxx',
+                       'src/sdp_solve/SDP/SDP/set_dual_objective_b.cxx',
                        'src/sdp_solve/SDP/SDP/read_bilinear_bases.cxx',
                        'src/sdp_solve/SDP/SDP/read_primal_objective_c.cxx',
                        'src/sdp_solve/SDP/SDP/read_free_var_matrix.cxx',
