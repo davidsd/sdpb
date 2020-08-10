@@ -6,7 +6,6 @@
 //=======================================================================
 
 #include "../sdp_solve.hxx"
-#include "../Timers.hxx"
 #include "../set_stream_precision.hxx"
 
 #include <El.hpp>
