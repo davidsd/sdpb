@@ -5,6 +5,8 @@
 #include "poles_prefactor.hxx"
 #include "power_prefactor.hxx"
 
+#include "../ostream_set.hxx"
+
 std::vector<El::BigFloat>
 compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                 const std::vector<El::BigFloat> &normalization,
@@ -38,7 +40,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
               points.at(block).emplace(point);
             }
           num_constraints += points.at(block).size();
-          // std::cout << "points: " << block << " " << points.at(block) << "\n";
+          std::cout << "points: " << block << " " << points.at(block) << "\n";
         }
 
       std::cout << "num_constraints: " << num_constraints << "\n";
@@ -106,11 +108,6 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
           c(2 * index + 1, 0) = objective[index];
         }
 
-      El::Print(A, "A");
-      El::Print(b, "\nb");
-      El::Print(c, "\nc");
-      std::cout << "\n";
-
       solve_LP(A, b, c, weights);
 
       // std::cout << "weight: " << weights << "\n";
@@ -125,7 +122,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                     },
                     0.01);
           new_points.at(block) = get_new_points(mesh);
-          std::cout << "new: " << block << " " << new_points.at(block) << "\n";
+          // std::cout << "new: " << block << " " << new_points.at(block) << "\n";
           has_new_points = has_new_points || !new_points.at(block).empty();
         }
     }
