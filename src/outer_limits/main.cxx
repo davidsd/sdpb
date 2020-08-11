@@ -51,8 +51,8 @@ load_vector(const boost::filesystem::path &vector_path);
 
 std::vector<El::BigFloat>
 compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
-                const std::vector<El::BigFloat> &normalization,
-                const std::vector<El::BigFloat> &objective);
+                const std::vector<El::BigFloat> &objectives,
+                const std::vector<El::BigFloat> &normalization);
 
 int main(int argc, char **argv)
 {
@@ -77,7 +77,7 @@ int main(int argc, char **argv)
     read_input("test/toy_damped.json", objectives, normalization, matrices);
 
     std::vector<El::BigFloat> weights(
-      compute_optimal(matrices, normalization, objectives));
+      compute_optimal(matrices, objectives, normalization));
     El::BigFloat optimal(0);
     for(size_t index(0); index < objectives.size(); ++index)
       {

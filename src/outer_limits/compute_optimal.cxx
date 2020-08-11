@@ -10,8 +10,8 @@
 
 std::vector<El::BigFloat>
 compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
-                const std::vector<El::BigFloat> &normalization,
-                const std::vector<El::BigFloat> &objective)
+                const std::vector<El::BigFloat> &objectives,
+                const std::vector<El::BigFloat> &normalization)
 {
   size_t num_weights(normalization.size());
 
@@ -52,6 +52,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
       Block_Info block_info(num_constraints, procs_per_node, proc_granularity,
                             verbosity);
       El::Grid grid(block_info.mpi_comm.value);
+      SDP sdp(objectives, normalization, block_info, grid);
 
       const size_t num_rows(num_constraints + 1),
         num_columns(2 * weights.size() + num_constraints);
@@ -111,10 +112,10 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
 
       El::Matrix<El::BigFloat> c(num_columns, 1);
       El::Zero(c);
-      for(size_t index(0); index != objective.size(); ++index)
+      for(size_t index(0); index != objectives.size(); ++index)
         {
-          c(2 * index, 0) = -objective[index];
-          c(2 * index + 1, 0) = objective[index];
+          c(2 * index, 0) = -objectives[index];
+          c(2 * index + 1, 0) = objectives[index];
         }
 
       solve_LP(A, b, c, weights);

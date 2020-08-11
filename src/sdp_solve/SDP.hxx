@@ -99,6 +99,7 @@ public:
 
   SDP(const boost::filesystem::path &sdp_directory,
       const Block_Info &block_info, const El::Grid &grid);
-  SDP(const std::vector<El::BigFloat> &objective_input,
+  SDP(const std::vector<El::BigFloat> &objectives,
+      const std::vector<El::BigFloat> &normalization,
       const Block_Info &block_info, const El::Grid &grid);
 };
