@@ -101,5 +101,6 @@ public:
       const Block_Info &block_info, const El::Grid &grid);
   SDP(const std::vector<El::BigFloat> &objectives,
       const std::vector<El::BigFloat> &normalization,
-      const Block_Info &block_info, const El::Grid &grid);
+      const std::vector<El::BigFloat> &prefactor, const Block_Info &block_info,
+      const El::Grid &grid);
 };

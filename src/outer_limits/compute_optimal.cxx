@@ -52,7 +52,17 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
       Block_Info block_info(num_constraints, procs_per_node, proc_granularity,
                             verbosity);
       El::Grid grid(block_info.mpi_comm.value);
-      SDP sdp(objectives, normalization, block_info, grid);
+      std::vector<El::BigFloat> prefactor;
+      for(size_t block(0); block != num_blocks; ++block)
+        {
+          for(auto &point : points.at(block))
+            {
+              prefactor.push_back(
+                power_prefactor(matrices[block].damped_rational.base, point)
+                * poles_prefactor(matrices[block].damped_rational.poles, point));
+            }
+        }
+      SDP sdp(objectives, normalization, prefactor, block_info, grid);
 
       const size_t num_rows(num_constraints + 1),
         num_columns(2 * weights.size() + num_constraints);

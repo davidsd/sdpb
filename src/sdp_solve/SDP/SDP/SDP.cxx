@@ -1,5 +1,6 @@
-#include "../../SDP.hxx"
+#include "assign_bilinear_bases_dist.hxx"
 #include "set_dual_objective_b.hxx"
+#include "../../SDP.hxx"
 
 #include <boost/filesystem.hpp>
 
@@ -35,6 +36,7 @@ SDP::SDP(const boost::filesystem::path &sdp_directory,
 
 SDP::SDP(const std::vector<El::BigFloat> &objectives,
          const std::vector<El::BigFloat> &normalization,
+         const std::vector<El::BigFloat> &prefactor,
          const Block_Info &block_info, const El::Grid &grid)
 {
   // TODO: This is duplicated from sdp2input/write_output/write_output.cxx
@@ -62,4 +64,14 @@ SDP::SDP(const std::vector<El::BigFloat> &objectives,
     }
 
   set_dual_objective_b(offset_dual_objective_b, grid, dual_objective_b);
+
+  auto &block_indices(block_info.block_indices);
+  bilinear_bases_local.resize(2 * block_indices.size());
+
+  for(size_t block(0); block != block_indices.size(); ++block)
+    {
+      bilinear_bases_local[2 * block].Resize(1, 1);
+      bilinear_bases_local[2 * block](0, 0) = Sqrt(prefactor.at(block));
+    }
+  assign_bilinear_bases_dist(bilinear_bases_local, grid, bilinear_bases_dist);
 }

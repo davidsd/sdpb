@@ -30,6 +30,7 @@ def build(bld):
                        'src/sdp_solve/SDP/SDP/read_objectives.cxx',
                        'src/sdp_solve/SDP/SDP/set_dual_objective_b.cxx',
                        'src/sdp_solve/SDP/SDP/read_bilinear_bases.cxx',
+                       'src/sdp_solve/SDP/SDP/assign_bilinear_bases_dist.cxx',
                        'src/sdp_solve/SDP/SDP/read_primal_objective_c.cxx',
                        'src/sdp_solve/SDP/SDP/read_free_var_matrix.cxx',
                        'src/sdp_solve/SDP_Solver/save_solution.cxx',
