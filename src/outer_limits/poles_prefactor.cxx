@@ -11,7 +11,7 @@ poles_prefactor(const std::vector<Boost_Float> &poles, const El::BigFloat &x)
   for(auto &pole : poles)
     {
       // TODO: This is really, really inefficient
-      pole_product *= El::BigFloat(to_string(pole)) + x;
+      pole_product *= x - El::BigFloat(to_string(pole));
     }
   return 1 / pole_product;
 }
