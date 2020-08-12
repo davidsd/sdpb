@@ -43,13 +43,11 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
               points.at(block).emplace(point);
             }
           num_constraints += points.at(block).size();
-          for(auto &point: points.at(block))
-            {
-              matrix_dimensions.push_back(matrices[block].polynomials.size());
-            }
+          matrix_dimensions.insert(matrix_dimensions.end(),
+                                   points.at(block).size(),
+                                   matrices[block].polynomials.size());
           std::cout << "points: " << block << " " << points.at(block) << "\n";
         }
-
 
       std::cout << "num_constraints: " << num_constraints << "\n";
       std::cout << "matrix_dimensions: " << matrix_dimensions << "\n";
