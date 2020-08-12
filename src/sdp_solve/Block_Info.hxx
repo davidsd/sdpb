@@ -75,8 +75,9 @@ public:
              const El::Matrix<int32_t> &block_timings,
              const size_t &procs_per_node, const size_t &proc_granularity,
              const Verbosity &verbosity);
-  Block_Info(const size_t &num_constraints, const size_t &procs_per_node,
-             const size_t &proc_granularity, const Verbosity &verbosity);
+  Block_Info(const std::vector<size_t> &matrix_dimensions,
+             const size_t &procs_per_node, const size_t &proc_granularity,
+             const Verbosity &verbosity);
   void read_block_info(const boost::filesystem::path &sdp_directory);
   std::vector<Block_Cost>
   read_block_costs(const boost::filesystem::path &sdp_directory,

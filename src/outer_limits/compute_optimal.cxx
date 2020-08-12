@@ -35,6 +35,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
     {
       has_new_points = false;
       size_t num_constraints(0);
+      std::vector<size_t> matrix_dimensions;
       for(size_t block(0); block != num_blocks; ++block)
         {
           for(auto &point : new_points.at(block))
@@ -42,12 +43,18 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
               points.at(block).emplace(point);
             }
           num_constraints += points.at(block).size();
+          for(auto &point: points.at(block))
+            {
+              matrix_dimensions.push_back(matrices[block].polynomials.size());
+            }
           std::cout << "points: " << block << " " << points.at(block) << "\n";
         }
 
-      std::cout << "num_constraints: " << num_constraints << "\n";
 
-      Block_Info block_info(num_constraints, parameters.procs_per_node,
+      std::cout << "num_constraints: " << num_constraints << "\n";
+      std::cout << "matrix_dimensions: " << matrix_dimensions << "\n";
+
+      Block_Info block_info(matrix_dimensions, parameters.procs_per_node,
                             parameters.proc_granularity, parameters.verbosity);
       El::Grid grid(block_info.mpi_comm.value);
       std::vector<El::BigFloat> prefactors;

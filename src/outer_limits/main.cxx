@@ -81,7 +81,9 @@ int main(int argc, char **argv)
   {
     std::vector<El::BigFloat> objectives, normalization;
     std::vector<Positive_Matrix_With_Prefactor> matrices;
-    read_input("test/toy_damped.json", objectives, normalization, matrices);
+    read_input("test/spectrum_test.json", objectives, normalization, matrices);
+    // read_input("test/toy_damped_duplicate.json", objectives, normalization, matrices);
+    // read_input("test/toy_damped.json", objectives, normalization, matrices);
 
     std::vector<El::BigFloat> weights(
       compute_optimal(matrices, objectives, normalization, parameters));
