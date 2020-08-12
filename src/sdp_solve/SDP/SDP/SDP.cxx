@@ -73,6 +73,7 @@ SDP::SDP(const std::vector<El::BigFloat> &objectives,
   for(size_t block(0); block != block_indices.size(); ++block)
     {
       bilinear_bases_local[2 * block].Resize(1, 1);
+      bilinear_bases_local[2 * block+1].Resize(0, 1);
       bilinear_bases_local[2 * block](0, 0) = Sqrt(prefactor.at(block));
     }
   assign_bilinear_bases_dist(bilinear_bases_local, grid, bilinear_bases_dist);

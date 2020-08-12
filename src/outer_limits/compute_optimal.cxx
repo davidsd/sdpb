@@ -11,7 +11,8 @@
 std::vector<El::BigFloat>
 compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                 const std::vector<El::BigFloat> &objectives,
-                const std::vector<El::BigFloat> &normalization)
+                const std::vector<El::BigFloat> &normalization,
+                const SDP_Solver_Parameters &parameters)
 {
   size_t num_weights(normalization.size());
 
@@ -105,6 +106,13 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
 
       SDP sdp(objectives, normalization, prefactors, primal_objective_c,
               free_var_matrix, block_info, grid);
+
+      SDP_Solver solver(parameters, block_info, grid,
+                        sdp.dual_objective_b.Height());
+
+      Timers timers(parameters.verbosity >= Verbosity::debug);
+      SDP_Solver_Terminate_Reason reason
+        = solver.run(parameters, block_info, sdp, grid, timers);
 
       const size_t num_rows(num_constraints + 1),
         num_columns(2 * weights.size() + num_constraints);
