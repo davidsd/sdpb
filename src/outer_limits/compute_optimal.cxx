@@ -1,5 +1,4 @@
 #include "get_new_points.hxx"
-#include "solve_LP.hxx"
 
 #include "eval_weighted.hxx"
 #include "poles_prefactor.hxx"
@@ -32,8 +31,6 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
 
   bool has_new_points(true);
 
-  const size_t procs_per_node(1), proc_granularity(1);
-  const Verbosity verbosity(Verbosity::regular);
   while(has_new_points)
     {
       has_new_points = false;
@@ -50,8 +47,8 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
 
       std::cout << "num_constraints: " << num_constraints << "\n";
 
-      Block_Info block_info(num_constraints, procs_per_node, proc_granularity,
-                            verbosity);
+      Block_Info block_info(num_constraints, parameters.procs_per_node,
+                            parameters.proc_granularity, parameters.verbosity);
       El::Grid grid(block_info.mpi_comm.value);
       std::vector<El::BigFloat> prefactors;
       prefactors.reserve(num_constraints);
@@ -114,73 +111,16 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
       SDP_Solver_Terminate_Reason reason
         = solver.run(parameters, block_info, sdp, grid, timers);
 
-      const size_t num_rows(num_constraints + 1),
-        num_columns(2 * weights.size() + num_constraints);
-
-      El::Matrix<El::BigFloat> A(num_rows, num_columns);
-      El::Zero(A);
-
-      size_t row(0);
-      for(size_t block(0); block != num_blocks; ++block)
+      // y is duplicated among cores, so only need to print out copy on
+      // the root node.
+      // THe first weight is implicitly 1.
+      for(int64_t block_row(0); block_row != solver.y.blocks.at(0).Height();
+          ++block_row)
         {
-          // One constraint per point
-          for(auto &x : points.at(block))
-            {
-              const El::BigFloat prefactor(
-                power_prefactor(matrices[block].damped_rational.base, x)
-                * poles_prefactor(matrices[block].damped_rational.poles, x));
-
-              for(size_t matrix_row(0);
-                  matrix_row < matrices[block].polynomials.size();
-                  ++matrix_row)
-                for(size_t matrix_column(0);
-                    matrix_column
-                    < matrices[block].polynomials[matrix_row].size();
-                    ++matrix_column)
-                  {
-                    // slack term
-                    A(row, 2 * weights.size() + row) = -1;
-
-                    for(size_t poly_index(0);
-                        poly_index
-                        != matrices[block]
-                             .polynomials[matrix_row][matrix_column]
-                             .size();
-                        ++poly_index)
-                      {
-                        A(row, 2 * poly_index)
-                          = prefactor
-                            * matrices[block]
-                                .polynomials[matrix_row][matrix_column]
-                                            [poly_index](x);
-                        A(row, 2 * poly_index + 1) = -A(row, 2 * poly_index);
-                      }
-                    ++row;
-                  }
-            }
+          weights.at(block_row + 1) = solver.y.blocks.at(0).Get(block_row, 0);
         }
 
-      for(size_t index(0); index != normalization.size(); ++index)
-        {
-          A(num_rows - 1, 2 * index) = normalization[index];
-          A(num_rows - 1, 2 * index + 1) = -normalization[index];
-        }
-
-      El::Matrix<El::BigFloat> b(num_rows, 1);
-      El::Zero(b);
-      b(num_rows - 1, 0) = 1;
-
-      El::Matrix<El::BigFloat> c(num_columns, 1);
-      El::Zero(c);
-      for(size_t index(0); index != objectives.size(); ++index)
-        {
-          c(2 * index, 0) = -objectives[index];
-          c(2 * index + 1, 0) = objectives[index];
-        }
-
-      solve_LP(A, b, c, weights);
-
-      // std::cout << "weight: " << weights << "\n";
+      std::cout << "weight: " << weights << "\n";
       for(size_t block(0); block != num_blocks; ++block)
         {
           // 0.01 should be a small enough relative error so that we are

@@ -169,7 +169,6 @@ def build(bld):
     bld.program(source=['src/outer_limits/main.cxx',
                         # 'src/outer_limits/is_feasible.cxx',
                         'src/outer_limits/compute_optimal.cxx',
-                        'src/outer_limits/solve_LP.cxx',
                         'src/outer_limits/get_new_points.cxx',
                         'src/outer_limits/Mesh/Mesh.cxx',
                         'src/outer_limits/Mesh/ostream.cxx',
