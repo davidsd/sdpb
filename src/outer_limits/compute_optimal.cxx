@@ -65,7 +65,6 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                 * poles_prefactor(matrices[block].damped_rational.poles, x));
               auto &prefactor(prefactors.back());
 
-              // TODO: only works for 1x1
               const size_t dim(matrices[block].polynomials.size());
               free_var_matrix.emplace_back(
                 dim * (dim + 1) / 2,
