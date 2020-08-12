@@ -37,6 +37,8 @@ SDP::SDP(const boost::filesystem::path &sdp_directory,
 SDP::SDP(const std::vector<El::BigFloat> &objectives,
          const std::vector<El::BigFloat> &normalization,
          const std::vector<El::BigFloat> &prefactor,
+         const std::vector<std::vector<El::BigFloat>> &primal_objective_c_input,
+         const std::vector<El::Matrix<El::BigFloat>> &free_var_input,
          const Block_Info &block_info, const El::Grid &grid)
 {
   // TODO: This is duplicated from sdp2input/write_output/write_output.cxx
@@ -74,4 +76,40 @@ SDP::SDP(const std::vector<El::BigFloat> &objectives,
       bilinear_bases_local[2 * block](0, 0) = Sqrt(prefactor.at(block));
     }
   assign_bilinear_bases_dist(bilinear_bases_local, grid, bilinear_bases_dist);
+
+  for(size_t index(0); index != block_indices.size(); ++index)
+    {
+      primal_objective_c.blocks.emplace_back(
+        primal_objective_c_input.at(index).size(), 1, grid);
+      // TODO: copied from sdp_solve/SDP/SDP/read_primal_objective_c.cxx
+      auto &block(primal_objective_c.blocks.back());
+      size_t local_height(block.LocalHeight());
+      if(block.GlobalCol(0) == 0)
+        {
+          for(size_t row = 0; row < local_height; ++row)
+            {
+              size_t global_row(block.GlobalRow(row));
+              block.SetLocal(
+                row, 0, primal_objective_c_input.at(index).at(global_row));
+            }
+        }
+    }
+
+  free_var_matrix.blocks.reserve(block_indices.size());
+  for(size_t index(0); index != block_indices.size(); ++index)
+    {
+      free_var_matrix.blocks.emplace_back(free_var_input.at(index).Height(),
+                                          free_var_input.at(index).Width(),
+                                          grid);
+      auto &block(free_var_matrix.blocks.back());
+      for(int64_t row(0); row != block.Height(); ++row)
+        for(int64_t column(0); column != block.Height(); ++column)
+          {
+            if(block.IsLocal(row, column))
+              {
+                block.SetLocal(block.LocalRow(row), block.LocalCol(column),
+                               free_var_input.at(index)(row, column));
+              }
+          }
+    }
 }

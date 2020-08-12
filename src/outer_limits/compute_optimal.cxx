@@ -52,17 +52,59 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
       Block_Info block_info(num_constraints, procs_per_node, proc_granularity,
                             verbosity);
       El::Grid grid(block_info.mpi_comm.value);
-      std::vector<El::BigFloat> prefactor;
+      std::vector<El::BigFloat> prefactors;
+      prefactors.reserve(num_constraints);
+      std::vector<std::vector<El::BigFloat>> primal_objective_c;
+      primal_objective_c.reserve(num_constraints);
+      std::vector<El::Matrix<El::BigFloat>> free_var_matrix;
+      free_var_matrix.reserve(num_constraints);
       for(size_t block(0); block != num_blocks; ++block)
         {
-          for(auto &point : points.at(block))
+          for(auto &x : points.at(block))
             {
-              prefactor.push_back(
-                power_prefactor(matrices[block].damped_rational.base, point)
-                * poles_prefactor(matrices[block].damped_rational.poles, point));
+              prefactors.push_back(
+                power_prefactor(matrices[block].damped_rational.base, x)
+                * poles_prefactor(matrices[block].damped_rational.poles, x));
+              auto &prefactor(prefactors.back());
+
+              // TODO: only works for 1x1
+              const size_t dim(matrices[block].polynomials.size());
+              free_var_matrix.emplace_back(
+                dim * (dim + 1) / 2,
+                matrices[block].polynomials.at(0).at(0).size() - 1);
+              auto &free_var(free_var_matrix.back());
+
+              primal_objective_c.emplace_back();
+              auto &primal(primal_objective_c.back());
+
+              size_t flattened_matrix_row(0);
+              for(size_t matrix_row(0); matrix_row != dim; ++matrix_row)
+                for(size_t matrix_column(0); matrix_column <= matrix_row;
+                    ++matrix_column)
+                  {
+                    primal.push_back(prefactor
+                                     * matrices[block]
+                                         .polynomials.at(matrix_row)
+                                         .at(matrix_column)
+                                         .at(0)(x));
+
+                    for(int64_t column(0); column != free_var.Width();
+                        ++column)
+                      {
+                        free_var(flattened_matrix_row, column)
+                          = -prefactor
+                            * matrices[block]
+                                .polynomials.at(matrix_row)
+                                .at(matrix_column)
+                                .at(column + 1)(x);
+                      }
+                    ++flattened_matrix_row;
+                  }
             }
         }
-      SDP sdp(objectives, normalization, prefactor, block_info, grid);
+
+      SDP sdp(objectives, normalization, prefactors, primal_objective_c,
+              free_var_matrix, block_info, grid);
 
       const size_t num_rows(num_constraints + 1),
         num_columns(2 * weights.size() + num_constraints);
