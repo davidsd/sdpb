@@ -60,6 +60,10 @@ int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
   SDP_Solver_Parameters parameters(argc, argv);
+  if(!parameters.is_valid())
+    {
+      return 0;
+    }
   const int64_t precision(parameters.precision);
   El::gmp::SetPrecision(precision);
   // El::gmp wants base-2 bits, but boost::multiprecision wants
