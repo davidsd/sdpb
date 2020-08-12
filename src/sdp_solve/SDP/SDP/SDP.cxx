@@ -104,7 +104,7 @@ SDP::SDP(const std::vector<El::BigFloat> &objectives,
                                           grid);
       auto &block(free_var_matrix.blocks.back());
       for(int64_t row(0); row != block.Height(); ++row)
-        for(int64_t column(0); column != block.Height(); ++column)
+        for(int64_t column(0); column != block.Width(); ++column)
           {
             if(block.IsLocal(row, column))
               {
