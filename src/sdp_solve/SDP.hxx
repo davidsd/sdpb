@@ -70,9 +70,8 @@
 //     the block index b determines a unique j, but not vice-versa.
 //
 
-class SDP
+struct SDP
 {
-public:
   // bilinear_bases is a vector of Matrices encoding the v_{b,k}
   // that enter the constraint matrices. Specifically, v_{b,k} are
   // the columns of bilinear_bases[b],
