@@ -73,43 +73,48 @@ SDP::SDP(const std::vector<El::BigFloat> &objectives,
   for(size_t block(0); block != block_indices.size(); ++block)
     {
       bilinear_bases_local[2 * block].Resize(1, 1);
-      bilinear_bases_local[2 * block+1].Resize(0, 1);
-      bilinear_bases_local[2 * block](0, 0) = Sqrt(prefactor.at(block));
+      bilinear_bases_local[2 * block + 1].Resize(0, 1);
+      bilinear_bases_local[2 * block](0, 0)
+        = Sqrt(prefactor.at(block_indices.at(block)));
     }
   assign_bilinear_bases_dist(bilinear_bases_local, grid, bilinear_bases_dist);
 
-  for(size_t index(0); index != block_indices.size(); ++index)
+  for(size_t block(0); block != block_indices.size(); ++block)
     {
       primal_objective_c.blocks.emplace_back(
-        primal_objective_c_input.at(index).size(), 1, grid);
+        primal_objective_c_input.at(block_indices.at(block)).size(), 1, grid);
       // TODO: copied from sdp_solve/SDP/SDP/read_primal_objective_c.cxx
-      auto &block(primal_objective_c.blocks.back());
-      size_t local_height(block.LocalHeight());
-      if(block.GlobalCol(0) == 0)
+      auto &primal_block(primal_objective_c.blocks.back());
+      size_t local_height(primal_block.LocalHeight());
+      if(primal_block.GlobalCol(0) == 0)
         {
           for(size_t row = 0; row < local_height; ++row)
             {
-              size_t global_row(block.GlobalRow(row));
-              block.SetLocal(
-                row, 0, primal_objective_c_input.at(index).at(global_row));
+              size_t global_row(primal_block.GlobalRow(row));
+              primal_block.SetLocal(
+                row, 0,
+                primal_objective_c_input.at(block_indices.at(block))
+                  .at(global_row));
             }
         }
     }
 
   free_var_matrix.blocks.reserve(block_indices.size());
-  for(size_t index(0); index != block_indices.size(); ++index)
+  for(size_t block(0); block != block_indices.size(); ++block)
     {
-      free_var_matrix.blocks.emplace_back(free_var_input.at(index).Height(),
-                                          free_var_input.at(index).Width(),
-                                          grid);
-      auto &block(free_var_matrix.blocks.back());
-      for(int64_t row(0); row != block.Height(); ++row)
-        for(int64_t column(0); column != block.Width(); ++column)
+      free_var_matrix.blocks.emplace_back(
+        free_var_input.at(block_indices.at(block)).Height(),
+        free_var_input.at(block_indices.at(block)).Width(), grid);
+      auto &free_var_block(free_var_matrix.blocks.back());
+      for(int64_t row(0); row != free_var_block.Height(); ++row)
+        for(int64_t column(0); column != free_var_block.Width(); ++column)
           {
-            if(block.IsLocal(row, column))
+            if(free_var_block.IsLocal(row, column))
               {
-                block.SetLocal(block.LocalRow(row), block.LocalCol(column),
-                               free_var_input.at(index)(row, column));
+                free_var_block.SetLocal(
+                  free_var_block.LocalRow(row),
+                  free_var_block.LocalCol(column),
+                  free_var_input.at(block_indices.at(block))(row, column));
               }
           }
     }
