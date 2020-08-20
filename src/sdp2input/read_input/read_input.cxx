@@ -36,4 +36,17 @@ void read_input(const boost::filesystem::path &input_file,
     {
       read_mathematica(input_file, objectives, normalization, matrices);
     }
+
+  for(auto &matrix : matrices)
+    {
+      for(auto &pole : matrix.damped_rational.poles)
+        {
+          if(pole > 0)
+            {
+              throw std::runtime_error(
+                "All poles must be positive, but found '" + to_string(pole)
+                + "'");
+            }
+        }
+    }
 }
