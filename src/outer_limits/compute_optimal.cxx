@@ -24,17 +24,20 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
   std::vector<std::set<El::BigFloat>> points(num_blocks);
   std::vector<std::vector<El::BigFloat>> new_points(num_blocks);
 
-  std::cout << "blocks: " << num_blocks << " " << num_weights << "\n";
-  const El::BigFloat min_x(0), max_x(10);
-  // const El::BigFloat min_x(1.0/1024), max_x(1024);
+  if(El::mpi::Rank() == 0)
+    {
+      std::cout << "blocks: " << num_blocks << " " << num_weights << "\n";
+    }
+  // const El::BigFloat min_x(0), max_x(10);
+  const El::BigFloat min_x(1.0 / 1024), max_x(1024);
   for(size_t block(0); block < num_blocks; ++block)
     {
       points.at(block).emplace(min_x);
 
       // points.at(block).emplace(0.1);
-      points.at(block).emplace(1);
+      // points.at(block).emplace(1);
       // points.at(block).emplace(10);
-      // for(double x(min_x); x<max_x; x*=1.02)
+      // for(double x(min_x); x < max_x; x *= 1.02)
       //   points.at(block).emplace(x);
 
       new_points.at(block).emplace_back(max_x);
@@ -57,10 +60,17 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
           matrix_dimensions.insert(matrix_dimensions.end(),
                                    points.at(block).size(),
                                    matrices[block].polynomials.size());
-          std::cout << "points: " << block << " " << points.at(block) << "\n";
+          if(El::mpi::Rank() == 0)
+            {
+              std::cout << "points: " << block << " " << points.at(block)
+                        << "\n";
+            }
         }
 
-      std::cout << "num_constraints: " << num_constraints << "\n";
+      if(El::mpi::Rank() == 0)
+        {
+          std::cout << "num_constraints: " << num_constraints << "\n";
+        }
       // std::cout << "matrix_dimensions: " << matrix_dimensions << "\n";
 
       Block_Info block_info(matrix_dimensions, parameters.procs_per_node,
@@ -82,7 +92,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
               max_normalization = n;
             }
         }
-      size_t max_index(
+      int64_t max_index(
         std::distance(normalization.begin(), max_normalization));
 
       for(size_t block(0); block != num_blocks; ++block)
@@ -187,8 +197,11 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
         }
       weights.at(max_index) /= normalization.at(max_index);
 
-      std::cout.precision(parameters.precision / 3.3);
-      std::cout << "weight: " << weights << "\n";
+      if(El::mpi::Rank() == 0)
+        {
+          std::cout.precision(parameters.precision / 3.3);
+          std::cout << "weight: " << weights << "\n";
+        }
       for(size_t block(0); block != num_blocks; ++block)
         {
           // 0.01 should be a small enough relative error so that we are
@@ -200,11 +213,19 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                     },
                     0.01);
           new_points.at(block) = get_new_points(mesh);
-          // std::cout << "new: " << block << " " << new_points.at(block) << "\n";
-          has_new_points = has_new_points || !new_points.at(block).empty();
+          for(auto &point : new_points.at(block))
+            {
+              has_new_points
+                = has_new_points || (points.at(block).count(point) == 0);
+            }
+          // std::cout << "new: " << block << " " << new_points.at(block) <<
+          // "\n";
         }
     }
   // std::cout.precision(precision / 3.3);
-  std::cout << "weights: " << weights << "\n";
+  if(El::mpi::Rank() == 0)
+    {
+      std::cout << "weights: " << weights << "\n";
+    }
   return weights;
 }
