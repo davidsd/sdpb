@@ -95,8 +95,11 @@ int main(int argc, char **argv)
       {
         optimal += objectives[index] * weights[index];
       }
-    std::cout.precision(precision / 3.3);
-    std::cout << "optimal: " << optimal << " " << weights << "\n";
+    if(El::mpi::Rank() == 0)
+      {
+        std::cout.precision(precision / 3.3);
+        std::cout << "optimal: " << optimal << " " << weights << "\n";
+      }
   }
   // {
   //   Functional functional("test/toy_polys", "test/toy_prefactor");
