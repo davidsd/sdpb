@@ -24,15 +24,10 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
   // GMP does not have a special infinity value, so we use max double.
   const El::BigFloat infinity(std::numeric_limits<double>::max());
   const El::BigFloat min_x(0), max_x(infinity);
-
   for(size_t block(0); block < num_blocks; ++block)
     {
       points.at(block).emplace(min_x);
-
       points.at(block).emplace(1);
-      points.at(block).emplace(10);
-      points.at(block).emplace(100);
-      points.at(block).emplace(1000);
       // for(double x(min_x); x < max_x; x *= 4)
       //   points.at(block).emplace(x);
 
