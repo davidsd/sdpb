@@ -17,27 +17,23 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
 
   const size_t num_blocks(matrices.size());
   std::vector<El::BigFloat> weights(num_weights, 1);
-
-  //   {
-  // #include "weight_string.hxx"
-  //   }
   std::vector<std::set<El::BigFloat>> points(num_blocks);
   std::vector<std::vector<El::BigFloat>> new_points(num_blocks);
 
-  if(El::mpi::Rank() == 0)
-    {
-      std::cout << "blocks: " << num_blocks << " " << num_weights << "\n";
-    }
-  // const El::BigFloat min_x(0), max_x(10);
-  const El::BigFloat min_x(1.0 / 1024), max_x(1024);
+  // Need to have a point at zero and infinity
+  // GMP does not have a special infinity value, so we use max double.
+  const El::BigFloat infinity(std::numeric_limits<double>::max());
+  const El::BigFloat min_x(0), max_x(infinity);
+
   for(size_t block(0); block < num_blocks; ++block)
     {
       points.at(block).emplace(min_x);
 
-      // points.at(block).emplace(0.1);
-      // points.at(block).emplace(1);
-      // points.at(block).emplace(10);
-      // for(double x(min_x); x < max_x; x *= 1.02)
+      points.at(block).emplace(1);
+      points.at(block).emplace(10);
+      points.at(block).emplace(100);
+      points.at(block).emplace(1000);
+      // for(double x(min_x); x < max_x; x *= 4)
       //   points.at(block).emplace(x);
 
       new_points.at(block).emplace_back(max_x);
@@ -99,9 +95,17 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
         {
           for(auto &x : points.at(block))
             {
-              prefactors.push_back(
-                power_prefactor(matrices[block].damped_rational.base, x)
-                * poles_prefactor(matrices[block].damped_rational.poles, x));
+              if(x == infinity)
+                {
+                  prefactors.push_back(1);
+                }
+              else
+                {
+                  prefactors.push_back(
+                    power_prefactor(matrices[block].damped_rational.base, x)
+                    * poles_prefactor(matrices[block].damped_rational.poles,
+                                      x));
+                }
               auto &prefactor(prefactors.back());
 
               const size_t dim(matrices[block].polynomials.size());
@@ -113,63 +117,83 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
               primal_objective_c.emplace_back();
               auto &primal(primal_objective_c.back());
 
-              // std::cout << "prefactor: "
-              //           << block << " "
-              //           << x << " "
-              //           << prefactor;
-
               size_t flattened_matrix_row(0);
               for(size_t matrix_row(0); matrix_row != dim; ++matrix_row)
                 for(size_t matrix_column(0); matrix_column <= matrix_row;
                     ++matrix_column)
                   {
-                    primal.push_back(prefactor
-                                     * matrices[block]
-                                         .polynomials.at(matrix_row)
-                                         .at(matrix_column)
-                                         .at(max_index)(x)
-                                     / normalization.at(max_index));
-
-                    auto &primal_constant(primal.back());
-                    // std::cout << " "
-                    //           << (matrices[block]
-                    //                      .polynomials.at(matrix_row)
-                    //                      .at(matrix_column)
-                    //               .at(0)(x));
-                    //           // << (prefactor
-                    //           //        * matrices[block]
-                    //           //            .polynomials.at(matrix_row)
-                    //           //            .at(matrix_column)
-                    //           //     .at(0)(x));
-
-                    for(int64_t column(0); column != free_var.Width();
-                        ++column)
+                    if(x == infinity)
                       {
-                        const int64_t index(column
-                                            + (column < max_index ? 0 : 1));
-                        free_var(flattened_matrix_row, column)
-                          = primal_constant * normalization.at(index)
-                            - prefactor
-                                * matrices[block]
-                                    .polynomials.at(matrix_row)
-                                    .at(matrix_column)
-                                    .at(index)(x);
+                        int64_t max_degree(0);
+                        for(auto &poly : matrices[block]
+                                           .polynomials.at(matrix_row)
+                                           .at(matrix_column))
+                          max_degree = std::max(max_degree, poly.degree());
+                        if(matrices[block]
+                             .polynomials.at(matrix_row)
+                             .at(matrix_column)
+                             .at(max_index)
+                             .degree()
+                           < max_degree)
+                          {
+                            primal.push_back(0);
+                          }
+                        else
+                          {
+                            primal.push_back(matrices[block]
+                                               .polynomials.at(matrix_row)
+                                               .at(matrix_column)
+                                               .at(max_index)
+                                               .coefficients.at(max_degree));
+                          }
+                        for(int64_t column(0); column != free_var.Width();
+                            ++column)
+                          {
+                            const int64_t index(
+                              column + (column < max_index ? 0 : 1));
+                            if(matrices[block]
+                                        .polynomials.at(matrix_row)
+                                        .at(matrix_column)
+                               .at(index).degree() < max_degree)
+                              {
+                                free_var(flattened_matrix_row, column)=0;
+                              }
+                            else
+                              {
+                                free_var(flattened_matrix_row, column)
+                                  = matrices[block]
+                                        .polynomials.at(matrix_row)
+                                        .at(matrix_column)
+                                  .at(index).coefficients.at(max_degree);
+                              }
+                          }
+                      }
+                    else
+                      {
+                        primal.push_back(prefactor
+                                         * matrices[block]
+                                             .polynomials.at(matrix_row)
+                                             .at(matrix_column)
+                                             .at(max_index)(x)
+                                         / normalization.at(max_index));
 
-                        // std::cout << " "
-                        //           << (matrices[block]
-                        //               .polynomials.at(matrix_row)
-                        //               .at(matrix_column)
-                        //               .at(column + 1)(x));
-                        //           // << (-prefactor
-                        //           //     * matrices[block]
-                        //           //     .polynomials.at(matrix_row)
-                        //           //     .at(matrix_column)
-                        //           //     .at(column + 1)(x));
+                        auto &primal_constant(primal.back());
+                        for(int64_t column(0); column != free_var.Width();
+                            ++column)
+                          {
+                            const int64_t index(
+                              column + (column < max_index ? 0 : 1));
+                            free_var(flattened_matrix_row, column)
+                              = primal_constant * normalization.at(index)
+                                - prefactor
+                                    * matrices[block]
+                                        .polynomials.at(matrix_row)
+                                        .at(matrix_column)
+                                        .at(index)(x);
+                          }
                       }
                     ++flattened_matrix_row;
-                    // std::cout << "\n";
                   }
-              // exit(0);
             }
         }
 
@@ -182,6 +206,12 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
       Timers timers(parameters.verbosity >= Verbosity::debug);
       SDP_Solver_Terminate_Reason reason
         = solver.run(parameters, block_info, sdp, grid, timers);
+      if(reason != SDP_Solver_Terminate_Reason::PrimalDualOptimal)
+        {
+          std::stringstream ss;
+          ss << "Can not find solution: " << reason;
+          throw std::runtime_error(ss.str());
+        }
 
       // y is duplicated among cores, so only need to print out copy on
       // the root node.
@@ -199,15 +229,23 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
 
       if(El::mpi::Rank() == 0)
         {
-          std::cout.precision(parameters.precision / 3.3);
+          std::cout.precision(10);
           std::cout << "weight: " << weights << "\n";
+
+          El::BigFloat optimal(0);
+          for(size_t index(0); index < objectives.size(); ++index)
+            {
+              optimal += objectives[index] * weights[index];
+            }
+          std::cout << "optimal: " << optimal << "\n";
         }
       for(size_t block(0); block != num_blocks; ++block)
         {
           // 0.01 should be a small enough relative error so that we are
           // in the regime of convergence.  Then the error estimates will
           // work
-          Mesh mesh(*(points.at(block).begin()), *(points.at(block).rbegin()),
+          // Mesh mesh(*(points.at(block).begin()), *(points.at(block).rbegin()),
+          Mesh mesh(*(points.at(block).begin()), El::BigFloat(100),
                     [&](const El::BigFloat &x) {
                       return eval_weighted(matrices[block], x, weights);
                     },
@@ -218,14 +256,11 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
               has_new_points
                 = has_new_points || (points.at(block).count(point) == 0);
             }
-          // std::cout << "new: " << block << " " << new_points.at(block) <<
-          // "\n";
         }
     }
-  // std::cout.precision(precision / 3.3);
-  if(El::mpi::Rank() == 0)
-    {
-      std::cout << "weights: " << weights << "\n";
-    }
+  // if(El::mpi::Rank() == 0)
+  //   {
+  //     std::cout << "weights: " << weights << "\n";
+  //   }
   return weights;
 }
