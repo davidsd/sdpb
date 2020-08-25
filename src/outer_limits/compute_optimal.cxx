@@ -102,7 +102,6 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                                       x));
                 }
               auto &prefactor(prefactors.back());
-
               const size_t dim(matrices[block].polynomials.size());
               free_var_matrix.emplace_back(
                 dim * (dim + 1) / 2,
@@ -139,27 +138,34 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                                                .polynomials.at(matrix_row)
                                                .at(matrix_column)
                                                .at(max_index)
-                                               .coefficients.at(max_degree));
+                                               .coefficients.at(max_degree)
+                                             / normalization.at(max_index));
                           }
+                        auto &primal_constant(primal.back());
                         for(int64_t column(0); column != free_var.Width();
                             ++column)
                           {
                             const int64_t index(
                               column + (column < max_index ? 0 : 1));
                             if(matrices[block]
-                                        .polynomials.at(matrix_row)
-                                        .at(matrix_column)
-                               .at(index).degree() < max_degree)
+                                 .polynomials.at(matrix_row)
+                                 .at(matrix_column)
+                                 .at(index)
+                                 .degree()
+                               < max_degree)
                               {
-                                free_var(flattened_matrix_row, column)=0;
+                                free_var(flattened_matrix_row, column)
+                                  = primal_constant * normalization.at(index);
                               }
                             else
                               {
                                 free_var(flattened_matrix_row, column)
-                                  = matrices[block]
+                                  = primal_constant * normalization.at(index)
+                                    - matrices[block]
                                         .polynomials.at(matrix_row)
                                         .at(matrix_column)
-                                  .at(index).coefficients.at(max_degree);
+                                        .at(index)
+                                        .coefficients.at(max_degree);
                               }
                           }
                       }
