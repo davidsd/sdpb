@@ -16,7 +16,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
   size_t num_weights(normalization.size());
 
   const size_t num_blocks(matrices.size());
-  std::vector<El::BigFloat> weights(num_weights, 1);
+  std::vector<El::BigFloat> weights(num_weights, 0);
   std::vector<std::set<El::BigFloat>> points(num_blocks);
   std::vector<std::vector<El::BigFloat>> new_points(num_blocks);
 
@@ -203,6 +203,20 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
 
       SDP_Solver solver(parameters, block_info, grid,
                         sdp.dual_objective_b.Height());
+
+      for(auto &block : solver.y.blocks)
+        {
+          if(block.GlobalCol(0) == 0)
+            {
+              for(int64_t row(0); row != block.LocalHeight(); ++row)
+                {
+                  int64_t global_row(block.GlobalRow(row));
+                  const int64_t index(global_row
+                                      + (global_row < max_index ? 0 : 1));
+                  block.SetLocal(row, 0, weights.at(index));
+                }
+            }
+        }
 
       Timers timers(parameters.verbosity >= Verbosity::debug);
       SDP_Solver_Terminate_Reason reason
