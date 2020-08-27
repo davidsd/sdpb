@@ -1,7 +1,5 @@
 #include "../SDP_Solver.hxx"
 
-// Create and initialize an SDPSolver for the given SDP and
-// SDP_Solver_Parameters
 SDP_Solver::SDP_Solver(const SDP_Solver_Parameters &parameters,
                        const Block_Info &block_info, const El::Grid &grid,
                        const size_t &dual_objective_b_height)
