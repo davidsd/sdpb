@@ -83,9 +83,9 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
               max_normalization = n;
             }
         }
-      int64_t max_index(
+      const int64_t max_index(
         std::distance(normalization.begin(), max_normalization));
-
+      
       for(size_t block(0); block != num_blocks; ++block)
         {
           for(auto &x : points.at(block))
