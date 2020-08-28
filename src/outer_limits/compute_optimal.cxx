@@ -27,6 +27,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
   for(size_t block(0); block < num_blocks; ++block)
     {
       points.at(block).emplace(min_x);
+      points.at(block).emplace(0.1);
       points.at(block).emplace(1);
       // for(double x(min_x); x < max_x; x *= 4)
       //   points.at(block).emplace(x);
