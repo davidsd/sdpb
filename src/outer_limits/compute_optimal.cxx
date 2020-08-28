@@ -111,6 +111,14 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
               primal_objective_c.emplace_back();
               auto &primal(primal_objective_c.back());
 
+              int64_t max_degree(0);
+              for(auto &row: matrices[block].polynomials)
+                for(auto &column: row)
+                  for(auto &poly: column)
+                    {
+                      max_degree = std::max(max_degree, poly.degree());
+                    }
+
               size_t flattened_matrix_row(0);
               for(size_t matrix_row(0); matrix_row != dim; ++matrix_row)
                 for(size_t matrix_column(0); matrix_column <= matrix_row;
@@ -118,11 +126,6 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                   {
                     if(x == infinity)
                       {
-                        int64_t max_degree(0);
-                        for(auto &poly : matrices[block]
-                                           .polynomials.at(matrix_row)
-                                           .at(matrix_column))
-                          max_degree = std::max(max_degree, poly.degree());
                         if(matrices[block]
                              .polynomials.at(matrix_row)
                              .at(matrix_column)
