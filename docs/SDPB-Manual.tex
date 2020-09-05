@@ -639,6 +639,16 @@ dualError       = 1.468413781935381263316274702968131054671976778420256867269376
 Saving solution to      : "test/test_out"
 \end{lstlisting}
 
+For larger, parallel runs, the exact solution that \SDPB\ computes can
+vary between different machines, or even different configurations on
+the same run.  For example, the step size is computed by adding up
+many other numbers.  The order in which these numbers are added can
+change the final sum in the lowest significant bits.  This does not
+make the solver unstable, but it does introduce a minor amount of
+variation.  The solver still converges to the same answer up to the
+error thresholds and duality gap, but the actual value of the residual
+errors and gap will be different.
+
 \subsection{Termination}
 
 The possible termination reasons for \SDPB\ are as follows
