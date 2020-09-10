@@ -4,6 +4,8 @@
 
 #include "../ostream_vector.hxx"
 
+#include <boost/date_time/posix_time/posix_time.hpp>
+
 // We convert the optimization problem into a regular linear
 // programming problem.
 //
@@ -64,6 +66,14 @@ int main(int argc, char **argv)
     {
       return 0;
     }
+  if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
+    {
+      std::cout << "Outer_Limits started at "
+                << boost::posix_time::second_clock::local_time() << '\n'
+                << parameters << '\n'
+                << std::flush;
+    }
+  
   const int64_t precision(parameters.precision);
   El::gmp::SetPrecision(precision);
   // El::gmp wants base-2 bits, but boost::multiprecision wants
