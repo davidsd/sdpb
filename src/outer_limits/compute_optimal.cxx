@@ -205,7 +205,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
             }
         }
 
-      SDP sdp(objectives, normalization, prefactors, primal_objective_c,
+      SDP sdp(objectives, normalization, primal_objective_c,
               free_var_matrix, block_info, grid);
 
       SDP_Solver solver(parameters, block_info, grid,

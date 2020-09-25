@@ -36,7 +36,6 @@ SDP::SDP(const boost::filesystem::path &sdp_directory,
 
 SDP::SDP(const std::vector<El::BigFloat> &objectives,
          const std::vector<El::BigFloat> &normalization,
-         const std::vector<El::BigFloat> &prefactor,
          const std::vector<std::vector<El::BigFloat>> &primal_objective_c_input,
          const std::vector<El::Matrix<El::BigFloat>> &free_var_input,
          const Block_Info &block_info, const El::Grid &grid)
@@ -74,8 +73,7 @@ SDP::SDP(const std::vector<El::BigFloat> &objectives,
     {
       bilinear_bases_local[2 * block].Resize(1, 1);
       bilinear_bases_local[2 * block + 1].Resize(0, 1);
-      bilinear_bases_local[2 * block](0, 0)
-        = Sqrt(prefactor.at(block_indices.at(block)));
+      bilinear_bases_local[2 * block](0, 0) = 1;
     }
   assign_bilinear_bases_dist(bilinear_bases_local, grid, bilinear_bases_dist);
 
