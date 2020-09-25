@@ -68,8 +68,6 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
       Block_Info block_info(matrix_dimensions, parameters.procs_per_node,
                             parameters.proc_granularity, parameters.verbosity);
       El::Grid grid(block_info.mpi_comm.value);
-      std::vector<El::BigFloat> prefactors;
-      prefactors.reserve(num_constraints);
       std::vector<std::vector<El::BigFloat>> primal_objective_c;
       primal_objective_c.reserve(num_constraints);
       std::vector<El::Matrix<El::BigFloat>> free_var_matrix;
@@ -102,18 +100,15 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
 
           for(auto &x : points.at(block))
             {
-              if(x == infinity)
-                {
-                  prefactors.push_back(1);
-                }
-              else
-                {
-                  prefactors.push_back(
-                    power_prefactor(matrices[block].damped_rational.base, x)
-                    * poles_prefactor(matrices[block].damped_rational.poles,
-                                      x));
-                }
-              auto &prefactor(prefactors.back());
+              El::BigFloat prefactor([&]() {
+                if(x == infinity)
+                  {
+                    return El::BigFloat(1);
+                  }
+                return power_prefactor(matrices[block].damped_rational.base, x)
+                       * poles_prefactor(matrices[block].damped_rational.poles,
+                                         x);
+              }());
               const size_t dim(matrices[block].polynomials.size());
               free_var_matrix.emplace_back(
                 dim * (dim + 1) / 2,
@@ -122,7 +117,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
 
               primal_objective_c.emplace_back();
               auto &primal(primal_objective_c.back());
- 
+
               size_t flattened_matrix_row(0);
               for(size_t matrix_row(0); matrix_row != dim; ++matrix_row)
                 for(size_t matrix_column(0); matrix_column <= matrix_row;
@@ -205,8 +200,8 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
             }
         }
 
-      SDP sdp(objectives, normalization, primal_objective_c,
-              free_var_matrix, block_info, grid);
+      SDP sdp(objectives, normalization, primal_objective_c, free_var_matrix,
+              block_info, grid);
 
       SDP_Solver solver(parameters, block_info, grid,
                         sdp.dual_objective_b.Height());
