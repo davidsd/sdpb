@@ -197,6 +197,42 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                       }
                     ++flattened_matrix_row;
                   }
+              // Rescale
+              const El::BigFloat scaling([&]() {
+                El::BigFloat max_value(0);
+                size_t flattened_matrix_row(0);
+                for(size_t matrix_row(0); matrix_row != dim; ++matrix_row)
+                  for(size_t matrix_column(0); matrix_column <= matrix_row;
+                      ++matrix_column)
+                    {
+                      max_value = std::max(
+                        max_value, El::Abs(primal.at(flattened_matrix_row)));
+                      for(int64_t column(0); column != free_var.Width();
+                          ++column)
+                        {
+                          max_value = std::max(
+                            max_value,
+                            El::Abs(free_var(flattened_matrix_row, column)));
+                        }
+                      ++flattened_matrix_row;
+                    }
+                return 1 / max_value;
+              }());
+              {
+                size_t flattened_matrix_row(0);
+                for(size_t matrix_row(0); matrix_row != dim; ++matrix_row)
+                  for(size_t matrix_column(0); matrix_column <= matrix_row;
+                      ++matrix_column)
+                    {
+                      primal.at(flattened_matrix_row) *= scaling;
+                      for(int64_t column(0); column != free_var.Width();
+                          ++column)
+                        {
+                          free_var(flattened_matrix_row, column) *= scaling;
+                        }
+                      ++flattened_matrix_row;
+                    }
+              }
             }
         }
 
