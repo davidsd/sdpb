@@ -66,6 +66,13 @@ int main(int argc, char **argv)
     {
       return 0;
     }
+
+  const int64_t precision(parameters.precision);
+  El::gmp::SetPrecision(precision);
+  // El::gmp wants base-2 bits, but boost::multiprecision wants
+  // base-10 digits.
+  Boost_Float::default_precision(precision * log(2) / log(10));
+
   if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
       std::cout << "Outer_Limits started at "
@@ -74,12 +81,6 @@ int main(int argc, char **argv)
                 << std::flush;
     }
   
-  const int64_t precision(parameters.precision);
-  El::gmp::SetPrecision(precision);
-  // El::gmp wants base-2 bits, but boost::multiprecision wants
-  // base-10 digits.
-  Boost_Float::default_precision(precision * log(2) / log(10));
-
   // {
   //   Functional functional("test/single_corr_polys",
   //                         "test/single_corr_prefactor",
