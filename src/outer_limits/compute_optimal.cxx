@@ -236,7 +236,38 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
             }
         }
 
-      SDP sdp(objectives, normalization, primal_objective_c, free_var_matrix,
+      // std::vector<El::BigFloat> rescaling(num_weights, 0);
+      // for(auto &matrix : free_var_matrix)
+      //   {
+      //     for(int64_t column(0); column < matrix.Width(); ++column)
+      //       {
+      //         const int64_t index(column + (column < max_index ? 0 : 1));
+      //         for(int64_t row(0); row < matrix.Height(); ++row)
+      //           {
+      //             rescaling.at(index)
+      //               = std::max(rescaling.at(index), matrix(row, column));
+      //           }
+      //       }
+      //   }
+
+      // if(El::mpi::Rank() == 0)
+      //   {
+      //     std::cout << "rescaling: " << rescaling << "\n";
+      //   }
+
+      El::BigFloat objective_const(objectives.at(max_index) / normalization.at(max_index));
+      std::vector<El::BigFloat> dual_objective_b;
+      dual_objective_b.reserve(normalization.size() - 1);
+      for(size_t index = 0; index < normalization.size(); ++index)
+        {
+          if(index != max_index)
+            {
+              dual_objective_b.push_back(
+                                         objectives.at(index) - normalization.at(index) * objective_const);
+            }
+        }
+      
+      SDP sdp(objective_const, dual_objective_b, primal_objective_c, free_var_matrix,
               block_info, grid);
 
       SDP_Solver solver(parameters, block_info, grid,

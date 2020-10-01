@@ -98,8 +98,8 @@ struct SDP
 
   SDP(const boost::filesystem::path &sdp_directory,
       const Block_Info &block_info, const El::Grid &grid);
-  SDP(const std::vector<El::BigFloat> &objectives,
-      const std::vector<El::BigFloat> &normalization,
+  SDP(const El::BigFloat &objective_const,
+      const std::vector<El::BigFloat> &dual_objective_b_input,
       const std::vector<std::vector<El::BigFloat>> &primal_objective_c_input,
       const std::vector<El::Matrix<El::BigFloat>> &free_var_input,
       const Block_Info &block_info, const El::Grid &grid);

@@ -34,37 +34,14 @@ SDP::SDP(const boost::filesystem::path &sdp_directory,
                        free_var_matrix);
 }
 
-SDP::SDP(const std::vector<El::BigFloat> &objectives,
-         const std::vector<El::BigFloat> &normalization,
+SDP::SDP(const El::BigFloat &objective_const_input,
+         const std::vector<El::BigFloat> &dual_objective_b_input,
          const std::vector<std::vector<El::BigFloat>> &primal_objective_c_input,
          const std::vector<El::Matrix<El::BigFloat>> &free_var_input,
-         const Block_Info &block_info, const El::Grid &grid)
+         const Block_Info &block_info, const El::Grid &grid):
+  objective_const(objective_const_input)
 {
-  // TODO: This is duplicated from sdp2input/write_output/write_output.cxx
-  auto max_normalization(normalization.begin());
-  for(auto n(normalization.begin()); n != normalization.end(); ++n)
-    {
-      if(Abs(*n) > Abs(*max_normalization))
-        {
-          max_normalization = n;
-        }
-    }
-  size_t max_index(std::distance(normalization.begin(), max_normalization));
-
-  objective_const = objectives.at(max_index) / normalization.at(max_index);
-
-  std::vector<El::BigFloat> offset_dual_objective_b;
-  offset_dual_objective_b.reserve(normalization.size() - 1);
-  for(size_t index = 0; index < normalization.size(); ++index)
-    {
-      if(index != max_index)
-        {
-          offset_dual_objective_b.push_back(
-            objectives.at(index) - normalization.at(index) * objective_const);
-        }
-    }
-
-  set_dual_objective_b(offset_dual_objective_b, grid, dual_objective_b);
+  set_dual_objective_b(dual_objective_b_input, grid, dual_objective_b);
 
   auto &block_indices(block_info.block_indices);
   bilinear_bases_local.resize(2 * block_indices.size());
