@@ -63,7 +63,6 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
         {
           std::cout << "num_constraints: " << num_constraints << "\n";
         }
-      // std::cout << "matrix_dimensions: " << matrix_dimensions << "\n";
 
       Block_Info block_info(matrix_dimensions, parameters.procs_per_node,
                             parameters.proc_granularity, parameters.verbosity);
@@ -82,7 +81,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
               max_normalization = n;
             }
         }
-      const int64_t max_index(
+      const size_t max_index(
         std::distance(normalization.begin(), max_normalization));
 
       for(size_t block(0); block != num_blocks; ++block)
@@ -144,11 +143,11 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                                              / normalization.at(max_index));
                           }
                         auto &primal_constant(primal.back());
-                        for(int64_t column(0); column != free_var.Width();
-                            ++column)
+                        for(size_t column(0);
+                            column != size_t(free_var.Width()); ++column)
                           {
-                            const int64_t index(
-                              column + (column < max_index ? 0 : 1));
+                            const size_t index(column
+                                               + (column < max_index ? 0 : 1));
                             if(matrices[block]
                                  .polynomials.at(matrix_row)
                                  .at(matrix_column)
@@ -181,11 +180,11 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                                          / normalization.at(max_index));
 
                         auto &primal_constant(primal.back());
-                        for(int64_t column(0); column != free_var.Width();
-                            ++column)
+                        for(size_t column(0);
+                            column != size_t(free_var.Width()); ++column)
                           {
-                            const int64_t index(
-                              column + (column < max_index ? 0 : 1));
+                            const size_t index(column
+                                               + (column < max_index ? 0 : 1));
                             free_var(flattened_matrix_row, column)
                               = primal_constant * normalization.at(index)
                                 - prefactor
@@ -197,7 +196,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                       }
                     ++flattened_matrix_row;
                   }
-              // Rescale
+              // Rescale rows
               const El::BigFloat scaling([&]() {
                 El::BigFloat max_value(0);
                 size_t flattened_matrix_row(0);
@@ -207,7 +206,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                     {
                       max_value = std::max(
                         max_value, El::Abs(primal.at(flattened_matrix_row)));
-                      for(int64_t column(0); column != free_var.Width();
+                      for(size_t column(0); column != size_t(free_var.Width());
                           ++column)
                         {
                           max_value = std::max(
@@ -225,7 +224,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                       ++matrix_column)
                     {
                       primal.at(flattened_matrix_row) *= scaling;
-                      for(int64_t column(0); column != free_var.Width();
+                      for(size_t column(0); column != size_t(free_var.Width());
                           ++column)
                         {
                           free_var(flattened_matrix_row, column) *= scaling;
@@ -236,39 +235,51 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
             }
         }
 
-      // std::vector<El::BigFloat> rescaling(num_weights, 0);
-      // for(auto &matrix : free_var_matrix)
-      //   {
-      //     for(int64_t column(0); column < matrix.Width(); ++column)
-      //       {
-      //         const int64_t index(column + (column < max_index ? 0 : 1));
-      //         for(int64_t row(0); row < matrix.Height(); ++row)
-      //           {
-      //             rescaling.at(index)
-      //               = std::max(rescaling.at(index), matrix(row, column));
-      //           }
-      //       }
-      //   }
-
-      // if(El::mpi::Rank() == 0)
-      //   {
-      //     std::cout << "rescaling: " << rescaling << "\n";
-      //   }
-
-      El::BigFloat objective_const(objectives.at(max_index) / normalization.at(max_index));
+      El::BigFloat objective_const(objectives.at(max_index)
+                                   / normalization.at(max_index));
       std::vector<El::BigFloat> dual_objective_b;
       dual_objective_b.reserve(normalization.size() - 1);
       for(size_t index = 0; index < normalization.size(); ++index)
         {
           if(index != max_index)
             {
-              dual_objective_b.push_back(
-                                         objectives.at(index) - normalization.at(index) * objective_const);
+              dual_objective_b.push_back(objectives.at(index)
+                                         - normalization.at(index)
+                                             * objective_const);
             }
         }
-      
-      SDP sdp(objective_const, dual_objective_b, primal_objective_c, free_var_matrix,
-              block_info, grid);
+
+      // Rescale columns
+      std::vector<El::BigFloat> rescaling(num_weights - 1, 0);
+      for(auto &matrix : free_var_matrix)
+        {
+          for(size_t column(0); column < size_t(matrix.Width()); ++column)
+            {
+              for(size_t row(0); row < size_t(matrix.Height()); ++row)
+                {
+                  rescaling.at(column) = std::max(
+                    rescaling.at(column), El::Abs(matrix(row, column)));
+                }
+            }
+        }
+
+      for(size_t index(0); index != rescaling.size(); ++index)
+        {
+          rescaling[index] = 1 / rescaling[index];
+          dual_objective_b[index] *= rescaling[index];
+        }
+
+      for(auto &matrix : free_var_matrix)
+        {
+          for(size_t row(0); row != size_t(matrix.Height()); ++row)
+            for(size_t column(0); column != size_t(matrix.Width()); ++column)
+              {
+                matrix(row, column) *= rescaling[column];
+              }
+        }
+
+      SDP sdp(objective_const, dual_objective_b, primal_objective_c,
+              free_var_matrix, block_info, grid);
 
       SDP_Solver solver(parameters, block_info, grid,
                         sdp.dual_objective_b.Height());
@@ -277,11 +288,11 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
         {
           if(block.GlobalCol(0) == 0)
             {
-              for(int64_t row(0); row != block.LocalHeight(); ++row)
+              for(size_t row(0); row != size_t(block.LocalHeight()); ++row)
                 {
-                  int64_t global_row(block.GlobalRow(row));
-                  const int64_t index(global_row
-                                      + (global_row < max_index ? 0 : 1));
+                  size_t global_row(block.GlobalRow(row));
+                  const size_t index(global_row
+                                     + (global_row < max_index ? 0 : 1));
                   block.SetLocal(row, 0, weights.at(index));
                 }
             }
@@ -302,11 +313,12 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
       // THe weight at max_index is determined by the normalization condition
       // dot(norm,weights)=1
       weights.at(max_index) = 1;
-      for(int64_t block_row(0); block_row != solver.y.blocks.at(0).Height();
-          ++block_row)
+      for(size_t block_row(0);
+          block_row != size_t(solver.y.blocks.at(0).Height()); ++block_row)
         {
-          const int64_t index(block_row + (block_row < max_index ? 0 : 1));
-          weights.at(index) = solver.y.blocks.at(0).Get(block_row, 0);
+          const size_t index(block_row + (block_row < max_index ? 0 : 1));
+          weights.at(index)
+            = solver.y.blocks.at(0).Get(block_row, 0) * rescaling[block_row];
           weights.at(max_index) -= weights.at(index) * normalization.at(index);
         }
       weights.at(max_index) /= normalization.at(max_index);
