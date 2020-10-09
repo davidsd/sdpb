@@ -21,11 +21,6 @@ void maybe_add_point(const El::BigFloat &x_minus, const El::BigFloat &x_bar,
          //      > Sqrt(Sqrt(El::limits::Epsilon<El::BigFloat>()))
          )
         {
-          std::cout << "add: "
-                    << x_min << " "
-                    << f_x_min << " "
-                    << El::limits::Epsilon<El::BigFloat>() << " "
-                    << Abs(f_x_bar - f_bar) << "\n";
           points.push_back(x_min);
         }
     }
