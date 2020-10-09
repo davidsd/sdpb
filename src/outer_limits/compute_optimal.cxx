@@ -27,16 +27,29 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
   for(size_t block(0); block < num_blocks; ++block)
     {
       points.at(block).emplace(min_x);
-      points.at(block).emplace(0.1);
-      points.at(block).emplace(1);
-      // for(double x(min_x); x < max_x; x *= 4)
+
+      // points.at(block).emplace(0.1);
+      // points.at(block).emplace(1);
+
+      // const int64_t num_points(64);
+      // const double dx(1.0/num_points);
+      // for(double x(dx); x < 1; x +=dx)
+      //   points.at(block).emplace(-log(1-x));
+
+      // const int64_t num_points(64);
+      // const double dx(64.0/num_points);
+      // for(double x(dx); x <= 64; x +=dx)
       //   points.at(block).emplace(x);
+
+      for(double x(1 / 64.0); x < 64; x *= 1.13878863476 * 1.13878863476)
+        points.at(block).emplace(x);
 
       new_points.at(block).emplace_back(max_x);
     }
 
   bool has_new_points(true);
 
+  bool is_first_iteration(true);
   while(has_new_points)
     {
       has_new_points = false;
@@ -59,14 +72,11 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
             }
         }
 
-      if(El::mpi::Rank() == 0)
-        {
-          std::cout << "num_constraints: " << num_constraints << "\n";
-        }
+      // if(El::mpi::Rank() == 0)
+      //   {
+      //     std::cout << "num_constraints: " << num_constraints << "\n";
+      //   }
 
-      Block_Info block_info(matrix_dimensions, parameters.procs_per_node,
-                            parameters.proc_granularity, parameters.verbosity);
-      El::Grid grid(block_info.mpi_comm.value);
       std::vector<std::vector<El::BigFloat>> primal_objective_c;
       primal_objective_c.reserve(num_constraints);
       std::vector<El::Matrix<El::BigFloat>> free_var_matrix;
@@ -272,11 +282,113 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
       for(auto &matrix : free_var_matrix)
         {
           for(size_t row(0); row != size_t(matrix.Height()); ++row)
-            for(size_t column(0); column != size_t(matrix.Width()); ++column)
-              {
-                matrix(row, column) *= rescaling[column];
-              }
+            {
+              for(size_t column(0); column != size_t(matrix.Width()); ++column)
+                {
+                  matrix(row, column) *= rescaling[column];
+                }
+            }
         }
+
+      if(is_first_iteration)
+        {
+          std::vector<size_t> elements_to_keep(1, 0);
+          const El::BigFloat tolerance(0.1);
+          for(size_t matrix_index(0);
+              matrix_index + 1 < free_var_matrix.size();)
+            {
+              auto &matrix(free_var_matrix[matrix_index]);
+              auto &c(primal_objective_c[matrix_index]);
+
+              size_t offset_index(matrix_index + 1);
+              for(; offset_index != free_var_matrix.size(); ++offset_index)
+                {
+                  if(free_var_matrix[offset_index].Height() != matrix.Height())
+                    {
+                      elements_to_keep.push_back(offset_index);
+                      break;
+                    }
+                  bool should_erase(true);
+                  for(size_t row(0);
+                      should_erase && row != size_t(matrix.Height()); ++row)
+                    {
+                      should_erase
+                        = should_erase
+                          && (El::Abs(c[row]
+                                      - primal_objective_c[offset_index][row])
+                              < tolerance);
+                      for(size_t column(0);
+                          should_erase && column != size_t(matrix.Width());
+                          ++column)
+                        {
+                          should_erase
+                            = should_erase
+                              && (El::Abs(matrix(row, column)
+                                          - free_var_matrix[offset_index](
+                                              row, column))
+                                  < tolerance);
+                        }
+                    }
+                  if(!should_erase)
+                    {
+                      elements_to_keep.push_back(offset_index);
+                      break;
+                    }
+                }
+              matrix_index = offset_index;
+            }
+
+          std::vector<std::vector<El::BigFloat>> temp_c;
+          temp_c.reserve(elements_to_keep.size());
+          std::vector<El::Matrix<El::BigFloat>> temp_matrix;
+          temp_matrix.reserve(elements_to_keep.size());
+          std::vector<size_t> temp_dimensions;
+          temp_dimensions.reserve(elements_to_keep.size());
+
+          for(auto element : elements_to_keep)
+            {
+              temp_c.push_back(primal_objective_c[element]);
+              temp_matrix.push_back(free_var_matrix[element]);
+              temp_dimensions.push_back(matrix_dimensions[element]);
+            }
+
+          std::vector<std::set<El::BigFloat>> temp_points(num_blocks);
+          size_t index(0), temp_num_constraints(0);
+          for(size_t block(0); block != num_blocks; ++block)
+            {
+              for(auto &point : points.at(block))
+                {
+                  if(std::find(elements_to_keep.begin(),
+                               elements_to_keep.end(), index)
+                     != elements_to_keep.end())
+                    temp_points.at(block).emplace(point);
+                  ++index;
+                }
+              temp_num_constraints += temp_points.at(block).size();
+              if(El::mpi::Rank() == 0)
+                {
+                  std::cout << "points: " << block << " "
+                            << temp_points.at(block) << "\n";
+                }
+            }
+
+          std::swap(temp_c, primal_objective_c);
+          std::swap(temp_matrix, free_var_matrix);
+          std::swap(temp_dimensions, matrix_dimensions);
+          std::swap(temp_points, points);
+
+          is_first_iteration = false;
+          // std::cout << "dimensions: " << temp_dimensions.size() << " "
+          //           << matrix_dimensions.size() << " "
+          //           << temp_num_constraints << "\n";
+          // std::cout << matrix_dimensions << "\n";
+          // std::cout << points << "\n";
+        }
+      std::cout << "num_constraints: " << free_var_matrix.size() << "\n";
+
+      Block_Info block_info(matrix_dimensions, parameters.procs_per_node,
+                            parameters.proc_granularity, parameters.verbosity);
+      El::Grid grid(block_info.mpi_comm.value);
 
       SDP sdp(objective_const, dual_objective_b, primal_objective_c,
               free_var_matrix, block_info, grid);
@@ -301,13 +413,13 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
       Timers timers(parameters.verbosity >= Verbosity::debug);
       SDP_Solver_Terminate_Reason reason
         = solver.run(parameters, block_info, sdp, grid, timers);
+
       if(reason != SDP_Solver_Terminate_Reason::PrimalDualOptimal)
         {
           std::stringstream ss;
           ss << "Can not find solution: " << reason;
           throw std::runtime_error(ss.str());
         }
-
       // y is duplicated among cores, so only need to print out copy on
       // the root node.
       // THe weight at max_index is determined by the normalization condition
@@ -325,7 +437,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
 
       if(El::mpi::Rank() == 0)
         {
-          std::cout.precision(10);
+          std::cout.precision(20);
           std::cout << "weight: " << weights << "\n";
 
           El::BigFloat optimal(0);
