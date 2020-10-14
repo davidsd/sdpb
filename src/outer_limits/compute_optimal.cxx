@@ -11,8 +11,10 @@ std::vector<El::BigFloat>
 compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                 const std::vector<El::BigFloat> &objectives,
                 const std::vector<El::BigFloat> &normalization,
-                const SDP_Solver_Parameters &parameters)
+                const SDP_Solver_Parameters &parameters_in)
 {
+  SDP_Solver_Parameters parameters(parameters_in);
+
   size_t num_weights(normalization.size());
 
   const size_t num_blocks(matrices.size());
@@ -47,12 +49,9 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
       new_points.at(block).emplace_back(max_x);
     }
 
-  bool has_new_points(true);
-
-  bool is_first_iteration(true);
-  while(has_new_points)
+  parameters.duality_gap_threshold = 1.1;
+  while(parameters.duality_gap_threshold > parameters_in.duality_gap_threshold)
     {
-      has_new_points = false;
       size_t num_constraints(0);
       std::vector<size_t> matrix_dimensions;
       for(size_t block(0); block != num_blocks; ++block)
@@ -72,10 +71,10 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
             }
         }
 
-      // if(El::mpi::Rank() == 0)
-      //   {
-      //     std::cout << "num_constraints: " << num_constraints << "\n";
-      //   }
+      if(El::mpi::Rank() == 0)
+        {
+          std::cout << "num_constraints: " << num_constraints << "\n";
+        }
 
       std::vector<std::vector<El::BigFloat>> primal_objective_c;
       primal_objective_c.reserve(num_constraints);
@@ -259,133 +258,6 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
             }
         }
 
-      // Rescale columns
-      std::vector<El::BigFloat> rescaling(num_weights - 1, 0);
-      for(auto &matrix : free_var_matrix)
-        {
-          for(size_t column(0); column < size_t(matrix.Width()); ++column)
-            {
-              for(size_t row(0); row < size_t(matrix.Height()); ++row)
-                {
-                  rescaling.at(column) = std::max(
-                    rescaling.at(column), El::Abs(matrix(row, column)));
-                }
-            }
-        }
-
-      for(size_t index(0); index != rescaling.size(); ++index)
-        {
-          rescaling[index] = 1 / rescaling[index];
-          dual_objective_b[index] *= rescaling[index];
-        }
-
-      for(auto &matrix : free_var_matrix)
-        {
-          for(size_t row(0); row != size_t(matrix.Height()); ++row)
-            {
-              for(size_t column(0); column != size_t(matrix.Width()); ++column)
-                {
-                  matrix(row, column) *= rescaling[column];
-                }
-            }
-        }
-
-      if(is_first_iteration)
-        {
-          std::vector<size_t> elements_to_keep(1, 0);
-          const El::BigFloat tolerance(0.1);
-          for(size_t matrix_index(0);
-              matrix_index + 1 < free_var_matrix.size();)
-            {
-              auto &matrix(free_var_matrix[matrix_index]);
-              auto &c(primal_objective_c[matrix_index]);
-
-              size_t offset_index(matrix_index + 1);
-              for(; offset_index != free_var_matrix.size(); ++offset_index)
-                {
-                  if(free_var_matrix[offset_index].Height() != matrix.Height())
-                    {
-                      elements_to_keep.push_back(offset_index);
-                      break;
-                    }
-                  bool should_erase(true);
-                  for(size_t row(0);
-                      should_erase && row != size_t(matrix.Height()); ++row)
-                    {
-                      should_erase
-                        = should_erase
-                          && (El::Abs(c[row]
-                                      - primal_objective_c[offset_index][row])
-                              < tolerance);
-                      for(size_t column(0);
-                          should_erase && column != size_t(matrix.Width());
-                          ++column)
-                        {
-                          should_erase
-                            = should_erase
-                              && (El::Abs(matrix(row, column)
-                                          - free_var_matrix[offset_index](
-                                              row, column))
-                                  < tolerance);
-                        }
-                    }
-                  if(!should_erase)
-                    {
-                      elements_to_keep.push_back(offset_index);
-                      break;
-                    }
-                }
-              matrix_index = offset_index;
-            }
-
-          std::vector<std::vector<El::BigFloat>> temp_c;
-          temp_c.reserve(elements_to_keep.size());
-          std::vector<El::Matrix<El::BigFloat>> temp_matrix;
-          temp_matrix.reserve(elements_to_keep.size());
-          std::vector<size_t> temp_dimensions;
-          temp_dimensions.reserve(elements_to_keep.size());
-
-          for(auto element : elements_to_keep)
-            {
-              temp_c.push_back(primal_objective_c[element]);
-              temp_matrix.push_back(free_var_matrix[element]);
-              temp_dimensions.push_back(matrix_dimensions[element]);
-            }
-
-          std::vector<std::set<El::BigFloat>> temp_points(num_blocks);
-          size_t index(0), temp_num_constraints(0);
-          for(size_t block(0); block != num_blocks; ++block)
-            {
-              for(auto &point : points.at(block))
-                {
-                  if(std::find(elements_to_keep.begin(),
-                               elements_to_keep.end(), index)
-                     != elements_to_keep.end())
-                    temp_points.at(block).emplace(point);
-                  ++index;
-                }
-              temp_num_constraints += temp_points.at(block).size();
-              if(El::mpi::Rank() == 0)
-                {
-                  std::cout << "points: " << block << " "
-                            << temp_points.at(block) << "\n";
-                }
-            }
-
-          std::swap(temp_c, primal_objective_c);
-          std::swap(temp_matrix, free_var_matrix);
-          std::swap(temp_dimensions, matrix_dimensions);
-          std::swap(temp_points, points);
-
-          is_first_iteration = false;
-          // std::cout << "dimensions: " << temp_dimensions.size() << " "
-          //           << matrix_dimensions.size() << " "
-          //           << temp_num_constraints << "\n";
-          // std::cout << matrix_dimensions << "\n";
-          // std::cout << points << "\n";
-        }
-      std::cout << "num_constraints: " << free_var_matrix.size() << "\n";
-
       Block_Info block_info(matrix_dimensions, parameters.procs_per_node,
                             parameters.proc_granularity, parameters.verbosity);
       El::Grid grid(block_info.mpi_comm.value);
@@ -414,12 +286,26 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
       SDP_Solver_Terminate_Reason reason
         = solver.run(parameters, block_info, sdp, grid, timers);
 
-      if(reason != SDP_Solver_Terminate_Reason::PrimalDualOptimal)
+      if(El::mpi::Rank() == 0)
         {
-          std::stringstream ss;
-          ss << "Can not find solution: " << reason;
-          throw std::runtime_error(ss.str());
+          set_stream_precision(std::cout);
+          std::cout << "-----" << reason << "-----\n"
+                    << '\n'
+                    << "primalObjective = " << solver.primal_objective << '\n'
+                    << "dualObjective   = " << solver.dual_objective << '\n'
+                    << "dualityGap      = " << solver.duality_gap << '\n'
+                    << "primalError     = " << solver.primal_error() << '\n'
+                    << "dualError       = " << solver.dual_error << '\n'
+                    << '\n';
         }
+
+      // if(reason != SDP_Solver_Terminate_Reason::PrimalDualOptimal)
+      //   {
+      //     std::stringstream ss;
+      //     ss << "Can not find solution: " << reason;
+      //     throw std::runtime_error(ss.str());
+      //   }
+
       // y is duplicated among cores, so only need to print out copy on
       // the root node.
       // THe weight at max_index is determined by the normalization condition
@@ -429,8 +315,9 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
           block_row != size_t(solver.y.blocks.at(0).Height()); ++block_row)
         {
           const size_t index(block_row + (block_row < max_index ? 0 : 1));
-          weights.at(index)
-            = solver.y.blocks.at(0).Get(block_row, 0) * rescaling[block_row];
+          weights.at(index) = solver.y.blocks.at(0).Get(block_row, 0);
+          // weights.at(index)
+          //   = solver.y.blocks.at(0).Get(block_row, 0) * rescaling[block_row];
           weights.at(max_index) -= weights.at(index) * normalization.at(index);
         }
       weights.at(max_index) /= normalization.at(max_index);
@@ -447,6 +334,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
             }
           std::cout << "optimal: " << optimal << "\n";
         }
+      bool has_new_points(false);
       for(size_t block(0); block != num_blocks; ++block)
         {
           // 0.01 should be a small enough relative error so that we are
@@ -457,7 +345,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                     [&](const El::BigFloat &x) {
                       return eval_weighted(matrices[block], x, weights);
                     },
-                    0.01);
+                    (1.0 / 128));
           new_points.at(block) = get_new_points(mesh);
           for(auto &point : new_points.at(block))
             {
@@ -465,10 +353,10 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                 = has_new_points || (points.at(block).count(point) == 0);
             }
         }
+      if(!has_new_points)
+        {
+          parameters.duality_gap_threshold *= (1.0 / 8);
+        }
     }
-  // if(El::mpi::Rank() == 0)
-  //   {
-  //     std::cout << "weights: " << weights << "\n";
-  //   }
   return weights;
 }
