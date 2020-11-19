@@ -108,3 +108,12 @@ manager such as [Homebrew](https://brew.sh).
 should give you a usage message.  HPC systems may require you to run
 all jobs through a batch system.  You will need to consult the
 documentation for your individual system.
+
+# Getting Help
+
+If you are having problems with installation, you can send a message
+to the [Bootstrap Software mailing
+list](https://groups.google.com/g/bootstrap-collaboration-software).
+When sending a message, be sure to include what system you are trying
+to install SDPB on, what you typed, and the **FULL** error message
+(even if you think it is too long).
