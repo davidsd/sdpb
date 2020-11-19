@@ -91,6 +91,44 @@ void initialize_schur_complement_solver(
   auto &Cholesky_timer(
     timers.add_and_start("run.step.initializeSchurComplementSolver."
                          "Cholesky"));
+
+  {
+    /// There is a bug in El::HermitianEig when there is more than
+    /// one level of recursion when computing eigenvalues.  One fix
+    /// is to increase the cutoff so that there is no more than one
+    /// level of recursion.
+
+    /// An alternate workaround is to compute both eigenvalues and
+    /// eigenvectors, but that seems to be significantly slower.
+    El::HermitianEigCtrl<El::BigFloat> hermitian_eig_ctrl;
+    hermitian_eig_ctrl.tridiagEigCtrl.dcCtrl.cutoff = Q.Height() / 2 + 1;
+
+    /// The default number of iterations is 40.  That is sometimes
+    /// not enough, so we bump it up significantly.
+    hermitian_eig_ctrl.tridiagEigCtrl.dcCtrl.secularCtrl.maxIterations = 400;
+
+    El::DistMatrix<El::BigFloat, El::VR, El::STAR> eigenvalues(Q.Grid());
+    El::HermitianEig(El::UpperOrLowerNS::LOWER, Q, eigenvalues,
+                     hermitian_eig_ctrl);
+
+    El::BigFloat max(0), min(std::numeric_limits<double>::max());
+
+    for(int64_t row(0); row!=eigenvalues.Height(); ++row)
+      {
+        max=std::max(max,El::Abs(eigenvalues.Get(row,0)));
+        min=std::min(min,El::Abs(eigenvalues.Get(row,0)));
+      }
+    if(El::mpi::Rank()==0)
+      {
+        std::cout << "Q Condition: "
+                  << (max / min) << " "
+                  << max << " "
+                  << min << "\n";
+      }
+    // exit(0);
+  }
+
+  
   Cholesky(El::UpperOrLowerNS::UPPER, Q);
   Cholesky_timer.stop();
   initialize_timer.stop();
