@@ -3,6 +3,7 @@ to use [Docker](docs/Docker.md) or [Singularity](docs/Singularity.md).
 
 * [Requirements](#requirements)
 * [Installation](#installation)
+* [Getting Help](#getting-help)
 
 # Requirements
 
@@ -109,8 +110,7 @@ should give you a usage message.  HPC systems may require you to run
 all jobs through a batch system.  You will need to consult the
 documentation for your individual system.
 
-# Getting Help
-
+# Getting Help<a name="getting-help" />
 If you are having problems with installation, you can send a message
 to the [Bootstrap Software mailing
 list](https://groups.google.com/g/bootstrap-collaboration-software).
