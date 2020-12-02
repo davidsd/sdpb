@@ -178,8 +178,6 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
                       beta_corrector, *this, solver_timer.start_time,
                       parameters.verbosity);
     }
-
-  // Never reached
   solver_timer.stop();
   return terminate_reason;
 }
