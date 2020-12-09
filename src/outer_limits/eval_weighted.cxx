@@ -26,6 +26,9 @@ eval_weighted(const Positive_Matrix_With_Prefactor &matrix,
         m.Set(row, column, element);
       }
 
+  // FIXME: Use the square of the matrix rather than the smallest
+  // eigenvalue?  That would map to B^T B.
+  
   El::Matrix<El::BigFloat> eigenvalues;
   /// There is a bug in El::HermitianEig when there is more than
   /// one level of recursion when computing eigenvalues.  One fix
