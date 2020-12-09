@@ -117,7 +117,7 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
         + std::to_string(block_info.block_indices[block])));
       schur_complement_cholesky.blocks[block] = schur_complement.blocks[block];
 
-
+      if(schur_complement.blocks[block].Height() > 1)
       {
         /// There is a bug in El::HermitianEig when there is more than
         /// one level of recursion when computing eigenvalues.  One fix
