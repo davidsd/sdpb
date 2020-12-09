@@ -161,7 +161,7 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
                schur_complement_cholesky.blocks[block]);
       cholesky_timer.stop();
 
-      // SchurOffDiagonal = L'^{-1} FreeVarMatrix
+      // SchurOffDiagonal = L^{-1} FreeVarMatrix
       auto &solve_timer(timers.add_and_start(
         "run.step.initializeSchurComplementSolver.Q.solve_"
         + std::to_string(block_info.block_indices[block])));
@@ -176,10 +176,7 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
 
       // Next, we compute
       //
-      //   Q = (L'^{-1} B')^T (L'^{-1} B') - {{0, 0}, {0, 1}}
-      //
-      // Where B' = (B U).  We think of Q as containing four blocks
-      // called Upper/Lower-Left/Right.
+      //   Q = (L^{-1} B)^T (L^{-1} B)
 
       auto &syrk_timer(timers.add_and_start(
         "run.step.initializeSchurComplementSolver.Q.syrk_"
