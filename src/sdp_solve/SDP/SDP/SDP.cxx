@@ -78,9 +78,9 @@ SDP::SDP(const El::BigFloat &objective_const_input,
 
   const int64_t B_Height([&]() {
     int64_t result(0);
-    for(auto &block : primal_objective_c.blocks)
+    for(auto &block : primal_objective_c_input)
       {
-        result += block.Height();
+        result += block.size();
       }
     return result;
   }());
