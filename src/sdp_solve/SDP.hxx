@@ -92,6 +92,8 @@ struct SDP
   // b, a vector of length N used with dual_objective
   // It is duplicated amongst all the blocks
   El::DistMatrix<El::BigFloat> dual_objective_b;
+  // Transformation from internal yp to original y
+  El::DistMatrix<El::BigFloat> yp_to_y;
 
   // objectiveConst = f
   El::BigFloat objective_const;
