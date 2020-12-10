@@ -160,8 +160,8 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
       //     points.at(block).emplace(candidates.at(point));
       //   }
 
-      points.at(block).emplace(0.1);
-      points.at(block).emplace(1);
+      // points.at(block).emplace(0.1);
+      // points.at(block).emplace(1);
 
       // const int64_t num_points(64);
       // const double dx(1.0/num_points);
@@ -180,8 +180,8 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
       //     points.at(block).emplace((1+cos(n*pi/N))*2);
       //   }
       
-      // for(double x(1 / 64.0); x < 64; x *= 1.13878863476 * 1.13878863476)
-      //   points.at(block).emplace(x);
+      for(double x(1 / 64.0); x < 64; x *= 1.13878863476 * 1.13878863476)
+        points.at(block).emplace(x);
 
       new_points.at(block).emplace_back(max_x);
     }
