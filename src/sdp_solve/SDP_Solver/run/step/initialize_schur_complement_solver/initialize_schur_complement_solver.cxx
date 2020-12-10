@@ -112,7 +112,6 @@ void initialize_schur_complement_solver(
                   << max << " "
                   << min << "\n";
       }
-    // exit(0);
   }
   
   Cholesky(El::UpperOrLowerNS::UPPER, Q);
