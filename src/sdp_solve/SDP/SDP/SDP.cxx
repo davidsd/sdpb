@@ -87,8 +87,6 @@ SDP::SDP(const El::BigFloat &objective_const_input,
   const int64_t B_Width(dual_objective_b.Height());
   El::DistMatrix<El::BigFloat> B(B_Height, B_Width, grid);
 
-  std::cout << "B: " << B.Height() << " " << B.Width() << "\n" << std::flush;
-
   int64_t row_block(0);
   for(size_t block(0); block != block_indices.size(); ++block)
     {
@@ -129,11 +127,6 @@ SDP::SDP(const El::BigFloat &objective_const_input,
   El::Copy(dual_objective_b, b_new);
   El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(1.0), yp_to_y, b_new,
            El::BigFloat(0.0), dual_objective_b);
-
-  El::Print(s, "s");
-  El::Print(b_new, "\nb");
-  El::Print(dual_objective_b, "\nb_prime");
-  std::cout << "\n" << std::flush;
 
   free_var_matrix.blocks.reserve(block_indices.size());
   int64_t global_row(0);
