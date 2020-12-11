@@ -28,9 +28,6 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
   schur_off_diagonal.blocks.clear();
   schur_off_diagonal.blocks.reserve(schur_complement_cholesky.blocks.size());
   
-  El::BigFloat S_max(0), S_min(std::numeric_limits<double>::max()),
-    S_condition(0);
-
   for(size_t block = 0; block < schur_complement_cholesky.blocks.size();
       ++block)
     {
@@ -39,51 +36,11 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
         + std::to_string(block_info.block_indices[block])));
       schur_complement_cholesky.blocks[block] = schur_complement.blocks[block];
 
-      if(schur_complement.blocks[block].Height() > 1)
-      {
-        /// There is a bug in El::HermitianEig when there is more than
-        /// one level of recursion when computing eigenvalues.  One fix
-        /// is to increase the cutoff so that there is no more than one
-        /// level of recursion.
-
-        /// An alternate workaround is to compute both eigenvalues and
-        /// eigenvectors, but that seems to be significantly slower.
-        El::HermitianEigCtrl<El::BigFloat> hermitian_eig_ctrl;
-        hermitian_eig_ctrl.tridiagEigCtrl.dcCtrl.cutoff = schur_complement_cholesky.blocks[block].Height() / 2 + 1;
-
-        /// The default number of iterations is 40.  That is sometimes
-        /// not enough, so we bump it up significantly.
-        hermitian_eig_ctrl.tridiagEigCtrl.dcCtrl.secularCtrl.maxIterations = 400;
-
-        El::DistMatrix<El::BigFloat, El::VR, El::STAR> eigenvalues(schur_complement_cholesky.blocks[block].Grid());
-        El::HermitianEig(El::UpperOrLowerNS::LOWER, schur_complement_cholesky.blocks[block], eigenvalues,
-                         hermitian_eig_ctrl);
-
-        El::BigFloat max(0), min(std::numeric_limits<double>::max());
-        for(int64_t row(0); row!=eigenvalues.Height(); ++row)
-          {
-            max=std::max(max,El::Abs(eigenvalues.Get(row,0)));
-            min=std::min(min,El::Abs(eigenvalues.Get(row,0)));
-          }
-        El::BigFloat condition(max/min);
-        if(condition>S_condition)
-          {
-            S_condition=condition;
-            S_min=min;
-            S_max=max;
-          }
-        // El::Print(schur_complement.blocks[block],"S");
-        // std::cout << "\n";
-        // exit(0);
-        schur_complement_cholesky.blocks[block] = schur_complement.blocks[block];
-      }
-      
-
       Cholesky(El::UpperOrLowerNS::LOWER,
                schur_complement_cholesky.blocks[block]);
       cholesky_timer.stop();
 
-      // SchurOffDiagonal = L^{-1} FreeVarMatrix
+      // schur_off_diagonal = L^{-1} B
       auto &solve_timer(timers.add_and_start(
         "run.step.initializeSchurComplementSolver.Q.solve_"
         + std::to_string(block_info.block_indices[block])));
@@ -96,10 +53,7 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
 
       solve_timer.stop();
 
-      // Next, we compute
-      //
-      //   Q = (L^{-1} B)^T (L^{-1} B)
-
+      // Q = (L^{-1} B)^T (L^{-1} B) = schur_off_diagonal^T schur_off_diagonal
       auto &syrk_timer(timers.add_and_start(
         "run.step.initializeSchurComplementSolver.Q.syrk_"
         + std::to_string(block_info.block_indices[block])));
@@ -111,14 +65,4 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
                El::BigFloat(1), Q_group_view);
       syrk_timer.stop();
     }
-
-  {
-    std::stringstream ss;
-    ss << "S Condition: "
-       << El::mpi::Rank() << " "
-       << S_condition << " "
-       << S_max << " "
-       << S_min << "\n";
-    std::cout << ss.str();
-  }
 }

@@ -91,29 +91,6 @@ void initialize_schur_complement_solver(
   auto &Cholesky_timer(
     timers.add_and_start("run.step.initializeSchurComplementSolver."
                          "Cholesky"));
-
-  {
-    El::DistMatrix<El::BigFloat> Q_copy(Q);
-    El::DistMatrix<El::BigFloat, El::VR, El::STAR> eigenvalues(Q_copy.Grid());
-    El::DistMatrix<El::BigFloat> eigenvectors(Q_copy.Grid());
-    El::HermitianEig(El::UpperOrLowerNS::UPPER, Q_copy, eigenvalues, eigenvectors);
-
-    El::BigFloat max(0), min(std::numeric_limits<double>::max());
-
-    for(int64_t row(0); row!=eigenvalues.Height(); ++row)
-      {
-        max=std::max(max,El::Abs(eigenvalues.Get(row,0)));
-        min=std::min(min,El::Abs(eigenvalues.Get(row,0)));
-      }
-    if(El::mpi::Rank()==0)
-      {
-        std::cout << "Q_copy Condition: "
-                  << (max / min) << " "
-                  << max << " "
-                  << min << "\n";
-      }
-  }
-  
   Cholesky(El::UpperOrLowerNS::UPPER, Q);
   Cholesky_timer.stop();
   initialize_timer.stop();
