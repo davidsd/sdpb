@@ -24,7 +24,7 @@ El::BigFloat min_eigenvalue(Block_Diagonal_Matrix &A)
 
       /// The default number of iterations is 40.  That is sometimes
       /// not enough, so we bump it up significantly.
-      hermitian_eig_ctrl.tridiagEigCtrl.dcCtrl.secularCtrl.maxIterations = 400;
+      hermitian_eig_ctrl.tridiagEigCtrl.dcCtrl.secularCtrl.maxIterations = 16384;
       El::HermitianEig(El::UpperOrLowerNS::LOWER, block, eigenvalues,
                        hermitian_eig_ctrl);
       local_min = El::Min(local_min, El::Min(eigenvalues));

@@ -43,7 +43,7 @@ One way to generate NSV files is with the `find` command.  For
 example, if you have a directory `input` with many files, you can
 generate an NSV file with the command
 
-    find input/ -print0 -name "*.m" > file_list.nsv
+    find input/ -name "*.m" -print0 > file_list.nsv
 
 `sdp2input` assumes that files ending with `.nsv` are NSV,
 files ending with `.json` are JSON, and everything else is

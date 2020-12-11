@@ -19,7 +19,6 @@
 
 #include "../../../Polynomial.hxx"
 
-
 El::Matrix<El::BigFloat>
 sample_bilinear_basis(const int maxDegree, const int numSamples,
                       const std::vector<Polynomial> &bilinearBasis,
@@ -29,8 +28,7 @@ sample_bilinear_basis(const int maxDegree, const int numSamples,
   El::Matrix<El::BigFloat> b(maxDegree + 1, numSamples);
   for(int k = 0; k < numSamples; k++)
     {
-      El::BigFloat x = samplePoints[k];
-      El::BigFloat scale = Sqrt(sampleScalings[k]);
+      El::BigFloat x(samplePoints[k]), scale(Sqrt(sampleScalings[k]));
       for(int i = 0; i <= maxDegree; i++)
         {
           b.Set(i, k, scale * bilinearBasis[i](x));
