@@ -39,10 +39,17 @@ void write_blocks(
   write_vector(output_stream, degrees, "degrees");
   output_stream << ",\n  ";
   write_vector(output_stream, schur_block_sizes, "schur_block_sizes");
-  output_stream << ",\n  ";
-  write_vector(output_stream, psd_matrix_block_sizes,
-               "psd_matrix_block_sizes");
-  output_stream << ",\n  \"bilinear_pairing_block_sizes\": [";
+  output_stream << ",\n  \"psd_matrix_block_sizes\": [";
+  for(size_t index(0); index < psd_matrix_block_sizes.size(); index += 2)
+    {
+      if(index != 0)
+        {
+          output_stream << ", ";
+        }
+      output_stream << "[" << psd_matrix_block_sizes[index] << ", "
+                    << psd_matrix_block_sizes[index + 1] << "]";
+    }
+  output_stream << "],\n  \"bilinear_pairing_block_sizes\": [";
   for(size_t index(0); index < bilinear_pairing_block_sizes.size(); index += 2)
     {
       if(index != 0)
