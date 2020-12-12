@@ -13,7 +13,7 @@ void write_bilinear_bases(
     output_dir / ("bilinear_bases_" + std::to_string(rank) + ".json"));
   boost::filesystem::ofstream output_stream(output_path);
   set_stream_precision(output_stream);
-  output_stream << "{\n  \"dual_constraint_groups\": [\n";
+  output_stream << "{\n  \"dual_constraints\": [\n";
   for(auto group(dual_constraint_groups.begin());
       group != dual_constraint_groups.end(); ++group)
     {
