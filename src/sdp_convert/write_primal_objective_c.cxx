@@ -18,7 +18,7 @@ void write_primal_objective_c(
         output_dir / ("primal_objective_c_" + std::to_string(*block_index) + ".json"));
       boost::filesystem::ofstream output_stream(output_path);
       set_stream_precision(output_stream);
-      write_vector(output_stream, group.constraint_constants);
+      write_vector(output_stream, group.constraint_constants, "");
       output_stream << "\n";
       if(!output_stream.good())
         {

@@ -42,10 +42,17 @@ void write_blocks(
   output_stream << ",\n  ";
   write_vector(output_stream, psd_matrix_block_sizes,
                "psd_matrix_block_sizes");
-  output_stream << ",\n  ";
-  write_vector(output_stream, bilinear_pairing_block_sizes,
-               "bilinear_pairing_block_sizes");
-  output_stream << "\n}\n";
+  output_stream << ",\n  \"bilinear_pairing_block_sizes\": [";
+  for(size_t index(0); index < bilinear_pairing_block_sizes.size(); index += 2)
+    {
+      if(index != 0)
+        {
+          output_stream << ", ";
+        }
+      output_stream << "[" << bilinear_pairing_block_sizes[index] << ", "
+                    << bilinear_pairing_block_sizes[index + 1] << "]";
+    }
+  output_stream << "]\n}\n";
   if(!output_stream.good())
     {
       throw std::runtime_error("Error when writing to: "

@@ -8,8 +8,8 @@ void write_objectives(const boost::filesystem::path &output_dir,
   const boost::filesystem::path output_path(output_dir / "objectives.json");
   boost::filesystem::ofstream output_stream(output_path);
   set_stream_precision(output_stream);
-  output_stream << "{\n  \"c\": \"" << objective_const << "\",\n  ";
-  write_vector(output_stream, dual_objective_b, "b");
+  output_stream << "{\n  \"c\": \"" << objective_const << "\",\n";
+  write_vector(output_stream, dual_objective_b, "  ", "b");
   output_stream << "\n}\n";
   if(!output_stream.good())
     {

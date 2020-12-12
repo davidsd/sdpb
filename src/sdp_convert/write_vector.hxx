@@ -4,24 +4,33 @@
 #include <boost/filesystem/fstream.hpp>
 #include <vector>
 
-
 template <typename T>
-inline void write_vector(boost::filesystem::ofstream &output_stream,
-                         const std::vector<T> &v)
+inline void
+write_vector(boost::filesystem::ofstream &output_stream,
+             const std::vector<T> &v, const std::string &indentation)
 {
-  output_stream << "[";
+  output_stream << indentation << "[\n";
   for(auto element(v.begin()); element != v.end(); ++element)
     {
       if(element != v.begin())
         {
-          output_stream << ", ";
+          output_stream << ",\n";
         }
-      output_stream << "\"" << *element << "\"";
+      output_stream << indentation << "  \"" << *element << "\"";
     }
-  output_stream << "]";
+  output_stream << "\n" << indentation << "]";
 }
 
-template <>
+template <typename T>
+inline void
+write_vector(boost::filesystem::ofstream &output_stream,
+             const std::vector<T> &v, const std::string &indentation,
+             const std::string &name)
+{
+  output_stream << indentation << "\"" << name << "\":\n";
+  write_vector(output_stream, v, indentation);
+}
+
 inline void write_vector(boost::filesystem::ofstream &output_stream,
                          const std::vector<size_t> &v)
 {
@@ -37,10 +46,9 @@ inline void write_vector(boost::filesystem::ofstream &output_stream,
   output_stream << "]";
 }
 
-template <typename T>
 inline void write_vector(boost::filesystem::ofstream &output_stream,
-                         const std::vector<T> &v, const std::string &name)
+                         const std::vector<size_t> &v, const std::string &name)
 {
   output_stream << "\"" << name << "\": ";
-  write_vector(output_stream,v);
+  write_vector(output_stream, v);
 }
