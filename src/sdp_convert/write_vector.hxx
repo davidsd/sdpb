@@ -6,11 +6,16 @@
 
 template<typename T>
 void write_vector(boost::filesystem::ofstream &output_stream,
-                  const std::vector<T> &v)
+                  const std::vector<T> &v, const std::string &name)
 {
-  output_stream << v.size() << "\n";
-  for(auto &element : v)
+  output_stream << "\"" << name << "\": [";
+  for(auto element(v.begin()); element!=v.end(); ++element)
     {
-      output_stream << element << "\n";
+      if(element!=v.begin())
+        {
+          output_stream << ", ";
+        }
+      output_stream << "\"" << *element << "\"";
     }
+  output_stream << "]";
 }

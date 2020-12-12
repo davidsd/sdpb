@@ -18,7 +18,7 @@ void write_primal_objective_c(
         output_dir / ("primal_objective_c." + std::to_string(*block_index)));
       boost::filesystem::ofstream output_stream(output_path);
       set_stream_precision(output_stream);
-      write_vector(output_stream, group.constraint_constants);
+      write_vector(output_stream, group.constraint_constants, "c");
       if(!output_stream.good())
         {
           throw std::runtime_error("Error when writing to: "
