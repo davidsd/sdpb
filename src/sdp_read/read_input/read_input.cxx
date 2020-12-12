@@ -1,5 +1,5 @@
 #include "../Positive_Matrix_With_Prefactor.hxx"
-#include "../../sdp_convert.hxx"
+#include "../../sdp_read.hxx"
 
 #include <boost/filesystem.hpp>
 

@@ -1,3 +1,4 @@
+#include "../../sdp_read.hxx"
 #include "../../sdp_convert.hxx"
 
 void read_xml_input(const boost::filesystem::path &input_file,

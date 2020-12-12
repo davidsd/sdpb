@@ -96,8 +96,7 @@ def build(bld):
                          'src/sdp_convert/write_blocks.cxx',
                          'src/sdp_convert/write_primal_objective_c.cxx',
                          'src/sdp_convert/write_free_var_matrix.cxx',
-                         'src/sdp_convert/write_sdpb_input_files.cxx',
-                         'src/sdp_convert/read_file_list.cxx']
+                         'src/sdp_convert/write_sdpb_input_files.cxx']
 
     bld.stlib(source=sdp_convert_sources,
               target='sdp_convert',
@@ -114,7 +113,7 @@ def build(bld):
                         'src/pvm2sdp/read_input_files/read_xml_input/Input_Parser/on_characters.cxx'],
                 target='pvm2sdp',
                 cxxflags=default_flags,
-                use=use_packages + ['sdp_convert']
+                use=use_packages + ['sdp_read']
                 )
 
     sdp_read_sources=['src/sdp_read/read_input/read_input.cxx',
@@ -143,7 +142,8 @@ def build(bld):
                       'src/sdp_read/read_input/read_mathematica/parse_SDP/parse_number.cxx',
                       'src/sdp_read/read_input/read_mathematica/parse_SDP/parse_polynomial.cxx',
                       'src/sdp_read/read_input/read_mathematica/parse_SDP/parse_matrix/parse_matrix.cxx',
-                      'src/sdp_read/read_input/read_mathematica/parse_SDP/parse_matrix/parse_damped_rational.cxx']
+                      'src/sdp_read/read_input/read_mathematica/parse_SDP/parse_matrix/parse_damped_rational.cxx',
+                      'src/sdp_read/read_file_list.cxx']
 
     bld.stlib(source=sdp_read_sources,
               target='sdp_read',

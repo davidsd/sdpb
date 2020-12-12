@@ -13,5 +13,3 @@ void write_sdpb_input_files(
   const std::vector<El::BigFloat> &dual_objective_b,
   const std::vector<Dual_Constraint_Group> &dual_constraint_groups);
 
-std::vector<boost::filesystem::path>
-read_file_list(const boost::filesystem::path &input_file);
