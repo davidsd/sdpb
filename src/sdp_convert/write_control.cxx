@@ -17,13 +17,13 @@ void output_escaped_string(std::ostream &os, const std::string &s)
 }
 
 void write_control(const boost::filesystem::path &output_dir,
-                   const int &num_procs,
+                   const size_t &num_blocks,
                    const std::vector<std::string> &command_arguments)
 {
   const boost::filesystem::path output_path(
     output_dir / ("control.json"));
   boost::filesystem::ofstream output_stream(output_path);
-  output_stream << "{\n  \"num_procs\": " << num_procs
+  output_stream << "{\n  \"num_blocks\": " << num_blocks
                 << ",\n  \"command\": \"";
   for(auto argument(command_arguments.begin()); argument!=command_arguments.end(); ++argument)
     {

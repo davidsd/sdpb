@@ -163,7 +163,7 @@ void write_output(const boost::filesystem::path &output_dir,
   matrices_timer.stop();
 
   auto &write_timer(timers.add_and_start("write_output.write"));
-  write_sdpb_input_files(output_dir, rank, num_procs, command_arguments,
+  write_sdpb_input_files(output_dir, rank, matrices.size(), command_arguments,
                          indices, objective_const, dual_objective_b,
                          dual_constraint_groups);
   write_timer.stop();
