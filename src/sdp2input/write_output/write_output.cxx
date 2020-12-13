@@ -11,6 +11,7 @@ std::vector<Polynomial> bilinear_basis(const Damped_Rational &damped_rational,
 std::vector<Boost_Float> sample_points(const size_t &num_points);
 
 void write_output(const boost::filesystem::path &output_dir,
+                  const std::vector<std::string> &command_arguments,
                   const std::vector<El::BigFloat> &objectives,
                   const std::vector<El::BigFloat> &normalization,
                   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
@@ -162,7 +163,8 @@ void write_output(const boost::filesystem::path &output_dir,
   matrices_timer.stop();
 
   auto &write_timer(timers.add_and_start("write_output.write"));
-  write_sdpb_input_files(output_dir, rank, num_procs, indices, objective_const,
-                         dual_objective_b, dual_constraint_groups);
+  write_sdpb_input_files(output_dir, rank, num_procs, command_arguments,
+                         indices, objective_const, dual_objective_b,
+                         dual_constraint_groups);
   write_timer.stop();
 }

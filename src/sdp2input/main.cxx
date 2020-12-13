@@ -12,6 +12,7 @@ void read_input(const boost::filesystem::path &input_file,
                 std::vector<Positive_Matrix_With_Prefactor> &matrices);
 
 void write_output(const boost::filesystem::path &output_dir,
+                  const std::vector<std::string> &command_arguments,
                   const std::vector<El::BigFloat> &objectives,
                   const std::vector<El::BigFloat> &normalization,
                   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
@@ -90,7 +91,13 @@ int main(int argc, char **argv)
       read_input(input_file, objectives, normalization, matrices);
       read_input_timer.stop();
       auto &write_output_timer(timers.add_and_start("write_output"));
-      write_output(output_dir, objectives, normalization, matrices, timers);
+      std::vector<std::string> command_arguments;
+      for(int arg(0); arg != argc; ++arg)
+        {
+          command_arguments.emplace_back(argv[arg]);
+        }
+      write_output(output_dir, command_arguments, objectives, normalization,
+                   matrices, timers);
       write_output_timer.stop();
       if(debug)
         {

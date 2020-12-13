@@ -33,8 +33,13 @@ int main(int argc, char **argv)
       read_input_files(input_files, objective_const, dual_objective_b,
                        dual_constraint_groups, indices);
 
-      write_sdpb_input_files(output_dir, rank, num_procs, indices,
-                             objective_const, dual_objective_b,
+      std::vector<std::string> command_arguments;
+      for(int arg(0); arg != argc; ++arg)
+        {
+          command_arguments.emplace_back(argv[arg]);
+        }
+      write_sdpb_input_files(output_dir, rank, num_procs, command_arguments,
+                             indices, objective_const, dual_objective_b,
                              dual_constraint_groups);
     }
   catch(std::exception &e)
