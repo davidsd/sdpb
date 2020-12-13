@@ -1,4 +1,5 @@
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <vector>
 
 void output_escaped_string(std::ostream &os, const std::string &s)
