@@ -14,7 +14,6 @@ public:
   bool inside = false, inside_rows = false, inside_columns = false;
   Polynomial_Vector_Matrix value;
   std::vector<Dual_Constraint_Group> &dual_constraint_groups;
-  std::vector<size_t> &indices;
   const size_t rank = El::mpi::Rank(),
                num_procs = El::mpi::Size(El::mpi::COMM_WORLD);
   size_t &num_processed;
@@ -29,9 +28,9 @@ public:
   Polynomial_Vector_Matrix_State(
     const std::vector<std::string> &names, const size_t &offset,
     std::vector<Dual_Constraint_Group> &Dual_constraint_groups,
-    std::vector<size_t> &Indices, size_t &Num_processed)
+    size_t &Num_processed)
       : name(names.at(offset)), dual_constraint_groups(Dual_constraint_groups),
-        indices(Indices), num_processed(Num_processed),
+        num_processed(Num_processed),
         elements_state(
           {"elements"s, "polynomialVector"s, "polynomial"s, "coeff"s}),
         sample_points_state({"samplePoints"s, "elt"s}),
@@ -90,8 +89,7 @@ public:
             // memory usage, but does complicate the code.
             if(num_processed % num_procs == rank)
               {
-                dual_constraint_groups.emplace_back(value);
-                indices.push_back(num_processed);
+                dual_constraint_groups.emplace_back(num_processed, value);
               }
             ++num_processed;
             value.clear();

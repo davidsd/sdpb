@@ -4,18 +4,16 @@
 
 void write_free_var_matrix(
   const boost::filesystem::path &output_dir,
-  const std::vector<size_t> &indices, const size_t &dual_objectives_b_size,
+  const size_t &dual_objectives_b_size,
   const std::vector<Dual_Constraint_Group> &dual_constraint_groups)
 {
-  auto block_index(indices.begin());
-
   for(auto &group : dual_constraint_groups)
     {
       size_t block_size(group.constraint_matrix.Height());
 
       const boost::filesystem::path output_path(
         output_dir
-        / ("free_var_matrix_" + std::to_string(*block_index) + ".json"));
+        / ("free_var_matrix_" + std::to_string(group.block_index) + ".json"));
       boost::filesystem::ofstream output_stream(output_path);
       set_stream_precision(output_stream);
 
@@ -44,6 +42,5 @@ void write_free_var_matrix(
           throw std::runtime_error("Error when writing to: "
                                    + output_path.string());
         }
-      ++block_index;
     }
 }

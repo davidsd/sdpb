@@ -48,11 +48,11 @@ void read_xml_input(const boost::filesystem::path &input_file,
                     El::BigFloat &objective_const,
                     std::vector<El::BigFloat> &dual_objectives_b,
                     std::vector<Dual_Constraint_Group> &dual_constraint_groups,
-                    std::vector<size_t> &indices, size_t &num_processed)
+                    size_t &num_processed)
 {
   LIBXML_TEST_VERSION;
 
-  Input_Parser input_parser(dual_constraint_groups, indices, num_processed);
+  Input_Parser input_parser(dual_constraint_groups, num_processed);
 
   xmlSAXHandler xml_handlers;
   // This feels unclean.

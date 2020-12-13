@@ -3,18 +3,16 @@
 
 void write_blocks(
   const boost::filesystem::path &output_dir,
-  const std::vector<size_t> &indices,
   const std::vector<Dual_Constraint_Group> &dual_constraint_groups)
 {
-  for(size_t block(0); block != dual_constraint_groups.size(); ++block)
+  for(auto &block : dual_constraint_groups)
     {
       const boost::filesystem::path output_path(
         output_dir
-        / ("blocks_" + std::to_string(indices.at(block)) + ".json"));
+        / ("blocks_" + std::to_string(block.block_index) + ".json"));
       boost::filesystem::ofstream output_stream(output_path);
-      output_stream << "{\n  \"dim\": " << dual_constraint_groups.at(block).dim
-                    << ",\n  \"num_points\": "
-                    << (dual_constraint_groups.at(block).degree + 1)
+      output_stream << "{\n  \"dim\": " << block.dim
+                    << ",\n  \"num_points\": " << (block.degree + 1)
                     << "\n}\n";
       if(!output_stream.good())
         {

@@ -16,19 +16,18 @@ public:
   Vector_State(const std::vector<std::string> &names, const size_t &offset)
       : name(names.at(offset)), element_state(names, offset + 1)
   {}
-  template <typename U, typename V, typename W>
+  template <typename U, typename V>
   Vector_State(const std::vector<std::string> &names, const size_t &offset,
-               U &u, V &v, W &w)
-      : name(names.at(offset)), element_state(names, offset + 1, u, v, w)
+               U &u, V &v)
+      : name(names.at(offset)), element_state(names, offset + 1, u, v)
   {}
 
   Vector_State(const std::initializer_list<std::string> &names)
       : Vector_State(names, 0)
   {}
-  template <typename U, typename V, typename W>
-  Vector_State(const std::initializer_list<std::string> &names, U &u, V &v,
-               W &w)
-      : Vector_State(names, 0, u, v, w)
+  template <typename U, typename V>
+  Vector_State(const std::initializer_list<std::string> &names, U &u, V &v)
+      : Vector_State(names, 0, u, v)
   {}
 
   // XML Functions

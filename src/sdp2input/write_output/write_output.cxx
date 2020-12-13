@@ -51,10 +51,6 @@ void write_output(const boost::filesystem::path &output_dir,
   std::vector<size_t> indices;
   for(size_t index = rank; index < matrices.size(); index += num_procs)
     {
-      indices.push_back(index);
-    }
-  for(auto &index : indices)
-    {
       auto &scalings_timer(timers.add_and_start(
         "write_output.matrices.scalings_" + std::to_string(index)));
       const size_t max_degree([&]() {
@@ -157,14 +153,14 @@ void write_output(const boost::filesystem::path &output_dir,
       pvm_timer.stop();
       auto &dual_constraint_timer(timers.add_and_start(
         "write_output.matrices.dual_constraint_" + std::to_string(index)));
-      dual_constraint_groups.emplace_back(pvm);
+      dual_constraint_groups.emplace_back(index, pvm);
       dual_constraint_timer.stop();
     }
   matrices_timer.stop();
 
   auto &write_timer(timers.add_and_start("write_output.write"));
   write_sdpb_input_files(output_dir, rank, matrices.size(), command_arguments,
-                         indices, objective_const, dual_objective_b,
+                         objective_const, dual_objective_b,
                          dual_constraint_groups);
   write_timer.stop();
 }

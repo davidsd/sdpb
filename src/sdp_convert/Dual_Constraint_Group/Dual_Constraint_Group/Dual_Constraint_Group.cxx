@@ -25,8 +25,9 @@ sample_bilinear_basis(const int maxDegree, const int numSamples,
 //
 // for tuples p = (r,s,k).
 //
-Dual_Constraint_Group::Dual_Constraint_Group(const Polynomial_Vector_Matrix &m)
-  : dim(m.rows), degree(m.sample_points.size() - 1)
+Dual_Constraint_Group::Dual_Constraint_Group(const size_t &Block_index,
+                                             const Polynomial_Vector_Matrix &m)
+    : block_index(Block_index), dim(m.rows), degree(m.sample_points.size() - 1)
 {
   assert(m.rows == m.cols);
 

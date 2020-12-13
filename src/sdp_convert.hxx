@@ -9,6 +9,6 @@
 void write_sdpb_input_files(
   const boost::filesystem::path &output_dir, const int &rank,
   const size_t &num_blocks, const std::vector<std::string> &command_arguments,
-  const std::vector<size_t> &indices, const El::BigFloat &objective_const,
+  const El::BigFloat &objective_const,
   const std::vector<El::BigFloat> &dual_objective_b,
   const std::vector<Dual_Constraint_Group> &dual_constraint_groups);
