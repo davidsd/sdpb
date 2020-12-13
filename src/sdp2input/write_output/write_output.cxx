@@ -20,11 +20,11 @@ void write_output(const boost::filesystem::path &output_dir,
   auto &objectives_timer(timers.add_and_start("write_output.objectives"));
 
   auto max_normalization(normalization.begin());
-  for(auto n(normalization.begin()); n!=normalization.end(); ++n)
+  for(auto n(normalization.begin()); n != normalization.end(); ++n)
     {
-      if(Abs(*n)>Abs(*max_normalization))
+      if(Abs(*n) > Abs(*max_normalization))
         {
-          max_normalization=n;
+          max_normalization = n;
         }
     }
   size_t max_index(std::distance(normalization.begin(), max_normalization));
