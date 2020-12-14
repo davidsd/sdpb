@@ -7,7 +7,7 @@ void write_primal_objective_c(boost::filesystem::ofstream &output_stream,
   assert(static_cast<size_t>(group.constraint_matrix.Height())
          == group.constraint_constants.size());
 
-  output_stream << "  \"primal_objective_c\":\n";
+  output_stream << "  \"c\":\n";
   write_vector(output_stream, group.constraint_constants, "  ");
   output_stream << ",\n";
 }
