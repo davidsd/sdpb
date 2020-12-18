@@ -68,7 +68,7 @@ void Block_Info::allocate_blocks(const std::vector<Block_Cost> &block_costs,
                       ss << ",";
                     }
                   ss << "(" << m.block_indices[ii] << ","
-                     << schur_block_sizes[m.block_indices[ii]] << ")";
+                     << num_points[m.block_indices[ii]] << ")";
                 }
               ss << "}\n";
             }

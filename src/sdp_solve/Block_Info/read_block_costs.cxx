@@ -37,12 +37,12 @@ Block_Info::read_block_costs(const boost::filesystem::path &sdp_directory,
           ++index;
           costs >> cost;
         }
-      if(result.size() != schur_block_sizes.size())
+      if(result.size() != num_points.size())
         {
           throw std::runtime_error(
             "Incompatible number of entries in '"
             + block_timings_filename.string() + "'. Expected "
-            + std::to_string(schur_block_sizes.size()) + " but found "
+            + std::to_string(num_points.size()) + " but found "
             + std::to_string(result.size()));
         }
     }
@@ -51,10 +51,10 @@ Block_Info::read_block_costs(const boost::filesystem::path &sdp_directory,
       // If no information, assign a cost proportional to the matrix
       // size.  This should balance out memory use when doing a timing
       // run.
-      for(size_t block = 0; block < schur_block_sizes.size(); ++block)
+      auto schur_sizes(schur_block_sizes());
+      for(size_t block = 0; block < schur_sizes.size(); ++block)
         {
-          result.emplace_back(
-            schur_block_sizes[block] * schur_block_sizes[block], block);
+          result.emplace_back(schur_sizes[block] * schur_sizes[block], block);
         }
     }
   return result;

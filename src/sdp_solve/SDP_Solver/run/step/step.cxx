@@ -37,20 +37,17 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
             const Block_Diagonal_Matrix &dM, const El::BigFloat &gamma,
             const std::string &timer_name, Timers &timers);
 
-void SDP_Solver::step(const SDP_Solver_Parameters &parameters,
-                      const std::size_t &total_psd_rows,
-                      const bool &is_primal_and_dual_feasible,
-                      const Block_Info &block_info, const SDP &sdp,
-                      const El::Grid &grid,
-                      const Block_Diagonal_Matrix &X_cholesky,
-                      const Block_Diagonal_Matrix &Y_cholesky,
-                      const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-                      const Block_Diagonal_Matrix &bilinear_pairings_Y,
-                      const Block_Vector &primal_residue_p, El::BigFloat &mu,
-                      El::BigFloat &beta_corrector,
-                      El::BigFloat &primal_step_length,
-                      El::BigFloat &dual_step_length,
-                      bool &terminate_now, Timers &timers)
+void SDP_Solver::step(
+  const SDP_Solver_Parameters &parameters, const std::size_t &total_psd_rows,
+  const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
+  const SDP &sdp, const El::Grid &grid,
+  const Block_Diagonal_Matrix &X_cholesky,
+  const Block_Diagonal_Matrix &Y_cholesky,
+  const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
+  const Block_Diagonal_Matrix &bilinear_pairings_Y,
+  const Block_Vector &primal_residue_p, El::BigFloat &mu,
+  El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
+  El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers)
 {
   auto &step_timer(timers.add_and_start("run.step"));
   El::BigFloat beta_predictor;
@@ -64,8 +61,8 @@ void SDP_Solver::step(const SDP_Solver_Parameters &parameters,
     // SchurComplementCholesky = L', the Cholesky decomposition of the
     // Schur complement matrix S.
     Block_Diagonal_Matrix schur_complement_cholesky(
-      block_info.schur_block_sizes, block_info.block_indices,
-      block_info.schur_block_sizes.size(), grid);
+      block_info.schur_block_sizes(), block_info.block_indices,
+      block_info.num_points.size(), grid);
 
     // SchurOffDiagonal = L'^{-1} FreeVarMatrix, needed in solving the
     // Schur complement equation.

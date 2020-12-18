@@ -1,7 +1,7 @@
-#include "set_dual_objective_b.hxx"
-#include "../../read_vector.hxx"
+#include "../../SDP.hxx"
 
-#include <El.hpp>
+#include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
@@ -9,20 +9,25 @@ void read_objectives(const boost::filesystem::path &sdp_directory,
                      const El::Grid &grid, El::BigFloat &objective_const,
                      El::DistMatrix<El::BigFloat> &dual_objective_b)
 {
-  const boost::filesystem::path objectives_path(sdp_directory / "objectives");
-  boost::filesystem::ifstream objectives_stream(objectives_path);
-  if(!objectives_stream.good())
-    {
-      throw std::runtime_error("Could not open '" + objectives_path.string()
-                               + "'");
-    }
-  objectives_stream >> objective_const;
-  if(!objectives_stream.good())
-    {
-      throw std::runtime_error("Corrupted file: " + objectives_path.string());
-    }
+  boost::filesystem::ifstream objectives_stream(sdp_directory
+                                                / "objectives.json");
+  rapidjson::IStreamWrapper wrapper(objectives_stream);
+  rapidjson::Document d;
+  d.ParseStream(wrapper);
+  objective_const = El::BigFloat(d["constant"].GetString());
+  auto b(d["b"].GetArray());
 
-  std::vector<El::BigFloat> temp;
-  read_vector(objectives_stream, temp);
-  set_dual_objective_b(temp, grid, dual_objective_b);
+  dual_objective_b.SetGrid(grid);
+  dual_objective_b.Resize(b.Size(), 1);
+  if(dual_objective_b.GlobalCol(0) == 0)
+    {
+      size_t local_height(dual_objective_b.LocalHeight());
+      for(size_t row = 0; row < local_height; ++row)
+        {
+          size_t global_row(dual_objective_b.GlobalRow(row));
+          dual_objective_b.SetLocal(
+            row, 0,
+            El::BigFloat(b[global_row].GetString()));
+        }
+    }
 }

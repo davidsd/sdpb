@@ -1,37 +1,20 @@
 #include "assign_bilinear_bases_dist.hxx"
-#include "set_dual_objective_b.hxx"
 #include "../../SDP.hxx"
 
 #include <boost/filesystem.hpp>
 
-void read_blocks(const boost::filesystem::path &sdp_directory, SDP &sdp);
+void read_blocks(const boost::filesystem::path &sdp_directory,
+                 const El::Grid &grid,
+                 const std::vector<size_t> &block_indices, SDP &sdp);
 void read_objectives(const boost::filesystem::path &sdp_directory,
                      const El::Grid &grid, El::BigFloat &objective_const,
                      El::DistMatrix<El::BigFloat> &dual_objective_b);
-void read_bilinear_bases(
-  const boost::filesystem::path &sdp_directory, const Block_Info &block_info,
-  const El::Grid &grid,
-  std::vector<El::Matrix<El::BigFloat>> &bilinear_bases_local,
-  std::vector<El::DistMatrix<El::BigFloat>> &bilinear_bases_dist);
-
-void read_primal_objective_c(const boost::filesystem::path &sdp_directory,
-                             const std::vector<size_t> &block_indices,
-                             const El::Grid &grid,
-                             Block_Vector &primal_objective_c);
-void read_free_var_matrix(const boost::filesystem::path &sdp_directory,
-                          const std::vector<size_t> &block_indices,
-                          const El::Grid &grid, Block_Matrix &free_var_matrix);
 
 SDP::SDP(const boost::filesystem::path &sdp_directory,
          const Block_Info &block_info, const El::Grid &grid)
 {
   read_objectives(sdp_directory, grid, objective_const, dual_objective_b);
-  read_bilinear_bases(sdp_directory, block_info, grid, bilinear_bases_local,
-                      bilinear_bases_dist);
-  read_primal_objective_c(sdp_directory, block_info.block_indices, grid,
-                          primal_objective_c);
-  read_free_var_matrix(sdp_directory, block_info.block_indices, grid,
-                       free_var_matrix);
+  read_blocks(sdp_directory, grid, block_info.block_indices, *this);
 }
 
 SDP::SDP(const El::BigFloat &objective_const_input,
@@ -43,7 +26,18 @@ SDP::SDP(const El::BigFloat &objective_const_input,
               grid),
       objective_const(objective_const_input)
 {
-  set_dual_objective_b(dual_objective_b_input, grid, dual_objective_b);
+  dual_objective_b.SetGrid(grid);
+  dual_objective_b.Resize(dual_objective_b_input.size(), 1);
+  if(dual_objective_b.GlobalCol(0) == 0)
+    {
+      size_t local_height(dual_objective_b.LocalHeight());
+      for(size_t row = 0; row < local_height; ++row)
+        {
+          size_t global_row(dual_objective_b.GlobalRow(row));
+          dual_objective_b.SetLocal(
+            row, 0, El::BigFloat(dual_objective_b_input.at(global_row)));
+        }
+    }
 
   auto &block_indices(block_info.block_indices);
   bilinear_bases_local.resize(2 * block_indices.size());
@@ -122,7 +116,7 @@ SDP::SDP(const El::BigFloat &objective_const_input,
   El::Copy(V, yp_to_y);
   El::DiagonalScale(El::LeftOrRight::RIGHT, El::Orientation::NORMAL, s,
                     yp_to_y);
-  
+
   El::DistMatrix<El::BigFloat> b_new(s.Height(), s.Width(), grid);
   El::Copy(dual_objective_b, b_new);
   El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(1.0), yp_to_y, b_new,

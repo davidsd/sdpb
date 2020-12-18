@@ -69,8 +69,8 @@ void initialize_schur_complement_solver(
   // (d_j+1)*m_j*(m_j+1)/2
   //
   Block_Diagonal_Matrix schur_complement(
-    block_info.schur_block_sizes, block_info.block_indices,
-    block_info.schur_block_sizes.size(), group_grid);
+    block_info.schur_block_sizes(), block_info.block_indices,
+    block_info.num_points.size(), group_grid);
 
   compute_schur_complement(block_info, bilinear_pairings_X_inv,
                            bilinear_pairings_Y, schur_complement, timers);

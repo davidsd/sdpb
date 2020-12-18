@@ -85,8 +85,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
   // SDP.h for more information on d_j and m_j.
 
   Block_Diagonal_Matrix bilinear_pairings_X_inv(
-    block_info.bilinear_pairing_block_sizes, block_info.block_indices,
-    block_info.schur_block_sizes.size(), grid);
+    block_info.bilinear_pairing_block_sizes(), block_info.block_indices,
+    block_info.num_points.size(), grid);
 
   // BilinearPairingsY is analogous to BilinearPairingsXInv, with
   // X^{-1} -> Y.
@@ -107,9 +107,9 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
   }
   print_header(parameters.verbosity);
 
+  auto psd_sizes(block_info.psd_matrix_block_sizes());
   std::size_t total_psd_rows(
-    std::accumulate(block_info.psd_matrix_block_sizes.begin(),
-                    block_info.psd_matrix_block_sizes.end(), size_t(0)));
+    std::accumulate(psd_sizes.begin(), psd_sizes.end(), size_t(0)));
 
   initialize_timer.stop();
   auto last_checkpoint_time(std::chrono::high_resolution_clock::now());

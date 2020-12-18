@@ -21,7 +21,7 @@ void constraint_matrix_weighted_sum(const Block_Info &block_info,
 
   for(auto &block_index : block_info.block_indices)
     {
-      const size_t block_size(block_info.degrees[block_index] + 1);
+      const size_t block_size(block_info.num_points[block_index]);
       for(size_t parity = 0; parity < 2; ++parity)
         {
           // TODO: Remove this because it gets zero'd out in Gemm?

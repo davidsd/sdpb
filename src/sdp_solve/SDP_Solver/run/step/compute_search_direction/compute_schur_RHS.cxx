@@ -34,7 +34,7 @@ void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
       // dx = -dual_residues
       *dx_block = *dual_residues_block;
       *dx_block *= -1;
-      const size_t dx_block_size(block_info.degrees[block_index] + 1);
+      const size_t dx_block_size(block_info.num_points[block_index]);
 
       // dx[p] -= Tr(A_p Z)
       // Not sure whether it is better to first loop over blocks in

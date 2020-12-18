@@ -72,7 +72,7 @@ void compute_schur_complement(
   auto bilinear_pairings_Y_block(bilinear_pairings_Y.blocks.begin());
   for(auto &block_index : block_info.block_indices)
     {
-      const size_t block_size(block_info.degrees[block_index] + 1);
+      const size_t block_size(block_info.num_points[block_index]);
 
       for(size_t column_block_0 = 0;
           column_block_0 < block_info.dimensions[block_index];

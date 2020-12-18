@@ -43,24 +43,8 @@ class Block_Info
 {
 public:
   boost::filesystem::path block_timings_filename;
-  size_t file_num_procs;
-  std::vector<std::vector<size_t>> file_block_indices;
-
-  // dimensions[j] = m_j  (0 <= j < J)
   std::vector<size_t> dimensions;
-
-  // degrees[j] = d_j  (0 <= j < J)
-  std::vector<size_t> degrees;
-
-  std::vector<size_t> schur_block_sizes,
-    // Dimensions of the blocks of X,Y
-    // psd_matrix_block_sizes[b] = (delta_b+1)*m_j = length(v_{b,*})*m_j
-    // (0 <= b < bMax)
-    psd_matrix_block_sizes,
-    // Dimensions of the bilinear pairing matrices U and V
-    // bilinear_pairing_block_sizes[b] = (d_j + 1)*m_j
-    // (0 <= b < bMax)
-    bilinear_pairing_block_sizes;
+  std::vector<size_t> num_points;
 
   std::vector<size_t> block_indices;
   MPI_Group_Wrapper mpi_group;
@@ -86,6 +70,40 @@ public:
   allocate_blocks(const std::vector<Block_Cost> &block_costs,
                   const size_t &procs_per_node, const size_t &proc_granularity,
                   const Verbosity &verbosity);
+
+  std::vector<size_t> schur_block_sizes() const
+  {
+    std::vector<size_t> result(num_points.size());
+    for(size_t index(0); index != num_points.size(); ++index)
+      {
+        result[index] = num_points[index] * dimensions[index]
+                        * (dimensions[index] + 1) / 2;
+      }
+    return result;
+  }
+  std::vector<size_t> bilinear_pairing_block_sizes() const
+  {
+    std::vector<size_t> result(2 * num_points.size());
+    for(size_t index(0); index != num_points.size(); ++index)
+      {
+        result[2 * index] = num_points[index] * dimensions[index];
+        result[2 * index + 1] = result[2 * index];
+      }
+    return result;
+  }
+  std::vector<size_t> psd_matrix_block_sizes() const
+  {
+    std::vector<size_t> result(2 * num_points.size());
+    for(size_t index(0); index != num_points.size(); ++index)
+      {
+        // Need to round down (num_points+1)/2 before multiplying by
+        // dim, since dim could be 2.
+        result[2 * index] = dimensions[index] * ((num_points[index] + 1) / 2);
+        result[2 * index + 1]
+          = dimensions[index] * num_points[index] - result[2 * index];
+      }
+    return result;
+  }
 };
 
 namespace std
@@ -102,13 +120,8 @@ namespace std
   inline void swap(Block_Info &a, Block_Info &b)
   {
     swap(a.block_timings_filename, b.block_timings_filename);
-    swap(a.file_num_procs, b.file_num_procs);
-    swap(a.file_block_indices, b.file_block_indices);
     swap(a.dimensions, b.dimensions);
-    swap(a.degrees, b.degrees);
-    swap(a.schur_block_sizes, b.schur_block_sizes);
-    swap(a.psd_matrix_block_sizes, b.psd_matrix_block_sizes);
-    swap(a.bilinear_pairing_block_sizes, b.bilinear_pairing_block_sizes);
+    swap(a.num_points, b.num_points);
     swap(a.block_indices, b.block_indices);
     swap(a.mpi_group, b.mpi_group);
     swap(a.mpi_comm, b.mpi_comm);

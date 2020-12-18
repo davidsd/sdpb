@@ -27,7 +27,7 @@ void compute_dual_residues_and_error(
   for(auto &block_index : block_info.block_indices)
     {
       Zero(*dual_residues_block);
-      const size_t block_size(block_info.degrees[block_index] + 1);
+      const size_t block_size(block_info.num_points[block_index]);
 
       // Not sure whether it is better to first loop over blocks in
       // the result or over sub-blocks in bilinear_pairings_Y
