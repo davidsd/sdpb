@@ -42,7 +42,7 @@ def configure(conf):
                    libpath=elemental_libdir,
                    rpath=elemental_libdir,
                    lib=elemental_libs,
-                   use=['cxx14','gmpxx'])
+                   use=['cxx17','gmpxx'])
 
 def options(opt):
     elemental=opt.add_option_group('Elemental Options')
