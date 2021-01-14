@@ -8,7 +8,8 @@ namespace
   void set_bilinear(const std::vector<std::vector<El::BigFloat>> &input,
                     std::vector<El::Matrix<El::BigFloat>> &local)
   {
-    size_t height(input.size()), width(input.at(0).size());
+    const size_t height(input.size()),
+      width(input.empty() ? 1 : input.at(0).size());
     local.emplace_back(height, width);
     auto &back(local.back());
     for(size_t row(0); row != height; ++row)
@@ -75,7 +76,7 @@ void read_blocks(const boost::filesystem::path &sdp_directory,
           }
       }
     }
-  
+
   sdp.bilinear_bases_dist.reserve(sdp.bilinear_bases_local.size());
   for(auto &local : sdp.bilinear_bases_local)
     {
