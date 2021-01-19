@@ -17,7 +17,7 @@ void constraint_matrix_weighted_sum(const Block_Info &block_info,
 {
   auto a_block(a.blocks.begin());
   auto result_block(result.blocks.begin());
-  auto bilinear_bases_block(sdp.bilinear_bases_dist.begin());
+  auto bilinear_bases_block(sdp.bilinear_bases.begin());
 
   for(auto &block_index : block_info.block_indices)
     {

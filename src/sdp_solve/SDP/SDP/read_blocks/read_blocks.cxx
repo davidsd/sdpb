@@ -77,12 +77,12 @@ void read_blocks(const boost::filesystem::path &sdp_directory,
       }
     }
 
-  sdp.bilinear_bases_dist.reserve(sdp.bilinear_bases_local.size());
+  sdp.bilinear_bases.reserve(sdp.bilinear_bases_local.size());
   for(auto &local : sdp.bilinear_bases_local)
     {
-      sdp.bilinear_bases_dist.emplace_back(local.Height(), local.Width(),
+      sdp.bilinear_bases.emplace_back(local.Height(), local.Width(),
                                            grid);
-      auto &dist(sdp.bilinear_bases_dist.back());
+      auto &dist(sdp.bilinear_bases.back());
       for(int64_t local_row(0); local_row < dist.LocalHeight(); ++local_row)
         {
           El::Int global_row(dist.GlobalRow(local_row));

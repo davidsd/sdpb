@@ -27,7 +27,7 @@ void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
   auto dx_block(dx.blocks.begin());
 
   auto Z_block(Z.blocks.begin());
-  auto bilinear_bases_block(sdp.bilinear_bases_dist.begin());
+  auto bilinear_bases_block(sdp.bilinear_bases.begin());
 
   for(auto &block_index : block_info.block_indices)
     {
