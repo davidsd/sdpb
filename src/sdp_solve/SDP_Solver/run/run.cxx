@@ -21,8 +21,7 @@ void compute_objectives(const SDP &sdp, const Block_Vector &x,
 
 void compute_bilinear_pairings(
   const Block_Diagonal_Matrix &X_cholesky, const Block_Diagonal_Matrix &Y,
-  const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases,
-  std::vector<El::DistMatrix<El::BigFloat>> &workspace,
+  std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
   Block_Diagonal_Matrix &bilinear_pairings_X_inv,
   Block_Diagonal_Matrix &bilinear_pairings_Y, Timers &timers);
 
@@ -93,16 +92,37 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
 
   Block_Diagonal_Matrix bilinear_pairings_Y(bilinear_pairings_X_inv);
 
-  // Additional workspace variables used in step_length()
-  std::vector<El::DistMatrix<El::BigFloat>> bilinear_pairings_workspace;
-  bilinear_pairings_workspace.reserve(X.blocks.size());
+  // Precompute this for compute_bilinear_pairings
+  std::vector<El::DistMatrix<El::BigFloat>> bases_blocks;
   {
     auto bilinear_pairings_X_inv_block(bilinear_pairings_X_inv.blocks.begin());
+    auto bilinear_bases_block(sdp.bilinear_bases_local.begin());
+
     for(auto &X_block : X.blocks)
       {
-        bilinear_pairings_workspace.emplace_back(
+        bases_blocks.emplace_back(
           X_block.Height(), bilinear_pairings_X_inv_block->Width(), grid);
+        auto &block(bases_blocks.back());
+        for(int64_t row = 0; row < block.LocalHeight(); ++row)
+          {
+            size_t global_row(block.GlobalRow(row)),
+              row_block(global_row / bilinear_bases_block->Height());
+
+            for(int64_t column = 0; column < block.LocalWidth(); ++column)
+              {
+                size_t global_column(block.GlobalCol(column)),
+                  column_block(global_column / bilinear_bases_block->Width());
+                block.SetLocal(
+                  row, column,
+                  row_block != column_block
+                    ? El::BigFloat(0)
+                    : (*bilinear_bases_block)(
+                      global_row % bilinear_bases_block->Height(),
+                      global_column % bilinear_bases_block->Width()));
+              }
+          }
         ++bilinear_pairings_X_inv_block;
+        ++bilinear_bases_block;
       }
   }
   print_header(parameters.verbosity);
@@ -137,9 +157,9 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
       cholesky_decomposition(Y, Y_cholesky);
       cholesky_decomposition_timer.stop();
 
-      compute_bilinear_pairings(
-        X_cholesky, Y, sdp.bilinear_bases_local, bilinear_pairings_workspace,
-        bilinear_pairings_X_inv, bilinear_pairings_Y, timers);
+      compute_bilinear_pairings(X_cholesky, Y, bases_blocks,
+                                bilinear_pairings_X_inv, bilinear_pairings_Y,
+                                timers);
 
       compute_dual_residues_and_error(block_info, sdp, y, bilinear_pairings_Y,
                                       dual_residues, dual_error, timers);
