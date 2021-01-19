@@ -1,5 +1,6 @@
 #include "Block_Parser.hxx"
 #include "../../../SDP.hxx"
+#include "../set_bases_blocks.hxx"
 
 #include <rapidjson/istreamwrapper.h>
 
@@ -24,12 +25,14 @@ namespace
 
 void read_blocks(const boost::filesystem::path &sdp_directory,
                  const El::Grid &grid,
-                 const std::vector<size_t> &block_indices, SDP &sdp)
+                 const Block_Info &block_info, SDP &sdp)
 {
-  sdp.primal_objective_c.blocks.reserve(block_indices.size());
-  sdp.bilinear_bases_local.reserve(2 * block_indices.size());
-  sdp.free_var_matrix.blocks.reserve(block_indices.size());
-  for(auto &block_index : block_indices)
+  sdp.primal_objective_c.blocks.reserve(block_info.block_indices.size());
+
+  std::vector<El::Matrix<El::BigFloat>> bilinear_bases_local;
+  bilinear_bases_local.reserve(2 * block_info.block_indices.size());
+  sdp.free_var_matrix.blocks.reserve(block_info.block_indices.size());
+  for(auto &block_index : block_info.block_indices)
     {
       const boost::filesystem::path block_path(
         sdp_directory / ("block_" + std::to_string(block_index) + ".json"));
@@ -53,9 +56,9 @@ void read_blocks(const boost::filesystem::path &sdp_directory,
         }
 
       set_bilinear(parser.bilinear_bases_even_state.value,
-                   sdp.bilinear_bases_local);
+                   bilinear_bases_local);
       set_bilinear(parser.bilinear_bases_odd_state.value,
-                   sdp.bilinear_bases_local);
+                   bilinear_bases_local);
 
       {
         sdp.free_var_matrix.blocks.emplace_back(
@@ -77,11 +80,10 @@ void read_blocks(const boost::filesystem::path &sdp_directory,
       }
     }
 
-  sdp.bilinear_bases.reserve(sdp.bilinear_bases_local.size());
-  for(auto &local : sdp.bilinear_bases_local)
+  sdp.bilinear_bases.reserve(bilinear_bases_local.size());
+  for(auto &local : bilinear_bases_local)
     {
-      sdp.bilinear_bases.emplace_back(local.Height(), local.Width(),
-                                           grid);
+      sdp.bilinear_bases.emplace_back(local.Height(), local.Width(), grid);
       auto &dist(sdp.bilinear_bases.back());
       for(int64_t local_row(0); local_row < dist.LocalHeight(); ++local_row)
         {
@@ -95,4 +97,5 @@ void read_blocks(const boost::filesystem::path &sdp_directory,
             }
         }
     }
+  set_bases_blocks(block_info, bilinear_bases_local, sdp.bases_blocks, grid);
 }

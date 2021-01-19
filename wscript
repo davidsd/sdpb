@@ -34,6 +34,7 @@ def build(bld):
                        'src/sdp_solve/SDP/SDP/read_blocks/Block_Parser/Key.cxx',
                        'src/sdp_solve/SDP/SDP/read_blocks/Block_Parser/StartArray.cxx',
                        'src/sdp_solve/SDP/SDP/read_blocks/Block_Parser/String.cxx',
+                       'src/sdp_solve/SDP/SDP/set_bases_blocks.cxx',
                        'src/sdp_solve/SDP_Solver/save_solution.cxx',
                        'src/sdp_solve/SDP_Solver/save_checkpoint.cxx',
                        'src/sdp_solve/SDP_Solver/load_checkpoint/load_checkpoint.cxx',

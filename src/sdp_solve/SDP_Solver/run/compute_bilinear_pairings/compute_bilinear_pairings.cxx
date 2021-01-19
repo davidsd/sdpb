@@ -13,7 +13,7 @@ void compute_bilinear_pairings_Y(
 
 void compute_bilinear_pairings(
   const Block_Diagonal_Matrix &X_cholesky, const Block_Diagonal_Matrix &Y,
-  std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
+  const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
   Block_Diagonal_Matrix &bilinear_pairings_X_inv,
   Block_Diagonal_Matrix &bilinear_pairings_Y, Timers &timers)
 {

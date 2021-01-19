@@ -1,11 +1,11 @@
 #include "assign_bilinear_bases_dist.hxx"
 #include "../../SDP.hxx"
+#include "set_bases_blocks.hxx"
 
 #include <boost/filesystem.hpp>
 
 void read_blocks(const boost::filesystem::path &sdp_directory,
-                 const El::Grid &grid,
-                 const std::vector<size_t> &block_indices, SDP &sdp);
+                 const El::Grid &grid, const Block_Info &block_info, SDP &sdp);
 void read_objectives(const boost::filesystem::path &sdp_directory,
                      const El::Grid &grid, El::BigFloat &objective_const,
                      El::DistMatrix<El::BigFloat> &dual_objective_b);
@@ -14,7 +14,7 @@ SDP::SDP(const boost::filesystem::path &sdp_directory,
          const Block_Info &block_info, const El::Grid &grid)
 {
   read_objectives(sdp_directory, grid, objective_const, dual_objective_b);
-  read_blocks(sdp_directory, grid, block_info.block_indices, *this);
+  read_blocks(sdp_directory, grid, block_info, *this);
 }
 
 SDP::SDP(const El::BigFloat &objective_const_input,
@@ -40,7 +40,8 @@ SDP::SDP(const El::BigFloat &objective_const_input,
     }
 
   auto &block_indices(block_info.block_indices);
-  bilinear_bases_local.resize(2 * block_indices.size());
+  std::vector<El::Matrix<El::BigFloat>> bilinear_bases_local(
+    2 * block_indices.size());
 
   for(size_t block(0); block != block_indices.size(); ++block)
     {
@@ -49,6 +50,7 @@ SDP::SDP(const El::BigFloat &objective_const_input,
       bilinear_bases_local[2 * block](0, 0) = 1;
     }
   assign_bilinear_bases_dist(bilinear_bases_local, grid, bilinear_bases);
+  set_bases_blocks(block_info, bilinear_bases_local, bases_blocks, grid);
 
   for(size_t block(0); block != block_indices.size(); ++block)
     {

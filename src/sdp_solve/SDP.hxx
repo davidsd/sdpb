@@ -79,9 +79,11 @@ struct SDP
   // bilinear_bases[b].elt(m,k) = (v_{b,k})_m  (0 <= b < bMax,
   //                                           0 <= k <= d_j,
   //                                           0 <= m <= delta_b)
-  //
-  std::vector<El::Matrix<El::BigFloat>> bilinear_bases_local;
+
   std::vector<El::DistMatrix<El::BigFloat>> bilinear_bases;
+
+  // Blocks of bilinear bases precomputed for X_inv and Y
+  std::vector<El::DistMatrix<El::BigFloat>> bases_blocks;
 
   // free_var_matrix = B, a PxN matrix
   Block_Matrix free_var_matrix;
