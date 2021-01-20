@@ -38,11 +38,11 @@
 // - SchurOffDiagonal
 //
 
-void compute_schur_complement(
-  const Block_Info &block_info,
-  const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-  const Block_Diagonal_Matrix &bilinear_pairings_Y,
-  Block_Diagonal_Matrix &schur_complement, Timers &timers);
+void compute_schur_complement(const Block_Info &block_info,
+                              const Block_Diagonal_Matrix &Q_X_inv_Q,
+                              const Block_Diagonal_Matrix &Q_Y_Q,
+                              Block_Diagonal_Matrix &schur_complement,
+                              Timers &timers);
 
 void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
                         const Block_Diagonal_Matrix &schur_complement,
@@ -56,9 +56,8 @@ void synchronize_Q(El::DistMatrix<El::BigFloat> &Q,
 
 void initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
-  const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-  const Block_Diagonal_Matrix &bilinear_pairings_Y, const El::Grid &group_grid,
-  Block_Diagonal_Matrix &schur_complement_cholesky,
+  const Block_Diagonal_Matrix &Q_X_inv_Q, const Block_Diagonal_Matrix &Q_Y_Q,
+  const El::Grid &group_grid, Block_Diagonal_Matrix &schur_complement_cholesky,
   Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
   Timers &timers)
 {
@@ -72,8 +71,8 @@ void initialize_schur_complement_solver(
     block_info.schur_block_sizes(), block_info.block_indices,
     block_info.num_points.size(), group_grid);
 
-  compute_schur_complement(block_info, bilinear_pairings_X_inv,
-                           bilinear_pairings_Y, schur_complement, timers);
+  compute_schur_complement(block_info, Q_X_inv_Q, Q_Y_Q, schur_complement,
+                           timers);
 
   auto &Q_computation_timer(
     timers.add_and_start("run.step.initializeSchurComplementSolver.Q"));

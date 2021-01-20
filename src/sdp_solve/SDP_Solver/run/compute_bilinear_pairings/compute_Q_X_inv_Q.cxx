@@ -1,14 +1,14 @@
 #include "../../../Block_Diagonal_Matrix.hxx"
 
-// bilinear_pairings_X_inv = bilinear_base^T X^{-1} bilinear_base for each block
+// Q_X_inv_Q = bilinear_base^T X^{-1} bilinear_base for each block
 
-void compute_bilinear_pairings_X_inv(
+void compute_Q_X_inv_Q(
   const Block_Diagonal_Matrix &X_cholesky,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
-  Block_Diagonal_Matrix &bilinear_pairings_X_inv)
+  Block_Diagonal_Matrix &Q_X_inv_Q)
 {
   auto X_cholesky_block(X_cholesky.blocks.begin());
-  auto bilinear_pairings_X_inv_block(bilinear_pairings_X_inv.blocks.begin());
+  auto Q_X_inv_Q_block(Q_X_inv_Q.blocks.begin());
 
   for(auto &block : bases_blocks)
     {
@@ -19,13 +19,11 @@ void compute_bilinear_pairings_X_inv(
 
       // We have to set this to zero because the values can be NaN.
       // Multiplying 0*NaN = NaN.
-      Zero(*bilinear_pairings_X_inv_block);
+      Zero(*Q_X_inv_Q_block);
       Syrk(El::UpperOrLowerNS::LOWER, El::Orientation::TRANSPOSE,
-           El::BigFloat(1), temp_space, El::BigFloat(0),
-           *bilinear_pairings_X_inv_block);
-      El::MakeSymmetric(El::UpperOrLower::LOWER,
-                        *bilinear_pairings_X_inv_block);
+           El::BigFloat(1), temp_space, El::BigFloat(0), *Q_X_inv_Q_block);
+      El::MakeSymmetric(El::UpperOrLower::LOWER, *Q_X_inv_Q_block);
       ++X_cholesky_block;
-      ++bilinear_pairings_X_inv_block;
+      ++Q_X_inv_Q_block;
     }
 }

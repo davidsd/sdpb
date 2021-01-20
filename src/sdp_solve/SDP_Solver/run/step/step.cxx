@@ -6,8 +6,8 @@ El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
 
 void initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
-  const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-  const Block_Diagonal_Matrix &bilinear_pairings_Y, const El::Grid &block_grid,
+  const Block_Diagonal_Matrix &Q_X_inv_Q,
+  const Block_Diagonal_Matrix &Q_Y_Q, const El::Grid &block_grid,
   Block_Diagonal_Matrix &schur_complement_cholesky,
   Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
   Timers &timers);
@@ -43,8 +43,8 @@ void SDP_Solver::step(
   const SDP &sdp, const El::Grid &grid,
   const Block_Diagonal_Matrix &X_cholesky,
   const Block_Diagonal_Matrix &Y_cholesky,
-  const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-  const Block_Diagonal_Matrix &bilinear_pairings_Y,
+  const Block_Diagonal_Matrix &Q_X_inv_Q,
+  const Block_Diagonal_Matrix &Q_Y_Q,
   const Block_Vector &primal_residue_p, El::BigFloat &mu,
   El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
   El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers)
@@ -82,7 +82,7 @@ void SDP_Solver::step(
     // Compute SchurComplement and prepare to solve the Schur
     // complement equation for dx, dy
     initialize_schur_complement_solver(
-      block_info, sdp, bilinear_pairings_X_inv, bilinear_pairings_Y, grid,
+      block_info, sdp, Q_X_inv_Q, Q_Y_Q, grid,
       schur_complement_cholesky, schur_off_diagonal, Q, timers);
 
     // Compute the complementarity mu = Tr(X Y)/X.dim

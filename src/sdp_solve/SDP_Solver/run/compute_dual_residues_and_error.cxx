@@ -12,7 +12,7 @@
 
 void compute_dual_residues_and_error(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
-  const Block_Diagonal_Matrix &bilinear_pairings_Y,
+  const Block_Diagonal_Matrix &Q_Y_Q,
   Block_Vector &dual_residues, El::BigFloat &dual_error, Timers &timers)
 {
   auto &dual_residues_timer(timers.add_and_start("run.computeDualResidues"));
@@ -21,7 +21,7 @@ void compute_dual_residues_and_error(
   auto primal_objective_c_block(sdp.primal_objective_c.blocks.begin());
   auto y_block(y.blocks.begin());
   auto free_var_matrix_block(sdp.free_var_matrix.blocks.begin());
-  auto bilinear_pairings_Y_block(bilinear_pairings_Y.blocks.begin());
+  auto Q_Y_Q_block(Q_Y_Q.blocks.begin());
 
   El::BigFloat local_max(0);
   for(auto &block_index : block_info.block_indices)
@@ -30,7 +30,7 @@ void compute_dual_residues_and_error(
       const size_t block_size(block_info.num_points[block_index]);
 
       // Not sure whether it is better to first loop over blocks in
-      // the result or over sub-blocks in bilinear_pairings_Y
+      // the result or over sub-blocks in Q_Y_Q
       for(size_t bb = 2 * block_index; bb < 2 * block_index + 2; ++bb)
         {
           for(size_t column_block = 0;
@@ -42,7 +42,7 @@ void compute_dual_residues_and_error(
                   row_offset(row_block * block_size);
 
                 El::DistMatrix<El::BigFloat> lower_diagonal(El::GetDiagonal(
-                  El::LockedView(*bilinear_pairings_Y_block, row_offset,
+                  El::LockedView(*Q_Y_Q_block, row_offset,
                                  column_offset, block_size, block_size)));
 
                 size_t residue_row_offset(
@@ -65,14 +65,14 @@ void compute_dual_residues_and_error(
 
                     El::DistMatrix<El::BigFloat> upper_diagonal(
                       El::GetDiagonal(El::LockedView(
-                        *bilinear_pairings_Y_block, column_offset, row_offset,
+                        *Q_Y_Q_block, column_offset, row_offset,
                         block_size, block_size)));
 
                     El::Axpy(El::BigFloat(-0.5), upper_diagonal,
                              residue_sub_block);
                   }
               }
-          ++bilinear_pairings_Y_block;
+          ++Q_Y_Q_block;
         }
       // dualResidues -= FreeVarMatrix * y
       Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, El::BigFloat(-1),

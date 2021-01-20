@@ -74,7 +74,7 @@ public:
 
   int64_t current_generation;
   boost::optional<int64_t> backup_generation;
-  
+
   SDP_Solver(const SDP_Solver_Parameters &parameters,
              const Block_Info &block_info, const El::Grid &grid,
              const size_t &dual_objective_b_height);
@@ -90,8 +90,8 @@ public:
        const SDP &sdp, const El::Grid &grid,
        const Block_Diagonal_Matrix &X_cholesky,
        const Block_Diagonal_Matrix &Y_cholesky,
-       const Block_Diagonal_Matrix &bilinear_pairings_X_inv,
-       const Block_Diagonal_Matrix &bilinear_pairings_Y,
+       const Block_Diagonal_Matrix &Q_X_inv_Q,
+       const Block_Diagonal_Matrix &Q_Y_Q,
        const Block_Vector &primal_residue_p, El::BigFloat &mu,
        El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
        El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers);
