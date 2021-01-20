@@ -20,7 +20,8 @@ void compute_objectives(const SDP &sdp, const Block_Vector &x,
                         El::BigFloat &duality_gap, Timers &timers);
 
 void compute_bilinear_pairings(
-  const Block_Diagonal_Matrix &X_cholesky, const Block_Diagonal_Matrix &Y,
+  const Block_Info &block_info, const Block_Diagonal_Matrix &X_cholesky,
+  const Block_Diagonal_Matrix &Y,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
   Block_Diagonal_Matrix &Q_X_inv_Q, Block_Diagonal_Matrix &Q_Y_Q,
   Timers &timers);
@@ -124,8 +125,8 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
       cholesky_decomposition(Y, Y_cholesky);
       cholesky_decomposition_timer.stop();
 
-      compute_bilinear_pairings(X_cholesky, Y, sdp.bases_blocks, Q_X_inv_Q,
-                                Q_Y_Q, timers);
+      compute_bilinear_pairings(block_info, X_cholesky, Y, sdp.bases_blocks,
+                                Q_X_inv_Q, Q_Y_Q, timers);
 
       compute_dual_residues_and_error(block_info, sdp, y, Q_Y_Q, dual_residues,
                                       dual_error, timers);
