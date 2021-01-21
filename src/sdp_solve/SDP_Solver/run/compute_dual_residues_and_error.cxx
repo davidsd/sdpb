@@ -12,7 +12,9 @@
 
 void compute_dual_residues_and_error(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
-  const Block_Diagonal_Matrix &Q_Y_Q,
+  const std::array<
+    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    &Q_Y_Q,
   Block_Vector &dual_residues, El::BigFloat &dual_error, Timers &timers)
 {
   auto &dual_residues_timer(timers.add_and_start("run.computeDualResidues"));
@@ -21,29 +23,22 @@ void compute_dual_residues_and_error(
   auto primal_objective_c_block(sdp.primal_objective_c.blocks.begin());
   auto y_block(y.blocks.begin());
   auto free_var_matrix_block(sdp.free_var_matrix.blocks.begin());
-  auto Q_Y_Q_block(Q_Y_Q.blocks.begin());
 
+  size_t Q_index(0);
   El::BigFloat local_max(0);
   for(auto &block_index : block_info.block_indices)
     {
       Zero(*dual_residues_block);
-      const size_t block_size(block_info.num_points[block_index]);
+      const size_t block_size(block_info.num_points[block_index]),
+        dim(block_info.dimensions[block_index]);
 
-      // Not sure whether it is better to first loop over blocks in
-      // the result or over sub-blocks in Q_Y_Q
-      for(size_t bb = 2 * block_index; bb < 2 * block_index + 2; ++bb)
+      for(auto &Q_Y_Q_parity : Q_Y_Q)
         {
-          for(size_t column_block = 0;
-              column_block < block_info.dimensions[block_index];
-              ++column_block)
+          for(size_t column_block = 0; column_block < dim; ++column_block)
             for(size_t row_block = 0; row_block <= column_block; ++row_block)
               {
-                size_t column_offset(column_block * block_size),
-                  row_offset(row_block * block_size);
-
                 El::DistMatrix<El::BigFloat> lower_diagonal(El::GetDiagonal(
-                  El::LockedView(*Q_Y_Q_block, row_offset,
-                                 column_offset, block_size, block_size)));
+                  Q_Y_Q_parity[Q_index][column_block][row_block]));
 
                 size_t residue_row_offset(
                   ((column_block * (column_block + 1)) / 2 + row_block)
@@ -51,28 +46,9 @@ void compute_dual_residues_and_error(
 
                 El::DistMatrix<El::BigFloat> residue_sub_block(El::View(
                   *dual_residues_block, residue_row_offset, 0, block_size, 1));
-
-                // Do a little less work when on a diagonal block.
-                if(column_offset == row_offset)
-                  {
-                    El::Axpy(El::BigFloat(-1.0), lower_diagonal,
-                             residue_sub_block);
-                  }
-                else
-                  {
-                    El::Axpy(El::BigFloat(-0.5), lower_diagonal,
-                             residue_sub_block);
-
-                    El::DistMatrix<El::BigFloat> upper_diagonal(
-                      El::GetDiagonal(El::LockedView(
-                        *Q_Y_Q_block, column_offset, row_offset,
-                        block_size, block_size)));
-
-                    El::Axpy(El::BigFloat(-0.5), upper_diagonal,
-                             residue_sub_block);
-                  }
+                El::Axpy(El::BigFloat(-1.0), lower_diagonal,
+                         residue_sub_block);
               }
-          ++Q_Y_Q_block;
         }
       // dualResidues -= FreeVarMatrix * y
       Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, El::BigFloat(-1),
@@ -87,6 +63,7 @@ void compute_dual_residues_and_error(
       ++y_block;
       ++free_var_matrix_block;
       ++dual_residues_block;
+      ++Q_index;
     }
   dual_error
     = El::mpi::AllReduce(local_max, El::mpi::MAX, El::mpi::COMM_WORLD);

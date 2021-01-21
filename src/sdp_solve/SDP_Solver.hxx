@@ -83,18 +83,21 @@ public:
   run(const SDP_Solver_Parameters &parameters, const Block_Info &block_info,
       const SDP &sdp, const El::Grid &grid, Timers &timers);
 
-  void
-  step(const SDP_Solver_Parameters &parameters,
-       const std::size_t &total_psd_rows,
-       const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
-       const SDP &sdp, const El::Grid &grid,
-       const Block_Diagonal_Matrix &X_cholesky,
-       const Block_Diagonal_Matrix &Y_cholesky,
-       const Block_Diagonal_Matrix &Q_X_inv_Q,
-       const Block_Diagonal_Matrix &Q_Y_Q,
-       const Block_Vector &primal_residue_p, El::BigFloat &mu,
-       El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
-       El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers);
+  void step(
+    const SDP_Solver_Parameters &parameters, const std::size_t &total_psd_rows,
+    const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
+    const SDP &sdp, const El::Grid &grid,
+    const Block_Diagonal_Matrix &X_cholesky,
+    const Block_Diagonal_Matrix &Y_cholesky,
+    const std::array<
+      std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+      &Q_X_inv_Q,
+    const std::array<
+      std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+      &Q_Y_Q,
+    const Block_Vector &primal_residue_p, El::BigFloat &mu,
+    El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
+    El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers);
 
   void save_solution(const SDP_Solver_Terminate_Reason,
                      const std::pair<std::string, Timer> &timer_pair,

@@ -38,11 +38,15 @@
 // - SchurOffDiagonal
 //
 
-void compute_schur_complement(const Block_Info &block_info,
-                              const Block_Diagonal_Matrix &Q_X_inv_Q,
-                              const Block_Diagonal_Matrix &Q_Y_Q,
-                              Block_Diagonal_Matrix &schur_complement,
-                              Timers &timers);
+void compute_schur_complement(
+  const Block_Info &block_info,
+  const std::array<
+    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    &Q_X_inv_Q,
+  const std::array<
+    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    &Q_Y_Q,
+  Block_Diagonal_Matrix &schur_complement, Timers &timers);
 
 void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
                         const Block_Diagonal_Matrix &schur_complement,
@@ -56,7 +60,12 @@ void synchronize_Q(El::DistMatrix<El::BigFloat> &Q,
 
 void initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
-  const Block_Diagonal_Matrix &Q_X_inv_Q, const Block_Diagonal_Matrix &Q_Y_Q,
+  const std::array<
+    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    &Q_X_inv_Q,
+  const std::array<
+    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    &Q_Y_Q,
   const El::Grid &group_grid, Block_Diagonal_Matrix &schur_complement_cholesky,
   Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
   Timers &timers)

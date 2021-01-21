@@ -23,7 +23,10 @@ void compute_bilinear_pairings(
   const Block_Info &block_info, const Block_Diagonal_Matrix &X_cholesky,
   const Block_Diagonal_Matrix &Y,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
-  Block_Diagonal_Matrix &Q_X_inv_Q, Block_Diagonal_Matrix &Q_Y_Q,
+  std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
+             2> &Q_X_inv_Q,
+  std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
+             2> &Q_Y_Q,
   Timers &timers);
 
 void compute_feasible_and_termination(
@@ -36,11 +39,12 @@ void compute_feasible_and_termination(
   bool &is_primal_and_dual_feasible,
   SDP_Solver_Terminate_Reason &terminate_reason, bool &terminate_now);
 
-void compute_dual_residues_and_error(const Block_Info &block_info,
-                                     const SDP &sdp, const Block_Vector &y,
-                                     const Block_Diagonal_Matrix &Q_Y_Q,
-                                     Block_Vector &dual_residues,
-                                     El::BigFloat &dual_error, Timers &timers);
+void compute_dual_residues_and_error(
+  const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
+  const std::array<
+    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    &Q_Y_Q,
+  Block_Vector &dual_residues, El::BigFloat &dual_error, Timers &timers);
 
 void compute_primal_residues_and_error_P_Ax_X(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &x,
@@ -85,14 +89,16 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
   // dimension of BilinearPairingsXInv.block[b] is (d_j+1)*m_j.  See
   // SDP.h for more information on d_j and m_j.
 
-  Block_Diagonal_Matrix Q_X_inv_Q(block_info.bilinear_pairing_block_sizes(),
-                                  block_info.block_indices,
-                                  block_info.num_points.size(), grid);
+  std::array<
+    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    Q_X_inv_Q;
 
   // BilinearPairingsY is analogous to BilinearPairingsXInv, with
   // X^{-1} -> Y.
 
-  Block_Diagonal_Matrix Q_Y_Q(Q_X_inv_Q);
+  std::array<
+    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    Q_Y_Q;
   print_header(parameters.verbosity);
 
   auto psd_sizes(block_info.psd_matrix_block_sizes());
