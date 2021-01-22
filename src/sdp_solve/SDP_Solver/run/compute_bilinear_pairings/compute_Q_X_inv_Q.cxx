@@ -50,6 +50,7 @@ void compute_Q_X_inv_Q(
 
               Q_X_inv_Q_block[column_block].emplace_back(
                 block_size, block_size, block.Grid());
+              Q_X_inv_Q_block[column_block].back().Align(0,0);
               El::Copy(submatrix, Q_X_inv_Q_block[column_block].back());
             }
         }
