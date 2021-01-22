@@ -85,24 +85,6 @@ void compute_schur_complement(
                             Q_Y_Q[parity][Q_index][column_block_1][row_block_0],
                             temp, result_sub_matrix);
 
-                          if(block_index == 15)
-                            {
-                              std::cout.precision(300);
-                              std::cout
-                                << "result 0: " << block_index << " "
-                                << block_size << " " << column_block_0 << " "
-                                << row_block_0 << " " << column_block_1 << " "
-                                << row_block_1 << " " << parity << " "
-                                << El::Norm(result_sub_matrix) << "\n "
-                                << El::Norm(
-                                     Q_X_inv_Q[parity][Q_index][column_block_0]
-                                              [row_block_1])
-                                << "\n "
-                                << El::Norm(Q_Y_Q[parity][Q_index]
-                                                 [column_block_1][row_block_0])
-                                << "\n";
-                            }
-
                           multiply_submatrices(
                             Q_X_inv_Q[parity][Q_index][row_block_0]
                                      [row_block_1],
@@ -110,97 +92,17 @@ void compute_schur_complement(
                                  [column_block_0],
                             temp, result_sub_matrix);
 
-                          if(block_index == 15)
-                            {
-                              std::cout.precision(300);
-                              std::cout
-                                << "result 1: " << block_index << " "
-                                << block_size << " " << column_block_0 << " "
-                                << row_block_0 << " " << column_block_1 << " "
-                                << row_block_1 << " " << parity << " "
-                                << El::Norm(result_sub_matrix) << "\n "
-                                << El::Norm(
-                                     Q_X_inv_Q[parity][Q_index][row_block_0]
-                                              [row_block_1])
-                                << "\n "
-                                << El::Norm(
-                                     Q_Y_Q[parity][Q_index][column_block_1]
-                                          [column_block_0])
-                                << "\n";
-                            }
-
-                          if(block_index != 15)
-                            {
-                              multiply_submatrices(
-                                Q_X_inv_Q[parity][Q_index][column_block_0]
-                                         [column_block_1],
-                                Q_Y_Q[parity][Q_index][row_block_1]
-                                     [row_block_0],
-                                temp, result_sub_matrix);
-                            }
-                          if(block_index == 15)
-                            {
-                              El::Hadamard(
-                                Q_X_inv_Q[parity][Q_index][column_block_0]
-                                         [column_block_1],
-                                Q_Y_Q[parity][Q_index][row_block_1]
-                                     [row_block_0],
-                                temp);
-                              Axpy(El::BigFloat(0.25), temp,
-                                   result_sub_matrix);
-
-                              std::cout.precision(300);
-
-                              for(size_t column(0); column < 5; ++column)
-                                for(size_t row(0); row < 5; ++row)
-                                  {
-                                    std::cout
-                                      << "temp: " << column << " " << row
-                                      << " "
-                                      << Q_X_inv_Q[parity][Q_index]
-                                                  [column_block_0]
-                                                  [column_block_1]
-                                                    .Get(column, row)
-                                      << "\n "
-                                      << Q_Y_Q[parity][Q_index][row_block_1]
-                                              [row_block_0]
-                                                .Get(column, row)
-                                      << "\n " << temp.Get(column, row)
-                                      << "\n "
-                                      << result_sub_matrix.Get(column, row)
-                                      << "\n";
-                                  }
-                              std::cout
-                                << "result 2: " << block_index << " "
-                                << block_size << " " << column_block_0 << " "
-                                << row_block_0 << " " << column_block_1 << " "
-                                << row_block_1 << " " << parity << " "
-                                << El::Norm(result_sub_matrix) << "\n "
-                                << El::Norm(
-                                     Q_X_inv_Q[parity][Q_index][column_block_0]
-                                              [column_block_1])
-                                << "\n "
-                                << El::Norm(Q_Y_Q[parity][Q_index][row_block_1]
-                                                 [row_block_0])
-                                << "\n " << El::Norm(temp) << "\n";
-                            }
+                          multiply_submatrices(
+                            Q_X_inv_Q[parity][Q_index][column_block_0]
+                                     [column_block_1],
+                            Q_Y_Q[parity][Q_index][row_block_1][row_block_0],
+                            temp, result_sub_matrix);
 
                           multiply_submatrices(
                             Q_X_inv_Q[parity][Q_index][row_block_0]
                                      [column_block_1],
                             Q_Y_Q[parity][Q_index][row_block_1][column_block_0],
                             temp, result_sub_matrix);
-
-                          if(block_index == 15)
-                            {
-                              std::cout.precision(300);
-                              std::cout << "result: " << block_index << " "
-                                        << block_size << " " << column_block_0
-                                        << " " << row_block_0 << " "
-                                        << column_block_1 << " " << row_block_1
-                                        << " " << parity << " "
-                                        << El::Norm(result_sub_matrix) << "\n";
-                            }
                         }
                     }
                 }
@@ -208,32 +110,6 @@ void compute_schur_complement(
         }
 
       El::MakeSymmetric(El::UpperOrLower::LOWER, *schur_complement_block);
-
-      if(block_index == 15)
-        {
-          std::cout.precision(300);
-          std::cout << "schur: " << block_index << " " << block_size << " "
-                    << dim
-                    << " "
-                    // // << El::Max(*schur_complement_block) << "\n "
-                    // // << El::Min(*schur_complement_block) << "\n "
-                    << El::Norm(*schur_complement_block)
-                    << "\n "
-                    // // << El::SymmetricNorm(El::UpperOrLower::LOWER,
-                    // *schur_complement_block) << "\n "
-                    // // << El::HermitianNorm(El::UpperOrLower::LOWER,
-                    // *schur_complement_block) << "\n "
-                    // // << (*schur_complement_block).Get(22,13) << "\n  "
-                    // // << (*Q_X_inv_Q_block).at(1).Get(22,13) << "\n  "
-                    // // << (*Q_Y_Q_block).at(1).Get(22,13) << " "
-                    << El::Norm(Q_X_inv_Q[0][Q_index][0][0]) << "\n "
-                    << El::Norm(Q_X_inv_Q[0][Q_index][0][1]) << "\n "
-                    << El::Norm(Q_X_inv_Q[0][Q_index][1][1]) << "\n "
-                    << El::Norm(Q_Y_Q[0][Q_index][0][0]) << "\n "
-                    << El::Norm(Q_Y_Q[0][Q_index][0][1]) << "\n "
-                    << El::Norm(Q_Y_Q[0][Q_index][1][1]) << "\n "
-                    << "\n";
-        }
       ++schur_complement_block;
       ++Q_index;
     }
