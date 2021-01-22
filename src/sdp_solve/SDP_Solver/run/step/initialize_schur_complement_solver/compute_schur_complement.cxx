@@ -22,10 +22,10 @@ namespace
   void multiply_submatrices(const El::DistMatrix<El::BigFloat> &X_inv,
                             const El::DistMatrix<El::BigFloat> &Y,
                             El::DistMatrix<El::BigFloat> &temp,
-                            El::DistMatrix<El::BigFloat> &result_submatrix)
+                            El::DistMatrix<El::BigFloat> &result)
   {
     El::Hadamard(X_inv, Y, temp);
-    Axpy(El::BigFloat(0.25), temp, result_submatrix);
+    Axpy(El::BigFloat(0.25), temp, result);
   }
 }
 
@@ -50,7 +50,8 @@ void compute_schur_complement(
         dim(block_info.dimensions[block_index]);
 
       El::DistMatrix<El::BigFloat> temp(block_size, block_size,
-                                        schur_complement_block->Grid());
+                                        schur_complement_block->Grid()),
+        temp_result(temp);
 
       for(size_t column_block_0 = 0; column_block_0 < dim; ++column_block_0)
         {
@@ -67,43 +68,45 @@ void compute_schur_complement(
                   for(size_t row_block_1 = 0; row_block_1 <= column_block_1;
                       ++row_block_1)
                     {
-                      size_t result_column_offset(
-                        ((column_block_1 * (column_block_1 + 1)) / 2
-                         + row_block_1)
-                        * block_size);
-
-                      El::DistMatrix<El::BigFloat> result_sub_matrix(El::View(
-                        *schur_complement_block, result_row_offset,
-                        result_column_offset, block_size, block_size));
-                      Zero(result_sub_matrix);
-
+                      Zero(temp_result);
                       for(size_t parity(0); parity < 2; ++parity)
                         {
                           multiply_submatrices(
                             Q_X_inv_Q[parity][Q_index][column_block_0]
                                      [row_block_1],
                             Q_Y_Q[parity][Q_index][column_block_1][row_block_0],
-                            temp, result_sub_matrix);
+                            temp, temp_result);
 
                           multiply_submatrices(
                             Q_X_inv_Q[parity][Q_index][row_block_0]
                                      [row_block_1],
                             Q_Y_Q[parity][Q_index][column_block_1]
                                  [column_block_0],
-                            temp, result_sub_matrix);
+                            temp, temp_result);
 
                           multiply_submatrices(
                             Q_X_inv_Q[parity][Q_index][column_block_0]
                                      [column_block_1],
                             Q_Y_Q[parity][Q_index][row_block_1][row_block_0],
-                            temp, result_sub_matrix);
+                            temp, temp_result);
 
                           multiply_submatrices(
                             Q_X_inv_Q[parity][Q_index][row_block_0]
                                      [column_block_1],
                             Q_Y_Q[parity][Q_index][row_block_1][column_block_0],
-                            temp, result_sub_matrix);
+                            temp, temp_result);
                         }
+
+                      size_t result_column_offset(
+                        ((column_block_1 * (column_block_1 + 1)) / 2
+                         + row_block_1)
+                        * block_size);
+
+                      El::DistMatrix<El::BigFloat> result_submatrix(El::View(
+                        *schur_complement_block, result_row_offset,
+                        result_column_offset, block_size, block_size));
+
+                      El::Copy(temp_result, result_submatrix);
                     }
                 }
             }
