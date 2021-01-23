@@ -12,23 +12,6 @@
 //
 // where ej = d_j + 1.
 
-namespace
-{
-  // Elementwise multiplication of two submatrices.
-  //
-  // result(i,j)=(Q_X_inv_Q(column_offset_X+i,row_offset_X+j)
-  //              * Q_Y_Q(column_offset_Y+i,row_offset_Y+j)) / 4
-
-  void multiply_submatrices(const El::DistMatrix<El::BigFloat> &X_inv,
-                            const El::DistMatrix<El::BigFloat> &Y,
-                            El::DistMatrix<El::BigFloat> &temp,
-                            El::DistMatrix<El::BigFloat> &result)
-  {
-    El::Hadamard(X_inv, Y, temp);
-    Axpy(El::BigFloat(0.25), temp, result);
-  }
-}
-
 void compute_schur_complement(
   const Block_Info &block_info,
   const std::array<
@@ -68,35 +51,58 @@ void compute_schur_complement(
                   for(size_t row_block_1 = 0; row_block_1 <= column_block_1;
                       ++row_block_1)
                     {
-                      Zero(temp_result);
-                      for(size_t parity(0); parity < 2; ++parity)
+                      El::BigFloat element, product;
+                      for(int64_t row(0); row < temp_result.LocalHeight();
+                          ++row)
                         {
-                          multiply_submatrices(
-                            Q_X_inv_Q[parity][Q_index][column_block_0]
-                                     [row_block_1],
-                            Q_Y_Q[parity][Q_index][column_block_1][row_block_0],
-                            temp, temp_result);
+                          for(int64_t column(0);
+                              column < temp_result.LocalWidth(); ++column)
+                            {
+                              element.Zero();
+                              for(size_t parity(0); parity < 2; ++parity)
+                                {
+                                  // Do this the hard way to avoid memory
+                                  // allocations
+                                  product
+                                    = Q_X_inv_Q[parity][Q_index]
+                                               [column_block_0][row_block_1]
+                                                 .GetLocal(row, column);
+                                  product *= Q_Y_Q[parity][Q_index]
+                                                  [column_block_1][row_block_0]
+                                                    .GetLocal(row, column);
+                                  element += product;
 
-                          multiply_submatrices(
-                            Q_X_inv_Q[parity][Q_index][row_block_0]
-                                     [row_block_1],
-                            Q_Y_Q[parity][Q_index][column_block_1]
-                                 [column_block_0],
-                            temp, temp_result);
+                                  product = Q_X_inv_Q[parity][Q_index]
+                                                     [row_block_0][row_block_1]
+                                                       .GetLocal(row, column);
+                                  product
+                                    *= Q_Y_Q[parity][Q_index][column_block_1]
+                                            [column_block_0]
+                                              .GetLocal(row, column);
+                                  element += product;
 
-                          multiply_submatrices(
-                            Q_X_inv_Q[parity][Q_index][column_block_0]
-                                     [column_block_1],
-                            Q_Y_Q[parity][Q_index][row_block_1][row_block_0],
-                            temp, temp_result);
+                                  product
+                                    = Q_X_inv_Q[parity][Q_index]
+                                               [column_block_0][column_block_1]
+                                                 .GetLocal(row, column);
+                                  product *= Q_Y_Q[parity][Q_index]
+                                                  [row_block_1][row_block_0]
+                                                    .GetLocal(row, column);
+                                  element += product;
 
-                          multiply_submatrices(
-                            Q_X_inv_Q[parity][Q_index][row_block_0]
-                                     [column_block_1],
-                            Q_Y_Q[parity][Q_index][row_block_1][column_block_0],
-                            temp, temp_result);
+                                  product
+                                    = Q_X_inv_Q[parity][Q_index][row_block_0]
+                                               [column_block_1]
+                                                 .GetLocal(row, column);
+                                  product *= Q_Y_Q[parity][Q_index]
+                                                  [row_block_1][column_block_0]
+                                                    .GetLocal(row, column);
+                                  element += product;
+                                }
+                              element /= 4;
+                              temp_result.SetLocal(column, row, element);
+                            }
                         }
-
                       size_t result_column_offset(
                         ((column_block_1 * (column_block_1 + 1)) / 2
                          + row_block_1)
