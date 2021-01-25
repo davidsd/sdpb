@@ -66,37 +66,38 @@ void compute_schur_complement(
                                   product
                                     = Q_X_inv_Q[parity][Q_index]
                                                [column_block_0][row_block_1]
-                                                 .GetLocal(row, column);
+                                                 .GetLocalCRef(row, column);
                                   product *= Q_Y_Q[parity][Q_index]
                                                   [column_block_1][row_block_0]
-                                                    .GetLocal(row, column);
+                                                    .GetLocalCRef(row, column);
                                   element += product;
 
-                                  product = Q_X_inv_Q[parity][Q_index]
-                                                     [row_block_0][row_block_1]
-                                                       .GetLocal(row, column);
+                                  product
+                                    = Q_X_inv_Q[parity][Q_index][row_block_0]
+                                               [row_block_1]
+                                                 .GetLocalCRef(row, column);
                                   product
                                     *= Q_Y_Q[parity][Q_index][column_block_1]
                                             [column_block_0]
-                                              .GetLocal(row, column);
+                                              .GetLocalCRef(row, column);
                                   element += product;
 
                                   product
                                     = Q_X_inv_Q[parity][Q_index]
                                                [column_block_0][column_block_1]
-                                                 .GetLocal(row, column);
+                                                 .GetLocalCRef(row, column);
                                   product *= Q_Y_Q[parity][Q_index]
                                                   [row_block_1][row_block_0]
-                                                    .GetLocal(row, column);
+                                                    .GetLocalCRef(row, column);
                                   element += product;
 
                                   product
                                     = Q_X_inv_Q[parity][Q_index][row_block_0]
                                                [column_block_1]
-                                                 .GetLocal(row, column);
+                                                 .GetLocalCRef(row, column);
                                   product *= Q_Y_Q[parity][Q_index]
                                                   [row_block_1][column_block_0]
-                                                    .GetLocal(row, column);
+                                                    .GetLocalCRef(row, column);
                                   element += product;
                                 }
                               element /= 4;
