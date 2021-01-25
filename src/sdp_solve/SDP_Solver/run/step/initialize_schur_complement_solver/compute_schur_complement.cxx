@@ -27,6 +27,8 @@ void compute_schur_complement(
 
   auto schur_complement_block(schur_complement.blocks.begin());
   size_t Q_index(0);
+  // Put these BigFloats at the beginning to avoid memory churn
+  El::BigFloat element, product;
   for(auto &block_index : block_info.block_indices)
     {
       const size_t block_size(block_info.num_points[block_index]),
@@ -35,7 +37,6 @@ void compute_schur_complement(
       El::DistMatrix<El::BigFloat> temp(block_size, block_size,
                                         schur_complement_block->Grid()),
         temp_result(temp);
-
       for(size_t column_block_0 = 0; column_block_0 < dim; ++column_block_0)
         {
           for(size_t row_block_0 = 0; row_block_0 <= column_block_0;
@@ -51,7 +52,6 @@ void compute_schur_complement(
                   for(size_t row_block_1 = 0; row_block_1 <= column_block_1;
                       ++row_block_1)
                     {
-                      El::BigFloat element, product;
                       for(int64_t row(0); row < temp_result.LocalHeight();
                           ++row)
                         {
