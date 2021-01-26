@@ -101,7 +101,7 @@ void compute_schur_complement(
                                   element += product;
                                 }
                               element /= 4;
-                              temp_result.SetLocal(column, row, element);
+                              temp_result.SetLocal(row, column, element);
                             }
                         }
                       size_t result_column_offset(
