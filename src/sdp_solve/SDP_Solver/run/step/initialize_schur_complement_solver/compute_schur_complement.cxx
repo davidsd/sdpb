@@ -15,10 +15,10 @@
 void compute_schur_complement(
   const Block_Info &block_info,
   const std::array<
-    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>, 2>
     &Q_X_inv_Q,
   const std::array<
-    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>, 2>
     &Q_Y_Q,
   Block_Diagonal_Matrix &schur_complement, Timers &timers)
 {
@@ -34,9 +34,10 @@ void compute_schur_complement(
       const size_t block_size(block_info.num_points[block_index]),
         dim(block_info.dimensions[block_index]);
 
-      El::DistMatrix<El::BigFloat> temp(block_size, block_size,
-                                        schur_complement_block->Grid()),
+      El::Matrix<El::BigFloat> temp(block_size, block_size),
         temp_result(temp);
+      El::DistMatrix<El::BigFloat, El::STAR, El::STAR> temp_star(
+        block_size, block_size, schur_complement_block->Grid());
       for(size_t column_block_0 = 0; column_block_0 < dim; ++column_block_0)
         {
           for(size_t row_block_0 = 0; row_block_0 <= column_block_0;
@@ -52,11 +53,11 @@ void compute_schur_complement(
                   for(size_t row_block_1 = 0; row_block_1 <= column_block_1;
                       ++row_block_1)
                     {
-                      for(int64_t row(0); row < temp_result.LocalHeight();
+                      for(int64_t row(0); row < temp_result.Height();
                           ++row)
                         {
                           for(int64_t column(0);
-                              column < temp_result.LocalWidth(); ++column)
+                              column < temp_result.Width(); ++column)
                             {
                               element.Zero();
                               for(size_t parity(0); parity < 2; ++parity)
@@ -66,42 +67,42 @@ void compute_schur_complement(
                                   product
                                     = Q_X_inv_Q[parity][Q_index]
                                                [column_block_0][row_block_1]
-                                                 .GetLocalCRef(row, column);
+                                                 .CRef(row, column);
                                   product *= Q_Y_Q[parity][Q_index]
                                                   [column_block_1][row_block_0]
-                                                    .GetLocalCRef(row, column);
+                                                    .CRef(row, column);
                                   element += product;
 
                                   product
                                     = Q_X_inv_Q[parity][Q_index][row_block_0]
                                                [row_block_1]
-                                                 .GetLocalCRef(row, column);
+                                                 .CRef(row, column);
                                   product
                                     *= Q_Y_Q[parity][Q_index][column_block_1]
                                             [column_block_0]
-                                              .GetLocalCRef(row, column);
+                                              .CRef(row, column);
                                   element += product;
 
                                   product
                                     = Q_X_inv_Q[parity][Q_index]
                                                [column_block_0][column_block_1]
-                                                 .GetLocalCRef(row, column);
+                                                 .CRef(row, column);
                                   product *= Q_Y_Q[parity][Q_index]
                                                   [row_block_1][row_block_0]
-                                                    .GetLocalCRef(row, column);
+                                                    .CRef(row, column);
                                   element += product;
 
                                   product
                                     = Q_X_inv_Q[parity][Q_index][row_block_0]
                                                [column_block_1]
-                                                 .GetLocalCRef(row, column);
+                                                 .CRef(row, column);
                                   product *= Q_Y_Q[parity][Q_index]
                                                   [row_block_1][column_block_0]
-                                                    .GetLocalCRef(row, column);
+                                                    .CRef(row, column);
                                   element += product;
                                 }
                               element /= 4;
-                              temp_result.SetLocal(column, row, element);
+                              temp_result.Set(column, row, element);
                             }
                         }
                       size_t result_column_offset(
@@ -113,7 +114,12 @@ void compute_schur_complement(
                         *schur_complement_block, result_row_offset,
                         result_column_offset, block_size, block_size));
 
-                      El::Copy(temp_result, result_submatrix);
+                      for(int64_t row(0); row<temp_star.LocalHeight(); ++row)
+                        for(int64_t column(0); column<temp_star.LocalWidth(); ++column)
+                          {
+                            temp_star.SetLocal(row,column,temp_result(row,column));
+                          }
+                      El::Copy(temp_star, result_submatrix);
                     }
                 }
             }

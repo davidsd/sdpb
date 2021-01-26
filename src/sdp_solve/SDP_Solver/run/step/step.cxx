@@ -7,10 +7,10 @@ El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
 void initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
   const std::array<
-    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>, 2>
     &Q_X_inv_Q,
   const std::array<
-    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>, 2>
     &Q_Y_Q,
   const El::Grid &block_grid, Block_Diagonal_Matrix &schur_complement_cholesky,
   Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
@@ -48,10 +48,10 @@ void SDP_Solver::step(
   const Block_Diagonal_Matrix &X_cholesky,
   const Block_Diagonal_Matrix &Y_cholesky,
   const std::array<
-    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>, 2>
     &Q_X_inv_Q,
   const std::array<
-    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>, 2>
     &Q_Y_Q,
   const Block_Vector &primal_residue_p, El::BigFloat &mu,
   El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,

@@ -90,10 +90,10 @@ public:
     const Block_Diagonal_Matrix &X_cholesky,
     const Block_Diagonal_Matrix &Y_cholesky,
     const std::array<
-      std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+      std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>, 2>
       &Q_X_inv_Q,
     const std::array<
-      std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+      std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>, 2>
       &Q_Y_Q,
     const Block_Vector &primal_residue_p, El::BigFloat &mu,
     El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,

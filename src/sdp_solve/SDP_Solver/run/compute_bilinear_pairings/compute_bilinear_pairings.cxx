@@ -5,22 +5,22 @@
 void compute_Q_X_inv_Q(
   const Block_Info &block_info, const Block_Diagonal_Matrix &X_cholesky,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
-  std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
+  std::array<std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>,
              2> &Q_X_inv_Q);
 
 void compute_Q_Y_Q(
   const Block_Info &block_info, const Block_Diagonal_Matrix &Y,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
-  std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
+  std::array<std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>,
              2> &Q_Y_Q);
 
 void compute_bilinear_pairings(
   const Block_Info &block_info, const Block_Diagonal_Matrix &X_cholesky,
   const Block_Diagonal_Matrix &Y,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
-  std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
+  std::array<std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>,
              2> &Q_X_inv_Q,
-  std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
+  std::array<std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>,
              2> &Q_Y_Q,
   Timers &timers)
 {

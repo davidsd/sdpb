@@ -13,8 +13,7 @@
 void compute_dual_residues_and_error(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
   const std::array<
-    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    &Q_Y_Q,
+    std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>, 2> &Q_Y_Q,
   Block_Vector &dual_residues, El::BigFloat &dual_error, Timers &timers)
 {
   auto &dual_residues_timer(timers.add_and_start("run.computeDualResidues"));
@@ -32,13 +31,22 @@ void compute_dual_residues_and_error(
       const size_t block_size(block_info.num_points[block_index]),
         dim(block_info.dimensions[block_index]);
 
+      El::DistMatrix<El::BigFloat, El::STAR, El::STAR> Y_star(
+        block_size, block_size, dual_residues_block->Grid());
       for(auto &Q_Y_Q_parity : Q_Y_Q)
         {
           for(size_t column_block = 0; column_block < dim; ++column_block)
             for(size_t row_block = 0; row_block <= column_block; ++row_block)
               {
-                El::DistMatrix<El::BigFloat> lower_diagonal(El::GetDiagonal(
-                  Q_Y_Q_parity[Q_index][column_block][row_block]));
+                for(int64_t diag(0); diag < Y_star.LocalHeight(); ++diag)
+                  {
+                    Y_star.SetLocal(
+                      diag, diag,
+                      Q_Y_Q_parity[Q_index][column_block][row_block](diag,
+                                                                     diag));
+                  }
+                El::DistMatrix<El::BigFloat> lower_diagonal(
+                  El::GetDiagonal(Y_star));
 
                 size_t residue_row_offset(
                   ((column_block * (column_block + 1)) / 2 + row_block)

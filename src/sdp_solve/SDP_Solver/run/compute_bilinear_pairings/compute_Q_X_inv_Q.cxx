@@ -6,7 +6,7 @@
 void compute_Q_X_inv_Q(
   const Block_Info &block_info, const Block_Diagonal_Matrix &X_cholesky,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
-  std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
+  std::array<std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>,
              2> &Q_X_inv_Q)
 {
   Q_X_inv_Q[0].resize(bases_blocks.size());
@@ -36,6 +36,8 @@ void compute_Q_X_inv_Q(
       const size_t parity(index % 2), Q_index(index / 2);
       auto &Q_X_inv_Q_block(Q_X_inv_Q[parity][Q_index]);
       Q_X_inv_Q_block.resize(dim);
+
+      El::DistMatrix<El::BigFloat,El::STAR,El::STAR> X_star(block_size, block_size, block.Grid());
       for(size_t column_block = 0; column_block < dim; ++column_block)
         {
           Q_X_inv_Q_block[column_block].clear();
@@ -49,9 +51,15 @@ void compute_Q_X_inv_Q(
                          block_size, block_size));
 
               Q_X_inv_Q_block[column_block].emplace_back(
-                block_size, block_size, block.Grid());
-              Q_X_inv_Q_block[column_block].back().Align(0,0);
-              El::Copy(submatrix, Q_X_inv_Q_block[column_block].back());
+                block_size, block_size);
+              auto &X_local(Q_X_inv_Q_block[column_block].back());
+              X_star.Align(0,0);
+              El::Copy(submatrix, X_star);
+              for(int64_t row(0); row<X_star.LocalHeight(); ++row)
+                for(int64_t column(0); column<X_star.LocalWidth(); ++column)
+                  {
+                    X_local(row,column)=X_star.GetLocal(row,column);
+                  }
             }
         }
     }

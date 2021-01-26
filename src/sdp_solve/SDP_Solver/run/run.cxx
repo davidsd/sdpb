@@ -23,9 +23,9 @@ void compute_bilinear_pairings(
   const Block_Info &block_info, const Block_Diagonal_Matrix &X_cholesky,
   const Block_Diagonal_Matrix &Y,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
-  std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
+  std::array<std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>,
              2> &Q_X_inv_Q,
-  std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
+  std::array<std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>,
              2> &Q_Y_Q,
   Timers &timers);
 
@@ -42,7 +42,7 @@ void compute_feasible_and_termination(
 void compute_dual_residues_and_error(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
   const std::array<
-    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>, 2>
     &Q_Y_Q,
   Block_Vector &dual_residues, El::BigFloat &dual_error, Timers &timers);
 
@@ -90,14 +90,14 @@ SDP_Solver::run(const SDP_Solver_Parameters &parameters,
   // SDP.h for more information on d_j and m_j.
 
   std::array<
-    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>, 2>
     Q_X_inv_Q;
 
   // BilinearPairingsY is analogous to BilinearPairingsXInv, with
   // X^{-1} -> Y.
 
   std::array<
-    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>, 2>
     Q_Y_Q;
   print_header(parameters.verbosity);
 

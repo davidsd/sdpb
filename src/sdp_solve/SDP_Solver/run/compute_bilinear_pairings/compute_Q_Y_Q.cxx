@@ -13,7 +13,7 @@
 void compute_Q_Y_Q(
   const Block_Info &block_info, const Block_Diagonal_Matrix &Y,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
-  std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
+  std::array<std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>,
              2> &Q_Y_Q)
 {
   Q_Y_Q[0].resize(bases_blocks.size() / 2);
@@ -41,6 +41,7 @@ void compute_Q_Y_Q(
 
       El::MakeSymmetric(El::UpperOrLower::LOWER, Q_Y_Q_matrix_temp);
 
+      El::DistMatrix<El::BigFloat,El::STAR,El::STAR> Y_star(block_size, block_size, block.Grid());
       for(size_t column_block = 0; column_block < dim; ++column_block)
         {
           Q_Y_Q_block[column_block].clear();
@@ -53,10 +54,15 @@ void compute_Q_Y_Q(
                 El::LockedView(Q_Y_Q_matrix_temp, column_offset, row_offset,
                                block_size, block_size));
 
-              Q_Y_Q_block[column_block].emplace_back(block_size, block_size,
-                                                     block.Grid());
-
-              El::Transpose(submatrix, Q_Y_Q_block[column_block].back());
+              Q_Y_Q_block[column_block].emplace_back(block_size, block_size);
+              auto &Y_local(Q_Y_Q_block[column_block].back());
+              
+              El::Transpose(submatrix, Y_star);
+              for(int64_t row(0); row<Y_star.LocalHeight(); ++row)
+                for(int64_t column(0); column<Y_star.LocalWidth(); ++column)
+                  {
+                    Y_local(row,column)=Y_star.GetLocal(row,column);
+                  }
             }
         }
     }
