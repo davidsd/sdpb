@@ -18,8 +18,7 @@ void compute_schur_complement(
     std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>, 2>
     &Q_X_inv_Q,
   const std::array<
-    std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>, 2>
-    &Q_Y_Q,
+    std::vector<std::vector<std::vector<El::Matrix<El::BigFloat>>>>, 2> &Q_Y_Q,
   Block_Diagonal_Matrix &schur_complement, Timers &timers)
 {
   auto &schur_complement_timer(timers.add_and_start(
@@ -34,10 +33,6 @@ void compute_schur_complement(
       const size_t block_size(block_info.num_points[block_index]),
         dim(block_info.dimensions[block_index]);
 
-      El::Matrix<El::BigFloat> temp(block_size, block_size),
-        temp_result(temp);
-      El::DistMatrix<El::BigFloat, El::STAR, El::STAR> temp_star(
-        block_size, block_size, schur_complement_block->Grid());
       for(size_t column_block_0 = 0; column_block_0 < dim; ++column_block_0)
         {
           for(size_t row_block_0 = 0; row_block_0 <= column_block_0;
@@ -53,73 +48,77 @@ void compute_schur_complement(
                   for(size_t row_block_1 = 0; row_block_1 <= column_block_1;
                       ++row_block_1)
                     {
-                      for(int64_t row(0); row < temp_result.Height();
-                          ++row)
-                        {
-                          for(int64_t column(0);
-                              column < temp_result.Width(); ++column)
-                            {
-                              element.Zero();
-                              for(size_t parity(0); parity < 2; ++parity)
-                                {
-                                  // Do this the hard way to avoid memory
-                                  // allocations
-                                  product
-                                    = Q_X_inv_Q[parity][Q_index]
-                                               [column_block_0][row_block_1]
-                                                 .CRef(row, column);
-                                  product *= Q_Y_Q[parity][Q_index]
-                                                  [column_block_1][row_block_0]
-                                                    .CRef(row, column);
-                                  element += product;
-
-                                  product
-                                    = Q_X_inv_Q[parity][Q_index][row_block_0]
-                                               [row_block_1]
-                                                 .CRef(row, column);
-                                  product
-                                    *= Q_Y_Q[parity][Q_index][column_block_1]
-                                            [column_block_0]
-                                              .CRef(row, column);
-                                  element += product;
-
-                                  product
-                                    = Q_X_inv_Q[parity][Q_index]
-                                               [column_block_0][column_block_1]
-                                                 .CRef(row, column);
-                                  product *= Q_Y_Q[parity][Q_index]
-                                                  [row_block_1][row_block_0]
-                                                    .CRef(row, column);
-                                  element += product;
-
-                                  product
-                                    = Q_X_inv_Q[parity][Q_index][row_block_0]
-                                               [column_block_1]
-                                                 .CRef(row, column);
-                                  product *= Q_Y_Q[parity][Q_index]
-                                                  [row_block_1][column_block_0]
-                                                    .CRef(row, column);
-                                  element += product;
-                                }
-                              element /= 4;
-                              temp_result.Set(row, column, element);
-                            }
-                        }
                       size_t result_column_offset(
                         ((column_block_1 * (column_block_1 + 1)) / 2
                          + row_block_1)
                         * block_size);
 
-                      El::DistMatrix<El::BigFloat> result_submatrix(El::View(
-                        *schur_complement_block, result_row_offset,
-                        result_column_offset, block_size, block_size));
+                      for(size_t row(0); row < block_size; ++row)
+                        {
+                          for(size_t column(0); column < block_size; ++column)
+                            {
+                              size_t global_row(row + result_row_offset),
+                                global_column(column + result_column_offset);
+                              if(schur_complement_block->IsLocal(global_row, global_column))
+                                {
+                                  element.Zero();
+                                  for(size_t parity(0); parity < 2; ++parity)
+                                    {
+                                      // Do this the hard way to avoid memory
+                                      // allocations
+                                      product
+                                        = Q_X_inv_Q[parity][Q_index]
+                                                   [column_block_0][row_block_1]
+                                                     .CRef(row, column);
+                                      product
+                                        *= Q_Y_Q[parity][Q_index]
+                                                [column_block_1][row_block_0]
+                                                  .CRef(row, column);
+                                      element += product;
 
-                      for(int64_t row(0); row<temp_star.LocalHeight(); ++row)
-                        for(int64_t column(0); column<temp_star.LocalWidth(); ++column)
-                          {
-                            temp_star.SetLocal(row,column,temp_result(row,column));
-                          }
-                      El::Copy(temp_star, result_submatrix);
+                                      product
+                                        = Q_X_inv_Q[parity][Q_index]
+                                                   [row_block_0][row_block_1]
+                                                     .CRef(row, column);
+                                      product
+                                        *= Q_Y_Q[parity][Q_index]
+                                                [column_block_1][column_block_0]
+                                                  .CRef(row, column);
+                                      element += product;
+
+                                      product = Q_X_inv_Q[parity][Q_index]
+                                                         [column_block_0]
+                                                         [column_block_1]
+                                                           .CRef(row, column);
+                                      product
+                                        *= Q_Y_Q[parity][Q_index][row_block_1]
+                                                [row_block_0]
+                                                  .CRef(row, column);
+                                      element += product;
+
+                                      product
+                                        = Q_X_inv_Q[parity][Q_index]
+                                                   [row_block_0][column_block_1]
+                                                     .CRef(row, column);
+                                      product
+                                        *= Q_Y_Q[parity][Q_index][row_block_1]
+                                                [column_block_0]
+                                                  .CRef(row, column);
+                                      element += product;
+                                    }
+                                  element /= 4;
+
+                                  int64_t local_row(
+                                    schur_complement_block->LocalRow(
+                                      row + result_row_offset)),
+                                    local_column(
+                                      schur_complement_block->LocalCol(
+                                        column + result_column_offset));
+                                  schur_complement_block->SetLocal(
+                                    local_row, local_column, element);
+                                }
+                            }
+                        }
                     }
                 }
             }
