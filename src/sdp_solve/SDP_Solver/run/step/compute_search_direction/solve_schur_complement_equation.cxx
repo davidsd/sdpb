@@ -51,7 +51,7 @@ void solve_schur_complement_equation(
     for(int64_t row = 0; row < dy_sum.Height(); ++row)
       for(int64_t column = 0; column < dy_sum.Width(); ++column)
         {
-          if(dy_sum(row, column)!=zero)
+          if(dy_sum(row, column) != zero)
             {
               dy_dist.QueueUpdate(row, column, dy_sum(row, column));
             }
