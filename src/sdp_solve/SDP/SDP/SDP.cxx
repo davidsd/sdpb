@@ -119,8 +119,7 @@ SDP::SDP(const El::BigFloat &objective_const_input,
   El::DiagonalScale(El::LeftOrRight::RIGHT, El::Orientation::NORMAL, s,
                     yp_to_y);
 
-  El::DistMatrix<El::BigFloat> b_new(s.Height(), s.Width(), grid);
-  El::Copy(dual_objective_b, b_new);
+  El::DistMatrix<El::BigFloat> b_new(dual_objective_b);
   El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(1.0), yp_to_y, b_new,
            El::BigFloat(0.0), dual_objective_b);
 
