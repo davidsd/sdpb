@@ -65,7 +65,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
   //           }
   //       }
   //   }
-  
+
   // GMP does not have a special infinity value, so we use max double.
   const El::BigFloat zero(0), infinity(std::numeric_limits<double>::max());
   // for(size_t index_0(0); index_0 + 1 < functions.front().size(); ++index_0)
@@ -148,7 +148,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
   //   }
 
   // exit(0);
-  
+
   // Need to have a point at zero and infinity
   const El::BigFloat min_x(0), max_x(infinity);
   for(size_t block(0); block < num_blocks; ++block)
@@ -457,7 +457,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
       El::DistMatrix<El::BigFloat> y(solver.y.blocks.at(0));
       El::Gemv(El::Orientation::NORMAL, El::BigFloat(1.0), sdp.yp_to_y,
                solver.y.blocks.at(0), El::BigFloat(0.0), y);
-      
+
       weights.at(max_index) = 1;
       for(size_t block_row(0); block_row != size_t(y.Height()); ++block_row)
         {
@@ -484,11 +484,12 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
           // 0.01 should be a small enough relative error so that we are
           // in the regime of convergence.  Then the error estimates will
           // work
-          Mesh mesh(*(points.at(block).begin()), El::BigFloat(100),
-                    [&](const El::BigFloat &x) {
-                      return eval_weighted(matrices[block], x, weights);
-                    },
-                    (1.0 / 128));
+          Mesh mesh(
+            *(points.at(block).begin()), El::BigFloat(100),
+            [&](const El::BigFloat &x) {
+              return eval_weighted(matrices[block], x, weights);
+            },
+            (1.0 / 128));
           new_points.at(block) = get_new_points(mesh);
           for(auto &point : new_points.at(block))
             {
