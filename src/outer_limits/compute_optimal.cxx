@@ -22,163 +22,16 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
   std::vector<std::set<El::BigFloat>> points(num_blocks);
   std::vector<std::vector<El::BigFloat>> new_points(num_blocks);
 
-  // std::vector<std::set<size_t>> candidates(num_blocks);
-  // std::vector<std::vector<std::vector<El::BigFloat>>> functions;
-
-  // // The choice of these points is completely arbitrary
-  // std::vector<std::set<size_t>> point_indices(num_blocks);
-  // const std::vector<El::BigFloat> candidates([]() {
-  //   std::vector<El::BigFloat> result;
-  //   // for(double x(1 / 4.0); x <= 1; x *= 2)
-  //   for(double x(1 / 64.0); x < 64; x *= 1.13878863476 * 1.13878863476)
-  //     {
-  //       result.emplace_back(x);
-  //     }
-  //   return result;
-  // }());
-  // for(size_t block(0); block < num_blocks; ++block)
-  //   {
-  //     functions.emplace_back(num_weights);
-  //     const size_t matrix_dim(matrices[block].polynomials.size());
-  //     for(size_t index(0); index != functions[block].size(); ++index)
-  //       {
-  //         for(auto &x : candidates)
-  //           {
-  //             functions[block][index].emplace_back(0);
-  //             auto &value(functions[block][index].back());
-
-  //             for(size_t row(0); row != matrix_dim; ++row)
-  //               for(size_t column(0); column <= row; ++column)
-  //                 {
-  //                   auto &polys(
-  //                     matrices[block].polynomials.at(row).at(column));
-  //                   El::BigFloat v(polys[index](x));
-  //                   if(row == column)
-  //                     {
-  //                       value += v * v;
-  //                     }
-  //                   else
-  //                     {
-  //                       value += 2 * v * v;
-  //                     }
-  //                 }
-  //           }
-  //       }
-  //   }
-
   // GMP does not have a special infinity value, so we use max double.
   const El::BigFloat zero(0), infinity(std::numeric_limits<double>::max());
-  // for(size_t index_0(0); index_0 + 1 < functions.front().size(); ++index_0)
-  //   {
-  //     const size_t index_1(index_0 + 1);
-  //     size_t max_block(0), max_point(0);
-  //     El::BigFloat max_ratio(1);
-  //     for(size_t block(0); block != functions.size(); ++block)
-  //       {
-  //         for(size_t point(0); point != functions[block][index_0].size();
-  //             ++point)
-  //           {
-  //             if((functions[block][index_0][point] == zero
-  //                 && functions[block][index_1][point] != zero)
-  //                || point_indices[block].find(point)
-  //                     != point_indices[block].end())
-  //               {
-  //                 continue;
-  //               }
-  //             if(functions[block][index_0][point] != zero
-  //                && functions[block][index_1][point] == zero)
-  //               {
-  //                 max_block = block;
-  //                 max_point = point;
-  //                 block = functions.size() - 1;
-  //                 max_ratio = infinity;
-  //                 break;
-  //               }
-  //             if(functions[block][index_0][point]
-  //                > functions[block][index_1][point])
-  //               {
-  //                 if(functions[block][index_0][point]
-  //                      > max_ratio * functions[block][index_1][point])
-  //                   {
-  //                     max_block = block;
-  //                     max_point = point;
-  //                     max_ratio = functions[block][index_0][point]
-  //                                 / functions[block][index_1][point];
-  //                   }
-  //               }
-  //             else
-  //               {
-  //                 if(functions[block][index_1][point]
-  //                    > max_ratio * functions[block][index_0][point])
-  //                   {
-  //                     max_block = block;
-  //                     max_point = point;
-  //                     max_ratio = functions[block][index_1][point]
-  //                                 / functions[block][index_0][point];
-  //                   }
-  //               }
-  //           }
-  //       }
-  //     point_indices[max_block].insert(max_point);
-  //     if(El::mpi::Rank()==0)
-  //       {
-  //         std::cout << "max_ratio: " << index_0 << " " << max_block << " "
-  //                   << max_point << " " << candidates.at(max_point) << " "
-  //                   << max_ratio << "\n"
-  //                   << std::flush;
-  //       }
-  //   }
-  // for(size_t block(0); block!=functions.size(); ++block)
-  //   {
-  //     for(size_t index_0(0); index_0!=functions[block].size(); ++index_0)
-  //       {
-  //         for(size_t index_1(index_0+1); index_1<functions[block].size();
-  //         ++index_1)
-  //           {
-  //             std::cout << "f: " << block << " " << index_0 << " " <<
-  //             index_1; for(size_t point(0);
-  //             point!=functions[block][index_0].size(); ++point)
-  //               {
-  //                 std::cout << " " <<
-  //                 functions[block][index_0][point]/functions[block][index_1][point];
-  //               }
-  //             std::cout << "\n";
-  //           }
-  //       }
-  //   }
-
-  // exit(0);
-
   // Need to have a point at zero and infinity
   const El::BigFloat min_x(0), max_x(infinity);
   for(size_t block(0); block < num_blocks; ++block)
     {
       points.at(block).emplace(min_x);
 
-      // for(auto &point: point_indices[block])
-      //   {
-      //     points.at(block).emplace(candidates.at(point));
-      //   }
-
       // points.at(block).emplace(0.1);
       // points.at(block).emplace(1);
-
-      // const int64_t num_points(64);
-      // const double dx(1.0/num_points);
-      // for(double x(dx); x < 1; x +=dx)
-      //   points.at(block).emplace(-log(1-x));
-
-      // const int64_t num_points(64);
-      // const double dx(64.0/num_points);
-      // for(double x(dx); x <= 64; x +=dx)
-      //   points.at(block).emplace(x);
-
-      // const double pi(4*atan(1.0));
-      // const size_t N(32);
-      // for(size_t n(0); n<N; ++n)
-      //   {
-      //     points.at(block).emplace((1+cos(n*pi/N))*2);
-      //   }
       
       for(double x(1 / 64.0); x < 64; x *= 1.13878863476 * 1.13878863476)
         points.at(block).emplace(x);
@@ -187,7 +40,6 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
     }
 
   parameters.duality_gap_threshold = 1.1;
-  // parameters.duality_gap_threshold = 1.1*parameters_in.duality_gap_threshold;
   while(parameters.duality_gap_threshold > parameters_in.duality_gap_threshold)
     {
       if(El::mpi::Rank() == 0)
