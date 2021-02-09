@@ -22,27 +22,16 @@ SDP::SDP(const El::BigFloat &objective_const_input,
          const std::vector<std::vector<El::BigFloat>> &primal_objective_c_input,
          const std::vector<El::Matrix<El::BigFloat>> &free_var_input,
          const Block_Info &block_info, const El::Grid &grid)
-    : yp_to_y(dual_objective_b_input.size(), dual_objective_b_input.size(),
+    : dual_objective_b(dual_objective_b_input.size(), 1, grid),
+      yp_to_y(dual_objective_b_input.size(), dual_objective_b_input.size(),
               grid),
-      objective_const(objective_const_input)
+      objective_const(objective_const_input > 0 ? 1 : -1)
 {
-  dual_objective_b.SetGrid(grid);
-  dual_objective_b.Resize(dual_objective_b_input.size(), 1);
-  if(dual_objective_b.GlobalCol(0) == 0)
-    {
-      size_t local_height(dual_objective_b.LocalHeight());
-      for(size_t row = 0; row < local_height; ++row)
-        {
-          size_t global_row(dual_objective_b.GlobalRow(row));
-          dual_objective_b.SetLocal(
-            row, 0, El::BigFloat(dual_objective_b_input.at(global_row)));
-        }
-    }
+  El::Fill(dual_objective_b, El::BigFloat(1.0));
 
   auto &block_indices(block_info.block_indices);
   std::vector<El::Matrix<El::BigFloat>> bilinear_bases_local(
     2 * block_indices.size());
-
   for(size_t block(0); block != block_indices.size(); ++block)
     {
       bilinear_bases_local[2 * block].Resize(1, 1);
@@ -83,6 +72,7 @@ SDP::SDP(const El::BigFloat &objective_const_input,
   const int64_t B_Width(dual_objective_b.Height());
   El::DistMatrix<El::BigFloat> B(B_Height, B_Width, grid);
 
+  const El::BigFloat objective_scale(El::Abs(objective_const_input));
   int64_t row_block(0);
   for(size_t block(0); block != block_indices.size(); ++block)
     {
@@ -91,14 +81,17 @@ SDP::SDP(const El::BigFloat &objective_const_input,
         block_width(free_var_input.at(block_indices.at(block)).Width());
       for(int64_t row_offset(0); row_offset != block_height; ++row_offset)
         {
-          const size_t row(row_block + row_offset);
-          for(int64_t column(0); column != block_width; ++column)
+          const size_t global_row(row_block + row_offset);
+          for(int64_t global_column(0); global_column != block_width;
+              ++global_column)
             {
-              if(B.IsLocal(row, column))
+              if(B.IsLocal(global_row, global_column))
                 {
-                  B.SetLocal(B.LocalRow(row), B.LocalCol(column),
+                  B.SetLocal(B.LocalRow(global_row), B.LocalCol(global_column),
                              free_var_input.at(block_indices.at(block))(
-                               row_offset, column));
+                               row_offset, global_column)
+                               * (objective_scale
+                                  / dual_objective_b_input[global_column]));
                 }
             }
         }
