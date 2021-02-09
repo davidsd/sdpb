@@ -402,6 +402,23 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
             }
         }
 
+      {
+        // Rescale EVERYTHING to 1
+        El::BigFloat objective_scale(El::Abs(objective_const));
+        for(auto &block : free_var_matrix)
+          {
+            for(int64_t row(0); row != block.Height(); ++row)
+              for(int64_t column(0); column < block.Width(); ++column)
+                {
+                  block(row, column)
+                    *= (objective_scale / dual_objective_b[column]);
+                }
+          }
+        std::fill(dual_objective_b.begin(), dual_objective_b.end(),
+                  El::BigFloat(1.0));
+        objective_const = (objective_const > 0 ? 1 : -1);
+      }
+
       Block_Info block_info(matrix_dimensions, parameters.procs_per_node,
                             parameters.proc_granularity, parameters.verbosity);
       El::Grid grid(block_info.mpi_comm.value);
