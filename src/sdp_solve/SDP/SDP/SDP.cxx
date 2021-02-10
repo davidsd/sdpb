@@ -25,8 +25,6 @@ SDP::SDP(const El::BigFloat &objective_const_input,
     : dual_objective_b(dual_objective_b_input.size(), 1, grid), yp_to_y(grid),
       objective_const(objective_const_input > 0 ? 1 : -1)
 {
-  El::Fill(dual_objective_b, El::BigFloat(1.0));
-
   auto &block_indices(block_info.block_indices);
   std::vector<El::Matrix<El::BigFloat>> bilinear_bases_local(
     2 * block_indices.size());
@@ -96,17 +94,36 @@ SDP::SDP(const El::BigFloat &objective_const_input,
       row_block += block_height;
     }
 
+  // Compute SVD of B = U s V^T
+  // b_new = (V.s^-1).(One)
+  // B_new = U
+  // 
+  // Implicitly
+  //   y_new = s V^T (objective_const * y / b)
+  // where 'y / b' is elementwise.  So convert back to y with 
+  //   yp_to_y = (b.V.s^-1)/objective_constant
   El::DistMatrix<El::BigFloat> U(grid);
   {
-    El::DistMatrix<El::BigFloat> s(grid);
-    El::SVD(B, U, s, yp_to_y);
-    El::DiagonalSolve(El::LeftOrRight::RIGHT, El::Orientation::NORMAL, s,
+    El::DistMatrix<El::BigFloat> temp(grid);
+    El::SVD(B, U, temp, yp_to_y);
+    El::DiagonalSolve(El::LeftOrRight::RIGHT, El::Orientation::NORMAL, temp,
                       yp_to_y);
-  }
-  {
-    El::DistMatrix<El::BigFloat> b_new(dual_objective_b);
-    El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(1.0), yp_to_y, b_new,
+
+    El::Fill(temp, El::BigFloat(1.0));
+    El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(1.0), yp_to_y, temp,
              El::BigFloat(0.0), dual_objective_b);
+
+    const El::BigFloat objective_inverse_scale(1 / objective_scale);
+    for(int64_t row(0); row < temp.LocalHeight(); ++row)
+      for(int64_t column(0); column < temp.LocalWidth(); ++column)
+        {
+          const int64_t global_column(temp.GlobalCol(column));
+          temp.SetLocal(row, column,
+                        objective_inverse_scale
+                          * dual_objective_b_input.at(global_column));
+        }
+    El::DiagonalScale(El::LeftOrRight::LEFT, El::Orientation::NORMAL, temp,
+                      yp_to_y);
   }
 
   free_var_matrix.blocks.reserve(block_indices.size());
