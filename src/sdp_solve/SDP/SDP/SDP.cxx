@@ -22,9 +22,7 @@ SDP::SDP(const El::BigFloat &objective_const_input,
          const std::vector<std::vector<El::BigFloat>> &primal_objective_c_input,
          const std::vector<El::Matrix<El::BigFloat>> &free_var_input,
          const Block_Info &block_info, const El::Grid &grid)
-    : dual_objective_b(dual_objective_b_input.size(), 1, grid),
-      yp_to_y(dual_objective_b_input.size(), dual_objective_b_input.size(),
-              grid),
+    : dual_objective_b(dual_objective_b_input.size(), 1, grid), yp_to_y(grid),
       objective_const(objective_const_input > 0 ? 1 : -1)
 {
   El::Fill(dual_objective_b, El::BigFloat(1.0));
@@ -98,23 +96,18 @@ SDP::SDP(const El::BigFloat &objective_const_input,
       row_block += block_height;
     }
 
-  El::DistMatrix<El::BigFloat> U(grid), s(grid), V(grid);
-  El::SVD(B, U, s, V);
-
-  for(int64_t row(0); row < s.LocalHeight(); ++row)
-    {
-      for(int64_t column(0); column < s.LocalWidth(); ++column)
-        {
-          s.SetLocal(row, column, 1 / s.GetLocal(row, column));
-        }
-    }
-  El::Copy(V, yp_to_y);
-  El::DiagonalScale(El::LeftOrRight::RIGHT, El::Orientation::NORMAL, s,
-                    yp_to_y);
-
-  El::DistMatrix<El::BigFloat> b_new(dual_objective_b);
-  El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(1.0), yp_to_y, b_new,
-           El::BigFloat(0.0), dual_objective_b);
+  El::DistMatrix<El::BigFloat> U(grid);
+  {
+    El::DistMatrix<El::BigFloat> s(grid);
+    El::SVD(B, U, s, yp_to_y);
+    El::DiagonalSolve(El::LeftOrRight::RIGHT, El::Orientation::NORMAL, s,
+                      yp_to_y);
+  }
+  {
+    El::DistMatrix<El::BigFloat> b_new(dual_objective_b);
+    El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(1.0), yp_to_y, b_new,
+             El::BigFloat(0.0), dual_objective_b);
+  }
 
   free_var_matrix.blocks.reserve(block_indices.size());
   int64_t global_row(0);
