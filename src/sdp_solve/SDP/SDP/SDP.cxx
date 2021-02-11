@@ -4,6 +4,8 @@
 
 #include <boost/filesystem.hpp>
 
+#include <iterator>
+
 void read_blocks(const boost::filesystem::path &sdp_directory,
                  const El::Grid &grid, const Block_Info &block_info, SDP &sdp);
 void read_objectives(const boost::filesystem::path &sdp_directory,
@@ -25,6 +27,13 @@ SDP::SDP(const El::BigFloat &objective_const_input,
     : dual_objective_b(dual_objective_b_input.size(), 1, grid), yp_to_y(grid),
       objective_const(objective_const_input > 0 ? 1 : -1)
 {
+  std::vector<size_t> block_offsets(primal_objective_c_input.size() + 1, 0);
+  for(size_t p(0); p < primal_objective_c_input.size(); ++p)
+    {
+      block_offsets[p + 1]
+        = block_offsets[p] + primal_objective_c_input[p].size();
+    }
+
   auto &block_indices(block_info.block_indices);
   std::vector<El::Matrix<El::BigFloat>> bilinear_bases_local(
     2 * block_indices.size());
@@ -57,61 +66,65 @@ SDP::SDP(const El::BigFloat &objective_const_input,
         }
     }
 
-  const int64_t B_Height([&]() {
-    int64_t result(0);
-    for(auto &block : primal_objective_c_input)
-      {
-        result += block.size();
-      }
-    return result;
-  }());
-  const int64_t B_Width(dual_objective_b.Height());
-  El::DistMatrix<El::BigFloat> B(B_Height, B_Width, grid);
+  const int64_t B_Height(block_offsets.back()),
+    B_Width(dual_objective_b_input.size());
+  El::Grid global_grid;
+  El::DistMatrix<El::BigFloat> B(B_Height, B_Width, global_grid);
 
   const El::BigFloat objective_scale(El::Abs(objective_const_input));
-  int64_t row_block(0);
-  for(size_t block(0); block != block_indices.size(); ++block)
+  for(int64_t row(0); row != B.LocalHeight(); ++row)
     {
-      const int64_t block_height(
-        free_var_input.at(block_indices.at(block)).Height()),
-        block_width(free_var_input.at(block_indices.at(block)).Width());
-      for(int64_t row_offset(0); row_offset != block_height; ++row_offset)
+      const size_t global_row(B.GlobalRow(row));
+      const auto upper_iterator(std::upper_bound(
+        block_offsets.begin(), block_offsets.end(), global_row));
+      const size_t block_index(
+        std::distance(block_offsets.begin(), upper_iterator) - 1);
+      const size_t block_row(global_row - block_offsets[block_index]);
+      for(int64_t column(0); column != B.LocalWidth(); ++column)
         {
-          const size_t global_row(row_block + row_offset);
-          for(int64_t global_column(0); global_column != block_width;
-              ++global_column)
-            {
-              if(B.IsLocal(global_row, global_column))
-                {
-                  B.SetLocal(B.LocalRow(global_row), B.LocalCol(global_column),
-                             free_var_input.at(block_indices.at(block))(
-                               row_offset, global_column)
-                               * (objective_scale
-                                  / dual_objective_b_input[global_column]));
-                }
-            }
+          const size_t global_column(B.GlobalCol(column));
+          B.SetLocal(
+            row, column,
+            free_var_input.at(block_index)(block_row, global_column)
+              * (objective_scale / dual_objective_b_input[global_column]));
         }
-      row_block += block_height;
     }
 
   // Compute SVD of B = U s V^T
   // b_new = (V.s^-1).(One)
   // B_new = U
-  // 
+  //
   // Implicitly
   //   y_new = s V^T (objective_const * y / b)
-  // where 'y / b' is elementwise.  So convert back to y with 
+  // where 'y / b' is elementwise.  So convert back to y with
   //   yp_to_y = (b.V.s^-1)/objective_constant
-  El::DistMatrix<El::BigFloat> U(grid);
+  El::DistMatrix<El::BigFloat> U(B.Grid());
   {
-    El::DistMatrix<El::BigFloat> temp(grid);
-    El::SVD(B, U, temp, yp_to_y);
+    El::DistMatrix<El::BigFloat> temp(B.Grid()), yp_to_y_global(B.Grid()),
+      dual_objective_b_global(dual_objective_b_input.size(), 1, B.Grid());
+    El::SVD(B, U, temp, yp_to_y_global);
     El::DiagonalSolve(El::LeftOrRight::RIGHT, El::Orientation::NORMAL, temp,
-                      yp_to_y);
+                      yp_to_y_global);
 
     El::Fill(temp, El::BigFloat(1.0));
-    El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(1.0), yp_to_y, temp,
-             El::BigFloat(0.0), dual_objective_b);
+    El::Zero(dual_objective_b_global);
+    El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(1.0), yp_to_y_global,
+             temp, El::BigFloat(0.0), dual_objective_b_global);
+
+    El::DistMatrix<El::BigFloat, El::STAR, El::STAR> dual_objective_b_star(
+      dual_objective_b_global);
+    for(int64_t row(0); row < dual_objective_b.LocalHeight(); ++row)
+      {
+        const int64_t global_row(dual_objective_b.GlobalRow(row));
+        for(int64_t column(0); column < dual_objective_b.LocalWidth();
+            ++column)
+          {
+            const int64_t global_column(dual_objective_b.GlobalCol(column));
+            dual_objective_b.SetLocal(
+              row, column,
+              dual_objective_b_star.GetLocal(global_row, global_column));
+          }
+      }
 
     const El::BigFloat objective_inverse_scale(1 / objective_scale);
     for(int64_t row(0); row < temp.LocalHeight(); ++row)
@@ -123,29 +136,42 @@ SDP::SDP(const El::BigFloat &objective_const_input,
                           * dual_objective_b_input.at(global_column));
         }
     El::DiagonalScale(El::LeftOrRight::LEFT, El::Orientation::NORMAL, temp,
-                      yp_to_y);
+                      yp_to_y_global);
+    El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_to_y_star(
+      yp_to_y_global);
+    for(int64_t row(0); row < yp_to_y.LocalHeight(); ++row)
+      {
+        const int64_t global_row(yp_to_y.GlobalRow(row));
+        for(int64_t column(0); column < yp_to_y.LocalWidth(); ++column)
+          {
+            const int64_t global_column(yp_to_y.GlobalCol(column));
+            yp_to_y.SetLocal(row, column,
+                             yp_to_y_star.GetLocal(global_row, global_column));
+          }
+      }
   }
+  El::DistMatrix<El::BigFloat, El::STAR, El::STAR> U_star(U);
 
   free_var_matrix.blocks.reserve(block_indices.size());
-  int64_t global_row(0);
   for(size_t block(0); block != block_indices.size(); ++block)
     {
+      const size_t block_index(block_indices.at(block));
       free_var_matrix.blocks.emplace_back(
-        free_var_input.at(block_indices.at(block)).Height(),
-        free_var_input.at(block_indices.at(block)).Width(), grid);
+        free_var_input.at(block_index).Height(),
+        free_var_input.at(block_index).Width(), grid);
       auto &free_var_block(free_var_matrix.blocks.back());
       for(int64_t row(0); row != free_var_block.Height(); ++row)
         {
+          const int64_t global_row(block_offsets.at(block_index) + row);
           for(int64_t column(0); column != free_var_block.Width(); ++column)
             {
               if(free_var_block.IsLocal(row, column))
                 {
                   free_var_block.SetLocal(free_var_block.LocalRow(row),
                                           free_var_block.LocalCol(column),
-                                          U.Get(global_row, column));
+                                          U_star.GetLocal(global_row, column));
                 }
             }
-          ++global_row;
         }
     }
 }
