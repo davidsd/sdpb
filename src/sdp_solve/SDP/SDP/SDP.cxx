@@ -24,7 +24,9 @@ SDP::SDP(const El::BigFloat &objective_const_input,
          const std::vector<std::vector<El::BigFloat>> &primal_objective_c_input,
          const std::vector<El::Matrix<El::BigFloat>> &free_var_input,
          const Block_Info &block_info, const El::Grid &grid)
-    : dual_objective_b(dual_objective_b_input.size(), 1, grid), yp_to_y(grid),
+    : dual_objective_b(dual_objective_b_input.size(), 1, grid),
+      yp_to_y(dual_objective_b_input.size(), dual_objective_b_input.size(),
+              grid),
       objective_const(objective_const_input > 0 ? 1 : -1)
 {
   std::vector<size_t> block_offsets(primal_objective_c_input.size() + 1, 0);
