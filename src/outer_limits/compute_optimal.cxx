@@ -15,7 +15,8 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
 {
   SDP_Solver_Parameters parameters(parameters_in);
 
-  size_t num_weights(normalization.size());
+  const size_t rank(El::mpi::Rank()), num_procs(El::mpi::Size()),
+    num_weights(normalization.size());
 
   const size_t num_blocks(matrices.size());
   std::vector<El::BigFloat> weights(num_weights, 0);
@@ -42,7 +43,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
   parameters.duality_gap_threshold = 1.1;
   while(parameters.duality_gap_threshold > parameters_in.duality_gap_threshold)
     {
-      if(El::mpi::Rank() == 0)
+      if(rank == 0)
         {
           std::cout << "Threshold: " << parameters.duality_gap_threshold
                     << "\n";
@@ -60,14 +61,14 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
           matrix_dimensions.insert(matrix_dimensions.end(),
                                    points.at(block).size(),
                                    matrices[block].polynomials.size());
-          if(El::mpi::Rank() == 0)
+          if(rank == 0)
             {
               std::cout << "points: " << block << " " << points.at(block)
                         << "\n";
             }
         }
 
-      if(El::mpi::Rank() == 0)
+      if(rank == 0)
         {
           std::cout << "num_constraints: " << num_constraints << "\n";
         }
@@ -282,7 +283,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
       SDP_Solver_Terminate_Reason reason
         = solver.run(parameters, block_info, sdp, grid, timers);
 
-      if(El::mpi::Rank() == 0)
+      if(rank == 0)
         {
           set_stream_precision(std::cout);
           std::cout << "-----" << reason << "-----\n"
@@ -307,21 +308,22 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
       // THe weight at max_index is determined by the normalization condition
       // dot(norm,weights)=1
       El::DistMatrix<El::BigFloat> y(sdp.yp_to_y.Grid());
-      y.Resize(dual_objective_b.size(),1);
+      y.Resize(dual_objective_b.size(), 1);
       El::Zero(y);
       El::Gemv(El::Orientation::NORMAL, El::BigFloat(1.0), sdp.yp_to_y,
                solver.y.blocks.at(0), El::BigFloat(0.0), y);
-      El::DistMatrix<El::BigFloat,El::STAR,El::STAR> y_star(y);
-      
+      El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(y);
+
       weights.at(max_index) = 1;
-      for(size_t block_row(0); block_row != size_t(y_star.LocalHeight()); ++block_row)
+      for(size_t block_row(0); block_row != size_t(y_star.LocalHeight());
+          ++block_row)
         {
           const size_t index(block_row + (block_row < max_index ? 0 : 1));
           weights.at(index) = y_star.GetLocalCRef(block_row, 0);
           weights.at(max_index) -= weights.at(index) * normalization.at(index);
         }
       weights.at(max_index) /= normalization.at(max_index);
-      if(El::mpi::Rank() == 0)
+      if(rank == 0)
         {
           std::cout.precision(20);
           std::cout << "weight: " << weights << "\n";
@@ -333,8 +335,8 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
             }
           std::cout << "optimal: " << optimal << "\n";
         }
-      bool has_new_points(false);
-      for(size_t block(0); block != num_blocks; ++block)
+      std::vector<size_t> num_new_points(num_blocks, 0);
+      for(size_t block(rank); block < num_blocks; block += num_procs)
         {
           // 0.01 should be a small enough relative error so that we are
           // in the regime of convergence.  Then the error estimates will
@@ -345,14 +347,31 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
               return eval_weighted(matrices[block], x, weights);
             },
             (1.0 / 128));
-          new_points.at(block) = get_new_points(mesh);
-          for(auto &point : new_points.at(block))
+          std::vector<El::BigFloat> candidates(get_new_points(mesh));
+          new_points.at(block).clear();
+          for(auto &point : candidates)
             {
-              has_new_points
-                = has_new_points || (points.at(block).count(point) == 0);
+              if(points.at(block).count(point) == 0)
+                {
+                  new_points.at(block).push_back(point);
+                  ++num_new_points.at(block);
+                }
             }
         }
-      if(!has_new_points)
+      
+      El::mpi::AllReduce(num_new_points.data(), num_new_points.size(),
+                         El::mpi::SUM, El::mpi::COMM_WORLD);
+
+      for(size_t block(0); block != num_blocks; ++block)
+        {
+          new_points.at(block).resize(num_new_points.at(block));
+          El::mpi::Broadcast(new_points.at(block).data(),
+                             num_new_points.at(block), block % num_procs,
+                             El::mpi::COMM_WORLD);
+        }
+      if(find_if(num_new_points.begin(), num_new_points.end(),
+                 [](const size_t &n) { return n != 0; })
+         == num_new_points.end())
         {
           parameters.duality_gap_threshold *= (1.0 / 8);
         }
