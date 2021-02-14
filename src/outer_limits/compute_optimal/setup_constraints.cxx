@@ -24,6 +24,7 @@ void setup_constraints(const size_t &max_index,
         return result;
       }());
 
+      // Evalueate B and c at each point
       for(auto &x : points.at(block))
         {
           El::BigFloat prefactor([&]() {
@@ -123,7 +124,7 @@ void setup_constraints(const size_t &max_index,
                   }
                 ++flattened_matrix_row;
               }
-          // Rescale rows
+          // Rescale rows by the largest element in the row
           const El::BigFloat scaling([&]() {
             El::BigFloat max_value(0);
             size_t flattened_matrix_row(0);
