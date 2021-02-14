@@ -50,6 +50,8 @@ void setup_constraints(const size_t &max_index,
             for(size_t matrix_column(0); matrix_column <= matrix_row;
                 ++matrix_column)
               {
+                // Special case infinity by only looking at the
+                // coefficients of the largest degree polynomials
                 if(x == infinity)
                   {
                     if(matrices[block]
