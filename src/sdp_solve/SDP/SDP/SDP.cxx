@@ -68,6 +68,8 @@ SDP::SDP(const El::BigFloat &objective_const_input,
         }
     }
 
+  // Scale B by b
+  //   B'(i,j) = B(i,j) |c_0|/b(j)
   const int64_t B_Height(block_offsets.back()),
     B_Width(dual_objective_b_input.size());
   El::Grid global_grid;
@@ -92,25 +94,33 @@ SDP::SDP(const El::BigFloat &objective_const_input,
         }
     }
 
-  // Compute SVD of B = U s V^T
-  // b_new = (V.s^-1).(One)
-  // B_new = U
-  //
-  // Implicitly
-  //   y_new = s V^T (objective_const * y / b)
-  // where 'y / b' is elementwise.  So convert back to y with
-  //   yp_to_y = (b.V.s^-1)/objective_constant
+  // Compute SVD of B'
+  //   B' = U s V^T
+  // Define
+  //   b''(j) = Sum(V(k,j)/s(k) ,k)
+  //   B'' = U
+  // This gives
+  //   minimize b''(j) y''(j) + sign(c_0)
+  // with constraints
+  //   B''(i,j) y''(j) <= c(i)
+  // This implies
+  //   y(m) = (|c_0|/b(m)) Sum((V(m,l)/s(m)) * y''(l), l)
+  // and so to convert back to y
+  //   yp_to_y(l,m) = V(m,l) * |c_0|/(b(m) * s(m))
   El::DistMatrix<El::BigFloat> U(B.Grid());
   {
-    El::DistMatrix<El::BigFloat> temp(B.Grid()), yp_to_y_global(B.Grid()),
+    El::DistMatrix<El::BigFloat> temp(B.Grid()), Vt(B.Grid()),
       dual_objective_b_global(dual_objective_b_input.size(), 1, B.Grid());
-    El::SVD(B, U, temp, yp_to_y_global);
+    // SVD return U, s, and V^T (not V)
+    El::SVD(B, U, temp, Vt);
+    
+    El::DistMatrix<El::BigFloat> Vt_s(Vt);
     El::DiagonalSolve(El::LeftOrRight::RIGHT, El::Orientation::NORMAL, temp,
-                      yp_to_y_global);
+                      Vt_s);
 
     El::Fill(temp, El::BigFloat(1.0));
     El::Zero(dual_objective_b_global);
-    El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(1.0), yp_to_y_global,
+    El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(1.0), Vt_s,
              temp, El::BigFloat(0.0), dual_objective_b_global);
 
     El::DistMatrix<El::BigFloat, El::STAR, El::STAR> dual_objective_b_star(
@@ -128,19 +138,22 @@ SDP::SDP(const El::BigFloat &objective_const_input,
           }
       }
 
-    const El::BigFloat objective_inverse_scale(1 / objective_scale);
     for(int64_t row(0); row < temp.LocalHeight(); ++row)
-      for(int64_t column(0); column < temp.LocalWidth(); ++column)
-        {
-          const int64_t global_column(temp.GlobalCol(column));
-          temp.SetLocal(row, column,
-                        objective_inverse_scale
-                          * dual_objective_b_input.at(global_column));
-        }
+      {
+        const int64_t global_row(temp.GlobalRow(row));
+        for(int64_t column(0); column < temp.LocalWidth(); ++column)
+          {
+            // TODO: Make an inverse scaled dual_objective_b so we do not
+            // have to divide so much.
+            temp.SetLocal(row, column,
+                          objective_scale
+                          / dual_objective_b_input.at(global_row));
+          }
+      }
     El::DiagonalScale(El::LeftOrRight::LEFT, El::Orientation::NORMAL, temp,
-                      yp_to_y_global);
+                      Vt_s);
     El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_to_y_star(
-      yp_to_y_global);
+      Vt_s);
     for(int64_t row(0); row < yp_to_y.LocalHeight(); ++row)
       {
         const int64_t global_row(yp_to_y.GlobalRow(row));

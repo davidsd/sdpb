@@ -306,15 +306,18 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
       // the root node.
       // THe weight at max_index is determined by the normalization condition
       // dot(norm,weights)=1
-      El::DistMatrix<El::BigFloat> y(solver.y.blocks.at(0));
+      El::DistMatrix<El::BigFloat> y(sdp.yp_to_y.Grid());
+      y.Resize(dual_objective_b.size(),1);
+      El::Zero(y);
       El::Gemv(El::Orientation::NORMAL, El::BigFloat(1.0), sdp.yp_to_y,
                solver.y.blocks.at(0), El::BigFloat(0.0), y);
-
+      El::DistMatrix<El::BigFloat,El::STAR,El::STAR> y_star(y);
+      
       weights.at(max_index) = 1;
-      for(size_t block_row(0); block_row != size_t(y.Height()); ++block_row)
+      for(size_t block_row(0); block_row != size_t(y_star.LocalHeight()); ++block_row)
         {
           const size_t index(block_row + (block_row < max_index ? 0 : 1));
-          weights.at(index) = y.Get(block_row, 0);
+          weights.at(index) = y_star.GetLocalCRef(block_row, 0);
           weights.at(max_index) -= weights.at(index) * normalization.at(index);
         }
       weights.at(max_index) /= normalization.at(max_index);
