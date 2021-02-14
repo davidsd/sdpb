@@ -1,11 +1,13 @@
-#include "get_new_points.hxx"
-
+#include "Mesh.hxx"
 #include "eval_weighted.hxx"
 #include "poles_prefactor.hxx"
 #include "power_prefactor.hxx"
 
-#include "../sdp_solve.hxx"
-#include "../ostream_set.hxx"
+#include "../../sdp_solve.hxx"
+#include "../../ostream_set.hxx"
+
+
+std::vector<El::BigFloat> get_new_points(const Mesh &mesh);
 
 std::vector<El::BigFloat>
 compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,

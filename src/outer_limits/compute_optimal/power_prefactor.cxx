@@ -1,5 +1,5 @@
-#include "../Boost_Float.hxx"
-#include "../set_stream_precision.hxx"
+#include "../../Boost_Float.hxx"
+#include "../../set_stream_precision.hxx"
 
 #include <El.hpp>
 

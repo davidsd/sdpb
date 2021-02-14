@@ -1,4 +1,3 @@
-#include "Mesh.hxx"
 #include "../sdp_read.hxx"
 #include "../sdp_solve.hxx"
 
