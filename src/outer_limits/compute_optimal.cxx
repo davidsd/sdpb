@@ -61,7 +61,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
           matrix_dimensions.insert(matrix_dimensions.end(),
                                    points.at(block).size(),
                                    matrices[block].polynomials.size());
-          if(rank == 0)
+          if(rank == 0 && parameters.verbosity >= Verbosity::debug)
             {
               std::cout << "points: " << block << " " << points.at(block)
                         << "\n";
