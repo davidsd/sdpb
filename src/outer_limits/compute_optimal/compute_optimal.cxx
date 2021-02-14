@@ -139,101 +139,106 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
             }
         }
 
-      Timers timers(parameters.verbosity >= Verbosity::debug);
-      SDP_Solver_Terminate_Reason reason
-        = solver.run(parameters, block_info, sdp, grid, timers);
-
-      if(rank == 0)
+      bool has_new_points(false);
+      while(!has_new_points)
         {
-          set_stream_precision(std::cout);
-          std::cout << "-----" << reason << "-----\n"
-                    << '\n'
-                    << "primalObjective = " << solver.primal_objective << '\n'
-                    << "dualObjective   = " << solver.dual_objective << '\n'
-                    << "dualityGap      = " << solver.duality_gap << '\n'
-                    << "primalError     = " << solver.primal_error() << '\n'
-                    << "dualError       = " << solver.dual_error << '\n'
-                    << '\n';
-        }
+          Timers timers(parameters.verbosity >= Verbosity::debug);
+          SDP_Solver_Terminate_Reason reason
+            = solver.run(parameters, block_info, sdp, grid, timers);
 
-      // if(reason != SDP_Solver_Terminate_Reason::PrimalDualOptimal)
-      //   {
-      //     std::stringstream ss;
-      //     ss << "Can not find solution: " << reason;
-      //     throw std::runtime_error(ss.str());
-      //   }
-
-      // y is duplicated among cores, so only need to print out copy on
-      // the root node.
-      // THe weight at max_index is determined by the normalization condition
-      // dot(norm,weights)=1
-      El::DistMatrix<El::BigFloat> y(sdp.yp_to_y.Grid());
-      y.Resize(dual_objective_b.size(), 1);
-      El::Zero(y);
-      El::Gemv(El::Orientation::NORMAL, El::BigFloat(1.0), sdp.yp_to_y,
-               solver.y.blocks.at(0), El::BigFloat(0.0), y);
-      El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(y);
-
-      weights.at(max_index) = 1;
-      for(size_t block_row(0); block_row != size_t(y_star.LocalHeight());
-          ++block_row)
-        {
-          const size_t index(block_row + (block_row < max_index ? 0 : 1));
-          weights.at(index) = y_star.GetLocalCRef(block_row, 0);
-          weights.at(max_index) -= weights.at(index) * normalization.at(index);
-        }
-      weights.at(max_index) /= normalization.at(max_index);
-      if(rank == 0)
-        {
-          std::cout.precision(20);
-          std::cout << "weight: " << weights << "\n";
-
-          El::BigFloat optimal(0);
-          for(size_t index(0); index < objectives.size(); ++index)
+          if(rank == 0)
             {
-              optimal += objectives[index] * weights[index];
+              set_stream_precision(std::cout);
+              std::cout << "-----" << reason << "-----\n"
+                        << '\n'
+                        << "primalObjective = " << solver.primal_objective << '\n'
+                        << "dualObjective   = " << solver.dual_objective << '\n'
+                        << "dualityGap      = " << solver.duality_gap << '\n'
+                        << "primalError     = " << solver.primal_error() << '\n'
+                        << "dualError       = " << solver.dual_error << '\n'
+                        << '\n';
             }
-          std::cout << "optimal: " << optimal << "\n";
-        }
-      std::vector<size_t> num_new_points(num_blocks, 0);
-      for(size_t block(rank); block < num_blocks; block += num_procs)
-        {
-          // 0.01 should be a small enough relative error so that we are
-          // in the regime of convergence.  Then the error estimates will
-          // work
-          Mesh mesh(
-            *(points.at(block).begin()), El::BigFloat(100),
-            [&](const El::BigFloat &x) {
-              return eval_weighted(matrices[block], x, weights);
-            },
-            (1.0 / 128));
-          std::vector<El::BigFloat> candidates(get_new_points(mesh));
-          new_points.at(block).clear();
-          for(auto &point : candidates)
+
+          // if(reason != SDP_Solver_Terminate_Reason::PrimalDualOptimal)
+          //   {
+          //     std::stringstream ss;
+          //     ss << "Can not find solution: " << reason;
+          //     throw std::runtime_error(ss.str());
+          //   }
+
+          // y is duplicated among cores, so only need to print out copy on
+          // the root node.
+          // THe weight at max_index is determined by the normalization condition
+          // dot(norm,weights)=1
+          El::DistMatrix<El::BigFloat> y(sdp.yp_to_y.Grid());
+          y.Resize(dual_objective_b.size(), 1);
+          El::Zero(y);
+          El::Gemv(El::Orientation::NORMAL, El::BigFloat(1.0), sdp.yp_to_y,
+                   solver.y.blocks.at(0), El::BigFloat(0.0), y);
+          El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(y);
+
+          weights.at(max_index) = 1;
+          for(size_t block_row(0); block_row != size_t(y_star.LocalHeight());
+              ++block_row)
             {
-              if(points.at(block).count(point) == 0)
+              const size_t index(block_row + (block_row < max_index ? 0 : 1));
+              weights.at(index) = y_star.GetLocalCRef(block_row, 0);
+              weights.at(max_index) -= weights.at(index) * normalization.at(index);
+            }
+          weights.at(max_index) /= normalization.at(max_index);
+          if(rank == 0)
+            {
+              std::cout.precision(20);
+              std::cout << "weight: " << weights << "\n";
+
+              El::BigFloat optimal(0);
+              for(size_t index(0); index < objectives.size(); ++index)
                 {
-                  new_points.at(block).push_back(point);
-                  ++num_new_points.at(block);
+                  optimal += objectives[index] * weights[index];
+                }
+              std::cout << "optimal: " << optimal << "\n";
+            }
+          std::vector<size_t> num_new_points(num_blocks, 0);
+          for(size_t block(rank); block < num_blocks; block += num_procs)
+            {
+              // 0.01 should be a small enough relative error so that we are
+              // in the regime of convergence.  Then the error estimates will
+              // work
+              Mesh mesh(
+                        *(points.at(block).begin()), El::BigFloat(100),
+                        [&](const El::BigFloat &x) {
+                          return eval_weighted(matrices[block], x, weights);
+                        },
+                        (1.0 / 128));
+              std::vector<El::BigFloat> candidates(get_new_points(mesh));
+              new_points.at(block).clear();
+              for(auto &point : candidates)
+                {
+                  if(points.at(block).count(point) == 0)
+                    {
+                      new_points.at(block).push_back(point);
+                      ++num_new_points.at(block);
+                    }
                 }
             }
-        }
 
-      El::mpi::AllReduce(num_new_points.data(), num_new_points.size(),
-                         El::mpi::SUM, El::mpi::COMM_WORLD);
+          El::mpi::AllReduce(num_new_points.data(), num_new_points.size(),
+                             El::mpi::SUM, El::mpi::COMM_WORLD);
 
-      for(size_t block(0); block != num_blocks; ++block)
-        {
-          new_points.at(block).resize(num_new_points.at(block));
-          El::mpi::Broadcast(new_points.at(block).data(),
-                             num_new_points.at(block), block % num_procs,
-                             El::mpi::COMM_WORLD);
-        }
-      if(find_if(num_new_points.begin(), num_new_points.end(),
-                 [](const size_t &n) { return n != 0; })
-         == num_new_points.end())
-        {
-          parameters.duality_gap_threshold *= (1.0 / 8);
+          for(size_t block(0); block != num_blocks; ++block)
+            {
+              new_points.at(block).resize(num_new_points.at(block));
+              El::mpi::Broadcast(new_points.at(block).data(),
+                                 num_new_points.at(block), block % num_procs,
+                                 El::mpi::COMM_WORLD);
+            }
+          has_new_points=(find_if(num_new_points.begin(), num_new_points.end(),
+                                  [](const size_t &n) { return n != 0; })
+                          != num_new_points.end());
+          if(!has_new_points)
+            {
+              parameters.duality_gap_threshold *= (1.0 / 8);
+            }
         }
     }
   return weights;
