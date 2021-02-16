@@ -15,6 +15,15 @@ void Positive_Matrix_With_Prefactor_State::json_end_array()
           swap(value.polynomials,polynomials_state.value);
         }
     }
+  else if(parsing_points)
+    {
+      points_state.json_end_array();
+      parsing_points=points_state.inside;
+      if(!parsing_points)
+        {
+          swap(value.points,points_state.value);
+        }
+    }
   else
     {
       throw std::runtime_error(

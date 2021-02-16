@@ -12,6 +12,12 @@ void Positive_Matrix_With_Prefactor_State::json_key(const std::string &key)
                                + "' inside '" + name + "."
                                + polynomials_state.name + "'.");
     }
+  else if(parsing_points)
+    {
+      throw std::runtime_error("Invalid input file.  Unexpected key '" + key
+                               + "' inside '" + name + "."
+                               + points_state.name + "'.");
+    }
   else if(key == damped_rational_state.name)
     {
       parsing_damped_rational = true;
@@ -19,6 +25,10 @@ void Positive_Matrix_With_Prefactor_State::json_key(const std::string &key)
   else if(key == polynomials_state.name)
     {
       parsing_polynomials = true;
+    }
+  else if(key == points_state.name)
+    {
+      parsing_points = true;
     }
   else
     {

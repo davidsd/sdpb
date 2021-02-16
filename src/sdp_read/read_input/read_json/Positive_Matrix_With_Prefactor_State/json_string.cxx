@@ -10,6 +10,10 @@ void Positive_Matrix_With_Prefactor_State::json_string(const std::string &s)
     {
       polynomials_state.json_string(s);
     }
+  else if(parsing_points)
+    {
+      points_state.json_string(s);
+    }
   else
     {
       throw std::runtime_error("Invalid input file.  Unexpected "

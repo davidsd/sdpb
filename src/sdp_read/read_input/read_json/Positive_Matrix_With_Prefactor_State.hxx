@@ -11,18 +11,20 @@ struct Positive_Matrix_With_Prefactor_State
 {
   std::string name;
   bool inside = false, parsing_damped_rational = false,
-       parsing_polynomials = false;
+    parsing_polynomials = false, parsing_points = false;
   Positive_Matrix_With_Prefactor value;
 
   Damped_Rational_State damped_rational_state;
   Vector_State<
     Vector_State<Vector_State<Vector_State<Number_State<El::BigFloat>>>>>
     polynomials_state;
+  Vector_State<Number_State<El::BigFloat>> points_state;
 
   Positive_Matrix_With_Prefactor_State(const std::vector<std::string> &names,
                                        const size_t &offset)
       : name(names.at(offset)), damped_rational_state(names, offset + 1),
-        polynomials_state(names, offset + 2)
+        polynomials_state(names, offset + 2),
+        points_state(names, offset + 7)
   {}
   Positive_Matrix_With_Prefactor_State(
     const std::initializer_list<std::string> &names)

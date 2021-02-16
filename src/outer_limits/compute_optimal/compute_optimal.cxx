@@ -32,19 +32,15 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
   std::vector<std::vector<El::BigFloat>> new_points(num_blocks);
 
   // GMP does not have a special infinity value, so we use max double.
-  const El::BigFloat zero(0), infinity(std::numeric_limits<double>::max());
-  // Need to have a point at zero and infinity
-  const El::BigFloat min_x(0), max_x(infinity);
+  const El::BigFloat infinity(std::numeric_limits<double>::max());
+  // Use the input points and add inifinty
+  const El::BigFloat max_x(infinity);
   for(size_t block(0); block < num_blocks; ++block)
     {
-      points.at(block).emplace(min_x);
-
-      // points.at(block).emplace(0.1);
-      // points.at(block).emplace(1);
-
-      for(double x(1 / 64.0); x < 64; x *= 1.13878863476 * 1.13878863476)
-        points.at(block).emplace(x);
-
+      for(auto &point: matrices[block].points)
+        {
+          points.at(block).emplace(point);
+        }
       new_points.at(block).emplace_back(max_x);
     }
 

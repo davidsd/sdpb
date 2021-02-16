@@ -22,7 +22,8 @@ struct JSON_Parser
         normalization_state({"normalization"s, ""s}),
         positive_matrices_with_prefactor_state(
           {"PositiveMatrixWithPrefactorArray"s, ""s, "DampedRational"s,
-           "polynomials"s, ""s, ""s, ""s, ""s})
+           "polynomials"s, ""s, ""s, ""s, ""s,
+           "points"s, ""s})
   {}
 
   bool Null() { throw std::runtime_error("Null not allowed"); }
