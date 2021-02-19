@@ -172,7 +172,6 @@ def build(bld):
                 )
 
     bld.program(source=['src/outer_limits/main.cxx',
-                        # 'src/outer_limits/is_feasible.cxx',
                         'src/outer_limits/compute_optimal/compute_optimal.cxx',
                         'src/outer_limits/compute_optimal/setup_constraints.cxx',
                         'src/outer_limits/compute_optimal/get_new_points.cxx',
@@ -180,7 +179,15 @@ def build(bld):
                         'src/outer_limits/compute_optimal/Mesh/ostream.cxx',
                         'src/outer_limits/compute_optimal/power_prefactor.cxx',
                         'src/outer_limits/compute_optimal/poles_prefactor.cxx',
-                        'src/outer_limits/compute_optimal/eval_weighted.cxx'],
+                        'src/outer_limits/compute_optimal/eval_weighted.cxx',
+                        'src/outer_limits/read_function_blocks/read_function_blocks.cxx',
+                        'src/outer_limits/read_function_blocks/read_json/Function_Blocks_Parser/EndArray.cxx',
+                        'src/outer_limits/read_function_blocks/read_json/Function_Blocks_Parser/EndObject.cxx',
+                        'src/outer_limits/read_function_blocks/read_json/Function_Blocks_Parser/Key.cxx',
+                        'src/outer_limits/read_function_blocks/read_json/Function_Blocks_Parser/StartArray.cxx',
+                        'src/outer_limits/read_function_blocks/read_json/Function_Blocks_Parser/StartObject.cxx',
+                        'src/outer_limits/read_function_blocks/read_json/Function_Blocks_Parser/String.cxx',
+                        'src/outer_limits/read_function_blocks/read_json/read_json.cxx'],
                 target='outer_limits',
                 cxxflags=default_flags,
                 use=use_packages + ['sdp_read','sdp_solve']
