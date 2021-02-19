@@ -6,7 +6,7 @@ def configure(conf):
         return getattr(Options.options,varname,'')or default
 
 
-    cxx17_fragment="#include <string>\n#include <optional>\nint main() {std::optional<int> i;\nusing namespace std::literals;\"hello\"s; }"
+    cxx17_fragment="#include <string>\n#include <exception>\nint main() {std::uncaught_exceptions();\nusing namespace std::literals;\"hello\"s; }"
     flags=['','-std=c++17','-std=c++1z']
     if conf.options.cxx17_flag:
         flags=[conf.options.cxx17_flag]
