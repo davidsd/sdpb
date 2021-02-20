@@ -51,6 +51,13 @@ std::vector<El::BigFloat>
 load_vector(const boost::filesystem::path &vector_path);
 // bool is_feasible(const Functional &functional);
 
+void read_function_blocks(
+  const boost::filesystem::path &input_file,
+  std::vector<El::BigFloat> &objectives,
+  std::vector<El::BigFloat> &normalization,
+  std::vector<std::vector<El::BigFloat>> &points,
+  std::vector<std::map<El::BigFloat, El::BigFloat>> &functions);
+
 std::vector<El::BigFloat>
 compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                 const std::vector<El::BigFloat> &objectives,
@@ -79,7 +86,7 @@ int main(int argc, char **argv)
                 << parameters << '\n'
                 << std::flush;
     }
-  
+
   // {
   //   Functional functional("test/single_corr_polys",
   //                         "test/single_corr_prefactor",
@@ -90,13 +97,22 @@ int main(int argc, char **argv)
   // }
   {
     std::vector<El::BigFloat> objectives, normalization;
+    std::vector<std::vector<El::BigFloat>> points;
+    std::vector<std::map<El::BigFloat, El::BigFloat>> functions;
+    read_function_blocks("test/toy_functions.json", objectives, normalization,
+                         points, functions);
+  }
+
+  {
+    std::vector<El::BigFloat> objectives, normalization;
     std::vector<Positive_Matrix_With_Prefactor> matrices;
-    // read_input("outer_small.nsv", objectives, normalization, matrices);
-    read_input("outer_2x2.nsv", objectives, normalization, matrices);
-    // read_input("test/spectrum_test.json", objectives, normalization, matrices);
-    // read_input("test/toy_damped_duplicate.json", objectives, normalization, matrices);
-    // read_input("test/toy_damped.json", objectives, normalization, matrices);
-    // read_input("test/toy_damped_3.json", objectives, normalization, matrices);
+    read_input("outer_small.nsv", objectives, normalization, matrices);
+    // read_input("outer_2x2.nsv", objectives, normalization, matrices);
+    // read_input("test/spectrum_test.json", objectives, normalization,
+    // matrices); read_input("test/toy_damped_duplicate.json", objectives,
+    // normalization, matrices); read_input("test/toy_damped.json", objectives,
+    // normalization, matrices); read_input("test/toy_damped_3.json",
+    // objectives, normalization, matrices);
 
     std::vector<El::BigFloat> weights(
       compute_optimal(matrices, objectives, normalization, parameters));
