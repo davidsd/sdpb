@@ -9,7 +9,7 @@ template <typename Key_State, typename Value_State> class Map_State
 {
 public:
   std::string name;
-  bool inside = false, parsing_key = false, parsing_value = false,
+  bool inside = false, parsing_key = false,
        parsing_entry = false;
   ;
   Key_State key_state;
@@ -37,15 +37,9 @@ public:
               {
                 key_state.json_key(key);
               }
-            else if(parsing_value)
-              {
-                value_state.json_key(key);
-              }
             else
               {
-                throw std::runtime_error(
-                  "Invalid input file.  Found the key '" + key
-                  + "' while parsing a key-value entry.");
+                value_state.json_key(key);
               }
           }
         else
@@ -73,16 +67,9 @@ public:
                 key_state.json_string(s);
                 parsing_key = key_state.inside;
               }
-            else if(parsing_value)
-              {
-                value_state.json_string(s);
-                parsing_value = value_state.inside;
-              }
             else
               {
-                throw std::runtime_error(
-                  "Invalid input file.  Found the string '" + s
-                  + "' while parsing a key-value entry.");
+                value_state.json_string(s);
               }
           }
         else
@@ -108,14 +95,9 @@ public:
               {
                 key_state.json_start_array();
               }
-            else if(parsing_value)
-              {
-                value_state.json_start_array();
-              }
             else
               {
-                throw std::runtime_error("Invalid input file.  Found an array "
-                                         "inside a key-value entry.");
+                value_state.json_start_array();
               }
           }
         else
@@ -142,10 +124,9 @@ public:
                 key_state.json_end_array();
                 parsing_key=key_state.inside;
               }
-            else if(parsing_value)
+            else if(value_state.inside)
               {
                 value_state.json_end_array();
-                parsing_value=value_state.inside;
               }
             else
               {
@@ -175,15 +156,9 @@ public:
               {
                 key_state.json_start_object();
               }
-            else if(parsing_value)
-              {
-                value_state.json_start_object();
-              }
             else
               {
-                throw std::runtime_error(
-                  "Invalid input file.  Found an unexpected object start when "
-                  "parsing a key-value entry.");
+                value_state.json_start_object();
               }
           }
         else
@@ -211,10 +186,9 @@ public:
                 key_state.json_end_object();
                 parsing_key=key_state.inside;
               }
-            else if(parsing_value)
+            else if(value_state.inside)
               {
                 value_state.json_end_object();
-                parsing_value=value_state.inside;
               }
             else
               {
