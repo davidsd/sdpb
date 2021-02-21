@@ -75,7 +75,8 @@ SDP::SDP(const El::BigFloat &objective_const_input,
   El::Grid global_grid;
   El::DistMatrix<El::BigFloat> B(B_Height, B_Width, global_grid);
 
-  const El::BigFloat objective_scale(El::Abs(objective_const_input));
+  const El::BigFloat objective_scale(1);
+  // const El::BigFloat objective_scale(El::Abs(objective_const_input));
   for(int64_t row(0); row != B.LocalHeight(); ++row)
     {
       const size_t global_row(B.GlobalRow(row));
