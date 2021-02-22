@@ -48,6 +48,25 @@ SDP::SDP(const El::BigFloat &objective_const_input,
   assign_bilinear_bases_dist(bilinear_bases_local, grid, bilinear_bases);
   set_bases_blocks(block_info, bilinear_bases_local, bases_blocks, grid);
 
+  // const El::BigFloat primal_c_scale(1.0);
+  const El::BigFloat primal_c_scale([&]() {
+    El::BigFloat max(0.0);
+    for(size_t block(0); block != block_indices.size(); ++block)
+      {
+        for(auto &element :
+            primal_objective_c_input.at(block_indices.at(block)))
+          {
+            max = std::max(max, El::Abs(element));
+          }
+      }
+    max=El::mpi::AllReduce(max, El::mpi::MAX, El::mpi::COMM_WORLD);
+    if(max == El::BigFloat(0.0))
+      {
+        return El::BigFloat(1.0);
+      }
+    return 1 / max;
+  }());
+
   for(size_t block(0); block != block_indices.size(); ++block)
     {
       primal_objective_c.blocks.emplace_back(
@@ -62,8 +81,9 @@ SDP::SDP(const El::BigFloat &objective_const_input,
               const size_t global_row(primal_block.GlobalRow(row));
               primal_block.SetLocal(
                 row, 0,
-                primal_objective_c_input.at(block_indices.at(block))
-                  .at(global_row));
+                primal_c_scale
+                  * primal_objective_c_input.at(block_indices.at(block))
+                      .at(global_row));
             }
         }
     }
@@ -85,8 +105,10 @@ SDP::SDP(const El::BigFloat &objective_const_input,
       for(int64_t column(0); column != B.LocalWidth(); ++column)
         {
           const size_t global_column(B.GlobalCol(column));
-          B.SetLocal(row, column,
-                     free_var_input.at(block_index)(block_row, global_column));
+          B.SetLocal(
+            row, column,
+            primal_c_scale
+              * free_var_input.at(block_index)(block_row, global_column));
         }
     }
 
@@ -128,6 +150,15 @@ SDP::SDP(const El::BigFloat &objective_const_input,
     El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(1.0), V_s, temp,
              El::BigFloat(0.0), dual_objective_b_global);
 
+    const El::BigFloat b_scale([&]() {
+      El::BigFloat max(El::MaxAbs(dual_objective_b_global));
+      if(max == El::BigFloat(0.0))
+        {
+          return El::BigFloat(1.0);
+        }
+      return 1 / max;
+    }());
+
     El::DistMatrix<El::BigFloat, El::STAR, El::STAR> dual_objective_b_star(
       dual_objective_b_global);
     for(int64_t row(0); row < dual_objective_b.LocalHeight(); ++row)
@@ -139,7 +170,8 @@ SDP::SDP(const El::BigFloat &objective_const_input,
             const int64_t global_column(dual_objective_b.GlobalCol(column));
             dual_objective_b.SetLocal(
               row, column,
-              dual_objective_b_star.GetLocal(global_row, global_column));
+              b_scale
+                * dual_objective_b_star.GetLocal(global_row, global_column));
           }
       }
 
