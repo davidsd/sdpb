@@ -21,5 +21,10 @@ read_file_list(const boost::filesystem::path &filename)
   std::vector<boost::filesystem::path> result;
   using namespace std::literals;
   boost::split(result, file_contents, boost::is_any_of("\0"s));
+  result.erase(std::remove_if(result.begin(), result.end(),
+                              [](const boost::filesystem::path &path) {
+                                return path.empty();
+                              }),
+               result.end());
   return result;
 }

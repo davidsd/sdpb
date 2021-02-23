@@ -22,10 +22,7 @@ void read_input(const boost::filesystem::path &input_file,
     {
       for(auto &filename : read_file_list(input_file))
         {
-          if(!filename.empty())
-            {
-              read_input(filename, objectives, normalization, matrices);
-            }
+          read_input(filename, objectives, normalization, matrices);
         }
     }
   else if(input_file.extension() == ".json")
