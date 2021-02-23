@@ -14,10 +14,6 @@ bool Function_Blocks_Parser::String(const Ch *str, rapidjson::SizeType length,
         {
           normalization_state.json_string(s);
         }
-      else if(parsing_points)
-        {
-          points_state.json_string(s);
-        }
       else if(parsing_functions)
         {
           functions_state.json_string(s);

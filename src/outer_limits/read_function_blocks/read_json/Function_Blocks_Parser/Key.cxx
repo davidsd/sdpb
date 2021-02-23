@@ -18,12 +18,6 @@ bool Function_Blocks_Parser::Key(const Ch *str, rapidjson::SizeType length,
                                    + "' inside '" + normalization_state.name
                                    + "'.");
         }
-      else if(parsing_points)
-        {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside '" + points_state.name
-                                   + "'.");
-        }
       else if(parsing_functions)
         {
           throw std::runtime_error("Invalid input file.  Found the key '" + key
@@ -37,10 +31,6 @@ bool Function_Blocks_Parser::Key(const Ch *str, rapidjson::SizeType length,
       else if(key == normalization_state.name)
         {
           parsing_normalization = true;
-        }
-      else if(key == points_state.name)
-        {
-          parsing_points = true;
         }
       else if(key == functions_state.name)
         {

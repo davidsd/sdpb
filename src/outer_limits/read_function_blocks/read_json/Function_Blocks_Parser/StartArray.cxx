@@ -12,10 +12,6 @@ bool Function_Blocks_Parser::StartArray()
         {
           normalization_state.json_start_array();
         }
-      else if(parsing_points)
-        {
-          points_state.json_start_array();
-        }
       else if(parsing_functions)
         {
           functions_state.json_start_array();

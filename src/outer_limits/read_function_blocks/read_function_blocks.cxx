@@ -7,15 +7,13 @@
 void read_json(const boost::filesystem::path &input_path,
                std::vector<El::BigFloat> &objectives,
                std::vector<El::BigFloat> &normalization,
-               std::vector<std::vector<El::BigFloat>> &points,
-               std::vector<std::map<El::BigFloat, El::BigFloat>> &functions);
+               std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>> &functions);
 
 void read_function_blocks(
   const boost::filesystem::path &input_file,
   std::vector<El::BigFloat> &objectives,
   std::vector<El::BigFloat> &normalization,
-  std::vector<std::vector<El::BigFloat>> &points,
-  std::vector<std::map<El::BigFloat, El::BigFloat>> &functions)
+  std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>> &functions)
 {
   if(input_file.extension() == ".nsv")
     {
@@ -23,13 +21,13 @@ void read_function_blocks(
         {
           if(!filename.empty())
             {
-              read_function_blocks(filename, objectives, normalization, points,
+              read_function_blocks(filename, objectives, normalization,
                                    functions);
             }
         }
     }
   else if(input_file.extension() == ".json")
     {
-      read_json(input_file, objectives, normalization, points, functions);
+      read_json(input_file, objectives, normalization, functions);
     }
 }

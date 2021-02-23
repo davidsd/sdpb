@@ -10,10 +10,6 @@ void Positive_Matrix_With_Prefactor_State::json_start_array()
     {
       polynomials_state.json_start_array();
     }
-  else if(parsing_points)
-    {
-      points_state.json_start_array();
-    }
   else
     {
       throw std::runtime_error("Invalid input file.  Unknown array inside "

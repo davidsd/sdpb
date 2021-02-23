@@ -16,12 +16,6 @@ bool Function_Blocks_Parser::EndObject(rapidjson::SizeType)
             "Invalid input file.  Found an object end inside '"
             + normalization_state.name + "'");
         }
-      else if(parsing_points)
-        {
-          throw std::runtime_error(
-            "Invalid input file.  Found an object end inside '"
-            + points_state.name + "'");
-        }
       else if(parsing_functions)
         {
           throw std::runtime_error(

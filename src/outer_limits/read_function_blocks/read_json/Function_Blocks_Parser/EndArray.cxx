@@ -14,11 +14,6 @@ bool Function_Blocks_Parser::EndArray(rapidjson::SizeType)
           normalization_state.json_end_array();
           parsing_normalization = normalization_state.inside;
         }
-      else if(parsing_points)
-        {
-          points_state.json_end_array();
-          parsing_points = points_state.inside;
-        }
       else if(parsing_functions)
         {
           functions_state.json_end_array();

@@ -13,20 +13,17 @@ struct Function_Blocks_Parser
                                           Function_Blocks_Parser>
 {
   bool inside = false, parsing_objective = false,
-       parsing_normalization = false, parsing_points = false,
-       parsing_functions = false;
+       parsing_normalization = false, parsing_functions = false;
 
   Vector_State<Number_State<El::BigFloat>> objective_state,
     normalization_state;
-  Vector_State<Vector_State<Number_State<El::BigFloat>>> points_state;
-  Vector_State<Map_State<Number_State<El::BigFloat>, Number_State<El::BigFloat>>>
+  Vector_State<Vector_State<Map_State<Number_State<El::BigFloat>, Number_State<El::BigFloat>>>>
     functions_state;
 
   Function_Blocks_Parser()
       : objective_state({"objective"s, ""s}),
         normalization_state({"normalization"s, ""s}),
-        points_state({"points"s, ""s, ""s}),
-        functions_state({"functions"s, ""s, ""s, ""s})
+        functions_state({"functions"s, ""s, ""s, ""s, ""s})
   {}
 
   bool Null() { throw std::runtime_error("Null not allowed"); }

@@ -17,16 +17,24 @@ std::vector<El::BigFloat> get_new_points(const Mesh &mesh);
 
 std::vector<El::BigFloat>
 compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
+                const std::vector<std::vector<El::BigFloat>> &initial_points,
                 const std::vector<El::BigFloat> &objectives,
                 const std::vector<El::BigFloat> &normalization,
                 const SDP_Solver_Parameters &parameters_in)
 {
+  if(initial_points.size() != matrices.size())
+    {
+      throw std::runtime_error("Size are different: Positive_Matrix_With_Prefactor: "
+                               + std::to_string(matrices.size())
+                               + ", initial points: "
+                               + std::to_string(initial_points.size()));
+    }
   SDP_Solver_Parameters parameters(parameters_in);
 
   const size_t rank(El::mpi::Rank()), num_procs(El::mpi::Size()),
     num_weights(normalization.size());
 
-  const size_t num_blocks(matrices.size());
+  const size_t num_blocks(initial_points.size());
   std::vector<El::BigFloat> weights(num_weights, 0);
   std::vector<std::set<El::BigFloat>> points(num_blocks);
   std::vector<std::vector<El::BigFloat>> new_points(num_blocks);
@@ -34,14 +42,13 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
   // GMP does not have a special infinity value, so we use max double.
   const El::BigFloat infinity(std::numeric_limits<double>::max());
   // Use the input points and add inifinty
-  const El::BigFloat max_x(infinity);
   for(size_t block(0); block < num_blocks; ++block)
     {
-      for(auto &point: matrices[block].points)
+      for(auto &point: initial_points.at(block))
         {
           points.at(block).emplace(point);
         }
-      new_points.at(block).emplace_back(max_x);
+      new_points.at(block).emplace_back(infinity);
     }
 
   parameters.duality_gap_threshold = 1.1;

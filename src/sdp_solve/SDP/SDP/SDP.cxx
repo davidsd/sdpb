@@ -48,7 +48,6 @@ SDP::SDP(const El::BigFloat &objective_const_input,
   assign_bilinear_bases_dist(bilinear_bases_local, grid, bilinear_bases);
   set_bases_blocks(block_info, bilinear_bases_local, bases_blocks, grid);
 
-  // const El::BigFloat primal_c_scale(1.0);
   const El::BigFloat primal_c_scale([&]() {
     El::BigFloat max(0.0);
     for(size_t block(0); block != block_indices.size(); ++block)

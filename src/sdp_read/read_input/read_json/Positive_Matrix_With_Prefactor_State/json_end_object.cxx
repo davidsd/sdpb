@@ -17,12 +17,6 @@ void Positive_Matrix_With_Prefactor_State::json_end_object()
         "Invalid input file.  Found an object end inside '" + name + "."
         + polynomials_state.name + "'");
     }
-  else if(parsing_points)
-    {
-      throw std::runtime_error(
-        "Invalid input file.  Found an object end inside '" + name + "."
-        + points_state.name + "'");
-    }
   else
     {
       inside = false;
