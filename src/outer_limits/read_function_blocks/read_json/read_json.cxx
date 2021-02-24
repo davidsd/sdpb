@@ -5,10 +5,13 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
-void read_json(const boost::filesystem::path &input_path,
-               std::vector<El::BigFloat> &objectives,
-               std::vector<El::BigFloat> &normalization,
-               std::vector<std::vector<std::map<El::BigFloat,El::BigFloat>>> &functions)
+void read_json(
+  const boost::filesystem::path &input_path,
+  std::vector<El::BigFloat> &objectives,
+  std::vector<El::BigFloat> &normalization,
+  std::vector<
+    std::vector<std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>>>>
+    &functions)
 {
   boost::filesystem::ifstream input_file(input_path);
   rapidjson::IStreamWrapper wrapper(input_file);
@@ -28,8 +31,8 @@ void read_json(const boost::filesystem::path &input_path,
   size_t functions_offset(functions.size());
   auto &temp_functions(parser.functions_state.value);
   functions.resize(functions.size() + temp_functions.size());
-  for(size_t index(0); index!=temp_functions.size(); ++index)
+  for(size_t index(0); index != temp_functions.size(); ++index)
     {
-      std::swap(functions[functions_offset+index], temp_functions[index]);
+      std::swap(functions[functions_offset + index], temp_functions[index]);
     }
 }

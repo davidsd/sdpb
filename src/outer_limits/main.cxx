@@ -54,7 +54,9 @@ void read_function_blocks(
   const boost::filesystem::path &input_file,
   std::vector<El::BigFloat> &objectives,
   std::vector<El::BigFloat> &normalization,
-  std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>> &functions);
+  std::vector<
+    std::vector<std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>>>>
+    &functions);
 
 void read_points(const boost::filesystem::path &input_path,
                  std::vector<std::vector<El::BigFloat>> &points);
@@ -100,7 +102,9 @@ int main(int argc, char **argv)
   {
     std::vector<El::BigFloat> objectives, normalization;
     std::vector<std::vector<El::BigFloat>> points;
-    std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>> functions;
+    std::vector<std::vector<
+      std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>>>>
+      functions;
     read_function_blocks("test/toy_functions.json", objectives, normalization,
                          functions);
     read_points("test/toy_functions_points.json", points);
@@ -137,7 +141,6 @@ int main(int argc, char **argv)
       }
   }
 
-  
   // {
   //   Functional functional("test/toy_polys", "test/toy_prefactor");
   //   std::vector<El::BigFloat> objective(load_vector("test/toy_objective"));
