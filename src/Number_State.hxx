@@ -52,11 +52,22 @@ public:
         inside = false;
         try
           {
-            value = Float_Type(string_value.str());
+            // GMP does not have inf or nan, so we approximate inf
+            // with max double.
+            using namespace std::string_literals;
+            if(string_value.str() == "inf"s)
+              {
+                std::cout << "Number inf\n" << std::flush;
+                value=Float_Type(std::numeric_limits<double>::max());
+              }
+            else
+              {
+                value = Float_Type(string_value.str());
+              }
           }
         catch(...)
           {
-            throw std::runtime_error("Invalid number: '" + string_value.str()
+            throw std::runtime_error("Invalid NNNN number: '" + string_value.str()
                                      + "'");
           }
       }
@@ -83,7 +94,17 @@ public:
   {
     try
       {
-        value = Float_Type(s);
+        // GMP does not have inf or nan, so we approximate inf
+        // with max double.
+        using namespace std::string_literals;
+        if(s == "inf"s)
+          {
+            value=Float_Type(std::numeric_limits<double>::max());
+          }
+        else
+          {
+            value = Float_Type(s);
+          }
       }
     catch(...)
       {
