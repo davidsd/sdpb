@@ -1,36 +1,43 @@
 #include "Mesh.hxx"
 
-#include "../../sdp_read.hxx"
 #include "../../sdp_solve.hxx"
 #include "../../ostream_set.hxx"
+#include "../../ostream_vector.hxx"
+#include "../../set_stream_precision.hxx"
 
-void setup_constraints(
+void setup_constraints_functions(
   const size_t &max_index, const size_t &num_blocks,
   const El::BigFloat &infinity,
-  const std::vector<Positive_Matrix_With_Prefactor> &matrices,
+  const std::vector<
+    std::vector<std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>>>>
+    &functions,
   const std::vector<El::BigFloat> &normalization,
   const std::vector<std::set<El::BigFloat>> &points,
   std::vector<std::vector<El::BigFloat>> &primal_objective_c,
   std::vector<El::Matrix<El::BigFloat>> &free_var_matrix);
 
-El::BigFloat
-eval_weighted(const Positive_Matrix_With_Prefactor &matrix,
-              const El::BigFloat &x, const std::vector<El::BigFloat> &weights);
+El::BigFloat eval_weighted_functions(
+  const El::BigFloat &infinity,
+  const std::vector<
+    std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>>> &functions,
+  const El::BigFloat &x, const std::vector<El::BigFloat> &weights);
 
 std::vector<El::BigFloat> get_new_points(const Mesh &mesh);
 
-std::vector<El::BigFloat>
-compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
-                const std::vector<std::vector<El::BigFloat>> &initial_points,
-                const std::vector<El::BigFloat> &objectives,
-                const std::vector<El::BigFloat> &normalization,
-                const SDP_Solver_Parameters &parameters_in)
+std::vector<El::BigFloat> compute_optimal_functions(
+  const std::vector<
+    std::vector<std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>>>>
+    &functions,
+  const std::vector<std::vector<El::BigFloat>> &initial_points,
+  const std::vector<El::BigFloat> &objectives,
+  const std::vector<El::BigFloat> &normalization,
+  const SDP_Solver_Parameters &parameters_in)
 {
-  if(initial_points.size() != matrices.size())
+  if(initial_points.size() != functions.size())
     {
       throw std::runtime_error(
         "Size are different: Positive_Matrix_With_Prefactor: "
-        + std::to_string(matrices.size())
+        + std::to_string(functions.size())
         + ", initial points: " + std::to_string(initial_points.size()));
     }
   SDP_Solver_Parameters parameters(parameters_in);
@@ -58,12 +65,6 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
   parameters.duality_gap_threshold = 1.1;
   while(parameters.duality_gap_threshold > parameters_in.duality_gap_threshold)
     {
-      if(rank == 0)
-        {
-          std::cout << "Threshold: " << parameters.duality_gap_threshold
-                    << "\n";
-        }
-
       size_t num_constraints(0);
       std::vector<size_t> matrix_dimensions;
       for(size_t block(0); block != num_blocks; ++block)
@@ -75,7 +76,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
           num_constraints += points.at(block).size();
           matrix_dimensions.insert(matrix_dimensions.end(),
                                    points.at(block).size(),
-                                   matrices[block].polynomials.size());
+                                   functions[block].size());
           if(rank == 0 && parameters.verbosity >= Verbosity::debug)
             {
               std::cout << "points: " << block << " " << points.at(block)
@@ -105,9 +106,9 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
       const size_t max_index(
         std::distance(normalization.begin(), max_normalization));
 
-      setup_constraints(max_index, num_blocks, infinity, matrices,
-                        normalization, points, primal_objective_c,
-                        free_var_matrix);
+      setup_constraints_functions(max_index, num_blocks, infinity, functions,
+                                  normalization, points, primal_objective_c,
+                                  free_var_matrix);
 
       El::BigFloat objective_const(objectives.at(max_index)
                                    / normalization.at(max_index));
@@ -152,6 +153,12 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
             && parameters.duality_gap_threshold
                  > parameters_in.duality_gap_threshold)
         {
+          if(rank == 0)
+            {
+              std::cout << "Threshold: " << parameters.duality_gap_threshold
+                        << "\n";
+            }
+
           Timers timers(parameters.verbosity >= Verbosity::debug);
           SDP_Solver_Terminate_Reason reason
             = solver.run(parameters, block_info, sdp, grid, timers);
@@ -218,10 +225,14 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
               // 0.01 should be a small enough relative error so that we are
               // in the regime of convergence.  Then the error estimates will
               // work
+              auto max_point(points.at(block).rbegin());
+              ++max_point;
+
               Mesh mesh(
-                *(points.at(block).begin()), El::BigFloat(100),
+                *(points.at(block).begin()), *max_point,
                 [&](const El::BigFloat &x) {
-                  return eval_weighted(matrices[block], x, weights);
+                  return eval_weighted_functions(infinity, functions[block], x,
+                                                 weights);
                 },
                 (1.0 / 128));
               std::vector<El::BigFloat> candidates(get_new_points(mesh));

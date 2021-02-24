@@ -68,6 +68,15 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                 const std::vector<El::BigFloat> &normalization,
                 const SDP_Solver_Parameters &parameters);
 
+std::vector<El::BigFloat> compute_optimal_functions(
+  const std::vector<
+    std::vector<std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>>>>
+    &functions,
+  const std::vector<std::vector<El::BigFloat>> &initial_points,
+  const std::vector<El::BigFloat> &objectives,
+  const std::vector<El::BigFloat> &normalization,
+  const SDP_Solver_Parameters &parameters_in);
+
 int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
@@ -101,34 +110,16 @@ int main(int argc, char **argv)
   // }
   {
     std::vector<El::BigFloat> objectives, normalization;
-    std::vector<std::vector<El::BigFloat>> points;
+    std::vector<std::vector<El::BigFloat>> initial_points;
     std::vector<std::vector<
       std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>>>>
       functions;
     read_function_blocks("test/toy_functions.json", objectives, normalization,
                          functions);
-    read_points("test/toy_functions_points.json", points);
-  }
+    read_points("test/toy_functions_points.json", initial_points);
 
-  {
-    std::vector<El::BigFloat> objectives, normalization;
-    std::vector<Positive_Matrix_With_Prefactor> matrices;
-    std::vector<std::vector<El::BigFloat>> initial_points;
-
-    // read_input("outer_small.nsv", objectives, normalization, matrices);
-    // read_points("outer_small_points.json", initial_points);
-
-    // read_input("outer_2x2.nsv", objectives, normalization, matrices);
-    // read_input("test/spectrum_test.json", objectives, normalization,
-    // matrices); read_input("test/toy_damped_duplicate.json", objectives,
-    // normalization, matrices);
-    // read_input("test/toy_damped_3.json", objectives, normalization, matrices);
-
-    read_input("test/toy_damped.json", objectives, normalization, matrices);
-    read_points("test/toy_damped_points.json", initial_points);
-
-    std::vector<El::BigFloat> weights(compute_optimal(
-      matrices, initial_points, objectives, normalization, parameters));
+    std::vector<El::BigFloat> weights(compute_optimal_functions(
+      functions, initial_points, objectives, normalization, parameters));
     El::BigFloat optimal(0);
     for(size_t index(0); index < objectives.size(); ++index)
       {
@@ -139,7 +130,39 @@ int main(int argc, char **argv)
         std::cout.precision(precision / 3.3);
         std::cout << "optimal: " << optimal << " " << weights << "\n";
       }
+    
   }
+
+  // {
+  //   std::vector<El::BigFloat> objectives, normalization;
+  //   std::vector<Positive_Matrix_With_Prefactor> matrices;
+  //   std::vector<std::vector<El::BigFloat>> initial_points;
+
+  //   // read_input("outer_small.nsv", objectives, normalization, matrices);
+  //   // read_points("outer_small_points.json", initial_points);
+
+  //   // read_input("outer_2x2.nsv", objectives, normalization, matrices);
+  //   // read_input("test/spectrum_test.json", objectives, normalization,
+  //   // matrices); read_input("test/toy_damped_duplicate.json", objectives,
+  //   // normalization, matrices);
+  //   // read_input("test/toy_damped_3.json", objectives, normalization, matrices);
+
+  //   read_input("test/toy_damped.json", objectives, normalization, matrices);
+  //   read_points("test/toy_damped_points.json", initial_points);
+
+  //   std::vector<El::BigFloat> weights(compute_optimal(
+  //     matrices, initial_points, objectives, normalization, parameters));
+  //   El::BigFloat optimal(0);
+  //   for(size_t index(0); index < objectives.size(); ++index)
+  //     {
+  //       optimal += objectives[index] * weights[index];
+  //     }
+  //   if(El::mpi::Rank() == 0)
+  //     {
+  //       std::cout.precision(precision / 3.3);
+  //       std::cout << "optimal: " << optimal << " " << weights << "\n";
+  //     }
+  // }
 
   // {
   //   Functional functional("test/toy_polys", "test/toy_prefactor");
