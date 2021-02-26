@@ -215,7 +215,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
           std::vector<size_t> num_new_points(num_blocks, 0);
           for(size_t block(rank); block < num_blocks; block += num_procs)
             {
-              // 0.01 should be a small enough relative error so that we are
+              // 1/128 should be a small enough relative error so that we are
               // in the regime of convergence.  Then the error estimates will
               // work
               Mesh mesh(

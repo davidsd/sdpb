@@ -1,19 +1,18 @@
-#include "eval_function.hxx"
+#include "../Function.hxx"
 #include <El.hpp>
 #include <vector>
 
 El::BigFloat eval_weighted_functions(
   const El::BigFloat &infinity,
-  const std::vector<
-    std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>>> &functions,
+  const std::vector<std::vector<std::vector<Function>>> &function_blocks,
   const El::BigFloat &x, const std::vector<El::BigFloat> &weights)
 {
-  const size_t matrix_dim(functions.size());
+  const size_t matrix_dim(function_blocks.size());
   El::Matrix<El::BigFloat> m(matrix_dim, matrix_dim);
   for(size_t row(0); row != matrix_dim; ++row)
     for(size_t column(0); column <= row; ++column)
       {
-        auto &function(functions.at(row).at(column));
+        auto &function(function_blocks.at(row).at(column));
         if(weights.size() != function.size())
           {
             throw std::runtime_error("INTERNAL ERROR mismatch: "
@@ -23,7 +22,8 @@ El::BigFloat eval_weighted_functions(
         El::BigFloat element(0);
         for(size_t index(0); index != weights.size(); ++index)
           {
-            element += weights[index] * eval_function(infinity, function[index], x);
+            element
+              += weights[index] * function[index].eval(infinity, x);
           }
         m.Set(row, column, element);
       }

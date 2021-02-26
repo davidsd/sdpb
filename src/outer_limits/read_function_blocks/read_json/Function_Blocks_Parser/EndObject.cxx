@@ -18,9 +18,8 @@ bool Function_Blocks_Parser::EndObject(rapidjson::SizeType)
         }
       else if(parsing_functions)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Found an object end inside '"
-            + functions_state.name + "'");
+          functions_state.json_end_object();
+          parsing_functions=functions_state.inside;
         }
       else
         {

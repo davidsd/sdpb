@@ -1,5 +1,6 @@
 #include "Mesh.hxx"
 
+#include "../Function.hxx"
 #include "../../sdp_solve.hxx"
 #include "../../ostream_set.hxx"
 #include "../../ostream_vector.hxx"
@@ -8,9 +9,8 @@
 void setup_constraints_functions(
   const size_t &max_index, const size_t &num_blocks,
   const El::BigFloat &infinity,
-  const std::vector<
-    std::vector<std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>>>>
-    &functions,
+  const std::vector<std::vector<std::vector<std::vector<Function>>>>
+    &function_blocks,
   const std::vector<El::BigFloat> &normalization,
   const std::vector<std::set<El::BigFloat>> &points,
   std::vector<std::vector<El::BigFloat>> &primal_objective_c,
@@ -18,26 +18,24 @@ void setup_constraints_functions(
 
 El::BigFloat eval_weighted_functions(
   const El::BigFloat &infinity,
-  const std::vector<
-    std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>>> &functions,
+  const std::vector<std::vector<std::vector<Function>>> &function_blocks,
   const El::BigFloat &x, const std::vector<El::BigFloat> &weights);
 
 std::vector<El::BigFloat> get_new_points(const Mesh &mesh);
 
 std::vector<El::BigFloat> compute_optimal_functions(
-  const std::vector<
-    std::vector<std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>>>>
-    &functions,
+  const std::vector<std::vector<std::vector<std::vector<Function>>>>
+    &function_blocks,
   const std::vector<std::vector<El::BigFloat>> &initial_points,
   const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
   const SDP_Solver_Parameters &parameters_in)
 {
-  if(initial_points.size() != functions.size())
+  if(initial_points.size() != function_blocks.size())
     {
       throw std::runtime_error(
         "Size are different: Positive_Matrix_With_Prefactor: "
-        + std::to_string(functions.size())
+        + std::to_string(function_blocks.size())
         + ", initial points: " + std::to_string(initial_points.size()));
     }
   SDP_Solver_Parameters parameters(parameters_in);
@@ -76,7 +74,7 @@ std::vector<El::BigFloat> compute_optimal_functions(
           num_constraints += points.at(block).size();
           matrix_dimensions.insert(matrix_dimensions.end(),
                                    points.at(block).size(),
-                                   functions[block].size());
+                                   function_blocks[block].size());
           if(rank == 0 && parameters.verbosity >= Verbosity::debug)
             {
               std::cout << "points: " << block << " " << points.at(block)
@@ -106,9 +104,9 @@ std::vector<El::BigFloat> compute_optimal_functions(
       const size_t max_index(
         std::distance(normalization.begin(), max_normalization));
 
-      setup_constraints_functions(max_index, num_blocks, infinity, functions,
-                                  normalization, points, primal_objective_c,
-                                  free_var_matrix);
+      setup_constraints_functions(max_index, num_blocks, infinity,
+                                  function_blocks, normalization, points,
+                                  primal_objective_c, free_var_matrix);
 
       El::BigFloat objective_const(objectives.at(max_index)
                                    / normalization.at(max_index));
@@ -222,17 +220,23 @@ std::vector<El::BigFloat> compute_optimal_functions(
           std::vector<size_t> num_new_points(num_blocks, 0);
           for(size_t block(rank); block < num_blocks; block += num_procs)
             {
-              // 0.01 should be a small enough relative error so that we are
+              El::BigFloat max_delta(infinity);
+              for(auto &row: function_blocks[block])
+                for(auto &column: row)
+                  for(auto &f: column)
+                    {
+                      max_delta=El::Min(max_delta,f.max_delta);
+                    }
+                
+              // 1/128 should be a small enough relative error so that we are
               // in the regime of convergence.  Then the error estimates will
               // work
-              auto max_point(points.at(block).rbegin());
-              ++max_point;
 
               Mesh mesh(
-                *(points.at(block).begin()), *max_point,
+                *(points.at(block).begin()), max_delta,
                 [&](const El::BigFloat &x) {
-                  return eval_weighted_functions(infinity, functions[block], x,
-                                                 weights);
+                  return eval_weighted_functions(
+                    infinity, function_blocks[block], x, weights);
                 },
                 (1.0 / 128));
               std::vector<El::BigFloat> candidates(get_new_points(mesh));

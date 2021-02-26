@@ -20,9 +20,7 @@ bool Function_Blocks_Parser::Key(const Ch *str, rapidjson::SizeType length,
         }
       else if(parsing_functions)
         {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside '" + functions_state.name
-                                   + "'.");
+          functions_state.json_key(key);
         }
       else if(key == objective_state.name)
         {

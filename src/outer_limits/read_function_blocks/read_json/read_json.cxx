@@ -1,5 +1,4 @@
 #include "Function_Blocks_Parser.hxx"
-#include "../Function_Block.hxx"
 
 #include <rapidjson/istreamwrapper.h>
 #include <boost/filesystem.hpp>
@@ -9,9 +8,7 @@ void read_json(
   const boost::filesystem::path &input_path,
   std::vector<El::BigFloat> &objectives,
   std::vector<El::BigFloat> &normalization,
-  std::vector<
-    std::vector<std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>>>>
-    &functions)
+  std::vector<std::vector<std::vector<std::vector<Function>>>> &functions)
 {
   boost::filesystem::ifstream input_file(input_path);
   rapidjson::IStreamWrapper wrapper(input_file);

@@ -1,3 +1,4 @@
+#include "Function.hxx"
 #include "../sdp_read.hxx"
 #include "../sdp_solve.hxx"
 
@@ -54,9 +55,7 @@ void read_function_blocks(
   const boost::filesystem::path &input_file,
   std::vector<El::BigFloat> &objectives,
   std::vector<El::BigFloat> &normalization,
-  std::vector<
-    std::vector<std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>>>>
-    &functions);
+  std::vector<std::vector<std::vector<std::vector<Function>>>> &functions);
 
 void read_points(const boost::filesystem::path &input_path,
                  std::vector<std::vector<El::BigFloat>> &points);
@@ -69,9 +68,7 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                 const SDP_Solver_Parameters &parameters);
 
 std::vector<El::BigFloat> compute_optimal_functions(
-  const std::vector<
-    std::vector<std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>>>>
-    &functions,
+  const std::vector<std::vector<std::vector<std::vector<Function>>>> &functions,
   const std::vector<std::vector<El::BigFloat>> &initial_points,
   const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
@@ -111,9 +108,7 @@ int main(int argc, char **argv)
   {
     std::vector<El::BigFloat> objectives, normalization;
     std::vector<std::vector<El::BigFloat>> initial_points;
-    std::vector<std::vector<
-      std::vector<std::vector<std::map<El::BigFloat, El::BigFloat>>>>>
-      functions;
+    std::vector<std::vector<std::vector<std::vector<Function>>>> functions;
     read_function_blocks("test/toy_functions.json", objectives, normalization,
                          functions);
     read_points("test/toy_functions_points.json", initial_points);
@@ -130,7 +125,6 @@ int main(int argc, char **argv)
         std::cout.precision(precision / 3.3);
         std::cout << "optimal: " << optimal << " " << weights << "\n";
       }
-    
   }
 
   // {
@@ -145,7 +139,8 @@ int main(int argc, char **argv)
   //   // read_input("test/spectrum_test.json", objectives, normalization,
   //   // matrices); read_input("test/toy_damped_duplicate.json", objectives,
   //   // normalization, matrices);
-  //   // read_input("test/toy_damped_3.json", objectives, normalization, matrices);
+  //   // read_input("test/toy_damped_3.json", objectives, normalization,
+  //   matrices);
 
   //   read_input("test/toy_damped.json", objectives, normalization, matrices);
   //   read_points("test/toy_damped_points.json", initial_points);

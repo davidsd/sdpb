@@ -18,9 +18,7 @@ bool Function_Blocks_Parser::StartObject()
         }
       else if(parsing_functions)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Found an object inside '"
-            + functions_state.name + "'");
+          functions_state.json_start_object();
         }
       else
         {
