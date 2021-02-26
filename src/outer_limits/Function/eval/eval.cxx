@@ -19,8 +19,8 @@ Function::eval(const El::BigFloat &infinity, const El::BigFloat &x) const
       //           << chebyshev_clenshaw_recurrence(chebyshev_values.data(),
       //                                            chebyshev_values.size(),
       //                                            El::BigFloat(0.0), max_delta, x) << "\n";
-      return chebyshev_clenshaw_recurrence(chebyshev_values.data(),
-                                           chebyshev_values.size(),
+      return chebyshev_clenshaw_recurrence(chebyshev_coeffs.data(),
+                                           chebyshev_coeffs.size(),
                                            El::BigFloat(0.0), max_delta, x);
     }
 }

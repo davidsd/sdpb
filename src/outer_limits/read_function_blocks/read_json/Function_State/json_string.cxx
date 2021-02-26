@@ -5,6 +5,7 @@ void Function_State::json_string(const std::string &s)
   if(parsing_max_delta)
     {
       max_delta_state.json_string(s);
+      max_delta_mpfr = Boost_Float(s);
       parsing_max_delta = false;
       value.max_delta = max_delta_state.value;
     }

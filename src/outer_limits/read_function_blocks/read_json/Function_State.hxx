@@ -3,6 +3,7 @@
 #include "../../Function.hxx"
 #include "../../../Vector_State.hxx"
 #include "../../../Number_State.hxx"
+#include "../../../Boost_Float.hxx"
 
 using namespace std::string_literals;
 struct Function_State
@@ -12,8 +13,9 @@ struct Function_State
   bool parsing_max_delta = false, parsing_infinity_value = false,
        parsing_chebyshev_values = false;
   Number_State<El::BigFloat> max_delta_state, infinity_value_state;
-  Vector_State<Number_State<El::BigFloat>> chebyshev_values_state;
+  Vector_State<Number_State<Boost_Float>> chebyshev_values_state;
   
+  Boost_Float max_delta_mpfr;
   Function value;
 
   Function_State(const std::vector<std::string> &names, const size_t &offset)

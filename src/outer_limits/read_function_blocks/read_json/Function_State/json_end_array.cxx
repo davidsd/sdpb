@@ -18,10 +18,6 @@ void Function_State::json_end_array()
     {
       chebyshev_values_state.json_end_array();
       parsing_chebyshev_values = chebyshev_values_state.inside;
-      if(!chebyshev_values_state.inside)
-        {
-          std::swap(value.chebyshev_values, chebyshev_values_state.value);
-        }
     }
   else
     {
