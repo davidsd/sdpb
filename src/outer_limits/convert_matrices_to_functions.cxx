@@ -29,7 +29,33 @@ void convert_matrices_to_functions(
         return result;
       }());
 
-      std::vector<El::BigFloat> values;
+      std::cout << "Converting: "
+                << El::mpi::Rank() << " "
+                << max_degree << "\n";
+      
+      const size_t N(max_degree+1);
+      std::vector<El::BigFloat> x(N);
+      for(size_t k(0); k < N; ++k)
+        {
+          Boost_Float x_unscaled(
+                                 cos(pi * (2 * (N - 1 - k) + 1) / (2 * N)));
+          x[k]=(El::BigFloat(to_string(x_unscaled)) + 1) * max_delta /2;
+        }
+
+      std::vector<std::vector<El::BigFloat>> weights(N);
+      for(size_t n(0); n < N; ++n)
+        {
+          weights[n].reserve(N);
+          for(size_t k(0); k < N; ++k)
+            {
+              Boost_Float weight_mpfr(
+                                     2 * cos((n * pi * (2 * (N - 1 - k) + 1)) / (2 * N))
+                                     / N);
+              weights[n].emplace_back(to_string(weight_mpfr));
+            }
+        }
+      
+      std::vector<El::BigFloat> values(N);
       functions.emplace_back();
       auto &function_block(functions.back());
       for(auto &matrix_row : matrix_block.polynomials)
@@ -54,17 +80,9 @@ void convert_matrices_to_functions(
                       function.infinity_value
                         = poly.coefficients.at(max_degree);
                     }
-                  // This is completely arbitrary
-                  const size_t N(64);
-                  values.resize(N);
                   for(size_t k(0); k < N; ++k)
                     {
-                      Boost_Float x_unscaled(
-                        cos(pi * (2 * (N - 1 - k) + 1) / (2 * N)));
-                      El::BigFloat x(to_string(x_unscaled));
-                      x = (x + 1) * max_delta / 2;
-
-                      values[k] = poly(x);
+                      values[k] = poly(x[k]);
                       // We do not multiply by the Damped Rational
                       // prefactor.  It has poles, many near zero,
                       // which make any kind of approximation bad.
@@ -78,11 +96,7 @@ void convert_matrices_to_functions(
                       El::BigFloat coeff(0);
                       for(size_t k(0); k < N; ++k)
                         {
-                          Boost_Float coeff_mpfr(
-                            2 * cos((n * pi * (2 * (N - 1 - k) + 1)) / (2 * N))
-                            / N);
-                          coeff
-                            += El::BigFloat(to_string(coeff_mpfr)) * values[k];
+                          coeff += weights[n][k] * values[k];
                         }
                       function.chebyshev_coeffs.emplace_back(coeff);
                     }
