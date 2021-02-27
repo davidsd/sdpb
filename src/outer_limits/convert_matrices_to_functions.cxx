@@ -65,17 +65,11 @@ void convert_matrices_to_functions(
                       x = (x + 1) * max_delta / 2;
 
                       values[k] = poly(x);
-                      // Adding the damped rational prefactor here
-                      // make convergence much worse.  Maybe because
-                      // without the prefactor the functions are
-                      // exactly approximated by a polynomial?
-                      if(!matrix_block.damped_rational.is_constant())
-                        {
-                          values[k] *= poles_prefactor(
-                                         matrix_block.damped_rational.poles, x)
-                                       * power_prefactor(
-                                         matrix_block.damped_rational.base, x);
-                        }
+                      // We do not multiply by the Damped Rational
+                      // prefactor.  It has poles, many near zero,
+                      // which make any kind of approximation bad.
+                      // Since positivity is not affected by the
+                      // overall prefactor, we can omit it.
                     }
 
                   function.chebyshev_coeffs.reserve(N);
