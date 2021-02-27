@@ -1,5 +1,5 @@
-#include "poles_prefactor.hxx"
-#include "power_prefactor.hxx"
+#include "../poles_prefactor.hxx"
+#include "../power_prefactor.hxx"
 #include "../../sdp_read.hxx"
 
 El::BigFloat

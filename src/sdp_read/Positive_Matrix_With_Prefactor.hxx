@@ -9,7 +9,6 @@ struct Positive_Matrix_With_Prefactor
   // TODO: This is actually a symmetric matrix (dim x dim) of a vector
   // of polynomials.  So we should use a proper symmetric matrix class.
   std::vector<std::vector<std::vector<Polynomial>>> polynomials;
-  std::vector<El::BigFloat> points;
 };
 
 inline void

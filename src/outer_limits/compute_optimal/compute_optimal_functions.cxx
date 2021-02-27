@@ -75,7 +75,8 @@ std::vector<El::BigFloat> compute_optimal_functions(
           matrix_dimensions.insert(matrix_dimensions.end(),
                                    points.at(block).size(),
                                    function_blocks[block].size());
-          if(rank == 0 && parameters.verbosity >= Verbosity::debug)
+          // if(rank == 0 && parameters.verbosity >= Verbosity::debug)
+          if(rank == 0)
             {
               std::cout << "points: " << block << " " << points.at(block)
                         << "\n";
@@ -177,12 +178,14 @@ std::vector<El::BigFloat> compute_optimal_functions(
                         << '\n';
             }
 
-          // if(reason != SDP_Solver_Terminate_Reason::PrimalDualOptimal)
-          //   {
-          //     std::stringstream ss;
-          //     ss << "Can not find solution: " << reason;
-          //     throw std::runtime_error(ss.str());
-          //   }
+          if(reason == SDP_Solver_Terminate_Reason::MaxComplementarityExceeded
+             || reason == SDP_Solver_Terminate_Reason::MaxIterationsExceeded
+             || reason == SDP_Solver_Terminate_Reason::MaxRuntimeExceeded)
+            {
+              std::stringstream ss;
+              ss << "Can not find solution: " << reason;
+              throw std::runtime_error(ss.str());
+            }
 
           // y is duplicated among cores, so only need to print out copy on
           // the root node.
