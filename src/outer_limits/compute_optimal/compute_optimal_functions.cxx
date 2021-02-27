@@ -75,8 +75,7 @@ std::vector<El::BigFloat> compute_optimal_functions(
           matrix_dimensions.insert(matrix_dimensions.end(),
                                    points.at(block).size(),
                                    function_blocks[block].size());
-          // if(rank == 0 && parameters.verbosity >= Verbosity::debug)
-          if(rank == 0)
+          if(rank == 0 && parameters.verbosity >= Verbosity::debug)
             {
               std::cout << "points: " << block << " " << points.at(block)
                         << "\n";
