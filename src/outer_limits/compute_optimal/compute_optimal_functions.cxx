@@ -21,7 +21,8 @@ El::BigFloat eval_weighted_functions(
   const std::vector<std::vector<std::vector<Function>>> &function_blocks,
   const El::BigFloat &x, const std::vector<El::BigFloat> &weights);
 
-std::vector<El::BigFloat> get_new_points(const Mesh &mesh);
+std::vector<El::BigFloat>
+get_new_points(const Mesh &mesh, const El::BigFloat &block_epsilon);
 
 std::vector<El::BigFloat> compute_optimal_functions(
   const std::vector<std::vector<std::vector<std::vector<Function>>>>
@@ -222,17 +223,58 @@ std::vector<El::BigFloat> compute_optimal_functions(
           std::vector<size_t> num_new_points(num_blocks, 0);
           for(size_t block(rank); block < num_blocks; block += num_procs)
             {
-              El::BigFloat max_delta(infinity);
-              for(auto &row: function_blocks[block])
-                for(auto &column: row)
-                  for(auto &f: column)
+              // std::cout << "block start: " << num_blocks << " " << rank << "
+              // "
+              //           << block << "\n";
+              // TODO: These can both be precomputed
+              El::BigFloat max_delta(infinity), block_scale(0);
+              size_t max_degree(0);
+              for(auto &row : function_blocks[block])
+                for(auto &column : row)
+                  for(size_t function_index(0);
+                      function_index != column.size(); ++function_index)
                     {
-                      max_delta=El::Min(max_delta,f.max_delta);
+                      auto &f(column[function_index]);
+                      max_delta = El::Min(max_delta, f.max_delta);
+                      max_degree
+                        = std::max(max_degree, f.chebyshev_coeffs.size());
+                      for(auto &coeff : f.chebyshev_coeffs)
+                        {
+                          block_scale = std::max(
+                            block_scale,
+                            El::Abs(coeff * weights[function_index]));
+                        }
                     }
-                
+
+              const El::BigFloat block_epsilon(
+                block_scale * El::limits::Epsilon<El::BigFloat>());
+
               // 1/128 should be a small enough relative error so that we are
               // in the regime of convergence.  Then the error estimates will
               // work
+
+              // std::cout << "block: " << rank << " " << block_epsilon << " "
+              //           << function_blocks[block].front().front().size() << " "
+              //           << weights.size() << "\n";
+
+              // std::cout
+              //   << "block mesh: " << num_blocks << " " << rank << " " <<
+              //   block
+              //   << " " << *(points.at(block).begin()) << " " << max_delta
+              //   << " " << block_scale << " "
+              //   << block_scale * El::limits::Epsilon<El::BigFloat>()
+              //   << " "
+              //   << (block_scale * El::limits::Epsilon<El::BigFloat>()
+              //       * objectives.size() * max_degree * max_degree)
+              //   << " "
+              //   // << function_blocks[block].size() << " "
+              //   // << function_blocks[block].front().size() << " "
+              //   // << function_blocks[block].front().front().size() << " "
+              //   // <<
+              //   //
+              //   function_blocks[block].front().front().front().chebyshev_coeffs.size()
+              //   // << " "
+              //   << "\n";
 
               Mesh mesh(
                 *(points.at(block).begin()), max_delta,
@@ -240,8 +282,24 @@ std::vector<El::BigFloat> compute_optimal_functions(
                   return eval_weighted_functions(
                     infinity, function_blocks[block], x, weights);
                 },
-                (1.0 / 128));
-              std::vector<El::BigFloat> candidates(get_new_points(mesh));
+                (1.0 / 128), block_epsilon);
+
+              // Each term in the polynomial adds degree*epsilon to
+              // the error, and degree goes from 0 to max_degree, so
+              // the sum is max_degree**2.  There are num_functions of
+              // these, so the final multiplicative term is
+              // num_functions*max_degree**2.
+
+              // std::cout << "block meshed: "
+              //           << num_blocks << " " << rank << " " << block << "\n"
+              //           << std::flush;
+
+              std::vector<El::BigFloat> candidates(
+                get_new_points(mesh, block_epsilon));
+
+              // std::cout << "block candidates: "
+              //           << num_blocks << " " << rank << " " << block << "\n";
+
               new_points.at(block).clear();
               for(auto &point : candidates)
                 {
@@ -251,7 +309,11 @@ std::vector<El::BigFloat> compute_optimal_functions(
                       ++num_new_points.at(block);
                     }
                 }
+              // std::cout << "block end: "
+              //           << num_blocks << " " << rank << " " << block << "\n";
             }
+          // std::cout << "meshed: "
+          //           << num_blocks << " " << rank << "\n";
 
           El::mpi::AllReduce(num_new_points.data(), num_new_points.size(),
                              El::mpi::SUM, El::mpi::COMM_WORLD);

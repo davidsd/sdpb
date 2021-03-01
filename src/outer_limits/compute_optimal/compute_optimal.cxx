@@ -17,7 +17,8 @@ El::BigFloat
 eval_weighted(const Positive_Matrix_With_Prefactor &matrix,
               const El::BigFloat &x, const std::vector<El::BigFloat> &weights);
 
-std::vector<El::BigFloat> get_new_points(const Mesh &mesh);
+std::vector<El::BigFloat>
+get_new_points(const Mesh &mesh, const El::BigFloat &block_epsilon);
 
 std::vector<El::BigFloat>
 compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
@@ -223,8 +224,9 @@ compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                 [&](const El::BigFloat &x) {
                   return eval_weighted(matrices[block], x, weights);
                 },
-                (1.0 / 128));
-              std::vector<El::BigFloat> candidates(get_new_points(mesh));
+                (1.0 / 128), Sqrt(El::limits::Epsilon<El::BigFloat>()));
+              std::vector<El::BigFloat> candidates(get_new_points(
+                mesh, Sqrt(El::limits::Epsilon<El::BigFloat>())));
               new_points.at(block).clear();
               for(auto &point : candidates)
                 {
