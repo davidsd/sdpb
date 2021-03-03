@@ -49,21 +49,21 @@ SDP::SDP(const El::BigFloat &objective_const_input,
   set_bases_blocks(block_info, bilinear_bases_local, bases_blocks, grid);
 
   const El::BigFloat primal_c_scale([&]() {
-    El::BigFloat max(0.0);
+    El::BigFloat max_c(0.0);
     for(size_t block(0); block != block_indices.size(); ++block)
       {
         for(auto &element :
             primal_objective_c_input.at(block_indices.at(block)))
           {
-            max = std::max(max, El::Abs(element));
+            max_c = std::max(max_c, El::Abs(element));
           }
       }
-    max=El::mpi::AllReduce(max, El::mpi::MAX, El::mpi::COMM_WORLD);
-    if(max == El::BigFloat(0.0))
+    max_c = El::mpi::AllReduce(max_c, El::mpi::MAX, El::mpi::COMM_WORLD);
+    if(max_c == El::BigFloat(0.0))
       {
         return El::BigFloat(1.0);
       }
-    return 1 / max;
+    return 1 / max_c;
   }());
 
   for(size_t block(0); block != block_indices.size(); ++block)
