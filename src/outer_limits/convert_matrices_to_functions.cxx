@@ -29,10 +29,6 @@ void convert_matrices_to_functions(
         return result;
       }());
 
-      std::cout << "Converting: "
-                << El::mpi::Rank() << " "
-                << max_degree << "\n";
-      
       const size_t N(max_degree+1);
       std::vector<El::BigFloat> x(N);
       for(size_t k(0); k < N; ++k)
@@ -104,5 +100,4 @@ void convert_matrices_to_functions(
             }
         }
     }
-  // std::cout << "functions: " << functions << "\n";
 }
