@@ -133,6 +133,8 @@ int main(int argc, char **argv)
     read_points("outer_small_points.json", initial_points);
 
     // read_input("outer_2x2.nsv", objectives, normalization, matrices);
+    // read_points("outer_2x2_points.json", initial_points);
+
     // read_input("test/spectrum_test.json", objectives, normalization,
     // matrices); read_input("test/toy_damped_duplicate.json", objectives,
     // normalization, matrices);
