@@ -180,6 +180,7 @@ def build(bld):
                         'src/outer_limits/compute_optimal/setup_constraints.cxx',
                         'src/outer_limits/compute_optimal/eval_weighted.cxx',
                         'src/outer_limits/compute_optimal/compute_optimal_functions.cxx',
+                        'src/outer_limits/compute_optimal/compute_y_transform.cxx',
                         'src/outer_limits/compute_optimal/setup_constraints_functions.cxx',
                         'src/outer_limits/compute_optimal/eval_weighted_functions.cxx',
                         'src/outer_limits/compute_optimal/get_new_points.cxx',

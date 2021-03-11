@@ -174,9 +174,6 @@ SDP::SDP(const El::BigFloat &objective_const_input,
           }
       }
 
-    El::Fill(temp, El::BigFloat(1.0));
-    El::DiagonalScale(El::LeftOrRight::LEFT, El::Orientation::NORMAL, temp,
-                      V_s);
     El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_to_y_star(V_s);
     for(int64_t row(0); row < yp_to_y.LocalHeight(); ++row)
       {
