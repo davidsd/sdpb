@@ -25,7 +25,6 @@ void compute_y_transform(
   const SDP_Solver_Parameters &parameters, const size_t &max_index,
   const El::Grid &global_grid,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
-  El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &y_to_yp_star,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   El::BigFloat &b_scale,
   El::BigFloat &primal_c_scale)
@@ -126,8 +125,6 @@ void compute_y_transform(
   // and so to convert back to y
   //   y(m) = Sum(yp_to_y(m,l) * y''(l), l)
   //   yp_to_y(m,l) = V^T(l,m)/s(l)
-  //   y_to_yp(m,l) = yp_to_y(m,l)^-1 = s(m) V(l,m)
-  //   y_to_yp(m,l) y_to_yp(l,n) = s(m) V(l,m) V^T(n,l)/s(n) = I
 
   El::DistMatrix<El::BigFloat> U(global_grid);
   El::DistMatrix<El::BigFloat> temp(global_grid), V(global_grid),
@@ -139,12 +136,6 @@ void compute_y_transform(
   El::DiagonalSolve(El::LeftOrRight::RIGHT, El::Orientation::NORMAL, temp,
                     yp_to_y);
   yp_to_y_star = yp_to_y;
-
-  El::DistMatrix<El::BigFloat> y_to_yp(global_grid);
-  El::Transpose(V, y_to_yp);
-  El::DiagonalScale(El::LeftOrRight::LEFT, El::Orientation::NORMAL, temp,
-                    y_to_yp);
-  y_to_yp_star = y_to_yp;
 
   for(int64_t row(0); row < temp.LocalHeight(); ++row)
     {

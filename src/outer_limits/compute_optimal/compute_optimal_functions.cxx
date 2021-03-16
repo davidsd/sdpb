@@ -15,7 +15,6 @@ void compute_y_transform(
   const SDP_Solver_Parameters &parameters, const size_t &max_index,
   const El::Grid &global_grid,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y,
-  El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &y_to_yp_star,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   El::BigFloat &b_scale, El::BigFloat &primal_c_scale);
 
@@ -89,11 +88,11 @@ std::vector<El::BigFloat> compute_optimal_functions(
 
   const El::Grid global_grid;
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_to_y_star(global_grid),
-    y_to_yp_star(global_grid), dual_objective_b_star(global_grid);
+    dual_objective_b_star(global_grid);
   El::BigFloat b_scale, primal_c_scale;
   compute_y_transform(function_blocks, points, objectives, normalization,
                       parameters, max_index, global_grid, yp_to_y_star,
-                      y_to_yp_star, dual_objective_b_star, b_scale,
+                      dual_objective_b_star, b_scale,
                       primal_c_scale);
   parameters.duality_gap_threshold = 1.1;
   while(parameters.duality_gap_threshold > parameters_in.duality_gap_threshold)
@@ -133,24 +132,13 @@ std::vector<El::BigFloat> compute_optimal_functions(
 
       const El::BigFloat objective_const(objectives.at(max_index)
                                          / normalization.at(max_index));
-      std::vector<El::BigFloat> dual_objective_b;
-      dual_objective_b.reserve(normalization.size() - 1);
-      for(size_t index = 0; index < normalization.size(); ++index)
-        {
-          if(index != max_index)
-            {
-              dual_objective_b.push_back(objectives.at(index)
-                                         - normalization.at(index)
-                                             * objective_const);
-            }
-        }
 
       Block_Info block_info(matrix_dimensions, parameters.procs_per_node,
                             parameters.proc_granularity, parameters.verbosity);
       El::Grid grid(block_info.mpi_comm.value);
 
-      SDP sdp(objective_const, dual_objective_b, primal_objective_c,
-              free_var_matrix, yp_to_y_star, y_to_yp_star,
+      SDP sdp(objective_const, primal_objective_c,
+              free_var_matrix, yp_to_y_star,
               dual_objective_b_star, b_scale, primal_c_scale, block_info,
               grid);
 
@@ -215,7 +203,7 @@ std::vector<El::BigFloat> compute_optimal_functions(
           // the root node.
           // THe weight at max_index is determined by the normalization
           // condition dot(norm,weights)=1
-          El::DistMatrix<El::BigFloat> yp(dual_objective_b.size(), 1,
+          El::DistMatrix<El::BigFloat> yp(dual_objective_b_star.Height(), 1,
                                           yp_to_y_star.Grid());
           El::Zero(yp);
           El::DistMatrix<El::BigFloat> y(yp);

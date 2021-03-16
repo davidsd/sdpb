@@ -21,15 +21,13 @@ SDP::SDP(const boost::filesystem::path &sdp_directory,
 
 SDP::SDP(
   const El::BigFloat &objective_const_input,
-  const std::vector<El::BigFloat> &dual_objective_b_input,
   const std::vector<std::vector<El::BigFloat>> &primal_objective_c_input,
   const std::vector<El::Matrix<El::BigFloat>> &free_var_input,
   const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
-  const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &y_to_yp_star,
   const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   const El::BigFloat &b_scale, const El::BigFloat &primal_c_scale,
   const Block_Info &block_info, const El::Grid &grid)
-    : dual_objective_b(dual_objective_b_input.size(), 1, grid),
+    : dual_objective_b(dual_objective_b_star.Height(), 1, grid),
       objective_const(objective_const_input)
 {
   std::vector<size_t> block_offsets(primal_objective_c_input.size() + 1, 0);
@@ -74,7 +72,7 @@ SDP::SDP(
 
   // Setup B
   const int64_t B_Height(block_offsets.back()),
-    B_Width(dual_objective_b_input.size());
+    B_Width(dual_objective_b_star.Height());
   El::Grid global_grid;
   El::DistMatrix<El::BigFloat> B(B_Height, B_Width, global_grid);
 
@@ -96,20 +94,7 @@ SDP::SDP(
         }
     }
 
-  // Compute SVD of B
-  //   B = U s V^T
-  // Define
-  //   b''(j) = Sum(b(m) * V^T(j,m)/s(j), m)
-  //   B'' = U
-  // This gives
-  //   minimize b''(j) y''(j) + c_0
-  // with constraints
-  //   B''(i,j) y''(j) <= c(i)
-  // This implies
-  //   y(m) = Sum((V^T(l,m)/s(l)) * y''(l), l)
-  // and so to convert back to y
-  //   y(m) = Sum(yp_to_y(m,l) * y''(l), l)
-  //   yp_to_y(m,l) = V^T(l,m)/s(l)
+  // Transform B into the yp frame.
   El::DistMatrix<El::BigFloat> U(B.Height(), B.Width(), B.Grid());
   El::Zero(U);
   El::DistMatrix<El::BigFloat> yp_to_y(yp_to_y_star.Height(),
@@ -127,19 +112,6 @@ SDP::SDP(
     }
   El::Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, El::BigFloat(1.0),
            B, yp_to_y, El::BigFloat(0.0), U);
-
-  for(int64_t row(0); row < dual_objective_b.LocalHeight(); ++row)
-    {
-      const int64_t global_row(dual_objective_b.GlobalRow(row));
-      for(int64_t column(0); column < dual_objective_b.LocalWidth(); ++column)
-        {
-          const int64_t global_column(dual_objective_b.GlobalCol(column));
-          dual_objective_b.SetLocal(
-            row, column,
-            b_scale
-              * dual_objective_b_star.GetLocal(global_row, global_column));
-        }
-    }
 
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> U_star(U);
 
@@ -163,6 +135,20 @@ SDP::SDP(
                                           U_star.GetLocal(global_row, column));
                 }
             }
+        }
+    }
+
+  // Copy over dual_objective_b
+  for(int64_t row(0); row < dual_objective_b.LocalHeight(); ++row)
+    {
+      const int64_t global_row(dual_objective_b.GlobalRow(row));
+      for(int64_t column(0); column < dual_objective_b.LocalWidth(); ++column)
+        {
+          const int64_t global_column(dual_objective_b.GlobalCol(column));
+          dual_objective_b.SetLocal(
+            row, column,
+            b_scale
+              * dual_objective_b_star.GetLocal(global_row, global_column));
         }
     }
 }
