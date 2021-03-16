@@ -25,6 +25,7 @@ SDP::SDP(const El::BigFloat &objective_const_input,
          const std::vector<El::Matrix<El::BigFloat>> &free_var_input,
          const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
          const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &y_to_yp_star,
+         const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
          const El::BigFloat &b_scale,
          const El::BigFloat &primal_c_scale,
          const Block_Info &block_info, const El::Grid &grid)
@@ -111,44 +112,25 @@ SDP::SDP(const El::BigFloat &objective_const_input,
   //   yp_to_y(m,l) = V^T(l,m)/s(l)
   El::DistMatrix<El::BigFloat> U(B.Grid());
   {
-    El::DistMatrix<El::BigFloat> temp(B.Grid()), V(B.Grid()),
-      dual_objective_b_global(dual_objective_b_input.size(), 1, B.Grid());
+    El::DistMatrix<El::BigFloat> temp(B.Grid()), V(B.Grid());
     // SVD returns U, s, and V
     El::SVD(B, U, temp, V);
-
-    El::DistMatrix<El::BigFloat> V_s(V);
-    El::DiagonalSolve(El::LeftOrRight::RIGHT, El::Orientation::NORMAL, temp,
-                      V_s);
-
-    for(int64_t row(0); row < temp.LocalHeight(); ++row)
-      {
-        const int64_t global_row(temp.GlobalRow(row));
-        for(int64_t column(0); column < temp.LocalWidth(); ++column)
-          {
-            temp.SetLocal(row, column, dual_objective_b_input.at(global_row));
-          }
-      }
-    
-    El::Zero(dual_objective_b_global);
-    El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(1.0), V_s, temp,
-             El::BigFloat(0.0), dual_objective_b_global);
-    
-    El::DistMatrix<El::BigFloat, El::STAR, El::STAR> dual_objective_b_star(
-      dual_objective_b_global);
-    for(int64_t row(0); row < dual_objective_b.LocalHeight(); ++row)
-      {
-        const int64_t global_row(dual_objective_b.GlobalRow(row));
-        for(int64_t column(0); column < dual_objective_b.LocalWidth();
-            ++column)
-          {
-            const int64_t global_column(dual_objective_b.GlobalCol(column));
-            dual_objective_b.SetLocal(
-              row, column,
-              b_scale
-                * dual_objective_b_star.GetLocal(global_row, global_column));
-          }
-      }
   }
+
+  for(int64_t row(0); row < dual_objective_b.LocalHeight(); ++row)
+    {
+      const int64_t global_row(dual_objective_b.GlobalRow(row));
+      for(int64_t column(0); column < dual_objective_b.LocalWidth();
+          ++column)
+        {
+          const int64_t global_column(dual_objective_b.GlobalCol(column));
+          dual_objective_b.SetLocal(
+                                    row, column,
+                                    b_scale
+                                    * dual_objective_b_star.GetLocal(global_row, global_column));
+        }
+    }
+
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> U_star(U);
 
   free_var_matrix.blocks.reserve(block_indices.size());

@@ -16,6 +16,7 @@ void compute_y_transform(
   const El::Grid &global_grid,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &y_to_yp_star,
+  El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   El::BigFloat &b_scale, El::BigFloat &primal_c_scale);
 
 void setup_constraints_functions(
@@ -87,12 +88,13 @@ std::vector<El::BigFloat> compute_optimal_functions(
     }
 
   const El::Grid global_grid;
-  El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_to_y_star(global_grid);
-  El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_to_yp_star(global_grid);
+  El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_to_y_star(global_grid),
+    y_to_yp_star(global_grid), dual_objective_b_star(global_grid);
   El::BigFloat b_scale, primal_c_scale;
   compute_y_transform(function_blocks, points, objectives, normalization,
                       parameters, max_index, global_grid, yp_to_y_star,
-                      y_to_yp_star, b_scale, primal_c_scale);
+                      y_to_yp_star, dual_objective_b_star, b_scale,
+                      primal_c_scale);
   parameters.duality_gap_threshold = 1.1;
   while(parameters.duality_gap_threshold > parameters_in.duality_gap_threshold)
     {
@@ -148,8 +150,9 @@ std::vector<El::BigFloat> compute_optimal_functions(
       El::Grid grid(block_info.mpi_comm.value);
 
       SDP sdp(objective_const, dual_objective_b, primal_objective_c,
-              free_var_matrix, yp_to_y_star, y_to_yp_star, b_scale, primal_c_scale,
-              block_info, grid);
+              free_var_matrix, yp_to_y_star, y_to_yp_star,
+              dual_objective_b_star, b_scale, primal_c_scale, block_info,
+              grid);
 
       SDP_Solver solver(parameters, block_info, grid,
                         sdp.dual_objective_b.Height());
@@ -228,8 +231,8 @@ std::vector<El::BigFloat> compute_optimal_functions(
                               yp_star.GetLocal(global_row, global_column));
                 }
             }
-          El::Gemv(El::Orientation::NORMAL, El::BigFloat(1.0), yp_to_y_star, yp,
-                   El::BigFloat(0.0), y);
+          El::Gemv(El::Orientation::NORMAL, El::BigFloat(1.0), yp_to_y_star,
+                   yp, El::BigFloat(0.0), y);
           El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(y);
 
           weights.at(max_index) = 1;

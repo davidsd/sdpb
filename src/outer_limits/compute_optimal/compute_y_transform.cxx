@@ -26,6 +26,7 @@ void compute_y_transform(
   const El::Grid &global_grid,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &y_to_yp_star,
+  El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   El::BigFloat &b_scale,
   El::BigFloat &primal_c_scale)
 {
@@ -160,4 +161,6 @@ void compute_y_transform(
 
   const El::BigFloat max_b(El::MaxAbs(dual_objective_b_global));
   b_scale = (max_b == El::BigFloat(0.0)) ? El::BigFloat(1.0) : 1 / max_b;
+
+  dual_objective_b_star=dual_objective_b_global;
 }
