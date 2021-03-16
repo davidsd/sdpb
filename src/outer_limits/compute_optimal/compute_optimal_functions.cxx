@@ -13,7 +13,8 @@ void compute_y_transform(
   const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
   const SDP_Solver_Parameters &parameters, const size_t &max_index,
-  const El::Grid &global_grid, El::DistMatrix<El::BigFloat> &yp_to_y,
+  const El::Grid &global_grid,
+  El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &y_to_yp_star,
   El::BigFloat &b_scale, El::BigFloat &primal_c_scale);
 
@@ -86,11 +87,11 @@ std::vector<El::BigFloat> compute_optimal_functions(
     }
 
   const El::Grid global_grid;
-  El::DistMatrix<El::BigFloat> yp_to_y(global_grid);
+  El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_to_y_star(global_grid);
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_to_yp_star(global_grid);
   El::BigFloat b_scale, primal_c_scale;
   compute_y_transform(function_blocks, points, objectives, normalization,
-                      parameters, max_index, global_grid, yp_to_y,
+                      parameters, max_index, global_grid, yp_to_y_star,
                       y_to_yp_star, b_scale, primal_c_scale);
   parameters.duality_gap_threshold = 1.1;
   while(parameters.duality_gap_threshold > parameters_in.duality_gap_threshold)
@@ -147,7 +148,8 @@ std::vector<El::BigFloat> compute_optimal_functions(
       El::Grid grid(block_info.mpi_comm.value);
 
       SDP sdp(objective_const, dual_objective_b, primal_objective_c,
-              free_var_matrix, b_scale, primal_c_scale, block_info, grid);
+              free_var_matrix, yp_to_y_star, y_to_yp_star, b_scale, primal_c_scale,
+              block_info, grid);
 
       SDP_Solver solver(parameters, block_info, grid,
                         sdp.dual_objective_b.Height());
@@ -210,21 +212,24 @@ std::vector<El::BigFloat> compute_optimal_functions(
           // the root node.
           // THe weight at max_index is determined by the normalization
           // condition dot(norm,weights)=1
-          El::DistMatrix<El::BigFloat> yp(dual_objective_b.size(), 1, yp_to_y.Grid());
+          El::DistMatrix<El::BigFloat> yp(dual_objective_b.size(), 1,
+                                          yp_to_y_star.Grid());
           El::Zero(yp);
           El::DistMatrix<El::BigFloat> y(yp);
-          El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_star(solver.y.blocks.at(0));
-          for(int64_t row(0); row!=yp.LocalHeight(); ++row)
+          El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_star(
+            solver.y.blocks.at(0));
+          for(int64_t row(0); row != yp.LocalHeight(); ++row)
             {
               int64_t global_row(yp.GlobalRow(row));
-              for(int64_t column(0); column!=yp.LocalWidth(); ++column)
+              for(int64_t column(0); column != yp.LocalWidth(); ++column)
                 {
                   int64_t global_column(yp.GlobalCol(column));
-                  yp.SetLocal(row, column, yp_star.GetLocal(global_row, global_column));
+                  yp.SetLocal(row, column,
+                              yp_star.GetLocal(global_row, global_column));
                 }
             }
-          El::Gemv(El::Orientation::NORMAL, El::BigFloat(1.0), yp_to_y,
-                   yp, El::BigFloat(0.0), y);
+          El::Gemv(El::Orientation::NORMAL, El::BigFloat(1.0), yp_to_y_star, yp,
+                   El::BigFloat(0.0), y);
           El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(y);
 
           weights.at(max_index) = 1;

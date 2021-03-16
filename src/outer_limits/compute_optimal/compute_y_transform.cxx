@@ -24,7 +24,7 @@ void compute_y_transform(
   const std::vector<El::BigFloat> &normalization,
   const SDP_Solver_Parameters &parameters, const size_t &max_index,
   const El::Grid &global_grid,
-  El::DistMatrix<El::BigFloat> &yp_to_y,
+  El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &y_to_yp_star,
   El::BigFloat &b_scale,
   El::BigFloat &primal_c_scale)
@@ -134,9 +134,10 @@ void compute_y_transform(
   // SVD returns U, s, and V
   El::SVD(B, U, temp, V);
 
-  yp_to_y=V;
+  El::DistMatrix<El::BigFloat> yp_to_y(V);
   El::DiagonalSolve(El::LeftOrRight::RIGHT, El::Orientation::NORMAL, temp,
                     yp_to_y);
+  yp_to_y_star = yp_to_y;
 
   El::DistMatrix<El::BigFloat> y_to_yp(global_grid);
   El::Transpose(V, y_to_yp);
@@ -154,7 +155,7 @@ void compute_y_transform(
     }
 
   El::Zero(dual_objective_b_global);
-  El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(1.0), yp_to_y, temp,
+  El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(1.0), yp_to_y_star, temp,
            El::BigFloat(0.0), dual_objective_b_global);
 
   const El::BigFloat max_b(El::MaxAbs(dual_objective_b_global));

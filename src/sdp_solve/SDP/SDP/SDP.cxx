@@ -23,6 +23,8 @@ SDP::SDP(const El::BigFloat &objective_const_input,
          const std::vector<El::BigFloat> &dual_objective_b_input,
          const std::vector<std::vector<El::BigFloat>> &primal_objective_c_input,
          const std::vector<El::Matrix<El::BigFloat>> &free_var_input,
+         const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
+         const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &y_to_yp_star,
          const El::BigFloat &b_scale,
          const El::BigFloat &primal_c_scale,
          const Block_Info &block_info, const El::Grid &grid)
@@ -116,6 +118,17 @@ SDP::SDP(const El::BigFloat &objective_const_input,
     // SVD returns U, s, and V
     El::SVD(B, U, temp, V);
 
+    // El::DistMatrix<El::BigFloat> V_s(V.Height(), V.Width(), V.Grid());
+    // for(int64_t row(0); row < V_s.LocalHeight(); ++row)
+    //   {
+    //     const int64_t global_row(V_s.GlobalRow(row));
+    //     for(int64_t column(0); column < V_s.LocalWidth();
+    //         ++column)
+    //       {
+    //         const int64_t global_column(V_s.GlobalCol(column));
+    //         V_s.SetLocal(row, column, yp_to_y.GetLocal(global_row, global_column));
+    //       }
+    //   }
     El::DistMatrix<El::BigFloat> V_s(V);
     El::DiagonalSolve(El::LeftOrRight::RIGHT, El::Orientation::NORMAL, temp,
                       V_s);
@@ -149,7 +162,7 @@ SDP::SDP(const El::BigFloat &objective_const_input,
           }
       }
 
-    El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_to_y_star(V_s);
+    
     for(int64_t row(0); row < yp_to_y.LocalHeight(); ++row)
       {
         const int64_t global_row(yp_to_y.GlobalRow(row));
