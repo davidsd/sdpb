@@ -147,7 +147,7 @@ std::vector<El::BigFloat> compute_optimal_functions(
       El::Grid grid(block_info.mpi_comm.value);
 
       SDP sdp(objective_const, dual_objective_b, primal_objective_c,
-              free_var_matrix, block_info, grid);
+              free_var_matrix, b_scale, primal_c_scale, block_info, grid);
 
       SDP_Solver solver(parameters, block_info, grid,
                         sdp.dual_objective_b.Height());

@@ -26,8 +26,8 @@ void compute_y_transform(
   const El::Grid &global_grid,
   El::DistMatrix<El::BigFloat> &yp_to_y,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &y_to_yp_star,
-  El::BigFloat &primal_c_scale,
-  El::BigFloat &b_scale)
+  El::BigFloat &b_scale,
+  El::BigFloat &primal_c_scale)
 {
   const size_t num_blocks(points.size());
 

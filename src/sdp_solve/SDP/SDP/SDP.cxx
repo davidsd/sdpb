@@ -23,6 +23,8 @@ SDP::SDP(const El::BigFloat &objective_const_input,
          const std::vector<El::BigFloat> &dual_objective_b_input,
          const std::vector<std::vector<El::BigFloat>> &primal_objective_c_input,
          const std::vector<El::Matrix<El::BigFloat>> &free_var_input,
+         const El::BigFloat &b_scale,
+         const El::BigFloat &primal_c_scale,
          const Block_Info &block_info, const El::Grid &grid)
     : dual_objective_b(dual_objective_b_input.size(), 1, grid),
       yp_to_y(dual_objective_b_input.size(), dual_objective_b_input.size(),
@@ -47,25 +49,7 @@ SDP::SDP(const El::BigFloat &objective_const_input,
     }
   assign_bilinear_bases_dist(bilinear_bases_local, grid, bilinear_bases);
   set_bases_blocks(block_info, bilinear_bases_local, bases_blocks, grid);
-
-  const El::BigFloat primal_c_scale([&]() {
-    El::BigFloat max_c(0.0);
-    for(size_t block(0); block != block_indices.size(); ++block)
-      {
-        for(auto &element :
-            primal_objective_c_input.at(block_indices.at(block)))
-          {
-            max_c = std::max(max_c, El::Abs(element));
-          }
-      }
-    max_c = El::mpi::AllReduce(max_c, El::mpi::MAX, El::mpi::COMM_WORLD);
-    if(max_c == El::BigFloat(0.0))
-      {
-        return El::BigFloat(1.0);
-      }
-    return 1 / max_c;
-  }());
-
+  
   for(size_t block(0); block != block_indices.size(); ++block)
     {
       primal_objective_c.blocks.emplace_back(
@@ -144,20 +128,11 @@ SDP::SDP(const El::BigFloat &objective_const_input,
             temp.SetLocal(row, column, dual_objective_b_input.at(global_row));
           }
       }
-
+    
     El::Zero(dual_objective_b_global);
     El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(1.0), V_s, temp,
              El::BigFloat(0.0), dual_objective_b_global);
-
-    const El::BigFloat b_scale([&]() {
-      El::BigFloat max(El::MaxAbs(dual_objective_b_global));
-      if(max == El::BigFloat(0.0))
-        {
-          return El::BigFloat(1.0);
-        }
-      return 1 / max;
-    }());
-
+    
     El::DistMatrix<El::BigFloat, El::STAR, El::STAR> dual_objective_b_star(
       dual_objective_b_global);
     for(int64_t row(0); row < dual_objective_b.LocalHeight(); ++row)
