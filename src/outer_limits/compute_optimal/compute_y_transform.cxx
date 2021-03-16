@@ -26,7 +26,6 @@ void compute_y_transform(
   const El::Grid &global_grid,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
-  El::BigFloat &b_scale,
   El::BigFloat &primal_c_scale)
 {
   const size_t num_blocks(points.size());
@@ -74,13 +73,14 @@ void compute_y_transform(
   for(size_t block(0); block != block_indices.size(); ++block)
     {
       for(auto &element :
-            primal_objective_c.at(block_info.block_indices.at(block)))
+          primal_objective_c.at(block_info.block_indices.at(block)))
         {
           max_c = std::max(max_c, El::Abs(element));
         }
     }
   max_c = El::mpi::AllReduce(max_c, El::mpi::MAX, El::mpi::COMM_WORLD);
-  primal_c_scale=(max_c == El::BigFloat(0.0)) ? El::BigFloat(1.0) : 1 / max_c;
+  primal_c_scale
+    = (max_c == El::BigFloat(0.0)) ? El::BigFloat(1.0) : 1 / max_c;
 
   // Setup B
   std::vector<size_t> block_offsets(primal_objective_c.size() + 1, 0);
@@ -151,7 +151,9 @@ void compute_y_transform(
            El::BigFloat(0.0), dual_objective_b_global);
 
   const El::BigFloat max_b(El::MaxAbs(dual_objective_b_global));
-  b_scale = (max_b == El::BigFloat(0.0)) ? El::BigFloat(1.0) : 1 / max_b;
+  const El::BigFloat b_scale((max_b == El::BigFloat(0.0)) ? El::BigFloat(1.0)
+                                                          : 1 / max_b);
 
-  dual_objective_b_star=dual_objective_b_global;
+  dual_objective_b_global *= b_scale;
+  dual_objective_b_star = dual_objective_b_global;
 }

@@ -16,7 +16,7 @@ void compute_y_transform(
   const El::Grid &global_grid,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
-  El::BigFloat &b_scale, El::BigFloat &primal_c_scale);
+  El::BigFloat &primal_c_scale);
 
 void setup_constraints_functions(
   const size_t &max_index, const size_t &num_blocks,
@@ -89,11 +89,10 @@ std::vector<El::BigFloat> compute_optimal_functions(
   const El::Grid global_grid;
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_to_y_star(global_grid),
     dual_objective_b_star(global_grid);
-  El::BigFloat b_scale, primal_c_scale;
+  El::BigFloat primal_c_scale;
   compute_y_transform(function_blocks, points, objectives, normalization,
                       parameters, max_index, global_grid, yp_to_y_star,
-                      dual_objective_b_star, b_scale,
-                      primal_c_scale);
+                      dual_objective_b_star, primal_c_scale);
   parameters.duality_gap_threshold = 1.1;
   while(parameters.duality_gap_threshold > parameters_in.duality_gap_threshold)
     {
@@ -137,9 +136,8 @@ std::vector<El::BigFloat> compute_optimal_functions(
                             parameters.proc_granularity, parameters.verbosity);
       El::Grid grid(block_info.mpi_comm.value);
 
-      SDP sdp(objective_const, primal_objective_c,
-              free_var_matrix, yp_to_y_star,
-              dual_objective_b_star, b_scale, primal_c_scale, block_info,
+      SDP sdp(objective_const, primal_objective_c, free_var_matrix,
+              yp_to_y_star, dual_objective_b_star, primal_c_scale, block_info,
               grid);
 
       SDP_Solver solver(parameters, block_info, grid,

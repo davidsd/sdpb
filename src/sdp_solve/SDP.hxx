@@ -105,7 +105,6 @@ struct SDP
       const std::vector<El::Matrix<El::BigFloat>> &free_var_input,
       const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
       const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
-      const El::BigFloat &b_scale,
       const El::BigFloat &primal_c_scale,
       const Block_Info &block_info, const El::Grid &grid);
 };
