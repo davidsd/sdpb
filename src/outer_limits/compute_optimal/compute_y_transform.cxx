@@ -6,7 +6,7 @@
 #include "../../ostream_vector.hxx"
 #include "../../set_stream_precision.hxx"
 
-void setup_constraints_functions(
+void setup_constraints(
   const size_t &max_index, const size_t &num_blocks,
   const El::BigFloat &infinity,
   const std::vector<std::vector<std::vector<std::vector<Function>>>>
@@ -51,9 +51,9 @@ void compute_y_transform(
   std::vector<El::Matrix<El::BigFloat>> free_var_matrix;
   free_var_matrix.reserve(num_constraints);
 
-  setup_constraints_functions(max_index, num_blocks, infinity, function_blocks,
-                              normalization, points, primal_objective_c,
-                              free_var_matrix);
+  setup_constraints(max_index, num_blocks, infinity, function_blocks,
+                    normalization, points, primal_objective_c,
+                    free_var_matrix);
 
   const El::BigFloat objective_const(objectives.at(max_index)
                                      / normalization.at(max_index));

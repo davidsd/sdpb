@@ -1,34 +1,36 @@
-#include "../poles_prefactor.hxx"
-#include "../power_prefactor.hxx"
-#include "../../sdp_read.hxx"
+#include "../Function.hxx"
+#include <El.hpp>
+#include <vector>
 
-El::BigFloat
-eval_weighted(const Positive_Matrix_With_Prefactor &matrix,
-              const El::BigFloat &x, const std::vector<El::BigFloat> &weights)
+El::BigFloat eval_weighted(
+  const El::BigFloat &infinity,
+  const std::vector<std::vector<std::vector<Function>>> &function_blocks,
+  const El::BigFloat &x, const std::vector<El::BigFloat> &weights)
 {
-  const size_t matrix_dim(matrix.polynomials.size());
+  const size_t matrix_dim(function_blocks.size());
   El::Matrix<El::BigFloat> m(matrix_dim, matrix_dim);
   for(size_t row(0); row != matrix_dim; ++row)
     for(size_t column(0); column <= row; ++column)
       {
-        auto &polys(matrix.polynomials.at(row).at(column));
-        if(weights.size() != polys.size())
+        auto &function(function_blocks.at(row).at(column));
+        if(weights.size() != function.size())
           {
             throw std::runtime_error("INTERNAL ERROR mismatch: "
                                      + std::to_string(weights.size()) + " "
-                                     + std::to_string(polys.size()));
+                                     + std::to_string(function.size()));
           }
         El::BigFloat element(0);
         for(size_t index(0); index != weights.size(); ++index)
           {
-            element += weights[index] * polys[index](x);
+            element
+              += weights[index] * function[index].eval(infinity, x);
           }
         m.Set(row, column, element);
       }
 
   // FIXME: Use the square of the matrix rather than the smallest
   // eigenvalue?  That would map to B^T B.
-  
+
   El::Matrix<El::BigFloat> eigenvalues;
   /// There is a bug in El::HermitianEig when there is more than
   /// one level of recursion when computing eigenvalues.  One fix
@@ -45,12 +47,5 @@ eval_weighted(const Positive_Matrix_With_Prefactor &matrix,
   hermitian_eig_ctrl.tridiagEigCtrl.dcCtrl.secularCtrl.maxIterations = 400;
   El::HermitianEig(El::UpperOrLowerNS::LOWER, m, eigenvalues,
                    hermitian_eig_ctrl);
-  El::BigFloat result(El::Min(eigenvalues));
-
-  if(!matrix.damped_rational.is_constant())
-    {
-      result *= poles_prefactor(matrix.damped_rational.poles, x)
-                * power_prefactor(matrix.damped_rational.base, x);
-    }
-  return result;
+  return El::Min(eigenvalues);
 }

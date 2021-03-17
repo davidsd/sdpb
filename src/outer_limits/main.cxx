@@ -64,14 +64,7 @@ void convert_matrices_to_functions(const El::BigFloat &max_delta,
   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
   std::vector<std::vector<std::vector<std::vector<Function>>>> &functions);
 
-std::vector<El::BigFloat>
-compute_optimal(const std::vector<Positive_Matrix_With_Prefactor> &matrices,
-                const std::vector<std::vector<El::BigFloat>> &initial_points,
-                const std::vector<El::BigFloat> &objectives,
-                const std::vector<El::BigFloat> &normalization,
-                const SDP_Solver_Parameters &parameters);
-
-std::vector<El::BigFloat> compute_optimal_functions(
+std::vector<El::BigFloat> compute_optimal(
   const std::vector<std::vector<std::vector<std::vector<Function>>>> &functions,
   const std::vector<std::vector<El::BigFloat>> &initial_points,
   const std::vector<El::BigFloat> &objectives,
@@ -101,29 +94,6 @@ int main(int argc, char **argv)
                 << std::flush;
     }
 
-  // {
-  //   std::vector<El::BigFloat> objectives, normalization;
-  //   std::vector<std::vector<El::BigFloat>> initial_points;
-  //   std::vector<std::vector<std::vector<std::vector<Function>>>> functions;
-  //   read_function_blocks("test/toy_functions.json", objectives,
-  //   normalization,
-  //                        functions);
-  //   read_points("test/toy_functions_points.json", initial_points);
-
-  //   std::vector<El::BigFloat> weights(compute_optimal_functions(
-  //     functions, initial_points, objectives, normalization, parameters));
-  //   El::BigFloat optimal(0);
-  //   for(size_t index(0); index < objectives.size(); ++index)
-  //     {
-  //       optimal += objectives[index] * weights[index];
-  //     }
-  //   if(El::mpi::Rank() == 0)
-  //     {
-  //       std::cout.precision(precision / 3.3);
-  //       std::cout << "optimal: " << optimal << " " << weights << "\n";
-  //     }
-  // }
-
   {
     std::vector<El::BigFloat> objectives, normalization;
     std::vector<Positive_Matrix_With_Prefactor> matrices;
@@ -148,11 +118,8 @@ int main(int argc, char **argv)
     const El::BigFloat max_delta(64); // This is completely arbitrary.
     convert_matrices_to_functions(max_delta, matrices, functions);
 
-    std::vector<El::BigFloat> weights(compute_optimal_functions(
+    std::vector<El::BigFloat> weights(compute_optimal(
       functions, initial_points, objectives, normalization, parameters));
-
-    // std::vector<El::BigFloat> weights(compute_optimal(
-    //   matrices, initial_points, objectives, normalization, parameters));
 
     El::BigFloat optimal(0);
     for(size_t index(0); index < objectives.size(); ++index)
