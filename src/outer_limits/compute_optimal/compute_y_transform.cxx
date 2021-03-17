@@ -1,20 +1,10 @@
 #include "Mesh.hxx"
+#include "setup_constraints.hxx"
 
-#include "../Function.hxx"
 #include "../../sdp_solve.hxx"
 #include "../../ostream_set.hxx"
 #include "../../ostream_vector.hxx"
 #include "../../set_stream_precision.hxx"
-
-void setup_constraints(
-  const size_t &max_index, const size_t &num_blocks,
-  const El::BigFloat &infinity,
-  const std::vector<std::vector<std::vector<std::vector<Function>>>>
-    &function_blocks,
-  const std::vector<El::BigFloat> &normalization,
-  const std::vector<std::set<El::BigFloat>> &points,
-  std::vector<std::vector<El::BigFloat>> &primal_objective_c,
-  std::vector<El::Matrix<El::BigFloat>> &free_var_matrix);
 
 void compute_y_transform(
   const std::vector<std::vector<std::vector<std::vector<Function>>>>

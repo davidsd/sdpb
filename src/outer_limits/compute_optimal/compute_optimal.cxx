@@ -1,6 +1,6 @@
 #include "Mesh.hxx"
+#include "setup_constraints.hxx"
 
-#include "../Function.hxx"
 #include "../../sdp_solve.hxx"
 #include "../../ostream_set.hxx"
 #include "../../ostream_vector.hxx"
@@ -17,16 +17,6 @@ void compute_y_transform(
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   El::BigFloat &primal_c_scale);
-
-void setup_constraints(
-  const size_t &max_index, const size_t &num_blocks,
-  const El::BigFloat &infinity,
-  const std::vector<std::vector<std::vector<std::vector<Function>>>>
-    &function_blocks,
-  const std::vector<El::BigFloat> &normalization,
-  const std::vector<std::set<El::BigFloat>> &points,
-  std::vector<std::vector<El::BigFloat>> &primal_objective_c,
-  std::vector<El::Matrix<El::BigFloat>> &free_var_matrix);
 
 El::BigFloat eval_weighted(
   const El::BigFloat &infinity,
