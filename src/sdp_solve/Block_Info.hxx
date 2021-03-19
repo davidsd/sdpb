@@ -42,6 +42,7 @@ struct MPI_Group_Wrapper
 class Block_Info
 {
 public:
+  // TODO: The filename should not be in this object.
   boost::filesystem::path block_timings_filename;
   std::vector<size_t> dimensions;
   std::vector<size_t> num_points;
