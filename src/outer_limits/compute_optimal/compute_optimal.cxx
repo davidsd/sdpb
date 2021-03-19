@@ -9,26 +9,6 @@
 
 namespace
 {
-  void copy_matrices(const std::vector<El::DistMatrix<El::BigFloat>> &input,
-                     std::vector<El::Matrix<El::BigFloat>> &output)
-  {
-    output.clear();
-    output.reserve(input.size());
-    for(auto &block : input)
-      {
-        output.emplace_back(block.Height(), block.Width());
-        auto &matrix(output.back());
-        for(int64_t row(0); row < block.LocalHeight(); ++row)
-          {
-            for(int64_t column(0); column < block.LocalWidth(); ++column)
-              {
-                // TODO: This will break in parallel
-                matrix(row, column) = block.GetLocal(row, column);
-              }
-          }
-      }
-  }
-
   void copy_matrix(const El::Matrix<El::BigFloat> &source,
                    El::DistMatrix<El::BigFloat> &destination)
   {
@@ -135,19 +115,8 @@ std::vector<El::BigFloat> compute_optimal(
                       parameters, max_index, global_grid, yp_to_y_star,
                       dual_objective_b_star, primal_c_scale);
 
-  // std::vector<size_t> matrix_dimensions;
-  // for(size_t block(0); block != num_blocks; ++block)
-  //   {
-  //     matrix_dimensions.insert(matrix_dimensions.end(),
-  //                              points.at(block).size(),
-  //                              function_blocks[block].size());
-  //   }
-  // Block_Info block_info(matrix_dimensions, parameters.procs_per_node,
-  //                       parameters.proc_granularity, parameters.verbosity);
-
-  std::map<size_t, size_t> old_offsets;
-  El::Matrix<El::BigFloat> y;
-  std::vector<El::Matrix<El::BigFloat>> x, X, Y;
+  El::Matrix<El::BigFloat> y_saved(yp_to_y_star.Height(), 1);
+  El::Zero(y_saved);
 
   parameters.duality_gap_threshold = 1.1;
   while(parameters.duality_gap_threshold > parameters_in.duality_gap_threshold)
@@ -179,9 +148,6 @@ std::vector<El::BigFloat> compute_optimal(
       if(rank == 0)
         {
           std::cout << "num_constraints: " << num_constraints << "\n";
-          std::cout << "sizes: " << x.size() << " " << X.size() << " "
-                    << Y.size() << " "
-                    << "\n";
         }
 
       std::vector<std::vector<El::BigFloat>> primal_objective_c;
@@ -208,59 +174,10 @@ std::vector<El::BigFloat> compute_optimal(
       SDP_Solver solver(parameters, block_info, grid,
                         sdp.dual_objective_b.Height());
 
-      if(!X.empty())
+      for(auto &y_block : solver.y.blocks)
         {
-          for(auto &block : solver.y.blocks)
-            {
-              copy_matrix(y, block);
-            }
+          copy_matrix(y_saved, y_block);
         }
-
-      // if(!X.empty())
-      //   {
-      //     // TODO: This will break in parallel
-      //     for(size_t new_offset(0);
-      //         new_offset != block_info.block_indices.size(); ++new_offset)
-      //       {
-      //         const size_t new_index(block_info.block_indices[new_offset]);
-      //         auto iter(new_to_old.find(new_index));
-      //         if(iter != new_to_old.end())
-      //           {
-      //             const size_t old_index(iter->second);
-
-      //             const size_t old_offset(old_offsets.find(old_index)->second);
-
-      //             copy_matrix(x.at(old_offset),
-      //                         solver.x.blocks.at(new_offset));
-
-      //             copy_matrix(X.at(2 * old_offset),
-      //                         solver.X.blocks.at(2 * new_offset));
-      //             copy_matrix(X.at(2 * old_offset + 1),
-      //                         solver.X.blocks.at(2 * new_offset + 1));
-
-      //             copy_matrix(Y.at(2 * old_offset),
-      //                         solver.Y.blocks.at(2 * new_offset));
-      //             copy_matrix(Y.at(2 * old_offset + 1),
-      //                         solver.Y.blocks.at(2 * new_offset + 1));
-
-      //             El::ShiftDiagonal(solver.X.blocks.at(2 * new_offset),
-      //                               parameters.initial_matrix_scale_primal);
-      //             El::ShiftDiagonal(solver.X.blocks.at(2 * new_offset + 1),
-      //                               parameters.initial_matrix_scale_primal);
-      //             El::ShiftDiagonal(solver.Y.blocks.at(2 * new_offset),
-      //                               parameters.initial_matrix_scale_dual);
-      //             El::ShiftDiagonal(solver.Y.blocks.at(2 * new_offset + 1),
-      //                               parameters.initial_matrix_scale_dual);
-      //           }
-      //         // else
-      //         //   {
-      //         //     El::Zero(solver.X.blocks.at(2 * new_offset));
-      //         //     El::Zero(solver.X.blocks.at(2 * new_offset + 1));
-      //         //     El::Zero(solver.Y.blocks.at(2 * new_offset));
-      //         //     El::Zero(solver.Y.blocks.at(2 * new_offset + 1));
-      //         //   }
-      //       }
-      //   }
 
       bool has_new_points(false);
       while(!has_new_points
@@ -417,18 +334,7 @@ std::vector<El::BigFloat> compute_optimal(
               parameters.duality_gap_threshold *= (1.0 / 8);
             }
         }
-      old_offsets.clear();
-      for(size_t index(0); index != block_info.block_indices.size(); ++index)
-        {
-          old_offsets.emplace(block_info.block_indices[index], index);
-        }
-      // std::cout << "old offset: "
-      //           << block_info.block_indices << "\n "
-      //           << old_offsets << "\n";
-      copy_matrices(solver.x.blocks, x);
-      copy_matrix(solver.y.blocks.front(), y);
-      copy_matrices(solver.X.blocks, X);
-      copy_matrices(solver.Y.blocks, Y);
+      copy_matrix(solver.y.blocks.front(), y_saved);
     }
   return weights;
 }
