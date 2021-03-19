@@ -3,8 +3,59 @@
 
 #include "../../sdp_solve.hxx"
 #include "../../ostream_set.hxx"
+#include "../../ostream_map.hxx"
 #include "../../ostream_vector.hxx"
 #include "../../set_stream_precision.hxx"
+
+namespace
+{
+  void copy_matrices(const std::vector<El::DistMatrix<El::BigFloat>> &input,
+                     std::vector<El::Matrix<El::BigFloat>> &output)
+  {
+    output.clear();
+    output.reserve(input.size());
+    for(auto &block : input)
+      {
+        output.emplace_back(block.Height(), block.Width());
+        auto &matrix(output.back());
+        for(int64_t row(0); row < block.LocalHeight(); ++row)
+          {
+            for(int64_t column(0); column < block.LocalWidth(); ++column)
+              {
+                // TODO: This will break in parallel
+                matrix(row, column) = block.GetLocal(row, column);
+              }
+          }
+      }
+  }
+
+  void copy_matrix(const El::Matrix<El::BigFloat> &source,
+                   El::DistMatrix<El::BigFloat> &destination)
+  {
+    for(int64_t row(0); row < source.Height(); ++row)
+      {
+        for(int64_t column(0); column < source.Width(); ++column)
+          {
+            // TODO: This will break in parallel
+            destination.SetLocal(row, column, source(row, column));
+          }
+      }
+  }
+
+  void copy_matrix(const El::DistMatrix<El::BigFloat> &source,
+                   El::Matrix<El::BigFloat> &destination)
+  {
+    destination.Resize(source.Height(), source.Width());
+    for(int64_t row(0); row < source.Height(); ++row)
+      {
+        for(int64_t column(0); column < source.Width(); ++column)
+          {
+            // TODO: This will break in parallel
+            destination(row, column) = source.GetLocal(row, column);
+          }
+      }
+  }
+}
 
 void compute_y_transform(
   const std::vector<std::vector<std::vector<std::vector<Function>>>>
@@ -83,13 +134,34 @@ std::vector<El::BigFloat> compute_optimal(
   compute_y_transform(function_blocks, points, objectives, normalization,
                       parameters, max_index, global_grid, yp_to_y_star,
                       dual_objective_b_star, primal_c_scale);
+
+  // std::vector<size_t> matrix_dimensions;
+  // for(size_t block(0); block != num_blocks; ++block)
+  //   {
+  //     matrix_dimensions.insert(matrix_dimensions.end(),
+  //                              points.at(block).size(),
+  //                              function_blocks[block].size());
+  //   }
+  // Block_Info block_info(matrix_dimensions, parameters.procs_per_node,
+  //                       parameters.proc_granularity, parameters.verbosity);
+
+  std::map<size_t, size_t> old_offsets;
+  El::Matrix<El::BigFloat> y;
+  std::vector<El::Matrix<El::BigFloat>> x, X, Y;
+
   parameters.duality_gap_threshold = 1.1;
   while(parameters.duality_gap_threshold > parameters_in.duality_gap_threshold)
     {
-      size_t num_constraints(0);
+      std::map<size_t, size_t> new_to_old;
+      size_t num_constraints(0), old_index(0);
       std::vector<size_t> matrix_dimensions;
       for(size_t block(0); block != num_blocks; ++block)
         {
+          for(size_t offset(0); offset != points.at(block).size(); ++offset)
+            {
+              new_to_old.emplace(num_constraints + offset, old_index + offset);
+            }
+          old_index += points.at(block).size();
           for(auto &point : new_points.at(block))
             {
               points.at(block).emplace(point);
@@ -104,10 +176,12 @@ std::vector<El::BigFloat> compute_optimal(
                         << "\n";
             }
         }
-
       if(rank == 0)
         {
           std::cout << "num_constraints: " << num_constraints << "\n";
+          std::cout << "sizes: " << x.size() << " " << X.size() << " "
+                    << Y.size() << " "
+                    << "\n";
         }
 
       std::vector<std::vector<El::BigFloat>> primal_objective_c;
@@ -124,6 +198,7 @@ std::vector<El::BigFloat> compute_optimal(
 
       Block_Info block_info(matrix_dimensions, parameters.procs_per_node,
                             parameters.proc_granularity, parameters.verbosity);
+
       El::Grid grid(block_info.mpi_comm.value);
 
       SDP sdp(objective_const, primal_objective_c, free_var_matrix,
@@ -133,19 +208,59 @@ std::vector<El::BigFloat> compute_optimal(
       SDP_Solver solver(parameters, block_info, grid,
                         sdp.dual_objective_b.Height());
 
-      for(auto &block : solver.y.blocks)
+      if(!X.empty())
         {
-          if(block.GlobalCol(0) == 0)
+          for(auto &block : solver.y.blocks)
             {
-              for(size_t row(0); row != size_t(block.LocalHeight()); ++row)
-                {
-                  size_t global_row(block.GlobalRow(row));
-                  const size_t index(global_row
-                                     + (global_row < max_index ? 0 : 1));
-                  block.SetLocal(row, 0, weights.at(index));
-                }
+              copy_matrix(y, block);
             }
         }
+
+      // if(!X.empty())
+      //   {
+      //     // TODO: This will break in parallel
+      //     for(size_t new_offset(0);
+      //         new_offset != block_info.block_indices.size(); ++new_offset)
+      //       {
+      //         const size_t new_index(block_info.block_indices[new_offset]);
+      //         auto iter(new_to_old.find(new_index));
+      //         if(iter != new_to_old.end())
+      //           {
+      //             const size_t old_index(iter->second);
+
+      //             const size_t old_offset(old_offsets.find(old_index)->second);
+
+      //             copy_matrix(x.at(old_offset),
+      //                         solver.x.blocks.at(new_offset));
+
+      //             copy_matrix(X.at(2 * old_offset),
+      //                         solver.X.blocks.at(2 * new_offset));
+      //             copy_matrix(X.at(2 * old_offset + 1),
+      //                         solver.X.blocks.at(2 * new_offset + 1));
+
+      //             copy_matrix(Y.at(2 * old_offset),
+      //                         solver.Y.blocks.at(2 * new_offset));
+      //             copy_matrix(Y.at(2 * old_offset + 1),
+      //                         solver.Y.blocks.at(2 * new_offset + 1));
+
+      //             El::ShiftDiagonal(solver.X.blocks.at(2 * new_offset),
+      //                               parameters.initial_matrix_scale_primal);
+      //             El::ShiftDiagonal(solver.X.blocks.at(2 * new_offset + 1),
+      //                               parameters.initial_matrix_scale_primal);
+      //             El::ShiftDiagonal(solver.Y.blocks.at(2 * new_offset),
+      //                               parameters.initial_matrix_scale_dual);
+      //             El::ShiftDiagonal(solver.Y.blocks.at(2 * new_offset + 1),
+      //                               parameters.initial_matrix_scale_dual);
+      //           }
+      //         // else
+      //         //   {
+      //         //     El::Zero(solver.X.blocks.at(2 * new_offset));
+      //         //     El::Zero(solver.X.blocks.at(2 * new_offset + 1));
+      //         //     El::Zero(solver.Y.blocks.at(2 * new_offset));
+      //         //     El::Zero(solver.Y.blocks.at(2 * new_offset + 1));
+      //         //   }
+      //       }
+      //   }
 
       bool has_new_points(false);
       while(!has_new_points
@@ -236,9 +351,6 @@ std::vector<El::BigFloat> compute_optimal(
           std::vector<size_t> num_new_points(num_blocks, 0);
           for(size_t block(rank); block < num_blocks; block += num_procs)
             {
-              // std::cout << "block start: " << num_blocks << " " << rank << "
-              // "
-              //           << block << "\n";
               // TODO: These can both be precomputed
               El::BigFloat max_delta(infinity), block_scale(0);
               size_t max_degree(0);
@@ -265,31 +377,6 @@ std::vector<El::BigFloat> compute_optimal(
               // 1/128 should be a small enough relative error so that we are
               // in the regime of convergence.  Then the error estimates will
               // work
-
-              // std::cout << "block: " << rank << " " << block_epsilon << " "
-              //           << function_blocks[block].front().front().size() <<
-              //           " "
-              //           << weights.size() << "\n";
-
-              // std::cout
-              //   << "block mesh: " << num_blocks << " " << rank << " " <<
-              //   block
-              //   << " " << *(points.at(block).begin()) << " " << max_delta
-              //   << " " << block_scale << " "
-              //   << block_scale * El::limits::Epsilon<El::BigFloat>()
-              //   << " "
-              //   << (block_scale * El::limits::Epsilon<El::BigFloat>()
-              //       * objectives.size() * max_degree * max_degree)
-              //   << " "
-              //   // << function_blocks[block].size() << " "
-              //   // << function_blocks[block].front().size() << " "
-              //   // << function_blocks[block].front().front().size() << " "
-              //   // <<
-              //   //
-              //   function_blocks[block].front().front().front().chebyshev_coeffs.size()
-              //   // << " "
-              //   << "\n";
-
               Mesh mesh(
                 *(points.at(block).begin()), max_delta,
                 [&](const El::BigFloat &x) {
@@ -298,21 +385,8 @@ std::vector<El::BigFloat> compute_optimal(
                 },
                 (1.0 / 128), block_epsilon);
 
-              // Each term in the polynomial adds degree*epsilon to
-              // the error, and degree goes from 0 to max_degree, so
-              // the sum is max_degree**2.  There are num_functions of
-              // these, so the final multiplicative term is
-              // num_functions*max_degree**2.
-
-              // std::cout << "block meshed: "
-              //           << num_blocks << " " << rank << " " << block << "\n"
-              //           << std::flush;
-
               std::vector<El::BigFloat> candidates(
                 get_new_points(mesh, block_epsilon));
-
-              // std::cout << "block candidates: "
-              //           << num_blocks << " " << rank << " " << block << "\n";
 
               new_points.at(block).clear();
               for(auto &point : candidates)
@@ -323,12 +397,7 @@ std::vector<El::BigFloat> compute_optimal(
                       ++num_new_points.at(block);
                     }
                 }
-              // std::cout << "block end: "
-              //           << num_blocks << " " << rank << " " << block << "\n";
             }
-          // std::cout << "meshed: "
-          //           << num_blocks << " " << rank << "\n";
-
           El::mpi::AllReduce(num_new_points.data(), num_new_points.size(),
                              El::mpi::SUM, El::mpi::COMM_WORLD);
 
@@ -347,8 +416,19 @@ std::vector<El::BigFloat> compute_optimal(
             {
               parameters.duality_gap_threshold *= (1.0 / 8);
             }
-          // exit(0);
         }
+      old_offsets.clear();
+      for(size_t index(0); index != block_info.block_indices.size(); ++index)
+        {
+          old_offsets.emplace(block_info.block_indices[index], index);
+        }
+      // std::cout << "old offset: "
+      //           << block_info.block_indices << "\n "
+      //           << old_offsets << "\n";
+      copy_matrices(solver.x.blocks, x);
+      copy_matrix(solver.y.blocks.front(), y);
+      copy_matrices(solver.X.blocks, X);
+      copy_matrices(solver.Y.blocks, Y);
     }
   return weights;
 }
