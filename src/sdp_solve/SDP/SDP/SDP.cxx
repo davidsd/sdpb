@@ -100,10 +100,10 @@ SDP::SDP(
   El::DistMatrix<El::BigFloat> yp_to_y(yp_to_y_star.Height(),
                                        yp_to_y_star.Width(), B.Grid());
 
-  for(int64_t row(0); row < yp_to_y.Height(); ++row)
+  for(int64_t row(0); row < yp_to_y.LocalHeight(); ++row)
     {
       const int64_t global_row(yp_to_y.GlobalRow(row));
-      for(int64_t column(0); column < yp_to_y.Width(); ++column)
+      for(int64_t column(0); column < yp_to_y.LocalWidth(); ++column)
         {
           const int64_t global_column(yp_to_y.GlobalCol(column));
           yp_to_y.SetLocal(row, column,

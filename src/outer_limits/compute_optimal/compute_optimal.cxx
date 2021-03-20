@@ -12,25 +12,27 @@ namespace
   void copy_matrix(const El::Matrix<El::BigFloat> &source,
                    El::DistMatrix<El::BigFloat> &destination)
   {
-    for(int64_t row(0); row < source.Height(); ++row)
+    for(int64_t row(0); row < destination.LocalHeight(); ++row)
       {
-        for(int64_t column(0); column < source.Width(); ++column)
+        int64_t global_row(destination.GlobalRow(row));
+        for(int64_t column(0); column < destination.LocalWidth(); ++column)
           {
-            // TODO: This will break in parallel
-            destination.SetLocal(row, column, source(row, column));
+            int64_t global_column(destination.GlobalCol(column));
+            destination.SetLocal(row, column,
+                                 source(global_row, global_column));
           }
       }
   }
 
-  void copy_matrix(const El::DistMatrix<El::BigFloat> &source,
-                   El::Matrix<El::BigFloat> &destination)
+  void
+  copy_matrix(const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &source,
+              El::Matrix<El::BigFloat> &destination)
   {
-    destination.Resize(source.Height(), source.Width());
-    for(int64_t row(0); row < source.Height(); ++row)
+    destination.Resize(source.LocalHeight(), source.LocalWidth());
+    for(int64_t row(0); row < source.LocalHeight(); ++row)
       {
-        for(int64_t column(0); column < source.Width(); ++column)
+        for(int64_t column(0); column < source.LocalWidth(); ++column)
           {
-            // TODO: This will break in parallel
             destination(row, column) = source.GetLocal(row, column);
           }
       }
@@ -362,7 +364,9 @@ std::vector<El::BigFloat> compute_optimal(
               parameters.duality_gap_threshold *= (1.0 / 8);
             }
         }
-      copy_matrix(solver.y.blocks.front(), y_saved);
+      El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(
+        solver.y.blocks.front());
+      copy_matrix(y_star, y_saved);
     }
   return weights;
 }
