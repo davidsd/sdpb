@@ -314,6 +314,34 @@ std::vector<El::BigFloat> compute_optimal(
                       ++num_new_points.at(block);
                     }
                 }
+
+              // for(auto &candidate : candidates)
+              //   {
+              //     const auto iter(points.at(block).lower_bound(candidate));
+              //     if(iter != points.at(block).begin() && *iter != candidate)
+              //       {
+              //         const size_t num_divisions(8);
+              //         El::BigFloat lower_coord(*std::prev(iter)),
+              //           upper_coord(
+              //             (iter == points.at(block).end() || *iter > max_delta)
+              //               ? max_delta
+              //               : *iter),
+              //           dx((upper_coord - lower_coord) / num_divisions);
+              //         // std::cout
+              //         //   << "coord: " << candidate << " " << std::boolalpha
+              //         //   << (iter == points.at(block).end()) << " " << max_delta
+              //         //   << " " << lower_coord << " " << upper_coord << " "
+              //         //   << dx << " "
+              //         //   << "\n";
+              //         for(size_t division(1); division < num_divisions;
+              //             ++division)
+              //           {
+              //             new_points.at(block).push_back(lower_coord
+              //                                            + dx * division);
+              //             ++num_new_points.at(block);
+              //           }
+              //       }
+              //   }
             }
           El::mpi::AllReduce(num_new_points.data(), num_new_points.size(),
                              El::mpi::SUM, El::mpi::COMM_WORLD);
