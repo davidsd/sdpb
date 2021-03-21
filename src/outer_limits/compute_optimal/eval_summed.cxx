@@ -2,30 +2,17 @@
 #include <El.hpp>
 #include <vector>
 
-El::BigFloat eval_weighted(
+El::BigFloat eval_summed(
   const El::BigFloat &infinity,
-  const std::vector<std::vector<std::vector<Function>>> &function_blocks,
-  const El::BigFloat &x, const std::vector<El::BigFloat> &weights)
+  const std::vector<std::vector<Function>> &summed_functions,
+  const El::BigFloat &x)
 {
-  const size_t matrix_dim(function_blocks.size());
+  const size_t matrix_dim(summed_functions.size());
   El::Matrix<El::BigFloat> m(matrix_dim, matrix_dim);
   for(size_t row(0); row != matrix_dim; ++row)
     for(size_t column(0); column <= row; ++column)
       {
-        auto &function(function_blocks.at(row).at(column));
-        if(weights.size() != function.size())
-          {
-            throw std::runtime_error("INTERNAL ERROR mismatch: "
-                                     + std::to_string(weights.size()) + " "
-                                     + std::to_string(function.size()));
-          }
-        El::BigFloat element(0);
-        for(size_t index(0); index != weights.size(); ++index)
-          {
-            element
-              += weights[index] * function[index].eval(infinity, x);
-          }
-        m.Set(row, column, element);
+        m.Set(row, column, summed_functions.at(row).at(column).eval(infinity, x));
       }
 
   // FIXME: Use the square of the matrix rather than the smallest

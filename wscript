@@ -179,7 +179,7 @@ def build(bld):
                         'src/outer_limits/compute_optimal/compute_optimal.cxx',
                         'src/outer_limits/compute_optimal/compute_y_transform.cxx',
                         'src/outer_limits/compute_optimal/setup_constraints.cxx',
-                        'src/outer_limits/compute_optimal/eval_weighted.cxx',
+                        'src/outer_limits/compute_optimal/eval_summed.cxx',
                         'src/outer_limits/compute_optimal/get_new_points.cxx',
                         'src/outer_limits/compute_optimal/Mesh/Mesh.cxx',
                         'src/outer_limits/compute_optimal/Mesh/ostream.cxx',

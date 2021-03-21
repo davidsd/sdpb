@@ -51,10 +51,10 @@ void compute_y_transform(
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   El::BigFloat &primal_c_scale);
 
-El::BigFloat eval_weighted(
-  const El::BigFloat &infinity,
-  const std::vector<std::vector<std::vector<Function>>> &function_blocks,
-  const El::BigFloat &x, const std::vector<El::BigFloat> &weights);
+El::BigFloat
+eval_summed(const El::BigFloat &infinity,
+            const std::vector<std::vector<Function>> &summed_functions,
+            const El::BigFloat &x);
 
 std::vector<El::BigFloat>
 get_new_points(const Mesh &mesh, const El::BigFloat &block_epsilon);
@@ -293,22 +293,58 @@ std::vector<El::BigFloat> compute_optimal(
               const El::BigFloat block_epsilon(
                 block_scale * El::limits::Epsilon<El::BigFloat>());
 
+              // Preadd the coefficients
+              std::vector<std::vector<Function>> summed_functions(
+                function_blocks[block].size());
+              El::BigFloat zero(0);
+              for(size_t matrix_row(0); matrix_row != summed_functions.size();
+                  ++matrix_row)
+                {
+                  summed_functions[matrix_row].reserve(
+                    function_blocks[block][matrix_row].size());
+                  for(size_t matrix_column(0);
+                      matrix_column
+                      != function_blocks[block][matrix_row].size();
+                      ++matrix_column)
+                    {
+                      auto &summed(
+                        summed_functions[matrix_row].emplace_back());
+                      // TODO: This only works if all have the same degree
+                      // and max_delta
+                      summed.max_delta = max_delta;
+                      summed.infinity_value = zero;
+                      summed.chebyshev_coeffs.resize(max_degree);
+                      auto &y_vector(
+                        function_blocks[block][matrix_row][matrix_column]);
+                      for(size_t y_index(0); y_index != y_vector.size();
+                          ++y_index)
+                        {
+                          for(size_t coeff_index(0);
+                              coeff_index
+                              != y_vector[y_index].chebyshev_coeffs.size();
+                              ++coeff_index)
+                            {
+                              summed.chebyshev_coeffs[coeff_index]
+                                += weights[y_index]
+                                   * y_vector[y_index]
+                                       .chebyshev_coeffs[coeff_index];
+                            }
+                        }
+                    }
+                }
+
               // 1/128 should be a small enough relative error so that we are
               // in the regime of convergence.  Then the error estimates will
               // work
               Mesh mesh(
                 *(points.at(block).begin()), max_delta,
                 [&](const El::BigFloat &x) {
-                  return eval_weighted(infinity, function_blocks[block], x,
-                                       weights);
+                  return eval_summed(infinity, summed_functions, x);
                 },
                 (1.0 / 128), block_epsilon);
 
-              std::vector<El::BigFloat> candidates(
-                get_new_points(mesh, block_epsilon));
-
               new_points.at(block).clear();
-              for(auto &point : candidates)
+              for(auto &point : get_new_points(mesh, block_epsilon))
                 {
                   if(points.at(block).count(point) == 0)
                     {
@@ -316,34 +352,6 @@ std::vector<El::BigFloat> compute_optimal(
                       ++num_new_points.at(block);
                     }
                 }
-
-              // for(auto &candidate : candidates)
-              //   {
-              //     const auto iter(points.at(block).lower_bound(candidate));
-              //     if(iter != points.at(block).begin() && *iter != candidate)
-              //       {
-              //         const size_t num_divisions(8);
-              //         El::BigFloat lower_coord(*std::prev(iter)),
-              //           upper_coord(
-              //             (iter == points.at(block).end() || *iter > max_delta)
-              //               ? max_delta
-              //               : *iter),
-              //           dx((upper_coord - lower_coord) / num_divisions);
-              //         // std::cout
-              //         //   << "coord: " << candidate << " " << std::boolalpha
-              //         //   << (iter == points.at(block).end()) << " " << max_delta
-              //         //   << " " << lower_coord << " " << upper_coord << " "
-              //         //   << dx << " "
-              //         //   << "\n";
-              //         for(size_t division(1); division < num_divisions;
-              //             ++division)
-              //           {
-              //             new_points.at(block).push_back(lower_coord
-              //                                            + dx * division);
-              //             ++num_new_points.at(block);
-              //           }
-              //       }
-              //   }
             }
           El::mpi::AllReduce(num_new_points.data(), num_new_points.size(),
                              El::mpi::SUM, El::mpi::COMM_WORLD);
