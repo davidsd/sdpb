@@ -1,0 +1,50 @@
+{
+    "type": "object",
+    "properties" :
+    {
+        "objective":
+        {
+            "type": "array",
+            "items": { "type": "string" }
+        },
+        "normalization":
+        {
+            "type": "array",
+            "items": { "type": "string" }
+        },
+        "functions":
+        {
+            "type": "array",
+            "items":
+            {
+                "type": "array",
+                "items":
+                {
+                    "type": "array",
+                    "items":
+                    {
+                        "type": "array",
+                        "items":
+                        {
+                            "type": "object",
+                            "properties":
+                            {
+                                "max_delta": { "type": "string" },
+                                "infinity_value": { "type": "string" },
+                                "chebyshev_values":
+                                {
+                                    "type": "array",
+                                    "items":
+                                    {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
