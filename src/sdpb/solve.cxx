@@ -12,8 +12,7 @@ void save_solution(const SDP_Solver &solver, const SDP_Solver_Terminate_Reason,
                    const std::vector<size_t> &block_indices,
                    const Verbosity &verbosity);
 
-Timers
-solve(const Block_Info &block_info, const SDP_Solver_Parameters &parameters)
+Timers solve(const Block_Info &block_info, const Solver_Parameters &parameters)
 {
   El::Grid grid(block_info.mpi_comm.value);
   SDP sdp(parameters.sdp_directory, block_info, grid);

@@ -1,11 +1,11 @@
-#include "../SDP_Solver_Parameters.hxx"
+#include "../Solver_Parameters.hxx"
 
 #include <boost/program_options.hpp>
 #include <boost/filesystem/fstream.hpp>
 
 namespace po = boost::program_options;
 
-SDP_Solver_Parameters::SDP_Solver_Parameters(int argc, char *argv[])
+Solver_Parameters::Solver_Parameters(int argc, char *argv[])
 {
   int int_verbosity;
   std::string write_solution_string;

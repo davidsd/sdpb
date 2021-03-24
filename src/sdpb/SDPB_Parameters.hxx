@@ -16,8 +16,8 @@ struct SDPB_Parameters
   size_t precision, procs_per_node, proc_granularity;
   Write_Solution write_solution;
 
-  SDP_Solver_Parameters solver_parameters;
-  
+  Solver_Parameters solver_parameters;
+
   boost::filesystem::path sdp_directory, out_directory, checkpoint_in,
     checkpoint_out, param_file;
 

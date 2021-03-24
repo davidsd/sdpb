@@ -10,7 +10,7 @@ El::BigFloat frobenius_product_of_sums(const Block_Diagonal_Matrix &X,
 
 // Centering parameter \beta_c for the corrector step
 El::BigFloat corrector_centering_parameter(
-  const SDP_Solver_Parameters &parameters, const Block_Diagonal_Matrix &X,
+  const Solver_Parameters &parameters, const Block_Diagonal_Matrix &X,
   const Block_Diagonal_Matrix &dX, const Block_Diagonal_Matrix &Y,
   const Block_Diagonal_Matrix &dY, const El::BigFloat &mu,
   const bool is_primal_dual_feasible, const size_t &total_psd_rows)

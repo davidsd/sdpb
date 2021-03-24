@@ -1,6 +1,6 @@
-#include "../SDP_Solver_Parameters.hxx"
+#include "../Solver_Parameters.hxx"
 
-std::ostream &operator<<(std::ostream &os, const SDP_Solver_Parameters &p)
+std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
 {
   os << "SDP directory   : " << p.sdp_directory << '\n'
      << "out directory   : " << p.out_directory << '\n'

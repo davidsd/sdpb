@@ -45,7 +45,7 @@ void compute_y_transform(
   const std::vector<std::set<El::BigFloat>> &points,
   const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
-  const SDP_Solver_Parameters &parameters, const size_t &max_index,
+  const Solver_Parameters &parameters, const size_t &max_index,
   const El::Grid &global_grid,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
@@ -65,7 +65,7 @@ std::vector<El::BigFloat> compute_optimal(
   const std::vector<std::vector<El::BigFloat>> &initial_points,
   const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
-  const SDP_Solver_Parameters &parameters_in)
+  const Solver_Parameters &parameters_in)
 {
   if(initial_points.size() != function_blocks.size())
     {
@@ -74,7 +74,7 @@ std::vector<El::BigFloat> compute_optimal(
         + std::to_string(function_blocks.size())
         + ", initial points: " + std::to_string(initial_points.size()));
     }
-  SDP_Solver_Parameters parameters(parameters_in);
+  Solver_Parameters parameters(parameters_in);
 
   const size_t rank(El::mpi::Rank()), num_procs(El::mpi::Size()),
     num_weights(normalization.size());

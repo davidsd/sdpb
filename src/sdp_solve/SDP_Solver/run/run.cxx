@@ -30,7 +30,7 @@ void compute_bilinear_pairings(
   Timers &timers);
 
 void compute_feasible_and_termination(
-  const SDP_Solver_Parameters &parameters, const El::BigFloat &primal_error,
+  const Solver_Parameters &parameters, const El::BigFloat &primal_error,
   const El::BigFloat &dual_error, const El::BigFloat &duality_gap,
   const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
   const int &iteration,
@@ -58,7 +58,7 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
                                               El::BigFloat &primal_error_p);
 
 SDP_Solver_Terminate_Reason
-SDP_Solver::run(const SDP_Solver_Parameters &parameters,
+SDP_Solver::run(const Solver_Parameters &parameters,
                 const Block_Info &block_info, const SDP &sdp,
                 const El::Grid &grid, Timers &timers)
 {

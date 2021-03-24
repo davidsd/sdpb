@@ -20,9 +20,9 @@ def build(bld):
     # default_flags=['-Wall', '-Wextra', '-g', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
     use_packages=['cxx17','boost','gmpxx','mpfr','elemental','libxml2', 'rapidjson']
 
-    sdp_solve_sources=['src/sdp_solve/SDP_Solver_Parameters/SDP_Solver_Parameters.cxx',
-                       'src/sdp_solve/SDP_Solver_Parameters/ostream.cxx',
-                       'src/sdp_solve/SDP_Solver_Parameters/to_property_tree.cxx',
+    sdp_solve_sources=['src/sdp_solve/Solver_Parameters/Solver_Parameters.cxx',
+                       'src/sdp_solve/Solver_Parameters/ostream.cxx',
+                       'src/sdp_solve/Solver_Parameters/to_property_tree.cxx',
                        'src/sdp_solve/Block_Info/Block_Info.cxx',
                        'src/sdp_solve/Block_Info/read_block_info.cxx',
                        'src/sdp_solve/Block_Info/read_block_costs.cxx',

@@ -12,7 +12,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 Timers
-solve(const Block_Info &block_info, const SDP_Solver_Parameters &parameters);
+solve(const Block_Info &block_info, const Solver_Parameters &parameters);
 
 void write_timing(const boost::filesystem::path &checkpoint_out,
                   const Block_Info &block_info, const Timers &timers,
@@ -24,7 +24,7 @@ int main(int argc, char **argv)
 
   try
     {
-      SDP_Solver_Parameters parameters(argc, argv);
+      Solver_Parameters parameters(argc, argv);
       if(!parameters.is_valid())
         {
           return 0;
@@ -54,7 +54,7 @@ int main(int argc, char **argv)
             {
               std::cout << "Performing a timing run\n";
             }
-          SDP_Solver_Parameters timing_parameters(parameters);
+          Solver_Parameters timing_parameters(parameters);
           timing_parameters.max_iterations = 2;
           timing_parameters.no_final_checkpoint = true;
           timing_parameters.checkpoint_interval

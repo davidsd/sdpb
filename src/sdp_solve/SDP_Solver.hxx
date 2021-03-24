@@ -13,7 +13,7 @@
 #include "SDP.hxx"
 #include "SDP_Solver_Terminate_Reason.hxx"
 
-#include "SDP_Solver_Parameters.hxx"
+#include "Solver_Parameters.hxx"
 #include "../Timers.hxx"
 
 #include <boost/filesystem.hpp>
@@ -75,16 +75,15 @@ public:
   int64_t current_generation;
   boost::optional<int64_t> backup_generation;
 
-  SDP_Solver(const SDP_Solver_Parameters &parameters,
-             const Block_Info &block_info, const El::Grid &grid,
-             const size_t &dual_objective_b_height);
+  SDP_Solver(const Solver_Parameters &parameters, const Block_Info &block_info,
+             const El::Grid &grid, const size_t &dual_objective_b_height);
 
   SDP_Solver_Terminate_Reason
-  run(const SDP_Solver_Parameters &parameters, const Block_Info &block_info,
+  run(const Solver_Parameters &parameters, const Block_Info &block_info,
       const SDP &sdp, const El::Grid &grid, Timers &timers);
 
   void step(
-    const SDP_Solver_Parameters &parameters, const std::size_t &total_psd_rows,
+    const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
     const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
     const SDP &sdp, const El::Grid &grid,
     const Block_Diagonal_Matrix &X_cholesky,
@@ -99,7 +98,7 @@ public:
     El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
     El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers);
 
-  void save_checkpoint(const SDP_Solver_Parameters &parameters);
+  void save_checkpoint(const Solver_Parameters &parameters);
   bool
   load_checkpoint(const boost::filesystem::path &checkpoint_directory,
                   const Block_Info &block_info, const Verbosity &verbosity,

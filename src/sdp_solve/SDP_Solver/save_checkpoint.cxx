@@ -34,7 +34,7 @@ void write_local_blocks(const T &t,
     }
 }
 
-void SDP_Solver::save_checkpoint(const SDP_Solver_Parameters &parameters)
+void SDP_Solver::save_checkpoint(const Solver_Parameters &parameters)
 {
   const boost::filesystem::path &checkpoint_directory(
     parameters.checkpoint_out);

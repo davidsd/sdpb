@@ -1,6 +1,6 @@
 #include "../SDP_Solver.hxx"
 
-SDP_Solver::SDP_Solver(const SDP_Solver_Parameters &parameters,
+SDP_Solver::SDP_Solver(const Solver_Parameters &parameters,
                        const Block_Info &block_info, const El::Grid &grid,
                        const size_t &dual_objective_b_height)
     : x(block_info.schur_block_sizes(), block_info.block_indices,

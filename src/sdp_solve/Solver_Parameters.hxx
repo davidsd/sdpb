@@ -12,7 +12,7 @@
 
 #include <iostream>
 
-struct SDP_Solver_Parameters
+struct Solver_Parameters
 {
   int64_t max_iterations, max_runtime, checkpoint_interval;
   bool no_final_checkpoint, find_primal_feasible, find_dual_feasible,
@@ -30,10 +30,10 @@ struct SDP_Solver_Parameters
   boost::filesystem::path sdp_directory, out_directory, checkpoint_in,
     checkpoint_out, param_file;
 
-  SDP_Solver_Parameters(int argc, char *argv[]);
+  Solver_Parameters(int argc, char *argv[]);
   bool is_valid() const { return !sdp_directory.empty(); }
 };
 
-std::ostream &operator<<(std::ostream &os, const SDP_Solver_Parameters &p);
+std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p);
 
-boost::property_tree::ptree to_property_tree(const SDP_Solver_Parameters &p);
+boost::property_tree::ptree to_property_tree(const Solver_Parameters &p);

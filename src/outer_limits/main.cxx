@@ -60,7 +60,8 @@ void read_function_blocks(
 void read_points(const boost::filesystem::path &input_path,
                  std::vector<std::vector<El::BigFloat>> &points);
 
-void convert_matrices_to_functions(const El::BigFloat &max_delta,
+void convert_matrices_to_functions(
+  const El::BigFloat &max_delta,
   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
   std::vector<std::vector<std::vector<std::vector<Function>>>> &functions);
 
@@ -69,12 +70,12 @@ std::vector<El::BigFloat> compute_optimal(
   const std::vector<std::vector<El::BigFloat>> &initial_points,
   const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
-  const SDP_Solver_Parameters &parameters_in);
+  const Solver_Parameters &parameters_in);
 
 int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
-  SDP_Solver_Parameters parameters(argc, argv);
+  Solver_Parameters parameters(argc, argv);
   if(!parameters.is_valid())
     {
       return 0;

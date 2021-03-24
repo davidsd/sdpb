@@ -1,7 +1,6 @@
-#include "../SDP_Solver_Parameters.hxx"
+#include "../Solver_Parameters.hxx"
 
-boost::property_tree::ptree
-to_property_tree(const SDP_Solver_Parameters &p)
+boost::property_tree::ptree to_property_tree(const Solver_Parameters &p)
 {
   boost::property_tree::ptree result;
 

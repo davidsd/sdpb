@@ -26,12 +26,11 @@ void compute_search_direction(
   Block_Vector &dx, Block_Diagonal_Matrix &dX, Block_Vector &dy,
   Block_Diagonal_Matrix &dY);
 
-El::BigFloat
-predictor_centering_parameter(const SDP_Solver_Parameters &parameters,
-                              const bool is_primal_dual_feasible);
+El::BigFloat predictor_centering_parameter(const Solver_Parameters &parameters,
+                                           const bool is_primal_dual_feasible);
 
 El::BigFloat corrector_centering_parameter(
-  const SDP_Solver_Parameters &parameters, const Block_Diagonal_Matrix &X,
+  const Solver_Parameters &parameters, const Block_Diagonal_Matrix &X,
   const Block_Diagonal_Matrix &dX, const Block_Diagonal_Matrix &Y,
   const Block_Diagonal_Matrix &dY, const El::BigFloat &mu,
   const bool is_primal_dual_feasible, const size_t &total_num_rows);
@@ -42,7 +41,7 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
             const std::string &timer_name, Timers &timers);
 
 void SDP_Solver::step(
-  const SDP_Solver_Parameters &parameters, const std::size_t &total_psd_rows,
+  const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
   const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
   const SDP &sdp, const El::Grid &grid,
   const Block_Diagonal_Matrix &X_cholesky,
