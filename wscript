@@ -37,7 +37,6 @@ def build(bld):
                        'src/sdp_solve/SDP/SDP/read_blocks/Block_Parser/StartArray.cxx',
                        'src/sdp_solve/SDP/SDP/read_blocks/Block_Parser/String.cxx',
                        'src/sdp_solve/SDP/SDP/set_bases_blocks.cxx',
-                       'src/sdp_solve/SDP_Solver/save_solution.cxx',
                        'src/sdp_solve/SDP_Solver/save_checkpoint.cxx',
                        'src/sdp_solve/SDP_Solver/load_checkpoint/load_checkpoint.cxx',
                        'src/sdp_solve/SDP_Solver/load_checkpoint/load_binary_checkpoint.cxx',
@@ -76,8 +75,7 @@ def build(bld):
                        'src/sdp_solve/SDP_Solver/run/step/step_length/lower_triangular_inverse_congruence.cxx',
                        'src/sdp_solve/SDP_Solver_Terminate_Reason/ostream.cxx',
                        'src/sdp_solve/lower_triangular_transpose_solve.cxx',
-                       'src/sdp_solve/Block_Diagonal_Matrix/ostream.cxx',
-                       'src/sdp_solve/Write_Solution.cxx']
+                       'src/sdp_solve/Block_Diagonal_Matrix/ostream.cxx']
 
     bld.stlib(source=sdp_solve_sources,
               target='sdp_solve',
@@ -87,7 +85,9 @@ def build(bld):
     # SDPB executable
     bld.program(source=['src/sdpb/main.cxx',
                         'src/sdpb/solve.cxx',
-                        'src/sdpb/write_timing.cxx'],
+                        'src/sdpb/write_timing.cxx',
+                        'src/sdpb/Write_Solution.cxx',
+                        'src/sdpb/save_solution.cxx'],
                 target='sdpb',
                 cxxflags=default_flags,
                 use=use_packages + ['sdp_solve']

@@ -99,11 +99,12 @@ int main(int argc, char **argv)
     std::vector<Positive_Matrix_With_Prefactor> matrices;
     std::vector<std::vector<El::BigFloat>> initial_points;
 
-    read_input("outer_small.nsv", objectives, normalization, matrices);
-    read_points("outer_small_points.json", initial_points);
+    // read_input("outer_small.nsv", objectives, normalization, matrices);
+    // read_points("outer_small_points.json", initial_points);
+    // // read_points("outer_small_points_extra.json", initial_points);
 
-    // read_input("outer_2x2.nsv", objectives, normalization, matrices);
-    // read_points("outer_2x2_points.json", initial_points);
+    read_input("outer_2x2.nsv", objectives, normalization, matrices);
+    read_points("outer_2x2_points.json", initial_points);
 
     // read_input("test/spectrum_test.json", objectives, normalization,
     // matrices); read_input("test/toy_damped_duplicate.json", objectives,

@@ -99,12 +99,6 @@ public:
     El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
     El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers);
 
-  void save_solution(const SDP_Solver_Terminate_Reason,
-                     const std::pair<std::string, Timer> &timer_pair,
-                     const boost::filesystem::path &out_directory,
-                     const Write_Solution &write_solution,
-                     const std::vector<size_t> &block_indices,
-                     const Verbosity &verbosity) const;
   void save_checkpoint(const SDP_Solver_Parameters &parameters);
   bool
   load_checkpoint(const boost::filesystem::path &checkpoint_directory,

@@ -1,10 +1,3 @@
-//=======================================================================
-// Copyright 2014-2015 David Simmons-Duffin.
-// Distributed under the MIT License.
-// (See accompanying file LICENSE or copy at
-//  http://opensource.org/licenses/MIT)
-//=======================================================================
-
 #include "../sdp_solve.hxx"
 #include "../set_stream_precision.hxx"
 
@@ -12,18 +5,24 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/filesystem.hpp>
 
+void save_solution(const SDP_Solver &solver, const SDP_Solver_Terminate_Reason,
+                   const std::pair<std::string, Timer> &timer_pair,
+                   const boost::filesystem::path &out_directory,
+                   const Write_Solution &write_solution,
+                   const std::vector<size_t> &block_indices,
+                   const Verbosity &verbosity);
+
 Timers
 solve(const Block_Info &block_info, const SDP_Solver_Parameters &parameters)
 {
-  // Read an SDP from sdpFile and create a solver for it
   El::Grid grid(block_info.mpi_comm.value);
   SDP sdp(parameters.sdp_directory, block_info, grid);
   SDP_Solver solver(parameters, block_info, grid,
                     sdp.dual_objective_b.Height());
 
   Timers timers(parameters.verbosity >= Verbosity::debug);
-  SDP_Solver_Terminate_Reason reason
-    = solver.run(parameters, block_info, sdp, grid, timers);
+  SDP_Solver_Terminate_Reason reason(
+    solver.run(parameters, block_info, sdp, grid, timers));
 
   if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
@@ -42,9 +41,8 @@ solve(const Block_Info &block_info, const SDP_Solver_Parameters &parameters)
     {
       solver.save_checkpoint(parameters);
     }
-  solver.save_solution(reason, timers.front(), parameters.out_directory,
-                       parameters.write_solution,
-                       block_info.block_indices,
-                       parameters.verbosity);
+  save_solution(solver, reason, timers.front(), parameters.out_directory,
+                parameters.write_solution, block_info.block_indices,
+                parameters.verbosity);
   return timers;
 }

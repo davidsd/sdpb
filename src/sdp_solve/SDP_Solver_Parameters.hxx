@@ -3,8 +3,8 @@
 // for a detailed description of each.
 //
 
+#include "../sdpb/Write_Solution.hxx"
 #include "Verbosity.hxx"
-#include "Write_Solution.hxx"
 
 #include <El.hpp>
 #include <boost/filesystem.hpp>
