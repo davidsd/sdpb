@@ -96,43 +96,24 @@ int main(int argc, char **argv)
                 << std::flush;
     }
 
-  {
-    std::vector<El::BigFloat> objectives, normalization;
-    std::vector<Positive_Matrix_With_Prefactor> matrices;
-    std::vector<std::vector<El::BigFloat>> initial_points;
+  std::vector<El::BigFloat> objectives, normalization;
+  std::vector<std::vector<std::vector<std::vector<Function>>>> functions;
+  read_function_blocks(parameters.sdp_path, objectives, normalization, functions);
 
-    read_input("outer_small.nsv", objectives, normalization, matrices);
-    read_points("outer_small_points.json", initial_points);
-    // read_points("outer_small_points_extra.json", initial_points);
+  std::vector<std::vector<El::BigFloat>> initial_points;
+  read_points(parameters.points_path, initial_points);
 
-    // read_input("outer_2x2.nsv", objectives, normalization, matrices);
-    // read_points("outer_2x2_points.json", initial_points);
+  std::vector<El::BigFloat> weights(compute_optimal(
+    functions, initial_points, objectives, normalization, parameters));
 
-    // read_input("test/spectrum_test.json", objectives, normalization,
-    // matrices); read_input("test/toy_damped_duplicate.json", objectives,
-    // normalization, matrices);
-    // read_input("test/toy_damped_3.json", objectives, normalization,
-    // matrices);
-
-    // read_input("test/toy_damped.json", objectives, normalization, matrices);
-    // read_points("test/toy_damped_points.json", initial_points);
-
-    std::vector<std::vector<std::vector<std::vector<Function>>>> functions;
-    const El::BigFloat max_delta(64); // This is completely arbitrary.
-    convert_matrices_to_functions(max_delta, matrices, functions);
-
-    std::vector<El::BigFloat> weights(compute_optimal(
-      functions, initial_points, objectives, normalization, parameters));
-
-    El::BigFloat optimal(0);
-    for(size_t index(0); index < objectives.size(); ++index)
-      {
-        optimal += objectives[index] * weights[index];
-      }
-    if(El::mpi::Rank() == 0)
-      {
-        std::cout.precision(precision / 3.3);
-        std::cout << "optimal: " << optimal << " " << weights << "\n";
-      }
-  }
+  El::BigFloat optimal(0);
+  for(size_t index(0); index < objectives.size(); ++index)
+    {
+      optimal += objectives[index] * weights[index];
+    }
+  if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
+    {
+      std::cout.precision(precision / 3.3);
+      std::cout << "optimal: " << optimal << " " << weights << "\n";
+    }
 }

@@ -148,7 +148,7 @@ std::vector<El::BigFloat> compute_optimal(
                         << "\n";
             }
         }
-      if(rank == 0)
+      if(rank == 0 && parameters.verbosity >= Verbosity::regular)
         {
           std::cout << "num_constraints: " << num_constraints << "\n";
         }
@@ -187,7 +187,7 @@ std::vector<El::BigFloat> compute_optimal(
             && parameters.solver.duality_gap_threshold
                  > parameters_in.solver.duality_gap_threshold)
         {
-          if(rank == 0)
+          if(rank == 0 && parameters.verbosity >= Verbosity::regular)
             {
               std::cout << "Threshold: "
                         << parameters.solver.duality_gap_threshold << "\n";
@@ -198,7 +198,7 @@ std::vector<El::BigFloat> compute_optimal(
             parameters.solver, parameters.verbosity,
             to_property_tree(parameters), block_info, sdp, grid, timers);
 
-          if(rank == 0)
+          if(rank == 0 && parameters.verbosity >= Verbosity::regular)
             {
               set_stream_precision(std::cout);
               std::cout << "-----" << reason << "-----\n"
@@ -257,7 +257,7 @@ std::vector<El::BigFloat> compute_optimal(
                 -= weights.at(index) * normalization.at(index);
             }
           weights.at(max_index) /= normalization.at(max_index);
-          if(rank == 0)
+          if(rank == 0 && parameters.verbosity >= Verbosity::regular)
             {
               std::cout.precision(20);
               std::cout << "weight: " << weights << "\n";

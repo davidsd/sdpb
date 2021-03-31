@@ -13,10 +13,10 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
 
   po::options_description required_options("Required options");
   required_options.add_options()(
-    "sdp,s", po::value<boost::filesystem::path>(&sdp_path)->required(),
+    "sdp", po::value<boost::filesystem::path>(&sdp_path)->required(),
     "Mathematica, JSON, or NSV file with SDP definition.");
   required_options.add_options()(
-    "points,p", po::value<boost::filesystem::path>(&points_path)->required(),
+    "points", po::value<boost::filesystem::path>(&points_path)->required(),
     "JSON, or NSV file with initial points.");
 
   po::options_description cmd_line_options;
