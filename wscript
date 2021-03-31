@@ -186,6 +186,7 @@ def build(bld):
                         'src/outer_limits/compute_optimal/get_new_points.cxx',
                         'src/outer_limits/compute_optimal/Mesh/Mesh.cxx',
                         'src/outer_limits/compute_optimal/Mesh/ostream.cxx',
+                        'src/outer_limits/compute_optimal/save_checkpoint.cxx',
                         'src/outer_limits/read_points/read_points.cxx',
                         'src/outer_limits/read_points/read_points_json/read_points_json.cxx',
                         'src/outer_limits/read_points/read_points_json/Points_Parser/EndArray.cxx',
