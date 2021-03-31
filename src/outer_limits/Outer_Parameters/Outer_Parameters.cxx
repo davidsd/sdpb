@@ -13,8 +13,8 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
 
   po::options_description required_options("Required options");
   required_options.add_options()(
-    "sdp", po::value<boost::filesystem::path>(&sdp_path)->required(),
-    "Mathematica, JSON, or NSV file with SDP definition.");
+    "functions", po::value<boost::filesystem::path>(&functions_path)->required(),
+    "Mathematica, JSON, or NSV file with SDP functions evaluated at chebyshev zeros.");
   required_options.add_options()(
     "points", po::value<boost::filesystem::path>(&points_path)->required(),
     "JSON, or NSV file with initial points.");
@@ -84,25 +84,25 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
 
           po::notify(variables_map);
 
-          if(!boost::filesystem::exists(sdp_path))
+          if(!boost::filesystem::exists(functions_path))
             {
-              throw std::runtime_error("sdp path '" + sdp_path.string()
+              throw std::runtime_error("sdp path '" + functions_path.string()
                                        + "' does not exist");
             }
-          if(boost::filesystem::is_directory(sdp_path))
+          if(boost::filesystem::is_directory(functions_path))
             {
-              throw std::runtime_error("sdp path '" + sdp_path.string()
+              throw std::runtime_error("sdp path '" + functions_path.string()
                                        + "' is a directory, not a file.");
             }
 
           if(variables_map.count("outDir") == 0)
             {
-              out_directory = sdp_path.string() + "_out";
+              out_directory = functions_path.string() + "_out";
             }
 
           if(variables_map.count("checkpointDir") == 0)
             {
-              solver.checkpoint_out = sdp_path;
+              solver.checkpoint_out = functions_path;
               if(solver.checkpoint_out.filename() == ".")
                 {
                   solver.checkpoint_out = solver.checkpoint_out.parent_path();

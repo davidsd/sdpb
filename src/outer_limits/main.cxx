@@ -98,7 +98,7 @@ int main(int argc, char **argv)
 
   std::vector<El::BigFloat> objectives, normalization;
   std::vector<std::vector<std::vector<std::vector<Function>>>> functions;
-  read_function_blocks(parameters.sdp_path, objectives, normalization, functions);
+  read_function_blocks(parameters.functions_path, objectives, normalization, functions);
 
   std::vector<std::vector<El::BigFloat>> initial_points;
   read_points(parameters.points_path, initial_points);
