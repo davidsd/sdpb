@@ -39,66 +39,40 @@ fi
 rm -rf test/io_tests
 
 mkdir -p test/io_tests
-touch test/io_tests/bilinear_bases.0
-chmod a-w test/io_tests/bilinear_bases.0
+touch test/io_tests/control.json
+chmod a-w test/io_tests/control.json
 mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests 2>/dev/null
 if [ $? != 0 ]
 then
-    echo "PASS bilinear_bases"
+    echo "PASS control"
 else
-    echo "FAIL bilinear_bases"
+    echo "FAIL control"
     result=1
 fi
 rm -rf test/io_tests
 
 mkdir -p test/io_tests
-touch test/io_tests/blocks.0
-chmod a-w test/io_tests/blocks.0
+touch test/io_tests/block_0.json
+chmod a-w test/io_tests/block_0.json
 mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests 2>/dev/null
 if [ $? != 0 ]
 then
-    echo "PASS blocks"
+    echo "PASS blocks write"
 else
-    echo "FAIL blocks"
+    echo "FAIL blocks write"
     result=1
 fi
 rm -rf test/io_tests
 
 mkdir -p test/io_tests
-touch test/io_tests/free_var_matrix.0
-chmod a-w test/io_tests/free_var_matrix.0
-mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests 2>/dev/null
-if [ $? != 0 ]
-then
-    echo "PASS free_var_matrix"
-else
-    echo "FAIL free_var_matrix"
-    result=1
-fi
-rm -rf test/io_tests
-
-mkdir -p test/io_tests
-touch test/io_tests/objectives
-chmod a-w test/io_tests/objectives
+touch test/io_tests/objectives.json
+chmod a-w test/io_tests/objectives.json
 mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS objectives"
 else
     echo "FAIL objectives"
-    result=1
-fi
-rm -rf test/io_tests
-
-mkdir -p test/io_tests
-touch test/io_tests/primal_objective_c.0
-chmod a-w test/io_tests/primal_objective_c.0
-mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests 2>/dev/null
-if [ $? != 0 ]
-then
-    echo "PASS primal_objective_c"
-else
-    echo "FAIL primal_objective_c"
     result=1
 fi
 rm -rf test/io_tests
@@ -187,34 +161,21 @@ rm -rf test/io_tests
 
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
-chmod a-r test/io_tests/test/blocks.0
+chmod a-r test/io_tests/test/block_0.json
 mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
-    echo "PASS blocks"
+    echo "PASS blocks read"
 else
-    echo "FAIL blocks"
+    echo "FAIL blocks read"
     result=1
 fi
 rm -rf test/io_tests
 
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
-chmod a-r test/io_tests/test/blocks.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
-if [ $? != 0 ]
-then
-    echo "PASS blocks"
-else
-    echo "FAIL blocks"
-    result=1
-fi
-rm -rf test/io_tests
-
-mkdir -p test/io_tests
-cp -r test/test test/io_tests
-rm test/io_tests/test/blocks.0
-touch test/io_tests/test/blocks.0
+rm test/io_tests/test/block_0.json
+touch test/io_tests/test/block_0.json
 mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
@@ -227,126 +188,34 @@ rm -rf test/io_tests
 
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
-head -n 1 test/io_tests/test/blocks.0 > test/io_tests/test/blocks.0
+chmod a-r test/io_tests/test/control.json
 mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
-    echo "PASS vector size"
+    echo "PASS control read"
 else
-    echo "FAIL vector size"
+    echo "FAIL control read"
     result=1
 fi
 rm -rf test/io_tests
 
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
-head -n 2 test/io_tests/test/blocks.0 > test/io_tests/test/blocks.0
+rm test/io_tests/test/control.json
+touch test/io_tests/test/control.json
 mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
-    echo "PASS vector element"
+    echo "PASS control empty"
 else
-    echo "FAIL vector element"
+    echo "FAIL control empty"
     result=1
 fi
 rm -rf test/io_tests
 
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
-chmod a-r test/io_tests/test/bilinear_bases.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
-if [ $? != 0 ]
-then
-    echo "PASS bilinear read"
-else
-    echo "FAIL bilinear read"
-    result=1
-fi
-rm -rf test/io_tests
-
-mkdir -p test/io_tests
-cp -r test/test test/io_tests
-rm test/io_tests/test/bilinear_bases.0
-touch test/io_tests/test/bilinear_bases.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
-if [ $? != 0 ]
-then
-    echo "PASS bilinear empty"
-else
-    echo "FAIL bilinear empty"
-    result=1
-fi
-rm -rf test/io_tests
-
-mkdir -p test/io_tests
-cp -r test/test test/io_tests
-head -n 2 test/io_tests/test/bilinear_bases.0 > test/io_tests/test/bilinear_bases.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
-if [ $? != 0 ]
-then
-    echo "PASS bilinear header"
-else
-    echo "FAIL bilinear header"
-    result=1
-fi
-rm -rf test/io_tests
-
-mkdir -p test/io_tests
-cp -r test/test test/io_tests
-head -n 26 test/io_tests/test/bilinear_bases.0 > test/io_tests/test/bilinear_bases.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
-if [ $? != 0 ]
-then
-    echo "PASS bilinear data"
-else
-    echo "FAIL bilinear data"
-    result=1
-fi
-rm -rf test/io_tests
-
-mkdir -p test/io_tests
-cp -r test/test test/io_tests
-chmod a-r test/io_tests/test/free_var_matrix.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
-if [ $? != 0 ]
-then
-    echo "PASS free_var_matrix read"
-else
-    echo "FAIL free_var_matrix read"
-    result=1
-fi
-rm -rf test/io_tests
-
-mkdir -p test/io_tests
-cp -r test/test test/io_tests
-rm test/io_tests/test/free_var_matrix.0
-touch test/io_tests/test/free_var_matrix.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
-if [ $? != 0 ]
-then
-    echo "PASS free_var_matrix header"
-else
-    echo "FAIL free_var_matrix header"
-    result=1
-fi
-rm -rf test/io_tests
-
-mkdir -p test/io_tests
-cp -r test/test test/io_tests
-head -n 2 test/io_tests/test/free_var_matrix.0 > test/io_tests/test/free_var_matrix.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
-if [ $? != 0 ]
-then
-    echo "PASS free_var_matrix data"
-else
-    echo "FAIL free_var_matrix data"
-    result=1
-fi
-rm -rf test/io_tests
-
-mkdir -p test/io_tests
-cp -r test/test test/io_tests
-chmod a-r test/io_tests/test/objectives
+chmod a-r test/io_tests/test/objectives.json
 mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
@@ -359,27 +228,14 @@ rm -rf test/io_tests
 
 mkdir -p test/io_tests
 cp -r test/test test/io_tests
-rm test/io_tests/test/objectives
-touch test/io_tests/test/objectives
+rm test/io_tests/test/objectives.json
+touch test/io_tests/test/objectives.json
 mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
 if [ $? != 0 ]
 then
     echo "PASS objectives corrupted"
 else
     echo "FAIL objectives corrupted"
-    result=1
-fi
-rm -rf test/io_tests
-
-mkdir -p test/io_tests
-cp -r test/test test/io_tests
-chmod a-r test/io_tests/test/primal_objective_c.0
-mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/io_tests/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0 2>/dev/null
-if [ $? != 0 ]
-then
-    echo "PASS primal_objective_c"
-else
-    echo "FAIL primal_objective_c"
     result=1
 fi
 rm -rf test/io_tests
