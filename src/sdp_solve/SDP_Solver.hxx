@@ -75,12 +75,18 @@ public:
   int64_t current_generation;
   boost::optional<int64_t> backup_generation;
 
-  SDP_Solver(const Solver_Parameters &parameters, const Block_Info &block_info,
-             const El::Grid &grid, const size_t &dual_objective_b_height);
+  SDP_Solver(const Solver_Parameters &parameters,
+             const Verbosity &verbosity,
+             const bool &require_initial_checkpoint,
+             const Block_Info &block_info, const El::Grid &grid,
+             const size_t &dual_objective_b_height);
 
   SDP_Solver_Terminate_Reason
-  run(const Solver_Parameters &parameters, const Block_Info &block_info,
-      const SDP &sdp, const El::Grid &grid, Timers &timers);
+  run(const Solver_Parameters &parameters,
+      const Verbosity &verbosity,
+      const boost::property_tree::ptree &parameter_properties,
+      const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
+      Timers &timers);
 
   void step(
     const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
@@ -98,7 +104,10 @@ public:
     El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
     El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers);
 
-  void save_checkpoint(const Solver_Parameters &parameters);
+  void
+  save_checkpoint(const boost::filesystem::path &checkpoint_directory,
+                  const Verbosity &verbosity,
+                  const boost::property_tree::ptree &parameter_properties);
   bool
   load_checkpoint(const boost::filesystem::path &checkpoint_directory,
                   const Block_Info &block_info, const Verbosity &verbosity,

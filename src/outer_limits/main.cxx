@@ -1,3 +1,4 @@
+#include "../sdpb/SDPB_Parameters.hxx"
 #include "Function.hxx"
 #include "../sdp_read.hxx"
 #include "../sdp_solve.hxx"
@@ -70,18 +71,18 @@ std::vector<El::BigFloat> compute_optimal(
   const std::vector<std::vector<El::BigFloat>> &initial_points,
   const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
-  const Solver_Parameters &parameters_in);
+  const SDPB_Parameters &parameters_in);
 
 int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
-  Solver_Parameters parameters(argc, argv);
+  SDPB_Parameters parameters(argc, argv);
   if(!parameters.is_valid())
     {
       return 0;
     }
 
-  const int64_t precision(parameters.precision);
+  const int64_t precision(parameters.solver.precision);
   El::gmp::SetPrecision(precision);
   // El::gmp wants base-2 bits, but boost::multiprecision wants
   // base-10 digits.
@@ -100,12 +101,12 @@ int main(int argc, char **argv)
     std::vector<Positive_Matrix_With_Prefactor> matrices;
     std::vector<std::vector<El::BigFloat>> initial_points;
 
-    // read_input("outer_small.nsv", objectives, normalization, matrices);
-    // read_points("outer_small_points.json", initial_points);
-    // // read_points("outer_small_points_extra.json", initial_points);
+    read_input("outer_small.nsv", objectives, normalization, matrices);
+    read_points("outer_small_points.json", initial_points);
+    // read_points("outer_small_points_extra.json", initial_points);
 
-    read_input("outer_2x2.nsv", objectives, normalization, matrices);
-    read_points("outer_2x2_points.json", initial_points);
+    // read_input("outer_2x2.nsv", objectives, normalization, matrices);
+    // read_points("outer_2x2_points.json", initial_points);
 
     // read_input("test/spectrum_test.json", objectives, normalization,
     // matrices); read_input("test/toy_damped_duplicate.json", objectives,

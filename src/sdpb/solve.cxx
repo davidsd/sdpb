@@ -1,3 +1,4 @@
+#include "SDPB_Parameters.hxx"
 #include "../sdp_solve.hxx"
 #include "../set_stream_precision.hxx"
 
@@ -12,16 +13,20 @@ void save_solution(const SDP_Solver &solver, const SDP_Solver_Terminate_Reason,
                    const std::vector<size_t> &block_indices,
                    const Verbosity &verbosity);
 
-Timers solve(const Block_Info &block_info, const Solver_Parameters &parameters)
+Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters)
 {
   El::Grid grid(block_info.mpi_comm.value);
   SDP sdp(parameters.sdp_directory, block_info, grid);
-  SDP_Solver solver(parameters, block_info, grid,
+  SDP_Solver solver(parameters.solver, parameters.verbosity,
+                    parameters.require_initial_checkpoint, block_info, grid,
                     sdp.dual_objective_b.Height());
 
   Timers timers(parameters.verbosity >= Verbosity::debug);
-  SDP_Solver_Terminate_Reason reason(
-    solver.run(parameters, block_info, sdp, grid, timers));
+  const boost::property_tree::ptree parameters_tree(
+    to_property_tree(parameters));
+  SDP_Solver_Terminate_Reason reason(solver.run(
+    parameters.solver, parameters.verbosity,
+    parameters_tree, block_info, sdp, grid, timers));
 
   if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
@@ -38,7 +43,8 @@ Timers solve(const Block_Info &block_info, const Solver_Parameters &parameters)
 
   if(!parameters.no_final_checkpoint)
     {
-      solver.save_checkpoint(parameters);
+      solver.save_checkpoint(parameters.solver.checkpoint_out, parameters.verbosity,
+                             parameters_tree);
     }
   save_solution(solver, reason, timers.front(), parameters.out_directory,
                 parameters.write_solution, block_info.block_indices,

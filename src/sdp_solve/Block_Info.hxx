@@ -1,7 +1,7 @@
 #pragma once
 
 #include "read_vector.hxx"
-#include "Verbosity.hxx"
+#include "../Verbosity.hxx"
 #include "../Block_Cost.hxx"
 
 #include <El.hpp>

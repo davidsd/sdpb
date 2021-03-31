@@ -59,6 +59,8 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
 
 SDP_Solver_Terminate_Reason
 SDP_Solver::run(const Solver_Parameters &parameters,
+                const Verbosity &verbosity,
+                const boost::property_tree::ptree &parameter_properties,
                 const Block_Info &block_info, const SDP &sdp,
                 const El::Grid &grid, Timers &timers)
 {
@@ -99,7 +101,7 @@ SDP_Solver::run(const Solver_Parameters &parameters,
   std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     Q_Y_Q;
-  print_header(parameters.verbosity);
+  print_header(verbosity);
 
   auto psd_sizes(block_info.psd_matrix_block_sizes());
   std::size_t total_psd_rows(
@@ -118,7 +120,8 @@ SDP_Solver::run(const Solver_Parameters &parameters,
       El::mpi::Broadcast(checkpoint_now, 0, El::mpi::COMM_WORLD);
       if(checkpoint_now == true)
         {
-          save_checkpoint(parameters);
+          save_checkpoint(parameters.checkpoint_out, verbosity,
+                          parameter_properties);
           last_checkpoint_time = std::chrono::high_resolution_clock::now();
         }
 
@@ -169,7 +172,7 @@ SDP_Solver::run(const Solver_Parameters &parameters,
         }
       print_iteration(iteration, mu, primal_step_length, dual_step_length,
                       beta_corrector, *this, solver_timer.start_time,
-                      parameters.verbosity);
+                      verbosity);
     }
   solver_timer.stop();
   return terminate_reason;

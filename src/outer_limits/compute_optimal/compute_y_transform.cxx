@@ -1,3 +1,4 @@
+#include "../../sdpb/SDPB_Parameters.hxx"
 #include "Mesh.hxx"
 #include "setup_constraints.hxx"
 
@@ -12,7 +13,7 @@ void compute_y_transform(
   const std::vector<std::set<El::BigFloat>> &points,
   const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
-  const Solver_Parameters &parameters, const size_t &max_index,
+  const SDPB_Parameters &parameters, const size_t &max_index,
   const El::Grid &global_grid,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,

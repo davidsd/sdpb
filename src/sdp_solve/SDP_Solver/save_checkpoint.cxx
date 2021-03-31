@@ -34,11 +34,11 @@ void write_local_blocks(const T &t,
     }
 }
 
-void SDP_Solver::save_checkpoint(const Solver_Parameters &parameters)
+void SDP_Solver::save_checkpoint(
+  const boost::filesystem::path &checkpoint_directory,
+  const Verbosity &verbosity,
+  const boost::property_tree::ptree &parameter_properties)
 {
-  const boost::filesystem::path &checkpoint_directory(
-    parameters.checkpoint_out);
-
   if(!exists(checkpoint_directory))
     {
       create_directories(checkpoint_directory);
@@ -68,7 +68,7 @@ void SDP_Solver::save_checkpoint(const Solver_Parameters &parameters)
       ++attempt)
     {
       boost::filesystem::ofstream checkpoint_stream(checkpoint_filename);
-      if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
+      if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {
           std::cout << "Saving checkpoint to    : " << checkpoint_directory
                     << '\n';
@@ -107,7 +107,7 @@ void SDP_Solver::save_checkpoint(const Solver_Parameters &parameters)
                << "    \"version\": \"" << SDPB_VERSION_STRING
                << "\",\n    \"options\": \n";
 
-      boost::property_tree::write_json(metadata, to_property_tree(parameters));
+      boost::property_tree::write_json(metadata, parameter_properties);
       metadata << "}\n";
     }
   El::mpi::Barrier(El::mpi::COMM_WORLD);

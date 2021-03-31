@@ -1,3 +1,4 @@
+#include "../../sdpb/SDPB_Parameters.hxx"
 #include "Mesh.hxx"
 #include "setup_constraints.hxx"
 
@@ -45,7 +46,7 @@ void compute_y_transform(
   const std::vector<std::set<El::BigFloat>> &points,
   const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
-  const Solver_Parameters &parameters, const size_t &max_index,
+  const SDPB_Parameters &parameters, const size_t &max_index,
   const El::Grid &global_grid,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
@@ -65,7 +66,7 @@ std::vector<El::BigFloat> compute_optimal(
   const std::vector<std::vector<El::BigFloat>> &initial_points,
   const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
-  const Solver_Parameters &parameters_in)
+  const SDPB_Parameters &parameters_in)
 {
   if(initial_points.size() != function_blocks.size())
     {
@@ -74,7 +75,7 @@ std::vector<El::BigFloat> compute_optimal(
         + std::to_string(function_blocks.size())
         + ", initial points: " + std::to_string(initial_points.size()));
     }
-  Solver_Parameters parameters(parameters_in);
+  SDPB_Parameters parameters(parameters_in);
 
   const size_t rank(El::mpi::Rank()), num_procs(El::mpi::Size()),
     num_weights(normalization.size());
@@ -120,8 +121,9 @@ std::vector<El::BigFloat> compute_optimal(
   El::Matrix<El::BigFloat> y_saved(yp_to_y_star.Height(), 1);
   El::Zero(y_saved);
 
-  parameters.duality_gap_threshold = 1.1;
-  while(parameters.duality_gap_threshold > parameters_in.duality_gap_threshold)
+  parameters.solver.duality_gap_threshold = 1.1;
+  while(parameters.solver.duality_gap_threshold
+        > parameters_in.solver.duality_gap_threshold)
     {
       std::map<size_t, size_t> new_to_old;
       size_t num_constraints(0), old_index(0);
@@ -173,8 +175,9 @@ std::vector<El::BigFloat> compute_optimal(
               yp_to_y_star, dual_objective_b_star, primal_c_scale, block_info,
               grid);
 
-      SDP_Solver solver(parameters, block_info, grid,
-                        sdp.dual_objective_b.Height());
+      SDP_Solver solver(parameters.solver, parameters.verbosity,
+                        parameters.require_initial_checkpoint, block_info,
+                        grid, sdp.dual_objective_b.Height());
 
       for(auto &y_block : solver.y.blocks)
         {
@@ -183,18 +186,19 @@ std::vector<El::BigFloat> compute_optimal(
 
       bool has_new_points(false);
       while(!has_new_points
-            && parameters.duality_gap_threshold
-                 > parameters_in.duality_gap_threshold)
+            && parameters.solver.duality_gap_threshold
+                 > parameters_in.solver.duality_gap_threshold)
         {
           if(rank == 0)
             {
-              std::cout << "Threshold: " << parameters.duality_gap_threshold
-                        << "\n";
+              std::cout << "Threshold: "
+                        << parameters.solver.duality_gap_threshold << "\n";
             }
 
           Timers timers(parameters.verbosity >= Verbosity::debug);
-          SDP_Solver_Terminate_Reason reason
-            = solver.run(parameters, block_info, sdp, grid, timers);
+          SDP_Solver_Terminate_Reason reason = solver.run(
+            parameters.solver, parameters.verbosity,
+            to_property_tree(parameters), block_info, sdp, grid, timers);
 
           if(rank == 0)
             {
@@ -369,7 +373,7 @@ std::vector<El::BigFloat> compute_optimal(
                != num_new_points.end());
           if(!has_new_points)
             {
-              parameters.duality_gap_threshold *= (1.0 / 8);
+              parameters.solver.duality_gap_threshold *= (1.0 / 8);
             }
         }
       El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(

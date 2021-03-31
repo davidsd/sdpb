@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Write_Solution.hxx"
+#include "../Verbosity.hxx"
 #include "../sdp_solve.hxx"
 
 #include <El.hpp>
@@ -12,14 +13,14 @@
 struct SDPB_Parameters
 {
   bool no_final_checkpoint;
+  size_t procs_per_node, proc_granularity;
   bool require_initial_checkpoint = false;
-  size_t precision, procs_per_node, proc_granularity;
   Write_Solution write_solution;
 
-  Solver_Parameters solver_parameters;
+  Solver_Parameters solver;
+  Verbosity verbosity;
 
-  boost::filesystem::path sdp_directory, out_directory, checkpoint_in,
-    checkpoint_out, param_file;
+  boost::filesystem::path sdp_directory, out_directory, param_file;
 
   SDPB_Parameters(int argc, char *argv[]);
   bool is_valid() const { return !sdp_directory.empty(); }

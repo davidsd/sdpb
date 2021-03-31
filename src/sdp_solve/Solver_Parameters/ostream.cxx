@@ -2,17 +2,10 @@
 
 std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
 {
-  os << "SDP directory   : " << p.sdp_directory << '\n'
-     << "out directory   : " << p.out_directory << '\n'
-     << "checkpoint in   : " << p.checkpoint_in << '\n'
-     << "checkpoint out  : " << p.checkpoint_out << '\n'
-     << "\nParameters:\n"
-     << std::boolalpha << "maxIterations                = " << p.max_iterations
+  os << std::boolalpha << "maxIterations                = " << p.max_iterations
      << '\n'
      << "maxRuntime                   = " << p.max_runtime << '\n'
      << "checkpointInterval           = " << p.checkpoint_interval << '\n'
-     << "noFinalCheckpoint            = " << p.no_final_checkpoint << '\n'
-     << "writeSolution                = " << p.write_solution << '\n'
      << "findPrimalFeasible           = " << p.find_primal_feasible << '\n'
      << "findDualFeasible             = " << p.find_dual_feasible << '\n'
      << "detectPrimalFeasibleJump     = " << p.detect_primal_feasible_jump
@@ -35,9 +28,7 @@ std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
      << '\n'
      << "stepLengthReduction          = " << p.step_length_reduction << '\n'
      << "maxComplementarity           = " << p.max_complementarity << '\n'
-     << "procsPerNode                 = " << p.procs_per_node << '\n'
-     << "procGranularity              = " << p.proc_granularity << '\n'
-     << "verbosity                    = " << static_cast<int>(p.verbosity)
-     << '\n';
+     << "initialCheckpointDir         = " << p.checkpoint_in << '\n'
+     << "checkpointDir                = " << p.checkpoint_out << '\n';
   return os;
 }
