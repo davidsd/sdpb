@@ -1,4 +1,4 @@
-#include "../sdpb/SDPB_Parameters.hxx"
+#include "Outer_Parameters.hxx"
 #include "Function.hxx"
 #include "../sdp_read.hxx"
 #include "../sdp_solve.hxx"
@@ -71,12 +71,12 @@ std::vector<El::BigFloat> compute_optimal(
   const std::vector<std::vector<El::BigFloat>> &initial_points,
   const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
-  const SDPB_Parameters &parameters_in);
+  const Outer_Parameters &parameters_in);
 
 int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
-  SDPB_Parameters parameters(argc, argv);
+  Outer_Parameters parameters(argc, argv);
   if(!parameters.is_valid())
     {
       return 0;

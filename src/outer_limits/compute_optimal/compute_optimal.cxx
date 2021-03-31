@@ -1,8 +1,7 @@
-#include "../../sdpb/SDPB_Parameters.hxx"
+#include "../Outer_Parameters.hxx"
 #include "Mesh.hxx"
 #include "setup_constraints.hxx"
 
-#include "../../sdp_solve.hxx"
 #include "../../ostream_set.hxx"
 #include "../../ostream_map.hxx"
 #include "../../ostream_vector.hxx"
@@ -46,7 +45,7 @@ void compute_y_transform(
   const std::vector<std::set<El::BigFloat>> &points,
   const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
-  const SDPB_Parameters &parameters, const size_t &max_index,
+  const Outer_Parameters &parameters, const size_t &max_index,
   const El::Grid &global_grid,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
@@ -66,7 +65,7 @@ std::vector<El::BigFloat> compute_optimal(
   const std::vector<std::vector<El::BigFloat>> &initial_points,
   const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
-  const SDPB_Parameters &parameters_in)
+  const Outer_Parameters &parameters_in)
 {
   if(initial_points.size() != function_blocks.size())
     {
@@ -75,7 +74,7 @@ std::vector<El::BigFloat> compute_optimal(
         + std::to_string(function_blocks.size())
         + ", initial points: " + std::to_string(initial_points.size()));
     }
-  SDPB_Parameters parameters(parameters_in);
+  Outer_Parameters parameters(parameters_in);
 
   const size_t rank(El::mpi::Rank()), num_procs(El::mpi::Size()),
     num_weights(normalization.size());
@@ -166,8 +165,7 @@ std::vector<El::BigFloat> compute_optimal(
       const El::BigFloat objective_const(objectives.at(max_index)
                                          / normalization.at(max_index));
 
-      Block_Info block_info(matrix_dimensions, parameters.procs_per_node,
-                            parameters.proc_granularity, parameters.verbosity);
+      Block_Info block_info(matrix_dimensions, parameters.verbosity);
 
       El::Grid grid(block_info.mpi_comm.value);
 

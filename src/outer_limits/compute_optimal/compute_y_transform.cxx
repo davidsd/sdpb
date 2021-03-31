@@ -1,8 +1,7 @@
-#include "../../sdpb/SDPB_Parameters.hxx"
 #include "Mesh.hxx"
 #include "setup_constraints.hxx"
+#include "../Outer_Parameters.hxx"
 
-#include "../../sdp_solve.hxx"
 #include "../../ostream_set.hxx"
 #include "../../ostream_vector.hxx"
 #include "../../set_stream_precision.hxx"
@@ -13,7 +12,7 @@ void compute_y_transform(
   const std::vector<std::set<El::BigFloat>> &points,
   const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
-  const SDPB_Parameters &parameters, const size_t &max_index,
+  const Outer_Parameters &parameters, const size_t &max_index,
   const El::Grid &global_grid,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
@@ -34,8 +33,7 @@ void compute_y_transform(
                                function_blocks[block].size());
     }
 
-  Block_Info block_info(matrix_dimensions, parameters.procs_per_node,
-                        parameters.proc_granularity, parameters.verbosity);
+  Block_Info block_info(matrix_dimensions, parameters.verbosity);
 
   std::vector<std::vector<El::BigFloat>> primal_objective_c;
   primal_objective_c.reserve(num_constraints);

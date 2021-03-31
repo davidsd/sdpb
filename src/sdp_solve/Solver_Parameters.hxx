@@ -3,8 +3,6 @@
 // for a detailed description of each.
 //
 
-#include "../sdpb/Write_Solution.hxx"
-
 #include <El.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>

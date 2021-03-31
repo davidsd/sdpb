@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Write_Solution.hxx"
 #include "../Verbosity.hxx"
 #include "../sdp_solve.hxx"
 
@@ -20,7 +19,7 @@ struct SDPB_Parameters
   Solver_Parameters solver;
   Verbosity verbosity;
 
-  boost::filesystem::path sdp_directory, out_directory, param_file;
+  boost::filesystem::path sdp_directory, out_directory, param_path;
 
   SDPB_Parameters(int argc, char *argv[]);
   bool is_valid() const { return !sdp_directory.empty(); }

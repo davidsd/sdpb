@@ -75,7 +75,8 @@ def build(bld):
                        'src/sdp_solve/SDP_Solver/run/step/step_length/lower_triangular_inverse_congruence.cxx',
                        'src/sdp_solve/SDP_Solver_Terminate_Reason/ostream.cxx',
                        'src/sdp_solve/lower_triangular_transpose_solve.cxx',
-                       'src/sdp_solve/Block_Diagonal_Matrix/ostream.cxx']
+                       'src/sdp_solve/Block_Diagonal_Matrix/ostream.cxx',
+                       'src/sdp_solve/Write_Solution.cxx']
 
     bld.stlib(source=sdp_solve_sources,
               target='sdp_solve',
@@ -86,7 +87,6 @@ def build(bld):
     bld.program(source=['src/sdpb/main.cxx',
                         'src/sdpb/solve.cxx',
                         'src/sdpb/write_timing.cxx',
-                        'src/sdpb/Write_Solution.cxx',
                         'src/sdpb/SDPB_Parameters/SDPB_Parameters.cxx',
                         'src/sdpb/SDPB_Parameters/to_property_tree.cxx',
                         'src/sdpb/SDPB_Parameters/ostream.cxx',
@@ -208,12 +208,9 @@ def build(bld):
                         'src/outer_limits/read_function_blocks/read_json/Function_Blocks_Parser/StartObject.cxx',
                         'src/outer_limits/read_function_blocks/read_json/Function_Blocks_Parser/String.cxx',
                         'src/outer_limits/read_function_blocks/read_json/read_json.cxx',
-
-                        # TODO: Make Outer_Parameters
-                        'src/sdpb/SDPB_Parameters/SDPB_Parameters.cxx',
-                        'src/sdpb/SDPB_Parameters/to_property_tree.cxx',
-                        'src/sdpb/SDPB_Parameters/ostream.cxx',
-                        'src/sdpb/Write_Solution.cxx'
+                        'src/outer_limits/Outer_Parameters/Outer_Parameters.cxx',
+                        'src/outer_limits/Outer_Parameters/to_property_tree.cxx',
+                        'src/outer_limits/Outer_Parameters/ostream.cxx'
                         ],
                 target='outer_limits',
                 cxxflags=default_flags,
