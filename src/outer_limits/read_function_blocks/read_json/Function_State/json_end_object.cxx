@@ -7,7 +7,6 @@
 
 void Function_State::json_end_object()
 {
-  std::cout << "end\n" << std::flush;
   if(parsing_max_delta)
     {
       throw std::runtime_error(
