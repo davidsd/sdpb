@@ -65,6 +65,7 @@ void save_checkpoint(const boost::filesystem::path &checkpoint_directory,
                      const El::Matrix<El::BigFloat> &y,
                      const std::vector<std::set<El::BigFloat>> &points,
                      const El::BigFloat &infinity,
+                     const El::BigFloat &threshold,
                      boost::optional<int64_t> &backup_generation,
                      int64_t &current_generation);
 
@@ -392,6 +393,7 @@ std::vector<El::BigFloat> compute_optimal(
       copy_matrix(y_star, y_saved);
       save_checkpoint(parameters.solver.checkpoint_out, parameters.verbosity,
                       parameter_properties, y_saved, points, infinity,
+                      parameters.solver.duality_gap_threshold,
                       backup_generation, current_generation);
     }
   return weights;

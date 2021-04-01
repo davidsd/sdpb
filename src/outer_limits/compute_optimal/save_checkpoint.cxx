@@ -14,6 +14,7 @@ void save_checkpoint(const boost::filesystem::path &checkpoint_directory,
                      const El::Matrix<El::BigFloat> &y,
                      const std::vector<std::set<El::BigFloat>> &points,
                      const El::BigFloat &infinity,
+                     const El::BigFloat &threshold,
                      boost::optional<int64_t> &backup_generation,
                      int64_t &current_generation)
 {
@@ -58,7 +59,9 @@ void save_checkpoint(const boost::filesystem::path &checkpoint_directory,
           checkpoint_stream << "{\n  \"version\": \"" << SDPB_VERSION_STRING
                             << "\",\n  \"options\": \n";
           boost::property_tree::write_json(checkpoint_stream, parameter_properties);
-          checkpoint_stream << ",\n  \"y\":\n  [\n";
+          checkpoint_stream << ",\n  \"threshold\": \""
+                            << threshold << "\",\n"
+                            << "\"y\":\n  [\n";
           for(int64_t row(0); row != y.Height(); ++row)
             {
               if(row != 0)
