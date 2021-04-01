@@ -133,6 +133,9 @@ std::vector<El::BigFloat> compute_optimal(
   boost::optional<int64_t> backup_generation;
   int64_t current_generation(0);
   parameters.solver.duality_gap_threshold = 1.1;
+
+  // TODO: Load checkpoint
+  
   while(parameters.solver.duality_gap_threshold
         > parameters_in.solver.duality_gap_threshold)
     {
