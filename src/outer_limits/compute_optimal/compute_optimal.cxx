@@ -59,6 +59,15 @@ eval_summed(const El::BigFloat &infinity,
 std::vector<El::BigFloat>
 get_new_points(const Mesh &mesh, const El::BigFloat &block_epsilon);
 
+void save_checkpoint(const boost::filesystem::path &checkpoint_directory,
+                     const Verbosity &verbosity,
+                     const boost::property_tree::ptree &parameter_properties,
+                     const El::Matrix<El::BigFloat> &y,
+                     const std::vector<std::set<El::BigFloat>> &points,
+                     const El::BigFloat &infinity,
+                     boost::optional<int64_t> &backup_generation,
+                     int64_t &current_generation);
+
 std::vector<El::BigFloat> compute_optimal(
   const std::vector<std::vector<std::vector<std::vector<Function>>>>
     &function_blocks,
@@ -120,6 +129,8 @@ std::vector<El::BigFloat> compute_optimal(
   El::Matrix<El::BigFloat> y_saved(yp_to_y_star.Height(), 1);
   El::Zero(y_saved);
 
+  boost::optional<int64_t> backup_generation;
+  int64_t current_generation(0);
   parameters.solver.duality_gap_threshold = 1.1;
   while(parameters.solver.duality_gap_threshold
         > parameters_in.solver.duality_gap_threshold)
@@ -182,6 +193,8 @@ std::vector<El::BigFloat> compute_optimal(
           copy_matrix(y_saved, y_block);
         }
 
+      boost::property_tree::ptree parameter_properties(
+        to_property_tree(parameters));
       bool has_new_points(false);
       while(!has_new_points
             && parameters.solver.duality_gap_threshold
@@ -194,9 +207,9 @@ std::vector<El::BigFloat> compute_optimal(
             }
 
           Timers timers(parameters.verbosity >= Verbosity::debug);
-          SDP_Solver_Terminate_Reason reason = solver.run(
-            parameters.solver, parameters.verbosity,
-            to_property_tree(parameters), block_info, sdp, grid, timers);
+          SDP_Solver_Terminate_Reason reason
+            = solver.run(parameters.solver, parameters.verbosity,
+                         parameter_properties, block_info, sdp, grid, timers);
 
           if(rank == 0 && parameters.verbosity >= Verbosity::regular)
             {
@@ -259,7 +272,7 @@ std::vector<El::BigFloat> compute_optimal(
           weights.at(max_index) /= normalization.at(max_index);
           if(rank == 0 && parameters.verbosity >= Verbosity::regular)
             {
-              std::cout.precision(20);
+              set_stream_precision(std::cout);
               std::cout << "weight: " << weights << "\n";
 
               El::BigFloat optimal(0);
@@ -377,6 +390,9 @@ std::vector<El::BigFloat> compute_optimal(
       El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(
         solver.y.blocks.front());
       copy_matrix(y_star, y_saved);
+      save_checkpoint(parameters.solver.checkpoint_out, parameters.verbosity,
+                      parameter_properties, y_saved, points, infinity,
+                      backup_generation, current_generation);
     }
   return weights;
 }
