@@ -30,17 +30,15 @@ void save_checkpoint(const boost::filesystem::path &checkpoint_directory,
   if(backup_generation)
     {
       remove(checkpoint_directory
-             / ("outer_checkpoint_" + std::to_string(backup_generation.value())
+             / ("points_" + std::to_string(backup_generation.value())
                 + "_" + std::to_string(El::mpi::Rank()) + ".json"));
     }
 
   backup_generation = current_generation;
   current_generation += 1;
-  std::cout << "generation: " << backup_generation << " " << current_generation
-            << "\n";
   boost::filesystem::path checkpoint_filename(
     checkpoint_directory
-    / ("outer_checkpoint_" + std::to_string(current_generation) + "_"
+    / ("points_" + std::to_string(current_generation) + "_"
        + std::to_string(El::mpi::Rank()) + ".json"));
 
   const size_t max_retries(10);
@@ -55,17 +53,7 @@ void save_checkpoint(const boost::filesystem::path &checkpoint_directory,
           std::cout << "Saving checkpoint to    : " << checkpoint_directory
                     << '\n';
         }
-      checkpoint_stream << "{\n  \"y\":\n  [\n";
-      for(int64_t row(0); row != y.Height(); ++row)
-        {
-          if(row != 0)
-            {
-              checkpoint_stream << ",\n";
-            }
-          checkpoint_stream << "    \"" << y(row, 0) << '"';
-        }
-      checkpoint_stream << "\n  ],\n"
-                        << "  \"points\":\n  [\n";
+      checkpoint_stream << "{\n  \"points\":\n  [\n";
       // Output 'points' manually because we want to substitute in
       // 'inf' for infinity.
       for(auto block(points.begin()); block!=points.end(); ++block)
@@ -118,20 +106,30 @@ void save_checkpoint(const boost::filesystem::path &checkpoint_directory,
     }
   if(El::mpi::Rank() == 0)
     {
-      boost::filesystem::ofstream metadata(checkpoint_directory
-                                           / "outer_checkpoint_new.json");
-      metadata << "{\n    \"current\": " << current_generation << ",\n"
+      boost::filesystem::ofstream y_stream(checkpoint_directory
+                                           / "y_new.json");
+      set_stream_precision(y_stream);
+      y_stream << "{\n    \"current\": " << current_generation << ",\n"
                << "    \"backup\": " << backup_generation.value() << ",\n"
                << "    \"version\": \"" << SDPB_VERSION_STRING
                << "\",\n    \"options\": \n";
 
-      boost::property_tree::write_json(metadata, parameter_properties);
-      metadata << "}\n";
+      boost::property_tree::write_json(y_stream, parameter_properties);
+      y_stream << ",\n  \"y\":\n  [\n";
+      for(int64_t row(0); row != y.Height(); ++row)
+        {
+          if(row != 0)
+            {
+              y_stream << ",\n";
+            }
+          y_stream << "    \"" << y(row, 0) << '"';
+        }
+      y_stream << "\n  ]\n}\n";
     }
   El::mpi::Barrier(El::mpi::COMM_WORLD);
   if(El::mpi::Rank() == 0)
     {
-      rename(checkpoint_directory / "outer_checkpoint_new.json",
-             checkpoint_directory / "outer_checkpoint.json");
+      rename(checkpoint_directory / "y_new.json",
+             checkpoint_directory / "y.json");
     }
 }
