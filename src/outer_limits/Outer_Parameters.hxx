@@ -15,6 +15,7 @@ struct Outer_Parameters
   bool require_initial_checkpoint = false;
   Write_Solution write_solution;
 
+  El::BigFloat duality_gap_reduction;
   Solver_Parameters solver;
   Verbosity verbosity;
 

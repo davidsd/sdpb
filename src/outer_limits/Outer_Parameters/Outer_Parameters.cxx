@@ -13,8 +13,10 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
 
   po::options_description required_options("Required options");
   required_options.add_options()(
-    "functions", po::value<boost::filesystem::path>(&functions_path)->required(),
-    "Mathematica, JSON, or NSV file with SDP functions evaluated at chebyshev zeros.");
+    "functions",
+    po::value<boost::filesystem::path>(&functions_path)->required(),
+    "Mathematica, JSON, or NSV file with SDP functions evaluated at chebyshev "
+    "zeros.");
   required_options.add_options()(
     "points", po::value<boost::filesystem::path>(&points_path)->required(),
     "JSON, or NSV file with initial points.");
@@ -41,7 +43,14 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
                               "output, 2 -> debug output");
 
   cmd_line_options.add(basic_options);
-  cmd_line_options.add(solver.options());
+  po::options_description solver_options(solver.options());
+  solver_options.add_options()(
+    "dualityGapReduction",
+    po::value<El::BigFloat>(&duality_gap_reduction)
+      ->default_value(El::BigFloat("1024", 10)),
+    "Shrink the duality gap threshold by this factor during each outer "
+    "iteration.  Smaller means slower convergence.");
+  cmd_line_options.add(solver_options);
 
   po::variables_map variables_map;
   try

@@ -388,7 +388,7 @@ std::vector<El::BigFloat> compute_optimal(
                != num_new_points.end());
           if(!has_new_points)
             {
-              parameters.solver.duality_gap_threshold *= (1.0 / 8);
+              parameters.solver.duality_gap_threshold /= parameters.duality_gap_reduction;
             }
         }
       El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(
