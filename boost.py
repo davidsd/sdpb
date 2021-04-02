@@ -43,10 +43,26 @@ def configure(conf):
     if conf.options.boost_libs:
         boost_libs=conf.options.boost_libs.split()
     else:
-        boost_libs=['boost_system', 'boost_filesystem', 'boost_date_time', 'boost_program_options']
+        boost_libs=['boost_system', 'boost_filesystem', 'boost_date_time',
+                    'boost_program_options', 'boost_iostreams']
 
     conf.check_cxx(msg="Checking for Boost",
-                   fragment="#include <boost/filesystem.hpp>\n#include <boost/date_time/posix_time/posix_time.hpp>\n#include <boost/program_options.hpp>\nint main()\n{\nboost::posix_time::second_clock::local_time();\nboost::filesystem::path();\nboost::program_options::options_description();\n}\n",
+                   fragment="""#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/device/file.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/program_options.hpp>
+int main()
+{
+boost::posix_time::second_clock::local_time();
+boost::filesystem::path();
+boost::program_options::options_description();
+boost::iostreams::file_sink("foo");
+boost::iostreams::filtering_ostream();
+boost::iostreams::gzip_compressor();
+}
+""",
                    includes=boost_incdir,
                    uselib_store='boost',
                    libpath=boost_libdir,
