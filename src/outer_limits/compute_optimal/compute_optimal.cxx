@@ -62,6 +62,7 @@ get_new_points(const Mesh &mesh, const El::BigFloat &block_epsilon);
 void save_checkpoint(const boost::filesystem::path &checkpoint_directory,
                      const Verbosity &verbosity,
                      const boost::property_tree::ptree &parameter_properties,
+                     const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
                      const El::Matrix<El::BigFloat> &y,
                      const std::vector<std::set<El::BigFloat>> &points,
                      const El::BigFloat &infinity,
@@ -123,6 +124,9 @@ std::vector<El::BigFloat> compute_optimal(
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_to_y_star(global_grid),
     dual_objective_b_star(global_grid);
   El::BigFloat primal_c_scale;
+
+  // TODO: Load checkpoint
+  
   compute_y_transform(function_blocks, points, objectives, normalization,
                       parameters, max_index, global_grid, yp_to_y_star,
                       dual_objective_b_star, primal_c_scale);
@@ -134,8 +138,6 @@ std::vector<El::BigFloat> compute_optimal(
   int64_t current_generation(0);
   parameters.solver.duality_gap_threshold = 1.1;
 
-  // TODO: Load checkpoint
-  
   while(parameters.solver.duality_gap_threshold
         > parameters_in.solver.duality_gap_threshold)
     {
@@ -395,7 +397,7 @@ std::vector<El::BigFloat> compute_optimal(
         solver.y.blocks.front());
       copy_matrix(y_star, y_saved);
       save_checkpoint(parameters.solver.checkpoint_out, parameters.verbosity,
-                      parameter_properties, y_saved, points, infinity,
+                      parameter_properties, yp_to_y_star, y_saved, points, infinity,
                       parameters.solver.duality_gap_threshold,
                       backup_generation, current_generation);
     }
