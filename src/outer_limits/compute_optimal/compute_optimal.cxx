@@ -59,16 +59,24 @@ eval_summed(const El::BigFloat &infinity,
 std::vector<El::BigFloat>
 get_new_points(const Mesh &mesh, const El::BigFloat &block_epsilon);
 
-void save_checkpoint(const boost::filesystem::path &checkpoint_directory,
-                     const Verbosity &verbosity,
-                     const boost::property_tree::ptree &parameter_properties,
-                     const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
-                     const El::Matrix<El::BigFloat> &y,
-                     const std::vector<std::set<El::BigFloat>> &points,
-                     const El::BigFloat &infinity,
-                     const El::BigFloat &threshold,
-                     boost::optional<int64_t> &backup_generation,
-                     int64_t &current_generation);
+boost::optional<int64_t> load_checkpoint(
+  const boost::filesystem::path &checkpoint_directory,
+  int64_t &current_generation,
+  El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
+  El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
+  El::Matrix<El::BigFloat> &y, std::vector<std::set<El::BigFloat>> &points,
+  El::BigFloat &threshold, El::BigFloat &primal_c_scale);
+
+void save_checkpoint(
+  const boost::filesystem::path &checkpoint_directory,
+  const Verbosity &verbosity,
+  const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
+  const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
+  const El::Matrix<El::BigFloat> &y,
+  const std::vector<std::set<El::BigFloat>> &points,
+  const El::BigFloat &infinity, const El::BigFloat &threshold,
+  const El::BigFloat &primal_c_scale,
+  boost::optional<int64_t> &backup_generation, int64_t &current_generation);
 
 std::vector<El::BigFloat> compute_optimal(
   const std::vector<std::vector<std::vector<std::vector<Function>>>>
@@ -126,17 +134,28 @@ std::vector<El::BigFloat> compute_optimal(
   El::BigFloat primal_c_scale;
 
   // TODO: Load checkpoint
-  
-  compute_y_transform(function_blocks, points, objectives, normalization,
-                      parameters, max_index, global_grid, yp_to_y_star,
-                      dual_objective_b_star, primal_c_scale);
-
+  parameters.solver.duality_gap_threshold = 1.1;
   El::Matrix<El::BigFloat> y_saved(yp_to_y_star.Height(), 1);
   El::Zero(y_saved);
 
-  boost::optional<int64_t> backup_generation;
   int64_t current_generation(0);
-  parameters.solver.duality_gap_threshold = 1.1;
+  boost::optional<int64_t> backup_generation(
+    load_checkpoint(parameters.solver.checkpoint_in, current_generation,
+                    yp_to_y_star, dual_objective_b_star, y_saved, points,
+                    parameters.solver.duality_gap_threshold, primal_c_scale));
+  if(backup_generation)
+    {
+      if(parameters.verbosity >= Verbosity::regular)
+        {
+          std::cout << "Loaded checkpoint " << backup_generation << "\n";
+        }
+    }
+  else
+    {
+      compute_y_transform(function_blocks, points, objectives, normalization,
+                          parameters, max_index, global_grid, yp_to_y_star,
+                          dual_objective_b_star, primal_c_scale);
+    }
 
   while(parameters.solver.duality_gap_threshold
         > parameters_in.solver.duality_gap_threshold)
@@ -390,16 +409,17 @@ std::vector<El::BigFloat> compute_optimal(
                != num_new_points.end());
           if(!has_new_points)
             {
-              parameters.solver.duality_gap_threshold /= parameters.duality_gap_reduction;
+              parameters.solver.duality_gap_threshold
+                /= parameters.duality_gap_reduction;
             }
         }
       El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(
         solver.y.blocks.front());
       copy_matrix(y_star, y_saved);
       save_checkpoint(parameters.solver.checkpoint_out, parameters.verbosity,
-                      parameter_properties, yp_to_y_star, y_saved, points, infinity,
-                      parameters.solver.duality_gap_threshold,
-                      backup_generation, current_generation);
+                      yp_to_y_star, dual_objective_b_star, y_saved, points,
+                      infinity, parameters.solver.duality_gap_threshold,
+                      primal_c_scale, backup_generation, current_generation);
     }
   return weights;
 }

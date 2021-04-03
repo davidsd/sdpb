@@ -5,8 +5,8 @@
 
 #include <El.hpp>
 
+#include <boost/optional.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/property_tree/json_parser.hpp>
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
@@ -22,11 +22,12 @@ namespace
 void save_checkpoint(
   const boost::filesystem::path &checkpoint_directory,
   const Verbosity &verbosity,
-  const boost::property_tree::ptree &parameter_properties,
   const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
+  const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   const El::Matrix<El::BigFloat> &y,
   const std::vector<std::set<El::BigFloat>> &points,
   const El::BigFloat &infinity, const El::BigFloat &threshold,
+  const El::BigFloat &primal_c_scale,
   boost::optional<int64_t> &backup_generation, int64_t &current_generation)
 {
   if(El::mpi::Rank() == 0)
@@ -69,11 +70,10 @@ void save_checkpoint(
                         << '\n';
             }
 
-          checkpoint_stream << "{\n  \"version\": \"" << SDPB_VERSION_STRING
-                            << "\",\n  \"options\": \n";
-          boost::property_tree::write_json(checkpoint_stream,
-                                           parameter_properties);
-          checkpoint_stream << ",\n  \"threshold\": \"" << threshold << "\",\n"
+          checkpoint_stream << "{\n  \"generation\": \"" << current_generation
+                            << "\",\n"
+                            << "  \"threshold\": \"" << threshold << "\",\n"
+                            << "  \"c_scale\": \"" << primal_c_scale << "\",\n"
                             << "  \"y\":\n  [\n";
           for(int64_t row(0); row != y.Height(); ++row)
             {
@@ -135,6 +135,18 @@ void save_checkpoint(
                     << "      \"" << yp_to_y_star.GetLocal(row, column) << '"';
                 }
               checkpoint_stream << "\n    ]";
+            }
+          checkpoint_stream << "\n  ],\n";
+
+          checkpoint_stream << "  \"b\":\n  [\n";
+          for(int64_t row(0); row < dual_objective_b_star.LocalHeight(); ++row)
+            {
+              if(row != 0)
+                {
+                  checkpoint_stream << ",\n";
+                }
+              checkpoint_stream
+                << "      \"" << dual_objective_b_star.GetLocal(row, 0) << '"';
             }
           checkpoint_stream << "\n  ]\n}\n";
 
