@@ -25,8 +25,8 @@ SDP::SDP(
   const std::vector<El::Matrix<El::BigFloat>> &free_var_input,
   const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
   const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
-  const El::BigFloat &primal_c_scale,
-  const Block_Info &block_info, const El::Grid &grid)
+  const El::BigFloat &primal_c_scale, const Block_Info &block_info,
+  const El::Grid &grid)
     : dual_objective_b(dual_objective_b_star.Height(), 1, grid),
       objective_const(objective_const_input)
 {
