@@ -37,15 +37,12 @@ namespace
       }
   }
 
-  void
-  fill_weights(const El::Matrix<El::BigFloat> &y,
-               const size_t &max_index,
-               const std::vector<El::BigFloat> &normalization,
-               std::vector<El::BigFloat> &weights)
+  void fill_weights(const El::Matrix<El::BigFloat> &y, const size_t &max_index,
+                    const std::vector<El::BigFloat> &normalization,
+                    std::vector<El::BigFloat> &weights)
   {
     weights.at(max_index) = 1;
-    for(size_t block_row(0); block_row != size_t(y.Height());
-        ++block_row)
+    for(size_t block_row(0); block_row != size_t(y.Height()); ++block_row)
       {
         const size_t index(block_row + (block_row < max_index ? 0 : 1));
         weights.at(index) = y(block_row, 0);
@@ -75,15 +72,14 @@ boost::optional<int64_t> load_checkpoint(
   El::Matrix<El::BigFloat> &y, std::vector<std::set<El::BigFloat>> &points,
   El::BigFloat &threshold, El::BigFloat &primal_c_scale);
 
-void find_new_points(const size_t &num_blocks,  const size_t &rank,
-                     const size_t &num_procs,
-                     const El::BigFloat &infinity,
-                     const std::vector<std::vector<std::vector<std::vector<Function>>>>
-                     &function_blocks,
-                     const std::vector<El::BigFloat> &weights,
-                     const std::vector<std::set<El::BigFloat>> &points,
-                     std::vector<std::vector<El::BigFloat>> &new_points,
-                     bool &has_new_points);
+void find_new_points(
+  const size_t &num_blocks, const size_t &rank, const size_t &num_procs,
+  const El::BigFloat &infinity,
+  const std::vector<std::vector<std::vector<std::vector<Function>>>>
+    &function_blocks,
+  const std::vector<El::BigFloat> &weights,
+  const std::vector<std::set<El::BigFloat>> &points,
+  std::vector<std::vector<El::BigFloat>> &new_points, bool &has_new_points);
 
 void save_checkpoint(
   const boost::filesystem::path &checkpoint_directory,
@@ -164,11 +160,16 @@ std::vector<El::BigFloat> compute_optimal(
                   primal_c_scale);
   if(backup_generation)
     {
-      if(parameters.verbosity >= Verbosity::regular)
+      El::Matrix<El::BigFloat> y(yp_saved.Height(), 1);
+
+      El::Gemv(El::Orientation::NORMAL, El::BigFloat(1.0),
+               yp_to_y_star.LockedMatrix(), yp_saved, El::BigFloat(0.0), y);
+
+      if(El::mpi::Rank() == 0 && parameters.verbosity >= Verbosity::regular)
         {
           std::cout << "Loaded checkpoint " << backup_generation << "\n";
         }
-      fill_weights(yp_saved, max_index, normalization, weights);
+      fill_weights(y, max_index, normalization, weights);
     }
   else
     {
@@ -305,12 +306,13 @@ std::vector<El::BigFloat> compute_optimal(
                    yp, El::BigFloat(0.0), y);
           El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(y);
 
-          fill_weights(y_star.LockedMatrix(), max_index, normalization, weights);
+          fill_weights(y_star.LockedMatrix(), max_index, normalization,
+                       weights);
           if(rank == 0 && parameters.verbosity >= Verbosity::regular)
             {
               set_stream_precision(std::cout);
               std::cout << "weight: " << weights << "\n";
-                  
+
               El::BigFloat optimal(0);
               for(size_t index(0); index < objectives.size(); ++index)
                 {
@@ -318,8 +320,9 @@ std::vector<El::BigFloat> compute_optimal(
                 }
               std::cout << "optimal: " << optimal << "\n";
             }
-          find_new_points(num_blocks, rank, num_procs, infinity, function_blocks,
-                          weights, points, new_points, has_new_points);
+          find_new_points(num_blocks, rank, num_procs, infinity,
+                          function_blocks, weights, points, new_points,
+                          has_new_points);
           if(!has_new_points)
             {
               parameters.solver.duality_gap_threshold
