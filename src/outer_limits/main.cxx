@@ -6,6 +6,7 @@
 #include "../ostream_vector.hxx"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 // We convert the optimization problem into a regular linear
 // programming problem.
@@ -98,7 +99,8 @@ int main(int argc, char **argv)
 
   std::vector<El::BigFloat> objectives, normalization;
   std::vector<std::vector<std::vector<std::vector<Function>>>> functions;
-  read_function_blocks(parameters.functions_path, objectives, normalization, functions);
+  read_function_blocks(parameters.functions_path, objectives, normalization,
+                       functions);
 
   std::vector<std::vector<El::BigFloat>> initial_points;
   read_points(parameters.points_path, initial_points);
@@ -116,26 +118,27 @@ int main(int argc, char **argv)
       set_stream_precision(std::cout);
       std::cout << "optimal: " << optimal << "\n";
     }
-  if(El::mpi::Rank() ==0)
+  if(El::mpi::Rank() == 0)
     {
       if(parameters.verbosity >= Verbosity::regular)
         {
-          std::cout << "Saving solution to "
-                    << parameters.output_path << "\n";
+          std::cout << "Saving solution to " << parameters.output_path << "\n";
         }
       boost::filesystem::ofstream output(parameters.output_path);
       set_stream_precision(output);
-      output << "{\n  \"optimal\": \"" << optimal
-             << "\",\n"
+      output << "{\n  \"optimal\": \"" << optimal << "\",\n"
              << "  \"y\":\n  [\n";
-      for(auto weight(weights.begin()); weight!=weights.end(); ++weight)
+      for(auto weight(weights.begin()); weight != weights.end(); ++weight)
         {
-          if(weight!=weights.begin())
+          if(weight != weights.begin())
             {
               output << ",\n";
             }
           output << "    \"" << *weight << "\"";
         }
-      output << "\n  ]\n}\n";
+
+      output << "\n  ],\n  \"options\": \n";
+      boost::property_tree::write_json(output, to_property_tree(parameters));
+      output << "}\n";
     }
 }
