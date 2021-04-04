@@ -4,7 +4,7 @@ boost::property_tree::ptree to_property_tree(const Outer_Parameters &p)
 {
   boost::property_tree::ptree result(to_property_tree(p.solver));
 
-  result.put("functions", p.functions_path.string());
+  result.put("sdp", p.sdp_path.string());
   result.put("points", p.points_path.string());
   result.put("out", p.output_path.string());
   result.put("dualityGapReduction", p.duality_gap_reduction);
