@@ -15,16 +15,14 @@
 
 #include <algorithm>
 
-boost::optional<int64_t> load_checkpoint(
+void load_checkpoint(
   const boost::filesystem::path &checkpoint_directory,
-  int64_t &current_generation,
+  boost::optional<int64_t> &backup_generation, int64_t &current_generation,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   El::Matrix<El::BigFloat> &y, std::vector<std::set<El::BigFloat>> &points,
   El::BigFloat &threshold, El::BigFloat &primal_c_scale)
 {
-  boost::optional<int64_t> result;
-
   if(boost::filesystem::exists(checkpoint_directory)
      && boost::filesystem::is_directory(checkpoint_directory))
     {
@@ -44,7 +42,7 @@ boost::optional<int64_t> load_checkpoint(
         }
       if(max_generation != -1)
         {
-          result = max_generation;
+          backup_generation = max_generation;
           current_generation = max_generation + 1;
 
           const std::string checkpoint_name(
@@ -110,5 +108,4 @@ boost::optional<int64_t> load_checkpoint(
           primal_c_scale = parser.c_scale_state.value;
         }
     }
-  return result;
 }

@@ -1,5 +1,4 @@
 #include "../Outer_Parameters.hxx"
-#include "Mesh.hxx"
 #include "setup_constraints.hxx"
 
 #include "../../ostream_set.hxx"
@@ -37,6 +36,23 @@ namespace
           }
       }
   }
+
+  void
+  fill_weights(const El::Matrix<El::BigFloat> &y,
+               const size_t &max_index,
+               const std::vector<El::BigFloat> &normalization,
+               std::vector<El::BigFloat> &weights)
+  {
+    weights.at(max_index) = 1;
+    for(size_t block_row(0); block_row != size_t(y.Height());
+        ++block_row)
+      {
+        const size_t index(block_row + (block_row < max_index ? 0 : 1));
+        weights.at(index) = y(block_row, 0);
+        weights.at(max_index) -= weights.at(index) * normalization.at(index);
+      }
+    weights.at(max_index) /= normalization.at(max_index);
+  }
 }
 
 void compute_y_transform(
@@ -51,21 +67,23 @@ void compute_y_transform(
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   El::BigFloat &primal_c_scale);
 
-El::BigFloat
-eval_summed(const El::BigFloat &infinity,
-            const std::vector<std::vector<Function>> &summed_functions,
-            const El::BigFloat &x);
-
-std::vector<El::BigFloat>
-get_new_points(const Mesh &mesh, const El::BigFloat &block_epsilon);
-
 boost::optional<int64_t> load_checkpoint(
   const boost::filesystem::path &checkpoint_directory,
-  int64_t &current_generation,
+  boost::optional<int64_t> &backup_generation, int64_t &current_generation,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   El::Matrix<El::BigFloat> &y, std::vector<std::set<El::BigFloat>> &points,
   El::BigFloat &threshold, El::BigFloat &primal_c_scale);
+
+void find_new_points(const size_t &num_blocks,  const size_t &rank,
+                     const size_t &num_procs,
+                     const El::BigFloat &infinity,
+                     const std::vector<std::vector<std::vector<std::vector<Function>>>>
+                     &function_blocks,
+                     const std::vector<El::BigFloat> &weights,
+                     const std::vector<std::set<El::BigFloat>> &points,
+                     std::vector<std::vector<El::BigFloat>> &new_points,
+                     bool &has_new_points);
 
 void save_checkpoint(
   const boost::filesystem::path &checkpoint_directory,
@@ -135,20 +153,22 @@ std::vector<El::BigFloat> compute_optimal(
 
   // TODO: Load checkpoint
   parameters.solver.duality_gap_threshold = 1.1;
-  El::Matrix<El::BigFloat> y_saved(yp_to_y_star.Height(), 1);
-  El::Zero(y_saved);
+  El::Matrix<El::BigFloat> yp_saved(yp_to_y_star.Height(), 1);
+  El::Zero(yp_saved);
 
   int64_t current_generation(0);
-  boost::optional<int64_t> backup_generation(
-    load_checkpoint(parameters.solver.checkpoint_in, current_generation,
-                    yp_to_y_star, dual_objective_b_star, y_saved, points,
-                    parameters.solver.duality_gap_threshold, primal_c_scale));
+  boost::optional<int64_t> backup_generation;
+  load_checkpoint(parameters.solver.checkpoint_in, backup_generation,
+                  current_generation, yp_to_y_star, dual_objective_b_star,
+                  yp_saved, points, parameters.solver.duality_gap_threshold,
+                  primal_c_scale);
   if(backup_generation)
     {
       if(parameters.verbosity >= Verbosity::regular)
         {
           std::cout << "Loaded checkpoint " << backup_generation << "\n";
         }
+      fill_weights(yp_saved, max_index, normalization, weights);
     }
   else
     {
@@ -215,7 +235,7 @@ std::vector<El::BigFloat> compute_optimal(
 
       for(auto &y_block : solver.y.blocks)
         {
-          copy_matrix(y_saved, y_block);
+          copy_matrix(yp_saved, y_block);
         }
 
       boost::property_tree::ptree parameter_properties(
@@ -285,16 +305,7 @@ std::vector<El::BigFloat> compute_optimal(
                    yp, El::BigFloat(0.0), y);
           El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(y);
 
-          weights.at(max_index) = 1;
-          for(size_t block_row(0); block_row != size_t(y_star.LocalHeight());
-              ++block_row)
-            {
-              const size_t index(block_row + (block_row < max_index ? 0 : 1));
-              weights.at(index) = y_star.GetLocalCRef(block_row, 0);
-              weights.at(max_index)
-                -= weights.at(index) * normalization.at(index);
-            }
-          weights.at(max_index) /= normalization.at(max_index);
+          fill_weights(y_star.LockedMatrix(), max_index, normalization, weights);
           if(rank == 0 && parameters.verbosity >= Verbosity::regular)
             {
               set_stream_precision(std::cout);
@@ -307,117 +318,19 @@ std::vector<El::BigFloat> compute_optimal(
                 }
               std::cout << "optimal: " << optimal << "\n";
             }
-          std::vector<size_t> num_new_points(num_blocks, 0);
-          for(size_t block(rank); block < num_blocks; block += num_procs)
-            {
-              // TODO: These can both be precomputed
-              El::BigFloat max_delta(infinity), block_scale(0);
-              size_t max_degree(0);
-              for(auto &row : function_blocks[block])
-                for(auto &column : row)
-                  for(size_t function_index(0);
-                      function_index != column.size(); ++function_index)
-                    {
-                      auto &f(column[function_index]);
-                      max_delta = El::Min(max_delta, f.max_delta);
-                      max_degree
-                        = std::max(max_degree, f.chebyshev_coeffs.size());
-                      for(auto &coeff : f.chebyshev_coeffs)
-                        {
-                          block_scale = std::max(
-                            block_scale,
-                            El::Abs(coeff * weights[function_index]));
-                        }
-                    }
-
-              const El::BigFloat block_epsilon(
-                block_scale * El::limits::Epsilon<El::BigFloat>());
-
-              // Preadd the coefficients
-              std::vector<std::vector<Function>> summed_functions(
-                function_blocks[block].size());
-              El::BigFloat zero(0);
-              for(size_t matrix_row(0); matrix_row != summed_functions.size();
-                  ++matrix_row)
-                {
-                  summed_functions[matrix_row].reserve(
-                    function_blocks[block][matrix_row].size());
-                  for(size_t matrix_column(0);
-                      matrix_column
-                      != function_blocks[block][matrix_row].size();
-                      ++matrix_column)
-                    {
-                      auto &summed(
-                        summed_functions[matrix_row].emplace_back());
-                      // TODO: This only works if all have the same degree
-                      // and max_delta
-                      summed.max_delta = max_delta;
-                      summed.infinity_value = zero;
-                      summed.chebyshev_coeffs.resize(max_degree);
-                      auto &y_vector(
-                        function_blocks[block][matrix_row][matrix_column]);
-                      for(size_t y_index(0); y_index != y_vector.size();
-                          ++y_index)
-                        {
-                          for(size_t coeff_index(0);
-                              coeff_index
-                              != y_vector[y_index].chebyshev_coeffs.size();
-                              ++coeff_index)
-                            {
-                              summed.chebyshev_coeffs[coeff_index]
-                                += weights[y_index]
-                                   * y_vector[y_index]
-                                       .chebyshev_coeffs[coeff_index];
-                            }
-                        }
-                    }
-                }
-
-              // 1/128 should be a small enough relative error so that we are
-              // in the regime of convergence.  Then the error estimates will
-              // work
-              Mesh mesh(
-                *(points.at(block).begin()), max_delta,
-                [&](const El::BigFloat &x) {
-                  return eval_summed(infinity, summed_functions, x);
-                },
-                (1.0 / 128), block_epsilon);
-
-              new_points.at(block).clear();
-              for(auto &point : get_new_points(mesh, block_epsilon))
-                {
-                  if(points.at(block).count(point) == 0)
-                    {
-                      new_points.at(block).push_back(point);
-                      ++num_new_points.at(block);
-                    }
-                }
-            }
-          El::mpi::AllReduce(num_new_points.data(), num_new_points.size(),
-                             El::mpi::SUM, El::mpi::COMM_WORLD);
-
-          for(size_t block(0); block != num_blocks; ++block)
-            {
-              new_points.at(block).resize(num_new_points.at(block));
-              El::mpi::Broadcast(new_points.at(block).data(),
-                                 num_new_points.at(block), block % num_procs,
-                                 El::mpi::COMM_WORLD);
-            }
-          has_new_points
-            = (find_if(num_new_points.begin(), num_new_points.end(),
-                       [](const size_t &n) { return n != 0; })
-               != num_new_points.end());
+          find_new_points(num_blocks, rank, num_procs, infinity, function_blocks,
+                          weights, points, new_points, has_new_points);
           if(!has_new_points)
             {
               parameters.solver.duality_gap_threshold
                 /= parameters.duality_gap_reduction;
             }
         }
-      El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(
+      El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_star(
         solver.y.blocks.front());
-      copy_matrix(y_star, y_saved);
+      copy_matrix(yp_star, yp_saved);
       save_checkpoint(parameters.solver.checkpoint_out, parameters.verbosity,
-                      yp_to_y_star, dual_objective_b_star, y_saved, points,
+                      yp_to_y_star, dual_objective_b_star, yp_saved, points,
                       infinity, parameters.solver.duality_gap_threshold,
                       primal_c_scale, backup_generation, current_generation);
     }
