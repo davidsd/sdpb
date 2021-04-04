@@ -74,6 +74,10 @@ std::vector<El::BigFloat> compute_optimal(
         + ", initial points: " + std::to_string(initial_points.size()));
     }
   Outer_Parameters parameters(parameters_in);
+  if(parameters.verbosity != Verbosity::debug)
+    {
+      parameters.verbosity = Verbosity::none;
+    }
 
   const size_t rank(El::mpi::Rank()), num_procs(El::mpi::Size()),
     num_weights(normalization.size());
@@ -130,7 +134,7 @@ std::vector<El::BigFloat> compute_optimal(
       El::Gemv(El::Orientation::NORMAL, El::BigFloat(1.0),
                yp_to_y_star.LockedMatrix(), yp_saved, El::BigFloat(0.0), y);
 
-      if(El::mpi::Rank() == 0 && parameters.verbosity >= Verbosity::regular)
+      if(El::mpi::Rank() == 0 && parameters_in.verbosity >= Verbosity::regular)
         {
           std::cout << "Loaded checkpoint " << backup_generation << "\n";
         }
@@ -164,13 +168,13 @@ std::vector<El::BigFloat> compute_optimal(
           matrix_dimensions.insert(matrix_dimensions.end(),
                                    points.at(block).size(),
                                    function_blocks[block].size());
-          if(rank == 0 && parameters.verbosity >= Verbosity::debug)
+          if(rank == 0 && parameters_in.verbosity >= Verbosity::debug)
             {
               std::cout << "points: " << block << " " << points.at(block)
                         << "\n";
             }
         }
-      if(rank == 0 && parameters.verbosity >= Verbosity::regular)
+      if(rank == 0 && parameters_in.verbosity >= Verbosity::regular)
         {
           std::cout << "num_constraints: " << num_constraints << "\n";
         }
@@ -211,7 +215,7 @@ std::vector<El::BigFloat> compute_optimal(
             && parameters.solver.duality_gap_threshold
                  > parameters_in.solver.duality_gap_threshold)
         {
-          if(rank == 0 && parameters.verbosity >= Verbosity::regular)
+          if(rank == 0 && parameters_in.verbosity >= Verbosity::regular)
             {
               std::cout << "Threshold: "
                         << parameters.solver.duality_gap_threshold << "\n";
@@ -222,7 +226,7 @@ std::vector<El::BigFloat> compute_optimal(
             = solver.run(parameters.solver, parameters.verbosity,
                          parameter_properties, block_info, sdp, grid, timers);
 
-          if(rank == 0 && parameters.verbosity >= Verbosity::regular)
+          if(rank == 0 && parameters_in.verbosity >= Verbosity::regular)
             {
               set_stream_precision(std::cout);
               std::cout << "-----" << reason << "-----\n"
@@ -256,7 +260,7 @@ std::vector<El::BigFloat> compute_optimal(
                    El::BigFloat(0.0), y);
 
           fill_weights(y, max_index, normalization, weights);
-          if(rank == 0 && parameters.verbosity >= Verbosity::regular)
+          if(rank == 0 && parameters_in.verbosity >= Verbosity::regular)
             {
               set_stream_precision(std::cout);
               std::cout << "weight: " << weights << "\n";
@@ -280,10 +284,11 @@ std::vector<El::BigFloat> compute_optimal(
       El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_star(
         solver.y.blocks.front());
       copy_matrix(yp_star, yp_saved);
-      save_checkpoint(parameters.solver.checkpoint_out, parameters.verbosity,
-                      yp_to_y_star, dual_objective_b_star, yp_saved, points,
-                      infinity, parameters.solver.duality_gap_threshold,
-                      primal_c_scale, backup_generation, current_generation);
+      save_checkpoint(parameters.solver.checkpoint_out,
+                      parameters_in.verbosity, yp_to_y_star,
+                      dual_objective_b_star, yp_saved, points, infinity,
+                      parameters.solver.duality_gap_threshold, primal_c_scale,
+                      backup_generation, current_generation);
     }
   return weights;
 }
