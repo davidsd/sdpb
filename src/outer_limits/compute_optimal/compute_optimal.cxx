@@ -41,6 +41,8 @@ namespace
                     const std::vector<El::BigFloat> &normalization,
                     std::vector<El::BigFloat> &weights)
   {
+    // THe weight at max_index is determined by the normalization
+    // condition dot(norm,weights)=1
     weights.at(max_index) = 1;
     for(size_t block_row(0); block_row != size_t(y.Height()); ++block_row)
       {
@@ -147,7 +149,6 @@ std::vector<El::BigFloat> compute_optimal(
     dual_objective_b_star(global_grid);
   El::BigFloat primal_c_scale;
 
-  // TODO: Load checkpoint
   parameters.solver.duality_gap_threshold = 1.1;
   El::Matrix<El::BigFloat> yp_saved(yp_to_y_star.Height(), 1);
   El::Zero(yp_saved);
@@ -282,32 +283,15 @@ std::vector<El::BigFloat> compute_optimal(
               throw std::runtime_error(ss.str());
             }
 
-          // y is duplicated among cores, so only need to print out copy on
-          // the root node.
-          // THe weight at max_index is determined by the normalization
-          // condition dot(norm,weights)=1
-          El::DistMatrix<El::BigFloat> yp(dual_objective_b_star.Height(), 1,
-                                          yp_to_y_star.Grid());
-          El::Zero(yp);
-          El::DistMatrix<El::BigFloat> y(yp);
+          El::Matrix<El::BigFloat> y(dual_objective_b_star.Height(), 1);
           El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_star(
             solver.y.blocks.at(0));
-          for(int64_t row(0); row != yp.LocalHeight(); ++row)
-            {
-              int64_t global_row(yp.GlobalRow(row));
-              for(int64_t column(0); column != yp.LocalWidth(); ++column)
-                {
-                  int64_t global_column(yp.GlobalCol(column));
-                  yp.SetLocal(row, column,
-                              yp_star.GetLocal(global_row, global_column));
-                }
-            }
-          El::Gemv(El::Orientation::NORMAL, El::BigFloat(1.0), yp_to_y_star,
-                   yp, El::BigFloat(0.0), y);
-          El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(y);
 
-          fill_weights(y_star.LockedMatrix(), max_index, normalization,
-                       weights);
+          El::Gemv(El::Orientation::NORMAL, El::BigFloat(1.0),
+                   yp_to_y_star.LockedMatrix(), yp_star.LockedMatrix(),
+                   El::BigFloat(0.0), y);
+
+          fill_weights(y, max_index, normalization, weights);
           if(rank == 0 && parameters.verbosity >= Verbosity::regular)
             {
               set_stream_precision(std::cout);
