@@ -7,52 +7,7 @@
 #include "../../set_stream_precision.hxx"
 
 namespace
-{
-  void copy_matrix(const El::Matrix<El::BigFloat> &source,
-                   El::DistMatrix<El::BigFloat> &destination)
-  {
-    for(int64_t row(0); row < destination.LocalHeight(); ++row)
-      {
-        int64_t global_row(destination.GlobalRow(row));
-        for(int64_t column(0); column < destination.LocalWidth(); ++column)
-          {
-            int64_t global_column(destination.GlobalCol(column));
-            destination.SetLocal(row, column,
-                                 source(global_row, global_column));
-          }
-      }
-  }
-
-  void
-  copy_matrix(const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &source,
-              El::Matrix<El::BigFloat> &destination)
-  {
-    destination.Resize(source.LocalHeight(), source.LocalWidth());
-    for(int64_t row(0); row < source.LocalHeight(); ++row)
-      {
-        for(int64_t column(0); column < source.LocalWidth(); ++column)
-          {
-            destination(row, column) = source.GetLocal(row, column);
-          }
-      }
-  }
-
-  void fill_weights(const El::Matrix<El::BigFloat> &y, const size_t &max_index,
-                    const std::vector<El::BigFloat> &normalization,
-                    std::vector<El::BigFloat> &weights)
-  {
-    // THe weight at max_index is determined by the normalization
-    // condition dot(norm,weights)=1
-    weights.at(max_index) = 1;
-    for(size_t block_row(0); block_row != size_t(y.Height()); ++block_row)
-      {
-        const size_t index(block_row + (block_row < max_index ? 0 : 1));
-        weights.at(index) = y(block_row, 0);
-        weights.at(max_index) -= weights.at(index) * normalization.at(index);
-      }
-    weights.at(max_index) /= normalization.at(max_index);
-  }
-}
+{}
 
 void compute_y_transform(
   const std::vector<std::vector<std::vector<std::vector<Function>>>>
@@ -73,6 +28,15 @@ boost::optional<int64_t> load_checkpoint(
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   El::Matrix<El::BigFloat> &y, std::vector<std::set<El::BigFloat>> &points,
   El::BigFloat &threshold, El::BigFloat &primal_c_scale);
+
+void copy_matrix(const El::Matrix<El::BigFloat> &source,
+                 El::DistMatrix<El::BigFloat> &destination);
+void copy_matrix(const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &source,
+                 El::Matrix<El::BigFloat> &destination);
+
+void fill_weights(const El::Matrix<El::BigFloat> &y, const size_t &max_index,
+                  const std::vector<El::BigFloat> &normalization,
+                  std::vector<El::BigFloat> &weights);
 
 void find_new_points(
   const size_t &num_blocks, const size_t &rank, const size_t &num_procs,
