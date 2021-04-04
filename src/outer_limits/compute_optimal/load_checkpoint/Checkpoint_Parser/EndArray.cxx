@@ -22,10 +22,10 @@ bool Checkpoint_Parser::EndArray(rapidjson::SizeType)
             "Invalid input file.  Unexpected array ending inside  '"
             + c_scale_state.name + "'");
         }
-      else if(parsing_y)
+      else if(parsing_yp)
         {
-          y_state.json_end_array();
-          parsing_y = y_state.inside;
+          yp_state.json_end_array();
+          parsing_yp = yp_state.inside;
         }
       else if(parsing_b)
         {

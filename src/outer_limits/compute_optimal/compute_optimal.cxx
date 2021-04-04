@@ -310,7 +310,7 @@ std::vector<El::BigFloat> compute_optimal(
             {
               set_stream_precision(std::cout);
               std::cout << "weight: " << weights << "\n";
-
+                  
               El::BigFloat optimal(0);
               for(size_t index(0); index < objectives.size(); ++index)
                 {

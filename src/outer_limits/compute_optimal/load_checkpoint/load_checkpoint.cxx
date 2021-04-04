@@ -20,7 +20,7 @@ void load_checkpoint(
   boost::optional<int64_t> &backup_generation, int64_t &current_generation,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
-  El::Matrix<El::BigFloat> &y, std::vector<std::set<El::BigFloat>> &points,
+  El::Matrix<El::BigFloat> &yp, std::vector<std::set<El::BigFloat>> &points,
   El::BigFloat &threshold, El::BigFloat &primal_c_scale)
 {
   if(boost::filesystem::exists(checkpoint_directory)
@@ -88,10 +88,10 @@ void load_checkpoint(
                                              parser.b_state.value[row]);
             }
 
-          y.Resize(parser.y_state.value.size(), 1);
-          for(int64_t row(0); row < y.Height(); ++row)
+          yp.Resize(parser.yp_state.value.size(), 1);
+          for(int64_t row(0); row < yp.Height(); ++row)
             {
-              y(row, 0) = parser.y_state.value[row];
+              yp(row, 0) = parser.yp_state.value[row];
             }
 
           points.clear();

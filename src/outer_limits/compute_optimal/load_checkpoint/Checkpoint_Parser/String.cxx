@@ -20,9 +20,9 @@ bool Checkpoint_Parser::String(const Ch *str, rapidjson::SizeType length, bool)
           c_scale_state.json_string(s);
           parsing_c_scale = false;
         }
-      else if(parsing_y)
+      else if(parsing_yp)
         {
-          y_state.json_string(s);
+          yp_state.json_string(s);
         }
       else if(parsing_b)
         {

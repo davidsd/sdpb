@@ -22,9 +22,9 @@ bool Checkpoint_Parser::StartArray()
             "Invalid input file.  Unexpected array start inside  '"
             + c_scale_state.name + "'");
         }
-      else if(parsing_y)
+      else if(parsing_yp)
         {
-          y_state.json_start_array();
+          yp_state.json_start_array();
         }
       else if(parsing_b)
         {

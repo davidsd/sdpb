@@ -22,11 +22,11 @@ bool Checkpoint_Parser::StartObject()
             "Invalid input file.  Unexpected object start inside '"
             + c_scale_state.name + "'");
         }
-      else if(parsing_y)
+      else if(parsing_yp)
         {
           throw std::runtime_error(
             "Invalid input file.  Unexpected object start inside '"
-            + y_state.name + "'");
+            + yp_state.name + "'");
         }
       else if(parsing_b)
         {

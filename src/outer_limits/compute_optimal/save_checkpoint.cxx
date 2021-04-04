@@ -24,7 +24,7 @@ void save_checkpoint(
   const Verbosity &verbosity,
   const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
   const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
-  const El::Matrix<El::BigFloat> &y,
+  const El::Matrix<El::BigFloat> &yp,
   const std::vector<std::set<El::BigFloat>> &points,
   const El::BigFloat &infinity, const El::BigFloat &threshold,
   const El::BigFloat &primal_c_scale,
@@ -74,14 +74,14 @@ void save_checkpoint(
                             << "\",\n"
                             << "  \"threshold\": \"" << threshold << "\",\n"
                             << "  \"c_scale\": \"" << primal_c_scale << "\",\n"
-                            << "  \"y\":\n  [\n";
-          for(int64_t row(0); row != y.Height(); ++row)
+                            << "  \"yp\":\n  [\n";
+          for(int64_t row(0); row != yp.Height(); ++row)
             {
               if(row != 0)
                 {
                   checkpoint_stream << ",\n";
                 }
-              checkpoint_stream << "    \"" << y(row, 0) << '"';
+              checkpoint_stream << "    \"" << yp(row, 0) << '"';
             }
           checkpoint_stream << "\n  ],\n";
           checkpoint_stream << "  \"points\":\n  [\n";

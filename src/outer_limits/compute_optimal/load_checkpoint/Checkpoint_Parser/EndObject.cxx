@@ -22,11 +22,11 @@ bool Checkpoint_Parser::EndObject(rapidjson::SizeType)
             "Invalid input file.  Unexpected object ending inside '"
             + c_scale_state.name + "'");
         }
-      else if(parsing_y)
+      else if(parsing_yp)
         {
           throw std::runtime_error(
             "Invalid input file.  Unexpected object ending inside '"
-            + y_state.name + "'");
+            + yp_state.name + "'");
         }
       else if(parsing_b)
         {

@@ -22,10 +22,10 @@ bool Checkpoint_Parser::Key(const Ch *str, rapidjson::SizeType length, bool)
           throw std::runtime_error("Invalid input file.  Found the key '" + key
                                    + "' inside '" + c_scale_state.name + "'.");
         }
-      else if(parsing_y)
+      else if(parsing_yp)
         {
           throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside '" + y_state.name + "'.");
+                                   + "' inside '" + yp_state.name + "'.");
         }
       else if(parsing_b)
         {
@@ -56,9 +56,9 @@ bool Checkpoint_Parser::Key(const Ch *str, rapidjson::SizeType length, bool)
         {
           parsing_c_scale = true;
         }
-      else if(key == y_state.name)
+      else if(key == yp_state.name)
         {
-          parsing_y = true;
+          parsing_yp = true;
         }
       else if(key == b_state.name)
         {
