@@ -1,5 +1,6 @@
 #include "Checkpoint_Parser.hxx"
 
+#include "../../../Verbosity.hxx"
 #include "../../../ostream_vector.hxx"
 #include "../../../ostream_set.hxx"
 
@@ -17,7 +18,8 @@
 
 void load_checkpoint(
   const boost::filesystem::path &checkpoint_directory,
-  boost::optional<int64_t> &backup_generation, int64_t &current_generation,
+  const Verbosity &verbosity, boost::optional<int64_t> &backup_generation,
+  int64_t &current_generation,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   El::Matrix<El::BigFloat> &yp, std::vector<std::set<El::BigFloat>> &points,
@@ -49,6 +51,12 @@ void load_checkpoint(
             (checkpoint_directory
              / (prefix + std::to_string(max_generation) + suffix))
               .string());
+
+          if(El::mpi::Rank() == 0 && verbosity >= Verbosity::regular)
+            {
+              std::cout << "Loading checkpoint: " << checkpoint_name << "\n";
+            }
+
           boost::iostreams::filtering_istream input_stream;
           input_stream.push(boost::iostreams::gzip_decompressor());
           input_stream.push(boost::iostreams::file_source(checkpoint_name));

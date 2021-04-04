@@ -20,7 +20,8 @@ void compute_y_transform(
 
 boost::optional<int64_t> load_checkpoint(
   const boost::filesystem::path &checkpoint_directory,
-  boost::optional<int64_t> &backup_generation, int64_t &current_generation,
+  const Verbosity &verbosity, boost::optional<int64_t> &backup_generation,
+  int64_t &current_generation,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   El::Matrix<El::BigFloat> &y, std::vector<std::set<El::BigFloat>> &points,
@@ -120,21 +121,16 @@ std::vector<El::BigFloat> compute_optimal(
 
   int64_t current_generation(0);
   boost::optional<int64_t> backup_generation;
-  load_checkpoint(parameters.solver.checkpoint_in, backup_generation,
-                  current_generation, yp_to_y_star, dual_objective_b_star,
-                  yp_saved, points, parameters.solver.duality_gap_threshold,
-                  primal_c_scale);
+  load_checkpoint(parameters.solver.checkpoint_in, parameters_in.verbosity,
+                  backup_generation, current_generation, yp_to_y_star,
+                  dual_objective_b_star, yp_saved, points,
+                  parameters.solver.duality_gap_threshold, primal_c_scale);
   if(backup_generation)
     {
       El::Matrix<El::BigFloat> y(yp_saved.Height(), 1);
 
       El::Gemv(El::Orientation::NORMAL, El::BigFloat(1.0),
                yp_to_y_star.LockedMatrix(), yp_saved, El::BigFloat(0.0), y);
-
-      if(El::mpi::Rank() == 0 && parameters_in.verbosity >= Verbosity::regular)
-        {
-          std::cout << "Loaded checkpoint " << backup_generation << "\n";
-        }
       fill_weights(y, max_index, normalization, weights);
     }
   else
