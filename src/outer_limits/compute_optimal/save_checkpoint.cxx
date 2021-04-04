@@ -30,6 +30,10 @@ void save_checkpoint(
   const El::BigFloat &primal_c_scale,
   boost::optional<int64_t> &backup_generation, int64_t &current_generation)
 {
+  if(checkpoint_directory.empty())
+    {
+      return;
+    }
   if(El::mpi::Rank() == 0)
     {
       if(!exists(checkpoint_directory))

@@ -6,9 +6,6 @@
 #include "../../ostream_vector.hxx"
 #include "../../set_stream_precision.hxx"
 
-namespace
-{}
-
 void compute_y_transform(
   const std::vector<std::vector<std::vector<std::vector<Function>>>>
     &function_blocks,

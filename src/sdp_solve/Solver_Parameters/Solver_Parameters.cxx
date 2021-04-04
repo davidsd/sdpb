@@ -113,8 +113,9 @@ boost::program_options::options_description Solver_Parameters::options()
   result.add_options()(
     "checkpointDir,c",
     boost::program_options::value<boost::filesystem::path>(&checkpoint_out),
-    "Checkpoints are saved to this directory every checkpointInterval. "
-    "Defaults to sdpDir with '.ck' extension.");
+    "Checkpoints are saved to this directory every checkpointInterval.  Set "
+    "to the empty string to inhibit checkpoints.  Defaults to sdpDir with "
+    "'.ck' extension.");
   result.add_options()(
     "initialCheckpointDir,i",
     boost::program_options::value<boost::filesystem::path>(&checkpoint_in),

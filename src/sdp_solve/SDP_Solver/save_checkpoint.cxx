@@ -39,6 +39,10 @@ void SDP_Solver::save_checkpoint(
   const Verbosity &verbosity,
   const boost::property_tree::ptree &parameter_properties)
 {
+  if(checkpoint_directory.empty())
+    {
+      return;
+    }
   if(!exists(checkpoint_directory))
     {
       create_directories(checkpoint_directory);

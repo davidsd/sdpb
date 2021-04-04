@@ -118,7 +118,7 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
                 {
                   solver.checkpoint_out = solver.checkpoint_out.parent_path();
                 }
-              solver.checkpoint_out += ".ck";
+              solver.checkpoint_out.replace_extension("ck");
             }
 
           if(variables_map.count("initialCheckpointDir") == 0)

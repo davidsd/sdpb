@@ -11,7 +11,6 @@
 
 struct Outer_Parameters
 {
-  bool no_final_checkpoint;
   bool require_initial_checkpoint = false;
   Write_Solution write_solution;
 
