@@ -113,7 +113,7 @@ int main(int argc, char **argv)
     }
   if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
-      std::cout.precision(precision / 3.3);
+      set_stream_precision(std::cout);
       std::cout << "optimal: " << optimal << " " << weights << "\n";
     }
 }
