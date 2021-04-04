@@ -19,7 +19,7 @@ struct Outer_Parameters
   Solver_Parameters solver;
   Verbosity verbosity;
 
-  boost::filesystem::path functions_path, points_path, out_directory, param_path;
+  boost::filesystem::path functions_path, points_path, output_path, param_path;
 
   Outer_Parameters(int argc, char *argv[]);
   bool is_valid() const { return !functions_path.empty(); }

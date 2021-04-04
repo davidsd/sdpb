@@ -114,6 +114,28 @@ int main(int argc, char **argv)
   if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
       set_stream_precision(std::cout);
-      std::cout << "optimal: " << optimal << " " << weights << "\n";
+      std::cout << "optimal: " << optimal << "\n";
+    }
+  if(El::mpi::Rank() ==0)
+    {
+      if(parameters.verbosity >= Verbosity::regular)
+        {
+          std::cout << "Saving solution to "
+                    << parameters.output_path << "\n";
+        }
+      boost::filesystem::ofstream output(parameters.output_path);
+      set_stream_precision(output);
+      output << "{\n  \"optimal\": \"" << optimal
+             << "\",\n"
+             << "  \"y\":\n  [\n";
+      for(auto weight(weights.begin()); weight!=weights.end(); ++weight)
+        {
+          if(weight!=weights.begin())
+            {
+              output << ",\n";
+            }
+          output << "    \"" << *weight << "\"";
+        }
+      output << "\n  ]\n}\n";
     }
 }

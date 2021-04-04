@@ -34,9 +34,9 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
     "format. Command line arguments override values in the parameter "
     "file.");
   basic_options.add_options()(
-    "outDir,o", po::value<boost::filesystem::path>(&out_directory),
-    "The optimal solution is saved to this directory in Mathematica "
-    "format. Defaults to sdp with '_out' appended.");
+    "out,o", po::value<boost::filesystem::path>(&output_path),
+    "The optimal solution is saved to this file in json "
+    "format. Defaults to 'functions' with the ending '_out.json'.");
   basic_options.add_options()("verbosity",
                               po::value<int>(&int_verbosity)->default_value(1),
                               "Verbosity.  0 -> no output, 1 -> regular "
@@ -104,9 +104,11 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
                                        + "' is a directory, not a file.");
             }
 
-          if(variables_map.count("outDir") == 0)
+          if(variables_map.count("out") == 0)
             {
-              out_directory = functions_path.string() + "_out";
+              boost::filesystem::path filename(functions_path);
+              filename.replace_extension();
+              output_path = filename.string() + "_out.json";
             }
 
           if(variables_map.count("checkpointDir") == 0)
@@ -132,12 +134,11 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
 
           if(El::mpi::Rank() == 0)
             {
-              boost::filesystem::create_directories(out_directory);
-              boost::filesystem::ofstream ofs(out_directory / "out.txt");
+              boost::filesystem::ofstream ofs(output_path);
               if(!ofs.good())
                 {
                   throw std::runtime_error("Cannot write to outDir: "
-                                           + out_directory.string());
+                                           + output_path.string());
                 }
             }
 
