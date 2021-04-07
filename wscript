@@ -2,14 +2,14 @@ import os, subprocess
 
 def options(opt):
     opt.load(['compiler_cxx','gnu_dirs','cxx17','boost','gmpxx','mpfr',
-              'elemental','libxml2', 'rapidjson'])
+              'elemental','libxml2', 'rapidjson', 'libarchive_cpp'])
 
 def configure(conf):
     if not 'CXX' in os.environ or os.environ['CXX']=='g++' or os.environ['CXX']=='icpc':
         conf.environ['CXX']='mpicxx'
 
     conf.load(['compiler_cxx','gnu_dirs','cxx17','boost','gmpxx','mpfr',
-               'elemental','libxml2', 'rapidjson'])
+               'elemental','libxml2', 'rapidjson', 'libarchive_cpp'])
     conf.load('clang_compilation_database')
 
     conf.env.git_version=subprocess.check_output('git describe --dirty', universal_newlines=True, shell=True).rstrip()
@@ -18,7 +18,7 @@ def build(bld):
     default_flags=['-Wall', '-Wextra', '-O3', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
     # default_flags=['-Wall', '-Wextra', '-O3', '-g', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
     # default_flags=['-Wall', '-Wextra', '-g', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
-    use_packages=['cxx17','boost','gmpxx','mpfr','elemental','libxml2', 'rapidjson']
+    use_packages=['cxx17','boost','gmpxx','mpfr','elemental','libxml2', 'rapidjson', 'libarchive_cpp']
 
     sdp_solve_sources=['src/sdp_solve/Solver_Parameters/Solver_Parameters.cxx',
                        'src/sdp_solve/Solver_Parameters/ostream.cxx',
