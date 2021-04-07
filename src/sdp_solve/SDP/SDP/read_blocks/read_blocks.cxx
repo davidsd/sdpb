@@ -2,6 +2,9 @@
 #include "../../../SDP.hxx"
 #include "../set_bases_blocks.hxx"
 
+#include <archive_reader.hpp>
+#include <archive_exception.hpp>
+
 #include <rapidjson/istreamwrapper.h>
 
 namespace
@@ -21,6 +24,50 @@ namespace
           }
       }
   }
+
+  void
+  read_block_stream(const El::Grid &grid, std::istream &block_stream, SDP &sdp, 
+                    std::vector<El::Matrix<El::BigFloat>> &bilinear_bases_local)
+  {
+    rapidjson::IStreamWrapper wrapper(block_stream);
+    Block_Parser parser;
+    rapidjson::Reader reader;
+    reader.Parse(wrapper, parser);
+
+    sdp.primal_objective_c.blocks.emplace_back(parser.c_state.value.size(), 1,
+                                               grid);
+    auto &c(sdp.primal_objective_c.blocks.back());
+    size_t local_height(c.LocalHeight());
+    if(c.GlobalCol(0) == 0)
+      {
+        for(size_t row = 0; row < local_height; ++row)
+          {
+            const size_t global_row(c.GlobalRow(row));
+            c.SetLocal(row, 0, parser.c_state.value.at(global_row));
+          }
+      }
+
+    set_bilinear(parser.bilinear_bases_even_state.value, bilinear_bases_local);
+    set_bilinear(parser.bilinear_bases_odd_state.value, bilinear_bases_local);
+
+    {
+      sdp.free_var_matrix.blocks.emplace_back(
+        parser.B_state.value.size(), parser.B_state.value.at(0).size(), grid);
+      auto &B(sdp.free_var_matrix.blocks.back());
+      for(int64_t local_row(0); local_row != B.LocalHeight(); ++local_row)
+        {
+          const El::Int global_row(B.GlobalRow(local_row));
+          for(int64_t local_column(0); local_column != B.LocalWidth();
+              ++local_column)
+            {
+              const El::Int global_column(B.GlobalCol(local_column));
+              B.SetLocal(
+                local_row, local_column,
+                parser.B_state.value.at(global_row).at(global_column));
+            }
+        }
+    }
+  }
 }
 
 void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
@@ -31,52 +78,33 @@ void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
   std::vector<El::Matrix<El::BigFloat>> bilinear_bases_local;
   bilinear_bases_local.reserve(2 * block_info.block_indices.size());
   sdp.free_var_matrix.blocks.reserve(block_info.block_indices.size());
+
   for(auto &block_index : block_info.block_indices)
     {
-      const boost::filesystem::path block_path(
-        sdp_path / ("block_" + std::to_string(block_index) + ".json"));
-      boost::filesystem::ifstream block_file(block_path);
-      rapidjson::IStreamWrapper wrapper(block_file);
-      Block_Parser parser;
-      rapidjson::Reader reader;
-      reader.Parse(wrapper, parser);
-
-      sdp.primal_objective_c.blocks.emplace_back(parser.c_state.value.size(),
-                                                 1, grid);
-      auto &c(sdp.primal_objective_c.blocks.back());
-      size_t local_height(c.LocalHeight());
-      if(c.GlobalCol(0) == 0)
+      if(boost::filesystem::is_regular_file(sdp_path))
         {
-          for(size_t row = 0; row < local_height; ++row)
+          boost::filesystem::ifstream fs(sdp_path);
+          ns_archive::reader reader = ns_archive::reader::make_reader<
+            ns_archive::ns_reader::format::_ALL,
+            ns_archive::ns_reader::filter::_ALL>(fs, 10240);
+
+          const std::string block_name("block_" + std::to_string(block_index)
+                                       + ".json");
+          for(auto entry : reader)
             {
-              const size_t global_row(c.GlobalRow(row));
-              c.SetLocal(row, 0, parser.c_state.value.at(global_row));
+              if(entry->get_header_value_pathname() == block_name)
+                {
+                  read_block_stream(grid, entry->get_stream(), sdp, bilinear_bases_local);
+                }
             }
         }
-
-      set_bilinear(parser.bilinear_bases_even_state.value,
-                   bilinear_bases_local);
-      set_bilinear(parser.bilinear_bases_odd_state.value,
-                   bilinear_bases_local);
-
-      {
-        sdp.free_var_matrix.blocks.emplace_back(
-          parser.B_state.value.size(), parser.B_state.value.at(0).size(),
-          grid);
-        auto &B(sdp.free_var_matrix.blocks.back());
-        for(int64_t local_row(0); local_row != B.LocalHeight(); ++local_row)
-          {
-            const El::Int global_row(B.GlobalRow(local_row));
-            for(int64_t local_column(0); local_column != B.LocalWidth();
-                ++local_column)
-              {
-                const El::Int global_column(B.GlobalCol(local_column));
-                B.SetLocal(
-                  local_row, local_column,
-                  parser.B_state.value.at(global_row).at(global_column));
-              }
-          }
-      }
+      else
+        {
+          const boost::filesystem::path block_path(
+            sdp_path / ("block_" + std::to_string(block_index) + ".json"));
+          boost::filesystem::ifstream block_stream(block_path);
+          read_block_stream(grid, block_stream, sdp, bilinear_bases_local);
+        }
     }
 
   sdp.bilinear_bases.reserve(bilinear_bases_local.size());

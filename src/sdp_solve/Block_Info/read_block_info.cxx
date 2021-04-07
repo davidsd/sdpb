@@ -63,7 +63,7 @@ namespace
   };
 
   void
-  parse_block(const size_t &block_number, std::istream &block_stream,
+  parse_block(const size_t &block_index, std::istream &block_stream,
               std::vector<size_t> &dimensions, std::vector<size_t> &num_points)
   {
     rapidjson::IStreamWrapper wrapper(block_stream);
@@ -73,10 +73,10 @@ namespace
     if(parser.dim == 0 || parser.num_points == 0)
       {
         throw std::runtime_error("Unable to parse block: "
-                                 + std::to_string(block_number));
+                                 + std::to_string(block_index));
       }
-    dimensions.at(block_number) = parser.dim;
-    num_points.at(block_number) = parser.num_points;
+    dimensions.at(block_index) = parser.dim;
+    num_points.at(block_index) = parser.num_points;
   }
 
   size_t parse_num_blocks(std::istream &control_stream)
@@ -124,9 +124,9 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
           const std::string pathname(entry->get_header_value_pathname());
           if(boost::algorithm::starts_with(pathname, prefix))
             {
-              const size_t block_number(
+              const size_t block_index(
                 std::stoll(pathname.substr(prefix.size())));
-              if(block_number >= num_blocks)
+              if(block_index >= num_blocks)
                 {
                   throw std::runtime_error(
                     "Invalid block number for entry '" + pathname + "' in '"
@@ -135,17 +135,17 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
                     + std::to_string(num_blocks - 1) + ".");
                 }
 
-              parse_block(block_number, entry->get_stream(), dimensions,
+              parse_block(block_index, entry->get_stream(), dimensions,
                           num_points);
             }
         }
-      for(size_t block_number(0); block_number != dimensions.size();
-          ++block_number)
+      for(size_t block_index(0); block_index != dimensions.size();
+          ++block_index)
         {
-          if(dimensions.at(block_number) == 0)
+          if(dimensions.at(block_index) == 0)
             {
               throw std::runtime_error(
-                "Missing block " + std::to_string(block_number)
+                "Missing block " + std::to_string(block_index)
                 + " from sdp path: '" + sdp_path.string() + "'.");
             }
         }
