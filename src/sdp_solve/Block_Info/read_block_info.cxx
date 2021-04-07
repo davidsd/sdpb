@@ -61,6 +61,31 @@ namespace
     bool StartArray() { return true; }
     bool EndArray(rapidjson::SizeType) { return true; }
   };
+
+  void
+  parse_block(const size_t &block_number, std::istream &block_stream,
+              std::vector<size_t> &dimensions, std::vector<size_t> &num_points)
+  {
+    rapidjson::IStreamWrapper wrapper(block_stream);
+    Block_Info_Parser parser;
+    rapidjson::Reader reader;
+    reader.Parse(wrapper, parser);
+    if(parser.dim == 0 || parser.num_points == 0)
+      {
+        throw std::runtime_error("Unable to parse block: "
+                                 + std::to_string(block_number));
+      }
+    dimensions.at(block_number) = parser.dim;
+    num_points.at(block_number) = parser.num_points;
+  }
+
+  size_t parse_num_blocks(std::istream &control_stream)
+  {
+    rapidjson::IStreamWrapper wrapper(control_stream);
+    rapidjson::Document document;
+    document.ParseStream(wrapper);
+    return document["num_blocks"].GetInt();
+  }
 }
 
 void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
@@ -77,11 +102,7 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
           {
             if(entry->get_header_value_pathname() == "control.json")
               {
-                auto &control_stream(entry->get_stream());
-                rapidjson::IStreamWrapper wrapper(control_stream);
-                rapidjson::Document document;
-                document.ParseStream(wrapper);
-                return document["num_blocks"].GetInt();
+                return parse_num_blocks(entry->get_stream());
               }
           }
         throw std::runtime_error(
@@ -114,17 +135,8 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
                     + std::to_string(num_blocks - 1) + ".");
                 }
 
-              rapidjson::IStreamWrapper wrapper(entry->get_stream());
-              Block_Info_Parser parser;
-              rapidjson::Reader reader;
-              reader.Parse(wrapper, parser);
-              if(parser.dim == 0 || parser.num_points == 0)
-                {
-                  throw std::runtime_error("Unable to parse entry: '"
-                                           + pathname + "'");
-                }
-              dimensions.at(block_number) = parser.dim;
-              num_points.at(block_number) = parser.num_points;
+              parse_block(block_number, entry->get_stream(), dimensions,
+                          num_points);
             }
         }
       for(size_t block_number(0); block_number != dimensions.size();
@@ -142,29 +154,17 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
     {
       const size_t num_blocks([&]() {
         boost::filesystem::ifstream control_stream(sdp_path / "control.json");
-        rapidjson::IStreamWrapper wrapper(control_stream);
-        rapidjson::Document d;
-        d.ParseStream(wrapper);
-        return d["num_blocks"].GetInt();
+        return parse_num_blocks(control_stream);
       }());
 
+      dimensions.resize(num_blocks);
+      num_points.resize(num_blocks);
       for(size_t block(0); block != num_blocks; ++block)
         {
           boost::filesystem::path block_path(
             sdp_path / ("block_" + std::to_string(block) + ".json"));
           boost::filesystem::ifstream block_stream(block_path);
-
-          rapidjson::IStreamWrapper wrapper(block_stream);
-          Block_Info_Parser parser;
-          rapidjson::Reader reader;
-          reader.Parse(wrapper, parser);
-          if(parser.dim == 0 || parser.num_points == 0)
-            {
-              throw std::runtime_error("Unable to parse "
-                                       + block_path.native());
-            }
-          dimensions.push_back(parser.dim);
-          num_points.push_back(parser.num_points);
+          parse_block(block, block_stream, dimensions, num_points);
         }
     }
 }
