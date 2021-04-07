@@ -3,10 +3,10 @@
 #include <boost/filesystem/fstream.hpp>
 
 std::vector<Block_Cost>
-Block_Info::read_block_costs(const boost::filesystem::path &sdp_directory,
+Block_Info::read_block_costs(const boost::filesystem::path &sdp_path,
                              const boost::filesystem::path &checkpoint_in)
 {
-  const boost::filesystem::path sdp_block_timings_path(sdp_directory
+  const boost::filesystem::path sdp_block_timings_path(sdp_path
                                                        / "block_timings"),
     checkpoint_block_timings_path(checkpoint_in / "block_timings");
 

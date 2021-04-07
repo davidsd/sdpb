@@ -128,12 +128,6 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
                                        + sdp_directory.string()
                                        + "' does not exist");
             }
-          if(!boost::filesystem::is_directory(sdp_directory))
-            {
-              throw std::runtime_error("sdp directory '"
-                                       + sdp_directory.string()
-                                       + "' is not a directory");
-            }
 
           if(variables_map.count("outDir") == 0)
             {
