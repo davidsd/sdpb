@@ -5,12 +5,11 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
-void read_objectives(const boost::filesystem::path &sdp_directory,
+void read_objectives(const boost::filesystem::path &sdp_path,
                      const El::Grid &grid, El::BigFloat &objective_const,
                      El::DistMatrix<El::BigFloat> &dual_objective_b)
 {
-  boost::filesystem::ifstream objectives_stream(sdp_directory
-                                                / "objectives.json");
+  boost::filesystem::ifstream objectives_stream(sdp_path / "objectives.json");
   rapidjson::IStreamWrapper wrapper(objectives_stream);
   rapidjson::Document d;
   d.ParseStream(wrapper);
@@ -25,9 +24,8 @@ void read_objectives(const boost::filesystem::path &sdp_directory,
       for(size_t row = 0; row < local_height; ++row)
         {
           size_t global_row(dual_objective_b.GlobalRow(row));
-          dual_objective_b.SetLocal(
-            row, 0,
-            El::BigFloat(b[global_row].GetString()));
+          dual_objective_b.SetLocal(row, 0,
+                                    El::BigFloat(b[global_row].GetString()));
         }
     }
 }

@@ -98,7 +98,7 @@ struct SDP
   // objectiveConst = f
   El::BigFloat objective_const;
 
-  SDP(const boost::filesystem::path &sdp_directory,
+  SDP(const boost::filesystem::path &sdp_path,
       const Block_Info &block_info, const El::Grid &grid);
   SDP(const El::BigFloat &objective_const,
       const std::vector<std::vector<El::BigFloat>> &primal_objective_c_input,

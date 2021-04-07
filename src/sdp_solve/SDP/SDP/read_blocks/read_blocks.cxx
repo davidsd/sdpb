@@ -23,8 +23,7 @@ namespace
   }
 }
 
-void read_blocks(const boost::filesystem::path &sdp_directory,
-                 const El::Grid &grid,
+void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
                  const Block_Info &block_info, SDP &sdp)
 {
   sdp.primal_objective_c.blocks.reserve(block_info.block_indices.size());
@@ -35,7 +34,7 @@ void read_blocks(const boost::filesystem::path &sdp_directory,
   for(auto &block_index : block_info.block_indices)
     {
       const boost::filesystem::path block_path(
-        sdp_directory / ("block_" + std::to_string(block_index) + ".json"));
+        sdp_path / ("block_" + std::to_string(block_index) + ".json"));
       boost::filesystem::ifstream block_file(block_path);
       rapidjson::IStreamWrapper wrapper(block_file);
       Block_Parser parser;

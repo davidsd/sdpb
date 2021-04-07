@@ -6,17 +6,17 @@
 
 #include <iterator>
 
-void read_blocks(const boost::filesystem::path &sdp_directory,
+void read_blocks(const boost::filesystem::path &sdp_path,
                  const El::Grid &grid, const Block_Info &block_info, SDP &sdp);
-void read_objectives(const boost::filesystem::path &sdp_directory,
+void read_objectives(const boost::filesystem::path &sdp_path,
                      const El::Grid &grid, El::BigFloat &objective_const,
                      El::DistMatrix<El::BigFloat> &dual_objective_b);
 
-SDP::SDP(const boost::filesystem::path &sdp_directory,
+SDP::SDP(const boost::filesystem::path &sdp_path,
          const Block_Info &block_info, const El::Grid &grid)
 {
-  read_objectives(sdp_directory, grid, objective_const, dual_objective_b);
-  read_blocks(sdp_directory, grid, block_info, *this);
+  read_objectives(sdp_path, grid, objective_const, dual_objective_b);
+  read_blocks(sdp_path, grid, block_info, *this);
 }
 
 SDP::SDP(
