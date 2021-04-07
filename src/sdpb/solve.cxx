@@ -16,7 +16,7 @@ void save_solution(const SDP_Solver &solver, const SDP_Solver_Terminate_Reason,
 Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters)
 {
   El::Grid grid(block_info.mpi_comm.value);
-  SDP sdp(parameters.sdp_directory, block_info, grid);
+  SDP sdp(parameters.sdp_path, block_info, grid);
   SDP_Solver solver(parameters.solver, parameters.verbosity,
                     parameters.require_initial_checkpoint, block_info, grid,
                     sdp.dual_objective_b.Height());

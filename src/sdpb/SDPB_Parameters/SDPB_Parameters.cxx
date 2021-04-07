@@ -13,7 +13,7 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
 
   po::options_description required_options("Required options");
   required_options.add_options()(
-    "sdpDir,s", po::value<boost::filesystem::path>(&sdp_directory)->required(),
+    "sdpDir,s", po::value<boost::filesystem::path>(&sdp_path)->required(),
     "Directory containing preprocessed SDP data files.");
   required_options.add_options()(
     "procsPerNode", po::value<size_t>(&procs_per_node)->required(),
@@ -122,16 +122,16 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
 
           po::notify(variables_map);
 
-          if(!boost::filesystem::exists(sdp_directory))
+          if(!boost::filesystem::exists(sdp_path))
             {
               throw std::runtime_error("sdp directory '"
-                                       + sdp_directory.string()
+                                       + sdp_path.string()
                                        + "' does not exist");
             }
 
           if(variables_map.count("outDir") == 0)
             {
-              out_directory = sdp_directory;
+              out_directory = sdp_path;
               if(out_directory.filename() == ".")
                 {
                   out_directory = out_directory.parent_path();
@@ -141,7 +141,7 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
 
           if(variables_map.count("checkpointDir") == 0)
             {
-              solver.checkpoint_out = sdp_directory;
+              solver.checkpoint_out = sdp_path;
               if(solver.checkpoint_out.filename() == ".")
                 {
                   solver.checkpoint_out = solver.checkpoint_out.parent_path();

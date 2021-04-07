@@ -2,7 +2,7 @@
 
 std::ostream &operator<<(std::ostream &os, const SDPB_Parameters &p)
 {
-  os << "SDP directory   : " << p.sdp_directory << '\n'
+  os << "SDP directory   : " << p.sdp_path << '\n'
      << "out directory   : " << p.out_directory << '\n'
      << "\nParameters:\n"
      << p.solver

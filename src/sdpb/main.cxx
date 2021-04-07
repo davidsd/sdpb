@@ -37,7 +37,7 @@ int main(int argc, char **argv)
                     << parameters << '\n';
         }
 
-      Block_Info block_info(parameters.sdp_directory,
+      Block_Info block_info(parameters.sdp_path,
                             parameters.solver.checkpoint_in,
                             parameters.procs_per_node,
                             parameters.proc_granularity, parameters.verbosity);
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
                        block_timings);
           El::mpi::Barrier(El::mpi::COMM_WORLD);
           Block_Info new_info(
-            parameters.sdp_directory, block_timings, parameters.procs_per_node,
+            parameters.sdp_path, block_timings, parameters.procs_per_node,
             parameters.proc_granularity, parameters.verbosity);
           std::swap(block_info, new_info);
 
