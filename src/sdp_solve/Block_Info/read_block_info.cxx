@@ -94,9 +94,10 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
     {
       const size_t num_blocks([&]() {
         boost::filesystem::ifstream fs(sdp_path);
-        ns_archive::reader reader = ns_archive::reader::make_reader<
-          ns_archive::ns_reader::format::_ALL,
-          ns_archive::ns_reader::filter::_ALL>(fs, 10240);
+        ns_archive::reader reader(
+          ns_archive::reader::make_reader<ns_archive::ns_reader::format::_ALL,
+                                          ns_archive::ns_reader::filter::_ALL>(
+            fs, 10240));
 
         for(auto entry : reader)
           {
@@ -113,10 +114,10 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
       num_points.resize(num_blocks);
 
       boost::filesystem::ifstream fs(sdp_path);
-      ns_archive::reader reader
-        = ns_archive::reader::make_reader<ns_archive::ns_reader::format::_ALL,
-                                          ns_archive::ns_reader::filter::_ALL>(
-          fs, 10240);
+      ns_archive::reader reader(
+        ns_archive::reader::make_reader<ns_archive::ns_reader::format::_ALL,
+                                        ns_archive::ns_reader::filter::_ALL>(
+          fs, 10240));
 
       const std::string prefix("block_");
       for(auto entry : reader)

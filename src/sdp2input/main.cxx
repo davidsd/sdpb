@@ -11,7 +11,7 @@ void read_input(const boost::filesystem::path &input_file,
                 std::vector<El::BigFloat> &normalization,
                 std::vector<Positive_Matrix_With_Prefactor> &matrices);
 
-void write_output(const boost::filesystem::path &output_dir,
+void write_output(const boost::filesystem::path &output_path,
                   const std::vector<std::string> &command_arguments,
                   const std::vector<El::BigFloat> &objectives,
                   const std::vector<El::BigFloat> &normalization,
@@ -25,7 +25,7 @@ int main(int argc, char **argv)
   try
     {
       int precision;
-      boost::filesystem::path input_file, output_dir;
+      boost::filesystem::path input_file, output_path;
       bool debug(false);
 
       po::options_description options("Basic options");
@@ -35,7 +35,7 @@ int main(int argc, char **argv)
         "Mathematica, JSON, or NSV file with SDP definition");
       options.add_options()(
         "output,o",
-        po::value<boost::filesystem::path>(&output_dir)->required(),
+        po::value<boost::filesystem::path>(&output_path)->required(),
         "Directory to place output");
       options.add_options()(
         "precision", po::value<int>(&precision)->required(),
@@ -72,11 +72,16 @@ int main(int argc, char **argv)
                                    + "' is a directory, not a file");
         }
 
-      if(boost::filesystem::exists(output_dir)
-         && !boost::filesystem::is_directory(output_dir))
+      if(output_path.filename_is_dot())
         {
-          throw std::runtime_error("Output directory '" + output_dir.string()
-                                   + "' exists and is not a directory");
+          throw std::runtime_error("Output file '" + output_path.string()
+                                   + "' is a directory");
+        }
+      if(boost::filesystem::exists(output_path)
+         && boost::filesystem::is_directory(output_path))
+        {
+          throw std::runtime_error("Output file '" + output_path.string()
+                                   + "' exists and is a directory");
         }
 
       El::gmp::SetPrecision(precision);
@@ -96,12 +101,12 @@ int main(int argc, char **argv)
         {
           command_arguments.emplace_back(argv[arg]);
         }
-      write_output(output_dir, command_arguments, objectives, normalization,
+      write_output(output_path, command_arguments, objectives, normalization,
                    matrices, timers);
       write_output_timer.stop();
       if(debug)
         {
-          timers.write_profile(output_dir.string() + "/profiling."
+          timers.write_profile(output_path.string() + "/profiling."
                                + std::to_string(El::mpi::Rank()));
         }
     }

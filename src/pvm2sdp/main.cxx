@@ -19,9 +19,9 @@ int main(int argc, char **argv)
     {
       int precision;
       std::vector<boost::filesystem::path> input_files;
-      boost::filesystem::path output_dir;
+      boost::filesystem::path output_path;
 
-      parse_command_line(argc, argv, precision, input_files, output_dir);
+      parse_command_line(argc, argv, precision, input_files, output_path);
       El::gmp::SetPrecision(precision);
 
       El::BigFloat objective_const;
@@ -36,7 +36,18 @@ int main(int argc, char **argv)
         {
           command_arguments.emplace_back(argv[arg]);
         }
-      write_sdpb_input_files(output_dir, rank, num_blocks, command_arguments,
+      if(output_path.filename_is_dot())
+        {
+          throw std::runtime_error("Output file '" + output_path.string()
+                                   + "' is a directory");
+        }
+      if(boost::filesystem::exists(output_path)
+         && boost::filesystem::is_directory(output_path))
+        {
+          throw std::runtime_error("Output file '" + output_path.string()
+                                   + "' exists and is a directory");
+        }
+      write_sdpb_input_files(output_path, rank, num_blocks, command_arguments,
                              objective_const, dual_objective_b,
                              dual_constraint_groups);
     }

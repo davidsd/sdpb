@@ -24,9 +24,10 @@ void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
           // TODO: This is going to reopen the zip file many, many
           // times.
           boost::filesystem::ifstream fs(sdp_path);
-          ns_archive::reader reader = ns_archive::reader::make_reader<
-            ns_archive::ns_reader::format::_ALL,
-            ns_archive::ns_reader::filter::_ALL>(fs, 10240);
+          ns_archive::reader reader(
+            ns_archive::reader::make_reader<
+              ns_archive::ns_reader::format::_ALL,
+              ns_archive::ns_reader::filter::_ALL>(fs, 10240));
 
           const std::string block_name("block_" + std::to_string(block_index)
                                        + ".json");

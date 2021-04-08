@@ -52,10 +52,4 @@ void parse_command_line(int argc, char **argv, int &precision,
         }
     }
   output_dir = argv[argc - 1];
-  if(boost::filesystem::exists(output_dir)
-     && !boost::filesystem::is_directory(output_dir))
-    {
-      throw std::runtime_error("Output directory '" + output_dir.string()
-                               + "' exists but is not a directory.");
-    }
 }

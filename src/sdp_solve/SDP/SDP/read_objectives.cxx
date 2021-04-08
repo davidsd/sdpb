@@ -47,9 +47,9 @@ void read_objectives(const boost::filesystem::path &sdp_path,
       // times.
       boost::filesystem::ifstream fs(sdp_path);
       ns_archive::reader reader
-        = ns_archive::reader::make_reader<ns_archive::ns_reader::format::_ALL,
+        (ns_archive::reader::make_reader<ns_archive::ns_reader::format::_ALL,
                                           ns_archive::ns_reader::filter::_ALL>(
-          fs, 10240);
+                                                                               fs, 10240));
 
       for(auto entry : reader)
         {

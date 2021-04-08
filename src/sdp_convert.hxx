@@ -7,7 +7,7 @@
 #include <vector>
 
 void write_sdpb_input_files(
-  const boost::filesystem::path &output_dir, const int &rank,
+  const boost::filesystem::path &output_path, const int &rank,
   const size_t &num_blocks, const std::vector<std::string> &command_arguments,
   const El::BigFloat &objective_const,
   const std::vector<El::BigFloat> &dual_objective_b,
