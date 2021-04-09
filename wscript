@@ -105,7 +105,11 @@ def build(bld):
                          'src/sdp_convert/write_primal_objective_c.cxx',
                          'src/sdp_convert/write_free_var_matrix.cxx',
                          'src/sdp_convert/write_sdpb_input_files.cxx',
-                         'src/sdp_convert/write_control.cxx']
+                         'src/sdp_convert/write_control.cxx',
+                         'src/sdp_convert/Archive_Writer/Archive_Writer.cxx',
+                         'src/sdp_convert/Archive_Writer/write_entry.cxx',
+                         'src/sdp_convert/Archive_Entry.cxx'
+                         ]
 
     bld.stlib(source=sdp_convert_sources,
               target='sdp_convert',

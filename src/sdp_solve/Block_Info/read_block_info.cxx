@@ -101,6 +101,8 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
 
         for(auto entry : reader)
           {
+            std::cout << "num: "
+                      << entry->get_header_value_pathname() << "\n";
             if(entry->get_header_value_pathname() == "control.json")
               {
                 return parse_num_blocks(entry->get_stream());
@@ -122,6 +124,8 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
       const std::string prefix("block_");
       for(auto entry : reader)
         {
+          std::cout << "block_: "
+                    << entry->get_header_value_pathname() << "\n";
           const std::string pathname(entry->get_header_value_pathname());
           if(boost::algorithm::starts_with(pathname, prefix))
             {

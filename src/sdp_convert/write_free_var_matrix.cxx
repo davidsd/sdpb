@@ -1,8 +1,8 @@
 #include "Dual_Constraint_Group.hxx"
 
-#include <boost/filesystem/fstream.hpp>
+#include <iostream>
 
-void write_free_var_matrix(boost::filesystem::ofstream &output_stream,
+void write_free_var_matrix(std::ostream &output_stream,
                            const size_t &dual_objectives_b_size,
                            const Dual_Constraint_Group &group)
 {

@@ -1,5 +1,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <boost/iostreams/device/file.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
 #include <vector>
 
 void output_escaped_string(std::ostream &os, const std::string &s)
@@ -23,7 +26,12 @@ void write_control(const boost::filesystem::path &output_dir,
 {
   const boost::filesystem::path output_path(
     output_dir / ("control.json"));
-  boost::filesystem::ofstream output_stream(output_path);
+
+  // Use gzip with no compression to get a CRC
+  boost::iostreams::filtering_ostream output_stream;
+  output_stream.push(boost::iostreams::gzip_compressor(boost::iostreams::gzip_params(0)));
+  output_stream.push(
+                     boost::iostreams::file_sink(output_path.string()));
   output_stream << "{\n  \"num_blocks\": " << num_blocks
                 << ",\n  \"command\": \"";
   for(auto argument(command_arguments.begin()); argument!=command_arguments.end(); ++argument)

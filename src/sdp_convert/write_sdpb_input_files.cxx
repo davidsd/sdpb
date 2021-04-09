@@ -1,11 +1,13 @@
 #include "Dual_Constraint_Group.hxx"
 #include "../set_stream_precision.hxx"
 
-#include <archive_writer.hpp>
-#include <archive_exception.hpp>
+#include "Archive_Writer.hxx"
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <boost/iostreams/device/file.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
 
 void write_control(const boost::filesystem::path &output_dir,
                    const size_t &num_blocks,
@@ -15,16 +17,16 @@ void write_objectives(const boost::filesystem::path &output_dir,
                       const El::BigFloat &objective_const,
                       const std::vector<El::BigFloat> &dual_objective_b);
 
-void write_bilinear_bases(boost::filesystem::ofstream &output_stream,
+void write_bilinear_bases(std::ostream &output_stream,
                           const Dual_Constraint_Group &group);
 
-void write_blocks(boost::filesystem::ofstream &output_stream,
+void write_blocks(std::ostream &output_stream,
                   const Dual_Constraint_Group &group);
 
-void write_primal_objective_c(boost::filesystem::ofstream &output_stream,
+void write_primal_objective_c(std::ostream &output_stream,
                               const Dual_Constraint_Group &group);
 
-void write_free_var_matrix(boost::filesystem::ofstream &output_stream,
+void write_free_var_matrix(std::ostream &output_stream,
                            const size_t &dual_objectives_b_size,
                            const Dual_Constraint_Group &group);
 
@@ -36,7 +38,7 @@ void write_sdpb_input_files(
   const std::vector<Dual_Constraint_Group> &dual_constraint_groups)
 {
   boost::filesystem::path temp_dir(output_path);
-  temp_dir+="_temp";
+  temp_dir += "_temp";
   boost::filesystem::create_directories(temp_dir);
   if(rank == 0)
     {
@@ -47,7 +49,12 @@ void write_sdpb_input_files(
     {
       const boost::filesystem::path block_path(
         temp_dir / ("block_" + std::to_string(group.block_index) + ".json"));
-      boost::filesystem::ofstream output_stream(block_path);
+
+      // Use gzip with no compression to get a CRC
+      boost::iostreams::filtering_ostream output_stream;
+      output_stream.push(
+        boost::iostreams::gzip_compressor(boost::iostreams::gzip_params(0)));
+      output_stream.push(boost::iostreams::file_sink(block_path.string()));
       set_stream_precision(output_stream);
       output_stream << "{\n";
 
@@ -65,23 +72,22 @@ void write_sdpb_input_files(
   El::mpi::Barrier(El::mpi::COMM_WORLD);
   if(rank == 0)
     {
-      boost::filesystem::ofstream zip_stream(output_path);
-      ns_archive::writer writer(
-        ns_archive::writer::make_writer<ns_archive::ns_writer::format::_ZIP>(
-          zip_stream, 10240));
-
-      const boost::filesystem::directory_iterator end;
-      for(auto &entry : boost::filesystem::directory_iterator(temp_dir))
+      std::vector<boost::filesystem::path> paths_to_remove;
+      Archive_Writer writer(output_path);
+      for(auto &directory_entry : boost::filesystem::directory_iterator(temp_dir))
         {
-          {
-            boost::filesystem::ifstream stream(entry.path());
-            ns_archive::entry out_entry(stream);
-            out_entry.set_header_value_pathname(
-                                                entry.path().filename().string());
-            writer.add_entry(out_entry);
-          }
-          boost::filesystem::remove(entry.path());
+          paths_to_remove.emplace_back(directory_entry.path());
+          auto &path(paths_to_remove.back());
+          boost::iostreams::filtering_stream<boost::iostreams::input> input_stream;
+          input_stream.push(boost::iostreams::gzip_decompressor());
+          input_stream.push(boost::iostreams::file_source(path.string()));
+  
+          writer.write_entry(Archive_Entry(path), input_stream);
+        }
+      paths_to_remove.emplace_back(temp_dir);
+      for(auto &path : paths_to_remove)
+        {
+          boost::filesystem::remove(path);
         }
     }
-  boost::filesystem::remove(temp_dir);
 }

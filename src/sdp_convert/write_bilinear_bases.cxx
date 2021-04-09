@@ -1,8 +1,8 @@
 #include "Dual_Constraint_Group.hxx"
 
-#include <boost/filesystem/fstream.hpp>
+#include <iostream>
 
-void write_bilinear_bases(boost::filesystem::ofstream &output_stream,
+void write_bilinear_bases(std::ostream &output_stream,
                           const Dual_Constraint_Group &group)
 {
   output_stream << "  \"bilinear_bases_even\":\n  [\n";

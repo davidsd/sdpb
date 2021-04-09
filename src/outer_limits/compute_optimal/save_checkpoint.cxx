@@ -63,7 +63,8 @@ void save_checkpoint(
           ++attempt)
         {
           boost::iostreams::filtering_ostream checkpoint_stream;
-          checkpoint_stream.push(boost::iostreams::gzip_compressor());
+          // Use no compression.  Filter is for CRC only.
+          checkpoint_stream.push(boost::iostreams::gzip_compressor(boost::iostreams::gzip_params(0)));
           checkpoint_stream.push(
             boost::iostreams::file_sink(checkpoint_filename.string()));
 

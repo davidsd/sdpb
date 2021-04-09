@@ -1,13 +1,11 @@
 #pragma once
 
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <iostream>
 #include <vector>
 
 template <typename T>
-inline void
-write_vector(boost::filesystem::ofstream &output_stream,
-             const std::vector<T> &v, const std::string &indentation)
+inline void write_vector(std::ostream &output_stream, const std::vector<T> &v,
+                         const std::string &indentation)
 {
   output_stream << indentation << "[\n";
   for(auto element(v.begin()); element != v.end(); ++element)
@@ -23,16 +21,15 @@ write_vector(boost::filesystem::ofstream &output_stream,
 
 template <typename T>
 inline void
-write_vector(boost::filesystem::ofstream &output_stream,
-             const std::vector<T> &v, const std::string &indentation,
-             const std::string &name)
+write_vector(std::ostream &output_stream, const std::vector<T> &v,
+             const std::string &indentation, const std::string &name)
 {
   output_stream << indentation << "\"" << name << "\":\n";
   write_vector(output_stream, v, indentation);
 }
 
-inline void write_vector(boost::filesystem::ofstream &output_stream,
-                         const std::vector<size_t> &v)
+inline void
+write_vector(std::ostream &output_stream, const std::vector<size_t> &v)
 {
   output_stream << "[";
   for(auto element(v.begin()); element != v.end(); ++element)
@@ -46,7 +43,7 @@ inline void write_vector(boost::filesystem::ofstream &output_stream,
   output_stream << "]";
 }
 
-inline void write_vector(boost::filesystem::ofstream &output_stream,
+inline void write_vector(std::ostream &output_stream,
                          const std::vector<size_t> &v, const std::string &name)
 {
   output_stream << "\"" << name << "\": ";

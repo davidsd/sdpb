@@ -46,18 +46,26 @@ void read_objectives(const boost::filesystem::path &sdp_path,
       // TODO: This is going to reopen the zip file many, many
       // times.
       boost::filesystem::ifstream fs(sdp_path);
-      ns_archive::reader reader
-        (ns_archive::reader::make_reader<ns_archive::ns_reader::format::_ALL,
-                                          ns_archive::ns_reader::filter::_ALL>(
-                                                                               fs, 10240));
+      ns_archive::reader reader(
+        ns_archive::reader::make_reader<ns_archive::ns_reader::format::_ALL,
+                                        ns_archive::ns_reader::filter::_ALL>(
+          fs, 10240));
 
       for(auto entry : reader)
         {
+          std::cout << "header: " << entry->get_header_value_pathname() << " "
+                    << objectives_name << " "
+                    << (entry->get_header_value_pathname() == objectives_name)
+                    << "\n";
           if(entry->get_header_value_pathname() == objectives_name)
             {
               read_objectives_stream(grid, entry->get_stream(),
                                      objective_const, dual_objective_b);
             }
+        }
+      if(dual_objective_b.Height() == 0)
+        {
+          throw std::runtime_error("Unable to read objectives from input");
         }
     }
   else

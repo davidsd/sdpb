@@ -124,7 +124,6 @@ SDP_Solver::run(const Solver_Parameters &parameters,
                           parameter_properties);
           last_checkpoint_time = std::chrono::high_resolution_clock::now();
         }
-
       compute_objectives(sdp, x, y, primal_objective, dual_objective,
                          duality_gap, timers);
 
