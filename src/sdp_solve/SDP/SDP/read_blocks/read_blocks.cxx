@@ -1,8 +1,6 @@
-#include "../../../SDP.hxx"
 #include "../set_bases_blocks.hxx"
-
-#include <archive_reader.hpp>
-#include <archive_exception.hpp>
+#include "../../../SDP.hxx"
+#include "../../../Archive_Reader.hxx"
 
 void read_block_stream(
   const El::Grid &grid, std::istream &block_stream, SDP &sdp,
@@ -23,20 +21,15 @@ void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
         {
           // TODO: This is going to reopen the zip file many, many
           // times.
-          boost::filesystem::ifstream fs(sdp_path);
-          ns_archive::reader reader(
-            ns_archive::reader::make_reader<
-              ns_archive::ns_reader::format::_ALL,
-              ns_archive::ns_reader::filter::_ALL>(fs, 10240));
-
           const std::string block_name("block_" + std::to_string(block_index)
                                        + ".json");
-          for(auto entry : reader)
+          Archive_Reader reader(sdp_path);
+          while(reader.next_entry())
             {
-              if(entry->get_header_value_pathname() == block_name)
+              if(block_name == archive_entry_pathname(reader.entry_ptr))
                 {
-                  read_block_stream(grid, entry->get_stream(), sdp,
-                                    bilinear_bases_local);
+                  std::istream stream(&reader);
+                  read_block_stream(grid, stream, sdp, bilinear_bases_local);
                 }
             }
         }

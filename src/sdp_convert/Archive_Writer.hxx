@@ -12,7 +12,8 @@ struct Archive_Writer
   std::unique_ptr<archive, int (*)(archive *)> ptr;
   Archive_Writer(const boost::filesystem::path &filename);
   ~Archive_Writer() { archive_write_close(ptr.get()); }
-
+  Archive_Writer() = delete;
+  
   void write_entry(const Archive_Entry &entry, std::istream &stream);
   void write_entry(const boost::filesystem::path &path, std::istream &stream)
   {

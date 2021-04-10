@@ -1,7 +1,5 @@
 #include "../Block_Info.hxx"
-
-#include <archive_reader.hpp>
-#include <archive_exception.hpp>
+#include "../Archive_Reader.hxx"
 
 #include <rapidjson/reader.h>
 #include <rapidjson/document.h>
@@ -93,19 +91,14 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
   if(boost::filesystem::is_regular_file(sdp_path))
     {
       const size_t num_blocks([&]() {
-        boost::filesystem::ifstream fs(sdp_path);
-        ns_archive::reader reader(
-          ns_archive::reader::make_reader<ns_archive::ns_reader::format::_ALL,
-                                          ns_archive::ns_reader::filter::_ALL>(
-            fs, 10240));
-
-        for(auto entry : reader)
+        Archive_Reader reader(sdp_path);
+        while(reader.next_entry())
           {
-            std::cout << "num: "
-                      << entry->get_header_value_pathname() << "\n";
-            if(entry->get_header_value_pathname() == "control.json")
+            using namespace std::string_literals;
+            if("control.json"s == archive_entry_pathname(reader.entry_ptr))
               {
-                return parse_num_blocks(entry->get_stream());
+                std::istream stream(&reader);
+                return parse_num_blocks(stream);
               }
           }
         throw std::runtime_error(
@@ -115,18 +108,11 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
       dimensions.resize(num_blocks);
       num_points.resize(num_blocks);
 
-      boost::filesystem::ifstream fs(sdp_path);
-      ns_archive::reader reader(
-        ns_archive::reader::make_reader<ns_archive::ns_reader::format::_ALL,
-                                        ns_archive::ns_reader::filter::_ALL>(
-          fs, 10240));
-
       const std::string prefix("block_");
-      for(auto entry : reader)
+      Archive_Reader reader(sdp_path);
+      while(reader.next_entry())
         {
-          std::cout << "block_: "
-                    << entry->get_header_value_pathname() << "\n";
-          const std::string pathname(entry->get_header_value_pathname());
+          const std::string pathname(archive_entry_pathname(reader.entry_ptr));
           if(boost::algorithm::starts_with(pathname, prefix))
             {
               const size_t block_index(
@@ -139,9 +125,8 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
                     + "'. The block number must be between 0 and "
                     + std::to_string(num_blocks - 1) + ".");
                 }
-
-              parse_block(block_index, entry->get_stream(), dimensions,
-                          num_points);
+              std::istream stream(&reader);
+              parse_block(block_index, stream, dimensions, num_points);
             }
         }
       for(size_t block_index(0); block_index != dimensions.size();

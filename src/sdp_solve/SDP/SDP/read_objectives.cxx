@@ -1,7 +1,5 @@
 #include "../../SDP.hxx"
-
-#include <archive_reader.hpp>
-#include <archive_exception.hpp>
+#include "../../Archive_Reader.hxx"
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
@@ -45,21 +43,13 @@ void read_objectives(const boost::filesystem::path &sdp_path,
     {
       // TODO: This is going to reopen the zip file many, many
       // times.
-      boost::filesystem::ifstream fs(sdp_path);
-      ns_archive::reader reader(
-        ns_archive::reader::make_reader<ns_archive::ns_reader::format::_ALL,
-                                        ns_archive::ns_reader::filter::_ALL>(
-          fs, 10240));
-
-      for(auto entry : reader)
+      Archive_Reader reader(sdp_path);
+      while(reader.next_entry())
         {
-          std::cout << "header: " << entry->get_header_value_pathname() << " "
-                    << objectives_name << " "
-                    << (entry->get_header_value_pathname() == objectives_name)
-                    << "\n";
-          if(entry->get_header_value_pathname() == objectives_name)
+          if(objectives_name == archive_entry_pathname(reader.entry_ptr))
             {
-              read_objectives_stream(grid, entry->get_stream(),
+              std::istream stream(&reader);
+              read_objectives_stream(grid, stream,
                                      objective_const, dual_objective_b);
             }
         }
