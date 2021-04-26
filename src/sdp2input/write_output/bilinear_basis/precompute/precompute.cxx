@@ -21,13 +21,15 @@ void precompute(
     sorted_poles.end());
   std::sort(sorted_poles.begin(), sorted_poles.end());
 
+  Boost_Float tolerance(
+    pow(Boost_Float(10.0), -(El::gmp::Precision() * std::log10(2.0)) / 2));
   for(auto pole(sorted_poles.begin()); pole != sorted_poles.end();)
     {
       const Boost_Float &p(*pole);
       equal_ranges.push_back(
         std::equal_range(pole, sorted_poles.end(), p,
                          [&](const Boost_Float &p, const Boost_Float &q) {
-                           return (p < q) && !(abs(p - q) < 1e-2);
+                           return (p < q) && !(abs(p - q) < tolerance);
                          }));
       auto &equal_range(equal_ranges.back());
       lengths.push_back(std::distance(equal_range.first, equal_range.second));
@@ -36,10 +38,10 @@ void precompute(
       products.push_back(
         1
         / accumulate_over_others(
-            sorted_poles, equal_range, Boost_Float(1),
-            [&](const Boost_Float &product, const Boost_Float &q) {
-              return product * (p - q);
-            }));
+          sorted_poles, equal_range, Boost_Float(1),
+          [&](const Boost_Float &product, const Boost_Float &q) {
+            return product * (p - q);
+          }));
 
       Boost_Float integral_sum(0);
       Boost_Float integral_prefactor(-boost::math::expint(-p * log(base))
