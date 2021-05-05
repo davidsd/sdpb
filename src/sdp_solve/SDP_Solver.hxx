@@ -8,8 +8,6 @@
 #pragma once
 
 #include "Block_Diagonal_Matrix.hxx"
-#include "Block_Matrix.hxx"
-#include "Block_Vector.hxx"
 #include "SDP.hxx"
 #include "SDP_Solver_Terminate_Reason.hxx"
 

@@ -78,6 +78,7 @@ def build(bld):
                        'src/sdp_solve/SDP_Solver/run/step/step_length/lower_triangular_inverse_congruence.cxx',
                        'src/sdp_solve/SDP_Solver_Terminate_Reason/ostream.cxx',
                        'src/sdp_solve/lower_triangular_transpose_solve.cxx',
+                       'src/sdp_solve/read_text_block.cxx',
                        'src/sdp_solve/Block_Diagonal_Matrix/ostream.cxx',
                        'src/sdp_solve/Write_Solution.cxx']
 
@@ -234,3 +235,16 @@ def build(bld):
                 cxxflags=default_flags,
                 use=use_packages + ['sdp_read','sdp_solve']
                 )
+
+    bld.program(source=['src/sdp_derivative/main.cxx',
+                        'src/sdp_derivative/DSDP_Parameters/DSDP_Parameters.cxx',
+                        'src/sdp_derivative/DSDP_Parameters/ostream.cxx',
+                        'src/sdp_derivative/Axpy.cxx',
+                        'src/sdp_derivative/compute_approximate_objective.cxx',
+                        'src/sdp_derivative/compute_B_pseudoinverse.cxx'
+                        ],
+                target='sdp_derivative',
+                cxxflags=default_flags,
+                use=use_packages + ['sdp_read','sdp_solve']
+                )
+    
