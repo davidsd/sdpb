@@ -5,10 +5,6 @@
 
 #include <El.hpp>
 
-void compute_B_pseudoinverse(const std::vector<size_t> &block_offsets,
-                             const std::vector<size_t> &block_indices,
-                             const El::Grid &grid, const Block_Matrix &B,
-                             Block_Matrix &B_pseudoinverse);
 void Axpy(const El::BigFloat &alpha, const SDP &new_sdp, SDP &delta_sdp);
 
 void load_solution(const boost::filesystem::path &checkpoint_path,
@@ -16,7 +12,7 @@ void load_solution(const boost::filesystem::path &checkpoint_path,
 El::BigFloat
 compute_approximate_objective(const SDP &sdp, const SDP &d_sdp,
                               const Block_Vector &x, const Block_Vector &y,
-                              const Block_Matrix &B_pseudoinverse);
+                              const Block_Diagonal_Matrix &Y);
 
 int main(int argc, char **argv)
 {
@@ -35,9 +31,8 @@ int main(int argc, char **argv)
                             parameters.proc_granularity, parameters.verbosity);
 
       El::Grid grid(block_info.mpi_comm.value);
-      std::cout << "param: "
-                << parameters << "\n";
-      
+      std::cout << "param: " << parameters << "\n";
+
       set_stream_precision(std::cout);
       SDP sdp(parameters.sdp_path, block_info, grid);
 
@@ -48,9 +43,6 @@ int main(int argc, char **argv)
           block_offsets[p + 1]
             = block_offsets[p] + sdp.free_var_matrix.blocks[p].Height();
         }
-      Block_Matrix B_pseudoinverse(sdp.free_var_matrix);
-      compute_B_pseudoinverse(block_offsets, block_info.block_indices, grid,
-                              sdp.free_var_matrix, B_pseudoinverse);
 
       SDP new_sdp(parameters.new_sdp_path, block_info, grid), d_sdp(new_sdp);
       Axpy(El::BigFloat(-1), sdp, d_sdp);
@@ -68,20 +60,33 @@ int main(int argc, char **argv)
         y(std::vector<size_t>(block_info.num_points.size(),
                               sdp.dual_objective_b.Height()),
           block_info.block_indices, block_info.num_points.size(), grid);
+      Block_Diagonal_Matrix Y(block_info.psd_matrix_block_sizes(),
+                              block_info.block_indices,
+                              block_info.num_points.size(), grid);
       for(size_t block = 0; block != block_info.block_indices.size(); ++block)
         {
           size_t block_index(block_info.block_indices.at(block));
           read_text_block(x.blocks.at(block), parameters.solution_dir, "x_",
-                          block_index);          
+                          block_index);
           read_text_block(y.blocks.at(block),
                           parameters.solution_dir / "y.txt");
+          for(size_t psd_block(0); psd_block < 2; ++psd_block)
+            {
+              // Constant constraints have empty odd parity blocks, so we do
+              // not need to load them.
+              if(Y.blocks.at(2 * block + psd_block).Height() != 0)
+                {
+                  const size_t psd_index(2 * block_index + psd_block);
+                  read_text_block(Y.blocks.at(2 * block + psd_block),
+                                  parameters.solution_dir, "Y_matrix_",
+                                  psd_index);
+                }
+            }
         }
 
       El::BigFloat new_objective(
-        compute_approximate_objective(sdp, d_sdp, x, y, B_pseudoinverse));
-      std::cout << "objective: "
-                << new_objective
-                << "\n";
+        compute_approximate_objective(sdp, d_sdp, x, y, Y));
+      std::cout << "objective: " << new_objective << "\n";
     }
   catch(std::exception &e)
     {

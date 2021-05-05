@@ -240,8 +240,7 @@ def build(bld):
                         'src/sdp_derivative/DSDP_Parameters/DSDP_Parameters.cxx',
                         'src/sdp_derivative/DSDP_Parameters/ostream.cxx',
                         'src/sdp_derivative/Axpy.cxx',
-                        'src/sdp_derivative/compute_approximate_objective.cxx',
-                        'src/sdp_derivative/compute_B_pseudoinverse.cxx'
+                        'src/sdp_derivative/compute_approximate_objective.cxx'
                         ],
                 target='sdp_derivative',
                 cxxflags=default_flags,
