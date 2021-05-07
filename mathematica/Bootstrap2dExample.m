@@ -1,5 +1,9 @@
 (* ::Package:: *)
 
+(*Write here the path of the folder containing sdpb and pvm2sdp*)
+executablesPath = "../build";
+
+
 <<"SDPB.m";
 
 half = SetPrecision[1/2, prec];
@@ -106,7 +110,7 @@ singletAllowed2d[deltaPhiLowPrecision_, deltaPhiSqLowPrecision_, derivativeOrder
 
 (* This is not a recommended long-term solution for evaluating SDPs
 for the following reasons: 1) different sdpFiles should have unique
-names so that they can be sovled in parallel and so that their
+names so that they can be solved in parallel and so that their
 checkpoints and output files don't overwrite each other; 2) The
 Run[...] command forces Mathematica to be running until sdpb
 finishes. It is better to use WriteBootstrapSDP instead of
@@ -114,21 +118,34 @@ SolveBootstrapSDP and run sdpb by hand or with an external script. *)
 SolveBootstrapSDP[sdp_] := Module[
     {
         sdpFile = "mySDP.xml",
-        outFile = "mySDP.out"
+        outFolder = "mySDP_out",
+        sdpFolder = "mySDP",
+        fullResult
     },
     WriteBootstrapSDP[sdpFile, sdp];
     (* Most of the defaults are way over the top for this size
     problem, but we'll use them because it's easy. If you want speed,
     try fiddling with some of the parameters. *)
-    Run["sdpb", "-s", sdpFile,
+    WriteString["stdout","Converting xml to pvm format\n"];
+    Run[StringRiffle[{
+        FileNameJoin[{executablesPath,"pvm2sdp"}],
+        ToString[prec], sdpFile, sdpFolder
+    }," "]];
+    WriteString["stdout","Running sdpb\n"];
+    Run[StringRiffle[{
+        "mpirun",
+        FileNameJoin[{executablesPath,"sdpb"}],
+        "-s", sdpFolder, "-o", outFolder,
+        "--procsPerNode", "6",
+        "--precision", ToString[prec],
         "--findPrimalFeasible",
         "--findDualFeasible",
-        "--noFinalCheckpoint"];
+        "--noFinalCheckpoint"
+    }," "]];
     (* Careful! Simply evaluating the output file will bring a bunch
     of variables into scope! *)
-    Get[outFile];
-    (* If we forget to clear x, it'll ruin everything *)
-    Clear[x,y];
+    fullResult = Import[FileNameJoin[{outFolder,"out.txt"}], "String"];
+    terminateReason = StringCases[fullResult,"terminateReason = \""~~Shortest[a__]~~"\";\n" :> a][[1]];
     Switch[
         terminateReason,
         "found primal feasible solution", True,
