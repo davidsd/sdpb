@@ -15,8 +15,4 @@ struct Archive_Writer
   Archive_Writer() = delete;
   
   void write_entry(const Archive_Entry &entry, std::istream &stream);
-  void write_entry(const boost::filesystem::path &path, std::istream &stream)
-  {
-    write_entry(Archive_Entry(path), stream);
-  }
 };
