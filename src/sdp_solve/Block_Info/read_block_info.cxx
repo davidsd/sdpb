@@ -19,7 +19,8 @@ namespace
 
     bool Null() { return true; }
     bool Bool(bool) { return true; }
-    bool parse_integer(const int64_t &value)
+
+    template <typename T> bool parse_integer(const T &value)
     {
       if(parsing_dim)
         {
@@ -31,8 +32,13 @@ namespace
           num_points = value;
           parsing_num_points = false;
         }
-      // Quit early if finished reading dim and num_points
-      return (dim == 0 || num_points == 0);
+      else
+        {
+          throw std::runtime_error("Invalid input file.  Found the integer '"
+                                   + std::to_string(value)
+                                   + "' outside of 'dim' or 'num_points'.");
+        }
+      return true;
     }
     bool Int(int value) { return parse_integer(value); }
     bool Uint(unsigned value) { return parse_integer(value); }
@@ -113,6 +119,7 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
       while(reader.next_entry())
         {
           const std::string pathname(archive_entry_pathname(reader.entry_ptr));
+          std::cout << "reading: " << pathname << "\n";
           if(boost::algorithm::starts_with(pathname, prefix))
             {
               const size_t block_index(
