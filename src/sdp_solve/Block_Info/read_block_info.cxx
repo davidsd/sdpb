@@ -119,7 +119,6 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
       while(reader.next_entry())
         {
           const std::string pathname(archive_entry_pathname(reader.entry_ptr));
-          std::cout << "reading: " << pathname << "\n";
           if(boost::algorithm::starts_with(pathname, prefix))
             {
               const size_t block_index(
