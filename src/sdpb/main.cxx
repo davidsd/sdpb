@@ -21,7 +21,7 @@ int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
 
-  // try
+  try
     {
       SDPB_Parameters parameters(argc, argv);
       if(!parameters.is_valid())
@@ -97,13 +97,13 @@ int main(int argc, char **argv)
         }
       solve(block_info, parameters);
     }
-  // catch(std::exception &e)
-  //   {
-  //     El::ReportException(e);
-  //     El::mpi::Abort(El::mpi::COMM_WORLD, 1);
-  //   }
-  // catch(...)
-  //   {
-  //     El::mpi::Abort(El::mpi::COMM_WORLD, 1);
-  //   }
+  catch(std::exception &e)
+    {
+      El::ReportException(e);
+      El::mpi::Abort(El::mpi::COMM_WORLD, 1);
+    }
+  catch(...)
+    {
+      El::mpi::Abort(El::mpi::COMM_WORLD, 1);
+    }
 }
