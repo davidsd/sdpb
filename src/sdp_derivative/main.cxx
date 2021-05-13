@@ -10,8 +10,10 @@ void Axpy(const El::BigFloat &alpha, const SDP &new_sdp, SDP &delta_sdp);
 void load_solution(const boost::filesystem::path &checkpoint_path,
                    Block_Vector &x, Block_Vector &y);
 El::BigFloat
-compute_approximate_objective(const SDP &sdp, const SDP &d_sdp,
-                              const Block_Vector &x, const Block_Vector &y,
+compute_approximate_objective(const Block_Info &block_info,
+                              const El::Grid &grid, const SDP &sdp,
+                              const SDP &d_sdp, const Block_Vector &x,
+                              const Block_Vector &y,
                               const Block_Diagonal_Matrix &Y);
 
 int main(int argc, char **argv)
@@ -85,7 +87,7 @@ int main(int argc, char **argv)
         }
 
       El::BigFloat new_objective(
-        compute_approximate_objective(sdp, d_sdp, x, y, Y));
+        compute_approximate_objective(block_info, grid, sdp, d_sdp, x, y, Y));
       std::cout << "objective: " << new_objective << "\n";
     }
   catch(std::exception &e)
