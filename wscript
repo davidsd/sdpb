@@ -236,14 +236,14 @@ def build(bld):
                 use=use_packages + ['sdp_read','sdp_solve']
                 )
 
-    bld.program(source=['src/sdp_derivative/main.cxx',
-                        'src/sdp_derivative/DSDP_Parameters/DSDP_Parameters.cxx',
-                        'src/sdp_derivative/DSDP_Parameters/ostream.cxx',
-                        'src/sdp_derivative/Axpy.cxx',
-                        'src/sdp_derivative/compute_approximate_objective.cxx',
-                        'src/sdp_derivative/compute_dx_dy/compute_dx_dy.cxx'
+    bld.program(source=['src/approx_objective/main.cxx',
+                        'src/approx_objective/DSDP_Parameters/DSDP_Parameters.cxx',
+                        'src/approx_objective/DSDP_Parameters/ostream.cxx',
+                        'src/approx_objective/Axpy.cxx',
+                        'src/approx_objective/compute_approximate_objective.cxx',
+                        'src/approx_objective/compute_dx_dy/compute_dx_dy.cxx'
                         ],
-                target='sdp_derivative',
+                target='approx_objective',
                 cxxflags=default_flags,
                 use=use_packages + ['sdp_read','sdp_solve']
                 )
