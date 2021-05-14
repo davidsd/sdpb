@@ -82,7 +82,7 @@ int main(int argc, char **argv)
 
       El::BigFloat new_objective(
                                  compute_approximate_objective(block_info, grid, sdp, d_sdp, x, y, X, Y));
-      std::cout << "objective: " << new_objective << "\n";
+      std::cout << "{\"approx_objective\": \"" << new_objective << "\"}\n";
     }
   catch(std::exception &e)
     {
