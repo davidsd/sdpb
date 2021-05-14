@@ -31,11 +31,9 @@ int main(int argc, char **argv)
       El::gmp::SetPrecision(parameters.precision);
       Block_Info block_info(parameters.sdp_path, parameters.solution_dir,
                             parameters.procs_per_node,
-                            parameters.proc_granularity, parameters.verbosity);
+                            parameters.proc_granularity, Verbosity::none);
 
       El::Grid grid(block_info.mpi_comm.value);
-      std::cout << "param: " << parameters << "\n";
-
       set_stream_precision(std::cout);
       SDP sdp(parameters.sdp_path, block_info, grid);
 
@@ -49,14 +47,6 @@ int main(int argc, char **argv)
 
       SDP new_sdp(parameters.new_sdp_path, block_info, grid), d_sdp(new_sdp);
       Axpy(El::BigFloat(-1), sdp, d_sdp);
-
-      // El::Print(sdp.free_var_matrix.blocks.front(),"B");
-      // // El::Print(new_sdp.free_var_matrix.blocks.front(),"\nB_new");
-      // El::Print(B_pseudoinverse.blocks.front(),"\nB_pinv");
-      // El::Print(d_sdp.free_var_matrix.blocks.front(),"\ndB");
-      // // El::Print(d_sdp.primal_objective_c.blocks.front(),"\ndc");
-      // // El::Print(d_sdp.dual_objective_b,"\ndb");
-      // std::cout << "\n";
 
       Block_Vector x(block_info.schur_block_sizes(), block_info.block_indices,
                      block_info.num_points.size(), grid),

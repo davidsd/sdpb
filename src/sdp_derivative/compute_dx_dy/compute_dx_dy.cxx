@@ -90,8 +90,4 @@ void compute_dx_dy(const Block_Info &block_info, const El::Grid &grid,
   // Solve for dx, dy in-place
   solve_schur_complement_equation(schur_complement_cholesky,
                                   schur_off_diagonal, Q, dx, dy);
-  El::Print(dy.blocks.at(0), "dy");
-  std::cout << "\n";
-  El::Print(dx.blocks.at(0), "dx");
-  std::cout << "\n";
 }

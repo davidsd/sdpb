@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../Verbosity.hxx"
 #include "../sdp_solve.hxx"
 
 #include <El.hpp>
@@ -13,7 +12,6 @@ struct DSDP_Parameters
 {
   size_t procs_per_node, proc_granularity;
   size_t precision;
-  Verbosity verbosity;
 
   boost::filesystem::path sdp_path, new_sdp_path, solution_dir,
     out_directory, param_path;

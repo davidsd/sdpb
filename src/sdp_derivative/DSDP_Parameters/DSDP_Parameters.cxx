@@ -7,7 +7,6 @@ namespace po = boost::program_options;
 
 DSDP_Parameters::DSDP_Parameters(int argc, char *argv[])
 {
-  int int_verbosity;
   std::string write_solution_string;
   using namespace std::string_literals;
 
@@ -65,10 +64,6 @@ DSDP_Parameters::DSDP_Parameters(int argc, char *argv[])
     boost::program_options::value<boost::filesystem::path>(&solution_dir),
     "The directory with the solution of x and y for the primary sdp. Defaults to "
     "primary with '_out' appended.");
-  basic_options.add_options()("verbosity",
-                              po::value<int>(&int_verbosity)->default_value(1),
-                              "Verbosity.  0 -> no output, 1 -> regular "
-                              "output, 2 -> debug output");
 
   cmd_line_options.add(basic_options);
 
@@ -151,16 +146,6 @@ DSDP_Parameters::DSDP_Parameters(int argc, char *argv[])
                   throw std::runtime_error("Cannot write to outDir: "
                                            + out_directory.string());
                 }
-            }
-
-          if(int_verbosity != 0 && int_verbosity != 1 && int_verbosity != 2)
-            {
-              throw std::runtime_error(
-                "Invalid number for Verbosity.  Only 0, 1 or 2 are allowed\n");
-            }
-          else
-            {
-              verbosity = static_cast<Verbosity>(int_verbosity);
             }
         }
     }

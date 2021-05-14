@@ -18,11 +18,6 @@ compute_approximate_objective(const Block_Info &block_info, const El::Grid &grid
   
   // b.y
   El::BigFloat objective(El::Dot(sdp.dual_objective_b, y.blocks.at(0)));
-
-  std::cout << "objective: "
-            << El::Dot(sdp.dual_objective_b, y.blocks.at(0)) << "\n "
-            << El::Dot(d_sdp.dual_objective_b, y.blocks.at(0));
-
   // ydy = y + dy/2
   El::DistMatrix<El::BigFloat> ydy(y.blocks.at(0));
   El::Axpy(El::BigFloat(0.5), dy.blocks.at(0), ydy);
@@ -39,8 +34,6 @@ compute_approximate_objective(const Block_Info &block_info, const El::Grid &grid
       // dc.dx/2
       local_sum
         += Dotu(d_sdp.primal_objective_c.blocks.at(block), dx.blocks.at(block))/2;
-
-      std::cout << "\n " << local_sum;
       {
         // temp = dB.(y + dy/2)
         El::DistMatrix<El::BigFloat> temp(x.blocks.at(block));
@@ -59,7 +52,6 @@ compute_approximate_objective(const Block_Info &block_info, const El::Grid &grid
         // comes along for the ride.
         local_sum -= El::Dotu(temp, xdx);
       }
-      std::cout << "\n " << local_sum << "\n";;
     }
   if(!x.blocks.empty() && x.blocks.at(0).Grid().Rank() != 0)
     {

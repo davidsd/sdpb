@@ -12,7 +12,6 @@ std::ostream &operator<<(std::ostream &os, const DSDP_Parameters &p)
 
      << "outDir                       = " << p.out_directory << '\n'
      << "solutionDir                  = " << p.solution_dir << '\n'
-     << "verbosity                    = " << static_cast<int>(p.verbosity)
      << '\n';
   return os;
 }
