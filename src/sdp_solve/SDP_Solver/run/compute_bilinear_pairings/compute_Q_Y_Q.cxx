@@ -10,6 +10,9 @@
 // for each b, L.blocks[b], Q[b], Work[b], and Q_Y_Q.blocks[b]
 // must have the structure described above for `tensorTransposeCongruence'
 
+// TODO: rename this to compute_A_Y, since this Q is
+// different from the big Q that gets inverted.
+
 void compute_Q_Y_Q(
   const Block_Info &block_info, const Block_Diagonal_Matrix &Y,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,

@@ -1,14 +1,8 @@
 #include "../../SDP_Solver.hxx"
 
-// dualResidues[p] = primalObjective[p] - Tr(A_p Y) - (FreeVarMatrix y)_p,
-// for 0 <= p < primalObjective.size()
+// dual_residues[p] = c[p] - A[p,a,b] Y[a,b] - B[p,a] y[a]
 //
-// The pairings Tr(A_p Y) can be written in terms of BilinearPairingsY:
-//
-//   Tr(A_(j,r,s,k) Y) = \sum_{b \in blocks[j]}
-//                       (1/2) (BilinearPairingsY_{ej r + k, ej s + k} +
-//                              swap (r <-> s))
-// where ej = d_j + 1.
+// A[p,a,c] Y[c,b] = (1/2) Q_Y_Q[parity,r,s,p,a,b] + swap (r <-> s)
 
 void compute_dual_residues_and_error(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
@@ -50,11 +44,12 @@ void compute_dual_residues_and_error(
                          residue_sub_block);
               }
         }
-      // dualResidues -= FreeVarMatrix * y
+      // dualResidues -= B * y
+      // TODO: Shouldn't this be Gemv since y is a vector?
       Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, El::BigFloat(-1),
            *free_var_matrix_block, *y_block, El::BigFloat(1),
            *dual_residues_block);
-      // dualResidues += primalObjective
+      // dualResidues += c
       Axpy(El::BigFloat(1), *primal_objective_c_block, *dual_residues_block);
 
       local_max = Max(local_max, El::MaxAbs(*dual_residues_block));
