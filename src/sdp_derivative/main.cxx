@@ -14,6 +14,7 @@ compute_approximate_objective(const Block_Info &block_info,
                               const El::Grid &grid, const SDP &sdp,
                               const SDP &d_sdp, const Block_Vector &x,
                               const Block_Vector &y,
+                              const Block_Diagonal_Matrix &X,
                               const Block_Diagonal_Matrix &Y);
 
 int main(int argc, char **argv)
@@ -62,9 +63,9 @@ int main(int argc, char **argv)
         y(std::vector<size_t>(block_info.num_points.size(),
                               sdp.dual_objective_b.Height()),
           block_info.block_indices, block_info.num_points.size(), grid);
-      Block_Diagonal_Matrix Y(block_info.psd_matrix_block_sizes(),
+      Block_Diagonal_Matrix X(block_info.psd_matrix_block_sizes(),
                               block_info.block_indices,
-                              block_info.num_points.size(), grid);
+                              block_info.num_points.size(), grid), Y(X);
       for(size_t block = 0; block != block_info.block_indices.size(); ++block)
         {
           size_t block_index(block_info.block_indices.at(block));
@@ -76,9 +77,12 @@ int main(int argc, char **argv)
             {
               // Constant constraints have empty odd parity blocks, so we do
               // not need to load them.
-              if(Y.blocks.at(2 * block + psd_block).Height() != 0)
+              if(X.blocks.at(2 * block + psd_block).Height() != 0)
                 {
                   const size_t psd_index(2 * block_index + psd_block);
+                  read_text_block(X.blocks.at(2 * block + psd_block),
+                                  parameters.solution_dir, "X_matrix_",
+                                  psd_index);
                   read_text_block(Y.blocks.at(2 * block + psd_block),
                                   parameters.solution_dir, "Y_matrix_",
                                   psd_index);
@@ -87,7 +91,7 @@ int main(int argc, char **argv)
         }
 
       El::BigFloat new_objective(
-        compute_approximate_objective(block_info, grid, sdp, d_sdp, x, y, Y));
+                                 compute_approximate_objective(block_info, grid, sdp, d_sdp, x, y, X, Y));
       std::cout << "objective: " << new_objective << "\n";
     }
   catch(std::exception &e)
