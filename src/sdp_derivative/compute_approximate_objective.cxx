@@ -17,8 +17,7 @@ compute_approximate_objective(const Block_Info &block_info, const El::Grid &grid
   compute_dx_dy(block_info, grid, sdp, d_sdp, x, y, X, Y, dx, dy);
   
   // b.y
-  El::BigFloat objective(El::Dot(sdp.dual_objective_b, y.blocks.at(0))
-                         + El::Dot(d_sdp.dual_objective_b, y.blocks.at(0)));
+  El::BigFloat objective(El::Dot(sdp.dual_objective_b, y.blocks.at(0)));
 
   std::cout << "objective: "
             << El::Dot(sdp.dual_objective_b, y.blocks.at(0)) << "\n "
@@ -30,7 +29,6 @@ compute_approximate_objective(const Block_Info &block_info, const El::Grid &grid
 
   // db.(y + dy/2)
   objective+=El::Dot(d_sdp.dual_objective_b, ydy);
-  
         
   El::BigFloat local_sum(0);
   for(size_t block(0); block != x.blocks.size(); ++block)
