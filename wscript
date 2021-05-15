@@ -240,8 +240,8 @@ def build(bld):
                         'src/approx_objective/Approx_Parameters/Approx_Parameters.cxx',
                         'src/approx_objective/Approx_Parameters/ostream.cxx',
                         'src/approx_objective/Axpy.cxx',
-                        'src/approx_objective/compute_approximate_objective.cxx',
-                        'src/approx_objective/compute_dx_dy/compute_dx_dy.cxx'
+                        'src/approx_objective/compute_approximate_objective/compute_approximate_objective.cxx',
+                        'src/approx_objective/compute_approximate_objective/compute_dx_dy.cxx'
                         ],
                 target='approx_objective',
                 cxxflags=default_flags,

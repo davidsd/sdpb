@@ -1,4 +1,4 @@
-#include "../sdp_solve.hxx"
+#include "../../sdp_solve.hxx"
 
 void compute_dx_dy(const Block_Info &block_info, const El::Grid &grid,
                    const SDP &sdp, const SDP &d_sdp, const Block_Vector &x,
