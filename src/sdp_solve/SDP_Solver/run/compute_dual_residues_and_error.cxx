@@ -2,13 +2,13 @@
 
 // dual_residues[p] = c[p] - A[p,a,b] Y[a,b] - B[p,a] y[a]
 //
-// A[p,a,c] Y[c,b] = (1/2) Q_Y_Q[parity,r,s,p,a,b] + swap (r <-> s)
+// A[p,a,c] Y[c,b] = (1/2) A_Y[parity,r,s,p,a,b] + swap (r <-> s)
 
 void compute_dual_residues_and_error(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    &Q_Y_Q,
+    &A_Y,
   Block_Vector &dual_residues, El::BigFloat &dual_error, Timers &timers)
 {
   auto &dual_residues_timer(timers.add_and_start("run.computeDualResidues"));
@@ -26,13 +26,13 @@ void compute_dual_residues_and_error(
       const size_t block_size(block_info.num_points[block_index]),
         dim(block_info.dimensions[block_index]);
 
-      for(auto &Q_Y_Q_parity : Q_Y_Q)
+      for(auto &A_Y_parity : A_Y)
         {
           for(size_t column_block = 0; column_block < dim; ++column_block)
             for(size_t row_block = 0; row_block <= column_block; ++row_block)
               {
                 El::DistMatrix<El::BigFloat> lower_diagonal(El::GetDiagonal(
-                  Q_Y_Q_parity[Q_index][column_block][row_block]));
+                  A_Y_parity[Q_index][column_block][row_block]));
 
                 size_t residue_row_offset(
                   ((column_block * (column_block + 1)) / 2 + row_block)

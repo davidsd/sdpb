@@ -3,33 +3,33 @@
 // TODO: Have this be part of sdp_solve.hxx
 void cholesky_decomposition(const Block_Diagonal_Matrix &A,
                             Block_Diagonal_Matrix &L);
-void compute_Q_X_inv_Q(
+void compute_A_X_inv(
   const Block_Info &block_info, const Block_Diagonal_Matrix &X_cholesky,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
   std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
-             2> &Q_X_inv_Q);
+             2> &A_X_inv);
 
-void compute_Q_Y_Q(
+void compute_A_Y(
   const Block_Info &block_info, const Block_Diagonal_Matrix &Y,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
   std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
-             2> &Q_Y_Q);
+             2> &A_Y);
 
 void compute_dual_residues_and_error(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    &Q_Y_Q,
+    &A_Y,
   Block_Vector &dual_residues, El::BigFloat &dual_error, Timers &timers);
 
 void initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    &Q_X_inv_Q,
+    &A_X_inv,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    &Q_Y_Q,
+    &A_Y,
   const El::Grid &block_grid, Block_Diagonal_Matrix &schur_complement_cholesky,
   Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
   Timers &timers);
@@ -47,12 +47,12 @@ void compute_dx_dy(const Block_Info &block_info, const El::Grid &grid,
 {
   std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    Q_X_inv_Q, Q_Y_Q;
+    A_X_inv, A_Y;
 
   Block_Diagonal_Matrix X_cholesky(X);
   cholesky_decomposition(X, X_cholesky);
-  compute_Q_X_inv_Q(block_info, X_cholesky, d_sdp.bases_blocks, Q_X_inv_Q);
-  compute_Q_Y_Q(block_info, Y, d_sdp.bases_blocks, Q_Y_Q);
+  compute_A_X_inv(block_info, X_cholesky, d_sdp.bases_blocks, A_X_inv);
+  compute_A_Y(block_info, Y, d_sdp.bases_blocks, A_Y);
 
   for(size_t block_index(0); block_index != dx.blocks.size(); ++block_index)
     {
@@ -82,9 +82,9 @@ void compute_dx_dy(const Block_Info &block_info, const El::Grid &grid,
                                  d_sdp.dual_objective_b.Height());
 
   Timers timers(false);
-  initialize_schur_complement_solver(block_info, sdp, Q_X_inv_Q,
-                                     // Q_Y_Q,
-                                     Q_Y_Q, grid, schur_complement_cholesky,
+  initialize_schur_complement_solver(block_info, sdp, A_X_inv,
+                                     // A_Y,
+                                     A_Y, grid, schur_complement_cholesky,
                                      schur_off_diagonal, Q, timers);
 
   // Solve for dx, dy in-place

@@ -2,31 +2,31 @@
 #include "../../../Block_Info.hxx"
 #include "../../../../Timers.hxx"
 
-void compute_Q_X_inv_Q(
+void compute_A_X_inv(
   const Block_Info &block_info, const Block_Diagonal_Matrix &X_cholesky,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
   std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
-             2> &Q_X_inv_Q);
+             2> &A_X_inv);
 
-void compute_Q_Y_Q(
+void compute_A_Y(
   const Block_Info &block_info, const Block_Diagonal_Matrix &Y,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
   std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
-             2> &Q_Y_Q);
+             2> &A_Y);
 
 void compute_bilinear_pairings(
   const Block_Info &block_info, const Block_Diagonal_Matrix &X_cholesky,
   const Block_Diagonal_Matrix &Y,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
   std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
-             2> &Q_X_inv_Q,
+             2> &A_X_inv,
   std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
-             2> &Q_Y_Q,
+             2> &A_Y,
   Timers &timers)
 {
   auto &congruence_timer(timers.add_and_start("run.bilinear_pairings"));
-  compute_Q_X_inv_Q(block_info, X_cholesky, bases_blocks, Q_X_inv_Q);
+  compute_A_X_inv(block_info, X_cholesky, bases_blocks, A_X_inv);
 
-  compute_Q_Y_Q(block_info, Y, bases_blocks, Q_Y_Q);
+  compute_A_Y(block_info, Y, bases_blocks, A_Y);
   congruence_timer.stop();
 }

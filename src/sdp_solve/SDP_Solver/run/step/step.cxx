@@ -8,10 +8,10 @@ void initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    &Q_X_inv_Q,
+    &A_X_inv,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    &Q_Y_Q,
+    &A_Y,
   const El::Grid &block_grid, Block_Diagonal_Matrix &schur_complement_cholesky,
   Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
   Timers &timers);
@@ -48,10 +48,10 @@ void SDP_Solver::step(
   const Block_Diagonal_Matrix &Y_cholesky,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    &Q_X_inv_Q,
+    &A_X_inv,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    &Q_Y_Q,
+    &A_Y,
   const Block_Vector &primal_residue_p, El::BigFloat &mu,
   El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
   El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers)
@@ -88,7 +88,7 @@ void SDP_Solver::step(
 
     // Compute SchurComplement and prepare to solve the Schur
     // complement equation for dx, dy
-    initialize_schur_complement_solver(block_info, sdp, Q_X_inv_Q, Q_Y_Q, grid,
+    initialize_schur_complement_solver(block_info, sdp, A_X_inv, A_Y, grid,
                                        schur_complement_cholesky,
                                        schur_off_diagonal, Q, timers);
 

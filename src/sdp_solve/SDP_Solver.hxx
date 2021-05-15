@@ -94,10 +94,10 @@ public:
     const Block_Diagonal_Matrix &Y_cholesky,
     const std::array<
       std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-      &Q_X_inv_Q,
+      &A_X_inv,
     const std::array<
       std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-      &Q_Y_Q,
+      &A_Y,
     const Block_Vector &primal_residue_p, El::BigFloat &mu,
     El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
     El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers);

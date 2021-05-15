@@ -2,12 +2,12 @@
 #include "../../../../Block_Info.hxx"
 #include "../../../../../Timers.hxx"
 
-// Compute the SchurComplement matrix using Q_X_inv_Q and
-// Q_Y_Q and the formula
+// Compute the SchurComplement matrix using A_X_inv and
+// A_Y and the formula
 //
 //   S_{(j,r1,s1,k1), (j,r2,s2,k2)} = \sum_{b \in blocks[j]}
-//          (1/4) (Q_X_inv_Q_{ej s1 + k1, ej r2 + k2}*
-//                 Q_Y_Q_{ej s2 + k2, ej r1 + k1} +
+//          (1/4) (A_X_inv_{ej s1 + k1, ej r2 + k2}*
+//                 A_Y_{ej s2 + k2, ej r1 + k1} +
 //                 swaps (r1 <-> s1) and (r2 <-> s2))
 //
 // where ej = d_j + 1.
@@ -16,10 +16,10 @@ void compute_schur_complement(
   const Block_Info &block_info,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    &Q_X_inv_Q,
+    &A_X_inv,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    &Q_Y_Q,
+    &A_Y,
   Block_Diagonal_Matrix &schur_complement, Timers &timers)
 {
   auto &schur_complement_timer(timers.add_and_start(
@@ -64,40 +64,40 @@ void compute_schur_complement(
                                   // Do this the hard way to avoid memory
                                   // allocations
                                   product
-                                    = Q_X_inv_Q[parity][Q_index]
-                                               [column_block_0][row_block_1]
-                                                 .GetLocalCRef(row, column);
-                                  product *= Q_Y_Q[parity][Q_index]
-                                                  [column_block_1][row_block_0]
-                                                    .GetLocalCRef(row, column);
+                                    = A_X_inv[parity][Q_index][column_block_0]
+                                             [row_block_1]
+                                               .GetLocalCRef(row, column);
+                                  product *= A_Y[parity][Q_index]
+                                                [column_block_1][row_block_0]
+                                                  .GetLocalCRef(row, column);
                                   element += product;
 
                                   product
-                                    = Q_X_inv_Q[parity][Q_index][row_block_0]
-                                               [row_block_1]
-                                                 .GetLocalCRef(row, column);
+                                    = A_X_inv[parity][Q_index][row_block_0]
+                                             [row_block_1]
+                                               .GetLocalCRef(row, column);
                                   product
-                                    *= Q_Y_Q[parity][Q_index][column_block_1]
-                                            [column_block_0]
-                                              .GetLocalCRef(row, column);
+                                    *= A_Y[parity][Q_index][column_block_1]
+                                          [column_block_0]
+                                            .GetLocalCRef(row, column);
                                   element += product;
 
                                   product
-                                    = Q_X_inv_Q[parity][Q_index]
-                                               [column_block_0][column_block_1]
-                                                 .GetLocalCRef(row, column);
-                                  product *= Q_Y_Q[parity][Q_index]
-                                                  [row_block_1][row_block_0]
-                                                    .GetLocalCRef(row, column);
+                                    = A_X_inv[parity][Q_index][column_block_0]
+                                             [column_block_1]
+                                               .GetLocalCRef(row, column);
+                                  product *= A_Y[parity][Q_index][row_block_1]
+                                                [row_block_0]
+                                                  .GetLocalCRef(row, column);
                                   element += product;
 
                                   product
-                                    = Q_X_inv_Q[parity][Q_index][row_block_0]
-                                               [column_block_1]
-                                                 .GetLocalCRef(row, column);
-                                  product *= Q_Y_Q[parity][Q_index]
-                                                  [row_block_1][column_block_0]
-                                                    .GetLocalCRef(row, column);
+                                    = A_X_inv[parity][Q_index][row_block_0]
+                                             [column_block_1]
+                                               .GetLocalCRef(row, column);
+                                  product *= A_Y[parity][Q_index][row_block_1]
+                                                [column_block_0]
+                                                  .GetLocalCRef(row, column);
                                   element += product;
                                 }
                               element /= 4;

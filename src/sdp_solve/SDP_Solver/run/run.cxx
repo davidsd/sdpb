@@ -24,9 +24,9 @@ void compute_bilinear_pairings(
   const Block_Diagonal_Matrix &Y,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
   std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
-             2> &Q_X_inv_Q,
+             2> &A_X_inv,
   std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
-             2> &Q_Y_Q,
+             2> &A_Y,
   Timers &timers);
 
 void compute_feasible_and_termination(
@@ -43,7 +43,7 @@ void compute_dual_residues_and_error(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    &Q_Y_Q,
+    &A_Y,
   Block_Vector &dual_residues, El::BigFloat &dual_error, Timers &timers);
 
 void compute_primal_residues_and_error_P_Ax_X(
@@ -93,14 +93,14 @@ SDP_Solver::run(const Solver_Parameters &parameters,
 
   std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    Q_X_inv_Q;
+    A_X_inv;
 
   // BilinearPairingsY is analogous to BilinearPairingsXInv, with
   // X^{-1} -> Y.
 
   std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    Q_Y_Q;
+    A_Y;
   print_header(verbosity);
 
   auto psd_sizes(block_info.psd_matrix_block_sizes());
@@ -134,9 +134,9 @@ SDP_Solver::run(const Solver_Parameters &parameters,
       cholesky_decomposition_timer.stop();
 
       compute_bilinear_pairings(block_info, X_cholesky, Y, sdp.bases_blocks,
-                                Q_X_inv_Q, Q_Y_Q, timers);
+                                A_X_inv, A_Y, timers);
 
-      compute_dual_residues_and_error(block_info, sdp, y, Q_Y_Q, dual_residues,
+      compute_dual_residues_and_error(block_info, sdp, y, A_Y, dual_residues,
                                       dual_error, timers);
       compute_primal_residues_and_error_P_Ax_X(
         block_info, sdp, x, X, primal_residues, primal_error_P, timers);
@@ -160,9 +160,9 @@ SDP_Solver::run(const Solver_Parameters &parameters,
 
       El::BigFloat mu, beta_corrector;
       step(parameters, total_psd_rows, is_primal_and_dual_feasible, block_info,
-           sdp, grid, X_cholesky, Y_cholesky, Q_X_inv_Q, Q_Y_Q,
-           primal_residue_p, mu, beta_corrector, primal_step_length,
-           dual_step_length, terminate_now, timers);
+           sdp, grid, X_cholesky, Y_cholesky, A_X_inv, A_Y, primal_residue_p,
+           mu, beta_corrector, primal_step_length, dual_step_length,
+           terminate_now, timers);
       if(terminate_now)
         {
           terminate_reason

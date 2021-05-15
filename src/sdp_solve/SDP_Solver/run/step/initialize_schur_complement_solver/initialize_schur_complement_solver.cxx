@@ -42,10 +42,10 @@ void compute_schur_complement(
   const Block_Info &block_info,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    &Q_X_inv_Q,
+    &A_X_inv,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    &Q_Y_Q,
+    &A_Y,
   Block_Diagonal_Matrix &schur_complement, Timers &timers);
 
 void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
@@ -62,10 +62,10 @@ void initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    &Q_X_inv_Q,
+    &A_X_inv,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
-    &Q_Y_Q,
+    &A_Y,
   const El::Grid &group_grid, Block_Diagonal_Matrix &schur_complement_cholesky,
   Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
   Timers &timers)
@@ -80,7 +80,7 @@ void initialize_schur_complement_solver(
     block_info.schur_block_sizes(), block_info.block_indices,
     block_info.num_points.size(), group_grid);
 
-  compute_schur_complement(block_info, Q_X_inv_Q, Q_Y_Q, schur_complement,
+  compute_schur_complement(block_info, A_X_inv, A_Y, schur_complement,
                            timers);
 
   auto &Q_computation_timer(
