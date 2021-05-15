@@ -237,8 +237,8 @@ def build(bld):
                 )
 
     bld.program(source=['src/approx_objective/main.cxx',
-                        'src/approx_objective/DSDP_Parameters/DSDP_Parameters.cxx',
-                        'src/approx_objective/DSDP_Parameters/ostream.cxx',
+                        'src/approx_objective/Approx_Parameters/Approx_Parameters.cxx',
+                        'src/approx_objective/Approx_Parameters/ostream.cxx',
                         'src/approx_objective/Axpy.cxx',
                         'src/approx_objective/compute_approximate_objective.cxx',
                         'src/approx_objective/compute_dx_dy/compute_dx_dy.cxx'

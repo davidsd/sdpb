@@ -1,6 +1,6 @@
-#include "../DSDP_Parameters.hxx"
+#include "../Approx_Parameters.hxx"
 
-std::ostream &operator<<(std::ostream &os, const DSDP_Parameters &p)
+std::ostream &operator<<(std::ostream &os, const Approx_Parameters &p)
 {
   os << std::boolalpha
      << "sdp                          = " << p.sdp_path << '\n'

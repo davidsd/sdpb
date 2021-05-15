@@ -1,4 +1,4 @@
-#include "DSDP_Parameters.hxx"
+#include "Approx_Parameters.hxx"
 #include "../sdp_solve.hxx"
 
 #include "../set_stream_precision.hxx"
@@ -23,7 +23,7 @@ int main(int argc, char **argv)
 
   try
     {
-      DSDP_Parameters parameters(argc, argv);
+      Approx_Parameters parameters(argc, argv);
       if(!parameters.is_valid())
         {
           return 0;
@@ -34,7 +34,6 @@ int main(int argc, char **argv)
                             parameters.proc_granularity, Verbosity::none);
 
       El::Grid grid(block_info.mpi_comm.value);
-      set_stream_precision(std::cout);
       SDP sdp(parameters.sdp_path, block_info, grid);
 
       std::vector<size_t> block_offsets(sdp.free_var_matrix.blocks.size() + 1,
@@ -82,6 +81,7 @@ int main(int argc, char **argv)
 
       El::BigFloat new_objective(
                                  compute_approximate_objective(block_info, grid, sdp, d_sdp, x, y, X, Y));
+      set_stream_precision(std::cout);
       std::cout << "{\"approx_objective\": \"" << new_objective << "\"}\n";
     }
   catch(std::exception &e)

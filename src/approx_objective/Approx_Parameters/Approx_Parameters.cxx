@@ -1,11 +1,11 @@
-#include "../DSDP_Parameters.hxx"
+#include "../Approx_Parameters.hxx"
 
 #include <boost/program_options.hpp>
 #include <boost/filesystem/fstream.hpp>
 
 namespace po = boost::program_options;
 
-DSDP_Parameters::DSDP_Parameters(int argc, char *argv[])
+Approx_Parameters::Approx_Parameters(int argc, char *argv[])
 {
   std::string write_solution_string;
   using namespace std::string_literals;
