@@ -5,17 +5,20 @@
 
 #include <El.hpp>
 
-void Axpy(const El::BigFloat &alpha, const SDP &new_sdp, SDP &delta_sdp);
+void setup_solver(const Block_Info &block_info, const El::Grid &grid,
+                  const SDP &sdp, const Block_Diagonal_Matrix &X,
+                  const Block_Diagonal_Matrix &Y,
+                  Block_Diagonal_Matrix &schur_complement_cholesky,
+                  Block_Matrix &schur_off_diagonal,
+                  El::DistMatrix<El::BigFloat> &Q);
 
-void load_solution(const boost::filesystem::path &checkpoint_path,
-                   Block_Vector &x, Block_Vector &y);
-El::BigFloat
-compute_approximate_objective(const Block_Info &block_info,
-                              const El::Grid &grid, const SDP &sdp,
-                              const SDP &d_sdp, const Block_Vector &x,
-                              const Block_Vector &y,
-                              const Block_Diagonal_Matrix &X,
-                              const Block_Diagonal_Matrix &Y);
+std::vector<El::BigFloat> compute_approximate_objectives(
+  const Block_Info &block_info, const El::Grid &grid, const SDP &sdp,
+  const Block_Vector &x, const Block_Vector &y,
+  const Block_Diagonal_Matrix &schur_complement_cholesky,
+  const Block_Matrix &schur_off_diagonal,
+  const El::DistMatrix<El::BigFloat> &Q,
+  const boost::filesystem::path &input_path);
 
 int main(int argc, char **argv)
 {
@@ -44,9 +47,6 @@ int main(int argc, char **argv)
             = block_offsets[p] + sdp.free_var_matrix.blocks[p].Height();
         }
 
-      SDP new_sdp(parameters.new_sdp_path, block_info, grid), d_sdp(new_sdp);
-      Axpy(El::BigFloat(-1), sdp, d_sdp);
-
       Block_Vector x(block_info.schur_block_sizes(), block_info.block_indices,
                      block_info.num_points.size(), grid),
         y(std::vector<size_t>(block_info.num_points.size(),
@@ -54,7 +54,8 @@ int main(int argc, char **argv)
           block_info.block_indices, block_info.num_points.size(), grid);
       Block_Diagonal_Matrix X(block_info.psd_matrix_block_sizes(),
                               block_info.block_indices,
-                              block_info.num_points.size(), grid), Y(X);
+                              block_info.num_points.size(), grid),
+        Y(X);
       for(size_t block = 0; block != block_info.block_indices.size(); ++block)
         {
           size_t block_index(block_info.block_indices.at(block));
@@ -79,10 +80,32 @@ int main(int argc, char **argv)
             }
         }
 
-      El::BigFloat new_objective(
-                                 compute_approximate_objective(block_info, grid, sdp, d_sdp, x, y, X, Y));
+      Block_Diagonal_Matrix schur_complement_cholesky(
+        block_info.schur_block_sizes(), block_info.block_indices,
+        block_info.num_points.size(), grid);
+      Block_Matrix schur_off_diagonal;
+      El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
+                                     sdp.dual_objective_b.Height());
+      setup_solver(block_info, grid, sdp, X, Y, schur_complement_cholesky,
+                   schur_off_diagonal, Q);
+
+      std::vector<El::BigFloat> approx_objectives(
+        compute_approximate_objectives(
+          block_info, grid, sdp, x, y, schur_complement_cholesky,
+          schur_off_diagonal, Q, parameters.new_sdp_path));
+
       set_stream_precision(std::cout);
-      std::cout << "{\"approx_objective\": \"" << new_objective << "\"}\n";
+      std::cout << "[\n";
+      for(auto iter(approx_objectives.begin());
+          iter != approx_objectives.end(); ++iter)
+        {
+          if(iter != approx_objectives.begin())
+            {
+              std::cout << ",\n";
+            }
+          std::cout << "  \"" << *iter << "\"";
+        }
+      std::cout << "\n]\n";
     }
   catch(std::exception &e)
     {
