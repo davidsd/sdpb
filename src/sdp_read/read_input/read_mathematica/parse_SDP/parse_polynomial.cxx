@@ -36,42 +36,47 @@ parse_polynomial(const char *begin, const char *end, Polynomial &polynomial)
           do
             {
               ++c;
-            }
-          while(c != delimiter
-                && (std::isdigit(*c) || *c == '.' || !is_valid_char(*c)
-                    || *c == '`'));
+          } while(c != delimiter
+                  && (std::isdigit(*c) || *c == '.' || !is_valid_char(*c)
+                      || *c == '`'));
         }
-      if(*c == '*')
+      // Coefficients can be a plain 'x' instead of '1.0*x'.
+      if(*c == '*' || *c == 'x')
         {
-          do
-            {
-              ++c;
-              check_iterator('*', begin, c, delimiter);
-            }
-          while(!is_valid_char(*c));
-
           std::string exponent;
-          if(*c == '^')
+          if(*c == '*')
             {
-              exponent = "E";
-              ++c;
-              check_iterator('^', begin, c, delimiter);
-              while(c != delimiter
-                    && ((exponent.size() == 1 && (*c == '-' || *c == '+'))
-                        || std::isdigit(*c) || !is_valid_char(*c)))
+              do
                 {
-                  if(is_valid_char(*c))
+                  ++c;
+                  check_iterator('*', begin, c, delimiter);
+              } while(!is_valid_char(*c));
+
+              if(*c == '^')
+                {
+                  exponent = "E";
+                  ++c;
+                  check_iterator('^', begin, c, delimiter);
+                  while(c != delimiter
+                        && ((exponent.size() == 1 && (*c == '-' || *c == '+'))
+                            || std::isdigit(*c) || !is_valid_char(*c)))
                     {
-                      exponent.push_back(*c);
+                      if(is_valid_char(*c))
+                        {
+                          exponent.push_back(*c);
+                        }
+                      ++c;
                     }
-                  ++c;
-                }
-              while(c != delimiter && (!is_valid_char(*c) || *c == '*'))
-                {
-                  ++c;
+                  while(c != delimiter && (!is_valid_char(*c) || *c == '*'))
+                    {
+                      ++c;
+                    }
                 }
             }
-
+          else
+            {
+              mantissa = "1";
+            }
           size_t degree(0);
           // Hard code the polynomial to be in 'x' since that is what
           // SDPB.m uses.
@@ -121,7 +126,7 @@ parse_polynomial(const char *begin, const char *end, Polynomial &polynomial)
           polynomial.coefficients.at(0) = El::BigFloat(mantissa);
           mantissa.clear();
         }
-      if(c!=delimiter && is_valid_char(*c) && *c != '+')
+      if(c != delimiter && is_valid_char(*c) && *c != '+')
         {
           mantissa.push_back(*c);
         }
