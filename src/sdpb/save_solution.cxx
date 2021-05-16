@@ -1,5 +1,6 @@
 #include "../sdp_solve.hxx"
 #include "../set_stream_precision.hxx"
+#include "../write_distmatrix.hxx"
 
 #include <boost/filesystem/fstream.hpp>
 
@@ -97,28 +98,9 @@ void save_solution(const SDP_Solver &solver,
       size_t block_index(block_indices.at(block));
       if(write_solution.vector_x)
         {
-          const boost::filesystem::path x_path(
-            out_directory / ("x_" + std::to_string(block_index) + ".txt"));
-          boost::filesystem::ofstream x_stream;
-          if(solver.x.blocks.at(block).DistRank()
-             == solver.x.blocks.at(block).Root())
-            {
-              x_stream.open(x_path);
-            }
-          El::Print(solver.x.blocks.at(block),
-                    std::to_string(solver.x.blocks.at(block).Height()) + " "
-                      + std::to_string(solver.x.blocks.at(block).Width()),
-                    "\n", x_stream);
-          if(solver.x.blocks.at(block).DistRank()
-             == solver.x.blocks.at(block).Root())
-            {
-              x_stream << "\n";
-              if(!x_stream.good())
-                {
-                  throw std::runtime_error("Error when writing to: "
-                                           + x_path.string());
-                }
-            }
+          write_distmatrix(solver.x.blocks.at(block),
+                           out_directory
+                             / ("x_" + std::to_string(block_index) + ".txt"));
         }
       for(size_t psd_block(0); psd_block < 2; ++psd_block)
         {

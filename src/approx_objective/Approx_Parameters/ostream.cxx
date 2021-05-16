@@ -9,9 +9,8 @@ std::ostream &operator<<(std::ostream &os, const Approx_Parameters &p)
      << "procsGranularity             = " << p.proc_granularity << '\n'
      << "precision(actual)            = " << p.precision << "("
      << mpf_get_default_prec() << ")" << '\n'
-
-     << "outDir                       = " << p.out_directory << '\n'
      << "solutionDir                  = " << p.solution_dir << '\n'
+     << "writeSolverState             = " << p.write_solver_state << '\n'
      << '\n';
   return os;
 }

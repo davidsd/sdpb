@@ -14,7 +14,9 @@ struct Approx_Parameters
   size_t precision;
 
   boost::filesystem::path sdp_path, new_sdp_path, solution_dir,
-    out_directory, param_path;
+    param_path;
+
+  bool write_solver_state;
 
   Approx_Parameters(int argc, char *argv[]);
   bool is_valid() const { return !sdp_path.empty(); }

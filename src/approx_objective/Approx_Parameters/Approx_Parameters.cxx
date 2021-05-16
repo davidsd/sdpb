@@ -13,10 +13,8 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
   po::options_description required_options("Required options");
   required_options.add_options()(
     "sdp", po::value<boost::filesystem::path>(&sdp_path)->required(),
-    "Directory containing preprocessed SDP data files corresponding to the solution.");
-  required_options.add_options()(
-    "newSdp", po::value<boost::filesystem::path>(&new_sdp_path)->required(),
-    "Directory containing preprocessed data files for the SDP you wish to approximate.");
+    "File or directory containing preprocessed SDP input corresponding to the "
+    "solution.");
   required_options.add_options()(
     "procsPerNode", po::value<size_t>(&procs_per_node)->required(),
     "The number of processes that can run on a node.  When running on "
@@ -29,12 +27,11 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
     "If you are using the Slurm workload manager, this should be set to "
     "'$SLURM_NTASKS_PER_NODE'.");
   required_options.add_options()(
-    "precision",
-    boost::program_options::value<size_t>(&precision)->required(),
+    "precision", boost::program_options::value<size_t>(&precision)->required(),
     "The precision, in the number of bits, for numbers in the "
     "computation. "
     " This should be less than or equal to the precision used when "
-    "preprocessing the XML input files with 'pvm2sdp'.  GMP will round "
+    "generating the solution with 'sdpb'.  GMP will round "
     "this up to a multiple of 32 or 64, depending on the system.");
 
   po::options_description cmd_line_options;
@@ -48,9 +45,9 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
     "format. Command line arguments override values in the parameter "
     "file.");
   basic_options.add_options()(
-    "outDir,o", po::value<boost::filesystem::path>(&out_directory),
-    "The objective is written this directory in Mathematica "
-    "format. Defaults to newSdp with '_out' appended.");
+    "newSdp", po::value<boost::filesystem::path>(&new_sdp_path),
+    "A file containing either preprocessed input for the SDP you wish to "
+    "approximate, or a null separated list of files with preprocessed input.");
   basic_options.add_options()(
     "procGranularity", po::value<size_t>(&proc_granularity)->default_value(1),
     "procGranularity must evenly divide procsPerNode.\n\n"
@@ -60,10 +57,17 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
     "This option is generally useful only when trying to fit a large problem "
     "in a small machine.");
   basic_options.add_options()(
-                              "solutionDir",
+    "solutionDir",
     boost::program_options::value<boost::filesystem::path>(&solution_dir),
-    "The directory with the solution of x and y for the primary sdp. Defaults to "
-    "primary with '_out' appended.");
+    "The directory with the text format solutions of x and y for the primary "
+    "sdp. It must also contain either X and Y or the solver state. "
+    "Defaults to sdp with '_out' appended.");
+  basic_options.add_options()(
+    "writeSolverState",
+    po::bool_switch(&write_solver_state)->default_value(false),
+    "Write the solver state in solutionDir.  This allows later invocations of "
+    "approx_objective to skip the time consuming part of setting up the "
+    "solver.");
 
   cmd_line_options.add(basic_options);
 
@@ -105,15 +109,13 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
 
           if(!boost::filesystem::exists(sdp_path))
             {
-              throw std::runtime_error("SDP path '"
-                                       + sdp_path.string()
+              throw std::runtime_error("SDP path '" + sdp_path.string()
                                        + "' does not exist");
             }
 
-          if(!boost::filesystem::exists(new_sdp_path))
+          if(!new_sdp_path.empty() && !boost::filesystem::exists(new_sdp_path))
             {
-              throw std::runtime_error("New SDP path '"
-                                       + new_sdp_path.string()
+              throw std::runtime_error("New SDP path '" + new_sdp_path.string()
                                        + "' does not exist");
             }
 
@@ -125,27 +127,6 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
                   solution_dir = solution_dir.parent_path();
                 }
               solution_dir += "_out";
-            }
-
-          if(variables_map.count("outDir") == 0)
-            {
-              out_directory = new_sdp_path;
-              if(out_directory.filename() == ".")
-                {
-                  out_directory = out_directory.parent_path();
-                }
-              out_directory += "_out";
-            }
-
-          if(El::mpi::Rank() == 0)
-            {
-              boost::filesystem::create_directories(out_directory);
-              boost::filesystem::ofstream ofs(out_directory / "out.txt");
-              if(!ofs.good())
-                {
-                  throw std::runtime_error("Cannot write to outDir: "
-                                           + out_directory.string());
-                }
             }
         }
     }

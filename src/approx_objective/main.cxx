@@ -6,11 +6,16 @@
 #include <El.hpp>
 
 void setup_solver(const Block_Info &block_info, const El::Grid &grid,
-                  const SDP &sdp, const Block_Diagonal_Matrix &X,
-                  const Block_Diagonal_Matrix &Y,
+                  const SDP &sdp, const boost::filesystem::path &solution_dir,
                   Block_Diagonal_Matrix &schur_complement_cholesky,
                   Block_Matrix &schur_off_diagonal,
                   El::DistMatrix<El::BigFloat> &Q);
+
+void write_solver_state(const std::vector<size_t> &block_indices,
+                        const boost::filesystem::path &solution_dir,
+                        const Block_Diagonal_Matrix &schur_complement_cholesky,
+                        const Block_Matrix &schur_off_diagonal,
+                        const El::DistMatrix<El::BigFloat> &Q);
 
 std::vector<El::BigFloat> compute_approximate_objectives(
   const Block_Info &block_info, const El::Grid &grid, const SDP &sdp,
@@ -52,10 +57,6 @@ int main(int argc, char **argv)
         y(std::vector<size_t>(block_info.num_points.size(),
                               sdp.dual_objective_b.Height()),
           block_info.block_indices, block_info.num_points.size(), grid);
-      Block_Diagonal_Matrix X(block_info.psd_matrix_block_sizes(),
-                              block_info.block_indices,
-                              block_info.num_points.size(), grid),
-        Y(X);
       for(size_t block = 0; block != block_info.block_indices.size(); ++block)
         {
           size_t block_index(block_info.block_indices.at(block));
@@ -63,37 +64,30 @@ int main(int argc, char **argv)
                           block_index);
           read_text_block(y.blocks.at(block),
                           parameters.solution_dir / "y.txt");
-          for(size_t psd_block(0); psd_block < 2; ++psd_block)
-            {
-              // Constant constraints have empty odd parity blocks, so we do
-              // not need to load them.
-              if(X.blocks.at(2 * block + psd_block).Height() != 0)
-                {
-                  const size_t psd_index(2 * block_index + psd_block);
-                  read_text_block(X.blocks.at(2 * block + psd_block),
-                                  parameters.solution_dir, "X_matrix_",
-                                  psd_index);
-                  read_text_block(Y.blocks.at(2 * block + psd_block),
-                                  parameters.solution_dir, "Y_matrix_",
-                                  psd_index);
-                }
-            }
         }
 
       Block_Diagonal_Matrix schur_complement_cholesky(
         block_info.schur_block_sizes(), block_info.block_indices,
         block_info.num_points.size(), grid);
-      Block_Matrix schur_off_diagonal;
+      Block_Matrix schur_off_diagonal(sdp.free_var_matrix);
       El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
                                      sdp.dual_objective_b.Height());
-      setup_solver(block_info, grid, sdp, X, Y, schur_complement_cholesky,
-                   schur_off_diagonal, Q);
 
-      std::vector<El::BigFloat> approx_objectives(
-        compute_approximate_objectives(
-          block_info, grid, sdp, x, y, schur_complement_cholesky,
-          schur_off_diagonal, Q, parameters.new_sdp_path));
-
+      setup_solver(block_info, grid, sdp, parameters.solution_dir,
+                   schur_complement_cholesky, schur_off_diagonal, Q);
+      if(parameters.write_solver_state)
+        {
+          write_solver_state(block_info.block_indices, parameters.solution_dir,
+                             schur_complement_cholesky, schur_off_diagonal, Q);
+        }
+      std::vector<El::BigFloat> approx_objectives;
+      if(!parameters.new_sdp_path.empty())
+        {
+          approx_objectives=
+            compute_approximate_objectives(
+                                           block_info, grid, sdp, x, y, schur_complement_cholesky,
+                                           schur_off_diagonal, Q, parameters.new_sdp_path);
+        }
       set_stream_precision(std::cout);
       std::cout << "[\n";
       for(auto iter(approx_objectives.begin());
