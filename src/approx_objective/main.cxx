@@ -17,7 +17,8 @@ void write_solver_state(const std::vector<size_t> &block_indices,
                         const Block_Matrix &schur_off_diagonal,
                         const El::DistMatrix<El::BigFloat> &Q);
 
-std::vector<El::BigFloat> compute_approximate_objectives(
+std::vector<std::pair<std::string, El::BigFloat>>
+compute_approximate_objectives(
   const Block_Info &block_info, const El::Grid &grid, const SDP &sdp,
   const Block_Vector &x, const Block_Vector &y,
   const Block_Diagonal_Matrix &schur_complement_cholesky,
@@ -80,26 +81,31 @@ int main(int argc, char **argv)
           write_solver_state(block_info.block_indices, parameters.solution_dir,
                              schur_complement_cholesky, schur_off_diagonal, Q);
         }
-      std::vector<El::BigFloat> approx_objectives;
+      std::vector<std::pair<std::string, El::BigFloat>> approx_objectives;
       if(!parameters.new_sdp_path.empty())
         {
-          approx_objectives=
-            compute_approximate_objectives(
-                                           block_info, grid, sdp, x, y, schur_complement_cholesky,
-                                           schur_off_diagonal, Q, parameters.new_sdp_path);
+          approx_objectives = compute_approximate_objectives(
+            block_info, grid, sdp, x, y, schur_complement_cholesky,
+            schur_off_diagonal, Q, parameters.new_sdp_path);
         }
-      set_stream_precision(std::cout);
-      std::cout << "[\n";
-      for(auto iter(approx_objectives.begin());
-          iter != approx_objectives.end(); ++iter)
+      if(El::mpi::Rank() == 0)
         {
-          if(iter != approx_objectives.begin())
+          set_stream_precision(std::cout);
+          std::cout << "[\n";
+          for(auto iter(approx_objectives.begin());
+              iter != approx_objectives.end(); ++iter)
             {
-              std::cout << ",\n";
+              if(iter != approx_objectives.begin())
+                {
+                  std::cout << ",\n";
+                }
+              std::cout << "  {\n"
+                        << "    \"path\": \"" << iter->first << "\",\n"
+                        << "    \"objective\": \"" << iter->second << "\"\n"
+                        << "  }";
             }
-          std::cout << "  \"" << *iter << "\"";
+          std::cout << "\n]\n";
         }
-      std::cout << "\n]\n";
     }
   catch(std::exception &e)
     {
