@@ -198,7 +198,10 @@ A full example of the whole sequence is
 
 The output is a JSON list with each element including the location of
 the new SDP, the approximate objective, and the first and second order
-terms.  The objective can be surprisingly sensitive to small changes,
+terms.  There is a [JSON schema](approx_objective_schema.json)
+describing the format.
+
+The objective can be surprisingly sensitive to small changes,
 so the first and second order terms should give you an idea of how
 accurate the approximation is.  In general, the first order term
 `d_objective`, should be smaller than `objective`.  Also, the second

@@ -1,0 +1,14 @@
+{
+    "type": "array",
+    "items" :
+    {
+        "type" : "object",
+        "properties":
+        {
+            "path": { "type": "string" },
+            "objective": { "type": "string" },
+            "d_objective": { "type": "string" },
+            "dd_objective": { "type": "string" }
+        }
+    }
+}
