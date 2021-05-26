@@ -1,4 +1,5 @@
 #include "Approx_Parameters.hxx"
+#include "Approx_Objective.hxx"
 #include "../sdp_solve.hxx"
 
 #include "../set_stream_precision.hxx"
@@ -17,7 +18,7 @@ void write_solver_state(const std::vector<size_t> &block_indices,
                         const Block_Matrix &schur_off_diagonal,
                         const El::DistMatrix<El::BigFloat> &Q);
 
-std::vector<std::pair<std::string, El::BigFloat>>
+std::vector<std::pair<std::string, Approx_Objective>>
 compute_approximate_objectives(
   const Block_Info &block_info, const El::Grid &grid, const SDP &sdp,
   const Block_Vector &x, const Block_Vector &y,
@@ -81,7 +82,7 @@ int main(int argc, char **argv)
           write_solver_state(block_info.block_indices, parameters.solution_dir,
                              schur_complement_cholesky, schur_off_diagonal, Q);
         }
-      std::vector<std::pair<std::string, El::BigFloat>> approx_objectives;
+      std::vector<std::pair<std::string, Approx_Objective>> approx_objectives;
       if(!parameters.new_sdp_path.empty())
         {
           approx_objectives = compute_approximate_objectives(
@@ -101,7 +102,9 @@ int main(int argc, char **argv)
                 }
               std::cout << "  {\n"
                         << "    \"path\": \"" << iter->first << "\",\n"
-                        << "    \"objective\": \"" << iter->second << "\"\n"
+                        << "    \"objective\": \"" << iter->second.objective << "\"\n"
+                        << "    \"dobjective\": \"" << iter->second.dobjective << "\"\n"
+                        << "    \"ddobjective\": \"" << iter->second.ddobjective << "\"\n"
                         << "  }";
             }
           std::cout << "\n]\n";
