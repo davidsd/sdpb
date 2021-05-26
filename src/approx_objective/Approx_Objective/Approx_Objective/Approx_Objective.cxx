@@ -1,5 +1,4 @@
 #include "../../Approx_Objective.hxx"
-#include "../../../sdp_solve.hxx"
 
 void compute_dx_dy(const Block_Info &block_info, const SDP &d_sdp,
                    const Block_Vector &x, const Block_Vector &y,
@@ -8,7 +7,7 @@ void compute_dx_dy(const Block_Info &block_info, const SDP &d_sdp,
                    const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx,
                    Block_Vector &dy);
 
-Approx_Objective compute_approximate_objective(
+Approx_Objective::Approx_Objective(
   const Block_Info &block_info, const SDP &sdp, const SDP &d_sdp,
   const El::BigFloat &new_objective_const, const Block_Vector &x,
   const Block_Vector &y,
@@ -21,15 +20,15 @@ Approx_Objective compute_approximate_objective(
                 schur_off_diagonal, Q, dx, dy);
 
   // b.y
-  El::BigFloat objective(El::Dot(sdp.dual_objective_b, y.blocks.at(0))
-                         + new_objective_const);
+  objective
+    = El::Dot(sdp.dual_objective_b, y.blocks.at(0)) + new_objective_const;
 
   El::BigFloat linear(0), quad(0);
   // db.y
-  linear += El::Dot(d_sdp.dual_objective_b, y.blocks.at(0));
+  d_objective = El::Dot(d_sdp.dual_objective_b, y.blocks.at(0));
 
   // db.dy/2
-  quad += El::Dot(d_sdp.dual_objective_b, dy.blocks.at(0)) / 2;
+  dd_objective = El::Dot(d_sdp.dual_objective_b, dy.blocks.at(0)) / 2;
 
   El::BigFloat local_linear(0), local_quad(0);
   for(size_t block(0); block != x.blocks.size(); ++block)
@@ -71,9 +70,8 @@ Approx_Objective compute_approximate_objective(
       local_quad = 0;
     }
 
-  linear
+  d_objective
     += El::mpi::AllReduce(local_linear, El::mpi::SUM, El::mpi::COMM_WORLD);
-  quad += El::mpi::AllReduce(local_quad, El::mpi::SUM, El::mpi::COMM_WORLD);
-  objective += linear + quad;
-  return Approx_Objective(objective, linear, quad);
+  dd_objective += El::mpi::AllReduce(local_quad, El::mpi::SUM, El::mpi::COMM_WORLD);
+  objective += d_objective + dd_objective;
 }

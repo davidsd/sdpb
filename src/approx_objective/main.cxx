@@ -103,8 +103,8 @@ int main(int argc, char **argv)
               std::cout << "  {\n"
                         << "    \"path\": \"" << iter->first << "\",\n"
                         << "    \"objective\": \"" << iter->second.objective << "\"\n"
-                        << "    \"dobjective\": \"" << iter->second.dobjective << "\"\n"
-                        << "    \"ddobjective\": \"" << iter->second.ddobjective << "\"\n"
+                        << "    \"dobjective\": \"" << iter->second.d_objective << "\"\n"
+                        << "    \"ddobjective\": \"" << iter->second.dd_objective << "\"\n"
                         << "  }";
             }
           std::cout << "\n]\n";
