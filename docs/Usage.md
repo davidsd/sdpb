@@ -166,3 +166,46 @@ because SDPB will make fewer local copies of the matrix Q.  However,
 larger granularity is also slower because even small blocks will be
 distributed among multiple cores.  So you should use
 `--procGranularity` only when absolutely needed.
+
+## Running approx_objective
+
+If you have a family of SDP's and a solution to one of these SDP's,
+`approx_objective` can compute the approximate value of the objective
+for the rest of the family.  The approximation is quadratic in the
+difference between the two SDP's (`b`, `c`, `B`).  `approx_objective`
+assumes that the bilinear bases `A` are the same.
+
+To compute approximate objectives, write out a text checkpoint when
+computing the initial solution with `sdpb` by including the option
+`--writeSolution=x,y,X,Y`.  `approx_objective` will then read in this
+solution, setup a solver, and compute the new objective.
+
+You specify the location of the new SDP with the option `--newSDP`.
+This file would be the output of `pvm2sdp` or `sdp2input`.  If you
+have multiple SDP's, then you can create an NSV as in the instructions
+for `sdp2input` that list all of the files.
+
+Setting up the solver can take a long time.  If you are going to run
+`approx_objective` many times, you can save the solver state by adding
+the option `--writeSolverState`.  You can run `approx_objective`
+without including any new SDP's, only saving the solver state for later.
+
+A full example of the whole sequence is
+
+    mpirun -n 4 build/sdpb --precision=1024 --procsPerNode=4 -s test/test/ --writeSolution=x,y,X,Y
+    mpirun -n 4 build/approx_objective --precision=1024 --procsPerNode=4 --sdp test/test/ --writeSolverState
+    mpirun -n 4 build/approx_objective --precision=1024 --procsPerNode=4 --sdp test/test/ --newSDP=test/test2
+
+The output is a JSON list with each element including the location of
+the new SDP, the approximate objective, and the first and second order
+terms.  The objective can be surprisingly sensitive to small changes,
+so the first and second order terms should give you an idea of how
+accurate the approximation is.  In general, the first order term
+`d_objective`, should be smaller than `objective`.  Also, the second
+order term `dd_objective` should be similar in size to the square
+of `d_objective` scaled by `objective`.
+
+    dd_objective ~ (d_objective / objective)²
+
+If this is not the case (e.g. `dd_objective > d_objective`), then the
+approximate objective is probably inaccurate.
