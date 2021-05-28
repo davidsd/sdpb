@@ -7,12 +7,9 @@
 void Axpy(const El::BigFloat &alpha, const SDP &new_sdp, SDP &delta_sdp);
 
 std::vector<std::pair<std::string, Approx_Objective>>
-compute_approximate_objectives(
+linear_approximate_objectives(
   const Block_Info &block_info, const El::Grid &grid, const SDP &sdp,
   const Block_Vector &x, const Block_Vector &y,
-  const Block_Diagonal_Matrix &schur_complement_cholesky,
-  const Block_Matrix &schur_off_diagonal,
-  const El::DistMatrix<El::BigFloat> &Q,
   const boost::filesystem::path &input_path)
 {
   std::vector<std::pair<std::string, Approx_Objective>> result;
@@ -20,9 +17,8 @@ compute_approximate_objectives(
     {
       for(auto &filename : read_file_list(input_path))
         {
-          for(auto &objective : compute_approximate_objectives(
-                block_info, grid, sdp, x, y, schur_complement_cholesky,
-                schur_off_diagonal, Q, filename))
+          for(auto &objective : linear_approximate_objectives(
+                block_info, grid, sdp, x, y, filename))
             {
               result.push_back(objective);
             }
@@ -35,8 +31,7 @@ compute_approximate_objectives(
 
       result.emplace_back(
         input_path.string(),
-        Approx_Objective(block_info, sdp, d_sdp, new_sdp.objective_const, x, y,
-                         schur_complement_cholesky, schur_off_diagonal, Q));
+        Approx_Objective(sdp, d_sdp, new_sdp.objective_const, x, y));
     }
   return result;
 }

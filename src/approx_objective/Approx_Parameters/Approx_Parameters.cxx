@@ -68,6 +68,11 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
     "Write the solver state in solutionDir.  This allows later invocations of "
     "approx_objective to skip the time consuming part of setting up the "
     "solver.");
+  basic_options.add_options()(
+    "linear",
+    po::bool_switch(&linear_only)->default_value(false),
+    "Only compute the linear correction, not the quadratic correction.  "
+    "This avoids having to compute an expensive inverse.");
 
   cmd_line_options.add(basic_options);
 

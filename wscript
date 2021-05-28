@@ -244,7 +244,8 @@ def build(bld):
                         'src/approx_objective/write_solver_state.cxx',
                         'src/approx_objective/Approx_Objective/Approx_Objective/Approx_Objective.cxx',
                         'src/approx_objective/Approx_Objective/Approx_Objective/compute_dx_dy.cxx',
-                        'src/approx_objective/compute_approximate_objectives.cxx'
+                        'src/approx_objective/linear_approximate_objectives.cxx',
+                        'src/approx_objective/quadratic_approximate_objectives.cxx'
                         ],
                 target='approx_objective',
                 cxxflags=default_flags,

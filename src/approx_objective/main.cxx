@@ -19,7 +19,13 @@ void write_solver_state(const std::vector<size_t> &block_indices,
                         const El::DistMatrix<El::BigFloat> &Q);
 
 std::vector<std::pair<std::string, Approx_Objective>>
-compute_approximate_objectives(
+linear_approximate_objectives(const Block_Info &block_info,
+                              const El::Grid &grid, const SDP &sdp,
+                              const Block_Vector &x, const Block_Vector &y,
+                              const boost::filesystem::path &input_path);
+
+std::vector<std::pair<std::string, Approx_Objective>>
+quadratic_approximate_objectives(
   const Block_Info &block_info, const El::Grid &grid, const SDP &sdp,
   const Block_Vector &x, const Block_Vector &y,
   const Block_Diagonal_Matrix &schur_complement_cholesky,
@@ -68,26 +74,38 @@ int main(int argc, char **argv)
                           parameters.solution_dir / "y.txt");
         }
 
-      Block_Diagonal_Matrix schur_complement_cholesky(
-        block_info.schur_block_sizes(), block_info.block_indices,
-        block_info.num_points.size(), grid);
-      Block_Matrix schur_off_diagonal(sdp.free_var_matrix);
-      El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
-                                     sdp.dual_objective_b.Height());
-
-      setup_solver(block_info, grid, sdp, parameters.solution_dir,
-                   schur_complement_cholesky, schur_off_diagonal, Q);
-      if(parameters.write_solver_state)
-        {
-          write_solver_state(block_info.block_indices, parameters.solution_dir,
-                             schur_complement_cholesky, schur_off_diagonal, Q);
-        }
       std::vector<std::pair<std::string, Approx_Objective>> approx_objectives;
-      if(!parameters.new_sdp_path.empty())
+      if(parameters.linear_only)
         {
-          approx_objectives = compute_approximate_objectives(
-            block_info, grid, sdp, x, y, schur_complement_cholesky,
-            schur_off_diagonal, Q, parameters.new_sdp_path);
+          if(!parameters.new_sdp_path.empty())
+            {
+              approx_objectives = linear_approximate_objectives(
+                block_info, grid, sdp, x, y, parameters.new_sdp_path);
+            }
+        }
+      else
+        {
+          Block_Diagonal_Matrix schur_complement_cholesky(
+            block_info.schur_block_sizes(), block_info.block_indices,
+            block_info.num_points.size(), grid);
+          Block_Matrix schur_off_diagonal(sdp.free_var_matrix);
+          El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
+                                         sdp.dual_objective_b.Height());
+
+          setup_solver(block_info, grid, sdp, parameters.solution_dir,
+                       schur_complement_cholesky, schur_off_diagonal, Q);
+          if(parameters.write_solver_state)
+            {
+              write_solver_state(
+                block_info.block_indices, parameters.solution_dir,
+                schur_complement_cholesky, schur_off_diagonal, Q);
+            }
+          if(!parameters.new_sdp_path.empty())
+            {
+              approx_objectives = quadratic_approximate_objectives(
+                block_info, grid, sdp, x, y, schur_complement_cholesky,
+                schur_off_diagonal, Q, parameters.new_sdp_path);
+            }
         }
       if(El::mpi::Rank() == 0)
         {
@@ -102,9 +120,17 @@ int main(int argc, char **argv)
                 }
               std::cout << "  {\n"
                         << "    \"path\": \"" << iter->first << "\",\n"
-                        << "    \"objective\": \"" << iter->second.objective << "\",\n"
-                        << "    \"d_objective\": \"" << iter->second.d_objective << "\",\n"
-                        << "    \"dd_objective\": \"" << iter->second.dd_objective << "\"\n"
+                        << "    \"objective\": \"" << iter->second.objective
+                        << "\",\n"
+                        << "    \"d_objective\": \""
+                        << iter->second.d_objective;
+              if(!parameters.linear_only)
+                {
+                  std::cout << "\",\n"
+                            << "    \"dd_objective\": \""
+                            << iter->second.dd_objective;
+                }
+              std::cout << "\"\n"
                         << "  }";
             }
           std::cout << "\n]\n";

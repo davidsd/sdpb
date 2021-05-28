@@ -16,7 +16,7 @@ struct Approx_Parameters
   boost::filesystem::path sdp_path, new_sdp_path, solution_dir,
     param_path;
 
-  bool write_solver_state;
+  bool write_solver_state, linear_only;
 
   Approx_Parameters(int argc, char *argv[]);
   bool is_valid() const { return !sdp_path.empty(); }

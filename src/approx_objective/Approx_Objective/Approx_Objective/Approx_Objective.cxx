@@ -7,6 +7,51 @@ void compute_dx_dy(const Block_Info &block_info, const SDP &d_sdp,
                    const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx,
                    Block_Vector &dy);
 
+// Only linear term
+Approx_Objective::Approx_Objective(const SDP &sdp, const SDP &d_sdp,
+                                   const El::BigFloat &new_objective_const,
+                                   const Block_Vector &x,
+                                   const Block_Vector &y)
+    : dd_objective(0)
+{
+  // b.y
+  objective
+    = El::Dot(sdp.dual_objective_b, y.blocks.at(0)) + new_objective_const;
+
+  El::BigFloat linear(0);
+  // db.y
+  d_objective = El::Dot(d_sdp.dual_objective_b, y.blocks.at(0));
+
+  El::BigFloat local_linear(0);
+  for(size_t block(0); block != x.blocks.size(); ++block)
+    {
+      // dc.x
+      local_linear
+        += Dotu(d_sdp.primal_objective_c.blocks.at(block), x.blocks.at(block));
+
+      {
+        // temp = dB.y
+        El::DistMatrix<El::BigFloat> temp(x.blocks.at(block));
+        El::Zero(temp);
+        El::Gemv(El::Orientation::NORMAL, El::BigFloat(1.0),
+                 d_sdp.free_var_matrix.blocks[block], y.blocks.at(0),
+                 El::BigFloat(0.0), temp);
+
+        // -x.dB.y/
+        local_linear -= El::Dotu(temp, x.blocks.at(block));
+      }
+    }
+  if(!x.blocks.empty() && x.blocks.at(0).Grid().Rank() != 0)
+    {
+      local_linear = 0;
+    }
+
+  d_objective
+    += El::mpi::AllReduce(local_linear, El::mpi::SUM, El::mpi::COMM_WORLD);
+  objective += d_objective + dd_objective;
+}
+
+// Linear and quadratic terms
 Approx_Objective::Approx_Objective(
   const Block_Info &block_info, const SDP &sdp, const SDP &d_sdp,
   const El::BigFloat &new_objective_const, const Block_Vector &x,
@@ -72,6 +117,7 @@ Approx_Objective::Approx_Objective(
 
   d_objective
     += El::mpi::AllReduce(local_linear, El::mpi::SUM, El::mpi::COMM_WORLD);
-  dd_objective += El::mpi::AllReduce(local_quad, El::mpi::SUM, El::mpi::COMM_WORLD);
+  dd_objective
+    += El::mpi::AllReduce(local_quad, El::mpi::SUM, El::mpi::COMM_WORLD);
   objective += d_objective + dd_objective;
 }

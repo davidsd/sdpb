@@ -171,9 +171,9 @@ distributed among multiple cores.  So you should use
 
 If you have a family of SDP's and a solution to one of these SDP's,
 `approx_objective` can compute the approximate value of the objective
-for the rest of the family.  The approximation is quadratic in the
-difference between the two SDP's (`b`, `c`, `B`).  `approx_objective`
-assumes that the bilinear bases `A` are the same.
+for the rest of the family.  The approximation is, by default,
+quadratic in the difference between the two SDP's (`b`, `c`, `B`).
+`approx_objective` assumes that the bilinear bases `A` are the same.
 
 To compute approximate objectives, write out a text checkpoint when
 computing the initial solution with `sdpb` by including the option
@@ -212,3 +212,8 @@ of `d_objective` scaled by `objective`.
 
 If this is not the case (e.g. `dd_objective > d_objective`), then the
 approximate objective is probably inaccurate.
+
+If the linear approximation is accurate enough for you, you can use
+the `--linear` option.  This avoids the one-time cost of an expensive
+solve.  Also, it only requires the solutions for `x` and `y`, which
+SDPB writes out by default.
