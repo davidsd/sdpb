@@ -180,21 +180,24 @@ computing the initial solution with `sdpb` by including the option
 `--writeSolution=x,y,X,Y`.  `approx_objective` will then read in this
 solution, setup a solver, and compute the new objective.
 
-You specify the location of the new SDP with the option `--newSDP`.
+You specify the location of the new SDP with the option `--newSdp`.
 This file would be the output of `pvm2sdp` or `sdp2input`.  If you
 have multiple SDP's, then you can create an NSV as in the instructions
 for `sdp2input` that list all of the files.
 
-Setting up the solver can take a long time.  If you are going to run
-`approx_objective` many times, you can save the solver state by adding
-the option `--writeSolverState`.  You can run `approx_objective`
-without including any new SDP's, only saving the solver state for later.
+Setting up the solver can take a long time.  If you have an SDP that
+you have perturbed in many different directions, and for logistical
+reasons you need to run `approx_objective` separately for each one,
+you can save time by saving the solver state with the option
+`--writeSolverState`.  To that end, you can also run
+`approx_objective` without any new SDP's, only saving the solver
+state.
 
 A full example of the whole sequence is
 
     mpirun -n 4 build/sdpb --precision=1024 --procsPerNode=4 -s test/test/ --writeSolution=x,y,X,Y
     mpirun -n 4 build/approx_objective --precision=1024 --procsPerNode=4 --sdp test/test/ --writeSolverState
-    mpirun -n 4 build/approx_objective --precision=1024 --procsPerNode=4 --sdp test/test/ --newSDP=test/test2
+    mpirun -n 4 build/approx_objective --precision=1024 --procsPerNode=4 --sdp test/test/ --newSdp=test/test2
 
 The output is a JSON list with each element including the location of
 the new SDP, the approximate objective, and the first and second order
