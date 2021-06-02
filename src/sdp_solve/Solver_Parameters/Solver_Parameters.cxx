@@ -105,6 +105,16 @@ boost::program_options::options_description Solver_Parameters::options()
     "Shrink each newton step by this factor (smaller means slower, more "
     "stable convergence). Corresponds to SDPA's gammaStar.");
   result.add_options()(
+    "minPrimalStep",
+    boost::program_options::value<El::BigFloat>(&min_primal_step)
+      ->default_value(El::BigFloat(0)),
+    "Terminate if the primal step size becomes smaller than this value.");
+  result.add_options()(
+    "minDualStep",
+    boost::program_options::value<El::BigFloat>(&min_dual_step)
+      ->default_value(El::BigFloat(0)),
+    "Terminate if the dual step size becomes smaller than this value.");
+  result.add_options()(
     "maxComplementarity",
     boost::program_options::value<El::BigFloat>(&max_complementarity)
       ->default_value(El::BigFloat("1e100", 10)),

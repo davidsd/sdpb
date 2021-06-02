@@ -29,6 +29,12 @@ operator<<(std::ostream &os, const SDP_Solver_Terminate_Reason &r)
     case SDP_Solver_Terminate_Reason::MaxComplementarityExceeded:
       os << "maxComplementarity exceeded";
       break;
+    case SDP_Solver_Terminate_Reason::MinPrimalStepExceeded:
+      os << "primal step too small";
+      break;
+    case SDP_Solver_Terminate_Reason::MinDualStepExceeded:
+      os << "dual step too small";
+      break;
     }
   return os;
 }

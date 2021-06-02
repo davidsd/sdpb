@@ -52,6 +52,14 @@ void compute_feasible_and_termination(
     {
       terminate_reason = SDP_Solver_Terminate_Reason::MaxRuntimeExceeded;
     }
+  else if(iteration > 1 && primal_step_length < parameters.min_primal_step)
+    {
+      terminate_reason = SDP_Solver_Terminate_Reason::MinPrimalStepExceeded;
+    }
+  else if(iteration > 1 && dual_step_length < parameters.min_dual_step)
+    {
+      terminate_reason = SDP_Solver_Terminate_Reason::MinDualStepExceeded;
+    }
   else
     {
       terminate_now = false;

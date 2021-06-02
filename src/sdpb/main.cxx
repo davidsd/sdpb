@@ -64,6 +64,8 @@ int main(int argc, char **argv)
           timing_parameters.solver.duality_gap_threshold = 0;
           timing_parameters.solver.primal_error_threshold = 0;
           timing_parameters.solver.dual_error_threshold = 0;
+          timing_parameters.solver.min_primal_step = 0;
+          timing_parameters.solver.min_dual_step = 0;
           if(timing_parameters.verbosity != Verbosity::debug)
             {
               timing_parameters.verbosity = Verbosity::none;
@@ -71,8 +73,8 @@ int main(int argc, char **argv)
           Timers timers(solve(block_info, timing_parameters));
 
           El::Matrix<int32_t> block_timings(block_info.dimensions.size(), 1);
-          write_timing(timing_parameters.solver.checkpoint_out, block_info, timers,
-                       timing_parameters.verbosity >= Verbosity::debug,
+          write_timing(timing_parameters.solver.checkpoint_out, block_info,
+                       timers, timing_parameters.verbosity >= Verbosity::debug,
                        block_timings);
           El::mpi::Barrier(El::mpi::COMM_WORLD);
           Block_Info new_info(
