@@ -23,17 +23,18 @@ const char *parse_SDP(const char *begin, const char *end,
     {
       throw std::runtime_error("Could not find 'SDP['");
     }
-  if(SDP_start!=begin)
+  if(SDP_start != begin)
     {
-      const char previous_char(*(SDP_start-1));
-      if(previous_char!=' ' && previous_char!='\t' && previous_char!='\n' && previous_char!='\r'
-         && previous_char!=')')
+      const char previous_char(*(SDP_start - 1));
+      if(previous_char != ' ' && previous_char != '\t' && previous_char != '\n'
+         && previous_char != '\r' && previous_char != ')')
         {
-          throw std::runtime_error("Invalid sequence: '" + (previous_char + SDP_literal)
+          throw std::runtime_error("Invalid sequence: '"
+                                   + (previous_char + SDP_literal)
                                    + "'.  Is this an SDP file?");
         }
     }
-  
+
   std::vector<El::BigFloat> temp_vector;
   const char *end_objective(parse_vector(SDP_start, end, temp_vector));
   if(!temp_vector.empty())
