@@ -54,11 +54,11 @@ void compute_feasible_and_termination(
     }
   else if(iteration > 1 && primal_step_length < parameters.min_primal_step)
     {
-      terminate_reason = SDP_Solver_Terminate_Reason::MinPrimalStepExceeded;
+      terminate_reason = SDP_Solver_Terminate_Reason::PrimalStepTooSmall;
     }
   else if(iteration > 1 && dual_step_length < parameters.min_dual_step)
     {
-      terminate_reason = SDP_Solver_Terminate_Reason::MinDualStepExceeded;
+      terminate_reason = SDP_Solver_Terminate_Reason::DualStepTooSmall;
     }
   else
     {

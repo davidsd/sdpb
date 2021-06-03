@@ -238,8 +238,8 @@ std::vector<El::BigFloat> compute_optimal(
           if(reason == SDP_Solver_Terminate_Reason::MaxComplementarityExceeded
              || reason == SDP_Solver_Terminate_Reason::MaxIterationsExceeded
              || reason == SDP_Solver_Terminate_Reason::MaxRuntimeExceeded
-             || reason == SDP_Solver_Terminate_Reason::MinPrimalStepExceeded
-             || reason == SDP_Solver_Terminate_Reason::MinDualStepExceeded)
+             || reason == SDP_Solver_Terminate_Reason::PrimalStepTooSmall
+             || reason == SDP_Solver_Terminate_Reason::DualStepTooSmall)
             {
               std::stringstream ss;
               ss << "Can not find solution: " << reason;

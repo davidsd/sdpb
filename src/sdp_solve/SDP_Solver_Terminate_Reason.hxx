@@ -15,8 +15,8 @@ enum class SDP_Solver_Terminate_Reason
   MaxComplementarityExceeded,
   MaxIterationsExceeded,
   MaxRuntimeExceeded,
-  MinPrimalStepExceeded,
-  MinDualStepExceeded,
+  PrimalStepTooSmall,
+  DualStepTooSmall,
 };
 
 std::ostream &
