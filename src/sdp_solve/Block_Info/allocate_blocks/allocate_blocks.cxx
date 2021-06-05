@@ -49,7 +49,7 @@ void Block_Info::allocate_blocks(const std::vector<Block_Cost> &block_costs,
 
   int rank(El::mpi::Rank(El::mpi::COMM_WORLD));
 
-  if(verbosity >= Verbosity::regular && rank == 0)
+  if(verbosity >= Verbosity::debug && rank == 0)
     {
       std::stringstream ss;
       ss << "Block Grid Mapping\n"
