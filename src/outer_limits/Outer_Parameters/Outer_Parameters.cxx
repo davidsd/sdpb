@@ -13,8 +13,8 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
 
   po::options_description required_options("Required options");
   required_options.add_options()(
-    "sdp,s",
-    po::value<boost::filesystem::path>(&sdp_path)->required(),
+    "functions",
+    po::value<boost::filesystem::path>(&functions_path)->required(),
     "Mathematica, JSON, or NSV file with SDP functions evaluated at chebyshev "
     "zeros.");
   required_options.add_options()(
@@ -36,7 +36,7 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
   basic_options.add_options()(
     "out,o", po::value<boost::filesystem::path>(&output_path),
     "The optimal solution is saved to this file in json "
-    "format. Defaults to 'sdp' with the ending '_out.json'.");
+    "format. Defaults to 'functions' with the ending '_out.json'.");
   basic_options.add_options()("verbosity",
                               po::value<int>(&int_verbosity)->default_value(1),
                               "Verbosity.  0 -> no output, 1 -> regular "
@@ -93,27 +93,27 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
 
           po::notify(variables_map);
 
-          if(!boost::filesystem::exists(sdp_path))
+          if(!boost::filesystem::exists(functions_path))
             {
-              throw std::runtime_error("sdp path '" + sdp_path.string()
+              throw std::runtime_error("functions path '" + functions_path.string()
                                        + "' does not exist");
             }
-          if(boost::filesystem::is_directory(sdp_path))
+          if(boost::filesystem::is_directory(functions_path))
             {
-              throw std::runtime_error("sdp path '" + sdp_path.string()
+              throw std::runtime_error("functions path '" + functions_path.string()
                                        + "' is a directory, not a file.");
             }
 
           if(variables_map.count("out") == 0)
             {
-              boost::filesystem::path filename(sdp_path);
+              boost::filesystem::path filename(functions_path);
               filename.replace_extension();
               output_path = filename.string() + "_out.json";
             }
 
           if(variables_map.count("checkpointDir") == 0)
             {
-              solver.checkpoint_out = sdp_path;
+              solver.checkpoint_out = functions_path;
               if(solver.checkpoint_out.filename() == ".")
                 {
                   solver.checkpoint_out = solver.checkpoint_out.parent_path();
