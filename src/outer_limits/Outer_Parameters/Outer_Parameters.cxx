@@ -19,7 +19,7 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
     "zeros.");
   required_options.add_options()(
     "points", po::value<boost::filesystem::path>(&points_path)->required(),
-    "JSON, or NSV file with initial points.");
+    "JSON or NSV file with initial points.");
 
   po::options_description cmd_line_options;
   cmd_line_options.add(required_options);
