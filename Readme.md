@@ -67,6 +67,12 @@ systems of correlation functions:
 - F. Kos, D. Poland and D. Simmons-Duffin, *Bootstrapping Mixed
   Correlators in the 3D Ising Model*, JHEP 1411, 109 (2014) [arXiv:1406.4858 \[hep-th\]](http://arxiv.org/abs/1406.4858).
 
+The derivation of the approximation to the objective:
+
+- D. Reehorst et. al., *Navigator Function for the Conformal Bootstrap*,
+  [arXiv:2104.09518 \[hep-th\]](http://arxiv.org/abs/2104.09518).
+
+
 ## Acknowledgements
 
 - Version 2 of SDPB was made possible by the [Simons Collaboration on the Nonperturbative Bootstrap](http://bootstrapcollaboration.com/).
