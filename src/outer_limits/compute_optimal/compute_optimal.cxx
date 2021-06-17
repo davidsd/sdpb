@@ -141,7 +141,7 @@ std::vector<El::BigFloat> compute_optimal(
     }
 
   while(parameters.solver.duality_gap_threshold
-        > parameters_in.solver.duality_gap_threshold)
+        >= parameters_in.solver.duality_gap_threshold)
     {
       std::map<size_t, size_t> new_to_old;
       size_t num_constraints(0), old_index(0);
@@ -206,7 +206,7 @@ std::vector<El::BigFloat> compute_optimal(
       bool has_new_points(false);
       while(!has_new_points
             && parameters.solver.duality_gap_threshold
-                 > parameters_in.solver.duality_gap_threshold)
+                 >= parameters_in.solver.duality_gap_threshold)
         {
           if(rank == 0 && parameters_in.verbosity >= Verbosity::regular)
             {
@@ -219,7 +219,7 @@ std::vector<El::BigFloat> compute_optimal(
             = solver.run(parameters.solver, parameters.verbosity,
                          parameter_properties, block_info, sdp, grid, timers);
 
-          if(rank == 0 && parameters_in.verbosity >= Verbosity::regular)
+          if(rank == 0 && parameters_in.verbosity >= Verbosity::debug)
             {
               set_stream_precision(std::cout);
               std::cout << "-----" << reason << "-----\n"
@@ -272,8 +272,16 @@ std::vector<El::BigFloat> compute_optimal(
                           has_new_points);
           if(!has_new_points)
             {
-              parameters.solver.duality_gap_threshold
-                /= parameters.duality_gap_reduction;
+              if(parameters.solver.duality_gap_threshold==parameters_in.solver.duality_gap_threshold)
+                {
+                  parameters.solver.duality_gap_threshold=0;
+                }
+              else
+                {
+                  parameters.solver.duality_gap_threshold
+                    = std::max(parameters.solver.duality_gap_threshold/parameters.duality_gap_reduction,
+                               parameters_in.solver.duality_gap_threshold);
+                }
             }
         }
       El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_star(
