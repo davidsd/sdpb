@@ -15,7 +15,7 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
   required_options.add_options()(
     "functions",
     po::value<boost::filesystem::path>(&functions_path)->required(),
-    "Mathematica, JSON, or NSV file with SDP functions evaluated at chebyshev "
+    "Mathematica, JSON, or NSV file with SDP functions evaluated at Chebyshev "
     "zeros.");
   required_options.add_options()(
     "points", po::value<boost::filesystem::path>(&points_path)->required(),
