@@ -32,8 +32,7 @@ SDPB requires
 
 - [CMake](https://cmake.org/)
 
-- [libarchive_cpp_wrapper](https://github.com/do-m-en/libarchive_cpp_wrapper)
-  This will require [libarchive](https://github.com/libarchive/libarchive)
+- [libarchive](https://github.com/libarchive/libarchive)
 
 SDPB has only been tested on Linux (Debian buster and Centos 7).  On
 Centos 7, the system compiler (gcc 4.8.5) is too old to support
