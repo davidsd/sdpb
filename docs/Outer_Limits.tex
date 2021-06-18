@@ -68,7 +68,7 @@ Initially, this will find a solution that is, in general, not positive
 semidefinite.  So \texttt{Outer\_Limits} will add more points to the
 places where the function is not positive semidefinite and find
 another solution.  This iterative procedure continues until the
-solutions is positive everywhere.
+solution is positive everywhere.
 
 This strategy also allows \texttt{Outer\_Limits} to be applied to more
 general problems.  \texttt{SDPB} requires that all inputs be
@@ -420,12 +420,17 @@ solutions that immediately get thrown away.
 The output from running \texttt{Outer\_Limits} on the example problem
 in section \ref{sec:input} is in listing
 \ref{listing:exampleoutput}. The beginning is very similar to
-\texttt{SDPB}.  Before each iteration, \texttt{Outer\_Limits} print
-the current number of constraints, including all of theblocks, and the
-current gap threshold.  After each iteration, \texttt{Outer\_Limits}
-prints a summary of the solution of the scaled problem in section
-\ref{subsec:initial}.  It then prints the full array of weights and
-the computed value of the objective.
+\texttt{SDPB}.  When iterating, \texttt{Outer\_Limits} first prints
+the current number of constraints, including all of the blocks, and
+the current gap threshold.  After each iteration,
+\texttt{Outer\_Limits} the full array of weights and the computed
+value of the objective.  If \texttt{Outer\_Limits} decides not to add
+points, it will reduce the duality gap threshold, print this new
+threshold, and continue with the current solution.
+
+Figures \ref{fig:plot1}, \ref{fig:plot2}, and
+\ref{fig:plot3} show the behavior of $F_0$ during the iterations
+as it alternates between adding points and reducing the gap threshold.
 
 \begin{lstlisting}[
   caption={Output of \texttt{Outer\_Limits} for the input file in listing~\ref{lst:points}},
@@ -495,10 +500,6 @@ Saving solution to "test/toy_functions_out.json"
 
 \pagebreak
 
-Figures \ref{fig:plot1}, \ref{fig:plot2}, and
-\ref{fig:plot3} show the behavior of $F_0$ during the iterations
-as it alternates between adding points and reducing the gap threshold.
-
 \begin{figure}
 \begin{center}
 \includegraphics[width=0.9\textwidth]{outer_plots_1}
@@ -535,10 +536,13 @@ as it alternates between adding points and reducing the gap threshold.
 
 \subsection{Termination}
 
-\texttt{Outer\_Limits} can fail when the inner \texttt{SDPB} fail, so
-\texttt{Outer\_Limits} has the same failure termination criteria.
-\texttt{Outer\_Limits}'s only successful termination criteria is if the
-duality gap is less than \texttt{dualityGapThreshold}.
+\texttt{Outer\_Limits} can fail when the inner \texttt{SDPB} routines
+fail, so \texttt{Outer\_Limits} has the same failure termination
+criteria.  \texttt{Outer\_Limits}'s only successful termination
+criteria is if the duality gap is less than
+\texttt{dualityGapThreshold}.
+
+\pagebreak
 
 \subsection{Output File}
 
