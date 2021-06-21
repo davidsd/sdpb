@@ -1,3 +1,43 @@
+# Version 2.5.0
+
+## sdp2input & pvm2sdp
+
+- Uses a new, **INCOMPATIBLE** JSON-based format for writing output.  The
+  output is written as a single zip file, with entries that are each
+  zip files.  This reduces problems with running out of inodes on
+  some filesystems.  The zip format also transparently catches file
+  corruption.
+
+- Mathematica polynomial input can now handle a plain 'x' as a
+  polynomial term, rather than requiring '1.0*x'.
+
+## sdp2input
+
+- Fixed a bug causing incorrect results when poles are closer together
+  than 1e-2.
+
+- Significantly reduced memory use when using multiple cores
+
+## sdpb
+
+- Uses the new incompatible json-based format from pvm2sdp and sdp2input.
+
+- Can read input as a directory or a wide variety of archive formats
+  (e.g. zip, tar, 7z).  This requires a new dependency on the
+  libarchive library.
+
+- Added the options --minPrimalStep and --minDualStep as stopping conditions.
+
+- Clean up output by only printing the Block Grid Mapping when verbosity=2.
+
+## outer_limits
+
+- Initial release.
+
+## approx_objective
+
+- Initial release.
+
 # Version 2.4.0
 
 ## sdpb
