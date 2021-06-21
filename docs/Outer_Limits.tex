@@ -88,19 +88,20 @@ addition, there is a known vector $b$, independent of the blocks.  The
 goal of semidefinite programming is to find a solution to these
 constraints while trying to maximize the quantity $b\cdot y$.
 
-Writing this more formally, consider a collection of symmetric matrices
+Writing this more formally, consider a collection of symmetric $R_{j}\times R_{j}$ matrices
 \begin{eqnarray}
 \label{eq:sdp}
 M_j^n(\Delta) &=& \begin{pmatrix}
 m_{j,11}^{n}(\Delta) & \dots & m_{j,1m_j}^{n}(\Delta)\\
 \vdots & \ddots & \vdots\\
-m_{j,m_j1}^{n}(\Delta) & \dots & m^{n}_{j,m_jm_j}(\Delta)
+m_{j,R_j1}^{n}(\Delta) & \dots & m^{n}_{j,R_jR_j}(\Delta)
 \end{pmatrix}
 \end{eqnarray}
 where $0 \leq n \leq N$ and $1 \leq j \leq J$, and each element
-$m_{j,rs}^{n}(\Delta)$ is an arbitrary function in $\Delta$.  Define the functional $F_j$
+$m_{j,rs}^{n}(\Delta)$ is an arbitrary function in $\Delta$.  Define
+the matrix $F_j\left(\Delta\right)$
 \begin{equation}
-F_j=M^0_j(\Delta)+\sum_{n=1}^{N} y_n M^n_j(\Delta)
+F_j\left(\Delta\right)=M^0_j(\Delta)+\sum_{n=1}^{N} y_n M^n_j(\Delta)
 \end{equation}
 Then given $b\in \R^N$, \texttt{Outer\_Limits} will solve for coefficients $y_n$
 that
@@ -108,10 +109,10 @@ that
 \label{eq:SDPconstraints}
 \begin{array}{ll}
 \textrm{maximize} & b_0+b\.y\quad\textrm{over}\quad y \in \R^N,\\
-\textrm{such that} & F_j \succeq 0 \quad \textrm{for all $\Delta\geq 0$ and $1 \leq j \leq J$}.
+\textrm{such that} & F_j\left(\Delta\right) \succeq 0 \quad \textrm{for all $\Delta\geq 0$ and $1 \leq j \leq J$}.
 \end{array}
 \end{eqnarray}
-The notation $F_j\succeq 0$ means $F_j$ is positive semidefinite.
+The notation $F_j\left(\Delta\right)\succeq 0$ means $F_j\left(\Delta\right)$ is positive semidefinite.
 
 \section{Input}
 \label{sec:input}
@@ -157,7 +158,7 @@ characterize the relative behavior of the different functions at
 infinity.  This characterization turns out to be important for
 computing high precision answers for the objective.
 
-In this case, the characterization is straightforward.  $f1$ and $f2$
+In this case, the characterization is straightforward.  $f_1$ and $f_2$
 are both degree=4 polynomials, so we only need to know the relative
 sizes of the coefficients of $\Delta^4$: $1$ and
 $1/12 \sim 0.083333333333333$.  Now we can construct the
@@ -225,7 +226,7 @@ The exact format is specified in the JSON schema
 \texttt{docs/functions\_schema.json}.  At its heart, there is a set of
 nested arrays.  The outermost array corresponds to the $j$ index of
 $m_{j,rs}^{n}(\Delta)$, followed by $r$, $s$, and $n$.  The toy
-example has $N=2$, $J=1$, and $m_{1}=1$, so $j=r=s=1$ and $n=1$ or
+example has $N=2$, $J=1$, and $R_{1}=1$, so $j=r=s=1$ and $n=1$ or
 $2$.
 
 The last thing to do is to create a \texttt{points} file that contains
@@ -238,7 +239,7 @@ degrees of freedom in $y$.
 For the toy problem, there are only two functions, so in principle you
 only need two points.  Infinity is always used, so you could try $0$.
 In practice, \texttt{Outer\_Limits} will get stuck if you do not
-provide a healthy margin.
+exceed the minimum by a healthy margin.
 
 With that in mind, we choose the three points $0$, $0.1$, and $1$,
 resulting in the \texttt{points} input file in listing \ref{lst:points}.
@@ -386,7 +387,7 @@ the location and value where $F_{j}$ is minimum
   F_{\min} & = & F\left(\Delta\right) - \left(dF_{j}\right)^{2} /\left( 2 d^{2}F_{j}\right).
 \end{eqnarray}
 
-At first, we might think that if $F_{\min}<0$, we need to add
+At first, we might think that only if $F_{\min}<0$ do we need to add
 $\Delta_{\min}$ to the list of constraint points.  However, if
 $F_{\min}>0$, it may only be positive due to inaccuracies in the
 quadratic approximation.  Also, if $F_{\min}<0$, it may only be
@@ -404,14 +405,13 @@ points if and only if
 With these new points, \texttt{Outer\_Limits} creates and solves a new
 system as in section \ref{subsec:initial}.  Eventually, there will be
 no new points.  Then \texttt{Outer\_Limits} reduces the duality gap by
-\texttt{dualityGapReduction} and iterates until there are no new
+\texttt{dualityGapReduction} and iterates again until there are no new
 points.  \texttt{Outer\_Limits} continues this cycle of finding new
 points and reducing the duality gap until the duality gap is less than
 \texttt{dualityGapThreshold}.  This guarantees that the final result
 will fully satisfy all of the constraints in \ref{eq:SDPconstraints}
 without having to spend a lot of effort computing highly precise
-solutions that immediately get thrown away.
-
+solutions for very approximate problems.
 
 \section{Output of \SDPB}
 
@@ -423,10 +423,10 @@ in section \ref{sec:input} is in listing
 \texttt{SDPB}.  When iterating, \texttt{Outer\_Limits} first prints
 the current number of constraints, including all of the blocks, and
 the current gap threshold.  After each iteration,
-\texttt{Outer\_Limits} the full array of weights and the computed
-value of the objective.  If \texttt{Outer\_Limits} decides not to add
-points, it will reduce the duality gap threshold, print this new
-threshold, and continue with the current solution.
+\texttt{Outer\_Limits} prints the full array of weights and the
+computed value of the objective.  If \texttt{Outer\_Limits} decides
+not to add points, it will reduce the duality gap threshold, print
+this new threshold, and continue with the current solution.
 
 Figures \ref{fig:plot1}, \ref{fig:plot2}, and
 \ref{fig:plot3} show the behavior of $F_0$ during the iterations
@@ -526,8 +526,8 @@ Saving solution to "test/toy_functions_out.json"
 \includegraphics[width=0.9\textwidth]{outer_plots_3}
 \end{center}
 \caption{Plot of $F_{0}$ after the fifth, sixth, and seventh
-  iterations, with duality gap thresholds of $1.05\times10^{-6}$, $1.02\times10^{-9}$, and $1.02\times10^{-9}$.
-  fourth iterations, with duality gap threshold=.  After the sixth
+  iterations, with duality gap thresholds of $1.05\times10^{-6}$,
+  $1.02\times10^{-9}$, and $1.02\times10^{-9}$.  After the sixth
   iteration, \texttt{Outer\_Limits} adds a point at 1.042497.}
 \label{fig:plot3}
 \end{figure}
