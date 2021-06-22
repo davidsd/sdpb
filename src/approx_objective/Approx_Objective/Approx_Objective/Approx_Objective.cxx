@@ -9,18 +9,19 @@ void compute_dx_dy(const Block_Info &block_info, const SDP &d_sdp,
 
 // Only linear term
 Approx_Objective::Approx_Objective(const SDP &sdp, const SDP &d_sdp,
-                                   const El::BigFloat &new_objective_const,
                                    const Block_Vector &x,
                                    const Block_Vector &y)
     : dd_objective(0)
 {
   // b.y
   objective
-    = El::Dot(sdp.dual_objective_b, y.blocks.at(0)) + new_objective_const;
+    = El::Dot(sdp.dual_objective_b, y.blocks.at(0)) + sdp.objective_const;
 
   El::BigFloat linear(0);
+  // dconst
+  d_objective = d_sdp.objective_const;
   // db.y
-  d_objective = El::Dot(d_sdp.dual_objective_b, y.blocks.at(0));
+  d_objective += El::Dot(d_sdp.dual_objective_b, y.blocks.at(0));
 
   El::BigFloat local_linear(0);
   for(size_t block(0); block != x.blocks.size(); ++block)
@@ -54,8 +55,7 @@ Approx_Objective::Approx_Objective(const SDP &sdp, const SDP &d_sdp,
 // Linear and quadratic terms
 Approx_Objective::Approx_Objective(
   const Block_Info &block_info, const SDP &sdp, const SDP &d_sdp,
-  const El::BigFloat &new_objective_const, const Block_Vector &x,
-  const Block_Vector &y,
+  const Block_Vector &x, const Block_Vector &y,
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
   const El::DistMatrix<El::BigFloat> &Q)
@@ -66,11 +66,13 @@ Approx_Objective::Approx_Objective(
 
   // b.y
   objective
-    = El::Dot(sdp.dual_objective_b, y.blocks.at(0)) + new_objective_const;
+    = El::Dot(sdp.dual_objective_b, y.blocks.at(0)) + sdp.objective_const;
 
   El::BigFloat linear(0), quad(0);
+  // dconst
+  d_objective = d_sdp.objective_const;
   // db.y
-  d_objective = El::Dot(d_sdp.dual_objective_b, y.blocks.at(0));
+  d_objective += El::Dot(d_sdp.dual_objective_b, y.blocks.at(0));
 
   // db.dy/2
   dd_objective = El::Dot(d_sdp.dual_objective_b, dy.blocks.at(0)) / 2;

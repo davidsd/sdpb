@@ -11,4 +11,5 @@ void Axpy(const El::BigFloat &alpha, const SDP &new_sdp, SDP &delta_sdp)
              delta_sdp.primal_objective_c.blocks.at(block));
   }
   El::Axpy(alpha, new_sdp.dual_objective_b, delta_sdp.dual_objective_b);
+  delta_sdp.objective_const += alpha*new_sdp.objective_const;
 }

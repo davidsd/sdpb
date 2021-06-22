@@ -33,10 +33,10 @@ quadratic_approximate_objectives(
       SDP new_sdp(input_path, block_info, grid), d_sdp(new_sdp);
       Axpy(El::BigFloat(-1), sdp, d_sdp);
 
-      result.emplace_back(
-        input_path.string(),
-        Approx_Objective(block_info, sdp, d_sdp, new_sdp.objective_const, x, y,
-                         schur_complement_cholesky, schur_off_diagonal, Q));
+      result.emplace_back(input_path.string(),
+                          Approx_Objective(block_info, sdp, d_sdp, x, y,
+                                           schur_complement_cholesky,
+                                           schur_off_diagonal, Q));
     }
   return result;
 }
