@@ -1,0 +1,5 @@
+{
+    "num_blocks" : { "type": "integer" },
+    "command": { "type" : "string" },
+    "required": [ "num_blocks" ]
+}

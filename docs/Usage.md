@@ -10,13 +10,15 @@ SDPB.
 
 ## Create input files
 
-You will normally start with either an SDP file in Mathematica or JSON format, or
-a Polynomial Vector Matrices file in XML format.  These must first be
-converted, using `sdp2input` or `pvm2sdp`, into a format that SDPB can
-quickly load.  When creating these input files, you must choose a
-working precision.  In general, you should use the same precision as
-when you run `sdpb`, though you may also use a larger precision.  Both
-`sdp2input` and `pvm2sdp` will run faster in parallel.
+You will normally start with either an SDP file in Mathematica or JSON
+format, or a Polynomial Vector Matrices file in XML format.  These
+must first be converted, using `sdp2input` or `pvm2sdp`, into a format
+that SDPB can quickly load.  The format is described in
+[SDPB_input_format.md](SDPB_input_format.md).  When creating these
+input files, you must choose a working precision.  In general, you
+should use the same precision as when you run `sdpb`, though you may
+also use a larger precision.  Both `sdp2input` and `pvm2sdp` will run
+faster in parallel.
 
 ### Converting an SDP
 
