@@ -2,11 +2,12 @@
 
 ## sdp2input & pvm2sdp
 
-- Uses a new, **INCOMPATIBLE** JSON-based format for writing output.  The
-  output is written as a single zip file, with entries that are each
-  zip files.  This reduces problems with running out of inodes on
+- Uses a new, **INCOMPATIBLE** JSON-based format for writing output.
+  The output is written as a single zip file, with entries that are
+  each zip files.  This reduces problems with running out of inodes on
   some filesystems.  The zip format also transparently catches file
-  corruption.
+  corruption.  The format is documented in
+  [SDPB_input_format.md](docs/SDPB_input_format.md).
 
 - Mathematica polynomial input can now handle a plain 'x' as a
   polynomial term, rather than requiring '1.0*x'.
