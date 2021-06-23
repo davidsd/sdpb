@@ -38,7 +38,7 @@
 
 {\Large
 \begin{center}
-{\bf Outer Limits 0.0.1 \\\vspace{.1in}}
+{\bf Outer Limits \\\vspace{.1in}}
 \end{center}
 }
 \begin{center}
@@ -65,15 +65,16 @@ matrices.  This allows \texttt{Outer\_Limits} to find a solution using
 much lower precision.
 
 Initially, this will find a solution that is, in general, not positive
-semidefinite.  So \texttt{Outer\_Limits} will add more points to the
-places where the function is not positive semidefinite and find
-another solution.  This iterative procedure continues until the
-solution is positive everywhere.
+semidefinite everywhere.  So \texttt{Outer\_Limits} will add more
+points to the places where the function is not positive semidefinite
+and find another solution.  This iterative procedure continues until
+the solution is positive everywhere.
 
-This strategy also allows \texttt{Outer\_Limits} to be applied to more
-general problems.  \texttt{SDPB} requires that all inputs be
-approximated as polynomials.  \texttt{Outer\_Limits}, in contrast, only requires
-evaluations of the functions at zeros of Chebyshev polynomials.
+This strategy also allows \texttt{Outer\_Limits} to be more easily
+applied to general problems.  \texttt{SDPB} requires that all inputs
+be approximated as polynomials.  \texttt{Outer\_Limits}, in contrast,
+only requires evaluations of the functions at zeros of Chebyshev
+polynomials.
 
 \texttt{Outer\_Limits} is bundled with \texttt{SDPB}.  See
 \texttt{Install.md} for up-to-date instructions on getting pre-made
@@ -101,7 +102,7 @@ where $0 \leq n \leq N$ and $1 \leq j \leq J$, and each element
 $m_{j,rs}^{n}(\Delta)$ is an arbitrary function in $\Delta$.  Define
 the matrix $F_j\left(\Delta\right)$
 \begin{equation}
-F_j\left(\Delta\right)=M^0_j(\Delta)+\sum_{n=1}^{N} y_n M^n_j(\Delta)
+F_j\left(\Delta\right)=M^0_j(\Delta)+\sum_{n=1}^{N} y_n M^n_j(\Delta).
 \end{equation}
 Then given $b\in \R^N$, \texttt{Outer\_Limits} will solve for coefficients $y_n$
 that
@@ -390,7 +391,7 @@ the location and value where $F_{j}$ is minimum
 At first, we might think that only if $F_{\min}<0$ do we need to add
 $\Delta_{\min}$ to the list of constraint points.  However, if
 $F_{\min}>0$, it may only be positive due to inaccuracies in the
-quadratic approximation.  Also, if $F_{\min}<0$, it may only be
+quadratic approximation.  Conversely, if $F_{\min}<0$, it may only be
 negative due to inaccuracies in the finite precision arithmetic.  To
 handle these cases, we add $\Delta_{\min}$ to the list of constraint
 points if and only if
@@ -505,7 +506,7 @@ Saving solution to "test/toy_functions_out.json"
 \includegraphics[width=0.9\textwidth]{outer_plots_1}
 \end{center}
 \caption{Plot of $F_{0}=y_{0}\left(1+x^4\right) + y_{1}\left(\frac{x^4}{12} + x^2\right)$
-  after the first iteration, with duality gap threshold=1.1, and second
+  after the first iteration, with duality gap threshold=1.1, and the second
   iteration, with duality gap threshold=$1.07\times10^{-3}$.  After the second
   iteration, \texttt{Outer\_Limits} adds a point at 1.044.}
 \label{fig:plot1}
@@ -516,7 +517,7 @@ Saving solution to "test/toy_functions_out.json"
 \includegraphics[width=0.9\textwidth]{outer_plots_2}
 \end{center}
 \caption{Plot of $F_{0}$
-  after the third iteration, with duality gap threshold=$1.07\times10^{-3}$, and fourth iterations, with duality gap threshold=$1.05\times10^{-6}$.  After the fourth
+  after the third iteration, with duality gap threshold=$1.07\times10^{-3}$, and the fourth iteration, with duality gap threshold=$1.05\times10^{-6}$.  After the fourth
   iteration, \texttt{Outer\_Limits} adds a point at 1.042500.}
 \label{fig:plot2}
 \end{figure}
