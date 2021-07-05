@@ -41,7 +41,7 @@ void read_input(const boost::filesystem::path &input_file,
           if(pole > 0)
             {
               throw std::runtime_error(
-                "All poles must be positive, but found '" + to_string(pole)
+                "All poles must be negative, but found '" + to_string(pole)
                 + "'");
             }
         }
