@@ -6,11 +6,6 @@
 
 namespace po = boost::program_options;
 
-void read_input(const boost::filesystem::path &input_file,
-                std::vector<El::BigFloat> &objectives,
-                std::vector<El::BigFloat> &normalization,
-                std::vector<Positive_Matrix_With_Prefactor> &matrices);
-
 void write_output(const boost::filesystem::path &output_path,
                   const std::vector<std::string> &command_arguments,
                   const std::vector<El::BigFloat> &objectives,
