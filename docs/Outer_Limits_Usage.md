@@ -44,7 +44,7 @@ Running `outer_limits` is very similar to running `sdpb`.  For
 example, to run the test case on your quad-core laptop, you can
 probably use `mpirun`:
 
-    mpirun -n 4 build/sdpb --functions test/toy_functions.json --points test/toy_functions_points.json --precision=64 --dualityGapThreshold=1e-10 --primalErrorThreshold=1e-10 --dualErrorThreshold=1e-10 --initialMatrixScalePrimal=1e1 --initialMatrixScaleDual=1e1 --maxIterations=1000
+    mpirun -n 4 build/outer_limits --functions test/toy_functions.json --points test/toy_functions_points.json --precision=64 --dualityGapThreshold=1e-10 --primalErrorThreshold=1e-10 --dualErrorThreshold=1e-10 --initialMatrixScalePrimal=1e1 --initialMatrixScaleDual=1e1 --maxIterations=1000
 
 Note that this requires relatively low precision: `64`.  Also, the
 values for `initialMatrixScalePrimal` and `initialMatrixScaleDual` are
