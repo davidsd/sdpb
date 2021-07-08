@@ -111,7 +111,8 @@ std::vector<El::BigFloat> compute_optimal(
     }
 
   const El::Grid global_grid;
-  El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_to_y_star(global_grid),
+  El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_to_y_star(
+    normalization.size() - 1, normalization.size() - 1, global_grid),
     dual_objective_b_star(global_grid);
   El::BigFloat primal_c_scale;
 
