@@ -273,14 +273,16 @@ std::vector<El::BigFloat> compute_optimal(
                           has_new_points);
           if(!has_new_points)
             {
-              if(parameters.solver.duality_gap_threshold==parameters_in.solver.duality_gap_threshold)
+              if(parameters.solver.duality_gap_threshold
+                 == parameters_in.solver.duality_gap_threshold)
                 {
-                  parameters.solver.duality_gap_threshold=0;
+                  parameters.solver.duality_gap_threshold = 0;
                 }
               else
                 {
                   parameters.solver.duality_gap_threshold
-                    = std::max(parameters.solver.duality_gap_threshold/parameters.duality_gap_reduction,
+                    = std::max(parameters.solver.duality_gap_threshold
+                                 / parameters.duality_gap_reduction,
                                parameters_in.solver.duality_gap_threshold);
                 }
             }
