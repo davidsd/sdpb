@@ -118,8 +118,11 @@ void compute_y_transform(
   El::DistMatrix<El::BigFloat> temp(global_grid), V(global_grid),
     dual_objective_b_global(dual_objective_b.size(), 1, global_grid);
   // SVD returns U, s, and V
-  El::SVD(B, U, temp, V);
-
+  El::SVDCtrl<El::BigFloat> svd_control;
+  // The default only does 6 iterations per value.  We need far more
+  // because of high precision.
+  svd_control.bidiagSVDCtrl.qrCtrl.maxIterPerVal=100;
+  El::SVD(B, U, temp, V, svd_control);
   El::DistMatrix<El::BigFloat> yp_to_y(V);
   El::DiagonalSolve(El::LeftOrRight::RIGHT, El::Orientation::NORMAL, temp,
                     yp_to_y);
