@@ -4,7 +4,7 @@ void fill_weights(const El::Matrix<El::BigFloat> &y, const size_t &max_index,
                   const std::vector<El::BigFloat> &normalization,
                   std::vector<El::BigFloat> &weights)
 {
-  // THe weight at max_index is determined by the normalization
+  // The weight at max_index is determined by the normalization
   // condition dot(norm,weights)=1
   weights.at(max_index) = 1;
   for(size_t block_row(0); block_row != size_t(y.Height()); ++block_row)
