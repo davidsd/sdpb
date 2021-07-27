@@ -9,6 +9,12 @@ void Function_State::json_string(const std::string &s)
       parsing_max_delta = false;
       value.max_delta = max_delta_state.value;
     }
+  else if(parsing_epsilon_value)
+    {
+      epsilon_value_state.json_string(s);
+      parsing_epsilon_value = false;
+      value.epsilon_value = epsilon_value_state.value;
+    }
   else if(parsing_infinity_value)
     {
       infinity_value_state.json_string(s);

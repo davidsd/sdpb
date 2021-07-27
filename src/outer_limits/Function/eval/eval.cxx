@@ -2,9 +2,16 @@
 #include "../../Function.hxx"
 
 El::BigFloat
-Function::eval(const El::BigFloat &infinity, const El::BigFloat &x) const
+Function::eval(const El::BigFloat &epsilon, const El::BigFloat &infinity, const El::BigFloat &x) const
 {
-  if(x == infinity)
+  // I use epsilon as a special value for when I want the limiting
+  // value at zero.  If I use zero, then when I need to actually
+  // evaluate it at zero, it gives the wrong answer.
+  if(x==epsilon)
+    {
+      return epsilon_value;
+    }
+  else if(x == infinity)
     {
       return infinity_value;
     }

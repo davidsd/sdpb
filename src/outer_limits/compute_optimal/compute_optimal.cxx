@@ -38,6 +38,7 @@ void fill_weights(const El::Matrix<El::BigFloat> &y, const size_t &max_index,
 
 void find_new_points(
   const size_t &num_blocks, const size_t &rank, const size_t &num_procs,
+  const El::BigFloat &epsilon,
   const El::BigFloat &infinity,
   const std::vector<std::vector<std::vector<std::vector<Function>>>>
     &function_blocks,
@@ -86,10 +87,12 @@ std::vector<El::BigFloat> compute_optimal(
   std::vector<std::vector<El::BigFloat>> new_points(num_blocks);
 
   // GMP does not have a special infinity value, so we use max double.
-  const El::BigFloat infinity(std::numeric_limits<double>::max());
+  const El::BigFloat infinity(std::numeric_limits<double>::max()),
+    epsilon(El::limits::Epsilon<El::BigFloat>());
   // Use the input points and add inifinty
   for(size_t block(0); block < num_blocks; ++block)
     {
+      points.at(block).emplace(epsilon);
       for(auto &point : initial_points.at(block))
         {
           points.at(block).emplace(point);
@@ -149,6 +152,10 @@ std::vector<El::BigFloat> compute_optimal(
       std::vector<size_t> matrix_dimensions;
       for(size_t block(0); block != num_blocks; ++block)
         {
+          std::stringstream ss;
+          set_stream_precision(ss);
+          ss << "new_points: " << El::mpi::Rank() << " " << block;
+
           for(size_t offset(0); offset != points.at(block).size(); ++offset)
             {
               new_to_old.emplace(num_constraints + offset, old_index + offset);
@@ -157,6 +164,12 @@ std::vector<El::BigFloat> compute_optimal(
           for(auto &point : new_points.at(block))
             {
               points.at(block).emplace(point);
+              ss << " " << point;
+            }
+          ss << "\n";
+          if(!new_points.at(block).empty())
+            {
+              std::cout << ss.str() << std::flush;
             }
           num_constraints += points.at(block).size();
           matrix_dimensions.insert(matrix_dimensions.end(),
@@ -178,7 +191,7 @@ std::vector<El::BigFloat> compute_optimal(
       std::vector<El::Matrix<El::BigFloat>> free_var_matrix;
       free_var_matrix.reserve(num_constraints);
 
-      setup_constraints(max_index, num_blocks, infinity, function_blocks,
+      setup_constraints(max_index, num_blocks, epsilon, infinity, function_blocks,
                         normalization, points, primal_objective_c,
                         free_var_matrix);
 
@@ -219,6 +232,49 @@ std::vector<El::BigFloat> compute_optimal(
           SDP_Solver_Terminate_Reason reason
             = solver.run(parameters.solver, parameters.verbosity,
                          parameter_properties, block_info, sdp, grid, timers);
+
+          for(size_t index(0); index < block_info.block_indices.size();
+              ++index)
+            {
+              size_t block_number(0),
+                point_index(block_info.block_indices[index]);
+              while(point_index > points.at(block_number).size())
+                {
+                  point_index -= points.at(block_number).size();
+                  ++block_number;
+                }
+              if(block_number == 2)
+                {
+                  auto &block(solver.Y.blocks[index * 2]);
+                  if(block.Height() > 0)
+                    {
+                      El::BigFloat determinant(-1);
+                      switch(block.Height())
+                        {
+                        case 1: determinant = block.Get(0, 0); break;
+                        case 2:
+                          determinant = block.Get(0, 0) * block.Get(1, 1)
+                                        - block.Get(0, 1) * block.Get(0, 1);
+                          break;
+                        default:
+                          throw std::runtime_error(
+                            "too big: " + std::to_string(block.Height()));
+                          break;
+                        }
+                      if(determinant < 1e-16)
+                        {
+                          std::cout.precision(20);
+                          std::cout
+                            << "Y: " << El::mpi::Rank() << " " << index << " "
+                            << block.Height() << " " << block_number << " "
+                            << *(std::next(points.at(block_number).begin(),
+                                           point_index))
+                            << " " << determinant << "\n"
+                            << std::flush;
+                        }
+                    }
+                }
+            }
 
           if(rank == 0 && parameters_in.verbosity >= Verbosity::debug)
             {
@@ -268,7 +324,7 @@ std::vector<El::BigFloat> compute_optimal(
                 }
               std::cout << "optimal: " << optimal << "\n";
             }
-          find_new_points(num_blocks, rank, num_procs, infinity,
+          find_new_points(num_blocks, rank, num_procs, epsilon, infinity,
                           function_blocks, weights, points, new_points,
                           has_new_points);
           if(!has_new_points)

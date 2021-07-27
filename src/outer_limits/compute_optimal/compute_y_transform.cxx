@@ -19,8 +19,9 @@ void compute_y_transform(
 {
   const size_t num_blocks(points.size());
 
-  // GMP does not have a special infinity value, so we use max double.
-  const El::BigFloat infinity(std::numeric_limits<double>::max());
+  // GMP does not have a special values for infinity, so we use double's largest number.
+  const El::BigFloat infinity(std::numeric_limits<double>::max()),
+    epsilon(El::limits::Epsilon<El::BigFloat>());
 
   size_t num_constraints(0);
   std::vector<size_t> matrix_dimensions;
@@ -39,8 +40,8 @@ void compute_y_transform(
   std::vector<El::Matrix<El::BigFloat>> free_var_matrix;
   free_var_matrix.reserve(num_constraints);
 
-  setup_constraints(max_index, num_blocks, infinity, function_blocks,
-                    normalization, points, primal_objective_c,
+  setup_constraints(max_index, num_blocks, epsilon, infinity,
+                    function_blocks, normalization, points, primal_objective_c,
                     free_var_matrix);
 
   const El::BigFloat objective_const(objectives.at(max_index)
@@ -121,7 +122,7 @@ void compute_y_transform(
   El::SVDCtrl<El::BigFloat> svd_control;
   // The default only does 6 iterations per value.  We need far more
   // because of high precision.
-  svd_control.bidiagSVDCtrl.qrCtrl.maxIterPerVal=100;
+  svd_control.bidiagSVDCtrl.qrCtrl.maxIterPerVal = 100;
   El::SVD(B, U, temp, V, svd_control);
   El::DistMatrix<El::BigFloat> yp_to_y(V);
   El::DiagonalSolve(El::LeftOrRight::RIGHT, El::Orientation::NORMAL, temp,

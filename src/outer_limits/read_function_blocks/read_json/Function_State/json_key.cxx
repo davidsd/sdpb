@@ -8,6 +8,12 @@ void Function_State::json_key(const std::string &key)
                                + "' inside '" + name + "."
                                + max_delta_state.name + "'.");
     }
+  else if(parsing_epsilon_value)
+    {
+      throw std::runtime_error("Invalid input file.  Unexpected key '" + key
+                               + "' inside '" + name + "."
+                               + epsilon_value_state.name + "'.");
+    }
   else if(parsing_infinity_value)
     {
       throw std::runtime_error("Invalid input file.  Unexpected key '" + key
@@ -23,6 +29,10 @@ void Function_State::json_key(const std::string &key)
   else if(key == max_delta_state.name)
     {
       parsing_max_delta = true;
+    }
+  else if(key == epsilon_value_state.name)
+    {
+      parsing_epsilon_value = true;
     }
   else if(key == infinity_value_state.name)
     {

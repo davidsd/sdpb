@@ -7,19 +7,18 @@ std::vector<El::BigFloat>
 get_new_points(const Mesh &mesh, const El::BigFloat &block_epsilon);
 
 El::BigFloat
-eval_summed(const El::BigFloat &infinity,
+eval_summed(const El::BigFloat &epsilon, const El::BigFloat &infinity,
             const std::vector<std::vector<Function>> &summed_functions,
             const El::BigFloat &x);
 
-void find_new_points(const size_t &num_blocks,  const size_t &rank,
-                     const size_t &num_procs,
-                     const El::BigFloat &infinity,
-                     const std::vector<std::vector<std::vector<std::vector<Function>>>>
-                     &function_blocks,
-                     const std::vector<El::BigFloat> &weights,
-                     const std::vector<std::set<El::BigFloat>> &points,
-                     std::vector<std::vector<El::BigFloat>> &new_points,
-                     bool &has_new_points)
+void find_new_points(
+  const size_t &num_blocks, const size_t &rank, const size_t &num_procs,
+  const El::BigFloat &epsilon, const El::BigFloat &infinity,
+  const std::vector<std::vector<std::vector<std::vector<Function>>>>
+    &function_blocks,
+  const std::vector<El::BigFloat> &weights,
+  const std::vector<std::set<El::BigFloat>> &points,
+  std::vector<std::vector<El::BigFloat>> &new_points, bool &has_new_points)
 {
   std::vector<size_t> num_new_points(num_blocks, 0);
   for(size_t block(rank); block < num_blocks; block += num_procs)
@@ -48,7 +47,6 @@ void find_new_points(const size_t &num_blocks,  const size_t &rank,
       // Preadd the coefficients
       std::vector<std::vector<Function>> summed_functions(
         function_blocks[block].size());
-      El::BigFloat zero(0);
       for(size_t matrix_row(0); matrix_row != summed_functions.size();
           ++matrix_row)
         {
@@ -62,7 +60,6 @@ void find_new_points(const size_t &num_blocks,  const size_t &rank,
               // TODO: This only works if all have the same degree
               // and max_delta
               summed.max_delta = max_delta;
-              summed.infinity_value = zero;
               summed.chebyshev_coeffs.resize(max_degree);
               auto &y_vector(
                 function_blocks[block][matrix_row][matrix_column]);
@@ -86,7 +83,7 @@ void find_new_points(const size_t &num_blocks,  const size_t &rank,
       Mesh mesh(
         *(points.at(block).begin()), max_delta,
         [&](const El::BigFloat &x) {
-          return eval_summed(infinity, summed_functions, x);
+          return eval_summed(epsilon, infinity, summed_functions, x);
         },
         (1.0 / 128), block_epsilon);
 

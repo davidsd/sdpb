@@ -3,6 +3,7 @@
 #include <vector>
 
 El::BigFloat eval_summed(
+  const El::BigFloat &minus_one,
   const El::BigFloat &infinity,
   const std::vector<std::vector<Function>> &summed_functions,
   const El::BigFloat &x)
@@ -12,7 +13,7 @@ El::BigFloat eval_summed(
   for(size_t row(0); row != matrix_dim; ++row)
     for(size_t column(0); column <= row; ++column)
       {
-        m.Set(row, column, summed_functions.at(row).at(column).eval(infinity, x));
+        m.Set(row, column, summed_functions.at(row).at(column).eval(minus_one, infinity, x));
       }
 
   // FIXME: Use the square of the matrix rather than the smallest

@@ -13,6 +13,12 @@ void Function_State::json_end_object()
         "Invalid input file.  Unexpected object end inside '" + name + "."
         + max_delta_state.name + "'.");
     }
+  else if(parsing_epsilon_value)
+    {
+      throw std::runtime_error(
+        "Invalid input file.  Unexpected object end inside '" + name + "."
+        + epsilon_value_state.name + "'.");
+    }
   else if(parsing_infinity_value)
     {
       throw std::runtime_error(

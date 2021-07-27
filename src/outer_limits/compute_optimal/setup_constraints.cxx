@@ -6,8 +6,9 @@
 
 void setup_constraints(
   const size_t &max_index, const size_t &num_blocks,
-  const El::BigFloat &infinity,
-  const std::vector<std::vector<std::vector<std::vector<Function>>>> &function_blocks,
+  const El::BigFloat &epsilon, const El::BigFloat &infinity,
+  const std::vector<std::vector<std::vector<std::vector<Function>>>>
+    &function_blocks,
   const std::vector<El::BigFloat> &normalization,
   const std::vector<std::set<El::BigFloat>> &points,
   std::vector<std::vector<El::BigFloat>> &primal_objective_c,
@@ -20,7 +21,8 @@ void setup_constraints(
         {
           const size_t dim(function_blocks[block].size());
           free_var_matrix.emplace_back(
-            dim * (dim + 1) / 2, function_blocks[block].at(0).at(0).size() - 1);
+            dim * (dim + 1) / 2,
+            function_blocks[block].at(0).at(0).size() - 1);
           auto &free_var(free_var_matrix.back());
 
           primal_objective_c.emplace_back();
@@ -35,7 +37,7 @@ void setup_constraints(
                                    .at(matrix_row)
                                    .at(matrix_column)
                                    .at(max_index)
-                                   .eval(infinity, x)
+                                   .eval(epsilon, infinity, x)
                                  / normalization.at(max_index));
                 auto &primal_constant(primal.back());
                 for(size_t column(0); column != size_t(free_var.Width());
@@ -48,7 +50,7 @@ void setup_constraints(
                             .at(matrix_row)
                             .at(matrix_column)
                             .at(index)
-                            .eval(infinity, x);
+                            .eval(epsilon, infinity, x);
                   }
                 ++flattened_matrix_row;
               }
