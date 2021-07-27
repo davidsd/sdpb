@@ -186,7 +186,6 @@ def build(bld):
                         'src/outer_limits/power_prefactor.cxx',
                         'src/outer_limits/poles_prefactor.cxx',
                         'src/outer_limits/Function/eval/eval.cxx',
-                        'src/outer_limits/convert_matrices_to_functions.cxx',
                         'src/outer_limits/compute_optimal/compute_optimal.cxx',
                         'src/outer_limits/compute_optimal/compute_y_transform.cxx',
                         'src/outer_limits/compute_optimal/setup_constraints.cxx',

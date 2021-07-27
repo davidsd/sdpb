@@ -62,11 +62,6 @@ void read_function_blocks(
 void read_points(const boost::filesystem::path &input_path,
                  std::vector<std::vector<El::BigFloat>> &points);
 
-void convert_matrices_to_functions(
-  const El::BigFloat &max_delta,
-  const std::vector<Positive_Matrix_With_Prefactor> &matrices,
-  std::vector<std::vector<std::vector<std::vector<Function>>>> &functions);
-
 std::vector<El::BigFloat> compute_optimal(
   const std::vector<std::vector<std::vector<std::vector<Function>>>> &functions,
   const std::vector<std::vector<El::BigFloat>> &initial_points,
