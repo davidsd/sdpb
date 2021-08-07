@@ -167,7 +167,7 @@ std::vector<El::BigFloat> compute_optimal(
               ss << " " << point;
             }
           ss << "\n";
-          if(!new_points.at(block).empty())
+          if(El::mpi::Rank() == 0 && !new_points.at(block).empty())
             {
               std::cout << ss.str() << std::flush;
             }
