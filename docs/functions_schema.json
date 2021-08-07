@@ -30,6 +30,7 @@
                             "properties":
                             {
                                 "max_delta": { "type": "string" },
+                                "epsilon_value": { "type": "string" },
                                 "infinity_value": { "type": "string" },
                                 "chebyshev_values":
                                 {
