@@ -38,8 +38,7 @@ void fill_weights(const El::Matrix<El::BigFloat> &y, const size_t &max_index,
 
 void find_new_points(
   const size_t &num_blocks, const size_t &rank, const size_t &num_procs,
-  const El::BigFloat &epsilon,
-  const El::BigFloat &infinity,
+  const El::BigFloat &epsilon, const El::BigFloat &infinity,
   const std::vector<std::vector<std::vector<std::vector<Function>>>>
     &function_blocks,
   const std::vector<El::BigFloat> &weights,
@@ -191,9 +190,9 @@ std::vector<El::BigFloat> compute_optimal(
       std::vector<El::Matrix<El::BigFloat>> free_var_matrix;
       free_var_matrix.reserve(num_constraints);
 
-      setup_constraints(max_index, num_blocks, epsilon, infinity, function_blocks,
-                        normalization, points, primal_objective_c,
-                        free_var_matrix);
+      setup_constraints(max_index, num_blocks, epsilon, infinity,
+                        function_blocks, normalization, points,
+                        primal_objective_c, free_var_matrix);
 
       const El::BigFloat objective_const(objectives.at(max_index)
                                          / normalization.at(max_index));
