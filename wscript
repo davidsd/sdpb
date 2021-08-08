@@ -132,6 +132,19 @@ def build(bld):
                 use=use_packages + ['sdp_read']
                 )
 
+    bld.program(source=['src/sdp2functions/main.cxx',
+                        'src/sdp2functions/parse_command_line.cxx',
+                        'src/sdp2functions/read_input_files/read_input_files.cxx',
+                        'src/sdp2functions/read_input_files/read_xml_input/read_xml_input.cxx',
+                        'src/sdp2functions/read_input_files/read_xml_input/Input_Parser/on_start_element.cxx',
+                        'src/sdp2functions/read_input_files/read_xml_input/Input_Parser/on_end_element.cxx',
+                        'src/sdp2functions/read_input_files/read_xml_input/Input_Parser/on_characters.cxx',
+                        'src/sdp2functions/write_functions/write_functions.cxx'],
+                target='sdp2functions',
+                cxxflags=default_flags,
+                use=use_packages + ['sdp_read']
+                )
+
     sdp_read_sources=['src/sdp_read/read_input/read_input.cxx',
                       'src/sdp_read/read_input/read_json/read_json.cxx',
                       'src/sdp_read/read_input/read_json/Positive_Matrix_With_Prefactor_State/json_key.cxx',
