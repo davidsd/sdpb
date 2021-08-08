@@ -20,21 +20,6 @@ void write_functions(
   const Boost_Float pi(boost::math::constants::pi<Boost_Float>());
   const El::BigFloat zero(0);
 
-  // std::vector<El::BigFloat> sum_points(20);
-  // sum_points.at(0)=0;
-  // sum_points.at(1)=El::BigFloat("1e-20");
-  // for(size_t point(2); point!=sum_points.size(); ++point)
-  //   {
-  //     sum_points.at(point)=El::BigFloat("10") * sum_points.at(point-1);
-  //   }
-  // std::vector<std::array<std::array<El::BigFloat,2>,2>>
-  // sum(sum_points.size()); for(auto &point: sum)
-  //   for(auto &row: point)
-  //     for(auto &element: row)
-  //       {
-  //         element=0;
-  //       }
-
   size_t block_number(0);
   for(auto block(polynomial_vector_matrices.begin());
       block != polynomial_vector_matrices.end(); ++block)
@@ -44,8 +29,6 @@ void write_functions(
           output_stream << ",\n";
         }
       output_stream << "    [\n";
-      // const size_t num_chebyshev_points(10);
-      // const El::BigFloat max_delta(100);
 
       const size_t num_chebyshev_points([&block]() {
         size_t max(0);
@@ -179,39 +162,6 @@ void write_functions(
                                 << "            \"chebyshev_values\":\n"
                                 << "            [\n";
 
-                  // if(block_number == 19)
-                  //   {
-                  //     std::cout << "coeff: " << block_number << " "
-                  //               << poly_number << " "
-                  //               << max_degree.at(row + column * block->rows)
-                  //               << " " << poly->degree() << " ";
-                  //     // << poly->coefficients.at(0) << " "
-                  //     // << poly->coefficients.at(1) << " "
-                  //     // << poly->coefficients.at(2)
-                  //     // << "\n";
-
-                  //     if(poly->degree()
-                  //        < max_degree.at(row + column * block->rows))
-                  //       {
-                  //         std::cout << "zero";
-                  //       }
-                  //     else
-                  //       {
-                  //         std::cout << poly->coefficients.at(
-                  //           max_degree.at(row + column * block->rows))
-                  //                   << " "
-                  //                   << poly->coefficients.back();
-                  //       }
-                  //     std::cout << "\n";
-
-                  //     // for(size_t point(0); point!=sum_points.size(); ++point)
-                  //     //   {
-                  //     //     sum.at(point).at(row).at(column) +=
-                  //     //     weights.at(poly_number)
-                  //     //       * (*poly)(sum_points.at(point));
-                  //     // }
-                  //   }
-
                   for(auto point(chebyshev_zeros.begin());
                       point != chebyshev_zeros.end(); ++point)
                     {
@@ -234,13 +184,4 @@ void write_functions(
       ++block_number;
     }
   output_stream << "\n  ]\n}\n";
-
-  // for(size_t point(0); point!=sum_points.size(); ++point)
-  //   {
-  //     std::cout << "sum: "
-  //               << sum_points.at(point) << " "
-  //               << sum.at(point)[0][0] << " "
-  //               << sum.at(point)[0][1] << " "
-  //               << sum.at(point)[1][1] << "\n";
-  //   }
 }
