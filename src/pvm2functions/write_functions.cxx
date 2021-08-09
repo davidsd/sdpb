@@ -1,6 +1,6 @@
-#include "../../Boost_Float.hxx"
-#include "../../sdp_convert.hxx"
-#include "../../sdp_convert/write_vector.hxx"
+#include "../Boost_Float.hxx"
+#include "../sdp_convert.hxx"
+#include "../sdp_convert/write_vector.hxx"
 
 void write_functions(
   const boost::filesystem::path &output_path,

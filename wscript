@@ -139,7 +139,7 @@ def build(bld):
                         'src/pvm2functions/read_input_files/read_xml_input/Input_Parser/on_start_element.cxx',
                         'src/pvm2functions/read_input_files/read_xml_input/Input_Parser/on_end_element.cxx',
                         'src/pvm2functions/read_input_files/read_xml_input/Input_Parser/on_characters.cxx',
-                        'src/pvm2functions/write_functions/write_functions.cxx'],
+                        'src/pvm2functions/write_functions.cxx'],
                 target='pvm2functions',
                 cxxflags=default_flags,
                 use=use_packages + ['sdp_read']
