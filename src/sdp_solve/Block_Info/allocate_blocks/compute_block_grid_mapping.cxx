@@ -50,8 +50,7 @@
 #include <numeric>
 #include <algorithm>
 #include <stdexcept>
-
-#include <iostream>
+#include <limits>
 
 std::vector<std::vector<Block_Map>>
 compute_block_grid_mapping(const size_t &procs_per_node,
