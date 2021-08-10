@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <stdexcept>
+#include <sstream>
 
 // Extracted from Boost
 // boost/math/special_functions/chebyshev.hpp
@@ -114,7 +115,14 @@ inline Real chebyshev_clenshaw_recurrence(const Real* const c, size_t length, co
 {
     if (x < a || x > b)
     {
-        throw std::domain_error("x in [a, b] is required.");
+      std::stringstream ss;
+      ss << "x in [a, b] is required: x = "
+         << x
+         << ", a = "
+         << a
+         << ", b = "
+         << b;
+      throw std::domain_error(ss.str());
     }
     if (length < 2)
     {
