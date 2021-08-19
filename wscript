@@ -182,6 +182,11 @@ def build(bld):
                 use=use_packages + ['sdp_read']
                 )
 
+    bld.stlib(source=['src/Mesh/Mesh.cxx', 'src/Mesh/ostream.cxx'],
+              target='mesh',
+              cxxflags=default_flags,
+              use=use_packages)
+
     bld.program(source=['src/outer_limits/main.cxx',
                         'src/outer_limits/power_prefactor.cxx',
                         'src/outer_limits/poles_prefactor.cxx',
@@ -194,8 +199,6 @@ def build(bld):
                         'src/outer_limits/compute_optimal/find_new_points/find_new_points.cxx',
                         'src/outer_limits/compute_optimal/find_new_points/eval_summed.cxx',
                         'src/outer_limits/compute_optimal/find_new_points/get_new_points.cxx',
-                        'src/outer_limits/compute_optimal/find_new_points/Mesh/Mesh.cxx',
-                        'src/outer_limits/compute_optimal/find_new_points/Mesh/ostream.cxx',
                         'src/outer_limits/compute_optimal/load_checkpoint/load_checkpoint.cxx',
                         'src/outer_limits/compute_optimal/load_checkpoint/Checkpoint_Parser/EndArray.cxx',
                         'src/outer_limits/compute_optimal/load_checkpoint/Checkpoint_Parser/EndObject.cxx',
@@ -232,7 +235,7 @@ def build(bld):
                         ],
                 target='outer_limits',
                 cxxflags=default_flags,
-                use=use_packages + ['sdp_read','sdp_solve']
+                use=use_packages + ['sdp_read','sdp_solve', 'mesh']
                 )
 
     bld.program(source=['src/approx_objective/main.cxx',
