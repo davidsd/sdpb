@@ -1,5 +1,6 @@
 #include "../../sdp_read.hxx"
 #include "../../Timers.hxx"
+#include "../../max_normalization_index.hxx"
 #include "../../sdp_convert.hxx"
 
 #include <boost/filesystem.hpp>
@@ -19,15 +20,7 @@ void write_output(const boost::filesystem::path &output_path,
 {
   auto &objectives_timer(timers.add_and_start("write_output.objectives"));
 
-  auto max_normalization(normalization.begin());
-  for(auto n(normalization.begin()); n != normalization.end(); ++n)
-    {
-      if(Abs(*n) > Abs(*max_normalization))
-        {
-          max_normalization = n;
-        }
-    }
-  size_t max_index(std::distance(normalization.begin(), max_normalization));
+  const size_t max_index(max_normalization_index(normalization));
 
   El::BigFloat objective_const(objectives.at(max_index)
                                / normalization.at(max_index));

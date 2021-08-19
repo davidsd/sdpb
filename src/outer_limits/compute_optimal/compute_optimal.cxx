@@ -1,10 +1,11 @@
-#include "../Outer_Parameters.hxx"
 #include "setup_constraints.hxx"
+#include "../Outer_Parameters.hxx"
 
 #include "../../ostream_set.hxx"
 #include "../../ostream_map.hxx"
 #include "../../ostream_vector.hxx"
 #include "../../set_stream_precision.hxx"
+#include "../../max_normalization_index.hxx"
 
 void compute_y_transform(
   const std::vector<std::vector<std::vector<std::vector<Function>>>>
@@ -99,18 +100,7 @@ std::vector<El::BigFloat> compute_optimal(
       points.at(block).emplace(infinity);
     }
 
-  // TODO: This is duplicated from sdp2input/write_output/write_output.cxx
-  size_t max_index(0);
-  El::BigFloat max_normalization(0);
-  for(size_t index(0); index != normalization.size(); ++index)
-    {
-      const El::BigFloat element(Abs(normalization[index]));
-      if(element > max_normalization)
-        {
-          max_normalization = element;
-          max_index = index;
-        }
-    }
+  const size_t max_index(max_normalization_index(normalization));
 
   const El::Grid global_grid;
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_to_y_star(
