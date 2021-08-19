@@ -194,7 +194,6 @@ def build(bld):
                         'src/outer_limits/compute_optimal/compute_optimal.cxx',
                         'src/outer_limits/compute_optimal/compute_y_transform.cxx',
                         'src/outer_limits/compute_optimal/setup_constraints.cxx',
-                        'src/outer_limits/compute_optimal/fill_weights.cxx',
                         'src/outer_limits/compute_optimal/copy_matrix.cxx',
                         'src/outer_limits/compute_optimal/find_new_points/find_new_points.cxx',
                         'src/outer_limits/compute_optimal/find_new_points/eval_summed.cxx',
@@ -272,5 +271,13 @@ def build(bld):
                 target='sdp2functions',
                 cxxflags=default_flags,
                 use=use_packages + ['sdp_read']
+                )
+
+    bld.program(source=['src/spectrum/main.cxx',
+                        'src/spectrum/compute_spectrum/compute_spectrum.cxx',
+                        'src/spectrum/compute_spectrum/eval_summed.cxx'],
+                target='spectrum',
+                cxxflags=default_flags,
+                use=use_packages + ['sdp_read', 'mesh']
                 )
 

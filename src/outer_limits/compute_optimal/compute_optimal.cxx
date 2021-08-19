@@ -6,6 +6,7 @@
 #include "../../ostream_vector.hxx"
 #include "../../set_stream_precision.hxx"
 #include "../../max_normalization_index.hxx"
+#include "../../fill_weights.hxx"
 
 void compute_y_transform(
   const std::vector<std::vector<std::vector<std::vector<Function>>>>
@@ -32,10 +33,6 @@ void copy_matrix(const El::Matrix<El::BigFloat> &source,
                  El::DistMatrix<El::BigFloat> &destination);
 void copy_matrix(const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &source,
                  El::Matrix<El::BigFloat> &destination);
-
-void fill_weights(const El::Matrix<El::BigFloat> &y, const size_t &max_index,
-                  const std::vector<El::BigFloat> &normalization,
-                  std::vector<El::BigFloat> &weights);
 
 void find_new_points(
   const size_t &num_blocks, const size_t &rank, const size_t &num_procs,
