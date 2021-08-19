@@ -85,11 +85,6 @@ int main(int argc, char **argv)
       std::vector<El::BigFloat> objectives, normalization;
       std::vector<Positive_Matrix_With_Prefactor> matrices;
       read_input(input_file, objectives, normalization, matrices);
-      std::vector<std::string> command_arguments;
-      for(int arg(0); arg != argc; ++arg)
-        {
-          command_arguments.emplace_back(argv[arg]);
-        }
       write_functions(output_path, objectives, normalization, matrices);
     }
   catch(std::exception &e)
