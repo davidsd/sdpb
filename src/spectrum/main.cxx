@@ -24,16 +24,16 @@ int main(int argc, char **argv)
     {
       int precision;
       std::string threshold_string;
-      boost::filesystem::path input_file, solution_file, output_path;
+      boost::filesystem::path input_path, solution_path, output_path;
 
       po::options_description options("Basic options");
       options.add_options()("help,h", "Show this helpful message.");
       options.add_options()(
-        "input,i", po::value<boost::filesystem::path>(&input_file)->required(),
+        "input,i", po::value<boost::filesystem::path>(&input_path)->required(),
         "Mathematica, JSON, or NSV file with SDP definition");
       options.add_options()(
         "solution",
-        po::value<boost::filesystem::path>(&solution_file)->required(),
+        po::value<boost::filesystem::path>(&solution_path)->required(),
         "SDPB output file containing the solution for y (e.g. 'y.txt')");
       options.add_options()(
         "threshold", po::value<std::string>(&threshold_string)->required(),
@@ -63,24 +63,24 @@ int main(int argc, char **argv)
 
       po::notify(variables_map);
 
-      if(!boost::filesystem::exists(input_file))
+      if(!boost::filesystem::exists(input_path))
         {
-          throw std::runtime_error("Input file '" + input_file.string()
+          throw std::runtime_error("Input file '" + input_path.string()
                                    + "' does not exist");
         }
-      if(boost::filesystem::is_directory(input_file))
+      if(boost::filesystem::is_directory(input_path))
         {
-          throw std::runtime_error("Input file '" + input_file.string()
+          throw std::runtime_error("Input file '" + input_path.string()
                                    + "' is a directory, not a file");
         }
-      if(!boost::filesystem::exists(solution_file))
+      if(!boost::filesystem::exists(solution_path))
         {
-          throw std::runtime_error("Solution file '" + solution_file.string()
+          throw std::runtime_error("Solution file '" + solution_path.string()
                                    + "' does not exist");
         }
-      if(boost::filesystem::is_directory(solution_file))
+      if(boost::filesystem::is_directory(solution_path))
         {
-          throw std::runtime_error("Solution file '" + solution_file.string()
+          throw std::runtime_error("Solution file '" + solution_path.string()
                                    + "' is a directory, not a file");
         }
 
@@ -103,9 +103,9 @@ int main(int argc, char **argv)
 
       std::vector<El::BigFloat> objectives, normalization;
       std::vector<Positive_Matrix_With_Prefactor> matrices;
-      read_input(input_file, objectives, normalization, matrices);
+      read_input(input_path, objectives, normalization, matrices);
       El::DistMatrix<El::BigFloat> y(normalization.size() - 1, 1);
-      read_text_block(y, solution_file);
+      read_text_block(y, solution_path);
       const std::vector<std::vector<El::BigFloat>> zeros(compute_spectrum(
         normalization, y, matrices, El::BigFloat(threshold_string)));
       write_spectrum(output_path, zeros);
