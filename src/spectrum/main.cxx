@@ -1,4 +1,5 @@
 #include "../sdp_read.hxx"
+#include "../sdp_solve.hxx"
 #include "../read_vector.hxx"
 
 #include <boost/program_options.hpp>
@@ -6,11 +7,11 @@
 
 namespace po = boost::program_options;
 
-void compute_spectrum(
-  const boost::filesystem::path &output_path,
-  const std::vector<El::BigFloat> &normalization,
-  const std::vector<El::BigFloat> &y,
-  const std::vector<Positive_Matrix_With_Prefactor> &matrices);
+std::vector<std::vector<El::BigFloat>>
+compute_spectrum(const std::vector<El::BigFloat> &normalization,
+                 const El::DistMatrix<El::BigFloat> &y,
+                 const std::vector<Positive_Matrix_With_Prefactor> &matrices,
+                 const El::BigFloat &threshold);
 
 int main(int argc, char **argv)
 {
@@ -19,6 +20,7 @@ int main(int argc, char **argv)
   try
     {
       int precision;
+      std::string threshold_string;
       boost::filesystem::path input_file, solution_file, output_path;
 
       po::options_description options("Basic options");
@@ -30,6 +32,9 @@ int main(int argc, char **argv)
         "solution",
         po::value<boost::filesystem::path>(&solution_file)->required(),
         "SDPB output file containing the solution for y (e.g. 'y.txt')");
+      options.add_options()(
+        "threshold", po::value<std::string>(&threshold_string)->required(),
+        "Threshold for when a functional is considered to be zero.");
       options.add_options()(
         "output,o",
         po::value<boost::filesystem::path>(&output_path)->required(),
@@ -93,14 +98,15 @@ int main(int argc, char **argv)
       // base-10 digits.
       Boost_Float::default_precision(precision * log(2) / log(10));
 
-      std::vector<El::BigFloat> objectives, normalization, y;
+      std::vector<El::BigFloat> objectives, normalization;
       std::vector<Positive_Matrix_With_Prefactor> matrices;
       read_input(input_file, objectives, normalization, matrices);
-      {
-        boost::filesystem::ifstream solution_stream(solution_file);
-        read_vector(solution_stream, y);
-      }
-      compute_spectrum(output_path, normalization, y, matrices);
+      El::DistMatrix<El::BigFloat> y(normalization.size() - 1, 1);
+      read_text_block(y, solution_file);
+      const std::vector<std::vector<El::BigFloat>> zeros(compute_spectrum(
+        normalization, y, matrices, El::BigFloat(threshold_string)));
+      set_stream_precision(std::cout);
+      std::cout << "{" << zeros << "}\n";
     }
   catch(std::exception &e)
     {

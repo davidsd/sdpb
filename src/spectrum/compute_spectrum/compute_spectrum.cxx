@@ -4,26 +4,26 @@
 #include "../../max_normalization_index.hxx"
 #include "../../fill_weights.hxx"
 
-#include <boost/filesystem.hpp>
-
 El::BigFloat
 eval_summed(const std::vector<std::vector<Polynomial>> &summed_polynomials,
             const El::BigFloat &x);
 
-void compute_spectrum(
-  const boost::filesystem::path &output_path,
-  const std::vector<El::BigFloat> &normalization,
-  const std::vector<El::BigFloat> &y,
-  const std::vector<Positive_Matrix_With_Prefactor> &matrices)
+std::vector<El::BigFloat>
+get_zeros(const Mesh &mesh, const El::BigFloat &threshold);
+
+std::vector<std::vector<El::BigFloat>>
+compute_spectrum(const std::vector<El::BigFloat> &normalization,
+                 const El::DistMatrix<El::BigFloat> &y,
+                 const std::vector<Positive_Matrix_With_Prefactor> &matrices,
+                 const El::BigFloat &threshold)
 {
   const size_t max_index(max_normalization_index(normalization));
   std::vector<El::BigFloat> weights(normalization.size());
-  fill_weights(y, max_index, normalization, weights);
-  
-  boost::filesystem::ofstream output_stream(output_path);
+  // TODO: FIXME to make a local copy
+  fill_weights(y.LockedMatrix(), max_index, normalization, weights);
 
   const El::BigFloat zero(0);
-  std::vector<std::vector<El::BigFloat>> zeros(matrices.size());
+  std::vector<std::vector<El::BigFloat>> zeros;
   for(auto block(matrices.begin()); block != matrices.end(); ++block)
     {
       const size_t max_number_terms([&block]() {
@@ -61,14 +61,13 @@ void compute_spectrum(
                   for(size_t coeff(0); coeff != poly.coefficients.size();
                       ++coeff)
                     {
-                      product = y[dual_index] * poly.coefficients[coeff];
+                      product = weights[dual_index] * poly.coefficients[coeff];
                       block_scale = std::max(block_scale, El::Abs(product));
                       summed.coefficients[coeff] += product;
                     }
                 }
             }
         }
-
       const El::BigFloat block_epsilon(block_scale
                                        * El::limits::Epsilon<El::BigFloat>());
 
@@ -81,5 +80,7 @@ void compute_spectrum(
           return eval_summed(summed_polynomials, x);
         },
         (1.0 / 128), block_epsilon);
+      zeros.emplace_back(get_zeros(mesh, threshold));
     }
+  return zeros;
 }

@@ -275,9 +275,10 @@ def build(bld):
 
     bld.program(source=['src/spectrum/main.cxx',
                         'src/spectrum/compute_spectrum/compute_spectrum.cxx',
-                        'src/spectrum/compute_spectrum/eval_summed.cxx'],
+                        'src/spectrum/compute_spectrum/eval_summed.cxx',
+                        'src/spectrum/compute_spectrum/get_zeros.cxx'],
                 target='spectrum',
                 cxxflags=default_flags,
-                use=use_packages + ['sdp_read', 'mesh']
+                use=use_packages + ['sdp_read', 'sdp_solve', 'mesh']
                 )
 
