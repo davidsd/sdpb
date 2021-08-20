@@ -74,11 +74,15 @@ compute_spectrum(const std::vector<El::BigFloat> &normalization,
       // 1/128 should be a small enough relative error so that we are
       // in the regime of convergence.  Then the error estimates will
       // work
+
+      // TODO: This should all happen in Boost_Float so that we do not
+      // have to do all of these conversions.
+      std::stringstream ss;
+      set_stream_precision(ss);
       Mesh mesh(
         zero, max_delta,
         [&](const El::BigFloat &x) {
-          std::stringstream ss;
-          set_stream_precision(ss);
+          ss.str("");
           ss << x;
           Boost_Float x_Boost_Float(ss.str());
           Boost_Float numerator(
