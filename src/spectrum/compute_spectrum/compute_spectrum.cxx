@@ -77,7 +77,20 @@ compute_spectrum(const std::vector<El::BigFloat> &normalization,
       Mesh mesh(
         zero, max_delta,
         [&](const El::BigFloat &x) {
-          return eval_summed(summed_polynomials, x);
+          std::stringstream ss;
+          set_stream_precision(ss);
+          ss << x;
+          Boost_Float x_Boost_Float(ss.str());
+          Boost_Float numerator(
+            block->damped_rational.constant
+            * pow(block->damped_rational.base, x_Boost_Float));
+          Boost_Float denominator(1);
+          for(auto &pole : block->damped_rational.poles)
+            {
+              denominator *= (x_Boost_Float - pole);
+            }
+          return El::BigFloat(to_string(numerator / denominator))
+                 * eval_summed(summed_polynomials, x);
         },
         (1.0 / 128), block_epsilon);
       zeros.emplace_back(get_zeros(mesh, threshold));
