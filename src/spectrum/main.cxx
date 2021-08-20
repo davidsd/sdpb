@@ -5,6 +5,9 @@
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
+void write_spectrum(const boost::filesystem::path &output_path,
+                    const std::vector<std::vector<El::BigFloat>> &zeros);
+
 namespace po = boost::program_options;
 
 std::vector<std::vector<El::BigFloat>>
@@ -105,8 +108,7 @@ int main(int argc, char **argv)
       read_text_block(y, solution_file);
       const std::vector<std::vector<El::BigFloat>> zeros(compute_spectrum(
         normalization, y, matrices, El::BigFloat(threshold_string)));
-      set_stream_precision(std::cout);
-      std::cout << "{" << zeros << "}\n";
+      write_spectrum(output_path, zeros);
     }
   catch(std::exception &e)
     {
