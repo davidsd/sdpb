@@ -159,6 +159,11 @@ def build(bld):
                       'src/sdp_read/read_input/read_mathematica/parse_SDP/parse_polynomial.cxx',
                       'src/sdp_read/read_input/read_mathematica/parse_SDP/parse_matrix/parse_matrix.cxx',
                       'src/sdp_read/read_input/read_mathematica/parse_SDP/parse_matrix/parse_damped_rational.cxx',
+                      'src/sdp_read/read_pvm_input/read_pvm_input.cxx',
+                      'src/sdp_read/read_pvm_input/read_xml_input/read_xml_input.cxx',
+                      'src/sdp_read/read_pvm_input/read_xml_input/Input_Parser/on_start_element.cxx',
+                      'src/sdp_read/read_pvm_input/read_xml_input/Input_Parser/on_end_element.cxx',
+                      'src/sdp_read/read_pvm_input/read_xml_input/Input_Parser/on_characters.cxx',
                       'src/sdp_read/read_file_list.cxx']
 
     bld.stlib(source=sdp_read_sources,
@@ -255,11 +260,6 @@ def build(bld):
     
     bld.program(source=['src/pvm2functions/main.cxx',
                         'src/pvm2functions/parse_command_line.cxx',
-                        'src/pvm2functions/read_input_files/read_input_files.cxx',
-                        'src/pvm2functions/read_input_files/read_xml_input/read_xml_input.cxx',
-                        'src/pvm2functions/read_input_files/read_xml_input/Input_Parser/on_start_element.cxx',
-                        'src/pvm2functions/read_input_files/read_xml_input/Input_Parser/on_end_element.cxx',
-                        'src/pvm2functions/read_input_files/read_xml_input/Input_Parser/on_characters.cxx',
                         'src/pvm2functions/write_functions.cxx'],
                 target='pvm2functions',
                 cxxflags=default_flags,
@@ -281,6 +281,6 @@ def build(bld):
                         'src/spectrum/write_spectrum.cxx'],
                 target='spectrum',
                 cxxflags=default_flags,
-                use=use_packages + ['sdp_read', 'sdp_solve', 'mesh']
+                use=use_packages + ['sdp_read', 'sdp_solve', 'sdp_convert', 'mesh']
                 )
 

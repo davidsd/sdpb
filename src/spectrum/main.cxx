@@ -1,5 +1,6 @@
 #include "Format.hxx"
 #include "../sdp_read.hxx"
+#include "../sdp_convert.hxx"
 #include "../sdp_solve.hxx"
 #include "../read_vector.hxx"
 
@@ -34,6 +35,11 @@ int main(int argc, char **argv)
       switch(format)
         {
           case Format::Polynomial_Vector_Matrix: {
+            std::vector<El::BigFloat> objectives;
+            std::vector<Polynomial_Vector_Matrix> polynomial_vector_matrices;
+            size_t num_blocks(0);
+            read_pvm_input({input_path}, objectives,
+                           polynomial_vector_matrices, num_blocks);
           }
           break;
           case Format::Positive_Matrix_with_Prefactor: {
