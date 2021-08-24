@@ -1,3 +1,4 @@
+#include "Format.hxx"
 #include "../sdp_read.hxx"
 #include "../sdp_solve.hxx"
 #include "../read_vector.hxx"
@@ -5,7 +6,7 @@
 #include <boost/filesystem.hpp>
 
 void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
-                      boost::filesystem::path &input_path,
+                      Format &format, boost::filesystem::path &input_path,
                       boost::filesystem::path &solution_path,
                       boost::filesystem::path &output_path);
 
@@ -25,19 +26,31 @@ int main(int argc, char **argv)
   try
     {
       El::BigFloat threshold;
+      Format format;
       boost::filesystem::path input_path, solution_path, output_path;
-      handle_arguments(argc, argv, threshold, input_path, solution_path,
-                       output_path);
+      handle_arguments(argc, argv, threshold, format, input_path,
+                       solution_path, output_path);
 
-      std::vector<El::BigFloat> objectives, normalization;
-      std::vector<Positive_Matrix_With_Prefactor> matrices;
-      read_input(input_path, objectives, normalization, matrices);
-      El::DistMatrix<El::BigFloat> y_dist(normalization.size() - 1, 1);
-      read_text_block(y_dist, solution_path);
-      El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(y_dist);
-      const std::vector<std::vector<El::BigFloat>> zeros(compute_spectrum(
-        normalization, y_star.LockedMatrix(), matrices, threshold));
-      write_spectrum(output_path, zeros);
+      switch(format)
+        {
+          case Format::Polynomial_Vector_Matrix: {
+          }
+          break;
+          case Format::Positive_Matrix_with_Prefactor: {
+            std::vector<El::BigFloat> objectives, normalization;
+            std::vector<Positive_Matrix_With_Prefactor> matrices;
+            read_input(input_path, objectives, normalization, matrices);
+            El::DistMatrix<El::BigFloat> y_dist(normalization.size() - 1, 1);
+            read_text_block(y_dist, solution_path);
+            El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(y_dist);
+            const std::vector<std::vector<El::BigFloat>> zeros(
+              compute_spectrum(normalization, y_star.LockedMatrix(), matrices,
+                               threshold));
+            write_spectrum(output_path, zeros);
+          }
+          break;
+        default: throw std::runtime_error("INTERNAL ERROR");
+        }
     }
   catch(std::exception &e)
     {

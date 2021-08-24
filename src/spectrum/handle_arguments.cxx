@@ -1,3 +1,4 @@
+#include "Format.hxx"
 #include "../Boost_Float.hxx"
 
 #include <El.hpp>
@@ -5,14 +6,13 @@
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
-void handle_arguments(const int &argc, char **argv,
-                      El::BigFloat &threshold,
-                      boost::filesystem::path &input_path,
+void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
+                      Format &format, boost::filesystem::path &input_path,
                       boost::filesystem::path &solution_path,
                       boost::filesystem::path &output_path)
 {
   int precision;
-  std::string threshold_string;
+  std::string threshold_string, format_string;
 
   namespace po = boost::program_options;
 
@@ -27,6 +27,9 @@ void handle_arguments(const int &argc, char **argv,
   options.add_options()(
     "threshold", po::value<std::string>(&threshold_string)->required(),
     "Threshold for when a functional is considered to be zero.");
+  options.add_options()(
+    "format", po::value<std::string>(&format_string)->required(),
+    "Format of input file: Either PVM (Polynomial Vector Matrix), or PMP (Positive Matrix with Prefactor).");
   options.add_options()(
     "output,o", po::value<boost::filesystem::path>(&output_path)->required(),
     "Output file");
@@ -90,4 +93,18 @@ void handle_arguments(const int &argc, char **argv,
   Boost_Float::default_precision(precision * log(2) / log(10));
 
   threshold = El::BigFloat(threshold_string);
+
+  if(format_string=="PVM")
+    {
+      format=Format::Polynomial_Vector_Matrix;
+    }
+  else if(format_string=="PMP")
+    {
+      format=Format::Positive_Matrix_with_Prefactor;
+    }
+  else
+    {
+      throw std::runtime_error("Unknown format.  Expected 'PVM' or 'PMP', but found '"
+                               + format_string + "'");
+    }
 }
