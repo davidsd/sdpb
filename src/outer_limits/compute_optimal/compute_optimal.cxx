@@ -70,11 +70,6 @@ std::vector<El::BigFloat> compute_optimal(
         + ", initial points: " + std::to_string(initial_points.size()));
     }
   Outer_Parameters parameters(parameters_in);
-  if(parameters.verbosity != Verbosity::debug)
-    {
-      parameters.verbosity = Verbosity::none;
-    }
-
   const size_t rank(El::mpi::Rank()), num_procs(El::mpi::Size()),
     num_weights(normalization.size());
 
@@ -140,7 +135,7 @@ std::vector<El::BigFloat> compute_optimal(
         {
           std::stringstream ss;
           set_stream_precision(ss);
-          ss << "new_points: " << El::mpi::Rank() << " " << block;
+          ss << "new_points: " << " " << block;
 
           for(size_t offset(0); offset != points.at(block).size(); ++offset)
             {
