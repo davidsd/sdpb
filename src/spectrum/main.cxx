@@ -20,11 +20,16 @@ compute_spectrum(const std::vector<El::BigFloat> &normalization,
                  const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                  const El::BigFloat &threshold);
 
+std::vector<std::vector<El::BigFloat>>
+compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
+                     const std::vector<Polynomial_Vector_Matrix> &matrices,
+                     const El::BigFloat &threshold);
+
 int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
 
-  try
+  // try
     {
       El::BigFloat threshold;
       Format format;
@@ -36,10 +41,16 @@ int main(int argc, char **argv)
         {
           case Format::Polynomial_Vector_Matrix: {
             std::vector<El::BigFloat> objectives;
-            std::vector<Polynomial_Vector_Matrix> polynomial_vector_matrices;
+            std::vector<Polynomial_Vector_Matrix> matrices;
             size_t num_blocks(0);
-            read_pvm_input({input_path}, objectives,
-                           polynomial_vector_matrices, num_blocks);
+            read_pvm_input({input_path}, objectives, matrices, num_blocks);
+            El::DistMatrix<El::BigFloat> y_dist(objectives.size() - 1, 1);
+            read_text_block(y_dist, solution_path);
+            El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(y_dist);
+            const std::vector<std::vector<El::BigFloat>> zeros(
+              compute_spectrum_pvm(y_star.LockedMatrix(), matrices,
+                                   threshold));
+            write_spectrum(output_path, zeros);
           }
           break;
           case Format::Positive_Matrix_with_Prefactor: {
@@ -58,14 +69,14 @@ int main(int argc, char **argv)
         default: throw std::runtime_error("INTERNAL ERROR");
         }
     }
-  catch(std::exception &e)
-    {
-      std::cerr << "Error: " << e.what() << "\n" << std::flush;
-      El::mpi::Abort(El::mpi::COMM_WORLD, 1);
-    }
-  catch(...)
-    {
-      std::cerr << "Unknown Error\n" << std::flush;
-      El::mpi::Abort(El::mpi::COMM_WORLD, 1);
-    }
+  // catch(std::exception &e)
+  //   {
+  //     std::cerr << "Error: " << e.what() << "\n" << std::flush;
+  //     El::mpi::Abort(El::mpi::COMM_WORLD, 1);
+  //   }
+  // catch(...)
+  //   {
+  //     std::cerr << "Unknown Error\n" << std::flush;
+  //     El::mpi::Abort(El::mpi::COMM_WORLD, 1);
+  //   }
 }

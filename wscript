@@ -278,6 +278,7 @@ def build(bld):
                         'src/spectrum/compute_spectrum/compute_spectrum.cxx',
                         'src/spectrum/compute_spectrum/eval_summed.cxx',
                         'src/spectrum/compute_spectrum/get_zeros.cxx',
+                        'src/spectrum/compute_spectrum_pvm.cxx',
                         'src/spectrum/write_spectrum.cxx'],
                 target='spectrum',
                 cxxflags=default_flags,

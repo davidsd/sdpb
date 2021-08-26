@@ -1,8 +1,8 @@
-#include "../../sdp_read.hxx"
-#include "../../sdp_convert/write_vector.hxx"
-#include "../../Mesh.hxx"
-#include "../../max_normalization_index.hxx"
-#include "../../fill_weights.hxx"
+#include "../sdp_read.hxx"
+#include "../sdp_convert/write_vector.hxx"
+#include "../Mesh.hxx"
+#include "../max_normalization_index.hxx"
+#include "../fill_weights.hxx"
 
 El::BigFloat
 eval_summed(const std::vector<std::vector<Polynomial>> &summed_polynomials,
@@ -12,12 +12,14 @@ std::vector<El::BigFloat>
 get_zeros(const Mesh &mesh, const El::BigFloat &threshold);
 
 std::vector<std::vector<El::BigFloat>>
-compute_spectrum(const std::vector<El::BigFloat> &normalization,
-                 const El::Matrix<El::BigFloat> &y,
-                 const std::vector<Positive_Matrix_With_Prefactor> &matrices,
-                 const El::BigFloat &threshold)
+compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
+                     const std::vector<Polynomial_Vector_Matrix> &matrices,
+                     const El::BigFloat &threshold)
 {
-  const size_t max_index(max_normalization_index(normalization));
+  // pvm2sdp implicitly uses the first element as the normalized column
+  std::vector<El::BigFloat> normalization(y.Height() + 1, 0);
+  normalization.at(0) = 1;
+  const size_t max_index(0);
   std::vector<El::BigFloat> weights(normalization.size());
   fill_weights(y, max_index, normalization, weights);
 
@@ -30,12 +32,11 @@ compute_spectrum(const std::vector<El::BigFloat> &normalization,
       auto &block(matrices[block_index]);
       const size_t max_number_terms([&block]() {
         size_t max(0);
-        for(auto &row : block.polynomials)
-          for(auto &column : row)
-            for(auto &poly : column)
-              {
-                max = std::max(max, poly.coefficients.size());
-              }
+        for(auto &element : block.elements)
+          for(auto &poly : element)
+            {
+              max = std::max(max, poly.coefficients.size());
+            }
         return max;
       }());
 
@@ -43,8 +44,7 @@ compute_spectrum(const std::vector<El::BigFloat> &normalization,
       // polynomial roots.
       const El::BigFloat max_delta(6 * max_number_terms);
 
-      const size_t num_rows(block.polynomials.size()),
-        num_columns(block.polynomials.front().size());
+      const size_t num_rows(block.rows), num_columns(block.cols);
 
       std::vector<std::vector<Polynomial>> summed_polynomials(num_rows);
       El::BigFloat block_scale(0), product;
@@ -56,10 +56,9 @@ compute_spectrum(const std::vector<El::BigFloat> &normalization,
               auto &summed(summed_polynomials[row].emplace_back());
               summed.coefficients.resize(max_number_terms, zero);
               for(size_t dual_index(0);
-                  dual_index != block.polynomials[row][column].size();
-                  ++dual_index)
+                  dual_index != block.elt(row, column).size(); ++dual_index)
                 {
-                  auto &poly(block.polynomials[row][column][dual_index]);
+                  auto &poly(block.elt(row, column)[dual_index]);
                   for(size_t coeff(0); coeff != poly.coefficients.size();
                       ++coeff)
                     {
@@ -76,27 +75,10 @@ compute_spectrum(const std::vector<El::BigFloat> &normalization,
       // 1/128 should be a small enough relative error so that we are
       // in the regime of convergence.  Then the error estimates will
       // work
-
-      // TODO: This should all happen in Boost_Float so that we do not
-      // have to do all of these conversions.
-      std::stringstream ss;
-      set_stream_precision(ss);
       Mesh mesh(
         zero, max_delta,
         [&](const El::BigFloat &x) {
-          ss.str("");
-          ss << x;
-          Boost_Float x_Boost_Float(ss.str());
-          Boost_Float numerator(
-            block.damped_rational.constant
-            * pow(block.damped_rational.base, x_Boost_Float));
-          Boost_Float denominator(1);
-          for(auto &pole : block.damped_rational.poles)
-            {
-              denominator *= (x_Boost_Float - pole);
-            }
-          return El::BigFloat(to_string(numerator / denominator))
-                 * eval_summed(summed_polynomials, x);
+          return eval_summed(summed_polynomials, x);
         },
         (1.0 / 128), block_epsilon);
       zeros.at(block_index) = get_zeros(mesh, threshold);
