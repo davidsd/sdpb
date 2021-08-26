@@ -1,4 +1,4 @@
-#include "../../Mesh.hxx"
+#include "../Mesh.hxx"
 
 namespace
 {

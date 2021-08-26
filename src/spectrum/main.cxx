@@ -14,11 +14,11 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
 void write_spectrum(const boost::filesystem::path &output_path,
                     const std::vector<std::vector<El::BigFloat>> &zeros);
 
-std::vector<std::vector<El::BigFloat>>
-compute_spectrum(const std::vector<El::BigFloat> &normalization,
-                 const El::Matrix<El::BigFloat> &y,
-                 const std::vector<Positive_Matrix_With_Prefactor> &matrices,
-                 const El::BigFloat &threshold);
+std::vector<std::vector<El::BigFloat>> compute_spectrum_pmp(
+  const std::vector<El::BigFloat> &normalization,
+  const El::Matrix<El::BigFloat> &y,
+  const std::vector<Positive_Matrix_With_Prefactor> &matrices,
+  const El::BigFloat &threshold);
 
 std::vector<std::vector<El::BigFloat>>
 compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
@@ -61,8 +61,8 @@ int main(int argc, char **argv)
             read_text_block(y_dist, solution_path);
             El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(y_dist);
             const std::vector<std::vector<El::BigFloat>> zeros(
-              compute_spectrum(normalization, y_star.LockedMatrix(), matrices,
-                               threshold));
+              compute_spectrum_pmp(normalization, y_star.LockedMatrix(),
+                                   matrices, threshold));
             write_spectrum(output_path, zeros);
           }
           break;

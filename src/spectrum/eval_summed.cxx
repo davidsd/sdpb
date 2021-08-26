@@ -1,4 +1,4 @@
-#include "../../Polynomial.hxx"
+#include "../Polynomial.hxx"
 #include <El.hpp>
 #include <vector>
 

@@ -1,15 +1,10 @@
+#include "eval_summed.hxx"
+#include "get_zeros.hxx"
 #include "../sdp_read.hxx"
 #include "../sdp_convert/write_vector.hxx"
 #include "../Mesh.hxx"
 #include "../max_normalization_index.hxx"
 #include "../fill_weights.hxx"
-
-El::BigFloat
-eval_summed(const std::vector<std::vector<Polynomial>> &summed_polynomials,
-            const El::BigFloat &x);
-
-std::vector<El::BigFloat>
-get_zeros(const Mesh &mesh, const El::BigFloat &threshold);
 
 std::vector<std::vector<El::BigFloat>>
 compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,

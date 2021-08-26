@@ -1,21 +1,16 @@
-#include "../../sdp_read.hxx"
-#include "../../sdp_convert/write_vector.hxx"
-#include "../../Mesh.hxx"
-#include "../../max_normalization_index.hxx"
-#include "../../fill_weights.hxx"
+#include "eval_summed.hxx"
+#include "get_zeros.hxx"
+#include "../sdp_read.hxx"
+#include "../sdp_convert/write_vector.hxx"
+#include "../Mesh.hxx"
+#include "../max_normalization_index.hxx"
+#include "../fill_weights.hxx"
 
-El::BigFloat
-eval_summed(const std::vector<std::vector<Polynomial>> &summed_polynomials,
-            const El::BigFloat &x);
-
-std::vector<El::BigFloat>
-get_zeros(const Mesh &mesh, const El::BigFloat &threshold);
-
-std::vector<std::vector<El::BigFloat>>
-compute_spectrum(const std::vector<El::BigFloat> &normalization,
-                 const El::Matrix<El::BigFloat> &y,
-                 const std::vector<Positive_Matrix_With_Prefactor> &matrices,
-                 const El::BigFloat &threshold)
+std::vector<std::vector<El::BigFloat>> compute_spectrum_pmp(
+  const std::vector<El::BigFloat> &normalization,
+  const El::Matrix<El::BigFloat> &y,
+  const std::vector<Positive_Matrix_With_Prefactor> &matrices,
+  const El::BigFloat &threshold)
 {
   const size_t max_index(max_normalization_index(normalization));
   std::vector<El::BigFloat> weights(normalization.size());
