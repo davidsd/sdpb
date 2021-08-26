@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
 
-  // try
+  try
     {
       El::BigFloat threshold;
       Format format;
@@ -69,14 +69,14 @@ int main(int argc, char **argv)
         default: throw std::runtime_error("INTERNAL ERROR");
         }
     }
-  // catch(std::exception &e)
-  //   {
-  //     std::cerr << "Error: " << e.what() << "\n" << std::flush;
-  //     El::mpi::Abort(El::mpi::COMM_WORLD, 1);
-  //   }
-  // catch(...)
-  //   {
-  //     std::cerr << "Unknown Error\n" << std::flush;
-  //     El::mpi::Abort(El::mpi::COMM_WORLD, 1);
-  //   }
+  catch(std::exception &e)
+    {
+      std::cerr << "Error: " << e.what() << "\n" << std::flush;
+      El::mpi::Abort(El::mpi::COMM_WORLD, 1);
+    }
+  catch(...)
+    {
+      std::cerr << "Unknown Error\n" << std::flush;
+      El::mpi::Abort(El::mpi::COMM_WORLD, 1);
+    }
 }
