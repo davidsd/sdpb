@@ -69,7 +69,7 @@ systems of correlation functions:
 
 The derivation of the approximation to the objective:
 
-- D. Reehorst et. al., *Navigator Function for the Conformal Bootstrap*,
+- M. Reehorst et. al., *Navigator Function for the Conformal Bootstrap*,
   [arXiv:2104.09518 \[hep-th\]](http://arxiv.org/abs/2104.09518).
 
 
