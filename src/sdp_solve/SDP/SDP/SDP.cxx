@@ -121,7 +121,7 @@ SDP::SDP(
       const size_t block_index(block_indices.at(block));
       free_var_matrix.blocks.emplace_back(
         free_var_input.at(block_index).Height(),
-        free_var_input.at(block_index).Width(), grid);
+        U_star.Width(), grid);
       auto &free_var_block(free_var_matrix.blocks.back());
       for(int64_t row(0); row != free_var_block.Height(); ++row)
         {
