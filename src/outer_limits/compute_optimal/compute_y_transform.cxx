@@ -116,8 +116,7 @@ void compute_y_transform(
   //   yp_to_y(m,l) = V^T(l,m)/s(l)
 
   El::DistMatrix<El::BigFloat> U(global_grid);
-  El::DistMatrix<El::BigFloat> temp(global_grid), V(global_grid),
-    dual_objective_b_global(dual_objective_b.size(), 1, global_grid);
+  El::DistMatrix<El::BigFloat> temp(global_grid), V(global_grid);
   // SVD returns U, s, and V
   El::SVDCtrl<El::BigFloat> svd_control;
   // The default only does 6 iterations per value.  We need far more
@@ -138,6 +137,7 @@ void compute_y_transform(
         }
     }
 
+  El::DistMatrix<El::BigFloat> dual_objective_b_global(yp_to_y_star.Width(), 1, global_grid);
   El::Zero(dual_objective_b_global);
   El::Gemv(El::Orientation::TRANSPOSE, El::BigFloat(1.0), yp_to_y_star, temp,
            El::BigFloat(0.0), dual_objective_b_global);
