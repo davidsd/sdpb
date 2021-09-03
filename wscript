@@ -159,6 +159,11 @@ def build(bld):
                       'src/sdp_read/read_input/read_mathematica/parse_SDP/parse_polynomial.cxx',
                       'src/sdp_read/read_input/read_mathematica/parse_SDP/parse_matrix/parse_matrix.cxx',
                       'src/sdp_read/read_input/read_mathematica/parse_SDP/parse_matrix/parse_damped_rational.cxx',
+                      'src/sdp_read/read_pvm_input/read_pvm_input.cxx',
+                      'src/sdp_read/read_pvm_input/read_xml_input/read_xml_input.cxx',
+                      'src/sdp_read/read_pvm_input/read_xml_input/Input_Parser/on_start_element.cxx',
+                      'src/sdp_read/read_pvm_input/read_xml_input/Input_Parser/on_end_element.cxx',
+                      'src/sdp_read/read_pvm_input/read_xml_input/Input_Parser/on_characters.cxx',
                       'src/sdp_read/read_file_list.cxx']
 
     bld.stlib(source=sdp_read_sources,
@@ -182,6 +187,11 @@ def build(bld):
                 use=use_packages + ['sdp_read']
                 )
 
+    bld.stlib(source=['src/Mesh/Mesh.cxx', 'src/Mesh/ostream.cxx'],
+              target='mesh',
+              cxxflags=default_flags,
+              use=use_packages)
+
     bld.program(source=['src/outer_limits/main.cxx',
                         'src/outer_limits/power_prefactor.cxx',
                         'src/outer_limits/poles_prefactor.cxx',
@@ -189,13 +199,10 @@ def build(bld):
                         'src/outer_limits/compute_optimal/compute_optimal.cxx',
                         'src/outer_limits/compute_optimal/compute_y_transform.cxx',
                         'src/outer_limits/compute_optimal/setup_constraints.cxx',
-                        'src/outer_limits/compute_optimal/fill_weights.cxx',
                         'src/outer_limits/compute_optimal/copy_matrix.cxx',
                         'src/outer_limits/compute_optimal/find_new_points/find_new_points.cxx',
                         'src/outer_limits/compute_optimal/find_new_points/eval_summed.cxx',
                         'src/outer_limits/compute_optimal/find_new_points/get_new_points.cxx',
-                        'src/outer_limits/compute_optimal/find_new_points/Mesh/Mesh.cxx',
-                        'src/outer_limits/compute_optimal/find_new_points/Mesh/ostream.cxx',
                         'src/outer_limits/compute_optimal/load_checkpoint/load_checkpoint.cxx',
                         'src/outer_limits/compute_optimal/load_checkpoint/Checkpoint_Parser/EndArray.cxx',
                         'src/outer_limits/compute_optimal/load_checkpoint/Checkpoint_Parser/EndObject.cxx',
@@ -232,7 +239,7 @@ def build(bld):
                         ],
                 target='outer_limits',
                 cxxflags=default_flags,
-                use=use_packages + ['sdp_read','sdp_solve']
+                use=use_packages + ['sdp_read','sdp_solve', 'mesh']
                 )
 
     bld.program(source=['src/approx_objective/main.cxx',
@@ -251,3 +258,30 @@ def build(bld):
                 use=use_packages + ['sdp_read','sdp_solve']
                 )
     
+    bld.program(source=['src/pvm2functions/main.cxx',
+                        'src/pvm2functions/parse_command_line.cxx',
+                        'src/pvm2functions/write_functions.cxx'],
+                target='pvm2functions',
+                cxxflags=default_flags,
+                use=use_packages + ['sdp_read']
+                )
+
+    bld.program(source=['src/sdp2functions/main.cxx',
+                        'src/sdp2functions/write_functions.cxx'],
+                target='sdp2functions',
+                cxxflags=default_flags,
+                use=use_packages + ['sdp_read']
+                )
+
+    bld.program(source=['src/spectrum/main.cxx',
+                        'src/spectrum/handle_arguments.cxx',
+                        'src/spectrum/compute_spectrum_pmp.cxx',
+                        'src/spectrum/compute_spectrum_pvm.cxx',
+                        'src/spectrum/eval_summed.cxx',
+                        'src/spectrum/get_zeros.cxx',
+                        'src/spectrum/write_spectrum.cxx'],
+                target='spectrum',
+                cxxflags=default_flags,
+                use=use_packages + ['sdp_read', 'sdp_solve', 'sdp_convert', 'mesh']
+                )
+

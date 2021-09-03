@@ -1,23 +1,20 @@
-#include "../../Function.hxx"
+#include "../Polynomial.hxx"
 #include <El.hpp>
 #include <vector>
 
-El::BigFloat
-eval_summed(const El::BigFloat &epsilon, const El::BigFloat &infinity,
-            const std::vector<std::vector<Function>> &summed_functions,
-            const El::BigFloat &x)
+El::BigFloat eval_summed(
+  const std::vector<std::vector<Polynomial>> &summed_polynomials,
+  const El::BigFloat &x)
 {
-  const size_t matrix_dim(summed_functions.size());
+  const size_t matrix_dim(summed_polynomials.size());
   El::Matrix<El::BigFloat> m(matrix_dim, matrix_dim);
   for(size_t row(0); row != matrix_dim; ++row)
     for(size_t column(0); column <= row; ++column)
       {
-        m.Set(row, column,
-              summed_functions.at(row).at(column).eval(epsilon, infinity, x));
+        m.Set(row, column, summed_polynomials.at(row).at(column)(x));
       }
 
-  // FIXME: Use the square of the matrix rather than the smallest
-  // eigenvalue?  That would map to B^T B.
+  // FIXME: Use the determinant rather than the smallest eigenvalue?
 
   El::Matrix<El::BigFloat> eigenvalues;
   /// There is a bug in El::HermitianEig when there is more than

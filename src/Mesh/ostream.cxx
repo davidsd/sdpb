@@ -1,5 +1,5 @@
 #include "../Mesh.hxx"
-#include "../../../../ostream_array.hxx"
+#include "../ostream_array.hxx"
 
 std::ostream & operator<<(std::ostream &os, const Mesh &mesh)
 {

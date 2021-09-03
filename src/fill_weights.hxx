@@ -1,8 +1,11 @@
+#pragma once
+
 #include <El.hpp>
 
-void fill_weights(const El::Matrix<El::BigFloat> &y, const size_t &max_index,
-                  const std::vector<El::BigFloat> &normalization,
-                  std::vector<El::BigFloat> &weights)
+inline void
+fill_weights(const El::Matrix<El::BigFloat> &y, const size_t &max_index,
+             const std::vector<El::BigFloat> &normalization,
+             std::vector<El::BigFloat> &weights)
 {
   // The weight at max_index is determined by the normalization
   // condition dot(norm,weights)=1

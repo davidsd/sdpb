@@ -1,10 +1,12 @@
-#include "../Outer_Parameters.hxx"
 #include "setup_constraints.hxx"
+#include "../Outer_Parameters.hxx"
 
 #include "../../ostream_set.hxx"
 #include "../../ostream_map.hxx"
 #include "../../ostream_vector.hxx"
 #include "../../set_stream_precision.hxx"
+#include "../../max_normalization_index.hxx"
+#include "../../fill_weights.hxx"
 
 void compute_y_transform(
   const std::vector<std::vector<std::vector<std::vector<Function>>>>
@@ -31,10 +33,6 @@ void copy_matrix(const El::Matrix<El::BigFloat> &source,
                  El::DistMatrix<El::BigFloat> &destination);
 void copy_matrix(const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &source,
                  El::Matrix<El::BigFloat> &destination);
-
-void fill_weights(const El::Matrix<El::BigFloat> &y, const size_t &max_index,
-                  const std::vector<El::BigFloat> &normalization,
-                  std::vector<El::BigFloat> &weights);
 
 void find_new_points(
   const size_t &num_blocks, const size_t &rank, const size_t &num_procs,
@@ -72,11 +70,6 @@ std::vector<El::BigFloat> compute_optimal(
         + ", initial points: " + std::to_string(initial_points.size()));
     }
   Outer_Parameters parameters(parameters_in);
-  if(parameters.verbosity != Verbosity::debug)
-    {
-      parameters.verbosity = Verbosity::none;
-    }
-
   const size_t rank(El::mpi::Rank()), num_procs(El::mpi::Size()),
     num_weights(normalization.size());
 
@@ -99,18 +92,7 @@ std::vector<El::BigFloat> compute_optimal(
       points.at(block).emplace(infinity);
     }
 
-  // TODO: This is duplicated from sdp2input/write_output/write_output.cxx
-  size_t max_index(0);
-  El::BigFloat max_normalization(0);
-  for(size_t index(0); index != normalization.size(); ++index)
-    {
-      const El::BigFloat element(Abs(normalization[index]));
-      if(element > max_normalization)
-        {
-          max_normalization = element;
-          max_index = index;
-        }
-    }
+  const size_t max_index(max_normalization_index(normalization));
 
   const El::Grid global_grid;
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> yp_to_y_star(
@@ -153,7 +135,7 @@ std::vector<El::BigFloat> compute_optimal(
         {
           std::stringstream ss;
           set_stream_precision(ss);
-          ss << "new_points: " << El::mpi::Rank() << " " << block;
+          ss << "new_points: " << " " << block;
 
           for(size_t offset(0); offset != points.at(block).size(); ++offset)
             {
