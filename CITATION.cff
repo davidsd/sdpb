@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "Cite these papers if you want to reference the general concepts of the software."
-references:
+preferred-citation:
   - authors:
       - family-name: "Simmons-Duffin"
         given-names: "David"
@@ -20,4 +20,3 @@ references:
     identifiers:
       - type: other
         value: "arXiv:1909.09745"
-
