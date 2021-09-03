@@ -1,0 +1,63 @@
+* Cori
+  SUSE Linux Enterprise Server 15
+  NAME="SLES"
+  VERSION="15"
+  VERSION_ID="15"
+  PRETTY_NAME="SUSE Linux Enterprise Server 15"
+  ID="sles"
+  ID_LIKE="suse"
+  ANSI_COLOR="0;32"
+  CPE_NAME="cpe:/o:suse:sles:15"
+
+  Linux cori09 4.12.14-150.47-default #1 SMP Wed Dec 18 15:05:52 UTC 2019 (8162e25) x86_64 x86_64 x86_64 GNU/Linux
+  glibc-2.26-13.36.1.x86_64
+
+* gnu OpenMPI
+module unload PrgEnv-intel
+module load PrgEnv-gnu eigen3/3.3.7-gnu openmpi
+
+  Do not use boost module.  It is slow for scalar blocks.
+
+** boost
+  wget https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.bz2/download 
+  mv download boost_1_68_0.tar.bz2
+  ./bootstrap.sh --prefix=$HOME/gnu_openmpi/install --without-libraries=python
+  ./b2 --prefix=$HOME/gnu_openmpi/install -j 16
+  ./b2 --prefix=$HOME/gnu_openmpi/install install
+
+** Elemental
+   cmake .. -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DCMAKE_INSTALL_PREFIX=$HOME/gnu_openmpi/install
+
+** RapidJSON
+   git clone https://github.com/Tencent/rapidjson.git
+   cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/gnu_openmpi/install
+
+** libarchive
+   wget http://www.libarchive.org/downloads/libarchive-3.5.1.tar.xz
+   ./configure --prefix=$HOME/gnu_openmpi/install
+   make -j 16
+   make install
+
+** sdpb
+  ./waf configure --prefix=$HOME/gnu_openmpi/install --elemental-dir=$HOME/gnu_openmpi/install --rapidjson-dir=$HOME/gnu_openmpi/install --boost-dir=$HOME/gnu_openmpi/install --libarchive-dir=$HOME/gnu_openmpi/install
+
+** Trilinos
+   cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DTrilinos_ENABLE_Sacado=ON -DTrilinos_ENABLE_Kokkos=OFF -DTrilinos_ENABLE_Teuchos=OFF -DCMAKE_INSTALL_PREFIX=$HOME/gnu_openmpi/install ..
+** scalar_blocks
+   ./waf configure --prefix=$HOME/gnu_openmpi/install --trilinos-dir=$HOME/gnu_openmpi/install --eigen-incdir=$EIGEN3_DIR/include/eigen3 --boost-dir=$HOME/gnu_openmpi/install
+
+** blocks_3d
+*** fmt
+   wget https://github.com/fmtlib/fmt/releases/download/6.2.1/fmt-6.2.1.zip
+   mkdir build
+   cd build
+   cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_INSTALL_PREFIX=$HOME/gnu_openmpi/install ..
+*** blocks_3d   
+   git clone https://gitlab.com/bootstrapcollaboration/blocks_3d.git
+   cd blocks-3d
+   ./waf configure --prefix=$HOME/gnu_openmpi/install --fmt-dir=$HOME/gnu_openmpi/install --fmt-libdir=$HOME/gnu_openmpi/install/lib64 --boost-dir=$HOME/gnu_openmpi/install --eigen-incdir=$EIGEN3_DIR/include/eigen3
+
+* Batch Scripts
+  /global/homes/w/wlandry/gnu_openmpi/runs/TTTT_small.sh
+  /global/homes/w/wlandry/gnu_openmpi/runs/scalar_blocks.sh
+  /global/homes/w/wlandry/gnu_openmpi/runs/blocks_3d.sh

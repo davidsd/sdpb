@@ -1,0 +1,37 @@
+* Fidis
+  Red Hat Enterprise Linux Server release 7.6 (Maipo)
+  Linux fidis 3.10.0-957.21.3.el7.x86_64 #1 SMP Fri Jun 14 02:54:29 EDT 2019 x86_64 x86_64 x86_64 GNU/Linux
+  glibc-devel-2.17-260.el7_6.6.x86_64
+
+* gcc openmpi
+  module load gcc/8.3.0 openmpi/3.1.4 openblas/0.3.6
+** RapidJSON
+   git clone https://github.com/Tencent/rapidjson.git
+   cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/gcc_openmpi/install
+
+** Elemental
+   cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/gcc_openmpi/install -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc
+** boost
+  ./bootstrap.sh --prefix=$HOME/gcc_openmpi/install --without-libraries=python
+  ./b2 --prefix=$HOME/gcc_openmpi/install -j 16
+  ./b2 --prefix=$HOME/gcc_openmpi/install install
+** libarchive
+   wget http://www.libarchive.org/downloads/libarchive-3.5.1.tar.xz
+   ./configure --prefix=$HOME/gcc_openmpi/install
+   make -j 16
+   make install
+
+** sdpb
+   ./waf configure --elemental-dir=/home/wlandry/gcc_openmpi/install --rapidjson-dir=$HOME/gcc_openmpi/install --boost-dir=/home/wlandry/gcc_openmpi/install --libarchive-dir=/home/wlandry/gcc_openmpi/install --prefix=/home/wlandry/gcc_openmpi/install
+
+** Trilinos
+   git clone --branch trilinos-release-12-12-branch https://github.com/trilinos/Trilinos.git
+   cmake -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_Fortran_COMPILER=gfortran -DTrilinos_ENABLE_Sacado=ON -DTrilinos_ENABLE_Kokkos=OFF -DTrilinos_ENABLE_Teuchos=OFF -DCMAKE_INSTALL_PREFIX=$HOME/gcc_openmpi/install ..
+** scalar_blocks
+   git clone https://gitlab.com/bootstrapcollaboration/scalar_blocks.git
+   ./waf configure --prefix=$HOME/gcc_openmpi/install --boost-dir=$HOME/gcc_openmpi/install --trilinos-dir=$HOME/gcc_openmpi/install --eigen-incdir=/ssoft/spack/humagne/v1/opt/spack/linux-rhel7-x86_E5v4_Mellanox/gcc-7.4.0/eigen-3.3.7-ew5ojtqdpt5thp53u2u4utiqnj57z5zg/include/eigen3
+   Specify full path of Eigen because it will only load with gcc 7.4.0
+
+* Batch Scripts
+  /home/wlandry/runs/TTTT_small.sh
+  /home/wlandry/runs/scalar_blocks.sh

@@ -1,0 +1,26 @@
+* gcc
+  export LD_LIBRARY_PATH=/software/gcc/9.2.0/lib64:$LD_LIBRARY_PATH
+  export PATH=/software/gcc/9.2.0/bin:$PATH
+* Elemental
+  git clone https://gitlab.com/bootstrapcollaboration/elemental.git
+  cmake .. -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DCMAKE_INSTALL_PREFIX=/mnt/orangefs/sdpb/install
+* boost
+  1.72.0
+  wget https://dl.bintray.com/boostorg/release/1.72.0/source/boost_1_72_0.tar.bz2
+  wget https://dl.bintray.com/boostorg/release/1.68.0/source/boost_1_68_0.tar.bz2
+  ./bootstrap.sh --prefix=/mnt/orangefs/sdpb/install
+  ./b2 --prefix=/mnt/orangefs/sdpb/install -j 4 --reconfigure
+  ./b2 --prefix=/mnt/orangefs/sdpb/install -j 4 install
+* RapidJSON
+  git clone https://github.com/Tencent/rapidjson.git
+  cmake .. -DCMAKE_INSTALL_PREFIX=/mnt/orangefs/sdpb/install
+
+* sdpb
+  git clone https://github.com/davidsd/sdpb
+  ./waf configure --elemental-dir=/mnt/orangefs/sdpb/install --prefix=/mnt/orangefs/sdpb/install --boost-dir=/mnt/orangefs/sdpb/install --rapidjson-dir=/mnt/orangefs/sdpb/install
+
+  
+* CCQ
+  ccqsub test_CC.sh
+  ccqstat
+  ccqdel <job_id>

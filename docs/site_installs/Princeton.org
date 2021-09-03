@@ -1,0 +1,191 @@
+* Della
+  Springdale Linux release 7.7 (Verona)
+  Linux della5.princeton.edu 3.10.0-1062.12.1.el7.x86_64 #1 SMP Wed Feb 5 07:15:42 EST 2020 x86_64 x86_64 x86_64 GNU/Linux
+  glibc-devel-2.17-292.el7.x86_64
+
+  The gcc + intel-mpi version is recommended, though the gcc + openmpi version should work.
+
+* gcc + intel-mpi
+  No warnings with new Cascade nodes.
+  module load rh/devtoolset/8 intel-mpi/gcc/2019.7/64
+
+** RapidJSON
+   git clone https://github.com/Tencent/rapidjson.git
+   cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/gnu_intel/install
+
+** Elemental  
+   cmake .. -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DCMAKE_INSTALL_PREFIX=$HOME/gnu_intel/install
+
+** boost
+   wget https://dl.bintray.com/boostorg/release/1.67.0/source/boost_1_67_0.tar.bz2
+   ./bootstrap.sh --prefix=$HOME/gnu_intel/install
+   ./b2 --prefix=$HOME/gnu_intel/install -j 16 --reconfigure
+   ./b2 --prefix=$HOME/gnu_intel/install -j 16 install
+
+** libarchive
+   wget http://www.libarchive.org/downloads/libarchive-3.5.1.tar.xz
+   ./configure --prefix=$HOME/gnu_intel/install
+   make -j 16
+   make install
+
+** sdpb
+   ./waf configure --prefix=$HOME/gnu_intel/install --boost-dir=$HOME/gnu_intel/install --elemental-dir=$HOME/gnu_intel/install --rapidjson-dir=$HOME/gnu_intel/install --libarchive-dir=$HOME/gnu_intel/install
+
+** Trilinos
+   cmake -DTrilinos_ENABLE_Sacado=ON -DTrilinos_ENABLE_Kokkos=OFF -DTrilinos_ENABLE_Teuchos=OFF -DCMAKE_INSTALL_PREFIX=$HOME/gnu_intel/install ..
+** scalar_blocks
+   ./waf configure --boost-dir=$HOME/gnu_intel/install --trilinos-dir=$HOME/gnu_intel/install --prefix=$HOME/gnu_intel/install
+
+** MPSolve
+   Can not use git because autoconf is too old
+   wget https://numpi.dm.unipi.it/mpsolve-2.2/mpsolve.tgz
+   ./configure --prefix=$HOME/gnu_intel/install
+
+   Newer version.  Different executable name.
+   wget https://numpi.dm.unipi.it/_media/software/mpsolve/mpsolve-3.2.1.tar.gz
+   ./configure --prefix=$HOME/gnu_intel/install
+
+** spectrum
+   module load anaconda3/2020.2
+   conda create -n conda3 -p /home/wlandry/gnu_intel/conda3
+   conda activate /home/wlandry/gnu_intel/conda3
+   conda install mpmath lxml
+
+   To run
+   module load anaconda3/2020.2
+   conda activate /home/wlandry/gnu_intel/conda3
+
+* Batch Scripts
+  /home/wlandry/gnu_intel/runs/TTTT_small.sh
+  /home/wlandry/gnu_intel/runs/scalar_blocks.sh
+
+
+* gcc + openmpi
+  Get warnings with new Cascade nodes.
+  module load rh/devtoolset/8 openmpi/gcc/2.0.2/64
+
+** Elemental  
+   cmake .. -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DCMAKE_INSTALL_PREFIX=$HOME/gnu/install
+
+** boost
+   wget https://dl.bintray.com/boostorg/release/1.67.0/source/boost_1_67_0.tar.bz2
+   ./bootstrap.sh --prefix=$HOME/gnu/install
+   ./b2 --prefix=$HOME/gnu/install -j 16 --reconfigure
+   ./b2 --prefix=$HOME/gnu/install -j 16 install
+
+** sdpb
+   ./waf configure --prefix=$HOME/gnu/install --boost-dir=$HOME/gnu/install --elemental-dir=$HOME/gnu/install
+
+** Trilinos
+   cmake -DTrilinos_ENABLE_Sacado=ON -DTrilinos_ENABLE_Kokkos=OFF -DTrilinos_ENABLE_Teuchos=OFF -DCMAKE_INSTALL_PREFIX=$HOME/gnu/install ..
+** scalar_blocks
+   ./waf configure --boost-dir=$HOME/gnu/install --trilinos-dir=$HOME/gnu/install --prefix=$HOME/gnu/install
+
+
+* feynman.princeton.edu: From scratch
+* Springdale Linux release 7.5 (Verona)
+  Linux feynman.princeton.edu 3.10.0-862.11.6.el7.x86_64 #1 SMP Tue Aug 14 15:29:59 EDT 2018 x86_64 x86_64 x86_64 GNU/Linux                                                                                                            
+  glibc-devel-2.17-222.el7.x86_64
+
+** GCC
+   # The default login sets a whole bunch of variables that are
+   # decidely unhelpful.
+   unset U
+   unset W
+   unset DB
+   wget https://bigsearcher.com/mirrors/gcc/releases/gcc-9.2.0/gcc-9.2.0.tar.gz
+   tar -zxf gcc-9.2.0.tar.gz 
+   cd gcc-9.2.0
+   ./contrib/download_prerequisites
+   mkdir build
+   cd build
+   # Need to install in a different place.  Otherwise gcc gets
+   # confused about search paths and will helpfully(!?!) remove the
+   # compiler's include directory from the search path.  This means
+   # that it will use the boost in /usr/local/include, which is
+   # definitely not what we want.
+   ../configure --prefix=/mnt/hepth/sdpb_elemental/gnu/gcc_install --disable-multilib
+   make -j 24
+   make install
+
+** export PATH=/mnt/hepth/sdpb_elemental/gnu/gcc_install/bin:/mnt/hepth/sdpb_elemental/gnu/install/bin:$PATH
+   export LD_LIBRARY_PATH=/mnt/hepth/sdpb_elemental/gnu/gcc_install/lib64:/mnt/hepth/sdpb_elemental/gnu/install/lib64:/mnt/hepth/sdpb_elemental/gnu/install/lib
+
+** OpenMPI
+   wget https://download.open-mpi.org/release/open-mpi/v4.0/openmpi-4.0.2.tar.bz2
+   ./configure --prefix=/mnt/hepth/sdpb_elemental/gnu/install 
+   ./configure --prefix=/mnt/hepth/sdpb_elemental/gnu/install --with-tm=no
+   # torque libraries are not installed on the compute nodes.
+   # It does not have pmix development libraries installed.  Trying to
+   # build with just pmi2 gives errors when invoking srun.  So just
+   # use mpirun.
+   make -j 24
+   make install
+
+** Boost
+   1.68.0
+   ./bootstrap.sh --prefix=/mnt/hepth/sdpb_elemental/gnu/install
+   ./b2 -j 24
+   ./b2 install
+
+** RapidJSON
+   git clone https://github.com/Tencent/rapidjson.git
+   cmake .. -DCMAKE_INSTALL_PREFIX=/mnt/hepth/sdpb_elemental/gnu/install
+
+** Elemental
+   cmake .. -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DCMAKE_INSTALL_PREFIX=/mnt/hepth/sdpb_elemental/gnu/install -DEL_FORCE_OPENBLAS_BUILD=ON
+   # Need to force build of OpenBLAS.  Otherwise it finds
+   # /usr/lib64/libopenblas.so which does not exist on the compute
+   # nodes.
+
+   # This will build Metis.
+
+   make -j 24
+   make install
+
+** sdpb
+   ./waf configure --boost-dir=/mnt/hepth/sdpb_elemental/gnu/install --elemental-dir=/mnt/hepth/sdpb_elemental/gnu/install --rapidjson-dir=/mnt/hepth/sdpb_elemental/gnu/install --prefix=/mnt/hepth/sdpb_elemental/gnu/install
+
+** Trilinos   
+   git clone --branch trilinos-release-12-12-branch https://github.com/trilinos/Trilinos.git
+   mkdir Trilinos/build
+   cd Trilinos/build
+   cmake -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_Fortran_COMPILER=gfortran -DTrilinos_ENABLE_Sacado=ON -DTrilinos_ENABLE_Kokkos=OFF -DTrilinos_ENABLE_Teuchos=OFF -DCMAKE_INSTALL_PREFIX=/mnt/hepth/sdpb_elemental/gnu/install ..
+
+** scalar_blocks
+   ./waf configure --prefix=/mnt/hepth/sdpb_elemental/gnu/install --boost-dir=/mnt/hepth/sdpb_elemental/gnu/install --trilinos-dir=/mnt/hepth/sdpb_elemental/gnu/install
+
+* feynman.princeton.edu: Intel
+  Does not work.  Get the 'too many communicators' bug.
+** source /opt/intel/impi/5.0.3.048/bin64/mpivars.sh 
+** boost
+*** ./bootstrap.sh --prefix=/mnt/hepth/sdpb_elemental/install --with-toolset=intel-linux
+*** ./b2 --prefix=/mnt/hepth/sdpb_elemental/install --reconfigure toolset=intel-linux cxxflags="-std=c++14" -j 16
+*** ./b2 --prefix=/mnt/hepth/sdpb_elemental/install toolset=intel-linux cxxflags="-std=c++14" install
+
+** Metis
+  git clone https://github.com/scibuilder/Metis.git
+  cd Metis
+  mkdir build
+  cd build
+  cmake .. -DCMAKE_INSTALL_PREFIX=/mnt/hepth/sdpb_elemental/install
+  make -j 16
+  make install
+
+  Have to build metis by hand because the autobuild fails in Elemental
+  (maybe because of -dynamic flag?)
+
+** Elemental
+*** cmake .. -DCMAKE_CXX_COMPILER=mpiicpc -DCMAKE_C_COMPILER=mpiicc -DCMAKE_Fortran_COMPILER=gfortran -DCMAKE_INSTALL_PREFIX=/mnt/hepth/sdpb_elemental/install -DMATH_LIBS="-L/opt/intel/compilers_and_libraries_2017.4.196/linux/mkl/lib/intel64 -lmkl_rt"
+    Trying to use Intel's ifort fortran compiler fails.
+** sdpb
+*** CXX=mpiicpc ./waf configure --boost-dir=/mnt/hepth/sdpb_elemental/install --elemental-dir=/mnt/hepth/sdpb_elemental/install --elemental-libdir="/mnt/hepth/sdpb_elemental/install/lib64 /opt/intel/compilers_and_libraries_2017.4.196/linux/mkl/lib/intel64" --elemental-libs="El pmrrr ElSuiteSparse mkl_rt" --cxx14-flag="-std=c++14" --prefix=/mnt/hepth/sdpb_elemental/install
+
+    To run set
+    LD_LIBRARY_PATH=/opt/intel/compilers_and_libraries_2017.4.196/linux/compiler/lib/intel64:$LD_LIBRARY_PATH 
+
+** Trilinos
+   cmake .. -DCMAKE_CXX_COMPILER=icpc -DCMAKE_C_COMPILER=icc -DCMAKE_Fortran_COMPILER=gfortran -DTrilinos_ENABLE_Sacado=ON -DTrilinos_ENABLE_Kokkos=OFF -DTrilinos_ENABLE_Teuchos=OFF -DCMAKE_INSTALL_PREFIX=/mnt/hepth/sdpb_elemental/install
+** scalar_blocks
+*** CXX=icpc ./waf configure --prefix=/mnt/hepth/sdpb_elemental/install --boost-dir=/mnt/hepth/sdpb_elemental/install --cxx14-flag="-std=c++14" --trilinos-dir=/mnt/hepth/sdpb_elemental/install
+*** ./bin/scalar_blocks --help

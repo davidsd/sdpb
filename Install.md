@@ -1,5 +1,7 @@
 This guide is for building SDPB.  To just run SDPB, it may be easier
 to use [Docker](docs/Docker.md) or [Singularity](docs/Singularity.md).
+In addition, there are [site specific
+notes](docs/site_installs/Readme.md) for different HPC machines.
 
 * [Requirements](#requirements)
 * [Installation](#installation)
@@ -9,8 +11,8 @@ to use [Docker](docs/Docker.md) or [Singularity](docs/Singularity.md).
 
 SDPB requires
 
-- A modern C++ compiler with C++ 14 support.  SDPB has been tested with
-  GCC versions 5 through 9.
+- A modern C++ compiler with C++ 17 support.  SDPB has been tested with
+  GCC versions 7 through 10.
 
 - An MPI implementation such as [OpenMPI](https://www.open-mpi.org/) or [MPICH](https://www.mpich.org/)
 

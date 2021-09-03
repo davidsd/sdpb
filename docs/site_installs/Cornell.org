@@ -1,0 +1,49 @@
+Almost everything has to be built from scratch.  The place where
+everything is built is very different from where it is installed.  The
+build directories have plenty of space, but get deleted automatically.
+The install directories are more limited in space, but they are
+persistent.
+
+* Build gcc
+  wget http://mirrors-usa.go-parts.com/gcc/releases/gcc-8.3.0/gcc-8.3.0.tar.gz
+  mkdir /cdat/tem/wlandry/
+  cd /cdat/tem/wlandry/
+  tar -zxf gcc-8.3.0.tar.gz
+  cd gcc-8.3.0
+  ./contrib/download_prerequisites
+  mkdir build
+  cd build
+  ../configure --prefix=/nfs/user/wlandry/install --disable-multilib
+  make -j 16
+  make install
+
+* Set environment
+export PATH=/nfs/user/wlandry/install/bin:$PATH
+export LD_LIBRARY_PATH=/nfs/user/wlandry/install/lib64
+* gmp-6.1.2
+  ./configure --enable-cxx --prefix=/nfs/user/wlandry/install
+* mpfr-4.0.2
+  ./configure --with-gmp=/nfs/user/wlandry/install --prefix=/nfs/user/wlandry/install
+* boost_1_67_0
+  ./bootstrap.sh --prefix=/nfs/user/wlandry/install
+  ./b2 --prefix=/nfs/user/wlandry/install -j 16 --reconfigure include="/nfs/user/wlandry/install/include" linkflags="-L/nfs/user/wlandry/install/lib"
+  ./b2 --prefix=/nfs/user/wlandry/install -j 16 include="/nfs/user/wlandry/install/include" linkflags="-L/nfs/user/wlandry/install/lib" install
+* RapidJSON
+  git clone https://github.com/Tencent/rapidjson.git
+  cmake .. -DCMAKE_INSTALL_PREFIX=/nfs/user/wlandry/install
+* Elemental
+  module load mpi
+  cmake .. -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DCMAKE_INSTALL_PREFIX=/nfs/user/wlandry/install -DGMP_INCLUDES=/nfs/user/wlandry/install/include -DGMP_LIBRARIES=/nfs/user/wlandry/install/lib/libgmp.so.10.3.2 -DGMPXX_INCLUDES=/nfs/user/wlandry/install/include -DGMPXX_LIBRARIES=/nfs/user/wlandry/install/lib/libgmpxx.so.4.5.2
+  make -j 16
+  make install
+* libarchive
+  wget http://www.libarchive.org/downloads/libarchive-3.5.1.tar.xz
+  ./configure --prefix=/nfs/user/wlandry/install
+  make -j 16
+  make install
+* sdpb
+  module load mpi
+  ./waf configure --elemental-dir=/nfs/user/wlandry/install --boost-dir=/nfs/user/wlandry/install --gmpxx-dir=/nfs/user/wlandry/install --mpfr-dir=/nfs/user/wlandry/install --libarchive-dir=/nfs/user/wlandry/install --prefix=/nfs/user/wlandry/install
+
+* Batch Scripts
+  /nfs/user/wlandry/runs/TTTT_small.sh

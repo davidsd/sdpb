@@ -1,0 +1,45 @@
+* CPHT
+module remove gcc/current
+module load gcc/7.1.0 openmpi/gcc/64/4.0.3 cmake/3.5.0 openblas/gcc/0.3.10 gmp/gcc/6.1.2 mpfr/gcc/4.1.0 boost/1.74.0 python/3.8.5
+** Eigen
+   wget https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.bz2
+   cmake .. -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DCMAKE_INSTALL_PREFIX=$HOME/install
+** Elemental
+   cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/install -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DGMP_INCLUDES=/cm/shared/apps/gmp/6.1.2/include -DGMP_LIBRARIES=/cm/shared/apps/gmp/6.1.2/lib/libgmp.so -DGMPXX_INCLUDES=/cm/shared/apps/gmp/6.1.2/include -DGMPXX_LIBRARIES=/cm/shared/apps/gmp/6.1.2/lib/libgmpxx.so -DMATH_LIBS="-L$BLASDIR -lopenblas"
+** RapidJSON
+   git clone https://github.com/Tencent/rapidjson.git
+   cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/install
+** libarchive
+   wget http://www.libarchive.org/downloads/libarchive-3.5.1.tar.xz
+   ./configure --prefix=$HOME/install
+   make -j
+   make install
+
+** sdpb
+   git clone https://github.com/davidsd/sdpb
+   CXX=mpicxx python3 ./waf configure --elemental-dir=$HOME/install --libarchive-dir=$HOME/install --prefix=$HOME/install --boost-dir=/cm/shared/apps/boost/1.74.0 --gmpxx-dir=/cm/shared/apps/gmp/6.1.2/ --mpfr-dir=/cm/shared/apps/mpfr/gcc/4.1.0 --rapidjson-dir=$HOME/install
+   python3 ./waf
+   python3 ./waf install
+
+** Trilinos
+   git clone --branch trilinos-release-12-12-branch https://github.com/trilinos/Trilinos.git
+   cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DTrilinos_ENABLE_Sacado=ON -DTrilinos_ENABLE_Kokkos=OFF -DTrilinos_ENABLE_Teuchos=OFF -DCMAKE_INSTALL_PREFIX=$HOME/install ..
+
+** scalar blocks
+   git clone https://gitlab.com/bootstrapcollaboration/scalar_blocks.git
+   python3 ./waf configure --prefix=$HOME/install --trilinos-dir=$HOME/install --eigen-incdir=$HOME/install/include/eigen3 --boost-dir=/cm/shared/apps/boost/1.74.0
+
+** fmt
+   wget --no-check-certificate https://github.com/fmtlib/fmt/releases/download/6.2.1/fmt-6.2.1.zip
+   mkdir build
+   cd build
+   cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_INSTALL_PREFIX=$HOME/install ..
+
+** blocks_3d
+   git clone https://gitlab.com/bootstrapcollaboration/blocks_3d.git
+   python3 ./waf configure --prefix=$HOME/install --eigen-incdir=$HOME/install/include/eigen3 --boost-dir=/cm/shared/apps/boost/1.74.0 --fmt-dir=$HOME/install --fmt-libdir=$HOME/install/lib64
+
+* Batch Scripts
+  /home/CPHT/walter.landry/runs/TTTT_small.sh
+  /home/CPHT/walter.landry/runs/scalar_blocks.sh
+  /home/CPHT/walter.landry/runs/blocks_3d.sh

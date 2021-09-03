@@ -1,0 +1,31 @@
+* Ubuntu 18.04.5 LTS
+  No modules
+
+  This is an experimental cluster (XACC) that is connected to FPGA's.
+  So there is no batch system.
+
+** Elemental
+   # No Fortran compiler, but need to give a fortran compiler to cmake
+   # to make it happy.
+   # No blas or GMP, but anaconda has one hidden in /opt/tools/external/anaconda.
+   git clone https://gitlab.com/bootstrapcollaboration/elemental.git libelemental
+   mkdir build
+   cd build
+   cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/install -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DCMAKE_Fortran_COMPILER=mpif90 -DMATH_LIBS="-L/opt/tools/external/anaconda/lib -lmkl_rt" -DGMP_INCLUDES=/opt/tools/external/anaconda/include -DGMPXX_INCLUDES=/opt/tools/external/anaconda/include -DGMP_LIBRARIES=/opt/tools/external/anaconda/lib/libgmp.so -DGMPXX_LIBRARIES=/opt/tools/external/anaconda/lib/libgmpxx.so
+** RapidJSON
+   git clone https://github.com/Tencent/rapidjson.git
+   cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/install
+** libarchive
+   wget http://www.libarchive.org/downloads/libarchive-3.5.1.tar.xz
+   ./configure --prefix=$HOME/install
+   make -j 16
+   make install
+
+** sdpb
+   git clone https://github.com/davidsd/sdpb
+   ./waf configure --elemental-dir=$HOME/install --prefix=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --gmpxx-dir=/opt/tools/external/anaconda/
+
+* Running
+  mpirun -n 16 $HOME/install/bin/sdpb --precision=1280 -s inputs/TTTT_small --procsPerNode=16 > $HOME/runs/TTTT_small/`date --iso-8601=minutes -u` 2>&1 &
+  mpirun -n 16 $HOME/install/bin/pvm2sdp 1216 $HOME/inputs/ising.xml $HOME/inputs/ising
+

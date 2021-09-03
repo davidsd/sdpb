@@ -1,0 +1,49 @@
+* Arcus-C
+  module load foss/2020a MPFR/4.0.2-GCCcore-9.3.0 OpenBLAS/0.3.9-GCC-9.3.0 CMake/3.16.4-GCCcore-9.3.0 METIS/5.1.0-GCCcore-9.3.0 Eigen/3.3.7-GCCcore-9.3.0
+
+** Elemental
+   git clone https://gitlab.com/bootstrapcollaboration/elemental.git
+   cmake .. -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DCMAKE_INSTALL_PREFIX=$HOME/arcus_c/install
+   make -j 4
+
+** RapidJSON
+   git clone https://github.com/Tencent/rapidjson.git
+   cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/arcus_c/install
+
+** Boost
+   wget https://boostorg.jfrog.io/artifactory/main/release/1.76.0/source/boost_1_76_0.tar.bz2
+   ./bootstrap.sh --prefix=$HOME/arcus_c/install --without-libraries=python
+   ./b2 --prefix=$HOME/arcus_c/install -j 64
+   ./b2 --prefix=$HOME/arcus_c/install install
+
+** libarchive
+   wget http://www.libarchive.org/downloads/libarchive-3.5.1.tar.xz
+   ./configure --prefix=$HOME/arcus_c/install
+   make -j 4
+   make install
+
+** sdpb
+  git clone https://github.com/davidsd/sdpb
+  ./waf configure --elemental-dir=$HOME/arcus_c/install --rapidjson-dir=$HOME/arcus_c/install --prefix=$HOME/arcus_c/install --boost-dir=$HOME/arcus_c/install --libarchive-dir=$HOME/arcus_c/install
+  # ./waf configure --elemental-dir=$HOME/arcus_c/install --rapidjson-dir=$HOME/arcus_c/install --prefix=$HOME/arcus_c/install --boost-dir=$HOME/arcus_c/install --gmpxx-dir=$HOME/arcus_c/install --mpfr-dir=$HOME/arcus_c/install
+
+** Trilinos
+  git clone --branch trilinos-release-12-12-branch https://github.com/trilinos/Trilinos.git  
+  cmake .. -DCMAKE_CXX_COMPILER=g++ -DCMAKE_Fortran_COMPILER=gfortran -DCMAKE_C_COMPILER=gcc -DTrilinos_ENABLE_Sacado=ON -DTrilinos_ENABLE_Kokkos=OFF -DTrilinos_ENABLE_Teuchos=OFF -DCMAKE_INSTALL_PREFIX=$HOME/arcus_c/install
+
+** scalar_blocks
+  git clone https://gitlab.com/bootstrapcollaboration/scalar_blocks
+  ./waf configure --prefix=$HOME/arcus_c/install --trilinos-dir=$HOME/arcus_c/install --boost-dir=$HOME/arcus_c/install
+  
+** fmt
+  wget https://github.com/fmtlib/fmt/releases/download/6.2.1/fmt-6.2.1.zip
+  cmake .. -DCMAKE_CXX_COMPILER=g++ -DCMAKE_INSTALL_PREFIX=$HOME/arcus_c/install
+
+** blocks_3d
+  git clone https://gitlab.com/bootstrapcollaboration/blocks_3d.git
+  ./waf configure --prefix=$HOME/arcus_c/install --fmt-dir=$HOME/arcus_c/install --fmt-libdir=$HOME/arcus_c/install/lib64 --boost-dir=$HOME/arcus_c/install
+
+* Batch Scripts
+  /home/wlandry/arcus_c/runs/TTTT_small.sh
+  /home/wlandry/arcus_c/runs/scalar_blocks.sh
+  /home/wlandry/arcus_c/runs/blocks_3d.sh

@@ -1,0 +1,69 @@
+* Sherlock
+  CentOS Linux release 7.6.1810 (Core) 
+  Linux sh03-ln07.stanford.edu 3.10.0-957.27.2.el7.x86_64 #1 SMP Mon Jul 29 17:46:05 UTC 2019 x86_64 x86_64 x86_64 GNU/Linux
+* gnu_openmpi
+** module
+   module load openblas/0.3.10 gcc/10.1.0 openmpi/4.0.3 cmake eigen/3.3.3 metis/5.1.0 libxml2/2.9.4
+
+   Module version of gmp does not have c++ bindings
+** boost
+   Available versions are too old or buggy.
+  wget https://dl.bintray.com/boostorg/release/1.74.0/source/boost_1_74_0.tar.bz2
+  tar -jxf boost_1_74_0.tar.bz2 
+  cd boost_1_74_0
+  ./bootstrap.sh --prefix=$HOME/gnu_openmpi/install --without-libraries=python
+  ./b2 --prefix=$HOME/gnu_openmpi/install -j 64
+  ./b2 --prefix=$HOME/gnu_openmpi/install install
+
+** gmp
+  ./configure --enable-cxx --prefix=$HOME/gnu_openmpi/install
+** mpfr
+  wget https://www.mpfr.org/mpfr-current/mpfr-4.1.0.tar.bz2
+  ./configure --with-gmp=$HOME/gnu_openmpi/install --prefix=$HOME/gnu_openmpi/install
+
+** Elemental
+   git clone https://gitlab.com/bootstrapcollaboration/elemental.git
+   cmake .. -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DCMAKE_Fortran_COMPILER=mpif90 -DCMAKE_INSTALL_PREFIX=$HOME/gnu_openmpi/install -DMETIS_INCLUDE_DIR=/share/software/user/open/metis/5.1.0/include -DMETIS_LIBRARY=/share/software/user/open/metis/5.1.0/lib/libmetis.so
+   # Building with too many cores wedges everything
+   make -j 4
+
+** RapidJSON
+   git clone https://github.com/Tencent/rapidjson.git
+   cmake .. -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_INSTALL_PREFIX=$HOME/gnu_openmpi/install
+
+** libxml2
+   development libraries not installed =:O !!!
+   wget ftp://xmlsoft.org/libxml2/libxml2-2.9.10.tar.gz
+
+** libarchive
+   wget http://www.libarchive.org/downloads/libarchive-3.5.1.tar.xz
+   ./configure --prefix=$HOME/gnu_openmpi/install
+   make -j 16
+   make install
+
+** sdpb
+   git clone https://github.com/davidsd/sdpb
+   CXX=mpicxx ./waf configure --prefix=$HOME/gnu_openmpi/install --elemental-dir=$HOME/gnu_openmpi/install --rapidjson-dir=$HOME/gnu_openmpi/install --boost-dir=$HOME/gnu_openmpi/install --gmpxx-dir=$HOME/gnu_openmpi/install --mpfr-dir=$HOME/gnu_openmpi/install --libarchive-dir=$HOME/gnu_openmpi/install
+   # Building with too many cores wedges everything
+   ./waf -j 4
+
+** Trilinos
+   git clone --branch trilinos-release-12-12-branch https://github.com/trilinos/Trilinos.git
+   cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DCMAKE_Fortran_COMPILER=gfortran -DTrilinos_ENABLE_Sacado=ON -DTrilinos_ENABLE_Kokkos=OFF -DTrilinos_ENABLE_Teuchos=OFF -DCMAKE_INSTALL_PREFIX=$HOME/gnu_openmpi/install ..
+
+** scalar_blocks
+   git clone https://gitlab.com/bootstrapcollaboration/scalar_blocks.git
+   ./waf configure --boost-dir=$HOME/gnu_openmpi/install --gmp-dir=$HOME/gnu_openmpi/install --trilinos-dir=$HOME/gnu_openmpi/install --eigen-incdir=/user/open/eigen/3.3.3/include/eigen3 --prefix=$HOME/gnu_openmpi/install
+
+** fmt
+   wget https://github.com/fmtlib/fmt/releases/download/6.2.1/fmt-6.2.1.zip
+   cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_INSTALL_PREFIX=$HOME/gnu_openmpi/install ..
+** blocks_3d
+   git clone https://gitlab.com/bootstrapcollaboration/blocks_3d.git
+   ./waf configure --prefix=$HOME/gnu_openmpi/install --fmt-dir=$HOME/gnu_openmpi/install --fmt-libdir=$HOME/gnu_openmpi/install/lib64 --boost-dir=$HOME/gnu_openmpi/install --eigen-incdir=/user/open/eigen/3.3.3/include/eigen3 --gmp-dir=$HOME/gnu_openmpi/install
+
+
+* Batch Scripts
+  /home/wlandry/arcus_c/runs/TTTT_small.sh
+  /home/wlandry/arcus_c/runs/scalar_blocks.sh
+  /home/wlandry/arcus_c/runs/blocks_3d.sh

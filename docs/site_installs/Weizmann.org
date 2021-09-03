@@ -1,0 +1,95 @@
+These are old instructions, and may no longer work.
+
+* WEXAC
+** module load gcc/8.3.0 cmake
+** Build on access.wexax.weizmann.ac.il
+  Other access[234] machines do not have gmp-dev installed
+** boost
+*** Need to build boost because gcc is not c++14.
+*** Use 1.67.  1.69 has a problem with multiprecision.
+*** ./bootstrap.sh --prefix=$HOME/install
+*** ./b2 --prefix=$HOME/install -j 16
+*** ./b2 --prefix=$HOME/install install
+** module load cmake openblas icompiler/2018 metis
+** Elemental
+*** cmake .. \
+   -DCMAKE_INSTALL_PREFIX=$HOME/install \
+   -DCMAKE_CXX_COMPILER=mpicxx \
+   -DCMAKE_C_COMPILER=mpicc \
+   -DOpenBLAS=/apps/RH7U2/gnu/OpenBLAS/0.2.20/lib/libopenblas.so \
+   -DMETIS_INCLUDE_DIR=/apps/RH7U2/intel/metis/5.1.0/include \
+   -DMETIS_LIBRARY=/apps/RH7U2/intel/metis/5.1.0/lib/libmetis.so
+** sdpb
+*** ./waf configure --prefix=$HOME/install --elemental-dir=$HOME/install --boost-dir=$HOME/install
+
+
+
+** scalar_blocks
+*** module load gcc/8.3.0 cmake eigen
+*** trilinos
+   export CC=gcc
+   export CXX=g++
+   # Otherwise trilinos will use /usr/bin/cc
+   cmake -DTrilinos_ENABLE_Sacado=ON -DTrilinos_ENABLE_Kokkos=OFF -DTrilinos_ENABLE_Teuchos=OFF -DCMAKE_INSTALL_PREFIX=$HOME/install ..
+*** configure
+   ./waf configure --boost-dir=$HOME/install --trilinos-dir=$HOME/install --eigen-incdir=/apps/RH7U2/general/eigen/3.3.0/include --prefix=$HOME/install
+
+
+* Atlas
+** Build gcc
+   tar -zxf gcc-8.3.0.tar.gz
+   cd gcc-8.3.0
+   ./contrib/download_prerequisites
+   mkdir build
+   cd build
+   ../configure --prefix=/srv01/tgrp/landry/install --disable-multilib
+   make -j 16
+   make install
+
+** export PATH=$HOME/install/bin:$PATH
+   export LD_LIBRARY_PATH=$HOME/install/lib64
+
+** openmpi
+   https://download.open-mpi.org/release/open-mpi/v4.0/openmpi-4.0.1.tar.bz2
+   ./configure --prefix=$HOME/install
+
+** gmp
+   gmp is too old 
+   https://gmplib.org/download/gmp/gmp-6.1.2.tar.lz
+  ./configure --enable-cxx --prefix=$HOME/install
+
+** mpfr
+   https://www.mpfr.org/mpfr-current/mpfr-4.0.2.tar.xz
+  ./configure --with-gmp=$HOME/install --prefix=$HOME/install
+
+** boost
+   Need to set flags to get new versions of gmp and mpfr
+  ./bootstrap.sh --prefix=/srv01/tgrp/landry/install
+  ./b2 --prefix=/srv01/tgrp/landry/install -j 16 --reconfigure include="/srv01/tgrp/landry/install/include" linkflags="-L/srv01/tgrp/landry/install/lib"
+  ./b2 --prefix=/srv01/tgrp/landry/install -j 16 include="/srv01/tgrp/landry/install/include" linkflags="-L/srv01/tgrp/landry/install/lib" install
+
+** elemental
+   cmake .. -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DCMAKE_INSTALL_PREFIX=$HOME/install -DGMP_INCLUDES=$HOME/install/include -DGMP_LIBRARIES=$HOME/install/lib/libgmp.so.10.3.2 -DGMPXX_INCLUDES=$HOME/install/include -DGMPXX_LIBRARIES=$HOME/install/lib/libgmpxx.so.4.5.2
+   make -j 16
+   make install
+
+** sdpb
+   python3 ./waf configure --elemental-dir=$HOME/install --boost-dir=$HOME/install --gmpxx-dir=$HOME/install --mpfr-dir=$HOME/install --prefix=$HOME/install
+   python3 ./waf 
+   python3 ./waf install
+
+** eigen
+   # Otherwise eigen and trilinos will use /usr/bin/cc
+   export CC=gcc
+   export CXX=g++
+   mkdir build
+   cd build
+   cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/install
+   make
+   make install
+** Trilinos
+   # Otherwise trilinos will use /usr/bin/cc
+   cmake -DTrilinos_ENABLE_Sacado=ON -DTrilinos_ENABLE_Kokkos=OFF -DTrilinos_ENABLE_Teuchos=OFF -DCMAKE_INSTALL_PREFIX=$HOME/install ..
+
+** scalar_blocks
+   python3 ./waf configure --boost-dir=$HOME/install --trilinos-dir=$HOME/install --eigen-incdir=$HOME/install/include/eigen3 --prefix=$HOME/install
