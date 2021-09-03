@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "Cite these papers if you want to reference the general concepts of the software."
+message: "Cite both this paper and 'Scaling the semidefinite program solver SDPB' if you want to reference the general concepts of the software."
 preferred-citation:
   type: article
   authors:
@@ -10,5 +10,90 @@ preferred-citation:
   pages: 174
   year: 2015
   volume: 06
+  identifiers:
+    - type: other
+      value: "arXiv:1502.02033"
   doi: "10.1007/JHEP06(2015)174"
 
+references:
+  - authors:
+      - family-name: "Landry"
+        given-names: "Walter"
+      - family-name: "Simmons-Duffin"
+        given-names: "David"
+    type: article
+    title: "Scaling the semidefinite program solver SDPB"
+    identifiers:
+      - type: other
+        value: "arXiv:1909.09745"
+    scope: "Cite these papers if you want to reference the general concepts of the software."
+  - authors:
+      - family-name: "Poland"
+        given-names: "David"
+      - family-name: "Simmons-Duffin"
+        given-names: "David"
+      - family-name: "Vichi"
+        given-names: "Alessandro"
+    title: "Carving Out the Space of 4D CFTs"
+    type: article
+    journal: "JHEP"
+    pages: 110
+    year: 2012
+    volume: 05
+    scope: "The first use of semidefinite programming in the bootstrap:."
+    identifiers:
+      - type: other
+        value: "arXiv:1109.5176"
+  - authors:
+      - family-name: "Kos"
+        given-names: "Filip"
+      - family-name: "Poland"
+        given-names: "David"
+      - family-name: "Simmons-Duffin"
+        given-names: "David"
+    title: "Bootstrapping the O(N) Vector Models"
+    type: article
+    journal: "JHEP"
+    pages: 091
+    year: 2014
+    volume: 06
+    scope: "The generalization of semidefinite programming methods to arbitrary spacetime dimension."
+    identifiers:
+      - type: other
+        value: "arXiv:1307.6856"
+  - authors:
+      - family-name: "Kos"
+        given-names: "Filip"
+      - family-name: "Poland"
+        given-names: "David"
+      - family-name: "Simmons-Duffin"
+        given-names: "David"
+    title: "Bootstrapping Mixed Correlators in the 3D Ising Model"
+    type: article
+    journal: "JHEP"
+    pages: 109
+    year: 2014
+    volume: 11
+    scope: "The generalization of semidefinite programming methods to arbitrary systems of correlation functions."
+    identifiers:
+      - type: other
+        value: "arXiv:1406.4858"
+  - authors:
+      - family-name: "Reehorst"
+        given-names: "Marten"
+      - family-name: "Rychkov"
+        given-names: "Slava"
+      - family-name: "Simmons-Duffin"
+        given-names: "David"
+      - family-name: "Sirois"
+        given-names: "Benoit"
+      - family-name: "Su"
+        given-names: "Ning"
+      - family-name: "van Rees"
+        given-names: "Balt"
+    title: "Navigator Function for the Conformal Bootstrap"
+    type: article
+    scope: "The derivation of the approximation to the objective."
+    identifiers:
+      - type: other
+        value: "arXiv:2104.09518"
