@@ -1,22 +1,14 @@
 cff-version: 1.2.0
 message: "Cite these papers if you want to reference the general concepts of the software."
 preferred-citation:
-  - authors:
-      - family-name: "Simmons-Duffin"
-        given-names: "David"
+  type: article
+  authors:
+    - family-name: "Simmons-Duffin"
+      given-names: "David"
   title: "A Semidefinite Program Solver for the Conformal Bootstrap"
   journal: "JHEP"
   pages: 174
   year: 2015
   volume: 06
   doi: "10.1007/JHEP06(2015)174"
-  title: SDPB
-  - authors:
-      - family-name: "Landry"
-        given-names: "Walter"
-      - family-name: "Simmons-Duffin"
-        given-names: "David"
-    title: "Scaling the semidefinite program solver SDPB"
-    identifiers:
-      - type: other
-        value: "arXiv:1909.09745"
+references:
