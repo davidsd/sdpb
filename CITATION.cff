@@ -1,5 +1,12 @@
 cff-version: 1.1.0
 message: "Please cite both 1502.02033 and 1909.09745 for the general concepts of the software."
+authors:
+  - family-name: "Simmons-Duffin"
+    given-names: "David"
+  - family-name: "Landry"
+    given-names: "Walter"
+date-released: "2021-06-23"
+version: "2.5.0"
 title: SDPB
 references:
   - authors:
