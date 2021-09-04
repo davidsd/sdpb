@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "Cite both this paper and 'Scaling the semidefinite program solver SDPB' if you want to reference the general concepts of the software."
+message: "Please cite both 1502.02033 and 1909.09745 for the general concepts of the software."
 title: SDPB
 references:
   - authors:
