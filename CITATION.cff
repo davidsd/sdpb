@@ -1,16 +1,16 @@
 cff-version: 1.1.0
 message: "Please cite both 1502.02033 and 1909.09745 for the general concepts of the software."
 authors:
-  - family-name: "Simmons-Duffin"
+  - family-names: "Simmons-Duffin"
     given-names: "David"
-  - family-name: "Landry"
+  - family-names: "Landry"
     given-names: "Walter"
 date-released: "2021-06-23"
 version: "2.5.0"
 title: SDPB
 references:
   - authors:
-      - family-name: "Simmons-Duffin"
+      - family-names: "Simmons-Duffin"
         given-names: "David"
     type: article
     title: "A Semidefinite Program Solver for the Conformal Bootstrap"
@@ -24,9 +24,9 @@ references:
     doi: "10.1007/JHEP06(2015)174"
     scope: "Cite these two papers if you want to reference the general concepts of the software."
   - authors:
-      - family-name: "Landry"
+      - family-names: "Landry"
         given-names: "Walter"
-      - family-name: "Simmons-Duffin"
+      - family-names: "Simmons-Duffin"
         given-names: "David"
     type: article
     title: "Scaling the semidefinite program solver SDPB"
@@ -35,11 +35,11 @@ references:
         value: "arXiv:1909.09745"
     scope: "Cite these two papers if you want to reference the general concepts of the software."
   - authors:
-      - family-name: "Poland"
+      - family-names: "Poland"
         given-names: "David"
-      - family-name: "Simmons-Duffin"
+      - family-names: "Simmons-Duffin"
         given-names: "David"
-      - family-name: "Vichi"
+      - family-names: "Vichi"
         given-names: "Alessandro"
     title: "Carving Out the Space of 4D CFTs"
     type: article
@@ -52,11 +52,11 @@ references:
       - type: other
         value: "arXiv:1109.5176"
   - authors:
-      - family-name: "Kos"
+      - family-names: "Kos"
         given-names: "Filip"
-      - family-name: "Poland"
+      - family-names: "Poland"
         given-names: "David"
-      - family-name: "Simmons-Duffin"
+      - family-names: "Simmons-Duffin"
         given-names: "David"
     title: "Bootstrapping the O(N) Vector Models"
     type: article
@@ -69,11 +69,11 @@ references:
       - type: other
         value: "arXiv:1307.6856"
   - authors:
-      - family-name: "Kos"
+      - family-names: "Kos"
         given-names: "Filip"
-      - family-name: "Poland"
+      - family-names: "Poland"
         given-names: "David"
-      - family-name: "Simmons-Duffin"
+      - family-names: "Simmons-Duffin"
         given-names: "David"
     title: "Bootstrapping Mixed Correlators in the 3D Ising Model"
     type: article
@@ -86,17 +86,17 @@ references:
       - type: other
         value: "arXiv:1406.4858"
   - authors:
-      - family-name: "Reehorst"
+      - family-names: "Reehorst"
         given-names: "Marten"
-      - family-name: "Rychkov"
+      - family-names: "Rychkov"
         given-names: "Slava"
-      - family-name: "Simmons-Duffin"
+      - family-names: "Simmons-Duffin"
         given-names: "David"
-      - family-name: "Sirois"
+      - family-names: "Sirois"
         given-names: "Benoit"
-      - family-name: "Su"
+      - family-names: "Su"
         given-names: "Ning"
-      - family-name: "van Rees"
+      - family-names: "van Rees"
         given-names: "Balt"
     title: "Navigator Function for the Conformal Bootstrap"
     type: article
