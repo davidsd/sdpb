@@ -56,8 +56,8 @@ int main(int argc, char **argv)
             std::vector<Polynomial_Vector_Matrix> matrices;
             size_t num_blocks(0);
             read_pvm_input({input_path}, objectives, matrices, num_blocks);
-            El::Matrix<El::BigFloat> y(
-              read_y(solution_dir, objectives.size() - 1));
+            El::Matrix<El::BigFloat> y(objectives.size() - 1,1);
+            read_text_block(y, solution_dir / "y.txt");
             std::vector<El::Matrix<El::BigFloat>> x(
               read_x(solution_dir, matrices));
             const std::vector<std::vector<El::BigFloat>> zeros(
@@ -69,8 +69,8 @@ int main(int argc, char **argv)
             std::vector<El::BigFloat> objectives, normalization;
             std::vector<Positive_Matrix_With_Prefactor> matrices;
             read_input(input_path, objectives, normalization, matrices);
-            El::Matrix<El::BigFloat> y(
-              read_y(solution_dir / "y.txt", objectives.size() - 1));
+            El::Matrix<El::BigFloat> y(objectives.size() - 1,1);
+            read_text_block(y, solution_dir / "y.txt");
             std::vector<El::Matrix<El::BigFloat>> x(
               read_x(solution_dir, matrices));
             const std::vector<std::vector<El::BigFloat>> zeros(

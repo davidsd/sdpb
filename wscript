@@ -78,7 +78,6 @@ def build(bld):
                        'src/sdp_solve/SDP_Solver/run/step/step_length/lower_triangular_inverse_congruence.cxx',
                        'src/sdp_solve/SDP_Solver_Terminate_Reason/ostream.cxx',
                        'src/sdp_solve/lower_triangular_transpose_solve.cxx',
-                       'src/sdp_solve/read_text_block.cxx',
                        'src/sdp_solve/Block_Diagonal_Matrix/ostream.cxx',
                        'src/sdp_solve/Write_Solution.cxx']
 
@@ -276,7 +275,6 @@ def build(bld):
     bld.program(source=['src/spectrum/main.cxx',
                         'src/spectrum/handle_arguments.cxx',
                         'src/spectrum/read_x.cxx',
-                        'src/spectrum/read_y.cxx',
                         'src/spectrum/compute_spectrum_pmp.cxx',
                         'src/spectrum/compute_spectrum_pvm.cxx',
                         'src/spectrum/compute_lambda.cxx',

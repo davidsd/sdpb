@@ -11,11 +11,9 @@ read_x(const boost::filesystem::path &solution_dir,
   for(size_t block_index(0); block_index != matrices.size(); ++block_index)
     {
       auto &m(matrices[block_index]);
-      El::DistMatrix<El::BigFloat> block(
-        m.sample_points.size() * m.rows * (m.rows + 1) / 2, 1);
-      read_text_block(block, solution_dir, "x_", block_index);
-      El::DistMatrix<El::BigFloat, El::STAR, El::STAR> x_star(block);
-      result.emplace_back(x_star.LockedMatrix());
+      result.emplace_back(m.sample_points.size() * m.rows * (m.rows + 1) / 2,
+                          1);
+      read_text_block(result.back(), solution_dir, "x_", block_index);
     }
   return result;
 }
@@ -42,13 +40,10 @@ read_x(const boost::filesystem::path &solution_path,
         return result;
       }());
 
-      El::DistMatrix<El::BigFloat> block((max_degree + 1)
-                                           * m.polynomials.size()
-                                           * (m.polynomials.size() + 1) / 2,
-                                         1);
-      read_text_block(block, solution_path, "x_", block_index);
-      El::DistMatrix<El::BigFloat, El::STAR, El::STAR> x_star(block);
-      result.emplace_back(x_star.LockedMatrix());
+      result.emplace_back((max_degree + 1) * m.polynomials.size()
+                            * (m.polynomials.size() + 1) / 2,
+                          1);
+      read_text_block(result.back(), solution_path, "x_", block_index);
     }
   return result;
 }
