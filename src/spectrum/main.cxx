@@ -1,4 +1,5 @@
 #include "Format.hxx"
+#include "Zeros.hxx"
 #include "../sdp_read.hxx"
 #include "../sdp_convert.hxx"
 #include "../sdp_solve.hxx"
@@ -9,7 +10,7 @@
 void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
                       Format &format, boost::filesystem::path &input_path,
                       boost::filesystem::path &solution_path,
-                      boost::filesystem::path &output_path);
+                      boost::filesystem::path &output_path, bool &need_lambda);
 
 std::vector<El::Matrix<El::BigFloat>>
 read_x(const boost::filesystem::path &solution_path,
@@ -23,19 +24,19 @@ El::Matrix<El::BigFloat>
 read_y(const boost::filesystem::path &solution_path, const size_t &y_height);
 
 void write_spectrum(const boost::filesystem::path &output_path,
-                    const std::vector<std::vector<El::BigFloat>> &zeros);
+                    const std::vector<Zeros> &zeros);
 
-std::vector<std::vector<El::BigFloat>> compute_spectrum_pmp(
+std::vector<Zeros> compute_spectrum_pmp(
   const std::vector<El::BigFloat> &normalization,
   const El::Matrix<El::BigFloat> &y,
   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
-  const El::BigFloat &threshold);
+  const El::BigFloat &threshold, const bool &need_lambda);
 
-std::vector<std::vector<El::BigFloat>>
+std::vector<Zeros>
 compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
                      const std::vector<Polynomial_Vector_Matrix> &matrices,
                      const std::vector<El::Matrix<El::BigFloat>> &x,
-                     const El::BigFloat &threshold);
+                     const El::BigFloat &threshold, const bool &need_lambda);
 
 int main(int argc, char **argv)
 {
@@ -46,8 +47,9 @@ int main(int argc, char **argv)
       El::BigFloat threshold;
       Format format;
       boost::filesystem::path input_path, solution_dir, output_path;
+      bool need_lambda;
       handle_arguments(argc, argv, threshold, format, input_path, solution_dir,
-                       output_path);
+                       output_path, need_lambda);
 
       switch(format)
         {
@@ -56,26 +58,26 @@ int main(int argc, char **argv)
             std::vector<Polynomial_Vector_Matrix> matrices;
             size_t num_blocks(0);
             read_pvm_input({input_path}, objectives, matrices, num_blocks);
-            El::Matrix<El::BigFloat> y(objectives.size() - 1,1);
+            El::Matrix<El::BigFloat> y(objectives.size() - 1, 1);
             read_text_block(y, solution_dir / "y.txt");
             std::vector<El::Matrix<El::BigFloat>> x(
               read_x(solution_dir, matrices));
-            const std::vector<std::vector<El::BigFloat>> zeros(
-              compute_spectrum_pvm(y, matrices, x, threshold));
-            write_spectrum(output_path, zeros);
+            const std::vector<Zeros> zeros_blocks(
+              compute_spectrum_pvm(y, matrices, x, threshold, need_lambda));
+            write_spectrum(output_path, zeros_blocks);
           }
           break;
           case Format::Positive_Matrix_with_Prefactor: {
             std::vector<El::BigFloat> objectives, normalization;
             std::vector<Positive_Matrix_With_Prefactor> matrices;
             read_input(input_path, objectives, normalization, matrices);
-            El::Matrix<El::BigFloat> y(objectives.size() - 1,1);
+            El::Matrix<El::BigFloat> y(objectives.size() - 1, 1);
             read_text_block(y, solution_dir / "y.txt");
             std::vector<El::Matrix<El::BigFloat>> x(
               read_x(solution_dir, matrices));
-            const std::vector<std::vector<El::BigFloat>> zeros(
-              compute_spectrum_pmp(normalization, y, matrices, threshold));
-            write_spectrum(output_path, zeros);
+            const std::vector<Zeros> zeros_blocks(compute_spectrum_pmp(
+              normalization, y, matrices, threshold, need_lambda));
+            write_spectrum(output_path, zeros_blocks);
           }
           break;
         default: throw std::runtime_error("INTERNAL ERROR");

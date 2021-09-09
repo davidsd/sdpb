@@ -1,5 +1,6 @@
 #include "eval_summed.hxx"
 #include "get_zeros.hxx"
+#include "Zeros.hxx"
 #include "../sdp_read.hxx"
 #include "../sdp_convert/write_vector.hxx"
 #include "../Mesh.hxx"
@@ -8,14 +9,14 @@
 
 void compute_lambda(const Polynomial_Vector_Matrix &m,
                     const El::Matrix<El::BigFloat> &x,
-                    const std::vector<El::BigFloat> &zeros,
-                    El::Matrix<El::BigFloat> &lambda);
+                    Zeros &zeros);
 
-std::vector<std::vector<El::BigFloat>>
+std::vector<Zeros>
 compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
                      const std::vector<Polynomial_Vector_Matrix> &matrices,
                      const std::vector<El::Matrix<El::BigFloat>> &x,
-                     const El::BigFloat &threshold)
+                     const El::BigFloat &threshold,
+                     const bool &need_lambda)
 {
   // pvm2sdp implicitly uses the first element as the normalized column
   std::vector<El::BigFloat> normalization(y.Height() + 1, 0);
@@ -25,7 +26,7 @@ compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
   fill_weights(y, max_index, normalization, weights);
 
   const El::BigFloat zero(0);
-  std::vector<std::vector<El::BigFloat>> zeros(matrices.size());
+  std::vector<Zeros> zeros_blocks(matrices.size());
   const size_t rank(El::mpi::Rank()), num_procs(El::mpi::Size());
   for(size_t block_index(rank); block_index < matrices.size();
       block_index += num_procs)
@@ -82,10 +83,13 @@ compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
           return eval_summed(summed_polynomials, point);
         },
         (1.0 / 128), block_epsilon);
-      zeros.at(block_index) = get_zeros(mesh, threshold);
 
-      El::Matrix<El::BigFloat> lambda;
-      compute_lambda(block, x.at(block_index), zeros.at(block_index), lambda);
+      auto &zeros(zeros_blocks.at(block_index));
+      zeros.zeros=get_zeros(mesh, threshold);
+      if(need_lambda)
+        {
+          compute_lambda(block, x.at(block_index), zeros);
+        }
     }
-  return zeros;
+  return zeros_blocks;
 }

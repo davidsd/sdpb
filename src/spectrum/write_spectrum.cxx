@@ -1,37 +1,36 @@
+#include "Zeros.hxx"
 #include "../set_stream_precision.hxx"
-
-#include <El.hpp>
 
 #include <boost/filesystem.hpp>
 
 void write_spectrum(const boost::filesystem::path &output_path,
-                    const std::vector<std::vector<El::BigFloat>> &zeros)
+                    const std::vector<Zeros> &zeros_blocks)
 {
   // Synchronize zeros
   // This is waaaay more work than it should be.
-  std::vector<int32_t> sizes(zeros.size(), 0);
-  for(size_t index(0); index != zeros.size(); ++index)
+  std::vector<int32_t> sizes(zeros_blocks.size(), 0);
+  for(size_t index(0); index != zeros_blocks.size(); ++index)
     {
-      sizes.at(index) = zeros.at(index).size();
+      sizes.at(index) = zeros_blocks.at(index).zeros.size();
     }
   El::mpi::AllReduce(sizes.data(), sizes.size(), El::mpi::MAX,
                      El::mpi::COMM_WORLD);
   const int64_t num_elements(std::accumulate(sizes.begin(), sizes.end(), 0));
   std::vector<El::BigFloat> zero_flattened;
   zero_flattened.reserve(num_elements);
-  for(size_t block_index(0); block_index != zeros.size(); ++block_index)
+  for(size_t block_index(0); block_index != zeros_blocks.size(); ++block_index)
     {
       for(int32_t zero_index(0); zero_index != sizes[block_index];
           ++zero_index)
         {
-          if(zeros.at(block_index).empty())
+          if(zeros_blocks.at(block_index).zeros.empty())
             {
               zero_flattened.emplace_back(0);
             }
           else
             {
               zero_flattened.emplace_back(
-                zeros.at(block_index).at(zero_index));
+                zeros_blocks.at(block_index).zeros.at(zero_index));
             }
         }
     }

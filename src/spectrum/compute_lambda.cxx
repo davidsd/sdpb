@@ -1,19 +1,19 @@
+#include "Zeros.hxx"
 #include "../sdp_convert.hxx"
 
 void compute_lambda(const Polynomial_Vector_Matrix &m,
                     const El::Matrix<El::BigFloat> &x,
-                    const std::vector<El::BigFloat> &zeros,
-                    El::Matrix<El::BigFloat> &lambda)
+                    Zeros &zeros)
 {
-  if(zeros.empty())
+  if(zeros.zeros.empty())
     {
       return;
     }
-  El::Matrix<El::BigFloat> interpolation(m.sample_points.size(), zeros.size());
+  El::Matrix<El::BigFloat> interpolation(m.sample_points.size(), zeros.zeros.size());
   for(size_t point_index(0); point_index != m.sample_points.size();
       ++point_index)
     {
-      for(size_t zero_index(0); zero_index != zeros.size(); ++zero_index)
+      for(size_t zero_index(0); zero_index != zeros.zeros.size(); ++zero_index)
         {
           auto &product(interpolation(point_index, zero_index));
           product = 1;
@@ -23,7 +23,7 @@ void compute_lambda(const Polynomial_Vector_Matrix &m,
             {
               if(point_index != point_product_index)
                 {
-                  product *= (zeros[zero_index]
+                  product *= (zeros.zeros[zero_index]
                               - m.sample_points[point_product_index])
                              / (m.sample_points[point_index]
                                 - m.sample_points[point_product_index]);
@@ -65,9 +65,9 @@ void compute_lambda(const Polynomial_Vector_Matrix &m,
   const size_t num_eigvals(eigenvalues.Height());
   if(eigenvalues(num_eigvals - 1, 0) >= 0)
     {
-      lambda = El::View(eigenvectors, 0, num_eigvals - 1, num_eigvals, 1);
-      lambda *= El::Sqrt(eigenvalues(num_eigvals - 1, 0));
+      zeros.lambda = El::View(eigenvectors, 0, num_eigvals - 1, num_eigvals, 1);
+      zeros.lambda *= El::Sqrt(eigenvalues(num_eigvals - 1, 0));
     }
-  El::Print(lambda, "lambda");
+  El::Print(zeros.lambda, "lambda");
   std::cout << "\n";
 }
