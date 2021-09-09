@@ -11,6 +11,17 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
                       boost::filesystem::path &solution_path,
                       boost::filesystem::path &output_path);
 
+std::vector<El::Matrix<El::BigFloat>>
+read_x(const boost::filesystem::path &solution_path,
+       const std::vector<Polynomial_Vector_Matrix> &matrices);
+
+std::vector<El::Matrix<El::BigFloat>>
+read_x(const boost::filesystem::path &solution_path,
+       const std::vector<Positive_Matrix_With_Prefactor> &matrices);
+
+El::Matrix<El::BigFloat>
+read_y(const boost::filesystem::path &solution_path, const size_t &y_height);
+
 void write_spectrum(const boost::filesystem::path &output_path,
                     const std::vector<std::vector<El::BigFloat>> &zeros);
 
@@ -23,6 +34,7 @@ std::vector<std::vector<El::BigFloat>> compute_spectrum_pmp(
 std::vector<std::vector<El::BigFloat>>
 compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
                      const std::vector<Polynomial_Vector_Matrix> &matrices,
+                     const std::vector<El::Matrix<El::BigFloat>> &x,
                      const El::BigFloat &threshold);
 
 int main(int argc, char **argv)
@@ -33,9 +45,9 @@ int main(int argc, char **argv)
     {
       El::BigFloat threshold;
       Format format;
-      boost::filesystem::path input_path, solution_path, output_path;
-      handle_arguments(argc, argv, threshold, format, input_path,
-                       solution_path, output_path);
+      boost::filesystem::path input_path, solution_dir, output_path;
+      handle_arguments(argc, argv, threshold, format, input_path, solution_dir,
+                       output_path);
 
       switch(format)
         {
@@ -44,12 +56,12 @@ int main(int argc, char **argv)
             std::vector<Polynomial_Vector_Matrix> matrices;
             size_t num_blocks(0);
             read_pvm_input({input_path}, objectives, matrices, num_blocks);
-            El::DistMatrix<El::BigFloat> y_dist(objectives.size() - 1, 1);
-            read_text_block(y_dist, solution_path);
-            El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(y_dist);
+            El::Matrix<El::BigFloat> y(
+              read_y(solution_dir, objectives.size() - 1));
+            std::vector<El::Matrix<El::BigFloat>> x(
+              read_x(solution_dir, matrices));
             const std::vector<std::vector<El::BigFloat>> zeros(
-              compute_spectrum_pvm(y_star.LockedMatrix(), matrices,
-                                   threshold));
+              compute_spectrum_pvm(y, matrices, x, threshold));
             write_spectrum(output_path, zeros);
           }
           break;
@@ -57,12 +69,12 @@ int main(int argc, char **argv)
             std::vector<El::BigFloat> objectives, normalization;
             std::vector<Positive_Matrix_With_Prefactor> matrices;
             read_input(input_path, objectives, normalization, matrices);
-            El::DistMatrix<El::BigFloat> y_dist(normalization.size() - 1, 1);
-            read_text_block(y_dist, solution_path);
-            El::DistMatrix<El::BigFloat, El::STAR, El::STAR> y_star(y_dist);
+            El::Matrix<El::BigFloat> y(
+              read_y(solution_dir / "y.txt", objectives.size() - 1));
+            std::vector<El::Matrix<El::BigFloat>> x(
+              read_x(solution_dir, matrices));
             const std::vector<std::vector<El::BigFloat>> zeros(
-              compute_spectrum_pmp(normalization, y_star.LockedMatrix(),
-                                   matrices, threshold));
+              compute_spectrum_pmp(normalization, y, matrices, threshold));
             write_spectrum(output_path, zeros);
           }
           break;

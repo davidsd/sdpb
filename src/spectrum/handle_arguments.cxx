@@ -8,7 +8,7 @@
 
 void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
                       Format &format, boost::filesystem::path &input_path,
-                      boost::filesystem::path &solution_path,
+                      boost::filesystem::path &solution_dir,
                       boost::filesystem::path &output_path)
 {
   int precision;
@@ -22,8 +22,8 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
     "input,i", po::value<boost::filesystem::path>(&input_path)->required(),
     "Mathematica, JSON, or NSV file with SDP definition");
   options.add_options()(
-    "solution", po::value<boost::filesystem::path>(&solution_path)->required(),
-    "SDPB output file containing the solution for y (e.g. 'y.txt')");
+    "solution", po::value<boost::filesystem::path>(&solution_dir)->required(),
+    "SDPB output directory containing the solutions for y and x (e.g. 'y.txt')");
   options.add_options()(
     "threshold", po::value<std::string>(&threshold_string)->required(),
     "Threshold for when a functional is considered to be zero.");
@@ -64,15 +64,10 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
       throw std::runtime_error("Input file '" + input_path.string()
                                + "' is a directory, not a file");
     }
-  if(!boost::filesystem::exists(solution_path))
+  if(!boost::filesystem::exists(solution_dir))
     {
-      throw std::runtime_error("Solution file '" + solution_path.string()
+      throw std::runtime_error("Solution file '" + solution_dir.string()
                                + "' does not exist");
-    }
-  if(boost::filesystem::is_directory(solution_path))
-    {
-      throw std::runtime_error("Solution file '" + solution_path.string()
-                               + "' is a directory, not a file");
     }
 
   if(output_path.filename_is_dot())

@@ -275,8 +275,11 @@ def build(bld):
 
     bld.program(source=['src/spectrum/main.cxx',
                         'src/spectrum/handle_arguments.cxx',
+                        'src/spectrum/read_x.cxx',
+                        'src/spectrum/read_y.cxx',
                         'src/spectrum/compute_spectrum_pmp.cxx',
                         'src/spectrum/compute_spectrum_pvm.cxx',
+                        'src/spectrum/compute_lambda.cxx',
                         'src/spectrum/eval_summed.cxx',
                         'src/spectrum/get_zeros.cxx',
                         'src/spectrum/write_spectrum.cxx'],

@@ -6,9 +6,15 @@
 #include "../max_normalization_index.hxx"
 #include "../fill_weights.hxx"
 
+void compute_lambda(const Polynomial_Vector_Matrix &m,
+                    const El::Matrix<El::BigFloat> &x,
+                    const std::vector<El::BigFloat> &zeros,
+                    El::Matrix<El::BigFloat> &lambda);
+
 std::vector<std::vector<El::BigFloat>>
 compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
                      const std::vector<Polynomial_Vector_Matrix> &matrices,
+                     const std::vector<El::Matrix<El::BigFloat>> &x,
                      const El::BigFloat &threshold)
 {
   // pvm2sdp implicitly uses the first element as the normalized column
@@ -72,11 +78,14 @@ compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
       // work
       Mesh mesh(
         zero, max_delta,
-        [&](const El::BigFloat &x) {
-          return eval_summed(summed_polynomials, x);
+        [&](const El::BigFloat &point) {
+          return eval_summed(summed_polynomials, point);
         },
         (1.0 / 128), block_epsilon);
       zeros.at(block_index) = get_zeros(mesh, threshold);
+
+      El::Matrix<El::BigFloat> lambda;
+      compute_lambda(block, x.at(block_index), zeros.at(block_index), lambda);
     }
   return zeros;
 }
