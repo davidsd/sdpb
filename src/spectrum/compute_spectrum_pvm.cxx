@@ -1,6 +1,7 @@
 #include "eval_summed.hxx"
 #include "get_zeros.hxx"
 #include "Zeros.hxx"
+#include "is_origin_zero.hxx"
 #include "../sdp_read.hxx"
 #include "../sdp_convert/write_vector.hxx"
 #include "../Mesh.hxx"
@@ -86,10 +87,18 @@ compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
 
       auto &zeros(zeros_blocks.at(block_index));
       zeros.zeros=get_zeros(mesh, threshold);
+      if(is_origin_zero(mesh, threshold))
+        {
+          // Push to the front to keep the zeros ordered
+          zeros.zeros.push_front(0.0);
+        }
+      // std::cout << "zeros: "
+      //           << zeros.zeros << "\n";
       if(need_lambda)
         {
           compute_lambda(block, x.at(block_index), zeros);
         }
+      break;
     }
   return zeros_blocks;
 }

@@ -1,5 +1,7 @@
 #include "../Mesh.hxx"
 
+#include <deque>
+
 namespace
 {
   void
@@ -7,7 +9,7 @@ namespace
                   const El::BigFloat &x_plus, const El::BigFloat &f_x_minus,
                   const El::BigFloat &f_x_bar, const El::BigFloat &f_x_plus,
                   const El::BigFloat &threshold,
-                  std::vector<El::BigFloat> &points)
+                  std::deque<El::BigFloat> &points)
   {
     const El::BigFloat dx(x_plus - x_minus);
     const El::BigFloat a(f_x_bar), b((f_x_plus - f_x_minus) / dx),
@@ -17,8 +19,9 @@ namespace
       {
         const El::BigFloat x_min(-b / c + x_bar);
         const El::BigFloat f_x_min(a - b * b / (2 * c));
-        if(x_min >= x_minus && x_min <= x_plus
-           && f_x_min < threshold)
+        // This checks if x_min is inside this submesh and
+        // f(x_min) < threshold * f''(x_min)
+        if(x_min >= x_minus && x_min <= x_plus && f_x_min < c * threshold)
           {
             points.push_back(x_min);
           }
@@ -26,9 +29,10 @@ namespace
   }
 }
 
-std::vector<El::BigFloat> get_zeros(const Mesh &mesh, const El::BigFloat &threshold)
+std::deque<El::BigFloat>
+get_zeros(const Mesh &mesh, const El::BigFloat &threshold)
 {
-  std::vector<El::BigFloat> result;
+  std::deque<El::BigFloat> result;
   if(mesh.lower)
     {
       for(auto &point : get_zeros(*(mesh.lower), threshold))

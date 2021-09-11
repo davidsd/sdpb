@@ -280,6 +280,7 @@ def build(bld):
                         'src/spectrum/compute_lambda.cxx',
                         'src/spectrum/eval_summed.cxx',
                         'src/spectrum/get_zeros.cxx',
+                        'src/spectrum/is_origin_zero.cxx',
                         'src/spectrum/write_spectrum.cxx'],
                 target='spectrum',
                 cxxflags=default_flags,

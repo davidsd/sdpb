@@ -2,8 +2,10 @@
 
 #include <El.hpp>
 
+#include <deque>
+
 struct Zeros
 {
-  std::vector<El::BigFloat> zeros;
+  std::deque<El::BigFloat> zeros;
   El::Matrix<El::BigFloat> lambda, error;
 };
