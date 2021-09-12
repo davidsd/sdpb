@@ -1,7 +1,5 @@
 #include "../Mesh.hxx"
 
-#include <deque>
-
 namespace
 {
   void
@@ -9,7 +7,7 @@ namespace
                   const El::BigFloat &x_plus, const El::BigFloat &f_x_minus,
                   const El::BigFloat &f_x_bar, const El::BigFloat &f_x_plus,
                   const El::BigFloat &threshold,
-                  std::deque<El::BigFloat> &points)
+                  std::vector<El::BigFloat> &points)
   {
     const El::BigFloat dx(x_plus - x_minus);
     const El::BigFloat a(f_x_bar), b((f_x_plus - f_x_minus) / dx),
@@ -29,10 +27,10 @@ namespace
   }
 }
 
-std::deque<El::BigFloat>
+std::vector<El::BigFloat>
 get_zeros(const Mesh &mesh, const El::BigFloat &threshold)
 {
-  std::deque<El::BigFloat> result;
+  std::vector<El::BigFloat> result;
   if(mesh.lower)
     {
       for(auto &point : get_zeros(*(mesh.lower), threshold))

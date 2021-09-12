@@ -21,32 +21,36 @@ void write_spectrum(const boost::filesystem::path &output_path,
     }
   El::mpi::AllReduce(zero_sizes.data(), zero_sizes.size(), El::mpi::SUM,
                      El::mpi::COMM_WORLD);
-  std::vector<std::vector<El::BigFloat>> zeros_vectors(num_blocks);
-  for(size_t block_index(0); block_index != zeros_vectors.size();
+
+  // El::Matrix<El::BigFloat> m(10,10);
+  // El::Fill(m,El::BigFloat(1));
+  // El::mpi::Reduce(m.Buffer(), m.Height()*m.Width(), 0, El::mpi::COMM_WORLD);
+
+  std::vector<Zeros> zeros_all_blocks(num_blocks);
+  for(size_t block_index(0); block_index != zeros_all_blocks.size();
       ++block_index)
     {
       if(block_index % num_procs == rank)
         {
           const size_t local_index(block_index / num_procs);
-          zeros_vectors[block_index].reserve(zero_sizes.at(block_index));
-          for(auto &zero : zeros_blocks.at(local_index).zeros)
-            {
-              zeros_vectors[block_index].emplace_back(zero);
-            }
+          zeros_all_blocks[block_index].zeros
+            = zeros_blocks.at(local_index).zeros;
         }
       else
         {
-          zeros_vectors[block_index].resize(zero_sizes.at(block_index),
-                                            El::BigFloat(0));
+          zeros_all_blocks[block_index].zeros.resize(
+            zero_sizes.at(block_index), El::BigFloat(0));
         }
-      El::mpi::Reduce(zeros_vectors[block_index].data(),
-                      zeros_vectors[block_index].size(), 0,
+      El::mpi::Reduce(zeros_all_blocks[block_index].zeros.data(),
+                      zeros_all_blocks[block_index].zeros.size(), 0,
                       El::mpi::COMM_WORLD);
     }
 
   // Write the file
   if(El::mpi::Rank() == 0)
     {
+      // El::Print(m,"m");
+      // std::cout << "\n";
       boost::filesystem::ofstream outfile(output_path);
       if(!outfile.good())
         {
@@ -55,22 +59,23 @@ void write_spectrum(const boost::filesystem::path &output_path,
         }
       set_stream_precision(outfile);
       outfile << "[";
-      for(auto zeros_iterator(zeros_vectors.begin());
-          zeros_iterator != zeros_vectors.end(); ++zeros_iterator)
+      for(auto zeros_iterator(zeros_all_blocks.begin());
+          zeros_iterator != zeros_all_blocks.end(); ++zeros_iterator)
         {
-          if(zeros_iterator != zeros_vectors.begin())
+          if(zeros_iterator != zeros_all_blocks.begin())
             {
               outfile << ",";
             }
           outfile << "\n  [";
-          for(size_t zero_index(0); zero_index != zeros_iterator->size();
+          for(size_t zero_index(0); zero_index != zeros_iterator->zeros.size();
               ++zero_index)
             {
               if(zero_index != 0)
                 {
                   outfile << ",";
                 }
-              outfile << "\n    \"" << zeros_iterator->at(zero_index) << "\"";
+              outfile << "\n    \"" << zeros_iterator->zeros.at(zero_index)
+                      << "\"";
             }
           outfile << "\n  ]";
         }

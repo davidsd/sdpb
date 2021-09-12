@@ -2,8 +2,5 @@
 
 #include "../Mesh.hxx"
 
-#include <deque>
-
-std::deque<El::BigFloat>
+std::vector<El::BigFloat>
 get_zeros(const Mesh &mesh, const El::BigFloat &threshold);
-

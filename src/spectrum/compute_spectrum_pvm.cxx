@@ -86,7 +86,7 @@ compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
       if(is_origin_zero(mesh, threshold))
         {
           // Push to the front to keep the zeros ordered
-          zeros.zeros.push_front(0.0);
+          zeros.zeros.insert(zeros.zeros.begin(), 0.0);
         }
       if(need_lambda)
         {
