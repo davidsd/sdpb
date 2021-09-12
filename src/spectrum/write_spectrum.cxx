@@ -12,14 +12,14 @@ void write_spectrum(const boost::filesystem::path &output_path,
   const size_t rank(El::mpi::Rank()),
     num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
 
-  std::vector<size_t> sizes(num_blocks, 0);
+  std::vector<size_t> zero_sizes(num_blocks, 0);
   size_t block_index(rank);
   for(auto &block : zeros_blocks)
     {
-      sizes.at(block_index) = block.zeros.size();
+      zero_sizes.at(block_index) = block.zeros.size();
       block_index += num_procs;
     }
-  El::mpi::AllReduce(sizes.data(), sizes.size(), El::mpi::SUM,
+  El::mpi::AllReduce(zero_sizes.data(), zero_sizes.size(), El::mpi::SUM,
                      El::mpi::COMM_WORLD);
   std::vector<std::vector<El::BigFloat>> zeros_vectors(num_blocks);
   for(size_t block_index(0); block_index != zeros_vectors.size();
@@ -28,7 +28,7 @@ void write_spectrum(const boost::filesystem::path &output_path,
       if(block_index % num_procs == rank)
         {
           const size_t local_index(block_index / num_procs);
-          zeros_vectors[block_index].reserve(sizes.at(block_index));
+          zeros_vectors[block_index].reserve(zero_sizes.at(block_index));
           for(auto &zero : zeros_blocks.at(local_index).zeros)
             {
               zeros_vectors[block_index].emplace_back(zero);
@@ -36,7 +36,7 @@ void write_spectrum(const boost::filesystem::path &output_path,
         }
       else
         {
-          zeros_vectors[block_index].resize(sizes.at(block_index),
+          zeros_vectors[block_index].resize(zero_sizes.at(block_index),
                                             El::BigFloat(0));
         }
       El::mpi::Reduce(zeros_vectors[block_index].data(),
