@@ -14,7 +14,8 @@ parse_matrices(const char *begin, const char *end, const int &rank,
 const char *parse_SDP(const char *begin, const char *end,
                       std::vector<El::BigFloat> &objectives,
                       std::vector<El::BigFloat> &normalization,
-                      std::vector<Positive_Matrix_With_Prefactor> &matrices)
+                      std::vector<Positive_Matrix_With_Prefactor> &matrices,
+                      size_t &num_processed)
 {
   const std::string SDP_literal("SDP[");
   auto SDP_start(
@@ -72,6 +73,7 @@ const char *parse_SDP(const char *begin, const char *end,
     for(size_t index = 0; index < temp_matrices.size(); ++index)
       {
         std::swap(matrices[offset + index], temp_matrices[index]);
+        ++num_processed;
       }
   }
   const auto close_bracket(std::find(end_matrices, end, ']'));

@@ -9,15 +9,13 @@
 #include "../fill_weights.hxx"
 
 void compute_lambda(const Polynomial_Vector_Matrix &m,
-                    const El::Matrix<El::BigFloat> &x,
-                    Zeros &zeros);
+                    const El::Matrix<El::BigFloat> &x, Zeros &zeros);
 
 std::vector<Zeros>
 compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
                      const std::vector<Polynomial_Vector_Matrix> &matrices,
                      const std::vector<El::Matrix<El::BigFloat>> &x,
-                     const El::BigFloat &threshold,
-                     const bool &need_lambda)
+                     const El::BigFloat &threshold, const bool &need_lambda)
 {
   // pvm2sdp implicitly uses the first element as the normalized column
   std::vector<El::BigFloat> normalization(y.Height() + 1, 0);
@@ -28,9 +26,7 @@ compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
 
   const El::BigFloat zero(0);
   std::vector<Zeros> zeros_blocks(matrices.size());
-  const size_t rank(El::mpi::Rank()), num_procs(El::mpi::Size());
-  for(size_t block_index(rank); block_index < matrices.size();
-      block_index += num_procs)
+  for(size_t block_index(0); block_index < matrices.size(); ++block_index)
     {
       auto &block(matrices[block_index]);
       const size_t max_number_terms([&block]() {
@@ -86,19 +82,16 @@ compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
         (1.0 / 128), block_epsilon);
 
       auto &zeros(zeros_blocks.at(block_index));
-      zeros.zeros=get_zeros(mesh, threshold);
+      zeros.zeros = get_zeros(mesh, threshold);
       if(is_origin_zero(mesh, threshold))
         {
           // Push to the front to keep the zeros ordered
           zeros.zeros.push_front(0.0);
         }
-      // std::cout << "zeros: "
-      //           << zeros.zeros << "\n";
       if(need_lambda)
         {
           compute_lambda(block, x.at(block_index), zeros);
         }
-      break;
     }
   return zeros_blocks;
 }

@@ -4,38 +4,45 @@
 #include <boost/filesystem.hpp>
 
 void write_spectrum(const boost::filesystem::path &output_path,
+                    const size_t &num_blocks,
                     const std::vector<Zeros> &zeros_blocks)
 {
   // Synchronize zeros
   // This is waaaay more work than it should be.
-  std::vector<int32_t> sizes(zeros_blocks.size(), 0);
-  for(size_t index(0); index != zeros_blocks.size(); ++index)
+  const size_t rank(El::mpi::Rank()),
+    num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
+
+  std::vector<size_t> sizes(num_blocks, 0);
+  size_t block_index(rank);
+  for(auto &block : zeros_blocks)
     {
-      sizes.at(index) = zeros_blocks.at(index).zeros.size();
+      sizes.at(block_index) = block.zeros.size();
+      block_index += num_procs;
     }
-  El::mpi::AllReduce(sizes.data(), sizes.size(), El::mpi::MAX,
+  El::mpi::AllReduce(sizes.data(), sizes.size(), El::mpi::SUM,
                      El::mpi::COMM_WORLD);
-  const int64_t num_elements(std::accumulate(sizes.begin(), sizes.end(), 0));
-  std::vector<El::BigFloat> zero_flattened;
-  zero_flattened.reserve(num_elements);
-  for(size_t block_index(0); block_index != zeros_blocks.size(); ++block_index)
+  std::vector<std::vector<El::BigFloat>> zeros_vectors(num_blocks);
+  for(size_t block_index(0); block_index != zeros_vectors.size();
+      ++block_index)
     {
-      for(int32_t zero_index(0); zero_index != sizes[block_index];
-          ++zero_index)
+      if(block_index % num_procs == rank)
         {
-          if(zeros_blocks.at(block_index).zeros.empty())
+          const size_t local_index(block_index / num_procs);
+          zeros_vectors[block_index].reserve(sizes.at(block_index));
+          for(auto &zero : zeros_blocks.at(local_index).zeros)
             {
-              zero_flattened.emplace_back(0);
-            }
-          else
-            {
-              zero_flattened.emplace_back(
-                zeros_blocks.at(block_index).zeros.at(zero_index));
+              zeros_vectors[block_index].emplace_back(zero);
             }
         }
+      else
+        {
+          zeros_vectors[block_index].resize(sizes.at(block_index),
+                                            El::BigFloat(0));
+        }
+      El::mpi::Reduce(zeros_vectors[block_index].data(),
+                      zeros_vectors[block_index].size(), 0,
+                      El::mpi::COMM_WORLD);
     }
-  El::mpi::Reduce(zero_flattened.data(), zero_flattened.size(), 0,
-                  El::mpi::COMM_WORLD);
 
   // Write the file
   if(El::mpi::Rank() == 0)
@@ -48,23 +55,22 @@ void write_spectrum(const boost::filesystem::path &output_path,
         }
       set_stream_precision(outfile);
       outfile << "[";
-      auto iterator(zero_flattened.begin());
-      for(size_t block_index(0); block_index != sizes.size(); ++block_index)
+      for(auto zeros_iterator(zeros_vectors.begin());
+          zeros_iterator != zeros_vectors.end(); ++zeros_iterator)
         {
-          if(block_index != 0)
+          if(zeros_iterator != zeros_vectors.begin())
             {
               outfile << ",";
             }
           outfile << "\n  [";
-          for(int64_t zero_index(0); zero_index != sizes.at(block_index);
+          for(size_t zero_index(0); zero_index != zeros_iterator->size();
               ++zero_index)
             {
               if(zero_index != 0)
                 {
                   outfile << ",";
                 }
-              outfile << "\n    \"" << *iterator << "\"";
-              ++iterator;
+              outfile << "\n    \"" << zeros_iterator->at(zero_index) << "\"";
             }
           outfile << "\n  ]";
         }

@@ -24,6 +24,7 @@ El::Matrix<El::BigFloat>
 read_y(const boost::filesystem::path &solution_path, const size_t &y_height);
 
 void write_spectrum(const boost::filesystem::path &output_path,
+                    const size_t &num_blocks,
                     const std::vector<Zeros> &zeros);
 
 std::vector<Zeros> compute_spectrum_pmp(
@@ -60,24 +61,27 @@ int main(int argc, char **argv)
             read_pvm_input({input_path}, objectives, matrices, num_blocks);
             El::Matrix<El::BigFloat> y(objectives.size() - 1, 1);
             read_text_block(y, solution_dir / "y.txt");
+            std::cout << El::mpi::Rank() << " matrices: "
+                      << matrices.size() << "\n";
             std::vector<El::Matrix<El::BigFloat>> x(
               read_x(solution_dir, matrices));
             const std::vector<Zeros> zeros_blocks(
               compute_spectrum_pvm(y, matrices, x, threshold, need_lambda));
-            write_spectrum(output_path, zeros_blocks);
+            write_spectrum(output_path, num_blocks, zeros_blocks);
           }
           break;
           case Format::Positive_Matrix_with_Prefactor: {
             std::vector<El::BigFloat> objectives, normalization;
             std::vector<Positive_Matrix_With_Prefactor> matrices;
-            read_input(input_path, objectives, normalization, matrices);
+            size_t num_blocks;
+            read_input(input_path, objectives, normalization, matrices, num_blocks);
             El::Matrix<El::BigFloat> y(objectives.size() - 1, 1);
             read_text_block(y, solution_dir / "y.txt");
             std::vector<El::Matrix<El::BigFloat>> x(
               read_x(solution_dir, matrices));
             const std::vector<Zeros> zeros_blocks(compute_spectrum_pmp(
               normalization, y, matrices, threshold, need_lambda));
-            write_spectrum(output_path, zeros_blocks);
+            write_spectrum(output_path, num_blocks, zeros_blocks);
           }
           break;
         default: throw std::runtime_error("INTERNAL ERROR");

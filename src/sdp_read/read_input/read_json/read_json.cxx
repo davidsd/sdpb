@@ -6,7 +6,8 @@
 void read_json(const boost::filesystem::path &input_path,
                std::vector<El::BigFloat> &objectives,
                std::vector<El::BigFloat> &normalization,
-               std::vector<Positive_Matrix_With_Prefactor> &matrices)
+               std::vector<Positive_Matrix_With_Prefactor> &matrices,
+               size_t &num_processed)
 {
   boost::filesystem::ifstream input_file(input_path);
   rapidjson::IStreamWrapper wrapper(input_file);
@@ -34,6 +35,7 @@ void read_json(const boost::filesystem::path &input_path,
       if((offset + index) % num_procs == rank)
         {
           std::swap(matrices[offset + index], temp_matrices[index]);
+          ++num_processed;
         }
     }
 }

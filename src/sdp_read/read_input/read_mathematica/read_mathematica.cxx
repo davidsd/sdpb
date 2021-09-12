@@ -10,12 +10,14 @@ std::vector<char>::const_iterator
 parse_SDP(const char *begin, const char *end,
           std::vector<El::BigFloat> &objectives,
           std::vector<El::BigFloat> &normalization,
-          std::vector<Positive_Matrix_With_Prefactor> &matrices);
+          std::vector<Positive_Matrix_With_Prefactor> &matrices,
+          size_t &num_processed);
 
 void read_mathematica(const boost::filesystem::path &input_path,
                       std::vector<El::BigFloat> &objectives,
                       std::vector<El::BigFloat> &normalization,
-                      std::vector<Positive_Matrix_With_Prefactor> &matrices)
+                      std::vector<Positive_Matrix_With_Prefactor> &matrices,
+                      size_t &num_processed)
 
 {
   boost::filesystem::ifstream input_stream(input_path);
@@ -33,7 +35,7 @@ void read_mathematica(const boost::filesystem::path &input_path,
     {
       const char *begin(static_cast<const char *>(mapped_region.get_address())),
         *end(begin + mapped_region.get_size());
-      parse_SDP(begin, end, objectives, normalization, matrices);
+      parse_SDP(begin, end, objectives, normalization, matrices, num_processed);
     }
   catch(std::exception &e)
     {
