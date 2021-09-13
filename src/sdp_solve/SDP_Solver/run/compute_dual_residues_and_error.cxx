@@ -22,7 +22,7 @@ void compute_dual_residues_and_error(
   El::BigFloat local_max(0);
   for(auto &block_index : block_info.block_indices)
     {
-      Zero(*dual_residues_block);
+      El::Zero(*dual_residues_block);
       const size_t block_size(block_info.num_points[block_index]),
         dim(block_info.dimensions[block_index]);
 
@@ -46,13 +46,14 @@ void compute_dual_residues_and_error(
         }
       // dualResidues -= B * y
       // TODO: Shouldn't this be Gemv since y is a vector?
-      Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, El::BigFloat(-1),
-           *free_var_matrix_block, *y_block, El::BigFloat(1),
-           *dual_residues_block);
+      El::Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL,
+               El::BigFloat(-1), *free_var_matrix_block, *y_block,
+               El::BigFloat(1), *dual_residues_block);
       // dualResidues += c
-      Axpy(El::BigFloat(1), *primal_objective_c_block, *dual_residues_block);
+      El::Axpy(El::BigFloat(1), *primal_objective_c_block,
+               *dual_residues_block);
 
-      local_max = Max(local_max, El::MaxAbs(*dual_residues_block));
+      local_max = El::Max(local_max, El::MaxAbs(*dual_residues_block));
 
       ++primal_objective_c_block;
       ++y_block;

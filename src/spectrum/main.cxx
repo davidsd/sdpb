@@ -1,5 +1,5 @@
 #include "Format.hxx"
-#include "Zeros.hxx"
+#include "Zero.hxx"
 #include "../sdp_read.hxx"
 #include "../sdp_convert.hxx"
 #include "../sdp_solve.hxx"
@@ -25,15 +25,15 @@ read_y(const boost::filesystem::path &solution_path, const size_t &y_height);
 
 void write_spectrum(const boost::filesystem::path &output_path,
                     const size_t &num_blocks,
-                    const std::vector<Zeros> &zeros);
+                    const std::vector<std::vector<Zero>> &zeros);
 
-std::vector<Zeros> compute_spectrum_pmp(
+std::vector<std::vector<Zero>> compute_spectrum_pmp(
   const std::vector<El::BigFloat> &normalization,
   const El::Matrix<El::BigFloat> &y,
   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
   const El::BigFloat &threshold, const bool &need_lambda);
 
-std::vector<Zeros>
+std::vector<std::vector<Zero>>
 compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
                      const std::vector<Polynomial_Vector_Matrix> &matrices,
                      const std::vector<El::Matrix<El::BigFloat>> &x,
@@ -61,11 +61,11 @@ int main(int argc, char **argv)
             read_pvm_input({input_path}, objectives, matrices, num_blocks);
             El::Matrix<El::BigFloat> y(objectives.size() - 1, 1);
             read_text_block(y, solution_dir / "y.txt");
-            std::cout << El::mpi::Rank() << " matrices: "
-                      << matrices.size() << "\n";
+            std::cout << El::mpi::Rank() << " matrices: " << matrices.size()
+                      << "\n";
             std::vector<El::Matrix<El::BigFloat>> x(
               read_x(solution_dir, matrices));
-            const std::vector<Zeros> zeros_blocks(
+            const std::vector<std::vector<Zero>> zeros_blocks(
               compute_spectrum_pvm(y, matrices, x, threshold, need_lambda));
             write_spectrum(output_path, num_blocks, zeros_blocks);
           }
@@ -74,13 +74,15 @@ int main(int argc, char **argv)
             std::vector<El::BigFloat> objectives, normalization;
             std::vector<Positive_Matrix_With_Prefactor> matrices;
             size_t num_blocks;
-            read_input(input_path, objectives, normalization, matrices, num_blocks);
+            read_input(input_path, objectives, normalization, matrices,
+                       num_blocks);
             El::Matrix<El::BigFloat> y(objectives.size() - 1, 1);
             read_text_block(y, solution_dir / "y.txt");
             std::vector<El::Matrix<El::BigFloat>> x(
               read_x(solution_dir, matrices));
-            const std::vector<Zeros> zeros_blocks(compute_spectrum_pmp(
-              normalization, y, matrices, threshold, need_lambda));
+            const std::vector<std::vector<Zero>> zeros_blocks(
+              compute_spectrum_pmp(normalization, y, matrices, threshold,
+                                   need_lambda));
             write_spectrum(output_path, num_blocks, zeros_blocks);
           }
           break;

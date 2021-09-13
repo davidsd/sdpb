@@ -24,9 +24,9 @@ void compute_A_X_inv(
 
       // We have to set this to zero because the values can be NaN.
       // Multiplying 0*NaN = NaN.
-      Zero(A_X_inv_matrix);
-      Syrk(El::UpperOrLowerNS::LOWER, El::Orientation::TRANSPOSE,
-           El::BigFloat(1), temp_space, El::BigFloat(0), A_X_inv_matrix);
+      El::Zero(A_X_inv_matrix);
+      El::Syrk(El::UpperOrLowerNS::LOWER, El::Orientation::TRANSPOSE,
+               El::BigFloat(1), temp_space, El::BigFloat(0), A_X_inv_matrix);
       El::MakeSymmetric(El::UpperOrLower::LOWER, A_X_inv_matrix);
 
       const size_t block_size(

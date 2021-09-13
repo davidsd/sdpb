@@ -24,11 +24,11 @@ SDP_Solver::SDP_Solver(const Solver_Parameters &parameters,
       Y.set_zero();
       for(auto &block : x.blocks)
         {
-          Zero(block);
+          El::Zero(block);
         }
       for(auto &block : y.blocks)
         {
-          Zero(block);
+          El::Zero(block);
         }
 
       // X = \Omega_p I

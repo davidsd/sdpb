@@ -13,7 +13,18 @@ namespace
     const El::BigFloat a(f_x_bar), b((f_x_plus - f_x_minus) / dx),
       c((f_x_plus - 2 * f_x_bar + f_x_minus) / (dx * dx / 4));
 
-    if(c > 0)
+    // Special case for x=zero, since there the function may go through zero
+    if(x_minus == El::BigFloat(0))
+      {
+      // TODO: This checks if f(0) <= threshold * f'(0).  This has
+      // different units from the regular check below.
+        
+        if(f_x_minus <= threshold * b)
+          {
+            points.push_back(x_minus);
+          }
+      }
+    else if(c > 0)
       {
         const El::BigFloat x_min(-b / c + x_bar);
         const El::BigFloat f_x_min(a - b * b / (2 * c));

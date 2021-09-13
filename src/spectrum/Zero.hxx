@@ -2,8 +2,9 @@
 
 #include <El.hpp>
 
-struct Zeros
+struct Zero
 {
-  std::vector<El::BigFloat> zeros;
+  El::BigFloat zero;
   El::Matrix<El::BigFloat> lambda, error;
+  Zero(const El::BigFloat &z): zero(z) {}
 };

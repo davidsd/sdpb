@@ -1,7 +1,6 @@
 #include "eval_summed.hxx"
 #include "get_zeros.hxx"
-#include "Zeros.hxx"
-#include "is_origin_zero.hxx"
+#include "Zero.hxx"
 #include "../sdp_read.hxx"
 #include "../sdp_convert/write_vector.hxx"
 #include "../Mesh.hxx"
@@ -9,9 +8,9 @@
 #include "../fill_weights.hxx"
 
 void compute_lambda(const Polynomial_Vector_Matrix &m,
-                    const El::Matrix<El::BigFloat> &x, Zeros &zeros);
+                    const El::Matrix<El::BigFloat> &x, std::vector<Zero> &zeros);
 
-std::vector<Zeros>
+std::vector<std::vector<Zero>>
 compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
                      const std::vector<Polynomial_Vector_Matrix> &matrices,
                      const std::vector<El::Matrix<El::BigFloat>> &x,
@@ -25,7 +24,7 @@ compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
   fill_weights(y, max_index, normalization, weights);
 
   const El::BigFloat zero(0);
-  std::vector<Zeros> zeros_blocks(matrices.size());
+  std::vector<std::vector<Zero>> zeros_blocks(matrices.size());
   for(size_t block_index(0); block_index < matrices.size(); ++block_index)
     {
       auto &block(matrices[block_index]);
@@ -82,14 +81,15 @@ compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
         (1.0 / 128), block_epsilon);
 
       auto &zeros(zeros_blocks.at(block_index));
-      zeros.zeros = get_zeros(mesh, threshold);
-      if(is_origin_zero(mesh, threshold))
+      std::vector<El::BigFloat> zero_vector(get_zeros(mesh, threshold));
+      zeros.reserve(zero_vector.size());
+      for(auto &zero: get_zeros(mesh, threshold))
         {
-          // Push to the front to keep the zeros ordered
-          zeros.zeros.insert(zeros.zeros.begin(), 0.0);
+          zeros.emplace_back(zero);
         }
       if(need_lambda)
         {
+          std::cout << "block: " << block_index << "\n";
           compute_lambda(block, x.at(block_index), zeros);
         }
     }

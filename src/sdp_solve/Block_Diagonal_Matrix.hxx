@@ -55,7 +55,7 @@ public:
   {
     for(auto &block : blocks)
       {
-        Zero(block);
+        El::Zero(block);
       }
   }
 

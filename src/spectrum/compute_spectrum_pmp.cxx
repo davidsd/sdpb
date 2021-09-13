@@ -1,4 +1,4 @@
-#include "Zeros.hxx"
+#include "Zero.hxx"
 #include "eval_summed.hxx"
 #include "get_zeros.hxx"
 #include "../sdp_read.hxx"
@@ -7,7 +7,7 @@
 #include "../max_normalization_index.hxx"
 #include "../fill_weights.hxx"
 
-std::vector<Zeros> compute_spectrum_pmp(
+std::vector<std::vector<Zero>> compute_spectrum_pmp(
   const std::vector<El::BigFloat> &normalization,
   const El::Matrix<El::BigFloat> &y,
   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
@@ -18,7 +18,7 @@ std::vector<Zeros> compute_spectrum_pmp(
   fill_weights(y, max_index, normalization, weights);
 
   const El::BigFloat zero(0);
-  std::vector<Zeros> zeros_blocks(matrices.size());
+  std::vector<std::vector<Zero>> zeros_blocks(matrices.size());
   const size_t rank(El::mpi::Rank()), num_procs(El::mpi::Size());
   for(size_t block_index(rank); block_index < matrices.size();
       block_index += num_procs)
@@ -95,7 +95,14 @@ std::vector<Zeros> compute_spectrum_pmp(
                  * eval_summed(summed_polynomials, x);
         },
         (1.0 / 128), block_epsilon);
-      zeros_blocks.at(block_index).zeros = get_zeros(mesh, threshold);
+
+      auto &zeros(zeros_blocks.at(block_index));
+      std::vector<El::BigFloat> zero_vector(get_zeros(mesh, threshold));
+      zeros.reserve(zero_vector.size());
+      for(auto &zero: get_zeros(mesh, threshold))
+        {
+          zeros.emplace_back(zero);
+        }
       if(need_lambda) {}
     }
   return zeros_blocks;

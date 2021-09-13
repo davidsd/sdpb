@@ -1,12 +1,11 @@
-#include "../Zeros.hxx"
+#include "../Zero.hxx"
 #include "../../set_stream_precision.hxx"
 
 #include <boost/filesystem.hpp>
 
 void write_file(const boost::filesystem::path &output_path,
-                    const std::vector<Zeros> &zeros_blocks)
+                const std::vector<std::vector<Zero>> &zeros_blocks)
 {
-// Write the file
   if(El::mpi::Rank() == 0)
     {
       // El::Print(m,"m");
@@ -27,15 +26,15 @@ void write_file(const boost::filesystem::path &output_path,
               outfile << ",";
             }
           outfile << "\n  [";
-          for(size_t zero_index(0); zero_index != zeros_iterator->zeros.size();
+          for(size_t zero_index(0); zero_index != zeros_iterator->size();
               ++zero_index)
             {
               if(zero_index != 0)
                 {
                   outfile << ",";
                 }
-              outfile << "\n    \"" << zeros_iterator->zeros.at(zero_index)
-                      << "\"";
+              outfile << "\n    {\n\"zero\": \""
+                      << zeros_iterator->at(zero_index).zero << "\"}";
             }
           outfile << "\n  ]";
         }
