@@ -8,7 +8,9 @@
 #include "../fill_weights.hxx"
 
 void compute_lambda(const Polynomial_Vector_Matrix &m,
-                    const El::Matrix<El::BigFloat> &x, std::vector<Zero> &zeros);
+                    const El::Matrix<El::BigFloat> &x,
+                    const std::vector<El::BigFloat> &zero_vector,
+                    std::vector<Zero> &zeros);
 
 std::vector<std::vector<Zero>>
 compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
@@ -81,16 +83,17 @@ compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
         (1.0 / 128), block_epsilon);
 
       auto &zeros(zeros_blocks.at(block_index));
-      std::vector<El::BigFloat> zero_vector(get_zeros(mesh, threshold));
-      zeros.reserve(zero_vector.size());
-      for(auto &zero: get_zeros(mesh, threshold))
-        {
-          zeros.emplace_back(zero);
-        }
       if(need_lambda)
         {
-          std::cout << "block: " << block_index << "\n";
-          compute_lambda(block, x.at(block_index), zeros);
+          compute_lambda(block, x.at(block_index), get_zeros(mesh, threshold),
+                         zeros);
+        }
+      else
+        {
+          for(auto &zero : get_zeros(mesh, threshold))
+            {
+              zeros.emplace_back(zero);
+            }
         }
     }
   return zeros_blocks;

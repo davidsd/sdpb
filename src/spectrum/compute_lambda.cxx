@@ -3,17 +3,18 @@
 
 void compute_lambda(const Polynomial_Vector_Matrix &m,
                     const El::Matrix<El::BigFloat> &x,
+                    const std::vector<El::BigFloat> &zero_vector,
                     std::vector<Zero> &zeros)
 {
-  if(zeros.empty())
+  if(zero_vector.empty())
     {
       return;
     }
-  El::Matrix<El::BigFloat> interpolation(m.sample_points.size(), zeros.size());
+  El::Matrix<El::BigFloat> interpolation(m.sample_points.size(), zero_vector.size());
   for(size_t point_index(0); point_index != m.sample_points.size();
       ++point_index)
     {
-      for(size_t zero_index(0); zero_index != zeros.size(); ++zero_index)
+      for(size_t zero_index(0); zero_index != zero_vector.size(); ++zero_index)
         {
           auto &product(interpolation(point_index, zero_index));
           product = 1;
@@ -23,7 +24,7 @@ void compute_lambda(const Polynomial_Vector_Matrix &m,
             {
               if(point_index != point_product_index)
                 {
-                  product *= (zeros[zero_index].zero
+                  product *= (zero_vector[zero_index]
                               - m.sample_points[point_product_index])
                              / (m.sample_points[point_index]
                                 - m.sample_points[point_product_index]);
@@ -63,7 +64,7 @@ void compute_lambda(const Polynomial_Vector_Matrix &m,
   }
   const size_t matrix_block_size(x.Height() / (m.rows * (m.rows + 1) / 2));
 
-  for(size_t zero_index(0); zero_index != zeros.size(); ++zero_index)
+  for(size_t zero_index(0); zero_index != zero_vector.size(); ++zero_index)
     {
       size_t offset(0);
       El::Matrix<El::BigFloat> Lambda(m.rows, m.cols);
@@ -97,14 +98,15 @@ void compute_lambda(const Polynomial_Vector_Matrix &m,
       El::Matrix<El::BigFloat> eigenvalues, eigenvectors;
       El::HermitianEig(El::UpperOrLowerNS::UPPER, Lambda, eigenvalues,
                        eigenvectors, hermitian_eig_ctrl);
-      // Eigenvalues are sorted, largest at the end
+      // Eigenvalues are sorted, largest at the end.  Only add a zero
+      // if max_eigenvalue > 0.
       const size_t num_eigvals(eigenvalues.Height());
       if(eigenvalues(num_eigvals - 1, 0) >= 0)
         {
-          zeros[zero_index].lambda
+          zeros.emplace_back(zero_vector[zero_index]);
+          zeros.back().lambda
             = El::View(eigenvectors, 0, num_eigvals - 1, num_eigvals, 1);
-          zeros[zero_index].lambda
-            *= El::Sqrt(eigenvalues(num_eigvals - 1, 0));
+          zeros.back().lambda *= El::Sqrt(eigenvalues(num_eigvals - 1, 0));
         }
     }
 }

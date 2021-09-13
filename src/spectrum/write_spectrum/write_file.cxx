@@ -8,8 +8,6 @@ void write_file(const boost::filesystem::path &output_path,
 {
   if(El::mpi::Rank() == 0)
     {
-      // El::Print(m,"m");
-      // std::cout << "\n";
       boost::filesystem::ofstream outfile(output_path);
       if(!outfile.good())
         {
@@ -33,8 +31,18 @@ void write_file(const boost::filesystem::path &output_path,
                 {
                   outfile << ",";
                 }
-              outfile << "\n    {\n\"zero\": \""
-                      << zeros_iterator->at(zero_index).zero << "\"}";
+              outfile << "\n    {\n      \"zero\": \""
+                      << zeros_iterator->at(zero_index).zero << "\""
+                      << ",\n      \"lambda\":\n        [\n";
+              for(int64_t row(0); row<zeros_iterator->at(zero_index).lambda.Height(); ++row)
+                {
+                  if(row!=0)
+                    {
+                      outfile << ",\n";
+                    }
+                  outfile << "          \"" << zeros_iterator->at(zero_index).lambda(row,0) << "\"";
+                }
+              outfile << "\n        ]\n    }";
             }
           outfile << "\n  ]";
         }
