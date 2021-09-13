@@ -72,7 +72,7 @@ compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
       const El::BigFloat block_epsilon(block_scale
                                        * El::limits::Epsilon<El::BigFloat>());
 
-      // 1/128 should be a small enough relative error so that we are
+      // 1/1024 should be a small enough relative error so that we are
       // in the regime of convergence.  Then the error estimates will
       // work
       Mesh mesh(
@@ -80,7 +80,7 @@ compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
         [&](const El::BigFloat &point) {
           return eval_summed(summed_polynomials, point);
         },
-        (1.0 / 128), block_epsilon);
+        (1.0 / 1024), block_epsilon);
 
       auto &zeros(zeros_blocks.at(block_index));
       if(need_lambda)
