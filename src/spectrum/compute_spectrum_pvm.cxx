@@ -16,7 +16,8 @@ std::vector<std::vector<Zero>>
 compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
                      const std::vector<Polynomial_Vector_Matrix> &matrices,
                      const std::vector<El::Matrix<El::BigFloat>> &x,
-                     const El::BigFloat &threshold, const bool &need_lambda)
+                     const El::BigFloat &threshold, El::BigFloat &epsilon,
+                     const bool &need_lambda)
 {
   // pvm2sdp implicitly uses the first element as the normalized column
   std::vector<El::BigFloat> normalization(y.Height() + 1, 0);
@@ -72,15 +73,12 @@ compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
       const El::BigFloat block_epsilon(block_scale
                                        * El::limits::Epsilon<El::BigFloat>());
 
-      // 1/1024 should be a small enough relative error so that we are
-      // in the regime of convergence.  Then the error estimates will
-      // work
       Mesh mesh(
         zero, max_delta,
         [&](const El::BigFloat &point) {
           return eval_summed(summed_polynomials, point);
         },
-        (1.0 / 1024), block_epsilon);
+        epsilon, block_epsilon);
 
       auto &zeros(zeros_blocks.at(block_index));
       if(need_lambda)

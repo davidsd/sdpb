@@ -7,12 +7,13 @@
 #include <boost/filesystem.hpp>
 
 void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
-                      Format &format, boost::filesystem::path &input_path,
+                      El::BigFloat &epsilon, Format &format,
+                      boost::filesystem::path &input_path,
                       boost::filesystem::path &solution_dir,
                       boost::filesystem::path &output_path, bool &need_lambda)
 {
   int precision;
-  std::string threshold_string, format_string;
+  std::string threshold_string, epsilon_string, format_string;
 
   namespace po = boost::program_options;
 
@@ -28,6 +29,10 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
   options.add_options()(
     "threshold", po::value<std::string>(&threshold_string)->required(),
     "Threshold for when a functional is considered to be zero.");
+  options.add_options()(
+    "epsilon", po::value<std::string>(&epsilon_string)->default_value("0.001"),
+    "Relative error threshold for when to refine a "
+    "functional when looking for zeros.");
   options.add_options()("format",
                         po::value<std::string>(&format_string)->required(),
                         "Format of input file: Either PVM (Polynomial Vector "
@@ -93,6 +98,7 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
   Boost_Float::default_precision(precision * log(2) / log(10));
 
   threshold = El::BigFloat(threshold_string);
+  epsilon = El::BigFloat(epsilon_string);
 
   if(format_string == "PVM")
     {

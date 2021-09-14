@@ -8,7 +8,8 @@
 #include <boost/filesystem.hpp>
 
 void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
-                      Format &format, boost::filesystem::path &input_path,
+                      El::BigFloat &epsilon, Format &format,
+                      boost::filesystem::path &input_path,
                       boost::filesystem::path &solution_path,
                       boost::filesystem::path &output_path, bool &need_lambda);
 
@@ -31,13 +32,15 @@ std::vector<std::vector<Zero>> compute_spectrum_pmp(
   const std::vector<El::BigFloat> &normalization,
   const El::Matrix<El::BigFloat> &y,
   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
-  const El::BigFloat &threshold, const bool &need_lambda);
+  const El::BigFloat &threshold, El::BigFloat &epsilon,
+  const bool &need_lambda);
 
 std::vector<std::vector<Zero>>
 compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
                      const std::vector<Polynomial_Vector_Matrix> &matrices,
                      const std::vector<El::Matrix<El::BigFloat>> &x,
-                     const El::BigFloat &threshold, const bool &need_lambda);
+                     const El::BigFloat &threshold, El::BigFloat &epsilon,
+                     const bool &need_lambda);
 
 int main(int argc, char **argv)
 {
@@ -45,12 +48,12 @@ int main(int argc, char **argv)
 
   try
     {
-      El::BigFloat threshold;
+      El::BigFloat threshold, epsilon;
       Format format;
       boost::filesystem::path input_path, solution_dir, output_path;
       bool need_lambda;
-      handle_arguments(argc, argv, threshold, format, input_path, solution_dir,
-                       output_path, need_lambda);
+      handle_arguments(argc, argv, threshold, epsilon, format, input_path,
+                       solution_dir, output_path, need_lambda);
 
       switch(format)
         {
@@ -66,7 +69,8 @@ int main(int argc, char **argv)
             std::vector<El::Matrix<El::BigFloat>> x(
               read_x(solution_dir, matrices));
             const std::vector<std::vector<Zero>> zeros_blocks(
-              compute_spectrum_pvm(y, matrices, x, threshold, need_lambda));
+              compute_spectrum_pvm(y, matrices, x, threshold, epsilon,
+                                   need_lambda));
             write_spectrum(output_path, num_blocks, zeros_blocks);
           }
           break;
@@ -82,7 +86,7 @@ int main(int argc, char **argv)
               read_x(solution_dir, matrices));
             const std::vector<std::vector<Zero>> zeros_blocks(
               compute_spectrum_pmp(normalization, y, matrices, threshold,
-                                   need_lambda));
+                                   epsilon, need_lambda));
             write_spectrum(output_path, num_blocks, zeros_blocks);
           }
           break;

@@ -11,7 +11,8 @@ std::vector<std::vector<Zero>> compute_spectrum_pmp(
   const std::vector<El::BigFloat> &normalization,
   const El::Matrix<El::BigFloat> &y,
   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
-  const El::BigFloat &threshold, const bool &need_lambda)
+  const El::BigFloat &threshold, El::BigFloat &epsilon,
+  const bool &need_lambda)
 {
   const size_t max_index(max_normalization_index(normalization));
   std::vector<El::BigFloat> weights(normalization.size());
@@ -69,10 +70,6 @@ std::vector<std::vector<Zero>> compute_spectrum_pmp(
       const El::BigFloat block_epsilon(block_scale
                                        * El::limits::Epsilon<El::BigFloat>());
 
-      // 1/128 should be a small enough relative error so that we are
-      // in the regime of convergence.  Then the error estimates will
-      // work
-
       // TODO: This should all happen in Boost_Float so that we do not
       // have to do all of these conversions.
       std::stringstream ss;
@@ -94,12 +91,12 @@ std::vector<std::vector<Zero>> compute_spectrum_pmp(
           return El::BigFloat(to_string(numerator / denominator))
                  * eval_summed(summed_polynomials, x);
         },
-        (1.0 / 128), block_epsilon);
+        epsilon, block_epsilon);
 
       auto &zeros(zeros_blocks.at(block_index));
       std::vector<El::BigFloat> zero_vector(get_zeros(mesh, threshold));
       zeros.reserve(zero_vector.size());
-      for(auto &zero: get_zeros(mesh, threshold))
+      for(auto &zero : get_zeros(mesh, threshold))
         {
           zeros.emplace_back(zero);
         }
