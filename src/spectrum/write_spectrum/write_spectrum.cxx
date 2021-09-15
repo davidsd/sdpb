@@ -64,8 +64,6 @@ void write_spectrum(const boost::filesystem::path &output_path,
               // TODO: This is painfully slow with lots of communication.
               zero.zero = El::mpi::Reduce(zero.zero, El::mpi::SUM, 0,
                                           El::mpi::COMM_WORLD);
-              // El::Matrix<El::BigFloat> lc(zero.lambda);
-              // El::Zero(lc);
               El::mpi::Reduce(zero.lambda.Buffer(),
                               zero.lambda.Height() * zero.lambda.Width(),
                               El::mpi::SUM, 0, El::mpi::COMM_WORLD);
