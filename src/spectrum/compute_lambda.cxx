@@ -10,18 +10,20 @@ void compute_lambda(const Polynomial_Vector_Matrix &m,
 
   El::Matrix<El::BigFloat> x_scaled_matrix(matrix_block_size,
                                            (m.rows * (m.rows + 1) / 2));
-  size_t row_column(0);
-  for(int64_t row(0); row != m.rows; ++row)
-    for(int64_t column(row); column != m.cols; ++column)
-      {
-        for(size_t index(0); index != matrix_block_size; ++index)
-          {
-            x_scaled_matrix(index, row_column)
-              = x(row_column * matrix_block_size + index, 0)
-                * m.sample_scalings.at(index);
-          }
-        ++row_column;
-      }
+  {
+    size_t row_column(0);
+    for(int64_t row(0); row != m.rows; ++row)
+      for(int64_t column(row); column != m.cols; ++column)
+        {
+          for(size_t index(0); index != matrix_block_size; ++index)
+            {
+              x_scaled_matrix(index, row_column)
+                = x(row_column * matrix_block_size + index, 0)
+                  * m.sample_scalings.at(index);
+            }
+          ++row_column;
+        }
+  }
   El::Matrix<El::BigFloat> error_matrix(x_scaled_matrix);
 
   if(zero_vector.empty())
@@ -55,9 +57,9 @@ void compute_lambda(const Polynomial_Vector_Matrix &m,
 
   El::Matrix<El::BigFloat> roots_fit;
   {
-    // This is a copy+paste of El::Pseudoinverse.  We need to set the
-    // number of iterations, which is not exposed in the API for
-    // El::Pseudoinverse, but is exposed in El::SVD.
+    // This is mostly a copy+paste of El::Pseudoinverse.  We need to
+    // set the number of iterations, which is not exposed in the API
+    // for El::Pseudoinverse, but is exposed in El::SVD.
 
     const El::Int m = interpolation.Height();
     const El::Int n = interpolation.Width();
@@ -74,7 +76,8 @@ void compute_lambda(const Polynomial_Vector_Matrix &m,
     // The default only does 6 iterations per value.  We need far more
     // because of high precision.
     ctrl.bidiagSVDCtrl.qrCtrl.maxIterPerVal = 100;
-    El::SVD(interpolation, U, s, V, ctrl);
+    El::Matrix<El::BigFloat> interpolation_copy(interpolation);
+    El::SVD(interpolation_copy, U, s, V, ctrl);
 
     // Scale U with the inverted (nonzero) singular values, U := U / Sigma
     El::DiagonalSolve(El::RIGHT, El::NORMAL, s, U);
@@ -115,14 +118,27 @@ void compute_lambda(const Polynomial_Vector_Matrix &m,
       El::HermitianEig(El::UpperOrLowerNS::UPPER, Lambda, eigenvalues,
                        eigenvectors, hermitian_eig_ctrl);
       // Eigenvalues are sorted, largest at the end.  Only add a zero
-      // if max_eigenvalue > 0.
+      // if max_eigenvalue >= 0.
       const size_t num_eigvals(eigenvalues.Height());
       if(eigenvalues(num_eigvals - 1, 0) >= 0)
         {
           zeros.emplace_back(zero_vector[zero_index]);
-          zeros.back().lambda
+          auto &lambda(zeros.back().lambda);
+          lambda
             = El::View(eigenvectors, 0, num_eigvals - 1, num_eigvals, 1);
-          zeros.back().lambda *= El::Sqrt(eigenvalues(num_eigvals - 1, 0));
+          lambda *= El::Sqrt(eigenvalues(num_eigvals - 1, 0));
+
+          size_t row_column(0);
+          for(int64_t row(0); row != m.rows; ++row)
+            for(int64_t column(row); column != m.cols; ++column)
+              {
+                for(size_t index(0); index != matrix_block_size; ++index)
+                  {
+                    error_matrix(index, row_column) -= interpolation(index, zero_index) *
+                      lambda(row) * lambda(column) * (row == column ? 1 : 2);
+                  }
+                ++row_column;
+              }
         }
     }
   error = El::Sqrt(El::Dot(error_matrix, error_matrix));
