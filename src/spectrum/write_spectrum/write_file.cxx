@@ -23,7 +23,7 @@ void write_file(const boost::filesystem::path &output_path,
             {
               outfile << ",";
             }
-          outfile << "\n  [";
+          outfile << "\n  {\n    \"zeros\":\n      [";
           for(size_t zero_index(0); zero_index != zeros_iterator->zeros.size();
               ++zero_index)
             {
@@ -31,9 +31,9 @@ void write_file(const boost::filesystem::path &output_path,
                 {
                   outfile << ",";
                 }
-              outfile << "\n    {\n      \"zero\": \""
+              outfile << "\n        {\n          \"zero\": \""
                       << zeros_iterator->zeros.at(zero_index).zero << "\""
-                      << ",\n      \"lambda\":\n        [\n";
+                      << ",\n          \"lambda\":\n            [\n";
               for(int64_t row(0);
                   row < zeros_iterator->zeros.at(zero_index).lambda.Height();
                   ++row)
@@ -42,13 +42,13 @@ void write_file(const boost::filesystem::path &output_path,
                     {
                       outfile << ",\n";
                     }
-                  outfile << "          \""
+                  outfile << "              \""
                           << zeros_iterator->zeros.at(zero_index).lambda(row, 0)
                           << "\"";
                 }
-              outfile << "\n        ]\n    }";
+              outfile << "\n            ]\n        }";
             }
-          outfile << "\n  ]";
+          outfile << "\n      ]\n  }";
         }
       outfile << "\n]\n";
       if(!outfile.good())
