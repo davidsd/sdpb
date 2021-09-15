@@ -1,13 +1,13 @@
-#include "../Zero.hxx"
+#include "../Zeros.hxx"
 
 #include <boost/filesystem.hpp>
 
 void write_file(const boost::filesystem::path &output_path,
-                const std::vector<std::vector<Zero>> &zeros_blocks);
+                const std::vector<Zeros> &zeros_blocks);
 
 void write_spectrum(const boost::filesystem::path &output_path,
                     const size_t &num_blocks,
-                    const std::vector<std::vector<Zero>> &zeros_blocks)
+                    const std::vector<Zeros> &zeros_blocks)
 {
   // Synchronize zeros
   // This is waaaay more work than it should be.

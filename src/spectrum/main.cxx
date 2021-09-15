@@ -1,5 +1,5 @@
 #include "Format.hxx"
-#include "Zero.hxx"
+#include "Zeros.hxx"
 #include "../sdp_read.hxx"
 #include "../sdp_convert.hxx"
 #include "../sdp_solve.hxx"
@@ -26,16 +26,16 @@ read_y(const boost::filesystem::path &solution_path, const size_t &y_height);
 
 void write_spectrum(const boost::filesystem::path &output_path,
                     const size_t &num_blocks,
-                    const std::vector<std::vector<Zero>> &zeros);
+                    const std::vector<Zeros> &zeros_blocks);
 
-std::vector<std::vector<Zero>> compute_spectrum_pmp(
+std::vector<Zeros> compute_spectrum_pmp(
   const std::vector<El::BigFloat> &normalization,
   const El::Matrix<El::BigFloat> &y,
   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
   const El::BigFloat &threshold, El::BigFloat &epsilon,
   const bool &need_lambda);
 
-std::vector<std::vector<Zero>>
+std::vector<Zeros>
 compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
                      const std::vector<Polynomial_Vector_Matrix> &matrices,
                      const std::vector<El::Matrix<El::BigFloat>> &x,
@@ -68,7 +68,7 @@ int main(int argc, char **argv)
                       << "\n";
             std::vector<El::Matrix<El::BigFloat>> x(
               read_x(solution_dir, matrices));
-            const std::vector<std::vector<Zero>> zeros_blocks(
+            const std::vector<Zeros> zeros_blocks(
               compute_spectrum_pvm(y, matrices, x, threshold, epsilon,
                                    need_lambda));
             write_spectrum(output_path, num_blocks, zeros_blocks);
@@ -84,7 +84,7 @@ int main(int argc, char **argv)
             read_text_block(y, solution_dir / "y.txt");
             std::vector<El::Matrix<El::BigFloat>> x(
               read_x(solution_dir, matrices));
-            const std::vector<std::vector<Zero>> zeros_blocks(
+            const std::vector<Zeros> zeros_blocks(
               compute_spectrum_pmp(normalization, y, matrices, threshold,
                                    epsilon, need_lambda));
             write_spectrum(output_path, num_blocks, zeros_blocks);

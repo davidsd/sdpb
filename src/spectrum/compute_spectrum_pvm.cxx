@@ -1,6 +1,6 @@
 #include "eval_summed.hxx"
 #include "get_zeros.hxx"
-#include "Zero.hxx"
+#include "Zeros.hxx"
 #include "../sdp_read.hxx"
 #include "../sdp_convert/write_vector.hxx"
 #include "../Mesh.hxx"
@@ -10,9 +10,9 @@
 void compute_lambda(const Polynomial_Vector_Matrix &m,
                     const El::Matrix<El::BigFloat> &x,
                     const std::vector<El::BigFloat> &zero_vector,
-                    std::vector<Zero> &zeros);
+                    std::vector<Zero> &zeros, El::BigFloat &error);
 
-std::vector<std::vector<Zero>>
+std::vector<Zeros>
 compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
                      const std::vector<Polynomial_Vector_Matrix> &matrices,
                      const std::vector<El::Matrix<El::BigFloat>> &x,
@@ -27,7 +27,7 @@ compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
   fill_weights(y, max_index, normalization, weights);
 
   const El::BigFloat zero(0);
-  std::vector<std::vector<Zero>> zeros_blocks(matrices.size());
+  std::vector<Zeros> zeros_blocks(matrices.size());
   for(size_t block_index(0); block_index < matrices.size(); ++block_index)
     {
       auto &block(matrices[block_index]);
@@ -80,11 +80,11 @@ compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
         },
         epsilon, block_epsilon);
 
-      auto &zeros(zeros_blocks.at(block_index));
+      auto &zeros(zeros_blocks.at(block_index).zeros);
       if(need_lambda)
         {
           compute_lambda(block, x.at(block_index), get_zeros(mesh, threshold),
-                         zeros);
+                         zeros, zeros_blocks.at(block_index).error);
         }
       else
         {

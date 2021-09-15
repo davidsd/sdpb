@@ -4,13 +4,14 @@
 void compute_lambda(const Polynomial_Vector_Matrix &m,
                     const El::Matrix<El::BigFloat> &x,
                     const std::vector<El::BigFloat> &zero_vector,
-                    std::vector<Zero> &zeros)
+                    std::vector<Zero> &zeros, El::BigFloat &error)
 {
   if(zero_vector.empty())
     {
       return;
     }
-  El::Matrix<El::BigFloat> interpolation(m.sample_points.size(), zero_vector.size());
+  El::Matrix<El::BigFloat> interpolation(m.sample_points.size(),
+                                         zero_vector.size());
   for(size_t point_index(0); point_index != m.sample_points.size();
       ++point_index)
     {

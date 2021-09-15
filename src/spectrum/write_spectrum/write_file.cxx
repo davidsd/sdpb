@@ -1,10 +1,10 @@
-#include "../Zero.hxx"
+#include "../Zeros.hxx"
 #include "../../set_stream_precision.hxx"
 
 #include <boost/filesystem.hpp>
 
 void write_file(const boost::filesystem::path &output_path,
-                const std::vector<std::vector<Zero>> &zeros_blocks)
+                const std::vector<Zeros> &zeros_blocks)
 {
   if(El::mpi::Rank() == 0)
     {
@@ -24,7 +24,7 @@ void write_file(const boost::filesystem::path &output_path,
               outfile << ",";
             }
           outfile << "\n  [";
-          for(size_t zero_index(0); zero_index != zeros_iterator->size();
+          for(size_t zero_index(0); zero_index != zeros_iterator->zeros.size();
               ++zero_index)
             {
               if(zero_index != 0)
@@ -32,15 +32,19 @@ void write_file(const boost::filesystem::path &output_path,
                   outfile << ",";
                 }
               outfile << "\n    {\n      \"zero\": \""
-                      << zeros_iterator->at(zero_index).zero << "\""
+                      << zeros_iterator->zeros.at(zero_index).zero << "\""
                       << ",\n      \"lambda\":\n        [\n";
-              for(int64_t row(0); row<zeros_iterator->at(zero_index).lambda.Height(); ++row)
+              for(int64_t row(0);
+                  row < zeros_iterator->zeros.at(zero_index).lambda.Height();
+                  ++row)
                 {
-                  if(row!=0)
+                  if(row != 0)
                     {
                       outfile << ",\n";
                     }
-                  outfile << "          \"" << zeros_iterator->at(zero_index).lambda(row,0) << "\"";
+                  outfile << "          \""
+                          << zeros_iterator->zeros.at(zero_index).lambda(row, 0)
+                          << "\"";
                 }
               outfile << "\n        ]\n    }";
             }

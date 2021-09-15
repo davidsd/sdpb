@@ -5,6 +5,6 @@
 struct Zero
 {
   El::BigFloat zero;
-  El::Matrix<El::BigFloat> lambda, error;
+  El::Matrix<El::BigFloat> lambda;
   Zero(const El::BigFloat &z) : zero(z) {}
 };
