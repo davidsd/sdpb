@@ -64,8 +64,6 @@ int main(int argc, char **argv)
             read_pvm_input({input_path}, objectives, matrices, num_blocks);
             El::Matrix<El::BigFloat> y(objectives.size() - 1, 1);
             read_text_block(y, solution_dir / "y.txt");
-            std::cout << El::mpi::Rank() << " matrices: " << matrices.size()
-                      << "\n";
             std::vector<El::Matrix<El::BigFloat>> x(
               read_x(solution_dir, matrices));
             const std::vector<Zeros> zeros_blocks(

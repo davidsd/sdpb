@@ -57,7 +57,6 @@ public:
             using namespace std::string_literals;
             if(string_value.str() == "inf"s)
               {
-                std::cout << "Number inf\n" << std::flush;
                 value=Float_Type(std::numeric_limits<double>::max());
               }
             else
