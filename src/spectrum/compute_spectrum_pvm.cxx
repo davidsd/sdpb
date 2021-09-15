@@ -1,16 +1,11 @@
 #include "eval_summed.hxx"
 #include "get_zeros.hxx"
 #include "Zeros.hxx"
-#include "../sdp_read.hxx"
+#include "compute_lambda.hxx"
 #include "../sdp_convert/write_vector.hxx"
 #include "../Mesh.hxx"
 #include "../max_normalization_index.hxx"
 #include "../fill_weights.hxx"
-
-void compute_lambda(const Polynomial_Vector_Matrix &m,
-                    const El::Matrix<El::BigFloat> &x,
-                    const std::vector<El::BigFloat> &zero_vector,
-                    std::vector<Zero> &zeros, El::BigFloat &error);
 
 std::vector<Zeros>
 compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
@@ -83,8 +78,10 @@ compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
       auto &zeros(zeros_blocks.at(block_index).zeros);
       if(need_lambda)
         {
-          compute_lambda(block, x.at(block_index), get_zeros(mesh, threshold),
-                         zeros, zeros_blocks.at(block_index).error);
+          compute_lambda(block.sample_points, block.sample_scalings,
+                         block.rows, x.at(block_index),
+                         get_zeros(mesh, threshold), zeros,
+                         zeros_blocks.at(block_index).error);
         }
       else
         {

@@ -1,25 +1,26 @@
 #include "Zero.hxx"
 #include "../sdp_convert.hxx"
 
-void compute_lambda(const Polynomial_Vector_Matrix &m,
-                    const El::Matrix<El::BigFloat> &x,
+void compute_lambda(const std::vector<El::BigFloat> &sample_points,
+                    const std::vector<El::BigFloat> &sample_scalings,
+                    const size_t &num_rows, const El::Matrix<El::BigFloat> &x,
                     const std::vector<El::BigFloat> &zero_vector,
                     std::vector<Zero> &zeros, El::BigFloat &error)
 {
-  const size_t matrix_block_size(x.Height() / (m.rows * (m.rows + 1) / 2));
+  const size_t matrix_block_size(x.Height() / (num_rows * (num_rows + 1) / 2));
 
   El::Matrix<El::BigFloat> x_scaled_matrix(matrix_block_size,
-                                           (m.rows * (m.rows + 1) / 2));
+                                           (num_rows * (num_rows + 1) / 2));
   {
     size_t row_column(0);
-    for(int64_t row(0); row != m.rows; ++row)
-      for(int64_t column(row); column != m.cols; ++column)
+    for(size_t row(0); row != num_rows; ++row)
+      for(size_t column(row); column != num_rows; ++column)
         {
           for(size_t index(0); index != matrix_block_size; ++index)
             {
               x_scaled_matrix(index, row_column)
                 = x(row_column * matrix_block_size + index, 0)
-                  * m.sample_scalings.at(index);
+                  * sample_scalings.at(index);
             }
           ++row_column;
         }
@@ -31,9 +32,9 @@ void compute_lambda(const Polynomial_Vector_Matrix &m,
       error = El::Sqrt(El::Dot(error_matrix, error_matrix));
       return;
     }
-  El::Matrix<El::BigFloat> interpolation(m.sample_points.size(),
+  El::Matrix<El::BigFloat> interpolation(sample_points.size(),
                                          zero_vector.size());
-  for(size_t point_index(0); point_index != m.sample_points.size();
+  for(size_t point_index(0); point_index != sample_points.size();
       ++point_index)
     {
       for(size_t zero_index(0); zero_index != zero_vector.size(); ++zero_index)
@@ -41,15 +42,15 @@ void compute_lambda(const Polynomial_Vector_Matrix &m,
           auto &product(interpolation(point_index, zero_index));
           product = 1;
           for(size_t point_product_index(0);
-              point_product_index != m.sample_points.size();
+              point_product_index != sample_points.size();
               ++point_product_index)
             {
               if(point_index != point_product_index)
                 {
                   product *= (zero_vector[zero_index]
-                              - m.sample_points[point_product_index])
-                             / (m.sample_points[point_index]
-                                - m.sample_points[point_product_index]);
+                              - sample_points[point_product_index])
+                             / (sample_points[point_index]
+                                - sample_points[point_product_index]);
                 }
             }
         }
@@ -88,11 +89,11 @@ void compute_lambda(const Polynomial_Vector_Matrix &m,
 
   for(size_t zero_index(0); zero_index != zero_vector.size(); ++zero_index)
     {
-      El::Matrix<El::BigFloat> Lambda(m.rows, m.cols);
+      El::Matrix<El::BigFloat> Lambda(num_rows, num_rows);
       El::Matrix<El::BigFloat> fit(roots_fit.Height(), 1);
       size_t row_column(0);
-      for(int64_t row(0); row != m.rows; ++row)
-        for(int64_t column(row); column != m.cols; ++column)
+      for(size_t row(0); row != num_rows; ++row)
+        for(size_t column(row); column != num_rows; ++column)
           {
             El::Matrix<El::BigFloat> roots_view(
               El::View(roots_fit, zero_index, 0, 1, roots_fit.Width()));
@@ -124,18 +125,18 @@ void compute_lambda(const Polynomial_Vector_Matrix &m,
         {
           zeros.emplace_back(zero_vector[zero_index]);
           auto &lambda(zeros.back().lambda);
-          lambda
-            = El::View(eigenvectors, 0, num_eigvals - 1, num_eigvals, 1);
+          lambda = El::View(eigenvectors, 0, num_eigvals - 1, num_eigvals, 1);
           lambda *= El::Sqrt(eigenvalues(num_eigvals - 1, 0));
 
           size_t row_column(0);
-          for(int64_t row(0); row != m.rows; ++row)
-            for(int64_t column(row); column != m.cols; ++column)
+          for(size_t row(0); row != num_rows; ++row)
+            for(size_t column(row); column != num_rows; ++column)
               {
                 for(size_t index(0); index != matrix_block_size; ++index)
                   {
-                    error_matrix(index, row_column) -= interpolation(index, zero_index) *
-                      lambda(row) * lambda(column) * (row == column ? 1 : 2);
+                    error_matrix(index, row_column)
+                      -= interpolation(index, zero_index) * lambda(row)
+                         * lambda(column) * (row == column ? 1 : 2);
                   }
                 ++row_column;
               }
