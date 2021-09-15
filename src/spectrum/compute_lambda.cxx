@@ -6,8 +6,27 @@ void compute_lambda(const Polynomial_Vector_Matrix &m,
                     const std::vector<El::BigFloat> &zero_vector,
                     std::vector<Zero> &zeros, El::BigFloat &error)
 {
+  const size_t matrix_block_size(x.Height() / (m.rows * (m.rows + 1) / 2));
+
+  El::Matrix<El::BigFloat> x_scaled_matrix(matrix_block_size,
+                                           (m.rows * (m.rows + 1) / 2));
+  size_t row_column(0);
+  for(int64_t row(0); row != m.rows; ++row)
+    for(int64_t column(row); column != m.cols; ++column)
+      {
+        for(size_t index(0); index != matrix_block_size; ++index)
+          {
+            x_scaled_matrix(index, row_column)
+              = x(row_column * matrix_block_size + index, 0)
+                * m.sample_scalings.at(index);
+          }
+        ++row_column;
+      }
+  El::Matrix<El::BigFloat> error_matrix(x_scaled_matrix);
+
   if(zero_vector.empty())
     {
+      error = El::Sqrt(El::Dot(error_matrix, error_matrix));
       return;
     }
   El::Matrix<El::BigFloat> interpolation(m.sample_points.size(),
@@ -63,32 +82,28 @@ void compute_lambda(const Polynomial_Vector_Matrix &m,
     // Form pinvA = (U Sigma V^H)^H = V (U Sigma)^H
     El::Gemm(El::NORMAL, El::ADJOINT, El::BigFloat(1), V, U, roots_fit);
   }
-  const size_t matrix_block_size(x.Height() / (m.rows * (m.rows + 1) / 2));
 
   for(size_t zero_index(0); zero_index != zero_vector.size(); ++zero_index)
     {
-      size_t offset(0);
       El::Matrix<El::BigFloat> Lambda(m.rows, m.cols);
       El::Matrix<El::BigFloat> fit(roots_fit.Height(), 1);
+      size_t row_column(0);
       for(int64_t row(0); row != m.rows; ++row)
         for(int64_t column(row); column != m.cols; ++column)
           {
-            El::Matrix<El::BigFloat> x_scaled(matrix_block_size, 1);
-            for(size_t index(0); index != matrix_block_size; ++index)
-              {
-                x_scaled(index, 0)
-                  = x(offset + index, 0) * m.sample_scalings.at(index);
-              }
             El::Matrix<El::BigFloat> roots_view(
               El::View(roots_fit, zero_index, 0, 1, roots_fit.Width()));
             El::Matrix<El::BigFloat> Lambda_view(
               El::View(Lambda, row, column, 1, 1));
 
-            El::Gemv(El::Orientation::NORMAL,
-                     (row == column ? El::BigFloat(1.0) : El::BigFloat(0.5)),
-                     roots_view, x_scaled, El::BigFloat(0.0), Lambda_view);
+            El::Gemv(
+              El::Orientation::NORMAL,
+              (row == column ? El::BigFloat(1.0) : El::BigFloat(0.5)),
+              roots_view,
+              El::View(x_scaled_matrix, 0, row_column, matrix_block_size, 1),
+              El::BigFloat(0.0), Lambda_view);
             Lambda(column, row) = Lambda(row, column);
-            offset += matrix_block_size;
+            ++row_column;
           }
 
       El::HermitianEigCtrl<El::BigFloat> hermitian_eig_ctrl;
@@ -110,4 +125,5 @@ void compute_lambda(const Polynomial_Vector_Matrix &m,
           zeros.back().lambda *= El::Sqrt(eigenvalues(num_eigvals - 1, 0));
         }
     }
+  error = El::Sqrt(El::Dot(error_matrix, error_matrix));
 }

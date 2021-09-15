@@ -48,7 +48,9 @@ void write_file(const boost::filesystem::path &output_path,
                 }
               outfile << "\n            ]\n        }";
             }
-          outfile << "\n      ]\n  }";
+          outfile << "\n      ],\n"
+                  << "    \"error\": \"" << zeros_iterator->error << "\"\n"
+                  << "  }";
         }
       outfile << "\n]\n";
       if(!outfile.good())
