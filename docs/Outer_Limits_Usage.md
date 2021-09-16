@@ -34,6 +34,12 @@ The format for `functions` is detailed in the
 Similarly, `points` has a [schema](points_schema.json) and an
 [example](../test/toy_functions_points.json).
 
+If you have an existing input file for `sdpb`, you can use the bundled
+`sdp2functions` and `pvm2functions` programs to create suitable input
+from JSON and XML files.  They work very similarly to `sdp2input` and
+`pvm2sdp`.  You can run them with the `--help` option to see usage
+information.
+
 All of the other options have a similar meaning as for `sdpb`.  For
 example, `initialMatrixScaleDual` will set the initial size of the `Y`
 matrices when computing a solution for each outer iteration.
