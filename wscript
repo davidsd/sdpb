@@ -163,7 +163,10 @@ def build(bld):
                       'src/sdp_read/read_pvm_input/read_xml_input/Input_Parser/on_start_element.cxx',
                       'src/sdp_read/read_pvm_input/read_xml_input/Input_Parser/on_end_element.cxx',
                       'src/sdp_read/read_pvm_input/read_xml_input/Input_Parser/on_characters.cxx',
-                      'src/sdp_read/read_file_list.cxx']
+                      'src/sdp_read/read_file_list.cxx',
+                      'src/sdp_read/sample_points.cxx',
+                      'src/sdp_read/sample_scalings.cxx'
+                      ]
 
     bld.stlib(source=sdp_read_sources,
               target='sdp_read',
@@ -172,7 +175,6 @@ def build(bld):
 
     bld.program(source=['src/sdp2input/main.cxx',
                         'src/sdp2input/write_output/write_output.cxx',
-                        'src/sdp2input/write_output/sample_points.cxx',
                         'src/sdp2input/write_output/bilinear_basis/bilinear_basis.cxx',
                         'src/sdp2input/write_output/bilinear_basis/precompute/precompute.cxx',
                         'src/sdp2input/write_output/bilinear_basis/precompute/integral.cxx',

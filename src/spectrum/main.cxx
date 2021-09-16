@@ -32,6 +32,7 @@ std::vector<Zeros> compute_spectrum_pmp(
   const std::vector<El::BigFloat> &normalization,
   const El::Matrix<El::BigFloat> &y,
   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
+  const std::vector<El::Matrix<El::BigFloat>> &x,
   const El::BigFloat &threshold, El::BigFloat &epsilon,
   const bool &need_lambda);
 
@@ -66,9 +67,8 @@ int main(int argc, char **argv)
             read_text_block(y, solution_dir / "y.txt");
             std::vector<El::Matrix<El::BigFloat>> x(
               read_x(solution_dir, matrices));
-            const std::vector<Zeros> zeros_blocks(
-              compute_spectrum_pvm(y, matrices, x, threshold, epsilon,
-                                   need_lambda));
+            const std::vector<Zeros> zeros_blocks(compute_spectrum_pvm(
+              y, matrices, x, threshold, epsilon, need_lambda));
             write_spectrum(output_path, num_blocks, zeros_blocks);
           }
           break;
@@ -82,9 +82,8 @@ int main(int argc, char **argv)
             read_text_block(y, solution_dir / "y.txt");
             std::vector<El::Matrix<El::BigFloat>> x(
               read_x(solution_dir, matrices));
-            const std::vector<Zeros> zeros_blocks(
-              compute_spectrum_pmp(normalization, y, matrices, threshold,
-                                   epsilon, need_lambda));
+            const std::vector<Zeros> zeros_blocks(compute_spectrum_pmp(
+              normalization, y, matrices, x, threshold, epsilon, need_lambda));
             write_spectrum(output_path, num_blocks, zeros_blocks);
           }
           break;

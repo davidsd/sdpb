@@ -9,8 +9,6 @@
 std::vector<Polynomial> bilinear_basis(const Damped_Rational &damped_rational,
                                        const size_t &half_max_degree);
 
-std::vector<Boost_Float> sample_points(const size_t &num_points);
-
 void write_output(const boost::filesystem::path &output_path,
                   const std::vector<std::string> &command_arguments,
                   const std::vector<El::BigFloat> &objectives,
@@ -57,21 +55,7 @@ void write_output(const boost::filesystem::path &output_path,
         return result;
       }());
       std::vector<Boost_Float> points(sample_points(max_degree + 1)),
-        sample_scalings;
-
-      sample_scalings.reserve(points.size());
-      for(auto &point : points)
-        {
-          Boost_Float numerator(
-            matrices[index].damped_rational.constant
-            * pow(matrices[index].damped_rational.base, point));
-          Boost_Float denominator(1);
-          for(auto &pole : matrices[index].damped_rational.poles)
-            {
-              denominator *= (point - pole);
-            }
-          sample_scalings.push_back(numerator / denominator);
-        }
+        scalings(sample_scalings(points, matrices[index].damped_rational));
       scalings_timer.stop();
 
       Polynomial_Vector_Matrix pvm;
@@ -91,8 +75,8 @@ void write_output(const boost::filesystem::path &output_path,
         {
           pvm.sample_points.emplace_back(to_string(point));
         }
-      pvm.sample_scalings.reserve(sample_scalings.size());
-      for(auto &scaling : sample_scalings)
+      pvm.sample_scalings.reserve(scalings.size());
+      for(auto &scaling : scalings)
         {
           pvm.sample_scalings.emplace_back(to_string(scaling));
         }

@@ -1,6 +1,8 @@
 #pragma once
 
+#include "Boost_Float.hxx"
 #include "sdp_convert/Dual_Constraint_Group.hxx"
+#include "sdp_convert/write_vector.hxx"
 
 #include <boost/filesystem.hpp>
 
@@ -12,3 +14,4 @@ void write_sdpb_input_files(
   const El::BigFloat &objective_const,
   const std::vector<El::BigFloat> &dual_objective_b,
   const std::vector<Dual_Constraint_Group> &dual_constraint_groups);
+

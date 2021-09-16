@@ -1,8 +1,9 @@
 #include "Zeros.hxx"
 #include "eval_summed.hxx"
 #include "get_zeros.hxx"
+#include "compute_lambda.hxx"
 #include "../sdp_read.hxx"
-#include "../sdp_convert/write_vector.hxx"
+#include "../sdp_convert.hxx"
 #include "../Mesh.hxx"
 #include "../max_normalization_index.hxx"
 #include "../fill_weights.hxx"
@@ -11,6 +12,7 @@ std::vector<Zeros> compute_spectrum_pmp(
   const std::vector<El::BigFloat> &normalization,
   const El::Matrix<El::BigFloat> &y,
   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
+  const std::vector<El::Matrix<El::BigFloat>> &x,
   const El::BigFloat &threshold, El::BigFloat &epsilon,
   const bool &need_lambda)
 {
@@ -94,13 +96,32 @@ std::vector<Zeros> compute_spectrum_pmp(
         epsilon, block_epsilon);
 
       auto &zeros(zeros_blocks.at(block_index).zeros);
-      std::vector<El::BigFloat> zero_vector(get_zeros(mesh, threshold));
-      zeros.reserve(zero_vector.size());
-      for(auto &zero : get_zeros(mesh, threshold))
+      if(need_lambda)
         {
-          zeros.emplace_back(zero);
+          std::vector<Boost_Float> points_boost(
+            sample_points(max_number_terms)),
+            scalings_boost(
+              sample_scalings(points_boost, block.damped_rational));
+          std::vector<El::BigFloat> points_gmp, scalings_gmp;
+          for(auto &point : points_boost)
+            {
+              points_gmp.emplace_back(to_string(point));
+            }
+          for(auto &scaling : scalings_boost)
+            {
+              scalings_gmp.emplace_back(to_string(scaling));
+            }
+          compute_lambda(points_gmp, scalings_gmp, num_rows, x.at(block_index),
+                         get_zeros(mesh, threshold), zeros,
+                         zeros_blocks.at(block_index).error);
         }
-      if(need_lambda) {}
+      else
+        {
+          for(auto &zero : get_zeros(mesh, threshold))
+            {
+              zeros.emplace_back(zero);
+            }
+        }
     }
   return zeros_blocks;
 }
