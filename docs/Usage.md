@@ -222,3 +222,36 @@ If the linear approximation is accurate enough for you, you can use
 the `--linear` option.  This avoids the one-time cost of an expensive
 solve.  Also, it only requires the solutions for `x` and `y`, which
 SDPB writes out by default.
+
+## Computing the Spectrum
+
+Another thing that you can do now that you have a solution is to
+extract the spectrum.  You could use [Spectrum
+Extraction](https://gitlab.com/bootstrapcollaboration/spectrum-extraction),
+but SDPB now ships with `spectrum`, its own parallel implementation of
+spectrum extraction.  The options are described in more detail in the
+help text, obtained by running `spectrum --help`.  As a simple
+example, extracting the spectrum from the toy example would be
+
+    mpirun -n 4 build/spectrum --input=test/test.xml --solution=test/test_out --threshold=1e-10 --format=PVM --output=test/test_spectrum.json --precision=1024
+
+This will output the spectra into `test/test_spectrum.json` and should look like
+
+    [
+      {
+        "zeros":
+          [
+            {
+              "zero": "1.042496785718158120984006519404233029358116776979134529895423630711390744689477902669840296432317928924423313326990327506518264981179194497998966064495830449099906260064344924049936036999283366682972235210076078068737842418915631791070882527833746310933972007746317544906692813981560963543407009636600477760275",
+              "lambda":
+                [
+                  "0.9185423261272011850274891418839269990813583260329451648910407000720586506746630441457833744183236806171597526139823408776201480812734713281917240661102772732679114912585794391259809037078324838527906848460941323049630998481551259846120994742359929339200105456931828844698382241896844615225241582897538916998522"
+                ]
+            }
+          ],
+        "error": "3.270654739398825572856615907651196430155073411176062513853164640754491556816769579861611709003779514625636694652117900107560196318376153341414775658107623405929672675109050400217760922806803922272334854654452970680533543987925006373170235909839750992547956738264810134223945517825404125007202619504819133489523e-26"
+      }
+    ]
+
+It is a json file with arrays of zeros.  There is a [JSON schema](spectrum_schema.json)
+describing the format.
