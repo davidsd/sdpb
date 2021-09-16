@@ -50,6 +50,12 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
       ->default_value(El::BigFloat("1024", 10)),
     "Shrink the duality gap threshold by this factor during each outer "
     "iteration.  Smaller means slower convergence.");
+  solver_options.add_options()(
+    "meshThreshold",
+    po::value<El::BigFloat>(&mesh_threshold)
+      ->default_value(El::BigFloat("0.001", 10)),
+    "Relative error threshold for when to refine a mesh when approximating a "
+    "functional to look for negative regions.");
   cmd_line_options.add(solver_options);
 
   po::variables_map variables_map;

@@ -13,7 +13,8 @@ eval_summed(const El::BigFloat &epsilon, const El::BigFloat &infinity,
 
 void find_new_points(
   const size_t &num_blocks, const size_t &rank, const size_t &num_procs,
-  const El::BigFloat &epsilon, const El::BigFloat &infinity,
+  const El::BigFloat &mesh_threshold, const El::BigFloat &epsilon,
+  const El::BigFloat &infinity,
   const std::vector<std::vector<std::vector<std::vector<Function>>>>
     &function_blocks,
   const std::vector<El::BigFloat> &weights,
@@ -85,7 +86,7 @@ void find_new_points(
         [&](const El::BigFloat &x) {
           return eval_summed(epsilon, infinity, summed_functions, x);
         },
-        (1.0 / 128), block_epsilon);
+        mesh_threshold, block_epsilon);
 
       new_points.at(block).clear();
       for(auto &point : get_new_points(mesh, block_epsilon))

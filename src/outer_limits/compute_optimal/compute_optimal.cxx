@@ -36,7 +36,8 @@ void copy_matrix(const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &source,
 
 void find_new_points(
   const size_t &num_blocks, const size_t &rank, const size_t &num_procs,
-  const El::BigFloat &epsilon, const El::BigFloat &infinity,
+  const El::BigFloat &mesh_threshold, const El::BigFloat &epsilon,
+  const El::BigFloat &infinity,
   const std::vector<std::vector<std::vector<std::vector<Function>>>>
     &function_blocks,
   const std::vector<El::BigFloat> &weights,
@@ -135,7 +136,8 @@ std::vector<El::BigFloat> compute_optimal(
         {
           std::stringstream ss;
           set_stream_precision(ss);
-          ss << "new_points: " << " " << block;
+          ss << "new_points: "
+             << " " << block;
 
           for(size_t offset(0); offset != points.at(block).size(); ++offset)
             {
@@ -305,7 +307,8 @@ std::vector<El::BigFloat> compute_optimal(
                 }
               std::cout << "optimal: " << optimal << "\n";
             }
-          find_new_points(num_blocks, rank, num_procs, epsilon, infinity,
+          find_new_points(num_blocks, rank, num_procs,
+                          parameters_in.mesh_threshold, epsilon, infinity,
                           function_blocks, weights, points, new_points,
                           has_new_points);
           if(!has_new_points)

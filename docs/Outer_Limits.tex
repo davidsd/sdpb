@@ -366,13 +366,14 @@ In addition, for a cell with a width $\delta$, we define an interpolated average
 Then we split the cell if the interpolated averaged value differs too
 much from the actual value at that point
 \begin{eqnarray}
-  \left|\overline{F}_j\left(\Delta\right) - F_j\left(\Delta\right)\right| & < & \epsilon_{\rm{relative}} \left|\overline{F}_j\left(\Delta\right) + F_j\left(\Delta\right)\right| /2\\
+  \left|\overline{F}_j\left(\Delta\right) - F_j\left(\Delta\right)\right| & < & \epsilon_{\rm{relative}} \left|\overline{F}_j\left(\Delta\right) + F_j\left(\Delta\right)\right| \\
   \left|\overline{F}_j\left(\Delta\right) - F_j\left(\Delta\right)\right| & < & \epsilon_{\rm{absolute}} F_{j,\max}.
 \end{eqnarray}
-The tolerance $\epsilon_{\rm{relative}}=\frac{1}{64}$ is somewhat
+The default mesh tolerance $\epsilon_{\rm{relative}}=\frac{1}{1000}$ is somewhat
 arbitrary.  The goal is to catch all of the places where $F_j$ varies
 strongly, and in this way we can find all of the places where it
-becomes negative.
+becomes negative.  You can set $\epsilon_{\rm{relative}}$ with the
+option \texttt{--meshThreshold}.
 
 The tolerance $\epsilon_{\rm{absolute}}$ is the smallest difference from 1
 that can be represented, given the working precision.  For example,
