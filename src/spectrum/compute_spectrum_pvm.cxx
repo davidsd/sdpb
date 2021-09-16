@@ -11,8 +11,8 @@ std::vector<Zeros>
 compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
                      const std::vector<Polynomial_Vector_Matrix> &matrices,
                      const std::vector<El::Matrix<El::BigFloat>> &x,
-                     const El::BigFloat &threshold, El::BigFloat &epsilon,
-                     const bool &need_lambda)
+                     const El::BigFloat &threshold,
+                     El::BigFloat &mesh_threshold, const bool &need_lambda)
 {
   // pvm2sdp implicitly uses the first element as the normalized column
   std::vector<El::BigFloat> normalization(y.Height() + 1, 0);
@@ -73,7 +73,7 @@ compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
         [&](const El::BigFloat &point) {
           return eval_summed(summed_polynomials, point);
         },
-        epsilon, block_epsilon);
+        mesh_threshold, block_epsilon);
 
       auto &zeros(zeros_blocks.at(block_index).zeros);
       if(need_lambda)

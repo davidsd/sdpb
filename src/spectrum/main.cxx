@@ -8,7 +8,7 @@
 #include <boost/filesystem.hpp>
 
 void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
-                      El::BigFloat &epsilon, Format &format,
+                      El::BigFloat &mesh_threshold, Format &format,
                       boost::filesystem::path &input_path,
                       boost::filesystem::path &solution_path,
                       boost::filesystem::path &output_path, bool &need_lambda);
@@ -33,15 +33,15 @@ std::vector<Zeros> compute_spectrum_pmp(
   const El::Matrix<El::BigFloat> &y,
   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
   const std::vector<El::Matrix<El::BigFloat>> &x,
-  const El::BigFloat &threshold, El::BigFloat &epsilon,
+  const El::BigFloat &threshold, El::BigFloat &mesh_threshold,
   const bool &need_lambda);
 
 std::vector<Zeros>
 compute_spectrum_pvm(const El::Matrix<El::BigFloat> &y,
                      const std::vector<Polynomial_Vector_Matrix> &matrices,
                      const std::vector<El::Matrix<El::BigFloat>> &x,
-                     const El::BigFloat &threshold, El::BigFloat &epsilon,
-                     const bool &need_lambda);
+                     const El::BigFloat &threshold,
+                     El::BigFloat &mesh_threshold, const bool &need_lambda);
 
 int main(int argc, char **argv)
 {
@@ -49,12 +49,12 @@ int main(int argc, char **argv)
 
   try
     {
-      El::BigFloat threshold, epsilon;
+      El::BigFloat threshold, mesh_threshold;
       Format format;
       boost::filesystem::path input_path, solution_dir, output_path;
       bool need_lambda;
-      handle_arguments(argc, argv, threshold, epsilon, format, input_path,
-                       solution_dir, output_path, need_lambda);
+      handle_arguments(argc, argv, threshold, mesh_threshold, format,
+                       input_path, solution_dir, output_path, need_lambda);
 
       switch(format)
         {
@@ -68,7 +68,7 @@ int main(int argc, char **argv)
             std::vector<El::Matrix<El::BigFloat>> x(
               read_x(solution_dir, matrices));
             const std::vector<Zeros> zeros_blocks(compute_spectrum_pvm(
-              y, matrices, x, threshold, epsilon, need_lambda));
+              y, matrices, x, threshold, mesh_threshold, need_lambda));
             write_spectrum(output_path, num_blocks, zeros_blocks);
           }
           break;
@@ -82,8 +82,9 @@ int main(int argc, char **argv)
             read_text_block(y, solution_dir / "y.txt");
             std::vector<El::Matrix<El::BigFloat>> x(
               read_x(solution_dir, matrices));
-            const std::vector<Zeros> zeros_blocks(compute_spectrum_pmp(
-              normalization, y, matrices, x, threshold, epsilon, need_lambda));
+            const std::vector<Zeros> zeros_blocks(
+              compute_spectrum_pmp(normalization, y, matrices, x, threshold,
+                                   mesh_threshold, need_lambda));
             write_spectrum(output_path, num_blocks, zeros_blocks);
           }
           break;

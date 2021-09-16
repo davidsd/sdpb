@@ -15,15 +15,15 @@ struct Mesh
        const El::BigFloat &x_4, const El::BigFloat &f_0,
        const El::BigFloat &f_2, const El::BigFloat &f_4,
        const std::function<El::BigFloat(const El::BigFloat &x)> &fn,
-       const El::BigFloat &epsilon,
+       const El::BigFloat &mesh_threshold,
        const El::BigFloat &block_epsilon);
   
   Mesh(const El::BigFloat &x_0, const El::BigFloat &x_4,
        const std::function<El::BigFloat(const El::BigFloat &x)> &fn,
-       const El::BigFloat &epsilon,
+       const El::BigFloat &mesh_threshold,
        const El::BigFloat &block_epsilon)
       : Mesh(x_0, (x_0 + x_4) / 2, x_4, fn(x_0), fn((x_0 + x_4) / 2), fn(x_4),
-             fn, epsilon, block_epsilon)
+             fn, mesh_threshold, block_epsilon)
   {}
 };
 

@@ -13,7 +13,7 @@ std::vector<Zeros> compute_spectrum_pmp(
   const El::Matrix<El::BigFloat> &y,
   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
   const std::vector<El::Matrix<El::BigFloat>> &x,
-  const El::BigFloat &threshold, El::BigFloat &epsilon,
+  const El::BigFloat &threshold, El::BigFloat &mesh_threshold,
   const bool &need_lambda)
 {
   const size_t max_index(max_normalization_index(normalization));
@@ -93,7 +93,7 @@ std::vector<Zeros> compute_spectrum_pmp(
           return El::BigFloat(to_string(numerator / denominator))
                  * eval_summed(summed_polynomials, x);
         },
-        epsilon, block_epsilon);
+        mesh_threshold, block_epsilon);
 
       auto &zeros(zeros_blocks.at(block_index).zeros);
       if(need_lambda)
