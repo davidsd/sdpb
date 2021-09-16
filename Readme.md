@@ -72,6 +72,14 @@ The derivation of the approximation to the objective:
 - M. Reehorst et. al., *Navigator Function for the Conformal Bootstrap*,
   [arXiv:2104.09518 \[hep-th\]](http://arxiv.org/abs/2104.09518).
 
+Spectrum extraction was originally written for use in:
+
+  - Komargodski, Zohar and Simmons-Duffin, David, 'The Random Bond
+    Ising Model in 2.01 and 3 Dimensions,' [arXiv:1603.04444](https://arxiv.org/abs/1603.04444)
+
+An explanation of how it works appears in:
+
+  - Simmons-Duffin, David, 'The Lightcone Bootstrap and the Spectrum of the 3d Ising CFT,' [arXiv:1612.08471](https://arxiv.org/abs/1612.08471)
 
 ## Acknowledgements
 
