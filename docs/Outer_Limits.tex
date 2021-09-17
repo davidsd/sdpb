@@ -291,11 +291,14 @@ transformations in order to scale the problem before making use of
 \texttt{SDPB}.  In the usual formulation, \texttt{SDPB} maximizes
 \begin{eqnarray}
   b\cdot y
+  \label{eq:bdy}
 \end{eqnarray}
 subject to the constraints
 \begin{eqnarray}
   Y + B\cdot y & = & c\\
+  \label{eq:YByc}
   Y \succeq 0
+  \label{eq:Ysucceq0}
 \end{eqnarray}
 $B$ is a matrix corresponding to $M^n_j$, and $c$ is $M^0_j$, both evaluated
 at the initial values of $\Delta$.  However, the relative sizes
@@ -333,14 +336,18 @@ subject to the constraints
   Y' \succeq 0
 \end{eqnarray}
 
-Computing the singular value decomposition of $B$ is relatively
-expensive, similar in cost to completing a single iteration of
-\texttt{SDPB}.  To amortize this cost over the whole calculation, we
+Computing the singular value decomposition of $B$ can be very
+expensive.  To amortize this cost over the whole calculation, we
 save the expression $V \Sigma^{\dagger}$.  Then, at each iteration, we
 compute a new $B'$ using equation \ref{eq:Bprime}.  With this method,
 $B'$ is only guaranteed to be unitary on the first iteration.
 However, later iterations will only add rows to $B$, so it should
 still work reasonably well at equalizing the columns.
+
+If your problem is very large, computing the SVD may be impractical.
+In that case, you can set the option \texttt{--useSVD=0} to skip it
+and solve equations \ref{eq:bdy}, \ref{eq:YByc}, \ref{eq:Ysucceq0}
+directly.
 
 \subsection{Adapted Mesh}
 \label{subsec:adaptedmesh}
