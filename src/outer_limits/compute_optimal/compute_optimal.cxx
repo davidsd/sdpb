@@ -150,7 +150,8 @@ std::vector<El::BigFloat> compute_optimal(
               ss << " " << point;
             }
           ss << "\n";
-          if(El::mpi::Rank() == 0 && !new_points.at(block).empty())
+          if(El::mpi::Rank() == 0 && !new_points.at(block).empty()
+             && parameters_in.verbosity >= Verbosity::regular)
             {
               std::cout << ss.str() << std::flush;
             }

@@ -11,7 +11,8 @@
 
 struct Outer_Parameters
 {
-  bool require_initial_checkpoint = false;
+  bool require_initial_checkpoint = false,
+    use_svd = false;
   Write_Solution write_solution;
 
   El::BigFloat duality_gap_reduction, mesh_threshold;

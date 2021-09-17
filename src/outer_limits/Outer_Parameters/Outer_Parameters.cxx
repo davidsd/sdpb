@@ -56,6 +56,10 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
       ->default_value(El::BigFloat("0.001", 10)),
     "Relative error threshold for when to refine a mesh when approximating a "
     "functional to look for negative regions.");
+  solver_options.add_options()(
+    "useSVD", po::value<bool>(&use_svd)->default_value(true),
+    "Regularize the system using an SVD.  This reduces the required "
+    "precision, but can be slow for large problems.");
   cmd_line_options.add(solver_options);
 
   po::variables_map variables_map;
@@ -101,12 +105,14 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
 
           if(!boost::filesystem::exists(functions_path))
             {
-              throw std::runtime_error("functions path '" + functions_path.string()
+              throw std::runtime_error("functions path '"
+                                       + functions_path.string()
                                        + "' does not exist");
             }
           if(boost::filesystem::is_directory(functions_path))
             {
-              throw std::runtime_error("functions path '" + functions_path.string()
+              throw std::runtime_error("functions path '"
+                                       + functions_path.string()
                                        + "' is a directory, not a file.");
             }
 
