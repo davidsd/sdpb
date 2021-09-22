@@ -1,3 +1,29 @@
+# Version 2.5.1
+
+## outer_limits
+
+- Treat the behavior near zero with special care.  This means that
+  input files now need to specify `epsilon_value` in addition to
+  `infinity_value`.
+
+- Added the `--meshThreshold` option to customize how finely the
+  mesh is divided when searching for negative regions.
+
+- Added the `--useSVD` option to control whether to regularize the
+  problem with an SVD.
+
+- Added the `sdp2functions` and `pvm2functions` programs to convert
+  JSON and XML input files to the format that `outer_limits` expects.
+
+- Fix an uninitialized matrix bug.
+
+- Increase the maximum number of allowed SVD iterations because we are
+  working at high precision.
+
+## spectrum
+
+- Initial release.
+
 # Version 2.5.0
 
 ## sdp2input & pvm2sdp
