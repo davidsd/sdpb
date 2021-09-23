@@ -11,6 +11,12 @@ support.  More commonly, `Boost` was built with the system compiler,
 so it is incompatible with the C++ 14 compiler required for the rest
 of the code.
 
+Some of the systems run into problems if you try to build too much in
+parallel.  You can reduce this parallelism by using the '-j' option.
+For example, 'make -j 4' or './waf -j 4' will only use 4 cores.  On
+some systems I found it expedient to submit a compile job to the
+queue.
+
 At the end of the file, there is an example of running TTTT_small.  It
 should take about 510 iterations and several hours, ending with primal
 and dual optimal solution.  The values for the primal and dual objectives should be
