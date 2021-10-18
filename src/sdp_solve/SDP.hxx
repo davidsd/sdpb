@@ -107,6 +107,8 @@ struct SDP
       const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
       const El::BigFloat &primal_c_scale,
       const Block_Info &block_info, const El::Grid &grid);
+  void reset(const std::filesystem::path &sdp_path,
+      const Block_Info &block_info, const El::Grid &grid, Timers& timers);
 
 private:
   void validate(const Block_Info &block_info) const noexcept(false);

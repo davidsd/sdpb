@@ -32,7 +32,9 @@ and [the manual](/docs/SDPB_Manual/SDPB-Manual.pdf).
 
 Authors: David Simmons-Duffin (dsd@caltech.edu), Walter Landry (wlandry@caltech.edu).
 
-On April 25, 2019, the main branch of this repository was updated to SDPB 2 which has very different performance characteristics and somewhat different usage instructions from version 1.0. Please see the changelog and other documentation for details.
+April 25, 2019: The main branch of this repository was updated to SDPB 2 which has very different performance characteristics and somewhat different usage instructions from version 1.0. Please see the changelog and other documentation for details.
+
+June 13, 2023: The skydive program is now included with SDPB. See the [skydive Readme](/docs/Skydive.md) for more information.
 
 ## Installation and Usage
 
@@ -100,6 +102,10 @@ Spectrum extraction was originally written for use in:
 An explanation of how it works appears in:
 
   - D. Simmons-Duffin, *The Lightcone Bootstrap and the Spectrum of the 3d Ising CFT*, [arXiv:1612.08471](https://arxiv.org/abs/1612.08471)
+
+### skydive
+
+- A. Liu, D. Simmons-Duffin, N. Su, B. C. van Rees, *Skydiving to Bootstrap Islands* [arxiv:2306.XXXXX](https://arxiv.org/abs/2306.XXXXX)
 
 ## Acknowledgements
 

@@ -41,4 +41,13 @@ struct Block_Vector
       }
   }
   Block_Vector() = default;
+
+  int size()
+  {
+        int local_size = 0;
+  	for( int i = 0 ; i < blocks.size(); i++){
+ 		local_size += blocks.at(i).Height();                 		      			      }
+        int final_size = El::mpi::AllReduce(local_size, El::mpi::SUM, El::mpi::COMM_WORLD); 
+        return final_size;
+  }
 };
