@@ -27,6 +27,13 @@ SDP::SDP(const fs::path &sdp_path, const Block_Info &block_info,
   validate(block_info);
 }
 
+void SDP::reset(const fs::path &sdp_path, const Block_Info &block_info, const El::Grid &grid, Timers& timers)
+{
+  Scoped_Timer timer(timers, "SDP_reset");
+  read_objectives(sdp_path, grid, objective_const, dual_objective_b, timers);
+  read_block_data(sdp_path, grid, block_info, *this, timers);
+}
+
 SDP::SDP(
   const El::BigFloat &objective_const_input,
   const std::vector<std::vector<El::BigFloat>> &primal_objective_c_input,

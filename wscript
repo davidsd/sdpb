@@ -102,7 +102,50 @@ def build(bld):
               defines=default_defines,
               includes=default_includes,
               use=use_packages + ['sdp_convert'])
-    
+
+    dynamical_solve_sources = [
+        'src/approx_objective/Approx_Objective/Approx_Objective/Approx_Objective.cxx',
+        'src/approx_objective/Approx_Objective/Approx_Objective/compute_dx_dy.cxx',
+        'src/approx_objective/Approx_Parameters/Approx_Parameters.cxx',
+        'src/approx_objective/Axpy.cxx',
+        'src/approx_objective/write_solver_state.cxx',
+        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/BFGS.cxx',
+        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_lag.cxx',
+        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_R_error.cxx',
+        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_search_direction.cxx',
+        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/cubic_approx.cxx',
+        # 'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step.cxx',
+        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_BFGS.cxx',
+        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_BFGS_func.cxx',
+        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_external_corrector.cxx',
+        # 'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_robust.cxx',
+        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/external_grad_hess.cxx',
+        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/internal_search_direction.cxx',
+        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/mixed_hess.cxx',
+        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/newton_trust.cxx',
+        'src/dynamical_solve/Dynamical_Solver/load_checkpoint/load_binary_checkpoint.cxx',
+        'src/dynamical_solve/Dynamical_Solver/load_checkpoint/load_checkpoint.cxx',
+        'src/dynamical_solve/Dynamical_Solver/load_checkpoint/load_text_checkpoint.cxx',
+        'src/dynamical_solve/Dynamical_Solver/run/compute_feasible_and_termination.cxx',
+        'src/dynamical_solve/Dynamical_Solver/run/print_header_dynamical.cxx',
+        'src/dynamical_solve/Dynamical_Solver/run/print_iteration.cxx',
+        'src/dynamical_solve/Dynamical_Solver/Dynamical_Solver.cxx',
+        'src/dynamical_solve/Dynamical_Solver/run_dynamical.cxx',
+        'src/dynamical_solve/Dynamical_Solver/save_checkpoint.cxx',
+        'src/dynamical_solve/Dynamical_Solver_Parameters/Dynamical_Solver_Parameters.cxx',
+        'src/dynamical_solve/Dynamical_Solver_Parameters/ostream.cxx',
+        'src/dynamical_solve/Dynamical_Solver_Parameters/to_property_tree.cxx',
+        'src/dynamical_solve/Dynamical_Solver_Terminate_Reason/ostream.cxx'
+    ]
+
+    bld.stlib(source=dynamical_solve_sources,
+              target='dynamical_solve',
+              cxxflags=default_flags,
+              defines=default_defines,
+              includes=default_includes,
+              use=use_packages + ['sdp_solve', 'sdp_read'])
+
+
     # SDPB executable
     bld.program(source=['src/sdpb/main.cxx',
                         'src/sdpb/solve.cxx',
@@ -316,6 +359,21 @@ def build(bld):
                 defines=default_defines,
                 includes=default_includes,
                 use=use_packages + ['sdp_read', 'sdp_solve', 'sdp_convert', 'mesh']
+                )
+
+    # Dynamically Navigated SDP executable
+    bld.program(source=['src/dynamical_sdp/main.cxx',
+                        'src/dynamical_sdp/solve.cxx',
+                        'src/dynamical_sdp/write_timing.cxx',
+                        'src/dynamical_sdp/Dynamical_Parameters/Dynamical_Parameters.cxx',
+                        'src/dynamical_sdp/Dynamical_Parameters/to_property_tree.cxx',
+                        'src/dynamical_sdp/Dynamical_Parameters/ostream.cxx',
+                        'src/dynamical_sdp/save_solution.cxx'],
+                target='dynamical_sdp_RV1B',
+                cxxflags=default_flags,
+                defines=default_defines,
+                includes=default_includes,
+                use=use_packages + ['sdp_read', 'sdp_solve', 'dynamical_solve']
                 )
 
     bld.program(source=['external/catch2/catch_amalgamated.cpp',
