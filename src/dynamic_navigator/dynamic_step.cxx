@@ -1,11 +1,11 @@
 #include <El.hpp>
-#include <string.h>
+#include <string>
 #include <vector>
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "../sdp_solve.hxx"
-
-
+#include "../sdp_read.hxx"
 
 void internal_predictor_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
@@ -59,6 +59,18 @@ El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
 El::BigFloat predictor_centering_parameter(const Solver_Parameters &parameters,
                                            const bool is_primal_dual_feasible);
 
+void cholesky_decomposition(const Block_Diagonal_Matrix &A,
+                            Block_Diagonal_Matrix &L);
+
+void setup_solver(const Block_Info &block_info, const El::Grid &grid,
+                  const SDP &sdp, const boost::filesystem::path &solution_dir,
+                  Block_Diagonal_Matrix &schur_complement_cholesky,
+                  Block_Matrix &schur_off_diagonal,
+                  El::DistMatrix<El::BigFloat> &Q);
+void Axpy(const El::BigFloat &alpha, const SDP &new_sdp, SDP &delta_sdp);
+
+
+
 
 //We will integrate this into SDP_Solver at some point, 
 //then we will not pass in const SDP_Solver &solver.
@@ -70,125 +82,129 @@ void dynamic_step(
   const boost::filesystem::path &input_path, const boost::filesystem::path &solution_dir, 
   //const Block_Diagonal_Matrix &schur_complement_cholesky,
   //const Block_Matrix &schur_off_diagonal, const El::DistMatrix<El::BigFloat> &Q,
-  const int &external_dim,  const Block_Vector &primal_residue_p, El::BigFloat &mu,Timers &timers) 
+  const int &external_dim, const El::BigFloat &alpha,  const Block_Vector &primal_residue_p, El::BigFloat &mu,Timers &timers) 
   
 {
-//     // read x, y, X, Y from file 
-//      Block_Vector x(block_info.schur_block_sizes(), 
-//                     block_info.block_indices, block_info.num_points.size(), grid),
-//                   y(std::vector<size_t>(block_info.num_points.size(), sdp.dual_objective_b.Height()),
-//                     block_info.block_indices, block_info.num_points.size(), grid);
-//      Block_Diagonal_Matrix X(block_info.psd_matrix_block_sizes(), 
-//                              block_info.block_indices, block_info.num_points.size(), grid),
-//                            Y (X);
-//      for(size_t block = 0; block != block_info.block_indices.size(); ++block)
-//        {
-//          size_t block_index(block_info.block_indices.at(block));
-//          read_text_block(x.blocks.at(block), solution_dir, "x_",
-//                          block_index);
-//          read_text_block(y.blocks.at(block),
-//                          solution_dir / "y.txt");
-//          for(size_t psd_block(0); psd_block < 2; ++psd_block)
-//            {
-//              if(X.blocks.at(2 * block + psd_block).Height() != 0)
-//                {
-//                  const size_t psd_index(2 * block_index + psd_block);
-//                  read_text_block(X.blocks.at(2 * block + psd_block),
-//                                  solution_dir, "X_matrix_", psd_index);
-//                  read_text_block(Y.blocks.at(2 * block + psd_block),
-//                                  solution_dir, "Y_matrix_", psd_index);
-//                }
-//            }
-//         }
-//
+     // read x, y, X, Y from file 
+      Block_Vector x(block_info.schur_block_sizes(), 
+                     block_info.block_indices, block_info.num_points.size(), grid),
+                   y(std::vector<size_t>(block_info.num_points.size(), sdp.dual_objective_b.Height()),
+                     block_info.block_indices, block_info.num_points.size(), grid);
+      Block_Diagonal_Matrix X(block_info.psd_matrix_block_sizes(), 
+                              block_info.block_indices, block_info.num_points.size(), grid),
+                            Y (X);
+      for(size_t block = 0; block != block_info.block_indices.size(); ++block)
+        {
+          size_t block_index(block_info.block_indices.at(block));
+          read_text_block(x.blocks.at(block), solution_dir, "x_",
+                          block_index);
+          read_text_block(y.blocks.at(block),
+                          solution_dir / "y.txt");
+          for(size_t psd_block(0); psd_block < 2; ++psd_block)
+            {
+              if(X.blocks.at(2 * block + psd_block).Height() != 0)
+                {
+                  const size_t psd_index(2 * block_index + psd_block);
+                  read_text_block(X.blocks.at(2 * block + psd_block),
+                                  solution_dir, "X_matrix_", psd_index);
+                  read_text_block(Y.blocks.at(2 * block + psd_block),
+                                  solution_dir, "Y_matrix_", psd_index);
+                }
+            }
+         }
+
 //      //Or get from solver 
 //      Block_Vector x(solver.x), y(solver.y); 
 //      Block_Diagonal_Matrix X(solver.X), Y(solver.Y);
 //
-//      Block_Diagonal_Matrix X_cholesky(X);
-//      cholesky_decomposition(X, X_cholesky);
-//
-//      Block_Diagonal_Matrix schur_complement_cholesky(
-//        block_info.schur_block_sizes(), block_info.block_indices,
-//        block_info.num_points.size(), grid);
-//
-//      Block_Matrix schur_off_diagonal(sdp.free_var_matrix);
-//
-//      El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
-//                                     sdp.dual_objective_b.Height());
-//
-//      setup_solver(block_info, grid, sdp, solution_dir,
-//                   schur_complement_cholesky, schur_off_diagonal, Q);
-//
-//      
-//      auto &frobenius_timer(
-//        timers.add_and_start("run.step.frobenius_product_symmetric"));
-//      mu = frobenius_product_symmetric(X, Y) / total_psd_rows;
-//      frobenius_timer.stop();
+      Block_Diagonal_Matrix X_cholesky(X);
+      cholesky_decomposition(X, X_cholesky);
+
+      Block_Diagonal_Matrix schur_complement_cholesky(
+        block_info.schur_block_sizes(), block_info.block_indices,
+        block_info.num_points.size(), grid);
+
+      Block_Matrix schur_off_diagonal(sdp.free_var_matrix);
+
+      El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
+                                     sdp.dual_objective_b.Height());
+
+      setup_solver(block_info, grid, sdp, solution_dir,
+                   schur_complement_cholesky, schur_off_diagonal, Q);
+
+      
+      auto &frobenius_timer(
+        timers.add_and_start("run.step.frobenius_product_symmetric"));
+      mu = frobenius_product_symmetric(X, Y) / total_psd_rows;
+      frobenius_timer.stop();
+// TODO
 //      if(mu > parameters.max_complementarity)
 //        {
 //          terminate_now = true;
 //          return;
 //        }
-//
-//      auto &predictor_timer(
-//        timers.add_and_start("run.step.computeSearchDirection(betaPredictor)"));
-//      El::BigFloat beta_predictor;
-//      beta_predictor = predictor_centering_parameter(parameters, is_primal_and_dual_feasible); 
-//
-//      // Internal_step      
-//      Block_Vector internal_dx(x), internal_dy(y);
-//
-//      internal_predictor_direction(block_info, sdp, solver, schur_complement_cholesky,
-//                           schur_off_diagonal, X_cholesky, beta_predictor,
-//                           mu, primal_residue_p, Q, internal_dx, internal_dy); 
-//      
-//      // approx_step and external Hessian 
-//      std::vector<Block_Vector> H_px, Delta_xy;     
-//      std::vector<El::BigFloat> eplus(external_dim), eminus(external_dim);
-//      std::vector<std::vector<El::BigFloat>> esum(external_dim, std::vector<El::BigFloat>(external_dim)), approx_hess(esum); 
-//      if(input_path.extension() == ".nsv")
-//        {
-//          for(auto &filename : read_file_list(input_path))
-//             {  
-//		//Assume that the filename takes the form "plus_i","minus_i" and "sum_i_j", 
-//		//standing for the change in positive e_i, negative e_i and (e_i + e_j) directions respectively 
-//                char *word = strtok ( filename.string,"-");
-//		SDP new_sdp(input_path, block_info, grid), d_sdp(new_sdp);
-//                Axpy(El::BigFloat(-1), sdp, d_sdp);
-//                if (word = "plus")
-//                  {
-//                     approx_step(block_info, d_sdp, x, y, schur_complement_cholesky, schur_off_diagonal, Q, H_px, Delta_xy);
-//                     eplus.at(int(strtok(NULL, " "))) = compute_lag(sdp,d_sdp,solver);
-//                  }
-//                else if (word = "minus")
-//                   {
-//                     eminus.at(int(strtok(NULL, " "))) = compute_lag(sdp,d_sdp,solver); 
-//                   }
-//                else if (word = "sum")
-//                   {
-//                     esum.at(int(strtok(NULL, " "))).at(int(strtok(NULL, " "))) = compute_lag(sdp,d_sdp,solver); 
-//	           }
-//               }
-//         }
-//       else 
-//         {
-//           throw std::invalid_argument( "A list of perturbed sdp files are required" );
-//         }
-//     
-//       std::vector<El::BigFloat> grad(eplus);
-//       std::vector<std::vector<El::BigFloat>> hess(esum);      
-//       external_grad_hessian(eplus, eminus, esum, alpha, grad, hess);   
-//        
-//       for (unsigned i=0; i<eplus.size(); i++)
-//         { 
-//           for (unsigned j=0; j<eplus.size(); j++)
-//             {
-//               approx_hess.at(i).at(j) = El::Dotu (H_px.at(i).first,Delta_xy.at(j).first) + El::Dotu (H_px.at(i).second,Delta_xy.at(j).second); 
-//             }
-//           internal_grad.at(i) = El::Dotu (H_px.at(i).first,internal_dx) + El::Dotu (H_px.at(i).second,internal_dy);
-//         }  
-//       
+
+      auto &predictor_timer(
+        timers.add_and_start("run.step.computeSearchDirection(betaPredictor)"));
+      El::BigFloat beta_predictor;
+      beta_predictor = predictor_centering_parameter(parameters, is_primal_and_dual_feasible); 
+
+      // Internal_step      
+      Block_Vector internal_dx(x), internal_dy(y);
+
+      internal_predictor_direction(block_info, sdp, solver, schur_complement_cholesky,
+                           schur_off_diagonal, X_cholesky, beta_predictor,
+                           mu, primal_residue_p, Q, internal_dx, internal_dy); 
+      
+      // approx_step and external Hessian 
+      std::vector<std::pair<Block_Vector, Block_Vector>> H_px, Delta_xy;     
+      std::vector<El::BigFloat> eplus(external_dim), eminus(external_dim);
+      std::vector<std::vector<El::BigFloat>> esum(external_dim, std::vector<El::BigFloat>(external_dim)), approx_hess(esum); 
+      if(input_path.extension() == ".nsv")
+        {
+          for(auto &filename : read_file_list(input_path))
+             {  
+		//Assume that the filename takes the form "plus_i","minus_i" and "sum_i_j", 
+		//standing for the change in positive e_i, negative e_i and (e_i + e_j) directions respectively 
+                std::string file_name = filename.string();
+                std::vector<std::string> directions;
+                boost::algorithm::split(directions, file_name, boost::is_any_of("-"));
+		//char *word = strtok ( filename.string().c_str(),"-");
+		SDP new_sdp(input_path, block_info, grid), d_sdp(new_sdp);
+                Axpy(El::BigFloat(-1), sdp, d_sdp);
+                if (directions[0] == "plus")
+                  {
+                     approx_step(block_info, d_sdp, x, y, schur_complement_cholesky, schur_off_diagonal, Q, H_px, Delta_xy);
+                     eplus.at(std::stoi(directions[1])) = compute_lag(sdp,d_sdp,solver);
+                  }
+                else if (directions[0] == "minus")
+                   {
+                     eminus.at(std::stoi(directions[1])) = compute_lag(sdp,d_sdp,solver); 
+                   }
+                else if (directions[0] == "sum")
+                   {
+                     esum.at(std::stoi(directions[1])).at(std::stoi(directions[2])) = compute_lag(sdp,d_sdp,solver); 
+	           }
+               }
+         }
+       else 
+         {
+           throw std::invalid_argument( "A list of perturbed sdp files are required" );
+         }
+     
+       std::vector<El::BigFloat> grad(eplus), internal_grad(eplus);
+       std::vector<std::vector<El::BigFloat>> hess(esum);      
+       external_grad_hessian(eplus, eminus, esum, alpha, grad, hess);   
+        
+       for (unsigned i=0; i<eplus.size(); i++)
+         { 
+           for (unsigned j=0; j<eplus.size(); j++)
+             {
+               approx_hess.at(i).at(j) = dot (H_px.at(i).first,Delta_xy.at(j).first) + dot(H_px.at(i).second,Delta_xy.at(j).second); 
+             }
+           internal_grad.at(i) = dot(H_px.at(i).first,internal_dx) + dot(H_px.at(i).second,internal_dy);
+         }  
+       
 //       hess - approx_hess 
 //       grad - internal_grad
 //       El::LinearSolve(hess - approx_hess, grad - internal_grad)
