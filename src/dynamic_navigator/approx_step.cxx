@@ -14,7 +14,7 @@ void approx_step(
   const Block_Vector &x, const Block_Vector &y,
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
-  const El::DistMatrix<El::BigFloat> &Q
+  const El::DistMatrix<El::BigFloat> &Q,
   std::vector<std::pair<Block_Vector, Block_Vector>> &delta_c_b_B,
   std::vector<std::pair<Block_Vector, Block_Vector>> &delta_x_y)
 {

@@ -1,4 +1,4 @@
-#include "../../sdp_solve.hxx"
+#include "../sdp_solve.hxx"
 
 
 void scale_multiply_add(const El::BigFloat &alpha,
@@ -8,7 +8,10 @@ void scale_multiply_add(const El::BigFloat &alpha,
 
 
 inline void multiply(const Block_Diagonal_Matrix &A,
-                     const Block_Diagonal_Matrix &B, Block_Diagonal_Matrix &C);
+                     const Block_Diagonal_Matrix &B, Block_Diagonal_Matrix &C)
+{
+  scale_multiply_add(El::BigFloat(1), A, B, El::BigFloat(0), C);
+}
 
 void cholesky_solve(const Block_Diagonal_Matrix &ACholesky,
                     Block_Diagonal_Matrix &X);
