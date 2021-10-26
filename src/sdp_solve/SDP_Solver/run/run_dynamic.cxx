@@ -5,7 +5,7 @@
 void dynamic_step(
   const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
   const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
-  const SDP &sdp, const SDP_Solver &solver, const El::Grid &grid,
+  const SDP &sdp, SDP_Solver &solver, const El::Grid &grid,
   const boost::filesystem::path &input_path, const boost::filesystem::path &solution_dir,
   //const Block_Diagonal_Matrix &schur_complement_cholesky,
   //const Block_Matrix &schur_off_diagonal, const El::DistMatrix<El::BigFloat> &Q,
@@ -71,9 +71,10 @@ SDP_Solver_Terminate_Reason
 SDP_Solver::run_dynamic(const Solver_Parameters &parameters,
                 const Verbosity &verbosity,
                 const boost::property_tree::ptree &parameter_properties,
-                const Block_Info &block_info, const SDP &sdp,
+                const Block_Info &block_info, 
                 const El::Grid &grid, Timers &timers)
 {
+  SDP sdp(parameters.input_path, block_info, grid);
   SDP_Solver_Terminate_Reason terminate_reason(
     SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
   auto &solver_timer(timers.add_and_start("Solver runtime"));
@@ -187,6 +188,9 @@ SDP_Solver::run_dynamic(const Solver_Parameters &parameters,
       print_iteration(iteration, mu, primal_step_length, dual_step_length,
                       beta_corrector, *this, solver_timer.start_time,
                       verbosity);
+      //Update input files 
+      sdp.reset(parameters.input_path, block_info, grid); //Memory ??
+      
     }
   solver_timer.stop();
   return terminate_reason;

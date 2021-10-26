@@ -19,6 +19,13 @@ SDP::SDP(const boost::filesystem::path &sdp_path,
   read_blocks(sdp_path, grid, block_info, *this);
 }
 
+void SDP::reset(const boost::filesystem::path &sdp_path,
+         const Block_Info &block_info, const El::Grid &grid)
+{ 
+  read_objectives(sdp_path, grid, objective_const, dual_objective_b);
+  read_blocks(sdp_path, grid, block_info, *this);
+}
+
 SDP::SDP(
   const El::BigFloat &objective_const_input,
   const std::vector<std::vector<El::BigFloat>> &primal_objective_c_input,

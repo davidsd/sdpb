@@ -89,7 +89,7 @@ def build(bld):
     bld.stlib(source=sdp_solve_sources,
               target='sdp_solve',
               cxxflags=default_flags,
-              use=use_packages)
+              use=use_packages + ['sdp_read'])
     
     # SDPB executable
     bld.program(source=['src/sdpb/main.cxx',

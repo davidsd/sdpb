@@ -104,7 +104,7 @@ inline void multiply(const Block_Diagonal_Matrix &A,
 void dynamic_step(
   const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
   const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
-  const SDP &sdp, const SDP_Solver &solver, const El::Grid &grid, 
+  const SDP &sdp, SDP_Solver &solver, const El::Grid &grid, 
   const boost::filesystem::path &input_path, const boost::filesystem::path &solution_dir, 
   //const Block_Diagonal_Matrix &schur_complement_cholesky,
   //const Block_Matrix &schur_off_diagonal, const El::DistMatrix<El::BigFloat> &Q,
@@ -112,36 +112,36 @@ void dynamic_step(
   El::BigFloat &primal_step_length, El::BigFloat &dual_step_length, El::BigFloat &mu,Timers &timers) 
 {
      // read x, y, X, Y from file 
-      Block_Vector x(block_info.schur_block_sizes(), 
-                     block_info.block_indices, block_info.num_points.size(), grid),
-                   y(std::vector<size_t>(block_info.num_points.size(), sdp.dual_objective_b.Height()),
-                     block_info.block_indices, block_info.num_points.size(), grid);
-      Block_Diagonal_Matrix X(block_info.psd_matrix_block_sizes(), 
-                              block_info.block_indices, block_info.num_points.size(), grid),
-                            Y (X);
-      for(size_t block = 0; block != block_info.block_indices.size(); ++block)
-        {
-          size_t block_index(block_info.block_indices.at(block));
-          read_text_block(x.blocks.at(block), solution_dir, "x_",
-                          block_index);
-          read_text_block(y.blocks.at(block),
-                          solution_dir / "y.txt");
-          for(size_t psd_block(0); psd_block < 2; ++psd_block)
-            {
-              if(X.blocks.at(2 * block + psd_block).Height() != 0)
-                {
-                  const size_t psd_index(2 * block_index + psd_block);
-                  read_text_block(X.blocks.at(2 * block + psd_block),
-                                  solution_dir, "X_matrix_", psd_index);
-                  read_text_block(Y.blocks.at(2 * block + psd_block),
-                                  solution_dir, "Y_matrix_", psd_index);
-                }
-            }
-         }
+     // Block_Vector x(block_info.schur_block_sizes(), 
+     //                block_info.block_indices, block_info.num_points.size(), grid),
+     //              y(std::vector<size_t>(block_info.num_points.size(), sdp.dual_objective_b.Height()),
+     //                block_info.block_indices, block_info.num_points.size(), grid);
+     // Block_Diagonal_Matrix X(block_info.psd_matrix_block_sizes(), 
+     //                         block_info.block_indices, block_info.num_points.size(), grid),
+     //                       Y (X);
+     // for(size_t block = 0; block != block_info.block_indices.size(); ++block)
+     //   {
+     //     size_t block_index(block_info.block_indices.at(block));
+     //     read_text_block(x.blocks.at(block), solution_dir, "x_",
+     //                     block_index);
+     //     read_text_block(y.blocks.at(block),
+     //                     solution_dir / "y.txt");
+     //     for(size_t psd_block(0); psd_block < 2; ++psd_block)
+     //       {
+     //         if(X.blocks.at(2 * block + psd_block).Height() != 0)
+     //           {
+     //             const size_t psd_index(2 * block_index + psd_block);
+     //             read_text_block(X.blocks.at(2 * block + psd_block),
+     //                             solution_dir, "X_matrix_", psd_index);
+     //             read_text_block(Y.blocks.at(2 * block + psd_block),
+     //                             solution_dir, "Y_matrix_", psd_index);
+     //           }
+     //       }
+     //    }
 
 //      //Or get from solver 
-//      Block_Vector x(solver.x), y(solver.y); 
-//      Block_Diagonal_Matrix X(solver.X), Y(solver.Y);
+      Block_Vector& x = solver.x, y = solver.y;
+      Block_Diagonal_Matrix& X = solver.X, Y = solver.Y;
 //
       Block_Diagonal_Matrix X_cholesky(X), Y_cholesky(Y);
       cholesky_decomposition(X, X_cholesky);
@@ -178,7 +178,7 @@ void dynamic_step(
 
       // Internal_step      
       Block_Vector internal_dx(x), internal_dy(y);
-      Block_Diagonal_Matrix R(solver.X);
+      Block_Diagonal_Matrix R(X);
       internal_predictor_direction(block_info, sdp, solver, schur_complement_cholesky,
                            schur_off_diagonal, X_cholesky, beta_predictor,
                            mu, primal_residue_p, Q, internal_dx, internal_dy, R); 
