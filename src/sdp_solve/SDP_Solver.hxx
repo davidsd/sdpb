@@ -86,6 +86,13 @@ public:
       const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
       Timers &timers);
 
+  SDP_Solver_Terminate_Reason
+  run_dynamic(const Solver_Parameters &parameters,
+      const Verbosity &verbosity,
+      const boost::property_tree::ptree &parameter_properties,
+      const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
+      Timers &timers);
+
   void step(
     const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
     const bool &is_primal_and_dual_feasible, const Block_Info &block_info,

@@ -79,7 +79,12 @@ def build(bld):
                        'src/sdp_solve/SDP_Solver_Terminate_Reason/ostream.cxx',
                        'src/sdp_solve/lower_triangular_transpose_solve.cxx',
                        'src/sdp_solve/Block_Diagonal_Matrix/ostream.cxx',
-                       'src/sdp_solve/Write_Solution.cxx']
+                       'src/sdp_solve/Write_Solution.cxx',
+                       'src/sdp_solve/SDP_Solver/run/dynamic_navigator/approx_step.cxx',
+                       'src/sdp_solve/SDP_Solver/run/dynamic_navigator/compute_lag.cxx',
+                       'src/sdp_solve/SDP_Solver/run/dynamic_navigator/dynamic_step.cxx',
+                       'src/sdp_solve/SDP_Solver/run/dynamic_navigator/internal_search_direction.cxx', 
+                       'src/sdp_solve/SDP_Solver/run/run_dynamic.cxx']
 
     bld.stlib(source=sdp_solve_sources,
               target='sdp_solve',
@@ -243,6 +248,13 @@ def build(bld):
                 use=use_packages + ['sdp_read','sdp_solve', 'mesh']
                 )
 
+#    bld.stlib(source=['src/approx_objective/setup_solver.cxx',
+#                        ],
+#                target='approx_objective',
+#                cxxflags=default_flags,
+#                use=use_packages + ['sdp_read','sdp_solve']
+#                )
+
     bld.program(source=['src/approx_objective/main.cxx',
                         'src/approx_objective/Approx_Parameters/Approx_Parameters.cxx',
                         'src/approx_objective/Approx_Parameters/ostream.cxx',
@@ -288,4 +300,13 @@ def build(bld):
                 cxxflags=default_flags,
                 use=use_packages + ['sdp_read', 'sdp_solve', 'sdp_convert', 'mesh']
                 )
+    
+    #bld.program(source=['src/dynamic_navigator/main.cxx',
+    #                    'src/dynamic_navigator/compute_lag.cxx'
+    #                    ],
+    #            target='dynamic_navigator',
+    #            cxxflags=default_flags,
+    #            use=use_packages + ['sdp_read','sdp_solve']
+    #            )
+
 
