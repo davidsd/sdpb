@@ -248,12 +248,6 @@ def build(bld):
                 use=use_packages + ['sdp_read','sdp_solve', 'mesh']
                 )
 
-#    bld.stlib(source=['src/approx_objective/setup_solver.cxx',
-#                        ],
-#                target='approx_objective',
-#                cxxflags=default_flags,
-#                use=use_packages + ['sdp_read','sdp_solve']
-#                )
 
     bld.program(source=['src/approx_objective/main.cxx',
                         'src/approx_objective/Approx_Parameters/Approx_Parameters.cxx',
@@ -301,12 +295,27 @@ def build(bld):
                 use=use_packages + ['sdp_read', 'sdp_solve', 'sdp_convert', 'mesh']
                 )
     
-    #bld.program(source=['src/dynamic_navigator/main.cxx',
-    #                    'src/dynamic_navigator/compute_lag.cxx'
-    #                    ],
-    #            target='dynamic_navigator',
-    #            cxxflags=default_flags,
-    #            use=use_packages + ['sdp_read','sdp_solve']
-    #            )
+
+    # Dynamically Navigated SDP executable
+    bld.program(source=['src/dynamic_sdp/main.cxx',
+                        'src/dynamic_sdp/solve.cxx',
+                        'src/dynamic_sdp/write_timing.cxx',
+                        'src/dynamic_sdp/Dynamic_Parameters/Dynamic_Parameters.cxx',
+                        'src/dynamic_sdp/Dynamic_Parameters/to_property_tree.cxx',
+                        'src/dynamic_sdp/Dynamic_Parameters/ostream.cxx',
+                        'src/dynamic_sdp/save_solution.cxx',
+                        'src/approx_objective/Axpy.cxx'],
+                target='dynamic_sdp',
+                cxxflags=default_flags,
+                use=use_packages + ['sdp_read','sdp_solve']
+                )
+
+
+#    bld.program(source=['src/dynamic_navigator/main.cxx'
+#                        ],
+#                target='dynamic_navigator',
+#                cxxflags=default_flags,
+#                use=use_packages + ['sdp_read','sdp_solve']
+#                )
 
 

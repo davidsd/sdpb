@@ -76,11 +76,18 @@ El::BigFloat step_length(const Block_Diagonal_Matrix &MCholesky,
                          const std::string &timer_name,
                          Timers &timers);
 
-void setup_solver(const Block_Info &block_info, const El::Grid &grid,
-                  const SDP &sdp, const boost::filesystem::path &solution_dir,
-                  Block_Diagonal_Matrix &schur_complement_cholesky,
-                  Block_Matrix &schur_off_diagonal,
-                  El::DistMatrix<El::BigFloat> &Q);
+void initialize_schur_complement_solver(
+  const Block_Info &block_info, const SDP &sdp,
+  const std::array<
+    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    &A_X_inv,
+  const std::array<
+    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    &A_Y,
+  const El::Grid &block_grid, Block_Diagonal_Matrix &schur_complement_cholesky,
+  Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
+  Timers &timers);
+
 void Axpy(const El::BigFloat &alpha, const SDP &new_sdp, SDP &delta_sdp);
 
 // C := alpha*A*B + beta*C
@@ -105,47 +112,21 @@ void dynamic_step(
   const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
   const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
   const SDP &sdp, SDP_Solver &solver, const El::Grid &grid, 
-  const boost::filesystem::path &input_path, const boost::filesystem::path &solution_dir, 
-  //const Block_Diagonal_Matrix &schur_complement_cholesky,
-  //const Block_Matrix &schur_off_diagonal, const El::DistMatrix<El::BigFloat> &Q,
-  const int &external_dim, const El::BigFloat &alpha,  const Block_Vector &primal_residue_p, 
+  const boost::filesystem::path &new_sdp_path, 
+  const int &n_external_paramters, const El::BigFloat &alpha,  
+  const Block_Diagonal_Matrix &X_cholesky,
+  const Block_Diagonal_Matrix &Y_cholesky,
+  const std::array<
+    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    &A_X_inv,
+  const std::array<
+    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+    &A_Y,
+  const Block_Vector &primal_residue_p, 
   El::BigFloat &primal_step_length, El::BigFloat &dual_step_length, El::BigFloat &mu,Timers &timers) 
 {
-     // read x, y, X, Y from file 
-     // Block_Vector x(block_info.schur_block_sizes(), 
-     //                block_info.block_indices, block_info.num_points.size(), grid),
-     //              y(std::vector<size_t>(block_info.num_points.size(), sdp.dual_objective_b.Height()),
-     //                block_info.block_indices, block_info.num_points.size(), grid);
-     // Block_Diagonal_Matrix X(block_info.psd_matrix_block_sizes(), 
-     //                         block_info.block_indices, block_info.num_points.size(), grid),
-     //                       Y (X);
-     // for(size_t block = 0; block != block_info.block_indices.size(); ++block)
-     //   {
-     //     size_t block_index(block_info.block_indices.at(block));
-     //     read_text_block(x.blocks.at(block), solution_dir, "x_",
-     //                     block_index);
-     //     read_text_block(y.blocks.at(block),
-     //                     solution_dir / "y.txt");
-     //     for(size_t psd_block(0); psd_block < 2; ++psd_block)
-     //       {
-     //         if(X.blocks.at(2 * block + psd_block).Height() != 0)
-     //           {
-     //             const size_t psd_index(2 * block_index + psd_block);
-     //             read_text_block(X.blocks.at(2 * block + psd_block),
-     //                             solution_dir, "X_matrix_", psd_index);
-     //             read_text_block(Y.blocks.at(2 * block + psd_block),
-     //                             solution_dir, "Y_matrix_", psd_index);
-     //           }
-     //       }
-     //    }
-
-//      //Or get from solver 
-      Block_Vector& x = solver.x, y = solver.y;
+     Block_Vector& x = solver.x, y = solver.y;
       Block_Diagonal_Matrix& X = solver.X, Y = solver.Y;
-//
-      Block_Diagonal_Matrix X_cholesky(X), Y_cholesky(Y);
-      cholesky_decomposition(X, X_cholesky);
-      cholesky_decomposition(Y, Y_cholesky);
 
       Block_Diagonal_Matrix schur_complement_cholesky(
         block_info.schur_block_sizes(), block_info.block_indices,
@@ -156,10 +137,10 @@ void dynamic_step(
       El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
                                      sdp.dual_objective_b.Height());
 
-      setup_solver(block_info, grid, sdp, solution_dir,
-                   schur_complement_cholesky, schur_off_diagonal, Q);
-
-      
+      initialize_schur_complement_solver(block_info, sdp, A_X_inv, A_Y, grid,
+                                         schur_complement_cholesky,
+                                         schur_off_diagonal, Q, timers);
+     
       auto &frobenius_timer(
         timers.add_and_start("run.step.frobenius_product_symmetric"));
       mu = frobenius_product_symmetric(X, Y) / total_psd_rows;
@@ -185,17 +166,17 @@ void dynamic_step(
       
       // approx_step and external Hessian 
       std::vector<std::pair<Block_Vector, Block_Vector>> H_px, Delta_xy;  
-      El::Matrix<El::BigFloat> eplus(external_dim,1),eminus(external_dim,1), esum(external_dim, external_dim);
-      if(input_path.extension() == ".nsv")
+      El::Matrix<El::BigFloat> eplus(n_external_paramters,1),eminus(n_external_paramters,1), esum(n_external_paramters, n_external_paramters);
+      if(new_sdp_path.extension() == ".nsv")
         {
-          for(auto &filename : read_file_list(input_path))
+          for(auto &filename : read_file_list(new_sdp_path))
              {  
 		//Assume that the filename takes the form "plus_i","minus_i" and "sum_i_j", f
 		//standing for the change in positive e_i, negative e_i and (e_i + e_j) directions respectively 
                 std::string file_name = filename.string();
                 std::vector<std::string> directions;
                 boost::algorithm::split(directions, file_name, boost::is_any_of("-"));
-		SDP new_sdp(input_path, block_info, grid), d_sdp(new_sdp);
+		SDP new_sdp(new_sdp_path, block_info, grid), d_sdp(new_sdp);
                 Axpy(El::BigFloat(-1), sdp, d_sdp);
                 if (directions[0] == "plus")
                   {
@@ -221,8 +202,8 @@ void dynamic_step(
         El::Matrix<El::BigFloat>  grad(eplus), hess(esum);
         external_grad_hessian(eplus, eminus, esum, alpha, grad, hess);   
 
-        El::Matrix<El::BigFloat> approx_hess(external_dim,external_dim);
-        El::Matrix<El::BigFloat> internal_grad(external_dim,1);        
+        El::Matrix<El::BigFloat> approx_hess(n_external_paramters,n_external_paramters);
+        El::Matrix<El::BigFloat> internal_grad(n_external_paramters,1);        
         for (int i=0; i<esum.Height(); i++)
           { 
             for (int j=0; j<esum.Width(); j++)

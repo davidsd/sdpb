@@ -89,8 +89,12 @@ public:
   SDP_Solver_Terminate_Reason
   run_dynamic(const Solver_Parameters &parameters,
       const Verbosity &verbosity,
+      const boost::filesystem::path &sdp_path,
+      const boost::filesystem::path &new_sdp_path,
+      const int &n_external_parameters,
+      const El::BigFloat &alpha,
       const boost::property_tree::ptree &parameter_properties,
-      const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
+      const Block_Info &block_info, const El::Grid &grid,
       Timers &timers);
 
   void step(

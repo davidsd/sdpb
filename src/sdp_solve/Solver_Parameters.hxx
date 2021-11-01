@@ -16,19 +16,17 @@ struct Solver_Parameters
   bool find_primal_feasible, find_dual_feasible, detect_primal_feasible_jump,
     detect_dual_feasible_jump;
   size_t precision;
-  int external_dim; 
 
   El::BigFloat duality_gap_threshold, primal_error_threshold,
     dual_error_threshold, initial_matrix_scale_primal,
     initial_matrix_scale_dual, feasible_centering_parameter,
     infeasible_centering_parameter, step_length_reduction, max_complementarity,
-    min_primal_step, min_dual_step, alpha;
+    min_primal_step, min_dual_step;
 
   boost::filesystem::path checkpoint_in, checkpoint_out;
   Solver_Parameters() = default;
   boost::program_options::options_description options();
 
-  boost::filesystem::path input_path, solution_dir;
 };
 
 std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p);

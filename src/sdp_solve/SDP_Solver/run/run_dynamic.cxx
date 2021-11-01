@@ -6,10 +6,17 @@ void dynamic_step(
   const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
   const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
   const SDP &sdp, SDP_Solver &solver, const El::Grid &grid,
-  const boost::filesystem::path &input_path, const boost::filesystem::path &solution_dir,
-  //const Block_Diagonal_Matrix &schur_complement_cholesky,
-  //const Block_Matrix &schur_off_diagonal, const El::DistMatrix<El::BigFloat> &Q,
-  const int &external_dim, const El::BigFloat &alpha,  const Block_Vector &primal_residue_p,
+  const boost::filesystem::path &new_sdp_path,
+  const int &n_external_paramters, const El::BigFloat &alpha,   
+  const Block_Diagonal_Matrix &X_cholesky, 
+  const Block_Diagonal_Matrix &Y_cholesky, 
+  const std::array<    
+    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>    
+    &A_X_inv,  
+  const std::array<  
+    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>   
+    &A_Y,   
+  const Block_Vector &primal_residue_p,
   El::BigFloat &primal_step_length, El::BigFloat &dual_step_length, El::BigFloat &mu,Timers &timers);
 
 void cholesky_decomposition(const Block_Diagonal_Matrix &A,
@@ -70,11 +77,15 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
 SDP_Solver_Terminate_Reason
 SDP_Solver::run_dynamic(const Solver_Parameters &parameters,
                 const Verbosity &verbosity,
+                const boost::filesystem::path &sdp_path,
+                const boost::filesystem::path &new_sdp_path,
+                const int &n_external_parameters,
+                const El::BigFloat &alpha,
                 const boost::property_tree::ptree &parameter_properties,
                 const Block_Info &block_info, 
                 const El::Grid &grid, Timers &timers)
 {
-  SDP sdp(parameters.input_path, block_info, grid);
+  SDP sdp(sdp_path, block_info, grid);
   SDP_Solver_Terminate_Reason terminate_reason(
     SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
   auto &solver_timer(timers.add_and_start("Solver runtime"));
@@ -170,16 +181,12 @@ SDP_Solver::run_dynamic(const Solver_Parameters &parameters,
         }
 
       El::BigFloat mu, beta_corrector;
-      if (!parameters.input_path.empty() && !parameters.solution_dir.empty() && parameters.external_dim  && parameters.alpha)
+      if (!sdp_path.empty() && !new_sdp_path.empty() && n_external_parameters  && alpha)
        {
          dynamic_step(parameters, total_psd_rows, is_primal_and_dual_feasible, block_info,
-           sdp, *this, grid, parameters.input_path, parameters.solution_dir, parameters.external_dim, parameters.alpha, primal_residue_p, primal_step_length, dual_step_length,mu, timers);
-       }
-      //step(parameters, total_psd_rows, is_primal_and_dual_feasible, block_info,
-      //     sdp, grid, X_cholesky, Y_cholesky, A_X_inv, A_Y, primal_residue_p,
-      //     mu, beta_corrector, primal_step_length, dual_step_length,
-      //     terminate_now, timers);
-      if(terminate_now)
+           sdp, *this, grid, new_sdp_path, n_external_parameters, alpha, X_cholesky, Y_cholesky, A_X_inv, A_Y,  primal_residue_p, primal_step_length, dual_step_length,mu, timers);
+      } 
+      if (terminate_now)
         {
           terminate_reason
             = SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
@@ -189,7 +196,7 @@ SDP_Solver::run_dynamic(const Solver_Parameters &parameters,
                       beta_corrector, *this, solver_timer.start_time,
                       verbosity);
       //Update input files 
-      sdp.reset(parameters.input_path, block_info, grid); //Memory ??
+      sdp.reset(sdp_path, block_info, grid); //Memory ??
       
     }
   solver_timer.stop();
