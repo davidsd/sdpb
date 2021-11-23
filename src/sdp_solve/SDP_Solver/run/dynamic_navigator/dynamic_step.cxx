@@ -6,7 +6,7 @@
 #include "cblas.h"
 #include "../../../../sdp_solve.hxx"
 #include "../../../../sdp_read.hxx"
-
+#include <iostream>
 
 void internal_predictor_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
@@ -123,7 +123,7 @@ void dynamic_step(
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     &A_Y,
   const Block_Vector &primal_residue_p, 
-  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length, El::BigFloat &mu,Timers &timers) 
+  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length, El::BigFloat &mu, bool &terminate_now, Timers &timers, El::Matrix<El::BigFloat> &external_step) 
 {
      Block_Vector& x = solver.x, y = solver.y;
       Block_Diagonal_Matrix& X = solver.X, Y = solver.Y;
@@ -146,11 +146,11 @@ void dynamic_step(
       mu = frobenius_product_symmetric(X, Y) / total_psd_rows;
       frobenius_timer.stop();
 // TODO
-//      if(mu > parameters.max_complementarity)
-//        {
-//          terminate_now = true;
-//          return;
-//        }
+      if(mu > parameters.max_complementarity)
+        {
+          terminate_now = true;
+          return;
+        }
 
       auto &predictor_timer(
         timers.add_and_start("run.step.computeSearchDirection(betaPredictor)"));
@@ -165,30 +165,55 @@ void dynamic_step(
                            mu, primal_residue_p, Q, internal_dx, internal_dy, R); 
       
       // approx_step and external Hessian 
+      std::cout << sdp.primal_objective_c.blocks.size() << "sdp primal_objective_c_block_size" << '\n';
       std::vector<std::pair<Block_Vector, Block_Vector>> H_px, Delta_xy;  
       El::Matrix<El::BigFloat> eplus(n_external_paramters,1),eminus(n_external_paramters,1), esum(n_external_paramters, n_external_paramters);
+      El::Zero(eplus);
+      El::Zero(eminus);
+      El::Zero(esum);
+      //std::cout << "Test d_sdp (expect to be close to zero)" << '\n';
+      //SDP test_d_sdp(sdp);
+      //Axpy(El::BigFloat(-1), sdp, test_d_sdp);
+      //std::cout << compute_lag(sdp,test_d_sdp,solver) << '\n';
       if(new_sdp_path.extension() == ".nsv")
         {
           for(auto &filename : read_file_list(new_sdp_path))
-             {  
+             { 
 		//Assume that the filename takes the form "plus_i","minus_i" and "sum_i_j", f
 		//standing for the change in positive e_i, negative e_i and (e_i + e_j) directions respectively 
-                std::string file_name = filename.string();
+                std::string file_name = filename.stem().string();
                 std::vector<std::string> directions;
-                boost::algorithm::split(directions, file_name, boost::is_any_of("-"));
-		SDP new_sdp(new_sdp_path, block_info, grid), d_sdp(new_sdp);
-                Axpy(El::BigFloat(-1), sdp, d_sdp);
+                boost::algorithm::split(directions, file_name, boost::is_any_of("_"));
+		//SDP new_sdp(filename, block_info, grid), d_sdp(new_sdp);
+                //Axpy(El::BigFloat(-1), sdp, d_sdp);
                 if (directions[0] == "plus")
                   {
+                     std::cout << "inside plus"<< file_name<< '\n';
+                     //std::cout << sdp.primal_objective_c.blocks.at(33) << "sdp primal_objective_c_33" << '\n';
+                     //El::Print(sdp.primal_objective_c.blocks.at(33), "sdp primal_objective_c_33");                     
+                     SDP plus_sdp(filename, block_info, grid), d_sdp(plus_sdp);
+                     //std::cout << d_sdp.primal_objective_c.blocks.at(33) << "new_sdp primal_objective_c_33" << '\n';
+                     //El::Print(d_sdp.primal_objective_c.blocks.at(33), "neww_sdp primal_objective_c_33");
+                     Axpy(El::BigFloat(-1), sdp, d_sdp);
+                     //std::cout << d_sdp.primal_objective_c.blocks.at(33) << "d_sdp primal_objective_c_33" << '\n';
+                     //El::Print(d_sdp.primal_objective_c.blocks.at(33), "d_sdp primal_objective_c_33");
                      approx_step(block_info, d_sdp, x, y, schur_complement_cholesky, schur_off_diagonal, Q, H_px, Delta_xy);
                      eplus(std::stoi(directions[1])) = compute_lag(sdp,d_sdp,solver);
+                     El::Print(eplus, "plus");
                   }
                 else if (directions[0] == "minus")
                    {
+                     std::cout << "inside minus "<< file_name<< '\n';
+                     SDP minus_sdp(filename, block_info, grid), d_sdp(minus_sdp);
+                     Axpy(El::BigFloat(-1), sdp, d_sdp);
                      eminus(std::stoi(directions[1])) = compute_lag(sdp,d_sdp,solver); 
+                     El::Print(eminus, "minus");
                    }
                 else if (directions[0] == "sum")
                    {
+                     SDP plus_sdp(filename, block_info, grid), d_sdp(plus_sdp);
+                     Axpy(El::BigFloat(-1), sdp, d_sdp);
+                     std::cout << "inside sum "<< file_name<< '\n';
                      esum(std::stoi(directions[1]),std::stoi(directions[2])) = compute_lag(sdp,d_sdp,solver); 
 	           }
                }
@@ -198,10 +223,12 @@ void dynamic_step(
            throw std::invalid_argument( "A list of perturbed sdp files are required" );
          }
      
- 
         El::Matrix<El::BigFloat>  grad(eplus), hess(esum);
         external_grad_hessian(eplus, eminus, esum, alpha, grad, hess);   
-
+        //El::Print(hess, "hess");
+        //El::Print(grad, "grad");
+        //El::Print(eplus, "plus");
+        //El::Print(eminus, "minus");
         El::Matrix<El::BigFloat> approx_hess(n_external_paramters,n_external_paramters);
         El::Matrix<El::BigFloat> internal_grad(n_external_paramters,1);        
         for (int i=0; i<esum.Height(); i++)
@@ -212,12 +239,14 @@ void dynamic_step(
               }
                 internal_grad(i) = dot(H_px.at(i).first,internal_dx) + dot(H_px.at(i).second,internal_dy);
           }  
-
+         //El::Print(internal_grad, "int grad");
          hess -= approx_hess;
          internal_grad -= grad;
-         El::Matrix<El::BigFloat> external_step(internal_grad);
+         external_step = internal_grad; // we can get rid of internal_grad here. 
          El::LinearSolve(hess,external_step);
-
+	 El::Print(external_step, "extStep");
+         //El::Print(internal_grad, "int grad after");
+         //El::Print(approx_hess, "approx_hess");
          Block_Vector dx(internal_dx), dy(internal_dy);
          for (int i=0; i<esum.Height(); i++)
            {
@@ -231,7 +260,6 @@ void dynamic_step(
                }
           }
  
-         
          Block_Diagonal_Matrix dX(X), dY(Y);
          // dX = PrimalResidues + \sum_p A_p dx[p]
          constraint_matrix_weighted_sum(block_info, sdp, dx, dX);
@@ -278,5 +306,5 @@ void dynamic_step(
          dY *= dual_step_length;
        
          Y += dY;
-
+         std::cout << "finish step" << '\n';
 } 

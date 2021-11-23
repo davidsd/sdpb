@@ -38,7 +38,8 @@ void save_solution(const SDP_Solver &solver,
                    const boost::filesystem::path &out_directory,
                    const Write_Solution &write_solution,
                    const std::vector<size_t> &block_indices,
-                   const Verbosity &verbosity)
+                   const Verbosity &verbosity,
+                   const El::Matrix<El::BigFloat> &extParamStep)
 {
   // Internally, El::Print() sync's everything to the root core and
   // outputs it from there.  So do not actually open the file on
@@ -67,6 +68,22 @@ void save_solution(const SDP_Solver &solver,
           throw std::runtime_error("Error when writing to: "
                                    + output_path.string());
         }
+    }
+
+  boost::filesystem::ofstream extParamStep_stream;
+  if(El::mpi::Rank() == 0)
+    {
+      const boost::filesystem::path extParamStep_path(out_directory / "externalParamStep.txt");
+      extParamStep_stream.open(extParamStep_path);
+      El::Print(extParamStep,
+                std::to_string(extParamStep.Height()) + " "
+                + std::to_string(extParamStep.Width()),
+               "\n", extParamStep_stream);
+      if(!extParamStep_stream.good())
+        {
+          throw std::runtime_error("Error when writing to: "
+                                   + extParamStep_path.string());
+        } 
     }
   // y is duplicated among cores, so only need to print out copy on
   // the root node.
@@ -121,4 +138,5 @@ void save_solution(const SDP_Solver &solver,
             }
         }
     }
+  
 }

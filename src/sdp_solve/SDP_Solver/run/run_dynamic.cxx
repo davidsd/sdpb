@@ -1,6 +1,8 @@
 #include "../../SDP_Solver.hxx"
+#include <iostream>
 //#include "../../../dynamic_navigator/dynamic_step.cxx"
 // The main solver loop
+#include <boost/filesystem/fstream.hpp>
 
 void dynamic_step(
   const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
@@ -17,7 +19,7 @@ void dynamic_step(
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>   
     &A_Y,   
   const Block_Vector &primal_residue_p,
-  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length, El::BigFloat &mu,Timers &timers);
+  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length, El::BigFloat &mu,bool &terminate_now, Timers &timers, El::Matrix<El::BigFloat> &extParamStep);
 
 void cholesky_decomposition(const Block_Diagonal_Matrix &A,
                             Block_Diagonal_Matrix &L);
@@ -77,15 +79,22 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
 SDP_Solver_Terminate_Reason
 SDP_Solver::run_dynamic(const Solver_Parameters &parameters,
                 const Verbosity &verbosity,
-                const boost::filesystem::path &sdp_path,
+                const SDP &sdp, //boost::filesystem::path &sdp_path,
                 const boost::filesystem::path &new_sdp_path,
+                const boost::filesystem::path &out_directory,
                 const int &n_external_parameters,
                 const El::BigFloat &alpha,
                 const boost::property_tree::ptree &parameter_properties,
                 const Block_Info &block_info, 
-                const El::Grid &grid, Timers &timers)
+                const El::Grid &grid, Timers &timers, El::Matrix<El::BigFloat> &extParamStep)
 {
-  SDP sdp(sdp_path, block_info, grid);
+  //SDP sdp(sdp_path, block_info, grid);
+  //std::cout << "path: " << sdp_path.string()<< '\n';
+  //std::cout << sdp.free_var_matrix.blocks.size() << "run sdp free_var_matrix_block_size" << '\n';
+  //for (auto i: sdp.primal_objective_c.blocks){
+  //    El::Print(i, "primal_objective_c");
+  //    std::cout  << '\n'; 
+ //}
   SDP_Solver_Terminate_Reason terminate_reason(
     SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
   auto &solver_timer(timers.add_and_start("Solver runtime"));
@@ -131,7 +140,7 @@ SDP_Solver::run_dynamic(const Solver_Parameters &parameters,
 
   initialize_timer.stop();
   auto last_checkpoint_time(std::chrono::high_resolution_clock::now());
-  for(size_t iteration = 1;; ++iteration)
+  for(size_t iteration = 1;iteration < 2; ++iteration)
     {
       El::byte checkpoint_now(
         std::chrono::duration_cast<std::chrono::seconds>(
@@ -181,10 +190,11 @@ SDP_Solver::run_dynamic(const Solver_Parameters &parameters,
         }
 
       El::BigFloat mu, beta_corrector;
-      if (!sdp_path.empty() && !new_sdp_path.empty() && n_external_parameters  && alpha)
+      if (!new_sdp_path.empty() && n_external_parameters  && alpha)
        {
+         std::cout << "call dynamic_step " << '\n';
          dynamic_step(parameters, total_psd_rows, is_primal_and_dual_feasible, block_info,
-           sdp, *this, grid, new_sdp_path, n_external_parameters, alpha, X_cholesky, Y_cholesky, A_X_inv, A_Y,  primal_residue_p, primal_step_length, dual_step_length,mu, timers);
+           sdp, *this, grid, new_sdp_path, n_external_parameters, alpha, X_cholesky, Y_cholesky, A_X_inv, A_Y,  primal_residue_p, primal_step_length, dual_step_length,mu, terminate_now, timers,extParamStep);
       } 
       if (terminate_now)
         {
@@ -195,9 +205,23 @@ SDP_Solver::run_dynamic(const Solver_Parameters &parameters,
       print_iteration(iteration, mu, primal_step_length, dual_step_length,
                       beta_corrector, *this, solver_timer.start_time,
                       verbosity);
+    boost::filesystem::ofstream extParamStep_stream;
+    
+     //const boost::filesystem::path extParamStep_path(out_directory / "externalParamStep.txt");
+     extParamStep_stream.open(out_directory);
+     El::Print(extParamStep,
+              "iteration : "+ std::to_string(iteration), 
+              "\n", extParamStep_stream);
+     if(!extParamStep_stream.good())
+       {
+         throw std::runtime_error("Error when writing to: "
+                                  + out_directory.string());
+       }
+    
       //Update input files 
-      sdp.reset(sdp_path, block_info, grid); //Memory ??
-      
+      //std::cout << "reset causing segfault? " << '\n';
+      //sdp.reset(sdp_path, block_info, grid); //Memory ??
+      //std::cout << "finish reset" << '\n'; 
     }
   solver_timer.stop();
   return terminate_reason;

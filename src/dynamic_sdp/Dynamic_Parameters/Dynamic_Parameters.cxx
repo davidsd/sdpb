@@ -16,7 +16,7 @@ Dynamic_Parameters::Dynamic_Parameters(int argc, char *argv[])
     "sdpDir,s", po::value<boost::filesystem::path>(&sdp_path)->required(),
     "Directory containing the preprocessed centering SDP data files.");
   required_options.add_options()(
-    "newsdpDir,s", po::value<boost::filesystem::path>(&new_sdp_path)->required(),
+    "newSdpDirs", po::value<boost::filesystem::path>(&new_sdp_path)->required(),
     "Directory containing the preprocessed SDP data files around the center SDP in external parameter space.");  
   required_options.add_options()(
     "procsPerNode", po::value<size_t>(&procs_per_node)->required(),
@@ -74,11 +74,11 @@ Dynamic_Parameters::Dynamic_Parameters(int argc, char *argv[])
                               po::value<int>(&int_verbosity)->default_value(1),
                               "Verbosity.  0 -> no output, 1 -> regular "
                               "output, 2 -> debug output");
-  basic_options.add_options()("StepSizeAlpha", 
+  basic_options.add_options()("stepSizeAlpha", 
                               po::value<El::BigFloat>(&alpha)->default_value(1),
                               "Step size in the external-parameter space to generate the new SDP data files. "
                               "The default value is set to 1.");
-  basic_options.add_options()("NumberExternalParameters",
+  basic_options.add_options()("numExternalParams",
                               po::value<int>(&N_external_parameters)->default_value(0),
                               "The number of external parameters to be varied in each iteration of the dynamic SDP. "
                               "The default value is set to 0.");

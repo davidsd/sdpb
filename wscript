@@ -310,7 +310,12 @@ def build(bld):
                 use=use_packages + ['sdp_read','sdp_solve']
                 )
 
-
+    # Test read files 
+    bld.program(source=['src/exp/test.cpp'],
+                target='test_readnsv', 
+                cxxflags=default_flags,
+                use=use_packages + ['sdp_read']
+                )
 #    bld.program(source=['src/dynamic_navigator/main.cxx'
 #                        ],
 #                target='dynamic_navigator',

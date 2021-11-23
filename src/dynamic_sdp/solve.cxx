@@ -11,12 +11,13 @@ void save_solution(const SDP_Solver &solver, const SDP_Solver_Terminate_Reason,
                    const boost::filesystem::path &out_directory,
                    const Write_Solution &write_solution,
                    const std::vector<size_t> &block_indices,
-                   const Verbosity &verbosity);
+                   const Verbosity &verbosity, const El::Matrix<El::BigFloat> &extParamStep);
 
 Timers solve(const Block_Info &block_info, const Dynamic_Parameters &parameters)
 {
   El::Grid grid(block_info.mpi_comm.value);
   SDP sdp(parameters.sdp_path, block_info, grid);
+  std::cout << "center path: " << parameters.sdp_path.string() << '\n';
   SDP_Solver solver(parameters.solver, parameters.verbosity,
                     parameters.require_initial_checkpoint, block_info, grid,
                     sdp.dual_objective_b.Height());
@@ -24,11 +25,14 @@ Timers solve(const Block_Info &block_info, const Dynamic_Parameters &parameters)
   Timers timers(parameters.verbosity >= Verbosity::debug);
   const boost::property_tree::ptree parameters_tree(
     to_property_tree(parameters));
+  El::Matrix<El::BigFloat> extParamStep;
+  std::cout << "call solver run_dynamic" << '\n';
+  const boost::filesystem::path out_path(parameters.out_directory / "externalParamStep.txt");
   SDP_Solver_Terminate_Reason reason(solver.run_dynamic(
     parameters.solver, parameters.verbosity,
-    parameters.sdp_path, parameters.new_sdp_path, 
+    sdp, parameters.new_sdp_path,out_path, 
     parameters.N_external_parameters, parameters.alpha, 
-    parameters_tree, block_info, grid, timers));
+    parameters_tree, block_info, grid, timers, extParamStep));
 
   if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
@@ -50,6 +54,6 @@ Timers solve(const Block_Info &block_info, const Dynamic_Parameters &parameters)
     }
   save_solution(solver, reason, timers.front(), parameters.out_directory,
                 parameters.write_solution, block_info.block_indices,
-                parameters.verbosity);
+                parameters.verbosity, extParamStep);
   return timers;
 }
