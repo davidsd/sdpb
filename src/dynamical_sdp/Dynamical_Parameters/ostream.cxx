@@ -1,6 +1,6 @@
-#include "../Dynamic_Parameters.hxx"
+#include "../Dynamical_Parameters.hxx"
 
-std::ostream &operator<<(std::ostream &os, const Dynamic_Parameters &p)
+std::ostream &operator<<(std::ostream &os, const Dynamical_Parameters &p)
 {
   os << "centering SDP directory   : " << p.sdp_path << '\n'
      << "shifted SDP directory  : "    << p.new_sdp_path << '\n'

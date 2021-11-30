@@ -9,7 +9,7 @@
 
 #include <iostream>
 
-struct Dynamic_Parameters
+struct Dynamical_Parameters
 {
   bool no_final_checkpoint;
   size_t procs_per_node, proc_granularity;
@@ -25,10 +25,10 @@ struct Dynamic_Parameters
   int N_external_parameters; 
   El::BigFloat update_sdp_threshold;
 
-  Dynamic_Parameters(int argc, char *argv[]);
+  Dynamical_Parameters(int argc, char *argv[]);
   bool is_valid() const { return !sdp_path.empty() && !new_sdp_path.empty(); }
 };
 
-std::ostream &operator<<(std::ostream &os, const Dynamic_Parameters &p);
+std::ostream &operator<<(std::ostream &os, const Dynamical_Parameters &p);
 
-boost::property_tree::ptree to_property_tree(const Dynamic_Parameters &p);
+boost::property_tree::ptree to_property_tree(const Dynamical_Parameters &p);

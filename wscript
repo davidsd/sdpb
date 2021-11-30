@@ -80,13 +80,13 @@ def build(bld):
                        'src/sdp_solve/lower_triangular_transpose_solve.cxx',
                        'src/sdp_solve/Block_Diagonal_Matrix/ostream.cxx',
                        'src/sdp_solve/Write_Solution.cxx',
-                       'src/sdp_solve/SDP_Solver/run/dynamic_navigator/mixed_hess.cxx',
-                       'src/sdp_solve/SDP_Solver/run/dynamic_navigator/external_grad_hess.cxx',
-                       'src/sdp_solve/SDP_Solver/run/dynamic_navigator/compute_lag.cxx',
-                       'src/sdp_solve/SDP_Solver/run/dynamic_navigator/dynamic_step.cxx',
-                       'src/sdp_solve/SDP_Solver/run/dynamic_navigator/internal_search_direction.cxx', 
-                       'src/sdp_solve/SDP_Solver/run/dynamic_navigator/compute_update_sdp.cxx',
-                       'src/sdp_solve/SDP_Solver/run/run_dynamic.cxx']
+                       'src/sdp_solve/SDP_Solver/run/dynamical_navigator/mixed_hess.cxx',
+                       'src/sdp_solve/SDP_Solver/run/dynamical_navigator/external_grad_hess.cxx',
+                       'src/sdp_solve/SDP_Solver/run/dynamical_navigator/compute_lag.cxx',
+                       'src/sdp_solve/SDP_Solver/run/dynamical_navigator/dynamical_step.cxx',
+                       'src/sdp_solve/SDP_Solver/run/dynamical_navigator/internal_search_direction.cxx', 
+                       'src/sdp_solve/SDP_Solver/run/dynamical_navigator/compute_update_sdp.cxx',
+                       'src/sdp_solve/SDP_Solver/run/run_dynamical.cxx']
 
     bld.stlib(source=sdp_solve_sources,
               target='sdp_solve',
@@ -299,15 +299,15 @@ def build(bld):
     
 
     # Dynamically Navigated SDP executable
-    bld.program(source=['src/dynamic_sdp/main.cxx',
-                        'src/dynamic_sdp/solve.cxx',
-                        'src/dynamic_sdp/write_timing.cxx',
-                        'src/dynamic_sdp/Dynamic_Parameters/Dynamic_Parameters.cxx',
-                        'src/dynamic_sdp/Dynamic_Parameters/to_property_tree.cxx',
-                        'src/dynamic_sdp/Dynamic_Parameters/ostream.cxx',
-                        'src/dynamic_sdp/save_solution.cxx',
+    bld.program(source=['src/dynamical_sdp/main.cxx',
+                        'src/dynamical_sdp/solve.cxx',
+                        'src/dynamical_sdp/write_timing.cxx',
+                        'src/dynamical_sdp/Dynamical_Parameters/Dynamical_Parameters.cxx',
+                        'src/dynamical_sdp/Dynamical_Parameters/to_property_tree.cxx',
+                        'src/dynamical_sdp/Dynamical_Parameters/ostream.cxx',
+                        'src/dynamical_sdp/save_solution.cxx',
                         'src/approx_objective/Axpy.cxx'],
-                target='dynamic_sdp',
+                target='dynamical_sdp',
                 cxxflags=default_flags,
                 use=use_packages + ['sdp_read','sdp_solve']
                 )
@@ -318,11 +318,5 @@ def build(bld):
                 cxxflags=default_flags,
                 use=use_packages + ['sdp_read']
                 )
-#    bld.program(source=['src/dynamic_navigator/main.cxx'
-#                        ],
-#                target='dynamic_navigator',
-#                cxxflags=default_flags,
-#                use=use_packages + ['sdp_read','sdp_solve']
-#                )
 
 

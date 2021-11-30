@@ -1,11 +1,11 @@
-#include "../Dynamic_Parameters.hxx"
+#include "../Dynamical_Parameters.hxx"
 
 #include <boost/program_options.hpp>
 #include <boost/filesystem/fstream.hpp>
 
 namespace po = boost::program_options;
 
-Dynamic_Parameters::Dynamic_Parameters(int argc, char *argv[])
+Dynamical_Parameters::Dynamical_Parameters(int argc, char *argv[])
 {
   int int_verbosity;
   std::string write_solution_string;
@@ -80,7 +80,7 @@ Dynamic_Parameters::Dynamic_Parameters(int argc, char *argv[])
                               "The default value is set to 1.");
   basic_options.add_options()("numExternalParams",
                               po::value<int>(&N_external_parameters)->default_value(0),
-                              "The number of external parameters to be varied in each iteration of the dynamic SDP. "
+                              "The number of external parameters to be varied in each iteration of the dynamical SDP. "
                               "The default value is set to 0.");
   basic_options.add_options()("updateSdpThreshold",
                               po::value<El::BigFloat>(&update_sdp_threshold)->default_value(1),

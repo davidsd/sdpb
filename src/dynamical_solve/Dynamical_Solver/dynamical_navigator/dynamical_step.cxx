@@ -65,7 +65,7 @@ void external_grad_hessian(const El::Matrix<El::BigFloat> &ePlus,
 
 
 
-void SDP_Solver::dynamic_step(
+void SDP_Solver::dynamical_step(
   const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
   const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
   const SDP &sdp, const El::Grid &grid, 
@@ -131,7 +131,7 @@ void SDP_Solver::dynamic_step(
     //                        external Hessian H_pp, 
     //                        external gradiant Del_p L 
     //                if dual_error and primal_error are small enough 
-    //                which is decided in run_dynamic()
+    //                which is decided in run_dynamical()
     if (update_sdp) 
       {
         El::Matrix<El::BigFloat> grad_p(n_external_paramters,1); // Del_p L

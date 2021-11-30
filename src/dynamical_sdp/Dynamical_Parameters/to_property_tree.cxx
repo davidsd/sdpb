@@ -1,6 +1,6 @@
-#include "../Dynamic_Parameters.hxx"
+#include "../Dynamical_Parameters.hxx"
 
-boost::property_tree::ptree to_property_tree(const Dynamic_Parameters &p)
+boost::property_tree::ptree to_property_tree(const Dynamical_Parameters &p)
 {
   boost::property_tree::ptree result(to_property_tree(p.solver));
 

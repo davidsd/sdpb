@@ -68,7 +68,7 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
                                               El::BigFloat &primal_error_p);
 
 SDP_Solver_Terminate_Reason
-SDP_Solver::run_dynamic(const Solver_Parameters &parameters,
+SDP_Solver::run_dynamical(const Solver_Parameters &parameters,
                 const Verbosity &verbosity,
                 const SDP &sdp, 
                 const boost::filesystem::path &new_sdp_path,
@@ -168,7 +168,7 @@ SDP_Solver::run_dynamic(const Solver_Parameters &parameters,
         { throw std::invalid_argument( "Invalid value of alpha, the external step scaling parameter"); }
       else 
        {
-         dynamic_step(parameters, total_psd_rows, is_primal_and_dual_feasible, block_info,
+         dynamical_step(parameters, total_psd_rows, is_primal_and_dual_feasible, block_info,
                       sdp, grid, new_sdp_path, n_external_parameters, alpha, external_threshold, 
                       X_cholesky, Y_cholesky, A_X_inv, A_Y,  primal_residue_p, 
                       mu, beta_corrector, primal_step_length, dual_step_length, 

@@ -5,13 +5,13 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
-#include "Dynamic_Parameters.hxx"
+#include "Dynamical_Parameters.hxx"
 
 #include <El.hpp>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
-Timers solve(const Block_Info &block_info, const Dynamic_Parameters &parameters);
+Timers solve(const Block_Info &block_info, const Dynamical_Parameters &parameters);
 
 void write_timing(const boost::filesystem::path &checkpoint_out,
                   const Block_Info &block_info, const Timers &timers,
@@ -23,7 +23,7 @@ int main(int argc, char **argv)
 
   try
     {
-      Dynamic_Parameters parameters(argc, argv);
+      Dynamical_Parameters parameters(argc, argv);
       if(!parameters.is_valid())
         {
           return 0;
@@ -32,7 +32,7 @@ int main(int argc, char **argv)
       El::gmp::SetPrecision(parameters.solver.precision);
       if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {
-          std::cout << "Dynamic SDP started at "
+          std::cout << "Dynamical SDP started at "
                     << boost::posix_time::second_clock::local_time() << '\n'
                     << parameters << '\n';
         }
@@ -55,7 +55,7 @@ int main(int argc, char **argv)
             {
               std::cout << "Performing a timing run\n";
             }
-          Dynamic_Parameters timing_parameters(parameters);
+          Dynamical_Parameters timing_parameters(parameters);
           timing_parameters.solver.max_iterations = 2;
           timing_parameters.no_final_checkpoint = true;
           timing_parameters.solver.checkpoint_interval

@@ -113,7 +113,6 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
           "Unable to find control.json in sdp input file");
       }());
 
-      std::cout << "num of blocks " << num_blocks << '\n';
       dimensions.resize(num_blocks);
       num_points.resize(num_blocks);
 
