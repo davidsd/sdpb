@@ -1,25 +1,6 @@
 #include "../../SDP_Solver.hxx"
 #include <iostream>
-//#include "../../../dynamic_navigator/dynamic_step.cxx"
-// The main solver loop
 #include <boost/filesystem/fstream.hpp>
-
-void dynamic_step(
-  const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
-  const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
-  const SDP &sdp, SDP_Solver &solver, const El::Grid &grid,
-  const boost::filesystem::path &new_sdp_path,
-  const int &n_external_paramters, const El::BigFloat &alpha,   
-  const Block_Diagonal_Matrix &X_cholesky, 
-  const Block_Diagonal_Matrix &Y_cholesky, 
-  const std::array<    
-    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>    
-    &A_X_inv,  
-  const std::array<  
-    std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>   
-    &A_Y,   
-  const Block_Vector &primal_residue_p,
-  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length, El::BigFloat &mu,bool &terminate_now, Timers &timers, El::Matrix<El::BigFloat> &extParamStep);
 
 void cholesky_decomposition(const Block_Diagonal_Matrix &A,
                             Block_Diagonal_Matrix &L);
@@ -58,6 +39,16 @@ void compute_feasible_and_termination(
   bool &is_primal_and_dual_feasible,
   SDP_Solver_Terminate_Reason &terminate_reason, bool &terminate_now);
 
+void compute_update_sdp(
+  const Solver_Parameters &parameters, const El::BigFloat &primal_error,
+  const El::BigFloat &dual_error, const El::BigFloat &duality_gap,
+  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
+  const int &iteration,
+  const std::chrono::time_point<std::chrono::high_resolution_clock>
+    &solver_start_time,
+  bool &is_primal_and_dual_feasible,
+  bool &update_sdp);
+
 void compute_dual_residues_and_error(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
   const std::array<
@@ -79,22 +70,17 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
 SDP_Solver_Terminate_Reason
 SDP_Solver::run_dynamic(const Solver_Parameters &parameters,
                 const Verbosity &verbosity,
-                const SDP &sdp, //boost::filesystem::path &sdp_path,
+                const SDP &sdp, 
                 const boost::filesystem::path &new_sdp_path,
                 const boost::filesystem::path &out_directory,
                 const int &n_external_parameters,
                 const El::BigFloat &alpha,
+                const El::BigFloat &external_threshold,
                 const boost::property_tree::ptree &parameter_properties,
                 const Block_Info &block_info, 
-                const El::Grid &grid, Timers &timers, El::Matrix<El::BigFloat> &extParamStep)
+                const El::Grid &grid, Timers &timers, 
+                bool &update_sdp, El::Matrix<El::BigFloat> &extParamStep)
 {
-  //SDP sdp(sdp_path, block_info, grid);
-  //std::cout << "path: " << sdp_path.string()<< '\n';
-  //std::cout << sdp.free_var_matrix.blocks.size() << "run sdp free_var_matrix_block_size" << '\n';
-  //for (auto i: sdp.primal_objective_c.blocks){
-  //    El::Print(i, "primal_objective_c");
-  //    std::cout  << '\n'; 
- //}
   SDP_Solver_Terminate_Reason terminate_reason(
     SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
   auto &solver_timer(timers.add_and_start("Solver runtime"));
@@ -104,30 +90,9 @@ SDP_Solver::run_dynamic(const Solver_Parameters &parameters,
 
   Block_Diagonal_Matrix X_cholesky(X), Y_cholesky(X);
 
-  // Bilinear pairings needed for computing the Schur complement
-  // matrix.  For example,
-  //
-  //   BilinearPairingsXInv.blocks[b].elt(
-  //     (d_j+1) s + k1,
-  //     (d_j+1) r + k2
-  //   ) = v_{b,k1}^T (X.blocks[b]^{-1})^{(s,r)} v_{b,k2}
-  //
-  //     0 <= k1,k2 <= block_info.degrees[j] = d_j
-  //     0 <= s,r < block_info.dimensions[j] = m_j
-  //
-  // where j corresponds to b and M^{(s,r)} denotes the (s,r)-th
-  // (d_j+1)x(d_j+1) block of M.
-  //
-  // BilinearPairingsXInv has one block for each block of X.  The
-  // dimension of BilinearPairingsXInv.block[b] is (d_j+1)*m_j.  See
-  // SDP.h for more information on d_j and m_j.
-
   std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     A_X_inv;
-
-  // BilinearPairingsY is analogous to BilinearPairingsXInv, with
-  // X^{-1} -> Y.
 
   std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
@@ -140,7 +105,7 @@ SDP_Solver::run_dynamic(const Solver_Parameters &parameters,
 
   initialize_timer.stop();
   auto last_checkpoint_time(std::chrono::high_resolution_clock::now());
-  for(size_t iteration = 1;iteration < 2; ++iteration)
+  for(size_t iteration = 1; ; ++iteration)
     {
       El::byte checkpoint_now(
         std::chrono::duration_cast<std::chrono::seconds>(
@@ -188,40 +153,54 @@ SDP_Solver::run_dynamic(const Solver_Parameters &parameters,
         {
           break;
         }
+      compute_update_sdp(
+        parameters, primal_error(), dual_error, duality_gap,
+        primal_step_length, dual_step_length, iteration,
+        solver_timer.start_time, is_primal_and_dual_feasible,
+        update_sdp);
 
       El::BigFloat mu, beta_corrector;
-      if (!new_sdp_path.empty() && n_external_parameters  && alpha)
+      if (new_sdp_path.empty()) 
+        { throw std::invalid_argument( "The list of perturbed sdp files is empty" ); }
+      else if (!n_external_parameters)
+        { throw std::invalid_argument( "Invalid value of n_external_parameters"); }
+      else if (!alpha)
+        { throw std::invalid_argument( "Invalid value of alpha, the external step scaling parameter"); }
+      else 
        {
-         std::cout << "call dynamic_step " << '\n';
          dynamic_step(parameters, total_psd_rows, is_primal_and_dual_feasible, block_info,
-           sdp, *this, grid, new_sdp_path, n_external_parameters, alpha, X_cholesky, Y_cholesky, A_X_inv, A_Y,  primal_residue_p, primal_step_length, dual_step_length,mu, terminate_now, timers,extParamStep);
-      } 
+                      sdp, grid, new_sdp_path, n_external_parameters, alpha, external_threshold, 
+                      X_cholesky, Y_cholesky, A_X_inv, A_Y,  primal_residue_p, 
+                      mu, beta_corrector, primal_step_length, dual_step_length, 
+                      terminate_now, timers, update_sdp, extParamStep);
+         //std::cout << "external_step_length " << (El::Nrm2(extParamStep)) << '\n';
+       } 
       if (terminate_now)
         {
           terminate_reason
             = SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
           break;
         }
+      else if (update_sdp)
+        { 
+           break;
+        }
       print_iteration(iteration, mu, primal_step_length, dual_step_length,
                       beta_corrector, *this, solver_timer.start_time,
                       verbosity);
-    boost::filesystem::ofstream extParamStep_stream;
+//    boost::filesystem::ofstream extParamStep_stream;
+//    
+//     //const boost::filesystem::path extParamStep_path(out_directory / "externalParamStep.txt");
+//     extParamStep_stream.open(out_directory);
+//     El::Print(extParamStep,
+//              "iteration : "+ std::to_string(iteration), 
+//              "\n", extParamStep_stream);
+//     if(!extParamStep_stream.good())
+//       {
+//         throw std::runtime_error("Error when writing to: "
+//                                  + out_directory.string());
+//       }
     
-     //const boost::filesystem::path extParamStep_path(out_directory / "externalParamStep.txt");
-     extParamStep_stream.open(out_directory);
-     El::Print(extParamStep,
-              "iteration : "+ std::to_string(iteration), 
-              "\n", extParamStep_stream);
-     if(!extParamStep_stream.good())
-       {
-         throw std::runtime_error("Error when writing to: "
-                                  + out_directory.string());
-       }
-    
-      //Update input files 
-      //std::cout << "reset causing segfault? " << '\n';
-      //sdp.reset(sdp_path, block_info, grid); //Memory ??
-      //std::cout << "finish reset" << '\n'; 
     }
   solver_timer.stop();
   return terminate_reason;

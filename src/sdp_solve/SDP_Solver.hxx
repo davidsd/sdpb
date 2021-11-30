@@ -94,9 +94,10 @@ public:
       const boost::filesystem::path &out_dir,
       const int &n_external_parameters,
       const El::BigFloat &alpha,
+      const El::BigFloat &external_threshold, 
       const boost::property_tree::ptree &parameter_properties,
       const Block_Info &block_info, const El::Grid &grid,
-      Timers &timers, El::Matrix<El::BigFloat> &extParamStep);
+      Timers &timers, bool &update_sdp,  El::Matrix<El::BigFloat> &extParamStep);
 
   void step(
     const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
@@ -113,6 +114,25 @@ public:
     const Block_Vector &primal_residue_p, El::BigFloat &mu,
     El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
     El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers);
+
+  void dynamic_step(
+    const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
+    const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
+    const SDP &sdp, const El::Grid &grid,
+    const boost::filesystem::path &new_sdp_path,
+    const int &n_external_paramters, const El::BigFloat &alpha, const El::BigFloat &external_threshold,
+    const Block_Diagonal_Matrix &X_cholesky,
+    const Block_Diagonal_Matrix &Y_cholesky,
+    const std::array<
+      std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+      &A_X_inv,
+    const std::array<
+      std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
+      &A_Y,
+    const Block_Vector &primal_residue_p, El::BigFloat &mu, 
+    El::BigFloat &beta_corrector, El::BigFloat &primal_step_length, 
+    El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
+    bool &update_sdp, El::Matrix<El::BigFloat> &external_step); 
 
   void
   save_checkpoint(const boost::filesystem::path &checkpoint_directory,

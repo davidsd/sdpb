@@ -80,10 +80,12 @@ def build(bld):
                        'src/sdp_solve/lower_triangular_transpose_solve.cxx',
                        'src/sdp_solve/Block_Diagonal_Matrix/ostream.cxx',
                        'src/sdp_solve/Write_Solution.cxx',
-                       'src/sdp_solve/SDP_Solver/run/dynamic_navigator/approx_step.cxx',
+                       'src/sdp_solve/SDP_Solver/run/dynamic_navigator/mixed_hess.cxx',
+                       'src/sdp_solve/SDP_Solver/run/dynamic_navigator/external_grad_hess.cxx',
                        'src/sdp_solve/SDP_Solver/run/dynamic_navigator/compute_lag.cxx',
                        'src/sdp_solve/SDP_Solver/run/dynamic_navigator/dynamic_step.cxx',
                        'src/sdp_solve/SDP_Solver/run/dynamic_navigator/internal_search_direction.cxx', 
+                       'src/sdp_solve/SDP_Solver/run/dynamic_navigator/compute_update_sdp.cxx',
                        'src/sdp_solve/SDP_Solver/run/run_dynamic.cxx']
 
     bld.stlib(source=sdp_solve_sources,

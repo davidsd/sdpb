@@ -1,5 +1,9 @@
 #include "../../../../sdp_solve.hxx"
 
+//Compute dx and dy of the central sdp as the standard sdp_solver does. 
+//Correspond to H^-1_xx Del_p L_mu in Eq(13).
+//Return: void.
+//Update dx, dy.
 
 void scale_multiply_add(const El::BigFloat &alpha,
                         const Block_Diagonal_Matrix &A,
