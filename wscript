@@ -107,7 +107,11 @@ def build(bld):
                        'src/dynamical_solve/Dynamical_Solver/run_dynamical.cxx',
                        'src/dynamical_solve/Dynamical_Solver/run/print_header_dynamical.cxx',
                        'src/dynamical_solve/Dynamical_Solver/run/print_iteration.cxx',
-                       'src/dynamical_solve/Dynamical_Solver/run/compute_feasible_and_termination.cxx']
+                       'src/dynamical_solve/Dynamical_Solver/run/compute_feasible_and_termination.cxx',
+                       'src/approx_objective/Approx_Parameters/Approx_Parameters.cxx',
+                       'src/approx_objective/Axpy.cxx',
+                       'src/approx_objective/Approx_Objective/Approx_Objective/Approx_Objective.cxx',
+                       'src/approx_objective/Approx_Objective/Approx_Objective/compute_dx_dy.cxx']
 
     bld.stlib(source=dynamical_solve_sources,
           target='dynamical_solve',
@@ -327,8 +331,7 @@ def build(bld):
                         'src/dynamical_sdp/Dynamical_Parameters/Dynamical_Parameters.cxx',
                         'src/dynamical_sdp/Dynamical_Parameters/to_property_tree.cxx',
                         'src/dynamical_sdp/Dynamical_Parameters/ostream.cxx',
-                        'src/dynamical_sdp/save_solution.cxx',
-                        'src/approx_objective/Axpy.cxx'],
+                        'src/dynamical_sdp/save_solution.cxx'],
                 target='dynamical_sdp',
                 cxxflags=default_flags,
                 use=use_packages + ['sdp_read','sdp_solve', 'dynamical_solve']

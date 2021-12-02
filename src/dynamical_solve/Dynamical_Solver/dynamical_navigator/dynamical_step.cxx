@@ -6,6 +6,7 @@
 #include "../../../dynamical_solve.hxx"
 #include "../../../sdp_read.hxx"
 #include "imports.hxx"
+#include "../../../approx_objective/Approx_Objective.hxx"
 
 //Compute dx and dy of the central sdp as the standard sdp_solver does in predictor phase. 
 //Correspond to H^-1_xx Del_p L_mu in Eq(13).
@@ -149,18 +150,24 @@ void Dynamical_Solver::dynamical_step(
                   boost::algorithm::split(directions, file_name, boost::is_any_of("_"));
                	  SDP new_sdp(filename, block_info, grid), d_sdp(new_sdp);
                   Axpy(El::BigFloat(-1), sdp, d_sdp);
+                  Approx_Objective approx_obj(block_info, sdp, d_sdp, x, y,
+                                           schur_complement_cholesky,
+                                           schur_off_diagonal, Q);
                   if (directions[0] == "plus")
                     {
                        mixed_hess(block_info, d_sdp, x, y, schur_complement_cholesky, schur_off_diagonal, Q, dynamical_parameters.alpha, H_xp, Delta_xy);
-                       eplus(std::stoi(directions[1])) = compute_delta_lag(d_sdp, *this);
+                       eplus(std::stoi(directions[1])) = approx_obj.d_objective + approx_obj.dd_objective; 
+                       //compute_delta_lag(d_sdp, *this);
                     }
                   else if (directions[0] == "minus")
                      {
-                       eminus(std::stoi(directions[1])) = compute_delta_lag(d_sdp,*this); 
+                       eminus(std::stoi(directions[1])) = approx_obj.d_objective + approx_obj.dd_objective; 
+                       //compute_delta_lag(d_sdp,*this); 
                      }
                   else if (directions[0] == "sum")
                      {
-                       esum(std::stoi(directions[1]),std::stoi(directions[2])) = compute_delta_lag(d_sdp,*this); 
+                       esum(std::stoi(directions[1]),std::stoi(directions[2])) = approx_obj.d_objective + approx_obj.dd_objective; 
+                       //compute_delta_lag(d_sdp,*this); 
                      }
                  }
           }
@@ -182,13 +189,13 @@ void Dynamical_Solver::dynamical_step(
                 grad_mixed(i) = dot(H_xp.at(i).first,internal_dx) + dot(H_xp.at(i).second,internal_dy);
           }  
 
-        std::cout<<'\n';
-        std::cout <<  "eplus "   << eplus(0,0)<<'\n';
-        std::cout <<  "eminus "   << eminus(0,0)<<'\n';
-        std::cout << "hess_pp " << hess_pp(0,0) <<'\n';
-        std::cout << "hess_mixed " << hess_mixed(0,0) <<'\n';
-        std::cout << "Del_p L " << grad_p(0,0) <<'\n';
-        std::cout << "internal Del L " << grad_mixed(0,0) <<'\n';
+        //std::cout<<'\n';
+        //std::cout <<  "eplus: "   << eplus(0,0)<<'\n';
+        //std::cout <<  "eminus: "   << eminus(0,0)<<'\n';
+        //std::cout << "hess_pp " << hess_pp(0,0) <<'\n';
+        //std::cout << "hess_mixed " << hess_mixed(0,0) <<'\n';
+        //std::cout << "Del_p L " << grad_p(0,0) <<'\n';
+        //std::cout << "internal Del L " << grad_mixed(0,0) <<'\n';
        
         // H_pp - H_px H^-1_xx H_xp, LHS of Eq(13)  
         hess_pp -= hess_mixed; 
