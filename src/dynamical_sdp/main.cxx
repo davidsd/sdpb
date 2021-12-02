@@ -29,7 +29,7 @@ int main(int argc, char **argv)
           return 0;
         }
 
-      El::gmp::SetPrecision(parameters.solver.precision);
+      El::gmp::SetPrecision(parameters.solver.solver_parameters.precision);
       if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {
           std::cout << "Dynamical SDP started at "
@@ -38,7 +38,7 @@ int main(int argc, char **argv)
         }
 
       Block_Info block_info(parameters.sdp_path,
-                            parameters.solver.checkpoint_in,
+                            parameters.solver.solver_parameters.checkpoint_in,
                             parameters.procs_per_node,
                             parameters.proc_granularity, parameters.verbosity);
 
@@ -48,7 +48,7 @@ int main(int argc, char **argv)
       // 3) We are not going to load a checkpoint.
       if(El::mpi::Size(El::mpi::COMM_WORLD) > 1
          && block_info.block_timings_filename.empty()
-         && !exists(parameters.solver.checkpoint_in / "checkpoint.0"))
+         && !exists(parameters.solver.solver_parameters.checkpoint_in / "checkpoint.0"))
         {
           if(parameters.verbosity >= Verbosity::regular
              && El::mpi::Rank() == 0)
@@ -56,17 +56,17 @@ int main(int argc, char **argv)
               std::cout << "Performing a timing run\n";
             }
           Dynamical_Parameters timing_parameters(parameters);
-          timing_parameters.solver.max_iterations = 2;
+          timing_parameters.solver.solver_parameters.max_iterations = 2;
           timing_parameters.no_final_checkpoint = true;
-          timing_parameters.solver.checkpoint_interval
+          timing_parameters.solver.solver_parameters.checkpoint_interval
             = std::numeric_limits<int64_t>::max();
-          timing_parameters.solver.max_runtime
+          timing_parameters.solver.solver_parameters.max_runtime
             = std::numeric_limits<int64_t>::max();
-          timing_parameters.solver.duality_gap_threshold = 0;
-          timing_parameters.solver.primal_error_threshold = 0;
-          timing_parameters.solver.dual_error_threshold = 0;
-          timing_parameters.solver.min_primal_step = 0;
-          timing_parameters.solver.min_dual_step = 0;
+          timing_parameters.solver.solver_parameters.duality_gap_threshold = 0;
+          timing_parameters.solver.solver_parameters.primal_error_threshold = 0;
+          timing_parameters.solver.solver_parameters.dual_error_threshold = 0;
+          timing_parameters.solver.solver_parameters.min_primal_step = 0;
+          timing_parameters.solver.solver_parameters.min_dual_step = 0;
           if(timing_parameters.verbosity != Verbosity::debug)
             {
               timing_parameters.verbosity = Verbosity::none;
@@ -74,7 +74,7 @@ int main(int argc, char **argv)
           Timers timers(solve(block_info, timing_parameters));
 
           El::Matrix<int32_t> block_timings(block_info.dimensions.size(), 1);
-          write_timing(timing_parameters.solver.checkpoint_out, block_info,
+          write_timing(timing_parameters.solver.solver_parameters.checkpoint_out, block_info,
                        timers, timing_parameters.verbosity >= Verbosity::debug,
                        block_timings);
           El::mpi::Barrier(El::mpi::COMM_WORLD);
@@ -83,18 +83,18 @@ int main(int argc, char **argv)
             parameters.proc_granularity, parameters.verbosity);
           std::swap(block_info, new_info);
 
-          parameters.solver.max_runtime
+          parameters.solver.solver_parameters.max_runtime
             -= timers.front().second.elapsed_seconds();
         }
       else if(!block_info.block_timings_filename.empty()
               && block_info.block_timings_filename
-                   != (parameters.solver.checkpoint_out / "block_timings"))
+                   != (parameters.solver.solver_parameters.checkpoint_out / "block_timings"))
         {
           if(El::mpi::Rank() == 0)
             {
-              create_directories(parameters.solver.checkpoint_out);
+              create_directories(parameters.solver.solver_parameters.checkpoint_out);
               copy_file(block_info.block_timings_filename,
-                        parameters.solver.checkpoint_out / "block_timings",
+                        parameters.solver.solver_parameters.checkpoint_out / "block_timings",
                         boost::filesystem::copy_option::overwrite_if_exists);
             }
         }

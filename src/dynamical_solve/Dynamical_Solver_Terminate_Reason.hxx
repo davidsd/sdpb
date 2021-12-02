@@ -17,7 +17,7 @@ enum class Dynamical_Solver_Terminate_Reason
   MaxRuntimeExceeded,
   PrimalStepTooSmall,
   DualStepTooSmall,
-  UpdatingSDPs, 
+  UpdateSDPs, 
 };
 
 std::ostream &

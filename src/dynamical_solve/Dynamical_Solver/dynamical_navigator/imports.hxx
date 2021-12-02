@@ -1,4 +1,5 @@
-#include "../../../../sdp_solve.hxx"
+#include "../../../sdp_solve.hxx"
+#include "../../../dynamical_solve.hxx"
 
 //Functions from SDP_Solver used in dynamic_step.cxx
 El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
@@ -12,16 +13,6 @@ El::BigFloat corrector_centering_parameter(
   const Block_Diagonal_Matrix &dX, const Block_Diagonal_Matrix &Y,
   const Block_Diagonal_Matrix &dY, const El::BigFloat &mu,
   const bool is_primal_dual_feasible, const size_t &total_num_rows);
-
-void compute_search_direction(
-  const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
-  const Block_Diagonal_Matrix &schur_complement_cholesky,
-  const Block_Matrix &schur_off_diagonal,
-  const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
-  const El::BigFloat &mu, const Block_Vector &primal_residue_p,
-  const bool &is_corrector_phase, const El::DistMatrix<El::BigFloat> &Q,
-  Block_Vector &dx, Block_Diagonal_Matrix &dX, Block_Vector &dy,
-  Block_Diagonal_Matrix &dY);
 
 void cholesky_decomposition(const Block_Diagonal_Matrix &A,
                             Block_Diagonal_Matrix &L);

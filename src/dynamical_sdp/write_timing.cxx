@@ -1,4 +1,4 @@
-#include "../sdp_solve.hxx"
+#include "../dynamical_solve.hxx"
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>

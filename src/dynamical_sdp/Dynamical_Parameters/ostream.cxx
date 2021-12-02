@@ -3,7 +3,7 @@
 std::ostream &operator<<(std::ostream &os, const Dynamical_Parameters &p)
 {
   os << "centering SDP directory   : " << p.sdp_path << '\n'
-     << "shifted SDP directory  : "    << p.new_sdp_path << '\n'
+     //<< "shifted SDP directory  : "    << p.new_sdp_path << '\n'
      << "out directory   : " << p.out_directory << '\n'
      << "\nParameters:\n"
      << p.solver
@@ -12,9 +12,6 @@ std::ostream &operator<<(std::ostream &os, const Dynamical_Parameters &p)
      << "procsPerNode                 = " << p.procs_per_node << '\n'
      << "procGranularity              = " << p.proc_granularity << '\n'
      << "verbosity                    = " << static_cast<int>(p.verbosity) << '\n'
-     << "stepSizeAlpha                = " << p.alpha << '\n'
-     << "updateSdpThreshold           = " << p.update_sdp_threshold << '\n'
-     << "numExternalParams            = " << p.N_external_parameters 
      << '\n';
   return os;
 }

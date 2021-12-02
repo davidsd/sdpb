@@ -7,18 +7,19 @@
 
 #pragma once
 
-#include "Block_Diagonal_Matrix.hxx"
-#include "SDP.hxx"
+#include "../sdp_solve/Block_Diagonal_Matrix.hxx"
+#include "../sdp_solve/SDP.hxx"
+#include "../sdp_solve/Solver_Parameters.hxx"
+#include "Dynamical_Solver_Parameters.hxx"
 #include "Dynamical_Solver_Terminate_Reason.hxx"
 
-#include "Solver_Parameters.hxx"
 #include "../Timers.hxx"
 
 #include <boost/filesystem.hpp>
 
-// SDPSolver contains the data structures needed during the running of
+// Dynamical Solver contains the data structures needed during the running of
 // the interior point algorithm.  Each structure is allocated when an
-// SDPSolver is initialized, and reused in each iteration.
+// Dynamical Solver is initialized, and reused in each iteration.
 //
 class Dynamical_Solver
 {
@@ -45,7 +46,8 @@ public:
   // confusion.
   El::BigFloat primal_objective, // f + c . x
     dual_objective,              // f + b . y
-    duality_gap;                 // normalized difference of objectives
+    duality_gap,                 // normalized difference of objectives
+    external_step_size;          // the size of the step to be taken in the external parameters' space 
 
   // Discrepancy in the primal equality constraints, a
   // Block_Diagonal_Matrix with the same structure as X, called 'P' in
@@ -73,22 +75,23 @@ public:
   int64_t current_generation;
   boost::optional<int64_t> backup_generation;
 
-  Dynamical_Solver(const Solver_Parameters &parameters,
+  Dynamical_Solver(const Dynamical_Solver_Parameters &dynamical_parameters,
              const Verbosity &verbosity,
              const bool &require_initial_checkpoint,
              const Block_Info &block_info, const El::Grid &grid,
              const size_t &dual_objective_b_height);
 
   Dynamical_Solver_Terminate_Reason
-  run_dynamical(const Solver_Parameters &parameters, const Dynamical_Solver_Parameters &dynamical_parameters,
+  run_dynamical(const Dynamical_Solver_Parameters &dynamical_parameters,
       const Verbosity &verbosity,
-      const SDP &sdp, //boost::filesystem::path &sdp_path,
+      const SDP &sdp, 
       const boost::property_tree::ptree &parameter_properties,
       const Block_Info &block_info, const El::Grid &grid,
       Timers &timers, bool &update_sdp,  El::Matrix<El::BigFloat> &extParamStep);
 
   void dynamical_step(
-    const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
+    const Dynamical_Solver_Parameters &dynamical_parameters,      
+    const std::size_t &total_psd_rows,
     const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
     const SDP &sdp, const El::Grid &grid,
     const Block_Diagonal_Matrix &X_cholesky,

@@ -15,9 +15,9 @@ Dynamical_Parameters::Dynamical_Parameters(int argc, char *argv[])
   required_options.add_options()(
     "sdpDir,s", po::value<boost::filesystem::path>(&sdp_path)->required(),
     "Directory containing the preprocessed centering SDP data files.");
-  required_options.add_options()(
-    "newSdpDirs", po::value<boost::filesystem::path>(&new_sdp_path)->required(),
-    "Directory containing the preprocessed SDP data files around the center SDP in external parameter space.");  
+  //required_options.add_options()(
+  //  "newSdpDirs", po::value<boost::filesystem::path>(&new_sdp_path)->required(),
+  //  "Directory containing the preprocessed SDP data files around the center SDP in external parameter space.");  
   required_options.add_options()(
     "procsPerNode", po::value<size_t>(&procs_per_node)->required(),
     "The number of processes that can run on a node.  When running on "
@@ -74,19 +74,6 @@ Dynamical_Parameters::Dynamical_Parameters(int argc, char *argv[])
                               po::value<int>(&int_verbosity)->default_value(1),
                               "Verbosity.  0 -> no output, 1 -> regular "
                               "output, 2 -> debug output");
-  basic_options.add_options()("stepSizeAlpha", 
-                              po::value<El::BigFloat>(&alpha)->default_value(1),
-                              "Step size in the external-parameter space to generate the new SDP data files. "
-                              "The default value is set to 1.");
-  basic_options.add_options()("numExternalParams",
-                              po::value<int>(&N_external_parameters)->default_value(0),
-                              "The number of external parameters to be varied in each iteration of the dynamical SDP. "
-                              "The default value is set to 0.");
-  basic_options.add_options()("updateSdpThreshold",
-                              po::value<El::BigFloat>(&update_sdp_threshold)->default_value(1),
-                              "Take a step in the external parameters, "
-                              "that is to regenerator the sdp files if the step size is smaller than the threshold. "
-                              "The default value is set to 1.");  
   cmd_line_options.add(basic_options);
   cmd_line_options.add(solver.options());
 
@@ -144,10 +131,10 @@ Dynamical_Parameters::Dynamical_Parameters(int argc, char *argv[])
                                        + sdp_path.string()
                                        + "' does not exist");
             }
-          if(!boost::filesystem::exists(new_sdp_path))
+          if(!boost::filesystem::exists(solver.new_sdp_path))
             {
               throw std::runtime_error("new sdp directory '"
-                                       + new_sdp_path.string()
+                                       + solver.new_sdp_path.string()
                                        + "' does not exist");
             }
           if(variables_map.count("outDir") == 0)
@@ -162,17 +149,17 @@ Dynamical_Parameters::Dynamical_Parameters(int argc, char *argv[])
 
           if(variables_map.count("checkpointDir") == 0)
             {
-              solver.checkpoint_out = sdp_path;
-              if(solver.checkpoint_out.filename() == ".")
+              solver.solver_parameters.checkpoint_out = sdp_path;
+              if(solver.solver_parameters.checkpoint_out.filename() == ".")
                 {
-                  solver.checkpoint_out = solver.checkpoint_out.parent_path();
+                  solver.solver_parameters.checkpoint_out = solver.solver_parameters.checkpoint_out.parent_path();
                 }
-              solver.checkpoint_out += ".ck";
+              solver.solver_parameters.checkpoint_out += ".ck";
             }
 
           if(variables_map.count("initialCheckpointDir") == 0)
             {
-              solver.checkpoint_in = solver.checkpoint_out;
+              solver.solver_parameters.checkpoint_in = solver.solver_parameters.checkpoint_out;
             }
           else
             {
@@ -202,7 +189,7 @@ Dynamical_Parameters::Dynamical_Parameters(int argc, char *argv[])
               verbosity = static_cast<Verbosity>(int_verbosity);
             }
 
-          if(N_external_parameters == 0)
+          if(solver.n_external_parameters == 0)
             {
               throw std::runtime_error("The number of external parameters to be varied is zero.");
             }

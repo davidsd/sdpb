@@ -1,4 +1,4 @@
-#include "../sdp_solve.hxx"
+#include "../dynamical_solve.hxx"
 #include "../set_stream_precision.hxx"
 #include "../write_distmatrix.hxx"
 
@@ -32,9 +32,8 @@ namespace
   }
 }
 
-void save_solution(const SDP_Solver &solver,
-                   const SDP_Solver_Terminate_Reason terminate_reason,
-                   const bool update_sdp,
+void save_solution(const Dynamical_Solver &solver,
+                   const Dynamical_Solver_Terminate_Reason terminate_reason,
                    const std::pair<std::string, Timer> &timer_pair,
                    const boost::filesystem::path &out_directory,
                    const Write_Solution &write_solution,
@@ -56,7 +55,7 @@ void save_solution(const SDP_Solver &solver,
       const boost::filesystem::path output_path(out_directory / "out.txt");
       out_stream.open(output_path);
       set_stream_precision(out_stream);
-      //if (update_sdp && terminate_reason == SDP_Solver_Terminate_Reason::MaxIterationsExceeded)
+      //if (update_sdp && terminate_reason == Dynamical_Solver_Terminate_Reason::MaxIterationsExceeded)
       //  {
       //    out_stream << "exit to update SDPs" << ";\n";
       //  }

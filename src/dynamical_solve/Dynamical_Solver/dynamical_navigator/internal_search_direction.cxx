@@ -1,4 +1,5 @@
-#include "../../../../sdp_solve.hxx"
+#include "../../../sdp_solve.hxx"
+#include "../../../dynamical_solve.hxx"
 
 //Compute dx and dy of the central sdp as the standard sdp_solver does. 
 //Correspond to H^-1_xx Del_p L_mu in Eq(13).
@@ -32,7 +33,7 @@ void solve_schur_complement_equation(
   const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx, Block_Vector &dy);
 
 void internal_predictor_direction(
-  const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
+  const Block_Info &block_info, const SDP &sdp, const Dynamical_Solver &solver,
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
   const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,

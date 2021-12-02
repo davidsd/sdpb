@@ -79,20 +79,42 @@ def build(bld):
                        'src/sdp_solve/SDP_Solver_Terminate_Reason/ostream.cxx',
                        'src/sdp_solve/lower_triangular_transpose_solve.cxx',
                        'src/sdp_solve/Block_Diagonal_Matrix/ostream.cxx',
-                       'src/sdp_solve/Write_Solution.cxx',
-                       'src/sdp_solve/SDP_Solver/run/dynamical_navigator/mixed_hess.cxx',
-                       'src/sdp_solve/SDP_Solver/run/dynamical_navigator/external_grad_hess.cxx',
-                       'src/sdp_solve/SDP_Solver/run/dynamical_navigator/compute_lag.cxx',
-                       'src/sdp_solve/SDP_Solver/run/dynamical_navigator/dynamical_step.cxx',
-                       'src/sdp_solve/SDP_Solver/run/dynamical_navigator/internal_search_direction.cxx', 
-                       'src/sdp_solve/SDP_Solver/run/dynamical_navigator/compute_update_sdp.cxx',
-                       'src/sdp_solve/SDP_Solver/run/run_dynamical.cxx']
+                       'src/sdp_solve/Write_Solution.cxx']
 
     bld.stlib(source=sdp_solve_sources,
               target='sdp_solve',
               cxxflags=default_flags,
               use=use_packages + ['sdp_read'])
+
     
+
+    dynamical_solve_sources=['src/dynamical_solve/Dynamical_Solver_Parameters/Dynamical_Solver_Parameters.cxx',
+                       'src/dynamical_solve/Dynamical_Solver_Parameters/ostream.cxx',
+                       'src/dynamical_solve/Dynamical_Solver_Parameters/to_property_tree.cxx',    
+                       'src/dynamical_solve/Dynamical_Solver_Terminate_Reason/ostream.cxx', 
+                       'src/dynamical_solve/Dynamical_Solver/save_checkpoint.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/load_checkpoint/load_checkpoint.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/load_checkpoint/load_binary_checkpoint.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/load_checkpoint/load_text_checkpoint.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/Dynamical_Solver.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/mixed_hess.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/external_grad_hess.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_lag.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/internal_search_direction.cxx', 
+                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_update_sdp.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_search_direction.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/run_dynamical.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/run/print_header_dynamical.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/run/print_iteration.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/run/compute_feasible_and_termination.cxx']
+
+    bld.stlib(source=dynamical_solve_sources,
+          target='dynamical_solve',
+          cxxflags=default_flags,
+          use=use_packages + ['sdp_solve', 'sdp_read'])
+
+                      
     # SDPB executable
     bld.program(source=['src/sdpb/main.cxx',
                         'src/sdpb/solve.cxx',
@@ -309,8 +331,9 @@ def build(bld):
                         'src/approx_objective/Axpy.cxx'],
                 target='dynamical_sdp',
                 cxxflags=default_flags,
-                use=use_packages + ['sdp_read','sdp_solve']
+                use=use_packages + ['sdp_read','sdp_solve', 'dynamical_solve']
                 )
+
 
     # Test read files 
     bld.program(source=['src/exp/test.cpp'],

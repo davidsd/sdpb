@@ -1,4 +1,5 @@
-#include "../../../../sdp_solve.hxx"
+#include "../../../sdp_solve.hxx"
+#include "../../../dynamical_solve.hxx"
 #include <El.hpp>
 
 // Tr(A B), where A and B are symmetric
@@ -9,14 +10,14 @@ El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
 // dual_residues[p] = c[p] - A[p,a,b] Y[a,b] - B[p,a] y[a]
 // Lagrangian = new_dual_residues.x + new_b.y + Tr(X,Y) - mu log det (X) 
 
-El::BigFloat compute_delta_lag(const SDP &d_sdp, const SDP_Solver &solver){
+El::BigFloat compute_delta_lag(const SDP &d_sdp, const Dynamical_Solver &solver){
   El::BigFloat d_objective;
   
   d_objective = 0; 
   
   // dconst
   d_objective += d_sdp.objective_const;
-  // new_b.y = db.y 
+  // db.y 
   d_objective += El::Dot(d_sdp.dual_objective_b, solver.y.blocks.at(0));
   
   El::BigFloat local_diff(0);

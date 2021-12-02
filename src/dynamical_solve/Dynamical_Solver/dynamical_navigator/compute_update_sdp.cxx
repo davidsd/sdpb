@@ -1,4 +1,5 @@
-#include "../../../Solver_Parameters.hxx"
+#include "../../../sdp_solve/Solver_Parameters.hxx"
+#include "../../Dynamical_Solver_Parameters.hxx"
 
 void compute_update_sdp(
   const Solver_Parameters &parameters, const El::BigFloat &primal_error,
