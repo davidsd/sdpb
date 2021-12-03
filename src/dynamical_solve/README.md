@@ -41,6 +41,6 @@ src/dynamical_solve
 ```
 
 # Notes
-1. There's potentially a **sign error** with internal_search_direction, as I'm not sure if it computes `- H^-1_xx Del_x L` or `+ H^-1_xx Del_x L`
-2. The external_step is scaled by dual_step_length at the very end of dynamical_step.cxx
+1. There's potentially a **sign error** with internal_search_direction, as I'm not sure if it computes `- H^-1_xx Del_x L` or `+ H^-1_xx Del_x L`.
+2. The external_step is scaled by dual_step_length at the very end of dynamical_step.cxx.
 3. More detailed comments can be found within the files. 
