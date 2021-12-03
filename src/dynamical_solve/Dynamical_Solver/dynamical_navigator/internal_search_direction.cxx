@@ -3,6 +3,7 @@
 
 //Compute dx and dy of the central sdp as the standard sdp_solver does. 
 //Correspond to H^-1_xx Del_p L_mu in Eq(13).
+//?:         or - H^-1_xx Del_p L_mu ??
 //Return: void.
 //Update dx, dy.
 

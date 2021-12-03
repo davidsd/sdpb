@@ -8,8 +8,8 @@ void print_header_dynamical(const Verbosity &verbosity)
     {
       std::cout << "\n"
                 << "          time    mu     P-obj       D-obj      gap     "
-                   "    P-err       p-err       D-err      P-step   D-step   beta   ext-Step\n"
+                   "    P-err       p-err       D-err      P-step   D-step   beta   ext-step-size\n"
                 << "--------------------------------------------------------"
-                   "------------------------------------------------------------------------\n";
+                   "-----------------------------------------------------------------------------\n";
     }
 }

@@ -2,6 +2,8 @@
 #include "../../../dynamical_solve.hxx"
 #include <El.hpp>
 
+//Does the same thing as Approx_Objective computes the linear difference 
+
 // Tr(A B), where A and B are symmetric
 El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
                                          const Block_Diagonal_Matrix &B);

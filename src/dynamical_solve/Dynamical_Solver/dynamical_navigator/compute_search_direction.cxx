@@ -2,6 +2,8 @@
 #include "../../../Timers.hxx"
 #include "imports.hxx"
 
+//Same as the function in SDP_Solver, adapted for the Dynamical_Solver class  
+
 // Compute the search direction (dx, dX, dy, dY) for the predictor and
 // corrector phases.
 //

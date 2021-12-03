@@ -4,6 +4,7 @@
 #include <iostream>
 #include <boost/filesystem/fstream.hpp>
 
+//Functions from SDP_Solver
 void cholesky_decomposition(const Block_Diagonal_Matrix &A,
                             Block_Diagonal_Matrix &L);
 
@@ -31,25 +32,6 @@ void compute_bilinear_pairings(
              2> &A_Y,
   Timers &timers);
 
-void compute_feasible_and_termination(
-  const Solver_Parameters &parameters, const El::BigFloat &primal_error,
-  const El::BigFloat &dual_error, const El::BigFloat &duality_gap,
-  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
-  const int &iteration,
-  const std::chrono::time_point<std::chrono::high_resolution_clock>
-    &solver_start_time,
-  bool &is_primal_and_dual_feasible,
-  Dynamical_Solver_Terminate_Reason &terminate_reason, bool &terminate_now);
-
-void compute_update_sdp(
-  const Solver_Parameters &parameters, const El::BigFloat &primal_error,
-  const El::BigFloat &dual_error, const El::BigFloat &duality_gap,
-  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
-  const int &iteration,
-  const std::chrono::time_point<std::chrono::high_resolution_clock>
-    &solver_start_time,
-  bool &is_primal_and_dual_feasible,
-  bool &update_sdp);
 
 void compute_dual_residues_and_error(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &y,
@@ -68,6 +50,28 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
                                               const Block_Vector &x,
                                               Block_Vector &primal_residue_p,
                                               El::BigFloat &primal_error_p);
+
+// subroutines to decide weather to update sdps in run_dynamical, before entering dynamical_step
+void compute_update_sdp(
+  const Solver_Parameters &parameters, const El::BigFloat &primal_error,
+  const El::BigFloat &dual_error, const El::BigFloat &duality_gap,
+  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
+  const int &iteration,
+  const std::chrono::time_point<std::chrono::high_resolution_clock>
+    &solver_start_time,
+  bool &is_primal_and_dual_feasible,
+  bool &update_sdp);
+
+//Same as the function in SDP_Solver, adapted for the Dynamical_Solver_Terminate_Reason class
+void compute_feasible_and_termination(
+  const Solver_Parameters &parameters, const El::BigFloat &primal_error,
+  const El::BigFloat &dual_error, const El::BigFloat &duality_gap,
+  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
+  const int &iteration,
+  const std::chrono::time_point<std::chrono::high_resolution_clock>
+    &solver_start_time,
+  bool &is_primal_and_dual_feasible,
+  Dynamical_Solver_Terminate_Reason &terminate_reason, bool &terminate_now);
 
 Dynamical_Solver_Terminate_Reason
 Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_parameters,

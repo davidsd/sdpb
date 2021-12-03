@@ -1,6 +1,7 @@
 #include "../../../sdp_solve/Solver_Parameters.hxx"
 #include "../../Dynamical_Solver_Parameters.hxx"
 
+// subroutines to decide weather to update sdps in run_dynamical, before entering dynamical_step
 void compute_update_sdp(
   const Solver_Parameters &parameters, const El::BigFloat &primal_error,
   const El::BigFloat &dual_error, const El::BigFloat &duality_gap,
