@@ -53,19 +53,23 @@ approxRational 1e-200 <$> toV (cos theta, sin theta)
 ```
 With this setup, we found that choosing alpha step size anywhere from e^-20 to e^-70 gives good approximations to the derivatives. 
 
-2. After correcting some sign errors, we found a primal_dual optimal solution at the minimum in the external parameter (theta in this example) after ~300 iterations. 
-```
-primalObjective = -0.00119767921900...
-```
-The BFGS algorithm that started from the same initial conditions took 782 iterations in total to get to 
-```
-primalObjective = -0.00119614134740... 
-```
-and 855 iterations in total to
-```
-primalObjective = -0.00119770961688...
-```
-(Whether the paramters I used was optimal for the BFGS algorithm is not clear to me, but I believe that the algorithm has hot-starting implemented) 
+2. After correcting some sign errors, we found a primal_dual optimal solution at the minimum in the external parameter (theta in this example) after ~300 iterations. By choosing the minimum external step size differently, after 300 iterations in total we get  
+   ```
+   primalObjective = -0.00119771939664...
+   ```
+   after 310 iterations in total we get  
+   ```
+   primalObjective = -0.00119771939664...
+   ```
+   The BFGS algorithm that started from the same initial conditions took 782 iterations in total to get  
+   ```
+   primalObjective = -0.00119614134740... 
+   ```
+   and 855 iterations in total 
+   ```
+   primalObjective = -0.00119770961688...
+   ```
+   (Whether the paramters I used was optimal for the BFGS algorithm is not clear to me, but I believe that the algorithm has hot-starting implemented) 
 
 3. I'm now working on finding the boundary of the island rather than the minimum of the navigator function. These lines are commented out in the lastest commit. 
 
