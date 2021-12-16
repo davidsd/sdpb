@@ -53,19 +53,17 @@ approxRational 1e-200 <$> toV (cos theta, sin theta)
 ```
 With this setup, we found that choosing alpha step size anywhere from e^-20 to e^-70 gives good approximations to the derivatives. 
 
-2. After correcting some sign errors, we found a primal_dual optimal solution at the minimum in the external parameter (theta in this example) after ~300 iterations. By choosing the minimum external step size differently, after 300 iterations in total we get  
-   ```
-   primalObjective = -0.00119771939664...
-   ```
-   after 310 iterations in total we get  
-   ```
-   primalObjective = -0.00119771939664...
-   ```
-   The BFGS algorithm that started from the same initial conditions took 782 iterations in total to get  
+2. After correcting some sign errors, we found a primal_dual optimal solution at the minimum in the external parameter (theta in this example) after ~300 iterations. Choosing the minimum external step size to be e-7, that is we do not update sdps when the step size calculated is less than e-7, We have  
+     ```
+     primalObjective = -0.00119771939664...
+     ```
+     after 310 iterations in total.
+
+   The BFGS algorithm that started from the same initial conditions took 782 iterations in total to arrive at  
    ```
    primalObjective = -0.00119614134740... 
    ```
-   and 855 iterations in total 
+   and 855 iterations in total to arrive at
    ```
    primalObjective = -0.00119770961688...
    ```
