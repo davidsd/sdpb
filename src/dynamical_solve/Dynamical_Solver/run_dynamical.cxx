@@ -12,7 +12,7 @@ void print_header_dynamical(const Verbosity &verbosity);
 void print_iteration(
   const int &iteration, const El::BigFloat &mu,
   const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
-  const El::BigFloat &beta_corrector, const Dynamical_Solver &dynamical_solver,
+  const El::BigFloat &beta, const Dynamical_Solver &dynamical_solver,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time,
   const Verbosity &verbosity);
@@ -106,7 +106,9 @@ Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_par
 
   initialize_timer.stop();
   auto last_checkpoint_time(std::chrono::high_resolution_clock::now());
-  for(size_t iteration = 1; ; ++iteration)
+  size_t iteration  = 1; 
+  bool find_zeros = false;
+  for(; ; ++iteration)
     {
       El::byte checkpoint_now(
         std::chrono::duration_cast<std::chrono::seconds>(
@@ -160,14 +162,15 @@ Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_par
         solver_timer.start_time, is_primal_and_dual_feasible,
         update_sdp);
 
-      El::BigFloat mu, beta_corrector;
+      El::BigFloat mu; 
+      El::BigFloat beta_predictor;
        {
          external_step_size = 0; 
          dynamical_step(dynamical_parameters, total_psd_rows, is_primal_and_dual_feasible, block_info,
                       sdp, grid, 
                       X_cholesky, Y_cholesky, A_X_inv, A_Y,  primal_residue_p, 
-                      mu, beta_corrector, primal_step_length, dual_step_length, 
-                      terminate_now, timers, update_sdp, extParamStep);
+                      mu, beta_predictor, primal_step_length, dual_step_length, 
+                      terminate_now, timers, update_sdp, find_zeros, extParamStep);
        } 
       if (terminate_now)
         {
@@ -176,7 +179,7 @@ Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_par
           break;
         }
      print_iteration(iteration, mu, primal_step_length, dual_step_length,
-                      beta_corrector, *this, solver_timer.start_time,
+                      beta_predictor, *this, solver_timer.start_time,
                       verbosity);
      if (update_sdp)
        {
@@ -186,6 +189,7 @@ Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_par
        }
     
     }
+  total_iteration = dynamical_parameters.total_iterations + iteration; 
   solver_timer.stop();
   return terminate_reason;
 }

@@ -6,8 +6,8 @@ boost::property_tree::ptree to_property_tree(const Dynamical_Solver_Parameters &
   result.put("newSdpDirs", p.new_sdp_path.string()); 
   result.put("stepSizeAlpha", p.alpha);
   result.put("numExternalParams", p.n_external_parameters);
-  result.put("updateSdpThreshold", p.update_sdp_threshold_max);
- 
-
+  result.put("updateSdpThresholdMax", p.update_sdp_threshold_max);
+  result.put("updateSdpThresholdMin", p.update_sdp_threshold_min); 
+  result.put("prevTotalIterations", p.total_iterations);
   return result;
 }

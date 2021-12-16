@@ -23,11 +23,20 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
                               boost::program_options::value<int>(&n_external_parameters)->default_value(0),
                               "The number of external parameters to be varied in each iteration of the dynamical SDP. "
                               "The default value is set to 0.");
+   result.add_options()("prevTotalIterations", 
+                              boost::program_options::value<size_t>(&total_iterations)->default_value(0),
+                              "The number of total iterations finished before this solver starts to run. "
+                              "The default value is set to 0.");
   result.add_options()("updateSdpThresholdMax",
                               boost::program_options::value<El::BigFloat>(&update_sdp_threshold_max)->default_value(1),
                               "Take a step in the external parameters, "
-                              "that is to regenerator the sdp files if the step size is smaller than the threshold. "
+                              "that is to regenerate the sdp files if the step size is smaller than the threshold. "
                               "The default value is set to 1.");  
+  result.add_options()("updateSdpThresholdMin",
+                              boost::program_options::value<El::BigFloat>(&update_sdp_threshold_min)->default_value(0),
+                              "Take a step in the external parameters, "
+                              "that is to regenerate the sdp files if the step size is bigger than the threshold. "
+                              "The default value is set to 0.");  
   result.add(solver_parameters.options()); 
 
   return result;

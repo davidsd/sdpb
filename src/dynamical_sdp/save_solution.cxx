@@ -69,6 +69,7 @@ void save_solution(const Dynamical_Solver &solver,
                  << "dualityGap      = " << solver.duality_gap << ";\n"
                  << "primalError     = " << solver.primal_error() << ";\n"
                  << "dualError       = " << solver.dual_error << ";\n"
+                 //<< "totalIterations = " << solver.total_iteration << ";\n"
                  << std::setw(16) << std::left << timer_pair.first << "= "
                  << timer_pair.second.elapsed_seconds() << ";\n";
       if(!out_stream.good())
@@ -92,6 +93,20 @@ void save_solution(const Dynamical_Solver &solver,
           throw std::runtime_error("Error when writing to: "
                                    + extParamStep_path.string());
         } 
+    }
+
+
+  boost::filesystem::ofstream iterations_stream;
+  if(El::mpi::Rank() == 0)
+    {
+      const boost::filesystem::path iterations_path(out_directory / "iterations.txt");
+      iterations_stream.open(iterations_path);
+      iterations_stream << solver.total_iteration << '\n';
+      if(!iterations_stream.good())
+        {
+          throw std::runtime_error("Error when writing to: "
+                                   + iterations_path.string());
+        }
     }
   // y is duplicated among cores, so only need to print out copy on
   // the root node.

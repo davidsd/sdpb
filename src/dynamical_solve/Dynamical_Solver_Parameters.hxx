@@ -15,12 +15,13 @@ struct Dynamical_Solver_Parameters
 {
   Solver_Parameters solver_parameters;  
 
-  El::BigFloat alpha,update_sdp_threshold_max;
+  El::BigFloat alpha,
                //duality_gap_threshold, primal_error_threshold, dual_error_threshold ,
                //primal_obj_threshold, dual_obj_threshold,
-               //update_sdp_threshold_max, update_sdp_threshold_min;
+               update_sdp_threshold_max, update_sdp_threshold_min;
 
   int n_external_parameters;
+  size_t total_iterations;
   boost::filesystem::path new_sdp_path;
 
   Dynamical_Solver_Parameters() = default;

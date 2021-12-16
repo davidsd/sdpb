@@ -24,6 +24,7 @@
 class Dynamical_Solver
 {
 public:
+  size_t total_iteration;
   // a Vector of length P = sdp.primalObjective.size()
   Block_Vector x;
 
@@ -103,9 +104,9 @@ public:
       std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
       &A_Y,
     const Block_Vector &primal_residue_p, El::BigFloat &mu, 
-    El::BigFloat &beta_corrector, El::BigFloat &primal_step_length, 
+    El::BigFloat &beta, El::BigFloat &primal_step_length, 
     El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
-    bool &update_sdp, El::Matrix<El::BigFloat> &external_step); 
+    bool &update_sdp, bool &find_zeros, El::Matrix<El::BigFloat> &external_step); 
 
   void
   save_checkpoint(const boost::filesystem::path &checkpoint_directory,

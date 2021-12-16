@@ -11,7 +11,7 @@ void solve_schur_complement_equation(
 //as shown in Eq(15). 
 //Return: void. 
 //Update: hess_xp = H_xp = (RHS(p1)/alpha, RHS(p2)/alpha, ... ), stored to compute the second term on the LHS of Eq(13) 
-//        delta_x_y = H^-1_xx H_xp = H^-1_xx hess_xp 
+//        delta_x_y = - H^-1_xx H_xp = - H^-1_xx hess_xp 
 void mixed_hess(
   const Block_Info &block_info, const SDP &d_sdp,
   const Block_Vector &x, const Block_Vector &y,
