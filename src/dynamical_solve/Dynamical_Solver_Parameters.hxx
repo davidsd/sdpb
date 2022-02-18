@@ -10,7 +10,7 @@
 
 #include "../sdp_solve/Solver_Parameters.hxx"
 #include <iostream>
-
+#include <vector>
 struct Dynamical_Solver_Parameters
 {
   Solver_Parameters solver_parameters;  
@@ -18,11 +18,17 @@ struct Dynamical_Solver_Parameters
   El::BigFloat alpha,
                //duality_gap_threshold, primal_error_threshold, dual_error_threshold ,
                //primal_obj_threshold, dual_obj_threshold,
-               update_sdp_threshold_max, update_sdp_threshold_min;
+               update_sdp_threshold_max, update_sdp_threshold_min,
+               find_boundary_obj_threshold;
 
   int n_external_parameters;
   size_t total_iterations;
   boost::filesystem::path new_sdp_path;
+
+  bool find_boundary;
+  std::vector<El::BigFloat> external_coor;
+  std::vector<El::BigFloat> search_direction; 
+  El::BigFloat lag_multiplier_lambda;
 
   Dynamical_Solver_Parameters() = default;
   boost::program_options::options_description options();

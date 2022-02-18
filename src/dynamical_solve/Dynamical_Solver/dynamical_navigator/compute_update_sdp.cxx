@@ -20,5 +20,5 @@ void compute_find_zeros(
   const El::BigFloat &duality_gap, const El::BigFloat &primal_objective,
   bool &find_zeros)
 {
-  find_zeros =  (duality_gap < 0.1) && (primal_objective < 0 ); 
+  find_zeros =  (duality_gap < 0.01);
 }  

@@ -189,6 +189,8 @@ Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_par
        }
     
     }
+  if (terminate_reason != Dynamical_Solver_Terminate_Reason::UpdateSDPs)
+     { El::Zero(extParamStep);}
   total_iteration = dynamical_parameters.total_iterations + iteration; 
   solver_timer.stop();
   return terminate_reason;

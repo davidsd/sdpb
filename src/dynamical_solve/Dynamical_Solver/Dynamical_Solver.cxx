@@ -36,4 +36,8 @@ Dynamical_Solver::Dynamical_Solver(const Dynamical_Solver_Parameters &dynamical_
       // Y = \Omega_d I
       Y.add_diagonal(dynamical_parameters.solver_parameters.initial_matrix_scale_dual);
     }
+  if (dynamical_parameters.find_boundary)
+    {
+      lag_multiplier_lambda = dynamical_parameters.lag_multiplier_lambda;
+    }
 }

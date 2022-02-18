@@ -48,8 +48,8 @@ public:
   El::BigFloat primal_objective, // f + c . x
     dual_objective,              // f + b . y
     duality_gap,                 // normalized difference of objectives
-    external_step_size;          // the size of the step to be taken in the external parameters' space 
-
+    external_step_size,          // the size of the step to be taken in the external parameters' space 
+    lag_multiplier_lambda;
   // Discrepancy in the primal equality constraints, a
   // Block_Diagonal_Matrix with the same structure as X, called 'P' in
   // the manual:

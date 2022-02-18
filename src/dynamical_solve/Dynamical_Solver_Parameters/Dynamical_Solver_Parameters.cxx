@@ -1,6 +1,7 @@
 #include "../Dynamical_Solver_Parameters.hxx"
 
 #include <boost/program_options.hpp>
+#include <vector>
 
 boost::program_options::options_description Dynamical_Solver_Parameters::options()
 {
@@ -37,6 +38,23 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
                               "Take a step in the external parameters, "
                               "that is to regenerate the sdp files if the step size is bigger than the threshold. "
                               "The default value is set to 0.");  
+  result.add_options()("findBoundary", 
+                              boost::program_options::value<bool>(&find_boundary) -> default_value(0), 
+                              "True if the program is required by the user to find a point on the boundary of the island. " 
+                              "The default value is set to False.");
+  result.add_options()("findBoundaryObjThreshold",
+                              boost::program_options::value<El::BigFloat>(&find_boundary_obj_threshold)->default_value(0),
+                              "Continue to move towards the boundary if the primal and dual objectives are not sufficiently close to zero. " 
+                              "The default value is set to 0.");
+  result.add_options()("externalCoor", 
+                              boost::program_options::value<std::vector<El::BigFloat>>(&external_coor), 
+                              "The values of the external variables that were used to produce the central sdp file.");
+  result.add_options()("searchDirection", 
+                              boost::program_options::value<std::vector<El::BigFloat>>(&search_direction), 
+                              "User-specified directional vector in which the program will looks for a zero. ");
+  result.add_options()("lagMultiplier", 
+                              boost::program_options::value<El::BigFloat>(&lag_multiplier_lambda), 
+                              "The Lagrange multiplier used to find the boundary of an island. ");
   result.add(solver_parameters.options()); 
 
   return result;
