@@ -41,45 +41,51 @@ An unofficial Haskell wrapper is available:
 
 ## Attribution
 
+### SDPB
+
 If you use SDPB in work that results in publication, consider citing
 
 - D. Simmons-Duffin, *A Semidefinite Program Solver for the
-  Conformal Bootstrap*, JHEP 1506, 174 (2015) [arXiv:1502.02033 \[hep-th\]](http://arxiv.org/abs/1502.02033).
+  Conformal Bootstrap*, JHEP 1506, 174 (2015) [arXiv:1502.02033](http://arxiv.org/abs/1502.02033).
 - W. Landry and D. Simmons-Duffin, *Scaling the semidefinite program solver SDPB*
-  [arXiv:1909.09745 \[hep-th\]](https://arxiv.org/abs/1909.09745).
+  [arXiv:1909.09745](https://arxiv.org/abs/1909.09745).
 
 Depending on how SDPB is used, the following other sources might be relevant:
 
 The first use of semidefinite programming in the bootstrap:
 
 - D. Poland, D. Simmons-Duffin and A. Vichi, *Carving Out the Space of
-  4D CFTs*, JHEP 1205, 110 (2012) [arXiv:1109.5176 \[hep-th\]](http://arxiv.org/abs/1109.5176).
+  4D CFTs*, JHEP 1205, 110 (2012) [arXiv:1109.5176](http://arxiv.org/abs/1109.5176).
 
 The generalization of semidefinite programming methods to arbitrary
 spacetime dimension:
 
 - F. Kos, D. Poland and D. Simmons-Duffin, *Bootstrapping the O(N)
-  Vector Models*, JHEP 1406, 091 (2014) [arXiv:1307.6856 \[hep-th\]](http://arxiv.org/abs/1307.6856).
+  Vector Models*, JHEP 1406, 091 (2014) [arXiv:1307.6856](http://arxiv.org/abs/1307.6856).
 
 The generalization of semidefinite programming methods to arbitrary
 systems of correlation functions:
 
 - F. Kos, D. Poland and D. Simmons-Duffin, *Bootstrapping Mixed
-  Correlators in the 3D Ising Model*, JHEP 1411, 109 (2014) [arXiv:1406.4858 \[hep-th\]](http://arxiv.org/abs/1406.4858).
+  Correlators in the 3D Ising Model*, JHEP 1411, 109 (2014) [arXiv:1406.4858](http://arxiv.org/abs/1406.4858).
 
-The derivation of the approximation to the objective:
+### approx_objective
 
-- M. Reehorst et. al., *Navigator Function for the Conformal Bootstrap*,
-  [arXiv:2104.09518 \[hep-th\]](http://arxiv.org/abs/2104.09518).
+Derivation of linear and quadratic variations of the objective function, used in `approx_objective`:
+
+- M. Reehorst, S. Rychkov, D. Simmons-Duffin, B. Sirois, N. Su, B. van Rees, *Navigator Function for the Conformal Bootstrap*,
+  [arXiv:2104.09518](http://arxiv.org/abs/2104.09518).
+
+### spectrum
 
 Spectrum extraction was originally written for use in:
 
-  - Komargodski, Zohar and Simmons-Duffin, David, 'The Random Bond
-    Ising Model in 2.01 and 3 Dimensions,' [arXiv:1603.04444](https://arxiv.org/abs/1603.04444)
+  - Z. Komargodski and D. Simmons-Duffin, *The Random Bond
+    Ising Model in 2.01 and 3 Dimensions*, [arXiv:1603.04444](https://arxiv.org/abs/1603.04444)
 
 An explanation of how it works appears in:
 
-  - Simmons-Duffin, David, 'The Lightcone Bootstrap and the Spectrum of the 3d Ising CFT,' [arXiv:1612.08471](https://arxiv.org/abs/1612.08471)
+  - D. Simmons-Duffin, *The Lightcone Bootstrap and the Spectrum of the 3d Ising CFT*, [arXiv:1612.08471](https://arxiv.org/abs/1612.08471)
 
 ## Acknowledgements
 
