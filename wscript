@@ -111,7 +111,8 @@ def build(bld):
                        'src/approx_objective/Approx_Parameters/Approx_Parameters.cxx',
                        'src/approx_objective/Axpy.cxx',
                        'src/approx_objective/Approx_Objective/Approx_Objective/Approx_Objective.cxx',
-                       'src/approx_objective/Approx_Objective/Approx_Objective/compute_dx_dy.cxx']
+                       'src/approx_objective/Approx_Objective/Approx_Objective/compute_dx_dy.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/newton_trust.cxx']
 
     bld.stlib(source=dynamical_solve_sources,
           target='dynamical_solve',
@@ -345,4 +346,9 @@ def build(bld):
                 use=use_packages + ['sdp_read']
                 )
 
-
+    # Test NewtonRegion
+    #bld.program(source=['src/dynamical_solve/Dynamical_Solver/dynamical_navigator/newton_trust.cxx'],
+    #            target='test_newton',
+    #            cxxflags=default_flags,
+    #            use=use_packages + ['sdp_solve', 'dynamical_solve']
+    #            )
