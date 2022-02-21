@@ -95,7 +95,19 @@ void save_solution(const Dynamical_Solver &solver,
         } 
     }
 
-
+  boost::filesystem::ofstream lag_multiplier_stream;
+  if(El::mpi::Rank() == 0)
+    {
+      const boost::filesystem::path lag_multiplier_path(out_directory / "lagMultiplier.txt");
+      lag_multiplier_stream.open(lag_multiplier_path);
+      lag_multiplier_stream << solver.lag_multiplier_lambda << '\n';
+      if(!lag_multiplier_stream.good())
+        {
+          throw std::runtime_error("Error when writing to: "
+                                   + lag_multiplier_path.string());
+        }
+    }
+ 
   boost::filesystem::ofstream iterations_stream;
   if(El::mpi::Rank() == 0)
     {

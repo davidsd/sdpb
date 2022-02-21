@@ -112,6 +112,7 @@ void Dynamical_Solver::dynamical_step(
   auto &step_timer(timers.add_and_start("run.step"));
 
   bool jump(false);
+  El::BigFloat delta_lambda(0);
   Block_Diagonal_Matrix schur_complement_cholesky(
     block_info.schur_block_sizes(), block_info.block_indices,
     block_info.num_points.size(), grid);
@@ -269,54 +270,82 @@ void Dynamical_Solver::dynamical_step(
         //if (external_step_size > dynamical_parameters.update_sdp_threshold_max || external_step_size < dynamical_parameters.update_sdp_threshold_min)
         //  { update_sdp = false; }
 
-        if (dynamical_parameters.find_boundary && El::Abs(dual_objective) < 100 && dynamical_parameters.total_iterations > 0)
-          { 
-            El::BigFloat lag = compute_lag(mu * beta, X_cholesky, *this);
-            std::cout << '\n'
-              << "Lagrangian" << lag << '\n' << std::flush;
-
-            //if ((El::Abs(primal_objective) < dynamical_parameters.find_boundary_obj_threshold) && 
-            //    (El::Abs(dual_objective) < dynamical_parameters.find_boundary_obj_threshold))
-            //  { 
-            //    update_sdp = false;
-            //  } 
-            find_zero_step(10^(-10), 100, dynamical_parameters.update_sdp_threshold_max,
-                                 hess_pp, grad_mixed, find_zeros, external_step, lag);
-            El::Matrix<El::BigFloat> search_direction(n_external_parameters,1, dynamical_parameters.search_direction.data(), n_external_parameters);
-            //El::Matrix<El::BigFloat> ext_coor(n_external_parameters,1, dynamical_parameters.external_coor.data(), n_external_parameters);
-            //El::Matrix<El::BigFloat> slope(grad_mixed);
-            
-            //El::Gemv( El::NORMAL, El::BigFloat(1), hess_pp , ext_coor , El::BigFloat(1), slope ); 
-            if (El::Dot(grad_mixed, search_direction) < 0)
-                  { jump = true; std::cout << '\n'<< "first jump" << '\n' << std::flush; external_step *= El::Min(El::BigFloat(10), dynamical_parameters.update_sdp_threshold_max/external_step_size);} 
-            if (find_zeros && update_sdp) 
-              { 
-                if (El::Dot(grad_mixed, search_direction) < 0) 
-                  { std::cout << '\n'<< "jump" << lag << '\n' << std::flush;} //external_step *= 2; }
-                else 
-                  { 
-                    El::BigFloat f, fprime;
-                    f = + El::Dot(external_step,grad_mixed) +(dot(grad_x, internal_dx) + dot(grad_y, internal_dy) + lag) ;
-                    fprime = - El::Dot(external_step,search_direction);
-
-                    El::LinearSolve(hess_pp, search_direction);
-                    search_direction *= - (f/fprime) ;
-
-                    external_step += search_direction;
-                  }
-                external_step_size = El::Nrm2(external_step);
-              }
-          }
-       
-        else
+//        if (dynamical_parameters.find_boundary && El::Abs(dual_objective) < 100 && dynamical_parameters.total_iterations > 0)
+//          { 
+//            El::BigFloat lag = compute_lag(mu * beta, X_cholesky, *this);
+//            std::cout << '\n'
+//              << "Lagrangian" << lag << '\n' << std::flush;
+//
+//            //if ((El::Abs(primal_objective) < dynamical_parameters.find_boundary_obj_threshold) && 
+//            //    (El::Abs(dual_objective) < dynamical_parameters.find_boundary_obj_threshold))
+//            //  { 
+//            //    update_sdp = false;
+//            //  } 
+//            find_zero_step(10^(-10), 100, dynamical_parameters.update_sdp_threshold_max,
+//                                 hess_pp, grad_mixed, find_zeros, external_step, lag);
+//            El::Matrix<El::BigFloat> search_direction(n_external_parameters,1, dynamical_parameters.search_direction.data(), n_external_parameters);
+//            //El::Matrix<El::BigFloat> ext_coor(n_external_parameters,1, dynamical_parameters.external_coor.data(), n_external_parameters);
+//            //El::Matrix<El::BigFloat> slope(grad_mixed);
+//            
+//            //El::Gemv( El::NORMAL, El::BigFloat(1), hess_pp , ext_coor , El::BigFloat(1), slope ); 
+//            if (El::Dot(grad_mixed, search_direction) < 0)
+//                  { jump = true; std::cout << '\n'<< "first jump" << '\n' << std::flush; external_step *= El::Min(El::BigFloat(10), dynamical_parameters.update_sdp_threshold_max/external_step_size);} 
+//            if (find_zeros && update_sdp) 
+//              { 
+//                if (El::Dot(grad_mixed, search_direction) < 0) 
+//                  { std::cout << '\n'<< "jump" << lag << '\n' << std::flush;} //external_step *= 2; }
+//                else 
+//                  { 
+//                    El::BigFloat f, fprime;
+//                    f = + El::Dot(external_step,grad_mixed) +(dot(grad_x, internal_dx) + dot(grad_y, internal_dy) + lag) ;
+//                    fprime = - El::Dot(external_step,search_direction);
+//
+//                    El::LinearSolve(hess_pp, search_direction);
+//                    search_direction *= - (f/fprime) ;
+//
+//                    external_step += search_direction;
+//                  }
+//                external_step_size = El::Nrm2(external_step);
+//              }
+//          }
+        //std::cout<< "dual_objective" << El::Abs(dual_objective) << '\n' << std::flush;
+        if (dynamical_parameters.find_boundary && El::Abs(dual_objective) < 10)
           {
-              if ((external_step_size > dynamical_parameters.update_sdp_threshold_max && dynamical_parameters.total_iterations > 0))
-                { external_step *= 0.1; external_step_size = El::Nrm2(external_step); }
-              if ((external_step_size > dynamical_parameters.update_sdp_threshold_max && dynamical_parameters.total_iterations == 0)
-                  || El::Abs(dual_objective) > 1000 
-                  || external_step_size < dynamical_parameters.update_sdp_threshold_min)
-                { update_sdp = false; }
-          }  
+            El::BigFloat lag = compute_lag(0, X_cholesky, *this);
+            //lag_multiplier_lambda = El::Min(El::BigFloat(100), dynamical_parameters.lag_multiplier_lambda);
+            El::Matrix<El::BigFloat> search_direction(n_external_parameters,1);
+            for (int i=0; i<n_external_parameters; i++) 
+              { search_direction(i,0) = dynamical_parameters.search_direction[i];} 
+            //search_direction.LockedAttach(n_external_parameters,1, dynamical_parameters.search_direction.data(), n_external_parameters);
+            El::BigFloat tempt;
+            tempt = (dot(grad_x, internal_dx) + dot(grad_y, internal_dy)) + El::Dot(external_step,grad_mixed);
+            //std::cout<< "external_step_size" << external_step_size  << '\n' << std::flush;
+            //std::cout<< "search_direction" << dynamical_parameters.search_direction << ", " << search_direction(0,0) << '\n' << std::flush;
+            //std::cout<< "inner product" << El::Dot(external_step,search_direction) << '\n' << std::flush;
+            delta_lambda = lag_multiplier_lambda * (lag + tempt) - El::Dot(external_step,search_direction);
+            //std::cout<< "denominator" << delta_lambda  << '\n' << std::flush;
+            delta_lambda /= -tempt;
+            std::cout 
+                << "tempt" << tempt << '\n'
+                << "lag" << tempt + lag  << '\n'
+                << "delta lambda" << delta_lambda << '\n' << std::flush;  
+            El::LinearSolve(hess_pp, search_direction);
+            search_direction *= 1.0/lag_multiplier_lambda;
+            external_step *= (1.0 + delta_lambda/lag_multiplier_lambda);
+            external_step += search_direction;
+            external_step_size = El::Nrm2(external_step); 
+          }
+        //else
+        //  {
+        //      if ((external_step_size > dynamical_parameters.update_sdp_threshold_max && dynamical_parameters.total_iterations > 0))
+        //        { external_step *= 0.1; external_step_size = El::Nrm2(external_step); }
+        //      if ((external_step_size > dynamical_parameters.update_sdp_threshold_max && dynamical_parameters.total_iterations == 0)
+        //          || El::Abs(dual_objective) > 1000 
+        //          || external_step_size < dynamical_parameters.update_sdp_threshold_min)
+        //        { update_sdp = false; }
+        //  }
+        if (El::Abs(dual_objective) > 1000 || ((duality_gap == El::BigFloat(0) || duality_gap >= 0.9) && external_step_size > dynamical_parameters.update_sdp_threshold_max))
+          { update_sdp = false; } 
       }
 
     Block_Vector dx(internal_dx), dy(internal_dy);
@@ -329,16 +358,24 @@ void Dynamical_Solver::dynamical_step(
         for (int i=0; i<n_external_parameters; i++)
           {
             for(size_t block = 0; block < x.blocks.size(); ++block)
-              {
+              { 
+                if (dynamical_parameters.find_boundary) 
+                  { dx.blocks[block] *= (1.0 + delta_lambda/lag_multiplier_lambda);} 
                 El::Axpy(external_step(i), Delta_xy.at(i).first.blocks[block], dx.blocks[block]);
               }
             for(size_t block = 0; block < dy.blocks.size(); ++block)
               {
+                if (dynamical_parameters.find_boundary) 
+                  { dy.blocks[block] *= (1.0 + delta_lambda/lag_multiplier_lambda);}
                 El::Axpy(external_step(i), Delta_xy.at(i).second.blocks[block], dy.blocks[block]);
               }
          }
-      } 
-            
+       
+        if (dynamical_parameters.find_boundary)
+          { primal_residues *= (1.0 + delta_lambda/lag_multiplier_lambda);
+            R *= (1.0 + delta_lambda/lag_multiplier_lambda);
+          }
+      }           
     //Block_Diagonal_Matrix dX(X), dY(Y);
     // dX = PrimalResidues + \sum_p A_p dx[p]
     constraint_matrix_weighted_sum(block_info, sdp, dx, dX);
@@ -412,8 +449,19 @@ void Dynamical_Solver::dynamical_step(
   Y += dY;
 
   // Update the external step external_step = dualStepLength * external_step
-  if (!jump) {external_step *= dual_step_length;} 
+  external_step *= dual_step_length;
   external_step_size = El::Nrm2(external_step);
+  delta_lambda *= dual_step_length;
+  lag_multiplier_lambda += delta_lambda;
+  //if (primal_step_length < 0.001 || dual_step_length < 0.001)
+  //  {
+  //  }
+  //else 
+  //  {   external_step *= dual_step_length;
+  //delta_lambda *= dual_step_length;}
+
+  external_step_size = El::Nrm2(external_step);
+  lag_multiplier_lambda += delta_lambda;
   //if (!dynamical_parameters.find_boundary && update_sdp)
   //  {
   //    if (external_step_size > dynamical_parameters.update_sdp_threshold_max || external_step_size < dynamical_parameters.update_sdp_threshold_min)
