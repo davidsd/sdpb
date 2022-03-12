@@ -129,8 +129,7 @@ void Dynamical_Solver::dynamical_step(
   
   auto &frobenius_timer(
     timers.add_and_start("run.step.frobenius_product_symmetric"));
-  if (!find_zeros)
-    { mu = frobenius_product_symmetric(X, Y) / total_psd_rows;}
+  mu = frobenius_product_symmetric(X, Y) / total_psd_rows;
   frobenius_timer.stop();
   if(mu > dynamical_parameters.solver_parameters.max_complementarity)
     {
