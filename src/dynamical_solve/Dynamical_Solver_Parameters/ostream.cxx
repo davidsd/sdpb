@@ -9,6 +9,7 @@ std::ostream &operator<<(std::ostream &os, const Dynamical_Solver_Parameters &p)
      << "shiftedSDPsDir               = " << p.new_sdp_path << '\n'
      << "findBoundary                 = " << p.find_boundary << '\n'
      << "findBoundaryObjThreshold     = " << p.find_boundary_obj_threshold << '\n'
+     << "muDirectionMode              = " << p.mu_last_direction << '\n'
      << p.solver_parameters 
      << '\n';
  

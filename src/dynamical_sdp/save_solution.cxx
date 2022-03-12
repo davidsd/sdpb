@@ -120,6 +120,20 @@ void save_solution(const Dynamical_Solver &solver,
                                    + iterations_path.string());
         }
     }
+
+  boost::filesystem::ofstream mu_direction_stream;
+  if(El::mpi::Rank() == 0)
+    {
+      const boost::filesystem::path mu_direction_path(out_directory / "mu_direction.txt");
+      mu_direction_stream.open(mu_direction_path);
+      mu_direction_stream << solver.mu_direction_mode << '\n';
+      if(!mu_direction_stream.good())
+        {
+          throw std::runtime_error("Error when writing to: "
+                                   + mu_direction_path.string());
+        }
+    }
+
   // y is duplicated among cores, so only need to print out copy on
   // the root node.
   if(write_solution.vector_y && !solver.y.blocks.empty())

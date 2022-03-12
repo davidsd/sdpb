@@ -55,6 +55,10 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
   result.add_options()("lagMultiplier", 
                               boost::program_options::value<El::BigFloat>(&lag_multiplier_lambda), 
                               "The Lagrange multiplier used to find the boundary of an island. ");
+  result.add_options()("muDirectionMode", 
+                              boost::program_options::value<int>(&mu_last_direction),
+                              "To decrease or increase mu based on the former step. ");
+
   result.add(solver_parameters.options()); 
 
   return result;

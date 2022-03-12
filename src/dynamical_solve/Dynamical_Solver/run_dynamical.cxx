@@ -108,6 +108,8 @@ Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_par
   auto last_checkpoint_time(std::chrono::high_resolution_clock::now());
   size_t iteration  = 1; 
   bool find_zeros = false;
+  El::BigFloat mu;
+  mu_direction_mode = dynamical_parameters.mu_last_direction;
   for(; ; ++iteration)
     {
       El::byte checkpoint_now(
@@ -162,7 +164,7 @@ Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_par
         solver_timer.start_time, is_primal_and_dual_feasible,
         update_sdp);
 
-      El::BigFloat mu; 
+      //El::BigFloat mu; 
       El::BigFloat beta_predictor;
        {
          external_step_size = 0; 

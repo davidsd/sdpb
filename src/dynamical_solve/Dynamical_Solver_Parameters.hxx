@@ -25,10 +25,14 @@ struct Dynamical_Solver_Parameters
   size_t total_iterations;
   boost::filesystem::path new_sdp_path;
 
+  std::vector<El::BigFloat> bounding_box_max;
+  std::vector<El::BigFloat> bounding_box_min;
+
   bool find_boundary;
   std::vector<El::BigFloat> external_coor;
   std::vector<El::BigFloat> search_direction; 
   El::BigFloat lag_multiplier_lambda;
+  int mu_last_direction;
 
   Dynamical_Solver_Parameters() = default;
   boost::program_options::options_description options();

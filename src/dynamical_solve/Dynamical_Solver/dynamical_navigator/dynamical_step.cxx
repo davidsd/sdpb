@@ -112,6 +112,7 @@ void Dynamical_Solver::dynamical_step(
   auto &step_timer(timers.add_and_start("run.step"));
 
   bool jump(false);
+
   El::BigFloat delta_lambda(0);
   Block_Diagonal_Matrix schur_complement_cholesky(
     block_info.schur_block_sizes(), block_info.block_indices,
@@ -128,7 +129,8 @@ void Dynamical_Solver::dynamical_step(
   
   auto &frobenius_timer(
     timers.add_and_start("run.step.frobenius_product_symmetric"));
-  mu = frobenius_product_symmetric(X, Y) / total_psd_rows;
+  if (!find_zeros)
+    { mu = frobenius_product_symmetric(X, Y) / total_psd_rows;}
   frobenius_timer.stop();
   if(mu > dynamical_parameters.solver_parameters.max_complementarity)
     {
@@ -141,8 +143,8 @@ void Dynamical_Solver::dynamical_step(
   // -----
     auto &predictor_timer(
       timers.add_and_start("run.step.computeSearchDirection(betaPredictor)"));
-    El::BigFloat beta_predictor;
-    beta_predictor  = predictor_centering_parameter(dynamical_parameters.solver_parameters, is_primal_and_dual_feasible); 
+    beta  = predictor_centering_parameter(dynamical_parameters.solver_parameters, is_primal_and_dual_feasible); 
+     if (mu_direction_mode == 1)beta = 1;    
 
     // Internal_step: compute dx and dy for the central sdp as in compute_search_direction()      
     //                - H^-1_xx Del_x L_mu in Eq (12) and Eq(13)
@@ -151,21 +153,11 @@ void Dynamical_Solver::dynamical_step(
     Block_Diagonal_Matrix dX(X), dY(Y);
     Block_Vector grad_x(internal_dx), grad_y(internal_dy);
     Block_Diagonal_Matrix R(X);
-    compute_search_direction(block_info, sdp, *this, schur_complement_cholesky,
-                             schur_off_diagonal, X_cholesky,beta_predictor,
-                             mu, primal_residue_p, false, Q, internal_dx, dX, internal_dy, dY);
-    predictor_timer.stop();
- 
-    auto &corrector_timer(
-    timers.add_and_start("run.step.computeSearchDirection(betaCorrector)"));
-    beta = corrector_centering_parameter(
-           dynamical_parameters.solver_parameters, X, dX, Y, dY, mu, is_primal_and_dual_feasible,
-           total_psd_rows); 
-    internal_corrector_direction(block_info, sdp, *this, schur_complement_cholesky,
+    internal_predictor_direction(block_info, sdp, *this, schur_complement_cholesky,
                          schur_off_diagonal, X_cholesky, beta,
-                         mu, primal_residue_p, Q, grad_x, grad_y, internal_dx, internal_dy, dX, dY, R); 
-     
-    //Delta_xy = - H^-1_xx H_xp as the second term on the LHS of Eq(13)
+                         mu, primal_residue_p, Q, grad_x, grad_y, internal_dx, internal_dy, R); 
+
+   //Delta_xy = - H^-1_xx H_xp as the second term on the LHS of Eq(13)
     std::vector<std::pair<Block_Vector, Block_Vector>> H_xp, Delta_xy; 
     int n_external_parameters = dynamical_parameters.n_external_parameters;
 
@@ -242,15 +234,6 @@ void Dynamical_Solver::dynamical_step(
                 grad_mixed(i) = (dot(H_xp.at(i).first,internal_dx) + dot(H_xp.at(i).second,internal_dy));
           }  
 
-        /*
-        std::cout<<'\n'
-         <<  "eplus: "   << eplus(0,0)<<'\n'
-         <<  "eminus: "   << eminus(0,0)<<'\n'
-         << "hess_pp " << hess_pp(0,0) <<'\n'
-         << "hess_mixed " << hess_mixed(0,0) <<'\n'
-         << "Del_p L " << grad_p(0,0) <<'\n'
-         << "internal Del L " << grad_mixed(0,0) <<'\n' << std::flush;
-        */
  
         // Eq(13):
         // (H_pp - H_px H^-1_xx H_xp)      dp     =  - Del_p L   + H_px (H^-1_xx Del_x L)
@@ -259,6 +242,14 @@ void Dynamical_Solver::dynamical_step(
 
         // H_pp - H_px H^-1_xx H_xp, LHS of Eq(13)
         hess_pp -= hess_mixed; 
+
+        //Flip the sign of Hessian if determinant is negative 
+        if (El::Determinant(hess_pp) < 0) 
+          { 
+            hess_pp *= -1 ; 
+            std::cout<< "flip the sign of hessian" <<'\n' << std::flush;
+          }
+
         // H_px (H^-1_xx Del_x L_mu) - Del_p L_mu, RHS of Eq(13) 
         grad_mixed += grad_p; 
 
@@ -309,6 +300,8 @@ void Dynamical_Solver::dynamical_step(
 //              }
 //          }
         //std::cout<< "dual_objective" << El::Abs(dual_objective) << '\n' << std::flush;
+
+
         if (dynamical_parameters.find_boundary && El::Abs(dual_objective) < 10)
           {
             El::BigFloat lag = compute_lag(0, X_cholesky, *this);
@@ -316,7 +309,6 @@ void Dynamical_Solver::dynamical_step(
             El::Matrix<El::BigFloat> search_direction(n_external_parameters,1);
             for (int i=0; i<n_external_parameters; i++) 
               { search_direction(i,0) = dynamical_parameters.search_direction[i];} 
-            //search_direction.LockedAttach(n_external_parameters,1, dynamical_parameters.search_direction.data(), n_external_parameters);
             El::BigFloat tempt;
             tempt = (dot(grad_x, internal_dx) + dot(grad_y, internal_dy)) + El::Dot(external_step,grad_mixed);
             //std::cout<< "external_step_size" << external_step_size  << '\n' << std::flush;
@@ -344,7 +336,8 @@ void Dynamical_Solver::dynamical_step(
         //          || external_step_size < dynamical_parameters.update_sdp_threshold_min)
         //        { update_sdp = false; }
         //  }
-        if (El::Abs(dual_objective) > 1000 || ((duality_gap == El::BigFloat(0) || duality_gap >= 0.9) && external_step_size > dynamical_parameters.update_sdp_threshold_max))
+       
+        if (external_step_size < dynamical_parameters.update_sdp_threshold_min)
           { update_sdp = false; } 
       }
 
@@ -389,28 +382,6 @@ void Dynamical_Solver::dynamical_step(
     dY *= El::BigFloat(-1);
 
 
-    corrector_timer.stop();
-    //predictor_timer.stop();
-
-
-  // -----
-  // Compute the corrector solution for (dx, dX, dy, dY)
-  // -----
-  //  if (external_step_size < dynamical_parameters.update_sdp_threshold_min && external_step_size > 0)
-  //    {
-  //      auto &corrector_timer(
-  //      timers.add_and_start("run.step.computeSearchDirection(betaCorrector)"));
-  //      beta = corrector_centering_parameter(
-  //             dynamical_parameters.solver_parameters, X, dX, Y, dY, mu, is_primal_and_dual_feasible,
-  //             total_psd_rows);
-  //   
-  //      compute_search_direction(block_info, sdp, *this, schur_complement_cholesky,
-  //                               schur_off_diagonal, X_cholesky,beta,
-  //                               mu, primal_residue_p, true, Q, dx, dX, dy, dY);
-  //      corrector_timer.stop();
-  //    }
-
-
   // Compute step-lengths that preserve positive definiteness of X, Y
   primal_step_length
     = step_length(X_cholesky, dX, dynamical_parameters.solver_parameters.step_length_reduction,
@@ -420,53 +391,85 @@ void Dynamical_Solver::dynamical_step(
   dual_step_length
     = step_length(Y_cholesky, dY, dynamical_parameters.solver_parameters.step_length_reduction,
                   "run.step.stepLength(YCholesky)", timers);
-  //if (dual_step_length < 0.01)
-  //  {dual_step_length = 10 * dual_step_length;}
-  // If our problem is both dual-feasible and primal-feasible,
-  // ensure we're following the true Newton direction.
-  if(is_primal_and_dual_feasible)
+
+  // Always set the step length to be min(primal_step_lengthm, dual_step_length)
+  if(true)//is_primal_and_dual_feasible)
     {
       primal_step_length = El::Min(primal_step_length, dual_step_length);
       dual_step_length = primal_step_length;
     }
-  // step_length = miN
-  // Update the primal point (x, X) += primalStepLength*(dx, dX)
-  for(size_t block = 0; block < x.blocks.size(); ++block)
-    {
-      El::Axpy(primal_step_length, dx.blocks[block], x.blocks[block]);
-    }
+
+  external_step_size *= dual_step_length;
+
+  // When we change our decision to update sdp based on the final scaled external_step_size,
+  // we redo some computations using internal_dx, internal_dy instead of dx, dy. 
+  // For now we reset external_step to be zero but not the external_step_size
+  // so that we can do sanity checks in the log file where external_step_size where printed out in each iteration.
+  // Else catches 1) previously decided update_sdp = false where dx, dy = internal_dx, internal_dy;
+  //              2) update_sdp = true still holds.   
+    if (update_sdp 
+        && (external_step_size > dynamical_parameters.update_sdp_threshold_max 
+             || external_step_size < dynamical_parameters.update_sdp_threshold_min))
+      { 
+        update_sdp = false;   
+        El::Zero(external_step);
+        //external_step_size = 0 ; 
+        constraint_matrix_weighted_sum(block_info, sdp, internal_dx, dX);
+        dX += primal_residues;
+
+        multiply(dX, Y, dY);
+        dY -= R;
+        cholesky_solve(X_cholesky, dY);
+        dY.symmetrize();
+        dY *= El::BigFloat(-1);
+        primal_step_length
+          = step_length(X_cholesky, dX, dynamical_parameters.solver_parameters.step_length_reduction,
+                        "run.step.stepLength(XCholesky)", timers);
+        dual_step_length
+          = step_length(Y_cholesky, dY, dynamical_parameters.solver_parameters.step_length_reduction,
+                        "run.step.stepLength(YCholesky)", timers);
+        if(is_primal_and_dual_feasible)
+          {
+            primal_step_length = El::Min(primal_step_length, dual_step_length);
+            dual_step_length = primal_step_length;
+          }
+        for(size_t block = 0; block < x.blocks.size(); ++block)
+          {
+            El::Axpy(primal_step_length, internal_dx.blocks[block], x.blocks[block]);
+          }
+        // Update the dual point (y, Y) += dualStepLength*(dy, dY)
+        for(size_t block = 0; block < dy.blocks.size(); ++block)
+          {
+            El::Axpy(dual_step_length, internal_dy.blocks[block], y.blocks[block]);
+          }
+      }
+    else
+      {
+         for(size_t block = 0; block < x.blocks.size(); ++block)
+           {
+             El::Axpy(primal_step_length, dx.blocks[block], x.blocks[block]);
+           }
+         // Update the dual point (y, Y) += dualStepLength*(dy, dY)
+         for(size_t block = 0; block < dy.blocks.size(); ++block)
+           {
+             El::Axpy(dual_step_length, dy.blocks[block], y.blocks[block]);
+           }
+       }
+  
+  predictor_timer.stop();
+
   dX *= primal_step_length;
-
-  X += dX;
-
-  // Update the dual point (y, Y) += dualStepLength*(dy, dY)
-  for(size_t block = 0; block < dy.blocks.size(); ++block)
-    {
-      El::Axpy(dual_step_length, dy.blocks[block], y.blocks[block]);
-    }
   dY *= dual_step_length;
-
+  X += dX;
   Y += dY;
-
-  // Update the external step external_step = dualStepLength * external_step
-  external_step *= dual_step_length;
-  external_step_size = El::Nrm2(external_step);
   delta_lambda *= dual_step_length;
   lag_multiplier_lambda += delta_lambda;
-  //if (primal_step_length < 0.001 || dual_step_length < 0.001)
-  //  {
-  //  }
-  //else 
-  //  {   external_step *= dual_step_length;
-  //delta_lambda *= dual_step_length;}
+  
+  if (El::Max(primal_step_length, dual_step_length)<0.3)
+	  mu_direction_mode = 1;
+  else
+	  mu_direction_mode = 0;
 
-  external_step_size = El::Nrm2(external_step);
-  lag_multiplier_lambda += delta_lambda;
-  //if (!dynamical_parameters.find_boundary && update_sdp)
-  //  {
-  //    if (external_step_size > dynamical_parameters.update_sdp_threshold_max || external_step_size < dynamical_parameters.update_sdp_threshold_min)
-  //      { update_sdp = false; }
-  //  }
 
   step_timer.stop();
 } 
