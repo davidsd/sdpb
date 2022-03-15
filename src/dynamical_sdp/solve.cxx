@@ -45,7 +45,7 @@ Timers solve(const Block_Info &block_info, const Dynamical_Parameters &parameter
                 << "extStepSize            = " << solver.external_step_size << '\n'
                 << "lagMultiplie           = " << solver.lag_multiplier_lambda << '\n'
                 << "totalIteration so far  = " << solver.total_iteration << '\n'
-                << "muDirection            = " << solver.lag_multiplier_lambda << '\n'
+                << "muDirection            = " << solver.mu_direction_mode<< '\n'
                 << '\n';
     }
 
