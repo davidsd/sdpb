@@ -80,7 +80,7 @@ Dynamical_Parameters::Dynamical_Parameters(int argc, char *argv[])
   po::variables_map variables_map;
   try
     {
-      po::store(po::parse_command_line(argc, argv, cmd_line_options),
+      po::store(po::parse_command_line(argc, argv, cmd_line_options, po::command_line_style::unix_style ^ po::command_line_style::allow_short),
                 variables_map);
 
       if(variables_map.count("help") != 0)

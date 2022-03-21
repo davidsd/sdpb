@@ -47,10 +47,10 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
                               "Continue to move towards the boundary if the primal and dual objectives are not sufficiently close to zero. " 
                               "The default value is set to 0.");
   result.add_options()("externalCoor", 
-                              boost::program_options::value<std::vector<El::BigFloat>>(&external_coor), 
+                              boost::program_options::value<std::vector<El::BigFloat>>(&external_coor)->multitoken(), 
                               "The values of the external variables that were used to produce the central sdp file.");
   result.add_options()("searchDirection", 
-                              boost::program_options::value<std::vector<El::BigFloat>>(&search_direction), 
+                              boost::program_options::value<std::vector<El::BigFloat>>(&search_direction)->multitoken(), 
                               "User-specified directional vector in which the program will looks for a zero. ");
   result.add_options()("lagMultiplier", 
                               boost::program_options::value<El::BigFloat>(&lag_multiplier_lambda), 
