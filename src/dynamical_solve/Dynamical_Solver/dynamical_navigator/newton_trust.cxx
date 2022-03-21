@@ -79,23 +79,24 @@ void find_zero_step(const El::BigFloat &thresh, const int &max_it, const El::Big
     //cout << "hessian" << hess(0,0) << endl;
   }
   else{
-    if (El::Nrm2(external_step) <= radius){
-      find_zeros = true;
-      //cout << "Looking for zeros using the original hessian" << endl;
-    }
-    else{
-      trust_region_boundary_step (thresh, max_it, radius, 
-                                  hess, grad, external_step);
-      quadratic_model = 0.5 * El::Dot(external_step, grad) + quadratic_const;
-      if (quadratic_model > 0) {
-        find_zeros = false;
-        cout << "hessian after correction: " << hess(0,0) << endl;
-      }
-      else{
-        find_zeros = true;
-        cout << "Looking for zeros using the updated hessian" << endl;
-      }
-    }
+    find_zeros = true;
+    //if (El::Nrm2(external_step) <= radius){
+    //  find_zeros = true;
+    //  //cout << "Looking for zeros using the original hessian" << endl;
+    //}
+    //else{
+    //  trust_region_boundary_step (thresh, max_it, radius, 
+    //                              hess, grad, external_step);
+    //  quadratic_model = 0.5 * El::Dot(external_step, grad) + quadratic_const;
+    //  if (quadratic_model > 0) {
+    //    find_zeros = false;
+    //    cout << "hessian after correction: " << hess(0,0) << endl;
+    //  }
+    //  else{
+    //    find_zeros = true;
+    //    cout << "Looking for zeros using the updated hessian" << endl;
+    //  }
+    //}
   }
 }     
 //

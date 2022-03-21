@@ -209,7 +209,9 @@ void Dynamical_Solver::dynamical_step(
                      }
                   else if (directions[0] == "sum")
                      {
-                       esum(std::stoi(directions[1]),std::stoi(directions[2])) = approx_obj.d_objective + approx_obj.dd_objective; 
+                       El::BigFloat tempt = approx_obj.d_objective + approx_obj.dd_objective;
+                       esum(std::stoi(directions[1]),std::stoi(directions[2])) = tempt; 
+                       esum(std::stoi(directions[2]),std::stoi(directions[1])) = tempt;
                        //compute_delta_lag(d_sdp,*this); 
                      }
                  }
@@ -232,6 +234,32 @@ void Dynamical_Solver::dynamical_step(
                 // The minus sign compensates the minus sign when calculating the internal step 
                 grad_mixed(i) = (dot(H_xp.at(i).first,internal_dx) + dot(H_xp.at(i).second,internal_dy));
           }  
+
+        //std::cout<<'\n'
+        // <<  "eplus: "   << '\n' << std::endl;
+        //El::Print(eplus);
+        //std::cout<<'\n'
+        // <<  "eminus: "  << '\n' << std::endl;
+        //El::Print(eminus);
+        //std::cout<<'\n'
+        // <<  "eSum: "  << '\n' << std::endl;
+        //El::Print(esum);
+        //std::cout<<'\n'
+        // <<  "hess_pp: "  << '\n' << std::endl;
+        //El::Print(hess_pp); 
+        //std::cout<<'\n'
+        // <<  "hess_mixed: "  << '\n' << std::endl;
+        //El::Print(hess_mixed);
+        //std::cout<<'\n'
+        // <<  "Del_p L : "  << '\n' << std::endl;
+        //El::Print(grad_p);
+        //std::cout <<'\n'
+        // <<  "internal Del L : "  << '\n' << std::endl;
+        //El::Print(grad_mixed);
+        // << "hess_pp " << hess_pp(0,0) <<'\n'
+        // << "hess_mixed " << hess_mixed(0,0) <<'\n'
+        // << "Del_p L " << grad_p(0,0) <<'\n'
+        // << "internal Del L " << grad_mixed(0,0) <<'\n' << std::flush;
 
  
         // Eq(13):
@@ -260,7 +288,7 @@ void Dynamical_Solver::dynamical_step(
         //if (external_step_size > dynamical_parameters.update_sdp_threshold_max || external_step_size < dynamical_parameters.update_sdp_threshold_min)
         //  { update_sdp = false; }
 
-        if (dynamical_parameters.find_boundary && El::Abs(dual_objective) < 100 && dynamical_parameters.total_iterations > 0)
+        if (dynamical_parameters.find_boundary && El::Abs(duality_gap) < 0.9 && dynamical_parameters.total_iterations > 0)
           { 
             El::BigFloat lag = compute_lag(0, X_cholesky, *this);
             std::cout << '\n'
@@ -271,9 +299,13 @@ void Dynamical_Solver::dynamical_step(
             El::Matrix<El::BigFloat> search_direction(n_external_parameters,1);
             for (int i=0; i<n_external_parameters; i++) 
               { search_direction(i,0) = dynamical_parameters.search_direction[i];} 
-
+            std::cout << '\n'<< "search_direction: " << search_direction(0,0) << ", "<<search_direction(1,0) << '\n' << std::flush;
             if (El::Dot(grad_mixed, search_direction) < 0)
-                  { jump = true; std::cout << '\n'<< "first jump" << '\n' << std::flush; external_step *= El::Min(El::BigFloat(10), dynamical_parameters.update_sdp_threshold_max/external_step_size);} 
+                  { jump = true; 
+                    std::cout << '\n'<< "first jump" << '\n' << std::flush; 
+                    external_step *= El::Min(El::BigFloat(10), dynamical_parameters.update_sdp_threshold_max/external_step_size);
+                    external_step_size = El::Nrm2(external_step);
+                  } 
             if (find_zeros && update_sdp) 
               { 
                 if (El::Dot(grad_mixed, search_direction) < 0) 
@@ -283,13 +315,13 @@ void Dynamical_Solver::dynamical_step(
                     El::BigFloat f, fprime;
                     f = + El::Dot(external_step,grad_mixed) +(dot(grad_x, internal_dx) + dot(grad_y, internal_dy) + lag) ;
                     fprime = - El::Dot(external_step,search_direction);
-
+                    std::cout << '\n'<< "fprime: " << fprime << '\n' << std::flush;
                     El::LinearSolve(hess_pp, search_direction);
                     search_direction *= - (f/fprime) ;
 
                     external_step += search_direction;
+                    external_step_size = El::Nrm2(external_step);
                   }
-                external_step_size = El::Nrm2(external_step);
               }
           }
 
