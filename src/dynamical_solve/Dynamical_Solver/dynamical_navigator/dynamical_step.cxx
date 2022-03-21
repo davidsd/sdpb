@@ -303,8 +303,11 @@ void Dynamical_Solver::dynamical_step(
             if (El::Dot(grad_mixed, search_direction) < 0)
                   { jump = true; 
                     std::cout << '\n'<< "first jump" << '\n' << std::flush; 
-                    external_step *= El::Min(El::BigFloat(10), dynamical_parameters.update_sdp_threshold_max/external_step_size);
+                    external_step = search_direction;
+                    external_step *= dynamical_parameters.update_sdp_threshold_max;
                     external_step_size = El::Nrm2(external_step);
+                    //external_step *= El::Min(El::BigFloat(10), dynamical_parameters.update_sdp_threshold_max/external_step_size);
+                    //external_step_size = El::Nrm2(external_step);
                   } 
             if (find_zeros && update_sdp) 
               { 
