@@ -1,6 +1,15 @@
 #include "../../../sdp_solve.hxx"
 
 
+void scale_block_vector(Block_Vector &A, const El::BigFloat &alpha)
+{
+  for(size_t block = 0; block != A.blocks.size(); ++block)
+    {
+      A.blocks[block] *= alpha;
+    }
+}
+
+
 void solve_schur_complement_equation(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
@@ -44,7 +53,9 @@ void mixed_hess(
                dy.blocks[block_index]);
       El::Scale(1.0/alpha, dy.blocks[block_index]);
     }
-  hess_xp.emplace_back(dx, dy);
+  Block_Vector negative_dx(dx);
+  scale_block_vector(negative_dx, El::BigFloat(-1));
+  hess_xp.emplace_back(negative_dx, dy);
   // Solve for dx, dy in-place
   solve_schur_complement_equation(schur_complement_cholesky,
                                   schur_off_diagonal, Q, dx, dy);

@@ -172,7 +172,7 @@ void Dynamical_Solver::dynamical_step(
     //                if criteria base on quantities, such as duality_gap, are met
     //                which is decided by function "compute_update_sdp()" called by run_dynamical()
     
-    
+    update_sdp = (primal_objective > dual_objective); 
     if (update_sdp) 
       {
         El::Matrix<El::BigFloat> grad_p(n_external_parameters,1); // Del_p L
@@ -271,13 +271,29 @@ void Dynamical_Solver::dynamical_step(
         hess_pp -= hess_mixed; 
 
         //Flip the sign of Hessian if determinant is negative 
-        if (El::Determinant(hess_pp) < 0) 
-          { 
-            hess_pp *= -1 ; 
-            std::cout<< "flip the sign of hessian" <<'\n' << std::flush;
-          }
+        typedef El::Base<El::BigFloat> Real;
+        El::Matrix<Real> w(n_external_parameters,1);
+        El::Zero(w);
+        El::Matrix<El::BigFloat> Q(hess_pp);
+        El::Matrix<El::BigFloat> tempt(hess_pp);
+        El::Matrix<El::BigFloat> diag(hess_pp);
+        El::Zero(diag);
+        El::HermitianEig(El::LOWER, hess_pp, w, Q);//,ctrl);
+        for (int i = 0; i < n_external_parameters; i++){
+            //std::cout<< "diag: " << w(i) << ", " << std::flush;
+            if (w(i) < 0){std::cout<< "flip the sign of hessian" <<'\n' << std::flush;}
+              diag(i,i) = El::Abs(w(i));
+        }
+        El::Gemm(El::NORMAL, El::TRANSPOSE, El::BigFloat(1), diag, Q, tempt);
+        El::Gemm(El::NORMAL, El::NORMAL, El::BigFloat(1),  Q, tempt, hess_pp); 
+        //if (El::Determinant(hess_pp) < 0) 
+        //  { 
+        //    hess_pp *= -1 ; 
+        //    std::cout<< "flip the sign of hessian" <<'\n' << std::flush;
+        //  }
 
-        // H_px (H^-1_xx Del_x L_mu) - Del_p L_mu, RHS of Eq(13) 
+
+        // - H_px (H^-1_xx Del_x L_mu) + Del_p L_mu, RHS of Eq(13) 
         grad_mixed += grad_p; 
 
         external_step = grad_mixed; 
@@ -292,7 +308,8 @@ void Dynamical_Solver::dynamical_step(
           { 
             El::BigFloat lag = compute_lag(0, X_cholesky, *this);
             std::cout << '\n'
-              << "Lagrangian" << lag << '\n' << std::flush;
+              << "Lagrangian mu=0: " << lag << ", mu: " << compute_lag(beta*mu, X_cholesky, *this) 
+              <<"dual_obj: " << dual_objective << ", const: " << sdp.objective_const << '\n' << std::flush;
 
             find_zero_step(10^(-10), 100, dynamical_parameters.update_sdp_threshold_max,
                                  hess_pp, grad_mixed, find_zeros, external_step, lag);
@@ -303,11 +320,11 @@ void Dynamical_Solver::dynamical_step(
             if (El::Dot(grad_mixed, search_direction) < 0)
                   { jump = true; 
                     std::cout << '\n'<< "first jump" << '\n' << std::flush; 
-                    external_step = search_direction;
-                    external_step *= dynamical_parameters.update_sdp_threshold_max;
-                    external_step_size = El::Nrm2(external_step);
-                    //external_step *= El::Min(El::BigFloat(10), dynamical_parameters.update_sdp_threshold_max/external_step_size);
+                    //external_step = search_direction;
+                    //external_step *= dynamical_parameters.update_sdp_threshold_max;
                     //external_step_size = El::Nrm2(external_step);
+                    external_step *= El::Min(El::BigFloat(10), dynamical_parameters.update_sdp_threshold_max/external_step_size);
+                    external_step_size = El::Nrm2(external_step);
                   } 
             if (find_zeros && update_sdp) 
               { 
@@ -367,7 +384,7 @@ void Dynamical_Solver::dynamical_step(
        
         if (external_step_size < dynamical_parameters.update_sdp_threshold_min
             //|| (external_step_size > dynamical_parameters.update_sdp_threshold_max && dynamical_parameters.total_iterations == 0)) 
-            || mu > 1e15)
+            || mu > 1e-3)
           { update_sdp = false; } 
       }
 
@@ -432,6 +449,7 @@ void Dynamical_Solver::dynamical_step(
   external_step *= dual_step_length; 
   external_step_size = El::Nrm2(external_step);
 
+  
   // When we change our decision to update sdp based on the final scaled external_step_size,
   // we redo some computations using internal_dx, internal_dy instead of dx, dy. 
   // For now we reset external_step to be zero but not the external_step_size
@@ -439,7 +457,8 @@ void Dynamical_Solver::dynamical_step(
   // Else catches 1) previously decided update_sdp = false where dx, dy = internal_dx, internal_dy;
   //              2) update_sdp = true still holds.   
     if (update_sdp 
-        && (external_step_size > dynamical_parameters.update_sdp_threshold_max)) 
+        && (external_step_size > dynamical_parameters.update_sdp_threshold_max) 
+       )
              //|| external_step_size < dynamical_parameters.update_sdp_threshold_min))
       { 
         update_sdp = false;   
