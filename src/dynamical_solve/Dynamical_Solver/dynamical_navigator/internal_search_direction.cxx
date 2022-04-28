@@ -18,6 +18,8 @@ inline void multiply(const Block_Diagonal_Matrix &A,
   scale_multiply_add(El::BigFloat(1), A, B, El::BigFloat(0), C);
 }
 
+void scale_block_vector(Block_Vector &A, const El::BigFloat &alpha);
+
 void cholesky_solve(const Block_Diagonal_Matrix &ACholesky,
                     Block_Diagonal_Matrix &X);
 
@@ -57,6 +59,8 @@ void internal_predictor_direction(
 
   grad_x = dx;
   grad_y = dy; 
+
+  scale_block_vector(grad_x, El::BigFloat(-1));
 
   solve_schur_complement_equation(schur_complement_cholesky,
                                   schur_off_diagonal, Q, dx, dy);
