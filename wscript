@@ -100,7 +100,7 @@ def build(bld):
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/mixed_hess.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/external_grad_hess.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_lag.cxx',
-                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_robust.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/internal_search_direction.cxx', 
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_update_sdp.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_search_direction.cxx',
@@ -115,7 +115,7 @@ def build(bld):
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/newton_trust.cxx']
 
     bld.stlib(source=dynamical_solve_sources,
-          target='dynamical_solve',
+          target='dynamical_solve1',
           cxxflags=default_flags,
           use=use_packages + ['sdp_solve', 'sdp_read'])
 
@@ -333,9 +333,9 @@ def build(bld):
                         'src/dynamical_sdp/Dynamical_Parameters/to_property_tree.cxx',
                         'src/dynamical_sdp/Dynamical_Parameters/ostream.cxx',
                         'src/dynamical_sdp/save_solution.cxx'],
-                target='dynamical_sdp',
+                target='dynamical_sdp1',
                 cxxflags=default_flags,
-                use=use_packages + ['sdp_read','sdp_solve', 'dynamical_solve']
+                use=use_packages + ['sdp_read','sdp_solve', 'dynamical_solve1']
                 )
 
 

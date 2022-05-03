@@ -144,7 +144,7 @@ void Dynamical_Solver::dynamical_step(
       timers.add_and_start("run.step.computeSearchDirection(betaPredictor)"));
     beta  = predictor_centering_parameter(dynamical_parameters.solver_parameters, is_primal_and_dual_feasible); 
      if (mu_direction_mode == 1)beta = 1;    
-
+     if (mu_direction_mode == 2)beta = 1; 
     // Internal_step: compute dx and dy for the central sdp as in compute_search_direction()      
     //                - H^-1_xx Del_x L_mu in Eq (12) and Eq(13)
     //                Notice that the negative sign has been accounted. 
@@ -172,7 +172,7 @@ void Dynamical_Solver::dynamical_step(
     //                if criteria base on quantities, such as duality_gap, are met
     //                which is decided by function "compute_update_sdp()" called by run_dynamical()
     
-    update_sdp = (primal_objective > dual_objective); 
+    //update_sdp = (primal_objective > dual_objective); 
     if (update_sdp) 
       {
         El::Matrix<El::BigFloat> grad_p(n_external_parameters,1); // Del_p L
@@ -268,24 +268,25 @@ void Dynamical_Solver::dynamical_step(
         // (hess_pp - hess_mixed)          dp     =  - grad_p    + grad_mixed 
 
         // H_pp - H_px H^-1_xx H_xp, LHS of Eq(13)
-        hess_pp -= hess_mixed; 
+        El::Matrix<El::BigFloat> Hpp_minus_Hmixed(hess_pp);
+        Hpp_minus_Hmixed -= hess_mixed; 
 
         //Flip the sign of Hessian if determinant is negative 
         typedef El::Base<El::BigFloat> Real;
         El::Matrix<Real> w(n_external_parameters,1);
         El::Zero(w);
-        El::Matrix<El::BigFloat> Q(hess_pp);
-        El::Matrix<El::BigFloat> tempt(hess_pp);
-        El::Matrix<El::BigFloat> diag(hess_pp);
+        El::Matrix<El::BigFloat> Q(Hpp_minus_Hmixed);
+        El::Matrix<El::BigFloat> tempt(Hpp_minus_Hmixed);
+        El::Matrix<El::BigFloat> diag(Hpp_minus_Hmixed);
         El::Zero(diag);
-        El::HermitianEig(El::LOWER, hess_pp, w, Q);//,ctrl);
+        El::HermitianEig(El::LOWER, Hpp_minus_Hmixed, w, Q);//,ctrl);
         for (int i = 0; i < n_external_parameters; i++){
             //std::cout<< "diag: " << w(i) << ", " << std::flush;
             if (w(i) < 0){std::cout<< "flip the sign of hessian" <<'\n' << std::flush;}
               diag(i,i) = El::Abs(w(i));
         }
         El::Gemm(El::NORMAL, El::TRANSPOSE, El::BigFloat(1), diag, Q, tempt);
-        El::Gemm(El::NORMAL, El::NORMAL, El::BigFloat(1),  Q, tempt, hess_pp); 
+        El::Gemm(El::NORMAL, El::NORMAL, El::BigFloat(1),  Q, tempt, Hpp_minus_Hmixed); 
         //if (El::Determinant(hess_pp) < 0) 
         //  { 
         //    hess_pp *= -1 ; 
@@ -298,7 +299,7 @@ void Dynamical_Solver::dynamical_step(
 
         external_step = grad_mixed; 
         external_step *= (-1);// we can get rid of grad_mixed here but it might be confusing. 
-        El::LinearSolve(hess_pp, external_step);
+        El::LinearSolve(Hpp_minus_Hmixed, external_step);
         
         external_step_size = El::Nrm2(external_step);
         //if (external_step_size > dynamical_parameters.update_sdp_threshold_max || external_step_size < dynamical_parameters.update_sdp_threshold_min)
@@ -312,7 +313,7 @@ void Dynamical_Solver::dynamical_step(
               <<"dual_obj: " << dual_objective << ", const: " << sdp.objective_const << '\n' << std::flush;
 
             find_zero_step(10^(-10), 100, dynamical_parameters.update_sdp_threshold_max,
-                                 hess_pp, grad_mixed, find_zeros, external_step, lag);
+                                 Hpp_minus_Hmixed, grad_mixed, find_zeros, external_step, lag);
             El::Matrix<El::BigFloat> search_direction(n_external_parameters,1);
             for (int i=0; i<n_external_parameters; i++) 
               { search_direction(i,0) = dynamical_parameters.search_direction[i];} 
@@ -336,11 +337,23 @@ void Dynamical_Solver::dynamical_step(
                     f = + El::Dot(external_step,grad_mixed) +(dot(grad_x, internal_dx) + dot(grad_y, internal_dy) + lag) ;
                     fprime = - El::Dot(external_step,search_direction);
                     std::cout << '\n'<< "fprime: " << fprime << '\n' << std::flush;
-                    El::LinearSolve(hess_pp, search_direction);
+                    El::LinearSolve(Hpp_minus_Hmixed, search_direction);
                     search_direction *= - (f/fprime) ;
 
                     external_step += search_direction;
                     external_step_size = El::Nrm2(external_step);
+                    //El::BigFloat a, b, c;
+                    //a =  + El::Dot(external_step,grad_mixed) +(dot(grad_x, internal_dx) + dot(grad_y, internal_dy) + lag) ;
+                    //b = El::Dot(external_step,search_direction);
+                    //El::Matrix<El::BigFloat> H_pp_d_min_p;
+                    //El::Gemv(El::NORMAL, El::BigFloat(1), hess_pp, external_step, H_pp_d_min_p);
+                    //a += El::Dot(external_step, H_pp_d_min_p)/2.0;
+                    //El::LinearSolve(Hpp_minus_Hmixed, search_direction);                    
+                    //El::Matrix<El::BigFloat> Hpp_minus_Hmixed_inv_vp;
+                    //El::Gemv(El::NORMAL, El::BigFloat(1), hess_pp, search_direction, Hpp_minus_Hmixed_inv_vp);
+                    //b += El::Dot(external_step, Hpp_minus_Hmixed_inv_vp);
+                    //c = El::Dot(search_direction, Hpp_minus_Hmixed_inv_vp)/2.0;
+                    
                   }
               }
           }
@@ -384,7 +397,7 @@ void Dynamical_Solver::dynamical_step(
        
         if (external_step_size < dynamical_parameters.update_sdp_threshold_min
             //|| (external_step_size > dynamical_parameters.update_sdp_threshold_max && dynamical_parameters.total_iterations == 0)) 
-            || mu > 1e-3)
+            || mu > 1e5)
           { update_sdp = false; } 
       }
 
@@ -515,8 +528,10 @@ void Dynamical_Solver::dynamical_step(
   delta_lambda *= dual_step_length;
   lag_multiplier_lambda += delta_lambda;
   
-  if (El::Max(primal_step_length, dual_step_length)<0.3)
-	  mu_direction_mode = 1;
+  if (El::Max(primal_step_length, dual_step_length) > 0 && El::Max(primal_step_length, dual_step_length)<0.1)
+	  mu_direction_mode = 2;
+  else if (El::Max(primal_step_length, dual_step_length) > 0 && El::Max(primal_step_length, dual_step_length)<0.3) 
+          mu_direction_mode = 1;
   else
 	  mu_direction_mode = 0;
 

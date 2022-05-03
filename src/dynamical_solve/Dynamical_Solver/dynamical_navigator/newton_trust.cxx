@@ -74,6 +74,7 @@ void find_zero_step(const El::BigFloat &thresh, const int &max_it, const El::Big
                                  El::Matrix<El::BigFloat> &hess, const El::Matrix<El::BigFloat> &grad, bool &find_zeros, 
                                  El::Matrix<El::BigFloat> &external_step, const El::BigFloat &quadratic_const){
   El::BigFloat quadratic_model = 0.5 * El::Dot(external_step, grad) + quadratic_const ;
+  cout << "quadratic_model" << quadratic_model << endl;
   if (quadratic_model > 0) {
     find_zeros = false; 
     //cout << "hessian" << hess(0,0) << endl;
