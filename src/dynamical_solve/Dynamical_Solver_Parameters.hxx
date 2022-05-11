@@ -21,6 +21,8 @@ struct Dynamical_Solver_Parameters
                update_sdp_threshold_max, update_sdp_threshold_min,
                find_boundary_obj_threshold;
 
+  El::BigFloat updateSDP_dualityGapThreshold;
+
   int n_external_parameters;
   size_t total_iterations;
   boost::filesystem::path new_sdp_path;

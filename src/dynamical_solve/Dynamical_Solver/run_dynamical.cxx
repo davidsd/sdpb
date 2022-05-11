@@ -53,7 +53,7 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
 
 // subroutines to decide weather to update sdps in run_dynamical, before entering dynamical_step
 void compute_update_sdp(
-  const Solver_Parameters &parameters, const El::BigFloat &primal_error,
+  const Dynamical_Solver_Parameters &parameters, const El::BigFloat &primal_error,
   const El::BigFloat &dual_error, const El::BigFloat &duality_gap,
   const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
   const int &iteration,
@@ -159,7 +159,7 @@ Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_par
           break;
         }
       compute_update_sdp(
-        dynamical_parameters.solver_parameters, primal_error(), dual_error, duality_gap,
+        dynamical_parameters, primal_error(), dual_error, duality_gap,
         primal_step_length, dual_step_length, iteration,
         solver_timer.start_time, is_primal_and_dual_feasible,
         update_sdp);

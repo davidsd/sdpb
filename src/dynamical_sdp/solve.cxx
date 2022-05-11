@@ -35,18 +35,18 @@ Timers solve(const Block_Info &block_info, const Dynamical_Parameters &parameter
   if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
       set_stream_precision(std::cout);
-      std::cout << "-----" << reason << "-----\n"
-                << '\n'
-                << "primalObjective        = " << solver.primal_objective << '\n'
-                << "dualObjective          = " << solver.dual_objective << '\n'
-                << "dualityGap             = " << solver.duality_gap << '\n'
-                << "primalError            = " << solver.primal_error() << '\n'
-                << "dualError              = " << solver.dual_error << '\n'
-                << "extStepSize            = " << solver.external_step_size << '\n'
-                << "lagMultiplie           = " << solver.lag_multiplier_lambda << '\n'
-                << "totalIteration so far  = " << solver.total_iteration << '\n'
-                << "muDirection            = " << solver.mu_direction_mode<< '\n'
-                << '\n';
+	  std::cout << "-----" << reason << "-----\n"
+		  << '\n'
+		  << "primalObjective        = " << solver.primal_objective << '\n'
+		  << "dualObjective          = " << solver.dual_objective << '\n'
+		  << "dualityGap             = " << solver.duality_gap << '\n'
+		  << "primalError            = " << solver.primal_error() << '\n'
+		  << "dualError              = " << solver.dual_error << '\n'
+		  << "extStepSize            = " << solver.external_step_size << '\n'
+		  << "lagMultiplie           = " << solver.lag_multiplier_lambda << '\n'
+		  << "totalIteration so far  = " << solver.total_iteration << '\n'
+		  << "muMovingMode           = " << solver.mu_direction_mode << '\n'
+		  << '\n';
     }
 
   if(!parameters.no_final_checkpoint)

@@ -59,6 +59,10 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
                               boost::program_options::value<int>(&mu_last_direction),
                               "To decrease or increase mu based on the former step. ");
 
+  result.add_options()("updateAtDualityGap",
+	  boost::program_options::value<El::BigFloat>(&updateSDP_dualityGapThreshold)->default_value(0),
+	  "If updateAtDualityGap is setted to >0, the solver will run until duality<updateAtDualityGap.");
+
   result.add(solver_parameters.options()); 
 
   return result;
