@@ -2,6 +2,7 @@
 
 #include "sdp_read/read_input.hxx"
 #include "sdp_read/read_pvm_input.hxx"
+#include <boost/filesystem/string_file.hpp>
 
 std::vector<boost::filesystem::path>
 read_file_list(const boost::filesystem::path &input_file);

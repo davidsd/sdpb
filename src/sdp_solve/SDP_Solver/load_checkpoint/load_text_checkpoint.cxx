@@ -2,6 +2,7 @@
 #include "../../read_text_block.hxx"
 
 #include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem/string_file.hpp>
 
 bool load_text_checkpoint(const boost::filesystem::path &checkpoint_directory,
                           const std::vector<size_t> &block_indices,

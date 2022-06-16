@@ -3,6 +3,7 @@
 #include "../../../Archive_Reader.hxx"
 
 #include <algorithm>
+#include <boost/filesystem/string_file.hpp>
 
 namespace
 {
