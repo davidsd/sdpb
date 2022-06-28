@@ -4,7 +4,7 @@
 #include <archive_entry.h>
 
 #include <boost/filesystem.hpp>
-
+#include <boost/filesystem/fstream.hpp>
 #include <streambuf>
 #include <memory>
 #include <array>
