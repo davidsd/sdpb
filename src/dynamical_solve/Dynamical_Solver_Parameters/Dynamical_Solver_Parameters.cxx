@@ -49,6 +49,12 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
   result.add_options()("externalCoor", 
                               boost::program_options::value<std::vector<El::BigFloat>>(&external_coor)->multitoken(), 
                               "The values of the external variables that were used to produce the central sdp file.");
+  result.add_options()("boundingBoxMax",
+                              boost::program_options::value<std::vector<El::BigFloat>>(&bounding_box_max)->multitoken(),
+                              "The upper bound of the external variables.");
+  result.add_options()("boundingBoxMin",
+                              boost::program_options::value<std::vector<El::BigFloat>>(&bounding_box_min)->multitoken(),
+                              "The lower bound of the external variables.");
   result.add_options()("searchDirection", 
                               boost::program_options::value<std::vector<El::BigFloat>>(&search_direction)->multitoken(), 
                               "User-specified directional vector in which the program will looks for a zero. ");
@@ -58,7 +64,19 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
   result.add_options()("muDirectionMode", 
                               boost::program_options::value<int>(&mu_last_direction),
                               "To decrease or increase mu based on the former step. ");
-
+//BFGS parameters
+  result.add_options()("useExactHessian",
+                              boost::program_options::value<bool>(&use_exact_hessian),
+                              "To reinitialize the BFGS hessian with the exact one. ");
+  result.add_options()("prevGradientBFGS",
+                              boost::program_options::value<std::vector<El::BigFloat>>(&prev_grad)->multitoken(),
+                              "The gradient of the Largrangian in the last iteration, used to update the hessian. ");  
+  result.add_options()("prevExternalStep",
+                              boost::program_options::value<std::vector<El::BigFloat>>(&prev_step)->multitoken(),
+                              "the step taken by the last iteration, used to update the hessian. "); 
+  result.add_options()("prevHessianBFGS",
+                              boost::program_options::value<std::vector<El::BigFloat>>(&hess_BFGS)->multitoken(),
+                              "Hessian approximated by BFGS. "); 
   result.add(solver_parameters.options()); 
 
   return result;

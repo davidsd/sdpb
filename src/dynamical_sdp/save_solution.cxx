@@ -95,6 +95,54 @@ void save_solution(const Dynamical_Solver &solver,
         } 
     }
 
+  boost::filesystem::ofstream gradient_stream;
+  if(El::mpi::Rank() == 0)
+    {
+      const boost::filesystem::path gradient_path(out_directory / "gradient.txt");
+      gradient_stream.open(gradient_path);
+      El::Print(solver.grad_BFGS,
+                std::to_string(solver.grad_BFGS.Height()) + " "
+                + std::to_string(solver.grad_BFGS.Width()),
+               "\n", gradient_stream);
+      if(!gradient_stream.good())
+        {
+          throw std::runtime_error("Error when writing to: "
+                                   + gradient_path.string());
+        } 
+    }
+
+  boost::filesystem::ofstream hess_BFGS_stream;
+  if(El::mpi::Rank() == 0)
+    {
+      const boost::filesystem::path hess_BFGS_path(out_directory / "hessBFGS.txt");
+      hess_BFGS_stream.open(hess_BFGS_path);
+      El::Print(solver.hess_BFGS,
+                std::to_string(solver.hess_BFGS.Height()*solver.hess_BFGS.Width()) + " "
+                + std::to_string(1),
+               "\n", hess_BFGS_stream);
+      if(!hess_BFGS_stream.good())
+        {
+          throw std::runtime_error("Error when writing to: "
+                                   + hess_BFGS_path.string());
+        } 
+    }
+
+  boost::filesystem::ofstream hess_Exact_stream;
+  if(El::mpi::Rank() == 0)
+    {
+      const boost::filesystem::path hess_Exact_path(out_directory / "hessExact.txt");
+      hess_Exact_stream.open(hess_Exact_path);
+      El::Print(solver.hess_Exact,
+                std::to_string(solver.hess_Exact.Height()*solver.hess_Exact.Width()) + " "
+                + std::to_string(1),
+               "\n", hess_Exact_stream);
+      if(!hess_Exact_stream.good())
+        {
+          throw std::runtime_error("Error when writing to: "
+                                   + hess_Exact_path.string());
+        }
+    }
+
   boost::filesystem::ofstream lag_multiplier_stream;
   if(El::mpi::Rank() == 0)
     {

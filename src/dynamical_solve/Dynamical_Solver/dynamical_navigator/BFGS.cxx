@@ -1,0 +1,31 @@
+#include <El.hpp>
+
+
+void BFGS_update_hessian(const int n_parameters, 
+                           const El::Matrix<El::BigFloat> &grad_p_diff, 
+                           const El::Matrix<El::BigFloat> &last_it_step, 
+                           El::Matrix<El::BigFloat> &hess_bfgs
+                           )
+{
+    El::Matrix<El::BigFloat> tempBs(last_it_step);
+    El::Gemv(El::NORMAL, El::BigFloat(1), hess_bfgs, last_it_step,  El::BigFloat(0), tempBs);
+
+    El::Matrix<El::BigFloat> tempyy(n_parameters,n_parameters);
+    El::Zero(tempyy);
+    El::Ger(El::BigFloat(1), grad_p_diff, grad_p_diff, tempyy);
+    tempyy *= 1.0/El::Dot(grad_p_diff, last_it_step);
+
+    El::Matrix<El::BigFloat> tempBssB(n_parameters,n_parameters); 
+    El::Zero(tempBssB);
+    El::Ger(El::BigFloat(1),tempBs, tempBs, tempBssB);
+    tempBssB *= 1.0/El::Dot(last_it_step, tempBs);
+    //El::Print(tempBssB);
+    
+    hess_bfgs += tempyy; 
+    hess_bfgs -= tempBssB; 
+}
+
+//void BFGS_line_search(const El::Matrix<El::BigFloat> &search_direction, El::BigFloat scaling_factor)
+//{
+//     f(
+//}
