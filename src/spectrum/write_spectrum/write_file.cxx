@@ -2,6 +2,7 @@
 #include "../../set_stream_precision.hxx"
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 void write_file(const boost::filesystem::path &output_path,
                 const std::vector<Zeros> &zeros_blocks)

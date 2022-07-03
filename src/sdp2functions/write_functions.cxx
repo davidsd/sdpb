@@ -2,6 +2,7 @@
 #include "../sdp_convert/write_vector.hxx"
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 
 void write_functions(
   const boost::filesystem::path &output_path,
