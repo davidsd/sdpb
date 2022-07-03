@@ -7,7 +7,7 @@ src/dynamical_solve
 │   ├── run_dynamical.cxx                  # calls dynamical_step till termination conditions are satisfied
 │   │ 
 │   ├── dynamical_navigator
-│   │   ├── dynamical_step.cxx             # update (dx, dy, dX, dY) and external_step 
+│   │   ├── dynamical_step.cxx             # update (dx, dy, dX, dY) and external_step (for now, use the functions in  dynamical_step_BFGS.cxx and set dynamical_parameters.use_exact_hessian to be always True)
 │   │   ├── dynamical_step_BFGS.cxx        # update steps with the option to use BFGS approximation
 │   │   ├── BFGS.cxx                       # Compute BFGS hessian
 │   │   ├── mixed_hess.cxx                 # Compute H_xp and (- H^-1_xx H_xp) 
