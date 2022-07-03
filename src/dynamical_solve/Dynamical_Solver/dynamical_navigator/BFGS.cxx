@@ -1,6 +1,8 @@
 #include <El.hpp>
 
 
+void print_matrix(El::Matrix<El::BigFloat> & matrix);
+
 void BFGS_update_hessian(const int n_parameters, 
                            const El::Matrix<El::BigFloat> &grad_p_diff, 
                            const El::Matrix<El::BigFloat> &last_it_step, 
@@ -13,14 +15,22 @@ void BFGS_update_hessian(const int n_parameters,
     El::Matrix<El::BigFloat> tempyy(n_parameters,n_parameters);
     El::Zero(tempyy);
     El::Ger(El::BigFloat(1), grad_p_diff, grad_p_diff, tempyy);
-    tempyy *= 1.0/El::Dot(grad_p_diff, last_it_step);
+    tempyy *= El::BigFloat(1)/El::Dot(grad_p_diff, last_it_step);
+
+//	std::cout << "\ntempyy :\n";
+//	print_matrix(tempyy);
 
     El::Matrix<El::BigFloat> tempBssB(n_parameters,n_parameters); 
     El::Zero(tempBssB);
     El::Ger(El::BigFloat(1),tempBs, tempBs, tempBssB);
-    tempBssB *= 1.0/El::Dot(last_it_step, tempBs);
-    //El::Print(tempBssB);
+    tempBssB *= El::BigFloat(1)/El::Dot(last_it_step, tempBs);
+
+//	std::cout << "\ntempBssB :\n";
+//	print_matrix(tempBssB);
     
+//	std::cout << "hess_bfgs.Precision = " << hess_bfgs(0, 0).Precision();
+
+
     hess_bfgs += tempyy; 
     hess_bfgs -= tempBssB; 
 }

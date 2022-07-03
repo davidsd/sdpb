@@ -6,25 +6,37 @@
 //Return: void.
 //Update: hess = H_pp ,
 //        grad = Del_p(L_mu).
-void external_grad_hessian(const El::Matrix<El::BigFloat> &ePlus, 
+void external_grad(const El::Matrix<El::BigFloat> &ePlus, 
                            const El::Matrix<El::BigFloat> &eMinus, 
-                           const El::Matrix<El::BigFloat> &eSum,
                            const El::BigFloat &alpha,
-                           El::Matrix<El::BigFloat> &grad,
-                           El::Matrix<El::BigFloat> &hess)
+                           El::Matrix<El::BigFloat> &grad)
 {
   grad =  ePlus;
   grad -= eMinus;
-  grad *= 1.0/(2.0*alpha);
-  hess = eSum;
-  for (int i=0; i<ePlus.Height(); i++)
-    { 
-      hess(i,i) += (ePlus(i) + eMinus(i) );
-      for (int j=0; j<i ; j++)
-        {
-          hess(i,j) += (- ePlus(i) - ePlus(j));
-          hess(j,i) += (- ePlus(i) - ePlus(j));
-        }
-    }
-  hess *= 1.0/(alpha * alpha);
+  grad *= El::BigFloat(1) /(El::BigFloat(2)*alpha);
 }
+
+
+void external_grad_hessian(const El::Matrix<El::BigFloat> &ePlus,
+	const El::Matrix<El::BigFloat> &eMinus,
+	const El::Matrix<El::BigFloat> &eSum,
+	const El::BigFloat &alpha,
+	El::Matrix<El::BigFloat> &grad,
+	El::Matrix<El::BigFloat> &hess)
+{
+	grad = ePlus;
+	grad -= eMinus;
+	grad *= 1.0 / (2.0*alpha);
+	hess = eSum;
+	for (int i = 0; i<ePlus.Height(); i++)
+	{
+		hess(i, i) += (ePlus(i) + eMinus(i));
+		for (int j = 0; j<i; j++)
+		{
+			hess(i, j) += (-ePlus(i) - ePlus(j));
+			hess(j, i) += (-ePlus(i) - ePlus(j));
+		}
+	}
+	hess *= 1.0 / (alpha * alpha);
+}
+

@@ -64,7 +64,6 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
   result.add_options()("muDirectionMode", 
                               boost::program_options::value<int>(&mu_last_direction),
                               "To decrease or increase mu based on the former step. ");
-//BFGS parameters
   result.add_options()("useExactHessian",
                               boost::program_options::value<bool>(&use_exact_hessian),
                               "To reinitialize the BFGS hessian with the exact one. ");
@@ -77,6 +76,12 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
   result.add_options()("prevHessianBFGS",
                               boost::program_options::value<std::vector<El::BigFloat>>(&hess_BFGS)->multitoken(),
                               "Hessian approximated by BFGS. "); 
+  result.add_options()("updateAtDualityGap",
+	  boost::program_options::value<El::BigFloat>(&updateSDP_dualityGapThreshold)->default_value(0),
+	  "If updateAtDualityGap is setted to >0, the solver will run until duality<updateAtDualityGap.");
+  result.add_options()("fixExtParamDirection",
+	  boost::program_options::value<bool>(&fix_ext_param_direction)->default_value(0),
+	  "True if the program dp is given by --searchDirection. ");
   result.add(solver_parameters.options()); 
 
   return result;
