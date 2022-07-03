@@ -40,7 +40,7 @@ void mixed_hess(
       Gemv(El::Orientation::NORMAL, El::BigFloat(1),
            d_sdp.free_var_matrix.blocks[block_index], y.blocks[block_index],
            El::BigFloat(-1), dx.blocks[block_index]);
-      El::Scale(1.0/alpha, dx.blocks[block_index]);
+      El::Scale(El::BigFloat(1)/alpha, dx.blocks[block_index]);
       // dy = db - x.dB
       El::Zero(dy.blocks[block_index]);
       if(block_info.block_indices[block_index] == 0)
@@ -51,7 +51,7 @@ void mixed_hess(
                d_sdp.free_var_matrix.blocks[block_index],
                x.blocks[block_index], El::BigFloat(1.0),
                dy.blocks[block_index]);
-      El::Scale(1.0/alpha, dy.blocks[block_index]);
+      El::Scale(El::BigFloat(1)/alpha, dy.blocks[block_index]);
     }
   Block_Vector negative_dx(dx);
   scale_block_vector(negative_dx, El::BigFloat(-1));

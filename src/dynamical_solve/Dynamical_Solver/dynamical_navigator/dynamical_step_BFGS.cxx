@@ -50,18 +50,25 @@ void mixed_hess(
 	std::vector<std::pair<Block_Vector, Block_Vector>> &delta_x_y);
 
 
-//Given objectives on a grid in the external parameter (p) space,
-//where ePlus correspond to (+e_i), eMinus corresponds to (-e_i) and eSum corresponds to (e_i+e_j) directions respectively, 
-//Compute H_pp and Del_p(L_mu) to solve Eq(13).
-//Return: void.
-//Update: hess = H_pp ,
-//        grad = Del_p(L_mu).
+
 void external_grad_hessian(const El::Matrix<El::BigFloat> &ePlus,
 	const El::Matrix<El::BigFloat> &eMinus,
 	const El::Matrix<El::BigFloat> &eSum,
 	const El::BigFloat &alpha,
 	El::Matrix<El::BigFloat> &grad,
 	El::Matrix<El::BigFloat> &hess);
+
+
+//Given objectives on a grid in the external parameter (p) space,
+//where ePlus correspond to (+e_i), eMinus corresponds to (-e_i) and eSum corresponds to (e_i+e_j) directions respectively, 
+//Compute H_pp and Del_p(L_mu) to solve Eq(13).
+//Return: void.
+//Update: hess = H_pp ,
+//        grad = Del_p(L_mu).
+void external_grad(const El::Matrix<El::BigFloat> &ePlus,
+	const El::Matrix<El::BigFloat> &eMinus,
+	const El::BigFloat &alpha,
+	El::Matrix<El::BigFloat> &grad);
 
 //This function is the same as in the usual SDP_Solver, 
 //modified to take the argument 'solver' of the right type. 
@@ -99,7 +106,7 @@ void print_matrix(El::Matrix<El::BigFloat> & matrix)
 
 	for (int i = 0; i < dim_height; i++)
 	{
-		for (int j = 0; j < dim_width; j++)std::cout << std::setprecision(15) << matrix(i, j) << " ";
+		for (int j = 0; j < dim_width; j++)std::cout << std::setprecision(100) << matrix(i, j) << " ";
 		std::cout << "\n";
 	}
 	return;
@@ -110,6 +117,19 @@ void print_matrix(El::Matrix<El::BigFloat> & matrix)
 void find_zero_step(const El::BigFloat &thresh, const int &max_it, const El::BigFloat &step_size_max,
 	El::Matrix<El::BigFloat> &hess, const El::Matrix<El::BigFloat> &grad, bool &find_zeros,
 	El::Matrix<El::BigFloat> &external_step, const El::BigFloat &quadratic_const);
+
+
+//*******BFGS*******/// 
+void BFGS_update_hessian(const int n_parameters,
+                           const El::Matrix<El::BigFloat> &grad_p_diff,
+                           const El::Matrix<El::BigFloat> &last_it_step,
+                           El::Matrix<El::BigFloat> &hess_bfgs
+                           );
+//*******BFGS*******/// 
+
+
+
+
 // A subroutine called by run_dynamical
 // The external parameter step is passed by the argument 'external_step'
 // Compute external_step using Eq (13)
@@ -178,6 +198,7 @@ void Dynamical_Solver::dynamical_step(
 
 	beta = predictor_centering_parameter_V2(dynamical_parameters.solver_parameters, is_primal_and_dual_feasible);
 
+	/*
 	if (update_sdp && dynamical_parameters.updateSDP_dualityGapThreshold > 0 && centering_steps > 0)
 	{
 		std::cout << "run centering steps\n";
@@ -185,6 +206,7 @@ void Dynamical_Solver::dynamical_step(
 		update_sdp = false;
 		centering_steps--;
 	}
+	*/
 
 	for (int stallrecovery_phase = 1; stallrecovery_phase <= 2; stallrecovery_phase++)
 	{
@@ -217,9 +239,10 @@ void Dynamical_Solver::dynamical_step(
 		//                which is decided by function "compute_update_sdp()" called by run_dynamical()
 
 
-
-		if (update_sdp && dynamical_parameters.fix_ext_param_direction)
+		if (update_sdp) //&& dynamical_parameters.fix_ext_param_direction
 		{
+			std::cout << "test start update \n" << std::flush;
+
 			El::Matrix<El::BigFloat> grad_p(n_external_parameters, 1); // Del_p L
 			El::Matrix<El::BigFloat> hess_pp(n_external_parameters, n_external_parameters); //H_pp
 
@@ -236,12 +259,14 @@ void Dynamical_Solver::dynamical_step(
 					std::string file_name = filename.stem().string();
 					std::vector<std::string> directions;
 					boost::algorithm::split(directions, file_name, boost::is_any_of("_"));
+
 					SDP new_sdp(filename, block_info, grid), d_sdp(new_sdp);
 					Axpy(El::BigFloat(-1), sdp, d_sdp);
 
 					Approx_Objective approx_obj(block_info, sdp, d_sdp, x, y,
 						schur_complement_cholesky,
 						schur_off_diagonal, Q);
+
 					if (directions[0] == "plus")
 					{
 						mixed_hess(block_info, d_sdp, x, y, schur_complement_cholesky, schur_off_diagonal, Q, dynamical_parameters.alpha, H_xp, Delta_xy);
@@ -267,17 +292,14 @@ void Dynamical_Solver::dynamical_step(
 			{
 				throw std::invalid_argument("A list of perturbed sdp files are required");
 			}
+			//external_grad(eplus, eminus, dynamical_parameters.alpha, grad_p);
 			external_grad_hessian(eplus, eminus, esum, dynamical_parameters.alpha, grad_p, hess_pp);
 
-			El::Matrix<El::BigFloat> hess_mixed(n_external_parameters, n_external_parameters); //H_px H^-1_xx H_xp in Eq(13).
+			//El::Matrix<El::BigFloat> hess_mixed(n_external_parameters, n_external_parameters); //H_px H^-1_xx H_xp in Eq(13).
+
 			El::Matrix<El::BigFloat> grad_mixed(n_external_parameters, 1); //H_px (-internal_dx_dy) = H_px (H^-1_xx Del_x L_mu) in Eq (13).  
 			for (int i = 0; i < n_external_parameters; i++)
 			{
-				for (int j = 0; j < n_external_parameters; j++)
-				{
-					// The minus sign compensate the minus sign when calculating Delta_xy in Eq(15)
-					hess_mixed(i, j) = -(dot(H_xp.at(i).first, Delta_xy.at(j).first) + dot(H_xp.at(i).second, Delta_xy.at(j).second));
-				}
 				// The minus sign compensates the minus sign when calculating the internal step 
 				grad_mixed(i) = (dot(H_xp.at(i).first, internal_dx) + dot(H_xp.at(i).second, internal_dy));
 			}
@@ -315,24 +337,82 @@ void Dynamical_Solver::dynamical_step(
 			// (hess_pp - hess_mixed)          dp     =  - grad_p    + grad_mixed 
 
 			// H_pp - H_px H^-1_xx H_xp, LHS of Eq(13)
-			El::Matrix<El::BigFloat> Hpp_minus_Hmixed = hess_pp;
-			Hpp_minus_Hmixed -= hess_mixed;
+			//El::Matrix<El::BigFloat> Hpp_minus_Hmixed = hess_pp;
+			//Hpp_minus_Hmixed -= hess_mixed;
 
 			/**/
 			// print Hpp, Hmixed, Hpp-Hmixed
-			std::cout << "Hpp :\n";
-			print_matrix(hess_pp);
-			std::cout << "\nHmixed :\n";
-			print_matrix(hess_mixed);
+			//std::cout << "Hpp :\n";
+			//print_matrix(hess_pp);
+			//std::cout << "\nHmixed :\n";
+			//print_matrix(hess_mixed);
 			//std::cout << "\nHpp-Hmixed :\n";
 			//print_matrix(Hpp_minus_Hmixed);
 
 			std::cout << "\ngrad_p :\n";
 			print_matrix(grad_p);
-			std::cout << "\ngrad_mixed :\n";
-			print_matrix(grad_mixed);
+			//std::cout << "\ngrad_mixed :\n";
+			//print_matrix(grad_mixed);
+
+                        //*******BFGS*******///     
+                        grad_mixed += grad_p;
+                        grad_BFGS = grad_mixed;
+                
+                        El::Matrix<El::BigFloat> prev_grad(n_external_parameters,1), prev_step(n_external_parameters,1);
+                        El::Zeros(hess_BFGS, n_external_parameters,n_external_parameters);
+                        for (int i=0; i<n_external_parameters; i++)
+                          { prev_grad(i,0) = dynamical_parameters.prev_grad[i];
+                            prev_step(i,0) = dynamical_parameters.prev_step[i];
+                            for (int j=0; j<n_external_parameters; j++)
+                              {
+                                 hess_BFGS(i,j) = dynamical_parameters.hess_BFGS[i * n_external_parameters + j];
+                              }
+                          }
+ 
+                
+                        if (dynamical_parameters.total_iterations > 0)
+                           {
+                             El::Matrix<El::BigFloat> grad_diff;
+                             grad_diff = grad_mixed;
+                             grad_diff -= prev_grad;
 
 
+							 std::cout << "\ngrad_diff :\n";
+							 print_matrix(grad_diff);
+
+							 std::cout << "\nprev_step :\n";
+							 print_matrix(prev_step);
+
+							 std::cout << "\nprev_hess_BFGS :\n";
+							 print_matrix(hess_BFGS);
+
+                             BFGS_update_hessian(n_external_parameters, grad_diff,prev_step,hess_BFGS);
+
+							 std::cout << "\nhess_BFGS :\n";
+							 print_matrix(hess_BFGS);
+                           }
+
+						/*
+                        //Flip the sign of Hessian if determinant is negative 
+                        typedef El::Base<El::BigFloat> Real;
+                        El::Matrix<Real> w(n_external_parameters,1);
+                        El::Zero(w);
+                        El::Matrix<El::BigFloat> Q(hess_BFGS);
+                        El::Matrix<El::BigFloat> tempt(hess_BFGS);
+                        El::Matrix<El::BigFloat> diag(hess_BFGS);
+                        El::Zero(diag);
+                        El::HermitianEig(El::LOWER, hess_BFGS, w, Q);//,ctrl);
+                        for (int i = 0; i < n_external_parameters; i++){
+                            //std::cout<< "diag: " << w(i) << ", " << std::flush;
+                            if (w(i) < 0){std::cout<< "flip the sign of hessian" <<'\n' << std::flush;}
+                              diag(i,i) = El::Abs(w(i));
+                        }
+                        El::Gemm(El::NORMAL, El::TRANSPOSE, El::BigFloat(1), diag, Q, tempt);
+                        El::Gemm(El::NORMAL, El::NORMAL, El::BigFloat(1),  Q, tempt, hess_BFGS);
+						*/
+                        //*******BFGS*******///  
+
+						/*
 			//Flip the sign of Hessian if determinant is negative 
 			typedef El::Base<El::BigFloat> Real;
 			El::Matrix<Real> w(n_external_parameters, 1);
@@ -350,14 +430,19 @@ void Dynamical_Solver::dynamical_step(
 			El::Gemm(El::NORMAL, El::TRANSPOSE, El::BigFloat(1), diag, Q, tempt);
 			El::Gemm(El::NORMAL, El::NORMAL, El::BigFloat(1), Q, tempt, Hpp_minus_Hmixed);
 
-
 			// H_px (H^-1_xx Del_x L_mu) - Del_p L_mu, RHS of Eq(13) 
 			grad_mixed += grad_p; //  after this line, grad_mixed actually means del_corrected
 			El::Matrix<El::BigFloat> &grad_corrected = grad_mixed;
+			*/
 
-			// special fix
-			//Hpp_minus_Hmixed = hess_pp;
-			//grad_corrected = grad_p;
+
+			//std::cout << "hess_BFGS :\n";
+			//print_matrix(hess_BFGS);
+
+
+			// temporary quick fix, in order to use my previous code
+			El::Matrix<El::BigFloat> &Hpp_minus_Hmixed = hess_BFGS;
+			El::Matrix<El::BigFloat> &grad_corrected = grad_mixed;
 
 			external_step = grad_corrected;
 			external_step *= (-1);// we can get rid of grad_mixed here but it might be confusing. 
@@ -442,10 +527,8 @@ void Dynamical_Solver::dynamical_step(
 				update_sdp = false;
 		}
 
-		if (update_sdp && (!dynamical_parameters.fix_ext_param_direction))
-		{
-			external_step = search_direction;
-		}
+		//if (update_sdp && (!dynamical_parameters.fix_ext_param_direction))
+		//	external_step = search_direction;
 
 		dx = internal_dx;
 		dy = internal_dy;
@@ -531,6 +614,8 @@ void Dynamical_Solver::dynamical_step(
 				<< "\n" << std::flush;
 			break;
 		}
+
+		if (dynamical_parameters.total_iterations == 0) break;
 
 		std::cout << "max_step.beta=" << El::Max(primal_step_length, dual_step_length)*beta
 			<< " max_step=" << El::Max(primal_step_length, dual_step_length)

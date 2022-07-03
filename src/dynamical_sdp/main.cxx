@@ -21,6 +21,8 @@ int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
 
+  El::gmp::SetPrecision(768);
+
   try
     {
       Dynamical_Parameters parameters(argc, argv);
@@ -29,7 +31,7 @@ int main(int argc, char **argv)
           return 0;
         }
 
-      El::gmp::SetPrecision(parameters.solver.solver_parameters.precision);
+      //El::gmp::SetPrecision(parameters.solver.solver_parameters.precision);
       if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {
           std::cout << "Dynamical SDP started at "

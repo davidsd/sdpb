@@ -50,6 +50,11 @@ public:
     duality_gap,                 // normalized difference of objectives
     external_step_size,          // the size of the step to be taken in the external parameters' space 
     lag_multiplier_lambda;
+
+  //*******BFGS*******/// 
+  El::Matrix<El::BigFloat> grad_BFGS, hess_BFGS;
+  //*******BFGS*******/// 
+
   int mu_direction_mode;
   // Discrepancy in the primal equality constraints, a
   // Block_Diagonal_Matrix with the same structure as X, called 'P' in

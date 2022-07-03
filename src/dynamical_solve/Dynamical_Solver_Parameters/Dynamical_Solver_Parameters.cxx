@@ -63,6 +63,20 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
 	  boost::program_options::value<El::BigFloat>(&updateSDP_dualityGapThreshold)->default_value(0),
 	  "If updateAtDualityGap is setted to >0, the solver will run until duality<updateAtDualityGap.");
 
+  result.add_options()("fixExtParamDirection",
+	  boost::program_options::value<bool>(&fix_ext_param_direction)->default_value(0),
+	  "True if the program dp is given by --searchDirection. ");
+  //*******BFGS*******/// 
+  result.add_options()("prevGradientBFGS",
+                              boost::program_options::value<std::vector<El::BigFloat>>(&prev_grad)->multitoken(),
+                              "The gradient of the Largrangian in the last iteration, used to update the hessian. ");
+  result.add_options()("prevExternalStep",
+                              boost::program_options::value<std::vector<El::BigFloat>>(&prev_step)->multitoken(),
+                              "the step taken by the last iteration, used to update the hessian. ");
+  result.add_options()("prevHessianBFGS",
+                              boost::program_options::value<std::vector<El::BigFloat>>(&hess_BFGS)->multitoken(),
+                              "Hessian approximated by BFGS. ");
+  //*******BFGS*******///  
   result.add(solver_parameters.options()); 
 
   return result;
