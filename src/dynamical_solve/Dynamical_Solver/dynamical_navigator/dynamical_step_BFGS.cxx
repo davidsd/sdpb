@@ -165,7 +165,6 @@ void Dynamical_Solver::dynamical_step(
       timers.add_and_start("run.step.computeSearchDirection(betaPredictor)"));
     beta  = predictor_centering_parameter(dynamical_parameters.solver_parameters, is_primal_and_dual_feasible); 
      if (mu_direction_mode == 1)beta = 1;    
-     //if (mu_direction_mode == 2)beta = 1; 
     // Internal_step: compute dx and dy for the central sdp as in compute_search_direction()      
     //                - H^-1_xx Del_x L_mu in Eq (12) and Eq(13)
     //                Notice that the negative sign has been accounted. 
@@ -193,7 +192,6 @@ void Dynamical_Solver::dynamical_step(
     //                if criteria base on quantities, such as duality_gap, are met
     //                which is decided by function "compute_update_sdp()" called by run_dynamical()
     
-    //update_sdp = (primal_objective > dual_objective); 
     if (update_sdp) 
       {
         El::Matrix<El::BigFloat> grad_p(n_external_parameters,1); // Del_p L
@@ -255,29 +253,7 @@ void Dynamical_Solver::dynamical_step(
                 // The minus sign compensates the minus sign when calculating the internal step 
                 grad_mixed(i) = (dot(H_xp.at(i).first,internal_dx) + dot(H_xp.at(i).second,internal_dy));
           }  
-        //if (dynamical_parameters.total_iterations > 0){
-        //std::cout<<'\n'
-        // <<  "eplus: "   << '\n' << std::flush;
-        //El::Print(eplus);
-        //std::cout<<'\n'
-        // <<  "eminus: "  << '\n' << std::flush;
-        //El::Print(eminus);
-        //std::cout<<'\n'
-        // <<  "eSum: "  << '\n' << std::flush;
-        //El::Print(esum);
-        //std::cout<<'\n'
-        // <<  "hess_pp: "  << '\n' << std::flush;
-        //El::Print(hess_pp); 
-        //std::cout<<'\n'
-        // <<  "hess_mixed: "  << '\n' << std::flush;
-        //El::Print(hess_mixed);
-        //std::cout<<'\n'
-        // <<  "Del_p L : "  << '\n' << std::flush;
-        //El::Print(grad_p);
-        //std::cout <<'\n'
-        // <<  "internal Del L : "  << '\n' << std::flush;
-        //El::Print(grad_mixed);}
- 
+
         // Eq(13):
         // (H_pp - H_px H^-1_xx H_xp)      dp     =  - Del_p L   + H_px (H^-1_xx Del_x L)
         // (H_pp - (H_px H^-1_xx H_xp))    dp     =  - Del_p L   + H_px . (- internal_dx, - internal_dy)  
@@ -285,26 +261,24 @@ void Dynamical_Solver::dynamical_step(
 
         // H_pp - H_px H^-1_xx H_xp, LHS of Eq(13)
         El::Matrix<El::BigFloat> Hpp_minus_Hmixed(hess_pp);
- 
-        if (mu > 0){
-        //El::Zero(Hpp_minus_Hmixed);
         Hpp_minus_Hmixed -= hess_mixed; 
-        }
 
         hess_Exact = Hpp_minus_Hmixed;
+
         // - H_px (H^-1_xx Del_x L_mu) + Del_p L_mu, RHS of Eq(13) 
         grad_mixed += grad_p; 
+
+
         grad_BFGS = grad_mixed;
         El::Zeros(hess_BFGS, n_external_parameters,n_external_parameters);
         hess_BFGS -= hess_mixed;
-        //if (El::Abs(dual_objective) < 10 || dynamical_parameters.total_iterations > 0) {std::cout <<'\n' << " grad BFGS: "<< '\n' << std::flush;
-        //El::Print(grad_BFGS);}
 	if ( dynamical_parameters.use_exact_hessian
            //|| (mu < 1e-8 && mu > 1e-9)
-           ){
-            //hess_BFGS -= hess_mixed;
+           )
+          {
+            //Initialize the BFGS hessian for the next
             hess_BFGS = Hpp_minus_Hmixed;
-            //El::Zeros(hess_BFGS, n_external_parameters,n_external_parameters);
+
             //Flip the sign of Hessian if determinant is negative 
             typedef El::Base<El::BigFloat> Real;
             El::Matrix<Real> w(n_external_parameters,1);
@@ -321,15 +295,16 @@ void Dynamical_Solver::dynamical_step(
             }
             El::Gemm(El::NORMAL, El::TRANSPOSE, El::BigFloat(1), diag, Q, tempt);
             El::Gemm(El::NORMAL, El::NORMAL, El::BigFloat(1),  Q, tempt, Hpp_minus_Hmixed);
+
             external_step = grad_mixed;
             external_step *= (-1);// we can get rid of grad_mixed here but it might be confusing. 
-            //El::LinearSolve(Hpp_minus_Hmixed, external_step);
             
-            El::LinearSolve(Hpp_minus_Hmixed, external_step);
-        }
+            El::LinearSolve(hess_Exact, external_step);
+          }
 
        else{
             std::cout<<"using BFGS: "<<'\n'<<std::flush;
+
             El::Matrix<El::BigFloat> prev_grad(n_external_parameters,1), prev_step(n_external_parameters,1);
             for (int i=0; i<n_external_parameters; i++)
               { prev_grad(i,0) = dynamical_parameters.prev_grad[i];
@@ -360,37 +335,21 @@ void Dynamical_Solver::dynamical_step(
             El::Zero(diag);
             El::HermitianEig(El::LOWER, hess_BFGS, w, Q);//,ctrl);
             for (int i = 0; i < n_external_parameters; i++){
-                //std::cout<< "diag: " << w(i) << ", " << std::flush;
                 if (w(i) < 0){std::cout<< "flip the sign of hessian" <<'\n' << std::flush;}
                   diag(i,i) = El::Abs(w(i));
             }
             El::Gemm(El::NORMAL, El::TRANSPOSE, El::BigFloat(1), diag, Q, tempt);
             El::Gemm(El::NORMAL, El::NORMAL, El::BigFloat(1),  Q, tempt, hess_BFGS); 
 
-            //if (El::Abs(dual_objective) < 10 || dynamical_parameters.total_iterations > 0){ 
-            // std::cout<< "hess_BFGS positive: "<< '\n' << std::flush;
-            // El::Print(hess_BFGS);
-            //}
 
             external_step = grad_mixed; 
             external_step *= (-1);// we can get rid of grad_mixed here but it might be confusing. 
-            //El::LinearSolve(Hpp_minus_Hmixed, external_step);
             El::LinearSolve(hess_BFGS, external_step);
             Hpp_minus_Hmixed = hess_BFGS;
         }
 
         El::Matrix<El::BigFloat> &d_min_p = external_step;
-        //external_window(dynamical_parameters.bounding_box_max, 
-        //                dynamical_parameters.bounding_box_min,  
-        //                dynamical_parameters.external_coor,
-        //                n_external_parameters,
-        //                external_step);
-        //if (El::Abs(dual_objective) < 10 || dynamical_parameters.total_iterations > 0){ 
-        // std::cout<< "external_step: "<<std::flush;
-        // El::Print(external_step);}
         external_step_size = El::Nrm2(external_step);
-        //if (external_step_size > dynamical_parameters.update_sdp_threshold_max || external_step_size < dynamical_parameters.update_sdp_threshold_min)
-        //  { update_sdp = false; }
 
         if (dynamical_parameters.find_boundary && El::Abs(duality_gap) < 0.9 && dynamical_parameters.total_iterations > 0)
           { 
@@ -401,105 +360,63 @@ void Dynamical_Solver::dynamical_step(
 
             find_zero_step(10^(-10), 100, dynamical_parameters.update_sdp_threshold_max,
                                  Hpp_minus_Hmixed, grad_mixed, find_zeros, external_step, lag);
+
             El::Matrix<El::BigFloat> search_direction(n_external_parameters,1);
             for (int i=0; i<n_external_parameters; i++) 
               { search_direction(i,0) = dynamical_parameters.search_direction[i];} 
-            std::cout << '\n'<< "search_direction: " << search_direction(0,0) << ", "<<search_direction(1,0) << '\n' << std::flush;
-/*
-            if (El::Dot(grad_mixed, search_direction) < 0)
-                  { jump = true; 
-                    std::cout << '\n'<< "first jump" << '\n' << std::flush; 
-                    //external_step = search_direction;
-                    //external_step *= dynamical_parameters.update_sdp_threshold_max;
-                    //external_step_size = El::Nrm2(external_step);
-                    external_step *= El::Min(El::BigFloat(10), dynamical_parameters.update_sdp_threshold_max/external_step_size);
-                    external_step_size = El::Nrm2(external_step);
-                  } 
-*/
-/*            if (find_zeros && update_sdp) 
-              { 
-                if (El::Dot(grad_mixed, search_direction) < 0) 
-                  { std::cout << '\n'<< "jump" << lag << '\n' << std::flush;} //external_step *= 2; }
-                else 
-                  { 
-                    El::BigFloat f, fprime;
-                    f = + El::Dot(external_step,grad_mixed) +(dot(grad_x, internal_dx) + dot(grad_y, internal_dy) + lag) ;
-                    fprime = - El::Dot(external_step,search_direction);
-                    std::cout << '\n'<< "fprime: " << fprime << '\n' << std::flush;
-                    El::LinearSolve(Hpp_minus_Hmixed, search_direction);
-                    search_direction *= - (f/fprime) ;
 
-                    external_step += search_direction;
+
+            if (find_zeros && update_sdp)
+              {
+                {
+                    El::BigFloat a, b, c;
+             
+                    El::Matrix<El::BigFloat> H_pp_d_min_p;
+                    El::Gemv(El::NORMAL, El::BigFloat(1), hess_pp, d_min_p, H_pp_d_min_p);
+                    c = El::Dot(d_min_p, grad_mixed) + (dot(grad_x, internal_dx) + dot(grad_y, internal_dy) + lag) + El::Dot(d_min_p, H_pp_d_min_p) / 2;
+             
+                    El::Matrix<El::BigFloat> Hpp_minus_Hmixed_inv_vp = search_direction;
+                    El::LinearSolve(Hpp_minus_Hmixed, Hpp_minus_Hmixed_inv_vp);
+             
+                    El::Matrix<El::BigFloat> Hpp_Hpp_minus_Hmixed_inv_vp;
+                    El::Gemv(El::NORMAL, El::BigFloat(1), hess_pp, Hpp_minus_Hmixed_inv_vp, Hpp_Hpp_minus_Hmixed_inv_vp);
+             
+                    a = El::Dot(Hpp_minus_Hmixed_inv_vp, Hpp_Hpp_minus_Hmixed_inv_vp) / 2;
+             
+                    b = -El::Dot(d_min_p, search_direction) + El::Dot(d_min_p, Hpp_Hpp_minus_Hmixed_inv_vp);
+             
+                    El::BigFloat b2_minus_4ac = b * b - 4 * a*c;
+                    El::BigFloat sq = 0;
+                    if (b2_minus_4ac > 0)sq = El::Sqrt(b2_minus_4ac);
+                    El::BigFloat lambda_plus = (-b + sq) / (2 * a);
+                    El::BigFloat lambda_minus = (-b - sq) / (2 * a);
+             
+                    //std::cout << "a=" << a << " b=" << b << " c=" << c << " b^2-4ac=" << b2_minus_4ac << "\n" << std::flush;
+             
+                    //std::cout << "lambda_plus=" << lambda_plus << " lambda_minus=" << lambda_minus << "\n" << std::flush;
+             
+                    El::Matrix<El::BigFloat> external_step_plus = Hpp_minus_Hmixed_inv_vp;
+                    external_step_plus *= lambda_plus;
+                    external_step_plus += d_min_p;
+                    std::cout << "external_step_plus="; for (int i = 0; i < external_step_plus.Height(); i++) std::cout << external_step_plus(i, 0) << " ";
+                    std::cout << "\n" << std::flush;
+             
+                    El::Matrix<El::BigFloat> external_step_minus = Hpp_minus_Hmixed_inv_vp;
+                    external_step_minus *= lambda_minus;
+                    external_step_minus += d_min_p;
+                    std::cout << "external_step_minus="; for (int i = 0; i < external_step_minus.Height(); i++) std::cout << external_step_minus(i, 0) << " ";
+                    std::cout << "\n" << std::flush;
+             
+                    // in this convention, I believe I should use lambda_plus
+                    external_step = external_step_plus;
+             
+                    //std::cout << "external_step="; for (int i = 0; i < external_step.Height(); i++) std::cout << external_step(i, 0) << " ";
+                    //std::cout << "\n" << std::flush;
+             
                     external_step_size = El::Nrm2(external_step);
-                    //El::BigFloat a, b, c;
-                    //a =  + El::Dot(external_step,grad_mixed) +(dot(grad_x, internal_dx) + dot(grad_y, internal_dy) + lag) ;
-                    //b = El::Dot(external_step,search_direction);
-                    //El::Matrix<El::BigFloat> H_pp_d_min_p;
-                    //El::Gemv(El::NORMAL, El::BigFloat(1), hess_pp, external_step, H_pp_d_min_p);
-                    //a += El::Dot(external_step, H_pp_d_min_p)/2.0;
-                    //El::LinearSolve(Hpp_minus_Hmixed, search_direction);                    
-                    //El::Matrix<El::BigFloat> Hpp_minus_Hmixed_inv_vp;
-                    //El::Gemv(El::NORMAL, El::BigFloat(1), hess_pp, search_direction, Hpp_minus_Hmixed_inv_vp);
-                    //b += El::Dot(external_step, Hpp_minus_Hmixed_inv_vp);
-                    //c = El::Dot(search_direction, Hpp_minus_Hmixed_inv_vp)/2.0;
-                    
-                  }
+                }
               }
-*/
- 			  if (find_zeros && update_sdp)
-			  {
-				  //if (El::Dot(grad_mixed, search_direction) < 0) 
-				  //  { std::cout << '\n'<< "jump" << lag << '\n' << std::flush;} //external_step *= 2; }
-				  //else 
-				  {
-					  El::BigFloat a, b, c;
-
-					  El::Matrix<El::BigFloat> H_pp_d_min_p;
-					  El::Gemv(El::NORMAL, El::BigFloat(1), hess_pp, d_min_p, H_pp_d_min_p);
-					  c = El::Dot(d_min_p, grad_mixed) + (dot(grad_x, internal_dx) + dot(grad_y, internal_dy) + lag) + El::Dot(d_min_p, H_pp_d_min_p) / 2;
-
-					  El::Matrix<El::BigFloat> Hpp_minus_Hmixed_inv_vp = search_direction;
-					  El::LinearSolve(Hpp_minus_Hmixed, Hpp_minus_Hmixed_inv_vp);
-
-					  El::Matrix<El::BigFloat> Hpp_Hpp_minus_Hmixed_inv_vp;
-					  El::Gemv(El::NORMAL, El::BigFloat(1), hess_pp, Hpp_minus_Hmixed_inv_vp, Hpp_Hpp_minus_Hmixed_inv_vp);
-
-					  a = El::Dot(Hpp_minus_Hmixed_inv_vp, Hpp_Hpp_minus_Hmixed_inv_vp) / 2;
-
-					  b = -El::Dot(d_min_p, search_direction) + El::Dot(d_min_p, Hpp_Hpp_minus_Hmixed_inv_vp);
-
-					  El::BigFloat b2_minus_4ac = b * b - 4 * a*c;
-					  El::BigFloat sq = 0;
-					  if (b2_minus_4ac > 0)sq = El::Sqrt(b2_minus_4ac);
-					  El::BigFloat lambda_plus = (-b + sq) / (2 * a);
-					  El::BigFloat lambda_minus = (-b - sq) / (2 * a);
-
-					  //std::cout << "a=" << a << " b=" << b << " c=" << c << " b^2-4ac=" << b2_minus_4ac << "\n" << std::flush;
-
-					  //std::cout << "lambda_plus=" << lambda_plus << " lambda_minus=" << lambda_minus << "\n" << std::flush;
-
-					  El::Matrix<El::BigFloat> external_step_plus = Hpp_minus_Hmixed_inv_vp;
-					  external_step_plus *= lambda_plus;
-					  external_step_plus += d_min_p;
-					  std::cout << "external_step_plus="; for (int i = 0; i < external_step_plus.Height(); i++) std::cout << external_step_plus(i, 0) << " ";
-					  std::cout << "\n" << std::flush;
-
-					  El::Matrix<El::BigFloat> external_step_minus = Hpp_minus_Hmixed_inv_vp;
-					  external_step_minus *= lambda_minus;
-					  external_step_minus += d_min_p;
-					  std::cout << "external_step_minus="; for (int i = 0; i < external_step_minus.Height(); i++) std::cout << external_step_minus(i, 0) << " ";
-					  std::cout << "\n" << std::flush;
-
-					  // in this convention, I believe I should use lambda_plus
-					  external_step = external_step_plus;
-
-					  //std::cout << "external_step="; for (int i = 0; i < external_step.Height(); i++) std::cout << external_step(i, 0) << " ";
-					  //std::cout << "\n" << std::flush;
-
-					  external_step_size = El::Nrm2(external_step);
-				  }
-			  }
-
+             
           }
 
    
@@ -551,18 +468,14 @@ void Dynamical_Solver::dynamical_step(
     dY.symmetrize();
     dY *= El::BigFloat(-1);
 
-  //std::cout << external_step_size << '\n' << std::endl;
   // Compute step-lengths that preserve positive definiteness of X, Y
   primal_step_length
     = step_length(X_cholesky, dX, dynamical_parameters.solver_parameters.step_length_reduction,
                   "run.step.stepLength(XCholesky)", timers);
-  //if (primal_step_length < 0.01)
-  //  {primal_step_length = 10 * primal_step_length;}
   dual_step_length
     = step_length(Y_cholesky, dY, dynamical_parameters.solver_parameters.step_length_reduction,
                   "run.step.stepLength(YCholesky)", timers);
 
-  // Always set the step length to be min(primal_step_lengthm, dual_step_length)
   if(is_primal_and_dual_feasible)
     {
       primal_step_length = El::Min(primal_step_length, dual_step_length);
