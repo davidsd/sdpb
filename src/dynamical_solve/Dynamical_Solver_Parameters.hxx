@@ -41,11 +41,6 @@ struct Dynamical_Solver_Parameters
   El::BigFloat lag_multiplier_lambda;
   int mu_last_direction;
 
-  //*******BFGS*******/// 
-  std::vector<El::BigFloat> prev_grad;
-  std::vector<El::BigFloat> prev_step;
-  std::vector<El::BigFloat> hess_BFGS;
-  //*******BFGS*******/// 
 
   Dynamical_Solver_Parameters() = default;
   boost::program_options::options_description options();

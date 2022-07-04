@@ -126,7 +126,6 @@ void save_solution(const Dynamical_Solver &solver,
                                    + hess_BFGS_path.string());
         } 
     }
-<<<<<<< HEAD
 
   boost::filesystem::ofstream hess_Exact_stream;
   if(El::mpi::Rank() == 0)
@@ -143,9 +142,6 @@ void save_solution(const Dynamical_Solver &solver,
                                    + hess_Exact_path.string());
         }
     }
-=======
-  //*******BFGS*******/// 
->>>>>>> ning/dynamical_sdp_BFGS_ning_ver_20220703
 
   boost::filesystem::ofstream lag_multiplier_stream;
   if(El::mpi::Rank() == 0)

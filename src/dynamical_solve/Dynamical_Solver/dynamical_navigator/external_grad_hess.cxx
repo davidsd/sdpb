@@ -26,7 +26,7 @@ void external_grad_hessian(const El::Matrix<El::BigFloat> &ePlus,
 {
 	grad = ePlus;
 	grad -= eMinus;
-	grad *= 1.0 / (2.0*alpha);
+	grad *= El::BigFloat(1) / (El::BigFloat(2) * alpha);
 	hess = eSum;
 	for (int i = 0; i<ePlus.Height(); i++)
 	{
@@ -37,6 +37,6 @@ void external_grad_hessian(const El::Matrix<El::BigFloat> &ePlus,
 			hess(j, i) += (-ePlus(i) - ePlus(j));
 		}
 	}
-	hess *= 1.0 / (alpha * alpha);
+	hess *= El::BigFloat(1) / (alpha * alpha);
 }
 
