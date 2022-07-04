@@ -116,7 +116,7 @@ def build(bld):
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/newton_trust.cxx']
 
     bld.stlib(source=dynamical_solve_sources,
-          target='dynamical_solve1',
+          target='dynamical_solve',
           cxxflags=default_flags,
           use=use_packages + ['sdp_solve', 'sdp_read'])
 
@@ -334,9 +334,9 @@ def build(bld):
                         'src/dynamical_sdp/Dynamical_Parameters/to_property_tree.cxx',
                         'src/dynamical_sdp/Dynamical_Parameters/ostream.cxx',
                         'src/dynamical_sdp/save_solution.cxx'],
-                target='dynamical_sdp1',
+                target='dynamical_sdp',
                 cxxflags=default_flags,
-                use=use_packages + ['sdp_read','sdp_solve', 'dynamical_solve1']
+                use=use_packages + ['sdp_read','sdp_solve', 'dynamical_solve']
                 )
 
 
