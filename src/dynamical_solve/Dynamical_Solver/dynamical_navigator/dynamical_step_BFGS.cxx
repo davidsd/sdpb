@@ -457,7 +457,6 @@ void Dynamical_Solver::dynamical_step(
 			}
 
 			if (stallrecovery_phase == 2 && dynamical_parameters.updateSDP_dualityGapThreshold <= 0)update_sdp = false;
-			update_sdp = false;
 
 			if (external_step_size < 0 //dynamical_parameters.update_sdp_threshold_min
 					//|| (external_step_size > dynamical_parameters.update_sdp_threshold_max && dynamical_parameters.total_iterations == 0)) 
