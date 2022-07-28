@@ -197,7 +197,7 @@ void Dynamical_Solver::dynamical_step(
 			timers.add_and_start("run.step.computeSearchDirection(betaPredictor)"));
 	beta  = predictor_centering_parameter(dynamical_parameters.solver_parameters, is_primal_and_dual_feasible); 
 
-	if (mu_direction_mode == 1)beta = 1;    
+	if (mu_direction_mode == 1)beta = 1;
 	// Internal_step: compute dx and dy for the central sdp as in compute_search_direction()      
 	//                - H^-1_xx Del_x L_mu in Eq (12) and Eq(13)
 	//                Notice that the negative sign has been accounted. 
@@ -457,11 +457,13 @@ void Dynamical_Solver::dynamical_step(
 			}
 
 			if (stallrecovery_phase == 2 && dynamical_parameters.updateSDP_dualityGapThreshold <= 0)update_sdp = false;
+			//update_sdp = false;
 
 			if (external_step_size < 0 //dynamical_parameters.update_sdp_threshold_min
 					//|| (external_step_size > dynamical_parameters.update_sdp_threshold_max && dynamical_parameters.total_iterations == 0)) 
 					//|| mu > 1e-10
-				|| (dual_objective) < -0.5 )
+				//|| (dual_objective) < -0.5 
+				)
 				{ update_sdp = false; } 
 		}
                 dx = internal_dx;
