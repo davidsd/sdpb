@@ -17,18 +17,18 @@ void BFGS_update_hessian(const int n_parameters,
     El::Ger(El::BigFloat(1), grad_p_diff, grad_p_diff, tempyy);
     tempyy *= El::BigFloat(1)/El::Dot(grad_p_diff, last_it_step);
 
-	std::cout << "\ntempyy :\n";
-	print_matrix(tempyy);
+//	std::cout << "\ntempyy :\n";
+//	print_matrix(tempyy);
 
     El::Matrix<El::BigFloat> tempBssB(n_parameters,n_parameters); 
     El::Zero(tempBssB);
     El::Ger(El::BigFloat(1),tempBs, tempBs, tempBssB);
     tempBssB *= El::BigFloat(1)/El::Dot(last_it_step, tempBs);
 
-	std::cout << "\ntempBssB :\n";
-	print_matrix(tempBssB);
+//	std::cout << "\ntempBssB :\n";
+//	print_matrix(tempBssB);
     
-	std::cout << "hess_bfgs.Precision = " << hess_bfgs(0, 0).Precision();
+//	std::cout << "hess_bfgs.Precision = " << hess_bfgs(0, 0).Precision();
 
 
     hess_bfgs += tempyy; 

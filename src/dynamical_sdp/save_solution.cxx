@@ -95,7 +95,6 @@ void save_solution(const Dynamical_Solver &solver,
         } 
     }
 
-  //*******BFGS*******/// 
   boost::filesystem::ofstream gradient_stream;
   if(El::mpi::Rank() == 0)
     {
@@ -127,7 +126,22 @@ void save_solution(const Dynamical_Solver &solver,
                                    + hess_BFGS_path.string());
         } 
     }
-  //*******BFGS*******/// 
+
+  boost::filesystem::ofstream hess_Exact_stream;
+  if(El::mpi::Rank() == 0)
+    {
+      const boost::filesystem::path hess_Exact_path(out_directory / "hessExact.txt");
+      hess_Exact_stream.open(hess_Exact_path);
+      El::Print(solver.hess_Exact,
+                std::to_string(solver.hess_Exact.Height()*solver.hess_Exact.Width()) + " "
+                + std::to_string(1),
+               "\n", hess_Exact_stream);
+      if(!hess_Exact_stream.good())
+        {
+          throw std::runtime_error("Error when writing to: "
+                                   + hess_Exact_path.string());
+        }
+    }
 
   boost::filesystem::ofstream lag_multiplier_stream;
   if(El::mpi::Rank() == 0)
