@@ -360,7 +360,8 @@ void Dynamical_Solver::dynamical_step(
 			}
 
 			// - H_px (H^-1_xx Del_x L_mu) + Del_p L_mu, RHS of Eq(13) 
-			grad_mixed += grad_p; 
+			grad_mixed += grad_p;
+			El::Matrix<El::BigFloat> &grad_corrected = grad_mixed;
 
 			grad_BFGS = grad_mixed;
 			El::Zeros(hess_BFGS, n_external_parameters,n_external_parameters);
@@ -456,21 +457,27 @@ void Dynamical_Solver::dynamical_step(
 
 			if (dynamical_parameters.find_boundary && El::Abs(duality_gap) < 0.9 && dynamical_parameters.total_iterations > 0)
 			{ 
-				El::BigFloat lag = compute_lag((-1)*beta*mu, X_cholesky, *this);
-				if (El::mpi::Rank() == 0)std::cout << '\n'
-					<< "Lagrangian mu=0: " << lag << ", mu: " << compute_lag(beta*mu, X_cholesky, *this) 
-					<<"dual_obj: " << dual_objective << ", const: " << sdp.objective_const << '\n' << std::flush;
+				El::BigFloat lag = compute_lag(beta*mu, X_cholesky, *this);
+				El::BigFloat lag0 = compute_lag(0, X_cholesky, *this);
+				lag = lag0;
 
-				find_zero_step(10^(-10), 100, dynamical_parameters.update_sdp_threshold_max,
-						Hpp_minus_Hmixed, grad_mixed, find_zeros, external_step, lag);
+				//if (El::mpi::Rank() == 0)std::cout << "lag  = " << lag << '\n' << std::flush;
+				if (El::mpi::Rank() == 0)std::cout << "lag0 = " << lag0 << '\n' << std::flush;
 
-				El::Matrix<El::BigFloat> search_direction(n_external_parameters,1);
-				for (int i=0; i<n_external_parameters; i++) 
-				{ search_direction(i,0) = dynamical_parameters.search_direction[i];} 
+				//find_zero_step(10^(-10), 100, dynamical_parameters.update_sdp_threshold_max,
+				//		Hpp_minus_Hmixed, grad_mixed, find_zeros, external_step, lag);
 
-
-				if (find_zeros && update_sdp)
+				El::Matrix<El::BigFloat> search_direction(n_external_parameters, 1);
+				for (int i = 0; i < n_external_parameters; i++)
 				{
+					search_direction(i, 0) = dynamical_parameters.search_direction[i];
+				}
+
+
+				//if (find_zeros && update_sdp)
+				if (update_sdp)
+				{
+					/*
 					{
 						El::BigFloat a, b, c;
 
@@ -511,6 +518,43 @@ void Dynamical_Solver::dynamical_step(
 						if (El::mpi::Rank() == 0)std::cout << "external_step_minus=";
 						for (int i = 0; i < external_step_minus.Height(); i++) if (El::mpi::Rank() == 0)std::cout << external_step_minus(i, 0) << " ";
 						if (El::mpi::Rank() == 0)std::cout << "\n" << std::flush;
+
+						// in this convention, I believe I should use lambda_plus
+						external_step = external_step_plus;
+
+						//std::cout << "external_step="; for (int i = 0; i < external_step.Height(); i++) std::cout << external_step(i, 0) << " ";
+						//std::cout << "\n" << std::flush;
+
+						external_step_size = El::Nrm2(external_step);
+					}
+					*/
+
+					{
+						El::Matrix<El::BigFloat> invH_e = search_direction;
+						El::LinearSolve(Hpp_minus_Hmixed, invH_e);
+						El::BigFloat e_invH_e = El::Dot(invH_e, search_direction);
+
+						El::Matrix<El::BigFloat> invH_g = grad_corrected;
+						El::LinearSolve(Hpp_minus_Hmixed, invH_g);
+						El::BigFloat g_invH_g = El::Dot(invH_g, grad_corrected);
+
+						El::BigFloat lambda = (g_invH_g - 2 * lag) / (e_invH_e);
+						if (lambda < 0)lambda = 0;
+						else lambda = El::Sqrt(lambda);
+
+						El::Matrix<El::BigFloat> external_step_plus = invH_e;
+						external_step_plus *= lambda;
+						external_step_plus += d_min_p;
+
+						El::Matrix<El::BigFloat> external_step_minus = invH_e;
+						external_step_minus *= -lambda;
+						external_step_minus += d_min_p;
+
+						if (El::mpi::Rank() == 0)std::cout << "new external_step_plus=";
+						for (int i = 0; i < external_step_plus.Height(); i++) if (El::mpi::Rank() == 0)std::cout << external_step_plus(i, 0) << " ";
+						if (El::mpi::Rank() == 0)std::cout << "\n" << std::flush;
+						//std::cout << "new external_step_minus="; for (int i = 0; i < external_step_minus.Height(); i++) std::cout << external_step_minus(i, 0) << " ";
+						//std::cout << "\n" << std::flush;
 
 						// in this convention, I believe I should use lambda_plus
 						external_step = external_step_plus;
