@@ -6,6 +6,8 @@
 //Return: void.
 //Update: hess = H_pp ,
 //        grad = Del_p(L_mu).
+
+/*
 void external_grad(const El::Matrix<El::BigFloat> &ePlus, 
                            const El::Matrix<El::BigFloat> &eMinus, 
                            const El::BigFloat &alpha,
@@ -15,6 +17,7 @@ void external_grad(const El::Matrix<El::BigFloat> &ePlus,
   grad -= eMinus;
   grad *= El::BigFloat(1) /(El::BigFloat(2)*alpha);
 }
+*/
 
 
 void external_grad_hessian(const El::Matrix<El::BigFloat> &ePlus,

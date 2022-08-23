@@ -106,6 +106,21 @@ void print_matrix(El::Matrix<El::BigFloat> & matrix)
 }
 
 
+void external_grad(const El::Matrix<El::BigFloat> &ePlus,
+	const El::Matrix<El::BigFloat> &eMinus,
+	const El::BigFloat &alpha,
+	El::Matrix<El::BigFloat> &grad)
+{
+	/*
+	grad = ePlus;
+	grad -= eMinus;
+	grad *= El::BigFloat(1) / (El::BigFloat(2)*alpha);
+	*/
+	grad = ePlus;
+	grad *= El::BigFloat(1) / alpha;
+}
+
+
 
 void find_zero_step(const El::BigFloat &thresh, const int &max_it, const El::BigFloat &step_size_max,
 	El::Matrix<El::BigFloat> &hess, const El::Matrix<El::BigFloat> &grad, bool &find_zeros,
@@ -267,7 +282,18 @@ void Dynamical_Solver::dynamical_step(
 			{
 				throw std::invalid_argument("A list of perturbed sdp files are required");
 			}
-			external_grad_hessian(eplus, eminus, esum, dynamical_parameters.alpha, grad_p, hess_pp);
+
+			std::cout << "dynamical_parameters.use_exact_hessian=" << dynamical_parameters.use_exact_hessian << "\n";
+
+			if (dynamical_parameters.use_exact_hessian)
+			{
+				external_grad_hessian(eplus, eminus, esum, dynamical_parameters.alpha, grad_p, hess_pp);
+			}
+			else
+			{
+				external_grad(eplus, eminus, dynamical_parameters.alpha, grad_p);
+			}
+			
 
 			El::Matrix<El::BigFloat> hess_mixed(n_external_parameters, n_external_parameters); //H_px H^-1_xx H_xp in Eq(13).
 			El::Matrix<El::BigFloat> grad_mixed(n_external_parameters, 1); //H_px (-internal_dx_dy) = H_px (H^-1_xx Del_x L_mu) in Eq (13).  
