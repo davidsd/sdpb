@@ -40,4 +40,6 @@ Dynamical_Solver::Dynamical_Solver(const Dynamical_Solver_Parameters &dynamical_
     {
       lag_multiplier_lambda = dynamical_parameters.lag_multiplier_lambda;
     }
+
+  intext_mode = 0;
 }

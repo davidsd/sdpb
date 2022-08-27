@@ -225,7 +225,23 @@ void Dynamical_Solver::dynamical_step(
 			timers.add_and_start("run.step.computeSearchDirection(betaPredictor)"));
 	beta  = predictor_centering_parameter_V2(dynamical_parameters.solver_parameters, is_primal_and_dual_feasible);
 
-	if (mu_direction_mode == 1)beta = 1;
+
+	if (dynamical_parameters.updateSDP_dualityGapThreshold <= 0 && 
+		dynamical_parameters.centeringRThreshold>0 && R_error > dynamical_parameters.centeringRThreshold)
+	{
+		if (El::mpi::Rank() == 0)std::cout << "run centering steps with beta=1 \n";
+		beta = 1;
+		update_sdp = false;
+	}
+
+	//if (mu_direction_mode == 1)beta = 1;
+	//if (mu_direction_mode == 2)beta = 2;
+	if (intext_mode == 1)
+	{
+		beta = 2;
+		intext_mode == 0;
+	}
+
 	// Internal_step: compute dx and dy for the central sdp as in compute_search_direction()      
 	//                - H^-1_xx Del_x L_mu in Eq (12) and Eq(13)
 	//                Notice that the negative sign has been accounted. 
@@ -235,9 +251,13 @@ void Dynamical_Solver::dynamical_step(
 	Block_Vector grad_x(internal_dx), grad_y(internal_dy);
 	Block_Diagonal_Matrix R(X);
 
-	for (int stallrecovery_phase = 1; stallrecovery_phase <= 2; stallrecovery_phase++)
+	if (El::mpi::Rank() == 0)std::cout << "test 1 \n" << std::flush;
+
+	for (int stallrecovery_phase = 1; stallrecovery_phase <= 20; stallrecovery_phase++)
 	{
-		if (stallrecovery_phase == 1)
+		if (El::mpi::Rank() == 0)std::cout << "test 2 \n" << std::flush;
+
+		if (beta <= 10)
 		{
 			internal_predictor_direction_dxdydXdY(block_info, sdp, *this, schur_complement_cholesky,
 				schur_off_diagonal, X_cholesky, beta,
@@ -252,6 +272,8 @@ void Dynamical_Solver::dynamical_step(
 				schur_off_diagonal, X_cholesky, beta,
 				mu, primal_residue_p, Q, grad_x, grad_y, internal_dx, internal_dy, R);
 		}
+
+		if (El::mpi::Rank() == 0)std::cout << "test 3 \n" << std::flush;
 
 		//Delta_xy = - H^-1_xx H_xp as the second term on the LHS of Eq(13)
 		std::vector<std::pair<Block_Vector, Block_Vector>> H_xp, Delta_xy; 
@@ -268,6 +290,8 @@ void Dynamical_Solver::dynamical_step(
 		//                        grad_mixed := H_px H^-1_xx Del_x L, the second term on the RHS of Eq(13)
 		//                if criteria base on quantities, such as duality_gap, are met
 		//                which is decided by function "compute_update_sdp()" called by run_dynamical()
+
+		if (El::mpi::Rank() == 0)std::cout << "test 4 \n" << std::flush;
 
 		if (update_sdp) 
 		{
@@ -568,9 +592,9 @@ void Dynamical_Solver::dynamical_step(
 
 			}
 
-			if (stallrecovery_phase == 2 && dynamical_parameters.updateSDP_dualityGapThreshold <= 0)
+			if (beta > 10 && dynamical_parameters.updateSDP_dualityGapThreshold <= 0)
 			{
-				if (El::mpi::Rank() == 0)std::cout << "stallrecover_phase=2 && (no dualityGapThreshold) : update_sdp=false \n";
+				if (El::mpi::Rank() == 0)std::cout << "beta>10 && (no dualityGapThreshold) : update_sdp=false \n";
 				update_sdp = false;
 			}
 
@@ -584,54 +608,15 @@ void Dynamical_Solver::dynamical_step(
 				update_sdp = false;
 			}
 		}
-                dx = internal_dx;
-                dy = internal_dy;
-		// Update dx and dy if the external parameter step is small enough 
-		// RHS of Eq(12)
-		//    - H^-1_xx Del_x L_mu - H^-1_xx H_xp dp 
-		// =  internal_dx, internal_dy + Delta_xy . external_step
-		if (update_sdp) 
-		{
-			for (int i=0; i<n_external_parameters; i++)
-			{
-				for(size_t block = 0; block < x.blocks.size(); ++block)
-				{ 
-					if (dynamical_parameters.find_boundary) 
-					{ dx.blocks[block] *= (1.0 + delta_lambda/lag_multiplier_lambda);} 
-					El::Axpy(external_step(i), Delta_xy.at(i).first.blocks[block], dx.blocks[block]);
-				}
-				for(size_t block = 0; block < dy.blocks.size(); ++block)
-				{
-					if (dynamical_parameters.find_boundary) 
-					{ dy.blocks[block] *= (1.0 + delta_lambda/lag_multiplier_lambda);}
-					El::Axpy(external_step(i), Delta_xy.at(i).second.blocks[block], dy.blocks[block]);
-				}
-			}
 
-			if (dynamical_parameters.find_boundary)
-			{ primal_residues *= (1.0 + delta_lambda/lag_multiplier_lambda);
-				R *= (1.0 + delta_lambda/lag_multiplier_lambda);
-			}
-		}           
-		//Block_Diagonal_Matrix dX(X), dY(Y);
-		// dX = PrimalResidues + \sum_p A_p dx[p]
-		constraint_matrix_weighted_sum(block_info, sdp, dx, dX);
-		dX += primal_residues;
+		if (El::mpi::Rank() == 0)std::cout << "test 5 \n" << std::flush;
 
-		// dY = Symmetrize(X^{-1} (R - dX Y))
-		multiply(dX, Y, dY);
-		dY -= R;
-		cholesky_solve(X_cholesky, dY);
-		dY.symmetrize();
-		dY *= El::BigFloat(-1);
+		update_dXdY(update_sdp,
+			dynamical_parameters, block_info, sdp, grid, X_cholesky, Y_cholesky, timers,
+			internal_dx, internal_dy, dx, dy, dX, dY, R,
+			delta_lambda, external_step, Delta_xy, primal_step_length, dual_step_length);
 
-		// Compute step-lengths that preserve positive definiteness of X, Y
-		primal_step_length
-			= step_length(X_cholesky, dX, dynamical_parameters.solver_parameters.step_length_reduction,
-					"run.step.stepLength(XCholesky)", timers);
-		dual_step_length
-			= step_length(Y_cholesky, dY, dynamical_parameters.solver_parameters.step_length_reduction,
-					"run.step.stepLength(YCholesky)", timers);
+		if (El::mpi::Rank() == 0)std::cout << "test 6 \n" << std::flush;
 
 		if(is_primal_and_dual_feasible)
 		{
@@ -639,20 +624,55 @@ void Dynamical_Solver::dynamical_step(
 			dual_step_length = primal_step_length;
 		}
 
-		if (El::Max(primal_step_length, dual_step_length) > 0.002 || El::Nrm2(external_step)*dual_step_length > 100)
-		{
-			if (El::mpi::Rank() == 0)std::cout << " ext_step_size*dual_step_len=" << El::Nrm2(external_step)*dual_step_length
-				<< "\n" << std::flush;
-			break;
-		}
+		El::BigFloat cutoff1 = El::BigFloat(1e-10);
+
+		if (El::mpi::Rank() == 0)std::cout << "actual beta : " << beta << "\n" << std::flush;
+
+		if (El::mpi::Rank() == 0 && update_sdp == true)
+			std::cout << "P/D-step-len-ext = " << primal_step_length << " , " << dual_step_length << "\n" << std::flush;
 
 		if (dynamical_parameters.total_iterations == 0) break;
 
-		if (El::mpi::Rank() == 0)std::cout << "max_step.beta=" << El::Max(primal_step_length, dual_step_length)*beta
-			<< " max_step=" << El::Max(primal_step_length, dual_step_length)
-			<< ". reset beta to 1e50. "
-			<< "\n" << std::flush;
-		beta = El::BigFloat(1e50);
+		if (El::Max(primal_step_length, dual_step_length) > 0.1) break;
+
+		if (El::Max(primal_step_length, dual_step_length) > cutoff1 && beta < 1)
+		{
+			beta = beta + El::BigFloat(0.1);
+			if (beta > 1)beta = 1;
+		}
+		// even if beta=1, P/D-step-len-ext still < 0.1 : we re-run internal step with beta=2
+		else if (El::Max(primal_step_length, dual_step_length) > cutoff1 && beta == El::BigFloat(1))
+		{
+			beta = 2;
+			update_sdp = false;
+		}
+		// no matter it's in external mode or internal mode, if P/D-step-len is small and beta>1,
+		// we accept the internal step and set beta=2 for next step
+		else if (El::Max(primal_step_length, dual_step_length) > cutoff1 && beta > El::BigFloat(1))
+		{
+			intext_mode = 1;
+			update_sdp = false;
+
+			update_dXdY(update_sdp,
+				dynamical_parameters, block_info, sdp, grid, X_cholesky, Y_cholesky, timers,
+				internal_dx, internal_dy, dx, dy, dX, dY, R,
+				delta_lambda, external_step, Delta_xy, primal_step_length, dual_step_length);
+
+			break;
+		}
+
+		if (beta >= El::BigFloat(1e50))break;
+		//if (beta >= El::BigFloat(1))break;
+  
+		if(El::Max(primal_step_length, dual_step_length) <= cutoff1)
+		{
+			if (El::mpi::Rank() == 0)std::cout << "max_step.beta=" << El::Max(primal_step_length, dual_step_length)*beta
+				<< " max_step=" << El::Max(primal_step_length, dual_step_length)
+				<< ". reset beta to 1e50. "
+				<< "\n" << std::flush;
+			beta = El::BigFloat(1e50);
+		}
+
 	}
 	external_step *= dual_step_length; 
 	external_step_size = El::Nrm2(external_step);
@@ -724,12 +744,15 @@ void Dynamical_Solver::dynamical_step(
 	delta_lambda *= dual_step_length;
 	lag_multiplier_lambda += delta_lambda;
 
+	/*
 	//if (El::Max(primal_step_length, dual_step_length) > 0 && El::Max(primal_step_length, dual_step_length)<0.1)
 	//	  mu_direction_mode = 2;
 	if (El::Max(primal_step_length, dual_step_length) > 0 && El::Max(primal_step_length, dual_step_length)<0.1) 
 		mu_direction_mode = 1;
 	else
 		mu_direction_mode = 0;
+		*/
+	//mu_direction_mode = 0;
 
 
 	step_timer.stop();

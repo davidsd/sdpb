@@ -15,9 +15,11 @@ def configure(conf):
     conf.env.git_version=subprocess.check_output('git describe --dirty', universal_newlines=True, shell=True).rstrip()
     
 def build(bld):
-    default_flags=['-Wall', '-Wextra', '-O3', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
+    # optimized building:
+    # default_flags=['-Wall', '-Wextra', '-O3', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
+    
     # default_flags=['-Wall', '-Wextra', '-O3', '-g', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
-    # default_flags=['-Wall', '-Wextra', '-g', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
+    default_flags=['-Wall', '-Wextra', '-g', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
     use_packages=['cxx17','boost','gmpxx','mpfr','elemental','libxml2', 'rapidjson', 'libarchive']
 
     sdp_solve_sources=['src/sdp_solve/Solver_Parameters/Solver_Parameters.cxx',
@@ -100,13 +102,16 @@ def build(bld):
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/mixed_hess.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/external_grad_hess.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_lag.cxx',
-                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_robust.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/BFGS.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_BFGS.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_BFGS_func.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/internal_search_direction.cxx', 
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_update_sdp.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_search_direction.cxx',
                        'src/dynamical_solve/Dynamical_Solver/run_dynamical.cxx',
                        'src/dynamical_solve/Dynamical_Solver/run/print_header_dynamical.cxx',
                        'src/dynamical_solve/Dynamical_Solver/run/print_iteration.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_R_error.cxx',
                        'src/dynamical_solve/Dynamical_Solver/run/compute_feasible_and_termination.cxx',
                        'src/approx_objective/Approx_Parameters/Approx_Parameters.cxx',
                        'src/approx_objective/Axpy.cxx',
@@ -115,7 +120,7 @@ def build(bld):
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/newton_trust.cxx']
 
     bld.stlib(source=dynamical_solve_sources,
-          target='dynamical_solve1',
+          target='dynamical_solve',
           cxxflags=default_flags,
           use=use_packages + ['sdp_solve', 'sdp_read'])
 
@@ -333,18 +338,11 @@ def build(bld):
                         'src/dynamical_sdp/Dynamical_Parameters/to_property_tree.cxx',
                         'src/dynamical_sdp/Dynamical_Parameters/ostream.cxx',
                         'src/dynamical_sdp/save_solution.cxx'],
-                target='dynamical_sdp1',
+                target='dynamical_sdp_V7_newstrategy',
                 cxxflags=default_flags,
-                use=use_packages + ['sdp_read','sdp_solve', 'dynamical_solve1']
+                use=use_packages + ['sdp_read','sdp_solve', 'dynamical_solve']
                 )
 
-
-    # Test read files 
-    bld.program(source=['src/exp/test.cpp'],
-                target='test_readnsv', 
-                cxxflags=default_flags,
-                use=use_packages + ['sdp_read']
-                )
 
     # Test NewtonRegion
     #bld.program(source=['src/dynamical_solve/Dynamical_Solver/dynamical_navigator/newton_trust.cxx'],
