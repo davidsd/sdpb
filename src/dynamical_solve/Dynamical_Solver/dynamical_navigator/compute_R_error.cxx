@@ -23,7 +23,7 @@ void compute_R_error(const std::size_t &total_psd_rows, const Block_Diagonal_Mat
   scale_multiply_add(El::BigFloat(-1), X, Y, El::BigFloat(0), R);
   R.add_diagonal(mu);
 
-  R_error = R.max_abs();
+  R_error = R.max_abs_mpi();
 
   R_error_timer.stop();
 }

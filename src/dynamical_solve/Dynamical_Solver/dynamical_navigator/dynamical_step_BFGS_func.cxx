@@ -173,11 +173,92 @@ void Dynamical_Solver::update_dXdY(bool external_step_Q,
 	dY.symmetrize();
 	dY *= El::BigFloat(-1);
 
+	//std::cout << "rank=" << El::mpi::Rank() << " before primal_step_length \n" << std::flush;
+
 	// Compute step-lengths that preserve positive definiteness of X, Y
 	primal_step_length
 		= step_length(X_cholesky, dX, dynamical_parameters.solver_parameters.step_length_reduction,
 			"run.step.stepLength(XCholesky)", timers);
+
+	//std::cout << "rank=" << El::mpi::Rank() << " after primal_step_length \n" << std::flush;
+
 	dual_step_length
 		= step_length(Y_cholesky, dY, dynamical_parameters.solver_parameters.step_length_reduction,
 			"run.step.stepLength(YCholesky)", timers);
 }
+
+
+
+void read_sdp_grid(
+	const Dynamical_Solver_Parameters &dynamical_parameters,
+	const Block_Info &block_info,
+	const SDP &sdp, const El::Grid &grid,
+	Timers &timers,
+
+	Block_Diagonal_Matrix & schur_complement_cholesky,
+	Block_Matrix & schur_off_diagonal,
+
+	El::DistMatrix<El::BigFloat> & Q,
+
+	Block_Vector & x,
+	Block_Vector & y,
+
+	int n_external_parameters,
+
+	El::Matrix<El::BigFloat> & eplus,
+	El::Matrix<El::BigFloat> & eminus,
+	El::Matrix<El::BigFloat> & esum,
+
+	std::vector<std::pair<Block_Vector, Block_Vector>> & H_xp,
+	std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy)
+{
+	El::Zero(eplus);
+	El::Zero(eminus);
+	El::Zero(esum);
+	if (dynamical_parameters.new_sdp_path.extension() == ".nsv")
+	{
+		for (auto &filename : read_file_list(dynamical_parameters.new_sdp_path))
+		{
+			//Assume that the filename takes the form "plus_i","minus_i" and "sum_i_j", f
+			//standing for the change in positive e_i, negative e_i and (e_i + e_j) directions respectively 
+			std::string file_name = filename.stem().string();
+			std::vector<std::string> directions;
+			boost::algorithm::split(directions, file_name, boost::is_any_of("_"));
+			SDP new_sdp(filename, block_info, grid), d_sdp(new_sdp);
+			Axpy(El::BigFloat(-1), sdp, d_sdp);
+
+			//std::cout << "rank=" << El::mpi::Rank() << " pid=" << getpid() << " before approx_obj \n" << std::flush;
+
+			Approx_Objective approx_obj(block_info, sdp, d_sdp, x, y,
+				schur_complement_cholesky,
+				schur_off_diagonal, Q);
+
+			//std::cout << "rank=" << El::mpi::Rank() << " after approx_obj \n" << std::flush;
+
+			if (directions[0] == "plus")
+			{
+				mixed_hess(block_info, d_sdp, x, y, schur_complement_cholesky, schur_off_diagonal, Q, dynamical_parameters.alpha, H_xp, Delta_xy);
+				eplus(std::stoi(directions[1])) = approx_obj.d_objective;//+ approx_obj.dd_objective; 
+																		 //compute_delta_lag(d_sdp, *this);
+			}
+			else if (directions[0] == "minus")
+			{
+				eminus(std::stoi(directions[1])) = approx_obj.d_objective;//+ approx_obj.dd_objective; 
+																		  //compute_delta_lag(d_sdp,*this); 
+			}
+			else if (directions[0] == "sum")
+			{
+				El::BigFloat tempt = approx_obj.d_objective;//+ approx_obj.dd_objective;
+				esum(std::stoi(directions[1]), std::stoi(directions[2])) = tempt;
+				esum(std::stoi(directions[2]), std::stoi(directions[1])) = tempt;
+				//compute_delta_lag(d_sdp,*this); 
+			}
+		}
+	}
+	else
+	{
+		throw std::invalid_argument("A list of perturbed sdp files are required");
+	}
+	return;
+}
+
