@@ -119,6 +119,16 @@ public:
     return max;
   }
 
+  El::BigFloat max_abs_mpi() const
+  {
+	  El::BigFloat local_max = 0;
+	  for (auto &block : blocks)
+	  {
+		  local_max = std::max(El::MaxAbs(block), local_max);
+	  }
+	  return El::mpi::AllReduce(local_max, El::mpi::MAX, El::mpi::COMM_WORLD);
+  }
+
   friend std::ostream &
   operator<<(std::ostream &os, const Block_Diagonal_Matrix &A);
 };

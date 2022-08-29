@@ -82,6 +82,16 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
   result.add_options()("fixExtParamDirection",
 	  boost::program_options::value<bool>(&fix_ext_param_direction)->default_value(0),
 	  "True if the program dp is given by --searchDirection. ");
+
+  result.add_options()("printMore",
+	  boost::program_options::bool_switch(&printMore)
+	  ->default_value(true),
+	  "Print R error for each iteration");
+
+  result.add_options()("centeringRThreshold",
+	  boost::program_options::value<El::BigFloat>(&centeringRThreshold)->default_value(-1),
+	  "If positive, run centering steps until R<centeringRThreshold.");
+
   result.add(solver_parameters.options()); 
 
   return result;

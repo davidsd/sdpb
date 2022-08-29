@@ -9,6 +9,8 @@ void cholesky_decomposition(const Block_Diagonal_Matrix &A,
                             Block_Diagonal_Matrix &L);
 
 void print_header_dynamical(const Verbosity &verbosity);
+void print_header_dynamical_new(const Verbosity &verbosity);
+
 void print_iteration(
   const int &iteration, const El::BigFloat &mu,
   const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
@@ -16,6 +18,14 @@ void print_iteration(
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time,
   const Verbosity &verbosity);
+
+void print_iteration_new(
+	const int &iteration, const El::BigFloat &mu,
+	const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
+	const El::BigFloat &beta, const Dynamical_Solver &dynamical_solver,
+	const std::chrono::time_point<std::chrono::high_resolution_clock>
+	&solver_start_time,
+	const Verbosity &verbosity);
 
 void compute_objectives(const SDP &sdp, const Block_Vector &x,
                         const Block_Vector &y, El::BigFloat &primal_objective,
@@ -50,6 +60,10 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
                                               const Block_Vector &x,
                                               Block_Vector &primal_residue_p,
                                               El::BigFloat &primal_error_p);
+
+
+void compute_R_error(const std::size_t &total_psd_rows, const Block_Diagonal_Matrix &X, const Block_Diagonal_Matrix &Y, El::BigFloat & R_error, Timers &timers);
+
 
 // subroutines to decide weather to update sdps in run_dynamical, before entering dynamical_step
 void compute_update_sdp(
@@ -98,7 +112,11 @@ Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_par
   std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     A_Y;
-  print_header_dynamical(verbosity);
+
+  if (dynamical_parameters.printMore)
+	  print_header_dynamical_new(verbosity);
+  else
+	  print_header_dynamical(verbosity);
 
   auto psd_sizes(block_info.psd_matrix_block_sizes());
   std::size_t total_psd_rows(
@@ -148,6 +166,8 @@ Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_par
       compute_primal_residues_and_error_p_b_Bx(
         block_info, sdp, x, primal_residue_p, primal_error_p);
 
+	  compute_R_error(total_psd_rows, X, Y, R_error, timers);
+
       bool terminate_now, is_primal_and_dual_feasible;
       compute_feasible_and_termination(
         dynamical_parameters.solver_parameters, primal_error(), dual_error, duality_gap,
@@ -180,9 +200,18 @@ Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_par
             = Dynamical_Solver_Terminate_Reason::MaxComplementarityExceeded;
           break;
         }
-     print_iteration(iteration, mu, primal_step_length, dual_step_length,
-                      beta_predictor, *this, solver_timer.start_time,
-                      verbosity);
+
+
+	  if (dynamical_parameters.printMore)
+		  print_iteration_new(iteration, mu, primal_step_length, dual_step_length,
+			  beta_predictor, *this, solver_timer.start_time,
+			  verbosity);
+	  else
+		  print_iteration(iteration, mu, primal_step_length, dual_step_length,
+			  beta_predictor, *this, solver_timer.start_time,
+			  verbosity);
+
+
      if (update_sdp)
        {
          terminate_reason

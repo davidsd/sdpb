@@ -55,6 +55,7 @@ public:
   El::Matrix<El::BigFloat> hess_Exact;
 
   int mu_direction_mode;
+  int intext_mode;
   // Discrepancy in the primal equality constraints, a
   // Block_Diagonal_Matrix with the same structure as X, called 'P' in
   // the manual:
@@ -77,6 +78,7 @@ public:
   //
   Block_Vector dual_residues;
   El::BigFloat dual_error; // maxAbs(dualResidues)
+  El::BigFloat R_error; // maxAbs(R)
 
   int64_t current_generation;
   boost::optional<int64_t> backup_generation;
@@ -112,6 +114,25 @@ public:
     El::BigFloat &beta, El::BigFloat &primal_step_length, 
     El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
     bool &update_sdp, bool &find_zeros, El::Matrix<El::BigFloat> &external_step); 
+
+  void update_dXdY(bool external_step_Q,
+
+	  const Dynamical_Solver_Parameters &dynamical_parameters,
+	  const Block_Info &block_info,
+	  const SDP &sdp, const El::Grid &grid,
+	  const Block_Diagonal_Matrix &X_cholesky,
+	  const Block_Diagonal_Matrix &Y_cholesky,
+	  Timers &timers,
+
+	  Block_Vector & internal_dx, Block_Vector & internal_dy,
+	  Block_Vector & dx, Block_Vector & dy,
+	  Block_Diagonal_Matrix & dX, Block_Diagonal_Matrix & dY,
+	  Block_Diagonal_Matrix & R,
+
+	  El::BigFloat &delta_lambda,
+	  El::Matrix<El::BigFloat> & external_step,
+	  std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy,
+	  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length);
 
   void
   save_checkpoint(const boost::filesystem::path &checkpoint_directory,
