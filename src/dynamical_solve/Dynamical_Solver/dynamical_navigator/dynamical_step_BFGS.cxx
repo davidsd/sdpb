@@ -1,3 +1,4 @@
+#include <unistd.h>
 
 #include <vector>
 #include <boost/filesystem.hpp>
@@ -162,6 +163,29 @@ void BFGS_update_hessian(const int n_parameters,
 		El::Matrix<El::BigFloat> &hess_bfgs
 		);
 
+void read_sdp_grid(
+	const Dynamical_Solver_Parameters &dynamical_parameters,
+	const Block_Info &block_info,
+	const SDP &sdp, const El::Grid &grid,
+	Timers &timers,
+
+	Block_Diagonal_Matrix & schur_complement_cholesky,
+	Block_Matrix & schur_off_diagonal,
+
+	El::DistMatrix<El::BigFloat> & Q,
+
+	Block_Vector & x,
+	Block_Vector & y,
+
+	int n_external_parameters,
+
+	El::Matrix<El::BigFloat> & eplus,
+	El::Matrix<El::BigFloat> & eminus,
+	El::Matrix<El::BigFloat> & esum,
+
+	std::vector<std::pair<Block_Vector, Block_Vector>> & H_xp,
+	std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy);
+
 
 // A subroutine called by run_dynamical
 // The external parameter step is passed by the argument 'external_step'
@@ -226,7 +250,27 @@ void Dynamical_Solver::dynamical_step(
 			timers.add_and_start("run.step.computeSearchDirection(betaPredictor)"));
 	beta  = predictor_centering_parameter_V2(dynamical_parameters.solver_parameters, is_primal_and_dual_feasible);
 
-	if (mu_direction_mode == 1)beta = 1;
+	//std::cout << "rank=" << El::mpi::Rank() << " pid=" << getpid() << " check R_error=" << R_error << "\n" << std::flush;
+
+	if (dynamical_parameters.updateSDP_dualityGapThreshold <= 0 && 
+		dynamical_parameters.centeringRThreshold>0 && R_error > dynamical_parameters.centeringRThreshold)
+	{
+		if (El::mpi::Rank() == 0)std::cout << "run centering steps with beta=1 \n";
+		beta = 1;
+		update_sdp = false;
+	}
+
+	//if (mu_direction_mode == 1)beta = 1;
+	//if (mu_direction_mode == 2)beta = 2;
+
+	//std::cout << "status : intext_mode=" << intext_mode << " beta=" << beta << " update_sdp=" << update_sdp <<  " \n";
+
+	if (intext_mode == 1)
+	{
+		beta = 2;
+		intext_mode = 0;
+	}
+
 	// Internal_step: compute dx and dy for the central sdp as in compute_search_direction()      
 	//                - H^-1_xx Del_x L_mu in Eq (12) and Eq(13)
 	//                Notice that the negative sign has been accounted. 
@@ -236,9 +280,26 @@ void Dynamical_Solver::dynamical_step(
 	Block_Vector grad_x(internal_dx), grad_y(internal_dy);
 	Block_Diagonal_Matrix R(X);
 
-	for (int stallrecovery_phase = 1; stallrecovery_phase <= 2; stallrecovery_phase++)
+	//if (El::mpi::Rank() == 0)std::cout << "test 1 \n" << std::flush;
+
+	//std::cout << "rank=" << El::mpi::Rank() << " pid=" << getpid() << " before for, update_sdp=" << update_sdp << "\n" << std::flush;
+
+	int n_external_parameters = dynamical_parameters.n_external_parameters;
+	std::vector<std::pair<Block_Vector, Block_Vector>> H_xp, Delta_xy;
+	El::Matrix<El::BigFloat> eplus(n_external_parameters, 1), eminus(n_external_parameters, 1), esum(n_external_parameters, n_external_parameters);
+
+	if (update_sdp)
+		read_sdp_grid(dynamical_parameters, block_info, sdp, grid, timers,
+			schur_complement_cholesky, schur_off_diagonal, Q, x, y, n_external_parameters,
+			eplus, eminus, esum,
+			H_xp, Delta_xy);
+
+	for (int stallrecovery_phase = 1; stallrecovery_phase <= 20; stallrecovery_phase++)
 	{
-		if (stallrecovery_phase == 1)
+
+		//if (El::mpi::Rank() == 0)std::cout << "test 2 \n" << std::flush;
+
+		if (beta <= 10)
 		{
 			internal_predictor_direction_dxdydXdY(block_info, sdp, *this, schur_complement_cholesky,
 				schur_off_diagonal, X_cholesky, beta,
@@ -254,9 +315,9 @@ void Dynamical_Solver::dynamical_step(
 				mu, primal_residue_p, Q, grad_x, grad_y, internal_dx, internal_dy, R);
 		}
 
+		//if (El::mpi::Rank() == 0)std::cout << "test 3 \n" << std::flush;
+
 		//Delta_xy = - H^-1_xx H_xp as the second term on the LHS of Eq(13)
-		std::vector<std::pair<Block_Vector, Block_Vector>> H_xp, Delta_xy; 
-		int n_external_parameters = dynamical_parameters.n_external_parameters;
 
 		// Eq(13):
 		// (H_pp - H_px H^-1_xx H_xp)      dp     =  - Del_p L   + H_px (H^-1_xx Del_x L)
@@ -270,53 +331,14 @@ void Dynamical_Solver::dynamical_step(
 		//                if criteria base on quantities, such as duality_gap, are met
 		//                which is decided by function "compute_update_sdp()" called by run_dynamical()
 
+		//if (El::mpi::Rank() == 0)std::cout << "test 4 \n" << std::flush;
+
+		//std::cout << "rank=" << El::mpi::Rank() << " pid=" << getpid() << " update_sdp=" << update_sdp << " before if (update_sdp) \n" << std::flush;
+
 		if (update_sdp) 
 		{
 			El::Matrix<El::BigFloat> grad_p(n_external_parameters,1); // Del_p L
 			El::Matrix<El::BigFloat> hess_pp(n_external_parameters, n_external_parameters); //H_pp
-
-			El::Matrix<El::BigFloat> eplus(n_external_parameters,1),eminus(n_external_parameters,1), esum(n_external_parameters, n_external_parameters);
-			El::Zero(eplus);
-			El::Zero(eminus);
-			El::Zero(esum);
-			if(dynamical_parameters.new_sdp_path.extension() == ".nsv")
-			{
-				for(auto &filename : read_file_list(dynamical_parameters.new_sdp_path))
-				{ 
-					//Assume that the filename takes the form "plus_i","minus_i" and "sum_i_j", f
-					//standing for the change in positive e_i, negative e_i and (e_i + e_j) directions respectively 
-					std::string file_name = filename.stem().string();
-					std::vector<std::string> directions;
-					boost::algorithm::split(directions, file_name, boost::is_any_of("_"));
-					SDP new_sdp(filename, block_info, grid), d_sdp(new_sdp);
-					Axpy(El::BigFloat(-1), sdp, d_sdp);
-					Approx_Objective approx_obj(block_info, sdp, d_sdp, x, y,
-							schur_complement_cholesky,
-							schur_off_diagonal, Q);
-					if (directions[0] == "plus")
-					{
-						mixed_hess(block_info, d_sdp, x, y, schur_complement_cholesky, schur_off_diagonal, Q, dynamical_parameters.alpha, H_xp, Delta_xy);
-						eplus(std::stoi(directions[1])) = approx_obj.d_objective ;//+ approx_obj.dd_objective; 
-						//compute_delta_lag(d_sdp, *this);
-					}
-					else if (directions[0] == "minus")
-					{
-						eminus(std::stoi(directions[1])) = approx_obj.d_objective ;//+ approx_obj.dd_objective; 
-						//compute_delta_lag(d_sdp,*this); 
-					}
-					else if (directions[0] == "sum")
-					{
-						El::BigFloat tempt = approx_obj.d_objective ;//+ approx_obj.dd_objective;
-						esum(std::stoi(directions[1]),std::stoi(directions[2])) = tempt; 
-						esum(std::stoi(directions[2]),std::stoi(directions[1])) = tempt;
-						//compute_delta_lag(d_sdp,*this); 
-					}
-				}
-			}
-			else 
-			{
-				throw std::invalid_argument( "A list of perturbed sdp files are required" );
-			}
 
 			if (dynamical_parameters.use_exact_hessian)
 			{
@@ -478,45 +500,6 @@ void Dynamical_Solver::dynamical_step(
 				//if (find_zeros && update_sdp)
 				if (update_sdp)
 				{
-					/*
-					{
-						El::BigFloat a, b, c;
-						El::Matrix<El::BigFloat> H_pp_d_min_p;
-						El::Gemv(El::NORMAL, El::BigFloat(1), hess_pp, d_min_p, H_pp_d_min_p);
-						c = El::Dot(d_min_p, grad_mixed) + (dot(grad_x, internal_dx) + dot(grad_y, internal_dy) + lag) + El::Dot(d_min_p, H_pp_d_min_p) / 2;
-						El::Matrix<El::BigFloat> Hpp_minus_Hmixed_inv_vp = search_direction;
-						El::LinearSolve(Hpp_minus_Hmixed, Hpp_minus_Hmixed_inv_vp);
-						El::Matrix<El::BigFloat> Hpp_Hpp_minus_Hmixed_inv_vp;
-						El::Gemv(El::NORMAL, El::BigFloat(1), hess_pp, Hpp_minus_Hmixed_inv_vp, Hpp_Hpp_minus_Hmixed_inv_vp);
-						a = El::Dot(Hpp_minus_Hmixed_inv_vp, Hpp_Hpp_minus_Hmixed_inv_vp) / 2;
-						b = -El::Dot(d_min_p, search_direction) + El::Dot(d_min_p, Hpp_Hpp_minus_Hmixed_inv_vp);
-						El::BigFloat b2_minus_4ac = b * b - 4 * a*c;
-						El::BigFloat sq = 0;
-						if (b2_minus_4ac > 0)sq = El::Sqrt(b2_minus_4ac);
-						El::BigFloat lambda_plus = (-b + sq) / (2 * a);
-						El::BigFloat lambda_minus = (-b - sq) / (2 * a);
-						//std::cout << "a=" << a << " b=" << b << " c=" << c << " b^2-4ac=" << b2_minus_4ac << "\n" << std::flush;
-						//std::cout << "lambda_plus=" << lambda_plus << " lambda_minus=" << lambda_minus << "\n" << std::flush;
-						El::Matrix<El::BigFloat> external_step_plus = Hpp_minus_Hmixed_inv_vp;
-						external_step_plus *= lambda_plus;
-						external_step_plus += d_min_p;
-						if (El::mpi::Rank() == 0)std::cout << "external_step_plus=";
-						for (int i = 0; i < external_step_plus.Height(); i++) if (El::mpi::Rank() == 0)std::cout << external_step_plus(i, 0) << " ";
-						if (El::mpi::Rank() == 0)std::cout << "\n" << std::flush;
-						El::Matrix<El::BigFloat> external_step_minus = Hpp_minus_Hmixed_inv_vp;
-						external_step_minus *= lambda_minus;
-						external_step_minus += d_min_p;
-						if (El::mpi::Rank() == 0)std::cout << "external_step_minus=";
-						for (int i = 0; i < external_step_minus.Height(); i++) if (El::mpi::Rank() == 0)std::cout << external_step_minus(i, 0) << " ";
-						if (El::mpi::Rank() == 0)std::cout << "\n" << std::flush;
-						// in this convention, I believe I should use lambda_plus
-						external_step = external_step_plus;
-						//std::cout << "external_step="; for (int i = 0; i < external_step.Height(); i++) std::cout << external_step(i, 0) << " ";
-						//std::cout << "\n" << std::flush;
-						external_step_size = El::Nrm2(external_step);
-					}
-					*/
-
 					{
 						El::Matrix<El::BigFloat> invH_e = search_direction;
 						El::LinearSolve(Hpp_minus_Hmixed, invH_e);
@@ -556,9 +539,9 @@ void Dynamical_Solver::dynamical_step(
 
 			}
 
-			if (stallrecovery_phase == 2 && dynamical_parameters.updateSDP_dualityGapThreshold <= 0)
+			if (beta > 10 && dynamical_parameters.updateSDP_dualityGapThreshold <= 0)
 			{
-				if (El::mpi::Rank() == 0)std::cout << "stallrecover_phase=2 && (no dualityGapThreshold) : update_sdp=false \n";
+				if (El::mpi::Rank() == 0)std::cout << "beta>10 && (no dualityGapThreshold) : update_sdp=false \n";
 				update_sdp = false;
 			}
 
@@ -572,54 +555,18 @@ void Dynamical_Solver::dynamical_step(
 				update_sdp = false;
 			}
 		}
-                dx = internal_dx;
-                dy = internal_dy;
-		// Update dx and dy if the external parameter step is small enough 
-		// RHS of Eq(12)
-		//    - H^-1_xx Del_x L_mu - H^-1_xx H_xp dp 
-		// =  internal_dx, internal_dy + Delta_xy . external_step
-		if (update_sdp) 
-		{
-			for (int i=0; i<n_external_parameters; i++)
-			{
-				for(size_t block = 0; block < x.blocks.size(); ++block)
-				{ 
-					if (dynamical_parameters.find_boundary) 
-					{ dx.blocks[block] *= (1.0 + delta_lambda/lag_multiplier_lambda);} 
-					El::Axpy(external_step(i), Delta_xy.at(i).first.blocks[block], dx.blocks[block]);
-				}
-				for(size_t block = 0; block < dy.blocks.size(); ++block)
-				{
-					if (dynamical_parameters.find_boundary) 
-					{ dy.blocks[block] *= (1.0 + delta_lambda/lag_multiplier_lambda);}
-					El::Axpy(external_step(i), Delta_xy.at(i).second.blocks[block], dy.blocks[block]);
-				}
-			}
 
-			if (dynamical_parameters.find_boundary)
-			{ primal_residues *= (1.0 + delta_lambda/lag_multiplier_lambda);
-				R *= (1.0 + delta_lambda/lag_multiplier_lambda);
-			}
-		}           
-		//Block_Diagonal_Matrix dX(X), dY(Y);
-		// dX = PrimalResidues + \sum_p A_p dx[p]
-		constraint_matrix_weighted_sum(block_info, sdp, dx, dX);
-		dX += primal_residues;
+		//std::cout << "rank=" << El::mpi::Rank() << " pid=" << getpid() << " after if (update_sdp) \n" << std::flush;
 
-		// dY = Symmetrize(X^{-1} (R - dX Y))
-		multiply(dX, Y, dY);
-		dY -= R;
-		cholesky_solve(X_cholesky, dY);
-		dY.symmetrize();
-		dY *= El::BigFloat(-1);
+		//if (El::mpi::Rank() == 0)std::cout << "test 5 \n" << std::flush;
 
-		// Compute step-lengths that preserve positive definiteness of X, Y
-		primal_step_length
-			= step_length(X_cholesky, dX, dynamical_parameters.solver_parameters.step_length_reduction,
-					"run.step.stepLength(XCholesky)", timers);
-		dual_step_length
-			= step_length(Y_cholesky, dY, dynamical_parameters.solver_parameters.step_length_reduction,
-					"run.step.stepLength(YCholesky)", timers);
+		update_dXdY(update_sdp,
+			dynamical_parameters, block_info, sdp, grid, X_cholesky, Y_cholesky, timers,
+			internal_dx, internal_dy, dx, dy, dX, dY, R,
+			delta_lambda, external_step, Delta_xy, primal_step_length, dual_step_length);
+			
+
+		//if (El::mpi::Rank() == 0)std::cout << "test 6 \n" << std::flush;
 
 		if(is_primal_and_dual_feasible)
 		{
@@ -627,20 +574,55 @@ void Dynamical_Solver::dynamical_step(
 			dual_step_length = primal_step_length;
 		}
 
-		if (El::Max(primal_step_length, dual_step_length) > 0.002 || El::Nrm2(external_step)*dual_step_length > 100)
-		{
-			if (El::mpi::Rank() == 0)std::cout << " ext_step_size*dual_step_len=" << El::Nrm2(external_step)*dual_step_length
-				<< "\n" << std::flush;
-			break;
-		}
+		El::BigFloat cutoff1 = El::BigFloat(1e-10);
+
+		if (El::mpi::Rank() == 0)std::cout << "actual beta : " << beta << "\n" << std::flush;
+
+		if (El::mpi::Rank() == 0 && update_sdp == true)
+			std::cout << "P/D-step-len-ext = " << primal_step_length << " , " << dual_step_length << "\n" << std::flush;
 
 		if (dynamical_parameters.total_iterations == 0) break;
 
-		if (El::mpi::Rank() == 0)std::cout << "max_step.beta=" << El::Max(primal_step_length, dual_step_length)*beta
-			<< " max_step=" << El::Max(primal_step_length, dual_step_length)
-			<< ". reset beta to 1e50. "
-			<< "\n" << std::flush;
-		beta = El::BigFloat(1e50);
+		if (El::Max(primal_step_length, dual_step_length) > 0.1) break;
+
+		if (El::Max(primal_step_length, dual_step_length) > cutoff1 && beta < 1)
+		{
+			beta = beta + El::BigFloat(0.1);
+			if (beta > 1)beta = 1;
+		}
+		// even if beta=1, P/D-step-len-ext still < 0.1 : we re-run internal step with beta=2
+		else if (El::Max(primal_step_length, dual_step_length) > cutoff1 && beta == El::BigFloat(1))
+		{
+			beta = 2;
+			update_sdp = false;
+		}
+		// no matter it's in external mode or internal mode, if P/D-step-len is small and beta>1,
+		// we accept the internal step and set beta=2 for next step
+		else if (El::Max(primal_step_length, dual_step_length) > cutoff1 && beta > El::BigFloat(1))
+		{
+			intext_mode = 1;
+			update_sdp = false;
+
+			update_dXdY(update_sdp,
+				dynamical_parameters, block_info, sdp, grid, X_cholesky, Y_cholesky, timers,
+				internal_dx, internal_dy, dx, dy, dX, dY, R,
+				delta_lambda, external_step, Delta_xy, primal_step_length, dual_step_length);
+
+			break;
+		}
+
+		if (beta >= El::BigFloat(1e50))break;
+		//if (beta >= El::BigFloat(1))break;
+  
+		if(El::Max(primal_step_length, dual_step_length) <= cutoff1)
+		{
+			if (El::mpi::Rank() == 0)std::cout << "max_step.beta=" << El::Max(primal_step_length, dual_step_length)*beta
+				<< " max_step=" << El::Max(primal_step_length, dual_step_length)
+				<< ". reset beta to 1e50. "
+				<< "\n" << std::flush;
+			beta = El::BigFloat(1e50);
+		}
+
 	}
 	external_step *= dual_step_length; 
 	external_step_size = El::Nrm2(external_step);
@@ -712,12 +694,15 @@ void Dynamical_Solver::dynamical_step(
 	delta_lambda *= dual_step_length;
 	lag_multiplier_lambda += delta_lambda;
 
+	/*
 	//if (El::Max(primal_step_length, dual_step_length) > 0 && El::Max(primal_step_length, dual_step_length)<0.1)
 	//	  mu_direction_mode = 2;
 	if (El::Max(primal_step_length, dual_step_length) > 0 && El::Max(primal_step_length, dual_step_length)<0.1) 
 		mu_direction_mode = 1;
 	else
 		mu_direction_mode = 0;
+		*/
+	//mu_direction_mode = 0;
 
 
 	step_timer.stop();

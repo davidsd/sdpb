@@ -13,3 +13,16 @@ void print_header_dynamical(const Verbosity &verbosity)
                    "-----------------------------------------------------------------------------\n";
     }
 }
+
+void print_header_dynamical_new(const Verbosity &verbosity)
+{
+	if (verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
+	{
+		std::cout << "\n"
+			<< "          time    mu     P-obj       D-obj      gap     "
+			"    P-err       p-err        D-err        R-err      P-step   D-step   beta   ext-step-size\n"
+			<< "--------------------------------------------------------"
+			"----------------------------------------------------------------------------------\n";
+	}
+}
+

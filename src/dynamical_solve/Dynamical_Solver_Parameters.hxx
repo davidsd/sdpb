@@ -41,6 +41,8 @@ struct Dynamical_Solver_Parameters
   El::BigFloat lag_multiplier_lambda;
   int mu_last_direction;
 
+  bool printMore;
+  El::BigFloat centeringRThreshold;
 
   Dynamical_Solver_Parameters() = default;
   boost::program_options::options_description options();
