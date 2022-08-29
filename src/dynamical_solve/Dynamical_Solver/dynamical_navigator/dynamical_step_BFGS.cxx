@@ -296,6 +296,7 @@ void Dynamical_Solver::dynamical_step(
 
 	for (int stallrecovery_phase = 1; stallrecovery_phase <= 20; stallrecovery_phase++)
 	{
+
 		//if (El::mpi::Rank() == 0)std::cout << "test 2 \n" << std::flush;
 
 		if (beta <= 10)
@@ -500,47 +501,31 @@ void Dynamical_Solver::dynamical_step(
 				if (update_sdp)
 				{
 					{
-						El::BigFloat a, b, c;
+						El::Matrix<El::BigFloat> invH_e = search_direction;
+						El::LinearSolve(Hpp_minus_Hmixed, invH_e);
+						El::BigFloat e_invH_e = El::Dot(invH_e, search_direction);
 
-						El::Matrix<El::BigFloat> H_pp_d_min_p;
-						El::Gemv(El::NORMAL, El::BigFloat(1), hess_pp, d_min_p, H_pp_d_min_p);
-						c = El::Dot(d_min_p, grad_mixed) + (dot(grad_x, internal_dx) + dot(grad_y, internal_dy) + lag) + El::Dot(d_min_p, H_pp_d_min_p) / 2;
+						El::Matrix<El::BigFloat> invH_g = grad_corrected;
+						El::LinearSolve(Hpp_minus_Hmixed, invH_g);
+						El::BigFloat g_invH_g = El::Dot(invH_g, grad_corrected);
 
-						El::Matrix<El::BigFloat> Hpp_minus_Hmixed_inv_vp = search_direction;
-						El::LinearSolve(Hpp_minus_Hmixed, Hpp_minus_Hmixed_inv_vp);
+						El::BigFloat lambda = (g_invH_g - 2 * lag) / (e_invH_e);
+						if (lambda < 0)lambda = 0;
+						else lambda = El::Sqrt(lambda);
 
-						El::Matrix<El::BigFloat> Hpp_Hpp_minus_Hmixed_inv_vp;
-						El::Gemv(El::NORMAL, El::BigFloat(1), hess_pp, Hpp_minus_Hmixed_inv_vp, Hpp_Hpp_minus_Hmixed_inv_vp);
-
-						a = El::Dot(Hpp_minus_Hmixed_inv_vp, Hpp_Hpp_minus_Hmixed_inv_vp) / 2;
-
-						b = -El::Dot(d_min_p, search_direction) + El::Dot(d_min_p, Hpp_Hpp_minus_Hmixed_inv_vp);
-
-						El::BigFloat b2_minus_4ac = b * b - 4 * a*c;
-						El::BigFloat sq = 0;
-						if (b2_minus_4ac > 0)sq = El::Sqrt(b2_minus_4ac);
-						El::BigFloat lambda_plus = (-b + sq) / (2 * a);
-						El::BigFloat lambda_minus = (-b - sq) / (2 * a);
-
-						//std::cout << "a=" << a << " b=" << b << " c=" << c << " b^2-4ac=" << b2_minus_4ac << "\n" << std::flush;
-
-<<<<<<< HEAD
-						//std::cout << "lambda_plus=" << lambda_plus << " lambda_minus=" << lambda_minus << "\n" << std::flush;
-
-						El::Matrix<El::BigFloat> external_step_plus = Hpp_minus_Hmixed_inv_vp;
-						external_step_plus *= lambda_plus;
+						El::Matrix<El::BigFloat> external_step_plus = invH_e;
+						external_step_plus *= lambda;
 						external_step_plus += d_min_p;
-						std::cout << "external_step_plus="; for (int i = 0; i < external_step_plus.Height(); i++) std::cout << external_step_plus(i, 0) << " ";
-						std::cout << "\n" << std::flush;
 
-						El::Matrix<El::BigFloat> external_step_minus = Hpp_minus_Hmixed_inv_vp;
-						external_step_minus *= lambda_minus;
+						El::Matrix<El::BigFloat> external_step_minus = invH_e;
+						external_step_minus *= -lambda;
 						external_step_minus += d_min_p;
-						std::cout << "external_step_minus="; for (int i = 0; i < external_step_minus.Height(); i++) std::cout << external_step_minus(i, 0) << " ";
-						std::cout << "\n" << std::flush;
+
 						if (El::mpi::Rank() == 0)std::cout << "new external_step_plus=";
 						for (int i = 0; i < external_step_plus.Height(); i++) if (El::mpi::Rank() == 0)std::cout << external_step_plus(i, 0) << " ";
 						if (El::mpi::Rank() == 0)std::cout << "\n" << std::flush;
+						//std::cout << "new external_step_minus="; for (int i = 0; i < external_step_minus.Height(); i++) std::cout << external_step_minus(i, 0) << " ";
+						//std::cout << "\n" << std::flush;
 
 						// in this convention, I believe I should use lambda_plus
 						external_step = external_step_plus;
@@ -721,4 +706,4 @@ void Dynamical_Solver::dynamical_step(
 
 
 	step_timer.stop();
-} 
+}  
