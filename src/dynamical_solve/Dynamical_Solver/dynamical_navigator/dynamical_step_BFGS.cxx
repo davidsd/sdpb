@@ -262,10 +262,13 @@ void Dynamical_Solver::dynamical_step(
 
 	//if (mu_direction_mode == 1)beta = 1;
 	//if (mu_direction_mode == 2)beta = 2;
+
+	//std::cout << "status : intext_mode=" << intext_mode << " beta=" << beta << " update_sdp=" << update_sdp <<  " \n";
+
 	if (intext_mode == 1)
 	{
 		beta = 2;
-		intext_mode == 0;
+		intext_mode = 0;
 	}
 
 	// Internal_step: compute dx and dy for the central sdp as in compute_search_direction()      
