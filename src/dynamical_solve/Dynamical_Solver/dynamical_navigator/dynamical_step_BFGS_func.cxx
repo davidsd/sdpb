@@ -125,7 +125,9 @@ void Dynamical_Solver::update_dXdY(bool external_step_Q,
 	El::BigFloat &delta_lambda,
 	El::Matrix<El::BigFloat> & external_step,
 	std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy,
-	El::BigFloat &primal_step_length, El::BigFloat &dual_step_length)
+	El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
+	El::BigFloat &step_length_reduction
+	)
 {
 	dx = internal_dx;
 	dy = internal_dy;
@@ -177,13 +179,13 @@ void Dynamical_Solver::update_dXdY(bool external_step_Q,
 
 	// Compute step-lengths that preserve positive definiteness of X, Y
 	primal_step_length
-		= step_length(X_cholesky, dX, dynamical_parameters.solver_parameters.step_length_reduction,
+		= step_length(X_cholesky, dX, step_length_reduction,
 			"run.step.stepLength(XCholesky)", timers);
 
 	//std::cout << "rank=" << El::mpi::Rank() << " after primal_step_length \n" << std::flush;
 
 	dual_step_length
-		= step_length(Y_cholesky, dY, dynamical_parameters.solver_parameters.step_length_reduction,
+		= step_length(Y_cholesky, dY, step_length_reduction,
 			"run.step.stepLength(YCholesky)", timers);
 }
 
@@ -203,11 +205,15 @@ void read_sdp_grid(
 	Block_Vector & x,
 	Block_Vector & y,
 
+	const Block_Diagonal_Matrix &X_cholesky,
+
 	int n_external_parameters,
 
 	El::Matrix<El::BigFloat> & eplus,
 	El::Matrix<El::BigFloat> & eminus,
 	El::Matrix<El::BigFloat> & esum,
+
+	El::Matrix<El::BigFloat> & Lpu,
 
 	std::vector<std::pair<Block_Vector, Block_Vector>> & H_xp,
 	std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy)
@@ -229,7 +235,7 @@ void read_sdp_grid(
 
 			//std::cout << "rank=" << El::mpi::Rank() << " pid=" << getpid() << " before approx_obj \n" << std::flush;
 
-			Approx_Objective approx_obj(block_info, sdp, d_sdp, x, y,
+			Approx_Objective approx_obj(block_info, sdp, d_sdp, x, y, X_cholesky,
 				schur_complement_cholesky,
 				schur_off_diagonal, Q);
 
@@ -240,6 +246,8 @@ void read_sdp_grid(
 				mixed_hess(block_info, d_sdp, x, y, schur_complement_cholesky, schur_off_diagonal, Q, dynamical_parameters.alpha, H_xp, Delta_xy);
 				eplus(std::stoi(directions[1])) = approx_obj.d_objective;//+ approx_obj.dd_objective; 
 																		 //compute_delta_lag(d_sdp, *this);
+
+				Lpu(std::stoi(directions[1])) = approx_obj.Lag_pu / dynamical_parameters.alpha;
 			}
 			else if (directions[0] == "minus")
 			{
@@ -260,5 +268,93 @@ void read_sdp_grid(
 		throw std::invalid_argument("A list of perturbed sdp files are required");
 	}
 	return;
+}
+
+void print_matrix(const El::Matrix<El::BigFloat> & matrix);
+void print_vector(const El::Matrix<El::BigFloat> & vec);
+
+void compute_ellipse_boundary(const El::Matrix<El::BigFloat> &H, 
+	const El::Matrix<El::BigFloat> &g, 
+	El::BigFloat &f0,
+	const El::Matrix<El::BigFloat> &search_direction,
+	El::Matrix<El::BigFloat> & result_plus,
+	El::Matrix<El::BigFloat> & result_minus,
+	El::BigFloat & lambda)
+{
+	El::Matrix<El::BigFloat> invH_e = search_direction;
+	El::LinearSolve(H, invH_e);
+	El::BigFloat e_invH_e = El::Dot(invH_e, search_direction);
+
+	El::Matrix<El::BigFloat> invH_g = g;
+	El::LinearSolve(H, invH_g);
+	El::BigFloat g_invH_g = El::Dot(invH_g, g);
+
+	lambda = (g_invH_g - 2 * f0) / (e_invH_e);
+	El::BigFloat lambda_sqrt;
+	if (lambda < 0)
+		lambda_sqrt = 0;
+	else lambda_sqrt = El::Sqrt(lambda);
+
+	result_plus = invH_e;
+	result_plus *= lambda_sqrt;
+	result_plus -= invH_g;
+
+	result_minus = invH_e;
+	result_minus *= -lambda_sqrt;
+	result_minus -= invH_g;
+
+
+	if (El::mpi::Rank() == 0) std::cout << std::setprecision(3);
+
+	return;
+}
+
+bool positivitize_matrix(El::Matrix<El::BigFloat> & matrix)
+{
+	int dim = matrix.Width();
+	bool flippedQ = false;
+
+	//Flip the sign of Hessian if determinant is negative 
+	typedef El::Base<El::BigFloat> Real;
+	El::Matrix<Real> w(dim, 1);
+	El::Zero(w);
+	El::Matrix<El::BigFloat> Q(matrix);
+	El::Matrix<El::BigFloat> tempt(matrix);
+	El::Matrix<El::BigFloat> diag(matrix);
+	El::Zero(diag);
+	El::HermitianEig(El::LOWER, matrix, w, Q);//,ctrl);
+	for (int i = 0; i < dim; i++) {
+		if (w(i) < 0) flippedQ = true;
+		diag(i, i) = El::Abs(w(i));
+	}
+	El::Gemm(El::NORMAL, El::TRANSPOSE, El::BigFloat(1), diag, Q, tempt);
+	El::Gemm(El::NORMAL, El::NORMAL, El::BigFloat(1), Q, tempt, matrix);
+
+	return flippedQ;
+}
+
+
+void BFGS_update_hessian(const int n_parameters,
+	const El::Matrix<El::BigFloat> &grad_p_diff,
+	const El::Matrix<El::BigFloat> &last_it_step,
+	El::Matrix<El::BigFloat> &hess_bfgs
+);
+
+bool BFGS_update_hessian(const int n_parameters,
+	const El::Matrix<El::BigFloat> &grad_p_diff,
+	const El::Matrix<El::BigFloat> &last_it_step,
+	El::Matrix<El::BigFloat> &hess_bfgs,
+	bool update_only_when_positive)
+{
+	El::Matrix<El::BigFloat> hess_bfgs_save(hess_bfgs);
+
+	BFGS_update_hessian(n_parameters, grad_p_diff, last_it_step, hess_bfgs);
+
+	bool flippedQ = positivitize_matrix(hess_bfgs);
+
+	if (update_only_when_positive && flippedQ)
+		hess_bfgs = hess_bfgs_save;
+
+	return flippedQ;
 }
 
