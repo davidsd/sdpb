@@ -42,6 +42,7 @@ struct Dynamical_Solver_Parameters
   int mu_last_direction;
 
   bool printMore;
+  bool use_Hmixed_for_BFGS;
   El::BigFloat centeringRThreshold;
 
   Dynamical_Solver_Parameters() = default;

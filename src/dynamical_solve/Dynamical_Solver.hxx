@@ -54,6 +54,7 @@ public:
   El::Matrix<El::BigFloat> grad_BFGS, hess_BFGS;
   El::Matrix<El::BigFloat> hess_Exact;
 
+  bool hess_BFGS_updateQ;
   int mu_direction_mode;
   int intext_mode;
   // Discrepancy in the primal equality constraints, a

@@ -340,7 +340,67 @@ void BFGS_update_hessian(const int n_parameters,
 	El::Matrix<El::BigFloat> &hess_bfgs
 );
 
-bool BFGS_update_hessian(const int n_parameters,
+
+El::BigFloat LA_vector_matrix_vector(const El::Matrix<El::BigFloat> &vec1,
+	const El::Matrix<El::BigFloat> &mat,
+	const El::Matrix<El::BigFloat> &vec2
+	)
+{
+	El::Matrix<El::BigFloat> mat_vec2(vec2);
+	El::Gemv(El::NORMAL, El::BigFloat(1), mat, vec2, El::BigFloat(0), mat_vec2);
+	return El::Dot(vec1, mat_vec2);
+}
+
+void LA_matrix_vector(const El::Matrix<El::BigFloat> &mat,
+	const El::Matrix<El::BigFloat> &vec,
+	El::Matrix<El::BigFloat> &result)
+{
+	result = vec;
+	El::Gemv(El::NORMAL, El::BigFloat(1), mat, vec, El::BigFloat(0), result);
+}
+
+void LA_x1_vec1_plus_x2_vec2(const El::BigFloat & x1, const El::Matrix<El::BigFloat> &vec1,
+	const El::BigFloat & x2, const El::Matrix<El::BigFloat> &vec2,
+	El::Matrix<El::BigFloat> &result)
+{
+	El::Matrix<El::BigFloat> x2_vec2 = vec2;
+	x2_vec2 *= x2;
+
+	result = vec1;
+	result *= x1;
+	result += x2_vec2;
+}
+
+// return whether the update is exact
+bool BFGS_partial_update_hessian(const El::BigFloat & reduction_factor,
+	const El::Matrix<El::BigFloat> &y,
+	const El::Matrix<El::BigFloat> &s,
+	El::Matrix<El::BigFloat> &B)
+{
+	El::BigFloat sy = El::Dot(s, y);
+
+	if (sy >= 0)
+	{
+		BFGS_update_hessian(B.Width(), y, s, B);
+		return true;
+	}
+
+	El::BigFloat b=LA_vector_matrix_vector(s,B,s);
+
+	El::Matrix<El::BigFloat> y2;
+	LA_matrix_vector(B,s,y2);
+
+	El::BigFloat y2_coeff = reduction_factor - sy / b;
+
+	El::Matrix<El::BigFloat> y_shifted;
+	LA_x1_vec1_plus_x2_vec2(El::BigFloat(1),y, y2_coeff,y2, y_shifted);
+
+	BFGS_update_hessian(B.Width(), y_shifted, s, B);
+	return false;
+}
+
+
+bool BFGS_update_hessian(
 	const El::Matrix<El::BigFloat> &grad_p_diff,
 	const El::Matrix<El::BigFloat> &last_it_step,
 	El::Matrix<El::BigFloat> &hess_bfgs,
@@ -348,7 +408,7 @@ bool BFGS_update_hessian(const int n_parameters,
 {
 	El::Matrix<El::BigFloat> hess_bfgs_save(hess_bfgs);
 
-	BFGS_update_hessian(n_parameters, grad_p_diff, last_it_step, hess_bfgs);
+	BFGS_update_hessian(hess_bfgs.Width(), grad_p_diff, last_it_step, hess_bfgs);
 
 	bool flippedQ = positivitize_matrix(hess_bfgs);
 
@@ -358,3 +418,76 @@ bool BFGS_update_hessian(const int n_parameters,
 	return flippedQ;
 }
 
+
+void external_grad_hessian(const El::Matrix<El::BigFloat> &ePlus,
+	const El::Matrix<El::BigFloat> &eMinus,
+	const El::Matrix<El::BigFloat> &eSum,
+	const El::BigFloat &alpha,
+	El::Matrix<El::BigFloat> &grad,
+	El::Matrix<El::BigFloat> &hess);
+
+
+void external_grad(const El::Matrix<El::BigFloat> &ePlus,
+	const El::Matrix<El::BigFloat> &eMinus,
+	const El::BigFloat &alpha,
+	El::Matrix<El::BigFloat> &grad)
+{
+	grad = ePlus;
+	grad *= El::BigFloat(1) / alpha;
+}
+
+
+void compute_grad_p_grad_mixed_Hpp_Hmixed(const Dynamical_Solver_Parameters &dynamical_parameters,
+	const El::Matrix<El::BigFloat> & eplus, const El::Matrix<El::BigFloat> & eminus, const El::Matrix<El::BigFloat> & esum,
+	const std::vector<std::pair<Block_Vector, Block_Vector>> & H_xp, const std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy,
+	const Block_Vector & internal_dx, const Block_Vector & internal_dy,
+	El::Matrix<El::BigFloat> & grad_p, El::Matrix<El::BigFloat> & grad_mixed,
+	El::Matrix<El::BigFloat> & hess_pp, El::Matrix<El::BigFloat> & hess_mixed)
+{
+	int dim_ext_p = dynamical_parameters.n_external_parameters;
+
+	if (dynamical_parameters.use_exact_hessian)
+	{
+		external_grad_hessian(eplus, eminus, esum, dynamical_parameters.alpha, grad_p, hess_pp);
+	}
+	else
+	{
+		//std::cout << "compute grad: " << '\n' << std::flush;
+		external_grad(eplus, eminus, dynamical_parameters.alpha, grad_p);
+	}
+
+	for (int i = 0; i < dim_ext_p; i++)
+	{
+		for (int j = 0; j < dim_ext_p; j++)
+		{
+			// The minus sign compensate the minus sign when calculating Delta_xy in Eq(15)
+			hess_mixed(i, j) = -(dot(H_xp.at(i).first, Delta_xy.at(j).first) + dot(H_xp.at(i).second, Delta_xy.at(j).second));
+		}
+	}
+
+	for (int i = 0; i < dim_ext_p; i++)
+	{
+		// The minus sign compensates the minus sign when calculating the internal step 
+		grad_mixed(i) = (dot(H_xp.at(i).first, internal_dx) + dot(H_xp.at(i).second, internal_dy));
+	}
+}
+
+void read_prev_grad_step_hess(const Dynamical_Solver_Parameters &dynamical_parameters,
+	El::Matrix<El::BigFloat> & prev_grad, El::Matrix<El::BigFloat> & prev_step, El::Matrix<El::BigFloat> & prev_BFGS)
+{
+	int dim_ext_p = dynamical_parameters.n_external_parameters;
+
+	for (int i = 0; i < dim_ext_p; i++)
+	{
+		prev_grad(i, 0) = dynamical_parameters.prev_grad[i];
+		prev_step(i, 0) = dynamical_parameters.prev_step[i];
+	}
+
+	for (int i = 0; i < dim_ext_p; i++)
+	{
+		for (int j = 0; j < dim_ext_p; j++)
+		{
+			prev_BFGS(i, j) = dynamical_parameters.hess_BFGS[i * dim_ext_p + j];
+		}
+	}
+}

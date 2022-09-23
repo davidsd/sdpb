@@ -159,22 +159,6 @@ void print_vector(const El::Matrix<El::BigFloat> & vec)
 }
 
 
-
-void external_grad(const El::Matrix<El::BigFloat> &ePlus,
-	const El::Matrix<El::BigFloat> &eMinus,
-	const El::BigFloat &alpha,
-	El::Matrix<El::BigFloat> &grad)
-{
-	/*
-	grad = ePlus;
-	grad -= eMinus;
-	grad *= El::BigFloat(1) / (El::BigFloat(2)*alpha);
-	*/
-
-	grad = ePlus;
-	grad *= El::BigFloat(1) / alpha;
-}
-
 bool positivitize_matrix(El::Matrix<El::BigFloat> & matrix);
 
 void BFGS_update_hessian(const int n_parameters,
@@ -220,12 +204,27 @@ void compute_ellipse_boundary(const El::Matrix<El::BigFloat> &H,
 	El::BigFloat & lambda);
 
 
-bool BFGS_update_hessian(const int n_parameters,
+bool BFGS_update_hessian(
 	const El::Matrix<El::BigFloat> &grad_p_diff,
 	const El::Matrix<El::BigFloat> &last_it_step,
 	El::Matrix<El::BigFloat> &hess_bfgs,
 	bool update_only_when_positive);
 
+bool BFGS_partial_update_hessian(const El::BigFloat & reduction_factor,
+	const El::Matrix<El::BigFloat> &y,
+	const El::Matrix<El::BigFloat> &s,
+	El::Matrix<El::BigFloat> &B);
+
+
+void read_prev_grad_step_hess(const Dynamical_Solver_Parameters &dynamical_parameters,
+	El::Matrix<El::BigFloat> & prev_grad, El::Matrix<El::BigFloat> & prev_step, El::Matrix<El::BigFloat> & prev_BFGS);
+
+void compute_grad_p_grad_mixed_Hpp_Hmixed(const Dynamical_Solver_Parameters &dynamical_parameters,
+	const El::Matrix<El::BigFloat> & eplus, const El::Matrix<El::BigFloat> & eminus, const El::Matrix<El::BigFloat> & esum,
+	const std::vector<std::pair<Block_Vector, Block_Vector>> & H_xp, const std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy,
+	const Block_Vector & internal_dx, const Block_Vector & internal_dy,
+	El::Matrix<El::BigFloat> & grad_p, El::Matrix<El::BigFloat> & grad_mixed,
+	El::Matrix<El::BigFloat> & hess_pp, El::Matrix<El::BigFloat> & hess_mixed);
 
 // A subroutine called by run_dynamical
 // The external parameter step is passed by the argument 'external_step'
@@ -236,6 +235,8 @@ bool BFGS_update_hessian(const int n_parameters,
 
 El::Matrix<El::BigFloat> external_step_save;
 bool external_step_specified_Q = false;
+
+El::Matrix<El::BigFloat> hess_BFGS_lowest_mu;
 
 bool lowest_mu_Q = true;  // true : the solver hasn't been lifted along the local central path
 
@@ -300,12 +301,14 @@ double beta_scan_start = -1;
 
 bool use_gradp_for_BFGS_update = true;
 
+double rescale_initial_hess = 1;
 
+double BFGS_partial_update_reduction = -1; // if positive, hessian will be updated always positive based on the partial update logic.
 
 El::BigFloat predictor_centering_parameter_V3(const Solver_Parameters &parameters,
 	const El::BigFloat & mu, const El::BigFloat & mu_near_optimal_threshold)
 {
-	return mu<mu_near_optimal_threshold ? parameters.feasible_centering_parameter
+	return mu < mu_near_optimal_threshold ? parameters.feasible_centering_parameter
 		: parameters.infeasible_centering_parameter;
 }
 
@@ -367,7 +370,11 @@ void Dynamical_Solver::dynamical_step(
 		beta = beta_scan_start;
 
 	El::BigFloat step_length_reduction = dynamical_parameters.solver_parameters.step_length_reduction;
-	if (mu*total_psd_rows < dgap_near_optimal_threshold)step_length_reduction = 0.9;
+	if (mu*total_psd_rows < dgap_near_optimal_threshold)
+	{
+		//step_length_reduction = 0.9;
+		beta = 0.1;
+	}
 
 	//std::cout << "rank=" << El::mpi::Rank() << " pid=" << getpid() << " check R_error=" << R_error << "\n" << std::flush;
 
@@ -478,33 +485,12 @@ void Dynamical_Solver::dynamical_step(
 			El::Matrix<El::BigFloat> grad_p(n_external_parameters, 1); // Del_p L
 			El::Matrix<El::BigFloat> hess_pp(n_external_parameters, n_external_parameters); //H_pp
 
-			if (dynamical_parameters.use_exact_hessian)
-			{
-				external_grad_hessian(eplus, eminus, esum, dynamical_parameters.alpha, grad_p, hess_pp);
-			}
-			else
-			{
-				//std::cout << "compute grad: " << '\n' << std::flush;
-				external_grad(eplus, eminus, dynamical_parameters.alpha, grad_p);
-			}
-
 			El::Matrix<El::BigFloat> hess_mixed(n_external_parameters, n_external_parameters); //H_px H^-1_xx H_xp in Eq(13).
 			El::Matrix<El::BigFloat> grad_mixed(n_external_parameters, 1); //H_px (-internal_dx_dy) = H_px (H^-1_xx Del_x L_mu) in Eq (13).  
 
-			for (int i = 0; i < n_external_parameters; i++)
-			{
-				for (int j = 0; j < n_external_parameters; j++)
-				{
-					// The minus sign compensate the minus sign when calculating Delta_xy in Eq(15)
-					hess_mixed(i, j) = -(dot(H_xp.at(i).first, Delta_xy.at(j).first) + dot(H_xp.at(i).second, Delta_xy.at(j).second));
-				}
-			}
-
-			for (int i = 0; i < n_external_parameters; i++)
-			{
-				// The minus sign compensates the minus sign when calculating the internal step 
-				grad_mixed(i) = (dot(H_xp.at(i).first, internal_dx) + dot(H_xp.at(i).second, internal_dy));
-			}
+			compute_grad_p_grad_mixed_Hpp_Hmixed(dynamical_parameters, 
+				eplus, eminus, esum, H_xp, Delta_xy, internal_dx, internal_dy,
+				grad_p, grad_mixed, hess_pp, hess_mixed);
 
 			// Eq(13):
 			// (H_pp - H_px H^-1_xx H_xp)      dp     =  - Del_p L   + H_px (H^-1_xx Del_x L)
@@ -512,21 +498,17 @@ void Dynamical_Solver::dynamical_step(
 			// (hess_pp - hess_mixed)          dp     =  - grad_p    + grad_mixed 
 
 			// H_pp - H_px H^-1_xx H_xp, LHS of Eq(13)
-			El::Matrix<El::BigFloat> Hpp_minus_Hmixed(hess_pp);
 
 			if (dynamical_parameters.use_exact_hessian)
 			{
-				Hpp_minus_Hmixed -= hess_mixed;
-				hess_Exact = Hpp_minus_Hmixed;
+				hess_Exact = hess_pp;
+				hess_Exact -= hess_mixed;
 			}
 
 			// - H_px (H^-1_xx Del_x L_mu) + Del_p L_mu, RHS of Eq(13) 
 
 			El::Matrix<El::BigFloat> grad_corrected = grad_mixed;
 			grad_corrected += grad_p;
-
-			El::Zeros(hess_BFGS, n_external_parameters, n_external_parameters);
-			// hess_BFGS -= hess_mixed;   // SN : what does this do?  SN: actually this is for 1st iteration to use hess_mixed as initial hess
 
 			if (use_Lpu_mu_correction)
 			{
@@ -535,85 +517,96 @@ void Dynamical_Solver::dynamical_step(
 				grad_corrected += grad_p;
 			}
 
-			if(use_gradp_for_BFGS_update)
+			if (use_gradp_for_BFGS_update)
 				grad_BFGS = grad_p;
 			else
 				grad_BFGS = grad_corrected;
 
+
+			El::Matrix<El::BigFloat> prev_grad(n_external_parameters, 1), prev_step(n_external_parameters, 1), prev_BFGS(n_external_parameters, n_external_parameters);
+			read_prev_grad_step_hess(dynamical_parameters, prev_grad, prev_step, prev_BFGS);
+
+			// decide hess_BFGS
 			if (dynamical_parameters.use_exact_hessian
 				//|| (mu < 1e-8 && mu > 1e-9)
 				)
 			{
-				//Initialize the BFGS hessian for the next
-				//hess_BFGS = Hpp_minus_Hmixed;
-				// SN : not sure what does this do?  I add hess_BFGS=hess_Exact in the end
-
 				if (positivitize_matrix(hess_Exact) == false)
 					if (El::mpi::Rank() == 0) std::cout << "flip the sign of hessian\n" << std::flush;
 
-				external_step = grad_corrected;
-				external_step *= (-1);
-
-				El::LinearSolve(hess_Exact, external_step);
-				external_step_size = El::Nrm2(external_step);
-
 				hess_BFGS = hess_Exact;
 			}
-
-			else {
+			else 
+			{
 				if (El::mpi::Rank() == 0)std::cout << "using BFGS: " << '\n' << std::flush;
 
-				El::Matrix<El::BigFloat> prev_grad(n_external_parameters, 1), prev_step(n_external_parameters, 1);
-				for (int i = 0; i < n_external_parameters; i++)
+				if (dynamical_parameters.use_Hmixed_for_BFGS) // I will let simpleboot control whether hess_mixed will be used for hess_BFGS
 				{
-					prev_grad(i, 0) = dynamical_parameters.prev_grad[i];
-					prev_step(i, 0) = dynamical_parameters.prev_step[i];
-					if (dynamical_parameters.total_iterations > 0) // in 1st iteration, we want to hess_mixed which has correct scale
-					{
-						for (int j = 0; j < n_external_parameters; j++)
-						{
-							hess_BFGS(i, j) = dynamical_parameters.hess_BFGS[i * n_external_parameters + j];
-
-							//if (El::mpi::Rank() == 0) std::cout << "param hess : i=" << i << " j=" << j << " : " <<
-							//	dynamical_parameters.hess_BFGS[i * n_external_parameters + j] << '\n' << std::flush;
-						}
-					}
-					else
-						hess_BFGS -= hess_mixed;
+					El::Zeros(hess_BFGS, n_external_parameters, n_external_parameters);
+					hess_BFGS -= hess_mixed;
+					positivitize_matrix(hess_BFGS);
+					hess_BFGS *= El::BigFloat(rescale_initial_hess);
+				}
+				else
+				{
+					hess_BFGS = prev_BFGS;
 				}
 
-				//if (El::mpi::Rank() == 0) std::cout << "init BFGS: " << '\n' << std::flush;
-				//print_matrix(hess_BFGS);
+				if (lowest_mu_Q == false) hess_BFGS = hess_BFGS_lowest_mu;
 
-				if (dynamical_parameters.total_iterations > 0)
+				// update hess_BFGS
+				if (dynamical_parameters.total_iterations > 0 && lowest_mu_Q)
 				{
-
 					El::Matrix<El::BigFloat> grad_diff;
 					if (use_gradp_for_BFGS_update)
 						grad_diff = grad_p;
 					else
 						grad_diff = grad_corrected;
-					
+
 					grad_diff -= prev_grad;
 
-					bool flippedQ = BFGS_update_hessian(n_external_parameters, grad_diff, prev_step, hess_BFGS, update_hess_only_positive);
+					if (BFGS_partial_update_reduction > 0)
+					{
+						bool exact_update_Q = BFGS_partial_update_hessian(El::BigFloat(BFGS_partial_update_reduction),
+							grad_diff, prev_step, hess_BFGS);
+						if (!exact_update_Q)
+							if (El::mpi::Rank() == 0)
+								std::cout << "New hessian is non-positive. partial update. \n" << std::flush;
+					}
+					else
+					{
+						bool flippedQ = BFGS_update_hessian(grad_diff, prev_step, hess_BFGS, update_hess_only_positive);
+						if (flippedQ)
+							if (update_hess_only_positive)
+							{
+								if (El::mpi::Rank() == 0) std::cout << "New hessian is non-positive. Rollback to prev_hess. \n" << std::flush;
+							}
+							else
+							{
+								if (El::mpi::Rank() == 0) std::cout << "New hessian is non-positive (still updated). \n" << std::flush;
+							}
 
-					if (flippedQ)
-						if (El::mpi::Rank() == 0)
-							std::cout << "New hessian is non-positive. Rollback to prev_hess \n" << std::flush;
+						if (flippedQ == false || update_hess_only_positive == false)
+							hess_BFGS_updateQ = true;
+					}
 
-					//std::cout<<"precision_BFGS_H: "<< hess_BFGS(0,0).Precision() << std::flush; 
+					hess_BFGS_lowest_mu = hess_BFGS;
+
+					if (El::mpi::Rank() == 0) std::cout << "hess_BFGS_lowest_mu saved : " << std::flush;
+					print_matrix(hess_BFGS_lowest_mu);
 				}
-
-				//std::cout << "updated BFGS: " << '\n' << std::flush;
-				//print_matrix(hess_BFGS);
-
-				external_step = grad_corrected;
-				external_step *= (-1);
-				El::LinearSolve(hess_BFGS, external_step);
-				external_step_size = El::Nrm2(external_step);
 			}
 
+			if (El::mpi::Rank() == 0) std::cout << "hess_BFGS_lowest_mu : " << std::flush;
+			print_matrix(hess_BFGS_lowest_mu);
+
+			if (El::mpi::Rank() == 0) std::cout << "hess_BFGS : " << std::flush;
+			print_matrix(hess_BFGS);
+
+			external_step = grad_corrected;
+			external_step *= (-1);
+			El::LinearSolve(hess_BFGS, external_step);
+			external_step_size = El::Nrm2(external_step);
 
 			if (dynamical_parameters.find_boundary && El::Abs(duality_gap) < 0.9 && dynamical_parameters.total_iterations > 0)
 			{
@@ -647,7 +640,9 @@ void Dynamical_Solver::dynamical_step(
 				//if (find_zeros && update_sdp)
 				if (update_sdp)
 				{
-					if (external_step_specified_Q)
+					if (compute_ext_step_only_once == true && external_step_specified_Q == true &&
+						(recompute_ext_during_re_aiming == false || lowest_mu_Q == false)
+						)
 					{
 						// hess_BFGS will not be updated, but grad_BFGS will be updated
 						external_step = external_step_save;
@@ -663,7 +658,7 @@ void Dynamical_Solver::dynamical_step(
 
 						if (El::mpi::Rank() == 0)
 						{
-							if(use_Lpu_mu_correction)
+							if (use_Lpu_mu_correction)
 								std::cout << "\nLpu corrected : \n";
 
 							std::cout << "BFGS hess =\n";
@@ -691,14 +686,8 @@ void Dynamical_Solver::dynamical_step(
 							std::cout << "\n" << std::flush;
 						}
 
-						if (compute_ext_step_only_once &&
-							(recompute_ext_during_re_aiming == false || lowest_mu_Q == false)
-							)
-						{
-							external_step_save = external_step;
-							external_step_specified_Q = true;
-						}
-
+						external_step_save = external_step;
+						external_step_specified_Q = true;
 					}
 
 					external_step_size = El::Nrm2(external_step);
@@ -739,13 +728,14 @@ void Dynamical_Solver::dynamical_step(
 			dual_step_length = primal_step_length;
 		}
 
-		El::BigFloat cutoff1 = El::BigFloat(1e-10);
+		//El::BigFloat cutoff1 = El::BigFloat(1e-50);
+		El::BigFloat cutoff1 = 0;
 
 		if (update_sdp)
 		{
 			if (stallrecovery_phase == 1 ||
 				((El::Max(primal_step_length, dual_step_length) > 0.1 &&
-					(primal_step_length + dual_step_length) > (primal_step_length_best + dual_step_length_best)
+				(primal_step_length + dual_step_length) > (primal_step_length_best + dual_step_length_best)
 					))
 				)
 			{

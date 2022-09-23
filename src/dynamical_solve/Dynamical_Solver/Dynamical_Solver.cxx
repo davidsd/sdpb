@@ -42,4 +42,5 @@ Dynamical_Solver::Dynamical_Solver(const Dynamical_Solver_Parameters &dynamical_
     }
 
   intext_mode = 0;
+  hess_BFGS_updateQ = false;
 }
