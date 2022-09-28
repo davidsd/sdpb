@@ -23,6 +23,31 @@ int main(int argc, char **argv)
 
   El::gmp::SetPrecision(768);
 
+
+  /*
+  // a very strange bug : if I compile with boost 1.77 , if I also use "mpirun -n 2", then somehow the copy stuck 
+  // at copy_file, even if I re-run it with "mpirun -n 1"
+  // compile with boost 1.67 is fine
+
+  std::cout << "before copy_file\n" << std::flush;
+
+  if (El::mpi::Rank() == 0)
+  {
+	  copy_file(
+		  "./Proj_Ising_pd11_3d_pureBFGS_newstrategy_debug_mpi_ck/SDPBFiles/0.519000000000_1.40000000000_0.576792155454_0.816890940950_Aug30_08h16m15s.ck/"
+		  "checkpoint.json",
+		  "./Proj_Ising_pd11_3d_pureBFGS_newstrategy_debug_mpi_ck/SDPBFiles/0.519218317386_1.40203144757_0.575973071057_0.817468666933_Aug30_08h48m54s.ck/"
+		  "checkpoint.json",
+		  boost::filesystem::copy_option::overwrite_if_exists);
+  }
+
+  std::cout << "after copy_file\n" << std::flush;
+
+  return 1;
+
+  */
+
+
   try
     {
       Dynamical_Parameters parameters(argc, argv);
@@ -92,13 +117,20 @@ int main(int argc, char **argv)
               && block_info.block_timings_filename
                    != (parameters.solver.solver_parameters.checkpoint_out / "block_timings"))
         {
+
+		  //std::cout << "before copy_file : from " << block_info.block_timings_filename
+		//	  << " to " << parameters.solver.solver_parameters.checkpoint_out / "block_timings" << " \n" << std::flush;
+
           if(El::mpi::Rank() == 0)
             {
               create_directories(parameters.solver.solver_parameters.checkpoint_out);
+
               copy_file(block_info.block_timings_filename,
                         parameters.solver.solver_parameters.checkpoint_out / "block_timings",
                         boost::filesystem::copy_option::overwrite_if_exists);
             }
+
+		  //std::cout << "after copy_file \n " << std::flush;
         }
       solve(block_info, parameters);
     }

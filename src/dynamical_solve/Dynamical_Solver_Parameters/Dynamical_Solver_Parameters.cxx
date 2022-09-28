@@ -88,6 +88,10 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
 	  ->default_value(true),
 	  "Print R error for each iteration");
 
+  result.add_options()("useHmixedforBFGS",
+	  boost::program_options::value<bool>(&use_Hmixed_for_BFGS)->default_value(false),
+	  "if True, hess_mixed will be used for hess_BFGS");
+
   result.add_options()("centeringRThreshold",
 	  boost::program_options::value<El::BigFloat>(&centeringRThreshold)->default_value(-1),
 	  "If positive, run centering steps until R<centeringRThreshold.");

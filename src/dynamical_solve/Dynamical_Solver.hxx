@@ -54,6 +54,7 @@ public:
   El::Matrix<El::BigFloat> grad_BFGS, hess_BFGS;
   El::Matrix<El::BigFloat> hess_Exact;
 
+  bool hess_BFGS_updateQ;
   int mu_direction_mode;
   int intext_mode;
   // Discrepancy in the primal equality constraints, a
@@ -132,7 +133,9 @@ public:
 	  El::BigFloat &delta_lambda,
 	  El::Matrix<El::BigFloat> & external_step,
 	  std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy,
-	  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length);
+	  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
+	  El::BigFloat &step_length_reduction
+	  );
 
   void
   save_checkpoint(const boost::filesystem::path &checkpoint_directory,

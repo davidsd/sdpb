@@ -46,6 +46,7 @@ Timers solve(const Block_Info &block_info, const Dynamical_Parameters &parameter
 		  << "lagMultiplie           = " << solver.lag_multiplier_lambda << '\n'
 		  << "totalIteration so far  = " << solver.total_iteration << '\n'
 		  << "muMovingMode           = " << solver.mu_direction_mode << '\n'
+		  << "BFGSHessianUpdated     = " << solver.hess_BFGS_updateQ << '\n'
 		  << '\n';
     }
 

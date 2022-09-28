@@ -14,13 +14,23 @@ void compute_update_sdp(
 {
 	if (parameters.updateSDP_dualityGapThreshold > 0 && duality_gap > parameters.updateSDP_dualityGapThreshold)
 	{
-		if (El::mpi::Rank() == 0)std::cout << "compute_update_sdp : set update_sdp = false \n" << std::flush;
 		update_sdp = false;
 	}
 	else
 	{
+		if (duality_gap > 0)
+			update_sdp = true;
+		else
+			update_sdp = false;
+	}
+
+	if (update_sdp)
+	{
 		if (El::mpi::Rank() == 0)std::cout << "compute_update_sdp : set update_sdp = true \n" << std::flush;
-		update_sdp = true;
+	}
+	else
+	{
+		if (El::mpi::Rank() == 0)std::cout << "compute_update_sdp : set update_sdp = false \n" << std::flush;
 	}
 }
 
