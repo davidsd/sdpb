@@ -339,13 +339,7 @@ def build(bld):
                         'src/dynamical_sdp/Dynamical_Parameters/to_property_tree.cxx',
                         'src/dynamical_sdp/Dynamical_Parameters/ostream.cxx',
                         'src/dynamical_sdp/save_solution.cxx'],
-<<<<<<< HEAD
-                target='dynamical_sdp',
-||||||| merged common ancestors
                 target='dynamical_sdp1',
-=======
-                target='dynamical_sdp_V7_newstrategy',
->>>>>>> ning/dynamical_sdp_new_strategy
                 cxxflags=default_flags,
                 use=use_packages + ['sdp_read','sdp_solve', 'dynamical_solve']
                 )
