@@ -540,7 +540,7 @@ void Dynamical_Solver::dynamical_step(
 				grad_BFGS = grad_corrected;
 			*/
 
-
+                        El::Zeros(hess_Exact, n_external_parameters, n_external_parameters);
 			El::Matrix<El::BigFloat> prev_grad(n_external_parameters, 1), prev_step(n_external_parameters, 1), prev_BFGS(n_external_parameters, n_external_parameters);
 			read_prev_grad_step_hess(dynamical_parameters, prev_grad, prev_step, prev_BFGS);
 
@@ -753,6 +753,27 @@ void Dynamical_Solver::dynamical_step(
 		//El::BigFloat cutoff1 = El::BigFloat(1e-50);
 		El::BigFloat cutoff1 = 0;
 
+		if (El::mpi::Rank() == 0)
+                {
+                        std::cout << "actual beta : " << beta << "\n" << std::flush;
+                        if (update_sdp == true)
+                        {
+                                std::cout << "P/D-step-len-ext = " 
+                                          << primal_step_length 
+                                          << " , " 
+                                          << dual_step_length << "\n" 
+                                          << std::flush;
+                        }
+                }
+
+		if (dynamical_parameters.total_iterations == 0
+                   || update_sdp == false
+                   || El::Max(primal_step_length, dual_step_length) > PDsteplen_threshold
+                   )
+                {
+                        break;
+                }
+
 		if (update_sdp)
 		{
 			if (stallrecovery_phase == 1 ||
@@ -769,13 +790,6 @@ void Dynamical_Solver::dynamical_step(
 			}
 		}
 
-		if (El::mpi::Rank() == 0)std::cout << "actual beta : " << beta << "\n" << std::flush;
-
-		if (El::mpi::Rank() == 0 && update_sdp == true)
-			std::cout << "P/D-step-len-ext = " << primal_step_length << " , " << dual_step_length << "\n" << std::flush;
-
-		if (dynamical_parameters.total_iterations == 0) break;
-		if (update_sdp == false)break;
 
 		if (El::Max(primal_step_length, dual_step_length) > step_max_threshold) break;
 

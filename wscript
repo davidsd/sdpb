@@ -102,7 +102,7 @@ def build(bld):
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/mixed_hess.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/external_grad_hess.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_lag.cxx',
-                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_robust.cxx',
+                       #'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_robust.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/BFGS.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_BFGS.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_BFGS_func.cxx',
