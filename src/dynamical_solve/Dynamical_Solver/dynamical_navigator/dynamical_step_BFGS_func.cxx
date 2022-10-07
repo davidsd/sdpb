@@ -218,6 +218,8 @@ void read_sdp_grid(
 	std::vector<std::pair<Block_Vector, Block_Vector>> & H_xp,
 	std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy)
 {
+	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
 	El::Zero(eplus);
 	El::Zero(eminus);
 	El::Zero(esum);
@@ -267,6 +269,12 @@ void read_sdp_grid(
 	{
 		throw std::invalid_argument("A list of perturbed sdp files are required");
 	}
+
+	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+
+	if (El::mpi::Rank() == 0)
+		std::cout << "read_sdp_grid : " << std::chrono::duration_cast<std::chrono::seconds>(end - begin).count() << "[s]\n" << std::flush;
+
 	return;
 }
 
@@ -490,4 +498,40 @@ void read_prev_grad_step_hess(const Dynamical_Solver_Parameters &dynamical_param
 			prev_BFGS(i, j) = dynamical_parameters.hess_BFGS[i * dim_ext_p + j];
 		}
 	}
+}
+
+
+void save_load_beta_scan_best_state(Block_Vector & dx, Block_Vector & dy,
+	Block_Diagonal_Matrix & dX, Block_Diagonal_Matrix & dY,
+	El::BigFloat & primal_step_length, El::BigFloat & dual_step_length,
+	El::BigFloat & beta,
+	El::Matrix<El::BigFloat> & hess_BFGS, El::Matrix<El::BigFloat> & grad_mixed,
+
+	Block_Vector & dx_best, Block_Vector & dy_best,
+	Block_Diagonal_Matrix & dX_best, Block_Diagonal_Matrix & dY_best,
+	El::BigFloat & primal_step_length_best, El::BigFloat & dual_step_length_best,
+	El::BigFloat & beta_best,
+	El::Matrix<El::BigFloat> & hess_BFGS_best, El::Matrix<El::BigFloat> & grad_mixed_best
+)
+{
+	dX = dX_best;
+	dY = dY_best;
+	dx = dx_best;
+	dy = dy_best;
+	primal_step_length = primal_step_length_best;
+	dual_step_length = dual_step_length_best;
+	beta = beta_best;
+	hess_BFGS = hess_BFGS_best;
+	grad_mixed = grad_mixed_best;
+}
+
+
+void extrapolate_gradient_as_target_mu(
+	const El::BigFloat & primal_step_length, const El::BigFloat & dual_step_length,
+	const El::Matrix<El::BigFloat> & grad_p, const El::Matrix<El::BigFloat> & grad_mixed_best, El::Matrix<El::BigFloat> & grad_BFGS)
+{
+	El::BigFloat step_length_avg = (primal_step_length + dual_step_length) / 2;
+	grad_BFGS = grad_mixed_best;
+	grad_BFGS *= step_length_avg;
+	grad_BFGS += grad_p;
 }

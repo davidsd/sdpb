@@ -338,7 +338,10 @@ def build(bld):
                         'src/dynamical_sdp/Dynamical_Parameters/to_property_tree.cxx',
                         'src/dynamical_sdp/Dynamical_Parameters/ostream.cxx',
                         'src/dynamical_sdp/save_solution.cxx'],
-                target='dynamical_sdp_V7_newstrategy',
+                #target='dynamical_sdp_V8E3_gradmixed_shift0.2_stepthreshld0.6_hesspositive',
+                #target='dynamical_sdp_V8E3_gradmixed_shift0.2_stepthreshld0.3_hesspositive',
+                #target='dynamical_sdp_V8E6_gradmixed_shift0.2_stepthreshld0.6_hesspos_extatlowestmu_maxlift2_BFGSgradp',
+                target='dynamical_sdp_V9_benchmark_steplenmax0.6',
                 cxxflags=default_flags,
                 use=use_packages + ['sdp_read','sdp_solve', 'dynamical_solve']
                 )
