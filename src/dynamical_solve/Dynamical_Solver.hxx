@@ -116,8 +116,19 @@ public:
     El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
     bool &update_sdp, bool &find_zeros, El::Matrix<El::BigFloat> &external_step); 
 
-  void update_dXdY(bool external_step_Q,
 
+  void
+	  save_checkpoint(const boost::filesystem::path &checkpoint_directory,
+		  const Verbosity &verbosity,
+		  const boost::property_tree::ptree &parameter_properties);
+  bool
+	  load_checkpoint(const boost::filesystem::path &checkpoint_directory,
+		  const Block_Info &block_info, const Verbosity &verbosity,
+		  const bool &require_initial_checkpoint);
+
+
+  void compute_external_dxdydXdY(
+	  const bool &is_primal_and_dual_feasible,
 	  const Dynamical_Solver_Parameters &dynamical_parameters,
 	  const Block_Info &block_info,
 	  const SDP &sdp, const El::Grid &grid,
@@ -137,12 +148,97 @@ public:
 	  El::BigFloat &step_length_reduction
 	  );
 
-  void
-  save_checkpoint(const boost::filesystem::path &checkpoint_directory,
-                  const Verbosity &verbosity,
-                  const boost::property_tree::ptree &parameter_properties);
-  bool
-  load_checkpoint(const boost::filesystem::path &checkpoint_directory,
-                  const Block_Info &block_info, const Verbosity &verbosity,
-                  const bool &require_initial_checkpoint);
+  void internal_step(
+	  const Dynamical_Solver_Parameters &dynamical_parameters,
+	  const Block_Info &block_info,
+	  const SDP &sdp, const El::Grid &grid,
+	  const Block_Diagonal_Matrix &X_cholesky,
+	  const Block_Diagonal_Matrix &Y_cholesky,
+	  Timers &timers,
+
+	  const Block_Diagonal_Matrix &schur_complement_cholesky,
+	  const Block_Matrix &schur_off_diagonal,
+	  const El::DistMatrix<El::BigFloat> &Q,
+
+	  Block_Vector & dx, Block_Vector & dy,
+	  Block_Diagonal_Matrix & dX, Block_Diagonal_Matrix & dY,
+	  Block_Diagonal_Matrix & R,
+	  Block_Vector &grad_x, Block_Vector &grad_y,
+
+	  const Block_Vector &primal_residue_p, El::BigFloat &mu,
+
+	  const bool &is_primal_and_dual_feasible,
+	  El::BigFloat &beta,
+	  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
+	  El::BigFloat &step_length_reduction
+  );
+
+  void execute_step(
+	  Block_Vector & dx, Block_Vector & dy,
+	  Block_Diagonal_Matrix & dX, Block_Diagonal_Matrix & dY,
+	  El::BigFloat &primal_step_length,
+	  El::BigFloat &dual_step_length
+  );
+
+
+  void compute_dXdY(
+	  const Block_Info &block_info,
+	  const SDP &sdp, const El::Grid &grid,
+	  const Block_Diagonal_Matrix &X_cholesky,
+	  const Block_Diagonal_Matrix &Y_cholesky,
+	  Timers &timers,
+
+	  Block_Vector & dx, Block_Vector & dy,
+	  Block_Diagonal_Matrix & dX, Block_Diagonal_Matrix & dY,
+	  Block_Diagonal_Matrix & R,
+	  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
+	  El::BigFloat &step_length_reduction
+  );
+
+  void compute_external_dxdy(
+	  const Dynamical_Solver_Parameters &dynamical_parameters,
+
+	  Block_Vector & internal_dx, Block_Vector & internal_dy,
+	  Block_Vector & dx, Block_Vector & dy,
+	  Block_Diagonal_Matrix & R,
+
+	  El::BigFloat &delta_lambda,
+	  El::Matrix<El::BigFloat> & external_step,
+	  std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy
+  );
+
+  void strategy_hess_BFGS(const Dynamical_Solver_Parameters &dynamical_parameters, int n_external_parameters,
+	  bool lowest_mu_Q,
+	  El::Matrix<El::BigFloat> & grad_p, El::Matrix<El::BigFloat> & grad_mixed, El::Matrix<El::BigFloat> & grad_corrected,
+	  El::Matrix<El::BigFloat> & Lpu, El::BigFloat & mu,
+	  El::Matrix<El::BigFloat> & hess_pp, El::Matrix<El::BigFloat> & hess_mixed, El::Matrix<El::BigFloat> & hess_Exact,
+
+	  El::Matrix<El::BigFloat> & prev_BFGS, El::Matrix<El::BigFloat> & prev_step, El::Matrix<El::BigFloat> & prev_grad,
+	  El::Matrix<El::BigFloat> & hess_BFGS_lowest_mu
+  );
+
+
+  void strategy_findboundary_extstep(
+	  const Block_Diagonal_Matrix &X_cholesky,
+	  const std::size_t &total_psd_rows,
+	  const El::BigFloat & mu,
+	  const El::BigFloat & beta,
+
+	  int n_external_parameters,
+	  const Dynamical_Solver_Parameters &dynamical_parameters,
+	  bool lowest_mu_Q,
+
+	  El::Matrix<El::BigFloat> & grad_corrected,
+	  El::Matrix<El::BigFloat> & grad_p,
+	  El::Matrix<El::BigFloat> & grad_mixed,
+
+	  El::Matrix<El::BigFloat> & external_step,
+	  El::Matrix<El::BigFloat> & external_step_save,
+	  bool & external_step_specified_Q
+  );
+
+  void strategy_update_grad_BFGS(
+	  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
+	  El::Matrix<El::BigFloat> & grad_p, El::Matrix<El::BigFloat> & grad_mixed, El::Matrix<El::BigFloat> & grad_BFGS
+  );
 };
