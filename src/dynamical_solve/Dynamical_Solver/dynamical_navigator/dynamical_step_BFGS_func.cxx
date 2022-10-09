@@ -196,6 +196,9 @@ void read_sdp_grid(
 	return;
 }
 
+void compute_R_error(const std::size_t &total_psd_rows, const Block_Diagonal_Matrix &X, const Block_Diagonal_Matrix &Y, El::BigFloat & R_error, Timers &timers);
+
+
 void print_matrix(const El::Matrix<El::BigFloat> & matrix);
 void print_vector(const El::Matrix<El::BigFloat> & vec);
 
@@ -546,6 +549,34 @@ void Dynamical_Solver::compute_dXdY(
 	}
 }
 
+// compute dX,dY based on dx,dy. This function doesn't compute step_length
+void Dynamical_Solver::compute_dXdY(
+	const bool &is_primal_and_dual_feasible,
+	const Block_Info &block_info,
+	const SDP &sdp, const El::Grid &grid,
+	const Block_Diagonal_Matrix &X_cholesky,
+	const Block_Diagonal_Matrix &Y_cholesky,
+	Timers &timers,
+
+	Block_Vector & dx, Block_Vector & dy,
+	Block_Diagonal_Matrix & dX, Block_Diagonal_Matrix & dY,
+	Block_Diagonal_Matrix & R
+)
+{
+	//Block_Diagonal_Matrix dX(X), dY(Y);
+	// dX = PrimalResidues + \sum_p A_p dx[p]
+	constraint_matrix_weighted_sum(block_info, sdp, dx, dX);
+	dX += primal_residues;
+
+	// dY = Symmetrize(X^{-1} (R - dX Y))
+	multiply(dX, Y, dY);
+	dY -= R;
+	cholesky_solve(X_cholesky, dY);
+	dY.symmetrize();
+	dY *= El::BigFloat(-1);
+}
+
+
 // compute external dx,dy based on external_step
 void Dynamical_Solver::compute_external_dxdy(
 	const Dynamical_Solver_Parameters &dynamical_parameters,
@@ -625,8 +656,185 @@ void Dynamical_Solver::compute_external_dxdydXdY(
 }
 
 
+// C := alpha*A*B + beta*C
+void scale_multiply_add(const El::BigFloat &alpha,
+	const Block_Diagonal_Matrix &A,
+	const Block_Diagonal_Matrix &B,
+	const El::BigFloat &beta, Block_Diagonal_Matrix &C);
+
+// this function computes various error for corrector iteration. But so far I only implemented error_R
+void compute_errors(
+	const Block_Info &block_info, const SDP &sdp,
+	const std::size_t &total_psd_rows,
+
+	const Block_Vector &x_const, const Block_Vector &dx_const,
+	const Block_Vector &y_const, const Block_Vector &dy_const,
+	const Block_Diagonal_Matrix &X_const, const Block_Diagonal_Matrix &dX_const,
+	const Block_Diagonal_Matrix &Y_const, const Block_Diagonal_Matrix &dY_const,
+
+	const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
+
+	El::BigFloat &primal_error_P,
+	El::BigFloat &primal_error_p,
+	El::BigFloat &dual_error,
+	El::BigFloat &R_error,
+	El::BigFloat &mu,
+
+	Timers &timers)
+{
+	Block_Vector x(x_const), y(y_const), dx(dx_const), dy(dy_const);
+	Block_Diagonal_Matrix X(X_const), Y(Y_const), dX(dX_const), dY(dY_const);
+
+	// Update x, y, dX, dY ///////////
+	for (size_t block = 0; block < x.blocks.size(); ++block)
+	{
+		El::Axpy(primal_step_length, dx.blocks[block], x.blocks[block]);
+	}
+	dX *= primal_step_length;
+	X += dX;
+	for (size_t block = 0; block < dy.blocks.size(); ++block)
+	{
+		El::Axpy(dual_step_length, dy.blocks[block], y.blocks[block]);
+	}
+	dY *= dual_step_length;
+	Y += dY;
+	//////////////////////////////////
+
+	mu = frobenius_product_symmetric(X, Y) / total_psd_rows;
+
+	Block_Diagonal_Matrix R(X);
+	scale_multiply_add(El::BigFloat(-1), X, Y, El::BigFloat(0), R);
+	R.add_diagonal(mu);
+
+	R_error = R.max_abs_mpi();
+
+	return;
+}
+
+
+void Dynamical_Solver::internal_step_corrector_iteration_centering(
+	const Dynamical_Solver_Parameters &dynamical_parameters,
+	const std::size_t &total_psd_rows,
+	const Block_Info &block_info,
+	const SDP &sdp, const El::Grid &grid,
+	const Block_Diagonal_Matrix &X_cholesky,
+	const Block_Diagonal_Matrix &Y_cholesky,
+	Timers &timers,
+
+	const Block_Diagonal_Matrix &schur_complement_cholesky,
+	const Block_Matrix &schur_off_diagonal,
+	const El::DistMatrix<El::BigFloat> &Q,
+
+	Block_Vector & dx, Block_Vector & dy,
+	Block_Diagonal_Matrix & dX, Block_Diagonal_Matrix & dY,
+	Block_Diagonal_Matrix & R,
+	Block_Vector &grad_x, Block_Vector &grad_y,
+
+	const Block_Vector &primal_residue_p, El::BigFloat &mu,
+
+	const bool &is_primal_and_dual_feasible,
+	El::BigFloat &beta,
+	El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
+	El::BigFloat &step_length_reduction
+)
+{
+	El::BigFloat error_P, error_p, error_d, error_R, coit_mu;
+
+	El::BigFloat coit_beta = 1;
+
+	Block_Vector dx_last(dx);
+	Block_Vector dy_last(dy);
+	Block_Diagonal_Matrix dX_last(dX);
+	Block_Diagonal_Matrix dY_last(dY);
+	El::BigFloat primal_step_length_last, dual_step_length_last, error_R_last;
+
+	// predictor step. This function also computes dX, dY
+	internal_predictor_direction_dxdydXdY(block_info, sdp, *this, schur_complement_cholesky,
+		schur_off_diagonal, X_cholesky, coit_beta,
+		mu, primal_residue_p, Q, grad_x, grad_y, dx, dy, dX, dY, R);
+
+	compute_errors(block_info, sdp, total_psd_rows,
+		x, dx, y, dy, X, dX, Y, dY,
+		1, 1,
+		error_P, error_p, error_d, error_R, coit_mu,
+		timers);
+
+	dx_last = dx;
+	dy_last = dy;
+	dX_last = dX;
+	dY_last = dY;
+	primal_step_length_last = primal_step_length;
+	dual_step_length_last = dual_step_length;
+	error_R_last = error_R;
+
+	while (error_R > dynamical_parameters.centeringRThreshold)
+	{
+		internal_corrector_direction(block_info, sdp, *this, schur_complement_cholesky,
+			schur_off_diagonal, X_cholesky, coit_beta,
+			mu, primal_residue_p, Q, grad_x, grad_y, dx, dy, dX, dY, R);
+
+		compute_dXdY(is_primal_and_dual_feasible, block_info, sdp, grid,
+			X_cholesky, Y_cholesky, timers,
+			dx, dy, dX, dY, R);
+
+		// check corrector iteration result
+		compute_errors(block_info, sdp, total_psd_rows,
+			x, dx, y, dy, X, dX, Y, dY,
+			1, 1,
+			error_P, error_p, error_d, error_R, coit_mu,
+			timers);
+
+		if (El::mpi::Rank() == 0) std::cout 
+			<< "R=" << error_R << " mu=" << coit_mu << "\n" << std::flush;
+
+		// decide if we want to stop the corrector iteration
+		if (error_R > error_R_last)break;
+		//if (primal_step_length + dual_step_length < primal_step_length_last + dual_step_length_last)break;
+
+		dx_last = dx;
+		dy_last = dy;
+		dX_last = dX;
+		dY_last = dY;
+		primal_step_length_last = primal_step_length;
+		dual_step_length_last = dual_step_length;
+		error_R_last = error_R;
+	}
+
+
+	compute_errors(block_info, sdp, total_psd_rows,
+		x, dx_last, y, dy_last, X, dX_last, Y, dY_last,
+		1, 1,
+		error_P, error_p, error_d, error_R, coit_mu,
+		timers);
+
+	if (El::mpi::Rank() == 0) std::cout
+		<< "dxyXY_last : R_error = " << error_R << "\n" << std::flush;
+
+	// recomputes for primal_step_length, dual_step_length .   step_length_reduction=0.9
+	primal_step_length
+		= step_length(X_cholesky, dX_last, El::BigFloat(0.9),
+			"run.step.stepLength(XCholesky)", timers);
+	dual_step_length
+		= step_length(Y_cholesky, dY_last, El::BigFloat(0.9),
+			"run.step.stepLength(YCholesky)", timers);
+
+	if (El::mpi::Rank() == 0) std::cout
+		<< "last coit : primal_step_length = " << primal_step_length
+		<< " dual_step_length = " << dual_step_length << "\n" << std::flush;
+
+	execute_step(dx_last, dy_last, dX_last, dY_last, primal_step_length, dual_step_length);
+
+	El::BigFloat R_err;
+	compute_R_error(total_psd_rows, X, Y, R_err, timers);
+
+	if (El::mpi::Rank() == 0) std::cout
+		<< "final R error after corrector iteration : " << R_err << "\n" << std::flush;
+}
+
+
 void Dynamical_Solver::internal_step(
 	const Dynamical_Solver_Parameters &dynamical_parameters,
+	const std::size_t &total_psd_rows,
 	const Block_Info &block_info,
 	const SDP &sdp, const El::Grid &grid,
 	const Block_Diagonal_Matrix &X_cholesky,
@@ -650,6 +858,14 @@ void Dynamical_Solver::internal_step(
 	El::BigFloat &step_length_reduction
 	)
 {
+	if(beta== El::BigFloat(1))
+		return internal_step_corrector_iteration(dynamical_parameters, total_psd_rows, block_info, sdp, grid,
+			X_cholesky, Y_cholesky, timers,
+			schur_complement_cholesky, schur_off_diagonal, Q,
+			dx, dy, dX, dY, R, grad_x, grad_y,
+			primal_residue_p, mu, is_primal_and_dual_feasible,
+			beta, primal_step_length, dual_step_length, step_length_reduction);
+
 	internal_predictor_direction_dxdydXdY(block_info, sdp, *this, schur_complement_cholesky,
 		schur_off_diagonal, X_cholesky, beta,
 		mu, primal_residue_p, Q, grad_x, grad_y, dx, dy, dX, dY, R);

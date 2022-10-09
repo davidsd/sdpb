@@ -150,6 +150,7 @@ public:
 
   void internal_step(
 	  const Dynamical_Solver_Parameters &dynamical_parameters,
+	  const std::size_t &total_psd_rows,
 	  const Block_Info &block_info,
 	  const SDP &sdp, const El::Grid &grid,
 	  const Block_Diagonal_Matrix &X_cholesky,
@@ -194,6 +195,19 @@ public:
 	  Block_Diagonal_Matrix & R,
 	  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
 	  El::BigFloat &step_length_reduction
+  );
+
+  void compute_dXdY(
+	  const bool &is_primal_and_dual_feasible,
+	  const Block_Info &block_info,
+	  const SDP &sdp, const El::Grid &grid,
+	  const Block_Diagonal_Matrix &X_cholesky,
+	  const Block_Diagonal_Matrix &Y_cholesky,
+	  Timers &timers,
+
+	  Block_Vector & dx, Block_Vector & dy,
+	  Block_Diagonal_Matrix & dX, Block_Diagonal_Matrix & dY,
+	  Block_Diagonal_Matrix & R
   );
 
   void compute_external_dxdy(
@@ -241,5 +255,31 @@ public:
   void strategy_update_grad_BFGS(
 	  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
 	  El::Matrix<El::BigFloat> & grad_p, El::Matrix<El::BigFloat> & grad_mixed, El::Matrix<El::BigFloat> & grad_BFGS
+  );
+
+  void internal_step_corrector_iteration_centering(
+	  const Dynamical_Solver_Parameters &dynamical_parameters,
+	  const std::size_t &total_psd_rows,
+	  const Block_Info &block_info,
+	  const SDP &sdp, const El::Grid &grid,
+	  const Block_Diagonal_Matrix &X_cholesky,
+	  const Block_Diagonal_Matrix &Y_cholesky,
+	  Timers &timers,
+
+	  const Block_Diagonal_Matrix &schur_complement_cholesky,
+	  const Block_Matrix &schur_off_diagonal,
+	  const El::DistMatrix<El::BigFloat> &Q,
+
+	  Block_Vector & dx, Block_Vector & dy,
+	  Block_Diagonal_Matrix & dX, Block_Diagonal_Matrix & dY,
+	  Block_Diagonal_Matrix & R,
+	  Block_Vector &grad_x, Block_Vector &grad_y,
+
+	  const Block_Vector &primal_residue_p, El::BigFloat &mu,
+
+	  const bool &is_primal_and_dual_feasible,
+	  El::BigFloat &beta,
+	  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
+	  El::BigFloat &step_length_reduction
   );
 };
