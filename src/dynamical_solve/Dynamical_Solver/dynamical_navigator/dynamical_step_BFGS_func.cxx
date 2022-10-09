@@ -742,6 +742,8 @@ void Dynamical_Solver::internal_step_corrector_iteration_centering(
 
 	El::BigFloat coit_beta = 1;
 
+	int max_corrector_steps = 1000;
+
 	Block_Vector dx_last(dx);
 	Block_Vector dy_last(dy);
 	Block_Diagonal_Matrix dX_last(dX);
@@ -767,7 +769,7 @@ void Dynamical_Solver::internal_step_corrector_iteration_centering(
 	dual_step_length_last = dual_step_length;
 	error_R_last = error_R;
 
-	while (error_R > dynamical_parameters.centeringRThreshold)
+	while (error_R > dynamical_parameters.centeringRThreshold && --max_corrector_steps > 0)
 	{
 		internal_corrector_direction(block_info, sdp, *this, schur_complement_cholesky,
 			schur_off_diagonal, X_cholesky, coit_beta,
@@ -859,7 +861,7 @@ void Dynamical_Solver::internal_step(
 	)
 {
 	if(beta== El::BigFloat(1))
-		return internal_step_corrector_iteration(dynamical_parameters, total_psd_rows, block_info, sdp, grid,
+		return internal_step_corrector_iteration_centering(dynamical_parameters, total_psd_rows, block_info, sdp, grid,
 			X_cholesky, Y_cholesky, timers,
 			schur_complement_cholesky, schur_off_diagonal, Q,
 			dx, dy, dX, dY, R, grad_x, grad_y,
