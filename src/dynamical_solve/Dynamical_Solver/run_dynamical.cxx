@@ -178,11 +178,6 @@ Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_par
         {
           break;
         }
-      compute_update_sdp(
-        dynamical_parameters, primal_error(), dual_error, duality_gap,
-        primal_step_length, dual_step_length, iteration,
-        solver_timer.start_time, is_primal_and_dual_feasible,
-        update_sdp);
 
       //El::BigFloat mu; 
       El::BigFloat beta_predictor;
