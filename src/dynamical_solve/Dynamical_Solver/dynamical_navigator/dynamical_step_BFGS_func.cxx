@@ -504,6 +504,7 @@ void extrapolate_gradient_as_target_mu(
 
 // compute dX,dY based on dx,dy
 void Dynamical_Solver::compute_dXdY(
+	const bool &is_primal_and_dual_feasible,
 	const Block_Info &block_info,
 	const SDP &sdp, const El::Grid &grid,
 	const Block_Diagonal_Matrix &X_cholesky,
@@ -537,6 +538,12 @@ void Dynamical_Solver::compute_dXdY(
 	dual_step_length
 		= step_length(Y_cholesky, dY, step_length_reduction,
 			"run.step.stepLength(YCholesky)", timers);
+
+	if (is_primal_and_dual_feasible)
+	{
+		primal_step_length = El::Min(primal_step_length, dual_step_length);
+		dual_step_length = primal_step_length;
+	}
 }
 
 // compute external dx,dy based on external_step
@@ -610,21 +617,11 @@ void Dynamical_Solver::compute_external_dxdydXdY(
 	El::BigFloat &step_length_reduction
 )
 {
-	dx = internal_dx;
-	dy = internal_dy;
+	compute_external_dxdy(dynamical_parameters, internal_dx, internal_dy, dx, dy, R, delta_lambda, external_step, Delta_xy);
 
-	if (external_step_Q)
-		compute_external_dxdy(dynamical_parameters, internal_dx, internal_dy, dx, dy, R, delta_lambda, external_step, Delta_xy);
-
-	compute_dXdY(block_info, sdp, grid,
+	compute_dXdY(is_primal_and_dual_feasible, block_info, sdp, grid,
 		X_cholesky, Y_cholesky, timers,
 		dx, dy, dX, dY, R, primal_step_length, dual_step_length, step_length_reduction);
-
-	if (is_primal_and_dual_feasible)
-	{
-		primal_step_length = El::Min(primal_step_length, dual_step_length);
-		dual_step_length = primal_step_length;
-	}
 }
 
 
@@ -661,15 +658,9 @@ void Dynamical_Solver::internal_step(
 		schur_off_diagonal, X_cholesky, beta,
 		mu, primal_residue_p, Q, grad_x, grad_y, dx, dy, dX, dY, R);
 
-	compute_dXdY(block_info, sdp, grid,
+	compute_dXdY(is_primal_and_dual_feasible, block_info, sdp, grid,
 		X_cholesky, Y_cholesky, timers,
 		dx, dy, dX, dY, R, primal_step_length, dual_step_length, step_length_reduction);
-
-	if (is_primal_and_dual_feasible)
-	{
-		primal_step_length = El::Min(primal_step_length, dual_step_length);
-		dual_step_length = primal_step_length;
-	}
 
 	execute_step(dx, dy, dX, dY, primal_step_length, dual_step_length);
 }

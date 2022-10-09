@@ -422,8 +422,6 @@ void Dynamical_Solver::dynamical_step(
 		dynamical_parameters.updateSDP_dualityGapThreshold > 0 && duality_gap > dynamical_parameters.updateSDP_dualityGapThreshold) ||
 		duality_gap == El::BigFloat(0))
 	{
-		if (El::mpi::Rank() == 0)std::cout << "test 1" << "\n";
-
 		update_sdp = false;
 		return internal_step(dynamical_parameters, block_info, sdp, grid,
 			X_cholesky, Y_cholesky, timers,

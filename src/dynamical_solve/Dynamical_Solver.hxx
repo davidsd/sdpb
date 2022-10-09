@@ -182,6 +182,7 @@ public:
 
 
   void compute_dXdY(
+	  const bool &is_primal_and_dual_feasible,
 	  const Block_Info &block_info,
 	  const SDP &sdp, const El::Grid &grid,
 	  const Block_Diagonal_Matrix &X_cholesky,
