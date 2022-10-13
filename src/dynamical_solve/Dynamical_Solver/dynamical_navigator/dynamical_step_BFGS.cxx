@@ -423,7 +423,7 @@ void Dynamical_Solver::dynamical_step(
 		duality_gap == El::BigFloat(0))
 	{
 		update_sdp = false;
-		return internal_step(dynamical_parameters, block_info, sdp, grid,
+		return internal_step(dynamical_parameters, total_psd_rows, block_info, sdp, grid,
 			X_cholesky, Y_cholesky, timers,
 			schur_complement_cholesky, schur_off_diagonal, Q,
 			dx, dy, dX, dY, R, grad_x, grad_y,
@@ -434,8 +434,7 @@ void Dynamical_Solver::dynamical_step(
 
 	if (El::mpi::Rank() == 0)
 	{
-		std::cout << "R_error : " << R_error
-			<< " \n";
+		std::cout << "R_error : " << R_error << " \n";
 	}
 
 	// if R_error is not small, we do centering steps
@@ -446,7 +445,7 @@ void Dynamical_Solver::dynamical_step(
 		beta = 1;
 		update_sdp = false;
 
-		return internal_step(dynamical_parameters, block_info, sdp, grid,
+		return internal_step(dynamical_parameters, total_psd_rows, block_info, sdp, grid,
 			X_cholesky, Y_cholesky, timers,
 			schur_complement_cholesky, schur_off_diagonal, Q,
 			dx, dy, dX, dY, R, grad_x, grad_y,
@@ -596,7 +595,7 @@ void Dynamical_Solver::dynamical_step(
 		max_climbing--;
 		lowest_mu_Q = false;
 
-		return internal_step(dynamical_parameters, block_info, sdp, grid,
+		return internal_step(dynamical_parameters, total_psd_rows, block_info, sdp, grid,
 			X_cholesky, Y_cholesky, timers,
 			schur_complement_cholesky, schur_off_diagonal, Q,
 			dx, dy, dX, dY, R, grad_x, grad_y,
