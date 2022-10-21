@@ -9,9 +9,7 @@ boost::property_tree::ptree to_property_tree(const Dynamical_Solver_Parameters &
   result.put("updateSdpThresholdMax", p.update_sdp_threshold_max);
   result.put("updateSdpThresholdMin", p.update_sdp_threshold_min); 
   result.put("prevTotalIterations", p.total_iterations);
-  result.put("lagMultiplier",  p.lag_multiplier_lambda);
   result.put("findBoudary", p.find_boundary);
   result.put("findBoudaryObjThreshold", p.find_boundary_obj_threshold);
-  result.put("muDirectionMode", p.mu_last_direction);
   return result;
 }

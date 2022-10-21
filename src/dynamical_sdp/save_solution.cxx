@@ -143,18 +143,6 @@ void save_solution(const Dynamical_Solver &solver,
         }
     }
 
-  boost::filesystem::ofstream lag_multiplier_stream;
-  if(El::mpi::Rank() == 0)
-    {
-      const boost::filesystem::path lag_multiplier_path(out_directory / "lagMultiplier.txt");
-      lag_multiplier_stream.open(lag_multiplier_path);
-      lag_multiplier_stream << solver.lag_multiplier_lambda << '\n';
-      if(!lag_multiplier_stream.good())
-        {
-          throw std::runtime_error("Error when writing to: "
-                                   + lag_multiplier_path.string());
-        }
-    }
  
   boost::filesystem::ofstream iterations_stream;
   if(El::mpi::Rank() == 0)
@@ -169,18 +157,18 @@ void save_solution(const Dynamical_Solver &solver,
         }
     }
 
-  boost::filesystem::ofstream mu_direction_stream;
-  if(El::mpi::Rank() == 0)
-    {
-      const boost::filesystem::path mu_direction_path(out_directory / "mu_direction.txt");
-      mu_direction_stream.open(mu_direction_path);
-      mu_direction_stream << solver.mu_direction_mode << '\n';
-      if(!mu_direction_stream.good())
-        {
-          throw std::runtime_error("Error when writing to: "
-                                   + mu_direction_path.string());
-        }
-    }
+  //boost::filesystem::ofstream mu_direction_stream;
+  //if(El::mpi::Rank() == 0)
+  //  {
+  //    const boost::filesystem::path mu_direction_path(out_directory / "mu_direction.txt");
+  //    mu_direction_stream.open(mu_direction_path);
+  //    mu_direction_stream << solver.mu_direction_mode << '\n';
+  //    if(!mu_direction_stream.good())
+  //      {
+  //        throw std::runtime_error("Error when writing to: "
+  //                                 + mu_direction_path.string());
+  //      }
+  //  }
 
   // y is duplicated among cores, so only need to print out copy on
   // the root node.

@@ -31,15 +31,12 @@ struct Dynamical_Solver_Parameters
   std::vector<El::BigFloat> bounding_box_min;
 
   bool find_boundary, fix_ext_param_direction;
-  std::vector<El::BigFloat> external_coor;
   std::vector<El::BigFloat> search_direction; 
 
   bool use_exact_hessian; 
   std::vector<El::BigFloat> prev_grad;
   std::vector<El::BigFloat> prev_step;
   std::vector<El::BigFloat> hess_BFGS;
-  El::BigFloat lag_multiplier_lambda;
-  int mu_last_direction;
 
   bool printMore;
   bool use_Hmixed_for_BFGS;

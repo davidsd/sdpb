@@ -127,7 +127,6 @@ Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_par
   size_t iteration  = 1; 
   bool find_zeros = false;
   El::BigFloat mu;
-  mu_direction_mode = dynamical_parameters.mu_last_direction;
   for(; ; ++iteration)
     {
       El::byte checkpoint_now(

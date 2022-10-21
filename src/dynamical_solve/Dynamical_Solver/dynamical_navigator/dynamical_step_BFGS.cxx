@@ -474,7 +474,7 @@ void Dynamical_Solver::dynamical_step(
 	El::Matrix<El::BigFloat> grad_mixed(n_external_parameters, 1); //H_px (-internal_dx_dy) = H_px (H^-1_xx Del_x L_mu) in Eq (13).  
 
 	El::Matrix<El::BigFloat> prev_grad(n_external_parameters, 1), prev_step(n_external_parameters, 1), prev_BFGS(n_external_parameters, n_external_parameters);
-        El::Zeros(hess_BFGS, n_external_parameters,n_external_parameters);
+        El::Zeros(hess_Exact, n_external_parameters,n_external_parameters);
 	read_prev_grad_step_hess(dynamical_parameters, prev_grad, prev_step, prev_BFGS);
 
 	read_sdp_grid(dynamical_parameters, block_info, sdp, grid, timers,
@@ -531,7 +531,7 @@ void Dynamical_Solver::dynamical_step(
 		compute_external_dxdydXdY(is_primal_and_dual_feasible, 
 			dynamical_parameters, block_info, sdp, grid, X_cholesky, Y_cholesky, timers,
 			internal_dx, internal_dy, dx, dy, dX, dY, R,
-			delta_lambda, external_step, Delta_xy, primal_step_length, dual_step_length, step_length_reduction);
+			external_step, Delta_xy, primal_step_length, dual_step_length, step_length_reduction);
 
 		// save the best beta
 		if (beta == El::BigFloat(beta_scan_begin) ||

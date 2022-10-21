@@ -585,7 +585,6 @@ void Dynamical_Solver::compute_external_dxdy(
 	Block_Vector & dx, Block_Vector & dy,
 	Block_Diagonal_Matrix & R,
 
-	El::BigFloat &delta_lambda,
 	El::Matrix<El::BigFloat> & external_step,
 	std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy
 )
@@ -599,27 +598,14 @@ void Dynamical_Solver::compute_external_dxdy(
 	{
 		for (size_t block = 0; block < x.blocks.size(); ++block)
 		{
-			if (dynamical_parameters.find_boundary)
-			{
-				dx.blocks[block] *= (1.0 + delta_lambda / lag_multiplier_lambda);
-			}
 			El::Axpy(external_step(i), Delta_xy.at(i).first.blocks[block], dx.blocks[block]);
 		}
 		for (size_t block = 0; block < dy.blocks.size(); ++block)
 		{
-			if (dynamical_parameters.find_boundary)
-			{
-				dy.blocks[block] *= (1.0 + delta_lambda / lag_multiplier_lambda);
-			}
 			El::Axpy(external_step(i), Delta_xy.at(i).second.blocks[block], dy.blocks[block]);
 		}
 	}
 
-	if (dynamical_parameters.find_boundary)
-	{
-		primal_residues *= (1.0 + delta_lambda / lag_multiplier_lambda);
-		R *= (1.0 + delta_lambda / lag_multiplier_lambda);
-	}
 }
 
 
@@ -641,14 +627,13 @@ void Dynamical_Solver::compute_external_dxdydXdY(
 	Block_Diagonal_Matrix & dX, Block_Diagonal_Matrix & dY,
 	Block_Diagonal_Matrix & R,
 
-	El::BigFloat &delta_lambda,
 	El::Matrix<El::BigFloat> & external_step,
 	std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy,
 	El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
 	El::BigFloat &step_length_reduction
 )
 {
-	compute_external_dxdy(dynamical_parameters, internal_dx, internal_dy, dx, dy, R, delta_lambda, external_step, Delta_xy);
+	compute_external_dxdy(dynamical_parameters, internal_dx, internal_dy, dx, dy, R, external_step, Delta_xy);
 
 	compute_dXdY(is_primal_and_dual_feasible, block_info, sdp, grid,
 		X_cholesky, Y_cholesky, timers,
@@ -742,7 +727,7 @@ void Dynamical_Solver::internal_step_corrector_iteration_centering(
 
 	El::BigFloat coit_beta = 1;
 
-	int max_corrector_steps = 1000;
+	int max_corrector_steps = 5;
 
 	Block_Vector dx_last(dx);
 	Block_Vector dy_last(dy);

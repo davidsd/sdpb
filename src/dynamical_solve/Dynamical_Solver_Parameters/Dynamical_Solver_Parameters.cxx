@@ -38,6 +38,14 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
                               "Take a step in the external parameters, "
                               "that is to regenerate the sdp files if the step size is bigger than the threshold. "
                               "The default value is set to 0.");  
+  result.add_options()("updateAtDualityGap",
+                              boost::program_options::value<El::BigFloat>(&updateSDP_dualityGapThreshold)->default_value(0),
+                              "If updateAtDualityGap is setted to >0, the solver will run until duality<updateAtDualityGap.");
+  result.add_options()("centeringRThreshold",
+                              boost::program_options::value<El::BigFloat>(&centeringRThreshold)->default_value(-1),
+                              "If positive, run centering steps until R<centeringRThreshold.");
+
+
   result.add_options()("findBoundary", 
                               boost::program_options::value<bool>(&find_boundary) -> default_value(0), 
                               "True if the program is required by the user to find a point on the boundary of the island. " 
@@ -46,24 +54,11 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
                               boost::program_options::value<El::BigFloat>(&find_boundary_obj_threshold)->default_value(0),
                               "Continue to move towards the boundary if the primal and dual objectives are not sufficiently close to zero. " 
                               "The default value is set to 0.");
-  result.add_options()("externalCoor", 
-                              boost::program_options::value<std::vector<El::BigFloat>>(&external_coor)->multitoken(), 
-                              "The values of the external variables that were used to produce the central sdp file.");
-  result.add_options()("boundingBoxMax",
-                              boost::program_options::value<std::vector<El::BigFloat>>(&bounding_box_max)->multitoken(),
-                              "The upper bound of the external variables.");
-  result.add_options()("boundingBoxMin",
-                              boost::program_options::value<std::vector<El::BigFloat>>(&bounding_box_min)->multitoken(),
-                              "The lower bound of the external variables.");
-  result.add_options()("searchDirection", 
+  result.add_options()("searchDirection",
                               boost::program_options::value<std::vector<El::BigFloat>>(&search_direction)->multitoken(), 
                               "User-specified directional vector in which the program will looks for a zero. ");
-  result.add_options()("lagMultiplier", 
-                              boost::program_options::value<El::BigFloat>(&lag_multiplier_lambda), 
-                              "The Lagrange multiplier used to find the boundary of an island. ");
-  result.add_options()("muDirectionMode", 
-                              boost::program_options::value<int>(&mu_last_direction),
-                              "To decrease or increase mu based on the former step. ");
+
+
   result.add_options()("useExactHessian",
                               boost::program_options::value<bool>(&use_exact_hessian),
                               "To reinitialize the BFGS hessian with the exact one. ");
@@ -76,25 +71,25 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
   result.add_options()("prevHessianBFGS",
                               boost::program_options::value<std::vector<El::BigFloat>>(&hess_BFGS)->multitoken(),
                               "Hessian approximated by BFGS. "); 
-  result.add_options()("updateAtDualityGap",
-	  boost::program_options::value<El::BigFloat>(&updateSDP_dualityGapThreshold)->default_value(0),
-	  "If updateAtDualityGap is setted to >0, the solver will run until duality<updateAtDualityGap.");
+  result.add_options()("useHmixedforBFGS",
+                              boost::program_options::value<bool>(&use_Hmixed_for_BFGS)->default_value(false),
+                              "if True, hess_mixed will be used for hess_BFGS");
+
+
+
+  result.add_options()("boundingBoxMax",
+                              boost::program_options::value<std::vector<El::BigFloat>>(&bounding_box_max)->multitoken(),
+                              "The upper bound of the external variables.");
+  result.add_options()("boundingBoxMin",
+                              boost::program_options::value<std::vector<El::BigFloat>>(&bounding_box_min)->multitoken(),
+                              "The lower bound of the external variables.");
   result.add_options()("fixExtParamDirection",
-	  boost::program_options::value<bool>(&fix_ext_param_direction)->default_value(0),
-	  "True if the program dp is given by --searchDirection. ");
+                    	      boost::program_options::value<bool>(&fix_ext_param_direction)->default_value(0),
+	                      "True if the program dp is given by --searchDirection. ");
 
   result.add_options()("printMore",
-	  boost::program_options::bool_switch(&printMore)
-	  ->default_value(true),
-	  "Print R error for each iteration");
-
-  result.add_options()("useHmixedforBFGS",
-	  boost::program_options::value<bool>(&use_Hmixed_for_BFGS)->default_value(false),
-	  "if True, hess_mixed will be used for hess_BFGS");
-
-  result.add_options()("centeringRThreshold",
-	  boost::program_options::value<El::BigFloat>(&centeringRThreshold)->default_value(-1),
-	  "If positive, run centering steps until R<centeringRThreshold.");
+	                      boost::program_options::bool_switch(&printMore) ->default_value(true),
+	                      "Print R error for each iteration");
 
   result.add(solver_parameters.options()); 
 

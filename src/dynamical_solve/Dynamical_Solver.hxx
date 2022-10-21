@@ -48,14 +48,12 @@ public:
   El::BigFloat primal_objective, // f + c . x
     dual_objective,              // f + b . y
     duality_gap,                 // normalized difference of objectives
-    external_step_size,          // the size of the step to be taken in the external parameters' space 
-    lag_multiplier_lambda;
+    external_step_size;          // the size of the step to be taken in the external parameters' space 
 
   El::Matrix<El::BigFloat> grad_BFGS, hess_BFGS;
   El::Matrix<El::BigFloat> hess_Exact;
 
   bool hess_BFGS_updateQ;
-  int mu_direction_mode;
   int intext_mode;
   // Discrepancy in the primal equality constraints, a
   // Block_Diagonal_Matrix with the same structure as X, called 'P' in
@@ -141,7 +139,6 @@ public:
 	  Block_Diagonal_Matrix & dX, Block_Diagonal_Matrix & dY,
 	  Block_Diagonal_Matrix & R,
 
-	  El::BigFloat &delta_lambda,
 	  El::Matrix<El::BigFloat> & external_step,
 	  std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy,
 	  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
@@ -217,7 +214,6 @@ public:
 	  Block_Vector & dx, Block_Vector & dy,
 	  Block_Diagonal_Matrix & R,
 
-	  El::BigFloat &delta_lambda,
 	  El::Matrix<El::BigFloat> & external_step,
 	  std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy
   );
