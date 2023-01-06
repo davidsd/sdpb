@@ -106,6 +106,7 @@ def build(bld):
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/BFGS.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_BFGS.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_BFGS_func.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_external_corrector.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/internal_search_direction.cxx', 
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_update_sdp.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_search_direction.cxx',
@@ -118,7 +119,8 @@ def build(bld):
                        'src/approx_objective/Axpy.cxx',
                        'src/approx_objective/Approx_Objective/Approx_Objective/Approx_Objective.cxx',
                        'src/approx_objective/Approx_Objective/Approx_Objective/compute_dx_dy.cxx',
-                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/newton_trust.cxx']
+                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/newton_trust.cxx',
+                       'src/approx_objective/write_solver_state.cxx']
 
     bld.stlib(source=dynamical_solve_sources,
           target='dynamical_solve',
@@ -339,7 +341,7 @@ def build(bld):
                         'src/dynamical_sdp/Dynamical_Parameters/to_property_tree.cxx',
                         'src/dynamical_sdp/Dynamical_Parameters/ostream.cxx',
                         'src/dynamical_sdp/save_solution.cxx'],
-                target='dynamical_sdp1',
+                target='dynamical_sdp_V14',
                 cxxflags=default_flags,
                 use=use_packages + ['sdp_read','sdp_solve', 'dynamical_solve']
                 )

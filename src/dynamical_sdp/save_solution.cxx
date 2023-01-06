@@ -69,6 +69,11 @@ void save_solution(const Dynamical_Solver &solver,
                  << "dualityGap      = " << solver.duality_gap << ";\n"
                  << "primalError     = " << solver.primal_error() << ";\n"
                  << "dualError       = " << solver.dual_error << ";\n"
+		         << "dualStepSize    = " << solver.d_step << ";\n"
+                 << "primalStepSize  = " << solver.p_step << ";\n"
+		         << "BFGSHessianUpdated = " << solver.hess_BFGS_updateQ << ";\n"
+		         << "NavigatorValue = " << solver.lag_shifted << ";\n"
+		         << "findMinimumQ = " << solver.findMinimumQ << ";\n"
                  //<< "totalIterations = " << solver.total_iteration << ";\n"
                  << std::setw(16) << std::left << timer_pair.first << "= "
                  << timer_pair.second.elapsed_seconds() << ";\n";

@@ -87,6 +87,11 @@ void compute_feasible_and_termination(
   bool &is_primal_and_dual_feasible,
   Dynamical_Solver_Terminate_Reason &terminate_reason, bool &terminate_now);
 
+// checkpoint_save will use this variable. It's very bad we pass this variable as argument everywhere.
+// I will just define a global variable. This is temporary fix. We should make it member variable.
+boost::property_tree::ptree parameter_properties_save;
+Verbosity verbosity_save;
+
 Dynamical_Solver_Terminate_Reason
 Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_parameters,
                 const Verbosity &verbosity,
@@ -96,6 +101,9 @@ Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_par
                 const El::Grid &grid, Timers &timers, 
                 bool &update_sdp, El::Matrix<El::BigFloat> &extParamStep)
 {
+	parameter_properties_save = parameter_properties;
+	verbosity_save = verbosity;
+
   Dynamical_Solver_Terminate_Reason terminate_reason(
     Dynamical_Solver_Terminate_Reason::MaxIterationsExceeded);
   auto &solver_timer(timers.add_and_start("Solver runtime"));
@@ -214,6 +222,9 @@ Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_par
        }
     
     }
+
+  if (El::mpi::Rank() == 0) std::cout << "hess_BFGS_updateQ = " << hess_BFGS_updateQ << "\n" << std::flush;
+
   if (terminate_reason != Dynamical_Solver_Terminate_Reason::UpdateSDPs)
      { El::Zero(extParamStep);}
   total_iteration = dynamical_parameters.total_iterations + iteration; 

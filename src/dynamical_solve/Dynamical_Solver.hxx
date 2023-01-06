@@ -53,8 +53,14 @@ public:
   El::Matrix<El::BigFloat> grad_BFGS, hess_BFGS;
   El::Matrix<El::BigFloat> hess_Exact;
 
+  El::BigFloat lag_shifted;
+  bool findMinimumQ;
+
   bool hess_BFGS_updateQ;
-  int intext_mode;
+
+  El::BigFloat p_step, d_step;
+
+  //int intext_mode;
   // Discrepancy in the primal equality constraints, a
   // Block_Diagonal_Matrix with the same structure as X, called 'P' in
   // the manual:
@@ -96,6 +102,35 @@ public:
       const Block_Info &block_info, const El::Grid &grid,
       Timers &timers, bool &update_sdp,  El::Matrix<El::BigFloat> &extParamStep);
 
+
+  void external_corrector_step(const Dynamical_Solver_Parameters &dynamical_parameters,
+	  const SDP &old_sdp, const SDP &new_sdp,
+	  const Block_Info &block_info, const El::Grid &grid, const std::size_t &total_psd_rows,
+	  Block_Diagonal_Matrix &X_cholesky, Block_Diagonal_Matrix &Y_cholesky,
+	  std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2> &A_X_inv,
+	  std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2> &A_Y,
+	  Block_Vector & dx, Block_Vector & dy,
+	  Block_Diagonal_Matrix & dX, Block_Diagonal_Matrix & dY,
+	  const Block_Diagonal_Matrix &schur_complement_cholesky,
+	  const Block_Matrix &schur_off_diagonal,
+	  const El::DistMatrix<El::BigFloat> &Q,
+	  El::BigFloat &current_error_R, El::BigFloat &current_mu,
+	  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length, El::BigFloat &step_length_reduction,
+	  Timers &timers);
+
+  void compute_corrector_residue_shift(const Block_Info &block_info,
+	  Block_Vector &primal_residue_p_0, Block_Vector &dual_residues_0, Block_Diagonal_Matrix &R_0,
+	  Block_Vector &primal_residue_p, Block_Vector &dual_residues, Block_Diagonal_Matrix &R,
+	  Block_Vector & dx, Block_Vector & dy, Block_Diagonal_Matrix & dX, Block_Diagonal_Matrix & dY,
+	  const SDP &d_sdp);
+
+  void external_corrector_run(const Dynamical_Solver_Parameters &dynamical_parameters,
+	  const SDP &new_sdp,
+	  const Block_Info &block_info, const El::Grid &grid,
+	  Block_Vector & dx, Block_Vector & dy, Block_Diagonal_Matrix & dX, Block_Diagonal_Matrix & dY,
+	  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length, El::BigFloat &step_length_reduction,
+	  Timers &timers);
+
   void dynamical_step(
     const Dynamical_Solver_Parameters &dynamical_parameters,      
     const std::size_t &total_psd_rows,
@@ -114,6 +149,20 @@ public:
     El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
     bool &update_sdp, bool &find_zeros, El::Matrix<El::BigFloat> &external_step); 
 
+  void save_solver_state(const Dynamical_Solver_Parameters &dynamical_parameters,
+	  const Block_Info &block_info,
+	  Block_Vector & dx, Block_Vector & dy,
+	  Block_Diagonal_Matrix & dX, Block_Diagonal_Matrix & dY,
+	  const Block_Diagonal_Matrix &schur_complement_cholesky,
+	  const Block_Matrix &schur_off_diagonal,
+	  const El::DistMatrix<El::BigFloat> &Q);
+
+  void save_checkpoint(
+	  Block_Vector & dx, Block_Vector & dy,
+	  Block_Diagonal_Matrix & dX, Block_Diagonal_Matrix & dY,
+	  const boost::filesystem::path &checkpoint_directory,
+	  const Verbosity &verbosity,
+	  const boost::property_tree::ptree &parameter_properties);
 
   void
 	  save_checkpoint(const boost::filesystem::path &checkpoint_directory,
@@ -278,4 +327,11 @@ public:
 	  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
 	  El::BigFloat &step_length_reduction
   );
+
+  El::BigFloat finite_mu_navigator(
+	  const Block_Diagonal_Matrix &X_cholesky,
+	  const std::size_t &total_psd_rows,
+	  const El::BigFloat & mu,
+	  const El::BigFloat & beta,
+	  const Dynamical_Solver_Parameters &dynamical_parameters);
 };

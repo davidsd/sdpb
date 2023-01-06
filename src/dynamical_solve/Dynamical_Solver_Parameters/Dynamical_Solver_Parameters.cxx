@@ -45,6 +45,10 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
                               boost::program_options::value<El::BigFloat>(&centeringRThreshold)->default_value(-1),
                               "If positive, run centering steps until R<centeringRThreshold.");
 
+  result.add_options()("dualityGapUpperLimit",
+	  boost::program_options::value<El::BigFloat>(&dualityGap_upper_limit)->default_value(0),
+	  "If dualityGap_upper_limit is setted to >0, mu will not go beyond dualityGap_upper_limit during climbing."
+	  "This should be setted to a proper value if there is a bifurcation in global central path when dualityGap > dualityGap_upper_limit.");
 
   result.add_options()("findBoundary", 
                               boost::program_options::value<bool>(&find_boundary) -> default_value(0), 
@@ -90,6 +94,53 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
   result.add_options()("printMore",
 	                      boost::program_options::bool_switch(&printMore) ->default_value(true),
 	                      "Print R error for each iteration");
+
+  result.add_options()("oldSchurDir",
+	  boost::program_options::value<boost::filesystem::path>(&old_schur_path),
+	  "Directory containing Schur complement of the previous Newtonian step.");
+
+  result.add_options()("oldSDPDir",
+	  boost::program_options::value<boost::filesystem::path>(&old_sdp_path),
+	  "Directory containing SDP of the previous Newtonian step.");
+
+
+  // new strategy parameters
+  result.add_options()("betaScanMin",
+	  boost::program_options::value<El::BigFloat>(&beta_scan_min)->default_value(0.1),
+	  "beta scan min value.");
+  result.add_options()("betaScanMax",
+	  boost::program_options::value<El::BigFloat>(&beta_scan_max)->default_value(1.01),
+	  "beta scan max value.");
+  result.add_options()("betaScanStep",
+	  boost::program_options::value<El::BigFloat>(&beta_scan_step)->default_value(0.1),
+	  "beta scan step.");
+  result.add_options()("stepMinThreshold",
+	  boost::program_options::value<El::BigFloat>(&step_min_threshold)->default_value(0.1),
+	  "step size min.");
+  result.add_options()("stepMaxThreshold",
+	  boost::program_options::value<El::BigFloat>(&step_max_threshold)->default_value(0.6),
+	  "step size max.");
+  result.add_options()("muIShift",
+	  boost::program_options::value<El::BigFloat>(&lagrangian_muI_shift)->default_value(0.2),
+	  "mu*I shift in Lagrangian.");
+  result.add_options()("maxClimbing",
+	  boost::program_options::value<int>(&max_climbing)->default_value(1),
+	  "max climbing allowed.");
+  result.add_options()("betaClimbing",
+	  boost::program_options::value<El::BigFloat>(&beta_climbing)->default_value(2),
+	  "beta value for climbing.");
+  result.add_options()("betamuLogDetX",
+	  boost::program_options::value<El::BigFloat>(&beta_for_mu_logdetX)->default_value(-1),
+	  "beta for mu*log(det(X)) term. if beta=-1, the solver takes value from beta scan.");
+
+  result.add_options()("finiteDualityGapTarget",
+	  boost::program_options::value<El::BigFloat>(&finite_dGap_target)->default_value(-1),
+	  "if finiteDualityGapTarget>0, the solver will ignore beta scan and try to move to the specified finite duality gap.");
+
+  result.add_options()("BFGSPartialUpdate",
+	  boost::program_options::value<El::BigFloat>(&BFGS_partial_update_reduction)->default_value(-1),
+	  "if BFGSPartialUpdate>0, the solver will update BFGS Hessian paritially when the full update is non-positive.");
+
 
   result.add(solver_parameters.options()); 
 

@@ -21,11 +21,15 @@ struct Dynamical_Solver_Parameters
                update_sdp_threshold_max, update_sdp_threshold_min,
                find_boundary_obj_threshold;
 
-  El::BigFloat updateSDP_dualityGapThreshold;
+  El::BigFloat updateSDP_dualityGapThreshold, dualityGap_upper_limit;
 
   int n_external_parameters;
   size_t total_iterations;
   boost::filesystem::path new_sdp_path;
+
+  boost::filesystem::path old_schur_path; 
+  boost::filesystem::path old_sdp_path;
+  bool external_corrector_Q;
 
   std::vector<El::BigFloat> bounding_box_max;
   std::vector<El::BigFloat> bounding_box_min;
@@ -41,6 +45,23 @@ struct Dynamical_Solver_Parameters
   bool printMore;
   bool use_Hmixed_for_BFGS;
   El::BigFloat centeringRThreshold;
+
+
+  // new strategy parameters
+  El::BigFloat beta_scan_min;
+  El::BigFloat beta_scan_max;
+  El::BigFloat beta_scan_step;
+
+  El::BigFloat step_min_threshold;
+  El::BigFloat step_max_threshold;
+  El::BigFloat lagrangian_muI_shift;
+
+  El::BigFloat finite_dGap_target;
+
+  int max_climbing;
+  El::BigFloat beta_climbing;
+  El::BigFloat beta_for_mu_logdetX;
+  El::BigFloat BFGS_partial_update_reduction;
 
   Dynamical_Solver_Parameters() = default;
   boost::program_options::options_description options();

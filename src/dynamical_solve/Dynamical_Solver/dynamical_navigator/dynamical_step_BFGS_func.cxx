@@ -1,5 +1,6 @@
 #include <vector>
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <boost/algorithm/string.hpp>
 #include <iostream>
 #include "../../../sdp_solve.hxx"
@@ -109,6 +110,138 @@ void BFGS_update_hessian(const int n_parameters,
 		);
 
 
+/*
+El::BigFloat compute_xBy(const Block_Info &block_info, const SDP &sdp,
+	const Block_Vector &x, const Block_Vector &y)
+{
+	Block_Vector By(x);
+
+	auto By_block(By.blocks.begin());
+	auto primal_objective_c_block(sdp.primal_objective_c.blocks.begin());
+	auto y_block(y.blocks.begin());
+	auto free_var_matrix_block(sdp.free_var_matrix.blocks.begin());
+
+	for (auto &block_index : block_info.block_indices)
+	{
+		// By = 0
+		Zero(*By_block);
+		const size_t block_size(block_info.degrees[block_index] + 1);
+
+		// By += FreeVarMatrix * y
+		Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, El::BigFloat(1),
+			*free_var_matrix_block, *y_block, El::BigFloat(1),
+			*By_block);
+
+		++y_block;
+		++free_var_matrix_block;
+		++By_block;
+	}
+
+	return dot(x, By);
+}
+*/
+
+
+El::BigFloat compute_xBy(const Block_Info &block_info, const SDP &sdp,
+	const Block_Vector &x, const Block_Vector &y)
+{
+	El::BigFloat local_linear(0), result(0);
+	for (size_t block(0); block != x.blocks.size(); ++block)
+	{
+		{
+			// temp = dB.y
+			El::DistMatrix<El::BigFloat> temp(x.blocks.at(block));
+			El::Zero(temp);
+			El::Gemv(El::Orientation::NORMAL, El::BigFloat(1.0),
+				sdp.free_var_matrix.blocks[block], y.blocks.at(0),
+				El::BigFloat(0.0), temp);
+
+			// x.dB.y/
+			local_linear += El::Dotu(temp, x.blocks.at(block));
+		}
+	}
+	if (!x.blocks.empty() && x.blocks.at(0).Grid().Rank() != 0)
+	{
+		local_linear = 0;
+	}
+	result += El::mpi::AllReduce(local_linear, El::mpi::SUM, El::mpi::COMM_WORLD);
+
+	return result;
+}
+
+
+void compute_dx_dy(const Block_Info &block_info,
+	const SDP &d_sdp, const Block_Vector &x,
+	const Block_Vector &y,
+	const Block_Diagonal_Matrix &schur_complement_cholesky,
+	const Block_Matrix &schur_off_diagonal,
+	const El::DistMatrix<El::BigFloat> &Q,
+	Block_Vector &dx,
+	Block_Vector &dy);
+
+// I don't understand why this code is wrong
+// compute_primalobj_gradient_V3 :1.38e-39
+// compute_primalobj_gradient_V2 : 1.16e-39
+// difference : about 2.17226, see Ising_pd19_testGCP_v0.4_1Dtest_nologterm.nb
+El::BigFloat compute_primalobj_gradient_V2(const Block_Info &block_info,
+	const SDP &sdp, const SDP &d_sdp, const Block_Vector &x,
+	const Block_Vector &y,
+	const Block_Diagonal_Matrix &schur_complement_cholesky,
+	const Block_Matrix &schur_off_diagonal,
+	const El::DistMatrix<El::BigFloat> &Q)
+{
+	Block_Vector dx(x), dy(y);
+	compute_dx_dy(block_info, d_sdp, x, y, schur_complement_cholesky, schur_off_diagonal, Q, dx, dy);
+
+	El::BigFloat pobj_grad = dot(d_sdp.primal_objective_c, x) + dot(sdp.primal_objective_c, dx);
+
+	return pobj_grad;
+}
+
+El::BigFloat compute_primalobj_gradient_V3(const Block_Info &block_info,
+	const SDP &sdp, const SDP &d_sdp, const Block_Vector &x,
+	const Block_Vector &y,
+	const Block_Diagonal_Matrix &schur_complement_cholesky,
+	const Block_Matrix &schur_off_diagonal,
+	const El::DistMatrix<El::BigFloat> &Q)
+{
+	Block_Vector dx(x), dy(y);
+	compute_dx_dy(block_info, d_sdp, x, y, schur_complement_cholesky, schur_off_diagonal, Q, dx, dy);
+
+	El::BigFloat dobj_grad = El::Dot(d_sdp.dual_objective_b, y.blocks.at(0)) + 
+		El::Dot(sdp.dual_objective_b, dy.blocks.at(0)) + d_sdp.objective_const;
+
+	El::BigFloat pobj_grad = dobj_grad;
+
+	return pobj_grad;
+}
+
+
+El::BigFloat compute_primalobj_gradient(const SDP & dsdp, 
+	const Block_Vector & x, const Block_Vector & y, const Block_Info &block_info)
+{
+	El::BigFloat dby;
+	if (!y.blocks.empty())
+	{
+		dby = dsdp.objective_const + El::Dotu(dsdp.dual_objective_b, y.blocks.front());
+	}
+
+	El::BigFloat xdBy = compute_xBy(block_info, dsdp, x, y);
+	El::BigFloat dcx = dot(dsdp.primal_objective_c, x);
+
+	El::BigFloat dprimalobj = dcx + dby - xdBy;
+
+	if (El::mpi::Rank() == 0) std::cout
+		<< "dprimalobj = " << dprimalobj
+		<< " dcx = " << dcx
+		<< " dby = " << dby
+		<< " xdBy = " << xdBy
+		<< "\n" << std::flush;
+
+	return dprimalobj;
+}
+
+
 void read_sdp_grid(
 	const Dynamical_Solver_Parameters &dynamical_parameters,
 	const Block_Info &block_info,
@@ -132,6 +265,8 @@ void read_sdp_grid(
 	El::Matrix<El::BigFloat> & esum,
 
 	El::Matrix<El::BigFloat> & Lpu,
+
+	El::Matrix<El::BigFloat> & exact_grad,
 
 	std::vector<std::pair<Block_Vector, Block_Vector>> & H_xp,
 	std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy)
@@ -167,6 +302,32 @@ void read_sdp_grid(
 				eplus(std::stoi(directions[1])) = approx_obj.d_objective;//+ approx_obj.dd_objective; 
 																		 //compute_delta_lag(d_sdp, *this);
 
+				//eplus(std::stoi(directions[1])) = approx_obj.d_objective + approx_obj.dd_objective; 
+
+				//exact_grad(std::stoi(directions[1])) = compute_primalobj_gradient(d_sdp, x, y, block_info);
+
+				/**/
+				exact_grad(std::stoi(directions[1])) = compute_primalobj_gradient_V2(block_info,
+					sdp, d_sdp, x, y,
+					schur_complement_cholesky, schur_off_diagonal, Q);
+
+				if (El::mpi::Rank() == 0) std::cout << "compute_primalobj_gradient_V2 :"
+					<< exact_grad(std::stoi(directions[1]))
+					<< '\n' << std::flush;
+					
+
+				exact_grad(std::stoi(directions[1])) = compute_primalobj_gradient_V3(block_info,
+					sdp, d_sdp, x, y,
+					schur_complement_cholesky, schur_off_diagonal, Q);
+
+				/**/
+				if (El::mpi::Rank() == 0) std::cout << "compute_primalobj_gradient_V3 :"
+					<< exact_grad(std::stoi(directions[1]))
+					<< '\n' << std::flush;
+					
+
+
+
 				Lpu(std::stoi(directions[1])) = approx_obj.Lag_pu / dynamical_parameters.alpha;
 			}
 			else if (directions[0] == "minus")
@@ -197,7 +358,6 @@ void read_sdp_grid(
 }
 
 void compute_R_error(const std::size_t &total_psd_rows, const Block_Diagonal_Matrix &X, const Block_Diagonal_Matrix &Y, El::BigFloat & R_error, Timers &timers);
-
 
 void print_matrix(const El::Matrix<El::BigFloat> & matrix);
 void print_vector(const El::Matrix<El::BigFloat> & vec);
@@ -362,7 +522,7 @@ void external_grad(const El::Matrix<El::BigFloat> &ePlus,
 	El::Matrix<El::BigFloat> &grad)
 {
 	grad = ePlus;
-	grad *= El::BigFloat(1) / alpha;
+	grad *= 2 * El::BigFloat(1) / alpha;
 }
 
 
@@ -385,15 +545,16 @@ extern double beta_scan_end;
 extern double beta_scan_step;
 extern bool use_gradp_for_BFGS_update;
 extern double rescale_initial_hess;
-extern double BFGS_partial_update_reduction;
+//extern double BFGS_partial_update_reduction;
 extern bool compare_BFGS_gradient_at_same_mu;
-extern double beta_for_mu_logdetX;
+//extern double beta_for_mu_logdetX;
 
 
 void compute_grad_p_grad_mixed_Hpp_Hmixed(const Dynamical_Solver_Parameters &dynamical_parameters,
 	const El::Matrix<El::BigFloat> & eplus, const El::Matrix<El::BigFloat> & eminus, const El::Matrix<El::BigFloat> & esum,
 	const std::vector<std::pair<Block_Vector, Block_Vector>> & H_xp, const std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy,
 	const Block_Vector & internal_dx, const Block_Vector & internal_dy,
+	const El::Matrix<El::BigFloat> & exact_grad,
 	El::Matrix<El::BigFloat> & grad_p, El::Matrix<El::BigFloat> & grad_mixed, El::Matrix<El::BigFloat> & grad_corrected,
 	El::Matrix<El::BigFloat> & Lpu, El::BigFloat & mu,
 	El::Matrix<El::BigFloat> & hess_pp, El::Matrix<El::BigFloat> & hess_mixed, El::Matrix<El::BigFloat> & hess_Exact
@@ -408,7 +569,15 @@ void compute_grad_p_grad_mixed_Hpp_Hmixed(const Dynamical_Solver_Parameters &dyn
 	else
 	{
 		//std::cout << "compute grad: " << '\n' << std::flush;
-		external_grad(eplus, eminus, dynamical_parameters.alpha, grad_p);
+		if (dynamical_parameters.beta_for_mu_logdetX == El::BigFloat(0))
+		{
+			grad_p = exact_grad;
+			grad_p *= 1/dynamical_parameters.alpha;
+			if (El::mpi::Rank() == 0)std::cout << "I computed the gradient for lagrangian without mu*log(detX) term. grad_p=";
+			print_vector(grad_p);
+		}
+		else
+			external_grad(eplus, eminus, dynamical_parameters.alpha, grad_p);
 	}
 
 	for (int i = 0; i < dim_ext_p; i++)
@@ -648,7 +817,7 @@ void scale_multiply_add(const El::BigFloat &alpha,
 	const El::BigFloat &beta, Block_Diagonal_Matrix &C);
 
 // this function computes various error for corrector iteration. But so far I only implemented error_R
-void compute_errors(
+void compute_corrector_errors(
 	const Block_Info &block_info, const SDP &sdp,
 	const std::size_t &total_psd_rows,
 
@@ -697,6 +866,70 @@ void compute_errors(
 }
 
 
+void compute_corrector_R(
+	const Block_Info &block_info, const std::size_t &total_psd_rows,
+
+	const Block_Vector &x_const, const Block_Vector &dx_const,
+	const Block_Vector &y_const, const Block_Vector &dy_const,
+	const Block_Diagonal_Matrix &X_const, const Block_Diagonal_Matrix &dX_const,
+	const Block_Diagonal_Matrix &Y_const, const Block_Diagonal_Matrix &dY_const,
+
+	const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
+
+	Block_Diagonal_Matrix &R,
+	El::BigFloat &R_error,
+	El::BigFloat &mu,
+
+	Timers &timers)
+{
+	Block_Vector x(x_const), y(y_const), dx(dx_const), dy(dy_const);
+	Block_Diagonal_Matrix X(X_const), Y(Y_const), dX(dX_const), dY(dY_const);
+
+	// Update x, y, dX, dY ///////////
+	for (size_t block = 0; block < x.blocks.size(); ++block)
+	{
+		El::Axpy(primal_step_length, dx.blocks[block], x.blocks[block]);
+	}
+	dX *= primal_step_length;
+	X += dX;
+	for (size_t block = 0; block < dy.blocks.size(); ++block)
+	{
+		El::Axpy(dual_step_length, dy.blocks[block], y.blocks[block]);
+	}
+	dY *= dual_step_length;
+	Y += dY;
+	//////////////////////////////////
+
+	mu = frobenius_product_symmetric(X, Y) / total_psd_rows;
+
+	scale_multiply_add(El::BigFloat(-1), X, Y, El::BigFloat(0), R);
+	R.add_diagonal(mu);
+
+	R_error = R.max_abs_mpi();
+
+	return;
+}
+
+void compute_corrector_R(
+	const Block_Info &block_info, const std::size_t &total_psd_rows,
+
+	const Block_Vector &x_const, const Block_Vector &dx_const,
+	const Block_Vector &y_const, const Block_Vector &dy_const,
+	const Block_Diagonal_Matrix &X_const, const Block_Diagonal_Matrix &dX_const,
+	const Block_Diagonal_Matrix &Y_const, const Block_Diagonal_Matrix &dY_const,
+
+	El::BigFloat &R_error,
+	El::BigFloat &mu,
+
+	Timers &timers)
+{
+	Block_Diagonal_Matrix R(X_const);
+
+	compute_corrector_R(block_info, total_psd_rows,
+		x_const, dx_const, y_const, dy_const, X_const, dX_const, Y_const, dY_const,
+		1, 1, R, R_error, mu, timers);
+}
+
 void Dynamical_Solver::internal_step_corrector_iteration_centering(
 	const Dynamical_Solver_Parameters &dynamical_parameters,
 	const std::size_t &total_psd_rows,
@@ -718,6 +951,7 @@ void Dynamical_Solver::internal_step_corrector_iteration_centering(
 	const Block_Vector &primal_residue_p, El::BigFloat &mu,
 
 	const bool &is_primal_and_dual_feasible,
+ 
 	El::BigFloat &beta,
 	El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
 	El::BigFloat &step_length_reduction
@@ -725,7 +959,7 @@ void Dynamical_Solver::internal_step_corrector_iteration_centering(
 {
 	El::BigFloat error_P, error_p, error_d, error_R, coit_mu;
 
-	El::BigFloat coit_beta = 1;
+	El::BigFloat coit_beta = beta;
 
 	int max_corrector_steps = 5;
 
@@ -740,7 +974,7 @@ void Dynamical_Solver::internal_step_corrector_iteration_centering(
 		schur_off_diagonal, X_cholesky, coit_beta,
 		mu, primal_residue_p, Q, grad_x, grad_y, dx, dy, dX, dY, R);
 
-	compute_errors(block_info, sdp, total_psd_rows,
+	compute_corrector_errors(block_info, sdp, total_psd_rows,
 		x, dx, y, dy, X, dX, Y, dY,
 		1, 1,
 		error_P, error_p, error_d, error_R, coit_mu,
@@ -765,7 +999,7 @@ void Dynamical_Solver::internal_step_corrector_iteration_centering(
 			dx, dy, dX, dY, R);
 
 		// check corrector iteration result
-		compute_errors(block_info, sdp, total_psd_rows,
+		compute_corrector_errors(block_info, sdp, total_psd_rows,
 			x, dx, y, dy, X, dX, Y, dY,
 			1, 1,
 			error_P, error_p, error_d, error_R, coit_mu,
@@ -788,7 +1022,7 @@ void Dynamical_Solver::internal_step_corrector_iteration_centering(
 	}
 
 
-	compute_errors(block_info, sdp, total_psd_rows,
+	compute_corrector_errors(block_info, sdp, total_psd_rows,
 		x, dx_last, y, dy_last, X, dX_last, Y, dY_last,
 		1, 1,
 		error_P, error_p, error_d, error_R, coit_mu,
@@ -840,18 +1074,20 @@ void Dynamical_Solver::internal_step(
 	const Block_Vector &primal_residue_p, El::BigFloat &mu,
 
 	const bool &is_primal_and_dual_feasible,
-	El::BigFloat &beta,
+	El::BigFloat &beta, 
 	El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
 	El::BigFloat &step_length_reduction
 	)
 {
 	if(beta== El::BigFloat(1))
+  {
 		return internal_step_corrector_iteration_centering(dynamical_parameters, total_psd_rows, block_info, sdp, grid,
 			X_cholesky, Y_cholesky, timers,
 			schur_complement_cholesky, schur_off_diagonal, Q,
 			dx, dy, dX, dY, R, grad_x, grad_y,
 			primal_residue_p, mu, is_primal_and_dual_feasible,
 			beta, primal_step_length, dual_step_length, step_length_reduction);
+  }
 
 	internal_predictor_direction_dxdydXdY(block_info, sdp, *this, schur_complement_cholesky,
 		schur_off_diagonal, X_cholesky, beta,
@@ -884,6 +1120,9 @@ void Dynamical_Solver::execute_step(
 	{
 		El::Axpy(dual_step_length, dy.blocks[block], y.blocks[block]);
 	}
+
+	p_step = primal_step_length;
+	d_step = dual_step_length;
 
 	dX *= primal_step_length;
 	dY *= dual_step_length;
@@ -938,9 +1177,9 @@ void Dynamical_Solver::strategy_hess_BFGS(const Dynamical_Solver_Parameters &dyn
 
 			grad_diff -= prev_grad;
 
-			if (BFGS_partial_update_reduction > 0)
+			if (dynamical_parameters.BFGS_partial_update_reduction > 0)
 			{
-				bool exact_update_Q = BFGS_partial_update_hessian(El::BigFloat(BFGS_partial_update_reduction),
+				bool exact_update_Q = BFGS_partial_update_hessian(El::BigFloat(dynamical_parameters.BFGS_partial_update_reduction),
 					grad_diff, prev_step, hess_BFGS);
 				if (!exact_update_Q)
 					if (El::mpi::Rank() == 0)
@@ -961,6 +1200,9 @@ void Dynamical_Solver::strategy_hess_BFGS(const Dynamical_Solver_Parameters &dyn
 
 				if (flippedQ == false || update_hess_only_positive == false)
 					hess_BFGS_updateQ = true;
+
+				if (El::mpi::Rank() == 0) std::cout << "hess_BFGS_updateQ = " << hess_BFGS_updateQ
+					<< " flippedQ=" << flippedQ << " update_hess_only_positive=" << update_hess_only_positive << "\n" << std::flush;
 			}
 
 			hess_BFGS_lowest_mu = hess_BFGS;
@@ -981,6 +1223,34 @@ void Dynamical_Solver::strategy_hess_BFGS(const Dynamical_Solver_Parameters &dyn
 
 El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_cholesky, const Dynamical_Solver &solver);
 
+
+
+El::BigFloat Dynamical_Solver::finite_mu_navigator(
+	const Block_Diagonal_Matrix &X_cholesky,
+	const std::size_t &total_psd_rows,
+	const El::BigFloat & mu,
+	const El::BigFloat & beta,
+	const Dynamical_Solver_Parameters &dynamical_parameters)
+{
+	El::BigFloat beta_lag;
+	if (dynamical_parameters.beta_for_mu_logdetX < 0)
+	{
+		beta_lag = beta;
+	}
+	else
+	{
+		beta_lag = El::BigFloat(dynamical_parameters.beta_for_mu_logdetX);
+	}
+
+	El::BigFloat lag = compute_lag(beta_lag*mu, X_cholesky, *this);
+
+	El::BigFloat lag_shifted = lag;
+	lag_shifted -= total_psd_rows * mu * dynamical_parameters.lagrangian_muI_shift;
+
+	return lag_shifted;
+}
+
+
 void Dynamical_Solver::strategy_findboundary_extstep(
 	const Block_Diagonal_Matrix &X_cholesky, 
 	const std::size_t &total_psd_rows,
@@ -1000,28 +1270,7 @@ void Dynamical_Solver::strategy_findboundary_extstep(
 	bool & external_step_specified_Q
 )
 {
-	El::BigFloat lag0 = compute_lag(0, X_cholesky, *this);
-
-	El::BigFloat beta_lag;
-	if (beta_for_mu_logdetX < 0)
-	{
-		beta_lag = beta;
-	}
-	else
-	{
-		beta_lag = El::BigFloat(beta_for_mu_logdetX);
-	}
-
-	El::BigFloat lag = compute_lag(beta_lag*mu, X_cholesky, *this);
-
-	El::BigFloat lag_shifted = lag;
-	lag_shifted -= total_psd_rows * mu * El::BigFloat(navigator_shift);
-
-	if (El::mpi::Rank() == 0)
-	{
-		std::cout << "lag_shifted  = " << lag_shifted << '\n' << std::flush;
-		std::cout << "logdetX  = " << lag - lag0 << '\n' << std::flush;
-	}
+	lag_shifted = finite_mu_navigator(X_cholesky, total_psd_rows, mu, beta, dynamical_parameters);
 
 	//find_zero_step(10^(-10), 100, dynamical_parameters.update_sdp_threshold_max,
 	//		Hpp_minus_Hmixed, grad_mixed, find_zeros, external_step, lag);
@@ -1074,6 +1323,8 @@ void Dynamical_Solver::strategy_findboundary_extstep(
 			else
 				std::cout << "ext-step_plus=";
 
+			findMinimumQ = (lambda < 0);
+
 			print_vector(external_step_plus);
 			std::cout << "\n" << std::flush;
 		}
@@ -1105,4 +1356,41 @@ void Dynamical_Solver::strategy_update_grad_BFGS(
 		grad_BFGS = grad_mixed;
 		grad_BFGS += grad_p;
 	}
+}
+
+
+
+extern boost::property_tree::ptree parameter_properties_save;
+extern Verbosity verbosity_save;
+
+void write_solver_state(const std::vector<size_t> &block_indices,
+	const boost::filesystem::path &solution_dir,
+	const Block_Diagonal_Matrix &schur_complement_cholesky,
+	const Block_Matrix &schur_off_diagonal,
+	const El::DistMatrix<El::BigFloat> &Q);
+
+void Dynamical_Solver::save_solver_state(const Dynamical_Solver_Parameters &dynamical_parameters,
+	const Block_Info &block_info,
+	Block_Vector & dx, Block_Vector & dy,
+	Block_Diagonal_Matrix & dX, Block_Diagonal_Matrix & dY,
+	const Block_Diagonal_Matrix &schur_complement_cholesky,
+	const Block_Matrix &schur_off_diagonal,
+	const El::DistMatrix<El::BigFloat> &Q)
+{
+	boost::filesystem::path out_folder;
+	out_folder = dynamical_parameters.solver_parameters.checkpoint_out / (".schur");
+	if (!boost::filesystem::exists(out_folder)) create_directories(out_folder);
+	
+	if (El::mpi::Rank() == 0)
+		std::cout << "save schur complement to : " << out_folder << " \n";
+ 
+	write_solver_state(block_info.block_indices, out_folder,
+		schur_complement_cholesky, schur_off_diagonal, Q);
+
+	save_checkpoint(
+		dynamical_parameters.solver_parameters.checkpoint_out / (".int_ck"), verbosity_save, parameter_properties_save);
+
+	save_checkpoint(dx, dy, dX, dY, 
+		dynamical_parameters.solver_parameters.checkpoint_out / (".ext_ck"), verbosity_save, parameter_properties_save);
+
 }

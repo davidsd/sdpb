@@ -195,6 +195,13 @@ Dynamical_Parameters::Dynamical_Parameters(int argc, char *argv[])
             {
               throw std::runtime_error("The number of external parameters to be varied is zero.");
             }
+
+		  if (variables_map.count("oldSchurDir") == 0)
+		  {
+			  solver.external_corrector_Q = false;
+		  }
+
+
         }
     }
   catch(po::error &e)

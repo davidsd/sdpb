@@ -13,17 +13,32 @@ void scale_multiply_add(const El::BigFloat &alpha,
 
 // R_error= tr(XY)/X.dim * I - XY
 
-void compute_R_error(const std::size_t &total_psd_rows, const Block_Diagonal_Matrix &X, const Block_Diagonal_Matrix &Y, El::BigFloat & R_error, Timers &timers)
+void compute_R_error(const std::size_t &total_psd_rows, const Block_Diagonal_Matrix &X, const Block_Diagonal_Matrix &Y, 
+	Block_Diagonal_Matrix &R, El::BigFloat & R_error, El::BigFloat & mu, Timers &timers)
 {
-  auto &R_error_timer(timers.add_and_start("run.computeRerror"));
+	auto &R_error_timer(timers.add_and_start("run.computeRerror"));
 
-  El::BigFloat mu = frobenius_product_symmetric(X, Y) / total_psd_rows;
+	mu = frobenius_product_symmetric(X, Y) / total_psd_rows;
 
-  Block_Diagonal_Matrix R(X);
-  scale_multiply_add(El::BigFloat(-1), X, Y, El::BigFloat(0), R);
-  R.add_diagonal(mu);
+	R = X;
+	scale_multiply_add(El::BigFloat(-1), X, Y, El::BigFloat(0), R);
+	R.add_diagonal(mu);
 
-  R_error = R.max_abs_mpi();
+	R_error = R.max_abs_mpi();
 
-  R_error_timer.stop();
+	R_error_timer.stop();
+}
+
+void compute_R_error(const std::size_t &total_psd_rows, const Block_Diagonal_Matrix &X, const Block_Diagonal_Matrix &Y
+	, El::BigFloat & R_error, El::BigFloat & mu, Timers &timers)
+{
+	Block_Diagonal_Matrix R(X);
+	return compute_R_error(total_psd_rows, X, Y, R, R_error, mu, timers);
+}
+
+void compute_R_error(const std::size_t &total_psd_rows,
+	const Block_Diagonal_Matrix &X, const Block_Diagonal_Matrix &Y, El::BigFloat & R_error, Timers &timers)
+{
+	El::BigFloat mu;
+	return compute_R_error(total_psd_rows, X, Y, R_error, mu, timers);
 }

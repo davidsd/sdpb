@@ -77,15 +77,19 @@ El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_c
   // dual_objective = f + b . y
   lag = solver.dual_objective;
   
+  El::BigFloat trXY = frobenius_product_symmetric(solver.X, solver.Y);
+
   // Tr(XY)
-  lag += frobenius_product_symmetric(solver.X, solver.Y);
+  lag += trXY;
 
   
   // mu log det X = mu log det LL^T = 2 mu log det L; 
   // The El::HPDDeterminant routine takes log of the diagonal entries and then exponentiate the sum
   // depending on if we want to use the whole routine or just use the sum of the logs  
   //Notice that El::hpd_det::AfterCholesky already accounts for the factor of 2 
-  lag -= mu * (det_log_cholesky(X_cholesky)); 
+
+  El::BigFloat muLogDetX = mu * (det_log_cholesky(X_cholesky));
+  lag -= muLogDetX;
 
   El::BigFloat local_residues(0);
   for(size_t block(0); block != solver.x.blocks.size(); ++block)
@@ -95,9 +99,19 @@ El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_c
       local_residues += Dotu(solver.dual_residues.blocks.at(block), solver.x.blocks.at(block));
    }
 
-   lag 
-    += El::mpi::AllReduce(local_residues, El::mpi::SUM, El::mpi::COMM_WORLD);
+  El::BigFloat dual_residue_dot_x = El::mpi::AllReduce(local_residues, El::mpi::SUM, El::mpi::COMM_WORLD);
 
+   lag 
+    += dual_residue_dot_x;
+
+   if (El::mpi::Rank() == 0) std::cout << "finite mu nvg :"
+	   << " d.x = " << dual_residue_dot_x
+	   << " b.y = " << solver.dual_objective
+	   << " tr(XY) = " << trXY
+	   << " mu = " << mu
+	   << " mu*log(detX) = " << muLogDetX
+	   << " nvg = " << lag
+	   << '\n' << std::flush;
 
   return lag;
 }
