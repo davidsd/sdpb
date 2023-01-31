@@ -37,4 +37,6 @@ Dynamical_Solver::Dynamical_Solver(const Dynamical_Solver_Parameters &dynamical_
       Y.add_diagonal(dynamical_parameters.solver_parameters.initial_matrix_scale_dual);
     }
   hess_BFGS_updateQ = false;
+  p_step = 1;
+  d_step = 1;
 }

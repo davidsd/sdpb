@@ -45,7 +45,7 @@ void internal_predictor_direction_dxdydXdY(
 //The same as the calculation done by Approx_Objective
 El::BigFloat compute_delta_lag(const SDP &d_sdp, const Dynamical_Solver &solver);
 
-El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_cholesky, const Dynamical_Solver &solver);
+//El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_cholesky, const Dynamical_Solver &solver);
 
 //Given delta_p(sdp) , compute the (delta_x, delta_y) = H_xx^-1 H_xp delta_p
 //as shown in Eq(15). 
@@ -191,7 +191,8 @@ void read_sdp_grid(
 
 	El::Matrix<El::BigFloat> & Lpu,
 
-	El::Matrix<El::BigFloat> & exact_grad,
+	El::Matrix<El::BigFloat> & grad_withoutlog,
+	El::Matrix<El::BigFloat> & grad_withlog,
 
 	std::vector<std::pair<Block_Vector, Block_Vector>> & H_xp,
 	std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy);
@@ -226,7 +227,8 @@ void compute_grad_p_grad_mixed_Hpp_Hmixed(const Dynamical_Solver_Parameters &dyn
 	const El::Matrix<El::BigFloat> & eplus, const El::Matrix<El::BigFloat> & eminus, const El::Matrix<El::BigFloat> & esum,
 	const std::vector<std::pair<Block_Vector, Block_Vector>> & H_xp, const std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy,
 	const Block_Vector & internal_dx, const Block_Vector & internal_dy,
-	const El::Matrix<El::BigFloat> & exact_grad,
+	const El::Matrix<El::BigFloat> & grad_withoutlog,
+	const El::Matrix<El::BigFloat> & grad_withlog,
 	El::Matrix<El::BigFloat> & grad_p, El::Matrix<El::BigFloat> & grad_mixed, El::Matrix<El::BigFloat> & grad_corrected,
 	El::Matrix<El::BigFloat> & Lpu, El::BigFloat & mu,
 	El::Matrix<El::BigFloat> & hess_pp, El::Matrix<El::BigFloat> & hess_mixed, El::Matrix<El::BigFloat> & hess_Exact);
@@ -383,7 +385,9 @@ El::BigFloat predictor_centering_parameter_V3(const Solver_Parameters &parameter
 
 El::BigFloat compute_beta_for_finite_dGap(const El::BigFloat & current_dGap, const El::BigFloat & dGap_target)
 {
-	return dGap_target / current_dGap;
+	El::BigFloat beta = dGap_target / current_dGap;
+	if (beta < 0.1) beta = El::BigFloat(0.1);
+	return beta;
 }
 
 
@@ -519,10 +523,13 @@ void Dynamical_Solver::dynamical_step(
 	{
 		beta = compute_beta_for_finite_dGap(dGap_current, dynamical_parameters.finite_dGap_target);
 		update_sdp = false;
+		if (El::Min(p_step, d_step) < 0.1)beta = El::Min(1 / (El::Min(p_step, d_step) * 10), El::BigFloat(1e10));
 
 		if (El::mpi::Rank() == 0)std::cout << "run centering steps with beta=" << beta
 			<< " duality Gap target=" << dynamical_parameters.finite_dGap_target
-			<< " abs(target-current)=" << El::Abs(dynamical_parameters.finite_dGap_target - dGap_current) << "\n";
+			<< " abs(target-current)=" << El::Abs(dynamical_parameters.finite_dGap_target - dGap_current) 
+			<< " prev_p_step=" << p_step << " prev_d_step=" << d_step
+			<< "\n";
 
 		return internal_step(dynamical_parameters, total_psd_rows, block_info, sdp, grid,
 			X_cholesky, Y_cholesky, timers,
@@ -572,14 +579,12 @@ void Dynamical_Solver::dynamical_step(
 	El::Zeros(hess_Exact, n_external_parameters, n_external_parameters);
 	read_prev_grad_step_hess(dynamical_parameters, prev_grad, prev_step, prev_BFGS);
 
-	El::Matrix<El::BigFloat> exact_grad(n_external_parameters, 1);
-
 	read_sdp_grid(dynamical_parameters, block_info, sdp, grid, timers,
 		schur_complement_cholesky, schur_off_diagonal, Q, x, y, X_cholesky, n_external_parameters,
-		eplus, eminus, esum, Lpu, exact_grad, H_xp, Delta_xy);
+		eplus, eminus, esum, Lpu, grad_withoutlog, grad_withlog, H_xp, Delta_xy);
 
 	if (El::mpi::Rank() == 0)std::cout << "eplus[0]=" << eplus(0) 
-		<< " exact_grad=" << exact_grad(0)
+		<< " grad_withoutlog=" << grad_withoutlog(0)
 		<< " Lpu(0)=" << Lpu(0) 
 		<< "\n";
 
@@ -596,7 +601,7 @@ void Dynamical_Solver::dynamical_step(
 		// compute various variables according to the formula
 		compute_grad_p_grad_mixed_Hpp_Hmixed(dynamical_parameters,
 			eplus, eminus, esum, H_xp, Delta_xy, internal_dx, internal_dy,
-			exact_grad, grad_p, grad_mixed, grad_corrected,
+			grad_withoutlog, grad_withlog, grad_p, grad_mixed, grad_corrected,
 			Lpu, mu, hess_pp, hess_mixed, hess_Exact);
 
 		// decide hess_BFGS
@@ -608,7 +613,7 @@ void Dynamical_Solver::dynamical_step(
 		// compute external step
 		if (dynamical_parameters.find_boundary && dynamical_parameters.total_iterations > 0)
 		{
-			strategy_findboundary_extstep(X_cholesky, total_psd_rows, mu, beta,
+			strategy_findboundary_extstep(block_info, X_cholesky, total_psd_rows, mu, beta,
 				n_external_parameters, dynamical_parameters, lowest_mu_Q,
 				grad_corrected, grad_p, grad_mixed,
 				external_step, external_step_save, external_step_specified_Q);
@@ -617,7 +622,7 @@ void Dynamical_Solver::dynamical_step(
 		{
 			findMinimumQ = true;
 			// this is not used in minimization mode. we should compute lag_shifted only in "debug" mode
-			lag_shifted = finite_mu_navigator(X_cholesky, total_psd_rows, mu, beta, dynamical_parameters);
+			lag_shifted = finite_mu_navigator(block_info, X_cholesky, total_psd_rows, mu, beta, dynamical_parameters);
 
 			external_step = grad_corrected;
 			external_step *= (-1);

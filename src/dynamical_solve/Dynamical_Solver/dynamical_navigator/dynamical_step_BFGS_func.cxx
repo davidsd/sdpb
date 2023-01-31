@@ -179,10 +179,9 @@ void compute_dx_dy(const Block_Info &block_info,
 	Block_Vector &dx,
 	Block_Vector &dy);
 
-// I don't understand why this code is wrong
-// compute_primalobj_gradient_V3 :1.38e-39
-// compute_primalobj_gradient_V2 : 1.16e-39
-// difference : about 2.17226, see Ising_pd19_testGCP_v0.4_1Dtest_nologterm.nb
+// compute_primalobj_gradient_V2 should be equivalent to compute_primalobj_gradient_V3
+// but I don't understand how x is distribute among different process.
+// Why in Approx_Objective it's computed in different process then AllReduce, but in compute_objective.cxx it's computed locally
 El::BigFloat compute_primalobj_gradient_V2(const Block_Info &block_info,
 	const SDP &sdp, const SDP &d_sdp, const Block_Vector &x,
 	const Block_Vector &y,
@@ -193,10 +192,51 @@ El::BigFloat compute_primalobj_gradient_V2(const Block_Info &block_info,
 	Block_Vector dx(x), dy(y);
 	compute_dx_dy(block_info, d_sdp, x, y, schur_complement_cholesky, schur_off_diagonal, Q, dx, dy);
 
-	El::BigFloat pobj_grad = dot(d_sdp.primal_objective_c, x) + dot(sdp.primal_objective_c, dx);
+	El::BigFloat pobj_grad = d_sdp.objective_const + dot(d_sdp.primal_objective_c, x) + dot(sdp.primal_objective_c, dx);
 
 	return pobj_grad;
 }
+
+
+// test x duplication
+El::BigFloat compute_primalobj_gradient_V2_test(const Block_Info &block_info,
+	const SDP &sdp, const SDP &d_sdp, const Block_Vector &x,
+	const Block_Vector &y,
+	const Block_Diagonal_Matrix &schur_complement_cholesky,
+	const Block_Matrix &schur_off_diagonal,
+	const El::DistMatrix<El::BigFloat> &Q)
+{
+	auto prec = std::cout.precision();
+	std::cout.precision(100);
+
+	El::BigFloat sum_local(0), result(0), cx_local(0);
+	for (size_t block(0); block != x.blocks.size(); ++block)
+	{
+		cx_local = Dotu(d_sdp.primal_objective_c.blocks.at(block), x.blocks.at(block));
+		sum_local += cx_local;
+
+		size_t block_index(block_info.block_indices.at(block));
+
+		std::cout << "rank=" << El::mpi::Rank() << " xID=" << block_index << " cx_local=" << cx_local << "\n";
+	}
+	if (!x.blocks.empty() && x.blocks.at(0).Grid().Rank() != 0)
+	{
+		std::cout << "rank=" << El::mpi::Rank() << " deleting sum_local."
+			<< " emptyQ=" << x.blocks.empty() 
+			<< " x.Rank()=" << x.blocks.at(0).Grid().Rank() << "\n";
+		sum_local = 0;
+	}
+
+	result += El::mpi::AllReduce(sum_local, El::mpi::SUM, El::mpi::COMM_WORLD);
+
+	if (El::mpi::Rank() == 0)
+		std::cout << "compute dc.x locally : " << d_sdp.objective_const + dot(d_sdp.primal_objective_c, x) << "\n";
+
+	std::cout.precision(prec);
+
+	return result + d_sdp.objective_const;
+}
+
 
 El::BigFloat compute_primalobj_gradient_V3(const Block_Info &block_info,
 	const SDP &sdp, const SDP &d_sdp, const Block_Vector &x,
@@ -266,7 +306,8 @@ void read_sdp_grid(
 
 	El::Matrix<El::BigFloat> & Lpu,
 
-	El::Matrix<El::BigFloat> & exact_grad,
+	El::Matrix<El::BigFloat> & grad_withoutlog,
+	El::Matrix<El::BigFloat> & grad_withlog,
 
 	std::vector<std::pair<Block_Vector, Block_Vector>> & H_xp,
 	std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy)
@@ -276,11 +317,12 @@ void read_sdp_grid(
 	El::Zero(eplus);
 	El::Zero(eminus);
 	El::Zero(esum);
+	grad_withoutlog = eplus;
 	if (dynamical_parameters.new_sdp_path.extension() == ".nsv")
 	{
 		for (auto &filename : read_file_list(dynamical_parameters.new_sdp_path))
 		{
-			//Assume that the filename takes the form "plus_i","minus_i" and "sum_i_j", f
+			//Assume that the filename takes the form "*plus_i","*minus_i" and "*sum_i_j", f
 			//standing for the change in positive e_i, negative e_i and (e_i + e_j) directions respectively 
 			std::string file_name = filename.stem().string();
 			std::vector<std::string> directions;
@@ -296,58 +338,68 @@ void read_sdp_grid(
 
 			//std::cout << "rank=" << El::mpi::Rank() << " after approx_obj \n" << std::flush;
 
-			if (directions[0] == "plus")
+			if (directions.size() < 2)throw std::invalid_argument("A list of perturbed sdp files are required");
+			std::string dir_str = directions.end()[-2];
+			int dir_index1 = std::stoi(directions.end()[-1]), dir_index2;
+			if (directions.size() >= 3 && directions.end()[-3] == "sum")
+			{
+				dir_str = "sum";
+				dir_index2 = std::stoi(directions.end()[-2]);
+			}
+
+			if (dir_str == "plus")
 			{
 				mixed_hess(block_info, d_sdp, x, y, schur_complement_cholesky, schur_off_diagonal, Q, dynamical_parameters.alpha, H_xp, Delta_xy);
-				eplus(std::stoi(directions[1])) = approx_obj.d_objective;//+ approx_obj.dd_objective; 
+				eplus(dir_index1) = approx_obj.d_objective;//+ approx_obj.dd_objective; 
 																		 //compute_delta_lag(d_sdp, *this);
 
-				//eplus(std::stoi(directions[1])) = approx_obj.d_objective + approx_obj.dd_objective; 
-
-				//exact_grad(std::stoi(directions[1])) = compute_primalobj_gradient(d_sdp, x, y, block_info);
+				//eplus(dir_index1) = approx_obj.d_objective + approx_obj.dd_objective; 
 
 				/**/
-				exact_grad(std::stoi(directions[1])) = compute_primalobj_gradient_V2(block_info,
+				grad_withoutlog(dir_index1) = compute_primalobj_gradient_V2(block_info,
 					sdp, d_sdp, x, y,
 					schur_complement_cholesky, schur_off_diagonal, Q);
 
 				if (El::mpi::Rank() == 0) std::cout << "compute_primalobj_gradient_V2 :"
-					<< exact_grad(std::stoi(directions[1]))
+					<< grad_withoutlog(dir_index1)
 					<< '\n' << std::flush;
 					
-
-				exact_grad(std::stoi(directions[1])) = compute_primalobj_gradient_V3(block_info,
+				grad_withoutlog(dir_index1) = compute_primalobj_gradient_V3(block_info,
 					sdp, d_sdp, x, y,
 					schur_complement_cholesky, schur_off_diagonal, Q);
 
 				/**/
 				if (El::mpi::Rank() == 0) std::cout << "compute_primalobj_gradient_V3 :"
-					<< exact_grad(std::stoi(directions[1]))
+					<< grad_withoutlog(dir_index1)
 					<< '\n' << std::flush;
-					
 
-
-
-				Lpu(std::stoi(directions[1])) = approx_obj.Lag_pu / dynamical_parameters.alpha;
+				Lpu(dir_index1) = approx_obj.Lag_pu / dynamical_parameters.alpha;
 			}
-			else if (directions[0] == "minus")
+			else if (dir_str == "minus")
 			{
-				eminus(std::stoi(directions[1])) = approx_obj.d_objective;//+ approx_obj.dd_objective; 
+				eminus(dir_index1) = approx_obj.d_objective;//+ approx_obj.dd_objective; 
 																		  //compute_delta_lag(d_sdp,*this); 
 			}
-			else if (directions[0] == "sum")
+			else if (dir_str == "sum")
 			{
 				El::BigFloat tempt = approx_obj.d_objective;//+ approx_obj.dd_objective;
-				esum(std::stoi(directions[1]), std::stoi(directions[2])) = tempt;
-				esum(std::stoi(directions[2]), std::stoi(directions[1])) = tempt;
+				esum(dir_index1, dir_index2) = tempt;
+				esum(dir_index2, dir_index1) = tempt;
 				//compute_delta_lag(d_sdp,*this); 
 			}
+			else
+				throw std::invalid_argument("A list of perturbed sdp files are required");
 		}
 	}
 	else
 	{
 		throw std::invalid_argument("A list of perturbed sdp files are required");
 	}
+
+	grad_withlog = eplus;
+
+	grad_withoutlog *= 1 / dynamical_parameters.alpha;
+	grad_withlog *= 1 / dynamical_parameters.alpha;
 
 	std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
@@ -522,7 +574,7 @@ void external_grad(const El::Matrix<El::BigFloat> &ePlus,
 	El::Matrix<El::BigFloat> &grad)
 {
 	grad = ePlus;
-	grad *= 2 * El::BigFloat(1) / alpha;
+	grad *= El::BigFloat(1) / alpha;
 }
 
 
@@ -554,7 +606,8 @@ void compute_grad_p_grad_mixed_Hpp_Hmixed(const Dynamical_Solver_Parameters &dyn
 	const El::Matrix<El::BigFloat> & eplus, const El::Matrix<El::BigFloat> & eminus, const El::Matrix<El::BigFloat> & esum,
 	const std::vector<std::pair<Block_Vector, Block_Vector>> & H_xp, const std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy,
 	const Block_Vector & internal_dx, const Block_Vector & internal_dy,
-	const El::Matrix<El::BigFloat> & exact_grad,
+	const El::Matrix<El::BigFloat> & grad_withoutlog,
+	const El::Matrix<El::BigFloat> & grad_withlog,
 	El::Matrix<El::BigFloat> & grad_p, El::Matrix<El::BigFloat> & grad_mixed, El::Matrix<El::BigFloat> & grad_corrected,
 	El::Matrix<El::BigFloat> & Lpu, El::BigFloat & mu,
 	El::Matrix<El::BigFloat> & hess_pp, El::Matrix<El::BigFloat> & hess_mixed, El::Matrix<El::BigFloat> & hess_Exact
@@ -568,16 +621,19 @@ void compute_grad_p_grad_mixed_Hpp_Hmixed(const Dynamical_Solver_Parameters &dyn
 	}
 	else
 	{
-		//std::cout << "compute grad: " << '\n' << std::flush;
-		if (dynamical_parameters.beta_for_mu_logdetX == El::BigFloat(0))
+		if (dynamical_parameters.gradientWithLogDetX == false)
 		{
-			grad_p = exact_grad;
-			grad_p *= 1/dynamical_parameters.alpha;
-			if (El::mpi::Rank() == 0)std::cout << "I computed the gradient for lagrangian without mu*log(detX) term. grad_p=";
-			print_vector(grad_p);
+			grad_p = grad_withoutlog;
+			if (El::mpi::Rank() == 0)std::cout << "the gradient N_p is computed without mu*log(detX) term. grad_p=";
 		}
 		else
+		{
+			grad_p = grad_withlog;
 			external_grad(eplus, eminus, dynamical_parameters.alpha, grad_p);
+			if (El::mpi::Rank() == 0)std::cout << "the gradient N_p is computed with mu*log(detX) term. grad_p=";
+		}
+		print_vector(grad_p);
+		if (El::mpi::Rank() == 0)std::cout << "\n";
 	}
 
 	for (int i = 0; i < dim_ext_p; i++)
@@ -1221,11 +1277,13 @@ void Dynamical_Solver::strategy_hess_BFGS(const Dynamical_Solver_Parameters &dyn
 }
 
 
-El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_cholesky, const Dynamical_Solver &solver);
+El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_cholesky, 
+	const Dynamical_Solver &solver, const Block_Info &block_info);
 
 
 
 El::BigFloat Dynamical_Solver::finite_mu_navigator(
+	const Block_Info &block_info,
 	const Block_Diagonal_Matrix &X_cholesky,
 	const std::size_t &total_psd_rows,
 	const El::BigFloat & mu,
@@ -1242,7 +1300,7 @@ El::BigFloat Dynamical_Solver::finite_mu_navigator(
 		beta_lag = El::BigFloat(dynamical_parameters.beta_for_mu_logdetX);
 	}
 
-	El::BigFloat lag = compute_lag(beta_lag*mu, X_cholesky, *this);
+	El::BigFloat lag = compute_lag(beta_lag*mu, X_cholesky, *this, block_info);
 
 	El::BigFloat lag_shifted = lag;
 	lag_shifted -= total_psd_rows * mu * dynamical_parameters.lagrangian_muI_shift;
@@ -1252,6 +1310,7 @@ El::BigFloat Dynamical_Solver::finite_mu_navigator(
 
 
 void Dynamical_Solver::strategy_findboundary_extstep(
+	const Block_Info &block_info,
 	const Block_Diagonal_Matrix &X_cholesky, 
 	const std::size_t &total_psd_rows,
 	const El::BigFloat & mu,
@@ -1270,7 +1329,7 @@ void Dynamical_Solver::strategy_findboundary_extstep(
 	bool & external_step_specified_Q
 )
 {
-	lag_shifted = finite_mu_navigator(X_cholesky, total_psd_rows, mu, beta, dynamical_parameters);
+	lag_shifted = finite_mu_navigator(block_info, X_cholesky, total_psd_rows, mu, beta, dynamical_parameters);
 
 	//find_zero_step(10^(-10), 100, dynamical_parameters.update_sdp_threshold_max,
 	//		Hpp_minus_Hmixed, grad_mixed, find_zeros, external_step, lag);
@@ -1346,6 +1405,12 @@ void Dynamical_Solver::strategy_update_grad_BFGS(
 	if (compare_BFGS_gradient_at_same_mu)
 	{
 		extrapolate_gradient_as_target_mu(primal_step_length, primal_step_length, grad_p, grad_mixed, grad_BFGS);
+		if (El::mpi::Rank() == 0)
+		{
+			std::cout << "grad_mixed : ";
+			print_vector(grad_mixed);
+			std::cout << "\n";
+		}
 	}
 	else if (use_gradp_for_BFGS_update)
 	{

@@ -132,6 +132,9 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
   result.add_options()("betamuLogDetX",
 	  boost::program_options::value<El::BigFloat>(&beta_for_mu_logdetX)->default_value(-1),
 	  "beta for mu*log(det(X)) term. if beta=-1, the solver takes value from beta scan.");
+  result.add_options()("gradientWithLogDetX",
+	  boost::program_options::value<bool>(&gradientWithLogDetX)->default_value(false),
+	  "if gradientWithLogDetX== true, the gradient N_p is computed with the mu*log(det(X)) term.");
 
   result.add_options()("finiteDualityGapTarget",
 	  boost::program_options::value<El::BigFloat>(&finite_dGap_target)->default_value(-1),

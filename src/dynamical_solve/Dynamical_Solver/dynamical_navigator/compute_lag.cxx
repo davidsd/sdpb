@@ -3,6 +3,8 @@
 #include <El.hpp>
 #include <math.h>
 #include <iostream>
+#include <iomanip>
+#include <limits>
 //#include <gmpxx.h>
 //#include <boost/multiprecision/gmp.hpp>
 //#include <mpfr.h>
@@ -15,21 +17,76 @@
 El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
                                          const Block_Diagonal_Matrix &B);
 
-
+// this version is incorrect
 El::Base<El::BigFloat> det_log_cholesky(const Block_Diagonal_Matrix &L){
    El::Base<El::BigFloat> local_det_log(0);
+
+   auto prec = std::cout.precision();
+   std::cout.precision(100);
+
    for(size_t b = 0; b < L.blocks.size(); b++)
      {
        El::SafeProduct<El::Base<El::BigFloat>> safeDet = El::hpd_det::AfterCholesky(El::UpperOrLowerNS::LOWER,L.blocks[b]);
        local_det_log += safeDet.kappa*safeDet.n;
+
+	   std::cout << "rank=" << El::mpi::Rank() << " b=" << b << " det=" << safeDet.kappa*safeDet.n << "\n";
+	   // there are some strange double counting. Example :
+	   //rank=4 b=0 det=-779.1462996382045296542806926055645690206327094625492878756216926599134446077938194558464097719553348
+	   //rank=5 b=0 det=-779.1462996382045296542806926055645690206327094625492878756216926599134446077938194558464097719553348
+
        //Notice that El::hpd_det::AfterCholesky multiply the det by 2 so the result is det(X = LL^T) instead of det(L);
      }
    //std::cout << "before all reduce: " << local_det_log << std::endl;
    El::Base<El::BigFloat> final_result = El::mpi::AllReduce(local_det_log, El::mpi::SUM, El::mpi::COMM_WORLD);
    //std::cout << "after all reduce: " << final_result   << std::endl;
 
+   std::cout.precision(prec);
    return final_result;
   
+}
+
+El::Base<El::BigFloat> det_log_cholesky_fix(const Block_Diagonal_Matrix &L, const Dynamical_Solver &solver, const Block_Info &block_info) {
+	El::Base<El::BigFloat> local_det_log(0);
+
+	auto prec = std::cout.precision();
+	std::cout.precision(100);
+
+	for (size_t block = 0; block != solver.x.blocks.size(); ++block)
+	{
+		size_t block_index(block_info.block_indices.at(block));
+		for (size_t psd_block(0); psd_block < 2; ++psd_block)
+		{
+			int blockID_global = 2 * block_index + psd_block;
+			int blockID = 2 * block + psd_block;
+
+			if (L.blocks.at(blockID).Height() != 0)
+			{
+				El::SafeProduct<El::Base<El::BigFloat>> safeDet = El::hpd_det::AfterCholesky(El::UpperOrLowerNS::LOWER, L.blocks.at(blockID));
+				local_det_log += safeDet.kappa*safeDet.n;
+
+				/*
+				std::cout << "rank=" << El::mpi::Rank() << " ID=" << blockID_global
+					<< " block=" << block << " psd_block=" << psd_block
+					<< " X.height=" << solver.X.blocks.at(blockID).Height()
+					<< " det=" << safeDet.kappa*safeDet.n << "\n";
+					*/
+			}
+		}
+	}
+
+	if (!solver.x.blocks.empty() && solver.x.blocks.at(0).Grid().Rank() != 0)
+	{
+		//std::cout << "rank=" << El::mpi::Rank() << " deleting local_det_log." << "\n";
+		local_det_log = 0;
+	}
+
+	//std::cout << "before all reduce: " << local_det_log << std::endl;
+	El::Base<El::BigFloat> final_result = El::mpi::AllReduce(local_det_log, El::mpi::SUM, El::mpi::COMM_WORLD);
+	//std::cout << "after all reduce: " << final_result   << std::endl;
+
+	std::cout.precision(prec);
+	return final_result;
+
 }
 
 // solver 
@@ -72,7 +129,9 @@ El::BigFloat compute_delta_lag(const SDP &d_sdp, const Dynamical_Solver &solver)
 // dual_residues[p] = c[p] - A[p,a,b] Y[a,b] - B[p,a] y[a]
 // Lagrangian = dual_residues.x + b.y + Tr(X,Y) - mu log det (X) 
 
-El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_cholesky, const Dynamical_Solver &solver){
+El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_cholesky, 
+	const Dynamical_Solver &solver, const Block_Info &block_info)
+{
   El::BigFloat lag(0);
   // dual_objective = f + b . y
   lag = solver.dual_objective;
@@ -88,7 +147,7 @@ El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_c
   // depending on if we want to use the whole routine or just use the sum of the logs  
   //Notice that El::hpd_det::AfterCholesky already accounts for the factor of 2 
 
-  El::BigFloat muLogDetX = mu * (det_log_cholesky(X_cholesky));
+  El::BigFloat muLogDetX = mu * (det_log_cholesky_fix(X_cholesky, solver, block_info));
   lag -= muLogDetX;
 
   El::BigFloat local_residues(0);
@@ -104,14 +163,18 @@ El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_c
    lag 
     += dual_residue_dot_x;
 
+   auto prec = std::cout.precision();
+
+   std::cout.precision(100);
    if (El::mpi::Rank() == 0) std::cout << "finite mu nvg :"
-	   << " d.x = " << dual_residue_dot_x
-	   << " b.y = " << solver.dual_objective
-	   << " tr(XY) = " << trXY
-	   << " mu = " << mu
-	   << " mu*log(detX) = " << muLogDetX
-	   << " nvg = " << lag
+	   << " d.x = " << dual_residue_dot_x << "\n"
+	   << " b.y = " << solver.dual_objective << "\n"
+	   << " tr(XY) = " << trXY << "\n"
+	   << " mu = " << mu << "\n"
+	   << " mu*log(detX) = " << muLogDetX << "\n"
+	   << " nvg = " << lag << "\n"
 	   << '\n' << std::flush;
+   std::cout.precision(prec);
 
   return lag;
 }

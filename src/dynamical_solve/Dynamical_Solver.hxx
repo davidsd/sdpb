@@ -53,12 +53,17 @@ public:
   El::Matrix<El::BigFloat> grad_BFGS, hess_BFGS;
   El::Matrix<El::BigFloat> hess_Exact;
 
+  El::Matrix<El::BigFloat> grad_withlog;
+  El::Matrix<El::BigFloat> grad_withoutlog;
+
   El::BigFloat lag_shifted;
   bool findMinimumQ;
 
   bool hess_BFGS_updateQ;
 
   El::BigFloat p_step, d_step;
+
+  El::BigFloat prev_p_step, prev_d_step;
 
   //int intext_mode;
   // Discrepancy in the primal equality constraints, a
@@ -279,6 +284,7 @@ public:
 
 
   void strategy_findboundary_extstep(
+	  const Block_Info &block_info,
 	  const Block_Diagonal_Matrix &X_cholesky,
 	  const std::size_t &total_psd_rows,
 	  const El::BigFloat & mu,
@@ -329,6 +335,7 @@ public:
   );
 
   El::BigFloat finite_mu_navigator(
+	  const Block_Info &block_info,
 	  const Block_Diagonal_Matrix &X_cholesky,
 	  const std::size_t &total_psd_rows,
 	  const El::BigFloat & mu,

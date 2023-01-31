@@ -64,6 +64,7 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
 
 void compute_R_error(const std::size_t &total_psd_rows, const Block_Diagonal_Matrix &X, const Block_Diagonal_Matrix &Y, El::BigFloat & R_error, Timers &timers);
 
+extern int max_climbing;
 
 // subroutines to decide weather to update sdps in run_dynamical, before entering dynamical_step
 void compute_update_sdp(
@@ -103,6 +104,7 @@ Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_par
 {
 	parameter_properties_save = parameter_properties;
 	verbosity_save = verbosity;
+	max_climbing = dynamical_parameters.max_climbing;
 
   Dynamical_Solver_Terminate_Reason terminate_reason(
     Dynamical_Solver_Terminate_Reason::MaxIterationsExceeded);

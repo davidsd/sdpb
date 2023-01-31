@@ -63,6 +63,8 @@ struct Dynamical_Solver_Parameters
   El::BigFloat beta_for_mu_logdetX;
   El::BigFloat BFGS_partial_update_reduction;
 
+  bool gradientWithLogDetX;
+
   Dynamical_Solver_Parameters() = default;
   boost::program_options::options_description options();
 
