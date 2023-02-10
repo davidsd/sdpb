@@ -645,7 +645,7 @@ void Dynamical_Solver::dynamical_step(
 
 		// save the best beta
 		if (beta == beta_scan_begin_El ||
-			(primal_step_length + dual_step_length) > (primal_step_length_best + dual_step_length_best)
+			El::Max(primal_step_length, dual_step_length) > El::Max(primal_step_length_best, dual_step_length_best)
 			)
 		{
 			// save best state
