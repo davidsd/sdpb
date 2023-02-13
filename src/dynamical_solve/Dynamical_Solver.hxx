@@ -50,7 +50,7 @@ public:
     duality_gap,                 // normalized difference of objectives
     external_step_size;          // the size of the step to be taken in the external parameters' space 
 
-  El::Matrix<El::BigFloat> grad_BFGS, hess_BFGS;
+  El::Matrix<El::BigFloat> grad_BFGS, hess_BFGS, grad_mixed;
   El::Matrix<El::BigFloat> hess_Exact;
 
   El::Matrix<El::BigFloat> grad_withlog;

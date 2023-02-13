@@ -65,6 +65,8 @@ struct Dynamical_Solver_Parameters
 
   bool gradientWithLogDetX;
 
+  El::BigFloat navigatorValueShift;
+
   Dynamical_Solver_Parameters() = default;
   boost::program_options::options_description options();
 

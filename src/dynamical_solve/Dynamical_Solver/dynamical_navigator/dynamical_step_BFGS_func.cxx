@@ -1257,8 +1257,8 @@ void Dynamical_Solver::strategy_hess_BFGS(const Dynamical_Solver_Parameters &dyn
 				if (flippedQ == false || update_hess_only_positive == false)
 					hess_BFGS_updateQ = true;
 
-				if (El::mpi::Rank() == 0) std::cout << "hess_BFGS_updateQ = " << hess_BFGS_updateQ
-					<< " flippedQ=" << flippedQ << " update_hess_only_positive=" << update_hess_only_positive << "\n" << std::flush;
+				//if (El::mpi::Rank() == 0) std::cout << "hess_BFGS_updateQ = " << hess_BFGS_updateQ
+				//	<< " flippedQ=" << flippedQ << " update_hess_only_positive=" << update_hess_only_positive << "\n" << std::flush;
 			}
 
 			hess_BFGS_lowest_mu = hess_BFGS;
@@ -1305,7 +1305,7 @@ El::BigFloat Dynamical_Solver::finite_mu_navigator(
 	El::BigFloat lag_shifted = lag;
 	lag_shifted -= total_psd_rows * mu * dynamical_parameters.lagrangian_muI_shift;
 
-	return lag_shifted;
+	return lag_shifted + dynamical_parameters.navigatorValueShift;
 }
 
 

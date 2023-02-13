@@ -144,6 +144,10 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
 	  boost::program_options::value<El::BigFloat>(&BFGS_partial_update_reduction)->default_value(-1),
 	  "if BFGSPartialUpdate>0, the solver will update BFGS Hessian paritially when the full update is non-positive.");
 
+  result.add_options()("navigatorValueShift",
+	  boost::program_options::value<El::BigFloat>(&navigatorValueShift)->default_value(0),
+	  "The navigator function will be shifted by this value. This only affects the findBoundary=True run.");
+
 
   result.add(solver_parameters.options()); 
 

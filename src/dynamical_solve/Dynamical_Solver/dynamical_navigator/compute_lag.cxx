@@ -165,6 +165,7 @@ El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_c
 
    auto prec = std::cout.precision();
 
+   /*
    std::cout.precision(100);
    if (El::mpi::Rank() == 0) std::cout << "finite mu nvg :"
 	   << " d.x = " << dual_residue_dot_x << "\n"
@@ -175,6 +176,7 @@ El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_c
 	   << " nvg = " << lag << "\n"
 	   << '\n' << std::flush;
    std::cout.precision(prec);
+   */
 
   return lag;
 }

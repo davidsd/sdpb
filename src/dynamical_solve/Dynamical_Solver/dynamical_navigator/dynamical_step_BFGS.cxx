@@ -560,6 +560,7 @@ void Dynamical_Solver::dynamical_step(
 	Block_Diagonal_Matrix dX_best(X), dY_best(Y);
 	Block_Vector dx_best(x), dy_best(y);
 	El::BigFloat primal_step_length_best, dual_step_length_best, beta_best;
+	El::BigFloat primal_step_length_prev, dual_step_length_prev, beta_prev;
 	El::Matrix<El::BigFloat> hess_BFGS_best, grad_mixed_best;
 
 	int n_external_parameters = dynamical_parameters.n_external_parameters;
@@ -573,10 +574,12 @@ void Dynamical_Solver::dynamical_step(
 	El::Matrix<El::BigFloat> grad_corrected(n_external_parameters, 1);
 
 	El::Matrix<El::BigFloat> hess_mixed(n_external_parameters, n_external_parameters); //H_px H^-1_xx H_xp in Eq(13).
-	El::Matrix<El::BigFloat> grad_mixed(n_external_parameters, 1); //H_px (-internal_dx_dy) = H_px (H^-1_xx Del_x L_mu) in Eq (13).  
+	//El::Matrix<El::BigFloat> grad_mixed(n_external_parameters, 1); //H_px (-internal_dx_dy) = H_px (H^-1_xx Del_x L_mu) in Eq (13).  
 
 	El::Matrix<El::BigFloat> prev_grad(n_external_parameters, 1), prev_step(n_external_parameters, 1), prev_BFGS(n_external_parameters, n_external_parameters);
 	El::Zeros(hess_Exact, n_external_parameters, n_external_parameters);
+	El::Zeros(grad_mixed, n_external_parameters, 1);
+
 	read_prev_grad_step_hess(dynamical_parameters, prev_grad, prev_step, prev_BFGS);
 
 	read_sdp_grid(dynamical_parameters, block_info, sdp, grid, timers,
@@ -588,9 +591,23 @@ void Dynamical_Solver::dynamical_step(
 		<< " Lpu(0)=" << Lpu(0) 
 		<< "\n";
 
+	El::BigFloat bisect_beta_begin, bisect_beta_end;
+	El::BigFloat optimal_step_min=0.6, optimal_step_max=0.7;
+
+	int i = 0;
+
 	// beta scan
-	for (beta = beta_scan_begin_El; beta <= beta_scan_end_El; beta += beta_scan_step_El)
+	beta = beta_scan_begin_El;
+	bool stall_on_GCP = false;
+	while (true)
 	{
+		i++;
+
+		if (El::mpi::Rank() == 0) std::cout << "i : " << i << "\n" << std::flush;
+
+		// loop control
+		if (beta > beta_scan_end_El)break;
+
 		internal_predictor_direction_dxdydXdY(block_info, sdp, *this, schur_complement_cholesky,
 			schur_off_diagonal, X_cholesky, beta,
 			mu, primal_residue_p, Q, grad_x, grad_y, internal_dx, internal_dy, dX, dY, R);
@@ -657,7 +674,10 @@ void Dynamical_Solver::dynamical_step(
 
 		if (El::mpi::Rank() == 0)
 		{
+			auto prec = std::cout.precision();
+			std::cout.precision(30);
 			std::cout << "scan beta : " << beta << "\n" << std::flush;
+			std::cout.precision(prec);			
 			std::cout << "P/D-step-len-ext = " << primal_step_length << " , " << dual_step_length << "\n" << std::flush;
 		}
 
@@ -673,15 +693,72 @@ void Dynamical_Solver::dynamical_step(
 			return;
 		}
 
-		// if step_length > step_max_threshold, break
-		if (El::Max(primal_step_length, dual_step_length) > dynamical_parameters.step_max_threshold) break;
+		// Condition for break when stuck on GCP : the step should be in the optimal range
+		if (stall_on_GCP && El::Max(primal_step_length, dual_step_length) >= optimal_step_min
+			&& El::Max(primal_step_length, dual_step_length) <= optimal_step_max)
+		{
+			if (El::mpi::Rank() == 0)std::cout << "Find a good beta to solve stalling on GCP \n" << std::flush;
+			break;
+		}
+		
+		if (stall_on_GCP == false)
+		{
+			// condition for stalling on GCP : (1), current beta is the last beta (but not first) to scan (usually 1) and current step=1;
+			//                                 (2), previous step < step_min_threshold
+			stall_on_GCP = primal_step_length == El::BigFloat(1) && dual_step_length == El::BigFloat(1) &&
+				(beta != beta_scan_begin_El && beta + beta_scan_step_El > beta_scan_end_El) &&
+				(El::Max(primal_step_length_prev, dual_step_length_prev) < dynamical_parameters.step_min_threshold);
+
+			if (stall_on_GCP == true)
+			{
+				bisect_beta_begin = beta_prev;
+				bisect_beta_end = beta;
+
+				if (El::mpi::Rank() == 0)std::cout << "stalling on GCP is detected. The solver will try to fine scan beta values \n" << std::flush;
+			}
+		}
+		else
+		{
+			if (El::Max(primal_step_length, dual_step_length) < optimal_step_min)
+				bisect_beta_begin = beta;
+			else
+				bisect_beta_end = beta;
+		}
+			
+		// to be compatible with the old version, i.e. turn off this stalling solution, just set stall_on_GCP=false;
+
+		// if step_length > step_max_threshold and not stuck on GCP, break
+		if ((!stall_on_GCP) && El::Max(primal_step_length, dual_step_length) > dynamical_parameters.step_max_threshold) break;
+
+		// loop control
+		beta_prev = beta; 
+		dual_step_length_prev = dual_step_length; 
+		primal_step_length_prev = primal_step_length;
+
+		// special control : if stuck on GCP, I should bisection search for a better beta value
+		if (stall_on_GCP)
+		{
+			beta = (bisect_beta_begin + bisect_beta_end) / 2;
+
+			//if (i == 12) beta = El::BigFloat("0.925");
+			//if (i == 14) beta = El::BigFloat("0.925");
+
+			auto prec = std::cout.precision();
+			std::cout.precision(30);
+			if (El::mpi::Rank() == 0)
+				std::cout << "beta bisection bracket : (" << bisect_beta_begin << "," << bisect_beta_end << "). Next beta="<< beta << "\n" << std::flush;
+			std::cout.precision(prec);
+		}
+		else
+			beta += beta_scan_step_El;
 	}
 
-	// load best state
-	save_load_beta_scan_best_state(
-		dx, dy, dX, dY, primal_step_length, dual_step_length, beta, hess_BFGS, grad_mixed,
-		dx_best, dy_best, dX_best, dY_best, primal_step_length_best, dual_step_length_best,
-		beta_best, hess_BFGS_best, grad_mixed_best);
+	// load best state if not stuck on GCP
+	if(stall_on_GCP==false)
+		save_load_beta_scan_best_state(
+			dx, dy, dX, dY, primal_step_length, dual_step_length, beta, hess_BFGS, grad_mixed,
+			dx_best, dy_best, dX_best, dY_best, primal_step_length_best, dual_step_length_best,
+			beta_best, hess_BFGS_best, grad_mixed_best);
 
 	if (El::mpi::Rank() == 0)std::cout << "best scan result : best beta = " << beta << " step-len : ("
 		<< primal_step_length << ", " << dual_step_length << ")\n" << std::flush;
