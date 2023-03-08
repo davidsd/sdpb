@@ -41,6 +41,7 @@ struct Dynamical_Solver_Parameters
   std::vector<El::BigFloat> prev_grad;
   std::vector<El::BigFloat> prev_step;
   std::vector<El::BigFloat> hess_BFGS;
+  std::vector<El::BigFloat> hess_BFGS_pp;
 
   bool printMore;
   bool use_Hmixed_for_BFGS;

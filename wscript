@@ -123,7 +123,7 @@ def build(bld):
                        'src/approx_objective/write_solver_state.cxx']
 
     bld.stlib(source=dynamical_solve_sources,
-          target='dynamical_solve_V14',
+          target='dynamical_solve_V16',
           cxxflags=default_flags,
           use=use_packages + ['sdp_solve', 'sdp_read'])
 
@@ -341,9 +341,9 @@ def build(bld):
                         'src/dynamical_sdp/Dynamical_Parameters/to_property_tree.cxx',
                         'src/dynamical_sdp/Dynamical_Parameters/ostream.cxx',
                         'src/dynamical_sdp/save_solution.cxx'],
-                target='dynamical_sdp_V14',
+                target='dynamical_sdp_V16',
                 cxxflags=default_flags,
-                use=use_packages + ['sdp_read','sdp_solve', 'dynamical_solve_V14']
+                use=use_packages + ['sdp_read','sdp_solve', 'dynamical_solve_V16']
                 )
 
 

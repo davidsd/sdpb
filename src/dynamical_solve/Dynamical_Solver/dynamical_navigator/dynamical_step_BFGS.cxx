@@ -220,7 +220,10 @@ bool BFGS_partial_update_hessian(const El::BigFloat & reduction_factor,
 
 
 void read_prev_grad_step_hess(const Dynamical_Solver_Parameters &dynamical_parameters,
-	El::Matrix<El::BigFloat> & prev_grad, El::Matrix<El::BigFloat> & prev_step, El::Matrix<El::BigFloat> & prev_BFGS);
+        El::Matrix<El::BigFloat> & prev_grad,
+        El::Matrix<El::BigFloat> & prev_step,
+        El::Matrix<El::BigFloat> & prev_BFGS,
+        El::Matrix<El::BigFloat> & prev_BFGS_pp );
 
 
 void compute_grad_p_grad_mixed_Hpp_Hmixed(const Dynamical_Solver_Parameters &dynamical_parameters,
@@ -354,7 +357,7 @@ double rescale_initial_hess = 1;
 
 //double BFGS_partial_update_reduction = -1; // if positive, hessian will be updated always positive based on the partial update logic.
 
-bool compare_BFGS_gradient_at_same_mu = true;
+bool compare_BFGS_gradient_at_same_mu = false;
 
 //double beta_for_mu_logdetX = 0; // if negative, it will use the beta from beta scan
 //double beta_for_mu_logdetX = -1;
@@ -411,6 +414,7 @@ void Dynamical_Solver::dynamical_step(
 	El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
 	bool &update_sdp, bool &find_zeros, El::Matrix<El::BigFloat> &external_step)
 {
+        if (El::mpi::Rank() == 0) std::cout << "start of step" << "\n";
 	auto &step_timer(timers.add_and_start("run.step"));
 	step_timer.stop();
 
@@ -428,18 +432,19 @@ void Dynamical_Solver::dynamical_step(
 	Block_Diagonal_Matrix schur_complement_cholesky(
 		block_info.schur_block_sizes(), block_info.block_indices,
 		block_info.num_points.size(), grid);
-
+        if (El::mpi::Rank() == 0) std::cout << "FINISH schur_complement_cholesky" << "\n";
 	Block_Matrix schur_off_diagonal(sdp.free_var_matrix);
-
+        if (El::mpi::Rank() == 0) std::cout << "schur_off_diagonal" << "\n";
 	El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
 		sdp.dual_objective_b.Height());
-
+        if (El::mpi::Rank() == 0) std::cout << "Initialize Q" << "\n";
 	if (!(dynamical_parameters.external_corrector_Q && external_corrector_jump_to_newSDP))
 	{
+                if (El::mpi::Rank() == 0) std::cout << "after external_corrector_Q" << "\n";
 		initialize_schur_complement_solver(block_info, sdp, A_X_inv, A_Y, grid,
 			schur_complement_cholesky, schur_off_diagonal, Q, timers);
 	}
-
+        if (El::mpi::Rank() == 0) std::cout << "after initialize_schur_complement_solver" << "\n";
 	auto &frobenius_timer(
 		timers.add_and_start("run.step.frobenius_product_symmetric"));
 	El::BigFloat dGap_current = frobenius_product_symmetric(X, Y);
@@ -575,9 +580,9 @@ void Dynamical_Solver::dynamical_step(
 	El::Matrix<El::BigFloat> hess_mixed(n_external_parameters, n_external_parameters); //H_px H^-1_xx H_xp in Eq(13).
 	El::Matrix<El::BigFloat> grad_mixed(n_external_parameters, 1); //H_px (-internal_dx_dy) = H_px (H^-1_xx Del_x L_mu) in Eq (13).  
 
-	El::Matrix<El::BigFloat> prev_grad(n_external_parameters, 1), prev_step(n_external_parameters, 1), prev_BFGS(n_external_parameters, n_external_parameters);
+	El::Matrix<El::BigFloat> prev_grad(n_external_parameters, 1), prev_step(n_external_parameters, 1), prev_BFGS(n_external_parameters, n_external_parameters) , prev_BFGS_pp(n_external_parameters, n_external_parameters);
 	El::Zeros(hess_Exact, n_external_parameters, n_external_parameters);
-	read_prev_grad_step_hess(dynamical_parameters, prev_grad, prev_step, prev_BFGS);
+	read_prev_grad_step_hess(dynamical_parameters, prev_grad, prev_step, prev_BFGS, prev_BFGS_pp);
 
 	read_sdp_grid(dynamical_parameters, block_info, sdp, grid, timers,
 		schur_complement_cholesky, schur_off_diagonal, Q, x, y, X_cholesky, n_external_parameters,
@@ -599,16 +604,31 @@ void Dynamical_Solver::dynamical_step(
 			mu, primal_residue_p, Q, grad_x, grad_y, internal_dx, internal_dy, dX, dY, R);
 
 		// compute various variables according to the formula
+                // grad_corrected = grad_p (grad_withoutlog or grad_withlog) 
+                //                  - mu Lpu  (option 1)
+                //                  + grad_mixed (option 2) 
+                // Lpu = d(Log det X)/dp, To be chekced: grad_mixed - (- mu Lpu) ~ O(R) 
+                // options decided by use_Lpu_mu_correction (false by default) 
+                // grad_withoutlog = dc.x + c.dx 
+                // grad_withlog    = db.y + dc.x + x.dB.y
+                // decided by dynamical_parameters.gradientWithLogDetX
 		compute_grad_p_grad_mixed_Hpp_Hmixed(dynamical_parameters,
 			eplus, eminus, esum, H_xp, Delta_xy, internal_dx, internal_dy,
 			grad_withoutlog, grad_withlog, grad_p, grad_mixed, grad_corrected,
 			Lpu, mu, hess_pp, hess_mixed, hess_Exact);
 
 		// decide hess_BFGS
+                // grad_diff = grad_p (option 1)
+                //           = grad_corrected (option 2)
+                // decided by use_gradp_for_BFGS_update (true by default)
+                // hess_BFGS (grad_p) ~ hess_BFGS (grad_corrected)   
+                // H_pp - H_px H_xx^-1 H_xp ~ 
+                // grad_diff = grad_p(i+1) + 0 - (grad_p(i) + step_length grad_mixed(i)) 
+                // Assuming R = 0, grad_diff = grad_p(i+1) + 0 - (grad_p(i) + step_length * mu Lpu ) 
 		strategy_hess_BFGS(dynamical_parameters, n_external_parameters,
 			lowest_mu_Q, grad_p, grad_mixed, grad_corrected,
 			Lpu, mu, hess_pp, hess_mixed, hess_Exact,
-			prev_BFGS, prev_step, prev_grad, hess_BFGS_lowest_mu);
+			prev_BFGS,prev_BFGS_pp, prev_step, prev_grad, hess_BFGS_lowest_mu);
 
 		// compute external step
 		if (dynamical_parameters.find_boundary && dynamical_parameters.total_iterations > 0)

@@ -545,11 +545,16 @@ bool BFGS_update_hessian(
 	const El::Matrix<El::BigFloat> &grad_p_diff,
 	const El::Matrix<El::BigFloat> &last_it_step,
 	El::Matrix<El::BigFloat> &hess_bfgs,
+        El::Matrix<El::BigFloat> &hess_bfgs_pp,
+        El::Matrix<El::BigFloat> &hess_mix,
 	bool update_only_when_positive)
 {
 	El::Matrix<El::BigFloat> hess_bfgs_save(hess_bfgs);
+       
+	BFGS_update_hessian(hess_bfgs.Width(), grad_p_diff, last_it_step, hess_bfgs_pp);
 
-	BFGS_update_hessian(hess_bfgs.Width(), grad_p_diff, last_it_step, hess_bfgs);
+        hess_bfgs = hess_bfgs_pp;
+        hess_bfgs -= hess_mix;
 
 	bool flippedQ = positivitize_matrix(hess_bfgs);
 
@@ -671,7 +676,10 @@ void compute_grad_p_grad_mixed_Hpp_Hmixed(const Dynamical_Solver_Parameters &dyn
 }
 
 void read_prev_grad_step_hess(const Dynamical_Solver_Parameters &dynamical_parameters,
-	El::Matrix<El::BigFloat> & prev_grad, El::Matrix<El::BigFloat> & prev_step, El::Matrix<El::BigFloat> & prev_BFGS)
+	El::Matrix<El::BigFloat> & prev_grad, 
+        El::Matrix<El::BigFloat> & prev_step, 
+        El::Matrix<El::BigFloat> & prev_BFGS, 
+        El::Matrix<El::BigFloat> & prev_BFGS_pp )
 {
 	int dim_ext_p = dynamical_parameters.n_external_parameters;
 
@@ -688,6 +696,14 @@ void read_prev_grad_step_hess(const Dynamical_Solver_Parameters &dynamical_param
 			prev_BFGS(i, j) = dynamical_parameters.hess_BFGS[i * dim_ext_p + j];
 		}
 	}
+
+	for (int i = 0; i < dim_ext_p; i++)
+	{
+		for (int j = 0; j < dim_ext_p; j++)
+		{
+			prev_BFGS_pp(i, j) = dynamical_parameters.hess_BFGS_pp[i * dim_ext_p + j];
+		}
+        }	
 }
 
 
@@ -1192,8 +1208,8 @@ void Dynamical_Solver::strategy_hess_BFGS(const Dynamical_Solver_Parameters &dyn
 	El::Matrix<El::BigFloat> & grad_p, El::Matrix<El::BigFloat> & grad_mixed, El::Matrix<El::BigFloat> & grad_corrected,
 	El::Matrix<El::BigFloat> & Lpu, El::BigFloat & mu,
 	El::Matrix<El::BigFloat> & hess_pp, El::Matrix<El::BigFloat> & hess_mixed, El::Matrix<El::BigFloat> & hess_Exact,
-
-	El::Matrix<El::BigFloat> & prev_BFGS, El::Matrix<El::BigFloat> & prev_step, El::Matrix<El::BigFloat> & prev_grad,
+	El::Matrix<El::BigFloat> & prev_BFGS, El::Matrix<El::BigFloat> & prev_BFGS_pp,
+        El::Matrix<El::BigFloat> & prev_step, El::Matrix<El::BigFloat> & prev_grad,
 	El::Matrix<El::BigFloat> & hess_BFGS_lowest_mu
 )
 {
@@ -1211,13 +1227,15 @@ void Dynamical_Solver::strategy_hess_BFGS(const Dynamical_Solver_Parameters &dyn
 		if (dynamical_parameters.use_Hmixed_for_BFGS) // I will let simpleboot control whether hess_mixed will be used for hess_BFGS
 		{
 			El::Zeros(hess_BFGS, n_external_parameters, n_external_parameters);
-			hess_BFGS -= hess_mixed;
+                        hess_BFGS_pp = hess_BFGS; 
+ 			hess_BFGS -= hess_mixed;
 			positivitize_matrix(hess_BFGS);
 			hess_BFGS *= El::BigFloat(rescale_initial_hess);
 		}
 		else
 		{
 			hess_BFGS = prev_BFGS;
+                        hess_BFGS_pp = prev_BFGS_pp;
 		}
 
 		if (lowest_mu_Q == false) hess_BFGS = hess_BFGS_lowest_mu;
@@ -1243,7 +1261,7 @@ void Dynamical_Solver::strategy_hess_BFGS(const Dynamical_Solver_Parameters &dyn
 			}
 			else
 			{
-				bool flippedQ = BFGS_update_hessian(grad_diff, prev_step, hess_BFGS, update_hess_only_positive);
+				bool flippedQ = BFGS_update_hessian(grad_diff, prev_step, hess_BFGS, hess_BFGS_pp, hess_mixed, update_hess_only_positive);
 				if (flippedQ)
 					if (update_hess_only_positive)
 					{

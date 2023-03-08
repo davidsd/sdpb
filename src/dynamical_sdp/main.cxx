@@ -21,7 +21,7 @@ int main(int argc, char **argv)
 {
   El::Environment env(argc, argv);
 
-  El::gmp::SetPrecision(768);
+  El::gmp::SetPrecision(1024);
 
 
   /*

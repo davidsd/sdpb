@@ -75,6 +75,9 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
   result.add_options()("prevHessianBFGS",
                               boost::program_options::value<std::vector<El::BigFloat>>(&hess_BFGS)->multitoken(),
                               "Hessian approximated by BFGS. "); 
+  result.add_options()("prevHessianBFGSpp",
+                              boost::program_options::value<std::vector<El::BigFloat>>(&hess_BFGS_pp)->multitoken(),
+                              "H_pp approximated by BFGS. "); 
   result.add_options()("useHmixedforBFGS",
                               boost::program_options::value<bool>(&use_Hmixed_for_BFGS)->default_value(false),
                               "if True, hess_mixed will be used for hess_BFGS");
@@ -133,7 +136,7 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
 	  boost::program_options::value<El::BigFloat>(&beta_for_mu_logdetX)->default_value(-1),
 	  "beta for mu*log(det(X)) term. if beta=-1, the solver takes value from beta scan.");
   result.add_options()("gradientWithLogDetX",
-	  boost::program_options::value<bool>(&gradientWithLogDetX)->default_value(false),
+	  boost::program_options::value<bool>(&gradientWithLogDetX)->default_value(true),
 	  "if gradientWithLogDetX== true, the gradient N_p is computed with the mu*log(det(X)) term.");
 
   result.add_options()("finiteDualityGapTarget",

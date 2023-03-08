@@ -69,11 +69,6 @@ void save_solution(const Dynamical_Solver &solver,
                  << "dualityGap      = " << solver.duality_gap << ";\n"
                  << "primalError     = " << solver.primal_error() << ";\n"
                  << "dualError       = " << solver.dual_error << ";\n"
-		         << "dualStepSize    = " << solver.d_step << ";\n"
-                 << "primalStepSize  = " << solver.p_step << ";\n"
-		         << "BFGSHessianUpdated = " << solver.hess_BFGS_updateQ << ";\n"
-		         << "NavigatorValue = " << solver.lag_shifted << ";\n"
-		         << "findMinimumQ = " << solver.findMinimumQ << ";\n"
                  //<< "totalIterations = " << solver.total_iteration << ";\n"
                  << std::setw(16) << std::left << timer_pair.first << "= "
                  << timer_pair.second.elapsed_seconds() << ";\n";
@@ -116,38 +111,6 @@ void save_solution(const Dynamical_Solver &solver,
         } 
     }
 
-  boost::filesystem::ofstream gradient_withlog_stream;
-  if (El::mpi::Rank() == 0)
-  {
-	  const boost::filesystem::path gradient_path(out_directory / "gradient_withlog.txt");
-	  gradient_withlog_stream.open(gradient_path);
-	  El::Print(solver.grad_withlog,
-		  std::to_string(solver.grad_withlog.Height()) + " "
-		  + std::to_string(solver.grad_withlog.Width()),
-		  "\n", gradient_withlog_stream);
-	  if (!gradient_withlog_stream.good())
-	  {
-		  throw std::runtime_error("Error when writing to: "
-			  + gradient_path.string());
-	  }
-  }
-
-  boost::filesystem::ofstream gradient_withoutlog_stream;
-  if (El::mpi::Rank() == 0)
-  {
-	  const boost::filesystem::path gradient_path(out_directory / "gradient_withoutlog.txt");
-	  gradient_withoutlog_stream.open(gradient_path);
-	  El::Print(solver.grad_withoutlog,
-		  std::to_string(solver.grad_withoutlog.Height()) + " "
-		  + std::to_string(solver.grad_withoutlog.Width()),
-		  "\n", gradient_withoutlog_stream);
-	  if (!gradient_withoutlog_stream.good())
-	  {
-		  throw std::runtime_error("Error when writing to: "
-			  + gradient_path.string());
-	  }
-  }
-
   boost::filesystem::ofstream hess_BFGS_stream;
   if(El::mpi::Rank() == 0)
     {
@@ -163,6 +126,23 @@ void save_solution(const Dynamical_Solver &solver,
                                    + hess_BFGS_path.string());
         } 
     }
+
+  boost::filesystem::ofstream hess_pp_stream;
+  if(El::mpi::Rank() == 0)
+    {
+      const boost::filesystem::path hess_pp_path(out_directory / "hessBFGSpp.txt");
+      hess_pp_stream.open(hess_pp_path);
+      El::Print(solver.hess_BFGS_pp,
+                std::to_string(solver.hess_BFGS_pp.Height()*solver.hess_BFGS_pp.Width()) + " "
+                + std::to_string(1),
+               "\n", hess_pp_stream);
+      if(!hess_pp_stream.good())
+        {
+          throw std::runtime_error("Error when writing to: "
+                                   + hess_pp_path.string());
+        } 
+    }
+
 
   boost::filesystem::ofstream hess_Exact_stream;
   if(El::mpi::Rank() == 0)
