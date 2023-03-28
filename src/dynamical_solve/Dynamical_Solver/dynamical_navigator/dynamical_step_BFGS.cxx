@@ -195,7 +195,8 @@ void read_sdp_grid(
 	El::Matrix<El::BigFloat> & grad_withlog,
 
 	std::vector<std::pair<Block_Vector, Block_Vector>> & H_xp,
-	std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy);
+	std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy,
+        std::vector<SDP> & eplus_d_sdp);
 
 
 void compute_ellipse_boundary(const El::Matrix<El::BigFloat> &H,
@@ -358,7 +359,7 @@ double rescale_initial_hess = 1;
 //double BFGS_partial_update_reduction = -1; // if positive, hessian will be updated always positive based on the partial update logic.
 
 bool compare_BFGS_gradient_at_same_mu = false;
-
+bool BFGS_approximate_Hpp_only = true;
 //double beta_for_mu_logdetX = 0; // if negative, it will use the beta from beta scan
 //double beta_for_mu_logdetX = -1;
 
@@ -584,9 +585,10 @@ void Dynamical_Solver::dynamical_step(
 	El::Zeros(hess_Exact, n_external_parameters, n_external_parameters);
 	read_prev_grad_step_hess(dynamical_parameters, prev_grad, prev_step, prev_BFGS, prev_BFGS_pp);
 
+        std::vector<SDP> eplus_delta_sdp;
 	read_sdp_grid(dynamical_parameters, block_info, sdp, grid, timers,
 		schur_complement_cholesky, schur_off_diagonal, Q, x, y, X_cholesky, n_external_parameters,
-		eplus, eminus, esum, Lpu, grad_withoutlog, grad_withlog, H_xp, Delta_xy);
+		eplus, eminus, esum, Lpu, grad_withoutlog, grad_withlog, H_xp, Delta_xy,eplus_delta_sdp);
 
 	if (El::mpi::Rank() == 0)std::cout << "eplus[0]=" << eplus(0) 
 		<< " grad_withoutlog=" << grad_withoutlog(0)
@@ -616,7 +618,11 @@ void Dynamical_Solver::dynamical_step(
 			eplus, eminus, esum, H_xp, Delta_xy, internal_dx, internal_dy,
 			grad_withoutlog, grad_withlog, grad_p, grad_mixed, grad_corrected,
 			Lpu, mu, hess_pp, hess_mixed, hess_Exact);
-
+                //El::Zero(hess_BFGS_pp); 
+                hess_BFGS_pp = hess_Exact; 
+                if (dynamical_parameters.use_exact_hessian){
+                   hess_BFGS_pp = hess_pp;  
+                 }    
 		// decide hess_BFGS
                 // grad_diff = grad_p (option 1)
                 //           = grad_corrected (option 2)
@@ -650,10 +656,12 @@ void Dynamical_Solver::dynamical_step(
 
 			if (El::mpi::Rank() == 0)
 			{
-				std::cout << "BFGS hess =\n";
-				print_matrix(hess_BFGS);
+				std::cout << "Hessian Mixed =\n";
+				print_matrix(hess_mixed);
 				std::cout << "ext-step=";
 				print_vector(external_step);
+                                std::cout << "grad_corrected= ";
+                                print_vector(grad_corrected);
 			}
 		}
 
