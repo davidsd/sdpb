@@ -311,15 +311,11 @@ void read_sdp_grid(
 	El::Matrix<El::BigFloat> & grad_withlog,
 
 	std::vector<std::pair<Block_Vector, Block_Vector>> & H_xp,
-	std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy,
-        std::vector<SDP> & eplus_d_sdp)
+	std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy)
 {
 	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
-        if (! eplus_d_sdp.empty()){
-          eplus_d_sdp.clear();
-        } 
- 
+
 	El::Zero(eplus);
 	El::Zero(eminus);
 	El::Zero(esum);
@@ -380,7 +376,6 @@ void read_sdp_grid(
 					<< '\n' << std::flush;
 
 				Lpu(dir_index1) = approx_obj.Lag_pu / dynamical_parameters.alpha;
-                                eplus_d_sdp.emplace_back(d_sdp);
 			}
 			else if (dir_str == "minus")
 			{
@@ -598,28 +593,15 @@ void external_grad(const El::Matrix<El::BigFloat> &ePlus,
 	grad *= El::BigFloat(1) / alpha;
 }
 
-void update_grad_p(const Block_Vector & x, 
-                   const Block_Vector & y, 
-                   const std::vector<SDP> & eplus_delta_sdp, 
-                   const SDP & sdp,
-                   const int & n_external_parameters,
-                   El::Matrix<El::BigFloat> & grad_p)
-{
-     for (int i = 0; i < n_external_parameters; i++){
-       Approx_Objective approx_obj(sdp, eplus_delta_sdp[i],x, y);
-       grad_p(i) = approx_obj.d_objective; 
-     }  
-}
 
-
-update_Lpu(const Block_Info &block_info,
-           const SDP &sdp, 
-           const Block_Vector & internal_dx,
-           const Block_Diagonal_Matrix &X_cholesky,
-           const BigF
-{
-
-}
+//update_Lpu(const Block_Info &block_info,
+//           const SDP &sdp, 
+//           const Block_Vector & internal_dx,
+//           const Block_Diagonal_Matrix &X_cholesky,
+//           const BigF
+//{
+//
+//}
 
 extern bool compute_ext_step_only_once;
 extern bool recompute_ext_during_re_aiming;
@@ -1401,7 +1383,9 @@ void Dynamical_Solver::strategy_findboundary_extstep(
 	El::Matrix<El::BigFloat> & grad_p,
 	El::Matrix<El::BigFloat> & grad_mixed,
 
-	El::Matrix<El::BigFloat> & external_step
+	El::Matrix<El::BigFloat> & external_step,
+	El::Matrix<El::BigFloat> & external_step_save,
+	bool & external_step_specified_Q
 )
 {
 	lag_shifted = finite_mu_navigator(block_info, X_cholesky, total_psd_rows, dim_y, mu, beta, dynamical_parameters);
@@ -1415,17 +1399,12 @@ void Dynamical_Solver::strategy_findboundary_extstep(
 		search_direction(i, 0) = dynamical_parameters.search_direction[i];
 	}
 
-	if (specified_ext_param_Q)
+	if (compute_ext_step_only_once == true && external_step_specified_Q == true &&
+		(recompute_ext_during_re_aiming == false || lowest_mu_Q == false)
+		)
 	{
 		// hess_BFGS will not be updated, but grad_BFGS will be updated
-		external_step = specified_ext_param;
-
-		if (El::mpi::Rank() == 0)
-		{
-			std::cout << "ext-step specified : ";
-			print_vector(specified_ext_param);
-			std::cout << "\n" << std::flush;
-		}
+		external_step = external_step_save;
 	}
 	else
 	{
@@ -1438,7 +1417,9 @@ void Dynamical_Solver::strategy_findboundary_extstep(
 
 		if (El::mpi::Rank() == 0)
 		{
-	
+			if (use_Lpu_mu_correction)
+				std::cout << "\nLpu corrected : \n";
+
 			std::cout << "BFGS hess =\n";
 			print_matrix(hess_BFGS);
 
@@ -1465,6 +1446,9 @@ void Dynamical_Solver::strategy_findboundary_extstep(
 			print_vector(external_step_plus);
 			std::cout << "\n" << std::flush;
 		}
+
+		external_step_save = external_step;
+		external_step_specified_Q = true;
 	}
 
 	external_step_size = El::Nrm2(external_step);

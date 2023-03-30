@@ -312,7 +312,9 @@ public:
 	  El::Matrix<El::BigFloat> & grad_p,
 	  El::Matrix<El::BigFloat> & grad_mixed,
 
-	  El::Matrix<El::BigFloat> & external_step
+	  El::Matrix<El::BigFloat> & external_step,
+          El::Matrix<El::BigFloat> & external_step_save,
+      	  bool & external_step_specified_Q
   );
 
   void strategy_update_grad_BFGS(

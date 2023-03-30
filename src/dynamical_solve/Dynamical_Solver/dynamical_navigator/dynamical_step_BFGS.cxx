@@ -221,8 +221,7 @@ void read_sdp_grid(
 	El::Matrix<El::BigFloat> & grad_withlog,
 
 	std::vector<std::pair<Block_Vector, Block_Vector>> & H_xp,
-	std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy,
-        std::vector<SDP> & eplus_d_sdp);
+	std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy);
 
 
 void compute_ellipse_boundary(const El::Matrix<El::BigFloat> &H,
@@ -244,13 +243,6 @@ bool BFGS_partial_update_hessian(const El::BigFloat & reduction_factor,
 	const El::Matrix<El::BigFloat> &y,
 	const El::Matrix<El::BigFloat> &s,
 	El::Matrix<El::BigFloat> &B);
-
-void update_grad_p(const Block_Vector & x,
-                   const Block_Vector & y,
-                   const std::vector<SDP> & eplus_delta_sdp,
-                   const SDP & sdp,
-                   const int & n_external_parameters,
-                   El::Matrix<El::BigFloat> & grad_p);
 
 void read_prev_grad_step_hess(const Dynamical_Solver_Parameters &dynamical_parameters,
         El::Matrix<El::BigFloat> & prev_grad,
@@ -571,10 +563,6 @@ void Dynamical_Solver::dynamical_step(
 		<< " bool2=" << (dynamical_parameters.centeringRThreshold > 0 && R_error > dynamical_parameters.centeringRThreshold)
 		<< "\n";
 
-        //std::vector<SDP> eplus_delta_sdp;
-        //read_sdp_grid(dynamical_parameters, block_info, sdp, grid, timers,
-        //        schur_complement_cholesky, schur_off_diagonal, Q, x, y, X_cholesky, n_external_parameters,
-        //        eplus, eminus, esum, Lpu, grad_withoutlog, grad_withlog, H_xp, Delta_xy,eplus_delta_sdp);
 
 	// move the solver to finite_dGap_target
 	if (dynamical_parameters.finite_dGap_target > 0 &&
@@ -666,10 +654,9 @@ void Dynamical_Solver::dynamical_step(
 
 
 
-  std::vector<SDP> eplus_delta_sdp;
 	read_sdp_grid(dynamical_parameters, block_info, sdp, grid, timers,
 		schur_complement_cholesky, schur_off_diagonal, Q, x, y, X_cholesky, n_external_parameters,
-		eplus, eminus, esum, Lpu, grad_withoutlog, grad_withlog, H_xp, Delta_xy,eplus_delta_sdp);
+		eplus, eminus, esum, Lpu, grad_withoutlog, grad_withlog, H_xp, Delta_xy);
 
 
 	if (El::mpi::Rank() == 0)std::cout << "eplus[0]=" << eplus(0) 
@@ -686,7 +673,7 @@ void Dynamical_Solver::dynamical_step(
 		internal_corrector_direction(block_info, sdp, *this, schur_complement_cholesky,
 			schur_off_diagonal, X_cholesky, beta,
 			mu, primal_residue_p, Q, grad_x, grad_y, internal_dx, internal_dy, dX, dY, R);
-                update_Lpu(block_info, sdp, internal_dx, X_cholesky);
+                //update_Lpu(block_info, sdp, internal_dx, X_cholesky);
 		// compute various variables according to the formula
                 // grad_corrected = grad_p (grad_withoutlog or grad_withlog) 
                 //                  - mu Lpu  (option 1)
@@ -721,7 +708,7 @@ void Dynamical_Solver::dynamical_step(
 		// compute external step
 		if (dynamical_parameters.find_boundary && dynamical_parameters.total_iterations > 0)
 		{
-			strategy_findboundary_extstep(block_info, X_cholesky, total_psd_rows, mu, beta,
+			strategy_findboundary_extstep(block_info, X_cholesky, total_psd_rows, y.size(),mu, beta,
 				n_external_parameters, dynamical_parameters, lowest_mu_Q,
 				grad_corrected, grad_p, grad_mixed,
 				external_step, external_step_save, external_step_specified_Q);
@@ -730,7 +717,7 @@ void Dynamical_Solver::dynamical_step(
 		{
 			findMinimumQ = true;
 			// this is not used in minimization mode. we should compute lag_shifted only in "debug" mode
-			lag_shifted = finite_mu_navigator(block_info, X_cholesky, total_psd_rows, mu, beta, dynamical_parameters);
+			lag_shifted = finite_mu_navigator(block_info, X_cholesky, total_psd_rows, y.size(), mu, beta, dynamical_parameters);
 
 			external_step = grad_corrected;
 			external_step *= (-1);
@@ -827,7 +814,6 @@ void Dynamical_Solver::dynamical_step(
 
 		update_sdp = true;
 		execute_step(dx, dy, dX, dY, primal_step_length, dual_step_length);
-                //update_grad_p(x, y, eplus_delta_sdp, sdp, n_external_parameters, grad_p);
 		compute_R_error(total_psd_rows, X, Y, R_err, coit_mu, timers);
 		if (El::mpi::Rank() == 0)std::cout << "after hopping step, R_err = " << R_err
 			<< " mu=" << coit_mu << "\n" << std::flush;
