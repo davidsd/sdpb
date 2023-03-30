@@ -197,6 +197,7 @@ Dynamical_Solver::run_dynamical(const Dynamical_Solver_Parameters &dynamical_par
                       X_cholesky, Y_cholesky, A_X_inv, A_Y,  primal_residue_p, 
                       mu, beta_predictor, primal_step_length, dual_step_length, 
                       terminate_now, timers, update_sdp, find_zeros, extParamStep);
+		 final_beta = beta_predictor;
        } 
       if (terminate_now)
         {

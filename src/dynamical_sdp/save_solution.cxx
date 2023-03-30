@@ -74,6 +74,8 @@ void save_solution(const Dynamical_Solver &solver,
 		         << "BFGSHessianUpdated = " << solver.hess_BFGS_updateQ << ";\n"
 		         << "NavigatorValue = " << solver.lag_shifted << ";\n"
 		         << "findMinimumQ = " << solver.findMinimumQ << ";\n"
+		         << "beta = " << solver.final_beta << ";\n"
+	         	 << "mulogdetX = " << solver.mulogdetX << ";\n"
                  //<< "totalIterations = " << solver.total_iteration << ";\n"
                  << std::setw(16) << std::left << timer_pair.first << "= "
                  << timer_pair.second.elapsed_seconds() << ";\n";
