@@ -732,7 +732,12 @@ void read_prev_grad_step_hess(const Dynamical_Solver_Parameters &dynamical_param
 	{
 		for (int j = 0; j < dim_ext_p; j++)
 		{
-			prev_BFGS_pp(i, j) = dynamical_parameters.hess_BFGS_pp[i * dim_ext_p + j];
+                        if (BFGS_approximate_Hpp_only) {
+				prev_BFGS_pp(i, j) = dynamical_parameters.hess_BFGS_pp[i * dim_ext_p + j];
+                        }
+			else{
+                                prev_BFGS_pp(i, j) = 0 ;
+			}
 		}
         }	
 }

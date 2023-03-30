@@ -400,8 +400,8 @@ double rescale_initial_hess = 1;
 
 //double BFGS_partial_update_reduction = -1; // if positive, hessian will be updated always positive based on the partial update logic.
 
-bool compare_BFGS_gradient_at_same_mu = false;
-bool BFGS_approximate_Hpp_only = true;
+bool compare_BFGS_gradient_at_same_mu = true;
+bool BFGS_approximate_Hpp_only = false;
 //double beta_for_mu_logdetX = 0; // if negative, it will use the beta from beta scan
 //double beta_for_mu_logdetX = -1;
 
