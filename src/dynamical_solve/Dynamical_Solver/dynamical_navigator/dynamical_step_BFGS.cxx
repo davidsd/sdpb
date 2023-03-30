@@ -158,6 +158,32 @@ void print_vector(const El::Matrix<El::BigFloat> & vec)
 	for (int i = 0; i < vec.Height(); i++) if (El::mpi::Rank() == 0)std::cout << vec(i, 0) << " ";
 }
 
+template <typename T>
+void print_stdvector(const std::vector<T> & vec)
+{
+	if (El::mpi::Rank() == 0)
+	{
+		for (auto it = vec.begin(); it != vec.end(); it++) std::cout << *it << " ";
+	}
+}
+
+
+template <typename T>
+void print_stdpair(const std::vector<T> & vec)
+{
+	if (El::mpi::Rank() == 0)
+	{
+		for (auto it = vec.begin(); it != vec.end(); it++) std::cout << *it << " ";
+	}
+}
+
+template <typename T1, typename T2>
+std::ostream& operator<<(std::ostream& stream,
+	const std::pair<T1,T2>& p) {
+	stream << "(" << p.first << "," << p.second << ")";
+	return stream;
+}
+
 
 bool positivitize_matrix(El::Matrix<El::BigFloat> & matrix);
 
@@ -291,6 +317,24 @@ void compute_corrector_R(
 void compute_R_error(const std::size_t &total_psd_rows, const Block_Diagonal_Matrix &X, const Block_Diagonal_Matrix &Y,
 	El::BigFloat & R_error, El::BigFloat & mu, Timers &timers);
 
+
+template <class T1, class T2, class Pred = std::less<T2> >
+struct comp_pair_second {
+	bool operator()(const std::pair<T1, T2>&left, const std::pair<T1, T2>&right) {
+		Pred p;
+		return p(left.second, right.second);
+	}
+};
+template <class T1, class T2, class Pred = std::less<T1> >
+struct comp_pair_first {
+	bool operator()(const std::pair<T1, T2>&left, const std::pair<T1, T2>&right) {
+		Pred p;
+		return p(left.first, right.first);
+	}
+};
+
+bool CubicApprox_LineSearch_RecommendPoint(std::vector<std::pair<El::BigFloat, El::BigFloat>> & history,
+	const El::BigFloat & beta_scan_end, const El::BigFloat & beta_scan_step, El::BigFloat & new_x);
 
 // A subroutine called by run_dynamical
 // The external parameter step is passed by the argument 'external_step'
@@ -480,14 +524,14 @@ void Dynamical_Solver::dynamical_step(
 	}
 
 	/**/
-	if (El::mpi::Rank() == 0) std::cout 
+	if (El::mpi::Rank() == 0) std::cout
 		<< " duality_gap=" << duality_gap
 		<< " dGap_current=" << dGap_current
 		<< " updateSDP_dualityGapThreshold=" << dynamical_parameters.updateSDP_dualityGapThreshold
 		<< " bool1=" << (dynamical_parameters.updateSDP_dualityGapThreshold > 0 && duality_gap > dynamical_parameters.updateSDP_dualityGapThreshold)
 		<< " bool2=" << (duality_gap == El::BigFloat(0))
 		<< "\n";
-		
+
 
 	// ordinary sdpb run until dualityGap < dualityGapThreshold
 	// this should only happend in the 1st call
@@ -544,7 +588,7 @@ void Dynamical_Solver::dynamical_step(
 
 		if (El::mpi::Rank() == 0)std::cout << "run centering steps with beta=" << beta
 			<< " duality Gap target=" << dynamical_parameters.finite_dGap_target
-			<< " abs(target-current)=" << El::Abs(dynamical_parameters.finite_dGap_target - dGap_current) 
+			<< " abs(target-current)=" << El::Abs(dynamical_parameters.finite_dGap_target - dGap_current)
 			<< " prev_p_step=" << p_step << " prev_d_step=" << d_step
 			<< "\n";
 
@@ -555,6 +599,26 @@ void Dynamical_Solver::dynamical_step(
 			primal_residue_p, mu, is_primal_and_dual_feasible,
 			beta, primal_step_length, dual_step_length, step_length_reduction);
 	}
+
+
+	if (dynamical_parameters.finite_dGap_target > 0 && dynamical_parameters.returnCheckpointOnLCP && 
+		dynamical_parameters.centeringRThreshold > 0 && R_error < dynamical_parameters.centeringRThreshold &&
+		El::Abs(dynamical_parameters.finite_dGap_target - dGap_current) < dynamical_parameters.centeringRThreshold )
+	{
+		update_sdp = true;
+
+		beta = compute_beta_for_finite_dGap(dGap_current, dynamical_parameters.finite_dGap_target);
+		update_sdp = false;
+		if (El::Min(p_step, d_step) < 0.1)beta = El::Min(1 / (El::Min(p_step, d_step) * 10), El::BigFloat(1e10));
+
+		return internal_step(dynamical_parameters, total_psd_rows, block_info, sdp, grid,
+			X_cholesky, Y_cholesky, timers,
+			schur_complement_cholesky, schur_off_diagonal, Q,
+			dx, dy, dX, dY, R, grad_x, grad_y,
+			primal_residue_p, mu, is_primal_and_dual_feasible,
+			beta, primal_step_length, dual_step_length, step_length_reduction);
+	}
+
 
 	// if R_error is not small, we do centering steps
 	if (dynamical_parameters.updateSDP_dualityGapThreshold <= 0 &&
@@ -577,6 +641,7 @@ void Dynamical_Solver::dynamical_step(
 	Block_Diagonal_Matrix dX_best(X), dY_best(Y);
 	Block_Vector dx_best(x), dy_best(y);
 	El::BigFloat primal_step_length_best, dual_step_length_best, beta_best;
+	El::BigFloat primal_step_length_prev, dual_step_length_prev, beta_prev;
 	El::Matrix<El::BigFloat> hess_BFGS_best, grad_mixed_best;
 
 	int n_external_parameters = dynamical_parameters.n_external_parameters;
@@ -590,16 +655,22 @@ void Dynamical_Solver::dynamical_step(
 	El::Matrix<El::BigFloat> grad_corrected(n_external_parameters, 1);
 
 	El::Matrix<El::BigFloat> hess_mixed(n_external_parameters, n_external_parameters); //H_px H^-1_xx H_xp in Eq(13).
-	El::Matrix<El::BigFloat> grad_mixed(n_external_parameters, 1); //H_px (-internal_dx_dy) = H_px (H^-1_xx Del_x L_mu) in Eq (13).  
+	//El::Matrix<El::BigFloat> grad_mixed(n_external_parameters, 1); //H_px (-internal_dx_dy) = H_px (H^-1_xx Del_x L_mu) in Eq (13).  
 
 	El::Matrix<El::BigFloat> prev_grad(n_external_parameters, 1), prev_step(n_external_parameters, 1), prev_BFGS(n_external_parameters, n_external_parameters) , prev_BFGS_pp(n_external_parameters, n_external_parameters);
 	El::Zeros(hess_Exact, n_external_parameters, n_external_parameters);
+  El::Zeros(grad_mixed, n_external_parameters, 1);
+  
+
 	read_prev_grad_step_hess(dynamical_parameters, prev_grad, prev_step, prev_BFGS, prev_BFGS_pp);
 
-        std::vector<SDP> eplus_delta_sdp;
+
+
+  std::vector<SDP> eplus_delta_sdp;
 	read_sdp_grid(dynamical_parameters, block_info, sdp, grid, timers,
 		schur_complement_cholesky, schur_off_diagonal, Q, x, y, X_cholesky, n_external_parameters,
 		eplus, eminus, esum, Lpu, grad_withoutlog, grad_withlog, H_xp, Delta_xy,eplus_delta_sdp);
+
 
 	if (El::mpi::Rank() == 0)std::cout << "eplus[0]=" << eplus(0) 
 		<< " grad_withoutlog=" << grad_withoutlog(0)

@@ -147,8 +147,68 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
 	  boost::program_options::value<El::BigFloat>(&BFGS_partial_update_reduction)->default_value(-1),
 	  "if BFGSPartialUpdate>0, the solver will update BFGS Hessian paritially when the full update is non-positive.");
 
+  result.add_options()("navigatorValueShift",
+	  boost::program_options::value<El::BigFloat>(&navigatorValueShift)->default_value(0),
+	  "The navigator function will be shifted by this value. This only affects the findBoundary=True run.");
+
+  result.add_options()("navigatorAutomaticShift",
+	  boost::program_options::value<bool>(&navigatorAutomaticShiftQ)->default_value(false),
+	  "Experimental : shift the navigator by dGap*log(dGap/dim(X)).");
+
+  result.add_options()("stickToGCP",
+	  boost::program_options::value<bool>(&stickToGCPQ)->default_value(false),
+	  "Experimental : stick to GCP.");
+
+  result.add_options()("optimalbeta",
+	  boost::program_options::value<bool>(&optimalbetaQ)->default_value(false),
+	  "Experimental : optimal beta.");
+
+  result.add_options()("climbingRecomputeExtParam",
+	  boost::program_options::value<bool>(&climbingRecomputeExtParamQ)->default_value(true),
+	  "Experimental : recompute external parameter after clibming. Default : true .");
+
+  result.add_options()("returnCheckpointOnLCP",
+	  boost::program_options::value<bool>(&returnCheckpointOnLCP)->default_value(false),
+	  "Experimental : the code will return checkpoint on local central path.");
 
   result.add(solver_parameters.options()); 
 
   return result;
 }
+
+
+namespace po = boost::program_options;
+
+PrecParameters::PrecParameters(int argc, char *argv[])
+{
+	po::options_description cmd_line_options("precision option");
+
+	cmd_line_options.add_options()(
+		"precision",
+		boost::program_options::value<size_t>(&prec)->default_value(768),
+		"The precision, in the number of bits, for numbers in the "
+		"computation. "
+		" This should be less than or equal to the precision used when "
+		"preprocessing the XML input files with 'pvm2sdp'.  GMP will round "
+		"this up to a multiple of 32 or 64, depending on the system.");
+
+	po::variables_map variables_map;
+	try
+	{
+		//po::store(po::parse_command_line(argc, argv, cmd_line_options, po::command_line_style::unix_style ^ po::command_line_style::allow_short),
+		//	variables_map);
+
+		po::store(
+			po::command_line_parser(argc, argv).options(cmd_line_options).allow_unregistered().run(),
+			variables_map);
+
+		po::notify(variables_map);
+	}
+	catch (po::error &e)
+	{
+		El::ReportException(e);
+		El::mpi::Abort(El::mpi::COMM_WORLD, 1);
+	}
+}
+
+

@@ -115,6 +115,7 @@ def build(bld):
                        'src/dynamical_solve/Dynamical_Solver/run/print_iteration.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_R_error.cxx',
                        'src/dynamical_solve/Dynamical_Solver/run/compute_feasible_and_termination.cxx',
+                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/cubic_approx.cxx',
                        'src/approx_objective/Approx_Parameters/Approx_Parameters.cxx',
                        'src/approx_objective/Axpy.cxx',
                        'src/approx_objective/Approx_Objective/Approx_Objective/Approx_Objective.cxx',
@@ -341,7 +342,7 @@ def build(bld):
                         'src/dynamical_sdp/Dynamical_Parameters/to_property_tree.cxx',
                         'src/dynamical_sdp/Dynamical_Parameters/ostream.cxx',
                         'src/dynamical_sdp/save_solution.cxx'],
-                target='dynamical_sdp_V14_Hpp',
+                target='dynamical_sdp_V14',
                 cxxflags=default_flags,
                 use=use_packages + ['sdp_read','sdp_solve', 'dynamical_solve_V14_Hpp']
                 )

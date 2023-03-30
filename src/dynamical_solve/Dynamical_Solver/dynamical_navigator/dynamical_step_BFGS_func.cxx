@@ -42,7 +42,8 @@ void internal_predictor_direction_dxdydXdY(
 //The same as the calculation done by Approx_Objective
 El::BigFloat compute_delta_lag(const SDP &d_sdp, const Dynamical_Solver &solver);
 
-El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_cholesky, const Dynamical_Solver &solver);
+El::BigFloat compute_lag(const El::BigFloat & mu, const Block_Diagonal_Matrix &X_cholesky,
+	const Dynamical_Solver &solver, const Block_Info &block_info, El::BigFloat & mulogdetX);
 
 //Given delta_p(sdp) , compute the (delta_x, delta_y) = H_xx^-1 H_xp delta_p
 //as shown in Eq(15). 
@@ -1328,8 +1329,8 @@ void Dynamical_Solver::strategy_hess_BFGS(const Dynamical_Solver_Parameters &dyn
 				if (flippedQ == false || update_hess_only_positive == false)
 					hess_BFGS_updateQ = true;
 
-				if (El::mpi::Rank() == 0) std::cout << "hess_BFGS_updateQ = " << hess_BFGS_updateQ
-					<< " flippedQ=" << flippedQ << " update_hess_only_positive=" << update_hess_only_positive << "\n" << std::flush;
+				//if (El::mpi::Rank() == 0) std::cout << "hess_BFGS_updateQ = " << hess_BFGS_updateQ
+				//	<< " flippedQ=" << flippedQ << " update_hess_only_positive=" << update_hess_only_positive << "\n" << std::flush;
 			}
 
 			hess_BFGS_lowest_mu = hess_BFGS;
@@ -1348,15 +1349,13 @@ void Dynamical_Solver::strategy_hess_BFGS(const Dynamical_Solver_Parameters &dyn
 }
 
 
-El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_cholesky, 
-	const Dynamical_Solver &solver, const Block_Info &block_info);
-
 
 
 El::BigFloat Dynamical_Solver::finite_mu_navigator(
 	const Block_Info &block_info,
 	const Block_Diagonal_Matrix &X_cholesky,
 	const std::size_t &total_psd_rows,
+	const int dim_y,
 	const El::BigFloat & mu,
 	const El::BigFloat & beta,
 	const Dynamical_Solver_Parameters &dynamical_parameters)
@@ -1371,12 +1370,18 @@ El::BigFloat Dynamical_Solver::finite_mu_navigator(
 		beta_lag = El::BigFloat(dynamical_parameters.beta_for_mu_logdetX);
 	}
 
-	El::BigFloat lag = compute_lag(beta_lag*mu, X_cholesky, *this, block_info);
+	El::BigFloat lag = compute_lag(beta_lag*mu, X_cholesky, *this, block_info, mulogdetX);
 
 	El::BigFloat lag_shifted = lag;
 	lag_shifted -= total_psd_rows * mu * dynamical_parameters.lagrangian_muI_shift;
 
-	return lag_shifted;
+	if (dynamical_parameters.navigatorAutomaticShiftQ)
+	{
+		El::BigFloat shift = (total_psd_rows - dim_y) * mu * El::Log(mu);
+		lag_shifted += shift;
+	}
+
+	return lag_shifted + dynamical_parameters.navigatorValueShift;
 }
 
 
@@ -1384,6 +1389,7 @@ void Dynamical_Solver::strategy_findboundary_extstep(
 	const Block_Info &block_info,
 	const Block_Diagonal_Matrix &X_cholesky, 
 	const std::size_t &total_psd_rows,
+	const int dim_y,
 	const El::BigFloat & mu,
 	const El::BigFloat & beta,
 
@@ -1395,12 +1401,10 @@ void Dynamical_Solver::strategy_findboundary_extstep(
 	El::Matrix<El::BigFloat> & grad_p,
 	El::Matrix<El::BigFloat> & grad_mixed,
 
-	El::Matrix<El::BigFloat> & external_step,
-	El::Matrix<El::BigFloat> & external_step_save,
-	bool & external_step_specified_Q
+	El::Matrix<El::BigFloat> & external_step
 )
 {
-	lag_shifted = finite_mu_navigator(block_info, X_cholesky, total_psd_rows, mu, beta, dynamical_parameters);
+	lag_shifted = finite_mu_navigator(block_info, X_cholesky, total_psd_rows, dim_y, mu, beta, dynamical_parameters);
 
 	//find_zero_step(10^(-10), 100, dynamical_parameters.update_sdp_threshold_max,
 	//		Hpp_minus_Hmixed, grad_mixed, find_zeros, external_step, lag);
@@ -1411,12 +1415,17 @@ void Dynamical_Solver::strategy_findboundary_extstep(
 		search_direction(i, 0) = dynamical_parameters.search_direction[i];
 	}
 
-	if (compute_ext_step_only_once == true && external_step_specified_Q == true &&
-		(recompute_ext_during_re_aiming == false || lowest_mu_Q == false)
-		)
+	if (specified_ext_param_Q)
 	{
 		// hess_BFGS will not be updated, but grad_BFGS will be updated
-		external_step = external_step_save;
+		external_step = specified_ext_param;
+
+		if (El::mpi::Rank() == 0)
+		{
+			std::cout << "ext-step specified : ";
+			print_vector(specified_ext_param);
+			std::cout << "\n" << std::flush;
+		}
 	}
 	else
 	{
@@ -1429,9 +1438,7 @@ void Dynamical_Solver::strategy_findboundary_extstep(
 
 		if (El::mpi::Rank() == 0)
 		{
-			if (use_Lpu_mu_correction)
-				std::cout << "\nLpu corrected : \n";
-
+	
 			std::cout << "BFGS hess =\n";
 			print_matrix(hess_BFGS);
 
@@ -1458,9 +1465,6 @@ void Dynamical_Solver::strategy_findboundary_extstep(
 			print_vector(external_step_plus);
 			std::cout << "\n" << std::flush;
 		}
-
-		external_step_save = external_step;
-		external_step_specified_Q = true;
 	}
 
 	external_step_size = El::Nrm2(external_step);

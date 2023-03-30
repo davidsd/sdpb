@@ -17,11 +17,21 @@ void write_timing(const boost::filesystem::path &checkpoint_out,
                   const Block_Info &block_info, const Timers &timers,
                   const bool &debug, El::Matrix<int32_t> &block_timings);
 
+
+
+
 int main(int argc, char **argv)
 {
-  El::Environment env(argc, argv);
+	El::Environment env(argc, argv);
 
-  El::gmp::SetPrecision(1024);
+	PrecParameters prec_parameter(argc, argv);
+
+	if (El::mpi::Rank() == 0)
+		std::cout << "Elemental precision = " << prec_parameter.prec << "\n" << std::flush;
+
+
+  El::gmp::SetPrecision(prec_parameter.prec);
+
 
 
   /*

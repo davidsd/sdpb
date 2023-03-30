@@ -129,8 +129,8 @@ El::BigFloat compute_delta_lag(const SDP &d_sdp, const Dynamical_Solver &solver)
 // dual_residues[p] = c[p] - A[p,a,b] Y[a,b] - B[p,a] y[a]
 // Lagrangian = dual_residues.x + b.y + Tr(X,Y) - mu log det (X) 
 
-El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_cholesky, 
-	const Dynamical_Solver &solver, const Block_Info &block_info)
+El::BigFloat compute_lag(const El::BigFloat & mu, const Block_Diagonal_Matrix &X_cholesky, 
+	const Dynamical_Solver &solver, const Block_Info &block_info, El::BigFloat & mulogdetX)
 {
   El::BigFloat lag(0);
   // dual_objective = f + b . y
@@ -147,8 +147,13 @@ El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_c
   // depending on if we want to use the whole routine or just use the sum of the logs  
   //Notice that El::hpd_det::AfterCholesky already accounts for the factor of 2 
 
-  El::BigFloat muLogDetX = mu * (det_log_cholesky_fix(X_cholesky, solver, block_info));
-  lag -= muLogDetX;
+  El::BigFloat mulogdetX_actual= det_log_cholesky_fix(X_cholesky, solver, block_info);
+  mulogdetX = mulogdetX_actual;
+  mulogdetX_actual *= mu;
+
+  lag -= mulogdetX_actual;
+
+  if (El::mpi::Rank() == 0) std::cout << "mulogdetX = " << mulogdetX << "\n";
 
   El::BigFloat local_residues(0);
   for(size_t block(0); block != solver.x.blocks.size(); ++block)
@@ -165,6 +170,7 @@ El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_c
 
    auto prec = std::cout.precision();
 
+   /*
    std::cout.precision(100);
    if (El::mpi::Rank() == 0) std::cout << "finite mu nvg :"
 	   << " d.x = " << dual_residue_dot_x << "\n"
@@ -175,6 +181,7 @@ El::BigFloat compute_lag(const El::BigFloat mu, const Block_Diagonal_Matrix &X_c
 	   << " nvg = " << lag << "\n"
 	   << '\n' << std::flush;
    std::cout.precision(prec);
+   */
 
   return lag;
 }

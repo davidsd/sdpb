@@ -50,7 +50,9 @@ public:
     duality_gap,                 // normalized difference of objectives
     external_step_size;          // the size of the step to be taken in the external parameters' space 
 
-  El::Matrix<El::BigFloat> grad_BFGS, hess_BFGS, hess_BFGS_pp;
+
+  El::Matrix<El::BigFloat> grad_BFGS, hess_BFGS, hess_BFGS_pp, grad_mixed;
+
   El::Matrix<El::BigFloat> hess_Exact;
 
   El::Matrix<El::BigFloat> grad_withlog;
@@ -64,6 +66,17 @@ public:
   El::BigFloat p_step, d_step;
 
   El::BigFloat prev_p_step, prev_d_step;
+
+  El::BigFloat mulogdetX;
+
+  std::vector<std::pair<El::BigFloat, El::BigFloat>> beta_scan_recorder;
+
+  El::BigFloat final_beta;
+
+  El::Matrix<El::BigFloat> specified_ext_param;
+  bool specified_ext_param_Q;
+
+
 
   //int intext_mode;
   // Discrepancy in the primal equality constraints, a
@@ -287,6 +300,7 @@ public:
 	  const Block_Info &block_info,
 	  const Block_Diagonal_Matrix &X_cholesky,
 	  const std::size_t &total_psd_rows,
+	  const int dim_y,
 	  const El::BigFloat & mu,
 	  const El::BigFloat & beta,
 
@@ -298,9 +312,7 @@ public:
 	  El::Matrix<El::BigFloat> & grad_p,
 	  El::Matrix<El::BigFloat> & grad_mixed,
 
-	  El::Matrix<El::BigFloat> & external_step,
-	  El::Matrix<El::BigFloat> & external_step_save,
-	  bool & external_step_specified_Q
+	  El::Matrix<El::BigFloat> & external_step
   );
 
   void strategy_update_grad_BFGS(
@@ -338,7 +350,56 @@ public:
 	  const Block_Info &block_info,
 	  const Block_Diagonal_Matrix &X_cholesky,
 	  const std::size_t &total_psd_rows,
+	  const int dim_y,
 	  const El::BigFloat & mu,
 	  const El::BigFloat & beta,
 	  const Dynamical_Solver_Parameters &dynamical_parameters);
+
+  void dynamical_step_scan_beta(const Dynamical_Solver_Parameters &dynamical_parameters,
+	  const El::Matrix<El::BigFloat> & eplus, const El::Matrix<El::BigFloat> & eminus, const El::Matrix<El::BigFloat> & esum,
+	  const std::vector<std::pair<Block_Vector, Block_Vector>> & H_xp, std::vector<std::pair<Block_Vector, Block_Vector>> & Delta_xy,
+	  Block_Vector & internal_dx, Block_Vector & internal_dy,
+	  const El::Matrix<El::BigFloat> & grad_withoutlog,
+	  const El::Matrix<El::BigFloat> & grad_withlog,
+	  El::Matrix<El::BigFloat> & grad_p, El::Matrix<El::BigFloat> & grad_mixed, El::Matrix<El::BigFloat> & grad_corrected,
+	  El::Matrix<El::BigFloat> & Lpu, El::BigFloat & mu,
+	  El::Matrix<El::BigFloat> & hess_pp, El::Matrix<El::BigFloat> & hess_mixed, El::Matrix<El::BigFloat> & hess_Exact,
+
+	  const std::size_t &total_psd_rows,
+	  const Block_Info &block_info,
+	  const SDP &sdp, const El::Grid &grid,
+	  const Block_Diagonal_Matrix &X_cholesky,
+	  const Block_Diagonal_Matrix &Y_cholesky,
+	  Timers &timers,
+
+	  const Block_Diagonal_Matrix &schur_complement_cholesky,
+	  const Block_Matrix &schur_off_diagonal,
+	  const El::DistMatrix<El::BigFloat> &Q,
+
+	  Block_Vector & dx, Block_Vector & dy,
+	  Block_Diagonal_Matrix & dX, Block_Diagonal_Matrix & dY,
+	  Block_Diagonal_Matrix & R,
+	  Block_Vector &grad_x, Block_Vector &grad_y,
+
+	  const Block_Vector &primal_residue_p,
+
+	  const bool &is_primal_and_dual_feasible,
+	  El::BigFloat &beta,
+	  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
+	  El::BigFloat &step_length_reduction,
+
+	  int n_external_parameters,
+	  El::Matrix<El::BigFloat> & prev_grad,
+	  El::Matrix<El::BigFloat> & prev_step,
+	  El::Matrix<El::BigFloat> & prev_BFGS,
+	  El::Matrix<El::BigFloat> & external_step,
+	  Block_Diagonal_Matrix & dX_best, Block_Diagonal_Matrix & dY_best,
+	  Block_Vector & dx_best, Block_Vector & dy_best,
+	  El::BigFloat & primal_step_length_best, El::BigFloat & dual_step_length_best, El::BigFloat & beta_best,
+	  El::Matrix<El::BigFloat> & hess_BFGS_best, El::Matrix<El::BigFloat> & grad_mixed_best,
+	  bool & update_sdp,
+
+	  bool first_beta_Q
+  );
+
 };

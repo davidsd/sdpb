@@ -64,7 +64,14 @@ struct Dynamical_Solver_Parameters
   El::BigFloat beta_for_mu_logdetX;
   El::BigFloat BFGS_partial_update_reduction;
 
-  bool gradientWithLogDetX;
+  bool gradientWithLogDetX, stickToGCPQ, optimalbetaQ;
+
+  El::BigFloat navigatorValueShift;
+  bool navigatorAutomaticShiftQ;
+
+  bool climbingRecomputeExtParamQ;
+
+  bool returnCheckpointOnLCP;
 
   Dynamical_Solver_Parameters() = default;
   boost::program_options::options_description options();
@@ -74,3 +81,12 @@ struct Dynamical_Solver_Parameters
 std::ostream &operator<<(std::ostream &os, const Dynamical_Solver_Parameters &p);
 
 boost::property_tree::ptree to_property_tree(const Dynamical_Solver_Parameters &p);
+
+
+struct PrecParameters
+{
+	size_t prec;
+	PrecParameters(int argc, char *argv[]);
+};
+
+
