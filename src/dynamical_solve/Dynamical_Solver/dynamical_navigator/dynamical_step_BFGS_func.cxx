@@ -315,6 +315,10 @@ void read_sdp_grid(
 {
 	std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
+        if (! eplus_d_sdp.empty()){
+          eplus_d_sdp.clear();
+        } 
+ 
 	El::Zero(eplus);
 	El::Zero(eminus);
 	El::Zero(esum);
@@ -593,6 +597,28 @@ void external_grad(const El::Matrix<El::BigFloat> &ePlus,
 	grad *= El::BigFloat(1) / alpha;
 }
 
+void update_grad_p(const Block_Vector & x, 
+                   const Block_Vector & y, 
+                   const std::vector<SDP> & eplus_delta_sdp, 
+                   const SDP & sdp,
+                   const int & n_external_parameters,
+                   El::Matrix<El::BigFloat> & grad_p)
+{
+     for (int i = 0; i < n_external_parameters; i++){
+       Approx_Objective approx_obj(sdp, eplus_delta_sdp[i],x, y);
+       grad_p(i) = approx_obj.d_objective; 
+     }  
+}
+
+
+update_Lpu(const Block_Info &block_info,
+           const SDP &sdp, 
+           const Block_Vector & internal_dx,
+           const Block_Diagonal_Matrix &X_cholesky,
+           const BigF
+{
+
+}
 
 extern bool compute_ext_step_only_once;
 extern bool recompute_ext_during_re_aiming;
@@ -695,6 +721,7 @@ void compute_grad_p_grad_mixed_Hpp_Hmixed(const Dynamical_Solver_Parameters &dyn
 	}
 
 }
+
 
 void read_prev_grad_step_hess(const Dynamical_Solver_Parameters &dynamical_parameters,
 	El::Matrix<El::BigFloat> & prev_grad, 
