@@ -340,7 +340,7 @@ bool external_step_specified_Q = false;
 
 El::Matrix<El::BigFloat> hess_BFGS_lowest_mu;
 
-bool lowest_mu_Q = true;  // true : the solver hasn't been lifted along the local central path
+
 
 /*  // this is parameter for the "best" Ising run
 
@@ -390,7 +390,7 @@ bool recompute_ext_during_re_aiming = true;  // if true, ext-step will be recomp
 
 bool update_hess_only_positive = true;
 
-bool use_Lpu_mu_correction = true;
+bool use_Lpu_mu_correction = false;
 
 double dgap_near_optimal_threshold = 1e-20;
 
@@ -457,7 +457,6 @@ void Dynamical_Solver::dynamical_step(
 	El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
 	bool &update_sdp, bool &find_zeros, El::Matrix<El::BigFloat> &external_step)
 {
-        if (El::mpi::Rank() == 0) std::cout << "start of step" << "\n";
 	auto &step_timer(timers.add_and_start("run.step"));
 	step_timer.stop();
 
@@ -475,19 +474,16 @@ void Dynamical_Solver::dynamical_step(
 	Block_Diagonal_Matrix schur_complement_cholesky(
 		block_info.schur_block_sizes(), block_info.block_indices,
 		block_info.num_points.size(), grid);
-        if (El::mpi::Rank() == 0) std::cout << "FINISH schur_complement_cholesky" << "\n";
 	Block_Matrix schur_off_diagonal(sdp.free_var_matrix);
-        if (El::mpi::Rank() == 0) std::cout << "schur_off_diagonal" << "\n";
 	El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
 		sdp.dual_objective_b.Height());
-        if (El::mpi::Rank() == 0) std::cout << "Initialize Q" << "\n";
+
 	if (!(dynamical_parameters.external_corrector_Q && external_corrector_jump_to_newSDP))
 	{
-                if (El::mpi::Rank() == 0) std::cout << "after external_corrector_Q" << "\n";
 		initialize_schur_complement_solver(block_info, sdp, A_X_inv, A_Y, grid,
 			schur_complement_cholesky, schur_off_diagonal, Q, timers);
 	}
-        if (El::mpi::Rank() == 0) std::cout << "after initialize_schur_complement_solver" << "\n";
+
 	auto &frobenius_timer(
 		timers.add_and_start("run.step.frobenius_product_symmetric"));
 	El::BigFloat dGap_current = frobenius_product_symmetric(X, Y);
@@ -527,8 +523,7 @@ void Dynamical_Solver::dynamical_step(
 
 	// ordinary sdpb run until dualityGap < dualityGapThreshold
 	// this should only happend in the 1st call
-	if ((dynamical_parameters.total_iterations == 0 && dGap_current > 0 &&
-		dynamical_parameters.updateSDP_dualityGapThreshold > 0 && dGap_current > dynamical_parameters.updateSDP_dualityGapThreshold) ||
+	if (( dGap_current > 0 && dynamical_parameters.dualityGap_upper_limit > 0 && dGap_current > dynamical_parameters.dualityGap_upper_limit) ||
 		duality_gap == El::BigFloat(0))
 	{
 		update_sdp = false;
@@ -558,7 +553,7 @@ void Dynamical_Solver::dynamical_step(
 	if (El::mpi::Rank() == 0) std::cout
 		<< " finite_dGap_target=" << dynamical_parameters.finite_dGap_target
 		<< " abs(current-target)=" << El::Abs(dynamical_parameters.finite_dGap_target - dGap_current)
-		<< " updateSDP_dualityGapThreshold=" << dynamical_parameters.updateSDP_dualityGapThreshold
+		<< " dualityGap_upper_limit=" << dynamical_parameters.dualityGap_upper_limit
 		<< " bool1=" << (El::Abs(dynamical_parameters.finite_dGap_target - dGap_current) > dynamical_parameters.centeringRThreshold)
 		<< " bool2=" << (dynamical_parameters.centeringRThreshold > 0 && R_error > dynamical_parameters.centeringRThreshold)
 		<< "\n";
@@ -588,7 +583,7 @@ void Dynamical_Solver::dynamical_step(
 			beta, primal_step_length, dual_step_length, step_length_reduction);
 	}
 
-
+	// hopping step for finite_dGap_target
 	if (dynamical_parameters.finite_dGap_target > 0 && dynamical_parameters.returnCheckpointOnLCP && 
 		dynamical_parameters.centeringRThreshold > 0 && R_error < dynamical_parameters.centeringRThreshold &&
 		El::Abs(dynamical_parameters.finite_dGap_target - dGap_current) < dynamical_parameters.centeringRThreshold )
@@ -609,8 +604,9 @@ void Dynamical_Solver::dynamical_step(
 
 
 	// if R_error is not small, we do centering steps
-	if (dynamical_parameters.updateSDP_dualityGapThreshold <= 0 &&
-		dynamical_parameters.centeringRThreshold > 0 && R_error > dynamical_parameters.centeringRThreshold)
+	//if (dynamical_parameters.dualityGap_upper_limit <= 0 &&
+	//	dynamical_parameters.centeringRThreshold > 0 && R_error > dynamical_parameters.centeringRThreshold)
+	if (dynamical_parameters.centeringRThreshold > 0 && R_error > dynamical_parameters.centeringRThreshold)
 	{
 		if (El::mpi::Rank() == 0)std::cout << "run centering steps with beta=1 \n";
 		beta = 1;
@@ -647,7 +643,7 @@ void Dynamical_Solver::dynamical_step(
 
 	El::Matrix<El::BigFloat> prev_grad(n_external_parameters, 1), prev_step(n_external_parameters, 1), prev_BFGS(n_external_parameters, n_external_parameters) , prev_BFGS_pp(n_external_parameters, n_external_parameters);
 	El::Zeros(hess_Exact, n_external_parameters, n_external_parameters);
-  El::Zeros(grad_mixed, n_external_parameters, 1);
+	El::Zeros(grad_mixed, n_external_parameters, 1);
   
 
 	read_prev_grad_step_hess(dynamical_parameters, prev_grad, prev_step, prev_BFGS, prev_BFGS_pp);
@@ -658,11 +654,12 @@ void Dynamical_Solver::dynamical_step(
 		schur_complement_cholesky, schur_off_diagonal, Q, x, y, X_cholesky, n_external_parameters,
 		eplus, eminus, esum, Lpu, grad_withoutlog, grad_withlog, H_xp, Delta_xy);
 
-
+	/**/
 	if (El::mpi::Rank() == 0)std::cout << "eplus[0]=" << eplus(0) 
 		<< " grad_withoutlog=" << grad_withoutlog(0)
 		<< " Lpu(0)=" << Lpu(0) 
 		<< "\n";
+		
 
 	// beta scan
 	for (beta = beta_scan_begin_El; beta <= beta_scan_end_El; beta += beta_scan_step_El)
@@ -692,7 +689,8 @@ void Dynamical_Solver::dynamical_step(
                 if (dynamical_parameters.use_exact_hessian){
                    hess_BFGS_pp = hess_pp;  
                  }    
-		// decide hess_BFGS
+
+				// decide hess_BFGS
                 // grad_diff = grad_p (option 1)
                 //           = grad_corrected (option 2)
                 // decided by use_gradp_for_BFGS_update (true by default)
@@ -706,7 +704,7 @@ void Dynamical_Solver::dynamical_step(
 			prev_BFGS,prev_BFGS_pp, prev_step, prev_grad, hess_BFGS_lowest_mu);
 
 		// compute external step
-		if (dynamical_parameters.find_boundary && dynamical_parameters.total_iterations > 0)
+		if (dynamical_parameters.find_boundary)
 		{
 			strategy_findboundary_extstep(block_info, X_cholesky, total_psd_rows, y.size(),mu, beta,
 				n_external_parameters, dynamical_parameters, lowest_mu_Q,
@@ -725,12 +723,21 @@ void Dynamical_Solver::dynamical_step(
 
 			if (El::mpi::Rank() == 0)
 			{
+				std::cout << "BFGS hess =\n";
+				print_matrix(hess_BFGS);
+				std::cout << "ext-step=";
+				print_vector(external_step);
+				std::cout << "\n";
+				std::cout << "grad_corrected= ";
+				print_vector(grad_corrected);
+				std::cout << "\n";
+
+				/*
 				std::cout << "Hessian Mixed =\n";
 				print_matrix(hess_mixed);
 				std::cout << "ext-step=";
 				print_vector(external_step);
-                                std::cout << "grad_corrected= ";
-                                print_vector(grad_corrected);
+				*/
 			}
 		}
 
@@ -739,6 +746,15 @@ void Dynamical_Solver::dynamical_step(
 			dynamical_parameters, block_info, sdp, grid, X_cholesky, Y_cholesky, timers,
 			internal_dx, internal_dy, dx, dy, dX, dY, R,
 			external_step, Delta_xy, primal_step_length, dual_step_length, step_length_reduction);
+
+		if (El::mpi::Rank() == 0)
+		{
+			auto prec = std::cout.precision();
+			std::cout.precision(20);
+			std::cout << "scan beta : " << beta << "\n" << std::flush;
+			std::cout << "P/D-step-len-ext = " << primal_step_length << " , " << dual_step_length << "\n" << std::flush;
+			std::cout.precision(prec);
+		}
 
 		// save the best beta
 		if (beta == beta_scan_begin_El ||
@@ -758,7 +774,8 @@ void Dynamical_Solver::dynamical_step(
 			std::cout << "P/D-step-len-ext = " << primal_step_length << " , " << dual_step_length << "\n" << std::flush;
 		}
 
-		// there is no special reason we don't want re-aiming for 1st call.
+		/*
+		// there is no special reason we don't want re-aiming for the 1st call.
 		// But I just prefer to seperate them (usually 2nd call has some climing steps)
 		if (dynamical_parameters.total_iterations == 0)
 		{
@@ -769,6 +786,7 @@ void Dynamical_Solver::dynamical_step(
 			strategy_update_grad_BFGS(primal_step_length, dual_step_length, grad_p, grad_mixed, grad_BFGS);
 			return;
 		}
+		*/
 
 		// if step_length > step_max_threshold, break
 		if (El::Max(primal_step_length, dual_step_length) > dynamical_parameters.step_max_threshold) break;
@@ -784,11 +802,14 @@ void Dynamical_Solver::dynamical_step(
 		<< primal_step_length << ", " << dual_step_length << ")\n" << std::flush;
 
 	if (El::mpi::Rank() == 0)std::cout << "dualityGap_upper_limit=" << dynamical_parameters.dualityGap_upper_limit
-		<< " 2 * mu*total_psd_rows=" << 2 * mu*total_psd_rows
+		<< " prev_grad_step_validQ=" << dynamical_parameters.prev_grad_step_validQ
+		<< " use_Hmixed_for_BFGS=" << dynamical_parameters.use_Hmixed_for_BFGS
+		<< " beta_for_mu_logdetX=" << dynamical_parameters.beta_for_mu_logdetX
 		<< "\n" << std::flush;
 
 	// check beta scan result
-	if (El::Max(primal_step_length, dual_step_length) > dynamical_parameters.step_min_threshold || max_climbing <= 0 ||
+	if (El::Max(primal_step_length, dual_step_length) > dynamical_parameters.step_min_threshold || max_climbing <= 0 || 
+		dynamical_parameters.finite_dGap_target > 0 ||
 		(dynamical_parameters.dualityGap_upper_limit > 0 && 2 * mu*total_psd_rows > dynamical_parameters.dualityGap_upper_limit)
 		)
 	{
@@ -796,8 +817,7 @@ void Dynamical_Solver::dynamical_step(
 
 		if (dynamical_parameters.external_corrector_Q)
 		{
-			save_solver_state(dynamical_parameters, block_info,
-				dx, dy, dX, dY,
+			save_solver_state(dynamical_parameters, block_info, dx, dy, dX, dY,
 				schur_complement_cholesky, schur_off_diagonal, Q);
 		}
 

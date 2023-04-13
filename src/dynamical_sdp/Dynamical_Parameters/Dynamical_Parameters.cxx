@@ -202,6 +202,29 @@ Dynamical_Parameters::Dynamical_Parameters(int argc, char *argv[])
 		  }
 
 
+		  if (variables_map.count("prevGradientBFGS") == 0 || variables_map.count("prevExternalStep") == 0)
+			  solver.prev_grad_step_validQ = false;
+		  else
+			  solver.prev_grad_step_validQ = true;
+
+		  
+		  if (variables_map.count("prevHessianBFGS") == 0)
+			  solver.use_Hmixed_for_BFGS = true;
+		  else
+			  solver.use_Hmixed_for_BFGS = false;
+
+
+		  if (variables_map.count("findBoundaryDirection") == 0)
+			  solver.find_boundary = false;
+		  else
+			  solver.find_boundary = true;
+
+
+		  if (solver.navigatorWithLogDetX)
+			  solver.beta_for_mu_logdetX = El::BigFloat("-1");
+		  else
+			  solver.beta_for_mu_logdetX = El::BigFloat("0");
+
         }
     }
   catch(po::error &e)

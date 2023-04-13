@@ -43,8 +43,10 @@ struct Dynamical_Solver_Parameters
   std::vector<El::BigFloat> hess_BFGS;
   std::vector<El::BigFloat> hess_BFGS_pp;
 
-  bool printMore;
+  bool prev_grad_step_validQ;
   bool use_Hmixed_for_BFGS;
+
+  bool printMore;
   El::BigFloat centeringRThreshold;
 
 
@@ -64,7 +66,8 @@ struct Dynamical_Solver_Parameters
   El::BigFloat beta_for_mu_logdetX;
   El::BigFloat BFGS_partial_update_reduction;
 
-  bool gradientWithLogDetX, stickToGCPQ, optimalbetaQ;
+  bool gradientWithLogDetX, navigatorWithLogDetX;
+  bool stickToGCPQ, optimalbetaQ;
 
   El::BigFloat navigatorValueShift;
   bool navigatorAutomaticShiftQ;

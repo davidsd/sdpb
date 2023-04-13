@@ -42,5 +42,6 @@ Dynamical_Solver::Dynamical_Solver(const Dynamical_Solver_Parameters &dynamical_
   p_step = 1;
   d_step = 1;
   specified_ext_param_Q = false;
+  lowest_mu_Q = true;
 
 }
