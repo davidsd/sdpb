@@ -515,9 +515,6 @@ void Dynamical_Solver::dynamical_step(
 	if (El::mpi::Rank() == 0) std::cout
 		<< " duality_gap=" << duality_gap
 		<< " dGap_current=" << dGap_current
-		<< " updateSDP_dualityGapThreshold=" << dynamical_parameters.updateSDP_dualityGapThreshold
-		<< " bool1=" << (dynamical_parameters.updateSDP_dualityGapThreshold > 0 && duality_gap > dynamical_parameters.updateSDP_dualityGapThreshold)
-		<< " bool2=" << (duality_gap == El::BigFloat(0))
 		<< "\n";
 
 

@@ -21,7 +21,7 @@ struct Dynamical_Solver_Parameters
                update_sdp_threshold_max, update_sdp_threshold_min,
                find_boundary_obj_threshold;
 
-  El::BigFloat updateSDP_dualityGapThreshold, dualityGap_upper_limit;
+  El::BigFloat dualityGap_upper_limit;
 
   int n_external_parameters;
   size_t total_iterations;
