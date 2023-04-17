@@ -16,7 +16,7 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
                               boost::program_options::value<boost::filesystem::path>(&new_sdp_path)->required(),
                               "Directory containing the preprocessed SDP data files around the center SDP in external parameter space.");  
  
-  result.add_options()("stepSizeAlpha", 
+  result.add_options()("externalParamInfinitestimal", 
                               boost::program_options::value<El::BigFloat>(&alpha)->default_value(1),
                               "Step size in the external-parameter space to generate the new SDP data files. "
                               "The default value is set to 1.");
@@ -50,18 +50,14 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
 	  "If dualityGap_upper_limit is setted to >0, mu will not go beyond dualityGap_upper_limit during climbing."
 	  "This should be setted to a proper value if there is a bifurcation in global central path when dualityGap > dualityGap_upper_limit.");
 
-  result.add_options()("findBoundary", 
-                              boost::program_options::value<bool>(&find_boundary) -> default_value(0), 
-                              "True if the program is required by the user to find a point on the boundary of the island. " 
-                              "The default value is set to False.");
   result.add_options()("findBoundaryObjThreshold",
                               boost::program_options::value<El::BigFloat>(&find_boundary_obj_threshold)->default_value(0),
                               "Continue to move towards the boundary if the primal and dual objectives are not sufficiently close to zero. " 
                               "The default value is set to 0.");
-  result.add_options()("searchDirection",
+  result.add_options()("findBoundaryDirection",
                               boost::program_options::value<std::vector<El::BigFloat>>(&search_direction)->multitoken(), 
-                              "User-specified directional vector in which the program will looks for a zero. ");
-
+                              "User-specified directional vector in which the program will look for a zero. "
+								"Without specify this option, the program will look for the minimum of the navigator function.");
 
   result.add_options()("useExactHessian",
                               boost::program_options::value<bool>(&use_exact_hessian),
@@ -78,11 +74,6 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
   result.add_options()("prevHessianBFGSpp",
                               boost::program_options::value<std::vector<El::BigFloat>>(&hess_BFGS_pp)->multitoken(),
                               "H_pp approximated by BFGS. "); 
-  result.add_options()("useHmixedforBFGS",
-                              boost::program_options::value<bool>(&use_Hmixed_for_BFGS)->default_value(false),
-                              "if True, hess_mixed will be used for hess_BFGS");
-
-
 
   result.add_options()("boundingBoxMax",
                               boost::program_options::value<std::vector<El::BigFloat>>(&bounding_box_max)->multitoken(),
@@ -123,18 +114,19 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
   result.add_options()("stepMaxThreshold",
 	  boost::program_options::value<El::BigFloat>(&step_max_threshold)->default_value(0.6),
 	  "step size max.");
-  result.add_options()("muIShift",
+  result.add_options()("primalDualObjWeight",
 	  boost::program_options::value<El::BigFloat>(&lagrangian_muI_shift)->default_value(0.2),
 	  "mu*I shift in Lagrangian.");
-  result.add_options()("maxClimbing",
+  result.add_options()("maxClimbingSteps",
 	  boost::program_options::value<int>(&max_climbing)->default_value(1),
 	  "max climbing allowed.");
   result.add_options()("betaClimbing",
 	  boost::program_options::value<El::BigFloat>(&beta_climbing)->default_value(2),
 	  "beta value for climbing.");
-  result.add_options()("betamuLogDetX",
-	  boost::program_options::value<El::BigFloat>(&beta_for_mu_logdetX)->default_value(-1),
-	  "beta for mu*log(det(X)) term. if beta=-1, the solver takes value from beta scan.");
+
+  result.add_options()("navigatorWithLogDetX",
+	  boost::program_options::value<bool>(&navigatorWithLogDetX)->default_value(false),
+	  "if gradientWithLogDetX== true, the navigator value is computed with the mu*log(det(X)) term.");
   result.add_options()("gradientWithLogDetX",
 	  boost::program_options::value<bool>(&gradientWithLogDetX)->default_value(true),
 	  "if gradientWithLogDetX== true, the gradient N_p is computed with the mu*log(det(X)) term.");
@@ -149,7 +141,7 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
 
   result.add_options()("navigatorValueShift",
 	  boost::program_options::value<El::BigFloat>(&navigatorValueShift)->default_value(0),
-	  "The navigator function will be shifted by this value. This only affects the findBoundary=True run.");
+	  "Experimental : The navigator function will be shifted by this value. This only affects the findBoundary=True run.");
 
   result.add_options()("navigatorAutomaticShift",
 	  boost::program_options::value<bool>(&navigatorAutomaticShiftQ)->default_value(false),

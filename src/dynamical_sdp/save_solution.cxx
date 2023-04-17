@@ -6,6 +6,8 @@
 
 #include <iomanip>
 
+void print_matrix(const El::Matrix<El::BigFloat> & matrix);
+
 namespace
 {
   void write_psd_block(const boost::filesystem::path &outfile,
@@ -76,6 +78,7 @@ void save_solution(const Dynamical_Solver &solver,
 		         << "findMinimumQ = " << solver.findMinimumQ << ";\n"
 		         << "beta = " << solver.final_beta << ";\n"
 	         	 << "mulogdetX = " << solver.mulogdetX << ";\n"
+		         << "climbedQ = " << (!solver.lowest_mu_Q) << ";\n"
                  //<< "totalIterations = " << solver.total_iteration << ";\n"
                  << std::setw(16) << std::left << timer_pair.first << "= "
                  << timer_pair.second.elapsed_seconds() << ";\n";

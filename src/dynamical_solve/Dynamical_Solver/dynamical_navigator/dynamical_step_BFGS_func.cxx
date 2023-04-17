@@ -714,32 +714,36 @@ void read_prev_grad_step_hess(const Dynamical_Solver_Parameters &dynamical_param
 {
 	int dim_ext_p = dynamical_parameters.n_external_parameters;
 
-	for (int i = 0; i < dim_ext_p; i++)
+	if (dynamical_parameters.prev_grad_step_validQ)
 	{
-		prev_grad(i, 0) = dynamical_parameters.prev_grad[i];
-		prev_step(i, 0) = dynamical_parameters.prev_step[i];
-	}
-
-	for (int i = 0; i < dim_ext_p; i++)
-	{
-		for (int j = 0; j < dim_ext_p; j++)
+		for (int i = 0; i < dim_ext_p; i++)
 		{
-			prev_BFGS(i, j) = dynamical_parameters.hess_BFGS[i * dim_ext_p + j];
+			prev_grad(i, 0) = dynamical_parameters.prev_grad[i];
+			prev_step(i, 0) = dynamical_parameters.prev_step[i];
 		}
 	}
 
-	for (int i = 0; i < dim_ext_p; i++)
+	if (!dynamical_parameters.use_Hmixed_for_BFGS)
 	{
-		for (int j = 0; j < dim_ext_p; j++)
+		for (int i = 0; i < dim_ext_p; i++)
 		{
-                        if (BFGS_approximate_Hpp_only) {
-				prev_BFGS_pp(i, j) = dynamical_parameters.hess_BFGS_pp[i * dim_ext_p + j];
-                        }
-			else{
-                                prev_BFGS_pp(i, j) = 0 ;
+			for (int j = 0; j < dim_ext_p; j++)
+			{
+				prev_BFGS(i, j) = dynamical_parameters.hess_BFGS[i * dim_ext_p + j];
 			}
 		}
-        }	
+	}
+
+	for (int i = 0; i < dim_ext_p; i++)
+	{
+		for (int j = 0; j < dim_ext_p; j++)
+		{
+			if (BFGS_approximate_Hpp_only)
+				prev_BFGS_pp(i, j) = dynamical_parameters.hess_BFGS_pp[i * dim_ext_p + j];
+			else
+				prev_BFGS_pp(i, j) = 0;
+		}
+    }	
 }
 
 
@@ -1191,15 +1195,16 @@ void Dynamical_Solver::internal_step(
 	El::BigFloat &step_length_reduction
 	)
 {
-	if(beta== El::BigFloat(1))
-  {
+	//if (beta == El::BigFloat(1))
+	if (beta>0.9 && beta < 1.1)
+	{
 		return internal_step_corrector_iteration_centering(dynamical_parameters, total_psd_rows, block_info, sdp, grid,
 			X_cholesky, Y_cholesky, timers,
 			schur_complement_cholesky, schur_off_diagonal, Q,
 			dx, dy, dX, dY, R, grad_x, grad_y,
 			primal_residue_p, mu, is_primal_and_dual_feasible,
 			beta, primal_step_length, dual_step_length, step_length_reduction);
-  }
+	}
 
 	internal_predictor_direction_dxdydXdY(block_info, sdp, *this, schur_complement_cholesky,
 		schur_off_diagonal, X_cholesky, beta,
@@ -1268,21 +1273,22 @@ void Dynamical_Solver::strategy_hess_BFGS(const Dynamical_Solver_Parameters &dyn
 		if (dynamical_parameters.use_Hmixed_for_BFGS) // I will let simpleboot control whether hess_mixed will be used for hess_BFGS
 		{
 			El::Zeros(hess_BFGS, n_external_parameters, n_external_parameters);
-                        hess_BFGS_pp = hess_BFGS; 
- 			hess_BFGS -= hess_mixed;
+			hess_BFGS_pp = hess_BFGS; 
+ 			
+			hess_BFGS -= hess_mixed;
 			positivitize_matrix(hess_BFGS);
 			hess_BFGS *= El::BigFloat(rescale_initial_hess);
 		}
 		else
 		{
 			hess_BFGS = prev_BFGS;
-                        hess_BFGS_pp = prev_BFGS_pp;
+			hess_BFGS_pp = prev_BFGS_pp;
 		}
 
 		if (lowest_mu_Q == false) hess_BFGS = hess_BFGS_lowest_mu;
 
 		// update hess_BFGS
-		if (dynamical_parameters.total_iterations > 0 && lowest_mu_Q)
+		if (dynamical_parameters.prev_grad_step_validQ && lowest_mu_Q)
 		{
 			El::Matrix<El::BigFloat> grad_diff;
 			if (use_gradp_for_BFGS_update)

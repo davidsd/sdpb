@@ -76,7 +76,8 @@ public:
   El::Matrix<El::BigFloat> specified_ext_param;
   bool specified_ext_param_Q;
 
-
+  bool lowest_mu_Q;  // true : the solver hasn't been lifted along the local central path
+  
 
   //int intext_mode;
   // Discrepancy in the primal equality constraints, a
