@@ -66,16 +66,6 @@ void compute_R_error(const std::size_t &total_psd_rows, const Block_Diagonal_Mat
 
 extern int max_climbing;
 
-// subroutines to decide weather to update sdps in run_dynamical, before entering dynamical_step
-void compute_update_sdp(
-  const Dynamical_Solver_Parameters &parameters, const El::BigFloat &primal_error,
-  const El::BigFloat &dual_error, const El::BigFloat &duality_gap,
-  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
-  const int &iteration,
-  const std::chrono::time_point<std::chrono::high_resolution_clock>
-    &solver_start_time,
-  bool &is_primal_and_dual_feasible,
-  bool &update_sdp);
 
 //Same as the function in SDP_Solver, adapted for the Dynamical_Solver_Terminate_Reason class
 void compute_feasible_and_termination(

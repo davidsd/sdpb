@@ -38,9 +38,6 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
                               "Take a step in the external parameters, "
                               "that is to regenerate the sdp files if the step size is bigger than the threshold. "
                               "The default value is set to 0.");  
-  result.add_options()("updateAtDualityGap",
-                              boost::program_options::value<El::BigFloat>(&updateSDP_dualityGapThreshold)->default_value(0),
-                              "If updateAtDualityGap is setted to >0, the solver will run until duality<updateAtDualityGap.");
   result.add_options()("centeringRThreshold",
                               boost::program_options::value<El::BigFloat>(&centeringRThreshold)->default_value(-1),
                               "If positive, run centering steps until R<centeringRThreshold.");
