@@ -24,7 +24,7 @@ boost::program_options::options_description Dynamical_Solver_Parameters::options
                               boost::program_options::value<int>(&n_external_parameters)->default_value(0),
                               "The number of external parameters to be varied in each iteration of the dynamical SDP. "
                               "The default value is set to 0.");
-   result.add_options()("prevTotalIterations", 
+   result.add_options()("totalIterationCount", 
                               boost::program_options::value<size_t>(&total_iterations)->default_value(0),
                               "The number of total iterations finished before this solver starts to run. "
                               "The default value is set to 0.");
