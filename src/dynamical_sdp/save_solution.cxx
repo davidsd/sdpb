@@ -71,14 +71,6 @@ void save_solution(const Dynamical_Solver &solver,
                  << "dualityGap      = " << solver.duality_gap << ";\n"
                  << "primalError     = " << solver.primal_error() << ";\n"
                  << "dualError       = " << solver.dual_error << ";\n"
-		         << "dualStepSize    = " << solver.d_step << ";\n"
-                 << "primalStepSize  = " << solver.p_step << ";\n"
-		         << "BFGSHessianUpdated = " << solver.hess_BFGS_updateQ << ";\n"
-		         << "NavigatorValue = " << solver.lag_shifted << ";\n"
-		         << "findMinimumQ = " << solver.findMinimumQ << ";\n"
-		         << "beta = " << solver.final_beta << ";\n"
-	         	 << "mulogdetX = " << solver.mulogdetX << ";\n"
-		         << "climbedQ = " << (!solver.lowest_mu_Q) << ";\n"
                  //<< "totalIterations = " << solver.total_iteration << ";\n"
                  << std::setw(16) << std::left << timer_pair.first << "= "
                  << timer_pair.second.elapsed_seconds() << ";\n";
@@ -88,6 +80,47 @@ void save_solution(const Dynamical_Solver &solver,
                                    + output_path.string());
         }
     }
+
+
+
+  boost::filesystem::ofstream out2_stream;
+  if (El::mpi::Rank() == 0)
+  {
+	  if (verbosity >= Verbosity::regular)
+	  {
+		  std::cout << "Saving solution to      : " << out_directory << '\n';
+	  }
+	  const boost::filesystem::path output2_path(out_directory / "skydiving_out.txt");
+	  out2_stream.open(output2_path);
+	  set_stream_precision(out2_stream);
+	  //if (update_sdp && terminate_reason == Dynamical_Solver_Terminate_Reason::MaxIterationsExceeded)
+	  //  {
+	  //    out_stream << "exit to update SDPs" << ";\n";
+	  //  }
+	  //else
+	  //  {
+	  //    out_stream << "terminateReason = \"" << terminate_reason << "\";\n";
+	  //  }
+	  out2_stream
+		  << "dualStepSize    = " << solver.d_step << ";\n"
+		  << "primalStepSize  = " << solver.p_step << ";\n"
+		  << "BFGSHessianUpdated = " << solver.hess_BFGS_updateQ << ";\n"
+		  << "NavigatorValue = " << solver.lag_shifted << ";\n"
+		  << "findMinimumQ = " << solver.findMinimumQ << ";\n"
+		  << "beta = " << solver.final_beta << ";\n"
+		  << "mulogdetX = " << solver.mulogdetX << ";\n"
+		  << "climbedQ = " << (!solver.lowest_mu_Q) << ";\n"
+		  << std::setw(16) << std::left << timer_pair.first << "= "
+		  << timer_pair.second.elapsed_seconds() << ";\n";
+	  if (!out2_stream.good())
+	  {
+		  throw std::runtime_error("Error when writing to: "
+			  + output2_path.string());
+	  }
+  }
+
+
+
 
   boost::filesystem::ofstream extParamStep_stream;
   if(El::mpi::Rank() == 0)
