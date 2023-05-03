@@ -75,8 +75,11 @@ fmt
   
 blocks_3d
 ---------
-    git clone git@gitlab.com:davidsd/blocks-3d.git
+    git clone git@gitlab.com:bootstrapcollaboration/blocks_3d.git
+    cd blocks_3d
     ./waf configure --prefix=$HOME/install --eigen-incdir=/software/eigen-b3f3d4950030/ --fmt-dir=$HOME/install --fmt-libdir=$HOME/install/lib64
+    ./waf # maybe -j
+    ./waf install
 
 Batch scripts
 -------------
