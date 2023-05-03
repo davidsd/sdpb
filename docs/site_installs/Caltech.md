@@ -5,7 +5,7 @@ System info
     glibc-devel-2.17-260.el7_6.3.x86_64
 
 sdpb
-----
+====
     module load cmake/3.10.2 gcc/7.3.0 openmpi/3.0.0 boost/1_68_0-gcc730 eigen/eigen
     # Can not use openblas module
     # It is compiled with the old gcc, and that would require loading
@@ -21,6 +21,9 @@ sdpb
 RapidJSON
 ---------
     git clone https://github.com/Tencent/rapidjson.git
+    cd rapidjson
+    mkdir build
+    cd build
     cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/install
     make
     make install
@@ -36,6 +39,9 @@ sdpb
 ----
     ./waf configure --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --prefix=$HOME/install
 
+scalar_blocks
+=============
+
 Trilinos
 --------
     cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DTrilinos_ENABLE_Sacado=ON -DTrilinos_ENABLE_Kokkos=OFF -DTrilinos_ENABLE_Teuchos=OFF -DCMAKE_INSTALL_PREFIX=$HOME/install ..
@@ -43,6 +49,9 @@ Trilinos
 scalar_blocks
 -------------
     ./waf configure --prefix=$HOME/install --trilinos-dir=$HOME/install --eigen-incdir=/software/eigen-b3f3d4950030/
+
+blocks_3d
+=========
 
 fmt
 ---
