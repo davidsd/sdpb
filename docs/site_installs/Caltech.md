@@ -38,17 +38,28 @@ libarchive
 sdpb
 ----
     ./waf configure --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --prefix=$HOME/install
+    ./waf # I needed to do './waf -j 1' (single threaded) to get it to compile without crashing
+    ./waf install
 
 scalar_blocks
 =============
 
 Trilinos
 --------
+    git clone --branch trilinos-release-12-12-branch https://github.com/trilinos/Trilinos.git
+    mkdir build
+    cd build
     cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DTrilinos_ENABLE_Sacado=ON -DTrilinos_ENABLE_Kokkos=OFF -DTrilinos_ENABLE_Teuchos=OFF -DCMAKE_INSTALL_PREFIX=$HOME/install ..
+    make
+    make install
 
 scalar_blocks
 -------------
+    git clone https://gitlab.com/bootstrapcollaboration/scalar_blocks.git
+    cd scalar_blocks
     ./waf configure --prefix=$HOME/install --trilinos-dir=$HOME/install --eigen-incdir=/software/eigen-b3f3d4950030/
+    ./waf # maybe -j 1
+    ./waf install
 
 blocks_3d
 =========
