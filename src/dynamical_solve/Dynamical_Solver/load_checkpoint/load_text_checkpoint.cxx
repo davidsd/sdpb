@@ -40,5 +40,8 @@ bool load_text_checkpoint(const boost::filesystem::path &checkpoint_directory,
             }
         }
     }
+  solver.X.symmetrize();
+  solver.Y.symmetrize();
+
   return true;
 }

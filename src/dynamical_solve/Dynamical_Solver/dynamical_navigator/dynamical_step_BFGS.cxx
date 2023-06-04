@@ -657,6 +657,8 @@ void Dynamical_Solver::dynamical_step(
 		<< " Lpu(0)=" << Lpu(0) 
 		<< "\n";
 		
+	if (dynamical_parameters.finite_dGap_target > 0)
+		beta_scan_begin_El = beta_scan_end_El = 1;
 
 	// beta scan
 	for (beta = beta_scan_begin_El; beta <= beta_scan_end_El; beta += beta_scan_step_El)

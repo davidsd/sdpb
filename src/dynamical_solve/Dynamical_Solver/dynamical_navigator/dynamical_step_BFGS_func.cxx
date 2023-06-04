@@ -1155,9 +1155,15 @@ void Dynamical_Solver::internal_step_corrector_iteration_centering(
 		= step_length(Y_cholesky, dY_last, El::BigFloat(0.9),
 			"run.step.stepLength(YCholesky)", timers);
 
-	if (El::mpi::Rank() == 0) std::cout
+	if (El::mpi::Rank() == 0) std::cout //<< std::setprecision(300)
 		<< "last coit : primal_step_length = " << primal_step_length
 		<< " dual_step_length = " << dual_step_length << "\n" << std::flush;
+
+	/*
+	if (El::mpi::Rank() == 0) std::cout << std::showpos << std::setw(11) << std::setprecision(3)
+		<< "last coit : primal_step_length = " << static_cast<double>(primal_step_length)
+		<< " dual_step_length = " << static_cast<double>(dual_step_length) << "\n" << std::flush;
+	*/
 
 	execute_step(dx_last, dy_last, dX_last, dY_last, primal_step_length, dual_step_length);
 
@@ -1245,6 +1251,9 @@ void Dynamical_Solver::execute_step(
 	dY *= dual_step_length;
 	X += dX;
 	Y += dY;
+
+	X.symmetrize();
+	Y.symmetrize();
 }
 
 
