@@ -26,6 +26,7 @@ struct Solver_Parameters
   boost::filesystem::path checkpoint_in, checkpoint_out;
   Solver_Parameters() = default;
   boost::program_options::options_description options();
+
 };
 
 std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p);

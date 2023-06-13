@@ -79,6 +79,7 @@ void solve_schur_complement_equation(
                 row, column, dy_local.GetLocal(global_row, global_column));
             }
         }
+
       Gemv(El::OrientationNS::NORMAL, El::BigFloat(1),
            schur_off_diagonal.blocks[block], dy.blocks[block], El::BigFloat(1),
            dx.blocks[block]);

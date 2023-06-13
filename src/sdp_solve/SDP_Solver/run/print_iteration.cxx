@@ -52,6 +52,9 @@ void print_iteration(
                 << std::setw(4) << std::setprecision(3)
                 << static_cast<double>(beta_corrector) << "\n"
 
+                //<< std::showpos << std::setw(11) << std::setprecision(3)
+                //<< static_cast<double>(extStep) << "\n"
+                
                 << std::flush;
     }
 }

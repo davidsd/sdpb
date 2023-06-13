@@ -8,6 +8,8 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
+#include <iostream> 
+
 namespace
 {
   struct Block_Info_Parser
