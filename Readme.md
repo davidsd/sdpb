@@ -89,6 +89,10 @@ An explanation of how it works appears in:
 
   - D. Simmons-Duffin, *The Lightcone Bootstrap and the Spectrum of the 3d Ising CFT*, [arXiv:1612.08471](https://arxiv.org/abs/1612.08471)
 
+### skydive
+
+- A. Liu, D. Simmons-Duffin, N. Su, B. C. van Rees, *Skydiving to Bootstrap Islands* [arxiv:2306.XXXXX](https://arxiv.org/abs/2306.XXXXX)
+
 ## Acknowledgements
 
 - Version 2 of SDPB was made possible by the [Simons Collaboration on the Nonperturbative Bootstrap](http://bootstrapcollaboration.com/).
