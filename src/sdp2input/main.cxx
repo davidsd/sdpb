@@ -11,7 +11,7 @@ void write_output(const boost::filesystem::path &output_path,
                   const std::vector<El::BigFloat> &objectives,
                   const std::vector<El::BigFloat> &normalization,
                   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
-                  Timers &timers);
+                  Timers &timers, bool debug);
 
 int main(int argc, char **argv)
 {
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
           command_arguments.emplace_back(argv[arg]);
         }
       write_output(output_path, command_arguments, objectives, normalization,
-                   matrices, timers);
+                   matrices, timers, debug);
       write_output_timer.stop();
       if(debug)
         {

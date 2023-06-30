@@ -14,7 +14,7 @@ void write_output(const boost::filesystem::path &output_path,
                   const std::vector<El::BigFloat> &objectives,
                   const std::vector<El::BigFloat> &normalization,
                   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
-                  Timers &timers)
+                  Timers &timers, bool debug)
 {
   auto &objectives_timer(timers.add_and_start("write_output.objectives"));
 
@@ -138,6 +138,6 @@ void write_output(const boost::filesystem::path &output_path,
   auto &write_timer(timers.add_and_start("write_output.write"));
   write_sdpb_input_files(output_path, rank, matrices.size(), command_arguments,
                          objective_const, dual_objective_b,
-                         dual_constraint_groups);
+                         dual_constraint_groups, debug);
   write_timer.stop();
 }
