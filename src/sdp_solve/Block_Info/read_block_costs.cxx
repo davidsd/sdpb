@@ -2,6 +2,10 @@
 
 #include <boost/filesystem/fstream.hpp>
 
+void read_objectives(const boost::filesystem::path &sdp_path,
+                     const El::Grid &grid, El::BigFloat &objective_const,
+                     El::DistMatrix<El::BigFloat> &dual_objective_b);
+
 std::vector<Block_Cost>
 Block_Info::read_block_costs(const boost::filesystem::path &sdp_path,
                              const boost::filesystem::path &checkpoint_in)
@@ -51,10 +55,37 @@ Block_Info::read_block_costs(const boost::filesystem::path &sdp_path,
       // If no information, assign a cost proportional to the matrix
       // size.  This should balance out memory use when doing a timing
       // run.
-      auto schur_sizes(schur_block_sizes());
+
+      El::Grid grid(this->mpi_comm.value);
+      El::BigFloat objective_const;
+      El::DistMatrix<El::BigFloat> dual_objective_b;
+      // TODO objectives are already read in SDP::SDP(),
+      // we should reuse them instead of reading again
+      read_objectives(sdp_path, grid, objective_const, dual_objective_b);
+
+      size_t dual_objective_size = dual_objective_b.Height(); // N
+      auto schur_sizes = schur_block_sizes();
+      auto psd_sizes = psd_matrix_block_sizes();
+      auto bilinear_sizes = bilinear_pairing_block_sizes();
+
+      auto elements_count = [](std::vector<size_t> sizes, size_t index) {
+        return sizes[index] * sizes[index];
+      };
+
       for(size_t block = 0; block < schur_sizes.size(); ++block)
         {
-          result.emplace_back(schur_sizes[block] * schur_sizes[block], block);
+          auto schur = elements_count(schur_sizes, block);
+          auto psd = elements_count(psd_sizes, 2 * block)
+                     + elements_count(psd_sizes, 2 * block + 1);
+          auto bilinear = elements_count(bilinear_sizes, 2 * block)
+                          + elements_count(bilinear_sizes, 2 * block + 1);
+          // P'xN, a band of B(=free_var_matrix)
+          auto B_band = schur_sizes[block] * dual_objective_size;
+          // Estimate total RAM associated with the block.
+          // (There is also a RAM contribution from #(Q)=NxN, but it's
+          // block-independent)
+          auto total_cost = 2 * B_band + 5 * psd + 2 * schur + 2 * bilinear;
+          result.emplace_back(total_cost, block);
         }
     }
   return result;
