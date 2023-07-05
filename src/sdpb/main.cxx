@@ -34,7 +34,7 @@ int main(int argc, char **argv)
         {
           std::cout << "SDPB started at "
                     << boost::posix_time::second_clock::local_time() << '\n'
-                    << parameters << '\n';
+                    << parameters << std::endl;
         }
 
       Block_Info block_info(parameters.sdp_path,
@@ -52,7 +52,9 @@ int main(int argc, char **argv)
           if(parameters.verbosity >= Verbosity::regular
              && El::mpi::Rank() == 0)
             {
-              std::cout << "Performing a timing run\n";
+              std::cout << "Performing a timing run, start at "
+                        << boost::posix_time::second_clock::local_time()
+                        << std::endl;
             }
           SDPB_Parameters timing_parameters(parameters);
           timing_parameters.solver.max_iterations = 2;

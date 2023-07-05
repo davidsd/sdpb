@@ -1,4 +1,5 @@
 #include "../../SDP_Solver.hxx"
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 // The main solver loop
 
@@ -111,6 +112,11 @@ SDP_Solver::run(const Solver_Parameters &parameters,
   auto last_checkpoint_time(std::chrono::high_resolution_clock::now());
   for(size_t iteration = 1;; ++iteration)
     {
+      if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+        {
+          El::Output("Start iteration ", iteration, " at ",
+                     boost::posix_time::second_clock::local_time());
+        }
       El::byte checkpoint_now(
         std::chrono::duration_cast<std::chrono::seconds>(
           std::chrono::high_resolution_clock::now() - last_checkpoint_time)
