@@ -15,6 +15,7 @@
 #include <string>
 #include <list>
 #include <algorithm>
+#include <boost/core/noncopyable.hpp>
 
 struct Timers : public std::list<std::pair<std::string, Timer>>
 {
@@ -72,4 +73,17 @@ struct Timers : public std::list<std::pair<std::string, Timer>>
       }
     return iter->second.elapsed_milliseconds();
   }
+};
+
+// Simple RAII timer
+// start() in constructor, stop() in destructor
+struct ScopedTimer : boost::noncopyable
+{
+  ScopedTimer(Timers &timers, const std::string &name)
+      : my_timer(timers.add_and_start(name))
+  {}
+  virtual ~ScopedTimer() { my_timer.stop(); }
+
+private:
+  Timer &my_timer;
 };

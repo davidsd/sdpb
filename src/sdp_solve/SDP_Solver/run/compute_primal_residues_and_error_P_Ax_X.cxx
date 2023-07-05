@@ -7,10 +7,8 @@ void compute_primal_residues_and_error_P_Ax_X(
   const Block_Diagonal_Matrix &X, Block_Diagonal_Matrix &primal_residues,
   El::BigFloat &primal_error, Timers &timers)
 {
-  auto &primal_residues_timer(
-    timers.add_and_start("run.computePrimalResidues"));
+  ScopedTimer primal_residues_timer(timers, "run.computePrimalResidues");
   constraint_matrix_weighted_sum(block_info, sdp, x, primal_residues);
   primal_residues -= X;
   primal_error = primal_residues.max_abs();
-  primal_residues_timer.stop();
 }
