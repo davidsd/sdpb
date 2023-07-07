@@ -34,6 +34,7 @@ int main(int argc, char **argv)
         {
           std::cout << "SDPB started at "
                     << boost::posix_time::second_clock::local_time() << '\n'
+                    << "SDPB version: " << SDPB_VERSION_STRING << '\n'
                     << parameters << std::endl;
         }
 
