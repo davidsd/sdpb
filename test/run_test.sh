@@ -50,16 +50,8 @@ touch_no_write test/io_tests/profile_error.profiling.0
 test_run_fails "write profile" mpirun -n 2 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test -c test/io_tests/profile_error --verbosity=2 --maxIterations=1
 rm -rf test/io_tests
 
-touch_no_write test/io_tests/control.json
-test_run_fails "control" mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests
-rm -rf test/io_tests
-
-touch_no_write test/io_tests/block_0.json
-test_run_fails "blocks write" mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests
-rm -rf test/io_tests
-
-touch_no_write test/io_tests/objectives.json
-test_run_fails "objectives" mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests
+touch_no_write test/io_tests/sdp.zip
+test_run_fails "pvm2sdp cannot write zip" mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests/sdp.zip
 rm -rf test/io_tests
 
 touch_no_write test/io_tests/out/out.txt
@@ -84,7 +76,7 @@ rm -rf test/io_tests
 
 mkdir -p test/io_tests
 echo "file_does_not_exist" >test/io_tests/file_list.nsv
-test_run_fails "file_list.nsv" mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/io_tests/file_list.nsv test/io_tests
+test_run_fails "file_list.nsv" mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/io_tests/file_list.nsv test/io_tests/sdp.zip
 rm -rf test/io_tests
 
 mkdir -p test/io_tests
