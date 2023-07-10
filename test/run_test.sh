@@ -36,62 +36,49 @@ rm -f test/test.out
 test_run_success "SDPB" ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test --verbosity=0
 rm -rf test/io_tests
 
-mkdir -p test/io_tests
-touch test/io_tests/profile_error.profiling.0
-chmod a-w test/io_tests/profile_error.profiling.0
+# create file and prohibit writing
+function touch_no_write() {
+  local filename=$1
+  local dir_name=$(dirname "$filename")
+  rm -rf "$dir_name"
+  mkdir -p "$dir_name"
+  touch "$filename"
+  chmod a-w "$filename"
+}
+
+touch_no_write test/io_tests/profile_error.profiling.0
 test_run_fails "write profile" mpirun -n 2 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test -c test/io_tests/profile_error --verbosity=2 --maxIterations=1
 rm -rf test/io_tests
 
-mkdir -p test/io_tests
-touch test/io_tests/control.json
-chmod a-w test/io_tests/control.json
+touch_no_write test/io_tests/control.json
 test_run_fails "control" mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests
 rm -rf test/io_tests
 
-mkdir -p test/io_tests
-touch test/io_tests/block_0.json
-chmod a-w test/io_tests/block_0.json
+touch_no_write test/io_tests/block_0.json
 test_run_fails "blocks write" mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests
 rm -rf test/io_tests
 
-mkdir -p test/io_tests
-touch test/io_tests/objectives.json
-chmod a-w test/io_tests/objectives.json
+touch_no_write test/io_tests/objectives.json
 test_run_fails "objectives" mpirun -n 1 --quiet ./build/pvm2sdp 1024 test/test.xml test/io_tests
 rm -rf test/io_tests
 
-mkdir -p test/io_tests
-mkdir test/io_tests/out
-touch test/io_tests/out/out.txt
-chmod a-w test/io_tests/out/out.txt
+touch_no_write test/io_tests/out/out.txt
 test_run_fails "out.txt" mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0
 rm -rf test/io_tests
 
-mkdir -p test/io_tests
-mkdir test/io_tests/out
-touch test/io_tests/out/x_0.txt
-chmod a-w test/io_tests/out/x_0.txt
+touch_no_write test/io_tests/out/x_0.txt
 test_run_fails "x_0.txt" mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0
 rm -rf test/io_tests
 
-mkdir -p test/io_tests
-mkdir test/io_tests/out
-touch test/io_tests/out/y.txt
-chmod a-w test/io_tests/out/y.txt
+touch_no_write test/io_tests/out/y.txt
 test_run_fails "y.txt" mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --verbosity=0
 rm -rf test/io_tests
 
-mkdir -p test/io_tests
-mkdir test/io_tests/out
-touch test/io_tests/out/X_matrix_0.txt
-chmod a-w test/io_tests/out/X_matrix_0.txt
+touch_no_write test/io_tests/out/X_matrix_0.txt
 test_run_fails "X_matrix_0.txt" mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --writeSolution=x,y,X,Y --verbosity=0
 rm -rf test/io_tests
 
-mkdir -p test/io_tests
-mkdir test/io_tests/out
-touch test/io_tests/out/Y_matrix_0.txt
-chmod a-w test/io_tests/out/Y_matrix_0.txt
+touch_no_write test/io_tests/out/Y_matrix_0.txt
 test_run_fails "Y_matrix_0.txt" mpirun -n 1 --quiet ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 -s test/test -c test/io_tests/ck -o test/io_tests/out --maxIterations=1 --writeSolution=x,y,X,Y --verbosity=0
 rm -rf test/io_tests
 
