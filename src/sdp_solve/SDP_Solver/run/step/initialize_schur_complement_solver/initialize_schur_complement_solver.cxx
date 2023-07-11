@@ -70,8 +70,8 @@ void initialize_schur_complement_solver(
   Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
   Timers &timers)
 {
-  auto &initialize_timer(
-    timers.add_and_start("run.step.initializeSchurComplementSolver"));
+  ScopedTimer initialize_timer(timers,
+                               "run.step.initializeSchurComplementSolver");
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
   // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
   // (d_j+1)*m_j*(m_j+1)/2
@@ -80,8 +80,7 @@ void initialize_schur_complement_solver(
     block_info.schur_block_sizes(), block_info.block_indices,
     block_info.num_points.size(), group_grid);
 
-  compute_schur_complement(block_info, A_X_inv, A_Y, schur_complement,
-                           timers);
+  compute_schur_complement(block_info, A_X_inv, A_Y, schur_complement, timers);
 
   auto &Q_computation_timer(
     timers.add_and_start("run.step.initializeSchurComplementSolver.Q"));
@@ -101,5 +100,4 @@ void initialize_schur_complement_solver(
                          "Cholesky"));
   Cholesky(El::UpperOrLowerNS::UPPER, Q);
   Cholesky_timer.stop();
-  initialize_timer.stop();
 }

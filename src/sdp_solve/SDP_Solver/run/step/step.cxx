@@ -56,7 +56,7 @@ void SDP_Solver::step(
   El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
   El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers)
 {
-  auto &step_timer(timers.add_and_start("run.step"));
+  ScopedTimer step_timer(timers, "run.step");
   El::BigFloat beta_predictor;
 
   // Search direction: These quantities have the same structure
@@ -160,5 +160,4 @@ void SDP_Solver::step(
   dY *= dual_step_length;
 
   Y += dY;
-  step_timer.stop();
 }

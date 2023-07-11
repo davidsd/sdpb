@@ -23,8 +23,8 @@ namespace
 void synchronize_Q(El::DistMatrix<El::BigFloat> &Q,
                    const El::DistMatrix<El::BigFloat> &Q_group, Timers &timers)
 {
-  auto &synchronize_Q_buffers_timer(timers.add_and_start(
-    "run.step.initializeSchurComplementSolver.Q.synchronize_Q"));
+  ScopedTimer synchronize_Q_buffers_timer(
+    timers, "run.step.initializeSchurComplementSolver.Q.synchronize_Q");
 
   const int total_ranks(El::mpi::Size(El::mpi::COMM_WORLD));
   // Special case serial case
@@ -183,5 +183,4 @@ void synchronize_Q(El::DistMatrix<El::BigFloat> &Q,
             current_receiving += serialized_size;
           }
       }
-  synchronize_Q_buffers_timer.stop();
 }

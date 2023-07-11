@@ -11,7 +11,7 @@ void compute_dual_residues_and_error(
     &A_Y,
   Block_Vector &dual_residues, El::BigFloat &dual_error, Timers &timers)
 {
-  auto &dual_residues_timer(timers.add_and_start("run.computeDualResidues"));
+  ScopedTimer dual_residues_timer(timers, "run.computeDualResidues");
 
   auto dual_residues_block(dual_residues.blocks.begin());
   auto primal_objective_c_block(sdp.primal_objective_c.blocks.begin());
@@ -63,5 +63,4 @@ void compute_dual_residues_and_error(
     }
   dual_error
     = El::mpi::AllReduce(local_max, El::mpi::MAX, El::mpi::COMM_WORLD);
-  dual_residues_timer.stop();
 }

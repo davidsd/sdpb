@@ -22,8 +22,8 @@ void compute_schur_complement(
     &A_Y,
   Block_Diagonal_Matrix &schur_complement, Timers &timers)
 {
-  auto &schur_complement_timer(timers.add_and_start(
-    "run.step.initializeSchurComplementSolver.schur_complement"));
+  ScopedTimer schur_complement_timer(
+    timers, "run.step.initializeSchurComplementSolver.schur_complement");
 
   auto schur_complement_block(schur_complement.blocks.begin());
   size_t Q_index(0);
@@ -123,5 +123,4 @@ void compute_schur_complement(
       ++schur_complement_block;
       ++Q_index;
     }
-  schur_complement_timer.stop();
 }
