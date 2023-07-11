@@ -1,8 +1,11 @@
 #!/bin/bash
 
 # Common functions and variables to be used for specific tests
-# Add the following line at the beginning of your test script (e.g. run_test.sh):
+# Add the following line at the beginning of your test script (e.g. run_all_tests.sh):
 # source test/common_test_setup.sh
+
+# only include once
+[ -n "$TEST_DATA_DIR" ] && return
 
 TEST_RESULT=0
 TEST_FAILED_LIST=""

@@ -1,14 +1,7 @@
 #!/bin/bash
 
-# Run this from the top level directory
-
 # setup
-common_test_setup=test/common_test_setup.sh
-if [ ! -f $common_test_setup ];then
-  echo "$common_test_setup not found. Run this script from sdpb root directory"
-  exit 1
-fi
-source $common_test_setup
+source test/common_test_setup.sh || exit 1
 
 # shortcuts for running pvm2sdp & sdpb with common options
 
@@ -36,13 +29,13 @@ function run_sdpb_default_sdp_custom_output_prefix() {
 }
 
 echo "================"
-echo "Running tests..."
+echo "Running sdpb and pvm2sdp tests..."
 
 pvm2sdp_out=$TEST_OUT_DIR/pvm2sdp/sdp.zip
 TEST_RUN_SUCCESS "run pvm2sdp" run_pvm2sdp $TEST_DATA_DIR/pvm2sdp/file_list.nsv $pvm2sdp_out
 TEST_RUN_SUCCESS "pvm2sdp check output" diff $pvm2sdp_out $sdp_path
 TEST_RUN_SUCCESS "run sdpb" run_sdpb_default_sdp_custom_output_prefix $TEST_OUT_DIR/sdpb
-TEST_RUN_SUCCESS "sdpb check TEST_RESULT" diff $TEST_OUT_DIR/sdpb/out $TEST_DATA_DIR/sdpb/test_out_orig
+TEST_RUN_SUCCESS "sdpb check output" diff $TEST_OUT_DIR/sdpb/out $TEST_DATA_DIR/sdpb/test_out_orig
 
 # create file and prohibit writing
 function touch_no_write() {
@@ -55,7 +48,7 @@ function touch_no_write() {
 }
 
 echo "================"
-echo "Running IO failure tests..."
+echo "Running sdpb and pvm2sdp IO failure tests..."
 
 io_tests="$TEST_OUT_DIR/io_tests"
 
@@ -104,11 +97,3 @@ checkpoint_data=$io_tests/checkpoint_data
 run_sdpb_default_sdp_custom_output_prefix $checkpoint_data --maxIterations=1 --writeSolution=x,y,X,Y >/dev/null
 head -n 2 $checkpoint_data/out/X_matrix_0.txt >$checkpoint_data/out/X_matrix_0.txt
 TEST_RUN_FAILS "corrupt text checkpoint X_matrix_0.txt" run_sdpb -s $sdp_path -c $checkpoint_data/out -o $checkpoint_data/out_new --maxIterations=1
-
-echo "================"
-if [ $TEST_RESULT != 0 ]; then
-  echo "FAILED TESTS: $TEST_FAILED_LIST"
-else
-  echo "PASSED ALL TESTS"
-fi
-exit $TEST_RESULT
