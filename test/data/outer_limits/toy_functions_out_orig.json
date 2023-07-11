@@ -1,0 +1,38 @@
+{
+  "optimal": "1.840265763127225452419805975066806442959",
+  "y":
+  [
+    "1",
+    "-1.84026576312722545241980597506680644296"
+  ],
+  "options": 
+{
+    "maxIterations": "1000",
+    "maxRuntime": "9223372036854775807",
+    "checkpointInterval": "3600",
+    "findPrimalFeasible": "false",
+    "findDualFeasible": "false",
+    "detectPrimalFeasibleJump": "false",
+    "detectDualFeasibleJump": "false",
+    "precision": "128",
+    "precision_actual": "128",
+    "dualityGapThreshold": "1e-10",
+    "primalErrorThreshold": "1e-10",
+    "dualErrorThreshold": "1e-10",
+    "initialMatrixScalePrimal": "10",
+    "initialMatrixScaleDual": "10",
+    "feasibleCenteringParameter": "0.1",
+    "infeasibleCenteringParameter": "0.3",
+    "stepLengthReduction": "0.7",
+    "maxComplementarity": "1e+100",
+    "initialCheckpointDir": "test\/out\/outer_limits\/ck",
+    "checkpointDir": "test\/out\/outer_limits\/ck",
+    "functions": "test\/data\/outer_limits\/toy_functions.json",
+    "points": "test\/data\/outer_limits\/toy_functions_points.json",
+    "out": "test\/out\/outer_limits\/toy_functions_out.json",
+    "dualityGapReduction": "1024",
+    "meshThreshold": "0.001",
+    "writeSolution": "",
+    "verbosity": "0"
+}
+}

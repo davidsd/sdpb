@@ -9,8 +9,5 @@ build/
 .idea/
 
 # test
-test/test
-test/test_out/
-test/io_tests/out/
-test/*.ck/
-test/toy_functions_out.json
+test/out/
+test/.nfs*
