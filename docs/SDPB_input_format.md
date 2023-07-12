@@ -36,7 +36,7 @@ The JSON schema for these input files are in
 [sdpb_input_block_schema.json](sdpb_input_block_schema.json).  Running `SDPB` on the
 test example
 
-    pvm2sdp 1024 test/test.xml test/test
+    pvm2sdp 1024 test/data/pvm2sdp/pvm.xml test/out/pvm2sdp/sdp.zip
     
 will generate a simple example you can look at.
 

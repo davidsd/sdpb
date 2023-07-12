@@ -30,9 +30,9 @@ of options.  There are four main differences:
 
 The format for `functions` is detailed in the
 [schema](functions_schema.json), and there is an
-[example](../test/toy_functions.json) included with the source code.
+[example](../test/data/outer_limits/toy_functions.json) included with the source code.
 Similarly, `points` has a [schema](points_schema.json) and an
-[example](../test/toy_functions_points.json).
+[example](../test/data/outer_limits/toy_functions_points.json).
 
 If you have an existing input file for `sdpb`, you can use the bundled
 `sdp2functions` and `pvm2functions` programs to create suitable input
@@ -50,7 +50,7 @@ Running `outer_limits` is very similar to running `sdpb`.  For
 example, to run the test case on your quad-core laptop, you can
 probably use `mpirun`:
 
-    mpirun -n 4 build/outer_limits --functions test/toy_functions.json --points test/toy_functions_points.json --precision=64 --dualityGapThreshold=1e-10 --primalErrorThreshold=1e-10 --dualErrorThreshold=1e-10 --initialMatrixScalePrimal=1e1 --initialMatrixScaleDual=1e1 --maxIterations=1000
+    mpirun -n 4 build/outer_limits --functions test/data/outer_limits/toy_functions.json --points test/data/outer_limits/toy_functions_points.json --precision=64 --dualityGapThreshold=1e-10 --primalErrorThreshold=1e-10 --dualErrorThreshold=1e-10 --initialMatrixScalePrimal=1e1 --initialMatrixScaleDual=1e1 --maxIterations=1000
 
 Note that this requires relatively low precision: `64`.  Also, the
 values for `initialMatrixScalePrimal` and `initialMatrixScaleDual` are

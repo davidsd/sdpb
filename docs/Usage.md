@@ -1,8 +1,8 @@
 # Usage
 
-Details of how SDPB works are described in the [the
-manual](SDPB-Manual.pdf).  An example input file
-[test.xml](../test/test.xml) is included with the source code.
+Details of how SDPB works are described in the
+[manual](SDPB-Manual.pdf).  An example input file
+[pvm.xml](../test/data/pvm2sdp/pvm.xml) is included with the source code.
 
 The build system creates the executables `pvm2sdp`, `sdp2input`, and
 `sdpb` in the `build` directory.  There are two steps when running
@@ -31,7 +31,7 @@ conversion.  `[INPUT]` is a single Mathematica, JSON, or NSV
 (Null Separated Value) file.  `[OUTPUT]` is an output directory.
 
 The single file Mathematica and JSON formats are described in Section
-3.2 of the [the manual](SDPB-Manual.pdf).  In addition, for JSON there
+3.2 of the [manual](SDPB-Manual.pdf).  In addition, for JSON there
 is a [schema](sdp2input_schema.json).
 
 The NSV format allows you to load an SDP from multiple JSON and/or
@@ -53,12 +53,12 @@ Mathematica.  NSV files can also recursively reference other NSV
 files.
 
 There are example input files in
-[Mathematica](../test/sdp2input_test.m),
-[JSON](../test/sdp2input_test.json), and
-[NSV](../test/sdp2input_split.nsv) format.  They all define the same
+[Mathematica](../test/data/sdp2input/sdp2input_test.m),
+[JSON](../test/data/sdp2input/sdp2input_test.json), and
+[NSV](../test/data/sdp2input/sdp2input_split.nsv) format.  They all define the same
 SDP, with the NSV example loading the SDP from two Mathematica files:
-[sdp2input\_split1.m](../test/sdp2input_split1.m) and
-[sdp2input\_split2.m](../test/sdp2input_split2.m).
+[sdp2input\_split1.m](../test/data/sdp2input/sdp2input_split1.m) and
+[sdp2input\_split2.m](../test/data/sdp2input/sdp2input_split2.m).
 
 ### Converting Polynomial Vector Matrices
 
@@ -74,34 +74,34 @@ those input files can be either an XML file with Polynomial Vector
 Matrices, or an Null Separated Value (NSV) file with a list of
 files. `[OUTPUT]` is an output directory.
 
-For example, the command to convert the file `test/test.xml`, using
+For example, the command to convert the file `test/data/pvm2sdp/pvm.xml`, using
 1024 bits of precision, and store the result in the directory
-`test/test/`, is
+`test/out/pvm2sdp/sdp.zip`, is
 
-    pvm2sdp 1024 test/test.xml test/test
+    pvm2sdp 1024 test/data/pvm2sdp/pvm.xml test/out/pvm2sdp/sdp.zip
 
 For input, you can also use an NSV file containing a list of file names
-separated by nulls.  There is an example in `test/file_list.nsv`.
+separated by nulls.  There is an example in `test/data/pvm2sdp/file_list.nsv`.
 Using it is similar to the xml files
 
-    pvm2sdp 1024 test/file_list.nsv test/test
+    pvm2sdp 1024 test/data/pvm2sdp/file_list.nsv test/out/pvm2sdp/sdp.zip
 
 One way to generate this file list is with the `find` command.  For
 example,
 
-    find test -print0 -name "test.xml" > test/file_list.nsv
+    find test/data/pvm2sdp/ -name "pvm.xml" -print0 > test/data/pvm2sdp/file_list.nsv
     
-will regenerate `test/file_list.nsv`.  If you have a directory `input`
+will regenerate `test/data/pvm2sdp/file_list.nsv`.  If you have a directory `input`
 with many xml files, you can generate a file list with the command
 
-    find input/ -print0 -name "*.xml" > file_list.nsv
+    find test/data/pvm2sdp/ -name "*.xml" -print0 > test/data/pvm2sdp/file_list.nsv
 
 `pvm2sdp` assumes that anything with the `.nsv` extension is a null
 separated file list, and everything else is an xml file.  File lists
 can also recursively reference other file lists.  So running
 
-    find test -print0 -name "*.nsv" > file_list_list.nsv
-    pvm2sdp 1024 file_list_list.nsv test/test
+    find test/data/pvm2sdp/ a-print0 -name "*.nsv" > test/out/file_list_list.nsv
+    pvm2sdp 1024 test/out/file_list_list.nsv test/out/pvm2sdp/sdp.zip
 
 will also work.
 
@@ -110,22 +110,23 @@ will also work.
 The options to SDPB are described in detail in the help text, obtained
 by running `build/sdpb --help`.  The most important options are `-s [--sdpDir]`,
 `--precision`, and `--procsPerNode`.
+You can specify output and checkpoint directories by `-o [ --outDir ]` and `-c [ --checkpointDir ]`, respectively.
 
 SDPB uses MPI to run in parallel, so you may need a special syntax to
 launch it.  For example, if you compiled the code on your own laptop,
 you will probably use `mpirun` to invoke SDPB.  If you have 4 physical
 cores on your machine, the command is
 
-    mpirun -n 4 build/sdpb --precision=1024 --procsPerNode=4 -s test/test/
+    mpirun -n 4 build/sdpb --precision=1024 --procsPerNode=4 -s test/data/sdp.zip -o test/out/sdpb -c test/out/sdpb/ck
 
 On the Yale Grace cluster, the command used in the Slurm batch file is
 
-    mpirun build/sdpb --precision=1024 --procsPerNode=$SLURM_NTASKS_PER_NODE -s test/test/
+    mpirun build/sdpb --precision=1024 --procsPerNode=$SLURM_NTASKS_PER_NODE -s test/data/sdp.zip -o test/out/sdpb -c test/out/sdpb/ck
 
 In contrast, the Harvard Odyssey 3 cluster, which also uses Slurm,
 uses the srun command
 
-    srun -n $SLURM_NTASKS --mpi=pmi2 build/sdpb --precision=1024 --procsPerNode=$SLURM_NTASKS_PER_NODE -s test/test
+    srun -n $SLURM_NTASKS --mpi=pmi2 build/sdpb --precision=1024 --procsPerNode=$SLURM_NTASKS_PER_NODE -s test/data/sdp.zip -o test/out/sdpb -c test/out/sdpb/ck
 
 The documentation for your HPC system will tell you how to write a
 batch script and invoke MPI programs.
@@ -146,10 +147,10 @@ copying the `block_timings` file to other input directories.
 
 If different runs have the same block structure, you can also reuse
 checkpoints from other inputs. For example, if you have a previous
-checkpoint in `test/test.ck`, you can reuse it for a different input
-in `test/test2` with a command like
+checkpoint in `test/out/test.ck`, you can reuse it for a different input
+in `test/data/sdp2.zip` with a command like
 
-    mpirun -n 4 build/sdpb --precision=1024 --procsPerNode=4 -s test/test2/ -i test/test.ck
+    mpirun -n 4 build/sdpb --precision=1024 --procsPerNode=4 -s test/data/sdp2.zip -i test/out/test.ck
 
 In addition to having the same block structure, the runs must also use
 the same `precision`, `procsPerNode`, and number and distribution of
@@ -160,7 +161,7 @@ cores.
 SDPB's defaults are set for optimal performance.  This may result in
 using more memory than is available.  Running SDPB on more nodes will
 reduce the amount of memory required on each node.  If this is not
-sufficient, you can also also use the option `--procGranularity`.
+sufficient, you can also use the option `--procGranularity`.
 This option sets minimum number of processes that a block group can
 have, so it must evenly divide the `--procsPerNode` option.  Using a
 larger granularity will result in less memory use (up to a point)
@@ -197,9 +198,9 @@ state.
 
 A full example of the whole sequence is
 
-    mpirun -n 4 build/sdpb --precision=1024 --procsPerNode=4 -s test/test/ --writeSolution=x,y,X,Y
-    mpirun -n 4 build/approx_objective --precision=1024 --procsPerNode=4 --sdp test/test/ --writeSolverState
-    mpirun -n 4 build/approx_objective --precision=1024 --procsPerNode=4 --sdp test/test/ --newSdp=test/test2
+    mpirun -n 4 build/sdpb --precision=1024 --procsPerNode=4 -s test/data/sdp.zip -o test/out/approx_objective --writeSolution=x,y,X,Y
+    mpirun -n 4 build/approx_objective --precision=1024 --procsPerNode=4 --sdp test/data/sdp.zip --writeSolverState
+    mpirun -n 4 build/approx_objective --precision=1024 --procsPerNode=4 --sdp test/data/sdp.zip --newSdp=test/data/sdp2.zip
 
 The output is a JSON list with each element including the location of
 the new SDP, the approximate objective, and the first and second order
@@ -233,9 +234,9 @@ spectrum extraction.  The options are described in more detail in the
 help text, obtained by running `spectrum --help`.  As a simple
 example, extracting the spectrum from the toy example would be
 
-    mpirun -n 4 build/spectrum --input=test/test.xml --solution=test/test_out --threshold=1e-10 --format=PVM --output=test/test_spectrum.json --precision=1024
+    mpirun -n 4 build/spectrum --input=test/data/spectrum/pvm.xml --solution=test/data/spectrum/solution --threshold=1e-10 --format=PVM --output=test/out/spectrum/spectrum.json --precision=1024
 
-This will output the spectra into `test/test_spectrum.json` and should look like
+This will output the spectra into `test/out/spectrum/spectrum.json` and should look like
 
     [
       {
