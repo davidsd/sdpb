@@ -8,16 +8,20 @@ cd .. # sdpb/
 # setup
 source test/common_test_setup.sh || { echo "Run this script from sdpb root directory"; exit 1; }
 
-source test/sdp2input_test.sh
-source test/pvm2sdp_test.sh
-source test/sdpb_test.sh
-source test/outer_test.sh
-source test/spectrum_test.sh
+for file in test/tests/*.sh
+do
+  echo "================"
+  echo "$file"
+  chmod +x "$file"
+  echo "----------------"
+  source "$file"
+done
 
 echo "================"
-if [ $TEST_RESULT != 0 ]; then
-  echo "FAILED TESTS: $TEST_FAILED_LIST"
-else
-  echo "PASSED ALL TESTS"
+echo "================"
+ECHO_GREEN "PASSED $TEST_PASSED_COUNT TESTS"
+ECHO_RED "FAILED $TEST_FAILED_COUNT TESTS"
+if [ $TEST_FAILED_COUNT != 0 ]; then
+  ECHO_RED "FAILED TESTS: $TEST_FAILED_LIST"
 fi
-exit $TEST_RESULT
+exit $TEST_FAILED_COUNT

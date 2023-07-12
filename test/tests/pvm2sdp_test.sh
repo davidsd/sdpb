@@ -9,9 +9,6 @@ function run_pvm2sdp() {
   mpirun -n 2 ./build/pvm2sdp 1024 $@
 }
 
-echo "================"
-echo "Running pvm2sdp tests..."
-
 pvm2sdp_out=$TEST_OUT_DIR/pvm2sdp/sdp.zip
 TEST_RUN_SUCCESS "run pvm2sdp" run_pvm2sdp $TEST_DATA_DIR/pvm2sdp/file_list.nsv $pvm2sdp_out
 TEST_RUN_SUCCESS "pvm2sdp check output" diff $pvm2sdp_out $TEST_DATA_DIR/sdp.zip
@@ -25,9 +22,6 @@ function touch_no_write() {
   touch "$filename"
   chmod a-w "$filename"
 }
-
-echo "----------------"
-echo "Running pvm2sdp IO failure tests..."
 
 io_tests="$TEST_OUT_DIR/io_tests"
 

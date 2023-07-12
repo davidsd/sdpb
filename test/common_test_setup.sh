@@ -7,8 +7,24 @@
 # only include once
 [ -n "$TEST_DATA_DIR" ] && return
 
-TEST_RESULT=0
 TEST_FAILED_LIST=""
+TEST_PASSED_COUNT=0
+TEST_FAILED_COUNT=0
+
+# usage:
+# echo -e "${SET_COLOR_RED}Red text${UNSET_COLOR}"
+SET_COLOR_RED='\033[0;31m'
+SET_COLOR_GREEN='\033[0;32m'
+UNSET_COLOR='\e[0m'
+
+function ECHO_RED() {
+  local text="$*"
+  echo -e "${SET_COLOR_RED}${text}${UNSET_COLOR}"
+}
+function ECHO_GREEN() {
+  local text="$*"
+  echo -e "${SET_COLOR_GREEN}${text}${UNSET_COLOR}"
+}
 
 echo "================"
 echo "Common test setup..."
@@ -50,13 +66,14 @@ function TEST_RUN_WITH_EXIT_CODE() {
   fi
   local cmd_exit_code=$?
   if [ $cmd_exit_code == $expected_exit_code ]; then
-    echo "PASS $name"
+    ECHO_GREEN "PASS $name"
+    ((TEST_PASSED_COUNT++))
   else
-    echo "FAIL $name: exit code $cmd_exit_code, expected $expected_exit_code"
+    ECHO_RED "FAIL $name: exit code $cmd_exit_code, expected $expected_exit_code"
     echo "stdout: $log_stdout"
     echo "stderr: $log_stderr"
     TEST_FAILED_LIST="${TEST_FAILED_LIST} '$name'"
-    TEST_RESULT=1
+    ((TEST_FAILED_COUNT++))
   fi
 }
 

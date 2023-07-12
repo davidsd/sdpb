@@ -20,9 +20,6 @@ function run_sdpb_default_sdp_custom_output_prefix() {
   run_sdpb -s $sdp_path -c "$output_prefix/ck" -o "$output_prefix/out" "${*:2}"
 }
 
-echo "----------------"
-echo "Running sdpb tests..."
-
 TEST_RUN_SUCCESS "run sdpb" run_sdpb_default_sdp_custom_output_prefix $TEST_OUT_DIR/sdpb
 TEST_RUN_SUCCESS "sdpb check output" diff $TEST_OUT_DIR/sdpb/out $TEST_DATA_DIR/sdpb/test_out_orig
 
@@ -36,10 +33,7 @@ function touch_no_write() {
   chmod a-w "$filename"
 }
 
-echo "================"
-echo "Running sdpb IO failure tests..."
-
-io_tests="$TEST_OUT_DIR/io_tests"
+io_tests="$TEST_OUT_DIR/sdpb/io_tests"
 
 touch_no_write $io_tests/write_profile/ck.profiling.0
 TEST_RUN_FAILS "write profile" run_sdpb_default_sdp_custom_output_prefix "$io_tests/write_profile" --maxIterations=1 --verbosity=2

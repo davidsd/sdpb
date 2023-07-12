@@ -36,8 +36,6 @@ function sdp2input_run_test() {
   TEST_RUN_SUCCESS "check sdp2input result for $filename" diff_zip_ignore_control "$result" "$orig"
 }
 
-echo "================"
-echo "Running sdp2input tests..."
 sdp2input_run_test "sdp2input_test.json"
 sdp2input_run_test "sdp2input_split.nsv"
 sdp2input_run_test "sdp2input_test.m"
