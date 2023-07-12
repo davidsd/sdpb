@@ -56,7 +56,7 @@ touch_no_write $io_tests/write_profile/ck.profiling.0
 TEST_RUN_FAILS "write profile" run_sdpb_default_sdp_custom_output_prefix "$io_tests/write_profile" --maxIterations=1 --verbosity=2
 
 touch_no_write $io_tests/pvm2sdp/sdp.zip
-TEST_RUN_FAILS "pvm2sdp cannot write zip" run_pvm2sdp $TEST_DATA_DIR/pvm2sdp/test.xml $io_tests/pvm2sdp/sdp.zip
+TEST_RUN_FAILS "pvm2sdp cannot write zip" run_pvm2sdp $TEST_DATA_DIR/pvm2sdp/pvm.xml $io_tests/pvm2sdp/sdp.zip
 
 function test_sdpb_nowrite() {
   local name="$1"

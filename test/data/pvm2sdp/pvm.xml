@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!-- This file was generated using the function testSDP in
    mathematica/Tests.m. To solve it, run
-   './sdpb -s test.xml'
+   './sdpb -s pvm.xml'
   -->
 <sdp>
   <objective>
