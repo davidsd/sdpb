@@ -87,4 +87,13 @@ function TEST_RUN_FAILS() {
   TEST_RUN_WITH_EXIT_CODE 1 "$@"
 }
 
+function CHECK_FILE_NOT_EMPTY() {
+  filename="$1"
+  if [[ -s "$filename" ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 echo "================"

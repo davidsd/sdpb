@@ -101,7 +101,7 @@ int main(int argc, char **argv)
       write_output_timer.stop();
       if(debug)
         {
-          timers.write_profile(output_path.string() + "/profiling."
+          timers.write_profile(output_path.string() + ".profiling."
                                + std::to_string(El::mpi::Rank()));
         }
     }
