@@ -4,9 +4,10 @@
 script_path="$0" # sdpb/test/run_all_test.sh
 cd "$(dirname "$script_path")" # sdpb/test/
 cd .. # sdpb/
+echo "root directory: $PWD"
 
 # setup
-source test/common_test_setup.sh || { echo "Run this script from sdpb root directory"; exit 1; }
+source test/common_test_setup.sh || { echo "Cannot find $PWD/test/common_test_setup.sh"; exit 1; }
 
 for file in test/tests/*.sh
 do
