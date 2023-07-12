@@ -9,6 +9,7 @@ void write_file(const boost::filesystem::path &output_path,
 {
   if(El::mpi::Rank() == 0)
     {
+      boost::filesystem::create_directories(output_path.parent_path());
       boost::filesystem::ofstream outfile(output_path);
       if(!outfile.good())
         {

@@ -1,4 +1,8 @@
 <?xml version="1.0"?>
+<!-- This file was generated using the function testSDP in
+   mathematica/Tests.m. To solve it, run
+   './sdpb -s pvm.xml'
+  -->
 <sdp>
   <objective>
     <elt>0</elt>
@@ -6,8 +10,8 @@
   </objective>
   <polynomialVectorMatrices>
     <polynomialVectorMatrix>
-      <rows>2</rows>
-      <cols>2</cols>
+      <rows>1</rows>
+      <cols>1</cols>
       <elements>
         <polynomialVector>
           <polynomial>
@@ -18,49 +22,11 @@
             <coeff>1</coeff>
           </polynomial>
           <polynomial>
-            <coeff>1</coeff>
+            <coeff>0</coeff>
             <coeff>0</coeff>
             <coeff>1</coeff>
             <coeff>0</coeff>
             <coeff>0.083333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333</coeff>
-          </polynomial>
-        </polynomialVector>
-        <polynomialVector>
-          <polynomial>
-            <coeff>0</coeff>
-            <coeff>0</coeff>
-            <coeff>1</coeff>
-          </polynomial>
-          <polynomial>
-            <coeff>0</coeff>
-            <coeff>0.20000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000</coeff>
-          </polynomial>
-        </polynomialVector>
-        <polynomialVector>
-          <polynomial>
-            <coeff>0</coeff>
-            <coeff>0</coeff>
-            <coeff>1</coeff>
-          </polynomial>
-          <polynomial>
-            <coeff>0</coeff>
-            <coeff>0.20000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000</coeff>
-          </polynomial>
-        </polynomialVector>
-        <polynomialVector>
-          <polynomial>
-            <coeff>2</coeff>
-            <coeff>0</coeff>
-            <coeff>0</coeff>
-            <coeff>0</coeff>
-            <coeff>1</coeff>
-          </polynomial>
-          <polynomial>
-            <coeff>0</coeff>
-            <coeff>0</coeff>
-            <coeff>2</coeff>
-            <coeff>0</coeff>
-            <coeff>0.33333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333</coeff>
           </polynomial>
         </polynomialVector>
       </elements>
