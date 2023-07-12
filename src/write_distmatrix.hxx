@@ -10,6 +10,7 @@ inline void write_distmatrix(const El::DistMatrix<El::BigFloat> &matrix,
   boost::filesystem::ofstream stream;
   if(matrix.DistRank() == matrix.Root())
     {
+      boost::filesystem::create_directories(path.parent_path());
       stream.open(path);
     }
   El::Print(matrix,

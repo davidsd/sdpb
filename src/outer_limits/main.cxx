@@ -119,6 +119,8 @@ int main(int argc, char **argv)
         {
           std::cout << "Saving solution to " << parameters.output_path << "\n";
         }
+      boost::filesystem::create_directories(
+        parameters.output_path.parent_path());
       boost::filesystem::ofstream output(parameters.output_path);
       set_stream_precision(output);
       output << "{\n  \"optimal\": \"" << optimal << "\",\n"

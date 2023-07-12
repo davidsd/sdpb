@@ -10,6 +10,7 @@ void write_functions(
   const std::vector<El::BigFloat> &normalization,
   const std::vector<Positive_Matrix_With_Prefactor> &matrices)
 {
+  boost::filesystem::create_directories(output_path.parent_path());
   boost::filesystem::ofstream output_stream(output_path);
   set_stream_precision(output_stream);
   output_stream << "{\n  \"objective\":\n";

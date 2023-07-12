@@ -9,6 +9,7 @@ void write_functions(
   const std::vector<El::BigFloat> &dual_objective_b,
   const std::vector<Polynomial_Vector_Matrix> &polynomial_vector_matrices)
 {
+  boost::filesystem::create_directories(output_path.parent_path());
   boost::filesystem::ofstream output_stream(output_path);
   set_stream_precision(output_stream);
   output_stream << "{\n  \"objective\":\n";

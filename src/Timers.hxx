@@ -15,6 +15,8 @@
 #include <string>
 #include <list>
 #include <algorithm>
+#include <boost/core/noncopyable.hpp>
+#include <boost/filesystem.hpp>
 
 struct Timers : public std::list<std::pair<std::string, Timer>>
 {
@@ -29,9 +31,10 @@ struct Timers : public std::list<std::pair<std::string, Timer>>
     return back().second;
   }
 
-  void write_profile(const std::string &filename) const
+  void write_profile(const boost::filesystem::path &path) const
   {
-    std::ofstream f(filename);
+    boost::filesystem::create_directories(path.parent_path());
+    std::ofstream f(path);
 
     f << "{" << '\n';
     for(auto it(begin()); it != end();)
@@ -48,7 +51,7 @@ struct Timers : public std::list<std::pair<std::string, Timer>>
 
     if(!f.good())
       {
-        throw std::runtime_error("Error when writing to: " + filename);
+        throw std::runtime_error("Error when writing to: " + path.string());
       }
   }
 
