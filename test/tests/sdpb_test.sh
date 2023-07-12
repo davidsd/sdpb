@@ -35,8 +35,19 @@ function touch_no_write() {
 
 io_tests="$TEST_OUT_DIR/sdpb/io_tests"
 
+function check_file_not_empty() {
+  filename="$1"
+  if [[ -s "$filename" ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 touch_no_write $io_tests/write_profile/ck.profiling.0
 TEST_RUN_FAILS "write profile" run_sdpb_default_sdp_custom_output_prefix "$io_tests/write_profile" --maxIterations=1 --verbosity=2
+TEST_RUN_FAILS "empty profiling.0" check_file_not_empty $io_tests/write_profile/ck.profiling.0
+TEST_RUN_SUCCESS "non-empty profiling.1" check_file_not_empty $io_tests/write_profile/ck.profiling.1
 
 function test_sdpb_nowrite() {
   local name="$1"
