@@ -3,14 +3,6 @@
 # setup
 source test/common_test_setup.sh || exit 1
 
-# shortcuts for running pvm2sdp & sdpb with common options
-
-# Usage:
-# run_pvm2sdp input output
-function run_pvm2sdp() {
-  mpirun -n 2 ./build/pvm2sdp 1024 $@
-}
-
 # set default parameters except for paths
 # Usage:
 # run_sdpb -s "sdpPath" -c "checkpointDir" -o "outDir"
@@ -28,12 +20,9 @@ function run_sdpb_default_sdp_custom_output_prefix() {
   run_sdpb -s $sdp_path -c "$output_prefix/ck" -o "$output_prefix/out" "${*:2}"
 }
 
-echo "================"
-echo "Running sdpb and pvm2sdp tests..."
+echo "----------------"
+echo "Running sdpb tests..."
 
-pvm2sdp_out=$TEST_OUT_DIR/pvm2sdp/sdp.zip
-TEST_RUN_SUCCESS "run pvm2sdp" run_pvm2sdp $TEST_DATA_DIR/pvm2sdp/file_list.nsv $pvm2sdp_out
-TEST_RUN_SUCCESS "pvm2sdp check output" diff $pvm2sdp_out $sdp_path
 TEST_RUN_SUCCESS "run sdpb" run_sdpb_default_sdp_custom_output_prefix $TEST_OUT_DIR/sdpb
 TEST_RUN_SUCCESS "sdpb check output" diff $TEST_OUT_DIR/sdpb/out $TEST_DATA_DIR/sdpb/test_out_orig
 
@@ -48,15 +37,12 @@ function touch_no_write() {
 }
 
 echo "================"
-echo "Running sdpb and pvm2sdp IO failure tests..."
+echo "Running sdpb IO failure tests..."
 
 io_tests="$TEST_OUT_DIR/io_tests"
 
 touch_no_write $io_tests/write_profile/ck.profiling.0
 TEST_RUN_FAILS "write profile" run_sdpb_default_sdp_custom_output_prefix "$io_tests/write_profile" --maxIterations=1 --verbosity=2
-
-touch_no_write $io_tests/pvm2sdp/sdp.zip
-TEST_RUN_FAILS "pvm2sdp cannot write zip" run_pvm2sdp $TEST_DATA_DIR/pvm2sdp/pvm.xml $io_tests/pvm2sdp/sdp.zip
 
 function test_sdpb_nowrite() {
   local name="$1"
@@ -70,11 +56,6 @@ test_sdpb_nowrite "x_0.txt"
 test_sdpb_nowrite "y.txt"
 test_sdpb_nowrite "X_matrix_0.txt"
 test_sdpb_nowrite "Y_matrix_0.txt"
-
-file_does_not_exist="$io_tests/file_does_not_exist"
-mkdir -p $file_does_not_exist
-echo "file_does_not_exist" >$file_does_not_exist/file_list.nsv
-TEST_RUN_FAILS "corrupt file_list.nsv" run_pvm2sdp $file_does_not_exist/file_list.nsv $file_does_not_exist/sdp.zip
 
 input_corruption="$io_tests/input_corruption"
 mkdir -p "$input_corruption"

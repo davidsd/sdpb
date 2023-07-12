@@ -9,6 +9,7 @@ cd .. # sdpb/
 source test/common_test_setup.sh || { echo "Run this script from sdpb root directory"; exit 1; }
 
 source test/sdp2input_test.sh
+source test/pvm2sdp_test.sh
 source test/sdpb_test.sh
 source test/outer_test.sh
 source test/spectrum_test.sh
