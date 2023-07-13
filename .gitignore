@@ -2,11 +2,13 @@
 .lock-waf*
 .waf*/
 build/
+__pycache__/
 
 # IDE
 *.code-workspace
 .vscode/
 .idea/
+.cache/
 
 # test
 test/out/
