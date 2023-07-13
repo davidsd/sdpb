@@ -11,7 +11,7 @@ function run_pvm2sdp() {
 
 pvm2sdp_out=$TEST_OUT_DIR/pvm2sdp/sdp.zip
 TEST_RUN_SUCCESS "run pvm2sdp" run_pvm2sdp $TEST_DATA_DIR/pvm2sdp/file_list.nsv $pvm2sdp_out
-TEST_RUN_SUCCESS "pvm2sdp check output" diff $pvm2sdp_out $TEST_DATA_DIR/sdp.zip
+TEST_RUN_SUCCESS "pvm2sdp check output" DIFF_ZIP_IGNORE_CONTROL $pvm2sdp_out $TEST_DATA_DIR/sdp.zip
 
 # create file and prohibit writing
 function touch_no_write() {

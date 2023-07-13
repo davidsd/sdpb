@@ -96,4 +96,19 @@ function CHECK_FILE_NOT_EMPTY() {
   fi
 }
 
+function ZIP_SUMMARY() {
+    local filename="$1"
+    (unzip -vqq "$filename"  | awk '{$2=""; $3=""; $4=""; $5=""; $6=""; print}' | sort -k3 -f )
+}
+
+# compare two sdp.zip archives by content ignoring control.json (it contains command which can be different)
+# explanation: https://stackoverflow.com/a/61113635/3270684
+function DIFF_ZIP_IGNORE_CONTROL() {
+  local x=$1
+  local y=$2
+  diff --exclude=control.json \
+    <(ZIP_SUMMARY "$x" | grep -v "control.json") \
+    <(ZIP_SUMMARY "$y" | grep -v "control.json")
+}
+
 echo "================"
