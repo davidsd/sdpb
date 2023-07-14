@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Call this script to run all tests from test/tests/ folder.
+# You may pass MPI run command as an optional argument to the script, e.g.:
+# $ ./run_all_tests.sh mpirun -n 2
+# $ ./run_all_tests.sh srun -n \$SLURM_NTASKS --mpi=pmi2
+# This command will be stored in MPI_RUN_COMMAND variable, see common_test_setup.sh
+# By default, MPI_RUN_COMMAND=mpirun -n 2
+# Note that some tests require at least two MPI processes.
+
 start_time=$(date +%s)
 
 # Set working directory to sdpb root

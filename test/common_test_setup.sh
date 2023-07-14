@@ -29,10 +29,34 @@ function ECHO_GREEN() {
 echo "================"
 echo "Common test setup..."
 
+if [[ $1 == "--help" ]]; then
+  echo "common_test_setup.sh help:"
+  echo "Pass custom mpirun command line as arguments to the testing script, e.g.:"
+  echo "  ./run_all_tests.sh mpirun -n 2"
+  echo "  ./run_all_tests.sh srun -n \$SLURM_NTASKS --mpi=pmi2"
+  echo "This command will be stored in MPI_RUN_COMMAND variable."
+  echo "By default, MPI_RUN_COMMAND=mpirun -n 2"
+  echo "Note that some tests require at least two MPI processes."
+  exit
+fi
+
+# setup custom mpirun command, e.g. "srun -n $SLURM_NTASKS --mpi=pmi2"
+if [ $# -ge 1 ]; then
+  MPI_RUN_COMMAND="$@"
+else
+  MPI_RUN_COMMAND="mpirun -n 2"
+fi
+
+$MPI_RUN_COMMAND echo "test MPI_RUN_COMMAND" >/dev/null || {
+  ECHO_RED "Invalid MPI_RUN_COMMAND=$MPI_RUN_COMMAND"
+  exit 1
+}
+echo "MPI_RUN_COMMAND=$MPI_RUN_COMMAND"
+
 # prepare main directories
 TEST_DATA_DIR=test/data
 if [ ! -d "$TEST_DATA_DIR" ]; then
-  echo "$TEST_DATA_DIR directory does not exist. Run this script from sdpb root directory"
+  ECHO_RED "$PWD/$TEST_DATA_DIR: directory does not exist."
   exit 1
 fi
 echo "TEST_DATA_DIR=$TEST_DATA_DIR"
@@ -97,8 +121,8 @@ function CHECK_FILE_NOT_EMPTY() {
 }
 
 function ZIP_SUMMARY() {
-    local filename="$1"
-    (unzip -vqq "$filename"  | awk '{$2=""; $3=""; $4=""; $5=""; $6=""; print}' | sort -k3 -f )
+  local filename="$1"
+  (unzip -vqq "$filename" | awk '{$2=""; $3=""; $4=""; $5=""; $6=""; print}' | sort -k3 -f)
 }
 
 # compare two sdp.zip archives by content ignoring control.json (it contains command which can be different)

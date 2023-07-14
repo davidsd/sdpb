@@ -6,7 +6,7 @@ source test/common_test_setup.sh || exit 1
 # Usage:
 # run_pvm2sdp input output
 function run_pvm2sdp() {
-  mpirun -n 2 ./build/pvm2sdp 1024 $@
+  $MPI_RUN_COMMAND build/pvm2sdp 1024 $@
 }
 
 pvm2sdp_out=$TEST_OUT_DIR/pvm2sdp/sdp.zip

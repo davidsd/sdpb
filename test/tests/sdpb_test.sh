@@ -7,7 +7,7 @@ source test/common_test_setup.sh || exit 1
 # Usage:
 # run_sdpb -s "sdpPath" -c "checkpointDir" -o "outDir"
 function run_sdpb() {
-  mpirun -n 2 ./build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 $@
+  $MPI_RUN_COMMAND build/sdpb --precision=1024 --noFinalCheckpoint --procsPerNode=1 $@
 }
 
 # default sdp input file

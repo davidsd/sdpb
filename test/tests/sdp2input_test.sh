@@ -12,7 +12,7 @@ function run_sdp2input() {
   local args=${*:2}
   # note that input files contain 214 decimal digits (~710 binary)
   # to have same results for .m and json, we have to set precision <=710
-  mpirun -n 2 build/sdp2input --precision=512 --input="$input_dir/$filename" --output="$output_dir/$filename/sdp.zip" $args
+  $MPI_RUN_COMMAND build/sdp2input --precision=512 --input="$input_dir/$filename" --output="$output_dir/$filename/sdp.zip" $args
 }
 
 function sdp2input_run_test() {
