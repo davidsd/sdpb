@@ -25,6 +25,7 @@ do
   echo "$file"
   chmod +x "$file"
   echo "----------------"
+  CURR_TEST_PATH=$file
   source "$file"
 done
 

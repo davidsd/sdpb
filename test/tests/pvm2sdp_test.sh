@@ -10,8 +10,8 @@ function run_pvm2sdp() {
 }
 
 pvm2sdp_out=$TEST_OUT_DIR/pvm2sdp/sdp.zip
-TEST_RUN_SUCCESS "run pvm2sdp" run_pvm2sdp $TEST_DATA_DIR/pvm2sdp/file_list.nsv $pvm2sdp_out
-TEST_RUN_SUCCESS "pvm2sdp check output" DIFF_ZIP_IGNORE_CONTROL $pvm2sdp_out $TEST_DATA_DIR/sdp.zip
+TEST_RUN_SUCCESS "run" run_pvm2sdp $TEST_DATA_DIR/pvm2sdp/file_list.nsv $pvm2sdp_out
+TEST_RUN_SUCCESS "check-output" DIFF_ZIP_IGNORE_CONTROL $pvm2sdp_out $TEST_DATA_DIR/sdp.zip
 
 # create file and prohibit writing
 function touch_no_write() {
@@ -26,9 +26,9 @@ function touch_no_write() {
 io_tests="$TEST_OUT_DIR/io_tests"
 
 touch_no_write $io_tests/pvm2sdp/sdp.zip
-TEST_RUN_FAILS "pvm2sdp cannot write zip" run_pvm2sdp $TEST_DATA_DIR/pvm2sdp/pvm.xml $io_tests/pvm2sdp/sdp.zip
+TEST_RUN_FAILS "cannot-write-zip" run_pvm2sdp $TEST_DATA_DIR/pvm2sdp/pvm.xml $io_tests/pvm2sdp/sdp.zip
 
 file_does_not_exist="$io_tests/file_does_not_exist"
 mkdir -p $file_does_not_exist
 echo "file_does_not_exist" >$file_does_not_exist/file_list.nsv
-TEST_RUN_FAILS "corrupt file_list.nsv" run_pvm2sdp $file_does_not_exist/file_list.nsv $file_does_not_exist/sdp.zip
+TEST_RUN_FAILS "corrupt-file_list.nsv" run_pvm2sdp $file_does_not_exist/file_list.nsv $file_does_not_exist/sdp.zip

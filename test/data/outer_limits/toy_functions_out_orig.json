@@ -33,6 +33,6 @@
     "dualityGapReduction": "1024",
     "meshThreshold": "0.001",
     "writeSolution": "",
-    "verbosity": "0"
+    "verbosity": "1"
 }
 }

@@ -7,6 +7,8 @@
 # only include once
 [ -n "$TEST_DATA_DIR" ] && return
 
+TEST_SCRIPT_PATH="$0"
+
 TEST_FAILED_LIST=""
 TEST_PASSED_COUNT=0
 TEST_FAILED_COUNT=0
@@ -78,24 +80,40 @@ function TEST_RUN_WITH_EXIT_CODE() {
   local name=${2}
   local cmd=${*:3}
 
-  local log_stdout="$TEST_LOG_DIR/$name.stdout.log"
-  local log_stderr="$TEST_LOG_DIR/$name.stderr.log"
+  # get current test script name, e.g. sdpb_test.sh
+  local curr_test_filename=$CURR_TEST_PATH
+  [[ -z $curr_test_filename ]] && curr_test_filename=$TEST_SCRIPT_PATH
+  curr_test_filename=$(basename $curr_test_filename)
 
-  echo "test_run_with_exit_code $expected_exit_code $name $cmd" >>"$log_stdout"
+  # log paths
+  # To ensure valid log filename, keep only alphanumerics and '_-.':
+  local name_sanitized=${name//[^A-Za-z0-9_-.]/_}
+  local curr_log_dir="$TEST_LOG_DIR/$curr_test_filename"
+  mkdir -p $curr_log_dir
+  local path_sanitized="$curr_log_dir/$name_sanitized"
+  local log_stdout="$path_sanitized.stdout.log"
+  local log_stderr="$path_sanitized.stderr.log"
 
-  if [ $expected_exit_code == 0 ]; then
-    $cmd >>"$log_stdout"
-  else
-    $cmd >>"$log_stdout" 2>>"$log_stderr"
-  fi
+  # name for printing
+  name="$curr_test_filename/$name"
+
+  # run and print to logs
+  echo "$cmd" >>"$log_stdout"
+  $cmd >>"$log_stdout" 2>>"$log_stderr"
   local cmd_exit_code=$?
+  cat "$log_stderr" >>"$log_stdout"
+
   if [ $cmd_exit_code == $expected_exit_code ]; then
     ECHO_GREEN "PASS $name"
     ((TEST_PASSED_COUNT++))
   else
+    echo "$name"
+    echo "$cmd"
+    cat "$log_stderr"
     ECHO_RED "FAIL $name: exit code $cmd_exit_code, expected $expected_exit_code"
     echo "stdout: $log_stdout"
     echo "stderr: $log_stderr"
+    echo "----------------"
     TEST_FAILED_LIST="${TEST_FAILED_LIST} '$name'"
     ((TEST_FAILED_COUNT++))
   fi
