@@ -81,6 +81,14 @@ blocks_3d
     ./waf # maybe -j
     ./waf install
 
+Note: If you are trying to build the "profiling" branch of `blocks_3d`, you will need to load the following modules before attempting the above:
+
+    module purge
+    module load gcc/9.2.0
+    module load boost/1_76_0_gcc-9.2.0
+    module load python3/3.7.0
+    module load eigen/eigen
+
 Batch scripts
 -------------
     /home/wlandry/sdpb/runs/TTTT_small.sh
