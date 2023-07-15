@@ -108,14 +108,25 @@ manager such as [Homebrew](https://brew.sh).
     
 7. Type `./waf` to build the executable in `build/sdpb`.  This will create eight executables in the `build/` directory:
 
-* `sdpb`: Semidefinite program solver
-  * `pvm2sdp`: Convert SDP's in XML and Mathematica format to `sdpb` input.
-  * `sdp2input`: Convert SDP's in JSON and Mathematica format to `sdpb` input.
-* `outer_limits`: Semidefinite program solver using the outer approximation (experimental)
-  * `pvm2functions`: Convert SDP's in XML and Mathematica format to `outer_limits` input.
-  * `sdp2functions`: Convert SDP's in JSON and Mathematica format to `outer_limits` input.
-* `spectrum`: Extract the spectrum given the solution and XML/JSON/Mathematica.
-* `approx_objective`: Compute an approximate objective given a solution to a nearby SDP.
+    * `sdpb`: Semidefinite program solver
+      * `pvm2sdp`: Convert SDP's in XML and Mathematica format to `sdpb` input.
+      * `sdp2input`: Convert SDP's in JSON and Mathematica format to `sdpb` input.
+    * `outer_limits`: Semidefinite program solver using the outer approximation (experimental)
+      * `pvm2functions`: Convert SDP's in XML and Mathematica format to `outer_limits` input.
+      * `sdp2functions`: Convert SDP's in JSON and Mathematica format to `outer_limits` input.
+    * `spectrum`: Extract the spectrum given the solution and XML/JSON/Mathematica.
+    * `approx_objective`: Compute an approximate objective given a solution to a nearby SDP.
+
+8. You can check the installation by running tests included in `test/` folder:
+
+        ./test/run_all_tests.sh
+
+    By default, the testing script calls sdpb via uses `mpirun -n 2` command to run `sdpb` and other executables. You can also provide a custom command for your HPC, e.g.:
+
+        ./test/run_all_tests.sh srun -n 4 --mpi=pmi2 
+    To obtain more information, run
+
+        ./test/run_all_tests.sh --help
 
 Running
    

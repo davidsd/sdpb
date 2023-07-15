@@ -51,6 +51,7 @@ void save_solution(const SDP_Solver &solver,
         {
           std::cout << "Saving solution to      : " << out_directory << '\n';
         }
+      boost::filesystem::create_directories(out_directory);
       const boost::filesystem::path output_path(out_directory / "out.txt");
       out_stream.open(output_path);
       set_stream_precision(out_stream);

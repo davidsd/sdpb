@@ -146,6 +146,7 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
 
           if(El::mpi::Rank() == 0)
             {
+              boost::filesystem::create_directories(output_path.parent_path());
               boost::filesystem::ofstream ofs(output_path);
               if(!ofs.good())
                 {
