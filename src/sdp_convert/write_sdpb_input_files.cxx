@@ -27,7 +27,6 @@ void write_primal_objective_c(std::ostream &output_stream,
                               const Dual_Constraint_Group &group);
 
 void write_free_var_matrix(std::ostream &output_stream,
-                           const size_t &dual_objectives_b_size,
                            const Dual_Constraint_Group &group);
 
 void print_matrix_sizes(
@@ -72,6 +71,15 @@ void write_sdpb_input_files(
   std::vector<size_t> block_file_sizes(num_blocks, 0);
   for(auto &group : dual_constraint_groups)
     {
+      auto width = group.constraint_matrix.Width();
+      auto dual_objective_size = dual_objective_b.size();
+      if(width != dual_objective_size)
+        {
+          El::RuntimeError(" Block width=", width,
+                           " and dual objective size=", dual_objective_size,
+                           " should be equal.");
+        }
+
       const boost::filesystem::path block_path(
         temp_dir / ("block_" + std::to_string(group.block_index) + ".json"));
 
@@ -89,7 +97,7 @@ void write_sdpb_input_files(
         write_blocks(output_stream, group);
         write_bilinear_bases(output_stream, group);
         write_primal_objective_c(output_stream, group);
-        write_free_var_matrix(output_stream, dual_objective_b.size(), group);
+        write_free_var_matrix(output_stream, group);
         output_stream << "}\n";
         if(!output_stream.good())
           {
