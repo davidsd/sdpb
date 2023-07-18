@@ -11,7 +11,16 @@
 SDPB is an open-source, arbitrary-precision, parallelized semidefinite
 program solver, designed for the conformal bootstrap. It solves the following problem:
 
-![maximize:  b_0 + \sum_n b_n y_n over (y_1,...,y_N), such that: M_{0j}(x) + \sum_n y_n M_{nj}(x) is positive semidefinite for all x >= 0 and 1 <= j <= J, where each M_{nj}(x) is a polynomial matrix in x.](/docs/SDPB-PMP-Description.png?raw=true)
+Let $S^{m\times m}[x]$ be the space of symmetric $m\times m$ matrices whose entries are polynomials in $x$.
+
+- Given:
+  - A collection of $J\times (N+1)$ polynomial matrices $M_{nj}(x) \in S^{m_j\times m_j}[x]$, ($j=1,\dots,J$ and $n=0,\dots,N$),
+  - A constant $b_0 \in \mathbb{R}$,
+  - A vector $b\in \mathbb{R}^N$,
+- Maximize $b_0 + b\cdot y$ over decision variables $y\in \mathbb{R}^N$
+- Such that: $M_{0j}(x) + \Sigma_{n=1}^N y_n M_{nj}(x) \succeq 0$ for all $x\geq 0$ and $j=1,\dots,J$.
+
+Here, $M\succeq 0$ means "M is positive semidefinite."
 
 For more information, see [A Semidefinite Program Solver for the Conformal Bootstrap](http://arxiv.org/abs/1502.02033)
 and [the manual](/docs/SDPB-Manual.pdf).
