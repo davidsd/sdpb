@@ -47,8 +47,9 @@ namespace
 }
 
 void write_sdpb_input_files(
-  const boost::filesystem::path &output_path, const int &rank,
-  const size_t &num_blocks, const std::vector<std::string> &command_arguments,
+  const boost::filesystem::path &output_path, Block_File_Format output_format,
+  const int &rank, const size_t &num_blocks,
+  const std::vector<std::string> &command_arguments,
   const El::BigFloat &objective_const,
   const std::vector<El::BigFloat> &dual_objective_b,
   const std::vector<Dual_Constraint_Group> &dual_constraint_groups,
@@ -69,6 +70,19 @@ void write_sdpb_input_files(
   // std::streamsize as an MPI_LONG_INT and then can not MPI_Reduce
   // over it.
   std::vector<size_t> block_file_sizes(num_blocks, 0);
+
+  std::string block_extension;
+  switch(output_format)
+    {
+    case json: block_extension = ".json"; break;
+    case bin: block_extension = ".bin"; break;
+    default: El::RuntimeError("Unsupported output_format: ", output_format);
+    }
+  auto get_block_path = [&temp_dir, &block_extension](size_t block_index) {
+    return temp_dir
+           / ("block_" + std::to_string(block_index) + block_extension);
+  };
+
   for(auto &group : dual_constraint_groups)
     {
       auto width = group.constraint_matrix.Width();
@@ -80,9 +94,7 @@ void write_sdpb_input_files(
                            " should be equal.");
         }
 
-      const boost::filesystem::path block_path(
-        temp_dir / ("block_" + std::to_string(group.block_index) + ".json"));
-
+      const auto block_path = get_block_path(group.block_index);
       byte_counter counter;
       {
         boost::iostreams::filtering_ostream output_stream;
@@ -90,8 +102,9 @@ void write_sdpb_input_files(
         // Use gzip with no compression to get a CRC
         output_stream.push(
           boost::iostreams::gzip_compressor(boost::iostreams::gzip_params(0)));
-        output_stream.push(boost::iostreams::file_sink(block_path.string()));
-        serialize_json(output_stream, group);
+        output_stream.push(boost::iostreams::file_sink(
+          block_path.string(), std::ios::out | std::ios::binary));
+        serialize(output_stream, group, output_format);
         if(!output_stream.good())
           {
             throw std::runtime_error("Error when writing to: "
@@ -120,8 +133,7 @@ void write_sdpb_input_files(
       for(size_t block_index(0); block_index != block_file_sizes.size();
           ++block_index)
         {
-          const boost::filesystem::path block_path(
-            temp_dir / ("block_" + std::to_string(block_index) + ".json"));
+          const auto block_path = get_block_path(block_index);
           archive_gzipped_file(block_path, block_file_sizes.at(block_index),
                                writer);
           boost::filesystem::remove(block_path);

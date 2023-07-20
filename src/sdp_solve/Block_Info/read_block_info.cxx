@@ -1,5 +1,6 @@
 #include "../Block_Info.hxx"
 #include "../Archive_Reader.hxx"
+#include "../../sdp_convert.hxx"
 
 #include <rapidjson/reader.h>
 #include <rapidjson/document.h>
@@ -68,21 +69,60 @@ namespace
     bool EndArray(rapidjson::SizeType) { return true; }
   };
 
-  void
-  parse_block(const size_t &block_index, std::istream &block_stream,
-              std::vector<size_t> &dimensions, std::vector<size_t> &num_points)
+  Block_File_Format get_block_format(const boost::filesystem::path &block_path)
   {
-    rapidjson::IStreamWrapper wrapper(block_stream);
-    Block_Info_Parser parser;
-    rapidjson::Reader reader;
-    reader.Parse(wrapper, parser);
-    if(parser.dim == 0 || parser.num_points == 0)
+    auto extension = block_path.extension();
+    if(extension == ".bin")
+      return Block_File_Format::bin;
+    else if(extension == ".json")
+      return Block_File_Format::json;
+    El::RuntimeError("Unknown block file extension: ", block_path);
+  }
+
+  void parse_block(const size_t &block_index, std::istream &block_stream,
+                   Block_File_Format format, std::vector<size_t> &dimensions,
+                   std::vector<size_t> &num_points)
+  {
+    size_t dim_value;
+    size_t num_points_value;
+    if(format == bin)
       {
-        throw std::runtime_error("Unable to parse block: "
-                                 + std::to_string(block_index));
+        // TODO reads the whole file and allocates unnecessary RAM
+        // We need to read all bytes anyway,
+        // otherwise libarchive fails to reasd next entry
+        // TODO store dim and num_points in a separate file
+        boost::archive::binary_iarchive ar(block_stream);
+        Dual_Constraint_Group group;
+        ar >> group;
+        dim_value = group.dim;
+        num_points_value = group.num_points;
+        if(group.block_index != block_index)
+          {
+            El::RuntimeError("Read wrong block_index=", group.block_index,
+                             " from block_", block_index);
+          }
       }
-    dimensions.at(block_index) = parser.dim;
-    num_points.at(block_index) = parser.num_points;
+    else if(format == json)
+      {
+        rapidjson::IStreamWrapper wrapper(block_stream);
+        Block_Info_Parser parser;
+        rapidjson::Reader reader;
+        reader.Parse(wrapper, parser);
+        dim_value = parser.dim;
+        num_points_value = parser.num_points;
+      }
+    else
+      El::RuntimeError("Unknown SDP format: ", format);
+
+    if(dim_value == 0 || num_points_value == 0)
+      {
+        El::RuntimeError("Unable to parse block_", block_index,
+                         ": dim=", dim_value,
+                         ", num_points=", num_points_value);
+      }
+
+    dimensions.at(block_index) = dim_value;
+    num_points.at(block_index) = num_points_value;
   }
 
   size_t parse_num_blocks(std::istream &control_stream)
@@ -133,8 +173,9 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
                     + "'. The block number must be between 0 and "
                     + std::to_string(num_blocks - 1) + ".");
                 }
+              Block_File_Format format = get_block_format(pathname);
               std::istream stream(&reader);
-              parse_block(block_index, stream, dimensions, num_points);
+              parse_block(block_index, stream, format, dimensions, num_points);
             }
         }
       for(size_t block_index(0); block_index != dimensions.size();
@@ -160,9 +201,13 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
       for(size_t block(0); block != num_blocks; ++block)
         {
           boost::filesystem::path block_path(
-            sdp_path / ("block_" + std::to_string(block) + ".json"));
-          boost::filesystem::ifstream block_stream(block_path);
-          parse_block(block, block_stream, dimensions, num_points);
+            sdp_path / ("block_" + std::to_string(block) + ".bin"));
+          if(!exists(block_path))
+            block_path = change_extension(block_path, ".json");
+          Block_File_Format format = get_block_format(block_path);
+          boost::filesystem::ifstream block_stream(block_path,
+                                                   std::ios::binary);
+          parse_block(block, block_stream, format, dimensions, num_points);
         }
     }
 }

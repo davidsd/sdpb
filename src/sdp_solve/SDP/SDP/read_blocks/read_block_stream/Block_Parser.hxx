@@ -16,12 +16,14 @@ struct Block_Parser
        parsing_bilinear_bases_even = false, parsing_bilinear_bases_odd = false;
 
   const std::string dim_name = "dim"s, num_points_name = "num_points"s;
+  size_t dim;
+  size_t num_points;
   Vector_State<Number_State<El::BigFloat>> c_state;
   Vector_State<Vector_State<Number_State<El::BigFloat>>> B_state,
     bilinear_bases_even_state, bilinear_bases_odd_state;
 
   Block_Parser()
-      : c_state({"c"s, ""s}), B_state({"B"s, ""s, ""s}),
+      : dim(0), num_points(0), c_state({"c"s, ""s}), B_state({"B"s, ""s, ""s}),
         bilinear_bases_even_state({"bilinear_bases_even"s, ""s, ""s}),
         bilinear_bases_odd_state({"bilinear_bases_odd"s, ""s, ""s})
   {}
@@ -32,10 +34,12 @@ struct Block_Parser
   {
     if(parsing_dim)
       {
+        dim = i;
         parsing_dim = false;
       }
     else if(parsing_num_points)
       {
+        num_points = i;
         parsing_num_points = false;
       }
     else

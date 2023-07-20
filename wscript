@@ -17,7 +17,7 @@ def configure(conf):
 def build(bld):
     # optimized building:
     # default_flags=['-Wall', '-Wextra', '-O3', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
-    
+
     # default_flags=['-Wall', '-Wextra', '-O3', '-g', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
     default_flags=['-Wall', '-Wextra', '-g', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
     use_packages=['cxx17','boost','gmpxx','mpfr','elemental','libxml2', 'rapidjson', 'libarchive']
@@ -86,14 +86,13 @@ def build(bld):
     bld.stlib(source=sdp_solve_sources,
               target='sdp_solve',
               cxxflags=default_flags,
-              use=use_packages + ['sdp_read'])
+              use=use_packages + ['sdp_read', 'sdp_convert'])
 
-    
 
     dynamical_solve_sources=['src/dynamical_solve/Dynamical_Solver_Parameters/Dynamical_Solver_Parameters.cxx',
                        'src/dynamical_solve/Dynamical_Solver_Parameters/ostream.cxx',
-                       'src/dynamical_solve/Dynamical_Solver_Parameters/to_property_tree.cxx',    
-                       'src/dynamical_solve/Dynamical_Solver_Terminate_Reason/ostream.cxx', 
+                             'src/dynamical_solve/Dynamical_Solver_Parameters/to_property_tree.cxx',
+                             'src/dynamical_solve/Dynamical_Solver_Terminate_Reason/ostream.cxx',
                        'src/dynamical_solve/Dynamical_Solver/save_checkpoint.cxx',
                        'src/dynamical_solve/Dynamical_Solver/load_checkpoint/load_checkpoint.cxx',
                        'src/dynamical_solve/Dynamical_Solver/load_checkpoint/load_binary_checkpoint.cxx',
@@ -107,7 +106,7 @@ def build(bld):
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_BFGS.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_BFGS_func.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_external_corrector.cxx',
-                       'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/internal_search_direction.cxx', 
+                             'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/internal_search_direction.cxx',
                        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_search_direction.cxx',
                        'src/dynamical_solve/Dynamical_Solver/run_dynamical.cxx',
                        'src/dynamical_solve/Dynamical_Solver/run/print_header_dynamical.cxx',
@@ -127,7 +126,6 @@ def build(bld):
           cxxflags=default_flags,
           use=use_packages + ['sdp_solve', 'sdp_read'])
 
-                      
     # SDPB executable
     bld.program(source=['src/sdpb/main.cxx',
                         'src/sdpb/solve.cxx',
@@ -331,7 +329,6 @@ def build(bld):
                 cxxflags=default_flags,
                 use=use_packages + ['sdp_read', 'sdp_solve', 'sdp_convert', 'mesh']
                 )
-    
 
     # Dynamically Navigated SDP executable
     bld.program(source=['src/dynamical_sdp/main.cxx',
