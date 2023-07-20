@@ -7,6 +7,7 @@
 
 #include "../../Dual_Constraint_Group.hxx"
 #include "../../../set_stream_precision.hxx"
+#include <boost/archive/binary_oarchive.hpp>
 
 void write_bilinear_bases(std::ostream &output_stream,
                           const Dual_Constraint_Group &group);
@@ -100,14 +101,27 @@ Dual_Constraint_Group::Dual_Constraint_Group(const size_t &Block_index,
     delta2, num_points, m.bilinear_basis, m.sample_points, scaled_samples);
 }
 
-void serialize_json(std::ostream &os, const Dual_Constraint_Group &group)
+void serialize(std::ostream &os, const Dual_Constraint_Group &group,
+               Block_File_Format format)
 {
-  set_stream_precision(os);
+  switch(format)
+    {
+      case bin: {
+        boost::archive::binary_oarchive ar(os);
+        ar << group;
+        break;
+      }
+      case json: {
+        set_stream_precision(os);
 
-  os << "{\n";
-  write_blocks(os, group);
-  write_bilinear_bases(os, group);
-  write_primal_objective_c(os, group);
-  write_free_var_matrix(os, group);
-  os << "}\n";
+        os << "{\n";
+        write_blocks(os, group);
+        write_bilinear_bases(os, group);
+        write_primal_objective_c(os, group);
+        write_free_var_matrix(os, group);
+        os << "}\n";
+        break;
+      }
+    default: El::RuntimeError("Unknown Block_File_Format: ", format);
+    }
 }

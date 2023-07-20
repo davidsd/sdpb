@@ -1,17 +1,32 @@
 #include "../sdp_read.hxx"
 #include "../Timers.hxx"
 
+#include <string>
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 
 namespace po = boost::program_options;
 
 void write_output(const boost::filesystem::path &output_path,
+                  Block_File_Format output_format,
                   const std::vector<std::string> &command_arguments,
                   const std::vector<El::BigFloat> &objectives,
                   const std::vector<El::BigFloat> &normalization,
                   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                   Timers &timers, bool debug);
+
+std::istream &operator>>(std::istream &in, Block_File_Format &format)
+{
+  std::string token;
+  in >> token;
+  if(token == "json")
+    format = json;
+  else if(token == "bin")
+    format = bin;
+  else
+    in.setstate(std::ios_base::failbit);
+  return in;
+}
 
 int main(int argc, char **argv)
 {
@@ -21,6 +36,7 @@ int main(int argc, char **argv)
     {
       int precision;
       boost::filesystem::path input_file, output_path;
+      Block_File_Format output_format;
       bool debug(false);
 
       po::options_description options("Basic options");
@@ -36,6 +52,11 @@ int main(int argc, char **argv)
         "precision", po::value<int>(&precision)->required(),
         "The precision, in the number of bits, for numbers in the "
         "computation. ");
+      options.add_options()(
+        "outputFormat,f",
+        po::value<Block_File_Format>(&output_format)
+          ->default_value(Block_File_Format::json),
+        "Output format for SDP blocks. Could be either 'bin' or 'json'");
       options.add_options()("debug",
                             po::value<bool>(&debug)->default_value(false),
                             "Write out debugging output.");
@@ -96,8 +117,8 @@ int main(int argc, char **argv)
         {
           command_arguments.emplace_back(argv[arg]);
         }
-      write_output(output_path, command_arguments, objectives, normalization,
-                   matrices, timers, debug);
+      write_output(output_path, output_format, command_arguments, objectives,
+                   normalization, matrices, timers, debug);
       write_output_timer.stop();
       if(debug)
         {
