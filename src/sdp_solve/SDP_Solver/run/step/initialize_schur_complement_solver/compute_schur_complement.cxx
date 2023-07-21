@@ -22,7 +22,7 @@ void compute_schur_complement(
     &A_Y,
   Block_Diagonal_Matrix &schur_complement, Timers &timers)
 {
-  ScopedTimer schur_complement_timer(
+  Scoped_Timer schur_complement_timer(
     timers, "run.step.initializeSchurComplementSolver.schur_complement");
 
   auto schur_complement_block(schur_complement.blocks.begin());
