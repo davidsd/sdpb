@@ -49,6 +49,10 @@ namespace
 
 TEST_CASE("Boost serialization")
 {
+  // this test is purely single-process, thus testing at rank=0 is sufficient
+  if(El::mpi::Rank() != 0)
+    return;
+
   El::InitializeRandom(true);
 
   SECTION("El::BigFloat")
