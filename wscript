@@ -19,6 +19,9 @@ def build(bld):
     # default_flags=['-Wall', '-Wextra', '-O3', '-g', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
     # default_flags=['-Wall', '-Wextra', '-g', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
     use_packages=['cxx17','boost','gmpxx','mpfr','elemental','libxml2', 'rapidjson', 'libarchive']
+    default_includes = ['src', 'external']
+    # TODO use default_includes for all targets and simplify #include directives
+    # e.g. #include "../../Timers.hxx" -> #include <Timers.hxx>
 
     sdp_solve_sources=['src/sdp_solve/Solver_Parameters/Solver_Parameters.cxx',
                        'src/sdp_solve/Solver_Parameters/ostream.cxx',
@@ -289,3 +292,16 @@ def build(bld):
                 use=use_packages + ['sdp_read', 'sdp_solve', 'sdp_convert', 'mesh']
                 )
 
+    bld.program(source=['external/catch2/catch_amalgamated.cpp',
+                        'test/src/integration_tests/main.cxx',
+                        'test/src/integration_tests/common.cxx',
+                        'test/src/integration_tests/outer_limits.test.cxx',
+                        'test/src/integration_tests/pvm2sdp.test.cxx',
+                        'test/src/integration_tests/sdp2input.test.cxx',
+                        'test/src/integration_tests/sdpb.test.cxx',
+                        'test/src/integration_tests/spectrum.test.cxx'],
+                target='integration_tests',
+                cxxflags=default_flags + ['-D CATCH_AMALGAMATED_CUSTOM_MAIN'],
+                use=use_packages,
+                includes=default_includes
+                )

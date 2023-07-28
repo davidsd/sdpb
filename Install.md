@@ -116,17 +116,18 @@ manager such as [Homebrew](https://brew.sh).
       * `sdp2functions`: Convert SDP's in JSON and Mathematica format to `outer_limits` input.
     * `spectrum`: Extract the spectrum given the solution and XML/JSON/Mathematica.
     * `approx_objective`: Compute an approximate objective given a solution to a nearby SDP.
+    * `integration_tests`: End-to-end tests for `sdpb` and other executables. The tests use data from `test/data/` folder.
 
-8. You can check the installation by running tests included in `test/` folder:
+8. You can check the installation by running `integration_tests`:
 
-        ./test/run_all_tests.sh
+        ./build/integration_tests
 
-    By default, the testing script calls sdpb via uses `mpirun -n 2` command to run `sdpb` and other executables. You can also provide a custom command for your HPC, e.g.:
+   If some test case fails, you may check the test logs in `test/out/log/` folder and files generated during the test run in `test/out/` folder.
 
-        ./test/run_all_tests.sh srun -n 4 --mpi=pmi2 
-    To obtain more information, run
+    By default, the testing script calls uses `mpirun` command to run `sdpb` and other executables. You can also provide a custom command for your HPC, e.g.:
 
-        ./test/run_all_tests.sh --help
+        ./build/integration_tests --mpirun="srun --mpi=pmi2" 
+    For more command-line options, see [Catch2 documentation](https://github.com/catchorg/Catch2/blob/devel/docs/command-line.md).
 
 Running
    
