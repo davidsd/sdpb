@@ -26,5 +26,10 @@ read_nsv_file_list(const boost::filesystem::path &input_file)
                                 return path.empty();
                               }),
                result.end());
+  for(auto &path : result)
+    {
+      if(path.is_relative())
+        path = input_file.parent_path() / path;
+    }
   return result;
 }
