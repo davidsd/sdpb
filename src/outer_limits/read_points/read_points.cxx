@@ -10,7 +10,7 @@ void read_points(const boost::filesystem::path &input_path,
 {
   if(input_path.extension() == ".nsv")
     {
-      for(auto &filename : read_file_list(input_path))
+      for(auto &filename : read_nsv_file_list(input_path))
         {
           read_points(filename, points);
         }

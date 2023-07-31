@@ -27,7 +27,7 @@ void read_input(const boost::filesystem::path &input_file,
     }
   if(input_file.extension() == ".nsv")
     {
-      for(auto &filename : read_file_list(input_file))
+      for(auto &filename : read_nsv_file_list(input_file))
         {
           read_input(filename, objectives, normalization, matrices,
                      num_processed);

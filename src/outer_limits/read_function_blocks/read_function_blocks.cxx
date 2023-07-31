@@ -18,7 +18,7 @@ void read_function_blocks(
 {
   if(input_file.extension() == ".nsv")
     {
-      for(auto &filename : read_file_list(input_file))
+      for(auto &filename : read_nsv_file_list(input_file))
         {
           read_function_blocks(filename, objectives, normalization, functions);
         }
