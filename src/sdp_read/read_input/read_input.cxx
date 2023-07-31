@@ -21,6 +21,10 @@ void read_input(const boost::filesystem::path &input_file,
                 std::vector<Positive_Matrix_With_Prefactor> &matrices,
                 size_t &num_processed)
 {
+  if(!boost::filesystem::exists(input_file))
+    {
+      El::RuntimeError("Cannot find input file: ", input_file);
+    }
   if(input_file.extension() == ".nsv")
     {
       for(auto &filename : read_file_list(input_file))
