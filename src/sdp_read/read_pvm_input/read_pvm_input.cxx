@@ -21,7 +21,7 @@ void read_pvm_input(
         }
       if(input_file.extension() == ".nsv")
         {
-          read_pvm_input(read_file_list(input_file), dual_objectives_b,
+          read_pvm_input(read_nsv_file_list(input_file), dual_objectives_b,
                          polynomial_vector_matrices, num_processed);
         }
       else

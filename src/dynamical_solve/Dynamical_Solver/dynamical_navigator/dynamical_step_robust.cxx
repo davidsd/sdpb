@@ -244,8 +244,9 @@ void Dynamical_Solver::dynamical_step(
 			El::Zero(esum);
 			if (dynamical_parameters.new_sdp_path.extension() == ".nsv")
 			{
-				for (auto &filename : read_file_list(dynamical_parameters.new_sdp_path))
-				{
+                            for(auto &filename : read_nsv_file_list(
+                                  dynamical_parameters.new_sdp_path))
+                              {
 					//Assume that the filename takes the form "plus_i","minus_i" and "sum_i_j", f
 					//standing for the change in positive e_i, negative e_i and (e_i + e_j) directions respectively 
 					std::string file_name = filename.stem().string();

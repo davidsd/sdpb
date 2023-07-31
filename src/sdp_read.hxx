@@ -4,7 +4,7 @@
 #include "sdp_read/read_pvm_input.hxx"
 
 std::vector<boost::filesystem::path>
-read_file_list(const boost::filesystem::path &input_file);
+read_nsv_file_list(const boost::filesystem::path &input_file);
 
 std::vector<Boost_Float>
 sample_scalings(const std::vector<Boost_Float> &points,

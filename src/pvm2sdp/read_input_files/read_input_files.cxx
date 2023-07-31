@@ -27,7 +27,7 @@ void read_input_files(
         }
       if(input_file.extension() == ".nsv")
         {
-          read_input_files(read_file_list(input_file), objective_const,
+          read_input_files(read_nsv_file_list(input_file), objective_const,
                            dual_objectives_b, dual_constraint_groups,
                            num_processed);
         }
