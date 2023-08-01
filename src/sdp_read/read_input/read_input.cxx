@@ -38,10 +38,15 @@ void read_input(const boost::filesystem::path &input_file,
       read_json(input_file, objectives, normalization, matrices,
                 num_processed);
     }
-  else
+  else if(input_file.extension() == ".m")
     {
       read_mathematica(input_file, objectives, normalization, matrices,
                        num_processed);
+    }
+  else
+    {
+      El::RuntimeError("Cannot parse input file: ", input_file,
+                       ". Expected .nsv, .json or .m extension.");
     }
 
   for(auto &matrix : matrices)
