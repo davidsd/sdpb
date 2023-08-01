@@ -31,10 +31,15 @@ void read_input_files(
                            dual_objectives_b, dual_constraint_groups,
                            num_processed);
         }
-      else
+      else if(input_file.extension() == ".xml")
         {
           read_xml_input(input_file, objective_const, dual_objectives_b,
                          dual_constraint_groups, num_processed);
+        }
+      else
+        {
+          El::RuntimeError("Cannot parse input file: ", input_file,
+                           ". Expected .nsv or .xml extension.");
         }
     }
 }
