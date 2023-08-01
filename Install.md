@@ -118,7 +118,7 @@ manager such as [Homebrew](https://brew.sh).
     * `approx_objective`: Compute an approximate objective given a solution to a nearby SDP.
     * `integration_tests`: End-to-end tests for `sdpb` and other executables. The tests use data from `test/data/` folder.
 
-8. You can check the installation by running `integration_tests`:
+8. You can check the installation by running `integration_tests` (takes up to several minutes):
 
         ./build/integration_tests
 
