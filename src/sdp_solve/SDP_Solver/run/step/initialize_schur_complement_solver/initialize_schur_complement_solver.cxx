@@ -70,8 +70,8 @@ void initialize_schur_complement_solver(
   Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
   Timers &timers)
 {
-  ScopedTimer initialize_timer(timers,
-                               "run.step.initializeSchurComplementSolver");
+  Scoped_Timer initialize_timer(timers,
+                                "run.step.initializeSchurComplementSolver");
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
   // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
   // (d_j+1)*m_j*(m_j+1)/2

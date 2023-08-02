@@ -137,9 +137,9 @@ all jobs through a batch system.  You will need to consult the
 documentation for your individual system.
 
 # Getting Help<a name="getting-help" />
-If you are having problems with installation, you can send a message
-to the [Bootstrap Software mailing
-list](https://groups.google.com/g/bootstrap-collaboration-software).
-When sending a message, be sure to include what system you are trying
+If you are having problems with installation, you can [create an issue on GitHub](https://github.com/davidsd/sdpb/issues/new).
+Be sure to include what system you are trying
 to install SDPB on, what you typed, and the **FULL** error message
 (even if you think it is too long).
+
+If installation was successful but some test case fails, please include also the corresponding logs, e.g. `test/out/log/sdpb/run.stdout.log` and `test/out/log/sdpb/run.stderr.log`.

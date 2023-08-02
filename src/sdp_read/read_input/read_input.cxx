@@ -21,9 +21,13 @@ void read_input(const boost::filesystem::path &input_file,
                 std::vector<Positive_Matrix_With_Prefactor> &matrices,
                 size_t &num_processed)
 {
+  if(!boost::filesystem::exists(input_file))
+    {
+      El::RuntimeError("Cannot find input file: ", input_file);
+    }
   if(input_file.extension() == ".nsv")
     {
-      for(auto &filename : read_file_list(input_file))
+      for(auto &filename : read_nsv_file_list(input_file))
         {
           read_input(filename, objectives, normalization, matrices,
                      num_processed);
@@ -34,10 +38,15 @@ void read_input(const boost::filesystem::path &input_file,
       read_json(input_file, objectives, normalization, matrices,
                 num_processed);
     }
-  else
+  else if(input_file.extension() == ".m")
     {
       read_mathematica(input_file, objectives, normalization, matrices,
                        num_processed);
+    }
+  else
+    {
+      El::RuntimeError("Cannot parse input file: ", input_file,
+                       ". Expected .nsv, .json or .m extension.");
     }
 
   for(auto &matrix : matrices)

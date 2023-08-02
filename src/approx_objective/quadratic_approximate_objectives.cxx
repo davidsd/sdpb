@@ -18,7 +18,7 @@ quadratic_approximate_objectives(
   std::vector<std::pair<std::string, Approx_Objective>> result;
   if(input_path.extension() == ".nsv")
     {
-      for(auto &filename : read_file_list(input_path))
+      for(auto &filename : read_nsv_file_list(input_path))
         {
           for(auto &objective : quadratic_approximate_objectives(
                 block_info, grid, sdp, x, y, schur_complement_cholesky,
