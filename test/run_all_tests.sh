@@ -23,8 +23,16 @@ else
   MPI_RUN_COMMAND=mpirun
 fi
 
-# Run integration tests with timing info and custom mpirun command
+# Run unit_tests and integration_tests with timing info and custom mpirun command
 # For more command-line options, see
 # https://github.com/catchorg/Catch2/blob/devel/docs/command-line.md
+
+# unit_tests: run 2 processes
+echo time $MPI_RUN_COMMAND -n 2 ./build/unit_tests --durations yes
+time $MPI_RUN_COMMAND -n 2 ./build/unit_tests --durations yes || { exit $?; }
+
+# integration_tests
 echo time ./build/integration_tests --durations yes --mpirun="$MPI_RUN_COMMAND"
-time ./build/integration_tests --durations yes --mpirun="$MPI_RUN_COMMAND"
+time ./build/integration_tests --durations yes --mpirun="$MPI_RUN_COMMAND" || { exit $?; }
+
+echo "$0: ALL TESTS PASSED"
