@@ -294,14 +294,14 @@ def build(bld):
 
     bld.program(source=['external/catch2/catch_amalgamated.cpp',
                         'test/src/integration_tests/main.cxx',
-                        'test/src/integration_tests/common.cxx',
-                        'test/src/integration_tests/outer_limits.test.cxx',
-                        'test/src/integration_tests/pvm2sdp.test.cxx',
-                        'test/src/integration_tests/sdp2input.test.cxx',
-                        'test/src/integration_tests/sdpb.test.cxx',
-                        'test/src/integration_tests/spectrum.test.cxx'],
+                        'test/src/integration_tests/util/Test_Case_Runner.cxx',
+                        'test/src/integration_tests/cases/outer_limits.test.cxx',
+                        'test/src/integration_tests/cases/pvm2sdp.test.cxx',
+                        'test/src/integration_tests/cases/sdp2input.test.cxx',
+                        'test/src/integration_tests/cases/sdpb.test.cxx',
+                        'test/src/integration_tests/cases/spectrum.test.cxx'],
                 target='integration_tests',
                 cxxflags=default_flags + ['-D CATCH_AMALGAMATED_CUSTOM_MAIN'],
                 use=use_packages,
-                includes=default_includes
+                includes=default_includes + ['test/src']
                 )

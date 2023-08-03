@@ -1,4 +1,4 @@
-#include "common.hxx"
+#include "integration_tests/common.hxx"
 
 namespace
 {
@@ -35,7 +35,7 @@ namespace
   }
 
   std::string
-  build_string_from_named_args(const Test_Util::Named_Args_Map &named_args)
+  build_string_from_named_args(const Test_Util::Test_Case_Runner::Named_Args_Map &named_args)
   {
     std::stringstream ss;
     for(const auto &[key, value] : named_args)

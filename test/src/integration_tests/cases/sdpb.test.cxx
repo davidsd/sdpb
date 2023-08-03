@@ -1,4 +1,4 @@
-#include "common.hxx"
+#include "integration_tests/common.hxx"
 #include <boost/filesystem.hpp>
 
 TEST_CASE("sdpb")
@@ -7,7 +7,7 @@ TEST_CASE("sdpb")
   // default sdp input file
   auto sdp_path = Test_Config::test_data_dir / "sdp.zip";
 
-  const Test_Util::Named_Args_Map default_args{
+  const Test_Util::Test_Case_Runner::Named_Args_Map default_args{
     {"--sdpDir", sdp_path.string()},
     {"--precision", "1024"},
     {"--noFinalCheckpoint", ""},
@@ -15,8 +15,9 @@ TEST_CASE("sdpb")
   };
 
   // Set appropriate checkpoint and out dirs, the run SDPB.
-  auto run_sdpb_set_out_ck_dirs = [](const Test_Util::Test_Case_Runner &runner,
-                                     Test_Util::Named_Args_Map &args) -> int {
+  auto run_sdpb_set_out_ck_dirs
+    = [](const Test_Util::Test_Case_Runner &runner,
+         Test_Util::Test_Case_Runner::Named_Args_Map &args) -> int {
     args["--checkpointDir"] = (runner.output_dir / "ck").string();
     args["--outDir"] = (runner.output_dir / "out").string();
     return runner.mpi_run({"build/sdpb"}, args);

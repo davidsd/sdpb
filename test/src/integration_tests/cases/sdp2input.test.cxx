@@ -1,4 +1,4 @@
-#include "common.hxx"
+#include "integration_tests/common.hxx"
 
 #include <boost/filesystem.hpp>
 
@@ -6,7 +6,7 @@ TEST_CASE("sdp2input")
 {
   auto data_dir = Test_Config::test_data_dir / "sdp2input";
 
-  Test_Util::Named_Args_Map default_args{
+  Test_Util::Test_Case_Runner::Named_Args_Map default_args{
     {"--precision", "512"},
     {"--debug", "true"},
   };
@@ -20,7 +20,7 @@ TEST_CASE("sdp2input")
       {
         Test_Util::Test_Case_Runner runner(section_name);
 
-        Test_Util::Named_Args_Map args(default_args);
+        Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
         args["--input"] = (data_dir / input_name).string();
         auto sdp_zip = (runner.output_dir / "sdp.zip").string();
         args["--output"] = sdp_zip;

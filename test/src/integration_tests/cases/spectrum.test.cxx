@@ -1,4 +1,4 @@
-#include "common.hxx"
+#include "integration_tests/common.hxx"
 
 #include <boost/filesystem.hpp>
 
@@ -9,7 +9,7 @@ TEST_CASE("spectrum")
   boost::filesystem::path data_dir = runner.data_dir;
   boost::filesystem::path output_dir = runner.output_dir;
 
-  Test_Util::Named_Args_Map args{
+  Test_Util::Test_Case_Runner::Named_Args_Map args{
     {"--input", (data_dir / "pvm.xml").string()},
     {"--solution", (data_dir / "solution").string()},
     {"--output", (output_dir / "spectrum.json").string()},

@@ -1,4 +1,4 @@
-#include "common.hxx"
+#include "integration_tests/common.hxx"
 
 #include <boost/filesystem.hpp>
 

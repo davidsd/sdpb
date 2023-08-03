@@ -1,4 +1,4 @@
-#include "common.hxx"
+#include "integration_tests/common.hxx"
 
 #include <boost/filesystem.hpp>
 
@@ -9,7 +9,7 @@ TEST_CASE("outer_limits")
   boost::filesystem::path data_dir = runner.data_dir;
   boost::filesystem::path output_dir = runner.output_dir;
 
-  Test_Util::Named_Args_Map args{
+  Test_Util::Test_Case_Runner::Named_Args_Map args{
     {"--functions", (data_dir / "toy_functions.json").string()},
     {"--out", (output_dir / "toy_functions_out.json").string()},
     {"--checkpointDir", (output_dir / "ck").string()},
