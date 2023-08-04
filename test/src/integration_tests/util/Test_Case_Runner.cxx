@@ -134,59 +134,6 @@ namespace Test_Util
     return run(args_with_mpi, named_args);
   }
 
-  // Note that calling diff on big files is slow and generates long output.
-  // Thus, instead of diff, we call cmp - it exits at first difference.
-  int Test_Case_Runner::diff(const boost::filesystem::path &x,
-                             const boost::filesystem::path &y) const
-  {
-    if(is_directory(x) != is_directory(y))
-      {
-        WARN("Cannot compare file and directory: " << x << " " << y << "");
-        return 1;
-      }
-
-    if(is_directory(x))
-      {
-        if(!is_directory(y))
-          {
-            WARN(y << " should be directory");
-            return 1;
-          }
-
-        std::vector<boost::filesystem::path> x_children;
-        std::vector<boost::filesystem::path> y_children;
-
-        for(const auto &p : boost::make_iterator_range(
-              boost::filesystem::directory_iterator(x), {}))
-          {
-            x_children.push_back(p);
-          }
-        for(const auto &p : boost::make_iterator_range(
-              boost::filesystem::directory_iterator(y), {}))
-          {
-            y_children.push_back(p);
-          }
-        if(x_children.size() != y_children.size())
-          {
-            WARN(x << " has " << x_children.size() << " entries, " << y
-                   << " has " << y_children.size() << " entries.");
-            return 1;
-          }
-        for(const auto &x_child : x_children)
-          {
-            auto y_child = y / boost::filesystem::relative(x_child, x);
-            int res = diff(x_child, y_child);
-            if(res != 0)
-              return res;
-          }
-        return 0;
-      }
-
-    // diff can be slow for large files, thus we call cmp
-    auto command = build_command_line("cmp --print-bytes", x, y);
-    return run(command);
-  }
-
   boost::filesystem::path Test_Case_Runner::unzip_to_temp_dir(
     const boost::filesystem::path &zip_path) const
   {

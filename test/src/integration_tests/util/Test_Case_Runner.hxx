@@ -40,9 +40,6 @@ namespace Test_Util
     mpi_run(const std::vector<std::string> &args,
             const Named_Args_Map &named_args = {}, int numProcs = 2) const;
 
-    [[nodiscard]] int diff(const boost::filesystem::path &x,
-                           const boost::filesystem::path &y) const;
-
     [[nodiscard]] boost::filesystem::path
     unzip_to_temp_dir(const boost::filesystem::path &zip_path) const;
 
