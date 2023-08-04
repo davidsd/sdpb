@@ -12,18 +12,26 @@ namespace bp = boost::process;
 
 namespace
 {
-  void check_paths()
+  // Change working directory to sdpb root
+  // Allow to run the executable from sdpb/ or sdpb/build/ directory,
+  // otherwise fail
+  void set_working_directory()
   {
-    for(const auto &path : {"build/integration_tests", "test/data"})
+    // if we find this file, we know where we are
+    auto sdp_zip = "test/data/sdp.zip";
+    for(const boost::filesystem::path prefix : {".", ".."})
       {
-        if(!boost::filesystem::exists(path))
+        if(exists(prefix / "test/data/sdp.zip"))
           {
-            auto msg
-              = std::string("Cannot find '") + path
-                + "'. Please run test executable from sdpb root directory.";
-            throw std::runtime_error(msg);
+            boost::filesystem::current_path(prefix);
+            return;
           }
       }
+
+    auto msg = std::string("Cannot find '") + sdp_zip
+               + "'. Please run test executable from root sdpb/ directory "
+                 "or sdpb/build/ directory";
+    throw std::runtime_error(msg);
   }
 }
 
@@ -34,7 +42,7 @@ int main(int argc, char *argv[])
 {
   Catch::Session session; // There must be exactly one instance
 
-  check_paths();
+  set_working_directory();
 
   // Build a new command line parser on top of Catch2's
   using namespace Catch::Clara;
