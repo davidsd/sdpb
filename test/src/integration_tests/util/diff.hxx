@@ -26,6 +26,14 @@ namespace Test_Util::REQUIRE_Equal
                     const boost::filesystem::path &b_sdp_zip,
                     unsigned int binary_precision, Test_Case_Runner runner);
 
+  void diff_outer_limits(const boost::filesystem::path &a_json,
+                         const boost::filesystem::path &b_json,
+                         unsigned int binary_precision);
+
+  void diff_spectrum(const boost::filesystem::path &a_json,
+                     const boost::filesystem::path &b_json,
+                     unsigned int binary_precision);
+
   inline void diff(int a, int b) { REQUIRE(a == b); }
   inline void diff(const Float &a, const Float &b)
   {
@@ -33,6 +41,16 @@ namespace Test_Util::REQUIRE_Equal
     // so we display also their (sometimes small) difference.
     CAPTURE(a - b);
     REQUIRE(a == b);
+  }
+  inline void diff(const std::string &a, const std::string &b)
+  {
+    REQUIRE(a == b);
+  }
+  template <class T1, class T2>
+  inline void diff(const std::pair<T1, T2> &a, const std::pair<T1, T2> &b)
+  {
+    diff(a.first, b.first);
+    diff(a.second, b.second);
   }
   template <class T>
   inline void diff(const std::vector<T> &a, const std::vector<T> &b)

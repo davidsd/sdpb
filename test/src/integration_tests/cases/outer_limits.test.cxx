@@ -29,6 +29,5 @@ TEST_CASE("outer_limits")
 
   auto out = output_dir / "toy_functions_out.json";
   auto out_orig = data_dir / "toy_functions_out_orig.json";
-  int diff_res = runner.create_nested("diff").diff(out, out_orig);
-  REQUIRE(diff_res == 0);
+  Test_Util::REQUIRE_Equal::diff_outer_limits(out, out_orig, 128);
 }

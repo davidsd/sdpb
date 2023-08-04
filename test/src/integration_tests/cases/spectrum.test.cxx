@@ -22,6 +22,5 @@ TEST_CASE("spectrum")
 
   auto out = output_dir / "spectrum.json";
   auto out_orig = data_dir / "spectrum_orig.json";
-  int diff_res = runner.create_nested("diff").diff(out, out_orig);
-  REQUIRE(diff_res == 0);
+  Test_Util::REQUIRE_Equal::diff_spectrum(out, out_orig, 1024);
 }
