@@ -37,9 +37,8 @@ TEST_CASE("sdpb")
     auto args = default_args;
     int res_run = run_sdpb_set_out_ck_dirs(runner.create_nested("run"), args);
     REQUIRE(res_run == 0);
-    int res_diff = runner.create_nested("diff").diff(
-      args["--outDir"], data_dir / "test_out_orig");
-    REQUIRE(res_diff == 0);
+    Test_Util::REQUIRE_Equal::diff_sdpb_output_dir(
+      args["--outDir"], data_dir / "test_out_orig", 1024);
   }
 
   // Check that sdpb fails on different IO errors

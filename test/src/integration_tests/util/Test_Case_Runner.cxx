@@ -1,4 +1,5 @@
-#include "integration_tests/common.hxx"
+#include "Test_Case_Runner.hxx"
+#include "Test_Config.hxx"
 
 namespace
 {

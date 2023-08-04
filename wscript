@@ -294,6 +294,8 @@ def build(bld):
 
     bld.program(source=['external/catch2/catch_amalgamated.cpp',
                         'test/src/integration_tests/main.cxx',
+                        'test/src/integration_tests/util/Float.cxx',
+                        'test/src/integration_tests/util/diff_sdpb_out.cxx',
                         'test/src/integration_tests/util/Test_Case_Runner.cxx',
                         'test/src/integration_tests/cases/outer_limits.test.cxx',
                         'test/src/integration_tests/cases/pvm2sdp.test.cxx',
