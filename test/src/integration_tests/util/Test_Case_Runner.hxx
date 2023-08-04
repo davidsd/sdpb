@@ -27,8 +27,9 @@ namespace Test_Util
     explicit Test_Case_Runner(const std::string &name);
 
     // create Test_Case_Runner "name/suffix"
-    Test_Case_Runner create_nested(const std::string &suffix,
-                                   const std::string &separator = "/") const;
+    [[nodiscard]] Test_Case_Runner
+    create_nested(const std::string &suffix,
+                  const std::string &separator = "/") const;
 
     [[nodiscard]] int run(const std::string &command) const;
     [[nodiscard]] int
@@ -42,10 +43,8 @@ namespace Test_Util
     [[nodiscard]] int diff(const boost::filesystem::path &x,
                            const boost::filesystem::path &y) const;
 
-    // diff two zip archives ignoring control.json file
-    // control.json may differ by "command" field - we ignore it.
-    [[nodiscard]] int diff_sdp_zip(const boost::filesystem::path &x,
-                                   const boost::filesystem::path &y) const;
+    [[nodiscard]] boost::filesystem::path
+    unzip_to_temp_dir(const boost::filesystem::path &zip_path) const;
 
     // Check if stderr contains given substring.
     // NB: multiline strings not supported!

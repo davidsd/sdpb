@@ -22,6 +22,10 @@ namespace Test_Util::REQUIRE_Equal
                             const std::vector<std::string> &filenames = {},
                             const std::vector<std::string> &out_txt_keys = {});
 
+  void diff_sdp_zip(const boost::filesystem::path &a_sdp_zip,
+                    const boost::filesystem::path &b_sdp_zip,
+                    unsigned int binary_precision, Test_Case_Runner runner);
+
   inline void diff(int a, int b) { REQUIRE(a == b); }
   inline void diff(const Float &a, const Float &b)
   {

@@ -35,8 +35,8 @@ namespace
                               std::to_string(numProcs));
   }
 
-  std::string
-  build_string_from_named_args(const Test_Util::Test_Case_Runner::Named_Args_Map &named_args)
+  std::string build_string_from_named_args(
+    const Test_Util::Test_Case_Runner::Named_Args_Map &named_args)
   {
     std::stringstream ss;
     for(const auto &[key, value] : named_args)
@@ -137,7 +137,7 @@ namespace Test_Util
   // Note that calling diff on big files is slow and generates long output.
   // Thus, instead of diff, we call cmp - it exits at first difference.
   int Test_Case_Runner::diff(const boost::filesystem::path &x,
-                   const boost::filesystem::path &y) const
+                             const boost::filesystem::path &y) const
   {
     if(is_directory(x) != is_directory(y))
       {
@@ -187,30 +187,25 @@ namespace Test_Util
     return run(command);
   }
 
-  int Test_Case_Runner::diff_sdp_zip(
-    const boost::filesystem::path &x, const boost::filesystem::path &y) const
+  boost::filesystem::path Test_Case_Runner::unzip_to_temp_dir(
+    const boost::filesystem::path &zip_path) const
   {
-    auto temp_dir
-      = Test_Config::test_output_dir / boost::filesystem::path(name) / "unzip";
+    auto temp_dir = output_dir;
     boost::filesystem::create_directories(temp_dir);
-    auto x_unzipped = temp_dir / boost::filesystem::unique_path();
-    auto y_unzipped = temp_dir / boost::filesystem::unique_path();
-    REQUIRE(x_unzipped != y_unzipped);
-
+    auto filename = zip_path.filename().string() + "."
+                    + boost::filesystem::unique_path().string();
+    auto output_path = temp_dir / filename;
     auto unzip = boost::process::search_path("unzip");
     if(unzip.empty())
-      throw std::runtime_error("Cannot find unzip");
+      FAIL("Cannot find unzip");
 
     // control.json may differ by "command" field
     // thus we exclude this file from comparison
-    auto unzip_x
-      = build_command_line("unzip -o", x, "-d", x_unzipped, "-x control.json");
-    auto unzip_y
-      = build_command_line("unzip -o", y, "-d", y_unzipped, "-x control.json");
-    REQUIRE(run(unzip_x) == 0);
-    REQUIRE(run(unzip_y) == 0);
-
-    return diff(x_unzipped, y_unzipped);
+    auto unzip_command
+      = build_command_line("unzip -o", zip_path, "-d", output_path);
+    CAPTURE(unzip_command);
+    REQUIRE(run(unzip_command) == 0);
+    return output_path;
   }
 
   bool Test_Case_Runner::stderr_contains_substring(

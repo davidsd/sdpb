@@ -15,9 +15,9 @@ TEST_CASE("pvm2sdp")
   REQUIRE(res_run == 0);
 
   auto output_orig = (Test_Config::test_data_dir / "sdp.zip").string();
-  int res_diff
-    = main_runner.create_nested("diff").diff_sdp_zip(output, output_orig);
-  REQUIRE(res_diff == 0);
+
+  Test_Util::REQUIRE_Equal::diff_sdp_zip(output, output_orig, 1024,
+                                         main_runner.create_nested("diff"));
 
   // prohibit output sdp.zip from writing and check that pvm2sdp fails
   {
