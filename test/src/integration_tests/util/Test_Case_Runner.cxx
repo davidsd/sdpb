@@ -79,9 +79,15 @@ namespace Test_Util
     return Test_Case_Runner(name + separator + suffix);
   }
 
-  int Test_Case_Runner::run(const std::string &command) const
+  void
+  Test_Case_Runner::run(const std::string &command, int required_exit_code,
+                        const std::string &required_error_msg) const
   {
     namespace bp = boost::process;
+
+    CAPTURE(command);
+    CAPTURE(stdout_path);
+    CAPTURE(stderr_path);
 
     boost::filesystem::ofstream os_stdout(stdout_path, std::ios::app);
     boost::filesystem::ofstream os_stderr(stderr_path, std::ios::app);
@@ -91,8 +97,8 @@ namespace Test_Util
 
     bp::ipstream stdout_pipe;
     bp::ipstream stderr_pipe;
-    int result = bp::system(command, bp::std_out > stdout_pipe,
-                            bp::std_err > stderr_pipe);
+    int exit_code = bp::system(command, bp::std_out > stdout_pipe,
+                               bp::std_err > stderr_pipe);
 
     // write stdout to file
     os_stdout << stdout_pipe.rdbuf();
@@ -106,32 +112,45 @@ namespace Test_Util
     os_stdout << stderr_string;
     os_stderr << stderr_string;
 
-    return result;
+    REQUIRE(exit_code == required_exit_code);
+    if(required_exit_code != 0 && !required_error_msg.empty())
+      {
+        CAPTURE(required_error_msg);
+        bool found_error_message
+          = stderr_string.find(required_error_msg) != std::string::npos;
+        REQUIRE(found_error_message);
+      }
   }
 
-  int Test_Case_Runner::mpi_run(const std::string &command, int numProcs) const
+  void Test_Case_Runner::mpi_run(const std::string &command, int numProcs,
+                                 int required_exit_code,
+                                 const std::string &required_error_msg) const
   {
     auto mpi_command
       = build_command_line(build_mpirun_prefix(numProcs), command);
-    return run(mpi_command);
+    run(mpi_command, required_exit_code, required_error_msg);
   }
 
-  int Test_Case_Runner::run(const std::vector<std::string> &args,
-                            const Named_Args_Map &named_args) const
+  void Test_Case_Runner::run(const std::vector<std::string> &args,
+                             const Named_Args_Map &named_args,
+                             int required_exit_code,
+                             const std::string &required_error_msg) const
   {
     auto args_string = boost::algorithm::join(args, " ");
     auto named_args_string = build_string_from_named_args(named_args);
     auto command = build_command_line(args_string, named_args_string);
-    return run(command);
+    run(command, required_exit_code, required_error_msg);
   }
 
-  int Test_Case_Runner::mpi_run(const std::vector<std::string> &args,
-                                const Named_Args_Map &named_args,
-                                int numProcs) const
+  void Test_Case_Runner::mpi_run(const std::vector<std::string> &args,
+                                 const Named_Args_Map &named_args,
+                                 int numProcs, int required_exit_code,
+                                 const std::string &required_error_msg) const
   {
     std::vector<std::string> args_with_mpi(args);
     args_with_mpi.insert(args_with_mpi.begin(), build_mpirun_prefix(numProcs));
-    return run(args_with_mpi, named_args);
+    run(args_with_mpi, named_args, required_exit_code,
+        required_error_msg);
   }
 
   boost::filesystem::path Test_Case_Runner::unzip_to_temp_dir(
@@ -150,22 +169,7 @@ namespace Test_Util
     // thus we exclude this file from comparison
     auto unzip_command
       = build_command_line("unzip -o", zip_path, "-d", output_path);
-    CAPTURE(unzip_command);
-    REQUIRE(run(unzip_command) == 0);
+    run(unzip_command);
     return output_path;
-  }
-
-  bool Test_Case_Runner::stderr_contains_substring(
-    const std::string &substring) const
-  {
-    boost::filesystem::ifstream is(stderr_path);
-
-    std::string line;
-    while(std::getline(is, line))
-      {
-        if(line.find(substring) != std::string::npos)
-          return true;
-      }
-    return false;
   }
 }

@@ -31,21 +31,20 @@ namespace Test_Util
     create_nested(const std::string &suffix,
                   const std::string &separator = "/") const;
 
-    [[nodiscard]] int run(const std::string &command) const;
-    [[nodiscard]] int
-    mpi_run(const std::string &command, int numProcs = 2) const;
-    [[nodiscard]] int run(const std::vector<std::string> &args,
-                          const Named_Args_Map &named_args = {}) const;
-    [[nodiscard]] int
-    mpi_run(const std::vector<std::string> &args,
-            const Named_Args_Map &named_args = {}, int numProcs = 2) const;
+    void run(const std::string &command, int required_exit_code = 0,
+             const std::string &required_error_msg = "") const;
+    void mpi_run(const std::string &command, int numProcs = 2,
+                 int required_exit_code = 0,
+                 const std::string &required_error_msg = "") const;
+    void run(const std::vector<std::string> &args,
+             const Named_Args_Map &named_args = {}, int required_exit_code = 0,
+             const std::string &required_error_msg = "") const;
+    void mpi_run(const std::vector<std::string> &args,
+                 const Named_Args_Map &named_args = {}, int numProcs = 2,
+                 int required_exit_code = 0,
+                 const std::string &required_error_msg = "") const;
 
     [[nodiscard]] boost::filesystem::path
     unzip_to_temp_dir(const boost::filesystem::path &zip_path) const;
-
-    // Check if stderr contains given substring.
-    // NB: multiline strings not supported!
-    [[nodiscard]] bool
-    stderr_contains_substring(const std::string &substring) const;
   };
 }

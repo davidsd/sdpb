@@ -4,6 +4,7 @@
 
 TEST_CASE("spectrum")
 {
+  INFO("Simple spectrum test");
   Test_Util::Test_Case_Runner runner("spectrum");
 
   boost::filesystem::path data_dir = runner.data_dir;
@@ -17,8 +18,7 @@ TEST_CASE("spectrum")
     {"--threshold", "1e-10"},
     {"--format", "PVM"}};
 
-  int res = runner.create_nested("run").mpi_run({"build/spectrum"}, args);
-  REQUIRE(res == 0);
+  runner.create_nested("run").mpi_run({"build/spectrum"}, args);
 
   auto out = output_dir / "spectrum.json";
   auto out_orig = data_dir / "spectrum_orig.json";

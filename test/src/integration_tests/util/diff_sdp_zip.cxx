@@ -142,6 +142,7 @@ namespace Test_Util::REQUIRE_Equal
                     const boost::filesystem::path &b_sdp_zip,
                     unsigned int binary_precision, Test_Case_Runner runner)
   {
+    INFO("diff sdp.zip files");
     CAPTURE(a_sdp_zip);
     CAPTURE(b_sdp_zip);
     auto a = runner.unzip_to_temp_dir(a_sdp_zip);

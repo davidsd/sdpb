@@ -4,6 +4,7 @@
 
 TEST_CASE("outer_limits")
 {
+  INFO("Simple outer_limits test");
   Test_Util::Test_Case_Runner runner("outer_limits");
 
   boost::filesystem::path data_dir = runner.data_dir;
@@ -24,8 +25,7 @@ TEST_CASE("outer_limits")
     {"--verbosity", "1"},
   };
 
-  int res = runner.create_nested("run").mpi_run({"build/outer_limits"}, args);
-  REQUIRE(res == 0);
+  runner.create_nested("run").mpi_run({"build/outer_limits"}, args);
 
   auto out = output_dir / "toy_functions_out.json";
   auto out_orig = data_dir / "toy_functions_out_orig.json";
