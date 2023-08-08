@@ -1,0 +1,160 @@
+#include "integration_tests/common.hxx"
+#include <boost/filesystem.hpp>
+
+TEST_CASE("sdpb")
+{
+  INFO("SDPB tests for a simple one-dimensional problem:");
+  INFO("maximize (-y) s.t. (1 + x^4 + y * (x^4 / 12 + x^2)) >= 0)");
+  auto data_dir = Test_Config::test_data_dir / "sdpb";
+  // default sdp input file
+  auto sdp_path = Test_Config::test_data_dir / "sdp.zip";
+  CAPTURE(sdp_path);
+
+  int num_procs = 2;
+
+  const Test_Util::Test_Case_Runner::Named_Args_Map default_args{
+    {"--sdpDir", sdp_path.string()},
+    {"--precision", "1024"},
+    {"--noFinalCheckpoint", ""},
+  };
+
+  // Set appropriate checkpoint and out dirs, the run SDPB.
+  auto run_sdpb_set_out_ck_dirs
+    = [](const Test_Util::Test_Case_Runner &runner,
+         Test_Util::Test_Case_Runner::Named_Args_Map &args, int num_procs = 2,
+         int required_exit_code = 0,
+         const std::string &required_error_msg = "") -> void {
+    args["--checkpointDir"] = (runner.output_dir / "ck").string();
+    args["--outDir"] = (runner.output_dir / "out").string();
+    args["--procsPerNode"] = std::to_string(num_procs);
+    runner.mpi_run({"build/sdpb"}, args, num_procs,
+                   required_exit_code, required_error_msg);
+  };
+
+  // create file with readonly premissions
+  auto create_readonly = [](const boost::filesystem::path &path) {
+    create_directories(path.parent_path());
+    boost::filesystem::ofstream os(path);
+    os << "";
+    boost::filesystem::permissions(path, boost::filesystem::others_read);
+  };
+
+  SECTION("sdpb")
+  {
+    INFO("Single-process sdpb run");
+    Test_Util::Test_Case_Runner runner("sdpb");
+    auto args = default_args;
+    run_sdpb_set_out_ck_dirs(runner.create_nested("run"), args, 1);
+    Test_Util::REQUIRE_Equal::diff_sdpb_output_dir(
+      args["--outDir"], data_dir / "test_out_orig", 1024);
+  }
+
+  SECTION("io_tests")
+  {
+    INFO("Check that sdpb fails on different IO errors.");
+    SECTION("write_profile")
+    {
+      Test_Util::Test_Case_Runner runner("sdpb/io_tests/write_profile");
+      auto args = default_args;
+      args["--maxIterations"] = "1";
+      args["--verbosity"] = "2";
+
+      create_readonly(runner.output_dir / "ck.profiling.0");
+      run_sdpb_set_out_ck_dirs(runner, args, num_procs, 1,
+                               "Error when writing to");
+      REQUIRE(
+        boost::filesystem::file_size(runner.output_dir / "ck.profiling.1")
+        > 0);
+    }
+
+    for(std::string name :
+        {"out.txt", "x_0.txt", "y.txt", "X_matrix_0.txt", "Y_matrix_0.txt"})
+      {
+        DYNAMIC_SECTION(name)
+        {
+          Test_Util::Test_Case_Runner runner("sdpb/io_tests/" + name);
+          auto args = default_args;
+          args["--maxIterations"] = "1";
+          args["--writeSolution"] = "x,y,X,Y";
+
+          create_readonly(runner.output_dir / "out" / name);
+          std::string expected_error
+            = name == "out.txt" ? "Cannot write to" : "Error when writing to";
+
+          run_sdpb_set_out_ck_dirs(runner, args, num_procs, 1, expected_error);
+        }
+      }
+
+    SECTION("input_corruption")
+    {
+      Test_Util::Test_Case_Runner runner("sdpb/io_tests/input_corruption");
+      auto sdp_corrupted = runner.output_dir / "sdp_corrupted.zip";
+      boost::filesystem::create_directories(runner.output_dir);
+      boost::filesystem::copy(sdp_path, sdp_corrupted,
+                              boost::filesystem::copy_options::recursive);
+      boost::filesystem::ofstream os(sdp_corrupted);
+      os << "any bytes to corrupt zip archive";
+
+      auto args = default_args;
+      args["--sdpDir"] = sdp_corrupted.string();
+      args["--maxIterations"] = "1";
+
+      run_sdpb_set_out_ck_dirs(runner, args, num_procs, 1);
+    }
+
+    SECTION("checkpoint_read")
+    {
+      Test_Util::Test_Case_Runner runner("sdpb/io_tests/checkpoint_read");
+      auto args = default_args;
+      args["--maxIterations"] = "1";
+      args["--writeSolution"] = "x,y,X,Y";
+
+      run_sdpb_set_out_ck_dirs(runner, args);
+
+      INFO("Check reading from checkpoint...");
+      run_sdpb_set_out_ck_dirs(runner, args);
+
+      INFO("now use outDir as checkpoint, "
+           "remove read permissions => fail to read");
+      args["--checkpointDir"] = args["--outDir"];
+      boost::filesystem::permissions(runner.output_dir / "out"
+                                       / "X_matrix_0.txt",
+                                     boost::filesystem::perms::no_perms);
+      const Test_Util::Test_Case_Runner runner_noread
+        = runner.create_nested("noread");
+      runner_noread.mpi_run({"build/sdpb"}, args, num_procs, 1,
+                            "Unable to open checkpoint file");
+    }
+
+    SECTION("checkpoint_corrupt")
+    {
+      Test_Util::Test_Case_Runner runner("sdpb/io_tests/checkpoint_corrupt");
+      auto args = default_args;
+      args["--maxIterations"] = "1";
+      args["--writeSolution"] = "x,y,X,Y";
+      run_sdpb_set_out_ck_dirs(runner, args);
+
+      INFO("corrupt X_matrix file: remove all data after first two lines");
+      auto X_matrix
+        = (boost::filesystem::path(args["--outDir"]) / "X_matrix_0.txt");
+      {
+        boost::filesystem::ifstream is(X_matrix);
+        std::string line_0, line_1;
+        std::getline(is, line_0);
+        std::getline(is, line_1);
+        is.close();
+
+        boost::filesystem::ofstream os(X_matrix);
+        os << line_0 << std::endl;
+        os << line_1 << std::endl;
+      }
+
+      INFO("try to read checkpoint with corrupted X_matrix");
+      args["--checkpointDir"] = args["--outDir"];
+      const Test_Util::Test_Case_Runner runner_corrupt
+        = runner.create_nested("read_corrupt");
+      runner_corrupt.mpi_run({"build/sdpb"}, args, num_procs, 1,
+                             "Corrupted data in file");
+    }
+  }
+}

@@ -25,7 +25,9 @@
                     }
                 }
             },
-            "error" : { "type" : "string" },
+          "error": {
+            "type": "string"
+          }
         }
     }
 }

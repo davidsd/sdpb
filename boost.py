@@ -53,6 +53,7 @@ def configure(conf):
 #include <boost/filesystem.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
+#include <boost/process.hpp>
 int main()
 {
 boost::posix_time::second_clock::local_time();
@@ -61,6 +62,7 @@ boost::program_options::options_description();
 boost::iostreams::file_sink("foo");
 boost::iostreams::filtering_ostream();
 boost::iostreams::gzip_compressor();
+boost::process::ipstream pipe_stream;
 }
 """,
                    includes=boost_incdir,
