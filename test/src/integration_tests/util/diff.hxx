@@ -53,9 +53,9 @@ namespace Test_Util::REQUIRE_Equal
     CAPTURE(diff_precision);
     REQUIRE(diff_precision > 0);
 
-    auto eps = pow(Float(2.0), -Float(diff_precision));
+    auto eps = Float(1) >>= diff_precision; // 2^{-precision}
     CAPTURE(eps);
-    REQUIRE(abs(a - b) < eps * (abs(a) + abs(b)));
+    REQUIRE(Abs(a - b) < eps * (Abs(a) + Abs(b)));
   }
   inline void diff(const std::string &a, const std::string &b)
   {
