@@ -48,3 +48,5 @@ public:
   Dual_Constraint_Group(const size_t &Block_index,
                         const Polynomial_Vector_Matrix &m);
 };
+
+void serialize_json(std::ostream &os, const Dual_Constraint_Group &group);

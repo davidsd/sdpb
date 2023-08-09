@@ -1,7 +1,7 @@
 #include "Dual_Constraint_Group.hxx"
 #include "byte_counter.hxx"
 #include "Archive_Writer.hxx"
-#include "../set_stream_precision.hxx"
+#include "../sdp_convert.hxx"
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -91,14 +91,7 @@ void write_sdpb_input_files(
         output_stream.push(
           boost::iostreams::gzip_compressor(boost::iostreams::gzip_params(0)));
         output_stream.push(boost::iostreams::file_sink(block_path.string()));
-        set_stream_precision(output_stream);
-        output_stream << "{\n";
-
-        write_blocks(output_stream, group);
-        write_bilinear_bases(output_stream, group);
-        write_primal_objective_c(output_stream, group);
-        write_free_var_matrix(output_stream, group);
-        output_stream << "}\n";
+        serialize_json(output_stream, group);
         if(!output_stream.good())
           {
             throw std::runtime_error("Error when writing to: "
