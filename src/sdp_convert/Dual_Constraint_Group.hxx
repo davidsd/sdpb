@@ -31,7 +31,7 @@ class Dual_Constraint_Group
 public:
   size_t block_index;
   size_t dim;
-  size_t degree;
+  size_t num_points;
 
   // constraint_matrix = B, a P'xN Matrix
   El::Matrix<El::BigFloat> constraint_matrix;

@@ -167,7 +167,7 @@ void print_matrix_sizes(
 
       // variables stored in Block_Info
       size_t dimensions = group.dim;
-      size_t num_points = group.degree + 1; // see write_blocks()
+      size_t num_points = group.num_points; // see write_blocks()
 
       // See Block_Info::schur_block_sizes()
       size_t schur_width = num_points * dimensions * (dimensions + 1) / 2;

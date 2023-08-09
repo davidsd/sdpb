@@ -15,7 +15,7 @@ void write_bilinear_bases(std::ostream &output_stream,
         }
       // Ensure that each bilinearBasis is sampled the correct number
       // of times
-      assert(static_cast<size_t>(basis->Width()) == group.degree + 1);
+      assert(static_cast<size_t>(basis->Width()) == group.num_points);
       for(int64_t row = 0; row < basis->Height(); ++row)
         {
           if(row != 0)

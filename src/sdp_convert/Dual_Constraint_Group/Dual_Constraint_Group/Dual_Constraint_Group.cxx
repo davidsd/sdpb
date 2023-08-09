@@ -27,12 +27,12 @@ sample_bilinear_basis(const int maxDegree, const int numSamples,
 //
 Dual_Constraint_Group::Dual_Constraint_Group(const size_t &Block_index,
                                              const Polynomial_Vector_Matrix &m)
-    : block_index(Block_index), dim(m.rows), degree(m.sample_points.size() - 1)
+    : block_index(Block_index), dim(m.rows), num_points(m.sample_points.size())
 {
   assert(m.rows == m.cols);
 
-  const size_t numSamples(degree + 1),
-    numConstraints(numSamples * dim * (dim + 1) / 2),
+  const size_t degree(num_points - 1),
+    numConstraints(num_points * dim * (dim + 1) / 2),
     vectorDim(m.elt(0, 0).size());
 
   // Form the constraint_matrix B and constraint_constants c from the
@@ -49,7 +49,7 @@ Dual_Constraint_Group::Dual_Constraint_Group(const size_t &Block_index,
     {
       for(size_t r = 0; r <= c; r++)
         {
-          for(size_t k = 0; k < numSamples; k++)
+          for(size_t k = 0; k < num_points; k++)
             {
               El::BigFloat x(m.sample_points.at(k));
               El::BigFloat scale(m.sample_scalings.at(k));
@@ -72,7 +72,7 @@ Dual_Constraint_Group::Dual_Constraint_Group(const size_t &Block_index,
   //
   const size_t delta1(degree / 2);
   bilinear_bases[0] = sample_bilinear_basis(
-    delta1, numSamples, m.bilinear_basis, m.sample_points, m.sample_scalings);
+    delta1, num_points, m.bilinear_basis, m.sample_points, m.sample_scalings);
 
   // For degree==0, the second block will have zero size.
   const size_t delta2((degree + 1) / 2 - 1);
@@ -84,5 +84,5 @@ Dual_Constraint_Group::Dual_Constraint_Group(const size_t &Block_index,
       scaled_samples.emplace_back(m.sample_points[ii] * m.sample_scalings[ii]);
     }
   bilinear_bases[1] = sample_bilinear_basis(
-    delta2, numSamples, m.bilinear_basis, m.sample_points, scaled_samples);
+    delta2, num_points, m.bilinear_basis, m.sample_points, scaled_samples);
 }
