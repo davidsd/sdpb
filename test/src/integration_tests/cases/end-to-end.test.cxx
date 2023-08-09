@@ -70,7 +70,7 @@ TEST_CASE("end-to-end_tests")
        "depending on GMP/MPFR version etc");
   int num_procs = 6;
   int precision = 768;
-  int sdp2input_final_precision = 720;
+  int sdp2input_final_precision = 608;
   std::string name = "end-to-end_tests";
 
   SECTION("SingletScalar_cT_test_nmax6/primal_dual_optimal")
