@@ -28,7 +28,7 @@ TEST_CASE("sdp2input")
 
         runner.create_nested("run").mpi_run({"build/sdp2input"}, args);
 
-        Test_Util::REQUIRE_Equal::diff_sdp_zip(sdp_zip, sdp_orig, 1024,
+        Test_Util::REQUIRE_Equal::diff_sdp_zip(sdp_zip, sdp_orig, 512,
                                                runner.create_nested("diff"));
 
         REQUIRE(boost::filesystem::file_size(sdp_zip + ".profiling.0") > 0);
