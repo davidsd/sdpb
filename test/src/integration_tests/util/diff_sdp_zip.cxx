@@ -37,12 +37,10 @@ namespace
   {
     Float constant;
     std::vector<Float> b;
-    Parse_Objectives_Json(const boost::filesystem::path &path,
-                          unsigned int binary_precision)
+    explicit Parse_Objectives_Json(const boost::filesystem::path &path)
     {
       CAPTURE(path);
       REQUIRE(exists(path));
-      Float_Binary_Precision _(binary_precision);
       boost::filesystem::ifstream is(path);
       rapidjson::IStreamWrapper wrapper(is);
       rapidjson::Document document;
@@ -62,12 +60,10 @@ namespace
     Float_Vector c;
     Float_Matrix B;
 
-    Parse_Block_Json(const boost::filesystem::path &path,
-                     unsigned int binary_precision)
+    explicit Parse_Block_Json(const boost::filesystem::path &path)
     {
       CAPTURE(path);
       REQUIRE(exists(path));
-      Float_Binary_Precision _(binary_precision);
       boost::filesystem::ifstream is(path);
       rapidjson::IStreamWrapper wrapper(is);
       rapidjson::Document document;
@@ -102,27 +98,25 @@ namespace
   }
 
   void diff_objectives_json(const boost::filesystem::path &a_objectives_json,
-                            const boost::filesystem::path &b_objectives_json,
-                            unsigned int binary_precision)
+                            const boost::filesystem::path &b_objectives_json)
   {
     CAPTURE(a_objectives_json);
     CAPTURE(b_objectives_json);
-    Parse_Objectives_Json a(a_objectives_json, binary_precision);
-    Parse_Objectives_Json b(b_objectives_json, binary_precision);
+    Parse_Objectives_Json a(a_objectives_json);
+    Parse_Objectives_Json b(b_objectives_json);
     diff(a.constant, b.constant);
     diff(a.b, b.b);
   }
 
   void diff_block_json(const boost::filesystem::path &a_block_json,
-                       const boost::filesystem::path &b_block_json,
-                       unsigned int binary_precision)
+                       const boost::filesystem::path &b_block_json)
 
   {
     INFO("diff_block_json");
     CAPTURE(a_block_json);
     CAPTURE(b_block_json);
-    Parse_Block_Json a_block(a_block_json, binary_precision);
-    Parse_Block_Json b_block(b_block_json, binary_precision);
+    Parse_Block_Json a_block(a_block_json);
+    Parse_Block_Json b_block(b_block_json);
 
     INFO("diff dim");
     diff(a_block.dim, b_block.dim);
@@ -149,16 +143,16 @@ namespace Test_Util::REQUIRE_Equal
     INFO("diff sdp.zip files");
     CAPTURE(a_sdp_zip);
     CAPTURE(b_sdp_zip);
+    Float_Binary_Precision prec(binary_precision);
     auto a = runner.unzip_to_temp_dir(a_sdp_zip);
     auto b = runner.unzip_to_temp_dir(b_sdp_zip);
     diff_control_json(a / "control.json", b / "control.json");
-    diff_objectives_json(a / "objectives.json", b / "objectives.json",
-                         binary_precision);
+    diff_objectives_json(a / "objectives.json", b / "objectives.json");
     Parse_Control_Json control(a / "control.json");
     for(int i = 0; i < control.num_blocks; ++i)
       {
         auto block_name = "block_" + std::to_string(i) + ".json";
-        diff_block_json(a / block_name, b / block_name, binary_precision);
+        diff_block_json(a / block_name, b / block_name);
       }
   }
 }

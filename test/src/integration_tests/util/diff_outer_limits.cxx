@@ -20,10 +20,8 @@ namespace
     Float optimal;
     Float_Vector y;
     std::vector<std::pair<std::string, std::string>> options;
-    explicit Parse_Outer_Limits_Json(const boost::filesystem::path &path,
-                                     unsigned int binary_precision)
+    explicit Parse_Outer_Limits_Json(const boost::filesystem::path &path)
     {
-      Float_Binary_Precision _(binary_precision);
       CAPTURE(path);
       REQUIRE(exists(path));
       boost::filesystem::ifstream is(path);
@@ -52,8 +50,9 @@ namespace Test_Util::REQUIRE_Equal
     INFO("diff outer_limits output");
     CAPTURE(a_json);
     CAPTURE(b_json);
-    Parse_Outer_Limits_Json a(a_json, binary_precision);
-    Parse_Outer_Limits_Json b(b_json, binary_precision);
+    Float_Binary_Precision prec(binary_precision);
+    Parse_Outer_Limits_Json a(a_json);
+    Parse_Outer_Limits_Json b(b_json);
     diff(a.optimal, b.optimal);
     diff(a.y, b.y);
     diff(a.options, b.options);

@@ -31,12 +31,10 @@ namespace
     std::vector<Zeros> zeros_array;
 
     std::vector<std::pair<std::string, std::string>> options;
-    explicit Parse_Spectrum_Json(const boost::filesystem::path &path,
-                                 unsigned int binary_precision)
+    explicit Parse_Spectrum_Json(const boost::filesystem::path &path)
     {
       CAPTURE(path);
       REQUIRE(exists(path));
-      Float_Binary_Precision _(binary_precision);
       boost::filesystem::ifstream is(path);
       rapidjson::IStreamWrapper wrapper(is);
       rapidjson::Document document;
@@ -82,8 +80,9 @@ namespace Test_Util::REQUIRE_Equal
     INFO("diff spectrum output");
     CAPTURE(a_json);
     CAPTURE(b_json);
-    Parse_Spectrum_Json a(a_json, binary_precision);
-    Parse_Spectrum_Json b(b_json, binary_precision);
+    Float_Binary_Precision prec(binary_precision);
+    Parse_Spectrum_Json a(a_json);
+    Parse_Spectrum_Json b(b_json);
     diff(a.zeros_array, b.zeros_array);
   }
 }
