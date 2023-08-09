@@ -6,7 +6,7 @@
 
 using Float = El::BigFloat;
 using Float_Vector = std::vector<Float>;
-using Float_Matrix = std::vector<Float_Vector>;
+using Float_Matrix = El::Matrix<Float>;
 
 // Temporarily sets El::BigFloat precision
 // and precision used in BigFloat comparison

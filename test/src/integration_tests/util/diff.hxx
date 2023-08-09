@@ -64,17 +64,33 @@ namespace Test_Util::REQUIRE_Equal
   template <class T1, class T2>
   inline void diff(const std::pair<T1, T2> &a, const std::pair<T1, T2> &b)
   {
+    INFO("diff std::pair");
     diff(a.first, b.first);
     diff(a.second, b.second);
   }
   template <class T>
   inline void diff(const std::vector<T> &a, const std::vector<T> &b)
   {
+    INFO("diff std::vector");
     REQUIRE(a.size() == b.size());
     for(size_t i = 0; i < a.size(); ++i)
       {
         CAPTURE(i);
         diff(a[i], b[i]);
       }
+  }
+  template <class T>
+  inline void diff(const El::Matrix<T> &a, const El::Matrix<T> &b)
+  {
+    INFO("diff El::Matrix");
+    REQUIRE(a.Height() == b.Height());
+    REQUIRE(a.Width() == b.Width());
+    for(int row = 0; row < a.Height(); ++row)
+      for(int col = 0; col < a.Width(); ++col)
+        {
+          CAPTURE(row);
+          CAPTURE(col);
+          diff(a.Get(row, col), b.Get(row, col));
+        }
   }
 }

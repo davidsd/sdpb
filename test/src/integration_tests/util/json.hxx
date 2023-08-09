@@ -26,10 +26,19 @@ namespace Test_Util::Json
   }
   inline Float_Matrix parse_Float_Matrix(const Json_Value &json_value)
   {
-    Float_Matrix result;
-    for(const auto &element : json_value.GetArray())
+    auto rows_array = json_value.GetArray();
+    int height = rows_array.Size();
+    int width = rows_array[0].GetArray().Size();
+    Float_Matrix result(height, width);
+
+    for(int row = 0; row < height; ++row)
       {
-        result.emplace_back(parse_Float_Vector(element));
+        auto cols_array = rows_array[row].GetArray();
+        for(int col = 0; col < width; ++col)
+          {
+            Float value = parse_Float(cols_array[col]);
+            result.Set(row, col, value);
+          }
       }
     return result;
   }
