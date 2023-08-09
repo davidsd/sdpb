@@ -6,6 +6,19 @@
 //=======================================================================
 
 #include "../../Dual_Constraint_Group.hxx"
+#include "../../../set_stream_precision.hxx"
+
+void write_bilinear_bases(std::ostream &output_stream,
+                          const Dual_Constraint_Group &group);
+
+void write_blocks(std::ostream &output_stream,
+                  const Dual_Constraint_Group &group);
+
+void write_primal_objective_c(std::ostream &output_stream,
+                              const Dual_Constraint_Group &group);
+
+void write_free_var_matrix(std::ostream &output_stream,
+                           const Dual_Constraint_Group &group);
 
 El::Matrix<El::BigFloat>
 sample_bilinear_basis(const int maxDegree, const int numSamples,
@@ -85,4 +98,16 @@ Dual_Constraint_Group::Dual_Constraint_Group(const size_t &Block_index,
     }
   bilinear_bases[1] = sample_bilinear_basis(
     delta2, num_points, m.bilinear_basis, m.sample_points, scaled_samples);
+}
+
+void serialize_json(std::ostream &os, const Dual_Constraint_Group &group)
+{
+  set_stream_precision(os);
+
+  os << "{\n";
+  write_blocks(os, group);
+  write_bilinear_bases(os, group);
+  write_primal_objective_c(os, group);
+  write_free_var_matrix(os, group);
+  os << "}\n";
 }
