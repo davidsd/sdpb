@@ -27,8 +27,8 @@ TEST_CASE("sdpb")
     args["--checkpointDir"] = (runner.output_dir / "ck").string();
     args["--outDir"] = (runner.output_dir / "out").string();
     args["--procsPerNode"] = std::to_string(num_procs);
-    runner.mpi_run({"build/sdpb"}, args, num_procs,
-                   required_exit_code, required_error_msg);
+    runner.mpi_run({"build/sdpb"}, args, num_procs, required_exit_code,
+                   required_error_msg);
   };
 
   // create file with readonly premissions
@@ -46,7 +46,7 @@ TEST_CASE("sdpb")
     auto args = default_args;
     run_sdpb_set_out_ck_dirs(runner.create_nested("run"), args, 1);
     Test_Util::REQUIRE_Equal::diff_sdpb_output_dir(
-      args["--outDir"], data_dir / "test_out_orig", 1024);
+      args["--outDir"], data_dir / "test_out_orig", 1024, 1024);
   }
 
   SECTION("io_tests")

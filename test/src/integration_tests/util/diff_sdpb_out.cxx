@@ -141,7 +141,8 @@ namespace Test_Util::REQUIRE_Equal
 {
   void diff_sdpb_output_dir(const boost::filesystem::path &a_out_dir,
                             const boost::filesystem::path &b_out_dir,
-                            unsigned int binary_precision,
+                            unsigned int input_precision,
+                            unsigned int diff_precision,
                             const std::vector<std::string> &filenames,
                             const std::vector<std::string> &out_txt_keys)
   {
@@ -150,7 +151,7 @@ namespace Test_Util::REQUIRE_Equal
     CAPTURE(b_out_dir);
     REQUIRE(is_directory(a_out_dir));
     REQUIRE(is_directory(b_out_dir));
-    Float_Binary_Precision prec(binary_precision);
+    Float_Binary_Precision prec(input_precision, diff_precision);
 
     std::vector<std::string> my_filenames = filenames;
     if(my_filenames.empty())

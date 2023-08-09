@@ -43,14 +43,15 @@ namespace
 // Implementation
 namespace Test_Util::REQUIRE_Equal
 {
-  void diff_outer_limits(const boost::filesystem::path &a_json,
-                         const boost::filesystem::path &b_json,
-                         unsigned int binary_precision)
+  void
+  diff_outer_limits(const boost::filesystem::path &a_json,
+                    const boost::filesystem::path &b_json,
+                    unsigned int input_precision, unsigned int diff_precision)
   {
     INFO("diff outer_limits output");
     CAPTURE(a_json);
     CAPTURE(b_json);
-    Float_Binary_Precision prec(binary_precision);
+    Float_Binary_Precision prec(input_precision, diff_precision);
     Parse_Outer_Limits_Json a(a_json);
     Parse_Outer_Limits_Json b(b_json);
     diff(a.optimal, b.optimal);

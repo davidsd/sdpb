@@ -75,12 +75,12 @@ namespace Test_Util::REQUIRE_Equal
 {
   void diff_spectrum(const boost::filesystem::path &a_json,
                      const boost::filesystem::path &b_json,
-                     unsigned int binary_precision)
+                     unsigned int input_precision, unsigned int diff_precision)
   {
     INFO("diff spectrum output");
     CAPTURE(a_json);
     CAPTURE(b_json);
-    Float_Binary_Precision prec(binary_precision);
+    Float_Binary_Precision prec(input_precision, diff_precision);
     Parse_Spectrum_Json a(a_json);
     Parse_Spectrum_Json b(b_json);
     diff(a.zeros_array, b.zeros_array);

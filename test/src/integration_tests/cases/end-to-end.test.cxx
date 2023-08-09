@@ -12,8 +12,8 @@ namespace
 {
   void end_to_end_test(const std::string &name,
                        const std::string &default_sdpb_args, int num_procs,
-                       int precision, int sdp2input_final_precision,
-                       int sdpb_final_precision,
+                       int precision, int sdp_zip_diff_precision,
+                       int sdpb_output_diff_precision,
                        const std::vector<std::string> &out_txt_keys = {})
   {
     Test_Util::Test_Case_Runner runner(name);
@@ -34,10 +34,10 @@ namespace
         .mpi_run({"build/sdp2input"}, args, num_procs);
 
       // sdp2input runs with --precision=<precision>
-      // We check test output up to lower precision=<sdp2input_final_precision>
+      // We check test output up to lower precision=<sdp_zip_diff_precision>
       // in order to neglect unimportant rounding errors
       Test_Util::REQUIRE_Equal::diff_sdp_zip(
-        sdp_zip, sdp_orig_zip, sdp2input_final_precision,
+        sdp_zip, sdp_orig_zip, precision, sdp_zip_diff_precision,
         runner.create_nested("sdp2input/diff"));
     }
 
@@ -53,11 +53,11 @@ namespace
         .mpi_run({"build/sdpb", default_sdpb_args}, args, num_procs);
 
       // SDPB runs with --precision=<precision>
-      // We check test output up to lower precision=<sdpb_final_precision>
+      // We check test output up to lower precision=<sdpb_output_diff_precision>
       // in order to neglect unimportant rounding errors
       Test_Util::REQUIRE_Equal::diff_sdpb_output_dir(
-        output_dir / "out", data_dir / "out", sdpb_final_precision, {},
-        out_txt_keys);
+        output_dir / "out", data_dir / "out", precision,
+        sdpb_output_diff_precision, {}, out_txt_keys);
     }
   }
 }
@@ -70,7 +70,7 @@ TEST_CASE("end-to-end_tests")
        "depending on GMP/MPFR version etc");
   int num_procs = 6;
   int precision = 768;
-  int sdp2input_final_precision = 608;
+  int sdp_zip_diff_precision = 608;
   std::string name = "end-to-end_tests";
 
   SECTION("SingletScalar_cT_test_nmax6/primal_dual_optimal")
@@ -88,9 +88,9 @@ TEST_CASE("end-to-end_tests")
         "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
         "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
         "--procGranularity 1 --writeSolution y";
-    int sdpb_final_precision = 600;
+    int sdpb_output_diff_precision = 600;
     end_to_end_test(name, default_sdpb_args, num_procs, precision,
-                    sdp2input_final_precision, sdpb_final_precision);
+                    sdp_zip_diff_precision, sdpb_output_diff_precision);
   }
 
   SECTION("SingletScalarAllowed_test_nmax6")
@@ -108,7 +108,7 @@ TEST_CASE("end-to-end_tests")
         "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
         "--procGranularity 1 --writeSolution y "
         "--detectPrimalFeasibleJump --detectDualFeasibleJump";
-    int sdpb_final_precision = 610;
+    int sdpb_output_diff_precision = 610;
 
     SECTION("primal_feasible_jump")
     {
@@ -118,7 +118,7 @@ TEST_CASE("end-to-end_tests")
         = {"terminateReason", "primalObjective", "dualObjective", "dualityGap",
            "dualError"};
       end_to_end_test(name, default_sdpb_args, num_procs, precision,
-                      sdp2input_final_precision, sdpb_final_precision,
+                      sdp_zip_diff_precision, sdpb_output_diff_precision,
                       out_txt_keys);
     }
     SECTION("dual_feasible_jump")
@@ -129,7 +129,7 @@ TEST_CASE("end-to-end_tests")
         = {"terminateReason", "primalObjective", "dualObjective", "dualityGap",
            "primalError"};
       end_to_end_test(name, default_sdpb_args, num_procs, precision,
-                      sdp2input_final_precision, sdpb_final_precision,
+                      sdp_zip_diff_precision, sdpb_output_diff_precision,
                       out_txt_keys);
     }
   }

@@ -138,12 +138,13 @@ namespace Test_Util::REQUIRE_Equal
 {
   void diff_sdp_zip(const boost::filesystem::path &a_sdp_zip,
                     const boost::filesystem::path &b_sdp_zip,
-                    unsigned int binary_precision, Test_Case_Runner runner)
+                    unsigned int input_precision, unsigned int diff_precision,
+                    Test_Case_Runner runner)
   {
     INFO("diff sdp.zip files");
     CAPTURE(a_sdp_zip);
     CAPTURE(b_sdp_zip);
-    Float_Binary_Precision prec(binary_precision);
+    Float_Binary_Precision prec(input_precision, diff_precision);
     auto a = runner.unzip_to_temp_dir(a_sdp_zip);
     auto b = runner.unzip_to_temp_dir(b_sdp_zip);
     diff_control_json(a / "control.json", b / "control.json");

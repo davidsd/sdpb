@@ -11,6 +11,8 @@
 // because otherwise useful CAPTURE() information will be lost
 namespace Test_Util::REQUIRE_Equal
 {
+  inline unsigned int diff_precision;
+
   // Compare SDPB output directories by content.
   // filenames: which files to compare (by default - all)
   // out_txt_keys: which keys compare in out.txt
@@ -18,29 +20,42 @@ namespace Test_Util::REQUIRE_Equal
   // Floating-point numbers are rounded to binary_precision
   void diff_sdpb_output_dir(const boost::filesystem::path &a_out_dir,
                             const boost::filesystem::path &b_out_dir,
-                            unsigned int binary_precision,
+                            unsigned int input_precision,
+                            unsigned int diff_precision,
                             const std::vector<std::string> &filenames = {},
                             const std::vector<std::string> &out_txt_keys = {});
 
   void diff_sdp_zip(const boost::filesystem::path &a_sdp_zip,
                     const boost::filesystem::path &b_sdp_zip,
-                    unsigned int binary_precision, Test_Case_Runner runner);
+                    unsigned int input_precision, unsigned int diff_precision,
+                    Test_Case_Runner runner);
 
-  void diff_outer_limits(const boost::filesystem::path &a_json,
-                         const boost::filesystem::path &b_json,
-                         unsigned int binary_precision);
+  void
+  diff_outer_limits(const boost::filesystem::path &a_json,
+                    const boost::filesystem::path &b_json,
+                    unsigned int input_precision, unsigned int diff_precision);
 
-  void diff_spectrum(const boost::filesystem::path &a_json,
-                     const boost::filesystem::path &b_json,
-                     unsigned int binary_precision);
+  void
+  diff_spectrum(const boost::filesystem::path &a_json,
+                const boost::filesystem::path &b_json,
+                unsigned int input_precision, unsigned int diff_precision);
 
   inline void diff(int a, int b) { REQUIRE(a == b); }
   inline void diff(const Float &a, const Float &b)
   {
-    // a and b will not be printed with all digits,
-    // so we display also their (sometimes small) difference.
+    if(a == b)
+      return;
+
+    CAPTURE(a);
+    CAPTURE(b);
     CAPTURE(a - b);
-    REQUIRE(a == b);
+
+    CAPTURE(diff_precision);
+    REQUIRE(diff_precision > 0);
+
+    auto eps = pow(Float(2.0), -Float(diff_precision));
+    CAPTURE(eps);
+    REQUIRE(abs(a - b) < eps * (abs(a) + abs(b)));
   }
   inline void diff(const std::string &a, const std::string &b)
   {
