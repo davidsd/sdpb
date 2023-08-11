@@ -6,6 +6,12 @@
 #include <catch2/catch_amalgamated.hpp>
 #include <boost/filesystem.hpp>
 
+#define DIFF(a, b)                                                            \
+  {                                                                           \
+    INFO("DIFF(" << #a << ", " << #b << ")");                                 \
+    diff(a, b);                                                               \
+  }
+
 // Functions that REQUIRE equality of given files or folders.
 // NB: we call REQUIRE() inside these functions,
 // because otherwise useful CAPTURE() information will be lost
@@ -65,8 +71,8 @@ namespace Test_Util::REQUIRE_Equal
   inline void diff(const std::pair<T1, T2> &a, const std::pair<T1, T2> &b)
   {
     INFO("diff std::pair");
-    diff(a.first, b.first);
-    diff(a.second, b.second);
+    DIFF(a.first, b.first);
+    DIFF(a.second, b.second);
   }
   template <class T>
   inline void diff(const std::vector<T> &a, const std::vector<T> &b)
@@ -76,7 +82,7 @@ namespace Test_Util::REQUIRE_Equal
     for(size_t i = 0; i < a.size(); ++i)
       {
         CAPTURE(i);
-        diff(a[i], b[i]);
+        DIFF(a[i], b[i]);
       }
   }
   template <class T>
@@ -90,7 +96,7 @@ namespace Test_Util::REQUIRE_Equal
         {
           CAPTURE(row);
           CAPTURE(col);
-          diff(a.Get(row, col), b.Get(row, col));
+          DIFF(a.Get(row, col), b.Get(row, col));
         }
   }
 }

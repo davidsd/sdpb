@@ -92,7 +92,7 @@ namespace
     CAPTURE(b_control_json);
     Parse_Control_Json a(a_control_json);
     Parse_Control_Json b(b_control_json);
-    diff(a.num_blocks, b.num_blocks);
+    DIFF(a.num_blocks, b.num_blocks);
     // ignore "command", since it's unimportant:
     // diff(a.command, b.command);
   }
@@ -104,8 +104,8 @@ namespace
     CAPTURE(b_objectives_json);
     Parse_Objectives_Json a(a_objectives_json);
     Parse_Objectives_Json b(b_objectives_json);
-    diff(a.constant, b.constant);
-    diff(a.b, b.b);
+    DIFF(a.constant, b.constant);
+    DIFF(a.b, b.b);
   }
 
   void diff_block_json(const boost::filesystem::path &a_block_json,
@@ -118,18 +118,12 @@ namespace
     Parse_Block_Json a_block(a_block_json);
     Parse_Block_Json b_block(b_block_json);
 
-    INFO("diff dim");
-    diff(a_block.dim, b_block.dim);
-    INFO("diff num_points");
-    diff(a_block.num_points, b_block.num_points);
-    INFO("diff bilinear_bases_even");
-    diff(a_block.bilinear_bases_even, b_block.bilinear_bases_even);
-    INFO("diff bilinear_bases_odd");
-    diff(a_block.bilinear_bases_odd, b_block.bilinear_bases_odd);
-    INFO("diff constraint vector c");
-    diff(a_block.c, b_block.c);
-    INFO("diff constraint matrix B");
-    diff(a_block.B, b_block.B);
+    DIFF(a_block.dim, b_block.dim);
+    DIFF(a_block.num_points, b_block.num_points);
+    DIFF(a_block.bilinear_bases_even, b_block.bilinear_bases_even);
+    DIFF(a_block.bilinear_bases_odd, b_block.bilinear_bases_odd);
+    DIFF(a_block.c, b_block.c);
+    DIFF(a_block.B, b_block.B);
   }
 }
 

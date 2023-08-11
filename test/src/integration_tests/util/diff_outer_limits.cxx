@@ -54,8 +54,8 @@ namespace Test_Util::REQUIRE_Equal
     Float_Binary_Precision prec(input_precision, diff_precision);
     Parse_Outer_Limits_Json a(a_json);
     Parse_Outer_Limits_Json b(b_json);
-    diff(a.optimal, b.optimal);
-    diff(a.y, b.y);
-    diff(a.options, b.options);
+    DIFF(a.optimal, b.optimal);
+    DIFF(a.y, b.y);
+    DIFF(a.options, b.options);
   }
 }

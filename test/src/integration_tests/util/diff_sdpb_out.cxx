@@ -92,9 +92,9 @@ namespace
     CAPTURE(b_matrix_txt);
     Parse_Matrix_Txt a(a_matrix_txt);
     Parse_Matrix_Txt b(b_matrix_txt);
-    diff(a.height, b.height);
-    diff(a.width, b.width);
-    diff(a.elements, b.elements);
+    DIFF(a.height, b.height);
+    DIFF(a.width, b.width);
+    DIFF(a.elements, b.elements);
   }
 
   // Compare out.txt
@@ -131,7 +131,7 @@ namespace
         REQUIRE(a_map.find(key) != a_map.end());
         REQUIRE(b_map.find(key) != b_map.end());
 
-        diff(a_map[key], b_map[key]);
+        DIFF(a_map[key], b_map[key]);
       }
   }
 }

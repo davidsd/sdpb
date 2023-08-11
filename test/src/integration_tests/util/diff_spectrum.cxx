@@ -60,13 +60,13 @@ namespace
 
   void diff(const Zero &a, const Zero &b)
   {
-    diff(a.zero, b.zero);
-    diff(a.lambda, b.lambda);
+    DIFF(a.zero, b.zero);
+    DIFF(a.lambda, b.lambda);
   }
   void diff(const Zeros &a, const Zeros &b)
   {
-    diff(a.error, b.error);
-    diff(a.zeros, b.zeros);
+    DIFF(a.error, b.error);
+    DIFF(a.zeros, b.zeros);
   }
 }
 
@@ -83,6 +83,6 @@ namespace Test_Util::REQUIRE_Equal
     Float_Binary_Precision prec(input_precision, diff_precision);
     Parse_Spectrum_Json a(a_json);
     Parse_Spectrum_Json b(b_json);
-    diff(a.zeros_array, b.zeros_array);
+    DIFF(a.zeros_array, b.zeros_array);
   }
 }
