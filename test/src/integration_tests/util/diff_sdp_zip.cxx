@@ -118,19 +118,23 @@ namespace
                        unsigned int binary_precision)
 
   {
+    INFO("diff_block_json");
     CAPTURE(a_block_json);
     CAPTURE(b_block_json);
     Parse_Block_Json a_block(a_block_json, binary_precision);
     Parse_Block_Json b_block(b_block_json, binary_precision);
 
+    INFO("diff dim");
     diff(a_block.dim, b_block.dim);
+    INFO("diff num_points");
     diff(a_block.num_points, b_block.num_points);
-    for(int i : {0, 1})
-      {
-        diff(a_block.bilinear_bases_even[i], b_block.bilinear_bases_even[i]);
-        diff(a_block.bilinear_bases_odd[i], b_block.bilinear_bases_odd[i]);
-      }
+    INFO("diff bilinear_bases_even");
+    diff(a_block.bilinear_bases_even, b_block.bilinear_bases_even);
+    INFO("diff bilinear_bases_odd");
+    diff(a_block.bilinear_bases_odd, b_block.bilinear_bases_odd);
+    INFO("diff constraint vector c");
     diff(a_block.c, b_block.c);
+    INFO("diff constraint matrix B");
     diff(a_block.B, b_block.B);
   }
 }
