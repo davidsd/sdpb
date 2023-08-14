@@ -102,19 +102,16 @@ def build(bld):
                 use=use_packages + ['sdp_solve']
                 )
 
-    sdp_convert_sources=['src/sdp_convert/Dual_Constraint_Group/Dual_Constraint_Group/Dual_Constraint_Group.cxx',
-                         'src/sdp_convert/Dual_Constraint_Group/Dual_Constraint_Group/sample_bilinear_basis.cxx',
-                         'src/sdp_convert/write_objectives.cxx',
-                         'src/sdp_convert/write_bilinear_bases.cxx',
-                         'src/sdp_convert/write_blocks.cxx',
-                         'src/sdp_convert/write_primal_objective_c.cxx',
-                         'src/sdp_convert/write_free_var_matrix.cxx',
-                         'src/sdp_convert/write_sdpb_input_files.cxx',
-                         'src/sdp_convert/write_control.cxx',
-                         'src/sdp_convert/Archive_Writer/Archive_Writer.cxx',
-                         'src/sdp_convert/Archive_Writer/write_entry.cxx',
-                         'src/sdp_convert/Archive_Entry.cxx'
-                         ]
+    sdp_convert_sources = ['src/sdp_convert/Dual_Constraint_Group/Dual_Constraint_Group.cxx',
+                           'src/sdp_convert/Dual_Constraint_Group/sample_bilinear_basis.cxx',
+                           'src/sdp_convert/write_block_json.cxx',
+                           'src/sdp_convert/write_objectives_json.cxx',
+                           'src/sdp_convert/write_sdpb_input_files.cxx',
+                           'src/sdp_convert/write_control_json.cxx',
+                           'src/sdp_convert/Archive_Writer/Archive_Writer.cxx',
+                           'src/sdp_convert/Archive_Writer/write_entry.cxx',
+                           'src/sdp_convert/Archive_Entry.cxx'
+                           ]
 
     bld.stlib(source=sdp_convert_sources,
               target='sdp_convert',

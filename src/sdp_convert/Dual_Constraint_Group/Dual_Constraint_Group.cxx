@@ -5,21 +5,12 @@
 //  http://opensource.org/licenses/MIT)
 //=======================================================================
 
-#include "../../Dual_Constraint_Group.hxx"
-#include "../../../set_stream_precision.hxx"
+#include "../Dual_Constraint_Group.hxx"
+#include "../../set_stream_precision.hxx"
 #include <boost/archive/binary_oarchive.hpp>
 
-void write_bilinear_bases(std::ostream &output_stream,
-                          const Dual_Constraint_Group &group);
-
-void write_blocks(std::ostream &output_stream,
-                  const Dual_Constraint_Group &group);
-
-void write_primal_objective_c(std::ostream &output_stream,
-                              const Dual_Constraint_Group &group);
-
-void write_free_var_matrix(std::ostream &output_stream,
-                           const Dual_Constraint_Group &group);
+void write_block_json(std::ostream &output_stream,
+                      const Dual_Constraint_Group &group);
 
 El::Matrix<El::BigFloat>
 sample_bilinear_basis(const int maxDegree, const int numSamples,
@@ -112,14 +103,7 @@ void serialize(std::ostream &os, const Dual_Constraint_Group &group,
         break;
       }
       case json: {
-        set_stream_precision(os);
-
-        os << "{\n";
-        write_blocks(os, group);
-        write_bilinear_bases(os, group);
-        write_primal_objective_c(os, group);
-        write_free_var_matrix(os, group);
-        os << "}\n";
+        write_block_json(os, group);
         break;
       }
     default: El::RuntimeError("Unknown Block_File_Format: ", format);

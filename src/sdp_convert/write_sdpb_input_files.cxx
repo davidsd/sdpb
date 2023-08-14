@@ -9,25 +9,16 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 
-size_t write_control(const boost::filesystem::path &output_dir,
-                     const size_t &num_blocks,
-                     const std::vector<std::string> &command_arguments);
+size_t
+write_control_json(std::ostream &output_stream, const size_t &num_blocks,
+                   const std::vector<std::string> &command_arguments);
 
-size_t write_objectives(const boost::filesystem::path &output_dir,
-                        const El::BigFloat &objective_const,
-                        const std::vector<El::BigFloat> &dual_objective_b);
+void write_objectives_json(std::ostream &output_stream,
+                           const El::BigFloat &objective_const,
+                           const std::vector<El::BigFloat> &dual_objective_b);
 
-void write_bilinear_bases(std::ostream &output_stream,
-                          const Dual_Constraint_Group &group);
-
-void write_blocks(std::ostream &output_stream,
-                  const Dual_Constraint_Group &group);
-
-void write_primal_objective_c(std::ostream &output_stream,
-                              const Dual_Constraint_Group &group);
-
-void write_free_var_matrix(std::ostream &output_stream,
-                           const Dual_Constraint_Group &group);
+void write_block_json(std::ostream &output_stream,
+                      const Dual_Constraint_Group &group);
 
 void print_matrix_sizes(
   const int &rank, const std::vector<El::BigFloat> &dual_objective_b,
@@ -35,6 +26,47 @@ void print_matrix_sizes(
 
 namespace
 {
+  size_t write_data_and_count_bytes(
+    const boost::filesystem::path &output_path,
+    const std::function<void(std::ostream &)> &write_data, bool binary = false)
+  {
+    byte_counter counter;
+    boost::iostreams::filtering_ostream output_stream;
+    output_stream.push(boost::ref(counter));
+    // Use gzip with no compression to get a CRC
+    output_stream.push(
+      boost::iostreams::gzip_compressor(boost::iostreams::gzip_params(0)));
+    auto openmode = std::ios::out;
+    if(binary)
+      openmode |= std::ios::binary;
+    output_stream.push(boost::iostreams::file_sink(output_path.string()),
+                       openmode);
+    if(!binary)
+      set_stream_precision(output_stream);
+    write_data(output_stream);
+    if(!output_stream.good())
+      {
+        throw std::runtime_error("Error when writing to: "
+                                 + output_path.string());
+      }
+
+    return counter.num_bytes;
+  }
+
+  boost::filesystem::path
+  get_block_path(const boost::filesystem::path &temp_dir, size_t block_index,
+                 Block_File_Format format)
+  {
+    std::string name = El::BuildString("block_", block_index);
+    switch(format)
+      {
+      case json: name += ".json"; break;
+      case bin: name += ".bin"; break;
+      default: El::RuntimeError("Unsupported Block_File_Format: ", format);
+      }
+    return temp_dir / name;
+  }
+
   void archive_gzipped_file(const boost::filesystem::path &path,
                             const int64_t &num_bytes, Archive_Writer &writer)
   {
@@ -58,35 +90,14 @@ void write_sdpb_input_files(
   boost::filesystem::path temp_dir(output_path);
   temp_dir += "_temp";
   boost::filesystem::create_directories(temp_dir);
-  size_t num_control_bytes(0), num_objectives_bytes(0);
-  if(rank == 0)
-    {
-      num_control_bytes
-        = write_control(temp_dir, num_blocks, command_arguments);
-      num_objectives_bytes
-        = write_objectives(temp_dir, objective_const, dual_objective_b);
-    }
   // We use size_t rather than std::streamsize because MPI treats
   // std::streamsize as an MPI_LONG_INT and then can not MPI_Reduce
   // over it.
   std::vector<size_t> block_file_sizes(num_blocks, 0);
-
-  std::string block_extension;
-  switch(output_format)
-    {
-    case json: block_extension = ".json"; break;
-    case bin: block_extension = ".bin"; break;
-    default: El::RuntimeError("Unsupported output_format: ", output_format);
-    }
-  auto get_block_path = [&temp_dir, &block_extension](size_t block_index) {
-    return temp_dir
-           / ("block_" + std::to_string(block_index) + block_extension);
-  };
-
   for(auto &group : dual_constraint_groups)
     {
-      auto width = group.constraint_matrix.Width();
-      auto dual_objective_size = dual_objective_b.size();
+      size_t width = group.constraint_matrix.Width();
+      size_t dual_objective_size = dual_objective_b.size();
       if(width != dual_objective_size)
         {
           El::RuntimeError(" Block width=", width,
@@ -94,24 +105,12 @@ void write_sdpb_input_files(
                            " should be equal.");
         }
 
-      const auto block_path = get_block_path(group.block_index);
-      byte_counter counter;
-      {
-        boost::iostreams::filtering_ostream output_stream;
-        output_stream.push(boost::ref(counter));
-        // Use gzip with no compression to get a CRC
-        output_stream.push(
-          boost::iostreams::gzip_compressor(boost::iostreams::gzip_params(0)));
-        output_stream.push(boost::iostreams::file_sink(
-          block_path.string(), std::ios::out | std::ios::binary));
-        serialize(output_stream, group, output_format);
-        if(!output_stream.good())
-          {
-            throw std::runtime_error("Error when writing to: "
-                                     + block_path.string());
-          }
-      }
-      block_file_sizes.at(group.block_index) = counter.num_bytes;
+      const auto block_path
+        = get_block_path(temp_dir, group.block_index, output_format);
+      block_file_sizes.at(group.block_index) = write_data_and_count_bytes(
+        block_path,
+        [&](std::ostream &os) { serialize(os, group, output_format); },
+        output_format == bin);
     }
   El::mpi::Reduce(block_file_sizes.data(), block_file_sizes.size(),
                   El::mpi::SUM, 0, El::mpi::COMM_WORLD);
@@ -121,9 +120,20 @@ void write_sdpb_input_files(
     }
   if(rank == 0)
     {
+      // write control.json and objectives.json
+      boost::filesystem::path control_path = temp_dir / "control.json";
+      boost::filesystem::path objectives_path = temp_dir / "objectives.json";
+      size_t num_control_bytes
+        = write_data_and_count_bytes(control_path, [&](std::ostream &os) {
+            write_control_json(os, num_blocks, command_arguments);
+          });
+      size_t num_objectives_bytes
+        = write_data_and_count_bytes(objectives_path, [&](std::ostream &os) {
+            write_objectives_json(os, objective_const, dual_objective_b);
+          });
+
+      // write all files to sdp.zip archive
       Archive_Writer writer(output_path);
-      const boost::filesystem::path control_path(temp_dir / "control.json"),
-        objectives_path(temp_dir / "objectives.json");
       archive_gzipped_file(control_path, num_control_bytes, writer);
       boost::filesystem::remove(control_path);
 
@@ -133,7 +143,8 @@ void write_sdpb_input_files(
       for(size_t block_index(0); block_index != block_file_sizes.size();
           ++block_index)
         {
-          const auto block_path = get_block_path(block_index);
+          const auto block_path
+            = get_block_path(temp_dir, block_index, output_format);
           archive_gzipped_file(block_path, block_file_sizes.at(block_index),
                                writer);
           boost::filesystem::remove(block_path);
