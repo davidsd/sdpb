@@ -91,21 +91,3 @@ Dual_Constraint_Group::Dual_Constraint_Group(const size_t &Block_index,
   bilinear_bases[1] = sample_bilinear_basis(
     delta2, num_points, m.bilinear_basis, m.sample_points, scaled_samples);
 }
-
-void serialize(std::ostream &os, const Dual_Constraint_Group &group,
-               Block_File_Format format)
-{
-  switch(format)
-    {
-      case bin: {
-        boost::archive::binary_oarchive ar(os);
-        ar << group;
-        break;
-      }
-      case json: {
-        write_block_json(os, group);
-        break;
-      }
-    default: El::RuntimeError("Unknown Block_File_Format: ", format);
-    }
-}

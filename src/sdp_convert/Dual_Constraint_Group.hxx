@@ -55,36 +55,3 @@ public:
   Dual_Constraint_Group(const size_t &Block_index,
                         const Polynomial_Vector_Matrix &m);
 };
-
-void serialize(std::ostream &os, const Dual_Constraint_Group &group,
-               Block_File_Format format);
-
-namespace boost::serialization
-{
-  template <class Archive>
-  void serialize(Archive &ar, Dual_Constraint_Group &group,
-                 const boost::serialization::version_type &)
-  {
-    mp_bitcnt_t precision;
-
-    if(Archive::is_saving::value)
-      precision = El::gmp::Precision();
-
-    ar & precision;
-
-    if(Archive::is_loading::value && precision != El::gmp::Precision())
-      {
-        El::RuntimeError("Read GMP precision: ", precision,
-                         ", expected: ", El::gmp::Precision());
-      }
-
-    ar & group.block_index;
-    ar & group.dim;
-    ar & group.num_points;
-    ar & group.constraint_matrix;
-    ar & group.constraint_constants;
-    ar & group.bilinear_bases;
-  }
-}
-
-BOOST_SERIALIZATION_SPLIT_FREE(Dual_Constraint_Group)
