@@ -1,18 +1,15 @@
 #include "Dual_Constraint_Group.hxx"
 #include "write_vector.hxx"
 #include "../set_stream_precision.hxx"
+#include "Block_File_Format.hxx"
+
+#include <boost/serialization/vector.hpp>
+#include <boost/archive/binary_oarchive.hpp>
 
 #include <iostream>
 
 namespace
 {
-  void write_block_info(std::ostream &output_stream,
-                        const Dual_Constraint_Group &group)
-  {
-    output_stream << "  \"dim\": " << group.dim
-                  << ",\n  \"num_points\": " << (group.num_points) << ",\n";
-  }
-
   void write_matrix(std::ostream &output_stream,
                     const El::Matrix<El::BigFloat> &matrix,
                     const std::string &indentation)
@@ -76,16 +73,41 @@ namespace
     write_matrix(output_stream, group.constraint_matrix, "  ");
     output_stream << "\n";
   }
+
+  void write_block_data_json(std::ostream &output_stream,
+                             const Dual_Constraint_Group &group)
+  {
+    set_stream_precision(output_stream);
+    output_stream << "{\n";
+    write_bilinear_bases(output_stream, group);
+    write_primal_objective_c(output_stream, group);
+    write_free_var_matrix(output_stream, group);
+    output_stream << "}\n";
+  }
+
+  void write_block_data_bin(std::ostream &output_stream,
+                            const Dual_Constraint_Group &group)
+  {
+    boost::archive::binary_oarchive ar(output_stream);
+    // store precision in order to ensure correct deserialization
+    ar << El::gmp::Precision();
+    // write fields in the same order as in Dual_Constraint_Group declaration
+    // TODO use the same order in JSON?
+    ar << group.constraint_matrix;
+    ar << group.constraint_constants;
+    assert(group.bilinear_bases.size() == 2);
+    ar << group.bilinear_bases[0];
+    ar << group.bilinear_bases[1];
+  }
 }
 
-void write_block_json(std::ostream &output_stream,
-                      const Dual_Constraint_Group &group)
+void write_block_data(std::ostream &os, const Dual_Constraint_Group &group,
+                      Block_File_Format format)
 {
-  set_stream_precision(output_stream);
-  output_stream << "{\n";
-  write_block_info(output_stream, group);
-  write_bilinear_bases(output_stream, group);
-  write_primal_objective_c(output_stream, group);
-  write_free_var_matrix(output_stream, group);
-  output_stream << "}\n";
+  switch(format)
+    {
+    case bin: write_block_data_bin(os, group); break;
+    case json: write_block_data_json(os, group); break;
+    default: El::RuntimeError("Unknown Block_File_Format: ", format);
+    }
 }

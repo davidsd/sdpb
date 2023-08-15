@@ -1,6 +1,4 @@
 {
-    "dim" : { "type": "integer"},
-    "num_points" : { "type": "integer"},
     "bilinear_bases_even":
     {
         "type" : "array",
