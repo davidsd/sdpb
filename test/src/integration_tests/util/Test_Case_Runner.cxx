@@ -112,7 +112,26 @@ namespace Test_Util
     os_stdout << stderr_string;
     os_stderr << stderr_string;
 
-    REQUIRE(exit_code == required_exit_code);
+    CAPTURE(exit_code);
+    CAPTURE(required_exit_code);
+    CAPTURE(stderr_string);
+    if(required_exit_code == 0)
+      {
+        REQUIRE(exit_code == 0);
+      }
+    else
+      {
+        REQUIRE(exit_code != 0);
+        if(exit_code != required_exit_code)
+          {
+            // We can get, e.g., code 137 from srun,
+            // when MPI process exits with code 1.
+            // Test should not fail in this case,
+            // so we only print warning.
+            WARN("Expected exit code " << exit_code << ", got "
+                                       << required_exit_code);
+          }
+      }
     if(required_exit_code != 0 && !required_error_msg.empty())
       {
         CAPTURE(required_error_msg);
@@ -149,8 +168,7 @@ namespace Test_Util
   {
     std::vector<std::string> args_with_mpi(args);
     args_with_mpi.insert(args_with_mpi.begin(), build_mpirun_prefix(numProcs));
-    run(args_with_mpi, named_args, required_exit_code,
-        required_error_msg);
+    run(args_with_mpi, named_args, required_exit_code, required_error_msg);
   }
 
   boost::filesystem::path Test_Case_Runner::unzip_to_temp_dir(

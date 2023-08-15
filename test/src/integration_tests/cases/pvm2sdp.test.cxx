@@ -21,7 +21,7 @@ TEST_CASE("pvm2sdp")
 
     auto output_orig = (Test_Config::test_data_dir / "sdp.zip").string();
 
-    Test_Util::REQUIRE_Equal::diff_sdp_zip(output, output_orig, 1024,
+    Test_Util::REQUIRE_Equal::diff_sdp_zip(output, output_orig, 1024, 1024,
                                            runner.create_nested("diff"));
   }
 

@@ -22,5 +22,5 @@ TEST_CASE("spectrum")
 
   auto out = output_dir / "spectrum.json";
   auto out_orig = data_dir / "spectrum_orig.json";
-  Test_Util::REQUIRE_Equal::diff_spectrum(out, out_orig, 1024);
+  Test_Util::REQUIRE_Equal::diff_spectrum(out, out_orig, 1024, 1024);
 }

@@ -15,11 +15,8 @@ namespace
     int height;
     int width;
     Float_Vector elements;
-    Parse_Matrix_Txt(const boost::filesystem::path &path,
-                     unsigned int binary_precision)
+    explicit Parse_Matrix_Txt(const boost::filesystem::path &path)
     {
-      Float_Binary_Precision _(binary_precision);
-
       CAPTURE(path);
       REQUIRE(is_regular_file(path));
       boost::filesystem::ifstream is(path);
@@ -47,11 +44,8 @@ namespace
     std::string terminate_reason;
     std::map<std::string, Float> float_map;
 
-    Parse_Sdpb_Out_Txt(const boost::filesystem::path &path,
-                       unsigned int binary_precision)
+    explicit Parse_Sdpb_Out_Txt(const boost::filesystem::path &path)
     {
-      Float_Binary_Precision _(binary_precision);
-
       CAPTURE(path);
       REQUIRE(is_regular_file(path));
       boost::filesystem::ifstream is(path);
@@ -92,28 +86,26 @@ namespace
   // Compare matrices written by SDPB save_solution() method,
   // e.g. y.txt or X.txt
   void diff_matrix_txt(const boost::filesystem::path &a_matrix_txt,
-                       const boost::filesystem::path &b_matrix_txt,
-                       unsigned int binary_precision)
+                       const boost::filesystem::path &b_matrix_txt)
   {
     CAPTURE(a_matrix_txt);
     CAPTURE(b_matrix_txt);
-    Parse_Matrix_Txt a(a_matrix_txt, binary_precision);
-    Parse_Matrix_Txt b(b_matrix_txt, binary_precision);
-    diff(a.height, b.height);
-    diff(a.width, b.width);
-    diff(a.elements, b.elements);
+    Parse_Matrix_Txt a(a_matrix_txt);
+    Parse_Matrix_Txt b(b_matrix_txt);
+    DIFF(a.height, b.height);
+    DIFF(a.width, b.width);
+    DIFF(a.elements, b.elements);
   }
 
   // Compare out.txt
   void diff_sdpb_out_txt(const boost::filesystem::path &a_out_txt,
                          const boost::filesystem::path &b_out_txt,
-                         unsigned int binary_precision,
                          const std::vector<std::string> &keys_to_compare)
   {
     CAPTURE(a_out_txt);
     CAPTURE(b_out_txt);
-    Parse_Sdpb_Out_Txt a(a_out_txt, binary_precision);
-    Parse_Sdpb_Out_Txt b(a_out_txt, binary_precision);
+    Parse_Sdpb_Out_Txt a(a_out_txt);
+    Parse_Sdpb_Out_Txt b(a_out_txt);
 
     auto keys = keys_to_compare;
     // By default, test each key except for "Solver runtime"
@@ -139,7 +131,7 @@ namespace
         REQUIRE(a_map.find(key) != a_map.end());
         REQUIRE(b_map.find(key) != b_map.end());
 
-        diff(a_map[key], b_map[key]);
+        DIFF(a_map[key], b_map[key]);
       }
   }
 }
@@ -149,7 +141,8 @@ namespace Test_Util::REQUIRE_Equal
 {
   void diff_sdpb_output_dir(const boost::filesystem::path &a_out_dir,
                             const boost::filesystem::path &b_out_dir,
-                            unsigned int binary_precision,
+                            unsigned int input_precision,
+                            unsigned int diff_precision,
                             const std::vector<std::string> &filenames,
                             const std::vector<std::string> &out_txt_keys)
   {
@@ -158,6 +151,7 @@ namespace Test_Util::REQUIRE_Equal
     CAPTURE(b_out_dir);
     REQUIRE(is_directory(a_out_dir));
     REQUIRE(is_directory(b_out_dir));
+    Float_Binary_Precision prec(input_precision, diff_precision);
 
     std::vector<std::string> my_filenames = filenames;
     if(my_filenames.empty())
@@ -185,9 +179,9 @@ namespace Test_Util::REQUIRE_Equal
         auto b = b_out_dir / name;
 
         if(name == "out.txt")
-          diff_sdpb_out_txt(a, b, binary_precision, out_txt_keys);
+          diff_sdpb_out_txt(a, b, out_txt_keys);
         else
-          diff_matrix_txt(a, b, binary_precision);
+          diff_matrix_txt(a, b);
       }
   }
 }
