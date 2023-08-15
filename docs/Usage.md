@@ -48,7 +48,7 @@ generate an NSV file with the command
     find input/ -name "*.m" -print0 > file_list.nsv
 
 `sdp2input` assumes that files ending with `.nsv` are NSV,
-files ending with `.json` are JSON, and everything else is
+files ending with `.json` are JSON, and `.m` is
 Mathematica.  NSV files can also recursively reference other NSV
 files.
 
@@ -97,7 +97,7 @@ with many xml files, you can generate a file list with the command
     find input/ -print0 -name "*.xml" > file_list.nsv
 
 `pvm2sdp` assumes that anything with the `.nsv` extension is a null
-separated file list, and everything else is an xml file.  File lists
+separated file list, and `.xml` is an xml file. File lists
 can also recursively reference other file lists.  So running
 
     find test -print0 -name "*.nsv" > file_list_list.nsv
