@@ -106,7 +106,7 @@ manager such as [Homebrew](https://brew.sh).
 
         ./waf configure --elemental-dir=$HOME/install
     
-7. Type `./waf` to build the executable in `build/sdpb`.  This will create eight executables in the `build/` directory:
+7. Type `./waf` to build the executable in `build/sdpb`.  This will create nine executables in the `build/` directory:
 
     * `sdpb`: Semidefinite program solver
       * `pvm2sdp`: Convert SDP's in XML and Mathematica format to `sdpb` input.
@@ -116,18 +116,28 @@ manager such as [Homebrew](https://brew.sh).
       * `sdp2functions`: Convert SDP's in JSON and Mathematica format to `outer_limits` input.
     * `spectrum`: Extract the spectrum given the solution and XML/JSON/Mathematica.
     * `approx_objective`: Compute an approximate objective given a solution to a nearby SDP.
+    * `unit_tests`: Unit tests.
     * `integration_tests`: End-to-end tests for `sdpb` and other executables. The tests use data from `test/data/` folder.
 
+8. You can check the installation by running `unit_tests` and `integration_tests` (takes up to several minutes):
 8. You can check the installation by running `integration_tests` (takes up to several minutes):
 
+        mpirun -n 2 ./build/unit_tests
         ./build/integration_tests
 
-   If some test case fails, you may check the test logs in `test/out/log/` folder and files generated during the test run in `test/out/` folder.
+   If some integration test case fails, you may check the test logs in `test/out/log/` folder and files generated during the test run in `test/out/` folder.
 
-    By default, the testing script calls uses `mpirun` command to run `sdpb` and other executables. You can also provide a custom command for your HPC, e.g.:
+    By default, `integration_tests` uses `mpirun` command to run `sdpb` and other executables. You can also provide a custom command for your HPC, e.g.:
 
         ./build/integration_tests --mpirun="srun --mpi=pmi2" 
     For more command-line options, see [Catch2 documentation](https://github.com/catchorg/Catch2/blob/devel/docs/command-line.md).
+ 
+    You can also run both unit and integration tests via the script
+
+        ./test/run_all_tests.sh 
+    It also supports custom mpirun command, e.g. 
+
+        ./test/run_all_tests.sh srun --mpi=pmi2
 
 Running
    

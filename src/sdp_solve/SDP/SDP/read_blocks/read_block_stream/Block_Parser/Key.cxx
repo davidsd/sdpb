@@ -5,17 +5,7 @@ bool Block_Parser::Key(const Ch *str, rapidjson::SizeType length, bool)
   std::string key(str, length);
   if(inside)
     {
-      if(parsing_dim)
-        {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside '" + dim_name + "'.");
-        }
-      else if(parsing_num_points)
-        {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside '" + num_points_name + "'.");
-        }
-      else if(parsing_bilinear_bases_even)
+      if(parsing_bilinear_bases_even)
         {
           throw std::runtime_error("Invalid input file.  Found the key '" + key
                                    + "' inside '"
@@ -37,15 +27,7 @@ bool Block_Parser::Key(const Ch *str, rapidjson::SizeType length, bool)
           throw std::runtime_error("Invalid input file.  Found the key '" + key
                                    + "' inside '" + B_state.name + "'.");
         }
-      else if(key == dim_name)
-        {
-          parsing_dim = true;
-        }
-      else if(key == num_points_name)
-        {
-          parsing_num_points = true;
-        }
-      else if(key == bilinear_bases_even_state.name)
+      if(key == bilinear_bases_even_state.name)
         {
           parsing_bilinear_bases_even = true;
         }

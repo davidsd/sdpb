@@ -10,14 +10,15 @@
 
 namespace
 {
-  void end_to_end_test(const std::string &name,
-                       const std::string &default_sdpb_args, int num_procs,
-                       int precision, int sdp_zip_diff_precision,
-                       int sdpb_output_diff_precision,
-                       const std::vector<std::string> &out_txt_keys = {})
+  void
+  end_to_end_test(const std::string &name,
+                  const std::string &default_sdpb_args,
+                  const std::string &sdp_format, int num_procs, int precision,
+                  int sdp_zip_diff_precision, int sdpb_output_diff_precision,
+                  const std::vector<std::string> &out_txt_keys = {})
   {
-    Test_Util::Test_Case_Runner runner(name);
-    const auto &data_dir = runner.data_dir;
+    Test_Util::Test_Case_Runner runner(name + "/" + sdp_format);
+    const auto &data_dir = runner.data_dir.parent_path();
     const auto &output_dir = runner.output_dir;
 
     auto sdp_orig_zip = (data_dir / ("sdp.orig.zip")).string();
@@ -28,6 +29,7 @@ namespace
       Test_Util::Test_Case_Runner::Named_Args_Map args{
         {"--input", (data_dir / "json" / "file_list.nsv").string()},
         {"--output", sdp_zip},
+        {"--outputFormat", sdp_format},
         {"--precision", std::to_string(precision)}};
 
       runner.create_nested("sdp2input/run")
@@ -89,7 +91,10 @@ TEST_CASE("end-to-end_tests")
         "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
         "--procGranularity 1 --writeSolution y";
     int sdpb_output_diff_precision = 600;
-    end_to_end_test(name, default_sdpb_args, num_procs, precision,
+    // This test is slow, we don't want to run it twice
+    // json/bin correctness is checked by other tests below,
+    // so we use only binary SDP here
+    end_to_end_test(name, default_sdpb_args, "bin", num_procs, precision,
                     sdp_zip_diff_precision, sdpb_output_diff_precision);
   }
 
@@ -117,9 +122,15 @@ TEST_CASE("end-to-end_tests")
       std::vector<std::string> out_txt_keys
         = {"terminateReason", "primalObjective", "dualObjective", "dualityGap",
            "dualError"};
-      end_to_end_test(name, default_sdpb_args, num_procs, precision,
-                      sdp_zip_diff_precision, sdpb_output_diff_precision,
-                      out_txt_keys);
+      for(auto &sdp_format : {"bin", "json"})
+        {
+          DYNAMIC_SECTION(sdp_format)
+          {
+            end_to_end_test(name, default_sdpb_args, sdp_format, num_procs,
+                            precision, sdp_zip_diff_precision,
+                            sdpb_output_diff_precision, out_txt_keys);
+          }
+        }
     }
     SECTION("dual_feasible_jump")
     {
@@ -128,9 +139,15 @@ TEST_CASE("end-to-end_tests")
       std::vector<std::string> out_txt_keys
         = {"terminateReason", "primalObjective", "dualObjective", "dualityGap",
            "primalError"};
-      end_to_end_test(name, default_sdpb_args, num_procs, precision,
-                      sdp_zip_diff_precision, sdpb_output_diff_precision,
-                      out_txt_keys);
+      for(auto &sdp_format : {"bin", "json"})
+        {
+          DYNAMIC_SECTION(sdp_format)
+          {
+            end_to_end_test(name, default_sdpb_args, sdp_format, num_procs,
+                            precision, sdp_zip_diff_precision,
+                            sdpb_output_diff_precision, out_txt_keys);
+          }
+        }
     }
   }
 }

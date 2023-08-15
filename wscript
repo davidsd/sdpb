@@ -87,7 +87,7 @@ def build(bld):
     bld.stlib(source=sdp_solve_sources,
               target='sdp_solve',
               cxxflags=default_flags,
-              use=use_packages)
+              use=use_packages + ['sdp_convert'])
     
     # SDPB executable
     bld.program(source=['src/sdpb/main.cxx',
@@ -102,19 +102,17 @@ def build(bld):
                 use=use_packages + ['sdp_solve']
                 )
 
-    sdp_convert_sources=['src/sdp_convert/Dual_Constraint_Group/Dual_Constraint_Group/Dual_Constraint_Group.cxx',
-                         'src/sdp_convert/Dual_Constraint_Group/Dual_Constraint_Group/sample_bilinear_basis.cxx',
-                         'src/sdp_convert/write_objectives.cxx',
-                         'src/sdp_convert/write_bilinear_bases.cxx',
-                         'src/sdp_convert/write_blocks.cxx',
-                         'src/sdp_convert/write_primal_objective_c.cxx',
-                         'src/sdp_convert/write_free_var_matrix.cxx',
-                         'src/sdp_convert/write_sdpb_input_files.cxx',
-                         'src/sdp_convert/write_control.cxx',
-                         'src/sdp_convert/Archive_Writer/Archive_Writer.cxx',
-                         'src/sdp_convert/Archive_Writer/write_entry.cxx',
-                         'src/sdp_convert/Archive_Entry.cxx'
-                         ]
+    sdp_convert_sources = ['src/sdp_convert/Dual_Constraint_Group/Dual_Constraint_Group.cxx',
+                           'src/sdp_convert/Dual_Constraint_Group/sample_bilinear_basis.cxx',
+                           'src/sdp_convert/write_block_data.cxx',
+                           'src/sdp_convert/write_block_info_json.cxx',
+                           'src/sdp_convert/write_objectives_json.cxx',
+                           'src/sdp_convert/write_sdpb_input_files.cxx',
+                           'src/sdp_convert/write_control_json.cxx',
+                           'src/sdp_convert/Archive_Writer/Archive_Writer.cxx',
+                           'src/sdp_convert/Archive_Writer/write_entry.cxx',
+                           'src/sdp_convert/Archive_Entry.cxx'
+                           ]
 
     bld.stlib(source=sdp_convert_sources,
               target='sdp_convert',
@@ -310,4 +308,12 @@ def build(bld):
                 cxxflags=default_flags + ['-D CATCH_AMALGAMATED_CUSTOM_MAIN'],
                 use=use_packages,
                 includes=default_includes + ['test/src']
+                )
+    bld.program(source=['external/catch2/catch_amalgamated.cpp',
+                        'test/src/unit_tests/main.cxx',
+                        'test/src/unit_tests/cases/boost_serialization.test.cxx'],
+                target='unit_tests',
+                cxxflags=default_flags + ['-D CATCH_AMALGAMATED_CUSTOM_MAIN'],
+                use=use_packages,
+                includes=default_includes
                 )

@@ -25,13 +25,19 @@
 //
 
 #include "Polynomial_Vector_Matrix.hxx"
+#include "../boost_serialization.hxx"
+#include "Block_File_Format.hxx"
+
+#include <boost/serialization/vector.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
 
 class Dual_Constraint_Group
 {
 public:
-  size_t block_index;
-  size_t dim;
-  size_t degree;
+  size_t block_index{};
+  size_t dim{};
+  size_t num_points{};
 
   // constraint_matrix = B, a P'xN Matrix
   El::Matrix<El::BigFloat> constraint_matrix;
@@ -45,6 +51,7 @@ public:
   // `bilinear_bases[j]' above for some fixed j.
   std::array<El::Matrix<El::BigFloat>, 2> bilinear_bases;
 
+  Dual_Constraint_Group() = default;
   Dual_Constraint_Group(const size_t &Block_index,
                         const Polynomial_Vector_Matrix &m);
 };

@@ -1,8 +1,10 @@
 #include "../set_bases_blocks.hxx"
 #include "../../../SDP.hxx"
 #include "../../../Archive_Reader.hxx"
+#include "../../../../sdp_convert.hxx"
 
 #include <algorithm>
+#include <utility>
 
 namespace
 {
@@ -18,11 +20,22 @@ namespace
   };
   inline bool operator<(const std::string &a, const Entry &b) { return a < b.s; }
   inline bool operator<(const Entry &a, const std::string &b) { return a.s < b; }
+
+  Block_File_Format get_block_format(const boost::filesystem::path &block_path)
+  {
+    auto extension = block_path.extension();
+    if(extension == ".json")
+      return Block_File_Format::json;
+    else if(extension == ".bin")
+      return Block_File_Format::bin;
+    El::RuntimeError("Unknown block file extension: ", block_path);
+  }
 }
 
 void read_block_stream(
   const El::Grid &grid, const size_t &index, std::istream &block_stream,
-  SDP &sdp, std::vector<El::Matrix<El::BigFloat>> &bilinear_bases_local);
+  Block_File_Format format, SDP &sdp,
+  std::vector<El::Matrix<El::BigFloat>> &bilinear_bases_local);
 
 void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
                  const Block_Info &block_info, SDP &sdp)
@@ -42,8 +55,7 @@ void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
       for(size_t index(0); index != num_blocks; ++index)
         {
           block_names.emplace_back(
-            "block_" + std::to_string(block_info.block_indices[index])
-              + ".json",
+            "block_data_" + std::to_string(block_info.block_indices[index]),
             index);
         }
       std::sort(block_names.begin(), block_names.end());
@@ -51,14 +63,19 @@ void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
       Archive_Reader reader(sdp_path);
       while(reader.next_entry())
         {
-          const std::string entry(archive_entry_pathname(reader.entry_ptr));
-          auto block_entry(std::equal_range(block_names.begin(),
-                                            block_names.end(), entry));
+          const boost::filesystem::path curr_block_path
+            = archive_entry_pathname(reader.entry_ptr);
+          const std::string extension = curr_block_path.extension().string();
+          Block_File_Format format = get_block_format(curr_block_path);
+          const std::string curr_block_name
+            = boost::filesystem::change_extension(curr_block_path, "").string();
+          auto block_entry(std::equal_range(
+            block_names.begin(), block_names.end(), curr_block_name));
           if(block_entry.first != block_entry.second)
             {
               std::istream stream(&reader);
-              read_block_stream(grid, block_entry.first->index, stream, sdp,
-                                bilinear_bases_local);
+              read_block_stream(grid, block_entry.first->index, stream, format,
+                                sdp, bilinear_bases_local);
             }
         }
     }
@@ -66,12 +83,19 @@ void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
     {
       for(size_t index(0); index != num_blocks; ++index)
         {
-          const boost::filesystem::path block_path(
+          boost::filesystem::path block_path(
             sdp_path
-            / ("block_" + std::to_string(block_info.block_indices.at(index))
-               + ".json"));
-          boost::filesystem::ifstream block_stream(block_path);
-          read_block_stream(grid, index, block_stream, sdp,
+            / ("block_data_"
+               + std::to_string(block_info.block_indices.at(index)) + ".bin"));
+          if(!exists(block_path))
+            block_path = change_extension(block_path, ".json");
+          if(!exists(block_path))
+            El::RuntimeError("Block not found: ", block_path);
+
+          Block_File_Format format = get_block_format(block_path);
+          boost::filesystem::ifstream block_stream(block_path,
+                                                   std::ios::binary);
+          read_block_stream(grid, index, block_stream, format, sdp,
                             bilinear_bases_local);
         }
     }

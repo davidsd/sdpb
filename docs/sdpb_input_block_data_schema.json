@@ -1,0 +1,36 @@
+{
+    "bilinear_bases_even":
+    {
+        "type" : "array",
+        "items" :
+        {
+            "type" : "array",
+            "items" : { "type" : "string" }
+        }
+    },
+    "bilinear_bases_odd":
+    {
+        "type" : "array",
+        "items" :
+        {
+            "type" : "array",
+            "items" : { "type" : "string" }
+        }
+    },
+    "c":
+    {
+        "type" : "array",
+        "items" : { "type" : "string" }
+    },
+    "B":
+    {
+        "type" : "array",
+        "items" :
+        {
+            "type" : "array",
+            "items" : { "type" : "string" }
+        }
+    },
+    "required" :["dim", "num_points", "bilinear_bases_even",
+                 "bilinear_bases_odd", "c", "B"]
+}

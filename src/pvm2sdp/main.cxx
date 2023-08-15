@@ -20,7 +20,10 @@ int main(int argc, char **argv)
       int precision;
       std::vector<boost::filesystem::path> input_files;
       boost::filesystem::path output_path;
-      bool debug = false; // TODO read from command line
+
+      // TODO read the following from command line:
+      Block_File_Format output_format = json;
+      bool debug = false;
 
       parse_command_line(argc, argv, precision, input_files, output_path);
       El::gmp::SetPrecision(precision);
@@ -48,9 +51,9 @@ int main(int argc, char **argv)
           throw std::runtime_error("Output file '" + output_path.string()
                                    + "' exists and is a directory");
         }
-      write_sdpb_input_files(output_path, rank, num_blocks, command_arguments,
-                             objective_const, dual_objective_b,
-                             dual_constraint_groups, debug);
+      write_sdpb_input_files(output_path, output_format, rank, num_blocks,
+                             command_arguments, objective_const,
+                             dual_objective_b, dual_constraint_groups, debug);
     }
   catch(std::exception &e)
     {

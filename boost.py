@@ -44,7 +44,7 @@ def configure(conf):
         boost_libs=conf.options.boost_libs.split()
     else:
         boost_libs=['boost_system', 'boost_filesystem', 'boost_date_time',
-                    'boost_program_options', 'boost_iostreams']
+                    'boost_program_options', 'boost_iostreams', 'boost_serialization']
 
     conf.check_cxx(msg="Checking for Boost",
                    fragment="""#include <boost/iostreams/filter/gzip.hpp>
@@ -54,6 +54,7 @@ def configure(conf):
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
 #include <boost/process.hpp>
+#include <boost/serialization/serialization.hpp>
 int main()
 {
 boost::posix_time::second_clock::local_time();
@@ -63,6 +64,7 @@ boost::iostreams::file_sink("foo");
 boost::iostreams::filtering_ostream();
 boost::iostreams::gzip_compressor();
 boost::process::ipstream pipe_stream;
+boost::serialization::version_type version;
 }
 """,
                    includes=boost_incdir,
