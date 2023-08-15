@@ -11,19 +11,15 @@ using namespace std::string_literals;
 struct Block_Parser
     : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>, Block_Parser>
 {
-  bool inside = false, parsing_dim = false, parsing_num_points = false,
-       parsing_c = false, parsing_B = false,
+  bool inside = false, parsing_c = false, parsing_B = false,
        parsing_bilinear_bases_even = false, parsing_bilinear_bases_odd = false;
 
-  const std::string dim_name = "dim"s, num_points_name = "num_points"s;
-  size_t dim;
-  size_t num_points;
   Vector_State<Number_State<El::BigFloat>> c_state;
   Vector_State<Vector_State<Number_State<El::BigFloat>>> B_state,
     bilinear_bases_even_state, bilinear_bases_odd_state;
 
   Block_Parser()
-      : dim(0), num_points(0), c_state({"c"s, ""s}), B_state({"B"s, ""s, ""s}),
+      : c_state({"c"s, ""s}), B_state({"B"s, ""s, ""s}),
         bilinear_bases_even_state({"bilinear_bases_even"s, ""s, ""s}),
         bilinear_bases_odd_state({"bilinear_bases_odd"s, ""s, ""s})
   {}
@@ -32,23 +28,7 @@ struct Block_Parser
   bool Bool(bool) { throw std::runtime_error("Bool not allowed"); }
   template <typename T> bool parse_integer(const T &i)
   {
-    if(parsing_dim)
-      {
-        dim = i;
-        parsing_dim = false;
-      }
-    else if(parsing_num_points)
-      {
-        num_points = i;
-        parsing_num_points = false;
-      }
-    else
-      {
-        throw std::runtime_error("Invalid input file.  Found the integer '"
-                                 + std::to_string(i) + "' outside of "
-                                 + dim_name + " or " + num_points_name + ".");
-      }
-    return true;
+    throw std::runtime_error("Integer not allowed");
   }
   bool Int(int i) { return parse_integer(i); }
   bool Uint(unsigned i) { return parse_integer(i); }

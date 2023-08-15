@@ -41,17 +41,28 @@ namespace
     return result;
   }
 
-  // TODO move this code closer to Dual_Constraint_Group definition.
-  Dual_Constraint_Group
-  read_Dual_Constraint_Group(size_t index, std::istream &block_stream,
-                             Block_File_Format format)
+  // TODO move this code closer to Dual_Constraint_Group definition?
+  void parse_block_data(std::istream &block_stream, Block_File_Format format,
+                        El::Matrix<El::BigFloat> &constraint_matrix,
+                        std::vector<El::BigFloat> &constraint_constants,
+                        El::Matrix<El::BigFloat> &bilinear_bases_even,
+                        El::Matrix<El::BigFloat> &bilinear_bases_odd)
   {
-    Dual_Constraint_Group group;
     if(format == bin)
       {
-        // NB: this should match Dual_Constraint_Group.cxx - serialize_bin()
+        // NB: this should match sdp_convert/write_block_data.cxx
         boost::archive::binary_iarchive ar(block_stream);
-        ar >> group;
+        mp_bitcnt_t precision;
+        ar >> precision;
+        if(precision != El::gmp::Precision())
+          {
+            El::RuntimeError("Read GMP precision: ", precision,
+                             ", expected: ", El::gmp::Precision());
+          }
+        ar >> constraint_matrix;
+        ar >> constraint_constants;
+        ar >> bilinear_bases_even;
+        ar >> bilinear_bases_odd;
       }
     else if(format == json)
       {
@@ -60,19 +71,15 @@ namespace
         rapidjson::Reader reader;
         reader.Parse(wrapper, parser);
 
-        group.block_index = index;
-        group.dim = parser.dim;
-        group.num_points = parser.num_points;
-        group.constraint_matrix = to_matrix(parser.B_state);
-        group.constraint_constants = parser.c_state.value;
-        group.bilinear_bases[0] = to_matrix(parser.bilinear_bases_even_state);
-        group.bilinear_bases[1] = to_matrix(parser.bilinear_bases_odd_state);
+        constraint_matrix = to_matrix(parser.B_state);
+        constraint_constants = parser.c_state.value;
+        bilinear_bases_even = to_matrix(parser.bilinear_bases_even_state);
+        bilinear_bases_odd = to_matrix(parser.bilinear_bases_odd_state);
       }
     else
       {
         El::RuntimeError("Unknown Block_File_Format: ", format);
       }
-    return group;
   }
 }
 
@@ -81,29 +88,35 @@ void read_block_stream(
   Block_File_Format format, SDP &sdp,
   std::vector<El::Matrix<El::BigFloat>> &bilinear_bases_local)
 {
-  auto group = read_Dual_Constraint_Group(index, block_stream, format);
+  El::Matrix<El::BigFloat> constraint_matrix;
+  std::vector<El::BigFloat> constraint_constants;
+  El::Matrix<El::BigFloat> bilinear_bases_even;
+  El::Matrix<El::BigFloat> bilinear_bases_odd;
+
+  parse_block_data(block_stream, format, constraint_matrix,
+                   constraint_constants, bilinear_bases_even,
+                   bilinear_bases_odd);
+
   auto &c(sdp.primal_objective_c.blocks.at(index));
   c.SetGrid(grid);
-  c.Resize(group.constraint_constants.size(), 1);
+  c.Resize(constraint_constants.size(), 1);
   size_t local_height(c.LocalHeight());
   if(c.GlobalCol(0) == 0)
     {
       for(size_t row = 0; row < local_height; ++row)
         {
           const size_t global_row(c.GlobalRow(row));
-          c.SetLocal(row, 0, group.constraint_constants.at(global_row));
+          c.SetLocal(row, 0, constraint_constants.at(global_row));
         }
     }
 
-  set_bilinear(group.bilinear_bases[0], bilinear_bases_local.at(2 * index));
-  set_bilinear(group.bilinear_bases[1],
-               bilinear_bases_local.at(2 * index + 1));
+  set_bilinear(bilinear_bases_even, bilinear_bases_local.at(2 * index));
+  set_bilinear(bilinear_bases_odd, bilinear_bases_local.at(2 * index + 1));
 
   {
     auto &B(sdp.free_var_matrix.blocks.at(index));
     B.SetGrid(grid);
-    B.Resize(group.constraint_matrix.Height(),
-             group.constraint_matrix.Width());
+    B.Resize(constraint_matrix.Height(), constraint_matrix.Width());
     for(int64_t local_row(0); local_row != B.LocalHeight(); ++local_row)
       {
         const El::Int global_row(B.GlobalRow(local_row));
@@ -112,7 +125,7 @@ void read_block_stream(
           {
             const El::Int global_column(B.GlobalCol(local_column));
             B.SetLocal(local_row, local_column,
-                       group.constraint_matrix.Get(global_row, global_column));
+                       constraint_matrix.Get(global_row, global_column));
           }
       }
   }

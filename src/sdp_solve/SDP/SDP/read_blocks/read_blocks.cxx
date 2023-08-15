@@ -55,7 +55,8 @@ void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
       for(size_t index(0); index != num_blocks; ++index)
         {
           block_names.emplace_back(
-            "block_" + std::to_string(block_info.block_indices[index]), index);
+            "block_data_" + std::to_string(block_info.block_indices[index]),
+            index);
         }
       std::sort(block_names.begin(), block_names.end());
       
@@ -84,8 +85,8 @@ void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
         {
           boost::filesystem::path block_path(
             sdp_path
-            / ("block_" + std::to_string(block_info.block_indices.at(index))
-               + ".bin"));
+            / ("block_data_"
+               + std::to_string(block_info.block_indices.at(index)) + ".bin"));
           if(!exists(block_path))
             block_path = change_extension(block_path, ".json");
           if(!exists(block_path))

@@ -2,13 +2,14 @@
 
 #include "Float.hxx"
 #include "json.hxx"
-
-#include "sdp_convert/Dual_Constraint_Group.hxx"
+#include "boost_serialization.hxx"
 
 #include <catch2/catch_amalgamated.hpp>
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/serialization/vector.hpp>
 
 using namespace Test_Util::Json;
 
@@ -53,30 +54,50 @@ namespace
     }
   };
 
-  struct Parse_Block
+  struct Parse_Block_Info_Json : boost::noncopyable
   {
-    Dual_Constraint_Group group;
+    size_t dim;
+    size_t num_points;
+    explicit Parse_Block_Info_Json(const boost::filesystem::path &path)
+    {
+      CAPTURE(path);
+      REQUIRE(exists(path));
+      boost::filesystem::ifstream is(path);
+      rapidjson::IStreamWrapper wrapper(is);
+      rapidjson::Document document;
+      document.ParseStream(wrapper);
 
-    explicit Parse_Block(const boost::filesystem::path &block_path_no_extension)
+      dim = document["dim"].GetInt();
+      num_points = document["num_points"].GetInt();
+    }
+  };
+
+  struct Parse_Block_Data
+  {
+    Float_Matrix bilinear_bases_even;
+    Float_Matrix bilinear_bases_odd;
+    Float_Vector constraint_constants;
+    Float_Matrix constraint_matrix;
+    explicit Parse_Block_Data(
+      const boost::filesystem::path &block_path_no_extension)
     {
       CAPTURE(block_path_no_extension);
 
       auto block_path = change_extension(block_path_no_extension, ".bin");
       if(exists(block_path))
         {
-          group = parse_bin(block_path);
+          parse_bin(block_path);
         }
       else
         {
           block_path = change_extension(block_path_no_extension, ".json");
           REQUIRE(exists(block_path));
-          group = parse_json(block_path);
+          parse_json(block_path);
         }
     }
 
   private:
-    static Dual_Constraint_Group
-    parse_json(const boost::filesystem::path &block_path)
+    void parse_json(const boost::filesystem::path &block_path)
     {
       CAPTURE(block_path);
       boost::filesystem::ifstream is(block_path);
@@ -84,26 +105,24 @@ namespace
       rapidjson::Document document;
       document.ParseStream(wrapper);
 
-      Dual_Constraint_Group result;
-      result.dim = document["dim"].GetInt();
-      result.num_points = document["num_points"].GetInt();
-      result.bilinear_bases[0]
+      bilinear_bases_even
         = parse_Float_Matrix(document["bilinear_bases_even"]);
-      result.bilinear_bases[1]
-        = parse_Float_Matrix(document["bilinear_bases_odd"]);
-      result.constraint_constants = parse_Float_Vector(document["c"]);
-      result.constraint_matrix = parse_Float_Matrix(document["B"]);
-      return result;
+      bilinear_bases_odd = parse_Float_Matrix(document["bilinear_bases_odd"]);
+      constraint_constants = parse_Float_Vector(document["c"]);
+      constraint_matrix = parse_Float_Matrix(document["B"]);
     }
-    static Dual_Constraint_Group
-    parse_bin(const boost::filesystem::path &block_path)
+    void parse_bin(const boost::filesystem::path &block_path)
     {
       CAPTURE(block_path);
       boost::filesystem::ifstream is(block_path, std::ios::binary);
       boost::archive::binary_iarchive ar(is);
-      Dual_Constraint_Group result;
-      ar >> result;
-      return result;
+      mp_bitcnt_t precision;
+      ar >> precision;
+      REQUIRE(precision == El::gmp::Precision());
+      ar >> constraint_matrix;
+      ar >> constraint_constants;
+      ar >> bilinear_bases_even;
+      ar >> bilinear_bases_odd;
     }
   };
 }
@@ -136,23 +155,34 @@ namespace
     DIFF(a.b, b.b);
   }
 
-  void
-  diff_block_file(const boost::filesystem::path &a_block_path_no_extension,
-                  const boost::filesystem::path &b_block_path_no_extension)
+  void diff_block_info_json(const boost::filesystem::path &a_block_info_path,
+                            const boost::filesystem::path &b_block_info_path)
   {
-    INFO("diff block files");
+    INFO("diff block_info_XXX.json files");
+    CAPTURE(a_block_info_path);
+    CAPTURE(b_block_info_path);
+
+    Parse_Block_Info_Json a(a_block_info_path);
+    Parse_Block_Info_Json b(b_block_info_path);
+
+    DIFF(a.dim, b.dim);
+    DIFF(a.num_points, b.num_points);
+  }
+  void diff_block_data_file(
+    const boost::filesystem::path &a_block_path_no_extension,
+    const boost::filesystem::path &b_block_path_no_extension)
+  {
+    INFO("diff block_data_XXX files");
     CAPTURE(a_block_path_no_extension);
     CAPTURE(b_block_path_no_extension);
 
-    Parse_Block a(a_block_path_no_extension);
-    Parse_Block b(b_block_path_no_extension);
+    Parse_Block_Data a(a_block_path_no_extension);
+    Parse_Block_Data b(b_block_path_no_extension);
 
-    DIFF(a.group.dim, b.group.dim);
-    DIFF(a.group.num_points, b.group.num_points);
-    DIFF(a.group.bilinear_bases[0], b.group.bilinear_bases[0]);
-    DIFF(a.group.bilinear_bases[1], b.group.bilinear_bases[1]);
-    DIFF(a.group.constraint_constants, b.group.constraint_constants);
-    DIFF(a.group.constraint_matrix, b.group.constraint_matrix);
+    DIFF(a.bilinear_bases_even, b.bilinear_bases_even);
+    DIFF(a.bilinear_bases_odd, b.bilinear_bases_odd);
+    DIFF(a.constraint_constants, b.constraint_constants);
+    DIFF(a.constraint_matrix, b.constraint_matrix);
   }
 }
 
@@ -175,8 +205,11 @@ namespace Test_Util::REQUIRE_Equal
     Parse_Control_Json control(a / "control.json");
     for(int i = 0; i < control.num_blocks; ++i)
       {
-        auto block_name = "block_" + std::to_string(i);
-        diff_block_file(a / block_name, b / block_name);
+        auto block_info_name = "block_info_" + std::to_string(i) + ".json";
+        diff_block_info_json(a / block_info_name, b / block_info_name);
+
+        auto block_data_name = "block_data_" + std::to_string(i);
+        diff_block_data_file(a / block_data_name, b / block_data_name);
       }
   }
 }

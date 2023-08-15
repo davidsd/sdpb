@@ -11,8 +11,8 @@ manage.  Also, the zip format has a built-in checksum to detect
 corruption.
 
 Inside the zip file, `SDPB` expects to find `control.json`,
-`objectives.json`, and a file for every block (`block_0.json`,
-`block_1.json`, `block_2.json`, ...)
+`objectives.json`, and two files for every block (`block_info_0.json`, `block_data_0.json`,
+`block_info_1.json`, `block_data_2.json`, ...)
 
 The main part of `control.json` is listing the number of blocks.
 `sdp2input` and `pvm2sdp` will also include a copy of the command used
@@ -21,8 +21,13 @@ to create the files, but `SDPB` does not require that.
 `objectives.json` includes the constant contribution to the objective,
 and 'b', the optimization vector.
 
-The block files contain the dimension, number of points, bilinear
+`block_info_XXX.json` contains the dimension and number of points.
+
+`block_data_XXX.bin` or `block_data_XXX.json` contains bilinear
 bases, the 'B' matrix, and the 'c' vector.
+Block data can be stored either in a human-readable JSON format, or in a more efficient binary format (which
+uses [Boost.Serialization](http://boost.org/libs/serialization) library,
+see [write_block_data.cxx](../src/sdp_convert/write_block_data.cxx) for details).
 
 `SDPB` can also read the input if you pack these files into different
 archive formats.  It is limited by the support for
@@ -33,7 +38,8 @@ everything in a plain old directory.
 The JSON schema for these input files are in
 [sdpb_input_control_schema.json](sdpb_input_control_schema.json),
 [sdpb_input_objectives_schema.json](sdpb_input_objectives_schema.json),
-[sdpb_input_block_schema.json](sdpb_input_block_schema.json).  Running `SDPB` on the
+[sdpb_input_block_info_schema.json](sdpb_input_block_info_schema.json),
+[sdpb_input_block_data_schema.json](sdpb_input_block_data_schema.json). Running `SDPB` on the
 test example
 
     pvm2sdp 1024 test/data/pvm2sdp/pvm.xml test/out/pvm2sdp/sdp.zip

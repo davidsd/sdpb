@@ -17,8 +17,12 @@ void write_objectives_json(std::ostream &output_stream,
                            const El::BigFloat &objective_const,
                            const std::vector<El::BigFloat> &dual_objective_b);
 
-void write_block_json(std::ostream &output_stream,
-                      const Dual_Constraint_Group &group);
+void write_block_info_json(std::ostream &output_stream,
+                           const Dual_Constraint_Group &group);
+
+void write_block_data(std::ostream &output_stream,
+                      const Dual_Constraint_Group &group,
+                      Block_File_Format format);
 
 void print_matrix_sizes(
   const int &rank, const std::vector<El::BigFloat> &dual_objective_b,
@@ -54,10 +58,17 @@ namespace
   }
 
   boost::filesystem::path
-  get_block_path(const boost::filesystem::path &temp_dir, size_t block_index,
-                 Block_File_Format format)
+  get_block_info_path(const boost::filesystem::path &temp_dir,
+                      size_t block_index)
   {
-    std::string name = El::BuildString("block_", block_index);
+    return temp_dir / El::BuildString("block_info_", block_index, ".json");
+  }
+
+  boost::filesystem::path
+  get_block_data_path(const boost::filesystem::path &temp_dir,
+                      size_t block_index, Block_File_Format format)
+  {
+    std::string name = El::BuildString("block_data_", block_index);
     switch(format)
       {
       case json: name += ".json"; break;
@@ -93,7 +104,9 @@ void write_sdpb_input_files(
   // We use size_t rather than std::streamsize because MPI treats
   // std::streamsize as an MPI_LONG_INT and then can not MPI_Reduce
   // over it.
-  std::vector<size_t> block_file_sizes(num_blocks, 0);
+  std::vector<size_t> block_info_sizes(num_blocks, 0);
+  std::vector<size_t> block_data_sizes(num_blocks, 0);
+
   for(auto &group : dual_constraint_groups)
     {
       size_t width = group.constraint_matrix.Width();
@@ -105,14 +118,23 @@ void write_sdpb_input_files(
                            " should be equal.");
         }
 
-      const auto block_path
-        = get_block_path(temp_dir, group.block_index, output_format);
-      block_file_sizes.at(group.block_index) = write_data_and_count_bytes(
-        block_path,
-        [&](std::ostream &os) { serialize(os, group, output_format); },
+      const auto block_info_path
+        = get_block_info_path(temp_dir, group.block_index);
+      block_info_sizes.at(group.block_index)
+        = write_data_and_count_bytes(block_info_path, [&](std::ostream &os) {
+            write_block_info_json(os, group);
+          });
+
+      const auto block_data_path
+        = get_block_data_path(temp_dir, group.block_index, output_format);
+      block_data_sizes.at(group.block_index) = write_data_and_count_bytes(
+        block_data_path,
+        [&](std::ostream &os) { write_block_data(os, group, output_format); },
         output_format == bin);
     }
-  El::mpi::Reduce(block_file_sizes.data(), block_file_sizes.size(),
+  El::mpi::Reduce(block_info_sizes.data(), block_info_sizes.size(),
+                  El::mpi::SUM, 0, El::mpi::COMM_WORLD);
+  El::mpi::Reduce(block_data_sizes.data(), block_data_sizes.size(),
                   El::mpi::SUM, 0, El::mpi::COMM_WORLD);
   if(debug)
     {
@@ -134,21 +156,36 @@ void write_sdpb_input_files(
 
       // write all files to sdp.zip archive
       Archive_Writer writer(output_path);
+      // control.json
       archive_gzipped_file(control_path, num_control_bytes, writer);
       boost::filesystem::remove(control_path);
-
+      // objectives.json
       archive_gzipped_file(objectives_path, num_objectives_bytes, writer);
       boost::filesystem::remove(objectives_path);
 
-      for(size_t block_index(0); block_index != block_file_sizes.size();
-          ++block_index)
+      // block_info_XXX.json
+      // We add block_info before all block_data,
+      // so that SDPB can read them fast and skip the rest of archive
+      for(size_t block_index = 0; block_index != num_blocks; ++block_index)
         {
-          const auto block_path
-            = get_block_path(temp_dir, block_index, output_format);
-          archive_gzipped_file(block_path, block_file_sizes.at(block_index),
-                               writer);
-          boost::filesystem::remove(block_path);
+          const auto block_info_path
+            = get_block_info_path(temp_dir, block_index);
+          archive_gzipped_file(block_info_path,
+                               block_info_sizes.at(block_index), writer);
+          boost::filesystem::remove(block_info_path);
         }
+      // block_data_XXX.bin (or .json)
+      for(size_t block_index = 0; block_index != num_blocks; ++block_index)
+        {
+          const auto block_data_path
+            = get_block_data_path(temp_dir, block_index, output_format);
+          archive_gzipped_file(block_data_path,
+                               block_data_sizes.at(block_index), writer);
+          boost::filesystem::remove(block_data_path);
+        }
+      // Do not call remove_all() to ensure that we
+      // don't remove anything useful.
+      // This function will fail if temp_dir is not empty.
       boost::filesystem::remove(temp_dir);
     }
 }

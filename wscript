@@ -104,7 +104,8 @@ def build(bld):
 
     sdp_convert_sources = ['src/sdp_convert/Dual_Constraint_Group/Dual_Constraint_Group.cxx',
                            'src/sdp_convert/Dual_Constraint_Group/sample_bilinear_basis.cxx',
-                           'src/sdp_convert/write_block_json.cxx',
+                           'src/sdp_convert/write_block_data.cxx',
+                           'src/sdp_convert/write_block_info_json.cxx',
                            'src/sdp_convert/write_objectives_json.cxx',
                            'src/sdp_convert/write_sdpb_input_files.cxx',
                            'src/sdp_convert/write_control_json.cxx',
