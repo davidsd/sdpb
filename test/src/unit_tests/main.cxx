@@ -11,7 +11,7 @@
 int main(int argc, char *argv[])
 {
   El::Environment env(argc, argv);
-  El::gmp::SetPrecision(128);
+  El::gmp::SetPrecision(768);
   Test_Util::REQUIRE_Equal::diff_precision = El::gmp::Precision();
 
   int rank = El::mpi::Rank();
