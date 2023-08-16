@@ -64,24 +64,25 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
 
       const std::string prefix("block_info_");
       Archive_Reader reader(sdp_path);
+      size_t processed_count = 0;
       while(reader.next_entry())
         {
           const std::string pathname(archive_entry_pathname(reader.entry_ptr));
-          if(boost::algorithm::starts_with(pathname, prefix))
+          if(!boost::algorithm::starts_with(pathname, prefix))
+            continue;
+          const size_t blockIndex(std::stoll(pathname.substr(prefix.size())));
+          if(blockIndex >= num_blocks)
             {
-              const size_t block_index(
-                std::stoll(pathname.substr(prefix.size())));
-              if(block_index >= num_blocks)
-                {
-                  El::RuntimeError("Invalid block number for entry '",
-                                   pathname, "' in '", sdp_path,
-                                   ". The block number must be between 0 and ",
-                                   num_blocks - 1, ".");
-                }
-              std::istream stream(&reader);
-              parse_block_info_json(block_index, stream, dimensions,
-                                    num_points);
+              El::RuntimeError("Invalid block number for entry '", pathname,
+                               "' in '", sdp_path,
+                               ". The block number must be between 0 and ",
+                               num_blocks - 1, ".");
             }
+          std::istream stream(&reader);
+          parse_block_info_json(blockIndex, stream, dimensions, num_points);
+          processed_count++;
+          if(processed_count == num_blocks)
+            break;
         }
       for(size_t block_index(0); block_index != num_blocks; ++block_index)
         {

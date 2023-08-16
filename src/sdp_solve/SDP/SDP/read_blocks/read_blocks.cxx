@@ -54,6 +54,7 @@ void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
       };
 
       Archive_Reader reader(sdp_path);
+      size_t processed_count = 0;
       while(reader.next_entry())
         {
           const boost::filesystem::path curr_block_path
@@ -65,6 +66,9 @@ void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
           std::istream stream(&reader);
           read_block_stream(grid, index, stream, format, sdp,
                             bilinear_bases_local);
+          processed_count++;
+          if(processed_count == num_blocks)
+            break;
         }
     }
   else
