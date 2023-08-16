@@ -93,10 +93,10 @@ void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
     {
       sdp.bilinear_bases.emplace_back(local.Height(), local.Width(), grid);
       auto &dist(sdp.bilinear_bases.back());
-      for(int64_t local_row(0); local_row < dist.LocalHeight(); ++local_row)
+      for(El::Int local_row(0); local_row < dist.LocalHeight(); ++local_row)
         {
           El::Int global_row(dist.GlobalRow(local_row));
-          for(int64_t local_column(0); local_column < dist.LocalWidth();
+          for(El::Int local_column(0); local_column < dist.LocalWidth();
               ++local_column)
             {
               El::Int global_column(dist.GlobalCol(local_column));
