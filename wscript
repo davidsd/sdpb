@@ -315,5 +315,5 @@ def build(bld):
                 target='unit_tests',
                 cxxflags=default_flags + ['-D CATCH_AMALGAMATED_CUSTOM_MAIN'],
                 use=use_packages,
-                includes=default_includes
+                includes=default_includes + ['test/src']
                 )

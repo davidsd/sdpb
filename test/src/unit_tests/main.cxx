@@ -2,6 +2,7 @@
 #include <El.hpp>
 #include <iostream>
 #include <sstream>
+#include "test_util/diff.hxx"
 
 #ifndef CATCH_AMALGAMATED_CUSTOM_MAIN
 #error "To override main, pass '-D CATCH_AMALGAMATED_CUSTOM_MAIN' to compiler"
@@ -11,6 +12,7 @@ int main(int argc, char *argv[])
 {
   El::Environment env(argc, argv);
   El::gmp::SetPrecision(128);
+  Test_Util::REQUIRE_Equal::diff_precision = El::gmp::Precision();
 
   int rank = El::mpi::Rank();
 
