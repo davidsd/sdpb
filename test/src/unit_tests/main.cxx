@@ -14,19 +14,27 @@ int main(int argc, char *argv[])
 
   int rank = El::mpi::Rank();
 
-  // redirect cout to string stream
+  int result;
   std::stringstream ss;
-  auto cout_buf = std::cout.rdbuf(ss.rdbuf());
 
-  int result = Catch::Session().run(argc, argv);
+  if(rank == 0)
+    {
+      El::Output("MPI Rank ", rank);
+      result = Catch::Session().run(argc, argv);
+    }
+  else
+    {
+      // redirect cout to string stream
+      auto cout_buf = std::cout.rdbuf(ss.rdbuf());
+      // run
+      result = Catch::Session().run(argc, argv);
+      // restore cout buffer
+      std::cout.rdbuf(cout_buf);
+    }
 
-  // restore cout buffer
-  std::cout.rdbuf(cout_buf);
-
-  // Print output.
-  // Always print from master rank,
-  // print from other ranks only if they failed.
-  for(int i = 0; i < El::mpi::Size(); ++i)
+  // We've printed output from master rank,
+  // Now let's print from all other ranks that failed.
+  for(int i = 1; i < El::mpi::Size(); ++i)
     {
       // Ensure rank printing order with barrier.
       // TODO sometimes output is still shuffled.
@@ -34,7 +42,7 @@ int main(int argc, char *argv[])
       El::mpi::Barrier();
       if(i == rank)
         {
-          if(rank == 0 || result != 0)
+          if(result != 0)
             {
               El::Output("MPI Rank ", rank);
               El::Output(ss.str());
