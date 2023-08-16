@@ -56,8 +56,7 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
                 return parse_num_blocks(stream);
               }
           }
-        throw std::runtime_error(
-          "Unable to find control.json in sdp input file");
+        El::RuntimeError("Unable to find control.json in sdp input file");
       }());
 
       dimensions.resize(num_blocks);
@@ -74,25 +73,23 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
                 std::stoll(pathname.substr(prefix.size())));
               if(block_index >= num_blocks)
                 {
-                  throw std::runtime_error(
-                    "Invalid block number for entry '" + pathname + "' in '"
-                    + sdp_path.string()
-                    + "'. The block number must be between 0 and "
-                    + std::to_string(num_blocks - 1) + ".");
+                  El::RuntimeError("Invalid block number for entry '",
+                                   pathname, "' in '", sdp_path,
+                                   ". The block number must be between 0 and ",
+                                   num_blocks - 1, ".");
                 }
               std::istream stream(&reader);
               parse_block_info_json(block_index, stream, dimensions,
                                     num_points);
             }
         }
-      for(size_t block_index(0); block_index != dimensions.size();
-          ++block_index)
+      for(size_t block_index(0); block_index != num_blocks; ++block_index)
         {
-          if(dimensions.at(block_index) == 0)
+          if(dimensions.at(block_index) == 0
+             || num_points.at(block_index) == 0)
             {
-              throw std::runtime_error(
-                "Missing block " + std::to_string(block_index)
-                + " from sdp path: '" + sdp_path.string() + "'.");
+              El::RuntimeError("Missing block ", block_index,
+                               " from sdp path: ", sdp_path);
             }
         }
     }
