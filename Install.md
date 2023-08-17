@@ -5,6 +5,7 @@ notes](docs/site_installs/Readme.md) for different HPC machines.
 
 * [Requirements](#requirements)
 * [Installation](#installation)
+* [Tests](#tests)
 * [Getting Help](#getting-help)
 
 # Requirements
@@ -119,33 +120,39 @@ manager such as [Homebrew](https://brew.sh).
     * `unit_tests`: Unit tests.
     * `integration_tests`: End-to-end tests for `sdpb` and other executables. The tests use data from `test/data/` folder.
 
-8. You can check the installation by running `unit_tests` and `integration_tests` (takes up to several minutes):
-8. You can check the installation by running `integration_tests` (takes up to several minutes):
+Running
+
+        ./build/sdpb --help
+
+should give you a usage message. HPC systems may require you to run
+all jobs through a batch system. You will need to consult the
+documentation for your individual system.
+
+# Tests<a name="tests" />
+
+You can check the installation by running `unit_tests` and `integration_tests` (takes up to several minutes):
 
         mpirun -n 2 ./build/unit_tests
         ./build/integration_tests
 
-   If some integration test case fails, you may check the test logs in `test/out/log/` folder and files generated during the test run in `test/out/` folder.
+If some integration test case fails, you may check the test logs in `test/out/log/` folder and files generated during
+the test run in `test/out/` folder.
 
-    By default, `integration_tests` uses `mpirun` command to run `sdpb` and other executables. You can also provide a custom command for your HPC, e.g.:
+By default, `integration_tests` uses `mpirun` command to run `sdpb` and other executables. You can also provide a custom
+command for your HPC, e.g.:
 
         ./build/integration_tests --mpirun="srun --mpi=pmi2" 
-    For more command-line options, see [Catch2 documentation](https://github.com/catchorg/Catch2/blob/devel/docs/command-line.md).
- 
-    You can also run both unit and integration tests via the script
 
-        ./test/run_all_tests.sh 
-    It also supports custom mpirun command, e.g. 
+For more command-line options,
+see [Catch2 documentation](https://github.com/catchorg/Catch2/blob/devel/docs/command-line.md).
+
+You can also run both unit and integration tests via the script
+
+        ./test/run_all_tests.sh
+
+It also supports custom mpirun command, e.g.
 
         ./test/run_all_tests.sh srun --mpi=pmi2
-
-Running
-   
-        ./build/sdpb --help
-
-should give you a usage message.  HPC systems may require you to run
-all jobs through a batch system.  You will need to consult the
-documentation for your individual system.
 
 # Getting Help<a name="getting-help" />
 If you are having problems with installation, you can [create an issue on GitHub](https://github.com/davidsd/sdpb/issues/new).
@@ -153,4 +160,6 @@ Be sure to include what system you are trying
 to install SDPB on, what you typed, and the **FULL** error message
 (even if you think it is too long).
 
-If installation was successful but some test case fails, please include also the corresponding logs, e.g. `test/out/log/sdpb/run.stdout.log` and `test/out/log/sdpb/run.stderr.log`.
+If installation was successful but some test case fails, please include also the console output and (in the case of
+integration tests) the corresponding logs, e.g. `test/out/log/sdpb/run.stdout.log`
+and `test/out/log/sdpb/run.stderr.log`.
