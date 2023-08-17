@@ -63,7 +63,7 @@ def configure(conf):
                    libpath=gmpxx_libdir,
                    rpath=gmpxx_libdir,
                    lib=gmpxx_libs,
-                   use=['cxx14'])
+                   use=['cxx17'])
 
 def options(opt):
     gmpxx=opt.add_option_group('GMPXX Options')

@@ -20,7 +20,7 @@ def configure(conf):
                    fragment="#include <rapidjson/reader.h>\nint main() {rapidjson::Reader();}\n",
                    includes=rapidjson_incdir,
                    uselib_store='rapidjson',
-                   use=['cxx14'])
+                   use=['cxx17'])
 
 def options(opt):
     rapidjson=opt.add_option_group('Rapidjson Options')
