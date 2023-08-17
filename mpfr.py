@@ -61,7 +61,7 @@ def configure(conf):
                    libpath=mpfr_libdir,
                    rpath=mpfr_libdir,
                    lib=mpfr_libs,
-                   use=['cxx14','gmpxx'])
+                   use=['cxx17', 'gmpxx'])
 
 def options(opt):
     mpfr=opt.add_option_group('MPFR Options')

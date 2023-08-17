@@ -72,7 +72,7 @@ boost::serialization::version_type version;
                    libpath=boost_libdir,
                    rpath=boost_libdir,
                    lib=boost_libs,
-                   use=['cxx14'])
+                   use=['cxx17'])
 
 
 

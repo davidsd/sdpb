@@ -52,7 +52,7 @@ int main()
                           libpath=libarchive_libdir,
                           rpath=libarchive_libdir,
                           lib=libarchive_libs,
-                          use=['cxx14']):
+                          use=['cxx17']):
         conf.fatal("Could not find libarchive")
 
 
