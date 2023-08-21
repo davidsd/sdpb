@@ -4,11 +4,13 @@
 
 #include <El.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 void save_solution(const SDP_Solver &solver, const SDP_Solver_Terminate_Reason,
                    const std::pair<std::string, Timer> &timer_pair,
-                   const boost::filesystem::path &out_directory,
+                   const fs::path &out_directory,
                    const Write_Solution &write_solution,
                    const std::vector<size_t> &block_indices,
                    const Verbosity &verbosity);

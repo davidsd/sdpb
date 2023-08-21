@@ -3,11 +3,13 @@
 #include "Archive_Writer.hxx"
 #include "../sdp_convert.hxx"
 
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
+
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
+
+namespace fs = std::filesystem;
 
 size_t
 write_control_json(std::ostream &output_stream, const size_t &num_blocks,
@@ -31,7 +33,7 @@ void print_matrix_sizes(
 namespace
 {
   size_t write_data_and_count_bytes(
-    const boost::filesystem::path &output_path,
+    const fs::path &output_path,
     const std::function<void(std::ostream &)> &write_data, bool binary = false)
   {
     byte_counter counter;
@@ -57,16 +59,12 @@ namespace
     return counter.num_bytes;
   }
 
-  boost::filesystem::path
-  get_block_info_path(const boost::filesystem::path &temp_dir,
-                      size_t block_index)
+  fs::path get_block_info_path(const fs::path &temp_dir, size_t block_index)
   {
     return temp_dir / El::BuildString("block_info_", block_index, ".json");
   }
 
-  boost::filesystem::path
-  get_block_data_path(const boost::filesystem::path &temp_dir,
-                      size_t block_index, Block_File_Format format)
+  fs::path get_block_data_path(const fs::path &temp_dir, size_t block_index, Block_File_Format format)
   {
     std::string name = El::BuildString("block_data_", block_index);
     switch(format)
@@ -78,8 +76,7 @@ namespace
     return temp_dir / name;
   }
 
-  void archive_gzipped_file(const boost::filesystem::path &path,
-                            const int64_t &num_bytes, Archive_Writer &writer)
+  void archive_gzipped_file(const fs::path &path, const int64_t &num_bytes, Archive_Writer &writer)
   {
     boost::iostreams::filtering_stream<boost::iostreams::input> input_stream;
     input_stream.push(boost::iostreams::gzip_decompressor());
@@ -90,7 +87,7 @@ namespace
 }
 
 void write_sdpb_input_files(
-  const boost::filesystem::path &output_path, Block_File_Format output_format,
+  const fs::path &output_path, Block_File_Format output_format,
   const int &rank, const size_t &num_blocks,
   const std::vector<std::string> &command_arguments,
   const El::BigFloat &objective_const,
@@ -98,9 +95,9 @@ void write_sdpb_input_files(
   const std::vector<Dual_Constraint_Group> &dual_constraint_groups,
   const bool debug)
 {
-  boost::filesystem::path temp_dir(output_path);
+  fs::path temp_dir(output_path);
   temp_dir += "_temp";
-  boost::filesystem::create_directories(temp_dir);
+  fs::create_directories(temp_dir);
   // We use size_t rather than std::streamsize because MPI treats
   // std::streamsize as an MPI_LONG_INT and then can not MPI_Reduce
   // over it.
@@ -143,8 +140,8 @@ void write_sdpb_input_files(
   if(rank == 0)
     {
       // write control.json and objectives.json
-      boost::filesystem::path control_path = temp_dir / "control.json";
-      boost::filesystem::path objectives_path = temp_dir / "objectives.json";
+      fs::path control_path = temp_dir / "control.json";
+      fs::path objectives_path = temp_dir / "objectives.json";
       size_t num_control_bytes
         = write_data_and_count_bytes(control_path, [&](std::ostream &os) {
             write_control_json(os, num_blocks, command_arguments);
@@ -158,10 +155,10 @@ void write_sdpb_input_files(
       Archive_Writer writer(output_path);
       // control.json
       archive_gzipped_file(control_path, num_control_bytes, writer);
-      boost::filesystem::remove(control_path);
+      fs::remove(control_path);
       // objectives.json
       archive_gzipped_file(objectives_path, num_objectives_bytes, writer);
-      boost::filesystem::remove(objectives_path);
+      fs::remove(objectives_path);
 
       // block_info_XXX.json
       // We add block_info before all block_data,
@@ -172,7 +169,7 @@ void write_sdpb_input_files(
             = get_block_info_path(temp_dir, block_index);
           archive_gzipped_file(block_info_path,
                                block_info_sizes.at(block_index), writer);
-          boost::filesystem::remove(block_info_path);
+          fs::remove(block_info_path);
         }
       // block_data_XXX.bin (or .json)
       for(size_t block_index = 0; block_index != num_blocks; ++block_index)
@@ -181,12 +178,12 @@ void write_sdpb_input_files(
             = get_block_data_path(temp_dir, block_index, output_format);
           archive_gzipped_file(block_data_path,
                                block_data_sizes.at(block_index), writer);
-          boost::filesystem::remove(block_data_path);
+          fs::remove(block_data_path);
         }
       // Do not call remove_all() to ensure that we
       // don't remove anything useful.
       // This function will fail if temp_dir is not empty.
-      boost::filesystem::remove(temp_dir);
+      fs::remove(temp_dir);
     }
 }
 

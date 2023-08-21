@@ -3,12 +3,12 @@
 
 #include <string>
 #include <boost/program_options.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
+namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
-void write_output(const boost::filesystem::path &output_path,
-                  Block_File_Format output_format,
+void write_output(const fs::path &output_path, Block_File_Format output_format,
                   const std::vector<std::string> &command_arguments,
                   const std::vector<El::BigFloat> &objectives,
                   const std::vector<El::BigFloat> &normalization,
@@ -35,19 +35,18 @@ int main(int argc, char **argv)
   try
     {
       int precision;
-      boost::filesystem::path input_file, output_path;
+      fs::path input_file, output_path;
       Block_File_Format output_format;
       bool debug(false);
 
       po::options_description options("Basic options");
       options.add_options()("help,h", "Show this helpful message.");
       options.add_options()(
-        "input,i", po::value<boost::filesystem::path>(&input_file)->required(),
+        "input,i", po::value<fs::path>(&input_file)->required(),
         "Mathematica, JSON, or NSV file with SDP definition");
-      options.add_options()(
-        "output,o",
-        po::value<boost::filesystem::path>(&output_path)->required(),
-        "Directory to place output");
+      options.add_options()("output,o",
+                            po::value<fs::path>(&output_path)->required(),
+                            "Directory to place output");
       options.add_options()(
         "precision", po::value<int>(&precision)->required(),
         "The precision, in the number of bits, for numbers in the "
@@ -77,24 +76,23 @@ int main(int argc, char **argv)
 
       po::notify(variables_map);
 
-      if(!boost::filesystem::exists(input_file))
+      if(!fs::exists(input_file))
         {
           throw std::runtime_error("Input file '" + input_file.string()
                                    + "' does not exist");
         }
-      if(boost::filesystem::is_directory(input_file))
+      if(fs::is_directory(input_file))
         {
           throw std::runtime_error("Input file '" + input_file.string()
                                    + "' is a directory, not a file");
         }
 
-      if(output_path.filename_is_dot())
+      if(output_path == ".")
         {
           throw std::runtime_error("Output file '" + output_path.string()
                                    + "' is a directory");
         }
-      if(boost::filesystem::exists(output_path)
-         && boost::filesystem::is_directory(output_path))
+      if(fs::exists(output_path) && fs::is_directory(output_path))
         {
           throw std::runtime_error("Output file '" + output_path.string()
                                    + "' exists and is a directory");

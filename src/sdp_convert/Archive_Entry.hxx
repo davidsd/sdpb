@@ -2,7 +2,7 @@
 
 #include <archive_entry.h>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include <memory>
 #include <array>
@@ -11,6 +11,6 @@
 struct Archive_Entry
 {
   std::unique_ptr<archive_entry, void (*)(archive_entry *)> entry_ptr;
-  Archive_Entry(const boost::filesystem::path &filename,
+  Archive_Entry(const std::filesystem::path &filename,
                 const int64_t &num_bytes);
 };

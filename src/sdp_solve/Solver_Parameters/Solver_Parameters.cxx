@@ -2,6 +2,8 @@
 
 #include <boost/program_options.hpp>
 
+namespace fs = std::filesystem;
+
 boost::program_options::options_description Solver_Parameters::options()
 {
   boost::program_options::options_description result("Solver parameters");
@@ -122,14 +124,14 @@ boost::program_options::options_description Solver_Parameters::options()
     "exceeds this value.");
   result.add_options()(
     "checkpointDir,c",
-    boost::program_options::value<boost::filesystem::path>(&checkpoint_out),
+    boost::program_options::value<fs::path>(&checkpoint_out),
     "Checkpoints are saved to this directory every checkpointInterval.  Set "
     "to the empty string to inhibit checkpoints.  Defaults to sdpDir with "
     "'.ck' extension.");
   result.add_options()(
     "initialCheckpointDir,i",
-    boost::program_options::value<boost::filesystem::path>(&checkpoint_in),
-    "The initial checkpoint directory to load. Defaults to "
+                       boost::program_options::value<fs::path>(&checkpoint_in),
+                       "The initial checkpoint directory to load. Defaults to "
     "checkpointDir.");
   result.add_options()(
     "checkpointInterval",

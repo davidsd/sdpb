@@ -2,16 +2,17 @@
 #include "../set_stream_precision.hxx"
 #include "../write_distmatrix.hxx"
 
-#include <boost/filesystem/fstream.hpp>
 
 #include <iomanip>
 
+namespace fs = std::filesystem;
+
 namespace
 {
-  void write_psd_block(const boost::filesystem::path &outfile,
+  void write_psd_block(const fs::path &outfile,
                        const El::DistMatrix<El::BigFloat> &block)
   {
-    boost::filesystem::ofstream stream;
+    std::ofstream stream;
     if(block.DistRank() == block.Root())
       {
         stream.open(outfile);
@@ -35,7 +36,7 @@ namespace
 void save_solution(const SDP_Solver &solver,
                    const SDP_Solver_Terminate_Reason terminate_reason,
                    const std::pair<std::string, Timer> &timer_pair,
-                   const boost::filesystem::path &out_directory,
+                   const fs::path &out_directory,
                    const Write_Solution &write_solution,
                    const std::vector<size_t> &block_indices,
                    const Verbosity &verbosity)
@@ -44,15 +45,15 @@ void save_solution(const SDP_Solver &solver,
   // outputs it from there.  So do not actually open the file on
   // anything but the root node.
 
-  boost::filesystem::ofstream out_stream;
+  std::ofstream out_stream;
   if(El::mpi::Rank() == 0)
     {
       if(verbosity >= Verbosity::regular)
         {
           std::cout << "Saving solution to      : " << out_directory << '\n';
         }
-      boost::filesystem::create_directories(out_directory);
-      const boost::filesystem::path output_path(out_directory / "out.txt");
+      fs::create_directories(out_directory);
+      const fs::path output_path(out_directory / "out.txt");
       out_stream.open(output_path);
       set_stream_precision(out_stream);
       out_stream << "terminateReason = \"" << terminate_reason << "\";\n"
@@ -73,8 +74,8 @@ void save_solution(const SDP_Solver &solver,
   // the root node.
   if(write_solution.vector_y && !solver.y.blocks.empty())
     {
-      const boost::filesystem::path y_path(out_directory / "y.txt");
-      boost::filesystem::ofstream y_stream;
+      const fs::path y_path(out_directory / "y.txt");
+      std::ofstream y_stream;
       if(El::mpi::Rank() == 0)
         {
           y_stream.open(y_path);

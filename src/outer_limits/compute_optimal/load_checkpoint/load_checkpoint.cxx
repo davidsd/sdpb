@@ -9,30 +9,31 @@
 #include <rapidjson/istreamwrapper.h>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/optional.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 
 #include <algorithm>
 
+namespace fs = std::filesystem;
+
 void load_checkpoint(
-  const boost::filesystem::path &checkpoint_directory,
-  const Verbosity &verbosity, boost::optional<int64_t> &backup_generation,
+  const fs::path &checkpoint_directory, const Verbosity &verbosity, boost::optional<int64_t> &backup_generation,
   int64_t &current_generation,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   El::Matrix<El::BigFloat> &yp, std::vector<std::set<El::BigFloat>> &points,
   El::BigFloat &threshold, El::BigFloat &primal_c_scale)
 {
-  if(boost::filesystem::exists(checkpoint_directory)
-     && boost::filesystem::is_directory(checkpoint_directory))
+  if(fs::exists(checkpoint_directory)
+     && fs::is_directory(checkpoint_directory))
     {
-      boost::filesystem::directory_iterator entry(checkpoint_directory);
+      fs::directory_iterator entry(checkpoint_directory);
       int64_t max_generation(-1);
       const std::string prefix("checkpoint_"), suffix(".json.gz");
-      for(boost::filesystem::directory_iterator entry(checkpoint_directory);
-          entry != boost::filesystem::directory_iterator(); ++entry)
+      for(fs::directory_iterator entry(checkpoint_directory);
+          entry != fs::directory_iterator(); ++entry)
         {
           const std::string name(entry->path().filename().string());
           if(boost::algorithm::starts_with(name, "checkpoint_"))

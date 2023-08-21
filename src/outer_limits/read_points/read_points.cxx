@@ -1,11 +1,13 @@
 #include "../../sdp_read.hxx"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
-void read_points_json(const boost::filesystem::path &input_path,
+namespace fs = std::filesystem;
+
+void read_points_json(const fs::path &input_path,
                       std::vector<std::vector<El::BigFloat>> &points);
 
-void read_points(const boost::filesystem::path &input_path,
+void read_points(const fs::path &input_path,
                  std::vector<std::vector<El::BigFloat>> &points)
 {
   if(input_path.extension() == ".nsv")

@@ -1,15 +1,16 @@
 #include "../../SDP_Solver.hxx"
 
-bool load_binary_checkpoint(const boost::filesystem::path &checkpoint_directory,
+namespace fs = std::filesystem;
+
+bool load_binary_checkpoint(const fs::path &checkpoint_directory,
                             const Verbosity &verbosity, SDP_Solver &solver);
 
-bool load_text_checkpoint(const boost::filesystem::path &checkpoint_directory,
+bool load_text_checkpoint(const fs::path &checkpoint_directory,
                           const std::vector<size_t> &block_indices,
                           const Verbosity &verbosity, SDP_Solver &solver);
 
-bool SDP_Solver::load_checkpoint(
-  const boost::filesystem::path &checkpoint_directory,
-  const Block_Info &block_info, const Verbosity &verbosity,
+bool SDP_Solver::load_checkpoint(const fs::path &checkpoint_directory,
+                                 const Block_Info &block_info, const Verbosity &verbosity,
   const bool &require_initial_checkpoint)
 {
   bool valid_checkpoint(

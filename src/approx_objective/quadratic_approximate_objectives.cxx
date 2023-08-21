@@ -2,7 +2,9 @@
 #include "../sdp_solve.hxx"
 #include "../sdp_read.hxx"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 void Axpy(const El::BigFloat &alpha, const SDP &new_sdp, SDP &delta_sdp);
 
@@ -12,8 +14,7 @@ quadratic_approximate_objectives(
   const Block_Vector &x, const Block_Vector &y,
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
-  const El::DistMatrix<El::BigFloat> &Q,
-  const boost::filesystem::path &input_path)
+  const El::DistMatrix<El::BigFloat> &Q, const fs::path &input_path)
 {
   std::vector<std::pair<std::string, Approx_Objective>> result;
   if(input_path.extension() == ".nsv")

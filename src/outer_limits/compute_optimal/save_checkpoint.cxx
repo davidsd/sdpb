@@ -6,22 +6,23 @@
 #include <El.hpp>
 
 #include <boost/optional.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 
+namespace fs = std::filesystem;
+
 namespace
 {
-  inline boost::filesystem::path checkpoint_name(const int64_t &generation)
+  inline fs::path checkpoint_name(const int64_t &generation)
   {
     return "checkpoint_" + std::to_string(generation) + ".json.gz";
   }
 }
 
 void save_checkpoint(
-  const boost::filesystem::path &checkpoint_directory,
-  const Verbosity &verbosity,
+  const fs::path &checkpoint_directory, const Verbosity &verbosity,
   const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
   const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   const El::Matrix<El::BigFloat> &yp,
@@ -54,8 +55,7 @@ void save_checkpoint(
 
       backup_generation = current_generation;
       current_generation += 1;
-      boost::filesystem::path checkpoint_filename(
-        checkpoint_directory / checkpoint_name(current_generation));
+      fs::path checkpoint_filename(checkpoint_directory / checkpoint_name(current_generation));
 
       const size_t max_retries(10);
       bool wrote_successfully(false);

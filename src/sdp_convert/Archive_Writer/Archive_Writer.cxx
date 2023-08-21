@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-Archive_Writer::Archive_Writer(const boost::filesystem::path &filename)
+Archive_Writer::Archive_Writer(const std::filesystem::path &filename)
     : ptr(archive_write_new(), archive_write_free)
 {
   // Hard code zip with no compression.

@@ -7,6 +7,8 @@
 #include <boost/algorithm/algorithm.hpp>
 #include <boost/algorithm/string.hpp>
 
+namespace fs = std::filesystem;
+
 // Parser classes
 namespace
 {
@@ -15,11 +17,11 @@ namespace
     int height;
     int width;
     Float_Vector elements;
-    explicit Parse_Matrix_Txt(const boost::filesystem::path &path)
+    explicit Parse_Matrix_Txt(const fs::path &path)
     {
       CAPTURE(path);
       REQUIRE(is_regular_file(path));
-      boost::filesystem::ifstream is(path);
+      std::ifstream is(path);
       height = width = 0;
       is >> height;
       is >> width;
@@ -44,11 +46,11 @@ namespace
     std::string terminate_reason;
     std::map<std::string, Float> float_map;
 
-    explicit Parse_Sdpb_Out_Txt(const boost::filesystem::path &path)
+    explicit Parse_Sdpb_Out_Txt(const fs::path &path)
     {
       CAPTURE(path);
       REQUIRE(is_regular_file(path));
-      boost::filesystem::ifstream is(path);
+      std::ifstream is(path);
       std::string line;
       while(std::getline(is, line))
         {
@@ -85,8 +87,8 @@ namespace
   using Test_Util::REQUIRE_Equal::diff;
   // Compare matrices written by SDPB save_solution() method,
   // e.g. y.txt or X.txt
-  void diff_matrix_txt(const boost::filesystem::path &a_matrix_txt,
-                       const boost::filesystem::path &b_matrix_txt)
+  void
+  diff_matrix_txt(const fs::path &a_matrix_txt, const fs::path &b_matrix_txt)
   {
     CAPTURE(a_matrix_txt);
     CAPTURE(b_matrix_txt);
@@ -98,8 +100,7 @@ namespace
   }
 
   // Compare out.txt
-  void diff_sdpb_out_txt(const boost::filesystem::path &a_out_txt,
-                         const boost::filesystem::path &b_out_txt,
+  void diff_sdpb_out_txt(const fs::path &a_out_txt, const fs::path &b_out_txt,
                          const std::vector<std::string> &keys_to_compare)
   {
     CAPTURE(a_out_txt);
@@ -139,9 +140,9 @@ namespace
 // Implementation
 namespace Test_Util::REQUIRE_Equal
 {
-  void diff_sdpb_output_dir(const boost::filesystem::path &a_out_dir,
-                            const boost::filesystem::path &b_out_dir,
-                            unsigned int input_precision,
+  void
+  diff_sdpb_output_dir(const fs::path &a_out_dir, const fs::path &b_out_dir,
+                       unsigned int input_precision,
                             unsigned int diff_precision,
                             const std::vector<std::string> &filenames,
                             const std::vector<std::string> &out_txt_keys)
@@ -156,17 +157,17 @@ namespace Test_Util::REQUIRE_Equal
     std::vector<std::string> my_filenames = filenames;
     if(my_filenames.empty())
       {
-        boost::filesystem::directory_iterator a_it(a_out_dir);
-        boost::filesystem::directory_iterator b_it(b_out_dir);
-        boost::filesystem::directory_iterator end{};
-        for(const auto &a : boost::filesystem::directory_iterator(a_out_dir))
+        fs::directory_iterator a_it(a_out_dir);
+        fs::directory_iterator b_it(b_out_dir);
+        fs::directory_iterator end{};
+        for(const auto &a : fs::directory_iterator(a_out_dir))
           {
             CAPTURE(a);
-            REQUIRE(boost::filesystem::is_regular_file(a));
+            REQUIRE(is_regular_file(a.path()));
             my_filenames.push_back(a.path().filename().string());
           }
         // Check that all files from b_out_dir exist in a_out_dir
-        for(const auto &b : boost::filesystem::directory_iterator(b_out_dir))
+        for(const auto &b : fs::directory_iterator(b_out_dir))
           {
             CAPTURE(b);
             REQUIRE(is_regular_file(a_out_dir / b.path().filename()));

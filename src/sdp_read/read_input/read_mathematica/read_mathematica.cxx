@@ -3,8 +3,9 @@
 #include <El.hpp>
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
-#include <boost/filesystem/fstream.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 std::vector<char>::const_iterator
 parse_SDP(const char *begin, const char *end,
@@ -13,14 +14,14 @@ parse_SDP(const char *begin, const char *end,
           std::vector<Positive_Matrix_With_Prefactor> &matrices,
           size_t &num_processed);
 
-void read_mathematica(const boost::filesystem::path &input_path,
+void read_mathematica(const fs::path &input_path,
                       std::vector<El::BigFloat> &objectives,
                       std::vector<El::BigFloat> &normalization,
                       std::vector<Positive_Matrix_With_Prefactor> &matrices,
                       size_t &num_processed)
 
 {
-  boost::filesystem::ifstream input_stream(input_path);
+  std::ifstream input_stream(input_path);
   if(!input_stream.good())
     {
       throw std::runtime_error("Unable to open input: " + input_path.string());

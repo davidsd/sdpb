@@ -1,7 +1,8 @@
 #include "../SDPB_Parameters.hxx"
 
 #include <boost/program_options.hpp>
-#include <boost/filesystem/fstream.hpp>
+
+namespace fs = std::filesystem;
 
 namespace po = boost::program_options;
 
@@ -13,7 +14,7 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
 
   po::options_description required_options("Required options");
   required_options.add_options()(
-    "sdpDir,s", po::value<boost::filesystem::path>(&sdp_path)->required(),
+    "sdpDir,s", po::value<fs::path>(&sdp_path)->required(),
     "Directory containing preprocessed SDP data files.");
   required_options.add_options()(
     "procsPerNode", po::value<size_t>(&procs_per_node)->required(),
@@ -35,12 +36,12 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
   basic_options.add_options()("version",
                               "Show version and configuration info.");
   basic_options.add_options()(
-    "paramFile,p", po::value<boost::filesystem::path>(&param_path),
+    "paramFile,p", po::value<fs::path>(&param_path),
     "Any parameter can optionally be set via this file in key=value "
     "format. Command line arguments override values in the parameter "
     "file.");
   basic_options.add_options()(
-    "outDir,o", po::value<boost::filesystem::path>(&out_directory),
+    "outDir,o", po::value<fs::path>(&out_directory),
     "The optimal solution is saved to this directory in Mathematica "
     "format. Defaults to sdpDir with '_out' appended.");
   basic_options.add_options()(
@@ -105,10 +106,9 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
             {
               // TODO: The next line is redundant.  param_file has
               // already been set.  Also, I can use
-              // boost::filesystem::ifstream and avoid the
+              // std::ifstream and avoid the
               // .string().c_str() nonsense.
-              param_path
-                = variables_map["paramFile"].as<boost::filesystem::path>();
+              param_path = variables_map["paramFile"].as<fs::path>();
               std::ifstream ifs(param_path.string().c_str());
               if(!ifs.good())
                 {
@@ -122,7 +122,7 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
 
           po::notify(variables_map);
 
-          if(!boost::filesystem::exists(sdp_path))
+          if(!fs::exists(sdp_path))
             {
               throw std::runtime_error("sdp directory '"
                                        + sdp_path.string()
@@ -162,8 +162,8 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
 
           if(El::mpi::Rank() == 0)
             {
-              boost::filesystem::create_directories(out_directory);
-              boost::filesystem::ofstream ofs(out_directory / "out.txt");
+              fs::create_directories(out_directory);
+              std::ofstream ofs(out_directory / "out.txt");
               if(!ofs.good())
                 {
                   throw std::runtime_error("Cannot write to outDir: "

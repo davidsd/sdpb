@@ -1,14 +1,16 @@
 #include "integration_tests/common.hxx"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 TEST_CASE("outer_limits")
 {
   INFO("Simple outer_limits test");
   Test_Util::Test_Case_Runner runner("outer_limits");
 
-  boost::filesystem::path data_dir = runner.data_dir;
-  boost::filesystem::path output_dir = runner.output_dir;
+  fs::path data_dir = runner.data_dir;
+  fs::path output_dir = runner.output_dir;
 
   Test_Util::Test_Case_Runner::Named_Args_Map args{
     {"--functions", (data_dir / "toy_functions.json").string()},

@@ -6,8 +6,9 @@
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 
-#include <boost/filesystem/fstream.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+
+namespace fs = std::filesystem;
 
 namespace
 {
@@ -41,9 +42,9 @@ namespace
   }
 }
 
-void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
+void Block_Info::read_block_info(const fs::path &sdp_path)
 {
-  if(boost::filesystem::is_regular_file(sdp_path))
+  if(fs::is_regular_file(sdp_path))
     {
       const size_t num_blocks([&]() {
         Archive_Reader reader(sdp_path);
@@ -97,7 +98,7 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
   else
     {
       const size_t num_blocks([&]() {
-        boost::filesystem::ifstream control_stream(sdp_path / "control.json");
+        std::ifstream control_stream(sdp_path / "control.json");
         return parse_num_blocks(control_stream);
       }());
 
@@ -105,9 +106,9 @@ void Block_Info::read_block_info(const boost::filesystem::path &sdp_path)
       num_points.resize(num_blocks);
       for(size_t block(0); block != num_blocks; ++block)
         {
-          boost::filesystem::path block_info_path(
+          fs::path block_info_path(
             sdp_path / ("block_info_" + std::to_string(block) + ".json"));
-          boost::filesystem::ifstream block_stream(block_info_path);
+          std::ifstream block_stream(block_info_path);
           parse_block_info_json(block, block_stream, dimensions, num_points);
         }
     }

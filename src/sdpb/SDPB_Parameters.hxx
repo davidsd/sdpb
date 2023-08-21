@@ -4,7 +4,7 @@
 #include "../sdp_solve.hxx"
 
 #include <El.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/property_tree/ptree.hpp>
 
 #include <iostream>
@@ -19,7 +19,7 @@ struct SDPB_Parameters
   Solver_Parameters solver;
   Verbosity verbosity;
 
-  boost::filesystem::path sdp_path, out_directory, param_path;
+  std::filesystem::path sdp_path, out_directory, param_path;
 
   SDPB_Parameters(int argc, char *argv[]);
   bool is_valid() const { return !sdp_path.empty(); }

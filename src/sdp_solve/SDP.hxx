@@ -12,7 +12,7 @@
 #include "../Block_Matrix.hxx"
 #include "../Block_Vector.hxx"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 // The class SDP encodes a semidefinite program of the following form
 //
@@ -98,8 +98,7 @@ struct SDP
   // objectiveConst = f
   El::BigFloat objective_const;
 
-  SDP(const boost::filesystem::path &sdp_path,
-      const Block_Info &block_info, const El::Grid &grid);
+  SDP(const std::filesystem::path &sdp_path, const Block_Info &block_info, const El::Grid &grid);
   SDP(const El::BigFloat &objective_const,
       const std::vector<std::vector<El::BigFloat>> &primal_objective_c_input,
       const std::vector<El::Matrix<El::BigFloat>> &free_var_input,

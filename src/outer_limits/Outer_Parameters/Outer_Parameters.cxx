@@ -1,8 +1,8 @@
 #include "../Outer_Parameters.hxx"
 
 #include <boost/program_options.hpp>
-#include <boost/filesystem/fstream.hpp>
 
+namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
 Outer_Parameters::Outer_Parameters(int argc, char *argv[])
@@ -13,13 +13,12 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
 
   po::options_description required_options("Required options");
   required_options.add_options()(
-    "functions",
-    po::value<boost::filesystem::path>(&functions_path)->required(),
+    "functions", po::value<fs::path>(&functions_path)->required(),
     "Mathematica, JSON, or NSV file with SDP functions evaluated at Chebyshev "
     "zeros.");
-  required_options.add_options()(
-    "points", po::value<boost::filesystem::path>(&points_path)->required(),
-    "JSON or NSV file with initial points.");
+  required_options.add_options()("points",
+                                 po::value<fs::path>(&points_path)->required(),
+                                 "JSON or NSV file with initial points.");
 
   po::options_description cmd_line_options;
   cmd_line_options.add(required_options);
@@ -29,12 +28,12 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
   basic_options.add_options()("version",
                               "Show version and configuration info.");
   basic_options.add_options()(
-    "paramFile,p", po::value<boost::filesystem::path>(&param_path),
+    "paramFile,p", po::value<fs::path>(&param_path),
     "Any parameter can optionally be set via this file in key=value "
     "format. Command line arguments override values in the parameter "
     "file.");
   basic_options.add_options()(
-    "out,o", po::value<boost::filesystem::path>(&output_path),
+    "out,o", po::value<fs::path>(&output_path),
     "The optimal solution is saved to this file in json "
     "format. Defaults to 'functions' with the ending '_out.json'.");
   basic_options.add_options()("verbosity",
@@ -90,7 +89,7 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
         {
           if(variables_map.count("paramFile") != 0)
             {
-              boost::filesystem::ifstream param_file(param_path);
+              std::ifstream param_file(param_path);
               if(!param_file.good())
                 {
                   throw std::runtime_error("Could not open '"
@@ -103,13 +102,13 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
 
           po::notify(variables_map);
 
-          if(!boost::filesystem::exists(functions_path))
+          if(!fs::exists(functions_path))
             {
               throw std::runtime_error("functions path '"
                                        + functions_path.string()
                                        + "' does not exist");
             }
-          if(boost::filesystem::is_directory(functions_path))
+          if(fs::is_directory(functions_path))
             {
               throw std::runtime_error("functions path '"
                                        + functions_path.string()
@@ -118,7 +117,7 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
 
           if(variables_map.count("out") == 0)
             {
-              boost::filesystem::path filename(functions_path);
+              fs::path filename(functions_path);
               filename.replace_extension();
               output_path = filename.string() + "_out.json";
             }
@@ -146,8 +145,8 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
 
           if(El::mpi::Rank() == 0)
             {
-              boost::filesystem::create_directories(output_path.parent_path());
-              boost::filesystem::ofstream ofs(output_path);
+              fs::create_directories(output_path.parent_path());
+              std::ofstream ofs(output_path);
               if(!ofs.good())
                 {
                   throw std::runtime_error("Cannot write to outDir: "

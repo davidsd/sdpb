@@ -1,12 +1,12 @@
 #include "../../SDP_Solver.hxx"
 
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
 #include <boost/property_tree/json_parser.hpp>
 
+namespace fs = std::filesystem;
+
 template <typename T>
-void read_local_binary_blocks(T &t,
-                              boost::filesystem::ifstream &checkpoint_stream)
+void read_local_binary_blocks(T &t, std::ifstream &checkpoint_stream)
 {
   El::BigFloat zero(0);
   const size_t serialized_size(zero.SerializedSize());
@@ -67,14 +67,13 @@ void read_local_binary_blocks(T &t,
     }
 }
 
-bool load_binary_checkpoint(const boost::filesystem::path &checkpoint_directory,
+bool load_binary_checkpoint(const fs::path &checkpoint_directory,
                             const Verbosity &verbosity, SDP_Solver &solver)
 {
   int64_t current_generation(-1), backup_generation(-1);
   if(El::mpi::Rank() == 0)
     {
-      boost::filesystem::path metadata(checkpoint_directory
-                                       / "checkpoint.json");
+      fs::path metadata(checkpoint_directory / "checkpoint.json");
       if(exists(metadata))
         {
           boost::property_tree::ptree tree;
@@ -106,7 +105,7 @@ bool load_binary_checkpoint(const boost::filesystem::path &checkpoint_directory,
   El::mpi::Broadcast(reinterpret_cast<El::byte *>(&current_generation),
                      sizeof(current_generation) / sizeof(El::byte), 0,
                      El::mpi::COMM_WORLD);
-  boost::filesystem::path checkpoint_filename;
+  fs::path checkpoint_filename;
   if(current_generation != -1)
     {
       solver.current_generation = current_generation;
@@ -136,7 +135,7 @@ bool load_binary_checkpoint(const boost::filesystem::path &checkpoint_directory,
       current_generation = 0;
     }
 
-  boost::filesystem::ifstream checkpoint_stream(checkpoint_filename);
+  std::ifstream checkpoint_stream(checkpoint_filename);
   if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
       std::cout << "Loading binary checkpoint from : " << checkpoint_directory

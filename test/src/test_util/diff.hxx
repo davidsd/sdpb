@@ -2,7 +2,7 @@
 
 #include <catch2/catch_amalgamated.hpp>
 #include <El.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #define DIFF(a, b)                                                            \
   {                                                                           \

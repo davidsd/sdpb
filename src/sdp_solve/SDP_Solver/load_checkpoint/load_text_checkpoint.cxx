@@ -1,9 +1,9 @@
 #include "../../SDP_Solver.hxx"
 #include "../../read_text_block.hxx"
 
-#include <boost/filesystem/fstream.hpp>
+namespace fs = std::filesystem;
 
-bool load_text_checkpoint(const boost::filesystem::path &checkpoint_directory,
+bool load_text_checkpoint(const fs::path &checkpoint_directory,
                           const std::vector<size_t> &block_indices,
                           const Verbosity &verbosity, SDP_Solver &solver)
 {

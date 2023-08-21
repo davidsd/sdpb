@@ -1,6 +1,6 @@
 #include "Archive_Entry.hxx"
 
-Archive_Entry::Archive_Entry(const boost::filesystem::path &filename,
+Archive_Entry::Archive_Entry(const std::filesystem::path &filename,
                              const int64_t &num_bytes)
     : entry_ptr(archive_entry_new(), archive_entry_free)
 {

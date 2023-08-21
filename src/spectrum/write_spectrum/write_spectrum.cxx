@@ -1,12 +1,13 @@
 #include "../Zeros.hxx"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
-void write_file(const boost::filesystem::path &output_path,
+namespace fs = std::filesystem;
+
+void write_file(const fs::path &output_path,
                 const std::vector<Zeros> &zeros_blocks);
 
-void write_spectrum(const boost::filesystem::path &output_path,
-                    const size_t &num_blocks,
+void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
                     const std::vector<Zeros> &zeros_blocks)
 {
   const size_t rank(El::mpi::Rank()),

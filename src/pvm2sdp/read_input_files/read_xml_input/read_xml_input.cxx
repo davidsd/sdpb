@@ -2,7 +2,9 @@
 
 #include "Input_Parser.hxx"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 namespace
 {
@@ -44,8 +46,7 @@ namespace
   }
 }
 
-void read_xml_input(const boost::filesystem::path &input_file,
-                    El::BigFloat &objective_const,
+void read_xml_input(const fs::path &input_file, El::BigFloat &objective_const,
                     std::vector<El::BigFloat> &dual_objectives_b,
                     std::vector<Dual_Constraint_Group> &dual_constraint_groups,
                     size_t &num_processed)

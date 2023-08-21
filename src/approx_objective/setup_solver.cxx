@@ -1,6 +1,8 @@
 #include "../sdp_solve.hxx"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 // TODO: Have this be part of sdp_solve.hxx
 void cholesky_decomposition(const Block_Diagonal_Matrix &A,
@@ -30,12 +32,12 @@ void initialize_schur_complement_solver(
   Timers &timers);
 
 void setup_solver(const Block_Info &block_info, const El::Grid &grid,
-                  const SDP &sdp, const boost::filesystem::path &solution_dir,
+                  const SDP &sdp, const fs::path &solution_dir,
                   Block_Diagonal_Matrix &schur_complement_cholesky,
                   Block_Matrix &schur_off_diagonal,
                   El::DistMatrix<El::BigFloat> &Q)
 {
-  if(boost::filesystem::exists(solution_dir / "Q_cholesky.txt"))
+  if(fs::exists(solution_dir / "Q_cholesky.txt"))
     {
       for(size_t block = 0; block != block_info.block_indices.size(); ++block)
         {

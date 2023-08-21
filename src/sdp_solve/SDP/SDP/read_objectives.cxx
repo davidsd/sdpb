@@ -3,8 +3,9 @@
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 namespace
 {
@@ -34,12 +35,11 @@ namespace
   }
 }
 
-void read_objectives(const boost::filesystem::path &sdp_path,
-                     const El::Grid &grid, El::BigFloat &objective_const,
+void read_objectives(const fs::path &sdp_path, const El::Grid &grid, El::BigFloat &objective_const,
                      El::DistMatrix<El::BigFloat> &dual_objective_b)
 {
   const std::string objectives_name("objectives.json");
-  if(boost::filesystem::is_regular_file(sdp_path))
+  if(fs::is_regular_file(sdp_path))
     {
       // TODO: This is going to reopen the zip file many, many
       // times.
@@ -60,8 +60,7 @@ void read_objectives(const boost::filesystem::path &sdp_path,
     }
   else
     {
-      boost::filesystem::ifstream objectives_stream(sdp_path
-                                                    / objectives_name);
+      std::ifstream objectives_stream(sdp_path / objectives_name);
       read_objectives_stream(grid, objectives_stream, objective_const,
                              dual_objective_b);
     }

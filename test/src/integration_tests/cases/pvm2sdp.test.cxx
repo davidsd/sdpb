@@ -1,6 +1,8 @@
 #include "integration_tests/common.hxx"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 TEST_CASE("pvm2sdp")
 {
@@ -29,12 +31,12 @@ TEST_CASE("pvm2sdp")
   {
     INFO("Prohibit output sdp.zip from writing and check that pvm2sdp fails:");
     const Test_Util::Test_Case_Runner runner("pvm2sdp/cannot_write_zip");
-    boost::filesystem::create_directories(runner.output_dir);
+    fs::create_directories(runner.output_dir);
 
     auto sdp_readonly_zip = runner.output_dir / "sdp.readonly.zip";
-    boost::filesystem::ofstream os(sdp_readonly_zip);
+    std::ofstream os(sdp_readonly_zip);
     os << "INVALID ZIP";
-    permissions(sdp_readonly_zip, boost::filesystem::others_read);
+    permissions(sdp_readonly_zip, fs::perms::others_read);
 
     runner.mpi_run({"build/pvm2sdp 1024", input, sdp_readonly_zip.string()},
                    {}, num_procs, 1,
@@ -45,10 +47,10 @@ TEST_CASE("pvm2sdp")
   {
     INFO("pvm2sdp should fail on an incorrect .nsv");
     const Test_Util::Test_Case_Runner runner("pvm2sdp/invalid_nsv");
-    boost::filesystem::create_directories(runner.output_dir);
+    fs::create_directories(runner.output_dir);
     auto invalid_nsv = (runner.output_dir / "invalid_file_list.nsv").string();
     {
-      boost::filesystem::ofstream os(invalid_nsv);
+      std::ofstream os(invalid_nsv);
       os << "no_such_file.xml";
     }
 

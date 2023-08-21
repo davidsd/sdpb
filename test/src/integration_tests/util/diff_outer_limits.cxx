@@ -3,11 +3,13 @@
 #include "Float.hxx"
 #include "json.hxx"
 
+
 #include <catch2/catch_amalgamated.hpp>
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 
+namespace fs = std::filesystem;
 using namespace Test_Util;
 
 // Parser classes
@@ -20,11 +22,11 @@ namespace
     Float optimal;
     Float_Vector y;
     std::vector<std::pair<std::string, std::string>> options;
-    explicit Parse_Outer_Limits_Json(const boost::filesystem::path &path)
+    explicit Parse_Outer_Limits_Json(const fs::path &path)
     {
       CAPTURE(path);
       REQUIRE(exists(path));
-      boost::filesystem::ifstream is(path);
+      std::ifstream is(path);
       rapidjson::IStreamWrapper wrapper(is);
       rapidjson::Document document;
       document.ParseStream(wrapper);
@@ -44,8 +46,7 @@ namespace
 namespace Test_Util::REQUIRE_Equal
 {
   void
-  diff_outer_limits(const boost::filesystem::path &a_json,
-                    const boost::filesystem::path &b_json,
+  diff_outer_limits(const fs::path &a_json, const fs::path &b_json,
                     unsigned int input_precision, unsigned int diff_precision)
   {
     INFO("diff outer_limits output");

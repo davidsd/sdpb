@@ -1,6 +1,6 @@
 #include "common.hxx"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/process.hpp>
 #include <iostream>
 
@@ -9,6 +9,7 @@
 #endif
 
 namespace bp = boost::process;
+namespace fs = std::filesystem;
 
 namespace
 {
@@ -19,11 +20,11 @@ namespace
   {
     // if we find this file, we know where we are
     auto sdp_zip = "test/data/sdp.zip";
-    for(const boost::filesystem::path prefix : {".", ".."})
+    for(const fs::path prefix : {".", ".."})
       {
         if(exists(prefix / "test/data/sdp.zip"))
           {
-            boost::filesystem::current_path(prefix);
+            fs::current_path(prefix);
             return;
           }
       }
@@ -85,8 +86,8 @@ int main(int argc, char *argv[])
     }
 
   // clear output and log directory
-  boost::filesystem::remove_all(Test_Config::test_output_dir);
-  boost::filesystem::remove_all(Test_Config::test_log_dir);
+  fs::remove_all(Test_Config::test_output_dir);
+  fs::remove_all(Test_Config::test_log_dir);
 
   return session.run();
 }

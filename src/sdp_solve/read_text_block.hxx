@@ -2,8 +2,7 @@
 
 #include <El.hpp>
 
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
 
 inline void
 set_element(El::DistMatrix<El::BigFloat> &block, const int64_t &row,
@@ -23,9 +22,9 @@ inline void set_element(El::Matrix<El::BigFloat> &block, const int64_t &row,
 }
 
 template <typename Matrix>
-void read_text_block(Matrix &block, const boost::filesystem::path &block_path)
+void read_text_block(Matrix &block, const std::filesystem::path &block_path)
 {
-  boost::filesystem::ifstream block_stream(block_path);
+  std::ifstream block_stream(block_path);
   if(!block_stream)
     {
       throw std::runtime_error("Unable to open checkpoint file: '"
@@ -64,7 +63,7 @@ void read_text_block(Matrix &block, const boost::filesystem::path &block_path)
 
 template <typename Matrix>
 void read_text_block(Matrix &block,
-                     const boost::filesystem::path &block_directory,
+                     const std::filesystem::path &block_directory,
                      const std::string &prefix, const size_t &block_index)
 {
   read_text_block(block, block_directory
