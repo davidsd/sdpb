@@ -12,7 +12,8 @@ def configure(conf):
                'elemental','libxml2', 'rapidjson', 'libarchive'])
     conf.load('clang_compilation_database')
 
-    conf.env.git_version=subprocess.check_output('git describe --dirty', universal_newlines=True, shell=True).rstrip()
+    conf.env.git_version = subprocess.check_output('git describe --always --dirty', universal_newlines=True,
+                                                   shell=True).rstrip()
     
 def build(bld):
     # optimized building:
