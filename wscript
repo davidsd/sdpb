@@ -19,7 +19,7 @@ def build(bld):
     default_flags=['-Wall', '-Wextra', '-O3', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
     # default_flags=['-Wall', '-Wextra', '-O3', '-g', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
     # default_flags=['-Wall', '-Wextra', '-g', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
-    use_packages=['cxx17','boost','gmpxx','mpfr','elemental','libxml2', 'rapidjson', 'libarchive']
+    use_packages = ['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive']
     default_includes = ['src', 'external']
     # TODO use default_includes for all targets and simplify #include directives
     # e.g. #include "../../Timers.hxx" -> #include <Timers.hxx>
