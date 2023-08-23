@@ -104,12 +104,8 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
         {
           if(variables_map.count("paramFile") != 0)
             {
-              // TODO: The next line is redundant.  param_file has
-              // already been set.  Also, I can use
-              // std::ifstream and avoid the
-              // .string().c_str() nonsense.
               param_path = variables_map["paramFile"].as<fs::path>();
-              std::ifstream ifs(param_path.string().c_str());
+              std::ifstream ifs(param_path);
               if(!ifs.good())
                 {
                   throw std::runtime_error("Could not open '"
