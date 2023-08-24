@@ -307,6 +307,7 @@ def build(bld):
                         'test/src/integration_tests/cases/sdpb.test.cxx',
                         'test/src/integration_tests/cases/spectrum.test.cxx'],
                 target='integration_tests',
+                install_path=None,
                 cxxflags=default_flags + ['-D CATCH_AMALGAMATED_CUSTOM_MAIN'],
                 use=use_packages,
                 includes=default_includes + ['test/src']
