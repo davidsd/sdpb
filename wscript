@@ -311,9 +311,10 @@ def build(bld):
                 )
     bld.program(source=['external/catch2/catch_amalgamated.cpp',
                         'test/src/unit_tests/main.cxx',
+                        'test/src/unit_tests/cases/block_data_serialization.test.cxx',
                         'test/src/unit_tests/cases/boost_serialization.test.cxx'],
                 target='unit_tests',
                 cxxflags=default_flags + ['-D CATCH_AMALGAMATED_CUSTOM_MAIN'],
-                use=use_packages,
-                includes=default_includes
+                use=use_packages + ['sdp_convert', 'sdp_solve'],
+                includes=default_includes + ['test/src']
                 )

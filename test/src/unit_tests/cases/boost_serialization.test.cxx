@@ -2,6 +2,11 @@
 #include <boost_serialization.hxx>
 #include <El.hpp>
 #include <sstream>
+#include "unit_tests/util/util.hxx"
+
+using Test_Util::random_bigfloat;
+using Test_Util::random_matrix;
+using Test_Util::REQUIRE_Equal::diff;
 
 namespace
 {
@@ -16,34 +21,6 @@ namespace
     in >> deserialized_value;
 
     return deserialized_value;
-  }
-
-  El::BigFloat random_bigfloat()
-  {
-    return El::SampleUniform<El::BigFloat>(-3.14, 3.14);
-  }
-  El::Matrix<El::BigFloat> random_matrix(int height, int width)
-  {
-    El::Matrix<El::BigFloat> matrix(height, width);
-    for(int i = 0; i < height; ++i)
-      for(int k = 0; k < width; ++k)
-        {
-          matrix.Set(i, k, random_bigfloat());
-        }
-
-    return matrix;
-  }
-
-  void diff(El::Matrix<El::BigFloat> a, El::Matrix<El::BigFloat> b)
-  {
-    // Compare dimensions
-    REQUIRE(b.Height() == a.Height());
-    REQUIRE(a.Width() == b.Width());
-    REQUIRE(a.LDim() == b.LDim());
-    // Elementwise comparison
-    for(int i = 0; i < a.Height(); ++i)
-      for(int k = 0; k < a.Width(); ++k)
-        REQUIRE(a.Get(i, k) == b.Get(i, k));
   }
 }
 
@@ -71,6 +48,6 @@ TEST_CASE("Boost serialization")
     El::Matrix<El::BigFloat> other = serialize_deserialize(matrix);
     // Sanity check: deserialized_matrix is not the same as matrix
     REQUIRE(matrix.LockedBuffer() != other.LockedBuffer());
-    diff(matrix, other);
+    DIFF(matrix, other);
   }
 }

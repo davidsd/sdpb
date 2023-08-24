@@ -40,47 +40,46 @@ namespace
       }
     return result;
   }
+}
+// TODO move this code closer to Dual_Constraint_Group definition?
+void parse_block_data(std::istream &block_stream, Block_File_Format format,
+                      El::Matrix<El::BigFloat> &constraint_matrix,
+                      std::vector<El::BigFloat> &constraint_constants,
+                      El::Matrix<El::BigFloat> &bilinear_bases_even,
+                      El::Matrix<El::BigFloat> &bilinear_bases_odd)
+{
+  if(format == bin)
+    {
+      // NB: this should match sdp_convert/write_block_data.cxx
+      boost::archive::binary_iarchive ar(block_stream);
+      mp_bitcnt_t precision;
+      ar >> precision;
+      if(precision != El::gmp::Precision())
+        {
+          El::RuntimeError("Read GMP precision: ", precision,
+                           ", expected: ", El::gmp::Precision());
+        }
+      ar >> constraint_matrix;
+      ar >> constraint_constants;
+      ar >> bilinear_bases_even;
+      ar >> bilinear_bases_odd;
+    }
+  else if(format == json)
+    {
+      rapidjson::IStreamWrapper wrapper(block_stream);
+      Block_Parser parser;
+      rapidjson::Reader reader;
+      reader.Parse(wrapper, parser);
 
-  // TODO move this code closer to Dual_Constraint_Group definition?
-  void parse_block_data(std::istream &block_stream, Block_File_Format format,
-                        El::Matrix<El::BigFloat> &constraint_matrix,
-                        std::vector<El::BigFloat> &constraint_constants,
-                        El::Matrix<El::BigFloat> &bilinear_bases_even,
-                        El::Matrix<El::BigFloat> &bilinear_bases_odd)
-  {
-    if(format == bin)
-      {
-        // NB: this should match sdp_convert/write_block_data.cxx
-        boost::archive::binary_iarchive ar(block_stream);
-        mp_bitcnt_t precision;
-        ar >> precision;
-        if(precision != El::gmp::Precision())
-          {
-            El::RuntimeError("Read GMP precision: ", precision,
-                             ", expected: ", El::gmp::Precision());
-          }
-        ar >> constraint_matrix;
-        ar >> constraint_constants;
-        ar >> bilinear_bases_even;
-        ar >> bilinear_bases_odd;
-      }
-    else if(format == json)
-      {
-        rapidjson::IStreamWrapper wrapper(block_stream);
-        Block_Parser parser;
-        rapidjson::Reader reader;
-        reader.Parse(wrapper, parser);
-
-        constraint_matrix = to_matrix(parser.B_state);
-        constraint_constants = parser.c_state.value;
-        bilinear_bases_even = to_matrix(parser.bilinear_bases_even_state);
-        bilinear_bases_odd = to_matrix(parser.bilinear_bases_odd_state);
-      }
-    else
-      {
-        El::RuntimeError("Unknown Block_File_Format: ", format);
-      }
-  }
+      constraint_matrix = to_matrix(parser.B_state);
+      constraint_constants = parser.c_state.value;
+      bilinear_bases_even = to_matrix(parser.bilinear_bases_even_state);
+      bilinear_bases_odd = to_matrix(parser.bilinear_bases_odd_state);
+    }
+  else
+    {
+      El::RuntimeError("Unknown Block_File_Format: ", format);
+    }
 }
 
 void read_block_stream(
