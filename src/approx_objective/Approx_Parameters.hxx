@@ -3,7 +3,7 @@
 #include "../sdp_solve.hxx"
 
 #include <El.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/property_tree/ptree.hpp>
 
 #include <iostream>
@@ -13,8 +13,7 @@ struct Approx_Parameters
   size_t procs_per_node, proc_granularity;
   size_t precision;
 
-  boost::filesystem::path sdp_path, new_sdp_path, solution_dir,
-    param_path;
+  std::filesystem::path sdp_path, new_sdp_path, solution_dir, param_path;
 
   bool write_solver_state, linear_only;
 

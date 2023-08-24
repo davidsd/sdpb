@@ -2,7 +2,7 @@
 
 #include <stdexcept>
 
-Archive_Reader::Archive_Reader(const boost::filesystem::path &filename)
+Archive_Reader::Archive_Reader(const std::filesystem::path &filename)
     : ptr(archive_read_new(), archive_read_free)
 {
   if(archive_read_support_filter_all(ptr.get()) != ARCHIVE_OK

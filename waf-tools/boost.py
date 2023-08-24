@@ -43,14 +43,13 @@ def configure(conf):
     if conf.options.boost_libs:
         boost_libs=conf.options.boost_libs.split()
     else:
-        boost_libs=['boost_system', 'boost_filesystem', 'boost_date_time',
-                    'boost_program_options', 'boost_iostreams', 'boost_serialization']
+        boost_libs = ['boost_system', 'boost_date_time', 'boost_filesystem',
+                      'boost_program_options', 'boost_iostreams', 'boost_serialization']
 
     conf.check_cxx(msg="Checking for Boost",
                    fragment="""#include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/device/file.hpp>
-#include <boost/filesystem.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
 #include <boost/process.hpp>
@@ -58,12 +57,12 @@ def configure(conf):
 int main()
 {
 boost::posix_time::second_clock::local_time();
-boost::filesystem::path();
 boost::program_options::options_description();
 boost::iostreams::file_sink("foo");
 boost::iostreams::filtering_ostream();
 boost::iostreams::gzip_compressor();
 boost::process::ipstream pipe_stream;
+boost::process::search_path("unzip");
 boost::serialization::version_type version;
 }
 """,
@@ -86,4 +85,4 @@ def options(opt):
                    help='Directory where boost library files are installed')
     boost.add_option('--boost-libs',
                    help='Names of the boost libraries without prefix or suffix\n'
-                   '(e.g. "boost_system boost_filesystem boost_date_time boost_program_options")')
+                        '(e.g. "boost_system boost_date_time boost_program_options")')

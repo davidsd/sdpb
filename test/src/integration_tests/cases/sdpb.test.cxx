@@ -1,5 +1,7 @@
 #include "integration_tests/common.hxx"
-#include <boost/filesystem.hpp>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 TEST_CASE("sdpb")
 {
@@ -32,11 +34,11 @@ TEST_CASE("sdpb")
   };
 
   // create file with readonly premissions
-  auto create_readonly = [](const boost::filesystem::path &path) {
+  auto create_readonly = [](const fs::path &path) {
     create_directories(path.parent_path());
-    boost::filesystem::ofstream os(path);
+    std::ofstream os(path);
     os << "";
-    boost::filesystem::permissions(path, boost::filesystem::others_read);
+    fs::permissions(path, fs::perms::others_read);
   };
 
   SECTION("sdpb")
@@ -62,9 +64,7 @@ TEST_CASE("sdpb")
       create_readonly(runner.output_dir / "ck.profiling.0");
       run_sdpb_set_out_ck_dirs(runner, args, num_procs, 1,
                                "Error when writing to");
-      REQUIRE(
-        boost::filesystem::file_size(runner.output_dir / "ck.profiling.1")
-        > 0);
+      REQUIRE(fs::file_size(runner.output_dir / "ck.profiling.1") > 0);
     }
 
     for(std::string name :
@@ -89,10 +89,9 @@ TEST_CASE("sdpb")
     {
       Test_Util::Test_Case_Runner runner("sdpb/io_tests/input_corruption");
       auto sdp_corrupted = runner.output_dir / "sdp_corrupted.zip";
-      boost::filesystem::create_directories(runner.output_dir);
-      boost::filesystem::copy(sdp_path, sdp_corrupted,
-                              boost::filesystem::copy_options::recursive);
-      boost::filesystem::ofstream os(sdp_corrupted);
+      fs::create_directories(runner.output_dir);
+      fs::copy(sdp_path, sdp_corrupted, fs::copy_options::recursive);
+      std::ofstream os(sdp_corrupted);
       os << "any bytes to corrupt zip archive";
 
       auto args = default_args;
@@ -117,9 +116,8 @@ TEST_CASE("sdpb")
       INFO("now use outDir as checkpoint, "
            "remove read permissions => fail to read");
       args["--checkpointDir"] = args["--outDir"];
-      boost::filesystem::permissions(runner.output_dir / "out"
-                                       / "X_matrix_0.txt",
-                                     boost::filesystem::perms::no_perms);
+      fs::permissions(runner.output_dir / "out" / "X_matrix_0.txt",
+                      fs::perms::none);
       const Test_Util::Test_Case_Runner runner_noread
         = runner.create_nested("noread");
       runner_noread.mpi_run({"build/sdpb"}, args, num_procs, 1,
@@ -135,16 +133,15 @@ TEST_CASE("sdpb")
       run_sdpb_set_out_ck_dirs(runner, args);
 
       INFO("corrupt X_matrix file: remove all data after first two lines");
-      auto X_matrix
-        = (boost::filesystem::path(args["--outDir"]) / "X_matrix_0.txt");
+      auto X_matrix = (fs::path(args["--outDir"]) / "X_matrix_0.txt");
       {
-        boost::filesystem::ifstream is(X_matrix);
+        std::ifstream is(X_matrix);
         std::string line_0, line_1;
         std::getline(is, line_0);
         std::getline(is, line_1);
         is.close();
 
-        boost::filesystem::ofstream os(X_matrix);
+        std::ofstream os(X_matrix);
         os << line_0 << std::endl;
         os << line_1 << std::endl;
       }

@@ -3,6 +3,7 @@
 .waf*/
 build/
 __pycache__/
+/waf-tools/*.pyc
 
 # IDE
 *.code-workspace

@@ -4,13 +4,14 @@
 #include <El.hpp>
 
 #include <boost/program_options.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
                       El::BigFloat &mesh_threshold, Format &format,
-                      boost::filesystem::path &input_path,
-                      boost::filesystem::path &solution_dir,
-                      boost::filesystem::path &output_path, bool &need_lambda)
+                      fs::path &input_path, fs::path &solution_dir,
+                      fs::path &output_path, bool &need_lambda)
 {
   int precision;
   std::string threshold_string, mesh_threshold_string, format_string;
@@ -19,11 +20,11 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
 
   po::options_description options("Basic options");
   options.add_options()("help,h", "Show this helpful message.");
+  options.add_options()("input,i",
+                        po::value<fs::path>(&input_path)->required(),
+                        "Mathematica, JSON, or NSV file with SDP definition");
   options.add_options()(
-    "input,i", po::value<boost::filesystem::path>(&input_path)->required(),
-    "Mathematica, JSON, or NSV file with SDP definition");
-  options.add_options()(
-    "solution", po::value<boost::filesystem::path>(&solution_dir)->required(),
+    "solution", po::value<fs::path>(&solution_dir)->required(),
     "SDPB output directory containing the solutions for y and x (e.g. "
     "'y.txt')");
   options.add_options()(
@@ -39,8 +40,7 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
                         "Format of input file: Either PVM (Polynomial Vector "
                         "Matrix), or PMP (Positive Matrix with Prefactor).");
   options.add_options()(
-    "output,o", po::value<boost::filesystem::path>(&output_path)->required(),
-    "Output file");
+    "output,o", po::value<fs::path>(&output_path)->required(), "Output file");
   options.add_options()(
     "precision", po::value<int>(&precision)->required(),
     "The precision, in the number of bits, for numbers in the "
@@ -65,29 +65,28 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
 
   po::notify(variables_map);
 
-  if(!boost::filesystem::exists(input_path))
+  if(!fs::exists(input_path))
     {
       throw std::runtime_error("Input file '" + input_path.string()
                                + "' does not exist");
     }
-  if(boost::filesystem::is_directory(input_path))
+  if(fs::is_directory(input_path))
     {
       throw std::runtime_error("Input file '" + input_path.string()
                                + "' is a directory, not a file");
     }
-  if(!boost::filesystem::exists(solution_dir))
+  if(!fs::exists(solution_dir))
     {
       throw std::runtime_error("Solution file '" + solution_dir.string()
                                + "' does not exist");
     }
 
-  if(output_path.filename_is_dot())
+  if(output_path == ".")
     {
       throw std::runtime_error("Output file '" + output_path.string()
                                + "' is a directory");
     }
-  if(boost::filesystem::exists(output_path)
-     && boost::filesystem::is_directory(output_path))
+  if(fs::exists(output_path) && fs::is_directory(output_path))
     {
       throw std::runtime_error("Output file '" + output_path.string()
                                + "' exists and is a directory");

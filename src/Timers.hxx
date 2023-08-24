@@ -16,7 +16,7 @@
 #include <list>
 #include <algorithm>
 #include <boost/core/noncopyable.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 struct Timers : public std::list<std::pair<std::string, Timer>>
 {
@@ -31,9 +31,9 @@ struct Timers : public std::list<std::pair<std::string, Timer>>
     return back().second;
   }
 
-  void write_profile(const boost::filesystem::path &path) const
+  void write_profile(const std::filesystem::path &path) const
   {
-    boost::filesystem::create_directories(path.parent_path());
+    std::filesystem::create_directories(path.parent_path());
     std::ofstream f(path);
 
     f << "{" << '\n';

@@ -1,12 +1,14 @@
 #include "../Boost_Float.hxx"
 #include "../sdp_read.hxx"
 
+namespace fs = std::filesystem;
+
 void parse_command_line(int argc, char **argv, int &precision,
-                        std::vector<boost::filesystem::path> &input_files,
-                        boost::filesystem::path &output_dir);
+                        std::vector<fs::path> &input_files,
+                        fs::path &output_dir);
 
 void write_functions(
-  const boost::filesystem::path &output_path,
+  const fs::path &output_path,
   const std::vector<El::BigFloat> &dual_objective_b,
   const std::vector<Polynomial_Vector_Matrix> &polynomial_vector_matrices);
 
@@ -17,8 +19,8 @@ int main(int argc, char **argv)
   try
     {
       int precision;
-      std::vector<boost::filesystem::path> input_files;
-      boost::filesystem::path output_path;
+      std::vector<fs::path> input_files;
+      fs::path output_path;
 
       parse_command_line(argc, argv, precision, input_files, output_path);
       El::gmp::SetPrecision(precision);
@@ -30,13 +32,12 @@ int main(int argc, char **argv)
       read_pvm_input(input_files, dual_objective_b, polynomial_vector_matrices,
                      num_blocks);
 
-      if(output_path.filename_is_dot())
+      if(output_path == ".")
         {
           throw std::runtime_error("Output file '" + output_path.string()
                                    + "' is a directory");
         }
-      if(boost::filesystem::exists(output_path)
-         && boost::filesystem::is_directory(output_path))
+      if(fs::exists(output_path) && fs::is_directory(output_path))
         {
           throw std::runtime_error("Output file '" + output_path.string()
                                    + "' exists and is a directory");

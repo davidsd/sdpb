@@ -2,15 +2,14 @@
 
 #include <El.hpp>
 
-#include <boost/filesystem/fstream.hpp>
 
 inline void write_distmatrix(const El::DistMatrix<El::BigFloat> &matrix,
-                             const boost::filesystem::path &path)
+                             const std::filesystem::path &path)
 {
-  boost::filesystem::ofstream stream;
+  std::ofstream stream;
   if(matrix.DistRank() == matrix.Root())
     {
-      boost::filesystem::create_directories(path.parent_path());
+      std::filesystem::create_directories(path.parent_path());
       stream.open(path);
     }
   El::Print(matrix,

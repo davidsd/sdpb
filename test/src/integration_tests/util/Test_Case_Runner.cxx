@@ -1,6 +1,10 @@
 #include "Test_Case_Runner.hxx"
 #include "Test_Config.hxx"
 
+#include <fstream>
+
+namespace fs = std::filesystem;
+
 namespace
 {
   // concatenate args with " " separator
@@ -56,15 +60,14 @@ namespace Test_Util
       : name(name), data_dir(Test_Config::test_data_dir / name),
         output_dir(Test_Config::test_output_dir / name),
         stdout_path(Test_Config::test_log_dir
-                    / boost::filesystem::path(name + ".stdout.log")),
-        stderr_path(Test_Config::test_log_dir
-                    / boost::filesystem::path(name + ".stderr.log"))
+                    / fs::path(name + ".stdout.log")),
+        stderr_path(Test_Config::test_log_dir / fs::path(name + ".stderr.log"))
   {
-    boost::filesystem::remove_all(output_dir);
-    boost::filesystem::remove_all(Test_Config::test_log_dir / name);
+    fs::remove_all(output_dir);
+    fs::remove_all(Test_Config::test_log_dir / name);
 
-    boost::filesystem::create_directories(stdout_path.parent_path());
-    if(!boost::filesystem::is_directory(stdout_path.parent_path()))
+    fs::create_directories(stdout_path.parent_path());
+    if(!fs::is_directory(stdout_path.parent_path()))
       {
         throw std::runtime_error(
           stdout_path.parent_path().string()
@@ -89,8 +92,8 @@ namespace Test_Util
     CAPTURE(stdout_path);
     CAPTURE(stderr_path);
 
-    boost::filesystem::ofstream os_stdout(stdout_path, std::ios::app);
-    boost::filesystem::ofstream os_stderr(stderr_path, std::ios::app);
+    std::ofstream os_stdout(stdout_path, std::ios::app);
+    std::ofstream os_stderr(stderr_path, std::ios::app);
 
     // write command before stdout
     os_stdout << command << std::endl;
@@ -171,13 +174,13 @@ namespace Test_Util
     run(args_with_mpi, named_args, required_exit_code, required_error_msg);
   }
 
-  boost::filesystem::path Test_Case_Runner::unzip_to_temp_dir(
-    const boost::filesystem::path &zip_path) const
+  fs::path Test_Case_Runner::unzip_to_temp_dir(const fs::path &zip_path) const
   {
     auto temp_dir = output_dir;
-    boost::filesystem::create_directories(temp_dir);
-    auto filename = zip_path.filename().string() + "."
-                    + boost::filesystem::unique_path().string();
+    fs::create_directories(temp_dir);
+    static int unique_suffix;
+    auto filename
+      = zip_path.filename().string() + "." + std::to_string(unique_suffix++);
     auto output_path = temp_dir / filename;
     auto unzip = boost::process::search_path("unzip");
     if(unzip.empty())

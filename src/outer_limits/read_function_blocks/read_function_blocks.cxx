@@ -2,17 +2,17 @@
 
 #include "../../sdp_read.hxx"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 void read_json(
-  const boost::filesystem::path &input_path,
-  std::vector<El::BigFloat> &objectives,
+  const fs::path &input_path, std::vector<El::BigFloat> &objectives,
   std::vector<El::BigFloat> &normalization,
   std::vector<std::vector<std::vector<std::vector<Function>>>> &functions);
 
 void read_function_blocks(
-  const boost::filesystem::path &input_file,
-  std::vector<El::BigFloat> &objectives,
+  const fs::path &input_file, std::vector<El::BigFloat> &objectives,
   std::vector<El::BigFloat> &normalization,
   std::vector<std::vector<std::vector<std::vector<Function>>>> &functions)
 {

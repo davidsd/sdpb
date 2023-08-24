@@ -1,15 +1,15 @@
 #include "../SDP_Solver.hxx"
 
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
 #include <boost/property_tree/json_parser.hpp>
+
+namespace fs = std::filesystem;
 
 // We use binary checkpointing because writing text does not write all
 // of the necessary digits.  The GMP library sets it to one less than
 // required for round-tripping.
 template <typename T>
-void write_local_blocks(const T &t,
-                        boost::filesystem::ofstream &checkpoint_stream)
+void write_local_blocks(const T &t, std::ofstream &checkpoint_stream)
 {
   El::BigFloat zero(0);
   const size_t serialized_size(zero.SerializedSize());
@@ -35,8 +35,7 @@ void write_local_blocks(const T &t,
 }
 
 void SDP_Solver::save_checkpoint(
-  const boost::filesystem::path &checkpoint_directory,
-  const Verbosity &verbosity,
+  const fs::path &checkpoint_directory, const Verbosity &verbosity,
   const boost::property_tree::ptree &parameter_properties)
 {
   if(checkpoint_directory.empty())
@@ -61,8 +60,7 @@ void SDP_Solver::save_checkpoint(
     }
   backup_generation = current_generation;
   current_generation += 1;
-  boost::filesystem::path checkpoint_filename(
-    checkpoint_directory
+  fs::path checkpoint_filename(checkpoint_directory
     / ("checkpoint_" + std::to_string(current_generation) + "_"
        + std::to_string(El::mpi::Rank())));
 
@@ -71,7 +69,7 @@ void SDP_Solver::save_checkpoint(
   for(size_t attempt = 0; attempt < max_retries && !wrote_successfully;
       ++attempt)
     {
-      boost::filesystem::ofstream checkpoint_stream(checkpoint_filename);
+      std::ofstream checkpoint_stream(checkpoint_filename);
       if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {
           std::cout << "Saving checkpoint to    : " << checkpoint_directory
@@ -104,8 +102,7 @@ void SDP_Solver::save_checkpoint(
     }
   if(El::mpi::Rank() == 0)
     {
-      boost::filesystem::ofstream metadata(checkpoint_directory
-                                           / "checkpoint_new.json");
+      std::ofstream metadata(checkpoint_directory / "checkpoint_new.json");
       metadata << "{\n    \"current\": " << current_generation << ",\n"
                << "    \"backup\": " << backup_generation.value() << ",\n"
                << "    \"version\": \"" << SDPB_VERSION_STRING

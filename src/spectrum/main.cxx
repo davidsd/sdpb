@@ -5,27 +5,27 @@
 #include "../sdp_solve.hxx"
 #include "../read_vector.hxx"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
                       El::BigFloat &mesh_threshold, Format &format,
-                      boost::filesystem::path &input_path,
-                      boost::filesystem::path &solution_path,
-                      boost::filesystem::path &output_path, bool &need_lambda);
+                      fs::path &input_path, fs::path &solution_path,
+                      fs::path &output_path, bool &need_lambda);
 
 std::vector<El::Matrix<El::BigFloat>>
-read_x(const boost::filesystem::path &solution_path,
+read_x(const fs::path &solution_path,
        const std::vector<Polynomial_Vector_Matrix> &matrices);
 
 std::vector<El::Matrix<El::BigFloat>>
-read_x(const boost::filesystem::path &solution_path,
+read_x(const fs::path &solution_path,
        const std::vector<Positive_Matrix_With_Prefactor> &matrices);
 
 El::Matrix<El::BigFloat>
-read_y(const boost::filesystem::path &solution_path, const size_t &y_height);
+read_y(const fs::path &solution_path, const size_t &y_height);
 
-void write_spectrum(const boost::filesystem::path &output_path,
-                    const size_t &num_blocks,
+void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
                     const std::vector<Zeros> &zeros_blocks);
 
 std::vector<Zeros> compute_spectrum_pmp(
@@ -51,7 +51,7 @@ int main(int argc, char **argv)
     {
       El::BigFloat threshold, mesh_threshold;
       Format format;
-      boost::filesystem::path input_path, solution_dir, output_path;
+      fs::path input_path, solution_dir, output_path;
       bool need_lambda;
       handle_arguments(argc, argv, threshold, mesh_threshold, format,
                        input_path, solution_dir, output_path, need_lambda);

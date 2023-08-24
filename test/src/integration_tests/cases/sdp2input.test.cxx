@@ -1,6 +1,8 @@
 #include "integration_tests/common.hxx"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 TEST_CASE("sdp2input")
 {
@@ -36,10 +38,8 @@ TEST_CASE("sdp2input")
               Test_Util::REQUIRE_Equal::diff_sdp_zip(
                 sdp_zip, sdp_orig, 512, 512, runner.create_nested("diff"));
 
-              REQUIRE(boost::filesystem::file_size(sdp_zip + ".profiling.0")
-                      > 0);
-              REQUIRE(boost::filesystem::file_size(sdp_zip + ".profiling.1")
-                      > 0);
+              REQUIRE(fs::file_size(sdp_zip + ".profiling.0") > 0);
+              REQUIRE(fs::file_size(sdp_zip + ".profiling.1") > 0);
             }
           }
       }

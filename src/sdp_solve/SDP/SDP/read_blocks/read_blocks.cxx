@@ -6,9 +6,11 @@
 #include <algorithm>
 #include <unordered_map>
 
+namespace fs = std::filesystem;
+
 namespace
 {
-  Block_File_Format get_block_format(const boost::filesystem::path &block_path)
+  Block_File_Format get_block_format(const fs::path &block_path)
   {
     auto extension = block_path.extension();
     if(extension == ".json")
@@ -24,7 +26,7 @@ void read_block_stream(
   Block_File_Format format, SDP &sdp,
   std::vector<El::Matrix<El::BigFloat>> &bilinear_bases_local);
 
-void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
+void read_blocks(const fs::path &sdp_path, const El::Grid &grid,
                  const Block_Info &block_info, SDP &sdp)
 {
   const size_t num_blocks(block_info.block_indices.size());
@@ -33,7 +35,7 @@ void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
 
   std::vector<El::Matrix<El::BigFloat>> bilinear_bases_local(2 * num_blocks);
 
-  if(boost::filesystem::is_regular_file(sdp_path))
+  if(fs::is_regular_file(sdp_path))
     {
       // The archive could have 10's of thousands of entries, so we
       // make a fast lookup table.
@@ -44,9 +46,9 @@ void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
             "block_data_" + std::to_string(block_info.block_indices[index]),
             index);
         }
-      auto get_index = [&index_by_blockname](
-                         const boost::filesystem::path &block_path) -> int {
-        auto name = change_extension(block_path, "").string();
+      auto get_index
+        = [&index_by_blockname](const fs::path &block_path) -> int {
+        auto name = fs::path(block_path).replace_extension().string();
         auto index_it = index_by_blockname.find(name);
         if(index_it == index_by_blockname.end())
           return -1;
@@ -57,7 +59,7 @@ void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
       size_t processed_count = 0;
       while(reader.next_entry())
         {
-          const boost::filesystem::path curr_block_path
+          const fs::path curr_block_path
             = archive_entry_pathname(reader.entry_ptr);
           int index = get_index(curr_block_path);
           if(index == -1)
@@ -75,18 +77,17 @@ void read_blocks(const boost::filesystem::path &sdp_path, const El::Grid &grid,
     {
       for(size_t index(0); index != num_blocks; ++index)
         {
-          boost::filesystem::path block_path(
+          fs::path block_path(
             sdp_path
             / ("block_data_"
                + std::to_string(block_info.block_indices.at(index)) + ".bin"));
           if(!exists(block_path))
-            block_path = change_extension(block_path, ".json");
+            block_path.replace_extension(".json");
           if(!exists(block_path))
             El::RuntimeError("Block not found: ", block_path);
 
           Block_File_Format format = get_block_format(block_path);
-          boost::filesystem::ifstream block_stream(block_path,
-                                                   std::ios::binary);
+          std::ifstream block_stream(block_path, std::ios::binary);
           read_block_stream(grid, index, block_stream, format, sdp,
                             bilinear_bases_local);
         }

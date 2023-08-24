@@ -11,6 +11,7 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/serialization/vector.hpp>
 
+namespace fs = std::filesystem;
 using namespace Test_Util::Json;
 
 // Parser classes
@@ -22,11 +23,11 @@ namespace
   {
     int num_blocks;
     std::string command;
-    explicit Parse_Control_Json(const boost::filesystem::path &path)
+    explicit Parse_Control_Json(const fs::path &path)
     {
       CAPTURE(path);
       REQUIRE(exists(path));
-      boost::filesystem::ifstream is(path);
+      std::ifstream is(path);
       rapidjson::IStreamWrapper wrapper(is);
       rapidjson::Document document;
       document.ParseStream(wrapper);
@@ -40,11 +41,11 @@ namespace
   {
     Float constant;
     std::vector<Float> b;
-    explicit Parse_Objectives_Json(const boost::filesystem::path &path)
+    explicit Parse_Objectives_Json(const fs::path &path)
     {
       CAPTURE(path);
       REQUIRE(exists(path));
-      boost::filesystem::ifstream is(path);
+      std::ifstream is(path);
       rapidjson::IStreamWrapper wrapper(is);
       rapidjson::Document document;
       document.ParseStream(wrapper);
@@ -58,11 +59,11 @@ namespace
   {
     size_t dim;
     size_t num_points;
-    explicit Parse_Block_Info_Json(const boost::filesystem::path &path)
+    explicit Parse_Block_Info_Json(const fs::path &path)
     {
       CAPTURE(path);
       REQUIRE(exists(path));
-      boost::filesystem::ifstream is(path);
+      std::ifstream is(path);
       rapidjson::IStreamWrapper wrapper(is);
       rapidjson::Document document;
       document.ParseStream(wrapper);
@@ -78,29 +79,29 @@ namespace
     Float_Matrix bilinear_bases_odd;
     Float_Vector constraint_constants;
     Float_Matrix constraint_matrix;
-    explicit Parse_Block_Data(
-      const boost::filesystem::path &block_path_no_extension)
+    explicit Parse_Block_Data(const fs::path &block_path_no_extension)
     {
       CAPTURE(block_path_no_extension);
 
-      auto block_path = change_extension(block_path_no_extension, ".bin");
+      auto block_path = block_path_no_extension;
+      block_path.replace_extension(".bin");
       if(exists(block_path))
         {
           parse_bin(block_path);
         }
       else
         {
-          block_path = change_extension(block_path_no_extension, ".json");
+          block_path.replace_extension(".json");
           REQUIRE(exists(block_path));
           parse_json(block_path);
         }
     }
 
   private:
-    void parse_json(const boost::filesystem::path &block_path)
+    void parse_json(const fs::path &block_path)
     {
       CAPTURE(block_path);
-      boost::filesystem::ifstream is(block_path);
+      std::ifstream is(block_path);
       rapidjson::IStreamWrapper wrapper(is);
       rapidjson::Document document;
       document.ParseStream(wrapper);
@@ -111,10 +112,10 @@ namespace
       constraint_constants = parse_Float_Vector(document["c"]);
       constraint_matrix = parse_Float_Matrix(document["B"]);
     }
-    void parse_bin(const boost::filesystem::path &block_path)
+    void parse_bin(const fs::path &block_path)
     {
       CAPTURE(block_path);
-      boost::filesystem::ifstream is(block_path, std::ios::binary);
+      std::ifstream is(block_path, std::ios::binary);
       boost::archive::binary_iarchive ar(is);
       mp_bitcnt_t precision;
       ar >> precision;
@@ -132,8 +133,8 @@ namespace
 {
   using Test_Util::REQUIRE_Equal::diff;
 
-  void diff_control_json(const boost::filesystem::path &a_control_json,
-                         const boost::filesystem::path &b_control_json)
+  void diff_control_json(const fs::path &a_control_json,
+                         const fs::path &b_control_json)
   {
     CAPTURE(a_control_json);
     CAPTURE(b_control_json);
@@ -144,8 +145,8 @@ namespace
     // diff(a.command, b.command);
   }
 
-  void diff_objectives_json(const boost::filesystem::path &a_objectives_json,
-                            const boost::filesystem::path &b_objectives_json)
+  void diff_objectives_json(const fs::path &a_objectives_json,
+                            const fs::path &b_objectives_json)
   {
     CAPTURE(a_objectives_json);
     CAPTURE(b_objectives_json);
@@ -155,8 +156,8 @@ namespace
     DIFF(a.b, b.b);
   }
 
-  void diff_block_info_json(const boost::filesystem::path &a_block_info_path,
-                            const boost::filesystem::path &b_block_info_path)
+  void diff_block_info_json(const fs::path &a_block_info_path,
+                            const fs::path &b_block_info_path)
   {
     INFO("diff block_info_XXX.json files");
     CAPTURE(a_block_info_path);
@@ -168,9 +169,8 @@ namespace
     DIFF(a.dim, b.dim);
     DIFF(a.num_points, b.num_points);
   }
-  void diff_block_data_file(
-    const boost::filesystem::path &a_block_path_no_extension,
-    const boost::filesystem::path &b_block_path_no_extension)
+  void diff_block_data_file(const fs::path &a_block_path_no_extension,
+                            const fs::path &b_block_path_no_extension)
   {
     INFO("diff block_data_XXX files");
     CAPTURE(a_block_path_no_extension);
@@ -189,8 +189,7 @@ namespace
 // Implementation
 namespace Test_Util::REQUIRE_Equal
 {
-  void diff_sdp_zip(const boost::filesystem::path &a_sdp_zip,
-                    const boost::filesystem::path &b_sdp_zip,
+  void diff_sdp_zip(const fs::path &a_sdp_zip, const fs::path &b_sdp_zip,
                     unsigned int input_precision, unsigned int diff_precision,
                     Test_Case_Runner runner)
   {

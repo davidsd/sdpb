@@ -2,7 +2,7 @@
 
 #include <catch2/catch_amalgamated.hpp>
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/process.hpp>
 #include <string>
 
@@ -19,10 +19,10 @@ namespace Test_Util
     typedef std::map<std::string, std::string> Named_Args_Map;
 
     const std::string name;
-    const boost::filesystem::path data_dir;
-    const boost::filesystem::path output_dir;
-    const boost::filesystem::path stdout_path;
-    const boost::filesystem::path stderr_path;
+    const std::filesystem::path data_dir;
+    const std::filesystem::path output_dir;
+    const std::filesystem::path stdout_path;
+    const std::filesystem::path stderr_path;
 
     explicit Test_Case_Runner(const std::string &name);
 
@@ -44,7 +44,7 @@ namespace Test_Util
                  int required_exit_code = 0,
                  const std::string &required_error_msg = "") const;
 
-    [[nodiscard]] boost::filesystem::path
-    unzip_to_temp_dir(const boost::filesystem::path &zip_path) const;
+    [[nodiscard]] std::filesystem::path
+    unzip_to_temp_dir(const std::filesystem::path &zip_path) const;
   };
 }

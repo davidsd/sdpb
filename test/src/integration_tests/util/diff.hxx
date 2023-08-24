@@ -4,7 +4,7 @@
 #include "Test_Case_Runner.hxx"
 
 #include <catch2/catch_amalgamated.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 // Functions that REQUIRE equality of given files or folders.
 // NB: we call REQUIRE() inside these functions,
@@ -16,25 +16,25 @@ namespace Test_Util::REQUIRE_Equal
   // out_txt_keys: which keys compare in out.txt
   // (by default - all except for "Solver runtime")
   // Floating-point numbers are rounded to binary_precision
-  void diff_sdpb_output_dir(const boost::filesystem::path &a_out_dir,
-                            const boost::filesystem::path &b_out_dir,
+  void diff_sdpb_output_dir(const std::filesystem::path &a_out_dir,
+                            const std::filesystem::path &b_out_dir,
                             unsigned int input_precision,
                             unsigned int diff_precision,
                             const std::vector<std::string> &filenames = {},
                             const std::vector<std::string> &out_txt_keys = {});
 
-  void diff_sdp_zip(const boost::filesystem::path &a_sdp_zip,
-                    const boost::filesystem::path &b_sdp_zip,
+  void diff_sdp_zip(const std::filesystem::path &a_sdp_zip,
+                    const std::filesystem::path &b_sdp_zip,
                     unsigned int input_precision, unsigned int diff_precision,
                     Test_Case_Runner runner);
 
   void
-  diff_outer_limits(const boost::filesystem::path &a_json,
-                    const boost::filesystem::path &b_json,
+  diff_outer_limits(const std::filesystem::path &a_json,
+                    const std::filesystem::path &b_json,
                     unsigned int input_precision, unsigned int diff_precision);
 
   void
-  diff_spectrum(const boost::filesystem::path &a_json,
-                const boost::filesystem::path &b_json,
+  diff_spectrum(const std::filesystem::path &a_json,
+                const std::filesystem::path &b_json,
                 unsigned int input_precision, unsigned int diff_precision);
 }

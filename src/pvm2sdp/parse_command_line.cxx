@@ -1,13 +1,14 @@
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <vector>
 #include <iostream>
 #include <stdexcept>
 
 using namespace std::literals;
+namespace fs = std::filesystem;
 
 void parse_command_line(int argc, char **argv, int &precision,
-                        std::vector<boost::filesystem::path> &input_files,
-                        boost::filesystem::path &output_dir)
+                        std::vector<fs::path> &input_files,
+                        fs::path &output_dir)
 {
   std::string usage("pvm2sdp [PRECISION] [INPUT]... [OUTPUT_DIR]\n");
   for(int arg = 1; arg < argc; ++arg)
@@ -45,7 +46,7 @@ void parse_command_line(int argc, char **argv, int &precision,
   input_files.insert(input_files.end(), argv + 2, argv + argc - 1);
   for(auto &file : input_files)
     {
-      if(!boost::filesystem::exists(file))
+      if(!fs::exists(file))
         {
           throw std::runtime_error("Input file '" + file.string()
                                    + "' does not exist");

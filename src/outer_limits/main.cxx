@@ -8,6 +8,8 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
+namespace fs = std::filesystem;
+
 // We convert the optimization problem into a regular linear
 // programming problem.
 //
@@ -50,16 +52,14 @@
 // => num_rows == num_constraints
 // => num_columns == 2*num_weights + num_constraints + 1
 
-std::vector<El::BigFloat>
-load_vector(const boost::filesystem::path &vector_path);
+std::vector<El::BigFloat> load_vector(const fs::path &vector_path);
 
 void read_function_blocks(
-  const boost::filesystem::path &input_file,
-  std::vector<El::BigFloat> &objectives,
+  const fs::path &input_file, std::vector<El::BigFloat> &objectives,
   std::vector<El::BigFloat> &normalization,
   std::vector<std::vector<std::vector<std::vector<Function>>>> &functions);
 
-void read_points(const boost::filesystem::path &input_path,
+void read_points(const fs::path &input_path,
                  std::vector<std::vector<El::BigFloat>> &points);
 
 std::vector<El::BigFloat> compute_optimal(
@@ -119,8 +119,8 @@ int main(int argc, char **argv)
         {
           std::cout << "Saving solution to " << parameters.output_path << "\n";
         }
-      boost::filesystem::create_directories(parameters.output_path.parent_path());
-      boost::filesystem::ofstream output(parameters.output_path);
+      fs::create_directories(parameters.output_path.parent_path());
+      std::ofstream output(parameters.output_path);
       set_stream_precision(output);
       output << "{\n  \"optimal\": \"" << optimal << "\",\n"
              << "  \"y\":\n  [\n";

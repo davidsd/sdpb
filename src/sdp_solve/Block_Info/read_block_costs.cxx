@@ -1,17 +1,15 @@
 #include "../Block_Info.hxx"
 
-#include <boost/filesystem/fstream.hpp>
+namespace fs = std::filesystem;
 
-void read_objectives(const boost::filesystem::path &sdp_path,
-                     const El::Grid &grid, El::BigFloat &objective_const,
+void read_objectives(const fs::path &sdp_path, const El::Grid &grid, El::BigFloat &objective_const,
                      El::DistMatrix<El::BigFloat> &dual_objective_b);
 
 std::vector<Block_Cost>
-Block_Info::read_block_costs(const boost::filesystem::path &sdp_path,
-                             const boost::filesystem::path &checkpoint_in)
+Block_Info::read_block_costs(const fs::path &sdp_path,
+                             const fs::path &checkpoint_in)
 {
-  const boost::filesystem::path sdp_block_timings_path(sdp_path
-                                                       / "block_timings"),
+  const fs::path sdp_block_timings_path(sdp_path / "block_timings"),
     checkpoint_block_timings_path(checkpoint_in / "block_timings");
 
   if(exists(checkpoint_in / ("checkpoint." + std::to_string(El::mpi::Rank()))))
@@ -33,7 +31,7 @@ Block_Info::read_block_costs(const boost::filesystem::path &sdp_path,
   if(!block_timings_filename.empty())
     {
       size_t index(0), cost;
-      boost::filesystem::ifstream costs(block_timings_filename);
+      std::ifstream costs(block_timings_filename);
       costs >> cost;
       while(costs.good())
         {

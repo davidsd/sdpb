@@ -1,10 +1,12 @@
 #include "../sdp_solve.hxx"
 #include "../write_distmatrix.hxx"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 void write_solver_state(const std::vector<size_t> &block_indices,
-                        const boost::filesystem::path &solution_dir,
+                        const fs::path &solution_dir,
                         const Block_Diagonal_Matrix &schur_complement_cholesky,
                         const Block_Matrix &schur_off_diagonal,
                         const El::DistMatrix<El::BigFloat> &Q)

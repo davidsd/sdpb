@@ -4,8 +4,7 @@
 #include "../sdp_solve.hxx"
 
 #include <El.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
 #include <boost/property_tree/ptree.hpp>
 
 #include <iostream>
@@ -20,7 +19,7 @@ struct Outer_Parameters
   Solver_Parameters solver;
   Verbosity verbosity;
 
-  boost::filesystem::path functions_path, points_path, output_path, param_path;
+  std::filesystem::path functions_path, points_path, output_path, param_path;
 
   Outer_Parameters(int argc, char *argv[]);
   bool is_valid() const { return !functions_path.empty(); }

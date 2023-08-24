@@ -1,16 +1,17 @@
 #include "../Zeros.hxx"
 #include "../../set_stream_precision.hxx"
 
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
 
-void write_file(const boost::filesystem::path &output_path,
+namespace fs = std::filesystem;
+
+void write_file(const fs::path &output_path,
                 const std::vector<Zeros> &zeros_blocks)
 {
   if(El::mpi::Rank() == 0)
     {
-      boost::filesystem::create_directories(output_path.parent_path());
-      boost::filesystem::ofstream outfile(output_path);
+      fs::create_directories(output_path.parent_path());
+      std::ofstream outfile(output_path);
       if(!outfile.good())
         {
           throw std::runtime_error("Problem when opening output file: '"

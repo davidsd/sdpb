@@ -5,7 +5,7 @@
 #include "../Block_Cost.hxx"
 
 #include <El.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include <algorithm>
 
@@ -43,7 +43,7 @@ class Block_Info
 {
 public:
   // TODO: The filename should not be in this object.
-  boost::filesystem::path block_timings_filename;
+  std::filesystem::path block_timings_filename;
   std::vector<size_t> dimensions;
   std::vector<size_t> num_points;
 
@@ -52,11 +52,11 @@ public:
   MPI_Comm_Wrapper mpi_comm;
 
   Block_Info() = delete;
-  Block_Info(const boost::filesystem::path &sdp_path,
-             const boost::filesystem::path &checkpoint_in,
+  Block_Info(const std::filesystem::path &sdp_path,
+             const std::filesystem::path &checkpoint_in,
              const size_t &procs_per_node, const size_t &proc_granularity,
              const Verbosity &verbosity);
-  Block_Info(const boost::filesystem::path &sdp_path,
+  Block_Info(const std::filesystem::path &sdp_path,
              const El::Matrix<int32_t> &block_timings,
              const size_t &procs_per_node, const size_t &proc_granularity,
              const Verbosity &verbosity);
@@ -67,10 +67,10 @@ public:
              const Verbosity &verbosity)
       : Block_Info(matrix_dimensions, 1, 1, verbosity)
   {}
-  void read_block_info(const boost::filesystem::path &sdp_path);
+  void read_block_info(const std::filesystem::path &sdp_path);
   std::vector<Block_Cost>
-  read_block_costs(const boost::filesystem::path &sdp_path,
-                   const boost::filesystem::path &checkpoint_in);
+  read_block_costs(const std::filesystem::path &sdp_path,
+                   const std::filesystem::path &checkpoint_in);
   void
   allocate_blocks(const std::vector<Block_Cost> &block_costs,
                   const size_t &procs_per_node, const size_t &proc_granularity,

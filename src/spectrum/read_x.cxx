@@ -2,8 +2,10 @@
 #include "../sdp_solve.hxx"
 #include "../sdp_convert.hxx"
 
+namespace fs = std::filesystem;
+
 std::vector<El::Matrix<El::BigFloat>>
-read_x(const boost::filesystem::path &solution_dir,
+read_x(const fs::path &solution_dir,
        const std::vector<Polynomial_Vector_Matrix> &matrices)
 {
   std::vector<El::Matrix<El::BigFloat>> result;
@@ -21,7 +23,7 @@ read_x(const boost::filesystem::path &solution_dir,
 }
 
 std::vector<El::Matrix<El::BigFloat>>
-read_x(const boost::filesystem::path &solution_path,
+read_x(const fs::path &solution_path,
        const std::vector<Positive_Matrix_With_Prefactor> &matrices)
 {
   std::vector<El::Matrix<El::BigFloat>> result;

@@ -1,8 +1,9 @@
 import os, subprocess
 
 def options(opt):
-    opt.load(['compiler_cxx','gnu_dirs','cxx17','boost','gmpxx','mpfr',
-              'elemental','libxml2', 'rapidjson', 'libarchive'])
+    opt.load(['compiler_cxx', 'gnu_dirs'])
+    opt.load(['cxx17', 'boost', 'gmpxx', 'mpfr', 'elemental', 'libxml2', 'rapidjson', 'libarchive'],
+             tooldir='./waf-tools')
 
 def configure(conf):
     if not 'CXX' in os.environ or os.environ['CXX']=='g++' or os.environ['CXX']=='icpc':
@@ -10,7 +11,7 @@ def configure(conf):
 
     conf.load(['compiler_cxx','gnu_dirs','cxx17','boost','gmpxx','mpfr',
                'elemental','libxml2', 'rapidjson', 'libarchive'])
-    conf.load('clang_compilation_database')
+    conf.load('clang_compilation_database', tooldir='./waf-tools')
 
     conf.env.git_version=subprocess.check_output('git describe --dirty', universal_newlines=True, shell=True).rstrip()
     

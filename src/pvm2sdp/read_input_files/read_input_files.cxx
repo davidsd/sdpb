@@ -1,21 +1,20 @@
 #include "../../sdp_read.hxx"
 #include "../../sdp_convert.hxx"
 
-void read_xml_input(const boost::filesystem::path &input_file,
-                    El::BigFloat &objective_const,
+namespace fs = std::filesystem;
+
+void read_xml_input(const fs::path &input_file, El::BigFloat &objective_const,
                     std::vector<El::BigFloat> &dual_objectives_b,
                     std::vector<Dual_Constraint_Group> &dual_constraint_groups,
                     size_t &num_processed);
 
 void read_input_files(
-  const std::vector<boost::filesystem::path> &input_files,
-  El::BigFloat &objective_const, std::vector<El::BigFloat> &dual_objectives_b,
+  const std::vector<fs::path> &input_files, El::BigFloat &objective_const, std::vector<El::BigFloat> &dual_objectives_b,
   std::vector<Dual_Constraint_Group> &dual_constraint_groups,
   size_t &num_processed);
 
 void read_input_files(
-  const std::vector<boost::filesystem::path> &input_files,
-  El::BigFloat &objective_const, std::vector<El::BigFloat> &dual_objectives_b,
+  const std::vector<fs::path> &input_files, El::BigFloat &objective_const, std::vector<El::BigFloat> &dual_objectives_b,
   std::vector<Dual_Constraint_Group> &dual_constraint_groups,
   size_t &num_processed)
 {

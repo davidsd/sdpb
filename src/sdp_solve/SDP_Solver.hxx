@@ -14,7 +14,7 @@
 #include "Solver_Parameters.hxx"
 #include "../Timers.hxx"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 // SDPSolver contains the data structures needed during the running of
 // the interior point algorithm.  Each structure is allocated when an
@@ -103,11 +103,11 @@ public:
     El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers);
 
   void
-  save_checkpoint(const boost::filesystem::path &checkpoint_directory,
+  save_checkpoint(const std::filesystem::path &checkpoint_directory,
                   const Verbosity &verbosity,
                   const boost::property_tree::ptree &parameter_properties);
   bool
-  load_checkpoint(const boost::filesystem::path &checkpoint_directory,
+  load_checkpoint(const std::filesystem::path &checkpoint_directory,
                   const Block_Info &block_info, const Verbosity &verbosity,
                   const bool &require_initial_checkpoint);
 };

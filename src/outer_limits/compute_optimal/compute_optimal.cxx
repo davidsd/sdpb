@@ -8,6 +8,8 @@
 #include "../../max_normalization_index.hxx"
 #include "../../fill_weights.hxx"
 
+namespace fs = std::filesystem;
+
 void compute_y_transform(
   const std::vector<std::vector<std::vector<std::vector<Function>>>>
     &function_blocks,
@@ -21,8 +23,7 @@ void compute_y_transform(
   El::BigFloat &primal_c_scale);
 
 boost::optional<int64_t> load_checkpoint(
-  const boost::filesystem::path &checkpoint_directory,
-  const Verbosity &verbosity, boost::optional<int64_t> &backup_generation,
+  const fs::path &checkpoint_directory, const Verbosity &verbosity, boost::optional<int64_t> &backup_generation,
   int64_t &current_generation,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
@@ -45,8 +46,7 @@ void find_new_points(
   std::vector<std::vector<El::BigFloat>> &new_points, bool &has_new_points);
 
 void save_checkpoint(
-  const boost::filesystem::path &checkpoint_directory,
-  const Verbosity &verbosity,
+  const fs::path &checkpoint_directory, const Verbosity &verbosity,
   const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
   const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   const El::Matrix<El::BigFloat> &y,

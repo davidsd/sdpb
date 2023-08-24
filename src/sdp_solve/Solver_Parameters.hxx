@@ -4,7 +4,7 @@
 //
 
 #include <El.hpp>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/program_options.hpp>
 
@@ -23,7 +23,7 @@ struct Solver_Parameters
     infeasible_centering_parameter, step_length_reduction, max_complementarity,
     min_primal_step, min_dual_step;
 
-  boost::filesystem::path checkpoint_in, checkpoint_out;
+  std::filesystem::path checkpoint_in, checkpoint_out;
   Solver_Parameters() = default;
   boost::program_options::options_description options();
 };

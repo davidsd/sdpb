@@ -2,18 +2,19 @@
 #include "../../SDP.hxx"
 #include "set_bases_blocks.hxx"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 #include <iterator>
 
-void read_blocks(const boost::filesystem::path &sdp_path,
-                 const El::Grid &grid, const Block_Info &block_info, SDP &sdp);
-void read_objectives(const boost::filesystem::path &sdp_path,
-                     const El::Grid &grid, El::BigFloat &objective_const,
+namespace fs = std::filesystem;
+
+void read_blocks(const fs::path &sdp_path, const El::Grid &grid,
+                 const Block_Info &block_info, SDP &sdp);
+void read_objectives(const fs::path &sdp_path, const El::Grid &grid, El::BigFloat &objective_const,
                      El::DistMatrix<El::BigFloat> &dual_objective_b);
 
-SDP::SDP(const boost::filesystem::path &sdp_path,
-         const Block_Info &block_info, const El::Grid &grid)
+SDP::SDP(const fs::path &sdp_path, const Block_Info &block_info,
+         const El::Grid &grid)
 {
   read_objectives(sdp_path, grid, objective_const, dual_objective_b);
   read_blocks(sdp_path, grid, block_info, *this);

@@ -1,8 +1,8 @@
 #include "../Approx_Parameters.hxx"
 
 #include <boost/program_options.hpp>
-#include <boost/filesystem/fstream.hpp>
 
+namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
 Approx_Parameters::Approx_Parameters(int argc, char *argv[])
@@ -12,7 +12,7 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
 
   po::options_description required_options("Required options");
   required_options.add_options()(
-    "sdp", po::value<boost::filesystem::path>(&sdp_path)->required(),
+    "sdp", po::value<fs::path>(&sdp_path)->required(),
     "File or directory containing preprocessed SDP input corresponding to the "
     "solution.");
   required_options.add_options()(
@@ -40,12 +40,12 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
   po::options_description basic_options("Basic options");
   basic_options.add_options()("help,h", "Show this helpful message.");
   basic_options.add_options()(
-    "paramFile,p", po::value<boost::filesystem::path>(&param_path),
+    "paramFile,p", po::value<fs::path>(&param_path),
     "Any parameter can optionally be set via this file in key=value "
     "format. Command line arguments override values in the parameter "
     "file.");
   basic_options.add_options()(
-    "newSdp", po::value<boost::filesystem::path>(&new_sdp_path),
+    "newSdp", po::value<fs::path>(&new_sdp_path),
     "A file containing either preprocessed input for the SDP you wish to "
     "approximate, or a null separated list of files with preprocessed input.");
   basic_options.add_options()(
@@ -57,8 +57,7 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
     "This option is generally useful only when trying to fit a large problem "
     "in a small machine.");
   basic_options.add_options()(
-    "solutionDir",
-    boost::program_options::value<boost::filesystem::path>(&solution_dir),
+    "solutionDir", boost::program_options::value<fs::path>(&solution_dir),
     "The directory with the text format solutions of x and y for the primary "
     "sdp. It must also contain either X and Y or the solver state. "
     "Defaults to sdp with '_out' appended.");
@@ -93,13 +92,8 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
         {
           if(variables_map.count("paramFile") != 0)
             {
-              // TODO: The next line is redundant.  param_file has
-              // already been set.  Also, I can use
-              // boost::filesystem::ifstream and avoid the
-              // .string().c_str() nonsense.
-              param_path
-                = variables_map["paramFile"].as<boost::filesystem::path>();
-              std::ifstream ifs(param_path.string().c_str());
+              param_path = variables_map["paramFile"].as<fs::path>();
+              std::ifstream ifs(param_path);
               if(!ifs.good())
                 {
                   throw std::runtime_error("Could not open '"
@@ -112,13 +106,13 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
 
           po::notify(variables_map);
 
-          if(!boost::filesystem::exists(sdp_path))
+          if(!fs::exists(sdp_path))
             {
               throw std::runtime_error("SDP path '" + sdp_path.string()
                                        + "' does not exist");
             }
 
-          if(!new_sdp_path.empty() && !boost::filesystem::exists(new_sdp_path))
+          if(!new_sdp_path.empty() && !fs::exists(new_sdp_path))
             {
               throw std::runtime_error("New SDP path '" + new_sdp_path.string()
                                        + "' does not exist");

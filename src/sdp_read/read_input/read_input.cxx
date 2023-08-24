@@ -1,27 +1,29 @@
 #include "../Positive_Matrix_With_Prefactor.hxx"
 #include "../../sdp_read.hxx"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
-void read_json(const boost::filesystem::path &input_path,
+namespace fs = std::filesystem;
+
+void read_json(const fs::path &input_path,
                std::vector<El::BigFloat> &objectives,
                std::vector<El::BigFloat> &normalization,
                std::vector<Positive_Matrix_With_Prefactor> &matrices,
                size_t &num_processed);
 
-void read_mathematica(const boost::filesystem::path &input_path,
+void read_mathematica(const fs::path &input_path,
                       std::vector<El::BigFloat> &objectives,
                       std::vector<El::BigFloat> &normalization,
                       std::vector<Positive_Matrix_With_Prefactor> &matrices,
                       size_t &num_processed);
 
-void read_input(const boost::filesystem::path &input_file,
+void read_input(const fs::path &input_file,
                 std::vector<El::BigFloat> &objectives,
                 std::vector<El::BigFloat> &normalization,
                 std::vector<Positive_Matrix_With_Prefactor> &matrices,
                 size_t &num_processed)
 {
-  if(!boost::filesystem::exists(input_file))
+  if(!exists(input_file))
     {
       El::RuntimeError("Cannot find input file: ", input_file);
     }

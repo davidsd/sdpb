@@ -1,17 +1,17 @@
 #include "../sdp_read.hxx"
 #include "../sdp_convert/write_vector.hxx"
 
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 void write_functions(
-  const boost::filesystem::path &output_path,
-  const std::vector<El::BigFloat> &objectives,
+  const fs::path &output_path, const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
   const std::vector<Positive_Matrix_With_Prefactor> &matrices)
 {
-  boost::filesystem::create_directories(output_path.parent_path());
-  boost::filesystem::ofstream output_stream(output_path);
+  fs::create_directories(output_path.parent_path());
+  std::ofstream output_stream(output_path);
   set_stream_precision(output_stream);
   output_stream << "{\n  \"objective\":\n";
   write_vector(output_stream, objectives, "    ");

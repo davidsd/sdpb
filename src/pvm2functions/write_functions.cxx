@@ -1,16 +1,16 @@
-#include <boost/filesystem/fstream.hpp>
-
 #include "../Boost_Float.hxx"
 #include "../sdp_convert.hxx"
 #include "../sdp_convert/write_vector.hxx"
 
+namespace fs = std::filesystem;
+
 void write_functions(
-  const boost::filesystem::path &output_path,
+  const fs::path &output_path,
   const std::vector<El::BigFloat> &dual_objective_b,
   const std::vector<Polynomial_Vector_Matrix> &polynomial_vector_matrices)
 {
-  boost::filesystem::create_directories(output_path.parent_path());
-  boost::filesystem::ofstream output_stream(output_path);
+  fs::create_directories(output_path.parent_path());
+  std::ofstream output_stream(output_path);
   set_stream_precision(output_stream);
   output_stream << "{\n  \"objective\":\n";
   write_vector(output_stream, dual_objective_b, "    ");

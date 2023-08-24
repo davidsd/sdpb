@@ -11,10 +11,11 @@
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
+namespace fs = std::filesystem;
+
 Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters);
 
-void write_timing(const boost::filesystem::path &checkpoint_out,
-                  const Block_Info &block_info, const Timers &timers,
+void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info, const Timers &timers,
                   const bool &debug, El::Matrix<int32_t> &block_timings);
 
 int main(int argc, char **argv)
@@ -97,7 +98,7 @@ int main(int argc, char **argv)
               create_directories(parameters.solver.checkpoint_out);
               copy_file(block_info.block_timings_filename,
                         parameters.solver.checkpoint_out / "block_timings",
-                        boost::filesystem::copy_option::overwrite_if_exists);
+                        fs::copy_options::overwrite_existing);
             }
         }
       solve(block_info, parameters);

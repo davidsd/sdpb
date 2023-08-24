@@ -6,14 +6,16 @@
 
 #include <El.hpp>
 
+namespace fs = std::filesystem;
+
 void setup_solver(const Block_Info &block_info, const El::Grid &grid,
-                  const SDP &sdp, const boost::filesystem::path &solution_dir,
+                  const SDP &sdp, const fs::path &solution_dir,
                   Block_Diagonal_Matrix &schur_complement_cholesky,
                   Block_Matrix &schur_off_diagonal,
                   El::DistMatrix<El::BigFloat> &Q);
 
 void write_solver_state(const std::vector<size_t> &block_indices,
-                        const boost::filesystem::path &solution_dir,
+                        const fs::path &solution_dir,
                         const Block_Diagonal_Matrix &schur_complement_cholesky,
                         const Block_Matrix &schur_off_diagonal,
                         const El::DistMatrix<El::BigFloat> &Q);
@@ -22,7 +24,7 @@ std::vector<std::pair<std::string, Approx_Objective>>
 linear_approximate_objectives(const Block_Info &block_info,
                               const El::Grid &grid, const SDP &sdp,
                               const Block_Vector &x, const Block_Vector &y,
-                              const boost::filesystem::path &input_path);
+                              const fs::path &input_path);
 
 std::vector<std::pair<std::string, Approx_Objective>>
 quadratic_approximate_objectives(
@@ -30,8 +32,7 @@ quadratic_approximate_objectives(
   const Block_Vector &x, const Block_Vector &y,
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
-  const El::DistMatrix<El::BigFloat> &Q,
-  const boost::filesystem::path &input_path);
+  const El::DistMatrix<El::BigFloat> &Q, const fs::path &input_path);
 
 int main(int argc, char **argv)
 {
