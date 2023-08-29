@@ -18,7 +18,7 @@ TEST_CASE("sdp2input")
     {
       DYNAMIC_SECTION(format)
       {
-        auto sdp_orig = data_dir / ("sdp_" + format + ".orig.zip");
+        auto sdp_orig = data_dir / ("sdp_json.orig.zip");
         for(std::string input_name :
             {"sdp2input_test.json", "sdp2input_split.nsv", "sdp2input_test.m"})
           {
@@ -34,6 +34,17 @@ TEST_CASE("sdp2input")
               args["--outputFormat"] = format;
 
               runner.create_nested("run").mpi_run({"build/sdp2input"}, args);
+
+              {
+                INFO("Check that sdp2input actually uses --outputFormat="
+                     << format);
+                auto sdp_unzip
+                  = runner.create_nested("format").unzip_to_temp_dir(sdp_zip);
+                auto block_data_0_path
+                  = sdp_unzip / ("block_data_0." + format);
+                CAPTURE(block_data_0_path);
+                REQUIRE(is_regular_file(block_data_0_path));
+              }
 
               Test_Util::REQUIRE_Equal::diff_sdp_zip(
                 sdp_zip, sdp_orig, 512, 512, runner.create_nested("diff"));
