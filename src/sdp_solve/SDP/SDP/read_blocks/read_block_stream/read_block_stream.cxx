@@ -11,7 +11,7 @@ namespace
                     El::Matrix<El::BigFloat> &local)
   {
     El::Int height = input.Height();
-    El::Int width = input.Width() == 0 ? 1 : input.Width();
+    El::Int width = input.Width();
     local.Resize(height, width);
     for(El::Int row(0); row != height; ++row)
       {
@@ -28,7 +28,7 @@ namespace
   {
     const auto &value = input.value;
     int height = value.size();
-    int width = value.at(0).size();
+    int width = value.empty() ? 1 : value.at(0).size();
     El::Matrix<FloatType> result(height, width);
 
     for(int row = 0; row < height; ++row)
