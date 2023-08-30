@@ -13,13 +13,13 @@ def configure(conf):
                'elemental','libxml2', 'rapidjson', 'libarchive'])
     conf.load('clang_compilation_database', tooldir='./waf-tools')
 
-    conf.env.git_version=subprocess.check_output('git describe --dirty', universal_newlines=True, shell=True).rstrip()
+    conf.env.git_version = subprocess.check_output('git describe --always --dirty', universal_newlines=True,
+                                                   shell=True).rstrip()
     
 def build(bld):
-    default_flags=['-Wall', '-Wextra', '-O3', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
-    # default_flags=['-Wall', '-Wextra', '-O3', '-g', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
-    # default_flags=['-Wall', '-Wextra', '-g', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
-    use_packages=['cxx17','boost','gmpxx','mpfr','elemental','libxml2', 'rapidjson', 'libarchive']
+    default_flags = ['-Wall', '-Wextra', '-O3']
+    default_defines = ['OMPI_SKIP_MPICXX', 'SDPB_VERSION_STRING="' + bld.env.git_version + '"']
+    use_packages = ['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive']
     default_includes = ['src', 'external']
     # TODO use default_includes for all targets and simplify #include directives
     # e.g. #include "../../Timers.hxx" -> #include <Timers.hxx>
@@ -88,6 +88,7 @@ def build(bld):
     bld.stlib(source=sdp_solve_sources,
               target='sdp_solve',
               cxxflags=default_flags,
+              defines=default_defines,
               use=use_packages + ['sdp_convert'])
     
     # SDPB executable
@@ -100,6 +101,7 @@ def build(bld):
                         'src/sdpb/save_solution.cxx'],
                 target='sdpb',
                 cxxflags=default_flags,
+                defines=default_defines,
                 use=use_packages + ['sdp_solve']
                 )
 
@@ -118,6 +120,7 @@ def build(bld):
     bld.stlib(source=sdp_convert_sources,
               target='sdp_convert',
               cxxflags=default_flags,
+              defines=default_defines,
               use=use_packages)
 
 
@@ -130,6 +133,7 @@ def build(bld):
                         'src/pvm2sdp/read_input_files/read_xml_input/Input_Parser/on_characters.cxx'],
                 target='pvm2sdp',
                 cxxflags=default_flags,
+                defines=default_defines,
                 use=use_packages + ['sdp_read']
                 )
 
@@ -173,6 +177,7 @@ def build(bld):
     bld.stlib(source=sdp_read_sources,
               target='sdp_read',
               cxxflags=default_flags,
+              defines=default_defines,
               use=use_packages + ['sdp_convert'])
 
     bld.program(source=['src/sdp2input/main.cxx',
@@ -187,12 +192,14 @@ def build(bld):
                         'src/sdp2input/write_output/bilinear_basis/bilinear_form/operator_plus_set_Derivative_Term.cxx'],
                 target='sdp2input',
                 cxxflags=default_flags,
+                defines=default_defines,
                 use=use_packages + ['sdp_read']
                 )
 
     bld.stlib(source=['src/Mesh/Mesh.cxx', 'src/Mesh/ostream.cxx'],
               target='mesh',
               cxxflags=default_flags,
+              defines=default_defines,
               use=use_packages)
 
     bld.program(source=['src/outer_limits/main.cxx',
@@ -242,6 +249,7 @@ def build(bld):
                         ],
                 target='outer_limits',
                 cxxflags=default_flags,
+                defines=default_defines,
                 use=use_packages + ['sdp_read','sdp_solve', 'mesh']
                 )
 
@@ -258,6 +266,7 @@ def build(bld):
                         ],
                 target='approx_objective',
                 cxxflags=default_flags,
+                defines=default_defines,
                 use=use_packages + ['sdp_read','sdp_solve']
                 )
     
@@ -266,6 +275,7 @@ def build(bld):
                         'src/pvm2functions/write_functions.cxx'],
                 target='pvm2functions',
                 cxxflags=default_flags,
+                defines=default_defines,
                 use=use_packages + ['sdp_read']
                 )
 
@@ -273,6 +283,7 @@ def build(bld):
                         'src/sdp2functions/write_functions.cxx'],
                 target='sdp2functions',
                 cxxflags=default_flags,
+                defines=default_defines,
                 use=use_packages + ['sdp_read']
                 )
 
@@ -288,6 +299,7 @@ def build(bld):
                         'src/spectrum/write_spectrum/write_file.cxx'],
                 target='spectrum',
                 cxxflags=default_flags,
+                defines=default_defines,
                 use=use_packages + ['sdp_read', 'sdp_solve', 'sdp_convert', 'mesh']
                 )
 
@@ -306,7 +318,9 @@ def build(bld):
                         'test/src/integration_tests/cases/sdpb.test.cxx',
                         'test/src/integration_tests/cases/spectrum.test.cxx'],
                 target='integration_tests',
-                cxxflags=default_flags + ['-D CATCH_AMALGAMATED_CUSTOM_MAIN'],
+                install_path=None,
+                cxxflags=default_flags,
+                defines=default_defines + ['CATCH_AMALGAMATED_CUSTOM_MAIN'],
                 use=use_packages,
                 includes=default_includes + ['test/src']
                 )
@@ -315,7 +329,8 @@ def build(bld):
                         'test/src/unit_tests/cases/block_data_serialization.test.cxx',
                         'test/src/unit_tests/cases/boost_serialization.test.cxx'],
                 target='unit_tests',
-                cxxflags=default_flags + ['-D CATCH_AMALGAMATED_CUSTOM_MAIN'],
+                cxxflags=default_flags,
+                defines=default_defines + ['CATCH_AMALGAMATED_CUSTOM_MAIN'],
                 use=use_packages + ['sdp_convert', 'sdp_solve'],
                 includes=default_includes + ['test/src']
                 )

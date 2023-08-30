@@ -9,7 +9,7 @@ void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info, 
 {
   if(debug)
     {
-      timers.write_profile(checkpoint_out.string() + ".profiling."
+      timers.write_profile(checkpoint_out.string() + ".profiling/profiling."
                            + std::to_string(El::mpi::Rank()));
     }
 

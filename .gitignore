@@ -21,3 +21,6 @@ test/.nfs*
 /docs/*.out
 /docs/*.synctex.gz
 /docs/*.toc
+
+# Misc
+tmp/

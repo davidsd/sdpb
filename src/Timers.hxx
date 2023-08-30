@@ -33,7 +33,8 @@ struct Timers : public std::list<std::pair<std::string, Timer>>
 
   void write_profile(const std::filesystem::path &path) const
   {
-    std::filesystem::create_directories(path.parent_path());
+    if(!path.parent_path().empty())
+      std::filesystem::create_directories(path.parent_path());
     std::ofstream f(path);
 
     f << "{" << '\n';

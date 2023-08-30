@@ -61,10 +61,10 @@ TEST_CASE("sdpb")
       args["--maxIterations"] = "1";
       args["--verbosity"] = "2";
 
-      create_readonly(runner.output_dir / "ck.profiling.0");
+      create_readonly(runner.output_dir / "ck.profiling/profiling.0");
       run_sdpb_set_out_ck_dirs(runner, args, num_procs, 1,
                                "Error when writing to");
-      REQUIRE(fs::file_size(runner.output_dir / "ck.profiling.1") > 0);
+      REQUIRE(fs::file_size(runner.output_dir / "ck.profiling/profiling.1") > 0);
     }
 
     for(std::string name :
