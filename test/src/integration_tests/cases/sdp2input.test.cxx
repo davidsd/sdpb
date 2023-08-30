@@ -53,8 +53,8 @@ TEST_CASE("sdp2input")
                 sdp_zip, sdp_orig, precision, diff_precision,
                 runner.create_nested("diff"));
 
-              REQUIRE(fs::file_size(sdp_zip + ".profiling.0") > 0);
-              REQUIRE(fs::file_size(sdp_zip + ".profiling.1") > 0);
+              REQUIRE(fs::file_size(sdp_zip + ".profiling/profiling.0") > 0);
+              REQUIRE(fs::file_size(sdp_zip + ".profiling/profiling.1") > 0);
             }
           }
       }
