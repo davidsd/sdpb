@@ -24,23 +24,37 @@ namespace
     auto sdp_orig_zip = (data_dir / ("sdp.orig.zip")).string();
     auto sdp_zip = (output_dir / "sdp.zip").string();
 
-    // sdp2input
+    // pvm2sdp or sdp2input
     {
-      Test_Util::Test_Case_Runner::Named_Args_Map args{
-        {"--input", (data_dir / "json" / "file_list.nsv").string()},
-        {"--output", sdp_zip},
-        {"--outputFormat", sdp_format},
-        {"--precision", std::to_string(precision)}};
+      if(exists(data_dir / "pvm.xml"))
+        {
+          INFO("run pvm2sdp");
+          INFO("TODO: only outputFormat=json format is supported for pvm2sdp");
+          REQUIRE(sdp_format == "json");
+          runner.create_nested("pvm2sdp").mpi_run(
+            {"build/pvm2sdp", std::to_string(precision),
+             (data_dir / "pvm.xml").string(), sdp_zip},
+            {}, num_procs);
+        }
+      else
+        {
+          INFO("run sdp2input");
+          Test_Util::Test_Case_Runner::Named_Args_Map args{
+            {"--input", (data_dir / "json" / "file_list.nsv").string()},
+            {"--output", sdp_zip},
+            {"--outputFormat", sdp_format},
+            {"--precision", std::to_string(precision)}};
 
-      runner.create_nested("sdp2input/run")
-        .mpi_run({"build/sdp2input"}, args, num_procs);
+          runner.create_nested("sdp2input")
+            .mpi_run({"build/sdp2input"}, args, num_procs);
+        }
 
       // sdp2input runs with --precision=<precision>
       // We check test output up to lower precision=<sdp_zip_diff_precision>
       // in order to neglect unimportant rounding errors
       Test_Util::REQUIRE_Equal::diff_sdp_zip(
         sdp_zip, sdp_orig_zip, precision, sdp_zip_diff_precision,
-        runner.create_nested("sdp2input/diff"));
+        runner.create_nested("sdp.zip.diff"));
     }
 
     // sdpb
@@ -66,8 +80,7 @@ namespace
 
 TEST_CASE("end-to-end_tests")
 {
-  INFO("End-to-end tests for sdp2input + sdpb");
-  INFO("Test data is generated with SDPB 2.5.1 on Caltech cluster.");
+  INFO("End-to-end tests for pvm2sdp/sdp2input + sdpb");
   INFO("On different machines results can vary due to rounding errors, "
        "depending on GMP/MPFR version etc");
   int num_procs = 6;
@@ -75,79 +88,107 @@ TEST_CASE("end-to-end_tests")
   int sdp_zip_diff_precision = 608;
   std::string name = "end-to-end_tests";
 
-  SECTION("SingletScalar_cT_test_nmax6/primal_dual_optimal")
+  SECTION("dfibo-0-0-j=3-c=3.0000-d=3-s=6")
   {
-    INFO("SingletScalar_cT_test_nmax6 from "
-         "https://gitlab.com/davidsd/scalars-3d/-/blob/master/src/Projects/"
-         "Scalars3d/SingletScalar2020.hs");
-    INFO("SDPB should find primal-dual optimal solution.");
-    name += "/SingletScalar_cT_test_nmax6/primal_dual_optimal";
+    INFO("pvm2sdp+sdpb test for https://github.com/davidsd/sdpb/issues/124");
+    INFO("sdp.zip contains block with empty bilinear_bases_odd, "
+         "which caused a bug.");
+    INFO("Test data from Harvard cluster, gmp/6.2.1 mpfr/4.2.0");
+    name += "/dfibo-0-0-j=3-c=3.0000-d=3-s=6";
     std::string default_sdpb_args
-      = "--checkpointInterval 3600 --maxRuntime 1340 "
-        "--dualityGapThreshold 1.0e-30 --primalErrorThreshold 1.0e-30 "
-        "--dualErrorThreshold 1.0e-30 --initialMatrixScalePrimal 1.0e20 "
-        "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
-        "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
-        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
-        "--procGranularity 1 --writeSolution y";
+      = "--findDualFeasible --findPrimalFeasible "
+        "--initialMatrixScalePrimal 1e10 --initialMatrixScaleDual 1e10 "
+        "--maxComplementarity 1e30 --dualErrorThreshold 1e-10 "
+        "--primalErrorThreshold 1e-153 --maxRuntime 259200 "
+        "--checkpointInterval 3600 --maxIterations 1000 "
+        "--feasibleCenteringParameter=0.1 --infeasibleCenteringParameter=0.3 "
+        "--stepLengthReduction=0.7";
     int sdpb_output_diff_precision = 600;
-    // This test is slow, we don't want to run it twice
-    // json/bin correctness is checked by other tests below,
-    // so we use only binary SDP here
-    end_to_end_test(name, default_sdpb_args, "bin", num_procs, precision,
+    // TODO pvm2sdp doesn't support bin output
+    end_to_end_test(name, default_sdpb_args, "json", num_procs, precision,
                     sdp_zip_diff_precision, sdpb_output_diff_precision);
   }
 
-  SECTION("SingletScalarAllowed_test_nmax6")
+  SECTION("SingletScalar_nmax6")
   {
-    INFO("SingletScalarAllowed_test_nmax6 from "
+    INFO("sdp2input+sdpb tests based on "
          "https://gitlab.com/davidsd/scalars-3d/-/blob/master/src/Projects/"
          "Scalars3d/SingletScalar2020.hs");
-    name += "/SingletScalarAllowed_test_nmax6";
-    std::string default_sdpb_args
-      = "--checkpointInterval 3600 --maxRuntime 1341 "
-        "--dualityGapThreshold 1.0e-30 --primalErrorThreshold 1.0e-200 "
-        "--dualErrorThreshold 1.0e-200 --initialMatrixScalePrimal 1.0e20 "
-        "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
-        "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
-        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
-        "--procGranularity 1 --writeSolution y "
-        "--detectPrimalFeasibleJump --detectDualFeasibleJump";
-    int sdpb_output_diff_precision = 610;
-
-    SECTION("primal_feasible_jump")
+    INFO("Test data is generated with SDPB 2.5.1 on Caltech cluster.");
+    SECTION("SingletScalar_cT_test_nmax6/primal_dual_optimal")
     {
-      INFO("SDPB should detect primal feasible jump.");
-      name += "/primal_feasible_jump";
-      std::vector<std::string> out_txt_keys
-        = {"terminateReason", "primalObjective", "dualObjective", "dualityGap",
-           "dualError"};
-      for(auto &sdp_format : {"bin", "json"})
-        {
-          DYNAMIC_SECTION(sdp_format)
-          {
-            end_to_end_test(name, default_sdpb_args, sdp_format, num_procs,
-                            precision, sdp_zip_diff_precision,
-                            sdpb_output_diff_precision, out_txt_keys);
-          }
-        }
+      INFO("SingletScalar_cT_test_nmax6 from "
+           "https://gitlab.com/davidsd/scalars-3d/-/blob/master/src/Projects/"
+           "Scalars3d/SingletScalar2020.hs");
+      INFO("SDPB should find primal-dual optimal solution.");
+      name += "/SingletScalar_cT_test_nmax6/primal_dual_optimal";
+      std::string default_sdpb_args
+        = "--checkpointInterval 3600 --maxRuntime 1340 "
+          "--dualityGapThreshold 1.0e-30 --primalErrorThreshold 1.0e-30 "
+          "--dualErrorThreshold 1.0e-30 --initialMatrixScalePrimal 1.0e20 "
+          "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
+          "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
+          "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
+          "--procGranularity 1 --writeSolution y";
+      int sdpb_output_diff_precision = 600;
+      // This test is slow, we don't want to run it twice
+      // json/bin correctness is checked by other tests below,
+      // so we use only binary SDP here
+      end_to_end_test(name, default_sdpb_args, "bin", num_procs, precision,
+                      sdp_zip_diff_precision, sdpb_output_diff_precision);
     }
-    SECTION("dual_feasible_jump")
+
+    SECTION("SingletScalarAllowed_test_nmax6")
     {
-      INFO("SDPB should detect dual feasible jump.");
-      name += "/dual_feasible_jump";
-      std::vector<std::string> out_txt_keys
-        = {"terminateReason", "primalObjective", "dualObjective", "dualityGap",
-           "primalError"};
-      for(auto &sdp_format : {"bin", "json"})
-        {
-          DYNAMIC_SECTION(sdp_format)
+      INFO("SingletScalarAllowed_test_nmax6 from "
+           "https://gitlab.com/davidsd/scalars-3d/-/blob/master/src/Projects/"
+           "Scalars3d/SingletScalar2020.hs");
+      name += "/SingletScalarAllowed_test_nmax6";
+      std::string default_sdpb_args
+        = "--checkpointInterval 3600 --maxRuntime 1341 "
+          "--dualityGapThreshold 1.0e-30 --primalErrorThreshold 1.0e-200 "
+          "--dualErrorThreshold 1.0e-200 --initialMatrixScalePrimal 1.0e20 "
+          "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
+          "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
+          "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
+          "--procGranularity 1 --writeSolution y "
+          "--detectPrimalFeasibleJump --detectDualFeasibleJump";
+      int sdpb_output_diff_precision = 610;
+
+      SECTION("primal_feasible_jump")
+      {
+        INFO("SDPB should detect primal feasible jump.");
+        name += "/primal_feasible_jump";
+        std::vector<std::string> out_txt_keys
+          = {"terminateReason", "primalObjective", "dualObjective",
+             "dualityGap", "dualError"};
+        for(auto &sdp_format : {"bin", "json"})
           {
-            end_to_end_test(name, default_sdpb_args, sdp_format, num_procs,
-                            precision, sdp_zip_diff_precision,
-                            sdpb_output_diff_precision, out_txt_keys);
+            DYNAMIC_SECTION(sdp_format)
+            {
+              end_to_end_test(name, default_sdpb_args, sdp_format, num_procs,
+                              precision, sdp_zip_diff_precision,
+                              sdpb_output_diff_precision, out_txt_keys);
+            }
           }
-        }
+      }
+      SECTION("dual_feasible_jump")
+      {
+        INFO("SDPB should detect dual feasible jump.");
+        name += "/dual_feasible_jump";
+        std::vector<std::string> out_txt_keys
+          = {"terminateReason", "primalObjective", "dualObjective",
+             "dualityGap", "primalError"};
+        for(auto &sdp_format : {"bin", "json"})
+          {
+            DYNAMIC_SECTION(sdp_format)
+            {
+              end_to_end_test(name, default_sdpb_args, sdp_format, num_procs,
+                              precision, sdp_zip_diff_precision,
+                              sdpb_output_diff_precision, out_txt_keys);
+            }
+          }
+      }
     }
   }
 }

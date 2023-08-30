@@ -28,7 +28,7 @@ namespace Test_Util::Json
   {
     auto rows_array = json_value.GetArray();
     int height = rows_array.Size();
-    int width = rows_array[0].GetArray().Size();
+    int width = height == 0 ? 1 : rows_array[0].GetArray().Size();
     Float_Matrix result(height, width);
 
     for(int row = 0; row < height; ++row)
