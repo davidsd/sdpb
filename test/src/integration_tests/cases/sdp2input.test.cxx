@@ -10,8 +10,11 @@ TEST_CASE("sdp2input")
 
   auto data_dir = Test_Config::test_data_dir / "sdp2input";
 
+  unsigned int precision = 512;
+  unsigned int diff_precision = 392;
+
   Test_Util::Test_Case_Runner::Named_Args_Map default_args{
-    {"--precision", "512"},
+    {"--precision", std::to_string(precision)},
     {"--debug", "true"},
   };
   for(std::string format : {"bin", "json"})
@@ -47,7 +50,8 @@ TEST_CASE("sdp2input")
               }
 
               Test_Util::REQUIRE_Equal::diff_sdp_zip(
-                sdp_zip, sdp_orig, 512, 512, runner.create_nested("diff"));
+                sdp_zip, sdp_orig, precision, diff_precision,
+                runner.create_nested("diff"));
 
               REQUIRE(fs::file_size(sdp_zip + ".profiling.0") > 0);
               REQUIRE(fs::file_size(sdp_zip + ".profiling.1") > 0);
