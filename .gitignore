@@ -5,6 +5,9 @@ build/
 __pycache__/
 /waf-tools/*.pyc
 
+# cmake
+cmake-build*/
+
 # IDE
 *.code-workspace
 .vscode/
