@@ -13,7 +13,7 @@ notes](docs/site_installs/Readme.md) for different HPC machines.
 SDPB requires
 
 - A modern C++ compiler with C++ 17 support.  SDPB has been tested with
-  GCC versions 7 through 10.
+  GCC versions 8 through 12.
 
 - An MPI implementation such as [OpenMPI](https://www.open-mpi.org/) or [MPICH](https://www.mpich.org/)
 
@@ -39,7 +39,7 @@ SDPB requires
 
 SDPB has only been tested on Linux (Debian buster and Centos 7).  On
 Centos 7, the system compiler (gcc 4.8.5) is too old to support
-C++ 14.  So you will have to install a newer compiler and Boost.  The
+C++ 17. So you will have to install a newer compiler and Boost. The
 system versions of GMP, MPFR, and libxml2 have been tested to work.
 
 In principle, SDPB should be installable on Mac OS X using a package
