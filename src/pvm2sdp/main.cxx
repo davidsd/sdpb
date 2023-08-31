@@ -2,7 +2,9 @@
 
 namespace fs = std::filesystem;
 
-void parse_command_line(int argc, char **argv, int &precision,
+// TODO use boost::program_options
+void parse_command_line(int argc, char **argv,
+                        Block_File_Format &output_format, int &precision,
                         std::vector<fs::path> &input_files,
                         fs::path &output_dir);
 
@@ -18,15 +20,15 @@ int main(int argc, char **argv)
   const int rank(El::mpi::Rank());
   try
     {
+      Block_File_Format output_format = bin;
       int precision;
       std::vector<fs::path> input_files;
       fs::path output_path;
 
-      // TODO read the following from command line:
-      Block_File_Format output_format = json;
       bool debug = false;
 
-      parse_command_line(argc, argv, precision, input_files, output_path);
+      parse_command_line(argc, argv, output_format, precision, input_files,
+                         output_path);
       El::gmp::SetPrecision(precision);
 
       El::BigFloat objective_const;

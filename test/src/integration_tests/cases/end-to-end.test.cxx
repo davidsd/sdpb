@@ -17,6 +17,10 @@ namespace
                   int sdp_zip_diff_precision, int sdpb_output_diff_precision,
                   const std::vector<std::string> &out_txt_keys = {})
   {
+    auto format_description = sdp_format.empty() ? "default(bin)" : sdp_format;
+    CAPTURE(sdp_format);
+    CAPTURE(format_description);
+
     Test_Util::Test_Case_Runner runner(name + "/" + sdp_format);
     const auto &data_dir = runner.data_dir.parent_path();
     const auto &output_dir = runner.output_dir;
@@ -29,10 +33,8 @@ namespace
       if(exists(data_dir / "pvm.xml"))
         {
           INFO("run pvm2sdp");
-          INFO("TODO: only outputFormat=json format is supported for pvm2sdp");
-          REQUIRE(sdp_format == "json");
           runner.create_nested("pvm2sdp").mpi_run(
-            {"build/pvm2sdp", std::to_string(precision),
+            {"build/pvm2sdp", sdp_format, std::to_string(precision),
              (data_dir / "pvm.xml").string(), sdp_zip},
             {}, num_procs);
         }
@@ -44,6 +46,9 @@ namespace
             {"--output", sdp_zip},
             {"--outputFormat", sdp_format},
             {"--precision", std::to_string(precision)}};
+
+          if(!sdp_format.empty())
+            args["--outputFormat"] = sdp_format;
 
           runner.create_nested("sdp2input")
             .mpi_run({"build/sdp2input"}, args, num_procs);
@@ -104,9 +109,16 @@ TEST_CASE("end-to-end_tests")
         "--feasibleCenteringParameter=0.1 --infeasibleCenteringParameter=0.3 "
         "--stepLengthReduction=0.7";
     int sdpb_output_diff_precision = 600;
-    // TODO pvm2sdp doesn't support bin output
-    end_to_end_test(name, default_sdpb_args, "json", num_procs, precision,
-                    sdp_zip_diff_precision, sdpb_output_diff_precision);
+    for(std::string sdp_format : {"", "bin", "json"})
+      {
+        // for sdp_format="" pvm2sdp will use bin format (by default)
+        DYNAMIC_SECTION((sdp_format.empty() ? "default(bin)" : sdp_format))
+        {
+          end_to_end_test(name, default_sdpb_args, sdp_format, num_procs,
+                          precision, sdp_zip_diff_precision,
+                          sdpb_output_diff_precision);
+        }
+      }
   }
 
   SECTION("SingletScalar_nmax6")
