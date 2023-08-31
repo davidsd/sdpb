@@ -130,6 +130,12 @@ uses the srun command
 
 The documentation for your HPC system will tell you how to write a
 batch script and invoke MPI programs.
+Note also that usually you have to **load modules** on your HPC before running SDPB. You can find the corresponding
+command in installations instructions for your HPC (see [docs/site_installs](site_installs) folder). For example,
+on [Expanse](site_installs/Expanse.md) this command reads
+
+    module load cpu/0.15.4 gcc/10.2.0 openmpi/4.0.4 gmp/6.1.2 mpfr/4.0.2 cmake/3.18.2 openblas/dynamic/0.3.7
+
 
 To efficiently run large MPI jobs, SDPB needs an accurate measurement
 of the time to evaluate each block.  If `block_timings` does not
