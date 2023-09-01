@@ -1,7 +1,7 @@
 # Outer_Limits Usage
 
 The exact details of how `outer_limits` works is described in the
-`outer_limits` [manual](Outer_Limits.pdf).  To briefly summarize,
+`outer_limits` [manual](Outer_Limits/Outer_Limits.pdf). To briefly summarize,
 `outer_limits` reads in function evaluated at Chebyshev zeros and
 initial points.  It applies constant constraints at those initial
 points and computes a solution.  It then iteratively adds constraints

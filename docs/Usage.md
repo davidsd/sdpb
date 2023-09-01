@@ -1,7 +1,7 @@
 # Usage
 
 Details of how SDPB works are described in the
-[manual](SDPB-Manual.pdf).  An example input file
+[manual](SDPB_Manual/SDPB-Manual.pdf). An example input file
 [pvm.xml](../test/data/pvm2sdp/pvm.xml) is included with the source code.
 
 The build system creates the executables `pvm2sdp`, `sdp2input`, and
@@ -31,7 +31,7 @@ conversion.  `[INPUT]` is a single Mathematica, JSON, or NSV
 (Null Separated Value) file.  `[OUTPUT]` is an output directory.
 
 The single file Mathematica and JSON formats are described in Section
-3.2 of the [manual](SDPB-Manual.pdf).  In addition, for JSON there
+3.2 of the [manual](SDPB_Manual/SDPB-Manual.pdf). In addition, for JSON there
 is a [schema](json_schema/sdp2input_schema.json).
 
 The NSV format allows you to load an SDP from multiple JSON and/or
@@ -64,7 +64,7 @@ SDP, with the NSV example loading the SDP from two Mathematica files:
 
 Use `pvm2sdp` to create input files from Polynomial Vector Matrix files
 in XML.  The format for these XML files is described in Section 3.1 of
-[the manual](SDPB-Manual.pdf).  The usage is
+[the manual](SDPB_Manual/SDPB-Manual.pdf). The usage is
 
     pvm2sdp [PRECISION] [INPUT] ... [OUTPUT]
 
