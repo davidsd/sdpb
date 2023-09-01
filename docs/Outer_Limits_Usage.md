@@ -29,9 +29,9 @@ of options.  There are four main differences:
     format. Defaults to `functions` with the ending `_out.json`.
 
 The format for `functions` is detailed in the
-[schema](functions_schema.json), and there is an
+[schema](json_schema/functions_schema.json), and there is an
 [example](../test/data/outer_limits/toy_functions.json) included with the source code.
-Similarly, `points` has a [schema](points_schema.json) and an
+Similarly, `points` has a [schema](json_schema/points_schema.json) and an
 [example](../test/data/outer_limits/toy_functions_points.json).
 
 If you have an existing input file for `sdpb`, you can use the bundled

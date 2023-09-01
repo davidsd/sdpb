@@ -32,7 +32,7 @@ conversion.  `[INPUT]` is a single Mathematica, JSON, or NSV
 
 The single file Mathematica and JSON formats are described in Section
 3.2 of the [manual](SDPB-Manual.pdf).  In addition, for JSON there
-is a [schema](sdp2input_schema.json).
+is a [schema](json_schema/sdp2input_schema.json).
 
 The NSV format allows you to load an SDP from multiple JSON and/or
 Mathematica files.  NSV files contain a list of files, separated by
@@ -210,7 +210,7 @@ A full example of the whole sequence is
 
 The output is a JSON list with each element including the location of
 the new SDP, the approximate objective, and the first and second order
-terms.  There is a [JSON schema](approx_objective_schema.json)
+terms. There is a [JSON schema](json_schema/approx_objective_schema.json)
 describing the format.
 
 The objective can be surprisingly sensitive to small changes,
@@ -260,5 +260,5 @@ This will output the spectra into `test/out/spectrum/spectrum.json` and should l
       }
     ]
 
-It is a json file with arrays of zeros.  There is a [JSON schema](spectrum_schema.json)
+It is a json file with arrays of zeros. There is a [JSON schema](json_schema/spectrum_schema.json)
 describing the format.
