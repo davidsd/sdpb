@@ -17,9 +17,13 @@ TEST_CASE("sdp2input")
     {"--precision", std::to_string(precision)},
     {"--debug", "true"},
   };
-  for(std::string format : {"bin", "json"})
+  for(std::string format : {"", "bin", "json"})
     {
-      DYNAMIC_SECTION(format)
+      auto format_description = format.empty() ? "default(bin)" : format;
+      CAPTURE(format);
+      CAPTURE(format_description);
+
+      DYNAMIC_SECTION(format_description)
       {
         auto sdp_orig = data_dir / ("sdp_json.orig.zip");
         for(std::string input_name :
@@ -27,24 +31,26 @@ TEST_CASE("sdp2input")
           {
             DYNAMIC_SECTION(input_name)
             {
-              Test_Util::Test_Case_Runner runner("sdp2input/" + format + "/"
-                                                 + input_name);
+              Test_Util::Test_Case_Runner runner(
+                "sdp2input/" + format_description + "/" + input_name);
 
               Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
               args["--input"] = (data_dir / input_name).string();
               auto sdp_zip = (runner.output_dir / "sdp.zip").string();
               args["--output"] = sdp_zip;
-              args["--outputFormat"] = format;
+              if(!format.empty())
+                args["--outputFormat"] = format;
 
               runner.create_nested("run").mpi_run({"build/sdp2input"}, args);
 
               {
                 INFO("Check that sdp2input actually uses --outputFormat="
-                     << format);
+                     << format_description);
                 auto sdp_unzip
                   = runner.create_nested("format").unzip_to_temp_dir(sdp_zip);
                 auto block_data_0_path
-                  = sdp_unzip / ("block_data_0." + format);
+                  = sdp_unzip
+                    / ("block_data_0." + (format.empty() ? "bin" : format));
                 CAPTURE(block_data_0_path);
                 REQUIRE(is_regular_file(block_data_0_path));
               }

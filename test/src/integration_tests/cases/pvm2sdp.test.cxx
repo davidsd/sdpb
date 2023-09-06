@@ -18,13 +18,33 @@ TEST_CASE("pvm2sdp")
     INFO("run pvm2sdp and check output");
     Test_Util::Test_Case_Runner runner("pvm2sdp");
     auto output = (runner.output_dir / "sdp.zip").string();
-    runner.create_nested("run").mpi_run({"build/pvm2sdp 1024", input, output},
-                                        {}, 2);
-
     auto output_orig = (Test_Config::test_data_dir / "sdp.zip").string();
 
-    Test_Util::REQUIRE_Equal::diff_sdp_zip(output, output_orig, 1024, 1024,
-                                           runner.create_nested("diff"));
+    for(std::string sdp_format : {"", "bin", "json"})
+      {
+        // for sdp_format="" pvm2sdp will use bin format (by default)
+        auto format_description = sdp_format.empty() ? "default(bin)" : sdp_format;
+        DYNAMIC_SECTION(format_description)
+        {
+          runner.create_nested(format_description + ".run")
+            .mpi_run({"build/pvm2sdp", sdp_format, "1024", input, output}, {},
+                     2);
+
+          {
+            INFO("Check that pvm2sdp actually uses correct outputFormat="
+                 << format_description);
+            auto sdp_unzip
+              = runner.create_nested("format").unzip_to_temp_dir(output);
+            auto format = sdp_format.empty() ? "bin" : sdp_format;
+            auto block_data_0_path = sdp_unzip / ("block_data_0." + format);
+            CAPTURE(block_data_0_path);
+            REQUIRE(is_regular_file(block_data_0_path));
+          }
+
+          Test_Util::REQUIRE_Equal::diff_sdp_zip(
+            output, output_orig, 1024, 1024, runner.create_nested("diff"));
+        }
+      }
   }
 
   SECTION("cannot_write_zip")

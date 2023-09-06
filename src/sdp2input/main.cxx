@@ -54,7 +54,7 @@ int main(int argc, char **argv)
       options.add_options()(
         "outputFormat,f",
         po::value<Block_File_Format>(&output_format)
-          ->default_value(Block_File_Format::json),
+          ->default_value(Block_File_Format::bin),
         "Output format for SDP blocks. Could be either 'bin' or 'json'");
       options.add_options()("debug",
                             po::value<bool>(&debug)->default_value(false),
