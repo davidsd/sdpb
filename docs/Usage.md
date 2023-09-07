@@ -137,6 +137,9 @@ on [Expanse](site_installs/Expanse.md) this command reads
     module load cpu/0.15.4 gcc/10.2.0 openmpi/4.0.4 gmp/6.1.2 mpfr/4.0.2 cmake/3.18.2 openblas/dynamic/0.3.7
 
 
+Note that most computation for different blocks can be done in parallel, and optimal performance is generally achieved
+when the number of MPI jobs is comparable to the number of blocks.
+
 To efficiently run large MPI jobs, SDPB needs an accurate measurement
 of the time to evaluate each block.  If `block_timings` does not
 already exists in the input directory or a checkpoint directory, SDPB
