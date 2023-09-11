@@ -11,7 +11,10 @@
   Already loaded cpu, gcc/10.2.0
 
 ** boost
-  wget https://dl.bintray.com/boostorg/release/1.74.0/source/boost_1_74_0.tar.bz2
+  # UPDATE: Maybe we can just do this:
+  module load boost/1.74.0
+  # OLD instructions:
+  wget https://boostorg.jfrog.io/artifactory/main/release/1.74.0/source/boost_1_74_0.tar.bz2
   tar -jxf boost_1_74_0.tar.bz2 
   cd boost_1_74_0
   ./bootstrap.sh --prefix=$HOME/gnu_openmpi/install --without-libraries=python
@@ -44,10 +47,19 @@
 
 ** fmt
    wget https://github.com/fmtlib/fmt/releases/download/6.2.1/fmt-6.2.1.zip
+   unzip fmt-6.2.1.zip
+   cd fmt-6.2.1
+   mkdir build
+   cd build
    cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_INSTALL_PREFIX=$HOME/gnu_openmpi/install ..
+   make
+   make install
 ** blocks_3d
+   module load boost/1.74.0
    git clone https://gitlab.com/bootstrapcollaboration/blocks_3d
-   ./waf configure --prefix=$HOME/gnu_openmpi/install --fmt-dir=$HOME/gnu_openmpi/install --fmt-libdir=$HOME/gnu_openmpi/install/lib64 --boost-dir=$HOME/gnu_openmpi/install --eigen-incdir=/cm/shared/apps/spack/cpu/opt/spack/linux-centos8-zen2/intel-19.1.1.217/eigen-3.3.7-plaog3szjnn3gh6wq5co55xxjuswwo7f/include/eigen3
+   ./waf configure --prefix=$HOME/gnu_openmpi/install --fmt-dir=$HOME/gnu_openmpi/install --fmt-libdir=$HOME/gnu_openmpi/install/lib64 --boost-dir=/cm/shared/apps/spack/cpu/opt/spack/linux-centos8-zen2/gcc-10.2.0/boost-1.74.0-ubdskthwa2edpqy4bx6deq6c3qy2xubs/include --eigen-incdir=/cm/shared/apps/spack/cpu/opt/spack/linux-centos8-zen2/intel-19.1.1.217/eigen-3.3.7-plaog3szjnn3gh6wq5co55xxjuswwo7f/include/eigen3
+   ./waf
+   ./waf install
 
 * Batch Scripts
   /home/wlandry/gnu_openmpi/runs/TTTT_small.sh
