@@ -1,0 +1,29 @@
+# waf
+.lock-waf*
+.waf*/
+build/
+__pycache__/
+/waf-tools/*.pyc
+
+# cmake
+cmake-build*/
+
+# IDE
+*.code-workspace
+.vscode/
+.idea/
+.cache/
+
+# test
+test/out/
+test/.nfs*
+
+# TeX
+/docs/*.aux
+/docs/*.log
+/docs/*.out
+/docs/*.synctex.gz
+/docs/*.toc
+
+# Misc
+tmp/
