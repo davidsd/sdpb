@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 if [[ $1 == "--help" ]]; then
   echo "Pass custom mpirun command line as arguments to the testing script, e.g.:"
