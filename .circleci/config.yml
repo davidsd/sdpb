@@ -1,0 +1,50 @@
+# Use the latest 2.1 version of CircleCI pipeline process engine.
+# See: https://circleci.com/docs/configuration-reference
+version: 2.1
+
+# Define a job to be invoked later in a workflow.
+# See: https://circleci.com/docs/configuration-reference/#jobs
+jobs:
+  build:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true # DLC will explicitly cache layers here and try to avoid rebuilding.
+      - run: docker build . --tag sdpb
+      - run: docker build . --tag sdpb-test --target test
+      - run:
+          name: Save images as tar
+          command: |
+            mkdir -p images
+            docker image save -o "images/sdpb" "sdpb"
+            docker image save -o "images/sdpb-test" "sdpb-test"
+      - persist_to_workspace:
+          root: .
+          paths:
+            - images
+  test:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - attach_workspace:
+          at: .
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Load images
+          command: |
+            docker image load < "images/sdpb"
+            docker image load < "images/sdpb-test"
+      - run: docker run sdpb sdpb --help
+      - run: docker run sdpb-test ./test/run_all_tests.sh mpirun --oversubscribe
+# Orchestrate jobs using workflows
+# See: https://circleci.com/docs/configuration-reference/#workflows
+workflows:
+  build-and-test:
+    jobs:
+      - build
+      - test:
+          requires:
+            - build
