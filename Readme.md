@@ -1,3 +1,8 @@
+[![License](https://img.shields.io/github/license/davidsd/sdpb)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/davidsd/sdpb)](https://github.com/davidsd/sdpb/releases/latest)
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/davidsd/sdpb/tree/master.svg?style=shield)](https://dl.circleci.com/status-badge/redirect/gh/davidsd/sdpb/tree/master)
+[![Issues](https://img.shields.io/github/issues/davidsd/sdpb)](https://github.com/davidsd/sdpb/issues)
+
 ## Contents
 
 * [SDPB](#sdpb)
