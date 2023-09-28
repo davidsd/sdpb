@@ -1,21 +1,77 @@
-# Use the latest 2.1 version of CircleCI pipeline process engine.
-# See: https://circleci.com/docs/configuration-reference
+# Config for CircleCI
+# See https://circleci.com/docs/configuration-reference
+#
+# This config has a single workflow, 'build-test-deploy', which goes as follows:
+# 1. 'build': Builds Docker image from SDPB sources (using ./Dockerfile)
+# 2. 'test': For this image, run tests from ./test/run_all_tests.sh
+# 3. 'deploy-master': On each 'master' branch update,
+#     push the fresh image to DockerHub as '${DOCKER_USERNAME}/sdpb:master', e.g. 'davidsd/sdpb:master'
+# 4. 'deploy-tag': If new tag is pushed to the repo,
+#     push the image '${DOCKER_USERNAME}/sdpb:${TAG}', e.g. 'davidsd/sdpb:2.6.0'
+#
+# Deploy works only if you specify DOCKER_USERNAME and DOCKER_PASSWORD environment variables for the CircleCI project
+# See instructions here:
+# https://docs.docker.com/docker-hub/access-tokens/#create-an-access-token
+# https://circleci.com/docs/set-environment-variable/#set-an-environment-variable-in-a-project
+
 version: 2.1
 
-# Define a job to be invoked later in a workflow.
+# Reusable commands
+# See https://circleci.com/docs/reusing-config/
+commands:
+
+  docker-load-sdpb:
+    description: Load sdpb and sdpb-test images (created by 'build' job) from the workspace.
+    steps:
+      - attach_workspace:
+          at: .
+      - setup_remote_docker
+      - run:
+          step-name: Load images
+          command: |
+            docker image load < "images/sdpb"
+            docker image load < "images/sdpb-test"
+  
+  docker-deploy-sdpb:
+    description: Push sdpb image to DockerHub
+    parameters:
+      tag:
+        type: string
+    steps:
+      # Do not deploy anything for forked PRs
+      # (i.e. PR from someuser/sdpb/master to davidsd/sdpb/master shouldn't trigger 'deploy-master' job and docker-push to davidsd/sdpb:master)
+      # https://circleci.com/docs/configuration-reference/#ending-a-job-from-within-a-step
+      # https://circleci.com/docs/variables/#built-in-environment-variables
+      - run: |
+          if [ -n "$CIRCLE_PR_NUMBER" ]; then
+            echo "Deploy for forked PRs is disabled"
+            circleci-agent step halt 
+          fi
+      - docker-load-sdpb
+      - run: echo tag=<< parameters.tag >>
+      - run:
+          step-name: Login and push to Docker.io
+          command: |
+            docker login --username ${DOCKER_USERNAME} --password ${DOCKER_PASSWORD} 
+            docker tag sdpb ${DOCKER_USERNAME}/sdpb:<< parameters.tag >>
+            docker push ${DOCKER_USERNAME}/sdpb:<< parameters.tag >>
+
+
+# Jobs to be invoked later in a workflow.
 # See: https://circleci.com/docs/configuration-reference/#jobs
 jobs:
+
   build:
     docker:
       - image: cimg/base:stable
     steps:
       - checkout
       - setup_remote_docker:
-          docker_layer_caching: true # DLC will explicitly cache layers here and try to avoid rebuilding.
+          docker_layer_caching: true
       - run: docker build . --tag sdpb
       - run: docker build . --tag sdpb-test --target test
       - run:
-          name: Save images as tar
+          step-name: Save images to workspace
           command: |
             mkdir -p images
             docker image save -o "images/sdpb" "sdpb"
@@ -24,27 +80,65 @@ jobs:
           root: .
           paths:
             - images
+  
   test:
     docker:
       - image: cimg/base:stable
     steps:
-      - attach_workspace:
-          at: .
-      - setup_remote_docker:
-          docker_layer_caching: true
-      - run:
-          name: Load images
-          command: |
-            docker image load < "images/sdpb"
-            docker image load < "images/sdpb-test"
+      - docker-load-sdpb
       - run: docker run sdpb sdpb --help
       - run: docker run sdpb-test ./test/run_all_tests.sh mpirun --oversubscribe
-# Orchestrate jobs using workflows
+  
+  deploy-master:
+    # executor: docker/docker
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - docker-deploy-sdpb:
+          tag: master
+  
+  deploy-tag:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - docker-deploy-sdpb:
+          tag: ${CIRCLE_TAG}
+
+# Workflows to be executed
 # See: https://circleci.com/docs/configuration-reference/#workflows
 workflows:
-  build-and-test:
+  build-test-deploy:
     jobs:
-      - build
+
+      - build:
+          filters:
+            tags:
+              only: /.*/
+
       - test:
           requires:
             - build
+          filters:
+            tags:
+              only: /.*/
+
+      - deploy-master:
+          filters:
+            branches:
+              only: master
+          requires:
+            - build
+            - test
+
+      - deploy-tag:
+          filters:
+            tags:
+              only: /.*/ # All tags
+            # See https://discuss.circleci.com/t/tag-not-triggered-by-circleci-not-filter-in-workflow/32036
+            branches:
+              ignore: /.*/ # Ignore all branches, otherwise the job is triggered by any git push
+          # NB: you have to specify tags filter for all dependencies,
+          # See https://circleci.com/docs/configuration-reference/#tags
+          requires:
+            - build
+            - test
