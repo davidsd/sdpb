@@ -43,12 +43,17 @@ TEST_CASE("sdpb")
 
   SECTION("sdpb")
   {
-    INFO("Single-process sdpb run");
-    Test_Util::Test_Case_Runner runner("sdpb");
-    auto args = default_args;
-    run_sdpb_set_out_ck_dirs(runner.create_nested("run"), args, 1);
-    Test_Util::REQUIRE_Equal::diff_sdpb_output_dir(
-      args["--outDir"], data_dir / "test_out_orig", 1024, 1024);
+    INFO("Simple sdpb run");
+    int sdpb_num_procs = GENERATE(1, 2);
+    DYNAMIC_SECTION("num_procs=" << sdpb_num_procs)
+    {
+      Test_Util::Test_Case_Runner runner("sdpb/run-"
+                                         + std::to_string(sdpb_num_procs));
+      auto args = default_args;
+      run_sdpb_set_out_ck_dirs(runner, args, sdpb_num_procs);
+      Test_Util::REQUIRE_Equal::diff_sdpb_output_dir(
+        args["--outDir"], data_dir / "test_out_orig", 1024, 1024 / 2);
+    }
   }
 
   SECTION("io_tests")
