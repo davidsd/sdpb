@@ -31,7 +31,7 @@ commands:
           command: |
             docker image load < "images/sdpb"
             docker image load < "images/sdpb-test"
-  
+
   docker-deploy-sdpb:
     description: Push sdpb image to DockerHub
     parameters:
@@ -80,15 +80,16 @@ jobs:
           root: .
           paths:
             - images
-  
+
   test:
     docker:
       - image: cimg/base:stable
     steps:
       - docker-load-sdpb
-      - run: docker run sdpb sdpb --help
-      - run: docker run sdpb-test ./test/run_all_tests.sh mpirun --oversubscribe
-  
+      # --cap-add=SYS_PTRACE is a workaround for https://github.com/open-mpi/ompi/issues/4948
+      - run: docker run --cap-add=SYS_PTRACE sdpb sdpb --help
+      - run: docker run --cap-add=SYS_PTRACE sdpb-test ./test/run_all_tests.sh mpirun --oversubscribe
+
   deploy-master:
     # executor: docker/docker
     docker:
@@ -96,7 +97,7 @@ jobs:
     steps:
       - docker-deploy-sdpb:
           tag: master
-  
+
   deploy-tag:
     docker:
       - image: cimg/base:stable
