@@ -5,7 +5,7 @@ if [[ $1 == "--help" ]]; then
   echo "  ./test/run_all_tests.sh mpirun"
   echo "  ./test/run_all_tests.sh srun --mpi=pmi2"
   echo "This command will be stored in MPI_RUN_COMMAND variable."
-  echo "By default, MPI_RUN_COMMAND=mpirun"
+  echo "By default, MPI_RUN_COMMAND=mpirun --oversubscribe"
   exit
 fi
 
@@ -20,7 +20,7 @@ if [ $# -ge 1 ]; then
   MPI_RUN_COMMAND="$@"
   echo "MPI_RUN_COMMAND=$MPI_RUN_COMMAND"
 else
-  MPI_RUN_COMMAND=mpirun
+  MPI_RUN_COMMAND=mpirun --oversubscribe
 fi
 
 # Run unit_tests and integration_tests with timing info and custom mpirun command
