@@ -3,7 +3,7 @@ AlignAfterOpenBracket: Align
 AllowAllParametersOfDeclarationOnNextLine: false
 AllowShortBlocksOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: All
+AllowShortFunctionsOnASingleLine: Inline
 # Uncommenting these lines will sometimes result in lines following an
 # if(){} or for(){} block being attached to the end of the block.
 # AllowShortIfStatementsOnASingleLine: true
@@ -26,6 +26,7 @@ BraceWrapping:
   SplitEmptyFunction: false
   SplitEmptyRecord: false
   SplitEmptyNamespace: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
 ContinuationIndentWidth: 2
 Cpp11BracedListStyle: true
 KeepEmptyLinesAtTheStartOfBlocks: false
@@ -35,6 +36,7 @@ NamespaceIndentation: All
 PenaltyExcessCharacter: 100
 PenaltyReturnTypeOnItsOwnLine: 1
 PointerAlignment: Right
+ReflowComments: false
 SortIncludes: false
 SpaceBeforeParens: Never
 SpacesInContainerLiterals: false
