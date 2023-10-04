@@ -21,8 +21,9 @@
 #
 # Note: 'mpirun --oversubscribe' is necessary only if your environment has less than 6 CPUs available
 
-# latest alpine release
-FROM alpine:3.18 AS build
+# Elemental binaries built from https://gitlab.com/bootstrapcollaboration/elemental.git
+# based on the same alpine:3.18 build as below
+FROM bootstrapcollaboration/elemental:master AS build
 
 RUN apk add \
     cmake \
@@ -40,19 +41,10 @@ RUN apk add \
     openmpi \
     openmpi-dev \
     rapidjson-dev
-WORKDIR /usr/local/src
-# Build Elemental
-RUN git clone https://gitlab.com/bootstrapcollaboration/elemental.git && \
-    cd elemental && \
-    mkdir -p build && \
-    cd build && \
-    cmake .. -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DCMAKE_INSTALL_PREFIX=/usr/local/ && \
-    make && \
-    make install
+WORKDIR /usr/local/src/sdpb
 # Build SDPB from current sources
-COPY . sdpb
-RUN cd sdpb && \
-    ./waf configure --elemental-dir=/usr/local --prefix=/usr/local && \
+COPY . .
+RUN ./waf configure --elemental-dir=/usr/local --prefix=/usr/local && \
     python3 ./waf && \
     python3 ./waf install
 
