@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [[ $1 == "--help" ]]; then
+if [ "$1" = "--help" ]; then
   echo "Pass custom mpirun command line as arguments to the testing script, e.g.:"
   echo "  ./test/run_all_tests.sh mpirun"
   echo "  ./test/run_all_tests.sh srun --mpi=pmi2"
@@ -11,16 +11,16 @@ fi
 
 # Set working directory to sdpb root
 script_path="$0" # sdpb/test/run_all_test.sh
-cd "$(dirname "$script_path")" # sdpb/test/
+cd "$(dirname "$script_path")" || exit 1 # sdpb/test/
 cd .. # sdpb/
 echo "root directory: $PWD"
 
 # setup custom mpirun command, e.g. "srun --mpi=pmi2"
 if [ $# -ge 1 ]; then
-  MPI_RUN_COMMAND="$@"
+  MPI_RUN_COMMAND="$*"
   echo "MPI_RUN_COMMAND=$MPI_RUN_COMMAND"
 else
-  MPI_RUN_COMMAND=mpirun --oversubscribe
+  MPI_RUN_COMMAND="mpirun --oversubscribe"
 fi
 
 # Run unit_tests and integration_tests with timing info and custom mpirun command
