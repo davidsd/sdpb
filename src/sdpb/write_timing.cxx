@@ -17,9 +17,12 @@ void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info,
   El::Zero(block_timings);
   std::string Q_prefix
     = "sdpb.solve.run.iter_2.step.initializeSchurComplementSolver.Q.";
-
+  // TODO now Q.syrk works together for all blocks on the node,
+  // so we cannot account for individual block.
+  // We can either ignore it or assign some timing proportional to the size of the block
+  // TODO account for compute_schur_complement too?
   for(auto timer_prefix :
-      {Q_prefix + "syrk_", Q_prefix + "solve_", Q_prefix + "cholesky_"})
+      {/*Q_prefix + "syrk_",*/ Q_prefix + "solve_", Q_prefix + "cholesky_"})
     {
       for(auto &index : block_info.block_indices)
         {

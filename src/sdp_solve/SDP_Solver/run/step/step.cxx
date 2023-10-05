@@ -1,4 +1,5 @@
 #include "sdp_solve/SDP_Solver.hxx"
+#include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 
 // Tr(A B), where A and B are symmetric
 El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
@@ -13,8 +14,9 @@ void initialize_schur_complement_solver(
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     &A_Y,
   const El::Grid &block_grid, Block_Diagonal_Matrix &schur_complement_cholesky,
-  Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
-  Timers &timers);
+  Block_Matrix &schur_off_diagonal,
+  BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
+  El::DistMatrix<El::BigFloat> &Q, Timers &timers);
 
 void compute_search_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
@@ -52,7 +54,8 @@ void SDP_Solver::step(
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     &A_Y,
-  const Block_Vector &primal_residue_p, El::BigFloat &mu,
+  const Block_Vector &primal_residue_p,
+  BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context, El::BigFloat &mu,
   El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
   El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers)
 {
@@ -89,9 +92,9 @@ void SDP_Solver::step(
 
     // Compute SchurComplement and prepare to solve the Schur
     // complement equation for dx, dy
-    initialize_schur_complement_solver(block_info, sdp, A_X_inv, A_Y, grid,
-                                       schur_complement_cholesky,
-                                       schur_off_diagonal, Q, timers);
+    initialize_schur_complement_solver(
+      block_info, sdp, A_X_inv, A_Y, grid, schur_complement_cholesky,
+      schur_off_diagonal, bigint_syrk_context, Q, timers);
 
     // Compute the complementarity mu = Tr(X Y)/X.dim
     Scoped_Timer frobenius_timer(timers, "frobenius_product_symmetric");

@@ -1,5 +1,6 @@
 #include "sdp_solve/SDP_Solver.hxx"
-
+#include "bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
+#include "bigint_syrk/initialize_bigint_syrk_context.hxx"
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 // The main solver loop
@@ -59,10 +60,10 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
                                               Block_Vector &primal_residue_p,
                                               El::BigFloat &primal_error_p);
 
-SDP_Solver_Terminate_Reason
-SDP_Solver::run(const Solver_Parameters &parameters,
-                const Verbosity &verbosity,
-                const boost::property_tree::ptree &parameter_properties,
+SDP_Solver_Terminate_Reason SDP_Solver::run(
+  const Environment &env, const Solver_Parameters &parameters,
+  const Verbosity &verbosity,
+  const boost::property_tree::ptree &parameter_properties,
   const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
   const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time,
   Timers &timers)
@@ -114,6 +115,8 @@ SDP_Solver::run(const Solver_Parameters &parameters,
   auto psd_sizes(block_info.psd_matrix_block_sizes());
   std::size_t total_psd_rows(
     std::accumulate(psd_sizes.begin(), psd_sizes.end(), size_t(0)));
+
+  auto bigint_syrk_context = initialize_bigint_syrk_context(env, block_info, sdp);
 
   initialize_timer.stop();
   auto last_checkpoint_time(std::chrono::high_resolution_clock::now());
@@ -176,8 +179,8 @@ SDP_Solver::run(const Solver_Parameters &parameters,
       El::BigFloat mu, beta_corrector;
       step(parameters, total_psd_rows, is_primal_and_dual_feasible, block_info,
            sdp, grid, X_cholesky, Y_cholesky, A_X_inv, A_Y, primal_residue_p,
-           mu, beta_corrector, primal_step_length, dual_step_length,
-           terminate_now, timers);
+           bigint_syrk_context, mu, beta_corrector, primal_step_length,
+           dual_step_length, terminate_now, timers);
       if(terminate_now)
         {
           terminate_reason

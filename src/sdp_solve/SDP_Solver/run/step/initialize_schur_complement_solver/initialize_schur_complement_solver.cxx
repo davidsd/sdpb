@@ -1,6 +1,7 @@
 #include "sdp_solve/SDP.hxx"
 #include "sdp_solve/Block_Diagonal_Matrix.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
+#include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 
 // Compute the quantities needed to solve the Schur complement
 // equation
@@ -48,11 +49,12 @@ void compute_schur_complement(
     &A_Y,
   Block_Diagonal_Matrix &schur_complement, Timers &timers);
 
-void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
-                        const Block_Diagonal_Matrix &schur_complement,
-                        Block_Matrix &schur_off_diagonal,
-                        Block_Diagonal_Matrix &schur_complement_cholesky,
-                        El::DistMatrix<El::BigFloat> &Q_group, Timers &timers);
+void compute_Q(const SDP &sdp, const Block_Info &block_info,
+               const Block_Diagonal_Matrix &schur_complement,
+               Block_Matrix &schur_off_diagonal,
+               Block_Diagonal_Matrix &schur_complement_cholesky,
+               BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
+               El::DistMatrix<El::BigFloat> &Q, Timers &timers);
 
 void synchronize_Q(El::DistMatrix<El::BigFloat> &Q,
                    const El::DistMatrix<El::BigFloat> &Q_group,
@@ -67,8 +69,9 @@ void initialize_schur_complement_solver(
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     &A_Y,
   const El::Grid &group_grid, Block_Diagonal_Matrix &schur_complement_cholesky,
-  Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
-  Timers &timers)
+  Block_Matrix &schur_off_diagonal,
+  BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
+  El::DistMatrix<El::BigFloat> &Q, Timers &timers)
 {
   Scoped_Timer initialize_timer(timers, "initializeSchurComplementSolver");
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
@@ -81,15 +84,8 @@ void initialize_schur_complement_solver(
 
   compute_schur_complement(block_info, A_X_inv, A_Y, schur_complement, timers);
 
-  {
-    Scoped_Timer Q_computation_timer(timers, "Q");
-    // FIXME: Change initialize_Q_group to initialize_Q and
-    // synchronize inside.
-    El::DistMatrix<El::BigFloat> Q_group(Q.Height(), Q.Width(), group_grid);
-    initialize_Q_group(sdp, block_info, schur_complement, schur_off_diagonal,
-                       schur_complement_cholesky, Q_group, timers);
-    synchronize_Q(Q, Q_group, timers);
-  }
+  compute_Q(sdp, block_info, schur_complement, schur_off_diagonal,
+            schur_complement_cholesky, bigint_syrk_context, Q, timers);
 
   Scoped_Timer Cholesky_timer(timers, "Cholesky_Q");
   Cholesky(El::UpperOrLowerNS::UPPER, Q);

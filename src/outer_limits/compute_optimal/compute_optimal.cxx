@@ -211,7 +211,7 @@ std::vector<El::BigFloat> compute_optimal(
 
           Timers timers(env, parameters.verbosity >= Verbosity::debug);
           SDP_Solver_Terminate_Reason reason = solver.run(
-            parameters.solver, parameters.verbosity, parameter_properties,
+            env, parameters.solver, parameters.verbosity, parameter_properties,
             block_info, sdp, grid, start_time, timers);
 
           for(size_t index(0); index < block_info.block_indices.size();

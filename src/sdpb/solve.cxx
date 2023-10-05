@@ -38,7 +38,7 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
   const boost::property_tree::ptree parameters_tree(
     to_property_tree(parameters));
   SDP_Solver_Terminate_Reason reason(
-    solver.run(parameters.solver, parameters.verbosity, parameters_tree,
+    solver.run(env, parameters.solver, parameters.verbosity, parameters_tree,
                block_info, sdp, grid, start_time, timers));
 
   if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)

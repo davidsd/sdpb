@@ -1,4 +1,5 @@
 #include "sdp_solve/sdp_solve.hxx"
+#include "sdp_solve/SDP_Solver/run/bigint_syrk/initialize_bigint_syrk_context.hxx"
 
 #include <filesystem>
 
@@ -28,11 +29,13 @@ void initialize_schur_complement_solver(
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     &A_Y,
   const El::Grid &block_grid, Block_Diagonal_Matrix &schur_complement_cholesky,
-  Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
-  Timers &timers);
+  Block_Matrix &schur_off_diagonal,
+  BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
+  El::DistMatrix<El::BigFloat> &Q, Timers &timers);
 
-void setup_solver(const Block_Info &block_info, const El::Grid &grid,
-                  const SDP &sdp, const fs::path &solution_dir,
+void setup_solver(const Environment &env, const Block_Info &block_info,
+                  const El::Grid &grid, const SDP &sdp,
+                  const fs::path &solution_dir,
                   Block_Diagonal_Matrix &schur_complement_cholesky,
                   Block_Matrix &schur_off_diagonal,
                   El::DistMatrix<El::BigFloat> &Q)
@@ -84,8 +87,10 @@ void setup_solver(const Block_Info &block_info, const El::Grid &grid,
       compute_A_Y(block_info, Y, sdp.bases_blocks, A_Y);
 
       Timers timers;
-      initialize_schur_complement_solver(block_info, sdp, A_X_inv, A_Y, grid,
-                                         schur_complement_cholesky,
-                                         schur_off_diagonal, Q, timers);
+      auto bigint_syrk_context
+        = initialize_bigint_syrk_context(env, block_info, sdp);
+      initialize_schur_complement_solver(
+        block_info, sdp, A_X_inv, A_Y, grid, schur_complement_cholesky,
+        schur_off_diagonal, bigint_syrk_context, Q, timers);
     }
 }
