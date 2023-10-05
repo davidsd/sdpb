@@ -2,10 +2,19 @@
 
 #include <catch2/catch_amalgamated.hpp>
 #include <El.hpp>
+#include <boost/noncopyable.hpp>
 #include <filesystem>
 
 #define DIFF(a, b)                                                            \
   {                                                                           \
+    INFO("DIFF(" << #a << ", " << #b << ")");                                 \
+    diff(a, b);                                                               \
+  }
+
+// DIFF up to a given binary precision 'prec'
+#define DIFF_PREC(a, b, prec)                                                 \
+  {                                                                           \
+    Test_Util::REQUIRE_Equal::Diff_Precision p(prec);                         \
     INFO("DIFF(" << #a << ", " << #b << ")");                                 \
     diff(a, b);                                                               \
   }
@@ -17,7 +26,24 @@ namespace Test_Util::REQUIRE_Equal
 {
   inline int diff_precision;
 
-  inline void diff(int a, int b) { REQUIRE(a == b); }
+  // RAII wrapper allowing to set diff_precision temporarily
+  struct Diff_Precision : boost::noncopyable
+  {
+    inline explicit Diff_Precision(int precision)
+    {
+      old_precision = diff_precision;
+      diff_precision = precision;
+    }
+    inline virtual ~Diff_Precision() { diff_precision = old_precision; }
+
+  private:
+    int old_precision;
+  };
+
+  inline void diff(int a, int b)
+  {
+    REQUIRE(a == b);
+  }
   inline void diff(const El::BigFloat &a, const El::BigFloat &b)
   {
     if(a == b)
@@ -79,6 +105,22 @@ namespace Test_Util::REQUIRE_Equal
           CAPTURE(row);
           CAPTURE(col);
           DIFF(a.Get(row, col), b.Get(row, col));
+        }
+  }
+  template <class T>
+  inline void diff(const El::DistMatrix<T> &a, const El::DistMatrix<T> &b)
+  {
+    INFO("diff El::DistMatrix");
+    REQUIRE(a.Height() == b.Height());
+    REQUIRE(a.Width() == b.Width());
+    REQUIRE(a.Grid() == b.Grid());
+
+    for(int row = 0; row < a.LocalHeight(); ++row)
+      for(int col = 0; col < a.LocalWidth(); ++col)
+        {
+          CAPTURE(row);
+          CAPTURE(col);
+          DIFF(a.GetLocal(row, col), b.GetLocal(row, col));
         }
   }
 }
