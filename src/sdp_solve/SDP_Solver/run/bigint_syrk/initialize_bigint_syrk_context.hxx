@@ -1,3 +1,4 @@
+#include "blas_jobs/create_blas_jobs.hxx"
 #include "BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdp_solve/Block_Matrix.hxx"
 #include "sdp_solve/Block_Info.hxx"

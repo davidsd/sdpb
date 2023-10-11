@@ -8,6 +8,7 @@
 #include "fmpz_BigFloat_convert.hxx"
 #include "restore_matrix_from_residues.hxx"
 #include "compute_matrix_residues.hxx"
+#include "blas_jobs/create_blas_jobs.hxx"
 
 // code adopted from flint mul_blas.c
 namespace
@@ -15,6 +16,36 @@ namespace
   El::Int sum(const std::vector<El::Int> &block_heights)
   {
     return std::accumulate(block_heights.begin(), block_heights.end(), 0);
+  }
+
+  // output = inputA^T * inputB
+  void gemm(const El::Matrix<double> &input_A,
+            const El::Matrix<double> &input_B, El::Matrix<double> &output)
+  {
+    // A: KxN matrix
+    // A: KxM matrix
+    // output = input^T * input: NxM matrix
+    assert(input_A.Height() == input_B.Height());
+    assert(output.Height() == input_A.Width());
+    assert(output.Width() == input_B.Width());
+
+    CBLAS_LAYOUT layout = CblasColMajor;
+    CBLAS_TRANSPOSE TransA = CblasTrans;
+    CBLAS_TRANSPOSE TransB = CblasNoTrans;
+    const CBLAS_INDEX M = input_A.Width();
+    const CBLAS_INDEX N = input_B.Width();
+    const CBLAS_INDEX K = input_A.Height();
+    const double alpha = 1.0;
+    const double *A = input_A.LockedBuffer();
+    const double *B = input_B.LockedBuffer();
+    const CBLAS_INDEX lda = input_A.LDim();
+    const CBLAS_INDEX ldb = input_B.LDim();
+    const double beta = 0.0;
+    double *C = output.Buffer();
+    const CBLAS_INDEX ldc = output.LDim();
+    // C := alpha * A^T * B + beta * C = (in our case) A^T * B
+    cblas_dgemm(layout, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta,
+                C, ldc);
   }
 
   // output = input^T * input
@@ -41,12 +72,53 @@ namespace
     // C := alpha * A^T * A + beta * C = (in our case) A^T * A
     cblas_dsyrk(layout, Uplo, Trans, N, K, alpha, A, lda, beta, C, ldc);
   }
+
+  // job: calculate submatrix Q_IJ = P_I^T * P_J (module some prime)
+  // I and J are column ranges of P
+  void do_blas_job(
+    const Blas_Job &job, El::UpperOrLower uplo,
+    const Block_Residue_Matrices_Window<double> &input_block_residues_window,
+    Residue_Matrices_Window<double> &output_residues_window)
+  {
+    auto prime_index = job.prime_index;
+    auto I = job.I;
+    auto J = job.J;
+
+    if(I.beg > J.beg && uplo == El::UpperOrLowerNS::UPPER)
+      std::swap(I, J);
+    if(I.beg < J.beg && uplo == El::UpperOrLowerNS::LOWER)
+      std::swap(I, J);
+
+    auto output_matrix
+      = El::View(output_residues_window.residues.at(prime_index), I, J);
+
+    // Diagonal blocks: call syrk
+    if(I == J)
+      {
+        // whole columns
+        const auto input_matrix = El::LockedView(
+          input_block_residues_window.residues.at(prime_index), El::ALL, I);
+
+        syrk(uplo, input_matrix, output_matrix);
+      }
+    // Off-diagonal: call gemm
+    else
+      {
+        const auto input_A = El::LockedView(
+          input_block_residues_window.residues.at(prime_index), El::ALL, I);
+        const auto input_B = El::LockedView(
+          input_block_residues_window.residues.at(prime_index), El::ALL, J);
+        gemm(input_A, input_B, output_matrix);
+      }
+  }
 }
 
 BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
   const El::mpi::Comm &shared_memory_comm, mp_bitcnt_t precision,
   const std::vector<El::Int> &block_heights, El::Int block_width,
-  const std::vector<size_t> &block_index_local_to_shmem)
+  const std::vector<size_t> &block_index_local_to_shmem,
+  const std::function<std::vector<Blas_Job>(
+    size_t num_ranks, size_t num_primes, int output_width)> &create_jobs)
     : shared_memory_comm(shared_memory_comm),
       comb(precision, precision, 1, sum(block_heights)),
       input_block_residues_window(shared_memory_comm, comb.num_primes,
@@ -54,7 +126,10 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
                                   block_width),
       output_residues_window(shared_memory_comm, comb.num_primes, block_width,
                              block_width),
-      block_index_local_to_shmem(block_index_local_to_shmem)
+      block_index_local_to_shmem(block_index_local_to_shmem),
+      blas_job_schedule(El::mpi::Size(shared_memory_comm),
+                        create_jobs(El::mpi::Size(shared_memory_comm),
+                                    comb.num_primes, block_width))
 {}
 
 void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
@@ -108,18 +183,11 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
   {
     Scoped_Timer syrk_timer(timers, "bigint_syrk_blas.syrk");
     auto comm = input_block_residues_window.Comm();
-    for(size_t prime_index = 0; prime_index < comb.num_primes; ++prime_index)
+    auto rank = El::mpi::Rank(comm);
+    for(const auto &job : blas_job_schedule.jobs_by_rank.at(rank))
       {
-        // TODO this is simple round-robin, we can use something better
-        // e.g. when there are more CPUs on the node than primes
-        if(prime_index % El::mpi::Size(comm) == El::mpi::Rank(comm))
-          {
-            const auto &input_matrix
-              = input_block_residues_window.residues.at(prime_index);
-            auto &output_matrix
-              = output_residues_window.residues.at(prime_index);
-            syrk(uplo, input_matrix, output_matrix);
-          }
+        do_blas_job(job, uplo, input_block_residues_window,
+                    output_residues_window);
       }
     output_residues_window.Fence();
   }
