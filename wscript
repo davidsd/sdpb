@@ -349,6 +349,7 @@ def build(bld):
                 )
     bld.program(source=['external/catch2/catch_amalgamated.cpp',
                         'test/src/unit_tests/main.cxx',
+                        'test/src/unit_tests/cases/LPT_scheduling.test.cxx',
                         'test/src/unit_tests/cases/Matrix_Normalizer.test.cxx',
                         'test/src/unit_tests/cases/block_data_serialization.test.cxx',
                         'test/src/unit_tests/cases/boost_serialization.test.cxx',
