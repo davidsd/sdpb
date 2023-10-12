@@ -87,6 +87,7 @@ def build(bld):
                        'src/sdp_solve/SDP_Solver/run/bigint_syrk/Fmpz_Comb.cxx',
                        'src/sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/Blas_Job.cxx',
                        'src/sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/Blas_Job_Schedule.cxx',
+                       'src/sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/create_blas_jobs.cxx',
                        'src/sdp_solve/SDP_Solver/run/step/compute_search_direction/compute_search_direction.cxx',
                        'src/sdp_solve/SDP_Solver/run/step/compute_search_direction/cholesky_solve.cxx',
                        'src/sdp_solve/SDP_Solver/run/step/compute_search_direction/compute_schur_RHS.cxx',

@@ -11,6 +11,11 @@
 
 using Test_Util::REQUIRE_Equal::diff;
 
+std::vector<Blas_Job>
+create_blas_jobs_split_remaining_primes(size_t num_ranks, size_t num_primes,
+                                        El::Int output_matrix_height,
+                                        size_t split_factor);
+
 // Helper functions for calculating Q = P^T P
 // using different methods
 namespace
@@ -205,63 +210,82 @@ TEST_CASE("calculate_Block_Matrix_square")
         }
 
         // calculate Q = P^T P using bigint_syrk_blas
-        El::DistMatrix<El::BigFloat> Q_result(block_width, block_width,
-                                              comm_grid);
-        {
-          // blocks are distributed among all ranks, thus COMM_WORLD
-          Matrix_Normalizer normalizer(P_matrix_blocks, block_width, bits,
-                                       El::mpi::COMM_WORLD);
-          CAPTURE(normalizer.column_norms);
-          for(auto &block : P_matrix_blocks)
+        // P is split into (split_factor) vertical bands
+        for(size_t split_factor = 1; split_factor <= block_width;
+            split_factor += 3)
+          DYNAMIC_SECTION("split_factor=" << split_factor)
+          {
+            INFO("P matrix is split into " << split_factor
+                                           << " vertical bands P_I");
+            INFO("The blocks Q_IJ = P_I^T * P_J are calculated in parallel.");
+
+            El::DistMatrix<El::BigFloat> Q_result(block_width, block_width,
+                                                  comm_grid);
             {
-              normalizer.normalize_and_shift_P(block);
+              // blocks are distributed among all ranks, thus COMM_WORLD
+              Matrix_Normalizer normalizer(P_matrix_blocks, block_width, bits,
+                                           El::mpi::COMM_WORLD);
+              CAPTURE(normalizer.column_norms);
+              for(auto &block : P_matrix_blocks)
+                {
+                  normalizer.normalize_and_shift_P(block);
+                }
+
+              El::UpperOrLower uplo = El::UpperOrLowerNS::UPPER;
+
+              auto create_jobs
+                = [&split_factor](size_t num_ranks, size_t num_primes,
+                                  int output_width) {
+                    return create_blas_jobs_split_remaining_primes(
+                      num_ranks, num_primes, output_width, split_factor);
+                  };
+              BigInt_Shared_Memory_Syrk_Context context(
+                comm, bits, block_heights, block_width, block_indices,
+                create_jobs);
+
+              Timers timers(false);
+              context.bigint_syrk_blas(uplo, P_matrix_blocks, Q_result,
+                                       timers);
+              {
+                INFO("Check that normalized Q_ii = 1:");
+                for(int iLoc = 0; iLoc < Q_result.LocalHeight(); ++iLoc)
+                  for(int jLoc = 0; jLoc < Q_result.LocalWidth(); ++jLoc)
+                    {
+                      int i = Q_result.GlobalRow(iLoc);
+                      int j = Q_result.GlobalCol(jLoc);
+                      if(i == j)
+                        {
+                          CAPTURE(i);
+                          auto value = Q_result.GetLocal(iLoc, jLoc);
+                          DIFF_PREC(value >> 2 * normalizer.precision,
+                                    El::BigFloat(1), diff_precision);
+                        }
+                    }
+              }
+
+              normalizer.restore_Q(uplo, Q_result);
+              El::MakeSymmetric(uplo, Q_result);
             }
 
-          El::UpperOrLower uplo = El::UpperOrLowerNS::UPPER;
-          BigInt_Shared_Memory_Syrk_Context context(
-            comm, bits, block_heights, block_width, block_indices);
+            // Check the result
 
-          Timers timers(false);
-          context.bigint_syrk_blas(uplo, P_matrix_blocks, Q_result, timers);
-          {
-            INFO("Check that normalized Q_ii = 1:");
+            CAPTURE(Q_result);
+
             for(int iLoc = 0; iLoc < Q_result.LocalHeight(); ++iLoc)
               for(int jLoc = 0; jLoc < Q_result.LocalWidth(); ++jLoc)
                 {
-                  int i = Q_result.GlobalRow(iLoc);
-                  int j = Q_result.GlobalCol(jLoc);
-                  if(i == j)
-                    {
-                      CAPTURE(i);
-                      auto value = Q_result.GetLocal(iLoc, jLoc);
-                      DIFF_PREC(value >> 2 * normalizer.precision,
-                                El::BigFloat(1), diff_precision);
-                    }
+                  CAPTURE(iLoc);
+                  CAPTURE(jLoc);
+                  auto global_row = Q_result.GlobalRow(iLoc);
+                  auto global_col = Q_result.GlobalCol(jLoc);
+                  CAPTURE(global_row);
+                  CAPTURE(global_col);
+
+                  DIFF_PREC(Q_result.GetLocal(iLoc, jLoc),
+                            Q_result_El_Syrk.Get(global_row, global_col),
+                            diff_precision);
                 }
           }
-
-          normalizer.restore_Q(uplo, Q_result);
-          El::MakeSymmetric(uplo, Q_result);
-        }
-
-        // Check the result
-
-        CAPTURE(Q_result);
-
-        for(int iLoc = 0; iLoc < Q_result.LocalHeight(); ++iLoc)
-          for(int jLoc = 0; jLoc < Q_result.LocalWidth(); ++jLoc)
-            {
-              CAPTURE(iLoc);
-              CAPTURE(jLoc);
-              auto global_row = Q_result.GlobalRow(iLoc);
-              auto global_col = Q_result.GlobalCol(jLoc);
-              CAPTURE(global_row);
-              CAPTURE(global_col);
-
-              DIFF_PREC(Q_result.GetLocal(iLoc, jLoc),
-                        Q_result_El_Syrk.Get(global_row, global_col),
-                        diff_precision);
-            }
       }
     }
   }
