@@ -12,4 +12,6 @@ struct Blas_Job
 
   Blas_Job(size_t prime_index, const El::Range<El::Int> &I,
            const El::Range<El::Int> &J);
+
+  size_t cost() const;
 };
