@@ -11,10 +11,11 @@
 
 using Test_Util::REQUIRE_Equal::diff;
 
-std::vector<Blas_Job>
-create_blas_jobs_split_remaining_primes(size_t num_ranks, size_t num_primes,
-                                        El::Int output_matrix_height,
-                                        size_t split_factor);
+Blas_Job_Schedule
+create_blas_job_schedule_split_remaining_primes(size_t num_ranks,
+                                                size_t num_primes,
+                                                El::Int output_matrix_height,
+                                                size_t split_factor);
 
 // Helper functions for calculating Q = P^T P
 // using different methods
@@ -233,15 +234,15 @@ TEST_CASE("calculate_Block_Matrix_square")
 
               El::UpperOrLower uplo = El::UpperOrLowerNS::UPPER;
 
-              auto create_jobs
+              auto create_job_schedule
                 = [&split_factor](size_t num_ranks, size_t num_primes,
-                                  int output_width) {
-                    return create_blas_jobs_split_remaining_primes(
+                                  int output_width, bool debug) {
+                    return create_blas_job_schedule_split_remaining_primes(
                       num_ranks, num_primes, output_width, split_factor);
                   };
               BigInt_Shared_Memory_Syrk_Context context(
-                comm, bits, block_heights, block_width, block_indices,
-                create_jobs);
+                comm, bits, block_heights, block_width, block_indices, false,
+                create_job_schedule);
 
               Timers timers(false);
               context.bigint_syrk_blas(uplo, P_matrix_blocks, Q_result,

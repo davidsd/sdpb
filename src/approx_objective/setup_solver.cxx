@@ -88,7 +88,7 @@ void setup_solver(const Environment &env, const Block_Info &block_info,
 
       Timers timers;
       auto bigint_syrk_context
-        = initialize_bigint_syrk_context(env, block_info, sdp);
+        = initialize_bigint_syrk_context(env, block_info, sdp, false);
       initialize_schur_complement_solver(
         block_info, sdp, A_X_inv, A_Y, grid, schur_complement_cholesky,
         schur_off_diagonal, bigint_syrk_context, Q, timers);

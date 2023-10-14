@@ -116,7 +116,8 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
   std::size_t total_psd_rows(
     std::accumulate(psd_sizes.begin(), psd_sizes.end(), size_t(0)));
 
-  auto bigint_syrk_context = initialize_bigint_syrk_context(env, block_info, sdp);
+  auto bigint_syrk_context = initialize_bigint_syrk_context(
+    env, block_info, sdp, verbosity >= Verbosity::debug);
 
   initialize_timer.stop();
   auto last_checkpoint_time(std::chrono::high_resolution_clock::now());

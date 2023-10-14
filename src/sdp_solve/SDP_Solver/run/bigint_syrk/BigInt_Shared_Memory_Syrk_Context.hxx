@@ -1,6 +1,6 @@
 #pragma once
 
-#include "blas_jobs/create_blas_jobs.hxx"
+#include "blas_jobs/create_blas_jobs_schedule.hxx"
 #include "blas_jobs/Blas_Job_Schedule.hxx"
 #include "Block_Residue_Matrices_Window.hxx"
 #include "Fmpz_Comb.hxx"
@@ -21,10 +21,11 @@ struct BigInt_Shared_Memory_Syrk_Context : boost::noncopyable
   BigInt_Shared_Memory_Syrk_Context(
     const El::mpi::Comm &shared_memory_comm, mp_bitcnt_t precision,
     const std::vector<El::Int> &block_heights, El::Int block_width,
-    const std::vector<size_t> &block_index_local_to_shmem,
-    const std::function<std::vector<Blas_Job>(
-      size_t num_ranks, size_t num_primes, int output_width)> &create_jobs
-    = create_blas_jobs);
+    const std::vector<size_t> &block_index_local_to_shmem, bool debug,
+    const std::function<Blas_Job_Schedule(size_t num_ranks, size_t num_primes,
+                                          int output_width, bool debug)>
+      &create_job_schedule
+    = create_blas_job_schedule);
 
   // Calculate Q := P^T P
   //

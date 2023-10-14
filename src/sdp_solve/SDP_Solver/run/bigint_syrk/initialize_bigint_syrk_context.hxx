@@ -1,4 +1,3 @@
-#include "blas_jobs/create_blas_jobs.hxx"
 #include "BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdp_solve/Block_Matrix.hxx"
 #include "sdp_solve/Block_Info.hxx"
@@ -6,7 +5,8 @@
 
 inline BigInt_Shared_Memory_Syrk_Context
 initialize_bigint_syrk_context(const Environment &env,
-                               const Block_Info &block_info, const SDP &sdp)
+                               const Block_Info &block_info, const SDP &sdp,
+                               bool debug)
 {
   int block_width = sdp.dual_objective_b.Height(); // = N
 
@@ -88,5 +88,5 @@ initialize_bigint_syrk_context(const Environment &env,
 
   return BigInt_Shared_Memory_Syrk_Context(
     shared_memory_comm, El::gmp::Precision(), shmem_block_index_to_height,
-    block_width, block_index_local_to_shmem);
+    block_width, block_index_local_to_shmem, debug);
 }

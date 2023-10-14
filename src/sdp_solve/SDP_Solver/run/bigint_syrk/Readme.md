@@ -104,11 +104,8 @@ block_2 mod prime_2
 ...
 ```
 
-5. Each core takes part of this window and calls `cblas_dsyrk()`.
-   Currently, we use a simple round-robin algorithm:
-   core 1 takes a matrix composed of all blocks mod prime_1, core 2 - all blocks mode prime_2, etc.
-   (TODO: if we have more cores than primes, then we should split a job for each prime into several cores).
-   The results are stored in [Residue_Matrices_Window](Residue_Matrices_Window.hxx):
+5. All cores are working in parallel to square each matrix and store the results
+   in [Residue_Matrices_Window](Residue_Matrices_Window.hxx):
 
 ```
 Q_group mod prime_1
@@ -117,67 +114,90 @@ Q_group mod prime_3
 ...
 ```
 
+Each `Q_group mod prime_k` is calculated either via single `cblas_dsyrk()` call or
+several `cblas_dsyrk()`/`cblas_dgemm()` calls, if Q is split into blocks for better parallelization (see below).
+
 6. `Q_group` is now a `DistMatrix<BigFloat>` distributed over all cores of a node. If some element `Q_group(i,j)` is
    stored e.g. on core 1, this core restores its value from the `Residue_Matrices_Window` using CRT.
 7. Restore Q_group (see `Matrix_Normalizer.restore_Q`), i.e. divide by 2^2N and remove normalization.
 8. Calculate global Q, which is `DistMatrix<BigFloat>` distributed over all cores, as a sum of all Q_groups.
    See [synchronize_Q.cxx](../step/initialize_schur_complement_solver/synchronize_Q.cxx).
 
-## Possible improvements
+### Distributing BLAS jobs
 
-### Better load balancing for BLAS jobs
+How can we distribute BLAS jobs from step 6 among the processes?
 
-Currently, each node has `num_primes` BLAS jobs, i.e. `cblas_dsyrk` calls calculating Q_group mod each prime.
-These jobs are distributed in a simple round-robin manner: core_1 gets prime_1, core2 - prime_2, etc.
+The simplest way is to assign each prime to some core
+in a simple round-robin manner: core_1 gets prime_1, core2 - prime_2, etc.
+Then each core calls `cblas_dsyrk` calculate Q_group modulo given prime.
+This scheme is certainly far from optimal, e.g. if the number of cores greatly exceeds the number of primes.
 
-This scheme is certainly not optimal, e.g. if number of cores greatly exceeds number of primes.
+We adopt the following algorithm:
 
-For better load balancing, we can split P into M vertical bands P_1..P_M.
+1. Distribute uniformly across all the cores as many primes as we can.
+   For each prime p_k, Q_group mod p_k is calculated via single `cblas_dsyrk` call.
+2. For each of the remaining `num_primes % num_ranks` primes,
+   we can split P into M vertical bands P_1..P_M.
 Then Q is split into MxM rectangular blocks Q_ij, and one can calculate each `Q_ij mod prime_k` separately.
 Since Q is symmetric, it is sufficient to calculate only upper half, `i <= j`.
-As a result, we have `num_primes * M * (M + 1) / 2` jobs that we can balance among all the cores on the node.
+   As a result, we have `M * (M + 1) / 2` jobs for each of the remaining primes.
 
 There are two kinds of jobs:
 
 - Diagonal (square) blocks: `Q_ii = P_i^T P_i` (call `cblas_dsyrk`)
 - Off-diagonal blocks: `Q_ij = P_i^T P_j, i < j` (call `cblas_dgemm`)
 
-Generally one can expect that syrk jobs are ~2x faster than gemm, since syrk calculates only the (upper) half of the
-matrix.
-Then we can assign cost to each job (i.e. n*m for gemm and n(n+1)/2 for syrk, where n and m are block height and width,
-respectively) and use any [scheduling algorithm](https://en.wikipedia.org/wiki/Identical-machines_scheduling) to
-distribute them. Note that block sizes may differ if width of Q does not divide by M.
+We estimate the cost of a job as a number of matrix elements that it calculates,
+i.e. `n*m` for gemm and `n*(n+1)/2` for syrk, where `n` and `m` are block height and width, respectively. This estimate
+is correct for naive matrix multiplication and does not account for specific BLAS optimization.
+Note that syrk cost is n(n+1)/2, since it calculates only the upper half of the matrix.
 
-Another question is how to choose M.
-For example, if we have 100 cores and 99 primes, we are happy with one idle core and do not want to split Q.
-If we have 100 cores and 10 primes, then it seems reasonable to set at least M=5 and get 100 BLAS jobs.
-
-Generally, there is a tradeoff between two goals:
-
-1. The jobs should be distributed evenly among the cores.
-2. Each BLAS job should be as big as possible (for a single process, one big syrk call is faster that several
-   small gemm+syrk calls calculating the same matrix).
-
-If we aim for the second goal only, then M should be set as
+3. How do we choose the split factor M?
+   The minimal reasonable value can be determined as
 
 ```
-if num_primes > procsPerNode:
-   M = 1
-else:
-   M = max m: num_primes * m * (m + 1) / 2 <= procsPerNode
-M = min(M, Q.Width())
+   min_split_factor = max m: num_jobs(m) <= num_ranks; m = 1..Q.Height()
 ```
 
-If we want better load balancing (at the cost of higher CPU time), then we should use larger M.
+where `num_jobs(m) = (num_primes % num_ranks) * m * (m+1) / 2` is the number of jobs for the remaining primes.
+It ensures that each core gets no more than one extra job, thus avoiding extra overhead.
 
-Which M is truly optimal, depends on the (unknown) details of `cblas_dsyrk` and `cblas_dgemm` performance for different
-matrix sizes.
+Then, for each M from `min_split_factor` to `min_split_factor+4`,
+we create job schedule using
+greedy [Longest-processing-time-first scheduling algorithm](https://en.wikipedia.org/wiki/Longest-processing-time-first_scheduling),
+(see [LPT_scheduling.hxx](blas_jobs/LPT_scheduling.hxx))
+and choose the best schedule.
+The best schedule is the one that has minimal total execution time, i.e.,
+minimal [max_cost()](blas_jobs/Blas_Job_Schedule.hxx) among all ranks.
+
+In most cases, testing the lowest five M gives almost uniform (up to several percent) load balancing.
+Of course, one could get better balancing by increasing M and splitting Q into smaller blocks (1x1 in the limiting
+case).
+But it would likely increase the total execution time because one big BLAS call is faster than several smaller ones.
+
+## Possible improvements
+
+### Better job scheduling
+
+If benchmarks show that job balancing is bad for some realistic cases, we can consider more sophisticated load
+balancing - e.g. use different splitting algorithm or more realistic BLAS job costs (although they are
+implementation-specific).
+
+### Block timings
+
+The old way
+of [distributing SDP blocks among the cores](../../../Block_Info/allocate_blocks/compute_block_grid_mapping.cxx)
+relies on [block timings](../../../../sdpb/write_timing.cxx), which include calculating contribution to Q from a single
+block, `run.step.initializeSchurComplementSolver.Q.syrk_XXX`.
+Now all blocks from a node are processed together.
+So we may include some timing estimate for this step,
+e.g. `(Q.syrk for a node) * (block size) / (total size for all blocks on a node)`.
 
 ### RAM optimization: split Q into blocks
 
 For extremely large problems, Q matrix may not fit into a single node.
 
-In this case it also helps to split P into M vertical bands P_1..P_M, so that Q is split into MxM blocks Q_ij.
+In this case, it also helps to split P into M vertical bands P_1..P_M, so that Q is split into MxM blocks Q_ij.
 Then the algorithm can be schematically written as
 
 ```
@@ -189,4 +209,4 @@ for i,j=1..M:
 With this procedure, memory window size for blocks is reduced by a factor of M.
 Memory window size for residues of Q and for Q_group are reduced by a factor of MxM.
 
-Increasing M and the number of cores/nodes, in principle we can fit arbitrarily large problems into memory.
+Increasing M and the number of cores/nodes, in principle, we can fit arbitrarily large problems into memory.

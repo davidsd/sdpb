@@ -1,6 +1,8 @@
 #include <cassert>
 #include "Blas_Job.hxx"
 
+using Cost = Blas_Job::Cost;
+
 Blas_Job::Blas_Job(size_t prime_index, const El::Range<El::Int> &I,
                    const El::Range<El::Int> &J)
     : prime_index(prime_index), I(I), J(J)
@@ -16,7 +18,7 @@ Blas_Job::Blas_Job(size_t prime_index, const El::Range<El::Int> &I,
     assert(I.end == J.end);
 }
 
-size_t Blas_Job::cost() const
+Cost Blas_Job::cost() const
 {
   // Blas_Job calculates a submatrix of Q = P^T P.
   // Simple model for job time:
@@ -32,13 +34,49 @@ size_t Blas_Job::cost() const
   size_t height = I.end - I.beg;
   size_t width = J.end - J.beg;
 
+  size_t elements;
   // For diagonal block,
   // we calculate only upper triangle
   if(I.beg == J.beg)
     {
       assert(height == width);
-      return height * (height + 1) / 2;
+      elements = height * (height + 1) / 2;
     }
-  // For off-diagonal blocks, we calculate all elements
-  return height * width;
+  else
+    {
+      // For off-diagonal blocks, we calculate all elements
+      elements = height * width;
+    }
+  size_t blas_calls = 1;
+  return {elements, blas_calls};
+}
+
+Cost::Cost() : elements(0), blas_calls(0) {}
+
+Cost::Cost(size_t elements, size_t blas_calls)
+    : elements(elements), blas_calls(blas_calls)
+{}
+
+bool Cost::operator<(const Blas_Job::Cost &rhs) const
+{
+  return std::tie(elements, blas_calls)
+         < std::tie(rhs.elements, rhs.blas_calls);
+}
+
+Blas_Job::Cost Cost::operator+(const Blas_Job::Cost &other) const
+{
+  return {elements + other.elements, blas_calls + other.blas_calls};
+}
+
+Cost &Blas_Job::Cost::operator+=(const Cost &other)
+{
+  elements += other.elements;
+  blas_calls += other.blas_calls;
+  return *this;
+}
+
+std::ostream &operator<<(std::ostream &os, const Blas_Job::Cost &cost)
+{
+  os << "elements: " << cost.elements << " blas_calls: " << cost.blas_calls;
+  return os;
 }

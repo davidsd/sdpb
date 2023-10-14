@@ -8,7 +8,7 @@
 #include "fmpz_BigFloat_convert.hxx"
 #include "restore_matrix_from_residues.hxx"
 #include "compute_matrix_residues.hxx"
-#include "blas_jobs/create_blas_jobs.hxx"
+#include "blas_jobs/create_blas_jobs_schedule.hxx"
 
 // code adopted from flint mul_blas.c
 namespace
@@ -116,9 +116,10 @@ namespace
 BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
   const El::mpi::Comm &shared_memory_comm, mp_bitcnt_t precision,
   const std::vector<El::Int> &block_heights, El::Int block_width,
-  const std::vector<size_t> &block_index_local_to_shmem,
-  const std::function<std::vector<Blas_Job>(
-    size_t num_ranks, size_t num_primes, int output_width)> &create_jobs)
+  const std::vector<size_t> &block_index_local_to_shmem, bool debug,
+  const std::function<Blas_Job_Schedule(size_t num_ranks, size_t num_primes,
+                                        int output_width, bool debug)>
+    &create_job_schedule)
     : shared_memory_comm(shared_memory_comm),
       comb(precision, precision, 1, sum(block_heights)),
       input_block_residues_window(shared_memory_comm, comb.num_primes,
@@ -127,9 +128,9 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       output_residues_window(shared_memory_comm, comb.num_primes, block_width,
                              block_width),
       block_index_local_to_shmem(block_index_local_to_shmem),
-      blas_job_schedule(El::mpi::Size(shared_memory_comm),
-                        create_jobs(El::mpi::Size(shared_memory_comm),
-                                    comb.num_primes, block_width))
+      blas_job_schedule(create_job_schedule(El::mpi::Size(shared_memory_comm),
+                                            comb.num_primes, block_width,
+                                            debug))
 {}
 
 void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
