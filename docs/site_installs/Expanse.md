@@ -53,49 +53,6 @@ TODO: on compute nodes compiler fails to find some libs
     ./waf install
     cd ..
 
-# Install scalar_blocks
-
-## Trilinos
-
-    git clone --branch trilinos-release-12-12-branch https://github.com/trilinos/Trilinos.git
-    cd Trilinos
-    mkdir build
-    cd build
-    cmake .. -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DCMAKE_Fortran_COMPILER=gfortran -DTrilinos_ENABLE_Sacado=ON -DTrilinos_ENABLE_Kokkos=OFF -DTrilinos_ENABLE_Teuchos=OFF -DCMAKE_INSTALL_PREFIX=$HOME/install
-    make && make install
-    cd ..
-
-## scalar_blocks
-
-    git clone https://gitlab.com/bootstrapcollaboration/scalar_blocks
-    cd scalar_blocks
-    ./waf configure --boost-dir=$HOME/install --gmp-dir=$HOME/install --trilinos-dir=$HOME/install --eigen-incdir=/cm/shared/apps/spack/cpu/opt/spack/linux-centos8-zen2/intel-19.1.1.217/eigen-3.3.7-plaog3szjnn3gh6wq5co55xxjuswwo7f/include/eigen3 --prefix=$HOME/install
-    ./waf
-    ./waf install
-    cd ..
-
-# Install blocks_3d
-
-## fmt
-
-    wget https://github.com/fmtlib/fmt/releases/download/6.2.1/fmt-6.2.1.zip
-    unzip fmt-6.2.1.zip -d fmt-6.2.1
-    cd fmt-6.2.1
-    mkdir build
-    cd build
-    cmake .. -DCMAKE_CXX_COMPILER=g++ -DCMAKE_INSTALL_PREFIX=$HOME/install
-    make && make install
-    cd ..
-
-## blocks_3d
-
-    git clone https://gitlab.com/bootstrapcollaboration/blocks_3d.git
-    cd blocks_3d
-    ./waf configure --prefix=$HOME/install --fmt-dir=$HOME/install --fmt-libdir=$HOME/install/lib64 --boost-dir=$HOME/install --eigen-incdir=/cm/shared/apps/spack/cpu/opt/spack/linux-centos8-zen2/intel-19.1.1.217/eigen-3.3.7-plaog3szjnn3gh6wq5co55xxjuswwo7f/include/eigen3
-    ./waf
-    ./waf install
-    cd ..
-
 ## Batch Scripts
 
     /home/wlandry/gnu_openmpi/runs/TTTT_small.sh

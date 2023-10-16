@@ -52,57 +52,6 @@ should compile on a login node.
     ./waf install
     cd ..
 
-Install scalar_blocks
-=============
+## Batch scripts
 
-Trilinos
---------
-    git clone --branch trilinos-release-12-12-branch https://github.com/trilinos/Trilinos.git
-    mkdir build
-    cd build
-    cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DTrilinos_ENABLE_Sacado=ON -DTrilinos_ENABLE_Kokkos=OFF -DTrilinos_ENABLE_Teuchos=OFF -DCMAKE_INSTALL_PREFIX=$HOME/install ..
-    make && make install
-    cd ../..
-
-scalar_blocks
--------------
-    git clone https://gitlab.com/bootstrapcollaboration/scalar_blocks.git
-    cd scalar_blocks
-    ./waf configure --prefix=$HOME/install --trilinos-dir=$HOME/install --eigen-incdir=/software/eigen-b3f3d4950030/
-    ./waf # maybe -j 1
-    ./waf install
-    cd ..
-
-Install blocks_3d
-=========
-
-fmt
----
-    wget https://github.com/fmtlib/fmt/releases/download/6.2.1/fmt-6.2.1.zip
-    mkdir build
-    cd build
-    cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_INSTALL_PREFIX=$HOME/install ..
-    make && make install
-    cd ../..
-  
-blocks_3d
----------
-    git clone git@gitlab.com:bootstrapcollaboration/blocks_3d.git
-    cd blocks_3d
-    ./waf configure --prefix=$HOME/install --eigen-incdir=/software/eigen-b3f3d4950030/ --fmt-dir=$HOME/install --fmt-libdir=$HOME/install/lib64
-    ./waf # maybe -j
-    ./waf install
-    cd ..
-
-Note: If you are trying to build the "profiling" branch of `blocks_3d`, you will need to load the following modules before attempting the above:
-
-    module purge
-    module load gcc/9.2.0
-    module load boost/1_76_0_gcc-9.2.0
-    module load python3/3.7.0
-    module load eigen/eigen
-
-Batch scripts
--------------
     /home/wlandry/sdpb/runs/TTTT_small.sh
-    /home/wlandry/scalar_blocks/runs/scalar_blocks.sh

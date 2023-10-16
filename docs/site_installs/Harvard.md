@@ -62,17 +62,6 @@ Use `RPATH` instead of `RUNPATH` in `mpicxx` linker, to fix shared library loadi
     ./test/run_all_tests.sh
     ./waf install
 
-# Install scalar_blocks
-
-## Trilinos
-
-    cmake -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc -DTrilinos_ENABLE_Sacado=ON -DTrilinos_ENABLE_Kokkos=OFF -DTrilinos_ENABLE_Teuchos=OFF -DCMAKE_INSTALL_PREFIX=$HOME/install ..
-
-## scalar_blocks
-
-    ./waf configure --prefix=/n/home09/wlandry/install --trilinos-dir=$HOME/install --boost-dir=$HOME/install
-
 ## Batch Scripts
 
     /n/home09/wlandry/sdpb/runs/TTTT_small.sh
-    /n/home09/wlandry/scalar_blocks/runs/scalar_blocks.sh
