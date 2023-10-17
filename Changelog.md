@@ -1,3 +1,55 @@
+# Version 2.6.0
+
+- New **INCOMPATIBLE** format for sdp.zip.
+  Instead of a single `block_XXX.json` file now we use `block_info_XXX.json` and `block_data_XXX.json` (
+  or `block_data_XXX.bin`), see [SDPB_input_format.md](docs/SDPB_input_format.md).
+  See [#114](https://github.com/davidsd/sdpb/pull/114).
+
+- Compact binary format instead of JSON for `block_data_XXX` in sdp.zip.
+  When generating sdp.zip by `sdp2input` or `pvm2sdp`, you can use optional command-line argument to choose between
+  binary and JSON formats:
+
+```
+sdp2input --outputFormat FORMAT
+pvm2sdp FORMAT PRECISION INPUT... OUTPUT
+```
+
+where `FORMAT` is either `bin` (used by default) or `json`.
+We recommend using the new binary format since it is more compact and efficient.
+See [#114](https://github.com/davidsd/sdpb/pull/114), [#128](https://github.com/davidsd/sdpb/pull/128), [#119](https://github.com/davidsd/sdpb/pull/119), [#149](https://github.com/davidsd/sdpb/pull/149).
+
+- New lightweight Docker image does not contain `scalar_blocks` and `blocks_3d` anymore.
+  Separate images for
+  [sdpb](https://hub.docker.com/r/bootstrapcollaboration/sdpb/tags),
+  [scalar_blocks](https://hub.docker.com/r/bootstrapcollaboration/scalar_blocks/tags)
+  and [blocks_3d](https://hub.docker.com/r/bootstrapcollaboration/blocks_3d/tags)
+  are now uploaded to https://hub.docker.com/u/bootstrapcollaboration.
+  See [#130](https://github.com/davidsd/sdpb/pull/130).
+
+- CI/CD pipelines on [CircleCI](https://app.circleci.com/pipelines/github/davidsd/sdpb).
+  Tests are run for each `git push` to the repo and for each pull request.
+  Docker images for the `master` branch and for each release starting from 2.6.0
+  are uploaded to [Docker Hub](https://hub.docker.com/r/bootstrapcollaboration/sdpb/tags) automatically.
+  See [#133](https://github.com/davidsd/sdpb/pull/133),
+  [#136](https://github.com/davidsd/sdpb/pull/136).
+
+- Tests are reorganized and rewritten from shell scripts to C++ [Catch2](https://github.com/catchorg/Catch2) framework.
+  Added unit tests and realistic end-to-end tests.
+  See [#91](https://github.com/davidsd/sdpb/pull/91),
+  [#102](https://github.com/davidsd/sdpb/pull/102),
+  [#109](https://github.com/davidsd/sdpb/pull/109),
+  [#119](https://github.com/davidsd/sdpb/pull/119).
+
+- Switched from C++14 to C++17.
+  See [#118](https://github.com/davidsd/sdpb/pull/118),
+  [#121](https://github.com/davidsd/sdpb/pull/121).
+
+- Updated installations
+  for [BU](docs/site_installs/Boston.md), [Caltech](docs/site_installs/Caltech.md), [Expanse](docs/site_installs/Expanse.md),
+  and [Harvard](docs/site_installs/Harvard.md) clusters.
+
+See https://github.com/davidsd/sdpb/releases/tag/2.6.0 for the full changelog.
+
 # Version 2.5.1
 
 ## outer_limits
