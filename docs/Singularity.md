@@ -54,21 +54,21 @@ and push it to [local registry](https://docs.docker.com/registry/):
 
 ## Run Singularity image
 Singularity should automatically mount your home directory.  If your
-Singularity image is named `sdpb-2.5.1.simg`, you can invoke the SDPB
+Singularity image is named `sdpb-2.6.0.sif`, you can invoke the SDPB
 programs by prepending the command with
 
-    singularity exec sdpb-2.5.1.simg
+    singularity exec sdpb-2.6.0.sif
 
 So to convert the XML input file at `/home/user/input.xml`, run the command
 
-    singularity exec sdpb-2.5.1.simg mpirun -n 4 pvm2sdp 1024 /home/user/input.xml /home/user/input
+    singularity exec sdpb-2.6.0.sif mpirun -n 4 pvm2sdp 1024 /home/user/input.xml /home/user/input
 
 This uses 4 cores when running pvm2sdp.  You can change that number to
 match your own machine.
 
 To find a primal-dual solution, 
 
-    singularity exec sdpb-2.5.1.simg mpirun -n 4 sdpb --precision=1024 --procsPerNode=4 -s /home/user/input
+    singularity exec sdpb-2.6.0.sif mpirun -n 4 sdpb --precision=1024 --procsPerNode=4 -s /home/user/input
 
 In theory, Singularity can be used to run jobs across multiple nodes.
 We have not been able to make that work yet.  So for large, multi-node
