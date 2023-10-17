@@ -15,7 +15,20 @@
 You may run `module -t list` to view loaded modules,
 and `module purge` to unload all modules.
 
-# Install SDPB
+# Use existing SDPB installation
+
+SDPB executables built from the latest `master` branch can be found in `/n/home02/vdommes/install/sdpb-master/bin/`
+folder, e.g.
+
+    /n/home02/vdommes/install/sdpb-master/bin/sdpb --help
+
+Stable release versions are also available, e.g.:
+
+    /n/home02/vdommes/install/sdpb-2.6.0/bin/sdpb --help
+
+NB: remember to load modules before using SDPB.
+
+# Build SDPB from sources
 
 Use `RPATH` instead of `RUNPATH` in `mpicxx` linker, to fix shared library loading in SDPB:
 
@@ -61,7 +74,3 @@ Use `RPATH` instead of `RUNPATH` in `mpicxx` linker, to fix shared library loadi
     ./waf
     ./test/run_all_tests.sh
     ./waf install
-
-## Batch Scripts
-
-    /n/home09/wlandry/sdpb/runs/TTTT_small.sh

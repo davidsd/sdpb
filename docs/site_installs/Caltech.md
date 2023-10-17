@@ -16,7 +16,20 @@
 You may run `module -t list` to view loaded modules,
 and `module purge` to unload all modules.
 
-# Install SDPB
+# Use existing SDPB installation
+
+SDPB executables built from the latest `master` branch can be found in `/home/vdommes/install/sdpb-master/bin/` folder,
+e.g.
+
+    /home/vdommes/install/sdpb-master/bin/sdpb --help
+
+Stable release versions are also available, e.g.:
+
+    /home/vdommes/install/sdpb-2.6.0/bin/sdpb --help
+
+NB: remember to load modules before using SDPB.
+
+# Build SDPB from sources
 
 TODO: Note that `/usr/include/gmp.h` is present on login node, but may be absent on compute nodes. In that case one
 should compile on a login node.
@@ -51,7 +64,3 @@ should compile on a login node.
     ./test/run_all_tests.sh
     ./waf install
     cd ..
-
-## Batch scripts
-
-    /home/wlandry/sdpb/runs/TTTT_small.sh
