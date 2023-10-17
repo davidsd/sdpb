@@ -23,6 +23,7 @@ def configure(conf):
             conf.options.flint_incdir = conf.options.flint_dir + "/include"
         if not conf.options.flint_libdir:
             conf.options.flint_libdir = conf.options.flint_dir + "/lib"
+            conf.options.flint_libdir += " " + conf.options.flint_dir + "/lib64"
 
     if conf.options.flint_incdir:
         flint_incdir = conf.options.flint_incdir.split()
