@@ -102,7 +102,8 @@ void copy_matrix_from_root_impl_shared_window(
     = El::BigFloat(1).SerializedSize() / sizeof(El::byte);
 
   Shared_Window_Array<El::byte> window(
-    comm, destination.Height() * destination.Width() * bigfloat_size_bytes);
+    comm, destination.Height() * destination.Width() * bigfloat_size_bytes,
+    false);
 
   const int ldim = destination.Height();
   auto get_buffer = [&](int i, int j) -> El::byte * {

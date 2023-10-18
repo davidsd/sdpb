@@ -18,10 +18,12 @@ TEST_CASE("MPI_Shared_Window")
   MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
                       &comm.comm);
 
+  bool debug = false;
+
   SECTION("Shared_Window_Array")
   {
     size_t size = 10;
-    Shared_Window_Array<double> array(comm, size);
+    Shared_Window_Array<double> array(comm, size, debug);
 
     for(size_t i = 0; i < size; ++i)
       {
@@ -53,7 +55,8 @@ TEST_CASE("MPI_Shared_Window")
       }
 
     // BLAS output will be stored here
-    Residue_Matrices_Window<double> window(comm, num_primes, height, width);
+    Residue_Matrices_Window<double> window(comm, num_primes, height, width,
+                                           debug);
     for(size_t p = 0; p < num_primes; ++p)
       for(size_t i = 0; i < height; ++i)
         for(size_t j = 0; j < width; ++j)
@@ -82,7 +85,7 @@ TEST_CASE("MPI_Shared_Window")
       }
 
     Block_Residue_Matrices_Window<double> window(comm, num_primes, num_blocks,
-                                                 block_heights, width);
+                                                 block_heights, width, debug);
     for(size_t p = 0; p < num_primes; ++p)
       {
         block_residues.at(p).resize(num_blocks);

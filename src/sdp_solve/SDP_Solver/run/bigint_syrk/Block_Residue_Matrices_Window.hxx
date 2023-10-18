@@ -28,9 +28,9 @@ public:
   Block_Residue_Matrices_Window(El::mpi::Comm shared_memory_comm,
                                 size_t num_primes, size_t num_blocks,
                                 const std::vector<El::Int> &block_heights,
-                                size_t block_width)
+                                size_t block_width, bool debug)
       : Residue_Matrices_Window<T>(shared_memory_comm, num_primes,
-                                   Sum(block_heights), block_width),
+                                   Sum(block_heights), block_width, debug),
         num_blocks(num_blocks),
         block_residues(num_primes, std::vector<El::Matrix<T>>(num_blocks))
   {
