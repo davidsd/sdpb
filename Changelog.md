@@ -45,8 +45,8 @@ See [#114](https://github.com/davidsd/sdpb/pull/114), [#128](https://github.com/
   [#121](https://github.com/davidsd/sdpb/pull/121).
 
 - Updated installations
-  for [BU](docs/site_installs/Boston.md), [Caltech](docs/site_installs/Caltech.md), [Expanse](docs/site_installs/Expanse.md),
-  and [Harvard](docs/site_installs/Harvard.md) clusters.
+  for [BU](docs/site_installs/Boston.md), [Caltech](docs/site_installs/Caltech.md), [Expanse](docs/site_installs/Expanse.md), [Harvard](docs/site_installs/Harvard.md),
+  and [Imperial College](docs/site_installs/Imperial.md) clusters.
 
 See https://github.com/davidsd/sdpb/releases/tag/2.6.0 for the full changelog.
 
