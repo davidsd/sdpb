@@ -131,7 +131,10 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       blas_job_schedule(create_job_schedule(El::mpi::Size(shared_memory_comm),
                                             comb.num_primes, block_width,
                                             debug))
-{}
+{
+  // Disable BLAS threading explicitly, each rank should work single-threaded
+  openblas_set_num_threads(1);
+}
 
 void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
   El::UpperOrLower uplo,
