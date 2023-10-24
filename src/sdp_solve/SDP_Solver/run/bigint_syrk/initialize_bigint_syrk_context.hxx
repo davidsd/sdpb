@@ -86,6 +86,43 @@ initialize_bigint_syrk_context(const Environment &env,
       block_index_local_to_shmem[local_index] = shmem_index;
     }
 
+  // Print block indices and sizes
+  if(debug && El::mpi::Rank(shared_memory_comm) == 0)
+    {
+      std::ostringstream os;
+      El::BuildStream(
+        os, "initialize_bigint_syrk_context, node=", env.node_index(), "\n");
+
+      // global block indices on the node
+      std::vector<int> block_index_shmem_to_global(
+        block_index_global_to_shmem.size());
+      for(const auto &[global_index, shmem_index] :
+          block_index_global_to_shmem)
+        {
+          block_index_shmem_to_global.at(shmem_index) = global_index;
+        }
+      El::BuildStream(os, "Number of blocks on the node: ",
+                      block_index_shmem_to_global.size(), "\n");
+      El::Print(block_index_shmem_to_global,
+                "Block indices on the node: ", ", ", os);
+      os << "\n";
+
+      El::Print(shmem_block_index_to_height, "Blocks heights: ", ", ", os);
+      os << "\n";
+
+      auto total_height
+        = std::accumulate(shmem_block_index_to_height.begin(),
+                          shmem_block_index_to_height.end(), 0);
+      El::BuildStream(os, "Total block height: ", total_height, "\n");
+      El::BuildStream(os, "Block width: ", block_width, "\n");
+      El::BuildStream(os, "Total block elements: ", total_height * block_width,
+                      "\n");
+      El::BuildStream(os, "Total Q elements: ", block_width * block_width,
+                      "\n");
+
+      El::Output(os.str());
+    }
+
   return BigInt_Shared_Memory_Syrk_Context(
     shared_memory_comm, El::gmp::Precision(), shmem_block_index_to_height,
     block_width, block_index_local_to_shmem, debug);
