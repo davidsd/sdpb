@@ -66,11 +66,19 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
 
   std::vector<El::DistMatrix<El::BigFloat>> &P_blocks
     = schur_off_diagonal.blocks;
+  Scoped_Timer normalizer_ctor_timer(timers, "Matrix_Normalizer_ctor");
   Matrix_Normalizer normalizer(P_blocks, block_width, El::gmp::Precision(),
                                bigint_syrk_context.shared_memory_comm);
-  normalizer.normalize_and_shift_P_blocks(P_blocks);
+  normalizer_ctor_timer.stop();
+
+  {
+    Scoped_Timer normalizer_timer(timers, "normalize_P");
+    normalizer.normalize_and_shift_P_blocks(P_blocks);
+  }
   auto uplo = El::UPPER;
   bigint_syrk_context.bigint_syrk_blas(uplo, P_blocks, Q_group, timers);
+
+  Scoped_Timer restore_timer(timers, "restore_P_Q");
   normalizer.restore_P_blocks(P_blocks);
 
   // TODO: synchronize_Q, check that Q(i,i)==2^2N, then restore
