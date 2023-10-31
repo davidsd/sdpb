@@ -50,30 +50,34 @@ initialize_bigint_syrk_context(const Environment &env,
                          num_blocks_in_rank, rank, shared_memory_comm);
     }
 
-  std::map<size_t, int> global_block_index_to_height;
-  std::set<size_t> global_block_indices;
+  // Introduce new block indices for all blocks on the node (shared_memory_comm).
+  //
+  // shmem_block_index should be consecutive for each rank,
+  // to allow for single memcpy for several blocks in compute_matrix_residues()
+  // e.g. rank 0 has blocks 0,1,2, rank 1 - blocks 3,4,5, ranks 3 and 4 share blocks 6 and 7 etc.
+  std::map<size_t, size_t> block_index_global_to_shmem;
+  std::vector<int> shmem_block_index_to_height;
+  size_t curr_shmem_block_index = 0;
+
   for(int rank = 0; rank < num_ranks_per_node; ++rank)
     {
-      for(size_t i = 0; i < rank_to_global_block_indices[rank].size(); ++i)
+      for(size_t i = 0; i < rank_to_global_block_indices.at(rank).size(); ++i)
         {
-          auto global_index = rank_to_global_block_indices[rank][i];
-          global_block_indices.insert(global_index);
+          auto global_index = rank_to_global_block_indices.at(rank).at(i);
+          auto height = rank_to_block_heights.at(rank).at(i);
 
-          auto height = rank_to_block_heights[rank][i];
-          global_block_index_to_height.emplace(global_index, height);
+          auto [it, inserted] = block_index_global_to_shmem.emplace(
+            global_index, curr_shmem_block_index);
+          // if block is shared among several ranks, we add it only once
+          if(inserted)
+            {
+              shmem_block_index_to_height.push_back(height);
+              curr_shmem_block_index++;
+            }
+          assert(height
+                 == shmem_block_index_to_height.at(
+                   block_index_global_to_shmem.at(global_index)));
         }
-    }
-
-  std::map<size_t, size_t> block_index_global_to_shmem;
-  std::vector<int> shmem_block_index_to_height(global_block_indices.size());
-  size_t curr_shmem_block_index = 0;
-  for(size_t global_index : global_block_indices)
-    {
-      block_index_global_to_shmem.emplace(global_index,
-                                          curr_shmem_block_index);
-      shmem_block_index_to_height[curr_shmem_block_index]
-        = global_block_index_to_height[global_index];
-      curr_shmem_block_index++;
     }
 
   std::vector<size_t> block_index_local_to_shmem(
