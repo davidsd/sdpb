@@ -82,6 +82,7 @@ def build(bld):
                        'src/sdp_solve/SDP_Solver/run/step/initialize_schur_complement_solver/compute_Q.cxx',
                        'src/sdp_solve/SDP_Solver/run/step/initialize_schur_complement_solver/synchronize_Q.cxx',
                        'src/sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.cxx',
+                       'src/sdp_solve/SDP_Solver/run/bigint_syrk/bigint_syrk_blas.cxx',
                        'src/sdp_solve/SDP_Solver/run/bigint_syrk/compute_block_residues.cxx',
                        'src/sdp_solve/SDP_Solver/run/bigint_syrk/Matrix_Normalizer.cxx',
                        'src/sdp_solve/SDP_Solver/run/bigint_syrk/Fmpz_Matrix.cxx',

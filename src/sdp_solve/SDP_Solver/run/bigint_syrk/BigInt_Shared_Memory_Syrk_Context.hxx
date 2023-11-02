@@ -54,4 +54,9 @@ private:
   void compute_block_residues(const std::vector<El::DistMatrix<El::BigFloat>>
                                 &bigint_input_matrix_blocks,
                               Timers &timers);
+
+  void bigint_syrk_blas_shmem(
+    El::UpperOrLower uplo,
+    const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
+    El::DistMatrix<El::BigFloat> &bigint_output_shmem, Timers &timers);
 };

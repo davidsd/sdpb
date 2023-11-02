@@ -56,10 +56,6 @@ void compute_Q(const SDP &sdp, const Block_Info &block_info,
                BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
                El::DistMatrix<El::BigFloat> &Q, Timers &timers);
 
-void synchronize_Q(El::DistMatrix<El::BigFloat> &Q,
-                   const El::DistMatrix<El::BigFloat> &Q_group,
-                   Timers &timers);
-
 void initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
   const std::array<
