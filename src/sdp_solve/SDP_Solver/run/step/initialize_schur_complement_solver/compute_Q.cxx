@@ -84,7 +84,7 @@ void syrk_Q(Block_Matrix &schur_off_diagonal,
   int block_width = Q.Width();
   Scoped_Timer normalizer_ctor_timer(timers, "Matrix_Normalizer_ctor");
   Matrix_Normalizer normalizer(P_blocks, block_width, El::gmp::Precision(),
-                               bigint_syrk_context.shared_memory_comm);
+                               El::mpi::COMM_WORLD);
   normalizer_ctor_timer.stop();
   {
     Scoped_Timer normalizer_timer(timers, "normalize_P");
