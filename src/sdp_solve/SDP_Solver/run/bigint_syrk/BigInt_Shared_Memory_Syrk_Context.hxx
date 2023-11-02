@@ -49,4 +49,9 @@ struct BigInt_Shared_Memory_Syrk_Context : boost::noncopyable
     El::UpperOrLower uplo,
     const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
     El::DistMatrix<El::BigFloat> &bigint_output, Timers &timers);
+
+private:
+  void compute_block_residues(const std::vector<El::DistMatrix<El::BigFloat>>
+                                &bigint_input_matrix_blocks,
+                              Timers &timers);
 };

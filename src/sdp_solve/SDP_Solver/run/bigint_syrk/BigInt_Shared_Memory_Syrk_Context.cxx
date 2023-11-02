@@ -7,7 +7,6 @@
 #include "fmpz_mul_blas_util.hxx"
 #include "fmpz_BigFloat_convert.hxx"
 #include "restore_matrix_from_residues.hxx"
-#include "compute_matrix_residues.hxx"
 #include "blas_jobs/create_blas_jobs_schedule.hxx"
 
 // code adopted from flint mul_blas.c
@@ -212,22 +211,7 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
   assert(El::mpi::Congruent(shared_memory_comm, bigint_output.DistComm()));
 
   // Compute residues
-  {
-    Scoped_Timer compute_residues_timer(timers,
-                                        "bigint_syrk_blas.compute_residues");
-    for(size_t i = 0; i < bigint_input_matrix_blocks.size(); ++i)
-      {
-        // NB: block_indices should enumerate all blocks
-        // from all ranks in current node
-        size_t block_index = block_index_local_to_shmem.at(i);
-        const auto &block = bigint_input_matrix_blocks.at(i);
-        assert(block.Width() == width);
-        compute_matrix_residues(block_index, block, comb,
-                                input_block_residues_window);
-      }
-    // wait for all ranks to fill blocks_window
-    input_block_residues_window.Fence();
-  }
+  compute_block_residues(bigint_input_matrix_blocks, timers);
 
   // Square each residue matrix
   {
