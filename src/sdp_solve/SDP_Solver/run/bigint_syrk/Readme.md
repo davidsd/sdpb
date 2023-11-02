@@ -77,7 +77,7 @@ In turn, Q is `DistMatrix<BigFloat>` distributed over all cores.
 
 In the old SDPB algorithm, each core (or group of cores, if `procGranularity > 1`) was calculating a contribution to Q (
 called `Q_group`) from its blocks. Adding up all Q_groups, one got the resulting Q
-(see [synchronize_Q.cxx](../step/initialize_schur_complement_solver/synchronize_Q.cxx)).
+(see [reduce_scatter_DistMatrix.hxx](reduce_scatter_DistMatrix.hxx), previously called `synchronize_Q`).
 
 This is inefficient in terms of memory, since we allocate memory for `Q_group` for each group of cores.
 
@@ -121,7 +121,7 @@ several `cblas_dsyrk()`/`cblas_dgemm()` calls, if Q is split into blocks for bet
    stored e.g. on core 1, this core restores its value from the `Residue_Matrices_Window` using CRT.
 7. Restore Q_group (see `Matrix_Normalizer.restore_Q`), i.e. divide by 2^2N and remove normalization.
 8. Calculate global Q, which is `DistMatrix<BigFloat>` distributed over all cores, as a sum of all Q_groups.
-   See [synchronize_Q.cxx](../step/initialize_schur_complement_solver/synchronize_Q.cxx).
+   See [reduce_scatter_DistMatrix.hxx](reduce_scatter_DistMatrix.hxx).
 
 ### Distributing BLAS jobs
 

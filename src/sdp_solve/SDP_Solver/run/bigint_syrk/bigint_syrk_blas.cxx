@@ -1,13 +1,9 @@
 #include "BigInt_Shared_Memory_Syrk_Context.hxx"
+#include "reduce_scatter_DistMatrix.hxx"
 #include "restore_matrix_from_residues.hxx"
 #include "fmpz_BigFloat_convert.hxx"
 
 #include <cblas.h>
-
-// TODO move to this folder and rename, e.g. to reduce_scatter
-void synchronize_Q(El::DistMatrix<El::BigFloat> &Q,
-                   const El::DistMatrix<El::BigFloat> &Q_group,
-                   Timers &timers);
 
 namespace
 {
@@ -157,7 +153,7 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
       deallocate_lower_half(bigint_output_shmem);
       bigint_syrk_blas_shmem(uplo, bigint_input_matrix_blocks,
                              bigint_output_shmem, timers);
-      synchronize_Q(bigint_output, bigint_output_shmem, timers);
+      reduce_scatter(bigint_output, bigint_output_shmem, timers);
     }
 }
 
