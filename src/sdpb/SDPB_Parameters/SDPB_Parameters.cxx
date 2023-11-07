@@ -86,7 +86,8 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
         {
           if(El::mpi::Rank() == 0)
             {
-              std::cout << cmd_line_options << '\n';
+		    std::cout << "SDPB v" << SDPB_VERSION_STRING << "\n";
+		    std::cout << cmd_line_options << '\n';
             }
         }
       else if(variables_map.count("version") != 0)
