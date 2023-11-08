@@ -100,8 +100,6 @@ namespace
 
     add_local_column_norms_squared(local_norms_squared, matrix);
 
-    // TODO do we need a barrier before AllReduce? probably no, check
-    // El::mpi::Barrier();
     El::mpi::AllReduce(local_norms_squared.data(), local_norms_squared.size(),
                        comm);
 
@@ -128,8 +126,7 @@ namespace
       {
         add_local_column_norms_squared(local_norms_squared, input_block);
       }
-    // TODO do we need a barrier before AllReduce? probably no, check
-    // El::mpi::Barrier();
+
     El::mpi::AllReduce(local_norms_squared.data(), local_norms_squared.size(),
                        comm);
 

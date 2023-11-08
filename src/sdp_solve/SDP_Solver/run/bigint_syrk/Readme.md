@@ -85,7 +85,7 @@ Now we can avoid this duplication, if all cores on a single node are working tog
 using [MPI shared memory window](https://docs.open-mpi.org/en/v5.0.x/man-openmpi/man3/MPI_Win_allocate_shared.3.html).
 
 The parallel algorithm goes as follows (see [compute_Q](../step/initialize_schur_complement_solver/compute_Q.cxx)
-and [bigint_syrk_blas](BigInt_Shared_Memory_Syrk_Context.cxx) functions):
+and [bigint_syrk_blas](bigint_syrk_blas.cxx) functions):
 
 1. Choose a set of primes. This is done only once at SDPB start,
    see [initialize_bigint_syrk_context](initialize_bigint_syrk_context.hxx).
@@ -119,13 +119,19 @@ several `cblas_dsyrk()`/`cblas_dgemm()` calls, if Q is split into blocks for bet
 
 6. `Q_group` is now a `DistMatrix<BigFloat>` distributed over all cores of a node. If some element `Q_group(i,j)` is
    stored e.g. on core 1, this core restores its value from the `Residue_Matrices_Window` using CRT.
-7. Restore Q_group (see `Matrix_Normalizer.restore_Q`), i.e. divide by 2^2N and remove normalization.
-8. Calculate global Q, which is `DistMatrix<BigFloat>` distributed over all cores, as a sum of all Q_groups.
+7. Reduce-scatter: calculate global Q, which is `DistMatrix<BigFloat>` distributed over all cores, as a sum of all
+   Q_groups.
    See [reduce_scatter_DistMatrix.hxx](reduce_scatter_DistMatrix.hxx).
+8. Restore Q (see `Matrix_Normalizer.restore_Q`), i.e. divide by 2^2N and remove normalization.
+
+Steps 2, 3 and 8 are performed in [compute_Q()](../step/initialize_schur_complement_solver/compute_Q.cxx) function,
+steps 4-7 - in [BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas()](bigint_syrk_blas.cxx) function.
+
+## Performance and memory optimizations
 
 ### Distributing BLAS jobs
 
-How can we distribute BLAS jobs from step 6 among the processes?
+How can we distribute BLAS jobs from step 5 among the processes?
 
 The simplest way is to assign each prime to some core
 in a simple round-robin manner: core_1 gets prime_1, core2 - prime_2, etc.
@@ -148,8 +154,8 @@ There are two kinds of jobs:
 - Off-diagonal blocks: `Q_ij = P_i^T P_j, i < j` (call `cblas_dgemm`)
 
 We estimate the cost of a job as a number of matrix elements that it calculates,
-i.e. `n*m` for gemm and `n*(n+1)/2` for syrk, where `n` and `m` are block height and width, respectively. This estimate
-is correct for naive matrix multiplication and does not account for specific BLAS optimization.
+i.e. `n*m` for gemm and `n*(n+1)/2` for syrk, where `n` and `m` are block height and width, respectively.
+This estimate is correct for naive matrix multiplication and does not account for specific BLAS optimizations.
 Note that syrk cost is n(n+1)/2, since it calculates only the upper half of the matrix.
 
 3. How do we choose the split factor M?
@@ -175,38 +181,174 @@ Of course, one could get better balancing by increasing M and splitting Q into s
 case).
 But it would likely increase the total execution time because one big BLAS call is faster than several smaller ones.
 
-## Possible improvements
+### Optimizing shared memory access time
 
-### Better job scheduling
+Accessing shared memory window can be significantly slower that accessing local memory (~10x for Expanse HPC).
+On systems with NUMA architecture, access time also varies for different cores and different memory regions. It depends
+on memory pinning (a memory page gets mapped into the local memory of the processor that first touches it).
+For more details, see
+e.g. [A Performance Evaluation of MPI Shared Memory Programming, David Karlbom (2016)](https://www.diva-portal.org/smash/get/diva2:938293/FULLTEXT01.pdf).
 
-If benchmarks show that job balancing is bad for some realistic cases, we can consider more sophisticated load
-balancing - e.g. use different splitting algorithm or more realistic BLAS job costs (although they are
-implementation-specific).
+Two optimizations:
 
-### Block timings
+1. Make a "first touch" of memory window, so that each memory region will be pinned to a core that uses it most.
+2. Bulk read/write to minimize memory access overhead.
 
-The old way
-of [distributing SDP blocks among the cores](../../../Block_Info/allocate_blocks/compute_block_grid_mapping.cxx)
-relies on [block timings](../../../../sdpb/write_timing.cxx), which include calculating contribution to Q from a single
-block, `run.step.initializeSchurComplementSolver.Q.syrk_XXX`.
-Now all blocks from a node are processed together.
-So we may include some timing estimate for this step,
-e.g. `(Q.syrk for a node) * (block size) / (total size for all blocks on a node)`.
+#### First touch
 
-### RAM optimization: split Q into blocks
+When making a first touch for input window, we can optimize it either for writing block residues or for BLAS calls.
 
-For extremely large problems, Q matrix may not fit into a single node.
+Memory access pattern for computing block residues is quite mosaic-like.
+Each process computes residues for all block elements that it owns, and writes them to the shared memory window. Only
+residues of a single column modulo single prime are stored consecutively (if the process owns the whole column). In
+total, each process is accessing at least to `block_width * num_primes` disconnected memory regions.
 
-In this case, it also helps to split P into M vertical bands P_1..P_M, so that Q is split into MxM blocks Q_ij.
-Then the algorithm can be schematically written as
+For BLAS calls, memory access is more regular:
+matrix of residues of P modulo given prime is processed either as a whole, or split into several submatrices.
+
+In our benchmarks, BLAS calls took more time than computing residues.
+Thus, in `BigInt_Shared_Memory_Syrk_Context` we make the first touch according to BLAS job schedule. We do the same for
+the output memory window.
+
+P.S. Note that memory is pinned page by page, where page size is usually 4096B = 512 doubles, so the memory access is
+still non-optimal, especially for smaller blocks.
+
+P.P.S. Creating and touching shared memory window introduces overhead for SDP solver start. For example, initializing
+70GB window on Expanse HPC takes about 30 seconds.
+This can be significant e.g. for Skydiving algorithm, where solver is restarted after several iterations.
+
+#### Bulk memory access
+
+If we write residues to the shared memory window one by one, it can be rather slow (even slower than BLAS calls).
+
+To optimize it, we compute residues for contiguous memory area (i.e. residues module single prime for each column of a
+single block or several consecutive blocks) locally, and then `memcpy` them to the window.
+See [compute_block_residues.cxx](compute_block_residues.cxx).
+
+**TODO**: currently, each block are stored in `DistMatrix<BigFloat, MC, MR>`, which means that both columns and rows are
+distributed among 2D process grid.
+If block is owned at least by four processes, then elements of a column are also distributed among several processes. In
+this case, there aren't any contiguous memory areas at all, and the `memcpy` trick is useless.
+
+Possible solutions:
+
+1. Store blocks in `DistMatrix<BigFloat, STAR, VR>`, which means that each column is always owned by a single rank. See
+   Fig. 11 and Fig.12 (page 21) of https://www.cs.utexas.edu/~flame/pubs/Elemental1.pdf. NB: this may affect e.g.
+   Cholesky decomposition performance
+   in [initialize_schur_off_diagonal()](../step/initialize_schur_complement_solver/compute_Q.cxx).
+2. Reorder rows of P matrix to ensure that rows coming from each rank are consecutive. NB: it can be non-trivial (and
+   cause subtle bugs) when some blocks are owned by a single ranks and others are distributed.
+
+### Reducing memory usage (TODO: not implemented yet)
+
+Storing (double-precision) residues of a BigFloat matrix requires ~4x more memory than the BigFloat matrix itself.
+For large problems, shared memory windows for P and/or Q do not fit into memory. Note also that sometimes HPC
+administrators may set maximal window size e.g. to 50% of available RAM.
+
+If Q is small and P is big, one can circumvent this issue by increasing number of nodes. However, this introduces extra
+communication overhead.
+If Q is too big, then one has to split it anyway.
+
+#### Splitting P
+
+Suppose that we set maximal window size for P to `H * block_width * num_primes * num_ranks`, where `num_ranks` is number
+of ranks on the node.
+This means residues only for `H` rows from each rank can fit into the window.
+
+Then the matrix multiplication [algorithm](#going-parallel) should be modified as:
+
+```
+1. Choose a set of primes.
+2. Calculate column norms of P.
+3. Normalize P and multiply by 2^N
+4. Fill Q window for with zeros.
+5. While not all rows of P are processed:
+   5.1 Each rank takes top H remaining rows from its blocks and writes their residues to the P window.
+   5.2 Call BLAS jobs to update the Q window.
+6. Compute Q_group from the residues stored in the Q window.
+7. Reduce-scatter Q_group from all nodes to the global Q.
+8. Restore Q (divide by 2^2N and remove normalization).
+```
+
+NB: distributed blocks require extra care, to ensure that we're not mixing elements from different rows.
+
+Splitting P saves memory, but introduces some extra overhead:
+
+- More synchronization points: before calling BLAS jobs, we have to wait until all ranks fill input window.
+- [Bulk memory access](#bulk-memory-access) is less effective since we're copying small chunks of data each time.
+- We make more BLAS calls (for smaller matrices), which should be less effective than fewer BLAS calls (for bigger
+  matrices).
+
+P.S. One can also split P vertically and store residues only for several columns.
+But this would require to calculate residues for each element multiple times.
+
+#### Splitting Q
+
+Imagine that we split P into M vertical bands P_1..P_M, so that Q is split into MxM blocks Q_ij.
+Then the [algorithm](#going-parallel) can be schematically written as
 
 ```
 for i,j=1..M:
-   - Calculate submatrix Q_group_ij = P_i^T P_j (from all blocks on the node), as in the current algorithm.
-   - Send the result to the global Q matrix.
+   - Calculate submatrix Q_group_ij = P_i^T P_j (from all blocks on the node), as described above.
+   - Reduce-scatter Q_group_ij from all nodes to the global Q_ij.
 ```
 
-With this procedure, memory window size for blocks is reduced by a factor of M.
-Memory window size for residues of Q and for Q_group are reduced by a factor of MxM.
+Here we don't need to allocate memory for the whole Q_group and for its residues,
+since we can reuse the same buffer for each Q_ij.
 
-Increasing M and the number of cores/nodes, in principle, we can fit arbitrarily large problems into memory.
+If we are splitting both P and Q memory windows, then the algorithm reads:
+
+```
+1. Choose a set of primes.
+2. Calculate column norms of P.
+3. Normalize P and multiply by 2^N.
+4. For each i,j=1..M:
+   4.1 Fill Q window for with zeros.
+   4.2 While not all rows of P are processed:
+     4.2.1 Each rank takes top H remaining rows from its blocks and writes their residues (for corresponding columns) to the P window.
+     4.2.2 Call BLAS jobs to update Q window.
+   4.3 Compute Q_group_ij from the residues stored in Q window.
+   4.4 Reduce-scatter Q_group_ij from all nodes to the global Q_ij.
+5. Restore Q (divide by 2^2N and remove normalization).
+```
+
+#### How to choose split factors for P and Q
+
+1. Determine memory limit for shared memory windows. We can use our memory usage estimates together with `MemAvailable`
+   value from `/proc/meminfo`. We can also introduce new command-line argument for SDPB,
+   e.g. `--maxSharedWindowSize=128G`.
+2. Set limit to Q window, e.g. 50% of total limit.
+3. Choose minimal split factor for Q so that it fits into the memory limit for Q window.
+4. Choose minimal split factor for P so that it fits into remaining memory.
+
+Note that our top priority is to minimize split factor for Q,
+because splitting Q introduces more significant overhead: (1) expensive reduce-scatter calls and (2) residues for each P
+element being calculated several times.
+
+### Block distribution
+
+SDP blocks are [distributed among the cores](../../../Block_Info/allocate_blocks/compute_block_grid_mapping.cxx)
+according to [block timings](../../../../sdpb/write_timing.cxx).
+In the old algorithm, for each block XXX, its cost is calculated as a sum
+of three timers:
+
+```
+run.step.initializeSchurComplementSolver.Q.cholesky_XXX
+run.step.initializeSchurComplementSolver.Q.solve_XXX
+run.step.initializeSchurComplementSolver.Q.syrk_XXX
+```
+
+In the new algorithm, all blocks from a node are processed together, so we cannot measure `syrk_XXX` for a single block.
+
+**TODO:**
+Currently, we use only timers for Q.solve_XXX and Q.syrk_XXX.
+We should include some timing estimate for the syrk step,
+e.g. `(Q.syrk for a node) * (block size) / (total size for all blocks on a node)`.
+There are other steps in the algorithm which are performed for each block separately.
+Ideally we should account for all of them (NB: excluding waiting time!).
+
+**TODO:**
+Current block distribution algorithm does not require uniform memory distribution explicitly. Generally, block timings
+correlate with block sizes, but two block of the same size can have different timings if one of them contains lots of
+zeros.Ideally, we should aim for both optimal memory distribution (to fit the problem into as few nodes as possible) and
+timing distribution (to minimize computation time).
