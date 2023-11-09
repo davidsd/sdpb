@@ -113,7 +113,7 @@ namespace
 // See compute_column_residues_elementwise().
 void BigInt_Shared_Memory_Syrk_Context::compute_block_residues(
   const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
-  Timers &timers)
+  Timers &timers, El::Matrix<int32_t> &block_timings_ms)
 {
   Scoped_Timer compute_residues_timer(timers, "compute_residues");
   {
@@ -185,6 +185,39 @@ void BigInt_Shared_Memory_Syrk_Context::compute_block_residues(
             block_index_local += num_consecutive_blocks - 1;
             // block_index_local now points to the last processed block,
             // i.e. at the start of the next iteration it will point to the first unprocessed block.
+          }
+      }
+
+    // Update block timings.
+    // Take total time and split it among local blocks, proportionally to block height
+
+    Scoped_Timer block_timing_timer(timers, "block_timing");
+    auto total_time_ms = compute_and_write_timer.elapsed_milliseconds();
+
+    assert(bigint_input_matrix_blocks.size()
+           == block_index_local_to_global.size());
+    constexpr auto get_size
+      = [](auto &block) { return block.LocalHeight() * block.LocalWidth(); };
+    auto total_size = std::transform_reduce(
+      bigint_input_matrix_blocks.cbegin(), bigint_input_matrix_blocks.cend(),
+      0, std::plus{}, get_size);
+    // Average time spent on one block element
+    double time_per_element = (double)total_time_ms / total_size;
+
+    // total_size=0 e.g. if we have single 1x1 block distributed to 2 ranks.
+    // Then rank=1 doesn't have any elements
+    if(total_size > 0)
+      {
+        for(size_t local_block_index = 0;
+            local_block_index < block_index_local_to_global.size();
+            ++local_block_index)
+          {
+            auto block_size
+              = get_size(bigint_input_matrix_blocks.at(local_block_index));
+            double time = block_size * time_per_element;
+            auto global_block_index
+              = block_index_local_to_global.at(local_block_index);
+            block_timings_ms(global_block_index, 0) += std::round(time);
           }
       }
   }

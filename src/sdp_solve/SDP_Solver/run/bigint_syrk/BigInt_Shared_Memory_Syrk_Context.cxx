@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cblas.h>
 
 #include <El.hpp>
@@ -18,7 +19,8 @@ namespace
 BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
   const El::mpi::Comm &shared_memory_comm, mp_bitcnt_t precision,
   const std::vector<El::Int> &block_heights, El::Int block_width,
-  const std::vector<size_t> &block_index_local_to_shmem, bool debug,
+  const std::vector<size_t> &block_index_local_to_shmem,
+  const std::vector<size_t> &block_index_local_to_global, bool debug,
   const std::function<Blas_Job_Schedule(size_t num_ranks, size_t num_primes,
                                         int output_width, bool debug)>
     &create_job_schedule)
@@ -30,10 +32,14 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       output_residues_window(shared_memory_comm, comb.num_primes, block_width,
                              block_width, debug),
       block_index_local_to_shmem(block_index_local_to_shmem),
+      block_index_local_to_global(block_index_local_to_global),
       blas_job_schedule(create_job_schedule(El::mpi::Size(shared_memory_comm),
                                             comb.num_primes, block_width,
                                             debug))
 {
+  assert(block_index_local_to_shmem.size()
+         == block_index_local_to_global.size());
+
   // Disable BLAS threading explicitly, each rank should work single-threaded
   openblas_set_num_threads(1);
 

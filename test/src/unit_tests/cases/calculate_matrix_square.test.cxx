@@ -241,12 +241,14 @@ TEST_CASE("calculate_Block_Matrix_square")
                       num_ranks, num_primes, output_width, split_factor);
                   };
               BigInt_Shared_Memory_Syrk_Context context(
-                comm, bits, block_heights, block_width, block_indices, false,
-                create_job_schedule);
+                comm, bits, block_heights, block_width, block_indices,
+                block_indices, false, create_job_schedule);
 
-              Timers timers(false);
-              context.bigint_syrk_blas(uplo, P_matrix_blocks, Q_result,
-                                       timers);
+              Timers timers;
+              El::Matrix<int32_t> block_timings_ms(
+                context.input_block_residues_window.num_blocks, 1);
+              context.bigint_syrk_blas(uplo, P_matrix_blocks, Q_result, timers,
+                                       block_timings_ms);
               {
                 INFO("Check that normalized Q_ii = 1:");
                 for(int iLoc = 0; iLoc < Q_result.LocalHeight(); ++iLoc)

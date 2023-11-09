@@ -125,7 +125,8 @@ namespace
 void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
   El::UpperOrLower uplo,
   const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
-  El::DistMatrix<El::BigFloat> &bigint_output, Timers &timers)
+  El::DistMatrix<El::BigFloat> &bigint_output, Timers &timers,
+  El::Matrix<int32_t> &block_timings_ms)
 {
   // - Calculate Q = P^T P from all P blocks on the node.
   // - If we have only one node, then it's the global result (=bigint_output).
@@ -140,7 +141,7 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
   if(El::mpi::Congruent(shared_memory_comm, bigint_output.DistComm()))
     {
       bigint_syrk_blas_shmem(uplo, bigint_input_matrix_blocks, bigint_output,
-                             timers);
+                             timers, block_timings_ms);
     }
   else
     {
@@ -152,7 +153,7 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
         bigint_output.Height(), bigint_output.Width(), grid);
       deallocate_lower_half(bigint_output_shmem);
       bigint_syrk_blas_shmem(uplo, bigint_input_matrix_blocks,
-                             bigint_output_shmem, timers);
+                             bigint_output_shmem, timers, block_timings_ms);
       reduce_scatter(bigint_output, bigint_output_shmem, timers);
     }
 }
@@ -162,7 +163,8 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
 void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem(
   El::UpperOrLower uplo,
   const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
-  El::DistMatrix<El::BigFloat> &bigint_output_shmem, Timers &timers)
+  El::DistMatrix<El::BigFloat> &bigint_output_shmem, Timers &timers,
+  El::Matrix<int32_t> &block_timings_ms)
 {
   Scoped_Timer timer(timers, "shmem");
   size_t width = bigint_output_shmem.Width();
@@ -190,19 +192,53 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem(
     El::mpi::Congruent(shared_memory_comm, bigint_output_shmem.DistComm()));
 
   // Compute residues
-  compute_block_residues(bigint_input_matrix_blocks, timers);
+  compute_block_residues(bigint_input_matrix_blocks, timers, block_timings_ms);
 
   // Square each residue matrix
   {
     Scoped_Timer syrk_timer(timers, "syrk");
-    auto shmem_rank = El::mpi::Rank(shared_memory_comm);
-    for(const auto &job : blas_job_schedule.jobs_by_rank.at(shmem_rank))
+    {
+      Scoped_Timer blas_timer(timers, "blas_jobs");
+      auto shmem_rank = El::mpi::Rank(shared_memory_comm);
+      for(const auto &job : blas_job_schedule.jobs_by_rank.at(shmem_rank))
+        {
+          do_blas_job(job, uplo, input_block_residues_window,
+                      output_residues_window);
+        }
+    }
+    {
+      Scoped_Timer fence_timer(timers, "fence");
+      output_residues_window.Fence();
+    }
+
+    // Update block_timings_ms with syrk time.
+    // We split total syrk time to individual blocks contributions, which are proportional to the block size.
+    // To avoid double-counting, each core accounts only for the elements that it owns.
+    // If block is distributed among several ranks,
+    // then total block timing is a sum of contributions from all its ranks.
+    constexpr auto get_size
+      = [](auto &block) { return block.LocalHeight() * block.LocalWidth(); };
+
+    // Estimate total CPU time spent on syrk for all blocks on the node,
+    // assuming that time is similar for all ranks.
+    auto total_syrk_time
+      = syrk_timer.elapsed_milliseconds() * El::mpi::Size(shared_memory_comm);
+    auto total_size
+      = input_block_residues_window.height * input_block_residues_window.width;
+    // Average time spent on one block element
+    double time_per_element = (double)total_syrk_time / total_size;
+
+    for(size_t local_block_index = 0;
+        local_block_index < block_index_local_to_global.size();
+        ++local_block_index)
       {
-        do_blas_job(job, uplo, input_block_residues_window,
-                    output_residues_window);
+        auto block_size
+          = get_size(bigint_input_matrix_blocks.at(local_block_index));
+        double time = block_size * time_per_element;
+        auto global_block_index
+          = block_index_local_to_global.at(local_block_index);
+        block_timings_ms(global_block_index, 0) += std::round(time);
       }
-    Scoped_Timer fence_timer(timers, "fence");
-    output_residues_window.Fence();
   }
 
   // Restore bigint_output matrix from residues

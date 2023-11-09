@@ -333,17 +333,18 @@ In the old algorithm, for each block XXX, its cost is calculated as a sum
 of three timers:
 
 ```
-run.step.initializeSchurComplementSolver.Q.cholesky_XXX
-run.step.initializeSchurComplementSolver.Q.solve_XXX
-run.step.initializeSchurComplementSolver.Q.syrk_XXX
+sdpb.solve.run.iter_2.step.initializeSchurComplementSolver.Q.cholesky_XXX
+sdpb.solve.run.iter_2.step.initializeSchurComplementSolver.Q.solve_XXX
+sdpb.solve.run.iter_2.step.initializeSchurComplementSolver.Q.syrk_XXX
 ```
 
-In the new algorithm, all blocks from a node are processed together, so we cannot measure `syrk_XXX` for a single block.
+In the new algorithm, all blocks from a node are processed together, so we cannot measure `Q.syrk_XXX` for a single
+block.
+Now we use the same two timers `Q.cholesky_XXX` and `Q.solve_XXX`
+as before. Instead of `Q.syrk_XXX`, we take time for computing residues and for calling BLAS, and split it among all
+blocks proportionally to the block sizes.
 
 **TODO:**
-Currently, we use only timers for Q.solve_XXX and Q.syrk_XXX.
-We should include some timing estimate for the syrk step,
-e.g. `(Q.syrk for a node) * (block size) / (total size for all blocks on a node)`.
 There are other steps in the algorithm which are performed for each block separately.
 Ideally we should account for all of them (NB: excluding waiting time!).
 

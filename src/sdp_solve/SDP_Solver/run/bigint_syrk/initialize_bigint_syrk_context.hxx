@@ -129,5 +129,5 @@ initialize_bigint_syrk_context(const Environment &env,
 
   return BigInt_Shared_Memory_Syrk_Context(
     shared_memory_comm, El::gmp::Precision(), shmem_block_index_to_height,
-    block_width, block_index_local_to_shmem, debug);
+    block_width, block_index_local_to_shmem, block_info.block_indices, debug);
 }

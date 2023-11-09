@@ -80,7 +80,8 @@ void check_normalized_Q_diagonal(El::DistMatrix<El::BigFloat> &Q,
 // Q = P^T P = (L^{-1} B)^T (L^{-1} B) = schur_off_diagonal^T schur_off_diagonal
 void syrk_Q(Block_Matrix &schur_off_diagonal,
             BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
-            El::DistMatrix<El::BigFloat> &Q, Timers &timers)
+            El::DistMatrix<El::BigFloat> &Q, Timers &timers,
+            El::Matrix<int32_t> &block_timings_ms)
 {
   std::vector<El::DistMatrix<El::BigFloat>> &P_blocks
     = schur_off_diagonal.blocks;
@@ -98,7 +99,8 @@ void syrk_Q(Block_Matrix &schur_off_diagonal,
 
   // Calculate Q = P^T P
   auto uplo = El::UPPER;
-  bigint_syrk_context.bigint_syrk_blas(uplo, P_blocks, Q, timers);
+  bigint_syrk_context.bigint_syrk_blas(uplo, P_blocks, Q, timers,
+                                       block_timings_ms);
 
   // Check that Q_ii = 2^2N
   check_normalized_Q_diagonal(Q, normalizer, timers);
@@ -122,5 +124,5 @@ void compute_Q(const SDP &sdp, const Block_Info &block_info,
   initialize_schur_off_diagonal(sdp, block_info, schur_complement,
                                 schur_off_diagonal, schur_complement_cholesky,
                                 timers, block_timings_ms);
-  syrk_Q(schur_off_diagonal, bigint_syrk_context, Q, timers);
+  syrk_Q(schur_off_diagonal, bigint_syrk_context, Q, timers, block_timings_ms);
 }

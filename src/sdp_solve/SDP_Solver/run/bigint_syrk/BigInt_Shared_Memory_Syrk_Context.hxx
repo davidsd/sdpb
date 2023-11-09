@@ -15,13 +15,15 @@ struct BigInt_Shared_Memory_Syrk_Context : boost::noncopyable
   Block_Residue_Matrices_Window<double> input_block_residues_window;
   Residue_Matrices_Window<double> output_residues_window;
   const std::vector<size_t> block_index_local_to_shmem;
+  const std::vector<size_t> block_index_local_to_global;
   const Blas_Job_Schedule blas_job_schedule;
 
   // block_heights - for all blocks in shared memory
   BigInt_Shared_Memory_Syrk_Context(
     const El::mpi::Comm &shared_memory_comm, mp_bitcnt_t precision,
     const std::vector<El::Int> &block_heights, El::Int block_width,
-    const std::vector<size_t> &block_index_local_to_shmem, bool debug,
+    const std::vector<size_t> &block_index_local_to_shmem,
+    const std::vector<size_t> &block_index_local_to_global, bool debug,
     const std::function<Blas_Job_Schedule(size_t num_ranks, size_t num_primes,
                                           int output_width, bool debug)>
       &create_job_schedule
@@ -45,18 +47,20 @@ struct BigInt_Shared_Memory_Syrk_Context : boost::noncopyable
   //
   // If you want to square arbitrary BigFloat matrix P,
   // then use Matrix_Normalizer before and after calling this bigint_syrk_blas()
-  void bigint_syrk_blas(
-    El::UpperOrLower uplo,
-    const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
-    El::DistMatrix<El::BigFloat> &bigint_output, Timers &timers);
+  void bigint_syrk_blas(El::UpperOrLower uplo,
+                        const std::vector<El::DistMatrix<El::BigFloat>>
+                          &bigint_input_matrix_blocks,
+                        El::DistMatrix<El::BigFloat> &bigint_output,
+                        Timers &timers, El::Matrix<int32_t> &block_timings_ms);
 
 private:
-  void compute_block_residues(const std::vector<El::DistMatrix<El::BigFloat>>
-                                &bigint_input_matrix_blocks,
-                              Timers &timers);
+  void compute_block_residues(
+    const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
+    Timers &timers, El::Matrix<int32_t> &block_timings_ms);
 
   void bigint_syrk_blas_shmem(
     El::UpperOrLower uplo,
     const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
-    El::DistMatrix<El::BigFloat> &bigint_output_shmem, Timers &timers);
+    El::DistMatrix<El::BigFloat> &bigint_output_shmem, Timers &timers,
+    El::Matrix<int32_t> &block_timings_ms);
 };
