@@ -18,7 +18,8 @@ void save_solution(const SDP_Solver &solver,
 Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
              const Environment &env,
              const std::chrono::time_point<std::chrono::high_resolution_clock>
-               &start_time)
+               &start_time,
+             El::Matrix<int32_t> &block_timings_ms)
 {
   Timers timers(env, parameters.verbosity >= Verbosity::debug);
   Scoped_Timer solve_timer(timers, "sdpb.solve");
@@ -39,7 +40,7 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
     to_property_tree(parameters));
   SDP_Solver_Terminate_Reason reason(
     solver.run(env, parameters.solver, parameters.verbosity, parameters_tree,
-               block_info, sdp, grid, start_time, timers));
+               block_info, sdp, grid, start_time, timers, block_timings_ms));
 
   if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {

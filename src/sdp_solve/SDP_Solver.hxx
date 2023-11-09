@@ -87,7 +87,7 @@ public:
       const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
       const std::chrono::time_point<std::chrono::high_resolution_clock>
         &start_time,
-      Timers &timers);
+      Timers &timers, El::Matrix<int32_t> &block_timings_ms);
 
   void step(
     const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
@@ -104,7 +104,8 @@ public:
     const Block_Vector &primal_residue_p,
     BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context, El::BigFloat &mu,
     El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
-    El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers);
+    El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
+    El::Matrix<int32_t> &block_timings_ms);
 
   void
   save_checkpoint(const std::filesystem::path &checkpoint_directory,

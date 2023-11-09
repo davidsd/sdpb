@@ -66,7 +66,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
   const boost::property_tree::ptree &parameter_properties,
   const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
   const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time,
-  Timers &timers)
+  Timers &timers, El::Matrix<int32_t> &block_timings_ms)
 {
   SDP_Solver_Terminate_Reason terminate_reason(
     SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
@@ -184,7 +184,14 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
       step(parameters, total_psd_rows, is_primal_and_dual_feasible, block_info,
            sdp, grid, X_cholesky, Y_cholesky, A_X_inv, A_Y, primal_residue_p,
            bigint_syrk_context, mu, beta_corrector, primal_step_length,
-           dual_step_length, terminate_now, timers);
+           dual_step_length, terminate_now, timers, block_timings_ms);
+
+      if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+        {
+          El::Print(block_timings_ms, "block_timings:");
+          El::Output();
+        }
+
       if(terminate_now)
         {
           terminate_reason

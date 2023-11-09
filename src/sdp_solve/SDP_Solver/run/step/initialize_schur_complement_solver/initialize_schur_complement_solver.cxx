@@ -54,7 +54,8 @@ void compute_Q(const SDP &sdp, const Block_Info &block_info,
                Block_Matrix &schur_off_diagonal,
                Block_Diagonal_Matrix &schur_complement_cholesky,
                BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
-               El::DistMatrix<El::BigFloat> &Q, Timers &timers);
+               El::DistMatrix<El::BigFloat> &Q, Timers &timers,
+               El::Matrix<int32_t> &block_timings_ms);
 
 void initialize_schur_complement_solver(
   const Block_Info &block_info, const SDP &sdp,
@@ -67,7 +68,8 @@ void initialize_schur_complement_solver(
   const El::Grid &group_grid, Block_Diagonal_Matrix &schur_complement_cholesky,
   Block_Matrix &schur_off_diagonal,
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
-  El::DistMatrix<El::BigFloat> &Q, Timers &timers)
+  El::DistMatrix<El::BigFloat> &Q, Timers &timers,
+  El::Matrix<int32_t> &block_timings_ms)
 {
   Scoped_Timer initialize_timer(timers, "initializeSchurComplementSolver");
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
@@ -81,7 +83,8 @@ void initialize_schur_complement_solver(
   compute_schur_complement(block_info, A_X_inv, A_Y, schur_complement, timers);
 
   compute_Q(sdp, block_info, schur_complement, schur_off_diagonal,
-            schur_complement_cholesky, bigint_syrk_context, Q, timers);
+            schur_complement_cholesky, bigint_syrk_context, Q, timers,
+            block_timings_ms);
 
   Scoped_Timer Cholesky_timer(timers, "Cholesky_Q");
   Cholesky(El::UpperOrLowerNS::UPPER, Q);

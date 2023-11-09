@@ -31,7 +31,8 @@ void initialize_schur_complement_solver(
   const El::Grid &block_grid, Block_Diagonal_Matrix &schur_complement_cholesky,
   Block_Matrix &schur_off_diagonal,
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
-  El::DistMatrix<El::BigFloat> &Q, Timers &timers);
+  El::DistMatrix<El::BigFloat> &Q, Timers &timers,
+  El::Matrix<int32_t> &block_timings_ms);
 
 void setup_solver(const Environment &env, const Block_Info &block_info,
                   const El::Grid &grid, const SDP &sdp,
@@ -87,10 +88,11 @@ void setup_solver(const Environment &env, const Block_Info &block_info,
       compute_A_Y(block_info, Y, sdp.bases_blocks, A_Y);
 
       Timers timers;
+      El::Matrix<int32_t> block_timings_ms(block_info.dimensions.size(), 1);
       auto bigint_syrk_context
         = initialize_bigint_syrk_context(env, block_info, sdp, false);
       initialize_schur_complement_solver(
         block_info, sdp, A_X_inv, A_Y, grid, schur_complement_cholesky,
-        schur_off_diagonal, bigint_syrk_context, Q, timers);
+        schur_off_diagonal, bigint_syrk_context, Q, timers, block_timings_ms);
     }
 }

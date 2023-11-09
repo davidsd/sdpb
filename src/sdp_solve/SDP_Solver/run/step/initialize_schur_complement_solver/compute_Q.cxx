@@ -9,7 +9,8 @@ void initialize_schur_off_diagonal(
   const SDP &sdp, const Block_Info &block_info,
   const Block_Diagonal_Matrix &schur_complement,
   Block_Matrix &schur_off_diagonal,
-  Block_Diagonal_Matrix &schur_complement_cholesky, Timers &timers)
+  Block_Diagonal_Matrix &schur_complement_cholesky, Timers &timers,
+  El::Matrix<int32_t> &block_timings_ms)
 {
   schur_off_diagonal.blocks.clear();
   schur_off_diagonal.blocks.reserve(schur_complement_cholesky.blocks.size());
@@ -17,8 +18,8 @@ void initialize_schur_off_diagonal(
   size_t num_blocks_local = schur_complement_cholesky.blocks.size();
   for(size_t block = 0; block < num_blocks_local; ++block)
     {
-      auto block_index_string
-        = std::to_string(block_info.block_indices[block]);
+      const auto global_block_index = block_info.block_indices.at(block);
+      auto block_index_string = std::to_string(global_block_index);
       {
         Scoped_Timer cholesky_timer(timers, "cholesky_" + block_index_string);
         schur_complement_cholesky.blocks[block]
@@ -26,6 +27,8 @@ void initialize_schur_off_diagonal(
 
         Cholesky(El::UpperOrLowerNS::LOWER,
                  schur_complement_cholesky.blocks[block]);
+        block_timings_ms(global_block_index, 0)
+          += cholesky_timer.elapsed_milliseconds();
       }
 
       // schur_off_diagonal = L^{-1} B
@@ -36,6 +39,8 @@ void initialize_schur_off_diagonal(
                El::OrientationNS::NORMAL, El::UnitOrNonUnitNS::NON_UNIT,
                El::BigFloat(1), schur_complement_cholesky.blocks[block],
                schur_off_diagonal.blocks[block]);
+      block_timings_ms(global_block_index, 0)
+        += solve_timer.elapsed_milliseconds();
     }
 }
 
@@ -109,12 +114,13 @@ void compute_Q(const SDP &sdp, const Block_Info &block_info,
                Block_Matrix &schur_off_diagonal,
                Block_Diagonal_Matrix &schur_complement_cholesky,
                BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
-               El::DistMatrix<El::BigFloat> &Q, Timers &timers)
+               El::DistMatrix<El::BigFloat> &Q, Timers &timers,
+               El::Matrix<int32_t> &block_timings_ms)
 {
   Scoped_Timer timer(timers, "Q");
 
   initialize_schur_off_diagonal(sdp, block_info, schur_complement,
                                 schur_off_diagonal, schur_complement_cholesky,
-                                timers);
+                                timers, block_timings_ms);
   syrk_Q(schur_off_diagonal, bigint_syrk_context, Q, timers);
 }

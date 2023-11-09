@@ -16,7 +16,8 @@ void initialize_schur_complement_solver(
   const El::Grid &block_grid, Block_Diagonal_Matrix &schur_complement_cholesky,
   Block_Matrix &schur_off_diagonal,
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
-  El::DistMatrix<El::BigFloat> &Q, Timers &timers);
+  El::DistMatrix<El::BigFloat> &Q, Timers &timers,
+  El::Matrix<int32_t> &block_timings_ms);
 
 void compute_search_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
@@ -57,9 +58,12 @@ void SDP_Solver::step(
   const Block_Vector &primal_residue_p,
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context, El::BigFloat &mu,
   El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
-  El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers)
+  El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
+  El::Matrix<int32_t> &block_timings_ms)
 {
   Scoped_Timer step_timer(timers, "step");
+  block_timings_ms.Resize(block_info.dimensions.size(), 1);
+  El::Zero(block_timings_ms);
 
   El::BigFloat beta_predictor;
 
@@ -94,7 +98,7 @@ void SDP_Solver::step(
     // complement equation for dx, dy
     initialize_schur_complement_solver(
       block_info, sdp, A_X_inv, A_Y, grid, schur_complement_cholesky,
-      schur_off_diagonal, bigint_syrk_context, Q, timers);
+      schur_off_diagonal, bigint_syrk_context, Q, timers, block_timings_ms);
 
     // Compute the complementarity mu = Tr(X Y)/X.dim
     Scoped_Timer frobenius_timer(timers, "frobenius_product_symmetric");
@@ -164,4 +168,8 @@ void SDP_Solver::step(
   dY *= dual_step_length;
 
   Y += dY;
+
+  // Block timings
+  Scoped_Timer block_timings_timer(timers, "block_timings_AllReduce");
+  El::AllReduce(block_timings_ms, El::mpi::COMM_WORLD);
 }

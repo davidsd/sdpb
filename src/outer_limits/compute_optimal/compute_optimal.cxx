@@ -210,9 +210,11 @@ std::vector<El::BigFloat> compute_optimal(
             }
 
           Timers timers(env, parameters.verbosity >= Verbosity::debug);
+          El::Matrix<int32_t> block_timings_ms(block_info.dimensions.size(),
+                                               1);
           SDP_Solver_Terminate_Reason reason = solver.run(
             env, parameters.solver, parameters.verbosity, parameter_properties,
-            block_info, sdp, grid, start_time, timers);
+            block_info, sdp, grid, start_time, timers, block_timings_ms);
 
           for(size_t index(0); index < block_info.block_indices.size();
               ++index)
