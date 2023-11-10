@@ -114,14 +114,14 @@ workflows:
       - build:
           filters:
             tags:
-              only: /.*/
+              only: /^\d+\.\d+\.\d+$/
 
       - test:
           requires:
             - build
           filters:
             tags:
-              only: /.*/
+              only: /^\d+\.\d+\.\d+$/
 
       - deploy-master:
           filters:
@@ -134,7 +134,7 @@ workflows:
       - deploy-tag:
           filters:
             tags:
-              only: /.*/ # All tags
+              only: /^\d+\.\d+\.\d+$/ # only release tags, e.g 2.6.0
             # See https://discuss.circleci.com/t/tag-not-triggered-by-circleci-not-filter-in-workflow/32036
             branches:
               ignore: /.*/ # Ignore all branches, otherwise the job is triggered by any git push
