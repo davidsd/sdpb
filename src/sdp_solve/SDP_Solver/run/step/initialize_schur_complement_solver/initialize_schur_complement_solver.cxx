@@ -82,10 +82,9 @@ void initialize_schur_complement_solver(
 
   compute_schur_complement(block_info, A_X_inv, A_Y, schur_complement, timers);
 
-  auto &Q_computation_timer(
-    timers.add_and_start("run.step.initializeSchurComplementSolver.Q"));
-
   {
+    Scoped_Timer Q_computation_timer(
+    timers, "run.step.initializeSchurComplementSolver.Q");
     // FIXME: Change initialize_Q_group to initialize_Q and
     // synchronize inside.
     El::DistMatrix<El::BigFloat> Q_group(Q.Height(), Q.Width(), group_grid);
@@ -93,11 +92,8 @@ void initialize_schur_complement_solver(
                        schur_complement_cholesky, Q_group, timers);
     synchronize_Q(Q, Q_group, timers);
   }
-  Q_computation_timer.stop();
 
-  auto &Cholesky_timer(
-    timers.add_and_start("run.step.initializeSchurComplementSolver."
-                         "Cholesky"));
+  Scoped_Timer Cholesky_timer(
+    timers, "run.step.initializeSchurComplementSolver.Cholesky");
   Cholesky(El::UpperOrLowerNS::UPPER, Q);
-  Cholesky_timer.stop();
 }

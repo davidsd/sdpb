@@ -106,10 +106,10 @@ int main(int argc, char **argv)
       std::vector<El::BigFloat> objectives, normalization;
       std::vector<Positive_Matrix_With_Prefactor> matrices;
       Timers timers(debug);
-      auto &read_input_timer(timers.add_and_start("read_input"));
-      read_input(input_file, objectives, normalization, matrices);
-      read_input_timer.stop();
-      auto &write_output_timer(timers.add_and_start("write_output"));
+      {
+        Scoped_Timer read_input_timer(timers, "read_input");
+        read_input(input_file, objectives, normalization, matrices);
+      }
       std::vector<std::string> command_arguments;
       for(int arg(0); arg != argc; ++arg)
         {
@@ -117,7 +117,6 @@ int main(int argc, char **argv)
         }
       write_output(output_path, output_format, command_arguments, objectives,
                    normalization, matrices, timers, debug);
-      write_output_timer.stop();
       if(debug)
         {
           timers.write_profile(output_path.string() + ".profiling/profiling."

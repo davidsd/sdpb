@@ -25,10 +25,10 @@ struct Timer
     return elapsed<std::chrono::seconds>();
   }
 
+  [[nodiscard]] bool is_running() const { return running; }
+
 private:
   bool running = true;
-
-  [[nodiscard]] bool is_running() const { return running; }
 
   static std::chrono::time_point<std::chrono::high_resolution_clock> now()
   {

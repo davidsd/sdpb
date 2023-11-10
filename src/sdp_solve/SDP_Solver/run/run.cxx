@@ -67,8 +67,8 @@ SDP_Solver::run(const Solver_Parameters &parameters,
 {
   SDP_Solver_Terminate_Reason terminate_reason(
     SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
-  auto &solver_timer(timers.add_and_start("Solver runtime"));
-  auto &initialize_timer(timers.add_and_start("run.initialize"));
+  Scoped_Timer solver_timer(timers, "Solver runtime");
+  Scoped_Timer initialize_timer(timers, "run.initialize");
 
   El::BigFloat primal_step_length(0), dual_step_length(0);
 
@@ -133,11 +133,12 @@ SDP_Solver::run(const Solver_Parameters &parameters,
       compute_objectives(sdp, x, y, primal_objective, dual_objective,
                          duality_gap, timers);
 
-      auto &cholesky_decomposition_timer(
-        timers.add_and_start("run.choleskyDecomposition"));
-      cholesky_decomposition(X, X_cholesky);
-      cholesky_decomposition(Y, Y_cholesky);
-      cholesky_decomposition_timer.stop();
+      {
+        Scoped_Timer cholesky_decomposition_timer(timers,
+                                                  "run.choleskyDecomposition");
+        cholesky_decomposition(X, X_cholesky);
+        cholesky_decomposition(Y, Y_cholesky);
+      }
 
       compute_bilinear_pairings(block_info, X_cholesky, Y, sdp.bases_blocks,
                                 A_X_inv, A_Y, timers);
@@ -157,8 +158,8 @@ SDP_Solver::run(const Solver_Parameters &parameters,
       compute_feasible_and_termination(
         parameters, primal_error(), dual_error, duality_gap,
         primal_step_length, dual_step_length, iteration,
-        solver_timer.start_time, is_primal_and_dual_feasible, terminate_reason,
-        terminate_now);
+        solver_timer.start_time(), is_primal_and_dual_feasible,
+        terminate_reason, terminate_now);
       if(terminate_now)
         {
           break;
@@ -176,9 +177,8 @@ SDP_Solver::run(const Solver_Parameters &parameters,
           break;
         }
       print_iteration(iteration, mu, primal_step_length, dual_step_length,
-                      beta_corrector, *this, solver_timer.start_time,
+                      beta_corrector, *this, solver_timer.start_time(),
                       verbosity);
     }
-  solver_timer.stop();
   return terminate_reason;
 }

@@ -11,6 +11,7 @@
 
 #include <El.hpp>
 
+#include <cassert>
 #include <fstream>
 #include <string>
 #include <list>
@@ -179,8 +180,26 @@ struct Scoped_Timer : boost::noncopyable
   Scoped_Timer(Timers &timers, const std::string &name)
       : my_timer(timers.add_and_start(name))
   {}
-  virtual ~Scoped_Timer() { my_timer.stop(); }
+  virtual ~Scoped_Timer()
+  {
+    if(is_running())
+      stop();
+  }
+
+  [[nodiscard]] std::chrono::time_point<std::chrono::high_resolution_clock>
+  start_time() const
+  {
+    return my_timer.start_time;
+  }
+
+  void stop()
+  {
+    // Don't stop timer twice!
+    assert(is_running());
+    my_timer.stop();
+  }
 
 private:
   Timer &my_timer;
+  [[nodiscard]] bool is_running() const { return my_timer.is_running(); }
 };

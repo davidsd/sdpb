@@ -8,7 +8,7 @@ void compute_objectives(const SDP &sdp, const Block_Vector &x,
                         El::BigFloat &dual_objective,
                         El::BigFloat &duality_gap, Timers &timers)
 {
-  auto &objectives_timer(timers.add_and_start("run.objectives"));
+  Scoped_Timer objectives_timer(timers, "run.objectives");
   primal_objective = sdp.objective_const + dot(sdp.primal_objective_c, x);
   // dual_objective_b is duplicated amongst the processors.  y is
   // duplicated amongst the blocks, but it is possible for some
@@ -26,6 +26,4 @@ void compute_objectives(const SDP &sdp, const Block_Vector &x,
   duality_gap
     = Abs(primal_objective - dual_objective)
       / Max(Abs(primal_objective) + Abs(dual_objective), El::BigFloat(1));
-
-  objectives_timer.stop();
 }
