@@ -48,7 +48,12 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters)
       solver.save_checkpoint(parameters.solver.checkpoint_out, parameters.verbosity,
                              parameters_tree);
     }
-  save_solution(solver, reason, timers.front(), parameters.out_directory,
+  auto runtime_it = std::find_if(timers.begin(), timers.end(),
+                                 [](std::pair<std::string, Timer> item) {
+                                   return item.first == "Solver runtime";
+                                 });
+  assert(runtime_it != timers.end());
+  save_solution(solver, reason, *runtime_it, parameters.out_directory,
                 parameters.write_solution, block_info.block_indices,
                 parameters.verbosity);
   return timers;

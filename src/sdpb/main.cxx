@@ -86,8 +86,14 @@ int main(int argc, char **argv)
             parameters.proc_granularity, parameters.verbosity);
           std::swap(block_info, new_info);
 
+          auto runtime_it
+            = std::find_if(timers.begin(), timers.end(),
+                           [](std::pair<std::string, Timer> item) {
+                             return item.first == "Solver runtime";
+                           });
+          assert(runtime_it != timers.end());
           parameters.solver.max_runtime
-            -= timers.front().second.elapsed_seconds();
+            -= runtime_it->second.elapsed_seconds();
         }
       else if(!block_info.block_timings_filename.empty()
               && block_info.block_timings_filename
