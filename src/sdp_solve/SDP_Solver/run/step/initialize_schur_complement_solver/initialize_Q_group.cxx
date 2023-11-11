@@ -32,8 +32,7 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
       ++block)
     {
       Scoped_Timer cholesky_timer(
-        timers, "run.step.initializeSchurComplementSolver.Q.cholesky_"
-                  + std::to_string(block_info.block_indices[block]));
+        timers, "cholesky_" + std::to_string(block_info.block_indices[block]));
       schur_complement_cholesky.blocks[block] = schur_complement.blocks[block];
 
       Cholesky(El::UpperOrLowerNS::LOWER,
@@ -42,8 +41,7 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
 
       // schur_off_diagonal = L^{-1} B
       Scoped_Timer solve_timer(
-        timers, "run.step.initializeSchurComplementSolver.Q.solve_"
-                  + std::to_string(block_info.block_indices[block]));
+        timers, "solve_" + std::to_string(block_info.block_indices[block]));
 
       schur_off_diagonal.blocks.push_back(sdp.free_var_matrix.blocks[block]);
       El::Trsm(El::LeftOrRightNS::LEFT, El::UpperOrLowerNS::LOWER,
@@ -55,8 +53,7 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
 
       // Q = (L^{-1} B)^T (L^{-1} B) = schur_off_diagonal^T schur_off_diagonal
       Scoped_Timer syrk_timer(
-        timers, "run.step.initializeSchurComplementSolver.Q.syrk_"
-                  + std::to_string(block_info.block_indices[block]));
+        timers, "syrk_" + std::to_string(block_info.block_indices[block]));
       El::DistMatrix<El::BigFloat> Q_group_view(
         El::View(Q_group, 0, 0, schur_off_diagonal.blocks[block].Width(),
                  schur_off_diagonal.blocks[block].Width()));

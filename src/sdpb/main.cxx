@@ -89,7 +89,7 @@ int main(int argc, char **argv)
           auto runtime_it
             = std::find_if(timers.begin(), timers.end(),
                            [](std::pair<std::string, Timer> item) {
-                             return item.first == "Solver runtime";
+                             return item.first == "sdpb.solve.run";
                            });
           assert(runtime_it != timers.end());
           parameters.solver.max_runtime

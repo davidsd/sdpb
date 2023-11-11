@@ -17,13 +17,21 @@ void save_solution(const SDP_Solver &solver, const SDP_Solver_Terminate_Reason,
 
 Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters)
 {
+  Timers timers(parameters.verbosity >= Verbosity::debug);
+  Scoped_Timer solve_timer(timers, "sdpb.solve");
+
   El::Grid grid(block_info.mpi_comm.value);
+
+  Scoped_Timer read_sdp_timer(timers, "read_sdp");
   SDP sdp(parameters.sdp_path, block_info, grid);
+  read_sdp_timer.stop();
+
+  Scoped_Timer solver_ctor_timer(timers, "SDP_Solver.ctor");
   SDP_Solver solver(parameters.solver, parameters.verbosity,
                     parameters.require_initial_checkpoint, block_info, grid,
                     sdp.dual_objective_b.Height());
+  solver_ctor_timer.stop();
 
-  Timers timers(parameters.verbosity >= Verbosity::debug);
   const boost::property_tree::ptree parameters_tree(
     to_property_tree(parameters));
   SDP_Solver_Terminate_Reason reason(solver.run(
@@ -50,7 +58,7 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters)
     }
   auto runtime_it = std::find_if(timers.begin(), timers.end(),
                                  [](std::pair<std::string, Timer> item) {
-                                   return item.first == "Solver runtime";
+                                   return item.first == "sdpb.solve.run";
                                  });
   assert(runtime_it != timers.end());
   save_solution(solver, reason, *runtime_it, parameters.out_directory,

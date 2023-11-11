@@ -56,7 +56,8 @@ void SDP_Solver::step(
   El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
   El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers)
 {
-  Scoped_Timer step_timer(timers, "run.step");
+  Scoped_Timer step_timer(timers, "step");
+
   El::BigFloat beta_predictor;
 
   // Search direction: These quantities have the same structure
@@ -93,8 +94,7 @@ void SDP_Solver::step(
                                        schur_off_diagonal, Q, timers);
 
     // Compute the complementarity mu = Tr(X Y)/X.dim
-    Scoped_Timer frobenius_timer(timers,
-                                 "run.step.frobenius_product_symmetric");
+    Scoped_Timer frobenius_timer(timers, "frobenius_product_symmetric");
     mu = frobenius_product_symmetric(X, Y) / total_psd_rows;
     frobenius_timer.stop();
     if(mu > parameters.max_complementarity)
@@ -104,8 +104,8 @@ void SDP_Solver::step(
       }
 
     {
-      Scoped_Timer predictor_timer(
-        timers, "run.step.computeSearchDirection(betaPredictor)");
+      Scoped_Timer predictor_timer(timers,
+                                   "computeSearchDirection(betaPredictor)");
 
       // Compute the predictor solution for (dx, dX, dy, dY)
       beta_predictor = predictor_centering_parameter(
@@ -117,8 +117,8 @@ void SDP_Solver::step(
     }
 
     // Compute the corrector solution for (dx, dX, dy, dY)
-    Scoped_Timer corrector_timer(
-      timers, "run.step.computeSearchDirection(betaCorrector)");
+    Scoped_Timer corrector_timer(timers,
+                                 "computeSearchDirection(betaCorrector)");
     beta_corrector = corrector_centering_parameter(
       parameters, X, dX, Y, dY, mu, is_primal_and_dual_feasible,
       total_psd_rows);
@@ -130,11 +130,11 @@ void SDP_Solver::step(
   // Compute step-lengths that preserve positive definiteness of X, Y
   primal_step_length
     = step_length(X_cholesky, dX, parameters.step_length_reduction,
-                  "run.step.stepLength(XCholesky)", timers);
+                  "stepLength(XCholesky)", timers);
 
   dual_step_length
     = step_length(Y_cholesky, dY, parameters.step_length_reduction,
-                  "run.step.stepLength(YCholesky)", timers);
+                  "stepLength(YCholesky)", timers);
 
   // If our problem is both dual-feasible and primal-feasible,
   // ensure we're following the true Newton direction.

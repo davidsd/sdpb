@@ -106,6 +106,7 @@ int main(int argc, char **argv)
       std::vector<El::BigFloat> objectives, normalization;
       std::vector<Positive_Matrix_With_Prefactor> matrices;
       Timers timers(debug);
+      Scoped_Timer timer(timers, "sdp2input");
       {
         Scoped_Timer read_input_timer(timers, "read_input");
         read_input(input_file, objectives, normalization, matrices);

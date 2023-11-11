@@ -67,8 +67,8 @@ SDP_Solver::run(const Solver_Parameters &parameters,
 {
   SDP_Solver_Terminate_Reason terminate_reason(
     SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
-  Scoped_Timer solver_timer(timers, "Solver runtime");
-  Scoped_Timer initialize_timer(timers, "run.initialize");
+  Scoped_Timer solver_timer(timers, "run");
+  Scoped_Timer initialize_timer(timers, "initialize");
 
   El::BigFloat primal_step_length(0), dual_step_length(0);
 
@@ -112,6 +112,8 @@ SDP_Solver::run(const Solver_Parameters &parameters,
   auto last_checkpoint_time(std::chrono::high_resolution_clock::now());
   for(size_t iteration = 1;; ++iteration)
     {
+      Scoped_Timer iteration_timer(timers,
+                                   "iter_" + std::to_string(iteration));
       if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
         {
           El::Output("Start iteration ", iteration, " at ",
@@ -135,7 +137,7 @@ SDP_Solver::run(const Solver_Parameters &parameters,
 
       {
         Scoped_Timer cholesky_decomposition_timer(timers,
-                                                  "run.choleskyDecomposition");
+                                                  "choleskyDecomposition");
         cholesky_decomposition(X, X_cholesky);
         cholesky_decomposition(Y, Y_cholesky);
       }

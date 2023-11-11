@@ -21,17 +21,26 @@
 
 struct Timers : public std::list<std::pair<std::string, Timer>>
 {
-  bool debug = false;
-  Timers(const bool &Debug) : debug(Debug) {}
+  friend struct Scoped_Timer; // can change private field prefix
 
+private:
+  const bool debug = false;
+  std::string prefix;
+
+public:
+  explicit Timers(bool debug) : debug(debug) {}
+
+private:
   Timer &add_and_start(const std::string &name)
   {
+    std::string full_name = prefix + name;
     if(debug)
-      print_debug_info(name);
-    emplace_back(name, Timer());
+      print_debug_info(full_name);
+    emplace_back(full_name, Timer());
     return back().second;
   }
 
+public:
   void write_profile(const std::filesystem::path &path) const
   {
     if(!path.parent_path().empty())
@@ -175,11 +184,30 @@ private:
 
 // Simple RAII timer
 // start() in constructor, stop() in destructor
+// Temporarily appends name to timers.prefix
+// NB: make sure that all Scoped_Timers are properly nested!
+// Otherwise, prefixes will be wrong.
+//
+// Example:
+//
+// void f()
+// {
+//   Timers timers(false);
+//   Scoped_Timer root_timer(timers, "root"); // "root"
+//   Scoped_Timer foo_timer(timers, "foo"); // "root.foo"
+//   foo_timer.stop();
+//   Scoped_Timer bar_timer(timers, "bar"); // "root.bar"
+// }
 struct Scoped_Timer : boost::noncopyable
 {
   Scoped_Timer(Timers &timers, const std::string &name)
-      : my_timer(timers.add_and_start(name))
-  {}
+      : timers(timers), my_timer(timers.add_and_start(name)),
+        old_prefix(timers.prefix),
+        new_prefix(timers.prefix + name + ".")
+
+  {
+    timers.prefix = new_prefix;
+  }
   virtual ~Scoped_Timer()
   {
     if(is_running())
@@ -194,12 +222,26 @@ struct Scoped_Timer : boost::noncopyable
 
   void stop()
   {
-    // Don't stop timer twice!
-    assert(is_running());
+    if(!is_running())
+      {
+        El::RuntimeError("Timer '" + new_prefix + "' already stopped!");
+      }
     my_timer.stop();
+
+    // This assertion will fail if some of the nested timers is still running:
+    if(timers.prefix != new_prefix)
+      {
+        El::RuntimeError("timers.prefix = '" + timers.prefix + "', expected: '"
+                         + new_prefix + "'");
+      }
+    timers.prefix = old_prefix;
   }
 
 private:
+  Timers &timers;
   Timer &my_timer;
+  std::string old_prefix;
+  std::string new_prefix;
+
   [[nodiscard]] bool is_running() const { return my_timer.is_running(); }
 };

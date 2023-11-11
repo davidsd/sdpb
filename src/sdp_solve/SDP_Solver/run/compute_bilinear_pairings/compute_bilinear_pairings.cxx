@@ -24,7 +24,7 @@ void compute_bilinear_pairings(
              2> &A_Y,
   Timers &timers)
 {
-  Scoped_Timer congruence_timer(timers, "run.bilinear_pairings");
+  Scoped_Timer congruence_timer(timers, "bilinear_pairings");
   compute_A_X_inv(block_info, X_cholesky, bases_blocks, A_X_inv);
 
   compute_A_Y(block_info, Y, bases_blocks, A_Y);

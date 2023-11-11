@@ -18,8 +18,9 @@ void write_output(const fs::path &output_path, Block_File_Format output_format,
                   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
                   Timers &timers, bool debug)
 {
-  Scoped_Timer write_output_timer(timers, "write_output");
-  Scoped_Timer objectives_timer(timers, "write_output.objectives");
+  // TODO extract converting to separate function
+  Scoped_Timer convert_timer(timers, "convert");
+  Scoped_Timer objectives_timer(timers, "objectives");
 
   const size_t max_index(max_normalization_index(normalization));
 
@@ -38,15 +39,15 @@ void write_output(const fs::path &output_path, Block_File_Format output_format,
 
   objectives_timer.stop();
 
-  Scoped_Timer matrices_timer(timers, "write_output.matrices");
+  Scoped_Timer matrices_timer(timers, "matrices");
   std::vector<Dual_Constraint_Group> dual_constraint_groups;
   int rank(El::mpi::Rank(El::mpi::COMM_WORLD)),
     num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
   std::vector<size_t> indices;
   for(size_t index = rank; index < matrices.size(); index += num_procs)
     {
-      Scoped_Timer scalings_timer(timers, "write_output.matrices.scalings_"
-                                            + std::to_string(index));
+      Scoped_Timer index_timer(timers, "block_" + std::to_string(index));
+      Scoped_Timer scalings_timer(timers, "scalings");
       const size_t max_degree([&]() {
         int64_t result(0);
         for(auto &pvv : matrices[index].polynomials)
@@ -65,9 +66,7 @@ void write_output(const fs::path &output_path, Block_File_Format output_format,
       pvm.rows = matrices[index].polynomials.size();
       pvm.cols = matrices[index].polynomials.front().size();
 
-      Scoped_Timer bilinear_basis_timer(timers,
-                                        "write_output.matrices.bilinear_basis_"
-                                          + std::to_string(index));
+      Scoped_Timer bilinear_basis_timer(timers, "bilinear_basis");
 
       pvm.bilinear_basis
         = bilinear_basis(matrices[index].damped_rational, max_degree / 2);
@@ -85,8 +84,7 @@ void write_output(const fs::path &output_path, Block_File_Format output_format,
           pvm.sample_scalings.emplace_back(to_string(scaling));
         }
 
-      Scoped_Timer pvm_timer(timers, "write_output.matrices.pvm_"
-                                       + std::to_string(index));
+      Scoped_Timer pvm_timer(timers, "pvm");
       pvm.elements.reserve(pvm.rows * pvm.cols);
       for(auto &pvv : matrices[index].polynomials)
         for(auto &pv : pvv)
@@ -132,15 +130,12 @@ void write_output(const fs::path &output_path, Block_File_Format output_format,
               }
           }
       pvm_timer.stop();
-      Scoped_Timer dual_constraint_timer(
-        timers,
-        "write_output.matrices.dual_constraint_" + std::to_string(index));
+      Scoped_Timer dual_constraint_timer(timers, "dual_constraint");
       dual_constraint_groups.emplace_back(index, pvm);
-      dual_constraint_timer.stop();
     }
   matrices_timer.stop();
-
-  Scoped_Timer write_timer(timers, "write_output.write");
+  convert_timer.stop();
+  Scoped_Timer write_timer(timers, "write");
   write_sdpb_input_files(output_path, output_format, rank, matrices.size(),
                          command_arguments, objective_const, dual_objective_b,
                          dual_constraint_groups, debug);
