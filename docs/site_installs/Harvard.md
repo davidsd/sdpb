@@ -10,23 +10,52 @@
 
 # Load modules
 
+For compiling and/or running SDPB, you have to load modules first:
+
     module load python gcc/12.2.0-fasrc01 cmake/3.25.2-fasrc01 openmpi/4.1.5-fasrc01 gmp/6.2.1-fasrc01 mpfr/4.2.0-fasrc01
 
 You may run `module -t list` to view loaded modules,
 and `module purge` to unload all modules.
 
+You may also add this command to your `~/.bashrc` file, so that modules will load automatically.
+
 # Use existing SDPB installation
 
-SDPB executables built from the latest `master` branch can be found in `/n/home02/vdommes/install/sdpb-master/bin/`
-folder, e.g.
+## Choose SDPB version
+
+SDPB is installed in `/n/home02/vdommes/install/sdpb-<VERSION>` folder,
+where `<VERSION>` denotes specific version.
+
+You may list all available versions via
+
+    ls /n/home02/vdommes/install | grep sdpb
+
+Fo example, `sdpb-master` is built from the latest [master](https://github.com/davidsd/sdpb/tree/master) branch (
+run `sdpb --version` to see commit hash, e.g. `SDPB 2.5.1-130-g88b1c9ae`),
+and `sdpb-2.6.0` is a stable [2.6.0](https://github.com/davidsd/sdpb/releases/tag/2.6.0) release.
+
+Examples below are for `sdpb-master`.
+You may replace it with another version, e.g. `sdpb-2.6.0`.
+In that case, please refer
+to [2.6.0 documentation](https://github.com/davidsd/sdpb/blob/2.6.0/docs/site_installs/Harvard.md).
+
+## Run SDPB
 
     /n/home02/vdommes/install/sdpb-master/bin/sdpb --help
 
-Stable release versions are also available, e.g.:
+### Batch script example
 
-    /n/home02/vdommes/install/sdpb-2.6.0/bin/sdpb --help
+    sbatch /n/home02/vdommes/install/sdpb-master/share/sdpb_example.sh
 
-NB: remember to load modules before using SDPB.
+This command submits `sdpb_example.sh` to
+the [queueing system](https://docs.rc.fas.harvard.edu/kb/running-jobs/).
+
+`sdpb_example.sh` loads modules and runs `sdp2input`+`sdpb` for a simple problem.
+See script code and comments for more details.
+
+Script output is written to the log file in the current directory, e.g.:
+`./sdpb_example.sh.26306151.out`.
+SDPB output files are written to the `./out/` folder in the current directory.
 
 # Build SDPB from sources
 
