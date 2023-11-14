@@ -118,6 +118,12 @@ int main(int argc, char **argv)
         }
       write_output(output_path, output_format, command_arguments, objectives,
                    normalization, matrices, timers, debug);
+      if(El::mpi::Rank() == 0)
+        {
+          El::Output("Processed ", matrices.size(), " SDP blocks in ",
+                     (double)timer.timer().elapsed_milliseconds() / 1000,
+                     " seconds, output: ", output_path.string());
+        }
       if(debug)
         {
           timers.write_profile(output_path.string() + ".profiling/profiling."
