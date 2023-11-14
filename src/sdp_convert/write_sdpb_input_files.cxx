@@ -2,6 +2,7 @@
 #include "byte_counter.hxx"
 #include "Archive_Writer.hxx"
 #include "../sdp_convert.hxx"
+#include "../Timers.hxx"
 
 #include <filesystem>
 
@@ -64,7 +65,8 @@ namespace
     return temp_dir / El::BuildString("block_info_", block_index, ".json");
   }
 
-  fs::path get_block_data_path(const fs::path &temp_dir, size_t block_index, Block_File_Format format)
+  fs::path get_block_data_path(const fs::path &temp_dir, size_t block_index,
+                               Block_File_Format format)
   {
     std::string name = El::BuildString("block_data_", block_index);
     switch(format)
@@ -76,7 +78,8 @@ namespace
     return temp_dir / name;
   }
 
-  void archive_gzipped_file(const fs::path &path, const int64_t &num_bytes, Archive_Writer &writer)
+  void archive_gzipped_file(const fs::path &path, const int64_t &num_bytes,
+                            Archive_Writer &writer)
   {
     boost::iostreams::filtering_stream<boost::iostreams::input> input_stream;
     input_stream.push(boost::iostreams::gzip_decompressor());
@@ -93,8 +96,10 @@ void write_sdpb_input_files(
   const El::BigFloat &objective_const,
   const std::vector<El::BigFloat> &dual_objective_b,
   const std::vector<Dual_Constraint_Group> &dual_constraint_groups,
-  const bool debug)
+  Timers &timers, const bool debug)
 {
+  Scoped_Timer write_timer(timers, "write_sdp");
+
   fs::path temp_dir(output_path);
   temp_dir += "_temp";
   fs::create_directories(temp_dir);
@@ -104,35 +109,50 @@ void write_sdpb_input_files(
   std::vector<size_t> block_info_sizes(num_blocks, 0);
   std::vector<size_t> block_data_sizes(num_blocks, 0);
 
-  for(auto &group : dual_constraint_groups)
-    {
-      size_t width = group.constraint_matrix.Width();
-      size_t dual_objective_size = dual_objective_b.size();
-      if(width != dual_objective_size)
+  {
+    Scoped_Timer block_files_timer(timers, "block_files");
+    for(auto &group : dual_constraint_groups)
+      {
+        size_t width = group.constraint_matrix.Width();
+        size_t dual_objective_size = dual_objective_b.size();
+        if(width != dual_objective_size)
+          {
+            El::RuntimeError(" Block width=", width,
+                             " and dual objective size=", dual_objective_size,
+                             " should be equal.");
+          }
+
         {
-          El::RuntimeError(" Block width=", width,
-                           " and dual objective size=", dual_objective_size,
-                           " should be equal.");
+          Scoped_Timer block_info_timer(
+            timers, "block_info_" + std::to_string(group.block_index));
+          const auto block_info_path
+            = get_block_info_path(temp_dir, group.block_index);
+          block_info_sizes.at(group.block_index) = write_data_and_count_bytes(
+            block_info_path,
+            [&](std::ostream &os) { write_block_info_json(os, group); });
         }
 
-      const auto block_info_path
-        = get_block_info_path(temp_dir, group.block_index);
-      block_info_sizes.at(group.block_index)
-        = write_data_and_count_bytes(block_info_path, [&](std::ostream &os) {
-            write_block_info_json(os, group);
-          });
-
-      const auto block_data_path
-        = get_block_data_path(temp_dir, group.block_index, output_format);
-      block_data_sizes.at(group.block_index) = write_data_and_count_bytes(
-        block_data_path,
-        [&](std::ostream &os) { write_block_data(os, group, output_format); },
-        output_format == bin);
-    }
-  El::mpi::Reduce(block_info_sizes.data(), block_info_sizes.size(),
-                  El::mpi::SUM, 0, El::mpi::COMM_WORLD);
-  El::mpi::Reduce(block_data_sizes.data(), block_data_sizes.size(),
-                  El::mpi::SUM, 0, El::mpi::COMM_WORLD);
+        {
+          Scoped_Timer block_data_timer(
+            timers, "block_data_" + std::to_string(group.block_index));
+          const auto block_data_path
+            = get_block_data_path(temp_dir, group.block_index, output_format);
+          block_data_sizes.at(group.block_index) = write_data_and_count_bytes(
+            block_data_path,
+            [&](std::ostream &os) {
+              write_block_data(os, group, output_format);
+            },
+            output_format == bin);
+        }
+      }
+  }
+  {
+    Scoped_Timer reduce_timer(timers, "mpi_reduce_block_sizes");
+    El::mpi::Reduce(block_info_sizes.data(), block_info_sizes.size(),
+                    El::mpi::SUM, 0, El::mpi::COMM_WORLD);
+    El::mpi::Reduce(block_data_sizes.data(), block_data_sizes.size(),
+                    El::mpi::SUM, 0, El::mpi::COMM_WORLD);
+  }
   if(debug)
     {
       print_matrix_sizes(rank, dual_objective_b, dual_constraint_groups);
@@ -152,34 +172,50 @@ void write_sdpb_input_files(
           });
 
       // write all files to sdp.zip archive
+      Scoped_Timer zip_timer(timers, "zip");
       Archive_Writer writer(output_path);
       // control.json
-      archive_gzipped_file(control_path, num_control_bytes, writer);
-      fs::remove(control_path);
+      {
+        Scoped_Timer control_timer(timers, "control");
+        archive_gzipped_file(control_path, num_control_bytes, writer);
+        fs::remove(control_path);
+      }
       // objectives.json
-      archive_gzipped_file(objectives_path, num_objectives_bytes, writer);
-      fs::remove(objectives_path);
+      {
+        Scoped_Timer objectives_timer(timers, "objectives");
+        archive_gzipped_file(objectives_path, num_objectives_bytes, writer);
+        fs::remove(objectives_path);
+      }
 
       // block_info_XXX.json
-      // We add block_info before all block_data,
-      // so that SDPB can read them fast and skip the rest of archive
-      for(size_t block_index = 0; block_index != num_blocks; ++block_index)
-        {
-          const auto block_info_path
-            = get_block_info_path(temp_dir, block_index);
-          archive_gzipped_file(block_info_path,
-                               block_info_sizes.at(block_index), writer);
-          fs::remove(block_info_path);
-        }
+      {
+        Scoped_Timer block_info_timer(timers, "block_info");
+
+        // We add block_info before all block_data,
+        // so that SDPB can read them fast and skip the rest of archive
+        for(size_t block_index = 0; block_index != num_blocks; ++block_index)
+          {
+            Scoped_Timer index_timer(timers, std::to_string(block_index));
+            const auto block_info_path
+              = get_block_info_path(temp_dir, block_index);
+            archive_gzipped_file(block_info_path,
+                                 block_info_sizes.at(block_index), writer);
+            fs::remove(block_info_path);
+          }
+      }
       // block_data_XXX.bin (or .json)
-      for(size_t block_index = 0; block_index != num_blocks; ++block_index)
-        {
-          const auto block_data_path
-            = get_block_data_path(temp_dir, block_index, output_format);
-          archive_gzipped_file(block_data_path,
-                               block_data_sizes.at(block_index), writer);
-          fs::remove(block_data_path);
-        }
+      {
+        Scoped_Timer block_data_timer(timers, "block_data");
+        for(size_t block_index = 0; block_index != num_blocks; ++block_index)
+          {
+            Scoped_Timer index_timer(timers, std::to_string(block_index));
+            const auto block_data_path
+              = get_block_data_path(temp_dir, block_index, output_format);
+            archive_gzipped_file(block_data_path,
+                                 block_data_sizes.at(block_index), writer);
+            fs::remove(block_data_path);
+          }
+      }
       // Do not call remove_all() to ensure that we
       // don't remove anything useful.
       // This function will fail if temp_dir is not empty.
