@@ -34,20 +34,40 @@ TEST_CASE("Boost serialization")
 
   SECTION("El::BigFloat")
   {
-    El::BigFloat value = random_bigfloat();
-    El::BigFloat other = serialize_deserialize(value);
-    REQUIRE(value == other);
+    auto zero = El::BigFloat(0);
+    auto nonzero = random_bigfloat();
+
+    for(auto &value : {zero, nonzero})
+      {
+        CAPTURE(value);
+        El::BigFloat other = serialize_deserialize(value);
+        REQUIRE(value == other);
+      }
+
+    {
+      INFO("Check that zero serialization is more compact");
+      std::stringstream ss_zero, ss_nonzero;
+      boost::archive::binary_oarchive ar_zero(ss_zero), ar_nonzero(ss_nonzero);
+      ar_zero << zero;
+      ar_nonzero << nonzero;
+      REQUIRE(ss_zero.str().size() < ss_nonzero.str().size());
+    }
   }
 
   SECTION("El::Matrix<BigFloat>")
   {
-    int height = 2;
-    int width = 3;
-    auto matrix = random_matrix(height, width);
+    int height = 100;
+    int width = 10;
+    auto rand_matrix = random_matrix(height, width);
+    El::Matrix<El::BigFloat> zeros(height, width);
+    El::Zero(zeros);
 
-    El::Matrix<El::BigFloat> other = serialize_deserialize(matrix);
-    // Sanity check: deserialized_matrix is not the same as matrix
-    REQUIRE(matrix.LockedBuffer() != other.LockedBuffer());
-    DIFF(matrix, other);
+    for(auto &matrix : {zeros, rand_matrix})
+      {
+        El::Matrix<El::BigFloat> other = serialize_deserialize(matrix);
+        // Sanity check: deserialized_matrix is not the same as matrix
+        REQUIRE(matrix.LockedBuffer() != other.LockedBuffer());
+        DIFF(matrix, other);
+      }
   }
 }
