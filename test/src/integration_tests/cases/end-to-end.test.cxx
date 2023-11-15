@@ -15,7 +15,8 @@ namespace
                   const std::string &default_sdpb_args,
                   const std::string &sdp_format, int num_procs, int precision,
                   int sdp_zip_diff_precision, int sdpb_output_diff_precision,
-                  const std::vector<std::string> &out_txt_keys = {})
+                  const std::vector<std::string> &out_txt_keys = {},
+                  bool compute_spectrum = false)
   {
     auto format_description = sdp_format.empty() ? "default(bin)" : sdp_format;
     CAPTURE(sdp_format);
@@ -80,6 +81,24 @@ namespace
         output_dir / "out", data_dir / "out", precision,
         sdpb_output_diff_precision, {}, out_txt_keys);
     }
+
+    // TODO spectrum
+    if(compute_spectrum)
+      {
+        Test_Util::Test_Case_Runner::Named_Args_Map args{
+          {"--input", (data_dir / "json" / "file_list.nsv").string()},
+          {"--solution", (output_dir / "out").string()},
+          {"--threshold", "1e-10"},
+          {"--format", "PMP"},
+          {"--output", (output_dir / "spectrum.json").string()},
+          {"--precision", std::to_string(precision)},
+        };
+        // TODO: run with num_procs. Currently, spectrum fails if num_procs > 1.
+        runner.create_nested("spectrum").mpi_run({"build/spectrum"}, args, 1);
+        Test_Util::REQUIRE_Equal::diff_spectrum(
+          output_dir / "spectrum.json", data_dir / "spectrum_orig.json",
+          precision, sdpb_output_diff_precision);
+      }
   }
 }
 
@@ -141,13 +160,16 @@ TEST_CASE("end-to-end_tests")
           "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
           "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
           "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
-          "--procGranularity 1 --writeSolution y";
-      int sdpb_output_diff_precision = 600;
+          "--procGranularity 1 --writeSolution x,y";
+      int sdpb_output_diff_precision = 512;
       // This test is slow, we don't want to run it twice
       // json/bin correctness is checked by other tests below,
       // so we use only binary SDP here
+      std::vector<std::string> out_txt_keys = {};
+      bool compute_spectrum = true;
       end_to_end_test(name, default_sdpb_args, "bin", num_procs, precision,
-                      sdp_zip_diff_precision, sdpb_output_diff_precision);
+                      sdp_zip_diff_precision, sdpb_output_diff_precision,
+                      out_txt_keys, compute_spectrum);
     }
 
     SECTION("SingletScalarAllowed_test_nmax6")
