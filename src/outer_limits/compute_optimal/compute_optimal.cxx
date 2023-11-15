@@ -61,7 +61,8 @@ std::vector<El::BigFloat> compute_optimal(
   const std::vector<std::vector<El::BigFloat>> &initial_points,
   const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
-  const Outer_Parameters &parameters_in)
+  const Outer_Parameters &parameters_in,
+  const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time)
 {
   if(initial_points.size() != function_blocks.size())
     {
@@ -213,9 +214,9 @@ std::vector<El::BigFloat> compute_optimal(
             }
 
           Timers timers(parameters.verbosity >= Verbosity::debug);
-          SDP_Solver_Terminate_Reason reason
-            = solver.run(parameters.solver, parameters.verbosity,
-                         parameter_properties, block_info, sdp, grid, timers);
+          SDP_Solver_Terminate_Reason reason = solver.run(
+            parameters.solver, parameters.verbosity, parameter_properties,
+            block_info, sdp, grid, start_time, timers);
 
           for(size_t index(0); index < block_info.block_indices.size();
               ++index)

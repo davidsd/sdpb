@@ -13,7 +13,9 @@
 
 namespace fs = std::filesystem;
 
-Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters);
+Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
+             const std::chrono::time_point<std::chrono::high_resolution_clock>
+               &start_time);
 
 void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info, const Timers &timers,
                   const bool &debug, El::Matrix<int32_t> &block_timings);
@@ -31,6 +33,7 @@ int main(int argc, char **argv)
         }
 
       El::gmp::SetPrecision(parameters.solver.precision);
+      auto start_time = std::chrono::high_resolution_clock::now();
       if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {
           std::cout << boost::posix_time::second_clock::local_time()
@@ -73,7 +76,7 @@ int main(int argc, char **argv)
             {
               timing_parameters.verbosity = Verbosity::none;
             }
-          Timers timers(solve(block_info, timing_parameters));
+          Timers timers(solve(block_info, timing_parameters, start_time));
 
           El::Matrix<int32_t> block_timings(block_info.dimensions.size(), 1);
           write_timing(timing_parameters.solver.checkpoint_out, block_info,
@@ -85,14 +88,11 @@ int main(int argc, char **argv)
             parameters.proc_granularity, parameters.verbosity);
           std::swap(block_info, new_info);
 
-          auto runtime_it
-            = std::find_if(timers.begin(), timers.end(),
-                           [](std::pair<std::string, Timer> item) {
-                             return item.first == "sdpb.solve.run";
-                           });
-          assert(runtime_it != timers.end());
-          parameters.solver.max_runtime
-            -= runtime_it->second.elapsed_seconds();
+          auto elapsed_seconds
+            = std::chrono::duration_cast<std::chrono::seconds>(
+                std::chrono::high_resolution_clock::now() - start_time)
+                .count();
+          parameters.solver.max_runtime -= elapsed_seconds;
         }
       else if(!block_info.block_timings_filename.empty()
               && block_info.block_timings_filename
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
                         fs::copy_options::overwrite_existing);
             }
         }
-      solve(block_info, parameters);
+      solve(block_info, parameters, start_time);
     }
   catch(std::exception &e)
     {

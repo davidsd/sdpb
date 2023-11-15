@@ -67,7 +67,9 @@ std::vector<El::BigFloat> compute_optimal(
   const std::vector<std::vector<El::BigFloat>> &initial_points,
   const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
-  const Outer_Parameters &parameters_in);
+  const Outer_Parameters &parameters_in,
+  const std::chrono::time_point<std::chrono::high_resolution_clock>
+    &start_time);
 
 int main(int argc, char **argv)
 {
@@ -83,7 +85,7 @@ int main(int argc, char **argv)
   // El::gmp wants base-2 bits, but boost::multiprecision wants
   // base-10 digits.
   Boost_Float::default_precision(precision * log(2) / log(10));
-
+  auto start_time = std::chrono::high_resolution_clock::now();
   if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
       std::cout << boost::posix_time::second_clock::local_time()
@@ -100,8 +102,9 @@ int main(int argc, char **argv)
   std::vector<std::vector<El::BigFloat>> initial_points;
   read_points(parameters.points_path, initial_points);
 
-  std::vector<El::BigFloat> weights(compute_optimal(
-    functions, initial_points, objectives, normalization, parameters));
+  std::vector<El::BigFloat> weights(compute_optimal(functions, initial_points,
+                                                    objectives, normalization,
+                                                    parameters, start_time));
 
   El::BigFloat optimal(0);
   for(size_t index(0); index < objectives.size(); ++index)

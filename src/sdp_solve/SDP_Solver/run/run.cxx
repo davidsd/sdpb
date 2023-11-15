@@ -62,8 +62,9 @@ SDP_Solver_Terminate_Reason
 SDP_Solver::run(const Solver_Parameters &parameters,
                 const Verbosity &verbosity,
                 const boost::property_tree::ptree &parameter_properties,
-                const Block_Info &block_info, const SDP &sdp,
-                const El::Grid &grid, Timers &timers)
+  const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
+  const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time,
+  Timers &timers)
 {
   SDP_Solver_Terminate_Reason terminate_reason(
     SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
@@ -164,9 +165,8 @@ SDP_Solver::run(const Solver_Parameters &parameters,
       bool terminate_now, is_primal_and_dual_feasible;
       compute_feasible_and_termination(
         parameters, primal_error(), dual_error, duality_gap,
-        primal_step_length, dual_step_length, iteration,
-        solver_timer.start_time(), is_primal_and_dual_feasible,
-        terminate_reason, terminate_now);
+        primal_step_length, dual_step_length, iteration, start_time,
+        is_primal_and_dual_feasible, terminate_reason, terminate_now);
       if(terminate_now)
         {
           break;
