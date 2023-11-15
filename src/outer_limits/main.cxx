@@ -86,10 +86,10 @@ int main(int argc, char **argv)
 
   if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
-      std::cout << "Outer_Limits started at "
-                << boost::posix_time::second_clock::local_time() << '\n'
-                << parameters << '\n'
-                << std::flush;
+      std::cout << boost::posix_time::second_clock::local_time()
+                << " Start Outer_Limits" << '\n'
+                << "Version: " << SDPB_VERSION_STRING << '\n'
+                << parameters << std::endl;
     }
 
   std::vector<El::BigFloat> objectives, normalization;

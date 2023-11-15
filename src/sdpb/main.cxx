@@ -33,8 +33,8 @@ int main(int argc, char **argv)
       El::gmp::SetPrecision(parameters.solver.precision);
       if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {
-          std::cout << "SDPB started at "
-                    << boost::posix_time::second_clock::local_time() << '\n'
+          std::cout << boost::posix_time::second_clock::local_time()
+                    << " Start SDPB" << '\n'
                     << "SDPB version: " << SDPB_VERSION_STRING << '\n'
                     << parameters << std::endl;
         }
@@ -54,9 +54,8 @@ int main(int argc, char **argv)
           if(parameters.verbosity >= Verbosity::regular
              && El::mpi::Rank() == 0)
             {
-              std::cout << "Performing a timing run, start at "
-                        << boost::posix_time::second_clock::local_time()
-                        << std::endl;
+              El::Output(boost::posix_time::second_clock::local_time(),
+                         " Start timing run");
             }
           SDPB_Parameters timing_parameters(parameters);
           timing_parameters.solver.max_iterations = 2;

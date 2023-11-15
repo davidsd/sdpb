@@ -69,6 +69,11 @@ SDP_Solver::run(const Solver_Parameters &parameters,
     SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
   Scoped_Timer solver_timer(timers, "run");
   Scoped_Timer initialize_timer(timers, "initialize");
+  if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
+    {
+      El::Output(boost::posix_time::second_clock::local_time(),
+                 " Start solver iterations");
+    }
 
   El::BigFloat primal_step_length(0), dual_step_length(0);
 
