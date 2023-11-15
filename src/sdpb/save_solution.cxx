@@ -2,9 +2,6 @@
 #include "../set_stream_precision.hxx"
 #include "../write_distmatrix.hxx"
 
-
-#include <iomanip>
-
 namespace fs = std::filesystem;
 
 namespace
@@ -62,8 +59,8 @@ void save_solution(const SDP_Solver &solver,
                  << "dualityGap      = " << solver.duality_gap << ";\n"
                  << "primalError     = " << solver.primal_error() << ";\n"
                  << "dualError       = " << solver.dual_error << ";\n"
-                 << std::setw(16) << std::left << timer_pair.first << "= "
-                 << timer_pair.second.elapsed_seconds() << ";\n";
+                 << "Solver runtime  = " << timer_pair.second.elapsed_seconds()
+                 << ";\n";
       if(!out_stream.good())
         {
           throw std::runtime_error("Error when writing to: "

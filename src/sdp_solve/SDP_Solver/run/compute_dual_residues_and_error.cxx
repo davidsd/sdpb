@@ -11,7 +11,7 @@ void compute_dual_residues_and_error(
     &A_Y,
   Block_Vector &dual_residues, El::BigFloat &dual_error, Timers &timers)
 {
-  Scoped_Timer dual_residues_timer(timers, "run.computeDualResidues");
+  Scoped_Timer dual_residues_timer(timers, "computeDualResidues");
 
   auto dual_residues_block(dual_residues.blocks.begin());
   auto primal_objective_c_block(sdp.primal_objective_c.blocks.begin());
