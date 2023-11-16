@@ -38,4 +38,11 @@ namespace Test_Util
 
     return matrix;
   }
+
+  inline El::Matrix<El::BigFloat> zero_matrix(int height, int width)
+  {
+    El::Matrix<El::BigFloat> zeros(height, width);
+    El::Zero(zeros);
+    return zeros;
+  }
 }

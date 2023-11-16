@@ -16,8 +16,31 @@ namespace boost::serialization
 
   template <class Archive>
   void serialize(Archive &ar, El::BigFloat &f,
-                 const boost::serialization::version_type &)
+                 const boost::serialization::version_type &version)
   {
+    // SDP blocks may contain many zeros.
+    // In that case binary format can be even less compact that json,
+    // see e.g. https://github.com/davidsd/sdpb/issues/148
+    // To optimize storing zeros, we use boolean flag is_zero.
+    // if (is_zero == true), we don't serialize all BigFloat bytes.
+    // Optimization introduced since version = 1
+
+    const El::BigFloat zero(0);
+    bool is_zero = false;
+    if(version > 0)
+      {
+        if(Archive::is_saving::value)
+          is_zero = (f == zero);
+        ar & is_zero;
+      }
+
+    if(is_zero)
+      {
+        if(Archive::is_loading::value)
+          f = zero;
+        return;
+      }
+
     auto size = f.SerializedSize();
     std::vector<El::byte> vec(size);
     El::byte *buffer = vec.data();
@@ -62,5 +85,7 @@ namespace boost::serialization
     matrix.Control(height, width, buffer, leadingDimension);
   }
 }
+
+BOOST_CLASS_VERSION(El::BigFloat, 1)
 
 BOOST_SERIALIZATION_SPLIT_FREE(El::Matrix<El::BigFloat>)
