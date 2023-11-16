@@ -31,8 +31,8 @@ namespace
 }
 
 void save_solution(const SDP_Solver &solver,
-                   const SDP_Solver_Terminate_Reason terminate_reason,
-                   const std::pair<std::string, Timer> &timer_pair,
+                   const SDP_Solver_Terminate_Reason &terminate_reason,
+                   const int64_t &solver_runtime,
                    const fs::path &out_directory,
                    const Write_Solution &write_solution,
                    const std::vector<size_t> &block_indices,
@@ -59,8 +59,7 @@ void save_solution(const SDP_Solver &solver,
                  << "dualityGap      = " << solver.duality_gap << ";\n"
                  << "primalError     = " << solver.primal_error() << ";\n"
                  << "dualError       = " << solver.dual_error << ";\n"
-                 << "Solver runtime  = " << timer_pair.second.elapsed_seconds()
-                 << ";\n";
+                 << "Solver runtime  = " << solver_runtime << ";\n";
       if(!out_stream.good())
         {
           throw std::runtime_error("Error when writing to: "

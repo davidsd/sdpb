@@ -53,9 +53,11 @@ int main(int argc, char **argv)
           throw std::runtime_error("Output file '" + output_path.string()
                                    + "' exists and is a directory");
         }
+      Timers timers(debug);
       write_sdpb_input_files(output_path, output_format, rank, num_blocks,
                              command_arguments, objective_const,
-                             dual_objective_b, dual_constraint_groups, debug);
+                             dual_objective_b, dual_constraint_groups, timers,
+                             debug);
     }
   catch(std::exception &e)
     {

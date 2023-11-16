@@ -4,6 +4,7 @@
 #include "sdp_convert/Block_File_Format.hxx"
 #include "sdp_convert/Dual_Constraint_Group.hxx"
 #include "sdp_convert/write_vector.hxx"
+#include "Timers.hxx"
 
 #include <filesystem>
 
@@ -16,4 +17,4 @@ void write_sdpb_input_files(
   const El::BigFloat &objective_const,
   const std::vector<El::BigFloat> &dual_objective_b,
   const std::vector<Dual_Constraint_Group> &dual_constraint_groups,
-  bool debug);
+  Timers &timers, const bool debug);

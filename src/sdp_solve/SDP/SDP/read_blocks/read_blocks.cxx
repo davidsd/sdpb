@@ -29,6 +29,11 @@ void read_block_stream(
 void read_blocks(const fs::path &sdp_path, const El::Grid &grid,
                  const Block_Info &block_info, SDP &sdp)
 {
+  if(!fs::exists(sdp_path))
+    {
+      El::RuntimeError("SDP path '" + sdp_path.string() + "' does not exist");
+    }
+
   const size_t num_blocks(block_info.block_indices.size());
   sdp.primal_objective_c.blocks.resize(num_blocks);
   sdp.free_var_matrix.blocks.resize(num_blocks);

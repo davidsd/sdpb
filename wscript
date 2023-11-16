@@ -13,7 +13,7 @@ def configure(conf):
                'elemental','libxml2', 'rapidjson', 'libarchive'])
     conf.load('clang_compilation_database', tooldir='./waf-tools')
 
-    conf.env.git_version = subprocess.check_output('git describe --always --dirty', universal_newlines=True,
+    conf.env.git_version = subprocess.check_output('git describe --tags --always --dirty', universal_newlines=True,
                                                    shell=True).rstrip()
     
 def build(bld):

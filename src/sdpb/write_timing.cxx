@@ -30,6 +30,12 @@ void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info,
   El::AllReduce(block_timings, El::mpi::COMM_WORLD);
   if(El::mpi::Rank() == 0)
     {
+      if(debug)
+        {
+          El::Print(block_timings, "block_timings, ms:", ", ");
+          El::Output();
+        }
+
       fs::create_directories(checkpoint_out);
       fs::path block_timings_path(checkpoint_out / "block_timings");
       std::ofstream block_timings_file(block_timings_path);

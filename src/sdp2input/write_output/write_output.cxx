@@ -135,8 +135,7 @@ void write_output(const fs::path &output_path, Block_File_Format output_format,
     }
   matrices_timer.stop();
   convert_timer.stop();
-  Scoped_Timer write_timer(timers, "write");
   write_sdpb_input_files(output_path, output_format, rank, matrices.size(),
                          command_arguments, objective_const, dual_objective_b,
-                         dual_constraint_groups, debug);
+                         dual_constraint_groups, timers, debug);
 }

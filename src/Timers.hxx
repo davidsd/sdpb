@@ -237,6 +237,8 @@ struct Scoped_Timer : boost::noncopyable
     timers.prefix = old_prefix;
   }
 
+  [[nodiscard]] const Timer &timer() const { return my_timer; }
+
 private:
   Timers &timers;
   Timer &my_timer;
