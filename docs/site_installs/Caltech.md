@@ -89,7 +89,7 @@ should compile on a login node.
 ## sdpb
 
     ./waf configure --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --mpfr-dir=/central/software/mpfr/4.0.2 --prefix=$HOME/install/sdpb-master
-    ./waf # I needed to do './waf -j 1' (single threaded) to get it to compile without crashing
+    ./waf # -j 1
     ./test/run_all_tests.sh
     ./waf install
     cd ..

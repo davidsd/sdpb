@@ -90,7 +90,7 @@ TODO: on compute nodes compiler fails to find some libs
     git clone https://github.com/davidsd/sdpb.git
     cd sdpb
     CXX=mpicxx ./waf configure --prefix=$HOME/install/sdpb-master --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --boost-dir=$HOME/install  --libarchive-dir=$HOME/install
-    ./waf
+    ./waf # -j 1
     ./test/run_all_tests.sh
     ./waf install
     cd ..

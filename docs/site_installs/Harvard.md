@@ -100,6 +100,6 @@ Use `RPATH` instead of `RUNPATH` in `mpicxx` linker, to fix shared library loadi
     git clone https://github.com/davidsd/sdpb.git
     cd sdpb
     ./waf configure --boost-dir=$HOME/install --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --prefix=$HOME/install/sdpb-master
-    ./waf
+    ./waf # -j 1
     ./test/run_all_tests.sh
     ./waf install

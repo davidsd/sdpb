@@ -88,7 +88,7 @@ Use `RPATH` instead of `RUNPATH` in `mpicxx` linker, to fix shared library loadi
     git clone https://github.com/davidsd/sdpb.git
     cd sdpb 
     ./waf configure --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --prefix=$HOME/install/sdpb-master
-    ./waf # I needed to do './waf -j 1' (single threaded) to get it to compile without crashing
+    ./waf # -j 1
     ./test/run_all_tests.sh
     ./waf install
     cd ..
