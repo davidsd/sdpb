@@ -71,8 +71,8 @@ namespace
         {"--sdpDir", sdp_zip},
         {"--outDir", (output_dir / "out").string()},
         {"--checkpointDir", (output_dir / "ck").string()}};
-      runner.create_nested("sdpb/run")
-        .mpi_run({"build/sdpb", default_sdpb_args}, args, num_procs);
+      runner.create_nested("sdpb").mpi_run({"build/sdpb", default_sdpb_args},
+                                           args, num_procs);
 
       // SDPB runs with --precision=<precision>
       // We check test output up to lower precision=<sdpb_output_diff_precision>
