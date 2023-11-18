@@ -25,6 +25,7 @@ namespace
     std::string default_sdpb_args;
     std::vector<std::string> sdpb_out_filenames;
     std::vector<std::string> sdpb_out_txt_keys;
+    bool check_sdp = true;
     bool check_sdp_normalization = true;
     bool run_sdpb_twice = false;
 
@@ -94,13 +95,16 @@ namespace
             runner.create_nested("pmp2sdp").mpi_run({"build/pmp2sdp"}, args,
                                                     num_procs);
 
-            // pmp2sdp runs with --precision=<precision>
-            // We check test output up to lower precision=<diff_precision>
-            // in order to neglect unimportant rounding errors
-            auto sdp_orig = data_output_dir / "sdp";
-            diff_sdp(sdp_path, sdp_orig, precision, diff_precision,
-                     runner.create_nested("sdp.diff"),
-                     check_sdp_normalization);
+            if(check_sdp)
+              {
+                // pmp2sdp runs with --precision=<precision>
+                // We check test output up to lower precision=<diff_precision>
+                // in order to neglect unimportant rounding errors
+                auto sdp_orig = data_output_dir / "sdp";
+                diff_sdp(sdp_path, sdp_orig, precision, diff_precision,
+                         runner.create_nested("sdp.diff"),
+                         check_sdp_normalization);
+              }
           }
 
           // sdpb
@@ -224,6 +228,26 @@ TEST_CASE("end-to-end_tests")
     INFO("See mathematica/Tests.m");
     End_To_End_Test test("1d-constraints");
     test.num_procs = 2;
+    test.run();
+  }
+
+  SECTION("1d-isolated-zeros")
+  {
+    INFO("maximize (-y) s.t. (1 + x^4 + y * (x^4 / 12 + x^2)) >= 0) for "
+         "x=2/3, x=4/3, and x>=2");
+    INFO("SDPB should find primal-dual optimal solution.");
+    INFO("Spectrum should find isolated zero for the last block (corresponding to x=4/3).");
+    End_To_End_Test test("1d-isolated-zeros");
+    test.default_sdpb_args
+      = "--checkpointInterval 3600 --maxRuntime 1340 "
+        "--dualityGapThreshold 1.0e-30 --primalErrorThreshold 1.0e-30 "
+        "--dualErrorThreshold 1.0e-30 --initialMatrixScalePrimal 1.0e20 "
+        "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
+        "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
+        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
+        "--procGranularity 1 --writeSolution x,y";
+    test.num_procs = 1;
+    test.check_sdp = false;
     test.run();
   }
 
