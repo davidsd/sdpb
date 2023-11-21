@@ -47,7 +47,7 @@ manager such as [Homebrew](https://brew.sh).
 
 # Installation
 
-1. Download the the fork of [Elemental](https://gitlab.com/bootstrapcollaboration/elemental)
+1. Download the fork of [Elemental](https://gitlab.com/bootstrapcollaboration/elemental)
 
         git clone https://gitlab.com/bootstrapcollaboration/elemental.git
 

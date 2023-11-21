@@ -4,6 +4,10 @@ Details of how SDPB works are described in the
 [manual](SDPB_Manual/SDPB-Manual.pdf). An example input file
 [pvm.xml](../test/data/pvm2sdp/pvm.xml) is included with the source code.
 
+Some known issues and workaround are described [below](#common-issues-and-workarounds).
+You may also [find](https://github.com/davidsd/sdpb/issues) unresolved issues
+or [report](https://github.com/davidsd/sdpb/issues/new) a new one in the GitHub repository.
+
 The build system creates the executables `pvm2sdp`, `sdp2input`, and
 `sdpb` in the `build` directory.  There are two steps when running
 SDPB.
@@ -165,20 +169,6 @@ In addition to having the same block structure, the runs must also use
 the same `precision`, `procsPerNode`, and number and distribution of
 cores.
 
-## Optimizing Memory Use
-
-SDPB's defaults are set for optimal performance.  This may result in
-using more memory than is available.  Running SDPB on more nodes will
-reduce the amount of memory required on each node.  If this is not
-sufficient, you can also use the option `--procGranularity`.
-This option sets minimum number of processes that a block group can
-have, so it must evenly divide the `--procsPerNode` option.  Using a
-larger granularity will result in less memory use (up to a point)
-because SDPB will make fewer local copies of the matrix Q.  However,
-larger granularity is also slower because even small blocks will be
-distributed among multiple cores.  So you should use
-`--procGranularity` only when absolutely needed.
-
 ## Running approx_objective
 
 If you have a family of SDP's and a solution to one of these SDP's,
@@ -265,3 +255,58 @@ This will output the spectra into `test/out/spectrum/spectrum.json` and should l
 
 It is a json file with arrays of zeros. There is a [JSON schema](json_schema/spectrum_schema.json)
 describing the format.
+
+## Common issues and workarounds
+
+### SDPB is slow, how many cores should I use for optimal performance?
+
+Most computation for different blocks can be done in parallel, and optimal performance is generally achieved when the
+number of MPI jobs approaches the number of blocks.
+
+Note, however, that increasing number of MPI processes increases also communication overhead, especially between
+different machines. Thus, sometimes single-node computation can outperform multi-node ones.
+
+You may use these considerations as a starting point, and run benchmarks in your environment to find the best
+configuration for your problem.
+
+### SDPB fails with out-of-memory, std::bad_alloc etc.
+
+SDPB's defaults are set for optimal performance. This may result in using more memory than is available.
+
+Two ways to reduce memory usage:
+
+1. Running SDPB on more nodes will reduce the amount of memory required on each node.
+2. You can also use the option `--procGranularity`.
+   This option sets minimum number of processes that a block group can have, so it must evenly divide
+   the `--procsPerNode` option. Using a larger granularity will result in less memory use (up to a point) because SDPB
+   will make fewer local copies of the matrix Q. However, larger granularity is also slower because even small blocks
+   will be distributed among multiple cores. So you should use `--procGranularity` only when absolutely needed.
+
+### SDPB crashes when using all available cores on the node
+
+We observed unexpected crashes for large SDPB runs even with enough memory, e.g. `--procsPerNode=128` on Expanse HPC (
+having 128 cores per node).
+In such cases, reducing this option e.g. to `--procsPerNode=64` may help.
+
+### SDPB fails to read large sdp.zip
+
+Sometimes this happens if sdp.zip size exceeds 4GB. You may try to unzip it to some folder and pass the folder instead
+of zip archive to sdpb:
+
+```
+unzip -o path/to/sdp.zip -d path/to/sdp_dir
+sdpb -s path/to/sdp_dir <...>
+```
+
+### Spectrum does not work in parallel
+
+See https://github.com/davidsd/sdpb/issues/152.
+
+If this happens, replace, e.g. `mpirun -n 6  build/spectrum <...>` with `mpirun -n 1  build/spectrum <...>` or
+simply `build/spectrum <...>`.
+
+### Spectrum does not find zeros
+
+Try to set `--threshold` option for `spectrum` larger than `--dualityGapThreshold` for `sdpb`.
+
+Note that currently spectrum [cannot find isolated zeros](https://github.com/davidsd/sdpb/issues/153).
