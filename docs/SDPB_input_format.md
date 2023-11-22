@@ -36,10 +36,10 @@ but it includes zip, tar, tar.gz, 7z.  If you like, you can also leave
 everything in a plain old directory.
 
 The JSON schema for these input files are in
-[sdpb_input_control_schema.json](sdpb_input_control_schema.json),
-[sdpb_input_objectives_schema.json](sdpb_input_objectives_schema.json),
-[sdpb_input_block_info_schema.json](sdpb_input_block_info_schema.json),
-[sdpb_input_block_data_schema.json](sdpb_input_block_data_schema.json). Running `SDPB` on the
+[sdpb_input_control_schema.json](json_schema/sdpb_input_control_schema.json),
+[sdpb_input_objectives_schema.json](json_schema/sdpb_input_objectives_schema.json),
+[sdpb_input_block_info_schema.json](json_schema/sdpb_input_block_info_schema.json),
+[sdpb_input_block_data_schema.json](json_schema/sdpb_input_block_data_schema.json). Running `SDPB` on the
 test example
 
     pvm2sdp 1024 test/data/pvm2sdp/pvm.xml test/out/pvm2sdp/sdp.zip

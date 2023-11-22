@@ -1,7 +1,0 @@
-FROM scratch
-ADD rootfs.tar.xz /
-
-RUN apt-get update && apt-get -y dist-upgrade && echo "Wed Sep 22 10:23:41 2021"
-RUN apt-get -y install openmpi-bin libgmp10 libgmpxx4ldbl libmpfr6 libboost-system1.74.0 libboost-filesystem1.74.0 libboost-program-options1.74.0 libboost-date-time1.74.0 libboost-iostreams1.74.0 libopenblas-base libmetis5 libtrilinos-teuchos12 libtrilinos-kokkos12 python3-lxml python3-mpmath libarchive13
-
-ADD sdpb.tgz /usr/local
