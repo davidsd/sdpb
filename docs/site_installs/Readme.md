@@ -1,5 +1,7 @@
 The *.org and *.md files in this directory contain notes on building and
-running SDPB on various HPC machines.  Most of the systems use
+running SDPB on various HPC machines, as well as [Apple MacBooks](Apple_MacBook).
+
+Most of the HPC systems use
 modules, so there is typically a module invocation like
 
     module load gcc/8.3.0 openmpi/3.1.4 openblas/0.3.6

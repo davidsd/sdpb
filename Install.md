@@ -1,7 +1,8 @@
 This guide is for building SDPB.  To just run SDPB, it may be easier
 to use [Docker](docs/Docker.md) or [Singularity](docs/Singularity.md).
 In addition, there are [site specific
-notes](docs/site_installs/Readme.md) for different HPC machines.
+notes](docs/site_installs/Readme.md) for different HPC machines and also
+for [Apple MacBooks](docs/site_installs/Apple_MacBook.md).
 
 * [Requirements](#requirements)
 * [Installation](#installation)
