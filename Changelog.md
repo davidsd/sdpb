@@ -46,7 +46,8 @@ See [#114](https://github.com/davidsd/sdpb/pull/114), [#128](https://github.com/
 
 - Updated installations
   for [BU](docs/site_installs/Boston.md), [Caltech](docs/site_installs/Caltech.md), [Expanse](docs/site_installs/Expanse.md), [Harvard](docs/site_installs/Harvard.md),
-  and [Imperial College](docs/site_installs/Imperial.md) clusters.
+  and [Imperial College](docs/site_installs/Imperial.md) clusters, with example scripts.
+- Added [Apple MacBook](docs/site_installs/Apple_MacBook.md) installation instructions.
 
 See https://github.com/davidsd/sdpb/releases/tag/2.6.0 for the full changelog.
 
