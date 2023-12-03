@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../../../Block_Diagonal_Matrix.hxx"
+#include "sdp_solve/Block_Diagonal_Matrix.hxx"
 
 // B := L^{-1} B, where L is the result of a previous cholesky
 // factorization.  Note that this is different from computing the solution to

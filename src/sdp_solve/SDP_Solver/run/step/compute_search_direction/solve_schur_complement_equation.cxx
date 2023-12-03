@@ -1,6 +1,6 @@
 #include "lower_triangular_solve.hxx"
-#include "../../../../SDP_Solver.hxx"
-#include "../../../../lower_triangular_transpose_solve.hxx"
+#include "sdp_solve/SDP_Solver.hxx"
+#include "sdp_solve/lower_triangular_transpose_solve.hxx"
 
 // Solve the Schur complement equation for dx, dy.
 //

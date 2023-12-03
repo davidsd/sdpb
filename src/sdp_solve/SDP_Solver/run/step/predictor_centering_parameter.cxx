@@ -1,4 +1,4 @@
-#include "../../../SDP_Solver.hxx"
+#include "sdp_solve/SDP_Solver.hxx"
 
 // Centering parameter \beta_p for the predictor step
 El::BigFloat predictor_centering_parameter(const Solver_Parameters &parameters,

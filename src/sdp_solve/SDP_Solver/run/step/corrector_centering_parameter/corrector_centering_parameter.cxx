@@ -1,4 +1,4 @@
-#include "../../../../SDP_Solver.hxx"
+#include "sdp_solve/SDP_Solver.hxx"
 
 // (X + dX) . (Y + dY), where X, dX, Y, dY are symmetric
 // BlockDiagonalMatrices and '.' is the Frobenius product.

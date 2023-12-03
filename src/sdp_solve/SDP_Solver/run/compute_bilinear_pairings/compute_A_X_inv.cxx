@@ -1,5 +1,5 @@
-#include "../../../Block_Diagonal_Matrix.hxx"
-#include "../../../Block_Info.hxx"
+#include "sdp_solve/Block_Diagonal_Matrix.hxx"
+#include "sdp_solve/Block_Info.hxx"
 
 // A_X_inv = bilinear_base^T X^{-1} bilinear_base for each block
 

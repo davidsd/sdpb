@@ -1,4 +1,5 @@
-#include "../../SDP_Solver.hxx"
+#include "sdp_solve/SDP_Solver.hxx"
+
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 // The main solver loop

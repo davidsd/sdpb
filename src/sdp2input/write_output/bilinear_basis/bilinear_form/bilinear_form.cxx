@@ -1,6 +1,5 @@
 #include "../factorial.hxx"
-#include "../../../../sdp_read.hxx"
-#include "../../../../Timers.hxx"
+#include "sdp_read/sdp_read.hxx"
 
 #include <boost/math/tools/polynomial.hpp>
 

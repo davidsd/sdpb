@@ -1,6 +1,6 @@
-#include "../Boost_Float.hxx"
-#include "../sdp_convert.hxx"
-#include "../sdp_convert/write_vector.hxx"
+#include "sdpb_util/Boost_Float.hxx"
+#include "sdp_convert/sdp_convert.hxx"
+#include "sdp_convert/write_vector.hxx"
 
 namespace fs = std::filesystem;
 

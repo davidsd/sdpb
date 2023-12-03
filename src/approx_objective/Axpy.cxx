@@ -1,4 +1,4 @@
-#include "../sdp_solve.hxx"
+#include "sdp_solve/sdp_solve.hxx"
 
 void Axpy(const El::BigFloat &alpha, const SDP &new_sdp, SDP &delta_sdp)
 {

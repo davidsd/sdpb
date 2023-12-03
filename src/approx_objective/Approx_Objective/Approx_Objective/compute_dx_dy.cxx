@@ -1,4 +1,4 @@
-#include "../../../sdp_solve.hxx"
+#include "sdp_solve/sdp_solve.hxx"
 
 // TODO: Have this be part of sdp_solve.hxx
 void solve_schur_complement_equation(

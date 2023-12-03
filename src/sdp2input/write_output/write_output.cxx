@@ -1,7 +1,7 @@
-#include "../../sdp_read.hxx"
-#include "../../Timers.hxx"
-#include "../../max_normalization_index.hxx"
-#include "../../sdp_convert.hxx"
+#include "sdp_read/sdp_read.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
+#include "sdpb_util/max_normalization_index.hxx"
+#include "sdp_convert/sdp_convert.hxx"
 
 #include <filesystem>
 #include <algorithm>

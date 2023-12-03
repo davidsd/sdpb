@@ -1,9 +1,9 @@
 #include "setup_constraints.hxx"
-#include "../Outer_Parameters.hxx"
+#include "outer_limits/Outer_Parameters.hxx"
 
-#include "../../ostream_set.hxx"
-#include "../../ostream_vector.hxx"
-#include "../../set_stream_precision.hxx"
+#include "sdpb_util/ostream/ostream_set.hxx"
+#include "sdpb_util/ostream/ostream_vector.hxx"
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 
 void compute_y_transform(
   const std::vector<std::vector<std::vector<std::vector<Function>>>>

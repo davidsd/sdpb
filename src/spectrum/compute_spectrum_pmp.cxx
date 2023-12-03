@@ -2,11 +2,11 @@
 #include "eval_summed.hxx"
 #include "get_zeros.hxx"
 #include "compute_lambda.hxx"
-#include "../sdp_read.hxx"
-#include "../sdp_convert.hxx"
-#include "../Mesh.hxx"
-#include "../max_normalization_index.hxx"
-#include "../fill_weights.hxx"
+#include "sdp_read/sdp_read.hxx"
+#include "sdp_convert/sdp_convert.hxx"
+#include "sdpb_util/Mesh.hxx"
+#include "sdpb_util/max_normalization_index.hxx"
+#include "sdpb_util/fill_weights.hxx"
 
 std::vector<Zeros> compute_spectrum_pmp(
   const std::vector<El::BigFloat> &normalization,

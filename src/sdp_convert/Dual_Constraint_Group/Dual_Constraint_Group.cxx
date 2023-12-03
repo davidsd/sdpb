@@ -6,8 +6,7 @@
 //=======================================================================
 
 #include "../Dual_Constraint_Group.hxx"
-#include "../../set_stream_precision.hxx"
-#include <boost/archive/binary_oarchive.hpp>
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 
 void write_block_json(std::ostream &output_stream,
                       const Dual_Constraint_Group &group);

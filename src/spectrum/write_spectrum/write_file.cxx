@@ -1,5 +1,5 @@
-#include "../Zeros.hxx"
-#include "../../set_stream_precision.hxx"
+#include "spectrum/Zeros.hxx"
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 
 #include <filesystem>
 

@@ -1,4 +1,4 @@
-#include "../../Approx_Objective.hxx"
+#include "approx_objective/Approx_Objective.hxx"
 
 void compute_dx_dy(const Block_Info &block_info, const SDP &d_sdp,
                    const Block_Vector &x, const Block_Vector &y,

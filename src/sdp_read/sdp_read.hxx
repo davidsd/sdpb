@@ -1,7 +1,7 @@
 #pragma once
 
-#include "sdp_read/read_input.hxx"
-#include "sdp_read/read_pvm_input.hxx"
+#include "read_input.hxx"
+#include "read_pvm_input.hxx"
 
 std::vector<std::filesystem::path>
 read_nsv_file_list(const std::filesystem::path &input_file);

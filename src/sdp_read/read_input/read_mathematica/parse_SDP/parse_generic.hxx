@@ -1,8 +1,9 @@
-#include "../../../Positive_Matrix_With_Prefactor.hxx"
+#pragma once
+
+#include "sdp_read/Positive_Matrix_With_Prefactor.hxx"
 
 #include <algorithm>
 #include <iterator>
-#include <string>
 
 const char *parse_matrix(const char *begin, const char *end,
                          Positive_Matrix_With_Prefactor &matrix);

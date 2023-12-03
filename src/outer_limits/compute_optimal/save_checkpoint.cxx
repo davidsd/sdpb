@@ -1,7 +1,7 @@
-#include "../../Verbosity.hxx"
-#include "../../ostream_vector.hxx"
-#include "../../ostream_set.hxx"
-#include "../../set_stream_precision.hxx"
+#include "sdpb_util/Verbosity.hxx"
+#include "sdpb_util/ostream/ostream_vector.hxx"
+#include "sdpb_util/ostream/ostream_set.hxx"
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 
 #include <El.hpp>
 

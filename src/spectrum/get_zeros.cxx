@@ -1,4 +1,4 @@
-#include "../Mesh.hxx"
+#include "sdpb_util/Mesh.hxx"
 
 namespace
 {

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include "../set_stream_precision.hxx"
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 
 void output_escaped_string(std::ostream &os, const std::string &s)
 {

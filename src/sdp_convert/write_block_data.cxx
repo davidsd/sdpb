@@ -1,6 +1,6 @@
 #include "Dual_Constraint_Group.hxx"
 #include "write_vector.hxx"
-#include "../set_stream_precision.hxx"
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 #include "Block_File_Format.hxx"
 
 #include <boost/serialization/vector.hpp>

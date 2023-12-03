@@ -2,7 +2,7 @@
 
 #include "Float.hxx"
 #include "json.hxx"
-#include "boost_serialization.hxx"
+#include "sdpb_util/boost_serialization.hxx"
 
 #include <catch2/catch_amalgamated.hpp>
 

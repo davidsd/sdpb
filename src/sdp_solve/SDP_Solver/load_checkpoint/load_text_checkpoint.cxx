@@ -1,5 +1,5 @@
-#include "../../SDP_Solver.hxx"
-#include "../../read_text_block.hxx"
+#include "sdp_solve/SDP_Solver.hxx"
+#include "sdp_solve/read_text_block.hxx"
 
 namespace fs = std::filesystem;
 

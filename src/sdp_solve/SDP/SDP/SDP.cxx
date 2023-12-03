@@ -1,6 +1,6 @@
 #include "assign_bilinear_bases_dist.hxx"
-#include "../../SDP.hxx"
 #include "set_bases_blocks.hxx"
+#include "sdp_solve/SDP.hxx"
 
 #include <filesystem>
 

@@ -1,9 +1,9 @@
 #include "Outer_Parameters.hxx"
 #include "Function.hxx"
-#include "../sdp_read.hxx"
-#include "../sdp_solve.hxx"
+#include "sdp_read/sdp_read.hxx"
+#include "sdp_solve/sdp_solve.hxx"
 
-#include "../ostream_vector.hxx"
+#include "sdpb_util/ostream/ostream_vector.hxx"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/property_tree/json_parser.hpp>

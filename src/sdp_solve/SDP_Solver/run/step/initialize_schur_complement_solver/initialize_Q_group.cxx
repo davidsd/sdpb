@@ -1,6 +1,6 @@
-#include "../../../../SDP.hxx"
-#include "../../../../Block_Diagonal_Matrix.hxx"
-#include "../../../../../Timers.hxx"
+#include "sdp_solve/SDP.hxx"
+#include "sdp_solve/Block_Diagonal_Matrix.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 
 void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
                         const Block_Diagonal_Matrix &schur_complement,

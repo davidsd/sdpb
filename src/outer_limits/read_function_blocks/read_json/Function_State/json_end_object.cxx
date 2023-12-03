@@ -1,7 +1,5 @@
 #include "../Function_State.hxx"
-
-#include "../../../../Boost_Float.hxx"
-#include "../../../../ostream_vector.hxx"
+#include "sdpb_util/Boost_Float.hxx"
 
 #include <boost/math/constants/constants.hpp>
 

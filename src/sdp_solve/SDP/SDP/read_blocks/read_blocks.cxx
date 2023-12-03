@@ -1,7 +1,7 @@
 #include "../set_bases_blocks.hxx"
-#include "../../../SDP.hxx"
-#include "../../../Archive_Reader.hxx"
-#include "../../../../sdp_convert.hxx"
+#include "sdp_solve/SDP.hxx"
+#include "sdp_solve/Archive_Reader.hxx"
+#include "sdp_convert/sdp_convert.hxx"
 
 #include <algorithm>
 #include <unordered_map>

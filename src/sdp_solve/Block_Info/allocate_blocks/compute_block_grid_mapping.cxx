@@ -44,8 +44,8 @@
 // 2) When large blocks are forced to fit into a node, there is no
 // sharing of procs between the existing block_maps and the new entry.
 
-#include "../../../Block_Cost.hxx"
-#include "../../../Block_Map.hxx"
+#include "sdp_solve/Block_Cost.hxx"
+#include "Block_Map.hxx"
 
 #include <numeric>
 #include <algorithm>
