@@ -1,5 +1,5 @@
-#include "../../SDP.hxx"
-#include "../../Archive_Reader.hxx"
+#include "sdp_solve/SDP.hxx"
+#include "sdp_solve/Archive_Reader.hxx"
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>

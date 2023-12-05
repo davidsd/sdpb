@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../Verbosity.hxx"
-#include "../sdp_solve.hxx"
+#include "sdpb_util/Verbosity.hxx"
+#include "sdp_solve/sdp_solve.hxx"
 
 #include <El.hpp>
 #include <filesystem>

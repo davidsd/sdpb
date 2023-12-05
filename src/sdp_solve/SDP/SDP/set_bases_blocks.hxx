@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Block_Info.hxx"
+#include "sdp_solve/Block_Info.hxx"
 
 void set_bases_blocks(
   const Block_Info &block_info,

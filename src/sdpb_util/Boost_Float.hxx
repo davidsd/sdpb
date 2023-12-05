@@ -1,6 +1,6 @@
 #pragma once
 
-#include "set_stream_precision.hxx"
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 
 #include <boost/multiprecision/mpfr.hpp>
 #include <sstream>

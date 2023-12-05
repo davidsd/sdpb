@@ -1,6 +1,6 @@
-#include "../sdp_read.hxx"
-#include "../sdp_solve.hxx"
-#include "../sdp_convert.hxx"
+#include "sdp_read/sdp_read.hxx"
+#include "sdp_solve/sdp_solve.hxx"
+#include "sdp_convert/sdp_convert.hxx"
 
 namespace fs = std::filesystem;
 

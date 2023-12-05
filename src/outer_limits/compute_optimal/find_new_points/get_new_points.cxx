@@ -1,4 +1,4 @@
-#include "../../../Mesh.hxx"
+#include "sdpb_util/Mesh.hxx"
 
 void maybe_add_point(const El::BigFloat &x_minus, const El::BigFloat &x_bar,
                      const El::BigFloat &x_plus, const El::BigFloat &f_x_minus,

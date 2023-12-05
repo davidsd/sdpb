@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../../../sdp_convert.hxx"
-#include "../../../Number_State.hxx"
-#include "../../../Vector_State.hxx"
+#include "sdp_convert/sdp_convert.hxx"
+#include "sdpb_util/Number_State.hxx"
+#include "sdpb_util/Vector_State.hxx"
 
 using namespace std::string_literals;
 class Polynomial_Vector_Matrix_State

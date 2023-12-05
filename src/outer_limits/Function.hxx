@@ -2,7 +2,7 @@
 
 #include <El.hpp>
 
-#include "../ostream_vector.hxx"
+#include "sdpb_util/ostream/ostream_vector.hxx"
 
 struct Function
 {

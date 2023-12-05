@@ -25,7 +25,7 @@
 //
 
 #include "Polynomial_Vector_Matrix.hxx"
-#include "../boost_serialization.hxx"
+#include "sdpb_util/boost_serialization.hxx"
 #include "Block_File_Format.hxx"
 
 #include <boost/serialization/vector.hpp>

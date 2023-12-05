@@ -1,9 +1,7 @@
 #include "../is_valid_char.hxx"
 #include "../parse_vector.hxx"
 #include "../parse_number.hxx"
-#include "../../../../Damped_Rational.hxx"
-
-#include <boost/algorithm/string.hpp>
+#include "sdp_read/Damped_Rational.hxx"
 
 #include <algorithm>
 #include <iterator>

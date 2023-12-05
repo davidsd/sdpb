@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Polynomial.hxx"
+#include "sdpb_util/Polynomial.hxx"
 
 // Let M(x) be a matrix whose entries are vectors of polynomials:
 //

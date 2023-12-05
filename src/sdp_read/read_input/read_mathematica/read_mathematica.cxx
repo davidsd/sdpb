@@ -1,4 +1,4 @@
-#include "../../Positive_Matrix_With_Prefactor.hxx"
+#include "sdp_read/Positive_Matrix_With_Prefactor.hxx"
 
 #include <El.hpp>
 #include <boost/interprocess/file_mapping.hpp>

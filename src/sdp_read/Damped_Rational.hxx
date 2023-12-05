@@ -1,7 +1,8 @@
 #pragma once
 
-#include "../Boost_Float.hxx"
-#include "../ostream_vector.hxx"
+#include "sdpb_util/Boost_Float.hxx"
+#include "sdpb_util/ostream/ostream_vector.hxx"
+
 #include <El.hpp>
 #include <vector>
 

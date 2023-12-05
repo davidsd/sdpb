@@ -1,6 +1,4 @@
-#include "../Polynomial.hxx"
-#include <El.hpp>
-#include <vector>
+#include "eval_summed.hxx"
 
 El::BigFloat eval_summed(
   const std::vector<std::vector<Polynomial>> &summed_polynomials,

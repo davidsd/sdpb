@@ -17,7 +17,7 @@
 // - sampleScalings: the scale factors {s_0, s_1, ... }
 //
 
-#include "../../Polynomial.hxx"
+#include "sdpb_util/Polynomial.hxx"
 
 El::Matrix<El::BigFloat>
 sample_bilinear_basis(const int maxDegree, const int numSamples,

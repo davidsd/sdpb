@@ -1,4 +1,4 @@
-#include "../../Block_Diagonal_Matrix.hxx"
+#include "sdp_solve/Block_Diagonal_Matrix.hxx"
 
 // Compute L (lower triangular) such that A = L L^T
 void cholesky_decomposition(const Block_Diagonal_Matrix &A,

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../../Function.hxx"
-#include "../../../Vector_State.hxx"
-#include "../../../Number_State.hxx"
-#include "../../../Boost_Float.hxx"
+#include "outer_limits/Function.hxx"
+#include "sdpb_util/Vector_State.hxx"
+#include "sdpb_util/Number_State.hxx"
+#include "sdpb_util/Boost_Float.hxx"
 
 using namespace std::string_literals;
 struct Function_State

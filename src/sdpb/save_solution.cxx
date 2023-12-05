@@ -1,6 +1,6 @@
-#include "../sdp_solve.hxx"
-#include "../set_stream_precision.hxx"
-#include "../write_distmatrix.hxx"
+#include "sdp_solve/sdp_solve.hxx"
+#include "sdpb_util/ostream/set_stream_precision.hxx"
+#include "sdpb_util/write_distmatrix.hxx"
 
 namespace fs = std::filesystem;
 

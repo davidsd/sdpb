@@ -1,4 +1,4 @@
-#include "../../../../SDP_Solver.hxx"
+#include "sdp_solve/SDP_Solver.hxx"
 
 // min(gamma \alpha(M, dM), 1), where \alpha(M, dM) denotes the
 // largest positive real number such that M + \alpha dM is positive

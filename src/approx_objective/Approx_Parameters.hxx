@@ -1,12 +1,9 @@
 #pragma once
 
-#include "../sdp_solve.hxx"
-
 #include <El.hpp>
 #include <filesystem>
-#include <boost/property_tree/ptree.hpp>
-
 #include <iostream>
+#include <boost/property_tree/ptree.hpp>
 
 struct Approx_Parameters
 {

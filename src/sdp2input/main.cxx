@@ -1,5 +1,5 @@
-#include "../sdp_read.hxx"
-#include "../Timers.hxx"
+#include "sdp_read/sdp_read.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 
 #include <string>
 #include <boost/program_options.hpp>

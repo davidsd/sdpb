@@ -1,4 +1,4 @@
-#include "../sdp_read.hxx"
+#include "sdp_read/sdp_read.hxx"
 
 #include <boost/program_options.hpp>
 #include <filesystem>

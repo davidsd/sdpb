@@ -19,10 +19,18 @@ def configure(conf):
 def build(bld):
     default_flags = ['-Wall', '-Wextra', '-O3']
     default_defines = ['OMPI_SKIP_MPICXX', 'SDPB_VERSION_STRING="' + bld.env.git_version + '"']
-    use_packages = ['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive']
+    use_packages = ['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'sdpb_util']
     default_includes = ['src', 'external']
-    # TODO use default_includes for all targets and simplify #include directives
-    # e.g. #include "../../Timers.hxx" -> #include <Timers.hxx>
+
+    bld.stlib(source=['src/sdpb_util/Mesh.cxx',
+                      'src/sdpb_util/Timers/Scoped_Timer.cxx',
+                      'src/sdpb_util/Timers/Timer.cxx',
+                      'src/sdpb_util/Timers/Timers.cxx'],
+              target='sdpb_util',
+              cxxflags=default_flags,
+              defines=default_defines,
+              includes=default_includes,
+              use=['cxx17', 'gmpxx', 'boost', 'elemental'])
 
     sdp_solve_sources=['src/sdp_solve/Solver_Parameters/Solver_Parameters.cxx',
                        'src/sdp_solve/Solver_Parameters/ostream.cxx',
@@ -89,6 +97,7 @@ def build(bld):
               target='sdp_solve',
               cxxflags=default_flags,
               defines=default_defines,
+              includes=default_includes,
               use=use_packages + ['sdp_convert'])
     
     # SDPB executable
@@ -102,6 +111,7 @@ def build(bld):
                 target='sdpb',
                 cxxflags=default_flags,
                 defines=default_defines,
+                includes=default_includes,
                 use=use_packages + ['sdp_solve']
                 )
 
@@ -121,6 +131,7 @@ def build(bld):
               target='sdp_convert',
               cxxflags=default_flags,
               defines=default_defines,
+              includes=default_includes,
               use=use_packages)
 
 
@@ -134,6 +145,7 @@ def build(bld):
                 target='pvm2sdp',
                 cxxflags=default_flags,
                 defines=default_defines,
+                includes=default_includes,
                 use=use_packages + ['sdp_read']
                 )
 
@@ -178,6 +190,7 @@ def build(bld):
               target='sdp_read',
               cxxflags=default_flags,
               defines=default_defines,
+              includes=default_includes,
               use=use_packages + ['sdp_convert'])
 
     bld.program(source=['src/sdp2input/main.cxx',
@@ -193,14 +206,9 @@ def build(bld):
                 target='sdp2input',
                 cxxflags=default_flags,
                 defines=default_defines,
+                includes=default_includes,
                 use=use_packages + ['sdp_read']
                 )
-
-    bld.stlib(source=['src/Mesh/Mesh.cxx', 'src/Mesh/ostream.cxx'],
-              target='mesh',
-              cxxflags=default_flags,
-              defines=default_defines,
-              use=use_packages)
 
     bld.program(source=['src/outer_limits/main.cxx',
                         'src/outer_limits/power_prefactor.cxx',
@@ -250,6 +258,7 @@ def build(bld):
                 target='outer_limits',
                 cxxflags=default_flags,
                 defines=default_defines,
+                includes=default_includes,
                 use=use_packages + ['sdp_read','sdp_solve', 'mesh']
                 )
 
@@ -267,6 +276,7 @@ def build(bld):
                 target='approx_objective',
                 cxxflags=default_flags,
                 defines=default_defines,
+                includes=default_includes,
                 use=use_packages + ['sdp_read','sdp_solve']
                 )
     
@@ -276,6 +286,7 @@ def build(bld):
                 target='pvm2functions',
                 cxxflags=default_flags,
                 defines=default_defines,
+                includes=default_includes,
                 use=use_packages + ['sdp_read']
                 )
 
@@ -284,6 +295,7 @@ def build(bld):
                 target='sdp2functions',
                 cxxflags=default_flags,
                 defines=default_defines,
+                includes=default_includes,
                 use=use_packages + ['sdp_read']
                 )
 
@@ -300,6 +312,7 @@ def build(bld):
                 target='spectrum',
                 cxxflags=default_flags,
                 defines=default_defines,
+                includes=default_includes,
                 use=use_packages + ['sdp_read', 'sdp_solve', 'sdp_convert', 'mesh']
                 )
 

@@ -1,5 +1,5 @@
-#include "../../../SDP.hxx"
-#include "../../../../Timers.hxx"
+#include "sdp_solve/SDP.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 
 El::BigFloat dot(const Block_Vector &a, const Block_Vector &b);
 

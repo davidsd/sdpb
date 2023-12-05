@@ -1,6 +1,6 @@
 #include "Approx_Objective.hxx"
-#include "../sdp_solve.hxx"
-#include "../sdp_read.hxx"
+#include "sdp_solve/sdp_solve.hxx"
+#include "sdp_read/sdp_read.hxx"
 
 #include <filesystem>
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../../Vector_State.hxx"
-#include "../../../Number_State.hxx"
+#include "sdpb_util/Vector_State.hxx"
+#include "sdpb_util/Number_State.hxx"
 
 #include <rapidjson/reader.h>
 

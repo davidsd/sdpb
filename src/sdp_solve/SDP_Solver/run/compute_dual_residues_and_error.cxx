@@ -1,4 +1,4 @@
-#include "../../SDP_Solver.hxx"
+#include "sdp_solve/SDP_Solver.hxx"
 
 // dual_residues[p] = c[p] - A[p,a,b] Y[a,b] - B[p,a] y[a]
 //

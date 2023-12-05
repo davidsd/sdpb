@@ -1,5 +1,5 @@
 #include <catch2/catch_amalgamated.hpp>
-#include <boost_serialization.hxx>
+#include "sdpb_util/boost_serialization.hxx"
 #include <El.hpp>
 #include <sstream>
 #include "unit_tests/util/util.hxx"

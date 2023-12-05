@@ -1,6 +1,6 @@
 #include "Block_Parser.hxx"
-#include "../../../../SDP.hxx"
-#include "../../../../../sdp_convert.hxx"
+#include "sdp_solve/SDP.hxx"
+#include "sdp_convert/sdp_convert.hxx"
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <rapidjson/istreamwrapper.h>

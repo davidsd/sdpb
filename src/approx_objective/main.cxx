@@ -1,8 +1,7 @@
-#include "Approx_Parameters.hxx"
 #include "Approx_Objective.hxx"
-#include "../sdp_solve.hxx"
-
-#include "../set_stream_precision.hxx"
+#include "Approx_Parameters.hxx"
+#include "sdp_solve/sdp_solve.hxx"
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 
 #include <El.hpp>
 

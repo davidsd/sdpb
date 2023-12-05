@@ -2,7 +2,7 @@
 #include <vector>
 #include <iostream>
 #include <stdexcept>
-#include "../sdp_convert/Block_File_Format.hxx"
+#include "sdp_convert/Block_File_Format.hxx"
 
 using namespace std::literals;
 namespace fs = std::filesystem;

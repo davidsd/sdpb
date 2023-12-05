@@ -1,4 +1,4 @@
-#include "../../SDP_Solver.hxx"
+#include "sdp_solve/SDP_Solver.hxx"
 
 #include <filesystem>
 #include <boost/property_tree/json_parser.hpp>

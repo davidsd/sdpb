@@ -12,7 +12,7 @@
 #include "SDP_Solver_Terminate_Reason.hxx"
 
 #include "Solver_Parameters.hxx"
-#include "../Timers.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 
 #include <filesystem>
 

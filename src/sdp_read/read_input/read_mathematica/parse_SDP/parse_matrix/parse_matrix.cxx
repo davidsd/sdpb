@@ -1,5 +1,5 @@
 #include "../parse_generic.hxx"
-#include "../../../../Positive_Matrix_With_Prefactor.hxx"
+#include "sdp_read/Positive_Matrix_With_Prefactor.hxx"
 
 #include <algorithm>
 #include <iterator>

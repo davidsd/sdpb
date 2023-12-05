@@ -1,5 +1,5 @@
-#include "../Boost_Float.hxx"
-#include "../sdp_read.hxx"
+#include "sdpb_util/Boost_Float.hxx"
+#include "sdp_read/sdp_read.hxx"
 
 namespace fs = std::filesystem;
 

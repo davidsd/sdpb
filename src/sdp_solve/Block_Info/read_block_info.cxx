@@ -1,8 +1,7 @@
-#include "../Block_Info.hxx"
-#include "../Archive_Reader.hxx"
-#include "../../sdp_convert.hxx"
+#include "sdp_solve/Block_Info.hxx"
+#include "sdp_solve/Archive_Reader.hxx"
+#include "sdp_convert/sdp_convert.hxx"
 
-#include <rapidjson/reader.h>
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
 

@@ -1,4 +1,5 @@
-#include "../Mesh.hxx"
+#include "Mesh.hxx"
+#include "sdpb_util/ostream/ostream_array.hxx"
 
 namespace
 {
@@ -39,4 +40,19 @@ Mesh::Mesh(const El::BigFloat &x_0, const El::BigFloat &x_2,
       upper = std::make_unique<Mesh>(x[2], x[3], x[4], f[2], f[3], f[4], fn,
                                      mesh_threshold, block_epsilon);
     }
+}
+
+std::ostream &operator<<(std::ostream &os, const Mesh &mesh)
+{
+  os << "{\n  \"x\": " << mesh.x << ",\n  \"f\": " << mesh.f;
+  if(mesh.lower)
+    {
+      os << ",\n    \"lower\": " << *(mesh.lower);
+    }
+  if(mesh.upper)
+    {
+      os << ",\n    \"upper\": " << *(mesh.upper);
+    }
+  os << "}";
+  return os;
 }

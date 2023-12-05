@@ -1,6 +1,6 @@
-#include "../../../Block_Cost.hxx"
-#include "../../../Block_Map.hxx"
-#include "../../Block_Info.hxx"
+#include "sdp_solve/Block_Cost.hxx"
+#include "Block_Map.hxx"
+#include "sdp_solve/Block_Info.hxx"
 
 std::vector<std::vector<Block_Map>>
 compute_block_grid_mapping(const size_t &procs_per_node,

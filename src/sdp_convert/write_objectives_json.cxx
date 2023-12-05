@@ -1,5 +1,5 @@
 #include "write_vector.hxx"
-#include "../set_stream_precision.hxx"
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 
 #include <El.hpp>
 #include <iostream>

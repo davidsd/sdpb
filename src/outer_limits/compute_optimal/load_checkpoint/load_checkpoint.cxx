@@ -1,8 +1,8 @@
 #include "Checkpoint_Parser.hxx"
 
-#include "../../../Verbosity.hxx"
-#include "../../../ostream_vector.hxx"
-#include "../../../ostream_set.hxx"
+#include "sdpb_util/Verbosity.hxx"
+#include "sdpb_util/ostream/ostream_vector.hxx"
+#include "sdpb_util/ostream/ostream_set.hxx"
 
 #include <El.hpp>
 

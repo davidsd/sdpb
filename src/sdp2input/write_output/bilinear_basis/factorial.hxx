@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../../Boost_Float.hxx"
+#include "sdpb_util/Boost_Float.hxx"
 
 // We implement factorial by hand because boost::math's versions want
 // to initialize epsilon in a static constructor.  However, Bigfloat
