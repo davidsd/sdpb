@@ -6,6 +6,8 @@ std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
      << '\n'
      << "maxRuntime                   = " << p.max_runtime << '\n'
      << "checkpointInterval           = " << p.checkpoint_interval << '\n'
+     << "maxSharedMemory              = " << p.max_shared_memory_bytes
+     << '\n'
      << "findPrimalFeasible           = " << p.find_primal_feasible << '\n'
      << "findDualFeasible             = " << p.find_dual_feasible << '\n'
      << "detectPrimalFeasibleJump     = " << p.detect_primal_feasible_jump

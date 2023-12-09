@@ -6,6 +6,7 @@ std::ostream &operator<<(std::ostream &os, const Approx_Parameters &p)
      << "sdp                          = " << p.sdp_path << '\n'
      << "newSdp                       = " << p.new_sdp_path << '\n'
      << "procsGranularity             = " << p.proc_granularity << '\n'
+     << "maxSharedMemory              = " << p.max_shared_memory_bytes << '\n'
      << "precision(actual)            = " << p.precision << "("
      << mpf_get_default_prec() << ")" << '\n'
      << "solutionDir                  = " << p.solution_dir << '\n'

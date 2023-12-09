@@ -316,7 +316,7 @@ If we are splitting both P and Q memory windows, then the algorithm reads:
 
 1. Determine memory limit for shared memory windows. We can use our memory usage estimates together with `MemAvailable`
    value from `/proc/meminfo`. We can also introduce new command-line argument for SDPB,
-   e.g. `--maxSharedWindowSize=128G`.
+   e.g. `--maxSharedMemory=128G`.
 2. Set limit to Q window, e.g. 50% of total limit.
 3. Choose minimal split factor for Q so that it fits into the memory limit for Q window.
 4. Choose minimal split factor for P so that it fits into remaining memory.
