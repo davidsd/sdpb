@@ -87,7 +87,8 @@ namespace
     El::Output(prefix, "MemUsed, GB: ", memUsedGB);
   }
 
-  void print_debug_info(const std::string &name)
+  void print_debug_info(const std::string &name,
+                        const El::mpi::Comm &comm_shared_mem)
   {
     std::ostringstream ss;
     ss << El::mpi::Rank() << " " << name << " ";
@@ -96,20 +97,22 @@ namespace
     print_statm(prefix);
 
     // /proc/meminfo is the same for all processes in node,
-    // so we print it only for rank 0.
-    // TODO: print meminfo for a first process of each node
-    // (makes sense if RAM is not distributed equally among the nodes)
-    if(El::mpi::Rank() == 0)
+    // so we print it only for rank 0 of each node
+    if(comm_shared_mem.Rank() == 0)
       print_meminfo(prefix);
   }
 }
 
-Timers::Timers(bool debug) : debug(debug) {}
+Timers::Timers(bool debug) : debug(debug)
+{
+  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
+                      &comm_shared_mem.comm);
+}
 Timer &Timers::add_and_start(const std::string &name)
 {
   std::string full_name = prefix + name;
   if(debug)
-    print_debug_info(full_name);
+    print_debug_info(full_name, comm_shared_mem);
   emplace_back(full_name, Timer());
   return back().second;
 }

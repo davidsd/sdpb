@@ -13,11 +13,8 @@
 
 #include <boost/core/noncopyable.hpp>
 
-#include <cassert>
-#include <fstream>
 #include <string>
 #include <list>
-#include <algorithm>
 #include <filesystem>
 
 struct Timers : public std::list<std::pair<std::string, Timer>>
@@ -27,6 +24,9 @@ struct Timers : public std::list<std::pair<std::string, Timer>>
 private:
   const bool debug = false;
   std::string prefix;
+  // Shared memory communicator, used for debug output.
+  // TODO: create it somewhere near El::Environment and reuse in other places,
+  El::mpi::Comm comm_shared_mem;
 
 public:
   explicit Timers(bool debug);
