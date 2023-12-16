@@ -12,7 +12,7 @@ create_blas_jobs_no_split(size_t num_primes, El::Int output_matrix_height)
   El::Range<El::Int> all(0, output_matrix_height);
   for(size_t prime_index = 0; prime_index < num_primes; ++prime_index)
     {
-      jobs.emplace_back(prime_index, all, all);
+      jobs.emplace_back(Blas_Job::create_syrk_job(prime_index, all));
     }
   return jobs;
 }
@@ -82,7 +82,9 @@ create_blas_jobs_split_remaining_primes(size_t num_ranks, size_t num_primes,
           {
             El::Range<El::Int> I = ranges.at(i);
             El::Range<El::Int> J = ranges.at(j);
-            jobs.emplace_back(prime_index, I, J);
+            auto job = i == j ? Blas_Job::create_syrk_job(prime_index, I)
+                              : Blas_Job::create_gemm_job(prime_index, I, J);
+            jobs.emplace_back(job);
           }
     }
   return jobs;

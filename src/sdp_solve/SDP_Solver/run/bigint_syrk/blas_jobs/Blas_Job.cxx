@@ -4,9 +4,22 @@
 
 using Cost = Blas_Job::Cost;
 
-Blas_Job::Blas_Job(size_t prime_index, const El::Range<El::Int> &I,
+Blas_Job
+Blas_Job::create_syrk_job(size_t prime_index, const El::Range<El::Int> &I)
+{
+  return Blas_Job(syrk, prime_index, I, I);
+}
+
+Blas_Job
+Blas_Job::create_gemm_job(size_t prime_index, const El::Range<El::Int> &I,
+                          const El::Range<El::Int> &J)
+{
+  return Blas_Job(gemm, prime_index, I, J);
+}
+
+Blas_Job::Blas_Job(Kind kind, size_t prime_index, const El::Range<El::Int> &I,
                    const El::Range<El::Int> &J)
-    : prime_index(prime_index), I(I), J(J)
+    : kind(kind), prime_index(prime_index), I(I), J(J)
 {
   for(const auto &range : {I, J})
     {
@@ -36,17 +49,19 @@ Cost Blas_Job::cost() const
   size_t width = J.end - J.beg;
 
   size_t elements;
-  // For diagonal block,
-  // we calculate only upper triangle
-  if(I.beg == J.beg)
+
+  switch(kind)
     {
-      ASSERT_EQUAL(height, width);
+    case syrk:
+      ASSERT_EQUAL(I, J);
+      // In syrk, we calculate only upper triangle
       elements = height * (height + 1) / 2;
-    }
-  else
-    {
-      // For off-diagonal blocks, we calculate all elements
+      break;
+    case gemm:
+      // In gemm, we calculate all output matrix elements
       elements = height * width;
+      break;
+    default: RUNTIME_ERROR("Unexpected Blas_Job::Kind");
     }
   size_t blas_calls = 1;
   return {elements, blas_calls};

@@ -102,23 +102,27 @@ namespace
     auto output_matrix
       = El::View(output_residues_window.residues.at(prime_index), I, J);
 
-    // Diagonal blocks: call syrk
-    if(I == J)
+    switch(job.kind)
       {
-        // whole columns
-        const auto input_matrix = El::LockedView(
-          input_block_residues_window.residues.at(prime_index), El::ALL, I);
+        case Blas_Job::syrk: {
+          // take whole columns
+          const auto input_matrix = El::LockedView(
+            input_block_residues_window.residues.at(prime_index), El::ALL, I);
 
-        syrk(uplo, input_matrix, output_matrix);
-      }
-    // Off-diagonal: call gemm
-    else
-      {
-        const auto input_A = El::LockedView(
-          input_block_residues_window.residues.at(prime_index), El::ALL, I);
-        const auto input_B = El::LockedView(
-          input_block_residues_window.residues.at(prime_index), El::ALL, J);
-        gemm(input_A, input_B, output_matrix);
+          syrk(uplo, input_matrix, output_matrix);
+          break;
+        }
+        case Blas_Job::gemm: {
+          const auto input_A = El::LockedView(
+            input_block_residues_window.residues.at(prime_index), El::ALL, I);
+          const auto input_B = El::LockedView(
+            input_block_residues_window.residues.at(prime_index), El::ALL, J);
+          gemm(input_A, input_B, output_matrix);
+          break;
+        }
+        default: {
+          El::RuntimeError("Unexpected Blas_Job::Kind=", job.kind);
+        }
       }
   }
 }
