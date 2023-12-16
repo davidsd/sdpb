@@ -78,11 +78,10 @@ namespace boost::serialization
     ar & height;
     ar & width;
     ar & leadingDimension;
+    matrix.Resize(height, width, leadingDimension);
     auto size = leadingDimension * width;
-    Ring *buffer = new Ring[size];
-    auto data = boost::serialization::make_array(buffer, size);
+    auto data = boost::serialization::make_array(matrix.Buffer(), size);
     ar & data;
-    matrix.Control(height, width, buffer, leadingDimension);
   }
 }
 
