@@ -14,20 +14,20 @@ namespace
   using Scheduling = std::vector<std::vector<Simple_Job>>;
 
   // Assign all jobs to the first process
-  Scheduling
-  single_process_scheduling(size_t num_ranks, std::vector<Simple_Job> jobs)
+  Scheduling single_process_scheduling(size_t num_ranks,
+                                       const std::vector<Simple_Job> &jobs)
   {
     Scheduling jobs_by_rank(num_ranks);
-    for(size_t i = 0; i < jobs.size(); ++i)
+    for(const auto &job : jobs)
       {
-        jobs_by_rank.at(0).emplace_back(jobs.at(i));
+        jobs_by_rank.at(0).emplace_back(job);
       }
     return jobs_by_rank;
   }
 
   // Naive round-robin scheduling, ignoring job costs
   Scheduling
-  round_robin_scheduling(size_t num_ranks, std::vector<Simple_Job> jobs)
+  round_robin_scheduling(size_t num_ranks, const std::vector<Simple_Job> &jobs)
   {
     Scheduling jobs_by_rank(num_ranks);
     for(size_t i = 0; i < jobs.size(); ++i)
@@ -39,7 +39,7 @@ namespace
   }
 
   // maximum completion time among all ranks
-  size_t max_total_cost(Scheduling jobs_by_rank)
+  size_t max_total_cost(const Scheduling &jobs_by_rank)
   {
     size_t max_total_cost = 0;
     for(const auto &jobs : jobs_by_rank)
@@ -54,12 +54,12 @@ namespace
 
   // Tests that LPT works and is good enough.
   // Returns (LPT_max_cost, round_robin_max_cost, single_process_max_cost)
-  // where XXX_max)cost is maximal total cost of a rank.
+  // where XXX_max_cost is maximal total cost of a rank.
   std::tuple<size_t, size_t, size_t>
   test_scheduling(size_t num_ranks, std::vector<size_t> costs)
   {
     size_t num_jobs = costs.size();
-    size_t total_cost = std::accumulate(costs.begin(), costs.end(), 0);
+    size_t total_cost = std::accumulate(costs.begin(), costs.end(), (size_t)0);
 
     CAPTURE(num_ranks);
     CAPTURE(num_jobs);
