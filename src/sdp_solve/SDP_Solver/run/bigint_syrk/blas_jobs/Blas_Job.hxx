@@ -29,15 +29,15 @@ struct Blas_Job
   const size_t prime_index;
   const El::Range<El::Int> I;
   const El::Range<El::Int> J;
+  const Cost cost;
 
-  [[nodiscard]] Cost cost() const;
-
-  static Blas_Job create_syrk_job(size_t prime_index, const El::Range<El::Int> &I);
-  static Blas_Job create_gemm_job(size_t prime_index, const El::Range<El::Int> &I,
-           const El::Range<El::Int> &J);
+  static Blas_Job
+  create_syrk_job(size_t prime_index, const El::Range<El::Int> &I);
+  static Blas_Job
+  create_gemm_job(size_t prime_index, const El::Range<El::Int> &I,
+                  const El::Range<El::Int> &J);
 
 private:
   Blas_Job(Kind kind, size_t prime_index, const El::Range<El::Int> &I,
-           const El::Range<El::Int> &J);
-
+           const El::Range<El::Int> &J, const Cost &cost);
 };

@@ -32,7 +32,7 @@ TEST_CASE("create_blas_jobs_schedule")
     for(const auto &jobs : schedule.jobs_by_rank)
       for(const auto &job : jobs)
         {
-          total_cost += job.cost();
+          total_cost += job.cost;
           num_jobs++;
         }
 
