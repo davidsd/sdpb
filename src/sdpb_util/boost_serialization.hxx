@@ -78,14 +78,20 @@ namespace boost::serialization
     ar & height;
     ar & width;
     ar & leadingDimension;
+    matrix.Resize(height, width, leadingDimension);
     auto size = leadingDimension * width;
-    Ring *buffer = new Ring[size];
-    auto data = boost::serialization::make_array(buffer, size);
+    auto data = boost::serialization::make_array(matrix.Buffer(), size);
     ar & data;
-    matrix.Control(height, width, buffer, leadingDimension);
   }
 }
 
 BOOST_CLASS_VERSION(El::BigFloat, 1)
 
 BOOST_SERIALIZATION_SPLIT_FREE(El::Matrix<El::BigFloat>)
+
+// https://www.boost.org/doc/libs/1_82_0/libs/serialization/doc/special.html#objecttracking
+// We are just writing arrays, don't need the object tracking mechanism,
+// which may cause memory issues (according to some StackOverflow questions).
+BOOST_CLASS_TRACKING(El::BigFloat, boost::serialization::track_never)
+BOOST_CLASS_TRACKING(El::Matrix<El::BigFloat>,
+                     boost::serialization::track_never)
