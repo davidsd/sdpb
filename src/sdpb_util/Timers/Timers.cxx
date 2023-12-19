@@ -1,8 +1,16 @@
 #include "Timers.hxx"
 
+#include "sdpb_util/Proc_Meminfo.hxx"
+
 namespace
 {
-  // TODO move to separate file
+  // Convert bytes to gigabytes
+  double to_GB(size_t bytes)
+  {
+    return static_cast<double>(bytes) / 1024 / 1024 / 1024;
+  }
+
+  // TODO print_statm() is currently unused
 
   // /proc/self/statm displays the following quantities:
   // size resident shared text lib data dt
@@ -18,100 +26,36 @@ namespace
         El::Output(prefix, stats);
       }
   }
-
-  // /proc/meminfo can be different on different OSs.
-  // Usually (e.g. on CentOS) it looks like
-  // MemTotal:       131189996 kB
-  // MemFree:        24211752 kB
-  // MemAvailable:   69487008 kB
-  // ...
-  // We print MemAvailable (RAM available for allocation)
-  // and MemUsed defined as MemUsed = MemTotal - MemAvailable.
-  // MemUsed is RAM that is occupied by all processes and cannot be released
-  // (i.e. it doesn't include cache)
-  void print_meminfo(const std::string &prefix)
-  {
-    const char *proc_meminfo_path = "/proc/meminfo";
-    std::ifstream meminfo_file(proc_meminfo_path);
-
-    if(!meminfo_file.good())
-      return;
-
-    const char *mem_total_prefix = "MemTotal:";
-    const char *mem_available_prefix = "MemAvailable:";
-    size_t memTotalKB = 0;
-    size_t memAvailableKB = 0;
-    std::string line;
-    while(std::getline(meminfo_file, line))
-      {
-        std::istringstream iss(line);
-        std::string name;
-        size_t size;
-        std::string kB;
-        if(iss >> name >> size >> kB)
-          {
-            if(kB != "kB" && kB != "KB")
-              {
-                El::Output(proc_meminfo_path,
-                           ": expected \"kB\" at the end of line: ", line);
-                return;
-              }
-            if(name == mem_total_prefix)
-              memTotalKB = size;
-            else if(name == mem_available_prefix)
-              memAvailableKB = size;
-            if(memTotalKB > 0 && memAvailableKB > 0)
-              break;
-          }
-        else
-          {
-            El::Output(proc_meminfo_path, ": cannot parse line: ", line);
-            return;
-          }
-      }
-
-    if(memTotalKB == 0)
-      {
-        El::Output(proc_meminfo_path, ": ", mem_total_prefix, " not found");
-        return;
-      }
-    if(memAvailableKB == 0)
-      {
-        El::Output(proc_meminfo_path, ": ", mem_available_prefix,
-                   " not found");
-        return;
-      }
-    auto memAvailableGB = (double)memAvailableKB / 1024 / 1024;
-    auto memUsedGB = (double)(memTotalKB - memAvailableKB) / 1024 / 1024;
-    El::Output(prefix, "MemAvailable, GB: ", memAvailableGB);
-    El::Output(prefix, "MemUsed, GB: ", memUsedGB);
-  }
-
-  void print_debug_info(const std::string &name)
-  {
-    std::ostringstream ss;
-    ss << El::mpi::Rank() << " " << name << " ";
-    auto prefix = ss.str();
-
-    print_statm(prefix);
-
-    // /proc/meminfo is the same for all processes in node,
-    // so we print it only for rank 0.
-    // TODO: print meminfo for a first process of each node
-    // (makes sense if RAM is not distributed equally among the nodes)
-    if(El::mpi::Rank() == 0)
-      print_meminfo(prefix);
-  }
 }
 
-Timers::Timers(bool debug) : debug(debug) {}
+Timers::Timers(bool debug) : debug(debug)
+{
+  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
+                      &comm_shared_mem.comm);
+}
+
+Timers::~Timers() noexcept
+{
+  try
+    {
+      if(debug)
+        print_max_mem_used();
+    }
+  catch(...)
+    {
+      // destructors should never throw exceptions
+    }
+}
+
 Timer &Timers::add_and_start(const std::string &name)
 {
   std::string full_name = prefix + name;
+
   if(debug)
-    print_debug_info(full_name);
-  emplace_back(full_name, Timer());
-  return back().second;
+    print_meminfo(full_name);
+
+  named_timers.emplace_back(full_name, Timer());
+  return named_timers.back().second;
 }
 void Timers::write_profile(const std::filesystem::path &path) const
 {
@@ -120,11 +64,11 @@ void Timers::write_profile(const std::filesystem::path &path) const
   std::ofstream f(path);
 
   f << "{" << '\n';
-  for(auto it(begin()); it != end();)
+  for(auto it(named_timers.begin()); it != named_timers.end();)
     {
       f << "    {\"" << it->first << "\", " << it->second << "}";
       ++it;
-      if(it != end())
+      if(it != named_timers.end())
         {
           f << ",";
         }
@@ -139,13 +83,67 @@ void Timers::write_profile(const std::filesystem::path &path) const
 }
 int64_t Timers::elapsed_milliseconds(const std::string &s) const
 {
-  auto iter(std::find_if(rbegin(), rend(),
+  auto iter(std::find_if(named_timers.rbegin(), named_timers.rend(),
                          [&s](const std::pair<std::string, Timer> &timer) {
                            return timer.first == s;
                          }));
-  if(iter == rend())
+  if(iter == named_timers.rend())
     {
       throw std::runtime_error("Could not find timing for " + s);
     }
   return iter->second.elapsed_milliseconds();
+}
+
+void Timers::print_max_mem_used() const
+{
+  if(max_mem_used > 0 && !max_mem_used_name.empty())
+    {
+      El::Output(El::mpi::Rank(), " max MemUsed: ", to_GB(max_mem_used),
+                 " GB at \"", max_mem_used_name, "\"");
+    }
+}
+
+void Timers::print_meminfo(const std::string &name)
+{
+  // Print data from /proc/meminfo only for a first rank of each node
+  if(comm_shared_mem.Rank() != 0)
+    return;
+
+  auto prefix = El::BuildString(El::mpi::Rank(), " ", name, " ");
+
+  // Print memory usage for the current node (from the first rank).
+  // If we cannot parse /proc/meminfo, then simply print timer name.
+
+  if(!can_read_meminfo)
+    {
+      El::Output(prefix);
+      return;
+    }
+
+  bool result;
+  constexpr bool print_error_msg = true;
+  const auto meminfo = Proc_Meminfo::try_read(result, print_error_msg);
+  if(!result)
+    {
+      can_read_meminfo = false;
+      El::Output("Printing RAM usage will be disabled.");
+      El::Output(prefix);
+      return;
+    }
+
+  // MemTotal is constant, thus we print it only once, when adding first timer
+  if(named_timers.empty())
+    {
+      El::Output(prefix, "--- MemTotal: ", to_GB(meminfo.mem_total), " GB");
+    }
+
+  //Print MemUsed each time
+  El::Output(prefix, "--- MemUsed: ", to_GB(meminfo.mem_used()), " GB");
+
+  // Update max MemUsed info
+  if(meminfo.mem_used() > max_mem_used)
+    {
+      max_mem_used = meminfo.mem_used();
+      max_mem_used_name = name;
+    }
 }

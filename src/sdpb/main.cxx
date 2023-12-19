@@ -106,7 +106,7 @@ int main(int argc, char **argv)
                         fs::copy_options::overwrite_existing);
             }
         }
-      solve(block_info, parameters, start_time);
+      Timers timers(solve(block_info, parameters, start_time));
     }
   catch(std::exception &e)
     {

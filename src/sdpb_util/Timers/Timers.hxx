@@ -13,23 +13,33 @@
 
 #include <boost/core/noncopyable.hpp>
 
-#include <cassert>
-#include <fstream>
 #include <string>
 #include <list>
-#include <algorithm>
 #include <filesystem>
 
-struct Timers : public std::list<std::pair<std::string, Timer>>
+struct Timers
 {
   friend struct Scoped_Timer; // can change private field prefix
 
 private:
+  // We use std::list instead of std::vector to avoid reallocation.
+  // Scoped_Timer holds reference to timer, which would be invalidated after reallocation.
+  // TODO refactor timers in a way that prevents such obscure bugs.
+  std::list<std::pair<std::string, Timer>> named_timers;
   const bool debug = false;
   std::string prefix;
+  // Shared memory communicator, used for debug output.
+  // TODO: create it somewhere near El::Environment and reuse in other places,
+  El::mpi::Comm comm_shared_mem;
+  bool can_read_meminfo = true;
+  // Max MemUsed value
+  size_t max_mem_used{};
+  // name of the timer that had max MemUsed value
+  std::string max_mem_used_name;
 
 public:
   explicit Timers(bool debug);
+  ~Timers() noexcept;
 
 private:
   Timer &add_and_start(const std::string &name);
@@ -38,6 +48,10 @@ public:
   void write_profile(const std::filesystem::path &path) const;
 
   int64_t elapsed_milliseconds(const std::string &s) const;
+
+private:
+  void print_max_mem_used() const;
+  void print_meminfo(const std::string &name);
 };
 
 // Simple RAII timer
