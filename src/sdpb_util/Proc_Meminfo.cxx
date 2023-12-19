@@ -14,7 +14,7 @@ size_t Proc_Meminfo::mem_used() const
   return mem_total - mem_available;
 }
 
-Proc_Meminfo Proc_Meminfo::try_read(bool &result) noexcept
+Proc_Meminfo Proc_Meminfo::try_read(bool &result, bool print_error_msg) noexcept
 {
   try
     {
@@ -22,9 +22,18 @@ Proc_Meminfo Proc_Meminfo::try_read(bool &result) noexcept
       result = true;
       return meminfo;
     }
+  catch(std::exception& e)
+    {
+      result = false;
+      if(print_error_msg)
+        El::Output("Failed to parse /proc/meminfo: ", e.what());
+      return {0, 0};
+    }
   catch(...)
     {
       result = false;
+      if(print_error_msg)
+        El::Output("Failed to parse /proc/meminfo");
       return {0, 0};
     }
 }
@@ -35,7 +44,7 @@ Proc_Meminfo Proc_Meminfo::read() noexcept(false)
   std::ifstream meminfo_file(proc_meminfo_path);
 
   if(!meminfo_file.good())
-    El::RuntimeError("Cannot read ", proc_meminfo_path);
+    El::RuntimeError("Cannot open ", proc_meminfo_path);
 
   const char *mem_total_prefix = "MemTotal:";
   const char *mem_available_prefix = "MemAvailable:";

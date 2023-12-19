@@ -26,7 +26,8 @@ struct Proc_Meminfo
   // read from /proc/meminfo, NB: can throw exceptions
   static Proc_Meminfo read() noexcept(false);
   // read from /proc/meminfo, in case of exception catch it and set result = false
-  static Proc_Meminfo try_read(bool &result) noexcept;
+  static Proc_Meminfo
+  try_read(bool &result, bool print_error_msg = false) noexcept;
 
 private:
   Proc_Meminfo(size_t mem_total, size_t mem_available);

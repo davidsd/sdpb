@@ -27,6 +27,7 @@ private:
   // Shared memory communicator, used for debug output.
   // TODO: create it somewhere near El::Environment and reuse in other places,
   El::mpi::Comm comm_shared_mem;
+  bool can_read_meminfo = true;
   // Max MemUsed value
   size_t max_mem_used{};
   // name of the timer that had max MemUsed value

@@ -97,13 +97,23 @@ void Timers::print_meminfo(const std::string &name)
 
   auto prefix = El::BuildString(El::mpi::Rank(), " ", name, " ");
 
-  // Print memory usage for each node (at first rank)
+  // Print memory usage for the current node (from the first rank).
+  // If we cannot parse /proc/meminfo, then simply print timer name.
+
+  if(!can_read_meminfo)
+    {
+      El::Output(prefix);
+      return;
+    }
 
   bool result;
-  const auto meminfo = Proc_Meminfo::try_read(result);
+  constexpr bool print_error_msg = true;
+  const auto meminfo = Proc_Meminfo::try_read(result, print_error_msg);
   if(!result)
     {
-      El::Output(prefix, "cannot parse /proc/meminfo");
+      can_read_meminfo = false;
+      El::Output("Printing RAM usage will be disabled.");
+      El::Output(prefix);
       return;
     }
 
