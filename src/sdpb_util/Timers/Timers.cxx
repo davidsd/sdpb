@@ -33,6 +33,20 @@ Timers::Timers(bool debug) : debug(debug)
   MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
                       &comm_shared_mem.comm);
 }
+
+Timers::~Timers() noexcept
+{
+  try
+    {
+      if(debug)
+        print_max_mem_used();
+    }
+  catch(...)
+    {
+      // destructors should never throw exceptions
+    }
+}
+
 Timer &Timers::add_and_start(const std::string &name)
 {
   std::string full_name = prefix + name;

@@ -39,6 +39,7 @@ private:
 
 public:
   explicit Timers(bool debug);
+  ~Timers() noexcept;
 
 private:
   Timer &add_and_start(const std::string &name);
@@ -48,9 +49,8 @@ public:
 
   int64_t elapsed_milliseconds(const std::string &s) const;
 
-  void print_max_mem_used() const;
-
 private:
+  void print_max_mem_used() const;
   void print_meminfo(const std::string &name);
 };
 
