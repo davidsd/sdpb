@@ -17,11 +17,15 @@
 #include <list>
 #include <filesystem>
 
-struct Timers : public std::list<std::pair<std::string, Timer>>
+struct Timers
 {
   friend struct Scoped_Timer; // can change private field prefix
 
 private:
+  // We use std::list instead of std::vector to avoid reallocation.
+  // Scoped_Timer holds reference to timer, which would be invalidated after reallocation.
+  // TODO refactor timers in a way that prevents such obscure bugs.
+  std::list<std::pair<std::string, Timer>> named_timers;
   const bool debug = false;
   std::string prefix;
   // Shared memory communicator, used for debug output.

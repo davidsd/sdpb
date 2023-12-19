@@ -40,8 +40,8 @@ Timer &Timers::add_and_start(const std::string &name)
   if(debug)
     print_meminfo(full_name);
 
-  emplace_back(full_name, Timer());
-  return back().second;
+  named_timers.emplace_back(full_name, Timer());
+  return named_timers.back().second;
 }
 void Timers::write_profile(const std::filesystem::path &path) const
 {
@@ -50,11 +50,11 @@ void Timers::write_profile(const std::filesystem::path &path) const
   std::ofstream f(path);
 
   f << "{" << '\n';
-  for(auto it(begin()); it != end();)
+  for(auto it(named_timers.begin()); it != named_timers.end();)
     {
       f << "    {\"" << it->first << "\", " << it->second << "}";
       ++it;
-      if(it != end())
+      if(it != named_timers.end())
         {
           f << ",";
         }
@@ -69,11 +69,11 @@ void Timers::write_profile(const std::filesystem::path &path) const
 }
 int64_t Timers::elapsed_milliseconds(const std::string &s) const
 {
-  auto iter(std::find_if(rbegin(), rend(),
+  auto iter(std::find_if(named_timers.rbegin(), named_timers.rend(),
                          [&s](const std::pair<std::string, Timer> &timer) {
                            return timer.first == s;
                          }));
-  if(iter == rend())
+  if(iter == named_timers.rend())
     {
       throw std::runtime_error("Could not find timing for " + s);
     }
@@ -118,7 +118,7 @@ void Timers::print_meminfo(const std::string &name)
     }
 
   // MemTotal is constant, thus we print it only once, when adding first timer
-  if(empty())
+  if(named_timers.empty())
     {
       El::Output(prefix, "--- MemTotal: ", to_GB(meminfo.mem_total), " GB");
     }
