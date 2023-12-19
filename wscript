@@ -23,6 +23,7 @@ def build(bld):
     default_includes = ['src', 'external']
 
     bld.stlib(source=['src/sdpb_util/Mesh.cxx',
+                      'src/sdpb_util/Proc_Meminfo.cxx',
                       'src/sdpb_util/Timers/Scoped_Timer.cxx',
                       'src/sdpb_util/Timers/Timer.cxx',
                       'src/sdpb_util/Timers/Timers.cxx'],

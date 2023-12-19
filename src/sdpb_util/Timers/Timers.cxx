@@ -1,8 +1,10 @@
 #include "Timers.hxx"
 
+#include "sdpb_util/Proc_Meminfo.hxx"
+
 namespace
 {
-  // TODO move to separate file
+  // TODO print_statm() is currently unused
 
   // /proc/self/statm displays the following quantities:
   // size resident shared text lib data dt
@@ -19,87 +21,28 @@ namespace
       }
   }
 
-  // /proc/meminfo can be different on different OSs.
-  // Usually (e.g. on CentOS) it looks like
-  // MemTotal:       131189996 kB
-  // MemFree:        24211752 kB
-  // MemAvailable:   69487008 kB
-  // ...
-  // We print MemAvailable (RAM available for allocation)
-  // and MemUsed defined as MemUsed = MemTotal - MemAvailable.
-  // MemUsed is RAM that is occupied by all processes and cannot be released
-  // (i.e. it doesn't include cache)
-  void print_meminfo(const std::string &prefix)
+  void print_meminfo(const std::string &name, bool print_mem_total = false)
   {
-    const char *proc_meminfo_path = "/proc/meminfo";
-    std::ifstream meminfo_file(proc_meminfo_path);
+    auto prefix = El::BuildString(El::mpi::Rank(), " ", name, " ");
 
-    if(!meminfo_file.good())
-      return;
-
-    const char *mem_total_prefix = "MemTotal:";
-    const char *mem_available_prefix = "MemAvailable:";
-    size_t memTotalKB = 0;
-    size_t memAvailableKB = 0;
-    std::string line;
-    while(std::getline(meminfo_file, line))
+    bool result;
+    const auto meminfo = Proc_Meminfo::try_read(result);
+    if(!result)
       {
-        std::istringstream iss(line);
-        std::string name;
-        size_t size;
-        std::string kB;
-        if(iss >> name >> size >> kB)
-          {
-            if(kB != "kB" && kB != "KB")
-              {
-                El::Output(proc_meminfo_path,
-                           ": expected \"kB\" at the end of line: ", line);
-                return;
-              }
-            if(name == mem_total_prefix)
-              memTotalKB = size;
-            else if(name == mem_available_prefix)
-              memAvailableKB = size;
-            if(memTotalKB > 0 && memAvailableKB > 0)
-              break;
-          }
-        else
-          {
-            El::Output(proc_meminfo_path, ": cannot parse line: ", line);
-            return;
-          }
-      }
-
-    if(memTotalKB == 0)
-      {
-        El::Output(proc_meminfo_path, ": ", mem_total_prefix, " not found");
+        El::Output(prefix, "cannot parse /proc/meminfo");
         return;
       }
-    if(memAvailableKB == 0)
+
+    if(print_mem_total)
       {
-        El::Output(proc_meminfo_path, ": ", mem_available_prefix,
-                   " not found");
-        return;
+        double mem_total_GB
+          = static_cast<double>(meminfo.mem_total) / 1024 / 1024 / 1024;
+        El::Output(prefix, "MemTotal, GB: ", mem_total_GB);
       }
-    auto memAvailableGB = (double)memAvailableKB / 1024 / 1024;
-    auto memUsedGB = (double)(memTotalKB - memAvailableKB) / 1024 / 1024;
-    El::Output(prefix, "MemAvailable, GB: ", memAvailableGB);
-    El::Output(prefix, "MemUsed, GB: ", memUsedGB);
-  }
 
-  void print_debug_info(const std::string &name,
-                        const El::mpi::Comm &comm_shared_mem)
-  {
-    std::ostringstream ss;
-    ss << El::mpi::Rank() << " " << name << " ";
-    auto prefix = ss.str();
-
-    print_statm(prefix);
-
-    // /proc/meminfo is the same for all processes in node,
-    // so we print it only for rank 0 of each node
-    if(comm_shared_mem.Rank() == 0)
-      print_meminfo(prefix);
+    double mem_used_GB
+      = static_cast<double>(meminfo.mem_used()) / 1024 / 1024 / 1024;
+    El::Output(prefix, "MemUsed, GB: ", mem_used_GB);
   }
 }
 
@@ -111,8 +54,15 @@ Timers::Timers(bool debug) : debug(debug)
 Timer &Timers::add_and_start(const std::string &name)
 {
   std::string full_name = prefix + name;
-  if(debug)
-    print_debug_info(full_name, comm_shared_mem);
+  if(debug && comm_shared_mem.Rank() == 0)
+    {
+      // Print memory usage for each node (at first rank)
+      // MemTotal is constant, thus we print it only once
+      // print MemUsed each time
+      bool print_mem_total = empty();
+      print_meminfo(full_name, print_mem_total);
+    }
+
   emplace_back(full_name, Timer());
   return back().second;
 }
