@@ -120,11 +120,11 @@ void Timers::print_meminfo(const std::string &name)
   // MemTotal is constant, thus we print it only once, when adding first timer
   if(empty())
     {
-      El::Output(prefix, "MemTotal: ", to_GB(meminfo.mem_total), " GB");
+      El::Output(prefix, "--- MemTotal: ", to_GB(meminfo.mem_total), " GB");
     }
 
   //Print MemUsed each time
-  El::Output(prefix, "MemUsed: ", to_GB(meminfo.mem_used()), " GB");
+  El::Output(prefix, "--- MemUsed: ", to_GB(meminfo.mem_used()), " GB");
 
   // Update max MemUsed info
   if(meminfo.mem_used() > max_mem_used)
