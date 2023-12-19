@@ -1,3 +1,16 @@
+# Version 2.6.1
+
+- Fixed major memory leak in binary SDP deserialization. See [#160](https://github.com/davidsd/sdpb/pull/160).
+- Improve debug mode output: print `MemUsed` and `MemTotal` for each node, print `max MemUsed` at the end,
+  disable `proc/self/statm`. See [#161](https://github.com/davidsd/sdpb/pull/161).
+- Refactoring: moved common headers to `sdpb_util`, simplified include paths.
+  See [#157](https://github.com/davidsd/sdpb/pull/157).
+- Updated installations
+  for [BU](docs/site_installs/Boston.md), [Caltech](docs/site_installs/Caltech.md), [Expanse](docs/site_installs/Expanse.md), [Harvard](docs/site_installs/Harvard.md),
+  and [Imperial College](docs/site_installs/Imperial.md) clusters, with example scripts.
+
+See https://github.com/davidsd/sdpb/releases/tag/2.6.1 for the full changelog.
+
 # Version 2.6.0
 
 - New **INCOMPATIBLE** format for sdp.zip.
