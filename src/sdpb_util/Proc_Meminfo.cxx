@@ -14,7 +14,8 @@ size_t Proc_Meminfo::mem_used() const
   return mem_total - mem_available;
 }
 
-Proc_Meminfo Proc_Meminfo::try_read(bool &result, bool print_error_msg) noexcept
+Proc_Meminfo
+Proc_Meminfo::try_read(bool &result, bool print_error_msg) noexcept
 {
   try
     {
@@ -22,7 +23,7 @@ Proc_Meminfo Proc_Meminfo::try_read(bool &result, bool print_error_msg) noexcept
       result = true;
       return meminfo;
     }
-  catch(std::exception& e)
+  catch(std::exception &e)
     {
       result = false;
       if(print_error_msg)
@@ -55,26 +56,30 @@ Proc_Meminfo Proc_Meminfo::read() noexcept(false)
     {
       std::istringstream iss(line);
       std::string name;
-      size_t size;
-      std::string kB;
-      if(iss >> name >> size >> kB)
+      if(iss >> name)
         {
-          if(kB != "kB" && kB != "KB")
+          if(name != mem_total_prefix && name != mem_available_prefix)
+            continue;
+          size_t size;
+          std::string kB;
+          if(iss >> size >> kB)
             {
-              El::RuntimeError(proc_meminfo_path,
-                               ": expected \"kB\" at the end of line: ", line);
+              if(kB != "kB" && kB != "KB")
+                {
+                  El::RuntimeError(
+                    proc_meminfo_path,
+                    ": expected \"kB\" at the end of line: ", line);
+                }
+              if(name == mem_total_prefix)
+                memTotalKB = size;
+              else if(name == mem_available_prefix)
+                memAvailableKB = size;
+              if(memTotalKB > 0 && memAvailableKB > 0)
+                break;
+              continue;
             }
-          if(name == mem_total_prefix)
-            memTotalKB = size;
-          else if(name == mem_available_prefix)
-            memAvailableKB = size;
-          if(memTotalKB > 0 && memAvailableKB > 0)
-            break;
         }
-      else
-        {
-          El::RuntimeError(proc_meminfo_path, ": cannot parse line: ", line);
-        }
+      El::RuntimeError(proc_meminfo_path, ": cannot parse line: ", line);
     }
 
   if(memTotalKB == 0)
