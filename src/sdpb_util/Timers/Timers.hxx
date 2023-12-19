@@ -27,6 +27,10 @@ private:
   // Shared memory communicator, used for debug output.
   // TODO: create it somewhere near El::Environment and reuse in other places,
   El::mpi::Comm comm_shared_mem;
+  // Max MemUsed value
+  size_t max_mem_used{};
+  // name of the timer that had max MemUsed value
+  std::string max_mem_used_name;
 
 public:
   explicit Timers(bool debug);
@@ -38,6 +42,11 @@ public:
   void write_profile(const std::filesystem::path &path) const;
 
   int64_t elapsed_milliseconds(const std::string &s) const;
+
+  void print_max_mem_used() const;
+
+private:
+  void print_meminfo(const std::string &name);
 };
 
 // Simple RAII timer

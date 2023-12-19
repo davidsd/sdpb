@@ -82,6 +82,8 @@ int main(int argc, char **argv)
           write_timing(timing_parameters.solver.checkpoint_out, block_info,
                        timers, timing_parameters.verbosity >= Verbosity::debug,
                        block_timings);
+          if(timing_parameters.verbosity >= Verbosity::debug)
+            timers.print_max_mem_used();
           El::mpi::Barrier(El::mpi::COMM_WORLD);
           Block_Info new_info(
             parameters.sdp_path, block_timings, parameters.procs_per_node,
@@ -106,7 +108,9 @@ int main(int argc, char **argv)
                         fs::copy_options::overwrite_existing);
             }
         }
-      solve(block_info, parameters, start_time);
+      Timers timers(solve(block_info, parameters, start_time));
+      if(parameters.verbosity >= Verbosity::debug)
+        timers.print_max_mem_used();
     }
   catch(std::exception &e)
     {

@@ -4,6 +4,12 @@
 
 namespace
 {
+  // Convert bytes to gigabytes
+  double to_GB(size_t bytes)
+  {
+    return static_cast<double>(bytes) / 1024 / 1024 / 1024;
+  }
+
   // TODO print_statm() is currently unused
 
   // /proc/self/statm displays the following quantities:
@@ -20,30 +26,6 @@ namespace
         El::Output(prefix, stats);
       }
   }
-
-  void print_meminfo(const std::string &name, bool print_mem_total = false)
-  {
-    auto prefix = El::BuildString(El::mpi::Rank(), " ", name, " ");
-
-    bool result;
-    const auto meminfo = Proc_Meminfo::try_read(result);
-    if(!result)
-      {
-        El::Output(prefix, "cannot parse /proc/meminfo");
-        return;
-      }
-
-    if(print_mem_total)
-      {
-        double mem_total_GB
-          = static_cast<double>(meminfo.mem_total) / 1024 / 1024 / 1024;
-        El::Output(prefix, "MemTotal, GB: ", mem_total_GB);
-      }
-
-    double mem_used_GB
-      = static_cast<double>(meminfo.mem_used()) / 1024 / 1024 / 1024;
-    El::Output(prefix, "MemUsed, GB: ", mem_used_GB);
-  }
 }
 
 Timers::Timers(bool debug) : debug(debug)
@@ -54,14 +36,9 @@ Timers::Timers(bool debug) : debug(debug)
 Timer &Timers::add_and_start(const std::string &name)
 {
   std::string full_name = prefix + name;
-  if(debug && comm_shared_mem.Rank() == 0)
-    {
-      // Print memory usage for each node (at first rank)
-      // MemTotal is constant, thus we print it only once
-      // print MemUsed each time
-      bool print_mem_total = empty();
-      print_meminfo(full_name, print_mem_total);
-    }
+
+  if(debug)
+    print_meminfo(full_name);
 
   emplace_back(full_name, Timer());
   return back().second;
@@ -101,4 +78,48 @@ int64_t Timers::elapsed_milliseconds(const std::string &s) const
       throw std::runtime_error("Could not find timing for " + s);
     }
   return iter->second.elapsed_milliseconds();
+}
+
+void Timers::print_max_mem_used() const
+{
+  if(max_mem_used > 0 && !max_mem_used_name.empty())
+    {
+      El::Output(El::mpi::Rank(), " max MemUsed: ", to_GB(max_mem_used),
+                 " GB at \"", max_mem_used_name, "\"");
+    }
+}
+
+void Timers::print_meminfo(const std::string &name)
+{
+  // Print data from /proc/meminfo only for a first rank of each node
+  if(comm_shared_mem.Rank() != 0)
+    return;
+
+  auto prefix = El::BuildString(El::mpi::Rank(), " ", name, " ");
+
+  // Print memory usage for each node (at first rank)
+
+  bool result;
+  const auto meminfo = Proc_Meminfo::try_read(result);
+  if(!result)
+    {
+      El::Output(prefix, "cannot parse /proc/meminfo");
+      return;
+    }
+
+  // MemTotal is constant, thus we print it only once, when adding first timer
+  if(empty())
+    {
+      El::Output(prefix, "MemTotal: ", to_GB(meminfo.mem_total), " GB");
+    }
+
+  //Print MemUsed each time
+  El::Output(prefix, "MemUsed: ", to_GB(meminfo.mem_used()), " GB");
+
+  // Update max MemUsed info
+  if(meminfo.mem_used() > max_mem_used)
+    {
+      max_mem_used = meminfo.mem_used();
+      max_mem_used_name = name;
+    }
 }
