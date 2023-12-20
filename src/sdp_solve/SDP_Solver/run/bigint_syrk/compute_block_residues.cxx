@@ -1,4 +1,5 @@
 #include "BigInt_Shared_Memory_Syrk_Context.hxx"
+#include "Fmpz_BigInt.hxx"
 #include "fmpz_mul_blas_util.hxx"
 #include "fmpz_BigFloat_convert.hxx"
 
@@ -18,17 +19,17 @@ namespace
       if(!block.IsLocalCol(global_col))
         return;
 
-      fmpz_t bigint_value;
-      fmpz_init(bigint_value);
+      Fmpz_BigInt bigint_value;
       int jLoc = block.LocalCol(global_col);
       for(int iLoc = 0; iLoc < block.LocalHeight(); ++iLoc)
         {
           int i = block.GlobalRow(iLoc);
           int j = block.GlobalCol(jLoc);
-          BigFloat_to_fmpz_t(block.GetLocalCRef(iLoc, jLoc), bigint_value);
+          bigint_value.from_BigFloat(block.GetLocalCRef(iLoc, jLoc));
           double *data = first_residue_matrix.Buffer(i, j);
-          fmpz_multi_mod_uint32_stride(
-            data, block_residues_window.prime_stride, bigint_value, comb);
+          fmpz_multi_mod_uint32_stride(data,
+                                       block_residues_window.prime_stride,
+                                       bigint_value.value, comb);
         }
     }
   }
@@ -56,8 +57,7 @@ namespace
 
     // Compute locally residues for a given column global_col and all blocks
     {
-      fmpz_t bigint_value;
-      fmpz_init(bigint_value);
+      Fmpz_BigInt bigint_value;
       int data_offset = 0;
       std::for_each(
         consecutive_blocks_begin, consecutive_blocks_end,
@@ -66,11 +66,11 @@ namespace
           int jLoc = block.LocalCol(global_col);
           for(int iLoc = 0; iLoc < block.LocalHeight(); ++iLoc)
             {
-              BigFloat_to_fmpz_t(block.GetLocalCRef(iLoc, jLoc), bigint_value);
+              bigint_value.from_BigFloat(block.GetLocalCRef(iLoc, jLoc));
               // pointer to the first residue
               double *data = column_residues.data() + data_offset + iLoc;
-              fmpz_multi_mod_uint32_stride(data, prime_stride, bigint_value,
-                                           comb);
+              fmpz_multi_mod_uint32_stride(data, prime_stride,
+                                           bigint_value.value, comb);
             }
           data_offset += block.LocalHeight();
         });

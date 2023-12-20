@@ -1,7 +1,7 @@
 #include "BigInt_Shared_Memory_Syrk_Context.hxx"
+#include "Fmpz_BigInt.hxx"
 #include "reduce_scatter_DistMatrix.hxx"
 #include "restore_matrix_from_residues.hxx"
-#include "fmpz_BigFloat_convert.hxx"
 
 #include <cblas.h>
 
@@ -149,6 +149,7 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
              < El::mpi::Size(bigint_output.DistComm()));
 
       const El::Grid grid(shared_memory_comm);
+      // TODO create once, in ctor
       El::DistMatrix<El::BigFloat> bigint_output_shmem(
         bigint_output.Height(), bigint_output.Width(), grid);
       deallocate_lower_half(bigint_output_shmem);
@@ -245,8 +246,7 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem(
   {
     Scoped_Timer restore_timer(timers, "from_residues");
 
-    fmpz_t big_int_value;
-    fmpz_init(big_int_value);
+    Fmpz_BigInt big_int_value;
     El::BigFloat big_float_value;
     for(int i = 0; i < bigint_output_shmem.LocalHeight(); ++i)
       for(int j = 0; j < bigint_output_shmem.LocalWidth(); ++j)
@@ -262,11 +262,9 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem(
 
           restore_matrix_from_residues(output_residues_window, global_i,
                                        global_j, comb, big_int_value);
-          fmpz_t_to_BigFloat(big_int_value, big_float_value);
+          big_int_value.to_BigFloat(big_float_value);
           bigint_output_shmem.SetLocal(i, j, big_float_value);
         }
-
-    fmpz_clear(big_int_value); // TODO use RAII wrapper?
   }
 
   El::mpi::Barrier(bigint_output_shmem.DistComm());

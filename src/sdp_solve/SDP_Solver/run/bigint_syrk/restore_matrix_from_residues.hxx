@@ -10,7 +10,7 @@
 inline void
 restore_matrix_from_residues(const Residue_Matrices_Window<double> &window,
                              size_t i, size_t j, Fmpz_Comb &comb,
-                             fmpz_t &output)
+                             Fmpz_BigInt &output)
 {
   int sign = 1; // means that negative values are allowed
   size_t num_primes = comb.num_primes;
@@ -24,5 +24,6 @@ restore_matrix_from_residues(const Residue_Matrices_Window<double> &window,
       residues.at(prime_index) = double_to_uint32_t_residue(d, mod);
     }
 
-  fmpz_multi_CRT_ui(output, residues.data(), comb.comb, comb.comb_temp, sign);
+  fmpz_multi_CRT_ui(output.value, residues.data(), comb.comb, comb.comb_temp,
+                    sign);
 }
