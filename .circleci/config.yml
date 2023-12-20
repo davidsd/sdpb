@@ -7,7 +7,7 @@
 # 3. 'deploy-master': On each 'master' branch update,
 #     push the fresh image to DockerHub as '${DOCKER_USERNAME}/sdpb:master', e.g. 'davidsd/sdpb:master'
 # 4. 'deploy-tag': If new tag is pushed to the repo,
-#     push the image '${DOCKER_USERNAME}/sdpb:${TAG}', e.g. 'davidsd/sdpb:2.6.0'
+#     push the image '${DOCKER_USERNAME}/sdpb:${TAG}', e.g. 'davidsd/sdpb:2.6.1'
 #
 # Deploy works only if you specify DOCKER_USERNAME and DOCKER_PASSWORD environment variables for the CircleCI project
 # See instructions here:
@@ -134,7 +134,7 @@ workflows:
       - deploy-tag:
           filters:
             tags:
-              only: /^\d+\.\d+\.\d+$/ # only release tags, e.g 2.6.0
+              only: /^\d+\.\d+\.\d+$/ # only release tags, e.g 2.6.1
             # See https://discuss.circleci.com/t/tag-not-triggered-by-circleci-not-filter-in-workflow/32036
             branches:
               ignore: /.*/ # Ignore all branches, otherwise the job is triggered by any git push
