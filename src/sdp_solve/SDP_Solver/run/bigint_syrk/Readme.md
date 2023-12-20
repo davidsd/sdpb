@@ -63,7 +63,7 @@ Matrix types:
 
 Class [Matrix_Normalizer](Matrix_Normalizer.hxx) performs steps 1 and 6.
 
-Class [Fmpz_Comb](Fmpz_Comb.hxx), which is a wrapper of FLINT's `fmpz_comb_t`,
+Class [Fmpz_Comb](fmpz/Fmpz_Comb.hxx), which is a wrapper of FLINT's `fmpz_comb_t`,
 helps us with steps 2, 3, and 5.
 
 ## Going parallel

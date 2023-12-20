@@ -1,13 +1,13 @@
 #include "catch2/catch_amalgamated.hpp"
 
+#include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
+#include "sdp_solve/SDP_Solver/run/bigint_syrk/Matrix_Normalizer.hxx"
+#include "sdp_solve/SDP_Solver/run/bigint_syrk/fmpz/Fmpz_Matrix.hxx"
 #include "test_util/test_util.hxx"
 #include "unit_tests/util/util.hxx"
-#include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
-#include "sdp_solve/SDP_Solver/run/bigint_syrk/Fmpz_Matrix.hxx"
-#include "sdp_solve/SDP_Solver/run/bigint_syrk/Matrix_Normalizer.hxx"
 
-#include <vector>
 #include <El.hpp>
+#include <vector>
 
 using Test_Util::REQUIRE_Equal::diff;
 

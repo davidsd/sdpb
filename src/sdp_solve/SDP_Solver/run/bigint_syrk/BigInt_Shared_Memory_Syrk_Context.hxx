@@ -2,8 +2,8 @@
 
 #include "blas_jobs/create_blas_jobs_schedule.hxx"
 #include "blas_jobs/Blas_Job_Schedule.hxx"
+#include "fmpz/Fmpz_Comb.hxx"
 #include "Block_Residue_Matrices_Window.hxx"
-#include "Fmpz_Comb.hxx"
 #include "Residue_Matrices_Window.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 

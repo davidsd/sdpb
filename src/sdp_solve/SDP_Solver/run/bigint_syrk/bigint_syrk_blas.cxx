@@ -1,5 +1,5 @@
 #include "BigInt_Shared_Memory_Syrk_Context.hxx"
-#include "Fmpz_BigInt.hxx"
+#include "fmpz/Fmpz_BigInt.hxx"
 #include "reduce_scatter_DistMatrix.hxx"
 #include "restore_matrix_from_residues.hxx"
 

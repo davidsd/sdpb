@@ -1,11 +1,11 @@
 #pragma once
 
+#include "fmpz/Fmpz_Comb.hxx"
+#include "fmpz/fmpz_mul_blas_util.hxx"
+#include "sdpb_util/Shared_Window_Array.hxx"
+
 #include <El.hpp>
 #include <flint/nmod.h>
-#include "Fmpz_Comb.hxx"
-#include "sdpb_util/Shared_Window_Array.hxx"
-#include "fmpz_mul_blas_util.hxx"
-#include "fmpz_BigFloat_convert.hxx" //TODO join with prev header
 
 inline void
 restore_matrix_from_residues(const Residue_Matrices_Window<double> &window,

@@ -4,8 +4,8 @@
 #include <El.hpp>
 
 #include "BigInt_Shared_Memory_Syrk_Context.hxx"
-#include "fmpz_mul_blas_util.hxx"
-#include "blas_jobs/create_blas_jobs_schedule.hxx"
+#include "blas_jobs/Blas_Job_Schedule.hxx"
+#include "fmpz/fmpz_mul_blas_util.hxx"
 
 // code adopted from flint mul_blas.c
 namespace

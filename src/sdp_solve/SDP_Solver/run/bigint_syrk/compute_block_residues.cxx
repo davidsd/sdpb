@@ -1,7 +1,6 @@
 #include "BigInt_Shared_Memory_Syrk_Context.hxx"
-#include "Fmpz_BigInt.hxx"
-#include "fmpz_mul_blas_util.hxx"
-#include "fmpz_BigFloat_convert.hxx"
+#include "fmpz/Fmpz_BigInt.hxx"
+#include "fmpz/fmpz_mul_blas_util.hxx"
 
 // compute residues and put them to shared window
 // NB: input blocks should be BigInt matrix (normalized matrix, multiplied by 2^N)

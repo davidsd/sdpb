@@ -1,5 +1,5 @@
 #include "../Block_Info.hxx"
-#include "sdp_solve/SDP_Solver/run/bigint_syrk/Fmpz_Comb.hxx"
+#include "sdp_solve/SDP_Solver/run/bigint_syrk/fmpz/Fmpz_Comb.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
 #include <cassert>
