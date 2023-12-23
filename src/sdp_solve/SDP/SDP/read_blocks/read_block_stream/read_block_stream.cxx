@@ -1,6 +1,7 @@
 #include "Block_Parser.hxx"
 #include "sdp_solve/SDP.hxx"
 #include "sdp_convert/sdp_convert.hxx"
+#include "sdp_solve/SDP/SDP/set_bases_blocks.hxx"
 #include "sdpb_util/copy_matrix.hxx"
 
 #include <boost/archive/binary_iarchive.hpp>
@@ -8,21 +9,6 @@
 
 namespace
 {
-  void set_bilinear(const El::Matrix<El::BigFloat> &input,
-                    El::Matrix<El::BigFloat> &local)
-  {
-    El::Int height = input.Height();
-    El::Int width = input.Width();
-    local.Resize(height, width);
-    for(El::Int row(0); row != height; ++row)
-      {
-        for(El::Int column(0); column != width; ++column)
-          {
-            local(row, column) = input.Get(row, column);
-          }
-      }
-  }
-
   template <class FloatType>
   El::Matrix<FloatType>
   to_matrix(const Vector_State<Vector_State<Number_State<FloatType>>> &input)
@@ -83,10 +69,9 @@ void parse_block_data(std::istream &block_stream, Block_File_Format format,
     }
 }
 
-void read_block_stream(
-  const El::Grid &grid, const size_t &index, std::istream &block_stream,
-  Block_File_Format format, SDP &sdp,
-  std::vector<El::Matrix<El::BigFloat>> &bilinear_bases_local)
+void read_block_stream(const El::Grid &grid, const size_t &index,
+                       std::istream &block_stream, Block_File_Format format,
+                       const Block_Info &block_info, SDP &sdp)
 {
   El::Matrix<El::BigFloat> constraint_matrix;
   std::vector<El::BigFloat> constraint_constants;
@@ -110,8 +95,36 @@ void read_block_stream(
         }
     }
 
-  set_bilinear(bilinear_bases_even, bilinear_bases_local.at(2 * index));
-  set_bilinear(bilinear_bases_odd, bilinear_bases_local.at(2 * index + 1));
+  // sdp.bilinear_bases and sdp.bases_blocks
+  for(const size_t parity : {0, 1})
+    {
+      const auto &bilinear_bases_local
+        = parity == 0 ? bilinear_bases_even : bilinear_bases_odd;
+
+      // Set sdp.bilinear_bases:
+
+      const size_t bilinear_index_local = 2 * index + parity;
+      auto &bilinear_base = sdp.bilinear_bases.at(bilinear_index_local);
+      bilinear_base.SetGrid(grid);
+
+      copy_matrix(bilinear_bases_local, bilinear_base);
+
+      // Set sdp.bases_blocks:
+
+      auto &bases_block = sdp.bases_blocks.at(bilinear_index_local);
+      auto pairing_sizes(block_info.bilinear_pairing_block_sizes());
+      auto psd_sizes(block_info.psd_matrix_block_sizes());
+
+      size_t block_index = block_info.block_indices.at(index);
+      El::Int height
+        = block_info.get_psd_matrix_block_size(block_index, parity);
+      El::Int width
+        = block_info.get_bilinear_pairing_block_size(block_index, parity);
+      bases_block.SetGrid(grid);
+      bases_block.Resize(height, width);
+
+      set_bilinear_bases_block(bilinear_bases_local, bases_block);
+    }
 
   {
     auto &B(sdp.free_var_matrix.blocks.at(index));

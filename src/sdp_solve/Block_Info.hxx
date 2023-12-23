@@ -74,36 +74,58 @@ public:
                   const size_t &procs_per_node, const size_t &proc_granularity,
                   const Verbosity &verbosity);
 
-  std::vector<size_t> schur_block_sizes() const
+  [[nodiscard]] size_t get_schur_block_size(const size_t index) const
+  {
+    return num_points.at(index) * dimensions.at(index)
+           * (dimensions.at(index) + 1) / 2;
+  }
+  [[nodiscard]] std::vector<size_t> schur_block_sizes() const
   {
     std::vector<size_t> result(num_points.size());
     for(size_t index(0); index != num_points.size(); ++index)
       {
-        result[index] = num_points[index] * dimensions[index]
-                        * (dimensions[index] + 1) / 2;
+        result[index] = get_schur_block_size(index);
       }
     return result;
   }
-  std::vector<size_t> bilinear_pairing_block_sizes() const
+  [[nodiscard]] size_t
+  get_bilinear_pairing_block_size(const size_t index,
+                                  const size_t parity) const
+  {
+    if(parity == 0 || parity == 1)
+      return num_points.at(index) * dimensions.at(index);
+    throw std::runtime_error("parity should be 0 or 1");
+  }
+  [[nodiscard]] std::vector<size_t> bilinear_pairing_block_sizes() const
   {
     std::vector<size_t> result(2 * num_points.size());
     for(size_t index(0); index != num_points.size(); ++index)
       {
-        result[2 * index] = num_points[index] * dimensions[index];
-        result[2 * index + 1] = result[2 * index];
+        result[2 * index] = get_bilinear_pairing_block_size(index, 0);
+        result[2 * index + 1] = get_bilinear_pairing_block_size(index, 1);
       }
     return result;
   }
-  std::vector<size_t> psd_matrix_block_sizes() const
+  [[nodiscard]] size_t
+  get_psd_matrix_block_size(const size_t index, const size_t parity) const
+  {
+    const size_t even
+      = dimensions.at(index) * ((num_points.at(index) + 1) / 2);
+    if(parity == 0)
+      return even;
+    if(parity == 1)
+      return dimensions.at(index) * num_points.at(index) - even;
+    throw std::runtime_error("parity should be 0 or 1");
+  }
+  [[nodiscard]] std::vector<size_t> psd_matrix_block_sizes() const
   {
     std::vector<size_t> result(2 * num_points.size());
     for(size_t index(0); index != num_points.size(); ++index)
       {
         // Need to round down (num_points+1)/2 before multiplying by
         // dim, since dim could be 2.
-        result[2 * index] = dimensions[index] * ((num_points[index] + 1) / 2);
-        result[2 * index + 1]
-          = dimensions[index] * num_points[index] - result[2 * index];
+        result[2 * index] = get_psd_matrix_block_size(index, 0);
+        result[2 * index + 1] = get_psd_matrix_block_size(index, 1);
       }
     return result;
   }

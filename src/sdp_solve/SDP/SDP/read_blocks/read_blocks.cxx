@@ -1,8 +1,6 @@
-#include "../set_bases_blocks.hxx"
-#include "sdp_solve/SDP.hxx"
-#include "sdp_solve/Archive_Reader.hxx"
 #include "sdp_convert/sdp_convert.hxx"
-#include "sdpb_util/copy_matrix.hxx"
+#include "sdp_solve/Archive_Reader.hxx"
+#include "sdp_solve/SDP.hxx"
 
 #include <unordered_map>
 
@@ -21,10 +19,9 @@ namespace
   }
 }
 
-void read_block_stream(
-  const El::Grid &grid, const size_t &index, std::istream &block_stream,
-  Block_File_Format format, SDP &sdp,
-  std::vector<El::Matrix<El::BigFloat>> &bilinear_bases_local);
+void read_block_stream(const El::Grid &grid, const size_t &index,
+                       std::istream &block_stream, Block_File_Format format,
+                       const Block_Info &block_info, SDP &sdp);
 
 void read_blocks(const fs::path &sdp_path, const El::Grid &grid,
                  const Block_Info &block_info, SDP &sdp)
@@ -37,8 +34,8 @@ void read_blocks(const fs::path &sdp_path, const El::Grid &grid,
   const size_t num_blocks(block_info.block_indices.size());
   sdp.primal_objective_c.blocks.resize(num_blocks);
   sdp.free_var_matrix.blocks.resize(num_blocks);
-
-  std::vector<El::Matrix<El::BigFloat>> bilinear_bases_local(2 * num_blocks);
+  sdp.bilinear_bases.resize(2 * num_blocks);
+  sdp.bases_blocks.resize(2 * num_blocks);
 
   if(fs::is_regular_file(sdp_path))
     {
@@ -71,8 +68,7 @@ void read_blocks(const fs::path &sdp_path, const El::Grid &grid,
             continue;
           Block_File_Format format = get_block_format(curr_block_path);
           std::istream stream(&reader);
-          read_block_stream(grid, index, stream, format, sdp,
-                            bilinear_bases_local);
+          read_block_stream(grid, index, stream, format, block_info, sdp);
           processed_count++;
           if(processed_count == num_blocks)
             break;
@@ -93,17 +89,7 @@ void read_blocks(const fs::path &sdp_path, const El::Grid &grid,
 
           Block_File_Format format = get_block_format(block_path);
           std::ifstream block_stream(block_path, std::ios::binary);
-          read_block_stream(grid, index, block_stream, format, sdp,
-                            bilinear_bases_local);
+          read_block_stream(grid, index, block_stream, format, block_info, sdp);
         }
     }
-
-  sdp.bilinear_bases.reserve(num_blocks);
-  for(auto &local : bilinear_bases_local)
-    {
-      sdp.bilinear_bases.emplace_back(local.Height(), local.Width(), grid);
-      auto &dist(sdp.bilinear_bases.back());
-      copy_matrix(local, dist);
-    }
-  set_bases_blocks(block_info, bilinear_bases_local, sdp.bases_blocks, grid);
 }

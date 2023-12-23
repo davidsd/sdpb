@@ -1,5 +1,30 @@
 #include "sdp_solve/Block_Info.hxx"
 
+void set_bilinear_bases_block(
+  const El::Matrix<El::BigFloat> &bilinear_base_local,
+  El::DistMatrix<El::BigFloat> &bases_block)
+{
+  El::BigFloat zero(0);
+  for(int64_t row = 0; row < bases_block.LocalHeight(); ++row)
+    {
+      size_t global_row(bases_block.GlobalRow(row)),
+        row_block(global_row / bilinear_base_local.Height());
+
+      for(int64_t column = 0; column < bases_block.LocalWidth(); ++column)
+        {
+          size_t global_column(bases_block.GlobalCol(column)),
+            column_block(global_column / bilinear_base_local.Width());
+          bases_block.SetLocal(
+            row, column,
+            row_block != column_block
+              ? zero
+              : bilinear_base_local(global_row % bilinear_base_local.Height(),
+                                    global_column
+                                      % bilinear_base_local.Width()));
+        }
+    }
+}
+
 void set_bases_blocks(
   const Block_Info &block_info,
   const std::vector<El::Matrix<El::BigFloat>> &bilinear_bases_local,
@@ -10,8 +35,6 @@ void set_bases_blocks(
   auto pairing_sizes(block_info.bilinear_pairing_block_sizes());
   auto psd_sizes(block_info.psd_matrix_block_sizes());
 
-  El::BigFloat zero(0);
-
   auto bilinear(bilinear_bases_local.begin());
   for(auto &block_index : block_info.block_indices)
     {
@@ -21,23 +44,7 @@ void set_bases_blocks(
                                     pairing_sizes[2 * block_index + parity],
                                     grid);
           auto &block(bases_blocks.back());
-          for(int64_t row = 0; row < block.LocalHeight(); ++row)
-            {
-              size_t global_row(block.GlobalRow(row)),
-                row_block(global_row / bilinear->Height());
-
-              for(int64_t column = 0; column < block.LocalWidth(); ++column)
-                {
-                  size_t global_column(block.GlobalCol(column)),
-                    column_block(global_column / bilinear->Width());
-                  block.SetLocal(
-                    row, column,
-                    row_block != column_block
-                      ? zero
-                      : (*bilinear)(global_row % bilinear->Height(),
-                                    global_column % bilinear->Width()));
-                }
-            }
+          set_bilinear_bases_block(*bilinear, block);
           ++bilinear;
         }
     }
