@@ -218,7 +218,6 @@ def build(bld):
                         'src/outer_limits/compute_optimal/compute_optimal.cxx',
                         'src/outer_limits/compute_optimal/compute_y_transform.cxx',
                         'src/outer_limits/compute_optimal/setup_constraints.cxx',
-                        'src/outer_limits/compute_optimal/copy_matrix.cxx',
                         'src/outer_limits/compute_optimal/find_new_points/find_new_points.cxx',
                         'src/outer_limits/compute_optimal/find_new_points/eval_summed.cxx',
                         'src/outer_limits/compute_optimal/find_new_points/get_new_points.cxx',

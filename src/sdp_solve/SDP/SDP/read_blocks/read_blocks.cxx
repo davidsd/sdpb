@@ -2,8 +2,8 @@
 #include "sdp_solve/SDP.hxx"
 #include "sdp_solve/Archive_Reader.hxx"
 #include "sdp_convert/sdp_convert.hxx"
+#include "sdpb_util/copy_matrix.hxx"
 
-#include <algorithm>
 #include <unordered_map>
 
 namespace fs = std::filesystem;
@@ -103,17 +103,7 @@ void read_blocks(const fs::path &sdp_path, const El::Grid &grid,
     {
       sdp.bilinear_bases.emplace_back(local.Height(), local.Width(), grid);
       auto &dist(sdp.bilinear_bases.back());
-      for(El::Int local_row(0); local_row < dist.LocalHeight(); ++local_row)
-        {
-          El::Int global_row(dist.GlobalRow(local_row));
-          for(El::Int local_column(0); local_column < dist.LocalWidth();
-              ++local_column)
-            {
-              El::Int global_column(dist.GlobalCol(local_column));
-              dist.SetLocal(local_row, local_column,
-                            local(global_row, global_column));
-            }
-        }
+      copy_matrix(local, dist);
     }
   set_bases_blocks(block_info, bilinear_bases_local, sdp.bases_blocks, grid);
 }

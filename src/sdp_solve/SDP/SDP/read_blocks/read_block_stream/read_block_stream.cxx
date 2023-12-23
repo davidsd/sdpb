@@ -1,6 +1,7 @@
 #include "Block_Parser.hxx"
 #include "sdp_solve/SDP.hxx"
 #include "sdp_convert/sdp_convert.hxx"
+#include "sdpb_util/copy_matrix.hxx"
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <rapidjson/istreamwrapper.h>
@@ -116,16 +117,6 @@ void read_block_stream(
     auto &B(sdp.free_var_matrix.blocks.at(index));
     B.SetGrid(grid);
     B.Resize(constraint_matrix.Height(), constraint_matrix.Width());
-    for(El::Int local_row(0); local_row != B.LocalHeight(); ++local_row)
-      {
-        const El::Int global_row(B.GlobalRow(local_row));
-        for(El::Int local_column(0); local_column != B.LocalWidth();
-            ++local_column)
-          {
-            const El::Int global_column(B.GlobalCol(local_column));
-            B.SetLocal(local_row, local_column,
-                       constraint_matrix.Get(global_row, global_column));
-          }
-      }
+    copy_matrix(constraint_matrix, B);
   }
 }

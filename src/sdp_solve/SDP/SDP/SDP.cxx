@@ -1,6 +1,7 @@
 #include "assign_bilinear_bases_dist.hxx"
 #include "set_bases_blocks.hxx"
 #include "sdp_solve/SDP.hxx"
+#include "sdpb_util/copy_matrix.hxx"
 
 #include <filesystem>
 
@@ -101,16 +102,7 @@ SDP::SDP(
   El::DistMatrix<El::BigFloat> yp_to_y(yp_to_y_star.Height(),
                                        yp_to_y_star.Width(), B.Grid());
 
-  for(int64_t row(0); row < yp_to_y.LocalHeight(); ++row)
-    {
-      const int64_t global_row(yp_to_y.GlobalRow(row));
-      for(int64_t column(0); column < yp_to_y.LocalWidth(); ++column)
-        {
-          const int64_t global_column(yp_to_y.GlobalCol(column));
-          yp_to_y.SetLocal(row, column,
-                           yp_to_y_star.GetLocal(global_row, global_column));
-        }
-    }
+  copy_matrix(yp_to_y_star, yp_to_y);
   El::Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, El::BigFloat(1.0),
            B, yp_to_y, El::BigFloat(0.0), U);
 
@@ -140,15 +132,5 @@ SDP::SDP(
     }
 
   // Copy over dual_objective_b
-  for(int64_t row(0); row < dual_objective_b.LocalHeight(); ++row)
-    {
-      const int64_t global_row(dual_objective_b.GlobalRow(row));
-      for(int64_t column(0); column < dual_objective_b.LocalWidth(); ++column)
-        {
-          const int64_t global_column(dual_objective_b.GlobalCol(column));
-          dual_objective_b.SetLocal(
-            row, column,
-            dual_objective_b_star.GetLocal(global_row, global_column));
-        }
-    }
+  copy_matrix(dual_objective_b_star, dual_objective_b);
 }
