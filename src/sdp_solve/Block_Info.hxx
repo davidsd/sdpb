@@ -129,6 +129,18 @@ public:
       }
     return result;
   }
+  // see Dual_Constraint_Group code:
+  [[nodiscard]] size_t
+  get_bilinear_bases_height(const size_t index, const size_t parity) const
+  {
+    const size_t degree = num_points.at(index) - 1;
+    return (degree + parity) / 2 + 1 - parity;
+  }
+  [[nodiscard]] size_t
+  get_bilinear_bases_width(const size_t index, const size_t parity) const
+  {
+    return num_points.at(index);
+  }
 };
 
 namespace std
