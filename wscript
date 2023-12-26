@@ -22,7 +22,8 @@ def build(bld):
     use_packages = ['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'sdpb_util']
     default_includes = ['src', 'external']
 
-    bld.stlib(source=['src/sdpb_util/Mesh.cxx',
+    bld.stlib(source=['src/sdpb_util/copy_matrix.cxx',
+                      'src/sdpb_util/Mesh.cxx',
                       'src/sdpb_util/Proc_Meminfo.cxx',
                       'src/sdpb_util/Timers/Scoped_Timer.cxx',
                       'src/sdpb_util/Timers/Timer.cxx',
@@ -341,6 +342,7 @@ def build(bld):
                         'test/src/unit_tests/main.cxx',
                         'test/src/unit_tests/cases/block_data_serialization.test.cxx',
                         'test/src/unit_tests/cases/boost_serialization.test.cxx',
+                        'test/src/unit_tests/cases/copy_matrix.test.cxx',
                         'test/src/unit_tests/cases/shared_window.test.cxx'],
                 target='unit_tests',
                 cxxflags=default_flags,
