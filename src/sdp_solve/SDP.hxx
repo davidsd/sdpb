@@ -10,6 +10,7 @@
 #include "Block_Info.hxx"
 #include "Block_Matrix.hxx"
 #include "Block_Vector.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 
 #include <filesystem>
 
@@ -97,7 +98,8 @@ struct SDP
   // objectiveConst = f
   El::BigFloat objective_const;
 
-  SDP(const std::filesystem::path &sdp_path, const Block_Info &block_info, const El::Grid &grid);
+  SDP(const std::filesystem::path &sdp_path, const Block_Info &block_info,
+      const El::Grid &grid, Timers &timers);
   SDP(const El::BigFloat &objective_const,
       const std::vector<std::vector<El::BigFloat>> &primal_objective_c_input,
       const std::vector<El::Matrix<El::BigFloat>> &free_var_input,

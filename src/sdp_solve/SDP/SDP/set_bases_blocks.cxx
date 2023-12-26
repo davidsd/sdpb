@@ -1,5 +1,26 @@
 #include "sdp_solve/Block_Info.hxx"
 
+void set_bilinear_bases_block_local(
+  const El::Matrix<El::BigFloat> &bilinear_base_local,
+  El::Matrix<El::BigFloat> &bases_block_local)
+{
+  El::BigFloat zero(0);
+  for(int64_t row = 0; row < bases_block_local.Height(); ++row)
+    {
+      size_t row_block(row / bilinear_base_local.Height());
+      for(int64_t column = 0; column < bases_block_local.Width(); ++column)
+        {
+          size_t column_block(column / bilinear_base_local.Width());
+          bases_block_local.Set(
+            row, column,
+            row_block != column_block
+              ? zero
+              : bilinear_base_local(row % bilinear_base_local.Height(),
+                                    column % bilinear_base_local.Width()));
+        }
+    }
+}
+
 void set_bilinear_bases_block(
   const El::Matrix<El::BigFloat> &bilinear_base_local,
   El::DistMatrix<El::BigFloat> &bases_block)

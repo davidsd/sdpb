@@ -1,4 +1,4 @@
-#include "../Block_Parser.hxx"
+#include "Block_Parser.hxx"
 
 bool Block_Parser::Key(const Ch *str, rapidjson::SizeType length, bool)
 {

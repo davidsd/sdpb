@@ -1,11 +1,14 @@
-#include "Block_Parser.hxx"
-#include "sdp_solve/SDP.hxx"
-#include "sdp_convert/sdp_convert.hxx"
+#include "SDP_Block_Data.hxx"
+
+#include "Block_Parser/Block_Parser.hxx"
 #include "sdp_solve/SDP/SDP/set_bases_blocks.hxx"
-#include "sdpb_util/copy_matrix.hxx"
+#include "sdpb_util/Number_State.hxx"
+#include "sdpb_util/Vector_State.hxx"
+#include "sdpb_util/boost_serialization.hxx"
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <rapidjson/istreamwrapper.h>
+#include <rapidjson/reader.h>
 
 namespace
 {
@@ -27,7 +30,22 @@ namespace
       }
     return result;
   }
+
+  // Convert vec[N] to Matrix(N,1)
+  template <class FloatType>
+  El::Matrix<FloatType> to_matrix(const std::vector<FloatType> &input)
+  {
+    int height = input.size();
+    int width = 1;
+    El::Matrix<FloatType> result(height, width);
+    for(int i = 0; i < height; ++i)
+      {
+        result.Set(i, 0, input.at(i));
+      }
+    return result;
+  }
 }
+
 // TODO move this code closer to Dual_Constraint_Group definition?
 void parse_block_data(std::istream &block_stream, Block_File_Format format,
                       El::Matrix<El::BigFloat> &constraint_matrix,
@@ -69,67 +87,31 @@ void parse_block_data(std::istream &block_stream, Block_File_Format format,
     }
 }
 
-void read_block_stream(const El::Grid &grid, const size_t &index,
-                       std::istream &block_stream, Block_File_Format format,
-                       const Block_Info &block_info, SDP &sdp)
+SDP_Block_Data::SDP_Block_Data(std::istream &block_stream,
+                               const Block_File_Format format,
+                               const size_t block_index_local,
+                               const Block_Info &block_info)
+    : block_index_local(block_index_local)
 {
-  El::Matrix<El::BigFloat> constraint_matrix;
   std::vector<El::BigFloat> constraint_constants;
-  El::Matrix<El::BigFloat> bilinear_bases_even;
-  El::Matrix<El::BigFloat> bilinear_bases_odd;
-
   parse_block_data(block_stream, format, constraint_matrix,
-                   constraint_constants, bilinear_bases_even,
-                   bilinear_bases_odd);
+                   constraint_constants, bilinear_bases[0], bilinear_bases[1]);
+  primal_objective_c = to_matrix(constraint_constants);
 
-  auto &c(sdp.primal_objective_c.blocks.at(index));
-  c.SetGrid(grid);
-  c.Resize(constraint_constants.size(), 1);
-  El::Int local_height(c.LocalHeight());
-  if(c.GlobalCol(0) == 0)
-    {
-      for(El::Int row = 0; row < local_height; ++row)
-        {
-          const size_t global_row(c.GlobalRow(row));
-          c.SetLocal(row, 0, constraint_constants.at(global_row));
-        }
-    }
+  const size_t block_index = block_info.block_indices.at(block_index_local);
 
-  // sdp.bilinear_bases and sdp.bases_blocks
+  // Set bases_blocks:
   for(const size_t parity : {0, 1})
     {
-      const auto &bilinear_bases_local
-        = parity == 0 ? bilinear_bases_even : bilinear_bases_odd;
+      const auto &bilinear_base_local = bilinear_bases[parity];
+      auto &bases_block = bases_blocks[parity];
 
-      // Set sdp.bilinear_bases:
-
-      const size_t bilinear_index_local = 2 * index + parity;
-      auto &bilinear_base = sdp.bilinear_bases.at(bilinear_index_local);
-      bilinear_base.SetGrid(grid);
-
-      copy_matrix(bilinear_bases_local, bilinear_base);
-
-      // Set sdp.bases_blocks:
-
-      auto &bases_block = sdp.bases_blocks.at(bilinear_index_local);
-      auto pairing_sizes(block_info.bilinear_pairing_block_sizes());
-      auto psd_sizes(block_info.psd_matrix_block_sizes());
-
-      size_t block_index = block_info.block_indices.at(index);
-      El::Int height
+      const auto height
         = block_info.get_psd_matrix_block_size(block_index, parity);
-      El::Int width
+      const auto width
         = block_info.get_bilinear_pairing_block_size(block_index, parity);
-      bases_block.SetGrid(grid);
       bases_block.Resize(height, width);
 
-      set_bilinear_bases_block(bilinear_bases_local, bases_block);
+      set_bilinear_bases_block_local(bilinear_base_local, bases_block);
     }
-
-  {
-    auto &B(sdp.free_var_matrix.blocks.at(index));
-    B.SetGrid(grid);
-    B.Resize(constraint_matrix.Height(), constraint_matrix.Width());
-    copy_matrix(constraint_matrix, B);
-  }
 }

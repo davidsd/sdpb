@@ -31,7 +31,8 @@ quadratic_approximate_objectives(
     }
   else
     {
-      SDP new_sdp(input_path, block_info, grid), d_sdp(new_sdp);
+      Timers timers(false);
+      SDP new_sdp(input_path, block_info, grid, timers), d_sdp(new_sdp);
       Axpy(El::BigFloat(-1), sdp, d_sdp);
 
       result.emplace_back(input_path.string(),

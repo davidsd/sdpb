@@ -25,7 +25,7 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
   El::Grid grid(block_info.mpi_comm.value);
 
   Scoped_Timer read_sdp_timer(timers, "read_sdp");
-  SDP sdp(parameters.sdp_path, block_info, grid);
+  SDP sdp(parameters.sdp_path, block_info, grid, timers);
   read_sdp_timer.stop();
 
   Scoped_Timer solver_ctor_timer(timers, "SDP_Solver.ctor");

@@ -9,16 +9,21 @@
 
 namespace fs = std::filesystem;
 
-void read_blocks(const fs::path &sdp_path, const El::Grid &grid,
-                 const Block_Info &block_info, SDP &sdp);
-void read_objectives(const fs::path &sdp_path, const El::Grid &grid, El::BigFloat &objective_const,
-                     El::DistMatrix<El::BigFloat> &dual_objective_b);
+void read_block_data(const fs::path &sdp_path, const El::Grid &grid,
+                     const Block_Info &block_info, SDP &sdp, Timers &timers);
+void read_objectives(const fs::path &sdp_path, const El::Grid &grid,
+                     El::BigFloat &objective_const,
+                     El::DistMatrix<El::BigFloat> &dual_objective_b,
+                     Timers &timers);
 
 SDP::SDP(const fs::path &sdp_path, const Block_Info &block_info,
-         const El::Grid &grid)
+         const El::Grid &grid, Timers &timers)
 {
-  read_objectives(sdp_path, grid, objective_const, dual_objective_b);
-  read_blocks(sdp_path, grid, block_info, *this);
+  Scoped_Timer timer(timers, "SDP_ctor");
+  read_objectives(sdp_path, grid, objective_const, dual_objective_b, timers);
+  read_block_data(sdp_path, grid, block_info, *this, timers);
+
+  Scoped_Timer validate_timer(timers, "validate");
   validate(block_info);
 }
 
@@ -114,8 +119,7 @@ SDP::SDP(
     {
       const size_t block_index(block_indices.at(block));
       free_var_matrix.blocks.emplace_back(
-        free_var_input.at(block_index).Height(),
-        U_star.Width(), grid);
+        free_var_input.at(block_index).Height(), U_star.Width(), grid);
       auto &free_var_block(free_var_matrix.blocks.back());
       for(int64_t row(0); row != free_var_block.Height(); ++row)
         {
