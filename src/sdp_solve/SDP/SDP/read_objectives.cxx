@@ -35,9 +35,12 @@ namespace
   }
 }
 
-void read_objectives(const fs::path &sdp_path, const El::Grid &grid, El::BigFloat &objective_const,
-                     El::DistMatrix<El::BigFloat> &dual_objective_b)
+void read_objectives(const fs::path &sdp_path, const El::Grid &grid,
+                     El::BigFloat &objective_const,
+                     El::DistMatrix<El::BigFloat> &dual_objective_b,
+                     Timers &timers)
 {
+  Scoped_Timer timer(timers, "read_objectives");
   if(!fs::exists(sdp_path))
     {
       El::RuntimeError("SDP path '" + sdp_path.string() + "' does not exist");

@@ -1,6 +1,7 @@
 #include "setup_constraints.hxx"
 #include "outer_limits/Outer_Parameters.hxx"
 
+#include "sdpb_util/copy_matrix.hxx"
 #include "sdpb_util/ostream/ostream_set.hxx"
 #include "sdpb_util/ostream/ostream_map.hxx"
 #include "sdpb_util/ostream/ostream_vector.hxx"
@@ -29,11 +30,6 @@ boost::optional<int64_t> load_checkpoint(
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   El::Matrix<El::BigFloat> &y, std::vector<std::set<El::BigFloat>> &points,
   El::BigFloat &threshold, El::BigFloat &primal_c_scale);
-
-void copy_matrix(const El::Matrix<El::BigFloat> &source,
-                 El::DistMatrix<El::BigFloat> &destination);
-void copy_matrix(const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &source,
-                 El::Matrix<El::BigFloat> &destination);
 
 void find_new_points(
   const size_t &num_blocks, const size_t &rank, const size_t &num_procs,

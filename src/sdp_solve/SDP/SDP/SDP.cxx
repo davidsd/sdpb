@@ -1,6 +1,7 @@
 #include "assign_bilinear_bases_dist.hxx"
 #include "set_bases_blocks.hxx"
 #include "sdp_solve/SDP.hxx"
+#include "sdpb_util/copy_matrix.hxx"
 
 #include <filesystem>
 
@@ -8,16 +9,22 @@
 
 namespace fs = std::filesystem;
 
-void read_blocks(const fs::path &sdp_path, const El::Grid &grid,
-                 const Block_Info &block_info, SDP &sdp);
-void read_objectives(const fs::path &sdp_path, const El::Grid &grid, El::BigFloat &objective_const,
-                     El::DistMatrix<El::BigFloat> &dual_objective_b);
+void read_block_data(const fs::path &sdp_path, const El::Grid &grid,
+                     const Block_Info &block_info, SDP &sdp, Timers &timers);
+void read_objectives(const fs::path &sdp_path, const El::Grid &grid,
+                     El::BigFloat &objective_const,
+                     El::DistMatrix<El::BigFloat> &dual_objective_b,
+                     Timers &timers);
 
 SDP::SDP(const fs::path &sdp_path, const Block_Info &block_info,
-         const El::Grid &grid)
+         const El::Grid &grid, Timers &timers)
 {
-  read_objectives(sdp_path, grid, objective_const, dual_objective_b);
-  read_blocks(sdp_path, grid, block_info, *this);
+  Scoped_Timer timer(timers, "SDP_ctor");
+  read_objectives(sdp_path, grid, objective_const, dual_objective_b, timers);
+  read_block_data(sdp_path, grid, block_info, *this, timers);
+
+  Scoped_Timer validate_timer(timers, "validate");
+  validate(block_info);
 }
 
 SDP::SDP(
@@ -101,16 +108,7 @@ SDP::SDP(
   El::DistMatrix<El::BigFloat> yp_to_y(yp_to_y_star.Height(),
                                        yp_to_y_star.Width(), B.Grid());
 
-  for(int64_t row(0); row < yp_to_y.LocalHeight(); ++row)
-    {
-      const int64_t global_row(yp_to_y.GlobalRow(row));
-      for(int64_t column(0); column < yp_to_y.LocalWidth(); ++column)
-        {
-          const int64_t global_column(yp_to_y.GlobalCol(column));
-          yp_to_y.SetLocal(row, column,
-                           yp_to_y_star.GetLocal(global_row, global_column));
-        }
-    }
+  copy_matrix(yp_to_y_star, yp_to_y);
   El::Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, El::BigFloat(1.0),
            B, yp_to_y, El::BigFloat(0.0), U);
 
@@ -121,8 +119,7 @@ SDP::SDP(
     {
       const size_t block_index(block_indices.at(block));
       free_var_matrix.blocks.emplace_back(
-        free_var_input.at(block_index).Height(),
-        U_star.Width(), grid);
+        free_var_input.at(block_index).Height(), U_star.Width(), grid);
       auto &free_var_block(free_var_matrix.blocks.back());
       for(int64_t row(0); row != free_var_block.Height(); ++row)
         {
@@ -140,15 +137,151 @@ SDP::SDP(
     }
 
   // Copy over dual_objective_b
-  for(int64_t row(0); row < dual_objective_b.LocalHeight(); ++row)
+  copy_matrix(dual_objective_b_star, dual_objective_b);
+
+  validate(block_info);
+}
+
+void SDP::validate(const Block_Info &block_info) const noexcept(false)
+{
+  const size_t num_blocks = block_info.block_indices.size();
+
+  const auto error_prefix = "Invalid SDP: ";
+
+  {
+    // Check array sizes
+
+    if(primal_objective_c.blocks.size() != num_blocks)
+      El::RuntimeError(error_prefix, "primal_objective_c.blocks.size() = ",
+                       primal_objective_c.blocks.size(), ", expected ",
+                       num_blocks);
+
+    if(free_var_matrix.blocks.size() != num_blocks)
+      El::RuntimeError(error_prefix, "free_var_matrix.blocks.size() = ",
+                       free_var_matrix.blocks.size(), ", expected ",
+                       num_blocks);
+
+    if(bilinear_bases.size() != 2 * num_blocks)
+      El::RuntimeError(error_prefix,
+                       "bilinear_bases.size() = ", bilinear_bases.size(),
+                       ", expected ", 2 * num_blocks);
+
+    if(bases_blocks.size() != 2 * num_blocks)
+      El::RuntimeError(error_prefix,
+                       "bases_blocks.size() = ", bases_blocks.size(),
+                       ", expected ", 2 * num_blocks);
+  }
+
+  // Check dual_objective_b
+  const auto &b = dual_objective_b;
+  {
+    if(!El::mpi::Congruent(b.DistComm(), block_info.mpi_comm.value))
+      {
+        El::RuntimeError(error_prefix,
+                         " wrong MPI communicator for dual_objective_b");
+      }
+    if(b.Width() != 1)
+      El::RuntimeError(error_prefix, "b.Width() = ", b.Width(), " expected 1");
+  }
+
+  for(size_t index = 0; index < num_blocks; ++index)
     {
-      const int64_t global_row(dual_objective_b.GlobalRow(row));
-      for(int64_t column(0); column < dual_objective_b.LocalWidth(); ++column)
+      const auto block_index = block_info.block_indices.at(index);
+
+      const auto error_prefix_index
+        = El::BuildString(error_prefix, "block_index = ", block_index, ": ");
+
+      {
+        // Check vector c and matrix B
+        const auto &c = primal_objective_c.blocks.at(index);
+        const auto &B = free_var_matrix.blocks.at(index);
+
+        if(!El::mpi::Congruent(c.DistComm(), block_info.mpi_comm.value))
+          {
+            El::RuntimeError(error_prefix_index,
+                             " wrong MPI communicator for primal_objective_c");
+          }
+        if(!El::mpi::Congruent(B.DistComm(), block_info.mpi_comm.value))
+          {
+            El::RuntimeError(error_prefix_index,
+                             " wrong MPI communicator for free_var_matrix");
+          }
+
+        const auto P = block_info.get_schur_block_size(block_index);
+        const auto N = b.Height();
+
+        if(c.Height() != P)
+          El::RuntimeError(error_prefix_index, "c.Height() = ", c.Height(),
+                           " expected ", P);
+        if(c.Width() != 1)
+          El::RuntimeError(error_prefix_index, "c.Width() = ", c.Width(),
+                           " expected 1");
+        if(B.Height() != P)
+          El::RuntimeError(error_prefix_index, "B.Height() = ", B.Height(),
+                           " expected ", P);
+        if(B.Width() != N)
+          El::RuntimeError(error_prefix_index, "B.Width() = ", B.Width(),
+                           " expected ", N);
+      }
+
+      for(const size_t parity : {0, 1})
         {
-          const int64_t global_column(dual_objective_b.GlobalCol(column));
-          dual_objective_b.SetLocal(
-            row, column,
-            dual_objective_b_star.GetLocal(global_row, global_column));
+          const auto error_prefix_index_parity
+            = El::BuildString(error_prefix_index, "parity = ", parity, ": ");
+
+          {
+            // Check bilinear_bases matrix size
+            // Should be consistent with Dual_Constraint_Group::Dual_Constraint_Group()
+            auto &bilinear_bases_matrix
+              = bilinear_bases.at(2 * index + parity);
+
+            if(!El::mpi::Congruent(bilinear_bases_matrix.DistComm(),
+                                   block_info.mpi_comm.value))
+              {
+                El::RuntimeError(error_prefix_index_parity,
+                                 " wrong MPI communicator for bilinear_bases");
+              }
+
+            const size_t height
+              = block_info.get_bilinear_bases_height(block_index, parity);
+            const size_t width
+              = block_info.get_bilinear_bases_width(block_index, parity);
+
+            if(bilinear_bases_matrix.Height() != height)
+              El::RuntimeError(
+                error_prefix_index_parity, "bilinear_bases_matrix.Height() = ",
+                bilinear_bases_matrix.Height(), ", expected ", height);
+            if(bilinear_bases_matrix.Width() != width)
+              El::RuntimeError(
+                error_prefix_index_parity, "bilinear_bases_matrix.Width() = ",
+                bilinear_bases_matrix.Width(), ", expected ", width);
+          }
+
+          {
+            // Check bases_block size
+            const auto &bases_block = bases_blocks.at(2 * index + parity);
+
+            if(!El::mpi::Congruent(bases_block.DistComm(),
+                                   block_info.mpi_comm.value))
+              {
+                El::RuntimeError(error_prefix_index_parity,
+                                 " wrong MPI communicator for bases_blocks");
+              }
+
+            const auto height
+              = block_info.get_psd_matrix_block_size(block_index, parity);
+            const auto width = block_info.get_bilinear_pairing_block_size(
+              block_index, parity);
+
+            if(bases_block.Height() != height)
+              El::RuntimeError(error_prefix_index_parity,
+                               "bases_block.Height() = ", bases_block.Height(),
+                               ", expected ", height);
+            if(bases_block.Width() != width)
+              El::RuntimeError(error_prefix_index_parity,
+                               "bases_block.Width()=", bases_block.Width(),
+                               ", expected ", width);
+          }
         }
     }
 }

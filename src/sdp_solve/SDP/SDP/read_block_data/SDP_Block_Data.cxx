@@ -1,27 +1,17 @@
-#include "Block_Parser.hxx"
-#include "sdp_solve/SDP.hxx"
-#include "sdp_convert/sdp_convert.hxx"
+#include "SDP_Block_Data.hxx"
+
+#include "Block_Parser/Block_Parser.hxx"
+#include "sdp_solve/SDP/SDP/set_bases_blocks.hxx"
+#include "sdpb_util/Number_State.hxx"
+#include "sdpb_util/Vector_State.hxx"
+#include "sdpb_util/boost_serialization.hxx"
 
 #include <boost/archive/binary_iarchive.hpp>
 #include <rapidjson/istreamwrapper.h>
+#include <rapidjson/reader.h>
 
 namespace
 {
-  void set_bilinear(const El::Matrix<El::BigFloat> &input,
-                    El::Matrix<El::BigFloat> &local)
-  {
-    El::Int height = input.Height();
-    El::Int width = input.Width();
-    local.Resize(height, width);
-    for(El::Int row(0); row != height; ++row)
-      {
-        for(El::Int column(0); column != width; ++column)
-          {
-            local(row, column) = input.Get(row, column);
-          }
-      }
-  }
-
   template <class FloatType>
   El::Matrix<FloatType>
   to_matrix(const Vector_State<Vector_State<Number_State<FloatType>>> &input)
@@ -40,7 +30,22 @@ namespace
       }
     return result;
   }
+
+  // Convert vec[N] to Matrix(N,1)
+  template <class FloatType>
+  El::Matrix<FloatType> to_matrix(const std::vector<FloatType> &input)
+  {
+    int height = input.size();
+    int width = 1;
+    El::Matrix<FloatType> result(height, width);
+    for(int i = 0; i < height; ++i)
+      {
+        result.Set(i, 0, input.at(i));
+      }
+    return result;
+  }
 }
+
 // TODO move this code closer to Dual_Constraint_Group definition?
 void parse_block_data(std::istream &block_stream, Block_File_Format format,
                       El::Matrix<El::BigFloat> &constraint_matrix,
@@ -82,50 +87,31 @@ void parse_block_data(std::istream &block_stream, Block_File_Format format,
     }
 }
 
-void read_block_stream(
-  const El::Grid &grid, const size_t &index, std::istream &block_stream,
-  Block_File_Format format, SDP &sdp,
-  std::vector<El::Matrix<El::BigFloat>> &bilinear_bases_local)
+SDP_Block_Data::SDP_Block_Data(std::istream &block_stream,
+                               const Block_File_Format format,
+                               const size_t block_index_local,
+                               const Block_Info &block_info)
+    : block_index_local(block_index_local)
 {
-  El::Matrix<El::BigFloat> constraint_matrix;
   std::vector<El::BigFloat> constraint_constants;
-  El::Matrix<El::BigFloat> bilinear_bases_even;
-  El::Matrix<El::BigFloat> bilinear_bases_odd;
-
   parse_block_data(block_stream, format, constraint_matrix,
-                   constraint_constants, bilinear_bases_even,
-                   bilinear_bases_odd);
+                   constraint_constants, bilinear_bases[0], bilinear_bases[1]);
+  primal_objective_c = to_matrix(constraint_constants);
 
-  auto &c(sdp.primal_objective_c.blocks.at(index));
-  c.SetGrid(grid);
-  c.Resize(constraint_constants.size(), 1);
-  El::Int local_height(c.LocalHeight());
-  if(c.GlobalCol(0) == 0)
+  const size_t block_index = block_info.block_indices.at(block_index_local);
+
+  // Set bases_blocks:
+  for(const size_t parity : {0, 1})
     {
-      for(El::Int row = 0; row < local_height; ++row)
-        {
-          const size_t global_row(c.GlobalRow(row));
-          c.SetLocal(row, 0, constraint_constants.at(global_row));
-        }
+      const auto &bilinear_base_local = bilinear_bases[parity];
+      auto &bases_block = bases_blocks[parity];
+
+      const auto height
+        = block_info.get_psd_matrix_block_size(block_index, parity);
+      const auto width
+        = block_info.get_bilinear_pairing_block_size(block_index, parity);
+      bases_block.Resize(height, width);
+
+      set_bilinear_bases_block_local(bilinear_base_local, bases_block);
     }
-
-  set_bilinear(bilinear_bases_even, bilinear_bases_local.at(2 * index));
-  set_bilinear(bilinear_bases_odd, bilinear_bases_local.at(2 * index + 1));
-
-  {
-    auto &B(sdp.free_var_matrix.blocks.at(index));
-    B.SetGrid(grid);
-    B.Resize(constraint_matrix.Height(), constraint_matrix.Width());
-    for(El::Int local_row(0); local_row != B.LocalHeight(); ++local_row)
-      {
-        const El::Int global_row(B.GlobalRow(local_row));
-        for(El::Int local_column(0); local_column != B.LocalWidth();
-            ++local_column)
-          {
-            const El::Int global_column(B.GlobalCol(local_column));
-            B.SetLocal(local_row, local_column,
-                       constraint_matrix.Get(global_row, global_column));
-          }
-      }
-  }
 }
