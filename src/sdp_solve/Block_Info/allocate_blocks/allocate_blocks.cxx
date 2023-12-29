@@ -55,21 +55,22 @@ void Block_Info::allocate_blocks(const Environment &env,
     {
       std::stringstream ss;
       ss << "Block Grid Mapping\n"
-         << "Node\tNum Procs\tCost\t\tBlock List\n"
-         << "==================================================\n";
+         << "Node\tNum Procs\tCost (Per Proc)\t\tBlock List\n"
+         << "==========================================================\n";
       for(size_t node = 0; node < mapping.size(); ++node)
         {
           for(auto &m : mapping[node])
             {
               ss << node << "\t" << m.num_procs << "\t\t"
-                 << m.cost / static_cast<double>(m.num_procs) << "\t{";
+                 << m.cost / static_cast<double>(m.num_procs) << "\t\t\t{";
               for(size_t ii = 0; ii < m.block_indices.size(); ++ii)
                 {
                   if(ii != 0)
                     {
-                      ss << ",";
+                      ss << ", ";
                     }
-                  ss << "(" << m.block_indices[ii] << ","
+                  ss << m.block_indices[ii] << "("
+                     << dimensions[m.block_indices[ii]] << ","
                      << num_points[m.block_indices[ii]] << ")";
                 }
               ss << "}\n";
