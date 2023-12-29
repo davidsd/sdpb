@@ -45,13 +45,7 @@ void Block_Info::allocate_blocks(const Environment &env,
         block_map.num_procs *= proc_granularity;
       }
 
-  // Create an mpi::Group for each set of processors.
-  El::mpi::Group default_mpi_group;
-  El::mpi::CommGroup(El::mpi::COMM_WORLD, default_mpi_group);
-
-  int rank(El::mpi::Rank(El::mpi::COMM_WORLD));
-
-  if(verbosity >= Verbosity::debug && rank == 0)
+  if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
     {
       std::stringstream ss;
       ss << "Block Grid Mapping\n"
@@ -80,21 +74,25 @@ void Block_Info::allocate_blocks(const Environment &env,
       El::Output(ss.str());
     }
 
-  int rank_begin(0), rank_end(0);
-  for(auto &block_vector : mapping)
+  const auto &node_comm = env.comm_shared_mem;
+  const int node_index = env.node_index();
+
+  // Create an mpi::Group for each node.
+  // The group will be split into subgroups according to block mapping.
+  El::mpi::Group node_mpi_group;
+  El::mpi::CommGroup(node_comm, node_mpi_group);
+
+  // Assign block_indices and create MPI group
+  // for node ranks in [node_rank_begin, node_rank_end) containing current node_rank.
+  const int node_rank = El::mpi::Rank(node_comm);
+  int node_rank_begin(0), node_rank_end(0);
+  for(const auto &block_map : mapping.at(node_index))
     {
-      for(auto &block_map : block_vector)
+      node_rank_begin = node_rank_end;
+      node_rank_end += block_map.num_procs;
+      if(node_rank_end > node_rank)
         {
-          rank_begin = rank_end;
-          rank_end += block_map.num_procs;
-          if(rank_end > rank)
-            {
-              block_indices = block_map.block_indices;
-              break;
-            }
-        }
-      if(rank_end > rank)
-        {
+          block_indices = block_map.block_indices;
           break;
         }
     }
@@ -102,19 +100,31 @@ void Block_Info::allocate_blocks(const Environment &env,
   // even if there are more nodes than procs.  So this is a sanity
   // check in case we messed up something in
   // compute_block_grid_mapping.
-  if(rank_end <= rank)
+  if(node_rank_end <= node_rank)
     {
-      throw std::runtime_error("INTERNAL ERROR: Some procs were not covered "
-                               "by compute_block_grid_mapping.\n"
-                               "\trank = "
-                               + std::to_string(rank) + "\n"
-                               + "\trank_end = " + std::to_string(rank_end));
+      El::LogicError(
+        "Some procs were not covered by compute_block_grid_mapping: "
+        "node=",
+        node_index, ", node_rank=", node_rank, ", rank_end=", node_rank_end);
     }
+  if(node_rank_end > procs_per_node)
+    {
+      El::LogicError("Block mapping for node=", node_index,
+                     " assumes more than ", procs_per_node,
+                     " processes per node.");
+    }
+
+  // Create MPI group for [node_rank_begin, node_rank_end)
   {
-    std::vector<int> group_ranks(rank_end - rank_begin);
-    std::iota(group_ranks.begin(), group_ranks.end(), rank_begin);
-    El::mpi::Incl(default_mpi_group, group_ranks.size(), group_ranks.data(),
+    std::vector<int> group_ranks(node_rank_end - node_rank_begin);
+    std::iota(group_ranks.begin(), group_ranks.end(), node_rank_begin);
+    El::mpi::Incl(node_mpi_group, group_ranks.size(), group_ranks.data(),
                   mpi_group.value);
   }
-  El::mpi::Create(El::mpi::COMM_WORLD, mpi_group.value, mpi_comm.value);
+  if(mpi_group.value == El::mpi::GROUP_NULL)
+    {
+      El::RuntimeError("Block assignment failed for rank=", El::mpi::Rank(),
+                       " at node=", node_index);
+    }
+  El::mpi::Create(node_comm, mpi_group.value, mpi_comm.value);
 }
