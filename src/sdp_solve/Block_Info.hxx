@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Block_Cost.hxx"
+#include "sdpb_util/Environment.hxx"
 #include "sdpb_util/Verbosity.hxx"
 
 #include <El.hpp>
@@ -50,29 +51,28 @@ public:
   MPI_Comm_Wrapper mpi_comm;
 
   Block_Info() = delete;
-  Block_Info(const std::filesystem::path &sdp_path,
+  Block_Info(const Environment &env, const std::filesystem::path &sdp_path,
              const std::filesystem::path &checkpoint_in,
-             const size_t &procs_per_node, const size_t &proc_granularity,
-             const Verbosity &verbosity);
-  Block_Info(const std::filesystem::path &sdp_path,
+             const size_t &proc_granularity, const Verbosity &verbosity);
+  Block_Info(const Environment &env, const std::filesystem::path &sdp_path,
              const El::Matrix<int32_t> &block_timings,
-             const size_t &procs_per_node, const size_t &proc_granularity,
-             const Verbosity &verbosity);
-  Block_Info(const std::vector<size_t> &matrix_dimensions,
-             const size_t &procs_per_node, const size_t &proc_granularity,
-             const Verbosity &verbosity);
-  Block_Info(const std::vector<size_t> &matrix_dimensions,
+             const size_t &proc_granularity, const Verbosity &verbosity);
+  Block_Info(const Environment &env,
+             const std::vector<size_t> &matrix_dimensions,
+             const size_t &proc_granularity, const Verbosity &verbosity);
+  Block_Info(const Environment &env,
+             const std::vector<size_t> &matrix_dimensions,
              const Verbosity &verbosity)
-      : Block_Info(matrix_dimensions, 1, 1, verbosity)
+      : Block_Info(env, matrix_dimensions, 1, verbosity)
   {}
   void read_block_info(const std::filesystem::path &sdp_path);
   std::vector<Block_Cost>
   read_block_costs(const std::filesystem::path &sdp_path,
                    const std::filesystem::path &checkpoint_in);
   void
-  allocate_blocks(const std::vector<Block_Cost> &block_costs,
-                  const size_t &procs_per_node, const size_t &proc_granularity,
-                  const Verbosity &verbosity);
+  allocate_blocks(const Environment &env,
+                  const std::vector<Block_Cost> &block_costs,
+                  const size_t &proc_granularity, const Verbosity &verbosity);
 
   [[nodiscard]] size_t get_schur_block_size(const size_t index) const
   {

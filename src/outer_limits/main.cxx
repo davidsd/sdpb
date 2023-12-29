@@ -2,6 +2,7 @@
 #include "Function.hxx"
 #include "sdp_read/sdp_read.hxx"
 #include "sdp_solve/sdp_solve.hxx"
+#include "sdpb_util/Environment.hxx"
 
 #include "sdpb_util/ostream/ostream_vector.hxx"
 
@@ -66,14 +67,14 @@ std::vector<El::BigFloat> compute_optimal(
   const std::vector<std::vector<std::vector<std::vector<Function>>>> &functions,
   const std::vector<std::vector<El::BigFloat>> &initial_points,
   const std::vector<El::BigFloat> &objectives,
-  const std::vector<El::BigFloat> &normalization,
+  const std::vector<El::BigFloat> &normalization, const Environment &env,
   const Outer_Parameters &parameters_in,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &start_time);
 
 int main(int argc, char **argv)
 {
-  El::Environment env(argc, argv);
+  Environment env(argc, argv);
   Outer_Parameters parameters(argc, argv);
   if(!parameters.is_valid())
     {
@@ -102,9 +103,9 @@ int main(int argc, char **argv)
   std::vector<std::vector<El::BigFloat>> initial_points;
   read_points(parameters.points_path, initial_points);
 
-  std::vector<El::BigFloat> weights(compute_optimal(functions, initial_points,
-                                                    objectives, normalization,
-                                                    parameters, start_time));
+  std::vector<El::BigFloat> weights(
+    compute_optimal(functions, initial_points, objectives, normalization, env,
+                    parameters, start_time));
 
   El::BigFloat optimal(0);
   for(size_t index(0); index < objectives.size(); ++index)

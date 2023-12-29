@@ -10,7 +10,7 @@ void compute_y_transform(
     &function_blocks,
   const std::vector<std::set<El::BigFloat>> &points,
   const std::vector<El::BigFloat> &objectives,
-  const std::vector<El::BigFloat> &normalization,
+  const std::vector<El::BigFloat> &normalization, const Environment &env,
   const Outer_Parameters &parameters, const size_t &max_index,
   const El::Grid &global_grid,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
@@ -34,7 +34,7 @@ void compute_y_transform(
                                function_blocks[block].size());
     }
 
-  Block_Info block_info(matrix_dimensions, parameters.verbosity);
+  Block_Info block_info(env, matrix_dimensions, parameters.verbosity);
 
   std::vector<std::vector<El::BigFloat>> primal_objective_c;
   primal_objective_c.reserve(num_constraints);

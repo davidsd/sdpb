@@ -16,7 +16,7 @@ void compute_y_transform(
     &function_blocks,
   const std::vector<std::set<El::BigFloat>> &points,
   const std::vector<El::BigFloat> &objectives,
-  const std::vector<El::BigFloat> &normalization,
+  const std::vector<El::BigFloat> &normalization, const Environment &env,
   const Outer_Parameters &parameters, const size_t &max_index,
   const El::Grid &global_grid,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y,
@@ -24,8 +24,8 @@ void compute_y_transform(
   El::BigFloat &primal_c_scale);
 
 boost::optional<int64_t> load_checkpoint(
-  const fs::path &checkpoint_directory, const Verbosity &verbosity, boost::optional<int64_t> &backup_generation,
-  int64_t &current_generation,
+  const fs::path &checkpoint_directory, const Verbosity &verbosity,
+  boost::optional<int64_t> &backup_generation, int64_t &current_generation,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   El::Matrix<El::BigFloat> &y, std::vector<std::set<El::BigFloat>> &points,
@@ -56,7 +56,7 @@ std::vector<El::BigFloat> compute_optimal(
     &function_blocks,
   const std::vector<std::vector<El::BigFloat>> &initial_points,
   const std::vector<El::BigFloat> &objectives,
-  const std::vector<El::BigFloat> &normalization,
+  const std::vector<El::BigFloat> &normalization, const Environment &env,
   const Outer_Parameters &parameters_in,
   const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time)
 {
@@ -119,8 +119,8 @@ std::vector<El::BigFloat> compute_optimal(
   else
     {
       compute_y_transform(function_blocks, points, objectives, normalization,
-                          parameters, max_index, global_grid, yp_to_y_star,
-                          dual_objective_b_star, primal_c_scale);
+                          env, parameters, max_index, global_grid,
+                          yp_to_y_star, dual_objective_b_star, primal_c_scale);
     }
 
   while(parameters.solver.duality_gap_threshold
@@ -179,7 +179,7 @@ std::vector<El::BigFloat> compute_optimal(
       const El::BigFloat objective_const(objectives.at(max_index)
                                          / normalization.at(max_index));
 
-      Block_Info block_info(matrix_dimensions, parameters.verbosity);
+      Block_Info block_info(env, matrix_dimensions, parameters.verbosity);
 
       El::Grid grid(block_info.mpi_comm.value);
 

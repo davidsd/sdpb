@@ -17,12 +17,13 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
              const std::chrono::time_point<std::chrono::high_resolution_clock>
                &start_time);
 
-void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info, const Timers &timers,
-                  const bool &debug, El::Matrix<int32_t> &block_timings);
+void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info,
+                  const Timers &timers, const bool &debug,
+                  El::Matrix<int32_t> &block_timings);
 
 int main(int argc, char **argv)
 {
-  El::Environment env(argc, argv);
+  Environment env(argc, argv);
 
   try
     {
@@ -42,9 +43,8 @@ int main(int argc, char **argv)
                     << parameters << std::endl;
         }
 
-      Block_Info block_info(parameters.sdp_path,
+      Block_Info block_info(env, parameters.sdp_path,
                             parameters.solver.checkpoint_in,
-                            parameters.procs_per_node,
                             parameters.proc_granularity, parameters.verbosity);
       // Only generate a block_timings file if
       // 1) We are running in parallel
@@ -83,9 +83,9 @@ int main(int argc, char **argv)
                        timers, timing_parameters.verbosity >= Verbosity::debug,
                        block_timings);
           El::mpi::Barrier(El::mpi::COMM_WORLD);
-          Block_Info new_info(
-            parameters.sdp_path, block_timings, parameters.procs_per_node,
-            parameters.proc_granularity, parameters.verbosity);
+          Block_Info new_info(env, parameters.sdp_path, block_timings,
+                              parameters.proc_granularity,
+                              parameters.verbosity);
           std::swap(block_info, new_info);
 
           auto elapsed_seconds

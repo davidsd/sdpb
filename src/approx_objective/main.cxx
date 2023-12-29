@@ -35,7 +35,7 @@ quadratic_approximate_objectives(
 
 int main(int argc, char **argv)
 {
-  El::Environment env(argc, argv);
+  Environment env(argc, argv);
 
   try
     {
@@ -45,8 +45,7 @@ int main(int argc, char **argv)
           return 0;
         }
       El::gmp::SetPrecision(parameters.precision);
-      Block_Info block_info(parameters.sdp_path, parameters.solution_dir,
-                            parameters.procs_per_node,
+      Block_Info block_info(env, parameters.sdp_path, parameters.solution_dir,
                             parameters.proc_granularity, Verbosity::none);
 
       El::Grid grid(block_info.mpi_comm.value);
