@@ -55,32 +55,8 @@ void copy_matrix_from_root_impl_send_recv(
   const El::Matrix<El::BigFloat> &source,
   El::DistMatrix<El::BigFloat> &destination, const El::mpi::Comm &comm)
 {
-  if(!El::mpi::Congruent(comm, destination.DistComm()))
-    {
-      El::RuntimeError("Wrong communicator for copy_matrix_from_root(); use "
-                       "output.DistComm()");
-    }
-
   const El::Int root = 0;
   const El::Int rank = comm.Rank();
-  if(rank == root)
-    {
-      // TODO set matrix size instead?
-      if(source.Height() != destination.Height()
-         || source.Width() != destination.Width())
-        {
-          El::RuntimeError(
-            "Incompatible matrix sizes: input: ", source.Height(), "*",
-            source.Width(), ", output: ", destination.Height(), "*",
-            destination.Width());
-        }
-    }
-
-  if(comm.Size() == 1)
-    {
-      copy_matrix(source, destination);
-      return;
-    }
 
   for(El::Int global_row = 0; global_row < destination.Height(); ++global_row)
     for(El::Int global_col = 0; global_col < destination.Width(); ++global_col)
@@ -119,33 +95,8 @@ void copy_matrix_from_root_impl_shared_window(
   const El::Matrix<El::BigFloat> &source,
   El::DistMatrix<El::BigFloat> &destination, const El::mpi::Comm &comm)
 {
-  if(!El::mpi::Congruent(comm, destination.DistComm()))
-    {
-      El::RuntimeError("Wrong communicator for copy_matrix_from_root(); use "
-                       "output.DistComm()");
-    }
-  // TODO check also that shared memory window is possible
-
   const El::Int root = 0;
   const El::Int rank = comm.Rank();
-  if(rank == root)
-    {
-      // TODO set matrix size instead?
-      if(source.Height() != destination.Height()
-         || source.Width() != destination.Width())
-        {
-          El::RuntimeError(
-            "Incompatible matrix sizes: input: ", source.Height(), "*",
-            source.Width(), ", output: ", destination.Height(), "*",
-            destination.Width());
-        }
-    }
-
-  if(comm.Size() == 1)
-    {
-      copy_matrix(source, destination);
-      return;
-    }
 
   const auto bigfloat_size_bytes
     = El::BigFloat(1).SerializedSize() / sizeof(El::byte);
@@ -196,6 +147,30 @@ void copy_matrix_from_root(const El::Matrix<El::BigFloat> &source,
                            El::DistMatrix<El::BigFloat> &destination,
                            const El::mpi::Comm &comm)
 {
+  if(!El::mpi::Congruent(comm, destination.DistComm()))
+    {
+      El::RuntimeError("Wrong communicator for copy_matrix_from_root(); use "
+                       "output.DistComm()");
+    }
+
+  if(comm.Rank() == 0)
+    {
+      // TODO set matrix size instead?
+      if(source.Height() != destination.Height()
+         || source.Width() != destination.Width())
+        {
+          El::RuntimeError("Incompatible matrix sizes: input: ",
+                           El::DimsString(source, "source"), ", ",
+                           El::DimsString(destination, "destination"));
+        }
+    }
+
+  if(comm.Size() == 1)
+    {
+      copy_matrix(source, destination);
+      return;
+    }
+
   // In our real-world tests, copy_matrix_from_root_impl_shared_window() was ~3x faster than copy_matrix_from_root_impl_send_recv()
   // Thus we use it when possible, i.e. when all ranks are on the same node
 
@@ -207,4 +182,5 @@ void copy_matrix_from_root(const El::Matrix<El::BigFloat> &source,
     copy_matrix_from_root_impl_shared_window(source, destination, comm);
   else
     copy_matrix_from_root_impl_send_recv(source, destination, comm);
+  El::mpi::Free(shared_memory_comm);
 }
