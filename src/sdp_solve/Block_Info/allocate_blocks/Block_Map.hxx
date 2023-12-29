@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <vector>
 
 struct Block_Map
@@ -23,6 +24,14 @@ struct Block_Map
   // Sort by average cost
   bool operator<(const Block_Map &b) const
   {
-    return cost * b.num_procs < b.cost * num_procs;
+    return std::make_tuple(cost * b.num_procs, first_index())
+           < std::make_tuple(b.cost * num_procs, b.first_index());
+  }
+
+private:
+  [[nodiscard]] size_t first_index() const
+  {
+    return block_indices.empty() ? std::numeric_limits<size_t>::max()
+                                 : block_indices.at(0);
   }
 };
