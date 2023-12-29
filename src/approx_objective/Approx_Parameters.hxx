@@ -7,7 +7,7 @@
 
 struct Approx_Parameters
 {
-  size_t procs_per_node, proc_granularity;
+  size_t proc_granularity;
   size_t precision;
 
   std::filesystem::path sdp_path, new_sdp_path, solution_dir, param_path;

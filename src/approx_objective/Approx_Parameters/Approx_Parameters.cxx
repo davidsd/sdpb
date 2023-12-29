@@ -16,17 +16,6 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
     "File or directory containing preprocessed SDP input corresponding to the "
     "solution.");
   required_options.add_options()(
-    "procsPerNode", po::value<size_t>(&procs_per_node)->required(),
-    "The number of processes that can run on a node.  When running on "
-    "more "
-    "than one node, the load balancer needs to know how many processes "
-    "are assigned to each node.  On a laptop or desktop, this would be "
-    "the number of physical cores on your machine, not including "
-    "hyperthreaded cores.  For current laptops (2018), this is probably "
-    "2 or 4.\n\n"
-    "If you are using the Slurm workload manager, this should be set to "
-    "'$SLURM_NTASKS_PER_NODE'.");
-  required_options.add_options()(
     "precision", boost::program_options::value<size_t>(&precision)->required(),
     "The precision, in the number of bits, for numbers in the "
     "computation. "
@@ -75,6 +64,13 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
 
   cmd_line_options.add(basic_options);
 
+  po::options_description obsolete_options("Obsolete options");
+  obsolete_options.add_options()(
+    "procsPerNode", po::value<size_t>(),
+    "[OBSOLETE] The number of MPI processes running on a node. "
+    "Determined automatically from MPI environment.");
+  cmd_line_options.add(obsolete_options);
+
   po::variables_map variables_map;
   try
     {
@@ -105,6 +101,13 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
             }
 
           po::notify(variables_map);
+
+          if(variables_map.count("procsPerNode") != 0)
+            {
+              El::Output("--procsPerNode option is obsolete. The number of "
+                         "MPI processes running on a node is determined "
+                         "automatically from MPI environment.");
+            }
 
           if(!fs::exists(sdp_path))
             {

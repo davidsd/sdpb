@@ -16,17 +16,6 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
   required_options.add_options()(
     "sdpDir,s", po::value<fs::path>(&sdp_path)->required(),
     "Directory containing preprocessed SDP data files.");
-  required_options.add_options()(
-    "procsPerNode", po::value<size_t>(&procs_per_node)->required(),
-    "The number of processes that can run on a node.  When running on "
-    "more "
-    "than one node, the load balancer needs to know how many processes "
-    "are assigned to each node.  On a laptop or desktop, this would be "
-    "the number of physical cores on your machine, not including "
-    "hyperthreaded cores.  For current laptops (2018), this is probably "
-    "2 or 4.\n\n"
-    "If you are using the Slurm workload manager, this should be set to "
-    "'$SLURM_NTASKS_PER_NODE'.");
 
   po::options_description cmd_line_options;
   cmd_line_options.add(required_options);
@@ -72,6 +61,13 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
                               po::value<int>(&int_verbosity)->default_value(1),
                               "Verbosity.  0 -> no output, 1 -> regular "
                               "output, 2 -> debug output");
+
+  po::options_description obsolete_options("Obsolete options");
+  obsolete_options.add_options()(
+    "procsPerNode", po::value<size_t>(),
+    "[OBSOLETE] The number of MPI processes running on a node. "
+    "Determined automatically from MPI environment.");
+  cmd_line_options.add(obsolete_options);
 
   cmd_line_options.add(basic_options);
   cmd_line_options.add(solver.options());
@@ -176,6 +172,14 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
           else
             {
               verbosity = static_cast<Verbosity>(int_verbosity);
+            }
+
+          if(El::mpi::Rank() == 0 && verbosity >= Verbosity::regular
+             && variables_map.count("procsPerNode") != 0)
+            {
+              El::Output("--procsPerNode option is obsolete. The number of "
+                         "MPI processes running on a node is determined "
+                         "automatically from MPI environment.");
             }
         }
     }

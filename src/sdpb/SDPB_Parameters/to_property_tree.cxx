@@ -8,7 +8,6 @@ boost::property_tree::ptree to_property_tree(const SDPB_Parameters &p)
   result.put("outDir", p.out_directory.string());
   result.put("noFinalCheckpoint", p.no_final_checkpoint);
   result.put("writeSolution", p.write_solution);
-  result.put("procsPerNode", p.procs_per_node);
   result.put("procGranularity", p.proc_granularity);
   result.put("verbosity", static_cast<int>(p.verbosity));
 
