@@ -9,7 +9,7 @@ Block_Info::Block_Info(const Environment &env, const fs::path &sdp_path,
 {
   read_block_info(sdp_path);
   std::vector<Block_Cost> block_costs(
-    read_block_costs(sdp_path, checkpoint_in));
+    read_block_costs(sdp_path, checkpoint_in, env));
   allocate_blocks(env, block_costs, proc_granularity, verbosity);
 }
 

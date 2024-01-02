@@ -14,6 +14,7 @@
 namespace fs = std::filesystem;
 
 Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
+             const Environment &env,
              const std::chrono::time_point<std::chrono::high_resolution_clock>
                &start_time);
 
@@ -76,7 +77,7 @@ int main(int argc, char **argv)
             {
               timing_parameters.verbosity = Verbosity::none;
             }
-          Timers timers(solve(block_info, timing_parameters, start_time));
+          Timers timers(solve(block_info, timing_parameters, env, start_time));
 
           El::Matrix<int32_t> block_timings(block_info.dimensions.size(), 1);
           write_timing(timing_parameters.solver.checkpoint_out, block_info,
@@ -106,7 +107,7 @@ int main(int argc, char **argv)
                         fs::copy_options::overwrite_existing);
             }
         }
-      Timers timers(solve(block_info, parameters, start_time));
+      Timers timers(solve(block_info, parameters, env, start_time));
     }
   catch(std::exception &e)
     {

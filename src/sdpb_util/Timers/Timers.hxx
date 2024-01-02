@@ -8,6 +8,7 @@
 #pragma once
 
 #include "Timer.hxx"
+#include "sdpb_util/Environment.hxx"
 
 #include <El.hpp>
 
@@ -26,19 +27,20 @@ private:
   // Scoped_Timer holds reference to timer, which would be invalidated after reallocation.
   // TODO refactor timers in a way that prevents such obscure bugs.
   std::list<std::pair<std::string, Timer>> named_timers;
-  const bool debug = false;
   std::string prefix;
-  // Shared memory communicator, used for debug output.
-  // TODO: create it somewhere near El::Environment and reuse in other places,
-  El::mpi::Comm comm_shared_mem;
+
+  bool print_debug_info = false;
+  std::string node_debug_prefix;
+
   bool can_read_meminfo = true;
   // Max MemUsed value
-  size_t max_mem_used{};
+  size_t max_mem_used = 0;
   // name of the timer that had max MemUsed value
   std::string max_mem_used_name;
 
 public:
-  explicit Timers(bool debug);
+  Timers();
+  Timers(const Environment &env, bool debug);
   ~Timers() noexcept;
 
 private:

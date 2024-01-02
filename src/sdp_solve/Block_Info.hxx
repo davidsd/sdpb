@@ -68,7 +68,8 @@ public:
   void read_block_info(const std::filesystem::path &sdp_path);
   std::vector<Block_Cost>
   read_block_costs(const std::filesystem::path &sdp_path,
-                   const std::filesystem::path &checkpoint_in);
+                   const std::filesystem::path &checkpoint_in,
+                   const Environment &env);
   void
   allocate_blocks(const Environment &env,
                   const std::vector<Block_Cost> &block_costs,

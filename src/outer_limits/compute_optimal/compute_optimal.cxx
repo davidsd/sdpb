@@ -209,7 +209,7 @@ std::vector<El::BigFloat> compute_optimal(
                         << parameters.solver.duality_gap_threshold << "\n";
             }
 
-          Timers timers(parameters.verbosity >= Verbosity::debug);
+          Timers timers(env, parameters.verbosity >= Verbosity::debug);
           SDP_Solver_Terminate_Reason reason = solver.run(
             parameters.solver, parameters.verbosity, parameter_properties,
             block_info, sdp, grid, start_time, timers);

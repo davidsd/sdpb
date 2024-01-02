@@ -83,7 +83,7 @@ void setup_solver(const Block_Info &block_info, const El::Grid &grid,
       compute_A_X_inv(block_info, X_cholesky, sdp.bases_blocks, A_X_inv);
       compute_A_Y(block_info, Y, sdp.bases_blocks, A_Y);
 
-      Timers timers(false);
+      Timers timers;
       initialize_schur_complement_solver(block_info, sdp, A_X_inv, A_Y, grid,
                                          schur_complement_cholesky,
                                          schur_off_diagonal, Q, timers);

@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 
       El::Grid grid(block_info.mpi_comm.value);
       // TODO use timers also below
-      Timers timers(false);
+      Timers timers(env, false);
       SDP sdp(parameters.sdp_path, block_info, grid, timers);
 
       std::vector<size_t> block_offsets(sdp.free_var_matrix.blocks.size() + 1,

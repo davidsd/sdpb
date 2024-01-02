@@ -16,10 +16,11 @@ void save_solution(const SDP_Solver &solver,
                    const Verbosity &verbosity);
 
 Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
+             const Environment &env,
              const std::chrono::time_point<std::chrono::high_resolution_clock>
                &start_time)
 {
-  Timers timers(parameters.verbosity >= Verbosity::debug);
+  Timers timers(env, parameters.verbosity >= Verbosity::debug);
   Scoped_Timer solve_timer(timers, "sdpb.solve");
 
   El::Grid grid(block_info.mpi_comm.value);
