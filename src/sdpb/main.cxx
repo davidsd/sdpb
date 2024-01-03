@@ -41,6 +41,8 @@ int main(int argc, char **argv)
           std::cout << boost::posix_time::second_clock::local_time()
                     << " Start SDPB" << '\n'
                     << "SDPB version: " << SDPB_VERSION_STRING << '\n'
+                    << "MPI processes: " << El::mpi::Size()
+                    << ", nodes: " << env.num_nodes() << '\n'
                     << parameters << std::endl;
         }
 
