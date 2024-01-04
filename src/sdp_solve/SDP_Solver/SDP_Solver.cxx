@@ -36,4 +36,16 @@ SDP_Solver::SDP_Solver(const Solver_Parameters &parameters,
       // Y = \Omega_d I
       Y.add_diagonal(parameters.initial_matrix_scale_dual);
     }
+  if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
+    {
+      const size_t num_blocks = block_info.num_points.size();
+      size_t primal_dimension = 0;
+      for(size_t i = 0; i < num_blocks; ++i)
+        primal_dimension += block_info.get_schur_block_size(i);
+      const size_t dual_dimension = dual_objective_b_height;
+      El::Output("Initialize SDP solver"
+                 "\n\tprimal dimension: ",
+                 primal_dimension, "\n\tdual dimension: ", dual_dimension,
+                 "\n\tSDP blocks: ", num_blocks);
+    }
 }
