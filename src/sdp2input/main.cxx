@@ -123,8 +123,8 @@ int main(int argc, char **argv)
       convert(objectives, normalization, matrices, objective_const,
               dual_objective_b, dual_constraint_groups, timers);
       size_t num_matrices = matrices.size();
-      write_sdpb_input_files(output_path, output_format, El::mpi::Rank(),
-                             num_matrices, command_arguments, objective_const,
+      write_sdpb_input_files(output_path, output_format, num_matrices,
+                             command_arguments, objective_const,
                              dual_objective_b, dual_constraint_groups, timers,
                              debug);
       if(El::mpi::Rank() == 0)
