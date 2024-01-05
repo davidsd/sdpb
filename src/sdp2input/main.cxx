@@ -8,12 +8,13 @@
 namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
-void write_output(const fs::path &output_path, Block_File_Format output_format,
-                  const std::vector<std::string> &command_arguments,
-                  const std::vector<El::BigFloat> &objectives,
-                  const std::vector<El::BigFloat> &normalization,
-                  const std::vector<Positive_Matrix_With_Prefactor> &matrices,
-                  Timers &timers, bool debug);
+void convert(const std::vector<El::BigFloat> &objectives,
+             const std::vector<El::BigFloat> &normalization,
+             const std::vector<Positive_Matrix_With_Prefactor> &matrices,
+             El::BigFloat &objective_const,
+             std::vector<El::BigFloat> &dual_objective_b,
+             std::vector<Dual_Constraint_Group> &dual_constraint_groups,
+             Timers &timers);
 
 std::istream &operator>>(std::istream &in, Block_File_Format &format)
 {
@@ -116,11 +117,19 @@ int main(int argc, char **argv)
         {
           command_arguments.emplace_back(argv[arg]);
         }
-      write_output(output_path, output_format, command_arguments, objectives,
-                   normalization, matrices, timers, debug);
+      El::BigFloat objective_const;
+      std::vector<El::BigFloat> dual_objective_b;
+      std::vector<Dual_Constraint_Group> dual_constraint_groups;
+      convert(objectives, normalization, matrices, objective_const,
+              dual_objective_b, dual_constraint_groups, timers);
+      size_t num_matrices = matrices.size();
+      write_sdpb_input_files(output_path, output_format, El::mpi::Rank(),
+                             num_matrices, command_arguments, objective_const,
+                             dual_objective_b, dual_constraint_groups, timers,
+                             debug);
       if(El::mpi::Rank() == 0)
         {
-          El::Output("Processed ", matrices.size(), " SDP blocks in ",
+          El::Output("Processed ", num_matrices, " SDP blocks in ",
                      (double)timer.timer().elapsed_milliseconds() / 1000,
                      " seconds, output: ", output_path.string());
         }
