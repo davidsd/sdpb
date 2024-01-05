@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
-#include <cstdio>
+#include <cstddef>
+#include <tuple>
 
 struct Block_Cost
 {
@@ -11,5 +11,8 @@ struct Block_Cost
       : cost(Cost == 0 ? 1 : Cost), index(Index)
   {}
   Block_Cost() = delete;
-  bool operator<(const Block_Cost &b) const { return cost < b.cost; }
+  bool operator<(const Block_Cost &b) const
+  {
+    return std::tie(cost, index) < std::tie(b.cost, b.index);
+  }
 };
