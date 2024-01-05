@@ -28,6 +28,9 @@ TEST_CASE("sdpb")
          const std::string &required_error_msg = "") -> void {
     args["--checkpointDir"] = (runner.output_dir / "ck").string();
     args["--outDir"] = (runner.output_dir / "out").string();
+    // We removed obsolete --procsPerNode from end-to-end.test.cxx,
+    // but we keep it here to check backward compatibility,
+    // i.e. SDPB shouldn't fail when we pass this option.
     args["--procsPerNode"] = std::to_string(num_procs);
     runner.mpi_run({"build/sdpb"}, args, num_procs, required_exit_code,
                    required_error_msg);
