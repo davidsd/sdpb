@@ -5,7 +5,6 @@ std::ostream &operator<<(std::ostream &os, const Approx_Parameters &p)
   os << std::boolalpha
      << "sdp                          = " << p.sdp_path << '\n'
      << "newSdp                       = " << p.new_sdp_path << '\n'
-     << "procsPerNode                 = " << p.procs_per_node << '\n'
      << "procsGranularity             = " << p.proc_granularity << '\n'
      << "precision(actual)            = " << p.precision << "("
      << mpf_get_default_prec() << ")" << '\n'

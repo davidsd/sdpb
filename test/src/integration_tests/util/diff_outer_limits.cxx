@@ -3,7 +3,6 @@
 #include "Float.hxx"
 #include "json.hxx"
 
-
 #include <catch2/catch_amalgamated.hpp>
 
 #include <rapidjson/document.h>
@@ -57,6 +56,18 @@ namespace Test_Util::REQUIRE_Equal
     Parse_Outer_Limits_Json b(b_json);
     DIFF(a.optimal, b.optimal);
     DIFF(a.y, b.y);
-    DIFF(a.options, b.options);
+    DIFF(a.options.size(), b.options.size());
+    for(size_t i = 0; i < a.options.size(); ++i)
+      {
+        const auto &[a_key, a_value] = a.options.at(i);
+        const auto &[b_key, b_value] = b.options.at(i);
+        DIFF(a_key, b_key);
+        // Do not compare output paths
+        if(a_key == "initialCheckpointDir" || a_key == "checkpointDir"
+           || a_key == "out")
+          continue;
+        CAPTURE(a_key);
+        DIFF(a_value, b_value);
+      }
   }
 }

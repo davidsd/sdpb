@@ -423,9 +423,10 @@ The terminal output ends with the final values of the primal/dual objectives, pr
   keepspaces=true,
   basicstyle=\scriptsize\ttfamily\selectfont,
 ]
-$ ./build/sdpb --noFinalCheckpoint --procsPerNode=1 -s test/data/sdp.zip -o test/out/sdpb
-SDPB started at 2023-Jul-12 11:28:10
-SDPB version: 2.5.1-11-gad5d9f8
+$ ./build/sdpb --noFinalCheckpoint -s test/data/sdp.zip -o test/out/sdpb
+2024-Jan-04 20:04:14 Start SDPB
+SDPB version: 2.6.1-14-ga7479df1
+MPI processes: 1, nodes: 1
 SDP directory   : "test/data/sdp.zip"
 out directory   : "test/out/sdpb"
 
@@ -451,10 +452,14 @@ initialCheckpointDir         = "test/data/sdp.zip.ck"
 checkpointDir                = "test/data/sdp.zip.ck"
 noFinalCheckpoint            = true
 writeSolution                = x,y
-procsPerNode                 = 1
 procGranularity              = 1
 verbosity                    = 1
 
+Initialize SDP solver
+        primal dimension: 5
+        dual dimension: 1
+        SDP blocks: 1
+2024-Jan-04 20:04:14 Start solver iterations
 
           time    mu     P-obj       D-obj      gap         P-err       p-err       D-err      P-step   D-step   beta
 ---------------------------------------------------------------------------------------------------------------------
@@ -741,8 +746,8 @@ a different machine.  Using the previous input as an example,
   keepspaces=true,
   basicstyle=\scriptsize\ttfamily\selectfont,
 ]
-$ ./build/sdpb -s test/data/sdp.zip -o test/test/out/sdpb --noFinalCheckpoint --procsPerNode=1 --writeSolution="x,y,X,Y"
-$ ./build/sdpb -s test/data/sdp.zip -o test/test/out/sdpb --noFinalCheckpoint --procsPerNode=1 -i test/test/out/sdpb
+$ ./build/sdpb -s test/data/sdp.zip -o test/test/out/sdpb --noFinalCheckpoint --writeSolution="x,y,X,Y"
+$ ./build/sdpb -s test/data/sdp.zip -o test/test/out/sdpb --noFinalCheckpoint -i test/test/out/sdpb
 \end{lstlisting}
 the second calculation will start from the end of the first calculation.
 

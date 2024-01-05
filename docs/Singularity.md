@@ -68,7 +68,7 @@ match your own machine.
 
 To find a primal-dual solution, 
 
-    singularity exec sdpb-2.6.1.sif mpirun -n 4 sdpb --precision=1024 --procsPerNode=4 -s /home/user/input
+    singularity exec sdpb-2.6.1.sif mpirun -n 4 sdpb --precision=1024 -s /home/user/input
 
 In theory, Singularity can be used to run jobs across multiple nodes.
 We have not been able to make that work yet.  So for large, multi-node

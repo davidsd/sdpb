@@ -28,17 +28,22 @@ namespace
   }
 }
 
-Timers::Timers(bool debug) : debug(debug)
+Timers::Timers() = default;
+Timers::Timers(const Environment &env, bool debug)
 {
-  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
-                      &comm_shared_mem.comm);
+  if(debug && env.comm_shared_mem.Rank() == 0)
+    {
+      print_debug_info = true;
+      if(env.num_nodes() != 1)
+        node_debug_prefix = El::BuildString("node=", env.node_index(), " ");
+    }
 }
 
 Timers::~Timers() noexcept
 {
   try
     {
-      if(debug)
+      if(print_debug_info)
         print_max_mem_used();
     }
   catch(...)
@@ -51,7 +56,7 @@ Timer &Timers::add_and_start(const std::string &name)
 {
   std::string full_name = prefix + name;
 
-  if(debug)
+  if(print_debug_info)
     print_meminfo(full_name);
 
   named_timers.emplace_back(full_name, Timer());
@@ -98,18 +103,14 @@ void Timers::print_max_mem_used() const
 {
   if(max_mem_used > 0 && !max_mem_used_name.empty())
     {
-      El::Output(El::mpi::Rank(), " max MemUsed: ", to_GB(max_mem_used),
+      El::Output(node_debug_prefix, "max MemUsed: ", to_GB(max_mem_used),
                  " GB at \"", max_mem_used_name, "\"");
     }
 }
 
 void Timers::print_meminfo(const std::string &name)
 {
-  // Print data from /proc/meminfo only for a first rank of each node
-  if(comm_shared_mem.Rank() != 0)
-    return;
-
-  auto prefix = El::BuildString(El::mpi::Rank(), " ", name, " ");
+  const auto prefix = El::BuildString(node_debug_prefix, "start ", name, " ");
 
   // Print memory usage for the current node (from the first rank).
   // If we cannot parse /proc/meminfo, then simply print timer name.

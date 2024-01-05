@@ -66,7 +66,6 @@ namespace
     // sdpb
     {
       Test_Util::Test_Case_Runner::Named_Args_Map args{
-        {"--procsPerNode", std::to_string(num_procs)},
         {"--precision", std::to_string(precision)},
         {"--sdpDir", sdp_zip},
         {"--outDir", (output_dir / "out").string()},

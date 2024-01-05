@@ -10,7 +10,8 @@ void read_objectives(const fs::path &sdp_path, const El::Grid &grid,
 
 std::vector<Block_Cost>
 Block_Info::read_block_costs(const fs::path &sdp_path,
-                             const fs::path &checkpoint_in)
+                             const fs::path &checkpoint_in,
+                             const Environment &env)
 {
   const fs::path sdp_block_timings_path(sdp_path / "block_timings"),
     checkpoint_block_timings_path(checkpoint_in / "block_timings");
@@ -61,7 +62,7 @@ Block_Info::read_block_costs(const fs::path &sdp_path,
       El::BigFloat objective_const;
       El::DistMatrix<El::BigFloat> dual_objective_b;
       // TODO pass timers as argument
-      Timers timers(false);
+      Timers timers(env, false);
       // TODO objectives are already read in SDP::SDP(),
       // we should reuse them instead of reading again
       read_objectives(sdp_path, grid, objective_const, dual_objective_b,

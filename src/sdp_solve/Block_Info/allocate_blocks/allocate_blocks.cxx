@@ -7,23 +7,26 @@ compute_block_grid_mapping(const size_t &procs_per_node,
                            const size_t &num_nodes,
                            const std::vector<Block_Cost> &block_costs);
 
-void Block_Info::allocate_blocks(const std::vector<Block_Cost> &block_costs,
-                                 const size_t &procs_per_node,
+void Block_Info::allocate_blocks(const Environment &env,
+                                 const std::vector<Block_Cost> &block_costs,
                                  const size_t &proc_granularity,
                                  const Verbosity &verbosity)
 {
   // Reverse sort, with largest first
   std::vector<Block_Cost> sorted_costs(block_costs);
   std::sort(sorted_costs.rbegin(), sorted_costs.rend());
-  const size_t num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
-  if(num_procs % procs_per_node != 0)
+  const size_t num_procs = El::mpi::Size(El::mpi::COMM_WORLD);
+  const size_t num_nodes = env.num_nodes();
+  const size_t procs_per_node = env.comm_shared_mem.Size();
+  if(procs_per_node * num_nodes != num_procs)
     {
-      throw std::runtime_error(
-        "Incompatible number of MPI processes and processes per node.  "
-        "procsPerNode must evenly divide to total number of MPI "
-        "processes:\n\tMPI processes: "
-        + std::to_string(num_procs)
-        + "\n\tprocsPerNode: " + std::to_string(procs_per_node));
+      El::RuntimeError("Incompatible number of MPI processes and processes "
+                       "per node for node=",
+                       env.node_index(),
+                       ". Each node should have the same number of processes."
+                       "\n\tMPI processes: ",
+                       num_procs, "\n\tprocsPerNode: ", procs_per_node,
+                       "\n\tnum_nodes: ", num_nodes);
     }
   if(procs_per_node % proc_granularity != 0)
     {
@@ -33,7 +36,6 @@ void Block_Info::allocate_blocks(const std::vector<Block_Cost> &block_costs,
         + std::to_string(procs_per_node)
         + "\n\tprocGranularity: " + std::to_string(proc_granularity));
     }
-  const size_t num_nodes(num_procs / procs_per_node);
   std::vector<std::vector<Block_Map>> mapping(compute_block_grid_mapping(
     procs_per_node / proc_granularity, num_nodes, sorted_costs));
 

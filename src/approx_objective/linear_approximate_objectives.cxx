@@ -28,7 +28,7 @@ linear_approximate_objectives(const Block_Info &block_info,
     }
   else
     {
-      Timers timers(false);
+      Timers timers;
       SDP new_sdp(input_path, block_info, grid, timers), d_sdp(new_sdp);
       Axpy(El::BigFloat(-1), sdp, d_sdp);
 

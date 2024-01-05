@@ -8,7 +8,6 @@ std::ostream &operator<<(std::ostream &os, const SDPB_Parameters &p)
      << p.solver
      << "noFinalCheckpoint            = " << p.no_final_checkpoint << '\n'
      << "writeSolution                = " << p.write_solution << '\n'
-     << "procsPerNode                 = " << p.procs_per_node << '\n'
      << "procGranularity              = " << p.proc_granularity << '\n'
      << "verbosity                    = " << static_cast<int>(p.verbosity)
      << '\n';
