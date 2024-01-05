@@ -51,7 +51,7 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
     "feasible point), set this to an empty string.");
   basic_options.add_options()(
     "procGranularity", po::value<size_t>(&proc_granularity)->default_value(1),
-    "procGranularity must evenly divide procsPerNode.\n\n"
+    "procGranularity must evenly divide number of processes per node.\n\n"
     "The minimum number of cores in a group, used during load balancing.  "
     "Setting it to anything larger than 1 will make the solution take "
     "longer.  "

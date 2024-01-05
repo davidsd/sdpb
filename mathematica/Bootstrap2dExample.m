@@ -136,7 +136,6 @@ SolveBootstrapSDP[sdp_] := Module[
         "mpirun",
         FileNameJoin[{executablesPath,"sdpb"}],
         "-s", sdpFolder, "-o", outFolder,
-        "--procsPerNode", "6",
         "--precision", ToString[prec],
         "--findPrimalFeasible",
         "--findDualFeasible",

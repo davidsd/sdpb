@@ -112,8 +112,8 @@ will also work.
 ## Running SDPB.
 
 The options to SDPB are described in detail in the help text, obtained
-by running `build/sdpb --help`.  The most important options are `-s [--sdpDir]`,
-`--precision`, and `--procsPerNode`.
+by running `build/sdpb --help`. The most important options are `-s [--sdpDir]` and
+`--precision`.
 You can specify output and checkpoint directories by `-o [ --outDir ]` and `-c [ --checkpointDir ]`, respectively.
 
 SDPB uses MPI to run in parallel, so you may need a special syntax to
@@ -121,16 +121,16 @@ launch it.  For example, if you compiled the code on your own laptop,
 you will probably use `mpirun` to invoke SDPB.  If you have 4 physical
 cores on your machine, the command is
 
-    mpirun -n 4 build/sdpb --precision=1024 --procsPerNode=4 -s test/data/sdp.zip -o test/out/sdpb -c test/out/sdpb/ck
+    mpirun -n 4 build/sdpb --precision=1024 -s test/data/sdp.zip -o test/out/sdpb -c test/out/sdpb/ck
 
 On the Yale Grace cluster, the command used in the Slurm batch file is
 
-    mpirun build/sdpb --precision=1024 --procsPerNode=$SLURM_NTASKS_PER_NODE -s test/data/sdp.zip -o test/out/sdpb -c test/out/sdpb/ck
+    mpirun build/sdpb --precision=1024 -s test/data/sdp.zip -o test/out/sdpb -c test/out/sdpb/ck
 
 In contrast, the Harvard Odyssey 3 cluster, which also uses Slurm,
 uses the srun command
 
-    srun -n $SLURM_NTASKS --mpi=pmi2 build/sdpb --precision=1024 --procsPerNode=$SLURM_NTASKS_PER_NODE -s test/data/sdp.zip -o test/out/sdpb -c test/out/sdpb/ck
+    srun -n $SLURM_NTASKS --mpi=pmi2 build/sdpb --precision=1024 -s test/data/sdp.zip -o test/out/sdpb -c test/out/sdpb/ck
 
 The documentation for your HPC system will tell you how to write a
 batch script and invoke MPI programs.
@@ -163,11 +163,10 @@ checkpoints from other inputs. For example, if you have a previous
 checkpoint in `test/out/test.ck`, you can reuse it for a different input
 in `test/data/sdp2.zip` with a command like
 
-    mpirun -n 4 build/sdpb --precision=1024 --procsPerNode=4 -s test/data/sdp2.zip -i test/out/test.ck
+    mpirun -n 4 build/sdpb --precision=1024 -s test/data/sdp2.zip -i test/out/test.ck
 
 In addition to having the same block structure, the runs must also use
-the same `precision`, `procsPerNode`, and number and distribution of
-cores.
+the same `precision`, and number and distribution of cores.
 
 ## Running approx_objective
 
@@ -197,9 +196,9 @@ state.
 
 A full example of the whole sequence is
 
-    mpirun -n 4 build/sdpb --precision=1024 --procsPerNode=4 -s test/data/sdp.zip -o test/out/approx_objective --writeSolution=x,y,X,Y
-    mpirun -n 4 build/approx_objective --precision=1024 --procsPerNode=4 --sdp test/data/sdp.zip --writeSolverState
-    mpirun -n 4 build/approx_objective --precision=1024 --procsPerNode=4 --sdp test/data/sdp.zip --newSdp=test/data/sdp2.zip
+    mpirun -n 4 build/sdpb --precision=1024 -s test/data/sdp.zip -o test/out/approx_objective --writeSolution=x,y,X,Y
+    mpirun -n 4 build/approx_objective --precision=1024 --sdp test/data/sdp.zip --writeSolverState
+    mpirun -n 4 build/approx_objective --precision=1024 --sdp test/data/sdp.zip --newSdp=test/data/sdp2.zip
 
 The output is a JSON list with each element including the location of
 the new SDP, the approximate objective, and the first and second order
@@ -278,15 +277,15 @@ Two ways to reduce memory usage:
 1. Running SDPB on more nodes will reduce the amount of memory required on each node.
 2. You can also use the option `--procGranularity`.
    This option sets minimum number of processes that a block group can have, so it must evenly divide
-   the `--procsPerNode` option. Using a larger granularity will result in less memory use (up to a point) because SDPB
+   the number of cores per node. Using a larger granularity will result in less memory use (up to a point) because SDPB
    will make fewer local copies of the matrix Q. However, larger granularity is also slower because even small blocks
    will be distributed among multiple cores. So you should use `--procGranularity` only when absolutely needed.
 
 ### SDPB crashes when using all available cores on the node
 
-We observed unexpected crashes for large SDPB runs even with enough memory, e.g. `--procsPerNode=128` on Expanse HPC (
-having 128 cores per node).
-In such cases, reducing this option e.g. to `--procsPerNode=64` may help.
+We observed unexpected crashes for large SDPB runs even with enough memory, e.g. using all 128 cores per node on Expanse
+HPC.
+In such cases, reducing `$SLURM_NTASKS_PER_NODE` (if you are using SLURM) e.g. from 128 to 64 may help.
 
 ### SDPB fails to read large sdp.zip
 

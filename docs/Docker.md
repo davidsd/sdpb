@@ -79,7 +79,7 @@ together on a single line
 Running this command will create `/my/project/sdp.zip`.
 To search for primal-dual solutions
 
-    docker run -v /my/project/:/usr/local/share/sdpb bootstrapcollaboration/sdpb:master mpirun --allow-run-as-root -n 4 sdpb --precision=1024 --procsPerNode=4 -s /usr/local/share/sdpb/sdp.zip
+    docker run -v /my/project/:/usr/local/share/sdpb bootstrapcollaboration/sdpb:master mpirun --allow-run-as-root -n 4 sdpb --precision=1024 -s /usr/local/share/sdpb/sdp.zip
 
 The results will be in `/my/project/`.
 
