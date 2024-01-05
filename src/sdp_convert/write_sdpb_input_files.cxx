@@ -322,8 +322,9 @@ void print_matrix_sizes(
       double GB_per_element = (double)big_float_bytes / 1024 / 1024 / 1024;
       El::Output("Total RAM (no Q), GB: ", total_no_Q * GB_per_element);
       El::Output("Q, GB: ", Q_matrix_size * GB_per_element);
-      El::Output("NB: Q is copied over each core group, i.e. "
-                 "(nodes*procsPerNode/procGranularity) times");
+      El::Output("NB: Q is copied over each core group "
+                 "(run SDPB with --verbosity=2 to see "
+                 "block distribution among core groups).");
       El::Output("---------------------");
     }
 }
