@@ -19,18 +19,21 @@ read_x(const fs::path &solution_path,
 
 std::vector<El::Matrix<El::BigFloat>>
 read_x(const fs::path &solution_path,
-       const std::vector<Positive_Matrix_With_Prefactor> &matrices);
+       const std::vector<Positive_Matrix_With_Prefactor> &matrices,
+       const std::vector<size_t> &block_indices);
 
 El::Matrix<El::BigFloat>
 read_y(const fs::path &solution_path, const size_t &y_height);
 
 void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
-                    const std::vector<Zeros> &zeros_blocks);
+                    const std::vector<Zeros> &zeros_blocks,
+                    const std::vector<size_t> &block_indices);
 
 std::vector<Zeros> compute_spectrum_pmp(
   const std::vector<El::BigFloat> &normalization,
   const El::Matrix<El::BigFloat> &y,
   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
+  const std::vector<size_t> &block_indices,
   const std::vector<El::Matrix<El::BigFloat>> &x,
   const El::BigFloat &threshold, El::BigFloat &mesh_threshold,
   const bool &need_lambda);
@@ -62,29 +65,36 @@ int main(int argc, char **argv)
             std::vector<Polynomial_Vector_Matrix> matrices;
             size_t num_blocks(0);
             read_pvm_input({input_path}, objectives, matrices, num_blocks);
+            std::vector<size_t> block_indices;
+            for(int block_index = 0; block_index < num_blocks; ++block_index)
+              {
+                if(block_index % El::mpi::Size() == El::mpi::Rank())
+                  block_indices.push_back(block_index);
+              }
+
             El::Matrix<El::BigFloat> y(objectives.size() - 1, 1);
             read_text_block(y, solution_dir / "y.txt");
             std::vector<El::Matrix<El::BigFloat>> x(
               read_x(solution_dir, matrices));
             const std::vector<Zeros> zeros_blocks(compute_spectrum_pvm(
               y, matrices, x, threshold, mesh_threshold, need_lambda));
-            write_spectrum(output_path, num_blocks, zeros_blocks);
+            write_spectrum(output_path, num_blocks, zeros_blocks,
+                           block_indices);
           }
           break;
           case Format::Positive_Matrix_with_Prefactor: {
-            std::vector<El::BigFloat> objectives, normalization;
-            std::vector<Positive_Matrix_With_Prefactor> matrices;
-            size_t num_blocks;
-            read_input(input_path, objectives, normalization, matrices,
-                       num_blocks);
-            El::Matrix<El::BigFloat> y(objectives.size() - 1, 1);
+            const PMWP_SDP sdp(input_path);
+            size_t num_blocks = sdp.num_matrices;
+            const auto &block_indices = sdp.matrix_index_local_to_global;
+            El::Matrix<El::BigFloat> y(sdp.objective.size() - 1, 1);
             read_text_block(y, solution_dir / "y.txt");
             std::vector<El::Matrix<El::BigFloat>> x(
-              read_x(solution_dir, matrices));
-            const std::vector<Zeros> zeros_blocks(
-              compute_spectrum_pmp(normalization, y, matrices, x, threshold,
-                                   mesh_threshold, need_lambda));
-            write_spectrum(output_path, num_blocks, zeros_blocks);
+              read_x(solution_dir, sdp.matrices, block_indices));
+            const std::vector<Zeros> zeros_blocks(compute_spectrum_pmp(
+              sdp.normalization, y, sdp.matrices, block_indices, x, threshold,
+              mesh_threshold, need_lambda));
+            write_spectrum(output_path, num_blocks, zeros_blocks,
+                           block_indices);
           }
           break;
         default: throw std::runtime_error("INTERNAL ERROR");

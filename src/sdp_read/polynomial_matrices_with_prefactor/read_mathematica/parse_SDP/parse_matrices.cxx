@@ -1,15 +1,16 @@
-#include "parse_vector.hxx"
 #include "parse_generic.hxx"
 #include "sdp_read/Positive_Matrix_With_Prefactor.hxx"
 
 #include <algorithm>
 #include <iterator>
-#include <string>
 
-const char *
-parse_matrices(const char *begin, const char *end, const int &rank,
-               const int &num_procs, const size_t &num_matrices,
-               std::vector<Positive_Matrix_With_Prefactor> &matrices)
+// should_parse_matrix() accepts matrix index in file (starting from 0)
+// and tells if this rank should parse the matrix of skip it.
+const char *parse_matrices(
+  const char *begin, const char *end,
+  const std::function<bool(size_t matrix_index)> &should_parse_matrix,
+  size_t &num_matrices,
+  std::map<size_t, Positive_Matrix_With_Prefactor> &parsed_matrices)
 {
   const auto open_brace(std::find(begin, end, '{'));
   if(open_brace == end)
@@ -19,16 +20,16 @@ parse_matrices(const char *begin, const char *end, const int &rank,
 
   auto delimiter(open_brace);
   const std::vector<char> delimiters({',', '}'});
-  int matrix_index(num_matrices);
+  int matrix_index = 0;
+  parsed_matrices.clear();
   do
     {
       auto start_matrix(std::next(delimiter));
       Positive_Matrix_With_Prefactor matrix;
       auto end_matrix(parse_generic(start_matrix, end, matrix));
-      matrices.emplace_back();
-      if(matrix_index % num_procs == rank)
+      if(should_parse_matrix(matrix_index))
         {
-          swap(matrices.back(), matrix);
+          parsed_matrices.emplace(matrix_index, std::move(matrix));
         }
       ++matrix_index;
 
@@ -39,7 +40,7 @@ parse_matrices(const char *begin, const char *end, const int &rank,
           throw std::runtime_error(
             "Missing '}' at end of array of PositiveMatrixWithPrefactor");
         }
-    }
-  while(*delimiter != '}');
+  } while(*delimiter != '}');
+  num_matrices = matrix_index;
   return std::next(delimiter);
 }

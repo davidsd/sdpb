@@ -1,4 +1,8 @@
+#include "sdp_convert/Block_File_Format.hxx"
+#include "sdp_convert/Dual_Constraint_Group.hxx"
+#include "sdp_convert/sdp_convert.hxx"
 #include "sdp_read/sdp_read.hxx"
+#include "sdp_read/polynomial_matrices_with_prefactor/PMWP_SDP.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
 #include <string>
@@ -8,10 +12,7 @@
 namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
-void convert(const std::vector<El::BigFloat> &objectives,
-             const std::vector<El::BigFloat> &normalization,
-             const std::vector<Positive_Matrix_With_Prefactor> &matrices,
-             El::BigFloat &objective_const,
+void convert(const PMWP_SDP &pwmp_sdp, El::BigFloat &objective_const,
              std::vector<El::BigFloat> &dual_objective_b,
              std::vector<Dual_Constraint_Group> &dual_constraint_groups,
              Timers &timers);
@@ -104,14 +105,13 @@ int main(int argc, char **argv)
       // base-10 digits.
       Boost_Float::default_precision(precision * log(2) / log(10));
 
-      std::vector<El::BigFloat> objectives, normalization;
-      std::vector<Positive_Matrix_With_Prefactor> matrices;
       Timers timers(env, debug);
       Scoped_Timer timer(timers, "sdp2input");
-      {
-        Scoped_Timer read_input_timer(timers, "read_input");
-        read_input(input_file, objectives, normalization, matrices);
-      }
+
+      Scoped_Timer read_input_timer(timers, "read_input");
+      PMWP_SDP pmwp_sdp(input_file);
+      read_input_timer.stop();
+
       std::vector<std::string> command_arguments;
       for(int arg(0); arg != argc; ++arg)
         {
@@ -120,9 +120,8 @@ int main(int argc, char **argv)
       El::BigFloat objective_const;
       std::vector<El::BigFloat> dual_objective_b;
       std::vector<Dual_Constraint_Group> dual_constraint_groups;
-      convert(objectives, normalization, matrices, objective_const,
-              dual_objective_b, dual_constraint_groups, timers);
-      size_t num_matrices = matrices.size();
+      convert(pmwp_sdp, objective_const, dual_objective_b, dual_constraint_groups, timers);
+      size_t num_matrices = pmwp_sdp.num_matrices;
       write_sdpb_input_files(output_path, output_format, num_matrices,
                              command_arguments, objective_const,
                              dual_objective_b, dual_constraint_groups, timers,

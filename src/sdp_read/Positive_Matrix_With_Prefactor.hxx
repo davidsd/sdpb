@@ -9,6 +9,25 @@ struct Positive_Matrix_With_Prefactor
   // TODO: This is actually a symmetric matrix (dim x dim) of a vector
   // of polynomials.  So we should use a proper symmetric matrix class.
   std::vector<std::vector<std::vector<Polynomial>>> polynomials;
+
+  // Prohibit accidential copying to avoid excessive memory usage,
+  // allow only moving
+
+  Positive_Matrix_With_Prefactor() = default;
+
+  Positive_Matrix_With_Prefactor(const Positive_Matrix_With_Prefactor &other)
+    = delete;
+  Positive_Matrix_With_Prefactor(
+    Positive_Matrix_With_Prefactor &&other) noexcept
+    = default;
+
+  Positive_Matrix_With_Prefactor &
+  operator=(const Positive_Matrix_With_Prefactor &other)
+    = delete;
+
+  Positive_Matrix_With_Prefactor &
+  operator=(Positive_Matrix_With_Prefactor &&other) noexcept
+    = default;
 };
 
 inline void

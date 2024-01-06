@@ -2,6 +2,7 @@
 #include "sdpb_util/Timers/Timers.hxx"
 #include "sdpb_util/max_normalization_index.hxx"
 #include "sdp_convert/sdp_convert.hxx"
+#include "sdp_read/polynomial_matrices_with_prefactor/PMWP_SDP.hxx"
 
 #include <filesystem>
 #include <algorithm>
@@ -13,7 +14,7 @@ std::vector<Polynomial> bilinear_basis(const Damped_Rational &damped_rational,
 
 namespace
 {
-  Polynomial_Vector_Matrix pmwp_to_pvm(
+  Polynomial_Vector_Matrix PMWP_to_PVM(
     const Positive_Matrix_With_Prefactor &positive_matrix_with_prefactor,
     const std::vector<El::BigFloat> &normalization,
     const size_t max_normalization_index, Timers &timers)
@@ -107,10 +108,7 @@ namespace
   }
 }
 
-void convert(const std::vector<El::BigFloat> &objectives,
-             const std::vector<El::BigFloat> &normalization,
-             const std::vector<Positive_Matrix_With_Prefactor> &matrices,
-             El::BigFloat &objective_const,
+void convert(const PMWP_SDP &pwmp_sdp, El::BigFloat &objective_const,
              std::vector<El::BigFloat> &dual_objective_b,
              std::vector<Dual_Constraint_Group> &dual_constraint_groups,
              Timers &timers)
@@ -119,17 +117,18 @@ void convert(const std::vector<El::BigFloat> &objectives,
   size_t max_index;
   {
     Scoped_Timer objectives_timer(timers, "objectives");
-    max_index = max_normalization_index(normalization);
+    max_index = max_normalization_index(pwmp_sdp.normalization);
 
-    objective_const = objectives.at(max_index) / normalization.at(max_index);
+    objective_const = pwmp_sdp.objective.at(max_index)
+                      / pwmp_sdp.normalization.at(max_index);
     dual_objective_b = std::vector<El::BigFloat>();
-    dual_objective_b.reserve(normalization.size() - 1);
-    for(size_t index = 0; index < normalization.size(); ++index)
+    dual_objective_b.reserve(pwmp_sdp.normalization.size() - 1);
+    for(size_t index = 0; index < pwmp_sdp.normalization.size(); ++index)
       {
         if(index != max_index)
           {
-            dual_objective_b.push_back(objectives.at(index)
-                                       - normalization.at(index)
+            dual_objective_b.push_back(pwmp_sdp.objective.at(index)
+                                       - pwmp_sdp.normalization.at(index)
                                            * objective_const);
           }
       }
@@ -137,17 +136,16 @@ void convert(const std::vector<El::BigFloat> &objectives,
 
   {
     Scoped_Timer matrices_timer(timers, "matrices");
-    int rank(El::mpi::Rank(El::mpi::COMM_WORLD)),
-      num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
-    std::vector<size_t> indices;
-    for(size_t index = rank; index < matrices.size(); index += num_procs)
+    for(size_t i = 0; i < pwmp_sdp.matrices.size(); ++i)
       {
-        Scoped_Timer index_timer(timers, "block_" + std::to_string(index));
-        const auto &positive_matrix_with_prefactor = matrices[index];
-        Polynomial_Vector_Matrix pvm = pmwp_to_pvm(
-          positive_matrix_with_prefactor, normalization, max_index, timers);
+        size_t block_index = pwmp_sdp.matrix_index_local_to_global.at(i);
+        const auto &pmwp_matrix = pwmp_sdp.matrices.at(i);
+        Scoped_Timer index_timer(timers,
+                                 "block_" + std::to_string(block_index));
+        Polynomial_Vector_Matrix pvm = PMWP_to_PVM(
+          pmwp_matrix, pwmp_sdp.normalization, max_index, timers);
         Scoped_Timer dual_constraint_timer(timers, "dual_constraint");
-        dual_constraint_groups.emplace_back(index, pvm);
+        dual_constraint_groups.emplace_back(block_index, std::move(pvm));
       }
   }
 }

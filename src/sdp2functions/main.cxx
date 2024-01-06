@@ -17,6 +17,10 @@ int main(int argc, char **argv)
 
   try
     {
+      // TODO fix parallel
+      if(El::mpi::Size() > 1)
+        El::RuntimeError("sdp2functions cannot work in parallel!");
+
       int precision;
       fs::path input_file, output_path;
       bool debug(false);
@@ -80,10 +84,9 @@ int main(int argc, char **argv)
       // base-10 digits.
       Boost_Float::default_precision(precision * log(2) / log(10));
 
-      std::vector<El::BigFloat> objectives, normalization;
-      std::vector<Positive_Matrix_With_Prefactor> matrices;
-      read_input(input_file, objectives, normalization, matrices);
-      write_functions(output_path, objectives, normalization, matrices);
+      PMWP_SDP sdp(input_file);
+      write_functions(output_path, sdp.objective, sdp.normalization,
+                      sdp.matrices);
     }
   catch(std::exception &e)
     {

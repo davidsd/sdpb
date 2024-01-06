@@ -6,16 +6,18 @@
 #include <iterator>
 #include <string>
 
-const char *
-parse_matrices(const char *begin, const char *end, const int &rank,
-               const int &num_procs, const size_t &num_matrices,
-               std::vector<Positive_Matrix_With_Prefactor> &matrices);
+const char *parse_matrices(
+  const char *begin, const char *end,
+  const std::function<bool(size_t)> &should_parse_current_matrix,
+  size_t &num_matrices,
+  std::map<size_t, Positive_Matrix_With_Prefactor> &parsed_matrices);
 
-const char *parse_SDP(const char *begin, const char *end,
-                      std::vector<El::BigFloat> &objectives,
-                      std::vector<El::BigFloat> &normalization,
-                      std::vector<Positive_Matrix_With_Prefactor> &matrices,
-                      size_t &num_processed)
+const char *
+parse_SDP(const char *begin, const char *end,
+          const std::function<bool(size_t matrix_index)> &should_parse_matrix,
+          std::vector<El::BigFloat> &objectives,
+          std::vector<El::BigFloat> &normalization, size_t &num_matrices,
+          std::map<size_t, Positive_Matrix_With_Prefactor> &parsed_matrices)
 {
   const std::string SDP_literal("SDP[");
   auto SDP_start(
@@ -63,19 +65,10 @@ const char *parse_SDP(const char *begin, const char *end,
       throw std::runtime_error("Missing comma after normalization");
     }
 
-  std::vector<Positive_Matrix_With_Prefactor> temp_matrices;
-  const int rank(El::mpi::Rank()), num_procs(El::mpi::Size());
-  const char *end_matrices(parse_matrices(
-    std::next(comma), end, rank, num_procs, matrices.size(), temp_matrices));
-  {
-    size_t offset(matrices.size());
-    matrices.resize(matrices.size() + temp_matrices.size());
-    for(size_t index = 0; index < temp_matrices.size(); ++index)
-      {
-        std::swap(matrices[offset + index], temp_matrices[index]);
-        ++num_processed;
-      }
-  }
+  const char *end_matrices(parse_matrices(std::next(comma), end,
+                                          should_parse_matrix, num_matrices,
+                                          parsed_matrices));
+
   const auto close_bracket(std::find(end_matrices, end, ']'));
   if(close_bracket == end)
     {

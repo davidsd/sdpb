@@ -8,12 +8,10 @@ void write_file(const fs::path &output_path,
                 const std::vector<Zeros> &zeros_blocks);
 
 void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
-                    const std::vector<Zeros> &zeros_blocks)
+                    const std::vector<Zeros> &zeros_blocks,
+                    const std::vector<size_t> &block_indices)
 {
-  const size_t rank(El::mpi::Rank()),
-    num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
-
-  if(num_procs == 1)
+  if(El::mpi::Size() == 1)
     {
       write_file(output_path, zeros_blocks);
     }
@@ -23,16 +21,24 @@ void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
       // This is waaaay more work than it should be.
       std::vector<size_t> zero_sizes(num_blocks, 0),
         lambda_sizes(num_blocks, 0);
-      size_t block_index(rank);
-      for(auto &block : zeros_blocks)
+
+      if(block_indices.size() != zeros_blocks.size())
         {
+          El::RuntimeError("block_indices.size()=", block_indices.size(),
+                           " and zeros_blocks.size()=", zeros_blocks.size(),
+                           " should be equal");
+        }
+      for(size_t local_index = 0; local_index < block_indices.size();
+          ++local_index)
+        {
+          const auto &block = zeros_blocks.at(local_index);
+          size_t block_index = block_indices.at(local_index);
           zero_sizes.at(block_index) = block.zeros.size();
           if(!block.zeros.empty())
             {
               lambda_sizes.at(block_index)
                 = block.zeros.front().lambda.Height();
             }
-          block_index += num_procs;
         }
       El::mpi::AllReduce(zero_sizes.data(), zero_sizes.size(), El::mpi::SUM,
                          El::mpi::COMM_WORLD);
@@ -40,12 +46,14 @@ void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
                          El::mpi::SUM, El::mpi::COMM_WORLD);
 
       std::vector<Zeros> zeros_all_blocks(num_blocks);
-      for(size_t block_index(0); block_index != zeros_all_blocks.size();
-          ++block_index)
+      for(size_t block_index(0); block_index != num_blocks; ++block_index)
         {
-          if(block_index % num_procs == rank)
+          // TODO this search is not optimal, O(N) for each block_index
+          auto local_index_it = std::find(block_indices.begin(),
+                                          block_indices.end(), block_index);
+          if(local_index_it != block_indices.end())
             {
-              const size_t local_index(block_index / num_procs);
+              size_t local_index = local_index_it - block_indices.begin();
               zeros_all_blocks[block_index] = zeros_blocks.at(local_index);
             }
           else

@@ -12,6 +12,7 @@ std::vector<Zeros> compute_spectrum_pmp(
   const std::vector<El::BigFloat> &normalization,
   const El::Matrix<El::BigFloat> &y,
   const std::vector<Positive_Matrix_With_Prefactor> &matrices,
+  const std::vector<size_t> &block_indices,
   const std::vector<El::Matrix<El::BigFloat>> &x,
   const El::BigFloat &threshold, El::BigFloat &mesh_threshold,
   const bool &need_lambda)
@@ -22,11 +23,10 @@ std::vector<Zeros> compute_spectrum_pmp(
 
   const El::BigFloat zero(0);
   std::vector<Zeros> zeros_blocks(matrices.size());
-  const size_t rank(El::mpi::Rank()), num_procs(El::mpi::Size());
-  for(size_t block_index(rank); block_index < matrices.size();
-      block_index += num_procs)
+  for(size_t local_index = 0; local_index < matrices.size(); ++local_index)
     {
-      auto &block(matrices[block_index]);
+      const auto &block_index = block_indices.at(local_index);
+      const auto &block = matrices.at(local_index);
       const size_t max_number_terms([&block]() {
         size_t max(0);
         for(auto &row : block.polynomials)
@@ -95,7 +95,7 @@ std::vector<Zeros> compute_spectrum_pmp(
         },
         mesh_threshold, block_epsilon);
 
-      auto &zeros(zeros_blocks.at(block_index).zeros);
+      auto &zeros(zeros_blocks.at(local_index).zeros);
       if(need_lambda)
         {
           std::vector<Boost_Float> points_boost(
@@ -111,9 +111,9 @@ std::vector<Zeros> compute_spectrum_pmp(
             {
               scalings_gmp.emplace_back(to_string(scaling));
             }
-          compute_lambda(points_gmp, scalings_gmp, num_rows, x.at(block_index),
+          compute_lambda(points_gmp, scalings_gmp, num_rows, x.at(local_index),
                          get_zeros(mesh, threshold), zeros,
-                         zeros_blocks.at(block_index).error);
+                         zeros_blocks.at(local_index).error);
         }
       else
         {

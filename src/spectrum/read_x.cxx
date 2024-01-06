@@ -24,14 +24,16 @@ read_x(const fs::path &solution_dir,
 
 std::vector<El::Matrix<El::BigFloat>>
 read_x(const fs::path &solution_path,
-       const std::vector<Positive_Matrix_With_Prefactor> &matrices)
+       const std::vector<Positive_Matrix_With_Prefactor> &matrices,
+       const std::vector<size_t> &block_indices)
 {
   std::vector<El::Matrix<El::BigFloat>> result;
   result.reserve(matrices.size());
-  const size_t num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
-  size_t x_index(El::mpi::Rank());
-  for(auto &m : matrices)
+  for(size_t i = 0; i < matrices.size(); ++i)
     {
+      const auto block_index = block_indices.at(i);
+      const auto &m = matrices.at(i);
+
       // Copied from sdp2input/write_output/write_output.cxx
       const size_t max_degree([&]() {
         int64_t result(0);
@@ -47,8 +49,7 @@ read_x(const fs::path &solution_path,
       result.emplace_back((max_degree + 1) * m.polynomials.size()
                             * (m.polynomials.size() + 1) / 2,
                           1);
-      read_text_block(result.back(), solution_path, "x_", x_index);
-      x_index += num_procs;
+      read_text_block(result.back(), solution_path, "x_", block_index);
     }
   return result;
 }
