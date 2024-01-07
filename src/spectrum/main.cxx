@@ -61,23 +61,16 @@ int main(int argc, char **argv)
       switch(format)
         {
           case Format::Polynomial_Vector_Matrix: {
-            std::vector<El::BigFloat> objectives;
-            std::vector<Polynomial_Vector_Matrix> matrices;
-            size_t num_blocks(0);
-            read_pvm_input({input_path}, objectives, matrices, num_blocks);
-            std::vector<size_t> block_indices;
-            for(int block_index = 0; block_index < num_blocks; ++block_index)
-              {
-                if(block_index % El::mpi::Size() == El::mpi::Rank())
-                  block_indices.push_back(block_index);
-              }
+            const PVM_SDP sdp(input_path);
+            size_t num_blocks = sdp.num_matrices;
+            const auto &block_indices = sdp.matrix_index_local_to_global;
 
-            El::Matrix<El::BigFloat> y(objectives.size() - 1, 1);
+            El::Matrix<El::BigFloat> y(sdp.objective.size() - 1, 1);
             read_text_block(y, solution_dir / "y.txt");
             std::vector<El::Matrix<El::BigFloat>> x(
-              read_x(solution_dir, matrices));
+              read_x(solution_dir, sdp.matrices));
             const std::vector<Zeros> zeros_blocks(compute_spectrum_pvm(
-              y, matrices, x, threshold, mesh_threshold, need_lambda));
+              y, sdp.matrices, x, threshold, mesh_threshold, need_lambda));
             write_spectrum(output_path, num_blocks, zeros_blocks,
                            block_indices);
           }

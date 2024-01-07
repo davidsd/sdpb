@@ -1,5 +1,6 @@
 // See the manual for a description of the correct XML input format.
 
+#include "read_xml.hxx"
 #include "Input_Parser.hxx"
 
 #include <filesystem>
@@ -46,14 +47,27 @@ namespace
   }
 }
 
-void read_xml_input(
-  const fs::path &input_file, std::vector<El::BigFloat> &dual_objectives_b,
-                    std::vector<Polynomial_Vector_Matrix> &polynomial_vector_matrices,
-                    size_t &num_processed)
+void read_xml(
+  const std::filesystem::path &input_file,
+  const std::function<bool(size_t matrix_index)> &should_parse_matrix,
+  std::vector<El::BigFloat> &objective, size_t &num_matrices,
+  std::map<size_t, Polynomial_Vector_Matrix> &polynomial_vector_matrices)
 {
   LIBXML_TEST_VERSION;
 
-  Input_Parser input_parser(polynomial_vector_matrices, num_processed);
+  num_matrices = 0;
+  auto process_matrix
+    = [&should_parse_matrix, &num_matrices,
+       &polynomial_vector_matrices](Polynomial_Vector_Matrix &&matrix) {
+        // num_matrices equals to current matrix index
+        auto index = num_matrices;
+        if(should_parse_matrix(index))
+          {
+            polynomial_vector_matrices.emplace(index, matrix);
+          }
+        ++num_matrices;
+      };
+  Input_Parser input_parser(process_matrix);
 
   xmlSAXHandler xml_handlers;
   // This feels unclean.
@@ -77,7 +91,7 @@ void read_xml_input(
     end(input_parser.objective_state.value.end());
   if(iterator != end)
     {
-      dual_objectives_b.clear();
-      dual_objectives_b.insert(dual_objectives_b.end(), iterator, end);
+      objective.clear();
+      objective.insert(objective.end(), iterator, end);
     }
 }

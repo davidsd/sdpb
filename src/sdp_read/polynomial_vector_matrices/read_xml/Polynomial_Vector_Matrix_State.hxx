@@ -13,10 +13,7 @@ public:
               columns_string;
   bool inside = false, inside_rows = false, inside_columns = false;
   Polynomial_Vector_Matrix value;
-  std::vector<Dual_Constraint_Group> &dual_constraint_groups;
-  const size_t rank = El::mpi::Rank(),
-               num_procs = El::mpi::Size(El::mpi::COMM_WORLD);
-  size_t &num_processed;
+  std::function<void(Polynomial_Vector_Matrix&& matrix)> process_matrix;
 
   using Polynomial_State = Vector_State<Number_State<El::BigFloat>>;
   using Polynomial_Vector_State = Vector_State<Polynomial_State>;
@@ -27,10 +24,9 @@ public:
 
   Polynomial_Vector_Matrix_State(
     const std::vector<std::string> &names, const size_t &offset,
-    std::vector<Dual_Constraint_Group> &Dual_constraint_groups,
-    size_t &Num_processed)
-      : name(names.at(offset)), dual_constraint_groups(Dual_constraint_groups),
-        num_processed(Num_processed),
+    const std::function<void(Polynomial_Vector_Matrix&& matrix)> &process_matrix)
+      : name(names.at(offset)),
+        process_matrix(process_matrix),
         elements_state(
           {"elements"s, "polynomialVector"s, "polynomial"s, "coeff"s}),
         sample_points_state({"samplePoints"s, "elt"s}),
@@ -83,15 +79,7 @@ public:
         if(element_name == name)
           {
             inside = false;
-            // Jump through hoops so that we immediately clear the
-            // polynomial_vector_matrix after constructing any needed
-            // dual_constraint_groups.  This significantly reduces the
-            // memory usage, but does complicate the code.
-            if(num_processed % num_procs == rank)
-              {
-                dual_constraint_groups.emplace_back(num_processed, value);
-              }
-            ++num_processed;
+            process_matrix(std::move(value));
             value.clear();
           }
         else if(inside_rows && element_name == rows_name)

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "polynomial_matrices_with_prefactor/PMWP_SDP.hxx"
-#include "read_pvm_input.hxx"
+#include "polynomial_vector_matrices/PVM_SDP.hxx"
 
 std::vector<std::filesystem::path>
 read_nsv_file_list(const std::filesystem::path &input_file);

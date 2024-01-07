@@ -12,7 +12,7 @@ namespace fs = std::filesystem;
 namespace
 {
   void collect_files_expanding_nsv(const fs::path &input_file,
-                                   std::vector<fs::path>& output)
+                                   std::vector<fs::path> &output)
   {
     if(input_file.empty())
       return;
