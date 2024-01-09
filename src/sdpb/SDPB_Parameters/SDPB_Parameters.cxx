@@ -8,7 +8,6 @@ namespace po = boost::program_options;
 
 SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
 {
-  int int_verbosity;
   std::string write_solution_string;
   using namespace std::string_literals;
 
@@ -58,9 +57,8 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
     "This option is generally useful only when trying to fit a large problem "
     "in a small machine.");
   basic_options.add_options()("verbosity",
-                              po::value<int>(&int_verbosity)->default_value(1),
-                              "Verbosity.  0 -> no output, 1 -> regular "
-                              "output, 2 -> debug output");
+    po::value<Verbosity>(&verbosity)->default_value(Verbosity::regular),
+    "Verbosity.  0 -> no output, 1 -> regular output, 2 -> debug output");
 
   po::options_description obsolete_options("Obsolete options");
   obsolete_options.add_options()(
@@ -162,16 +160,6 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
                   throw std::runtime_error("Cannot write to outDir: "
                                            + out_directory.string());
                 }
-            }
-
-          if(int_verbosity != 0 && int_verbosity != 1 && int_verbosity != 2)
-            {
-              throw std::runtime_error(
-                "Invalid number for Verbosity.  Only 0, 1 or 2 are allowed\n");
-            }
-          else
-            {
-              verbosity = static_cast<Verbosity>(int_verbosity);
             }
 
           if(El::mpi::Rank() == 0 && verbosity >= Verbosity::regular
