@@ -1,6 +1,6 @@
 #include "sdp_solve/Block_Info.hxx"
 #include "sdp_solve/Archive_Reader.hxx"
-#include "sdp_convert/sdp_convert.hxx"
+#include "pmp2sdp/write_sdp.hxx"
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>

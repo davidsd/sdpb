@@ -1,0 +1,39 @@
+#pragma once
+
+#include "Polynomial_Vector_Matrix.hxx"
+
+#include <El.hpp>
+
+#include <vector>
+
+// Result of JSON/Mathematica/xml input parsing.
+// Format is described in SDPB Manual, eq. (3.1)
+// NB: SDPB internals use format (2.2), which doesn't have normalization vector.
+// Conversion from (3.1) to (2.2)
+// takes place in pmp2sdp/Dual_Constraint_Group constructor,
+// before writing to sdp.zip
+struct Polynomial_Matrix_Program
+{
+  // vector a_i, i=0..N
+  std::vector<El::BigFloat> objective;
+  // normalization vector n_i, i=0..N
+  std::vector<El::BigFloat> normalization;
+  // Total number of matrices
+  size_t num_matrices = 0;
+  // In case of several processes,
+  // each process owns only some matrices.
+  std::vector<Polynomial_Vector_Matrix> matrices;
+  // global index of matrices[i], lies in [0..num_matrices)
+  std::vector<size_t> matrix_index_local_to_global;
+
+  // Allow move and prohibit copy
+
+  Polynomial_Matrix_Program(const Polynomial_Matrix_Program &other) = delete;
+  Polynomial_Matrix_Program(Polynomial_Matrix_Program &&other) noexcept
+    = default;
+  Polynomial_Matrix_Program &operator=(const Polynomial_Matrix_Program &other)
+    = delete;
+  Polynomial_Matrix_Program &
+  operator=(Polynomial_Matrix_Program &&other) noexcept
+    = default;
+};

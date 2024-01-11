@@ -1,13 +1,13 @@
 #include "sdpb_util/Boost_Float.hxx"
-#include "sdp_convert/sdp_convert.hxx"
-#include "sdp_convert/write_vector.hxx"
+#include "pmp2sdp/write_sdp.hxx"
+#include "pmp2sdp/write_vector.hxx"
 
 namespace fs = std::filesystem;
 
-void write_functions(
-  const fs::path &output_path,
-  const std::vector<El::BigFloat> &dual_objective_b,
-  const std::vector<Polynomial_Vector_Matrix> &polynomial_vector_matrices)
+void write_functions(const fs::path &output_path,
+                     const std::vector<El::BigFloat> &dual_objective_b,
+                     const std::vector<Polynomial_Vector_Matrix>
+                       &polynomial_vector_matrices)
 {
   fs::create_directories(output_path.parent_path());
   std::ofstream output_stream(output_path);
@@ -35,11 +35,12 @@ void write_functions(
 
       const size_t num_chebyshev_points([&block]() {
         size_t max(0);
-        for(auto &matrix_element : block->elements)
-          for(auto &poly : matrix_element)
-            {
-              max = std::max(max, poly.coefficients.size());
-            }
+        for(int i = 0; i < block->polynomials.Height(); ++i)
+          for(int j = 0; j < block->polynomials.Width(); ++j)
+            for(const auto &poly : block->polynomials(i, j))
+              {
+                max = std::max(max, poly.coefficients.size());
+              }
         return max;
       }());
       const El::BigFloat max_delta([&block]() {
@@ -61,14 +62,16 @@ void write_functions(
                                 / num_chebyshev_points)));
         }
 
-      std::vector<int64_t> max_degree(block->rows * block->cols, 0),
-        min_degree(block->rows * block->cols,
+      std::vector<int64_t> max_degree(
+        block->polynomials.Height() * block->polynomials.Width(), 0),
+        min_degree(block->polynomials.Height() * block->polynomials.Width(),
                    std::numeric_limits<int64_t>::max());
-      for(int64_t row(0); row != block->rows; ++row)
+      for(int64_t row(0); row != block->polynomials.Height(); ++row)
         {
-          for(int64_t column(0); column != block->cols; ++column)
+          for(int64_t column(0); column != block->polynomials.Width();
+              ++column)
             {
-              for(auto &poly : block->elt(row, column))
+              for(auto &poly : block->polynomials(row, column))
                 {
                   // Sometimes, the highest degree coefficients are zero
                   for(size_t index(0); index != poly.coefficients.size();
@@ -78,10 +81,18 @@ void write_functions(
                                            - index);
                       if(poly.coefficients.at(degree) != zero)
                         {
-                          max_degree.at(row + column * block->rows) = std::max(
-                            max_degree.at(row + column * block->rows), degree);
-                          min_degree.at(row + column * block->rows) = std::min(
-                            min_degree.at(row + column * block->rows), degree);
+                          max_degree.at(row
+                                        + column * block->polynomials.Height())
+                            = std::max(
+                              max_degree.at(
+                                row + column * block->polynomials.Height()),
+                              degree);
+                          min_degree.at(row
+                                        + column * block->polynomials.Height())
+                            = std::min(
+                              min_degree.at(
+                                row + column * block->polynomials.Height()),
+                              degree);
                         }
                     }
                 }
@@ -89,7 +100,7 @@ void write_functions(
         }
       // Fix max_degree so that we have the correct limiting
       // determinant
-      switch(block->rows)
+      switch(block->polynomials.Height())
         {
         case 1: break;
           case 2: {
@@ -110,17 +121,18 @@ void write_functions(
         default:
           throw std::runtime_error(
             "Too large a dimension.  Only 1x1 and 2x2 supported: "
-            + std::to_string(block->rows));
+            + std::to_string(block->polynomials.Height()));
         }
 
-      for(int64_t row(0); row != block->rows; ++row)
+      for(int64_t row(0); row != block->polynomials.Height(); ++row)
         {
           if(row != 0)
             {
               output_stream << ",\n";
             }
           output_stream << "      [\n";
-          for(int64_t column(0); column != block->cols; ++column)
+          for(int64_t column(0); column != block->polynomials.Width();
+              ++column)
             {
               if(column != 0)
                 {
@@ -128,10 +140,10 @@ void write_functions(
                 }
               output_stream << "        [\n";
               size_t poly_number(0);
-              for(auto poly(block->elt(row, column).begin());
-                  poly != block->elt(row, column).end(); ++poly)
+              for(auto poly(block->polynomials(row, column).begin());
+                  poly != block->polynomials(row, column).end(); ++poly)
                 {
-                  if(poly != block->elt(row, column).begin())
+                  if(poly != block->polynomials(row, column).begin())
                     {
                       output_stream << ",\n";
                     }
@@ -139,27 +151,27 @@ void write_functions(
                                 << "            \"max_delta\": \"" << max_delta
                                 << "\",\n"
                                 << "            \"infinity_value\": \"";
-                  if(poly->degree()
-                     < max_degree.at(row + column * block->rows))
+                  if(poly->degree() < max_degree.at(
+                       row + column * block->polynomials.Height()))
                     {
                       output_stream << "0";
                     }
                   else
                     {
-                      output_stream << poly->coefficients.at(
-                        max_degree.at(row + column * block->rows));
+                      output_stream << poly->coefficients.at(max_degree.at(
+                        row + column * block->polynomials.Height()));
                     }
                   output_stream << "\",\n"
                                 << "            \"epsilon_value\": \"";
-                  if(poly->degree()
-                     < min_degree.at(row + column * block->rows))
+                  if(poly->degree() < min_degree.at(
+                       row + column * block->polynomials.Height()))
                     {
                       output_stream << "0";
                     }
                   else
                     {
-                      output_stream << poly->coefficients.at(
-                        min_degree.at(row + column * block->rows));
+                      output_stream << poly->coefficients.at(min_degree.at(
+                        row + column * block->polynomials.Height()));
                     }
                   output_stream << "\",\n"
                                 << "            \"chebyshev_values\":\n"

@@ -27,7 +27,7 @@ and 'b', the optimization vector.
 bases, the 'B' matrix, and the 'c' vector.
 Block data can be stored either in a human-readable JSON format, or in a more efficient binary format (which
 uses [Boost.Serialization](http://boost.org/libs/serialization) library,
-see [write_block_data.cxx](../src/sdp_convert/write_block_data.cxx) for details).
+see [write_block_data.cxx](../src/pmp2sdp/write_block_data.cxx) for details).
 
 `SDPB` can also read the input if you pack these files into different
 archive formats.  It is limited by the support for

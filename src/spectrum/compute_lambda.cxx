@@ -1,5 +1,5 @@
 #include "Zero.hxx"
-#include "sdp_convert/sdp_convert.hxx"
+#include "pmp2sdp/write_sdp.hxx"
 
 void compute_lambda(const std::vector<El::BigFloat> &sample_points,
                     const std::vector<El::BigFloat> &sample_scalings,

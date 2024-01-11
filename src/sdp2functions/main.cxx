@@ -1,4 +1,4 @@
-#include "sdp_read/sdp_read.hxx"
+#include "pmp_read/pmp_read.hxx"
 
 #include <boost/program_options.hpp>
 #include <filesystem>
@@ -9,7 +9,7 @@ namespace po = boost::program_options;
 void write_functions(
   const fs::path &output_path, const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
-  const std::vector<Positive_Matrix_With_Prefactor> &matrices);
+  const std::vector<Polynomial_Vector_Matrix> &matrices);
 
 int main(int argc, char **argv)
 {
@@ -84,9 +84,9 @@ int main(int argc, char **argv)
       // base-10 digits.
       Boost_Float::default_precision(precision * log(2) / log(10));
 
-      PMWP_SDP sdp(input_file);
-      write_functions(output_path, sdp.objective, sdp.normalization,
-                      sdp.matrices);
+      const auto pmp = read_polynomial_matrix_program(input_file);
+      write_functions(output_path, pmp.objective, pmp.normalization,
+                      pmp.matrices);
     }
   catch(std::exception &e)
     {

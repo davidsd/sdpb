@@ -1,5 +1,5 @@
 #include "sdpb_util/Boost_Float.hxx"
-#include "sdp_read/sdp_read.hxx"
+#include "pmp_read/pmp_read.hxx"
 
 namespace fs = std::filesystem;
 
@@ -40,8 +40,8 @@ int main(int argc, char **argv)
           throw std::runtime_error("Output file '" + output_path.string()
                                    + "' exists and is a directory");
         }
-      const PVM_SDP sdp(input_files);
-      write_functions(output_path, sdp.objective, sdp.matrices);
+      const auto pmp = read_polynomial_matrix_program(input_files);
+      write_functions(output_path, pmp.objective, pmp.matrices);
     }
   catch(std::exception &e)
     {

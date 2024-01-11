@@ -2,7 +2,7 @@
 #include <vector>
 #include <iostream>
 #include <stdexcept>
-#include "sdp_convert/Block_File_Format.hxx"
+#include "pmp2sdp/Block_File_Format.hxx"
 
 using namespace std::literals;
 namespace fs = std::filesystem;
@@ -10,7 +10,7 @@ namespace fs = std::filesystem;
 void parse_command_line(int argc, char **argv,
                         Block_File_Format &output_format, int &precision,
                         std::vector<fs::path> &input_files,
-                        fs::path &output_dir)
+                        fs::path &output_dir, std::vector<std::string>& command_arguments)
 {
   std::string usage("pvm2sdp [FORMAT] PRECISION INPUT... OUTPUT\n"
                     "FORMAT (optional): output format, bin (default) or json\n"
@@ -24,6 +24,11 @@ void parse_command_line(int argc, char **argv,
           std::cerr << usage;
           exit(0);
         }
+    }
+
+  for(int arg(0); arg != argc; ++arg)
+    {
+      command_arguments.emplace_back(argv[arg]);
     }
 
   size_t curr_arg_pos = 1;
