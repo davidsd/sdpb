@@ -232,7 +232,7 @@ spectrum extraction.  The options are described in more detail in the
 help text, obtained by running `spectrum --help`.  As a simple
 example, extracting the spectrum from the toy example would be
 
-    mpirun -n 4 build/spectrum --input=test/data/spectrum/pvm.xml --solution=test/data/spectrum/solution --threshold=1e-10 --format=PVM --output=test/out/spectrum/spectrum.json --precision=1024
+    mpirun -n 4 build/spectrum --input=test/data/spectrum/pvm.xml --solution=test/data/spectrum/solution --threshold=1e-10 --output=test/out/spectrum/spectrum.json --precision=1024
 
 This will output the spectra into `test/out/spectrum/spectrum.json` and should look like
 

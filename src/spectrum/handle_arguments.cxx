@@ -1,4 +1,3 @@
-#include "Format.hxx"
 #include "sdpb_util/Boost_Float.hxx"
 
 #include <El.hpp>
@@ -9,9 +8,9 @@
 namespace fs = std::filesystem;
 
 void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
-                      El::BigFloat &mesh_threshold, Format &format,
-                      fs::path &input_path, fs::path &solution_dir,
-                      fs::path &output_path, bool &need_lambda)
+                      El::BigFloat &mesh_threshold, fs::path &input_path,
+                      fs::path &solution_dir, fs::path &output_path,
+                      bool &need_lambda)
 {
   int precision;
   std::string threshold_string, mesh_threshold_string, format_string;
@@ -35,10 +34,6 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
     po::value<std::string>(&mesh_threshold_string)->default_value("0.001"),
     "Relative error threshold for when to refine a mesh when approximating a "
     "functional to look for zeros.");
-  options.add_options()("format",
-                        po::value<std::string>(&format_string)->required(),
-                        "Format of input file: Either PVM (Polynomial Vector "
-                        "Matrix), or PMP (Positive Matrix with Prefactor).");
   options.add_options()(
     "output,o", po::value<fs::path>(&output_path)->required(), "Output file");
   options.add_options()(
@@ -48,6 +43,10 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
   options.add_options()("lambda",
                         po::value<bool>(&need_lambda)->default_value(true),
                         "If true, compute Λ and its associated error.");
+
+  options.add_options()(
+    "format", po::value<std::string>(&format_string),
+    "[OBSOLETE] Format of input file. Determined automatically.");
 
   po::positional_options_description positional;
   positional.add("precision", 1);
@@ -61,6 +60,11 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
     {
       std::cout << options << '\n';
       exit(0);
+    }
+  if(variables_map.count("format") != 0)
+    {
+      El::Output("--format option is obsolete. Input file format is "
+                 "determined automatically.");
     }
 
   po::notify(variables_map);
@@ -99,19 +103,4 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
 
   threshold = El::BigFloat(threshold_string);
   mesh_threshold = El::BigFloat(mesh_threshold_string);
-
-  if(format_string == "PVM")
-    {
-      format = Format::Polynomial_Vector_Matrix;
-    }
-  else if(format_string == "PMP")
-    {
-      format = Format::Positive_Matrix_with_Prefactor;
-    }
-  else
-    {
-      throw std::runtime_error(
-        "Unknown format.  Expected 'PVM' or 'PMP', but found '" + format_string
-        + "'");
-    }
 }

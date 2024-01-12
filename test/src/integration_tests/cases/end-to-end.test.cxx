@@ -87,7 +87,6 @@ namespace
           {"--input", (data_dir / "json" / "file_list.nsv").string()},
           {"--solution", (output_dir / "out").string()},
           {"--threshold", "1e-10"},
-          {"--format", "PMP"},
           {"--output", (output_dir / "spectrum.json").string()},
           {"--precision", std::to_string(precision)},
         };
