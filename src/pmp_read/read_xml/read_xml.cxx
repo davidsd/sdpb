@@ -1,7 +1,7 @@
 // See the manual for a description of the correct XML input format.
 
-#include "read_xml.hxx"
 #include "Xml_Parser.hxx"
+#include "pmp_read/PMP_File_Parse_Result.hxx"
 
 #include <filesystem>
 
@@ -47,26 +47,25 @@ namespace
   }
 }
 
-void read_xml(
-  const std::filesystem::path &input_file,
-  const std::function<bool(size_t matrix_index)> &should_parse_matrix,
-  std::vector<El::BigFloat> &objective, size_t &num_matrices,
-  std::map<size_t, Polynomial_Vector_Matrix>
-    &polynomial_vector_matrices)
+PMP_File_Parse_Result
+read_xml(const std::filesystem::path &input_file,
+         const std::function<bool(size_t matrix_index)> &should_parse_matrix)
 {
   LIBXML_TEST_VERSION;
 
-  num_matrices = 0;
+  PMP_File_Parse_Result result;
+
+  result.num_matrices = 0;
   // TODO this is ugly, we should keep track of matrix index inside parser
   // and skip matrices that we don't need.
   // NB: should be called only once for each matrix index,
   // otherwise num_matrices will be incorrect!
   // Currently it is called in Xml_Polynomial_Vector_Matrix_State.xml_on_end_element()
   auto process_matrix
-    = [&should_parse_matrix, &num_matrices, &polynomial_vector_matrices](
+    = [&should_parse_matrix, &result](
         Xml_Polynomial_Vector_Matrix_State &matrix_state) {
         // num_matrices equals to current matrix index
-        auto index = num_matrices;
+        auto index = result.num_matrices;
         if(should_parse_matrix(index))
           {
             El::Matrix<std::vector<Polynomial>> poly_vectors(
@@ -76,7 +75,6 @@ void read_xml(
             for(int i = 0; i < poly_vectors.Height(); ++i)
               for(int j = 0; j < poly_vectors.Width(); ++j)
                 {
-                  auto &x = matrix_state.elements_state.value.at(i).at(j);
                   swap(poly_vectors(i, j), *elt++);
                 }
 
@@ -86,13 +84,13 @@ void read_xml(
             std::vector<Polynomial> bilinear_basis;
             swap(bilinear_basis, matrix_state.bilinear_basis_state.value);
 
-            polynomial_vector_matrices.emplace(
+            result.parsed_matrices.emplace(
               index,
               Polynomial_Vector_Matrix(
                 std::move(poly_vectors), prefactor, std::move(sample_points),
                 std::move(sample_scalings), std::move(bilinear_basis)));
           }
-        ++num_matrices;
+        ++result.num_matrices;
       };
   Xml_Parser input_parser(process_matrix);
 
@@ -118,7 +116,8 @@ void read_xml(
     end(input_parser.objective_state.value.end());
   if(iterator != end)
     {
-      objective.clear();
-      objective.insert(objective.end(), iterator, end);
+      result.objective.clear();
+      result.objective.insert(result.objective.end(), iterator, end);
     }
+  return result;
 }

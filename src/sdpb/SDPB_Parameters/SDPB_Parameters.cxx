@@ -65,9 +65,9 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
     "procsPerNode", po::value<size_t>(),
     "[OBSOLETE] The number of MPI processes running on a node. "
     "Determined automatically from MPI environment.");
-  cmd_line_options.add(obsolete_options);
 
   cmd_line_options.add(basic_options);
+  cmd_line_options.add(obsolete_options);
   cmd_line_options.add(solver.options());
 
   po::variables_map variables_map;

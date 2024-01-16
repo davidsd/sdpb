@@ -1,43 +1,37 @@
-#include "read_json.hxx"
-#include "JSON_Parser.hxx"
-#include "pmp/Polynomial_Vector_Matrix.hxx"
-#include "sdpb_util/to_matrix.hxx"
+#include "pmp_read/read_json/Json_PMP_Parser.hxx"
 
 #include <rapidjson/istreamwrapper.h>
+#include <rapidjson/error/en.h>
 
 namespace fs = std::filesystem;
 
-void read_json(
-  const std::filesystem::path &input_path,
-  const std::function<bool(size_t matrix_index)> &should_parse_matrix,
-  std::vector<El::BigFloat> &objectives,
-  std::vector<El::BigFloat> &normalization, size_t &num_matrices,
-  std::map<size_t, Polynomial_Vector_Matrix> &parsed_matrices)
+PMP_File_Parse_Result
+read_json(const std::filesystem::path &input_path,
+          const std::function<bool(size_t matrix_index)> &should_parse_matrix)
 {
   std::ifstream input_file(input_path);
   rapidjson::IStreamWrapper wrapper(input_file);
-  JSON_Parser parser;
-  rapidjson::Reader reader;
-  reader.Parse(wrapper, parser);
+  PMP_File_Parse_Result result;
+  Json_PMP_Parser parser(
+    should_parse_matrix,
+    [&](PMP_File_Parse_Result &&value) { result = std::move(value); });
 
-  if(!parser.objective_state.value.empty())
+  rapidjson::ParseResult res;
+  try
     {
-      std::swap(objectives, parser.objective_state.value);
+      rapidjson::Reader reader;
+      res = reader.Parse(wrapper, parser);
     }
-  if(!parser.normalization_state.value.empty())
+  catch(std::exception &e)
     {
-      std::swap(normalization, parser.normalization_state.value);
+      El::RuntimeError("Failed to parse ", input_path,
+                       ": offset=", wrapper.Tell(), ": ", e.what());
     }
-
-  // TODO skip matrices that we don't need
-  auto &all_matrices(parser.positive_matrices_with_prefactor_state.value);
-  num_matrices = all_matrices.size();
-
-  for(size_t index = 0; index < all_matrices.size(); ++index)
+  if(res.IsError())
     {
-      if(should_parse_matrix(index))
-        {
-          parsed_matrices.emplace(index, std::move(*all_matrices.at(index)));
-        }
+      El::RuntimeError("Failed to parse ", input_path,
+                       ": offset=", res.Offset(),
+                       ": error: ", rapidjson::GetParseError_En(res.Code()));
     }
+  return result;
 }

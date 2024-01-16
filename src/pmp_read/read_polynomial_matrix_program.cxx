@@ -29,7 +29,8 @@ Polynomial_Matrix_Program read_polynomial_matrix_program(
         return (num_matrices + matrix_index) % El::mpi::Size()
                == El::mpi::Rank();
       };
-      PMP_File_Parse_Result file_parse_result(file, should_parse_matrix);
+      auto file_parse_result
+        = PMP_File_Parse_Result::read(file, should_parse_matrix);
 
       // TODO throw error if objectives or normalization are defined in several files?
       if(!file_parse_result.objective.empty())
