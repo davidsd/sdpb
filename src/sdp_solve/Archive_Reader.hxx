@@ -16,21 +16,26 @@ struct Archive_Reader : public std::streambuf
   std::array<char, 8192> buffer;
   archive_entry *entry_ptr;
   bool entry_is_valid = false;
-  Archive_Reader(const std::filesystem::path &filename);
+  explicit Archive_Reader(const std::filesystem::path &filename);
   Archive_Reader() = delete;
-  ~Archive_Reader() = default;
+  ~Archive_Reader() override = default;
 
   bool next_entry()
   {
-    auto read_result = archive_read_next_header(ptr.get(), &entry_ptr);
+    const auto read_result = archive_read_next_header(ptr.get(), &entry_ptr);
     if(read_result == ARCHIVE_OK)
       entry_is_valid = true;
     else if(read_result == ARCHIVE_EOF)
       entry_is_valid = false;
     else
-      El::RuntimeError("Archive_Reader: ", archive_error_string(ptr.get()));
+      {
+        const char *const pathname = archive_entry_pathname(entry_ptr);
+        const std::string name = pathname ? pathname : "EOF";
+        El::RuntimeError("Archive_Reader: ", name, ": ",
+                         archive_error_string(ptr.get()));
+      }
 
     return entry_is_valid;
   }
-  int underflow();
+  int underflow() override;
 };
