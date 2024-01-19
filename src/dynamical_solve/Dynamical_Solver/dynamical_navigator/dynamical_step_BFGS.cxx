@@ -101,19 +101,6 @@ void external_window(const std::vector<El::BigFloat> &bmax,
 //	const El::BigFloat &alpha,
 //	El::Matrix<El::BigFloat> &grad);
 
-//This function is the same as in the usual SDP_Solver,
-//modified to take the argument 'solver' of the right type.
-//Currently not used in the dynamical_step
-void compute_search_direction(
-  const Block_Info &block_info, const SDP &sdp, const Dynamical_Solver &solver,
-  const Block_Diagonal_Matrix &schur_complement_cholesky,
-  const Block_Matrix &schur_off_diagonal,
-  const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
-  const El::BigFloat &mu, const Block_Vector &primal_residue_p,
-  const bool &is_corrector_phase, const El::DistMatrix<El::BigFloat> &Q,
-  Block_Vector &dx, Block_Diagonal_Matrix &dX, Block_Vector &dy,
-  Block_Diagonal_Matrix &dY);
-
 void compute_find_zeros(const El::BigFloat &duality_gap,
                         const El::BigFloat &primal_objective,
                         bool &find_zeros);

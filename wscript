@@ -111,7 +111,6 @@ def build(bld):
         'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/BFGS.cxx',
         'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_lag.cxx',
         'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_R_error.cxx',
-        'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/compute_search_direction.cxx',
         'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/cubic_approx.cxx',
         'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_BFGS.cxx',
         'src/dynamical_solve/Dynamical_Solver/dynamical_navigator/dynamical_step_BFGS_func.cxx',
