@@ -49,7 +49,7 @@ void compute_search_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
-  const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
+  const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat &beta,
   const El::BigFloat &mu, const Block_Vector &primal_residue_p,
   const bool &is_corrector_phase,
   const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx,
