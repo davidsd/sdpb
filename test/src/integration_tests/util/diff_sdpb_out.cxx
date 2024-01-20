@@ -76,7 +76,6 @@ namespace
               float_map[key] = Float(value);
             }
         }
-      REQUIRE(!terminate_reason.empty());
     }
   };
 }
@@ -120,6 +119,7 @@ namespace
         CAPTURE(key);
         if(key == "terminateReason")
           {
+            REQUIRE(!a.terminate_reason.empty());
             REQUIRE(a.terminate_reason == b.terminate_reason);
             continue;
           }
@@ -135,6 +135,22 @@ namespace
         DIFF(a_map[key], b_map[key]);
       }
   }
+
+  // txt with a single integer
+  int read_int_file(const fs::path &file_path)
+  {
+    std::ifstream is(file_path);
+    int result;
+    is >> result >> std::ws;
+    REQUIRE(is.eof());
+    return result;
+  }
+
+  // Compare iterations.txt from skydiving
+  void diff_int_txt(const fs::path &a, const fs::path &b)
+  {
+    DIFF(read_int_file(a), read_int_file(b));
+  }
 }
 
 // Implementation
@@ -143,9 +159,9 @@ namespace Test_Util::REQUIRE_Equal
   void
   diff_sdpb_output_dir(const fs::path &a_out_dir, const fs::path &b_out_dir,
                        unsigned int input_precision,
-                            unsigned int diff_precision,
-                            const std::vector<std::string> &filenames,
-                            const std::vector<std::string> &out_txt_keys)
+                       unsigned int diff_precision,
+                       const std::vector<std::string> &filenames,
+                       const std::vector<std::string> &out_txt_keys)
   {
     INFO("diff sdpb output");
     CAPTURE(a_out_dir);
@@ -181,6 +197,13 @@ namespace Test_Util::REQUIRE_Equal
 
         if(name == "out.txt")
           diff_sdpb_out_txt(a, b, out_txt_keys);
+        else if(name == "skydiving_out.txt")
+          diff_sdpb_out_txt(a, b,
+                            {"dualStepSize", "primalStepSize",
+                             "BFGSHessianUpdated", "NavigatorValue",
+                             "findMinimumQ", "beta", "mulogdetX", "climbedQ"});
+        else if(name == "iterations.txt")
+          diff_int_txt(a, b);
         else
           diff_matrix_txt(a, b);
       }

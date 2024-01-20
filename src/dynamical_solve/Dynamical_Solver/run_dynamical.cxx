@@ -2,6 +2,7 @@
 #include "sdp_solve/sdp_solve.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/initialize_bigint_syrk_context.hxx"
+#include "sdp_solve/SDP_Solver/run/compute_feasible_and_termination.hxx"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
@@ -70,17 +71,6 @@ void compute_R_error(const std::size_t &total_psd_rows,
                      Timers &timers);
 
 extern int max_climbing;
-
-//Same as the function in SDP_Solver, adapted for the Dynamical_Solver_Terminate_Reason class
-void compute_feasible_and_termination(
-  const Solver_Parameters &parameters, const El::BigFloat &primal_error,
-  const El::BigFloat &dual_error, const El::BigFloat &duality_gap,
-  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
-  const int &iteration,
-  const std::chrono::time_point<std::chrono::high_resolution_clock>
-    &solver_start_time,
-  bool &is_primal_and_dual_feasible,
-  Dynamical_Solver_Terminate_Reason &terminate_reason, bool &terminate_now);
 
 // checkpoint_save will use this variable. It's very bad we pass this variable as argument everywhere.
 // I will just define a global variable. This is temporary fix. We should make it member variable.
