@@ -26,7 +26,7 @@
 
 FROM vasdommes/flint:3.0-trunk as flint
 
-FROM bootstrapcollaboration/elemental:v0.88.0 AS build
+FROM bootstrapcollaboration/elemental:master AS build
 
 RUN apk add \
     cmake \
