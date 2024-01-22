@@ -1,42 +1,14 @@
 #pragma once
 
-#include "Block_Cost.hxx"
 #include "sdpb_util/Environment.hxx"
 #include "sdpb_util/Verbosity.hxx"
+#include "sdpb_util/block_mapping/Block_Cost.hxx"
+#include "sdpb_util/block_mapping/MPI_Comm_Wrapper.hxx"
+#include "sdpb_util/block_mapping/MPI_Group_Wrapper.hxx"
 
 #include <El.hpp>
 #include <algorithm>
 #include <filesystem>
-
-struct MPI_Comm_Wrapper
-{
-  El::mpi::Comm value;
-  MPI_Comm_Wrapper() = default;
-  MPI_Comm_Wrapper(const MPI_Comm_Wrapper &) = delete;
-  void operator=(const MPI_Comm_Wrapper &) = delete;
-  ~MPI_Comm_Wrapper()
-  {
-    if(value != El::mpi::COMM_WORLD)
-      {
-        El::mpi::Free(value);
-      }
-  }
-};
-
-struct MPI_Group_Wrapper
-{
-  El::mpi::Group value;
-  MPI_Group_Wrapper() = default;
-  MPI_Group_Wrapper(const MPI_Group_Wrapper &) = delete;
-  void operator=(const MPI_Group_Wrapper &) = delete;
-  ~MPI_Group_Wrapper()
-  {
-    if(value != El::mpi::GROUP_NULL)
-      {
-        El::mpi::Free(value);
-      }
-  }
-};
 
 class Block_Info
 {
@@ -146,15 +118,6 @@ public:
 
 namespace std
 {
-  inline void swap(MPI_Comm_Wrapper &a, MPI_Comm_Wrapper &b)
-  {
-    swap(a.value, b.value);
-  }
-  inline void swap(MPI_Group_Wrapper &a, MPI_Group_Wrapper &b)
-  {
-    swap(a.value, b.value);
-  }
-
   inline void swap(Block_Info &a, Block_Info &b)
   {
     swap(a.block_timings_filename, b.block_timings_filename);

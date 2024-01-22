@@ -1,11 +1,6 @@
-#include "sdp_solve/Block_Cost.hxx"
-#include "Block_Map.hxx"
-#include "sdp_solve/Block_Info.hxx"
-
-std::vector<std::vector<Block_Map>>
-compute_block_grid_mapping(const size_t &procs_per_node,
-                           const size_t &num_nodes,
-                           const std::vector<Block_Cost> &block_costs);
+#include "../Block_Info.hxx"
+#include "../../sdpb_util/block_mapping/compute_block_grid_mapping.hxx"
+#include "../../sdpb_util/block_mapping/create_mpi_block_mapping_groups.hxx"
 
 void Block_Info::allocate_blocks(const Environment &env,
                                  const std::vector<Block_Cost> &block_costs,
@@ -77,54 +72,7 @@ void Block_Info::allocate_blocks(const Environment &env,
   const auto &node_comm = env.comm_shared_mem;
   const int node_index = env.node_index();
 
-  // Create an mpi::Group for each node.
-  // The group will be split into subgroups according to block mapping.
-  El::mpi::Group node_mpi_group;
-  El::mpi::CommGroup(node_comm, node_mpi_group);
-
-  // Assign block_indices and create MPI group
-  // for node ranks in [node_rank_begin, node_rank_end) containing current node_rank.
-  const int node_rank = El::mpi::Rank(node_comm);
-  int node_rank_begin(0), node_rank_end(0);
-  for(const auto &block_map : mapping.at(node_index))
-    {
-      node_rank_begin = node_rank_end;
-      node_rank_end += block_map.num_procs;
-      if(node_rank_end > node_rank)
-        {
-          block_indices = block_map.block_indices;
-          break;
-        }
-    }
-  // We should be generating blocks to cover all of the processors,
-  // even if there are more nodes than procs.  So this is a sanity
-  // check in case we messed up something in
-  // compute_block_grid_mapping.
-  if(node_rank_end <= node_rank)
-    {
-      El::LogicError(
-        "Some procs were not covered by compute_block_grid_mapping: "
-        "node=",
-        node_index, ", node_rank=", node_rank, ", rank_end=", node_rank_end);
-    }
-  if(node_rank_end > procs_per_node)
-    {
-      El::LogicError("Block mapping for node=", node_index,
-                     " assumes more than ", procs_per_node,
-                     " processes per node.");
-    }
-
-  // Create MPI group for [node_rank_begin, node_rank_end)
-  {
-    std::vector<int> group_ranks(node_rank_end - node_rank_begin);
-    std::iota(group_ranks.begin(), group_ranks.end(), node_rank_begin);
-    El::mpi::Incl(node_mpi_group, group_ranks.size(), group_ranks.data(),
-                  mpi_group.value);
-  }
-  if(mpi_group.value == El::mpi::GROUP_NULL)
-    {
-      El::RuntimeError("Block assignment failed for rank=", El::mpi::Rank(),
-                       " at node=", node_index);
-    }
-  El::mpi::Create(node_comm, mpi_group.value, mpi_comm.value);
+  create_mpi_block_mapping_groups(mapping, node_comm, node_index,
+                                  mpi_group.value, mpi_comm.value,
+                                  block_indices);
 }

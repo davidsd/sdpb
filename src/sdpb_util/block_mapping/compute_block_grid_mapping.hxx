@@ -44,7 +44,9 @@
 // 2) When large blocks are forced to fit into a node, there is no
 // sharing of procs between the existing block_maps and the new entry.
 
-#include "sdp_solve/Block_Cost.hxx"
+#pragma once
+
+#include "Block_Cost.hxx"
 #include "Block_Map.hxx"
 
 #include <numeric>
@@ -52,7 +54,7 @@
 #include <stdexcept>
 #include <limits>
 
-std::vector<std::vector<Block_Map>>
+inline std::vector<std::vector<Block_Map>>
 compute_block_grid_mapping(const size_t &procs_per_node,
                            const size_t &num_nodes,
                            const std::vector<Block_Cost> &block_costs)
