@@ -1,6 +1,6 @@
 #include "../Block_Info.hxx"
-#include "../../sdpb_util/block_mapping/compute_block_grid_mapping.hxx"
-#include "../../sdpb_util/block_mapping/create_mpi_block_mapping_groups.hxx"
+#include "sdpb_util/block_mapping/compute_block_grid_mapping.hxx"
+#include "sdpb_util/block_mapping/create_mpi_block_mapping_groups.hxx"
 
 void Block_Info::allocate_blocks(const Environment &env,
                                  const std::vector<Block_Cost> &block_costs,
@@ -75,4 +75,8 @@ void Block_Info::allocate_blocks(const Environment &env,
   create_mpi_block_mapping_groups(mapping, node_comm, node_index,
                                   mpi_group.value, mpi_comm.value,
                                   block_indices);
+
+  if(block_indices.empty())
+    El::RuntimeError("No SDP blocks were assigned to rank=", El::mpi::Rank(),
+                     ". node=", node_index, " node_rank=", node_comm.Rank());
 }
