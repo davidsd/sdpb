@@ -90,9 +90,9 @@ namespace
   }
 }
 
-void write_sdp(
-  const fs::path &output_path, const Output_SDP& sdp, Block_File_Format output_format,
-  Timers &timers, const bool debug)
+void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
+               Block_File_Format output_format, Timers &timers,
+               const bool debug)
 {
   Scoped_Timer write_timer(timers, "write_sdp");
 
@@ -144,15 +144,49 @@ void write_sdp(
   }
   {
     Scoped_Timer reduce_timer(timers, "mpi_reduce_block_sizes");
+
+    // for validation:
+    auto block_info_sizes_max = block_info_sizes;
+
     El::mpi::Reduce(block_info_sizes.data(), block_info_sizes.size(),
                     El::mpi::SUM, 0, El::mpi::COMM_WORLD);
     El::mpi::Reduce(block_data_sizes.data(), block_data_sizes.size(),
                     El::mpi::SUM, 0, El::mpi::COMM_WORLD);
+
+    // Validate sizes.
+    // For each block, block_info_sizes[block] is positive on exaclty one rank
+    // and equals zero on all other ranks.
+    // Thus, MPI_Reduce block_info_sizes with SUM and with MAX
+    // should yield the same result.
+    El::mpi::Reduce(block_info_sizes_max.data(), block_info_sizes_max.size(),
+                    El::mpi::MAX, 0, El::mpi::COMM_WORLD);
+    if(El::mpi::Rank() == 0)
+      {
+        for(size_t block_index = 0; block_index < block_info_sizes.size();
+            ++block_index)
+          {
+            if(block_info_sizes.at(block_index)
+               != block_info_sizes_max.at(block_index))
+              {
+                El::LogicError("block_", block_index,
+                               " has been processed by more than one rank!");
+              }
+            if(block_info_sizes.at(block_index) == 0)
+              {
+                El::RuntimeError("block_info_", block_index, " size is zero");
+              }
+            if(block_data_sizes.at(block_index) == 0)
+              {
+                El::RuntimeError("block_data_", block_index, " size is zero");
+              }
+          }
+      }
   }
   const int rank = El::mpi::Rank();
   if(debug)
     {
-      print_matrix_sizes(rank, sdp.dual_objective_b, sdp.dual_constraint_groups);
+      print_matrix_sizes(rank, sdp.dual_objective_b,
+                         sdp.dual_constraint_groups);
     }
   if(rank == 0)
     {
@@ -163,10 +197,10 @@ void write_sdp(
         = write_data_and_count_bytes(control_path, [&](std::ostream &os) {
             write_control_json(os, sdp.num_blocks, sdp.command_arguments);
           });
-      size_t num_objectives_bytes
-        = write_data_and_count_bytes(objectives_path, [&](std::ostream &os) {
-            write_objectives_json(os, sdp.objective_const, sdp.dual_objective_b);
-          });
+      size_t num_objectives_bytes = write_data_and_count_bytes(
+        objectives_path, [&](std::ostream &os) {
+          write_objectives_json(os, sdp.objective_const, sdp.dual_objective_b);
+        });
 
       // write all files to sdp.zip archive
       Scoped_Timer zip_timer(timers, "zip");
@@ -190,7 +224,8 @@ void write_sdp(
 
         // We add block_info before all block_data,
         // so that SDPB can read them fast and skip the rest of archive
-        for(size_t block_index = 0; block_index != sdp.num_blocks; ++block_index)
+        for(size_t block_index = 0; block_index != sdp.num_blocks;
+            ++block_index)
           {
             Scoped_Timer index_timer(timers, std::to_string(block_index));
             const auto block_info_path
@@ -203,7 +238,8 @@ void write_sdp(
       // block_data_XXX.bin (or .json)
       {
         Scoped_Timer block_data_timer(timers, "block_data");
-        for(size_t block_index = 0; block_index != sdp.num_blocks; ++block_index)
+        for(size_t block_index = 0; block_index != sdp.num_blocks;
+            ++block_index)
           {
             Scoped_Timer index_timer(timers, std::to_string(block_index));
             const auto block_data_path

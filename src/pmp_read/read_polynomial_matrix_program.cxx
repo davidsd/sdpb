@@ -198,7 +198,7 @@ read_polynomial_matrix_program(const std::vector<fs::path> &input_files)
       normalization.at(0) = 1;
     }
 
-  return Polynomial_Matrix_Program{
+  return Polynomial_Matrix_Program(
     std::move(objective), std::move(normalization), num_matrices,
-    std::move(matrices), std::move(matrix_index_local_to_global)};
+    std::move(matrices), std::move(matrix_index_local_to_global));
 }

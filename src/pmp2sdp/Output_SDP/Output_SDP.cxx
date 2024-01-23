@@ -54,6 +54,24 @@ namespace
         }
     return output;
   }
+
+  void validate(const Output_SDP &sdp)
+  {
+    if(sdp.num_blocks == 0)
+      El::RuntimeError("sdp.num_blocks == 0");
+    if(sdp.dual_constraint_groups.size() > sdp.num_blocks)
+      El::RuntimeError("sdp.dual_constraint_groups.size()=",
+                       sdp.dual_constraint_groups.size(),
+                       " should not exceed sdp.num_blocks=", sdp.num_blocks);
+    for(const auto &group : sdp.dual_constraint_groups)
+      if(group.block_index >= sdp.num_blocks)
+        El::RuntimeError(
+          "group.block_index=", group.block_index,
+          " should be less than sdp.num_blocks=", sdp.num_blocks);
+    // TODO: we should also check that block indices from all ranks
+    // are unique and cover [0, num_blocks) range.
+    // This is checked indirectly in write_sdp().
+  }
 }
 
 Output_SDP::Output_SDP(const Polynomial_Matrix_Program &pmp,
@@ -105,4 +123,5 @@ Output_SDP::Output_SDP(const Polynomial_Matrix_Program &pmp,
           dual_constraint_groups.emplace_back(block_index, matrix);
         }
     }
+  validate(*this);
 }
