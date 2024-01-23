@@ -68,8 +68,7 @@ read_xml(const std::filesystem::path &input_file,
         auto index = result.num_matrices;
         if(should_parse_matrix(index))
           {
-            El::Matrix<std::vector<Polynomial>> poly_vectors(
-              matrix_state.rows, matrix_state.cols);
+            El::Matrix<Polynomial_Vector> poly_vectors(matrix_state.rows, matrix_state.cols);
 
             auto elt = matrix_state.elements_state.value.begin();
             for(int i = 0; i < poly_vectors.Height(); ++i)
@@ -81,7 +80,7 @@ read_xml(const std::filesystem::path &input_file,
             std::optional<Damped_Rational> prefactor = std::nullopt;
             auto &sample_points = matrix_state.sample_points_state.value;
             auto &sample_scalings = matrix_state.sample_scalings_state.value;
-            std::vector<Polynomial> bilinear_basis;
+            Polynomial_Vector bilinear_basis;
             swap(bilinear_basis, matrix_state.bilinear_basis_state.value);
 
             result.parsed_matrices.emplace(

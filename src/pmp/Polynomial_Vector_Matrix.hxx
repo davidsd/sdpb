@@ -33,7 +33,7 @@ struct Polynomial_Vector_Matrix
 {
   // TODO: This is actually a symmetric matrix (dim x dim) of a vector
   // of polynomials.  So we should use a proper symmetric matrix class.
-  El::Matrix<std::vector<Polynomial>> polynomials;
+  El::Matrix<Polynomial_Vector> polynomials;
 
   // A list of real numbers x_k (0 <= k <= degree(M)) at which to
   // sample M(x) to construct the v_{b,k}.
@@ -45,14 +45,14 @@ struct Polynomial_Vector_Matrix
 
   // bilinearBasis[m] = q_m(x) (0 <= m <= degree/2), where q_m is a
   // polynomial with degree deg(q_m) = m.
-  std::vector<Polynomial> bilinear_basis;
+  Polynomial_Vector bilinear_basis;
 
   Polynomial_Vector_Matrix(
-    const El::Matrix<std::vector<Polynomial>> &polynomials,
+    const El::Matrix<Polynomial_Vector> &polynomials,
     const std::optional<Damped_Rational> &prefactor_opt,
     const std::optional<std::vector<El::BigFloat>> &sample_points_opt,
     const std::optional<std::vector<El::BigFloat>> &sample_scalings_opt,
-    const std::optional<std::vector<Polynomial>>
+    const std::optional<Polynomial_Vector>
       &bilinear_basis_opt) noexcept(false);
 
   void validate(int64_t max_degree) const;

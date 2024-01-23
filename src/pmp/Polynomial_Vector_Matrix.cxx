@@ -10,7 +10,7 @@ std::vector<Boost_Float>
 sample_scalings(const std::vector<Boost_Float> &points,
                 const Damped_Rational &damped_rational);
 
-std::vector<Polynomial> bilinear_basis(const Damped_Rational &damped_rational,
+Polynomial_Vector bilinear_basis(const Damped_Rational &damped_rational,
                                        const size_t &half_max_degree);
 
 namespace
@@ -56,7 +56,7 @@ namespace
 
 namespace
 {
-  int64_t get_max_degree(const El::Matrix<std::vector<Polynomial>> &pvm)
+  int64_t get_max_degree(const El::Matrix<Polynomial_Vector> &pvm)
   {
     int64_t max_degree = 0;
     for(int i = 0; i < pvm.Height(); ++i)
@@ -99,8 +99,8 @@ namespace
     return to_BigFloat_Vector(
       sample_scalings(to_Boost_Float_Vector(sample_points), damped_rational));
   }
-  std::vector<Polynomial> bilinear_basis_or_default(
-    const std::optional<std::vector<Polynomial>> &bilinear_basis_opt,
+  Polynomial_Vector bilinear_basis_or_default(
+    const std::optional<Polynomial_Vector> &bilinear_basis_opt,
     const Damped_Rational &damped_rational, int64_t max_degree)
   {
     if(bilinear_basis_opt.has_value())
@@ -111,11 +111,11 @@ namespace
 }
 
 Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
-  const El::Matrix<std::vector<Polynomial>> &polynomials,
+  const El::Matrix<Polynomial_Vector> &polynomials,
   const std::optional<Damped_Rational> &prefactor_opt,
   const std::optional<std::vector<El::BigFloat>> &sample_points_opt,
   const std::optional<std::vector<El::BigFloat>> &sample_scalings_opt,
-  const std::optional<std::vector<Polynomial>> &bilinear_basis_opt)
+  const std::optional<Polynomial_Vector> &bilinear_basis_opt)
 {
   const auto max_degree = get_max_degree(polynomials);
 

@@ -41,7 +41,7 @@ std::vector<Zeros> compute_spectrum(
       const size_t num_rows(block.polynomials.Height()),
         num_columns(block.polynomials.Width());
 
-      std::vector<std::vector<Polynomial>> summed_polynomials(num_rows);
+      std::vector<Polynomial_Vector> summed_polynomials(num_rows);
       El::BigFloat block_scale(0), product;
       for(size_t row(0); row != num_rows; ++row)
         {

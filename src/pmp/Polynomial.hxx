@@ -90,8 +90,21 @@ inline Polynomial operator/(const Polynomial &a, const El::BigFloat &b)
   return result;
 }
 
+struct Polynomial_Vector : std::vector<Polynomial>
+{
+  template <class... Args>
+  explicit Polynomial_Vector(Args &&...args)
+      : std::vector<Polynomial>(std::forward<Args>(args)...)
+  {}
+
+  // Need to implement this method to use El::Matrix<Polynomial_Vector>:
+  // for some configurations, El::MemZero() is called when constructing a matrix.
+  // It calls element.Zero() for each matrix element.
+  void Zero() { clear(); }
+};
+
 // Convenience functions to avoid copies
-inline void swap(std::vector<Polynomial> &polynomials,
+inline void swap(Polynomial_Vector &polynomials,
                  std::vector<std::vector<El::BigFloat>> &elements_vector)
 {
   for(auto &elements : elements_vector)
@@ -102,7 +115,7 @@ inline void swap(std::vector<Polynomial> &polynomials,
 }
 
 inline void swap(
-  std::vector<std::vector<Polynomial>> &polynomials_vector,
+  std::vector<Polynomial_Vector> &polynomials_vector,
   std::vector<std::vector<std::vector<El::BigFloat>>> &elements_vector_vector)
 {
   for(auto &elements_vector : elements_vector_vector)
@@ -112,10 +125,10 @@ inline void swap(
     }
 }
 
-inline void swap(
-  std::vector<std::vector<std::vector<Polynomial>>> &polynomials_vector_vector,
-  std::vector<std::vector<std::vector<std::vector<El::BigFloat>>>>
-    &elements_vector_vector_vector)
+inline void
+swap(std::vector<std::vector<Polynomial_Vector>> &polynomials_vector_vector,
+     std::vector<std::vector<std::vector<std::vector<El::BigFloat>>>>
+       &elements_vector_vector_vector)
 {
   for(auto &elements_vector_vector : elements_vector_vector_vector)
     {

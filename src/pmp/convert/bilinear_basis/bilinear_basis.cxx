@@ -19,13 +19,13 @@ Boost_Float bilinear_form(
   const std::vector<std::vector<Boost_Float>> &integral_matrix,
   const int64_t &m);
 
-std::vector<Polynomial> bilinear_basis(const Damped_Rational &damped_rational,
-                                       const size_t &half_max_degree)
+Polynomial_Vector bilinear_basis(const Damped_Rational &damped_rational,
+                                 const size_t &half_max_degree)
 {
   // Exit early if damped_rational is a constant
   if(damped_rational.is_constant())
     {
-      std::vector<Polynomial> result;
+      Polynomial_Vector result;
       result.emplace_back(
         1, El::BigFloat(to_string(1 / sqrt(damped_rational.constant))));
       return result;
@@ -76,7 +76,7 @@ std::vector<Polynomial> bilinear_basis(const Damped_Rational &damped_rational,
            El::OrientationNS::NORMAL, El::UnitOrNonUnit::NON_UNIT,
            El::BigFloat(1), anti_band_matrix, basis);
 
-  std::vector<Polynomial> result(basis.Height());
+  Polynomial_Vector result(basis.Height());
   for(int64_t row = 0; row < basis.Height(); ++row)
     for(int64_t column = 0; column < basis.Width(); ++column)
       {

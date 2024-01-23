@@ -21,7 +21,7 @@
 
 El::Matrix<El::BigFloat>
 sample_bilinear_basis(const int maxDegree, const int numSamples,
-                      const std::vector<Polynomial> &bilinearBasis,
+                      const Polynomial_Vector &bilinearBasis,
                       const std::vector<El::BigFloat> &samplePoints,
                       const std::vector<El::BigFloat> &sampleScalings)
 {

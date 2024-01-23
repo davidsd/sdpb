@@ -32,7 +32,7 @@ parse_matrix(const char *begin, const char *end,
       throw std::runtime_error("Missing comma after DampedRational");
     }
 
-  std::vector<std::vector<std::vector<Polynomial>>> polynomials;
+  std::vector<std::vector<Polynomial_Vector>> polynomials;
   const char *end_polynomials(
     parse_generic(std::next(comma), end, polynomials));
 
