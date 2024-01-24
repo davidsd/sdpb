@@ -4,6 +4,7 @@
 #include "sdp_solve/SDP/SDP/set_bases_blocks.hxx"
 #include "sdpb_util/Number_State.hxx"
 #include "sdpb_util/Vector_State.hxx"
+#include "sdpb_util/assert.hxx"
 #include "sdpb_util/boost_serialization.hxx"
 
 #include <boost/archive/binary_iarchive.hpp>
@@ -59,11 +60,9 @@ void parse_block_data(std::istream &block_stream, Block_File_Format format,
       boost::archive::binary_iarchive ar(block_stream);
       mp_bitcnt_t precision;
       ar >> precision;
-      if(precision != El::gmp::Precision())
-        {
-          El::RuntimeError("Read GMP precision: ", precision,
-                           ", expected: ", El::gmp::Precision());
-        }
+      ASSERT(precision == El::gmp::Precision(),
+             "Read GMP precision: ", precision,
+             ", expected: ", El::gmp::Precision());
       ar >> constraint_matrix;
       ar >> constraint_constants;
       ar >> bilinear_bases_even;
@@ -83,7 +82,7 @@ void parse_block_data(std::istream &block_stream, Block_File_Format format,
     }
   else
     {
-      El::RuntimeError("Unknown Block_File_Format: ", format);
+      RUNTIME_ERROR("Unknown Block_File_Format: ", format);
     }
 }
 

@@ -1,3 +1,4 @@
+#include "sdpb_util/assert.hxx"
 #include "spectrum/Zeros.hxx"
 
 #include <filesystem>
@@ -22,12 +23,10 @@ void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
       std::vector<size_t> zero_sizes(num_blocks, 0),
         lambda_sizes(num_blocks, 0);
 
-      if(block_indices.size() != zeros_blocks.size())
-        {
-          El::RuntimeError("block_indices.size()=", block_indices.size(),
-                           " and zeros_blocks.size()=", zeros_blocks.size(),
-                           " should be equal");
-        }
+      ASSERT(block_indices.size() == zeros_blocks.size(),
+             "block_indices.size()=", block_indices.size(),
+             " and zeros_blocks.size()=", zeros_blocks.size(),
+             " should be equal");
       for(size_t local_index = 0; local_index < block_indices.size();
           ++local_index)
         {

@@ -1,3 +1,4 @@
+#include "sdpb_util/assert.hxx"
 #include "spectrum/Zeros.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
 
@@ -12,11 +13,8 @@ void write_file(const fs::path &output_path,
     {
       fs::create_directories(output_path.parent_path());
       std::ofstream outfile(output_path);
-      if(!outfile.good())
-        {
-          throw std::runtime_error("Problem when opening output file: '"
-                                   + output_path.string() + "'");
-        }
+      ASSERT(outfile.good(),
+             "Problem when opening output file: ", output_path);
       set_stream_precision(outfile);
       outfile << "[";
       for(auto zeros_iterator(zeros_blocks.begin());
@@ -56,10 +54,7 @@ void write_file(const fs::path &output_path,
                   << "  }";
         }
       outfile << "\n]\n";
-      if(!outfile.good())
-        {
-          throw std::runtime_error("Problem when writing to output file: '"
-                                   + output_path.string() + "'");
-        }
+      ASSERT(outfile.good(),
+             "Problem when writing to output file: ", output_path);
     }
 }

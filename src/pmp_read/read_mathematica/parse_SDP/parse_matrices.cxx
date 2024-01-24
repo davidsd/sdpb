@@ -16,7 +16,7 @@ const char *parse_matrices(
   const auto open_brace(std::find(begin, end, '{'));
   if(open_brace == end)
     {
-      throw std::runtime_error("Could not find '{' to start array");
+      RUNTIME_ERROR("Could not find '{' to start array");
     }
 
   auto delimiter(open_brace);
@@ -39,7 +39,7 @@ const char *parse_matrices(
                                      delimiters.end());
       if(delimiter == end)
         {
-          throw std::runtime_error(
+          RUNTIME_ERROR(
             "Missing '}' at end of array of PositiveMatrixWithPrefactor");
         }
   } while(*delimiter != '}');

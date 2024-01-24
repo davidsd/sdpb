@@ -10,13 +10,13 @@ bool Points_Parser::StartArray()
         }
       else
         {
-          throw std::runtime_error(
-            "Invalid input file.  Unknown array inside the main object");
+          RUNTIME_ERROR(
+            "Invalid input file. Unknown array inside the main object");
         }
     }
   else
     {
-      throw std::runtime_error("Found an array outside of the SDP.");
+      RUNTIME_ERROR("Found an array outside of the SDP.");
     }
   return true;
 }

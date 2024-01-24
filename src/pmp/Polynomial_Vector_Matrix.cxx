@@ -1,6 +1,7 @@
 #include "Polynomial_Vector_Matrix.hxx"
 
 #include "sdpb_util/Boost_Float.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <boost/math/constants/constants.hpp>
 
@@ -11,7 +12,7 @@ sample_scalings(const std::vector<Boost_Float> &points,
                 const Damped_Rational &damped_rational);
 
 Polynomial_Vector bilinear_basis(const Damped_Rational &damped_rational,
-                                       const size_t &half_max_degree);
+                                 const size_t &half_max_degree);
 
 namespace
 {
@@ -132,25 +133,18 @@ Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
 
 void Polynomial_Vector_Matrix::validate(const int64_t max_degree) const
 {
-  if(sample_points.size() != max_degree + 1)
-    {
-      El::RuntimeError("sample_points.size()=", sample_points.size(),
-                       ", expected ", max_degree + 1);
-    }
-  if(sample_scalings.size() != sample_points.size())
-    {
-      El::RuntimeError("sample_scalings.size()=", sample_scalings.size(),
-                       ", expected ", sample_points.size());
-    }
-  if(bilinear_basis.size() != max_degree / 2 + 1)
-    {
-      El::RuntimeError("bilinear_basis.size()=", bilinear_basis.size(),
-                       ", expected ", max_degree / 2 + 1);
-    }
+  ASSERT(sample_points.size() == max_degree + 1,
+         "sample_points.size()=", sample_points.size(), ", expected ",
+         max_degree + 1);
+  ASSERT(sample_scalings.size() == sample_points.size(),
+         "sample_scalings.size()=", sample_scalings.size(), ", expected ",
+         sample_points.size());
+  ASSERT(bilinear_basis.size() == max_degree / 2 + 1,
+         "bilinear_basis.size()=", bilinear_basis.size(), ", expected ",
+         max_degree / 2 + 1);
 
-  if(polynomials.Height() != polynomials.Width())
-    El::RuntimeError("Polynomial Matrix should be square! Height()=",
-                     polynomials.Height(), ", Width()=", polynomials.Width());
+  ASSERT(polynomials.Height() == polynomials.Width(),
+         "Height()=", polynomials.Height(), " Width()=", polynomials.Width());
 
   // TODO check if this is fast enough
   for(int i = 0; i < polynomials.Height(); ++i)
@@ -158,8 +152,6 @@ void Polynomial_Vector_Matrix::validate(const int64_t max_degree) const
       {
         if(i == j)
           continue;
-        if(polynomials(i, j) != polynomials(j, i))
-          El::RuntimeError(
-            "Polynomial vector matrix is not symmetric at i=", i, " j=", j);
+        ASSERT(polynomials(i, j) == polynomials(j, i), "i=", i, " j=", j);
       }
 }

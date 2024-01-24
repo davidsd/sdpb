@@ -1,4 +1,5 @@
 #include "../Function_Blocks_Parser.hxx"
+#include "sdpb_util/assert.hxx"
 
 bool Function_Blocks_Parser::EndObject(rapidjson::SizeType)
 {
@@ -6,20 +7,18 @@ bool Function_Blocks_Parser::EndObject(rapidjson::SizeType)
     {
       if(parsing_objective)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Found an object end inside '"
-            + objective_state.name + "'");
+          RUNTIME_ERROR("Invalid input file. Found an object end inside '",
+                        objective_state.name, "'");
         }
       else if(parsing_normalization)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Found an object end inside '"
-            + normalization_state.name + "'");
+          RUNTIME_ERROR("Invalid input file. Found an object end inside '",
+                        normalization_state.name, "'");
         }
       else if(parsing_functions)
         {
           functions_state.json_end_object();
-          parsing_functions=functions_state.inside;
+          parsing_functions = functions_state.inside;
         }
       else
         {
@@ -28,8 +27,7 @@ bool Function_Blocks_Parser::EndObject(rapidjson::SizeType)
     }
   else
     {
-      throw std::runtime_error(
-        "Invalid input file.  Ending an object outside of the SDP");
+      RUNTIME_ERROR("Invalid input file. Ending an object outside of the SDP");
     }
   return true;
 }

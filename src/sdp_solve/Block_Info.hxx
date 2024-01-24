@@ -2,6 +2,7 @@
 
 #include "sdpb_util/Environment.hxx"
 #include "sdpb_util/Verbosity.hxx"
+#include "sdpb_util/assert.hxx"
 #include "sdpb_util/block_mapping/Block_Cost.hxx"
 #include "sdpb_util/block_mapping/MPI_Comm_Wrapper.hxx"
 #include "sdpb_util/block_mapping/MPI_Group_Wrapper.hxx"
@@ -65,9 +66,8 @@ public:
   get_bilinear_pairing_block_size(const size_t index,
                                   const size_t parity) const
   {
-    if(parity == 0 || parity == 1)
-      return num_points.at(index) * dimensions.at(index);
-    throw std::runtime_error("parity should be 0 or 1");
+    ASSERT(parity == 0 || parity == 1);
+    return num_points.at(index) * dimensions.at(index);
   }
   [[nodiscard]] std::vector<size_t> bilinear_pairing_block_sizes() const
   {
@@ -88,7 +88,7 @@ public:
       return even;
     if(parity == 1)
       return dimensions.at(index) * num_points.at(index) - even;
-    throw std::runtime_error("parity should be 0 or 1");
+    RUNTIME_ERROR("parity should be 0 or 1");
   }
   [[nodiscard]] std::vector<size_t> psd_matrix_block_sizes() const
   {

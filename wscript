@@ -20,7 +20,7 @@ def configure(conf):
 
 
 def build(bld):
-    default_flags = ['-Wall', '-Wextra', '-O3']
+    default_flags = ['-Wall', '-Wextra', '-Werror=return-type', '-O3']
     default_defines = ['OMPI_SKIP_MPICXX', 'SDPB_VERSION_STRING="' + bld.env.git_version + '"']
     use_packages = ['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'sdpb_util']
     default_includes = ['src', 'external']

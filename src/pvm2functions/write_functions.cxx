@@ -119,7 +119,7 @@ void write_functions(const fs::path &output_path,
           }
           break;
         default:
-          throw std::runtime_error(
+          RUNTIME_ERROR(
             "Too large a dimension.  Only 1x1 and 2x2 supported: "
             + std::to_string(block->polynomials.Height()));
         }

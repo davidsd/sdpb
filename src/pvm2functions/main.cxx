@@ -1,5 +1,6 @@
 #include "sdpb_util/Boost_Float.hxx"
 #include "pmp_read/pmp_read.hxx"
+#include "sdpb_util/assert.hxx"
 
 namespace fs = std::filesystem;
 
@@ -20,7 +21,7 @@ int main(int argc, char **argv)
     {
       // TODO fix parallel
       if(El::mpi::Size() > 1)
-        El::RuntimeError("pvm2functions cannot work in parallel!");
+        RUNTIME_ERROR("pvm2functions cannot work in parallel!");
 
       int precision;
       std::vector<fs::path> input_files;
@@ -30,16 +31,9 @@ int main(int argc, char **argv)
       El::gmp::SetPrecision(precision);
       Boost_Float::default_precision(precision * log(2) / log(10));
 
-      if(output_path == ".")
-        {
-          throw std::runtime_error("Output file '" + output_path.string()
-                                   + "' is a directory");
-        }
-      if(fs::exists(output_path) && fs::is_directory(output_path))
-        {
-          throw std::runtime_error("Output file '" + output_path.string()
-                                   + "' exists and is a directory");
-        }
+      ASSERT(output_path != ".", "Output file is a directory: ", output_path);
+      ASSERT(!(fs::exists(output_path) && fs::is_directory(output_path)),
+             "Output file exists and is a directory: ", output_path);
       const auto pmp = read_polynomial_matrix_program(input_files);
       write_functions(output_path, pmp.objective, pmp.matrices);
     }

@@ -1,6 +1,7 @@
 #include "PMP_File_Parse_Result.hxx"
 #include "pmp_read.hxx"
 #include "sdp_solve/Block_Info.hxx"
+#include "sdpb_util/assert.hxx"
 #include "sdpb_util/block_mapping/compute_block_grid_mapping.hxx"
 #include "sdpb_util/block_mapping/create_mpi_block_mapping_groups.hxx"
 
@@ -122,9 +123,8 @@ read_polynomial_matrix_program(const std::vector<fs::path> &input_files)
         {
           auto [it, inserted]
             = parse_results.insert({file_index, std::move(file_parse_result)});
-          if(!inserted)
-            El::LogicError("Parsing result already insterted: ",
-                           all_files.at(file_index));
+          ASSERT(inserted, "Duplicate parsing result for ",
+                 all_files.at(file_index));
         }
       }
   }
@@ -163,16 +163,18 @@ read_polynomial_matrix_program(const std::vector<fs::path> &input_files)
     {
       if(!parse_result.objective.empty())
         {
-          if(!objective.empty())
-            El::RuntimeError("Duplicate objective at ",
-                             all_files.at(file_index));
+          ASSERT(objective.empty(),
+                 "objective already read from another file: "
+                 "duplicate found at ",
+                 all_files.at(file_index));
           objective = std::move(parse_result.objective);
         }
       if(!parse_result.normalization.empty())
         {
-          if(!normalization.empty())
-            El::RuntimeError("Duplicate normalization at ",
-                             all_files.at(file_index));
+          ASSERT(normalization.empty(),
+                 "normalization already read from another file: "
+                 "duplicate found at ",
+                 all_files.at(file_index));
           normalization = std::move(parse_result.normalization);
         }
       for(auto &[index_in_file, matrix] : parse_result.parsed_matrices)
@@ -188,8 +190,7 @@ read_polynomial_matrix_program(const std::vector<fs::path> &input_files)
   synchronize_vector(objective);
   synchronize_vector(normalization);
 
-  if(objective.empty())
-    El::RuntimeError("objective not found in input files");
+  ASSERT(!objective.empty(), "objective not found in input files");
 
   if(normalization.empty())
     {

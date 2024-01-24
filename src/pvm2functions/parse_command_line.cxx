@@ -1,3 +1,5 @@
+#include "sdpb_util/assert.hxx"
+
 #include <filesystem>
 #include <vector>
 #include <iostream>
@@ -34,23 +36,16 @@ void parse_command_line(int argc, char **argv, int &precision,
     }
   catch(std::logic_error &e)
     {
-      throw std::runtime_error("Invalid precision: '" + precision_string
-                               + "'");
+      RUNTIME_ERROR("Invalid precision: '" + precision_string + "'");
     }
-  if(pos != precision_string.size())
-    {
-      throw std::runtime_error("Precision has trailing characters: '"
-                               + precision_string.substr(pos) + "'");
-    }
+  ASSERT(pos == precision_string.size(),
+         "Precision has trailing characters: '",
+         precision_string.substr(pos) + "'");
 
   input_files.insert(input_files.end(), argv + 2, argv + argc - 1);
   for(auto &file : input_files)
     {
-      if(!fs::exists(file))
-        {
-          throw std::runtime_error("Input file '" + file.string()
-                                   + "' does not exist");
-        }
+      ASSERT(fs::exists(file), "Input file does not exist: ", file);
     }
   output_dir = argv[argc - 1];
 }

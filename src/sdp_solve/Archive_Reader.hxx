@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sdpb_util/assert.hxx"
+
 #include <El.hpp>
 
 #include <archive.h>
@@ -31,7 +33,7 @@ struct Archive_Reader : public std::streambuf
       {
         const char *const pathname = archive_entry_pathname(entry_ptr);
         const std::string name = pathname ? pathname : "EOF";
-        El::RuntimeError("Archive_Reader: ", name, ": ",
+        RUNTIME_ERROR("Archive_Reader: ", name, ": ",
                          archive_error_string(ptr.get()));
       }
 

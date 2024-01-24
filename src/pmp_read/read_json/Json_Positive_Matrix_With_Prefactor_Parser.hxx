@@ -49,15 +49,13 @@ protected:
       return polynomials_parser;
     if(key == "DampedRational")
       return prefactor_parser;
-    El::RuntimeError(
-      "Json_Positive_Matrix_With_Prefactor_Parser: unknown key=", key);
+    RUNTIME_ERROR("unknown key=", key);
   }
 
 public:
   value_type get_result() override
   {
-    if(!polynomials.has_value())
-      El::RuntimeError("rank=", El::mpi::Rank(), ": polynomials not found");
+    ASSERT(polynomials.has_value(), "polynomials not found");
     const auto matrix = to_matrix(std::move(polynomials).value());
     // TODO add move ctor for Polynomial_Vector_Matrix?
     return Polynomial_Vector_Matrix(matrix, prefactor, std::nullopt,

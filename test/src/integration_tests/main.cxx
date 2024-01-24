@@ -1,4 +1,5 @@
 #include "common.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <filesystem>
 #include <boost/process.hpp>
@@ -29,10 +30,9 @@ namespace
           }
       }
 
-    auto msg = std::string("Cannot find '") + sdp_zip
-               + "'. Please run test executable from root sdpb/ directory "
-                 "or sdpb/build/ directory";
-    throw std::runtime_error(msg);
+    RUNTIME_ERROR("Cannot find '", sdp_zip,
+                  "'. Please run test executable from root sdpb/ directory "
+                  "or sdpb/build/ directory");
   }
 }
 

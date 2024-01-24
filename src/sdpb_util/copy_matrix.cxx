@@ -1,5 +1,6 @@
 #include "copy_matrix.hxx"
 #include "Shared_Window_Array.hxx"
+#include "assert.hxx"
 
 void copy_matrix(const El::Matrix<El::BigFloat> &source,
                  El::DistMatrix<El::BigFloat> &destination)
@@ -147,22 +148,17 @@ void copy_matrix_from_root(const El::Matrix<El::BigFloat> &source,
                            El::DistMatrix<El::BigFloat> &destination,
                            const El::mpi::Comm &comm)
 {
-  if(!El::mpi::Congruent(comm, destination.DistComm()))
-    {
-      El::RuntimeError("Wrong communicator for copy_matrix_from_root(); use "
-                       "output.DistComm()");
-    }
+  ASSERT(El::mpi::Congruent(comm, destination.DistComm()),
+         "Wrong communicator for copy_matrix_from_root(); "
+         "use output.DistComm()");
 
   if(comm.Rank() == 0)
     {
       // TODO set matrix size instead?
-      if(source.Height() != destination.Height()
-         || source.Width() != destination.Width())
-        {
-          El::RuntimeError("Incompatible matrix sizes: input: ",
-                           El::DimsString(source, "source"), ", ",
-                           El::DimsString(destination, "destination"));
-        }
+      ASSERT(source.Height() == destination.Height()
+               && source.Width() == destination.Width(),
+             "Incompatible matrix sizes: ", El::DimsString(source, "source"),
+             ", ", El::DimsString(destination, "destination"));
     }
 
   if(comm.Size() == 1)

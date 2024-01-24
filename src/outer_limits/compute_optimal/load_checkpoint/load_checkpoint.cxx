@@ -67,15 +67,11 @@ void load_checkpoint(
           rapidjson::Reader reader;
           reader.Parse(wrapper, parser);
 
-          if(parser.generation_state.value != El::BigFloat(max_generation))
-            {
-              std::stringstream ss;
-              ss << "Invalid checkpoint.  The generation from the file name "
-                 << max_generation
-                 << " does not match the generation stored inside: "
-                 << parser.generation_state.value;
-              throw std::runtime_error(ss.str());
-            }
+          ASSERT(parser.generation_state.value == El::BigFloat(max_generation),
+                 "Invalid checkpoint. The generation from the file name ",
+                 max_generation,
+                 " does not match the generation stored inside: ",
+                 parser.generation_state.value);
 
           yp_to_y_star.Resize(parser.y_transform_state.value.size(),
                               parser.y_transform_state.value.size());

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sdpb_util/assert.hxx"
+
 #include <cstddef>
 #include <stdexcept>
 #include <sstream>
@@ -113,16 +115,10 @@ inline Real unchecked_chebyshev_clenshaw_recurrence(const Real* const c, size_t 
 template<class Real>
 inline Real chebyshev_clenshaw_recurrence(const Real* const c, size_t length, const Real & a, const Real & b, const Real& x)
 {
-    if (x < a || x > b)
+  if(x < a || x > b)
     {
-      std::stringstream ss;
-      ss << "x in [a, b] is required: x = "
-         << x
-         << ", a = "
-         << a
-         << ", b = "
-         << b;
-      throw std::domain_error(ss.str());
+      THROW(std::domain_error, "x in [a, b] is required: x = ", x, ", a = ", a,
+            ", b = ", b);
     }
     if (length < 2)
     {

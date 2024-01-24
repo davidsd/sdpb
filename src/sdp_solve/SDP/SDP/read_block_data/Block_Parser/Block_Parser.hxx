@@ -19,16 +19,17 @@ struct Block_Parser
     bilinear_bases_even_state, bilinear_bases_odd_state;
 
   Block_Parser()
-      : c_state({"c"s, ""s}), B_state({"B"s, ""s, ""s}),
+      : c_state({"c"s, ""s}),
+        B_state({"B"s, ""s, ""s}),
         bilinear_bases_even_state({"bilinear_bases_even"s, ""s, ""s}),
         bilinear_bases_odd_state({"bilinear_bases_odd"s, ""s, ""s})
   {}
 
-  bool Null() { throw std::runtime_error("Null not allowed"); }
-  bool Bool(bool) { throw std::runtime_error("Bool not allowed"); }
+  bool Null() { RUNTIME_ERROR("Null not allowed"); }
+  bool Bool(bool) { RUNTIME_ERROR("Bool not allowed"); }
   template <typename T> bool parse_integer(const T &i)
   {
-    throw std::runtime_error("Integer not allowed");
+    RUNTIME_ERROR("Integer not allowed");
   }
   bool Int(int i) { return parse_integer(i); }
   bool Uint(unsigned i) { return parse_integer(i); }
@@ -37,15 +38,13 @@ struct Block_Parser
 
   bool Double(double d)
   {
-    throw std::runtime_error(
-      "Invalid input '" + std::to_string(d)
-      + "'.  All floating point numbers must be quoted as strings.");
+    RUNTIME_ERROR("Invalid input '", d,
+                  "'. All floating point numbers must be quoted as strings.");
   }
   bool RawNumber(const Ch *characters, rapidjson::SizeType size, bool)
   {
-    throw std::runtime_error(
-      "Invalid input '" + std::string(characters, size)
-      + "'.  All floating point numbers must be quoted as strings.");
+    RUNTIME_ERROR("Invalid input '", std::string(characters, size),
+                  "'.  All floating point numbers must be quoted as strings.");
   }
   bool StartObject()
   {
@@ -55,8 +54,8 @@ struct Block_Parser
       }
     else
       {
-        throw std::runtime_error(
-          "Invalid input.  No objects allowed inside the main object.");
+        RUNTIME_ERROR(
+          "Invalid input. No objects allowed inside the main object.");
       }
     return true;
   }

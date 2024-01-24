@@ -2,6 +2,7 @@
 #include "pmp2sdp/write_sdp.hxx"
 #include "sdp_solve/Archive_Reader.hxx"
 #include "sdp_solve/SDP.hxx"
+#include "sdpb_util/assert.hxx"
 #include "sdpb_util/copy_matrix.hxx"
 
 #include <unordered_map>
@@ -15,9 +16,9 @@ namespace
     const auto &extension = block_path.extension();
     if(extension == ".json")
       return Block_File_Format::json;
-    else if(extension == ".bin")
+    if(extension == ".bin")
       return Block_File_Format::bin;
-    El::RuntimeError("Unknown block file extension: ", block_path);
+    RUNTIME_ERROR("Unknown block file extension: ", block_path);
   }
 
   // sdp_block_local in initialized only at comm.Rank() == 0
@@ -30,7 +31,7 @@ namespace
     int index = sdp_block_local.block_index_local;
     El::mpi::Broadcast(index, 0, comm);
     if(index == -1)
-      El::RuntimeError("block_data file not found for one of the indices");
+      RUNTIME_ERROR("block_data file not found for one of the indices");
 
     const size_t block_index = block_info.block_indices.at(index);
 
@@ -98,10 +99,7 @@ void read_block_data(const fs::path &sdp_path, const El::Grid &grid,
 {
   Scoped_Timer timer(timers, "read_block_data");
 
-  if(!fs::exists(sdp_path))
-    {
-      El::RuntimeError("SDP path '" + sdp_path.string() + "' does not exist");
-    }
+  ASSERT(fs::exists(sdp_path), "SDP path does not exist: ", sdp_path);
 
   const size_t num_blocks(block_info.block_indices.size());
   sdp.primal_objective_c.blocks.resize(num_blocks);
@@ -186,8 +184,7 @@ void read_block_data(const fs::path &sdp_path, const El::Grid &grid,
                    + ".bin"));
               if(!exists(block_path))
                 block_path.replace_extension(".json");
-              if(!exists(block_path))
-                El::RuntimeError("Block not found: ", block_path);
+              ASSERT(exists(block_path), "Block not found: ", block_path);
 
               Block_File_Format format = get_block_format(block_path);
               std::ifstream block_stream(block_path, std::ios::binary);

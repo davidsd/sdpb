@@ -1,5 +1,6 @@
 #include "Test_Case_Runner.hxx"
 #include "Test_Config.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <fstream>
 
@@ -18,7 +19,10 @@ namespace
   }
 
   // concatenate args with " " separator
-  inline std::string build_args_string(const std::string &arg) { return arg; }
+  inline std::string build_args_string(const std::string &arg)
+  {
+    return arg;
+  }
   template <typename... ArgPack>
   std::string build_args_string(const ArgPack &...args)
   {
@@ -57,7 +61,8 @@ namespace Test_Util
 {
   // NB: name should be a valid path relative to test_log_dir
   Test_Case_Runner::Test_Case_Runner(const std::string &name)
-      : name(name), data_dir(Test_Config::test_data_dir / name),
+      : name(name),
+        data_dir(Test_Config::test_data_dir / name),
         output_dir(Test_Config::test_output_dir / name),
         stdout_path(Test_Config::test_log_dir
                     / fs::path(name + ".stdout.log")),
@@ -67,12 +72,9 @@ namespace Test_Util
     fs::remove_all(Test_Config::test_log_dir / name);
 
     fs::create_directories(stdout_path.parent_path());
-    if(!fs::is_directory(stdout_path.parent_path()))
-      {
-        throw std::runtime_error(
-          stdout_path.parent_path().string()
-          + " is not a directory! Check file name and permissions.");
-      }
+    ASSERT(fs::is_directory(stdout_path.parent_path()),
+           stdout_path.parent_path(),
+           " is not a directory! Check file name and permissions.");
   }
 
   Test_Case_Runner

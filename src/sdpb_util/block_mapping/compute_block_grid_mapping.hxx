@@ -158,10 +158,10 @@ compute_block_grid_mapping(const size_t &procs_per_node,
                 }
             }
         }
-      if(min_block==available_block_maps.at(0).end())
+      if(min_block == available_block_maps.at(0).end())
         {
-          throw std::runtime_error("INTERNAL ERROR: Unable to find any "
-                                   "free processors for remaining blocks");
+          LOGIC_ERROR(
+            "Unable to find any free processors for remaining blocks");
         }
       min_block->cost += block->cost;
       min_block->block_indices.push_back(block->index);

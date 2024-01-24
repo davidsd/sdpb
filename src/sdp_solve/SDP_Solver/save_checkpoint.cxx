@@ -1,4 +1,5 @@
 #include "../SDP_Solver.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <filesystem>
 #include <boost/property_tree/json_parser.hpp>
@@ -48,9 +49,9 @@ void SDP_Solver::save_checkpoint(
     }
   else if(!is_directory(checkpoint_directory))
     {
-      throw std::runtime_error("Checkpoint directory '"
-                               + checkpoint_directory.string()
-                               + "'already exists, but is not a directory");
+      RUNTIME_ERROR(
+        "Checkpoint directory already exists, but is not a directory: ",
+        checkpoint_directory);
     }
   if(backup_generation)
     {
@@ -93,10 +94,8 @@ void SDP_Solver::save_checkpoint(
             }
           else
             {
-              std::stringstream ss;
-              ss << "Error writing checkpoint file '" << checkpoint_filename
-                 << "'.  Exceeded max retries.\n";
-              throw std::runtime_error(ss.str());
+              RUNTIME_ERROR("Error writing checkpoint file ",
+                            checkpoint_filename, ":  Exceeded max retries.");
             }
         }
     }

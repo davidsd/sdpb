@@ -57,8 +57,8 @@ public:
 
   void on_element_parsed(element_type &&value, size_t index) override
   {
-    if(index != this->result.size())
-      El::LogicError("index=", index, ", expected ", this->result.size());
+    ASSERT(index == this->result.size(), "index=", index, ", expected ",
+           this->result.size());
     this->result.push_back(std::move(value));
   }
 

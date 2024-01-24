@@ -11,7 +11,7 @@ Json_PMP_Parser::Json_PMP_Parser(
         [this](std::vector<El::BigFloat> &&result) {
           this->result.objective = std::move(result);
         },
-        [] { El::LogicError(R"(Skipping "objective" not allowed)"); }),
+        [] { LOGIC_ERROR(R"(Skipping "objective" not allowed)"); }),
       normalization_parser(
         // don't skip normalization:
         false,
@@ -19,7 +19,7 @@ Json_PMP_Parser::Json_PMP_Parser(
         [this](std::vector<El::BigFloat> &&result) {
           this->result.normalization = std::move(result);
         },
-        [] { El::LogicError(R"(Skipping "normalization" not allowed)"); }),
+        [] { LOGIC_ERROR(R"(Skipping "normalization" not allowed)"); }),
       matrices_parser(
         // don't skip matrices array:
         false,
@@ -35,7 +35,7 @@ Json_PMP_Parser::Json_PMP_Parser(
             }
         },
         [] {
-          El::LogicError(
+          LOGIC_ERROR(
             R"(Skipping "PositiveMatrixWithPrefactorArray" not allowed)");
         },
         // Skip some matrices according to their indices:
@@ -52,7 +52,7 @@ Json_PMP_Parser::element_parser(const std::string &key)
     return normalization_parser;
   if(key == "PositiveMatrixWithPrefactorArray")
     return matrices_parser;
-  El::RuntimeError("Json_PMP_Parser: Unexpected key=", key);
+  RUNTIME_ERROR("Json_PMP_Parser: Unexpected key=", key);
 }
 void Json_PMP_Parser::clear_result()
 {

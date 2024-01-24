@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sdpb_util/assert.hxx"
+
 #include <iostream>
 #include <string>
 
@@ -30,6 +32,6 @@ operator<<(std::ostream &out, const Block_File_Format &format)
   else if(format == json)
     out << "json";
   else
-    throw std::out_of_range("Block_File_Format=" + std::to_string(format));
+    THROW(std::out_of_range, "Block_File_Format=", std::to_string(format));
   return out;
 }

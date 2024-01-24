@@ -1,4 +1,5 @@
 #include "pmp_read/PMP_File_Parse_Result.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
@@ -20,7 +21,7 @@ PMP_File_Parse_Result read_mathematica(
   std::ifstream input_stream(input_path);
   if(!input_stream.good())
     {
-      El::RuntimeError("Unable to open input: ", input_path);
+      RUNTIME_ERROR("Unable to open input: ", input_path);
     }
 
   boost::interprocess::file_mapping mapped_file(

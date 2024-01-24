@@ -1,5 +1,7 @@
 #include "../Archive_Writer.hxx"
 
+#include "sdpb_util/assert.hxx"
+
 #include <stdexcept>
 
 Archive_Writer::Archive_Writer(const std::filesystem::path &filename)
@@ -12,7 +14,6 @@ Archive_Writer::Archive_Writer(const std::filesystem::path &filename)
           != ARCHIVE_OK
      || archive_write_open_filename(ptr.get(), filename.c_str()) != ARCHIVE_OK)
     {
-      throw std::runtime_error(
-        "Unable to set options for writing an archive.");
+      RUNTIME_ERROR("Unable to set options for writing an archive.");
     }
 }

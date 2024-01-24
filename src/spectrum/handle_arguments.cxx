@@ -1,4 +1,5 @@
 #include "sdpb_util/Boost_Float.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <El.hpp>
 
@@ -69,32 +70,16 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
 
   po::notify(variables_map);
 
-  if(!fs::exists(input_path))
-    {
-      throw std::runtime_error("Input file '" + input_path.string()
-                               + "' does not exist");
-    }
-  if(fs::is_directory(input_path))
-    {
-      throw std::runtime_error("Input file '" + input_path.string()
-                               + "' is a directory, not a file");
-    }
-  if(!fs::exists(solution_dir))
-    {
-      throw std::runtime_error("Solution file '" + solution_dir.string()
-                               + "' does not exist");
-    }
+  ASSERT(fs::exists(input_path), "Input file does not exist: ", input_path);
+  ASSERT(!fs::is_directory(input_path),
+         "Input file is a directory, not a file: ", input_path);
 
-  if(output_path == ".")
-    {
-      throw std::runtime_error("Output file '" + output_path.string()
-                               + "' is a directory");
-    }
-  if(fs::exists(output_path) && fs::is_directory(output_path))
-    {
-      throw std::runtime_error("Output file '" + output_path.string()
-                               + "' exists and is a directory");
-    }
+  ASSERT(fs::exists(solution_dir),
+         "Solution file does not exist: ", solution_dir);
+
+  ASSERT(output_path != ".", "Output file is a directory: ", output_path);
+  ASSERT(!(fs::exists(output_path) && fs::is_directory(output_path)),
+         "Output file exists and is a directory: ", output_path);
 
   El::gmp::SetPrecision(precision);
   // El::gmp wants base-2 bits, but boost::multiprecision wants

@@ -102,9 +102,8 @@ void write_functions(
           }
           break;
         default:
-          throw std::runtime_error(
-            "Too large a dimension.  Only 1x1 and 2x2 supported: "
-            + std::to_string(num_rows));
+          RUNTIME_ERROR("Too large a dimension. Only 1x1 and 2x2 supported: ",
+                        num_rows);
         }
 
       for(size_t row(0); row != num_rows; ++row)

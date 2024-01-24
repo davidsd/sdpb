@@ -12,6 +12,8 @@
 
 #pragma once
 
+#include "sdpb_util/assert.hxx"
+
 #include <algorithm>
 #include <boost/iostreams/categories.hpp>
 #include <boost/iostreams/char_traits.hpp>
@@ -40,8 +42,7 @@ public:
   template <typename Source>
   std::streamsize read(Source &, char_type *, std::streamsize)
   {
-    throw std::runtime_error(
-      "INTERNAL_ERROR: byte_counter::read() not implemented");
+    LOGIC_ERROR("INTERNAL_ERROR: byte_counter::read() not implemented");
   }
 
   std::streamsize num_bytes;

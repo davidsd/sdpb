@@ -57,17 +57,17 @@ namespace
 
   void validate(const Output_SDP &sdp)
   {
-    if(sdp.num_blocks == 0)
-      El::RuntimeError("sdp.num_blocks == 0");
-    if(sdp.dual_constraint_groups.size() > sdp.num_blocks)
-      El::RuntimeError("sdp.dual_constraint_groups.size()=",
-                       sdp.dual_constraint_groups.size(),
-                       " should not exceed sdp.num_blocks=", sdp.num_blocks);
+    ASSERT(sdp.num_blocks > 0);
+    ASSERT(
+      sdp.dual_constraint_groups.size() <= sdp.num_blocks,
+      "sdp.dual_constraint_groups.size()=", sdp.dual_constraint_groups.size(),
+      " should not exceed sdp.num_blocks=", sdp.num_blocks);
     for(const auto &group : sdp.dual_constraint_groups)
-      if(group.block_index >= sdp.num_blocks)
-        El::RuntimeError(
-          "group.block_index=", group.block_index,
-          " should be less than sdp.num_blocks=", sdp.num_blocks);
+      {
+        ASSERT(group.block_index < sdp.num_blocks,
+               "group.block_index=", group.block_index,
+               " should be less than sdp.num_blocks=", sdp.num_blocks);
+      }
     // TODO: we should also check that block indices from all ranks
     // are unique and cover [0, num_blocks) range.
     // This is checked indirectly in write_sdp().

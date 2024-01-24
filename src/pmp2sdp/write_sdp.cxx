@@ -3,6 +3,7 @@
 #include "Archive_Writer.hxx"
 #include "write_sdp.hxx"
 #include "Output_SDP/Output_SDP.hxx"
+#include "sdpb_util/assert.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
 #include <filesystem>
@@ -52,12 +53,7 @@ namespace
     if(!binary)
       set_stream_precision(output_stream);
     write_data(output_stream);
-    if(!output_stream.good())
-      {
-        throw std::runtime_error("Error when writing to: "
-                                 + output_path.string());
-      }
-
+    ASSERT(output_stream.good(), "Error when writing to: ", output_path);
     return counter.num_bytes;
   }
 
@@ -74,7 +70,7 @@ namespace
       {
       case json: name += ".json"; break;
       case bin: name += ".bin"; break;
-      default: El::RuntimeError("Unsupported Block_File_Format: ", format);
+      default: RUNTIME_ERROR("Unsupported Block_File_Format: ", format);
       }
     return temp_dir / name;
   }
@@ -111,13 +107,8 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
       {
         size_t width = group.constraint_matrix.Width();
         size_t dual_objective_size = sdp.dual_objective_b.size();
-        if(width != dual_objective_size)
-          {
-            El::RuntimeError(" Block width=", width,
-                             " and dual objective size=", dual_objective_size,
-                             " should be equal.");
-          }
-
+        ASSERT(width == dual_objective_size, "width=", width,
+               " dual_objective_size=", dual_objective_size);
         {
           Scoped_Timer block_info_timer(
             timers, "block_info_" + std::to_string(group.block_index));
@@ -165,20 +156,14 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
         for(size_t block_index = 0; block_index < block_info_sizes.size();
             ++block_index)
           {
-            if(block_info_sizes.at(block_index)
-               != block_info_sizes_max.at(block_index))
-              {
-                El::LogicError("block_", block_index,
-                               " has been processed by more than one rank!");
-              }
-            if(block_info_sizes.at(block_index) == 0)
-              {
-                El::RuntimeError("block_info_", block_index, " size is zero");
-              }
-            if(block_data_sizes.at(block_index) == 0)
-              {
-                El::RuntimeError("block_data_", block_index, " size is zero");
-              }
+            ASSERT(block_info_sizes.at(block_index)
+                     == block_info_sizes_max.at(block_index),
+                   "block_", block_index,
+                   " has been processed by more than one rank!");
+            ASSERT(block_info_sizes.at(block_index) != 0, "block_info_",
+                   block_index, " size is zero");
+            ASSERT(block_data_sizes.at(block_index) != 0, "block_data_",
+                   block_index, " size is zero");
           }
       }
   }
@@ -305,11 +290,9 @@ void print_matrix_sizes(
       auto psd_odd = dimensions * num_points - psd_even;
       my_psd_elements += psd_even * psd_even + psd_odd * psd_odd;
     }
-  if(my_P * N != my_constraint_matrix_elements)
-    {
-      El::LogicError("sum(P'*N) != #(B bands): P'=", my_P, ", N=", N,
-                     "#(B bands)=", my_constraint_matrix_elements);
-    }
+  ASSERT(my_P * N == my_constraint_matrix_elements,
+         "sum(P'*N) != #(B bands): P'=", my_P, ", N=", N,
+         "#(B bands)=", my_constraint_matrix_elements);
 
   // NB: Reduce should be called on all ranks, its result used only on rank 0!
   auto reduce_sum = [](size_t item) {
