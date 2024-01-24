@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pmp/Damped_Rational.hxx"
+#include "sdpb_util/assert.hxx"
 #include "sdpb_util/json/Abstract_Json_Object_Parser.hxx"
 #include "sdpb_util/json/Json_Float_Parser.hxx"
 
@@ -55,7 +56,7 @@ protected:
       return constant_parser;
     if(key == "poles")
       return poles_parser;
-    El::RuntimeError("Json_Damped_Rational_Parser: unknown key=", key);
+    RUNTIME_ERROR("Json_Damped_Rational_Parser: unknown key=", key);
   }
 
 public:

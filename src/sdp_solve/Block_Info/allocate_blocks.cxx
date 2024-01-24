@@ -1,4 +1,5 @@
 #include "../Block_Info.hxx"
+#include "sdpb_util/assert.hxx"
 #include "sdpb_util/block_mapping/compute_block_grid_mapping.hxx"
 #include "sdpb_util/block_mapping/create_mpi_block_mapping_groups.hxx"
 
@@ -13,24 +14,19 @@ void Block_Info::allocate_blocks(const Environment &env,
   const size_t num_procs = El::mpi::Size(El::mpi::COMM_WORLD);
   const size_t num_nodes = env.num_nodes();
   const size_t procs_per_node = env.comm_shared_mem.Size();
-  if(procs_per_node * num_nodes != num_procs)
-    {
-      El::RuntimeError("Incompatible number of MPI processes and processes "
-                       "per node for node=",
-                       env.node_index(),
-                       ". Each node should have the same number of processes."
-                       "\n\tMPI processes: ",
-                       num_procs, "\n\tprocsPerNode: ", procs_per_node,
-                       "\n\tnum_nodes: ", num_nodes);
-    }
-  if(procs_per_node % proc_granularity != 0)
-    {
-      throw std::runtime_error(
-        "Incompatible number of processes per node and process granularity.  "
-        "procGranularity mush evenly divide procsPerNode:\n\tprocsPerNode: "
-        + std::to_string(procs_per_node)
-        + "\n\tprocGranularity: " + std::to_string(proc_granularity));
-    }
+  ASSERT(procs_per_node * num_nodes == num_procs,
+         "Incompatible number of MPI processes and processes per node "
+         "for node=",
+         env.node_index(),
+         ". Each node should have the same number of processes."
+         "\n\tMPI processes: ",
+         num_procs, "\n\tprocsPerNode: ", procs_per_node,
+         "\n\tnum_nodes: ", num_nodes);
+  ASSERT(procs_per_node % proc_granularity == 0,
+         "Incompatible number of processes per node and process granularity.  "
+         "procGranularity mush evenly divide procsPerNode:\n\tprocsPerNode: ",
+         procs_per_node, "\n\tprocGranularity: ", proc_granularity);
+
   std::vector<std::vector<Block_Map>> mapping(compute_block_grid_mapping(
     procs_per_node / proc_granularity, num_nodes, sorted_costs));
 
@@ -76,7 +72,7 @@ void Block_Info::allocate_blocks(const Environment &env,
                                   mpi_group.value, mpi_comm.value,
                                   block_indices);
 
-  if(block_indices.empty())
-    El::RuntimeError("No SDP blocks were assigned to rank=", El::mpi::Rank(),
-                     ". node=", node_index, " node_rank=", node_comm.Rank());
+  ASSERT(!block_indices.empty(),
+         "No SDP blocks were assigned to rank=", El::mpi::Rank(),
+         ". node=", node_index, " node_rank=", node_comm.Rank());
 }

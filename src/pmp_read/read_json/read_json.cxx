@@ -24,14 +24,13 @@ read_json(const std::filesystem::path &input_path,
     }
   catch(std::exception &e)
     {
-      El::RuntimeError("Failed to parse ", input_path,
-                       ": offset=", wrapper.Tell(), ": ", e.what());
+      RUNTIME_ERROR("Failed to parse ", input_path,
+                    ": offset=", wrapper.Tell(), ": ", e.what());
     }
   if(res.IsError())
     {
-      El::RuntimeError("Failed to parse ", input_path,
-                       ": offset=", res.Offset(),
-                       ": error: ", rapidjson::GetParseError_En(res.Code()));
+      RUNTIME_ERROR("Failed to parse ", input_path, ": offset=", res.Offset(),
+                    ": error: ", rapidjson::GetParseError_En(res.Code()));
     }
   return result;
 }

@@ -26,7 +26,8 @@ public:
 
   Xml_Polynomial_Vector_Matrix_State(
     const std::vector<std::string> &names, const size_t &offset,
-    const std::function<void(Xml_Polynomial_Vector_Matrix_State& matrix_state)> &process_matrix)
+    const std::function<void(Xml_Polynomial_Vector_Matrix_State &matrix_state)>
+      &process_matrix)
       : name(names.at(offset)),
         process_matrix(process_matrix),
         elements_state(
@@ -53,11 +54,11 @@ public:
                   || sample_scalings_state.xml_on_start_element(element_name)
                   || bilinear_basis_state.xml_on_start_element(element_name)))
           {
-            throw std::runtime_error(
+            RUNTIME_ERROR(
               "Inside polynomialVectorMatrix, expected 'rows', 'cols', "
               "'elements', 'sample_points', 'sample_scalings', or "
-              "'bilinear_basis', but found '"
-              + element_name + "'");
+              "'bilinear_basis', but found '",
+              element_name, "'");
           }
       }
     else if(element_name == name)

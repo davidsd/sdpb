@@ -1,4 +1,5 @@
 #include "../Function_Blocks_Parser.hxx"
+#include "sdpb_util/assert.hxx"
 
 bool Function_Blocks_Parser::StartObject()
 {
@@ -6,15 +7,15 @@ bool Function_Blocks_Parser::StartObject()
     {
       if(parsing_objective)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Found an object inside '"
-            + objective_state.name + "'");
+          RUNTIME_ERROR(
+            "Invalid input file. Found an object inside '"
+            , objective_state.name , "'");
         }
       else if(parsing_normalization)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Found an object inside '"
-            + normalization_state.name + "'");
+          RUNTIME_ERROR(
+            "Invalid input file. Found an object inside '"
+            , normalization_state.name , "'");
         }
       else if(parsing_functions)
         {
@@ -22,8 +23,8 @@ bool Function_Blocks_Parser::StartObject()
         }
       else
         {
-          throw std::runtime_error(
-            "Invalid input file.  Unknown object inside the main object");
+          RUNTIME_ERROR(
+            "Invalid input file. Unknown object inside the main object");
         }
     }
   else

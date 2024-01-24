@@ -1,4 +1,5 @@
 #include "../Checkpoint_Parser.hxx"
+#include "sdpb_util/assert.hxx"
 
 bool Checkpoint_Parser::EndObject(rapidjson::SizeType)
 {
@@ -6,45 +7,45 @@ bool Checkpoint_Parser::EndObject(rapidjson::SizeType)
     {
       if(parsing_generation)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Unexpected object ending inside '"
-            + generation_state.name + "'");
+          RUNTIME_ERROR(
+            "Invalid input file. Unexpected object ending inside '",
+            generation_state.name, "'");
         }
       else if(parsing_threshold)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Unexpected object ending inside '"
-            + threshold_state.name + "'");
+          RUNTIME_ERROR(
+            "Invalid input file. Unexpected object ending inside '",
+            threshold_state.name, "'");
         }
       else if(parsing_c_scale)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Unexpected object ending inside '"
-            + c_scale_state.name + "'");
+          RUNTIME_ERROR(
+            "Invalid input file. Unexpected object ending inside '",
+            c_scale_state.name, "'");
         }
       else if(parsing_yp)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Unexpected object ending inside '"
-            + yp_state.name + "'");
+          RUNTIME_ERROR(
+            "Invalid input file. Unexpected object ending inside '",
+            yp_state.name, "'");
         }
       else if(parsing_b)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Unexpected object ending inside '"
-            + b_state.name + "'");
+          RUNTIME_ERROR(
+            "Invalid input file. Unexpected object ending inside '",
+            b_state.name, "'");
         }
       else if(parsing_y_transform)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Unexpected object ending inside '"
-            + y_transform_state.name + "'");
+          RUNTIME_ERROR(
+            "Invalid input file. Unexpected object ending inside '",
+            y_transform_state.name, "'");
         }
       else if(parsing_points)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Unexpected object ending inside '"
-            + points_state.name + "'");
+          RUNTIME_ERROR(
+            "Invalid input file. Unexpected object ending inside '",
+            points_state.name, "'");
         }
       else
         {
@@ -53,8 +54,8 @@ bool Checkpoint_Parser::EndObject(rapidjson::SizeType)
     }
   else
     {
-      throw std::runtime_error("Invalid input file.  Unexpected object ending "
-                               "outside of the main object");
+      RUNTIME_ERROR("Invalid input file. "
+                    "Unexpected object ending outside of the main object");
     }
   return true;
 }

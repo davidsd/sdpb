@@ -65,27 +65,13 @@ int main(int argc, char **argv)
 
       po::notify(variables_map);
 
-      if(!fs::exists(input_file))
-        {
-          throw std::runtime_error("Input file '" + input_file.string()
-                                   + "' does not exist");
-        }
-      if(fs::is_directory(input_file))
-        {
-          throw std::runtime_error("Input file '" + input_file.string()
-                                   + "' is a directory, not a file");
-        }
-
-      if(output_path == ".")
-        {
-          throw std::runtime_error("Output file '" + output_path.string()
-                                   + "' is a directory");
-        }
-      if(fs::exists(output_path) && fs::is_directory(output_path))
-        {
-          throw std::runtime_error("Output file '" + output_path.string()
-                                   + "' exists and is a directory");
-        }
+      ASSERT(fs::exists(input_file),
+             "Input file does not exist: ", input_file);
+      ASSERT(!fs::is_directory(input_file) && input_file != ".",
+             "Input file is a directory, not a file:", input_file);
+      ASSERT(output_path != ".", "Output file is a directory: ", output_path);
+      ASSERT(!(fs::exists(output_path) && fs::is_directory(output_path)),
+             "Output file exists and is a directory: ", output_path);
 
       El::gmp::SetPrecision(precision);
       // El::gmp wants base-2 bits, but boost::multiprecision wants

@@ -27,7 +27,7 @@ void Function_State::json_string(const std::string &s)
     }
   else
     {
-      throw std::runtime_error("Invalid input file.  Unexpected string '" + s
-                               + "' inside '" + name + "'");
+      RUNTIME_ERROR("Invalid input file. Unexpected string '" , s
+                               , "' inside '" , name , "'");
     }
 }

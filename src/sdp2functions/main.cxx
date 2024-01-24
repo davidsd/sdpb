@@ -1,4 +1,5 @@
 #include "pmp_read/pmp_read.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <boost/program_options.hpp>
 #include <filesystem>
@@ -19,7 +20,7 @@ int main(int argc, char **argv)
     {
       // TODO fix parallel
       if(El::mpi::Size() > 1)
-        El::RuntimeError("sdp2functions cannot work in parallel!");
+        RUNTIME_ERROR("sdp2functions cannot work in parallel!");
 
       int precision;
       fs::path input_file, output_path;
@@ -57,27 +58,13 @@ int main(int argc, char **argv)
 
       po::notify(variables_map);
 
-      if(!fs::exists(input_file))
-        {
-          throw std::runtime_error("Input file '" + input_file.string()
-                                   + "' does not exist");
-        }
-      if(fs::is_directory(input_file))
-        {
-          throw std::runtime_error("Input file '" + input_file.string()
-                                   + "' is a directory, not a file");
-        }
-
-      if(output_path == ".")
-        {
-          throw std::runtime_error("Output file '" + output_path.string()
-                                   + "' is a directory");
-        }
-      if(fs::exists(output_path) && fs::is_directory(output_path))
-        {
-          throw std::runtime_error("Output file '" + output_path.string()
-                                   + "' exists and is a directory");
-        }
+      ASSERT(fs::exists(input_file),
+             "Input file does not exist: ", input_file);
+      ASSERT(!fs::is_directory(input_file) && input_file != ".",
+             "Input file is a directory, not a file:", input_file);
+      ASSERT(output_path != ".", "Output file is a directory: ", output_path);
+      ASSERT(!(fs::exists(output_path) && fs::is_directory(output_path)),
+             "Output file exists and is a directory: ", output_path);
 
       El::gmp::SetPrecision(precision);
       // El::gmp wants base-2 bits, but boost::multiprecision wants

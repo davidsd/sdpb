@@ -1,6 +1,7 @@
 #include "Timers.hxx"
 
 #include "sdpb_util/Proc_Meminfo.hxx"
+#include "sdpb_util/assert.hxx"
 
 namespace
 {
@@ -81,10 +82,7 @@ void Timers::write_profile(const std::filesystem::path &path) const
     }
   f << "}" << '\n';
 
-  if(!f.good())
-    {
-      throw std::runtime_error("Error when writing to: " + path.string());
-    }
+  ASSERT(f.good(), "Error when writing to: ", path);
 }
 int64_t Timers::elapsed_milliseconds(const std::string &s) const
 {
@@ -92,10 +90,7 @@ int64_t Timers::elapsed_milliseconds(const std::string &s) const
                          [&s](const std::pair<std::string, Timer> &timer) {
                            return timer.first == s;
                          }));
-  if(iter == named_timers.rend())
-    {
-      throw std::runtime_error("Could not find timing for " + s);
-    }
+  ASSERT(iter != named_timers.rend(), "Could not find timing for ", s);
   return iter->second.elapsed_milliseconds();
 }
 

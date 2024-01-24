@@ -1,5 +1,6 @@
 #include "is_valid_char.hxx"
 #include "pmp/Polynomial.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <algorithm>
 #include <iterator>
@@ -12,8 +13,8 @@ inline void check_iterator(const char character, const char *begin,
 {
   if(iterator == end)
     {
-      throw std::runtime_error("Invalid polynomial string after '"s + character
-                               + "': " + std::string(begin, end));
+      RUNTIME_ERROR("Invalid polynomial string after '", character
+                               , "': " , std::string(begin, end));
     }
 }
 
@@ -25,7 +26,7 @@ parse_polynomial(const char *begin, const char *end, Polynomial &polynomial)
     std::find_first_of(begin, end, delimiters.begin(), delimiters.end()));
   if(delimiter == end)
     {
-      throw std::runtime_error("Missing '}' at end of array of polynomials");
+      RUNTIME_ERROR("Missing '}' at end of array of polynomials");
     }
 
   std::string mantissa;

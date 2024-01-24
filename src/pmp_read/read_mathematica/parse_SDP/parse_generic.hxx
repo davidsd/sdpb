@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pmp/Polynomial_Vector_Matrix.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <algorithm>
 #include <iterator>
@@ -30,7 +31,7 @@ const char *parse_generic(const char *begin, const char *end,
   const auto open_brace(std::find(begin, end, '{'));
   if(open_brace == end)
     {
-      throw std::runtime_error("Could not find '{' to start array");
+      RUNTIME_ERROR("Could not find '{' to start array");
     }
 
   auto delimiter(open_brace);
@@ -44,7 +45,7 @@ const char *parse_generic(const char *begin, const char *end,
                                      delimiters.end());
       if(delimiter == end)
         {
-          throw std::runtime_error("Missing '}' at end of array");
+          RUNTIME_ERROR("Missing '}' at end of array");
         }
     }
   while(*delimiter != '}');

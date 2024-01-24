@@ -2,6 +2,7 @@
 #include "write_vector.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
 #include "Block_File_Format.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <boost/serialization/vector.hpp>
 #include <boost/archive/binary_oarchive.hpp>
@@ -108,6 +109,6 @@ void write_block_data(std::ostream &os, const Dual_Constraint_Group &group,
     {
     case bin: write_block_data_bin(os, group); break;
     case json: write_block_data_json(os, group); break;
-    default: El::RuntimeError("Unknown Block_File_Format: ", format);
+    default: RUNTIME_ERROR("Unknown Block_File_Format: ", format);
     }
 }

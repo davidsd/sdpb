@@ -2,6 +2,7 @@
 
 #include "sdpb_util/Number_State.hxx"
 #include "sdpb_util/Vector_State.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <El.hpp>
 #include <rapidjson/reader.h>
@@ -26,38 +27,35 @@ struct Checkpoint_Parser
         y_transform_state({"y_transform"s, ""s, ""s})
   {}
 
-  bool Null() { throw std::runtime_error("Null not allowed"); }
-  bool Bool(bool) { throw std::runtime_error("Bool not allowed"); }
+  bool Null() { RUNTIME_ERROR("Null not allowed"); }
+  bool Bool(bool) { RUNTIME_ERROR("Bool not allowed"); }
 
   bool Int(int)
   {
-    throw std::runtime_error(
-      "Int not allowed.  You must quote all numbers as strings.");
+    RUNTIME_ERROR("Int not allowed. You must quote all numbers as strings.");
   }
   bool Uint(unsigned)
   {
-    throw std::runtime_error(
-      "Uint not allowed.  You must quote all numbers as strings.");
+    RUNTIME_ERROR("Uint not allowed. You must quote all numbers as strings.");
   }
   bool Int64(int64_t)
   {
-    throw std::runtime_error(
-      "Int64 not allowed.  You must quote all numbers as strings.");
+    RUNTIME_ERROR("Int64 not allowed. You must quote all numbers as strings.");
   }
   bool Uint64(uint64_t)
   {
-    throw std::runtime_error(
-      "Uint64 not allowed.  You must quote all numbers as strings.");
+    RUNTIME_ERROR(
+      "Uint64 not allowed. You must quote all numbers as strings.");
   }
   bool Double(double)
   {
-    throw std::runtime_error(
-      "Double not allowed.  You must quote all numbers as strings.");
+    RUNTIME_ERROR(
+      "Double not allowed. You must quote all numbers as strings.");
   }
   bool RawNumber(const Ch *, rapidjson::SizeType, bool)
   {
-    throw std::runtime_error(
-      "Numbers not allowed.  You must quote all numbers as strings.");
+    RUNTIME_ERROR(
+      "Numbers not allowed. You must quote all numbers as strings.");
   }
   bool String(const Ch *str, rapidjson::SizeType length, bool copy);
   bool StartObject();

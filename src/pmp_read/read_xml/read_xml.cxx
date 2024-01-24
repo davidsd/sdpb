@@ -43,7 +43,7 @@ namespace
     va_start(args, msg);
     vprintf(msg, args);
     va_end(args);
-    throw std::runtime_error("Invalid Input file");
+    RUNTIME_ERROR("Invalid Input file");
   }
 }
 
@@ -104,8 +104,7 @@ read_xml(const std::filesystem::path &input_file,
 
   if(xmlSAXUserParseFile(&xml_handlers, &input_parser, input_file.c_str()) < 0)
     {
-      throw std::runtime_error("Unable to parse input file: "
-                               + input_file.string());
+      RUNTIME_ERROR("Unable to parse input file: ", input_file);
     }
 
   // Overwrite the objective with whatever is in the last file

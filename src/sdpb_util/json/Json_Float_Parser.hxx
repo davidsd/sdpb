@@ -44,11 +44,15 @@ public:
                              ? TFloat(std::numeric_limits<double>::max())
                              : TFloat(string_value);
           }
+        catch(std::exception &e)
+          {
+            RUNTIME_ERROR("Json_Number_Parser failed to parse '", string_value,
+                          "': ", e.what());
+          }
         catch(...)
           {
-            El::RuntimeError("Json_Number_Parser failed to parse '",
-                             string_value, "'");
-            return false;
+            RUNTIME_ERROR("Json_Number_Parser failed to parse '", string_value,
+                          "'");
           }
       }
 

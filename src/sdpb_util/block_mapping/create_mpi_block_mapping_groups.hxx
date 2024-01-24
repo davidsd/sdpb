@@ -44,19 +44,13 @@ inline void create_mpi_block_mapping_groups(
   // even if there are more nodes than procs.  So this is a sanity
   // check in case we messed up something in
   // compute_block_grid_mapping.
-  if(node_rank_end <= node_rank)
-    {
-      El::LogicError(
-        "Some procs were not covered by compute_block_grid_mapping: "
-        "node=",
-        node_index, ", node_rank=", node_rank, ", rank_end=", node_rank_end);
-    }
-  if(node_rank_end > procs_per_node)
-    {
-      El::LogicError("Block mapping for node=", node_index,
-                     " assumes more than ", procs_per_node,
-                     " processes per node.");
-    }
+  ASSERT(node_rank < node_rank_end,
+         "Some procs were not covered by compute_block_grid_mapping: "
+         "node=",
+         node_index, ", node_rank=", node_rank, ", rank_end=", node_rank_end);
+  ASSERT(node_rank_end <= procs_per_node,
+         "Block mapping for node=", node_index, " assumes more than ",
+         procs_per_node, "processes per node.");
 
   // Create MPI group for [node_rank_begin, node_rank_end)
   {
@@ -65,10 +59,8 @@ inline void create_mpi_block_mapping_groups(
     El::mpi::Incl(node_mpi_group, group_ranks.size(), group_ranks.data(),
                   mpi_group);
   }
-  if(mpi_group == El::mpi::GROUP_NULL)
-    {
-      El::RuntimeError("Block assignment failed for rank=", El::mpi::Rank(),
-                       " at node=", node_index);
-    }
+  ASSERT(mpi_group != El::mpi::GROUP_NULL,
+         "Block assignment failed for rank=", El::mpi::Rank(),
+         " at node=", node_index);
   El::mpi::Create(node_comm, mpi_group, mpi_group_comm);
 }

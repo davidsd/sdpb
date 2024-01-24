@@ -1,6 +1,7 @@
 #include "parse_vector.hxx"
 #include "parse_generic.hxx"
 #include "pmp/Polynomial_Vector_Matrix.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <algorithm>
 #include <iterator>
@@ -24,7 +25,7 @@ parse_SDP(const char *begin, const char *end,
     std::search(begin, end, SDP_literal.begin(), SDP_literal.end()));
   if(SDP_start == end)
     {
-      throw std::runtime_error("Could not find 'SDP['");
+      RUNTIME_ERROR("Could not find 'SDP['");
     }
   if(SDP_start != begin)
     {
@@ -32,7 +33,7 @@ parse_SDP(const char *begin, const char *end,
       if(previous_char != ' ' && previous_char != '\t' && previous_char != '\n'
          && previous_char != '\r' && previous_char != ')')
         {
-          throw std::runtime_error("Invalid sequence: '"
+          RUNTIME_ERROR("Invalid sequence: '"
                                    + (previous_char + SDP_literal)
                                    + "'.  Is this an SDP file?");
         }
@@ -49,7 +50,7 @@ parse_SDP(const char *begin, const char *end,
   const char *comma(std::find(end_objective, end, ','));
   if(comma == end)
     {
-      throw std::runtime_error("Missing comma after objective");
+      RUNTIME_ERROR("Missing comma after objective");
     }
 
   parse_vector(std::next(comma), end, temp_vector);
@@ -62,7 +63,7 @@ parse_SDP(const char *begin, const char *end,
   comma = std::find(end_objective, end, ',');
   if(comma == end)
     {
-      throw std::runtime_error("Missing comma after normalization");
+      RUNTIME_ERROR("Missing comma after normalization");
     }
 
   const char *end_matrices(parse_matrices(std::next(comma), end,
@@ -72,7 +73,7 @@ parse_SDP(const char *begin, const char *end,
   const auto close_bracket(std::find(end_matrices, end, ']'));
   if(close_bracket == end)
     {
-      throw std::runtime_error("Missing ']' at end of SDP");
+      RUNTIME_ERROR("Missing ']' at end of SDP");
     }
   return std::next(close_bracket);
 }

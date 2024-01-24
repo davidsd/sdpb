@@ -1,5 +1,7 @@
 #pragma once
 
+#include "assert.hxx"
+
 #include <libxml2/libxml/parser.h>
 #include <vector>
 #include <string>
@@ -46,10 +48,9 @@ public:
       {
         if(!element_state.xml_on_start_element(element_name))
           {
-            throw std::runtime_error("Invalid input file.  Expected '"
-                                     + element_state.name + "' inside Vector '"
-                                     + name + "', but found '" + element_name
-                                     + "'");
+            RUNTIME_ERROR("Invalid input file. Expected '", element_state.name,
+                          "' inside Vector '", name + "', but found '",
+                          element_name, "'");
           }
       }
     else

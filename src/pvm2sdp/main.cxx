@@ -32,16 +32,10 @@ int main(int argc, char **argv)
 
       auto pmp = read_polynomial_matrix_program(input_files);
       Output_SDP sdp(pmp, command_arguments, timers);
-      if(output_path == ".")
-        {
-          throw std::runtime_error("Output file '" + output_path.string()
-                                   + "' is a directory");
-        }
-      if(fs::exists(output_path) && fs::is_directory(output_path))
-        {
-          throw std::runtime_error("Output file '" + output_path.string()
-                                   + "' exists and is a directory");
-        }
+      ASSERT(output_path != ".",
+             "Output file is a directory: ", output_path);
+      ASSERT(!(fs::exists(output_path) && fs::is_directory(output_path)),
+             "Output file exists and is a directory: ", output_path);
       write_sdp(output_path, sdp, output_format, timers, debug);
     }
   catch(std::exception &e)

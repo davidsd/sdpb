@@ -1,5 +1,6 @@
 // Synchronize the results back to the global Q.
 
+#include "sdpb_util/assert.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
 #include <El.hpp>
@@ -15,7 +16,7 @@ namespace
         std::vector<char> error_string(MPI_MAX_ERROR_STRING);
         int lengthOfErrorString;
         MPI_Error_string(mpi_error, error_string.data(), &lengthOfErrorString);
-        El::RuntimeError(std::string(error_string.data()));
+        RUNTIME_ERROR(std::string(error_string.data()));
       }
   }
 }

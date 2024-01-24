@@ -53,8 +53,8 @@ struct Abstract_Json_Reader_Handler
 #define VIRTUAL_NOT_IMPLEMENTED(func)                                         \
   virtual func [[noreturn]]                                                   \
   {                                                                           \
-    El::RuntimeError("Not implemented: function '", #func, "' in class: '",   \
-                     typeid(*this).name(), "'");                              \
+    RUNTIME_ERROR("Not implemented: function '", #func, "' in class: '",      \
+                  typeid(*this).name(), "'");                                 \
   }
 
   VIRTUAL_NOT_IMPLEMENTED(bool json_default())

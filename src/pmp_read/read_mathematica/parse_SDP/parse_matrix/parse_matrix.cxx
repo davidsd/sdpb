@@ -18,7 +18,7 @@ parse_matrix(const char *begin, const char *end,
     std::search(begin, end, matrix_literal.begin(), matrix_literal.end()));
   if(matrix_start == end)
     {
-      throw std::runtime_error("Could not find '" + matrix_literal + "'");
+      RUNTIME_ERROR("Could not find '" + matrix_literal + "'");
     }
 
   Damped_Rational prefactor;
@@ -29,7 +29,7 @@ parse_matrix(const char *begin, const char *end,
   auto comma(std::find(end_damped_rational, end, ','));
   if(comma == end)
     {
-      throw std::runtime_error("Missing comma after DampedRational");
+      RUNTIME_ERROR("Missing comma after DampedRational");
     }
 
   std::vector<std::vector<Polynomial_Vector>> polynomials;
@@ -39,7 +39,7 @@ parse_matrix(const char *begin, const char *end,
   const char *close_bracket(std::find(end_polynomials, end, ']'));
   if(close_bracket == end)
     {
-      throw std::runtime_error("Missing ']' at end of SDP");
+      RUNTIME_ERROR("Missing ']' at end of SDP");
     }
 
   matrix = std::make_unique<Polynomial_Vector_Matrix>(

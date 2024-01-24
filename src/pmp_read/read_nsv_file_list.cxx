@@ -1,3 +1,5 @@
+#include "sdpb_util/assert.hxx"
+
 #include <filesystem>
 #include <boost/algorithm/string.hpp>
 
@@ -17,7 +19,7 @@ std::vector<fs::path> read_nsv_file_list(const fs::path &input_file)
   infile.read(file_contents.data(), file_size);
   if(!infile.good())
     {
-      throw std::runtime_error("Unable to read: " + input_file.string());
+      RUNTIME_ERROR("Unable to read: " , input_file);
     }
   std::vector<fs::path> result;
   using namespace std::literals;

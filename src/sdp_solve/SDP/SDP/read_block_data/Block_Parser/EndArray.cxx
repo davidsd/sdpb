@@ -1,4 +1,5 @@
 #include "Block_Parser.hxx"
+#include "sdpb_util/assert.hxx"
 
 bool Block_Parser::EndArray(rapidjson::SizeType)
 {
@@ -26,14 +27,14 @@ bool Block_Parser::EndArray(rapidjson::SizeType)
         }
       else
         {
-          throw std::runtime_error(
+          RUNTIME_ERROR(
             "INTERNAL ERROR: Ending an array inside the main object.");
         }
     }
   else
     {
-      throw std::runtime_error(
-        "Invalid input file.  Ending an array outside of the main object.");
+      RUNTIME_ERROR(
+        "Invalid input file. Ending an array outside of the main object.");
     }
   return true;
 }

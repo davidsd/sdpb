@@ -1,5 +1,7 @@
 #include "../Outer_Parameters.hxx"
 
+#include "sdpb_util/assert.hxx"
+
 #include <boost/program_options.hpp>
 
 namespace fs = std::filesystem;
@@ -88,11 +90,7 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
           if(variables_map.count("paramFile") != 0)
             {
               std::ifstream param_file(param_path);
-              if(!param_file.good())
-                {
-                  throw std::runtime_error("Could not open '"
-                                           + param_path.string() + "'");
-                }
+              ASSERT(param_file.good(), "Could not open ", param_path);
 
               po::store(po::parse_config_file(param_file, cmd_line_options),
                         variables_map);
@@ -100,18 +98,11 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
 
           po::notify(variables_map);
 
-          if(!fs::exists(functions_path))
-            {
-              throw std::runtime_error("functions path '"
-                                       + functions_path.string()
-                                       + "' does not exist");
-            }
-          if(fs::is_directory(functions_path))
-            {
-              throw std::runtime_error("functions path '"
-                                       + functions_path.string()
-                                       + "' is a directory, not a file.");
-            }
+          ASSERT(fs::exists(functions_path),
+                 "functions path does not exist: ", functions_path);
+          ASSERT(
+            !fs::is_directory(functions_path),
+            "functions path is a directory, not a file: ", functions_path);
 
           if(variables_map.count("out") == 0)
             {
@@ -145,11 +136,7 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
             {
               fs::create_directories(output_path.parent_path());
               std::ofstream ofs(output_path);
-              if(!ofs.good())
-                {
-                  throw std::runtime_error("Cannot write to outDir: "
-                                           + output_path.string());
-                }
+              ASSERT(ofs.good(), "Cannot write to outDir: ", output_path);
             }
         }
     }

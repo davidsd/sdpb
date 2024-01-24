@@ -2,6 +2,7 @@
 #include "setup_constraints.hxx"
 #include "outer_limits/Outer_Parameters.hxx"
 #include "pmp/max_normalization_index.hxx"
+#include "sdpb_util/assert.hxx"
 #include "sdpb_util/copy_matrix.hxx"
 #include "sdpb_util/fill_weights.hxx"
 #include "sdpb_util/ostream/ostream_map.hxx"
@@ -60,13 +61,10 @@ std::vector<El::BigFloat> compute_optimal(
   const Outer_Parameters &parameters_in,
   const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time)
 {
-  if(initial_points.size() != function_blocks.size())
-    {
-      throw std::runtime_error("Size are different: Polynomial_Vector_Matrix: "
-                               + std::to_string(function_blocks.size())
-                               + ", initial points: "
-                               + std::to_string(initial_points.size()));
-    }
+  ASSERT(initial_points.size() == function_blocks.size(),
+         "Size are different: Polynomial_Vector_Matrix: "
+           + std::to_string(function_blocks.size())
+           + ", initial points: " + std::to_string(initial_points.size()));
   Outer_Parameters parameters(parameters_in);
   const size_t rank(El::mpi::Rank()), num_procs(El::mpi::Size()),
     num_weights(normalization.size());
@@ -238,8 +236,7 @@ std::vector<El::BigFloat> compute_optimal(
                                         - block.Get(0, 1) * block.Get(0, 1);
                           break;
                         default:
-                          throw std::runtime_error(
-                            "too big: " + std::to_string(block.Height()));
+                          RUNTIME_ERROR("too big: ", block.Height());
                           break;
                         }
                       if(determinant < 1e-16)
@@ -279,9 +276,7 @@ std::vector<El::BigFloat> compute_optimal(
              || reason == SDP_Solver_Terminate_Reason::PrimalStepTooSmall
              || reason == SDP_Solver_Terminate_Reason::DualStepTooSmall)
             {
-              std::stringstream ss;
-              ss << "Can not find solution: " << reason;
-              throw std::runtime_error(ss.str());
+              RUNTIME_ERROR("Cannot find solution: ", reason);
             }
 
           El::Matrix<El::BigFloat> y(dual_objective_b_star.Height(), 1);

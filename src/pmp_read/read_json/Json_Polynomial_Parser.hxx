@@ -23,10 +23,8 @@ public:
   void clear_result() override { result.coefficients.clear(); }
   void on_element_parsed(element_type &&value, size_t index) override
   {
-    if(index != result.coefficients.size())
-      El::RuntimeError(
-        "Json_Polynomial_Parser: Invalid polynomial coefficient index=", index,
-        ", expected ", result.coefficients.size());
+    ASSERT(index == result.coefficients.size(), "index=", index,
+           ", result.coefficients.size()=", result.coefficients.size());
     result.coefficients.push_back(std::forward<element_type>(value));
   }
   void on_element_skipped(size_t index) override {}

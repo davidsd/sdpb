@@ -1,5 +1,6 @@
 #include "sdp_solve/SDP.hxx"
 #include "sdp_solve/Archive_Reader.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
@@ -41,10 +42,7 @@ void read_objectives(const fs::path &sdp_path, const El::Grid &grid,
                      Timers &timers)
 {
   Scoped_Timer timer(timers, "read_objectives");
-  if(!fs::exists(sdp_path))
-    {
-      El::RuntimeError("SDP path '" + sdp_path.string() + "' does not exist");
-    }
+  ASSERT(fs::exists(sdp_path), "SDP path does not exist: ", sdp_path);
 
   const std::string objectives_name("objectives.json");
   if(fs::is_regular_file(sdp_path))
@@ -57,13 +55,13 @@ void read_objectives(const fs::path &sdp_path, const El::Grid &grid,
           if(objectives_name == archive_entry_pathname(reader.entry_ptr))
             {
               std::istream stream(&reader);
-              read_objectives_stream(grid, stream,
-                                     objective_const, dual_objective_b);
+              read_objectives_stream(grid, stream, objective_const,
+                                     dual_objective_b);
             }
         }
       if(dual_objective_b.Height() == 0)
         {
-          throw std::runtime_error("Unable to read objectives from input");
+          RUNTIME_ERROR("Unable to read objective from input");
         }
     }
   else
