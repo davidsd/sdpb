@@ -16,6 +16,10 @@ int main(int argc, char **argv)
 
   try
     {
+      if(El::mpi::Rank() == 0)
+        El::Output("pvm2sdp is DEPRECATED, please use pmp2sdp instead.");
+      // TODO remove pvm2sdp in 2.8.0 release
+
       Block_File_Format output_format = bin;
       int precision;
       std::vector<fs::path> input_files;

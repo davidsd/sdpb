@@ -18,6 +18,10 @@ int main(int argc, char **argv)
 
   try
     {
+      if(El::mpi::Rank() == 0)
+        El::Output("sdp2input is DEPRECATED, please use pmp2sdp instead.");
+      // TODO remove sdp2input in 2.8.0 release
+
       int precision;
       fs::path input_file, output_path;
       Block_File_Format output_format;
