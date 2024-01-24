@@ -1,5 +1,5 @@
 #include "SDP_Block_Data.hxx"
-#include "sdp_convert/sdp_convert.hxx"
+#include "pmp2sdp/write_sdp.hxx"
 #include "sdp_solve/Archive_Reader.hxx"
 #include "sdp_solve/SDP.hxx"
 #include "sdpb_util/copy_matrix.hxx"

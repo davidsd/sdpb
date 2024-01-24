@@ -1,13 +1,13 @@
 #include "setup_constraints.hxx"
+#include "setup_constraints.hxx"
 #include "outer_limits/Outer_Parameters.hxx"
-
+#include "pmp/max_normalization_index.hxx"
 #include "sdpb_util/copy_matrix.hxx"
-#include "sdpb_util/ostream/ostream_set.hxx"
+#include "sdpb_util/fill_weights.hxx"
 #include "sdpb_util/ostream/ostream_map.hxx"
+#include "sdpb_util/ostream/ostream_set.hxx"
 #include "sdpb_util/ostream/ostream_vector.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
-#include "sdpb_util/max_normalization_index.hxx"
-#include "sdpb_util/fill_weights.hxx"
 
 namespace fs = std::filesystem;
 
@@ -62,10 +62,10 @@ std::vector<El::BigFloat> compute_optimal(
 {
   if(initial_points.size() != function_blocks.size())
     {
-      throw std::runtime_error(
-        "Size are different: Positive_Matrix_With_Prefactor: "
-        + std::to_string(function_blocks.size())
-        + ", initial points: " + std::to_string(initial_points.size()));
+      throw std::runtime_error("Size are different: Polynomial_Vector_Matrix: "
+                               + std::to_string(function_blocks.size())
+                               + ", initial points: "
+                               + std::to_string(initial_points.size()));
     }
   Outer_Parameters parameters(parameters_in);
   const size_t rank(El::mpi::Rank()), num_procs(El::mpi::Size()),

@@ -27,6 +27,7 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
 
   Scoped_Timer read_sdp_timer(timers, "read_sdp");
   SDP sdp(parameters.sdp_path, block_info, grid, timers);
+  // parameters.write_solution
   read_sdp_timer.stop();
 
   Scoped_Timer solver_ctor_timer(timers, "SDP_Solver.ctor");

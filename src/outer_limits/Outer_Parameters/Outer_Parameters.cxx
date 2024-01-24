@@ -7,7 +7,6 @@ namespace po = boost::program_options;
 
 Outer_Parameters::Outer_Parameters(int argc, char *argv[])
 {
-  int int_verbosity;
   std::string write_solution_string;
   using namespace std::string_literals;
 
@@ -37,9 +36,8 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
     "The optimal solution is saved to this file in json "
     "format. Defaults to 'functions' with the ending '_out.json'.");
   basic_options.add_options()("verbosity",
-                              po::value<int>(&int_verbosity)->default_value(1),
-                              "Verbosity.  0 -> no output, 1 -> regular "
-                              "output, 2 -> debug output");
+    po::value<Verbosity>(&verbosity)->default_value(Verbosity::regular),
+    "Verbosity.  0 -> no output, 1 -> regular output, 2 -> debug output");
 
   cmd_line_options.add(basic_options);
   po::options_description solver_options(solver.options());
@@ -152,16 +150,6 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
                   throw std::runtime_error("Cannot write to outDir: "
                                            + output_path.string());
                 }
-            }
-
-          if(int_verbosity != 0 && int_verbosity != 1 && int_verbosity != 2)
-            {
-              throw std::runtime_error(
-                "Invalid number for Verbosity.  Only 0, 1 or 2 are allowed\n");
-            }
-          else
-            {
-              verbosity = static_cast<Verbosity>(int_verbosity);
             }
         }
     }

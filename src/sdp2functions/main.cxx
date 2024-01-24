@@ -1,4 +1,4 @@
-#include "sdp_read/sdp_read.hxx"
+#include "pmp_read/pmp_read.hxx"
 
 #include <boost/program_options.hpp>
 #include <filesystem>
@@ -9,7 +9,7 @@ namespace po = boost::program_options;
 void write_functions(
   const fs::path &output_path, const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
-  const std::vector<Positive_Matrix_With_Prefactor> &matrices);
+  const std::vector<Polynomial_Vector_Matrix> &matrices);
 
 int main(int argc, char **argv)
 {
@@ -17,6 +17,10 @@ int main(int argc, char **argv)
 
   try
     {
+      // TODO fix parallel
+      if(El::mpi::Size() > 1)
+        El::RuntimeError("sdp2functions cannot work in parallel!");
+
       int precision;
       fs::path input_file, output_path;
       bool debug(false);
@@ -80,10 +84,9 @@ int main(int argc, char **argv)
       // base-10 digits.
       Boost_Float::default_precision(precision * log(2) / log(10));
 
-      std::vector<El::BigFloat> objectives, normalization;
-      std::vector<Positive_Matrix_With_Prefactor> matrices;
-      read_input(input_file, objectives, normalization, matrices);
-      write_functions(output_path, objectives, normalization, matrices);
+      const auto pmp = read_polynomial_matrix_program(input_file);
+      write_functions(output_path, pmp.objective, pmp.normalization,
+                      pmp.matrices);
     }
   catch(std::exception &e)
     {

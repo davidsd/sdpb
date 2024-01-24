@@ -55,7 +55,7 @@ void parse_block_data(std::istream &block_stream, Block_File_Format format,
 {
   if(format == bin)
     {
-      // NB: this should match sdp_convert/write_block_data.cxx
+      // NB: this should match pmp2sdp/write_block_data.cxx
       boost::archive::binary_iarchive ar(block_stream);
       mp_bitcnt_t precision;
       ar >> precision;

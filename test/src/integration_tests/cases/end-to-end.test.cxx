@@ -81,19 +81,16 @@ namespace
         sdpb_output_diff_precision, {}, out_txt_keys);
     }
 
-    // TODO spectrum
     if(compute_spectrum)
       {
         Test_Util::Test_Case_Runner::Named_Args_Map args{
           {"--input", (data_dir / "json" / "file_list.nsv").string()},
           {"--solution", (output_dir / "out").string()},
           {"--threshold", "1e-10"},
-          {"--format", "PMP"},
           {"--output", (output_dir / "spectrum.json").string()},
           {"--precision", std::to_string(precision)},
         };
-        // TODO: run with num_procs. Currently, spectrum fails if num_procs > 1.
-        runner.create_nested("spectrum").mpi_run({"build/spectrum"}, args, 1);
+        runner.create_nested("spectrum").mpi_run({"build/spectrum"}, args, num_procs);
         Test_Util::REQUIRE_Equal::diff_spectrum(
           output_dir / "spectrum.json", data_dir / "spectrum_orig.json",
           precision, sdpb_output_diff_precision);

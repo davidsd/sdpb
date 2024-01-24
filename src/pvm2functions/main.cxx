@@ -1,5 +1,5 @@
 #include "sdpb_util/Boost_Float.hxx"
-#include "sdp_read/sdp_read.hxx"
+#include "pmp_read/pmp_read.hxx"
 
 namespace fs = std::filesystem;
 
@@ -18,6 +18,10 @@ int main(int argc, char **argv)
 
   try
     {
+      // TODO fix parallel
+      if(El::mpi::Size() > 1)
+        El::RuntimeError("pvm2functions cannot work in parallel!");
+
       int precision;
       std::vector<fs::path> input_files;
       fs::path output_path;
@@ -25,12 +29,6 @@ int main(int argc, char **argv)
       parse_command_line(argc, argv, precision, input_files, output_path);
       El::gmp::SetPrecision(precision);
       Boost_Float::default_precision(precision * log(2) / log(10));
-
-      std::vector<El::BigFloat> dual_objective_b;
-      std::vector<Polynomial_Vector_Matrix> polynomial_vector_matrices;
-      size_t num_blocks(0);
-      read_pvm_input(input_files, dual_objective_b, polynomial_vector_matrices,
-                     num_blocks);
 
       if(output_path == ".")
         {
@@ -42,8 +40,8 @@ int main(int argc, char **argv)
           throw std::runtime_error("Output file '" + output_path.string()
                                    + "' exists and is a directory");
         }
-      write_functions(output_path, dual_objective_b,
-                      polynomial_vector_matrices);
+      const auto pmp = read_polynomial_matrix_program(input_files);
+      write_functions(output_path, pmp.objective, pmp.matrices);
     }
   catch(std::exception &e)
     {

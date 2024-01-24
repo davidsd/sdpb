@@ -1,5 +1,5 @@
-#include "sdp_read/sdp_read.hxx"
-#include "sdp_convert/write_vector.hxx"
+#include "pmp_read/pmp_read.hxx"
+#include "pmp2sdp/write_vector.hxx"
 
 #include <filesystem>
 
@@ -8,7 +8,7 @@ namespace fs = std::filesystem;
 void write_functions(
   const fs::path &output_path, const std::vector<El::BigFloat> &objectives,
   const std::vector<El::BigFloat> &normalization,
-  const std::vector<Positive_Matrix_With_Prefactor> &matrices)
+  const std::vector<Polynomial_Vector_Matrix> &matrices)
 {
   fs::create_directories(output_path.parent_path());
   std::ofstream output_stream(output_path);
@@ -33,9 +33,9 @@ void write_functions(
 
       const size_t num_chebyshev_points([&block]() {
         size_t max(0);
-        for(auto &row : block->polynomials)
-          for(auto &column : row)
-            for(auto &poly : column)
+        for(int i = 0; i < block->polynomials.Height();++i)
+          for(int j = 0; j < block->polynomials.Width();++j)
+            for(const auto &poly : block->polynomials(i,j))
               {
                 max = std::max(max, poly.coefficients.size());
               }
@@ -54,15 +54,15 @@ void write_functions(
                                 / num_chebyshev_points)));
         }
 
-      const size_t num_rows(block->polynomials.size()),
-        num_columns(block->polynomials.front().size());
+      const size_t num_rows(block->polynomials.Height()),
+        num_columns(block->polynomials.Width());
       std::vector<int64_t> max_degree(num_rows * num_columns, 0),
         min_degree(max_degree.size(), std::numeric_limits<int64_t>::max());
       for(size_t row(0); row != num_rows; ++row)
         {
           for(size_t column(0); column != num_columns; ++column)
             {
-              for(auto &poly : block->polynomials[row][column])
+              for(auto &poly : block->polynomials(row,column))
                 {
                   // Sometimes, the highest degree coefficients are zero
                   for(size_t index(0); index != poly.coefficients.size();
@@ -122,10 +122,10 @@ void write_functions(
                 }
               output_stream << "        [\n";
               size_t poly_number(0);
-              for(auto poly(block->polynomials[row][column].begin());
-                  poly != block->polynomials[row][column].end(); ++poly)
+              for(auto poly(block->polynomials(row,column).begin());
+                  poly != block->polynomials(row,column).end(); ++poly)
                 {
-                  if(poly != block->polynomials[row][column].begin())
+                  if(poly != block->polynomials(row,column).begin())
                     {
                       output_stream << ",\n";
                     }

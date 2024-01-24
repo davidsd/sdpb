@@ -29,6 +29,11 @@ namespace Test_Util::REQUIRE_Equal
                     Test_Case_Runner runner);
 
   void
+  diff_functions_json(const std::filesystem::path &a_json,
+                 const std::filesystem::path &b_json,
+                 unsigned int input_precision, unsigned int diff_precision);
+
+  void
   diff_outer_limits(const std::filesystem::path &a_json,
                     const std::filesystem::path &b_json,
                     unsigned int input_precision, unsigned int diff_precision);

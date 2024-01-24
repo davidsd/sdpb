@@ -76,6 +76,6 @@ TEST_CASE("pvm2sdp")
 
     auto sdp_invalid_zip = (runner.output_dir / "sdp.invalid.zip").string();
     runner.mpi_run({"build/pvm2sdp 1024", invalid_nsv, sdp_invalid_zip}, {},
-                   num_procs, 1, "Unable to parse input file");
+                   num_procs, 1, "No such file");
   }
 }

@@ -1,32 +1,16 @@
-#include "sdp_read/sdp_read.hxx"
+#include "pmp_read/pmp_read.hxx"
+#include "pmp2sdp/Block_File_Format.hxx"
+#include "pmp2sdp/Dual_Constraint_Group.hxx"
+#include "pmp2sdp/write_sdp.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
-#include <string>
 #include <boost/program_options.hpp>
+
 #include <filesystem>
+#include <string>
 
 namespace fs = std::filesystem;
 namespace po = boost::program_options;
-
-void write_output(const fs::path &output_path, Block_File_Format output_format,
-                  const std::vector<std::string> &command_arguments,
-                  const std::vector<El::BigFloat> &objectives,
-                  const std::vector<El::BigFloat> &normalization,
-                  const std::vector<Positive_Matrix_With_Prefactor> &matrices,
-                  Timers &timers, bool debug);
-
-std::istream &operator>>(std::istream &in, Block_File_Format &format)
-{
-  std::string token;
-  in >> token;
-  if(token == "json")
-    format = json;
-  else if(token == "bin")
-    format = bin;
-  else
-    in.setstate(std::ios_base::failbit);
-  return in;
-}
 
 int main(int argc, char **argv)
 {
@@ -67,6 +51,11 @@ int main(int argc, char **argv)
 
       po::variables_map variables_map;
       po::store(po::parse_command_line(argc, argv, options), variables_map);
+      std::vector<std::string> command_arguments;
+      for(int arg(0); arg != argc; ++arg)
+        {
+          command_arguments.emplace_back(argv[arg]);
+        }
 
       if(variables_map.count("help") != 0)
         {
@@ -103,24 +92,18 @@ int main(int argc, char **argv)
       // base-10 digits.
       Boost_Float::default_precision(precision * log(2) / log(10));
 
-      std::vector<El::BigFloat> objectives, normalization;
-      std::vector<Positive_Matrix_With_Prefactor> matrices;
       Timers timers(env, debug);
       Scoped_Timer timer(timers, "sdp2input");
-      {
-        Scoped_Timer read_input_timer(timers, "read_input");
-        read_input(input_file, objectives, normalization, matrices);
-      }
-      std::vector<std::string> command_arguments;
-      for(int arg(0); arg != argc; ++arg)
-        {
-          command_arguments.emplace_back(argv[arg]);
-        }
-      write_output(output_path, output_format, command_arguments, objectives,
-                   normalization, matrices, timers, debug);
+
+      Scoped_Timer read_input_timer(timers, "read_input");
+      auto pmp = read_polynomial_matrix_program(input_file);
+      read_input_timer.stop();
+
+      Output_SDP sdp(pmp, command_arguments, timers);
+      write_sdp(output_path, sdp, output_format, timers, debug);
       if(El::mpi::Rank() == 0)
         {
-          El::Output("Processed ", matrices.size(), " SDP blocks in ",
+          El::Output("Processed ", sdp.num_blocks, " SDP blocks in ",
                      (double)timer.timer().elapsed_milliseconds() / 1000,
                      " seconds, output: ", output_path.string());
         }
