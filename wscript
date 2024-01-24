@@ -281,19 +281,10 @@ def build(bld):
                 use=use_packages + ['pmp_read', 'sdp_solve']
                 )
 
-    bld.program(source=['src/pvm2functions/main.cxx',
-                        'src/pvm2functions/parse_command_line.cxx',
-                        'src/pvm2functions/write_functions.cxx'],
-                target='pvm2functions',
-                cxxflags=default_flags,
-                defines=default_defines,
-                includes=default_includes,
-                use=use_packages + ['pmp_read']
-                )
-
-    bld.program(source=['src/sdp2functions/main.cxx',
-                        'src/sdp2functions/write_functions.cxx'],
-                target='sdp2functions',
+    bld.program(source=['src/pmp2functions/main.cxx',
+                        'src/pmp2functions/Pmp2functions_Parameters.cxx',
+                        'src/pmp2functions/write_functions.cxx'],
+                target='pmp2functions',
                 cxxflags=default_flags,
                 defines=default_defines,
                 includes=default_includes,

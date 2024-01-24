@@ -35,9 +35,9 @@ Similarly, `points` has a [schema](json_schema/points_schema.json) and an
 [example](../test/data/outer_limits/toy_functions_points.json).
 
 If you have an existing input file for `sdpb`, you can use the bundled
-`sdp2functions` and `pvm2functions` programs to create suitable input
-from JSON and XML files.  They work very similarly to `sdp2input` and
-`pvm2sdp`.  You can run them with the `--help` option to see usage
+`pmp2functions` program to create suitable input
+from JSON, Mathematica or XML files. It works very similarly to
+`pmp2sdp`. You can run them with the `--help` option to see usage
 information.
 
 All the other options have a similar meaning as for `sdpb`. For

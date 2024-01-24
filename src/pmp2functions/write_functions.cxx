@@ -5,10 +5,10 @@
 
 namespace fs = std::filesystem;
 
-void write_functions(
-  const fs::path &output_path, const std::vector<El::BigFloat> &objectives,
-  const std::vector<El::BigFloat> &normalization,
-  const std::vector<Polynomial_Vector_Matrix> &matrices)
+void write_functions(const fs::path &output_path,
+                     const std::vector<El::BigFloat> &objectives,
+                     const std::vector<El::BigFloat> &normalization,
+                     const std::vector<Polynomial_Vector_Matrix> &matrices)
 {
   fs::create_directories(output_path.parent_path());
   std::ofstream output_stream(output_path);
@@ -33,16 +33,28 @@ void write_functions(
 
       const size_t num_chebyshev_points([&block]() {
         size_t max(0);
-        for(int i = 0; i < block->polynomials.Height();++i)
-          for(int j = 0; j < block->polynomials.Width();++j)
-            for(const auto &poly : block->polynomials(i,j))
+        for(int i = 0; i < block->polynomials.Height(); ++i)
+          for(int j = 0; j < block->polynomials.Width(); ++j)
+            for(const auto &poly : block->polynomials(i, j))
               {
                 max = std::max(max, poly.coefficients.size());
               }
         return max;
       }());
 
-      const El::BigFloat max_delta(6 * num_chebyshev_points);
+      // TODO which max_delta to choose?
+      // from old sdp2functions (it didn't know sample_points):
+      // const El::BigFloat max_delta(6 * num_chebyshev_points);
+      // from old pvm2functions:
+      const El::BigFloat max_delta([&block]() {
+        El::BigFloat max(0);
+        for(auto &point : block->sample_points)
+          {
+            max = std::max(max, point);
+          }
+        return 8 * max;
+      }());
+
       std::vector<El::BigFloat> chebyshev_zeros(num_chebyshev_points, 0);
       for(size_t index(0); index != chebyshev_zeros.size(); ++index)
         {
@@ -62,7 +74,7 @@ void write_functions(
         {
           for(size_t column(0); column != num_columns; ++column)
             {
-              for(auto &poly : block->polynomials(row,column))
+              for(auto &poly : block->polynomials(row, column))
                 {
                   // Sometimes, the highest degree coefficients are zero
                   for(size_t index(0); index != poly.coefficients.size();
@@ -121,10 +133,10 @@ void write_functions(
                 }
               output_stream << "        [\n";
               size_t poly_number(0);
-              for(auto poly(block->polynomials(row,column).begin());
-                  poly != block->polynomials(row,column).end(); ++poly)
+              for(auto poly(block->polynomials(row, column).begin());
+                  poly != block->polynomials(row, column).end(); ++poly)
                 {
-                  if(poly != block->polynomials(row,column).begin())
+                  if(poly != block->polynomials(row, column).begin())
                     {
                       output_stream << ",\n";
                     }

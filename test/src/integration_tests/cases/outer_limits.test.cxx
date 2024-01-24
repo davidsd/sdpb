@@ -7,8 +7,7 @@ namespace fs = std::filesystem;
 
 TEST_CASE("outer_limits")
 {
-  INFO("Simple pvm2functions + outer_limits test");
-  // TODO test also sdp2functions
+  INFO("Simple pmp2functions + outer_limits test");
 
   int num_procs = GENERATE(1, 2, 6);
   DYNAMIC_SECTION("num_procs=" << num_procs)
@@ -23,13 +22,13 @@ TEST_CASE("outer_limits")
     int precision = 128;
 
     {
-      INFO("run pvm2functions");
+      INFO("run pmp2functions");
       fs::path pvm_xml
         = Test_Config::test_data_dir / "pmp2sdp" / "xml" / "pmp.xml";
 
-      // TODO allow running pvm2functions in parallel
-      runner.create_nested("pvm2functions")
-        .run({"build/pvm2functions", std::to_string(precision), pvm_xml,
+      // TODO allow running pmp2functions in parallel
+      runner.create_nested("pmp2functions")
+        .run({"build/pmp2functions", std::to_string(precision), pvm_xml,
               functions_json});
       Test_Util::REQUIRE_Equal::diff_functions_json(
         functions_json, functions_orig_json, precision, precision / 2);
