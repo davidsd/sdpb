@@ -40,7 +40,7 @@ from JSON and XML files.  They work very similarly to `sdp2input` and
 `pvm2sdp`.  You can run them with the `--help` option to see usage
 information.
 
-All of the other options have a similar meaning as for `sdpb`.  For
+All the other options have a similar meaning as for `sdpb`. For
 example, `initialMatrixScaleDual` will set the initial size of the `Y`
 matrices when computing a solution for each outer iteration.
 

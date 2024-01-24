@@ -2,48 +2,50 @@
 
 Details of how SDPB works are described in the
 [manual](SDPB_Manual/SDPB-Manual.pdf). An example input file
-[pvm.xml](../test/data/pvm2sdp/pvm.xml) is included with the source code.
+[pmp.xml](../test/data/pmp2sdp/xml/pmp.xml) is included with the source code.
 
 Some known issues and workaround are described [below](#common-issues-and-workarounds).
 You may also [find](https://github.com/davidsd/sdpb/issues) unresolved issues
 or [report](https://github.com/davidsd/sdpb/issues/new) a new one in the GitHub repository.
 
-The build system creates the executables `pvm2sdp`, `sdp2input`, and
+The build system creates the executables `pmp2sdp` and
 `sdpb` in the `build` directory.  There are two steps when running
 SDPB.
 
 ## Create input files
 
-You will normally start with either an SDP file in Mathematica or JSON
-format, or a Polynomial Vector Matrices file in XML format.  These
-must first be converted, using `sdp2input` or `pvm2sdp`, into a format
+You will normally start with either a Polynomial Matrix Program (PMP) file in Mathematica, JSON or XML format. These
+files
+must first be converted, using `pmp2sdp`, into an SDP format
 that SDPB can quickly load.  The format is described in
 [SDPB_input_format.md](SDPB_input_format.md).  When creating these
-input files, you must choose a working precision.  In general, you
-should use the same precision as when you run `sdpb`, though you may
-also use a larger precision.  Both `sdp2input` and `pvm2sdp` will run
+input files, you must choose a working precision. You
+should use the same precision as when you run `sdpb` (you may also use larger precision if you are using `pmp2sdp`
+with `--outputFormat=json`). `pmp2sdp` will run
 faster in parallel.
 
-### Converting an SDP
+### Converting PMP to SDP
 
-Use `sdp2input` to create input from files with an SDP.  The usage is
+Use `pmp2sdp` to create SDPB input from files with a PMP. The usage is
 
-    sdp2input --precision=[PRECISION] --input=[INPUT] --output=[OUTPUT]
+    pmp2sdp --precision=[PRECISION] --input=[INPUT] --output=[OUTPUT]
 
 `[PRECISION]` is the number of bits of precision used in the
-conversion.  `[INPUT]` is a single Mathematica, JSON, or NSV
-(Null Separated Value) file.  `[OUTPUT]` is an output directory.
+conversion.  `[INPUT]` is a single Mathematica, JSON, XML or NSV
+(Null Separated Value) file. `[OUTPUT]` is an output directory.
 
 The single file Mathematica and JSON formats are described in Section
 3.2 of the [manual](SDPB_Manual/SDPB-Manual.pdf). In addition, for JSON there
-is a [schema](json_schema/sdp2input_schema.json).
+is a [schema](json_schema/pmp_schema.json).
+The format for the XML files is described in Section 3.1 of
+[the manual](SDPB_Manual/SDPB-Manual.pdf).
 
-The NSV format allows you to load an SDP from multiple JSON and/or
-Mathematica files.  NSV files contain a list of files, separated by
-null's.  When using multiple files, each component is optional.  If
-there are multiple versions of `normalization` or `objective`,
-`sdp2input` will use the last one it sees.  Multiple elements of
-`PositiveMatrixWithPrefactor` will be concatenated together.
+The NSV format allows you to load a PMP from multiple files.
+NSV files contain a list of files, separated by null's (`'\0'`).
+When using multiple files, each component is optional.
+If there are multiple versions of `normalization` or `objective`,
+`pmp2sdp` will arbitrarily choose one of them.
+Multiple elements of `PositiveMatrixWithPrefactor` will be concatenated together.
 
 One way to generate NSV files is with the `find` command.  For
 example, if you have a directory `input` with many files, you can
@@ -51,63 +53,19 @@ generate an NSV file with the command
 
     find input/ -name "*.m" -print0 > file_list.nsv
 
-`sdp2input` assumes that files ending with `.nsv` are NSV,
-files ending with `.json` are JSON, and `.m` is
-Mathematica.  NSV files can also recursively reference other NSV
-files.
+`pmp2sdp` assumes that files ending with `.nsv` are NSV,
+files ending with `.json` are JSON, `.m` is
+Mathematica, and `.xml` is XML.
+NSV files can also recursively reference other NSV files.
 
 There are example input files in
-[Mathematica](../test/data/sdp2input/sdp2input_test.m),
-[JSON](../test/data/sdp2input/sdp2input_test.json), and
-[NSV](../test/data/sdp2input/sdp2input_split.nsv) format.  They all define the same
-SDP, with the NSV example loading the SDP from two Mathematica files:
-[sdp2input\_split1.m](../test/data/sdp2input/sdp2input_split1.m) and
-[sdp2input\_split2.m](../test/data/sdp2input/sdp2input_split2.m).
-
-### Converting Polynomial Vector Matrices
-
-Use `pvm2sdp` to create input files from Polynomial Vector Matrix files
-in XML.  The format for these XML files is described in Section 3.1 of
-[the manual](SDPB_Manual/SDPB-Manual.pdf). The usage is
-
-    pvm2sdp [PRECISION] [INPUT] ... [OUTPUT]
-
-`[PRECISION]` is the number of bits of precision used in the
-conversion.  `[INPUT] ...` is a list of one or more files.  Each of
-those input files can be either an XML file with Polynomial Vector
-Matrices, or an Null Separated Value (NSV) file with a list of
-files. `[OUTPUT]` is an output directory.
-
-For example, the command to convert the file `test/data/pvm2sdp/pvm.xml`, using
-1024 bits of precision, and store the result in the directory
-`test/out/pvm2sdp/sdp.zip`, is
-
-    pvm2sdp 1024 test/data/pvm2sdp/pvm.xml test/out/pvm2sdp/sdp.zip
-
-For input, you can also use an NSV file containing a list of file names
-separated by nulls.  There is an example in `test/data/pvm2sdp/file_list.nsv`.
-Using it is similar to the xml files
-
-    pvm2sdp 1024 test/data/pvm2sdp/file_list.nsv test/out/pvm2sdp/sdp.zip
-
-One way to generate this file list is with the `find` command.  For
-example,
-
-    find test/data/pvm2sdp/ -name "pvm.xml" -print0 > test/data/pvm2sdp/file_list.nsv
-    
-will regenerate `test/data/pvm2sdp/file_list.nsv`.  If you have a directory `input`
-with many xml files, you can generate a file list with the command
-
-    find test/data/pvm2sdp/ -name "*.xml" -print0 > test/data/pvm2sdp/file_list.nsv
-
-`pvm2sdp` assumes that anything with the `.nsv` extension is a null
-separated file list, and `.xml` is an xml file. File lists
-can also recursively reference other file lists.  So running
-
-    find test/data/pvm2sdp/ a-print0 -name "*.nsv" > test/out/file_list_list.nsv
-    pvm2sdp 1024 test/out/file_list_list.nsv test/out/pvm2sdp/sdp.zip
-
-will also work.
+[Mathematica](../test/data/pmp2sdp/m/pmp.m),
+[JSON](../test/data/pmp2sdp/json/pmp.json), and
+[NSV](../test/data/pmp2sdp/m/file_list.nsv) format. They all define the same
+SDP, with the NSV example loading the PMP from two Mathematica files:
+[pmp\_split1.m](../test/data/pmp2sdp/m/pmp_split1.m) and
+[pmp\_split2.m](../test/data/pmp2sdp/m/pmp_split2.m).
+There is also an [XML file](../test/data/pmp2sdp/xml/pmp.xml) with a simple one-dimensional PMP described in manual.
 
 ## Running SDPB.
 
@@ -182,9 +140,9 @@ computing the initial solution with `sdpb` by including the option
 solution, setup a solver, and compute the new objective.
 
 You specify the location of the new SDP with the option `--newSdp`.
-This file would be the output of `pvm2sdp` or `sdp2input`.  If you
-have multiple SDP's, then you can create an NSV as in the instructions
-for `sdp2input` that list all of the files.
+This file would be the output of `pmp2sdp`.
+If you have multiple SDP's, then you should create an NSV as in the instructions
+for `pmp2sdp` that list all the files.
 
 Setting up the solver can take a long time.  If you have an SDP that
 you have perturbed in many different directions, and for logistical
@@ -232,7 +190,7 @@ spectrum extraction.  The options are described in more detail in the
 help text, obtained by running `spectrum --help`.  As a simple
 example, extracting the spectrum from the toy example would be
 
-    mpirun -n 4 build/spectrum --input=test/data/spectrum/pvm.xml --solution=test/data/spectrum/solution --threshold=1e-10 --output=test/out/spectrum/spectrum.json --precision=1024
+    mpirun -n 4 build/spectrum --input=test/data/spectrum/pmp.xml --solution=test/data/spectrum/solution --threshold=1e-10 --output=test/out/spectrum/spectrum.json --precision=1024
 
 This will output the spectra into `test/out/spectrum/spectrum.json` and should look like
 

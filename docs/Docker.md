@@ -62,19 +62,19 @@ place that docker will see it.
 
 `<command>` is the command that you would normally use to run the SDPB
 commands (see [Usage.md](Usage.md)).  The directory containing the
-input file is mounted as `/usr/local/share/sdpb`.  So we first run `pvm2sdp` to
+input file is mounted as `/usr/local/share/sdpb`. So we first run `pmp2sdp` to
 convert from xml
 
-    mpirun --allow-run-as-root -n 4 pvm2sdp 1024 /usr/local/share/sdpb/input.xml /usr/local/share/sdpb/input
+    mpirun --allow-run-as-root -n 4 pmp2sdp --precision 1024 -i /usr/local/share/sdpb/input.xml -o /usr/local/share/sdpb/sdp.zip
     
 `mpirun` runs as root inside the docker container.  Running `mpirun` as
 root is normally dangerous, but it is safe to do so inside the
 container. To allow `mpirun` to run as root, we add the option
-`--allow-run-as-root`.  This uses 4 cores when running pvm2sdp.  You
+`--allow-run-as-root`. This uses 4 cores when running pmp2sdp. You
 can change that number to match your own machine.  Putting it all
 together on a single line
 
-    docker run -v /my/project/:/usr/local/share/sdpb bootstrapcollaboration/sdpb:master mpirun --allow-run-as-root -n 4 pvm2sdp 1024 /usr/local/share/sdpb/input.xml /usr/local/share/sdpb/sdp.zip
+    docker run -v /my/project/:/usr/local/share/sdpb bootstrapcollaboration/sdpb:master mpirun --allow-run-as-root -n 4 pmp2sdp --precision 1024 -i /usr/local/share/sdpb/input.xml -o /usr/local/share/sdpb/sdp.zip
 
 Running this command will create `/my/project/sdp.zip`.
 To search for primal-dual solutions
@@ -94,4 +94,4 @@ Instead of Docker, one can also use [Podman](https://podman.io), which is compat
 same syntax (the only difference is the additional `docker.io/` prefix):
 
     podman pull docker.io/bootstrapcollaboration/sdpb:master
-    podman run -v /my/project/:/usr/local/share/sdpb bootstrapcollaboration/sdpb:master mpirun --allow-run-as-root -n 4 pvm2sdp 1024 /usr/local/share/sdpb/input.xml /usr/local/share/sdpb/input
+    podman run -v /my/project/:/usr/local/share/sdpb bootstrapcollaboration/sdpb:master mpirun --allow-run-as-root -n 4 pmp2sdp --precision 1024 -i /usr/local/share/sdpb/input.xml -o /usr/local/share/sdpb/sdp.zip
