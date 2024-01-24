@@ -15,7 +15,7 @@ void write_functions(const fs::path &output_path,
 
 int main(int argc, char **argv)
 {
-  El::Environment env(argc, argv);
+  Environment env(argc, argv);
 
   try
     {
@@ -32,7 +32,9 @@ int main(int argc, char **argv)
       // base-10 digits.
       Boost_Float::default_precision(parameters.precision * log(2) / log(10));
 
-      const auto pmp = read_polynomial_matrix_program(parameters.input_file);
+      Timers timers(env, parameters.verbosity >= debug);
+      const auto pmp
+        = read_polynomial_matrix_program(parameters.input_file, timers);
       write_functions(parameters.output_path, pmp.objective, pmp.normalization,
                       pmp.matrices);
     }

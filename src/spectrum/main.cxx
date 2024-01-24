@@ -34,7 +34,7 @@ compute_spectrum(const std::vector<El::BigFloat> &normalization,
 
 int main(int argc, char **argv)
 {
-  El::Environment env(argc, argv);
+  Environment env(argc, argv);
 
   try
     {
@@ -44,7 +44,9 @@ int main(int argc, char **argv)
       handle_arguments(argc, argv, threshold, mesh_threshold, input_path,
                        solution_dir, output_path, need_lambda);
 
-      const auto pmp = read_polynomial_matrix_program(input_path);
+      bool debug = false; // TODO set verbosity from command line
+      Timers timers(env, debug);
+      const auto pmp = read_polynomial_matrix_program(input_path, timers);
       const size_t num_blocks = pmp.num_matrices;
       const auto &block_indices = pmp.matrix_index_local_to_global;
       El::Matrix<El::BigFloat> y(pmp.objective.size() - 1, 1);

@@ -61,9 +61,9 @@ namespace
 }
 
 Polynomial_Matrix_Program
-read_polynomial_matrix_program(const fs::path &input_file)
+read_polynomial_matrix_program(const fs::path &input_file, Timers &timers)
 {
-  return read_polynomial_matrix_program(std::vector{input_file});
+  return read_polynomial_matrix_program(std::vector{input_file}, timers);
 }
 
 // Read Polynomal Matrix Program in one of the supported formats.
@@ -78,8 +78,11 @@ read_polynomial_matrix_program(const fs::path &input_file)
 //   root of each group copies file content to a shared memory window,
 //   and other processes read it.
 Polynomial_Matrix_Program
-read_polynomial_matrix_program(const std::vector<fs::path> &input_files)
+read_polynomial_matrix_program(const std::vector<fs::path> &input_files,
+                               Timers &timers)
 {
+  Scoped_Timer timer(timers, "read_pmp");
+
   std::vector<El::BigFloat> objective;
   std::vector<El::BigFloat> normalization;
   // Total number of PVM matrices
@@ -97,6 +100,7 @@ read_polynomial_matrix_program(const std::vector<fs::path> &input_files)
 
   std::map<size_t, PMP_File_Parse_Result> parse_results;
   {
+    Scoped_Timer parse_timer(timers, "parse");
     // Determine which processes will parse which files
     const Mapping mapping(all_files);
     // Cumulative number of matrices in all files parsed
@@ -105,6 +109,9 @@ read_polynomial_matrix_program(const std::vector<fs::path> &input_files)
     for(const auto file_index : mapping.file_indices)
       {
         const auto &file = all_files.at(file_index);
+        Scoped_Timer parse_file_timer(timers,
+                                      "file_" + std::to_string(file_index)
+                                        + "=" + file.filename().string());
         // Simple round-robin for matrices across files in a given group
         auto should_parse_matrix
           = [&mapping, &num_matrices_in_group](size_t matrix_index_in_file) {
@@ -135,6 +142,8 @@ read_polynomial_matrix_program(const std::vector<fs::path> &input_files)
 
   // Synhronize number of matrices in each file
   {
+    Scoped_Timer sync_num_matrices_timer(timers, "sync_num_matrices");
+
     std::vector<size_t> num_matrices_per_file(num_files, 0);
     for(auto &[file_index, parse_result] : parse_results)
       {
@@ -186,9 +195,13 @@ read_polynomial_matrix_program(const std::vector<fs::path> &input_files)
         }
     }
 
-  // TODO check also that objective/normalization exist only in a single file
-  synchronize_vector(objective);
-  synchronize_vector(normalization);
+  {
+    Scoped_Timer sync_objective_timer(timers, "sync_objective_normalization");
+    // TODO check also that objective/normalization exist only in a single file
+    // TODO we can store objective on one rank, no need to synchronize it
+    synchronize_vector(objective);
+    synchronize_vector(normalization);
+  }
 
   ASSERT(!objective.empty(), "objective not found in input files");
 

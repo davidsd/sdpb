@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 
       Timers timers(env, debug);
 
-      auto pmp = read_polynomial_matrix_program(input_files);
+      auto pmp = read_polynomial_matrix_program(input_files, timers);
       Output_SDP sdp(pmp, command_arguments, timers);
       ASSERT(output_path != ".",
              "Output file is a directory: ", output_path);

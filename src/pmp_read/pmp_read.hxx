@@ -1,14 +1,16 @@
 #pragma once
 #include "pmp/Polynomial_Matrix_Program.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 
 #include <filesystem>
-#include<vector>
+#include <vector>
+
+Polynomial_Matrix_Program read_polynomial_matrix_program(
+  const std::vector<std::filesystem::path> &input_files, Timers &timers);
 
 Polynomial_Matrix_Program
-read_polynomial_matrix_program(const std::vector<std::filesystem::path> &input_files);
-
-Polynomial_Matrix_Program
-read_polynomial_matrix_program(const std::filesystem::path &input_file);
+read_polynomial_matrix_program(const std::filesystem::path &input_file,
+                               Timers &timers);
 
 std::vector<std::filesystem::path>
 read_nsv_file_list(const std::filesystem::path &input_file);

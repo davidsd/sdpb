@@ -85,9 +85,7 @@ int main(int argc, char **argv)
       Timers timers(env, debug);
       Scoped_Timer timer(timers, "sdp2input");
 
-      Scoped_Timer read_input_timer(timers, "read_input");
-      auto pmp = read_polynomial_matrix_program(input_file);
-      read_input_timer.stop();
+      auto pmp = read_polynomial_matrix_program(input_file, timers);
 
       Output_SDP sdp(pmp, command_arguments, timers);
       write_sdp(output_path, sdp, output_format, timers, debug);
