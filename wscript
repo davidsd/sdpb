@@ -134,7 +134,7 @@ def build(bld):
                        ]
 
     bld.stlib(source=pmp2sdp_sources,
-              target='pmp2sdp',
+              target='pmp2sdp_lib',
               cxxflags=default_flags,
               defines=default_defines,
               includes=default_includes,
@@ -192,14 +192,24 @@ def build(bld):
               cxxflags=default_flags,
               defines=default_defines,
               includes=default_includes,
-              use=use_packages + ['pmp', 'pmp2sdp'])
+              use=use_packages + ['pmp', 'pmp2sdp_lib'])
 
     bld.program(source=['src/sdp2input/main.cxx'],
                 target='sdp2input',
                 cxxflags=default_flags,
                 defines=default_defines,
                 includes=default_includes,
-                use=use_packages + ['pmp', 'pmp_read', 'pmp2sdp']
+                use=use_packages + ['pmp', 'pmp_read', 'pmp2sdp_lib']
+                )
+
+    bld.program(source=['src/pmp2sdp/main.cxx',
+                        'src/pmp2sdp/Pmp2sdp_Parameters/Pmp2sdp_Parameters.cxx'
+                        ],
+                target='pmp2sdp',
+                cxxflags=default_flags,
+                defines=default_defines,
+                includes=default_includes,
+                use=use_packages + ['pmp', 'pmp_read', 'pmp2sdp_lib']
                 )
 
     bld.program(source=['src/outer_limits/main.cxx',
@@ -303,7 +313,7 @@ def build(bld):
                 cxxflags=default_flags,
                 defines=default_defines,
                 includes=default_includes,
-                use=use_packages + ['pmp_read', 'sdp_solve', 'pmp2sdp', 'mesh']
+                use=use_packages + ['pmp_read', 'sdp_solve', 'pmp2sdp_lib', 'mesh']
                 )
 
     bld.program(source=['external/catch2/catch_amalgamated.cpp',
@@ -337,6 +347,6 @@ def build(bld):
                 target='unit_tests',
                 cxxflags=default_flags,
                 defines=default_defines + ['CATCH_AMALGAMATED_CUSTOM_MAIN'],
-                use=use_packages + ['pmp_read', 'pmp2sdp', 'sdp_solve'],
+                use=use_packages + ['pmp_read', 'pmp2sdp_lib', 'sdp_solve'],
                 includes=default_includes + ['test/src']
                 )
