@@ -17,7 +17,7 @@ TEST_CASE("spectrum")
       fs::path output_dir = runner.output_dir;
 
       Test_Util::Test_Case_Runner::Named_Args_Map args{
-        {"--input", (data_dir / "pvm.xml").string()},
+        {"--input", (data_dir / "pmp.xml").string()},
         {"--solution", (data_dir / "solution").string()},
         {"--output", (output_dir / "spectrum.json").string()},
         {"--precision", "1024"},

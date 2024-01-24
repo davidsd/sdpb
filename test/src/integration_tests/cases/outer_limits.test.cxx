@@ -24,7 +24,8 @@ TEST_CASE("outer_limits")
 
     {
       INFO("run pvm2functions");
-      fs::path pvm_xml = Test_Config::test_data_dir / "pvm2sdp" / "pvm.xml";
+      fs::path pvm_xml
+        = Test_Config::test_data_dir / "pmp2sdp" / "xml" / "pmp.xml";
 
       // TODO allow running pvm2functions in parallel
       runner.create_nested("pvm2functions")

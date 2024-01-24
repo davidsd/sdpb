@@ -20,10 +20,10 @@ namespace
   void set_working_directory()
   {
     // if we find this file, we know where we are
-    auto sdp_zip = "test/data/sdp.zip";
+    const auto sdp_zip = "test/data/pmp2sdp/xml/sdp_orig.zip";
     for(const fs::path prefix : {".", ".."})
       {
-        if(exists(prefix / "test/data/sdp.zip"))
+        if(exists(prefix / sdp_zip))
           {
             fs::current_path(prefix);
             return;
