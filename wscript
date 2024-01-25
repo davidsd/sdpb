@@ -103,7 +103,7 @@ def build(bld):
               cxxflags=default_flags,
               defines=default_defines,
               includes=default_includes,
-              use=use_packages + ['pmp2sdp'])
+              use=use_packages + ['pmp2sdp_lib'])
 
     # SDPB executable
     bld.program(source=['src/sdpb/main.cxx',
