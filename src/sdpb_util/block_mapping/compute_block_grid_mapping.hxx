@@ -48,17 +48,22 @@
 
 #include "Block_Cost.hxx"
 #include "Block_Map.hxx"
+#include "sdpb_util/assert.hxx"
 
-#include <numeric>
 #include <algorithm>
-#include <stdexcept>
 #include <limits>
+#include <numeric>
 
 inline std::vector<std::vector<Block_Map>>
 compute_block_grid_mapping(const size_t &procs_per_node,
                            const size_t &num_nodes,
-                           const std::vector<Block_Cost> &block_costs)
+                           std::vector<Block_Cost> block_costs)
 {
+  //NB: we pass block_costs by value instead of const&, since we'll sort it.
+
+  // Reverse sort, with largest first:
+  std::sort(block_costs.rbegin(), block_costs.rend());
+
   // We do computations in integers to make sure that the results are
   // the same on different processers.
   const size_t total_cost(

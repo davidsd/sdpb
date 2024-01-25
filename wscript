@@ -330,6 +330,7 @@ def build(bld):
     bld.program(source=['external/catch2/catch_amalgamated.cpp',
                         'test/src/unit_tests/main.cxx',
                         'test/src/unit_tests/cases/block_data_serialization.test.cxx',
+                        'test/src/unit_tests/cases/block_mapping.test.cxx',
                         'test/src/unit_tests/cases/boost_serialization.test.cxx',
                         'test/src/unit_tests/cases/copy_matrix.test.cxx',
                         'test/src/unit_tests/cases/json.test.cxx',
