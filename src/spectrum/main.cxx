@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 
       bool debug = false; // TODO set verbosity from command line
       Timers timers(env, debug);
-      const auto pmp = read_polynomial_matrix_program(input_path, timers);
+      const auto pmp = read_polynomial_matrix_program(env, input_path, timers);
       const size_t num_blocks = pmp.num_matrices;
       const auto &block_indices = pmp.matrix_index_local_to_global;
       El::Matrix<El::BigFloat> y(pmp.objective.size() - 1, 1);

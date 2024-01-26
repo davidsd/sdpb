@@ -15,7 +15,7 @@ namespace
     MPI_Group_Wrapper mpi_group;
     std::vector<size_t> file_indices;
 
-    explicit Mapping(const std::vector<fs::path> &input_files)
+    Mapping(const Environment &env, const std::vector<fs::path> &input_files)
     {
       const size_t num_files = input_files.size();
 
@@ -27,13 +27,21 @@ namespace
           file_costs.emplace_back(fs::file_size(input_files.at(i)), i);
         }
 
-      // We do not need shared memory windows, fast communication inside mpi_group etc.,
-      // so we distribute files as if all processes were on a single node.
-      const auto mapping
-        = compute_block_grid_mapping(El::mpi::Size(), 1, file_costs);
-      ASSERT(mapping.size() == 1);
+      const auto node_comm = env.comm_shared_mem;
+      ASSERT(node_comm.Size() * env.num_nodes() == El::mpi::Size(),
+             "Each node should have the same number of processes.");
+      // Reading file from different nodes may be slower,
+      // so we distribute files across nodes and processes
+      // in such a way that each file is assigned to a single node.
+      // NB: in case of a single input file, only first node will process it.
+      // It can be slower than reading it from all ranks.
+      // However, reading the same file from too many ranks looks non-optimal too.
+      // In that case user should split input to several files.
+      const auto mapping = compute_block_grid_mapping(
+        node_comm.Size(), env.num_nodes(), file_costs);
+      ASSERT(mapping.size() == env.num_nodes());
 
-      create_mpi_block_mapping_groups(mapping, El::mpi::COMM_WORLD, 0,
+      create_mpi_block_mapping_groups(mapping, node_comm, env.node_index(),
                                       mpi_group.value, mpi_comm.value,
                                       file_indices);
     }
@@ -61,9 +69,10 @@ namespace
 }
 
 Polynomial_Matrix_Program
-read_polynomial_matrix_program(const fs::path &input_file, Timers &timers)
+read_polynomial_matrix_program(const Environment &env,
+                               const fs::path &input_file, Timers &timers)
 {
-  return read_polynomial_matrix_program(std::vector{input_file}, timers);
+  return read_polynomial_matrix_program(env, std::vector{input_file}, timers);
 }
 
 // Read Polynomal Matrix Program in one of the supported formats.
@@ -78,7 +87,8 @@ read_polynomial_matrix_program(const fs::path &input_file, Timers &timers)
 //   root of each group copies file content to a shared memory window,
 //   and other processes read it.
 Polynomial_Matrix_Program
-read_polynomial_matrix_program(const std::vector<fs::path> &input_files,
+read_polynomial_matrix_program(const Environment &env,
+                               const std::vector<fs::path> &input_files,
                                Timers &timers)
 {
   Scoped_Timer timer(timers, "read_pmp");
@@ -102,7 +112,7 @@ read_polynomial_matrix_program(const std::vector<fs::path> &input_files,
   {
     Scoped_Timer parse_timer(timers, "parse");
     // Determine which processes will parse which files
-    const Mapping mapping(all_files);
+    const Mapping mapping(env, all_files);
     // Cumulative number of matrices in all files parsed
     // by the current group of processes
     size_t num_matrices_in_group = 0;

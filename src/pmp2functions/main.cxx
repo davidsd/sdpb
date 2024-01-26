@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 
       Timers timers(env, parameters.verbosity >= debug);
       const auto pmp
-        = read_polynomial_matrix_program(parameters.input_file, timers);
+        = read_polynomial_matrix_program(env, parameters.input_file, timers);
       write_functions(parameters.output_path, pmp.objective, pmp.normalization,
                       pmp.matrices);
     }

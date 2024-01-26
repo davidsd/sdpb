@@ -6,10 +6,12 @@
 #include <vector>
 
 Polynomial_Matrix_Program read_polynomial_matrix_program(
+  const Environment &env,
   const std::vector<std::filesystem::path> &input_files, Timers &timers);
 
 Polynomial_Matrix_Program
-read_polynomial_matrix_program(const std::filesystem::path &input_file,
+read_polynomial_matrix_program(const Environment &env,
+                               const std::filesystem::path &input_file,
                                Timers &timers);
 
 std::vector<std::filesystem::path>
