@@ -1,9 +1,9 @@
 #include "sdp_solve/Block_Vector.hxx"
-#include <cassert>
+#include "sdpb_util/assert.hxx"
 
 El::BigFloat dot(const Block_Vector &A, const Block_Vector &B)
 {
-  assert(A.blocks.size() == B.blocks.size());
+  ASSERT(A.blocks.size() == B.blocks.size());
   El::BigFloat local_sum(0);
   for(size_t ii = 0; ii != A.blocks.size(); ++ii)
     {

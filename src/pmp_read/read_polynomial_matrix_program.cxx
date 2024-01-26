@@ -31,7 +31,7 @@ namespace
       // so we distribute files as if all processes were on a single node.
       const auto mapping
         = compute_block_grid_mapping(El::mpi::Size(), 1, file_costs);
-      assert(mapping.size() == 1);
+      ASSERT(mapping.size() == 1);
 
       create_mpi_block_mapping_groups(mapping, El::mpi::COMM_WORLD, 0,
                                       mpi_group.value, mpi_comm.value,
