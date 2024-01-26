@@ -6,14 +6,15 @@
 namespace fs = std::filesystem;
 
 PMP_File_Parse_Result
-read_json(const std::filesystem::path &input_path,
+read_json(const std::filesystem::path &input_path, bool should_parse_objective,
+          bool should_parse_normalization,
           const std::function<bool(size_t matrix_index)> &should_parse_matrix)
 {
   std::ifstream input_file(input_path);
   rapidjson::IStreamWrapper wrapper(input_file);
   PMP_File_Parse_Result result;
   Json_PMP_Parser parser(
-    should_parse_matrix,
+    should_parse_objective, should_parse_normalization, should_parse_matrix,
     [&](PMP_File_Parse_Result &&value) { result = std::move(value); });
 
   rapidjson::ParseResult res;

@@ -132,8 +132,12 @@ read_polynomial_matrix_program(const Environment &env,
         // TODO set also bool should_parse_objective and should_parse_normalization
         // to (mapping.mpi_comm.value.Rank() == 0)
 
-        auto file_parse_result
-          = PMP_File_Parse_Result::read(file, should_parse_matrix);
+        bool should_parse_objective = mapping.mpi_comm.value.Rank() == 0;
+        bool should_parse_normalization = mapping.mpi_comm.value.Rank() == 0;
+
+        auto file_parse_result = PMP_File_Parse_Result::read(
+          file, should_parse_objective, should_parse_normalization,
+          should_parse_matrix);
 
         num_matrices_in_group += file_parse_result.num_matrices;
 

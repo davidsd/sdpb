@@ -29,7 +29,8 @@ struct PMP_File_Parse_Result
   static void validate(const PMP_File_Parse_Result &result);
 
   static PMP_File_Parse_Result
-  read(const std::filesystem::path &input_path,
+  read(const std::filesystem::path &input_path, bool should_parse_objective,
+       bool should_parse_normalization,
        const std::function<bool(size_t matrix_index)> &should_parse_matrix);
 
   // Allow moving and prevent accidential copying

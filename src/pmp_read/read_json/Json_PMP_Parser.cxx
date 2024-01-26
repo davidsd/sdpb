@@ -2,19 +2,18 @@
 #include "sdpb_util/json/Vector_Parse_Result_With_Skip.hxx"
 
 Json_PMP_Parser::Json_PMP_Parser(
+  bool should_parse_objective, bool should_parse_normalization,
   const std::function<bool(size_t matrix_index)> &should_parse_matrix,
   const std::function<void(value_type &&result)> &on_parsed)
     : Abstract_Json_Object_Parser(false, on_parsed, [] {}),
       objective_parser(
-        // don't skip objective:
-        false,
+        !should_parse_objective,
         [this](std::vector<El::BigFloat> &&result) {
           this->result.objective = std::move(result);
         },
         [] { LOGIC_ERROR(R"(Skipping "objective" not allowed)"); }),
       normalization_parser(
-        // don't skip normalization:
-        false,
+        !should_parse_normalization,
         // accept normalization vector:
         [this](std::vector<El::BigFloat> &&result) {
           this->result.normalization = std::move(result);
