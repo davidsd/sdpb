@@ -8,7 +8,7 @@
 #include <iostream>
 #include "sdp_solve/sdp_solve.hxx"
 #include "dynamical_solve/dynamical_solve.hxx"
-#include "sdp_read/sdp_read.hxx"
+#include "pmp_read/pmp_read.hxx"
 #include "imports.hxx"
 #include "approx_objective/Approx_Objective.hxx"
 

@@ -19,28 +19,19 @@ void read_local_binary_blocks(T &t, std::ifstream &checkpoint_stream)
       checkpoint_stream.read(reinterpret_cast<char *>(&local_width),
                              sizeof(int64_t));
 
-      if(!checkpoint_stream.good())
-        {
-          std::stringstream ss;
-          ss << "Corrupted binary checkpoint file.  For block with "
-             << "global size (" << block.Height() << "," << block.Width()
-             << ") and local dimensions (" << block.LocalHeight() << ","
-             << block.LocalWidth() << "), error when reading height and width";
-          throw std::runtime_error(ss.str());
-        }
+      ASSERT(checkpoint_stream.good(),
+             "Corrupted binary checkpoint file.  For block with ",
+             "global size (", block.Height(), ",", block.Width(),
+             ") and local dimensions (", block.LocalHeight(), ",",
+             block.LocalWidth(), "), error when reading height and width");
 
-      if(local_height != block.LocalHeight()
-         || local_width != block.LocalWidth())
-        {
-          std::stringstream ss;
-          ss << "Incompatible binary checkpoint file.  For block with "
-             << "global size (" << block.Height() << "," << block.Width()
-             << "), expected local dimensions (" << block.LocalHeight() << ","
-             << block.LocalWidth() << "), but found (" << local_height << ","
-             << local_width << ")";
-
-          throw std::runtime_error(ss.str());
-        }
+      ASSERT(local_height == block.LocalHeight()
+               && local_width == block.LocalWidth(),
+             "Incompatible binary checkpoint file.  For block with ",
+             "global size (", block.Height(), ",", block.Width(),
+             "), expected local dimensions (", block.LocalHeight(), ",",
+             block.LocalWidth(), "), but found (", local_height, ",",
+             local_width, ")");
 
       for(int64_t row = 0; row < local_height; ++row)
         for(int64_t column = 0; column < local_width; ++column)
@@ -49,16 +40,12 @@ void read_local_binary_blocks(T &t, std::ifstream &checkpoint_stream)
             checkpoint_stream.read(
               reinterpret_cast<char *>(local_array.data()),
               std::streamsize(local_array.size()));
-            if(!checkpoint_stream.good())
-              {
-                std::stringstream ss;
-                ss << "Corrupted binary checkpoint file.  For block with "
-                   << "global size (" << block.Height() << "," << block.Width()
-                   << ") and local dimensions (" << block.LocalHeight() << ","
-                   << block.LocalWidth() << "), error when reading element ("
-                   << row << "," << column << ")";
-                throw std::runtime_error(ss.str());
-              }
+            ASSERT(checkpoint_stream.good(),
+                   "Corrupted binary checkpoint file.  For block with ",
+                   "global size (", block.Height(), ",", block.Width(),
+                   ") and local dimensions (", block.LocalHeight(), ",",
+                   block.LocalWidth(), "), error when reading element (", row,
+                   ",", column, ")");
             input.Deserialize(local_array.data());
 
             block.SetLocal(row, column, input);
@@ -86,9 +73,8 @@ bool load_binary_checkpoint(const std::filesystem::path &checkpoint_directory,
             }
           else
             {
-              throw std::runtime_error(
-                "Invalid or missing element 'current' in "
-                + metadata.string());
+              RUNTIME_ERROR("Invalid or missing element 'current' in ",
+                            metadata);
             }
           boost::optional<int64_t> backup(
             tree.get_optional<int64_t>("backup"));
@@ -113,11 +99,8 @@ bool load_binary_checkpoint(const std::filesystem::path &checkpoint_directory,
         = checkpoint_directory
           / ("checkpoint_" + std::to_string(current_generation) + "_"
              + std::to_string(El::mpi::Rank()));
-      if(!exists(checkpoint_filename))
-        {
-          throw std::runtime_error("Missing checkpoint file: "
-                                   + checkpoint_filename.string());
-        }
+      ASSERT(exists(checkpoint_filename),
+             "Missing checkpoint file: ", checkpoint_filename);
       // See note above about Broadcast()
       El::mpi::Broadcast(reinterpret_cast<El::byte *>(&backup_generation),
                          sizeof(current_generation) / sizeof(El::byte), 0,
@@ -175,9 +158,8 @@ bool load_binary_checkpoint(const std::filesystem::path &checkpoint_directory,
             }
           else
             {
-              throw std::runtime_error(
-                "Invalid or missing element 'current' in "
-                + metadata.string());
+              RUNTIME_ERROR("Invalid or missing element 'current' in ",
+                            metadata);
             }
           boost::optional<int64_t> backup(
             tree.get_optional<int64_t>("backup"));
@@ -201,11 +183,8 @@ bool load_binary_checkpoint(const std::filesystem::path &checkpoint_directory,
         = checkpoint_directory
           / ("checkpoint_" + std::to_string(current_generation) + "_"
              + std::to_string(El::mpi::Rank()));
-      if(!exists(checkpoint_filename))
-        {
-          throw std::runtime_error("Missing checkpoint file: "
-                                   + checkpoint_filename.string());
-        }
+      ASSERT(exists(checkpoint_filename),
+             "Missing checkpoint file: ", checkpoint_filename);
       // See note above about Broadcast()
       El::mpi::Broadcast(reinterpret_cast<El::byte *>(&backup_generation),
                          sizeof(current_generation) / sizeof(El::byte), 0,

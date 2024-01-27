@@ -20,8 +20,8 @@ bool Dynamical_Solver::load_checkpoint(
                             verbosity, *this));
   if(!valid_checkpoint && require_initial_checkpoint)
     {
-      throw std::runtime_error("Unable to load checkpoint from directory: "
-                               + checkpoint_directory.string());
+      RUNTIME_ERROR("Unable to load checkpoint from directory: ",
+                    checkpoint_directory);
     }
   return valid_checkpoint;
 }

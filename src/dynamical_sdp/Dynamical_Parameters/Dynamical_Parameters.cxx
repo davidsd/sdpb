@@ -1,4 +1,5 @@
 #include "../Dynamical_Parameters.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <El.hpp>
 
@@ -117,11 +118,7 @@ Dynamical_Parameters::Dynamical_Parameters(int argc, char *argv[])
               param_path
                 = variables_map["paramFile"].as<std::filesystem::path>();
               std::ifstream ifs(param_path.string().c_str());
-              if(!ifs.good())
-                {
-                  throw std::runtime_error("Could not open '"
-                                           + param_path.string() + "'");
-                }
+              ASSERT(ifs.good(), "Could not open paramFile: ", param_path);
 
               po::store(po::parse_config_file(ifs, cmd_line_options),
                         variables_map);
@@ -129,17 +126,9 @@ Dynamical_Parameters::Dynamical_Parameters(int argc, char *argv[])
 
           po::notify(variables_map);
 
-          if(!std::filesystem::exists(sdp_path))
-            {
-              throw std::runtime_error("sdp directory '" + sdp_path.string()
-                                       + "' does not exist");
-            }
-          if(!std::filesystem::exists(solver.new_sdp_path))
-            {
-              throw std::runtime_error("new sdp directory '"
-                                       + solver.new_sdp_path.string()
-                                       + "' does not exist");
-            }
+          ASSERT(exists(sdp_path), "sdp directory does not exist: ", sdp_path);
+          ASSERT(exists(solver.new_sdp_path),
+                 "new sdp directory does not exist: ", solver.new_sdp_path);
           if(variables_map.count("outDir") == 0)
             {
               out_directory = sdp_path;
@@ -177,17 +166,13 @@ Dynamical_Parameters::Dynamical_Parameters(int argc, char *argv[])
             {
               std::filesystem::create_directories(out_directory);
               std::ofstream ofs(out_directory / "out.txt");
-              if(!ofs.good())
-                {
-                  throw std::runtime_error("Cannot write to outDir: "
-                                           + out_directory.string());
-                }
+              ASSERT(ofs.good(), "Cannot write to outDir: ", out_directory);
             }
 
           if(int_verbosity != 0 && int_verbosity != 1 && int_verbosity != 2)
             {
-              throw std::runtime_error(
-                "Invalid number for Verbosity.  Only 0, 1 or 2 are allowed\n");
+              RUNTIME_ERROR(
+                "Invalid number for Verbosity.  Only 0, 1 or 2 are allowed");
             }
           else
             {
@@ -196,7 +181,7 @@ Dynamical_Parameters::Dynamical_Parameters(int argc, char *argv[])
 
           if(solver.n_external_parameters == 0)
             {
-              throw std::runtime_error(
+              RUNTIME_ERROR(
                 "The number of external parameters to be varied is zero.");
             }
 

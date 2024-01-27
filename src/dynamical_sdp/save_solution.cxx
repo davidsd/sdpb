@@ -25,11 +25,7 @@ namespace
     if(block.DistRank() == block.Root())
       {
         stream << "\n";
-        if(!stream.good())
-          {
-            throw std::runtime_error("Error when writing to: "
-                                     + outfile.string());
-          }
+        ASSERT(stream.good(), "Error when writing to: ", outfile);
       }
   }
 }
@@ -73,11 +69,7 @@ void save_solution(const Dynamical_Solver &solver,
                  << "primalError     = " << solver.primal_error() << ";\n"
                  << "dualError       = " << solver.dual_error << ";\n"
                  << "Solver runtime  = " << solver_runtime << ";\n";
-      if(!out_stream.good())
-        {
-          throw std::runtime_error("Error when writing to: "
-                                   + output_path.string());
-        }
+      ASSERT(out_stream.good(), "Error when writing to: ", output_path);
     }
 
   std::ofstream out2_stream;
@@ -109,11 +101,7 @@ void save_solution(const Dynamical_Solver &solver,
                   << "mulogdetX          = " << solver.mulogdetX << ";\n"
                   << "climbedQ           = " << (!solver.lowest_mu_Q) << ";\n"
                   << "Solver runtime     = " << solver_runtime << ";\n";
-      if(!out2_stream.good())
-        {
-          throw std::runtime_error("Error when writing to: "
-                                   + output2_path.string());
-        }
+      ASSERT(out2_stream.good(), "Error when writing to: ", output2_path);
     }
 
   std::ofstream extParamStep_stream;
@@ -126,11 +114,8 @@ void save_solution(const Dynamical_Solver &solver,
                 std::to_string(extParamStep.Height()) + " "
                   + std::to_string(extParamStep.Width()),
                 "\n", extParamStep_stream);
-      if(!extParamStep_stream.good())
-        {
-          throw std::runtime_error("Error when writing to: "
-                                   + extParamStep_path.string());
-        }
+      ASSERT(extParamStep_stream.good(),
+             "Error when writing to: ", extParamStep_path);
     }
 
   std::ofstream gradient_stream;
@@ -143,11 +128,7 @@ void save_solution(const Dynamical_Solver &solver,
                 std::to_string(solver.grad_BFGS.Height()) + " "
                   + std::to_string(solver.grad_BFGS.Width()),
                 "\n", gradient_stream);
-      if(!gradient_stream.good())
-        {
-          throw std::runtime_error("Error when writing to: "
-                                   + gradient_path.string());
-        }
+      ASSERT(gradient_stream.good(), "Error when writing to: ", gradient_path);
     }
 
   // SN_V15
@@ -161,11 +142,8 @@ void save_solution(const Dynamical_Solver &solver,
                 std::to_string(solver.grad_withlog.Height()) + " "
                   + std::to_string(solver.grad_withlog.Width()),
                 "\n", gradient_withlog_stream);
-      if(!gradient_withlog_stream.good())
-        {
-          throw std::runtime_error("Error when writing to: "
-                                   + gradient_path.string());
-        }
+      ASSERT(gradient_withlog_stream.good(),
+             "Error when writing to: ", gradient_path);
     }
 
   std::ofstream gradient_withoutlog_stream;
@@ -178,11 +156,8 @@ void save_solution(const Dynamical_Solver &solver,
                 std::to_string(solver.grad_withoutlog.Height()) + " "
                   + std::to_string(solver.grad_withoutlog.Width()),
                 "\n", gradient_withoutlog_stream);
-      if(!gradient_withoutlog_stream.good())
-        {
-          throw std::runtime_error("Error when writing to: "
-                                   + gradient_path.string());
-        }
+      ASSERT(gradient_withoutlog_stream.good(),
+             "Error when writing to: ", gradient_path);
     }
 
   std::ofstream gradient_mixed_stream;
@@ -195,11 +170,8 @@ void save_solution(const Dynamical_Solver &solver,
                 std::to_string(solver.grad_mixed.Height()) + " "
                   + std::to_string(solver.grad_mixed.Width()),
                 "\n", gradient_mixed_stream);
-      if(!gradient_mixed_stream.good())
-        {
-          throw std::runtime_error("Error when writing to: "
-                                   + gradient_path.string());
-        }
+      ASSERT(gradient_mixed_stream.good(),
+             "Error when writing to: ", gradient_path);
     }
 
   // SN_V15
@@ -214,11 +186,8 @@ void save_solution(const Dynamical_Solver &solver,
         std::to_string(solver.hess_BFGS.Height() * solver.hess_BFGS.Width())
           + " " + std::to_string(1),
         "\n", hess_BFGS_stream);
-      if(!hess_BFGS_stream.good())
-        {
-          throw std::runtime_error("Error when writing to: "
-                                   + hess_BFGS_path.string());
-        }
+      ASSERT(hess_BFGS_stream.good(),
+             "Error when writing to: ", hess_BFGS_path);
     }
 
   std::ofstream hess_pp_stream;
@@ -232,11 +201,8 @@ void save_solution(const Dynamical_Solver &solver,
                                * solver.hess_BFGS_pp.Width())
                   + " " + std::to_string(1),
                 "\n", hess_pp_stream);
-      if(!hess_pp_stream.good())
-        {
-          throw std::runtime_error("Error when writing to: "
-                                   + hess_pp_path.string());
-        }
+      ASSERT(hess_pp_stream.good(),
+             "Error when writing to: ", hess_pp_path);
     }
 
   std::ofstream hess_Exact_stream;
@@ -250,11 +216,8 @@ void save_solution(const Dynamical_Solver &solver,
         std::to_string(solver.hess_Exact.Height() * solver.hess_Exact.Width())
           + " " + std::to_string(1),
         "\n", hess_Exact_stream);
-      if(!hess_Exact_stream.good())
-        {
-          throw std::runtime_error("Error when writing to: "
-                                   + hess_Exact_path.string());
-        }
+      ASSERT(hess_Exact_stream.good(),
+             "Error when writing to: ", hess_Exact_path);
     }
 
   std::ofstream iterations_stream;
@@ -264,25 +227,20 @@ void save_solution(const Dynamical_Solver &solver,
                                                   / "iterations.txt");
       iterations_stream.open(iterations_path);
       iterations_stream << solver.total_iteration << '\n';
-      if(!iterations_stream.good())
-        {
-          throw std::runtime_error("Error when writing to: "
-                                   + iterations_path.string());
-        }
+      ASSERT(iterations_stream.good(),
+             "Error when writing to: ", iterations_path);
     }
 
-  //std::ofstream mu_direction_stream;
-  //if(El::mpi::Rank() == 0)
-  //  {
-  //    const std::filesystem::path mu_direction_path(out_directory / "mu_direction.txt");
-  //    mu_direction_stream.open(mu_direction_path);
-  //    mu_direction_stream << solver.mu_direction_mode << '\n';
-  //    if(!mu_direction_stream.good())
-  //      {
-  //        throw std::runtime_error("Error when writing to: "
-  //                                 + mu_direction_path.string());
-  //      }
-  //  }
+  // std::ofstream mu_direction_stream;
+  // if(El::mpi::Rank() == 0)
+  //   {
+  //     const std::filesystem::path mu_direction_path(out_directory
+  //                                                   / "mu_direction.txt");
+  //     mu_direction_stream.open(mu_direction_path);
+  //     mu_direction_stream << solver.mu_direction_mode << '\n';
+  //     ASSERT(mu_direction_stream.good(),
+  //            "Error when writing to: ", mu_direction_path);
+  //   }
 
   // y is duplicated among cores, so only need to print out copy on
   // the root node.
@@ -301,11 +259,7 @@ void save_solution(const Dynamical_Solver &solver,
       if(El::mpi::Rank() == 0)
         {
           y_stream << "\n";
-          if(!y_stream.good())
-            {
-              throw std::runtime_error("Error when writing to: "
-                                       + y_path.string());
-            }
+          ASSERT(y_stream.good(), "Error when writing to: ", y_path);
         }
     }
 

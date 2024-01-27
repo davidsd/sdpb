@@ -11,36 +11,31 @@ void newton_search1d(const El::BigFloat &thresh, const int &it,
                      const El::BigFloat &radius,
                      const int &n_external_parameters)
 {
-  if(it == 0)
+  ASSERT(it != 0, "Newton1dMaxIterationsExceeded");
+
+  El::BigFloat f(-radius * radius);
+  El::BigFloat fprime(0);
+  for(int i = 0; i < n_external_parameters; i++)
     {
-      throw std::invalid_argument("Newton1dMaxIterationsExceeded");
+      //cout << "for loop"<<endl;
+      f += (e_dot_grad(i) * e_dot_grad(i))
+           / ((w(i) + lambda) * (w(i) + lambda));
+      fprime -= 2 * (e_dot_grad(i) * e_dot_grad(i))
+                / ((w(i) + lambda) * (w(i) + lambda) * (w(i) + lambda));
+      //cout << "it: " << it << endl;
+    }
+  El::BigFloat step(-f / fprime);
+  //cout << "step: "<< step << endl;
+  if(El::Abs(step) < thresh)
+    {
+      //cout <<"smaller? " <<  "it: " << it << endl;
+      return;
     }
   else
     {
-      El::BigFloat f(-radius * radius);
-      El::BigFloat fprime(0);
-      for(int i = 0; i < n_external_parameters; i++)
-        {
-          //cout << "for loop"<<endl;
-          f += (e_dot_grad(i) * e_dot_grad(i))
-               / ((w(i) + lambda) * (w(i) + lambda));
-          fprime -= 2 * (e_dot_grad(i) * e_dot_grad(i))
-                    / ((w(i) + lambda) * (w(i) + lambda) * (w(i) + lambda));
-          //cout << "it: " << it << endl;
-        }
-      El::BigFloat step(-f / fprime);
-      //cout << "step: "<< step << endl;
-      if(El::Abs(step) < thresh)
-        {
-          //cout <<"smaller? " <<  "it: " << it << endl;
-          return;
-        }
-      else
-        {
-          lambda += step;
-          newton_search1d(thresh, it - 1, w, lambda, e_dot_grad, radius,
-                          n_external_parameters);
-        }
+      lambda += step;
+      newton_search1d(thresh, it - 1, w, lambda, e_dot_grad, radius,
+                      n_external_parameters);
     }
 }
 

@@ -151,7 +151,7 @@ def build(bld):
               cxxflags=default_flags,
               defines=default_defines,
               includes=default_includes,
-              use=use_packages + ['sdp_solve', 'sdp_read'])
+              use=use_packages + ['sdp_solve', 'pmp_read'])
 
     # SDPB executable
     bld.program(source=['src/sdpb/main.cxx',
@@ -187,6 +187,7 @@ def build(bld):
               defines=default_defines,
               includes=default_includes,
               use=use_packages + ['pmp'])
+
     bld.program(source=['src/pvm2sdp/main.cxx',
                         'src/pvm2sdp/parse_command_line.cxx'],
                 target='pvm2sdp',
@@ -366,7 +367,7 @@ def build(bld):
                 cxxflags=default_flags,
                 defines=default_defines,
                 includes=default_includes,
-                use=use_packages + ['sdp_read', 'sdp_solve', 'dynamical_solve']
+                use=use_packages + ['pmp_read', 'sdp_solve', 'dynamical_solve']
                 )
 
     bld.program(source=['external/catch2/catch_amalgamated.cpp',
