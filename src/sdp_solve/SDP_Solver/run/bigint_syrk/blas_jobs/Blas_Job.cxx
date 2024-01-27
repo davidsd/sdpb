@@ -1,5 +1,6 @@
-#include <cassert>
 #include "Blas_Job.hxx"
+
+#include "sdpb_util/assert.hxx"
 
 using Cost = Blas_Job::Cost;
 
@@ -9,13 +10,13 @@ Blas_Job::Blas_Job(size_t prime_index, const El::Range<El::Int> &I,
 {
   for(const auto &range : {I, J})
     {
-      assert(range.beg >= 0);
-      assert(range.end > range.beg);
+      ASSERT(range.beg >= 0);
+      ASSERT(range.end > range.beg);
     }
 
   // Diagonal blocks must be square!
   if(I.beg == J.beg)
-    assert(I.end == J.end);
+    ASSERT(I.end == J.end);
 }
 
 Cost Blas_Job::cost() const
@@ -39,7 +40,7 @@ Cost Blas_Job::cost() const
   // we calculate only upper triangle
   if(I.beg == J.beg)
     {
-      assert(height == width);
+      ASSERT(height == width);
       elements = height * (height + 1) / 2;
     }
   else

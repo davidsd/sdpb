@@ -2,6 +2,7 @@
 #include "sdp_solve/Block_Matrix.hxx"
 #include "sdp_solve/Block_Info.hxx"
 #include "sdp_solve/SDP.hxx"
+#include "sdpb_util/assert.hxx"
 
 inline BigInt_Shared_Memory_Syrk_Context
 initialize_bigint_syrk_context(const Environment &env,
@@ -21,7 +22,7 @@ initialize_bigint_syrk_context(const Environment &env,
   for(int rank = 0; rank < num_ranks_per_node; ++rank)
     {
       size_t num_blocks_in_rank = sdp.free_var_matrix.blocks.size();
-      assert(num_blocks_in_rank == block_info.block_indices.size());
+      ASSERT(num_blocks_in_rank == block_info.block_indices.size());
       El::mpi::Broadcast(num_blocks_in_rank, rank, shared_memory_comm);
 
       rank_to_global_block_indices.emplace(
@@ -41,8 +42,8 @@ initialize_bigint_syrk_context(const Environment &env,
                 = sdp.free_var_matrix.blocks[block_index].Height();
             }
         }
-      assert(num_blocks_in_rank == rank_to_global_block_indices[rank].size());
-      assert(num_blocks_in_rank == rank_to_block_heights[rank].size());
+      ASSERT(num_blocks_in_rank == rank_to_global_block_indices[rank].size());
+      ASSERT(num_blocks_in_rank == rank_to_block_heights[rank].size());
 
       El::mpi::Broadcast(rank_to_global_block_indices[rank].data(),
                          num_blocks_in_rank, rank, shared_memory_comm);
@@ -74,7 +75,7 @@ initialize_bigint_syrk_context(const Environment &env,
               shmem_block_index_to_height.push_back(height);
               curr_shmem_block_index++;
             }
-          assert(height
+          ASSERT(height
                  == shmem_block_index_to_height.at(
                    block_index_global_to_shmem.at(global_index)));
         }

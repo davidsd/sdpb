@@ -66,13 +66,10 @@ void check_normalized_Q_diagonal(El::DistMatrix<El::BigFloat> &Q,
             // We cannot control rounding errors exactly,
             // so we (conservatively) require that at least N/2 bits are correct.
             auto eps = El::BigFloat(1) >> normalizer.precision / 2;
-            if(diff > eps)
-              {
-                El::RuntimeError(
-                  "Normalized Q should have ones on diagonal. For i = ", i,
-                  ": Q_ii = ", should_be_one, ", |Q_ii - 1| = ", diff,
-                  ", eps = ", eps);
-              }
+            ASSERT(diff < eps,
+                   "Normalized Q should have ones on diagonal. For i = ", i,
+                   ": Q_ii = ", should_be_one, ", |Q_ii - 1| = ", diff,
+                   ", eps = ", eps);
           }
       }
 }

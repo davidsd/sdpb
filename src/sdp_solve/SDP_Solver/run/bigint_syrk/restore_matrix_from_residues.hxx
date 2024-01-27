@@ -2,7 +2,7 @@
 
 #include "fmpz/Fmpz_Comb.hxx"
 #include "fmpz/fmpz_mul_blas_util.hxx"
-#include "sdpb_util/Shared_Window_Array.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <El.hpp>
 #include <flint/nmod.h>
@@ -19,7 +19,7 @@ restore_matrix_from_residues(const Residue_Matrices_Window<double> &window,
   for(size_t prime_index = 0; prime_index < num_primes; prime_index++)
     {
       double d = window.residues.at(prime_index)(i, j);
-      assert(abs(d) <= MAX_BLAS_DP_INT);
+      ASSERT(abs(d) <= MAX_BLAS_DP_INT);
       auto &mod = comb.mods.at(prime_index);
       residues.at(prime_index) = double_to_uint32_t_residue(d, mod);
     }
