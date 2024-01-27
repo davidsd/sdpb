@@ -1,4 +1,5 @@
 #include "Block_Parser.hxx"
+#include "sdpb_util/assert.hxx"
 
 bool Block_Parser::StartArray()
 {
@@ -22,15 +23,15 @@ bool Block_Parser::StartArray()
         }
       else
         {
-          throw std::runtime_error(
-            "Invalid input file.  Found an array not inside " + c_state.name
-            + ", " + B_state.name + ", " + bilinear_bases_even_state.name
-            + ", " + bilinear_bases_odd_state.name + ".");
+          RUNTIME_ERROR("Invalid input file. Found an array not inside ",
+                        c_state.name, ", ", B_state.name, ", ",
+                        bilinear_bases_even_state.name, ", ",
+                        bilinear_bases_odd_state.name, ".");
         }
     }
   else
     {
-      throw std::runtime_error("Found an array outside of the main object.");
+      RUNTIME_ERROR("Found an array outside of the main object.");
     }
   return true;
 }

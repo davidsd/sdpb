@@ -2,7 +2,6 @@
 
 #include <El.hpp>
 
-
 inline void write_distmatrix(const El::DistMatrix<El::BigFloat> &matrix,
                              const std::filesystem::path &path)
 {
@@ -19,9 +18,6 @@ inline void write_distmatrix(const El::DistMatrix<El::BigFloat> &matrix,
   if(matrix.DistRank() == matrix.Root())
     {
       stream << "\n";
-      if(!stream.good())
-        {
-          throw std::runtime_error("Error when writing to: " + path.string());
-        }
+      ASSERT(stream.good(), "Error when writing to: ", path);
     }
 }

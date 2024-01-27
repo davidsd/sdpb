@@ -27,25 +27,18 @@ void read_text_block(Matrix &block, const std::filesystem::path &block_path)
   std::ifstream block_stream(block_path);
   if(!block_stream)
     {
-      throw std::runtime_error("Unable to open checkpoint file: '"
-                               + block_path.string() + "'");
+      RUNTIME_ERROR("Unable to open checkpoint file: ", block_path);
     }
   int64_t file_height, file_width;
   block_stream >> file_height >> file_width;
   if(!block_stream.good())
     {
-      throw std::runtime_error("Corrupted header in file: "
-                               + block_path.string());
+      RUNTIME_ERROR("Corrupted header in file: ", block_path);
     }
-  if(file_height != block.Height() || file_width != block.Width())
-    {
-      std::stringstream ss;
-      ss << "Incompatible checkpoint file: '" << block_path.string()
-         << "'.  Expected dimensions (" << block.Height() << ","
-         << block.Width() << "), but found (" << file_height << ","
-         << file_width << ")";
-      throw std::runtime_error(ss.str());
-    }
+  ASSERT(file_height == block.Height() && file_width == block.Width(),
+         "Incompatible checkpoint file: ", block_path,
+         ":  Expected dimensions (", block.Height(), ",", block.Width(),
+         "), but found (", file_height, ",", file_width, ")");
 
   std::string element;
   for(int64_t row = 0; row < file_height; ++row)
@@ -54,11 +47,7 @@ void read_text_block(Matrix &block, const std::filesystem::path &block_path)
         block_stream >> element;
         set_element(block, row, column, El::BigFloat(element));
       }
-  if(!block_stream.good())
-    {
-      throw std::runtime_error("Corrupted data in file: "
-                               + block_path.string());
-    }
+  ASSERT(block_stream.good(), "Corrupted data in file: ", block_path);
 }
 
 template <typename Matrix>

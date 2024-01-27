@@ -1,6 +1,6 @@
 #include "Outer_Parameters.hxx"
 #include "Function.hxx"
-#include "sdp_read/sdp_read.hxx"
+#include "pmp_read/pmp_read.hxx"
 #include "sdp_solve/sdp_solve.hxx"
 #include "sdpb_util/Environment.hxx"
 

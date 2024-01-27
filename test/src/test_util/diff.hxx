@@ -17,8 +17,12 @@ namespace Test_Util::REQUIRE_Equal
 {
   inline int diff_precision;
 
-  inline void diff(int a, int b) { REQUIRE(a == b); }
-  inline void diff(const El::BigFloat &a, const El::BigFloat &b)
+  template <class T> void diff(const T &a, const T &b)
+  {
+    REQUIRE(a == b);
+  }
+
+  template <> inline void diff(const El::BigFloat &a, const El::BigFloat &b)
   {
     if(a == b)
       return;
@@ -45,19 +49,15 @@ namespace Test_Util::REQUIRE_Equal
     CAPTURE(eps);
     REQUIRE(Abs(a - b) < eps * (Abs(a) + Abs(b)));
   }
-  inline void diff(const std::string &a, const std::string &b)
-  {
-    REQUIRE(a == b);
-  }
   template <class T1, class T2>
-  inline void diff(const std::pair<T1, T2> &a, const std::pair<T1, T2> &b)
+  void diff(const std::pair<T1, T2> &a, const std::pair<T1, T2> &b)
   {
     INFO("diff std::pair");
     DIFF(a.first, b.first);
     DIFF(a.second, b.second);
   }
   template <class T>
-  inline void diff(const std::vector<T> &a, const std::vector<T> &b)
+  void diff(const std::vector<T> &a, const std::vector<T> &b)
   {
     INFO("diff std::vector");
     REQUIRE(a.size() == b.size());
@@ -67,8 +67,7 @@ namespace Test_Util::REQUIRE_Equal
         DIFF(a[i], b[i]);
       }
   }
-  template <class T>
-  inline void diff(const El::Matrix<T> &a, const El::Matrix<T> &b)
+  template <class T> void diff(const El::Matrix<T> &a, const El::Matrix<T> &b)
   {
     INFO("diff El::Matrix");
     REQUIRE(a.Height() == b.Height());

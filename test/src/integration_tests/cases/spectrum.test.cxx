@@ -17,11 +17,13 @@ TEST_CASE("spectrum")
       fs::path output_dir = runner.output_dir;
 
       Test_Util::Test_Case_Runner::Named_Args_Map args{
-        {"--input", (data_dir / "pvm.xml").string()},
+        {"--input", (data_dir / "pmp.xml").string()},
         {"--solution", (data_dir / "solution").string()},
         {"--output", (output_dir / "spectrum.json").string()},
         {"--precision", "1024"},
         {"--threshold", "1e-10"},
+        // --format is obsolete, we keep to here to check backward compatibility,
+        // i.e. spectrum shouldn't fail when we pass this option.
         {"--format", "PVM"}};
 
       runner.mpi_run({"build/spectrum"}, args, 2);

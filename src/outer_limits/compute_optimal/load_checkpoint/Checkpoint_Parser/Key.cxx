@@ -1,4 +1,5 @@
 #include "../Checkpoint_Parser.hxx"
+#include "sdpb_util/assert.hxx"
 
 bool Checkpoint_Parser::Key(const Ch *str, rapidjson::SizeType length, bool)
 {
@@ -7,41 +8,39 @@ bool Checkpoint_Parser::Key(const Ch *str, rapidjson::SizeType length, bool)
     {
       if(parsing_generation)
         {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside '" + generation_state.name
-                                   + "'.");
+          RUNTIME_ERROR("Invalid input file. Found the key '", key,
+                        "' inside '", generation_state.name, "'.");
         }
       else if(parsing_threshold)
         {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside '" + threshold_state.name
-                                   + "'.");
+          RUNTIME_ERROR("Invalid input file. Found the key '", key,
+                        "' inside '", threshold_state.name, "'.");
         }
       else if(parsing_c_scale)
         {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside '" + c_scale_state.name + "'.");
+          RUNTIME_ERROR("Invalid input file. Found the key '", key,
+                        "' inside '", c_scale_state.name , "'.");
         }
       else if(parsing_yp)
         {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside '" + yp_state.name + "'.");
+          RUNTIME_ERROR("Invalid input file. Found the key '" , key
+                                   , "' inside '" , yp_state.name , "'.");
         }
       else if(parsing_b)
         {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside '" + b_state.name + "'.");
+          RUNTIME_ERROR("Invalid input file. Found the key '", key
+                                   , "' inside '" , b_state.name , "'.");
         }
       else if(parsing_y_transform)
         {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside '" + y_transform_state.name
-                                   + "'.");
+          RUNTIME_ERROR("Invalid input file. Found the key '", key
+                                   , "' inside '" , y_transform_state.name
+                                   , "'.");
         }
       else if(parsing_points)
         {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside '" + points_state.name + "'.");
+          RUNTIME_ERROR("Invalid input file. Found the key '", key
+                                   , "' inside '" , points_state.name , "'.");
         }
 
       else if(key == generation_state.name)
@@ -74,13 +73,13 @@ bool Checkpoint_Parser::Key(const Ch *str, rapidjson::SizeType length, bool)
         }
       else
         {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
+          RUNTIME_ERROR("Invalid input file. Found the key '", key
                                    + "' inside the main object.");
         }
     }
   else
     {
-      throw std::runtime_error("Found a key outside of the main object: "
+      RUNTIME_ERROR("Found a key outside of the main object: "
                                + key);
     }
   return true;

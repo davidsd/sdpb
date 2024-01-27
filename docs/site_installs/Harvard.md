@@ -50,7 +50,7 @@ to [2.6.1 documentation](https://github.com/davidsd/sdpb/blob/2.6.1/docs/site_in
 This command submits `sdpb_example.sh` to
 the [queueing system](https://docs.rc.fas.harvard.edu/kb/running-jobs/).
 
-`sdpb_example.sh` loads modules and runs `sdp2input`+`sdpb` for a simple problem.
+`sdpb_example.sh` loads modules and runs `pmp2sdp`+`sdpb` for a simple problem.
 See script code and comments for more details.
 
 Script output is written to the log file in the current directory, e.g.:

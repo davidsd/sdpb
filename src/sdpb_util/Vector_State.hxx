@@ -1,5 +1,7 @@
 #pragma once
 
+#include "assert.hxx"
+
 #include <libxml2/libxml/parser.h>
 #include <vector>
 #include <string>
@@ -16,6 +18,11 @@ public:
   Vector_State(const std::vector<std::string> &names, const size_t &offset)
       : name(names.at(offset)), element_state(names, offset + 1)
   {}
+  template <typename U>
+  Vector_State(const std::vector<std::string> &names, const size_t &offset,
+               U &u)
+      : name(names.at(offset)), element_state(names, offset + 1, u)
+  {}
   template <typename U, typename V>
   Vector_State(const std::vector<std::string> &names, const size_t &offset,
                U &u, V &v)
@@ -24,6 +31,10 @@ public:
 
   Vector_State(const std::initializer_list<std::string> &names)
       : Vector_State(names, 0)
+  {}
+  template <typename U>
+  Vector_State(const std::initializer_list<std::string> &names, U &u)
+      : Vector_State(names, 0, u)
   {}
   template <typename U, typename V>
   Vector_State(const std::initializer_list<std::string> &names, U &u, V &v)
@@ -37,10 +48,9 @@ public:
       {
         if(!element_state.xml_on_start_element(element_name))
           {
-            throw std::runtime_error("Invalid input file.  Expected '"
-                                     + element_state.name + "' inside Vector '"
-                                     + name + "', but found '" + element_name
-                                     + "'");
+            RUNTIME_ERROR("Invalid input file. Expected '", element_state.name,
+                          "' inside Vector '", name + "', but found '",
+                          element_name, "'");
           }
       }
     else

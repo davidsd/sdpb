@@ -61,9 +61,9 @@ programs by prepending the command with
 
 So to convert the XML input file at `/home/user/input.xml`, run the command
 
-    singularity exec sdpb-2.6.1.sif mpirun -n 4 pvm2sdp 1024 /home/user/input.xml /home/user/input
+    singularity exec sdpb-2.6.1.sif mpirun -n 4 pmp2sdp --precision 1024 -i /home/user/input.xml -o /home/user/input
 
-This uses 4 cores when running pvm2sdp.  You can change that number to
+This uses 4 cores when running pmp2sdp. You can change that number to
 match your own machine.
 
 To find a primal-dual solution, 

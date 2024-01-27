@@ -1,0 +1,38 @@
+{
+  "optimal": "1.840265763127212156309183639194339718254",
+  "y":
+  [
+    "1",
+    "-1.840265763127212156309183639194339718254"
+  ],
+  "options": 
+{
+    "maxIterations": "1000",
+    "maxRuntime": "9223372036854775807",
+    "checkpointInterval": "3600",
+    "findPrimalFeasible": "false",
+    "findDualFeasible": "false",
+    "detectPrimalFeasibleJump": "false",
+    "detectDualFeasibleJump": "false",
+    "precision": "128",
+    "precision_actual": "128",
+    "dualityGapThreshold": "1e-10",
+    "primalErrorThreshold": "1e-10",
+    "dualErrorThreshold": "1e-10",
+    "initialMatrixScalePrimal": "10",
+    "initialMatrixScaleDual": "10",
+    "feasibleCenteringParameter": "0.1",
+    "infeasibleCenteringParameter": "0.3",
+    "stepLengthReduction": "0.7",
+    "maxComplementarity": "1e+100",
+    "initialCheckpointDir": "test\/out\/outer_limits\/mpirun-1\/ck",
+    "checkpointDir": "test\/out\/outer_limits\/mpirun-1\/ck",
+    "functions": "test\/out\/outer_limits\/mpirun-1\/functions.json",
+    "points": "test\/data\/outer_limits\/points.json",
+    "out": "test\/out\/outer_limits\/mpirun-1\/out.json",
+    "dualityGapReduction": "1024",
+    "meshThreshold": "0.001",
+    "writeSolution": "",
+    "verbosity": "1"
+}
+}

@@ -1,4 +1,5 @@
 #include "../Block_Info.hxx"
+#include "sdpb_util/assert.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
 namespace fs = std::filesystem;
@@ -45,11 +46,9 @@ Block_Info::read_block_costs(const fs::path &sdp_path,
         }
       if(result.size() != num_points.size())
         {
-          throw std::runtime_error(
-            "Incompatible number of entries in '"
-            + block_timings_filename.string() + "'. Expected "
-            + std::to_string(num_points.size()) + " but found "
-            + std::to_string(result.size()));
+          RUNTIME_ERROR("Incompatible number of entries in ",
+                        block_timings_filename, ": expected ",
+                        num_points.size(), " but found ", result.size());
         }
     }
   else
