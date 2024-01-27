@@ -255,6 +255,11 @@ unzip -o path/to/sdp.zip -d path/to/sdp_dir
 sdpb -s path/to/sdp_dir <...>
 ```
 
+### 'Running out of inodes' error
+
+This may happen on some filesystems if SDP contains too many block files. Run `pmp2sdp` with `--zip` flag to put
+everything into a single zip archive.
+
 ### Spectrum does not work in parallel
 
 See https://github.com/davidsd/sdpb/issues/152.

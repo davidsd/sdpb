@@ -38,8 +38,10 @@ namespace
       Test_Util::Test_Case_Runner::Named_Args_Map args{
         {"--input", input.string()},
         {"--output", sdp_path},
-        {"--precision", std::to_string(precision)},
-        {"--zip", std::to_string(zip)}};
+        {"--precision", std::to_string(precision)}};
+
+      if(zip)
+        args["--zip"] = "";
 
       if(!sdp_format.empty())
         args["--outputFormat"] = sdp_format;
