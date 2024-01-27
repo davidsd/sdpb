@@ -152,7 +152,7 @@ TEST_CASE("pmp2sdp")
       Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
       args["--input"] = input;
       args["--output"] = sdp_readonly_zip.string();
-      args["--zip"] = "true";
+      args["--zip"] = "";
       runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 1,
                      "Unable to set options for writing an archive");
     }
