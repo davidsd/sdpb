@@ -133,8 +133,7 @@ TEST_CASE("pmp2sdp")
       Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
       args["--input"] = input;
       args["--output"] = sdp_dir.string();
-      runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 1,
-                     "Directory not empty");
+      runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 1, "cannot rename");
     }
 
     SECTION("cannot_write_zip")
