@@ -1,8 +1,7 @@
 #include "../Block_Info.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/fmpz/Fmpz_Comb.hxx"
+#include "sdpb_util/assert.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
-
-#include <cassert>
 
 namespace fs = std::filesystem;
 
@@ -48,11 +47,9 @@ Block_Info::read_block_costs(const fs::path &sdp_path,
         }
       if(result.size() != num_points.size())
         {
-          throw std::runtime_error(
-            "Incompatible number of entries in '"
-            + block_timings_filename.string() + "'. Expected "
-            + std::to_string(num_points.size()) + " but found "
-            + std::to_string(result.size()));
+          RUNTIME_ERROR("Incompatible number of entries in ",
+                        block_timings_filename, ": expected ",
+                        num_points.size(), " but found ", result.size());
         }
     }
   else
@@ -106,7 +103,7 @@ Block_Info::read_block_costs(const fs::path &sdp_path,
         // Sanity check: residues always take more RAM
         // than the original BigFloat number,
         // otherwise the number cannot be restored.
-        assert(residue_size >= 1.0);
+        ASSERT(residue_size >= 1.0, residue_size);
       }
 
       for(size_t block = 0; block < schur_sizes.size(); ++block)

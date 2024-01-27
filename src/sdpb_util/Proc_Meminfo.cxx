@@ -1,5 +1,7 @@
 #include "Proc_Meminfo.hxx"
 
+#include "assert.hxx"
+
 #include <El.hpp>
 
 #include <fstream>
@@ -44,8 +46,7 @@ Proc_Meminfo Proc_Meminfo::read() noexcept(false)
   auto proc_meminfo_path = "/proc/meminfo";
   std::ifstream meminfo_file(proc_meminfo_path);
 
-  if(!meminfo_file.good())
-    El::RuntimeError("Cannot open ", proc_meminfo_path);
+  ASSERT(meminfo_file.good(), "Cannot open ", proc_meminfo_path);
 
   const char *mem_total_prefix = "MemTotal:";
   const char *mem_available_prefix = "MemAvailable:";
@@ -64,12 +65,8 @@ Proc_Meminfo Proc_Meminfo::read() noexcept(false)
           std::string kB;
           if(iss >> size >> kB)
             {
-              if(kB != "kB" && kB != "KB")
-                {
-                  El::RuntimeError(
-                    proc_meminfo_path,
-                    ": expected \"kB\" at the end of line: ", line);
-                }
+              ASSERT(kB == "kB" || kB == "KB", proc_meminfo_path,
+                     ": expected \"kB\" at the end of line: ", line);
               if(name == mem_total_prefix)
                 memTotalKB = size;
               else if(name == mem_available_prefix)
@@ -79,19 +76,13 @@ Proc_Meminfo Proc_Meminfo::read() noexcept(false)
               continue;
             }
         }
-      El::RuntimeError(proc_meminfo_path, ": cannot parse line: ", line);
+      RUNTIME_ERROR(proc_meminfo_path, ": cannot parse line: ", line);
     }
 
-  if(memTotalKB == 0)
-    {
-      El::RuntimeError(proc_meminfo_path, ": ", mem_total_prefix,
-                       " not found");
-    }
-  if(memAvailableKB == 0)
-    {
-      El::RuntimeError(proc_meminfo_path, ": ", mem_available_prefix,
-                       " not found");
-    }
+  ASSERT(memTotalKB != 0, proc_meminfo_path, ": ", mem_total_prefix,
+         " not found");
+  ASSERT(memAvailableKB != 0, proc_meminfo_path, ": ", mem_available_prefix,
+         " not found");
 
   return {memTotalKB * 1024, memAvailableKB * 1024};
 }

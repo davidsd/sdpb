@@ -1,5 +1,7 @@
 #include "../Approx_Parameters.hxx"
 
+#include "sdpb_util/assert.hxx"
+
 #include <boost/program_options.hpp>
 
 namespace fs = std::filesystem;
@@ -57,8 +59,7 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
     "approx_objective to skip the time consuming part of setting up the "
     "solver.");
   basic_options.add_options()(
-    "linear",
-    po::bool_switch(&linear_only)->default_value(false),
+    "linear", po::bool_switch(&linear_only)->default_value(false),
     "Only compute the linear correction, not the quadratic correction.  "
     "This avoids having to compute an expensive inverse.");
 
@@ -90,12 +91,7 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
             {
               param_path = variables_map["paramFile"].as<fs::path>();
               std::ifstream ifs(param_path);
-              if(!ifs.good())
-                {
-                  throw std::runtime_error("Could not open '"
-                                           + param_path.string() + "'");
-                }
-
+              ASSERT(ifs.good(), "Could not open ", param_path);
               po::store(po::parse_config_file(ifs, cmd_line_options),
                         variables_map);
             }
@@ -109,17 +105,9 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
                          "automatically from MPI environment.");
             }
 
-          if(!fs::exists(sdp_path))
-            {
-              throw std::runtime_error("SDP path '" + sdp_path.string()
-                                       + "' does not exist");
-            }
-
-          if(!new_sdp_path.empty() && !fs::exists(new_sdp_path))
-            {
-              throw std::runtime_error("New SDP path '" + new_sdp_path.string()
-                                       + "' does not exist");
-            }
+          ASSERT(fs::exists(sdp_path), "SDP path does not exist: ", sdp_path);
+          ASSERT(new_sdp_path.empty() || fs::exists(new_sdp_path),
+                 "New SDP path does not exist: ", sdp_path);
 
           if(variables_map.count("solutionDir") == 0)
             {

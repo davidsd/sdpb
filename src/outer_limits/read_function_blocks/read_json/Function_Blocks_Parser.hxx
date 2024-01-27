@@ -24,36 +24,36 @@ struct Function_Blocks_Parser
         functions_state({"functions"s, ""s, ""s, ""s, ""s})
   {}
 
-  bool Null() { throw std::runtime_error("Null not allowed"); }
-  bool Bool(bool) { throw std::runtime_error("Bool not allowed"); }
+  bool Null() { RUNTIME_ERROR("Null not allowed"); }
+  bool Bool(bool) { RUNTIME_ERROR("Bool not allowed"); }
   bool Int(int)
   {
-    throw std::runtime_error(
+    RUNTIME_ERROR(
       "Int not allowed.  You must quote all numbers as strings.");
   }
   bool Uint(unsigned)
   {
-    throw std::runtime_error(
+    RUNTIME_ERROR(
       "Uint not allowed.  You must quote all numbers as strings.");
   }
   bool Int64(int64_t)
   {
-    throw std::runtime_error(
+    RUNTIME_ERROR(
       "Int64 not allowed.  You must quote all numbers as strings.");
   }
   bool Uint64(uint64_t)
   {
-    throw std::runtime_error(
+    RUNTIME_ERROR(
       "Uint64 not allowed.  You must quote all numbers as strings.");
   }
   bool Double(double)
   {
-    throw std::runtime_error(
+    RUNTIME_ERROR(
       "Double not allowed.  You must quote all numbers as strings.");
   }
   bool RawNumber(const Ch *, rapidjson::SizeType, bool)
   {
-    throw std::runtime_error(
+    RUNTIME_ERROR(
       "Numbers not allowed.  You must quote all numbers as strings.");
   }
   bool String(const Ch *str, rapidjson::SizeType length, bool copy);

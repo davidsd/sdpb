@@ -7,8 +7,8 @@ bool Points_Parser::Key(const Ch *str, rapidjson::SizeType length, bool)
     {
       if(parsing_points)
         {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside '" + points_state.name + "'.");
+          RUNTIME_ERROR("Invalid input file. Found the key '", key
+                                   , "' inside '", points_state.name , "'.");
         }
       else if(key == points_state.name)
         {
@@ -16,13 +16,13 @@ bool Points_Parser::Key(const Ch *str, rapidjson::SizeType length, bool)
         }
       else
         {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside the main object.");
+          RUNTIME_ERROR("Invalid input file. Found the key '", key
+                                   , "' inside the main object.");
         }
     }
   else
     {
-      throw std::runtime_error("Found a key outside of the main object: "
+      RUNTIME_ERROR("Found a key outside of the main object: "
                                + key);
     }
   return true;

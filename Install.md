@@ -123,15 +123,13 @@ See [FLINT documentation](https://flintlib.org/doc/building.html) for installati
 
         ./waf configure --elemental-dir=$HOME/install --flint-dir=$HOME/install
 
-8. Type `./waf` to build the executable in `build/sdpb`. This will create nine executables in the `build/` directory:
+8. Type `./waf` to build the executable in `build/sdpb`. This will create eight executables in the `build/` directory:
 
     * `sdpb`: Semidefinite program solver
-      * `pvm2sdp`: Convert SDP's in XML and Mathematica format to `sdpb` input.
-      * `sdp2input`: Convert SDP's in JSON and Mathematica format to `sdpb` input.
+       * `pmp2sdp`: Convert Polynomial Matrix Program (PMP) in JSON, Mathematica or XML format to `sdpb` input.
     * `outer_limits`: Semidefinite program solver using the outer approximation (experimental)
-      * `pvm2functions`: Convert SDP's in XML and Mathematica format to `outer_limits` input.
-      * `sdp2functions`: Convert SDP's in JSON and Mathematica format to `outer_limits` input.
-    * `spectrum`: Extract the spectrum given the solution and XML/JSON/Mathematica.
+       * `pmp2functions`: Convert PMP in JSON, Mathematica or XML format to `outer_limits` input.
+    * `spectrum`: Extract the spectrum given the solution and PMP in JSON/Mathematica/XML format.
     * `approx_objective`: Compute an approximate objective given a solution to a nearby SDP.
     * `unit_tests`: Unit tests.
     * `integration_tests`: End-to-end tests for `sdpb` and other executables. The tests use data from `test/data/` folder.

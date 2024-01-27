@@ -37,10 +37,7 @@ void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info,
             }
           block_timings_file << block_time << "\n";
         }
-      if(!block_timings_file.good())
-        {
-          throw std::runtime_error("Error when writing to: "
-                                   + block_timings_path.string());
-        }
+      ASSERT(block_timings_file.good(),
+             "Error when writing to: ", block_timings_path);
     }
 }

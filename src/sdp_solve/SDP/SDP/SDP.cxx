@@ -1,6 +1,8 @@
 #include "assign_bilinear_bases_dist.hxx"
 #include "set_bases_blocks.hxx"
 #include "sdp_solve/SDP.hxx"
+
+#include "sdpb_util/assert.hxx"
 #include "sdpb_util/copy_matrix.hxx"
 
 #include <filesystem>
@@ -151,37 +153,30 @@ void SDP::validate(const Block_Info &block_info) const noexcept(false)
   {
     // Check array sizes
 
-    if(primal_objective_c.blocks.size() != num_blocks)
-      El::RuntimeError(error_prefix, "primal_objective_c.blocks.size() = ",
-                       primal_objective_c.blocks.size(), ", expected ",
-                       num_blocks);
+    ASSERT(primal_objective_c.blocks.size() == num_blocks, error_prefix,
+           "primal_objective_c.blocks.size() = ",
+           primal_objective_c.blocks.size(), ", expected ", num_blocks);
 
-    if(free_var_matrix.blocks.size() != num_blocks)
-      El::RuntimeError(error_prefix, "free_var_matrix.blocks.size() = ",
-                       free_var_matrix.blocks.size(), ", expected ",
-                       num_blocks);
+    ASSERT(free_var_matrix.blocks.size() == num_blocks, error_prefix,
+           "free_var_matrix.blocks.size() = ", free_var_matrix.blocks.size(),
+           ", expected ", num_blocks);
 
-    if(bilinear_bases.size() != 2 * num_blocks)
-      El::RuntimeError(error_prefix,
-                       "bilinear_bases.size() = ", bilinear_bases.size(),
-                       ", expected ", 2 * num_blocks);
+    ASSERT(bilinear_bases.size() == 2 * num_blocks, error_prefix,
+           "bilinear_bases.size() = ", bilinear_bases.size(), ", expected ",
+           2 * num_blocks);
 
-    if(bases_blocks.size() != 2 * num_blocks)
-      El::RuntimeError(error_prefix,
-                       "bases_blocks.size() = ", bases_blocks.size(),
-                       ", expected ", 2 * num_blocks);
+    ASSERT(bases_blocks.size() == 2 * num_blocks,
+           "bases_blocks.size() = ", bases_blocks.size(), ", expected ",
+           2 * num_blocks);
   }
 
   // Check dual_objective_b
   const auto &b = dual_objective_b;
   {
-    if(!El::mpi::Congruent(b.DistComm(), block_info.mpi_comm.value))
-      {
-        El::RuntimeError(error_prefix,
-                         " wrong MPI communicator for dual_objective_b");
-      }
-    if(b.Width() != 1)
-      El::RuntimeError(error_prefix, "b.Width() = ", b.Width(), " expected 1");
+    ASSERT(El::mpi::Congruent(b.DistComm(), block_info.mpi_comm.value),
+           error_prefix, " wrong MPI communicator for dual_objective_b");
+    ASSERT(b.Width() == 1, error_prefix, "b.Width() = ", b.Width(),
+           " expected 1");
   }
 
   for(size_t index = 0; index < num_blocks; ++index)
@@ -196,32 +191,24 @@ void SDP::validate(const Block_Info &block_info) const noexcept(false)
         const auto &c = primal_objective_c.blocks.at(index);
         const auto &B = free_var_matrix.blocks.at(index);
 
-        if(!El::mpi::Congruent(c.DistComm(), block_info.mpi_comm.value))
-          {
-            El::RuntimeError(error_prefix_index,
-                             " wrong MPI communicator for primal_objective_c");
-          }
-        if(!El::mpi::Congruent(B.DistComm(), block_info.mpi_comm.value))
-          {
-            El::RuntimeError(error_prefix_index,
-                             " wrong MPI communicator for free_var_matrix");
-          }
+        ASSERT(El::mpi::Congruent(c.DistComm(), block_info.mpi_comm.value),
+               error_prefix_index,
+               " wrong MPI communicator for primal_objective_c");
+        ASSERT(El::mpi::Congruent(B.DistComm(), block_info.mpi_comm.value),
+               error_prefix_index,
+               " wrong MPI communicator for free_var_matrix");
 
         const auto P = block_info.get_schur_block_size(block_index);
         const auto N = b.Height();
 
-        if(c.Height() != P)
-          El::RuntimeError(error_prefix_index, "c.Height() = ", c.Height(),
-                           " expected ", P);
-        if(c.Width() != 1)
-          El::RuntimeError(error_prefix_index, "c.Width() = ", c.Width(),
-                           " expected 1");
-        if(B.Height() != P)
-          El::RuntimeError(error_prefix_index, "B.Height() = ", B.Height(),
-                           " expected ", P);
-        if(B.Width() != N)
-          El::RuntimeError(error_prefix_index, "B.Width() = ", B.Width(),
-                           " expected ", N);
+        ASSERT(c.Height() == P, error_prefix_index,
+               "c.Height() = ", c.Height(), " expected ", P);
+        ASSERT(c.Width() == 1, error_prefix_index, "c.Width() = ", c.Width(),
+               " expected 1");
+        ASSERT(B.Height() == P, error_prefix_index,
+               "B.Height() = ", B.Height(), " expected ", P);
+        ASSERT(B.Width() == N, error_prefix_index, "B.Width() = ", B.Width(),
+               " expected ", N);
       }
 
       for(const size_t parity : {0, 1})
@@ -235,52 +222,46 @@ void SDP::validate(const Block_Info &block_info) const noexcept(false)
             auto &bilinear_bases_matrix
               = bilinear_bases.at(2 * index + parity);
 
-            if(!El::mpi::Congruent(bilinear_bases_matrix.DistComm(),
-                                   block_info.mpi_comm.value))
-              {
-                El::RuntimeError(error_prefix_index_parity,
-                                 " wrong MPI communicator for bilinear_bases");
-              }
+            ASSERT(El::mpi::Congruent(bilinear_bases_matrix.DistComm(),
+                                      block_info.mpi_comm.value),
+                   error_prefix_index_parity,
+                   " wrong MPI communicator for bilinear_bases");
 
             const size_t height
               = block_info.get_bilinear_bases_height(block_index, parity);
             const size_t width
               = block_info.get_bilinear_bases_width(block_index, parity);
 
-            if(bilinear_bases_matrix.Height() != height)
-              El::RuntimeError(
-                error_prefix_index_parity, "bilinear_bases_matrix.Height() = ",
-                bilinear_bases_matrix.Height(), ", expected ", height);
-            if(bilinear_bases_matrix.Width() != width)
-              El::RuntimeError(
-                error_prefix_index_parity, "bilinear_bases_matrix.Width() = ",
-                bilinear_bases_matrix.Width(), ", expected ", width);
+            ASSERT(bilinear_bases_matrix.Height() == height,
+                   error_prefix_index_parity,
+                   "bilinear_bases_matrix.Height() = ",
+                   bilinear_bases_matrix.Height(), ", expected ", height);
+            ASSERT(bilinear_bases_matrix.Width() == width,
+                   error_prefix_index_parity,
+                   "bilinear_bases_matrix.Width() = ",
+                   bilinear_bases_matrix.Width(), ", expected ", width);
           }
 
           {
             // Check bases_block size
             const auto &bases_block = bases_blocks.at(2 * index + parity);
 
-            if(!El::mpi::Congruent(bases_block.DistComm(),
-                                   block_info.mpi_comm.value))
-              {
-                El::RuntimeError(error_prefix_index_parity,
-                                 " wrong MPI communicator for bases_blocks");
-              }
+            ASSERT(El::mpi::Congruent(bases_block.DistComm(),
+                                      block_info.mpi_comm.value),
+                   error_prefix_index_parity,
+                   " wrong MPI communicator for bases_blocks");
 
             const auto height
               = block_info.get_psd_matrix_block_size(block_index, parity);
             const auto width = block_info.get_bilinear_pairing_block_size(
               block_index, parity);
 
-            if(bases_block.Height() != height)
-              El::RuntimeError(error_prefix_index_parity,
-                               "bases_block.Height() = ", bases_block.Height(),
-                               ", expected ", height);
-            if(bases_block.Width() != width)
-              El::RuntimeError(error_prefix_index_parity,
-                               "bases_block.Width()=", bases_block.Width(),
-                               ", expected ", width);
+            ASSERT(bases_block.Height() == height, error_prefix_index_parity,
+                   "bases_block.Height() = ", bases_block.Height(),
+                   ", expected ", height);
+            ASSERT(bases_block.Width() == width, error_prefix_index_parity,
+                   "bases_block.Width()=", bases_block.Width(), ", expected ",
+                   width);
           }
         }
     }

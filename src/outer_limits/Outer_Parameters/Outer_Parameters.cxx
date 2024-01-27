@@ -1,5 +1,7 @@
 #include "../Outer_Parameters.hxx"
 
+#include "sdpb_util/assert.hxx"
+
 #include <boost/program_options.hpp>
 
 namespace fs = std::filesystem;
@@ -7,7 +9,6 @@ namespace po = boost::program_options;
 
 Outer_Parameters::Outer_Parameters(int argc, char *argv[])
 {
-  int int_verbosity;
   std::string write_solution_string;
   using namespace std::string_literals;
 
@@ -37,9 +38,8 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
     "The optimal solution is saved to this file in json "
     "format. Defaults to 'functions' with the ending '_out.json'.");
   basic_options.add_options()("verbosity",
-                              po::value<int>(&int_verbosity)->default_value(1),
-                              "Verbosity.  0 -> no output, 1 -> regular "
-                              "output, 2 -> debug output");
+    po::value<Verbosity>(&verbosity)->default_value(Verbosity::regular),
+    "Verbosity.  0 -> no output, 1 -> regular output, 2 -> debug output");
 
   cmd_line_options.add(basic_options);
   po::options_description solver_options(solver.options());
@@ -90,11 +90,7 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
           if(variables_map.count("paramFile") != 0)
             {
               std::ifstream param_file(param_path);
-              if(!param_file.good())
-                {
-                  throw std::runtime_error("Could not open '"
-                                           + param_path.string() + "'");
-                }
+              ASSERT(param_file.good(), "Could not open ", param_path);
 
               po::store(po::parse_config_file(param_file, cmd_line_options),
                         variables_map);
@@ -102,18 +98,11 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
 
           po::notify(variables_map);
 
-          if(!fs::exists(functions_path))
-            {
-              throw std::runtime_error("functions path '"
-                                       + functions_path.string()
-                                       + "' does not exist");
-            }
-          if(fs::is_directory(functions_path))
-            {
-              throw std::runtime_error("functions path '"
-                                       + functions_path.string()
-                                       + "' is a directory, not a file.");
-            }
+          ASSERT(fs::exists(functions_path),
+                 "functions path does not exist: ", functions_path);
+          ASSERT(
+            !fs::is_directory(functions_path),
+            "functions path is a directory, not a file: ", functions_path);
 
           if(variables_map.count("out") == 0)
             {
@@ -147,21 +136,7 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
             {
               fs::create_directories(output_path.parent_path());
               std::ofstream ofs(output_path);
-              if(!ofs.good())
-                {
-                  throw std::runtime_error("Cannot write to outDir: "
-                                           + output_path.string());
-                }
-            }
-
-          if(int_verbosity != 0 && int_verbosity != 1 && int_verbosity != 2)
-            {
-              throw std::runtime_error(
-                "Invalid number for Verbosity.  Only 0, 1 or 2 are allowed\n");
-            }
-          else
-            {
-              verbosity = static_cast<Verbosity>(int_verbosity);
+              ASSERT(ofs.good(), "Cannot write to outDir: ", output_path);
             }
         }
     }

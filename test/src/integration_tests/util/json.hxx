@@ -11,6 +11,23 @@ namespace Test_Util::Json
 {
   using Json_Value = rapidjson::GenericValue<rapidjson::UTF8<>>;
 
+  template<class TValue>
+  TValue parse(const Json_Value &json_value)
+  {
+    return TValue(json_value.GetString());
+  }
+
+  template<class TValue>
+  std::vector<TValue> parse_vector(const Json_Value &json_value, const std::function<TValue(const Json_Value&)> parse_element)
+  {
+    std::vector<TValue> result;
+    for(const auto &element : json_value.GetArray())
+      {
+        result.emplace_back(parse_element(element));
+      }
+    return result;
+  }
+
   inline Float parse_Float(const Json_Value &json_value)
   {
     return Float(json_value.GetString());

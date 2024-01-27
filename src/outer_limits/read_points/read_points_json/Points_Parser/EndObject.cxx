@@ -6,9 +6,9 @@ bool Points_Parser::EndObject(rapidjson::SizeType)
     {
       if(parsing_points)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Found an object end inside '"
-            + points_state.name + "'");
+          RUNTIME_ERROR(
+            "Invalid input file. Found an object end inside '"
+            + points_state.name , "'");
         }
       else
         {
@@ -17,8 +17,8 @@ bool Points_Parser::EndObject(rapidjson::SizeType)
     }
   else
     {
-      throw std::runtime_error(
-        "Invalid input file.  Ending an object outside of the SDP");
+      RUNTIME_ERROR(
+        "Invalid input file. Ending an object outside of the SDP");
     }
   return true;
 }

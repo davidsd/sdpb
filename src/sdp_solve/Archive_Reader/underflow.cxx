@@ -11,7 +11,7 @@ int Archive_Reader::underflow()
         archive_read_data(ptr.get(), buffer.data(), buffer.size()));
       if(num_bytes_read < 0)
         {
-          throw std::runtime_error("Error reading archive.");
+          RUNTIME_ERROR("Error reading archive.");
         }
       if(num_bytes_read > 0)
         {

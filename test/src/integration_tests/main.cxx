@@ -1,4 +1,5 @@
 #include "common.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <filesystem>
 #include <boost/process.hpp>
@@ -19,20 +20,19 @@ namespace
   void set_working_directory()
   {
     // if we find this file, we know where we are
-    auto sdp_zip = "test/data/sdp.zip";
+    const auto sdp_zip = "test/data/sdp.zip";
     for(const fs::path prefix : {".", ".."})
       {
-        if(exists(prefix / "test/data/sdp.zip"))
+        if(exists(prefix / sdp_zip))
           {
             fs::current_path(prefix);
             return;
           }
       }
 
-    auto msg = std::string("Cannot find '") + sdp_zip
-               + "'. Please run test executable from root sdpb/ directory "
-                 "or sdpb/build/ directory";
-    throw std::runtime_error(msg);
+    RUNTIME_ERROR("Cannot find '", sdp_zip,
+                  "'. Please run test executable from root sdpb/ directory "
+                  "or sdpb/build/ directory");
   }
 }
 

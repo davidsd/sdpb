@@ -1,6 +1,6 @@
 #include "Environment.hxx"
 
-#include <cassert>
+#include "assert.hxx"
 
 Environment::Environment() : Environment(0, nullptr) {}
 Environment::Environment(int argc, char **argv) : env(argc, argv)
@@ -42,8 +42,8 @@ void Environment::initialize()
       }
     _num_nodes = curr_node;
 
-    assert(_node_index >= 0);
-    assert(_node_index < _num_nodes);
+    ASSERT(_node_index >= 0);
+    ASSERT(_node_index < _num_nodes);
   }
 }
 void Environment::finalize()

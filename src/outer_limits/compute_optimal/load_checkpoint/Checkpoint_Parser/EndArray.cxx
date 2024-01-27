@@ -1,4 +1,5 @@
 #include "../Checkpoint_Parser.hxx"
+#include "sdpb_util/assert.hxx"
 
 bool Checkpoint_Parser::EndArray(rapidjson::SizeType)
 {
@@ -6,21 +7,21 @@ bool Checkpoint_Parser::EndArray(rapidjson::SizeType)
     {
       if(parsing_generation)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Unexpected array ending inside  '"
-            + generation_state.name + "'");
+          RUNTIME_ERROR(
+            "Invalid input file. Unexpected array ending inside  '",
+            generation_state.name, "'");
         }
       else if(parsing_threshold)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Unexpected array ending inside  '"
-            + threshold_state.name + "'");
+          RUNTIME_ERROR(
+            "Invalid input file. Unexpected array ending inside  '",
+            threshold_state.name, "'");
         }
       else if(parsing_c_scale)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Unexpected array ending inside  '"
-            + c_scale_state.name + "'");
+          RUNTIME_ERROR(
+            "Invalid input file. Unexpected array ending inside  '",
+            c_scale_state.name, "'");
         }
       else if(parsing_yp)
         {
@@ -44,14 +45,14 @@ bool Checkpoint_Parser::EndArray(rapidjson::SizeType)
         }
       else
         {
-          throw std::runtime_error("Invalid input file.  Unexpected array "
-                                   "ending inside the main object.");
+          RUNTIME_ERROR("Invalid input file. "
+                        "Unexpected array ending inside the main object.");
         }
     }
   else
     {
-      throw std::runtime_error("Invalid input file.  Unexpected array ending "
-                               "outside of the main object.");
+      RUNTIME_ERROR("Invalid input file. "
+                    " Unexpected array ending outside of the main object.");
     }
   return true;
 }

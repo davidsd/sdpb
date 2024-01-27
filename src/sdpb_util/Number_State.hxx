@@ -1,5 +1,7 @@
 #pragma once
 
+#include "assert.hxx"
+
 #include <El.hpp>
 
 #include <libxml2/libxml/parser.h>
@@ -29,8 +31,8 @@ public:
   {
     if(inside)
       {
-        throw std::runtime_error("Invalid input file.  Unexpected element '"
-                                 + element_name + "' inside '" + name + "'");
+        RUNTIME_ERROR("Invalid input file. Unexpected element '", element_name,
+                      "' inside '", name, "'");
       }
     else
       {
@@ -57,7 +59,7 @@ public:
             using namespace std::string_literals;
             if(string_value.str() == "inf"s)
               {
-                value=Float_Type(std::numeric_limits<double>::max());
+                value = Float_Type(std::numeric_limits<double>::max());
               }
             else
               {
@@ -66,8 +68,7 @@ public:
           }
         catch(...)
           {
-            throw std::runtime_error("Invalid NNNN number: '" + string_value.str()
-                                     + "'");
+            RUNTIME_ERROR("Invalid NNNN number: '", string_value.str(), "'");
           }
       }
     return result;
@@ -85,8 +86,8 @@ public:
   // JSON Functions
   void json_key(const std::string &key)
   {
-    throw std::runtime_error("Invalid input file.  Found the key '" + key
-                             + "' when expecting a number.");
+    RUNTIME_ERROR("Invalid input file. Found the key '", key,
+                  "' when expecting a number.");
   }
 
   void json_string(const std::string &s)
@@ -98,7 +99,7 @@ public:
         using namespace std::string_literals;
         if(s == "inf"s)
           {
-            value=Float_Type(std::numeric_limits<double>::max());
+            value = Float_Type(std::numeric_limits<double>::max());
           }
         else
           {
@@ -107,31 +108,31 @@ public:
       }
     catch(...)
       {
-        throw std::runtime_error("Invalid number: '" + s + "'");
+        RUNTIME_ERROR("Invalid number: '", s, "'");
       }
   }
 
   void json_start_array()
   {
-    throw std::runtime_error(
-      "Invalid input file.  Found an array when expecting a number.");
+    RUNTIME_ERROR(
+      "Invalid input file. Found an array when expecting a number.");
   }
 
   void json_end_array()
   {
-    throw std::runtime_error(
-      "Invalid input file.  Found an array end when parsing a number.");
+    RUNTIME_ERROR(
+      "Invalid input file. Found an array end when parsing a number.");
   }
 
   void json_start_object()
   {
-    throw std::runtime_error(
-      "Invalid input file.  Found an object when expecting a number.");
+    RUNTIME_ERROR(
+      "Invalid input file. Found an object when expecting a number.");
   }
 
   void json_end_object()
   {
-    throw std::runtime_error(
-      "Invalid input file.  Found an object end when parsing a number.");
+    RUNTIME_ERROR(
+      "Invalid input file. Found an object end when parsing a number.");
   }
 };

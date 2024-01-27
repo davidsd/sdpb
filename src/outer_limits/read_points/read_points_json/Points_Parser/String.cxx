@@ -11,15 +11,15 @@ bool Points_Parser::String(const Ch *str, rapidjson::SizeType length, bool)
         }
       else
         {
-          throw std::runtime_error(
-            "Invalid input file.  Unexpected string in the main object: '" + s
-            + "'");
+          RUNTIME_ERROR(
+            "Invalid input file. Unexpected string in the main object: '", s
+            , "'");
         }
     }
   else
     {
-      throw std::runtime_error("Found a string outside of the SDP: '" + s
-                               + "'");
+      RUNTIME_ERROR("Found a string outside of the SDP: '", s
+                               , "'");
     }
   return true;
 }

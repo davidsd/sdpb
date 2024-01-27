@@ -1,7 +1,7 @@
 #include "eval_summed.hxx"
 
 El::BigFloat eval_summed(
-  const std::vector<std::vector<Polynomial>> &summed_polynomials,
+  const std::vector<Polynomial_Vector> &summed_polynomials,
   const El::BigFloat &x)
 {
   const size_t matrix_dim(summed_polynomials.size());
