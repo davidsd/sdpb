@@ -12,7 +12,7 @@
 // NB: SDPB internals use format (2.2), which doesn't have normalization vector.
 // Conversion from (3.1) to (2.2)
 // takes place in pmp2sdp/Dual_Constraint_Group constructor,
-// before writing to sdp.zip
+// before writing to sdp directory
 struct Polynomial_Matrix_Program
 {
   // vector a_i, i=0..N

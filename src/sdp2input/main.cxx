@@ -88,7 +88,8 @@ int main(int argc, char **argv)
       auto pmp = read_polynomial_matrix_program(env, input_file, timers);
 
       Output_SDP sdp(pmp, command_arguments, timers);
-      write_sdp(output_path, sdp, output_format, timers, debug);
+      bool zip = false;
+      write_sdp(output_path, sdp, output_format, zip, timers, debug);
       if(El::mpi::Rank() == 0)
         {
           El::Output("Processed ", sdp.num_blocks, " SDP blocks in ",

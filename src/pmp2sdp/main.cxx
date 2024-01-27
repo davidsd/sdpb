@@ -44,8 +44,8 @@ int main(int argc, char **argv)
         = read_polynomial_matrix_program(env, parameters.input_file, timers);
 
       Output_SDP sdp(pmp, parameters.command_arguments, timers);
-      write_sdp(parameters.output_path, sdp, parameters.output_format, timers,
-                debug);
+      write_sdp(parameters.output_path, sdp, parameters.output_format,
+                parameters.zip, timers, debug);
       if(El::mpi::Rank() == 0)
         {
           El::Output("Processed ", sdp.num_blocks, " SDP blocks in ",

@@ -10,7 +10,7 @@
 
 #include <boost/noncopyable.hpp>
 
-// Data to be written to sdp.zip
+// Data to be written to sdp directory
 struct Output_SDP : boost::noncopyable
 {
   // objective_const and dual_objective_b are copied across all processes

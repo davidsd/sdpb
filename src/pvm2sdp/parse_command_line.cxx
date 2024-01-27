@@ -17,7 +17,7 @@ void parse_command_line(int argc, char **argv,
                     "FORMAT (optional): output format, bin (default) or json\n"
                     "PRECISION: binary precision\n"
                     "INPUT: input .xml or .nsv files\n"
-                    "OUTPUT: output sdp.zip file");
+                    "OUTPUT: output sdp directory");
   for(int arg = 1; arg < argc; ++arg)
     {
       if((argv[arg] == "-h"s) || argv[arg] == "--help"s)

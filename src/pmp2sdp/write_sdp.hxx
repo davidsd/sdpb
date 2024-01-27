@@ -7,4 +7,5 @@
 #include <filesystem>
 
 void write_sdp(const std::filesystem::path &output_path, const Output_SDP &sdp,
-               Block_File_Format output_format, Timers &timers, bool debug);
+               Block_File_Format block_file_format, bool zip, Timers &timers,
+               bool debug);

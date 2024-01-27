@@ -14,6 +14,7 @@ struct Pmp2sdp_Parameters
   std::filesystem::path input_file;
   std::filesystem::path output_path;
   Block_File_Format output_format;
+  bool zip;
   Verbosity verbosity;
 
   std::vector<std::string> command_arguments;

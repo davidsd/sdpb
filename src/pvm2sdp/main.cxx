@@ -40,7 +40,8 @@ int main(int argc, char **argv)
              "Output file is a directory: ", output_path);
       ASSERT(!(fs::exists(output_path) && fs::is_directory(output_path)),
              "Output file exists and is a directory: ", output_path);
-      write_sdp(output_path, sdp, output_format, timers, debug);
+      bool zip = false;
+      write_sdp(output_path, sdp, output_format, zip, timers, debug);
     }
   catch(std::exception &e)
     {
