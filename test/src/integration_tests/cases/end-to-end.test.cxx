@@ -14,8 +14,8 @@ namespace
   end_to_end_test(const std::string &name,
                   const std::string &default_sdpb_args,
                   const std::string &sdp_format, int num_procs, int precision,
-                  int sdp_zip_diff_precision, int sdpb_output_diff_precision,
-                  const std::vector<std::string> &out_txt_keys = {},
+                  int sdp_diff_precision, int sdpb_output_diff_precision,
+                  bool zip, const std::vector<std::string> &out_txt_keys = {},
                   bool compute_spectrum = false)
   {
     auto format_description = sdp_format.empty() ? "default(bin)" : sdp_format;
@@ -27,7 +27,7 @@ namespace
     const auto &output_dir = runner.output_dir;
 
     auto sdp_orig_zip = (data_dir / ("sdp.orig.zip")).string();
-    auto sdp_zip = (output_dir / "sdp.zip").string();
+    auto sdp_path = (output_dir / (zip ? "sdp.zip" : "sdp")).string();
 
     // pmp2sdp
     {
@@ -37,8 +37,9 @@ namespace
         input = data_dir / "json" / "file_list.nsv";
       Test_Util::Test_Case_Runner::Named_Args_Map args{
         {"--input", input.string()},
-        {"--output", sdp_zip},
-        {"--precision", std::to_string(precision)}};
+        {"--output", sdp_path},
+        {"--precision", std::to_string(precision)},
+        {"--zip", std::to_string(zip)}};
 
       if(!sdp_format.empty())
         args["--outputFormat"] = sdp_format;
@@ -47,18 +48,18 @@ namespace
                                               num_procs);
 
       // pmp2sdp runs with --precision=<precision>
-      // We check test output up to lower precision=<sdp_zip_diff_precision>
+      // We check test output up to lower precision=<sdp_diff_precision>
       // in order to neglect unimportant rounding errors
-      Test_Util::REQUIRE_Equal::diff_sdp_zip(
-        sdp_zip, sdp_orig_zip, precision, sdp_zip_diff_precision,
-        runner.create_nested("sdp.zip.diff"));
+      Test_Util::REQUIRE_Equal::diff_sdp(sdp_path, sdp_orig_zip, precision,
+                                         sdp_diff_precision,
+                                         runner.create_nested("sdp.diff"));
     }
 
     // sdpb
     {
       Test_Util::Test_Case_Runner::Named_Args_Map args{
         {"--precision", std::to_string(precision)},
-        {"--sdpDir", sdp_zip},
+        {"--sdpDir", sdp_path},
         {"--outDir", (output_dir / "out").string()},
         {"--checkpointDir", (output_dir / "ck").string()}};
       runner.create_nested("sdpb").mpi_run({"build/sdpb", default_sdpb_args},
@@ -81,7 +82,8 @@ namespace
           {"--output", (output_dir / "spectrum.json").string()},
           {"--precision", std::to_string(precision)},
         };
-        runner.create_nested("spectrum").mpi_run({"build/spectrum"}, args, num_procs);
+        runner.create_nested("spectrum")
+          .mpi_run({"build/spectrum"}, args, num_procs);
         Test_Util::REQUIRE_Equal::diff_spectrum(
           output_dir / "spectrum.json", data_dir / "spectrum_orig.json",
           precision, sdpb_output_diff_precision);
@@ -96,13 +98,13 @@ TEST_CASE("end-to-end_tests")
        "depending on GMP/MPFR version etc");
   int num_procs = 6;
   int precision = 768;
-  int sdp_zip_diff_precision = 608;
+  int sdp_diff_precision = 608;
   std::string name = "end-to-end_tests";
 
   SECTION("dfibo-0-0-j=3-c=3.0000-d=3-s=6")
   {
     INFO("pmp2sdp+sdpb test for https://github.com/davidsd/sdpb/issues/124");
-    INFO("sdp.zip contains block with empty bilinear_bases_odd, "
+    INFO("sdp contains block with empty bilinear_bases_odd, "
          "which caused a bug.");
     INFO("Test data from Harvard cluster, gmp/6.2.1 mpfr/4.2.0");
     name += "/dfibo-0-0-j=3-c=3.0000-d=3-s=6";
@@ -119,15 +121,20 @@ TEST_CASE("end-to-end_tests")
       {
         DYNAMIC_SECTION((sdp_format.empty() ? "default(bin)" : sdp_format))
         {
+          // write sdp to zip instead of plain directory
+          bool zip = true;
           end_to_end_test(name, default_sdpb_args, sdp_format, num_procs,
-                          precision, sdp_zip_diff_precision,
-                          sdpb_output_diff_precision);
+                          precision, sdp_diff_precision,
+                          sdpb_output_diff_precision, zip);
         }
       }
   }
 
   SECTION("SingletScalar_nmax6")
   {
+    // write sdp to plain directory instead of zip
+    bool zip = false;
+
     INFO("pmp2sdp+sdpb tests based on "
          "https://gitlab.com/davidsd/scalars-3d/-/blob/master/src/Projects/"
          "Scalars3d/SingletScalar2020.hs");
@@ -154,7 +161,7 @@ TEST_CASE("end-to-end_tests")
       std::vector<std::string> out_txt_keys = {};
       bool compute_spectrum = true;
       end_to_end_test(name, default_sdpb_args, "bin", num_procs, precision,
-                      sdp_zip_diff_precision, sdpb_output_diff_precision,
+                      sdp_diff_precision, sdpb_output_diff_precision, zip,
                       out_txt_keys, compute_spectrum);
     }
 
@@ -187,8 +194,8 @@ TEST_CASE("end-to-end_tests")
             DYNAMIC_SECTION(sdp_format)
             {
               end_to_end_test(name, default_sdpb_args, sdp_format, num_procs,
-                              precision, sdp_zip_diff_precision,
-                              sdpb_output_diff_precision, out_txt_keys);
+                              precision, sdp_diff_precision,
+                              sdpb_output_diff_precision, zip, out_txt_keys);
             }
           }
       }
@@ -204,8 +211,8 @@ TEST_CASE("end-to-end_tests")
             DYNAMIC_SECTION(sdp_format)
             {
               end_to_end_test(name, default_sdpb_args, sdp_format, num_procs,
-                              precision, sdp_zip_diff_precision,
-                              sdpb_output_diff_precision, out_txt_keys);
+                              precision, sdp_diff_precision,
+                              sdpb_output_diff_precision, zip, out_txt_keys);
             }
           }
       }

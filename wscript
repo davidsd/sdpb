@@ -311,7 +311,7 @@ def build(bld):
                         'test/src/integration_tests/main.cxx',
                         'test/src/integration_tests/util/Float.cxx',
                         'test/src/integration_tests/util/diff_outer_limits.cxx',
-                        'test/src/integration_tests/util/diff_sdp_zip.cxx',
+                        'test/src/integration_tests/util/diff_sdp.cxx',
                         'test/src/integration_tests/util/diff_sdpb_out.cxx',
                         'test/src/integration_tests/util/diff_spectrum.cxx',
                         'test/src/integration_tests/util/Test_Case_Runner.cxx',

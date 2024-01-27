@@ -30,17 +30,17 @@ TEST_CASE("pmp2sdp")
                                              + input_filename);
           Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
           args["--input"] = (data_dir / input_filename).string();
-          auto sdp_zip = (runner.output_dir / "sdp.zip").string();
-          args["--output"] = sdp_zip;
+          auto sdp_path = (runner.output_dir / "sdp").string();
+          args["--output"] = sdp_path;
 
           runner.create_nested("run").mpi_run({"build/pmp2sdp"}, args);
 
-          Test_Util::REQUIRE_Equal::diff_sdp_zip(sdp_zip, sdp_orig, precision,
-                                                 diff_precision,
-                                                 runner.create_nested("diff"));
+          Test_Util::REQUIRE_Equal::diff_sdp(sdp_path, sdp_orig, precision,
+                                             diff_precision,
+                                             runner.create_nested("diff"));
 
-          REQUIRE(fs::file_size(sdp_zip + ".profiling/profiling.0") > 0);
-          REQUIRE(fs::file_size(sdp_zip + ".profiling/profiling.1") > 0);
+          REQUIRE(fs::file_size(sdp_path + ".profiling/profiling.0") > 0);
+          REQUIRE(fs::file_size(sdp_path + ".profiling/profiling.1") > 0);
         }
     }
   }
@@ -63,8 +63,8 @@ TEST_CASE("pmp2sdp")
                                              + format_description);
           Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
           args["--input"] = (data_dir / "file_list.nsv").string();
-          auto sdp_zip = (runner.output_dir / "sdp.zip").string();
-          args["--output"] = sdp_zip;
+          auto sdp_path = runner.output_dir / "sdp";
+          args["--output"] = sdp_path.string();
           if(!output_format.empty())
             args["--outputFormat"] = output_format;
           runner.create_nested("run").mpi_run({"build/pmp2sdp"}, args);
@@ -72,10 +72,8 @@ TEST_CASE("pmp2sdp")
           {
             INFO("Check that pmp2sdp actually uses --outputFormat="
                  << format_description);
-            auto sdp_unzip
-              = runner.create_nested("unzip").unzip_to_temp_dir(sdp_zip);
             auto block_data_0_path
-              = sdp_unzip
+              = sdp_path
                 / ("block_data_0."
                    + (output_format.empty() ? "bin" : output_format));
             CAPTURE(block_data_0_path);
@@ -84,9 +82,9 @@ TEST_CASE("pmp2sdp")
 
           auto sdp_orig = data_dir / "sdp_orig.zip";
 
-          Test_Util::REQUIRE_Equal::diff_sdp_zip(sdp_zip, sdp_orig, precision,
-                                                 diff_precision,
-                                                 runner.create_nested("diff"));
+          Test_Util::REQUIRE_Equal::diff_sdp(sdp_path, sdp_orig, precision,
+                                             diff_precision,
+                                             runner.create_nested("diff"));
         }
       }
   }
@@ -98,6 +96,46 @@ TEST_CASE("pmp2sdp")
     int num_procs = 2;
 
     auto input = (data_dir / "file_list.nsv").string();
+
+    SECTION("sdp_temp_not_empty")
+    {
+      const Test_Util::Test_Case_Runner runner("pmp2sdp/sdp_temp_not_empty");
+      fs::create_directories(runner.output_dir);
+
+      auto sdp_dir = runner.output_dir / "sdp";
+
+      {
+        auto sdp_temp_dir = runner.output_dir / "sdp_temp";
+        fs::create_directories(runner.output_dir / "sdp_temp");
+        std::ofstream os(sdp_temp_dir / "some_file.json");
+        os << "some data";
+      }
+
+      Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
+      args["--input"] = input;
+      args["--output"] = sdp_dir.string();
+      runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 1,
+                     "check_sdp_directory()");
+    }
+    SECTION("sdp_dir_exists")
+    {
+      INFO("Prohibit writing to existing directory:");
+      const Test_Util::Test_Case_Runner runner("pmp2sdp/sdp_dir_exists");
+      fs::create_directories(runner.output_dir);
+
+      auto sdp_dir = runner.output_dir / "sdp";
+      {
+        fs::create_directories(sdp_dir);
+        std::ofstream os(sdp_dir / "control.json");
+        os << "some data";
+      }
+
+      Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
+      args["--input"] = input;
+      args["--output"] = sdp_dir.string();
+      runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 1,
+                     "Directory not empty");
+    }
 
     SECTION("cannot_write_zip")
     {
@@ -113,8 +151,8 @@ TEST_CASE("pmp2sdp")
 
       Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
       args["--input"] = input;
-      auto sdp_zip = (runner.output_dir / "sdp.zip").string();
       args["--output"] = sdp_readonly_zip.string();
+      args["--zip"] = "true";
       runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 1,
                      "Unable to set options for writing an archive");
     }
@@ -133,8 +171,8 @@ TEST_CASE("pmp2sdp")
 
       Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
       args["--input"] = invalid_nsv;
-      auto sdp_zip = (runner.output_dir / "sdp.zip").string();
-      args["--output"] = sdp_zip;
+      auto sdp_path = (runner.output_dir / "sdp").string();
+      args["--output"] = sdp_path;
 
       auto sdp_invalid_zip = (runner.output_dir / "sdp.invalid.zip").string();
       runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 1, "No such file");

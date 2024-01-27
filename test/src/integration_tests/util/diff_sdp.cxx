@@ -189,16 +189,16 @@ namespace
 // Implementation
 namespace Test_Util::REQUIRE_Equal
 {
-  void diff_sdp_zip(const fs::path &a_sdp_zip, const fs::path &b_sdp_zip,
-                    unsigned int input_precision, unsigned int diff_precision,
-                    Test_Case_Runner runner)
+  void diff_sdp(const fs::path &a_sdp, const fs::path &b_sdp,
+                unsigned int input_precision, unsigned int diff_precision,
+                Test_Case_Runner runner)
   {
-    INFO("diff sdp.zip files");
-    CAPTURE(a_sdp_zip);
-    CAPTURE(b_sdp_zip);
+    INFO("diff sdp directories/zip files");
+    CAPTURE(a_sdp);
+    CAPTURE(b_sdp);
     Float_Binary_Precision prec(input_precision, diff_precision);
-    auto a = runner.unzip_to_temp_dir(a_sdp_zip);
-    auto b = runner.unzip_to_temp_dir(b_sdp_zip);
+    auto a = fs::is_directory(a_sdp) ? a_sdp : runner.unzip_to_temp_dir(a_sdp);
+    auto b = fs::is_directory(b_sdp) ? b_sdp : runner.unzip_to_temp_dir(b_sdp);
     diff_control_json(a / "control.json", b / "control.json");
     diff_objectives_json(a / "objectives.json", b / "objectives.json");
     Parse_Control_Json control(a / "control.json");

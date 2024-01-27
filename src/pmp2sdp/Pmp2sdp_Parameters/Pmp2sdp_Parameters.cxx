@@ -32,9 +32,7 @@ Pmp2sdp_Parameters::Pmp2sdp_Parameters(int argc, char **argv)
       ->default_value(Block_File_Format::bin),
     "Output format for SDP blocks. Could be either 'bin' or 'json'");
   options.add_options()(
-    "zip,z",
-    po::value<bool>(&zip)
-      ->default_value(false),
+    "zip,z", po::value<bool>(&zip)->default_value(false),
     "Store output to zip file instead of plain directory.");
   options.add_options()(
     "verbosity,v",
