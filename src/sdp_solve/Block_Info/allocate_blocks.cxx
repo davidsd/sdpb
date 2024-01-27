@@ -8,9 +8,6 @@ void Block_Info::allocate_blocks(const Environment &env,
                                  const size_t &proc_granularity,
                                  const Verbosity &verbosity)
 {
-  // Reverse sort, with largest first
-  std::vector<Block_Cost> sorted_costs(block_costs);
-  std::sort(sorted_costs.rbegin(), sorted_costs.rend());
   const size_t num_procs = El::mpi::Size(El::mpi::COMM_WORLD);
   const size_t num_nodes = env.num_nodes();
   const size_t procs_per_node = env.comm_shared_mem.Size();
@@ -28,7 +25,7 @@ void Block_Info::allocate_blocks(const Environment &env,
          procs_per_node, "\n\tprocGranularity: ", proc_granularity);
 
   std::vector<std::vector<Block_Map>> mapping(compute_block_grid_mapping(
-    procs_per_node / proc_granularity, num_nodes, sorted_costs));
+    procs_per_node / proc_granularity, num_nodes, block_costs));
 
   for(auto &block_vector : mapping)
     for(auto &block_map : block_vector)

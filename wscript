@@ -103,7 +103,7 @@ def build(bld):
               cxxflags=default_flags,
               defines=default_defines,
               includes=default_includes,
-              use=use_packages + ['pmp2sdp'])
+              use=use_packages + ['pmp2sdp_lib'])
 
     # SDPB executable
     bld.program(source=['src/sdpb/main.cxx',
@@ -134,7 +134,7 @@ def build(bld):
                        ]
 
     bld.stlib(source=pmp2sdp_sources,
-              target='pmp2sdp',
+              target='pmp2sdp_lib',
               cxxflags=default_flags,
               defines=default_defines,
               includes=default_includes,
@@ -192,14 +192,24 @@ def build(bld):
               cxxflags=default_flags,
               defines=default_defines,
               includes=default_includes,
-              use=use_packages + ['pmp', 'pmp2sdp'])
+              use=use_packages + ['pmp', 'pmp2sdp_lib'])
 
     bld.program(source=['src/sdp2input/main.cxx'],
                 target='sdp2input',
                 cxxflags=default_flags,
                 defines=default_defines,
                 includes=default_includes,
-                use=use_packages + ['pmp', 'pmp_read', 'pmp2sdp']
+                use=use_packages + ['pmp', 'pmp_read', 'pmp2sdp_lib']
+                )
+
+    bld.program(source=['src/pmp2sdp/main.cxx',
+                        'src/pmp2sdp/Pmp2sdp_Parameters/Pmp2sdp_Parameters.cxx'
+                        ],
+                target='pmp2sdp',
+                cxxflags=default_flags,
+                defines=default_defines,
+                includes=default_includes,
+                use=use_packages + ['pmp', 'pmp_read', 'pmp2sdp_lib']
                 )
 
     bld.program(source=['src/outer_limits/main.cxx',
@@ -271,19 +281,10 @@ def build(bld):
                 use=use_packages + ['pmp_read', 'sdp_solve']
                 )
 
-    bld.program(source=['src/pvm2functions/main.cxx',
-                        'src/pvm2functions/parse_command_line.cxx',
-                        'src/pvm2functions/write_functions.cxx'],
-                target='pvm2functions',
-                cxxflags=default_flags,
-                defines=default_defines,
-                includes=default_includes,
-                use=use_packages + ['pmp_read']
-                )
-
-    bld.program(source=['src/sdp2functions/main.cxx',
-                        'src/sdp2functions/write_functions.cxx'],
-                target='sdp2functions',
+    bld.program(source=['src/pmp2functions/main.cxx',
+                        'src/pmp2functions/Pmp2functions_Parameters.cxx',
+                        'src/pmp2functions/write_functions.cxx'],
+                target='pmp2functions',
                 cxxflags=default_flags,
                 defines=default_defines,
                 includes=default_includes,
@@ -303,21 +304,20 @@ def build(bld):
                 cxxflags=default_flags,
                 defines=default_defines,
                 includes=default_includes,
-                use=use_packages + ['pmp_read', 'sdp_solve', 'pmp2sdp', 'mesh']
+                use=use_packages + ['pmp_read', 'sdp_solve', 'pmp2sdp_lib', 'mesh']
                 )
 
     bld.program(source=['external/catch2/catch_amalgamated.cpp',
                         'test/src/integration_tests/main.cxx',
                         'test/src/integration_tests/util/Float.cxx',
                         'test/src/integration_tests/util/diff_outer_limits.cxx',
-                        'test/src/integration_tests/util/diff_sdp_zip.cxx',
+                        'test/src/integration_tests/util/diff_sdp.cxx',
                         'test/src/integration_tests/util/diff_sdpb_out.cxx',
                         'test/src/integration_tests/util/diff_spectrum.cxx',
                         'test/src/integration_tests/util/Test_Case_Runner.cxx',
                         'test/src/integration_tests/cases/end-to-end.test.cxx',
                         'test/src/integration_tests/cases/outer_limits.test.cxx',
-                        'test/src/integration_tests/cases/pvm2sdp.test.cxx',
-                        'test/src/integration_tests/cases/sdp2input.test.cxx',
+                        'test/src/integration_tests/cases/pmp2sdp.test.cxx',
                         'test/src/integration_tests/cases/sdpb.test.cxx',
                         'test/src/integration_tests/cases/spectrum.test.cxx'],
                 target='integration_tests',
@@ -330,6 +330,7 @@ def build(bld):
     bld.program(source=['external/catch2/catch_amalgamated.cpp',
                         'test/src/unit_tests/main.cxx',
                         'test/src/unit_tests/cases/block_data_serialization.test.cxx',
+                        'test/src/unit_tests/cases/block_mapping.test.cxx',
                         'test/src/unit_tests/cases/boost_serialization.test.cxx',
                         'test/src/unit_tests/cases/copy_matrix.test.cxx',
                         'test/src/unit_tests/cases/json.test.cxx',
@@ -337,6 +338,6 @@ def build(bld):
                 target='unit_tests',
                 cxxflags=default_flags,
                 defines=default_defines + ['CATCH_AMALGAMATED_CUSTOM_MAIN'],
-                use=use_packages + ['pmp_read', 'pmp2sdp', 'sdp_solve'],
+                use=use_packages + ['pmp_read', 'pmp2sdp_lib', 'sdp_solve'],
                 includes=default_includes + ['test/src']
                 )

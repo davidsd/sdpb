@@ -1,0 +1,8 @@
+{
+    "dim": {
+        "type": "integer"
+    },
+    "num_points": {
+        "type": "integer"
+    }
+}

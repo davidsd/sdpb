@@ -50,7 +50,7 @@ namespace
           }
         // Ensure that each bilinearBasis is sampled the correct number
         // of times
-        assert(static_cast<size_t>(basis->Width()) == group.num_points);
+        ASSERT(static_cast<size_t>(basis->Width()) == group.num_points);
         write_matrix(output_stream, *basis, "  ");
       }
     output_stream << ",\n";
@@ -59,7 +59,7 @@ namespace
   void write_primal_objective_c(std::ostream &output_stream,
                                 const Dual_Constraint_Group &group)
   {
-    assert(static_cast<size_t>(group.constraint_matrix.Height())
+    ASSERT(static_cast<size_t>(group.constraint_matrix.Height())
            == group.constraint_constants.size());
 
     output_stream << "  \"c\":\n";
@@ -96,7 +96,7 @@ namespace
     // TODO use the same order in JSON?
     ar << group.constraint_matrix;
     ar << group.constraint_constants;
-    assert(group.bilinear_bases.size() == 2);
+    ASSERT(group.bilinear_bases.size() == 2);
     ar << group.bilinear_bases[0];
     ar << group.bilinear_bases[1];
   }

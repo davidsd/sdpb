@@ -6,6 +6,7 @@
 //=======================================================================
 
 #include "../Dual_Constraint_Group.hxx"
+#include "sdpb_util/assert.hxx"
 
 void write_block_json(std::ostream &output_stream,
                       const Dual_Constraint_Group &group);
@@ -35,7 +36,7 @@ Dual_Constraint_Group::Dual_Constraint_Group(
       num_points(m.sample_points.size())
 {
   const auto &polys = m.polynomials;
-  assert(polys.Height() == polys.Width());
+  ASSERT(polys.Height() == polys.Width());
 
   const size_t degree(num_points - 1),
     numConstraints(num_points * dim * (dim + 1) / 2),

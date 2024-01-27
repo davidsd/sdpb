@@ -16,6 +16,10 @@ int main(int argc, char **argv)
 
   try
     {
+      if(El::mpi::Rank() == 0)
+        El::Output("pvm2sdp is DEPRECATED, please use pmp2sdp instead.");
+      // TODO remove pvm2sdp in 2.8.0 release
+
       Block_File_Format output_format = bin;
       int precision;
       std::vector<fs::path> input_files;
@@ -30,13 +34,14 @@ int main(int argc, char **argv)
 
       Timers timers(env, debug);
 
-      auto pmp = read_polynomial_matrix_program(input_files);
+      auto pmp = read_polynomial_matrix_program(env, input_files, timers);
       Output_SDP sdp(pmp, command_arguments, timers);
       ASSERT(output_path != ".",
              "Output file is a directory: ", output_path);
       ASSERT(!(fs::exists(output_path) && fs::is_directory(output_path)),
              "Output file exists and is a directory: ", output_path);
-      write_sdp(output_path, sdp, output_format, timers, debug);
+      bool zip = false;
+      write_sdp(output_path, sdp, output_format, zip, timers, debug);
     }
   catch(std::exception &e)
     {

@@ -23,15 +23,15 @@ namespace Test_Util::REQUIRE_Equal
                             const std::vector<std::string> &filenames = {},
                             const std::vector<std::string> &out_txt_keys = {});
 
-  void diff_sdp_zip(const std::filesystem::path &a_sdp_zip,
-                    const std::filesystem::path &b_sdp_zip,
-                    unsigned int input_precision, unsigned int diff_precision,
-                    Test_Case_Runner runner);
-
   void
-  diff_functions_json(const std::filesystem::path &a_json,
-                 const std::filesystem::path &b_json,
-                 unsigned int input_precision, unsigned int diff_precision);
+  diff_sdp(const std::filesystem::path &a_sdp,
+           const std::filesystem::path &b_sdp, unsigned int input_precision,
+           unsigned int diff_precision, Test_Case_Runner runner);
+
+  void diff_functions_json(const std::filesystem::path &a_json,
+                           const std::filesystem::path &b_json,
+                           unsigned int input_precision,
+                           unsigned int diff_precision);
 
   void
   diff_outer_limits(const std::filesystem::path &a_json,

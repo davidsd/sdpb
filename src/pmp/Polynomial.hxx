@@ -7,9 +7,10 @@
 
 #pragma once
 
+#include "sdpb_util/assert.hxx"
+
 #include <El.hpp>
 
-#include <cassert>
 #include <iostream>
 #include <vector>
 #include <boost/math/tools/polynomial.hpp>
@@ -38,7 +39,7 @@ public:
   // Evaluate p(x) for some x using horner's method
   El::BigFloat operator()(const El::BigFloat &x) const
   {
-    assert(!coefficients.empty());
+    ASSERT(!coefficients.empty());
     auto coefficient(coefficients.rbegin());
     El::BigFloat result(*coefficient);
     ++coefficient;

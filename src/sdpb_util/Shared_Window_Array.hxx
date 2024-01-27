@@ -1,8 +1,9 @@
 #pragma once
 
+#include "assert.hxx"
+
 #include <El.hpp>
 #include <boost/noncopyable.hpp>
-#include <cassert>
 
 template <class T> class Shared_Window_Array : boost::noncopyable
 {
@@ -36,8 +37,8 @@ public:
                             shared_memory_comm.comm, &data, &win);
     // Get local pointer to data allocated in rank=0
     MPI_Win_shared_query(win, 0, &local_window_size, &disp_unit, &data);
-    assert(local_window_size == size * sizeof(T));
-    assert(disp_unit == sizeof(T));
+    ASSERT(local_window_size == size * sizeof(T));
+    ASSERT(disp_unit == sizeof(T));
     Fence();
   }
 
