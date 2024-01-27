@@ -20,7 +20,7 @@ El::BigFloat El_Pow(const El::BigFloat &a, int p)
     return a;
   if(p == 0)
     return 1;
-  throw std::runtime_error(std::string("El_Pow failed: negative p"));
+  RUNTIME_ERROR("El_Pow failed: negative p=", p);
 }
 
 El::BigFloat CubicApprox_Optimal_x_SqrtRadicand(

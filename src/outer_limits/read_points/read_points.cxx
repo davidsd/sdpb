@@ -23,7 +23,6 @@ void read_points(const fs::path &input_path,
     }
   else
     {
-      throw std::runtime_error("Unknown extension for file: "
-                               + input_path.string());
+      RUNTIME_ERROR("Unknown extension for file: ", input_path);
     }
 }

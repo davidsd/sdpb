@@ -333,9 +333,8 @@ void read_sdp_grid(const Dynamical_Solver_Parameters &dynamical_parameters,
 
           //std::cout << "rank=" << El::mpi::Rank() << " after approx_obj \n" << std::flush;
 
-          if(directions.size() < 2)
-            throw std::invalid_argument(
-              "A list of perturbed sdp files are required");
+          ASSERT(directions.size() >= 2,
+                 "A list of perturbed sdp files are required");
           std::string dir_str = directions.end()[-2];
           int dir_index1 = std::stoi(directions.end()[-1]), dir_index2;
           if(directions.size() >= 3 && directions.end()[-3] == "sum")
@@ -392,14 +391,14 @@ void read_sdp_grid(const Dynamical_Solver_Parameters &dynamical_parameters,
               //compute_delta_lag(d_sdp,*this);
             }
           else
-            throw std::invalid_argument(
-              "A list of perturbed sdp files are required");
+            THROW(std::invalid_argument,
+                  "A list of perturbed sdp files are required");
         }
     }
   else
     {
-      throw std::invalid_argument(
-        "A list of perturbed sdp files are required");
+      THROW(std::invalid_argument,
+            "A list of perturbed sdp files are required");
     }
 
   grad_withlog = eplus;
