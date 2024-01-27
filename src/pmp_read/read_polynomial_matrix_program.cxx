@@ -175,8 +175,8 @@ read_polynomial_matrix_program(const Environment &env,
       }
 
     num_matrices
-      = std::reduce(num_matrices_per_file.begin(), num_matrices_per_file.end(),
-                    static_cast<size_t>(0));
+      = std::accumulate(num_matrices_per_file.begin(),
+                        num_matrices_per_file.end(), static_cast<size_t>(0));
   }
 
   // Get objective, normalization and polynomial vector matrices
