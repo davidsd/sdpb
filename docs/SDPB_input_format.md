@@ -4,13 +4,17 @@
 If you want to modify these files or generate your own input files
 with a separate tool, this documents the format you will need to follow.
 
-`pmp2sdp` generates a main zip file containing multiple
-JSON/binary files. It does not enable compression, because that can be quite
-slow.  Putting everything into a single file makes it easier to
-manage.  Also, the zip format has a built-in checksum to detect
-corruption.
+`pmp2sdp` generates a directory containing multiple
+JSON/binary files.
+It may also generate zip archive instead of a directory, if you run it with option `--zip true`. This can be useful,
+e.g. to prevent `running out of inodes` error on some filesystems, when SDP contains large number of blocks. Also, the
+zip format has a built-in checksum to detect corruption. Note that `pmp2sdp` does not enable compression, because that
+can be quite slow.
 
-Inside the zip file, `SDPB` expects to find `control.json`,
+`SDPB` can read SDP from plain directory or in any archive format supported
+by [libarchive](https://github.com/libarchive/libarchive/wiki/LibarchiveFormats), including zip, tar, tar.gz, 7z.
+
+Inside the SDP directory, `SDPB` expects to find `control.json`,
 `objectives.json`, and two files for every block: `block_info_0.json`, `block_data_0.bin` (or `block_data_0.json`),
 `block_info_1.json`, `block_data_2.bin`, ...
 
@@ -29,11 +33,6 @@ Block data can be stored either in a human-readable JSON format, or in a more ef
 uses [Boost.Serialization](http://boost.org/libs/serialization) library,
 see [write_block_data.cxx](../src/pmp2sdp/write_block_data.cxx) for details).
 
-`SDPB` can also read the input if you pack these files into different
-archive formats.  It is limited by the support for
-[libarchive](https://github.com/libarchive/libarchive/wiki/LibarchiveFormats),
-but it includes zip, tar, tar.gz, 7z.  If you like, you can also leave
-everything in a plain old directory.
 
 The JSON schema for these input files are in
 [sdp_control_schema.json](json_schema/sdp_control_schema.json),
@@ -42,7 +41,7 @@ The JSON schema for these input files are in
 [sdp_block_data_schema.json](json_schema/sdp_block_data_schema.json). Running `SDPB` on the
 test example
 
-    pmp2sdp --precision 1024 -i test/data/pmp2sdp/xml/pmp.xml -o test/out/pmp2sdp/sdp.zip
+    pmp2sdp --precision 1024 -i test/data/pmp2sdp/xml/pmp.xml -o test/out/pmp2sdp/sdp
     
 will generate a simple example you can look at.
 

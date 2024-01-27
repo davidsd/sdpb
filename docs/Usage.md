@@ -154,9 +154,9 @@ state.
 
 A full example of the whole sequence is
 
-    mpirun -n 4 build/sdpb --precision=1024 -s test/data/sdp.zip -o test/out/approx_objective --writeSolution=x,y,X,Y
-    mpirun -n 4 build/approx_objective --precision=1024 --sdp test/data/sdp.zip --writeSolverState
-    mpirun -n 4 build/approx_objective --precision=1024 --sdp test/data/sdp.zip --newSdp=test/data/sdp2.zip
+    mpirun -n 4 build/sdpb --precision=1024 -s test/data/sdp -o test/out/approx_objective --writeSolution=x,y,X,Y
+    mpirun -n 4 build/approx_objective --precision=1024 --sdp test/data/sdp --writeSolverState
+    mpirun -n 4 build/approx_objective --precision=1024 --sdp test/data/sdp --newSdp=test/data/sdp2
 
 The output is a JSON list with each element including the location of
 the new SDP, the approximate objective, and the first and second order

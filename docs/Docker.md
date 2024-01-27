@@ -65,7 +65,7 @@ commands (see [Usage.md](Usage.md)).  The directory containing the
 input file is mounted as `/usr/local/share/sdpb`. So we first run `pmp2sdp` to
 convert from xml
 
-    mpirun --allow-run-as-root -n 4 pmp2sdp --precision 1024 -i /usr/local/share/sdpb/input.xml -o /usr/local/share/sdpb/sdp.zip
+    mpirun --allow-run-as-root -n 4 pmp2sdp --precision 1024 -i /usr/local/share/sdpb/input.xml -o /usr/local/share/sdpb/sdp
     
 `mpirun` runs as root inside the docker container.  Running `mpirun` as
 root is normally dangerous, but it is safe to do so inside the
@@ -74,19 +74,19 @@ container. To allow `mpirun` to run as root, we add the option
 can change that number to match your own machine.  Putting it all
 together on a single line
 
-    docker run -v /my/project/:/usr/local/share/sdpb bootstrapcollaboration/sdpb:master mpirun --allow-run-as-root -n 4 pmp2sdp --precision 1024 -i /usr/local/share/sdpb/input.xml -o /usr/local/share/sdpb/sdp.zip
+    docker run -v /my/project/:/usr/local/share/sdpb bootstrapcollaboration/sdpb:master mpirun --allow-run-as-root -n 4 pmp2sdp --precision 1024 -i /usr/local/share/sdpb/input.xml -o /usr/local/share/sdpb/sdp
 
-Running this command will create `/my/project/sdp.zip`.
+Running this command will create directory `/my/project/sdp`.
 To search for primal-dual solutions
 
-    docker run -v /my/project/:/usr/local/share/sdpb bootstrapcollaboration/sdpb:master mpirun --allow-run-as-root -n 4 sdpb --precision=1024 -s /usr/local/share/sdpb/sdp.zip
+    docker run -v /my/project/:/usr/local/share/sdpb bootstrapcollaboration/sdpb:master mpirun --allow-run-as-root -n 4 sdpb --precision=1024 -s /usr/local/share/sdpb/sdp
 
 The results will be in `/my/project/`.
 
 Note that the newly created files may be owned by root.
 If you cannot remove them outside the container, run `rm` from the container, e.g.:
 
-    docker run -v /my/project/:/usr/local/share/sdpb bootstrapcollaboration/sdpb:master rm /usr/local/share/sdpb/sdp.zip
+    docker run -v /my/project/:/usr/local/share/sdpb bootstrapcollaboration/sdpb:master rm /usr/local/share/sdpb/sdp
 
 # Podman
 
@@ -94,4 +94,4 @@ Instead of Docker, one can also use [Podman](https://podman.io), which is compat
 same syntax (the only difference is the additional `docker.io/` prefix):
 
     podman pull docker.io/bootstrapcollaboration/sdpb:master
-    podman run -v /my/project/:/usr/local/share/sdpb bootstrapcollaboration/sdpb:master mpirun --allow-run-as-root -n 4 pmp2sdp --precision 1024 -i /usr/local/share/sdpb/input.xml -o /usr/local/share/sdpb/sdp.zip
+    podman run -v /my/project/:/usr/local/share/sdpb bootstrapcollaboration/sdpb:master mpirun --allow-run-as-root -n 4 pmp2sdp --precision 1024 -i /usr/local/share/sdpb/input.xml -o /usr/local/share/sdpb/sdp
