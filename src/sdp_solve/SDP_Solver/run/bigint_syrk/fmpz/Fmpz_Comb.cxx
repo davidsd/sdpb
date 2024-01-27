@@ -4,6 +4,8 @@
 
 #include "Fmpz_Comb.hxx"
 
+#include "sdpb_util/assert.hxx"
+
 // TODO explain all parameters!
 namespace
 {
@@ -76,8 +78,8 @@ namespace
     slong n;
     mp_limb_t *primes = _calculate_primes(&n, bits, k);
     // TODO test this case (happens with low precision) and add workaround
-    if(primes == NULL)
-      El::RuntimeError("Failed to calculate primes for bits=", bits, "k=", k);
+    ASSERT(primes != NULL, "Failed to calculate primes for bits=", bits,
+           "k=", k);
 
     auto result = std::vector<mp_limb_t>(primes, primes + n);
     flint_free(primes);

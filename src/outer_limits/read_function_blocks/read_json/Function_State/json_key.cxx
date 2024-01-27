@@ -4,27 +4,23 @@ void Function_State::json_key(const std::string &key)
 {
   if(parsing_max_delta)
     {
-      throw std::runtime_error("Invalid input file.  Unexpected key '" + key
-                               + "' inside '" + name + "."
-                               + max_delta_state.name + "'.");
+      RUNTIME_ERROR("Invalid input file. Unexpected key '", key, "' inside '",
+                    name, "." + max_delta_state.name, "'.");
     }
   else if(parsing_epsilon_value)
     {
-      throw std::runtime_error("Invalid input file.  Unexpected key '" + key
-                               + "' inside '" + name + "."
-                               + epsilon_value_state.name + "'.");
+      RUNTIME_ERROR("Invalid input file. Unexpected key '", key, "' inside '",
+                    name, "." + epsilon_value_state.name, "'.");
     }
   else if(parsing_infinity_value)
     {
-      throw std::runtime_error("Invalid input file.  Unexpected key '" + key
-                               + "' inside '" + name + "."
-                               + infinity_value_state.name + "'.");
+      RUNTIME_ERROR("Invalid input file. Unexpected key '", key, "' inside '",
+                    name, "." + infinity_value_state.name, "'.");
     }
   else if(parsing_chebyshev_values)
     {
-      throw std::runtime_error("Invalid input file.  Unexpected key '" + key
-                               + "' inside '" + name + "."
-                               + chebyshev_values_state.name + "'.");
+      RUNTIME_ERROR("Invalid input file. Unexpected key '", key, "' inside '",
+                    name, "." + chebyshev_values_state.name, "'.");
     }
   else if(key == max_delta_state.name)
     {
@@ -44,7 +40,7 @@ void Function_State::json_key(const std::string &key)
     }
   else
     {
-      throw std::runtime_error("Invalid input file.  Unexpected key '" + key
-                               + "' inside '" + name + "'");
+      RUNTIME_ERROR("Invalid input file. Unexpected key '", key, "' inside '",
+                    name, "'");
     }
 }

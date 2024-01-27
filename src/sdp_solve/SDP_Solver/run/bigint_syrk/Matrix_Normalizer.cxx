@@ -1,5 +1,6 @@
-#include <cassert>
 #include "Matrix_Normalizer.hxx"
+
+#include "sdpb_util/assert.hxx"
 
 // Helper functions providing common interface for El::Matrix<T> and
 // El::DistMatrix<T>
@@ -77,7 +78,7 @@ namespace
     if(local_norms_squared.size() != matrix.Width())
       El::Output("local_norms_squared.size() != matrix.Width(): ",
                  local_norms_squared.size(), " ", matrix.Width());
-    assert(local_norms_squared.size() == matrix.Width());
+    ASSERT(local_norms_squared.size() == matrix.Width());
     for(int iLoc = 0; iLoc < local_height(matrix); ++iLoc)
       for(int jLoc = 0; jLoc < local_width(matrix); ++jLoc)
         {
@@ -172,7 +173,7 @@ template Matrix_Normalizer::Matrix_Normalizer(
 template <class TMatrix>
 void Matrix_Normalizer::normalize_and_shift_P(TMatrix &P_block)
 {
-  assert(P_block.Width() == column_norms.size());
+  ASSERT(P_block.Width() == column_norms.size());
   El::BigFloat normalized_value;
   for(int jLoc = 0; jLoc < local_width(P_block); ++jLoc)
     {
@@ -208,7 +209,7 @@ template void Matrix_Normalizer::normalize_and_shift_P_blocks(
 
 template <class TMatrix> void Matrix_Normalizer::restore_P(TMatrix &P_block)
 {
-  assert(P_block.Width() == column_norms.size());
+  ASSERT(P_block.Width() == column_norms.size());
   El::BigFloat value;
   for(int jLoc = 0; jLoc < local_width(P_block); ++jLoc)
     {
@@ -243,8 +244,8 @@ template void Matrix_Normalizer::restore_P_blocks(
 template <class TMatrix>
 void Matrix_Normalizer::restore_Q(El::UpperOrLower uplo, TMatrix &Q_matrix)
 {
-  assert(Q_matrix.Height() == column_norms.size());
-  assert(Q_matrix.Width() == column_norms.size());
+  ASSERT(Q_matrix.Height() == column_norms.size());
+  ASSERT(Q_matrix.Width() == column_norms.size());
   El::BigFloat restored_value;
   for(int iLoc = 0; iLoc < local_height(Q_matrix); ++iLoc)
     for(int jLoc = 0; jLoc < local_width(Q_matrix); ++jLoc)

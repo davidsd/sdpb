@@ -6,6 +6,7 @@
 #include "BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "blas_jobs/Blas_Job_Schedule.hxx"
 #include "fmpz/fmpz_mul_blas_util.hxx"
+#include "sdpb_util/assert.hxx"
 
 // code adopted from flint mul_blas.c
 namespace
@@ -37,7 +38,7 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
                                             comb.num_primes, block_width,
                                             debug))
 {
-  assert(block_index_local_to_shmem.size()
+  ASSERT(block_index_local_to_shmem.size()
          == block_index_local_to_global.size());
 
   // Disable BLAS threading explicitly, each rank should work single-threaded
@@ -67,7 +68,7 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
 
       // P_I = 0
       El::View(submatrix, input_matrix, all_rows, job.I);
-      assert(submatrix.LockedBuffer()
+      ASSERT(submatrix.LockedBuffer()
              == input_matrix.LockedBuffer(0, job.I.beg));
       El::Zero(submatrix);
 
@@ -75,14 +76,14 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       if(job.I.beg != job.J.beg)
         {
           El::View(submatrix, input_matrix, all_rows, job.J);
-          assert(submatrix.LockedBuffer()
+          ASSERT(submatrix.LockedBuffer()
                  == input_matrix.LockedBuffer(0, job.J.beg));
           El::Zero(submatrix);
         }
 
       // Q_IJ = 0
       El::View(submatrix, output_matrix, job.I, job.J);
-      assert(submatrix.LockedBuffer()
+      ASSERT(submatrix.LockedBuffer()
              == output_matrix.LockedBuffer(job.I.beg, job.J.beg));
       El::Zero(submatrix);
     }

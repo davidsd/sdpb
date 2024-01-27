@@ -1,4 +1,5 @@
 #include "Block_Parser.hxx"
+#include "sdpb_util/assert.hxx"
 
 bool Block_Parser::Key(const Ch *str, rapidjson::SizeType length, bool)
 {
@@ -7,25 +8,23 @@ bool Block_Parser::Key(const Ch *str, rapidjson::SizeType length, bool)
     {
       if(parsing_bilinear_bases_even)
         {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside '"
-                                   + bilinear_bases_even_state.name + "'.");
+          RUNTIME_ERROR("Invalid input file. Found the key '", key,
+                        "' inside '", bilinear_bases_even_state.name, "'.");
         }
       else if(parsing_bilinear_bases_odd)
         {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside '"
-                                   + bilinear_bases_odd_state.name + "'.");
+          RUNTIME_ERROR("Invalid input file. Found the key '", key,
+                        "' inside '", bilinear_bases_odd_state.name, "'.");
         }
       else if(parsing_c)
         {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside '" + c_state.name + "'.");
+          RUNTIME_ERROR("Invalid input file. Found the key '", key,
+                        "' inside '", c_state.name, "'.");
         }
       else if(parsing_B)
         {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside '" + B_state.name + "'.");
+          RUNTIME_ERROR("Invalid input file. Found the key '", key,
+                        "' inside '", B_state.name, "'.");
         }
       if(key == bilinear_bases_even_state.name)
         {
@@ -45,14 +44,13 @@ bool Block_Parser::Key(const Ch *str, rapidjson::SizeType length, bool)
         }
       else
         {
-          throw std::runtime_error("Invalid input file.  Found the key '" + key
-                                   + "' inside the main object.");
+          RUNTIME_ERROR("Invalid input file. Found the key '", key,
+                        "' inside the main object.");
         }
     }
   else
     {
-      throw std::runtime_error("Found a key outside of the main object: "
-                               + key);
+      RUNTIME_ERROR("Found a key outside of the main object: ", key);
     }
   return true;
 }

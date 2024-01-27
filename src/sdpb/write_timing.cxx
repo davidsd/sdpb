@@ -21,8 +21,8 @@ void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info,
           El::Output();
         }
 
-      assert(block_timings_ms.Height() == block_info.dimensions.size());
-      assert(block_timings_ms.Width() == 1);
+      ASSERT(block_timings_ms.Height() == block_info.dimensions.size());
+      ASSERT(block_timings_ms.Width() == 1);
 
       fs::create_directories(checkpoint_out);
       fs::path block_timings_path(checkpoint_out / "block_timings");
@@ -30,17 +30,12 @@ void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info,
       for(int64_t row = 0; row < block_timings_ms.Height(); ++row)
         {
           const auto block_time = block_timings_ms(row, 0);
-          if(block_time < 0)
-            {
-              El::RuntimeError("block = ", row, ": block_time = ", block_time,
-                               "ms is negative, probably overflow occurred!");
-            }
+          ASSERT(block_time >= 0, "block = ", row,
+                 ": block_time = ", block_time,
+                 "ms is negative, probably overflow occurred!");
           block_timings_file << block_time << "\n";
         }
-      if(!block_timings_file.good())
-        {
-          throw std::runtime_error("Error when writing to: "
-                                   + block_timings_path.string());
-        }
+      ASSERT(block_timings_file.good(),
+             "Error when writing to: ", block_timings_path);
     }
 }

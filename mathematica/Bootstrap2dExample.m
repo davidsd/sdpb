@@ -1,6 +1,6 @@
 (* ::Package:: *)
 
-(*Write here the path of the folder containing sdpb and pvm2sdp*)
+(*Write here the path of the folder containing sdpb and pmp2sdp*)
 executablesPath = "../build";
 
 
@@ -126,9 +126,9 @@ SolveBootstrapSDP[sdp_] := Module[
     (* Most of the defaults are way over the top for this size
     problem, but we'll use them because it's easy. If you want speed,
     try fiddling with some of the parameters. *)
-    WriteString["stdout","Converting xml to pvm format\n"];
+    WriteString["stdout","Converting xml to SDP format\n"];
     Run[StringRiffle[{
-        FileNameJoin[{executablesPath,"pvm2sdp"}],
+        FileNameJoin[{executablesPath,"pmp2sdp"}],
         ToString[prec], sdpFile, sdpFolder
     }," "]];
     WriteString["stdout","Running sdpb\n"];

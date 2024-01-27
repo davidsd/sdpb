@@ -3,6 +3,7 @@
 #include "Fmpz_Comb.hxx"
 #include "fmpz_BigFloat_convert.hxx"
 #include "sdpb_util/Shared_Window_Array.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <El.hpp>
 #include <flint/nmod.h>
@@ -98,7 +99,7 @@ fmpz_multi_mod_uint32_stride(double *out, slong stride, const fmpz_t &input,
             }
           else if(lu[i].mod1.n != 0)
             {
-              assert(l + 2 <= C->num_primes);
+              ASSERT(l + 2 <= C->num_primes);
               out[l * stride] = _reduce_double(t, lu[i].mod0);
               l++;
               out[l * stride] = _reduce_double(t, lu[i].mod1);
@@ -106,7 +107,7 @@ fmpz_multi_mod_uint32_stride(double *out, slong stride, const fmpz_t &input,
             }
           else
             {
-              assert(l + 1 <= C->num_primes);
+              ASSERT(l + 1 <= C->num_primes);
               out[l * stride]
                 = uint32_t_residue_to_double((uint32_t)(t), comb.primes.at(l));
               l++;
@@ -114,7 +115,7 @@ fmpz_multi_mod_uint32_stride(double *out, slong stride, const fmpz_t &input,
         }
     }
 
-  assert(l == C->num_primes);
+  ASSERT(l == C->num_primes);
 
   if(klen == 1)
     A[0] = *ttt;

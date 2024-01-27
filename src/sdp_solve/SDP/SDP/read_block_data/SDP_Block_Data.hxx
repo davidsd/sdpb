@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sdp_convert/Block_File_Format.hxx"
+#include "pmp2sdp/Block_File_Format.hxx"
 #include "sdp_solve/Block_Info.hxx"
 
 #include <El.hpp>

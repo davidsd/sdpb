@@ -3,7 +3,8 @@
 #include <sstream>
 
 #include "unit_tests/util/util.hxx"
-#include "sdp_convert/Dual_Constraint_Group.hxx"
+#include "pmp2sdp/Dual_Constraint_Group.hxx"
+#include "pmp2sdp/Block_File_Format.hxx"
 
 using Test_Util::random_bigfloat;
 using Test_Util::random_matrix;

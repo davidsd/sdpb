@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Residue_Matrices_Window.hxx"
+#include "sdpb_util/assert.hxx"
 
 // Same as Residue_Matrices_Window<T>,
 // but each (tall) residue matrix (i.e. residues[prime_index])
@@ -49,7 +50,7 @@ public:
           }
       }
     if(num_primes > 0 && num_blocks > 0)
-      assert(block_residues[0][0].Buffer() == this->residues[0].Buffer());
+      ASSERT(block_residues[0][0].Buffer() == this->residues[0].Buffer());
   }
 
 private:

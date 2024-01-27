@@ -2,6 +2,7 @@
 #include "fmpz/Fmpz_BigInt.hxx"
 #include "reduce_scatter_DistMatrix.hxx"
 #include "restore_matrix_from_residues.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <cblas.h>
 
@@ -34,9 +35,9 @@ namespace
     // A: KxN matrix
     // A: KxM matrix
     // output = input^T * input: NxM matrix
-    assert(input_A.Height() == input_B.Height());
-    assert(output.Height() == input_A.Width());
-    assert(output.Width() == input_B.Width());
+    ASSERT(input_A.Height() == input_B.Height());
+    ASSERT(output.Height() == input_A.Width());
+    ASSERT(output.Width() == input_B.Width());
 
     CBLAS_LAYOUT layout = CblasColMajor;
     CBLAS_TRANSPOSE TransA = CblasTrans;
@@ -63,8 +64,8 @@ namespace
   {
     // input: KxN matrix
     // output = input^T * input: NxN matrix
-    assert(input.Width() == output.Width());
-    assert(output.Height() == output.Width());
+    ASSERT(input.Width() == output.Width());
+    ASSERT(output.Height() == output.Width());
 
     CBLAS_LAYOUT layout = CblasColMajor;
     CBLAS_UPLO Uplo
@@ -136,7 +137,7 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
   Scoped_Timer timer(timers, "bigint_syrk_blas");
 
   // TODO: only UPPER is supported now.
-  assert(uplo == El::UPPER);
+  ASSERT(uplo == El::UPPER);
 
   if(El::mpi::Congruent(shared_memory_comm, bigint_output.DistComm()))
     {
@@ -145,7 +146,7 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
     }
   else
     {
-      assert(El::mpi::Size(shared_memory_comm)
+      ASSERT(El::mpi::Size(shared_memory_comm)
              < El::mpi::Size(bigint_output.DistComm()));
 
       const El::Grid grid(shared_memory_comm);
@@ -170,26 +171,22 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem(
   Scoped_Timer timer(timers, "shmem");
   size_t width = bigint_output_shmem.Width();
 
-  // TODO replace asserts with El::RuntimeError?
-  if(bigint_input_matrix_blocks.size() != block_index_local_to_shmem.size())
-    {
-      El::RuntimeError("bigint_input_matrix_blocks.size()=",
-                       bigint_input_matrix_blocks.size(),
-                       ", block_index_local_to_shmem.size()=",
-                       block_index_local_to_shmem.size());
-    }
-  assert(bigint_input_matrix_blocks.size()
+  ASSERT(
+    bigint_input_matrix_blocks.size() == block_index_local_to_shmem.size(),
+    "bigint_input_matrix_blocks.size()=", bigint_input_matrix_blocks.size(),
+    ", block_index_local_to_shmem.size()=", block_index_local_to_shmem.size());
+  ASSERT(bigint_input_matrix_blocks.size()
          == block_index_local_to_shmem.size());
 
-  assert(bigint_output_shmem.Height() == bigint_output_shmem.Width());
-  assert(bigint_output_shmem.Height() == width);
-  assert(input_block_residues_window.width == width);
+  ASSERT(bigint_output_shmem.Height() == bigint_output_shmem.Width());
+  ASSERT(bigint_output_shmem.Height() == width);
+  ASSERT(input_block_residues_window.width == width);
 
-  assert(El::mpi::Congruent(shared_memory_comm,
+  ASSERT(El::mpi::Congruent(shared_memory_comm,
                             input_block_residues_window.Comm()));
-  assert(
+  ASSERT(
     El::mpi::Congruent(shared_memory_comm, output_residues_window.Comm()));
-  assert(
+  ASSERT(
     El::mpi::Congruent(shared_memory_comm, bigint_output_shmem.DistComm()));
 
   // Compute residues

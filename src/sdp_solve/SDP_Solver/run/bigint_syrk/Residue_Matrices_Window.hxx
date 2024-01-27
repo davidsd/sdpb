@@ -1,9 +1,10 @@
 #pragma once
 
 #include "sdpb_util/Shared_Window_Array.hxx"
+#include "sdpb_util/assert.hxx"
+
 #include <El.hpp>
 #include <boost/noncopyable.hpp>
-#include <cassert>
 #include <vector>
 
 // Vector of matrices stored in a contiguous Shared_Window_Array
@@ -30,9 +31,9 @@ public:
         prime_stride(height * width),
         window(shared_memory_comm, num_primes * prime_stride, debug)
   {
-    assert(num_primes > 0);
-    assert(height > 0);
-    assert(width > 0);
+    ASSERT(num_primes > 0);
+    ASSERT(height > 0);
+    ASSERT(width > 0);
     residues.resize(num_primes);
     for(size_t prime_index = 0; prime_index < num_primes; ++prime_index)
       {

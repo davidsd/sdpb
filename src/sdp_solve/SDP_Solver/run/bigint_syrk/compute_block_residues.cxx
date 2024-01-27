@@ -1,6 +1,7 @@
 #include "BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "fmpz/Fmpz_BigInt.hxx"
 #include "fmpz/fmpz_mul_blas_util.hxx"
+#include "sdpb_util/assert.hxx"
 
 // compute residues and put them to shared window
 // NB: input blocks should be BigInt matrix (normalized matrix, multiplied by 2^N)
@@ -73,7 +74,7 @@ namespace
             }
           data_offset += block.LocalHeight();
         });
-      assert(data_offset == total_height);
+      ASSERT(data_offset == total_height);
     }
 
     {
@@ -193,7 +194,7 @@ void BigInt_Shared_Memory_Syrk_Context::compute_block_residues(
     Scoped_Timer block_timing_timer(timers, "block_timing");
     auto total_time_ms = compute_and_write_timer.elapsed_milliseconds();
 
-    assert(bigint_input_matrix_blocks.size()
+    ASSERT(bigint_input_matrix_blocks.size()
            == block_index_local_to_global.size());
     constexpr auto get_size
       = [](auto &block) { return block.LocalHeight() * block.LocalWidth(); };

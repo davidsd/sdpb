@@ -1,6 +1,7 @@
 #include <cassert>
 #include "create_blas_jobs_schedule.hxx"
 #include "Blas_Job_Schedule.hxx"
+#include "sdpb_util/assert.hxx"
 
 // Jobs for Q = P^T P modulo each prime
 std::vector<Blas_Job>
@@ -51,7 +52,7 @@ create_blas_jobs_split_remaining_primes(size_t num_ranks, size_t num_primes,
                                         El::Int output_matrix_height,
                                         size_t split_factor)
 {
-  assert(split_factor <= (size_t)output_matrix_height);
+  ASSERT(split_factor <= (size_t)output_matrix_height);
 
   // Distribute uniformly as many primes as we can, without splitting Q
   auto num_primes_no_split = num_primes - (num_primes % num_ranks);

@@ -9,7 +9,8 @@ TEST_CASE("sdpb")
   INFO("maximize (-y) s.t. (1 + x^4 + y * (x^4 / 12 + x^2)) >= 0)");
   auto data_dir = Test_Config::test_data_dir / "sdpb";
   // default sdp input file
-  auto sdp_path = Test_Config::test_data_dir / "sdp.zip";
+  auto sdp_path
+    = Test_Config::test_data_dir / "pmp2sdp" / "xml" / "sdp_orig.zip";
   CAPTURE(sdp_path);
 
   int num_procs = 2;
@@ -72,7 +73,8 @@ TEST_CASE("sdpb")
       create_readonly(runner.output_dir / "ck.profiling/profiling.0");
       run_sdpb_set_out_ck_dirs(runner, args, num_procs, 1,
                                "Error when writing to");
-      REQUIRE(fs::file_size(runner.output_dir / "ck.profiling/profiling.1") > 0);
+      REQUIRE(fs::file_size(runner.output_dir / "ck.profiling/profiling.1")
+              > 0);
     }
 
     for(std::string name :

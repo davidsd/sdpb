@@ -1,11 +1,11 @@
 #include "Timer.hxx"
 
-#include <cassert>
+#include "sdpb_util/assert.hxx"
 
 Timer::Timer() : start_time(now()) {}
 void Timer::stop()
 {
-  assert(is_running());
+  ASSERT(is_running());
   stop_time = now();
   running = false;
 }

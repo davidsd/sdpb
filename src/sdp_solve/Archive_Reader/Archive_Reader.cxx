@@ -10,8 +10,7 @@ Archive_Reader::Archive_Reader(const std::filesystem::path &filename)
      || archive_read_open_filename(ptr.get(), filename.c_str(), 10240)
           != ARCHIVE_OK)
     {
-      throw std::runtime_error("Error when opening: '" + filename.string()
-                               + "'");
+      RUNTIME_ERROR("Error when opening ", filename);
     }
   setg(buffer.data(), buffer.data(), buffer.data());
 }

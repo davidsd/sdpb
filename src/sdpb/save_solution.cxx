@@ -21,11 +21,7 @@ namespace
     if(block.DistRank() == block.Root())
       {
         stream << "\n";
-        if(!stream.good())
-          {
-            throw std::runtime_error("Error when writing to: "
-                                     + outfile.string());
-          }
+        ASSERT(stream.good(), "Error when writing to: ", outfile);
       }
   }
 }
@@ -60,11 +56,7 @@ void save_solution(const SDP_Solver &solver,
                  << "primalError     = " << solver.primal_error() << ";\n"
                  << "dualError       = " << solver.dual_error << ";\n"
                  << "Solver runtime  = " << solver_runtime << ";\n";
-      if(!out_stream.good())
-        {
-          throw std::runtime_error("Error when writing to: "
-                                   + output_path.string());
-        }
+      ASSERT(out_stream.good(), "Error when writing to: ", output_path);
     }
   // y is duplicated among cores, so only need to print out copy on
   // the root node.
@@ -83,11 +75,7 @@ void save_solution(const SDP_Solver &solver,
       if(El::mpi::Rank() == 0)
         {
           y_stream << "\n";
-          if(!y_stream.good())
-            {
-              throw std::runtime_error("Error when writing to: "
-                                       + y_path.string());
-            }
+          ASSERT(y_stream.good(), "Error when writing to: ", y_path);
         }
     }
 
