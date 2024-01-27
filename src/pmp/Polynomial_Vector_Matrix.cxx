@@ -70,9 +70,15 @@ namespace
   // We use XXX_or_default() functions instead of std::optional::value_or()
   // to prevent unnecessary computation of default value.
 
+  const Boost_Float exp_minus_one =
+#if(BOOST_VERSION >= 106900)
+    boost::math::constants::exp_minus_one<Boost_Float>();
+#else
+    Boost_Float(1) / boost::math::constants::e<Boost_Float>();
+#endif
+
   // Default prefactor is e^-x
-  const Damped_Rational exp_minus_x
-    = {1, boost::math::constants::exp_minus_one<Boost_Float>(), {}};
+  const Damped_Rational exp_minus_x = {1, exp_minus_one, {}};
 
   Damped_Rational
   prefactor_or_default(const std::optional<Damped_Rational> &prefactor_opt)
