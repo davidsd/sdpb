@@ -21,15 +21,9 @@ namespace
   {
     std::vector<El::BigFloat> output;
     output.reserve(input.size());
-
-    std::stringstream ss;
-    set_stream_precision(ss);
-
     for(const auto &x : input)
       {
-        ss.str("");
-        ss << x;
-        output.emplace_back(ss.str());
+        output.push_back(to_BigFloat(x));
       }
 
     return output;
@@ -40,15 +34,9 @@ namespace
   {
     std::vector<Boost_Float> output;
     output.reserve(input.size());
-
-    std::stringstream ss;
-    set_stream_precision(ss);
-
     for(const auto &x : input)
       {
-        ss.str("");
-        ss << x;
-        output.emplace_back(ss.str());
+        output.push_back(to_Boost_Float(x));
       }
 
     return output;

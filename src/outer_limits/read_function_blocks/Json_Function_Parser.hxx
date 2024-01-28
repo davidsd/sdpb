@@ -87,7 +87,7 @@ public:
                              * cos((n * pi * (2 * (N - 1 - k) + 1)) / (2 * N))
                              * chebyshev_values[k] / N;
                   }
-                this->result.chebyshev_coeffs.emplace_back(to_string(coeff));
+                this->result.chebyshev_coeffs.push_back(to_BigFloat(coeff));
               }
           })
   {}
