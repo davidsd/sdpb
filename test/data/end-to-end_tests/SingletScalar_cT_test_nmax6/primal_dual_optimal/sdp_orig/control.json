@@ -1,0 +1,4 @@
+{
+  "num_blocks": 11,
+  "command": "/home/dssimmon/install/bin/sdp2input --precision 768 --input /central/groups/dssimmon/vdommes/hyperion3/data/2023-08/EROFM/Object_KvNvmeYdU2--64lkUnDCfKDX5JavA9qpcm5GZ0JNabc/json/file_list103285-0.nsv --output /central/groups/dssimmon/vdommes/hyperion3/data/2023-08/EROFM/Object_KvNvmeYdU2--64lkUnDCfKDX5JavA9qpcm5GZ0JNabc/sdp"
+}

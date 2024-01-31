@@ -20,7 +20,7 @@ TEST_CASE("pmp2sdp")
     DYNAMIC_SECTION(input_format)
     {
       auto data_dir = Test_Config::test_data_dir / "pmp2sdp" / input_format;
-      auto sdp_orig = data_dir / "sdp_orig.zip";
+      auto sdp_orig = data_dir / "sdp_orig";
 
       for(const std::string &input_filename :
           {"pmp."s + input_format, "file_list.nsv"s})
@@ -80,7 +80,7 @@ TEST_CASE("pmp2sdp")
             REQUIRE(is_regular_file(block_data_0_path));
           }
 
-          auto sdp_orig = data_dir / "sdp_orig.zip";
+          auto sdp_orig = data_dir / "sdp_orig";
 
           Test_Util::REQUIRE_Equal::diff_sdp(sdp_path, sdp_orig, precision,
                                              diff_precision,

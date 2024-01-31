@@ -26,7 +26,7 @@ namespace
     const auto &data_dir = runner.data_dir.parent_path();
     const auto &output_dir = runner.output_dir;
 
-    auto sdp_orig_zip = (data_dir / ("sdp.orig.zip")).string();
+    auto sdp_orig = (data_dir / "sdp_orig").string();
     auto sdp_path = (output_dir / (zip ? "sdp.zip" : "sdp")).string();
 
     // pmp2sdp
@@ -52,7 +52,7 @@ namespace
       // pmp2sdp runs with --precision=<precision>
       // We check test output up to lower precision=<sdp_diff_precision>
       // in order to neglect unimportant rounding errors
-      Test_Util::REQUIRE_Equal::diff_sdp(sdp_path, sdp_orig_zip, precision,
+      Test_Util::REQUIRE_Equal::diff_sdp(sdp_path, sdp_orig, precision,
                                          sdp_diff_precision,
                                          runner.create_nested("sdp.diff"));
     }
