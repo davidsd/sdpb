@@ -77,23 +77,24 @@ namespace
 Output_SDP::Output_SDP(const Polynomial_Matrix_Program &pmp,
                        const std::vector<std::string> &command_arguments,
                        Timers &timers)
-    : num_blocks(pmp.num_matrices), command_arguments(command_arguments)
+    : normalization(pmp.normalization),
+      num_blocks(pmp.num_matrices),
+      command_arguments(command_arguments)
 {
   Scoped_Timer timer(timers, "convert");
 
-  const auto max_index = max_normalization_index(pmp.normalization);
+  const auto max_index = max_normalization_index(normalization);
 
-  objective_const
-    = pmp.objective.at(max_index) / pmp.normalization.at(max_index);
-  // a_{max_index} goes to b_0 = objective_const
+  objective_const = pmp.objective.at(max_index) / normalization.at(max_index);
+  // (a_{max_index} / n_{max_index}) goes to b_0 = objective_const
   // other a_i are translated to b_1..b_N = dual_objective_b
   dual_objective_b.reserve(pmp.objective.size() - 1);
-  for(size_t index = 0; index < pmp.normalization.size(); ++index)
+  for(size_t index = 0; index < normalization.size(); ++index)
     {
       if(index != max_index)
         {
           dual_objective_b.push_back(pmp.objective.at(index)
-                                     - pmp.normalization.at(index)
+                                     - normalization.at(index)
                                          * objective_const);
         }
     }
@@ -101,10 +102,10 @@ Output_SDP::Output_SDP(const Polynomial_Matrix_Program &pmp,
   // If normalization == (1,0,0...0),
   // then all PVM matrices in (2.2) in SDPB Manual are the same as in (3.1),
   // and there is no need to convert them
-  std::vector<El::BigFloat> default_normalization(pmp.normalization.size(),
+  std::vector<El::BigFloat> default_normalization(normalization.size(),
                                                   El::BigFloat(0));
   default_normalization.at(0) = El::BigFloat(1);
-  const bool need_convert_pvm = pmp.normalization != default_normalization;
+  const bool need_convert_pvm = normalization != default_normalization;
 
   Scoped_Timer pvm_timer(timers, "matrices");
 
@@ -115,8 +116,8 @@ Output_SDP::Output_SDP(const Polynomial_Matrix_Program &pmp,
       if(need_convert_pvm)
         {
           dual_constraint_groups.emplace_back(
-            block_index, convert_pvm_using_normalization(
-                           matrix, pmp.normalization, max_index));
+            block_index,
+            convert_pvm_using_normalization(matrix, normalization, max_index));
         }
       else
         {

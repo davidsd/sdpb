@@ -11,11 +11,16 @@
 #include <boost/noncopyable.hpp>
 
 // Data to be written to sdp directory
+// see eq. (2.2) in SDPB Manual
 struct Output_SDP : boost::noncopyable
 {
   // objective_const and dual_objective_b are copied across all processes
+  // b_0
   El::BigFloat objective_const;
+  // b_1..b_N
   std::vector<El::BigFloat> dual_objective_b;
+  // n_0..n_N
+  std::vector<El::BigFloat> normalization;
   // Total number of blocks for all processes
   size_t num_blocks = 0;
   // Each dual constraint group is written to  block_info_XXX.json and block_data_XXX.bin.

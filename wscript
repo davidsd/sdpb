@@ -122,6 +122,7 @@ def build(bld):
                        'src/pmp2sdp/write_block_data.cxx',
                        'src/pmp2sdp/write_block_info_json.cxx',
                        'src/pmp2sdp/write_objectives_json.cxx',
+                       'src/pmp2sdp/write_normalization_json.cxx',
                        'src/pmp2sdp/write_sdp.cxx',
                        'src/pmp2sdp/write_control_json.cxx',
                        'src/pmp2sdp/Archive_Writer/Archive_Writer.cxx',
