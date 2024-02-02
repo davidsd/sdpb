@@ -13,6 +13,7 @@
 #include "sdpb_util/Timers/Timers.hxx"
 
 #include <filesystem>
+#include <optional>
 
 // The class SDP encodes a semidefinite program of the following form
 //
@@ -98,15 +99,23 @@ struct SDP
   // objectiveConst = f
   El::BigFloat objective_const;
 
+  // Vector of length N+1, initialized only on rank=0
+  // Normalization condition n.z = 1 is used to translate
+  // SDP_Solver.y (eq. 2.2 in SDPB Manual) to vector z (eq. 3.1)
+  // Not initialized if there was no normalization in PMP (i.e. in xml format).
+  std::optional<std::vector<El::BigFloat>> normalization;
+
   SDP(const std::filesystem::path &sdp_path, const Block_Info &block_info,
       const El::Grid &grid, Timers &timers);
   SDP(const El::BigFloat &objective_const,
       const std::vector<std::vector<El::BigFloat>> &primal_objective_c_input,
       const std::vector<El::Matrix<El::BigFloat>> &free_var_input,
       const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
-      const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
-      const El::BigFloat &primal_c_scale,
-      const Block_Info &block_info, const El::Grid &grid);
+      const El::DistMatrix<El::BigFloat, El::STAR, El::STAR>
+        &dual_objective_b_star,
+      const std::vector<El::BigFloat> &normalization,
+      const El::BigFloat &primal_c_scale, const Block_Info &block_info,
+      const El::Grid &grid);
 
 private:
   void validate(const Block_Info &block_info) const noexcept(false);

@@ -48,6 +48,7 @@ def build(bld):
                          'src/sdp_solve/Block_Info/read_block_costs.cxx',
                          'src/sdp_solve/Block_Info/allocate_blocks.cxx',
                          'src/sdp_solve/SDP/SDP/SDP.cxx',
+                         'src/sdp_solve/SDP/SDP/read_normalization.cxx',
                          'src/sdp_solve/SDP/SDP/read_objectives.cxx',
                          'src/sdp_solve/SDP/SDP/assign_bilinear_bases_dist.cxx',
                          'src/sdp_solve/SDP/SDP/read_block_data/read_block_data.cxx',
