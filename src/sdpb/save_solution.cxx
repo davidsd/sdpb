@@ -58,24 +58,30 @@ void save_solution(const SDP_Solver &solver,
                  << "Solver runtime  = " << solver_runtime << ";\n";
       ASSERT(out_stream.good(), "Error when writing to: ", output_path);
     }
-  // y is duplicated among cores, so only need to print out copy on
-  // the root node.
-  if(write_solution.vector_y && !solver.y.blocks.empty())
+  if(write_solution.vector_y)
     {
-      const fs::path y_path(out_directory / "y.txt");
-      std::ofstream y_stream;
-      if(El::mpi::Rank() == 0)
+      // y is duplicated among blocks, so only need to print out copy
+      // from the first block of rank 0.
+      const auto &y_dist = solver.y.blocks.at(0);
+      if(y_dist.Root() == 0)
         {
-          y_stream.open(y_path);
-        }
-      El::Print(solver.y.blocks.at(0),
-                std::to_string(solver.y.blocks.at(0).Height()) + " "
-                  + std::to_string(solver.y.blocks.at(0).Width()),
-                "\n", y_stream);
-      if(El::mpi::Rank() == 0)
-        {
-          y_stream << "\n";
-          ASSERT(y_stream.good(), "Error when writing to: ", y_path);
+          // Copy from all ranks owning a block to rank zero
+          El::DistMatrix<El::BigFloat, El::CIRC, El::CIRC> y_circ(y_dist);
+          ASSERT(y_circ.Root() == 0);
+          if(El::mpi::Rank() == 0)
+            {
+              // local matrix
+              const El::Matrix<El::BigFloat> &y = y_circ.Matrix();
+              ASSERT(y.Height() == y_dist.Height(), "y.Height()=", y.Height(),
+                     " y_dist.Height()=", y_dist.Height());
+              ASSERT(y.Width() == 1);
+              const fs::path y_path(out_directory / "y.txt");
+              std::ofstream y_stream(y_path);
+              auto title = El::BuildString(y.Height(), " ", y.Width());
+              El::Print(y, title, "\n", y_stream);
+              y_stream << "\n";
+              ASSERT(y_stream.good(), "Error when writing to: ", y_path);
+            }
         }
     }
 

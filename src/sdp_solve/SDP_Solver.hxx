@@ -31,6 +31,7 @@ public:
   Block_Diagonal_Matrix X;
 
   // a Vector of length N = sdp.dualObjective.size()
+  // Duplicated among all blocks.
   Block_Vector y;
 
   // a Block_Diagonal_Matrix with the same structure as X
