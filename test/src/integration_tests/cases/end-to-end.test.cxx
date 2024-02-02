@@ -155,7 +155,7 @@ TEST_CASE("end-to-end_tests")
           "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
           "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
           "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
-          "--procGranularity 1 --writeSolution x,y";
+          "--procGranularity 1 --writeSolution x,y,z";
       int sdpb_output_diff_precision = 512;
       // This test is slow, we don't want to run it twice
       // json/bin correctness is checked by other tests below,
@@ -180,7 +180,7 @@ TEST_CASE("end-to-end_tests")
           "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
           "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
           "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
-          "--procGranularity 1 --writeSolution y "
+          "--procGranularity 1 --writeSolution y,z "
           "--detectPrimalFeasibleJump --detectDualFeasibleJump";
       int sdpb_output_diff_precision = 610;
 
