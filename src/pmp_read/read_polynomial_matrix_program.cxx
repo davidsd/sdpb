@@ -28,8 +28,10 @@ namespace
         }
 
       const auto node_comm = env.comm_shared_mem;
-      ASSERT(node_comm.Size() * env.num_nodes() == El::mpi::Size(),
-             "Each node should have the same number of processes.");
+      ASSERT_EQUAL(node_comm.Size() * env.num_nodes(), El::mpi::Size(),
+                   DEBUG_STRING(node_comm.Size()),
+                   DEBUG_STRING(env.num_nodes()),
+                   "Each node should have the same number of processes.");
       // Reading file from different nodes may be slower,
       // so we distribute files across nodes and processes
       // in such a way that each file is assigned to a single node.
@@ -39,7 +41,7 @@ namespace
       // In that case user should split input to several files.
       const auto mapping = compute_block_grid_mapping(
         node_comm.Size(), env.num_nodes(), file_costs);
-      ASSERT(mapping.size() == env.num_nodes());
+      ASSERT_EQUAL(mapping.size(), env.num_nodes());
 
       create_mpi_block_mapping_groups(mapping, node_comm, env.node_index(),
                                       mpi_group.value, mpi_comm.value,

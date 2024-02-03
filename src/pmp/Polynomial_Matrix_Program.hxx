@@ -42,22 +42,16 @@ struct Polynomial_Matrix_Program
     // Validate
     ASSERT(this->num_matrices != 0);
     ASSERT(!this->objective.empty());
-    ASSERT(
-      this->objective.size() == this->normalization.size(),
-      "objective.size=", this->objective.size(),
-      "should be equal to normalization.size=", this->normalization.size());
+    ASSERT_EQUAL(this->objective.size(), this->normalization.size());
     ASSERT(this->matrices.size() <= num_matrices,
-           "matrices.size=", this->matrices.size(), " should not exceed",
-           num_matrices);
-    ASSERT(this->matrices.size() == this->matrix_index_local_to_global.size(),
-           "matrices.size=", this->matrices.size(),
-           " should be equal to matrix_index_local_to_global.size",
-           this->matrix_index_local_to_global.size());
+           DEBUG_STRING(this->matrices.size()), DEBUG_STRING(num_matrices));
+    ASSERT_EQUAL(this->matrices.size(),
+                 this->matrix_index_local_to_global.size());
 
     for(const size_t global_index : this->matrix_index_local_to_global)
       {
-        ASSERT(global_index < num_matrices, "Block index=", global_index,
-               " should be less than num_matrices=", num_matrices);
+        ASSERT(global_index < num_matrices, DEBUG_STRING(global_index),
+               DEBUG_STRING(num_matrices));
       }
     // TODO: we should also check that matrix indices from all ranks
     // are unique and cover [0, num_matrices) range.

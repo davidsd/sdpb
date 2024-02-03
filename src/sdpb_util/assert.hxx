@@ -20,7 +20,22 @@
   do                                                                          \
     {                                                                         \
       if(!(condition))                                                        \
-        /* El::BuildString() is necessary in case of empty __VA_ARGS__ */    \
-        RUNTIME_ERROR("Assertion '", #condition, "' failed: \n    ",          \
+        /* El::BuildString() is necessary in case of empty __VA_ARGS__ */     \
+        RUNTIME_ERROR("Assertion '", #condition, "' failed:\n    ",           \
                       El::BuildString(__VA_ARGS__));                          \
   } while(false)
+
+// Example:
+// int x = 1;
+// auto s = DEBUG_STRING(x+x) // s = "x+x=='2' "
+// Trailing whitespace added for convenience
+// in cases like ASSERT(false, DEBUG_STRING(a), DEBUG_STRING(b))
+#define DEBUG_STRING(expr) El::BuildString(#expr, "='", expr, "' ")
+
+// Example:
+// int x = 1;
+// int y = 2;
+// ASSERT_EQUAL(x,y) // Assertion 'x == y' failed: x='1' x='2'
+#define ASSERT_EQUAL(a, b, ...)                                               \
+  ASSERT(a == b, DEBUG_STRING(a), "\n    ", DEBUG_STRING(b), "\n    ",        \
+         El::BuildString(__VA_ARGS__))

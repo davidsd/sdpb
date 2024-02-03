@@ -157,9 +157,7 @@ namespace
 
   void check_file_size(const fs::path &file_path, const size_t expected_size)
   {
-    const auto size = file_size(file_path);
-    ASSERT(size == expected_size, "File size is ", size, ", expected ",
-           expected_size, ": ", file_path);
+    ASSERT_EQUAL(file_size(file_path), expected_size, DEBUG_STRING(file_path));
   }
 
   void check_sdp_directory(const fs::path &temp_dir, size_t num_blocks,
@@ -183,8 +181,8 @@ namespace
           ++file_count;
         }
       // control.json + objectives.json + (block_info_XXX + block_data_XXX)
-      ASSERT(file_count == 2 + 2 * num_blocks, temp_dir, " contains ",
-             file_count, " files, ", 2 + 2 * num_blocks, " expected");
+      ASSERT_EQUAL(file_count, 2 + 2 * num_blocks, temp_dir,
+                   " contains wrong number of files.");
     }
 
     {
@@ -223,8 +221,7 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
       {
         size_t width = group.constraint_matrix.Width();
         size_t dual_objective_size = sdp.dual_objective_b.size();
-        ASSERT(width == dual_objective_size, "width=", width,
-               " dual_objective_size=", dual_objective_size);
+        ASSERT_EQUAL(width, dual_objective_size);
         {
           Scoped_Timer block_info_timer(
             timers, "block_info_" + std::to_string(group.block_index));
@@ -272,10 +269,10 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
         for(size_t block_index = 0; block_index < block_info_sizes.size();
             ++block_index)
           {
-            ASSERT(block_info_sizes.at(block_index)
-                     == block_info_sizes_max.at(block_index),
-                   "block_", block_index,
-                   " has been processed by more than one rank!");
+            ASSERT_EQUAL(block_info_sizes.at(block_index),
+                         block_info_sizes_max.at(block_index), "block_",
+                         block_index,
+                         " has been processed by more than one rank!");
             ASSERT(block_info_sizes.at(block_index) != 0, "block_info_",
                    block_index, " size is zero");
             ASSERT(block_data_sizes.at(block_index) != 0, "block_data_",

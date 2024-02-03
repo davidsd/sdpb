@@ -15,7 +15,7 @@ El::Matrix<T> to_matrix(const std::vector<std::vector<U>> &elements,
   for(int i = 0; i < result.Height(); ++i)
     {
       const auto &row = elements.at(i);
-      ASSERT(row.size() == result.Width());
+      ASSERT_EQUAL(row.size(), result.Width());
       for(int j = 0; j < result.Width(); ++j)
         {
           result.Set(i, j, convert(row.at(j)));

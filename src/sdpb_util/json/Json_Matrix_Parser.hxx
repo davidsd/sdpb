@@ -39,8 +39,7 @@ public:
   // Parsed single row
   void on_element_parsed(element_type &&value, size_t index) override
   {
-    ASSERT(index == elements.size(), "index=", index, ", expected ",
-           elements.size());
+    ASSERT_EQUAL(index, elements.size());
     elements.push_back(std::move(value));
   }
 
