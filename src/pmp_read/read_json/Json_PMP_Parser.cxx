@@ -59,7 +59,6 @@ void Json_PMP_Parser::clear_result()
   result.normalization.clear();
   result.num_matrices = 0;
   result.parsed_matrices.clear();
-  result.path.clear();
 }
 Json_PMP_Parser::value_type Json_PMP_Parser::get_result()
 {
