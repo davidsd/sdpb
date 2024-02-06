@@ -26,6 +26,7 @@ namespace
   {
     std::vector<Zero> zeros;
     Float error;
+    std::string block_path;
   };
 
   struct Parse_Spectrum_Json : boost::noncopyable
@@ -45,6 +46,7 @@ namespace
       for(const auto &item : document.GetArray())
         {
           Zeros zeros;
+          zeros.block_path = item["block_path"].GetString();
           for(const auto &z : item["zeros"].GetArray())
             {
               Zero zero;
@@ -67,6 +69,7 @@ namespace
   }
   void diff(const Zeros &a, const Zeros &b)
   {
+    DIFF(a.block_path, b.block_path);
     DIFF(a.error, b.error);
     DIFF(a.zeros, b.zeros);
   }

@@ -1,5 +1,6 @@
 [
   {
+    "block_path": "test/data/spectrum/1d/pmp.xml",
     "zeros":
       [
         {

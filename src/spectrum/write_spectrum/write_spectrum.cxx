@@ -21,6 +21,27 @@ namespace
     if(to == from)
       return;
 
+    // block_path
+    {
+      auto block_path = zeros_block.block_path.string();
+      if(rank == from)
+        {
+          const size_t path_size = block_path.size();
+          El::mpi::Send<size_t>(path_size, to, El::mpi::COMM_WORLD);
+          MPI_Send(block_path.data(), path_size, MPI_CHAR, to, 0,
+                   MPI_COMM_WORLD);
+        }
+      if(rank == to)
+        {
+          const auto path_size
+            = El::mpi::Recv<size_t>(from, El::mpi::COMM_WORLD);
+          block_path.resize(path_size);
+          MPI_Recv(block_path.data(), path_size, MPI_CHAR, from, 0,
+                   MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+          zeros_block.block_path = block_path;
+        }
+    }
+
     // zeros
     {
       auto &zeros = zeros_block.zeros;

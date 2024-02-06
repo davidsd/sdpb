@@ -104,6 +104,8 @@ read_polynomial_matrix_program(const Environment &env,
   std::vector<Polynomial_Vector_Matrix> matrices;
   // global index of matrices[i], lies in [0..num_matrices)
   std::vector<size_t> matrix_index_local_to_global;
+  // input path for each of the matrices
+  std::vector<std::filesystem::path> block_paths;
 
   const auto all_files = collect_files_expanding_nsv(input_files);
   const size_t num_files = all_files.size();
@@ -208,6 +210,7 @@ read_polynomial_matrix_program(const Environment &env,
             = matrix_index_offset_per_file.at(file_index) + index_in_file;
           matrices.emplace_back(std::move(matrix));
           matrix_index_local_to_global.push_back(global_index);
+          block_paths.push_back(all_files.at(file_index));
         }
     }
 
@@ -230,5 +233,6 @@ read_polynomial_matrix_program(const Environment &env,
 
   return Polynomial_Matrix_Program(
     std::move(objective), std::move(normalization), num_matrices,
-    std::move(matrices), std::move(matrix_index_local_to_global));
+    std::move(matrices), std::move(matrix_index_local_to_global),
+    std::move(block_paths));
 }
