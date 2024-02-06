@@ -9,7 +9,6 @@
 
 struct PMP_File_Parse_Result
 {
-  std::filesystem::path path;
   // Vector a_0..a_N, see (3.1) in SDPB Manual
   // Empty if no objectives in file
   std::vector<El::BigFloat> objective;

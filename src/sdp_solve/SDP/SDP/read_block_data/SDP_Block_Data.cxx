@@ -1,8 +1,7 @@
 #include "SDP_Block_Data.hxx"
 
-#include "Block_Parser/Block_Parser.hxx"
+#include "Json_Block_Data_Parser.hxx"
 #include "sdp_solve/SDP/SDP/set_bases_blocks.hxx"
-#include "sdpb_util/Number_State.hxx"
 #include "sdpb_util/Vector_State.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/boost_serialization.hxx"
@@ -13,25 +12,6 @@
 
 namespace
 {
-  template <class FloatType>
-  El::Matrix<FloatType>
-  to_matrix(const Vector_State<Vector_State<Number_State<FloatType>>> &input)
-  {
-    const auto &value = input.value;
-    int height = value.size();
-    int width = value.empty() ? 1 : value.at(0).size();
-    El::Matrix<FloatType> result(height, width);
-
-    for(int row = 0; row < height; ++row)
-      {
-        for(int col = 0; col < width; ++col)
-          {
-            result.Set(row, col, value.at(row).at(col));
-          }
-      }
-    return result;
-  }
-
   // Convert vec[N] to Matrix(N,1)
   template <class FloatType>
   El::Matrix<FloatType> to_matrix(const std::vector<FloatType> &input)
@@ -48,12 +28,10 @@ namespace
 }
 
 // TODO move this code closer to Dual_Constraint_Group definition?
-void parse_block_data(std::istream &block_stream, Block_File_Format format,
-                      El::Matrix<El::BigFloat> &constraint_matrix,
-                      std::vector<El::BigFloat> &constraint_constants,
-                      El::Matrix<El::BigFloat> &bilinear_bases_even,
-                      El::Matrix<El::BigFloat> &bilinear_bases_odd)
+Block_Data_Parse_Result
+parse_block_data(std::istream &block_stream, Block_File_Format format)
 {
+  Block_Data_Parse_Result result;
   if(format == bin)
     {
       // NB: this should match pmp2sdp/write_block_data.cxx
@@ -63,27 +41,26 @@ void parse_block_data(std::istream &block_stream, Block_File_Format format,
       ASSERT(precision == El::gmp::Precision(),
              "Read GMP precision: ", precision,
              ", expected: ", El::gmp::Precision());
-      ar >> constraint_matrix;
-      ar >> constraint_constants;
-      ar >> bilinear_bases_even;
-      ar >> bilinear_bases_odd;
+      ar >> result.B;
+      ar >> result.c;
+      ar >> result.bilinear_bases_even;
+      ar >> result.bilinear_bases_odd;
     }
   else if(format == json)
     {
       rapidjson::IStreamWrapper wrapper(block_stream);
-      Block_Parser parser;
+      Json_Block_Data_Parser parser(
+        [&result](Block_Data_Parse_Result &&block_data_parse_result) {
+          result = std::move(block_data_parse_result);
+        });
       rapidjson::Reader reader;
       reader.Parse(wrapper, parser);
-
-      constraint_matrix = to_matrix(parser.B_state);
-      constraint_constants = parser.c_state.value;
-      bilinear_bases_even = to_matrix(parser.bilinear_bases_even_state);
-      bilinear_bases_odd = to_matrix(parser.bilinear_bases_odd_state);
     }
   else
     {
       RUNTIME_ERROR("Unknown Block_File_Format: ", format);
     }
+  return result;
 }
 
 SDP_Block_Data::SDP_Block_Data(std::istream &block_stream,
@@ -92,10 +69,11 @@ SDP_Block_Data::SDP_Block_Data(std::istream &block_stream,
                                const Block_Info &block_info)
     : block_index_local(block_index_local)
 {
-  std::vector<El::BigFloat> constraint_constants;
-  parse_block_data(block_stream, format, constraint_matrix,
-                   constraint_constants, bilinear_bases[0], bilinear_bases[1]);
-  primal_objective_c = to_matrix(constraint_constants);
+  auto parse_result = parse_block_data(block_stream, format);
+  constraint_matrix = std::move(parse_result.B);
+  primal_objective_c = to_matrix(parse_result.c);
+  bilinear_bases[0] = std::move(parse_result.bilinear_bases_even);
+  bilinear_bases[1] = std::move(parse_result.bilinear_bases_odd);
 
   const size_t block_index = block_info.block_indices.at(block_index_local);
 

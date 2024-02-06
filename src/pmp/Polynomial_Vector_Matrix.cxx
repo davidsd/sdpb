@@ -21,15 +21,9 @@ namespace
   {
     std::vector<El::BigFloat> output;
     output.reserve(input.size());
-
-    std::stringstream ss;
-    set_stream_precision(ss);
-
     for(const auto &x : input)
       {
-        ss.str("");
-        ss << x;
-        output.emplace_back(ss.str());
+        output.push_back(to_BigFloat(x));
       }
 
     return output;
@@ -40,15 +34,9 @@ namespace
   {
     std::vector<Boost_Float> output;
     output.reserve(input.size());
-
-    std::stringstream ss;
-    set_stream_precision(ss);
-
     for(const auto &x : input)
       {
-        ss.str("");
-        ss << x;
-        output.emplace_back(ss.str());
+        output.push_back(to_Boost_Float(x));
       }
 
     return output;
@@ -139,18 +127,12 @@ Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
 
 void Polynomial_Vector_Matrix::validate(const int64_t max_degree) const
 {
-  ASSERT(sample_points.size() == max_degree + 1,
-         "sample_points.size()=", sample_points.size(), ", expected ",
-         max_degree + 1);
-  ASSERT(sample_scalings.size() == sample_points.size(),
-         "sample_scalings.size()=", sample_scalings.size(), ", expected ",
-         sample_points.size());
-  ASSERT(bilinear_basis.size() == max_degree / 2 + 1,
-         "bilinear_basis.size()=", bilinear_basis.size(), ", expected ",
-         max_degree / 2 + 1);
+  ASSERT_EQUAL(sample_points.size(), max_degree + 1);
+  ASSERT_EQUAL(sample_scalings.size(), sample_points.size());
+  ASSERT_EQUAL(bilinear_basis.size(), max_degree / 2 + 1,
+               DEBUG_STRING(max_degree));
 
-  ASSERT(polynomials.Height() == polynomials.Width(),
-         "Height()=", polynomials.Height(), " Width()=", polynomials.Width());
+  ASSERT_EQUAL(polynomials.Height(), polynomials.Width());
 
   // TODO check if this is fast enough
   for(int i = 0; i < polynomials.Height(); ++i)
@@ -158,6 +140,7 @@ void Polynomial_Vector_Matrix::validate(const int64_t max_degree) const
       {
         if(i == j)
           continue;
-        ASSERT(polynomials(i, j) == polynomials(j, i), "i=", i, " j=", j);
+        ASSERT_EQUAL(polynomials(i, j), polynomials(j, i), DEBUG_STRING(i),
+                     DEBUG_STRING(j));
       }
 }

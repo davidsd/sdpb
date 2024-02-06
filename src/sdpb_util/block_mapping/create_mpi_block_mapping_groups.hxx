@@ -45,9 +45,9 @@ inline void create_mpi_block_mapping_groups(
   // check in case we messed up something in
   // compute_block_grid_mapping.
   ASSERT(node_rank < node_rank_end,
-         "Some procs were not covered by compute_block_grid_mapping: "
-         "node=",
-         node_index, ", node_rank=", node_rank, ", rank_end=", node_rank_end);
+         "Some procs were not covered by compute_block_grid_mapping: ",
+         DEBUG_STRING(node_index), DEBUG_STRING(node_rank),
+         DEBUG_STRING(node_rank_end));
   ASSERT(node_rank_end <= procs_per_node,
          "Block mapping for node=", node_index, " assumes more than ",
          procs_per_node, "processes per node.");

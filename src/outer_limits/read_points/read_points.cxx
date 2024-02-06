@@ -1,28 +1,39 @@
+#include "Json_Points_Parser.hxx"
 #include "pmp_read/pmp_read.hxx"
+
+#include <rapidjson/istreamwrapper.h>
 
 #include <filesystem>
 
 namespace fs = std::filesystem;
 
-void read_points_json(const fs::path &input_path,
-                      std::vector<std::vector<El::BigFloat>> &points);
-
 void read_points(const fs::path &input_path,
                  std::vector<std::vector<El::BigFloat>> &points)
 {
-  if(input_path.extension() == ".nsv")
+  for(auto &json_file : collect_files_expanding_nsv(input_path))
     {
-      for(auto &filename : read_nsv_file_list(input_path))
+      try
         {
-          read_points(filename, points);
+          ASSERT(json_file.extension() == ".json", json_file);
+
+          std::ifstream ifs(json_file);
+          rapidjson::IStreamWrapper wrapper(ifs);
+
+          Json_Points_Parser parser(
+            [&points](std::vector<std::vector<El::BigFloat>> &&result) {
+              ASSERT(!result.empty());
+              for(auto &block_points : result)
+                {
+                  points.push_back(std::move(block_points));
+                }
+            });
+
+          rapidjson::Reader reader;
+          reader.Parse(wrapper, parser);
         }
-    }
-  else if(input_path.extension() == ".json")
-    {
-      read_points_json(input_path, points);
-    }
-  else
-    {
-      RUNTIME_ERROR("Unknown extension for file: ", input_path);
+      catch(std::exception &e)
+        {
+          RUNTIME_ERROR("Failed to parse ", json_file, "\n", e.what());
+        }
     }
 }

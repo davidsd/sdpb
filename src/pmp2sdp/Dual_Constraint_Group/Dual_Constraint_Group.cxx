@@ -36,7 +36,7 @@ Dual_Constraint_Group::Dual_Constraint_Group(
       num_points(m.sample_points.size())
 {
   const auto &polys = m.polynomials;
-  ASSERT(polys.Height() == polys.Width());
+  ASSERT_EQUAL(polys.Height(), polys.Width());
 
   const size_t degree(num_points - 1),
     numConstraints(num_points * dim * (dim + 1) / 2),

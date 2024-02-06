@@ -66,7 +66,7 @@ public:
   get_bilinear_pairing_block_size(const size_t index,
                                   const size_t parity) const
   {
-    ASSERT(parity == 0 || parity == 1);
+    ASSERT(parity == 0 || parity == 1, DEBUG_STRING(parity));
     return num_points.at(index) * dimensions.at(index);
   }
   [[nodiscard]] std::vector<size_t> bilinear_pairing_block_sizes() const

@@ -60,10 +60,9 @@ void write_functions(const fs::path &output_path,
         {
           chebyshev_zeros[index]
             = 0.5 * max_delta
-              * El::BigFloat(
-                to_string(1
-                          + cos((pi * (num_chebyshev_points - index - 0.5))
-                                / num_chebyshev_points)));
+              * to_BigFloat(1
+                            + cos((pi * (num_chebyshev_points - index - 0.5))
+                                  / num_chebyshev_points));
         }
 
       const size_t num_rows(block->polynomials.Height()),
