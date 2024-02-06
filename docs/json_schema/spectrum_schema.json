@@ -5,6 +5,9 @@
         "type" : "object",
         "properties" :
         {
+          "block_path": {
+            "type": "string"
+          },
             "zeros" :
             {
                 "type" : "array",

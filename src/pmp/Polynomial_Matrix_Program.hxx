@@ -5,6 +5,7 @@
 
 #include <El.hpp>
 
+#include <filesystem>
 #include <vector>
 
 // Result of JSON/Mathematica/xml input parsing.
@@ -26,18 +27,22 @@ struct Polynomial_Matrix_Program
   std::vector<Polynomial_Vector_Matrix> matrices;
   // global index of matrices[i], lies in [0..num_matrices)
   std::vector<size_t> matrix_index_local_to_global;
+  // input path for each of the matrices
+  std::vector<std::filesystem::path> block_paths;
 
   [[nodiscard]]
   Polynomial_Matrix_Program(std::vector<El::BigFloat> objective,
                             std::vector<El::BigFloat> normalization,
                             size_t num_matrices,
                             std::vector<Polynomial_Vector_Matrix> matrices,
-                            std::vector<size_t> matrix_index_local_to_global)
+                            std::vector<size_t> matrix_index_local_to_global,
+                            std::vector<std::filesystem::path> block_paths)
       : objective(std::move(objective)),
         normalization(std::move(normalization)),
         num_matrices(num_matrices),
         matrices(std::move(matrices)),
-        matrix_index_local_to_global(std::move(matrix_index_local_to_global))
+        matrix_index_local_to_global(std::move(matrix_index_local_to_global)),
+        block_paths(std::move(block_paths))
   {
     // Validate
     ASSERT(this->num_matrices != 0);
@@ -47,6 +52,7 @@ struct Polynomial_Matrix_Program
            DEBUG_STRING(this->matrices.size()), DEBUG_STRING(num_matrices));
     ASSERT_EQUAL(this->matrices.size(),
                  this->matrix_index_local_to_global.size());
+    ASSERT_EQUAL(this->matrices.size(), this->block_paths.size());
 
     for(const size_t global_index : this->matrix_index_local_to_global)
       {
