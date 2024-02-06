@@ -26,7 +26,7 @@ namespace
   {
     std::vector<Zero> zeros;
     Float error;
-    std::string block_path;
+    fs::path block_path;
   };
 
   struct Parse_Spectrum_Json : boost::noncopyable

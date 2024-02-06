@@ -80,4 +80,12 @@ namespace Test_Util::REQUIRE_Equal
           DIFF(a.Get(row, col), b.Get(row, col));
         }
   }
+  template <>
+  inline void
+  diff(const std::filesystem::path &a, const std::filesystem::path &b)
+  {
+    CAPTURE(a);
+    CAPTURE(b);
+    DIFF(weakly_canonical(a).string(), weakly_canonical(b).string());
+  }
 }
