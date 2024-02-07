@@ -20,7 +20,8 @@ def configure(conf):
 
 
 def build(bld):
-    default_flags = ['-Wall', '-Wextra', '-Werror=return-type', '-O3']
+    default_flags = ['-Wall', '-Wextra', '-Werror=return-type', '-O3', '-fsanitize=undefined']
+    default_linkflags = ['-fsanitize=undefined']
     default_defines = ['OMPI_SKIP_MPICXX', 'SDPB_VERSION_STRING="' + bld.env.git_version + '"']
     use_packages = ['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'sdpb_util']
     default_includes = ['src', 'external']
@@ -34,6 +35,7 @@ def build(bld):
                       'src/sdpb_util/Timers/Timers.cxx'],
               target='sdpb_util',
               cxxflags=default_flags,
+              linkflags=default_linkflags,
               defines=default_defines,
               includes=default_includes,
               use=['cxx17', 'gmpxx', 'boost', 'elemental'])
@@ -98,6 +100,7 @@ def build(bld):
     bld.stlib(source=sdp_solve_sources,
               target='sdp_solve',
               cxxflags=default_flags,
+              linkflags=default_linkflags,
               defines=default_defines,
               includes=default_includes,
               use=use_packages + ['pmp2sdp_lib'])
@@ -112,6 +115,7 @@ def build(bld):
                         'src/sdpb/save_solution.cxx'],
                 target='sdpb',
                 cxxflags=default_flags,
+                linkflags=default_linkflags,
                 defines=default_defines,
                 includes=default_includes,
                 use=use_packages + ['sdp_solve']
@@ -134,6 +138,7 @@ def build(bld):
     bld.stlib(source=pmp2sdp_sources,
               target='pmp2sdp_lib',
               cxxflags=default_flags,
+              linkflags=default_linkflags,
               defines=default_defines,
               includes=default_includes,
               use=use_packages + ['pmp'])
@@ -142,6 +147,7 @@ def build(bld):
                         'src/pvm2sdp/parse_command_line.cxx'],
                 target='pvm2sdp',
                 cxxflags=default_flags,
+                linkflags=default_linkflags,
                 defines=default_defines,
                 includes=default_includes,
                 use=use_packages + ['pmp_read']
@@ -162,6 +168,7 @@ def build(bld):
     bld.stlib(source=pmp_sources,
               target='pmp',
               cxxflags=default_flags,
+              linkflags=default_linkflags,
               defines=default_defines,
               includes=default_includes,
               use=use_packages)
@@ -188,6 +195,7 @@ def build(bld):
     bld.stlib(source=pmp_read_sources,
               target='pmp_read',
               cxxflags=default_flags,
+              linkflags=default_linkflags,
               defines=default_defines,
               includes=default_includes,
               use=use_packages + ['pmp', 'pmp2sdp_lib'])
@@ -195,6 +203,7 @@ def build(bld):
     bld.program(source=['src/sdp2input/main.cxx'],
                 target='sdp2input',
                 cxxflags=default_flags,
+                linkflags=default_linkflags,
                 defines=default_defines,
                 includes=default_includes,
                 use=use_packages + ['pmp', 'pmp_read', 'pmp2sdp_lib']
@@ -205,6 +214,7 @@ def build(bld):
                         ],
                 target='pmp2sdp',
                 cxxflags=default_flags,
+                linkflags=default_linkflags,
                 defines=default_defines,
                 includes=default_includes,
                 use=use_packages + ['pmp', 'pmp_read', 'pmp2sdp_lib']
@@ -236,6 +246,7 @@ def build(bld):
                         ],
                 target='outer_limits',
                 cxxflags=default_flags,
+                linkflags=default_linkflags,
                 defines=default_defines,
                 includes=default_includes,
                 use=use_packages + ['pmp_read', 'sdp_solve', 'mesh']
@@ -254,6 +265,7 @@ def build(bld):
                         ],
                 target='approx_objective',
                 cxxflags=default_flags,
+                linkflags=default_linkflags,
                 defines=default_defines,
                 includes=default_includes,
                 use=use_packages + ['pmp_read', 'sdp_solve']
@@ -264,6 +276,7 @@ def build(bld):
                         'src/pmp2functions/write_functions.cxx'],
                 target='pmp2functions',
                 cxxflags=default_flags,
+                linkflags=default_linkflags,
                 defines=default_defines,
                 includes=default_includes,
                 use=use_packages + ['pmp_read']
@@ -280,6 +293,7 @@ def build(bld):
                         'src/spectrum/write_spectrum/write_file.cxx'],
                 target='spectrum',
                 cxxflags=default_flags,
+                linkflags=default_linkflags,
                 defines=default_defines,
                 includes=default_includes,
                 use=use_packages + ['pmp_read', 'sdp_solve', 'pmp2sdp_lib', 'mesh']
@@ -301,6 +315,7 @@ def build(bld):
                 target='integration_tests',
                 install_path=None,
                 cxxflags=default_flags,
+                linkflags=default_linkflags,
                 defines=default_defines + ['CATCH_AMALGAMATED_CUSTOM_MAIN'],
                 use=use_packages,
                 includes=default_includes + ['test/src']
@@ -316,6 +331,7 @@ def build(bld):
                         'test/src/unit_tests/cases/shared_window.test.cxx'],
                 target='unit_tests',
                 cxxflags=default_flags,
+                linkflags=default_linkflags,
                 defines=default_defines + ['CATCH_AMALGAMATED_CUSTOM_MAIN'],
                 use=use_packages + ['pmp_read', 'pmp2sdp_lib', 'sdp_solve'],
                 includes=default_includes + ['test/src']
