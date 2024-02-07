@@ -57,6 +57,7 @@ void read_objectives(const fs::path &sdp_path, const El::Grid &grid,
               std::istream stream(&reader);
               read_objectives_stream(grid, stream, objective_const,
                                      dual_objective_b);
+              break;
             }
         }
       if(dual_objective_b.Height() == 0)

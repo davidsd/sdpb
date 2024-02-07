@@ -6,10 +6,22 @@
 namespace fs = std::filesystem;
 
 void write_functions(const fs::path &output_path,
-                     const std::vector<El::BigFloat> &objectives,
-                     const std::vector<El::BigFloat> &normalization,
-                     const std::vector<Polynomial_Vector_Matrix> &matrices)
+                     const Polynomial_Matrix_Program &pmp)
 {
+  const auto &objectives = pmp.objective;
+  const auto &matrices = pmp.matrices;
+  // TODO do not write normalization if missing?
+  std::vector<El::BigFloat> normalization;
+  if(pmp.normalization.has_value())
+    {
+      normalization = pmp.normalization.value();
+    }
+  else
+    {
+      normalization.resize(pmp.objective.size(), 0);
+      normalization.at(0) = 1;
+    }
+
   fs::create_directories(output_path.parent_path());
   std::ofstream output_stream(output_path);
   set_stream_precision(output_stream);

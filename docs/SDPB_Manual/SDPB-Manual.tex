@@ -199,7 +199,9 @@ The \texttt{Mathematica} definition of a PMP is slightly different but trivially
  & n\.z = 1.
 \end{array}
 \ee
-where $W_j^n(x)$ are matrix polynomials.  The normalization condition $n\.z=1$ can be used to solve for one of the components of $z$ in terms of the others.  Calling the remaining components $y\in \R^N$, we arrive at (\ref{eq:PMPconstraint}), where $M_j^n(x)$ are linear combinations of $W^n_j(x)$ and $b_0,b_n$ are linear combinations of the $a_n$.  This difference in convention is for convenient use in the conformal bootstrap.
+where $W_j^n(x)$ are matrix polynomials.  The normalization condition $n\.z=1$ can be used to solve for one of the components of $z$ in terms of the others. 
+For numerical stability, SDPB eliminates the component $z_k$ that has the largest absolute value of $|n_k|$.
+Calling the remaining components $y\in \R^N$, we arrive at (\ref{eq:PMPconstraint}), where $M_j^n(x)$ are linear combinations of $W^n_j(x)$ and $b_0,b_n$ are linear combinations of the $a_n$.  This difference in convention is for convenient use in the conformal bootstrap.
 
 \texttt{SDPB.m} defines a function \texttt{WriteBootstrapSDP[file, sdp]}, where \texttt{file} is the XML file to be written to, and \texttt{sdp} has the following form, where the polynomials $Q^n_{j,rs}(x)$ are the elements of $W_j^n(x)$.
 
@@ -701,8 +703,12 @@ termination, the final primal/dual objective values, the final duality
 gap, the final primal/dual errors, and the total runtime. The vector
 $y$ is saved in \texttt{test/out/sdpb/y.txt}, and the two blocks of the $x$ vector
 are saved in \texttt{test/out/sdpb/x\_0.txt} and
-\texttt{test/out/sdpb/x\_1.txt}.  To write additional files for the matrices $X$ and $Y,$ add the
-option \newline
+\texttt{test/out/sdpb/x\_1.txt}.
+For JSON and Mathematica, you can also restore the vector $z$ from $y$
+using normalization condition $n\.z=1$ \eqref{eq:PMPconstraintMathematica}.
+If you call SDPB with \texttt{--writeSolution="x,y,z"} option, $z$ is saved in \texttt{test/out/sdpb/z.txt}.
+To write additional files for the matrices $X$ and $Y$, add the
+option %\newline
 \texttt{--writeSolution="x,y,X,Y"}.
 
 The value of $y$ gives the solution to our optimization problem.  The function

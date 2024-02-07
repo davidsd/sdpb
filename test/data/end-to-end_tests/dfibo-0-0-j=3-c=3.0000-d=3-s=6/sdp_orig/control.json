@@ -1,0 +1,4 @@
+{
+  "num_blocks": 98,
+  "command": "build/pmp2sdp --input=test/data/end-to-end_tests/dfibo-0-0-j=3-c=3.0000-d=3-s=6/pmp.xml --output=test/out/end-to-end_tests/dfibo-0-0-j=3-c=3.0000-d=3-s=6/json/sdp.zip --outputFormat=json --precision=768 --zip"
+}

@@ -13,7 +13,19 @@ compute_spectrum(const Polynomial_Matrix_Program &pmp,
                  const El::BigFloat &threshold,
                  const El::BigFloat &mesh_threshold, const bool &need_lambda)
 {
-  const auto &normalization = pmp.normalization;
+  std::vector<El::BigFloat> normalization;
+  if(pmp.normalization.has_value())
+    normalization = pmp.normalization.value();
+  if(pmp.normalization.has_value())
+    {
+      normalization = pmp.normalization.value();
+    }
+  else
+    {
+      normalization.resize(pmp.objective.size(), 0);
+      normalization.at(0) = 1;
+    }
+
   const auto &matrices = pmp.matrices;
 
   const size_t max_index(max_normalization_index(normalization));

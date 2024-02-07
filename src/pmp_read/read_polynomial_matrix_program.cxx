@@ -224,15 +224,12 @@ read_polynomial_matrix_program(const Environment &env,
 
   ASSERT(!objective.empty(), "objective not found in input files");
 
-  if(normalization.empty())
-    {
-      // default normalization [1,0,0..0]
-      normalization.resize(objective.size(), 0);
-      normalization.at(0) = 1;
-    }
+  std::optional<std::vector<El::BigFloat>> opt_normalization;
+  if(!normalization.empty())
+    opt_normalization = std::move(normalization);
 
   return Polynomial_Matrix_Program(
-    std::move(objective), std::move(normalization), num_matrices,
+    std::move(objective), std::move(opt_normalization), num_matrices,
     std::move(matrices), std::move(matrix_index_local_to_global),
     std::move(block_paths));
 }
