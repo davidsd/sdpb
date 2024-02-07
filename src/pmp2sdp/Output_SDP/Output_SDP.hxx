@@ -20,7 +20,7 @@ struct Output_SDP : boost::noncopyable
   // b_1..b_N
   std::vector<El::BigFloat> dual_objective_b;
   // n_0..n_N
-  std::vector<El::BigFloat> normalization;
+  std::optional<std::vector<El::BigFloat>> normalization;
   // Total number of blocks for all processes
   size_t num_blocks = 0;
   // Each dual constraint group is written to  block_info_XXX.json and block_data_XXX.bin.

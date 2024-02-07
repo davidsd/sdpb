@@ -19,7 +19,7 @@ struct Polynomial_Matrix_Program
   // vector a_i, i=0..N
   std::vector<El::BigFloat> objective;
   // normalization vector n_i, i=0..N
-  std::vector<El::BigFloat> normalization;
+  std::optional<std::vector<El::BigFloat>> normalization;
   // Total number of matrices
   size_t num_matrices = 0;
   // In case of several processes,
@@ -30,13 +30,12 @@ struct Polynomial_Matrix_Program
   // input path for each of the matrices
   std::vector<std::filesystem::path> block_paths;
 
-  [[nodiscard]]
-  Polynomial_Matrix_Program(std::vector<El::BigFloat> objective,
-                            std::vector<El::BigFloat> normalization,
-                            size_t num_matrices,
-                            std::vector<Polynomial_Vector_Matrix> matrices,
-                            std::vector<size_t> matrix_index_local_to_global,
-                            std::vector<std::filesystem::path> block_paths)
+  [[nodiscard]] Polynomial_Matrix_Program(
+    std::vector<El::BigFloat> objective,
+    std::optional<std::vector<El::BigFloat>> normalization,
+    size_t num_matrices, std::vector<Polynomial_Vector_Matrix> matrices,
+    std::vector<size_t> matrix_index_local_to_global,
+    std::vector<std::filesystem::path> block_paths)
       : objective(std::move(objective)),
         normalization(std::move(normalization)),
         num_matrices(num_matrices),
@@ -47,7 +46,8 @@ struct Polynomial_Matrix_Program
     // Validate
     ASSERT(this->num_matrices != 0);
     ASSERT(!this->objective.empty());
-    ASSERT_EQUAL(this->objective.size(), this->normalization.size());
+    if(this->normalization.has_value())
+      ASSERT_EQUAL(this->objective.size(), this->normalization->size());
     ASSERT(this->matrices.size() <= num_matrices,
            DEBUG_STRING(this->matrices.size()), DEBUG_STRING(num_matrices));
     ASSERT_EQUAL(this->matrices.size(),

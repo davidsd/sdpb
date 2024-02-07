@@ -110,7 +110,7 @@ namespace
                const Block_File_Format output_format, const fs::path &temp_dir,
                const size_t num_control_bytes,
                const size_t num_objectives_bytes,
-               const size_t num_normalization_bytes,
+               const std::optional<size_t> num_normalization_bytes,
                const std::vector<size_t> &block_info_sizes,
                const std::vector<size_t> &block_data_sizes, Timers &timers)
   {
@@ -132,13 +132,14 @@ namespace
       fs::remove(objectives_path);
     }
     // normalization.json
-    {
-      Scoped_Timer normalization_timer(timers, "normalization");
-      auto normalization_path = get_normalization_path(temp_dir);
-      archive_gzipped_file(normalization_path, num_normalization_bytes,
-                           writer);
-      fs::remove(normalization_path);
-    }
+    if(num_normalization_bytes.has_value())
+      {
+        Scoped_Timer normalization_timer(timers, "normalization");
+        auto normalization_path = get_normalization_path(temp_dir);
+        archive_gzipped_file(normalization_path,
+                             num_normalization_bytes.value(), writer);
+        fs::remove(normalization_path);
+      }
 
     // block_info_XXX.json
     {
@@ -180,7 +181,7 @@ namespace
                            Block_File_Format output_format,
                            const size_t num_control_bytes,
                            const size_t num_objectives_bytes,
-                           const size_t num_normalization_bytes,
+                           const std::optional<size_t> num_normalization_bytes,
                            const std::vector<size_t> &block_info_sizes,
                            const std::vector<size_t> &block_data_sizes,
                            Timers &timers)
@@ -197,8 +198,12 @@ namespace
         {
           ++file_count;
         }
-      // control.json + objectives.json + normalization.json + (block_info_XXX + block_data_XXX)
-      ASSERT_EQUAL(file_count, 3 + 2 * num_blocks, temp_dir,
+      // control.json + objectives.json + (block_info_XXX + block_data_XXX)
+      size_t expected_file_count = 2 + 2 * num_blocks;
+      // + optional normalization.json
+      if(num_normalization_bytes.has_value())
+        expected_file_count += 1;
+      ASSERT_EQUAL(file_count, expected_file_count, temp_dir,
                    " contains wrong number of files.");
     }
 
@@ -206,8 +211,11 @@ namespace
       Scoped_Timer file_sizes_timer(timers, "file_sizes");
       check_file_size(get_control_path(temp_dir), num_control_bytes);
       check_file_size(get_objectives_path(temp_dir), num_objectives_bytes);
-      check_file_size(get_normalization_path(temp_dir),
-                      num_normalization_bytes);
+      if(num_normalization_bytes.has_value())
+        {
+          check_file_size(get_normalization_path(temp_dir),
+                          num_normalization_bytes.value());
+        }
       for(size_t i = 0; i < num_blocks; ++i)
         {
           check_file_size(get_block_info_path(temp_dir, i),
@@ -320,12 +328,16 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
           write_objectives_json(os, sdp.objective_const, sdp.dual_objective_b);
         },
         zip);
-      size_t num_normalization_bytes = write_data_and_count_bytes(
-        get_normalization_path(temp_dir),
-        [&](std::ostream &os) {
-          write_normalization_json(os, sdp.normalization);
-        },
-        zip);
+      std::optional<size_t> num_normalization_bytes;
+      if(sdp.normalization.has_value())
+        {
+          num_normalization_bytes = write_data_and_count_bytes(
+            get_normalization_path(temp_dir),
+            [&](std::ostream &os) {
+              write_normalization_json(os, sdp.normalization.value());
+            },
+            zip);
+        }
 
       if(zip)
         {

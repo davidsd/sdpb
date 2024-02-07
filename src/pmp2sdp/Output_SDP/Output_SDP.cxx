@@ -83,44 +83,65 @@ Output_SDP::Output_SDP(const Polynomial_Matrix_Program &pmp,
 {
   Scoped_Timer timer(timers, "convert");
 
-  const auto max_index = max_normalization_index(normalization);
+  // Trivial normalization: (1,0,0...0).
+  const bool has_nontrivial_normalization = [this] {
+    if(!normalization.has_value())
+      return false;
+    const El::BigFloat zero(0);
+    for(size_t i = 0; i < normalization->size(); ++i)
+      {
+        if(i == 0 && normalization->at(i) != El::BigFloat(1))
+          return true;
+        if(i != 0 && normalization->at(i) != zero)
+          return true;
+      }
+    return false;
+  }();
 
-  objective_const = pmp.objective.at(max_index) / normalization.at(max_index);
-  // (a_{max_index} / n_{max_index}) goes to b_0 = objective_const
-  // other a_i are translated to b_1..b_N = dual_objective_b
-  dual_objective_b.reserve(pmp.objective.size() - 1);
-  for(size_t index = 0; index < normalization.size(); ++index)
+  if(has_nontrivial_normalization)
     {
-      if(index != max_index)
+      const auto max_index = max_normalization_index(normalization.value());
+      // (a_{max_index} / n_{max_index}) goes to b_0 = objective_const
+      objective_const
+        = pmp.objective.at(max_index) / normalization.value().at(max_index);
+      // other a_i are translated to b_1..b_N = dual_objective_b
+      dual_objective_b.reserve(pmp.objective.size() - 1);
+      for(size_t index = 0; index < normalization.value().size(); ++index)
         {
-          dual_objective_b.push_back(pmp.objective.at(index)
-                                     - normalization.at(index)
-                                         * objective_const);
+          if(index != max_index)
+            {
+              dual_objective_b.push_back(pmp.objective.at(index)
+                                         - normalization.value().at(index)
+                                             * objective_const);
+            }
+        }
+
+      Scoped_Timer pvm_timer(timers, "matrices");
+      for(size_t i = 0; i < pmp.matrices.size(); ++i)
+        {
+          const auto &matrix = pmp.matrices.at(i);
+          const auto block_index = pmp.matrix_index_local_to_global.at(i);
+          dual_constraint_groups.emplace_back(
+            block_index, convert_pvm_using_normalization(
+                           matrix, normalization.value(), max_index));
         }
     }
-
-  // If normalization == (1,0,0...0),
-  // then all PVM matrices in (2.2) in SDPB Manual are the same as in (3.1),
-  // and there is no need to convert them
-  std::vector<El::BigFloat> default_normalization(normalization.size(),
-                                                  El::BigFloat(0));
-  default_normalization.at(0) = El::BigFloat(1);
-  const bool need_convert_pvm = normalization != default_normalization;
-
-  Scoped_Timer pvm_timer(timers, "matrices");
-
-  for(size_t i = 0; i < pmp.matrices.size(); ++i)
+  else
     {
-      const auto &matrix = pmp.matrices.at(i);
-      const auto block_index = pmp.matrix_index_local_to_global.at(i);
-      if(need_convert_pvm)
+      // b_0 = a_0
+      objective_const = pmp.objective.at(0);
+      // b_i = a_i
+      dual_objective_b.reserve(pmp.objective.size() - 1);
+      dual_objective_b.assign(pmp.objective.begin() + 1, pmp.objective.end());
+
+      // If normalization == (1,0,0...0),
+      // then all PVM matrices in (2.2) in SDPB Manual are the same as in (3.1),
+      // and there is no need to convert them via convert_pvm_using_normalization()
+      Scoped_Timer pvm_timer(timers, "matrices");
+      for(size_t i = 0; i < pmp.matrices.size(); ++i)
         {
-          dual_constraint_groups.emplace_back(
-            block_index,
-            convert_pvm_using_normalization(matrix, normalization, max_index));
-        }
-      else
-        {
+          const auto &matrix = pmp.matrices.at(i);
+          const auto block_index = pmp.matrix_index_local_to_global.at(i);
           dual_constraint_groups.emplace_back(block_index, matrix);
         }
     }
