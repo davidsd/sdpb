@@ -21,8 +21,8 @@ void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info,
           El::Output();
         }
 
-      ASSERT(block_timings_ms.Height() == block_info.dimensions.size());
-      ASSERT(block_timings_ms.Width() == 1);
+      ASSERT_EQUAL(block_timings_ms.Height(), block_info.dimensions.size());
+      ASSERT_EQUAL(block_timings_ms.Width(), 1);
 
       fs::create_directories(checkpoint_out);
       fs::path block_timings_path(checkpoint_out / "block_timings");

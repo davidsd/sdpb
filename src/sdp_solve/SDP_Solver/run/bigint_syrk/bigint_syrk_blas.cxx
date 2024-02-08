@@ -35,9 +35,9 @@ namespace
     // A: KxN matrix
     // A: KxM matrix
     // output = input^T * input: NxM matrix
-    ASSERT(input_A.Height() == input_B.Height());
-    ASSERT(output.Height() == input_A.Width());
-    ASSERT(output.Width() == input_B.Width());
+    ASSERT_EQUAL(input_A.Height(), input_B.Height());
+    ASSERT_EQUAL(output.Height(), input_A.Width());
+    ASSERT_EQUAL(output.Width(), input_B.Width());
 
     CBLAS_LAYOUT layout = CblasColMajor;
     CBLAS_TRANSPOSE TransA = CblasTrans;
@@ -64,8 +64,8 @@ namespace
   {
     // input: KxN matrix
     // output = input^T * input: NxN matrix
-    ASSERT(input.Width() == output.Width());
-    ASSERT(output.Height() == output.Width());
+    ASSERT_EQUAL(input.Width(), output.Width());
+    ASSERT_EQUAL(output.Height(), output.Width());
 
     CBLAS_LAYOUT layout = CblasColMajor;
     CBLAS_UPLO Uplo
@@ -137,7 +137,7 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
   Scoped_Timer timer(timers, "bigint_syrk_blas");
 
   // TODO: only UPPER is supported now.
-  ASSERT(uplo == El::UPPER);
+  ASSERT_EQUAL(uplo, El::UPPER);
 
   if(El::mpi::Congruent(shared_memory_comm, bigint_output.DistComm()))
     {
@@ -171,16 +171,13 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem(
   Scoped_Timer timer(timers, "shmem");
   size_t width = bigint_output_shmem.Width();
 
-  ASSERT(
-    bigint_input_matrix_blocks.size() == block_index_local_to_shmem.size(),
-    "bigint_input_matrix_blocks.size()=", bigint_input_matrix_blocks.size(),
-    ", block_index_local_to_shmem.size()=", block_index_local_to_shmem.size());
-  ASSERT(bigint_input_matrix_blocks.size()
-         == block_index_local_to_shmem.size());
-
-  ASSERT(bigint_output_shmem.Height() == bigint_output_shmem.Width());
-  ASSERT(bigint_output_shmem.Height() == width);
-  ASSERT(input_block_residues_window.width == width);
+  ASSERT_EQUAL(bigint_input_matrix_blocks.size(),
+               block_index_local_to_shmem.size());
+  ASSERT_EQUAL(bigint_input_matrix_blocks.size(),
+               block_index_local_to_shmem.size());
+  ASSERT_EQUAL(bigint_output_shmem.Height(), bigint_output_shmem.Width());
+  ASSERT_EQUAL(bigint_output_shmem.Height(), width);
+  ASSERT_EQUAL(input_block_residues_window.width, width);
 
   ASSERT(El::mpi::Congruent(shared_memory_comm,
                             input_block_residues_window.Comm()));
