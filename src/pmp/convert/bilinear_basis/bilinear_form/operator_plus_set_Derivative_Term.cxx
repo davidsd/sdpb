@@ -7,7 +7,7 @@ void operator+=(std::set<Derivative_Term> &a,
                 const std::set<Derivative_Term> &b)
 {
   auto iter_a(a.begin()), iter_b(b.begin());
-  while(iter_a != a.end())
+  while(iter_a != a.end() && iter_b != b.end())
     {
       if(iter_a->powers == iter_b->powers)
         {
