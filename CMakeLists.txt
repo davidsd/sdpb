@@ -2,22 +2,18 @@
 cmake_minimum_required(VERSION 3.16)
 project(sdpb LANGUAGES CXX)
 
-#import os, subprocess
+# Currently we are working with a single CMake file but it is better to refactor parts of this file and put them inside cmake/modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
-#def options(opt):
-#    opt.load(['compiler_cxx','gnu_dirs','cxx17','boost','gmpxx','mpfr',
-#              'elemental','libxml2', 'rapidjson', 'libarchive'])
-
-# Let's try to do these one by one from the list and then potentially refactor. 
 
 # cxx 17
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Currently we are working with a single CMake file but it is better to refactor parts of this file and put them inside cmake/modules
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
+# We all love some colour don't we
+include(CustomMessages)
 
 # compiler_cxx
 # TODO
@@ -29,31 +25,55 @@ else()
     SET(CMAKE_CXX_COMPILER mpicxx)
 endif()
 
-message("Found g++ compiler (C++ compiler): ${CMAKE_CXX_COMPILER}")
+message(STATUS "Found g++ compiler (C++ compiler): ${CMAKE_CXX_COMPILER}")
 
 # TODO gnu_dirs
 
+##################################################
+########### Find required dependencies ###########
+##################################################
+
+include(FindPkgConfig)
+find_package(PkgConfig REQUIRED)
 
 # TODO boost
+# TODO Check that the custom approach works. Have not tested.
 
+find_package(Boost REQUIRED COMPONENTS system filesystem date_time program_options iostreams serialization)
+if(NOT Boost_FOUND)
+        pkg_check_modules(Boost REQUIRED COMPONENTS system filesystem date_time program_options iostreams serialization)
+endif()
+message(STATUS "Boost version: ${Boost_VERSION}")
+
+# Omitted the part where boost.py tests for boost by running a small snippet of code.
 
 # TODO gmpxx
+# NOTE This does not work right now because find_package is not able to find FindGMPXX.cmake
+# find_package(GMPXX REQUIRED)
+# message(STATUS "GMP version: ${GMPXX_VERSION}")
 
 
 # TODO mpfr
-
+pkg_check_modules(MPFR REQUIRED mpfr)
+message(STATUS "MPFR version: ${MPFR_VERSION}")
 
 # TODO elemental
 
 
 # TODO libxml2
-
+#find_package(libxml2 REQUIRED)
+# if(NOT libxml2_FOUND)
+#         pkg_check_modules(LIBXML2 REQUIRED libxml-2)
+# endif()
+# message(STATUS "libxml2 version: ${libxml2_VERSION}")
 
 # TODO rapidjson
-
+pkg_check_modules(RapidJSON REQUIRED RapidJSON)
+message(STATUS "RapidJSON version: ${RapidJSON_VERSION}")
 
 # TODO libarchive
-
+pkg_check_modules(libarchive REQUIRED libarchive)
+message(STATUS "libarchive version: ${libarchive_VERSION}")
 
 
 #def configure(conf):
@@ -117,9 +137,6 @@ set(CMAKE_LIBRARY_PATH CMAKE_LIBRARY_PATH /usr/local/lib)
 message("CMAKE_LIBRARY_PATH = ${CMAKE_LIBRARY_PATH}")
 
 include(FeatureSummary)
-
-find_package(Boost REQUIRED COMPONENTS system filesystem date_time program_options iostreams serialization)
-message(STATUS "Boost version: ${Boost_VERSION}")
 
 set(libxml2_INCLUDE_DIR /usr/include/libxml2)
 include(FindLibXml2)
