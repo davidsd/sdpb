@@ -24,9 +24,9 @@ struct Block_Data_Parse_Result
   // Allow move and prohibit copy
 
   Block_Data_Parse_Result(const Block_Data_Parse_Result &other) = delete;
-  Block_Data_Parse_Result(Block_Data_Parse_Result &&other) noexcept = default;
+  Block_Data_Parse_Result(Block_Data_Parse_Result &&other) = default;
   Block_Data_Parse_Result &operator=(const Block_Data_Parse_Result &other)
     = delete;
-  Block_Data_Parse_Result &operator=(Block_Data_Parse_Result &&other) noexcept
+  Block_Data_Parse_Result &operator=(Block_Data_Parse_Result &&other)
     = default;
 };
