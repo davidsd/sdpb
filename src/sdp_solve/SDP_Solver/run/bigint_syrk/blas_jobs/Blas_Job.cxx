@@ -16,7 +16,7 @@ Blas_Job::Blas_Job(size_t prime_index, const El::Range<El::Int> &I,
 
   // Diagonal blocks must be square!
   if(I.beg == J.beg)
-    ASSERT(I.end == J.end);
+    ASSERT_EQUAL(I.end, J.end);
 }
 
 Cost Blas_Job::cost() const
@@ -40,7 +40,7 @@ Cost Blas_Job::cost() const
   // we calculate only upper triangle
   if(I.beg == J.beg)
     {
-      ASSERT(height == width);
+      ASSERT_EQUAL(height, width);
       elements = height * (height + 1) / 2;
     }
   else

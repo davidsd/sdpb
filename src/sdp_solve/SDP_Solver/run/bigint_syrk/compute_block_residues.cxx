@@ -74,7 +74,7 @@ namespace
             }
           data_offset += block.LocalHeight();
         });
-      ASSERT(data_offset == total_height);
+      ASSERT_EQUAL(data_offset, total_height);
     }
 
     {
@@ -194,8 +194,8 @@ void BigInt_Shared_Memory_Syrk_Context::compute_block_residues(
     Scoped_Timer block_timing_timer(timers, "block_timing");
     auto total_time_ms = compute_and_write_timer.elapsed_milliseconds();
 
-    ASSERT(bigint_input_matrix_blocks.size()
-           == block_index_local_to_global.size());
+    ASSERT_EQUAL(bigint_input_matrix_blocks.size(),
+                 block_index_local_to_global.size());
     constexpr auto get_size
       = [](auto &block) { return block.LocalHeight() * block.LocalWidth(); };
     auto total_size = std::transform_reduce(

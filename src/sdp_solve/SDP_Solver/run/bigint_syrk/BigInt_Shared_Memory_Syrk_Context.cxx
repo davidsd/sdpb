@@ -38,8 +38,8 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
                                             comb.num_primes, block_width,
                                             debug))
 {
-  ASSERT(block_index_local_to_shmem.size()
-         == block_index_local_to_global.size());
+  ASSERT_EQUAL(block_index_local_to_shmem.size(),
+               block_index_local_to_global.size());
 
   // Disable BLAS threading explicitly, each rank should work single-threaded
   openblas_set_num_threads(1);

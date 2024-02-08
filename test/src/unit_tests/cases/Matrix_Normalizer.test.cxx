@@ -2,6 +2,7 @@
 
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/Matrix_Normalizer.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/fmpz/Fmpz_Comb.hxx"
+#include "sdpb_util/assert.hxx"
 #include "unit_tests/util/util.hxx"
 
 #include <El.hpp>
@@ -47,9 +48,9 @@ TEST_CASE("normalize_and_shift")
           int block_height = block_heights.at(block_index);
           int end_row = begin_row + block_height;
 
-          assert(block_height > 0);
-          assert(end_row > begin_row);
-          assert(end_row <= P_matrix.Height());
+          ASSERT(block_height > 0);
+          ASSERT(end_row > begin_row);
+          ASSERT(end_row <= P_matrix.Height());
 
           El::Range<int> rows(begin_row, end_row);
           El::Range<int> cols(0, P_matrix.Width());
