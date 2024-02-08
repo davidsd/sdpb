@@ -51,7 +51,7 @@ struct Abstract_Json_Reader_Handler
   // Implementing BaseReaderHandler interface via virtual functions
 
 #define VIRTUAL_NOT_IMPLEMENTED(func)                                         \
-  virtual func [[noreturn]]                                                   \
+  [[noreturn]] virtual func                                                   \
   {                                                                           \
     RUNTIME_ERROR("Not implemented: function '", #func, "' in class: '",      \
                   typeid(*this).name(), "'");                                 \
