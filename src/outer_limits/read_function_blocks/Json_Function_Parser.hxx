@@ -51,7 +51,6 @@ public:
   }
 
 public:
-  [[nodiscard]]
   Json_Function_Parser(const bool skip,
                        const std::function<void(Function &&)> &on_parsed,
                        const std::function<void()> &on_skipped)

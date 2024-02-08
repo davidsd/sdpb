@@ -25,10 +25,10 @@ public:
       : Abstract_Json_Array_Parser_With_Skip<value_type, TElementParser>(
           skip, on_parsed, on_skipped,
           // Never skip individual elements:
-          []([[maybe_unused]] size_t index) { return false; },
+          [](size_t /*index*/) { return false; },
           element_parser_args...)
   {}
-  void on_element_skipped(size_t index) override {}
+  void on_element_skipped(size_t /*index*/) override {}
 };
 
 // Parses JSON array elements with TElementParser

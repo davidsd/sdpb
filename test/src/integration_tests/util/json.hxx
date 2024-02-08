@@ -1,6 +1,7 @@
 #pragma once
 
 #define RAPIDJSON_ASSERT(x) ASSERT(x)
+#define RAPIDJSON_NOEXCEPT_ASSERT(x) assert(x)
 
 #include "Float.hxx"
 #include "sdpb_util/assert.hxx"

@@ -67,7 +67,9 @@ void read_objectives(const fs::path &sdp_path, const El::Grid &grid,
     }
   else
     {
-      std::ifstream objectives_stream(sdp_path / objectives_name);
+      auto objectives_path = sdp_path / objectives_name;
+      std::ifstream objectives_stream(objectives_path);
+      ASSERT(objectives_stream.good(), "Failed to open ", objectives_path);
       read_objectives_stream(grid, objectives_stream, objective_const,
                              dual_objective_b);
     }
