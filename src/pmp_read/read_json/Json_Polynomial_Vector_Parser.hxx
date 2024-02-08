@@ -25,8 +25,7 @@ public:
   void clear_result() override { result.clear(); }
   void on_element_parsed(element_type &&value, size_t index) override
   {
-    ASSERT(index == result.size(), "index=", index, ", expected ",
-           result.size());
+    ASSERT_EQUAL(index, result.size());
     result.push_back(value);
   }
   void on_element_skipped(size_t index) override {}

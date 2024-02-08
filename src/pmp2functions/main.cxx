@@ -9,9 +9,7 @@ namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
 void write_functions(const fs::path &output_path,
-                     const std::vector<El::BigFloat> &objectives,
-                     const std::vector<El::BigFloat> &normalization,
-                     const std::vector<Polynomial_Vector_Matrix> &matrices);
+                     const Polynomial_Matrix_Program &pmp);
 
 int main(int argc, char **argv)
 {
@@ -35,8 +33,7 @@ int main(int argc, char **argv)
       Timers timers(env, parameters.verbosity >= debug);
       const auto pmp
         = read_polynomial_matrix_program(env, parameters.input_file, timers);
-      write_functions(parameters.output_path, pmp.objective, pmp.normalization,
-                      pmp.matrices);
+      write_functions(parameters.output_path, pmp);
     }
   catch(std::exception &e)
     {

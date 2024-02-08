@@ -22,7 +22,7 @@ sample_scalings(const std::vector<Boost_Float> &points,
         {
           denominator *= (point - pole);
         }
-      result.emplace_back(to_string(numerator / denominator));
+      result.emplace_back(numerator / denominator);
     }
   return result;
 }

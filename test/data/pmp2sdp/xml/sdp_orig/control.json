@@ -1,0 +1,4 @@
+{
+  "num_blocks": 1,
+  "command": "./build/pvm2sdp 1024 test/data/pvm2sdp/file_list.nsv test/out/pvm2sdp/sdp.zip"
+}

@@ -55,6 +55,22 @@ namespace
     }
   };
 
+  struct Parse_Normalization_Json : boost::noncopyable
+  {
+    std::vector<Float> normalization;
+    explicit Parse_Normalization_Json(const fs::path &path)
+    {
+      CAPTURE(path);
+      REQUIRE(exists(path));
+      std::ifstream is(path);
+      rapidjson::IStreamWrapper wrapper(is);
+      rapidjson::Document document;
+      document.ParseStream(wrapper);
+
+      normalization = parse_Float_Vector(document["normalization"]);
+    }
+  };
+
   struct Parse_Block_Info_Json : boost::noncopyable
   {
     size_t dim;
@@ -156,6 +172,16 @@ namespace
     DIFF(a.b, b.b);
   }
 
+  void diff_normalization_json(const fs::path &a_normalization_json,
+                               const fs::path &b_normalization_json)
+  {
+    CAPTURE(a_normalization_json);
+    CAPTURE(b_normalization_json);
+    Parse_Normalization_Json a(a_normalization_json);
+    Parse_Normalization_Json b(b_normalization_json);
+    DIFF(a.normalization, b.normalization);
+  }
+
   void diff_block_info_json(const fs::path &a_block_info_path,
                             const fs::path &b_block_info_path)
   {
@@ -201,6 +227,11 @@ namespace Test_Util::REQUIRE_Equal
     auto b = fs::is_directory(b_sdp) ? b_sdp : runner.unzip_to_temp_dir(b_sdp);
     diff_control_json(a / "control.json", b / "control.json");
     diff_objectives_json(a / "objectives.json", b / "objectives.json");
+    if(exists(a / "normalization.json") || exists(b / "normalization.json"))
+      {
+        diff_normalization_json(a / "normalization.json",
+                                b / "normalization.json");
+      }
     Parse_Control_Json control(a / "control.json");
     for(int i = 0; i < control.num_blocks; ++i)
       {

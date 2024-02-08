@@ -190,12 +190,13 @@ spectrum extraction.  The options are described in more detail in the
 help text, obtained by running `spectrum --help`.  As a simple
 example, extracting the spectrum from the toy example would be
 
-    mpirun -n 4 build/spectrum --input=test/data/spectrum/pmp.xml --solution=test/data/spectrum/solution --threshold=1e-10 --output=test/out/spectrum/spectrum.json --precision=1024
+    mpirun -n 4 build/spectrum --input=test/data/spectrum/1d/pmp.xml --output=test/out/spectrum/1d/spectrum.json --precision=1024 --solution=test/data/spectrum/1d/solution --threshold=1e-10
 
 This will output the spectra into `test/out/spectrum/spectrum.json` and should look like
 
     [
       {
+        "block_path": "test/data/spectrum/1d/pmp.xml",
         "zeros":
           [
             {
@@ -254,6 +255,11 @@ of zip archive to sdpb:
 unzip -o path/to/sdp.zip -d path/to/sdp_dir
 sdpb -s path/to/sdp_dir <...>
 ```
+
+### 'Running out of inodes' error
+
+This may happen on some filesystems if SDP contains too many block files. Run `pmp2sdp` with `--zip` flag to put
+everything into a single zip archive.
 
 ### Spectrum does not work in parallel
 

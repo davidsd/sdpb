@@ -22,6 +22,9 @@ void write_objectives_json(std::ostream &output_stream,
                            const El::BigFloat &objective_const,
                            const std::vector<El::BigFloat> &dual_objective_b);
 
+void write_normalization_json(std::ostream &output_stream,
+                              const std::vector<El::BigFloat> &normalization);
+
 void write_block_info_json(std::ostream &output_stream,
                            const Dual_Constraint_Group &group);
 
@@ -87,6 +90,10 @@ namespace
   {
     return temp_dir / "objectives.json";
   }
+  fs::path get_normalization_path(const fs::path &temp_dir)
+  {
+    return temp_dir / "normalization.json";
+  }
 
   void archive_gzipped_file(const fs::path &path, const int64_t &num_bytes,
                             Archive_Writer &writer)
@@ -103,6 +110,7 @@ namespace
                const Block_File_Format output_format, const fs::path &temp_dir,
                const size_t num_control_bytes,
                const size_t num_objectives_bytes,
+               const std::optional<size_t> num_normalization_bytes,
                const std::vector<size_t> &block_info_sizes,
                const std::vector<size_t> &block_data_sizes, Timers &timers)
   {
@@ -123,6 +131,15 @@ namespace
       archive_gzipped_file(objectives_path, num_objectives_bytes, writer);
       fs::remove(objectives_path);
     }
+    // normalization.json
+    if(num_normalization_bytes.has_value())
+      {
+        Scoped_Timer normalization_timer(timers, "normalization");
+        auto normalization_path = get_normalization_path(temp_dir);
+        archive_gzipped_file(normalization_path,
+                             num_normalization_bytes.value(), writer);
+        fs::remove(normalization_path);
+      }
 
     // block_info_XXX.json
     {
@@ -157,15 +174,14 @@ namespace
 
   void check_file_size(const fs::path &file_path, const size_t expected_size)
   {
-    const auto size = file_size(file_path);
-    ASSERT(size == expected_size, "File size is ", size, ", expected ",
-           expected_size, ": ", file_path);
+    ASSERT_EQUAL(file_size(file_path), expected_size, DEBUG_STRING(file_path));
   }
 
   void check_sdp_directory(const fs::path &temp_dir, size_t num_blocks,
                            Block_File_Format output_format,
                            const size_t num_control_bytes,
                            const size_t num_objectives_bytes,
+                           const std::optional<size_t> num_normalization_bytes,
                            const std::vector<size_t> &block_info_sizes,
                            const std::vector<size_t> &block_data_sizes,
                            Timers &timers)
@@ -183,14 +199,23 @@ namespace
           ++file_count;
         }
       // control.json + objectives.json + (block_info_XXX + block_data_XXX)
-      ASSERT(file_count == 2 + 2 * num_blocks, temp_dir, " contains ",
-             file_count, " files, ", 2 + 2 * num_blocks, " expected");
+      size_t expected_file_count = 2 + 2 * num_blocks;
+      // + optional normalization.json
+      if(num_normalization_bytes.has_value())
+        expected_file_count += 1;
+      ASSERT_EQUAL(file_count, expected_file_count, temp_dir,
+                   " contains wrong number of files.");
     }
 
     {
       Scoped_Timer file_sizes_timer(timers, "file_sizes");
       check_file_size(get_control_path(temp_dir), num_control_bytes);
       check_file_size(get_objectives_path(temp_dir), num_objectives_bytes);
+      if(num_normalization_bytes.has_value())
+        {
+          check_file_size(get_normalization_path(temp_dir),
+                          num_normalization_bytes.value());
+        }
       for(size_t i = 0; i < num_blocks; ++i)
         {
           check_file_size(get_block_info_path(temp_dir, i),
@@ -223,8 +248,7 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
       {
         size_t width = group.constraint_matrix.Width();
         size_t dual_objective_size = sdp.dual_objective_b.size();
-        ASSERT(width == dual_objective_size, "width=", width,
-               " dual_objective_size=", dual_objective_size);
+        ASSERT_EQUAL(width, dual_objective_size);
         {
           Scoped_Timer block_info_timer(
             timers, "block_info_" + std::to_string(group.block_index));
@@ -272,10 +296,10 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
         for(size_t block_index = 0; block_index < block_info_sizes.size();
             ++block_index)
           {
-            ASSERT(block_info_sizes.at(block_index)
-                     == block_info_sizes_max.at(block_index),
-                   "block_", block_index,
-                   " has been processed by more than one rank!");
+            ASSERT_EQUAL(block_info_sizes.at(block_index),
+                         block_info_sizes_max.at(block_index), "block_",
+                         block_index,
+                         " has been processed by more than one rank!");
             ASSERT(block_info_sizes.at(block_index) != 0, "block_info_",
                    block_index, " size is zero");
             ASSERT(block_data_sizes.at(block_index) != 0, "block_data_",
@@ -304,12 +328,23 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
           write_objectives_json(os, sdp.objective_const, sdp.dual_objective_b);
         },
         zip);
+      std::optional<size_t> num_normalization_bytes;
+      if(sdp.normalization.has_value())
+        {
+          num_normalization_bytes = write_data_and_count_bytes(
+            get_normalization_path(temp_dir),
+            [&](std::ostream &os) {
+              write_normalization_json(os, sdp.normalization.value());
+            },
+            zip);
+        }
 
       if(zip)
         {
           write_to_zip(output_path, sdp, block_file_format, temp_dir,
                        num_control_bytes, num_objectives_bytes,
-                       block_info_sizes, block_data_sizes, timers);
+                       num_normalization_bytes, block_info_sizes,
+                       block_data_sizes, timers);
           // Do not call remove_all() to ensure that we
           // don't remove anything useful.
           // This function will fail if temp_dir is not empty.
@@ -319,7 +354,8 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
         {
           check_sdp_directory(temp_dir, sdp.num_blocks, block_file_format,
                               num_control_bytes, num_objectives_bytes,
-                              block_info_sizes, block_data_sizes, timers);
+                              num_normalization_bytes, block_info_sizes,
+                              block_data_sizes, timers);
           fs::rename(temp_dir, output_path);
         }
     }
