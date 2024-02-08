@@ -39,7 +39,11 @@ void SDP::reset(const fs::path &sdp_path, const Block_Info &block_info, const El
 {
   Scoped_Timer timer(timers, "SDP_reset");
   read_objectives(sdp_path, grid, objective_const, dual_objective_b, timers);
+  // normalization will be used only at rank=0
+  if(El::mpi::Rank() == 0)
+    normalization = read_normalization(sdp_path, timers);
   read_block_data(sdp_path, grid, block_info, *this, timers);
+  validate(block_info);
 }
 
 SDP::SDP(
