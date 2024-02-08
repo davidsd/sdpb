@@ -1,4 +1,5 @@
 #include "SDPB_Parameters.hxx"
+#include "save_sdpb_solution.hxx"
 #include "sdp_solve/sdp_solve.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
 
@@ -7,14 +8,6 @@
 #include <filesystem>
 
 namespace fs = std::filesystem;
-
-void save_solution(
-  const SDP_Solver &solver,
-  const SDP_Solver_Terminate_Reason &terminate_reason, const int64_t &runtime,
-  const fs::path &out_directory, const Write_Solution &write_solution,
-  const std::vector<size_t> &block_indices,
-  const std::optional<std::vector<El::BigFloat>> &normalization,
-  const Verbosity &verbosity);
 
 Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
              const Environment &env,
@@ -70,8 +63,8 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
   auto runtime = std::chrono::duration_cast<std::chrono::seconds>(
                    std::chrono::high_resolution_clock::now() - start_time)
                    .count();
-  save_solution(solver, reason, runtime, parameters.out_directory,
-                parameters.write_solution, block_info.block_indices,
-                sdp.normalization, parameters.verbosity);
+  save_sdpb_solution(solver, reason, runtime, parameters.out_directory,
+                     parameters.write_solution, block_info.block_indices,
+                     sdp.normalization, parameters.verbosity);
   return timers;
 }

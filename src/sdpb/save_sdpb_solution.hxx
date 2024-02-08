@@ -1,3 +1,5 @@
+#pragma once
+
 #include "pmp/max_normalization_index.hxx"
 #include "sdp_solve/sdp_solve.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
@@ -5,31 +7,29 @@
 
 namespace fs = std::filesystem;
 
-namespace
+void write_psd_block(const fs::path &outfile,
+                     const El::DistMatrix<El::BigFloat> &block)
 {
-  void write_psd_block(const fs::path &outfile,
-                       const El::DistMatrix<El::BigFloat> &block)
-  {
-    std::ofstream stream;
-    if(block.DistRank() == block.Root())
-      {
-        stream.open(outfile);
-      }
-    El::Print(block,
-              std::to_string(block.Height()) + " "
-                + std::to_string(block.Width()),
-              "\n", stream);
-    if(block.DistRank() == block.Root())
-      {
-        stream << "\n";
-        ASSERT(stream.good(), "Error when writing to: ", outfile);
-      }
-  }
+  std::ofstream stream;
+  if(block.DistRank() == block.Root())
+    {
+      stream.open(outfile);
+    }
+  El::Print(block,
+            std::to_string(block.Height()) + " "
+              + std::to_string(block.Width()),
+            "\n", stream);
+  if(block.DistRank() == block.Root())
+    {
+      stream << "\n";
+      ASSERT(stream.good(), "Error when writing to: ", outfile);
+    }
 }
 
-void save_solution(
-  const SDP_Solver &solver,
-  const SDP_Solver_Terminate_Reason &terminate_reason,
+// TSolver is SDP_Solver or Dynamical_Solver
+template <class TSolver, class TSolver_Terminate_Reason>
+void save_sdpb_solution(
+  const TSolver &solver, const TSolver_Terminate_Reason &terminate_reason,
   const int64_t &solver_runtime, const fs::path &out_directory,
   const Write_Solution &write_solution,
   const std::vector<size_t> &block_indices,
