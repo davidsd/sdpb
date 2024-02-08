@@ -48,7 +48,7 @@ public:
   void clear_result() override { result.clear(); }
 
 public:
-  [[nodiscard]] explicit Json_Block_Data_Parser(
+  explicit Json_Block_Data_Parser(
     const std::function<void(Block_Data_Parse_Result &&)> &on_parsed)
       : Abstract_Json_Object_Parser(false, on_parsed, [] {}),
         c_parser(false,
