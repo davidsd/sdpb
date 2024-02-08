@@ -10,23 +10,6 @@ namespace
   {
     return static_cast<double>(bytes) / 1024 / 1024 / 1024;
   }
-
-  // TODO print_statm() is currently unused
-
-  // /proc/self/statm displays the following quantities:
-  // size resident shared text lib data dt
-  // Each quantity is measured in pages;
-  // usually page size=4096B (you can check it by calling "getconf PAGESIZE")
-  void print_statm(const std::string &prefix)
-  {
-    std::ifstream stat_file("/proc/self/statm");
-    if(stat_file.good())
-      {
-        std::string stats;
-        std::getline(stat_file, stats);
-        El::Output(prefix, stats);
-      }
-  }
 }
 
 Timers::Timers() = default;
