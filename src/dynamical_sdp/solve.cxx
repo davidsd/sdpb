@@ -5,14 +5,14 @@
 #include <El.hpp>
 #include <filesystem>
 
-void save_solution(const Dynamical_Solver &solver,
-                   const Dynamical_Solver_Terminate_Reason &,
-                   const int64_t &runtime,
-                   const std::filesystem::path &out_directory,
-                   const Write_Solution &write_solution,
-                   const std::vector<size_t> &block_indices,
-                   const Verbosity &verbosity,
-                   const El::Matrix<El::BigFloat> &extParamStep);
+void save_solution(
+  const Dynamical_Solver &solver,
+  const Dynamical_Solver_Terminate_Reason &terminate_reason,
+  const int64_t &solver_runtime, const std::filesystem::path &out_directory,
+  const Write_Solution &write_solution,
+  const std::vector<size_t> &block_indices,
+  const std::optional<std::vector<El::BigFloat>> &normalization,
+  const Verbosity &verbosity, const El::Matrix<El::BigFloat> &extParamStep);
 
 Timers solve(const Block_Info &block_info,
              const Dynamical_Parameters &parameters, const Environment &env,
@@ -77,6 +77,6 @@ Timers solve(const Block_Info &block_info,
                    .count();
   save_solution(solver, reason, runtime, parameters.out_directory,
                 parameters.write_solution, block_info.block_indices,
-                parameters.verbosity, extParamStep);
+                sdp.normalization, parameters.verbosity, extParamStep);
   return timers;
 }
