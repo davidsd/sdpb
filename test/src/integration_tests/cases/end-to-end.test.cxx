@@ -26,7 +26,7 @@ namespace
     const auto &data_dir = runner.data_dir.parent_path();
     const auto &output_dir = runner.output_dir;
 
-    auto sdp_orig_zip = (data_dir / ("sdp.orig.zip")).string();
+    auto sdp_orig = (data_dir / "sdp_orig").string();
     auto sdp_path = (output_dir / (zip ? "sdp.zip" : "sdp")).string();
 
     // pmp2sdp
@@ -38,8 +38,10 @@ namespace
       Test_Util::Test_Case_Runner::Named_Args_Map args{
         {"--input", input.string()},
         {"--output", sdp_path},
-        {"--precision", std::to_string(precision)},
-        {"--zip", std::to_string(zip)}};
+        {"--precision", std::to_string(precision)}};
+
+      if(zip)
+        args["--zip"] = "";
 
       if(!sdp_format.empty())
         args["--outputFormat"] = sdp_format;
@@ -50,7 +52,7 @@ namespace
       // pmp2sdp runs with --precision=<precision>
       // We check test output up to lower precision=<sdp_diff_precision>
       // in order to neglect unimportant rounding errors
-      Test_Util::REQUIRE_Equal::diff_sdp(sdp_path, sdp_orig_zip, precision,
+      Test_Util::REQUIRE_Equal::diff_sdp(sdp_path, sdp_orig, precision,
                                          sdp_diff_precision,
                                          runner.create_nested("sdp.diff"));
     }
@@ -153,7 +155,7 @@ TEST_CASE("end-to-end_tests")
           "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
           "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
           "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
-          "--procGranularity 1 --writeSolution x,y";
+          "--procGranularity 1 --writeSolution x,y,z";
       int sdpb_output_diff_precision = 512;
       // This test is slow, we don't want to run it twice
       // json/bin correctness is checked by other tests below,
@@ -178,7 +180,7 @@ TEST_CASE("end-to-end_tests")
           "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
           "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
           "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
-          "--procGranularity 1 --writeSolution y "
+          "--procGranularity 1 --writeSolution y,z "
           "--detectPrimalFeasibleJump --detectDualFeasibleJump";
       int sdpb_output_diff_precision = 610;
 

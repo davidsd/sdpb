@@ -1,0 +1,4 @@
+{
+  "num_blocks": 11,
+  "command": "build/pmp2sdp --input=test/data/end-to-end_tests/SingletScalarAllowed_test_nmax6/primal_feasible_jump/json/file_list.nsv --output=test/out/end-to-end_tests/SingletScalarAllowed_test_nmax6/primal_feasible_jump/json/sdp --outputFormat=json --precision=768"
+}

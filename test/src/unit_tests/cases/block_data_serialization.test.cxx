@@ -5,6 +5,7 @@
 #include "unit_tests/util/util.hxx"
 #include "pmp2sdp/Dual_Constraint_Group.hxx"
 #include "pmp2sdp/Block_File_Format.hxx"
+#include "sdp_solve/SDP/SDP/read_block_data/Block_Data_Parse_Result.hxx"
 
 using Test_Util::random_bigfloat;
 using Test_Util::random_matrix;
@@ -14,11 +15,8 @@ using Test_Util::REQUIRE_Equal::diff;
 
 void write_block_data(std::ostream &os, const Dual_Constraint_Group &group,
                       Block_File_Format format);
-void parse_block_data(std::istream &block_stream, Block_File_Format format,
-                      El::Matrix<El::BigFloat> &constraint_matrix,
-                      std::vector<El::BigFloat> &constraint_constants,
-                      El::Matrix<El::BigFloat> &bilinear_bases_even,
-                      El::Matrix<El::BigFloat> &bilinear_bases_odd);
+Block_Data_Parse_Result
+parse_block_data(std::istream &block_stream, Block_File_Format format);
 
 namespace
 {
@@ -30,9 +28,12 @@ namespace
     write_block_data(ss, group, format);
 
     Dual_Constraint_Group result;
-    parse_block_data(ss, format, result.constraint_matrix,
-                     result.constraint_constants, result.bilinear_bases[0],
-                     result.bilinear_bases[1]);
+    auto parse_result = parse_block_data(ss, format);
+    result.constraint_matrix = std::move(parse_result.B);
+    result.constraint_constants = std::move(parse_result.c);
+    result.bilinear_bases[0] = parse_result.bilinear_bases_even;
+    result.bilinear_bases[1] = parse_result.bilinear_bases_odd;
+
     result.dim = group.dim;
     result.num_points = group.num_points;
     return result;

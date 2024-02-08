@@ -26,8 +26,7 @@ Polynomial_Vector bilinear_basis(const Damped_Rational &damped_rational,
   if(damped_rational.is_constant())
     {
       Polynomial_Vector result;
-      result.emplace_back(
-        1, El::BigFloat(to_string(1 / sqrt(damped_rational.constant))));
+      result.emplace_back(1, to_BigFloat(1 / sqrt(damped_rational.constant)));
       return result;
     }
 
@@ -47,8 +46,8 @@ Polynomial_Vector bilinear_basis(const Damped_Rational &damped_rational,
   for(int64_t m = 0; m <= int64_t(2 * half_max_degree); ++m)
     {
       bilinear_table.emplace_back(
-        to_string(bilinear_form(damped_rational, sorted_poles, equal_ranges,
-                                lengths, products, integral_matrix, m)));
+        to_BigFloat(bilinear_form(damped_rational, sorted_poles, equal_ranges,
+                                  lengths, products, integral_matrix, m)));
     }
 
   El::Matrix<El::BigFloat> anti_band_matrix(half_max_degree + 1,

@@ -25,9 +25,8 @@ void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
                     const std::vector<size_t> &block_indices);
 
 std::vector<Zeros>
-compute_spectrum(const std::vector<El::BigFloat> &normalization,
+compute_spectrum(const Polynomial_Matrix_Program &pmp,
                  const El::Matrix<El::BigFloat> &y,
-                 const std::vector<Polynomial_Vector_Matrix> &matrices,
                  const std::vector<El::Matrix<El::BigFloat>> &x,
                  const El::BigFloat &threshold,
                  const El::BigFloat &mesh_threshold, const bool &need_lambda);
@@ -54,8 +53,7 @@ int main(int argc, char **argv)
       std::vector<El::Matrix<El::BigFloat>> x(
         read_x(solution_dir, pmp.matrices, block_indices));
       const std::vector<Zeros> zeros_blocks(
-        compute_spectrum(pmp.normalization, y, pmp.matrices, x, threshold,
-                         mesh_threshold, need_lambda));
+        compute_spectrum(pmp, y, x, threshold, mesh_threshold, need_lambda));
       write_spectrum(output_path, num_blocks, zeros_blocks, block_indices);
     }
   catch(std::exception &e)

@@ -42,8 +42,9 @@ void Environment::initialize()
       }
     _num_nodes = curr_node;
 
-    ASSERT(_node_index >= 0);
-    ASSERT(_node_index < _num_nodes);
+    ASSERT(_node_index >= 0, DEBUG_STRING(_node_index));
+    ASSERT(_node_index < _num_nodes, DEBUG_STRING(_node_index),
+           DEBUG_STRING(_num_nodes));
   }
 }
 void Environment::finalize()

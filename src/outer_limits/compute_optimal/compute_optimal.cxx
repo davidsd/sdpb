@@ -182,7 +182,7 @@ std::vector<El::BigFloat> compute_optimal(
       El::Grid grid(block_info.mpi_comm.value);
 
       SDP sdp(objective_const, primal_objective_c, free_var_matrix,
-              yp_to_y_star, dual_objective_b_star, primal_c_scale, block_info,
+              yp_to_y_star, dual_objective_b_star, normalization, primal_c_scale, block_info,
               grid);
 
       SDP_Solver solver(parameters.solver, parameters.verbosity,

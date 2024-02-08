@@ -57,8 +57,7 @@ public:
 
   void on_element_parsed(element_type &&value, size_t index) override
   {
-    ASSERT(index == this->result.size(), "index=", index, ", expected ",
-           this->result.size());
+    ASSERT_EQUAL(index , this->result.size());
     this->result.push_back(std::move(value));
   }
 

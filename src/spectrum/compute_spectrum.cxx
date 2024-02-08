@@ -6,14 +6,28 @@
 #include "pmp/max_normalization_index.hxx"
 #include "sdpb_util/fill_weights.hxx"
 
-std::vector<Zeros> compute_spectrum(
-  const std::vector<El::BigFloat> &normalization,
-  const El::Matrix<El::BigFloat> &y,
-  const std::vector<Polynomial_Vector_Matrix> &matrices,
-  const std::vector<El::Matrix<El::BigFloat>> &x,
-  const El::BigFloat &threshold, const El::BigFloat &mesh_threshold,
-  const bool &need_lambda)
+std::vector<Zeros>
+compute_spectrum(const Polynomial_Matrix_Program &pmp,
+                 const El::Matrix<El::BigFloat> &y,
+                 const std::vector<El::Matrix<El::BigFloat>> &x,
+                 const El::BigFloat &threshold,
+                 const El::BigFloat &mesh_threshold, const bool &need_lambda)
 {
+  std::vector<El::BigFloat> normalization;
+  if(pmp.normalization.has_value())
+    normalization = pmp.normalization.value();
+  if(pmp.normalization.has_value())
+    {
+      normalization = pmp.normalization.value();
+    }
+  else
+    {
+      normalization.resize(pmp.objective.size(), 0);
+      normalization.at(0) = 1;
+    }
+
+  const auto &matrices = pmp.matrices;
+
   const size_t max_index(max_normalization_index(normalization));
   std::vector<El::BigFloat> weights(normalization.size());
   fill_weights(y, max_index, normalization, weights);
@@ -22,6 +36,8 @@ std::vector<Zeros> compute_spectrum(
   std::vector<Zeros> zeros_blocks(matrices.size());
   for(size_t block_index(0); block_index < matrices.size(); ++block_index)
     {
+      zeros_blocks.at(block_index).block_path
+        = pmp.block_paths.at(block_index);
       auto &block(matrices[block_index]);
       const size_t max_number_terms([&block]() {
         size_t max(0);

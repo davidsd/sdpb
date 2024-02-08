@@ -1,7 +1,9 @@
-#include "pmp_read/pmp_read.hxx"
+#include "Json_Function_Blocks_Parser.hxx"
 #include "outer_limits/Function.hxx"
+#include "pmp_read/pmp_read.hxx"
 
 #include <filesystem>
+#include <rapidjson/istreamwrapper.h>
 
 namespace fs = std::filesystem;
 
@@ -15,15 +17,28 @@ void read_function_blocks(
   std::vector<El::BigFloat> &normalization,
   std::vector<std::vector<std::vector<std::vector<Function>>>> &functions)
 {
-  if(input_file.extension() == ".nsv")
+  for(auto &json_file : collect_files_expanding_nsv(input_file))
     {
-      for(auto &filename : read_nsv_file_list(input_file))
+      try
         {
-          read_function_blocks(filename, objectives, normalization, functions);
+          ASSERT(json_file.extension() == ".json", json_file);
+          std::ifstream ifs(json_file);
+          rapidjson::IStreamWrapper wrapper(ifs);
+
+          Json_Functions_Parser parser(
+            [&objectives, &normalization,
+             &functions](Functions_File_Parse_Result &&result) {
+              objectives = std::move(result.objective);
+              normalization = std::move(result.normalization);
+              functions = std::move(result.functions);
+            });
+
+          rapidjson::Reader reader;
+          reader.Parse(wrapper, parser);
         }
-    }
-  else if(input_file.extension() == ".json")
-    {
-      read_json(input_file, objectives, normalization, functions);
+      catch(std::exception &e)
+        {
+          RUNTIME_ERROR("Failed to parse ", json_file, "\n", e.what());
+        }
     }
 }

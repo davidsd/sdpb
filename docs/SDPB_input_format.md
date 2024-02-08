@@ -6,7 +6,7 @@ with a separate tool, this documents the format you will need to follow.
 
 `pmp2sdp` generates a directory containing multiple
 JSON/binary files.
-It may also generate zip archive instead of a directory, if you run it with option `--zip true`. This can be useful,
+It may also generate zip archive instead of a directory, if you run it with `--zip` flag. This can be useful,
 e.g. to prevent `running out of inodes` error on some filesystems, when SDP contains large number of blocks. Also, the
 zip format has a built-in checksum to detect corruption. Note that `pmp2sdp` does not enable compression, because that
 can be quite slow.

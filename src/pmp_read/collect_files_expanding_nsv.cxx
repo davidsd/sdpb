@@ -26,7 +26,7 @@ namespace
       }
     else
       {
-        output.push_back(input_file);
+        output.push_back(weakly_canonical(input_file));
       }
   }
 }

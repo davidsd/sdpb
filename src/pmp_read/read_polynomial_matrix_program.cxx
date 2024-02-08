@@ -28,8 +28,10 @@ namespace
         }
 
       const auto node_comm = env.comm_shared_mem;
-      ASSERT(node_comm.Size() * env.num_nodes() == El::mpi::Size(),
-             "Each node should have the same number of processes.");
+      ASSERT_EQUAL(node_comm.Size() * env.num_nodes(), El::mpi::Size(),
+                   DEBUG_STRING(node_comm.Size()),
+                   DEBUG_STRING(env.num_nodes()),
+                   "Each node should have the same number of processes.");
       // Reading file from different nodes may be slower,
       // so we distribute files across nodes and processes
       // in such a way that each file is assigned to a single node.
@@ -39,7 +41,7 @@ namespace
       // In that case user should split input to several files.
       const auto mapping = compute_block_grid_mapping(
         node_comm.Size(), env.num_nodes(), file_costs);
-      ASSERT(mapping.size() == env.num_nodes());
+      ASSERT_EQUAL(mapping.size(), env.num_nodes());
 
       create_mpi_block_mapping_groups(mapping, node_comm, env.node_index(),
                                       mpi_group.value, mpi_comm.value,
@@ -102,6 +104,8 @@ read_polynomial_matrix_program(const Environment &env,
   std::vector<Polynomial_Vector_Matrix> matrices;
   // global index of matrices[i], lies in [0..num_matrices)
   std::vector<size_t> matrix_index_local_to_global;
+  // input path for each of the matrices
+  std::vector<std::filesystem::path> block_paths;
 
   const auto all_files = collect_files_expanding_nsv(input_files);
   const size_t num_files = all_files.size();
@@ -175,8 +179,8 @@ read_polynomial_matrix_program(const Environment &env,
       }
 
     num_matrices
-      = std::reduce(num_matrices_per_file.begin(), num_matrices_per_file.end(),
-                    static_cast<size_t>(0));
+      = std::accumulate(num_matrices_per_file.begin(),
+                        num_matrices_per_file.end(), static_cast<size_t>(0));
   }
 
   // Get objective, normalization and polynomial vector matrices
@@ -206,6 +210,7 @@ read_polynomial_matrix_program(const Environment &env,
             = matrix_index_offset_per_file.at(file_index) + index_in_file;
           matrices.emplace_back(std::move(matrix));
           matrix_index_local_to_global.push_back(global_index);
+          block_paths.push_back(all_files.at(file_index));
         }
     }
 
@@ -219,14 +224,12 @@ read_polynomial_matrix_program(const Environment &env,
 
   ASSERT(!objective.empty(), "objective not found in input files");
 
-  if(normalization.empty())
-    {
-      // default normalization [1,0,0..0]
-      normalization.resize(objective.size(), 0);
-      normalization.at(0) = 1;
-    }
+  std::optional<std::vector<El::BigFloat>> opt_normalization;
+  if(!normalization.empty())
+    opt_normalization = std::move(normalization);
 
   return Polynomial_Matrix_Program(
-    std::move(objective), std::move(normalization), num_matrices,
-    std::move(matrices), std::move(matrix_index_local_to_global));
+    std::move(objective), std::move(opt_normalization), num_matrices,
+    std::move(matrices), std::move(matrix_index_local_to_global),
+    std::move(block_paths));
 }

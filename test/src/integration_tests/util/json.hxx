@@ -1,7 +1,9 @@
 #pragma once
 
+#define RAPIDJSON_ASSERT(x) ASSERT(x)
+
 #include "Float.hxx"
-#include "Test_Case_Runner.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <catch2/catch_amalgamated.hpp>
 #include <filesystem>

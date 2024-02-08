@@ -1,6 +1,7 @@
 #include "dynamical_solve/dynamical_solve.hxx"
+#include "pmp/max_normalization_index.hxx"
+#include "sdpb/save_sdpb_solution.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
-#include "sdpb_util/write_distmatrix.hxx"
 
 #include <fstream>
 
@@ -8,100 +9,52 @@ namespace fs = std::filesystem;
 
 void print_matrix(const El::Matrix<El::BigFloat> &matrix);
 
-namespace
+void save_solution(
+  const Dynamical_Solver &solver,
+  const Dynamical_Solver_Terminate_Reason &terminate_reason,
+  const int64_t &solver_runtime, const fs::path &out_directory,
+  const Write_Solution &write_solution,
+  const std::vector<size_t> &block_indices,
+  const std::optional<std::vector<El::BigFloat>> &normalization,
+  const Verbosity &verbosity, const El::Matrix<El::BigFloat> &extParamStep)
 {
-  void write_psd_block(const std::filesystem::path &outfile,
-                       const El::DistMatrix<El::BigFloat> &block)
-  {
-    std::ofstream stream;
-    if(block.DistRank() == block.Root())
-      {
-        stream.open(outfile);
-      }
-    El::Print(block,
-              std::to_string(block.Height()) + " "
-                + std::to_string(block.Width()),
-              "\n", stream);
-    if(block.DistRank() == block.Root())
-      {
-        stream << "\n";
-        ASSERT(stream.good(), "Error when writing to: ", outfile);
-      }
-  }
-}
+  // Regular SDPB output
+  save_sdpb_solution(solver, terminate_reason, solver_runtime, out_directory,
+                     write_solution, block_indices, normalization, verbosity);
 
-void save_solution(const Dynamical_Solver &solver,
-                   const Dynamical_Solver_Terminate_Reason &terminate_reason,
-                   const int64_t &solver_runtime,
-                   const fs::path &out_directory,
-                   const Write_Solution &write_solution,
-                   const std::vector<size_t> &block_indices,
-                   const Verbosity &verbosity,
-                   const El::Matrix<El::BigFloat> &extParamStep)
-{
-  // Internally, El::Print() sync's everything to the root core and
-  // outputs it from there.  So do not actually open the file on
-  // anything but the root node.
+  // Skydiving output
 
-  std::ofstream out_stream;
   if(El::mpi::Rank() == 0)
     {
+      std::ofstream skydiving_out_stream;
       if(verbosity >= Verbosity::regular)
         {
           std::cout << "Saving solution to      : " << out_directory << '\n';
         }
-      fs::create_directories(out_directory);
-      const fs::path output_path(out_directory / "out.txt");
-      out_stream.open(output_path);
-      set_stream_precision(out_stream);
+      const std::filesystem::path skydiving_out_path(out_directory
+                                                     / "skydiving_out.txt");
+      skydiving_out_stream.open(skydiving_out_path);
+      set_stream_precision(skydiving_out_stream);
       //if (update_sdp && terminate_reason == Dynamical_Solver_Terminate_Reason::MaxIterationsExceeded)
       //  {
-      //    out_stream << "exit to update SDPs" << ";\n";
+      //    skydiving_out_stream << "exit to update SDPs" << ";\n";
       //  }
       //else
       //  {
-      //    out_stream << "terminateReason = \"" << terminate_reason << "\";\n";
+      //    skydiving_out_stream << "terminateReason = \"" << terminate_reason << "\";\n";
       //  }
-      out_stream << "terminateReason = \"" << terminate_reason << "\";\n"
-                 << "primalObjective = " << solver.primal_objective << ";\n"
-                 << "dualObjective   = " << solver.dual_objective << ";\n"
-                 << "dualityGap      = " << solver.duality_gap << ";\n"
-                 << "primalError     = " << solver.primal_error() << ";\n"
-                 << "dualError       = " << solver.dual_error << ";\n"
-                 << "Solver runtime  = " << solver_runtime << ";\n";
-      ASSERT(out_stream.good(), "Error when writing to: ", output_path);
-    }
-
-  std::ofstream out2_stream;
-  if(El::mpi::Rank() == 0)
-    {
-      if(verbosity >= Verbosity::regular)
-        {
-          std::cout << "Saving solution to      : " << out_directory << '\n';
-        }
-      const std::filesystem::path output2_path(out_directory
-                                               / "skydiving_out.txt");
-      out2_stream.open(output2_path);
-      set_stream_precision(out2_stream);
-      //if (update_sdp && terminate_reason == Dynamical_Solver_Terminate_Reason::MaxIterationsExceeded)
-      //  {
-      //    out_stream << "exit to update SDPs" << ";\n";
-      //  }
-      //else
-      //  {
-      //    out_stream << "terminateReason = \"" << terminate_reason << "\";\n";
-      //  }
-      out2_stream << "dualStepSize       = " << solver.d_step << ";\n"
-                  << "primalStepSize     = " << solver.p_step << ";\n"
-                  << "BFGSHessianUpdated = " << solver.hess_BFGS_updateQ
-                  << ";\n"
-                  << "NavigatorValue     = " << solver.lag_shifted << ";\n"
-                  << "findMinimumQ       = " << solver.findMinimumQ << ";\n"
-                  << "beta               = " << solver.final_beta << ";\n"
-                  << "mulogdetX          = " << solver.mulogdetX << ";\n"
-                  << "climbedQ           = " << (!solver.lowest_mu_Q) << ";\n"
-                  << "Solver runtime     = " << solver_runtime << ";\n";
-      ASSERT(out2_stream.good(), "Error when writing to: ", output2_path);
+      skydiving_out_stream
+        << "dualStepSize       = " << solver.d_step << ";\n"
+        << "primalStepSize     = " << solver.p_step << ";\n"
+        << "BFGSHessianUpdated = " << solver.hess_BFGS_updateQ << ";\n"
+        << "NavigatorValue     = " << solver.lag_shifted << ";\n"
+        << "findMinimumQ       = " << solver.findMinimumQ << ";\n"
+        << "beta               = " << solver.final_beta << ";\n"
+        << "mulogdetX          = " << solver.mulogdetX << ";\n"
+        << "climbedQ           = " << (!solver.lowest_mu_Q) << ";\n"
+        << "Solver runtime     = " << solver_runtime << ";\n";
+      ASSERT(skydiving_out_stream.good(),
+             "Error when writing to: ", skydiving_out_path);
     }
 
   std::ofstream extParamStep_stream;
@@ -201,8 +154,7 @@ void save_solution(const Dynamical_Solver &solver,
                                * solver.hess_BFGS_pp.Width())
                   + " " + std::to_string(1),
                 "\n", hess_pp_stream);
-      ASSERT(hess_pp_stream.good(),
-             "Error when writing to: ", hess_pp_path);
+      ASSERT(hess_pp_stream.good(), "Error when writing to: ", hess_pp_path);
     }
 
   std::ofstream hess_Exact_stream;
@@ -241,54 +193,4 @@ void save_solution(const Dynamical_Solver &solver,
   //     ASSERT(mu_direction_stream.good(),
   //            "Error when writing to: ", mu_direction_path);
   //   }
-
-  // y is duplicated among cores, so only need to print out copy on
-  // the root node.
-  if(write_solution.vector_y && !solver.y.blocks.empty())
-    {
-      const fs::path y_path(out_directory / "y.txt");
-      std::ofstream y_stream;
-      if(El::mpi::Rank() == 0)
-        {
-          y_stream.open(y_path);
-        }
-      El::Print(solver.y.blocks.at(0),
-                std::to_string(solver.y.blocks.at(0).Height()) + " "
-                  + std::to_string(solver.y.blocks.at(0).Width()),
-                "\n", y_stream);
-      if(El::mpi::Rank() == 0)
-        {
-          y_stream << "\n";
-          ASSERT(y_stream.good(), "Error when writing to: ", y_path);
-        }
-    }
-
-  for(size_t block = 0; block != solver.x.blocks.size(); ++block)
-    {
-      size_t block_index(block_indices.at(block));
-      if(write_solution.vector_x)
-        {
-          write_distmatrix(solver.x.blocks.at(block),
-                           out_directory
-                             / ("x_" + std::to_string(block_index) + ".txt"));
-        }
-      for(size_t psd_block(0); psd_block < 2; ++psd_block)
-        {
-          std::string suffix(std::to_string(2 * block_index + psd_block)
-                             + ".txt");
-
-          if(write_solution.matrix_X
-             && solver.X.blocks.at(2 * block + psd_block).Height() != 0)
-            {
-              write_psd_block(out_directory / ("X_matrix_" + suffix),
-                              solver.X.blocks.at(2 * block + psd_block));
-            }
-          if(write_solution.matrix_Y
-             && solver.Y.blocks.at(2 * block + psd_block).Height() != 0)
-            {
-              write_psd_block(out_directory / ("Y_matrix_" + suffix),
-                              solver.Y.blocks.at(2 * block + psd_block));
-            }
-        }
-    }
 }

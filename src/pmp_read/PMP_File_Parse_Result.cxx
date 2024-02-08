@@ -60,13 +60,13 @@ PMP_File_Parse_Result PMP_File_Parse_Result::read(
 void PMP_File_Parse_Result::validate(const PMP_File_Parse_Result &result)
 {
   ASSERT(result.parsed_matrices.size() <= result.num_matrices,
-         "parsed_matrices.size()=", result.parsed_matrices.size(),
-         " should not exceed num_matrices=", result.num_matrices);
+         DEBUG_STRING(result.parsed_matrices.size()),
+         DEBUG_STRING(result.num_matrices));
 
   for(auto &[index, matrix] : result.parsed_matrices)
     {
-      ASSERT(index < result.num_matrices, "index=", index,
-             "should be less than", result.num_matrices);
+      ASSERT(index < result.num_matrices, DEBUG_STRING(index),
+             DEBUG_STRING(result.num_matrices));
     }
 
   if(result.num_matrices == 0 && result.objective.empty()
