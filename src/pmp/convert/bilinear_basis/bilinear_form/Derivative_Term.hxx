@@ -31,9 +31,7 @@ struct Derivative_Term
 
 inline bool operator<(const Derivative_Term &a, const Derivative_Term &b)
 {
-  return a.powers < b.powers
-           ? true
-           : (a.powers > b.powers ? false : a.constant < b.constant);
+  return std::tie(a.powers, a.constant) < std::tie(b.powers, b.constant);
 }
 
 inline std::ostream & operator<<(std::ostream &os, const Derivative_Term &term)

@@ -9,8 +9,7 @@ TEST_CASE("sdpb")
   INFO("maximize (-y) s.t. (1 + x^4 + y * (x^4 / 12 + x^2)) >= 0)");
   auto data_dir = Test_Config::test_data_dir / "sdpb";
   // default sdp input file
-  auto sdp_path
-    = Test_Config::test_data_dir / "pmp2sdp" / "xml" / "sdp_orig.zip";
+  auto sdp_path = Test_Config::test_data_dir / "pmp2sdp" / "xml" / "sdp_orig";
   CAPTURE(sdp_path);
 
   int num_procs = 2;
@@ -100,7 +99,6 @@ TEST_CASE("sdpb")
       Test_Util::Test_Case_Runner runner("sdpb/io_tests/input_corruption");
       auto sdp_corrupted = runner.output_dir / "sdp_corrupted.zip";
       fs::create_directories(runner.output_dir);
-      fs::copy(sdp_path, sdp_corrupted, fs::copy_options::recursive);
       std::ofstream os(sdp_corrupted);
       os << "any bytes to corrupt zip archive";
 

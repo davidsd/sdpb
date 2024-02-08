@@ -17,4 +17,11 @@ struct SDP_Block_Data
   SDP_Block_Data() = default;
   SDP_Block_Data(std::istream &block_stream, Block_File_Format format,
                  size_t block_index_local, const Block_Info &block_info);
+
+  // Allow move and prohibit copy
+
+  SDP_Block_Data(const SDP_Block_Data &other) = delete;
+  SDP_Block_Data(SDP_Block_Data &&other) noexcept = default;
+  SDP_Block_Data &operator=(const SDP_Block_Data &other) = delete;
+  SDP_Block_Data &operator=(SDP_Block_Data &&other) noexcept = default;
 };

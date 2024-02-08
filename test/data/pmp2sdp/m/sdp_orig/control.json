@@ -1,0 +1,4 @@
+{
+  "num_blocks": 3,
+  "command": "build/sdp2input --precision=512 --input=test/data/sdp2input/sdp2input_test.m --outputFormat=json --output=test/out/sdp2input/sdp2input_test.m/sdp_json.zip --debug=true"
+}

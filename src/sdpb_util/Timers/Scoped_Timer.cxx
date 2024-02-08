@@ -26,8 +26,7 @@ void Scoped_Timer::stop()
   my_timer.stop();
 
   // This assertion will fail if some of the nested timers is still running:
-  ASSERT(timers.prefix == new_prefix, "timers.prefix = '" + timers.prefix
-                                        + "', expected: '" + new_prefix + "'");
+  ASSERT_EQUAL(timers.prefix, new_prefix);
   timers.prefix = old_prefix;
 }
 const Timer &Scoped_Timer::timer() const

@@ -41,10 +41,12 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
     "writeSolution",
     po::value<std::string>(&write_solution_string)->default_value("x,y"s),
     "A comma separated list of vectors and matrices to write into the output "
-    "directory.  The default only writes the vectors 'x' and 'y'.  If you add "
-    "the 'X' and 'Y' matrices, then the output directory can be used as a "
-    "final text "
-    "checkpoint.  Runs started from text checkpoints will very close to, but "
+    "directory.  The default only writes the vectors 'x' and 'y'. "
+    "If you add 'z', SDPB will also write the vector z "
+    "restored from y with the help of sdp/normalization.json. "
+    "If you add the 'X' and 'Y' matrices, then the output directory can be "
+    "used as a final text checkpoint. "
+    "Runs started from text checkpoints will very close to, but "
     "not bitwise identical to, the original run.\nTo only output the result "
     "(because, for example, you only want to know if SDPB found a primal "
     "feasible point), set this to an empty string.");

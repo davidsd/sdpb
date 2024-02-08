@@ -26,7 +26,7 @@ Json_PMP_Parser::Json_PMP_Parser(
         [this](
           Vector_Parse_Result_With_Skip<Polynomial_Vector_Matrix> &&result) {
           this->result.num_matrices = result.num_elements;
-          ASSERT(result.indices.size() == result.parsed_elements.size());
+          ASSERT_EQUAL(result.indices.size(), result.parsed_elements.size());
           for(size_t i = 0; i < result.indices.size(); ++i)
             {
               this->result.parsed_matrices.emplace(
@@ -59,7 +59,6 @@ void Json_PMP_Parser::clear_result()
   result.normalization.clear();
   result.num_matrices = 0;
   result.parsed_matrices.clear();
-  result.path.clear();
 }
 Json_PMP_Parser::value_type Json_PMP_Parser::get_result()
 {

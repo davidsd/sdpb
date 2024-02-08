@@ -24,7 +24,11 @@ void write_file(const fs::path &output_path,
             {
               outfile << ",";
             }
-          outfile << "\n  {\n    \"zeros\":\n      [";
+          auto block_path = zeros_iterator->block_path.string();
+          ASSERT(!block_path.empty(), "Empty path for block_",
+                 std::distance(zeros_blocks.begin(), zeros_iterator));
+          outfile << "\n  {\n    \"block_path\": \"" << block_path << "\",";
+          outfile << "\n    \"zeros\":\n      [";
           for(size_t zero_index(0); zero_index != zeros_iterator->zeros.size();
               ++zero_index)
             {

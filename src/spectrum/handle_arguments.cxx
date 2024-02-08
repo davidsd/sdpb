@@ -62,7 +62,7 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
       std::cout << options << '\n';
       exit(0);
     }
-  if(variables_map.count("format") != 0)
+  if(variables_map.count("format") != 0 && El::mpi::Rank() == 0)
     {
       El::Output("--format option is obsolete. Input file format is "
                  "determined automatically.");
