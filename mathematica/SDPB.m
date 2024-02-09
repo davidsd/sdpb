@@ -59,6 +59,13 @@ toJsonObject[PositiveMatrixWithPrefactor[prefactor_, m_]] := <|
   "polynomials" ->
    Map[toJsonNumberArray[safeCoefficientList[#, x]] &, m, {3}]
   |>;
+  
+toJsonObject[PositiveMatrixWithPrefactor[prefactor_, m_], samplePointsFn_] := <|
+  "DampedRational" -> toJsonObject[prefactor],
+  "polynomials" ->
+   Map[toJsonNumberArray[safeCoefficientList[#, x]] &, m, {3}],
+   "samplePoints"-> toJsonNumberArray[samplePointsFn[Max[Exponent[m, x]] + 1]]
+  |>;
 
 toJsonObject[
   SDP[objective_List, normalization_List,
@@ -67,6 +74,16 @@ toJsonObject[
   "normalization" -> toJsonNumberArray[normalization],
   "PositiveMatrixWithPrefactorArray" ->
    toJsonObject /@ positiveMatricesWithPrefactors
+  |>;
+
+toJsonObject[
+  SDP[objective_List, normalization_List,
+   positiveMatricesWithPrefactors_List],
+   samplePointsFn_] := <|
+  "objective" -> toJsonNumberArray[objective],
+  "normalization" -> toJsonNumberArray[normalization],
+  "PositiveMatrixWithPrefactorArray" ->
+   Map[toJsonObject[#,samplePointsFn]& , positiveMatricesWithPrefactors]
   |>;
 
 exportJson[file_,expr_]:=If[
@@ -81,6 +98,15 @@ WritePmpJson[
   ] := exportJson[
     file,
     toJsonObject@SDP[objective, normalization, positiveMatricesWithPrefactors]
+    ];
+    
+WritePmpJson[
+  file_,
+  SDP[objective_, normalization_, positiveMatricesWithPrefactors_],
+  samplePointsFn_
+  ]:=exportJson[
+    file,
+    toJsonObject[SDP[objective, normalization, positiveMatricesWithPrefactors], samplePointsFn]
     ];
 
 
@@ -197,7 +223,7 @@ reshuffleWithNormalization[normalization_, v_] := Module[
     Prepend[Delete[v - normalization*const, j], const]];
 
 
-(* ::Subsection:: *)
+(* ::Subsection::Closed:: *)
 (*Export to XML file*)
 
 
