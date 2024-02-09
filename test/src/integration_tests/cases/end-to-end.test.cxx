@@ -15,8 +15,7 @@ namespace
                   const std::string &default_sdpb_args,
                   const std::string &sdp_format, int num_procs, int precision,
                   int sdp_diff_precision, int sdpb_output_diff_precision,
-                  bool zip, const std::vector<std::string> &out_txt_keys = {},
-                  bool compute_spectrum = false)
+                  bool zip, const std::vector<std::string> &out_txt_keys = {})
   {
     auto format_description = sdp_format.empty() ? "default(bin)" : sdp_format;
     CAPTURE(sdp_format);
@@ -26,15 +25,16 @@ namespace
     const auto &data_dir = runner.data_dir.parent_path();
     const auto &output_dir = runner.output_dir;
 
-    auto sdp_orig = (data_dir / "sdp_orig").string();
+    auto data_input_dir = data_dir / "input";
+    auto data_output_dir = data_dir / "output";
+
+    auto sdp_orig = (data_output_dir / "sdp").string();
     auto sdp_path = (output_dir / (zip ? "sdp.zip" : "sdp")).string();
 
     // pmp2sdp
     {
       INFO("run pmp2sdp");
-      auto input = data_dir / "pmp.xml";
-      if(!exists(input))
-        input = data_dir / "json" / "file_list.nsv";
+      auto input = data_input_dir / "pmp.nsv";
       Test_Util::Test_Case_Runner::Named_Args_Map args{
         {"--input", input.string()},
         {"--output", sdp_path},
@@ -71,14 +71,14 @@ namespace
       // We check test output up to lower precision=<sdpb_output_diff_precision>
       // in order to neglect unimportant rounding errors
       Test_Util::REQUIRE_Equal::diff_sdpb_output_dir(
-        output_dir / "out", data_dir / "out", precision,
+        output_dir / "out", data_output_dir / "out", precision,
         sdpb_output_diff_precision, {}, out_txt_keys);
     }
 
-    if(compute_spectrum)
+    if(exists(data_output_dir / "spectrum.json"))
       {
         Test_Util::Test_Case_Runner::Named_Args_Map args{
-          {"--input", (data_dir / "json" / "file_list.nsv").string()},
+          {"--input", (data_input_dir / "pmp.nsv").string()},
           {"--solution", (output_dir / "out").string()},
           {"--threshold", "1e-10"},
           {"--output", (output_dir / "spectrum.json").string()},
@@ -87,7 +87,7 @@ namespace
         runner.create_nested("spectrum")
           .mpi_run({"build/spectrum"}, args, num_procs);
         Test_Util::REQUIRE_Equal::diff_spectrum(
-          output_dir / "spectrum.json", data_dir / "spectrum_orig.json",
+          output_dir / "spectrum.json", data_output_dir / "spectrum.json",
           precision, sdpb_output_diff_precision);
       }
   }
@@ -164,7 +164,7 @@ TEST_CASE("end-to-end_tests")
       bool compute_spectrum = true;
       end_to_end_test(name, default_sdpb_args, "bin", num_procs, precision,
                       sdp_diff_precision, sdpb_output_diff_precision, zip,
-                      out_txt_keys, compute_spectrum);
+                      out_txt_keys);
     }
 
     SECTION("SingletScalarAllowed_test_nmax6")

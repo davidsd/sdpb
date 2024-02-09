@@ -1,6 +1,6 @@
 [
   {
-    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/json/./continuum_mat_90qKjX-X0eTpn8Qm2nq7aXN0RzV_JJpQTX9sgc_73zc.json",
+    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/input/json/continuum_mat_90qKjX-X0eTpn8Qm2nq7aXN0RzV_JJpQTX9sgc_73zc.json",
     "zeros":
       [
         {
@@ -28,7 +28,7 @@
     "error": "1.0957971628646188592514996372153105692587326024214494395535809621126180179739508668207214489134647954535500415128119250687831275739334098283609630501605901895850826665113174836335344919662263007529338643566056725790779475959769213246e-29"
   },
   {
-    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/json/./continuum_mat_Dg5aXJhNmwPwysx5qmbql5hU2mN0QLsymZLx12KEkko.json",
+    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/input/json/continuum_mat_Dg5aXJhNmwPwysx5qmbql5hU2mN0QLsymZLx12KEkko.json",
     "zeros":
       [
         {
@@ -42,7 +42,7 @@
     "error": "2.5068060721472721456370151657077190044050624463469170019143432724764621798110303153769546441410365958383189617591582633688898485757519733622090510343784228491056659009217887612960474145958151322617484796207359608196177407950902971196e-38"
   },
   {
-    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/json/./continuum_mat_ii1gf1LMD_mxYze-dXcTORp13e_I2UTLORTFkQNL8rE.json",
+    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/input/json/continuum_mat_ii1gf1LMD_mxYze-dXcTORp13e_I2UTLORTFkQNL8rE.json",
     "zeros":
       [
         {
@@ -70,7 +70,7 @@
     "error": "4.3873104643546052203107501971327411125355453875939744958488386006666730450291449066322609593204164684920599296291016854558239464535960295069191773686238877792432650989980955130428797645783304868044062388201816999300917736745463588637e-37"
   },
   {
-    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/json/./continuum_mat_IcAkE0Vg0Pq2L9Q3vLvhm_H_weQ3MUF6qILFg7swJtA.json",
+    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/input/json/continuum_mat_IcAkE0Vg0Pq2L9Q3vLvhm_H_weQ3MUF6qILFg7swJtA.json",
     "zeros":
       [
         {
@@ -84,7 +84,7 @@
     "error": "3.616574874719925840182069596146897687717697396728324655983045891608279615503045728142929192410153385356068439183800889823396724835413163597177482325798602629762727829666187408845850610722543287101735568588024746371694246376652439457e-42"
   },
   {
-    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/json/./continuum_mat_7Zx5W7tmNKpppVSnqLIn8r_akbYXohvojSl-AQ85nOQ.json",
+    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/input/json/continuum_mat_7Zx5W7tmNKpppVSnqLIn8r_akbYXohvojSl-AQ85nOQ.json",
     "zeros":
       [
         {
@@ -98,7 +98,7 @@
     "error": "1.7502303331601979969750271057870648971869571718782759635479341428464946924312528305883934869674501127265749805891662294687025819550772276266380107236131033501022104060467880566028806638386405027819041400154755094477911503596722401817e-45"
   },
   {
-    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/json/./continuum_mat_wVIa6e0uBY68Gc_3CbRkIJxqCUNuEFxzNUoWFHp1VJw.json",
+    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/input/json/continuum_mat_wVIa6e0uBY68Gc_3CbRkIJxqCUNuEFxzNUoWFHp1VJw.json",
     "zeros":
       [
         {
@@ -119,35 +119,35 @@
     "error": "1.6297203944374657947362956483758808803296508510735940757111713406972318407627446635106617568753939805153557934303746624514996416639806457488704618915474808994073860006300597483025484118096153161649042236616032337143653807054620302102e-49"
   },
   {
-    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/json/./continuum_mat_7vd7W4Mx4RGHJMyuSkhIDkgRqzv-Kqm5Vl-9HaH2pno.json",
+    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/input/json/continuum_mat_7vd7W4Mx4RGHJMyuSkhIDkgRqzv-Kqm5Vl-9HaH2pno.json",
     "zeros":
       [
       ],
     "error": "5.3129307910389221343061198593132680959283819901818212895275441377005335130882225788120046514115259715887650099904521670095530075346953848163765563209895159729939817511450313692883729797029529843727494388835013698044809236105491992037e-49"
   },
   {
-    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/json/./continuum_mat_JBzN8YCMIm6QPDw3pVKGPjzDn25EztGGpHKgsW7bs-w.json",
+    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/input/json/continuum_mat_JBzN8YCMIm6QPDw3pVKGPjzDn25EztGGpHKgsW7bs-w.json",
     "zeros":
       [
       ],
     "error": "1.1668775629115380960750516327937370100974108386679244447099679581353670683081563591514743890785982540050310528113726751822249157332308246038356166716484782250795535748426893310356060495126582025004729578877377296822897664625179115604e-48"
   },
   {
-    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/json/./continuum_mat_jvCUmc9AsJ7FNXCmRtzCjo6uRjxgxwnKoRobn8EGyn0.json",
+    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/input/json/continuum_mat_jvCUmc9AsJ7FNXCmRtzCjo6uRjxgxwnKoRobn8EGyn0.json",
     "zeros":
       [
       ],
     "error": "2.5436161021393187962920826122834954633180426507513711080836306987089477191539198686985528095959722346501621097697203343069903860607177690213675816739052434068643957610187933004767790499503906732559105305745402673333979930667523185892e-48"
   },
   {
-    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/json/./continuum_mat_0E7pYGtsMg5eAZP-5aZ7GxwN1d9hQPl58MmzhURiiMg.json",
+    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/input/json/continuum_mat_0E7pYGtsMg5eAZP-5aZ7GxwN1d9hQPl58MmzhURiiMg.json",
     "zeros":
       [
       ],
     "error": "5.5171450902620492831932179065830894893938769888186024570563553233249458475471720933200773829122436588844431229186843838282791142073599198112926393207106684300163251040768308744975878134127709374274525340135486950579168052411140849964e-48"
   },
   {
-    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/json/./continuum_mat_m0Cn4jAfYghjMBAl5Z1JSUhPjiOjnu_msjxPVaJyRBg.json",
+    "block_path": "test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal/input/json/continuum_mat_m0Cn4jAfYghjMBAl5Z1JSUhPjiOjnu_msjxPVaJyRBg.json",
     "zeros":
       [
       ],
