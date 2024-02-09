@@ -133,8 +133,9 @@ TEST_CASE("pmp2sdp")
       Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
       args["--input"] = input;
       args["--output"] = sdp_dir.string();
-      runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 1,
-                     "check_sdp_directory()");
+      // We allow pmp2sdp to overwrite exsiting sdp_temp
+      runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 0,
+                     "exists and will be overwritten");
     }
     SECTION("sdp_dir_exists")
     {
@@ -152,7 +153,9 @@ TEST_CASE("pmp2sdp")
       Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
       args["--input"] = input;
       args["--output"] = sdp_dir.string();
-      runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 1, "cannot rename");
+      // We allow pmp2sdp to overwrite exsiting sdp
+      runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 0,
+                     "exists and will be overwritten");
     }
 
     SECTION("cannot_write_zip")
@@ -171,8 +174,9 @@ TEST_CASE("pmp2sdp")
       args["--input"] = input;
       args["--output"] = sdp_readonly_zip.string();
       args["--zip"] = "";
-      runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 1,
-                     "Unable to set options for writing an archive");
+      // We allow pmp2sdp to overwrite exsiting sdp
+      runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 0,
+                     "exists and will be overwritten");
     }
 
     SECTION("invalid_nsv")
