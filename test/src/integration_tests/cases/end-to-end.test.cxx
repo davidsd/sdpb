@@ -29,6 +29,17 @@ namespace
     auto data_input_dir = data_dir / "input";
     auto data_output_dir = data_dir / "output";
 
+    for(const auto &it : fs::directory_iterator(data_output_dir))
+      {
+        INFO("Check filenames in data_output_dir");
+        CAPTURE(data_output_dir);
+        auto filename = it.path().filename();
+        CAPTURE(filename);
+        if(!(filename == "sdp" || filename == "out"
+             || filename == "spectrum.json"))
+          FAIL("Unexpected file: " << it.path());
+      }
+
     std::string sdp_format;
     if(pmp2sdp_args.find("--outputFormat") != pmp2sdp_args.end())
       sdp_format = pmp2sdp_args.at("--outputFormat");
