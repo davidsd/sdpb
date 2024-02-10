@@ -2,6 +2,9 @@
 cmake_minimum_required(VERSION 3.16)
 project(sdpb LANGUAGES CXX)
 
+# This is to ensure that CMake also checks lib64 for the dependencies 
+set(CMAKE_PREFIX_PATH "/usr/lib64" ${CMAKE_PREFIX_PATH})
+
 # Currently we are working with a single CMake file but it is better to refactor parts of this file and put them inside cmake/modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
@@ -54,8 +57,37 @@ message(STATUS "Boost version: ${Boost_VERSION}")
 
 
 # TODO mpfr
-pkg_check_modules(MPFR REQUIRED mpfr)
-message(STATUS "MPFR version: ${MPFR_VERSION}")
+find_package(MPFR QUIET)
+
+if (MPFR_FOUND) 
+	message(STATUS "MPFR version: ${MPFR_VERSION}")
+else ()
+	find_path(MPFR_INCLUDE_DIR mpfr.h
+		PATHS /usr/include /usr/local/include
+	)
+
+	find_library(MPFR_LIBRARY mpfr
+    		PATHS /usr/lib64 /usr/local/lib
+	)
+
+	if (MPFR_INCLUDE_DIR AND MPFR_LIBRARY)
+    		set(MPFR_FOUND TRUE)
+	endif ()
+
+	if (MPFR_FOUND)
+    		if (NOT MPFR_FIND_QUIETLY)
+        		message(STATUS "Found MPFR: ${MPFR_LIBRARY}")
+    		endif ()
+	else ()
+    		if (MPFR_FIND_REQUIRED)
+        		message(FATAL_ERROR "Could not find MPFR")
+    		endif ()
+	endif ()
+
+	mark_as_advanced(MPFR_INCLUDE_DIR MPFR_LIBRARY)
+
+	message(STATUS "MPFR version: ${MPFR_VERSION}")
+endif ()
 
 # TODO elemental
 
