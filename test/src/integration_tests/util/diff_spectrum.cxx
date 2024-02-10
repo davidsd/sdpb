@@ -33,7 +33,6 @@ namespace
   {
     std::vector<Zeros> zeros_array;
 
-    std::vector<std::pair<std::string, std::string>> options;
     explicit Parse_Spectrum_Json(const fs::path &path)
     {
       CAPTURE(path);
@@ -82,6 +81,7 @@ namespace Test_Util::REQUIRE_Equal
                      unsigned int input_precision, unsigned int diff_precision)
   {
     INFO("diff spectrum output");
+    REQUIRE(a_json != b_json);
     CAPTURE(a_json);
     CAPTURE(b_json);
     Float_Binary_Precision prec(input_precision, diff_precision);

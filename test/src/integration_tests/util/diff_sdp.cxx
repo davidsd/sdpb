@@ -220,6 +220,7 @@ namespace Test_Util::REQUIRE_Equal
                 Test_Case_Runner runner)
   {
     INFO("diff sdp directories/zip files");
+    REQUIRE(a_sdp != b_sdp);
     CAPTURE(a_sdp);
     CAPTURE(b_sdp);
     Float_Binary_Precision prec(input_precision, diff_precision);
