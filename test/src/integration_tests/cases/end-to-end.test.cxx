@@ -142,6 +142,17 @@ TEST_CASE("end-to-end_tests")
                     check_sdp_normalization);
   }
 
+  SECTION("1d-duplicate-poles")
+  {
+    INFO("SDPB test for a simple one-dimensional problem from SDPB Manual:");
+    INFO("maximize (-y) s.t. (1 + x^4 + y * (x^4 / 12 + x^2)) >= 0)");
+    INFO("Here the matrix has a non-trivial prefactor with duplicate poles.");
+    INFO("Primal objective, dual objective and the vector y should be similar "
+         "to the simple 1d case. The vector x may differ.");
+    num_procs = 2;
+    end_to_end_test("1d-duplicate-poles", num_procs, precision);
+  }
+
   SECTION("dfibo-0-0-j=3-c=3.0000-d=3-s=6")
   {
     INFO("pmp2sdp+sdpb test for https://github.com/davidsd/sdpb/issues/124");

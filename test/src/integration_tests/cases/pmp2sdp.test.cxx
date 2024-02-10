@@ -89,25 +89,6 @@ TEST_CASE("pmp2sdp")
       }
   }
 
-  SECTION("duplicate_poles")
-  {
-    const Test_Util::Test_Case_Runner runner("pmp2sdp/duplicate_poles");
-    fs::create_directories(runner.output_dir);
-
-    Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
-    args["--input"] = (runner.data_dir / "pmp.json").string();
-    auto sdp_path = runner.output_dir / "sdp";
-    args["--output"] = sdp_path.string();
-    args["--outputFormat"] = "json";
-
-    runner.create_nested("run").mpi_run({"build/pmp2sdp"}, args);
-
-    auto sdp_orig = runner.data_dir / "sdp_orig";
-    Test_Util::REQUIRE_Equal::diff_sdp(sdp_path, sdp_orig, precision,
-                                       diff_precision,
-                                       runner.create_nested("diff"));
-  }
-
   SECTION("filesystem errors")
   {
     INFO("pmp2sdp should fail due to invalid input/output arguments");
