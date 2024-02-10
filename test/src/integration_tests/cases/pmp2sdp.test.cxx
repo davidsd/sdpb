@@ -16,7 +16,7 @@ TEST_CASE("pmp2sdp")
 
   SECTION("run")
   {
-    std::string input_format = GENERATE("json", "m", "xml");
+    std::string input_format = GENERATE("json", "m");
     DYNAMIC_SECTION(input_format)
     {
       auto data_dir = Test_Config::test_data_dir / "pmp2sdp" / input_format;
@@ -48,7 +48,7 @@ TEST_CASE("pmp2sdp")
   SECTION("outputFormat")
   {
     INFO("Check different --outputFormat options");
-    auto data_dir = Test_Config::test_data_dir / "pmp2sdp" / "xml";
+    auto data_dir = Test_Config::test_data_dir / "end-to-end_tests" / "1d";
 
     for(std::string output_format : {"", "bin", "json"})
       {
@@ -62,7 +62,7 @@ TEST_CASE("pmp2sdp")
           Test_Util::Test_Case_Runner runner("pmp2sdp/outputFormat"s + "/"
                                              + format_description);
           Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
-          args["--input"] = (data_dir / "file_list.nsv").string();
+          args["--input"] = (data_dir / "input" / "pmp.json").string();
           auto sdp_path = runner.output_dir / "sdp";
           args["--output"] = sdp_path.string();
           if(!output_format.empty())
@@ -80,7 +80,7 @@ TEST_CASE("pmp2sdp")
             REQUIRE(is_regular_file(block_data_0_path));
           }
 
-          auto sdp_orig = data_dir / "sdp_orig";
+          auto sdp_orig = data_dir / "output" / "sdp";
 
           Test_Util::REQUIRE_Equal::diff_sdp(sdp_path, sdp_orig, precision,
                                              diff_precision,
@@ -111,10 +111,10 @@ TEST_CASE("pmp2sdp")
   SECTION("filesystem errors")
   {
     INFO("pmp2sdp should fail due to invalid input/output arguments");
-    auto data_dir = Test_Config::test_data_dir / "pmp2sdp" / "xml";
+    auto data_dir = Test_Config::test_data_dir / "end-to-end_tests" / "1d";
     int num_procs = 2;
 
-    auto input = (data_dir / "file_list.nsv").string();
+    auto input = (data_dir / "input" / "pmp.json").string();
 
     SECTION("sdp_temp_not_empty")
     {

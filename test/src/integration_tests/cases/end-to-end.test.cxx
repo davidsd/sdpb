@@ -8,16 +8,26 @@
 // Note that on different machines results can vary due to rounding errors,
 // depending on GMP/MPFR version etc.
 
-using Named_Args_Map = Test_Util::Test_Case_Runner::Named_Args_Map;
+using namespace Test_Util;
+using namespace Test_Util::REQUIRE_Equal;
+using Named_Args_Map = Test_Case_Runner::Named_Args_Map;
+
+namespace fs = std::filesystem;
 
 namespace
 {
   void end_to_end_test(const std::string &name, int num_procs, int precision,
                        const std::string &default_sdpb_args = "",
-                       Named_Args_Map pmp2sdp_args = {},
-                       const std::vector<std::string> &out_txt_keys = {})
+                       const Named_Args_Map &pmp2sdp_args = {},
+                       const std::vector<std::string> &out_txt_keys = {},
+                       bool check_sdp_normalization = true)
   {
     int diff_precision = precision / 2;
+
+    const auto data_dir
+      = Test_Config::test_data_dir / "end-to-end_tests" / name;
+    auto data_input_dir = data_dir / "input";
+    auto data_output_dir = data_dir / "output";
 
     std::string sdp_format;
     if(pmp2sdp_args.find("--outputFormat") != pmp2sdp_args.end())
@@ -26,70 +36,77 @@ namespace
     CAPTURE(sdp_format);
     CAPTURE(format_description);
 
-    Test_Util::Test_Case_Runner runner(name + "/" + sdp_format);
-    const auto &output_dir = runner.output_dir;
-
-    const auto &data_dir = runner.data_dir.parent_path();
-    auto data_input_dir = data_dir / "input";
-    auto data_output_dir = data_dir / "output";
-
-    auto sdp_orig = (data_output_dir / "sdp").string();
-
-    bool zip = pmp2sdp_args.find("--zip") != pmp2sdp_args.end();
-    auto sdp_path = (output_dir / (zip ? "sdp.zip" : "sdp")).string();
-
-    // pmp2sdp
-    {
-      INFO("run pmp2sdp");
-      auto input = data_input_dir / "pmp.nsv";
-      auto &args = pmp2sdp_args;
-
-      args.insert({{"--input", input.string()},
-                   {"--output", sdp_path},
-                   {"--precision", std::to_string(precision)}});
-
-      runner.create_nested("pmp2sdp").mpi_run({"build/pmp2sdp"}, args,
-                                              num_procs);
-
-      // pmp2sdp runs with --precision=<precision>
-      // We check test output up to lower precision=<sdp_diff_precision>
-      // in order to neglect unimportant rounding errors
-      Test_Util::REQUIRE_Equal::diff_sdp(sdp_path, sdp_orig, precision,
-                                         diff_precision,
-                                         runner.create_nested("sdp.diff"));
-    }
-
-    // sdpb
-    {
-      Named_Args_Map args{{"--precision", std::to_string(precision)},
-                          {"--sdpDir", sdp_path},
-                          {"--outDir", (output_dir / "out").string()},
-                          {"--checkpointDir", (output_dir / "ck").string()}};
-      runner.create_nested("sdpb").mpi_run({"build/sdpb", default_sdpb_args},
-                                           args, num_procs);
-
-      // SDPB runs with --precision=<precision>
-      // We check test output up to lower precision=<sdpb_output_diff_precision>
-      // in order to neglect unimportant rounding errors
-      Test_Util::REQUIRE_Equal::diff_sdpb_output_dir(
-        output_dir / "out", data_output_dir / "out", precision, diff_precision,
-        {}, out_txt_keys);
-    }
-
-    if(exists(data_output_dir / "spectrum.json"))
+    std::vector<fs::path> pmp_paths;
+    for(const auto &it : fs::directory_iterator(data_input_dir))
       {
-        Named_Args_Map args{
-          {"--input", (data_input_dir / "pmp.nsv").string()},
-          {"--solution", (output_dir / "out").string()},
-          {"--threshold", "1e-10"},
-          {"--output", (output_dir / "spectrum.json").string()},
-          {"--precision", std::to_string(precision)},
-        };
-        runner.create_nested("spectrum")
-          .mpi_run({"build/spectrum"}, args, num_procs);
-        Test_Util::REQUIRE_Equal::diff_spectrum(
-          output_dir / "spectrum.json", data_output_dir / "spectrum.json",
-          precision, diff_precision);
+        if(is_regular_file(it.path()))
+          pmp_paths.push_back(it.path());
+      }
+    REQUIRE(!pmp_paths.empty());
+
+    for(const auto &pmp_path : pmp_paths)
+      DYNAMIC_SECTION(pmp_path.filename().string())
+      {
+        std::string runner_name = name + "/" + pmp_path.filename().string();
+        if(!sdp_format.empty())
+          runner_name += "/format=" + sdp_format;
+        Test_Case_Runner runner(runner_name);
+        const auto &output_dir = runner.output_dir;
+
+        bool zip = pmp2sdp_args.find("--zip") != pmp2sdp_args.end();
+        auto sdp_path = (output_dir / (zip ? "sdp.zip" : "sdp")).string();
+        // pmp2sdp
+        {
+          INFO("run pmp2sdp");
+          auto args = pmp2sdp_args;
+
+          args.insert({{"--input", pmp_path.string()},
+                       {"--output", sdp_path},
+                       {"--precision", std::to_string(precision)}});
+
+          runner.create_nested("pmp2sdp").mpi_run({"build/pmp2sdp"}, args,
+                                                  num_procs);
+
+          // pmp2sdp runs with --precision=<precision>
+          // We check test output up to lower precision=<diff_precision>
+          // in order to neglect unimportant rounding errors
+          auto sdp_orig = data_output_dir / "sdp";
+          diff_sdp(sdp_path, sdp_orig, precision, diff_precision,
+                   runner.create_nested("sdp.diff"), check_sdp_normalization);
+        }
+
+        // sdpb
+        {
+          Named_Args_Map args{
+            {"--precision", std::to_string(precision)},
+            {"--sdpDir", sdp_path},
+            {"--outDir", (output_dir / "out").string()},
+            {"--checkpointDir", (output_dir / "ck").string()}};
+          runner.create_nested("sdpb").mpi_run(
+            {"build/sdpb", default_sdpb_args}, args, num_procs);
+
+          // SDPB runs with --precision=<precision>
+          // We check test output up to lower precision=<sdpb_output_diff_precision>
+          // in order to neglect unimportant rounding errors
+          diff_sdpb_output_dir(output_dir / "out", data_output_dir / "out",
+                               precision, diff_precision, {}, out_txt_keys);
+        }
+
+        if(exists(data_output_dir / "spectrum.json"))
+          {
+            Named_Args_Map args{
+              {"--input", pmp_path.string()},
+              {"--solution", (output_dir / "out").string()},
+              {"--threshold", "1e-10"},
+              {"--output", (output_dir / "spectrum.json").string()},
+              {"--precision", std::to_string(precision)},
+            };
+            runner.create_nested("spectrum")
+              .mpi_run({"build/spectrum"}, args, num_procs);
+            diff_spectrum(output_dir / "spectrum.json",
+                          data_output_dir / "spectrum.json", precision,
+                          diff_precision);
+          }
       }
   }
 
@@ -112,7 +129,18 @@ TEST_CASE("end-to-end_tests")
        "depending on GMP/MPFR version etc");
   int num_procs = 6;
   int precision = 768;
-  std::string name = "end-to-end_tests";
+
+  SECTION("1d")
+  {
+    INFO("SDPB test for a simple one-dimensional problem from SDPB Manual:");
+    INFO("maximize (-y) s.t. (1 + x^4 + y * (x^4 / 12 + x^2)) >= 0)");
+
+    num_procs = 2;
+    // Do not check normalization.json because it is absent for XML
+    bool check_sdp_normalization = false;
+    end_to_end_test("1d", num_procs, precision, {}, {}, {},
+                    check_sdp_normalization);
+  }
 
   SECTION("dfibo-0-0-j=3-c=3.0000-d=3-s=6")
   {
@@ -120,7 +148,6 @@ TEST_CASE("end-to-end_tests")
     INFO("sdp contains block with empty bilinear_bases_odd, "
          "which caused a bug.");
     INFO("Test data from Harvard cluster, gmp/6.2.1 mpfr/4.2.0");
-    name += "/dfibo-0-0-j=3-c=3.0000-d=3-s=6";
     std::string default_sdpb_args
       = "--findDualFeasible --findPrimalFeasible "
         "--initialMatrixScalePrimal 1e10 --initialMatrixScaleDual 1e10 "
@@ -131,11 +158,13 @@ TEST_CASE("end-to-end_tests")
         "--stepLengthReduction=0.7";
     for(std::string sdp_format : {"", "bin", "json"})
       {
-        DYNAMIC_SECTION((sdp_format.empty() ? "default(bin)" : sdp_format))
+        DYNAMIC_SECTION(
+          "format=" << (sdp_format.empty() ? "default(bin)" : sdp_format))
         {
           // write sdp to zip instead of plain directory
           bool zip = true;
-          end_to_end_test(name, num_procs, precision, default_sdpb_args,
+          end_to_end_test("dfibo-0-0-j=3-c=3.0000-d=3-s=6", num_procs,
+                          precision, default_sdpb_args,
                           build_pmp2sdp_args(sdp_format, zip));
         }
       }
@@ -148,7 +177,7 @@ TEST_CASE("end-to-end_tests")
          "Scalars3d/SingletScalar2020.hs");
     INFO("Test data is generated with SDPB 2.5.1 on Caltech cluster.");
     INFO("SDPB should find primal-dual optimal solution.");
-    name += "/SingletScalar_cT_test_nmax6/primal_dual_optimal";
+    const auto name = "SingletScalar_cT_test_nmax6/primal_dual_optimal";
     std::string default_sdpb_args
       = "--checkpointInterval 3600 --maxRuntime 1340 "
         "--dualityGapThreshold 1.0e-30 --primalErrorThreshold 1.0e-30 "
@@ -169,7 +198,7 @@ TEST_CASE("end-to-end_tests")
          "https://gitlab.com/davidsd/scalars-3d/-/blob/master/src/Projects/"
          "Scalars3d/SingletScalar2020.hs");
     INFO("Test data is generated with SDPB 2.5.1 on Caltech cluster.");
-    name += "/SingletScalarAllowed_test_nmax6";
+    std::string name = "SingletScalarAllowed_test_nmax6";
     std::string default_sdpb_args
       = "--checkpointInterval 3600 --maxRuntime 1341 "
         "--dualityGapThreshold 1.0e-30 --primalErrorThreshold 1.0e-200 "

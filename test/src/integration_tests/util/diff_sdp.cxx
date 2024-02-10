@@ -217,7 +217,7 @@ namespace Test_Util::REQUIRE_Equal
 {
   void diff_sdp(const fs::path &a_sdp, const fs::path &b_sdp,
                 unsigned int input_precision, unsigned int diff_precision,
-                Test_Case_Runner runner)
+                Test_Case_Runner runner, bool check_normalization)
   {
     INFO("diff sdp directories/zip files");
     REQUIRE(a_sdp != b_sdp);
@@ -230,8 +230,9 @@ namespace Test_Util::REQUIRE_Equal
     diff_objectives_json(a / "objectives.json", b / "objectives.json");
     if(exists(a / "normalization.json") || exists(b / "normalization.json"))
       {
-        diff_normalization_json(a / "normalization.json",
-                                b / "normalization.json");
+        if(check_normalization)
+          diff_normalization_json(a / "normalization.json",
+                                  b / "normalization.json");
       }
     Parse_Control_Json control(a / "control.json");
     for(int i = 0; i < control.num_blocks; ++i)
