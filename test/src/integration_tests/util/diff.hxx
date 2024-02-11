@@ -38,8 +38,8 @@ namespace Test_Util::REQUIRE_Equal
                     const std::filesystem::path &b_json,
                     unsigned int input_precision, unsigned int diff_precision);
 
-  void
-  diff_spectrum(const std::filesystem::path &a_json,
-                const std::filesystem::path &b_json,
-                unsigned int input_precision, unsigned int diff_precision);
+  void diff_spectrum(const std::filesystem::path &a_json,
+                     const std::filesystem::path &b_json,
+                     unsigned int input_precision, unsigned int diff_precision,
+                     bool check_block_path = true);
 }

@@ -114,9 +114,14 @@ namespace
             };
             runner.create_nested("spectrum")
               .mpi_run({"build/spectrum"}, args, num_procs);
+
+            // Cannot check block paths if the same spectrum.json
+            // is generated several times by different PMP inputs,
+            // e.g. pmp.xml and pmp.json.
+            bool check_block_paths = pmp_paths.size() == 1;
             diff_spectrum(output_dir / "spectrum.json",
                           data_output_dir / "spectrum.json", precision,
-                          diff_precision);
+                          diff_precision, check_block_paths);
           }
       }
   }
@@ -162,6 +167,14 @@ TEST_CASE("end-to-end_tests")
          "to the simple 1d case. The vector x may differ.");
     num_procs = 2;
     end_to_end_test("1d-duplicate-poles", num_procs, precision);
+  }
+
+  SECTION("1d-constraints")
+  {
+    INFO("Same as 1d, but with nontrivial semidefiniteness constraints.");
+    INFO("See mathematica/Tests.m");
+    num_procs = 2;
+    end_to_end_test("1d-constraints", num_procs, precision);
   }
 
   SECTION("dfibo-0-0-j=3-c=3.0000-d=3-s=6")
