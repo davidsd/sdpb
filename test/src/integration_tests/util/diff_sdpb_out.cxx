@@ -143,11 +143,12 @@ namespace Test_Util::REQUIRE_Equal
   void
   diff_sdpb_output_dir(const fs::path &a_out_dir, const fs::path &b_out_dir,
                        unsigned int input_precision,
-                            unsigned int diff_precision,
-                            const std::vector<std::string> &filenames,
-                            const std::vector<std::string> &out_txt_keys)
+                       unsigned int diff_precision,
+                       const std::vector<std::string> &filenames,
+                       const std::vector<std::string> &out_txt_keys)
   {
     INFO("diff sdpb output");
+    REQUIRE(a_out_dir != b_out_dir);
     CAPTURE(a_out_dir);
     CAPTURE(b_out_dir);
     REQUIRE(is_directory(a_out_dir));

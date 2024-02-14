@@ -39,3 +39,6 @@
 #define ASSERT_EQUAL(a, b, ...)                                               \
   ASSERT(a == b, DEBUG_STRING(a), "\n    ", DEBUG_STRING(b), "\n    ",        \
          El::BuildString(__VA_ARGS__))
+
+#define PRINT_WARNING(...)                                                    \
+  std::cerr << El::BuildString("Warning: ", __VA_ARGS__, "\n")
