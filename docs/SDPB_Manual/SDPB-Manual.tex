@@ -78,142 +78,149 @@ Given $b\in \R^N$, we would like to
 \ee
 The notation $M\succeq 0$ means ``$M$ is positive semidefinite."
 
-
+The constant $b_0$ in formulation \eqref{eq:PMPconstraint} is completely irrelevant to the solution algorithm, but is included for convenience.
 
 \section{Input to \SDPB}
+You will normally start with a Polynomial Matrix Program (PMP) described in a file (or several files) in JSON, Mathematica, or XML format.
+PMP must first be converted, using \texttt{pmp2sdp} program, into an internal SDP format
+that SDPB can quickly load. SDP format is described in \texttt{docs/SDPB\_input\_format.md}.
 
-\SDPB\ takes the following input:
-\begin{itemize}
-\item for each $j=1,\dots,J$:
-\begin{itemize}
-\item polynomial matrices $M^0_j(x),\dots,M^N_j(x)$ of maximum degree $d_j$,
-\item bilinear bases $q_m^{(j)}(x)$ ($m=0,\dots,\lfloor d_j/2\rfloor$),
-\item sample points $x_k^{(j)}$ ($k=0,\dots,d_j$),
-\item sample scalings $s_k^{(j)}$ ($k=0,\dots,d_j$),
-\end{itemize}
-\item an objective function $b_0\in \R$ and $b\in \R^N$.
-\end{itemize}
-A bilinear basis is a collection of polynomials $q_m^{(j)}(x)$ such that $\deg q_m^{(j)} = m$, for example monomials $q_m^{(j)}(x)=x^m$.  (A better choice for numerical stability is usually orthogonal polynomials on the positive real line.)  The sample points and sample scalings determine how the PMP is represented internally as an SDP.  In principle, they do not affect the solution of the PMP, but in practice they can affect numerical stability.  The constant $b_0$ is completely irrelevant to the solution algorithm, but is included for convenience.  See \cite{DSD} for details.
 
-\subsection{Input Format}
-
-\SDPB\ reads the data above in the following XML format.
-
-\begin{lstlisting}[
-  caption={XML input format for \SDPB},
-  label=xmlinputformat,
-  mathescape,
-  columns=fullflexible,
-  frame=single,
-  escapeinside=@@,
-  basicstyle=\small\ttfamily\selectfont,
-]
-@\defn{input to \SDPB}@
-  <sdp>
-    @\repl{xml for objective}@
-    @\repl{xml for polynomial vector matrices}@
-  </sdp>
-
-@\defn{xml for objective}@
-  <objective>
-    <elt>$b_0$</elt>
-    ...
-    <elt>$b_N$</elt>
-  </objective>
-  
-@\defn{xml for polynomial vector matrices}@
-  <polynomialVectorMatrices>
-    @\repl{xml for polynomial vector matrix $M_1^n(x)$}@
-    ...
-    @\repl{xml for polynomial vector matrix $M_J^n(x)$}@
-  </polynomialVectorMatrices>
-
-@\defn{xml for polynomial vector matrix $M_j^n(x)$}@
-  <polynomialVectorMatrix>
-    <rows>$m_j$</rows>
-    <cols>$m_j$</cols>
-    <elements>
-      @\repl{xml for polynomial vector $P^{n}_{j,11}(x)$}@
-      ...
-      @\repl{xml for polynomial vector $P^{n}_{j,m_j1}(x)$}@
-      ...
-      @\repl{xml for polynomial vector $P^{n}_{j,1m_j}(x)$}@
-      ...
-      @\repl{xml for polynomial vector $P^{n}_{j,m_jm_j}(x)$}@
-    </elements>
-    <samplePoints>
-      <elt>$x_0^{(j)}$</elt>
-      ...
-      <elt>$x_{d_j}^{(j)}$</elt>
-    </samplePoints>
-    <sampleScalings>
-      <elt>$s_0^{(j)}$</elt>
-      ...
-      <elt>$s_{d_j}^{(j)}$</elt>
-    </sampleScalings>
-    <bilinearBasis>
-      @\repl{xml for polynomial $q_0^{(j)}(x)$}@
-      ...
-      @\repl{xml for polynomial $q_{\lfloor d_j/2\rfloor}^{(j)}(x)$}@
-    </bilinearBasis>
-  </polynomialVectorMatrix>
-
-@\defn{xml for polynomial vector $P^{n}_{j,rs}(x)$}@
-  <polynomialVector>
-    @\repl{xml for polynomial $P^{0}_{j,rs}(x)$}@
-    ...
-    @\repl{xml for polynomial $P^{N}_{j,rs}(x)$}@
-  </polynomialVector>
-
-@\defn{xml for polynomial $a_0+a_1 x+\dots a_d x^d$}@
-  <polynomial>
-    <coeff>$a_0$</coeff>
-    ...
-    <coeff>$a_d$</coeff>
-  </polynomial>
-\end{lstlisting}
-
-The data can be spread over multiple files. In such cases the different input files should all follow the above format except that $\langle${\it xml for objective}$\rangle$ should be omitted from all but one file. The parser will combine the constraints from all the polynomial vector matrices specified in the different files.
-
-Several aspects of the input format are inefficient.  Because the matrices are symmetric, \texttt{rows} and \texttt{cols} are redundant, and most elements are listed twice.  Also, XML is extremely verbose.
-
-To improve performance for large inputs, the XML files must first be
-preprocessed into a more efficient format via \texttt{pmp2sdp} program.  Instructions on how to
-preprocess the input and run SDPB are in \texttt{docs/Usage.md}.
-
-\subsection{\texttt{JSON} and \texttt{Mathematica} Interface}
-
-The program \texttt{pmp2sdp} can also generate preprocessed input files from
-\texttt{JSON} or \texttt{Mathematica} data.
-It automatically makes sensible choices for the bilinear bases
-$q_m^{(j)}(x)$, the sample points $x_k^{(j)}$ and the sample scalings
-$s_k^{(j)}$.  If you wish to experiment with these choices, there is
-also an included \texttt{Mathematica} notebook \texttt{SDPB.m}.
-
-The \texttt{Mathematica} definition of a PMP is slightly different but trivially equivalent to (\ref{eq:PMPconstraint}).  It is:
+\texttt{pmp2sdp} uses a PMP definition that is slightly different but equivalent to (\ref{eq:PMPconstraint}):
 \be
 \label{eq:PMPconstraintMathematica}
 \begin{array}{ll}
-\textrm{maximize} & a\.z\quad\textrm{over}\quad z \in \R^{N+1},\\
-\textrm{such that} & \sum_{n=0}^{N} z_n W^n_j(x) \succeq 0 \quad \textrm{for all $x\geq 0$ and $1 \leq j \leq J$},\\
- & n\.z = 1.
+	\textrm{maximize} & a\.z\quad\textrm{over}\quad z \in \R^{N+1},\\
+	\textrm{such that} & \sum_{n=0}^{N} z_n W^n_j(x) \succeq 0 \quad \textrm{for all $x\geq 0$ and $1 \leq j \leq J$},\\
+	& n\.z = 1.
 \end{array}
 \ee
 where $W_j^n(x)$ are matrix polynomials.  The normalization condition $n\.z=1$ can be used to solve for one of the components of $z$ in terms of the others. 
 For numerical stability, SDPB eliminates the component $z_k$ that has the largest absolute value of $|n_k|$.
-Calling the remaining components $y\in \R^N$, we arrive at (\ref{eq:PMPconstraint}), where $M_j^n(x)$ are linear combinations of $W^n_j(x)$ and $b_0,b_n$ are linear combinations of the $a_n$.  This difference in convention is for convenient use in the conformal bootstrap.
+Calling the remaining components $y\in \R^N$, we arrive at \eqref{eq:PMPconstraint}, where $M_j^n(x)$ are linear combinations of $W^n_j(x)$ and $b_0,b_n$ are linear combinations of the $a_n$.  This difference in convention is for convenient use in the conformal bootstrap. Note that conversion to \eqref{eq:PMPconstraint} is trivial, if you choose normalization vector $n=(1,0,\ldots,0)$: in that case $(b_0\ldots b_N) = (a_0\ldots a_N)$, $(y_1\ldots y_N) = (z_1\ldots z_N)$, $M^n_j(x) = W^n_j(x)$.
 
-\texttt{SDPB.m} defines a function \texttt{WriteBootstrapSDP[file, sdp]}, where \texttt{file} is the XML file to be written to, and \texttt{sdp} has the following form, where the polynomials $Q^n_{j,rs}(x)$ are the elements of $W_j^n(x)$.
+To construct an SDP, \texttt{pmp2sdp} needs the following information:
+\begin{itemize}
+	\item for each $j=1,\dots,J$:
+	\begin{itemize}
+		\item polynomial matrices $W^0_j(x),\dots,W^N_j(x)$ of maximum degree $d_j$,
+		\item bilinear bases $q_m^{(j)}(x)$ ($m=0,\dots,\lfloor d_j/2\rfloor$),
+		\item sample points $x_k^{(j)}$ ($k=0,\dots,d_j$),
+		\item sample scalings $s_k^{(j)}$ ($k=0,\dots,d_j$),
+	\end{itemize}
+	\item an objective function $a\in \R^{N+1}$.
+	\item a normalization vector $n\in \R^{N+1}$.
+\end{itemize}
+A bilinear basis is a collection of polynomials $q_m^{(j)}(x)$ such that $\deg q_m^{(j)} = m$, for example monomials $q_m^{(j)}(x)=x^m$.  (A better choice for numerical stability is usually orthogonal polynomials on the positive real line.)  The sample points, sample scalings and bilinear bases determine how the PMP is represented internally as an SDP.  In principle, they do not affect the solution of the PMP, but in practice they can affect numerical stability.
+See Section 3.3 in \cite{DSD} for details.
+
+
+\texttt{pmp2sdp} can parse input in \texttt{JSON}, \texttt{Mathematica} and \texttt{XML} formats, described below.
+We recommend using \texttt{JSON}; the two other formats are left for backward compatibility.
+
+For convenience and/or for better efficiency when running \texttt{pmp2sdp} in parallel,
+you may split PMP into several files.
+In that case, you should provide an \texttt{.nsv} file with a null-separated list of PMP files.
+See details in \texttt{docs/Usage.md}.
+
+\subsection{\texttt{JSON} format}
+\begin{lstlisting}[
+	caption={JSON format for PMP},
+	label=jsoninputformat,
+	mathescape,
+	columns=fullflexible,
+	frame=single,
+	escapeinside=@@,
+	basicstyle=\small\ttfamily\selectfont,
+	]
+@\defn{PMP}@ {
+	"objective": ["$a_0$", ...,"$a_N$"],
+	@\textrm{\em{(optional)}}@ "normalization": ["$n_0$", ...,"$n_N$"],
+	"PositiveMatrixWithPrefactorArray": [
+		@\repl{positive matrix with prefactor 1}@,
+		...
+		@\repl{positive matrix with prefactor $J$}@,
+	]
+}
+
+@\defn{positive matrix with prefactor $j$}@ {
+	@\textrm{\em{(optional)}}@ "DampedRational": @\repl{damped-rational prefactor}@,
+	"polynomials": [
+		[@\repl{polynomial vector $Q^{n}_{j,11}(x)$}@, ... @\repl{polynomial vector $Q^{n}_{j,m_j1}(x)$}@],
+		...
+		[@\repl{polynomial vector $Q^{n}_{j,1m_j}(x)$}@, ..., @\repl{polynomial vector $Q^{n}_{j,m_jm_j}(x)$}@]
+	],
+	@\textrm{\em{(optional)}}@ "samplePoints": ["$x_0^{(j)}$", ...,"$x_{d_j}^{(j)}$"],
+	@\textrm{\em{(optional)}}@ "sampleScalings": ["$s_0^{(j)}$", ...,"$s_{d_j}^{(j)}$"],
+	@\textrm{\em{(optional)}}@ "bilinearBasis": [
+		@\repl{polynomial $q_0^{(j)}(x)$}@,
+		...
+		@\repl{polynomial $q_{\lfloor d_j/2\rfloor}^{(j)}(x)$}@
+	]
+}
+	
+@\defn{polynomial vector $Q^{n}_{j,rs}(x)$}@ [@\repl{polynomial $Q^{0}_{j,rs}(x)$}@,...@\repl{polynomial $Q^{N}_{j,rs}(x)$}@]
+
+@\defn{polynomial $c_0+c_1 x+\dots+c_d x^d$}@ ["$c_0$", ...,"$c_d$"]
+
+@\defn{damped-rational prefactor $c\frac{b^x}{\prod_{i=1}^k (x-p_i)}$}@ {
+	"constant": "$c$"
+	"base": "$b$"
+	"poles": ["$p_1$", ...,"$p_k$"]
+}
+\end{lstlisting}
+
+Some fields in \texttt{JSON} format are optional.
+
+If \texttt{"normalization"} is not specified, the default value $n=(1,0,\ldots,0)$ is assumed, effectively reducing formulation \eqref{eq:PMPconstraintMathematica} to \eqref{eq:PMPconstraint}.
+
+If \texttt{"samplePoints"} are not specified, \texttt{pmp2sdp} will make a choice of sample points automatically.
+For historical reasons, the choice is
+\be
+	x_k^{(j)} = \frac{\pi^2 (-1+4k)^2}{-64 (d_j + 1) \log(3-2\sqrt{2})}
+.
+\ee
+
+If \texttt{"sampleScalings"} and/or \texttt{"bilinearBasis"} are not specified,
+they are calculated automatically from the \texttt{"DampedRational"} prefactor.
+Specifically, if the prefactor is $\chi(x)$, the bilinear basis is a set of orthogonal polynomials with respect to measure $\chi(x)dx$ on the positive real line, and sample scalings are $\chi(x_k)$, where the $x_k$ are sample points.
+Only damped-rational prefactors are supported.
+Such prefactors are relevant to the conformal bootstrap problems.  These stand for
+\be
+\texttt{DampedRational[$c$, \{$p_1,\dots,p_k$\}, $b$, $x$]} &\to& c\frac{b^x}{\prod_{i=1}^k (x-p_i)}.
+\ee
+
+If \texttt{"DampedRational"} is not specified, default sample scalings and bilinear basis are calculated assuming the prefactor $\chi(x) = e^{-x}$.
+
+The \texttt{JSON} format is also described by the schema in \texttt{docs/json\_schema/pmp\_schema.json}.
+
+\subsection{\texttt{Mathematica} interface}
+
+\texttt{JSON} can be generated with a \texttt{WritePmpJson} function in the included \texttt{Mathematica} package \texttt{mathematica/SDPB.m}.
+Here \texttt{file} is the JSON file to be written to, and \texttt{sdp} has a form described in Listing \ref{listing:mathematica}.
+You can also provide a custom function \texttt{samplePointsFn[d]} generating sample points $x_0,\ldots,x_d$ for a polynomial of degree $d$.
+
+
+As an example bootstrap application, the included notebook \texttt{Bootstrap2dExample.m} computes a single-correlator dimension bound for 2d CFTs with a $\Z_2$ symmetry, as in \cite{Rychkov:2009ij}.
+
+
+\texttt{SDPB.m} also defines \texttt{WritePmpXml[file, sdp]} function which writes PMP in XML format described in Section \ref{sec:xml}.
+In addition, \texttt{pmp2sdp} can also directly read .m files containing \texttt{SDP} definition.
+
 
 \begin{lstlisting}[
-  caption={Usage of \texttt{WriteBootstrapSDP} in \texttt{SDPB.m}},
-  mathescape,
-  columns=fullflexible,
-  frame=single,
-  escapeinside=@@,
-  basicstyle=\small\ttfamily\selectfont,
+caption={Usage of \texttt{WritePmpJson} in \texttt{SDPB.m}},
+label=listing:mathematica,
+mathescape,
+columns=fullflexible,
+frame=single,
+escapeinside=@@,
+basicstyle=\small\ttfamily\selectfont,
 ]
-@\defn{function call}@ WriteBootstrapSDP[file, @\repl{sdp}@]
+@\defn{function call}@
+WritePmpJson[file, @\repl{sdp}@]
+@\textrm{\em or}@
+WritePmpJson[file, @\repl{sdp}@, @\repl{samplePointsFn}@] 
 
 @\defn{sdp}@ SDP[@\repl{objective}@, @\repl{normalization}@, @\repl{positive matrices with prefactors}@]
 
@@ -222,40 +229,111 @@ Calling the remaining components $y\in \R^N$, we arrive at (\ref{eq:PMPconstrain
 @\defn{normalization}@ {$n_0$, ..., $n_N$}
 
 @\defn{positive matrices with prefactors}@ {
-    @\repl{positive matrix with prefactor 1}@,
-    ...
-    @\repl{positive matrix with prefactor $J$}@,
-  }
+	@\repl{positive matrix with prefactor 1}@,
+	...
+	@\repl{positive matrix with prefactor $J$}@,
+}
 
 @\defn{positive matrix with prefactor $j$}@
-  PositiveMatrixWithPrefactor[@\repl{prefactor}@,
-    {
-      {
-        {$Q^0_{j,11}(x)$, ..., $Q^N_{j,11}(x)$},  ..., {$Q^0_{j,m_j1}(x)$, ..., $Q^N_{j,m_j1}(x)$}
-      },
-      ...
-      {
-        {$Q^0_{j,1m_j}(x)$, ..., $Q^N_{j,1m_j}(x)$},  ..., {$Q^0_{j,m_jm_j}(x)$, ..., $Q^N_{j,m_jm_j}(x)$}
-      },
-    }
-  ]
-  
+PositiveMatrixWithPrefactor[@\repl{prefactor}@,
+{
+	{
+		{$Q^0_{j,11}(x)$, ..., $Q^N_{j,11}(x)$},  ..., {$Q^0_{j,m_j1}(x)$, ..., $Q^N_{j,m_j1}(x)$}
+	},
+	...
+	{
+		{$Q^0_{j,1m_j}(x)$, ..., $Q^N_{j,1m_j}(x)$},  ..., {$Q^0_{j,m_jm_j}(x)$, ..., $Q^N_{j,m_jm_j}(x)$}
+	},
+}
+]
+
 @\defn{prefactor}@
-    DampedRational[$c$, {$p_1,\dots,p_k$}, $b$, x]
-  @\textrm{\em or}@
-    const  
+DampedRational[$c$, {$p_1,\dots,p_k$}, $b$, x]
+@\textrm{\em or}@
+const  
+
+@\defn{samplePointsFn[d\_]}@ function returning a list {$x_0$, ..., $x_d$}
 \end{lstlisting}
 
-The prefactor in \texttt{PositiveMatrixWithPrefactor} is used for constructing bilinear bases and sample scalings.  Specifically, if the prefactor is $\chi(x)$, the bilinear basis is a set of orthogonal polynomials with respect to measure $\chi(x)dx$ on the positive real line, and sample scalings are $\chi(x_k)$, where the $x_k$ are sample points.
- The notebook \texttt{SDPB.m} only deals with damped-rational prefactors because these are relevant to the conformal bootstrap.  These stand for
-\be
-\texttt{DampedRational[$c$, \{$p_1,\dots,p_k$\}, $b$, $x$]} &\to& c\frac{b^x}{\prod_{i=1}^k (x-p_i)}.
-\ee
-We do not use an exponential-times-rational \texttt{Mathematica} function directly because the  \texttt{DampedRational} data structure makes it easier to extract information needed to construct a bilinear basis.  The notebook \texttt{SDPB.m} makes a choice of sample points that are reasonable for conformal bootstrap applications.
+\subsection{\texttt{XML} format}
+\label{sec:xml}
 
-As an example bootstrap application, the included notebook \texttt{Bootstrap2dExample.m} computes a single-correlator dimension bound for 2d CFTs with a $\Z_2$ symmetry, as in \cite{Rychkov:2009ij}.
+\texttt{pmp2sdp} can read \texttt{XML} files describing PMP in form \eqref{eq:PMPconstraint}.
+Note that we recommend using \texttt{JSON} as more compact and efficient.
 
-The \texttt{JSON} format is described by the schema in \texttt{docs/json\_schema/pmp\_schema.json}.
+\begin{lstlisting}[
+	caption={XML format for PMP},
+	label=listing:xml,
+	mathescape,
+	columns=fullflexible,
+	frame=single,
+	escapeinside=@@,
+	basicstyle=\small\ttfamily\selectfont,
+	]
+	@\defn{PMP}@
+	<sdp>
+	@\repl{xml for objective}@
+	@\repl{xml for polynomial vector matrices}@
+	</sdp>
+	
+	@\defn{xml for objective}@
+	<objective>
+	<elt>$b_0$</elt>
+	...
+	<elt>$b_N$</elt>
+	</objective>
+	
+	@\defn{xml for polynomial vector matrices}@
+	<polynomialVectorMatrices>
+	@\repl{xml for polynomial vector matrix $M_1^n(x)$}@
+	...
+	@\repl{xml for polynomial vector matrix $M_J^n(x)$}@
+	</polynomialVectorMatrices>
+	
+	@\defn{xml for polynomial vector matrix $M_j^n(x)$}@
+	<polynomialVectorMatrix>
+	<rows>$m_j$</rows>
+	<cols>$m_j$</cols>
+	<elements>
+	@\repl{xml for polynomial vector $P^{n}_{j,11}(x)$}@
+	...
+	@\repl{xml for polynomial vector $P^{n}_{j,m_j1}(x)$}@
+	...
+	@\repl{xml for polynomial vector $P^{n}_{j,1m_j}(x)$}@
+	...
+	@\repl{xml for polynomial vector $P^{n}_{j,m_jm_j}(x)$}@
+	</elements>
+	<samplePoints>
+	<elt>$x_0^{(j)}$</elt>
+	...
+	<elt>$x_{d_j}^{(j)}$</elt>
+	</samplePoints>
+	<sampleScalings>
+	<elt>$s_0^{(j)}$</elt>
+	...
+	<elt>$s_{d_j}^{(j)}$</elt>
+	</sampleScalings>
+	<bilinearBasis>
+	@\repl{xml for polynomial $q_0^{(j)}(x)$}@
+	...
+	@\repl{xml for polynomial $q_{\lfloor d_j/2\rfloor}^{(j)}(x)$}@
+	</bilinearBasis>
+	</polynomialVectorMatrix>
+	
+	@\defn{xml for polynomial vector $P^{n}_{j,rs}(x)$}@
+	<polynomialVector>
+	@\repl{xml for polynomial $P^{0}_{j,rs}(x)$}@
+	...
+	@\repl{xml for polynomial $P^{N}_{j,rs}(x)$}@
+	</polynomialVector>
+	
+	@\defn{xml for polynomial $a_0+a_1 x+\dots a_d x^d$}@
+	<polynomial>
+	<coeff>$a_0$</coeff>
+	...
+	<coeff>$a_d$</coeff>
+	</polynomial>
+\end{lstlisting}
 
 \subsection{An Example}
 \label{sec:example}
@@ -265,7 +343,7 @@ Let's look at an example.  Consider the following problem: maximize $-y$ such th
 \label{eq:exampleproblem}
 1+x^4 + y\p{\frac{x^4}{12} + x^2} &\geq& 0\qquad \textrm{for all $x\geq 0$}
 \ee
-This is an PMP with $1\x1$ positive-semidefiniteness constraints.  We will arbitrarily choose a prefactor of $e^{-x}=\texttt{DampedRational[1,\{\}, 1/E,x]}$, so that the bilinear basis consists of Laguerre polynomials.  The \texttt{Mathematica} code for this example is
+This is an PMP with $1\x1$ positive-semidefiniteness constraints.  We will arbitrarily choose a prefactor of $e^{-x}=\texttt{DampedRational[1,\{\}, 1/E,x]}$, so that the bilinear basis consists of Laguerre polynomials.  The \texttt{Mathematica} code for this example (see \texttt{mathematica/Tests.m}) is
 
 \begin{lstlisting}[
   caption={Mathematica input for the example~(\ref{eq:exampleproblem})},
@@ -287,12 +365,12 @@ Module[
     norm = {1, 0},
     obj  = {0, -1}
   },
-  WriteBootstrapSDP["pmp.xml", SDP[obj, norm, pols]];
+  WritePmpJson["pmp.json", SDP[obj, norm, pols]];
 ];
 \end{lstlisting}
-It produces the following XML file
+It produces the following JSON file
 \begin{lstlisting}[
-  caption={XML file \texttt{pmp.xml} produced by listing~\ref{mathematicaexample}.  Decimals are truncated at 12 digits.},
+  caption={JSON file \texttt{pmp.json} produced by listing~\ref{mathematicaexample}.  Decimals are truncated at 12 digits.},
   label=exampleinputfile,
   mathescape,
   columns=fullflexible,
@@ -300,40 +378,45 @@ It produces the following XML file
   escapeinside=@@,
   basicstyle=\footnotesize\ttfamily\selectfont,
 ]
-<sdp>
-  <objective><elt>0</elt><elt>-1</elt></objective>
-  <polynomialVectorMatrices>
-    <polynomialVectorMatrix>
-      <rows>1</rows>
-      <cols>1</cols>
-      <elements>
-        <polynomialVector>
-          <polynomial>
-            <coeff>1</coeff><coeff>0</coeff><coeff>0</coeff>
-            <coeff>0</coeff><coeff>1</coeff>
-          </polynomial>
-          <polynomial>
-            <coeff>0</coeff><coeff>0</coeff><coeff>1</coeff>
-            <coeff>0</coeff><coeff>0.0833333333333</coeff>
-          </polynomial>
-        </polynomialVector>
-      </elements>
-      <samplePoints>
-        <elt>0.017496844815</elt><elt>0.157471603340</elt><elt>0.857345395967</elt>
-        <elt>2.117118222694</elt><elt>3.936790083523</elt>
-      </samplePoints>
-      <sampleScalings>
-        <elt>0.982655336118</elt><elt>0.854301072560</elt><elt>0.424286902403</elt>
-        <elt>0.120378031823</elt><elt>0.019510742190</elt>
-      </sampleScalings>
-      <bilinearBasis>
-        <polynomial><coeff>1</coeff></polynomial>
-        <polynomial><coeff>-1</coeff><coeff>1</coeff></polynomial>
-        <polynomial><coeff>1</coeff><coeff>-2</coeff><coeff>0.5</coeff></polynomial>
-      </bilinearBasis>
-    </polynomialVectorMatrix>
-  </polynomialVectorMatrices>
-</sdp>
+{
+  "objective": [
+    "0",
+    "-1"
+  ],
+  "normalization": [
+    "1",
+    "0"
+  ],
+  "PositiveMatrixWithPrefactorArray": [
+    {
+      "DampedRational": {
+        "base": "0.3678794411",
+        "constant": "1",
+        "poles": []
+      },
+      "polynomials": [
+        [
+          [
+            [
+              "1",
+              "0",
+              "0",
+              "0",
+              "1"
+            ],
+            [
+              "0",
+              "0",
+              "1",
+              "0",
+              "0.08333333333"
+            ]
+          ]
+        ]
+      ]
+    }
+  ]
+}
 \end{lstlisting}
 
 \section{Internal SDP}
@@ -709,7 +792,7 @@ using normalization condition $n\.z=1$ \eqref{eq:PMPconstraintMathematica}.
 If you call SDPB with \texttt{--writeSolution="x,y,z"} option, $z$ is saved in \texttt{test/out/sdpb/z.txt}.
 To write additional files for the matrices $X$ and $Y$, add the
 option %\newline
-\texttt{--writeSolution="x,y,X,Y"}.
+\texttt{--writeSolution="x,y,z,X,Y"}.
 
 The value of $y$ gives the solution to our optimization problem.  The function
 \be

@@ -79,5 +79,8 @@
             }
         }
     },
-    "required":[ "objective", "normalization", "PositiveMatrixWithPrefactorArray"]
+    "required": [
+        "objective",
+        "PositiveMatrixWithPrefactorArray"
+    ]
 }
