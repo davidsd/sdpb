@@ -56,9 +56,26 @@
                         "items": {
                             "type": "string"
                         }
+                    },
+                    "sampleScalings": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "bilinearBasis": {
+                        "type": "array",
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
                     }
                 },
-                "required":[ "DampedRational", "polynomials"]
+                "required": [
+                    "polynomials"
+                ]
             }
         }
     },

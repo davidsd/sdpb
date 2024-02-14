@@ -102,7 +102,7 @@ struct SDP
   // Vector of length N+1, initialized only on rank=0
   // Normalization condition n.z = 1 is used to translate
   // SDP_Solver.y (eq. 2.2 in SDPB Manual) to vector z (eq. 3.1)
-  // Not initialized if there was no normalization in PMP (i.e. in xml format).
+  // Not initialized if there was no normalization in PMP
   std::optional<std::vector<El::BigFloat>> normalization;
 
   SDP(const std::filesystem::path &sdp_path, const Block_Info &block_info,
