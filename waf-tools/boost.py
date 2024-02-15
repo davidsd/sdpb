@@ -5,43 +5,43 @@ def configure(conf):
     # Find Boost
     import os
     if not conf.options.boost_incdir and not conf.options.boost_dir:
-        for d in ['BOOST_INCLUDE','BOOST_INCLUDE_DIR','BOOST_INC_DIR']:
-            env_dir=os.getenv(d)
+        for d in ['BOOST_INCLUDE', 'BOOST_INCLUDE_DIR', 'BOOST_INC_DIR']:
+            env_dir = os.getenv(d)
             if env_dir:
                 conf.to_log('Setting boost_incdir using environment variable: ' + d + '=' + env_dir)
-                conf.options.boost_incdir=env_dir
-                
+                conf.options.boost_incdir = env_dir
+
     if not conf.options.boost_libdir and not conf.options.boost_dir:
-        for d in ['BOOST_LIB','BOOST_LIB_DIR']:
-            env_dir=os.getenv(d)
+        for d in ['BOOST_LIB', 'BOOST_LIB_DIR']:
+            env_dir = os.getenv(d)
             if env_dir:
                 conf.to_log('Setting boost_libdir using environment variable: ' + d + '=' + env_dir)
-                conf.options.boost_libdir=env_dir
+                conf.options.boost_libdir = env_dir
 
     if not conf.options.boost_dir:
-        for d in ['BOOST_HOME','BOOST_DIR']:
-            env_dir=os.getenv(d)
+        for d in ['BOOST_HOME', 'BOOST_DIR']:
+            env_dir = os.getenv(d)
             if env_dir:
                 conf.to_log('Setting boost_dir using environment variable: ' + d + '=' + env_dir)
-                conf.options.boost_dir=env_dir
-                
+                conf.options.boost_dir = env_dir
+
     if conf.options.boost_dir:
         if not conf.options.boost_incdir:
-            conf.options.boost_incdir=conf.options.boost_dir + "/include"
+            conf.options.boost_incdir = conf.options.boost_dir + "/include"
         if not conf.options.boost_libdir:
-            conf.options.boost_libdir=conf.options.boost_dir + "/lib"
+            conf.options.boost_libdir = conf.options.boost_dir + "/lib"
 
     if conf.options.boost_incdir:
-        boost_incdir=conf.options.boost_incdir.split()
+        boost_incdir = conf.options.boost_incdir.split()
     else:
-        boost_incdir=[]
+        boost_incdir = []
     if conf.options.boost_libdir:
-        boost_libdir=conf.options.boost_libdir.split()
+        boost_libdir = conf.options.boost_libdir.split()
     else:
-        boost_libdir=[]
+        boost_libdir = []
 
     if conf.options.boost_libs:
-        boost_libs=conf.options.boost_libs.split()
+        boost_libs = conf.options.boost_libs.split()
     else:
         boost_libs = ['boost_system', 'boost_date_time', 'boost_filesystem',
                       'boost_program_options', 'boost_iostreams', 'boost_serialization']
@@ -107,15 +107,14 @@ boost::stacktrace::stacktrace();
                 break
 
 
-
 def options(opt):
-    boost=opt.add_option_group('Boost Options')
+    boost = opt.add_option_group('Boost Options')
     boost.add_option('--boost-dir',
-                   help='Base directory where boost is installed')
+                     help='Base directory where boost is installed')
     boost.add_option('--boost-incdir',
-                   help='Directory where boost include files are installed')
+                     help='Directory where boost include files are installed')
     boost.add_option('--boost-libdir',
-                   help='Directory where boost library files are installed')
+                     help='Directory where boost library files are installed')
     boost.add_option('--boost-libs',
-                   help='Names of the boost libraries without prefix or suffix\n'
-                        '(e.g. "boost_system boost_date_time boost_program_options")')
+                     help='Names of the boost libraries without prefix or suffix\n'
+                          '(e.g. "boost_system boost_date_time boost_program_options")')
