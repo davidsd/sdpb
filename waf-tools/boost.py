@@ -46,6 +46,10 @@ def configure(conf):
         boost_libs = ['boost_system', 'boost_date_time', 'boost_filesystem',
                       'boost_program_options', 'boost_iostreams', 'boost_serialization']
 
+    boost_stacktrace_lib_found = any(name.startswith('boost_stacktrace') for name in boost_libs)
+    # link to boost_stacktrace library instead of header-only compilation:
+    boost_defines = ['BOOST_STACKTRACE_LINK'] if boost_stacktrace_lib_found else []
+
     conf.check_cxx(msg="Checking for Boost",
                    fragment="""#include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
@@ -54,6 +58,7 @@ def configure(conf):
 #include <boost/program_options.hpp>
 #include <boost/process.hpp>
 #include <boost/serialization/serialization.hpp>
+#include <boost/stacktrace.hpp>
 int main()
 {
 boost::posix_time::second_clock::local_time();
@@ -64,6 +69,7 @@ boost::iostreams::gzip_compressor();
 boost::process::ipstream pipe_stream;
 boost::process::search_path("unzip");
 boost::serialization::version_type version;
+boost::stacktrace::stacktrace();
 }
 """,
                    includes=boost_incdir,
@@ -71,7 +77,34 @@ boost::serialization::version_type version;
                    libpath=boost_libdir,
                    rpath=boost_libdir,
                    lib=boost_libs,
-                   use=['cxx17'])
+                   use=['cxx17'],
+                   defines=boost_defines)
+
+    # If boost_stacktrace library not defined by user, try linking to one of the libraries
+    # listed in https://www.boost.org/doc/libs/1_84_0/doc/html/stacktrace/configuration_and_build.html
+    # boost_stacktrace_backtrace and boost_stacktrace_addr2line can print source code location for each frame.
+    # If all libraries fail to link, boost_stacktrace will be used as a header-only library
+    # (which compiles longer and will not print source code location).
+    if not boost_stacktrace_lib_found:
+        for boost_stacktrace_lib in ['boost_stacktrace_backtrace', 'boost_stacktrace_addr2line',
+                                     'boost_stacktrace_basic']:
+            if conf.check_cxx(msg=f'Checking for {boost_stacktrace_lib}',
+                              fragment="""
+    #include <boost/stacktrace.hpp>
+    int main()
+    {
+      boost::stacktrace::stacktrace();
+    }
+    """,
+                              includes=boost_incdir,
+                              uselib_store='boost',
+                              libpath=boost_libdir,
+                              rpath=boost_libdir,
+                              lib=boost_libs + [boost_stacktrace_lib],
+                              use=['cxx17'],
+                              defines='BOOST_STACKTRACE_LINK',
+                              mandatory=False):
+                break
 
 
 

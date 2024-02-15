@@ -26,6 +26,7 @@
 FROM bootstrapcollaboration/elemental:master AS build
 
 RUN apk add \
+    binutils \
     cmake \
     g++ \
     git \
@@ -42,15 +43,22 @@ RUN apk add \
     openmpi-dev \
     rapidjson-dev
 WORKDIR /usr/local/src/sdpb
-# Build SDPB from current sources
+# Build SDPB from current sources, print build/config.log in configuration failed
 COPY . .
-RUN ./waf configure --elemental-dir=/usr/local --prefix=/usr/local && \
+RUN (./waf configure --elemental-dir=/usr/local --prefix=/usr/local \
+        || (cat build/config.log && exit 1) \
+    ) && \
     python3 ./waf && \
     python3 ./waf install
 
 # Take only sdpb binaries + load necessary dynamic libraries
+# Unfortunately, boost1.82-stacktrace_addr2line does not exist as a standalone package in Alpine Linux repo.
+# Thus we have to load the whole boost-dev (~180MB extra)
+# TODO: for some reason, function names and source locations are not printed in stacktrace.
 FROM alpine:3.18 as install
 RUN apk add \
+    binutils \
+    boost-dev \
     boost1.82-date_time \
     boost1.82-filesystem \
     boost1.82-iostreams \
