@@ -54,21 +54,21 @@ and push it to [local registry](https://docs.docker.com/registry/):
 
 ## Run Singularity image
 Singularity should automatically mount your home directory.  If your
-Singularity image is named `sdpb-2.6.1.sif`, you can invoke the SDPB
+Singularity image is named `sdpb-2.7.0.sif`, you can invoke the SDPB
 programs by prepending the command with
 
-    singularity exec sdpb-2.6.1.sif
+    singularity exec sdpb-2.7.0.sif
 
 So to convert the JSON input file at `/home/user/input.json`, run the command
 
-    singularity exec sdpb-2.6.1.sif mpirun -n 4 pmp2sdp --precision 1024 -i /home/user/input.json -o /home/user/input
+    singularity exec sdpb-2.7.0.sif mpirun -n 4 pmp2sdp --precision 1024 -i /home/user/input.json -o /home/user/input
 
 This uses 4 cores when running pmp2sdp. You can change that number to
 match your own machine.
 
 To find a primal-dual solution, 
 
-    singularity exec sdpb-2.6.1.sif mpirun -n 4 sdpb --precision=1024 -s /home/user/input
+    singularity exec sdpb-2.7.0.sif mpirun -n 4 sdpb --precision=1024 -s /home/user/input
 
 In theory, Singularity can be used to run jobs across multiple nodes.
 We have not been able to make that work yet.  So for large, multi-node
