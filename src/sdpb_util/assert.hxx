@@ -2,14 +2,20 @@
 
 #include <El.hpp>
 
+#include <boost/stacktrace.hpp>
+
 #include <exception>
 
+// Throw exception with source code location, message and stacktrace.
+// NB: ideally, stacktrace should contain source code location for each frame,
+// but that depends on Boost.Stacktrace configuration.
+// Thus, we print location explicitly.
 #define THROW(exception_type, ...)                                            \
   do                                                                          \
     {                                                                         \
-      throw exception_type(El::BuildString("in ", __FUNCTION__, "() at ",     \
-                                           __FILE__, ":", __LINE__, ": \n  ", \
-                                           __VA_ARGS__));                     \
+      throw exception_type(El::BuildString(                                   \
+        "in ", __FUNCTION__, "() at ", __FILE__, ":", __LINE__, ": \n  ",     \
+        __VA_ARGS__, "\nStacktrace:\n", boost::stacktrace::stacktrace()));    \
   } while(false)
 
 #define RUNTIME_ERROR(...) THROW(std::runtime_error, __VA_ARGS__)
