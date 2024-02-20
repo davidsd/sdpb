@@ -1,17 +1,10 @@
 (* ::Package:: *)
 
+(* ::Section:: *)
 (*Setup*)
-prec = 200;
 
-(* A matrix with constant anti-diagonals given by the list bs *)
-antiBandMatrix[bs_] := Module[
-    {n = Ceiling[Length[bs]/2]},
-    Reverse[Normal[
-        SparseArray[
-            Join[
-                Table[Band[{i, 1}] -> bs[[n - i + 1]], {i, n}],
-                Table[Band[{1, i}] -> bs[[n + i - 1]], {i, 2, n}]],
-            {n, n}]]]];
+
+prec = 200;
 
 (* DampedRational[c, {p1, p2, ...}, b, x] stands for c b^x / ((x-p1)(x-p2)...) *)
 (* It satisfies the following identities *)
@@ -29,6 +22,111 @@ DampedRational/:DampedRational[c1_,p1_,b1_,x] DampedRational[c2_,p2_,b2_,x] :=
     DampedRational[c1 c2, Join[p1, p2], b1 b2, x];
 
 DampedRational/:a_ DampedRational[c_,p_,b_,x] /; FreeQ[a,x] := DampedRational[a c, p, b, x];
+
+nf[x_Integer] := x;
+nf[x_] := NumberForm[SetPrecision[x,prec],prec,ExponentFunction->(Null&)];
+
+safeCoefficientList[p_, x_] := Module[
+    {coeffs = CoefficientList[p, x]},
+    If[Length[coeffs] > 0, coeffs, {0}]];
+
+(*WritePmpXml is equivalent to old WriteBootstrapSDP, writing XML output.
+We want to enforce transition from XML to more effective and compact JSON,
+thus we set WriteBootstrapSDP := WritePmpJson.
+Note that users should change file extension from .xml to .json*)
+
+(*WriteBootstrapSDP := WritePmpXml*)
+(*WriteBootstrapSDP := Throw["WriteBootstrapSDP is deprecated, use WritePmpJson instead."];*)
+WriteBootstrapSDP := WritePmpJson
+
+
+(* ::Section:: *)
+(*JSON export*)
+
+
+toJsonNumber[x_] := ToString@nf@x;
+
+toJsonNumberArray[xs_List] := toJsonNumber /@ xs;
+
+toJsonObject[DampedRational[constant_, poles_List, base_, x]] := <|
+   "base" -> toJsonNumber[base],
+   "constant" -> toJsonNumber[constant],
+   "poles" -> toJsonNumberArray[poles]
+   |>;
+
+toJsonObject[PositiveMatrixWithPrefactor[prefactor_, m_]] := <|
+  "DampedRational" -> toJsonObject[prefactor],
+  "polynomials" ->
+   Map[toJsonNumberArray[safeCoefficientList[#, x]] &, m, {3}]
+  |>;
+  
+toJsonObject[PositiveMatrixWithPrefactor[prefactor_, m_], samplePointsFn_] := <|
+  "DampedRational" -> toJsonObject[prefactor],
+  "polynomials" ->
+   Map[toJsonNumberArray[safeCoefficientList[#, x]] &, m, {3}],
+   "samplePoints"-> toJsonNumberArray[samplePointsFn[Max[Exponent[m, x]] + 1]]
+  |>;
+
+toJsonObject[
+  SDP[objective_List, normalization_List,
+   positiveMatricesWithPrefactors_List]] := <|
+  "objective" -> toJsonNumberArray[objective],
+  "normalization" -> toJsonNumberArray[normalization],
+  "PositiveMatrixWithPrefactorArray" ->
+   toJsonObject /@ positiveMatricesWithPrefactors
+  |>;
+
+toJsonObject[
+  SDP[objective_List, normalization_List,
+   positiveMatricesWithPrefactors_List],
+   samplePointsFn_] := <|
+  "objective" -> toJsonNumberArray[objective],
+  "normalization" -> toJsonNumberArray[normalization],
+  "PositiveMatrixWithPrefactorArray" ->
+   Map[toJsonObject[#,samplePointsFn]& , positiveMatricesWithPrefactors]
+  |>;
+
+exportJson[file_,expr_]:=If[
+  StringEndsQ[file,".json"],
+  Export[file,expr,"JSON"],
+  Throw["Expected .json extension: "<>ToString[file]]
+];
+
+WritePmpJson[
+  file_,
+  SDP[objective_, normalization_, positiveMatricesWithPrefactors_]
+  ] := exportJson[
+    file,
+    toJsonObject@SDP[objective, normalization, positiveMatricesWithPrefactors]
+    ];
+    
+WritePmpJson[
+  file_,
+  SDP[objective_, normalization_, positiveMatricesWithPrefactors_],
+  samplePointsFn_
+  ]:=exportJson[
+    file,
+    toJsonObject[SDP[objective, normalization, positiveMatricesWithPrefactors], samplePointsFn]
+    ];
+
+
+(* ::Section:: *)
+(*XML export (obsolete)*)
+
+
+(* ::Subsection::Closed:: *)
+(*Helper functions*)
+
+
+(* A matrix with constant anti-diagonals given by the list bs *)
+antiBandMatrix[bs_] := Module[
+    {n = Ceiling[Length[bs]/2]},
+    Reverse[Normal[
+        SparseArray[
+            Join[
+                Table[Band[{i, 1}] -> bs[[n - i + 1]], {i, n}],
+                Table[Band[{1, i}] -> bs[[n + i - 1]], {i, 2, n}]],
+            {n, n}]]]];
 
 (* bilinearForm[f, m] = Integral[x^m f[x], {x, 0, Infinity}] *)
 (* The special case when f[x] has no poles *)
@@ -124,15 +222,12 @@ reshuffleWithNormalization[normalization_, v_] := Module[
     const = v[[j]]/normalization[[j]];
     Prepend[Delete[v - normalization*const, j], const]];
 
-(* XML Exporting *)
-nf[x_Integer] := x;
-nf[x_] := NumberForm[SetPrecision[x,prec],prec,ExponentFunction->(Null&)];
 
-safeCoefficientList[p_, x_] := Module[
-    {coeffs = CoefficientList[p, x]},
-    If[Length[coeffs] > 0, coeffs, {0}]];
+(* ::Subsection::Closed:: *)
+(*Export to XML file*)
 
-WriteBootstrapSDP[
+
+WritePmpXml[
     file_,
     SDP[objective_, normalization_, positiveMatricesWithPrefactors_],
     samplePointsFn_ : rescaledLaguerreSamplePoints] := Module[
@@ -142,6 +237,9 @@ WriteBootstrapSDP[
         polynomialVector, polynomialVectorMatrix,
         affineObjective, polynomialVectorMatrices
     },
+    If[!StringEndsQ[file,".xml"],
+      Throw["Expected .xml extension: "<>ToString[file]];
+      ];
 
     (* write a single XML node to file.  children is a routine that writes child nodes when run. *)
     node[name_, children_] := (

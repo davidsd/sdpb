@@ -45,7 +45,7 @@ to [run built-in tests](../test/run_all_tests.sh) inside Docker containter:
 
 ## Run Docker image
 
-Suppose you have an input file `/my/project/input.xml`. To use this
+Suppose you have an input file `/my/project/input.json`. To use this
 file, and be able to write output, we will make the `/my/project`
 directory visible to the docker image in the location `/usr/local/share/sdpb`.
 
@@ -63,9 +63,9 @@ place that docker will see it.
 `<command>` is the command that you would normally use to run the SDPB
 commands (see [Usage.md](Usage.md)).  The directory containing the
 input file is mounted as `/usr/local/share/sdpb`. So we first run `pmp2sdp` to
-convert from xml
+convert from json
 
-    mpirun --allow-run-as-root -n 4 pmp2sdp --precision 1024 -i /usr/local/share/sdpb/input.xml -o /usr/local/share/sdpb/sdp
+    mpirun --allow-run-as-root -n 4 pmp2sdp --precision 1024 -i /usr/local/share/sdpb/input.json -o /usr/local/share/sdpb/sdp
     
 `mpirun` runs as root inside the docker container.  Running `mpirun` as
 root is normally dangerous, but it is safe to do so inside the
@@ -74,7 +74,7 @@ container. To allow `mpirun` to run as root, we add the option
 can change that number to match your own machine.  Putting it all
 together on a single line
 
-    docker run -v /my/project/:/usr/local/share/sdpb bootstrapcollaboration/sdpb:master mpirun --allow-run-as-root -n 4 pmp2sdp --precision 1024 -i /usr/local/share/sdpb/input.xml -o /usr/local/share/sdpb/sdp
+    docker run -v /my/project/:/usr/local/share/sdpb bootstrapcollaboration/sdpb:master mpirun --allow-run-as-root -n 4 pmp2sdp --precision 1024 -i /usr/local/share/sdpb/input.json -o /usr/local/share/sdpb/sdp
 
 Running this command will create directory `/my/project/sdp`.
 To search for primal-dual solutions
@@ -94,4 +94,4 @@ Instead of Docker, one can also use [Podman](https://podman.io), which is compat
 same syntax (the only difference is the additional `docker.io/` prefix):
 
     podman pull docker.io/bootstrapcollaboration/sdpb:master
-    podman run -v /my/project/:/usr/local/share/sdpb bootstrapcollaboration/sdpb:master mpirun --allow-run-as-root -n 4 pmp2sdp --precision 1024 -i /usr/local/share/sdpb/input.xml -o /usr/local/share/sdpb/sdp
+    podman run -v /my/project/:/usr/local/share/sdpb bootstrapcollaboration/sdpb:master mpirun --allow-run-as-root -n 4 pmp2sdp --precision 1024 -i /usr/local/share/sdpb/input.json -o /usr/local/share/sdpb/sdp
