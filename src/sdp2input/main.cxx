@@ -73,9 +73,6 @@ int main(int argc, char **argv)
              "Input file does not exist: ", input_file);
       ASSERT(!fs::is_directory(input_file) && input_file != ".",
              "Input file is a directory, not a file:", input_file);
-      ASSERT(output_path != ".", "Output file is a directory: ", output_path);
-      ASSERT(!(fs::exists(output_path) && fs::is_directory(output_path)),
-             "Output file exists and is a directory: ", output_path);
 
       El::gmp::SetPrecision(precision);
       // El::gmp wants base-2 bits, but boost::multiprecision wants

@@ -51,7 +51,7 @@ struct Abstract_Json_Reader_Handler
   // Implementing BaseReaderHandler interface via virtual functions
 
 #define VIRTUAL_NOT_IMPLEMENTED(func)                                         \
-  virtual func [[noreturn]]                                                   \
+  [[noreturn]] virtual func                                                   \
   {                                                                           \
     RUNTIME_ERROR("Not implemented: function '", #func, "' in class: '",      \
                   typeid(*this).name(), "'");                                 \
@@ -59,22 +59,23 @@ struct Abstract_Json_Reader_Handler
 
   VIRTUAL_NOT_IMPLEMENTED(bool json_default())
   VIRTUAL_NOT_IMPLEMENTED(bool json_null())
-  VIRTUAL_NOT_IMPLEMENTED(bool json_bool(bool b))
-  VIRTUAL_NOT_IMPLEMENTED(bool json_int(int i))
-  VIRTUAL_NOT_IMPLEMENTED(bool json_uint(unsigned i))
-  VIRTUAL_NOT_IMPLEMENTED(bool json_int64(int64_t i))
-  VIRTUAL_NOT_IMPLEMENTED(bool json_uint64(uint64_t i))
-  VIRTUAL_NOT_IMPLEMENTED(bool json_double(double d))
-  VIRTUAL_NOT_IMPLEMENTED(bool json_raw_number(const Ch *str, SizeType length,
-                                               bool copy))
-  VIRTUAL_NOT_IMPLEMENTED(bool json_string(const Ch *str, SizeType length,
-                                           bool copy))
+  VIRTUAL_NOT_IMPLEMENTED(bool json_bool(bool /*b*/))
+  VIRTUAL_NOT_IMPLEMENTED(bool json_int(int /*i*/))
+  VIRTUAL_NOT_IMPLEMENTED(bool json_uint(unsigned /*i*/))
+  VIRTUAL_NOT_IMPLEMENTED(bool json_int64(int64_t /*i*/))
+  VIRTUAL_NOT_IMPLEMENTED(bool json_uint64(uint64_t /*i*/))
+  VIRTUAL_NOT_IMPLEMENTED(bool json_double(double /*d*/))
+  VIRTUAL_NOT_IMPLEMENTED(bool json_raw_number(const Ch * /*str*/,
+                                               SizeType /*length*/,
+                                               bool /*copy*/))
+  VIRTUAL_NOT_IMPLEMENTED(bool json_string(const Ch * /*str*/,
+                                           SizeType /*length*/, bool /*copy*/))
   VIRTUAL_NOT_IMPLEMENTED(bool json_start_object())
-  VIRTUAL_NOT_IMPLEMENTED(bool json_key(const Ch *str, SizeType length,
-                                        bool copy))
-  VIRTUAL_NOT_IMPLEMENTED(bool json_end_object(SizeType memberCount))
+  VIRTUAL_NOT_IMPLEMENTED(bool json_key(const Ch * /*str*/,
+                                        SizeType /*length*/, bool /*copy*/))
+  VIRTUAL_NOT_IMPLEMENTED(bool json_end_object(SizeType /*memberCount*/))
   VIRTUAL_NOT_IMPLEMENTED(bool json_start_array())
-  VIRTUAL_NOT_IMPLEMENTED(bool json_end_array(SizeType elementCount))
+  VIRTUAL_NOT_IMPLEMENTED(bool json_end_array(SizeType /*elementCount*/))
 
 protected:
   ~Abstract_Json_Reader_Handler() = default;

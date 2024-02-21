@@ -32,7 +32,7 @@ public:
   void reset_element_parsers(bool skip) override { points_parser.reset(skip); }
   void clear_result() override { result.clear(); }
 
-  [[nodiscard]] explicit
+  explicit
   Json_Points_Parser(const std::function<void(value_type &&result)> &on_parsed)
       : Abstract_Json_Object_Parser(false, on_parsed, [] {}),
         points_parser(false, [this](value_type &&points) {

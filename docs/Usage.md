@@ -2,7 +2,7 @@
 
 Details of how SDPB works are described in the
 [manual](SDPB_Manual/SDPB-Manual.pdf). An example input file
-[pmp.xml](../test/data/pmp2sdp/xml/pmp.xml) is included with the source code.
+[pmp.json](../test/data/end-to-end_tests/1d/input/pmp.json) is included with the source code.
 
 Some known issues and workaround are described [below](#common-issues-and-workarounds).
 You may also [find](https://github.com/davidsd/sdpb/issues) unresolved issues
@@ -14,7 +14,8 @@ SDPB.
 
 ## Create input files
 
-You will normally start with either a Polynomial Matrix Program (PMP) file in Mathematica, JSON or XML format. These
+You will normally start with a Polynomial Matrix Program (PMP) described in a file (or several files) in JSON,
+Mathematica, or XML format. These
 files
 must first be converted, using `pmp2sdp`, into an SDP format
 that SDPB can quickly load.  The format is described in
@@ -58,14 +59,18 @@ files ending with `.json` are JSON, `.m` is
 Mathematica, and `.xml` is XML.
 NSV files can also recursively reference other NSV files.
 
-There are example input files in
+There is an example [pmp.json](../test/data/end-to-end_tests/1d/input/pmp.json) with a simple one-dimensional PMP
+described in manual.
+Other JSON files in the folder [test/data/end-to-end_tests/1d/input/](../test/data/end-to-end_tests/1d/input/)
+illustrate different ways to define the same PMP.
+
+There are also example input files in
 [Mathematica](../test/data/pmp2sdp/m/pmp.m),
 [JSON](../test/data/pmp2sdp/json/pmp.json), and
 [NSV](../test/data/pmp2sdp/m/file_list.nsv) format. They all define the same
-SDP, with the NSV example loading the PMP from two Mathematica files:
+SDP (having three blocks), with the NSV example loading the PMP from two Mathematica files:
 [pmp\_split1.m](../test/data/pmp2sdp/m/pmp_split1.m) and
 [pmp\_split2.m](../test/data/pmp2sdp/m/pmp_split2.m).
-There is also an [XML file](../test/data/pmp2sdp/xml/pmp.xml) with a simple one-dimensional PMP described in manual.
 
 ## Running SDPB.
 
@@ -190,13 +195,13 @@ spectrum extraction.  The options are described in more detail in the
 help text, obtained by running `spectrum --help`.  As a simple
 example, extracting the spectrum from the toy example would be
 
-    mpirun -n 4 build/spectrum --input=test/data/spectrum/1d/pmp.xml --output=test/out/spectrum/1d/spectrum.json --precision=1024 --solution=test/data/spectrum/1d/solution --threshold=1e-10
+    mpirun -n 4 build/spectrum --input=test/data/end-to-end_tests/1d/input/pmp.json --output=test/out/spectrum/1d/spectrum.json --precision=1024 --solution=test/data/spectrum/1d/solution --threshold=1e-10
 
-This will output the spectra into `test/out/spectrum/spectrum.json` and should look like
+This will output the spectra into `test/out/spectrum/1d/spectrum.json` and should look like
 
     [
       {
-        "block_path": "test/data/spectrum/1d/pmp.xml",
+        "block_path": "test/data/end-to-end_tests/1d/input/pmp.json",
         "zeros":
           [
             {

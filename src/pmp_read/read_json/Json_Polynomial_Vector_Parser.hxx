@@ -28,6 +28,6 @@ public:
     ASSERT_EQUAL(index, result.size());
     result.push_back(value);
   }
-  void on_element_skipped(size_t index) override {}
+  void on_element_skipped(size_t /*index*/) override {}
   value_type get_result() override { return std::move(result); }
 };

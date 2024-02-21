@@ -118,6 +118,7 @@ namespace Test_Util::REQUIRE_Equal
                            unsigned int diff_precision)
   {
     INFO("diff outer_limits output");
+    REQUIRE(a_json != b_json);
     CAPTURE(a_json);
     CAPTURE(b_json);
     Float_Binary_Precision prec(input_precision, diff_precision);
@@ -133,6 +134,7 @@ namespace Test_Util::REQUIRE_Equal
                     unsigned int input_precision, unsigned int diff_precision)
   {
     INFO("diff outer_limits output");
+    REQUIRE(a_json != b_json);
     CAPTURE(a_json);
     CAPTURE(b_json);
     Float_Binary_Precision prec(input_precision, diff_precision);

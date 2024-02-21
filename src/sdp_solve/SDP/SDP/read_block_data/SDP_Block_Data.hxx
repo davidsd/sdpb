@@ -21,7 +21,7 @@ struct SDP_Block_Data
   // Allow move and prohibit copy
 
   SDP_Block_Data(const SDP_Block_Data &other) = delete;
-  SDP_Block_Data(SDP_Block_Data &&other) noexcept = default;
+  SDP_Block_Data(SDP_Block_Data &&other) = default;
   SDP_Block_Data &operator=(const SDP_Block_Data &other) = delete;
-  SDP_Block_Data &operator=(SDP_Block_Data &&other) noexcept = default;
+  SDP_Block_Data &operator=(SDP_Block_Data &&other) = default;
 };

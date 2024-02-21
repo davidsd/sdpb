@@ -164,6 +164,7 @@ namespace Test_Util::REQUIRE_Equal
                        const std::vector<std::string> &out_txt_keys)
   {
     INFO("diff sdpb output");
+    REQUIRE(a_out_dir != b_out_dir);
     CAPTURE(a_out_dir);
     CAPTURE(b_out_dir);
     REQUIRE(is_directory(a_out_dir));

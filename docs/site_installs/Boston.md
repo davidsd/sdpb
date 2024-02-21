@@ -32,12 +32,12 @@ You may list all available versions via
 
 Fo example, `sdpb-master` is built from the latest [master](https://github.com/davidsd/sdpb/tree/master) branch (
 run `sdpb --version` to see commit hash, e.g. `SDPB 2.5.1-130-g88b1c9ae`),
-and `sdpb-2.6.1` is a stable [2.6.1](https://github.com/davidsd/sdpb/releases/tag/2.6.1) release.
+and `sdpb-2.7.0` is a stable [2.7.0](https://github.com/davidsd/sdpb/releases/tag/2.7.0) release.
 
 Examples below are for `sdpb-master`.
-You may replace it with another version, e.g. `sdpb-2.6.1`.
+You may replace it with another version, e.g. `sdpb-2.7.0`.
 In that case, please refer
-to [2.6.1 documentation](https://github.com/davidsd/sdpb/blob/2.6.1/docs/site_installs/Boston.md).
+to [2.7.0 documentation](https://github.com/davidsd/sdpb/blob/2.7.0/docs/site_installs/Boston.md).
 
 ## Run SDPB
 

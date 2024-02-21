@@ -23,12 +23,12 @@ TEST_CASE("outer_limits")
 
     {
       INFO("run pmp2functions");
-      fs::path pvm_xml
-        = Test_Config::test_data_dir / "pmp2sdp" / "xml" / "pmp.xml";
+      fs::path pmp_json = Test_Config::test_data_dir / "end-to-end_tests"
+                          / "1d" / "input" / "pmp.json";
 
       // TODO allow running pmp2functions in parallel
       runner.create_nested("pmp2functions")
-        .run({"build/pmp2functions", std::to_string(precision), pvm_xml,
+        .run({"build/pmp2functions", std::to_string(precision), pmp_json,
               functions_json});
       Test_Util::REQUIRE_Equal::diff_functions_json(
         functions_json, functions_orig_json, precision, precision / 2);
