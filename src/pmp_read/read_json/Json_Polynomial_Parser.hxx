@@ -26,6 +26,6 @@ public:
     ASSERT_EQUAL(index, result.coefficients.size());
     result.coefficients.push_back(std::forward<element_type>(value));
   }
-  void on_element_skipped(size_t index) override {}
+  void on_element_skipped(size_t /*index*/) override {}
   value_type get_result() override { return std::move(result); }
 };

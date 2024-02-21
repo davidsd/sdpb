@@ -1,0 +1,4 @@
+{
+  "num_blocks": 2,
+  "command": "build/pmp2sdp --input=test/data/end-to-end_tests/1d-constraints/input/pmp.xml --output=test/out/1d-constraints/pmp.xml/format=json/sdp --outputFormat=json --precision=768"
+}

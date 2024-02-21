@@ -15,17 +15,18 @@ The prefactor DampedRational[1,{},1/E,x] doesn't affect the answer,
 but does affect the choice of sample scalings and bilinear basis.
 
 *)
-testSDP[datFile_] := Module[
+testSDP[jsonFile_] := Module[
     {
         pols = {PositiveMatrixWithPrefactor[DampedRational[1,{}, 1/E,x], {{{1 + x^4, x^4/12 + x^2}}}]},
         norm = {1, 0},
         obj  = {0, -1}
     },
 
-    WriteBootstrapSDP[datFile, SDP[obj, norm, pols]];];
+    WritePmpJson[jsonFile, SDP[obj, norm, pols]]
+    ];
 
 (* A similar computation to the above, except with nontrivial matrix semidefiniteness constraints *)
-testSDPMatrix[datFile_] := Module[
+testSDPMatrix[jsonFile_] := Module[
     {
         pols = {
             PositiveMatrixWithPrefactor[
@@ -41,4 +42,5 @@ testSDPMatrix[datFile_] := Module[
         obj  = {0, -1}
     },
 
-    WriteBootstrapSDP[datFile, SDP[obj, norm, pols]];];
+    WritePmpJson[jsonFile, SDP[obj, norm, pols]]
+];

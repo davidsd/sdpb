@@ -110,7 +110,7 @@ public:
     return (degree + parity) / 2 + 1 - parity;
   }
   [[nodiscard]] size_t
-  get_bilinear_bases_width(const size_t index, const size_t parity) const
+  get_bilinear_bases_width(const size_t index, const size_t /*parity*/) const
   {
     return num_points.at(index);
   }

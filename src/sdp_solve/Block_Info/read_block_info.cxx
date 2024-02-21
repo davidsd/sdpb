@@ -89,7 +89,9 @@ void Block_Info::read_block_info(const fs::path &sdp_path)
   else
     {
       const size_t num_blocks([&]() {
-        std::ifstream control_stream(sdp_path / "control.json");
+        auto control_path = sdp_path / "control.json";
+        std::ifstream control_stream(control_path);
+        ASSERT(control_stream.good(), "Failed to open ", control_path);
         return parse_num_blocks(control_stream);
       }());
 
@@ -100,6 +102,7 @@ void Block_Info::read_block_info(const fs::path &sdp_path)
           fs::path block_info_path(
             sdp_path / ("block_info_" + std::to_string(block) + ".json"));
           std::ifstream block_stream(block_info_path);
+          ASSERT(block_stream.good(), "Failed to open ", block_info_path);
           parse_block_info_json(block, block_stream, dimensions, num_points);
         }
     }

@@ -100,7 +100,7 @@ namespace
     auto on_parsed = [&output_values](auto &&parse_result) {
       output_values = std::forward<std::vector<El::BigFloat>>(parse_result);
     };
-    Json_Float_Vector_Parser<El::BigFloat> parser(skip, on_parsed);
+    Json_Float_Vector_Parser<El::BigFloat> parser(skip, on_parsed, []{});
 
     json_parse(json_string, parser);
     return output_values;

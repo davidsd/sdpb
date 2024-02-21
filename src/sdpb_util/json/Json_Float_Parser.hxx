@@ -29,7 +29,7 @@ public:
   {}
 
   bool json_string(const rapidjson::UTF8<>::Ch *str,
-                   rapidjson::SizeType length, bool copy) override
+                   rapidjson::SizeType length, bool /*copy*/) override
   {
     if(!this->skip)
       {

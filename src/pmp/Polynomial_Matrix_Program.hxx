@@ -30,7 +30,7 @@ struct Polynomial_Matrix_Program
   // input path for each of the matrices
   std::vector<std::filesystem::path> block_paths;
 
-  [[nodiscard]] Polynomial_Matrix_Program(
+  Polynomial_Matrix_Program(
     std::vector<El::BigFloat> objective,
     std::optional<std::vector<El::BigFloat>> normalization,
     size_t num_matrices, std::vector<Polynomial_Vector_Matrix> matrices,

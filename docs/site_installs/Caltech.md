@@ -13,7 +13,7 @@
 
 For compiling and/or running SDPB, you have to load modules first:
 
-    module load cmake/3.25.1 gcc/9.2.0 openmpi/4.1.5 boost/1_81_0_openmpi-4.1.1_gcc-9.2.0 eigen/eigen mpfr/4.0.2
+    module load python3/3.8.5 git/2.37.2 cmake/3.25.1 gcc/9.2.0 openmpi/4.1.5 boost/1_81_0_openmpi-4.1.1_gcc-9.2.0 eigen/eigen mpfr/4.0.2
 
 You may run `module -t list` to view loaded modules,
 and `module purge` to unload all modules.
@@ -33,12 +33,12 @@ You may list all available versions via
 
 Fo example, `sdpb-master` is built from the latest [master](https://github.com/davidsd/sdpb/tree/master) branch (
 run `sdpb --version` to see commit hash, e.g. `SDPB 2.5.1-130-g88b1c9ae`),
-and `sdpb-2.6.1` is a stable [2.6.1](https://github.com/davidsd/sdpb/releases/tag/2.6.1) release.
+and `sdpb-2.7.0` is a stable [2.7.0](https://github.com/davidsd/sdpb/releases/tag/2.7.0) release.
 
 Examples below are for `sdpb-master`.
-You may replace it with another version, e.g. `sdpb-2.6.1`.
+You may replace it with another version, e.g. `sdpb-2.7.0`.
 In that case, please refer
-to [2.6.1 documentation](https://github.com/davidsd/sdpb/blob/2.6.1/docs/site_installs/Caltech.md).
+to [2.7.0 documentation](https://github.com/davidsd/sdpb/blob/2.7.0/docs/site_installs/Caltech.md).
 
 ## Run SDPB
 
@@ -88,8 +88,8 @@ should compile on a login node.
 
 ## sdpb
 
-    ./waf configure --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --mpfr-dir=/central/software/mpfr/4.0.2 --prefix=$HOME/install/sdpb-master
-    ./waf # -j 1
+    python3 ./waf configure --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --mpfr-dir=/central/software/mpfr/4.0.2 --prefix=$HOME/install/sdpb-master
+    python3 ./waf # -j 1
     ./test/run_all_tests.sh
-    ./waf install
+    python3 ./waf install
     cd ..

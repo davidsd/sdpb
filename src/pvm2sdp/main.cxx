@@ -36,10 +36,6 @@ int main(int argc, char **argv)
 
       auto pmp = read_polynomial_matrix_program(env, input_files, timers);
       Output_SDP sdp(pmp, command_arguments, timers);
-      ASSERT(output_path != ".",
-             "Output file is a directory: ", output_path);
-      ASSERT(!(fs::exists(output_path) && fs::is_directory(output_path)),
-             "Output file exists and is a directory: ", output_path);
       bool zip = false;
       write_sdp(output_path, sdp, output_format, zip, timers, debug);
     }

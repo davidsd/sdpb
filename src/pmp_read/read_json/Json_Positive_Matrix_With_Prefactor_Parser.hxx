@@ -22,6 +22,9 @@ class Json_Positive_Matrix_With_Prefactor_Parser final
 private:
   std::optional<Matrix_Of_Polynomial_Vectors> polynomials;
   std::optional<Damped_Rational> prefactor;
+  std::optional<std::vector<El::BigFloat>> sample_points;
+  std::optional<std::vector<El::BigFloat>> sample_scalings;
+  std::optional<Polynomial_Vector> bilinear_basis;
 
 public:
   Json_Positive_Matrix_With_Prefactor_Parser(
@@ -33,14 +36,32 @@ public:
                            [this](Matrix_Of_Polynomial_Vectors &&pvm) {
                              polynomials = std::make_optional(std::move(pvm));
                            }),
-        prefactor_parser(skip, [this](Damped_Rational &&prefactor) {
-          this->prefactor = std::move(prefactor);
-        })
+        prefactor_parser(skip,
+                         [this](Damped_Rational &&prefactor) {
+                           this->prefactor = std::move(prefactor);
+                         }),
+        sample_points_parser(
+          skip,
+          [this](std::vector<El::BigFloat> &&sample_points) {
+            this->sample_points = std::move(sample_points);
+          }),
+        sample_scalings_parser(
+          skip,
+          [this](std::vector<El::BigFloat> &&sample_scalings) {
+            this->sample_scalings = std::move(sample_scalings);
+          }),
+        bilinear_basis_parser(
+          skip, [this](Polynomial_Vector &&bilinear_basis) {
+            this->bilinear_basis = std::move(bilinear_basis);
+          })
   {}
 
 private:
   Json_Matrix_Of_Polynomial_Vectors_Parser polynomials_parser;
   Json_Damped_Rational_Parser prefactor_parser;
+  Json_Float_Vector_Parser<El::BigFloat> sample_points_parser;
+  Json_Float_Vector_Parser<El::BigFloat> sample_scalings_parser;
+  Json_Polynomial_Vector_Parser bilinear_basis_parser;
 
 protected:
   Abstract_Json_Reader_Handler &element_parser(const std::string &key) override
@@ -49,6 +70,12 @@ protected:
       return polynomials_parser;
     if(key == "DampedRational")
       return prefactor_parser;
+    if(key == "samplePoints")
+      return sample_points_parser;
+    if(key == "sampleScalings")
+      return sample_scalings_parser;
+    if(key == "bilinearBasis")
+      return bilinear_basis_parser;
     RUNTIME_ERROR("unknown key=", key);
   }
 
@@ -58,18 +85,24 @@ public:
     ASSERT(polynomials.has_value(), "polynomials not found");
     const auto matrix = to_matrix(std::move(polynomials).value());
     // TODO add move ctor for Polynomial_Vector_Matrix?
-    return Polynomial_Vector_Matrix(matrix, prefactor, std::nullopt,
-                                    std::nullopt, std::nullopt);
+    return Polynomial_Vector_Matrix(matrix, prefactor, sample_points,
+                                    sample_scalings, bilinear_basis);
   }
   void clear_result() override
   {
     polynomials.reset();
     prefactor.reset();
+    sample_points.reset();
+    sample_scalings.reset();
+    bilinear_basis.reset();
   }
   void reset_element_parsers(const bool skip) override
   {
     prefactor_parser.reset(skip);
     polynomials_parser.reset(skip);
+    sample_points_parser.reset(skip);
+    sample_scalings_parser.reset(skip);
+    bilinear_basis_parser.reset(skip);
   }
 };
 
