@@ -1,12 +1,11 @@
-#include <cassert>
-#include <cblas.h>
-
-#include <El.hpp>
-
 #include "BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "blas_jobs/Blas_Job_Schedule.hxx"
 #include "fmpz/fmpz_mul_blas_util.hxx"
 #include "sdpb_util/assert.hxx"
+
+#include <El.hpp>
+
+#include <cblas.h>
 
 // code adopted from flint mul_blas.c
 namespace

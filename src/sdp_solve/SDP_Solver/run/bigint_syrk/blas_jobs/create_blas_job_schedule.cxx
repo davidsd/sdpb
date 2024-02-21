@@ -1,5 +1,5 @@
-#include <cassert>
 #include "create_blas_jobs_schedule.hxx"
+
 #include "Blas_Job_Schedule.hxx"
 #include "sdpb_util/assert.hxx"
 
