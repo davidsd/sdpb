@@ -20,9 +20,9 @@ can be downloaded from [Docker Hub](https://hub.docker.com/r/bootstrapcollaborat
 
     docker pull bootstrapcollaboration/sdpb:master
 
-You can also download image for a specific release, e.g., 2.6.1:
+You can also download image for a specific release, e.g., 2.7.0:
 
-    docker pull bootstrapcollaboration/sdpb:2.6.1
+    docker pull bootstrapcollaboration/sdpb:2.7.0
 
 The list of all available tags can be found in
 [bootstrapcollaboration/sdpb](https://hub.docker.com/r/bootstrapcollaboration/sdpb/tags) repo on Docker Hub.

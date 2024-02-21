@@ -1,3 +1,45 @@
+# Version 2.7.0
+
+### Breaking changes:
+
+- New executable `pmp2sdp` instead of separate `sdp2input` and `pvm2sdp`. Reads Polynomial Matrix Programs in JSON, Mathematica, or XML formats. We recommend using JSON since it is more compact, efficient and universal than Mathematica or XML.
+See [#181](https://github.com/davidsd/sdpb/pull/181), [#184](https://github.com/davidsd/sdpb/pull/184). 
+Example:
+```
+pmp2sdp --precision 768 --input in/pmp.json --output out/sdp --verbosity regular
+```
+By default, `pmp2sdp` writes sdp to plain directory (as in 2.4.0 and earlier). Run it with `--zip` flag to write to zip archive instead (as in 2.5.0 - 2.6.1).
+Note that writing to zip can be slow for large problems, see plots in [#176](https://github.com/davidsd/sdpb/pull/176).
+
+`sdp2input` and `pvm2sdp` are deprecated and will be removed in future versions.
+
+
+- `sdpb` option `--procsPerNode` is deprecated and will be removed in future versions. Now MPI configuration is determined automatically. See [#169](https://github.com/davidsd/sdpb/pull/169).
+- Mathematica script [SDPB.m](mathematica/SDPB.m) now writes PMP in JSON format instead of XML. Use `WritePmpJson` (or its alias `WriteBootstrapSDP`) function. `WritePmpXml` is left for backward compatibility.
+**NB:** you should also change PMP file extension from `.xml` to `.json` in your Mathematica scripts.
+Using JSON instead of XML results in ~x2 speedup when running [Bootstrap2dExample.m](mathematica/Bootstrap2dExample.m) script. See [#199](https://github.com/davidsd/sdpb/pull/199).
+
+### New features:
+- Added `sdpb` option `--writeSolution=z`. Restores the vector `z` (see [SDPB Manual](docs/SDPB_Manual/SDPB-Manual.pdf), eq. 3.1) from the vector `y` (eq. 2.2) and `sdp/normalization.json`, and writes it to `out/z.txt`.
+See [#191](https://github.com/davidsd/sdpb/pull/191).
+- Added new field `"block_path"` to `spectrum` JSON output. For each block, `"block_path"` contains its path from the PMP input. See [#190](https://github.com/davidsd/sdpb/pull/190).
+- Added optional fields to `pmp.json` format: `"samplePoints"`, `"sampleScalings"` and `"bilinearBasis"`, same as in the old XML format.
+See [#199](https://github.com/davidsd/sdpb/pull/199).
+
+### Other improvements:
+- Optimized IO and RAM usage when reading big SDP blocks, see [#167](https://github.com/davidsd/sdpb/pull/167).
+- Optimized reading and writing for `pmp2sdp`, got order-of-magnitude speedup.
+See [#176](https://github.com/davidsd/sdpb/pull/176) and [#181](https://github.com/davidsd/sdpb/pull/181).
+- Fix undefined behaviour (sometimes leading to SEGFAULT) when reading PMP with a prefactor containing duplicate poles. See [#195](https://github.com/davidsd/sdpb/pull/195).
+- Fix incorrect block mapping for cyclic MPI job distribution across nodes, see [#170](https://github.com/davidsd/sdpb/pull/170).
+- Print number of MPI processes and nodes, print SDP dimensions and number of blocks. See [#169](https://github.com/davidsd/sdpb/pull/169).
+- Print source code location and stacktrace for exceptions, see [#180](https://github.com/davidsd/sdpb/pull/180) and [#198](https://github.com/davidsd/sdpb/pull/198).
+- Rewrote Section 3 of [SDPB Manual](docs/SDPB_Manual/SDPB-Manual.pdf), see [#199](https://github.com/davidsd/sdpb/pull/199).
+- Internal improvements: new macros `RUNTIME_ERROR`, `ASSERT`, `ASSERT_EQUAL` and `DEBUG_STRING`, new JSON parser, better GMP<->MPFR conversion, fix compiler warnings, refactor integration tests.
+See [#180](https://github.com/davidsd/sdpb/pull/180), [#189](https://github.com/davidsd/sdpb/pull/189), [#196](https://github.com/davidsd/sdpb/pull/196), [#197](https://github.com/davidsd/sdpb/pull/197).
+
+See https://github.com/davidsd/sdpb/releases/tag/2.7.0 for the full changelog.
+
 # Version 2.6.1
 
 - Fixed major memory leak in binary SDP deserialization. See [#160](https://github.com/davidsd/sdpb/pull/160).
