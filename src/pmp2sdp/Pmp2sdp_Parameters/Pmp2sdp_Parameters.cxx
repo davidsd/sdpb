@@ -68,10 +68,6 @@ Pmp2sdp_Parameters::Pmp2sdp_Parameters(int argc, char **argv)
              "Input file does not exist: ", input_file);
       ASSERT(!fs::is_directory(input_file) && input_file != ".",
              "Input file is a directory, not a file:", input_file);
-      // TODO debug:
-      // ASSERT(output_path != ".", "Output file is a directory: ", output_path);
-      // ASSERT(!(fs::exists(output_path) && fs::is_directory(output_path)),
-      //        "Output file exists and is a directory: ", output_path);
     }
   catch(po::error &e)
     {

@@ -33,7 +33,6 @@ public:
     const bool skip, const std::function<void(Damped_Rational &&)> &on_parsed,
     const std::function<void()> &on_skipped = [] {})
       : Abstract_Json_Object_Parser(skip, on_parsed, on_skipped),
-        // TODO set on_skipped = []{} everywhere by default
         base_parser(skip,
                     [this](Boost_Float &&value) {
                       this->result.base = std::move(value);

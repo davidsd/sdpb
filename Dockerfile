@@ -26,9 +26,10 @@
 
 FROM vasdommes/flint:3.0-trunk as flint
 
-FROM bootstrapcollaboration/elemental:v0.88.0 AS build
+FROM bootstrapcollaboration/elemental:master AS build
 
 RUN apk add \
+    binutils \
     cmake \
     g++ \
     git \
@@ -49,15 +50,22 @@ WORKDIR /usr/local/src/sdpb
 COPY --from=flint /usr/local /usr/local
 COPY --from=flint /usr/local/lib /usr/local/lib
 COPY --from=flint /usr/local/include /usr/local/include
-# Build SDPB from current sources
+# Build SDPB from current sources, print build/config.log in configuration failed
 COPY . .
-RUN ./waf configure --elemental-dir=/usr/local --flint-dir=/usr/local --prefix=/usr/local && \
+RUN (./waf configure --elemental-dir=/usr/local --flint-dir=/usr/local --prefix=/usr/local \
+        || (cat build/config.log && exit 1) \
+    ) && \
     python3 ./waf && \
     python3 ./waf install
 
 # Take only sdpb binaries + load necessary dynamic libraries
+# Unfortunately, boost1.82-stacktrace_addr2line does not exist as a standalone package in Alpine Linux repo.
+# Thus we have to load the whole boost-dev (~180MB extra)
+# TODO: for some reason, function names and source locations are not printed in stacktrace.
 FROM alpine:3.18 as install
 RUN apk add \
+    binutils \
+    boost-dev \
     boost1.82-date_time \
     boost1.82-filesystem \
     boost1.82-iostreams \

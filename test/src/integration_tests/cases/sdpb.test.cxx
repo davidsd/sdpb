@@ -7,9 +7,9 @@ TEST_CASE("sdpb")
 {
   INFO("SDPB tests for a simple one-dimensional problem:");
   INFO("maximize (-y) s.t. (1 + x^4 + y * (x^4 / 12 + x^2)) >= 0)");
-  auto data_dir = Test_Config::test_data_dir / "sdpb";
   // default sdp input file
-  auto sdp_path = Test_Config::test_data_dir / "pmp2sdp" / "xml" / "sdp_orig";
+  auto sdp_path = Test_Config::test_data_dir / "end-to-end_tests" / "1d"
+                  / "output" / "sdp";
   CAPTURE(sdp_path);
 
   int num_procs = 2;
@@ -43,21 +43,6 @@ TEST_CASE("sdpb")
     os << "";
     fs::permissions(path, fs::perms::others_read);
   };
-
-  SECTION("sdpb")
-  {
-    INFO("Simple sdpb run");
-    int sdpb_num_procs = GENERATE(1, 2);
-    DYNAMIC_SECTION("num_procs=" << sdpb_num_procs)
-    {
-      Test_Util::Test_Case_Runner runner("sdpb/run-"
-                                         + std::to_string(sdpb_num_procs));
-      auto args = default_args;
-      run_sdpb_set_out_ck_dirs(runner, args, sdpb_num_procs);
-      Test_Util::REQUIRE_Equal::diff_sdpb_output_dir(
-        args["--outDir"], data_dir / "test_out_orig", 1024, 1024 / 2);
-    }
-  }
 
   SECTION("io_tests")
   {

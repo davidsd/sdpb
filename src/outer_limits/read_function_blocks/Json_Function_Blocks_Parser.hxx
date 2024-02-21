@@ -54,7 +54,7 @@ public:
   }
 
 public:
-  [[nodiscard]] Json_Functions_Parser(
+  explicit Json_Functions_Parser(
     const std::function<void(Functions_File_Parse_Result &&)> &on_parsed)
       : Abstract_Json_Object_Parser(false, on_parsed, [] {}),
         objective_parser(false,

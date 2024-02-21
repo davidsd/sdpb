@@ -233,9 +233,29 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
 {
   Scoped_Timer write_timer(timers, "write_sdp");
 
+  const int rank = El::mpi::Rank();
+
   fs::path temp_dir(output_path);
   temp_dir += "_temp";
-  fs::create_directories(temp_dir);
+  {
+    Scoped_Timer clear_timer(timers, "clear_output_paths");
+    if(rank == 0)
+      {
+        if(fs::remove_all(temp_dir) != 0)
+          PRINT_WARNING("Temporary directory ", temp_dir,
+                        " exists and will be overwritten.");
+        if(fs::remove_all(output_path) != 0)
+          PRINT_WARNING("Output path ", output_path,
+                        " exists and will be overwritten.");
+
+        fs::create_directories(temp_dir);
+      }
+
+    // All ranks should wait until root clears the directories before writing.
+    Scoped_Timer mpi_barrier_timer(timers, "mpi_barrier");
+    El::mpi::Barrier();
+  }
+
   // We use size_t rather than std::streamsize because MPI treats
   // std::streamsize as an MPI_LONG_INT and then can not MPI_Reduce
   // over it.
@@ -307,7 +327,6 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
           }
       }
   }
-  const int rank = El::mpi::Rank();
   if(debug)
     {
       print_matrix_sizes(rank, sdp.dual_objective_b,

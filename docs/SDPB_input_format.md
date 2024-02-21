@@ -41,7 +41,7 @@ The JSON schema for these input files are in
 [sdp_block_data_schema.json](json_schema/sdp_block_data_schema.json). Running `SDPB` on the
 test example
 
-    pmp2sdp --precision 1024 -i test/data/pmp2sdp/xml/pmp.xml -o test/out/pmp2sdp/sdp
+    pmp2sdp --precision 1024 -i test/data/end-to-end_tests/1d/input/pmp.json -o test/out/pmp2sdp/sdp
     
 will generate a simple example you can look at.
 
