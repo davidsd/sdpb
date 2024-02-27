@@ -1,22 +1,25 @@
-# TODO choose version:
-cmake_minimum_required(VERSION 3.16)
-project(sdpb LANGUAGES CXX)
-
-# This is to ensure that CMake also checks lib64 for the dependencies 
-set(CMAKE_PREFIX_PATH "/usr/lib64" ${CMAKE_PREFIX_PATH})
-
 # Currently we are working with a single CMake file but it is better to refactor parts of this file and put them inside cmake/modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
+# Custom colour scheme for logging
+include(CustomMessages)
+
+# TODO choose version, currently working with 3.16 as a temporary measure:
+cmake_minimum_required(VERSION 3.16)
+
+# This is to ensure that CMake also checks lib64 for the dependencies on Linux systems
+if(LINUX)
+        set(CMAKE_PREFIX_PATH "/usr/lib64" ${CMAKE_PREFIX_PATH})
+endif()
+
+project(sdpb LANGUAGES CXX)
+# TODO setting version of SDPB
 
 # cxx 17
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #set(CMAKE_CXX_EXTENSIONS OFF)
-
-# We all love some colour don't we
-include(CustomMessages)
 
 # compiler_cxx
 # TODO
@@ -93,19 +96,26 @@ endif ()
 
 
 # TODO libxml2
-#find_package(libxml2 REQUIRED)
-# if(NOT libxml2_FOUND)
-#         pkg_check_modules(LIBXML2 REQUIRED libxml-2)
-# endif()
-# message(STATUS "libxml2 version: ${libxml2_VERSION}")
+find_package(libxml2 REQUIRED)
+if(NOT libxml2_FOUND)
+        pkg_check_modules(LIBXML2 REQUIRED libxml-2)
+endif()
+message(STATUS "libxml2 version: ${libxml2_VERSION}")
 
 # TODO rapidjson
-pkg_check_modules(RapidJSON REQUIRED RapidJSON)
+find_package(RapidJSON REQUIRED)
+# pkg_check_modules(RapidJSON REQUIRED RapidJSON)
 message(STATUS "RapidJSON version: ${RapidJSON_VERSION}")
 
 # TODO libarchive
-pkg_check_modules(libarchive REQUIRED libarchive)
-message(STATUS "libarchive version: ${libarchive_VERSION}")
+find_package(ZLIB REQUIRED)
+message(STATUS "ZLIB version: ${ZLIB_VERSION}")
+find_package(libarchive REQUIRED)
+# if (NOT libarchive_FOUND)
+#         pkg_check_modules(libarchive REQUIRED libarchive)
+# endif()      
+# find_library(LIBARCHIVE_LIBRARIES archive REQUIRED)  
+# message(STATUS "libarchive version: ${libarchive_VERSION}")
 
 
 #def configure(conf):
