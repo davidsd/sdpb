@@ -209,7 +209,7 @@ std::vector<El::BigFloat> compute_optimal(
 
           Timers timers(env, parameters.verbosity >= Verbosity::debug);
           SDP_Solver_Terminate_Reason reason = solver.run(
-            parameters.solver, parameters.verbosity, parameter_properties,
+            env, parameters.solver, parameters.verbosity, parameter_properties,
             block_info, sdp, grid, start_time, timers);
 
           for(size_t index(0); index < block_info.block_indices.size();
@@ -274,7 +274,8 @@ std::vector<El::BigFloat> compute_optimal(
              || reason == SDP_Solver_Terminate_Reason::MaxIterationsExceeded
              || reason == SDP_Solver_Terminate_Reason::MaxRuntimeExceeded
              || reason == SDP_Solver_Terminate_Reason::PrimalStepTooSmall
-             || reason == SDP_Solver_Terminate_Reason::DualStepTooSmall)
+             || reason == SDP_Solver_Terminate_Reason::DualStepTooSmall
+             || reason == SDP_Solver_Terminate_Reason::SIGTERM_Received)
             {
               RUNTIME_ERROR("Cannot find solution: ", reason);
             }

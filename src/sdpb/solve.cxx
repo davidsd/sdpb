@@ -3,6 +3,8 @@
 #include "sdpb_util/ostream/set_stream_precision.hxx"
 
 #include <El.hpp>
+#include <csignal>
+#include <cstdlib>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <filesystem>
 
@@ -45,7 +47,7 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
   const boost::property_tree::ptree parameters_tree(
     to_property_tree(parameters));
   SDP_Solver_Terminate_Reason reason(
-    solver.run(parameters.solver, parameters.verbosity, parameters_tree,
+    solver.run(env, parameters.solver, parameters.verbosity, parameters_tree,
                block_info, sdp, grid, start_time, timers));
 
   if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
@@ -61,7 +63,8 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
                 << '\n';
     }
 
-  if(!parameters.no_final_checkpoint)
+  if(reason == SDP_Solver_Terminate_Reason::SIGTERM_Received
+     || !parameters.no_final_checkpoint)
     {
       solver.save_checkpoint(parameters.solver.checkpoint_out,
                              parameters.verbosity, parameters_tree);
@@ -73,5 +76,13 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
   save_solution(solver, reason, runtime, parameters.out_directory,
                 parameters.write_solution, block_info.block_indices,
                 sdp.normalization, parameters.verbosity);
+
+  if(reason == SDP_Solver_Terminate_Reason::SIGTERM_Received)
+    {
+      if(El::mpi::Rank() == 0)
+        El::Output("Received SIGTERM, exiting gracefully...");
+      MPI_Finalize();
+      std::exit(SIGTERM);
+    }
   return timers;
 }
