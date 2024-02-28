@@ -68,23 +68,23 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
 
       // P_I = 0
       El::View(submatrix, input_matrix, all_rows, job.I);
-      ASSERT(submatrix.LockedBuffer()
-             == input_matrix.LockedBuffer(0, job.I.beg));
+      ASSERT_EQUAL(submatrix.LockedBuffer(),
+                   input_matrix.LockedBuffer(0, job.I.beg));
       El::Zero(submatrix);
 
       // P_J = 0
       if(job.I.beg != job.J.beg)
         {
           El::View(submatrix, input_matrix, all_rows, job.J);
-          ASSERT(submatrix.LockedBuffer()
-                 == input_matrix.LockedBuffer(0, job.J.beg));
+          ASSERT_EQUAL(submatrix.LockedBuffer(),
+                       input_matrix.LockedBuffer(0, job.J.beg));
           El::Zero(submatrix);
         }
 
       // Q_IJ = 0
       El::View(submatrix, output_matrix, job.I, job.J);
-      ASSERT(submatrix.LockedBuffer()
-             == output_matrix.LockedBuffer(job.I.beg, job.J.beg));
+      ASSERT_EQUAL(submatrix.LockedBuffer(),
+                   output_matrix.LockedBuffer(job.I.beg, job.J.beg));
       El::Zero(submatrix);
     }
   input_block_residues_window.Fence();
