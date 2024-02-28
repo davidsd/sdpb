@@ -3,18 +3,23 @@
 #include "assert.hxx"
 
 #include <El.hpp>
-#include <boost/noncopyable.hpp>
 
-template <class T> class Shared_Window_Array : boost::noncopyable
+template <class T> class Shared_Window_Array
 {
 public:
+  Shared_Window_Array(const Shared_Window_Array &other) = delete;
+  Shared_Window_Array(Shared_Window_Array &&other) noexcept = default;
+  Shared_Window_Array &operator=(const Shared_Window_Array &other) = delete;
+  Shared_Window_Array &operator=(Shared_Window_Array &&other) noexcept
+    = default;
+
   MPI_Win win{};
   El::mpi::Comm comm;
   T *data;
-  const size_t size;
+  size_t size = 0;
 
 public:
-  Shared_Window_Array() = delete;
+  Shared_Window_Array() = default;
   // shared_memory_comm should be created via
   // MPI_Comm_split_type (MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0,
   // MPI_INFO_NULL, &shared_memory_comm.comm);

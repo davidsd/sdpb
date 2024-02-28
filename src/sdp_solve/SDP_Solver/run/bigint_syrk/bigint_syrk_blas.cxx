@@ -175,23 +175,24 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem(
   Scoped_Timer timer(timers, "shmem");
   size_t width = bigint_output_shmem.Width();
 
-  ASSERT_EQUAL(bigint_input_matrix_blocks.size(),
-               block_index_local_to_shmem.size());
-  ASSERT_EQUAL(bigint_input_matrix_blocks.size(),
-               block_index_local_to_shmem.size());
   ASSERT_EQUAL(bigint_output_shmem.Height(), bigint_output_shmem.Width());
   ASSERT_EQUAL(bigint_output_shmem.Height(), width);
-  ASSERT_EQUAL(input_block_residues_window.width, width);
+  ASSERT_EQUAL(input_grouped_block_residues_window->width, width);
 
   ASSERT(El::mpi::Congruent(shared_memory_comm,
-                            input_block_residues_window.Comm()));
+                            input_grouped_block_residues_window->Comm()));
   ASSERT(
     El::mpi::Congruent(shared_memory_comm, output_residues_window.Comm()));
   ASSERT(
     El::mpi::Congruent(shared_memory_comm, bigint_output_shmem.DistComm()));
 
   // Compute residues
-  compute_block_residues(bigint_input_matrix_blocks, timers, block_timings_ms);
+  // TODO if we split input window, we should fill input window
+  // several times (with different skip_rows)
+  // and call BLAS to update output window.
+  int skip_rows = 0;
+  compute_block_residues(bigint_input_matrix_blocks, skip_rows, timers,
+                         block_timings_ms);
 
   // Square each residue matrix
   {
@@ -201,7 +202,7 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem(
       auto shmem_rank = El::mpi::Rank(shared_memory_comm);
       for(const auto &job : blas_job_schedule.jobs_by_rank.at(shmem_rank))
         {
-          do_blas_job(job, uplo, input_block_residues_window,
+          do_blas_job(job, uplo, *input_grouped_block_residues_window,
                       output_residues_window);
         }
     }
@@ -223,7 +224,7 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem(
     auto total_syrk_time
       = syrk_timer.elapsed_milliseconds() * El::mpi::Size(shared_memory_comm);
     auto total_size
-      = input_block_residues_window.height * input_block_residues_window.width;
+      = input_grouped_block_residues_window->height * input_grouped_block_residues_window->width;
     // Average time spent on one block element
     double time_per_element = (double)total_syrk_time / total_size;
 

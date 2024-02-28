@@ -92,7 +92,7 @@ TEST_CASE("calculate_Block_Matrix_square")
   INFO("input: dense tall NxK matrix P, splitted horizontally into blocks");
   INFO("output: NxN matrix Q := P^T P");
   INFO("We calculate Q with different methods, including our bigint_syrk_blas,"
-       ", and compare the results.");
+       " and compare the results.");
 
   MPI_Comm comm;
   MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
@@ -248,13 +248,28 @@ TEST_CASE("calculate_Block_Matrix_square")
                     return create_blas_job_schedule_split_remaining_primes(
                       num_ranks, num_primes, output_width, split_factor);
                   };
+
+              // TODO use lower values to check window splitting
+              size_t max_shared_memory_bytes
+                = std::numeric_limits<size_t>::max();
+              // TODO refactor
+              size_t group_index = use_dist_blocks ? 0 : El::mpi::Rank();
+              size_t num_groups = use_dist_blocks ? 1 : El::mpi::Size();
+              std::vector<El::Int> blocks_height_per_group(num_groups);
+              for(const auto &block : P_matrix_blocks)
+                {
+                  blocks_height_per_group.at(group_index) += block.Height();
+                }
+              El::mpi::AllReduce(blocks_height_per_group.data(), num_groups,
+                                 El::mpi::COMM_WORLD);
+
               BigInt_Shared_Memory_Syrk_Context context(
-                comm, bits, block_heights, block_width, block_indices,
-                block_indices, false, create_job_schedule);
+                comm, group_index, bits, max_shared_memory_bytes,
+                blocks_height_per_group, block_width, block_indices, false,
+                create_job_schedule);
 
               Timers timers;
-              El::Matrix<int32_t> block_timings_ms(
-                context.input_block_residues_window.num_blocks, 1);
+              El::Matrix<int32_t> block_timings_ms(num_blocks, 1);
               context.bigint_syrk_blas(uplo, P_matrix_blocks, Q_result, timers,
                                        block_timings_ms);
               {

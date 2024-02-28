@@ -11,19 +11,25 @@
 struct BigInt_Shared_Memory_Syrk_Context : boost::noncopyable
 {
   El::mpi::Comm shared_memory_comm;
+  // Index of MPI group on a node
+  size_t group_index;
+  // Number of MPI groups on a node
+  size_t num_groups;
   Fmpz_Comb comb;
-  Block_Residue_Matrices_Window<double> input_block_residues_window;
+  // All blocks from each MPI group are combined
+  // into a single block in Block_Residue_Matrices_Window
+  std::unique_ptr<Block_Residue_Matrices_Window<double>>
+    input_grouped_block_residues_window;
   Residue_Matrices_Window<double> output_residues_window;
-  const std::vector<size_t> block_index_local_to_shmem;
   const std::vector<size_t> block_index_local_to_global;
   const Blas_Job_Schedule blas_job_schedule;
 
-  // block_heights - for all blocks in shared memory
   BigInt_Shared_Memory_Syrk_Context(
-    const El::mpi::Comm &shared_memory_comm, mp_bitcnt_t precision,
-    const std::vector<El::Int> &block_heights, El::Int block_width,
-    const std::vector<size_t> &block_index_local_to_shmem,
-    const std::vector<size_t> &block_index_local_to_global, bool debug,
+    const El::mpi::Comm &shared_memory_comm, size_t group_index,
+    mp_bitcnt_t precision, size_t max_shared_memory_bytes,
+    const std::vector<El::Int> &blocks_height_per_group, int block_width,
+    const std::vector<size_t> &block_index_local_to_global,
+    bool debug,
     const std::function<Blas_Job_Schedule(size_t num_ranks, size_t num_primes,
                                           int output_width, bool debug)>
       &create_job_schedule
@@ -56,11 +62,13 @@ struct BigInt_Shared_Memory_Syrk_Context : boost::noncopyable
 private:
   void compute_block_residues(
     const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
-    Timers &timers, El::Matrix<int32_t> &block_timings_ms);
+    El::Int skip_rows, Timers &timers, El::Matrix<int32_t> &block_timings_ms);
 
   void bigint_syrk_blas_shmem(
     El::UpperOrLower uplo,
     const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
     El::DistMatrix<El::BigFloat> &bigint_output_shmem, Timers &timers,
     El::Matrix<int32_t> &block_timings_ms);
+
+  [[nodiscard]] El::Int input_group_height_per_prime() const;
 };
