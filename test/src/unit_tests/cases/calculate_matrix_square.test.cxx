@@ -67,8 +67,16 @@ namespace
     Fmpz_Matrix PT_bigint(PT);
     Fmpz_Matrix P_bigint(P);
     Fmpz_Matrix Q(P.Width(), P.Width());
-    fmpz_mat_mul_blas(Q.fmpz_matrix, PT_bigint.fmpz_matrix,
-                      P_bigint.fmpz_matrix);
+    if(fmpz_mat_mul_blas(Q.fmpz_matrix, PT_bigint.fmpz_matrix,
+                         P_bigint.fmpz_matrix)
+       == 0)
+      {
+        WARN(
+          "fmpz_mat_mul_blas() returned 0 (probably since FLINT was compiled "
+          "without BLAS), falling back to fmpz_mat_mul_multi_mod()");
+        fmpz_mat_mul_multi_mod(Q.fmpz_matrix, PT_bigint.fmpz_matrix,
+                               P_bigint.fmpz_matrix);
+      }
 
     El::Matrix<El::BigFloat> Q_result;
     Q.ToBigFloatMatrix(Q_result);
