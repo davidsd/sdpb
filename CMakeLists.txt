@@ -1,4 +1,4 @@
-# Currently we are working with a single CMake file but it is better to refactor parts of this file and put them inside cmake/modules
+# TODO - Currently we are working with a single CMake file but it is better to refactor parts of this file and put them inside cmake/modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
@@ -9,7 +9,7 @@ include(CustomMessages)
 cmake_minimum_required(VERSION 3.16)
 
 # This is to ensure that CMake also checks lib64 for the dependencies on Linux systems
-if(LINUX)
+if(UNIX)
         set(CMAKE_PREFIX_PATH "/usr/lib64" ${CMAKE_PREFIX_PATH})
 endif()
 
@@ -42,24 +42,11 @@ message(STATUS "Found g++ compiler (C++ compiler): ${CMAKE_CXX_COMPILER}")
 include(FindPkgConfig)
 find_package(PkgConfig REQUIRED)
 
-# TODO boost
-# TODO Check that the custom approach works. Have not tested.
-
-find_package(Boost REQUIRED COMPONENTS system filesystem date_time program_options iostreams serialization)
-if(NOT Boost_FOUND)
-        pkg_check_modules(Boost REQUIRED COMPONENTS system filesystem date_time program_options iostreams serialization)
+# GMP and GMPXX
+# -------------
 endif()
-message(STATUS "Boost version: ${Boost_VERSION}")
-
-# Omitted the part where boost.py tests for boost by running a small snippet of code.
-
-# TODO gmpxx
-# NOTE This does not work right now because find_package is not able to find FindGMPXX.cmake
-# find_package(GMPXX REQUIRED)
-# message(STATUS "GMP version: ${GMPXX_VERSION}")
-
-
-# TODO mpfr
+# MPFR
+# ----
 find_package(MPFR QUIET)
 
 if (MPFR_FOUND) 
@@ -69,17 +56,17 @@ else ()
 		PATHS /usr/include /usr/local/include
 	)
 
-	find_library(MPFR_LIBRARY mpfr
+	find_library(MPFR_LIBRARIES mpfr
     		PATHS /usr/lib64 /usr/local/lib
 	)
 
-	if (MPFR_INCLUDE_DIR AND MPFR_LIBRARY)
+	if (MPFR_INCLUDE_DIR AND MPFR_LIBRARIES)
     		set(MPFR_FOUND TRUE)
 	endif ()
 
 	if (MPFR_FOUND)
     		if (NOT MPFR_FIND_QUIETLY)
-        		message(STATUS "Found MPFR: ${MPFR_LIBRARY}")
+        		message(STATUS "Found MPFR: ${MPFR_LIBRARIES}")
     		endif ()
 	else ()
     		if (MPFR_FIND_REQUIRED)
@@ -87,41 +74,32 @@ else ()
     		endif ()
 	endif ()
 
-	mark_as_advanced(MPFR_INCLUDE_DIR MPFR_LIBRARY)
+	mark_as_advanced(MPFR_INCLUDE_DIR MPFR_LIBRARIES)
 
 	message(STATUS "MPFR version: ${MPFR_VERSION}")
 endif ()
-
-# TODO elemental
-
-
-# TODO libxml2
-find_package(libxml2 REQUIRED)
-if(NOT libxml2_FOUND)
+# Boost
+# -----
+# TODO Change pkg_check_modules to a solution where you use find_path and find_library 
         pkg_check_modules(LIBXML2 REQUIRED libxml-2)
 endif()
-message(STATUS "libxml2 version: ${libxml2_VERSION}")
-
-# TODO rapidjson
+# RapidJSON
+# ---------
+# TODO Change pkg_check_modules to a solution where you use find_path and find_library
 find_package(RapidJSON REQUIRED)
 # pkg_check_modules(RapidJSON REQUIRED RapidJSON)
 message(STATUS "RapidJSON version: ${RapidJSON_VERSION}")
-
-# TODO libarchive
-find_package(ZLIB REQUIRED)
-message(STATUS "ZLIB version: ${ZLIB_VERSION}")
-find_package(libarchive REQUIRED)
-# if (NOT libarchive_FOUND)
-#         pkg_check_modules(libarchive REQUIRED libarchive)
-# endif()      
-# find_library(LIBARCHIVE_LIBRARIES archive REQUIRED)  
-# message(STATUS "libarchive version: ${libarchive_VERSION}")
+# libarchive
+# ----------
+# TODO Change pkg_check_modules to a solution where you use find_path and find_library
 
 
 #def configure(conf):
 #    if not 'CXX' in os.environ or os.environ['CXX']=='g++' or os.environ['CXX']=='icpc':
 #        conf.environ['CXX']='mpicxx'
 
+# MPI
+# ---
 find_package(MPI REQUIRED)
 message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
 
@@ -191,25 +169,43 @@ find_library(MPFR_LIBRARIES mpfr)
 # TODO use target_link_libraries
 #link_libraries(cxx17 boost gmpxx mpfr elemental libxml2 rapidjson libarchive)
 
-find_library(LIBARCHIVE_LIBRARIES archive)
+# Elemental
+# ---------
+find_package(Elemental REQUIRED)
+# find_path(Elemental_INCLUDES El.hpp
+#         PATHS /usr/include /usr/local/include ${CMAKE_PREFIX_PATH}
+# )
 
-# TODO This does not work right now and gives undefined variable error, because of which cmake cannot configure the build
-find_library(elemental elemental)
-link_libraries(elemental)
-foreach(LIB El pmrrr ElSuiteSparse)
-    find_library(Elemental_${LIB}_LIBRARIES ${LIB}
-            PATHS $ENV{HOME}/install
-            PATH_SUFFIXES lib lib64)
-    list(APPEND ELEMENTAL_LIBRARIES "${Elemental_${LIB}_LIBRARIES}")
-endforeach()
+# find_library(Elemental_LIBRARIES El
+#         PATHS /usr/lib64 /usr/local/lib ${CMAKE_PREFIX_PATH}
+# )
 
-# see elemental/cmake/modules/FindGMP.cmake
-#find_path(GMP_INCLUDES NAMES gmp.h PATHS $ENV{GMPDIR} $ENV{GMP_HOME} $ENV{GMPHOME} $ENV{GMP_INCLUDE} ${INCLUDE_INSTALL_DIR})
-find_library(GMP_LIBRARIES gmp PATHS $ENV{GMPHOME} $ENV{GMPDIR} $ENV{GMP_HOME} $ENV{GMP_LIB} ${LIB_INSTALL_DIR})
+# if (Elemental_INCLUDES AND Elemental_LIBRARIES)
+#         set(Elemental_FOUND TRUE)
+# endif ()
 
-# see elemental/cmake/modules/FindGMPXX.cmake
-#find_path(GMPXX_INCLUDES NAMES gmpxx.h PATHS $ENV{GMPXXDIR} $ENV{GMPXX_HOME} $ENV{GMPXX_INCLUDE} $ENV{GMPDIR} $ENV{GMP_HOME} $ENV{GMP_INCLUDE} ${INCLUDE_INSTALL_DIR})
-find_library(GMPXX_LIBRARIES gmpxx PATHS $ENV{GMPHOME} $ENV{GMPXXDIR} $ENV{GMPXX_HOME} $ENV{GMPXX_LIB} $ENV{GMPDIR} $ENV{GMP_HOME} $ENV{GMP_LIB} ${LIB_INSTALL_DIR})
+# if (Elemental_FOUND)
+#         if (NOT Elemental_FIND_QUIETLY)
+#                 message(STATUS "Found El: ${Elemental_LIBRARIES}")
+#         endif ()
+# else ()
+#         if (Elemental_FIND_REQUIRED)
+#                 message(FATAL_ERROR "Could not find Elemental")
+#         endif ()
+# endif ()
+# mark_as_advanced(Elemental_INCLUDES Elemental_LIBRARIES)
+
+if(Elemental_FOUND AND Elemental_INCLUDE_DIRS)
+    include_directories(${Elemental_INCLUDE_DIRS})
+endif()
+
+message(STATUS "El version: ${Elemental_VERSION}")
+message(STATUS "Found Elemental: ${Elemental_LIBRARIES}")
+# find_library(El El PATHS ${Elemental_DIR} REQUIRED)
+find_library(pmrrr pmrrr PATHS ${Elemental_DIR}/external/pmrrr REQUIRED)
+find_library(ElSuiteSparse ElSuiteSparse PATHS ${Elemental_DIR}/external/suite_sparse REQUIRED)
+list(APPEND Elemental_LIBRARIES "Elemental_pmrrr_LIBRARIES")
+list(APPEND Elemental_LIBRARIES "Elemental_ElSuiteSparse_LIBRARIES")
 
 # FIXME This is a hardcoded path
 # NOTE FLINT is not required in the current release of SDPB. Commenting it out...
@@ -342,7 +338,7 @@ target_link_libraries(sdpb
         Boost::serialization
         ${MPFR_LIBRARIES}
         ${GMP_LIBRARIES} ${GMPXX_LIBRARIES}
-        ${ELEMENTAL_LIBRARIES})
+        ${Elemental_LIBRARIES})
 
 add_library(sdp_convert)
 target_sources(sdp_convert
@@ -549,7 +545,7 @@ target_link_libraries(unit_tests
         sdp_solve
         ${MPFR_LIBRARIES}
         ${GMP_LIBRARIES} ${GMPXX_LIBRARIES}
-        ${ELEMENTAL_LIBRARIES})
+        ${Elemental_LIBRARIES})
 
 add_executable(integration_tests)
 target_compile_definitions(integration_tests PUBLIC CATCH_AMALGAMATED_CUSTOM_MAIN)
@@ -575,5 +571,5 @@ target_link_libraries(integration_tests
         Boost::filesystem
         ${MPFR_LIBRARIES}
         ${GMP_LIBRARIES} ${GMPXX_LIBRARIES}
-        ${ELEMENTAL_LIBRARIES}
+        ${Elemental_LIBRARIES}
 )
