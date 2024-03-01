@@ -7,6 +7,7 @@ __pycache__/
 
 # cmake
 cmake-build*/
+build/
 
 # IDE
 *.code-workspace
