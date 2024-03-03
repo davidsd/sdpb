@@ -9,7 +9,7 @@
 // parent_comm is split into child_comms.
 // We assign child_index = [0..num_children) to each child_comm
 // and return {child_index, [child_comm.Size() for each child], num_children}
-inline std::tuple<size_t, std::vector<size_t>, size_t>
+inline std::tuple<size_t, std::vector<int>, size_t>
 get_child_index_sizes_and_count(const El::mpi::Comm &parent_comm,
                                 const El::mpi::Comm &child_comm)
 {
@@ -18,7 +18,7 @@ get_child_index_sizes_and_count(const El::mpi::Comm &parent_comm,
 
   size_t child_index = std::numeric_limits<size_t>::max();
   size_t num_children = 0;
-  std::vector<size_t> child_comm_sizes;
+  std::vector<int> child_comm_sizes;
 
   size_t curr_index = 0;
   for(int curr_rank = 0; curr_rank < parent_comm.Size(); ++curr_rank)
@@ -64,7 +64,7 @@ struct Grouped_Block_Size_Info
   // Number of groups on the node
   size_t num_groups;
   // Size of group_comm for each group
-  std::vector<size_t> group_comm_sizes;
+  std::vector<int> group_comm_sizes;
 
   size_t block_width;
   // Total block height for blocks owned by a given group_comm
@@ -108,7 +108,8 @@ initialize_bigint_syrk_context(const Environment &env,
   const Grouped_Block_Size_Info info(env, block_info, sdp);
 
   return BigInt_Shared_Memory_Syrk_Context(
-    env.comm_shared_mem, info.group_index, El::gmp::Precision(),
-    max_shared_memory_bytes, info.blocks_height_per_group, info.block_width,
-    block_info.block_indices, debug);
+    env.comm_shared_mem, info.group_index, info.group_comm_sizes,
+    El::gmp::Precision(), max_shared_memory_bytes,
+    info.blocks_height_per_group, info.block_width, block_info.block_indices,
+    debug);
 }

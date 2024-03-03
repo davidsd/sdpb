@@ -13,6 +13,8 @@ struct BigInt_Shared_Memory_Syrk_Context : boost::noncopyable
   El::mpi::Comm shared_memory_comm;
   // Index of MPI group on a node
   size_t group_index;
+  // Sizes of MPI groups on a node
+  const std::vector<int> &group_comm_sizes;
   // Number of MPI groups on a node
   size_t num_groups;
   Fmpz_Comb comb;
@@ -20,16 +22,21 @@ struct BigInt_Shared_Memory_Syrk_Context : boost::noncopyable
   // into a single block in Block_Residue_Matrices_Window
   std::unique_ptr<Block_Residue_Matrices_Window<double>>
     input_grouped_block_residues_window;
+  // How many times we should fill input window
+  // to process all blocks:
+  // (should be same for all ranks)
+  size_t input_window_split_factor = 0;
   Residue_Matrices_Window<double> output_residues_window;
   const std::vector<size_t> block_index_local_to_global;
   const Blas_Job_Schedule blas_job_schedule;
 
+  void clear_residues();
   BigInt_Shared_Memory_Syrk_Context(
     const El::mpi::Comm &shared_memory_comm, size_t group_index,
-    mp_bitcnt_t precision, size_t max_shared_memory_bytes,
+    const std::vector<int> &group_comm_sizes, mp_bitcnt_t precision,
+    size_t max_shared_memory_bytes,
     const std::vector<El::Int> &blocks_height_per_group, int block_width,
-    const std::vector<size_t> &block_index_local_to_global,
-    bool debug,
+    const std::vector<size_t> &block_index_local_to_global, bool debug,
     const std::function<Blas_Job_Schedule(size_t num_ranks, size_t num_primes,
                                           int output_width, bool debug)>
       &create_job_schedule

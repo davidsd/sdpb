@@ -113,8 +113,23 @@ TEST_CASE("calculate_Block_Matrix_square")
     auto block_heights = Test_Util::random_split(total_block_height);
     size_t num_blocks = block_heights.size();
 
-    DYNAMIC_SECTION("P_height=" << total_block_height
-                                << " num_blocks=" << num_blocks)
+    size_t max_shared_memory_bytes
+      = GENERATE(std::numeric_limits<size_t>::max(), 0);
+    // Workaround for compilation failing at max_shared_memory_bytes = GENERATE(block_width)
+    if(max_shared_memory_bytes == 0)
+      {
+        auto num_primes = Fmpz_Comb(El::gmp::Precision(), El::gmp::Precision(),
+                                    1, total_block_height)
+                            .num_primes;
+        // Allow memory for the whole output window + for three rows of input window per each MPI rank
+        max_shared_memory_bytes
+          = (block_width * block_width + 3 * block_width * El::mpi::Size())
+            * num_primes * sizeof(double);
+      }
+
+    DYNAMIC_SECTION("P_height="
+                    << total_block_height << " num_blocks=" << num_blocks
+                    << " maxSharedMemory=" << max_shared_memory_bytes)
     {
       bool use_dist_blocks = GENERATE(false, true);
       if(use_dist_blocks)
@@ -249,24 +264,27 @@ TEST_CASE("calculate_Block_Matrix_square")
                       num_ranks, num_primes, output_width, split_factor);
                   };
 
-              // TODO use lower values to check window splitting
-              size_t max_shared_memory_bytes
-                = std::numeric_limits<size_t>::max();
               // TODO refactor
+              auto group_comm
+                = use_dist_blocks ? El::mpi::COMM_WORLD : El::mpi::COMM_SELF;
               size_t group_index = use_dist_blocks ? 0 : El::mpi::Rank();
               size_t num_groups = use_dist_blocks ? 1 : El::mpi::Size();
+              // NB: group_comm.Size() is the same for everyone,
+              // otherwise we'd have to synchronize it
+              std::vector<int> group_comm_sizes(num_groups, group_comm.Size());
               std::vector<El::Int> blocks_height_per_group(num_groups);
               for(const auto &block : P_matrix_blocks)
                 {
-                  blocks_height_per_group.at(group_index) += block.Height();
+                  if(block.DistComm().Rank() == 0)
+                    blocks_height_per_group.at(group_index) += block.Height();
                 }
               El::mpi::AllReduce(blocks_height_per_group.data(), num_groups,
                                  El::mpi::COMM_WORLD);
 
               BigInt_Shared_Memory_Syrk_Context context(
-                comm, group_index, bits, max_shared_memory_bytes,
-                blocks_height_per_group, block_width, block_indices, false,
-                create_job_schedule);
+                comm, group_index, group_comm_sizes, bits,
+                max_shared_memory_bytes, blocks_height_per_group, block_width,
+                block_indices, false, create_job_schedule);
 
               Timers timers;
               El::Matrix<int32_t> block_timings_ms(num_blocks, 1);

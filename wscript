@@ -83,6 +83,7 @@ def build(bld):
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/bigint_syrk_blas.cxx',
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/compute_block_residues.cxx',
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/Matrix_Normalizer.cxx',
+                         'src/sdp_solve/SDP_Solver/run/bigint_syrk/clear_residues.cxx',
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/Blas_Job.cxx',
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/Blas_Job_Cost.cxx',
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/Blas_Job_Schedule.cxx',
