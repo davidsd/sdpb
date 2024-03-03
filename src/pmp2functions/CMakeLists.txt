@@ -1,0 +1,17 @@
+add_executable(pmp2functions)
+target_sources(pmp2functions
+                PRIVATE
+                main.cxx
+                Pmp2functions_Parameters.cxx
+                write_functions.cxx)
+target_link_libraries(pmp2functions 
+                        PRIVATE
+                        ${USE_PACKAGES} 
+                        Boost::iostreams
+                        Boost::stacktrace_basic
+                        Boost::stacktrace_addr2line
+                        Boost::stacktrace_noop
+                        Boost::program_options
+                        dl
+                        sdpb_util
+                        pmp_read)

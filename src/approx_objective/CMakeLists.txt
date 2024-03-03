@@ -1,0 +1,18 @@
+add_executable(approx_objective)
+target_sources(approx_objective 
+                PRIVATE
+                main.cxx
+                Approx_Parameters/Approx_Parameters.cxx
+                Approx_Parameters/ostream.cxx
+                Axpy.cxx
+                setup_solver.cxx
+                write_solver_state.cxx
+                Approx_Objective/Approx_Objective/Approx_Objective.cxx
+                Approx_Objective/Approx_Objective/compute_dx_dy.cxx
+                linear_approximate_objectives.cxx
+                quadratic_approximate_objectives.cxx)
+target_link_libraries(approx_objective
+                        PRIVATE
+                        ${USE_PACKAGES}
+                        pmp_read
+                        sdp_solve)

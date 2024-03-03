@@ -1,0 +1,16 @@
+add_executable(sdpb)
+target_sources(sdpb
+                PRIVATE
+                main.cxx
+                solve.cxx
+                write_timing.cxx
+                SDPB_Parameters/SDPB_Parameters.cxx
+                SDPB_Parameters/to_property_tree.cxx
+                SDPB_Parameters/ostream.cxx
+                save_solution.cxx)
+target_link_libraries(sdpb
+                        PRIVATE
+                        ${USE_PACKAGES}
+                        Boost::serialization
+                        sdpb_util
+                        sdp_solve)

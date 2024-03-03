@@ -1,0 +1,16 @@
+add_executable(pvm2sdp)
+target_sources(pvm2sdp 
+                PRIVATE
+                main.cxx
+                parse_command_line.cxx)
+target_link_libraries(pvm2sdp 
+                        PUBLIC
+                        ${USE_PACKAGES} 
+                        Boost::iostreams
+                        Boost::serialization
+                        Boost::stacktrace_basic
+                        Boost::stacktrace_addr2line
+                        Boost::stacktrace_noop
+                        dl
+                        sdpb_util
+                        pmp_read)

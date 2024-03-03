@@ -1,0 +1,27 @@
+add_executable(outer_limits)
+target_sources(outer_limits
+                PRIVATE
+                main.cxx
+                power_prefactor.cxx
+                poles_prefactor.cxx
+                Function/eval/eval.cxx
+                compute_optimal/compute_optimal.cxx
+                compute_optimal/compute_y_transform.cxx
+                compute_optimal/setup_constraints.cxx
+                compute_optimal/find_new_points/find_new_points.cxx
+                compute_optimal/find_new_points/eval_summed.cxx
+                compute_optimal/find_new_points/get_new_points.cxx
+                compute_optimal/load_checkpoint/load_checkpoint.cxx
+                compute_optimal/load_checkpoint/Checkpoint_Parser/EndArray.cxx
+                compute_optimal/load_checkpoint/Checkpoint_Parser/EndObject.cxx
+                compute_optimal/load_checkpoint/Checkpoint_Parser/Key.cxx
+                compute_optimal/load_checkpoint/Checkpoint_Parser/StartArray.cxx
+                compute_optimal/load_checkpoint/Checkpoint_Parser/StartObject.cxx
+                compute_optimal/load_checkpoint/Checkpoint_Parser/String.cxx
+                compute_optimal/save_checkpoint.cxx
+                read_points/read_points.cxx
+                read_function_blocks/read_function_blocks.cxx
+                Outer_Parameters/Outer_Parameters.cxx
+                Outer_Parameters/to_property_tree.cxx
+                Outer_Parameters/ostream.cxx)
+target_link_libraries(outer_limits PRIVATE ${USE_PACKAGES} sdpb_util pmp_read sdp_solve) 

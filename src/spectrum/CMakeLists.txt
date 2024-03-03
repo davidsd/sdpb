@@ -1,0 +1,19 @@
+add_executable(spectrum)
+target_sources(spectrum
+                PRIVATE
+                main.cxx
+                handle_arguments.cxx
+                read_x.cxx
+                compute_spectrum.cxx
+                compute_lambda.cxx
+                eval_summed.cxx
+                get_zeros.cxx
+                write_spectrum/write_spectrum.cxx
+                write_spectrum/write_file.cxx)
+target_link_libraries(spectrum
+                        PRIVATE
+                        ${USE_PACKAGES}
+                        pmp_read
+                        sdp_solve
+                        pmp2sdp_lib
+                        sdpb_util)
