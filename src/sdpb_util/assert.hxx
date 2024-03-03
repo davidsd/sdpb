@@ -33,10 +33,10 @@
 
 // Example:
 // int x = 1;
-// auto s = DEBUG_STRING(x+x) // s = "x+x=='2' "
-// Trailing whitespace added for convenience
-// in cases like ASSERT(false, DEBUG_STRING(a), DEBUG_STRING(b))
-#define DEBUG_STRING(expr) El::BuildString(#expr, "='", expr, "' ")
+// auto s = DEBUG_STRING(x+x) // s = " x+x=='2' "
+// Leading and trailing whitespaces added for convenience
+// in cases like ASSERT(false, "message", DEBUG_STRING(a), DEBUG_STRING(b))
+#define DEBUG_STRING(expr) El::BuildString(" ", #expr, "='", expr, "' ")
 
 // Example:
 // int x = 1;
