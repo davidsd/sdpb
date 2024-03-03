@@ -35,7 +35,8 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       group_index(group_index),
       group_comm_sizes(group_comm_sizes),
       num_groups(group_comm_sizes.size()),
-      comb(precision, precision, 1, sum(blocks_height_per_group)),
+      total_block_height_per_node(sum(blocks_height_per_group)),
+      comb(precision, precision, 1, total_block_height_per_node),
       output_residues_window(shared_memory_comm, comb.num_primes, block_width,
                              block_width, debug),
       block_index_local_to_global(block_index_local_to_global),
@@ -52,12 +53,11 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
 
   const size_t max_input_window_bytes
     = max_shared_memory_bytes - output_window_bytes;
-  const size_t total_block_height = sum(blocks_height_per_group);
 
   const size_t residues_bytes_per_single_block_row
     = block_width * comb.num_primes * sizeof(double);
   const size_t total_input_residues_bytes
-    = total_block_height * residues_bytes_per_single_block_row;
+    = total_block_height_per_node * residues_bytes_per_single_block_row;
 
   std::vector<int> input_window_height_per_group_per_prime(num_groups);
   if(total_input_residues_bytes <= max_input_window_bytes)
@@ -129,22 +129,25 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       El::BuildStream(os, "  Number of primes: ", comb.num_primes, "\n");
 
       El::BuildStream(os, "  Blocks on the node:\n");
-      El::BuildStream(os, "    Total height: ", total_block_height, "\n");
-      El::BuildStream(os, "    Width: ", block_width, "\n");
-      El::BuildStream(os, "    Elements: ", total_block_height * block_width,
+      El::BuildStream(os, "    Total height: ",
+                      static_cast<const size_t>(total_block_height_per_node),
                       "\n");
+      El::BuildStream(os, "    Width: ", block_width, "\n");
+      El::BuildStream(
+        os, "    Elements: ", total_block_height_per_node * block_width, "\n");
 
       El::BuildStream(os, "  Output residues window (Q):\n");
       El::BuildStream(os, "    Window size, bytes: ",
                       window_size_bytes(output_residues_window), "\n");
-      El::BuildStream(
-        os, "    Total elements (per prime): ", block_width * block_width, "\n");
+      El::BuildStream(os, "    Total elements (per prime): ",
+                      block_width * block_width, "\n");
 
       El::BuildStream(os, "  Input residues window (P):\n");
       El::BuildStream(os, "    Window size, bytes: ",
                       window_size_bytes(*input_grouped_block_residues_window),
                       "\n");
-      El::BuildStream(os, "    Split factor: ", input_window_split_factor, "\n");
+      El::BuildStream(os, "    Split factor: ", input_window_split_factor,
+                      "\n");
       El::BuildStream(os, "    Height (per prime): ",
                       input_grouped_block_residues_window->height, "\n");
       El::Print(input_window_height_per_group_per_prime,

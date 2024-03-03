@@ -132,7 +132,8 @@ namespace
     const std::vector<size_t> &block_index_local_to_global,
     const El::mpi::Comm &shared_memory_comm,
     const Block_Residue_Matrices_Window<double>
-      &input_grouped_block_residues_window)
+      &input_grouped_block_residues_window,
+    const size_t total_block_height)
   {
     // Update block_timings_ms with syrk time.
     // We split total syrk time to individual blocks contributions, which are proportional to the block size.
@@ -146,8 +147,11 @@ namespace
     // assuming that time is similar for all ranks.
     const auto total_syrk_time
       = syrk_timer.elapsed_milliseconds() * shared_memory_comm.Size();
-    const auto total_size = input_grouped_block_residues_window.height
-                            * input_grouped_block_residues_window.width;
+    // Total number of block elements on the node
+    // NB: total_block_height > input_grouped_block_residues_window.height,
+    // if split_factor > 1.
+    const auto total_size
+      = total_block_height * input_grouped_block_residues_window.width;
     // Average time spent on one block element
     const double time_per_element
       = static_cast<double>(total_syrk_time) / total_size;
@@ -267,7 +271,7 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem(
         update_block_timings_with_syrk(
           block_timings_ms, syrk_timer, bigint_input_matrix_blocks,
           block_index_local_to_global, shared_memory_comm,
-          *input_grouped_block_residues_window);
+          *input_grouped_block_residues_window, total_block_height_per_node);
       }
     }
 

@@ -17,6 +17,7 @@ struct BigInt_Shared_Memory_Syrk_Context : boost::noncopyable
   const std::vector<int> &group_comm_sizes;
   // Number of MPI groups on a node
   size_t num_groups;
+  int total_block_height_per_node;
   Fmpz_Comb comb;
   // All blocks from each MPI group are combined
   // into a single block in Block_Residue_Matrices_Window
