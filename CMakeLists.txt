@@ -1,3 +1,9 @@
+# TODO choose version, currently working with 3.16 as a temporary measure:
+cmake_minimum_required(VERSION 3.16)
+
+project(sdpb LANGUAGES CXX)
+# TODO setting version of SDPB
+
 # TODO - Currently we are working with a single CMake file but it is better to refactor parts of this file and put them inside cmake/modules
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
@@ -5,16 +11,10 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 # Custom colour scheme for logging
 include(CustomMessages)
 
-# TODO choose version, currently working with 3.16 as a temporary measure:
-cmake_minimum_required(VERSION 3.16)
-
 # This is to ensure that CMake also checks lib64 for the dependencies on Linux systems
 if(UNIX)
         set(CMAKE_PREFIX_PATH "/usr/lib64" ${CMAKE_PREFIX_PATH})
 endif()
-
-project(sdpb LANGUAGES CXX)
-# TODO setting version of SDPB
 
 # cxx 17
 set(CMAKE_CXX_STANDARD 17)
@@ -321,10 +321,11 @@ endif()
 message(STATUS "El version: ${Elemental_VERSION}")
 message(STATUS "Found Elemental: ${Elemental_LIBRARIES}")
 # find_library(El El PATHS ${Elemental_DIR} REQUIRED)
-find_library(pmrrr pmrrr PATHS ${Elemental_DIR}/external/pmrrr REQUIRED)
-find_library(ElSuiteSparse ElSuiteSparse PATHS ${Elemental_DIR}/external/suite_sparse REQUIRED)
-list(APPEND Elemental_LIBRARIES "Elemental_pmrrr_LIBRARIES")
-list(APPEND Elemental_LIBRARIES "Elemental_ElSuiteSparse_LIBRARIES")
+find_library(PMRRR_LIBRARIES pmrrr PATHS ${Elemental_DIR}/external/pmrrr REQUIRED)
+find_library(ELSUITESPARSE_LIBRARIES ElSuiteSparse PATHS ${Elemental_DIR}/external/suite_sparse REQUIRED)
+list(APPEND Elemental_LIBRARIES ${PMRRR_LIBRARIES})
+list(APPEND Elemental_LIBRARIES ${ELSUITESPARSE_LIBRARIES})
+message(STATUS "Elemental Libraries - ${Elemental_LIBRARIES}")
 
 # FIXME This is a hardcoded path
 # NOTE FLINT is not required in the current release of SDPB. Commenting it out...
