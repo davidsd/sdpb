@@ -234,12 +234,13 @@ TEST_CASE("calculate_Block_Matrix_square")
         }
 
         // calculate Q = P^T P using bigint_syrk_blas
-        // P is split into (split_factor) vertical bands
-        for(size_t split_factor = 1; split_factor <= block_width;
-            split_factor += 3)
-          DYNAMIC_SECTION("split_factor=" << split_factor)
+        // P is split into (blas_schedule_split_factor) vertical bands
+        for(size_t blas_schedule_split_factor = 1;
+            blas_schedule_split_factor <= block_width;
+            blas_schedule_split_factor += 3)
+          DYNAMIC_SECTION("blas_split_factor=" << blas_schedule_split_factor)
           {
-            INFO("P matrix is split into " << split_factor
+            INFO("P matrix is split into " << blas_schedule_split_factor
                                            << " vertical bands P_I");
             INFO("The blocks Q_IJ = P_I^T * P_J are calculated in parallel.");
 
@@ -257,12 +258,13 @@ TEST_CASE("calculate_Block_Matrix_square")
 
               El::UpperOrLower uplo = El::UpperOrLowerNS::UPPER;
 
-              auto create_job_schedule
-                = [&split_factor](size_t num_ranks, size_t num_primes,
-                                  int output_width, bool debug) {
-                    return create_blas_job_schedule_split_remaining_primes(
-                      num_ranks, num_primes, output_width, split_factor);
-                  };
+              auto create_job_schedule = [&blas_schedule_split_factor](
+                                           size_t num_ranks, size_t num_primes,
+                                           int output_width, bool debug) {
+                return create_blas_job_schedule_split_remaining_primes(
+                  num_ranks, num_primes, output_width,
+                  blas_schedule_split_factor);
+              };
 
               // TODO refactor
               auto group_comm
