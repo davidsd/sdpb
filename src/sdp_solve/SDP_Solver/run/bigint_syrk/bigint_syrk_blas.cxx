@@ -126,6 +126,30 @@ namespace
       }
   }
 
+  void
+  do_blas_jobs(El::UpperOrLower uplo,
+                    const Blas_Job_Schedule &blas_job_schedule,
+                    const Block_Residue_Matrices_Window<double>
+                      &input_grouped_block_residues_window,
+                    Residue_Matrices_Window<double> &output_residues_window,
+                    const El::mpi::Comm &shared_memory_comm, Timers &timers)
+  {
+    // Square each residue matrix
+    {
+      Scoped_Timer blas_timer(timers, "blas_jobs");
+      auto shmem_rank = shared_memory_comm.Rank();
+      for(const auto &job : blas_job_schedule.jobs_by_rank.at(shmem_rank))
+        {
+          do_blas_job(job, uplo, input_grouped_block_residues_window,
+                      output_residues_window);
+        }
+    }
+    {
+      Scoped_Timer fence_timer(timers, "fence");
+      output_residues_window.Fence();
+    }
+  }
+
   void update_block_timings_with_syrk(
     El::Matrix<int32_t> &block_timings_ms, const Scoped_Timer &syrk_timer,
     const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
@@ -193,8 +217,7 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
     }
   else
     {
-      ASSERT(El::mpi::Size(shared_memory_comm)
-             < El::mpi::Size(bigint_output.DistComm()));
+      ASSERT(shared_memory_comm.Size() < bigint_output.DistComm().Size());
 
       const El::Grid grid(shared_memory_comm);
       // TODO create once, in ctor
@@ -246,7 +269,7 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem(
         // For each block group, compute residues and write them
         // to input residues window,
         // skipping first skip_rows rows
-        auto skip_rows = iter * input_group_height_per_prime();
+        const auto skip_rows = iter * input_group_height_per_prime();
         compute_block_residues(bigint_input_matrix_blocks, skip_rows, timers,
                                block_timings_ms);
       }
@@ -254,20 +277,9 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem(
       // Square each residue matrix
       {
         Scoped_Timer syrk_timer(timers, "syrk");
-        {
-          Scoped_Timer blas_timer(timers, "blas_jobs");
-          auto shmem_rank = El::mpi::Rank(shared_memory_comm);
-          for(const auto &job : blas_job_schedule.jobs_by_rank.at(shmem_rank))
-            {
-              do_blas_job(job, uplo, *input_grouped_block_residues_window,
-                          output_residues_window);
-            }
-        }
-        {
-          Scoped_Timer fence_timer(timers, "fence");
-          output_residues_window.Fence();
-        }
-
+        do_blas_jobs(uplo, blas_job_schedule,
+                     *input_grouped_block_residues_window,
+                     output_residues_window, shared_memory_comm, timers);
         update_block_timings_with_syrk(
           block_timings_ms, syrk_timer, bigint_input_matrix_blocks,
           block_index_local_to_global, shared_memory_comm,
