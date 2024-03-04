@@ -39,121 +39,18 @@ message(STATUS "Found g++ compiler (C++ compiler): ${CMAKE_CXX_COMPILER}")
 ########### Find required dependencies ###########
 ##################################################
 
-include(FindPkgConfig)
-find_package(PkgConfig REQUIRED)
+# include(FindPkgConfig)
+# find_package(PkgConfig REQUIRED)
 
 # GMP and GMPXX
 # -------------
-find_package(GMP QUIET)
+find_package(GMP REQUIRED)
 
-if (GMP_FOUND) 
-	message(STATUS "GMP version: ${GMP_VERSION}")
-else ()
-	find_path(GMP_INCLUDE_DIR 
-                        NAMES gmp.h 
-                        PATHS $ENV{GMPDIR} $ENV{GMP_HOME} $ENV{GMP_INCLUDE} ${INCLUDE_INSTALL_DIR}
-                        )
-
-	find_library(GMP_LIBRARIES gmp 
-                        PATHS $ENV{GMPDIR} $ENV{GMP_HOME} $ENV{GMP_LIB} ${LIB_INSTALL_DIR}
-                        )
-
-	if (GMP_INCLUDE_DIR AND GMP_LIBRARIES)
-    		set(GMP_FOUND TRUE)
-	endif ()
-
-	if (GMP_FOUND)
-    		if (NOT GMP_FIND_QUIETLY)
-        		message(STATUS "Found GMP: ${GMP_LIBRARIES}")
-    		endif ()
-	else ()
-    		if (GMP_FIND_REQUIRED)
-        		message(FATAL_ERROR "Could not find GMP")
-    		endif ()
-	endif ()
-
-	mark_as_advanced(GMP_INCLUDE_DIR GMP_LIBRARIES)
-
-	message(STATUS "GMP version: ${GMP_VERSION}")
-endif ()
-if(GMP_FOUND AND GMP_INCLUDE_DIR)
-    include_directories(${GMP_INCLUDE_DIR})
-endif()
-
-find_package(GMPXX QUIET)
-
-if (GMPXX_FOUND) 
-	message(STATUS "GMPXX version: ${GMPXX_VERSION}")
-else ()
-	find_path(GMPXX_INCLUDE_DIR 
-                        NAMES gmpxx.h 
-                        PATHS $ENV{GMPXXDIR} $ENV{GMPXX_HOME} $ENV{GMPXX_INCLUDE} $ENV{GMPDIR} $ENV{GMP_HOME} $ENV{GMP_INCLUDE} ${INCLUDE_INSTALL_DIR}
-                        )
-
-	find_library(GMPXX_LIBRARIES gmpxx
-                        PATHS $ENV{GMPXXDIR} $ENV{GMPXX_HOME} $ENV{GMPXX_LIB} $ENV{GMPDIR} $ENV{GMP_HOME} $ENV{GMP_LIB} ${LIB_INSTALL_DIR}
-                        )
-
-	if (GMPXX_INCLUDE_DIR AND GMPXX_LIBRARIES)
-    		set(GMPXX_FOUND TRUE)
-	endif ()
-
-	if (GMPXX_FOUND)
-    		if (NOT GMPXX_FIND_QUIETLY)
-        		message(STATUS "Found GMPXX: ${GMPXX_LIBRARIES}")
-    		endif ()
-	else ()
-    		if (GMPXX_FIND_REQUIRED)
-        		message(FATAL_ERROR "Could not find GMPXX")
-    		endif ()
-	endif ()
-
-	mark_as_advanced(GMPXX_INCLUDE_DIR GMPXX_LIBRARIES)
-
-	message(STATUS "GMPXX version: ${GMPXX_VERSION}")
-endif ()
-if(GMPXX_FOUND AND GMPXX_INCLUDE_DIR)
-    include_directories(${GMPXX_INCLUDES})
-endif()
+find_package(GMPXX REQUIRED)
 
 # MPFR
 # ----
-find_package(MPFR QUIET)
-
-if (MPFR_FOUND) 
-	message(STATUS "MPFR version: ${MPFR_VERSION}")
-else ()
-	find_path(MPFR_INCLUDE_DIR mpfr.h
-		PATHS /usr/include /usr/local/include
-	)
-
-	find_library(MPFR_LIBRARIES mpfr
-    		PATHS /usr/lib64 /usr/local/lib
-	)
-
-	if (MPFR_INCLUDE_DIR AND MPFR_LIBRARIES)
-    		set(MPFR_FOUND TRUE)
-	endif ()
-
-	if (MPFR_FOUND)
-    		if (NOT MPFR_FIND_QUIETLY)
-        		message(STATUS "Found MPFR: ${MPFR_LIBRARIES}")
-    		endif ()
-	else ()
-    		if (MPFR_FIND_REQUIRED)
-        		message(FATAL_ERROR "Could not find MPFR")
-    		endif ()
-	endif ()
-
-	mark_as_advanced(MPFR_INCLUDE_DIR MPFR_LIBRARIES)
-
-	message(STATUS "MPFR version: ${MPFR_VERSION}")
-endif ()
-message(STATUS ${MPFR_INCLUDE_DIR})
-
-if(MPFR_FOUND AND MPFR_INCLUDE_DIR)
-    include_directories(${MPFR_INCLUDE_DIR})
-endif()
+find_package(MPFR REQUIRED)
 
 
 # Boost
@@ -171,10 +68,8 @@ find_package(Boost
                 stacktrace_basic
                 stacktrace_backtrace
                 stacktrace_addr2line
-                stacktrace_noop)
-if(NOT Boost_FOUND)
-        pkg_check_modules(Boost REQUIRED COMPONENTS system filesystem date_time program_options iostreams serialization)
-endif()
+                stacktrace_noop
+                REQUIRED)
 message(STATUS "Boost version: ${Boost_VERSION}")
 if(Boost_FOUND AND Boost_INCLUDE_DIR)
     include_directories(${Boost_INCLUDE_DIR})
@@ -187,9 +82,6 @@ endif()
 # -------
 # TODO Change pkg_check_modules to a solution where you use find_path and find_library
 find_package(LibXml2 REQUIRED)
-if(NOT LIBXML2_FOUND)
-        pkg_check_modules(LIBXML2 REQUIRED libxml-2)
-endif()
 message(STATUS "libxml2 version: ${LIBXML2_VERSION} at ${LIBXML2_DIRECTORY}")
 if(LIBXML2_FOUND AND LIBXML2_INCLUDE_DIR)
     include_directories(${LIBXML2_INCLUDE_DIR})
@@ -200,7 +92,6 @@ endif()
 # ---------
 # TODO Change pkg_check_modules to a solution where you use find_path and find_library
 find_package(RapidJSON REQUIRED)
-# pkg_check_modules(RapidJSON REQUIRED RapidJSON)
 message(STATUS "RapidJSON version: ${RapidJSON_VERSION}")
 if(RapidJSON_FOUND AND RapidJSON_INCLUDE_DIR)
     include_directories(${RapidJSON_INCLUDE_DIR})
@@ -211,9 +102,6 @@ endif()
 # ----------
 # TODO Change pkg_check_modules to a solution where you use find_path and find_library
 find_package(LibArchive REQUIRED)
-if (NOT libarchive_FOUND)
-        pkg_check_modules(libarchive REQUIRED libarchive)
-endif()      
 message(STATUS "libarchive version: ${libarchive_VERSION}")
 if(LibArchive_FOUND AND LibArchive_INCLUDE_DIR)
     include_directories(${LibArchive_INCLUDE_DIR})
