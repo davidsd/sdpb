@@ -1,4 +1,5 @@
 #include "../Checkpoint_Parser.hxx"
+#include "sdpb_util/assert.hxx"
 
 bool Checkpoint_Parser::StartArray()
 {
@@ -6,21 +7,21 @@ bool Checkpoint_Parser::StartArray()
     {
       if(parsing_generation)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Unexpected array start inside  '"
-            + generation_state.name + "'");
+          RUNTIME_ERROR(
+            "Invalid input file. Unexpected array start inside  '",
+            generation_state.name, "'");
         }
       else if(parsing_threshold)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Unexpected array start inside  '"
-            + threshold_state.name + "'");
+          RUNTIME_ERROR(
+            "Invalid input file. Unexpected array start inside  '",
+            threshold_state.name, "'");
         }
       else if(parsing_c_scale)
         {
-          throw std::runtime_error(
-            "Invalid input file.  Unexpected array start inside  '"
-            + c_scale_state.name + "'");
+          RUNTIME_ERROR(
+            "Invalid input file. Unexpected array start inside  '",
+            c_scale_state.name, "'");
         }
       else if(parsing_yp)
         {
@@ -40,13 +41,13 @@ bool Checkpoint_Parser::StartArray()
         }
       else
         {
-          throw std::runtime_error(
-            "Invalid input file.  Unknown array inside the main object");
+          RUNTIME_ERROR(
+            "Invalid input file. Unknown array inside the main object");
         }
     }
   else
     {
-      throw std::runtime_error("Found an array outside of the SDP.");
+      RUNTIME_ERROR("Found an array outside of the SDP.");
     }
   return true;
 }

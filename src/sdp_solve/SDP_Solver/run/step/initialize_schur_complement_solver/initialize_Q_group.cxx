@@ -1,6 +1,6 @@
-#include "../../../../SDP.hxx"
-#include "../../../../Block_Diagonal_Matrix.hxx"
-#include "../../../../../Timers.hxx"
+#include "sdp_solve/SDP.hxx"
+#include "sdp_solve/Block_Diagonal_Matrix.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 
 void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
                         const Block_Diagonal_Matrix &schur_complement,
@@ -31,9 +31,8 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
   for(size_t block = 0; block < schur_complement_cholesky.blocks.size();
       ++block)
     {
-      auto &cholesky_timer(timers.add_and_start(
-        "run.step.initializeSchurComplementSolver.Q.cholesky_"
-        + std::to_string(block_info.block_indices[block])));
+      Scoped_Timer cholesky_timer(
+        timers, "cholesky_" + std::to_string(block_info.block_indices[block]));
       schur_complement_cholesky.blocks[block] = schur_complement.blocks[block];
 
       Cholesky(El::UpperOrLowerNS::LOWER,
@@ -41,9 +40,8 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
       cholesky_timer.stop();
 
       // schur_off_diagonal = L^{-1} B
-      auto &solve_timer(timers.add_and_start(
-        "run.step.initializeSchurComplementSolver.Q.solve_"
-        + std::to_string(block_info.block_indices[block])));
+      Scoped_Timer solve_timer(
+        timers, "solve_" + std::to_string(block_info.block_indices[block]));
 
       schur_off_diagonal.blocks.push_back(sdp.free_var_matrix.blocks[block]);
       El::Trsm(El::LeftOrRightNS::LEFT, El::UpperOrLowerNS::LOWER,
@@ -54,15 +52,13 @@ void initialize_Q_group(const SDP &sdp, const Block_Info &block_info,
       solve_timer.stop();
 
       // Q = (L^{-1} B)^T (L^{-1} B) = schur_off_diagonal^T schur_off_diagonal
-      auto &syrk_timer(timers.add_and_start(
-        "run.step.initializeSchurComplementSolver.Q.syrk_"
-        + std::to_string(block_info.block_indices[block])));
+      Scoped_Timer syrk_timer(
+        timers, "syrk_" + std::to_string(block_info.block_indices[block]));
       El::DistMatrix<El::BigFloat> Q_group_view(
         El::View(Q_group, 0, 0, schur_off_diagonal.blocks[block].Width(),
                  schur_off_diagonal.blocks[block].Width()));
       El::Syrk(El::UpperOrLowerNS::UPPER, El::OrientationNS::TRANSPOSE,
                El::BigFloat(1), schur_off_diagonal.blocks[block],
                El::BigFloat(1), Q_group_view);
-      syrk_timer.stop();
     }
 }

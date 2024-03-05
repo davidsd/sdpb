@@ -1,45 +1,52 @@
 # Usage
 
 Details of how SDPB works are described in the
-[manual](SDPB-Manual.pdf).  An example input file
-[pvm.xml](../test/data/pvm2sdp/pvm.xml) is included with the source code.
+[manual](SDPB_Manual/SDPB-Manual.pdf). An example input file
+[pmp.json](../test/data/end-to-end_tests/1d/input/pmp.json) is included with the source code.
 
-The build system creates the executables `pvm2sdp`, `sdp2input`, and
+Some known issues and workaround are described [below](#common-issues-and-workarounds).
+You may also [find](https://github.com/davidsd/sdpb/issues) unresolved issues
+or [report](https://github.com/davidsd/sdpb/issues/new) a new one in the GitHub repository.
+
+The build system creates the executables `pmp2sdp` and
 `sdpb` in the `build` directory.  There are two steps when running
 SDPB.
 
 ## Create input files
 
-You will normally start with either an SDP file in Mathematica or JSON
-format, or a Polynomial Vector Matrices file in XML format.  These
-must first be converted, using `sdp2input` or `pvm2sdp`, into a format
+You will normally start with a Polynomial Matrix Program (PMP) described in a file (or several files) in JSON,
+Mathematica, or XML format. These
+files
+must first be converted, using `pmp2sdp`, into an SDP format
 that SDPB can quickly load.  The format is described in
 [SDPB_input_format.md](SDPB_input_format.md).  When creating these
-input files, you must choose a working precision.  In general, you
-should use the same precision as when you run `sdpb`, though you may
-also use a larger precision.  Both `sdp2input` and `pvm2sdp` will run
+input files, you must choose a working precision. You
+should use the same precision as when you run `sdpb` (you may also use larger precision if you are using `pmp2sdp`
+with `--outputFormat=json`). `pmp2sdp` will run
 faster in parallel.
 
-### Converting an SDP
+### Converting PMP to SDP
 
-Use `sdp2input` to create input from files with an SDP.  The usage is
+Use `pmp2sdp` to create SDPB input from files with a PMP. The usage is
 
-    sdp2input --precision=[PRECISION] --input=[INPUT] --output=[OUTPUT]
+    pmp2sdp --precision=[PRECISION] --input=[INPUT] --output=[OUTPUT]
 
 `[PRECISION]` is the number of bits of precision used in the
-conversion.  `[INPUT]` is a single Mathematica, JSON, or NSV
-(Null Separated Value) file.  `[OUTPUT]` is an output directory.
+conversion.  `[INPUT]` is a single Mathematica, JSON, XML or NSV
+(Null Separated Value) file. `[OUTPUT]` is an output directory.
 
 The single file Mathematica and JSON formats are described in Section
-3.2 of the [manual](SDPB-Manual.pdf).  In addition, for JSON there
-is a [schema](sdp2input_schema.json).
+3.2 of the [manual](SDPB_Manual/SDPB-Manual.pdf). In addition, for JSON there
+is a [schema](json_schema/pmp_schema.json).
+The format for the XML files is described in Section 3.1 of
+[the manual](SDPB_Manual/SDPB-Manual.pdf).
 
-The NSV format allows you to load an SDP from multiple JSON and/or
-Mathematica files.  NSV files contain a list of files, separated by
-null's.  When using multiple files, each component is optional.  If
-there are multiple versions of `normalization` or `objective`,
-`sdp2input` will use the last one it sees.  Multiple elements of
-`PositiveMatrixWithPrefactor` will be concatenated together.
+The NSV format allows you to load a PMP from multiple files.
+NSV files contain a list of files, separated by null's (`'\0'`).
+When using multiple files, each component is optional.
+If there are multiple versions of `normalization` or `objective`,
+`pmp2sdp` will arbitrarily choose one of them.
+Multiple elements of `PositiveMatrixWithPrefactor` will be concatenated together.
 
 One way to generate NSV files is with the `find` command.  For
 example, if you have a directory `input` with many files, you can
@@ -47,69 +54,29 @@ generate an NSV file with the command
 
     find input/ -name "*.m" -print0 > file_list.nsv
 
-`sdp2input` assumes that files ending with `.nsv` are NSV,
-files ending with `.json` are JSON, and `.m` is
-Mathematica.  NSV files can also recursively reference other NSV
-files.
+`pmp2sdp` assumes that files ending with `.nsv` are NSV,
+files ending with `.json` are JSON, `.m` is
+Mathematica, and `.xml` is XML.
+NSV files can also recursively reference other NSV files.
 
-There are example input files in
-[Mathematica](../test/data/sdp2input/sdp2input_test.m),
-[JSON](../test/data/sdp2input/sdp2input_test.json), and
-[NSV](../test/data/sdp2input/sdp2input_split.nsv) format.  They all define the same
-SDP, with the NSV example loading the SDP from two Mathematica files:
-[sdp2input\_split1.m](../test/data/sdp2input/sdp2input_split1.m) and
-[sdp2input\_split2.m](../test/data/sdp2input/sdp2input_split2.m).
+There is an example [pmp.json](../test/data/end-to-end_tests/1d/input/pmp.json) with a simple one-dimensional PMP
+described in manual.
+Other JSON files in the folder [test/data/end-to-end_tests/1d/input/](../test/data/end-to-end_tests/1d/input/)
+illustrate different ways to define the same PMP.
 
-### Converting Polynomial Vector Matrices
-
-Use `pvm2sdp` to create input files from Polynomial Vector Matrix files
-in XML.  The format for these XML files is described in Section 3.1 of
-[the manual](SDPB-Manual.pdf).  The usage is
-
-    pvm2sdp [PRECISION] [INPUT] ... [OUTPUT]
-
-`[PRECISION]` is the number of bits of precision used in the
-conversion.  `[INPUT] ...` is a list of one or more files.  Each of
-those input files can be either an XML file with Polynomial Vector
-Matrices, or an Null Separated Value (NSV) file with a list of
-files. `[OUTPUT]` is an output directory.
-
-For example, the command to convert the file `test/data/pvm2sdp/pvm.xml`, using
-1024 bits of precision, and store the result in the directory
-`test/out/pvm2sdp/sdp.zip`, is
-
-    pvm2sdp 1024 test/data/pvm2sdp/pvm.xml test/out/pvm2sdp/sdp.zip
-
-For input, you can also use an NSV file containing a list of file names
-separated by nulls.  There is an example in `test/data/pvm2sdp/file_list.nsv`.
-Using it is similar to the xml files
-
-    pvm2sdp 1024 test/data/pvm2sdp/file_list.nsv test/out/pvm2sdp/sdp.zip
-
-One way to generate this file list is with the `find` command.  For
-example,
-
-    find test/data/pvm2sdp/ -name "pvm.xml" -print0 > test/data/pvm2sdp/file_list.nsv
-    
-will regenerate `test/data/pvm2sdp/file_list.nsv`.  If you have a directory `input`
-with many xml files, you can generate a file list with the command
-
-    find test/data/pvm2sdp/ -name "*.xml" -print0 > test/data/pvm2sdp/file_list.nsv
-
-`pvm2sdp` assumes that anything with the `.nsv` extension is a null
-separated file list, and `.xml` is an xml file. File lists
-can also recursively reference other file lists.  So running
-
-    find test/data/pvm2sdp/ a-print0 -name "*.nsv" > test/out/file_list_list.nsv
-    pvm2sdp 1024 test/out/file_list_list.nsv test/out/pvm2sdp/sdp.zip
-
-will also work.
+There are also example input files in
+[Mathematica](../test/data/pmp2sdp/m/pmp.m),
+[JSON](../test/data/pmp2sdp/json/pmp.json), and
+[NSV](../test/data/pmp2sdp/m/file_list.nsv) format. They all define the same
+SDP (having three blocks), with the NSV example loading the PMP from two Mathematica files:
+[pmp\_split1.m](../test/data/pmp2sdp/m/pmp_split1.m) and
+[pmp\_split2.m](../test/data/pmp2sdp/m/pmp_split2.m).
 
 ## Running SDPB.
 
 The options to SDPB are described in detail in the help text, obtained
-by running `build/sdpb --help`.  The most important options are `-s [--sdpDir]`,
-`--precision`, and `--procsPerNode`.
+by running `build/sdpb --help`. The most important options are `-s [--sdpDir]` and
+`--precision`.
 You can specify output and checkpoint directories by `-o [ --outDir ]` and `-c [ --checkpointDir ]`, respectively.
 
 SDPB uses MPI to run in parallel, so you may need a special syntax to
@@ -117,19 +84,28 @@ launch it.  For example, if you compiled the code on your own laptop,
 you will probably use `mpirun` to invoke SDPB.  If you have 4 physical
 cores on your machine, the command is
 
-    mpirun -n 4 build/sdpb --precision=1024 --procsPerNode=4 -s test/data/sdp.zip -o test/out/sdpb -c test/out/sdpb/ck
+    mpirun -n 4 build/sdpb --precision=1024 -s test/data/sdp.zip -o test/out/sdpb -c test/out/sdpb/ck
 
 On the Yale Grace cluster, the command used in the Slurm batch file is
 
-    mpirun build/sdpb --precision=1024 --procsPerNode=$SLURM_NTASKS_PER_NODE -s test/data/sdp.zip -o test/out/sdpb -c test/out/sdpb/ck
+    mpirun build/sdpb --precision=1024 -s test/data/sdp.zip -o test/out/sdpb -c test/out/sdpb/ck
 
 In contrast, the Harvard Odyssey 3 cluster, which also uses Slurm,
 uses the srun command
 
-    srun -n $SLURM_NTASKS --mpi=pmi2 build/sdpb --precision=1024 --procsPerNode=$SLURM_NTASKS_PER_NODE -s test/data/sdp.zip -o test/out/sdpb -c test/out/sdpb/ck
+    srun -n $SLURM_NTASKS --mpi=pmi2 build/sdpb --precision=1024 -s test/data/sdp.zip -o test/out/sdpb -c test/out/sdpb/ck
 
 The documentation for your HPC system will tell you how to write a
 batch script and invoke MPI programs.
+Note also that usually you have to **load modules** on your HPC before running SDPB. You can find the corresponding
+command in installations instructions for your HPC (see [docs/site_installs](site_installs) folder). For example,
+on [Expanse](site_installs/Expanse.md) this command reads
+
+    module load cpu/0.15.4 gcc/10.2.0 openmpi/4.0.4 gmp/6.1.2 mpfr/4.0.2 cmake/3.18.2 openblas/dynamic/0.3.7
+
+
+Note that most computation for different blocks can be done in parallel, and optimal performance is generally achieved
+when the number of MPI jobs is comparable to the number of blocks.
 
 To efficiently run large MPI jobs, SDPB needs an accurate measurement
 of the time to evaluate each block.  If `block_timings` does not
@@ -150,25 +126,10 @@ checkpoints from other inputs. For example, if you have a previous
 checkpoint in `test/out/test.ck`, you can reuse it for a different input
 in `test/data/sdp2.zip` with a command like
 
-    mpirun -n 4 build/sdpb --precision=1024 --procsPerNode=4 -s test/data/sdp2.zip -i test/out/test.ck
+    mpirun -n 4 build/sdpb --precision=1024 -s test/data/sdp2.zip -i test/out/test.ck
 
 In addition to having the same block structure, the runs must also use
-the same `precision`, `procsPerNode`, and number and distribution of
-cores.
-
-## Optimizing Memory Use
-
-SDPB's defaults are set for optimal performance.  This may result in
-using more memory than is available.  Running SDPB on more nodes will
-reduce the amount of memory required on each node.  If this is not
-sufficient, you can also use the option `--procGranularity`.
-This option sets minimum number of processes that a block group can
-have, so it must evenly divide the `--procsPerNode` option.  Using a
-larger granularity will result in less memory use (up to a point)
-because SDPB will make fewer local copies of the matrix Q.  However,
-larger granularity is also slower because even small blocks will be
-distributed among multiple cores.  So you should use
-`--procGranularity` only when absolutely needed.
+the same `precision`, and number and distribution of cores.
 
 ## Running approx_objective
 
@@ -184,9 +145,9 @@ computing the initial solution with `sdpb` by including the option
 solution, setup a solver, and compute the new objective.
 
 You specify the location of the new SDP with the option `--newSdp`.
-This file would be the output of `pvm2sdp` or `sdp2input`.  If you
-have multiple SDP's, then you can create an NSV as in the instructions
-for `sdp2input` that list all of the files.
+This file would be the output of `pmp2sdp`.
+If you have multiple SDP's, then you should create an NSV as in the instructions
+for `pmp2sdp` that list all the files.
 
 Setting up the solver can take a long time.  If you have an SDP that
 you have perturbed in many different directions, and for logistical
@@ -198,13 +159,13 @@ state.
 
 A full example of the whole sequence is
 
-    mpirun -n 4 build/sdpb --precision=1024 --procsPerNode=4 -s test/data/sdp.zip -o test/out/approx_objective --writeSolution=x,y,X,Y
-    mpirun -n 4 build/approx_objective --precision=1024 --procsPerNode=4 --sdp test/data/sdp.zip --writeSolverState
-    mpirun -n 4 build/approx_objective --precision=1024 --procsPerNode=4 --sdp test/data/sdp.zip --newSdp=test/data/sdp2.zip
+    mpirun -n 4 build/sdpb --precision=1024 -s test/data/sdp -o test/out/approx_objective --writeSolution=x,y,X,Y
+    mpirun -n 4 build/approx_objective --precision=1024 --sdp test/data/sdp --writeSolverState
+    mpirun -n 4 build/approx_objective --precision=1024 --sdp test/data/sdp --newSdp=test/data/sdp2
 
 The output is a JSON list with each element including the location of
 the new SDP, the approximate objective, and the first and second order
-terms.  There is a [JSON schema](approx_objective_schema.json)
+terms. There is a [JSON schema](json_schema/approx_objective_schema.json)
 describing the format.
 
 The objective can be surprisingly sensitive to small changes,
@@ -234,12 +195,13 @@ spectrum extraction.  The options are described in more detail in the
 help text, obtained by running `spectrum --help`.  As a simple
 example, extracting the spectrum from the toy example would be
 
-    mpirun -n 4 build/spectrum --input=test/data/spectrum/pvm.xml --solution=test/data/spectrum/solution --threshold=1e-10 --format=PVM --output=test/out/spectrum/spectrum.json --precision=1024
+    mpirun -n 4 build/spectrum --input=test/data/end-to-end_tests/1d/input/pmp.json --output=test/out/spectrum/1d/spectrum.json --precision=1024 --solution=test/data/spectrum/1d/solution --threshold=1e-10
 
-This will output the spectra into `test/out/spectrum/spectrum.json` and should look like
+This will output the spectra into `test/out/spectrum/1d/spectrum.json` and should look like
 
     [
       {
+        "block_path": "test/data/end-to-end_tests/1d/input/pmp.json",
         "zeros":
           [
             {
@@ -254,5 +216,65 @@ This will output the spectra into `test/out/spectrum/spectrum.json` and should l
       }
     ]
 
-It is a json file with arrays of zeros.  There is a [JSON schema](spectrum_schema.json)
+It is a json file with arrays of zeros. There is a [JSON schema](json_schema/spectrum_schema.json)
 describing the format.
+
+## Common issues and workarounds
+
+### SDPB is slow, how many cores should I use for optimal performance?
+
+Most computation for different blocks can be done in parallel, and optimal performance is generally achieved when the
+number of MPI jobs approaches the number of blocks.
+
+Note, however, that increasing number of MPI processes increases also communication overhead, especially between
+different machines. Thus, sometimes single-node computation can outperform multi-node ones.
+
+You may use these considerations as a starting point, and run benchmarks in your environment to find the best
+configuration for your problem.
+
+### SDPB fails with out-of-memory, std::bad_alloc etc.
+
+SDPB's defaults are set for optimal performance. This may result in using more memory than is available.
+
+Two ways to reduce memory usage:
+
+1. Running SDPB on more nodes will reduce the amount of memory required on each node.
+2. You can also use the option `--procGranularity`.
+   This option sets minimum number of processes that a block group can have, so it must evenly divide
+   the number of cores per node. Using a larger granularity will result in less memory use (up to a point) because SDPB
+   will make fewer local copies of the matrix Q. However, larger granularity is also slower because even small blocks
+   will be distributed among multiple cores. So you should use `--procGranularity` only when absolutely needed.
+
+### SDPB crashes when using all available cores on the node
+
+We observed unexpected crashes for large SDPB runs even with enough memory, e.g. using all 128 cores per node on Expanse
+HPC.
+In such cases, reducing `$SLURM_NTASKS_PER_NODE` (if you are using SLURM) e.g. from 128 to 64 may help.
+
+### SDPB fails to read large sdp.zip
+
+Sometimes this happens if sdp.zip size exceeds 4GB. You may try to unzip it to some folder and pass the folder instead
+of zip archive to sdpb:
+
+```
+unzip -o path/to/sdp.zip -d path/to/sdp_dir
+sdpb -s path/to/sdp_dir <...>
+```
+
+### 'Running out of inodes' error
+
+This may happen on some filesystems if SDP contains too many block files. Run `pmp2sdp` with `--zip` flag to put
+everything into a single zip archive.
+
+### Spectrum does not work in parallel
+
+See https://github.com/davidsd/sdpb/issues/152.
+
+If this happens, replace, e.g. `mpirun -n 6  build/spectrum <...>` with `mpirun -n 1  build/spectrum <...>` or
+simply `build/spectrum <...>`.
+
+### Spectrum does not find zeros
+
+Try to set `--threshold` option for `spectrum` larger than `--dualityGapThreshold` for `sdpb`.
+
+Note that currently spectrum [cannot find isolated zeros](https://github.com/davidsd/sdpb/issues/153).

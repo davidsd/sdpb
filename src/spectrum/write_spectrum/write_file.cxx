@@ -1,5 +1,6 @@
-#include "../Zeros.hxx"
-#include "../../set_stream_precision.hxx"
+#include "sdpb_util/assert.hxx"
+#include "spectrum/Zeros.hxx"
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 
 #include <filesystem>
 
@@ -12,11 +13,8 @@ void write_file(const fs::path &output_path,
     {
       fs::create_directories(output_path.parent_path());
       std::ofstream outfile(output_path);
-      if(!outfile.good())
-        {
-          throw std::runtime_error("Problem when opening output file: '"
-                                   + output_path.string() + "'");
-        }
+      ASSERT(outfile.good(),
+             "Problem when opening output file: ", output_path);
       set_stream_precision(outfile);
       outfile << "[";
       for(auto zeros_iterator(zeros_blocks.begin());
@@ -26,7 +24,11 @@ void write_file(const fs::path &output_path,
             {
               outfile << ",";
             }
-          outfile << "\n  {\n    \"zeros\":\n      [";
+          auto block_path = zeros_iterator->block_path.string();
+          ASSERT(!block_path.empty(), "Empty path for block_",
+                 std::distance(zeros_blocks.begin(), zeros_iterator));
+          outfile << "\n  {\n    \"block_path\": \"" << block_path << "\",";
+          outfile << "\n    \"zeros\":\n      [";
           for(size_t zero_index(0); zero_index != zeros_iterator->zeros.size();
               ++zero_index)
             {
@@ -56,10 +58,7 @@ void write_file(const fs::path &output_path,
                   << "  }";
         }
       outfile << "\n]\n";
-      if(!outfile.good())
-        {
-          throw std::runtime_error("Problem when writing to output file: '"
-                                   + output_path.string() + "'");
-        }
+      ASSERT(outfile.good(),
+             "Problem when writing to output file: ", output_path);
     }
 }

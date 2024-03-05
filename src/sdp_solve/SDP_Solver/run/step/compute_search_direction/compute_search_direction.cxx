@@ -1,5 +1,4 @@
-#include "../../constraint_matrix_weighted_sum.hxx"
-#include "../../../../../Timers.hxx"
+#include "sdp_solve/SDP_Solver/run/constraint_matrix_weighted_sum.hxx"
 
 // Compute the search direction (dx, dX, dy, dY) for the predictor and
 // corrector phases.

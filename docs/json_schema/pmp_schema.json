@@ -1,0 +1,86 @@
+{
+    "type": "object",
+    "properties" :
+    {
+        "objective":
+        {
+            "type": "array",
+            "items": { "type": "string" }
+        },
+        "normalization":
+        {
+            "type": "array",
+            "items": { "type": "string" }
+        },
+        "PositiveMatrixWithPrefactorArray":
+        {
+            "type": "array",
+            "items":
+            {
+                "type": "object",
+                "properties":
+                {
+                    "DampedRational":
+                    {
+                        "type": "object",
+                        "properties":
+                        {
+                            "base": { "type": "string" },
+                            "constant": { "type": "string" },
+                            "poles":
+                            {
+                                "type": "array",
+                                "items": { "type": "string" }
+                            }
+                        }
+                    },
+                    "polynomials":
+                    {
+                        "type": "array",
+                        "items":
+                        {
+                            "type": "array",
+                            "items":
+                            {
+                                "type": "array",
+                                "items":
+                                {
+                                    "type": "array",
+                                    "items": { "type": "string" }
+                                }
+                            }
+                        }
+                    },
+                    "samplePoints": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "sampleScalings": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "bilinearBasis": {
+                        "type": "array",
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "polynomials"
+                ]
+            }
+        }
+    },
+    "required": [
+        "objective",
+        "PositiveMatrixWithPrefactorArray"
+    ]
+}

@@ -7,9 +7,9 @@ TEST_CASE("sdpb")
 {
   INFO("SDPB tests for a simple one-dimensional problem:");
   INFO("maximize (-y) s.t. (1 + x^4 + y * (x^4 / 12 + x^2)) >= 0)");
-  auto data_dir = Test_Config::test_data_dir / "sdpb";
   // default sdp input file
-  auto sdp_path = Test_Config::test_data_dir / "sdp.zip";
+  auto sdp_path = Test_Config::test_data_dir / "end-to-end_tests" / "1d"
+                  / "output" / "sdp";
   CAPTURE(sdp_path);
 
   int num_procs = 2;
@@ -28,6 +28,9 @@ TEST_CASE("sdpb")
          const std::string &required_error_msg = "") -> void {
     args["--checkpointDir"] = (runner.output_dir / "ck").string();
     args["--outDir"] = (runner.output_dir / "out").string();
+    // We removed obsolete --procsPerNode from end-to-end.test.cxx,
+    // but we keep it here to check backward compatibility,
+    // i.e. SDPB shouldn't fail when we pass this option.
     args["--procsPerNode"] = std::to_string(num_procs);
     runner.mpi_run({"build/sdpb"}, args, num_procs, required_exit_code,
                    required_error_msg);
@@ -40,21 +43,6 @@ TEST_CASE("sdpb")
     os << "";
     fs::permissions(path, fs::perms::others_read);
   };
-
-  SECTION("sdpb")
-  {
-    INFO("Simple sdpb run");
-    int sdpb_num_procs = GENERATE(1, 2);
-    DYNAMIC_SECTION("num_procs=" << sdpb_num_procs)
-    {
-      Test_Util::Test_Case_Runner runner("sdpb/run-"
-                                         + std::to_string(sdpb_num_procs));
-      auto args = default_args;
-      run_sdpb_set_out_ck_dirs(runner, args, sdpb_num_procs);
-      Test_Util::REQUIRE_Equal::diff_sdpb_output_dir(
-        args["--outDir"], data_dir / "test_out_orig", 1024, 1024 / 2);
-    }
-  }
 
   SECTION("io_tests")
   {
@@ -69,7 +57,8 @@ TEST_CASE("sdpb")
       create_readonly(runner.output_dir / "ck.profiling/profiling.0");
       run_sdpb_set_out_ck_dirs(runner, args, num_procs, 1,
                                "Error when writing to");
-      REQUIRE(fs::file_size(runner.output_dir / "ck.profiling/profiling.1") > 0);
+      REQUIRE(fs::file_size(runner.output_dir / "ck.profiling/profiling.1")
+              > 0);
     }
 
     for(std::string name :
@@ -95,7 +84,6 @@ TEST_CASE("sdpb")
       Test_Util::Test_Case_Runner runner("sdpb/io_tests/input_corruption");
       auto sdp_corrupted = runner.output_dir / "sdp_corrupted.zip";
       fs::create_directories(runner.output_dir);
-      fs::copy(sdp_path, sdp_corrupted, fs::copy_options::recursive);
       std::ofstream os(sdp_corrupted);
       os << "any bytes to corrupt zip archive";
 

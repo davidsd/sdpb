@@ -1,39 +1,27 @@
-#include "../sdp_read.hxx"
-#include "../Timers.hxx"
+#include "pmp_read/pmp_read.hxx"
+#include "pmp2sdp/Block_File_Format.hxx"
+#include "pmp2sdp/Dual_Constraint_Group.hxx"
+#include "pmp2sdp/write_sdp.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 
-#include <string>
 #include <boost/program_options.hpp>
+
 #include <filesystem>
+#include <string>
 
 namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
-void write_output(const fs::path &output_path, Block_File_Format output_format,
-                  const std::vector<std::string> &command_arguments,
-                  const std::vector<El::BigFloat> &objectives,
-                  const std::vector<El::BigFloat> &normalization,
-                  const std::vector<Positive_Matrix_With_Prefactor> &matrices,
-                  Timers &timers, bool debug);
-
-std::istream &operator>>(std::istream &in, Block_File_Format &format)
-{
-  std::string token;
-  in >> token;
-  if(token == "json")
-    format = json;
-  else if(token == "bin")
-    format = bin;
-  else
-    in.setstate(std::ios_base::failbit);
-  return in;
-}
-
 int main(int argc, char **argv)
 {
-  El::Environment env(argc, argv);
+  Environment env(argc, argv);
 
   try
     {
+      if(El::mpi::Rank() == 0)
+        El::Output("sdp2input is DEPRECATED, please use pmp2sdp instead.");
+      // TODO remove sdp2input in 2.8.0 release
+
       int precision;
       fs::path input_file, output_path;
       Block_File_Format output_format;
@@ -67,6 +55,11 @@ int main(int argc, char **argv)
 
       po::variables_map variables_map;
       po::store(po::parse_command_line(argc, argv, options), variables_map);
+      std::vector<std::string> command_arguments;
+      for(int arg(0); arg != argc; ++arg)
+        {
+          command_arguments.emplace_back(argv[arg]);
+        }
 
       if(variables_map.count("help") != 0)
         {
@@ -76,48 +69,30 @@ int main(int argc, char **argv)
 
       po::notify(variables_map);
 
-      if(!fs::exists(input_file))
-        {
-          throw std::runtime_error("Input file '" + input_file.string()
-                                   + "' does not exist");
-        }
-      if(fs::is_directory(input_file))
-        {
-          throw std::runtime_error("Input file '" + input_file.string()
-                                   + "' is a directory, not a file");
-        }
-
-      if(output_path == ".")
-        {
-          throw std::runtime_error("Output file '" + output_path.string()
-                                   + "' is a directory");
-        }
-      if(fs::exists(output_path) && fs::is_directory(output_path))
-        {
-          throw std::runtime_error("Output file '" + output_path.string()
-                                   + "' exists and is a directory");
-        }
+      ASSERT(fs::exists(input_file),
+             "Input file does not exist: ", input_file);
+      ASSERT(!fs::is_directory(input_file) && input_file != ".",
+             "Input file is a directory, not a file:", input_file);
 
       El::gmp::SetPrecision(precision);
       // El::gmp wants base-2 bits, but boost::multiprecision wants
       // base-10 digits.
       Boost_Float::default_precision(precision * log(2) / log(10));
 
-      std::vector<El::BigFloat> objectives, normalization;
-      std::vector<Positive_Matrix_With_Prefactor> matrices;
-      Timers timers(debug);
-      auto &read_input_timer(timers.add_and_start("read_input"));
-      read_input(input_file, objectives, normalization, matrices);
-      read_input_timer.stop();
-      auto &write_output_timer(timers.add_and_start("write_output"));
-      std::vector<std::string> command_arguments;
-      for(int arg(0); arg != argc; ++arg)
+      Timers timers(env, debug);
+      Scoped_Timer timer(timers, "sdp2input");
+
+      auto pmp = read_polynomial_matrix_program(env, input_file, timers);
+
+      Output_SDP sdp(pmp, command_arguments, timers);
+      bool zip = false;
+      write_sdp(output_path, sdp, output_format, zip, timers, debug);
+      if(El::mpi::Rank() == 0)
         {
-          command_arguments.emplace_back(argv[arg]);
+          El::Output("Processed ", sdp.num_blocks, " SDP blocks in ",
+                     (double)timer.timer().elapsed_milliseconds() / 1000,
+                     " seconds, output: ", output_path.string());
         }
-      write_output(output_path, output_format, command_arguments, objectives,
-                   normalization, matrices, timers, debug);
-      write_output_timer.stop();
       if(debug)
         {
           timers.write_profile(output_path.string() + ".profiling/profiling."

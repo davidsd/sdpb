@@ -1,12 +1,14 @@
 #include "setup_constraints.hxx"
-#include "../Outer_Parameters.hxx"
-
-#include "../../ostream_set.hxx"
-#include "../../ostream_map.hxx"
-#include "../../ostream_vector.hxx"
-#include "../../set_stream_precision.hxx"
-#include "../../max_normalization_index.hxx"
-#include "../../fill_weights.hxx"
+#include "setup_constraints.hxx"
+#include "outer_limits/Outer_Parameters.hxx"
+#include "pmp/max_normalization_index.hxx"
+#include "sdpb_util/assert.hxx"
+#include "sdpb_util/copy_matrix.hxx"
+#include "sdpb_util/fill_weights.hxx"
+#include "sdpb_util/ostream/ostream_map.hxx"
+#include "sdpb_util/ostream/ostream_set.hxx"
+#include "sdpb_util/ostream/ostream_vector.hxx"
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 
 namespace fs = std::filesystem;
 
@@ -15,7 +17,7 @@ void compute_y_transform(
     &function_blocks,
   const std::vector<std::set<El::BigFloat>> &points,
   const std::vector<El::BigFloat> &objectives,
-  const std::vector<El::BigFloat> &normalization,
+  const std::vector<El::BigFloat> &normalization, const Environment &env,
   const Outer_Parameters &parameters, const size_t &max_index,
   const El::Grid &global_grid,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y,
@@ -23,17 +25,12 @@ void compute_y_transform(
   El::BigFloat &primal_c_scale);
 
 boost::optional<int64_t> load_checkpoint(
-  const fs::path &checkpoint_directory, const Verbosity &verbosity, boost::optional<int64_t> &backup_generation,
-  int64_t &current_generation,
+  const fs::path &checkpoint_directory, const Verbosity &verbosity,
+  boost::optional<int64_t> &backup_generation, int64_t &current_generation,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &yp_to_y_star,
   El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &dual_objective_b_star,
   El::Matrix<El::BigFloat> &y, std::vector<std::set<El::BigFloat>> &points,
   El::BigFloat &threshold, El::BigFloat &primal_c_scale);
-
-void copy_matrix(const El::Matrix<El::BigFloat> &source,
-                 El::DistMatrix<El::BigFloat> &destination);
-void copy_matrix(const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &source,
-                 El::Matrix<El::BigFloat> &destination);
 
 void find_new_points(
   const size_t &num_blocks, const size_t &rank, const size_t &num_procs,
@@ -60,16 +57,14 @@ std::vector<El::BigFloat> compute_optimal(
     &function_blocks,
   const std::vector<std::vector<El::BigFloat>> &initial_points,
   const std::vector<El::BigFloat> &objectives,
-  const std::vector<El::BigFloat> &normalization,
-  const Outer_Parameters &parameters_in)
+  const std::vector<El::BigFloat> &normalization, const Environment &env,
+  const Outer_Parameters &parameters_in,
+  const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time)
 {
-  if(initial_points.size() != function_blocks.size())
-    {
-      throw std::runtime_error(
-        "Size are different: Positive_Matrix_With_Prefactor: "
-        + std::to_string(function_blocks.size())
-        + ", initial points: " + std::to_string(initial_points.size()));
-    }
+  ASSERT(initial_points.size() == function_blocks.size(),
+         "Size are different: Polynomial_Vector_Matrix: "
+           + std::to_string(function_blocks.size())
+           + ", initial points: " + std::to_string(initial_points.size()));
   Outer_Parameters parameters(parameters_in);
   const size_t rank(El::mpi::Rank()), num_procs(El::mpi::Size()),
     num_weights(normalization.size());
@@ -122,8 +117,8 @@ std::vector<El::BigFloat> compute_optimal(
   else
     {
       compute_y_transform(function_blocks, points, objectives, normalization,
-                          parameters, max_index, global_grid, yp_to_y_star,
-                          dual_objective_b_star, primal_c_scale);
+                          env, parameters, max_index, global_grid,
+                          yp_to_y_star, dual_objective_b_star, primal_c_scale);
     }
 
   while(parameters.solver.duality_gap_threshold
@@ -182,12 +177,12 @@ std::vector<El::BigFloat> compute_optimal(
       const El::BigFloat objective_const(objectives.at(max_index)
                                          / normalization.at(max_index));
 
-      Block_Info block_info(matrix_dimensions, parameters.verbosity);
+      Block_Info block_info(env, matrix_dimensions, parameters.verbosity);
 
       El::Grid grid(block_info.mpi_comm.value);
 
       SDP sdp(objective_const, primal_objective_c, free_var_matrix,
-              yp_to_y_star, dual_objective_b_star, primal_c_scale, block_info,
+              yp_to_y_star, dual_objective_b_star, normalization, primal_c_scale, block_info,
               grid);
 
       SDP_Solver solver(parameters.solver, parameters.verbosity,
@@ -212,10 +207,10 @@ std::vector<El::BigFloat> compute_optimal(
                         << parameters.solver.duality_gap_threshold << "\n";
             }
 
-          Timers timers(parameters.verbosity >= Verbosity::debug);
-          SDP_Solver_Terminate_Reason reason
-            = solver.run(parameters.solver, parameters.verbosity,
-                         parameter_properties, block_info, sdp, grid, timers);
+          Timers timers(env, parameters.verbosity >= Verbosity::debug);
+          SDP_Solver_Terminate_Reason reason = solver.run(
+            parameters.solver, parameters.verbosity, parameter_properties,
+            block_info, sdp, grid, start_time, timers);
 
           for(size_t index(0); index < block_info.block_indices.size();
               ++index)
@@ -241,8 +236,7 @@ std::vector<El::BigFloat> compute_optimal(
                                         - block.Get(0, 1) * block.Get(0, 1);
                           break;
                         default:
-                          throw std::runtime_error(
-                            "too big: " + std::to_string(block.Height()));
+                          RUNTIME_ERROR("too big: ", block.Height());
                           break;
                         }
                       if(determinant < 1e-16)
@@ -282,9 +276,7 @@ std::vector<El::BigFloat> compute_optimal(
              || reason == SDP_Solver_Terminate_Reason::PrimalStepTooSmall
              || reason == SDP_Solver_Terminate_Reason::DualStepTooSmall)
             {
-              std::stringstream ss;
-              ss << "Can not find solution: " << reason;
-              throw std::runtime_error(ss.str());
+              RUNTIME_ERROR("Cannot find solution: ", reason);
             }
 
           El::Matrix<El::BigFloat> y(dual_objective_b_star.Height(), 1);

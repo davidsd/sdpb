@@ -1,7 +1,7 @@
 # Outer_Limits Usage
 
 The exact details of how `outer_limits` works is described in the
-`outer_limits` [manual](Outer_Limits.pdf).  To briefly summarize,
+`outer_limits` [manual](Outer_Limits/Outer_Limits.pdf). To briefly summarize,
 `outer_limits` reads in function evaluated at Chebyshev zeros and
 initial points.  It applies constant constraints at those initial
 points and computes a solution.  It then iteratively adds constraints
@@ -29,18 +29,18 @@ of options.  There are four main differences:
     format. Defaults to `functions` with the ending `_out.json`.
 
 The format for `functions` is detailed in the
-[schema](functions_schema.json), and there is an
+[schema](json_schema/functions_schema.json), and there is an
 [example](../test/data/outer_limits/toy_functions.json) included with the source code.
-Similarly, `points` has a [schema](points_schema.json) and an
+Similarly, `points` has a [schema](json_schema/points_schema.json) and an
 [example](../test/data/outer_limits/toy_functions_points.json).
 
 If you have an existing input file for `sdpb`, you can use the bundled
-`sdp2functions` and `pvm2functions` programs to create suitable input
-from JSON and XML files.  They work very similarly to `sdp2input` and
-`pvm2sdp`.  You can run them with the `--help` option to see usage
+`pmp2functions` program to create suitable input
+from JSON, Mathematica or XML files. It works very similarly to
+`pmp2sdp`. You can run them with the `--help` option to see usage
 information.
 
-All of the other options have a similar meaning as for `sdpb`.  For
+All the other options have a similar meaning as for `sdpb`. For
 example, `initialMatrixScaleDual` will set the initial size of the `Y`
 matrices when computing a solution for each outer iteration.
 

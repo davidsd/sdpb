@@ -1,5 +1,6 @@
-#include "../../SDP.hxx"
-#include "../../Archive_Reader.hxx"
+#include "sdp_solve/SDP.hxx"
+#include "sdp_solve/Archive_Reader.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <rapidjson/document.h>
 #include <rapidjson/istreamwrapper.h>
@@ -35,9 +36,14 @@ namespace
   }
 }
 
-void read_objectives(const fs::path &sdp_path, const El::Grid &grid, El::BigFloat &objective_const,
-                     El::DistMatrix<El::BigFloat> &dual_objective_b)
+void read_objectives(const fs::path &sdp_path, const El::Grid &grid,
+                     El::BigFloat &objective_const,
+                     El::DistMatrix<El::BigFloat> &dual_objective_b,
+                     Timers &timers)
 {
+  Scoped_Timer timer(timers, "read_objectives");
+  ASSERT(fs::exists(sdp_path), "SDP path does not exist: ", sdp_path);
+
   const std::string objectives_name("objectives.json");
   if(fs::is_regular_file(sdp_path))
     {
@@ -49,18 +55,21 @@ void read_objectives(const fs::path &sdp_path, const El::Grid &grid, El::BigFloa
           if(objectives_name == archive_entry_pathname(reader.entry_ptr))
             {
               std::istream stream(&reader);
-              read_objectives_stream(grid, stream,
-                                     objective_const, dual_objective_b);
+              read_objectives_stream(grid, stream, objective_const,
+                                     dual_objective_b);
+              break;
             }
         }
       if(dual_objective_b.Height() == 0)
         {
-          throw std::runtime_error("Unable to read objectives from input");
+          RUNTIME_ERROR("Unable to read objective from input");
         }
     }
   else
     {
-      std::ifstream objectives_stream(sdp_path / objectives_name);
+      auto objectives_path = sdp_path / objectives_name;
+      std::ifstream objectives_stream(objectives_path);
+      ASSERT(objectives_stream.good(), "Failed to open ", objectives_path);
       read_objectives_stream(grid, objectives_stream, objective_const,
                              dual_objective_b);
     }

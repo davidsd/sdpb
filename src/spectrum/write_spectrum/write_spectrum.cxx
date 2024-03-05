@@ -1,4 +1,5 @@
-#include "../Zeros.hxx"
+#include "sdpb_util/assert.hxx"
+#include "spectrum/Zeros.hxx"
 
 #include <filesystem>
 
@@ -7,72 +8,137 @@ namespace fs = std::filesystem;
 void write_file(const fs::path &output_path,
                 const std::vector<Zeros> &zeros_blocks);
 
-void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
-                    const std::vector<Zeros> &zeros_blocks)
+namespace
 {
-  const size_t rank(El::mpi::Rank()),
-    num_procs(El::mpi::Size(El::mpi::COMM_WORLD));
+  // Send Zeros from some rank to rank=0
+  void synchronize_zeros_block(Zeros &zeros_block, const int from)
+  {
+    const int to = 0;
 
-  if(num_procs == 1)
+    const int rank = El::mpi::Rank();
+    if(rank != to && rank != from)
+      return;
+    if(to == from)
+      return;
+
+    // block_path
+    {
+      auto block_path = zeros_block.block_path.string();
+      if(rank == from)
+        {
+          const size_t path_size = block_path.size();
+          El::mpi::Send<size_t>(path_size, to, El::mpi::COMM_WORLD);
+          MPI_Send(block_path.data(), path_size, MPI_CHAR, to, 0,
+                   MPI_COMM_WORLD);
+        }
+      if(rank == to)
+        {
+          const auto path_size
+            = El::mpi::Recv<size_t>(from, El::mpi::COMM_WORLD);
+          block_path.resize(path_size);
+          MPI_Recv(block_path.data(), path_size, MPI_CHAR, from, 0,
+                   MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+          zeros_block.block_path = block_path;
+        }
+    }
+
+    // zeros
+    {
+      auto &zeros = zeros_block.zeros;
+
+      // Synchronize zeros.size()
+      if(rank == from)
+        {
+          El::mpi::Send<size_t>(zeros.size(), to, El::mpi::COMM_WORLD);
+        }
+      if(rank == to)
+        {
+          const auto zeros_size
+            = El::mpi::Recv<size_t>(from, El::mpi::COMM_WORLD);
+          zeros.resize(zeros_size, El::BigFloat(0));
+        }
+
+      // Synchronize zeros vector
+      for(auto &zero : zeros)
+        {
+          // zero
+          {
+            if(rank == from)
+              El::mpi::Send(zero.zero, to, El::mpi::COMM_WORLD);
+            if(rank == to)
+              zero.zero
+                = El::mpi::Recv<El::BigFloat>(from, El::mpi::COMM_WORLD);
+          }
+
+          // lambda
+          {
+            auto &lambda = zero.lambda;
+            if(rank == from)
+              {
+                El::mpi::Send(lambda.Height(), to, El::mpi::COMM_WORLD);
+                El::mpi::Send(lambda.Width(), to, El::mpi::COMM_WORLD);
+                El::Send(lambda, El::mpi::COMM_WORLD, to);
+              }
+            if(rank == to)
+              {
+                int height = El::mpi::Recv<int>(from, El::mpi::COMM_WORLD);
+                int width = El::mpi::Recv<int>(from, El::mpi::COMM_WORLD);
+                lambda.Resize(height, width);
+                El::Recv(lambda, El::mpi::COMM_WORLD, from);
+              }
+          }
+        }
+    }
+
+    // error
+    {
+      if(rank == from)
+        El::mpi::Send(zeros_block.error, to, El::mpi::COMM_WORLD);
+      if(rank == to)
+        zeros_block.error
+          = El::mpi::Recv<El::BigFloat>(from, El::mpi::COMM_WORLD);
+    }
+  }
+}
+
+void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
+                    const std::vector<Zeros> &zeros_blocks,
+                    const std::vector<size_t> &block_indices)
+{
+  if(El::mpi::Size() == 1)
     {
       write_file(output_path, zeros_blocks);
+      return;
     }
-  else
+
+  // Synchronize zeros
+  const int rank = El::mpi::Rank();
+
+  ASSERT_EQUAL(block_indices.size(), zeros_blocks.size());
+
+  std::vector<int> block_ranks(num_blocks, -1);
+  std::map<size_t, size_t> block_index_global_to_local;
+  std::vector<Zeros> zeros_all_blocks(num_blocks);
+
+  for(size_t local_index = 0; local_index < block_indices.size();
+      ++local_index)
     {
-      // Synchronize zeros
-      // This is waaaay more work than it should be.
-      std::vector<size_t> zero_sizes(num_blocks, 0),
-        lambda_sizes(num_blocks, 0);
-      size_t block_index(rank);
-      for(auto &block : zeros_blocks)
-        {
-          zero_sizes.at(block_index) = block.zeros.size();
-          if(!block.zeros.empty())
-            {
-              lambda_sizes.at(block_index)
-                = block.zeros.front().lambda.Height();
-            }
-          block_index += num_procs;
-        }
-      El::mpi::AllReduce(zero_sizes.data(), zero_sizes.size(), El::mpi::SUM,
-                         El::mpi::COMM_WORLD);
-      El::mpi::AllReduce(lambda_sizes.data(), lambda_sizes.size(),
-                         El::mpi::SUM, El::mpi::COMM_WORLD);
-
-      std::vector<Zeros> zeros_all_blocks(num_blocks);
-      for(size_t block_index(0); block_index != zeros_all_blocks.size();
-          ++block_index)
-        {
-          if(block_index % num_procs == rank)
-            {
-              const size_t local_index(block_index / num_procs);
-              zeros_all_blocks[block_index] = zeros_blocks.at(local_index);
-            }
-          else
-            {
-              zeros_all_blocks[block_index].zeros.resize(
-                zero_sizes.at(block_index), El::BigFloat(0));
-              for(auto &zero : zeros_all_blocks[block_index].zeros)
-                {
-                  zero.lambda.Resize(lambda_sizes.at(block_index), 1);
-                  El::Zero(zero.lambda);
-                }
-              zeros_all_blocks[block_index].error = 0;
-            }
-
-          for(auto &zero : zeros_all_blocks[block_index].zeros)
-            {
-              // TODO: This is painfully slow with lots of communication.
-              zero.zero = El::mpi::Reduce(zero.zero, El::mpi::SUM, 0,
-                                          El::mpi::COMM_WORLD);
-              El::mpi::Reduce(zero.lambda.Buffer(),
-                              zero.lambda.Height() * zero.lambda.Width(),
-                              El::mpi::SUM, 0, El::mpi::COMM_WORLD);
-            }
-          zeros_all_blocks[block_index].error
-            = El::mpi::Reduce(zeros_all_blocks[block_index].error,
-                              El::mpi::SUM, 0, El::mpi::COMM_WORLD);
-        }
-      write_file(output_path, zeros_all_blocks);
+      const auto block_index = block_indices.at(local_index);
+      block_ranks.at(block_index) = rank;
+      block_index_global_to_local.emplace(block_index, local_index);
+      zeros_all_blocks.at(block_index) = zeros_blocks.at(local_index);
     }
+  El::mpi::AllReduce(block_ranks.data(), block_ranks.size(), El::mpi::MAX,
+                     El::mpi::COMM_WORLD);
+
+  for(size_t block_index = 0; block_index < num_blocks; ++block_index)
+    {
+      const int block_rank = block_ranks.at(block_index);
+      ASSERT(block_rank >= 0, DEBUG_STRING(block_index));
+      ASSERT(block_rank < El::mpi::Size(), DEBUG_STRING(block_index));
+
+      auto &zeros_block = zeros_all_blocks.at(block_index);
+      synchronize_zeros_block(zeros_block, block_rank);
+    }
+  write_file(output_path, zeros_all_blocks);
 }

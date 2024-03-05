@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../sdp_solve.hxx"
+#include "sdp_solve/sdp_solve.hxx"
 
 struct Approx_Objective
 {

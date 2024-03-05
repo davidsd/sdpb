@@ -1,11 +1,12 @@
-#include "../sdp_solve.hxx"
+#include "sdp_solve/sdp_solve.hxx"
 
 #include <filesystem>
 
 namespace fs = std::filesystem;
 
-void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info, const Timers &timers,
-                  const bool &debug, El::Matrix<int32_t> &block_timings)
+void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info,
+                  const Timers &timers, const bool &debug,
+                  El::Matrix<int32_t> &block_timings)
 {
   if(debug)
     {
@@ -14,24 +15,27 @@ void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info, 
     }
 
   El::Zero(block_timings);
-  for(auto &index : block_info.block_indices)
+  std::string Q_prefix
+    = "sdpb.solve.run.iter_2.step.initializeSchurComplementSolver.Q.";
+
+  for(auto timer_prefix :
+      {Q_prefix + "syrk_", Q_prefix + "solve_", Q_prefix + "cholesky_"})
     {
-      block_timings(index, 0) = timers.elapsed_milliseconds(
-                                  "run.step.initializeSchurComplementSolver."
-                                  "Q.syrk_"
-                                  + std::to_string(index))
-                                + timers.elapsed_milliseconds(
-                                    "run.step.initializeSchurComplementSolver."
-                                    "Q.solve_"
-                                    + std::to_string(index))
-                                + timers.elapsed_milliseconds(
-                                    "run.step.initializeSchurComplementSolver."
-                                    "Q.cholesky_"
-                                    + std::to_string(index));
+      for(auto &index : block_info.block_indices)
+        {
+          block_timings(index, 0) += timers.elapsed_milliseconds(
+            timer_prefix + std::to_string(index));
+        }
     }
   El::AllReduce(block_timings, El::mpi::COMM_WORLD);
   if(El::mpi::Rank() == 0)
     {
+      if(debug)
+        {
+          El::Print(block_timings, "block_timings, ms:", ", ");
+          El::Output();
+        }
+
       fs::create_directories(checkpoint_out);
       fs::path block_timings_path(checkpoint_out / "block_timings");
       std::ofstream block_timings_file(block_timings_path);
@@ -39,10 +43,7 @@ void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info, 
         {
           block_timings_file << block_timings(row, 0) << "\n";
         }
-      if(!block_timings_file.good())
-        {
-          throw std::runtime_error("Error when writing to: "
-                                   + block_timings_path.string());
-        }
+      ASSERT(block_timings_file.good(),
+             "Error when writing to: ", block_timings_path);
     }
 }

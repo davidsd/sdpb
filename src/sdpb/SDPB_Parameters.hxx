@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../Verbosity.hxx"
-#include "../sdp_solve.hxx"
+#include "sdpb_util/Verbosity.hxx"
+#include "sdp_solve/sdp_solve.hxx"
 
 #include <El.hpp>
 #include <filesystem>
@@ -12,7 +12,7 @@
 struct SDPB_Parameters
 {
   bool no_final_checkpoint;
-  size_t procs_per_node, proc_granularity;
+  size_t proc_granularity;
   bool require_initial_checkpoint = false;
   Write_Solution write_solution;
 

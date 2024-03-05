@@ -1,0 +1,36 @@
+{
+    "type" : "array",
+    "items" :
+    {
+        "type" : "object",
+        "properties" :
+        {
+          "block_path": {
+            "type": "string"
+          },
+            "zeros" :
+            {
+                "type" : "array",
+                "items" :
+                {
+                    "type" : "object",
+                    "properties" :
+                    {
+                        "zero" : { "type" : "string" },
+                        "lambda" :
+                        {
+                            "type" : "array",
+                            "items" :
+                            {
+                                "type" : "string"
+                            }
+                        }
+                    }
+                }
+            },
+          "error": {
+            "type": "string"
+          }
+        }
+    }
+}

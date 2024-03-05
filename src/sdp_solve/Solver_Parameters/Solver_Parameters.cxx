@@ -19,7 +19,7 @@ boost::program_options::options_description Solver_Parameters::options()
     "The precision, in the number of bits, for numbers in the "
     "computation. "
     " This should be less than or equal to the precision used when "
-    "preprocessing the XML input files with 'pvm2sdp'.  GMP will round "
+    "preprocessing the input PMP files with 'pmp2sdp'.  GMP will round "
     "this up to a multiple of 32 or 64, depending on the system.");
   result.add_options()(
     "findPrimalFeasible",

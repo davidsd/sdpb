@@ -1,4 +1,5 @@
-#include "../../SDP_Solver.hxx"
+#include "sdp_solve/SDP_Solver.hxx"
+
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 // The main solver loop
@@ -62,13 +63,19 @@ SDP_Solver_Terminate_Reason
 SDP_Solver::run(const Solver_Parameters &parameters,
                 const Verbosity &verbosity,
                 const boost::property_tree::ptree &parameter_properties,
-                const Block_Info &block_info, const SDP &sdp,
-                const El::Grid &grid, Timers &timers)
+  const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
+  const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time,
+  Timers &timers)
 {
   SDP_Solver_Terminate_Reason terminate_reason(
     SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
-  auto &solver_timer(timers.add_and_start("Solver runtime"));
-  auto &initialize_timer(timers.add_and_start("run.initialize"));
+  Scoped_Timer solver_timer(timers, "run");
+  Scoped_Timer initialize_timer(timers, "initialize");
+  if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
+    {
+      El::Output(boost::posix_time::second_clock::local_time(),
+                 " Start solver iterations");
+    }
 
   El::BigFloat primal_step_length(0), dual_step_length(0);
 
@@ -112,6 +119,8 @@ SDP_Solver::run(const Solver_Parameters &parameters,
   auto last_checkpoint_time(std::chrono::high_resolution_clock::now());
   for(size_t iteration = 1;; ++iteration)
     {
+      Scoped_Timer iteration_timer(timers,
+                                   "iter_" + std::to_string(iteration));
       if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
         {
           El::Output("Start iteration ", iteration, " at ",
@@ -133,11 +142,12 @@ SDP_Solver::run(const Solver_Parameters &parameters,
       compute_objectives(sdp, x, y, primal_objective, dual_objective,
                          duality_gap, timers);
 
-      auto &cholesky_decomposition_timer(
-        timers.add_and_start("run.choleskyDecomposition"));
-      cholesky_decomposition(X, X_cholesky);
-      cholesky_decomposition(Y, Y_cholesky);
-      cholesky_decomposition_timer.stop();
+      {
+        Scoped_Timer cholesky_decomposition_timer(timers,
+                                                  "choleskyDecomposition");
+        cholesky_decomposition(X, X_cholesky);
+        cholesky_decomposition(Y, Y_cholesky);
+      }
 
       compute_bilinear_pairings(block_info, X_cholesky, Y, sdp.bases_blocks,
                                 A_X_inv, A_Y, timers);
@@ -156,9 +166,8 @@ SDP_Solver::run(const Solver_Parameters &parameters,
       bool terminate_now, is_primal_and_dual_feasible;
       compute_feasible_and_termination(
         parameters, primal_error(), dual_error, duality_gap,
-        primal_step_length, dual_step_length, iteration,
-        solver_timer.start_time, is_primal_and_dual_feasible, terminate_reason,
-        terminate_now);
+        primal_step_length, dual_step_length, iteration, start_time,
+        is_primal_and_dual_feasible, terminate_reason, terminate_now);
       if(terminate_now)
         {
           break;
@@ -176,9 +185,8 @@ SDP_Solver::run(const Solver_Parameters &parameters,
           break;
         }
       print_iteration(iteration, mu, primal_step_length, dual_step_length,
-                      beta_corrector, *this, solver_timer.start_time,
+                      beta_corrector, *this, solver_timer.start_time(),
                       verbosity);
     }
-  solver_timer.stop();
   return terminate_reason;
 }

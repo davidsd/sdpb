@@ -1,16 +1,13 @@
 #pragma once
 
-#include "../sdp_solve.hxx"
-
 #include <El.hpp>
 #include <filesystem>
-#include <boost/property_tree/ptree.hpp>
-
 #include <iostream>
+#include <boost/property_tree/ptree.hpp>
 
 struct Approx_Parameters
 {
-  size_t procs_per_node, proc_granularity;
+  size_t proc_granularity;
   size_t precision;
 
   std::filesystem::path sdp_path, new_sdp_path, solution_dir, param_path;

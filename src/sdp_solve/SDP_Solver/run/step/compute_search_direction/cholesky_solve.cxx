@@ -1,4 +1,4 @@
-#include "../../../../Block_Diagonal_Matrix.hxx"
+#include "sdp_solve/Block_Diagonal_Matrix.hxx"
 
 // X := ACholesky^{-T} ACholesky^{-1} X = A^{-1} X
 void cholesky_solve(const Block_Diagonal_Matrix &ACholesky,

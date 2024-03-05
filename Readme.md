@@ -28,7 +28,7 @@ Let $S^{m\times m}[x]$ be the space of symmetric $m\times m$ matrices whose entr
 Here, $M\succeq 0$ means "M is positive semidefinite."
 
 For more information, see [A Semidefinite Program Solver for the Conformal Bootstrap](http://arxiv.org/abs/1502.02033)
-and [the manual](/docs/SDPB-Manual.pdf).
+and [the manual](/docs/SDPB_Manual/SDPB-Manual.pdf).
 
 Authors: David Simmons-Duffin (dsd@caltech.edu), Walter Landry (wlandry@caltech.edu).
 

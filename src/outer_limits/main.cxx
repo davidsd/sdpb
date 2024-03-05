@@ -1,9 +1,10 @@
-#include "Outer_Parameters.hxx"
 #include "Function.hxx"
-#include "../sdp_read.hxx"
-#include "../sdp_solve.hxx"
-
-#include "../ostream_vector.hxx"
+#include "Outer_Parameters.hxx"
+#include "sdp_solve/sdp_solve.hxx"
+#include "sdpb_util/Boost_Float.hxx"
+#include "sdpb_util/Environment.hxx"
+#include "sdpb_util/ostream/ostream_vector.hxx"
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -66,12 +67,14 @@ std::vector<El::BigFloat> compute_optimal(
   const std::vector<std::vector<std::vector<std::vector<Function>>>> &functions,
   const std::vector<std::vector<El::BigFloat>> &initial_points,
   const std::vector<El::BigFloat> &objectives,
-  const std::vector<El::BigFloat> &normalization,
-  const Outer_Parameters &parameters_in);
+  const std::vector<El::BigFloat> &normalization, const Environment &env,
+  const Outer_Parameters &parameters_in,
+  const std::chrono::time_point<std::chrono::high_resolution_clock>
+    &start_time);
 
 int main(int argc, char **argv)
 {
-  El::Environment env(argc, argv);
+  Environment env(argc, argv);
   Outer_Parameters parameters(argc, argv);
   if(!parameters.is_valid())
     {
@@ -83,13 +86,13 @@ int main(int argc, char **argv)
   // El::gmp wants base-2 bits, but boost::multiprecision wants
   // base-10 digits.
   Boost_Float::default_precision(precision * log(2) / log(10));
-
+  auto start_time = std::chrono::high_resolution_clock::now();
   if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
-      std::cout << "Outer_Limits started at "
-                << boost::posix_time::second_clock::local_time() << '\n'
-                << parameters << '\n'
-                << std::flush;
+      std::cout << boost::posix_time::second_clock::local_time()
+                << " Start Outer_Limits" << '\n'
+                << "Version: " << SDPB_VERSION_STRING << '\n'
+                << parameters << std::endl;
     }
 
   std::vector<El::BigFloat> objectives, normalization;
@@ -100,8 +103,9 @@ int main(int argc, char **argv)
   std::vector<std::vector<El::BigFloat>> initial_points;
   read_points(parameters.points_path, initial_points);
 
-  std::vector<El::BigFloat> weights(compute_optimal(
-    functions, initial_points, objectives, normalization, parameters));
+  std::vector<El::BigFloat> weights(
+    compute_optimal(functions, initial_points, objectives, normalization, env,
+                    parameters, start_time));
 
   El::BigFloat optimal(0);
   for(size_t index(0); index < objectives.size(); ++index)

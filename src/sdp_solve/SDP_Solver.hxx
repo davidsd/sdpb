@@ -12,7 +12,7 @@
 #include "SDP_Solver_Terminate_Reason.hxx"
 
 #include "Solver_Parameters.hxx"
-#include "../Timers.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 
 #include <filesystem>
 
@@ -31,6 +31,7 @@ public:
   Block_Diagonal_Matrix X;
 
   // a Vector of length N = sdp.dualObjective.size()
+  // Duplicated among all blocks.
   Block_Vector y;
 
   // a Block_Diagonal_Matrix with the same structure as X
@@ -80,10 +81,11 @@ public:
              const size_t &dual_objective_b_height);
 
   SDP_Solver_Terminate_Reason
-  run(const Solver_Parameters &parameters,
-      const Verbosity &verbosity,
+  run(const Solver_Parameters &parameters, const Verbosity &verbosity,
       const boost::property_tree::ptree &parameter_properties,
       const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
+      const std::chrono::time_point<std::chrono::high_resolution_clock>
+        &start_time,
       Timers &timers);
 
   void step(

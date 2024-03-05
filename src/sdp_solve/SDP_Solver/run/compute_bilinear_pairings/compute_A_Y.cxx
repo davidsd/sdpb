@@ -1,5 +1,5 @@
-#include "../../../Block_Diagonal_Matrix.hxx"
-#include "../../../Block_Info.hxx"
+#include "sdp_solve/Block_Diagonal_Matrix.hxx"
+#include "sdp_solve/Block_Info.hxx"
 
 // A_Y[b] = Q[b]'^T A[b] Q[b]' for each block 0 <= b < Q.size()
 // A_Y[b], A[b] denote the b-th blocks of A_Y,

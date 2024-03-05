@@ -1,6 +1,6 @@
-#include "../../../../Block_Diagonal_Matrix.hxx"
-#include "../../../../Block_Info.hxx"
-#include "../../../../../Timers.hxx"
+#include "sdp_solve/Block_Diagonal_Matrix.hxx"
+#include "sdp_solve/Block_Info.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 
 // Compute the SchurComplement matrix using A_X_inv and
 // A_Y and the formula
@@ -22,8 +22,7 @@ void compute_schur_complement(
     &A_Y,
   Block_Diagonal_Matrix &schur_complement, Timers &timers)
 {
-  Scoped_Timer schur_complement_timer(
-    timers, "run.step.initializeSchurComplementSolver.schur_complement");
+  Scoped_Timer schur_complement_timer(timers, "schur_complement");
 
   auto schur_complement_block(schur_complement.blocks.begin());
   size_t Q_index(0);

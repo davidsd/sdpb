@@ -20,11 +20,11 @@ test/out/
 test/.nfs*
 
 # TeX
-/docs/*.aux
-/docs/*.log
-/docs/*.out
-/docs/*.synctex.gz
-/docs/*.toc
+/docs/**/*.aux
+/docs/**/*.log
+/docs/**/*.out
+/docs/**/*.synctex.gz
+/docs/**/*.toc
 
 # Misc
 tmp/

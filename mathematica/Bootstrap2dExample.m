@@ -1,6 +1,6 @@
 (* ::Package:: *)
 
-(*Write here the path of the folder containing sdpb and pvm2sdp*)
+(*Write here the path of the folder containing sdpb and pmp2sdp*)
 executablesPath = "../build";
 
 
@@ -109,34 +109,33 @@ singletAllowed2d[deltaPhiLowPrecision_, deltaPhiSqLowPrecision_, derivativeOrder
         SolveBootstrapSDP[SDP[obj,norm,pols]]];
 
 (* This is not a recommended long-term solution for evaluating SDPs
-for the following reasons: 1) different sdpFiles should have unique
+for the following reasons: 1) different pmpFiles should have unique
 names so that they can be solved in parallel and so that their
 checkpoints and output files don't overwrite each other; 2) The
 Run[...] command forces Mathematica to be running until sdpb
-finishes. It is better to use WriteBootstrapSDP instead of
+finishes. It is better to use WritePmpJson instead of
 SolveBootstrapSDP and run sdpb by hand or with an external script. *)
 SolveBootstrapSDP[sdp_] := Module[
     {
-        sdpFile = "mySDP.xml",
+        pmpFile = "myPMP.json",
         outFolder = "mySDP_out",
         sdpFolder = "mySDP",
         fullResult
     },
-    WriteBootstrapSDP[sdpFile, sdp];
+    WritePmpXml[pmpFile, sdp];
     (* Most of the defaults are way over the top for this size
     problem, but we'll use them because it's easy. If you want speed,
     try fiddling with some of the parameters. *)
-    WriteString["stdout","Converting xml to pvm format\n"];
+    WriteString["stdout","Converting PMP from JSON to SDP format\n"];
     Run[StringRiffle[{
-        FileNameJoin[{executablesPath,"pvm2sdp"}],
-        ToString[prec], sdpFile, sdpFolder
+        FileNameJoin[{executablesPath,"pmp2sdp"}],
+        ToString[prec], pmpFile, sdpFolder
     }," "]];
     WriteString["stdout","Running sdpb\n"];
     Run[StringRiffle[{
         "mpirun",
         FileNameJoin[{executablesPath,"sdpb"}],
         "-s", sdpFolder, "-o", outFolder,
-        "--procsPerNode", "6",
         "--precision", ToString[prec],
         "--findPrimalFeasible",
         "--findDualFeasible",

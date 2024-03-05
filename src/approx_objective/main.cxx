@@ -1,8 +1,7 @@
-#include "Approx_Parameters.hxx"
 #include "Approx_Objective.hxx"
-#include "../sdp_solve.hxx"
-
-#include "../set_stream_precision.hxx"
+#include "Approx_Parameters.hxx"
+#include "sdp_solve/sdp_solve.hxx"
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 
 #include <El.hpp>
 
@@ -36,7 +35,7 @@ quadratic_approximate_objectives(
 
 int main(int argc, char **argv)
 {
-  El::Environment env(argc, argv);
+  Environment env(argc, argv);
 
   try
     {
@@ -46,12 +45,13 @@ int main(int argc, char **argv)
           return 0;
         }
       El::gmp::SetPrecision(parameters.precision);
-      Block_Info block_info(parameters.sdp_path, parameters.solution_dir,
-                            parameters.procs_per_node,
+      Block_Info block_info(env, parameters.sdp_path, parameters.solution_dir,
                             parameters.proc_granularity, Verbosity::none);
 
       El::Grid grid(block_info.mpi_comm.value);
-      SDP sdp(parameters.sdp_path, block_info, grid);
+      // TODO use timers also below
+      Timers timers(env, false);
+      SDP sdp(parameters.sdp_path, block_info, grid, timers);
 
       std::vector<size_t> block_offsets(sdp.free_var_matrix.blocks.size() + 1,
                                         0);

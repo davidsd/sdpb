@@ -1,4 +1,4 @@
-#include "../../../../Block_Diagonal_Matrix.hxx"
+#include "sdp_solve/Block_Diagonal_Matrix.hxx"
 
 // Minimum eigenvalue of A.  A is assumed to be symmetric.
 
