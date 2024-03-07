@@ -59,10 +59,10 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
                                               Block_Vector &primal_residue_p,
                                               El::BigFloat &primal_error_p);
 
-SDP_Solver_Terminate_Reason
-SDP_Solver::run(const Solver_Parameters &parameters,
-                const Verbosity &verbosity,
-                const boost::property_tree::ptree &parameter_properties,
+SDP_Solver_Terminate_Reason SDP_Solver::run(
+  const Environment &env, const Solver_Parameters &parameters,
+  const Verbosity &verbosity,
+  const boost::property_tree::ptree &parameter_properties,
   const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
   const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time,
   Timers &timers)
@@ -126,6 +126,16 @@ SDP_Solver::run(const Solver_Parameters &parameters,
           El::Output("Start iteration ", iteration, " at ",
                      boost::posix_time::second_clock::local_time());
         }
+
+      // Prepare graceful exit if any process has received SIGTERM
+      {
+        El::byte sigterm = env.sigterm_received();
+        sigterm = El::mpi::AllReduce(sigterm, El::mpi::LOGICAL_OR,
+                                     El::mpi::COMM_WORLD);
+        if(sigterm)
+          return SDP_Solver_Terminate_Reason::SIGTERM_Received;
+      }
+
       El::byte checkpoint_now(
         std::chrono::duration_cast<std::chrono::seconds>(
           std::chrono::high_resolution_clock::now() - last_checkpoint_time)
