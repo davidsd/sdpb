@@ -16,6 +16,11 @@ if(UNIX)
         set(CMAKE_PREFIX_PATH "/usr/lib64" ${CMAKE_PREFIX_PATH})
 endif()
 
+# Specific definition for an issue with boost/stacktrace when building on macOS. See https://github.com/boostorg/stacktrace/issues/88 and comments therein.
+if(APPLE)
+  add_compile_definitions(_GNU_SOURCE)
+endif()
+
 # cxx 17
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
