@@ -43,7 +43,7 @@
 // int y = 2;
 // ASSERT_EQUAL(x,y) // Assertion 'x == y' failed: x='1' x='2'
 #define ASSERT_EQUAL(a, b, ...)                                               \
-  ASSERT(a == b, DEBUG_STRING(a), "\n    ", DEBUG_STRING(b), "\n    ",        \
+  ASSERT((a) == (b), DEBUG_STRING(a), "\n    ", DEBUG_STRING(b), "\n    ",    \
          El::BuildString(__VA_ARGS__))
 
 #define PRINT_WARNING(...)                                                    \
