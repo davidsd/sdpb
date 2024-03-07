@@ -183,29 +183,29 @@ include(FeatureSummary)
 
 # Elemental
 # ---------
-find_package(Elemental REQUIRED)
-# find_path(Elemental_INCLUDES El.hpp
-#         PATHS /usr/include /usr/local/include ${CMAKE_PREFIX_PATH}
-# )
+find_package(Elemental QUIET)
+find_path(Elemental_INCLUDES El.hpp
+        PATHS /usr/include /usr/local/include ${Elemental_DIR}
+)
 
-# find_library(Elemental_LIBRARIES El
-#         PATHS /usr/lib64 /usr/local/lib ${CMAKE_PREFIX_PATH}
-# )
+find_library(Elemental_LIBRARIES El
+        PATHS /usr/lib /usr/local/lib ${Elemental_DIR}
+)
 
-# if (Elemental_INCLUDES AND Elemental_LIBRARIES)
-#         set(Elemental_FOUND TRUE)
-# endif ()
+if (Elemental_INCLUDES AND Elemental_LIBRARIES)
+        set(Elemental_FOUND TRUE)
+endif ()
 
-# if (Elemental_FOUND)
-#         if (NOT Elemental_FIND_QUIETLY)
-#                 message(STATUS "Found El: ${Elemental_LIBRARIES}")
-#         endif ()
-# else ()
-#         if (Elemental_FIND_REQUIRED)
-#                 message(FATAL_ERROR "Could not find Elemental")
-#         endif ()
-# endif ()
-# mark_as_advanced(Elemental_INCLUDES Elemental_LIBRARIES)
+if (Elemental_FOUND)
+        if (NOT Elemental_FIND_QUIETLY)
+                message(STATUS "Found El: ${Elemental_LIBRARIES}")
+        endif ()
+else ()
+        if (Elemental_FIND_REQUIRED)
+                message(FATAL_ERROR "Could not find Elemental")
+        endif ()
+endif ()
+mark_as_advanced(Elemental_INCLUDES Elemental_LIBRARIES)
 
 if(Elemental_FOUND AND Elemental_INCLUDE_DIRS)
     include_directories(${Elemental_INCLUDE_DIRS})
@@ -214,8 +214,8 @@ endif()
 message(STATUS "El version: ${Elemental_VERSION}")
 message(STATUS "Found Elemental: ${Elemental_LIBRARIES}")
 # find_library(El El PATHS ${Elemental_DIR} REQUIRED)
-find_library(PMRRR_LIBRARIES pmrrr PATHS ${Elemental_DIR}/external/pmrrr REQUIRED)
-find_library(ELSUITESPARSE_LIBRARIES ElSuiteSparse PATHS ${Elemental_DIR}/external/suite_sparse REQUIRED)
+find_library(PMRRR_LIBRARIES pmrrr PATHS ${Elemental_DIR} ${Elemental_DIR}/external/pmrrr REQUIRED)
+find_library(ELSUITESPARSE_LIBRARIES ElSuiteSparse PATHS ${Elemental_DIR} ${Elemental_DIR}/external/suite_sparse REQUIRED)
 list(APPEND Elemental_LIBRARIES ${PMRRR_LIBRARIES})
 list(APPEND Elemental_LIBRARIES ${ELSUITESPARSE_LIBRARIES})
 message(STATUS "Elemental Libraries - ${Elemental_LIBRARIES}")
