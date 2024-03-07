@@ -2,6 +2,19 @@
 
 #include "assert.hxx"
 
+#include <csignal>
+
+namespace
+{
+  bool sigterm_flag = false;
+
+  void handle_sigterm(int signal)
+  {
+    ASSERT_EQUAL(signal, SIGTERM);
+    sigterm_flag = true;
+  }
+}
+
 Environment::Environment() : Environment(0, nullptr) {}
 Environment::Environment(int argc, char **argv) : env(argc, argv)
 {
@@ -19,9 +32,18 @@ int Environment::node_index() const
 {
   return _node_index;
 }
+// NB: This function could be made static, but it makes no sense to call it
+// without constructing Environment instance and subscribing to SIGTERM.
+bool Environment::sigterm_received() const
+{
+  return sigterm_flag;
+}
 
 void Environment::initialize()
 {
+  // Subscribe to SIGTERM
+  std::signal(SIGTERM, handle_sigterm);
+
   MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
                       &comm_shared_mem.comm);
 

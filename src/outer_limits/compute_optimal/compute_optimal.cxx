@@ -276,7 +276,8 @@ std::vector<El::BigFloat> compute_optimal(
              || reason == SDP_Solver_Terminate_Reason::MaxIterationsExceeded
              || reason == SDP_Solver_Terminate_Reason::MaxRuntimeExceeded
              || reason == SDP_Solver_Terminate_Reason::PrimalStepTooSmall
-             || reason == SDP_Solver_Terminate_Reason::DualStepTooSmall)
+             || reason == SDP_Solver_Terminate_Reason::DualStepTooSmall
+             || reason == SDP_Solver_Terminate_Reason::SIGTERM_Received)
             {
               RUNTIME_ERROR("Cannot find solution: ", reason);
             }

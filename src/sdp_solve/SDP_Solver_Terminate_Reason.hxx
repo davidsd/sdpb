@@ -17,6 +17,7 @@ enum class SDP_Solver_Terminate_Reason
   MaxRuntimeExceeded,
   PrimalStepTooSmall,
   DualStepTooSmall,
+  SIGTERM_Received,
 };
 
 std::ostream &

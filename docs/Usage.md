@@ -266,13 +266,6 @@ sdpb -s path/to/sdp_dir <...>
 This may happen on some filesystems if SDP contains too many block files. Run `pmp2sdp` with `--zip` flag to put
 everything into a single zip archive.
 
-### Spectrum does not work in parallel
-
-See https://github.com/davidsd/sdpb/issues/152.
-
-If this happens, replace, e.g. `mpirun -n 6  build/spectrum <...>` with `mpirun -n 1  build/spectrum <...>` or
-simply `build/spectrum <...>`.
-
 ### Spectrum does not find zeros
 
 Try to set `--threshold` option for `spectrum` larger than `--dualityGapThreshold` for `sdpb`.

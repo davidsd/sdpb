@@ -1,4 +1,5 @@
 #include "../SDP_Solver_Terminate_Reason.hxx"
+#include "sdpb_util/assert.hxx"
 
 std::ostream &
 operator<<(std::ostream &os, const SDP_Solver_Terminate_Reason &r)
@@ -35,6 +36,10 @@ operator<<(std::ostream &os, const SDP_Solver_Terminate_Reason &r)
     case SDP_Solver_Terminate_Reason::DualStepTooSmall:
       os << "dual step too small";
       break;
+    case SDP_Solver_Terminate_Reason::SIGTERM_Received:
+      os << "SIGTERM signal received";
+      break;
+    default: RUNTIME_ERROR("Unknown SDP_Solver_Terminate_Reason=", r);
     }
   return os;
 }
