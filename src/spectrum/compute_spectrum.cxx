@@ -15,8 +15,6 @@ compute_spectrum(const Polynomial_Matrix_Program &pmp,
 {
   std::vector<El::BigFloat> normalization;
   if(pmp.normalization.has_value())
-    normalization = pmp.normalization.value();
-  if(pmp.normalization.has_value())
     {
       normalization = pmp.normalization.value();
     }
