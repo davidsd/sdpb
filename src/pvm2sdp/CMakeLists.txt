@@ -14,3 +14,4 @@ target_link_libraries(pvm2sdp
                         dl
                         sdpb_util
                         pmp_read)
+install(TARGETS pvm2sdp RUNTIME)

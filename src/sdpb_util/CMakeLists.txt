@@ -9,3 +9,4 @@ target_sources(sdpb_util
                 Timers/Timer.cxx
                 Timers/Timers.cxx)
 target_link_libraries(sdpb_util PUBLIC ${GMPXX_LIBRARIES} Boost::iostreams Boost::serialization Boost::filesystem ${Elemental_LIBRARIES})
+install(TARGETS sdpb_util LIBRARY)

@@ -14,3 +14,4 @@ target_link_libraries(sdp2input
                         pmp_read 
                         pmp2sdp_lib
                         sdpb_util)
+install(TARGETS sdp2input RUNTIME)

@@ -17,3 +17,4 @@ target_link_libraries(spectrum
                         sdp_solve
                         pmp2sdp_lib
                         sdpb_util)
+install(TARGETS spectrum RUNTIME)

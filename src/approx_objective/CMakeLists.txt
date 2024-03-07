@@ -16,3 +16,4 @@ target_link_libraries(approx_objective
                         ${USE_PACKAGES}
                         pmp_read
                         sdp_solve)
+install(TARGETS approx_objective RUNTIME)

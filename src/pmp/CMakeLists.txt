@@ -13,3 +13,4 @@ target_sources(pmp
                 convert/bilinear_basis/bilinear_form/derivative.cxx
                 convert/bilinear_basis/bilinear_form/operator_plus_set_Derivative_Term.cxx)
 target_link_libraries(pmp PUBLIC ${USE_PACKAGES})
+install(TARGETS pmp LIBRARY)

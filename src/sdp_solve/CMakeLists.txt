@@ -68,3 +68,4 @@ target_link_libraries(sdp_solve
                         dl
                         sdpb_util
                         pmp2sdp_lib)
+install(TARGETS sdp_solve LIBRARY)

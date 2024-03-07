@@ -19,3 +19,4 @@ target_sources(pmp_read
                 read_xml/Xml_Parser/on_end_element.cxx
                 read_xml/Xml_Parser/on_characters.cxx)
 target_link_libraries(pmp_read PUBLIC ${USE_PACKAGES} pmp pmp2sdp_lib)
+install(TARGETS pmp_read LIBRARY)

@@ -281,6 +281,7 @@ target_link_libraries(pmp2sdp
                         pmp 
                         pmp_read 
                         pmp2sdp_lib)
+  install(TARGETS pmp2sdp RUNTIME)
 
 add_subdirectory(src/pmp2functions)
 

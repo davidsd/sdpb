@@ -24,4 +24,5 @@ target_sources(outer_limits
                 Outer_Parameters/Outer_Parameters.cxx
                 Outer_Parameters/to_property_tree.cxx
                 Outer_Parameters/ostream.cxx)
-target_link_libraries(outer_limits PRIVATE ${USE_PACKAGES} sdpb_util pmp_read sdp_solve) 
+target_link_libraries(outer_limits PRIVATE ${USE_PACKAGES} sdpb_util pmp_read sdp_solve)
+install(TARGETS outer_limits RUNTIME) 

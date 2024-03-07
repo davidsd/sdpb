@@ -15,3 +15,4 @@ target_link_libraries(pmp2functions
                         dl
                         sdpb_util
                         pmp_read)
+install(TARGETS pmp2functions RUNTIME)

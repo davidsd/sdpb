@@ -14,3 +14,4 @@ target_link_libraries(sdpb
                         Boost::serialization
                         sdpb_util
                         sdp_solve)
+install(TARGETS sdpb RUNTIME)
