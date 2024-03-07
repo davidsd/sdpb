@@ -82,7 +82,7 @@ namespace
 BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
   const El::mpi::Comm &shared_memory_comm, const size_t group_index,
   const std::vector<int> &group_comm_sizes, const mp_bitcnt_t precision,
-  const size_t max_shared_memory_bytes,
+  size_t max_shared_memory_bytes,
   const std::vector<El::Int> &blocks_height_per_group, const int block_width,
   const std::vector<size_t> &block_index_local_to_global, const bool debug,
   const std::function<Blas_Job_Schedule(
@@ -104,6 +104,8 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
   std::vector<int> input_window_height_per_group_per_prime(num_groups);
   size_t window_width;
 
+  if(max_shared_memory_bytes == 0)
+    max_shared_memory_bytes = std::numeric_limits<size_t>::max();
   // Each extra split for output window leads to more reduce-scatter calls.
   // Thus, we try to find minimal output_window_split_factor
   // that allows to fit all shared windows into memory
