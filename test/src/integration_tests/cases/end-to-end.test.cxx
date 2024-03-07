@@ -191,7 +191,7 @@ TEST_CASE("end-to-end_tests")
         "--checkpointInterval 3600 --maxIterations 1000 "
         "--feasibleCenteringParameter=0.1 --infeasibleCenteringParameter=0.3 "
         "--stepLengthReduction=0.7 "
-        "--maxSharedMemory=1M"; // forces split_factor=4 for P window
+        "--maxSharedMemory=100K"; // forces split_factor=3 for Q window
     for(std::string sdp_format : {"", "bin", "json"})
       {
         DYNAMIC_SECTION(
@@ -244,7 +244,7 @@ TEST_CASE("end-to-end_tests")
         "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
         "--procGranularity 1 --writeSolution y,z "
         "--detectPrimalFeasibleJump --detectDualFeasibleJump "
-        "--maxSharedMemory=1M"; // forces split_factor=6 for P window
+        "--maxSharedMemory=100K"; // forces split_factor=3 for Q window
 
     SECTION("primal_feasible_jump")
     {

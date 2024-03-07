@@ -1,14 +1,14 @@
 #pragma once
 
-#include "fmpz/Fmpz_Comb.hxx"
-#include "fmpz/fmpz_mul_blas_util.hxx"
+#include "../fmpz/Fmpz_Comb.hxx"
+#include "../fmpz/fmpz_mul_blas_util.hxx"
 #include "sdpb_util/assert.hxx"
 
 #include <El.hpp>
 #include <flint/nmod.h>
 
 inline void
-restore_matrix_from_residues(const Residue_Matrices_Window<double> &window,
+restore_bigint_from_residues(const Residue_Matrices_Window<double> &window,
                              size_t i, size_t j, Fmpz_Comb &comb,
                              Fmpz_BigInt &output)
 {

@@ -11,11 +11,10 @@
 
 using Test_Util::REQUIRE_Equal::diff;
 
-Blas_Job_Schedule
-create_blas_job_schedule_split_remaining_primes(size_t num_ranks,
-                                                size_t num_primes,
-                                                El::Int output_matrix_height,
-                                                size_t split_factor);
+Blas_Job_Schedule create_blas_job_schedule_split_remaining_primes(
+  Blas_Job::Kind kind, El::UpperOrLower uplo, size_t num_ranks,
+  size_t num_primes, El::Int output_matrix_height, El::Int output_matrix_width,
+  size_t split_factor);
 
 // Helper functions for calculating Q = P^T P
 // using different methods
@@ -111,19 +110,44 @@ TEST_CASE("calculate_Block_Matrix_square")
   {
     int total_block_height = GENERATE(1, 10, 100, 1000);
     auto block_heights = Test_Util::random_split(total_block_height);
+    CAPTURE(block_heights);
     size_t num_blocks = block_heights.size();
 
+    auto num_primes = Fmpz_Comb(El::gmp::Precision(), El::gmp::Precision(), 1,
+                                total_block_height)
+                        .num_primes;
+
     size_t max_shared_memory_bytes
-      = GENERATE(std::numeric_limits<size_t>::max(), 0);
-    // Workaround for compilation failing at max_shared_memory_bytes = GENERATE(block_width)
-    if(max_shared_memory_bytes == 0)
+      = GENERATE(std::numeric_limits<size_t>::max(), 1, 0);
+    // We cannot use variables inside GENERATE, e.g. max_shared_memory_bytes = GENERATE(block_width)
+    // Thus we set them below:
+    INFO((max_shared_memory_bytes == 0
+            ? "Splitting both P and Q memory windows"
+          : max_shared_memory_bytes == 1 ? "Splitting P memory window"
+                                         : "Do not split memory windows"));
+    if(max_shared_memory_bytes == 1)
       {
-        auto num_primes = Fmpz_Comb(El::gmp::Precision(), El::gmp::Precision(),
-                                    1, total_block_height)
-                            .num_primes;
-        // Allow memory for the whole output window + for three rows of input window per each MPI rank
+        // Do not split output window
+        size_t output_window_height = block_width;
+        size_t output_window_width = output_window_height;
+        // Input window will have 3 rows per MPI group
+        size_t input_window_height = 3 * El::mpi::Size();
+        size_t input_window_width = block_width;
+        max_shared_memory_bytes = (output_window_height * output_window_width
+                                   + input_window_height * input_window_width)
+                                  * num_primes * sizeof(double);
+      }
+    else if(max_shared_memory_bytes == 0)
+      {
+        // Split output window by 3x3 submatrices
+        size_t output_window_height = std::ceil(block_width / 3.0);
+        size_t output_window_width = output_window_height;
+        // Two identical input windows of minimal size, i.e. one row per MPI group
+        size_t input_window_height = El::mpi::Size();
+        size_t input_window_width = output_window_width;
         max_shared_memory_bytes
-          = (block_width * block_width + 3 * block_width * El::mpi::Size())
+          = (output_window_height * output_window_width
+             + 2 * input_window_height * input_window_width)
             * num_primes * sizeof(double);
       }
 
@@ -258,13 +282,15 @@ TEST_CASE("calculate_Block_Matrix_square")
 
               El::UpperOrLower uplo = El::UpperOrLowerNS::UPPER;
 
-              auto create_job_schedule = [&blas_schedule_split_factor](
-                                           size_t num_ranks, size_t num_primes,
-                                           int output_width, bool debug) {
-                return create_blas_job_schedule_split_remaining_primes(
-                  num_ranks, num_primes, output_width,
-                  blas_schedule_split_factor);
-              };
+              auto create_job_schedule
+                = [&blas_schedule_split_factor](
+                    Blas_Job::Kind kind, El::UpperOrLower uplo,
+                    size_t num_ranks, size_t num_primes, int output_height,
+                    int output_width, bool debug) {
+                    return create_blas_job_schedule_split_remaining_primes(
+                      kind, uplo, num_ranks, num_primes, output_height,
+                      output_width, blas_schedule_split_factor);
+                  };
 
               // TODO refactor
               auto group_comm
@@ -283,17 +309,22 @@ TEST_CASE("calculate_Block_Matrix_square")
               El::mpi::AllReduce(blocks_height_per_group.data(), num_groups,
                                  El::mpi::COMM_WORLD);
 
-              BigInt_Shared_Memory_Syrk_Context context(
-                comm, group_index, group_comm_sizes, bits,
-                max_shared_memory_bytes, blocks_height_per_group, block_width,
-                block_indices, false, create_job_schedule);
+              {
+                const bool debug = false;
+                BigInt_Shared_Memory_Syrk_Context context(
+                  comm, group_index, group_comm_sizes, bits,
+                  max_shared_memory_bytes, blocks_height_per_group,
+                  block_width, block_indices, debug, create_job_schedule);
 
-              Timers timers;
-              El::Matrix<int32_t> block_timings_ms(num_blocks, 1);
-              context.bigint_syrk_blas(uplo, P_matrix_blocks, Q_result, timers,
-                                       block_timings_ms);
+                Timers timers;
+                El::Matrix<int32_t> block_timings_ms(num_blocks, 1);
+                context.bigint_syrk_blas(uplo, P_matrix_blocks, Q_result,
+                                         timers, block_timings_ms);
+              }
               {
                 INFO("Check that normalized Q_ii = 1:");
+                // TODO: if check fails only on some rank!=0,
+                // rank=0 will hang, waiting for
                 for(int iLoc = 0; iLoc < Q_result.LocalHeight(); ++iLoc)
                   for(int jLoc = 0; jLoc < Q_result.LocalWidth(); ++jLoc)
                     {

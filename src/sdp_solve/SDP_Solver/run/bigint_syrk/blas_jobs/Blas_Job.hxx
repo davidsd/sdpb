@@ -1,7 +1,6 @@
 #pragma once
 
 #include <El.hpp>
-#include <ostream>
 
 // Job for calculating submatrix Q_IJ = P_I^T P_J modulo given prime
 // I and J are contiguous ranges, e.g. I=[0,3), J=[6,9)

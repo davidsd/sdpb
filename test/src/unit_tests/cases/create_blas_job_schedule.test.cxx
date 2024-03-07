@@ -20,8 +20,11 @@ TEST_CASE("create_blas_jobs_schedule")
   DYNAMIC_SECTION("num_ranks=" << num_ranks << " num_primes=" << num_primes
                                << " Q_height=" << Q_height)
   {
-    auto schedule
-      = create_blas_job_schedule(num_ranks, num_primes, Q_height, false);
+    const auto Q_width = Q_height;
+    // TODO test also gemm
+    constexpr auto uplo = El::UPPER;
+    auto schedule = create_blas_job_schedule(
+      Blas_Job::syrk, uplo, num_ranks, num_primes, Q_height, Q_width, false);
     {
       INFO("Check that schedule has correct number of ranks:");
       DIFF(schedule.jobs_by_rank.size(), num_ranks);
@@ -32,6 +35,12 @@ TEST_CASE("create_blas_jobs_schedule")
     for(const auto &jobs : schedule.jobs_by_rank)
       for(const auto &job : jobs)
         {
+          if(job.I.beg != job.J.beg)
+            {
+              INFO(job.I.beg);
+              INFO(job.J.beg);
+              REQUIRE((job.I.beg < job.J.beg) == (uplo == El::UPPER));
+            }
           total_cost += job.cost;
           num_jobs++;
         }

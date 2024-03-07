@@ -61,10 +61,11 @@ Blas_Job::Blas_Job(Kind kind, size_t prime_index, const El::Range<El::Int> &I,
   for(const auto &range : {I, J})
     {
       ASSERT(range.beg >= 0);
-      ASSERT(range.end > range.beg);
+      ASSERT(range.end > range.beg, DEBUG_STRING(range.beg),
+             DEBUG_STRING(range.end));
     }
 
-  // Diagonal blocks must be square!
-  if(I.beg == J.beg)
-    ASSERT_EQUAL(I.end, J.end);
+  // Diagonal blocks for syrk must be square!
+  if(kind == syrk && I.beg == J.beg)
+    ASSERT_EQUAL(I.end, J.end, DEBUG_STRING(I.beg));
 }

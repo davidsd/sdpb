@@ -77,7 +77,7 @@ In turn, Q is `DistMatrix<BigFloat>` distributed over all cores.
 
 In the old SDPB algorithm, each core (or group of cores, if `procGranularity > 1`) was calculating a contribution to Q (
 called `Q_group`) from its blocks. Adding up all Q_groups, one got the resulting Q
-(see [reduce_scatter_DistMatrix.hxx](reduce_scatter_DistMatrix.hxx), previously called `synchronize_Q`).
+(see [reduce_scatter_DistMatrix.hxx](BigInt_Shared_Memory_Syrk_Context/reduce_scatter_DistMatrix.hxx), previously called `synchronize_Q`).
 
 This is inefficient in terms of memory, since we allocate memory for `Q_group` for each group of cores.
 
@@ -85,7 +85,7 @@ Now we can avoid this duplication, if all cores on a single node are working tog
 using [MPI shared memory window](https://docs.open-mpi.org/en/v5.0.x/man-openmpi/man3/MPI_Win_allocate_shared.3.html).
 
 The parallel algorithm goes as follows (see [compute_Q](../step/initialize_schur_complement_solver/compute_Q.cxx)
-and [bigint_syrk_blas](bigint_syrk_blas.cxx) functions):
+and [bigint_syrk_blas](BigInt_Shared_Memory_Syrk_Context/bigint_syrk_blas.cxx) functions):
 
 1. Choose a set of primes. This is done only once at SDPB start,
    see [initialize_bigint_syrk_context](initialize_bigint_syrk_context.hxx).
@@ -121,11 +121,11 @@ several `cblas_dsyrk()`/`cblas_dgemm()` calls, if Q is split into blocks for bet
    stored e.g. on core 1, this core restores its value from the `Residue_Matrices_Window` using CRT.
 7. Reduce-scatter: calculate global Q, which is `DistMatrix<BigFloat>` distributed over all cores, as a sum of all
    Q_groups.
-   See [reduce_scatter_DistMatrix.hxx](reduce_scatter_DistMatrix.hxx).
+   See [reduce_scatter_DistMatrix.hxx](BigInt_Shared_Memory_Syrk_Context/reduce_scatter_DistMatrix.hxx).
 8. Restore Q (see `Matrix_Normalizer.restore_Q`), i.e. divide by 2^2N and remove normalization.
 
 Steps 2, 3 and 8 are performed in [compute_Q()](../step/initialize_schur_complement_solver/compute_Q.cxx) function,
-steps 4-7 - in [BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas()](bigint_syrk_blas.cxx) function.
+steps 4-7 - in [BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas()](BigInt_Shared_Memory_Syrk_Context/bigint_syrk_blas.cxx) function.
 
 ## Performance and memory optimizations
 
@@ -223,7 +223,7 @@ If we write residues to the shared memory window one by one, it can be rather sl
 
 To optimize it, we compute residues for contiguous memory area (i.e. residues module single prime for each column of a
 single block or several consecutive blocks) locally, and then `memcpy` them to the window.
-See [compute_block_residues.cxx](compute_block_residues.cxx).
+See [compute_block_residues.cxx](BigInt_Shared_Memory_Syrk_Context/compute_block_residues.cxx).
 
 **TODO**: currently, each block are stored in `DistMatrix<BigFloat, MC, MR>`, which means that both columns and rows are
 distributed among 2D process grid.

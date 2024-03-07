@@ -7,40 +7,21 @@
 #include "Residue_Matrices_Window.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
-// TODO rename
-struct BigInt_Shared_Memory_Syrk_Context : boost::noncopyable
-{
-  El::mpi::Comm shared_memory_comm;
-  // Index of MPI group on a node
-  size_t group_index;
-  // Sizes of MPI groups on a node
-  const std::vector<int> &group_comm_sizes;
-  // Number of MPI groups on a node
-  size_t num_groups;
-  int total_block_height_per_node;
-  Fmpz_Comb comb;
-  // All blocks from each MPI group are combined
-  // into a single block in Block_Residue_Matrices_Window
-  std::unique_ptr<Block_Residue_Matrices_Window<double>>
-    input_grouped_block_residues_window;
-  // How many times we should fill input window
-  // to process all blocks:
-  // (should be same for all ranks)
-  size_t input_window_split_factor = 0;
-  Residue_Matrices_Window<double> output_residues_window;
-  const std::vector<size_t> block_index_local_to_global;
-  const Blas_Job_Schedule blas_job_schedule;
+#include <memory>
+#include <vector>
 
-  void clear_residues();
+class BigInt_Shared_Memory_Syrk_Context : boost::noncopyable
+{
+public:
   BigInt_Shared_Memory_Syrk_Context(
     const El::mpi::Comm &shared_memory_comm, size_t group_index,
     const std::vector<int> &group_comm_sizes, mp_bitcnt_t precision,
     size_t max_shared_memory_bytes,
     const std::vector<El::Int> &blocks_height_per_group, int block_width,
     const std::vector<size_t> &block_index_local_to_global, bool debug,
-    const std::function<Blas_Job_Schedule(size_t num_ranks, size_t num_primes,
-                                          int output_width, bool debug)>
-      &create_job_schedule
+    const std::function<Blas_Job_Schedule(
+      Blas_Job::Kind kind,El::UpperOrLower uplo, size_t num_ranks, size_t num_primes,
+      int output_height, int output_width, bool debug)> &create_job_schedule
     = create_blas_job_schedule);
 
   // Calculate Q := P^T P
@@ -68,15 +49,54 @@ struct BigInt_Shared_Memory_Syrk_Context : boost::noncopyable
                         Timers &timers, El::Matrix<int32_t> &block_timings_ms);
 
 private:
-  void compute_block_residues(
-    const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
-    El::Int skip_rows, Timers &timers, El::Matrix<int32_t> &block_timings_ms);
+  El::mpi::Comm shared_memory_comm;
+  // Index of MPI group on a node
+  size_t group_index;
+  // Sizes of MPI groups on a node
+  const std::vector<int> &group_comm_sizes;
+  // Number of MPI groups on a node
+  size_t num_groups;
+  int total_block_height_per_node;
+  Fmpz_Comb comb;
+  const bool debug;
+  // All blocks from each MPI group are combined
+  // into a single block in Block_Residue_Matrices_Window
+  std::unique_ptr<Block_Residue_Matrices_Window<double>>
+    input_grouped_block_residues_window_A;
+  std::unique_ptr<Block_Residue_Matrices_Window<double>>
+    input_grouped_block_residues_window_B;
+  // How many times we should fill input window
+  // to process all blocks:
+  // (should be same for all ranks)
+  size_t input_window_split_factor = 0;
+  size_t output_window_split_factor = 0;
+  std::unique_ptr<Residue_Matrices_Window<double>> output_residues_window;
+  const std::vector<size_t> block_index_local_to_global;
+  std::function<Blas_Job_Schedule(
+    Blas_Job::Kind kind, El::UpperOrLower uplo, size_t num_ranks,
+    size_t num_primes, int output_height, int output_width, bool debug)>
+    create_blas_job_schedule_func;
+  std::map<std::tuple<Blas_Job::Kind, El::UpperOrLower, El::Int, El::Int>,
+           std::shared_ptr<Blas_Job_Schedule>>
+    blas_job_schedule_cache;
 
-  void bigint_syrk_blas_shmem(
+  [[nodiscard]] std::shared_ptr<Blas_Job_Schedule>
+  get_blas_job_schedule(Blas_Job::Kind kind, El::UpperOrLower uplo,
+                        El::Int output_height, El::Int output_width);
+
+  void clear_residues(const Blas_Job_Schedule &blas_job_schedule);
+  void compute_block_residues(
+    Block_Residue_Matrices_Window<double> &grouped_block_residues_window,
+    const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
+    El::Int skip_rows, El::Range<El::Int> col_range, Timers &timers,
+    El::Matrix<int32_t> &block_timings_ms);
+
+  void bigint_syrk_blas_shmem_submatrix(
     El::UpperOrLower uplo,
     const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
-    El::DistMatrix<El::BigFloat> &bigint_output_shmem, Timers &timers,
-    El::Matrix<int32_t> &block_timings_ms);
+    El::DistMatrix<El::BigFloat> &bigint_output_shmem_submatrix,
+    const El::Range<El::Int> &output_I, const El::Range<El::Int> &output_J,
+    Timers &timers, El::Matrix<int32_t> &block_timings_ms);
 
   [[nodiscard]] El::Int input_group_height_per_prime() const;
 };

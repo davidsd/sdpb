@@ -1,6 +1,6 @@
-#include "BigInt_Shared_Memory_Syrk_Context.hxx"
-#include "fmpz/Fmpz_BigInt.hxx"
-#include "fmpz/fmpz_mul_blas_util.hxx"
+#include "../BigInt_Shared_Memory_Syrk_Context.hxx"
+#include "../fmpz/Fmpz_BigInt.hxx"
+#include "../fmpz/fmpz_mul_blas_util.hxx"
 #include "sdpb_util/assert.hxx"
 
 // compute residues and put them to shared window
@@ -209,16 +209,24 @@ namespace
 // If residues don't form a contiguous memory range (e.g. rank owns only half of the column elements),
 // then we calculate residues for each element separately and put them into shared memory window one by one.
 // See compute_column_residues_elementwise().
+//
+// We calculate first skip_rows rows,
+// and then fill the input window with as many remaining rows as we can
+// (if the window height is small, we have to call compute_block_residues() several times)
 void BigInt_Shared_Memory_Syrk_Context::compute_block_residues(
+  Block_Residue_Matrices_Window<double> &grouped_block_residues_window,
   const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
-  El::Int skip_rows, Timers &timers, El::Matrix<int32_t> &block_timings_ms)
+  El::Int skip_rows, El::Range<El::Int> col_range, Timers &timers,
+  El::Matrix<int32_t> &block_timings_ms)
 {
   Scoped_Timer compute_residues_timer(timers, "compute_residues");
   {
     Scoped_Timer compute_and_write_timer(timers, "compute_and_write");
-    const auto block_width = input_grouped_block_residues_window->width;
     // How many block rows we want to write to the window
     int target_height = input_group_height_per_prime();
+    int width = col_range.end - col_range.beg;
+    ASSERT(col_range.beg >= 0 && width > 0, DEBUG_STRING(col_range.beg),
+           DEBUG_STRING(col_range.end));
 
     // block_views contains subset of block rows that will be processed
     // in the current step.
@@ -237,8 +245,8 @@ void BigInt_Shared_Memory_Syrk_Context::compute_block_residues(
           }
         const int row_begin = skip_rows;
         const int row_end = std::min(height, row_begin + target_height);
-        block_views.emplace_back(block(El::Range<int>(row_begin, row_end),
-                                       El::Range<int>(0, block_width)));
+        block_views.emplace_back(
+          block(El::Range<int>(row_begin, row_end), col_range));
         skip_rows = 0;
         target_height -= row_end - row_begin;
       }
@@ -246,11 +254,11 @@ void BigInt_Shared_Memory_Syrk_Context::compute_block_residues(
       {
         // Fill remaining rows with zeros.
         // TODO: write zeros directly to residue window?
-        // Tha would be faster, but it's hardly a bottleneck.
+        // That would be faster, but it's hardly a bottleneck.
         // So we go with a simple solution for now.
         const auto &grid = bigint_input_matrix_blocks.at(0).Grid();
         auto &zero_block
-          = block_views.emplace_back(target_height, block_width, grid);
+          = block_views.emplace_back(target_height, width, grid);
         El::Zero(zero_block);
         target_height = 0;
       }
@@ -263,10 +271,10 @@ void BigInt_Shared_Memory_Syrk_Context::compute_block_residues(
       ASSERT_EQUAL(block_views_height, input_group_height_per_prime());
     }
 
-    for(int global_col = 0; global_col < block_width; ++global_col)
+    for(int global_col = 0; global_col < width; ++global_col)
       {
         compute_column_residues(group_index, block_views, global_col, comb,
-                                *input_grouped_block_residues_window);
+                                grouped_block_residues_window);
       }
 
     // Update block timings.
@@ -305,5 +313,5 @@ void BigInt_Shared_Memory_Syrk_Context::compute_block_residues(
 
   // wait for all ranks to fill input_block_residues_window
   Scoped_Timer fence_timer(timers, "fence");
-  input_grouped_block_residues_window->Fence();
+  grouped_block_residues_window.Fence();
 }
