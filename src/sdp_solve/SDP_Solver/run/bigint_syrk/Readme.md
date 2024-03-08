@@ -239,7 +239,7 @@ Possible solutions:
 2. Reorder rows of P matrix to ensure that rows coming from each rank are consecutive. NB: it can be non-trivial (and
    cause subtle bugs) when some blocks are owned by a single ranks and others are distributed.
 
-### Reducing memory usage (TODO: not implemented yet)
+### Reducing memory usage
 
 Storing (double-precision) residues of a BigFloat matrix requires ~4x more memory than the BigFloat matrix itself.
 For large problems, shared memory windows for P and/or Q do not fit into memory. Note also that sometimes HPC
@@ -251,9 +251,7 @@ If Q is too big, then one has to split it anyway.
 
 #### Splitting P
 
-Suppose that we set maximal window size for P to `H * block_width * num_primes * num_ranks`, where `num_ranks` is number
-of ranks on the node.
-This means residues only for `H` rows from each rank can fit into the window.
+If all residues do not fit into memory, then we choose split factor `s` and allow for each MPI group `g` to write only `H_g / s` rows at once to the window, where `H_g` is the total height of all blocks owned by this group.
 
 Then the matrix multiplication [algorithm](#going-parallel) should be modified as:
 
@@ -263,7 +261,7 @@ Then the matrix multiplication [algorithm](#going-parallel) should be modified a
 3. Normalize P and multiply by 2^N
 4. Fill Q window for with zeros.
 5. While not all rows of P are processed:
-   5.1 Each rank takes top H remaining rows from its blocks and writes their residues to the P window.
+   5.1 Each MPI group takes top (H_g/s) remaining rows from its blocks and writes their residues to the P window.
    5.2 Call BLAS jobs to update the Q window.
 6. Compute Q_group from the residues stored in the Q window.
 7. Reduce-scatter Q_group from all nodes to the global Q.
@@ -279,7 +277,7 @@ Splitting P saves memory, but introduces some extra overhead:
 - We make more BLAS calls (for smaller matrices), which should be less effective than fewer BLAS calls (for bigger
   matrices).
 
-P.S. One can also split P vertically and store residues only for several columns.
+P.S. One could also split P vertically and store residues only for several columns.
 But this would require to calculate residues for each element multiple times.
 
 #### Splitting Q
@@ -305,7 +303,7 @@ If we are splitting both P and Q memory windows, then the algorithm reads:
 4. For each i,j=1..M:
    4.1 Fill Q window for with zeros.
    4.2 While not all rows of P are processed:
-     4.2.1 Each rank takes top H remaining rows from its blocks and writes their residues (for corresponding columns) to the P window.
+     4.2.1 Each MPI group takes top (H_g/s) remaining rows from its blocks and writes their residues (for corresponding columns) to the P window.
      4.2.2 Call BLAS jobs to update Q window.
    4.3 Compute Q_group_ij from the residues stored in Q window.
    4.4 Reduce-scatter Q_group_ij from all nodes to the global Q_ij.
@@ -314,16 +312,18 @@ If we are splitting both P and Q memory windows, then the algorithm reads:
 
 #### How to choose split factors for P and Q
 
-1. Determine memory limit for shared memory windows. We can use our memory usage estimates together with `MemAvailable`
-   value from `/proc/meminfo`. We can also introduce new command-line argument for SDPB,
-   e.g. `--maxSharedMemory=128G`.
-2. Set limit to Q window, e.g. 50% of total limit.
-3. Choose minimal split factor for Q so that it fits into the memory limit for Q window.
-4. Choose minimal split factor for P so that it fits into remaining memory.
+1. Determine memory limit for shared memory windows. Currently, it is set by command-line option, e.g. `--maxSharedMemory=128G`.
+2. Choose minimal split factor for Q so that it fits into the memory limit (and leaves some room for P, namely 1 row per each MPI group).
+3. Choose minimal split factor for P so that it fits into remaining memory.
+
+**TODO**: in addition to `--maxSharedMemory`, we can also use our memory usage estimates together with `MemAvailable` value from `/proc/meminfo`.
 
 Note that our top priority is to minimize split factor for Q,
 because splitting Q introduces more significant overhead: (1) expensive reduce-scatter calls and (2) residues for each P
 element being calculated several times.
+
+Note also that split factor of Q should be the same for all nodes, since we perform global reduce-scatter for each submatrix of Q.
+At the same time, split factor for P differe among the nodes (but should be the same for all ranks on a node).
 
 ### Block distribution
 
