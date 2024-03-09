@@ -119,7 +119,9 @@ Dynamical_Solver_Terminate_Reason Dynamical_Solver::run_dynamical(
   Scoped_Timer initialize_bigint_syrk_context_timer(timers,
                                                     "bigint_syrk_context");
   auto bigint_syrk_context = initialize_bigint_syrk_context(
-    env, block_info, sdp, verbosity >= Verbosity::debug);
+    env, block_info, sdp,
+    dynamical_parameters.solver_parameters.max_shared_memory_bytes,
+    verbosity >= Verbosity::debug);
   initialize_bigint_syrk_context_timer.stop();
 
   initialize_timer.stop();
