@@ -7,7 +7,7 @@ namespace
   {
     Blas_Job::Cost cost{};
     for(const auto &job : jobs)
-      cost += job.cost();
+      cost += job.cost;
 
     return cost;
   }
@@ -15,7 +15,7 @@ namespace
   std::vector<std::vector<Blas_Job>>
   get_jobs_by_rank(size_t num_ranks, const std::vector<Blas_Job> &jobs)
   {
-    const auto get_job_cost = [](const Blas_Job &job) { return job.cost(); };
+    const auto get_job_cost = [](const Blas_Job &job) { return job.cost; };
     auto jobs_by_rank = LPT_scheduling<Blas_Job, Blas_Job::Cost>(
       num_ranks, jobs, get_job_cost);
 

@@ -1,135 +1,115 @@
+#pragma once
+
 #include "BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdp_solve/Block_Matrix.hxx"
 #include "sdp_solve/Block_Info.hxx"
 #include "sdp_solve/SDP.hxx"
 #include "sdpb_util/assert.hxx"
 
+// parent_comm is split into child_comms.
+// We assign child_index = [0..num_children) to each child_comm
+// and return {child_index, [child_comm.Size() for each child], num_children}
+inline std::tuple<size_t, std::vector<int>, size_t>
+get_child_index_sizes_and_count(const El::mpi::Comm &parent_comm,
+                                const El::mpi::Comm &child_comm)
+{
+  ASSERT(parent_comm.Size() > 0);
+  ASSERT(child_comm.Size() > 0);
+
+  size_t child_index = std::numeric_limits<size_t>::max();
+  size_t num_children = 0;
+  std::vector<int> child_comm_sizes;
+
+  size_t curr_index = 0;
+  for(int curr_rank = 0; curr_rank < parent_comm.Size(); ++curr_rank)
+    {
+      // When we are on the first rank of the parent, set index
+      if(curr_rank == parent_comm.Rank() && child_comm.Rank() == 0)
+        {
+          child_index = curr_index;
+          curr_index++;
+          child_comm_sizes.push_back(child_comm.Size());
+        }
+      // All ranks of a child_comm have the same index
+      El::mpi::Broadcast(child_index, 0, child_comm);
+      // Synchronize curr_index
+      El::mpi::Broadcast(curr_index, curr_rank, parent_comm);
+      // Synchronize child_comm_sizes
+      auto curr_child_index = curr_index - 1;
+      child_comm_sizes.resize(curr_child_index + 1, 0);
+      El::mpi::Broadcast(child_comm_sizes.at(curr_child_index), curr_rank,
+                         parent_comm);
+    }
+  num_children = curr_index;
+
+  ASSERT_EQUAL(child_comm_sizes.size(), num_children);
+  ASSERT(num_children > 0);
+  ASSERT(child_index < num_children, DEBUG_STRING(child_index),
+         DEBUG_STRING(num_children));
+  ASSERT_EQUAL(parent_comm.Size(),
+               std::accumulate(child_comm_sizes.begin(),
+                               child_comm_sizes.end(), (size_t)0));
+
+  return {child_index, child_comm_sizes, num_children};
+}
+
+struct Grouped_Block_Size_Info
+{
+  // All ranks on a node
+  El::mpi::Comm node_comm;
+  // node_comm is split into groups, each SDP block is assigned to one group
+  El::mpi::Comm group_comm;
+  // current group index in node, [0, num_groups)
+  size_t group_index;
+  // Number of groups on the node
+  size_t num_groups;
+  // Size of group_comm for each group
+  std::vector<int> group_comm_sizes;
+
+  size_t block_width;
+  // Total block height for blocks owned by a given group_comm
+  std::vector<El::Int> blocks_height_per_group;
+
+  [[nodiscard]]
+  Grouped_Block_Size_Info(const Environment &env, const Block_Info &block_info,
+                          const SDP &sdp)
+      : node_comm(env.comm_shared_mem), group_comm(block_info.mpi_comm.value)
+  {
+    block_width = sdp.dual_objective_b.Height(); // = N
+
+    std::tie(group_index, group_comm_sizes, num_groups)
+      = get_child_index_sizes_and_count(node_comm, group_comm);
+    blocks_height_per_group.resize(num_groups, 0);
+
+    for(size_t i = 0; i < num_groups; ++i)
+      {
+        if(i == group_index && group_comm.Rank() == 0)
+          {
+            // Total height for all blocks on group_comm.
+            // Since all ranks of group_comm share the same blocks,
+            // It's enough to calculate it on group root only.
+            blocks_height_per_group.at(i) = std::transform_reduce(
+              sdp.free_var_matrix.blocks.begin(),
+              sdp.free_var_matrix.blocks.end(), 0, std::plus{},
+              [](const auto &block) { return block.Height(); });
+          }
+      }
+    El::mpi::AllReduce(blocks_height_per_group.data(), num_groups,
+                       El::mpi::SUM, node_comm);
+  }
+};
+
 inline BigInt_Shared_Memory_Syrk_Context
 initialize_bigint_syrk_context(const Environment &env,
                                const Block_Info &block_info, const SDP &sdp,
-                               bool debug)
+                               const size_t max_shared_memory_bytes,
+                               const bool debug)
 {
-  int block_width = sdp.dual_objective_b.Height(); // = N
-
-  // Communicator for all ranks on a node
-  const auto &shared_memory_comm = env.comm_shared_mem;
-
-  auto num_ranks_per_node = El::mpi::Size(shared_memory_comm);
-
-  // Collect block heights and block indices from all ranks in shared_memory_comm
-  std::map<int, std::vector<size_t>> rank_to_global_block_indices;
-  std::map<int, std::vector<int>> rank_to_block_heights;
-  for(int rank = 0; rank < num_ranks_per_node; ++rank)
-    {
-      size_t num_blocks_in_rank = sdp.free_var_matrix.blocks.size();
-      ASSERT_EQUAL(num_blocks_in_rank, block_info.block_indices.size());
-      El::mpi::Broadcast(num_blocks_in_rank, rank, shared_memory_comm);
-
-      rank_to_global_block_indices.emplace(
-        rank, std::vector<size_t>(num_blocks_in_rank));
-      rank_to_block_heights.emplace(rank,
-                                    std::vector<int>(num_blocks_in_rank));
-
-      if(num_blocks_in_rank == 0)
-        continue;
-      if(El::mpi::Rank(shared_memory_comm) == rank)
-        {
-          rank_to_global_block_indices[rank] = block_info.block_indices;
-          for(size_t block_index = 0; block_index < num_blocks_in_rank;
-              ++block_index)
-            {
-              rank_to_block_heights[rank][block_index]
-                = sdp.free_var_matrix.blocks[block_index].Height();
-            }
-        }
-      ASSERT_EQUAL(num_blocks_in_rank,
-                   rank_to_global_block_indices[rank].size());
-      ASSERT_EQUAL(num_blocks_in_rank, rank_to_block_heights[rank].size());
-
-      El::mpi::Broadcast(rank_to_global_block_indices[rank].data(),
-                         num_blocks_in_rank, rank, shared_memory_comm);
-      El::mpi::Broadcast(rank_to_block_heights[rank].data(),
-                         num_blocks_in_rank, rank, shared_memory_comm);
-    }
-
-  // Introduce new block indices for all blocks on the node (shared_memory_comm).
-  //
-  // shmem_block_index should be consecutive for each rank,
-  // to allow for single memcpy for several blocks in compute_matrix_residues()
-  // e.g. rank 0 has blocks 0,1,2, rank 1 - blocks 3,4,5, ranks 3 and 4 share blocks 6 and 7 etc.
-  std::map<size_t, size_t> block_index_global_to_shmem;
-  std::vector<int> shmem_block_index_to_height;
-  size_t curr_shmem_block_index = 0;
-
-  for(int rank = 0; rank < num_ranks_per_node; ++rank)
-    {
-      for(size_t i = 0; i < rank_to_global_block_indices.at(rank).size(); ++i)
-        {
-          auto global_index = rank_to_global_block_indices.at(rank).at(i);
-          auto height = rank_to_block_heights.at(rank).at(i);
-
-          auto [it, inserted] = block_index_global_to_shmem.emplace(
-            global_index, curr_shmem_block_index);
-          // if block is shared among several ranks, we add it only once
-          if(inserted)
-            {
-              shmem_block_index_to_height.push_back(height);
-              curr_shmem_block_index++;
-            }
-          ASSERT_EQUAL(height,
-                       shmem_block_index_to_height.at(
-                         block_index_global_to_shmem.at(global_index)));
-        }
-    }
-
-  std::vector<size_t> block_index_local_to_shmem(
-    block_info.block_indices.size());
-  for(size_t local_index = 0; local_index < block_index_local_to_shmem.size();
-      ++local_index)
-    {
-      size_t global_index = block_info.block_indices[local_index];
-      size_t shmem_index = block_index_global_to_shmem[global_index];
-      block_index_local_to_shmem[local_index] = shmem_index;
-    }
-
-  // Print block indices and sizes
-  if(debug && El::mpi::Rank(shared_memory_comm) == 0)
-    {
-      std::ostringstream os;
-      El::BuildStream(
-        os, "initialize_bigint_syrk_context, node=", env.node_index(), "\n");
-
-      // global block indices on the node
-      std::vector<int> block_index_shmem_to_global(
-        block_index_global_to_shmem.size());
-      for(const auto &[global_index, shmem_index] :
-          block_index_global_to_shmem)
-        {
-          block_index_shmem_to_global.at(shmem_index) = global_index;
-        }
-      El::BuildStream(os, "Number of blocks on the node: ",
-                      block_index_shmem_to_global.size(), "\n");
-      El::Print(block_index_shmem_to_global,
-                "Block indices on the node: ", ", ", os);
-      os << "\n";
-
-      El::Print(shmem_block_index_to_height, "Blocks heights: ", ", ", os);
-      os << "\n";
-
-      auto total_height
-        = std::accumulate(shmem_block_index_to_height.begin(),
-                          shmem_block_index_to_height.end(), 0);
-      El::BuildStream(os, "Total block height: ", total_height, "\n");
-      El::BuildStream(os, "Block width: ", block_width, "\n");
-      El::BuildStream(os, "Total block elements: ", total_height * block_width,
-                      "\n");
-      El::BuildStream(os, "Total Q elements: ", block_width * block_width,
-                      "\n");
-
-      El::Output(os.str());
-    }
+  const Grouped_Block_Size_Info info(env, block_info, sdp);
 
   return BigInt_Shared_Memory_Syrk_Context(
-    shared_memory_comm, El::gmp::Precision(), shmem_block_index_to_height,
-    block_width, block_index_local_to_shmem, block_info.block_indices, debug);
+    env.comm_shared_mem, info.group_index, info.group_comm_sizes,
+    El::gmp::Precision(), max_shared_memory_bytes,
+    info.blocks_height_per_group, info.block_width, block_info.block_indices,
+    debug);
 }

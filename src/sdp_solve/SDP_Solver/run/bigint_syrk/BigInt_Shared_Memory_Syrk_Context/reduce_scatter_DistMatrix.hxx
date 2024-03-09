@@ -6,19 +6,17 @@
 #include <El.hpp>
 
 #include <algorithm>
+#include <optional>
 
-namespace
+inline void check_mpi_error(const int &mpi_error)
 {
-  void check_mpi_error(const int &mpi_error)
-  {
-    if(mpi_error != MPI_SUCCESS)
-      {
-        std::vector<char> error_string(MPI_MAX_ERROR_STRING);
-        int lengthOfErrorString;
-        MPI_Error_string(mpi_error, error_string.data(), &lengthOfErrorString);
-        RUNTIME_ERROR(std::string(error_string.data()));
-      }
-  }
+  if(mpi_error != MPI_SUCCESS)
+    {
+      std::vector<char> error_string(MPI_MAX_ERROR_STRING);
+      int lengthOfErrorString;
+      MPI_Error_string(mpi_error, error_string.data(), &lengthOfErrorString);
+      RUNTIME_ERROR(std::string(error_string.data()));
+    }
 }
 
 // input is a matrix distributed over all ranks on a node.
@@ -26,17 +24,34 @@ namespace
 // We set output = (sum of input from all nodes).
 inline void
 reduce_scatter(El::DistMatrix<El::BigFloat> &output,
-               const El::DistMatrix<El::BigFloat> &input, Timers &timers)
+               const El::DistMatrix<El::BigFloat> &input, Timers &timers,
+               const std::optional<El::UpperOrLower> &uplo = std::nullopt)
 {
   Scoped_Timer timer(timers, "reduce_scatter");
+
+  ASSERT_EQUAL(input.Height(), output.Height());
+  ASSERT_EQUAL(input.Width(), output.Width());
+
+  auto skip_element = [&uplo](auto row, auto column) {
+    if(uplo.has_value())
+      {
+        if(*uplo == El::UPPER && column < row)
+          return true;
+        if(*uplo == El::LOWER && row < column)
+          return true;
+      }
+    return false;
+  };
 
   const int total_ranks(El::mpi::Size(El::mpi::COMM_WORLD));
   // Special case serial case
   if(total_ranks == 1)
     {
       for(int64_t row = 0; row < input.Height(); ++row)
-        for(int64_t column = row; column < input.Height(); ++column)
+        for(int64_t column = 0; column < input.Width(); ++column)
           {
+            if(skip_element(row, column))
+              continue;
             output.SetLocal(
               output.LocalRow(row), output.LocalCol(column),
               input.GetLocal(input.LocalRow(row), input.LocalCol(column)));
@@ -61,8 +76,10 @@ reduce_scatter(El::DistMatrix<El::BigFloat> &output,
   // MPI uses 'int' for message sizes.
   std::vector<int> rank_sizes(total_ranks);
   for(int64_t row = 0; row < input.Height(); ++row)
-    for(int64_t column = row; column < input.Height(); ++column)
+    for(int64_t column = 0; column < input.Width(); ++column)
       {
+        if(skip_element(row, column))
+          continue;
         ++rank_sizes.at(output.Owner(row, column));
       }
 
@@ -91,8 +108,10 @@ reduce_scatter(El::DistMatrix<El::BigFloat> &output,
   {
     El::byte *insertion_point(send_receive[1].data());
     for(int64_t row = 0; row < input.Height(); ++row)
-      for(int64_t column = row; column < input.Height(); ++column)
+      for(int64_t column = 0; column < input.Width(); ++column)
         {
+          if(skip_element(row, column))
+            continue;
           if(output.Owner(row, column) == final_send_destination)
             {
               if(input.IsLocal(row, column))
@@ -143,8 +162,10 @@ reduce_scatter(El::DistMatrix<El::BigFloat> &output,
         auto &receive_then_send_buffer(send_receive[rank_offset % 2]);
         El::byte *current_receiving(receive_then_send_buffer.data());
         for(int64_t row = 0; row < input.Height(); ++row)
-          for(int64_t column = row; column < input.Height(); ++column)
+          for(int64_t column = 0; column < input.Width(); ++column)
             {
+              if(skip_element(row, column))
+                continue;
               if(output.Owner(row, column) == final_send_destination)
                 {
                   if(input.IsLocal(row, column))
@@ -171,8 +192,10 @@ reduce_scatter(El::DistMatrix<El::BigFloat> &output,
     MPI_Wait(&receive_requests[total_ranks % 2], MPI_STATUS_IGNORE));
   El::byte *current_receiving(send_receive[total_ranks % 2].data());
   for(int64_t row = 0; row < input.Height(); ++row)
-    for(int64_t column = row; column < input.Height(); ++column)
+    for(int64_t column = 0; column < input.Width(); ++column)
       {
+        if(skip_element(row, column))
+          continue;
         if(output.Owner(row, column) == rank)
           {
             El::BigFloat received;

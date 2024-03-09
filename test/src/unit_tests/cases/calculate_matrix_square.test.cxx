@@ -11,11 +11,10 @@
 
 using Test_Util::REQUIRE_Equal::diff;
 
-Blas_Job_Schedule
-create_blas_job_schedule_split_remaining_primes(size_t num_ranks,
-                                                size_t num_primes,
-                                                El::Int output_matrix_height,
-                                                size_t split_factor);
+Blas_Job_Schedule create_blas_job_schedule_split_remaining_primes(
+  Blas_Job::Kind kind, El::UpperOrLower uplo, size_t num_ranks,
+  size_t num_primes, El::Int output_matrix_height, El::Int output_matrix_width,
+  size_t split_factor);
 
 // Helper functions for calculating Q = P^T P
 // using different methods
@@ -67,8 +66,16 @@ namespace
     Fmpz_Matrix PT_bigint(PT);
     Fmpz_Matrix P_bigint(P);
     Fmpz_Matrix Q(P.Width(), P.Width());
-    fmpz_mat_mul_blas(Q.fmpz_matrix, PT_bigint.fmpz_matrix,
-                      P_bigint.fmpz_matrix);
+    if(fmpz_mat_mul_blas(Q.fmpz_matrix, PT_bigint.fmpz_matrix,
+                         P_bigint.fmpz_matrix)
+       == 0)
+      {
+        WARN(
+          "fmpz_mat_mul_blas() returned 0 (probably since FLINT was compiled "
+          "without BLAS), falling back to fmpz_mat_mul_multi_mod()");
+        fmpz_mat_mul_multi_mod(Q.fmpz_matrix, PT_bigint.fmpz_matrix,
+                               P_bigint.fmpz_matrix);
+      }
 
     El::Matrix<El::BigFloat> Q_result;
     Q.ToBigFloatMatrix(Q_result);
@@ -84,7 +91,7 @@ TEST_CASE("calculate_Block_Matrix_square")
   INFO("input: dense tall NxK matrix P, splitted horizontally into blocks");
   INFO("output: NxN matrix Q := P^T P");
   INFO("We calculate Q with different methods, including our bigint_syrk_blas,"
-       ", and compare the results.");
+       " and compare the results.");
 
   MPI_Comm comm;
   MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
@@ -103,10 +110,50 @@ TEST_CASE("calculate_Block_Matrix_square")
   {
     int total_block_height = GENERATE(1, 10, 100, 1000);
     auto block_heights = Test_Util::random_split(total_block_height);
+    CAPTURE(block_heights);
     size_t num_blocks = block_heights.size();
 
-    DYNAMIC_SECTION("P_height=" << total_block_height
-                                << " num_blocks=" << num_blocks)
+    auto num_primes = Fmpz_Comb(El::gmp::Precision(), El::gmp::Precision(), 1,
+                                total_block_height)
+                        .num_primes;
+
+    size_t max_shared_memory_bytes
+      = GENERATE(std::numeric_limits<size_t>::max(), 1, 0);
+    // We cannot use variables inside GENERATE, e.g. max_shared_memory_bytes = GENERATE(block_width)
+    // Thus we set them below:
+    INFO((max_shared_memory_bytes == 0
+            ? "Splitting both P and Q memory windows"
+          : max_shared_memory_bytes == 1 ? "Splitting P memory window"
+                                         : "Do not split memory windows"));
+    if(max_shared_memory_bytes == 1)
+      {
+        // Do not split output window
+        size_t output_window_height = block_width;
+        size_t output_window_width = output_window_height;
+        // Input window will have 3 rows per MPI group
+        size_t input_window_height = 3 * El::mpi::Size();
+        size_t input_window_width = block_width;
+        max_shared_memory_bytes = (output_window_height * output_window_width
+                                   + input_window_height * input_window_width)
+                                  * num_primes * sizeof(double);
+      }
+    else if(max_shared_memory_bytes == 0)
+      {
+        // Split output window by 3x3 submatrices
+        size_t output_window_height = std::ceil(block_width / 3.0);
+        size_t output_window_width = output_window_height;
+        // Two identical input windows of minimal size, i.e. one row per MPI group
+        size_t input_window_height = El::mpi::Size();
+        size_t input_window_width = output_window_width;
+        max_shared_memory_bytes
+          = (output_window_height * output_window_width
+             + 2 * input_window_height * input_window_width)
+            * num_primes * sizeof(double);
+      }
+
+    DYNAMIC_SECTION("P_height="
+                    << total_block_height << " num_blocks=" << num_blocks
+                    << " maxSharedMemory=" << max_shared_memory_bytes)
     {
       bool use_dist_blocks = GENERATE(false, true);
       if(use_dist_blocks)
@@ -211,12 +258,13 @@ TEST_CASE("calculate_Block_Matrix_square")
         }
 
         // calculate Q = P^T P using bigint_syrk_blas
-        // P is split into (split_factor) vertical bands
-        for(size_t split_factor = 1; split_factor <= block_width;
-            split_factor += 3)
-          DYNAMIC_SECTION("split_factor=" << split_factor)
+        // P is split into (blas_schedule_split_factor) vertical bands
+        for(size_t blas_schedule_split_factor = 1;
+            blas_schedule_split_factor <= block_width;
+            blas_schedule_split_factor += 3)
+          DYNAMIC_SECTION("blas_split_factor=" << blas_schedule_split_factor)
           {
-            INFO("P matrix is split into " << split_factor
+            INFO("P matrix is split into " << blas_schedule_split_factor
                                            << " vertical bands P_I");
             INFO("The blocks Q_IJ = P_I^T * P_J are calculated in parallel.");
 
@@ -235,22 +283,48 @@ TEST_CASE("calculate_Block_Matrix_square")
               El::UpperOrLower uplo = El::UpperOrLowerNS::UPPER;
 
               auto create_job_schedule
-                = [&split_factor](size_t num_ranks, size_t num_primes,
-                                  int output_width, bool debug) {
+                = [&blas_schedule_split_factor](
+                    Blas_Job::Kind kind, El::UpperOrLower uplo,
+                    size_t num_ranks, size_t num_primes, int output_height,
+                    int output_width, bool debug) {
                     return create_blas_job_schedule_split_remaining_primes(
-                      num_ranks, num_primes, output_width, split_factor);
+                      kind, uplo, num_ranks, num_primes, output_height,
+                      output_width, blas_schedule_split_factor);
                   };
-              BigInt_Shared_Memory_Syrk_Context context(
-                comm, bits, block_heights, block_width, block_indices,
-                block_indices, false, create_job_schedule);
 
-              Timers timers;
-              El::Matrix<int32_t> block_timings_ms(
-                context.input_block_residues_window.num_blocks, 1);
-              context.bigint_syrk_blas(uplo, P_matrix_blocks, Q_result, timers,
-                                       block_timings_ms);
+              // TODO refactor
+              auto group_comm
+                = use_dist_blocks ? El::mpi::COMM_WORLD : El::mpi::COMM_SELF;
+              size_t group_index = use_dist_blocks ? 0 : El::mpi::Rank();
+              size_t num_groups = use_dist_blocks ? 1 : El::mpi::Size();
+              // NB: group_comm.Size() is the same for everyone,
+              // otherwise we'd have to synchronize it
+              std::vector<int> group_comm_sizes(num_groups, group_comm.Size());
+              std::vector<El::Int> blocks_height_per_group(num_groups);
+              for(const auto &block : P_matrix_blocks)
+                {
+                  if(block.DistComm().Rank() == 0)
+                    blocks_height_per_group.at(group_index) += block.Height();
+                }
+              El::mpi::AllReduce(blocks_height_per_group.data(), num_groups,
+                                 El::mpi::COMM_WORLD);
+
+              {
+                const bool debug = false;
+                BigInt_Shared_Memory_Syrk_Context context(
+                  comm, group_index, group_comm_sizes, bits,
+                  max_shared_memory_bytes, blocks_height_per_group,
+                  block_width, block_indices, debug, create_job_schedule);
+
+                Timers timers;
+                El::Matrix<int32_t> block_timings_ms(num_blocks, 1);
+                context.bigint_syrk_blas(uplo, P_matrix_blocks, Q_result,
+                                         timers, block_timings_ms);
+              }
               {
                 INFO("Check that normalized Q_ii = 1:");
+                // TODO: if check fails only on some rank!=0,
+                // rank=0 will hang, waiting for
                 for(int iLoc = 0; iLoc < Q_result.LocalHeight(); ++iLoc)
                   for(int jLoc = 0; jLoc < Q_result.LocalWidth(); ++jLoc)
                     {

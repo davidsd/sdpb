@@ -50,7 +50,7 @@ public:
           }
       }
     if(num_primes > 0 && num_blocks > 0)
-      ASSERT(block_residues[0][0].Buffer() == this->residues[0].Buffer());
+      ASSERT_EQUAL(block_residues[0][0].Buffer(), this->residues[0].Buffer());
   }
 
 private:

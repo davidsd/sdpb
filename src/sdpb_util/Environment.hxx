@@ -17,6 +17,8 @@ struct Environment
   // Node index for current rank, 0..(num_nodes-1)
   [[nodiscard]] int node_index() const;
 
+  [[nodiscard]] bool sigterm_received() const;
+
 private:
   El::Environment env;
   int _num_nodes = -1;

@@ -110,7 +110,8 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
   Scoped_Timer initialize_bigint_syrk_context_timer(timers,
                                                     "bigint_syrk_context");
   auto bigint_syrk_context = initialize_bigint_syrk_context(
-    env, block_info, sdp, verbosity >= Verbosity::debug);
+    env, block_info, sdp, parameters.max_shared_memory_bytes,
+    verbosity >= Verbosity::debug);
   initialize_bigint_syrk_context_timer.stop();
 
   initialize_timer.stop();
@@ -124,6 +125,16 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
           El::Output("Start iteration ", iteration, " at ",
                      boost::posix_time::second_clock::local_time());
         }
+
+      // Prepare graceful exit if any process has received SIGTERM
+      {
+        El::byte sigterm = env.sigterm_received();
+        sigterm = El::mpi::AllReduce(sigterm, El::mpi::LOGICAL_OR,
+                                     El::mpi::COMM_WORLD);
+        if(sigterm)
+          return SDP_Solver_Terminate_Reason::SIGTERM_Received;
+      }
+
       El::byte checkpoint_now(
         std::chrono::duration_cast<std::chrono::seconds>(
           std::chrono::high_resolution_clock::now() - last_checkpoint_time)

@@ -48,6 +48,14 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
     "This option is generally useful only when trying to fit a large problem "
     "in a small machine.");
   basic_options.add_options()(
+    "maxSharedMemory",
+    boost::program_options::value<size_t>(&max_shared_memory_bytes)
+      ->default_value(std::numeric_limits<size_t>::max()),
+    "Maximum amount of memory that can be used for MPI shared windows, "
+    "in bytes."
+    " Optional suffixes: B (bytes), K or KB (kilobytes), M or MB (megabytes), "
+    "G or GB (gigabytes).");
+  basic_options.add_options()(
     "solutionDir", boost::program_options::value<fs::path>(&solution_dir),
     "The directory with the text format solutions of x and y for the primary "
     "sdp. It must also contain either X and Y or the solver state. "
