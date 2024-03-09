@@ -62,7 +62,8 @@ TEST_CASE("dynamical_sdp")
         "--navigatorWithLogDetX False --gradientWithLogDetX True "
         "--finiteDualityGapTarget 0.0 --totalIterationCount 0 "
         "--boundingBoxMax 0.523 --boundingBoxMin 0.515 "
-        "--useExactHessian False --prevHessianBFGS 1.0";
+        "--useExactHessian False --prevHessianBFGS 1.0 "
+        "--maxSharedMemory 1G";
 
     Named_Args_Map named_args{
       {"--precision", std::to_string(precision)},
