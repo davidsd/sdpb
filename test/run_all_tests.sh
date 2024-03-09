@@ -30,8 +30,8 @@ fi
 # unit_tests: run 4 processes
 # 4 is a minimal number that makes DistMatrix grids two-dimensional (2x2),
 # allowing to catch some bugs e.g. in bigint_syrk/compute_matrix_residues
-echo time $MPI_RUN_COMMAND -n 4 ./build/unit_tests --durations yes
-time $MPI_RUN_COMMAND -n 4 ./build/unit_tests --durations yes || { exit $?; }
+echo time $MPI_RUN_COMMAND -n 6 ./build/unit_tests --durations yes
+time $MPI_RUN_COMMAND -n 6 ./build/unit_tests --durations yes || { exit $?; }
 
 # integration_tests
 echo time ./build/integration_tests --durations yes --mpirun="$MPI_RUN_COMMAND"
