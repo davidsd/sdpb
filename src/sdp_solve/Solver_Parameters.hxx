@@ -13,6 +13,7 @@
 struct Solver_Parameters
 {
   int64_t max_iterations, max_runtime, checkpoint_interval;
+  size_t max_shared_memory_bytes;
   bool find_primal_feasible, find_dual_feasible, detect_primal_feasible_jump,
     detect_dual_feasible_jump;
   size_t precision;

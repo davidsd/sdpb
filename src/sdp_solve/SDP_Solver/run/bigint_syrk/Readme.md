@@ -77,7 +77,7 @@ In turn, Q is `DistMatrix<BigFloat>` distributed over all cores.
 
 In the old SDPB algorithm, each core (or group of cores, if `procGranularity > 1`) was calculating a contribution to Q (
 called `Q_group`) from its blocks. Adding up all Q_groups, one got the resulting Q
-(see [reduce_scatter_DistMatrix.hxx](reduce_scatter_DistMatrix.hxx), previously called `synchronize_Q`).
+(see [reduce_scatter_DistMatrix.hxx](BigInt_Shared_Memory_Syrk_Context/reduce_scatter_DistMatrix.hxx), previously called `synchronize_Q`).
 
 This is inefficient in terms of memory, since we allocate memory for `Q_group` for each group of cores.
 
@@ -85,7 +85,7 @@ Now we can avoid this duplication, if all cores on a single node are working tog
 using [MPI shared memory window](https://docs.open-mpi.org/en/v5.0.x/man-openmpi/man3/MPI_Win_allocate_shared.3.html).
 
 The parallel algorithm goes as follows (see [compute_Q](../step/initialize_schur_complement_solver/compute_Q.cxx)
-and [bigint_syrk_blas](bigint_syrk_blas.cxx) functions):
+and [bigint_syrk_blas](BigInt_Shared_Memory_Syrk_Context/bigint_syrk_blas.cxx) functions):
 
 1. Choose a set of primes. This is done only once at SDPB start,
    see [initialize_bigint_syrk_context](initialize_bigint_syrk_context.hxx).
@@ -121,11 +121,11 @@ several `cblas_dsyrk()`/`cblas_dgemm()` calls, if Q is split into blocks for bet
    stored e.g. on core 1, this core restores its value from the `Residue_Matrices_Window` using CRT.
 7. Reduce-scatter: calculate global Q, which is `DistMatrix<BigFloat>` distributed over all cores, as a sum of all
    Q_groups.
-   See [reduce_scatter_DistMatrix.hxx](reduce_scatter_DistMatrix.hxx).
+   See [reduce_scatter_DistMatrix.hxx](BigInt_Shared_Memory_Syrk_Context/reduce_scatter_DistMatrix.hxx).
 8. Restore Q (see `Matrix_Normalizer.restore_Q`), i.e. divide by 2^2N and remove normalization.
 
 Steps 2, 3 and 8 are performed in [compute_Q()](../step/initialize_schur_complement_solver/compute_Q.cxx) function,
-steps 4-7 - in [BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas()](bigint_syrk_blas.cxx) function.
+steps 4-7 - in [BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas()](BigInt_Shared_Memory_Syrk_Context/bigint_syrk_blas.cxx) function.
 
 ## Performance and memory optimizations
 
@@ -223,7 +223,7 @@ If we write residues to the shared memory window one by one, it can be rather sl
 
 To optimize it, we compute residues for contiguous memory area (i.e. residues module single prime for each column of a
 single block or several consecutive blocks) locally, and then `memcpy` them to the window.
-See [compute_block_residues.cxx](compute_block_residues.cxx).
+See [compute_block_residues.cxx](BigInt_Shared_Memory_Syrk_Context/compute_block_residues.cxx).
 
 **TODO**: currently, each block are stored in `DistMatrix<BigFloat, MC, MR>`, which means that both columns and rows are
 distributed among 2D process grid.
@@ -239,7 +239,7 @@ Possible solutions:
 2. Reorder rows of P matrix to ensure that rows coming from each rank are consecutive. NB: it can be non-trivial (and
    cause subtle bugs) when some blocks are owned by a single ranks and others are distributed.
 
-### Reducing memory usage (TODO: not implemented yet)
+### Reducing memory usage
 
 Storing (double-precision) residues of a BigFloat matrix requires ~4x more memory than the BigFloat matrix itself.
 For large problems, shared memory windows for P and/or Q do not fit into memory. Note also that sometimes HPC
@@ -251,9 +251,7 @@ If Q is too big, then one has to split it anyway.
 
 #### Splitting P
 
-Suppose that we set maximal window size for P to `H * block_width * num_primes * num_ranks`, where `num_ranks` is number
-of ranks on the node.
-This means residues only for `H` rows from each rank can fit into the window.
+If all residues do not fit into memory, then we choose split factor `s` and allow for each MPI group `g` to write only `H_g / s` rows at once to the window, where `H_g` is the total height of all blocks owned by this group.
 
 Then the matrix multiplication [algorithm](#going-parallel) should be modified as:
 
@@ -263,7 +261,7 @@ Then the matrix multiplication [algorithm](#going-parallel) should be modified a
 3. Normalize P and multiply by 2^N
 4. Fill Q window for with zeros.
 5. While not all rows of P are processed:
-   5.1 Each rank takes top H remaining rows from its blocks and writes their residues to the P window.
+   5.1 Each MPI group takes top (H_g/s) remaining rows from its blocks and writes their residues to the P window.
    5.2 Call BLAS jobs to update the Q window.
 6. Compute Q_group from the residues stored in the Q window.
 7. Reduce-scatter Q_group from all nodes to the global Q.
@@ -279,7 +277,7 @@ Splitting P saves memory, but introduces some extra overhead:
 - We make more BLAS calls (for smaller matrices), which should be less effective than fewer BLAS calls (for bigger
   matrices).
 
-P.S. One can also split P vertically and store residues only for several columns.
+P.S. One could also split P vertically and store residues only for several columns.
 But this would require to calculate residues for each element multiple times.
 
 #### Splitting Q
@@ -305,7 +303,7 @@ If we are splitting both P and Q memory windows, then the algorithm reads:
 4. For each i,j=1..M:
    4.1 Fill Q window for with zeros.
    4.2 While not all rows of P are processed:
-     4.2.1 Each rank takes top H remaining rows from its blocks and writes their residues (for corresponding columns) to the P window.
+     4.2.1 Each MPI group takes top (H_g/s) remaining rows from its blocks and writes their residues (for corresponding columns) to the P window.
      4.2.2 Call BLAS jobs to update Q window.
    4.3 Compute Q_group_ij from the residues stored in Q window.
    4.4 Reduce-scatter Q_group_ij from all nodes to the global Q_ij.
@@ -314,16 +312,18 @@ If we are splitting both P and Q memory windows, then the algorithm reads:
 
 #### How to choose split factors for P and Q
 
-1. Determine memory limit for shared memory windows. We can use our memory usage estimates together with `MemAvailable`
-   value from `/proc/meminfo`. We can also introduce new command-line argument for SDPB,
-   e.g. `--maxSharedWindowSize=128G`.
-2. Set limit to Q window, e.g. 50% of total limit.
-3. Choose minimal split factor for Q so that it fits into the memory limit for Q window.
-4. Choose minimal split factor for P so that it fits into remaining memory.
+1. Determine memory limit for shared memory windows. Currently, it is set by command-line option, e.g. `--maxSharedMemory=128G`.
+2. Choose minimal split factor for Q so that it fits into the memory limit (and leaves some room for P, namely 1 row per each MPI group).
+3. Choose minimal split factor for P so that it fits into remaining memory.
+
+**TODO**: in addition to `--maxSharedMemory`, we can also use our memory usage estimates together with `MemAvailable` value from `/proc/meminfo`.
 
 Note that our top priority is to minimize split factor for Q,
 because splitting Q introduces more significant overhead: (1) expensive reduce-scatter calls and (2) residues for each P
 element being calculated several times.
+
+Note also that split factor of Q should be the same for all nodes, since we perform global reduce-scatter for each submatrix of Q.
+At the same time, split factor for P differe among the nodes (but should be the same for all ranks on a node).
 
 ### Block distribution
 

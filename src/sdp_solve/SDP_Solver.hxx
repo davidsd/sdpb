@@ -75,8 +75,7 @@ public:
   int64_t current_generation;
   boost::optional<int64_t> backup_generation;
 
-  SDP_Solver(const Solver_Parameters &parameters,
-             const Verbosity &verbosity,
+  SDP_Solver(const Solver_Parameters &parameters, const Verbosity &verbosity,
              const bool &require_initial_checkpoint,
              const Block_Info &block_info, const El::Grid &grid,
              const size_t &dual_objective_b_height);

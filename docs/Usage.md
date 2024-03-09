@@ -239,11 +239,8 @@ SDPB's defaults are set for optimal performance. This may result in using more m
 Two ways to reduce memory usage:
 
 1. Running SDPB on more nodes will reduce the amount of memory required on each node.
-2. You can also use the option `--procGranularity`.
-   This option sets minimum number of processes that a block group can have, so it must evenly divide
-   the number of cores per node. Using a larger granularity will result in less memory use (up to a point) because SDPB
-   will make fewer local copies of the matrix Q. However, larger granularity is also slower because even small blocks
-   will be distributed among multiple cores. So you should use `--procGranularity` only when absolutely needed.
+2. Set `--maxSharedMemory` option, e.g. `--maxSharedMemory=64G`. This will reduce memory usage by splitting shared memory windows used for matrix multiplication, see [bigint_syrk/Readme.md](../src/sdp_solve/SDP_Solver/run/bigint_syrk/Readme.md) for details. This may affect performance, especially if the limit is lower than the output window size.
+You can see current shared window sizes if you run SDPB with `--verbosity debug` option (search for `create BigInt_Shared_Memory_Syrk_Context` in the output).
 
 ### SDPB crashes when using all available cores on the node
 
