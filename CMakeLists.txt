@@ -106,7 +106,6 @@ find_package(MPFR REQUIRED)
 
 # Boost
 # -----
-# TODO Change pkg_check_modules to a solution where you use find_path and find_library 
 
 find_package(Boost 
                 REQUIRED COMPONENTS 
@@ -117,7 +116,6 @@ find_package(Boost
                 iostreams 
                 serialization 
                 stacktrace_basic
-                stacktrace_backtrace
                 stacktrace_addr2line
                 stacktrace_noop
                 REQUIRED)
@@ -131,7 +129,6 @@ endif()
 
 # libxml2
 # -------
-# TODO Change pkg_check_modules to a solution where you use find_path and find_library
 find_package(LibXml2 REQUIRED)
 message(STATUS "libxml2 version: ${LIBXML2_VERSION} at ${LIBXML2_DIRECTORY}")
 if(LIBXML2_FOUND AND LIBXML2_INCLUDE_DIR)
@@ -141,7 +138,6 @@ endif()
 
 # RapidJSON
 # ---------
-# TODO Change pkg_check_modules to a solution where you use find_path and find_library
 find_package(RapidJSON REQUIRED)
 message(STATUS "RapidJSON version: ${RapidJSON_VERSION}")
 if(RapidJSON_FOUND AND RapidJSON_INCLUDE_DIR)
@@ -151,7 +147,6 @@ endif()
 
 # libarchive
 # ----------
-# TODO Change pkg_check_modules to a solution where you use find_path and find_library
 find_package(LibArchive REQUIRED)
 message(STATUS "libarchive version: ${libarchive_VERSION}")
 if(LibArchive_FOUND AND LibArchive_INCLUDE_DIR)
@@ -170,10 +165,6 @@ message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} 
 
 
 include(FeatureSummary)
-
-#find_library()
-# TODO use target_link_libraries
-#link_libraries(cxx17 boost gmpxx mpfr elemental libxml2 rapidjson libarchive)
 
 # Elemental
 # ---------
@@ -219,24 +210,24 @@ message(STATUS "Elemental Libraries - ${Elemental_LIBRARIES}")
 #find_library(FLINT_LIBRARIES flint PATHS /home/vasdommes/install/lib)
 
 # From FLINT - FindCBLAS
-find_path(CBLAS_INCLUDE_DIRS NAMES cblas.h
-        HINTS CBLAS_ROOT ENV CBLAS_ROOT
-        PATHS ${INCLUDE_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX}/include
-        PATH_SUFFIXES openblas cblas blis
-)
+# find_path(CBLAS_INCLUDE_DIRS NAMES cblas.h
+#         HINTS CBLAS_ROOT ENV CBLAS_ROOT
+#         PATHS ${INCLUDE_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX}/include
+#         PATH_SUFFIXES openblas cblas blis
+# )
 
-find_library(CBLAS_LIBRARIES NAMES accelerate openblas cblas blas blis
-        HINTS CBLAS_ROOT ENV CBLAS_ROOT
-        PATHS ${LIB_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX}/lib
-        PATH_SUFFIXES openblas cblas blis
-)
+# find_library(CBLAS_LIBRARIES NAMES accelerate openblas cblas blas blis
+#         HINTS CBLAS_ROOT ENV CBLAS_ROOT
+#         PATHS ${LIB_INSTALL_DIR} ${CMAKE_INSTALL_PREFIX}/lib
+#         PATH_SUFFIXES openblas cblas blis
+# )
 
-include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(CBLAS
-        "Could NOT find a BLAS compatible library or 'cblas.h', install BLAS or set CBLAS_ROOT."
-        CBLAS_INCLUDE_DIRS CBLAS_LIBRARIES)
+# include(FindPackageHandleStandardArgs)
+# find_package_handle_standard_args(CBLAS
+#         "Could NOT find a BLAS compatible library or 'cblas.h', install BLAS or set CBLAS_ROOT."
+#         CBLAS_INCLUDE_DIRS CBLAS_LIBRARIES)
 
-mark_as_advanced(CBLAS_LIBRARIES CBLAS_INCLUDE_DIRS)
+# mark_as_advanced(CBLAS_LIBRARIES CBLAS_INCLUDE_DIRS)
 
 
 include_directories(src)
