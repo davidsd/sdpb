@@ -40,6 +40,52 @@ message(STATUS "Found g++ compiler (C++ compiler): ${CMAKE_CXX_COMPILER}")
 
 # TODO gnu_dirs
 
+# TODO Refactor into a separate file for Git (see Elemental for example)
+#    conf.env.git_version=subprocess.check_output('git describe --dirty', universal_newlines=True, shell=True).rstrip()
+find_package(Git QUIET REQUIRED)
+if(NOT EXISTS "${PROJECT_SOURCE_DIR}/.git")
+    message(FATAL_ERROR "${PROJECT_SOURCE_DIR}/.git not found")
+endif()
+execute_process(COMMAND ${GIT_EXECUTABLE} describe --always --dirty
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE GIT_DESCRIBE_RESULT
+        OUTPUT_VARIABLE SDPB_VERSION_STRING
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+if(NOT GIT_DESCRIBE_RESULT EQUAL "0")
+    message(FATAL_ERROR "git describe --always --dirty failed: ${GIT_DESCRIBE_RESULT}.")
+endif()
+
+# Compiler flags used in waf 
+#def build(bld):
+#    default_flags=['-Wall', '-Wextra', '-O3', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
+#    # default_flags=['-Wall', '-Wextra', '-O3', '-g', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
+#    # default_flags=['-Wall', '-Wextra', '-g', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
+
+# TODO -Werror=return-type, but it requires to mark El::RuntimeError as [[noreturn]]
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  # This option is okay as-is
+  set(CMAKE_BUILD_TYPE Release)
+elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  # This option is okay as-is
+  set(CMAKE_BUILD_TYPE Debug)
+else()
+  message(WARNING "Build mode not specified, defaulting to Release build.")
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  set(SDPB_RELEASE TRUE)
+  add_compile_options(-O3 -DOMPI_SKIP_MPICXX)
+else()
+  set(SDPB_RELEASE FALSE)
+  add_compile_options(-Wall -Wextra -g -DOMPI_SKIP_MPICXX)
+endif()
+string(TOUPPER ${CMAKE_BUILD_TYPE} UPPER_BUILD_TYPE)
+
+add_compile_definitions(SDPB_VERSION_STRING="${SDPB_VERSION_STRING}")
+add_compile_definitions(RAPIDJSON_HAS_STDSTRING=1)
+
 ##################################################
 ########### Find required dependencies ###########
 ##################################################
@@ -122,58 +168,6 @@ endif()
 find_package(MPI REQUIRED)
 message(STATUS "Run: ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_PREFLAGS} EXECUTABLE ${MPIEXEC_POSTFLAGS} ARGS")
 
-# TODO Refactor into a separate file for Git (see Elemental for example)
-#    conf.env.git_version=subprocess.check_output('git describe --dirty', universal_newlines=True, shell=True).rstrip()
-find_package(Git QUIET REQUIRED)
-if(NOT EXISTS "${PROJECT_SOURCE_DIR}/.git")
-    message(FATAL_ERROR "${PROJECT_SOURCE_DIR}/.git not found")
-endif()
-execute_process(COMMAND ${GIT_EXECUTABLE} describe --always --dirty
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        RESULT_VARIABLE GIT_DESCRIBE_RESULT
-        OUTPUT_VARIABLE SDPB_VERSION_STRING
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-if(NOT GIT_DESCRIBE_RESULT EQUAL "0")
-    message(FATAL_ERROR "git describe --always --dirty failed: ${GIT_DESCRIBE_RESULT}.")
-endif()
-
-#def build(bld):
-#    default_flags=['-Wall', '-Wextra', '-O3', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
-#    # default_flags=['-Wall', '-Wextra', '-O3', '-g', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
-#    # default_flags=['-Wall', '-Wextra', '-g', '-DOMPI_SKIP_MPICXX', '-D SDPB_VERSION_STRING="' + bld.env.git_version + '"']
-
-#TODO -O3 etc is set by choosing cmake debug/release
-# TODO -Werror=return-type, but it requires to mark El::RuntimeError as [[noreturn]]
-add_compile_options(-Wall -Wextra -DOMPI_SKIP_MPICXX)
-add_compile_definitions(SDPB_VERSION_STRING="${SDPB_VERSION_STRING}")
-add_compile_definitions(RAPIDJSON_HAS_STDSTRING=1)
-
-# TODO setup flags for build configurations (debug/release)
-
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  # This option is okay as-is
-  set(CMAKE_BUILD_TYPE Release)
-elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  # This option is okay as-is
-  set(CMAKE_BUILD_TYPE Debug)
-else()
-  message(WARNING "Build mode not specified, defaulting to Release build.")
-  set(CMAKE_BUILD_TYPE Release)
-endif()
-
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-  set(SDPB_RELEASE TRUE)
-else()
-  set(SDPB_RELEASE FALSE)
-endif()
-string(TOUPPER ${CMAKE_BUILD_TYPE} UPPER_BUILD_TYPE)
-
-
-#    use_packages=['cxx17','boost','gmpxx','mpfr','elemental','libxml2', 'rapidjson', 'libarchive']
-#TODO
-
-# set(CMAKE_LIBRARY_PATH CMAKE_LIBRARY_PATH /usr/local/lib)
-# message("CMAKE_LIBRARY_PATH = ${CMAKE_LIBRARY_PATH}")
 
 include(FeatureSummary)
 
