@@ -7,37 +7,37 @@
 
 #include <cblas.h>
 
+// uplo == UPPER: deallocate below diagonal
+// uplo == LOWER: deallocate above diagonal
+void deallocate_unused_half(El::DistMatrix<El::BigFloat> &matrix,
+                            const El::UpperOrLower uplo)
+{
+  // Explicitly deallocate the lower half of matrix (i.e. below diagonal).
+  // This significantly reduces the total amount of memory required.
+
+  // Sanity check in case we pass off-diagonal block Q_IJ here
+  ASSERT_EQUAL(matrix.Height(), matrix.Width());
+
+  for(El::Int iLoc = 0; iLoc < matrix.LocalHeight(); ++iLoc)
+    {
+      for(El::Int jLoc = 0; jLoc < matrix.LocalWidth(); ++jLoc)
+        {
+          const auto i = matrix.GlobalRow(iLoc);
+          const auto j = matrix.GlobalCol(jLoc);
+          if(uplo == El::UPPER && i <= j)
+            continue;
+          if(uplo == El::LOWER && j <= i)
+            continue;
+
+          auto &gmp_float = matrix.Matrix().Ref(iLoc, jLoc).gmp_float;
+          mpf_clear(gmp_float.get_mpf_t());
+          gmp_float.get_mpf_t()[0]._mp_d = nullptr;
+        }
+    }
+}
+
 namespace
 {
-  // uplo == UPPER: deallocate below diagonal
-  // uplo == LOWER: deallocate above diagonal
-  void deallocate_unused_half(El::DistMatrix<El::BigFloat> &matrix,
-                              const El::UpperOrLower uplo)
-  {
-    // Explicitly deallocate the lower half of matrix (i.e. below diagonal).
-    // This significantly reduces the total amount of memory required.
-
-    // Sanity check in case we pass off-diagonal block Q_IJ here
-    ASSERT_EQUAL(matrix.Height(), matrix.Width());
-
-    for(El::Int iLoc = 0; iLoc < matrix.LocalHeight(); ++iLoc)
-      {
-        for(El::Int jLoc = 0; jLoc < matrix.LocalWidth(); ++jLoc)
-          {
-            const auto i = matrix.GlobalRow(iLoc);
-            const auto j = matrix.GlobalRow(jLoc);
-            if(uplo == El::UPPER && i <= j)
-              continue;
-            if(uplo == El::LOWER && j <= i)
-              continue;
-
-            auto &gmp_float = matrix.Matrix().Ref(iLoc, jLoc).gmp_float;
-            mpf_clear(gmp_float.get_mpf_t());
-            gmp_float.get_mpf_t()[0]._mp_d = nullptr;
-          }
-      }
-  }
-
   // output = inputA^T * inputB
   void gemm(const El::Matrix<double> &input_A,
             const El::Matrix<double> &input_B, El::Matrix<double> &output)
