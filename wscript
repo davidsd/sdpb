@@ -329,6 +329,7 @@ def build(bld):
                         'test/src/unit_tests/cases/calculate_matrix_square.test.cxx',
                         'test/src/unit_tests/cases/copy_matrix.test.cxx',
                         'test/src/unit_tests/cases/json.test.cxx',
+                        'test/src/unit_tests/cases/reduce_scatter.test.cxx',
                         'test/src/unit_tests/cases/shared_window.test.cxx'],
                 target='unit_tests',
                 cxxflags=default_flags,

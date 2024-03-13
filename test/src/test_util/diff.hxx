@@ -104,19 +104,37 @@ namespace Test_Util::REQUIRE_Equal
         }
   }
   template <class T>
-  inline void diff(const El::DistMatrix<T> &a, const El::DistMatrix<T> &b)
+  void diff(const El::DistMatrix<T> &a, const El::DistMatrix<T> &b,
+            const std::optional<El::UpperOrLower> uplo = std::nullopt)
   {
     INFO("diff El::DistMatrix");
+    CAPTURE(uplo);
     REQUIRE(a.Height() == b.Height());
     REQUIRE(a.Width() == b.Width());
     REQUIRE(a.Grid() == b.Grid());
 
-    for(int row = 0; row < a.LocalHeight(); ++row)
-      for(int col = 0; col < a.LocalWidth(); ++col)
+    // only square matrices allowed for uplo
+    if(uplo.has_value())
+      REQUIRE(a.Height() == a.Width());
+
+    for(int iLoc = 0; iLoc < a.LocalHeight(); ++iLoc)
+      for(int jLoc = 0; jLoc < a.LocalWidth(); ++jLoc)
         {
-          CAPTURE(row);
-          CAPTURE(col);
-          DIFF(a.GetLocal(row, col), b.GetLocal(row, col));
+          CAPTURE(iLoc);
+          CAPTURE(jLoc);
+          int i = a.GlobalRow(iLoc);
+          int j = a.GlobalCol(jLoc);
+          CAPTURE(i);
+          CAPTURE(j);
+          if(uplo.has_value())
+            {
+              if(uplo.value() == El::UPPER && i > j)
+                continue;
+              if(uplo.value() == El::LOWER && i < j)
+                continue;
+            }
+
+          DIFF(a.GetLocal(iLoc, jLoc), b.GetLocal(iLoc, jLoc));
         }
   }
   template <>
