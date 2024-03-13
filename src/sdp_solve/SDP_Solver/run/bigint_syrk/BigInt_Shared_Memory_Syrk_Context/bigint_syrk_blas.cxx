@@ -25,7 +25,7 @@ namespace
         for(El::Int jLoc = 0; jLoc < matrix.LocalWidth(); ++jLoc)
           {
             const auto i = matrix.GlobalRow(iLoc);
-            const auto j = matrix.GlobalRow(jLoc);
+            const auto j = matrix.GlobalCol(jLoc);
             if(uplo == El::UPPER && i <= j)
               continue;
             if(uplo == El::LOWER && j <= i)
