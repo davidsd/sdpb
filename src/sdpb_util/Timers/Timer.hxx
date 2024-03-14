@@ -20,7 +20,12 @@ private:
 
   static std::chrono::time_point<std::chrono::high_resolution_clock> now();
 
-  template <class Duration> [[nodiscard]] int64_t elapsed() const;
+public:
+  template <class Duration> [[nodiscard]] int64_t elapsed() const
+  {
+    const auto end_time = is_running() ? now() : stop_time;
+    return std::chrono::duration_cast<Duration>(end_time - start_time).count();
+  }
 };
 
 std::ostream &operator<<(std::ostream &os, const Timer &timer);

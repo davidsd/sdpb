@@ -6,6 +6,7 @@
 #include <El.hpp>
 
 #include <algorithm>
+#include <chrono>
 #include <optional>
 
 inline void check_mpi_error(const int &mpi_error)
@@ -28,6 +29,7 @@ reduce_scatter(El::DistMatrix<El::BigFloat> &output,
                const std::optional<El::UpperOrLower> &uplo = std::nullopt)
 {
   Scoped_Timer timer(timers, "reduce_scatter");
+  double mpi_wait_time = 0;
 
   ASSERT_EQUAL(input.Height(), output.Height());
   ASSERT_EQUAL(input.Width(), output.Width());
@@ -161,8 +163,14 @@ reduce_scatter(El::DistMatrix<El::BigFloat> &output,
         // one we just initiated.
 
         // We do not cancel sends, so no need to check status.
-        check_mpi_error(
-          MPI_Wait(&receive_requests[rank_offset % 2], MPI_STATUS_IGNORE));
+        {
+          Timer wait_timer;
+          check_mpi_error(
+            MPI_Wait(&receive_requests[rank_offset % 2], MPI_STATUS_IGNORE));
+          wait_timer.stop();
+          mpi_wait_time
+            += wait_timer.elapsed<std::chrono::nanoseconds>() / 1.0e9;
+        }
 
         final_send_destination
           = (total_ranks + rank - rank_offset) % total_ranks;
@@ -195,8 +203,13 @@ reduce_scatter(El::DistMatrix<El::BigFloat> &output,
   // Add the local contribution to the last message and put it into
   // the global Q.
 
-  check_mpi_error(
-    MPI_Wait(&receive_requests[total_ranks % 2], MPI_STATUS_IGNORE));
+  {
+    Timer wait_timer;
+    check_mpi_error(
+      MPI_Wait(&receive_requests[total_ranks % 2], MPI_STATUS_IGNORE));
+    wait_timer.stop();
+    mpi_wait_time += wait_timer.elapsed<std::chrono::nanoseconds>() / 1.0e9;
+  }
   El::byte *current_receiving = send_receive[total_ranks % 2].data();
   for(El::Int row = 0; row < input.Height(); ++row)
     for(El::Int column = 0; column < input.Width(); ++column)
@@ -217,4 +230,11 @@ reduce_scatter(El::DistMatrix<El::BigFloat> &output,
             current_receiving += serialized_size;
           }
       }
+  // TODO debug
+  timer.stop();
+  const double reduce_scatter_time
+    = timer.timer().elapsed<std::chrono::nanoseconds>() / 1.0e9;
+
+  El::Output(DEBUG_STRING(rank), DEBUG_STRING(mpi_wait_time),
+             DEBUG_STRING(reduce_scatter_time));
 }

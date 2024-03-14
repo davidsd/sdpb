@@ -25,11 +25,6 @@ std::chrono::time_point<std::chrono::high_resolution_clock> Timer::now()
 {
   return std::chrono::high_resolution_clock::now();
 }
-template <class Duration> int64_t Timer::elapsed() const
-{
-  auto end_time = is_running() ? now() : stop_time;
-  return std::chrono::duration_cast<Duration>(end_time - start_time).count();
-}
 std::ostream &operator<<(std::ostream &os, const Timer &timer)
 {
   os << (timer.elapsed_milliseconds() / 1000.0);
