@@ -32,6 +32,11 @@ reduce_scatter(El::DistMatrix<El::BigFloat> &output,
   ASSERT_EQUAL(input.Height(), output.Height());
   ASSERT_EQUAL(input.Width(), output.Width());
 
+  if(input.DistComm().Size() == output.DistComm().Size())
+    ASSERT(El::mpi::Congruent(input.DistComm(), output.DistComm()));
+  else
+    ASSERT(input.DistComm().Size() < output.DistComm().Size());
+
   auto skip_element = [&uplo](auto row, auto column) {
     if(uplo.has_value())
       {
@@ -43,12 +48,14 @@ reduce_scatter(El::DistMatrix<El::BigFloat> &output,
     return false;
   };
 
-  const int total_ranks(El::mpi::Size(El::mpi::COMM_WORLD));
-  // Special case serial case
-  if(total_ranks == 1)
+  const auto output_comm = output.DistComm();
+  const int total_ranks = output_comm.Size();
+  // Special case: input and output are spread over the same ranks,
+  // no need for reduce-scatter
+  if(input.DistComm().Size() == output_comm.Size())
     {
-      for(int64_t row = 0; row < input.Height(); ++row)
-        for(int64_t column = 0; column < input.Width(); ++column)
+      for(El::Int row = 0; row < input.Height(); ++row)
+        for(El::Int column = 0; column < input.Width(); ++column)
           {
             if(skip_element(row, column))
               continue;
@@ -59,8 +66,8 @@ reduce_scatter(El::DistMatrix<El::BigFloat> &output,
       return;
     }
 
-  El::BigFloat zero(0);
-  size_t serialized_size(zero.SerializedSize());
+  const El::BigFloat zero(0);
+  const size_t serialized_size = zero.SerializedSize();
   std::vector<uint8_t> serialized_zero(serialized_size);
   zero.Serialize(serialized_zero.data());
 
@@ -75,40 +82,40 @@ reduce_scatter(El::DistMatrix<El::BigFloat> &output,
 
   // MPI uses 'int' for message sizes.
   std::vector<int> rank_sizes(total_ranks);
-  for(int64_t row = 0; row < input.Height(); ++row)
-    for(int64_t column = 0; column < input.Width(); ++column)
+  for(El::Int row = 0; row < input.Height(); ++row)
+    for(El::Int column = 0; column < input.Width(); ++column)
       {
         if(skip_element(row, column))
           continue;
         ++rank_sizes.at(output.Owner(row, column));
       }
 
-  int max_buffer_size(*std::max_element(rank_sizes.begin(), rank_sizes.end())
-                      * serialized_size);
+  const int max_buffer_size
+    = *std::max_element(rank_sizes.begin(), rank_sizes.end())
+      * serialized_size;
   std::array<std::vector<El::byte>, 2> send_receive(
     {std::vector<El::byte>(max_buffer_size),
      std::vector<El::byte>(max_buffer_size)});
 
-  const int rank(El::mpi::Rank(El::mpi::COMM_WORLD));
-  const int send_to_rank((rank + 1) % total_ranks),
-    receive_from_rank((total_ranks + rank - 1) % total_ranks);
+  const int rank = output_comm.Rank();
+  const int send_to_rank = (rank + 1) % total_ranks;
+  const int receive_from_rank = (total_ranks + rank - 1) % total_ranks;
 
   // Initial async receive
-  int final_receive_destination((total_ranks + rank - 2) % total_ranks);
-  std::array<MPI_Request, 2> receive_requests;
-  check_mpi_error(MPI_Irecv(send_receive[0].data(),
-                            rank_sizes[final_receive_destination],
-                            El::mpi::TypeMap<El::BigFloat>(),
-                            receive_from_rank, final_receive_destination,
-                            El::mpi::COMM_WORLD.comm, &receive_requests[0]));
+  int final_receive_destination = (total_ranks + rank - 2) % total_ranks;
+  std::array<MPI_Request, 2> receive_requests{};
+  check_mpi_error(MPI_Irecv(
+    send_receive[0].data(), rank_sizes[final_receive_destination],
+    El::mpi::TypeMap<El::BigFloat>(), receive_from_rank,
+    final_receive_destination, output_comm.comm, &receive_requests[0]));
 
   // Initial fill of send buffer
-  int final_send_destination((total_ranks + rank - 1) % total_ranks);
+  int final_send_destination = (total_ranks + rank - 1) % total_ranks;
 
   {
     El::byte *insertion_point(send_receive[1].data());
-    for(int64_t row = 0; row < input.Height(); ++row)
-      for(int64_t column = 0; column < input.Width(); ++column)
+    for(El::Int row = 0; row < input.Height(); ++row)
+      for(El::Int column = 0; column < input.Width(); ++column)
         {
           if(skip_element(row, column))
             continue;
@@ -132,13 +139,13 @@ reduce_scatter(El::DistMatrix<El::BigFloat> &output,
   check_mpi_error(MPI_Send(send_receive[1].data(),
                            rank_sizes[final_send_destination],
                            El::mpi::TypeMap<El::BigFloat>(), send_to_rank,
-                           final_send_destination, El::mpi::COMM_WORLD.comm));
+                           final_send_destination, output_comm.comm));
 
   // Loop over all remaining intermediate ranks
   for(int rank_offset(2); rank_offset < total_ranks; ++rank_offset)
     {
       {
-        auto &receive_buffer(send_receive[(rank_offset + 1) % 2]);
+        auto &receive_buffer = send_receive[(rank_offset + 1) % 2];
 
         final_receive_destination
           = (total_ranks + rank - (rank_offset + 1)) % total_ranks;
@@ -146,7 +153,7 @@ reduce_scatter(El::DistMatrix<El::BigFloat> &output,
         check_mpi_error(MPI_Irecv(
           receive_buffer.data(), rank_sizes[final_receive_destination],
           El::mpi::TypeMap<El::BigFloat>(), receive_from_rank,
-          final_receive_destination, El::mpi::COMM_WORLD.comm,
+          final_receive_destination, output_comm.comm,
           &receive_requests[(rank_offset + 1) % 2]));
       }
       {
@@ -159,10 +166,10 @@ reduce_scatter(El::DistMatrix<El::BigFloat> &output,
 
         final_send_destination
           = (total_ranks + rank - rank_offset) % total_ranks;
-        auto &receive_then_send_buffer(send_receive[rank_offset % 2]);
-        El::byte *current_receiving(receive_then_send_buffer.data());
-        for(int64_t row = 0; row < input.Height(); ++row)
-          for(int64_t column = 0; column < input.Width(); ++column)
+        auto &receive_then_send_buffer = send_receive[rank_offset % 2];
+        El::byte *current_receiving = receive_then_send_buffer.data();
+        for(El::Int row = 0; row < input.Height(); ++row)
+          for(El::Int column = 0; column < input.Width(); ++column)
             {
               if(skip_element(row, column))
                 continue;
@@ -182,7 +189,7 @@ reduce_scatter(El::DistMatrix<El::BigFloat> &output,
         check_mpi_error(MPI_Send(
           receive_then_send_buffer.data(), rank_sizes[final_send_destination],
           El::mpi::TypeMap<El::BigFloat>(), send_to_rank,
-          final_send_destination, El::mpi::COMM_WORLD.comm));
+          final_send_destination, output_comm.comm));
       }
     }
   // Add the local contribution to the last message and put it into
@@ -190,9 +197,9 @@ reduce_scatter(El::DistMatrix<El::BigFloat> &output,
 
   check_mpi_error(
     MPI_Wait(&receive_requests[total_ranks % 2], MPI_STATUS_IGNORE));
-  El::byte *current_receiving(send_receive[total_ranks % 2].data());
-  for(int64_t row = 0; row < input.Height(); ++row)
-    for(int64_t column = 0; column < input.Width(); ++column)
+  El::byte *current_receiving = send_receive[total_ranks % 2].data();
+  for(El::Int row = 0; row < input.Height(); ++row)
+    for(El::Int column = 0; column < input.Width(); ++column)
       {
         if(skip_element(row, column))
           continue;
