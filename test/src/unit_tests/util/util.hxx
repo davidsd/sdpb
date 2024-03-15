@@ -45,4 +45,36 @@ namespace Test_Util
     El::Zero(zeros);
     return zeros;
   }
+
+  inline El::DistMatrix<El::BigFloat>
+  random_distmatrix(int height, int width,
+                    const std::function<El::BigFloat()> &make_float
+                    = random_bigfloat)
+  {
+    El::DistMatrix<El::BigFloat> matrix(height, width);
+    for(int i = 0; i < matrix.LocalHeight(); ++i)
+      for(int k = 0; k < matrix.LocalWidth(); ++k)
+        {
+          matrix.SetLocal(i, k, make_float());
+        }
+
+    return matrix;
+  }
+
+  // Split n>0 into sum of random positive integers n1+n2+...
+  template <class TInt> inline std::vector<TInt> random_split(TInt n)
+  {
+    std::vector<TInt> result;
+
+    std::default_random_engine rand_engine;
+
+    while(n > 0)
+      {
+        std::uniform_int_distribution<TInt> dist(1, n);
+        int curr = dist(rand_engine);
+        result.push_back(curr);
+        n -= curr;
+      }
+    return result;
+  }
 }

@@ -37,3 +37,7 @@ bool Scoped_Timer::is_running() const
 {
   return my_timer.is_running();
 }
+int64_t Scoped_Timer::elapsed_milliseconds() const
+{
+  return my_timer.elapsed_milliseconds();
+}

@@ -1,4 +1,6 @@
+#include "Approx_Parameters.hxx"
 #include "sdp_solve/sdp_solve.hxx"
+#include "sdp_solve/SDP_Solver/run/bigint_syrk/initialize_bigint_syrk_context.hxx"
 
 #include <filesystem>
 
@@ -28,15 +30,19 @@ void initialize_schur_complement_solver(
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     &A_Y,
   const El::Grid &block_grid, Block_Diagonal_Matrix &schur_complement_cholesky,
-  Block_Matrix &schur_off_diagonal, El::DistMatrix<El::BigFloat> &Q,
-  Timers &timers);
+  Block_Matrix &schur_off_diagonal,
+  BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
+  El::DistMatrix<El::BigFloat> &Q, Timers &timers,
+  El::Matrix<int32_t> &block_timings_ms);
 
-void setup_solver(const Block_Info &block_info, const El::Grid &grid,
-                  const SDP &sdp, const fs::path &solution_dir,
+void setup_solver(const Environment &env, const Block_Info &block_info,
+                  const El::Grid &grid, const SDP &sdp,
+                  const Approx_Parameters &parameters,
                   Block_Diagonal_Matrix &schur_complement_cholesky,
                   Block_Matrix &schur_off_diagonal,
                   El::DistMatrix<El::BigFloat> &Q)
 {
+  const auto& solution_dir = parameters.solution_dir;
   if(fs::exists(solution_dir / "Q_cholesky.txt"))
     {
       for(size_t block = 0; block != block_info.block_indices.size(); ++block)
@@ -84,8 +90,11 @@ void setup_solver(const Block_Info &block_info, const El::Grid &grid,
       compute_A_Y(block_info, Y, sdp.bases_blocks, A_Y);
 
       Timers timers;
-      initialize_schur_complement_solver(block_info, sdp, A_X_inv, A_Y, grid,
-                                         schur_complement_cholesky,
-                                         schur_off_diagonal, Q, timers);
+      El::Matrix<int32_t> block_timings_ms(block_info.dimensions.size(), 1);
+      auto bigint_syrk_context = initialize_bigint_syrk_context(
+        env, block_info, sdp, parameters.max_shared_memory_bytes, false);
+      initialize_schur_complement_solver(
+        block_info, sdp, A_X_inv, A_Y, grid, schur_complement_cholesky,
+        schur_off_diagonal, bigint_syrk_context, Q, timers, block_timings_ms);
     }
 }

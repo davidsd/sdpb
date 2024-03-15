@@ -1,4 +1,4 @@
-// Synchronize the results back to the global Q.
+#pragma once
 
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
@@ -6,36 +6,55 @@
 #include <El.hpp>
 
 #include <algorithm>
+#include <optional>
 
-namespace
+inline void check_mpi_error(const int &mpi_error)
 {
-  void check_mpi_error(const int &mpi_error)
-  {
-    if(mpi_error != MPI_SUCCESS)
-      {
-        std::vector<char> error_string(MPI_MAX_ERROR_STRING);
-        int lengthOfErrorString;
-        MPI_Error_string(mpi_error, error_string.data(), &lengthOfErrorString);
-        RUNTIME_ERROR(std::string(error_string.data()));
-      }
-  }
+  if(mpi_error != MPI_SUCCESS)
+    {
+      std::vector<char> error_string(MPI_MAX_ERROR_STRING);
+      int lengthOfErrorString;
+      MPI_Error_string(mpi_error, error_string.data(), &lengthOfErrorString);
+      RUNTIME_ERROR(std::string(error_string.data()));
+    }
 }
 
-void synchronize_Q(El::DistMatrix<El::BigFloat> &Q,
-                   const El::DistMatrix<El::BigFloat> &Q_group, Timers &timers)
+// input is a matrix distributed over all ranks on a node.
+// output is a global matrix.
+// We set output = (sum of input from all nodes).
+inline void
+reduce_scatter(El::DistMatrix<El::BigFloat> &output,
+               const El::DistMatrix<El::BigFloat> &input, Timers &timers,
+               const std::optional<El::UpperOrLower> &uplo = std::nullopt)
 {
-  Scoped_Timer timer(timers, "synchronize_Q");
+  Scoped_Timer timer(timers, "reduce_scatter");
+
+  ASSERT_EQUAL(input.Height(), output.Height());
+  ASSERT_EQUAL(input.Width(), output.Width());
+
+  auto skip_element = [&uplo](auto row, auto column) {
+    if(uplo.has_value())
+      {
+        if(*uplo == El::UPPER && column < row)
+          return true;
+        if(*uplo == El::LOWER && row < column)
+          return true;
+      }
+    return false;
+  };
 
   const int total_ranks(El::mpi::Size(El::mpi::COMM_WORLD));
   // Special case serial case
   if(total_ranks == 1)
     {
-      for(int64_t row = 0; row < Q_group.Height(); ++row)
-        for(int64_t column = row; column < Q_group.Height(); ++column)
+      for(int64_t row = 0; row < input.Height(); ++row)
+        for(int64_t column = 0; column < input.Width(); ++column)
           {
-            Q.SetLocal(Q.LocalRow(row), Q.LocalCol(column),
-                       Q_group.GetLocal(Q_group.LocalRow(row),
-                                        Q_group.LocalCol(column)));
+            if(skip_element(row, column))
+              continue;
+            output.SetLocal(
+              output.LocalRow(row), output.LocalCol(column),
+              input.GetLocal(input.LocalRow(row), input.LocalCol(column)));
           }
       return;
     }
@@ -56,10 +75,12 @@ void synchronize_Q(El::DistMatrix<El::BigFloat> &Q,
 
   // MPI uses 'int' for message sizes.
   std::vector<int> rank_sizes(total_ranks);
-  for(int64_t row = 0; row < Q_group.Height(); ++row)
-    for(int64_t column = row; column < Q_group.Height(); ++column)
+  for(int64_t row = 0; row < input.Height(); ++row)
+    for(int64_t column = 0; column < input.Width(); ++column)
       {
-        ++rank_sizes.at(Q.Owner(row, column));
+        if(skip_element(row, column))
+          continue;
+        ++rank_sizes.at(output.Owner(row, column));
       }
 
   int max_buffer_size(*std::max_element(rank_sizes.begin(), rank_sizes.end())
@@ -86,15 +107,16 @@ void synchronize_Q(El::DistMatrix<El::BigFloat> &Q,
 
   {
     El::byte *insertion_point(send_receive[1].data());
-    for(int64_t row = 0; row < Q_group.Height(); ++row)
-      for(int64_t column = row; column < Q_group.Height(); ++column)
+    for(int64_t row = 0; row < input.Height(); ++row)
+      for(int64_t column = 0; column < input.Width(); ++column)
         {
-          if(Q.Owner(row, column) == final_send_destination)
+          if(skip_element(row, column))
+            continue;
+          if(output.Owner(row, column) == final_send_destination)
             {
-              if(Q_group.IsLocal(row, column))
+              if(input.IsLocal(row, column))
                 {
-                  Q_group
-                    .GetLocal(Q_group.LocalRow(row), Q_group.LocalCol(column))
+                  input.GetLocal(input.LocalRow(row), input.LocalCol(column))
                     .Serialize(insertion_point);
                 }
               else
@@ -139,17 +161,19 @@ void synchronize_Q(El::DistMatrix<El::BigFloat> &Q,
           = (total_ranks + rank - rank_offset) % total_ranks;
         auto &receive_then_send_buffer(send_receive[rank_offset % 2]);
         El::byte *current_receiving(receive_then_send_buffer.data());
-        for(int64_t row = 0; row < Q_group.Height(); ++row)
-          for(int64_t column = row; column < Q_group.Height(); ++column)
+        for(int64_t row = 0; row < input.Height(); ++row)
+          for(int64_t column = 0; column < input.Width(); ++column)
             {
-              if(Q.Owner(row, column) == final_send_destination)
+              if(skip_element(row, column))
+                continue;
+              if(output.Owner(row, column) == final_send_destination)
                 {
-                  if(Q_group.IsLocal(row, column))
+                  if(input.IsLocal(row, column))
                     {
                       El::BigFloat received;
                       received.Deserialize(current_receiving);
-                      received += Q_group.GetLocal(Q_group.LocalRow(row),
-                                                   Q_group.LocalCol(column));
+                      received += input.GetLocal(input.LocalRow(row),
+                                                 input.LocalCol(column));
                       received.Serialize(current_receiving);
                     }
                   current_receiving += serialized_size;
@@ -167,19 +191,22 @@ void synchronize_Q(El::DistMatrix<El::BigFloat> &Q,
   check_mpi_error(
     MPI_Wait(&receive_requests[total_ranks % 2], MPI_STATUS_IGNORE));
   El::byte *current_receiving(send_receive[total_ranks % 2].data());
-  for(int64_t row = 0; row < Q_group.Height(); ++row)
-    for(int64_t column = row; column < Q_group.Height(); ++column)
+  for(int64_t row = 0; row < input.Height(); ++row)
+    for(int64_t column = 0; column < input.Width(); ++column)
       {
-        if(Q.Owner(row, column) == rank)
+        if(skip_element(row, column))
+          continue;
+        if(output.Owner(row, column) == rank)
           {
             El::BigFloat received;
             received.Deserialize(current_receiving);
-            if(Q_group.IsLocal(row, column))
+            if(input.IsLocal(row, column))
               {
-                received += Q_group.GetLocal(Q_group.LocalRow(row),
-                                             Q_group.LocalCol(column));
+                received += input.GetLocal(input.LocalRow(row),
+                                           input.LocalCol(column));
               }
-            Q.SetLocal(Q.LocalRow(row), Q.LocalCol(column), received);
+            output.SetLocal(output.LocalRow(row), output.LocalCol(column),
+                            received);
             current_receiving += serialized_size;
           }
       }

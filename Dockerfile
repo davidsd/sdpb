@@ -23,6 +23,9 @@
 
 # Elemental binaries built from https://gitlab.com/bootstrapcollaboration/elemental.git
 # based on the same alpine:3.18 build as below
+
+FROM vasdommes/flint:3.0-trunk as flint
+
 FROM bootstrapcollaboration/elemental:master AS build
 
 RUN apk add \
@@ -43,9 +46,13 @@ RUN apk add \
     openmpi-dev \
     rapidjson-dev
 WORKDIR /usr/local/src/sdpb
+# Include FLINT
+COPY --from=flint /usr/local /usr/local
+COPY --from=flint /usr/local/lib /usr/local/lib
+COPY --from=flint /usr/local/include /usr/local/include
 # Build SDPB from current sources, print build/config.log in configuration failed
 COPY . .
-RUN (./waf configure --elemental-dir=/usr/local --prefix=/usr/local \
+RUN (./waf configure --elemental-dir=/usr/local --flint-dir=/usr/local --prefix=/usr/local \
         || (cat build/config.log && exit 1) \
     ) && \
     python3 ./waf && \

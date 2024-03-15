@@ -16,11 +16,12 @@ namespace fs = std::filesystem;
 Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
              const Environment &env,
              const std::chrono::time_point<std::chrono::high_resolution_clock>
-               &start_time);
+               &start_time,
+             El::Matrix<int32_t> &block_timings_ms);
 
 void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info,
                   const Timers &timers, const bool &debug,
-                  El::Matrix<int32_t> &block_timings);
+                  const El::Matrix<int32_t> &block_timings_ms);
 
 int main(int argc, char **argv)
 {
@@ -79,14 +80,16 @@ int main(int argc, char **argv)
             {
               timing_parameters.verbosity = Verbosity::none;
             }
-          Timers timers(solve(block_info, timing_parameters, env, start_time));
+          El::Matrix<int32_t> block_timings_ms(block_info.dimensions.size(),
+                                               1);
+          Timers timers(solve(block_info, timing_parameters, env, start_time,
+                              block_timings_ms));
 
-          El::Matrix<int32_t> block_timings(block_info.dimensions.size(), 1);
           write_timing(timing_parameters.solver.checkpoint_out, block_info,
                        timers, timing_parameters.verbosity >= Verbosity::debug,
-                       block_timings);
+                       block_timings_ms);
           El::mpi::Barrier(El::mpi::COMM_WORLD);
-          Block_Info new_info(env, parameters.sdp_path, block_timings,
+          Block_Info new_info(env, parameters.sdp_path, block_timings_ms,
                               parameters.proc_granularity,
                               parameters.verbosity);
           std::swap(block_info, new_info);
@@ -109,7 +112,9 @@ int main(int argc, char **argv)
                         fs::copy_options::overwrite_existing);
             }
         }
-      Timers timers(solve(block_info, parameters, env, start_time));
+      El::Matrix<int32_t> block_timings_ms(block_info.dimensions.size(), 1);
+      Timers timers(
+        solve(block_info, parameters, env, start_time, block_timings_ms));
     }
   catch(std::exception &e)
     {

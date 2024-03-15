@@ -71,6 +71,17 @@ TODO: on compute nodes compiler fails to find some libs
     make -j 64 && make install
     cd ../..
 
+## FLINT
+
+    git clone https://github.com/flintlib/flint.git
+    cd flint
+    ./bootstrap.sh    
+    mkdir build
+    cd build
+    cmake .. -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DCMAKE_INSTALL_PREFIX=$HOME/install -DBUILD_SHARED_LIBS=ON
+    cmake --build . --target install
+    cd ../..
+
 ## libarchive
 
     wget http://www.libarchive.org/downloads/libarchive-3.7.1.tar.xz
@@ -89,7 +100,7 @@ TODO: on compute nodes compiler fails to find some libs
 
     git clone https://github.com/davidsd/sdpb.git
     cd sdpb
-    CXX=mpicxx ./waf configure --prefix=$HOME/install/sdpb-master --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --boost-dir=$HOME/install  --libarchive-dir=$HOME/install
+    CXX=mpicxx ./waf configure --prefix=$HOME/install/sdpb-master --elemental-dir=$HOME/install --flint-dir=$HOME/install --rapidjson-dir=$HOME/install --boost-dir=$HOME/install  --libarchive-dir=$HOME/install
     ./waf # -j 1
     ./test/run_all_tests.sh
     ./waf install

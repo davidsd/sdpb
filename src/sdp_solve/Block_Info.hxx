@@ -23,6 +23,9 @@ public:
   MPI_Group_Wrapper mpi_group;
   MPI_Comm_Wrapper mpi_comm;
 
+  // TODO add Block_Info::total_size() == block_info.dimensions.size()
+  // Rename block_info.block_indices to local_block_indices to make it clearer
+
   Block_Info() = delete;
   Block_Info(const Environment &env, const std::filesystem::path &sdp_path,
              const std::filesystem::path &checkpoint_in,

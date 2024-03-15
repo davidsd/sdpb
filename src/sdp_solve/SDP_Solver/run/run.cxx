@@ -1,5 +1,6 @@
 #include "sdp_solve/SDP_Solver.hxx"
-
+#include "bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
+#include "bigint_syrk/initialize_bigint_syrk_context.hxx"
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 // The main solver loop
@@ -65,7 +66,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
   const boost::property_tree::ptree &parameter_properties,
   const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
   const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time,
-  Timers &timers)
+  Timers &timers, El::Matrix<int32_t> &block_timings_ms)
 {
   SDP_Solver_Terminate_Reason terminate_reason(
     SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
@@ -114,6 +115,13 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
   auto psd_sizes(block_info.psd_matrix_block_sizes());
   std::size_t total_psd_rows(
     std::accumulate(psd_sizes.begin(), psd_sizes.end(), size_t(0)));
+
+  Scoped_Timer initialize_bigint_syrk_context_timer(timers,
+                                                    "bigint_syrk_context");
+  auto bigint_syrk_context = initialize_bigint_syrk_context(
+    env, block_info, sdp, parameters.max_shared_memory_bytes,
+    verbosity >= Verbosity::debug);
+  initialize_bigint_syrk_context_timer.stop();
 
   initialize_timer.stop();
   auto last_checkpoint_time(std::chrono::high_resolution_clock::now());
@@ -186,8 +194,15 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
       El::BigFloat mu, beta_corrector;
       step(parameters, total_psd_rows, is_primal_and_dual_feasible, block_info,
            sdp, grid, X_cholesky, Y_cholesky, A_X_inv, A_Y, primal_residue_p,
-           mu, beta_corrector, primal_step_length, dual_step_length,
-           terminate_now, timers);
+           bigint_syrk_context, mu, beta_corrector, primal_step_length,
+           dual_step_length, terminate_now, timers, block_timings_ms);
+
+      if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+        {
+          El::Print(block_timings_ms, "block_timings:");
+          El::Output();
+        }
+
       if(terminate_now)
         {
           terminate_reason
