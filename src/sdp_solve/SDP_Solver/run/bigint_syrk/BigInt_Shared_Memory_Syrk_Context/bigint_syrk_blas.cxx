@@ -1,6 +1,5 @@
 #include "../BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "../fmpz/Fmpz_BigInt.hxx"
-#include "reduce_scatter_DistMatrix.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/split_range.hxx"
 
