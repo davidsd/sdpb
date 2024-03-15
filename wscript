@@ -84,6 +84,7 @@ def build(bld):
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context/clear_residues.cxx',
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context/compute_block_residues.cxx',
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context/get_blas_job_schedule.cxx',
+                         'src/sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context/restore_and_reduce.cxx',
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/Blas_Job.cxx',
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/Blas_Job_Cost.cxx',
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/Blas_Job_Schedule.cxx',
