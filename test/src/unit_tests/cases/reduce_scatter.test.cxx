@@ -35,7 +35,9 @@ TEST_CASE("reduce_scatter_DistMatrix")
   INFO("Input: global DistMatrix.");
   El::mpi::Comm comm_world = El::mpi::COMM_WORLD;
 
-  int node_comm_size = GENERATE(1, 2, 3);
+  INFO("NB: you should run the test on 6/12/18/... ranks,"
+       " e.g. mpirun -n 6 unit_tests");
+  int node_comm_size = GENERATE(1, 2, 3, 6);
 
   DYNAMIC_SECTION("node_comm_size=" << node_comm_size)
   {
