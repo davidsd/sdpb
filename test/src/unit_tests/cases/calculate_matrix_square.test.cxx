@@ -70,7 +70,7 @@ namespace
                          P_bigint.fmpz_matrix)
        == 0)
       {
-        WARN(
+        INFO(
           "fmpz_mat_mul_blas() returned 0 (probably since FLINT was compiled "
           "without BLAS), falling back to fmpz_mat_mul_multi_mod()");
         fmpz_mat_mul_multi_mod(Q.fmpz_matrix, PT_bigint.fmpz_matrix,
@@ -308,7 +308,8 @@ TEST_CASE("calculate_Block_Matrix_square")
                 INFO("The blocks Q_IJ = P_I^T * P_J are calculated in "
                      "parallel.");
 
-                El::DistMatrix<El::BigFloat> Q_result(block_width, block_width);
+                El::DistMatrix<El::BigFloat> Q_result(block_width,
+                                                      block_width);
                 {
                   // blocks are distributed among all ranks, thus COMM_WORLD
                   Matrix_Normalizer normalizer(P_matrix_blocks, block_width,
