@@ -8,6 +8,7 @@
 #include "sdpb_util/Timers/Timers.hxx"
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 class BigInt_Shared_Memory_Syrk_Context : boost::noncopyable
@@ -94,9 +95,13 @@ private:
   void bigint_syrk_blas_shmem_submatrix(
     El::UpperOrLower uplo,
     const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
-    El::DistMatrix<El::BigFloat> &bigint_output_shmem_submatrix,
     const El::Range<El::Int> &output_I, const El::Range<El::Int> &output_J,
     Timers &timers, El::Matrix<int32_t> &block_timings_ms);
+
+  void restore_and_reduce(
+    std::optional<El::UpperOrLower> uplo,
+    El::DistMatrix<El::BigFloat> &output,
+    Timers &timers);
 
   [[nodiscard]] El::Int input_group_height_per_prime() const;
 };

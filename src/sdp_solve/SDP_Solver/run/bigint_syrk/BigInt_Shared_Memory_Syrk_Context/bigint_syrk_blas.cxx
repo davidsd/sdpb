@@ -1,7 +1,5 @@
 #include "../BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "../fmpz/Fmpz_BigInt.hxx"
-#include "reduce_scatter_DistMatrix.hxx"
-#include "restore_bigint_from_residues.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/split_range.hxx"
 
@@ -242,7 +240,7 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
             {
               // Single-node case, no need to reduce-scatter
               bigint_syrk_blas_shmem_submatrix(
-                uplo, bigint_input_matrix_blocks, bigint_output_submatrix, I,
+                uplo, bigint_input_matrix_blocks, I,
                 J, timers, block_timings_ms);
             }
           else
@@ -259,15 +257,13 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
 
               bigint_syrk_blas_shmem_submatrix(
                 uplo, bigint_input_matrix_blocks,
-                bigint_output_shmem_submatrix, I, J, timers, block_timings_ms);
-
-              // Sum the results for all nodes.
-              // For diagonal Q blocks (i==j), we need only upper/lower half (for uplo==UPPER/LOWER, respectively)
-              // For off-diagonal blocks, we have to synchronize all elements.
-              reduce_scatter(bigint_output_submatrix, bigint_output_shmem_submatrix,
-                             timers,
-                             i == j ? std::make_optional(uplo) : std::nullopt);
+                I, J, timers, block_timings_ms);
             }
+
+          std::optional<El::UpperOrLower> uplo_opt;
+          if(I.beg == J.beg)
+            uplo_opt = uplo;
+          restore_and_reduce(uplo_opt,bigint_output_submatrix,timers);
         }
     }
 }
@@ -276,9 +272,8 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
 // (i.e. single shared memory window).
 // bigint_output_shmem_submatrix is Q_IJ on the node
 void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem_submatrix(
-  El::UpperOrLower uplo,
+  const El::UpperOrLower uplo,
   const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
-  El::DistMatrix<El::BigFloat> &bigint_output_shmem_submatrix,
   const El::Range<El::Int> &output_I, const El::Range<El::Int> &output_J,
   Timers &timers, El::Matrix<int32_t> &block_timings_ms)
 {
@@ -288,16 +283,11 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem_submatrix(
                             input_grouped_block_residues_window_A->Comm()));
   ASSERT(
     El::mpi::Congruent(shared_memory_comm, output_residues_window->Comm()));
-  ASSERT(El::mpi::Congruent(shared_memory_comm,
-                            bigint_output_shmem_submatrix.DistComm()));
 
   ASSERT(input_window_split_factor > 0);
 
   const auto output_height = output_I.end - output_I.beg;
   const auto output_width = output_J.end - output_J.beg;
-
-  ASSERT_EQUAL(output_height, bigint_output_shmem_submatrix.Height());
-  ASSERT_EQUAL(output_width, bigint_output_shmem_submatrix.Width());
 
   ASSERT(input_grouped_block_residues_window_A->width >= output_height,
          DEBUG_STRING(input_grouped_block_residues_window_A->width),
@@ -356,33 +346,5 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem_submatrix(
       }
     }
 
-  // Restore bigint_output matrix from residues
-  {
-    Scoped_Timer restore_timer(timers, "from_residues");
-
-    Fmpz_BigInt big_int_value;
-    El::BigFloat big_float_value;
-    for(int i = 0; i < bigint_output_shmem_submatrix.LocalHeight(); ++i)
-      for(int j = 0; j < bigint_output_shmem_submatrix.LocalWidth(); ++j)
-        {
-          const int global_i = bigint_output_shmem_submatrix.GlobalRow(i);
-          const int global_j = bigint_output_shmem_submatrix.GlobalCol(j);
-
-          if(kind == Blas_Job::syrk)
-            {
-              // Only half of output matrix is initialized, ignore the other one
-              if(uplo == El::UpperOrLowerNS::UPPER && global_j < global_i)
-                continue;
-              if(uplo == El::UpperOrLowerNS::LOWER && global_i < global_j)
-                continue;
-            }
-
-          restore_bigint_from_residues(*output_residues_window, global_i,
-                                       global_j, comb, big_int_value);
-          big_int_value.to_BigFloat(big_float_value);
-          bigint_output_shmem_submatrix.SetLocal(i, j, big_float_value);
-        }
-  }
-
-  El::mpi::Barrier(bigint_output_shmem_submatrix.DistComm());
+  output_residues_window->Fence();
 }

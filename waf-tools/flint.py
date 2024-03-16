@@ -58,7 +58,7 @@ int main()
                           libpath=flint_libdir,
                           rpath=flint_libdir,
                           lib=flint_libs,
-                          use=['cxx17']):
+                          use=['cxx17', 'gmpxx']):
         conf.fatal("Could not find flint")
 
 

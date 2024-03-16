@@ -75,9 +75,9 @@ This means that P is split into horizontal bands (or blocks), and each block is 
 
 In turn, Q is `DistMatrix<BigFloat>` distributed over all cores.
 
-In the old SDPB algorithm, each core (or group of cores, if `procGranularity > 1`) was calculating a contribution to Q (
+In the old SDPB algorithm, each core (or group of cores) was calculating a contribution to Q (
 called `Q_group`) from its blocks. Adding up all Q_groups, one got the resulting Q
-(see [reduce_scatter_DistMatrix.hxx](BigInt_Shared_Memory_Syrk_Context/reduce_scatter_DistMatrix.hxx), previously called `synchronize_Q`).
+(see [synchronize_Q.cxx](https://github.com/davidsd/sdpb/blob/2.7.0/src/sdp_solve/SDP_Solver/run/step/initialize_schur_complement_solver/synchronize_Q.cxx)).
 
 This is inefficient in terms of memory, since we allocate memory for `Q_group` for each group of cores.
 
@@ -117,11 +117,10 @@ Q_group mod prime_3
 Each `Q_group mod prime_k` is calculated either via single `cblas_dsyrk()` call or
 several `cblas_dsyrk()`/`cblas_dgemm()` calls, if Q is split into blocks for better parallelization (see below).
 
-6. `Q_group` is now a `DistMatrix<BigFloat>` distributed over all cores of a node. If some element `Q_group(i,j)` is
-   stored e.g. on core 1, this core restores its value from the `Residue_Matrices_Window` using CRT.
-7. Reduce-scatter: calculate global Q, which is `DistMatrix<BigFloat>` distributed over all cores, as a sum of all
+6. `Q_group` is now stored implicitly, as a residues in the `Residue_Matrices_Window`. If some rank on a node needs some element `Q_group(i,j)`, it can restore it from the residues using CRT.
+7. Reduce-scatter: calculate global Q, which is a `DistMatrix<BigFloat>` distributed over all cores, as a sum of all
    Q_groups.
-   See [reduce_scatter_DistMatrix.hxx](BigInt_Shared_Memory_Syrk_Context/reduce_scatter_DistMatrix.hxx).
+   See [restore_and_reduce.cxx](BigInt_Shared_Memory_Syrk_Context/restore_and_reduce.cxx).
 8. Restore Q (see `Matrix_Normalizer.restore_Q`), i.e. divide by 2^2N and remove normalization.
 
 Steps 2, 3 and 8 are performed in [compute_Q()](../step/initialize_schur_complement_solver/compute_Q.cxx) function,
