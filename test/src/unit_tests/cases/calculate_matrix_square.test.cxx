@@ -106,7 +106,9 @@ TEST_CASE("calculate_Block_Matrix_square")
     }
   }
 
-  const int node_size = GENERATE(1, 2, 3);
+  INFO("NB: you should run the test on 6/12/18/... ranks,"
+       " e.g. mpirun -n 6 unit_tests");
+  const int node_size = GENERATE(1, 2, 3, 6);
   for(int group_size : std::set{1, node_size})
     {
       DYNAMIC_SECTION("node_size=" << node_size
