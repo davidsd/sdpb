@@ -229,6 +229,7 @@ message(STATUS "Elemental Libraries - ${Elemental_LIBRARIES}")
 
 # mark_as_advanced(CBLAS_LIBRARIES CBLAS_INCLUDE_DIRS)
 
+# find_package(Catch2 REQUIRED)
 
 include_directories(src)
 include_directories(external)
@@ -285,26 +286,31 @@ add_subdirectory(src/approx_objective)
 
 add_subdirectory(src/spectrum)
 
-# add_executable(integration_tests)
-# target_sources(integration_tests
-#                 PRIVATE
-#                 external/catch2/catch_amalgamated.cpp
-#                 test/src/integration_tests/main.cxx
-#                 test/src/integration_tests/util/Float.cxx
-#                 test/src/integration_tests/util/diff_outer_limits.cxx
-#                 test/src/integration_tests/util/diff_sdp.cxx
-#                 test/src/integration_tests/util/diff_sdpb_out.cxx
-#                 test/src/integration_tests/util/diff_spectrum.cxx
-#                 test/src/integration_tests/util/Test_Case_Runner.cxx
-#                 test/src/integration_tests/cases/end-to-end.test.cxx
-#                 test/src/integration_tests/cases/outer_limits.test.cxx
-#                 test/src/integration_tests/cases/pmp2sdp.test.cxx
-#                 test/src/integration_tests/cases/sdpb.test.cxx)
-# target_link_libraries(integration_tests
-#                         PRIVATE
-#                         ${USE_PACKAGES}
-#                         Boost::serialization)
-# target_include_directories(integration_tests PRIVATE test/src)
+add_compile_definitions(CATCH_AMALGAMATED_CUSTOM_MAIN)
+
+add_executable(integration_tests)
+target_sources(integration_tests
+                PRIVATE
+                external/catch2/catch_amalgamated.cpp
+                test/src/integration_tests/main.cxx
+                test/src/integration_tests/util/Float.cxx
+                test/src/integration_tests/util/diff_outer_limits.cxx
+                test/src/integration_tests/util/diff_sdp.cxx
+                test/src/integration_tests/util/diff_sdpb_out.cxx
+                test/src/integration_tests/util/diff_spectrum.cxx
+                test/src/integration_tests/util/Test_Case_Runner.cxx
+                test/src/integration_tests/cases/end-to-end.test.cxx
+                test/src/integration_tests/cases/outer_limits.test.cxx
+                test/src/integration_tests/cases/pmp2sdp.test.cxx
+                test/src/integration_tests/cases/sdpb.test.cxx)
+target_link_libraries(integration_tests
+                        PRIVATE
+                        ${USE_PACKAGES}
+                        # Catch2::Catch2
+                        Boost::filesystem
+                        Boost::serialization)
+target_include_directories(integration_tests PRIVATE test/src)
+install(TARGETS integration_tests RUNTIME)
 #     bld.program(source=['external/catch2/catch_amalgamated.cpp',
 #                         'test/src/integration_tests/main.cxx',
 #                         'test/src/integration_tests/util/Float.cxx',
@@ -324,6 +330,31 @@ add_subdirectory(src/spectrum)
 #                 use=use_packages,
 #                 includes=default_includes + ['test/src']
 #                 )
+
+add_executable(unit_tests)
+target_sources(unit_tests
+                PRIVATE
+                external/catch2/catch_amalgamated.cpp
+                test/src/unit_tests/main.cxx
+                test/src/unit_tests/cases/block_data_serialization.test.cxx
+                test/src/unit_tests/cases/block_mapping.test.cxx
+                test/src/unit_tests/cases/Boost_Float.test.cxx
+                test/src/unit_tests/cases/boost_serialization.test.cxx
+                test/src/unit_tests/cases/copy_matrix.test.cxx
+                test/src/unit_tests/cases/json.test.cxx
+                test/src/unit_tests/cases/shared_window.test.cxx)
+target_link_libraries(unit_tests
+                PRIVATE
+                ${USE_PACKAGES}
+                # Catch2::Catch2
+                Boost::filesystem
+                Boost::serialization
+                sdpb_util
+                pmp2sdp_lib
+                sdp_solve)
+target_include_directories(unit_tests PRIVATE test/src)
+install(TARGETS unit_tests RUNTIME)     
+
 #     bld.program(source=['external/catch2/catch_amalgamated.cpp',
 #                         'test/src/unit_tests/main.cxx',
 #                         'test/src/unit_tests/cases/block_data_serialization.test.cxx',
