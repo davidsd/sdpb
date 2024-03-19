@@ -80,6 +80,7 @@ void syrk_Q(Block_Matrix &schur_off_diagonal,
             El::DistMatrix<El::BigFloat> &Q, Timers &timers,
             El::Matrix<int32_t> &block_timings_ms)
 {
+  Scoped_Timer(timers, "syrk");
   std::vector<El::DistMatrix<El::BigFloat>> &P_blocks
     = schur_off_diagonal.blocks;
 
