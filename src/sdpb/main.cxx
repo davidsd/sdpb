@@ -115,6 +115,18 @@ int main(int argc, char **argv)
       El::Matrix<int32_t> block_timings_ms(block_info.dimensions.size(), 1);
       Timers timers(
         solve(block_info, parameters, env, start_time, block_timings_ms));
+      try
+        {
+          // TODO do not write block_timings if number of iterations == 1?
+          write_timing(parameters.solver.checkpoint_out, block_info,
+                 timers, parameters.verbosity >= Verbosity::debug,
+                 block_timings_ms);
+        }
+      catch(std::exception &e)
+        {
+          El::Output("An exception has been thrown in write_timing():");
+          El::ReportException(e);
+        }
     }
   catch(std::exception &e)
     {
