@@ -10,8 +10,29 @@ void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info,
 {
   if(debug)
     {
-      timers.write_profile(checkpoint_out.string() + ".profiling/profiling."
-                           + std::to_string(El::mpi::Rank()));
+      // Write profiling for each rank to ck.profiling/profiling.{rank}
+      fs::path parent_dir = checkpoint_out.string() + ".profiling";
+
+      // Move old profiling data to ck.profiling.0/
+      if(El::mpi::Rank() == 0 && fs::exists(parent_dir))
+        {
+          for(size_t index = 0; index < std::numeric_limits<size_t>::max();
+              ++index)
+            {
+              const fs::path backup_dir
+                = parent_dir.string() + "." + std::to_string(index);
+              if(!fs::exists(backup_dir))
+                {
+                  El::Output("Move old ", parent_dir, " to ", backup_dir);
+                  fs::rename(parent_dir, backup_dir);
+                  break;
+                }
+            }
+        }
+      // Barrier to ensure that we'll move old ck.profiling/ before writing to it
+      El::mpi::Barrier();
+      timers.write_profile(parent_dir
+                           / ("profiling." + std::to_string(El::mpi::Rank())));
     }
 
   El::Zero(block_timings);
@@ -38,6 +59,24 @@ void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info,
 
       fs::create_directories(checkpoint_out);
       fs::path block_timings_path(checkpoint_out / "block_timings");
+      // Copy old block_timings to block_timings.0
+      if(fs::exists(block_timings_path))
+        {
+          for(size_t index = 0; index < std::numeric_limits<size_t>::max();
+              ++index)
+            {
+              fs::path backup_path = block_timings_path;
+              backup_path.replace_extension("." + std::to_string(index));
+              if(!fs::exists(backup_path))
+                {
+                  El::Output("Copy old ", block_timings_path, " to ",
+                             backup_path);
+                  fs::copy(block_timings_path, backup_path);
+                  break;
+                }
+            }
+        }
+
       std::ofstream block_timings_file(block_timings_path);
       for(int64_t row = 0; row < block_timings.Height(); ++row)
         {

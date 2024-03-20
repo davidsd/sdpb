@@ -110,6 +110,17 @@ int main(int argc, char **argv)
             }
         }
       Timers timers(solve(block_info, parameters, env, start_time));
+      El::Matrix<int32_t> block_timings(block_info.dimensions.size(), 1);
+      try
+        {
+          write_timing(parameters.solver.checkpoint_out, block_info,
+                 timers, parameters.verbosity >= Verbosity::debug,
+                 block_timings);
+        }
+      catch(std::exception& e)
+        {
+          El::ReportException(e);
+        }
     }
   catch(std::exception &e)
     {
