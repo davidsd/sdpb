@@ -31,10 +31,7 @@ int main(int argc, char **argv)
           return 0;
         }
 
-      El::gmp::SetPrecision(parameters.precision);
-      // El::gmp wants base-2 bits, but boost::multiprecision wants
-      // base-10 digits.
-      Boost_Float::default_precision(parameters.precision * log(2) / log(10));
+      Environment::set_precision(parameters.precision);
 
       const bool debug = parameters.verbosity >= Verbosity::debug;
       Timers timers(env, debug);

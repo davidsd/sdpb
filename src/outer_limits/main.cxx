@@ -82,10 +82,7 @@ int main(int argc, char **argv)
     }
 
   const int64_t precision(parameters.solver.precision);
-  El::gmp::SetPrecision(precision);
-  // El::gmp wants base-2 bits, but boost::multiprecision wants
-  // base-10 digits.
-  Boost_Float::default_precision(precision * log(2) / log(10));
+  Environment::set_precision(precision);
   auto start_time = std::chrono::high_resolution_clock::now();
   if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
