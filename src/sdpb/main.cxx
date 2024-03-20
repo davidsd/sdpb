@@ -35,7 +35,7 @@ int main(int argc, char **argv)
           return 0;
         }
 
-      El::gmp::SetPrecision(parameters.solver.precision);
+      Environment::set_precision(parameters.solver.precision);
       auto start_time = std::chrono::high_resolution_clock::now();
       if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {

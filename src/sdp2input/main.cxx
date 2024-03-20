@@ -74,10 +74,7 @@ int main(int argc, char **argv)
       ASSERT(!fs::is_directory(input_file) && input_file != ".",
              "Input file is a directory, not a file:", input_file);
 
-      El::gmp::SetPrecision(precision);
-      // El::gmp wants base-2 bits, but boost::multiprecision wants
-      // base-10 digits.
-      Boost_Float::default_precision(precision * log(2) / log(10));
+      Environment::set_precision(precision);
 
       Timers timers(env, debug);
       Scoped_Timer timer(timers, "sdp2input");

@@ -30,7 +30,7 @@ int main(int argc, char **argv)
 
       parse_command_line(argc, argv, output_format, precision, input_files,
                          output_path, command_arguments);
-      El::gmp::SetPrecision(precision);
+      Environment::set_precision(precision);
 
       Timers timers(env, debug);
 
