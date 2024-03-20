@@ -28,13 +28,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # compiler_cxx
 # TODO
-if(DEFINED (ENV{CXX}))
-    if(ENV{CXX} == "g++" || ENV{CXX} == "icpc")
-        SET(CMAKE_CXX_COMPILER mpicxx)
-    endif()
-else()
-    SET(CMAKE_CXX_COMPILER mpicxx)
-endif()
+# if(DEFINED (ENV{CXX}))
+#     if(ENV{CXX} == "g++" || ENV{CXX} == "icpc")
+#         SET(CMAKE_CXX_COMPILER mpicxx)
+#     endif()
+# else()
+#     SET(CMAKE_CXX_COMPILER mpicxx)
+# endif()
 
 message(STATUS "Found g++ compiler (C++ compiler): ${CMAKE_CXX_COMPILER}")
 
@@ -76,10 +76,10 @@ endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   set(SDPB_RELEASE TRUE)
-  add_compile_options(-O3 -DOMPI_SKIP_MPICXX)
+  add_compile_options(-O3 -DOMPI_SKIP_MPICXX -pthread)
 else()
   set(SDPB_RELEASE FALSE)
-  add_compile_options(-Wall -Wextra -g -DOMPI_SKIP_MPICXX)
+  add_compile_options(-Wall -Wextra -g -DOMPI_SKIP_MPICXX -pthread)
 endif()
 string(TOUPPER ${CMAKE_BUILD_TYPE} UPPER_BUILD_TYPE)
 
@@ -118,6 +118,7 @@ find_package(Boost
                 stacktrace_basic
                 stacktrace_addr2line
                 stacktrace_noop
+                thread
                 REQUIRED)
 message(STATUS "Boost version: ${Boost_VERSION}")
 if(Boost_FOUND AND Boost_INCLUDE_DIR)
@@ -229,7 +230,18 @@ message(STATUS "Elemental Libraries - ${Elemental_LIBRARIES}")
 
 # mark_as_advanced(CBLAS_LIBRARIES CBLAS_INCLUDE_DIRS)
 
-# find_package(Catch2 REQUIRED)
+find_package(Catch2 QUIET)
+if(NOT Catch2_FOUND)
+  Include(FetchContent)
+
+  FetchContent_Declare(
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG        v3.5.3 # or a later release
+  )
+
+  FetchContent_MakeAvailable(Catch2)
+endif()
 
 include_directories(src)
 include_directories(external)
@@ -306,9 +318,11 @@ target_sources(integration_tests
 target_link_libraries(integration_tests
                         PRIVATE
                         ${USE_PACKAGES}
-                        # Catch2::Catch2
+                        Catch2::Catch2
                         Boost::filesystem
-                        Boost::serialization)
+                        Boost::serialization
+                        pthread
+                        dl)
 target_include_directories(integration_tests PRIVATE test/src)
 install(TARGETS integration_tests RUNTIME)
 #     bld.program(source=['external/catch2/catch_amalgamated.cpp',
@@ -351,7 +365,8 @@ target_link_libraries(unit_tests
                 Boost::serialization
                 sdpb_util
                 pmp2sdp_lib
-                sdp_solve)
+                sdp_solve
+                pthread)
 target_include_directories(unit_tests PRIVATE test/src)
 install(TARGETS unit_tests RUNTIME)     
 

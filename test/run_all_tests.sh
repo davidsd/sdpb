@@ -28,11 +28,11 @@ fi
 # https://github.com/catchorg/Catch2/blob/devel/docs/command-line.md
 
 # unit_tests: run 2 processes
-echo time $MPI_RUN_COMMAND -n 2 ./build/unit_tests --durations yes
+echo time $MPI_RUN_COMMAND -n 2 ./build/bin/unit_tests --durations yes
 time $MPI_RUN_COMMAND -n 2 ./build/unit_tests --durations yes || { exit $?; }
 
 # integration_tests
-echo time ./build/integration_tests --durations yes --mpirun="$MPI_RUN_COMMAND"
+echo time ./build/bin/integration_tests --durations yes --mpirun="$MPI_RUN_COMMAND"
 time ./build/integration_tests --durations yes --mpirun="$MPI_RUN_COMMAND" || { exit $?; }
 
 echo "$0: ALL TESTS PASSED"
