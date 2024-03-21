@@ -21,10 +21,10 @@ SDPB requires
 - [Boost C++ Libraries](http://www.boost.org/) Please be sure that the
   boost library is compiled with the same C++ compiler you are using.
 
-- [The GNU Multiprecision Library](https://gmplib.org/).  Be sure to
+- [The GNU Multiprecision Library](https://gmplib.org/) (6.2.1 or later).  Be sure to
   enable C++ support by configuring with the option `--enable-cxx`.
 
-- [The GNU MPFR Library](https://www.mpfr.org/)
+- [The GNU MPFR Library](https://www.mpfr.org/)  (4.1.0 or later)
 
 - [libxml2](http://www.xmlsoft.org/).  Only the C library is required.
 
@@ -87,21 +87,23 @@ manager such as [Homebrew](https://brew.sh).
 4. Build and install Elemental
 
         make && make install
+        cd ../..
 
-5. Install FLINT library
+5. Install [FLINT](https://github.com/flintlib/flint) library
+ 
+        git clone https://github.com/flintlib/flint.git
+        cd flint
+        ./bootstrap.sh
+        ./configure --disable-static --enable-assert --prefix=$HOME/install
+        make
+        make check
+        make install
+        cd ..
 
-You should compile [FLINT](https://github.com/flintlib/flint) library with BLAS support enabled.
-
-      ./bootstrap.sh
-      ./configure --disable-static --enable-assert --with-blas --disable-pthread --prefix=$HOME/install
-      make
-      make install
-
-See [FLINT documentation](https://flintlib.org/doc/building.html) for installation instructions.
+   See [FLINT documentation](https://flintlib.org/doc/building.html) for installation instructions.
 
 6. Download SDPB
 
-        cd ../..
         git clone https://github.com/davidsd/sdpb
         cd sdpb
 
@@ -111,15 +113,7 @@ See [FLINT documentation](https://flintlib.org/doc/building.html) for installati
    system directories or have corresponding environment variables. You may have to explicitly tell it where other
    libraries are. If you are having problems, running `./waf --help` will give you a list of options.
    
-   On Yale, a working command is
-
-        ./waf configure --elemental-dir=$HOME/project/install --flint-dir=$HOME/project/install
-
-    On Harvard, a working command is
-
-        ./waf configure --elemental-dir=$HOME/install --flint-dir=$HOME/install
-
-    and on Debian buster, it is
+   For example, on Debian buster, a working command is
 
         ./waf configure --elemental-dir=$HOME/install --flint-dir=$HOME/install
 
@@ -146,7 +140,7 @@ documentation for your individual system.
 
 You can check the installation by running `unit_tests` and `integration_tests` (takes up to several minutes):
 
-        mpirun -n 2 ./build/unit_tests
+        mpirun -n 6 ./build/unit_tests
         ./build/integration_tests
 
 If some integration test case fails, you may check the test logs in `test/out/log/` folder and files generated during
