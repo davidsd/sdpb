@@ -1,5 +1,6 @@
 #include "Environment.hxx"
 
+#include "Boost_Float.hxx"
 #include "assert.hxx"
 
 #include <csignal>
@@ -23,6 +24,14 @@ Environment::Environment(int argc, char **argv) : env(argc, argv)
 Environment::~Environment()
 {
   finalize();
+}
+void Environment::set_precision(const mp_bitcnt_t digits2)
+{
+  El::gmp::SetPrecision(digits2);
+  // El::gmp wants base-2 bits, but boost::multiprecision wants
+  // base-10 digits.
+  const unsigned digits10 = El::gmp::Precision() * log(2) / log(10);
+  Boost_Float::default_precision(digits10);
 }
 int Environment::num_nodes() const
 {

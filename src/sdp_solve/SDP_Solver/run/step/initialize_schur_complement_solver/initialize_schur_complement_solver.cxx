@@ -87,5 +87,12 @@ void initialize_schur_complement_solver(
             block_timings_ms);
 
   Scoped_Timer Cholesky_timer(timers, "Cholesky_Q");
-  Cholesky(El::UpperOrLowerNS::UPPER, Q);
+  try
+    {
+      Cholesky(El::UpperOrLowerNS::UPPER, Q);
+    }
+  catch(std::exception &e)
+    {
+      RUNTIME_ERROR("Error when computing Cholesky(Q): ", e.what());
+    }
 }

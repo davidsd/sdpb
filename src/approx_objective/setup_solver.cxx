@@ -8,7 +8,9 @@ namespace fs = std::filesystem;
 
 // TODO: Have this be part of sdp_solve.hxx
 void cholesky_decomposition(const Block_Diagonal_Matrix &A,
-                            Block_Diagonal_Matrix &L);
+                            Block_Diagonal_Matrix &L,
+                            const Block_Info &block_info,
+                            const std::string &name);
 void compute_A_X_inv(
   const Block_Info &block_info, const Block_Diagonal_Matrix &X_cholesky,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
@@ -85,7 +87,7 @@ void setup_solver(const Environment &env, const Block_Info &block_info,
         A_X_inv, A_Y;
 
       Block_Diagonal_Matrix X_cholesky(X);
-      cholesky_decomposition(X, X_cholesky);
+      cholesky_decomposition(X, X_cholesky, block_info, "X");
       compute_A_X_inv(block_info, X_cholesky, sdp.bases_blocks, A_X_inv);
       compute_A_Y(block_info, Y, sdp.bases_blocks, A_Y);
 

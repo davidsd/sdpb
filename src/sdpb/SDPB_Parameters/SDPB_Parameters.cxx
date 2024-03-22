@@ -51,14 +51,6 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
     "(because, for example, you only want to know if SDPB found a primal "
     "feasible point), set this to an empty string.");
   basic_options.add_options()(
-    "procGranularity", po::value<size_t>(&proc_granularity)->default_value(1),
-    "procGranularity must evenly divide number of processes per node.\n\n"
-    "The minimum number of cores in a group, used during load balancing.  "
-    "Setting it to anything larger than 1 will make the solution take "
-    "longer.  "
-    "This option is generally useful only when trying to fit a large problem "
-    "in a small machine.");
-  basic_options.add_options()(
     "verbosity",
     po::value<Verbosity>(&verbosity)->default_value(Verbosity::regular),
     "Verbosity.  0 -> no output, 1 -> regular output, 2 -> debug output");
@@ -68,6 +60,14 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
     "procsPerNode", po::value<size_t>(),
     "[OBSOLETE] The number of MPI processes running on a node. "
     "Determined automatically from MPI environment.");
+  obsolete_options.add_options()(
+    "procGranularity", po::value<size_t>(&proc_granularity)->default_value(1),
+    "[OBSOLETE] procGranularity must evenly divide number of processes per "
+    "node.\n\n"
+    "The minimum number of cores in a group, used during load balancing.  "
+    "Setting it to anything larger than 1 will make the solution take "
+    "longer.  "
+    "This option should not be used except for testing purposes.");
 
   cmd_line_options.add(basic_options);
   cmd_line_options.add(obsolete_options);
@@ -153,12 +153,23 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
               ASSERT(ofs.good(), "Cannot write to outDir: ", out_directory);
             }
 
-          if(El::mpi::Rank() == 0 && verbosity >= Verbosity::regular
-             && variables_map.count("procsPerNode") != 0)
+          if(El::mpi::Rank() == 0 && verbosity >= Verbosity::regular)
             {
-              El::Output("--procsPerNode option is obsolete. The number of "
-                         "MPI processes running on a node is determined "
-                         "automatically from MPI environment.");
+              if(variables_map.count("procsPerNode") != 0)
+                {
+                  PRINT_WARNING(
+                    "--procsPerNode option is obsolete. The number of "
+                    "MPI processes running on a node is determined "
+                    "automatically from MPI environment.");
+                }
+              if(variables_map.count("procGranularity") != 0)
+                {
+                  PRINT_WARNING("--procGranularity option is obsolete. "
+                                "Setting it to anything larger than 1 will "
+                                "make the solution take longer. "
+                                "This option should not be used except for "
+                                "testing purposes.");
+                }
             }
         }
     }

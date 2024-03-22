@@ -1,4 +1,5 @@
 #include "sdpb_util/Boost_Float.hxx"
+#include "sdpb_util/Environment.hxx"
 #include "sdpb_util/assert.hxx"
 
 #include <El.hpp>
@@ -81,10 +82,7 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
   ASSERT(!(fs::exists(output_path) && fs::is_directory(output_path)),
          "Output file exists and is a directory: ", output_path);
 
-  El::gmp::SetPrecision(precision);
-  // El::gmp wants base-2 bits, but boost::multiprecision wants
-  // base-10 digits.
-  Boost_Float::default_precision(precision * log(2) / log(10));
+  Environment::set_precision(precision);
 
   threshold = El::BigFloat(threshold_string);
   mesh_threshold = El::BigFloat(mesh_threshold_string);
