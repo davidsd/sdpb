@@ -25,8 +25,17 @@ void initialize_schur_off_diagonal(
         schur_complement_cholesky.blocks[block]
           = schur_complement.blocks[block];
 
-        Cholesky(El::UpperOrLowerNS::LOWER,
-                 schur_complement_cholesky.blocks[block]);
+        try
+          {
+            Cholesky(El::UpperOrLowerNS::LOWER,
+                     schur_complement_cholesky.blocks[block]);
+          }
+        catch(std::exception &e)
+          {
+            RUNTIME_ERROR(
+              "Error when computing Cholesky decomposition of block_",
+              global_block_index, ": ", e.what());
+          }
         block_timings_ms(global_block_index, 0)
           += cholesky_timer.elapsed_milliseconds();
       }
