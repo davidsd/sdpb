@@ -113,8 +113,7 @@ int main(int argc, char **argv)
             {
               timing_parameters.verbosity = Verbosity::none;
             }
-          El::Matrix<int32_t> block_timings_ms(block_info.dimensions.size(),
-                                               1);
+          El::Matrix<int32_t> block_timings_ms;
           Timers timers(solve(block_info, timing_parameters, env, start_time,
                               block_timings_ms));
 
@@ -122,6 +121,12 @@ int main(int argc, char **argv)
             timing_parameters.solver.solver_parameters.checkpoint_out,
             block_info, timers,
             timing_parameters.verbosity >= Verbosity::debug, block_timings_ms);
+          if(block_timings_ms.Height() == 0 && block_timings_ms.Width() == 0)
+            {
+              RUNTIME_ERROR(
+                "block_timings vector is empty, probably because "
+                "timing run exited before completing two solver iterations.");
+            }
           El::mpi::Barrier(El::mpi::COMM_WORLD);
           Block_Info new_info(env, parameters.sdp_path, block_timings_ms,
                               parameters.proc_granularity,
@@ -155,8 +160,21 @@ int main(int argc, char **argv)
 
           //std::cout << "after copy_file \n " << std::flush;
         }
-      El::Matrix<int32_t> block_timings_ms(block_info.dimensions.size(), 1);
-      solve(block_info, parameters, env, start_time, block_timings_ms);
+      El::Matrix<int32_t> block_timings_ms;
+      Timers timers(
+        solve(block_info, parameters, env, start_time, block_timings_ms));
+      try
+        {
+          write_timing(parameters.solver.solver_parameters.checkpoint_out,
+                       block_info, timers,
+                       parameters.verbosity >= Verbosity::debug,
+                       block_timings_ms);
+        }
+      catch(std::exception &e)
+        {
+          El::Output("An exception has been thrown in write_timing():");
+          El::ReportException(e);
+        }
     }
   catch(std::exception &e)
     {

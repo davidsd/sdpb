@@ -212,6 +212,24 @@ Dynamical_Solver_Terminate_Reason Dynamical_Solver::run_dynamical(
           primal_step_length, dual_step_length, terminate_now, timers,
           update_sdp, find_zeros, extParamStep, block_timings_ms);
         final_beta = beta_predictor;
+
+        if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+          {
+            El::Print(block_timings_ms, "block_timings, ms:");
+            El::Output();
+          }
+        if(iteration == 1)
+          {
+            // One the first iteration, matrices may have many zeros, thus
+            // block timings may be quite different from the next iterations.
+            // Thus, we never want to write first iteration to ck/block_timings.
+            if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+              {
+                El::Output("block_timings from the first iteration will be "
+                           "ignored and removed.");
+              }
+            block_timings_ms.Empty(false);
+          }
       }
       if(terminate_now)
         {
