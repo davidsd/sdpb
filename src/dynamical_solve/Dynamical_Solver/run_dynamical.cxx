@@ -140,6 +140,16 @@ Dynamical_Solver_Terminate_Reason Dynamical_Solver::run_dynamical(
           El::Output("Start iteration ", iteration, " at ",
                      boost::posix_time::second_clock::local_time());
         }
+
+      // Prepare graceful exit if any process has received SIGTERM
+      {
+        El::byte sigterm = env.sigterm_received();
+        sigterm = El::mpi::AllReduce(sigterm, El::mpi::LOGICAL_OR,
+                                     El::mpi::COMM_WORLD);
+        if(sigterm)
+          return Dynamical_Solver_Terminate_Reason::SIGTERM_Received;
+      }
+
       El::byte checkpoint_now(
         std::chrono::duration_cast<std::chrono::seconds>(
           std::chrono::high_resolution_clock::now() - last_checkpoint_time)

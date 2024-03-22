@@ -3,6 +3,7 @@
 #include "sdpb_util/ostream/set_stream_precision.hxx"
 
 #include <El.hpp>
+#include <csignal>
 #include <filesystem>
 
 void save_solution(
@@ -66,7 +67,8 @@ Timers solve(const Block_Info &block_info,
                 << '\n';
     }
 
-  if(!parameters.no_final_checkpoint)
+  if(reason == Dynamical_Solver_Terminate_Reason::SIGTERM_Received
+     || !parameters.no_final_checkpoint)
     {
       solver.save_checkpoint(
         parameters.solver.solver_parameters.checkpoint_out,
@@ -79,5 +81,12 @@ Timers solve(const Block_Info &block_info,
   save_solution(solver, reason, runtime, parameters.out_directory,
                 parameters.write_solution, block_info.block_indices,
                 sdp.normalization, parameters.verbosity, extParamStep);
+  if(reason == Dynamical_Solver_Terminate_Reason::SIGTERM_Received)
+    {
+      if(El::mpi::Rank() == 0)
+        El::Output("Received SIGTERM, exiting gracefully...");
+      MPI_Finalize();
+      std::exit(SIGTERM);
+    }
   return timers;
 }

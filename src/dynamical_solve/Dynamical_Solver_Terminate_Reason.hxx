@@ -18,6 +18,7 @@ enum class Dynamical_Solver_Terminate_Reason
   PrimalStepTooSmall,
   DualStepTooSmall,
   UpdateSDPs,
+  SIGTERM_Received,
 };
 
 std::ostream &
