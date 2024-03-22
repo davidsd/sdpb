@@ -40,14 +40,6 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
     "A file containing either preprocessed input for the SDP you wish to "
     "approximate, or a null separated list of files with preprocessed input.");
   basic_options.add_options()(
-    "procGranularity", po::value<size_t>(&proc_granularity)->default_value(1),
-    "procGranularity must evenly divide number of processes per node.\n\n"
-    "The minimum number of cores in a group, used during load balancing.  "
-    "Setting it to anything larger than 1 will make the solution take "
-    "longer.  "
-    "This option is generally useful only when trying to fit a large problem "
-    "in a small machine.");
-  basic_options.add_options()(
     "maxSharedMemory",
     boost::program_options::value<size_t>(&max_shared_memory_bytes)
       ->default_value(std::numeric_limits<size_t>::max()),
@@ -78,6 +70,14 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
     "procsPerNode", po::value<size_t>(),
     "[OBSOLETE] The number of MPI processes running on a node. "
     "Determined automatically from MPI environment.");
+  obsolete_options.add_options()(
+    "procGranularity", po::value<size_t>(&proc_granularity)->default_value(1),
+    "[OBSOLETE] procGranularity must evenly divide number of processes per "
+    "node.\n\n"
+    "The minimum number of cores in a group, used during load balancing.  "
+    "Setting it to anything larger than 1 will make the solution take "
+    "longer.  "
+    "This option should not be used except for testing purposes.");
   cmd_line_options.add(obsolete_options);
 
   po::variables_map variables_map;
@@ -106,13 +106,6 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
 
           po::notify(variables_map);
 
-          if(variables_map.count("procsPerNode") != 0)
-            {
-              El::Output("--procsPerNode option is obsolete. The number of "
-                         "MPI processes running on a node is determined "
-                         "automatically from MPI environment.");
-            }
-
           ASSERT(fs::exists(sdp_path), "SDP path does not exist: ", sdp_path);
           ASSERT(new_sdp_path.empty() || fs::exists(new_sdp_path),
                  "New SDP path does not exist: ", sdp_path);
@@ -125,6 +118,25 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
                   solution_dir = solution_dir.parent_path();
                 }
               solution_dir += "_out";
+            }
+
+          if(El::mpi::Rank() == 0)
+            {
+              if(variables_map.count("procsPerNode") != 0)
+                {
+                  PRINT_WARNING(
+                    "--procsPerNode option is obsolete. The number of "
+                    "MPI processes running on a node is determined "
+                    "automatically from MPI environment.");
+                }
+              if(variables_map.count("procGranularity") != 0)
+                {
+                  PRINT_WARNING("--procGranularity option is obsolete. "
+                                "Setting it to anything larger than 1 will "
+                                "make the solution take longer. "
+                                "This option should not be used except for "
+                                "testing purposes.");
+                }
             }
         }
     }

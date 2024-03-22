@@ -107,6 +107,10 @@ void SDP_Solver::step(
     if(mu > parameters.max_complementarity)
       {
         terminate_now = true;
+        // Block timings are not updated below, so here we already have correct values.
+        // (otherwise, we might want to clear them)
+        Scoped_Timer block_timings_timer(timers, "block_timings_AllReduce");
+        El::AllReduce(block_timings_ms, El::mpi::COMM_WORLD);
         return;
       }
 

@@ -25,8 +25,17 @@ void initialize_schur_off_diagonal(
         schur_complement_cholesky.blocks[block]
           = schur_complement.blocks[block];
 
-        Cholesky(El::UpperOrLowerNS::LOWER,
-                 schur_complement_cholesky.blocks[block]);
+        try
+          {
+            Cholesky(El::UpperOrLowerNS::LOWER,
+                     schur_complement_cholesky.blocks[block]);
+          }
+        catch(std::exception &e)
+          {
+            RUNTIME_ERROR(
+              "Error when computing Cholesky decomposition of block_",
+              global_block_index, ": ", e.what());
+          }
         block_timings_ms(global_block_index, 0)
           += cholesky_timer.elapsed_milliseconds();
       }
@@ -80,6 +89,7 @@ void syrk_Q(Block_Matrix &schur_off_diagonal,
             El::DistMatrix<El::BigFloat> &Q, Timers &timers,
             El::Matrix<int32_t> &block_timings_ms)
 {
+  Scoped_Timer(timers, "syrk");
   std::vector<El::DistMatrix<El::BigFloat>> &P_blocks
     = schur_off_diagonal.blocks;
 

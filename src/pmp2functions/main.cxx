@@ -25,10 +25,7 @@ int main(int argc, char **argv)
       if(!parameters.is_valid())
         return 0;
 
-      El::gmp::SetPrecision(parameters.precision);
-      // El::gmp wants base-2 bits, but boost::multiprecision wants
-      // base-10 digits.
-      Boost_Float::default_precision(parameters.precision * log(2) / log(10));
+      Environment::set_precision(parameters.precision);
 
       Timers timers(env, parameters.verbosity >= debug);
       const auto pmp

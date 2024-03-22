@@ -45,7 +45,7 @@ int main(int argc, char **argv)
         {
           return 0;
         }
-      El::gmp::SetPrecision(parameters.precision);
+      Environment::set_precision(parameters.precision);
       Block_Info block_info(env, parameters.sdp_path, parameters.solution_dir,
                             parameters.proc_granularity, Verbosity::none);
 

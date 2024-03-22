@@ -1,3 +1,5 @@
+#include "sdpb_util/Environment.hxx"
+
 #include <catch2/catch_amalgamated.hpp>
 #include <El.hpp>
 #include <iostream>
@@ -10,8 +12,8 @@
 
 int main(int argc, char *argv[])
 {
-  El::Environment env(argc, argv);
-  El::gmp::SetPrecision(768);
+  Environment env(argc, argv);
+  Environment::set_precision(768);
   Test_Util::REQUIRE_Equal::diff_precision = El::gmp::Precision();
 
   int rank = El::mpi::Rank();
