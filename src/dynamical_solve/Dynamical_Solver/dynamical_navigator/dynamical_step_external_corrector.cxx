@@ -385,8 +385,8 @@ void Dynamical_Solver::external_corrector_run(
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     A_Y;
 
-  cholesky_decomposition(X, X_cholesky);
-  cholesky_decomposition(Y, Y_cholesky);
+  cholesky_decomposition(X, X_cholesky, block_info, "X");
+  cholesky_decomposition(Y, Y_cholesky, block_info, "Y");
 
   compute_bilinear_pairings(block_info, X_cholesky, Y, old_sdp.bases_blocks,
                             A_X_inv, A_Y, timers);

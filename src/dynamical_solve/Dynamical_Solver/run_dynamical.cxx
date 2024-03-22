@@ -11,7 +11,9 @@
 
 //Functions from SDP_Solver
 void cholesky_decomposition(const Block_Diagonal_Matrix &A,
-                            Block_Diagonal_Matrix &L);
+                            Block_Diagonal_Matrix &L,
+                            const Block_Info &block_info,
+                            const std::string &name);
 
 void print_header_dynamical(const Verbosity &verbosity);
 void print_header_dynamical_new(const Verbosity &verbosity);
@@ -158,8 +160,8 @@ Dynamical_Solver_Terminate_Reason Dynamical_Solver::run_dynamical(
       {
         Scoped_Timer cholesky_decomposition_timer(timers,
                                                   "choleskyDecomposition");
-        cholesky_decomposition(X, X_cholesky);
-        cholesky_decomposition(Y, Y_cholesky);
+        cholesky_decomposition(X, X_cholesky, block_info, "X");
+        cholesky_decomposition(Y, Y_cholesky, block_info, "Y");
       }
 
       compute_bilinear_pairings(block_info, X_cholesky, Y, sdp.bases_blocks,

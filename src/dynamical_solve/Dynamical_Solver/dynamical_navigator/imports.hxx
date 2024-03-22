@@ -15,7 +15,9 @@ El::BigFloat corrector_centering_parameter(
   const bool is_primal_dual_feasible, const size_t &total_num_rows);
 
 void cholesky_decomposition(const Block_Diagonal_Matrix &A,
-                            Block_Diagonal_Matrix &L);
+                            Block_Diagonal_Matrix &L,
+                            const Block_Info &block_info,
+                            const std::string &name);
 
 void cholesky_solve(const Block_Diagonal_Matrix &ACholesky,
                     Block_Diagonal_Matrix &X);
