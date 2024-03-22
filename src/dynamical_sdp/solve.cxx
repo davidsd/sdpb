@@ -28,6 +28,12 @@ Timers solve(const Block_Info &block_info,
 
   Scoped_Timer read_sdp_timer(timers, "read_sdp");
   SDP sdp(parameters.sdp_path, block_info, grid, timers);
+  if(El::mpi::Rank() == 0 && parameters.write_solution.vector_z)
+    {
+      ASSERT(sdp.normalization.has_value(),
+             "Please provide SDP with valid normalization.json "
+             "or exclude z from --writeSolution arguments.");
+    }
   read_sdp_timer.stop();
 
   Scoped_Timer solver_ctor_timer(timers, "Dynamical_Solver.ctor");
