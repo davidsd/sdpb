@@ -80,14 +80,18 @@ int main(int argc, char **argv)
             {
               timing_parameters.verbosity = Verbosity::none;
             }
-          El::Matrix<int32_t> block_timings_ms(block_info.dimensions.size(),
-                                               1);
+          El::Matrix<int32_t> block_timings_ms;
           Timers timers(solve(block_info, timing_parameters, env, start_time,
                               block_timings_ms));
 
           write_timing(timing_parameters.solver.checkpoint_out, block_info,
                        timers, timing_parameters.verbosity >= Verbosity::debug,
                        block_timings_ms);
+          if(block_timings_ms.Height() == 0 && block_timings_ms.Width() == 0)
+            {
+              RUNTIME_ERROR("block_timings vector is empty, probably because "
+                "timing run exited before completing two solver iterations.");
+            }
           El::mpi::Barrier(El::mpi::COMM_WORLD);
           Block_Info new_info(env, parameters.sdp_path, block_timings_ms,
                               parameters.proc_granularity,
@@ -112,15 +116,14 @@ int main(int argc, char **argv)
                         fs::copy_options::overwrite_existing);
             }
         }
-      El::Matrix<int32_t> block_timings_ms(block_info.dimensions.size(), 1);
+      El::Matrix<int32_t> block_timings_ms;
       Timers timers(
         solve(block_info, parameters, env, start_time, block_timings_ms));
       try
         {
-          // TODO do not write block_timings if number of iterations == 1?
-          write_timing(parameters.solver.checkpoint_out, block_info,
-                 timers, parameters.verbosity >= Verbosity::debug,
-                 block_timings_ms);
+          write_timing(parameters.solver.checkpoint_out, block_info, timers,
+                       parameters.verbosity >= Verbosity::debug,
+                       block_timings_ms);
         }
       catch(std::exception &e)
         {

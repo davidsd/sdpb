@@ -41,6 +41,12 @@ void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info,
           El::Print(block_timings_ms, "block_timings, ms:", ", ");
           El::Output();
         }
+      if(block_timings_ms.Height() == 0 && block_timings_ms.Width() == 0)
+        {
+          PRINT_WARNING(
+            "block_timings vector is empty, cannot write it to the file!");
+          return;
+        }
 
       ASSERT_EQUAL(block_timings_ms.Height(), block_info.dimensions.size());
       ASSERT_EQUAL(block_timings_ms.Width(), 1);
