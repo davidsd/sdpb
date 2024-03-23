@@ -10,13 +10,13 @@ smoothly depends on a few "external parameters". The solver attempts to find a p
 such that (1), the objective of PMP is minimized; or (2), the external parameters are extremized along certain direction
 while keeping the objective of PMP non-positive.
 
-The description of the strategy and algorithm is in the paper :
+The description of the strategy and algorithm is in the paper: https://arxiv.org/abs/2307.13046
 
-This code is developed based on SDPB 2.5.1 and then updated to SDPB 2.6.1.
+This code is developed based on SDPB 2.5.1 and then updated to SDPB 3.0.0.
 
 ## Installation and Usage
 
-The installation of `skydive` is the same as for SDPB 2.6.1,
+The installation of `skydive` is the same as for SDPB 3.0.0,
 see instructions at [docs/site_installs](https://github.com/davidsd/sdpb/tree/master/docs/site_installs).
 
 NB: make sure that you are using an up-to-date version
