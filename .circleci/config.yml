@@ -90,13 +90,12 @@ jobs:
       - run: docker run --cap-add=SYS_PTRACE sdpb sdpb --help
       - run: docker run --cap-add=SYS_PTRACE sdpb-test ./test/run_all_tests.sh
 
-  deploy-master:
-    # executor: docker/docker
+  deploy-branch:
     docker:
       - image: cimg/base:stable
     steps:
       - docker-deploy-sdpb:
-          tag: master
+          tag: ${CIRCLE_BRANCH}
 
   deploy-tag:
     docker:
@@ -123,10 +122,12 @@ workflows:
             tags:
               only: /^\d+\.\d+\.\d+$/
 
-      - deploy-master:
+      - deploy-branch:
           filters:
             branches:
-              only: master
+              only:
+                - master
+                - skydiving-master
           requires:
             - build
             - test
