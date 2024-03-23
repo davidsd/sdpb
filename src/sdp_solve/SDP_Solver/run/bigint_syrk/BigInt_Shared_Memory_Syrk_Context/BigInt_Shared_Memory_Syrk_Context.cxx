@@ -248,22 +248,39 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
     }
 
   // Print warnings for large split factors.
-  if(output_window_split_factor > 1 && El::mpi::Rank() == 0)
+  if(shared_memory_comm.Rank() == 0)
     {
-      PRINT_WARNING("BigInt_Shared_Memory_Syrk_Context: output window "
-                    "is split by a factor of ",
-                    output_window_split_factor,
-                    ", which may affect performance. "
-                    "Consider increasing available shared memory per node.");
-    }
-  if(input_window_split_factor > 10 && shared_memory_comm.Rank() == 0)
-    {
-      PRINT_WARNING("rank=", El::mpi::Rank(),
-                    ": BigInt_Shared_Memory_Syrk_Context: "
-                    "large input_window_split_factor=",
-                    input_window_split_factor,
-                    " may affect performance. "
-                    "Consider increasing available shared memory per node.");
+      const bool print_output_warning = output_window_split_factor > 1;
+      const bool print_input_warning = input_window_split_factor > 10;
+      if(print_output_warning || print_input_warning)
+        {
+          std::ostringstream ss;
+          El::BuildStream(ss, "rank=", El::mpi::Rank(),
+                          ": BigInt_Shared_Memory_Syrk_Context:\n");
+          if(print_output_warning)
+            {
+              El::BuildStream(ss, "\tOutput window is split by a factor of ",
+                              output_window_split_factor,
+                              ", which may affect performance.\n");
+            }
+          if(print_input_warning)
+            {
+              El::BuildStream(ss,
+                              "\tInput window is split by a large factor of ",
+                              input_window_split_factor,
+                              ", which may affect performance.\n");
+            }
+          El::BuildStream(
+            ss, "\tConsider increasing available shared memory per node (--maxSharedMemory option).\n",
+            "\tShared memory limit: ", max_shared_memory_bytes, " bytes.\n",
+            "\tOutput window size (without splitting): ",
+            window_size_bytes(total_block_height_per_node, block_width,
+                              comb.num_primes),
+            " bytes.\n", "\tInput window size (without splitting): ",
+            window_size_bytes(block_width, block_width, comb.num_primes),
+            " bytes.\n");
+          PRINT_WARNING(ss.str());
+        }
     }
 }
 
