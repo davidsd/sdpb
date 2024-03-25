@@ -1,6 +1,10 @@
 #include "sdp_solve/SDP_Solver.hxx"
 #include "bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "bigint_syrk/initialize_bigint_syrk_context.hxx"
+#include "sdp_solve/SDP_Solver.hxx"
+#include "sdpb_util/print_cholesky_diagonal_info.hxx"
+#include "sdpb_util/ostream/pretty_print_bytes.hxx"
+
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 // The main solver loop
@@ -168,6 +172,32 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
                                                   "choleskyDecomposition");
         cholesky_decomposition(X, X_cholesky, block_info, "X");
         cholesky_decomposition(Y, Y_cholesky, block_info, "Y");
+
+        // (TODO for debug only, don't merge) print diagonal elements
+        {
+          ASSERT_EQUAL(X_cholesky.blocks.size(),
+                       2 * block_info.block_indices.size());
+          ASSERT_EQUAL(Y_cholesky.blocks.size(),
+                       2 * block_info.block_indices.size());
+          for(size_t i = 0; i < block_info.block_indices.size(); ++i)
+            {
+              const auto block_index = block_info.block_indices.at(i);
+              for(const size_t parity : {0, 1})
+                {
+                  const auto local_X_index = 2 * i + parity;
+
+                  std::string index_str
+                    = El::BuildString(block_index, "_", parity);
+
+                  print_cholesky_diagonal_info(
+                    X_cholesky.blocks.at(local_X_index),
+                    "X_cholesky.block_" + index_str);
+                  print_cholesky_diagonal_info(
+                    Y_cholesky.blocks.at(local_X_index),
+                    "Y_cholesky.block_" + index_str);
+                }
+            }
+        }
       }
 
       compute_bilinear_pairings(block_info, X_cholesky, Y, sdp.bases_blocks,

@@ -2,6 +2,7 @@
 #include "sdp_solve/Block_Diagonal_Matrix.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
+#include "sdpb_util/print_cholesky_diagonal_info.hxx"
 
 // Compute the quantities needed to solve the Schur complement
 // equation
@@ -90,6 +91,9 @@ void initialize_schur_complement_solver(
   try
     {
       Cholesky(El::UpperOrLowerNS::UPPER, Q);
+
+      // (TODO for debug only, don't merge) print diagonal elements
+      print_cholesky_diagonal_info(Q, "Q_Cholesky");
     }
   catch(std::exception &e)
     {

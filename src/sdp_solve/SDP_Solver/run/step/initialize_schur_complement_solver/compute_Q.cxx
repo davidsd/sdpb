@@ -3,6 +3,8 @@
 #include "sdpb_util/Timers/Timers.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/Matrix_Normalizer.hxx"
+#include "sdpb_util/print_cholesky_diagonal_info.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 
 // schur_off_diagonal = L^{-1} B
 void initialize_schur_off_diagonal(
@@ -38,6 +40,15 @@ void initialize_schur_off_diagonal(
           }
         block_timings_ms(global_block_index, 0)
           += cholesky_timer.elapsed_milliseconds();
+
+        // (TODO for debug only, don't merge) print diagonal elements
+        {
+          const auto &cholesky_block
+            = schur_complement_cholesky.blocks.at(block);
+          print_cholesky_diagonal_info(cholesky_block,
+                                  "schur_complement_cholesky.block_"
+                                    + std::to_string(global_block_index));
+        }
       }
 
       // schur_off_diagonal = L^{-1} B
