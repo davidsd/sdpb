@@ -24,7 +24,7 @@
 # Elemental binaries built from https://gitlab.com/bootstrapcollaboration/elemental.git
 # based on the same alpine:3.18 build as below
 
-FROM vasdommes/flint:3.0-trunk as flint
+FROM vasdommes/flint:3.1.1 as flint
 
 FROM bootstrapcollaboration/elemental:master AS build
 
@@ -62,7 +62,7 @@ RUN (./waf configure --elemental-dir=/usr/local --flint-dir=/usr/local --prefix=
 # Unfortunately, boost1.82-stacktrace_addr2line does not exist as a standalone package in Alpine Linux repo.
 # Thus we have to load the whole boost-dev (~180MB extra)
 # TODO: for some reason, function names and source locations are not printed in stacktrace.
-FROM alpine:3.18 as install
+FROM alpine:3.19 as install
 RUN apk add \
     binutils \
     boost-dev \
