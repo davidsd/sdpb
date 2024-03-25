@@ -30,6 +30,12 @@ namespace
                                 window.num_primes);
   }
 
+  std::string to_GB_string(const size_t bytes)
+  {
+    const double GB = (double)bytes / 1024 / 1024 / 1024;
+    return El::BuildString(GB, " GB (", bytes, " bytes)");
+  }
+
   // Divide and round to the nearest integer above
   [[nodiscard]] size_t div_ceil(const size_t x, const size_t y)
   {
@@ -153,10 +159,12 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
           RUNTIME_ERROR(
             "Cannot allocate shared memory window for input block residues."
             " Required: at least ",
-            residues_bytes_per_single_block_row,
-            " bytes per each MPI group, available: ", max_input_window_bytes,
-            " bytes in total. ", DEBUG_STRING(max_shared_memory_bytes),
-            DEBUG_STRING(output_window_bytes), DEBUG_STRING(num_groups));
+            to_GB_string(residues_bytes_per_single_block_row),
+            " per each MPI group, available: ",
+            to_GB_string(max_input_window_bytes), " in total. ",
+            DEBUG_STRING(to_GB_string(max_shared_memory_bytes)),
+            DEBUG_STRING(to_GB_string(output_window_bytes)),
+            DEBUG_STRING(num_groups));
         }
     }
 
@@ -190,13 +198,14 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
             ss,
             "\tConsider increasing available shared memory per node "
             "(--maxSharedMemory option).\n",
-            "\tShared memory limit: ", max_shared_memory_bytes, " bytes.\n",
-            "\tOutput window size (without splitting): ",
-            window_size_bytes(block_width, block_width, comb.num_primes),
-            " bytes.\n", "\tInput window size (without splitting): ",
-            window_size_bytes(total_block_height_per_node, block_width,
-                              comb.num_primes),
-            " bytes.\n");
+            "\tShared memory limit: ", to_GB_string(max_shared_memory_bytes),
+            ".\n", "\tOutput window size (without splitting): ",
+            to_GB_string(
+              window_size_bytes(block_width, block_width, comb.num_primes)),
+            ".\n", "\tInput window size (without splitting): ",
+            to_GB_string(window_size_bytes(total_block_height_per_node,
+                                           block_width, comb.num_primes)),
+            ".\n");
           PRINT_WARNING(ss.str());
         }
     }
@@ -207,8 +216,8 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       std::ostringstream os;
       El::BuildStream(os, "create BigInt_Shared_Memory_Syrk_Context, rank=",
                       El::mpi::Rank(), "\n");
-      El::BuildStream(
-        os, "  Shared memory limit, bytes: ", max_shared_memory_bytes, "\n");
+      El::BuildStream(os, "  Shared memory limit: ",
+                      to_GB_string(max_shared_memory_bytes), "\n");
       El::BuildStream(os, "  Number of primes: ", comb.num_primes, "\n");
 
       El::BuildStream(os, "  Blocks on the node:\n");
@@ -223,9 +232,10 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       os << "\n";
 
       El::BuildStream(os, "  Output residues window (Q):\n");
-      El::BuildStream(
-        os, "    Window size, bytes: ",
-        window_size_bytes(window_width, window_width, comb.num_primes), "\n");
+      El::BuildStream(os, "    Window size: ",
+                      to_GB_string(window_size_bytes(
+                        window_width, window_width, comb.num_primes)),
+                      "\n");
       El::BuildStream(os, "    Split factor: ", output_window_split_factor,
                       "\n");
       El::BuildStream(os, "    Height=Width (per prime): ", window_width,
@@ -238,10 +248,10 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       El::BuildStream(os, "  Input residues window (P):\n");
       El::BuildStream(os, "  Number of windows: ",
                       output_window_split_factor == 1 ? 1 : 2, "\n");
-      El::BuildStream(
-        os, "    Window size, bytes: ",
-        window_size_bytes(input_window_height, window_width, comb.num_primes),
-        "\n");
+      El::BuildStream(os, "    Window size: ",
+                      to_GB_string(window_size_bytes(
+                        input_window_height, window_width, comb.num_primes)),
+                      "\n");
       El::BuildStream(os, "    Split factor: ", input_window_split_factor,
                       "\n");
       El::BuildStream(os, "    Height (per prime): ", input_window_height,
