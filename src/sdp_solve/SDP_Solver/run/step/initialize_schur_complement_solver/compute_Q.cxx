@@ -38,6 +38,39 @@ void initialize_schur_off_diagonal(
           }
         block_timings_ms(global_block_index, 0)
           += cholesky_timer.elapsed_milliseconds();
+
+        // (TODO for debug only, don't merge) print diagonal elements
+        {
+          const auto &cholesky_block
+           = schur_complement_cholesky.blocks.at(block);
+          std::vector<double> diagonal(cholesky_block.Height());
+          for(int i = 0; i < cholesky_block.Height(); ++i)
+            {
+              if(cholesky_block.IsLocal(i, i))
+                {
+                  auto iLoc = cholesky_block.LocalRow(i);
+                  auto jLoc = cholesky_block.LocalCol(i);
+                  diagonal.at(i)
+                    = static_cast<double>(cholesky_block.GetLocal(iLoc, jLoc));
+                }
+            }
+          El::mpi::Reduce(diagonal.data(), diagonal.size(), 0,
+                          block_info.mpi_comm.value);
+          if(block_info.mpi_comm.value.Rank() == 0)
+            {
+              std::ostringstream ss;
+              El::BuildStream(ss, "Diagonal of schur_complement_cholesky.block_"
+                                    + std::to_string(global_block_index) + " : ");
+              ss << std::setprecision(3);
+              for(size_t i = 0; i < diagonal.size(); ++i)
+                {
+                  if(i != 0)
+                    ss << ", ";
+                  ss << diagonal.at(i);
+                }
+              El::Output(ss.str());
+            }
+        }
       }
 
       // schur_off_diagonal = L^{-1} B
