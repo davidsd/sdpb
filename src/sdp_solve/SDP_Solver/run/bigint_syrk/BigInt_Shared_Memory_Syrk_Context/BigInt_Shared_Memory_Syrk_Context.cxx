@@ -280,12 +280,12 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
     }
 
   output_residues_window = std::make_unique<Residue_Matrices_Window<double>>(
-    shared_memory_comm, comb.num_primes, window_width, window_width, debug);
+    shared_memory_comm, comb.num_primes, window_width, window_width);
 
   input_grouped_block_residues_window_A
     = std::make_unique<Block_Residue_Matrices_Window<double>>(
       shared_memory_comm, comb.num_primes, num_groups,
-      input_window_height_per_group_per_prime, window_width, debug);
+      input_window_height_per_group_per_prime, window_width);
 
   // We need a second input window only to calculate off-diagonal blocks
   // of the output window.
@@ -294,7 +294,7 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       input_grouped_block_residues_window_B
         = std::make_unique<Block_Residue_Matrices_Window<double>>(
           shared_memory_comm, comb.num_primes, num_groups,
-          input_window_height_per_group_per_prime, window_width, debug);
+          input_window_height_per_group_per_prime, window_width);
     }
 
   {
