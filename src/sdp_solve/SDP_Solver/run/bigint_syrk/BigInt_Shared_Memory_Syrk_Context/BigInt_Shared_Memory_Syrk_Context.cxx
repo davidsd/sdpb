@@ -192,10 +192,10 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
             "(--maxSharedMemory option).\n",
             "\tShared memory limit: ", max_shared_memory_bytes, " bytes.\n",
             "\tOutput window size (without splitting): ",
+            window_size_bytes(block_width, block_width, comb.num_primes),
+            " bytes.\n", "\tInput window size (without splitting): ",
             window_size_bytes(total_block_height_per_node, block_width,
                               comb.num_primes),
-            " bytes.\n", "\tInput window size (without splitting): ",
-            window_size_bytes(block_width, block_width, comb.num_primes),
             " bytes.\n");
           PRINT_WARNING(ss.str());
         }
