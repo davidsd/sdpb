@@ -22,7 +22,6 @@ namespace Test_Util
     const std::filesystem::path data_dir;
     const std::filesystem::path output_dir;
     const std::filesystem::path stdout_path;
-    const std::filesystem::path stderr_path;
 
     explicit Test_Case_Runner(const std::string &name);
 

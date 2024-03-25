@@ -65,8 +65,7 @@ namespace Test_Util
         data_dir(Test_Config::test_data_dir / name),
         output_dir(Test_Config::test_output_dir / name),
         stdout_path(Test_Config::test_log_dir
-                    / fs::path(name + ".stdout.log")),
-        stderr_path(Test_Config::test_log_dir / fs::path(name + ".stderr.log"))
+                    / fs::path(name + ".log"))
   {
     fs::remove_all(output_dir);
     fs::remove_all(Test_Config::test_log_dir / name);
@@ -92,30 +91,34 @@ namespace Test_Util
 
     CAPTURE(command);
     CAPTURE(stdout_path);
-    CAPTURE(stderr_path);
 
-    std::ofstream os_stdout(stdout_path, std::ios::app);
-    std::ofstream os_stderr(stderr_path, std::ios::app);
-
-    // write command before stdout
-    os_stdout << command << std::endl;
-
-    bp::ipstream stdout_pipe;
     bp::ipstream stderr_pipe;
-    int exit_code = bp::system(command, bp::std_out > stdout_pipe,
-                               bp::std_err > stderr_pipe);
 
-    // write stdout to file
-    os_stdout << stdout_pipe.rdbuf();
+    // TODO: stderr is redirected only to the last target, stderr_pipe
+    // Is it possible to redirect to multiple targets?
+    int exit_code
+      = bp::system(command, (bp::std_out & bp::std_err) > stdout_path, bp::std_err > stderr_pipe);
 
-    // write stderr to both stderr and stdout files
-    // we cannot call rdbuf() twice, thus we copy it to stderr_string
-    std::stringstream ss;
-    ss << stderr_pipe.rdbuf();
-    auto stderr_string = ss.str();
+    auto stderr_string = [&stderr_pipe] {
+      std::stringstream ss;
+      ss << stderr_pipe.rdbuf();
+      return ss.str();
+    }();
+    boost::trim(stderr_string);
 
-    os_stdout << stderr_string;
-    os_stderr << stderr_string;
+
+    {
+      std::ofstream os_stdout(stdout_path, std::ios::app);
+      if(!stderr_string.empty())
+        {
+          os_stdout << std::endl
+                    << "---stderr---" << std::endl
+                    << stderr_string << std::endl;
+        }
+      os_stdout << std::endl
+                << "---Command line---" << std::endl
+                << command << std::endl;
+    }
 
     CAPTURE(exit_code);
     CAPTURE(required_exit_code);
