@@ -101,7 +101,7 @@ You should compile it on a compute node, e.g. [loading interactive session](http
 ## sdpb
     git clone https://github.com/davidsd/sdpb.git
     cd sdpb 
-    ./waf configure --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --gmpxx-dir=$SCC_GMPLIB_DIR --mpfr-dir=$SCC_MPFR_DIR --flint-dir=$HOME/install --openblas-dir=$SCC_OPENBLAS_DIR --prefix=$HOME/install/sdpb-master
+    ./waf configure --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --gmpxx-dir=$SCC_GMPLIB_DIR --mpfr-dir=$SCC_MPFR_DIR --flint-dir=$HOME/install --cblas-dir=$SCC_OPENBLAS_DIR --prefix=$HOME/install/sdpb-master
     ./waf # -j 1
     ./test/run_all_tests.sh
     ./waf install

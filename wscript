@@ -4,7 +4,7 @@ import os, subprocess
 def options(opt):
     opt.load(['compiler_cxx', 'gnu_dirs'])
     opt.load(
-        ['cxx17', 'boost', 'gmpxx', 'mpfr', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'flint', 'openblas'],
+        ['cxx17', 'boost', 'gmpxx', 'mpfr', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'flint', 'cblas'],
         tooldir='./waf-tools')
 
 
@@ -13,7 +13,7 @@ def configure(conf):
         conf.environ['CXX'] = 'mpicxx'
 
     conf.load(['compiler_cxx', 'gnu_dirs', 'cxx17', 'boost', 'gmpxx', 'mpfr',
-               'elemental', 'libxml2', 'rapidjson', 'libarchive', 'flint', 'openblas'])
+               'elemental', 'libxml2', 'rapidjson', 'libarchive', 'flint', 'cblas'])
     conf.load('clang_compilation_database', tooldir='./waf-tools')
 
     conf.env.git_version = subprocess.check_output('git describe --tags --always --dirty', universal_newlines=True,
@@ -23,7 +23,7 @@ def configure(conf):
 def build(bld):
     default_flags = ['-Wall', '-Wextra', '-Werror=return-type', '-O3', '-g']
     default_defines = ['OMPI_SKIP_MPICXX', 'SDPB_VERSION_STRING="' + bld.env.git_version + '"']
-    use_packages = ['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'openblas',
+    use_packages = ['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'cblas',
                     'sdpb_util']
     default_includes = ['src', 'external']
 
