@@ -24,12 +24,12 @@ private:
 
 public:
   Residue_Matrices_Window(El::mpi::Comm shared_memory_comm, size_t num_primes,
-                          size_t height, size_t width, bool debug)
+                          size_t height, size_t width)
       : num_primes(num_primes),
         height(height),
         width(width),
         prime_stride(height * width),
-        window(shared_memory_comm, num_primes * prime_stride, debug)
+        window(shared_memory_comm, num_primes * prime_stride)
   {
     ASSERT(num_primes > 0);
     ASSERT(height > 0);
