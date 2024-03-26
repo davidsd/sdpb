@@ -5,35 +5,6 @@
 
 #include <cblas.h>
 
-// uplo == UPPER: deallocate below diagonal
-// uplo == LOWER: deallocate above diagonal
-void deallocate_unused_half(El::DistMatrix<El::BigFloat> &matrix,
-                            const El::UpperOrLower uplo)
-{
-  // Explicitly deallocate the lower half of matrix (i.e. below diagonal).
-  // This significantly reduces the total amount of memory required.
-
-  // Sanity check in case we pass off-diagonal block Q_IJ here
-  ASSERT_EQUAL(matrix.Height(), matrix.Width());
-
-  for(El::Int iLoc = 0; iLoc < matrix.LocalHeight(); ++iLoc)
-    {
-      for(El::Int jLoc = 0; jLoc < matrix.LocalWidth(); ++jLoc)
-        {
-          const auto i = matrix.GlobalRow(iLoc);
-          const auto j = matrix.GlobalCol(jLoc);
-          if(uplo == El::UPPER && i <= j)
-            continue;
-          if(uplo == El::LOWER && j <= i)
-            continue;
-
-          auto &gmp_float = matrix.Matrix().Ref(iLoc, jLoc).gmp_float;
-          mpf_clear(gmp_float.get_mpf_t());
-          gmp_float.get_mpf_t()[0]._mp_d = nullptr;
-        }
-    }
-}
-
 namespace
 {
   // output = inputA^T * inputB
@@ -133,15 +104,16 @@ namespace
       }
   }
 
-  void do_blas_jobs(
-    const El::UpperOrLower uplo, const Blas_Job::Kind kind,
-    const Blas_Job_Schedule &blas_job_schedule,
-    const std::unique_ptr<Block_Residue_Matrices_Window<double>>
-      &input_grouped_block_residues_window_A,
-    const std::unique_ptr<Block_Residue_Matrices_Window<double>>
-      &input_grouped_block_residues_window_B,
-    std::unique_ptr<Residue_Matrices_Window<double>> &output_residues_window,
-    const El::mpi::Comm &shared_memory_comm, Timers &timers)
+  void
+  do_blas_jobs(const El::UpperOrLower uplo, const Blas_Job::Kind kind,
+               const Blas_Job_Schedule &blas_job_schedule,
+               const std::unique_ptr<Block_Residue_Matrices_Window<double>>
+                 &input_grouped_block_residues_window_A,
+               const std::unique_ptr<Block_Residue_Matrices_Window<double>>
+                 &input_grouped_block_residues_window_B,
+               const std::unique_ptr<Residue_Matrices_Window<double>>
+                 &output_residues_window,
+               const El::mpi::Comm &shared_memory_comm, Timers &timers)
   {
     // Square each residue matrix
     {
@@ -225,7 +197,7 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
   ASSERT(output_residues_window->width * output_window_split_factor
          >= bigint_output.Height());
 
-  auto output_ranges
+  const auto output_ranges
     = split_range({0, bigint_output.Height()}, output_window_split_factor);
 
   for(size_t i = 0; i < output_window_split_factor; ++i)
@@ -236,34 +208,14 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
           Scoped_Timer ij_timer(timers, El::BuildString("Q_", i, "_", j));
           const auto &J = output_ranges.at(j);
           auto bigint_output_submatrix = bigint_output(I, J);
-          if(El::mpi::Congruent(shared_memory_comm, bigint_output.DistComm()))
-            {
-              // Single-node case, no need to reduce-scatter
-              bigint_syrk_blas_shmem_submatrix(
-                uplo, bigint_input_matrix_blocks, I,
-                J, timers, block_timings_ms);
-            }
-          else
-            {
-              ASSERT(shared_memory_comm.Size()
-                     < bigint_output.DistComm().Size());
-
-              const El::Grid grid(shared_memory_comm);
-              El::DistMatrix<El::BigFloat> bigint_output_shmem_submatrix(
-                I.end - I.beg, J.end - J.beg, grid);
-              // For diagonal blocks Q_II, we need only upper/lower half
-              if(i == j)
-                deallocate_unused_half(bigint_output_shmem_submatrix, uplo);
-
-              bigint_syrk_blas_shmem_submatrix(
-                uplo, bigint_input_matrix_blocks,
-                I, J, timers, block_timings_ms);
-            }
-
+          // Call BLAS to calculate residues for Q(I,J)
+          bigint_syrk_blas_shmem_submatrix(uplo, bigint_input_matrix_blocks, I,
+                                           J, timers, block_timings_ms);
           std::optional<El::UpperOrLower> uplo_opt;
           if(I.beg == J.beg)
             uplo_opt = uplo;
-          restore_and_reduce(uplo_opt,bigint_output_submatrix,timers);
+          // Restore Q from residues and reduce-scatter over all nodes
+          restore_and_reduce(uplo_opt, bigint_output_submatrix, timers);
         }
     }
 }
