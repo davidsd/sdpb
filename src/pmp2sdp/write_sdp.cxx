@@ -5,6 +5,7 @@
 #include "Output_SDP/Output_SDP.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
+#include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
 #include <filesystem>
 
@@ -448,38 +449,40 @@ void print_matrix_sizes(
 
   if(rank == 0)
     {
-      size_t big_float_bytes = El::BigFloat(1.1).SerializedSize();
+      // BigFloat stores some data members + pointer to limbs.
+      // See also https://gmplib.org/manual/Float-Internals
+      const size_t big_float_bytes
+        = sizeof(El::BigFloat) + El::gmp::num_limbs * sizeof(mp_limb_t);
 
       size_t Q_matrix_size = N * N;
-      size_t total_no_Q = 2 * B_matrix_elements + 5 * psd_blocks_elements
-                          + 2 * schur_elements
-                          + 2 * bilinear_pairing_block_elements;
+      size_t total_size
+        = 2 * B_matrix_elements + 9 * psd_blocks_elements + 2 * schur_elements
+          + 2 * bilinear_pairing_block_elements + Q_matrix_size;
 
       std::vector<std::pair<std::string, size_t>> sizes{
         {"P (primal objective)", P},
         {"N (dual objective)", N},
-        {"B matrix (PxN)", B_matrix_elements},
+        {"B matrix (PxN) - free_var_matrix, schur_off_diagonal", B_matrix_elements},
         {"Q matrix (NxN)", Q_matrix_size},
         {"Bilinear bases", bilinear_bases_elements},
-        {"Bilinear pairing blocks", bilinear_pairing_block_elements},
-        {"PSD blocks", psd_blocks_elements},
-        {"Schur (PxP block diagonal)", schur_elements},
-        {"Total (no Q) = 2#(B) + 5#(PSD) + 2#(S) + 2#(Bilinear pairing)",
-         total_no_Q},
+        {"Bilinear pairing blocks - A_x_inv, A_y", bilinear_pairing_block_elements},
+        // R,Z - from compute_search_direction(), TODO we shall account for them only if peak usage is there.
+        {"PSD blocks - X, Y, primal_residues, X_chol, Y_chol, dX, dY, R, Z", psd_blocks_elements},
+        {"Schur (PxP block diagonal) - schur_complement, schur_complement_cholesky", schur_elements},
+        {"Total (without shared windows) = 2#(B) + 9#(PSD) + 2#(S) + "
+         "2#(Bilinear pairing) + #(Q)",
+         total_size},
       };
 
       El::Output("BigFloat, bytes: ", big_float_bytes);
       for(auto &[key, value] : sizes)
         {
-          El::Output(key, ", elements: ", value);
-          El::Output(key, ", bytes: ", value * big_float_bytes);
+          El::Output(key, ": ", value, " elements, ",
+                     pretty_print_bytes(value * big_float_bytes, true));
         }
-      double GB_per_element = (double)big_float_bytes / 1024 / 1024 / 1024;
-      El::Output("Total RAM (no Q), GB: ", total_no_Q * GB_per_element);
-      El::Output("Q, GB: ", Q_matrix_size * GB_per_element);
-      El::Output("NB: Q is copied over each core group "
-                 "(run SDPB with --verbosity=2 to see "
-                 "block distribution among core groups).");
+      El::Output(
+        "NB: in addition to that, SDPB will allocate shared memory "
+        "windows (for calculating Q), within --maxSharedMemory limit.");
       El::Output("---------------------");
     }
 }
