@@ -1,0 +1,209 @@
+#include "memory_estimates.hxx"
+#include "sdpb_util/assert.hxx"
+#include "sdpb_util/Proc_Meminfo.hxx"
+#include "sdpb_util/ostream/pretty_print_bytes.hxx"
+
+#include <iomanip>
+
+size_t bigfloat_bytes()
+{
+  return sizeof(El::BigFloat) + El::gmp::num_limbs * sizeof(mp_limb_t);
+}
+
+size_t get_max_shared_memory_bytes(
+  const size_t default_max_shared_memory_bytes,
+  const size_t nonshared_memory_required_per_node_bytes,
+  const Environment &env, const bool debug)
+{
+  // Ensure that all ranks finished reading SDP and allocated memory for it
+  El::mpi::Barrier(env.comm_shared_mem);
+
+  El::byte can_update = false;
+  // will be set only on rank=0
+  size_t mem_available_bytes = 0;
+  size_t mem_total_bytes = 0;
+  if(env.comm_shared_mem.Rank() == 0)
+    {
+      bool res;
+      const auto meminfo = Proc_Meminfo::try_read(res, debug);
+      mem_available_bytes = meminfo.mem_available;
+      mem_total_bytes = meminfo.mem_total;
+      can_update = res;
+    }
+  El::mpi::Broadcast(can_update, 0, env.comm_shared_mem);
+  if(!can_update)
+    return default_max_shared_memory_bytes;
+
+  // Total memory required for all ranks on a node
+
+  size_t max_shared_memory_bytes = 0;
+  if(env.comm_shared_mem.Rank() == 0)
+    {
+      std::ostringstream ss;
+      El::BuildStream(ss, "node=", env.node_index(), ": ");
+
+      bool print_warning = debug;
+
+      if(nonshared_memory_required_per_node_bytes > mem_available_bytes)
+        {
+          // This is certainly not enough, but at least
+          // we'll print sizes in BigInt_Shared_Memory_Syrk_Context
+          max_shared_memory_bytes = 0.9 * mem_available_bytes;
+          El::BuildStream(ss, "SDPB will probably fail with OOM. Consider "
+                              "increasing number of nodes or RAM per node.");
+          print_warning = true;
+        }
+      else
+        {
+          // ad-hoc coefficient 0.9 to leave some free RAM
+          max_shared_memory_bytes
+            = 0.9
+              * (mem_available_bytes
+                 - nonshared_memory_required_per_node_bytes);
+        }
+
+      El::BuildStream(
+        ss, "\n\tMemUsed: ",
+        pretty_print_bytes(mem_total_bytes - mem_available_bytes, false),
+        "\n\tMemAvailable: ", pretty_print_bytes(mem_available_bytes, false),
+        "\n\tSDP solver will use approximately ",
+        pretty_print_bytes(nonshared_memory_required_per_node_bytes, false),
+        " of MemAvailable (excluding shared memory windows).");
+
+      if(max_shared_memory_bytes < default_max_shared_memory_bytes)
+        {
+          print_warning = true;
+          if(nonshared_memory_required_per_node_bytes <= mem_available_bytes)
+            {
+              El::BuildStream(
+                ss,
+                "\n\tTo prevent OOM, "
+                "SDPB will set --maxSharedMemory to 90% of the "
+                "remaining memory, i.e. ",
+                pretty_print_bytes(max_shared_memory_bytes, false));
+              El::BuildStream(
+                ss, "\n\tSDPB is expected to use no more than ",
+                pretty_print_bytes(mem_total_bytes - mem_available_bytes
+                                     + nonshared_memory_required_per_node_bytes
+                                     + max_shared_memory_bytes,
+                                   false),
+                " RAM on a node. If it fails with OOM, consider increasing "
+                "number of "
+                "nodes and/or decreasing --maxSharedMemory limit.");
+            }
+          else
+            {
+              El::BuildStream(
+                ss,
+                "\n\tSDPB will set --maxSharedMemory to 90% of MemAvailable, "
+                "i.e. ",
+                pretty_print_bytes(max_shared_memory_bytes, false),
+                ". This will not help, probably.");
+            }
+        }
+      else
+        {
+          // Do not set the limit higher than user-defined --maxSharedMemory
+          max_shared_memory_bytes = default_max_shared_memory_bytes;
+        }
+      if(print_warning)
+        PRINT_WARNING(ss.str());
+    }
+  // All ranks on a node should have the same limit
+  El::mpi::Broadcast(max_shared_memory_bytes, 0, env.comm_shared_mem);
+
+  return max_shared_memory_bytes;
+}
+size_t get_matrix_size_local(const Block_Diagonal_Matrix &X)
+{
+  size_t X_size = 0;
+  for(const auto &X_block : X.blocks)
+    {
+      X_size += X_block.AllocatedMemory();
+    }
+  return X_size;
+}
+size_t get_A_X_size_local(const Block_Info &block_info, const SDP &sdp)
+{
+  // A_X_inv and A_Y
+  // See compute_A_X_inv()
+  // Calculate on rank=0 to avoid double-counting for DistMatrices
+  size_t A_X_size = 0;
+  if(block_info.mpi_comm.value.Rank() == 0)
+    {
+      for(size_t index = 0; index < sdp.bases_blocks.size(); ++index)
+        {
+          const size_t block_size
+            = block_info.num_points.at(block_info.block_indices.at(index / 2));
+          const size_t dim
+            = block_info.dimensions.at(block_info.block_indices.at(index / 2));
+
+          for(size_t column_block = 0; column_block < dim; ++column_block)
+            for(size_t row_block = 0; row_block < dim; ++row_block)
+              A_X_size += block_size * block_size;
+        }
+    }
+  return A_X_size;
+}
+size_t get_schur_complement_size_local(const Block_Info &block_info)
+{
+  // schur_complement + schur_complement_cholesky
+  size_t schur_complement_size = 0;
+  // Calculate on rank=0 to avoid double-counting for DistMatrices
+  if(block_info.mpi_comm.value.Rank() == 0)
+    {
+      // see initialize_schur_complement_solver() and Block_Diagonal_Matrix() ctor
+      const auto &block_sizes = block_info.schur_block_sizes();
+      const auto &block_indices = block_info.block_indices;
+      const auto num_schur_blocks = block_info.num_points.size();
+      const bool scale_index = num_schur_blocks != block_sizes.size();
+      for(const auto block_index : block_indices)
+        {
+          if(scale_index)
+            {
+              schur_complement_size += block_sizes.at(block_index * 2)
+                                       * block_sizes.at(block_index * 2);
+              schur_complement_size += block_sizes.at(block_index * 2 + 1)
+                                       * block_sizes.at(block_index * 2 + 1);
+            }
+          else
+            {
+              schur_complement_size
+                += block_sizes.at(block_index) * block_sizes.at(block_index);
+            }
+        }
+    }
+  return schur_complement_size;
+}
+size_t get_B_size_local(const SDP &sdp)
+{
+  size_t B_size = 0;
+  for(const auto &B_block : sdp.free_var_matrix.blocks)
+    {
+      B_size += B_block.AllocatedMemory();
+    }
+  return B_size;
+}
+size_t get_Q_size_local(const SDP &sdp)
+{
+  // #Q = NxN, distributed over all nodes.
+  return std::ceil(1.0 * sdp.dual_objective_b.Height()
+                   * sdp.dual_objective_b.Height() / El::mpi::Size());
+  // TODO: in fact, different ranks can own slightly different number of elements.
+  // So this is not a precise estimate.
+  // Sum of get_Q_size_local() over all ranks will give upper bound to the real #(Q).
+
+  // NB: reduce-scatter needs also ~(2 * Q_size / split_factor^2 / num_nodes) per node for MPI buffers.
+  // We account for it inside --maxSharedMemory limit, see BigInt_Shared_Memory_Syrk_Context() constructor.
+}
+size_t get_SDP_size_local(const SDP &sdp)
+{
+  size_t SDP_size = 0;
+  for(const auto &matrix : sdp.bilinear_bases)
+    SDP_size += matrix.AllocatedMemory();
+  for(const auto &matrix : sdp.bases_blocks)
+    SDP_size += matrix.AllocatedMemory();
+  for(const auto &B_block : sdp.free_var_matrix.blocks)
+    SDP_size += B_block.AllocatedMemory();
+  return SDP_size;
+}
