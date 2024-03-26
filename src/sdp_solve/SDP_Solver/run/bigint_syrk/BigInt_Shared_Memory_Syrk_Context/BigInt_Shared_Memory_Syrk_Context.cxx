@@ -38,6 +38,35 @@ namespace
     return std::ceil(static_cast<double>(x) / static_cast<double>(y));
   }
 
+  // Estimate total MPI buffer sizes on a node for restore_and_reduce()
+  size_t
+  get_reduce_scatter_buffer_bytes(const El::mpi::Comm &shared_memory_comm,
+                                  const size_t window_width,
+                                  const size_t split_factor)
+  {
+    ASSERT(El::mpi::Size() % shared_memory_comm.Size() == 0,
+           "All nodes should have the same number of ranks! ",
+           DEBUG_STRING(El::mpi::Size()),
+           DEBUG_STRING(shared_memory_comm.Size()));
+    auto num_nodes = El::mpi::Size() / shared_memory_comm.Size();
+
+    // no reduce-scatter => no RAM needed
+    if(num_nodes == 1)
+      return 0;
+
+    // Total number of elements in Q submatrix
+    // If split factor == 1, we need only half of the matrix.
+    // Otherwise, we need the whole matrix for off-diagonal blocks
+    const size_t num_elements = split_factor == 1
+                                  ? window_width * (window_width + 1) / 2
+                                  : window_width * window_width;
+    const size_t bigfloat_bytes = El::BigFloat(1.1).SerializedSize();
+
+    // Each rank needs ~(num_elements/num_ranks) buffer for MPI_Send
+    // and the same for MPI_Recv
+    return 2 * div_ceil(num_elements, num_nodes) * bigfloat_bytes;
+  }
+
   [[nodiscard]] bool calculate_input_window_split(
     const std::vector<El::Int> &blocks_height_per_group,
     const size_t max_input_window_height_per_prime,
@@ -108,6 +137,9 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
 
   if(max_shared_memory_bytes == 0)
     max_shared_memory_bytes = std::numeric_limits<size_t>::max();
+
+  size_t reduce_scatter_buffer_bytes;
+
   // Each extra split for output window leads to more reduce-scatter calls.
   // Thus, we try to find minimal output_window_split_factor
   // that allows to fit all shared windows into memory
@@ -121,13 +153,18 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
 
       const auto output_window_bytes
         = window_size_bytes(window_width, window_width, comb.num_primes);
-      if(output_window_bytes >= max_shared_memory_bytes)
+
+      reduce_scatter_buffer_bytes = get_reduce_scatter_buffer_bytes(
+        shared_memory_comm, window_width, output_window_split_factor);
+      if(output_window_bytes + reduce_scatter_buffer_bytes
+         >= max_shared_memory_bytes)
         continue;
 
       // Try to find minimal input_window_split_factor
 
-      auto max_input_window_bytes
-        = max_shared_memory_bytes - output_window_bytes;
+      auto max_input_window_bytes = max_shared_memory_bytes
+                                    - output_window_bytes
+                                    - reduce_scatter_buffer_bytes;
       // If output window is split, we need two (same-size) input windows
       // to calculate off-diagonal Q blocks
       if(output_window_split_factor > 1)
@@ -161,7 +198,9 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
             "\n\tmax_shared_memory = ",
             pretty_print_bytes(max_shared_memory_bytes, true),
             "\n\toutput_window = ",
-            pretty_print_bytes(output_window_bytes, true), "\n\t",
+            pretty_print_bytes(output_window_bytes, true),
+            "\n\treduce_scatter_buffer = ",
+            pretty_print_bytes(reduce_scatter_buffer_bytes, true), "\n\t",
             DEBUG_STRING(num_groups));
         }
     }
@@ -275,6 +314,13 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       os << "    Heights for each MPI group: "
          << input_window_height_per_group_per_prime << "\n";
       os << "    MPI group sizes:" << group_comm_sizes << "\n";
+
+      if(reduce_scatter_buffer_bytes > 0)
+        {
+          El::BuildStream(
+            os, "  Buffer size for reduce-scatter Q: ",
+            pretty_print_bytes(reduce_scatter_buffer_bytes, true), "\n");
+        }
 
       El::Output(os.str());
     }
