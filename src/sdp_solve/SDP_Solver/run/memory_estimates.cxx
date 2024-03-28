@@ -15,18 +15,13 @@ size_t get_max_shared_memory_bytes(
   const size_t nonshared_memory_required_per_node_bytes,
   const Environment &env, const bool debug)
 {
-  // Ensure that all ranks finished reading SDP and allocated memory for it
-  El::mpi::Barrier(env.comm_shared_mem);
-
   El::byte can_update = false;
   // will be set only on rank=0
-  size_t mem_available_bytes = 0;
   size_t mem_total_bytes = 0;
   if(env.comm_shared_mem.Rank() == 0)
     {
       bool res;
       const auto meminfo = Proc_Meminfo::try_read(res, debug);
-      mem_available_bytes = meminfo.mem_available;
       mem_total_bytes = meminfo.mem_total;
       can_update = res;
     }
@@ -44,11 +39,11 @@ size_t get_max_shared_memory_bytes(
 
       bool print_warning = debug;
 
-      if(nonshared_memory_required_per_node_bytes > mem_available_bytes)
+      if(nonshared_memory_required_per_node_bytes > mem_total_bytes)
         {
           // This is certainly not enough, but at least
           // we'll print sizes in BigInt_Shared_Memory_Syrk_Context
-          max_shared_memory_bytes = 0.9 * mem_available_bytes;
+          max_shared_memory_bytes = 0.9 * mem_total_bytes;
           El::BuildStream(ss, "SDPB will probably fail with OOM. Consider "
                               "increasing number of nodes or RAM per node.");
           print_warning = true;
@@ -58,22 +53,18 @@ size_t get_max_shared_memory_bytes(
           // ad-hoc coefficient 0.9 to leave some free RAM
           max_shared_memory_bytes
             = 0.9
-              * (mem_available_bytes
-                 - nonshared_memory_required_per_node_bytes);
+              * (mem_total_bytes - nonshared_memory_required_per_node_bytes);
         }
 
       El::BuildStream(
-        ss, "\n\tMemUsed: ",
-        pretty_print_bytes(mem_total_bytes - mem_available_bytes, false),
-        "\n\tMemAvailable: ", pretty_print_bytes(mem_available_bytes, false),
-        "\n\tSDP solver will use approximately ",
-        pretty_print_bytes(nonshared_memory_required_per_node_bytes, false),
-        " of MemAvailable (excluding shared memory windows).");
+        ss, "\n\tMemTotal: ", pretty_print_bytes(mem_total_bytes, false),
+        "\n\tRequired memory estimate (excluding shared memory windows): ",
+        pretty_print_bytes(nonshared_memory_required_per_node_bytes, false));
 
       if(max_shared_memory_bytes < default_max_shared_memory_bytes)
         {
           print_warning = true;
-          if(nonshared_memory_required_per_node_bytes <= mem_available_bytes)
+          if(nonshared_memory_required_per_node_bytes <= mem_total_bytes)
             {
               El::BuildStream(
                 ss,
@@ -83,8 +74,7 @@ size_t get_max_shared_memory_bytes(
                 pretty_print_bytes(max_shared_memory_bytes, false));
               El::BuildStream(
                 ss, "\n\tSDPB is expected to use no more than ",
-                pretty_print_bytes(mem_total_bytes - mem_available_bytes
-                                     + nonshared_memory_required_per_node_bytes
+                pretty_print_bytes(nonshared_memory_required_per_node_bytes
                                      + max_shared_memory_bytes,
                                    false),
                 " RAM on a node. If it fails with OOM, consider increasing "

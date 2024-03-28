@@ -73,19 +73,19 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
 
 namespace
 {
-  // Estimate how many BigFloats will be allocated for the current node.
+  // Estimate how many BigFloats will be allocated by SDPB on the current node,
+  // (including what's already allocated, e.g. SDP)
   size_t get_required_nonshared_memory_per_node_bytes(
     const Environment &env, const Block_Info &block_info, const SDP &sdp,
     const SDP_Solver &solver, const bool debug)
   {
     const auto &node_comm = env.comm_shared_mem;
 
-    // dX, dY - have the same size as solver.X
+    // X, Y, primal_residues, X_chol, Y_chol, dX, dY, R, Z
     const size_t X_size
       = El::mpi::Reduce(get_matrix_size_local(solver.X), 0, node_comm);
 
-    // A_X_inv, A_Y
-    // See compute_A_X_inv()
+    // Bilinear pairing blocks - A_X_inv, A_Y
     const size_t A_X_inv_size
       = El::mpi::Reduce(get_A_X_size_local(block_info, sdp), 0, node_comm);
 
@@ -94,11 +94,15 @@ namespace
       get_schur_complement_size_local(block_info), 0, node_comm);
 
     // #(B) = PxN
-    // free_var_matrix, schur_off_diagonal
+    // sdp.free_var_matrix, schur_off_diagonal
     const size_t B_size = El::mpi::Reduce(get_B_size_local(sdp), 0, node_comm);
 
     // #Q = NxN, distributed over all nodes.
     const size_t Q_size = El::mpi::Reduce(get_Q_size_local(sdp), 0, node_comm);
+
+    // SDP struct
+    const size_t SDP_size
+      = El::mpi::Reduce(get_SDP_size_local(sdp), 0, node_comm);
 
     // We will use only result on rank=0
     if(node_comm.Rank() != 0)
@@ -107,9 +111,11 @@ namespace
     // Calculate mem_required_size
     size_t mem_required_size = 0;
 
-    // X, Y, X_cholesky, Y_cholesky, primal_residues - already allocated
-    // dX, dY - will be allocated in SDP_Solver::step()
-    mem_required_size += 2 * X_size;
+    // Everything allocated in SDP
+    mem_required_size += SDP_size;
+
+    // X, Y, X_cholesky, Y_cholesky, primal_residues, dX, dY
+    mem_required_size += 7 * X_size;
 
     // A_X_inv and A_Y
     mem_required_size += 2 * A_X_inv_size;
@@ -122,9 +128,7 @@ namespace
     // (they do not coexist, thus we choose maximum size instead of adding both)
     mem_required_size += std::max(schur_complement_size, 2 * X_size);
 
-    // schur_off_diagonal = L^{-1} B takes the same size as B
-    // Allocated in initialize_schur_off_diagonal()
-    // (B = sdp.free_var_matrix is already allocated)
+    // schur_off_diagonal = L^{-1} B
     mem_required_size += B_size;
     // Q = NxN
     mem_required_size += Q_size;
@@ -136,13 +140,15 @@ namespace
         std::ostringstream ss;
         El::BuildStream(
           ss, "node=", env.node_index(),
-          " matrix sizes and memory estimates: ", "\n\t#(X) = ", X_size,
+          " matrix sizes and memory estimates: ",
+          "\n\t#(SDP) = ", SDP_size,
+          "\n\t#(X) = ", X_size,
           "\n\t#(A_X_inv) = ", A_X_inv_size,
           "\n\t#(schur_complement) = ", schur_complement_size,
           "\n\t#(B) = ", B_size, "\n\t#(Q) = ", Q_size,
           "\n\tTotal BigFloats to be allocated: ", mem_required_size,
           "\n\tBigfloat bytes: ", bigfloat_bytes(),
-          "\n\tTotal non-shared memory to be allocated: ",
+          "\n\tTotal non-shared memory estimate: ",
           pretty_print_bytes(mem_required_bytes, true));
         El::Output(ss.str());
       }

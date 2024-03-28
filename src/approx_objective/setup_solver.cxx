@@ -41,14 +41,21 @@ void initialize_schur_complement_solver(
 
 namespace
 {
-  // Estimate how many BigFloats will be allocated for the current node.
-  size_t
-  get_required_nonshared_memory_per_node_bytes(const Environment &env,
-                                               const Block_Info &block_info,
-                                               const SDP &sdp,
-                                               const bool debug)
+  // Estimate how many BigFloats will be allocated by SDPB on the current node,
+  // (including what's already allocated, e.g. SDP)
+  size_t get_required_nonshared_memory_per_node_bytes(
+    const Environment &env, const Block_Info &block_info, const SDP &sdp,
+    const Block_Diagonal_Matrix &X, const bool debug)
   {
     const auto &node_comm = env.comm_shared_mem;
+
+    // X, Y, X_cholesky, Y_cholesky, primal_residues
+    const size_t X_size
+      = El::mpi::Reduce(get_matrix_size_local(X), 0, node_comm);
+
+    // Bilinear pairing blocks - A_X_inv, A_Y
+    const size_t A_X_inv_size
+      = El::mpi::Reduce(get_A_X_size_local(block_info, sdp), 0, node_comm);
 
     // schur_complement, schur_complement_cholesky
     const size_t schur_complement_size = El::mpi::Reduce(
@@ -72,8 +79,14 @@ namespace
     // Calculate mem_required_size
     size_t mem_required_size = 0;
 
-    // X, Y, X_cholesky, Y_cholesky, primal_residues - already allocated
-    // A_X_inv and A_Y - already allocated
+    // SDP struct
+    mem_required_size += SDP_size;
+
+    // X, Y, X_cholesky, Y_cholesky, primal_residues
+    mem_required_size += 5 * X_size;
+
+    // A_X_inv and A_Y
+    mem_required_size += 2 * A_X_inv_size;
 
     // schur_complement_cholesky
     mem_required_size += schur_complement_size;
@@ -97,13 +110,15 @@ namespace
         std::ostringstream ss;
         El::BuildStream(
           ss, "node=", env.node_index(),
-          " matrix sizes and memory estimates: "
-          "\n\t#(schur_complement) = ",
-          schur_complement_size, "\n\t#(B) = ", B_size, "\n\t#(Q) = ", Q_size,
+          " matrix sizes and memory estimates: ",
           "\n\t#(SDP) = ", SDP_size,
+          "\n\t#(X) = ", X_size,
+          "\n\t#(A_X_inv) = ", A_X_inv_size,
+          "\n\t#(schur_complement) = ", schur_complement_size,
+          "\n\t#(B) = ", B_size, "\n\t#(Q) = ", Q_size,
           "\n\tTotal BigFloats to be allocated: ", mem_required_size,
           "\n\tBigfloat bytes: ", bigfloat_bytes(),
-          "\n\tTotal non-shared memory to be allocated: ",
+          "\n\tTotal non-shared memory estimate: ",
           pretty_print_bytes(mem_required_bytes, true));
         El::Output(ss.str());
       }
@@ -115,14 +130,14 @@ namespace
   get_max_shared_memory_bytes(const size_t default_max_shared_memory_bytes,
                               const Environment &env,
                               const Block_Info &block_info, const SDP &sdp,
-                              const bool debug)
+                              const Block_Diagonal_Matrix &X, const bool debug)
   {
     // If user sets --maxSharedMemory limit manually, we use it.
     // Otherwise, we calculate the limit automatically.
     if(default_max_shared_memory_bytes != 0)
       return default_max_shared_memory_bytes;
     const size_t nonshared_memory_required_per_node_bytes
-      = get_required_nonshared_memory_per_node_bytes(env, block_info, sdp,
+      = get_required_nonshared_memory_per_node_bytes(env, block_info, sdp, X,
                                                      debug);
     return get_max_shared_memory_bytes(
       default_max_shared_memory_bytes,
@@ -190,7 +205,7 @@ void setup_solver(const Environment &env, const Block_Info &block_info,
 
       bool debug = false; // TODO add --verbosity option
       const auto max_shared_memory_bytes = get_max_shared_memory_bytes(
-        parameters.max_shared_memory_bytes, env, block_info, sdp, debug);
+        parameters.max_shared_memory_bytes, env, block_info, sdp, X, debug);
       auto bigint_syrk_context = initialize_bigint_syrk_context(
         env, block_info, sdp, max_shared_memory_bytes, debug);
 
