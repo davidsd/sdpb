@@ -1,5 +1,7 @@
 #include "SDPB_Parameters.hxx"
 #include "sdp_solve/sdp_solve.hxx"
+#include "sdpb_util/memory_estimates.hxx"
+#include "sdpb_util/ostream/pretty_print_bytes.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
 
 #include <El.hpp>
@@ -31,6 +33,10 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
 
   Scoped_Timer read_sdp_timer(timers, "read_sdp");
   SDP sdp(parameters.sdp_path, block_info, grid, timers);
+  if(parameters.verbosity >= debug)
+    {
+      print_allocation_message_per_node(env, "SDP", get_allocated_bytes(sdp));
+    }
   if(El::mpi::Rank() == 0 && parameters.write_solution.vector_z)
     {
       ASSERT(sdp.normalization.has_value(),
@@ -43,6 +49,11 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
   SDP_Solver solver(parameters.solver, parameters.verbosity,
                     parameters.require_initial_checkpoint, block_info, grid,
                     sdp.dual_objective_b.Height());
+  if(parameters.verbosity >= debug)
+    {
+      print_allocation_message_per_node(env, "SDP_Solver",
+                                        get_allocated_bytes(solver));
+    }
   solver_ctor_timer.stop();
 
   const boost::property_tree::ptree parameters_tree(

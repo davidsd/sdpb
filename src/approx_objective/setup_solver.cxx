@@ -1,7 +1,7 @@
 #include "Approx_Parameters.hxx"
 #include "sdp_solve/sdp_solve.hxx"
-#include "sdp_solve/SDP_Solver/run/memory_estimates.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/initialize_bigint_syrk_context.hxx"
+#include "sdpb_util/memory_estimates.hxx"
 #include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
 #include <filesystem>
@@ -26,7 +26,7 @@ void compute_A_Y(
              2> &A_Y);
 
 void initialize_schur_complement_solver(
-  const Block_Info &block_info, const SDP &sdp,
+  const Environment &env, const Block_Info &block_info, const SDP &sdp,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     &A_X_inv,
@@ -37,7 +37,7 @@ void initialize_schur_complement_solver(
   Block_Matrix &schur_off_diagonal,
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
   El::DistMatrix<El::BigFloat> &Q, Timers &timers,
-  El::Matrix<int32_t> &block_timings_ms);
+  El::Matrix<int32_t> &block_timings_ms, bool debug);
 
 namespace
 {
@@ -210,7 +210,8 @@ void setup_solver(const Environment &env, const Block_Info &block_info,
         env, block_info, sdp, max_shared_memory_bytes, debug);
 
       initialize_schur_complement_solver(
-        block_info, sdp, A_X_inv, A_Y, grid, schur_complement_cholesky,
-        schur_off_diagonal, bigint_syrk_context, Q, timers, block_timings_ms);
+        env, block_info, sdp, A_X_inv, A_Y, grid, schur_complement_cholesky,
+        schur_off_diagonal, bigint_syrk_context, Q, timers, block_timings_ms,
+        debug);
     }
 }

@@ -1,7 +1,8 @@
 #include "memory_estimates.hxx"
-#include "sdpb_util/assert.hxx"
-#include "sdpb_util/Proc_Meminfo.hxx"
-#include "sdpb_util/ostream/pretty_print_bytes.hxx"
+
+#include "Proc_Meminfo.hxx"
+#include "assert.hxx"
+#include "ostream/pretty_print_bytes.hxx"
 
 #include <iomanip>
 
@@ -196,4 +197,65 @@ size_t get_SDP_size_local(const SDP &sdp)
   for(const auto &B_block : sdp.free_var_matrix.blocks)
     SDP_size += B_block.AllocatedMemory();
   return SDP_size;
+}
+size_t get_heap_allocated_bytes(const El::BigFloat &f)
+{
+  return bigfloat_bytes();
+}
+size_t get_heap_allocated_bytes(const Block_Diagonal_Matrix &m)
+{
+  return get_heap_allocated_bytes(m.blocks);
+}
+size_t get_heap_allocated_bytes(const Block_Matrix &m)
+{
+  return get_heap_allocated_bytes(m.blocks);
+}
+size_t get_heap_allocated_bytes(const Block_Vector &v)
+{
+  return get_heap_allocated_bytes(v.blocks);
+}
+size_t get_heap_allocated_bytes(const El::DistMatrix<El::BigFloat> &m)
+{
+  return m.AllocatedMemory() * bigfloat_bytes();
+}
+size_t get_heap_allocated_bytes(const El::Matrix<El::BigFloat> &m)
+{
+  return m.MemorySize() * bigfloat_bytes();
+}
+size_t get_heap_allocated_bytes(const SDP &sdp)
+{
+  size_t res = get_heap_allocated_bytes(sdp.bases_blocks)
+               + get_heap_allocated_bytes(sdp.bilinear_bases)
+               + get_heap_allocated_bytes(sdp.dual_objective_b)
+               + get_heap_allocated_bytes(sdp.free_var_matrix)
+               + get_heap_allocated_bytes(sdp.objective_const)
+               + get_heap_allocated_bytes(sdp.primal_objective_c);
+  if(sdp.normalization.has_value())
+    res += get_heap_allocated_bytes(sdp.normalization.value());
+  return res;
+}
+size_t get_heap_allocated_bytes(const SDP_Solver &solver)
+{
+  return get_heap_allocated_bytes(solver.dual_error)
+         + get_heap_allocated_bytes(solver.dual_objective)
+         + get_heap_allocated_bytes(solver.dual_residues)
+         + get_heap_allocated_bytes(solver.duality_gap)
+         + get_heap_allocated_bytes(solver.primal_error_p)
+         + get_heap_allocated_bytes(solver.primal_objective)
+         + get_heap_allocated_bytes(solver.primal_residues)
+         + get_heap_allocated_bytes(solver.x)
+         + get_heap_allocated_bytes(solver.y)
+         + get_heap_allocated_bytes(solver.primal_error_P)
+         + get_heap_allocated_bytes(solver.X)
+         + get_heap_allocated_bytes(solver.Y);
+}
+void print_allocation_message_per_node(const Environment &env,
+                                       const std::string &name, size_t bytes)
+{
+  bytes = El::mpi::Reduce(bytes, 0, env.comm_shared_mem);
+  if(env.comm_shared_mem.Rank() == 0)
+    {
+      El::Output("node=", env.node_index(), ": allocate ", name, ": ",
+                 pretty_print_bytes(bytes));
+    }
 }

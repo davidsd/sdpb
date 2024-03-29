@@ -29,6 +29,7 @@ def build(bld):
 
     bld.stlib(source=['src/sdpb_util/copy_matrix.cxx',
                       'src/sdpb_util/Environment.cxx',
+                      'src/sdpb_util/memory_estimates.cxx',
                       'src/sdpb_util/Mesh.cxx',
                       'src/sdpb_util/Proc_Meminfo.cxx',
                       'src/sdpb_util/Timers/Scoped_Timer.cxx',
@@ -67,7 +68,6 @@ def build(bld):
                          'src/sdp_solve/SDP_Solver/run/compute_dual_residues_and_error.cxx',
                          'src/sdp_solve/SDP_Solver/run/compute_primal_residues_and_error_P_Ax_X.cxx',
                          'src/sdp_solve/SDP_Solver/run/compute_primal_residues_and_error_p_b_Bx.cxx',
-                         'src/sdp_solve/SDP_Solver/run/memory_estimates.cxx',
                          'src/sdp_solve/SDP_Solver/run/compute_objectives/compute_objectives.cxx',
                          'src/sdp_solve/SDP_Solver/run/compute_objectives/dot.cxx',
                          'src/sdp_solve/SDP_Solver/run/compute_bilinear_pairings/compute_bilinear_pairings.cxx',

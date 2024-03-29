@@ -6,6 +6,8 @@
 //=======================================================================
 
 #include "SDPB_Parameters.hxx"
+#include "sdpb_util/Proc_Meminfo.hxx"
+#include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
 #include <El.hpp>
 
@@ -48,6 +50,23 @@ int main(int argc, char **argv)
                     << "MPI processes: " << El::mpi::Size()
                     << ", nodes: " << env.num_nodes() << '\n'
                     << parameters << std::endl;
+        }
+
+      if(parameters.verbosity >= debug)
+        {
+          if(env.comm_shared_mem.Rank() == 0)
+            {
+              bool res;
+              auto meminfo = Proc_Meminfo::try_read(res, true);
+              if(res)
+                {
+                  El::Output("node=", env.node_index(),
+                             ": MemUsed: ",
+                             pretty_print_bytes(meminfo.mem_used()));
+                }
+            }
+          // Make sure that we don't allocate anything before printing MemUsed
+          El::mpi::Barrier(env.comm_shared_mem);
         }
 
       Block_Info block_info(env, parameters.sdp_path,

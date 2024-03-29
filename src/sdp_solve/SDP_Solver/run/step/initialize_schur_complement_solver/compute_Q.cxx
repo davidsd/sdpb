@@ -1,16 +1,17 @@
-#include "sdp_solve/SDP.hxx"
 #include "sdp_solve/Block_Diagonal_Matrix.hxx"
-#include "sdpb_util/Timers/Timers.hxx"
+#include "sdp_solve/SDP.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/Matrix_Normalizer.hxx"
+#include "sdpb_util/memory_estimates.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 
 // schur_off_diagonal = L^{-1} B
 void initialize_schur_off_diagonal(
-  const SDP &sdp, const Block_Info &block_info,
+  const Environment &env, const SDP &sdp, const Block_Info &block_info,
   const Block_Diagonal_Matrix &schur_complement,
   Block_Matrix &schur_off_diagonal,
   Block_Diagonal_Matrix &schur_complement_cholesky, Timers &timers,
-  El::Matrix<int32_t> &block_timings_ms)
+  El::Matrix<int32_t> &block_timings_ms, const bool debug)
 {
   schur_off_diagonal.blocks.clear();
   schur_off_diagonal.blocks.reserve(schur_complement_cholesky.blocks.size());
@@ -51,6 +52,12 @@ void initialize_schur_off_diagonal(
       block_timings_ms(global_block_index, 0)
         += solve_timer.elapsed_milliseconds();
     }
+  if(debug)
+    {
+      print_allocation_message_per_node(
+        env, "schur_off_diagonal", get_allocated_bytes(schur_off_diagonal));
+      // schur_complement_cholesky was already allocated in SDP_Solver::step()
+    }
 }
 
 // Check that Q_ii = 2^2N, where N = normalizer.precision.
@@ -84,12 +91,12 @@ void check_normalized_Q_diagonal(El::DistMatrix<El::BigFloat> &Q,
 }
 
 // Q = P^T P = (L^{-1} B)^T (L^{-1} B) = schur_off_diagonal^T schur_off_diagonal
-void syrk_Q(Block_Matrix &schur_off_diagonal,
+void syrk_Q(const Environment &env, Block_Matrix &schur_off_diagonal,
             BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
             El::DistMatrix<El::BigFloat> &Q, Timers &timers,
-            El::Matrix<int32_t> &block_timings_ms)
+            El::Matrix<int32_t> &block_timings_ms, const bool debug)
 {
-  Scoped_Timer(timers, "syrk");
+  Scoped_Timer syrk_timer(timers, "syrk");
   std::vector<El::DistMatrix<El::BigFloat>> &P_blocks
     = schur_off_diagonal.blocks;
 
@@ -98,6 +105,12 @@ void syrk_Q(Block_Matrix &schur_off_diagonal,
   Scoped_Timer normalizer_ctor_timer(timers, "Matrix_Normalizer_ctor");
   Matrix_Normalizer normalizer(P_blocks, block_width, El::gmp::Precision(),
                                El::mpi::COMM_WORLD);
+  if(debug)
+    {
+      print_allocation_message_per_node(
+        env, "Matrix_Normalizer",
+        get_allocated_bytes(normalizer.column_norms));
+    }
   normalizer_ctor_timer.stop();
   {
     Scoped_Timer normalizer_timer(timers, "normalize_P");
@@ -118,18 +131,20 @@ void syrk_Q(Block_Matrix &schur_off_diagonal,
   normalizer.restore_Q(uplo, Q);
 }
 
-void compute_Q(const SDP &sdp, const Block_Info &block_info,
+void compute_Q(const Environment &env, const SDP &sdp,
+               const Block_Info &block_info,
                const Block_Diagonal_Matrix &schur_complement,
                Block_Matrix &schur_off_diagonal,
                Block_Diagonal_Matrix &schur_complement_cholesky,
                BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
                El::DistMatrix<El::BigFloat> &Q, Timers &timers,
-               El::Matrix<int32_t> &block_timings_ms)
+               El::Matrix<int32_t> &block_timings_ms, const bool debug)
 {
   Scoped_Timer timer(timers, "Q");
 
-  initialize_schur_off_diagonal(sdp, block_info, schur_complement,
+  initialize_schur_off_diagonal(env, sdp, block_info, schur_complement,
                                 schur_off_diagonal, schur_complement_cholesky,
-                                timers, block_timings_ms);
-  syrk_Q(schur_off_diagonal, bigint_syrk_context, Q, timers, block_timings_ms);
+                                timers, block_timings_ms, debug);
+  syrk_Q(env, schur_off_diagonal, bigint_syrk_context, Q, timers,
+         block_timings_ms, debug);
 }

@@ -1,4 +1,4 @@
-#include "memory_estimates.hxx"
+#include "sdpb_util/memory_estimates.hxx"
 #include "bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "bigint_syrk/initialize_bigint_syrk_context.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
@@ -197,6 +197,13 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
   El::BigFloat primal_step_length(0), dual_step_length(0);
 
   Block_Diagonal_Matrix X_cholesky(X), Y_cholesky(X);
+  if(verbosity >= debug)
+    {
+      print_allocation_message_per_node(env, "X_cholesky",
+                                        get_allocated_bytes(X_cholesky));
+      print_allocation_message_per_node(env, "Y_cholesky",
+                                        get_allocated_bytes(Y_cholesky));
+    }
 
   // Bilinear pairings needed for computing the Schur complement
   // matrix.  For example,
@@ -337,6 +344,13 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
 
       compute_bilinear_pairings(block_info, X_cholesky, Y, sdp.bases_blocks,
                                 A_X_inv, A_Y, timers);
+      if(verbosity >= debug)
+        {
+          print_allocation_message_per_node(env, "A_X_inv",
+                                            get_allocated_bytes(A_X_inv));
+          print_allocation_message_per_node(env, "A_Y",
+                                            get_allocated_bytes(A_Y));
+        }
 
       compute_dual_residues_and_error(block_info, sdp, y, A_Y, dual_residues,
                                       dual_error, timers);
@@ -348,6 +362,11 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
       Block_Vector primal_residue_p(y);
       compute_primal_residues_and_error_p_b_Bx(
         block_info, sdp, x, primal_residue_p, primal_error_p);
+      if(verbosity >= debug)
+        {
+          print_allocation_message_per_node(
+            env, "primal_residue_p", get_allocated_bytes(primal_residue_p));
+        }
 
       bool terminate_now, is_primal_and_dual_feasible;
       compute_feasible_and_termination(
@@ -363,11 +382,12 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
       El::BigFloat Q_cond_number;
       El::BigFloat max_block_cond_number;
       std::string max_block_cond_number_name;
-      step(parameters, total_psd_rows, is_primal_and_dual_feasible, block_info,
-           sdp, grid, X_cholesky, Y_cholesky, A_X_inv, A_Y, primal_residue_p,
-           bigint_syrk_context, mu, beta_corrector, primal_step_length,
-           dual_step_length, terminate_now, timers, block_timings_ms,
-           Q_cond_number, max_block_cond_number, max_block_cond_number_name);
+      step(env, parameters, verbosity, total_psd_rows,
+           is_primal_and_dual_feasible, block_info, sdp, grid, X_cholesky,
+           Y_cholesky, A_X_inv, A_Y, primal_residue_p, bigint_syrk_context, mu,
+           beta_corrector, primal_step_length, dual_step_length, terminate_now,
+           timers, block_timings_ms, Q_cond_number, max_block_cond_number,
+           max_block_cond_number_name);
 
       if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
         {
