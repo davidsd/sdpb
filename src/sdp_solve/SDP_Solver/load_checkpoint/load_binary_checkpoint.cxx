@@ -7,7 +7,8 @@
 namespace fs = std::filesystem;
 
 template <typename T>
-void read_local_binary_blocks(T &t, std::ifstream &checkpoint_stream)
+void read_local_binary_blocks(T &t, std::ifstream &checkpoint_stream,
+                              const std::string &blocks_name)
 {
   El::BigFloat zero(0);
   const size_t serialized_size(zero.SerializedSize());
@@ -21,19 +22,19 @@ void read_local_binary_blocks(T &t, std::ifstream &checkpoint_stream)
       checkpoint_stream.read(reinterpret_cast<char *>(&local_width),
                              sizeof(int64_t));
 
-      ASSERT(checkpoint_stream.good(),
-             "Corrupted binary checkpoint file.  For block with ",
-             "global size (", block.Height(), ",", block.Width(),
-             ") and local dimensions (", block.LocalHeight(), ",",
-             block.LocalWidth(), "), error when reading height and width");
+      ASSERT(
+        checkpoint_stream.good(), "Corrupted binary checkpoint file.  For ",
+        blocks_name, ".block with ", "global size (", block.Height(), ",",
+        block.Width(), ") and local dimensions (", block.LocalHeight(), ",",
+        block.LocalWidth(), "), error when reading height and width");
 
       ASSERT(local_height == block.LocalHeight()
                && local_width == block.LocalWidth(),
-             "Incompatible binary checkpoint file.  For block with ",
-             "global size (", block.Height(), ",", block.Width(),
-             "), expected local dimensions (", block.LocalHeight(), ",",
-             block.LocalWidth(), "), but found (", local_height, ",",
-             local_width, ")");
+             "Incompatible binary checkpoint file.  For ", blocks_name,
+             ".block with ", "global size (", block.Height(), ",",
+             block.Width(), "), expected local dimensions (",
+             block.LocalHeight(), ",", block.LocalWidth(), "), but found (",
+             local_height, ",", local_width, ")");
 
       for(int64_t row = 0; row < local_height; ++row)
         for(int64_t column = 0; column < local_width; ++column)
@@ -43,11 +44,11 @@ void read_local_binary_blocks(T &t, std::ifstream &checkpoint_stream)
               reinterpret_cast<char *>(local_array.data()),
               std::streamsize(local_array.size()));
             ASSERT(checkpoint_stream.good(),
-                   "Corrupted binary checkpoint file. For block with ",
-                   "global size (", block.Height(), ",", block.Width(),
-                   ") and local dimensions (", block.LocalHeight(), ",",
-                   block.LocalWidth(), "), error when reading element (", row,
-                   ",", column, ")");
+                   "Corrupted binary checkpoint file. For ", blocks_name,
+                   ".block with ", "global size (", block.Height(), ",",
+                   block.Width(), ") and local dimensions (",
+                   block.LocalHeight(), ",", block.LocalWidth(),
+                   "), error when reading element (", row, ",", column, ")");
             input.Deserialize(local_array.data());
 
             block.SetLocal(row, column, input);
@@ -125,10 +126,10 @@ bool load_binary_checkpoint(const fs::path &checkpoint_directory,
       std::cout << "Loading binary checkpoint from : " << checkpoint_directory
                 << '\n';
     }
-  read_local_binary_blocks(solver.x, checkpoint_stream);
-  read_local_binary_blocks(solver.X, checkpoint_stream);
-  read_local_binary_blocks(solver.y, checkpoint_stream);
-  read_local_binary_blocks(solver.Y, checkpoint_stream);
+  read_local_binary_blocks(solver.x, checkpoint_stream, "x");
+  read_local_binary_blocks(solver.X, checkpoint_stream, "X");
+  read_local_binary_blocks(solver.y, checkpoint_stream, "y");
+  read_local_binary_blocks(solver.Y, checkpoint_stream, "Y");
   solver.current_generation = current_generation;
   if(backup_generation != -1)
     {

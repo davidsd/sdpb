@@ -33,7 +33,7 @@ void Block_Info::allocate_blocks(const Environment &env,
         block_map.num_procs *= proc_granularity;
       }
 
-  if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+  if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
       std::stringstream ss;
       ss << "Block Grid Mapping\n"

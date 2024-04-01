@@ -18,9 +18,11 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
              const std::chrono::time_point<std::chrono::high_resolution_clock>
                &start_time);
 
-void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info,
-                  const Timers &timers, const bool &debug,
-                  El::Matrix<int32_t> &block_timings);
+void write_profiling(const fs::path &checkpoint_out, const Timers &timers);
+void write_block_timings(const fs::path &checkpoint_out,
+                         const Block_Info &block_info, const Timers &timers,
+                         const bool &debug,
+                         El::Matrix<int32_t> &block_timings_ms);
 
 int main(int argc, char **argv)
 {
@@ -82,9 +84,22 @@ int main(int argc, char **argv)
           Timers timers(solve(block_info, timing_parameters, env, start_time));
 
           El::Matrix<int32_t> block_timings(block_info.dimensions.size(), 1);
-          write_timing(timing_parameters.solver.checkpoint_out, block_info,
-                       timers, timing_parameters.verbosity >= Verbosity::debug,
-                       block_timings);
+          write_block_timings(
+            timing_parameters.solver.checkpoint_out, block_info, timers,
+            timing_parameters.verbosity >= Verbosity::debug, block_timings);
+          if(timing_parameters.verbosity >= Verbosity::debug)
+            {
+              try
+                {
+                  write_profiling(parameters.solver.checkpoint_out, timers);
+                }
+              catch(std::exception &e)
+                {
+                  El::Output(
+                    "An exception has been thrown in write_profiling():");
+                  El::ReportException(e);
+                }
+            }
           El::mpi::Barrier(El::mpi::COMM_WORLD);
           Block_Info new_info(env, parameters.sdp_path, block_timings,
                               parameters.proc_granularity,
@@ -111,15 +126,17 @@ int main(int argc, char **argv)
         }
       Timers timers(solve(block_info, parameters, env, start_time));
       El::Matrix<int32_t> block_timings(block_info.dimensions.size(), 1);
-      try
+      if(parameters.verbosity >= Verbosity::debug)
         {
-          write_timing(parameters.solver.checkpoint_out, block_info,
-                 timers, parameters.verbosity >= Verbosity::debug,
-                 block_timings);
-        }
-      catch(std::exception& e)
-        {
-          El::ReportException(e);
+          try
+            {
+              write_profiling(parameters.solver.checkpoint_out, timers);
+            }
+          catch(std::exception &e)
+            {
+              El::Output("An exception has been thrown in write_profiling():");
+              El::ReportException(e);
+            }
         }
     }
   catch(std::exception &e)
