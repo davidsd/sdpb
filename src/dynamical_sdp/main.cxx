@@ -36,7 +36,7 @@ int main(int argc, char **argv)
     std::cout << "Elemental precision = " << prec_parameter.prec << "\n"
               << std::flush;
 
-  El::gmp::SetPrecision(prec_parameter.prec);
+  Environment::set_precision(prec_parameter.prec);
 
   /*
   // a very strange bug : if I compile with boost 1.77 , if I also use "mpirun -n 2", then somehow the copy stuck 
