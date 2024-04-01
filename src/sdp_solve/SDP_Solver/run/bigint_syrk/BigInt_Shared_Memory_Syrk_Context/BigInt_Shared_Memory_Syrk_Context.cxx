@@ -1,6 +1,8 @@
 #include "../BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "../fmpz/fmpz_mul_blas_util.hxx"
 #include "sdpb_util/assert.hxx"
+#include "sdpb_util/ostream/ostream_vector.hxx"
+#include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
 #include <El.hpp>
 
@@ -153,10 +155,14 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
           RUNTIME_ERROR(
             "Cannot allocate shared memory window for input block residues."
             " Required: at least ",
-            residues_bytes_per_single_block_row,
-            " bytes per each MPI group, available: ", max_input_window_bytes,
-            " bytes in total. ", DEBUG_STRING(max_shared_memory_bytes),
-            DEBUG_STRING(output_window_bytes), DEBUG_STRING(num_groups));
+            pretty_print_bytes(residues_bytes_per_single_block_row, true),
+            " per each MPI group, available: ",
+            pretty_print_bytes(max_input_window_bytes), " in total. ",
+            "\n\tmax_shared_memory = ",
+            pretty_print_bytes(max_shared_memory_bytes, true),
+            "\n\toutput_window = ",
+            pretty_print_bytes(output_window_bytes, true), "\n\t",
+            DEBUG_STRING(num_groups));
         }
     }
 
@@ -189,14 +195,27 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
           El::BuildStream(
             ss,
             "\tConsider increasing available shared memory per node "
-            "(--maxSharedMemory option).\n",
-            "\tShared memory limit: ", max_shared_memory_bytes, " bytes.\n",
-            "\tOutput window size (without splitting): ",
-            window_size_bytes(block_width, block_width, comb.num_primes),
-            " bytes.\n", "\tInput window size (without splitting): ",
-            window_size_bytes(total_block_height_per_node, block_width,
-                              comb.num_primes),
-            " bytes.\n");
+            "(--maxSharedMemory option).",
+            "\n\tShared memory limit: ",
+            pretty_print_bytes(max_shared_memory_bytes, true),
+            "\n\tOutput window:", "\n\t\tactual size after splitting: ",
+            pretty_print_bytes(
+              window_size_bytes(window_width, window_width, comb.num_primes),
+              true),
+            "\n\t\toptimal size without splitting: ",
+            pretty_print_bytes(
+              window_size_bytes(block_width, block_width, comb.num_primes),
+              true),
+            "\n\tInput window:"
+            "\n\t\tactual size after splitting: ",
+            pretty_print_bytes(
+              window_size_bytes(sum(input_window_height_per_group_per_prime),
+                                window_width, comb.num_primes),
+              true),
+            "\n\t\toptimal size without splitting: ",
+            pretty_print_bytes(window_size_bytes(total_block_height_per_node,
+                                                 block_width, comb.num_primes),
+                               true));
           PRINT_WARNING(ss.str());
         }
     }
@@ -207,8 +226,8 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       std::ostringstream os;
       El::BuildStream(os, "create BigInt_Shared_Memory_Syrk_Context, rank=",
                       El::mpi::Rank(), "\n");
-      El::BuildStream(
-        os, "  Shared memory limit, bytes: ", max_shared_memory_bytes, "\n");
+      El::BuildStream(os, "  Shared memory limit: ",
+                      pretty_print_bytes(max_shared_memory_bytes, true), "\n");
       El::BuildStream(os, "  Number of primes: ", comb.num_primes, "\n");
 
       El::BuildStream(os, "  Blocks on the node:\n");
@@ -218,14 +237,18 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       El::BuildStream(os, "    Width: ", block_width, "\n");
       El::BuildStream(
         os, "    Elements: ", total_block_height_per_node * block_width, "\n");
-      El::Print(blocks_height_per_group,
-                "    Heights for each MPI group:", ", ", os);
-      os << "\n";
+      // TODO for some reason, El::BuildStream() fails for std::vector
+      // although we've included sdpb_util/ostream/ostream_vector.hxx
+      os << "    Heights for each MPI group: " << blocks_height_per_group
+         << "\n";
 
       El::BuildStream(os, "  Output residues window (Q):\n");
       El::BuildStream(
-        os, "    Window size, bytes: ",
-        window_size_bytes(window_width, window_width, comb.num_primes), "\n");
+        os, "    Window size: ",
+        pretty_print_bytes(
+          window_size_bytes(window_width, window_width, comb.num_primes),
+          true),
+        "\n");
       El::BuildStream(os, "    Split factor: ", output_window_split_factor,
                       "\n");
       El::BuildStream(os, "    Height=Width (per prime): ", window_width,
@@ -236,33 +259,33 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       auto input_window_height = sum(input_window_height_per_group_per_prime);
 
       El::BuildStream(os, "  Input residues window (P):\n");
-      El::BuildStream(os, "  Number of windows: ",
+      El::BuildStream(os, "    Number of windows: ",
                       output_window_split_factor == 1 ? 1 : 2, "\n");
       El::BuildStream(
-        os, "    Window size, bytes: ",
-        window_size_bytes(input_window_height, window_width, comb.num_primes),
+        os, "    Window size: ",
+        pretty_print_bytes(window_size_bytes(input_window_height, window_width,
+                                             comb.num_primes),
+                           true),
         "\n");
       El::BuildStream(os, "    Split factor: ", input_window_split_factor,
                       "\n");
       El::BuildStream(os, "    Height (per prime): ", input_window_height,
                       "\n");
       El::BuildStream(os, "    Width: ", window_width, "\n");
-      El::Print(input_window_height_per_group_per_prime,
-                "    Heights for each MPI group:", ", ", os);
-      os << "\n";
-      El::Print(group_comm_sizes, "    MPI group sizes:", ", ", os);
-      os << "\n";
+      os << "    Heights for each MPI group: "
+         << input_window_height_per_group_per_prime << "\n";
+      os << "    MPI group sizes:" << group_comm_sizes << "\n";
 
       El::Output(os.str());
     }
 
   output_residues_window = std::make_unique<Residue_Matrices_Window<double>>(
-    shared_memory_comm, comb.num_primes, window_width, window_width, debug);
+    shared_memory_comm, comb.num_primes, window_width, window_width);
 
   input_grouped_block_residues_window_A
     = std::make_unique<Block_Residue_Matrices_Window<double>>(
       shared_memory_comm, comb.num_primes, num_groups,
-      input_window_height_per_group_per_prime, window_width, debug);
+      input_window_height_per_group_per_prime, window_width);
 
   // We need a second input window only to calculate off-diagonal blocks
   // of the output window.
@@ -271,7 +294,7 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       input_grouped_block_residues_window_B
         = std::make_unique<Block_Residue_Matrices_Window<double>>(
           shared_memory_comm, comb.num_primes, num_groups,
-          input_window_height_per_group_per_prime, window_width, debug);
+          input_window_height_per_group_per_prime, window_width);
     }
 
   {

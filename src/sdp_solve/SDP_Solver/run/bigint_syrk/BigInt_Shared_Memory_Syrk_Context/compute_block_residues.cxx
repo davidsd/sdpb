@@ -19,6 +19,7 @@ namespace
     // Block submatrix for a given row range and a given column
     const auto block_column_submatrix
       = block(El::Range(0, block.Height()), global_col);
+    ASSERT(block_column_submatrix.Viewing());
 
     // Residues of blocks on a current MPI group
     // modulo the first prime are written here
@@ -36,6 +37,7 @@ namespace
     ASSERT(residue_I.end <= group_residues_matrix.Height());
     auto first_residue_column_submatrix
       = group_residues_matrix(residue_I, residue_J);
+    ASSERT(first_residue_column_submatrix.Viewing());
 
     Fmpz_BigInt bigint_value;
     // Submatrix is single-column, thus index j is always 0.
@@ -245,8 +247,12 @@ void BigInt_Shared_Memory_Syrk_Context::compute_block_residues(
           }
         const int row_begin = skip_rows;
         const int row_end = std::min(height, row_begin + target_height);
-        block_views.emplace_back(
-          block(El::Range<int>(row_begin, row_end), col_range));
+
+        auto &block_view = block_views.emplace_back();
+        El::LockedView(block_view, block, El::Range<int>(row_begin, row_end),
+                       col_range);
+        ASSERT(block_view.Viewing());
+
         skip_rows = 0;
         target_height -= row_end - row_begin;
       }
