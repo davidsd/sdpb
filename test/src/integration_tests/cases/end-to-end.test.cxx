@@ -20,7 +20,8 @@ namespace
                        const std::string &default_sdpb_args = "",
                        const Named_Args_Map &pmp2sdp_args = {},
                        const std::vector<std::string> &out_txt_keys = {},
-                       bool check_sdp_normalization = true)
+                       bool check_sdp_normalization = true,
+                       bool run_sdpb_twice = false)
   {
     int diff_precision = precision / 2;
 
@@ -95,6 +96,11 @@ namespace
             {"--checkpointDir", (output_dir / "ck").string()}};
           runner.create_nested("sdpb").mpi_run(
             {"build/sdpb", default_sdpb_args}, args, num_procs);
+          if(run_sdpb_twice)
+            {
+              runner.create_nested("sdpb-2").mpi_run(
+                {"build/sdpb", default_sdpb_args}, args, num_procs);
+            }
 
           // SDPB runs with --precision=<precision>
           // We check test output up to lower precision=<sdpb_output_diff_precision>
@@ -222,10 +228,15 @@ TEST_CASE("end-to-end_tests")
         "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
         "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
         "--procGranularity 1 --writeSolution x,y,z";
-    // This test is slow, we don't want to run it twice
+    // This test is slow, we don't want to run it for both json and binary SDP.
     // json/bin correctness is checked by other tests,
     // so we use only binary SDP here
-    end_to_end_test(name, num_procs, precision, default_sdpb_args);
+
+    bool check_sdp_normalization = true;
+    // run_sdpb_twice=true to test checkpoint loading, see https://github.com/davidsd/sdpb/issues/219
+    bool run_sdpb_twice = true;
+    end_to_end_test(name, num_procs, precision, default_sdpb_args, {}, {},
+                    check_sdp_normalization, run_sdpb_twice);
   }
 
   SECTION("SingletScalarAllowed_test_nmax6")
