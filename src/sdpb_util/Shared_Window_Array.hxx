@@ -26,8 +26,7 @@ public:
   //
   // It ensures that all ranks in the communicator are on the same node
   // and can share memory.
-  Shared_Window_Array(El::mpi::Comm shared_memory_comm, size_t size,
-                      bool debug)
+  Shared_Window_Array(El::mpi::Comm shared_memory_comm, size_t size)
       : comm(shared_memory_comm), size(size)
   {
     MPI_Aint local_window_size; // number of bytes allocated by current rank
@@ -35,16 +34,7 @@ public:
 
     // Allocate all memory in rank=0
     if(El::mpi::Rank(shared_memory_comm) == 0)
-      {
-        local_window_size = size * disp_unit;
-        if(debug)
-          {
-            El::Output(
-              El::mpi::Rank(),
-              " Allocate Shared_Window_Array, elements: ", size,
-              ", size, GB: ", (double)local_window_size / 1024 / 1024 / 1024);
-          }
-      }
+      local_window_size = size * disp_unit;
     else
       local_window_size = 0;
 
