@@ -44,7 +44,7 @@ size_t get_max_shared_memory_bytes(
         {
           // This is certainly not enough, but at least
           // we'll print sizes in BigInt_Shared_Memory_Syrk_Context
-          max_shared_memory_bytes = 0.9 * mem_total_bytes;
+          max_shared_memory_bytes = 0.4 * mem_total_bytes;
           El::BuildStream(ss, "SDPB will probably fail with OOM. Consider "
                               "increasing number of nodes or RAM per node.");
           print_warning = true;
@@ -53,7 +53,7 @@ size_t get_max_shared_memory_bytes(
         {
           // ad-hoc coefficient 0.9 to leave some free RAM
           max_shared_memory_bytes
-            = 0.9
+            = 0.4
               * (mem_total_bytes - nonshared_memory_required_per_node_bytes);
         }
 
@@ -70,7 +70,7 @@ size_t get_max_shared_memory_bytes(
               El::BuildStream(
                 ss,
                 "\n\tTo prevent OOM, "
-                "SDPB will set --maxSharedMemory to 90% of the "
+                "SDPB will set --maxSharedMemory to 40% of the "
                 "remaining memory, i.e. ",
                 pretty_print_bytes(max_shared_memory_bytes, false));
               El::BuildStream(
@@ -86,7 +86,7 @@ size_t get_max_shared_memory_bytes(
             {
               El::BuildStream(
                 ss,
-                "\n\tSDPB will set --maxSharedMemory to 90% of MemAvailable, "
+                "\n\tSDPB will set --maxSharedMemory to 40% of MemAvailable, "
                 "i.e. ",
                 pretty_print_bytes(max_shared_memory_bytes, false),
                 ". This will not help, probably.");
