@@ -26,7 +26,7 @@ def configure(conf):
         if not conf.options.cblas_incdir:
             conf.options.cblas_incdir = conf.options.cblas_dir + "/include"
         if not conf.options.cblas_libdir:
-            conf.options.cblas_libdir = ' '.join(conf.options.cblas_dir + "/lib", conf.options.cblas_dir + "/lib64")
+            conf.options.cblas_libdir = ' '.join([conf.options.cblas_dir + "/lib", conf.options.cblas_dir + "/lib64"])
 
     if conf.options.cblas_incdir:
         cblas_incdir = conf.options.cblas_incdir.split()
