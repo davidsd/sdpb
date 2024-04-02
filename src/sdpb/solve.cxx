@@ -67,16 +67,20 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
   if(reason == SDP_Solver_Terminate_Reason::SIGTERM_Received
      || !parameters.no_final_checkpoint)
     {
+      Scoped_Timer save_timer(timers, "save_checkpoint");
       solver.save_checkpoint(parameters.solver.checkpoint_out,
                              parameters.verbosity, parameters_tree);
     }
 
-  auto runtime = std::chrono::duration_cast<std::chrono::seconds>(
-                   std::chrono::high_resolution_clock::now() - start_time)
-                   .count();
-  save_solution(solver, reason, runtime, parameters.out_directory,
-                parameters.write_solution, block_info.block_indices,
-                sdp.normalization, parameters.verbosity);
+  {
+    Scoped_Timer save_timer(timers, "save_solution");
+    auto runtime = std::chrono::duration_cast<std::chrono::seconds>(
+                    std::chrono::high_resolution_clock::now() - start_time)
+                    .count();
+    save_solution(solver, reason, runtime, parameters.out_directory,
+                  parameters.write_solution, block_info.block_indices,
+                  sdp.normalization, parameters.verbosity);
+  }
 
   if(reason == SDP_Solver_Terminate_Reason::SIGTERM_Received)
     {
