@@ -12,7 +12,6 @@ size_t bigfloat_bytes()
 }
 
 size_t get_max_shared_memory_bytes(
-  const size_t default_max_shared_memory_bytes,
   const size_t nonshared_memory_required_per_node_bytes,
   const Environment &env, const bool debug)
 {
@@ -28,7 +27,7 @@ size_t get_max_shared_memory_bytes(
     }
   El::mpi::Broadcast(can_update, 0, env.comm_shared_mem);
   if(!can_update)
-    return default_max_shared_memory_bytes;
+    return 0;
 
   // Total memory required for all ranks on a node
 
@@ -38,16 +37,24 @@ size_t get_max_shared_memory_bytes(
       std::ostringstream ss;
       El::BuildStream(ss, "node=", env.node_index(), ": ");
 
-      bool print_warning = debug;
+      El::BuildStream(
+        ss, "\n\tMemTotal: ", pretty_print_bytes(mem_total_bytes, false),
+        "\n\tRequired memory estimate (excluding shared memory windows): ",
+        pretty_print_bytes(nonshared_memory_required_per_node_bytes, false));
 
       if(nonshared_memory_required_per_node_bytes > mem_total_bytes)
         {
           // This is certainly not enough, but at least
           // we'll print sizes in BigInt_Shared_Memory_Syrk_Context
           max_shared_memory_bytes = 0.4 * mem_total_bytes;
-          El::BuildStream(ss, "SDPB will probably fail with OOM. Consider "
+          El::BuildStream(
+            ss,
+            "\n\tSDPB will set --maxSharedMemory to 40% of MemAvailable, "
+            "i.e. ",
+            pretty_print_bytes(max_shared_memory_bytes, false),
+            ". This will not help, probably.");
+          El::BuildStream(ss, "\n\tSDPB will probably fail with OOM. Consider "
                               "increasing number of nodes or RAM per node.");
-          print_warning = true;
         }
       else
         {
@@ -55,50 +62,21 @@ size_t get_max_shared_memory_bytes(
           max_shared_memory_bytes
             = 0.4
               * (mem_total_bytes - nonshared_memory_required_per_node_bytes);
+          El::BuildStream(ss,
+                          "\n\tTo prevent OOM, "
+                          "SDPB will set --maxSharedMemory to 40% of the "
+                          "remaining memory, i.e. ",
+                          pretty_print_bytes(max_shared_memory_bytes, false));
+          El::BuildStream(
+            ss, "\n\tSDPB is expected to use no more than ",
+            pretty_print_bytes(nonshared_memory_required_per_node_bytes
+                                 + max_shared_memory_bytes,
+                               false),
+            " RAM on a node. If it fails with OOM, consider increasing "
+            "number of "
+            "nodes and/or decreasing --maxSharedMemory limit.");
         }
-
-      El::BuildStream(
-        ss, "\n\tMemTotal: ", pretty_print_bytes(mem_total_bytes, false),
-        "\n\tRequired memory estimate (excluding shared memory windows): ",
-        pretty_print_bytes(nonshared_memory_required_per_node_bytes, false));
-
-      if(max_shared_memory_bytes < default_max_shared_memory_bytes)
-        {
-          print_warning = true;
-          if(nonshared_memory_required_per_node_bytes <= mem_total_bytes)
-            {
-              El::BuildStream(
-                ss,
-                "\n\tTo prevent OOM, "
-                "SDPB will set --maxSharedMemory to 40% of the "
-                "remaining memory, i.e. ",
-                pretty_print_bytes(max_shared_memory_bytes, false));
-              El::BuildStream(
-                ss, "\n\tSDPB is expected to use no more than ",
-                pretty_print_bytes(nonshared_memory_required_per_node_bytes
-                                     + max_shared_memory_bytes,
-                                   false),
-                " RAM on a node. If it fails with OOM, consider increasing "
-                "number of "
-                "nodes and/or decreasing --maxSharedMemory limit.");
-            }
-          else
-            {
-              El::BuildStream(
-                ss,
-                "\n\tSDPB will set --maxSharedMemory to 40% of MemAvailable, "
-                "i.e. ",
-                pretty_print_bytes(max_shared_memory_bytes, false),
-                ". This will not help, probably.");
-            }
-        }
-      else
-        {
-          // Do not set the limit higher than user-defined --maxSharedMemory
-          max_shared_memory_bytes = default_max_shared_memory_bytes;
-        }
-      if(print_warning)
-        PRINT_WARNING(ss.str());
+      PRINT_WARNING(ss.str());
     }
   // All ranks on a node should have the same limit
   El::mpi::Broadcast(max_shared_memory_bytes, 0, env.comm_shared_mem);

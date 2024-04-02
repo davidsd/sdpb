@@ -7,8 +7,7 @@
 #include "sdp_solve/SDP_Solver.hxx"
 
 size_t
-get_max_shared_memory_bytes(size_t default_max_shared_memory_bytes,
-                            size_t nonshared_memory_required_per_node_bytes,
+get_max_shared_memory_bytes(size_t nonshared_memory_required_per_node_bytes,
                             const Environment &env, bool debug);
 
 size_t get_matrix_size_local(const Block_Diagonal_Matrix &X);

@@ -175,7 +175,6 @@ namespace
       = get_required_nonshared_memory_per_node_bytes(env, block_info, sdp,
                                                      solver, debug);
     return get_max_shared_memory_bytes(
-      default_max_shared_memory_bytes,
       nonshared_memory_required_per_node_bytes, env, debug);
   }
 }
