@@ -1,6 +1,7 @@
 #include "Environment.hxx"
 
 #include "Boost_Float.hxx"
+#include "Proc_Meminfo.hxx"
 #include "assert.hxx"
 
 #include <csignal>
@@ -41,6 +42,10 @@ int Environment::node_index() const
 {
   return _node_index;
 }
+size_t Environment::initial_node_mem_used() const
+{
+  return _initial_node_mem_used;
+}
 // NB: This function could be made static, but it makes no sense to call it
 // without constructing Environment instance and subscribing to SIGTERM.
 bool Environment::sigterm_received() const
@@ -53,6 +58,7 @@ void Environment::initialize()
   // Subscribe to SIGTERM
   std::signal(SIGTERM, handle_sigterm);
 
+  // Create shared memory communicator (all ranks on a node)
   MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL,
                       &comm_shared_mem.comm);
 
@@ -76,6 +82,17 @@ void Environment::initialize()
     ASSERT(_node_index >= 0, DEBUG_STRING(_node_index));
     ASSERT(_node_index < _num_nodes, DEBUG_STRING(_node_index),
            DEBUG_STRING(_num_nodes));
+  }
+
+  // Initial MemUsed (at SDPB start)
+  {
+    if(comm_shared_mem.Rank() == 0)
+      {
+        bool res;
+        const auto meminfo = Proc_Meminfo::try_read(res);
+        _initial_node_mem_used = res ? meminfo.mem_used() : 0;
+      }
+    El::mpi::Broadcast(_initial_node_mem_used, 0, comm_shared_mem);
   }
 }
 void Environment::finalize()

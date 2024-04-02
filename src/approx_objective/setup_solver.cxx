@@ -103,21 +103,26 @@ namespace
     // Q = NxN
     mem_required_size += Q_size;
 
-    const size_t mem_required_bytes = mem_required_size * bigfloat_bytes();
+    // initial_node_mem_used() is RAM allocated at SDPB start.
+    // This could be important: e.g. on 128 cores (Expanse HPC) it is ~26GB
+    const size_t mem_required_bytes
+      = env.initial_node_mem_used() + mem_required_size * bigfloat_bytes();
 
     if(debug)
       {
         std::ostringstream ss;
         El::BuildStream(
           ss, "node=", env.node_index(),
-          " matrix sizes and memory estimates: ",
-          "\n\t#(SDP) = ", SDP_size,
-          "\n\t#(X) = ", X_size,
-          "\n\t#(A_X_inv) = ", A_X_inv_size,
+          " matrix sizes and memory estimates: ", "\n\t#(SDP) = ", SDP_size,
+          "\n\t#(X) = ", X_size, "\n\t#(A_X_inv) = ", A_X_inv_size,
           "\n\t#(schur_complement) = ", schur_complement_size,
           "\n\t#(B) = ", B_size, "\n\t#(Q) = ", Q_size,
+          "\n\tBigFloat size: ", pretty_print_bytes(bigfloat_bytes()),
           "\n\tTotal BigFloats to be allocated: ", mem_required_size,
-          "\n\tBigfloat bytes: ", bigfloat_bytes(),
+          " elements = ",
+          pretty_print_bytes(mem_required_size * bigfloat_bytes()),
+          "\n\tInitial MemUsed (at SDPB start) = ",
+          pretty_print_bytes(env.initial_node_mem_used()),
           "\n\tTotal non-shared memory estimate: ",
           pretty_print_bytes(mem_required_bytes, true));
         El::Output(ss.str());
