@@ -49,16 +49,14 @@ size_t get_max_shared_memory_bytes(
           max_shared_memory_bytes = 0.4 * mem_total_bytes;
           El::BuildStream(
             ss,
-            "\n\tSDPB will set --maxSharedMemory to 40% of MemAvailable, "
-            "i.e. ",
-            pretty_print_bytes(max_shared_memory_bytes, false),
-            ". This will not help, probably.");
+            "\n\tSDPB will set --maxSharedMemory to 40% of MemTotal, i.e. ",
+            pretty_print_bytes(max_shared_memory_bytes, false));
           El::BuildStream(ss, "\n\tSDPB will probably fail with OOM. Consider "
                               "increasing number of nodes or RAM per node.");
         }
       else
         {
-          // ad-hoc coefficient 0.9 to leave some free RAM
+          // ad-hoc coefficient 0.4 to leave some free RAM
           max_shared_memory_bytes
             = 0.4
               * (mem_total_bytes - nonshared_memory_required_per_node_bytes);
@@ -67,14 +65,9 @@ size_t get_max_shared_memory_bytes(
                           "SDPB will set --maxSharedMemory to 40% of the "
                           "remaining memory, i.e. ",
                           pretty_print_bytes(max_shared_memory_bytes, false));
-          El::BuildStream(
-            ss, "\n\tSDPB is expected to use no more than ",
-            pretty_print_bytes(nonshared_memory_required_per_node_bytes
-                                 + max_shared_memory_bytes,
-                               false),
-            " RAM on a node. If it fails with OOM, consider increasing "
-            "number of "
-            "nodes and/or decreasing --maxSharedMemory limit.");
+          El::BuildStream(ss,
+                          "\n\tIn case of OOM, consider increasing number of "
+                          "nodes and/or decreasing --maxSharedMemory limit.");
         }
       PRINT_WARNING(ss.str());
     }
