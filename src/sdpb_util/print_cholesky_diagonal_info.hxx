@@ -41,8 +41,9 @@ print_cholesky_diagonal_info(const El::DistMatrix<El::BigFloat> &matrix,
 
       std::ostringstream ss;
       ss << std::setprecision(3) << name
-         << " diagonal: max/min ratio = " << max_element / min_element
-         << ", elements = " << diagonal;
+         << " diagonal: max/min ratio = " << max_element / min_element;
+         // << ", elements = " << diagonal;
+      // Printing elements is too verbose
       El::Output(ss.str());
     }
 }
