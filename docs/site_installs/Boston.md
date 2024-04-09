@@ -12,7 +12,7 @@
 
 For compiling and/or running SDPB, you have to load modules first:
 
-    module load python3 gcc/12.2.0 openmpi/4.1.5 cmake/3.22.2 gmplib/6.2.1 mpfr/4.0.1 boost/1.79.0_gcc5+ openblas/0.3.23
+    module load python3 gcc/12.2.0 openmpi/4.1.5 cmake/3.22.2 gmplib/6.2.1 mpfr/4.2.1 boost/1.69.0 openblas/0.3.23
 
 You may run `module -t list` to view loaded modules,
 and `module purge` to unload all modules.
@@ -68,9 +68,23 @@ Use `RPATH` instead of `RUNPATH` in `mpicxx` linker, to fix shared library loadi
     cd elemental
     mkdir build
     cd build
-    cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/install -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc
+    GMPDIR=$SCC_GMPLIB_DIR MPFRDIR=$SCC_MPFR_DIR cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/install -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc
     make && make install
     cd ../..
+
+## FLINT
+NB: when compiling FLINT on a login node, SDPB fails at runtime with `SIGILL #0 __funlockfile #1 n_is_probabprime #2 comb` error.
+
+You should compile it on a compute node, e.g. [loading interactive session](https://www.bu.edu/tech/support/research/system-usage/running-jobs/interactive-jobs/) via `qrsh`.
+
+    git clone https://github.com/flintlib/flint.git
+    cd flint
+    ./bootstrap.sh
+    ./configure --prefix=$HOME/install --disable-static --disable-pthread --with-gmp=$SCC_GMPLIB_DIR --with-mpfr=$SCC_MPFR_DIR CC=mpicc CXX=mpicxx
+    make #-j1
+    make check
+    make install
+    cd ..
 
 ## RapidJSON
     git clone https://github.com/Tencent/rapidjson.git
@@ -87,7 +101,7 @@ Use `RPATH` instead of `RUNPATH` in `mpicxx` linker, to fix shared library loadi
 ## sdpb
     git clone https://github.com/davidsd/sdpb.git
     cd sdpb 
-    ./waf configure --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --prefix=$HOME/install/sdpb-master
+    ./waf configure --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --gmpxx-dir=$SCC_GMPLIB_DIR --mpfr-dir=$SCC_MPFR_DIR --flint-dir=$HOME/install --cblas-dir=$SCC_OPENBLAS_DIR --prefix=$HOME/install/sdpb-master
     ./waf # -j 1
     ./test/run_all_tests.sh
     ./waf install

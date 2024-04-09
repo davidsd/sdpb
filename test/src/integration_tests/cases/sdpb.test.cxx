@@ -49,16 +49,38 @@ TEST_CASE("sdpb")
     INFO("Check that sdpb fails on different IO errors.");
     SECTION("write_profile")
     {
-      Test_Util::Test_Case_Runner runner("sdpb/io_tests/write_profile");
-      auto args = default_args;
-      args["--maxIterations"] = "1";
-      args["--verbosity"] = "2";
+      int max_iterations = GENERATE(1, 2);
+      DYNAMIC_SECTION("--maxIterations=" << max_iterations)
+      {
+        Test_Util::Test_Case_Runner runner(
+          "sdpb/io_tests/write_profile/--maxIterations="
+          + std::to_string(max_iterations));
+        auto args = default_args;
+        args["--maxIterations"] = std::to_string(max_iterations);
+        args["--verbosity"] = "2";
 
-      create_readonly(runner.output_dir / "ck.profiling/profiling.0");
-      run_sdpb_set_out_ck_dirs(runner, args, num_procs, 1,
-                               "Error when writing to");
-      REQUIRE(fs::file_size(runner.output_dir / "ck.profiling/profiling.1")
-              > 0);
+        create_readonly(runner.output_dir / "ck.profiling/profiling.0");
+        run_sdpb_set_out_ck_dirs(runner, args, num_procs);
+
+        {
+          INFO(
+            "ck.profiling/ exists, SDPB should rename it to ck.profiling.0/");
+          INFO("Then SDPB should create "
+               "ck.profiling.1/profiling.* for timing run and "
+               "ck.profiling/profiling.* for actual run.");
+          for(const std::string dir_suffix : {"", ".1"})
+            for(const size_t rank : {0, 1})
+              {
+                auto profiling_path = runner.output_dir
+                                      / ("ck.profiling" + dir_suffix)
+                                      / ("profiling." + std::to_string(rank));
+                REQUIRE(fs::file_size(profiling_path) > 0);
+              }
+        }
+        {
+          REQUIRE(fs::file_size(runner.output_dir / "ck/block_timings") > 0);
+        }
+      }
     }
 
     for(std::string name :

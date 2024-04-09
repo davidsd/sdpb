@@ -2,10 +2,19 @@
 
 #include <catch2/catch_amalgamated.hpp>
 #include <El.hpp>
+#include <boost/noncopyable.hpp>
 #include <filesystem>
 
 #define DIFF(a, b)                                                            \
   {                                                                           \
+    INFO("DIFF(" << #a << ", " << #b << ")");                                 \
+    diff(a, b);                                                               \
+  }
+
+// DIFF up to a given binary precision 'prec'
+#define DIFF_PREC(a, b, prec)                                                 \
+  {                                                                           \
+    Test_Util::REQUIRE_Equal::Diff_Precision p(prec);                         \
     INFO("DIFF(" << #a << ", " << #b << ")");                                 \
     diff(a, b);                                                               \
   }
@@ -16,6 +25,20 @@
 namespace Test_Util::REQUIRE_Equal
 {
   inline int diff_precision;
+
+  // RAII wrapper allowing to set diff_precision temporarily
+  struct Diff_Precision : boost::noncopyable
+  {
+    explicit Diff_Precision(int precision)
+    {
+      old_precision = diff_precision;
+      diff_precision = precision;
+    }
+    virtual ~Diff_Precision() { diff_precision = old_precision; }
+
+  private:
+    int old_precision;
+  };
 
   template <class T> void diff(const T &a, const T &b)
   {
@@ -78,6 +101,40 @@ namespace Test_Util::REQUIRE_Equal
           CAPTURE(row);
           CAPTURE(col);
           DIFF(a.Get(row, col), b.Get(row, col));
+        }
+  }
+  template <class T>
+  void diff(const El::DistMatrix<T> &a, const El::DistMatrix<T> &b,
+            const std::optional<El::UpperOrLower> uplo = std::nullopt)
+  {
+    INFO("diff El::DistMatrix");
+    CAPTURE(uplo);
+    REQUIRE(a.Height() == b.Height());
+    REQUIRE(a.Width() == b.Width());
+    REQUIRE(a.Grid() == b.Grid());
+
+    // only square matrices allowed for uplo
+    if(uplo.has_value())
+      REQUIRE(a.Height() == a.Width());
+
+    for(int iLoc = 0; iLoc < a.LocalHeight(); ++iLoc)
+      for(int jLoc = 0; jLoc < a.LocalWidth(); ++jLoc)
+        {
+          CAPTURE(iLoc);
+          CAPTURE(jLoc);
+          int i = a.GlobalRow(iLoc);
+          int j = a.GlobalCol(jLoc);
+          CAPTURE(i);
+          CAPTURE(j);
+          if(uplo.has_value())
+            {
+              if(uplo.value() == El::UPPER && i > j)
+                continue;
+              if(uplo.value() == El::LOWER && i < j)
+                continue;
+            }
+
+          DIFF(a.GetLocal(iLoc, jLoc), b.GetLocal(iLoc, jLoc));
         }
   }
   template <>

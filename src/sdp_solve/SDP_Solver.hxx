@@ -13,6 +13,7 @@
 
 #include "Solver_Parameters.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
+#include "SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 
 #include <filesystem>
 
@@ -74,19 +75,19 @@ public:
   int64_t current_generation;
   boost::optional<int64_t> backup_generation;
 
-  SDP_Solver(const Solver_Parameters &parameters,
-             const Verbosity &verbosity,
+  SDP_Solver(const Solver_Parameters &parameters, const Verbosity &verbosity,
              const bool &require_initial_checkpoint,
              const Block_Info &block_info, const El::Grid &grid,
              const size_t &dual_objective_b_height);
 
   SDP_Solver_Terminate_Reason
-  run(const Solver_Parameters &parameters, const Verbosity &verbosity,
+  run(const Environment &env, const Solver_Parameters &parameters,
+      const Verbosity &verbosity,
       const boost::property_tree::ptree &parameter_properties,
       const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
       const std::chrono::time_point<std::chrono::high_resolution_clock>
         &start_time,
-      Timers &timers);
+      Timers &timers, El::Matrix<int32_t> &block_timings_ms);
 
   void step(
     const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
@@ -100,9 +101,11 @@ public:
     const std::array<
       std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
       &A_Y,
-    const Block_Vector &primal_residue_p, El::BigFloat &mu,
+    const Block_Vector &primal_residue_p,
+    BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context, El::BigFloat &mu,
     El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
-    El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers);
+    El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
+    El::Matrix<int32_t> &block_timings_ms);
 
   void
   save_checkpoint(const std::filesystem::path &checkpoint_directory,

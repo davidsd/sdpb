@@ -20,6 +20,8 @@ Block_Info::Block_Info(const Environment &env, const fs::path &sdp_path,
 {
   read_block_info(sdp_path);
   std::vector<Block_Cost> block_costs;
+  ASSERT_EQUAL(block_timings.Height(), num_points.size());
+  ASSERT_EQUAL(block_timings.Width(), 1);
   for(int64_t block = 0; block < block_timings.Height(); ++block)
     {
       block_costs.emplace_back(block_timings(block, 0), block);
@@ -40,6 +42,7 @@ Block_Info::Block_Info(const Environment &env,
   auto schur_sizes(schur_block_sizes());
   for(size_t block = 0; block < schur_sizes.size(); ++block)
     {
+      // TODO use more precise memory-based estimates, as in read_block_costs()
       block_costs.emplace_back(schur_sizes[block] * schur_sizes[block], block);
     }
   allocate_blocks(env, block_costs, proc_granularity, verbosity);

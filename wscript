@@ -3,8 +3,9 @@ import os, subprocess
 
 def options(opt):
     opt.load(['compiler_cxx', 'gnu_dirs'])
-    opt.load(['cxx17', 'boost', 'gmpxx', 'mpfr', 'elemental', 'libxml2', 'rapidjson', 'libarchive'],
-             tooldir='./waf-tools')
+    opt.load(
+        ['cxx17', 'boost', 'gmpxx', 'mpfr', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'flint', 'cblas'],
+        tooldir='./waf-tools')
 
 
 def configure(conf):
@@ -12,7 +13,7 @@ def configure(conf):
         conf.environ['CXX'] = 'mpicxx'
 
     conf.load(['compiler_cxx', 'gnu_dirs', 'cxx17', 'boost', 'gmpxx', 'mpfr',
-               'elemental', 'libxml2', 'rapidjson', 'libarchive'])
+               'elemental', 'libxml2', 'rapidjson', 'libarchive', 'flint', 'cblas'])
     conf.load('clang_compilation_database', tooldir='./waf-tools')
 
     conf.env.git_version = subprocess.check_output('git describe --tags --always --dirty', universal_newlines=True,
@@ -22,7 +23,8 @@ def configure(conf):
 def build(bld):
     default_flags = ['-Wall', '-Wextra', '-Werror=return-type', '-O3', '-g']
     default_defines = ['OMPI_SKIP_MPICXX', 'SDPB_VERSION_STRING="' + bld.env.git_version + '"']
-    use_packages = ['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'sdpb_util']
+    use_packages = ['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'cblas',
+                    'sdpb_util']
     default_includes = ['src', 'external']
 
     bld.stlib(source=['src/sdpb_util/copy_matrix.cxx',
@@ -76,8 +78,21 @@ def build(bld):
                          'src/sdp_solve/SDP_Solver/run/step/step.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/initialize_schur_complement_solver/initialize_schur_complement_solver.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/initialize_schur_complement_solver/compute_schur_complement.cxx',
-                         'src/sdp_solve/SDP_Solver/run/step/initialize_schur_complement_solver/initialize_Q_group.cxx',
-                         'src/sdp_solve/SDP_Solver/run/step/initialize_schur_complement_solver/synchronize_Q.cxx',
+                         'src/sdp_solve/SDP_Solver/run/step/initialize_schur_complement_solver/compute_Q.cxx',
+                         'src/sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context/BigInt_Shared_Memory_Syrk_Context.cxx',
+                         'src/sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context/bigint_syrk_blas.cxx',
+                         'src/sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context/clear_residues.cxx',
+                         'src/sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context/compute_block_residues.cxx',
+                         'src/sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context/get_blas_job_schedule.cxx',
+                         'src/sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context/restore_and_reduce.cxx',
+                         'src/sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/Blas_Job.cxx',
+                         'src/sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/Blas_Job_Cost.cxx',
+                         'src/sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/Blas_Job_Schedule.cxx',
+                         'src/sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/create_blas_job_schedule.cxx',
+                         'src/sdp_solve/SDP_Solver/run/bigint_syrk/fmpz/Fmpz_BigInt.cxx',
+                         'src/sdp_solve/SDP_Solver/run/bigint_syrk/fmpz/Fmpz_Matrix.cxx',
+                         'src/sdp_solve/SDP_Solver/run/bigint_syrk/fmpz/Fmpz_Comb.cxx',
+                         'src/sdp_solve/SDP_Solver/run/bigint_syrk/Matrix_Normalizer.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/compute_search_direction/compute_search_direction.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/compute_search_direction/cholesky_solve.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/compute_search_direction/compute_schur_RHS.cxx',
@@ -100,7 +115,7 @@ def build(bld):
               cxxflags=default_flags,
               defines=default_defines,
               includes=default_includes,
-              use=use_packages + ['pmp2sdp_lib'])
+              use=use_packages + ['pmp2sdp_lib', 'flint'])
 
     # SDPB executable
     bld.program(source=['src/sdpb/main.cxx',
@@ -137,7 +152,6 @@ def build(bld):
               defines=default_defines,
               includes=default_includes,
               use=use_packages + ['pmp'])
-
     bld.program(source=['src/pvm2sdp/main.cxx',
                         'src/pvm2sdp/parse_command_line.cxx'],
                 target='pvm2sdp',
@@ -306,10 +320,14 @@ def build(bld):
                 )
     bld.program(source=['external/catch2/catch_amalgamated.cpp',
                         'test/src/unit_tests/main.cxx',
+                        'test/src/unit_tests/cases/LPT_scheduling.test.cxx',
+                        'test/src/unit_tests/cases/Matrix_Normalizer.test.cxx',
                         'test/src/unit_tests/cases/block_data_serialization.test.cxx',
                         'test/src/unit_tests/cases/block_mapping.test.cxx',
                         'test/src/unit_tests/cases/Boost_Float.test.cxx',
                         'test/src/unit_tests/cases/boost_serialization.test.cxx',
+                        'test/src/unit_tests/cases/create_blas_job_schedule.test.cxx',
+                        'test/src/unit_tests/cases/calculate_matrix_square.test.cxx',
                         'test/src/unit_tests/cases/copy_matrix.test.cxx',
                         'test/src/unit_tests/cases/json.test.cxx',
                         'test/src/unit_tests/cases/shared_window.test.cxx'],

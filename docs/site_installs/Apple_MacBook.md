@@ -13,7 +13,7 @@ to path following instructions shown after installing.
 
 Then you can install packages required for SDPB:
 
-    brew install gmp mpfr boost rapidjson libarchive openblas cmake open-mpi
+    brew install gmp mpfr boost rapidjson libarchive openblas flint cmake open-mpi
 
 You can see installation directory and another information for a package (e.g. `boost`)
 by calling `brew info <package>` (e.g. `brew info boost`).
@@ -43,7 +43,7 @@ using default Python 3, at least on some laptops.
 
 ### Configure
 
-    ./waf configure --elemental-dir=$HOME/install --boost-dir=/opt/homebrew/opt/boost/ --gmpxx-dir=/opt/homebrew/Cellar/gmp/6.3.0/ --mpfr-dir=/opt/homebrew/Cellar/mpfr/4.2.1/ --rapidjson-dir=/opt/homebrew/Cellar/rapidjson/1.1.0 --libarchive-dir=/opt/homebrew/Cellar/libarchive/3.7.2/ --prefix=$HOME/install/sdpb-master
+    ./waf configure --elemental-dir=$HOME/install --boost-dir=/opt/homebrew/opt/boost/ --gmpxx-dir=/opt/homebrew/Cellar/gmp/6.3.0/ --mpfr-dir=/opt/homebrew/Cellar/mpfr/4.2.1/ --rapidjson-dir=/opt/homebrew/Cellar/rapidjson/1.1.0 --libarchive-dir=/opt/homebrew/Cellar/libarchive/3.7.2/ --flint-dir=/opt/homebrew/Cellar/flint/3.1.0 --cblas-dir=/opt/homebrew/Cellar/openblas/0.3.26 --prefix=$HOME/install/sdpb-master
 
 If waf fails to find some package, e.g. `boost`, check the installation directory by calling, e.g. `brew info boost` and
 update `--boost-dir` argument above.
@@ -52,7 +52,7 @@ The above `./waf configure` command works or x86 processors (e.g. Intel i5), but
 M2) with linker warnings `found architecture 'arm64', required architecture 'x86_64` in `build/config.log`.
 In that case, you should set `-arch arm64` flag explicitly:
 
-    CXXFLAGS="${CXXFLAGS} -arch arm64" LDFLAGS="${LDFLAGS} -arch arm64" ./waf configure --elemental-dir=$HOME/install --boost-dir=/opt/homebrew/opt/boost/ --gmpxx-dir=/opt/homebrew/Cellar/gmp/6.3.0/ --mpfr-dir=/opt/homebrew/Cellar/mpfr/4.2.1/ --rapidjson-dir=/opt/homebrew/Cellar/rapidjson/1.1.0 --libarchive-dir=/opt/homebrew/Cellar/libarchive/3.7.2/ --prefix=$HOME/install/sdpb-master
+    CXXFLAGS="${CXXFLAGS} -arch arm64" LDFLAGS="${LDFLAGS} -arch arm64" ./waf configure --elemental-dir=$HOME/install --boost-dir=/opt/homebrew/opt/boost/ --gmpxx-dir=/opt/homebrew/Cellar/gmp/6.3.0/ --mpfr-dir=/opt/homebrew/Cellar/mpfr/4.2.1/ --rapidjson-dir=/opt/homebrew/Cellar/rapidjson/1.1.0 --libarchive-dir=/opt/homebrew/Cellar/libarchive/3.7.2/ --flint-dir=/opt/homebrew/Cellar/flint/3.1.0 --cblas-dir=/opt/homebrew/Cellar/openblas/0.3.26 --prefix=$HOME/install/sdpb-master
 
 ### Compile and install
 

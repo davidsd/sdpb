@@ -16,11 +16,15 @@ namespace fs = std::filesystem;
 Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
              const Environment &env,
              const std::chrono::time_point<std::chrono::high_resolution_clock>
-               &start_time);
+               &start_time,
+             El::Matrix<int32_t> &block_timings_ms);
 
-void write_timing(const fs::path &checkpoint_out, const Block_Info &block_info,
-                  const Timers &timers, const bool &debug,
-                  El::Matrix<int32_t> &block_timings);
+void write_block_timings(const fs::path &checkpoint_out,
+                         const Block_Info &block_info,
+                         const El::Matrix<int32_t> &block_timings_ms,
+                         const bool &debug);
+
+void write_profiling(const fs::path &checkpoint_out, const Timers &timers);
 
 int main(int argc, char **argv)
 {
@@ -34,7 +38,7 @@ int main(int argc, char **argv)
           return 0;
         }
 
-      El::gmp::SetPrecision(parameters.solver.precision);
+      Environment::set_precision(parameters.solver.precision);
       auto start_time = std::chrono::high_resolution_clock::now();
       if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {
@@ -79,14 +83,36 @@ int main(int argc, char **argv)
             {
               timing_parameters.verbosity = Verbosity::none;
             }
-          Timers timers(solve(block_info, timing_parameters, env, start_time));
+          El::Matrix<int32_t> block_timings_ms;
+          Timers timers(solve(block_info, timing_parameters, env, start_time,
+                              block_timings_ms));
 
-          El::Matrix<int32_t> block_timings(block_info.dimensions.size(), 1);
-          write_timing(timing_parameters.solver.checkpoint_out, block_info,
-                       timers, timing_parameters.verbosity >= Verbosity::debug,
-                       block_timings);
+          if(block_timings_ms.Height() == 0 && block_timings_ms.Width() == 0)
+            {
+              RUNTIME_ERROR(
+                "block_timings vector is empty, probably because "
+                "timing run exited before completing two solver iterations.");
+            }
+
+          write_block_timings(timing_parameters.solver.checkpoint_out,
+                              block_info, block_timings_ms,
+                              timing_parameters.verbosity >= Verbosity::debug);
+          if(timing_parameters.verbosity >= Verbosity::debug)
+            {
+              try
+                {
+                  write_profiling(parameters.solver.checkpoint_out, timers);
+                }
+              catch(std::exception &e)
+                {
+                  El::Output(
+                    "An exception has been thrown in write_profiling():");
+                  El::ReportException(e);
+                }
+            }
+
           El::mpi::Barrier(El::mpi::COMM_WORLD);
-          Block_Info new_info(env, parameters.sdp_path, block_timings,
+          Block_Info new_info(env, parameters.sdp_path, block_timings_ms,
                               parameters.proc_granularity,
                               parameters.verbosity);
           std::swap(block_info, new_info);
@@ -109,7 +135,21 @@ int main(int argc, char **argv)
                         fs::copy_options::overwrite_existing);
             }
         }
-      Timers timers(solve(block_info, parameters, env, start_time));
+      El::Matrix<int32_t> block_timings_ms;
+      Timers timers(
+        solve(block_info, parameters, env, start_time, block_timings_ms));
+      if(parameters.verbosity >= Verbosity::debug)
+        {
+          try
+            {
+              write_profiling(parameters.solver.checkpoint_out, timers);
+            }
+          catch(std::exception &e)
+            {
+              El::Output("An exception has been thrown in write_profiling():");
+              El::ReportException(e);
+            }
+        }
     }
   catch(std::exception &e)
     {

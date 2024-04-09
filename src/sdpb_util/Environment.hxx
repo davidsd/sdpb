@@ -12,10 +12,15 @@ struct Environment
   Environment(int argc, char **argv);
   ~Environment();
 
+  // Set precision for El::BigFloat (GMP) and Boost_Float (MPFR)
+  static void set_precision(mp_bitcnt_t digits2);
+
   // Total number of nodes
   [[nodiscard]] int num_nodes() const;
   // Node index for current rank, 0..(num_nodes-1)
   [[nodiscard]] int node_index() const;
+
+  [[nodiscard]] bool sigterm_received() const;
 
 private:
   El::Environment env;

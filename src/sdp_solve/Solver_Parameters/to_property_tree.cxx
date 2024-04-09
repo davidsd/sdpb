@@ -1,3 +1,4 @@
+#include "String_To_Bytes_Translator.hxx"
 #include "../Solver_Parameters.hxx"
 
 boost::property_tree::ptree to_property_tree(const Solver_Parameters &p)
@@ -6,6 +7,8 @@ boost::property_tree::ptree to_property_tree(const Solver_Parameters &p)
 
   result.put("maxIterations", p.max_iterations);
   result.put("maxRuntime", p.max_runtime);
+  result.put("maxSharedMemory", p.max_shared_memory_bytes,
+             String_To_Bytes_Translator());
   result.put("checkpointInterval", p.checkpoint_interval);
   result.put("findPrimalFeasible", p.find_primal_feasible);
   result.put("findDualFeasible", p.find_dual_feasible);

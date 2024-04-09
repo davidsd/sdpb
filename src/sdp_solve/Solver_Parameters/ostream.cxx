@@ -1,4 +1,5 @@
 #include "../Solver_Parameters.hxx"
+#include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
 std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
 {
@@ -6,6 +7,8 @@ std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
      << '\n'
      << "maxRuntime                   = " << p.max_runtime << '\n'
      << "checkpointInterval           = " << p.checkpoint_interval << '\n'
+     << "maxSharedMemory              = "
+     << pretty_print_bytes(p.max_shared_memory_bytes, true) << '\n'
      << "findPrimalFeasible           = " << p.find_primal_feasible << '\n'
      << "findDualFeasible             = " << p.find_dual_feasible << '\n'
      << "detectPrimalFeasibleJump     = " << p.detect_primal_feasible_jump

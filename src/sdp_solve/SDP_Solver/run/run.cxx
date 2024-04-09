@@ -1,11 +1,14 @@
 #include "sdp_solve/SDP_Solver.hxx"
-
+#include "bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
+#include "bigint_syrk/initialize_bigint_syrk_context.hxx"
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 // The main solver loop
 
 void cholesky_decomposition(const Block_Diagonal_Matrix &A,
-                            Block_Diagonal_Matrix &L);
+                            Block_Diagonal_Matrix &L,
+                            const Block_Info &block_info,
+                            const std::string &name);
 
 void print_header(const Verbosity &verbosity);
 void print_iteration(
@@ -59,13 +62,13 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
                                               Block_Vector &primal_residue_p,
                                               El::BigFloat &primal_error_p);
 
-SDP_Solver_Terminate_Reason
-SDP_Solver::run(const Solver_Parameters &parameters,
-                const Verbosity &verbosity,
-                const boost::property_tree::ptree &parameter_properties,
+SDP_Solver_Terminate_Reason SDP_Solver::run(
+  const Environment &env, const Solver_Parameters &parameters,
+  const Verbosity &verbosity,
+  const boost::property_tree::ptree &parameter_properties,
   const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
   const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time,
-  Timers &timers)
+  Timers &timers, El::Matrix<int32_t> &block_timings_ms)
 {
   SDP_Solver_Terminate_Reason terminate_reason(
     SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
@@ -115,6 +118,13 @@ SDP_Solver::run(const Solver_Parameters &parameters,
   std::size_t total_psd_rows(
     std::accumulate(psd_sizes.begin(), psd_sizes.end(), size_t(0)));
 
+  Scoped_Timer initialize_bigint_syrk_context_timer(timers,
+                                                    "bigint_syrk_context");
+  auto bigint_syrk_context = initialize_bigint_syrk_context(
+    env, block_info, sdp, parameters.max_shared_memory_bytes,
+    verbosity >= Verbosity::debug);
+  initialize_bigint_syrk_context_timer.stop();
+
   initialize_timer.stop();
   auto last_checkpoint_time(std::chrono::high_resolution_clock::now());
   for(size_t iteration = 1;; ++iteration)
@@ -126,6 +136,16 @@ SDP_Solver::run(const Solver_Parameters &parameters,
           El::Output("Start iteration ", iteration, " at ",
                      boost::posix_time::second_clock::local_time());
         }
+
+      // Prepare graceful exit if any process has received SIGTERM
+      {
+        El::byte sigterm = env.sigterm_received();
+        sigterm = El::mpi::AllReduce(sigterm, El::mpi::LOGICAL_OR,
+                                     El::mpi::COMM_WORLD);
+        if(sigterm)
+          return SDP_Solver_Terminate_Reason::SIGTERM_Received;
+      }
+
       El::byte checkpoint_now(
         std::chrono::duration_cast<std::chrono::seconds>(
           std::chrono::high_resolution_clock::now() - last_checkpoint_time)
@@ -145,8 +165,8 @@ SDP_Solver::run(const Solver_Parameters &parameters,
       {
         Scoped_Timer cholesky_decomposition_timer(timers,
                                                   "choleskyDecomposition");
-        cholesky_decomposition(X, X_cholesky);
-        cholesky_decomposition(Y, Y_cholesky);
+        cholesky_decomposition(X, X_cholesky, block_info, "X");
+        cholesky_decomposition(Y, Y_cholesky, block_info, "Y");
       }
 
       compute_bilinear_pairings(block_info, X_cholesky, Y, sdp.bases_blocks,
@@ -176,8 +196,27 @@ SDP_Solver::run(const Solver_Parameters &parameters,
       El::BigFloat mu, beta_corrector;
       step(parameters, total_psd_rows, is_primal_and_dual_feasible, block_info,
            sdp, grid, X_cholesky, Y_cholesky, A_X_inv, A_Y, primal_residue_p,
-           mu, beta_corrector, primal_step_length, dual_step_length,
-           terminate_now, timers);
+           bigint_syrk_context, mu, beta_corrector, primal_step_length,
+           dual_step_length, terminate_now, timers, block_timings_ms);
+
+      if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+        {
+          El::Print(block_timings_ms, "block_timings, ms:");
+          El::Output();
+        }
+      if(iteration == 1)
+        {
+          // One the first iteration, matrices may have many zeros, thus
+          // block timings may be quite different from the next iterations.
+          // Thus, we never want to write first iteration to ck/block_timings.
+          if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+            {
+              El::Output("block_timings from the first iteration will be "
+                         "ignored and removed.");
+            }
+          block_timings_ms.Empty(false);
+        }
+
       if(terminate_now)
         {
           terminate_reason

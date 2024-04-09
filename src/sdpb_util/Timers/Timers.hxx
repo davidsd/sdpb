@@ -82,6 +82,7 @@ struct Scoped_Timer : boost::noncopyable
 
   void stop();
   [[nodiscard]] const Timer &timer() const;
+  [[nodiscard]] int64_t elapsed_milliseconds() const;
 
 private:
   Timers &timers;

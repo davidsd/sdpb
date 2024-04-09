@@ -239,39 +239,34 @@ SDPB's defaults are set for optimal performance. This may result in using more m
 Two ways to reduce memory usage:
 
 1. Running SDPB on more nodes will reduce the amount of memory required on each node.
-2. You can also use the option `--procGranularity`.
-   This option sets minimum number of processes that a block group can have, so it must evenly divide
-   the number of cores per node. Using a larger granularity will result in less memory use (up to a point) because SDPB
-   will make fewer local copies of the matrix Q. However, larger granularity is also slower because even small blocks
-   will be distributed among multiple cores. So you should use `--procGranularity` only when absolutely needed.
+2. Set `--maxSharedMemory` option, e.g. `--maxSharedMemory=64G`. This will reduce memory usage by splitting shared memory windows used for matrix multiplication, see [bigint_syrk/Readme.md](../src/sdp_solve/SDP_Solver/run/bigint_syrk/Readme.md) for details. This may affect performance, especially if the limit is lower than the output window size.
+You can see current shared window sizes if you run SDPB with `--verbosity debug` option (search for `create BigInt_Shared_Memory_Syrk_Context` in the output).
+If you set small limit, SDPB will print a warning with optimal windows sizes.
 
 ### SDPB crashes when using all available cores on the node
 
-We observed unexpected crashes for large SDPB runs even with enough memory, e.g. using all 128 cores per node on Expanse
+For older SDPB versions (e.g. 2.5.1), we sometimes observed unexpected crashes for large SDPB runs even with enough memory, e.g. using all 128 cores per node on Expanse
 HPC.
 In such cases, reducing `$SLURM_NTASKS_PER_NODE` (if you are using SLURM) e.g. from 128 to 64 may help.
 
 ### SDPB fails to read large sdp.zip
 
-Sometimes this happens if sdp.zip size exceeds 4GB. You may try to unzip it to some folder and pass the folder instead
-of zip archive to sdpb:
+Sometimes this happens if sdp.zip size exceeds 4GB. You may either regenerate sdp with `pmp2sdp` without `--zip` flag, or unzip sdp manually and pass the resulting folder to `sdpb`:
 
 ```
 unzip -o path/to/sdp.zip -d path/to/sdp_dir
 sdpb -s path/to/sdp_dir <...>
 ```
 
+### 'A was not numerically HPD' error
+
+Elemental throws this error if you are trying to compute Cholesky decomposition of a matrix that is not Hermitian positive definite (HPD).
+Try increasing SDPB `--precision` and/or precision of your PMP input files.
+
 ### 'Running out of inodes' error
 
 This may happen on some filesystems if SDP contains too many block files. Run `pmp2sdp` with `--zip` flag to put
 everything into a single zip archive.
-
-### Spectrum does not work in parallel
-
-See https://github.com/davidsd/sdpb/issues/152.
-
-If this happens, replace, e.g. `mpirun -n 6  build/spectrum <...>` with `mpirun -n 1  build/spectrum <...>` or
-simply `build/spectrum <...>`.
 
 ### Spectrum does not find zeros
 

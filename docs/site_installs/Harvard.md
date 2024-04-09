@@ -81,6 +81,17 @@ Use `RPATH` instead of `RUNPATH` in `mpicxx` linker, to fix shared library loadi
     cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/install -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc
     make && make install
 
+## FLINT
+
+    git clone https://github.com/flintlib/flint.git
+    cd flint
+    ./bootstrap.sh
+    ./configure --prefix=$HOME/install --disable-static
+    make #-j1
+    make check
+    make install 
+    cd ..
+
 ## RapidJSON
 
     git clone https://github.com/Tencent/rapidjson.git
@@ -99,7 +110,7 @@ Use `RPATH` instead of `RUNPATH` in `mpicxx` linker, to fix shared library loadi
 
     git clone https://github.com/davidsd/sdpb.git
     cd sdpb
-    ./waf configure --boost-dir=$HOME/install --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --prefix=$HOME/install/sdpb-master
+    ./waf configure --boost-dir=$HOME/install --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --flint-dir=$HOME/install --cblas-incdir=/usr/include/openblas --prefix=$HOME/install/sdpb-master
     ./waf # -j 1
     ./test/run_all_tests.sh
     ./waf install
