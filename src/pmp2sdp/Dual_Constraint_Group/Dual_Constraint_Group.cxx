@@ -11,6 +11,10 @@
 void write_block_json(std::ostream &output_stream,
                       const Dual_Constraint_Group &group);
 
+std::array<El::Matrix<El::BigFloat>, 2>
+sample_bilinear_basis(const std::vector<El::BigFloat> &sample_points,
+                      const std::vector<El::BigFloat> &sample_scalings);
+
 El::Matrix<El::BigFloat>
 sample_bilinear_basis(const int maxDegree, const int numSamples,
                       const Polynomial_Vector &bilinearBasis,
@@ -29,8 +33,8 @@ sample_bilinear_basis(const int maxDegree, const int numSamples,
 //
 // for tuples p = (r,s,k).
 //
-Dual_Constraint_Group::Dual_Constraint_Group(
-  const size_t &Block_index, const Polynomial_Vector_Matrix &m)
+Dual_Constraint_Group::Dual_Constraint_Group(const size_t &Block_index,
+                                             const Polynomial_Vector_Matrix &m)
     : block_index(Block_index),
       dim(m.polynomials.Height()),
       num_points(m.sample_points.size())
@@ -77,19 +81,32 @@ Dual_Constraint_Group::Dual_Constraint_Group(
   //   Y_1: {q_0(x), ..., q_delta1(x)}
   //   Y_2: {\sqrt(x) q_0(x), ..., \sqrt(x) q_delta2(x)
   //
-  const size_t delta1(degree / 2);
-  bilinear_bases[0] = sample_bilinear_basis(
-    delta1, num_points, m.bilinear_basis, m.sample_points, m.sample_scalings);
-
-  // For degree==0, the second block will have zero size.
-  const size_t delta2((degree + 1) / 2 - 1);
-  // The \sqrt(x) factors can be accounted for by replacing the
-  // scale factors s_k with x_k s_k.
-  std::vector<El::BigFloat> scaled_samples;
-  for(size_t ii = 0; ii < m.sample_points.size(); ++ii)
+  if(m.bilinear_basis.has_value())
     {
-      scaled_samples.emplace_back(m.sample_points[ii] * m.sample_scalings[ii]);
+      // Old algorithm
+      const size_t delta1(degree / 2);
+      bilinear_bases[0]
+        = sample_bilinear_basis(delta1, num_points, m.bilinear_basis.value(),
+                                m.sample_points, m.sample_scalings);
+
+      // For degree==0, the second block will have zero size.
+      const size_t delta2((degree + 1) / 2 - 1);
+      // The \sqrt(x) factors can be accounted for by replacing the
+      // scale factors s_k with x_k s_k.
+      std::vector<El::BigFloat> scaled_samples;
+      for(size_t ii = 0; ii < m.sample_points.size(); ++ii)
+        {
+          scaled_samples.emplace_back(m.sample_points[ii]
+                                      * m.sample_scalings[ii]);
+        }
+      bilinear_bases[1]
+        = sample_bilinear_basis(delta2, num_points, m.bilinear_basis.value(),
+                                m.sample_points, scaled_samples);
     }
-  bilinear_bases[1] = sample_bilinear_basis(
-    delta2, num_points, m.bilinear_basis, m.sample_points, scaled_samples);
+  else
+    {
+      // new sampling algorithm
+      bilinear_bases
+        = sample_bilinear_basis(m.sample_points, m.sample_scalings);
+    }
 }

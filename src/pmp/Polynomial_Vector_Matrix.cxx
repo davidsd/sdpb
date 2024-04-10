@@ -100,15 +100,6 @@ namespace
     return to_BigFloat_Vector(
       sample_scalings(to_Boost_Float_Vector(sample_points), damped_rational));
   }
-  Polynomial_Vector bilinear_basis_or_default(
-    const std::optional<Polynomial_Vector> &bilinear_basis_opt,
-    const Damped_Rational &damped_rational, int64_t max_degree)
-  {
-    if(bilinear_basis_opt.has_value())
-      return bilinear_basis_opt.value();
-
-    return bilinear_basis(damped_rational, max_degree / 2);
-  }
 }
 
 Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
@@ -117,6 +108,7 @@ Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
   const std::optional<std::vector<El::BigFloat>> &sample_points_opt,
   const std::optional<std::vector<El::BigFloat>> &sample_scalings_opt,
   const std::optional<Polynomial_Vector> &bilinear_basis_opt)
+    : bilinear_basis(bilinear_basis_opt)
 {
   const auto max_degree = get_max_degree(polynomials);
 
@@ -126,8 +118,7 @@ Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
     = sample_points_or_default(sample_points_opt, prefactor, max_degree);
   sample_scalings = sample_scalings_or_default(sample_scalings_opt,
                                                this->sample_points, prefactor);
-  bilinear_basis
-    = bilinear_basis_or_default(bilinear_basis_opt, prefactor, max_degree);
+  bilinear_basis = bilinear_basis_opt;
 
   validate(max_degree);
 }
@@ -136,8 +127,11 @@ void Polynomial_Vector_Matrix::validate(const int64_t max_degree) const
 {
   ASSERT_EQUAL(sample_points.size(), max_degree + 1);
   ASSERT_EQUAL(sample_scalings.size(), sample_points.size());
-  ASSERT_EQUAL(bilinear_basis.size(), max_degree / 2 + 1,
-               DEBUG_STRING(max_degree));
+  if(bilinear_basis.has_value())
+    {
+      ASSERT_EQUAL(bilinear_basis.value().size(), max_degree / 2 + 1,
+                   DEBUG_STRING(max_degree));
+    }
 
   ASSERT_EQUAL(polynomials.Height(), polynomials.Width());
 

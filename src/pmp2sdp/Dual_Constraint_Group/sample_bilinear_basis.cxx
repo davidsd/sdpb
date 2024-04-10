@@ -19,6 +19,7 @@
 
 #include "pmp/Polynomial.hxx"
 
+// Old algorithm
 El::Matrix<El::BigFloat>
 sample_bilinear_basis(const int maxDegree, const int numSamples,
                       const Polynomial_Vector &bilinearBasis,
@@ -35,4 +36,45 @@ sample_bilinear_basis(const int maxDegree, const int numSamples,
         }
     }
   return b;
+}
+
+// New algorithm, if bilinearBasis not specified
+std::array<El::Matrix<El::BigFloat>, 2>
+sample_bilinear_basis(const std::vector<El::BigFloat> &sample_points,
+                      const std::vector<El::BigFloat> &sample_scalings)
+{
+  std::array<El::Matrix<El::BigFloat>, 2> bilinear_bases;
+  const size_t num_points = sample_points.size();
+  ASSERT_EQUAL(sample_points.size(), sample_scalings.size());
+  const size_t degree = num_points - 1;
+  const std::array<size_t, 2> delta = {degree / 2, (degree + 1) / 2 - 1};
+
+  for(const size_t index : {0, 1})
+    {
+      // Matrix of monomials
+      // index = 0: set m[i,k] = scalings[k] * x[k]^i
+      // index = 1: set m[i,k] = scalings[k] * x[k]^{i+1/2}
+      El::Matrix<El::BigFloat> monomials(delta[index] + 1, num_points);
+      for(int k = 0; k < monomials.Width(); ++k)
+        {
+          const auto &scaling = sample_scalings.at(k);
+          const auto &x = sample_points.at(k);
+          El::BigFloat x_pow = index == 0 ? 1 : El::Sqrt(x);
+          for(int i = 0; i < monomials.Height(); ++i)
+            {
+              monomials.Set(i, k, El::Sqrt(scaling) * x_pow);
+              x_pow *= x;
+            }
+        }
+
+      // SVD decomposition of monomials
+      El::Matrix<El::BigFloat> U, S, V;
+      El::SVDCtrl<El::BigFloat> ctrl;
+      ctrl.bidiagSVDCtrl.approach = El::COMPACT_SVD;
+      // TODO set other ctrl parameters, as in compute_lamda.cxx?
+      El::SVD(monomials, U, S, V);
+      El::Transpose(V, bilinear_bases[index]);
+    }
+
+  return bilinear_bases;
 }
