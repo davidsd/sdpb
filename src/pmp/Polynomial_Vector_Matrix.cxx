@@ -5,7 +5,8 @@
 
 #include <boost/math/constants/constants.hpp>
 
-std::vector<Boost_Float> sample_points(const size_t &num_points);
+std::vector<Boost_Float>
+sample_points(const size_t &num_points, const Damped_Rational &prefactor);
 
 std::vector<Boost_Float>
 sample_scalings(const std::vector<Boost_Float> &points,
@@ -81,12 +82,12 @@ namespace
 
   std::vector<El::BigFloat> sample_points_or_default(
     const std::optional<std::vector<El::BigFloat>> &sample_points_opt,
-    const size_t max_degree)
+    const Damped_Rational &prefactor, const size_t max_degree)
   {
     if(sample_points_opt.has_value())
       return sample_points_opt.value();
 
-    return to_BigFloat_Vector(sample_points(max_degree + 1));
+    return to_BigFloat_Vector(sample_points(max_degree + 1, prefactor));
   }
 
   std::vector<El::BigFloat> sample_scalings_or_default(
@@ -121,7 +122,8 @@ Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
 
   this->polynomials = polynomials;
   const auto prefactor = prefactor_or_default(prefactor_opt);
-  sample_points = sample_points_or_default(sample_points_opt, max_degree);
+  sample_points
+    = sample_points_or_default(sample_points_opt, prefactor, max_degree);
   sample_scalings = sample_scalings_or_default(sample_scalings_opt,
                                                this->sample_points, prefactor);
   bilinear_basis
