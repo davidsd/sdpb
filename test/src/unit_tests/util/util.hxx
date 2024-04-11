@@ -1,6 +1,6 @@
 #pragma once
 
-#include "test_util/diff.hxx"
+#include "test_util/test_util.hxx"
 
 #include <vector>
 #include <El.hpp>

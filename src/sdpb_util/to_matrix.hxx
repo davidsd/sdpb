@@ -1,5 +1,7 @@
 #pragma once
 
+#include "assert.hxx"
+
 #include <El.hpp>
 
 #include <vector>
