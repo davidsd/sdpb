@@ -1,4 +1,5 @@
 #include "pmp/Damped_Rational.hxx"
+#include "pmp/Polynomial.hxx"
 #include "sdpb_util/to_matrix.hxx"
 
 #include <catch2/catch_amalgamated.hpp>
@@ -14,9 +15,14 @@ std::vector<Boost_Float>
 sample_scalings(const std::vector<Boost_Float> &points,
                 const Damped_Rational &damped_rational);
 
-std::array<El::Matrix<El::BigFloat>, 2>
-sample_bilinear_basis(const std::vector<El::BigFloat> &sample_points,
-                      const std::vector<El::BigFloat> &sample_scalings);
+std::array<Polynomial_Vector, 2>
+bilinear_basis(const std::vector<El::BigFloat> &sample_points,
+               const std::vector<El::BigFloat> &sample_scalings);
+
+El::Matrix<El::BigFloat>
+sample_bilinear_basis(const Polynomial_Vector &bilinearBasis,
+                      const std::vector<El::BigFloat> &samplePoints,
+                      const std::vector<El::BigFloat> &sampleScalings);
 
 namespace
 {
@@ -63,7 +69,13 @@ namespace
     const auto scalings = to_BigFloat_Vector(boost_scalings);
     CAPTURE(scalings);
 
-    const auto bilinear_bases = sample_bilinear_basis(points, scalings);
+    const auto bilinear_basis_arr = bilinear_basis(points, scalings);
+    std::array<El::Matrix<El::BigFloat>, 2> bilinear_bases;
+    for(size_t index : {0, 1})
+      {
+        bilinear_bases[index]
+          = sample_bilinear_basis(bilinear_basis_arr[index], points, scalings);
+      }
     CAPTURE(bilinear_bases[0]);
     CAPTURE(bilinear_bases[1]);
   }
@@ -89,7 +101,13 @@ namespace
     const auto scalings = to_BigFloat_Vector(boost_scalings);
     CAPTURE(scalings);
 
-    const auto bilinear_bases = sample_bilinear_basis(points, scalings);
+    const auto bilinear_basis_arr = bilinear_basis(points, scalings);
+    std::array<El::Matrix<El::BigFloat>, 2> bilinear_bases;
+    for(size_t index : {0, 1})
+      {
+        bilinear_bases[index]
+          = sample_bilinear_basis(bilinear_basis_arr[index], points, scalings);
+      }
     CAPTURE(bilinear_bases[0]);
     CAPTURE(bilinear_bases[1]);
 
@@ -116,6 +134,8 @@ TEST_CASE("pmp_sampling")
 
       // The numbers below are calculated in Mathematica.
       // Truncated to 5 decimal digits, i.e. precision = 16.
+      // TODO: Mathematica's bilinear bases are computed via SVD,
+      // we should update them to Cholesky version
 
       const std::vector<El::BigFloat> points{0.061812, 0.56588, 1.6319, 3.4239,
                                              6.4864};
@@ -140,7 +160,8 @@ TEST_CASE("pmp_sampling")
          {0.40713, 0.71945, 0.21543, -0.37109, -0.36404}});
       bilinear_bases[1](0, El::ALL) *= -1;
 
-      do_test(prefactor, degree, points, scalings, bilinear_bases, diff_precision);
+      do_test(prefactor, degree, points, scalings, bilinear_bases,
+              diff_precision);
     }
   }
 

@@ -12,8 +12,9 @@ std::vector<Boost_Float>
 sample_scalings(const std::vector<Boost_Float> &points,
                 const Damped_Rational &damped_rational);
 
-Polynomial_Vector bilinear_basis(const Damped_Rational &damped_rational,
-                                 const size_t &half_max_degree);
+std::array<Polynomial_Vector, 2>
+bilinear_basis(const std::vector<El::BigFloat> &sample_points,
+               const std::vector<El::BigFloat> &sample_scalings);
 
 namespace
 {
@@ -100,6 +101,24 @@ namespace
     return to_BigFloat_Vector(
       sample_scalings(to_Boost_Float_Vector(sample_points), damped_rational));
   }
+
+  std::array<Polynomial_Vector, 2> bilinear_basis_or_default(
+    const std::optional<Polynomial_Vector> &bilinear_basis_opt,
+    const std::vector<El::BigFloat> &sample_points,
+    const std::vector<El::BigFloat> &sample_scalings)
+  {
+    if(bilinear_basis_opt.has_value())
+      {
+        std::array<Polynomial_Vector, 2> basis;
+        basis[0] = bilinear_basis_opt.value();
+        const size_t delta2 = sample_points.size() / 2 - 1;
+        std::copy_n(basis[0].begin(), delta2 + 1,
+                    std::back_inserter(basis[1]));
+        return basis;
+      }
+
+    return bilinear_basis(sample_points, sample_scalings);
+  }
 }
 
 Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
@@ -119,6 +138,8 @@ Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
   sample_scalings = sample_scalings_or_default(sample_scalings_opt,
                                                this->sample_points, prefactor);
   bilinear_basis = bilinear_basis_opt;
+  bilinear_basis = bilinear_basis_or_default(bilinear_basis_opt, sample_points,
+                                             sample_scalings);
 
   validate(max_degree);
 }
@@ -128,8 +149,16 @@ void Polynomial_Vector_Matrix::validate(const int64_t max_degree) const
   ASSERT_EQUAL(sample_points.size(), max_degree + 1);
   ASSERT_EQUAL(sample_scalings.size(), sample_points.size());
   if(bilinear_basis.has_value())
+  const size_t delta1 = max_degree / 2;
+  ASSERT_EQUAL(bilinear_basis[0].size(), delta1 + 1, DEBUG_STRING(max_degree));
+  if(max_degree == 0)
     {
-      ASSERT_EQUAL(bilinear_basis.value().size(), max_degree / 2 + 1,
+      ASSERT_EQUAL(bilinear_basis[1].size(), 0);
+    }
+  else
+    {
+      const size_t delta2 = (max_degree + 1) / 2 - 1;
+      ASSERT_EQUAL(bilinear_basis[1].size(), delta2 + 1,
                    DEBUG_STRING(max_degree));
     }
 

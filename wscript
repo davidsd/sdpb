@@ -164,14 +164,7 @@ def build(bld):
     pmp_sources = ['src/pmp/Polynomial_Vector_Matrix.cxx',
                    'src/pmp/convert/sample_points.cxx',
                    'src/pmp/convert/sample_scalings.cxx',
-                   'src/pmp/convert/bilinear_basis/bilinear_basis.cxx',
-                   'src/pmp/convert/bilinear_basis/precompute/precompute.cxx',
-                   'src/pmp/convert/bilinear_basis/precompute/integral.cxx',
-                   'src/pmp/convert/bilinear_basis/bilinear_form/bilinear_form.cxx',
-                   'src/pmp/convert/bilinear_basis/bilinear_form/rest.cxx',
-                   'src/pmp/convert/bilinear_basis/bilinear_form/dExp.cxx',
-                   'src/pmp/convert/bilinear_basis/bilinear_form/derivative.cxx',
-                   'src/pmp/convert/bilinear_basis/bilinear_form/operator_plus_set_Derivative_Term.cxx']
+                   'src/pmp/convert/bilinear_basis/bilinear_basis.cxx']
 
     bld.stlib(source=pmp_sources,
               target='pmp',

@@ -45,7 +45,7 @@ struct Polynomial_Vector_Matrix
 
   // bilinearBasis[m] = q_m(x) (0 <= m <= degree/2), where q_m is a
   // polynomial with degree deg(q_m) = m.
-  std::optional<Polynomial_Vector> bilinear_basis;
+  std::array<Polynomial_Vector, 2> bilinear_basis;
 
   Polynomial_Vector_Matrix(
     const El::Matrix<Polynomial_Vector> &polynomials,
