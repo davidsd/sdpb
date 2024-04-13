@@ -1,9 +1,9 @@
 # Config for CircleCI
 # See https://circleci.com/docs/configuration-reference
 #
-# This config has a single workflow, 'build-deploy', which goes as follows:
-# 1. 'build-linux-amd64': Builds Docker image from SDPB sources (using ./Dockerfile) for AMD64 platform and run tests
-# 2. 'build-linux-arm64': same for ARM64
+# This config has a single workflow, 'build-test-deploy', which goes as follows:
+# 1. 'build-test-linux-amd64': Builds Docker image from SDPB sources (using ./Dockerfile) for AMD64 platform and run tests
+# 2. 'build-test-linux-arm64': same for ARM64
 # 3. 'deploy-master': On each 'master' branch update, build a multiplatform image (working for both AMD64 and ARM64)
 #     and push it to DockerHub as '${DOCKER_USERNAME}/sdpb:master', e.g. 'davidsd/sdpb:master'.
 # 4. 'deploy-tag': If new tag is pushed to the repo, build and push the multiplatform image
@@ -24,8 +24,8 @@ version: 2.1
 # See https://circleci.com/docs/reusing-config/
 commands:
 
-  docker-build:
-    description: Build Docker image for platform
+  docker-build-test:
+    description: Build and test Docker image for platform
     parameters:
       # linux/amd64, linux/arm64
       # Run 'docker buildx ls' to see all available platforms
@@ -126,21 +126,21 @@ commands:
 # See: https://circleci.com/docs/configuration-reference/#jobs
 jobs:
 
-  build-linux-amd64:
+  build-test-linux-amd64:
     machine:
       image: ubuntu-2004:current
     resource_class: large
     steps:
-      - docker-build:
+      - docker-build-test:
           platform: linux/amd64
           tag: amd64
 
-  build-linux-arm64:
+  build-test-linux-arm64:
     machine:
       image: ubuntu-2004:current
     resource_class: arm.large
     steps:
-      - docker-build:
+      - docker-build-test:
           platform: linux/arm64
           tag: arm64
   
@@ -150,7 +150,7 @@ jobs:
   #      xcode: 15.3.0
   #    resource_class: macos.m1.medium.gen1
   #    steps:
-  #      - docker-build:
+  #      - docker-build-test:
   #          platform: linux/arm64
   #          tag: arm64
 
@@ -187,15 +187,15 @@ jobs:
 # Workflows to be executed
 # See: https://circleci.com/docs/configuration-reference/#workflows
 workflows:
-  build-deploy:
+  build-test-deploy:
     jobs:
 
-      - build-linux-amd64:
+      - build-test-linux-amd64:
           filters:
             tags:
               only: /^\d+\.\d+\.\d+$/
 
-      - build-linux-arm64:
+      - build-test-linux-arm64:
           filters:
             tags:
               only: /^\d+\.\d+\.\d+$/
@@ -205,8 +205,8 @@ workflows:
             branches:
               only: master
           requires:
-            - build-linux-amd64
-            - build-linux-arm64
+            - build-test-linux-amd64
+            - build-test-linux-arm64
 
       - deploy-tag:
           filters:
@@ -218,5 +218,5 @@ workflows:
           # NB: you have to specify tags filter for all dependencies,
           # See https://circleci.com/docs/configuration-reference/#tags
           requires:
-            - build-linux-amd64
-            - build-linux-arm64
+            - build-test-linux-amd64
+            - build-test-linux-arm64
