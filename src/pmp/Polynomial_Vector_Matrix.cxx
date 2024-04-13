@@ -109,11 +109,35 @@ namespace
   {
     if(bilinear_basis_opt.has_value())
       {
+        const auto &basis_all = bilinear_basis_opt.value();
+
         std::array<Polynomial_Vector, 2> basis;
-        basis[0] = bilinear_basis_opt.value();
-        const size_t delta2 = sample_points.size() / 2 - 1;
-        std::copy_n(basis[0].begin(), delta2 + 1,
-                    std::back_inserter(basis[1]));
+        const size_t degree = sample_points.size() - 1;
+        const size_t delta1 = degree / 2;
+
+        // Check input size.
+        // delta1 >= delta2 always, so we need to compare only with (delta1 + 1)
+        if(basis_all.size() < delta1 + 1)
+          {
+            RUNTIME_ERROR("PMP: bilinearBases size=", basis_all.size(),
+                          ", required at least ", delta1 + 1);
+          }
+        if(basis_all.size() > delta1 + 1)
+          {
+            PRINT_WARNING("PMP: bilinearBases size=", basis_all.size(),
+                          " is too large, only the first ", delta1 + 1,
+                          " polynomials will be used");
+          }
+
+        basis[0] = Polynomial_Vector(basis_all.begin(),
+                                     basis_all.begin() + delta1 + 1);
+        if(degree > 0)
+          {
+            const size_t delta2 = (degree + 1) / 2 - 1;
+            basis[1] = Polynomial_Vector(basis_all.begin(),
+                                         basis_all.begin() + delta2 + 1);
+            // otherwise keep basis[1] empty
+          }
         return basis;
       }
 
@@ -124,22 +148,48 @@ namespace
 Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
   const El::Matrix<Polynomial_Vector> &polynomials,
   const std::optional<Damped_Rational> &prefactor_opt,
+  const std::optional<Damped_Rational> &reduced_prefactor_opt,
   const std::optional<std::vector<El::BigFloat>> &sample_points_opt,
   const std::optional<std::vector<El::BigFloat>> &sample_scalings_opt,
+  const std::optional<std::vector<El::BigFloat>> &reduced_sample_scalings_opt,
   const std::optional<Polynomial_Vector> &bilinear_basis_opt)
-    : bilinear_basis(bilinear_basis_opt)
 {
-  const auto max_degree = get_max_degree(polynomials);
-
   this->polynomials = polynomials;
   const auto prefactor = prefactor_or_default(prefactor_opt);
-  sample_points
-    = sample_points_or_default(sample_points_opt, prefactor, max_degree);
+
+  const auto reduced_prefactor = [&] {
+    if(reduced_prefactor_opt.has_value())
+      {
+        ASSERT(prefactor_opt.has_value());
+        return prefactor_or_default(reduced_prefactor_opt);
+      }
+    return prefactor;
+  }();
+
+  if(reduced_prefactor.poles.size() > prefactor.poles.size())
+    {
+      PRINT_WARNING("reducedPrefactor has more poles than prefactor, the "
+                    "number of sample points will be increased!\n\t",
+                    DEBUG_STRING(prefactor.poles.size()),
+                    DEBUG_STRING(reduced_prefactor.poles.size()));
+    }
+
+  const int64_t max_degree = get_max_degree(polynomials)
+                             + reduced_prefactor.poles.size()
+                             - prefactor.poles.size();
+  ASSERT(max_degree >= 0, DEBUG_STRING(max_degree), DEBUG_STRING(prefactor),
+         DEBUG_STRING(reduced_prefactor));
+
+  sample_points = sample_points_or_default(sample_points_opt,
+                                           reduced_prefactor, max_degree);
+
   sample_scalings = sample_scalings_or_default(sample_scalings_opt,
                                                this->sample_points, prefactor);
-  bilinear_basis = bilinear_basis_opt;
+  reduced_sample_scalings = sample_scalings_or_default(
+    reduced_sample_scalings_opt, this->sample_points, reduced_prefactor);
+
   bilinear_basis = bilinear_basis_or_default(bilinear_basis_opt, sample_points,
-                                             sample_scalings);
+                                             reduced_sample_scalings);
 
   validate(max_degree);
 }
@@ -147,8 +197,8 @@ Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
 void Polynomial_Vector_Matrix::validate(const int64_t max_degree) const
 {
   ASSERT_EQUAL(sample_points.size(), max_degree + 1);
-  ASSERT_EQUAL(sample_scalings.size(), sample_points.size());
-  if(bilinear_basis.has_value())
+  ASSERT_EQUAL(reduced_sample_scalings.size(), sample_points.size());
+
   const size_t delta1 = max_degree / 2;
   ASSERT_EQUAL(bilinear_basis[0].size(), delta1 + 1, DEBUG_STRING(max_degree));
   if(max_degree == 0)

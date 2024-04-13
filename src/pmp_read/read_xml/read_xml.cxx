@@ -84,10 +84,10 @@ read_xml(const std::filesystem::path &input_file,
             swap(bilinear_basis, matrix_state.bilinear_basis_state.value);
 
             result.parsed_matrices.emplace(
-              index,
-              Polynomial_Vector_Matrix(
-                std::move(poly_vectors), prefactor, std::move(sample_points),
-                std::move(sample_scalings), std::move(bilinear_basis)));
+              index, Polynomial_Vector_Matrix(
+                       std::move(poly_vectors), prefactor, std::nullopt,
+                       std::move(sample_points), std::move(sample_scalings),
+                       std::nullopt, std::move(bilinear_basis)));
           }
         ++result.num_matrices;
       };

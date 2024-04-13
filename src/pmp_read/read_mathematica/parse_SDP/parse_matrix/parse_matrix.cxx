@@ -9,9 +9,8 @@ const char *parse_damped_rational(const char *begin, const char *end,
                                   Damped_Rational &damped_rational);
 
 // TODO fill matrix
-const char *
-parse_matrix(const char *begin, const char *end,
-             std::unique_ptr<Polynomial_Vector_Matrix> &matrix)
+const char *parse_matrix(const char *begin, const char *end,
+                         std::unique_ptr<Polynomial_Vector_Matrix> &matrix)
 {
   const std::string matrix_literal("PositiveMatrixWithPrefactor[");
   auto matrix_start(
@@ -43,7 +42,7 @@ parse_matrix(const char *begin, const char *end,
     }
 
   matrix = std::make_unique<Polynomial_Vector_Matrix>(
-    to_matrix(polynomials), std::make_optional(prefactor), std::nullopt,
-    std::nullopt, std::nullopt);
+    to_matrix(polynomials), prefactor, std::nullopt, std::nullopt,
+    std::nullopt, std::nullopt, std::nullopt);
   return std::next(close_bracket);
 }

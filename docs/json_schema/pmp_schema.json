@@ -20,6 +20,34 @@
                 "type": "object",
                 "properties":
                 {
+                    "prefactor":
+                    {
+                        "type": "object",
+                        "properties":
+                        {
+                            "base": { "type": "string" },
+                            "constant": { "type": "string" },
+                            "poles":
+                            {
+                                "type": "array",
+                                "items": { "type": "string" }
+                            }
+                        }
+                    },
+                    "reducedPrefactor":
+                    {
+                        "type": "object",
+                        "properties":
+                        {
+                            "base": { "type": "string" },
+                            "constant": { "type": "string" },
+                            "poles":
+                            {
+                                "type": "array",
+                                "items": { "type": "string" }
+                            }
+                        }
+                    },
                     "DampedRational":
                     {
                         "type": "object",
@@ -58,6 +86,12 @@
                         }
                     },
                     "sampleScalings": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "reducedSampleScalings": {
                         "type": "array",
                         "items": {
                             "type": "string"

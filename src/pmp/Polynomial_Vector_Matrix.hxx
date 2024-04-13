@@ -42,6 +42,7 @@ struct Polynomial_Vector_Matrix
   // A list of real numbers s_k (0 <= k <= degree(M)) to scale M(x_k)
   // and the corresponding v_{b,k}.
   std::vector<El::BigFloat> sample_scalings;
+  std::vector<El::BigFloat> reduced_sample_scalings;
 
   // bilinearBasis[m] = q_m(x) (0 <= m <= degree/2), where q_m is a
   // polynomial with degree deg(q_m) = m.
@@ -50,8 +51,10 @@ struct Polynomial_Vector_Matrix
   Polynomial_Vector_Matrix(
     const El::Matrix<Polynomial_Vector> &polynomials,
     const std::optional<Damped_Rational> &prefactor_opt,
+    const std::optional<Damped_Rational> &reduced_prefactor_opt,
     const std::optional<std::vector<El::BigFloat>> &sample_points_opt,
     const std::optional<std::vector<El::BigFloat>> &sample_scalings_opt,
+    const std::optional<std::vector<El::BigFloat>> &reduced_sample_scalings_opt,
     const std::optional<Polynomial_Vector> &bilinear_basis_opt) noexcept(false);
 
   void validate(int64_t max_degree) const;

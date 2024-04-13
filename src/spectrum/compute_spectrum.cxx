@@ -92,7 +92,7 @@ compute_spectrum(const Polynomial_Matrix_Program &pmp,
       auto &zeros(zeros_blocks.at(block_index).zeros);
       if(need_lambda)
         {
-          compute_lambda(block.sample_points, block.sample_scalings,
+          compute_lambda(block.sample_points, block.reduced_sample_scalings,
                          block.polynomials.Height(), x.at(block_index),
                          get_zeros(mesh, threshold), zeros,
                          zeros_blocks.at(block_index).error);
