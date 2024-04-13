@@ -357,6 +357,7 @@ TEST_CASE("calculate_Block_Matrix_square")
 
                     Timers timers;
                     El::Matrix<int32_t> block_timings_ms(num_blocks, 1);
+                    El::Zero(block_timings_ms);
                     INFO("Calling bigint_syrk_blas()...");
                     context.bigint_syrk_blas(uplo, P_matrix_blocks, Q_result,
                                              timers, block_timings_ms);

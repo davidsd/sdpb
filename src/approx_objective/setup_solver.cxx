@@ -93,6 +93,7 @@ void setup_solver(const Environment &env, const Block_Info &block_info,
 
       Timers timers;
       El::Matrix<int32_t> block_timings_ms(block_info.dimensions.size(), 1);
+      El::Zero(block_timings_ms);
       auto bigint_syrk_context = initialize_bigint_syrk_context(
         env, block_info, sdp, parameters.max_shared_memory_bytes, false);
       initialize_schur_complement_solver(

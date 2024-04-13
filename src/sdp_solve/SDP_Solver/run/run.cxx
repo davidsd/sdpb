@@ -155,6 +155,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
       El::mpi::Broadcast(checkpoint_now, 0, El::mpi::COMM_WORLD);
       if(checkpoint_now == true)
         {
+          Scoped_Timer save_timer(timers, "save_checkpoint");
           save_checkpoint(parameters.checkpoint_out, verbosity,
                           parameter_properties);
           last_checkpoint_time = std::chrono::high_resolution_clock::now();

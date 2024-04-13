@@ -38,7 +38,7 @@ def build(bld):
               cxxflags=default_flags,
               defines=default_defines,
               includes=default_includes,
-              use=['cxx17', 'gmpxx', 'boost', 'elemental'])
+              use=['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'cblas'])
 
     sdp_solve_sources = ['src/sdp_solve/Solver_Parameters/Solver_Parameters.cxx',
                          'src/sdp_solve/Solver_Parameters/ostream.cxx',
