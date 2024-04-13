@@ -135,6 +135,12 @@ namespace
         DIFF(a_map[key], b_map[key]);
       }
   }
+
+  void diff_iterations_json(const fs::path &a_iterations_json,
+                            const fs::path &b_iterations_json)
+  {
+    // TODO
+  }
 }
 
 // Implementation
@@ -182,6 +188,8 @@ namespace Test_Util::REQUIRE_Equal
 
         if(name == "out.txt")
           diff_sdpb_out_txt(a, b, out_txt_keys);
+        else if(name.substr(0, 10) == "iterations")
+          diff_iterations_json(a, b);
         else
           diff_matrix_txt(a, b);
       }

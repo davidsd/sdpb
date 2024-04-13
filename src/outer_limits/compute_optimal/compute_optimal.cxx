@@ -182,8 +182,8 @@ std::vector<El::BigFloat> compute_optimal(
       El::Grid grid(block_info.mpi_comm.value);
 
       SDP sdp(objective_const, primal_objective_c, free_var_matrix,
-              yp_to_y_star, dual_objective_b_star, normalization, primal_c_scale, block_info,
-              grid);
+              yp_to_y_star, dual_objective_b_star, normalization,
+              primal_c_scale, block_info, grid);
 
       SDP_Solver solver(parameters.solver, parameters.verbosity,
                         parameters.require_initial_checkpoint, block_info,
@@ -211,9 +211,12 @@ std::vector<El::BigFloat> compute_optimal(
           El::Matrix<int32_t> block_timings_ms(block_info.dimensions.size(),
                                                1);
           El::Zero(block_timings_ms);
+          const auto iterations_json_path
+            = parameters.output_path / "iterations.json";
           SDP_Solver_Terminate_Reason reason = solver.run(
             env, parameters.solver, parameters.verbosity, parameter_properties,
-            block_info, sdp, grid, start_time, timers, block_timings_ms);
+            block_info, sdp, grid, start_time, iterations_json_path, timers,
+            block_timings_ms);
 
           for(size_t index(0); index < block_info.block_indices.size();
               ++index)

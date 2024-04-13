@@ -47,9 +47,12 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
 
   const boost::property_tree::ptree parameters_tree(
     to_property_tree(parameters));
-  SDP_Solver_Terminate_Reason reason(
-    solver.run(env, parameters.solver, parameters.verbosity, parameters_tree,
-               block_info, sdp, grid, start_time, timers, block_timings_ms));
+
+  const auto iterations_json_path
+    = parameters.out_directory / "iterations.json";
+  SDP_Solver_Terminate_Reason reason(solver.run(
+    env, parameters.solver, parameters.verbosity, parameters_tree, block_info,
+    sdp, grid, start_time, iterations_json_path, timers, block_timings_ms));
 
   if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {
