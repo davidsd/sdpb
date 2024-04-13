@@ -57,7 +57,6 @@ boost::program_options::options_description Solver_Parameters::options()
                        boost::program_options::value<int64_t>(&max_runtime)
                          ->default_value(std::numeric_limits<int64_t>::max()),
                        "Maximum amount of time to run the solver in seconds.");
-  std::string max_shared_memory_string;
   result.add_options()(
     "maxSharedMemory",
     boost::program_options::value<std::string>()
@@ -65,7 +64,7 @@ boost::program_options::options_description Solver_Parameters::options()
         this->max_shared_memory_bytes
           = String_To_Bytes_Translator::from_string(s);
       })
-      ->default_value(std::to_string(std::numeric_limits<size_t>::max())),
+      ->default_value("0"),
     "Maximum amount of memory that can be used for MPI shared windows, "
     "in bytes."
     " Optional suffixes: B (bytes), K or KB (kilobytes), M or MB (megabytes), "
