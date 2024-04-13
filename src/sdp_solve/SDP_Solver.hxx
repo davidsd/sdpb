@@ -87,7 +87,8 @@ public:
       const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
       const std::chrono::time_point<std::chrono::high_resolution_clock>
         &start_time,
-      Timers &timers, El::Matrix<int32_t> &block_timings_ms);
+      const std::filesystem::path &iterations_json_path, Timers &timers,
+      El::Matrix<int32_t> &block_timings_ms);
 
   void step(
     const Solver_Parameters &parameters, const std::size_t &total_psd_rows,

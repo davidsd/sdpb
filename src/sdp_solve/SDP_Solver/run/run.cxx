@@ -5,6 +5,8 @@
 
 // The main solver loop
 
+namespace fs = std::filesystem;
+
 void cholesky_decomposition(const Block_Diagonal_Matrix &A,
                             Block_Diagonal_Matrix &L,
                             const Block_Info &block_info,
@@ -12,9 +14,10 @@ void cholesky_decomposition(const Block_Diagonal_Matrix &A,
 
 void print_header(const Verbosity &verbosity);
 void print_iteration(
-  const int &iteration, const El::BigFloat &mu,
-  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
-  const El::BigFloat &beta_corrector, const SDP_Solver &sdp_solver,
+  const fs::path &iterations_json_path, const int &iteration,
+  const El::BigFloat &mu, const El::BigFloat &primal_step_length,
+  const El::BigFloat &dual_step_length, const El::BigFloat &beta_corrector,
+  const SDP_Solver &sdp_solver,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time,
   const Verbosity &verbosity);
@@ -68,7 +71,8 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
   const boost::property_tree::ptree &parameter_properties,
   const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
   const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time,
-  Timers &timers, El::Matrix<int32_t> &block_timings_ms)
+  const fs::path &iterations_json_path, Timers &timers,
+  El::Matrix<int32_t> &block_timings_ms)
 {
   SDP_Solver_Terminate_Reason terminate_reason(
     SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
@@ -127,6 +131,44 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
 
   initialize_timer.stop();
   auto last_checkpoint_time(std::chrono::high_resolution_clock::now());
+
+  if(El::mpi::Rank() == 0)
+    {
+      // Copy old iterations.json e.g. to iterations.0.json
+      if(fs::exists(iterations_json_path))
+        {
+          const auto parent_dir = iterations_json_path.parent_path();
+          for(size_t index = 0; index < std::numeric_limits<size_t>::max();
+              ++index)
+            {
+              const fs::path backup_path
+                = parent_dir
+                  / ("iterations." + std::to_string(index) + ".json");
+              if(!fs::exists(backup_path))
+                {
+                  if(verbosity >= Verbosity::debug)
+                    El::Output("Move old ", iterations_json_path, " to ",
+                               backup_path);
+                  fs::rename(iterations_json_path, backup_path);
+                  break;
+                }
+            }
+        }
+
+      // Open JSON array
+      std::ofstream iterations_json;
+      iterations_json.open(iterations_json_path);
+      if(iterations_json.good())
+        {
+          iterations_json << "[";
+        }
+      else
+        {
+          if(!iterations_json_path.empty())
+            PRINT_WARNING("Cannot write to ", iterations_json_path);
+        }
+    }
+
   for(size_t iteration = 1;; ++iteration)
     {
       Scoped_Timer iteration_timer(timers,
@@ -143,7 +185,16 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
         sigterm = El::mpi::AllReduce(sigterm, El::mpi::LOGICAL_OR,
                                      El::mpi::COMM_WORLD);
         if(sigterm)
-          return SDP_Solver_Terminate_Reason::SIGTERM_Received;
+          {
+            if(El::mpi::Rank() == 0 && !iterations_json_path.empty())
+              {
+                std::ofstream iterations_json;
+                iterations_json.open(iterations_json_path, std::ios::app);
+                if(iterations_json.good())
+                  iterations_json << "\n]";
+              }
+            return SDP_Solver_Terminate_Reason::SIGTERM_Received;
+          }
       }
 
       El::byte checkpoint_now(
@@ -224,9 +275,17 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
             = SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
           break;
         }
-      print_iteration(iteration, mu, primal_step_length, dual_step_length,
-                      beta_corrector, *this, solver_timer.start_time(),
-                      verbosity);
+      Scoped_Timer print_iteration_timer(timers, "print_iteration");
+      print_iteration(iterations_json_path, iteration, mu, primal_step_length,
+                      dual_step_length, beta_corrector, *this,
+                      solver_timer.start_time(), verbosity);
+    }
+  if(El::mpi::Rank() == 0 && !iterations_json_path.empty())
+    {
+      std::ofstream iterations_json;
+      iterations_json.open(iterations_json_path, std::ios::app);
+      if(iterations_json.good())
+        iterations_json << "\n]";
     }
   return terminate_reason;
 }
