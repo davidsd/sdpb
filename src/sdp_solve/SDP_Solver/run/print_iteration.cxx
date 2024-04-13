@@ -11,11 +11,19 @@ void print_iteration(
   const SDP_Solver &sdp_solver,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time,
-  const Verbosity &verbosity)
+  const std::chrono::time_point<std::chrono::high_resolution_clock>
+    &iteration_start_time,
+  const El::BigFloat &Q_cond_number, const El::BigFloat &max_block_cond_number,
+  const std::string &max_block_cond_number_name, const Verbosity &verbosity)
 {
   if(El::mpi::Rank() != 0)
     return;
 
+  const double iteration_time_seconds
+    = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::high_resolution_clock::now() - iteration_start_time)
+        .count()
+      / 1000.0;
   const double runtime_seconds
     = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::high_resolution_clock::now() - solver_start_time)
@@ -71,7 +79,9 @@ void print_iteration(
       if(iteration != 1)
         os_json << ",";
       os_json << "\n{ \"iteration\":" << iteration << std::setprecision(3)
-              << ", \"time\": " << runtime_seconds << ", \"mu\": " << mu
+              << ", \"total_time\": " << runtime_seconds
+              << ", \"iter_time\": " << iteration_time_seconds
+              << ", \"mu\": " << mu
               << ", \"P-obj\": " << sdp_solver.primal_objective
               << ", \"D-obj\": " << sdp_solver.dual_objective
               << ", \"gap\": " << sdp_solver.duality_gap
@@ -80,6 +90,19 @@ void print_iteration(
               << ", \"D-err\": " << sdp_solver.dual_error
               << ", \"P-step\": " << primal_step_length
               << ", \"D-step\": " << dual_step_length
-              << ", \"beta\": " << beta_corrector << " }";
+              << ", \"beta\": " << beta_corrector
+              << ", \"Q_cond_number\": " << Q_cond_number
+              << ", \"max_block_cond_number\": " << max_block_cond_number
+              << ", \"block_name\": \"" << max_block_cond_number_name << "\""
+              << " }";
+      ASSERT(Q_cond_number >= 1, DEBUG_STRING(Q_cond_number));
+      ASSERT(max_block_cond_number >= 1, DEBUG_STRING(max_block_cond_number));
+      ASSERT(!max_block_cond_number_name.empty());
+    }
+  if(verbosity >= Verbosity::debug)
+    {
+      El::Output("Cholesky condition number of Q: ", Q_cond_number);
+      El::Output("Max Cholesky condition number among blocks: ",
+                 max_block_cond_number, ", ", max_block_cond_number_name);
     }
 }

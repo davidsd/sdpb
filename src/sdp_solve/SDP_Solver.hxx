@@ -106,7 +106,9 @@ public:
     BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context, El::BigFloat &mu,
     El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
     El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
-    El::Matrix<int32_t> &block_timings_ms);
+    El::Matrix<int32_t> &block_timings_ms, El::BigFloat &Q_cond_number,
+    El::BigFloat &max_block_cond_number,
+    std::string &max_block_cond_number_name);
 
   void
   save_checkpoint(const std::filesystem::path &checkpoint_directory,

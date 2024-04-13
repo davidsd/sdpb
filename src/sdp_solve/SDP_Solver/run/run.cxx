@@ -20,7 +20,10 @@ void print_iteration(
   const SDP_Solver &sdp_solver,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time,
-  const Verbosity &verbosity);
+  const std::chrono::time_point<std::chrono::high_resolution_clock>
+    &iteration_start_time,
+  const El::BigFloat &Q_cond_number, const El::BigFloat &max_block_cond_number,
+  const std::string &max_block_cond_number_name, const Verbosity &verbosity);
 
 void compute_objectives(const SDP &sdp, const Block_Vector &x,
                         const Block_Vector &y, El::BigFloat &primal_objective,
@@ -246,10 +249,14 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
         }
 
       El::BigFloat mu, beta_corrector;
+      El::BigFloat Q_cond_number;
+      El::BigFloat max_block_cond_number;
+      std::string max_block_cond_number_name;
       step(parameters, total_psd_rows, is_primal_and_dual_feasible, block_info,
            sdp, grid, X_cholesky, Y_cholesky, A_X_inv, A_Y, primal_residue_p,
            bigint_syrk_context, mu, beta_corrector, primal_step_length,
-           dual_step_length, terminate_now, timers, block_timings_ms);
+           dual_step_length, terminate_now, timers, block_timings_ms,
+           Q_cond_number, max_block_cond_number, max_block_cond_number_name);
 
       if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
         {
@@ -278,7 +285,9 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
       Scoped_Timer print_iteration_timer(timers, "print_iteration");
       print_iteration(iterations_json_path, iteration, mu, primal_step_length,
                       dual_step_length, beta_corrector, *this,
-                      solver_timer.start_time(), verbosity);
+                      solver_timer.start_time(), iteration_timer.start_time(),
+                      Q_cond_number, max_block_cond_number,
+                      max_block_cond_number_name, verbosity);
     }
   if(El::mpi::Rank() == 0 && !iterations_json_path.empty())
     {
