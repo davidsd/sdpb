@@ -32,3 +32,32 @@ sample_bilinear_basis(const Polynomial_Vector &bilinearBasis,
     }
   return b;
 }
+
+std::array<El::Matrix<El::BigFloat>, 2>
+sample_bilinear_basis(const std::array<Polynomial_Vector, 2> &bilinear_basis,
+                      const std::vector<El::BigFloat> &sample_points,
+                      const std::vector<El::BigFloat> &sample_scalings)
+{
+  // The matrix Y has two blocks Y_1, Y_2.  The bilinear_bases for the
+  // constraint matrices A_p are given by sampling the following
+  // vectors for each block:
+  //
+  //   Y_1: {q_0(x), ..., q_delta1(x)}
+  //   Y_2: {\sqrt(x) q_0(x), ..., \sqrt(x) q_delta2(x)
+
+  std::array<El::Matrix<El::BigFloat>, 2> bilinear_bases;
+
+  bilinear_bases[0]
+    = sample_bilinear_basis(bilinear_basis[0], sample_points, sample_scalings);
+
+  // The \sqrt(x) factors can be accounted for by replacing the
+  // scale factors s_k with x_k s_k.
+  std::vector<El::BigFloat> scaled_samples;
+  for(size_t ii = 0; ii < sample_points.size(); ++ii)
+    {
+      scaled_samples.emplace_back(sample_points[ii] * sample_scalings[ii]);
+    }
+  bilinear_bases[1]
+    = sample_bilinear_basis(bilinear_basis[1], sample_points, scaled_samples);
+  return bilinear_bases;
+}

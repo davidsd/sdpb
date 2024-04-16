@@ -12,13 +12,9 @@ void write_block_json(std::ostream &output_stream,
                       const Dual_Constraint_Group &group);
 
 std::array<El::Matrix<El::BigFloat>, 2>
-sample_bilinear_basis(const std::vector<El::BigFloat> &sample_points,
+sample_bilinear_basis(const std::array<Polynomial_Vector, 2> &bilinear_basis,
+                      const std::vector<El::BigFloat> &sample_points,
                       const std::vector<El::BigFloat> &sample_scalings);
-
-El::Matrix<El::BigFloat>
-sample_bilinear_basis(const Polynomial_Vector &bilinearBasis,
-                      const std::vector<El::BigFloat> &samplePoints,
-                      const std::vector<El::BigFloat> &sampleScalings);
 
 // Construct a Dual_Constraint_Group from a Polynomial_Vector_Matrix by
 // sampling the matrix at the appropriate number of points, as
@@ -79,17 +75,6 @@ Dual_Constraint_Group::Dual_Constraint_Group(const size_t &Block_index,
   //   Y_1: {q_0(x), ..., q_delta1(x)}
   //   Y_2: {\sqrt(x) q_0(x), ..., \sqrt(x) q_delta2(x)
 
-  bilinear_bases[0] = sample_bilinear_basis(
-    m.bilinear_basis[0], m.sample_points, m.reduced_sample_scalings);
-
-  // The \sqrt(x) factors can be accounted for by replacing the
-  // scale factors s_k with x_k s_k.
-  std::vector<El::BigFloat> scaled_samples;
-  for(size_t ii = 0; ii < m.sample_points.size(); ++ii)
-    {
-      scaled_samples.emplace_back(m.sample_points[ii]
-                                  * m.reduced_sample_scalings[ii]);
-    }
-  bilinear_bases[1] = sample_bilinear_basis(m.bilinear_basis[1],
-                                            m.sample_points, scaled_samples);
+  bilinear_bases = sample_bilinear_basis(m.bilinear_basis, m.sample_points,
+                                         m.reduced_sample_scalings);
 }
