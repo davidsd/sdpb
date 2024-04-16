@@ -19,10 +19,10 @@ std::array<Polynomial_Vector, 2>
 bilinear_basis(const std::vector<El::BigFloat> &sample_points,
                const std::vector<El::BigFloat> &sample_scalings);
 
-El::Matrix<El::BigFloat>
-sample_bilinear_basis(const Polynomial_Vector &bilinearBasis,
-                      const std::vector<El::BigFloat> &samplePoints,
-                      const std::vector<El::BigFloat> &sampleScalings);
+std::array<El::Matrix<El::BigFloat>, 2>
+sample_bilinear_basis(const std::array<Polynomial_Vector, 2> &bilinear_basis,
+                      const std::vector<El::BigFloat> &sample_points,
+                      const std::vector<El::BigFloat> &sample_scalings);
 
 namespace
 {
@@ -70,12 +70,10 @@ namespace
     CAPTURE(scalings);
 
     const auto bilinear_basis_arr = bilinear_basis(points, scalings);
-    std::array<El::Matrix<El::BigFloat>, 2> bilinear_bases;
-    for(size_t index : {0, 1})
-      {
-        bilinear_bases[index]
-          = sample_bilinear_basis(bilinear_basis_arr[index], points, scalings);
-      }
+    std::array<El::Matrix<El::BigFloat>, 2> bilinear_bases
+      = sample_bilinear_basis(bilinear_basis_arr, points, scalings);
+    CAPTURE(bilinear_basis_arr[0]);
+    CAPTURE(bilinear_basis_arr[1]);
     CAPTURE(bilinear_bases[0]);
     CAPTURE(bilinear_bases[1]);
   }
@@ -102,12 +100,11 @@ namespace
     CAPTURE(scalings);
 
     const auto bilinear_basis_arr = bilinear_basis(points, scalings);
-    std::array<El::Matrix<El::BigFloat>, 2> bilinear_bases;
-    for(size_t index : {0, 1})
-      {
-        bilinear_bases[index]
-          = sample_bilinear_basis(bilinear_basis_arr[index], points, scalings);
-      }
+    std::array<El::Matrix<El::BigFloat>, 2> bilinear_bases
+      = sample_bilinear_basis(bilinear_basis_arr, points, scalings);
+    CAPTURE(bilinear_basis_arr[0]);
+    CAPTURE(bilinear_basis_arr[1]);
+
     CAPTURE(bilinear_bases[0]);
     CAPTURE(bilinear_bases[1]);
 
@@ -150,15 +147,48 @@ TEST_CASE("pmp_sampling")
       // To compensate for this, we multiply rows by -1 when necessary to pass the test.
 
       bilinear_bases[0] = to_matrix<El::BigFloat>(
-        {{0.059050, 0.15519, 0.44912, 0.70680, 0.52072},
-         {-0.72208, -0.58512, -0.23133, 0.15942, 0.23941},
-         {0.58115, -0.27484, -0.59714, 0.038956, 0.47816}});
-      bilinear_bases[0](2, El::ALL) *= -1;
+        {{0.735538, 0.571674, 0.335472, 0.136945, 0.0296154},
+         {-0.454533, 0.0809192, 0.586352, 0.609108, 0.268386},
+         {0.339114, -0.329580, -0.394268, 0.369777, 0.695842}});
 
       bilinear_bases[1] = to_matrix<El::BigFloat>(
-        {{0.065390, 0.29723, 0.59855, 0.65441, 0.34766},
-         {0.40713, 0.71945, 0.21543, -0.37109, -0.36404}});
-      bilinear_bases[1](0, El::ALL) *= -1;
+        {{0.266195, 0.625991, 0.623829, 0.368860, 0.109794},
+         {-0.314913, -0.462694, 0.124527, 0.655667, 0.491262}});
+
+      do_test(prefactor, degree, points, scalings, bilinear_bases,
+              diff_precision);
+    }
+
+    SECTION("exp(-x)/x/(x+1), degree=4")
+    {
+      const Damped_Rational prefactor{1, exp_minus_one(), {0, -1}};
+      const size_t degree = 4;
+
+      // The numbers below are calculated in Mathematica.
+      // Truncated to 5 decimal digits, i.e. precision = 16.
+      // TODO: Mathematica's bilinear bases are computed via SVD,
+      // we should update them to Cholesky version
+
+      const std::vector<El::BigFloat> points{0, 0.0501905, 0.490170, 1.56871,
+                                             3.82960};
+      const std::vector<El::BigFloat> scalings{1.0000e16, 18.0432, 0.838570,
+                                               0.0516961, 0.00117426};
+      std::array<El::Matrix<El::BigFloat>, 2> bilinear_bases;
+
+      // NB: some rows of bilinear_bases in C++ implementation
+      // have different sign compared to Mathematica.
+      // This doesn't really matter:
+      // one can choose the signs arbitrarily when performing SVD decomposition of a matrix.
+      // To compensate for this, we multiply rows by -1 when necessary to pass the test.
+
+      bilinear_bases[0] = to_matrix<El::BigFloat>(
+        {{1.00000, 4.247724e-8, 9.157346e-9, 2.273678e-9, 3.426744e-10},
+         {-2.241430e-8, 0.3407876, 0.7175002, 0.5701354, 0.2097686},
+         {1.771584e-8, -0.3631303, -0.3850530, 0.4332262, 0.7295105}});
+
+      bilinear_bases[1] = to_matrix<El::BigFloat>(
+        {{0, 0.8036324, 0.5414187, 0.2404866, 0.05663024},
+         {0, -0.4294390, 0.2667574, 0.7239642, 0.4693597}});
 
       do_test(prefactor, degree, points, scalings, bilinear_bases,
               diff_precision);
