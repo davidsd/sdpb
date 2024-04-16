@@ -12,7 +12,7 @@
 // TODO add comments describing sampling algorithm and its rationale.
 
 // TODO choose better threshold and/or make it configurable
-#define SMALL_POLE_THRESHOLD 1e-10
+#define SMALL_POLE_THRESHOLD Boost_Float("1e-10")
 
 namespace
 {

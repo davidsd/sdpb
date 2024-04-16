@@ -18,7 +18,7 @@ sample_scalings(const std::vector<Boost_Float> &points,
   // we replace (x - p) with min_pole_distance.
 
   // TODO choose better threshold and/or make it configurable
-  const Boost_Float min_pole_distance = 1e-16;
+  const Boost_Float min_pole_distance("1e-16");
 
   for(auto &point : points)
     {
