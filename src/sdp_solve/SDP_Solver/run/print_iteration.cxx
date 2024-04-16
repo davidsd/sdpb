@@ -99,7 +99,7 @@ void print_iteration(
       ASSERT(max_block_cond_number >= 1, DEBUG_STRING(max_block_cond_number));
       ASSERT(!max_block_cond_number_name.empty());
     }
-  if(verbosity >= Verbosity::debug)
+  if(verbosity >= Verbosity::trace)
     {
       El::Output("Cholesky condition number of Q: ", Q_cond_number);
       El::Output("Max Cholesky condition number among blocks: ",

@@ -24,7 +24,7 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
 void write_block_timings(const fs::path &checkpoint_out,
                          const Block_Info &block_info,
                          const El::Matrix<int32_t> &block_timings_ms,
-                         const bool &debug);
+                         Verbosity verbosity);
 
 void write_profiling(const fs::path &checkpoint_out, const Timers &timers);
 
@@ -52,7 +52,7 @@ int main(int argc, char **argv)
                     << parameters << std::endl;
         }
 
-      if(parameters.verbosity >= debug)
+      if(parameters.verbosity >= Verbosity::debug)
         {
           if(env.comm_shared_mem.Rank() == 0)
             {
@@ -60,8 +60,7 @@ int main(int argc, char **argv)
               auto meminfo = Proc_Meminfo::try_read(res, true);
               if(res)
                 {
-                  El::Output("node=", env.node_index(),
-                             ": MemUsed: ",
+                  El::Output("node=", env.node_index(), ": MemUsed: ",
                              pretty_print_bytes(meminfo.mem_used()));
                 }
             }
@@ -98,7 +97,7 @@ int main(int argc, char **argv)
           timing_parameters.solver.dual_error_threshold = 0;
           timing_parameters.solver.min_primal_step = 0;
           timing_parameters.solver.min_dual_step = 0;
-          if(timing_parameters.verbosity != Verbosity::debug)
+          if(timing_parameters.verbosity < Verbosity::debug)
             {
               timing_parameters.verbosity = Verbosity::none;
             }
@@ -115,7 +114,7 @@ int main(int argc, char **argv)
 
           write_block_timings(timing_parameters.solver.checkpoint_out,
                               block_info, block_timings_ms,
-                              timing_parameters.verbosity >= Verbosity::debug);
+                              timing_parameters.verbosity);
           if(timing_parameters.verbosity >= Verbosity::debug)
             {
               try

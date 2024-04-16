@@ -207,7 +207,7 @@ std::vector<El::BigFloat> compute_optimal(
                         << parameters.solver.duality_gap_threshold << "\n";
             }
 
-          Timers timers(env, parameters.verbosity >= Verbosity::debug);
+          Timers timers(env, parameters.verbosity);
           El::Matrix<int32_t> block_timings_ms(block_info.dimensions.size(),
                                                1);
           El::Zero(block_timings_ms);

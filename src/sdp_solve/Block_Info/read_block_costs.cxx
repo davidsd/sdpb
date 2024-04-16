@@ -62,7 +62,7 @@ Block_Info::read_block_costs(const fs::path &sdp_path,
       El::BigFloat objective_const;
       El::DistMatrix<El::BigFloat> dual_objective_b;
       // TODO pass timers as argument
-      Timers timers(env, false);
+      Timers timers(env, Verbosity::regular);
       // TODO objectives are already read in SDP::SDP(),
       // we should reuse them instead of reading again
       read_objectives(sdp_path, grid, objective_const, dual_objective_b,

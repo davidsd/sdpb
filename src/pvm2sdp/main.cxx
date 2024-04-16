@@ -26,18 +26,18 @@ int main(int argc, char **argv)
       fs::path output_path;
       std::vector<std::string> command_arguments;
 
-      bool debug = false;
+      Verbosity verbosity = Verbosity::regular;
 
       parse_command_line(argc, argv, output_format, precision, input_files,
                          output_path, command_arguments);
       Environment::set_precision(precision);
 
-      Timers timers(env, debug);
+      Timers timers(env, Verbosity::regular);
 
       auto pmp = read_polynomial_matrix_program(env, input_files, timers);
       Output_SDP sdp(pmp, command_arguments, timers);
       bool zip = false;
-      write_sdp(output_path, sdp, output_format, zip, timers, debug);
+      write_sdp(output_path, sdp, output_format, zip, timers, verbosity);
     }
   catch(std::exception &e)
     {

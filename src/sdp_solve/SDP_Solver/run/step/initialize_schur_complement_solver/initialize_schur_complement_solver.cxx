@@ -57,7 +57,7 @@ void compute_Q(const Environment &env, const SDP &sdp,
                Block_Diagonal_Matrix &schur_complement_cholesky,
                BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
                El::DistMatrix<El::BigFloat> &Q, Timers &timers,
-               El::Matrix<int32_t> &block_timings_ms, bool debug);
+               El::Matrix<int32_t> &block_timings_ms, Verbosity verbosity);
 
 void initialize_schur_complement_solver(
   const Environment &env, const Block_Info &block_info, const SDP &sdp,
@@ -71,7 +71,7 @@ void initialize_schur_complement_solver(
   Block_Matrix &schur_off_diagonal,
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
   El::DistMatrix<El::BigFloat> &Q, Timers &timers,
-  El::Matrix<int32_t> &block_timings_ms, const bool debug)
+  El::Matrix<int32_t> &block_timings_ms, const Verbosity verbosity)
 {
   Scoped_Timer initialize_timer(timers, "initializeSchurComplementSolver");
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
@@ -81,17 +81,16 @@ void initialize_schur_complement_solver(
   Block_Diagonal_Matrix schur_complement(
     block_info.schur_block_sizes(), block_info.block_indices,
     block_info.num_points.size(), group_grid);
-  if(debug)
+  if(verbosity >= Verbosity::trace)
     {
-      print_allocation_message_per_node(
-        env, "schur_complement",
-        get_allocated_bytes(schur_complement));
+      print_allocation_message_per_node(env, "schur_complement",
+                                        get_allocated_bytes(schur_complement));
     }
   compute_schur_complement(block_info, A_X_inv, A_Y, schur_complement, timers);
 
   compute_Q(env, sdp, block_info, schur_complement, schur_off_diagonal,
             schur_complement_cholesky, bigint_syrk_context, Q, timers,
-            block_timings_ms, debug);
+            block_timings_ms, verbosity);
 
   Scoped_Timer Cholesky_timer(timers, "Cholesky_Q");
   try

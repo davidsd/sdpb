@@ -37,7 +37,7 @@ void initialize_schur_complement_solver(
   Block_Matrix &schur_off_diagonal,
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
   El::DistMatrix<El::BigFloat> &Q, Timers &timers,
-  El::Matrix<int32_t> &block_timings_ms, bool debug);
+  El::Matrix<int32_t> &block_timings_ms, Verbosity verbosity);
 
 namespace
 {
@@ -45,7 +45,7 @@ namespace
   // (including what's already allocated, e.g. SDP)
   size_t get_required_nonshared_memory_per_node_bytes(
     const Environment &env, const Block_Info &block_info, const SDP &sdp,
-    const Block_Diagonal_Matrix &X, const bool debug)
+    const Block_Diagonal_Matrix &X, const Verbosity verbosity)
   {
     const auto &node_comm = env.comm_shared_mem;
 
@@ -108,7 +108,7 @@ namespace
     const size_t mem_required_bytes
       = env.initial_node_mem_used() + mem_required_size * bigfloat_bytes();
 
-    if(debug)
+    if(verbosity >= Verbosity::debug)
       {
         std::ostringstream ss;
         El::BuildStream(
@@ -135,7 +135,7 @@ namespace
   get_max_shared_memory_bytes(const size_t default_max_shared_memory_bytes,
                               const Environment &env,
                               const Block_Info &block_info, const SDP &sdp,
-                              const Block_Diagonal_Matrix &X, const bool debug)
+                              const Block_Diagonal_Matrix &X, const Verbosity verbosity)
   {
     // If user sets --maxSharedMemory limit manually, we use it.
     // Otherwise, we calculate the limit automatically.
@@ -143,9 +143,9 @@ namespace
       return default_max_shared_memory_bytes;
     const size_t nonshared_memory_required_per_node_bytes
       = get_required_nonshared_memory_per_node_bytes(env, block_info, sdp, X,
-                                                     debug);
+                                                     verbosity);
     return get_max_shared_memory_bytes(
-      nonshared_memory_required_per_node_bytes, env, debug);
+      nonshared_memory_required_per_node_bytes, env, verbosity);
   }
 }
 
@@ -207,15 +207,15 @@ void setup_solver(const Environment &env, const Block_Info &block_info,
       El::Matrix<int32_t> block_timings_ms(block_info.dimensions.size(), 1);
       El::Zero(block_timings_ms);
 
-      bool debug = false; // TODO add --verbosity option
+      Verbosity verbosity = Verbosity::regular; // TODO add --verbosity option
       const auto max_shared_memory_bytes = get_max_shared_memory_bytes(
-        parameters.max_shared_memory_bytes, env, block_info, sdp, X, debug);
+        parameters.max_shared_memory_bytes, env, block_info, sdp, X, verbosity);
       auto bigint_syrk_context = initialize_bigint_syrk_context(
-        env, block_info, sdp, max_shared_memory_bytes, debug);
+        env, block_info, sdp, max_shared_memory_bytes, verbosity);
 
       initialize_schur_complement_solver(
         env, block_info, sdp, A_X_inv, A_Y, grid, schur_complement_cholesky,
         schur_off_diagonal, bigint_syrk_context, Q, timers, block_timings_ms,
-        debug);
+        verbosity);
     }
 }

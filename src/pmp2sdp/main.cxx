@@ -33,8 +33,7 @@ int main(int argc, char **argv)
 
       Environment::set_precision(parameters.precision);
 
-      const bool debug = parameters.verbosity >= Verbosity::debug;
-      Timers timers(env, debug);
+      Timers timers(env, parameters.verbosity);
       Scoped_Timer timer(timers, "pmp2sdp");
 
       auto pmp
@@ -42,7 +41,7 @@ int main(int argc, char **argv)
 
       Output_SDP sdp(pmp, parameters.command_arguments, timers);
       write_sdp(parameters.output_path, sdp, parameters.output_format,
-                parameters.zip, timers, debug);
+                parameters.zip, timers, parameters.verbosity);
       if(El::mpi::Rank() == 0)
         {
           El::Output("Processed ", sdp.num_blocks, " SDP blocks in ",
@@ -50,7 +49,7 @@ int main(int argc, char **argv)
                      " seconds, output: ", parameters.output_path.string());
         }
 
-      if(debug)
+      if(parameters.verbosity >= Verbosity::debug)
         {
           timers.write_profile(parameters.output_path.string()
                                + ".profiling/profiling."

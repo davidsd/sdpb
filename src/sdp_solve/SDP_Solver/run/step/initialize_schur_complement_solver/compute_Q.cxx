@@ -11,7 +11,7 @@ void initialize_schur_off_diagonal(
   const Block_Diagonal_Matrix &schur_complement,
   Block_Matrix &schur_off_diagonal,
   Block_Diagonal_Matrix &schur_complement_cholesky, Timers &timers,
-  El::Matrix<int32_t> &block_timings_ms, const bool debug)
+  El::Matrix<int32_t> &block_timings_ms, const Verbosity verbosity)
 {
   schur_off_diagonal.blocks.clear();
   schur_off_diagonal.blocks.reserve(schur_complement_cholesky.blocks.size());
@@ -52,7 +52,7 @@ void initialize_schur_off_diagonal(
       block_timings_ms(global_block_index, 0)
         += solve_timer.elapsed_milliseconds();
     }
-  if(debug)
+  if(verbosity >= Verbosity::trace)
     {
       print_allocation_message_per_node(
         env, "schur_off_diagonal", get_allocated_bytes(schur_off_diagonal));
@@ -94,7 +94,7 @@ void check_normalized_Q_diagonal(El::DistMatrix<El::BigFloat> &Q,
 void syrk_Q(const Environment &env, Block_Matrix &schur_off_diagonal,
             BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
             El::DistMatrix<El::BigFloat> &Q, Timers &timers,
-            El::Matrix<int32_t> &block_timings_ms, const bool debug)
+            El::Matrix<int32_t> &block_timings_ms, const Verbosity verbosity)
 {
   Scoped_Timer syrk_timer(timers, "syrk");
   std::vector<El::DistMatrix<El::BigFloat>> &P_blocks
@@ -105,7 +105,7 @@ void syrk_Q(const Environment &env, Block_Matrix &schur_off_diagonal,
   Scoped_Timer normalizer_ctor_timer(timers, "Matrix_Normalizer_ctor");
   Matrix_Normalizer normalizer(P_blocks, block_width, El::gmp::Precision(),
                                El::mpi::COMM_WORLD);
-  if(debug)
+  if(verbosity >= Verbosity::trace)
     {
       print_allocation_message_per_node(
         env, "Matrix_Normalizer",
@@ -138,13 +138,14 @@ void compute_Q(const Environment &env, const SDP &sdp,
                Block_Diagonal_Matrix &schur_complement_cholesky,
                BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
                El::DistMatrix<El::BigFloat> &Q, Timers &timers,
-               El::Matrix<int32_t> &block_timings_ms, const bool debug)
+               El::Matrix<int32_t> &block_timings_ms,
+               const Verbosity verbosity)
 {
   Scoped_Timer timer(timers, "Q");
 
   initialize_schur_off_diagonal(env, sdp, block_info, schur_complement,
                                 schur_off_diagonal, schur_complement_cholesky,
-                                timers, block_timings_ms, debug);
+                                timers, block_timings_ms, verbosity);
   syrk_Q(env, schur_off_diagonal, bigint_syrk_context, Q, timers,
-         block_timings_ms, debug);
+         block_timings_ms, verbosity);
 }

@@ -8,7 +8,7 @@
 
 size_t
 get_max_shared_memory_bytes(size_t nonshared_memory_required_per_node_bytes,
-                            const Environment &env, bool debug);
+                            const Environment &env, Verbosity verbosity);
 
 size_t get_matrix_size_local(const Block_Diagonal_Matrix &X);
 size_t get_A_X_size_local(const Block_Info &block_info, const SDP &sdp);
