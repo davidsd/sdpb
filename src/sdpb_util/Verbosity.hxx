@@ -3,6 +3,8 @@
 #include <istream>
 #include <string>
 
+#include <boost/algorithm/string.hpp>
+
 enum Verbosity
 {
   none = 0,
@@ -15,6 +17,7 @@ inline std::istream &operator>>(std::istream &in, Verbosity &value)
 {
   std::string token;
   in >> token;
+  boost::algorithm::to_lower(token);
 
   if(token == "0" || token == "none")
     value = none;
