@@ -90,8 +90,8 @@ public:
       const std::filesystem::path &iterations_json_path, Timers &timers,
       El::Matrix<int32_t> &block_timings_ms);
 
-  void step(
-    const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
+  void step(const Environment &env,
+    const Solver_Parameters &parameters,const Verbosity &verbosity, const std::size_t &total_psd_rows,
     const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
     const SDP &sdp, const El::Grid &grid,
     const Block_Diagonal_Matrix &X_cholesky,
