@@ -29,6 +29,7 @@ def build(bld):
 
     bld.stlib(source=['src/sdpb_util/copy_matrix.cxx',
                       'src/sdpb_util/Environment.cxx',
+                      'src/sdpb_util/memory_estimates.cxx',
                       'src/sdpb_util/Mesh.cxx',
                       'src/sdpb_util/Proc_Meminfo.cxx',
                       'src/sdpb_util/Timers/Scoped_Timer.cxx',
@@ -38,7 +39,7 @@ def build(bld):
               cxxflags=default_flags,
               defines=default_defines,
               includes=default_includes,
-              use=['cxx17', 'gmpxx', 'boost', 'elemental'])
+              use=['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'cblas'])
 
     sdp_solve_sources = ['src/sdp_solve/Solver_Parameters/Solver_Parameters.cxx',
                          'src/sdp_solve/Solver_Parameters/ostream.cxx',

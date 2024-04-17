@@ -2,12 +2,16 @@
 # See https://circleci.com/docs/configuration-reference
 #
 # This config has a single workflow, 'build-test-deploy', which goes as follows:
-# 1. 'build': Builds Docker image from SDPB sources (using ./Dockerfile)
-# 2. 'test': For this image, run tests from ./test/run_all_tests.sh
-# 3. 'deploy-master': On each 'master' branch update,
-#     push the fresh image to DockerHub as '${DOCKER_USERNAME}/sdpb:master', e.g. 'davidsd/sdpb:master'
-# 4. 'deploy-tag': If new tag is pushed to the repo,
-#     push the image '${DOCKER_USERNAME}/sdpb:${TAG}', e.g. 'davidsd/sdpb:2.7.0'
+# 1. 'build-test-linux-amd64': Builds Docker image from SDPB sources (using ./Dockerfile) for AMD64 platform and run tests
+# 2. 'build-test-linux-arm64': same for ARM64
+# 3. 'deploy-master': On each 'master' branch update, build a multiplatform image (working for both AMD64 and ARM64)
+#     and push it to DockerHub as '${DOCKER_USERNAME}/sdpb:master', e.g. 'davidsd/sdpb:master'.
+# 4. 'deploy-tag': If new tag is pushed to the repo, build and push the multiplatform image
+#    '${DOCKER_USERNAME}/sdpb:${TAG}', e.g. 'davidsd/sdpb:3.0.0'
+# In steps 3 and 4, separate images for each platform are also pushed,
+#   e.g. davidsd/sdpb:master-amd64 and davidsd/sdpb:master-arm64.
+#   (TODO: this is necessary to push a multiplatform image, in principle we could delete them later.
+#    Or we could find a way not to push them, e.g. using docker buildx - but I found that complicated)
 #
 # Deploy works only if you specify DOCKER_USERNAME and DOCKER_PASSWORD environment variables for the CircleCI project
 # See instructions here:
@@ -20,26 +24,94 @@ version: 2.1
 # See https://circleci.com/docs/reusing-config/
 commands:
 
-  docker-load-sdpb:
-    description: Load sdpb and sdpb-test images (created by 'build' job) from the workspace.
+  docker-build-test:
+    description: Build and test Docker image for platform
+    parameters:
+      # linux/amd64, linux/arm64
+      # Run 'docker buildx ls' to see all available platforms
+      platform:
+        type: string
+      # Docker image tag, e.g. tag=amd64 -> image sdpb:amd64, sdpb-test:amd64
+      # We cannot use platform name as a tag because it contains slashes
+      tag:
+        type: string
+    steps:
+      - checkout
+      - run: uname -m
+      - run:
+          name: Docker build sdpb
+          command: |
+            docker build . --platform << parameters.platform >> --tag sdpb:<< parameters.tag >>
+      - run:
+          name: Run tests
+          # --cap-add=SYS_PTRACE is a workaround for https://github.com/open-mpi/ompi/issues/4948
+          command: |
+            docker build . --platform << parameters.platform >> --tag sdpb-test --target test
+            docker run --cap-add=SYS_PTRACE sdpb:<< parameters.tag >> uname -m
+            docker run --cap-add=SYS_PTRACE sdpb:<< parameters.tag >> sdpb --help
+            docker run --cap-add=SYS_PTRACE sdpb-test ./test/run_all_tests.sh
+      - run:
+          name: Save image to workspace
+          command: |
+            mkdir -p images/<< parameters.platform >>
+            docker image save -o "images/<< parameters.platform >>/sdpb" sdpb:<< parameters.tag >>
+      - persist_to_workspace:
+          root: .
+          paths:
+            - images
+
+  docker-load:
+    description: Load docker image created via docker-build step
+    parameters:
+      platform:
+        type: string
     steps:
       - attach_workspace:
           at: .
-      - setup_remote_docker
-      - run:
-          step-name: Load images
-          command: |
-            docker image load < "images/sdpb"
-            docker image load < "images/sdpb-test"
+      - run: docker image load < "images/<< parameters.platform >>/sdpb"
 
-  docker-deploy-sdpb:
-    description: Push sdpb image to DockerHub
+  docker-build-push-multiplatform:
+    description: Build and push image for linux/amd64 and linux/arm64 platforms
+    parameters:
+      full-name:
+        type: string
+    steps:
+      # AMD64
+      - docker-load:
+          platform: linux/amd64
+      - run: |
+          docker tag sdpb:amd64 << parameters.full-name >>-amd64
+      # ARM64
+      - docker-load:
+          platform: linux/arm64
+      - run: |
+          docker tag sdpb:arm64 << parameters.full-name >>-arm64
+      # Combine into multiplatform
+      - run:
+          name: Build and push multiplatform Docker image
+          command: |
+            echo << parameters.full-name >>
+            docker login --username ${DOCKER_USERNAME} --password ${DOCKER_PASSWORD}
+            export NAME_AMD64=<< parameters.full-name >>-amd64
+            export NAME_ARM64=<< parameters.full-name >>-arm64
+            export NAME_MULTI=<< parameters.full-name >>
+            docker tag sdpb:amd64 ${NAME_AMD64}
+            docker tag sdpb:arm64 ${NAME_ARM64}
+            docker push ${NAME_AMD64}
+            docker push ${NAME_ARM64}
+            docker manifest create ${NAME_MULTI} --amend ${NAME_AMD64} --amend ${NAME_ARM64}
+            docker manifest push ${NAME_MULTI}
+      - run: docker run << parameters.full-name >> uname -m
+      - run: docker run << parameters.full-name >> sdpb --help
+
+  docker-deploy:
+    description: Push image to DockerHub
     parameters:
       tag:
         type: string
     steps:
       # Do not deploy anything for forked PRs
-      # (i.e. PR from someuser/sdpb/master to davidsd/sdpb/master shouldn't trigger 'deploy-master' job and docker-push to davidsd/sdpb:master)
+      # (i.e. PR from someuser/sdpb/master to upstream/sdpb/master shouldn't trigger 'deploy-master' job and docker-push to upstream/sdpb:master)
       # https://circleci.com/docs/configuration-reference/#ending-a-job-from-within-a-step
       # https://circleci.com/docs/variables/#built-in-environment-variables
       - run: |
@@ -47,61 +119,69 @@ commands:
             echo "Deploy for forked PRs is disabled"
             circleci-agent step halt 
           fi
-      - docker-load-sdpb
-      - run: echo tag=<< parameters.tag >>
-      - run:
-          step-name: Login and push to Docker.io
-          command: |
-            docker login --username ${DOCKER_USERNAME} --password ${DOCKER_PASSWORD} 
-            docker tag sdpb ${DOCKER_USERNAME}/sdpb:<< parameters.tag >>
-            docker push ${DOCKER_USERNAME}/sdpb:<< parameters.tag >>
-
+      - docker-build-push-multiplatform:
+          full-name: ${DOCKER_USERNAME}/sdpb:<< parameters.tag >>
 
 # Jobs to be invoked later in a workflow.
 # See: https://circleci.com/docs/configuration-reference/#jobs
 jobs:
 
-  build:
-    docker:
-      - image: cimg/base:stable
+  build-test-linux-amd64:
+    machine:
+      image: ubuntu-2004:current
+    resource_class: large
     steps:
-      - checkout
-      - setup_remote_docker:
-          docker_layer_caching: true
-      - run: docker build . --tag sdpb
-      - run: docker build . --tag sdpb-test --target test
-      - run:
-          step-name: Save images to workspace
-          command: |
-            mkdir -p images
-            docker image save -o "images/sdpb" "sdpb"
-            docker image save -o "images/sdpb-test" "sdpb-test"
-      - persist_to_workspace:
-          root: .
-          paths:
-            - images
+      - docker-build-test:
+          platform: linux/amd64
+          tag: amd64
 
-  test:
+  build-test-linux-arm64:
+    machine:
+      image: ubuntu-2004:current
+    resource_class: arm.large
+    steps:
+      - docker-build-test:
+          platform: linux/arm64
+          tag: arm64
+
+  # TODO MacOS M1 will be available on free plan after 24 Jun 2024
+  #  build-macos-m1:
+  #    macos:
+  #      xcode: 15.3.0
+  #    resource_class: macos.m1.medium.gen1
+  #    steps:
+  #      - docker-build-test:
+  #          platform: linux/arm64
+  #          tag: arm64
+
+  # Test deploy process for local registry
+  # TODO:docker manifest push works for DockerHub, but fails for local registry.
+  # So we have to disable this step.
+  deploy-local-registry:
     docker:
       - image: cimg/base:stable
     steps:
-      - docker-load-sdpb
-      # --cap-add=SYS_PTRACE is a workaround for https://github.com/open-mpi/ompi/issues/4948
-      - run: docker run --cap-add=SYS_PTRACE sdpb sdpb --help
-      - run: docker run --cap-add=SYS_PTRACE sdpb-test ./test/run_all_tests.sh
+      - setup_remote_docker
+      - run:
+          name: Create local Docker registry
+          command: docker run -d -p 5000:5000 --restart=always --name registry registry:2.8
+      - docker-build-push-multiplatform:
+          full-name: localhost:5000/sdpb:multiplatform
 
   deploy-branch:
     docker:
       - image: cimg/base:stable
     steps:
-      - docker-deploy-sdpb:
+      - setup_remote_docker
+      - docker-deploy:
           tag: ${CIRCLE_BRANCH}
 
   deploy-tag:
     docker:
       - image: cimg/base:stable
     steps:
-      - docker-deploy-sdpb:
+      - setup_remote_docker
+      - docker-deploy:
           tag: ${CIRCLE_TAG}
 
 # Workflows to be executed
@@ -110,14 +190,12 @@ workflows:
   build-test-deploy:
     jobs:
 
-      - build:
+      - build-test-linux-amd64:
           filters:
             tags:
               only: /^\d+\.\d+\.\d+$/
 
-      - test:
-          requires:
-            - build
+      - build-test-linux-arm64:
           filters:
             tags:
               only: /^\d+\.\d+\.\d+$/
@@ -129,8 +207,8 @@ workflows:
                 - master
                 - skydiving-master
           requires:
-            - build
-            - test
+            - build-test-linux-amd64
+            - build-test-linux-arm64
 
       - deploy-tag:
           filters:
@@ -142,5 +220,5 @@ workflows:
           # NB: you have to specify tags filter for all dependencies,
           # See https://circleci.com/docs/configuration-reference/#tags
           requires:
-            - build
-            - test
+            - build-test-linux-amd64
+            - build-test-linux-arm64

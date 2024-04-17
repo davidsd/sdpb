@@ -24,7 +24,7 @@ struct String_To_Bytes_Translator
   static size_t from_string(const std::string &s)
   {
     std::istringstream iss(s);
-    size_t number;
+    double number;
     std::string suffix;
 
     iss >> number >> suffix;

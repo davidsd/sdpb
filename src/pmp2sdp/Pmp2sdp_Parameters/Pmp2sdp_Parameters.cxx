@@ -37,8 +37,8 @@ Pmp2sdp_Parameters::Pmp2sdp_Parameters(int argc, char **argv)
   options.add_options()(
     "verbosity,v",
     po::value<Verbosity>(&verbosity)->default_value(Verbosity::regular),
-    "Verbosity.  0 -> no output, 1 -> regular "
-    "output, 2 -> debug output");
+    "Verbosity.  0 -> no output, 1 -> regular output, 2 -> debug output, 3 -> "
+    "trace output");
 
   // (partial) backward compatibility with pvm2sdp
   po::positional_options_description positional;

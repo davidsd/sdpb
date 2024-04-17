@@ -326,7 +326,7 @@ TEST_CASE("calculate_Block_Matrix_square")
                     = [&blas_schedule_split_factor](
                         Blas_Job::Kind kind, El::UpperOrLower uplo,
                         size_t num_ranks, size_t num_primes, int output_height,
-                        int output_width, bool debug) {
+                        int output_width, Verbosity verbosity) {
                         return create_blas_job_schedule_split_remaining_primes(
                           kind, uplo, num_ranks, num_primes, output_height,
                           output_width, blas_schedule_split_factor);
@@ -348,15 +348,16 @@ TEST_CASE("calculate_Block_Matrix_square")
                                      num_groups_per_node, node_comm);
 
                   {
-                    const bool debug = false;
+                    const Verbosity verbosity = Verbosity::regular;
                     BigInt_Shared_Memory_Syrk_Context context(
                       node_comm, group_index_in_node,
                       group_comm_sizes_per_node, bits, max_shared_memory_bytes,
                       blocks_height_per_group, block_width, block_indices,
-                      debug, create_job_schedule);
+                      verbosity, create_job_schedule);
 
                     Timers timers;
                     El::Matrix<int32_t> block_timings_ms(num_blocks, 1);
+                    El::Zero(block_timings_ms);
                     INFO("Calling bigint_syrk_blas()...");
                     context.bigint_syrk_blas(uplo, P_matrix_blocks, Q_result,
                                              timers, block_timings_ms);

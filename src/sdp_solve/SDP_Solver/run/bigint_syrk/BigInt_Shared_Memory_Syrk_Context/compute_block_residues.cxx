@@ -60,7 +60,8 @@ namespace
     El::Int group_index, const BlockIterator &consecutive_blocks_begin,
     const BlockIterator &consecutive_blocks_end, El::Int residue_row_begin,
     El::Int global_col, Fmpz_Comb &comb,
-    Block_Residue_Matrices_Window<double> &block_residues_window)
+    Block_Residue_Matrices_Window<double> &block_residues_window,
+    std::vector<double> &column_residues_buffer_temp)
   {
     auto total_height = std::transform_reduce(
       consecutive_blocks_begin, consecutive_blocks_end, 0, std::plus{},
@@ -73,7 +74,7 @@ namespace
     size_t prime_stride = total_height;
 
     // (column residues for prime_1),(column residues for prime_2),... stored in a single array.
-    std::vector<double> column_residues(total_height * comb.num_primes);
+    column_residues_buffer_temp.resize(total_height * comb.num_primes);
 
     // Compute locally residues for a given column global_col and all blocks
     {
@@ -90,7 +91,8 @@ namespace
             {
               bigint_value.from_BigFloat(block.GetLocalCRef(iLoc, jLoc));
               // pointer to the first residue
-              double *data = column_residues.data() + data_offset + iLoc;
+              double *data
+                = column_residues_buffer_temp.data() + data_offset + iLoc;
               fmpz_multi_mod_uint32_stride(data, prime_stride,
                                            bigint_value.value, comb);
             }
@@ -109,7 +111,8 @@ namespace
             = block_residues_window.block_residues.at(prime_index)
                 .at(group_index);
 
-          double *src = column_residues.data() + prime_index * prime_stride;
+          double *src
+            = column_residues_buffer_temp.data() + prime_index * prime_stride;
           double *dest = residue_matrix.Buffer(residue_row_begin, j);
 
           // according to C++ docs, memcpy is the fastest way to copy memory
@@ -122,7 +125,8 @@ namespace
     const size_t group_index,
     const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
     const El::Int global_col, Fmpz_Comb &comb,
-    Block_Residue_Matrices_Window<double> &input_block_residues_window)
+    Block_Residue_Matrices_Window<double> &input_block_residues_window,
+    std::vector<double> &column_residues_buffer_temp)
   {
     // offset for current block in the residues window
     int residue_row_begin = 0;
@@ -185,7 +189,8 @@ namespace
 
         compute_column_residues_for_consecutive_blocks(
           group_index, curr_block, curr_block + num_consecutive_blocks,
-          residue_row_begin, global_col, comb, input_block_residues_window);
+          residue_row_begin, global_col, comb, input_block_residues_window,
+          column_residues_buffer_temp);
 
         residue_row_begin += total_consecutive_height;
 
@@ -277,10 +282,12 @@ void BigInt_Shared_Memory_Syrk_Context::compute_block_residues(
       ASSERT_EQUAL(block_views_height, input_group_height_per_prime());
     }
 
+    std::vector<double> column_residues_buffer_temp;
     for(int global_col = 0; global_col < width; ++global_col)
       {
         compute_column_residues(group_index, block_views, global_col, comb,
-                                grouped_block_residues_window);
+                                grouped_block_residues_window,
+                                column_residues_buffer_temp);
       }
 
     // Update block timings.
