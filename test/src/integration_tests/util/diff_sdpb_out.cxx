@@ -4,6 +4,9 @@
 
 #include <catch2/catch_amalgamated.hpp>
 
+#include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
+
 #include <boost/algorithm/algorithm.hpp>
 #include <boost/algorithm/string.hpp>
 
@@ -79,6 +82,51 @@ namespace
       REQUIRE(!terminate_reason.empty());
     }
   };
+
+  struct Parse_Iterations_Json : boost::noncopyable
+  {
+    std::vector<std::vector<std::pair<std::string, std::string>>> iterations;
+    explicit Parse_Iterations_Json(const fs::path &path)
+    {
+      CAPTURE(path);
+      REQUIRE(exists(path));
+      std::ifstream is(path);
+      rapidjson::IStreamWrapper wrapper(is);
+      rapidjson::Document document;
+      document.ParseStream(wrapper);
+
+      REQUIRE(document.IsArray());
+      for(const auto &json_iteration : document.GetArray())
+        {
+          iterations.emplace_back();
+          REQUIRE(json_iteration.IsObject());
+          const auto obj = json_iteration.GetObject();
+          for(auto it = obj.MemberBegin(); it != obj.MemberEnd(); ++it)
+            {
+              {
+                CAPTURE(it->name.GetType());
+                REQUIRE(it->name.IsString());
+              }
+              auto name = std::string(it->name.GetString(),
+                                      it->name.GetStringLength());
+
+              std::string value;
+              CAPTURE(it->value.GetType());
+              if(it->value.IsString())
+                {
+                  value = std::string(it->value.GetString(),
+                                      it->value.GetStringLength());
+                }
+              else
+                {
+                  REQUIRE(it->value.IsNumber());
+                  value = std::to_string(it->value.GetDouble());
+                }
+              iterations.back().emplace_back(name, value);
+            }
+        }
+    }
+  };
 }
 
 // Helper functions
@@ -139,7 +187,32 @@ namespace
   void diff_iterations_json(const fs::path &a_iterations_json,
                             const fs::path &b_iterations_json)
   {
-    // TODO
+    CAPTURE(a_iterations_json);
+    CAPTURE(b_iterations_json);
+    const auto a_iterations
+      = Parse_Iterations_Json(a_iterations_json).iterations;
+    const auto b_iterations
+      = Parse_Iterations_Json(b_iterations_json).iterations;
+    DIFF(a_iterations.size(), b_iterations.size());
+    for(size_t iteration = 0; iteration < a_iterations.size(); ++iteration)
+      {
+        CAPTURE(iteration);
+        const auto &a_iter = a_iterations.at(iteration);
+        const auto &b_iter = b_iterations.at(iteration);
+        DIFF(a_iter.size(), b_iter.size());
+        for(size_t index = 0; index < a_iter.size(); ++index)
+          {
+            CAPTURE(index);
+            const auto [a_key, a_value] = a_iter.at(index);
+            const auto [b_key, b_value] = b_iter.at(index);
+            DIFF(a_key, b_key);
+            // Timings can vary, we ignore them
+            if(a_key == "total_time" || a_key == "iter_time")
+              continue;
+            CAPTURE(a_key);
+            DIFF(a_value, b_value);
+          }
+      }
   }
 }
 

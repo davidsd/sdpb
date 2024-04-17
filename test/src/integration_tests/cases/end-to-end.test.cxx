@@ -37,8 +37,12 @@ namespace
         auto filename = it.path().filename();
         CAPTURE(filename);
         if(!(filename == "sdp" || filename == "out"
-             || filename == "spectrum.json"))
-          FAIL("Unexpected file: " << it.path());
+             || filename == "spectrum.json" || filename == "iterations.json"
+             || filename == "iterations.0.json"
+             || filename == "iterations.1.json"))
+          {
+            FAIL("Unexpected file: " << it.path());
+          }
       }
 
     std::string sdp_format;
