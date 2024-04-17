@@ -26,14 +26,14 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
                &start_time,
              El::Matrix<int32_t> &block_timings_ms)
 {
-  Timers timers(env, parameters.verbosity >= Verbosity::debug);
+  Timers timers(env, parameters.verbosity);
   Scoped_Timer solve_timer(timers, "sdpb.solve");
 
   El::Grid grid(block_info.mpi_comm.value);
 
   Scoped_Timer read_sdp_timer(timers, "read_sdp");
   SDP sdp(parameters.sdp_path, block_info, grid, timers);
-  if(parameters.verbosity >= debug)
+  if(parameters.verbosity >= Verbosity::debug)
     {
       print_allocation_message_per_node(env, "SDP", get_allocated_bytes(sdp));
     }
@@ -49,7 +49,7 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
   SDP_Solver solver(parameters.solver, parameters.verbosity,
                     parameters.require_initial_checkpoint, block_info, grid,
                     sdp.dual_objective_b.Height());
-  if(parameters.verbosity >= debug)
+  if(parameters.verbosity >= Verbosity::debug)
     {
       print_allocation_message_per_node(env, "SDP_Solver",
                                         get_allocated_bytes(solver));

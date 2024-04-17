@@ -13,7 +13,7 @@ size_t bigfloat_bytes()
 
 size_t get_max_shared_memory_bytes(
   const size_t nonshared_memory_required_per_node_bytes,
-  const Environment &env, const bool debug)
+  const Environment &env, const Verbosity verbosity)
 {
   El::byte can_update = false;
   // will be set only on rank=0
@@ -21,7 +21,8 @@ size_t get_max_shared_memory_bytes(
   if(env.comm_shared_mem.Rank() == 0)
     {
       bool res;
-      const auto meminfo = Proc_Meminfo::try_read(res, debug);
+      const auto meminfo
+        = Proc_Meminfo::try_read(res, verbosity >= Verbosity::debug);
       mem_total_bytes = meminfo.mem_total;
       can_update = res;
     }

@@ -77,7 +77,7 @@ namespace
   // (including what's already allocated, e.g. SDP)
   size_t get_required_nonshared_memory_per_node_bytes(
     const Environment &env, const Block_Info &block_info, const SDP &sdp,
-    const SDP_Solver &solver, const bool debug)
+    const SDP_Solver &solver, const Verbosity verbosity)
   {
     const auto &node_comm = env.comm_shared_mem;
 
@@ -138,7 +138,7 @@ namespace
     const size_t mem_required_bytes
       = env.initial_node_mem_used() + mem_required_size * bigfloat_bytes();
 
-    if(debug)
+    if(verbosity >= Verbosity::debug)
       {
         std::ostringstream ss;
         El::BuildStream(
@@ -165,7 +165,8 @@ namespace
   get_max_shared_memory_bytes(const size_t default_max_shared_memory_bytes,
                               const Environment &env,
                               const Block_Info &block_info, const SDP &sdp,
-                              const SDP_Solver &solver, const bool debug)
+                              const SDP_Solver &solver,
+                              const Verbosity verbosity)
   {
     // If user sets --maxSharedMemory limit manually, we use it.
     // Otherwise, we calculate the limit automatically.
@@ -173,9 +174,9 @@ namespace
       return default_max_shared_memory_bytes;
     const size_t nonshared_memory_required_per_node_bytes
       = get_required_nonshared_memory_per_node_bytes(env, block_info, sdp,
-                                                     solver, debug);
+                                                     solver, verbosity);
     return get_max_shared_memory_bytes(
-      nonshared_memory_required_per_node_bytes, env, debug);
+      nonshared_memory_required_per_node_bytes, env, verbosity);
   }
 }
 
@@ -201,7 +202,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
   El::BigFloat primal_step_length(0), dual_step_length(0);
 
   Block_Diagonal_Matrix X_cholesky(X), Y_cholesky(X);
-  if(verbosity >= debug)
+  if(verbosity >= Verbosity::debug)
     {
       print_allocation_message_per_node(env, "X_cholesky",
                                         get_allocated_bytes(X_cholesky));
@@ -246,12 +247,11 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
   Scoped_Timer initialize_bigint_syrk_context_timer(timers,
                                                     "bigint_syrk_context");
 
-  auto max_shared_memory_bytes = get_max_shared_memory_bytes(
-    parameters.max_shared_memory_bytes, env, block_info, sdp, *this,
-    verbosity >= Verbosity::debug);
+  auto max_shared_memory_bytes
+    = get_max_shared_memory_bytes(parameters.max_shared_memory_bytes, env,
+                                  block_info, sdp, *this, verbosity);
   auto bigint_syrk_context = initialize_bigint_syrk_context(
-    env, block_info, sdp, max_shared_memory_bytes,
-    verbosity >= Verbosity::debug);
+    env, block_info, sdp, max_shared_memory_bytes, verbosity);
   initialize_bigint_syrk_context_timer.stop();
 
   initialize_timer.stop();
@@ -298,7 +298,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
     {
       Scoped_Timer iteration_timer(timers,
                                    "iter_" + std::to_string(iteration));
-      if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+      if(verbosity >= Verbosity::trace && El::mpi::Rank() == 0)
         {
           El::Output("Start iteration ", iteration, " at ",
                      boost::posix_time::second_clock::local_time());
@@ -348,7 +348,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
 
       compute_bilinear_pairings(block_info, X_cholesky, Y, sdp.bases_blocks,
                                 A_X_inv, A_Y, timers);
-      if(verbosity >= debug)
+      if(verbosity >= Verbosity::trace)
         {
           print_allocation_message_per_node(env, "A_X_inv",
                                             get_allocated_bytes(A_X_inv));
@@ -366,7 +366,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
       Block_Vector primal_residue_p(y);
       compute_primal_residues_and_error_p_b_Bx(
         block_info, sdp, x, primal_residue_p, primal_error_p);
-      if(verbosity >= debug)
+      if(verbosity >= Verbosity::trace)
         {
           print_allocation_message_per_node(
             env, "primal_residue_p", get_allocated_bytes(primal_residue_p));
@@ -393,7 +393,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
            timers, block_timings_ms, Q_cond_number, max_block_cond_number,
            max_block_cond_number_name);
 
-      if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+      if(verbosity >= Verbosity::trace && El::mpi::Rank() == 0)
         {
           El::Print(block_timings_ms, "block_timings, ms:");
           El::Output();
@@ -403,7 +403,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
           // One the first iteration, matrices may have many zeros, thus
           // block timings may be quite different from the next iterations.
           // Thus, we never want to write first iteration to ck/block_timings.
-          if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+          if(verbosity >= Verbosity::trace && El::mpi::Rank() == 0)
             {
               El::Output("block_timings from the first iteration will be "
                          "ignored and removed.");

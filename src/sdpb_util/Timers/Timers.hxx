@@ -9,6 +9,7 @@
 
 #include "Timer.hxx"
 #include "sdpb_util/Environment.hxx"
+#include "sdpb_util/Verbosity.hxx"
 
 #include <El.hpp>
 
@@ -29,7 +30,7 @@ private:
   std::list<std::pair<std::string, Timer>> named_timers;
   std::string prefix;
 
-  bool print_debug_info = false;
+  Verbosity verbosity = Verbosity::regular;
   std::string node_debug_prefix;
 
   bool can_read_meminfo = true;
@@ -40,7 +41,7 @@ private:
 
 public:
   Timers();
-  Timers(const Environment &env, bool debug);
+  Timers(const Environment &env, const Verbosity &verbosity);
   ~Timers() noexcept;
 
 private:
@@ -49,7 +50,7 @@ private:
 public:
   void write_profile(const std::filesystem::path &path) const;
 
-  int64_t elapsed_milliseconds(const std::string &s) const;
+  [[nodiscard]] int64_t elapsed_milliseconds(const std::string &s) const;
 
 private:
   void print_max_mem_used() const;

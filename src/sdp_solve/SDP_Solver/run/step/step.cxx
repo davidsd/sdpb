@@ -20,7 +20,7 @@ void initialize_schur_complement_solver(
   Block_Matrix &schur_off_diagonal,
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
   El::DistMatrix<El::BigFloat> &Q, Timers &timers,
-  El::Matrix<int32_t> &block_timings_ms, bool debug);
+  El::Matrix<int32_t> &block_timings_ms, Verbosity verbosity);
 
 void compute_search_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
@@ -77,16 +77,12 @@ void SDP_Solver::step(
   // once in the predictor step, and once in the corrector step.
   Block_Vector dx(x), dy(y);
   Block_Diagonal_Matrix dX(X), dY(Y);
-  if(verbosity >= debug)
+  if(verbosity >= Verbosity::trace)
     {
-      print_allocation_message_per_node(
-        env, "dx", get_allocated_bytes(dx));
-      print_allocation_message_per_node(
-        env, "dy", get_allocated_bytes(dy));
-      print_allocation_message_per_node(
-        env, "dX",  get_allocated_bytes(dX));
-      print_allocation_message_per_node(
-        env, "dY",  get_allocated_bytes(dY));
+      print_allocation_message_per_node(env, "dx", get_allocated_bytes(dx));
+      print_allocation_message_per_node(env, "dy", get_allocated_bytes(dy));
+      print_allocation_message_per_node(env, "dX", get_allocated_bytes(dX));
+      print_allocation_message_per_node(env, "dY", get_allocated_bytes(dY));
     }
   {
     // SchurComplementCholesky = L', the Cholesky decomposition of the
@@ -94,11 +90,11 @@ void SDP_Solver::step(
     Block_Diagonal_Matrix schur_complement_cholesky(
       block_info.schur_block_sizes(), block_info.block_indices,
       block_info.num_points.size(), grid);
-    if(verbosity >= debug)
+    if(verbosity >= Verbosity::trace)
       {
         print_allocation_message_per_node(
           env, "schur_complement_cholesky",
-           get_allocated_bytes(schur_complement_cholesky));
+          get_allocated_bytes(schur_complement_cholesky));
       }
 
     // SchurOffDiagonal = L'^{-1} FreeVarMatrix, needed in solving the
@@ -115,18 +111,17 @@ void SDP_Solver::step(
     // that N' could change with each iteration.
     El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
                                    sdp.dual_objective_b.Height());
-    if(verbosity >= debug)
+    if(verbosity >= Verbosity::trace)
       {
-        print_allocation_message_per_node(
-          env, "Q", get_allocated_bytes(Q));
+        print_allocation_message_per_node(env, "Q", get_allocated_bytes(Q));
       }
 
     // Compute SchurComplement and prepare to solve the Schur
     // complement equation for dx, dy
-    initialize_schur_complement_solver(
-      env, block_info, sdp, A_X_inv, A_Y, grid, schur_complement_cholesky,
-      schur_off_diagonal, bigint_syrk_context, Q, timers, block_timings_ms,
-      verbosity >= debug);
+    initialize_schur_complement_solver(env, block_info, sdp, A_X_inv, A_Y,
+                                       grid, schur_complement_cholesky,
+                                       schur_off_diagonal, bigint_syrk_context,
+                                       Q, timers, block_timings_ms, verbosity);
 
     // Compute the complementarity mu = Tr(X Y)/X.dim
     Scoped_Timer frobenius_timer(timers, "frobenius_product_symmetric");

@@ -6,18 +6,20 @@
 namespace
 {
   // Convert bytes to gigabytes
-  double to_GB(size_t bytes)
+  double to_GB(const size_t bytes)
   {
     return static_cast<double>(bytes) / 1024 / 1024 / 1024;
   }
 }
 
 Timers::Timers() = default;
-Timers::Timers(const Environment &env, bool debug)
+Timers::Timers(const Environment &env, const Verbosity &verbosity)
+    : verbosity(verbosity)
 {
-  if(debug && env.comm_shared_mem.Rank() == 0)
+  if(env.comm_shared_mem.Rank() != 0)
     {
-      print_debug_info = true;
+      // Print info only from the first rank on a node
+      this->verbosity = Verbosity::none;
       if(env.num_nodes() != 1)
         node_debug_prefix = El::BuildString("node=", env.node_index(), " ");
     }
@@ -27,7 +29,7 @@ Timers::~Timers() noexcept
 {
   try
     {
-      if(print_debug_info)
+      if(verbosity >= Verbosity::debug)
         print_max_mem_used();
     }
   catch(...)
@@ -40,7 +42,7 @@ Timer &Timers::add_and_start(const std::string &name)
 {
   std::string full_name = prefix + name;
 
-  if(print_debug_info)
+  if(verbosity >= Verbosity::trace)
     print_meminfo(full_name);
 
   named_timers.emplace_back(full_name, Timer());

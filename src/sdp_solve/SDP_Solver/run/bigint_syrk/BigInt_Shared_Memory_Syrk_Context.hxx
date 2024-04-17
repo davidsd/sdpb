@@ -19,10 +19,12 @@ public:
     const std::vector<int> &group_comm_sizes, mp_bitcnt_t precision,
     size_t max_shared_memory_bytes,
     const std::vector<El::Int> &blocks_height_per_group, int block_width,
-    const std::vector<size_t> &block_index_local_to_global, bool debug,
+    const std::vector<size_t> &block_index_local_to_global,
+    Verbosity verbosity,
     const std::function<Blas_Job_Schedule(
-      Blas_Job::Kind kind,El::UpperOrLower uplo, size_t num_ranks, size_t num_primes,
-      int output_height, int output_width, bool debug)> &create_job_schedule
+      Blas_Job::Kind kind, El::UpperOrLower uplo, size_t num_ranks,
+      size_t num_primes, int output_height, int output_width,
+      Verbosity _verbosity)> &create_job_schedule
     = create_blas_job_schedule);
 
   // Calculate Q := P^T P
@@ -59,7 +61,7 @@ private:
   size_t num_groups;
   int total_block_height_per_node;
   Fmpz_Comb comb;
-  const bool debug;
+  const Verbosity verbosity;
   // All blocks from each MPI group are combined
   // into a single block in Block_Residue_Matrices_Window
   std::unique_ptr<Block_Residue_Matrices_Window<double>>
@@ -73,9 +75,10 @@ private:
   size_t output_window_split_factor = 0;
   std::unique_ptr<Residue_Matrices_Window<double>> output_residues_window;
   const std::vector<size_t> block_index_local_to_global;
-  std::function<Blas_Job_Schedule(
-    Blas_Job::Kind kind, El::UpperOrLower uplo, size_t num_ranks,
-    size_t num_primes, int output_height, int output_width, bool debug)>
+  std::function<Blas_Job_Schedule(Blas_Job::Kind kind, El::UpperOrLower uplo,
+                                  size_t num_ranks, size_t num_primes,
+                                  int output_height, int output_width,
+                                  Verbosity verbosity)>
     create_blas_job_schedule_func;
   std::map<std::tuple<Blas_Job::Kind, El::UpperOrLower, El::Int, El::Int>,
            std::shared_ptr<Blas_Job_Schedule>>
@@ -98,10 +101,9 @@ private:
     const El::Range<El::Int> &output_I, const El::Range<El::Int> &output_J,
     Timers &timers, El::Matrix<int32_t> &block_timings_ms);
 
-  void restore_and_reduce(
-    std::optional<El::UpperOrLower> uplo,
-    El::DistMatrix<El::BigFloat> &output,
-    Timers &timers);
+  void
+  restore_and_reduce(std::optional<El::UpperOrLower> uplo,
+                     El::DistMatrix<El::BigFloat> &output, Timers &timers);
 
   [[nodiscard]] El::Int input_group_height_per_prime() const;
 };

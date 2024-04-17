@@ -230,7 +230,7 @@ TEST_CASE("end-to-end_tests")
         "--dualErrorThreshold 1.0e-30 --initialMatrixScalePrimal 1.0e20 "
         "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
         "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
-        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
+        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 2 "
         "--procGranularity 1 --writeSolution x,y,z";
     // This test is slow, we don't want to run it for both json and binary SDP.
     // json/bin correctness is checked by other tests,
@@ -256,7 +256,7 @@ TEST_CASE("end-to-end_tests")
         "--dualErrorThreshold 1.0e-200 --initialMatrixScalePrimal 1.0e20 "
         "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
         "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
-        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
+        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 2 "
         "--procGranularity 1 --writeSolution y,z "
         "--detectPrimalFeasibleJump --detectDualFeasibleJump "
         "--maxSharedMemory=100.1K"; // forces split_factor=3 for Q window; also test floating-point --maxSharedMemory value
