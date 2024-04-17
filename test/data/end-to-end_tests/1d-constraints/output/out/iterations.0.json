@@ -1,0 +1,4 @@
+[
+{ "iteration":1, "total_time": 0.013, "iter_time": 0.013, "mu": 1e+40, "P-obj": 0, "D-obj": 0, "gap": 0, "P-err": 1e+20, "p-err": 1, "D-err": 2.88e+20, "P-step": 0.515, "D-step": 0.564, "beta": 0.3, "Q_cond_number": 1, "max_block_cond_number": 212, "block_name": "schur_complement_cholesky.block_0" },
+{ "iteration":2, "total_time": 0.021, "iter_time": 0.008, "mu": 6.3e+39, "P-obj": 6.24e+20, "D-obj": -6.82e+19, "gap": 1, "P-err": 4.85e+19, "p-err": 0.485, "D-err": 1.26e+20, "P-step": 0.624, "D-step": 0.472, "beta": 0.3, "Q_cond_number": 1, "max_block_cond_number": 83.3, "block_name": "schur_complement_cholesky.block_1" }
+]

@@ -1,3 +1,4 @@
+#include "update_cond_numbers.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 
@@ -59,7 +60,8 @@ void SDP_Solver::step(
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context, El::BigFloat &mu,
   El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
   El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
-  El::Matrix<int32_t> &block_timings_ms)
+  El::Matrix<int32_t> &block_timings_ms, El::BigFloat &Q_cond_number,
+  El::BigFloat &max_block_cond_number, std::string &max_block_cond_number_name)
 {
   Scoped_Timer step_timer(timers, "step");
   block_timings_ms.Resize(block_info.dimensions.size(), 1);
@@ -128,15 +130,23 @@ void SDP_Solver::step(
     }
 
     // Compute the corrector solution for (dx, dX, dy, dY)
-    Scoped_Timer corrector_timer(timers,
-                                 "computeSearchDirection(betaCorrector)");
-    beta_corrector = corrector_centering_parameter(
-      parameters, X, dX, Y, dY, mu, is_primal_and_dual_feasible,
-      total_psd_rows);
+    {
+      Scoped_Timer corrector_timer(timers,
+                                   "computeSearchDirection(betaCorrector)");
+      beta_corrector = corrector_centering_parameter(
+        parameters, X, dX, Y, dY, mu, is_primal_and_dual_feasible,
+        total_psd_rows);
 
-    compute_search_direction(block_info, sdp, *this, schur_complement_cholesky,
-                             schur_off_diagonal, X_cholesky, beta_corrector,
-                             mu, primal_residue_p, true, Q, dx, dX, dy, dY);
+      compute_search_direction(block_info, sdp, *this,
+                               schur_complement_cholesky, schur_off_diagonal,
+                               X_cholesky, beta_corrector, mu,
+                               primal_residue_p, true, Q, dx, dX, dy, dY);
+    }
+
+    // Calculate condition numbers for Cholesky matrices
+    update_cond_numbers(Q, block_info, schur_complement_cholesky, X_cholesky,
+                        Y_cholesky, timers, Q_cond_number,
+                        max_block_cond_number, max_block_cond_number_name);
   }
   // Compute step-lengths that preserve positive definiteness of X, Y
   primal_step_length
