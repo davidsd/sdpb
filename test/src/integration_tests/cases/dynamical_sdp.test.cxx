@@ -53,7 +53,7 @@ TEST_CASE("dynamical_sdp")
         "--dualErrorThreshold 1.0e-30  --initialMatrixScalePrimal 1.0e30 "
         "--initialMatrixScaleDual 1.0e30 --feasibleCenteringParameter 0.1 "
         "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
-        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
+        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 2 "
         "--procGranularity 1 --writeSolution x,y,z --numExternalParams 1 "
         "--externalParamInfinitestimal 1.0e-20 --centeringRThreshold 1.0e-20 "
         "--dualityGapUpperLimit 0.1 --betaScanMin 0.1 --betaScanMax 1.01 "

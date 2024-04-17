@@ -14,6 +14,10 @@
 #include "Dynamical_Solver_Terminate_Reason.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
+#include "sdpb_util/json/Abstract_Json_Array_Parser_With_Skip.hxx"
+#include "sdpb_util/json/Abstract_Json_Array_Parser_With_Skip.hxx"
+#include "sdpb_util/json/Abstract_Json_Array_Parser_With_Skip.hxx"
+#include "sdpb_util/json/Abstract_Json_Array_Parser_With_Skip.hxx"
 
 #include <filesystem>
 
@@ -158,6 +162,7 @@ public:
     Timers &timers);
 
   void dynamical_step(
+    const Environment &env,
     const Dynamical_Solver_Parameters &dynamical_parameters,
     const std::size_t &total_psd_rows, const bool &is_primal_and_dual_feasible,
     const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
@@ -175,7 +180,7 @@ public:
     El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
     bool &update_sdp, bool &find_zeros,
     El::Matrix<El::BigFloat> &external_step,
-    El::Matrix<int32_t> &block_timings_ms);
+    El::Matrix<int32_t> &block_timings_ms, Verbosity verbosity);
 
   void
   save_solver_state(const Dynamical_Solver_Parameters &dynamical_parameters,

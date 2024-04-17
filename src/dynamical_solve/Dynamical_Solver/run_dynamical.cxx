@@ -122,8 +122,7 @@ Dynamical_Solver_Terminate_Reason Dynamical_Solver::run_dynamical(
                                                     "bigint_syrk_context");
   auto bigint_syrk_context = initialize_bigint_syrk_context(
     env, block_info, sdp,
-    dynamical_parameters.solver_parameters.max_shared_memory_bytes,
-    verbosity >= Verbosity::debug);
+    dynamical_parameters.solver_parameters.max_shared_memory_bytes, verbosity);
   initialize_bigint_syrk_context_timer.stop();
 
   initialize_timer.stop();
@@ -135,7 +134,7 @@ Dynamical_Solver_Terminate_Reason Dynamical_Solver::run_dynamical(
     {
       Scoped_Timer iteration_timer(timers,
                                    "iter_" + std::to_string(iteration));
-      if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+      if(verbosity >= Verbosity::trace && El::mpi::Rank() == 0)
         {
           El::Output("Start iteration ", iteration, " at ",
                      boost::posix_time::second_clock::local_time());
@@ -205,15 +204,16 @@ Dynamical_Solver_Terminate_Reason Dynamical_Solver::run_dynamical(
       El::BigFloat beta_predictor;
       {
         external_step_size = 0;
-        dynamical_step(
-          dynamical_parameters, total_psd_rows, is_primal_and_dual_feasible,
-          block_info, sdp, grid, X_cholesky, Y_cholesky, A_X_inv, A_Y,
-          primal_residue_p, bigint_syrk_context, mu, beta_predictor,
-          primal_step_length, dual_step_length, terminate_now, timers,
-          update_sdp, find_zeros, extParamStep, block_timings_ms);
+        dynamical_step(env, dynamical_parameters, total_psd_rows,
+                       is_primal_and_dual_feasible, block_info, sdp, grid,
+                       X_cholesky, Y_cholesky, A_X_inv, A_Y, primal_residue_p,
+                       bigint_syrk_context, mu, beta_predictor,
+                       primal_step_length, dual_step_length, terminate_now,
+                       timers, update_sdp, find_zeros, extParamStep,
+                       block_timings_ms, verbosity);
         final_beta = beta_predictor;
 
-        if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+        if(verbosity >= Verbosity::trace && El::mpi::Rank() == 0)
           {
             El::Print(block_timings_ms, "block_timings, ms:");
             El::Output();
@@ -223,7 +223,7 @@ Dynamical_Solver_Terminate_Reason Dynamical_Solver::run_dynamical(
             // One the first iteration, matrices may have many zeros, thus
             // block timings may be quite different from the next iterations.
             // Thus, we never want to write first iteration to ck/block_timings.
-            if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+            if(verbosity >= Verbosity::trace && El::mpi::Rank() == 0)
               {
                 El::Output("block_timings from the first iteration will be "
                            "ignored and removed.");

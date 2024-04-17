@@ -137,6 +137,7 @@ void find_zero_step(const El::BigFloat &thresh, const int &max_it,
 int centering_steps = 5;
 
 void Dynamical_Solver::dynamical_step(
+  const Environment &env,
   const Dynamical_Solver_Parameters &dynamical_parameters,
   const std::size_t &total_psd_rows, const bool &is_primal_and_dual_feasible,
   const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
@@ -151,7 +152,7 @@ void Dynamical_Solver::dynamical_step(
   const Block_Vector &primal_residue_p, El::BigFloat &mu, El::BigFloat &beta,
   El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
   bool &terminate_now, Timers &timers, bool &update_sdp, bool &find_zeros,
-  El::Matrix<El::BigFloat> &external_step)
+  El::Matrix<El::BigFloat> &external_step, const Verbosity verbosity)
 {
   Scoped_Timer step_timer(timers, "run.step");
 

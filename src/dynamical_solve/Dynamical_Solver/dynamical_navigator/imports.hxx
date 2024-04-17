@@ -32,7 +32,7 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
             const std::string &timer_name, Timers &timers);
 
 void initialize_schur_complement_solver(
-  const Block_Info &block_info, const SDP &sdp,
+  const Environment &env, const Block_Info &block_info, const SDP &sdp,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     &A_X_inv,
@@ -43,7 +43,7 @@ void initialize_schur_complement_solver(
   Block_Matrix &schur_off_diagonal,
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
   El::DistMatrix<El::BigFloat> &Q, Timers &timers,
-  El::Matrix<int32_t> &block_timings_ms);
+  El::Matrix<int32_t> &block_timings_ms, Verbosity verbosity);
 
 void Axpy(const El::BigFloat &alpha, const SDP &new_sdp, SDP &delta_sdp);
 

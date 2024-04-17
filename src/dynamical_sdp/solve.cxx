@@ -21,7 +21,7 @@ Timers solve(const Block_Info &block_info,
                &start_time,
              El::Matrix<int32_t> &block_timings_ms)
 {
-  Timers timers(env, parameters.verbosity >= Verbosity::debug);
+  Timers timers(env, parameters.verbosity);
   Scoped_Timer solve_timer(timers, "dynamical_sdp.solve");
 
   El::Grid grid(block_info.mpi_comm.value);

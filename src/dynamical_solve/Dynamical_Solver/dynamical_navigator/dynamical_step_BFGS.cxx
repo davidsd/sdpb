@@ -440,6 +440,7 @@ El::BigFloat compute_beta_for_finite_dGap(const El::BigFloat &current_dGap,
 bool external_corrector_jump_to_newSDP = true;
 
 void Dynamical_Solver::dynamical_step(
+  const Environment &env,
   const Dynamical_Solver_Parameters &dynamical_parameters,
   const std::size_t &total_psd_rows, const bool &is_primal_and_dual_feasible,
   const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
@@ -456,7 +457,7 @@ void Dynamical_Solver::dynamical_step(
   El::BigFloat &beta, El::BigFloat &primal_step_length,
   El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
   bool &update_sdp, bool &find_zeros, El::Matrix<El::BigFloat> &external_step,
-  El::Matrix<int32_t> &block_timings_ms)
+  El::Matrix<int32_t> &block_timings_ms, const Verbosity verbosity)
 {
   Scoped_Timer step_timer(timers, "dynamical_step");
 
@@ -483,8 +484,9 @@ void Dynamical_Solver::dynamical_step(
       block_timings_ms.Resize(block_info.dimensions.size(), 1);
       El::Zero(block_timings_ms);
       initialize_schur_complement_solver(
-        block_info, sdp, A_X_inv, A_Y, grid, schur_complement_cholesky,
-        schur_off_diagonal, bigint_syrk_context, Q, timers, block_timings_ms);
+        env, block_info, sdp, A_X_inv, A_Y, grid, schur_complement_cholesky,
+        schur_off_diagonal, bigint_syrk_context, Q, timers, block_timings_ms,
+        verbosity);
       // Synchronize block timings
       Scoped_Timer block_timings_timer(timers, "block_timings_AllReduce");
       El::AllReduce(block_timings_ms, El::mpi::COMM_WORLD);

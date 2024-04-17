@@ -99,6 +99,7 @@ void find_zero_step(const El::BigFloat &thresh, const int &max_it,
 // Scale both external_step and (dx, dy, dX, dY) by the step length
 
 void Dynamical_Solver::dynamical_step(
+  const Environment &env,
   const Dynamical_Solver_Parameters &dynamical_parameters,
   const std::size_t &total_psd_rows, const bool &is_primal_and_dual_feasible,
   const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
@@ -113,7 +114,7 @@ void Dynamical_Solver::dynamical_step(
   const Block_Vector &primal_residue_p, El::BigFloat &mu, El::BigFloat &beta,
   El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
   bool &terminate_now, Timers &timers, bool &update_sdp, bool &find_zeros,
-  El::Matrix<El::BigFloat> &external_step)
+  El::Matrix<El::BigFloat> &external_step, const Verbosity verbosity)
 {
   Scoped_Timer step_timer(timers, "run.step");
 
@@ -129,9 +130,9 @@ void Dynamical_Solver::dynamical_step(
   El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
                                  sdp.dual_objective_b.Height());
 
-  initialize_schur_complement_solver(block_info, sdp, A_X_inv, A_Y, grid,
+  initialize_schur_complement_solver(env, block_info, sdp, A_X_inv, A_Y, grid,
                                      schur_complement_cholesky,
-                                     schur_off_diagonal, Q, timers);
+                                     schur_off_diagonal, Q, timers, verbosity);
 
   Scoped_Timer frobenius_timer(timers, "run.step.frobenius_product_symmetric");
   mu = frobenius_product_symmetric(X, Y) / total_psd_rows;

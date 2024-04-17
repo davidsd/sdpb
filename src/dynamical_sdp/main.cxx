@@ -22,7 +22,7 @@ Timers solve(const Block_Info &block_info,
 void write_block_timings(const fs::path &checkpoint_out,
                          const Block_Info &block_info,
                          const El::Matrix<int32_t> &block_timings_ms,
-                         const bool &debug);
+                         const Verbosity verbosity);
 
 void write_profiling(const fs::path &checkpoint_out, const Timers &timers);
 
@@ -131,7 +131,7 @@ int main(int argc, char **argv)
           write_block_timings(
             timing_parameters.solver.solver_parameters.checkpoint_out,
             block_info, block_timings_ms,
-            timing_parameters.verbosity >= Verbosity::debug);
+            timing_parameters.verbosity);
           if(timing_parameters.verbosity >= Verbosity::debug)
             {
               try
