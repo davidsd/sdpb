@@ -1,4 +1,4 @@
 [
-{ "iteration":1, "total_time": 0.004, "iter_time": 0.004, "mu": 1e+40, "P-obj": 0, "D-obj": 0, "gap": 0, "P-err": 1e+20, "p-err": 1, "D-err": 5.38e+20, "P-step": 0.679, "D-step": 0.662, "beta": 0.3, "Q_cond_number": 1, "max_block_cond_number": 3.2e+12, "block_name": "schur_complement_cholesky.block_0" },
-{ "iteration":2, "total_time": 0.007, "iter_time": 0.002, "mu": 4.59e+39, "P-obj": 1.81e+20, "D-obj": -6.15e+22, "gap": 1, "P-err": 3.21e+19, "p-err": 0.321, "D-err": 1.82e+20, "P-step": 0.649, "D-step": 0.685, "beta": 0.3, "Q_cond_number": 1, "max_block_cond_number": 1.19e+13, "block_name": "schur_complement_cholesky.block_0" }
+{ "iteration":1, "total_time": 0.005, "iter_time": 0.0041, "mu": "1e+40", "P-obj": "0", "D-obj": "0", "gap": "0", "P-err": "1e+20", "p-err": "1", "D-err": "5.38e+20", "P-step": "0.679", "D-step": "0.662", "beta": "0.3", "Q_cond_number": "1", "max_block_cond_number": "3.2e+12", "block_name": "schur_complement_cholesky.block_0" },
+{ "iteration":2, "total_time": 0.009, "iter_time": 0.0031, "mu": "4.59e+39", "P-obj": "1.81e+20", "D-obj": "-6.15e+22", "gap": "1", "P-err": "3.21e+19", "p-err": "0.321", "D-err": "1.82e+20", "P-step": "0.649", "D-step": "0.685", "beta": "0.3", "Q_cond_number": "1", "max_block_cond_number": "1.19e+13", "block_name": "schur_complement_cholesky.block_0" }
 ]

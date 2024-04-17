@@ -117,10 +117,17 @@ namespace
                   value = std::string(it->value.GetString(),
                                       it->value.GetStringLength());
                 }
+              else if(it->value.IsInt())
+                {
+                  value = std::to_string(it->value.GetInt());
+                }
+              else if(it->value.IsNumber())
+                {
+                  value = std::to_string(it->value.GetDouble());
+                }
               else
                 {
-                  REQUIRE(it->value.IsNumber());
-                  value = std::to_string(it->value.GetDouble());
+                  FAIL("Unsupported JSON value type");
                 }
               iterations.back().emplace_back(name, value);
             }
@@ -194,27 +201,38 @@ namespace
     const auto b_iterations
       = Parse_Iterations_Json(b_iterations_json).iterations;
     DIFF(a_iterations.size(), b_iterations.size());
-    for(size_t iteration = 0; iteration < a_iterations.size(); ++iteration)
+    for(size_t iter_index = 0; iter_index < a_iterations.size(); ++iter_index)
       {
+        const size_t iteration = iter_index + 1;
         CAPTURE(iteration);
-        const auto &a_iter = a_iterations.at(iteration);
-        const auto &b_iter = b_iterations.at(iteration);
+        const auto &a_iter = a_iterations.at(iter_index);
+        const auto &b_iter = b_iterations.at(iter_index);
         DIFF(a_iter.size(), b_iter.size());
         for(size_t index = 0; index < a_iter.size(); ++index)
           {
             CAPTURE(index);
-            const auto [a_key, a_value] = a_iter.at(index);
-            const auto [b_key, b_value] = b_iter.at(index);
+            const auto [a_key, a_value_str] = a_iter.at(index);
+            const auto [b_key, b_value_str] = b_iter.at(index);
             DIFF(a_key, b_key);
             // Timings can vary, we ignore them
+            if(a_key == "total_time" || a_key == "iter_time")
+              continue;
             // "block_name" can be different if several blocks
             // have the same condition number up to rounding errors.
             // For example, this happened in test/out/dfibo-0-0-j=3-c=3.0000-d=3-s=6/pmp.xml:
             // for iteration=1, block_name="block_2" for format=json and block_name="block_19" for format=bin
-            if(a_key == "total_time" || a_key == "iter_time"
-               || a_key == "block_name")
+            if(a_key == "block_name")
               continue;
+            // Errors may differ as they approach zero
+            if(a_key == "P-err" || a_key == "p-err" || a_key == "D-err")
+              continue;
+
             CAPTURE(a_key);
+            CAPTURE(a_value_str);
+            CAPTURE(b_value_str);
+
+            El::BigFloat a_value = a_value_str;
+            El::BigFloat b_value = b_value_str;
             DIFF(a_value, b_value);
           }
       }
