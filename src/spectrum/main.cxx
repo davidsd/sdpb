@@ -10,7 +10,7 @@ namespace fs = std::filesystem;
 void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
                       El::BigFloat &mesh_threshold, fs::path &input_path,
                       fs::path &solution_path, fs::path &output_path,
-                      bool &need_lambda);
+                      bool &need_lambda, Verbosity& verbosity);
 
 std::vector<El::Matrix<El::BigFloat>>
 read_x(const fs::path &solution_path,
@@ -40,11 +40,10 @@ int main(int argc, char **argv)
       El::BigFloat threshold, mesh_threshold;
       fs::path input_path, solution_dir, output_path;
       bool need_lambda;
+      Verbosity verbosity;
       handle_arguments(argc, argv, threshold, mesh_threshold, input_path,
-                       solution_dir, output_path, need_lambda);
+                       solution_dir, output_path, need_lambda, verbosity);
 
-      // TODO set verbosity from command line
-      const auto verbosity = Verbosity::regular;
       // Print command line
       if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
         {
