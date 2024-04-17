@@ -63,7 +63,8 @@ namespace
     for(const auto &pmp_path : pmp_paths)
       DYNAMIC_SECTION(pmp_path.filename().string())
       {
-        std::string runner_name = name + "/" + pmp_path.filename().string();
+        std::string runner_name
+          = "end-to-end_tests/" + name + "/" + pmp_path.filename().string();
         if(!sdp_format.empty())
           runner_name += "/format=" + sdp_format;
         Test_Case_Runner runner(runner_name);
