@@ -68,6 +68,16 @@ int main(int argc, char **argv)
         }
 
       po::notify(variables_map);
+      const auto verbosity = debug ? Verbosity::debug : Verbosity::regular;
+
+      // Print command line
+      if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+        {
+          std::vector<std::string> arg_list(argv, argv + argc);
+          for(const auto &arg : arg_list)
+            std::cout << arg << " ";
+          std::cout << std::endl;
+        }
 
       ASSERT(fs::exists(input_file),
              "Input file does not exist: ", input_file);
@@ -76,7 +86,6 @@ int main(int argc, char **argv)
 
       Environment::set_precision(precision);
 
-      const auto verbosity = debug ? Verbosity::debug : Verbosity::regular;
       Timers timers(env, verbosity);
       Scoped_Timer timer(timers, "sdp2input");
 

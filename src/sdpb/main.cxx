@@ -44,6 +44,14 @@ int main(int argc, char **argv)
       auto start_time = std::chrono::high_resolution_clock::now();
       if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {
+          // Print command line
+          if(parameters.verbosity >= Verbosity::debug)
+            {
+              std::vector<std::string> arg_list(argv, argv + argc);
+              for(const auto &arg : arg_list)
+                std::cout << arg << " ";
+              std::cout << std::endl;
+            }
           std::cout << boost::posix_time::second_clock::local_time()
                     << " Start SDPB" << '\n'
                     << "SDPB version: " << SDPB_VERSION_STRING << '\n'

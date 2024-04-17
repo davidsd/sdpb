@@ -45,6 +45,15 @@ int main(int argc, char **argv)
 
       // TODO set verbosity from command line
       const auto verbosity = Verbosity::regular;
+      // Print command line
+      if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+        {
+          std::vector<std::string> arg_list(argv, argv + argc);
+          for(const auto &arg : arg_list)
+            std::cout << arg << " ";
+          std::cout << std::endl;
+        }
+
       Timers timers(env, verbosity);
       const auto pmp = read_polynomial_matrix_program(env, input_path, timers);
       const size_t num_blocks = pmp.num_matrices;

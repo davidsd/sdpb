@@ -30,6 +30,14 @@ int main(int argc, char **argv)
         {
           return 0;
         }
+      // Print command line
+      if(parameters.verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+        {
+          std::vector<std::string> arg_list(argv, argv + argc);
+          for(const auto &arg : arg_list)
+            std::cout << arg << " ";
+          std::cout << std::endl;
+        }
 
       Environment::set_precision(parameters.precision);
 
@@ -42,7 +50,7 @@ int main(int argc, char **argv)
       Output_SDP sdp(pmp, parameters.command_arguments, timers);
       write_sdp(parameters.output_path, sdp, parameters.output_format,
                 parameters.zip, timers, parameters.verbosity);
-      if(El::mpi::Rank() == 0)
+      if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {
           El::Output("Processed ", sdp.num_blocks, " SDP blocks in ",
                      (double)timer.timer().elapsed_milliseconds() / 1000,
