@@ -13,7 +13,7 @@
 
 For compiling and/or running SDPB, you have to load modules first:
 
-    module load python3/3.8.5 git/2.37.2 cmake/3.25.1 gcc/9.2.0 openmpi/4.1.5 boost/1_81_0_openmpi-4.1.1_gcc-9.2.0 eigen/eigen mpfr/4.0.2 openblas/0.3.6
+    module load boost/1.84.0-gcc-11.3.1-zauawkb gcc/13.2.0-gcc-13.2.0-w55nxkl openmpi/5.0.1-gcc-13.2.0-xpoh5uw libarchive/3.7.1-gcc-13.2.0-bzt555v openblas/0.3.23-gcc-13.2.0-3csynno
 
 You may run `module -t list` to view loaded modules,
 and `module purge` to unload all modules.
@@ -98,9 +98,8 @@ should compile on a login node.
     cd ../..
 
 ## sdpb
-
-    python3 ./waf configure --elemental-dir=$HOME/install --flint-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --mpfr-dir=/central/software/mpfr/4.0.2 --prefix=$HOME/install/sdpb-master
-    python3 ./waf # -j 1
+    CXX=mpicxx ./waf configure --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=/central/software9/spack/opt/spack/linux-rhel9-x86_64/gcc-13.2.0/libarchive-3.7.1-bzt555vawhwq2akdnvmilrsi5ocxdhvj --gmpxx-dir=/central/software9/spack/opt/spack/linux-rhel9-x86_64/gcc-13.2.0/gmp-6.2.1-lcnhysea5isaes4r547jt5nw2qru5ab7 --mpfr-dir=/central/software/mpfr/4.0.2 --flint-dir=$HOME/install --cblas-dir=/central/software9/spack/opt/spack/linux-rhel9-x86_64/gcc-13.2.0/openblas-0.3.23-3csynnoa2r6ctx3khqe5gxye6ukno3mu --prefix=$HOME/install/sdpb-master
+    ./waf # -j 1
     ./test/run_all_tests.sh
-    python3 ./waf install
+    ./waf install
     cd ..

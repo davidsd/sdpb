@@ -53,7 +53,8 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
   basic_options.add_options()(
     "verbosity",
     po::value<Verbosity>(&verbosity)->default_value(Verbosity::regular),
-    "Verbosity.  0 -> no output, 1 -> regular output, 2 -> debug output");
+    "Verbosity.  0 -> no output, 1 -> regular output, 2 -> debug output, 3 -> "
+    "trace output");
 
   po::options_description obsolete_options("Obsolete options");
   obsolete_options.add_options()(

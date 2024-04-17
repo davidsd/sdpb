@@ -230,7 +230,7 @@ namespace
 
 void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
                Block_File_Format block_file_format, bool zip, Timers &timers,
-               const bool debug)
+               const Verbosity verbosity)
 {
   Scoped_Timer write_timer(timers, "write_sdp");
 
@@ -328,7 +328,7 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
           }
       }
   }
-  if(debug)
+  if(verbosity >= Verbosity::debug)
     {
       print_matrix_sizes(rank, sdp.dual_objective_b,
                          sdp.dual_constraint_groups);

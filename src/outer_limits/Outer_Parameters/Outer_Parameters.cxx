@@ -39,7 +39,8 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
     "format. Defaults to 'functions' with the ending '_out.json'.");
   basic_options.add_options()("verbosity",
     po::value<Verbosity>(&verbosity)->default_value(Verbosity::regular),
-    "Verbosity.  0 -> no output, 1 -> regular output, 2 -> debug output");
+    "Verbosity.  0 -> no output, 1 -> regular output, 2 -> debug output, 3 -> "
+    "trace output");
 
   cmd_line_options.add(basic_options);
   po::options_description solver_options(solver.options());

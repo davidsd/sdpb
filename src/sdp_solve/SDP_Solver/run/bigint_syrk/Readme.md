@@ -311,11 +311,9 @@ If we are splitting both P and Q memory windows, then the algorithm reads:
 
 #### How to choose split factors for P and Q
 
-1. Determine memory limit for shared memory windows. Currently, it is set by command-line option, e.g. `--maxSharedMemory=128G`.
+1. Determine memory limit for shared memory windows. Currently, it is set by command-line option, e.g. `--maxSharedMemory=128G`. If the limit is set to `0` or not provided, SDPB will determine it automatically based on expected memory usage and amount of available RAM. 
 2. Choose minimal split factor for Q so that it fits into the memory limit (and leaves some room for P, namely 1 row per each MPI group).
 3. Choose minimal split factor for P so that it fits into remaining memory.
-
-**TODO**: in addition to `--maxSharedMemory`, we can also use our memory usage estimates together with `MemAvailable` value from `/proc/meminfo`.
 
 Note that our top priority is to minimize split factor for Q,
 because splitting Q introduces more significant overhead: (1) expensive reduce-scatter calls and (2) residues for each P

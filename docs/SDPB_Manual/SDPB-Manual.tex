@@ -481,6 +481,7 @@ where $\texttt{dualityGapThreshold} \ll 1$ is chosen by the user.
 \section{Output of \SDPB}
 
 \subsection{Terminal Output}
+\label{sec:terminal-output}
 
 The output from running \SDPB\ on the example problem in section~\ref{sec:example} is in listing~\ref{listing:exampleoutput}.  The input, output, and checkpoint files are listed first, followed by various parameters.  After each iteration, \SDPB\ prints the following:
 \begin{description}
@@ -496,6 +497,7 @@ The output from running \SDPB\ on the example problem in section~\ref{sec:exampl
 \item[\texttt{D-step}:] The dual step length $\alpha_\cD$ described in \cite{DSD}.
 \item[\texttt{beta}:]  The corrector centering parameter $\beta_c$ described in \cite{DSD}.
 \end{description}
+These values are also written to \texttt{iterations.json} in the output folder (see Section \ref{sec:output-file}).
 
 If an optimal solution exists, the primal and dual error will decrease until the problem becomes primal and dual feasible.  Then the primal and dual objective functions start to converge, and the complementarity $\mu$ decreases until the duality gap becomes smaller than \texttt{dualityGapThreshold}.
 
@@ -760,6 +762,7 @@ When using \SDPB\ to determine primal or dual feasibility, one can specify the o
 
 
 \subsection{Output File}
+\label{sec:output-file}
 
 \begin{lstlisting}[
   caption={Contents of the output file \texttt{test/out/sdpb/out.txt} corresponding to listing~\ref{exampleinputfile}. Decimal expansions have been truncated for brevity.  \texttt{Mathematica} uses \texttt{*\^} instead of the character \texttt{e} for scientific notation.  Thus, the output format is not quite suitable for import into \texttt{Mathematica} without modification.  This could be changed in future versions.},
@@ -783,7 +786,12 @@ The output file \texttt{test/out/sdpb/out.txt} corresponding to
 listing~\ref{exampleinputfile} is shown in
 listing~\ref{listing:exampleoutputfile}. It includes the reason for
 termination, the final primal/dual objective values, the final duality
-gap, the final primal/dual errors, and the total runtime. The vector
+gap, the final primal/dual errors, and the total runtime.
+
+The output file \texttt{test/out/sdpb/iterations.json} contains information about each iteration in machine-readable \texttt{JSON} format. It includes all fields printed to terminal (see Section \ref{sec:terminal-output}),
+as well as condition number for matrix $Q$, the worst condition number across all SDP blocks and the name of the corresponding block.
+
+The vector
 $y$ is saved in \texttt{test/out/sdpb/y.txt}, and the two blocks of the $x$ vector
 are saved in \texttt{test/out/sdpb/x\_0.txt} and
 \texttt{test/out/sdpb/x\_1.txt}.

@@ -24,11 +24,18 @@ int main(int argc, char **argv)
         {
           return 0;
         }
+      // Print command line
+      if(parameters.verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+        {
+          std::vector<std::string> arg_list(argv, argv + argc);
+          for(const auto &arg : arg_list)
+            std::cout << arg << " ";
+          std::cout << std::endl;
+        }
 
       Environment::set_precision(parameters.precision);
 
-      const bool debug = parameters.verbosity >= Verbosity::debug;
-      Timers timers(env, debug);
+      Timers timers(env, parameters.verbosity);
       Scoped_Timer timer(timers, "pmp2sdp");
 
       auto pmp
@@ -36,15 +43,15 @@ int main(int argc, char **argv)
 
       Output_SDP sdp(pmp, parameters.command_arguments, timers);
       write_sdp(parameters.output_path, sdp, parameters.output_format,
-                parameters.zip, timers, debug);
-      if(El::mpi::Rank() == 0)
+                parameters.zip, timers, parameters.verbosity);
+      if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {
           El::Output("Processed ", sdp.num_blocks, " SDP blocks in ",
                      (double)timer.timer().elapsed_milliseconds() / 1000,
                      " seconds, output: ", parameters.output_path.string());
         }
 
-      if(debug)
+      if(parameters.verbosity >= Verbosity::debug)
         {
           timers.write_profile(parameters.output_path.string()
                                + ".profiling/profiling."

@@ -1,4 +1,5 @@
 #include "sdp_solve/SDP_Solver.hxx"
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 
 #include <chrono>
 #include <iostream>
@@ -78,28 +79,32 @@ void print_iteration(
     {
       if(iteration != 1)
         os_json << ",";
-      os_json << "\n{ \"iteration\":" << iteration << std::setprecision(3)
-              << ", \"total_time\": " << runtime_seconds
-              << ", \"iter_time\": " << iteration_time_seconds
-              << ", \"mu\": " << mu
-              << ", \"P-obj\": " << sdp_solver.primal_objective
-              << ", \"D-obj\": " << sdp_solver.dual_objective
-              << ", \"gap\": " << sdp_solver.duality_gap
-              << ", \"P-err\": " << sdp_solver.primal_error_P
-              << ", \"p-err\": " << sdp_solver.primal_error_p
-              << ", \"D-err\": " << sdp_solver.dual_error
-              << ", \"P-step\": " << primal_step_length
-              << ", \"D-step\": " << dual_step_length
-              << ", \"beta\": " << beta_corrector
-              << ", \"Q_cond_number\": " << Q_cond_number
-              << ", \"max_block_cond_number\": " << max_block_cond_number
+
+      os_json << "\n{ \"iteration\":" << iteration;
+      os_json << std::setprecision(3) << std::fixed;
+      os_json << ", \"total_time\": " << runtime_seconds
+              << ", \"iter_time\": " << iteration_time_seconds;
+      os_json << std::defaultfloat << set_stream_precision;
+      os_json << ", \"mu\": \"" << mu << "\""
+              << ", \"P-obj\": \"" << sdp_solver.primal_objective << "\""
+              << ", \"D-obj\": \"" << sdp_solver.dual_objective << "\""
+              << ", \"gap\": \"" << sdp_solver.duality_gap << "\""
+              << ", \"P-err\": \"" << sdp_solver.primal_error_P << "\""
+              << ", \"p-err\": \"" << sdp_solver.primal_error_p << "\""
+              << ", \"D-err\": \"" << sdp_solver.dual_error << "\""
+              << ", \"P-step\": \"" << primal_step_length << "\""
+              << ", \"D-step\": \"" << dual_step_length << "\""
+              << ", \"beta\": \"" << beta_corrector << "\""
+              << ", \"Q_cond_number\": \"" << Q_cond_number << "\""
+              << ", \"max_block_cond_number\": \"" << max_block_cond_number
+              << "\""
               << ", \"block_name\": \"" << max_block_cond_number_name << "\""
               << " }";
       ASSERT(Q_cond_number >= 1, DEBUG_STRING(Q_cond_number));
       ASSERT(max_block_cond_number >= 1, DEBUG_STRING(max_block_cond_number));
       ASSERT(!max_block_cond_number_name.empty());
     }
-  if(verbosity >= Verbosity::debug)
+  if(verbosity >= Verbosity::trace)
     {
       El::Output("Cholesky condition number of Q: ", Q_cond_number);
       El::Output("Max Cholesky condition number among blocks: ",

@@ -103,7 +103,7 @@ inline BigInt_Shared_Memory_Syrk_Context
 initialize_bigint_syrk_context(const Environment &env,
                                const Block_Info &block_info, const SDP &sdp,
                                const size_t max_shared_memory_bytes,
-                               const bool debug)
+                               const Verbosity verbosity)
 {
   const Grouped_Block_Size_Info info(env, block_info, sdp);
 
@@ -111,5 +111,5 @@ initialize_bigint_syrk_context(const Environment &env,
     env.comm_shared_mem, info.group_index, info.group_comm_sizes,
     El::gmp::Precision(), max_shared_memory_bytes,
     info.blocks_height_per_group, info.block_width, block_info.block_indices,
-    debug);
+    verbosity);
 }

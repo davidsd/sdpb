@@ -13,7 +13,7 @@ BigInt_Shared_Memory_Syrk_Context::get_blas_job_schedule(Blas_Job::Kind kind,
   auto [it, res] = blas_job_schedule_cache.emplace(
     key, std::make_shared<Blas_Job_Schedule>(create_blas_job_schedule_func(
            kind, uplo, shared_memory_comm.Size(), comb.num_primes,
-           output_height, output_width, debug)));
+           output_height, output_width, verbosity)));
   ASSERT(res);
   return it->second;
 }

@@ -1,13 +1,15 @@
 #include "update_cond_numbers.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
+#include "sdpb_util/memory_estimates.hxx"
+#include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
 // Tr(A B), where A and B are symmetric
 El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
                                          const Block_Diagonal_Matrix &B);
 
 void initialize_schur_complement_solver(
-  const Block_Info &block_info, const SDP &sdp,
+  const Environment &env, const Block_Info &block_info, const SDP &sdp,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     &A_X_inv,
@@ -18,13 +20,13 @@ void initialize_schur_complement_solver(
   Block_Matrix &schur_off_diagonal,
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
   El::DistMatrix<El::BigFloat> &Q, Timers &timers,
-  El::Matrix<int32_t> &block_timings_ms);
+  El::Matrix<int32_t> &block_timings_ms, Verbosity verbosity);
 
 void compute_search_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
-  const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
+  const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat &beta,
   const El::BigFloat &mu, const Block_Vector &primal_residue_p,
   const bool &is_corrector_phase, const El::DistMatrix<El::BigFloat> &Q,
   Block_Vector &dx, Block_Diagonal_Matrix &dX, Block_Vector &dy,
@@ -45,7 +47,8 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
             const std::string &timer_name, Timers &timers);
 
 void SDP_Solver::step(
-  const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
+  const Environment &env, const Solver_Parameters &parameters,
+  const Verbosity &verbosity, const std::size_t &total_psd_rows,
   const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
   const SDP &sdp, const El::Grid &grid,
   const Block_Diagonal_Matrix &X_cholesky,
@@ -74,12 +77,25 @@ void SDP_Solver::step(
   // once in the predictor step, and once in the corrector step.
   Block_Vector dx(x), dy(y);
   Block_Diagonal_Matrix dX(X), dY(Y);
+  if(verbosity >= Verbosity::trace)
+    {
+      print_allocation_message_per_node(env, "dx", get_allocated_bytes(dx));
+      print_allocation_message_per_node(env, "dy", get_allocated_bytes(dy));
+      print_allocation_message_per_node(env, "dX", get_allocated_bytes(dX));
+      print_allocation_message_per_node(env, "dY", get_allocated_bytes(dY));
+    }
   {
     // SchurComplementCholesky = L', the Cholesky decomposition of the
     // Schur complement matrix S.
     Block_Diagonal_Matrix schur_complement_cholesky(
       block_info.schur_block_sizes(), block_info.block_indices,
       block_info.num_points.size(), grid);
+    if(verbosity >= Verbosity::trace)
+      {
+        print_allocation_message_per_node(
+          env, "schur_complement_cholesky",
+          get_allocated_bytes(schur_complement_cholesky));
+      }
 
     // SchurOffDiagonal = L'^{-1} FreeVarMatrix, needed in solving the
     // Schur complement equation.
@@ -95,12 +111,17 @@ void SDP_Solver::step(
     // that N' could change with each iteration.
     El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
                                    sdp.dual_objective_b.Height());
+    if(verbosity >= Verbosity::trace)
+      {
+        print_allocation_message_per_node(env, "Q", get_allocated_bytes(Q));
+      }
 
     // Compute SchurComplement and prepare to solve the Schur
     // complement equation for dx, dy
-    initialize_schur_complement_solver(
-      block_info, sdp, A_X_inv, A_Y, grid, schur_complement_cholesky,
-      schur_off_diagonal, bigint_syrk_context, Q, timers, block_timings_ms);
+    initialize_schur_complement_solver(env, block_info, sdp, A_X_inv, A_Y,
+                                       grid, schur_complement_cholesky,
+                                       schur_off_diagonal, bigint_syrk_context,
+                                       Q, timers, block_timings_ms, verbosity);
 
     // Compute the complementarity mu = Tr(X Y)/X.dim
     Scoped_Timer frobenius_timer(timers, "frobenius_product_symmetric");
