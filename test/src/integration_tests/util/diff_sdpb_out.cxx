@@ -207,7 +207,12 @@ namespace
             const auto [b_key, b_value] = b_iter.at(index);
             DIFF(a_key, b_key);
             // Timings can vary, we ignore them
-            if(a_key == "total_time" || a_key == "iter_time")
+            // "block_name" can be different if several blocks
+            // have the same condition number up to rounding errors.
+            // For example, this happened in test/out/dfibo-0-0-j=3-c=3.0000-d=3-s=6/pmp.xml:
+            // for iteration=1, block_name="block_2" for format=json and block_name="block_19" for format=bin
+            if(a_key == "total_time" || a_key == "iter_time"
+               || a_key == "block_name")
               continue;
             CAPTURE(a_key);
             DIFF(a_value, b_value);
