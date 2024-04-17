@@ -94,28 +94,30 @@ namespace Test_Util
     CAPTURE(stdout_path);
     CAPTURE(stderr_path);
 
+    int exit_code = bp::system(command, bp::std_out > stdout_path,
+                               bp::std_err > stderr_path);
+    // NB: We need separate stderr output to process stderr_string.
+    // TODO: ideally, we want to redirect bp::std_err to both stdout_path and stderr_path
+    // instead of appending stderr to the end ot stdout.
+    // Unfortunately, the following simple solution doesn't do what we need,
+    // since redirections works only for one path:
+    // bp::system(command, (bp::std_out & bp::std_err) > stdout_path, bp::std_err > stderr_path)
+
     std::ofstream os_stdout(stdout_path, std::ios::app);
-    std::ofstream os_stderr(stderr_path, std::ios::app);
-
-    // write command before stdout
+    os_stdout << std::endl << "===Command line===" << std::endl;
     os_stdout << command << std::endl;
+    os_stdout << "===================" << std::endl;
 
-    bp::ipstream stdout_pipe;
-    bp::ipstream stderr_pipe;
-    int exit_code = bp::system(command, bp::std_out > stdout_pipe,
-                               bp::std_err > stderr_pipe);
+    const auto stderr_string = [&] {
+      std::ifstream is_stderr(stderr_path);
+      std::stringstream ss;
+      ss << is_stderr.rdbuf();
+      return ss.str();
+    }();
 
-    // write stdout to file
-    os_stdout << stdout_pipe.rdbuf();
-
-    // write stderr to both stderr and stdout files
-    // we cannot call rdbuf() twice, thus we copy it to stderr_string
-    std::stringstream ss;
-    ss << stderr_pipe.rdbuf();
-    auto stderr_string = ss.str();
-
-    os_stdout << stderr_string;
-    os_stderr << stderr_string;
+    os_stdout << std::endl << "===stderr===" << std::endl;
+    os_stdout << stderr_string << std::endl;
+    os_stdout << "============" << std::endl;
 
     CAPTURE(exit_code);
     CAPTURE(required_exit_code);
