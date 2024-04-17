@@ -54,7 +54,7 @@ public:
 
 private:
   void print_max_mem_used() const;
-  void print_meminfo(const std::string &name);
+  void process_meminfo(const std::string &name);
 };
 
 // Simple RAII timer

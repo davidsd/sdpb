@@ -42,8 +42,7 @@ Timer &Timers::add_and_start(const std::string &name)
 {
   std::string full_name = prefix + name;
 
-  if(verbosity >= Verbosity::trace)
-    print_meminfo(full_name);
+  process_meminfo(full_name);
 
   named_timers.emplace_back(full_name, Timer());
   return named_timers.back().second;
@@ -88,29 +87,41 @@ void Timers::print_max_mem_used() const
     }
 }
 
-void Timers::print_meminfo(const std::string &name)
+// For --verbosity=trace:
+// Print memory usage for the current node (from the first rank).
+// If we cannot parse /proc/meminfo, then simply print timer name.
+//
+// In addition, for --verbosity=debug we update max MemUsed (will be printed in the end).
+void Timers::process_meminfo(const std::string &name)
 {
+  // Do not collect memory info for lower verbosity levels, it will not be used
+  if(verbosity < Verbosity::debug)
+    return;
+
   const auto prefix = El::BuildString(node_debug_prefix, "start ", name, " ");
-
-  // Print memory usage for the current node (from the first rank).
-  // If we cannot parse /proc/meminfo, then simply print timer name.
-
   if(!can_read_meminfo)
     {
-      El::Output(prefix);
+      // Print "start timer" without MemUsed
+      if(verbosity >= Verbosity::trace)
+        El::Output(prefix);
       return;
     }
 
-  bool result;
+  // Read /proc/meminfo
   constexpr bool print_error_msg = true;
-  const auto meminfo = Proc_Meminfo::try_read(result, print_error_msg);
-  if(!result)
+  const auto meminfo
+    = Proc_Meminfo::try_read(can_read_meminfo, print_error_msg);
+
+  // Update max MemUsed info, it will be printed for --verbosity=debug
+  if(meminfo.mem_used() > max_mem_used)
     {
-      can_read_meminfo = false;
-      El::Output("Printing RAM usage will be disabled.");
-      El::Output(prefix);
-      return;
+      max_mem_used = meminfo.mem_used();
+      max_mem_used_name = name;
     }
+
+  // Print "start timer", only for --verbosity=trace
+  if(verbosity < Verbosity::trace)
+    return;
 
   // MemTotal is constant, thus we print it only once, when adding first timer
   if(named_timers.empty())
@@ -120,11 +131,4 @@ void Timers::print_meminfo(const std::string &name)
 
   //Print MemUsed each time
   El::Output(prefix, "--- MemUsed: ", to_GB(meminfo.mem_used()), " GB");
-
-  // Update max MemUsed info
-  if(meminfo.mem_used() > max_mem_used)
-    {
-      max_mem_used = meminfo.mem_used();
-      max_mem_used_name = name;
-    }
 }
