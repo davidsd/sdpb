@@ -84,7 +84,8 @@ void print_iteration(
       os_json << std::setprecision(3) << std::fixed;
       os_json << ", \"total_time\": " << runtime_seconds
               << ", \"iter_time\": " << iteration_time_seconds;
-      os_json << std::defaultfloat << set_stream_precision;
+      os_json << std::defaultfloat;
+      set_stream_precision(os_json);
       os_json << ", \"mu\": \"" << mu << "\""
               << ", \"P-obj\": \"" << sdp_solver.primal_objective << "\""
               << ", \"D-obj\": \"" << sdp_solver.dual_objective << "\""

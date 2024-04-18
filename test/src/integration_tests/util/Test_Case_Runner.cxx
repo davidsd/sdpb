@@ -94,8 +94,8 @@ namespace Test_Util
     CAPTURE(stdout_path);
     CAPTURE(stderr_path);
 
-    int exit_code = bp::system(command, bp::std_out > stdout_path,
-                               bp::std_err > stderr_path);
+    int exit_code = bp::system(command, bp::std_out > stdout_path.string(),
+                               bp::std_err > stderr_path.string());
     // NB: We need separate stderr output to process stderr_string.
     // TODO: ideally, we want to redirect bp::std_err to both stdout_path and stderr_path
     // instead of appending stderr to the end ot stdout.
