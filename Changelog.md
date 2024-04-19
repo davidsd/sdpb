@@ -1,3 +1,36 @@
+# Version 3.0.0
+
+### Optimizations:
+
+Implemented new distributed matrix multiplication algorithm for calculating Q matrix.
+It employs MPI shared windows, Chinese Remainder Theorem, [FLINT](https://flintlib.org/) and BLAS libraries.
+
+Our benchmarks for large SDPB problems demonstrated more than **~2.5x** overall program speedup and much better performance scaling with increasing number of CPUs and nodes, as compared to the 2.7.0 release.
+In addition, improved RAM usage in the new algorithm now allows to solve even larger problems where Q matrix does not fit into single node memory.
+
+See [#142](https://github.com/davidsd/sdpb/pull/142), [#212](https://github.com/davidsd/sdpb/pull/212).
+
+### New features:
+
+- New option `--maxSharedMemory` allowing to reduce memory usage in the new matrix multiplication algorithm. If the limit is not set, it is calculated automatically. See [#209](https://github.com/davidsd/sdpb/pull/209), [#229](https://github.com/davidsd/sdpb/pull/229).
+- Added new `--verbosity trace` level. See [#230](https://github.com/davidsd/sdpb/pull/230).
+
+### Other improvements:
+
+- Print iterations data and condition numbers to `iterations.json` in the output folder. See [#228](https://github.com/davidsd/sdpb/pull/228), [#231](https://github.com/davidsd/sdpb/pull/231), [#232](https://github.com/davidsd/sdpb/pull/232).
+- In debug mode, write profiling data for both timing run and actual run, see [#215](https://github.com/davidsd/sdpb/pull/215).
+- In debug mode, print maximal memory usage [#231](https://github.com/davidsd/sdpb/pull/231).
+- Graceful exit on SIGTERM, see [#208](https://github.com/davidsd/sdpb/pull/208).
+- Build multiplatform Docker image (AMD64+ARM64) on CircleCI, see [#225](https://github.com/davidsd/sdpb/pull/225).
+
+
+### New dependencies:
+
+- [FLINT](https://flintlib.org/) library
+- CBLAS implementation, e.g. [OpenBLAS](https://www.openblas.net/)
+
+See https://github.com/davidsd/sdpb/releases/tag/3.0.0 for the full changelog.
+
 # Version 2.7.0
 
 ### Breaking changes:
