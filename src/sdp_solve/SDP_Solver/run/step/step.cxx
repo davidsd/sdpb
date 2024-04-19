@@ -29,6 +29,7 @@ void initialize_schur_complement_solver(
 
 void compute_search_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
+  const Block_Diagonal_Matrix &minus_XY,
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
   const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat &beta,
@@ -128,10 +129,23 @@ void SDP_Solver::step(
                                        schur_off_diagonal, bigint_syrk_context,
                                        Q, timers, block_timings_ms, verbosity);
 
+    // Calculate matrix product -XY
+    // It will be reused for mu, R-err, compute_search_direction().
+    Scoped_Timer XY_timer(timers, "XY");
+    Block_Diagonal_Matrix minus_XY(X);
+    if(verbosity >= Verbosity::trace)
+      {
+        print_allocation_message_per_node(env, "XY",
+                                          get_allocated_bytes(minus_XY));
+      }
+    scale_multiply_add(El::BigFloat(-1), X, Y, El::BigFloat(0), minus_XY);
+    XY_timer.stop();
+
     // Compute the complementarity mu = Tr(X Y)/X.dim
-    Scoped_Timer frobenius_timer(timers, "frobenius_product_symmetric");
-    mu = frobenius_product_symmetric(X, Y) / total_psd_rows;
-    frobenius_timer.stop();
+    {
+      Scoped_Timer mu_timer(timers, "mu");
+      mu = -minus_XY.trace() / total_psd_rows;
+    }
     if(mu > parameters.max_complementarity)
       {
         terminate_now = true;
@@ -144,16 +158,14 @@ void SDP_Solver::step(
 
     {
       // R = mu * I - XY
-      // R_error = max(abs(R))
+      // R_error = maxAbs(R)
       Scoped_Timer R_error_timer(timers, "R_error");
 
-      Block_Diagonal_Matrix R(X);
+      Block_Diagonal_Matrix R(minus_XY);
       if(verbosity >= Verbosity::trace)
         {
           print_allocation_message_per_node(env, "R", get_allocated_bytes(R));
         }
-      // TODO reuse X*Y for mu and compute_search_direction()
-      scale_multiply_add(El::BigFloat(-1), X, Y, El::BigFloat(0), R);
       R.add_diagonal(mu);
       R_error = R.max_abs();
     }
@@ -165,7 +177,7 @@ void SDP_Solver::step(
       // Compute the predictor solution for (dx, dX, dy, dY)
       beta_predictor = predictor_centering_parameter(
         parameters, is_primal_and_dual_feasible);
-      compute_search_direction(block_info, sdp, *this,
+      compute_search_direction(block_info, sdp, *this, minus_XY,
                                schur_complement_cholesky, schur_off_diagonal,
                                X_cholesky, beta_predictor, mu,
                                primal_residue_p, false, Q, dx, dX, dy, dY);
@@ -179,7 +191,7 @@ void SDP_Solver::step(
         parameters, X, dX, Y, dY, mu, is_primal_and_dual_feasible,
         total_psd_rows);
 
-      compute_search_direction(block_info, sdp, *this,
+      compute_search_direction(block_info, sdp, *this, minus_XY,
                                schur_complement_cholesky, schur_off_diagonal,
                                X_cholesky, beta_corrector, mu,
                                primal_residue_p, true, Q, dx, dX, dy, dY);
