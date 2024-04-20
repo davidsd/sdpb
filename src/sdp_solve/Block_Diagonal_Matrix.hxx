@@ -109,14 +109,14 @@ public:
   }
 
   // The maximal absolute value of the elements of M
-  El::BigFloat max_abs() const
+  [[nodiscard]] El::BigFloat max_abs() const
   {
     El::BigFloat max = 0;
     for(auto &block : blocks)
       {
         max = std::max(El::MaxAbs(block), max);
       }
-    return max;
+    return El::mpi::AllReduce(max, El::mpi::MAX, El::mpi::COMM_WORLD);
   }
 
   friend std::ostream &
