@@ -93,6 +93,7 @@ void print_iteration(
               << ", \"P-err\": \"" << sdp_solver.primal_error_P << "\""
               << ", \"p-err\": \"" << sdp_solver.primal_error_p << "\""
               << ", \"D-err\": \"" << sdp_solver.dual_error << "\""
+              << ", \"R-err\": \"" << sdp_solver.R_error << "\""
               << ", \"P-step\": \"" << primal_step_length << "\""
               << ", \"D-step\": \"" << dual_step_length << "\""
               << ", \"beta\": \"" << beta_corrector << "\""

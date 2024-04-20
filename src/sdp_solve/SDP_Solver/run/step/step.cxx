@@ -8,6 +8,11 @@
 El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
                                          const Block_Diagonal_Matrix &B);
 
+void scale_multiply_add(const El::BigFloat &alpha,
+                        const Block_Diagonal_Matrix &A,
+                        const Block_Diagonal_Matrix &B,
+                        const El::BigFloat &beta, Block_Diagonal_Matrix &C);
+
 void initialize_schur_complement_solver(
   const Environment &env, const Block_Info &block_info, const SDP &sdp,
   const std::array<
@@ -136,6 +141,22 @@ void SDP_Solver::step(
         El::AllReduce(block_timings_ms, El::mpi::COMM_WORLD);
         return;
       }
+
+    {
+      // R = mu * I - XY
+      // R_error = max(abs(R))
+      Scoped_Timer R_error_timer(timers, "R_error");
+
+      Block_Diagonal_Matrix R(X);
+      if(verbosity >= Verbosity::trace)
+        {
+          print_allocation_message_per_node(env, "R", get_allocated_bytes(R));
+        }
+      // TODO reuse X*Y for mu and compute_search_direction()
+      scale_multiply_add(El::BigFloat(-1), X, Y, El::BigFloat(0), R);
+      R.add_diagonal(mu);
+      R_error = R.max_abs();
+    }
 
     {
       Scoped_Timer predictor_timer(timers,
