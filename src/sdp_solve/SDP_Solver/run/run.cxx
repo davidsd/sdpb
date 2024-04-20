@@ -124,9 +124,9 @@ namespace
     mem_required_size += schur_complement_size;
 
     // Add either schur_complement from initialize_schur_complement_solver(),
-    // or R,Z from compute_search_direction().
+    // or XY,R,Z from compute_search_direction().
     // (they do not coexist, thus we choose maximum size instead of adding both)
-    mem_required_size += std::max(schur_complement_size, 2 * X_size);
+    mem_required_size += std::max(schur_complement_size, 3 * X_size);
 
     // schur_off_diagonal = L^{-1} B
     mem_required_size += B_size;
