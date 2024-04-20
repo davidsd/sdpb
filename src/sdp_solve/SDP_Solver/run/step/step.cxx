@@ -1,12 +1,8 @@
+#include "compute_R_error.hxx"
 #include "update_cond_numbers.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdpb_util/memory_estimates.hxx"
-#include "sdpb_util/ostream/pretty_print_bytes.hxx"
-
-// Tr(A B), where A and B are symmetric
-El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
-                                         const Block_Diagonal_Matrix &B);
 
 void scale_multiply_add(const El::BigFloat &alpha,
                         const Block_Diagonal_Matrix &A,
@@ -156,19 +152,9 @@ void SDP_Solver::step(
         return;
       }
 
-    {
-      // R = mu * I - XY
-      // R_error = maxAbs(R)
-      Scoped_Timer R_error_timer(timers, "R_error");
-
-      Block_Diagonal_Matrix R(minus_XY);
-      if(verbosity >= Verbosity::trace)
-        {
-          print_allocation_message_per_node(env, "R", get_allocated_bytes(R));
-        }
-      R.add_diagonal(mu);
-      R_error = R.max_abs();
-    }
+    // R = mu * I - XY
+    // R_error = maxAbs(R)
+    R_error = compute_R_error(mu, minus_XY, timers);
 
     {
       Scoped_Timer predictor_timer(timers,
