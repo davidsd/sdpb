@@ -185,8 +185,15 @@ Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
 
   sample_scalings = sample_scalings_or_default(sample_scalings_opt,
                                                this->sample_points, prefactor);
-  reduced_sample_scalings = sample_scalings_or_default(
-    reduced_sample_scalings_opt, this->sample_points, reduced_prefactor);
+  reduced_sample_scalings = [&] {
+    if(reduced_sample_scalings_opt.has_value()
+       || reduced_prefactor_opt.has_value())
+      {
+        return sample_scalings_or_default(
+          reduced_sample_scalings_opt, this->sample_points, reduced_prefactor);
+      }
+    return sample_scalings;
+  }();
 
   bilinear_basis = bilinear_basis_or_default(bilinear_basis_opt, sample_points,
                                              reduced_sample_scalings);
