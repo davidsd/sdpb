@@ -71,6 +71,7 @@ public:
   //
   Block_Vector dual_residues;
   El::BigFloat dual_error; // maxAbs(dualResidues)
+  El::BigFloat R_error;    // maxAbs(R = mu * I - XY)
 
   int64_t current_generation;
   boost::optional<int64_t> backup_generation;

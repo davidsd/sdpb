@@ -789,7 +789,7 @@ termination, the final primal/dual objective values, the final duality
 gap, the final primal/dual errors, and the total runtime.
 
 The output file \texttt{test/out/sdpb/iterations.json} contains information about each iteration in machine-readable \texttt{JSON} format. It includes all fields printed to terminal (see Section \ref{sec:terminal-output}),
-as well as condition number for matrix $Q$, the worst condition number across all SDP blocks and the name of the corresponding block.
+as well as the quantity \texttt{R-err} = $||\mu I - XY ||_{\rm max}$, condition number for matrix $Q$, the worst condition number across all SDP blocks and the name of the corresponding block.
 
 The vector
 $y$ is saved in \texttt{test/out/sdpb/y.txt}, and the two blocks of the $x$ vector

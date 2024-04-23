@@ -23,8 +23,10 @@ def configure(conf):
 def build(bld):
     default_flags = ['-Wall', '-Wextra', '-Werror=return-type', '-O3', '-g']
     default_defines = ['OMPI_SKIP_MPICXX', 'SDPB_VERSION_STRING="' + bld.env.git_version + '"']
-    use_packages = ['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'cblas',
-                    'sdpb_util']
+    external_packages = ['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'flint',
+                         'cblas']
+    # All binaries (except for sdpb_util itself) depend also on sdpb_util
+    use_packages = external_packages + ['sdpb_util']
     default_includes = ['src', 'external']
 
     bld.stlib(source=['src/sdpb_util/copy_matrix.cxx',
@@ -39,7 +41,7 @@ def build(bld):
               cxxflags=default_flags,
               defines=default_defines,
               includes=default_includes,
-              use=['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'cblas'])
+              use=external_packages)
 
     sdp_solve_sources = ['src/sdp_solve/Solver_Parameters/Solver_Parameters.cxx',
                          'src/sdp_solve/Solver_Parameters/ostream.cxx',
@@ -115,7 +117,7 @@ def build(bld):
               cxxflags=default_flags,
               defines=default_defines,
               includes=default_includes,
-              use=use_packages + ['pmp2sdp_lib', 'flint'])
+              use=use_packages + ['pmp2sdp_lib'])
 
     dynamical_solve_sources = [
         'src/approx_objective/Approx_Objective/Approx_Objective/Approx_Objective.cxx',
