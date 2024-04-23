@@ -224,7 +224,8 @@ namespace
             if(a_key == "block_name")
               continue;
             // Errors may differ as they approach zero
-            if(a_key == "P-err" || a_key == "p-err" || a_key == "D-err")
+            if(a_key == "P-err" || a_key == "p-err" || a_key == "D-err"
+               || a_key == "R-err")
               continue;
 
             CAPTURE(a_key);
