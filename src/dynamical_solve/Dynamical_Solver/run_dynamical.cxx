@@ -9,6 +9,8 @@
 #include <iostream>
 #include <fstream>
 
+namespace fs = std::filesystem;
+
 //Functions from SDP_Solver
 void cholesky_decomposition(const Block_Diagonal_Matrix &A,
                             Block_Diagonal_Matrix &L,
@@ -19,20 +21,28 @@ void print_header_dynamical(const Verbosity &verbosity);
 void print_header_dynamical_new(const Verbosity &verbosity);
 
 void print_iteration(
-  const int &iteration, const El::BigFloat &mu,
-  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
-  const El::BigFloat &beta, const Dynamical_Solver &dynamical_solver,
+  const std::filesystem::path &iterations_json_path, const int &iteration,
+  const El::BigFloat &mu, const El::BigFloat &primal_step_length,
+  const El::BigFloat &dual_step_length, const El::BigFloat &beta,
+  const Dynamical_Solver &dynamical_solver,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time,
-  const Verbosity &verbosity);
+  const std::chrono::time_point<std::chrono::high_resolution_clock>
+    &iteration_start_time,
+  const El::BigFloat &Q_cond_number, const El::BigFloat &max_block_cond_number,
+  const std::string &max_block_cond_number_name, const Verbosity &verbosity);
 
 void print_iteration_new(
-  const int &iteration, const El::BigFloat &mu,
-  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
-  const El::BigFloat &beta, const Dynamical_Solver &dynamical_solver,
+  const std::filesystem::path &iterations_json_path, const int &iteration,
+  const El::BigFloat &mu, const El::BigFloat &primal_step_length,
+  const El::BigFloat &dual_step_length, const El::BigFloat &beta,
+  const Dynamical_Solver &dynamical_solver,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time,
-  const Verbosity &verbosity);
+  const std::chrono::time_point<std::chrono::high_resolution_clock>
+    &iteration_start_time,
+  const El::BigFloat &Q_cond_number, const El::BigFloat &max_block_cond_number,
+  const std::string &max_block_cond_number_name, const Verbosity &verbosity);
 
 void compute_objectives(const SDP &sdp, const Block_Vector &x,
                         const Block_Vector &y, El::BigFloat &primal_objective,
@@ -84,8 +94,9 @@ Dynamical_Solver_Terminate_Reason Dynamical_Solver::run_dynamical(
   const Dynamical_Solver_Parameters &dynamical_parameters,
   const Verbosity &verbosity, const SDP &sdp,
   const boost::property_tree::ptree &parameter_properties,
-  const Block_Info &block_info, const El::Grid &grid, Timers &timers,
-  bool &update_sdp, El::Matrix<El::BigFloat> &extParamStep,
+  const Block_Info &block_info, const El::Grid &grid,
+  const fs::path &iterations_json_path, Timers &timers, bool &update_sdp,
+  El::Matrix<El::BigFloat> &extParamStep,
   El::Matrix<int32_t> &block_timings_ms)
 {
   parameter_properties_save = parameter_properties;
@@ -127,6 +138,44 @@ Dynamical_Solver_Terminate_Reason Dynamical_Solver::run_dynamical(
 
   initialize_timer.stop();
   auto last_checkpoint_time(std::chrono::high_resolution_clock::now());
+
+  if(El::mpi::Rank() == 0)
+    {
+      // Copy old iterations.json e.g. to iterations.0.json
+      if(fs::exists(iterations_json_path))
+        {
+          const auto parent_dir = iterations_json_path.parent_path();
+          for(size_t index = 0; index < std::numeric_limits<size_t>::max();
+              ++index)
+            {
+              const fs::path backup_path
+                = parent_dir
+                  / ("iterations." + std::to_string(index) + ".json");
+              if(!fs::exists(backup_path))
+                {
+                  if(verbosity >= Verbosity::debug)
+                    El::Output("Move old ", iterations_json_path, " to ",
+                               backup_path);
+                  fs::rename(iterations_json_path, backup_path);
+                  break;
+                }
+            }
+        }
+
+      // Open JSON array
+      std::ofstream iterations_json;
+      iterations_json.open(iterations_json_path);
+      if(iterations_json.good())
+        {
+          iterations_json << "[";
+        }
+      else
+        {
+          if(!iterations_json_path.empty())
+            PRINT_WARNING("Cannot write to ", iterations_json_path);
+        }
+    }
+
   size_t iteration = 1;
   bool find_zeros = false;
   El::BigFloat mu;
@@ -146,7 +195,16 @@ Dynamical_Solver_Terminate_Reason Dynamical_Solver::run_dynamical(
         sigterm = El::mpi::AllReduce(sigterm, El::mpi::LOGICAL_OR,
                                      El::mpi::COMM_WORLD);
         if(sigterm)
-          return Dynamical_Solver_Terminate_Reason::SIGTERM_Received;
+          {
+            if(El::mpi::Rank() == 0 && !iterations_json_path.empty())
+              {
+                std::ofstream iterations_json;
+                iterations_json.open(iterations_json_path, std::ios::app);
+                if(iterations_json.good())
+                  iterations_json << "\n]";
+              }
+            return Dynamical_Solver_Terminate_Reason::SIGTERM_Received;
+          }
       }
 
       El::byte checkpoint_now(
@@ -158,6 +216,7 @@ Dynamical_Solver_Terminate_Reason Dynamical_Solver::run_dynamical(
       El::mpi::Broadcast(checkpoint_now, 0, El::mpi::COMM_WORLD);
       if(checkpoint_now == true)
         {
+          Scoped_Timer save_timer(timers, "save_checkpoint");
           save_checkpoint(
             dynamical_parameters.solver_parameters.checkpoint_out, verbosity,
             parameter_properties);
@@ -202,15 +261,18 @@ Dynamical_Solver_Terminate_Reason Dynamical_Solver::run_dynamical(
 
       //El::BigFloat mu;
       El::BigFloat beta_predictor;
+      El::BigFloat Q_cond_number;
+      El::BigFloat max_block_cond_number;
+      std::string max_block_cond_number_name;
       {
         external_step_size = 0;
-        dynamical_step(env, dynamical_parameters, total_psd_rows,
-                       is_primal_and_dual_feasible, block_info, sdp, grid,
-                       X_cholesky, Y_cholesky, A_X_inv, A_Y, primal_residue_p,
-                       bigint_syrk_context, mu, beta_predictor,
-                       primal_step_length, dual_step_length, terminate_now,
-                       timers, update_sdp, find_zeros, extParamStep,
-                       block_timings_ms, verbosity);
+        dynamical_step(
+          env, dynamical_parameters, verbosity, total_psd_rows,
+          is_primal_and_dual_feasible, block_info, sdp, grid, X_cholesky,
+          Y_cholesky, A_X_inv, A_Y, primal_residue_p, bigint_syrk_context, mu,
+          beta_predictor, primal_step_length, dual_step_length, terminate_now,
+          timers, update_sdp, find_zeros, extParamStep, block_timings_ms,
+          Q_cond_number, max_block_cond_number, max_block_cond_number_name);
         final_beta = beta_predictor;
 
         if(verbosity >= Verbosity::trace && El::mpi::Rank() == 0)
@@ -239,13 +301,17 @@ Dynamical_Solver_Terminate_Reason Dynamical_Solver::run_dynamical(
         }
 
       if(dynamical_parameters.printMore)
-        print_iteration_new(iteration, mu, primal_step_length,
-                            dual_step_length, beta_predictor, *this,
-                            solver_timer.start_time(), verbosity);
+        print_iteration_new(
+          iterations_json_path, iteration, mu, primal_step_length,
+          dual_step_length, beta_predictor, *this, solver_timer.start_time(),
+          iteration_timer.start_time(), Q_cond_number, max_block_cond_number,
+          max_block_cond_number_name, verbosity);
       else
-        print_iteration(iteration, mu, primal_step_length, dual_step_length,
-                        beta_predictor, *this, solver_timer.start_time(),
-                        verbosity);
+        print_iteration(
+          iterations_json_path, iteration, mu, primal_step_length,
+          dual_step_length, beta_predictor, *this, solver_timer.start_time(),
+          iteration_timer.start_time(), Q_cond_number, max_block_cond_number,
+          max_block_cond_number_name, verbosity);
 
       if(update_sdp)
         {
@@ -257,6 +323,13 @@ Dynamical_Solver_Terminate_Reason Dynamical_Solver::run_dynamical(
   if(El::mpi::Rank() == 0)
     std::cout << "hess_BFGS_updateQ = " << hess_BFGS_updateQ << "\n"
               << std::flush;
+  if(El::mpi::Rank() == 0 && !iterations_json_path.empty())
+    {
+      std::ofstream iterations_json;
+      iterations_json.open(iterations_json_path, std::ios::app);
+      if(iterations_json.good())
+        iterations_json << "\n]";
+    }
 
   if(terminate_reason != Dynamical_Solver_Terminate_Reason::UpdateSDPs)
     {

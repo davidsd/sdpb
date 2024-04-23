@@ -49,9 +49,12 @@ Timers solve(const Block_Info &block_info,
 
   const std::filesystem::path out_path(parameters.out_directory
                                        / "externalParamStep.txt");
+  const auto iterations_json_path
+    = parameters.out_directory / "iterations.json";
   Dynamical_Solver_Terminate_Reason reason(solver.run_dynamical(
     env, parameters.solver, parameters.verbosity, sdp, parameters_tree,
-    block_info, grid, timers, update_sdp, extParamStep, block_timings_ms));
+    block_info, grid, iterations_json_path, timers, update_sdp, extParamStep,
+    block_timings_ms));
 
   if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
     {

@@ -11,6 +11,7 @@
 #include "pmp_read/pmp_read.hxx"
 #include "imports.hxx"
 #include "approx_objective/Approx_Objective.hxx"
+#include "sdp_solve/SDP_Solver/run/step/update_cond_numbers.hxx"
 
 //Compute dx and dy of the central sdp as the standard sdp_solver does in predictor phase.
 //Correspond to - H^-1_xx Del_p L_mu in Eq(13).
@@ -442,8 +443,9 @@ bool external_corrector_jump_to_newSDP = true;
 void Dynamical_Solver::dynamical_step(
   const Environment &env,
   const Dynamical_Solver_Parameters &dynamical_parameters,
-  const std::size_t &total_psd_rows, const bool &is_primal_and_dual_feasible,
-  const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
+  const Verbosity &verbosity, const std::size_t &total_psd_rows,
+  const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
+  const SDP &sdp, const El::Grid &grid,
   const Block_Diagonal_Matrix &X_cholesky,
   const Block_Diagonal_Matrix &Y_cholesky,
   const std::array<
@@ -457,7 +459,8 @@ void Dynamical_Solver::dynamical_step(
   El::BigFloat &beta, El::BigFloat &primal_step_length,
   El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
   bool &update_sdp, bool &find_zeros, El::Matrix<El::BigFloat> &external_step,
-  El::Matrix<int32_t> &block_timings_ms, const Verbosity verbosity)
+  El::Matrix<int32_t> &block_timings_ms, El::BigFloat &Q_cond_number,
+  El::BigFloat &max_block_cond_number, std::string &max_block_cond_number_name)
 {
   Scoped_Timer step_timer(timers, "dynamical_step");
 
@@ -487,6 +490,15 @@ void Dynamical_Solver::dynamical_step(
         env, block_info, sdp, A_X_inv, A_Y, grid, schur_complement_cholesky,
         schur_off_diagonal, bigint_syrk_context, Q, timers, block_timings_ms,
         verbosity);
+      // Update condition numbers.
+      // Note that X_Cholesky and Y_cholesky are const,
+      // while Q and schur_complement_cholesky are updated either in
+      // initialize_schur_complement_solver() or in read_sdp_grid() below.
+      // TODO: update them once before returing from dynamical_step()?
+      // That should be better, but there are too many return statements.
+      update_cond_numbers(Q, block_info, schur_complement_cholesky, X_cholesky,
+                          Y_cholesky, timers, Q_cond_number,
+                          max_block_cond_number, max_block_cond_number_name);
       // Synchronize block timings
       Scoped_Timer block_timings_timer(timers, "block_timings_AllReduce");
       El::AllReduce(block_timings_ms, El::mpi::COMM_WORLD);
@@ -683,6 +695,15 @@ void Dynamical_Solver::dynamical_step(
                 schur_complement_cholesky, schur_off_diagonal, Q, x, y,
                 X_cholesky, n_external_parameters, eplus, eminus, esum, Lpu,
                 grad_withoutlog, grad_withlog, H_xp, Delta_xy);
+  // Update condition numbers.
+  // Note that X_Cholesky and Y_cholesky are const,
+  // while Q and schur_complement_cholesky are updated either in read_sdp_grid()
+  // or in initialize_schur_complement_solver() above.
+  // TODO: update them once before returing from dynamical_step()?
+  // That should be better, but there are too many return statements.
+  update_cond_numbers(Q, block_info, schur_complement_cholesky, X_cholesky,
+                      Y_cholesky, timers, Q_cond_number,
+                      max_block_cond_number, max_block_cond_number_name);
 
   /**/
   if(El::mpi::Rank() == 0)
