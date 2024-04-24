@@ -170,7 +170,27 @@ namespace
 std::vector<Boost_Float>
 sample_points(const size_t &num_points, const Damped_Rational &prefactor)
 {
+  if(num_points == 1)
+    {
+      if(!prefactor.poles.empty())
+        {
+          PRINT_WARNING("Prefactor for a constant constraint has poles: ",
+                        DEBUG_STRING(prefactor));
+        }
+      // For constant constraints (degree-0 polynomials),
+      // we can choose any sample point, so we choose 0.
+      // Usually there will be a constant prefactor = 1,
+      // or a default prefactor exp(-x),
+      // both leading to trivial sample_scalings={1}.
+      return {0};
+    }
+
+  // Calculate analytic sample points
+
   std::vector<Boost_Float> points(num_points);
+
+  // For base>=1, integrals diverge and we cannot get meaningful answer.
+  ASSERT(prefactor.base < 1, DEBUG_STRING(prefactor));
 
   // Number of small points
   size_t num_small_points = std::count_if(

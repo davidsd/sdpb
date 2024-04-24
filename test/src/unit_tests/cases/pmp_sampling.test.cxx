@@ -193,6 +193,24 @@ TEST_CASE("pmp_sampling")
       do_test(prefactor, degree, points, scalings, bilinear_bases,
               diff_precision);
     }
+
+    SECTION("prefactor=1, degree=0")
+    {
+      INFO("Special case: constant prefactor and constant constraints. "
+           "In that case, we can choose any sample point. "
+           "SDPB chooses 0.");
+      const size_t degree = 0;
+      const Damped_Rational prefactor{1, 1, {}};
+
+      const std::vector<El::BigFloat> points{0};
+      const std::vector<El::BigFloat> scalings{1};
+      std::array<El::Matrix<El::BigFloat>, 2> bilinear_bases;
+      bilinear_bases[0] = to_matrix<El::BigFloat>({{1}});
+      bilinear_bases[1] = El::Matrix<El::BigFloat>(0, 1);
+
+      do_test(prefactor, degree, points, scalings, bilinear_bases,
+              diff_precision);
+    }
   }
 
   SECTION("Crash tests")
