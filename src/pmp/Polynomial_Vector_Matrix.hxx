@@ -55,7 +55,8 @@ struct Polynomial_Vector_Matrix
     const std::optional<std::vector<El::BigFloat>> &sample_points_opt,
     const std::optional<std::vector<El::BigFloat>> &sample_scalings_opt,
     const std::optional<std::vector<El::BigFloat>> &reduced_sample_scalings_opt,
-    const std::optional<Polynomial_Vector> &bilinear_basis_opt) noexcept(false);
+    const std::optional<std::array<Polynomial_Vector, 2>>
+      &bilinear_basis_opt) noexcept(false);
 
   void validate(int64_t max_degree) const;
 };

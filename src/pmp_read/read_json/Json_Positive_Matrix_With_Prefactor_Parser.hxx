@@ -26,7 +26,7 @@ private:
   std::optional<std::vector<El::BigFloat>> sample_points;
   std::optional<std::vector<El::BigFloat>> sample_scalings;
   std::optional<std::vector<El::BigFloat>> reduced_sample_scalings;
-  std::optional<Polynomial_Vector> bilinear_basis;
+  std::optional<std::array<Polynomial_Vector, 2>> bilinear_basis;
 
 public:
   Json_Positive_Matrix_With_Prefactor_Parser(
@@ -36,7 +36,7 @@ public:
       : Abstract_Json_Object_Parser(skip, on_parsed, on_skipped),
         polynomials_parser(skip,
                            [this](Matrix_Of_Polynomial_Vectors &&pvm) {
-                             polynomials = std::make_optional(std::move(pvm));
+                             this->polynomials = std::move(pvm);
                            }),
         prefactor_parser(skip,
                          [this](Damped_Rational &&damped_rational) {
@@ -61,10 +61,23 @@ public:
           [this](std::vector<El::BigFloat> &&scalings) {
             this->reduced_sample_scalings = std::move(scalings);
           }),
-        bilinear_basis_parser(
-          skip, [this](Polynomial_Vector &&bilinear_basis) {
-            this->bilinear_basis = std::move(bilinear_basis);
-          })
+        bilinear_basis_parser(skip,
+                              [this](Polynomial_Vector &&value) {
+                                if(!this->bilinear_basis.has_value())
+                                  this->bilinear_basis = {value, value};
+                              }),
+        bilinear_basis_0_parser(skip,
+                                [this](Polynomial_Vector &&value) {
+                                  if(!this->bilinear_basis.has_value())
+                                    this->bilinear_basis.emplace();
+                                  this->bilinear_basis.value()[0]
+                                    = std::move(value);
+                                }),
+        bilinear_basis_1_parser(skip, [this](Polynomial_Vector &&value) {
+          if(!this->bilinear_basis.has_value())
+            this->bilinear_basis.emplace();
+          this->bilinear_basis.value()[1] = std::move(value);
+        })
   {}
 
 private:
@@ -75,6 +88,8 @@ private:
   Json_Float_Vector_Parser<El::BigFloat> sample_scalings_parser;
   Json_Float_Vector_Parser<El::BigFloat> reduced_sample_scalings_parser;
   Json_Polynomial_Vector_Parser bilinear_basis_parser;
+  Json_Polynomial_Vector_Parser bilinear_basis_0_parser;
+  Json_Polynomial_Vector_Parser bilinear_basis_1_parser;
 
 protected:
   Abstract_Json_Reader_Handler &element_parser(const std::string &key) override
@@ -93,6 +108,10 @@ protected:
       return reduced_sample_scalings_parser;
     if(key == "bilinearBasis")
       return bilinear_basis_parser;
+    if(key == "bilinearBasis_0")
+      return bilinear_basis_0_parser;
+    if(key == "bilinearBasis_1")
+      return bilinear_basis_1_parser;
     RUNTIME_ERROR("unknown key=", key);
   }
 
@@ -102,9 +121,9 @@ public:
     ASSERT(polynomials.has_value(), "polynomials not found");
     const auto matrix = to_matrix(std::move(polynomials).value());
     // TODO add move ctor for Polynomial_Vector_Matrix?
-    return Polynomial_Vector_Matrix(matrix, prefactor, reduced_prefactor,
-                                    sample_points, sample_scalings,
-                                    reduced_sample_scalings, bilinear_basis);
+    return Polynomial_Vector_Matrix(
+      matrix, prefactor, reduced_prefactor, sample_points, sample_scalings,
+      reduced_sample_scalings, bilinear_basis);
   }
   void clear_result() override
   {
@@ -120,7 +139,10 @@ public:
     polynomials_parser.reset(skip);
     sample_points_parser.reset(skip);
     sample_scalings_parser.reset(skip);
+
     bilinear_basis_parser.reset(skip);
+    bilinear_basis_0_parser.reset(skip);
+    bilinear_basis_1_parser.reset(skip);
   }
 };
 

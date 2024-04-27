@@ -102,46 +102,46 @@ namespace
       sample_scalings(to_Boost_Float_Vector(sample_points), damped_rational));
   }
 
+  // NB: result is truncated to (delta1+1, delta2+1)
   std::array<Polynomial_Vector, 2> bilinear_basis_or_default(
-    const std::optional<Polynomial_Vector> &bilinear_basis_opt,
+    const std::optional<std::array<Polynomial_Vector, 2>> &bilinear_basis_opt,
     const std::vector<El::BigFloat> &sample_points,
     const std::vector<El::BigFloat> &sample_scalings)
   {
-    if(bilinear_basis_opt.has_value())
+    if(!bilinear_basis_opt.has_value())
       {
-        const auto &basis_all = bilinear_basis_opt.value();
-
-        std::array<Polynomial_Vector, 2> basis;
-        const size_t degree = sample_points.size() - 1;
-        const size_t delta1 = degree / 2;
-
-        // Check input size.
-        // delta1 >= delta2 always, so we need to compare only with (delta1 + 1)
-        if(basis_all.size() < delta1 + 1)
-          {
-            RUNTIME_ERROR("PMP: bilinearBases size=", basis_all.size(),
-                          ", required at least ", delta1 + 1);
-          }
-        if(basis_all.size() > delta1 + 1)
-          {
-            PRINT_WARNING("PMP: bilinearBases size=", basis_all.size(),
-                          " is too large, only the first ", delta1 + 1,
-                          " polynomials will be used");
-          }
-
-        basis[0] = Polynomial_Vector(basis_all.begin(),
-                                     basis_all.begin() + delta1 + 1);
-        if(degree > 0)
-          {
-            const size_t delta2 = (degree + 1) / 2 - 1;
-            basis[1] = Polynomial_Vector(basis_all.begin(),
-                                         basis_all.begin() + delta2 + 1);
-            // otherwise keep basis[1] empty
-          }
-        return basis;
+        return bilinear_basis(sample_points, sample_scalings);
       }
 
-    return bilinear_basis(sample_points, sample_scalings);
+    std::array<Polynomial_Vector, 2> basis;
+    ASSERT(!sample_points.empty());
+    const size_t degree = sample_points.size() - 1;
+
+    for(const size_t parity : {0, 1})
+      {
+        // basis_size = delta + 1
+        const size_t basis_size
+          = parity == 0 ? degree / 2 + 1 : (degree + 1) / 2;
+        const auto &input_basis = bilinear_basis_opt.value()[parity];
+
+        // Check input size.
+        if(input_basis.size() < basis_size)
+          {
+            RUNTIME_ERROR("PMP: bilinearBasis_", parity,
+                          " size=", input_basis.size(), ", required at least ",
+                          basis_size);
+          }
+        if(input_basis.size() > basis_size)
+          {
+            PRINT_WARNING("PMP: bilinearBasis_", parity,
+                          " size=", input_basis.size(),
+                          " is too large, only the first ", basis_size,
+                          " polynomials will be used");
+          }
+        basis[parity] = Polynomial_Vector(input_basis.begin(),
+                                          input_basis.begin() + basis_size);
+      }
+    return basis;
   }
 }
 
@@ -152,7 +152,7 @@ Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
   const std::optional<std::vector<El::BigFloat>> &sample_points_opt,
   const std::optional<std::vector<El::BigFloat>> &sample_scalings_opt,
   const std::optional<std::vector<El::BigFloat>> &reduced_sample_scalings_opt,
-  const std::optional<Polynomial_Vector> &bilinear_basis_opt)
+  const std::optional<std::array<Polynomial_Vector, 2>> &bilinear_basis_opt)
 {
   this->polynomials = polynomials;
   const auto prefactor = prefactor_or_default(prefactor_opt);
