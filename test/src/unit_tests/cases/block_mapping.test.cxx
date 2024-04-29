@@ -1,7 +1,6 @@
 #include <catch2/catch_amalgamated.hpp>
 
 #include "sdpb_util/block_mapping/compute_block_grid_mapping.hxx"
-#include "sdpb_util/ostream/ostream_vector.hxx"
 #include "test_util/diff.hxx"
 #include "unit_tests/util/util.hxx"
 
@@ -14,20 +13,6 @@ void diff(const Block_Map &a, const Block_Map &b)
   DIFF(a.num_procs, b.num_procs);
   DIFF(a.cost, b.cost);
   DIFF(a.block_indices, b.block_indices);
-}
-
-std::ostream &operator<<(std::ostream &os, const Block_Map &block_map)
-{
-  // return os << "block_indices=" << block_map.block_indices
-  //           << " num_procs=" << block_map.num_procs
-  //           << " cost=" << block_map.cost;
-  return os << "{" << block_map.num_procs << ", " << block_map.cost << ", "
-            << block_map.block_indices << "}";
-}
-
-std::ostream &operator<<(std::ostream &os, const Block_Cost &block_cost)
-{
-  return os << "{" << block_cost.cost << "," << block_cost.index << "}";
 }
 
 namespace

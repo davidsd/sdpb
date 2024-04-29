@@ -49,10 +49,25 @@
 #include "Block_Cost.hxx"
 #include "Block_Map.hxx"
 #include "sdpb_util/assert.hxx"
+#include "sdpb_util/ostream/ostream_vector.hxx"
 
 #include <algorithm>
 #include <limits>
 #include <numeric>
+
+inline std::ostream &operator<<(std::ostream &os, const Block_Map &block_map)
+{
+  // return os << "block_indices=" << block_map.block_indices
+  //           << " num_procs=" << block_map.num_procs
+  //           << " cost=" << block_map.cost;
+  return os << "{" << block_map.num_procs << ", " << block_map.cost << ", "
+            << block_map.block_indices << "}";
+}
+
+inline std::ostream &operator<<(std::ostream &os, const Block_Cost &block_cost)
+{
+  return os << "{" << block_cost.cost << "," << block_cost.index << "}";
+}
 
 inline std::vector<std::vector<Block_Map>>
 compute_block_grid_mapping(const size_t &procs_per_node,
@@ -82,6 +97,8 @@ compute_block_grid_mapping(const size_t &procs_per_node,
     }));
 
   size_t remaining_cost(total_cost), remaining_procs(num_procs);
+  // TODO for debug
+  El::Output("Adding large blocks...");
   for(auto block(block_costs.begin()); block != multi_proc_end; ++block)
     {
       // Always add block_map's to the node with the most available
@@ -95,6 +112,11 @@ compute_block_grid_mapping(const size_t &procs_per_node,
         available_procs[max_available_node],
         std::max(size_t(1), size_t(block->cost * num_procs / total_cost)));
       Block_Map block_map(procs_for_block, block->cost, {block->index});
+      // TODO for debug
+      El::Output("Add block=", block->index, " cost=", block->cost,
+                 " to node=", max_available_node,
+                 " group=", result[max_available_node].size(),
+                 " procs=", procs_for_block);
       result[max_available_node].push_back(block_map);
       available_procs[max_available_node] -= procs_for_block;
       remaining_cost -= block->cost;
@@ -146,10 +168,17 @@ compute_block_grid_mapping(const size_t &procs_per_node,
         }
     }
 
+  // TODO for debug
+  El::Output("available_block_maps=", available_block_maps);
+
+  // TODO for debug
+  El::Output("Adding small blocks...");
   for(auto block(multi_proc_end); block != block_costs.end(); ++block)
     {
       size_t min_cost(std::numeric_limits<size_t>::max());
       auto min_block(available_block_maps.at(0).end());
+
+      size_t curr_node = std::numeric_limits<size_t>::max();
       for(size_t node(0); node < num_nodes; ++node)
         {
           if(!available_block_maps[node].empty())
@@ -160,6 +189,7 @@ compute_block_grid_mapping(const size_t &procs_per_node,
                 {
                   min_block = block;
                   min_cost = block->cost;
+                  curr_node = node;
                 }
             }
         }
@@ -170,11 +200,19 @@ compute_block_grid_mapping(const size_t &procs_per_node,
         }
       min_block->cost += block->cost;
       min_block->block_indices.push_back(block->index);
+
+      // TODO debug
+      El::Output(
+        "Add block=", block->index, " cost=", block->cost,
+        " to node=", curr_node, " group=",
+        std::distance(available_block_maps[curr_node].begin(), min_block),
+        " procs=", 1);
     }
   for(size_t node = 0; node < num_nodes; ++node)
     for(auto &available : available_block_maps[node])
       {
         result[node].push_back(available);
       }
+  El::Output(DEBUG_STRING(result));
   return result;
 }
