@@ -175,6 +175,9 @@ compute_block_grid_mapping(const size_t &procs_per_node,
   El::Output("Adding small blocks...");
   for(auto block(multi_proc_end); block != block_costs.end(); ++block)
     {
+      // TODO debug
+      El::Output("  processing ", DEBUG_STRING(*block));
+
       size_t min_cost(std::numeric_limits<size_t>::max());
       auto min_block(available_block_maps.at(0).end());
 
@@ -183,18 +186,32 @@ compute_block_grid_mapping(const size_t &procs_per_node,
         {
           if(!available_block_maps[node].empty())
             {
-              auto block = std::min_element(available_block_maps[node].begin(),
-                                            available_block_maps[node].end());
-              if(block->cost < min_cost)
+              auto block_map
+                = std::min_element(available_block_maps[node].begin(),
+                                   available_block_maps[node].end());
+              El::Output("  ", DEBUG_STRING(node), DEBUG_STRING(*block_map),
+                         DEBUG_STRING(min_cost));
+              if(block_map->cost < min_cost)
                 {
-                  min_block = block;
-                  min_cost = block->cost;
+                  min_block = block_map;
+                  min_cost = block_map->cost;
                   curr_node = node;
                 }
+              else
+                {
+                  El::Output("  block_map->cost >= min_cost");
+                }
+            }
+          else
+            {
+              // TODO debug
+              El::Output("  skip node=", node, ", no available block maps");
             }
         }
       if(min_block == available_block_maps.at(0).end())
         {
+          El::Output(DEBUG_STRING(*block), DEBUG_STRING(min_cost),
+                     DEBUG_STRING(available_block_maps));
           LOGIC_ERROR(
             "Unable to find any free processors for remaining blocks");
         }
