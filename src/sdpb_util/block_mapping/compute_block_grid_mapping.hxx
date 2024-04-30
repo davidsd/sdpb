@@ -54,6 +54,7 @@
 #include <algorithm>
 #include <limits>
 #include <numeric>
+#include <optional>
 
 inline std::ostream &operator<<(std::ostream &os, const Block_Map &block_map)
 {
@@ -130,7 +131,7 @@ compute_block_grid_mapping(const size_t &procs_per_node,
       size_t extra_procs(remaining_procs - required_procs);
       while(extra_procs > 0)
         {
-          std::vector<Block_Map>::iterator max_element(result.front().end());
+          std::optional<std::vector<Block_Map>::iterator> max_element;
           size_t max_node;
           for(size_t node = 0; node < result.size(); ++node)
             {
@@ -138,17 +139,17 @@ compute_block_grid_mapping(const size_t &procs_per_node,
                 {
                   auto max_element_on_node(std::max_element(
                     result[node].begin(), result[node].end()));
-                  if(max_element == result.front().end()
-                     || *max_element < *max_element_on_node)
+                  if(!max_element.has_value()
+                     || *max_element.value() < *max_element_on_node)
                     {
                       max_element = max_element_on_node;
                       max_node = node;
                     }
                 }
             }
-          if(max_element != result.front().end())
+          if(max_element.has_value())
             {
-              max_element->num_procs += 1;
+              max_element.value()->num_procs += 1;
               --available_procs[max_node];
               --extra_procs;
             }
@@ -179,7 +180,7 @@ compute_block_grid_mapping(const size_t &procs_per_node,
       El::Output("  processing ", DEBUG_STRING(*block));
 
       size_t min_cost(std::numeric_limits<size_t>::max());
-      auto min_block(available_block_maps.at(0).end());
+      std::optional<std::vector<Block_Map>::iterator> min_block;
 
       size_t curr_node = std::numeric_limits<size_t>::max();
       for(size_t node(0); node < num_nodes; ++node)
@@ -208,22 +209,22 @@ compute_block_grid_mapping(const size_t &procs_per_node,
               El::Output("  skip node=", node, ", no available block maps");
             }
         }
-      if(min_block == available_block_maps.at(0).end())
+      if(!min_block.has_value())
         {
           El::Output(DEBUG_STRING(*block), DEBUG_STRING(min_cost),
                      DEBUG_STRING(available_block_maps));
           LOGIC_ERROR(
             "Unable to find any free processors for remaining blocks");
         }
-      min_block->cost += block->cost;
-      min_block->block_indices.push_back(block->index);
+      min_block.value()->cost += block->cost;
+      min_block.value()->block_indices.push_back(block->index);
 
       // TODO debug
-      El::Output(
-        "Add block=", block->index, " cost=", block->cost,
-        " to node=", curr_node, " group=",
-        std::distance(available_block_maps[curr_node].begin(), min_block),
-        " procs=", 1);
+      El::Output("Add block=", block->index, " cost=", block->cost,
+                 " to node=", curr_node, " group=",
+                 std::distance(available_block_maps[curr_node].begin(),
+                               min_block.value()),
+                 " procs=", 1);
     }
   for(size_t node = 0; node < num_nodes; ++node)
     for(auto &available : available_block_maps[node])
