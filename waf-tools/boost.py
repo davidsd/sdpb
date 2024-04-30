@@ -88,7 +88,7 @@ boost::stacktrace::stacktrace();
     if not boost_stacktrace_lib_found:
         for boost_stacktrace_lib in ['boost_stacktrace_backtrace', 'boost_stacktrace_addr2line',
                                      'boost_stacktrace_basic']:
-            if conf.check_cxx(msg=f'Checking for {boost_stacktrace_lib}',
+            if conf.check_cxx(msg='Checking for ' + boost_stacktrace_lib,
                               fragment="""
     #include <boost/stacktrace.hpp>
     int main()
