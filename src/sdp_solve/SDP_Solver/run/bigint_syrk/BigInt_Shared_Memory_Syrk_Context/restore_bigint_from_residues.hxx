@@ -5,7 +5,6 @@
 #include "sdpb_util/assert.hxx"
 
 #include <El.hpp>
-#include <flint/nmod.h>
 
 inline void
 restore_bigint_from_residues(const Residue_Matrices_Window<double> &window,
