@@ -1,8 +1,19 @@
 #pragma once
 
 #include <flint/fmpz.h>
-#include <vector>
+// In FLINT 2.8.5, part of nmod_vec.h was extracted to nmod.h
+// See:
+// https://github.com/davidsd/sdpb/issues/234
+// https://github.com/flintlib/flint/pull/1041
+#if __FLINT_RELEASE >= 20805
+#include <flint/nmod.h>
+#else
+#include <flint/nmod_vec.h>
+#endif
+
 #include <boost/noncopyable.hpp>
+
+#include <vector>
 
 // adopted from FLINT, fmpz_mat/mul_blas.c
 // TODO: rename arguments and add description to make the code readable

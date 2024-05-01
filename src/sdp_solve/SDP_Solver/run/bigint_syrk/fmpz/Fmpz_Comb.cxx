@@ -1,10 +1,10 @@
-#include <flint/ulong_extras.h>
-#include <El.hpp>
-#include <flint/nmod.h>
-
 #include "Fmpz_Comb.hxx"
 
 #include "sdpb_util/assert.hxx"
+
+#include <flint/ulong_extras.h>
+
+#include <El.hpp>
 
 // TODO explain all parameters!
 namespace

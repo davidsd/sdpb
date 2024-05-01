@@ -223,9 +223,6 @@ namespace
             // for iteration=1, block_name="block_2" for format=json and block_name="block_19" for format=bin
             if(a_key == "block_name")
               continue;
-            // Errors may differ as they approach zero
-            if(a_key == "P-err" || a_key == "p-err" || a_key == "D-err")
-              continue;
 
             CAPTURE(a_key);
             CAPTURE(a_value_str);
@@ -233,6 +230,22 @@ namespace
 
             El::BigFloat a_value = a_value_str;
             El::BigFloat b_value = b_value_str;
+
+            // Errors may differ as they approach zero,
+            // so we do not compare small values
+            if(a_key == "P-err" || a_key == "p-err" || a_key == "D-err"
+               || a_key == "R-err")
+              {
+                auto prec = Test_Util::REQUIRE_Equal::diff_precision > 0
+                              ? Test_Util::REQUIRE_Equal::diff_precision
+                              : El::gmp::Precision();
+                // Trying to be conservative, otherwise skydiving test fails:
+                prec /= 2;
+                const auto abs_eps = El::BigFloat(1) >>= prec;
+                if(Abs(a_value) + Abs(b_value) < abs_eps)
+                  continue;
+              }
+
             DIFF(a_value, b_value);
           }
       }
