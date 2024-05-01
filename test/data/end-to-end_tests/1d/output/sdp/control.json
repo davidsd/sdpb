@@ -1,4 +1,4 @@
 {
   "num_blocks": 1,
-  "command": "./build/pvm2sdp 1024 test/data/pvm2sdp/file_list.nsv test/out/pvm2sdp/sdp.zip"
+  "command": "build/pmp2sdp --input=test/data/end-to-end_tests/1d/input/pmp-all-sampling-fields.json --output=test/out/end-to-end_tests/1d/pmp-all-sampling-fields.json/format=json/sdp --outputFormat=json --precision=768"
 }

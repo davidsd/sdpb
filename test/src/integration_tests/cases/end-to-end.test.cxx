@@ -163,9 +163,24 @@ TEST_CASE("end-to-end_tests")
     INFO("maximize (-y) s.t. (1 + x^4 + y * (x^4 / 12 + x^2)) >= 0)");
 
     num_procs = 2;
+    // Do not check normalization.json because it is absent in pmp-no-optional-fields.json
+    bool check_sdp_normalization = false;
+    // binary precision 664 is equivalent to decimal precision 200 used in SDPB.m
+    // TODO generate input files with precision 768
+    end_to_end_test("1d", num_procs, 664, {}, {}, {}, check_sdp_normalization);
+  }
+
+  SECTION("1d-old-sampling")
+  {
+    INFO("SDPB test for a simple one-dimensional problem from SDPB Manual:");
+    INFO("maximize (-y) s.t. (1 + x^4 + y * (x^4 / 12 + x^2)) >= 0)");
+    INFO("Use old sampling algorithm, samplng data specified explicitly in "
+         "XML and JSON");
+
+    num_procs = 2;
     // Do not check normalization.json because it is absent for XML
     bool check_sdp_normalization = false;
-    end_to_end_test("1d", num_procs, precision, {}, {}, {},
+    end_to_end_test("1d-old-sampling", num_procs, precision, {}, {}, {},
                     check_sdp_normalization);
   }
 
