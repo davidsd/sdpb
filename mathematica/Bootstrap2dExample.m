@@ -6,6 +6,8 @@ executablesPath = "../build";
 
 <<"SDPB.m";
 
+prec=200;
+
 half = SetPrecision[1/2, prec];
 
 rho[z_] := z/(1+Sqrt[1-z])^2;
@@ -122,7 +124,7 @@ SolveBootstrapSDP[sdp_] := Module[
         sdpFolder = "mySDP",
         fullResult
     },
-    WritePmpXml[pmpFile, sdp];
+    WritePmpJson[pmpFile, sdp, prec];
     (* Most of the defaults are way over the top for this size
     problem, but we'll use them because it's easy. If you want speed,
     try fiddling with some of the parameters. *)

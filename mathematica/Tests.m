@@ -15,32 +15,44 @@ The prefactor DampedRational[1,{},1/E,x] doesn't affect the answer,
 but does affect the choice of sample scalings and bilinear basis.
 
 *)
-testSDP[jsonFile_] := Module[
+testSDP[jsonFile_, prec_:200] := Module[
     {
-        pols = {PositiveMatrixWithPrefactor[DampedRational[1,{}, 1/E,x], {{{1 + x^4, x^4/12 + x^2}}}]},
+        pols = {PositiveMatrixWithPrefactor[<|
+        "prefactor"->DampedRational[1,{}, 1/E,x],
+        "polynomials"->{{{1 + x^4, x^4/12 + x^2}}}
+        |>]},
         norm = {1, 0},
         obj  = {0, -1}
     },
-
-    WritePmpJson[jsonFile, SDP[obj, norm, pols]]
+    
+    (*
+    If you want to specify sample points, sample scalings and/or bilinear bases explicitly,
+    you may provide a function computing this data.
+    See SDPB.m, getAnalyticSampleData[PositiveMatrixWithPrefactor[pmp_?AssociationQ],prec_]
+    *)
+    WritePmpJson[jsonFile, SDP[obj, norm, pols], prec(*, getAnalyticSampleData*)]
     ];
 
 (* A similar computation to the above, except with nontrivial matrix semidefiniteness constraints *)
-testSDPMatrix[jsonFile_] := Module[
+testSDPMatrix[jsonFile_, prec_:200] := Module[
     {
         pols = {
-            PositiveMatrixWithPrefactor[
-                DampedRational[1, {}, 1/E, x],
+            PositiveMatrixWithPrefactor[<|
+                "prefactor"->DampedRational[1, {}, 1/E, x],
+                "polynomials"->
                 {{{1 + x^4, 1 + x^4/12 + x^2}, {x^2,     x/5}},
-                 {{x^2,     x/5},              {2 + x^4, x^4/3 + 2*x^2}}}],
-            PositiveMatrixWithPrefactor[
-                DampedRational[1, {}, 1/E, x],
+                 {{x^2,     x/5},              {2 + x^4, x^4/3 + 2*x^2}}}
+                 |>],
+            PositiveMatrixWithPrefactor[<|
+                "prefactor"->DampedRational[1, {}, 1/E, x],
+                "polynomials"->
                 {{{1 + 3x^4/4, 1 + x^4/12 + x^2}, {x^2,     1/2 + x/5}},
-                 {{x^2,     1/2 + x/5},        {2 + 3x^4/5, x^4/3 + 2*x^2}}}]
+                 {{x^2,     1/2 + x/5},        {2 + 3x^4/5, x^4/3 + 2*x^2}}}
+                 |>]
         },
         norm = {1, 0},
         obj  = {0, -1}
     },
 
-    WritePmpJson[jsonFile, SDP[obj, norm, pols]]
+    WritePmpJson[jsonFile, SDP[obj, norm, pols], prec(*, getAnalyticSampleData*)]
 ];

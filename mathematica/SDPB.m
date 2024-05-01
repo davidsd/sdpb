@@ -4,6 +4,8 @@
 (*Setup*)
 
 
+(*TODO get rid of global prec, pass as an argument*)
+(*Now it is used only for obsolete XML output*)
 prec = 200;
 
 (* DampedRational[c, {p1, p2, ...}, b, x] stands for c b^x / ((x-p1)(x-p2)...) *)
@@ -23,8 +25,11 @@ DampedRational/:DampedRational[c1_,p1_,b1_,x] DampedRational[c2_,p2_,b2_,x] :=
 
 DampedRational/:a_ DampedRational[c_,p_,b_,x] /; FreeQ[a,x] := DampedRational[a c, p, b, x];
 
-nf[x_Integer] := x;
-nf[x_] := NumberForm[SetPrecision[x,prec],prec,ExponentFunction->(Null&)];
+evalDampedRationalRegulated[DampedRational[c_,poles_,b_,x],x0_,minPoleDistance_]:=c b^x0/Product[Max[x0-p,minPoleDistance],{p,poles}];
+
+nf[x_Integer, prec___] := x;
+nf[x_, prec_:prec] := NumberForm[SetPrecision[x,prec],prec,ExponentFunction->(Null&)];
+nf[x_] := nf[x ,prec];
 
 safeCoefficientList[p_, x_] := Module[
     {coeffs = CoefficientList[p, x]},
@@ -44,46 +49,56 @@ WriteBootstrapSDP := WritePmpJson
 (*JSON export*)
 
 
-toJsonNumber[x_] := ToString@nf@x;
+toJsonNumber[x_, prec_] := ToString@nf[x,prec];
 
-toJsonNumberArray[xs_List] := toJsonNumber /@ xs;
+toJsonNumberArray[xs_List, prec_] := toJsonNumber[#,prec]& /@ xs;
+toJsonNumberArray[xs_?MissingQ, args___] := xs;
 
-toJsonObject[DampedRational[constant_, poles_List, base_, x]] := <|
-   "base" -> toJsonNumber[base],
-   "constant" -> toJsonNumber[constant],
-   "poles" -> toJsonNumberArray[poles]
+toJsonObject[value_?MissingQ, args___]:=value;
+
+bilinearBasisToJson[value_?MissingQ,args___]:=value;
+bilinearBasisToJson[value_List,prec_]:=toJsonNumberArray[safeCoefficientList[#, x],prec]&/@value;
+
+toJsonObject[DampedRational[constant_, poles_List, base_, x],prec_] := <|
+   "base" -> toJsonNumber[base,prec],
+   "constant" -> toJsonNumber[constant,prec],
+   "poles" -> toJsonNumberArray[poles,prec]
    |>;
 
-toJsonObject[PositiveMatrixWithPrefactor[prefactor_, m_]] := <|
-  "DampedRational" -> toJsonObject[prefactor],
-  "polynomials" ->
-   Map[toJsonNumberArray[safeCoefficientList[#, x]] &, m, {3}]
-  |>;
-  
-toJsonObject[PositiveMatrixWithPrefactor[prefactor_, m_], samplePointsFn_] := <|
-  "DampedRational" -> toJsonObject[prefactor],
-  "polynomials" ->
-   Map[toJsonNumberArray[safeCoefficientList[#, x]] &, m, {3}],
-   "samplePoints"-> toJsonNumberArray[samplePointsFn[Max[Exponent[m, x]] + 1]]
-  |>;
+
+(*With default getSampleDataFn, "samplePoints" and next fields will be missing*)
+toJsonObject[PositiveMatrixWithPrefactor[pmp_?AssociationQ], prec_, getSampleDataFn_:Function[<||>]] :=
+Module[
+{sampleData=getSampleDataFn[PositiveMatrixWithPrefactor[pmp],prec]}
+,
+<|
+  "prefactor" -> toJsonObject[pmp[["prefactor"]],prec],
+  "reducedPrefactor" -> toJsonObject[pmp[["reducedPrefactor"]],prec],
+  "polynomials" -> Map[toJsonNumberArray[safeCoefficientList[#, x],prec] &, pmp[["polynomials"]], {3}],
+  "samplePoints" -> toJsonNumberArray[sampleData[["samplePoints"]],prec],
+  "sampleScalings" -> toJsonNumberArray[sampleData[["sampleScalings"]],prec],
+  "bilinearBasis" -> bilinearBasisToJson[sampleData[["bilinearBasis"]],prec],
+  "bilinearBasis_0" -> bilinearBasisToJson[sampleData[["bilinearBasis_0"]],prec],
+  "bilinearBasis_1" -> bilinearBasisToJson[sampleData[["bilinearBasis_1"]],prec]
+|>//DeleteMissing
+  ];
+
+toJsonObject[PositiveMatrixWithPrefactor[prefactor_, m_],args___] := 
+toJsonObject[PositiveMatrixWithPrefactor[<|
+"prefactor"->prefactor,
+"polynomials"->m
+|>],
+args
+];
 
 toJsonObject[
   SDP[objective_List, normalization_List,
-   positiveMatricesWithPrefactors_List]] := <|
-  "objective" -> toJsonNumberArray[objective],
-  "normalization" -> toJsonNumberArray[normalization],
+   positiveMatricesWithPrefactors_List], prec_, getSampleDataFn_:Function[<||>]
+   ] := <|
+  "objective" -> toJsonNumberArray[objective, prec],
+  "normalization" -> toJsonNumberArray[normalization, prec],
   "PositiveMatrixWithPrefactorArray" ->
-   toJsonObject /@ positiveMatricesWithPrefactors
-  |>;
-
-toJsonObject[
-  SDP[objective_List, normalization_List,
-   positiveMatricesWithPrefactors_List],
-   samplePointsFn_] := <|
-  "objective" -> toJsonNumberArray[objective],
-  "normalization" -> toJsonNumberArray[normalization],
-  "PositiveMatrixWithPrefactorArray" ->
-   Map[toJsonObject[#,samplePointsFn]& , positiveMatricesWithPrefactors]
+   Table[toJsonObject[pmp, prec, getSampleDataFn],{pmp,positiveMatricesWithPrefactors}]
   |>;
 
 exportJson[file_,expr_]:=If[
@@ -92,30 +107,159 @@ exportJson[file_,expr_]:=If[
   Throw["Expected .json extension: "<>ToString[file]]
 ];
 
-WritePmpJson[
-  file_,
-  SDP[objective_, normalization_, positiveMatricesWithPrefactors_]
-  ] := exportJson[
-    file,
-    toJsonObject@SDP[objective, normalization, positiveMatricesWithPrefactors]
-    ];
-    
+(*getSampleDataFn computes sample points, sample scalings and bilinear bases.
+getSampleDataFn[PositiveMatrixWithPrefactor[pmp],prec] should return an association
+with some of the following (optional) fields:
+<|
+  "samplePoints" \[Rule]...
+  "sampleScalings" \[Rule] ...
+  "bilinearBasis" \[Rule] ...
+  "bilinearBasis_0" \[Rule] ...
+  "bilinearBasis_1" \[Rule]...
+|>
+See getAnalyticSampleData[] below for an example.
+By default, sampling data is not computed (pmp2sdp will compute it automatically).
+*)
 WritePmpJson[
   file_,
   SDP[objective_, normalization_, positiveMatricesWithPrefactors_],
-  samplePointsFn_
+  prec_, getSampleDataFn_:Function[<||>]
   ]:=exportJson[
     file,
-    toJsonObject[SDP[objective, normalization, positiveMatricesWithPrefactors], samplePointsFn]
+    toJsonObject[SDP[objective, normalization, positiveMatricesWithPrefactors], prec, getSampleDataFn]
     ];
 
 
 (* ::Section:: *)
-(*XML export (obsolete)*)
+(*Compute sample points, sample scalings and bilinear bases (same algorithm as in pmp2sdp)*)
 
 
 (* ::Subsection::Closed:: *)
-(*Helper functions*)
+(*getAnalyticSampleData (main function)*)
+
+
+(*
+PMP input:
+PolynomialMatrixWithPrefactor[<|
+"prefactor"->DampedRational[...],
+"reducedPrefactor"->DampedRational[...],
+"polynomials"->{...}
+|>]
+
+Output:
+<|
+"samplePoints"\[Rule]...,
+"sampleScalings"\[Rule]...,
+"bilinearBasis_0"\[Rule]...,
+"bilinearBasis_1"\[Rule]...
+|>
+*)
+
+getAnalyticSampleData[PositiveMatrixWithPrefactor[pmp_?AssociationQ],prec_]:=Module[
+{
+numeratorDegOld,
+prefactorOld,
+prefactorNew
+},
+If[MissingQ[pmp[["polynomials"]]], Return[$Failed]];
+numeratorDegOld=Max[Exponent[pmp[["polynomials"]], x]];
+
+prefactorOld=pmp[["prefactor"]];
+(*Set default prefactor*)
+If[MissingQ@prefactorOld, prefactorOld=DampedRational[1,{},1/E,x]];
+
+prefactorNew=pmp[["reducedPrefactor"]];
+If[MissingQ@prefactorNew, prefactorNew=prefactorOld];
+
+getAnalyticSampleData[numeratorDegOld,prefactorOld,prefactorNew,prec]
+];
+
+
+(* ::Subsection::Closed:: *)
+(*Implementation: sample points*)
+
+
+(*
+Compute Table[root of f=1/2+n, {n,nmin,NN-1}]. First we find the root with n=nmin, then we use that as an initial condition to find the next root, and so on. If we set nmin=0, then the total number of roots returned is NN.
+*)
+findBohrSommerfeldRoots[f_,nmin_,NN_,x_,x0_,prec_]:=findBohrSommerfeldHelper[f,NN,x,{},prec][nmin,x0];
+(* Here, we use Mathematica's FindRoot. In the C++ implementation, perhaps we should use Newton's method (since we will know analytic formula for both the function f and its derivative)? *)
+findBohrSommerfeldHelper[f_,NN_,x_,xs_,prec_][n_,x0_]:=If[
+n>=NN,
+xs,
+Module[
+{xPrime=x/.FindRoot[f==1/2+n,{x,x0},WorkingPrecision->prec]},
+findBohrSommerfeldHelper[f,NN,x,Append[xs,xPrime],prec][n+1,xPrime]
+]
+];
+
+
+(* Compute (nearly) optimal sample points for the given DampedRational. We use smallPoleThreshold to decide whether a pole is 0 or very close to 0. In that case, we include 0 as a sample point, and compute the remaining sample points starting from n=1. *)
+getSamplePoints[DampedRational[_,poles_,base_,x_],numSamplePoints_,smallPoleThreshold_,prec_]:=Module[
+{
+bVar,
+bEquation,
+bGuess,
+b,
+integratedDensity,
+z,
+z0,
+nmin,
+numSmallRoots,
+smallRoots,
+smallRootEnd,
+bohrSommerfeldRoots,
+(* Mathematica seems to require some quantities to be higher precision in order for FindRoot to give answers with precision prec *)
+highPrec=2*prec,
+result
+},
+
+If[numSamplePoints==1,Return[{0}]];
+
+bEquation=Sum[1-Sqrt[-p/(bVar-p)],{p,poles}]-1/2 bVar Log[base]-numSamplePoints;
+bGuess=-((2 numSamplePoints)/Log[base]);
+(* Petr explains that to get rid of highPrec, we need to treat the p=0 case analytically in this sum *)
+b=bVar/.FindRoot[bEquation,{bVar,bGuess},WorkingPrecision->highPrec];
+(*TODO choose a better way to print warnings?*)
+If[b<smallPoleThreshold,
+  Print["b is too small, setting b=smallPoleThreshold"];
+  b=smallPoleThreshold;
+];
+
+integratedDensity=Sum[ 1 /\[Pi] ( ArcCos[1-(2z(b-p))/(b (z-p))]- Sqrt[-p/(b-p)] ArcCos[1-(2 z)/b]),{p,poles}]-Log[base]/\[Pi] (Sqrt[(b-z) z]+ b/2 ArcCos[1-(2 z)/b]);
+
+numSmallRoots=Count[poles,_?(Abs[#]<smallPoleThreshold&)];
+numSmallRoots=Min[numSmallRoots,numSamplePoints];
+
+
+z0=SetPrecision[smallPoleThreshold+(b-smallPoleThreshold)/(numSamplePoints-numSmallRoots+1.0),highPrec];
+
+bohrSommerfeldRoots=findBohrSommerfeldRoots[integratedDensity,numSmallRoots,numSamplePoints,z,z0,prec];
+
+smallRootEnd=If[numSmallRoots==numSamplePoints,b,bohrSommerfeldRoots[[1]]];
+
+
+smallRoots=Table[
+smallRootEnd*(i-1)/numSmallRoots
+,{i,numSmallRoots}
+];
+
+result=Join[
+smallRoots,
+findBohrSommerfeldRoots[integratedDensity,numSmallRoots,numSamplePoints,z,z0,prec]
+];
+
+Table[
+  Assert[result[[i+1]]>result[[i]]];
+  ,{i,numSamplePoints-1}
+];
+
+result
+];
+
+
+(* ::Subsection::Closed:: *)
+(*Implementation: sample scalings and bilinear bases*)
 
 
 (* A matrix with constant anti-diagonals given by the list bs *)
@@ -127,6 +271,80 @@ antiBandMatrix[bs_] := Module[
                 Table[Band[{i, 1}] -> bs[[n - i + 1]], {i, n}],
                 Table[Band[{1, i}] -> bs[[n + i - 1]], {i, 2, n}]],
             {n, n}]]]];
+
+
+(*getAnalyticSampleData[] implementation*)
+getAnalyticSampleData[numeratorDegOld_,prefactorOld_,prefactorNew_,prec_]:=Module[
+{
+numeratorDeg,
+numSamplePoints,
+(* TODO: Is this a good value? *)
+smallPoleThreshold=10^-10,
+(* TODO: Is this a good value? *)
+minPoleDistance=10^-16,
+samplePoints,
+sampleScalings,
+prefactorNewAtZero,
+(*integrateMeasure,*)
+integrateMeasure1,
+integrateMeasure2,
+\[Delta]1,
+\[Delta]2,
+(*invL,*)
+invL1,
+invL2,
+bilinearBasis1,
+bilinearBasis2
+},
+numeratorDeg=numeratorDegOld-poleDegree[prefactorOld]+poleDegree[prefactorNew];
+numSamplePoints=numeratorDeg+1;
+samplePoints=getSamplePoints[prefactorNew,numSamplePoints,smallPoleThreshold,prec];
+
+sampleScalings=Table[
+evalDampedRationalRegulated[prefactorNew,xx,minPoleDistance],
+{xx,samplePoints}
+];
+integrateMeasure1[f_]:=Sum[
+sampleScalings[[i]](f/.x->samplePoints[[i]]),
+{i,Length[samplePoints]}
+];
+
+integrateMeasure2[f_]:=Sum[
+sampleScalings[[i]](x* f/.x->samplePoints[[i]]),
+{i,Length[samplePoints]}
+];
+
+\[Delta]1=Floor[numeratorDeg/2];
+\[Delta]2=Floor[(numeratorDeg-1)/2];
+
+invL1=Inverse[CholeskyDecomposition[antiBandMatrix[Table[
+integrateMeasure1[x^n],
+{n,0,2\[Delta]1}
+]]]];
+
+invL2=Inverse[CholeskyDecomposition[antiBandMatrix[Table[
+integrateMeasure2[x^n],
+{n,0,2\[Delta]2}
+]]]];
+
+bilinearBasis1=Transpose[invL1] . Table[x^n,{n,0,\[Delta]1}];
+bilinearBasis2=Transpose[invL2] . Table[x^n,{n,0,\[Delta]2}];
+<|
+"samplePoints"->samplePoints,
+"sampleScalings"->sampleScalings,
+"bilinearBasis_0"->bilinearBasis1,
+"bilinearBasis_1"->bilinearBasis2
+|>
+];
+
+
+(* ::Section::Closed:: *)
+(*XML export (obsolete)*)
+
+
+(* ::Subsection:: *)
+(*Helper functions*)
+
 
 (* bilinearForm[f, m] = Integral[x^m f[x], {x, 0, Infinity}] *)
 (* The special case when f[x] has no poles *)
