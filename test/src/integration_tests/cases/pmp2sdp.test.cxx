@@ -48,7 +48,9 @@ TEST_CASE("pmp2sdp")
   SECTION("outputFormat")
   {
     INFO("Check different --outputFormat options");
-    auto data_dir = Test_Config::test_data_dir / "end-to-end_tests" / "1d";
+    // TODO use input from "1d" and update output
+    auto data_dir
+      = Test_Config::test_data_dir / "end-to-end_tests" / "1d-old-sampling";
 
     for(std::string output_format : {"", "bin", "json"})
       {
