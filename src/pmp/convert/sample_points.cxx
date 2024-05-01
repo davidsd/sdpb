@@ -97,7 +97,16 @@ namespace
   {
     ASSERT(z <= b, DEBUG_STRING(z), DEBUG_STRING(b), DEBUG_STRING(prefactor));
     const auto pi = boost::math::constants::pi<Boost_Float>();
-    const auto one_div_pi = boost::math::constants::one_div_pi<Boost_Float>();
+
+    // NB: we cannot initialize one_div_pi as a global constant,
+    // because we don't know required MPFR precision at that moment.
+    // Thus, we do it inside the function.
+    const Boost_Float one_div_pi =
+#if(BOOST_VERSION >= 107200)
+      boost::math::constants::one_div_pi<Boost_Float>();
+#else
+      Boost_Float(1) / pi;
+#endif
 
     Boost_Float density = 0;
     Boost_Float density_deriv = 0;
