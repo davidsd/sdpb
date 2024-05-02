@@ -78,7 +78,7 @@ should compile on a login node.
     git clone https://github.com/flintlib/flint.git
     cd flint
     ./bootstrap.sh
-    ./configure CC=mpicc CXX=mpicxx --disable-static --with-gmp=/central/software9/spack/opt/spack/linux-rhel9-x86_64/gcc-13.2.0/gmp-6.2.1-lcnhysea5isaes4r547jt5nw2qru5ab7 --with-mpfr=/central/software9/spack/opt/spack/linux-rhel9-x86_64/gcc-13.2.0/mpfr-4.2.0-yy2fkq564g7urkswawmdk66vpw7ufkkh --prefix=$HOME/install 
+    ./configure CC=mpicc CXX=mpicxx --disable-static --with-gmp=`pkg-config --variable=prefix gmp` --with-mpfr=`pkg-config --variable=prefix mpfr`--prefix=$HOME/install 
     make
     make check 
     make install
@@ -97,7 +97,7 @@ should compile on a login node.
     cd ../..
 
 ## sdpb
-    CXX=mpicxx ./waf configure --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=/central/software9/spack/opt/spack/linux-rhel9-x86_64/gcc-13.2.0/libarchive-3.7.1-bzt555vawhwq2akdnvmilrsi5ocxdhvj --gmpxx-dir=/central/software9/spack/opt/spack/linux-rhel9-x86_64/gcc-13.2.0/gmp-6.2.1-lcnhysea5isaes4r547jt5nw2qru5ab7 --mpfr-dir=/central/software/mpfr/4.0.2 --flint-dir=$HOME/install --cblas-dir=/central/software9/spack/opt/spack/linux-rhel9-x86_64/gcc-13.2.0/openblas-0.3.23-3csynnoa2r6ctx3khqe5gxye6ukno3mu --prefix=$HOME/install/sdpb-master
+    CXX=mpicxx ./waf configure --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=`pkg-config --variable=prefix libarchive` --gmpxx-dir=`pkg-config --variable=prefix gmp` --mpfr-dir=`pkg-config --variable=prefix mpfr` --flint-dir=$HOME/install --cblas-incdir=`pkg-config --variable=includedir openblas` --cblas-libdir=`pkg-config --variable=libdir openblas` --prefix=$HOME/install/sdpb-master
     ./waf # -j 1
     ./test/run_all_tests.sh
     ./waf install
