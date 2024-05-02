@@ -77,12 +77,11 @@ should compile on a login node.
 
     git clone https://github.com/flintlib/flint.git
     cd flint
-    ./bootstrap.sh    
-    mkdir build
-    cd build
-    cmake .. -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DCMAKE_INSTALL_PREFIX=$HOME/install -DBUILD_SHARED_LIBS=ON
-    cmake --build . --target install
-    cd ../..
+    ./bootstrap.sh
+    ./configure CC=mpicc CXX=mpicxx --disable-static --with-gmp=/central/software9/spack/opt/spack/linux-rhel9-x86_64/gcc-13.2.0/gmp-6.2.1-lcnhysea5isaes4r547jt5nw2qru5ab7 --with-mpfr=/central/software9/spack/opt/spack/linux-rhel9-x86_64/gcc-13.2.0/mpfr-4.2.0-yy2fkq564g7urkswawmdk66vpw7ufkkh --prefix=$HOME/install 
+    make
+    make check 
+    make install
 
 ## RapidJSON
     git clone https://github.com/Tencent/rapidjson.git

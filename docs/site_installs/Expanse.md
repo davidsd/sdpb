@@ -73,14 +73,16 @@ TODO: on compute nodes compiler fails to find some libs
 
 ## FLINT
 
-    git clone https://github.com/flintlib/flint.git
+    git clone https://github.com/flintlib/flint.git -b v3.0.1
     cd flint
-    ./bootstrap.sh    
-    mkdir build
-    cd build
-    cmake .. -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DCMAKE_INSTALL_PREFIX=$HOME/install -DBUILD_SHARED_LIBS=ON
-    cmake --build . --target install
-    cd ../..
+    ./bootstrap.sh
+    ./configure CC=mpicc CXX=mpicxx --disable-static --disable-gmp-internals --prefix=$HOME/install 
+    make
+    make check 
+    make install
+
+Note that you have to checkout `v3.0.1` because starting from v3.1.0 FLINT requires GMP 6.2.1 or later.
+The flag `--disable-gmp-internals` is required to prevent `mpn_gcd_11 not found` error.
 
 ## libarchive
 
