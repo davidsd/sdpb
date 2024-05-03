@@ -104,6 +104,22 @@
                             "items": {
                                 "type": "string"
                             }
+                        },
+                    "bilinearBasis_0": {
+                        "type": "array",
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                    "bilinearBasis_1": {
+                        "type": "array",
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
                         }
                     }
                 },
