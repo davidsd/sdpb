@@ -1,13 +1,14 @@
 # waf
-.lock-waf*
-.waf*/
-build/
+/.lock-waf*
+/.waf*/
+/build/
 __pycache__/
 /waf-tools/*.pyc
 
 # cmake
 cmake-build*/
 build/
+/cmake-build*/
 
 # IDE
 *.code-workspace
@@ -16,8 +17,8 @@ build/
 .cache/
 
 # test
-test/out/
-test/.nfs*
+/test/out/
+/test/.nfs*
 
 # TeX
 /docs/**/*.aux
@@ -27,4 +28,4 @@ test/.nfs*
 /docs/**/*.toc
 
 # Misc
-tmp/
+/tmp/

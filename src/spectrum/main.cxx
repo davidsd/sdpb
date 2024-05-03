@@ -10,7 +10,7 @@ namespace fs = std::filesystem;
 void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
                       El::BigFloat &mesh_threshold, fs::path &input_path,
                       fs::path &solution_path, fs::path &output_path,
-                      bool &need_lambda);
+                      bool &need_lambda, Verbosity& verbosity);
 
 std::vector<El::Matrix<El::BigFloat>>
 read_x(const fs::path &solution_path,
@@ -40,11 +40,20 @@ int main(int argc, char **argv)
       El::BigFloat threshold, mesh_threshold;
       fs::path input_path, solution_dir, output_path;
       bool need_lambda;
+      Verbosity verbosity;
       handle_arguments(argc, argv, threshold, mesh_threshold, input_path,
-                       solution_dir, output_path, need_lambda);
+                       solution_dir, output_path, need_lambda, verbosity);
 
-      bool debug = false; // TODO set verbosity from command line
-      Timers timers(env, debug);
+      // Print command line
+      if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+        {
+          std::vector<std::string> arg_list(argv, argv + argc);
+          for(const auto &arg : arg_list)
+            std::cout << arg << " ";
+          std::cout << std::endl;
+        }
+
+      Timers timers(env, verbosity);
       const auto pmp = read_polynomial_matrix_program(env, input_path, timers);
       const size_t num_blocks = pmp.num_matrices;
       const auto &block_indices = pmp.matrix_index_local_to_global;

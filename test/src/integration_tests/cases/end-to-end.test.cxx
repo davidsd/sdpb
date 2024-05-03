@@ -37,8 +37,12 @@ namespace
         auto filename = it.path().filename();
         CAPTURE(filename);
         if(!(filename == "sdp" || filename == "out"
-             || filename == "spectrum.json"))
-          FAIL("Unexpected file: " << it.path());
+             || filename == "spectrum.json" || filename == "iterations.json"
+             || filename == "iterations.0.json"
+             || filename == "iterations.1.json"))
+          {
+            FAIL("Unexpected file: " << it.path());
+          }
       }
 
     std::string sdp_format;
@@ -59,7 +63,8 @@ namespace
     for(const auto &pmp_path : pmp_paths)
       DYNAMIC_SECTION(pmp_path.filename().string())
       {
-        std::string runner_name = name + "/" + pmp_path.filename().string();
+        std::string runner_name
+          = "end-to-end_tests/" + name + "/" + pmp_path.filename().string();
         if(!sdp_format.empty())
           runner_name += "/format=" + sdp_format;
         Test_Case_Runner runner(runner_name);
@@ -226,7 +231,7 @@ TEST_CASE("end-to-end_tests")
         "--dualErrorThreshold 1.0e-30 --initialMatrixScalePrimal 1.0e20 "
         "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
         "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
-        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
+        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 2 "
         "--procGranularity 1 --writeSolution x,y,z";
     // This test is slow, we don't want to run it for both json and binary SDP.
     // json/bin correctness is checked by other tests,
@@ -252,10 +257,10 @@ TEST_CASE("end-to-end_tests")
         "--dualErrorThreshold 1.0e-200 --initialMatrixScalePrimal 1.0e20 "
         "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
         "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
-        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
+        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 2 "
         "--procGranularity 1 --writeSolution y,z "
         "--detectPrimalFeasibleJump --detectDualFeasibleJump "
-        "--maxSharedMemory=100K"; // forces split_factor=3 for Q window
+        "--maxSharedMemory=100.1K"; // forces split_factor=3 for Q window; also test floating-point --maxSharedMemory value
 
     SECTION("primal_feasible_jump")
     {

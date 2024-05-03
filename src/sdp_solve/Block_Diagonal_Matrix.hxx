@@ -109,14 +109,27 @@ public:
   }
 
   // The maximal absolute value of the elements of M
-  El::BigFloat max_abs() const
+  [[nodiscard]] El::BigFloat max_abs() const
   {
     El::BigFloat max = 0;
     for(auto &block : blocks)
       {
         max = std::max(El::MaxAbs(block), max);
       }
-    return max;
+    return El::mpi::AllReduce(max, El::mpi::MAX, El::mpi::COMM_WORLD);
+  }
+
+  [[nodiscard]] El::BigFloat trace() const
+  {
+    El::BigFloat result = 0;
+    for(auto &block : blocks)
+      {
+        const auto block_trace = El::Trace(block);
+        // to avoid double-counting, we accumulate results on rank 0 of each block
+        if(block.DistComm().Rank() == 0)
+          result += block_trace;
+      }
+    return El::mpi::AllReduce(result, El::mpi::COMM_WORLD);
   }
 
   friend std::ostream &

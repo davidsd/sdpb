@@ -1,5 +1,6 @@
 #include "../Approx_Parameters.hxx"
 
+#include "sdp_solve/Solver_Parameters/String_To_Bytes_Translator.hxx"
 #include "sdpb_util/assert.hxx"
 
 #include <boost/program_options.hpp>
@@ -41,8 +42,12 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
     "approximate, or a null separated list of files with preprocessed input.");
   basic_options.add_options()(
     "maxSharedMemory",
-    boost::program_options::value<size_t>(&max_shared_memory_bytes)
-      ->default_value(std::numeric_limits<size_t>::max()),
+    boost::program_options::value<std::string>()
+      ->notifier([this](const std::string &s) {
+        this->max_shared_memory_bytes
+          = String_To_Bytes_Translator::from_string(s);
+      })
+      ->default_value("0"),
     "Maximum amount of memory that can be used for MPI shared windows, "
     "in bytes."
     " Optional suffixes: B (bytes), K or KB (kilobytes), M or MB (megabytes), "

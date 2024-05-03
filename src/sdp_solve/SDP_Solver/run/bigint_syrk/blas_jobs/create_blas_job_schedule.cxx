@@ -1,6 +1,7 @@
 #include "create_blas_jobs_schedule.hxx"
 
 #include "Blas_Job_Schedule.hxx"
+#include "sdpb_util/Verbosity.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/split_range.hxx"
 
@@ -150,7 +151,8 @@ create_blas_job_schedule(const Blas_Job::Kind kind,
                          const El::UpperOrLowerNS::UpperOrLower uplo,
                          const size_t num_ranks, const size_t num_primes,
                          const El::Int output_matrix_height,
-                         const El::Int output_matrix_width, const bool debug)
+                         const El::Int output_matrix_width,
+                         const Verbosity verbosity)
 {
   const auto all_ranks_cost
     = kind == Blas_Job::syrk
@@ -161,7 +163,7 @@ create_blas_job_schedule(const Blas_Job::Kind kind,
     = minimal_split_factor(kind, num_ranks, num_primes % num_ranks,
                            output_matrix_height, output_matrix_width);
 
-  if(debug && El::mpi::Rank() == 0)
+  if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
     {
       El::Output("-----------------------------");
       El::Output("Creating BLAS job schedule...");
@@ -198,7 +200,7 @@ create_blas_job_schedule(const Blas_Job::Kind kind,
           best_split_factor = split_factor;
         }
 
-      if(debug && El::mpi::Rank() == 0)
+      if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
         {
           auto [max_rank_cost, num_jobs] = cost;
           El::Output("Checking split_factor=", split_factor,
@@ -208,7 +210,7 @@ create_blas_job_schedule(const Blas_Job::Kind kind,
         }
     }
 
-  if(debug && El::mpi::Rank() == 0)
+  if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
     {
       El::Output("Choosing the optimal split_factor=", best_split_factor);
       El::Output("For the first ", num_primes - num_primes % num_ranks,

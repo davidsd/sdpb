@@ -27,7 +27,8 @@
 # Elemental binaries built from https://gitlab.com/bootstrapcollaboration/elemental.git
 # based on the same alpine:3.18 build as below
 
-FROM vasdommes/flint:3.1.1 as flint
+# Built from https://github.com/vasdommes/flint/tree/docker-main
+FROM vasdommes/flint:main as flint
 
 FROM bootstrapcollaboration/elemental:master AS build
 

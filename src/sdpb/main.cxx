@@ -6,6 +6,8 @@
 //=======================================================================
 
 #include "SDPB_Parameters.hxx"
+#include "sdpb_util/Proc_Meminfo.hxx"
+#include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
 #include <El.hpp>
 
@@ -22,7 +24,7 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
 void write_block_timings(const fs::path &checkpoint_out,
                          const Block_Info &block_info,
                          const El::Matrix<int32_t> &block_timings_ms,
-                         const bool &debug);
+                         Verbosity verbosity);
 
 void write_profiling(const fs::path &checkpoint_out, const Timers &timers);
 
@@ -42,12 +44,36 @@ int main(int argc, char **argv)
       auto start_time = std::chrono::high_resolution_clock::now();
       if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {
+          // Print command line
+          if(parameters.verbosity >= Verbosity::debug)
+            {
+              std::vector<std::string> arg_list(argv, argv + argc);
+              for(const auto &arg : arg_list)
+                std::cout << arg << " ";
+              std::cout << std::endl;
+            }
           std::cout << boost::posix_time::second_clock::local_time()
                     << " Start SDPB" << '\n'
                     << "SDPB version: " << SDPB_VERSION_STRING << '\n'
                     << "MPI processes: " << El::mpi::Size()
                     << ", nodes: " << env.num_nodes() << '\n'
                     << parameters << std::endl;
+        }
+
+      if(parameters.verbosity >= Verbosity::debug)
+        {
+          if(env.comm_shared_mem.Rank() == 0)
+            {
+              bool res;
+              auto meminfo = Proc_Meminfo::try_read(res, true);
+              if(res)
+                {
+                  El::Output("node=", env.node_index(), ": MemUsed: ",
+                             pretty_print_bytes(meminfo.mem_used()));
+                }
+            }
+          // Make sure that we don't allocate anything before printing MemUsed
+          El::mpi::Barrier(env.comm_shared_mem);
         }
 
       Block_Info block_info(env, parameters.sdp_path,
@@ -79,7 +105,7 @@ int main(int argc, char **argv)
           timing_parameters.solver.dual_error_threshold = 0;
           timing_parameters.solver.min_primal_step = 0;
           timing_parameters.solver.min_dual_step = 0;
-          if(timing_parameters.verbosity != Verbosity::debug)
+          if(timing_parameters.verbosity < Verbosity::debug)
             {
               timing_parameters.verbosity = Verbosity::none;
             }
@@ -96,7 +122,7 @@ int main(int argc, char **argv)
 
           write_block_timings(timing_parameters.solver.checkpoint_out,
                               block_info, block_timings_ms,
-                              timing_parameters.verbosity >= Verbosity::debug);
+                              timing_parameters.verbosity);
           if(timing_parameters.verbosity >= Verbosity::debug)
             {
               try

@@ -57,6 +57,7 @@ void BigInt_Shared_Memory_Syrk_Context::restore_and_reduce(
          DEBUG_STRING(output_residues_window->width));
 
   Fmpz_BigInt bigint_value;
+  std::vector<mp_limb_t> residues_buffer_temp(comb.num_primes);
 
   {
     Scoped_Timer local_restore_timer(timers, "local_restore");
@@ -69,7 +70,7 @@ void BigInt_Shared_Memory_Syrk_Context::restore_and_reduce(
             continue;
 
           restore_bigint_from_residues(*output_residues_window, i, j, comb,
-                                       bigint_value);
+                                       residues_buffer_temp, bigint_value);
           const auto iLoc = output.LocalRow(i);
           const auto jLoc = output.LocalCol(j);
           bigint_value.to_BigFloat(output.Matrix()(iLoc, jLoc));
@@ -156,7 +157,8 @@ void BigInt_Shared_Memory_Syrk_Context::restore_and_reduce(
 
                 ASSERT(curr_send - send_buf.data() < send_buf.size());
                 restore_bigint_from_residues(*output_residues_window, i, j,
-                                             comb, bigint_value);
+                                             comb, residues_buffer_temp,
+                                             bigint_value);
                 bigint_value.to_BigFloat(bigfloat_value);
                 bigfloat_value.Serialize(curr_send);
                 curr_send += serialized_size;

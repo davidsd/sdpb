@@ -1,5 +1,6 @@
 #include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/Environment.hxx"
+#include "sdpb_util/Verbosity.hxx"
 #include "sdpb_util/assert.hxx"
 
 #include <El.hpp>
@@ -12,7 +13,7 @@ namespace fs = std::filesystem;
 void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
                       El::BigFloat &mesh_threshold, fs::path &input_path,
                       fs::path &solution_dir, fs::path &output_path,
-                      bool &need_lambda)
+                      bool &need_lambda, Verbosity &verbosity)
 {
   int precision;
   std::string threshold_string, mesh_threshold_string, format_string;
@@ -45,6 +46,11 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
   options.add_options()("lambda",
                         po::value<bool>(&need_lambda)->default_value(true),
                         "If true, compute Λ and its associated error.");
+  options.add_options()(
+    "verbosity",
+    po::value<Verbosity>(&verbosity)->default_value(Verbosity::regular),
+    "Verbosity.  0 -> no output, 1 -> regular output, 2 -> debug output, 3 -> "
+    "trace output");
 
   options.add_options()(
     "format", po::value<std::string>(&format_string),

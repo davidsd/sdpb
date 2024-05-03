@@ -23,8 +23,9 @@ TEST_CASE("create_blas_jobs_schedule")
     const auto Q_width = Q_height;
     // TODO test also gemm
     constexpr auto uplo = El::UPPER;
-    auto schedule = create_blas_job_schedule(
-      Blas_Job::syrk, uplo, num_ranks, num_primes, Q_height, Q_width, false);
+    auto schedule
+      = create_blas_job_schedule(Blas_Job::syrk, uplo, num_ranks, num_primes,
+                                 Q_height, Q_width, Verbosity::regular);
     {
       INFO("Check that schedule has correct number of ranks:");
       DIFF(schedule.jobs_by_rank.size(), num_ranks);

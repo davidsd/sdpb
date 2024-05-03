@@ -1,12 +1,16 @@
+#include "compute_R_error.hxx"
+#include "update_cond_numbers.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
+#include "sdpb_util/memory_estimates.hxx"
 
-// Tr(A B), where A and B are symmetric
-El::BigFloat frobenius_product_symmetric(const Block_Diagonal_Matrix &A,
-                                         const Block_Diagonal_Matrix &B);
+void scale_multiply_add(const El::BigFloat &alpha,
+                        const Block_Diagonal_Matrix &A,
+                        const Block_Diagonal_Matrix &B,
+                        const El::BigFloat &beta, Block_Diagonal_Matrix &C);
 
 void initialize_schur_complement_solver(
-  const Block_Info &block_info, const SDP &sdp,
+  const Environment &env, const Block_Info &block_info, const SDP &sdp,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     &A_X_inv,
@@ -17,13 +21,14 @@ void initialize_schur_complement_solver(
   Block_Matrix &schur_off_diagonal,
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
   El::DistMatrix<El::BigFloat> &Q, Timers &timers,
-  El::Matrix<int32_t> &block_timings_ms);
+  El::Matrix<int32_t> &block_timings_ms, Verbosity verbosity);
 
 void compute_search_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
+  const Block_Diagonal_Matrix &minus_XY,
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
-  const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat beta,
+  const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat &beta,
   const El::BigFloat &mu, const Block_Vector &primal_residue_p,
   const bool &is_corrector_phase, const El::DistMatrix<El::BigFloat> &Q,
   Block_Vector &dx, Block_Diagonal_Matrix &dX, Block_Vector &dy,
@@ -44,7 +49,8 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
             const std::string &timer_name, Timers &timers);
 
 void SDP_Solver::step(
-  const Solver_Parameters &parameters, const std::size_t &total_psd_rows,
+  const Environment &env, const Solver_Parameters &parameters,
+  const Verbosity &verbosity, const std::size_t &total_psd_rows,
   const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
   const SDP &sdp, const El::Grid &grid,
   const Block_Diagonal_Matrix &X_cholesky,
@@ -59,7 +65,8 @@ void SDP_Solver::step(
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context, El::BigFloat &mu,
   El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
   El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
-  El::Matrix<int32_t> &block_timings_ms)
+  El::Matrix<int32_t> &block_timings_ms, El::BigFloat &Q_cond_number,
+  El::BigFloat &max_block_cond_number, std::string &max_block_cond_number_name)
 {
   Scoped_Timer step_timer(timers, "step");
   block_timings_ms.Resize(block_info.dimensions.size(), 1);
@@ -72,12 +79,25 @@ void SDP_Solver::step(
   // once in the predictor step, and once in the corrector step.
   Block_Vector dx(x), dy(y);
   Block_Diagonal_Matrix dX(X), dY(Y);
+  if(verbosity >= Verbosity::trace)
+    {
+      print_allocation_message_per_node(env, "dx", get_allocated_bytes(dx));
+      print_allocation_message_per_node(env, "dy", get_allocated_bytes(dy));
+      print_allocation_message_per_node(env, "dX", get_allocated_bytes(dX));
+      print_allocation_message_per_node(env, "dY", get_allocated_bytes(dY));
+    }
   {
     // SchurComplementCholesky = L', the Cholesky decomposition of the
     // Schur complement matrix S.
     Block_Diagonal_Matrix schur_complement_cholesky(
       block_info.schur_block_sizes(), block_info.block_indices,
       block_info.num_points.size(), grid);
+    if(verbosity >= Verbosity::trace)
+      {
+        print_allocation_message_per_node(
+          env, "schur_complement_cholesky",
+          get_allocated_bytes(schur_complement_cholesky));
+      }
 
     // SchurOffDiagonal = L'^{-1} FreeVarMatrix, needed in solving the
     // Schur complement equation.
@@ -93,17 +113,35 @@ void SDP_Solver::step(
     // that N' could change with each iteration.
     El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
                                    sdp.dual_objective_b.Height());
+    if(verbosity >= Verbosity::trace)
+      {
+        print_allocation_message_per_node(env, "Q", get_allocated_bytes(Q));
+      }
 
     // Compute SchurComplement and prepare to solve the Schur
     // complement equation for dx, dy
-    initialize_schur_complement_solver(
-      block_info, sdp, A_X_inv, A_Y, grid, schur_complement_cholesky,
-      schur_off_diagonal, bigint_syrk_context, Q, timers, block_timings_ms);
+    initialize_schur_complement_solver(env, block_info, sdp, A_X_inv, A_Y,
+                                       grid, schur_complement_cholesky,
+                                       schur_off_diagonal, bigint_syrk_context,
+                                       Q, timers, block_timings_ms, verbosity);
+
+    // Calculate matrix product -XY
+    // It will be reused for mu, R-err, compute_search_direction().
+    Scoped_Timer XY_timer(timers, "XY");
+    Block_Diagonal_Matrix minus_XY(X);
+    if(verbosity >= Verbosity::trace)
+      {
+        print_allocation_message_per_node(env, "XY",
+                                          get_allocated_bytes(minus_XY));
+      }
+    scale_multiply_add(El::BigFloat(-1), X, Y, El::BigFloat(0), minus_XY);
+    XY_timer.stop();
 
     // Compute the complementarity mu = Tr(X Y)/X.dim
-    Scoped_Timer frobenius_timer(timers, "frobenius_product_symmetric");
-    mu = frobenius_product_symmetric(X, Y) / total_psd_rows;
-    frobenius_timer.stop();
+    {
+      Scoped_Timer mu_timer(timers, "mu");
+      mu = -minus_XY.trace() / total_psd_rows;
+    }
     if(mu > parameters.max_complementarity)
       {
         terminate_now = true;
@@ -114,6 +152,10 @@ void SDP_Solver::step(
         return;
       }
 
+    // R = mu * I - XY
+    // R_error = maxAbs(R)
+    R_error = compute_R_error(mu, minus_XY, timers);
+
     {
       Scoped_Timer predictor_timer(timers,
                                    "computeSearchDirection(betaPredictor)");
@@ -121,22 +163,30 @@ void SDP_Solver::step(
       // Compute the predictor solution for (dx, dX, dy, dY)
       beta_predictor = predictor_centering_parameter(
         parameters, is_primal_and_dual_feasible);
-      compute_search_direction(block_info, sdp, *this,
+      compute_search_direction(block_info, sdp, *this, minus_XY,
                                schur_complement_cholesky, schur_off_diagonal,
                                X_cholesky, beta_predictor, mu,
                                primal_residue_p, false, Q, dx, dX, dy, dY);
     }
 
     // Compute the corrector solution for (dx, dX, dy, dY)
-    Scoped_Timer corrector_timer(timers,
-                                 "computeSearchDirection(betaCorrector)");
-    beta_corrector = corrector_centering_parameter(
-      parameters, X, dX, Y, dY, mu, is_primal_and_dual_feasible,
-      total_psd_rows);
+    {
+      Scoped_Timer corrector_timer(timers,
+                                   "computeSearchDirection(betaCorrector)");
+      beta_corrector = corrector_centering_parameter(
+        parameters, X, dX, Y, dY, mu, is_primal_and_dual_feasible,
+        total_psd_rows);
 
-    compute_search_direction(block_info, sdp, *this, schur_complement_cholesky,
-                             schur_off_diagonal, X_cholesky, beta_corrector,
-                             mu, primal_residue_p, true, Q, dx, dX, dy, dY);
+      compute_search_direction(block_info, sdp, *this, minus_XY,
+                               schur_complement_cholesky, schur_off_diagonal,
+                               X_cholesky, beta_corrector, mu,
+                               primal_residue_p, true, Q, dx, dX, dy, dY);
+    }
+
+    // Calculate condition numbers for Cholesky matrices
+    update_cond_numbers(Q, block_info, schur_complement_cholesky, X_cholesky,
+                        Y_cholesky, timers, Q_cond_number,
+                        max_block_cond_number, max_block_cond_number_name);
   }
   // Compute step-lengths that preserve positive definiteness of X, Y
   primal_step_length

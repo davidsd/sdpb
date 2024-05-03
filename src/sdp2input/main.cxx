@@ -25,7 +25,7 @@ int main(int argc, char **argv)
       int precision;
       fs::path input_file, output_path;
       Block_File_Format output_format;
-      bool debug(false);
+      bool debug;
 
       po::options_description options("Basic options");
       options.add_options()("help,h", "Show this helpful message.");
@@ -68,6 +68,16 @@ int main(int argc, char **argv)
         }
 
       po::notify(variables_map);
+      const auto verbosity = debug ? Verbosity::debug : Verbosity::regular;
+
+      // Print command line
+      if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+        {
+          std::vector<std::string> arg_list(argv, argv + argc);
+          for(const auto &arg : arg_list)
+            std::cout << arg << " ";
+          std::cout << std::endl;
+        }
 
       ASSERT(fs::exists(input_file),
              "Input file does not exist: ", input_file);
@@ -76,21 +86,21 @@ int main(int argc, char **argv)
 
       Environment::set_precision(precision);
 
-      Timers timers(env, debug);
+      Timers timers(env, verbosity);
       Scoped_Timer timer(timers, "sdp2input");
 
       auto pmp = read_polynomial_matrix_program(env, input_file, timers);
 
       Output_SDP sdp(pmp, command_arguments, timers);
       bool zip = false;
-      write_sdp(output_path, sdp, output_format, zip, timers, debug);
+      write_sdp(output_path, sdp, output_format, zip, timers, verbosity);
       if(El::mpi::Rank() == 0)
         {
           El::Output("Processed ", sdp.num_blocks, " SDP blocks in ",
                      (double)timer.timer().elapsed_milliseconds() / 1000,
                      " seconds, output: ", output_path.string());
         }
-      if(debug)
+      if(verbosity >= Verbosity::debug)
         {
           timers.write_profile(output_path.string() + ".profiling/profiling."
                                + std::to_string(El::mpi::Rank()));

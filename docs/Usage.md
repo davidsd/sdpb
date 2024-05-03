@@ -239,9 +239,13 @@ SDPB's defaults are set for optimal performance. This may result in using more m
 Two ways to reduce memory usage:
 
 1. Running SDPB on more nodes will reduce the amount of memory required on each node.
-2. Set `--maxSharedMemory` option, e.g. `--maxSharedMemory=64G`. This will reduce memory usage by splitting shared memory windows used for matrix multiplication, see [bigint_syrk/Readme.md](../src/sdp_solve/SDP_Solver/run/bigint_syrk/Readme.md) for details. This may affect performance, especially if the limit is lower than the output window size.
-You can see current shared window sizes if you run SDPB with `--verbosity debug` option (search for `create BigInt_Shared_Memory_Syrk_Context` in the output).
-If you set small limit, SDPB will print a warning with optimal windows sizes.
+2. Set `--maxSharedMemory` option, e.g. `--maxSharedMemory=64G`. This will reduce memory usage by splitting shared memory windows used for matrix multiplication, see [bigint_syrk/Readme.md](../src/sdp_solve/SDP_Solver/run/bigint_syrk/Readme.md) for details.
+
+If `--maxSharedMemory` is not set by user, SDPB will calculate it automatically based on expected memory usage and amount of available RAM (search for `--maxSharedMemory` in the output to see the new limit).
+Note that these estimates are very imprecise, and actual memory usage can be much higher than expected. If automatically calculated `--maxSharedMemory` value does not prevent OOM, consider decreasing it manually and/or increasing number of nodes.
+
+Decreasing `--maxSharedMemory` may affect performance. If the value is too small, SDPB will print a warning with current and optimal shared windows sizes.
+In our benchmarks, the negative effect on performance was significant only when `--maxSharedMemory` was much smaller than the output window size.
 
 ### SDPB crashes when using all available cores on the node
 
@@ -262,6 +266,15 @@ sdpb -s path/to/sdp_dir <...>
 
 Elemental throws this error if you are trying to compute Cholesky decomposition of a matrix that is not Hermitian positive definite (HPD).
 Try increasing SDPB `--precision` and/or precision of your PMP input files.
+
+### 'Illegal instruction' crash
+
+This crash has been observed when FLINT binaries compiled on one CPU are used on another CPU which does not support some extensions (e.g. AVX).
+For example, this may happen in HPC environment when the code is compiled on a login node and used on a compute node.
+
+Workaround: rebuild FLINT, prodiving `--host` option for `configure` script, e.g. `./configure --host=amd64 <...>`.
+
+See more details in https://github.com/davidsd/sdpb/issues/235.
 
 ### 'Running out of inodes' error
 

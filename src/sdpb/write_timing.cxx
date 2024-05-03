@@ -34,12 +34,12 @@ void write_profiling(const fs::path &checkpoint_out, const Timers &timers)
 void write_block_timings(const fs::path &checkpoint_out,
                          const Block_Info &block_info,
                          const El::Matrix<int32_t> &block_timings_ms,
-                         const bool &debug)
+                         const Verbosity verbosity)
 {
   if(El::mpi::Rank() != 0)
     return;
 
-  if(debug)
+  if(verbosity >= Verbosity::debug)
     {
       El::Print(block_timings_ms, "block_timings, ms:", ", ");
       El::Output();

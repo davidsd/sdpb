@@ -230,7 +230,7 @@ namespace
 
 void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
                Block_File_Format block_file_format, bool zip, Timers &timers,
-               const bool debug)
+               const Verbosity verbosity)
 {
   Scoped_Timer write_timer(timers, "write_sdp");
 
@@ -328,7 +328,7 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
           }
       }
   }
-  if(debug)
+  if(verbosity >= Verbosity::debug)
     {
       print_matrix_sizes(rank, sdp.dual_objective_b,
                          sdp.dual_constraint_groups);
@@ -467,9 +467,9 @@ void print_matrix_sizes(
         {"Bilinear bases", bilinear_bases_elements},
         {"Bilinear pairing blocks - A_x_inv, A_y", bilinear_pairing_block_elements},
         // R,Z - from compute_search_direction(), TODO we shall account for them only if peak usage is there.
-        {"PSD blocks - X, Y, primal_residues, X_chol, Y_chol, dX, dY, R, Z", psd_blocks_elements},
+        {"PSD blocks - X, Y, primal_residues, X_chol, Y_chol, dX, dY, XY, R, Z", psd_blocks_elements},
         {"Schur (PxP block diagonal) - schur_complement, schur_complement_cholesky", schur_elements},
-        {"Total (without shared windows) = 2#(B) + 9#(PSD) + 2#(S) + "
+        {"Total (without shared windows) = 2#(B) + 10#(PSD) + 2#(S) + "
          "2#(Bilinear pairing) + #(Q)",
          total_size},
       };
