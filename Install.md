@@ -38,7 +38,7 @@ SDPB requires
 
 - [libarchive](https://github.com/libarchive/libarchive)
 
-- [FLINT](https://github.com/flintlib/flint)
+- [FLINT](https://github.com/flintlib/flint) (2.8.0 or later)
 
 SDPB has only been tested on Linux (Debian buster and Centos 7).  On
 Centos 7, the system compiler (gcc 4.8.5) is too old to support
