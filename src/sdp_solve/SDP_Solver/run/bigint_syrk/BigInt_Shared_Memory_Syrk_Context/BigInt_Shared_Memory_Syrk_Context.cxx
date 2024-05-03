@@ -355,8 +355,16 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
            DEBUG_STRING(max_shared_memory_bytes));
   }
 
-  // Disable BLAS threading explicitly, each rank should work single-threaded
+// detect OpenBLAS using any OpenBLAS-specific macro from cblas.h
+#ifdef OPENBLAS_THREAD
+  // Disable BLAS threading explicitly, each rank should work single-threaded.
+  // If this does not work, try also setting environment variables:
+  // export OPENBLAS_NUM_THREADS=1
+  // or also:
+  // export OMP_NUM_THREADS=1
   openblas_set_num_threads(1);
+#endif
+  // TODO: disable threading for other CBLAS implementations too.
 }
 
 El::Int BigInt_Shared_Memory_Syrk_Context::input_group_height_per_prime() const
