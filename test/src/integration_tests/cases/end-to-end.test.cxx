@@ -259,6 +259,23 @@ TEST_CASE("end-to-end_tests")
                     check_sdp_normalization, run_sdpb_twice);
   }
 
+  SECTION("SingletScalar_cT_test_nmax6/primal_dual_optimal_reduced")
+  {
+    INFO("Same as primal_dual_optimal, but with reducedPrefactor");
+    INFO("SDPB should find primal-dual optimal solution.");
+    const auto name
+      = "SingletScalar_cT_test_nmax6/primal_dual_optimal_reduced";
+    std::string default_sdpb_args
+      = "--checkpointInterval 3600 --maxRuntime 1340 "
+        "--dualityGapThreshold 1.0e-30 --primalErrorThreshold 1.0e-30 "
+        "--dualErrorThreshold 1.0e-30 --initialMatrixScalePrimal 1.0e20 "
+        "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
+        "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
+        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 2 "
+        "--procGranularity 1 --writeSolution x,y,z";
+    end_to_end_test(name, num_procs, precision, default_sdpb_args);
+  }
+
   SECTION("SingletScalarAllowed_test_nmax6")
   {
     INFO("SingletScalarAllowed_test_nmax6 from "
