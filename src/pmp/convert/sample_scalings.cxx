@@ -1,9 +1,5 @@
 #include "../Damped_Rational.hxx"
 
-#include <El.hpp>
-
-#include <boost/math/constants/constants.hpp>
-
 #include <vector>
 
 std::vector<Boost_Float>
@@ -22,24 +18,7 @@ sample_scalings(const std::vector<Boost_Float> &points,
 
   for(auto &point : points)
     {
-      Boost_Float numerator(damped_rational.constant
-                            * pow(damped_rational.base, point));
-      Boost_Float denominator(1);
-      for(auto &pole : damped_rational.poles)
-        {
-          Boost_Float delta = point - pole;
-
-          // Regularize value at small denominator
-          if(abs(delta) < min_pole_distance)
-            {
-              delta = min_pole_distance;
-              if(sign(delta) < 0)
-                delta = -delta;
-            }
-
-          denominator *= delta;
-        }
-      result.emplace_back(numerator / denominator);
+      result.emplace_back(damped_rational.evaluate(point, min_pole_distance));
     }
   return result;
 }
