@@ -3,12 +3,15 @@
 
 void compute_lambda(const std::vector<El::BigFloat> &sample_points,
                     const std::vector<El::BigFloat> &sample_scalings,
-                    const size_t &num_rows, const El::Matrix<El::BigFloat> &x,
+                    const Damped_Rational &prefactor, const size_t &num_rows,
+                    const El::Matrix<El::BigFloat> &x,
                     const std::vector<El::BigFloat> &zero_vector,
                     std::vector<Zero> &zeros, El::BigFloat &error)
 {
   const size_t matrix_block_size(x.Height() / (num_rows * (num_rows + 1) / 2));
 
+  // U_{j,k} in Eq. (A.11)
+  // hereafter equation numbers are from https://arxiv.org/pdf/1612.08471
   El::Matrix<El::BigFloat> x_scaled_matrix(matrix_block_size,
                                            (num_rows * (num_rows + 1) / 2));
   {
@@ -32,6 +35,8 @@ void compute_lambda(const std::vector<El::BigFloat> &sample_points,
       error = El::Sqrt(El::Dot(error_matrix, error_matrix));
       return;
     }
+
+  // Lagrange interpolation coefficients L(\tau, x_k^{(j)}, Eq. (A.15)
   El::Matrix<El::BigFloat> interpolation(sample_points.size(),
                                          zero_vector.size());
   for(size_t point_index(0); point_index != sample_points.size();
@@ -56,6 +61,8 @@ void compute_lambda(const std::vector<El::BigFloat> &sample_points,
         }
     }
 
+  // Solve Eq. (A.15) for V using least-squares fit.
+  // roots_fit is L^{-1}
   El::Matrix<El::BigFloat> roots_fit;
   {
     // This is mostly a copy+paste of El::Pseudoinverse.  We need to
@@ -89,6 +96,7 @@ void compute_lambda(const std::vector<El::BigFloat> &sample_points,
 
   for(size_t zero_index(0); zero_index != zero_vector.size(); ++zero_index)
     {
+      //  V_{j,\tau} from Eq. (A.15)
       El::Matrix<El::BigFloat> Lambda(num_rows, num_rows);
       El::Matrix<El::BigFloat> fit(roots_fit.Height(), 1);
       size_t row_column(0);
@@ -100,6 +108,7 @@ void compute_lambda(const std::vector<El::BigFloat> &sample_points,
             El::Matrix<El::BigFloat> Lambda_view(
               El::View(Lambda, row, column, 1, 1));
 
+            // Lambda_view = V_{j,\tau} = symmetrize( L^{-1}(\tau,x_k^{(j)}) . U_{j,k} )
             El::Gemv(
               El::Orientation::NORMAL,
               (row == column ? El::BigFloat(1.0) : El::BigFloat(0.5)),
@@ -125,6 +134,8 @@ void compute_lambda(const std::vector<El::BigFloat> &sample_points,
         {
           zeros.emplace_back(zero_vector[zero_index]);
           auto &lambda(zeros.back().lambda);
+          // lambdas = eigenvectors * sqrt(eigenvalues)
+          // lambdas = v_{j,\tau} from Eq. (A.8)
           lambda = El::View(eigenvectors, 0, num_eigvals - 1, num_eigvals, 1);
           lambda *= El::Sqrt(eigenvalues(num_eigvals - 1, 0));
 
@@ -140,6 +151,14 @@ void compute_lambda(const std::vector<El::BigFloat> &sample_points,
                   }
                 ++row_column;
               }
+
+          // Set lambda = 1/sqrt(\chi) * v_{j,\tau}
+          // With this definition, lambda does not change
+          // if one adds reducedPrefactor != prefactor to PMP.json
+          // NB: this is different from Python script and from (A.8) definition!
+          lambda *= 1
+                    / El::Sqrt(to_BigFloat(
+                      prefactor.evaluate(to_Boost_Float(zeros.back().zero))));
         }
     }
   error = El::Sqrt(El::Dot(error_matrix, error_matrix));

@@ -35,6 +35,9 @@ struct Polynomial_Vector_Matrix
   // of polynomials.  So we should use a proper symmetric matrix class.
   El::Matrix<Polynomial_Vector> polynomials;
 
+
+  Damped_Rational reduced_prefactor;
+
   // A list of real numbers x_k (0 <= k <= degree(M)) at which to
   // sample M(x) to construct the v_{b,k}.
   std::vector<El::BigFloat> sample_points;

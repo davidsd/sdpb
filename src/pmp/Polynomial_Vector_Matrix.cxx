@@ -155,9 +155,11 @@ Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
   const std::optional<std::array<Polynomial_Vector, 2>> &bilinear_basis_opt)
 {
   this->polynomials = polynomials;
+
+  // TODO for degree=0, set default prefactor = 1 instead of exp(-x)
   const auto prefactor = prefactor_or_default(prefactor_opt);
 
-  const auto reduced_prefactor = [&] {
+  reduced_prefactor = [&] {
     if(reduced_prefactor_opt.has_value())
       {
         ASSERT(prefactor_opt.has_value());
