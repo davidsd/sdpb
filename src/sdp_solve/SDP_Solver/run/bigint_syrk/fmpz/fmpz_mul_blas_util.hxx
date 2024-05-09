@@ -1,12 +1,9 @@
 #pragma once
 
 #include "Fmpz_Comb.hxx"
-#include "fmpz_BigFloat_convert.hxx"
-#include "sdpb_util/Shared_Window_Array.hxx"
 #include "sdpb_util/assert.hxx"
 
 #include <El.hpp>
-#include <flint/nmod.h>
 
 // Code adopted from FLINT library, mat_mul_blas.c
 

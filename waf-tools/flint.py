@@ -42,23 +42,24 @@ def configure(conf):
     if not conf.check_cxx(msg="Checking for flint",
                           fragment='''
 #include "flint/flint.h"
-#include "flint/arb.h"
+#include "flint/fmpz.h"
+#include <vector>
 
 int main()
 {
-    arb_t x;
-    arb_init(x);
-    arb_const_pi(x, 50 * 3.33);
-    arb_printn(x, 50, 0); flint_printf("");
-    flint_printf("Computed with FLINT-%s", flint_version);
-    arb_clear(x);
+    static_assert(__FLINT_RELEASE >= 20800, "FLINT 2.8.0 or later required, current version: " FLINT_VERSION);
+
+    std::vector<mp_limb_t> primes{2, 3, 5};
+    fmpz_comb_t comb;
+    fmpz_comb_init(comb, primes.data(), primes.size());
+    flint_printf("Computed with FLINT-%s", FLINT_VERSION);
 }''',
                           includes=flint_incdir,
                           uselib_store='flint',
                           libpath=flint_libdir,
                           rpath=flint_libdir,
                           lib=flint_libs,
-                          use=['cxx17', 'gmpxx']):
+                          use=['cxx17', 'gmpxx', 'mpfr', 'cblas']):
         conf.fatal("Could not find flint")
 
 

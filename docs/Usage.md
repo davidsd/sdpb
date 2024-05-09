@@ -267,10 +267,35 @@ sdpb -s path/to/sdp_dir <...>
 Elemental throws this error if you are trying to compute Cholesky decomposition of a matrix that is not Hermitian positive definite (HPD).
 Try increasing SDPB `--precision` and/or precision of your PMP input files.
 
+### 'Illegal instruction' crash
+
+This crash has been observed when FLINT binaries compiled on one CPU are used on another CPU which does not support some extensions (e.g. AVX).
+For example, this may happen in HPC environment when the code is compiled on a login node and used on a compute node.
+
+Workaround: rebuild FLINT, prodiving `--host` option for `configure` script, e.g. `./configure --host=amd64 <...>`.
+
+See more details in https://github.com/davidsd/sdpb/issues/235.
+
 ### 'Running out of inodes' error
 
 This may happen on some filesystems if SDP contains too many block files. Run `pmp2sdp` with `--zip` flag to put
 everything into a single zip archive.
+
+### OpenBLAS fails to create threads
+
+```
+OpenBLAS blas_thread_init: pthread_create failed for thread 15 of 32: Resource temporarily unavailable
+```
+
+Each BLAS call in SDPB should be single-threaded.
+To ensure that, disable threading by setting environment variable
+```
+export OPENBLAS_NUM_THREADS=1
+```
+and/or
+```
+export OMP_NUM_THREADS=1
+```
 
 ### Spectrum does not find zeros
 
