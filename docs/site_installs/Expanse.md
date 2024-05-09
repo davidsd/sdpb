@@ -32,12 +32,12 @@ You may list all available versions via
 
 Fo example, `sdpb-master` is built from the latest [master](https://github.com/davidsd/sdpb/tree/master) branch (
 run `sdpb --version` to see commit hash, e.g. `SDPB 2.5.1-130-g88b1c9ae`),
-and `sdpb-2.7.0` is a stable [2.7.0](https://github.com/davidsd/sdpb/releases/tag/2.7.0) release.
+and `sdpb-3.0.0` is a stable [3.0.0](https://github.com/davidsd/sdpb/releases/tag/3.0.0) release.
 
 Examples below are for `sdpb-master`.
-You may replace it with another version, e.g. `sdpb-2.7.0`.
+You may replace it with another version, e.g. `sdpb-3.0.0`.
 In that case, please refer
-to [2.7.0 documentation](https://github.com/davidsd/sdpb/blob/2.7.0/docs/site_installs/Expanse.md).
+to [3.0.0 documentation](https://github.com/davidsd/sdpb/blob/3.0.0/docs/site_installs/Expanse.md).
 
 ## Run SDPB
 
@@ -73,14 +73,16 @@ TODO: on compute nodes compiler fails to find some libs
 
 ## FLINT
 
-    git clone https://github.com/flintlib/flint.git
+    git clone https://github.com/flintlib/flint.git -b v3.0.1
     cd flint
-    ./bootstrap.sh    
-    mkdir build
-    cd build
-    cmake .. -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DCMAKE_INSTALL_PREFIX=$HOME/install -DBUILD_SHARED_LIBS=ON
-    cmake --build . --target install
-    cd ../..
+    ./bootstrap.sh
+    ./configure CC=mpicc CXX=mpicxx --disable-static --disable-gmp-internals --prefix=$HOME/install 
+    make
+    make check 
+    make install
+
+Note that you have to checkout `v3.0.1` because starting from v3.1.0 FLINT requires GMP 6.2.1 or later.
+The flag `--disable-gmp-internals` is required to prevent `mpn_gcd_11 not found` error.
 
 ## libarchive
 

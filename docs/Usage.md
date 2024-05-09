@@ -281,6 +281,22 @@ See more details in https://github.com/davidsd/sdpb/issues/235.
 This may happen on some filesystems if SDP contains too many block files. Run `pmp2sdp` with `--zip` flag to put
 everything into a single zip archive.
 
+### OpenBLAS fails to create threads
+
+```
+OpenBLAS blas_thread_init: pthread_create failed for thread 15 of 32: Resource temporarily unavailable
+```
+
+Each BLAS call in SDPB should be single-threaded.
+To ensure that, disable threading by setting environment variable
+```
+export OPENBLAS_NUM_THREADS=1
+```
+and/or
+```
+export OMP_NUM_THREADS=1
+```
+
 ### Spectrum does not find zeros
 
 Try to set `--threshold` option for `spectrum` larger than `--dualityGapThreshold` for `sdpb`.
