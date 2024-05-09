@@ -103,14 +103,19 @@ To construct an SDP, \texttt{pmp2sdp} needs the following information:
 \begin{itemize}
 	\item for each $j=1,\dots,J$:
 	\begin{itemize}
-		\item polynomial matrices $W^0_j(x),\dots,W^N_j(x)$ of maximum degree $d_j$,
-		\item bilinear bases $q_m^{(j)}(x)$ ($m=0,\dots,\lfloor d_j/2\rfloor$),
+		\item polynomial matrices $W^0_j(x),\dots,W^N_j(x)$,
+		\item bilinear bases $q_m^{(j1)}(x)$ ($m=0,\dots,\delta_{j1}$) 
+			and $q_m^{(j2)}(x)$ ($m=0,\dots,\delta_{j2}$)
+			used to construct matrices $Q_{\delta_{j1}}$ and $Q_{\delta_{j2}}$
+			(see eqs. (2.6) and (2.11) in \cite{DSD}),
 		\item sample points $x_k^{(j)}$ ($k=0,\dots,d_j$),
 		\item sample scalings $s_k^{(j)}$ ($k=0,\dots,d_j$),
 	\end{itemize}
 	\item an objective function $a\in \R^{N+1}$.
 	\item a normalization vector $n\in \R^{N+1}$.
 \end{itemize}
+By default, $d_j$ equals to the maximum degree of polynomials in $W^0_j(x),\dots,W^N_j(x)$.
+To improve performance, one may use a lower value (e.g. by specifying \texttt{"reducedPrefactor"} or choosing sample points explicitly, see below).
 A bilinear basis is a collection of polynomials $q_m^{(j)}(x)$ such that $\deg q_m^{(j)} = m$, for example monomials $q_m^{(j)}(x)=x^m$.  (A better choice for numerical stability is usually orthogonal polynomials on the positive real line.)  The sample points, sample scalings and bilinear bases determine how the PMP is represented internally as an SDP.  In principle, they do not affect the solution of the PMP, but in practice they can affect numerical stability.
 See Section 3.3 in \cite{DSD} for details.
 
@@ -144,7 +149,8 @@ See details in \texttt{docs/Usage.md}.
 }
 
 @\defn{positive matrix with prefactor $j$}@ {
-	@\textrm{\em{(optional)}}@ "DampedRational": @\repl{damped-rational prefactor}@,
+	@\textrm{\em{(optional)}}@ "prefactor" | "DampedRational": @\repl{damped-rational prefactor}@,
+	@\textrm{\em{(optional)}}@ "reducedPrefactor": @\repl{damped-rational prefactor}@,
 	"polynomials": [
 		[@\repl{polynomial vector $Q^{n}_{j,11}(x)$}@, ... @\repl{polynomial vector $Q^{n}_{j,m_j1}(x)$}@],
 		...
@@ -152,7 +158,18 @@ See details in \texttt{docs/Usage.md}.
 	],
 	@\textrm{\em{(optional)}}@ "samplePoints": ["$x_0^{(j)}$", ...,"$x_{d_j}^{(j)}$"],
 	@\textrm{\em{(optional)}}@ "sampleScalings": ["$s_0^{(j)}$", ...,"$s_{d_j}^{(j)}$"],
-	@\textrm{\em{(optional)}}@ "bilinearBasis": [
+	@\textrm{\em{(optional)}}@ "reducedSampleScalings": ["$s_0^{\prime(j)}$", ...,"$s_{d_j}^{\prime(j)}$"],
+	@\textrm{\em{(optional)}}@ "bilinearBasis_0": [
+		@\repl{polynomial $q_0^{(j1)}(x)$}@,
+		...
+		@\repl{polynomial $q_{\lfloor d_j/2\rfloor}^{(j1)}(x)$}@
+	],
+	@\textrm{\em{(optional)}}@ "bilinearBasis_1": [
+		@\repl{polynomial $q_0^{(j2)}(x)$}@,
+		...
+		@\repl{polynomial $q_{\lfloor (d_j-1)/2\rfloor}^{(j2)}(x)$}@
+	],
+	@\textrm{\em{(optional, obsolete)}}@ "bilinearBasis": [
 		@\repl{polynomial $q_0^{(j)}(x)$}@,
 		...
 		@\repl{polynomial $q_{\lfloor d_j/2\rfloor}^{(j)}(x)$}@
@@ -174,23 +191,27 @@ Some fields in \texttt{JSON} format are optional.
 
 If \texttt{"normalization"} is not specified, the default value $n=(1,0,\ldots,0)$ is assumed, effectively reducing formulation \eqref{eq:PMPconstraintMathematica} to \eqref{eq:PMPconstraint}.
 
-If \texttt{"samplePoints"} are not specified, \texttt{pmp2sdp} will make a choice of sample points automatically.
-For historical reasons, the choice is
-\be
-	x_k^{(j)} = \frac{\pi^2 (-1+4k)^2}{-64 (d_j + 1) \log(3-2\sqrt{2})}
-.
-\ee
-
-If \texttt{"sampleScalings"} and/or \texttt{"bilinearBasis"} are not specified,
-they are calculated automatically from the \texttt{"DampedRational"} prefactor.
-Specifically, if the prefactor is $\chi(x)$, the bilinear basis is a set of orthogonal polynomials with respect to measure $\chi(x)dx$ on the positive real line, and sample scalings are $\chi(x_k)$, where the $x_k$ are sample points.
+If \texttt{"samplePoints"}, \texttt{"sampleScalings"}, \texttt{"reducedSampleScalings"}, \texttt{"bilinearBasis\_0"} and/or  \texttt{"bilinearBasis\_1"} are not specified,
+they are calculated automatically from the \texttt{"prefactor"} and \texttt{"reducedPrefactor"}.
 Only damped-rational prefactors are supported.
-Such prefactors are relevant to the conformal bootstrap problems.  These stand for
+Such prefactors are relevant to the conformal bootstrap problems.
+These stand for
 \be
 \texttt{DampedRational[$c$, \{$p_1,\dots,p_k$\}, $b$, $x$]} &\to& c\frac{b^x}{\prod_{i=1}^k (x-p_i)}.
 \ee
+Sample points $x_0 \ldots x_{d_j}$ are chosen to minimize interpolation errors on the positive real line.
+$d_j$ is determined as maximum degree of polynomials in $W^0_j(x),\dots,W^N_j(x)$ plus the number of poles in the reduced prefactor minus the number of poles in the prefactor.
+Sample scalings are $s_k = \chi(x_k)$ and reduced sample scalings are $s^\prime_k = \chi^\prime(x_k)$,
+where $\chi(x)$ is the prefactor and $\chi^\prime(x)$ is the reduced prefactor.
+\texttt{"bilinearBasis\_0"} is a set of orthogonal polynomials with respect to measure $\sum_{0}^{d_j}s^\prime_k \delta(x-x_k)dx$ on the positive real line, and \texttt{"bilinearBasis\_1"} is a set of orthogonal polynomials with respect to measure $x\sum_{0}^{d_j}s^\prime_k \delta(x-x_k)dx$.
 
-If \texttt{"DampedRational"} is not specified, default sample scalings and bilinear basis are calculated assuming the prefactor $\chi(x) = e^{-x}$.
+If \texttt{"prefactor"} is not specified, default sample points, sample scalings and bilinear bases are calculated assuming the prefactor $\chi(x) = e^{-x}$. For constant constraints (degree-0 polynomials), default prefactor is $\chi(x) = 1$.
+Note that in SDPB 3.0.0 and earlier, \texttt{"prefactor"} was called \texttt{"DampedRational"}; this name is left for backward compatibility.
+
+If \texttt{"reducedPrefactor"} is not specified, it is set to the same value as \texttt{"prefactor"}.
+
+
+If \texttt{"bilinearBasis"} is specified, it is used for both $q_m^{(j1)}(x)$ and $q_m^{(j2)}(x)$. This field is left for backward compatibility with SDPB 3.0.0 and earlier.
 
 The \texttt{JSON} format is also described by the schema in \texttt{docs/json\_schema/pmp\_schema.json}.
 
@@ -198,15 +219,12 @@ The \texttt{JSON} format is also described by the schema in \texttt{docs/json\_s
 
 \texttt{JSON} can be generated with a \texttt{WritePmpJson} function in the included \texttt{Mathematica} package \texttt{mathematica/SDPB.m}.
 Here \texttt{file} is the JSON file to be written to, and \texttt{sdp} has a form described in Listing \ref{listing:mathematica}.
-You can also provide a custom function \texttt{samplePointsFn[d]} generating sample points $x_0,\ldots,x_d$ for a polynomial of degree $d$.
+You can also provide a custom function \texttt{getSampleDataFn} generating sample points, sample scalings and bilinear bases.
+An example of such function is \texttt{getAnalyticSampleData} in \texttt{SDPB.m}.
+It implements the same sampling algorithm as in \texttt{pmp2sdp}.
 
 
 As an example bootstrap application, the included notebook \texttt{Bootstrap2dExample.m} computes a single-correlator dimension bound for 2d CFTs with a $\Z_2$ symmetry, as in \cite{Rychkov:2009ij}.
-
-
-\texttt{SDPB.m} also defines \texttt{WritePmpXml[file, sdp]} function which writes PMP in XML format described in Section \ref{sec:xml}.
-In addition, \texttt{pmp2sdp} can also directly read .m files containing \texttt{SDP} definition.
-
 
 \begin{lstlisting}[
 caption={Usage of \texttt{WritePmpJson} in \texttt{SDPB.m}},
@@ -218,9 +236,9 @@ escapeinside=@@,
 basicstyle=\small\ttfamily\selectfont,
 ]
 @\defn{function call}@
-WritePmpJson[file, @\repl{sdp}@]
+WritePmpJson[file, @\repl{sdp}@, prec]
 @\textrm{\em or}@
-WritePmpJson[file, @\repl{sdp}@, @\repl{samplePointsFn}@] 
+WritePmpJson[file, @\repl{sdp}@, prec, @\repl{getSampleDataFn}@] 
 
 @\defn{sdp}@ SDP[@\repl{objective}@, @\repl{normalization}@, @\repl{positive matrices with prefactors}@]
 
@@ -235,8 +253,10 @@ WritePmpJson[file, @\repl{sdp}@, @\repl{samplePointsFn}@]
 }
 
 @\defn{positive matrix with prefactor $j$}@
-PositiveMatrixWithPrefactor[@\repl{prefactor}@,
-{
+PositiveMatrixWithPrefactor[<|
+@\textrm{\em{(optional)}}@ "prefactor" -> @\repl{prefactor}@,
+@\textrm{\em{(optional)}}@ "reducedPrefactor" -> @\repl{prefactor}@,
+"polynomials" -> {
 	{
 		{$Q^0_{j,11}(x)$, ..., $Q^N_{j,11}(x)$},  ..., {$Q^0_{j,m_j1}(x)$, ..., $Q^N_{j,m_j1}(x)$}
 	},
@@ -245,21 +265,27 @@ PositiveMatrixWithPrefactor[@\repl{prefactor}@,
 		{$Q^0_{j,1m_j}(x)$, ..., $Q^N_{j,1m_j}(x)$},  ..., {$Q^0_{j,m_jm_j}(x)$, ..., $Q^N_{j,m_jm_j}(x)$}
 	},
 }
-]
+|>]
 
 @\defn{prefactor}@
 DampedRational[$c$, {$p_1,\dots,p_k$}, $b$, x]
 @\textrm{\em or}@
 const  
 
-@\defn{samplePointsFn[d\_]}@ function returning a list {$x_0$, ..., $x_d$}
+@\defn{getSampleDataFn[PositiveMatrixWithPrefactor, prec]}@ function returning a map
+<|
+@\textrm{\em{(optional)}}@ "samplePoints" ->...
+@\textrm{\em{(optional)}}@ "sampleScalings" -> ...
+@\textrm{\em{(optional)}}@ "bilinearBasis_0" -> ...
+@\textrm{\em{(optional)}}@ "bilinearBasis_1" ->...
+|>
 \end{lstlisting}
 
 \subsection{\texttt{XML} format}
 \label{sec:xml}
 
 \texttt{pmp2sdp} can read \texttt{XML} files describing PMP in form \eqref{eq:PMPconstraint}.
-Note that we recommend using \texttt{JSON} as more compact and efficient.
+Note that we recommend using \texttt{JSON} as more versatile, compact and efficient.
 
 \begin{lstlisting}[
 	caption={XML format for PMP},
@@ -343,7 +369,8 @@ Let's look at an example.  Consider the following problem: maximize $-y$ such th
 \label{eq:exampleproblem}
 1+x^4 + y\p{\frac{x^4}{12} + x^2} &\geq& 0\qquad \textrm{for all $x\geq 0$}
 \ee
-This is an PMP with $1\x1$ positive-semidefiniteness constraints.  We will arbitrarily choose a prefactor of $e^{-x}=\texttt{DampedRational[1,\{\}, 1/E,x]}$, so that the bilinear basis consists of Laguerre polynomials.  The \texttt{Mathematica} code for this example (see \texttt{mathematica/Tests.m}) is
+This is an PMP with $1\x1$ positive-semidefiniteness constraints.  We will arbitrarily choose a prefactor of $e^{-x}=\texttt{DampedRational[1,\{\}, 1/E,x]}$.
+The \texttt{Mathematica} code for this example (see \texttt{mathematica/Tests.m}) is
 
 \begin{lstlisting}[
   caption={Mathematica input for the example~(\ref{eq:exampleproblem})},
@@ -357,15 +384,16 @@ This is an PMP with $1\x1$ positive-semidefiniteness constraints.  We will arbit
 Module[
   {
     pols = {
-      PositiveMatrixWithPrefactor[
-        DampedRational[1,{}, 1/E,x],
-        {{{1 + x^4, x^4/12 + x^2}}}
-      ]
+      PositiveMatrixWithPrefactor[<|
+        "prefactor" -> DampedRational[1,{}, 1/E,x],
+        "polynomials" -> {{{1 + x^4, x^4/12 + x^2}}}
+      >|]
     },
     norm = {1, 0},
-    obj  = {0, -1}
+    obj  = {0, -1},
+    prec = 200
   },
-  WritePmpJson["pmp.json", SDP[obj, norm, pols]];
+  WritePmpJson["pmp.json", SDP[obj, norm, pols], prec];
 ];
 \end{lstlisting}
 It produces the following JSON file
