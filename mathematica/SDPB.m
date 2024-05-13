@@ -165,8 +165,13 @@ If[MissingQ[pmp[["polynomials"]]], Return[$Failed]];
 numeratorDegOld=Max[Exponent[pmp[["polynomials"]], x]];
 
 prefactorOld=pmp[["prefactor"]];
-(*Set default prefactor*)
-If[MissingQ@prefactorOld, prefactorOld=DampedRational[1,{},1/E,x]];
+(*Set default prefactor to 1 for constant constraints and to Exp[-x] otherwise*)
+If[MissingQ@prefactorOld,
+  prefactorOld=If[numeratorDegOld==0,
+    DampedRational[1,{},1,x],
+    DampedRational[1,{},1/E,x]
+  ]
+];
 
 prefactorNew=pmp[["reducedPrefactor"]];
 If[MissingQ@prefactorNew, prefactorNew=prefactorOld];

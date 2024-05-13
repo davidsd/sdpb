@@ -199,7 +199,7 @@ sample_points(const size_t &num_points, const Damped_Rational &prefactor)
   std::vector<Boost_Float> points(num_points);
 
   // For base>=1, integrals diverge and we cannot get meaningful answer.
-  ASSERT(prefactor.base < 1, DEBUG_STRING(prefactor));
+  ASSERT(prefactor.base > 0 && prefactor.base < 1, DEBUG_STRING(prefactor));
 
   // Number of small points
   size_t num_small_points = std::count_if(
