@@ -26,6 +26,7 @@ DampedRational/:DampedRational[c1_,p1_,b1_,x] DampedRational[c2_,p2_,b2_,x] :=
 DampedRational/:a_ DampedRational[c_,p_,b_,x] /; FreeQ[a,x] := DampedRational[a c, p, b, x];
 
 evalDampedRationalRegulated[DampedRational[c_,poles_,b_,x],x0_,minPoleDistance_]:=c b^x0/Product[Max[x0-p,minPoleDistance],{p,poles}];
+evalDampedRationalRegulated[const_?NumericQ,x0_,minPoleDistance_]:=const;
 
 nf[x_Integer, prec___] := x;
 nf[x_, prec_:prec] := NumberForm[SetPrecision[x,prec],prec,ExponentFunction->(Null&)];
@@ -59,11 +60,18 @@ toJsonObject[value_?MissingQ, args___]:=value;
 bilinearBasisToJson[value_?MissingQ,args___]:=value;
 bilinearBasisToJson[value_List,prec_]:=toJsonNumberArray[safeCoefficientList[#, x],prec]&/@value;
 
-toJsonObject[DampedRational[constant_, poles_List, base_, x],prec_] := <|
+toJsonDampedRational[DampedRational[constant_, poles_List, base_, x],prec_] := <|
    "base" -> toJsonNumber[base,prec],
    "constant" -> toJsonNumber[constant,prec],
    "poles" -> toJsonNumberArray[poles,prec]
    |>;
+   
+toJsonDampedRational[constant_?NumericQ,prec_] := <|
+   "base" -> toJsonNumber[1,prec],
+   "constant" -> toJsonNumber[constant,prec],
+   "poles" -> toJsonNumberArray[{},prec]
+   |>;
+toJsonDampedRational[value_?MissingQ, args___]:=value;
 
 
 (*With default getSampleDataFn, "samplePoints" and next fields will be missing*)
@@ -72,11 +80,12 @@ Module[
 {sampleData=getSampleDataFn[PositiveMatrixWithPrefactor[pmp],prec]}
 ,
 <|
-  "prefactor" -> toJsonObject[pmp[["prefactor"]],prec],
-  "reducedPrefactor" -> toJsonObject[pmp[["reducedPrefactor"]],prec],
+  "prefactor" -> toJsonDampedRational[pmp[["prefactor"]],prec],
+  "reducedPrefactor" -> toJsonDampedRational[pmp[["reducedPrefactor"]],prec],
   "polynomials" -> Map[toJsonNumberArray[safeCoefficientList[#, x],prec] &, pmp[["polynomials"]], {3}],
   "samplePoints" -> toJsonNumberArray[sampleData[["samplePoints"]],prec],
   "sampleScalings" -> toJsonNumberArray[sampleData[["sampleScalings"]],prec],
+  "reducedSampleScalings" -> toJsonNumberArray[sampleData[["reducedSampleScalings"]],prec],
   "bilinearBasis" -> bilinearBasisToJson[sampleData[["bilinearBasis"]],prec],
   "bilinearBasis_0" -> bilinearBasisToJson[sampleData[["bilinearBasis_0"]],prec],
   "bilinearBasis_1" -> bilinearBasisToJson[sampleData[["bilinearBasis_1"]],prec]
@@ -113,6 +122,7 @@ with some of the following (optional) fields:
 <|
   "samplePoints" \[Rule]...
   "sampleScalings" \[Rule] ...
+  "reducedSampleScalings" \[Rule] ...
   "bilinearBasis" \[Rule] ...
   "bilinearBasis_0" \[Rule] ...
   "bilinearBasis_1" \[Rule]...
@@ -134,7 +144,7 @@ WritePmpJson[
 (*Compute sample points, sample scalings and bilinear bases (same algorithm as in pmp2sdp)*)
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*getAnalyticSampleData (main function)*)
 
 
@@ -150,6 +160,7 @@ Output:
 <|
 "samplePoints"\[Rule]...,
 "sampleScalings"\[Rule]...,
+"reducedSampleScalings"\[Rule]...,
 "bilinearBasis_0"\[Rule]...,
 "bilinearBasis_1"\[Rule]...
 |>
@@ -168,7 +179,7 @@ prefactorOld=pmp[["prefactor"]];
 (*Set default prefactor to 1 for constant constraints and to Exp[-x] otherwise*)
 If[MissingQ@prefactorOld,
   prefactorOld=If[numeratorDegOld==0,
-    DampedRational[1,{},1,x],
+    1,
     DampedRational[1,{},1/E,x]
   ]
 ];
@@ -180,7 +191,7 @@ getAnalyticSampleData[numeratorDegOld,prefactorOld,prefactorNew,prec]
 ];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Implementation: sample points*)
 
 
@@ -200,6 +211,9 @@ findBohrSommerfeldHelper[f,NN,x,Append[xs,xPrime],prec][n+1,xPrime]
 
 
 (* Compute (nearly) optimal sample points for the given DampedRational. We use smallPoleThreshold to decide whether a pole is 0 or very close to 0. In that case, we include 0 as a sample point, and compute the remaining sample points starting from n=1. *)
+getSamplePoints[const_?NumericQ,numSamplePoints_,smallPoleThreshold_,prec_]:=
+If[numSamplePoints==1,{0},error["numSamplePoints is not equal to 1:",numSamplePoints]];
+
 getSamplePoints[DampedRational[_,poles_,base_,x_],numSamplePoints_,smallPoleThreshold_,prec_]:=Module[
 {
 bVar,
@@ -263,7 +277,7 @@ result
 ];
 
 
-(* ::Subsection::Closed:: *)
+(* ::Subsection:: *)
 (*Implementation: sample scalings and bilinear bases*)
 
 
@@ -278,6 +292,10 @@ antiBandMatrix[bs_] := Module[
             {n, n}]]]];
 
 
+poleDegree[HoldPattern[DampedRational[_,poles_,_,_]]]:=Length[poles];
+poleDegree[constant_?NumericQ]:=0;
+
+
 (*getAnalyticSampleData[] implementation*)
 getAnalyticSampleData[numeratorDegOld_,prefactorOld_,prefactorNew_,prec_]:=Module[
 {
@@ -289,13 +307,12 @@ smallPoleThreshold=10^-10,
 minPoleDistance=10^-16,
 samplePoints,
 sampleScalings,
+reducedSampleScalings,
 prefactorNewAtZero,
-(*integrateMeasure,*)
 integrateMeasure1,
 integrateMeasure2,
 \[Delta]1,
 \[Delta]2,
-(*invL,*)
 invL1,
 invL2,
 bilinearBasis1,
@@ -306,16 +323,21 @@ numSamplePoints=numeratorDeg+1;
 samplePoints=getSamplePoints[prefactorNew,numSamplePoints,smallPoleThreshold,prec];
 
 sampleScalings=Table[
+evalDampedRationalRegulated[prefactorOld,xx,minPoleDistance],
+{xx,samplePoints}
+];
+
+reducedSampleScalings=Table[
 evalDampedRationalRegulated[prefactorNew,xx,minPoleDistance],
 {xx,samplePoints}
 ];
 integrateMeasure1[f_]:=Sum[
-sampleScalings[[i]](f/.x->samplePoints[[i]]),
+reducedSampleScalings[[i]](f/.x->samplePoints[[i]]),
 {i,Length[samplePoints]}
 ];
 
 integrateMeasure2[f_]:=Sum[
-sampleScalings[[i]](x* f/.x->samplePoints[[i]]),
+reducedSampleScalings[[i]](x* f/.x->samplePoints[[i]]),
 {i,Length[samplePoints]}
 ];
 
@@ -326,24 +348,30 @@ invL1=Inverse[CholeskyDecomposition[antiBandMatrix[Table[
 integrateMeasure1[x^n],
 {n,0,2\[Delta]1}
 ]]]];
+bilinearBasis1=Transpose[invL1] . Table[x^n,{n,0,\[Delta]1}];
 
-invL2=Inverse[CholeskyDecomposition[antiBandMatrix[Table[
+If[\[Delta]2<0,
+bilinearBasis2={};
+,
+invL2=
+Inverse[CholeskyDecomposition[antiBandMatrix[Table[
 integrateMeasure2[x^n],
 {n,0,2\[Delta]2}
 ]]]];
-
-bilinearBasis1=Transpose[invL1] . Table[x^n,{n,0,\[Delta]1}];
 bilinearBasis2=Transpose[invL2] . Table[x^n,{n,0,\[Delta]2}];
+];
+
 <|
 "samplePoints"->samplePoints,
 "sampleScalings"->sampleScalings,
+"reducedSampleScalings"->reducedSampleScalings,
 "bilinearBasis_0"->bilinearBasis1,
 "bilinearBasis_1"->bilinearBasis2
 |>
 ];
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*XML export (obsolete)*)
 
 
