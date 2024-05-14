@@ -1,6 +1,7 @@
 #pragma once
 
-#include <El.hpp>
+#include "sdpb_util/Verbosity.hxx"
+
 #include <filesystem>
 #include <iostream>
 #include <boost/property_tree/ptree.hpp>
@@ -15,8 +16,10 @@ struct Approx_Parameters
 
   bool write_solver_state, linear_only;
 
+  Verbosity verbosity;
+
   Approx_Parameters(int argc, char *argv[]);
-  bool is_valid() const { return !sdp_path.empty(); }
+  [[nodiscard]] bool is_valid() const { return !sdp_path.empty(); }
 };
 
 std::ostream &operator<<(std::ostream &os, const Approx_Parameters &p);
