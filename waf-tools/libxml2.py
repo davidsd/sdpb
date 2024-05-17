@@ -38,17 +38,34 @@ def configure(conf):
     else:
         libxml2_libs=['xml2']
 
-    if not conf.check_cxx(msg="Checking for libxml2",
-                          header_name='libxml/parser.h',
+    fragment='''
+#include <libxml/parser.h>
+int main()
+{
+  xmlInitParser();
+}
+'''
+
+    if not conf.check_cxx(msg="Checking for libxml2 in default and user-specified paths",
+                          fragment=fragment,
                           includes=libxml2_incdir,
                           uselib_store='libxml2',
                           libpath=libxml2_libdir,
                           rpath=libxml2_libdir,
                           lib=libxml2_libs,
-                          mandatory=False) and not conf.check_cfg(path='pkg-config', args='--libs --cflags',
-                                                                  package='libxml-2.0', uselib_store='libxml2',
-                                                                  mandatory=False):
-        conf.fatal("Could not find libxml2")
+                          mandatory=False):
+        conf.check_cfg(msg='  Searching for libxml-2.0 in pkg-config',
+                       path='pkg-config',
+                       args='--libs --cflags',
+                       package='libxml-2.0',
+                       uselib_store='libxml2',
+                       mandatory=True)
+        # check_cfg() does not support 'fragment' argument,
+        # so we have to check compilation separately via check_cxx()
+        conf.check_cxx(msg='  Checking libxml2 compilation',
+                       fragment=fragment,
+                       use=['libxml2'],
+                       mandatory=True)
 
 
 def options(opt):
