@@ -1,9 +1,13 @@
 #! /usr/bin/env python
 # encoding: utf-8
 
+from check_config import check_config
+
+
 def configure(conf):
-    # Find Libarchive
+    # Find FLINT
     import os
+
     if not conf.options.flint_incdir:
         for d in ['FLINT_INCLUDE', 'FLINT_INCLUDE_DIR', 'FLINT_INC_DIR']:
             env_dir = os.getenv(d)
@@ -39,8 +43,8 @@ def configure(conf):
     else:
         flint_libs = ['flint']
 
-    if not conf.check_cxx(msg="Checking for flint",
-                          fragment='''
+    check_config(conf,
+                 fragment='''
 #include "flint/flint.h"
 #include "flint/fmpz.h"
 #include <vector>
@@ -54,13 +58,11 @@ int main()
     fmpz_comb_init(comb, primes.data(), primes.size());
     flint_printf("Computed with FLINT-%s", FLINT_VERSION);
 }''',
-                          includes=flint_incdir,
-                          uselib_store='flint',
-                          libpath=flint_libdir,
-                          rpath=flint_libdir,
-                          lib=flint_libs,
-                          use=['cxx17', 'gmpxx', 'mpfr', 'cblas']):
-        conf.fatal("Could not find flint")
+                 includes=flint_incdir,
+                 uselib_store='flint',
+                 libpath=flint_libdir,
+                 lib=flint_libs,
+                 use=['cxx17', 'gmpxx', 'mpfr', 'cblas'])
 
 
 def options(opt):

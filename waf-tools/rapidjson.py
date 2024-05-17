@@ -1,30 +1,32 @@
 #! /usr/bin/env python
 # encoding: utf-8
 
-def configure(conf):
-    def get_param(varname,default):
-        return getattr(Options.options,varname,'')or default
+from check_config import check_config
 
-    import os
+
+def configure(conf):
     # Find Rapidjson
     if conf.options.rapidjson_dir:
         if not conf.options.rapidjson_incdir:
-            conf.options.rapidjson_incdir=conf.options.rapidjson_dir + "/include"
+            conf.options.rapidjson_incdir = conf.options.rapidjson_dir + "/include"
 
     if conf.options.rapidjson_incdir:
-        rapidjson_incdir=conf.options.rapidjson_incdir.split()
+        rapidjson_incdir = conf.options.rapidjson_incdir.split()
     else:
-        rapidjson_incdir=[]
+        rapidjson_incdir = []
 
-    conf.check_cxx(msg="Checking for rapidjson",
-                   fragment="#include <rapidjson/reader.h>\nint main() {rapidjson::Reader();}\n",
-                   includes=rapidjson_incdir,
-                   uselib_store='rapidjson',
-                   use=['cxx17'])
+    check_config(conf,
+                 fragment="#include <rapidjson/reader.h>\nint main() {rapidjson::Reader();}\n",
+                 includes=rapidjson_incdir,
+                 uselib_store='rapidjson',
+                 libpath=[],
+                 lib=[],
+                 use=['cxx17'])
+
 
 def options(opt):
-    rapidjson=opt.add_option_group('Rapidjson Options')
+    rapidjson = opt.add_option_group('Rapidjson Options')
     rapidjson.add_option('--rapidjson-dir',
-                   help='Base directory where rapidjson is installed')
+                         help='Base directory where rapidjson is installed')
     rapidjson.add_option('--rapidjson-incdir',
-                   help='Directory where rapidjson include files are installed')
+                         help='Directory where rapidjson include files are installed')
