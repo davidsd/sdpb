@@ -1,6 +1,9 @@
 #! /usr/bin/env python
 # encoding: utf-8
 
+from check_config import check_config
+
+
 def configure(conf):
     # Find Boost
     import os
@@ -50,8 +53,8 @@ def configure(conf):
     # link to boost_stacktrace library instead of header-only compilation:
     boost_defines = ['BOOST_STACKTRACE_LINK'] if boost_stacktrace_lib_found else []
 
-    conf.check_cxx(msg="Checking for Boost",
-                   fragment="""#include <boost/iostreams/filter/gzip.hpp>
+    check_config(conf,
+                 fragment="""#include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/device/file.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -72,13 +75,12 @@ boost::serialization::version_type version;
 boost::stacktrace::stacktrace();
 }
 """,
-                   includes=boost_incdir,
-                   uselib_store='boost',
-                   libpath=boost_libdir,
-                   rpath=boost_libdir,
-                   lib=boost_libs,
-                   use=['cxx17'],
-                   defines=boost_defines)
+                 includes=boost_incdir,
+                 uselib_store='boost',
+                 libpath=boost_libdir,
+                 lib=boost_libs,
+                 use=['cxx17'],
+                 defines=boost_defines)
 
     # If boost_stacktrace library not defined by user, try linking to one of the libraries
     # listed in https://www.boost.org/doc/libs/1_84_0/doc/html/stacktrace/configuration_and_build.html
@@ -88,22 +90,22 @@ boost::stacktrace::stacktrace();
     if not boost_stacktrace_lib_found:
         for boost_stacktrace_lib in ['boost_stacktrace_backtrace', 'boost_stacktrace_addr2line',
                                      'boost_stacktrace_basic']:
-            if conf.check_cxx(msg='Checking for ' + boost_stacktrace_lib,
-                              fragment="""
+            if check_config(conf,
+                            msg='  Checking for ' + boost_stacktrace_lib,
+                            fragment="""
     #include <boost/stacktrace.hpp>
     int main()
     {
       boost::stacktrace::stacktrace();
     }
     """,
-                              includes=boost_incdir,
-                              uselib_store='boost',
-                              libpath=boost_libdir,
-                              rpath=boost_libdir,
-                              lib=boost_libs + [boost_stacktrace_lib],
-                              use=['cxx17'],
-                              defines='BOOST_STACKTRACE_LINK',
-                              mandatory=False):
+                            includes=boost_incdir,
+                            uselib_store='boost',
+                            libpath=boost_libdir,
+                            lib=boost_libs + [boost_stacktrace_lib],
+                            use=['cxx17'],
+                            defines='BOOST_STACKTRACE_LINK',
+                            mandatory=False):
                 break
 
 

@@ -4,7 +4,7 @@
 
 #include <El.hpp>
 
-#include <libxml2/libxml/parser.h>
+#include <libxml/parser.h>
 #include <vector>
 #include <sstream>
 #include <stdexcept>

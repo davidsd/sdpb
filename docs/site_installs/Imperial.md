@@ -125,7 +125,7 @@ We have to build GMP manually: FLINT requires at least MPFR 4.1.0, but only MPFR
 
     git clone https://github.com/davidsd/sdpb.git
     cd sdpb 
-    python3 ./waf configure --gmpxx-dir=$HOME/install --mpfr-dir=$HOME/install --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --flint-dir=$HOME/install --cblas-incdir=/usr/include/openblas --cblas-libdir=/usr/lib64 --prefix=$HOME/install/sdpb-master
+    python3 ./waf configure --gmpxx-dir=$HOME/install --mpfr-dir=$HOME/install --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --flint-dir=$HOME/install --prefix=$HOME/install/sdpb-master
     python3 ./waf # -j 1
     ./test/run_all_tests.sh mpirun
     python3 ./waf install
