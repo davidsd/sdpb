@@ -1,8 +1,8 @@
 #pragma once
 
-#include <El.hpp>
+#include "sdpb_util/flint.hxx"
 
-#include <flint/fmpz.h>
+#include <El.hpp>
 
 #include <boost/noncopyable.hpp>
 
