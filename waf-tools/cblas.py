@@ -1,9 +1,13 @@
 #! /usr/bin/env python
 # encoding: utf-8
 
+from check_config import check_config
+
+
 def configure(conf):
     # Find cblas
     import os
+
     if not conf.options.cblas_incdir:
         for libname in ['CBLAS', 'OPENBLAS']:
             for suffix in ['_INCLUDE', '_INCLUDE_DIR', '_INC_DIR', '_INCDIR']:
@@ -42,25 +46,24 @@ def configure(conf):
     else:
         cblas_libs = ['openblas']
 
-    if not conf.check_cxx(msg="Checking for CBLAS",
-                          fragment='''
+    check_config(conf,
+                 fragment='''
 #include "cblas.h"
 
 int main()
 {
-  int m=10,n=10,k=10;
-  double x[m*k];
-  double y[k*n];
-  double result[m*n];
-  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, m, n, k, 1.0, x, k, y, n, 0.0, result, n);
+    int m=10,n=10,k=10;
+    double x[m*k];
+    double y[k*n];
+    double result[m*n];
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, m, n, k, 1.0, x, k, y, n, 0.0, result, n);
 }''',
-                          includes=cblas_incdir,
-                          uselib_store='cblas',
-                          libpath=cblas_libdir,
-                          rpath=cblas_libdir,
-                          lib=cblas_libs,
-                          use=['cxx17']):
-        conf.fatal("Could not find CBLAS")
+                 includes=cblas_incdir,
+                 uselib_store='cblas',
+                 libpath=cblas_libdir,
+                 lib=cblas_libs,
+                 packages=cblas_libs,
+                 use=['cxx17'])
 
 
 def options(opt):

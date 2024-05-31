@@ -46,11 +46,8 @@ int main(int argc, char **argv)
           return 0;
         }
 
-      // TODO set verbosity from command line
-      const auto verbosity = Verbosity::regular;
-
       // Print command line
-      if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+      if(parameters.verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
         {
           std::vector<std::string> arg_list(argv, argv + argc);
           for(const auto &arg : arg_list)
@@ -60,11 +57,11 @@ int main(int argc, char **argv)
 
       Environment::set_precision(parameters.precision);
       Block_Info block_info(env, parameters.sdp_path, parameters.solution_dir,
-                            parameters.proc_granularity, verbosity);
+                            parameters.proc_granularity, parameters.verbosity);
 
       El::Grid grid(block_info.mpi_comm.value);
       // TODO use timers also below
-      Timers timers(env, verbosity);
+      Timers timers(env, parameters.verbosity);
       SDP sdp(parameters.sdp_path, block_info, grid, timers);
 
       std::vector<size_t> block_offsets(sdp.free_var_matrix.blocks.size() + 1,

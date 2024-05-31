@@ -2,6 +2,13 @@
 
 #include <boost/program_options.hpp>
 
+#include <El.hpp>
+#include <archive.h>
+#include <cblas.h>
+#include <mpfr.h>
+#include <libxml/xmlversion.h>
+#include <rapidjson/rapidjson.h>
+
 namespace fs = std::filesystem;
 
 namespace po = boost::program_options;
@@ -92,12 +99,37 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
         {
           if(El::mpi::Rank() == 0)
             {
-              std::cout << "SDPB " << SDPB_VERSION_STRING << "\n";
+              El::Output("SDPB ", SDPB_VERSION_STRING);
+              El::Output("\nDependencies: ");
+              El::Output("  Boost ", BOOST_LIB_VERSION);
+              El::Output("  Elemental ", EL_VERSION_MAJOR, ".",
+                         EL_VERSION_MINOR);
+              El::Output("  FLINT ", FLINT_VERSION);
+              El::Output("  GMP ", gmp_version);
+              El::Output("  libarchive ", ARCHIVE_VERSION_ONLY_STRING);
+              El::Output("  libxml ", LIBXML_DOTTED_VERSION);
+              El::Output("  MPFR ", MPFR_VERSION_STRING);
+              El::Output("  RapidJSON ", RAPIDJSON_VERSION_STRING);
+              // We should also print CBLAS version,
+              // but the standard interface cblas.h does not have version macro.
+              // Thus, we can print it only for specific implementations.
+
+              // detect OpenBLAS using any OpenBLAS-specific macro from cblas.h
+#ifdef OPENBLAS_THREAD
+              // e.g.: OpenBLAS 0.3.20 NO_LAPACKE DYNAMIC_ARCH NO_AFFINITY SkylakeX MAX_THREADS=64
+              El::Output("  ", openblas_get_config());
+#elif
+              // TODO print info for other CBLAS implementations
+              // (FlexiBLAS, BLIS, Intel MKL...)
+              El::Output("  CBLAS");
+#endif
+
+              El::Output();
+              El::PrintVersion();
+              El::PrintConfig();
+              El::PrintCCompilerInfo();
+              El::PrintCxxCompilerInfo();
             }
-          El::PrintVersion();
-          El::PrintConfig();
-          El::PrintCCompilerInfo();
-          El::PrintCxxCompilerInfo();
         }
       else
         {
