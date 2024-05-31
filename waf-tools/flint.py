@@ -45,6 +45,7 @@ def configure(conf):
 
     check_config(conf,
                  fragment='''
+#include <gmp.h>
 #include "flint/flint.h"
 #include "flint/fmpz.h"
 #include <vector>
