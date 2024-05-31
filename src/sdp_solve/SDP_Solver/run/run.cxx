@@ -238,7 +238,6 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
   std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     A_Y;
-  print_header(verbosity);
 
   auto psd_sizes(block_info.psd_matrix_block_sizes());
   std::size_t total_psd_rows(
@@ -294,6 +293,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
         }
     }
 
+  print_header(verbosity);
   for(size_t iteration = 1;; ++iteration)
     {
       Scoped_Timer iteration_timer(timers,
