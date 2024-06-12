@@ -22,7 +22,8 @@ void write_functions(const fs::path &output_path,
       normalization.at(0) = 1;
     }
 
-  fs::create_directories(output_path.parent_path());
+  if(output_path.has_parent_path())
+    fs::create_directories(output_path.parent_path());
   std::ofstream output_stream(output_path);
   set_stream_precision(output_stream);
   output_stream << "{\n  \"objective\":\n";
