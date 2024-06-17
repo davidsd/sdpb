@@ -77,7 +77,7 @@ In turn, Q is `DistMatrix<BigFloat>` distributed over all cores.
 
 In the old SDPB algorithm, each core (or group of cores) was calculating a contribution to Q (
 called `Q_group`) from its blocks. Adding up all Q_groups, one got the resulting Q
-(see [synchronize_Q.cxx](https://github.com/davidsd/sdpb/blob/2.7.0/src/sdp_solve/SDP_Solver/run/step/initialize_schur_complement_solver/synchronize_Q.cxx)).
+(see [synchronize_Q.cxx](https://github.com/davidsd/sdpb/blob/3.0.0/src/sdp_solve/SDP_Solver/run/step/initialize_schur_complement_solver/synchronize_Q.cxx)).
 
 This is inefficient in terms of memory, since we allocate memory for `Q_group` for each group of cores.
 

@@ -1,15 +1,6 @@
 #pragma once
 
-#include <flint/fmpz.h>
-// In FLINT 2.8.5, part of nmod_vec.h was extracted to nmod.h
-// See:
-// https://github.com/davidsd/sdpb/issues/234
-// https://github.com/flintlib/flint/pull/1041
-#if __FLINT_RELEASE >= 20805
-#include <flint/nmod.h>
-#else
-#include <flint/nmod_vec.h>
-#endif
+#include "sdpb_util/flint.hxx"
 
 #include <boost/noncopyable.hpp>
 

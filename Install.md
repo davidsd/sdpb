@@ -38,7 +38,7 @@ SDPB requires
 
 - [libarchive](https://github.com/libarchive/libarchive)
 
-- [FLINT](https://github.com/flintlib/flint)
+- [FLINT](https://github.com/flintlib/flint) (2.8.0 or later)
 
 SDPB has only been tested on Linux (Debian buster and Centos 7).  On
 Centos 7, the system compiler (gcc 4.8.5) is too old to support
@@ -94,12 +94,14 @@ manager such as [Homebrew](https://brew.sh).
         git clone https://github.com/flintlib/flint.git
         cd flint
         ./bootstrap.sh
-        ./configure --disable-static --enable-assert --prefix=$HOME/install
+        ./configure --disable-static --prefix=$HOME/install
         make
         make check
         make install
         cd ..
 
+   If you have GMP 6.2.0 or earlier, you should use FLINT 3.0.1 or earlier (`git checkout v3.0.1`) and run `configure` with `--disable-gmp-internals` flag to prevent `mpn_gcd_11 not found` error.
+   
    See [FLINT documentation](https://flintlib.org/doc/building.html) for installation instructions.
 
 6. Download SDPB

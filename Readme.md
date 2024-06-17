@@ -30,9 +30,7 @@ Here, $M\succeq 0$ means "M is positive semidefinite."
 For more information, see [A Semidefinite Program Solver for the Conformal Bootstrap](http://arxiv.org/abs/1502.02033)
 and [the manual](/docs/SDPB_Manual/SDPB-Manual.pdf).
 
-Authors: David Simmons-Duffin (dsd@caltech.edu), Walter Landry (wlandry@caltech.edu).
-
-On April 25, 2019, the main branch of this repository was updated to SDPB 2 which has very different performance characteristics and somewhat different usage instructions from version 1.0. Please see the changelog and other documentation for details.
+Authors: David Simmons-Duffin (dsd@caltech.edu), Walter Landry (wlandry@caltech.edu), Vasiliy Dommes (vasdommes@gmail.com)
 
 ## Installation and Usage
 
@@ -103,7 +101,7 @@ An explanation of how it works appears in:
 
 ## Acknowledgements
 
-- Version 2 of SDPB was made possible by the [Simons Collaboration on the Nonperturbative Bootstrap](http://bootstrapcollaboration.com/).
+- Versions 2 and 3 of SDPB were made possible by support from the [Simons Collaboration on the Nonperturbative Bootstrap](http://bootstrapcollaboration.com/).
 
 - The design of SDPB was partially based on the solvers [SDPA](http://sdpa.sourceforge.net/) and SDPA-GMP, which were essential sources of inspiration and examples.
 
@@ -115,4 +113,4 @@ An explanation of how it works appears in:
 
 ## Works Using SDPB
 
-As of April 2019, SDPB has been used in approximately 70 works. Here is [a list of papers citing SDPB](http://inspirehep.net/search?ln=en&p=refersto%3Arecid%3A1343540&sf=earliestdate).
+Here is [a list of papers citing SDPB](http://inspirehep.net/search?ln=en&p=refersto%3Arecid%3A1343540&sf=earliestdate).

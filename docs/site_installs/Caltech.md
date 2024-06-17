@@ -33,12 +33,12 @@ You may list all available versions via
 
 Fo example, `sdpb-master` is built from the latest [master](https://github.com/davidsd/sdpb/tree/master) branch (
 run `sdpb --version` to see commit hash, e.g. `SDPB 2.5.1-130-g88b1c9ae`),
-and `sdpb-2.7.0` is a stable [2.7.0](https://github.com/davidsd/sdpb/releases/tag/2.7.0) release.
+and `sdpb-3.0.0` is a stable [3.0.0](https://github.com/davidsd/sdpb/releases/tag/3.0.0) release.
 
 Examples below are for `sdpb-master`.
-You may replace it with another version, e.g. `sdpb-2.7.0`.
+You may replace it with another version, e.g. `sdpb-3.0.0`.
 In that case, please refer
-to [2.7.0 documentation](https://github.com/davidsd/sdpb/blob/2.7.0/docs/site_installs/Caltech.md).
+to [3.0.0 documentation](https://github.com/davidsd/sdpb/blob/3.0.0/docs/site_installs/Caltech.md).
 
 ## Run SDPB
 
@@ -77,12 +77,11 @@ should compile on a login node.
 
     git clone https://github.com/flintlib/flint.git
     cd flint
-    ./bootstrap.sh    
-    mkdir build
-    cd build
-    cmake .. -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc -DCMAKE_INSTALL_PREFIX=$HOME/install -DBUILD_SHARED_LIBS=ON
-    cmake --build . --target install
-    cd ../..
+    ./bootstrap.sh
+    ./configure CC=mpicc CXX=mpicxx --disable-static --with-gmp=`pkg-config --variable=prefix gmp` --with-mpfr=`pkg-config --variable=prefix mpfr`--prefix=$HOME/install 
+    make
+    make check 
+    make install
 
 ## RapidJSON
     git clone https://github.com/Tencent/rapidjson.git
@@ -98,7 +97,8 @@ should compile on a login node.
     cd ../..
 
 ## sdpb
-    CXX=mpicxx ./waf configure --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=/central/software9/spack/opt/spack/linux-rhel9-x86_64/gcc-13.2.0/libarchive-3.7.1-bzt555vawhwq2akdnvmilrsi5ocxdhvj --gmpxx-dir=/central/software9/spack/opt/spack/linux-rhel9-x86_64/gcc-13.2.0/gmp-6.2.1-lcnhysea5isaes4r547jt5nw2qru5ab7 --mpfr-dir=/central/software/mpfr/4.0.2 --flint-dir=$HOME/install --cblas-dir=/central/software9/spack/opt/spack/linux-rhel9-x86_64/gcc-13.2.0/openblas-0.3.23-3csynnoa2r6ctx3khqe5gxye6ukno3mu --prefix=$HOME/install/sdpb-master
+    CXX=mpicxx ./waf configure --libarchive-dir=`pkg-config --variable=prefix libarchive` --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --flint-dir=$HOME/install 
+    --prefix=$HOME/install/sdpb-master
     ./waf # -j 1
     ./test/run_all_tests.sh
     ./waf install
