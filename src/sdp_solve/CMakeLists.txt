@@ -39,8 +39,21 @@ target_sources(sdp_solve
                 SDP_Solver/run/step/step.cxx
                 SDP_Solver/run/step/initialize_schur_complement_solver/initialize_schur_complement_solver.cxx
                 SDP_Solver/run/step/initialize_schur_complement_solver/compute_schur_complement.cxx
-                SDP_Solver/run/step/initialize_schur_complement_solver/initialize_Q_group.cxx
-                SDP_Solver/run/step/initialize_schur_complement_solver/synchronize_Q.cxx
+                SDP_Solver/run/step/initialize_schur_complement_solver/compute_Q.cxx
+                SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context/BigInt_Shared_Memory_Syrk_Context.cxx
+                SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context/bigint_syrk_blas.cxx
+                SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context/clear_residues.cxx
+                SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context/compute_block_residues.cxx
+                SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context/get_blas_job_schedule.cxx
+                SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context/restore_and_reduce.cxx
+                SDP_Solver/run/bigint_syrk/blas_jobs/Blas_Job.cxx
+                SDP_Solver/run/bigint_syrk/blas_jobs/Blas_Job_Cost.cxx
+                SDP_Solver/run/bigint_syrk/blas_jobs/Blas_Job_Schedule.cxx
+                SDP_Solver/run/bigint_syrk/blas_jobs/create_blas_job_schedule.cxx
+                SDP_Solver/run/bigint_syrk/fmpz/Fmpz_BigInt.cxx
+                SDP_Solver/run/bigint_syrk/fmpz/Fmpz_Matrix.cxx
+                SDP_Solver/run/bigint_syrk/fmpz/Fmpz_Comb.cxx
+                SDP_Solver/run/bigint_syrk/Matrix_Normalizer.cxx
                 SDP_Solver/run/step/compute_search_direction/compute_search_direction.cxx
                 SDP_Solver/run/step/compute_search_direction/cholesky_solve.cxx
                 SDP_Solver/run/step/compute_search_direction/compute_schur_RHS.cxx
@@ -56,7 +69,7 @@ target_sources(sdp_solve
                 SDP_Solver_Terminate_Reason/ostream.cxx
                 lower_triangular_transpose_solve.cxx
                 Block_Diagonal_Matrix/ostream.cxx
-                Write_Solution.cxx)                        
+                Write_Solution.cxx)                      
 target_link_libraries(sdp_solve
                         PRIVATE
                         ${USE_PACKAGES}
@@ -67,5 +80,6 @@ target_link_libraries(sdp_solve
                         Boost::program_options
                         dl
                         sdpb_util
-                        pmp2sdp_lib)
+                        pmp2sdp_lib
+                        BLAS::BLAS)
 install(TARGETS sdp_solve LIBRARY)

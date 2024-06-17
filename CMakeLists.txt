@@ -13,7 +13,7 @@ include(CustomMessages)
 
 # This is to ensure that CMake also checks lib64 for the dependencies on Linux systems
 if(UNIX)
-        set(CMAKE_PREFIX_PATH "/usr/lib64" ${CMAKE_PREFIX_PATH})
+        list(APPEND CMAKE_PREFIX_PATH "/usr/lib64")
 endif()
 
 # Specific definition for an issue with boost/stacktrace when building on macOS. See https://github.com/boostorg/stacktrace/issues/88 and comments therein.
@@ -28,13 +28,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # compiler_cxx
 # TODO
-# if(DEFINED (ENV{CXX}))
-#     if(ENV{CXX} == "g++" || ENV{CXX} == "icpc")
-#         SET(CMAKE_CXX_COMPILER mpicxx)
-#     endif()
-# else()
-#     SET(CMAKE_CXX_COMPILER mpicxx)
-# endif()
+if(DEFINED (ENV{CXX}))
+    if(ENV{CXX} == "g++" || ENV{CXX} == "icpc")
+        SET(CMAKE_CXX_COMPILER mpicxx)
+    endif()
+else()
+    SET(CMAKE_CXX_COMPILER mpicxx)
+endif()
 
 message(STATUS "Found g++ compiler (C++ compiler): ${CMAKE_CXX_COMPILER}")
 
@@ -154,6 +154,13 @@ if(LibArchive_FOUND AND LibArchive_INCLUDE_DIR)
     include_directories(${LibArchive_INCLUDE_DIR})
 endif()
 
+find_package(BLAS REQUIRED)
+message(STATUS "BLAS version: ${libarchive_VERSION}")
+if(BLAS_FOUND AND BLAS_INCLUDE_DIR)
+    include_directories(${BLAS_INCLUDE_DIR})
+endif()
+
+find_package(FLINT REQUIRED)
 
 #def configure(conf):
 #    if not 'CXX' in os.environ or os.environ['CXX']=='g++' or os.environ['CXX']=='icpc':
@@ -230,19 +237,6 @@ message(STATUS "Elemental Libraries - ${Elemental_LIBRARIES}")
 
 # mark_as_advanced(CBLAS_LIBRARIES CBLAS_INCLUDE_DIRS)
 
-find_package(Catch2 QUIET)
-if(NOT Catch2_FOUND)
-  Include(FetchContent)
-
-  FetchContent_Declare(
-    Catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG        v3.5.3 # or a later release
-  )
-
-  FetchContent_MakeAvailable(Catch2)
-endif()
-
 include_directories(src)
 include_directories(external)
 include_directories(SYSTEM elemental/install/include)
@@ -318,7 +312,6 @@ target_sources(integration_tests
 target_link_libraries(integration_tests
                         PRIVATE
                         ${USE_PACKAGES}
-                        Catch2::Catch2
                         Boost::filesystem
                         Boost::serialization
                         pthread
@@ -360,7 +353,6 @@ target_sources(unit_tests
 target_link_libraries(unit_tests
                 PRIVATE
                 ${USE_PACKAGES}
-                # Catch2::Catch2
                 Boost::filesystem
                 Boost::serialization
                 sdpb_util
