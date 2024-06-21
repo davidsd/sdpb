@@ -49,7 +49,7 @@ Timer &Timers::add_and_start(const std::string &name)
 }
 void Timers::write_profile(const std::filesystem::path &path) const
 {
-  if(!path.parent_path().empty())
+  if(path.has_parent_path())
     std::filesystem::create_directories(path.parent_path());
   std::ofstream f(path);
 

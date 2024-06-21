@@ -135,7 +135,8 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
 
           if(El::mpi::Rank() == 0)
             {
-              fs::create_directories(output_path.parent_path());
+              if(output_path.has_parent_path())
+                fs::create_directories(output_path.parent_path());
               std::ofstream ofs(output_path);
               ASSERT(ofs.good(), "Cannot write to outDir: ", output_path);
             }
