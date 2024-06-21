@@ -1,5 +1,7 @@
 #include "../Approx_Parameters.hxx"
 
+#include <El.hpp>
+
 std::ostream &operator<<(std::ostream &os, const Approx_Parameters &p)
 {
   os << std::boolalpha
@@ -11,6 +13,7 @@ std::ostream &operator<<(std::ostream &os, const Approx_Parameters &p)
      << mpf_get_default_prec() << ")" << '\n'
      << "solutionDir                  = " << p.solution_dir << '\n'
      << "writeSolverState             = " << p.write_solver_state << '\n'
+     << "verbosity                    = " << p.verbosity << '\n'
      << '\n';
   return os;
 }

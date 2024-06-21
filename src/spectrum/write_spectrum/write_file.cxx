@@ -11,7 +11,8 @@ void write_file(const fs::path &output_path,
 {
   if(El::mpi::Rank() == 0)
     {
-      fs::create_directories(output_path.parent_path());
+      if(output_path.has_parent_path())
+        fs::create_directories(output_path.parent_path());
       std::ofstream outfile(output_path);
       ASSERT(outfile.good(),
              "Problem when opening output file: ", output_path);

@@ -163,7 +163,7 @@ create_blas_job_schedule(const Blas_Job::Kind kind,
     = minimal_split_factor(kind, num_ranks, num_primes % num_ranks,
                            output_matrix_height, output_matrix_width);
 
-  if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+  if(verbosity >= Verbosity::trace && El::mpi::Rank() == 0)
     {
       El::Output("-----------------------------");
       El::Output("Creating BLAS job schedule...");
@@ -200,7 +200,7 @@ create_blas_job_schedule(const Blas_Job::Kind kind,
           best_split_factor = split_factor;
         }
 
-      if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+      if(verbosity >= Verbosity::trace && El::mpi::Rank() == 0)
         {
           auto [max_rank_cost, num_jobs] = cost;
           El::Output("Checking split_factor=", split_factor,
@@ -210,7 +210,7 @@ create_blas_job_schedule(const Blas_Job::Kind kind,
         }
     }
 
-  if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
+  if(verbosity >= Verbosity::trace && El::mpi::Rank() == 0)
     {
       El::Output("Choosing the optimal split_factor=", best_split_factor);
       El::Output("For the first ", num_primes - num_primes % num_ranks,

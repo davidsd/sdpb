@@ -135,7 +135,8 @@ namespace
   get_max_shared_memory_bytes(const size_t default_max_shared_memory_bytes,
                               const Environment &env,
                               const Block_Info &block_info, const SDP &sdp,
-                              const Block_Diagonal_Matrix &X, const Verbosity verbosity)
+                              const Block_Diagonal_Matrix &X,
+                              const Verbosity verbosity)
   {
     // If user sets --maxSharedMemory limit manually, we use it.
     // Otherwise, we calculate the limit automatically.
@@ -207,9 +208,10 @@ void setup_solver(const Environment &env, const Block_Info &block_info,
       El::Matrix<int32_t> block_timings_ms(block_info.dimensions.size(), 1);
       El::Zero(block_timings_ms);
 
-      Verbosity verbosity = Verbosity::regular; // TODO add --verbosity option
-      const auto max_shared_memory_bytes = get_max_shared_memory_bytes(
-        parameters.max_shared_memory_bytes, env, block_info, sdp, X, verbosity);
+      const auto verbosity = parameters.verbosity;
+      const auto max_shared_memory_bytes
+        = get_max_shared_memory_bytes(parameters.max_shared_memory_bytes, env,
+                                      block_info, sdp, X, verbosity);
       auto bigint_syrk_context = initialize_bigint_syrk_context(
         env, block_info, sdp, max_shared_memory_bytes, verbosity);
 

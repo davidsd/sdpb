@@ -1,7 +1,8 @@
 #pragma once
 
+#include "sdpb_util/flint.hxx"
+
 #include <flint/fmpz_mat.h>
-#include <memory>
 #include <El.hpp>
 
 // RAII wrapper for FLINT's fmpz_mat_t (big integer matrix)

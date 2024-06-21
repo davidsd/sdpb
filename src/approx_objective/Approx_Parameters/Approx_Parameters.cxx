@@ -67,6 +67,11 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
     "linear", po::bool_switch(&linear_only)->default_value(false),
     "Only compute the linear correction, not the quadratic correction.  "
     "This avoids having to compute an expensive inverse.");
+  basic_options.add_options()(
+    "verbosity",
+    po::value<Verbosity>(&verbosity)->default_value(Verbosity::regular),
+    "Verbosity.  0 -> no output, 1 -> regular output, 2 -> debug output, 3 -> "
+    "trace output");
 
   cmd_line_options.add(basic_options);
 

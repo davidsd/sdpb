@@ -97,7 +97,8 @@ should compile on a login node.
     cd ../..
 
 ## sdpb
-    CXX=mpicxx ./waf configure --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=`pkg-config --variable=prefix libarchive` --gmpxx-dir=`pkg-config --variable=prefix gmp` --mpfr-dir=`pkg-config --variable=prefix mpfr` --flint-dir=$HOME/install --cblas-incdir=`pkg-config --variable=includedir openblas` --cblas-libdir=`pkg-config --variable=libdir openblas` --prefix=$HOME/install/sdpb-master
+    CXX=mpicxx ./waf configure --libarchive-dir=`pkg-config --variable=prefix libarchive` --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --flint-dir=$HOME/install 
+    --prefix=$HOME/install/sdpb-master
     ./waf # -j 1
     ./test/run_all_tests.sh
     ./waf install

@@ -265,8 +265,6 @@ def build(bld):
                 )
 
     bld.program(source=['src/outer_limits/main.cxx',
-                        'src/outer_limits/power_prefactor.cxx',
-                        'src/outer_limits/poles_prefactor.cxx',
                         'src/outer_limits/Function/eval/eval.cxx',
                         'src/outer_limits/compute_optimal/compute_optimal.cxx',
                         'src/outer_limits/compute_optimal/compute_y_transform.cxx',

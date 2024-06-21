@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sdpb_util/flint.hxx"
+
 #include <El.hpp>
 
 inline void fmpz_t_to_BigFloat(const fmpz_t input, El::BigFloat &output)
