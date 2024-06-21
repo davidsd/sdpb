@@ -71,7 +71,8 @@ namespace Test_Util
     fs::remove_all(output_dir);
     fs::remove_all(Test_Config::test_log_dir / name);
 
-    fs::create_directories(stdout_path.parent_path());
+    if(stdout_path.has_parent_path())
+      fs::create_directories(stdout_path.parent_path());
     ASSERT(fs::is_directory(stdout_path.parent_path()),
            stdout_path.parent_path(),
            " is not a directory! Check file name and permissions.");

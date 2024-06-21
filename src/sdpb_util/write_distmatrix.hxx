@@ -8,7 +8,8 @@ inline void write_distmatrix(const El::DistMatrix<El::BigFloat> &matrix,
   std::ofstream stream;
   if(matrix.DistRank() == matrix.Root())
     {
-      std::filesystem::create_directories(path.parent_path());
+      if(path.has_parent_path())
+        std::filesystem::create_directories(path.parent_path());
       stream.open(path);
     }
   El::Print(matrix,

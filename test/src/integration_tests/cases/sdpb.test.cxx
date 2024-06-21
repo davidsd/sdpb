@@ -38,7 +38,8 @@ TEST_CASE("sdpb")
 
   // create file with readonly premissions
   auto create_readonly = [](const fs::path &path) {
-    create_directories(path.parent_path());
+    if(path.has_parent_path())
+      create_directories(path.parent_path());
     std::ofstream os(path);
     os << "";
     fs::permissions(path, fs::perms::others_read);
