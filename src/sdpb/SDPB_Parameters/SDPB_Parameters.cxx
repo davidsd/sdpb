@@ -118,7 +118,7 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
 #ifdef OPENBLAS_THREAD
               // e.g.: OpenBLAS 0.3.20 NO_LAPACKE DYNAMIC_ARCH NO_AFFINITY SkylakeX MAX_THREADS=64
               El::Output("  ", openblas_get_config());
-#elif
+#else
               // TODO print info for other CBLAS implementations
               // (FlexiBLAS, BLIS, Intel MKL...)
               El::Output("  CBLAS");
