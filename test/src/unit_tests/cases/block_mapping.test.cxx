@@ -4,6 +4,7 @@
 #include "test_util/diff.hxx"
 #include "unit_tests/util/util.hxx"
 
+#include <algorithm>
 #include <unordered_set>
 
 using Test_Util::REQUIRE_Equal::diff;
