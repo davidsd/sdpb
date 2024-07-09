@@ -81,7 +81,7 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
     "[OBSOLETE] The number of MPI processes running on a node. "
     "Determined automatically from MPI environment.");
   obsolete_options.add_options()(
-    "procGranularity", po::value<size_t>(&proc_granularity)->default_value(1),
+    "procGranularity", po::value<size_t>(&proc_granularity),
     "[OBSOLETE] procGranularity must evenly divide number of processes per "
     "node.\n\n"
     "The minimum number of cores in a group, used during load balancing.  "
