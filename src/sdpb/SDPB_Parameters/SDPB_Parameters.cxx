@@ -106,7 +106,16 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
                          EL_VERSION_MINOR);
               El::Output("  FLINT ", FLINT_VERSION);
               El::Output("  GMP ", gmp_version);
+#if defined ARCHIVE_VERSION_STRING
+              El::Output("  ", ARCHIVE_VERSION_STRING);
+#elif defined ARCHIVE_LIBRARY_VERSION
+              // this macro is defined in older versions, e.g. libarchive 2.0
+              El::Output("  ", ARCHIVE_LIBRARY_VERSION);
+#elif defined ARCHIVE_VERSION_ONLY_STRING
               El::Output("  libarchive ", ARCHIVE_VERSION_ONLY_STRING);
+#else
+              El::Output("  libarchive");
+#endif
               El::Output("  libxml ", LIBXML_DOTTED_VERSION);
               El::Output("  MPFR ", MPFR_VERSION_STRING);
               El::Output("  RapidJSON ", RAPIDJSON_VERSION_STRING);
