@@ -49,13 +49,12 @@ namespace
     }
   };
 
-  // Vector 'vec' (objective or normalization) can be empty (missing) on some ranks.
-  // When it's not empty, it should have the same value for all ranks.
-  // We check this condition and broadcast the value to all ranks.
-  // TODO: pass const std::optional<vector<T>> &vec
+  // Check that vec.value() is the same for all ranks where vec.has_value()
+  // and broadcast it to other ranks.
   template <class T>
-  [[nodiscard]] std::vector<T>
-  check_and_broadcast_vector(const std::vector<T> &vec,
+  [[nodiscard]] std::optional<std::vector<T>>
+  check_and_broadcast_vector(const std::optional<std::vector<T>> &vec,
+                             // Parameters for debug output:
                              const std::string &vector_name,
                              const std::optional<size_t> &file_index,
                              const std::vector<std::filesystem::path> &files,
@@ -65,17 +64,17 @@ namespace
       return vec;
 
     // Choose the first rank that has data
-    int source_rank = vec.empty() ? comm.Size() : comm.Rank();
+    int source_rank = vec.has_value() ? comm.Rank() : comm.Size();
     source_rank = El::mpi::AllReduce(source_rank, El::mpi::MIN, comm);
 
-    // vector is empty on all ranks
+    // vector is missing on all ranks
     if(source_rank == comm.Size())
       return vec;
 
+    std::vector<T> result = vec.value_or(std::vector<T>{});
     // broadcast vector
-    std::vector<T> result = vec;
     {
-      size_t size = vec.size();
+      size_t size = result.size();
       El::mpi::Broadcast(size, source_rank, comm);
 
       result.resize(size);
@@ -87,9 +86,9 @@ namespace
       size_t source_file_index = file_index.value_or(files.size());
       El::mpi::Broadcast(source_file_index, source_rank, comm);
 
-      if(!vec.empty())
+      if(vec.has_value())
         {
-          ASSERT(result == vec, "Found different ", vector_name,
+          ASSERT(result == vec.value(), "Found different ", vector_name,
                  " vectors in input files:\n\t", files.at(file_index.value()),
                  "\n\t", files.at(source_file_index));
         }
@@ -123,8 +122,8 @@ read_polynomial_matrix_program(const Environment &env,
 {
   Scoped_Timer timer(timers, "read_pmp");
 
-  std::vector<El::BigFloat> objective;
-  std::vector<El::BigFloat> normalization;
+  std::optional<std::vector<El::BigFloat>> objective;
+  std::optional<std::vector<El::BigFloat>> normalization;
   // Total number of PVM matrices
   size_t num_matrices = 0;
   // In case of several processes,
@@ -216,9 +215,9 @@ read_polynomial_matrix_program(const Environment &env,
   std::optional<size_t> normalization_file_index;
   for(auto &&[file_index, parse_result] : parse_results)
     {
-      if(!parse_result.objective.empty())
+      if(parse_result.objective.has_value())
         {
-          if(objective.empty())
+          if(!objective.has_value())
             {
               objective = std::move(parse_result.objective);
               objective_file_index = file_index;
@@ -231,9 +230,9 @@ read_polynomial_matrix_program(const Environment &env,
                      all_files.at(file_index));
             }
         }
-      if(!parse_result.normalization.empty())
+      if(parse_result.normalization.has_value())
         {
-          if(normalization.empty())
+          if(!normalization.has_value())
             {
               normalization = std::move(parse_result.normalization);
               normalization_file_index = file_index;
@@ -266,14 +265,10 @@ read_polynomial_matrix_program(const Environment &env,
       normalization, "normalization", normalization_file_index, all_files);
   }
 
-  ASSERT(!objective.empty(), "objective not found in input files");
-
-  std::optional<std::vector<El::BigFloat>> opt_normalization;
-  if(!normalization.empty())
-    opt_normalization = std::move(normalization);
+  ASSERT(objective.has_value(), "objective not found in input files");
 
   return Polynomial_Matrix_Program(
-    std::move(objective), std::move(opt_normalization), num_matrices,
+    std::move(objective.value()), std::move(normalization), num_matrices,
     std::move(matrices), std::move(matrix_index_local_to_global),
     std::move(block_paths));
 }
