@@ -99,9 +99,11 @@ namespace
 
 Polynomial_Matrix_Program
 read_polynomial_matrix_program(const Environment &env,
-                               const fs::path &input_file, Timers &timers)
+                               const fs::path &input_file,
+                               const Verbosity &verbosity, Timers &timers)
 {
-  return read_polynomial_matrix_program(env, std::vector{input_file}, timers);
+  return read_polynomial_matrix_program(env, std::vector{input_file},
+                                        verbosity, timers);
 }
 
 // Read Polynomal Matrix Program in one of the supported formats.
@@ -118,7 +120,7 @@ read_polynomial_matrix_program(const Environment &env,
 Polynomial_Matrix_Program
 read_polynomial_matrix_program(const Environment &env,
                                const std::vector<fs::path> &input_files,
-                               Timers &timers)
+                               const Verbosity &verbosity, Timers &timers)
 {
   Scoped_Timer timer(timers, "read_pmp");
 
@@ -153,6 +155,11 @@ read_polynomial_matrix_program(const Environment &env,
         Scoped_Timer parse_file_timer(timers,
                                       "file_" + std::to_string(file_index)
                                         + "=" + file.filename().string());
+        if(verbosity >= Verbosity::trace)
+          {
+            El::Output("rank=", El::mpi::Rank(), " read ", file);
+          }
+
         // Simple round-robin for matrices across files in a given group
         auto should_parse_matrix
           = [&mapping, &num_matrices_in_group](size_t matrix_index_in_file) {
