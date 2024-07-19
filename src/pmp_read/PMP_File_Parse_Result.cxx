@@ -69,7 +69,7 @@ void PMP_File_Parse_Result::validate(const PMP_File_Parse_Result &result)
              DEBUG_STRING(result.num_matrices));
     }
 
-  if(result.num_matrices == 0 && result.objective.empty()
-     && result.normalization.empty())
-    RUNTIME_ERROR("Nothing was read from input file.");
+  ASSERT(result.num_matrices > 0 || result.objective.has_value()
+           || result.normalization.has_value(),
+         "Nothing was read from input file.");
 }

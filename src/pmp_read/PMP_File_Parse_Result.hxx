@@ -5,16 +5,15 @@
 #include <El.hpp>
 
 #include <filesystem>
+#include <optional>
 #include <vector>
 
 struct PMP_File_Parse_Result
 {
   // Vector a_0..a_N, see (3.1) in SDPB Manual
-  // Empty if no objectives in file
-  std::vector<El::BigFloat> objective;
+  std::optional<std::vector<El::BigFloat>> objective;
   // Normaliation vector n_0..n_N, see (3.1) in SDPB Manual
-  // Empty if no normalization in file
-  std::vector<El::BigFloat> normalization;
+  std::optional<std::vector<El::BigFloat>> normalization;
   // Total number of PMWP matrices in file
   size_t num_matrices = 0;
   // If file is read by several processes,

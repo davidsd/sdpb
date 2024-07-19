@@ -32,9 +32,10 @@ int main(int argc, char **argv)
                          output_path, command_arguments);
       Environment::set_precision(precision);
 
-      Timers timers(env, Verbosity::regular);
+      Timers timers(env, verbosity);
 
-      auto pmp = read_polynomial_matrix_program(env, input_files, timers);
+      auto pmp
+        = read_polynomial_matrix_program(env, input_files, verbosity, timers);
       Output_SDP sdp(pmp, command_arguments, timers);
       bool zip = false;
       write_sdp(output_path, sdp, output_format, zip, timers, verbosity);

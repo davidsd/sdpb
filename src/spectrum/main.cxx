@@ -10,7 +10,7 @@ namespace fs = std::filesystem;
 void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
                       El::BigFloat &mesh_threshold, fs::path &input_path,
                       fs::path &solution_path, fs::path &output_path,
-                      bool &need_lambda, Verbosity& verbosity);
+                      bool &need_lambda, Verbosity &verbosity);
 
 std::vector<El::Matrix<El::BigFloat>>
 read_x(const fs::path &solution_path,
@@ -54,7 +54,8 @@ int main(int argc, char **argv)
         }
 
       Timers timers(env, verbosity);
-      const auto pmp = read_polynomial_matrix_program(env, input_path, timers);
+      const auto pmp
+        = read_polynomial_matrix_program(env, input_path, verbosity, timers);
       const size_t num_blocks = pmp.num_matrices;
       const auto &block_indices = pmp.matrix_index_local_to_global;
       El::Matrix<El::BigFloat> y(pmp.objective.size() - 1, 1);

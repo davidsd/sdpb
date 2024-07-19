@@ -114,8 +114,7 @@ read_xml(const std::filesystem::path &input_file,
     end(input_parser.objective_state.value.end());
   if(iterator != end)
     {
-      result.objective.clear();
-      result.objective.insert(result.objective.end(), iterator, end);
+      result.objective.emplace(iterator, end);
     }
   return result;
 }

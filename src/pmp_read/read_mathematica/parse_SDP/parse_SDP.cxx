@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <optional>
 #include <string>
 
 const char *parse_matrices(
@@ -16,8 +17,9 @@ const char *parse_matrices(
 const char *
 parse_SDP(const char *begin, const char *end,
           const std::function<bool(size_t matrix_index)> &should_parse_matrix,
-          std::vector<El::BigFloat> &objectives,
-          std::vector<El::BigFloat> &normalization, size_t &num_matrices,
+          std::optional<std::vector<El::BigFloat>> &objectives,
+          std::optional<std::vector<El::BigFloat>> &normalization,
+          size_t &num_matrices,
           std::map<size_t, Polynomial_Vector_Matrix> &parsed_matrices)
 {
   const std::string SDP_literal("SDP[");
@@ -43,7 +45,7 @@ parse_SDP(const char *begin, const char *end,
   const char *end_objective(parse_vector(SDP_start, end, temp_vector));
   if(!temp_vector.empty())
     {
-      std::swap(objectives, temp_vector);
+      objectives = std::move(temp_vector);
       temp_vector.clear();
     }
 
@@ -56,7 +58,7 @@ parse_SDP(const char *begin, const char *end,
   parse_vector(std::next(comma), end, temp_vector);
   if(!temp_vector.empty())
     {
-      std::swap(normalization, temp_vector);
+      normalization = std::move(temp_vector);
       temp_vector.clear();
     }
 

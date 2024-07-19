@@ -49,32 +49,61 @@ namespace
     }
   };
 
-  // Broadcast vector from the first rank for which vector is not empty.
+  // Check that vec.value() is the same for all ranks where vec.has_value()
+  // and broadcast it to other ranks.
   template <class T>
-  void synchronize_vector(std::vector<T> &vec,
-                          const El::mpi::Comm &comm = El::mpi::COMM_WORLD)
+  [[nodiscard]] std::optional<std::vector<T>>
+  check_and_broadcast_vector(const std::optional<std::vector<T>> &vec,
+                             // Parameters for debug output:
+                             const std::string &vector_name,
+                             const std::optional<size_t> &file_index,
+                             const std::vector<std::filesystem::path> &files,
+                             const El::mpi::Comm &comm = El::mpi::COMM_WORLD)
   {
+    if(comm.Size() == 1)
+      return vec;
+
     // Choose the first rank that has data
-    int source_rank = vec.empty() ? comm.Size() : comm.Rank();
+    int source_rank = vec.has_value() ? comm.Rank() : comm.Size();
     source_rank = El::mpi::AllReduce(source_rank, El::mpi::MIN, comm);
 
-    // vector is empty on all ranks
+    // vector is missing on all ranks
     if(source_rank == comm.Size())
-      return;
+      return vec;
 
-    size_t size = vec.size();
-    El::mpi::Broadcast(size, source_rank, comm);
+    std::vector<T> result = vec.value_or(std::vector<T>{});
+    // broadcast vector
+    {
+      size_t size = result.size();
+      El::mpi::Broadcast(size, source_rank, comm);
 
-    vec.resize(size);
-    El::mpi::Broadcast(vec.data(), size, source_rank, comm);
+      result.resize(size);
+      El::mpi::Broadcast(result.data(), size, source_rank, comm);
+    }
+
+    // Check that all non-empty vectors were the same
+    {
+      size_t source_file_index = file_index.value_or(files.size());
+      El::mpi::Broadcast(source_file_index, source_rank, comm);
+
+      if(vec.has_value())
+        {
+          ASSERT(result == vec.value(), "Found different ", vector_name,
+                 " vectors in input files:\n\t", files.at(file_index.value()),
+                 "\n\t", files.at(source_file_index));
+        }
+    }
+    return result;
   }
 }
 
 Polynomial_Matrix_Program
 read_polynomial_matrix_program(const Environment &env,
-                               const fs::path &input_file, Timers &timers)
+                               const fs::path &input_file,
+                               const Verbosity &verbosity, Timers &timers)
 {
-  return read_polynomial_matrix_program(env, std::vector{input_file}, timers);
+  return read_polynomial_matrix_program(env, std::vector{input_file},
+                                        verbosity, timers);
 }
 
 // Read Polynomal Matrix Program in one of the supported formats.
@@ -91,12 +120,12 @@ read_polynomial_matrix_program(const Environment &env,
 Polynomial_Matrix_Program
 read_polynomial_matrix_program(const Environment &env,
                                const std::vector<fs::path> &input_files,
-                               Timers &timers)
+                               const Verbosity &verbosity, Timers &timers)
 {
   Scoped_Timer timer(timers, "read_pmp");
 
-  std::vector<El::BigFloat> objective;
-  std::vector<El::BigFloat> normalization;
+  std::optional<std::vector<El::BigFloat>> objective;
+  std::optional<std::vector<El::BigFloat>> normalization;
   // Total number of PVM matrices
   size_t num_matrices = 0;
   // In case of several processes,
@@ -126,6 +155,11 @@ read_polynomial_matrix_program(const Environment &env,
         Scoped_Timer parse_file_timer(timers,
                                       "file_" + std::to_string(file_index)
                                         + "=" + file.filename().string());
+        if(verbosity >= Verbosity::trace)
+          {
+            El::Output("rank=", El::mpi::Rank(), " read ", file);
+          }
+
         // Simple round-robin for matrices across files in a given group
         auto should_parse_matrix
           = [&mapping, &num_matrices_in_group](size_t matrix_index_in_file) {
@@ -133,8 +167,6 @@ read_polynomial_matrix_program(const Environment &env,
                        % mapping.mpi_comm.value.Size()
                      == mapping.mpi_comm.value.Rank();
             };
-        // TODO set also bool should_parse_objective and should_parse_normalization
-        // to (mapping.mpi_comm.value.Rank() == 0)
 
         bool should_parse_objective = mapping.mpi_comm.value.Rank() == 0;
         bool should_parse_normalization = mapping.mpi_comm.value.Rank() == 0;
@@ -186,23 +218,40 @@ read_polynomial_matrix_program(const Environment &env,
   // Get objective, normalization and polynomial vector matrices
   // + calculate block indices
   // NB: after this loop, data it moved from parse_results, don't use it!
+  std::optional<size_t> objective_file_index;
+  std::optional<size_t> normalization_file_index;
   for(auto &&[file_index, parse_result] : parse_results)
     {
-      if(!parse_result.objective.empty())
+      if(parse_result.objective.has_value())
         {
-          ASSERT(objective.empty(),
-                 "objective already read from another file: "
-                 "duplicate found at ",
-                 all_files.at(file_index));
-          objective = std::move(parse_result.objective);
+          if(!objective.has_value())
+            {
+              objective = std::move(parse_result.objective);
+              objective_file_index = file_index;
+            }
+          else
+            {
+              ASSERT(objective == parse_result.objective,
+                     "Found different objective vectors in input files:\n\t",
+                     all_files.at(objective_file_index.value()), "\n\t",
+                     all_files.at(file_index));
+            }
         }
-      if(!parse_result.normalization.empty())
+      if(parse_result.normalization.has_value())
         {
-          ASSERT(normalization.empty(),
-                 "normalization already read from another file: "
-                 "duplicate found at ",
-                 all_files.at(file_index));
-          normalization = std::move(parse_result.normalization);
+          if(!normalization.has_value())
+            {
+              normalization = std::move(parse_result.normalization);
+              normalization_file_index = file_index;
+            }
+          else
+            {
+              ASSERT(
+                normalization == parse_result.normalization,
+                "Found different normalization vectors in input files:\n\t",
+                all_files.at(normalization_file_index.value()), "\n\t",
+                all_files.at(file_index));
+            }
         }
       for(auto &[index_in_file, matrix] : parse_result.parsed_matrices)
         {
@@ -216,20 +265,17 @@ read_polynomial_matrix_program(const Environment &env,
 
   {
     Scoped_Timer sync_objective_timer(timers, "sync_objective_normalization");
-    // TODO check also that objective/normalization exist only in a single file
     // TODO we can store objective on one rank, no need to synchronize it
-    synchronize_vector(objective);
-    synchronize_vector(normalization);
+    objective = check_and_broadcast_vector(objective, "objective",
+                                           objective_file_index, all_files);
+    normalization = check_and_broadcast_vector(
+      normalization, "normalization", normalization_file_index, all_files);
   }
 
-  ASSERT(!objective.empty(), "objective not found in input files");
-
-  std::optional<std::vector<El::BigFloat>> opt_normalization;
-  if(!normalization.empty())
-    opt_normalization = std::move(normalization);
+  ASSERT(objective.has_value(), "objective not found in input files");
 
   return Polynomial_Matrix_Program(
-    std::move(objective), std::move(opt_normalization), num_matrices,
+    std::move(objective.value()), std::move(normalization), num_matrices,
     std::move(matrices), std::move(matrix_index_local_to_global),
     std::move(block_paths));
 }
