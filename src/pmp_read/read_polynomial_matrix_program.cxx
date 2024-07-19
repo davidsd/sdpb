@@ -49,24 +49,52 @@ namespace
     }
   };
 
-  // Broadcast vector from the first rank for which vector is not empty.
+  // Vector 'vec' (objective or normalization) can be empty (missing) on some ranks.
+  // When it's not empty, it should have the same value for all ranks.
+  // We check this condition and broadcast the value to all ranks.
+  // TODO: pass const std::optional<vector<T>> &vec
   template <class T>
-  void synchronize_vector(std::vector<T> &vec,
-                          const El::mpi::Comm &comm = El::mpi::COMM_WORLD)
+  [[nodiscard]] std::vector<T>
+  check_and_broadcast_vector(const std::vector<T> &vec,
+                             const std::string &vector_name,
+                             const std::optional<size_t> &file_index,
+                             const std::vector<std::filesystem::path> &files,
+                             const El::mpi::Comm &comm = El::mpi::COMM_WORLD)
   {
+    if(comm.Size() == 1)
+      return vec;
+
     // Choose the first rank that has data
     int source_rank = vec.empty() ? comm.Size() : comm.Rank();
     source_rank = El::mpi::AllReduce(source_rank, El::mpi::MIN, comm);
 
     // vector is empty on all ranks
     if(source_rank == comm.Size())
-      return;
+      return vec;
 
-    size_t size = vec.size();
-    El::mpi::Broadcast(size, source_rank, comm);
+    // broadcast vector
+    std::vector<T> result = vec;
+    {
+      size_t size = vec.size();
+      El::mpi::Broadcast(size, source_rank, comm);
 
-    vec.resize(size);
-    El::mpi::Broadcast(vec.data(), size, source_rank, comm);
+      result.resize(size);
+      El::mpi::Broadcast(result.data(), size, source_rank, comm);
+    }
+
+    // Check that all non-empty vectors were the same
+    {
+      size_t source_file_index = file_index.value_or(files.size());
+      El::mpi::Broadcast(source_file_index, source_rank, comm);
+
+      if(!vec.empty())
+        {
+          ASSERT(result == vec, "Found different ", vector_name,
+                 " vectors in input files:\n\t", files.at(file_index.value()),
+                 "\n\t", files.at(source_file_index));
+        }
+    }
+    return result;
   }
 }
 
@@ -133,8 +161,6 @@ read_polynomial_matrix_program(const Environment &env,
                        % mapping.mpi_comm.value.Size()
                      == mapping.mpi_comm.value.Rank();
             };
-        // TODO set also bool should_parse_objective and should_parse_normalization
-        // to (mapping.mpi_comm.value.Rank() == 0)
 
         bool should_parse_objective = mapping.mpi_comm.value.Rank() == 0;
         bool should_parse_normalization = mapping.mpi_comm.value.Rank() == 0;
@@ -186,23 +212,40 @@ read_polynomial_matrix_program(const Environment &env,
   // Get objective, normalization and polynomial vector matrices
   // + calculate block indices
   // NB: after this loop, data it moved from parse_results, don't use it!
+  std::optional<size_t> objective_file_index;
+  std::optional<size_t> normalization_file_index;
   for(auto &&[file_index, parse_result] : parse_results)
     {
       if(!parse_result.objective.empty())
         {
-          ASSERT(objective.empty(),
-                 "objective already read from another file: "
-                 "duplicate found at ",
-                 all_files.at(file_index));
-          objective = std::move(parse_result.objective);
+          if(objective.empty())
+            {
+              objective = std::move(parse_result.objective);
+              objective_file_index = file_index;
+            }
+          else
+            {
+              ASSERT(objective == parse_result.objective,
+                     "Found different objective vectors in input files:\n\t",
+                     all_files.at(objective_file_index.value()), "\n\t",
+                     all_files.at(file_index));
+            }
         }
       if(!parse_result.normalization.empty())
         {
-          ASSERT(normalization.empty(),
-                 "normalization already read from another file: "
-                 "duplicate found at ",
-                 all_files.at(file_index));
-          normalization = std::move(parse_result.normalization);
+          if(normalization.empty())
+            {
+              normalization = std::move(parse_result.normalization);
+              normalization_file_index = file_index;
+            }
+          else
+            {
+              ASSERT(
+                normalization == parse_result.normalization,
+                "Found different normalization vectors in input files:\n\t",
+                all_files.at(normalization_file_index.value()), "\n\t",
+                all_files.at(file_index));
+            }
         }
       for(auto &[index_in_file, matrix] : parse_result.parsed_matrices)
         {
@@ -216,10 +259,11 @@ read_polynomial_matrix_program(const Environment &env,
 
   {
     Scoped_Timer sync_objective_timer(timers, "sync_objective_normalization");
-    // TODO check also that objective/normalization exist only in a single file
     // TODO we can store objective on one rank, no need to synchronize it
-    synchronize_vector(objective);
-    synchronize_vector(normalization);
+    objective = check_and_broadcast_vector(objective, "objective",
+                                           objective_file_index, all_files);
+    normalization = check_and_broadcast_vector(
+      normalization, "normalization", normalization_file_index, all_files);
   }
 
   ASSERT(!objective.empty(), "objective not found in input files");
