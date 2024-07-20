@@ -74,7 +74,7 @@ sample_pmp_matrix(const Polynomial_Vector_Matrix &matrix,
                   const El::Matrix<El::BigFloat> &z)
 {
   El::Matrix<Vector<El::BigFloat>> result(matrix.polynomials.Height(),
-                                               matrix.polynomials.Width());
+                                          matrix.polynomials.Width());
   for(int i = 0; i < matrix.polynomials.Height(); ++i)
     for(int j = 0; j < matrix.polynomials.Width(); ++j)
       {
@@ -194,7 +194,7 @@ int main(int argc, char **argv)
       int precision;
       fs::path left_pmp_path, right_pmp_path;
       fs::path z_path;
-      const auto verbosity = Verbosity::debug;
+      Verbosity verbosity = Verbosity::trace;
 
       // Parse command-line arguments
       {
@@ -214,6 +214,9 @@ int main(int argc, char **argv)
           "precision", po::value<int>(&precision)->required(),
           "The precision, in the number of bits, for numbers in the "
           "computation. ");
+        options.add_options()(
+          "verbosity", po::value<Verbosity>(&verbosity),
+          "Verbosity (0,1,2,3 or none,regular,debug,trace)");
 
         po::positional_options_description positional;
         positional.add("precision", 1);
@@ -261,7 +264,7 @@ int main(int argc, char **argv)
       Environment::set_precision(precision);
 
       Timers timers(env, verbosity);
-      Scoped_Timer timer(timers, "sdp2input");
+      Scoped_Timer timer(timers, "pmp_compare");
 
       auto left_pmp
         = read_polynomial_matrix_program(env, left_pmp_path, timers);
@@ -274,6 +277,7 @@ int main(int argc, char **argv)
       El::Matrix<El::BigFloat> z(left_pmp.objective.size(), 1);
       read_text_block(z, z_path);
 
+      Scoped_Timer compare_timer(timers, "compare");
       compare_pmp(left_pmp, right_pmp, z);
     }
   catch(std::exception &e)
