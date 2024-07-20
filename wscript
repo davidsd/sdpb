@@ -293,6 +293,14 @@ def build(bld):
                 use=use_packages + ['pmp_read', 'sdp_solve', 'pmp2sdp_lib', 'mesh']
                 )
 
+    bld.program(source=['src/pmp_compare/main.cxx'],
+                target='pmp_compare',
+                cxxflags=default_flags,
+                defines=default_defines,
+                includes=default_includes,
+                use=use_packages + ['pmp_read', 'sdp_solve']
+                )
+
     bld.program(source=['external/catch2/catch_amalgamated.cpp',
                         'test/src/integration_tests/main.cxx',
                         'test/src/integration_tests/util/Float.cxx',
