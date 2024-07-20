@@ -24,7 +24,11 @@ namespace
       file_costs.reserve(num_files);
       for(size_t i = 0; i < num_files; ++i)
         {
-          file_costs.emplace_back(fs::file_size(input_files.at(i)), i);
+          // file_costs.emplace_back(fs::file_size(input_files.at(i)), i);
+          // TODO: trivial costs to ensure that mapping in pmp_compare
+          // is identical for left and right PMP,
+          // so that we can compare them directly
+          file_costs.emplace_back(1, i);
         }
 
       const auto node_comm = env.comm_shared_mem;

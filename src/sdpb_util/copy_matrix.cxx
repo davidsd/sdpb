@@ -2,6 +2,31 @@
 #include "Shared_Window_Array.hxx"
 #include "assert.hxx"
 
+void copy_matrix(El::Matrix<El::BigFloat> &matrix, const int from,
+                 const int to, const El::mpi::Comm comm)
+{
+  if(to == from)
+    return;
+
+  const int rank = comm.Rank();
+  if(rank != to && rank != from)
+    return;
+
+  if(rank == from)
+    {
+      Send(matrix.Height(), to, El::mpi::COMM_WORLD);
+      Send(matrix.Width(), to, El::mpi::COMM_WORLD);
+      El::Send(matrix, El::mpi::COMM_WORLD, to);
+    }
+  if(rank == to)
+    {
+      const int height = El::mpi::Recv<int>(from, El::mpi::COMM_WORLD);
+      const int width = El::mpi::Recv<int>(from, El::mpi::COMM_WORLD);
+      matrix.Resize(height, width);
+      El::Recv(matrix, El::mpi::COMM_WORLD, from);
+    }
+}
+
 void copy_matrix(const El::Matrix<El::BigFloat> &source,
                  El::DistMatrix<El::BigFloat> &destination)
 {

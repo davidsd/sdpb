@@ -2,6 +2,9 @@
 
 #include <El.hpp>
 
+void copy_matrix(El::Matrix<El::BigFloat> &matrix, int from, int to,
+                 El::mpi::Comm comm);
+
 // source: same Matrix copied over all ranks of destination.DistComm()
 // destination: DistMatrix
 void copy_matrix(const El::Matrix<El::BigFloat> &source,
