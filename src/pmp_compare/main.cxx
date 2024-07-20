@@ -8,6 +8,10 @@
 #include <ostream>
 #include <string>
 #include <boost/program_options.hpp>
+#include <rapidjson/filewritestream.h>
+#include <rapidjson/ostreamwrapper.h>
+#include <rapidjson/rapidjson.h>
+#include <rapidjson/writer.h>
 
 namespace fs = std::filesystem;
 namespace po = boost::program_options;
@@ -26,7 +30,17 @@ struct Matrix_Diff
   void resize(const int height, const int width)
   {
     max_diff.Resize(height, width);
+    El::Zero(max_diff);
     max_x.Resize(height, width);
+    El::Zero(max_x);
+  }
+
+  [[nodiscard]] std::tuple<int, int, El::BigFloat, El::BigFloat>
+  get_max_element_and_x() const
+  {
+    auto [i, j, value] = El::MaxAbsLoc(max_diff);
+    auto x = max_x(i, j);
+    return {i, j, value, x};
   }
 
   friend std::ostream &operator<<(std::ostream &os, const Matrix_Diff &obj)
@@ -51,9 +65,9 @@ struct Matrix_Diff
       }
     os << "]";
 
-    auto [i, j, max_diff] = El::MaxAbsLoc(obj.max_diff);
+    auto [i, j, max_diff, x] = obj.get_max_element_and_x();
     os << "\n  max_diff=" << max_diff << " at (" << i << "," << j
-       << ") x=" << obj.max_x(i, j);
+       << ") x=" << x;
     return os;
   }
 };
@@ -132,26 +146,34 @@ Matrix_Diff diff_pvm(const Polynomial_Vector_Matrix &left,
   return matrix_diff(sample_pmp_matrix(left, z), sample_pmp_matrix(right, z),
                      left.sample_points);
 }
-void compare_pmp(const Polynomial_Matrix_Program &left_pmp,
-                 const Polynomial_Matrix_Program &right_pmp,
-                 const El::Matrix<El::BigFloat> &z)
+std::vector<std::tuple<fs::path, fs::path, Matrix_Diff>>
+diff_pmp(const Polynomial_Matrix_Program &left_pmp,
+         const Polynomial_Matrix_Program &right_pmp,
+         const El::Matrix<El::BigFloat> &z)
 {
   ASSERT_EQUAL(left_pmp.matrices.size(), right_pmp.matrices.size());
   ASSERT(left_pmp.matrix_index_local_to_global
          == right_pmp.matrix_index_local_to_global);
 
-  std::map<size_t, Matrix_Diff> result;
+  const size_t num_matrices = left_pmp.num_matrices;
+  // block_index, left, rigt, result
+  std::vector<std::tuple<fs::path, fs::path, Matrix_Diff>> result(
+    num_matrices);
+
   for(size_t local_index = 0; local_index < left_pmp.matrices.size();
       ++local_index)
     {
       const auto &left_pvm = left_pmp.matrices.at(local_index);
       const auto &right_pvm = right_pmp.matrices.at(local_index);
-      result.emplace(left_pmp.matrix_index_local_to_global.at(local_index),
-                     diff_pvm(left_pvm, right_pvm, z));
+
+      const auto &left_path = left_pmp.block_paths.at(local_index);
+      const auto &right_path = right_pmp.block_paths.at(local_index);
+
+      result.at(left_pmp.matrix_index_local_to_global.at(local_index))
+        = {left_path, right_path, diff_pvm(left_pvm, right_pvm, z)};
     }
 
   const int rank = El::mpi::Rank();
-  const size_t num_matrices = left_pmp.num_matrices;
   std::vector<int> block_index_to_rank(num_matrices, El::mpi::Size());
   for(auto &block_index : left_pmp.matrix_index_local_to_global)
     {
@@ -170,29 +192,12 @@ void compare_pmp(const Polynomial_Matrix_Program &left_pmp,
       if(rank != to && rank != from)
         continue;
 
-      auto [it, inserted] = result.try_emplace(block_index, Matrix_Diff());
-      ASSERT_EQUAL(
-        inserted, (rank != from), "Each block should exist only on one rank!",
-        DEBUG_STRING(rank), DEBUG_STRING(from), DEBUG_STRING(block_index));
-
-      auto &matrix_diff = it->second;
+      auto &[left_path, right_path, matrix_diff] = result.at(block_index);
       copy_matrix(matrix_diff.max_diff, from, to, comm);
       copy_matrix(matrix_diff.max_x, from, to, comm);
 
-      fs::path left_path, right_path;
-      if(rank == from)
-        {
-          size_t local_index
-            = std::find(left_pmp.matrix_index_local_to_global.begin(),
-                        left_pmp.matrix_index_local_to_global.end(),
-                        block_index)
-              - left_pmp.matrix_index_local_to_global.begin();
-          left_path = left_pmp.block_paths.at(local_index);
-          right_path = left_pmp.block_paths.at(local_index);
-        }
-
       // Copy paths to rank=0
-      for(auto* path : {&left_path, &right_path})
+      for(auto *path : {&left_path, &right_path})
         {
           auto path_string = path->string();
           if(rank == from)
@@ -212,55 +217,127 @@ void compare_pmp(const Polynomial_Matrix_Program &left_pmp,
               *path = path_string;
             }
         }
-
-      //Print results
-      if(rank == 0)
-        {
-          El::Output("\nblock_index=", block_index);
-          El::Output("  left=", left_path);
-          El::Output("  right=", right_path);
-          El::Output("  diff=", matrix_diff);
-        }
     }
+  return result;
 }
 
-//TODO remove
-void compare_pmp_old(const Polynomial_Matrix_Program &left_pmp,
-                     const Polynomial_Matrix_Program &right_pmp,
-                     const El::Matrix<El::BigFloat> &z)
+void compare_pmp(const Polynomial_Matrix_Program &left_pmp,
+                 const Polynomial_Matrix_Program &right_pmp,
+                 const El::Matrix<El::BigFloat> &z,
+                 const fs::path &output_path, const bool sort_stdout,
+                 const Verbosity verbosity)
 {
-  const size_t num_matrices = left_pmp.num_matrices;
-  std::vector<size_t> left_block_index_global_to_local(num_matrices);
-  std::vector<size_t> right_block_index_global_to_local(num_matrices);
+  auto diff = diff_pmp(left_pmp, right_pmp, z);
+  //Print results
+  if(El::mpi::Rank() != 0)
+    return;
 
-  for(size_t index_local = 0; index_local < num_matrices; ++index_local)
+  std::vector<std::tuple<size_t, fs::path, fs::path, Matrix_Diff>>
+    sorted_result;
+  {
+    for(size_t block_index = 0; block_index < diff.size(); ++block_index)
+      {
+        const auto &[left_path, right_path, value] = diff.at(block_index);
+        sorted_result.emplace_back(block_index, left_path, right_path, value);
+      }
+    if(sort_stdout)
+      {
+        auto get_key =
+          [](const std::tuple<size_t, fs::path, fs::path, Matrix_Diff> &item) {
+            const auto &[block_index, left, right, value] = item;
+            const auto &[i, j, max_value, x] = value.get_max_element_and_x();
+            return std::make_tuple(max_value, block_index);
+          };
+        std::sort(sorted_result.begin(), sorted_result.end(),
+                  [&get_key](const auto &a, const auto &b) {
+                    return get_key(a) < get_key(b);
+                  });
+      }
+  }
+
+  // Print to stdout
+  if(verbosity >= Verbosity::regular)
     {
-      left_block_index_global_to_local.at(
-        left_pmp.matrix_index_local_to_global.at(index_local))
-        = index_local;
-      right_block_index_global_to_local.at(
-        right_pmp.matrix_index_local_to_global.at(index_local))
-        = index_local;
+      El::Output("======================================");
+      El::Output("Comparison results",
+                 sort_stdout ? " sorted by max diff:" : ":");
+      El::Output("======================================");
+      for(const auto &[block_index, left_path, right_path, value] :
+          sorted_result)
+        {
+          El::Output("block_index=", block_index);
+          El::Output("  left=", left_path);
+          El::Output("  right=", right_path);
+          El::Output("  diff=", value);
+          El::Output("--------------------------------------");
+        }
+      El::Output("======================================");
     }
 
-  for(size_t block_index = 0; block_index < num_matrices; ++block_index)
+  // write to JSON
+  if(!output_path.empty())
     {
-      const auto left_local_index
-        = left_block_index_global_to_local.at(block_index);
-      const auto right_local_index
-        = right_block_index_global_to_local.at(block_index);
+      if(verbosity >= Verbosity::regular)
+        El::Output("Writing JSON output to ", weakly_canonical(output_path).string());
 
-      const auto &left_path = left_pmp.block_paths.at(left_local_index);
-      const auto &right_path = right_pmp.block_paths.at(right_local_index);
+      if(output_path.has_parent_path())
+        fs::create_directories(output_path.parent_path());
+      std::ofstream os(output_path);
+      ASSERT(os.good(), "Cannot open --output=", output_path);
+      rapidjson::OStreamWrapper osw(os);
+      rapidjson::Writer writer(osw);
 
-      const auto &left_pvm = left_pmp.matrices.at(left_local_index);
-      const auto &right_pvm = right_pmp.matrices.at(right_local_index);
-      auto diff = diff_pvm(left_pvm, right_pvm, z);
+      writer.StartArray();
+      for(size_t block_index = 0; block_index < diff.size(); ++block_index)
+        {
+          writer.StartObject();
+          const auto &[left_path, right_path, value] = diff.at(block_index);
+          const auto &[max_i, max_j, max_value, max_x]
+            = value.get_max_element_and_x();
+          writer.Key("block_index");
+          writer.Uint(block_index);
+          writer.Key("left_path");
+          writer.String(left_path.c_str());
+          writer.Key("right_path");
+          writer.String(right_path.c_str());
+          writer.Key("max");
+          writer.Double(static_cast<double>(max_value));
+          writer.Key("i");
+          writer.Int(max_i);
+          writer.Key("j");
+          writer.Int(max_j);
+          writer.Key("x");
+          writer.Double(static_cast<double>(max_x));
 
-      El::Output("\nblock_index=", block_index);
-      El::Output("  left=", left_path);
-      El::Output("  right=", right_path);
-      El::Output("  diff=", diff);
+          writer.Key("diff_matrix");
+          writer.StartArray();
+          for(int i = 0; i < value.max_diff.Height(); ++i)
+            {
+              writer.StartArray();
+              for(int j = 0; j < value.max_diff.Width(); ++j)
+                {
+                  writer.Double(static_cast<double>(value.max_diff(i, j)));
+                }
+              writer.EndArray();
+            }
+          writer.EndArray();
+
+          writer.Key("x_matrix");
+          writer.StartArray();
+          for(int i = 0; i < value.max_x.Height(); ++i)
+            {
+              writer.StartArray();
+              for(int j = 0; j < value.max_x.Width(); ++j)
+                {
+                  writer.Double(static_cast<double>(value.max_x(i, j)));
+                }
+              writer.EndArray();
+            }
+          writer.EndArray();
+
+          writer.EndObject();
+        }
+      writer.EndArray();
     }
 }
 
@@ -273,6 +350,8 @@ int main(int argc, char **argv)
       int precision;
       fs::path left_pmp_path, right_pmp_path;
       fs::path z_path;
+      fs::path output_path;
+      bool sort_stdout = false;
       Verbosity verbosity = Verbosity::debug;
 
       // Parse command-line arguments
@@ -293,6 +372,10 @@ int main(int argc, char **argv)
           "precision", po::value<int>(&precision)->required(),
           "The precision, in the number of bits, for numbers in the "
           "computation. ");
+        options.add_options()("output,o", po::value<fs::path>(&output_path),
+                              "Directory to place output");
+        options.add_options()("sort,s", po::bool_switch(&sort_stdout),
+                              "Sort (by max_diff) results printed to stdout.");
         options.add_options()(
           "verbosity", po::value<Verbosity>(&verbosity),
           "Verbosity (0,1,2,3 or none,regular,debug,trace)");
@@ -302,6 +385,7 @@ int main(int argc, char **argv)
         positional.add("left", 1);
         positional.add("right", 1);
         positional.add("z", 1);
+        positional.add("output", 1);
 
         po::variables_map variables_map;
         po::store(po::command_line_parser(argc, argv)
@@ -357,7 +441,7 @@ int main(int argc, char **argv)
       read_text_block(z, z_path);
 
       Scoped_Timer compare_timer(timers, "compare");
-      compare_pmp(left_pmp, right_pmp, z);
+      compare_pmp(left_pmp, right_pmp, z, output_path, sort_stdout, verbosity);
     }
   catch(std::exception &e)
     {
