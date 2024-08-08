@@ -70,7 +70,11 @@ size_t get_max_shared_memory_bytes(
                           "\n\tIn case of OOM, consider increasing number of "
                           "nodes and/or decreasing --maxSharedMemory limit.");
         }
-      PRINT_WARNING(ss.str());
+      if(verbosity >= Verbosity::regular)
+        {
+          if(env.node_index() == 0 || verbosity >= Verbosity::debug)
+            PRINT_WARNING(ss.str());
+        }
     }
   // All ranks on a node should have the same limit
   El::mpi::Broadcast(max_shared_memory_bytes, 0, env.comm_shared_mem);

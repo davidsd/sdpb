@@ -12,7 +12,7 @@
 struct SDPB_Parameters
 {
   bool no_final_checkpoint;
-  size_t proc_granularity;
+  size_t proc_granularity = 1;
   bool require_initial_checkpoint = false;
   Write_Solution write_solution;
 
