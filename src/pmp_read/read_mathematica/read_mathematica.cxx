@@ -9,8 +9,9 @@ namespace fs = std::filesystem;
 const char *
 parse_SDP(const char *begin, const char *end,
           const std::function<bool(size_t matrix_index)> &should_parse_matrix,
-          std::vector<El::BigFloat> &objectives,
-          std::vector<El::BigFloat> &normalization, size_t &num_matrices,
+          std::optional<std::vector<El::BigFloat>> &objectives,
+          std::optional<std::vector<El::BigFloat>> &normalization,
+          size_t &num_matrices,
           std::map<size_t, Polynomial_Vector_Matrix> &parsed_matrices);
 
 PMP_File_Parse_Result read_mathematica(

@@ -69,7 +69,7 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
     "[OBSOLETE] The number of MPI processes running on a node. "
     "Determined automatically from MPI environment.");
   obsolete_options.add_options()(
-    "procGranularity", po::value<size_t>(&proc_granularity)->default_value(1),
+    "procGranularity", po::value<size_t>(&proc_granularity),
     "[OBSOLETE] procGranularity must evenly divide number of processes per "
     "node.\n\n"
     "The minimum number of cores in a group, used during load balancing.  "
@@ -106,7 +106,16 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
                          EL_VERSION_MINOR);
               El::Output("  FLINT ", FLINT_VERSION);
               El::Output("  GMP ", gmp_version);
+#if defined ARCHIVE_VERSION_STRING
+              El::Output("  ", ARCHIVE_VERSION_STRING);
+#elif defined ARCHIVE_LIBRARY_VERSION
+              // this macro is defined in older versions, e.g. libarchive 2.0
+              El::Output("  ", ARCHIVE_LIBRARY_VERSION);
+#elif defined ARCHIVE_VERSION_ONLY_STRING
               El::Output("  libarchive ", ARCHIVE_VERSION_ONLY_STRING);
+#else
+              El::Output("  libarchive");
+#endif
               El::Output("  libxml ", LIBXML_DOTTED_VERSION);
               El::Output("  MPFR ", MPFR_VERSION_STRING);
               El::Output("  RapidJSON ", RAPIDJSON_VERSION_STRING);
@@ -118,7 +127,7 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
 #ifdef OPENBLAS_THREAD
               // e.g.: OpenBLAS 0.3.20 NO_LAPACKE DYNAMIC_ARCH NO_AFFINITY SkylakeX MAX_THREADS=64
               El::Output("  ", openblas_get_config());
-#elif
+#else
               // TODO print info for other CBLAS implementations
               // (FlexiBLAS, BLIS, Intel MKL...)
               El::Output("  CBLAS");

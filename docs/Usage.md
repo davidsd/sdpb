@@ -44,9 +44,8 @@ The format for the XML files is described in Section 3.1 of
 The NSV format allows you to load a PMP from multiple files.
 NSV files contain a list of files, separated by null's (`'\0'`).
 When using multiple files, each component is optional.
-If there are multiple versions of `normalization` or `objective`,
-`pmp2sdp` will arbitrarily choose one of them.
 Multiple elements of `PositiveMatrixWithPrefactor` will be concatenated together.
+Multiple versions of `normalization` or `objective` are allowed as long as they are identical.
 
 One way to generate NSV files is with the `find` command.  For
 example, if you have a directory `input` with many files, you can

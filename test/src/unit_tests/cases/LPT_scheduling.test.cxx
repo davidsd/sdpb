@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/LPT_scheduling.hxx"
 #include "unit_tests/util/util.hxx"
 

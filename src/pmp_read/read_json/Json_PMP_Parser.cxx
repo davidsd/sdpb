@@ -55,8 +55,8 @@ Json_PMP_Parser::element_parser(const std::string &key)
 }
 void Json_PMP_Parser::clear_result()
 {
-  result.objective.clear();
-  result.normalization.clear();
+  result.objective.reset();
+  result.normalization.reset();
   result.num_matrices = 0;
   result.parsed_matrices.clear();
 }

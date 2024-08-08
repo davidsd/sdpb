@@ -4,6 +4,7 @@
 #include <functional>
 #include <numeric>
 #include <queue>
+#include <algorithm>
 
 // Input: number of ranks, costs for each job.
 // Output: vector of vectors of job IDs for each rank.

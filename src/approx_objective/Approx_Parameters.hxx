@@ -8,7 +8,7 @@
 
 struct Approx_Parameters
 {
-  size_t proc_granularity;
+  size_t proc_granularity = 1;
   size_t precision;
   size_t max_shared_memory_bytes;
 

@@ -7,12 +7,13 @@
 
 Polynomial_Matrix_Program read_polynomial_matrix_program(
   const Environment &env,
-  const std::vector<std::filesystem::path> &input_files, Timers &timers);
+  const std::vector<std::filesystem::path> &input_files,
+  const Verbosity &verbosity, Timers &timers);
 
 Polynomial_Matrix_Program
 read_polynomial_matrix_program(const Environment &env,
                                const std::filesystem::path &input_file,
-                               Timers &timers);
+                               const Verbosity &verbosity, Timers &timers);
 
 std::vector<std::filesystem::path>
 read_nsv_file_list(const std::filesystem::path &input_file);

@@ -183,4 +183,60 @@ TEST_CASE("pmp2sdp")
       runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 1, "No such file");
     }
   }
+
+  SECTION("duplicate objectives")
+  {
+    INFO("Two PMP files having same objective vector.");
+    INFO("pmp2sdp should not fail, see "
+         "https://github.com/davidsd/sdpb/issues/251");
+    INFO("Same input as end-to-end_tests/1d-constraints/pmp.xml, but split "
+         "into two files");
+
+    auto data_dir
+      = Test_Config::test_data_dir / "pmp2sdp" / "duplicate-objectives";
+    int num_procs = GENERATE(1, 2);
+    auto input_nsv = (data_dir / "pmp.nsv").string();
+
+    DYNAMIC_SECTION("num_procs=" << num_procs)
+    {
+      const Test_Util::Test_Case_Runner runner(
+        "pmp2sdp/duplicate-objectives/num_procs=" + std::to_string(num_procs));
+
+      Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
+      args["--input"] = input_nsv;
+      auto sdp_path = (runner.output_dir / "sdp").string();
+      args["--output"] = sdp_path;
+
+      runner.create_nested("run").mpi_run({"build/pmp2sdp"}, args, num_procs);
+
+      auto sdp_orig = Test_Config::test_data_dir / "end-to-end_tests"
+                      / "1d-constraints" / "output" / "sdp";
+      Test_Util::REQUIRE_Equal::diff_sdp(sdp_path, sdp_orig, precision,
+                                         diff_precision,
+                                         runner.create_nested("diff"));
+    }
+  }
+
+  SECTION("objectives are different")
+  {
+    INFO("pmp2sdp should fail because two files have different objectives");
+
+    auto data_dir
+      = Test_Config::test_data_dir / "pmp2sdp" / "wrong-objectives";
+    int num_procs = GENERATE(1, 2);
+    auto input_nsv = (data_dir / "pmp.nsv").string();
+
+    DYNAMIC_SECTION("num_procs=" << num_procs)
+    {
+      const Test_Util::Test_Case_Runner runner(
+        "pmp2sdp/wrong-objectives/num_procs=" + std::to_string(num_procs));
+
+      Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
+      args["--input"] = input_nsv;
+      auto sdp_path = (runner.output_dir / "sdp").string();
+      args["--output"] = sdp_path;
+      runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 1,
+                     "Found different objective vectors in input files:");
+    }
+  }
 }
