@@ -190,6 +190,7 @@ def build(bld):
                         'src/pmp_read/read_mathematica/parse_SDP/parse_polynomial.cxx',
                         'src/pmp_read/read_mathematica/parse_SDP/parse_matrix/parse_matrix.cxx',
                         'src/pmp_read/read_mathematica/parse_SDP/parse_matrix/parse_damped_rational.cxx',
+                        'src/pmp_read/read_sdpa/read_sdpa.cxx',
                         'src/pmp_read/read_xml/read_xml.cxx',
                         'src/pmp_read/read_xml/Xml_Parser/on_start_element.cxx',
                         'src/pmp_read/read_xml/Xml_Parser/on_end_element.cxx',

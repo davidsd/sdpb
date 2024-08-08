@@ -17,6 +17,10 @@ PMP_File_Parse_Result
 read_xml(const std::filesystem::path &input_file,
          const std::function<bool(size_t matrix_index)> &should_parse_matrix);
 
+PMP_File_Parse_Result
+read_sdpa(const std::filesystem::path &input_file,
+          const std::function<bool(size_t matrix_index)> &should_parse_matrix);
+
 PMP_File_Parse_Result PMP_File_Parse_Result::read(
   const fs::path &input_path, bool should_parse_objective,
   bool should_parse_normalization,
@@ -42,9 +46,17 @@ PMP_File_Parse_Result PMP_File_Parse_Result::read(
         {
           result = read_xml(input_path, should_parse_matrix);
         }
+      // SDPA format .dat-s, see e.g. https://github.com/vsdp/SDPLIB
+      // TODO support also .dat-s.gz, .dat and .dat.gz
+      // TODO support also CBF (Conic Becnhmark Format) https://cblib.zib.de/
+      else if(input_path.extension() == ".dat-s")
+        {
+          result = read_sdpa(input_path, should_parse_matrix);
+        }
       else
         {
-          RUNTIME_ERROR("Expected .json, .m, or .xml extension.");
+          RUNTIME_ERROR("Expected .json, .m, .xml, or .dat-s extension.",
+                        DEBUG_STRING(input_path));
         }
 
       // Validate
