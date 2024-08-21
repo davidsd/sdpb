@@ -1,3 +1,4 @@
+#include "save_c_minus_By.hxx"
 #include "sdpb_util/memory_estimates.hxx"
 #include "bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "bigint_syrk/initialize_bigint_syrk_context.hxx"
@@ -256,9 +257,16 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
   initialize_timer.stop();
   auto last_checkpoint_time(std::chrono::high_resolution_clock::now());
 
-  if(El::mpi::Rank() == 0)
+  const bool write_iterations_json_and_c_minus_By
+    = !iterations_json_path.empty();
+  const auto c_minus_By_dir_path
+    = write_iterations_json_and_c_minus_By
+        ? iterations_json_path.parent_path() / "c_minus_By"
+        : fs::path();
+  if(El::mpi::Rank() == 0 && write_iterations_json_and_c_minus_By)
     {
-      // Copy old iterations.json e.g. to iterations.0.json
+      // Copy old out/iterations.json e.g. to out/iterations.0.json,
+      // Do the same for out/c_minus_By/
       if(fs::exists(iterations_json_path))
         {
           const auto parent_dir = iterations_json_path.parent_path();
@@ -274,6 +282,23 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
                     El::Output("Move old ", iterations_json_path, " to ",
                                backup_path);
                   fs::rename(iterations_json_path, backup_path);
+
+                  // move old c_minus_By
+                  if(fs::exists(c_minus_By_dir_path))
+                    {
+                      auto c_minus_By_dir_backup_path = c_minus_By_dir_path;
+                      c_minus_By_dir_backup_path.replace_extension(
+                        "." + std::to_string(index));
+                      if(verbosity >= Verbosity::debug)
+                        El::Output("Move old ", c_minus_By_dir_path, " to ",
+                                   c_minus_By_dir_backup_path);
+                      if(fs::exists(c_minus_By_dir_backup_path))
+                        PRINT_WARNING(c_minus_By_dir_backup_path,
+                                      " exists and will be overwritten");
+                      fs::rename(c_minus_By_dir_path,
+                                 c_minus_By_dir_backup_path);
+                    }
+
                   break;
                 }
             }
@@ -311,12 +336,19 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
                                      El::mpi::COMM_WORLD);
         if(sigterm)
           {
-            if(El::mpi::Rank() == 0 && !iterations_json_path.empty())
+            if(write_iterations_json_and_c_minus_By)
               {
-                std::ofstream iterations_json;
-                iterations_json.open(iterations_json_path, std::ios::app);
-                if(iterations_json.good())
-                  iterations_json << "\n]";
+                if(El::mpi::Rank() == 0)
+                  {
+                    std::ofstream iterations_json;
+                    iterations_json.open(iterations_json_path, std::ios::app);
+                    if(iterations_json.good())
+                      iterations_json << "\n]";
+                  }
+                auto c_minus_By_path
+                  = c_minus_By_dir_path / ("c_minus_By.json");
+                save_c_minus_By(c_minus_By_path, block_info, sdp, y, verbosity,
+                                timers);
               }
             return SDP_Solver_Terminate_Reason::SIGTERM_Received;
           }
@@ -335,6 +367,15 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
           save_checkpoint(parameters.checkpoint_out, verbosity,
                           parameter_properties);
           last_checkpoint_time = std::chrono::high_resolution_clock::now();
+
+          if(write_iterations_json_and_c_minus_By)
+            {
+              auto c_minus_By_path
+                = c_minus_By_dir_path
+                  / ("c_minus_By." + std::to_string(iteration) + ".json");
+              save_c_minus_By(c_minus_By_path, block_info, sdp, y, verbosity,
+                              timers);
+            }
         }
       compute_objectives(sdp, x, y, primal_objective, dual_objective,
                          duality_gap, timers);
@@ -424,12 +465,18 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
                       Q_cond_number, max_block_cond_number,
                       max_block_cond_number_name, verbosity);
     }
-  if(El::mpi::Rank() == 0 && !iterations_json_path.empty())
+
+  if(write_iterations_json_and_c_minus_By)
     {
-      std::ofstream iterations_json;
-      iterations_json.open(iterations_json_path, std::ios::app);
-      if(iterations_json.good())
-        iterations_json << "\n]";
+      if(El::mpi::Rank() == 0)
+        {
+          std::ofstream iterations_json;
+          iterations_json.open(iterations_json_path, std::ios::app);
+          if(iterations_json.good())
+            iterations_json << "\n]";
+        }
+      auto c_minus_By_path = c_minus_By_dir_path / "c_minus_By.json";
+      save_c_minus_By(c_minus_By_path, block_info, sdp, y, verbosity, timers);
     }
   return terminate_reason;
 }
