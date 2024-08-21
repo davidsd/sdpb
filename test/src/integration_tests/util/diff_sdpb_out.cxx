@@ -279,6 +279,16 @@ namespace Test_Util::REQUIRE_Equal
         for(const auto &a : fs::directory_iterator(a_out_dir))
           {
             CAPTURE(a);
+            // Skip out/c_minus_By/ folders
+            // TODO check c_minus_By.json files
+            if(a.is_directory())
+              {
+                const std::string c_minus_By = "c_minus_By";
+                REQUIRE(
+                  a.path().filename().string().substr(0, c_minus_By.size())
+                  == c_minus_By);
+                continue;
+              }
             REQUIRE(is_regular_file(a.path()));
             my_filenames.push_back(a.path().filename().string());
           }
