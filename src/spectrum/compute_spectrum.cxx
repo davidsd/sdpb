@@ -84,14 +84,13 @@ compute_spectrum(const Polynomial_Matrix_Program &pmp,
         }
       const El::BigFloat block_epsilon(block_scale
                                        * El::limits::Epsilon<El::BigFloat>());
-
-      std::ofstream outfile("debug_spectrum.log");
-      ASSERT(outfile.good(),
-             "Problem when opening output file: debug_spectrum.log");
+      const auto outpath
+        = "functional_" + std::to_string(block_index) + ".json";
+      std::ofstream outfile(outpath);
+      ASSERT(outfile.good(), "Problem when opening output file: ", outpath);
       set_stream_precision(outfile);
       write_polynomial_vector_vector(outfile, summed_polynomials, "");
-      ASSERT(outfile.good(),
-             "Problem when writing to output file: debug_spectrum.log");
+      ASSERT(outfile.good(), "Problem when writing to output file: ", outpath);
 
       Mesh mesh(
         zero, max_delta,
