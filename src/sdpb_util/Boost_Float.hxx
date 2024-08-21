@@ -33,3 +33,28 @@ inline El::BigFloat to_BigFloat(const Boost_Float &value)
   mpfr_get_f(result.gmp_float.get_mpf_t(), value.backend().data(), MPFR_RNDN);
   return result;
 }
+
+inline std::vector<El::BigFloat>
+to_BigFloat_Vector(const std::vector<Boost_Float> &input)
+{
+  std::vector<El::BigFloat> output;
+  output.reserve(input.size());
+  for(const auto &x : input)
+    {
+      output.push_back(to_BigFloat(x));
+    }
+
+  return output;
+}
+inline std::vector<Boost_Float>
+to_Boost_Float_Vector(const std::vector<El::BigFloat> &input)
+{
+  std::vector<Boost_Float> output;
+  output.reserve(input.size());
+  for(const auto &x : input)
+    {
+      output.push_back(to_Boost_Float(x));
+    }
+
+  return output;
+}

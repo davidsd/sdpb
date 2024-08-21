@@ -18,35 +18,6 @@ bilinear_basis(const std::vector<El::BigFloat> &sample_points,
 
 namespace
 {
-  std::vector<El::BigFloat>
-  to_BigFloat_Vector(const std::vector<Boost_Float> &input)
-  {
-    std::vector<El::BigFloat> output;
-    output.reserve(input.size());
-    for(const auto &x : input)
-      {
-        output.push_back(to_BigFloat(x));
-      }
-
-    return output;
-  }
-
-  std::vector<Boost_Float>
-  to_Boost_Float_Vector(const std::vector<El::BigFloat> &input)
-  {
-    std::vector<Boost_Float> output;
-    output.reserve(input.size());
-    for(const auto &x : input)
-      {
-        output.push_back(to_Boost_Float(x));
-      }
-
-    return output;
-  }
-}
-
-namespace
-{
   int64_t get_max_degree(const El::Matrix<Polynomial_Vector> &pvm)
   {
     int64_t max_degree = 0;
