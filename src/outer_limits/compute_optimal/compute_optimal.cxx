@@ -211,8 +211,7 @@ std::vector<El::BigFloat> compute_optimal(
           El::Matrix<int32_t> block_timings_ms(block_info.dimensions.size(),
                                                1);
           El::Zero(block_timings_ms);
-          const auto iterations_json_path
-            = parameters.output_path / "iterations.json";
+          const auto iterations_json_path  = fs::path();
           SDP_Solver_Terminate_Reason reason = solver.run(
             env, parameters.solver, parameters.verbosity, parameter_properties,
             block_info, sdp, grid, start_time, iterations_json_path, timers,
