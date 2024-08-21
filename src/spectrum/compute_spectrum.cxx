@@ -5,6 +5,9 @@
 #include "sdpb_util/Mesh.hxx"
 #include "pmp/max_normalization_index.hxx"
 #include "sdpb_util/fill_weights.hxx"
+#include "write_polynomial_vector_vector.hxx"
+
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 
 std::vector<Zeros>
 compute_spectrum(const Polynomial_Matrix_Program &pmp,
@@ -81,6 +84,14 @@ compute_spectrum(const Polynomial_Matrix_Program &pmp,
         }
       const El::BigFloat block_epsilon(block_scale
                                        * El::limits::Epsilon<El::BigFloat>());
+
+      std::ofstream outfile("debug_spectrum.log");
+      ASSERT(outfile.good(),
+             "Problem when opening output file: debug_spectrum.log");
+      set_stream_precision(outfile);
+      write_polynomial_vector_vector(outfile, summed_polynomials, "");
+      ASSERT(outfile.good(),
+             "Problem when writing to output file: debug_spectrum.log");
 
       Mesh mesh(
         zero, max_delta,
