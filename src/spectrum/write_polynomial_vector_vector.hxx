@@ -22,3 +22,12 @@ void write_polynomial_vector_vector(std::ostream &output_stream,
     }
   output_stream << "\n" << indentation << "]";
 }
+
+void write_polynomial_vector_vector(std::ostream &output_stream,
+                                    const std::vector<Polynomial_Vector> &m,
+                                    const std::string &indentation,
+                                    const std::string &name)
+{
+  output_stream << indentation << "\"" << name << "\":\n";
+  write_polynomial_vector_vector(output_stream, m, indentation);
+}

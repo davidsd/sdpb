@@ -96,9 +96,13 @@ compute_spectrum(const Polynomial_Matrix_Program &pmp,
       std::ofstream outfile(outpath);
       ASSERT(outfile.good(), "Problem when opening output file: ", outpath);
       set_stream_precision(outfile);
-      write_polynomial_vector_vector(outfile, summed_polynomials, "");
-      ASSERT(outfile.good(), "Problem when writing to output file: ", outpath);
 
+      outfile << "{\n";
+      outfile << "  \"prefactor\": " << block.reduced_prefactor << ",\n";
+      write_polynomial_vector_vector(outfile, summed_polynomials, "  ",
+                                     "matrix");
+      ASSERT(outfile.good(), "Problem when writing to output file: ", outpath);
+      outfile << "\n}";
       Mesh mesh(
         zero, max_delta,
         [&](const El::BigFloat &point) {
