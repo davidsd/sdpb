@@ -4,6 +4,7 @@
 #include "Parse_SDP.hxx"
 #include "json.hxx"
 #include "sdpb_util/to_matrix.hxx"
+#include "Parse_Sdpb_Out_Txt.hxx"
 
 #include <catch2/catch_amalgamated.hpp>
 
@@ -16,151 +17,108 @@
 namespace fs = std::filesystem;
 
 // Parser classes
-namespace
+struct Parse_Matrix_Txt
 {
-  struct Parse_Matrix_Txt
+  int height;
+  int width;
+  Float_Vector elements;
+  explicit Parse_Matrix_Txt(const fs::path &path)
   {
-    int height;
-    int width;
-    Float_Vector elements;
-    explicit Parse_Matrix_Txt(const fs::path &path)
-    {
-      CAPTURE(path);
-      REQUIRE(is_regular_file(path));
-      std::ifstream is(path);
-      height = width = 0;
-      is >> height;
-      is >> width;
-      REQUIRE(is.good());
-      REQUIRE(height > 0);
-      REQUIRE(width > 0);
-      elements.reserve(height * width);
-      for(int i = 0; i < height; ++i)
-        {
-          for(int k = 0; k < width; ++k)
-            {
-              Float f;
-              is >> f;
-              elements.push_back(f);
-            }
-        }
-    }
-  };
+    CAPTURE(path);
+    REQUIRE(is_regular_file(path));
+    std::ifstream is(path);
+    height = width = 0;
+    is >> height;
+    is >> width;
+    REQUIRE(is.good());
+    REQUIRE(height > 0);
+    REQUIRE(width > 0);
+    elements.reserve(height * width);
+    for(int i = 0; i < height; ++i)
+      {
+        for(int k = 0; k < width; ++k)
+          {
+            Float f;
+            is >> f;
+            elements.push_back(f);
+          }
+      }
+  }
+};
 
-  // out.txt produced by SDPB
-  struct Parse_Sdpb_Out_Txt : boost::noncopyable
+struct Parse_Iterations_Json : boost::noncopyable
+{
+  std::vector<std::vector<std::pair<std::string, std::string>>> iterations;
+  explicit Parse_Iterations_Json(const fs::path &path)
   {
-    std::string terminate_reason;
-    std::map<std::string, Float> float_map;
+    CAPTURE(path);
+    REQUIRE(exists(path));
+    std::ifstream is(path);
+    rapidjson::IStreamWrapper wrapper(is);
+    rapidjson::Document document;
+    document.ParseStream(wrapper);
 
-    explicit Parse_Sdpb_Out_Txt(const fs::path &path)
-    {
-      CAPTURE(path);
-      REQUIRE(is_regular_file(path));
-      std::ifstream is(path);
-      std::string line;
-      while(std::getline(is, line))
-        {
-          // line format:
-          // key = value;
-          CAPTURE(line);
-          std::vector<std::string> tokens;
-          boost::split(tokens, line, boost::is_any_of("=;"));
-          if(tokens.size() <= 1)
-            break; // empty string (the last one)
-
-          REQUIRE(tokens.size() == 3); // key, value, empty "" at the end
-          auto key = tokens[0];
-          auto value = tokens[1];
-          boost::trim(key);
-          boost::trim(value);
-          if(key == "terminateReason")
+    REQUIRE(document.IsArray());
+    for(const auto &json_iteration : document.GetArray())
+      {
+        iterations.emplace_back();
+        REQUIRE(json_iteration.IsObject());
+        const auto obj = json_iteration.GetObject();
+        for(auto it = obj.MemberBegin(); it != obj.MemberEnd(); ++it)
+          {
             {
-              terminate_reason = value;
+              CAPTURE(it->name.GetType());
+              REQUIRE(it->name.IsString());
             }
-          else
-            {
-              float_map[key] = Float(value);
-            }
-        }
-      REQUIRE(!terminate_reason.empty());
-    }
-  };
+            auto name
+              = std::string(it->name.GetString(), it->name.GetStringLength());
 
-  struct Parse_Iterations_Json : boost::noncopyable
-  {
-    std::vector<std::vector<std::pair<std::string, std::string>>> iterations;
-    explicit Parse_Iterations_Json(const fs::path &path)
-    {
-      CAPTURE(path);
-      REQUIRE(exists(path));
-      std::ifstream is(path);
-      rapidjson::IStreamWrapper wrapper(is);
-      rapidjson::Document document;
-      document.ParseStream(wrapper);
-
-      REQUIRE(document.IsArray());
-      for(const auto &json_iteration : document.GetArray())
-        {
-          iterations.emplace_back();
-          REQUIRE(json_iteration.IsObject());
-          const auto obj = json_iteration.GetObject();
-          for(auto it = obj.MemberBegin(); it != obj.MemberEnd(); ++it)
-            {
+            std::string value;
+            CAPTURE(it->value.GetType());
+            if(it->value.IsString())
               {
-                CAPTURE(it->name.GetType());
-                REQUIRE(it->name.IsString());
+                value = std::string(it->value.GetString(),
+                                    it->value.GetStringLength());
               }
-              auto name = std::string(it->name.GetString(),
-                                      it->name.GetStringLength());
+            else if(it->value.IsInt())
+              {
+                value = std::to_string(it->value.GetInt());
+              }
+            else if(it->value.IsNumber())
+              {
+                value = std::to_string(it->value.GetDouble());
+              }
+            else
+              {
+                FAIL("Unsupported JSON value type");
+              }
+            iterations.back().emplace_back(name, value);
+          }
+      }
+  }
+};
 
-              std::string value;
-              CAPTURE(it->value.GetType());
-              if(it->value.IsString())
-                {
-                  value = std::string(it->value.GetString(),
-                                      it->value.GetStringLength());
-                }
-              else if(it->value.IsInt())
-                {
-                  value = std::to_string(it->value.GetInt());
-                }
-              else if(it->value.IsNumber())
-                {
-                  value = std::to_string(it->value.GetDouble());
-                }
-              else
-                {
-                  FAIL("Unsupported JSON value type");
-                }
-              iterations.back().emplace_back(name, value);
-            }
-        }
-    }
-  };
-
-  struct Parse_c_minus_By_Json
+struct Parse_c_minus_By_Json
+{
+  std::vector<Float_Vector> blocks;
+  explicit Parse_c_minus_By_Json(const fs::path &path)
   {
-    std::vector<Float_Vector> blocks;
-    explicit Parse_c_minus_By_Json(const fs::path &path)
-    {
-      CAPTURE(path);
-      REQUIRE(exists(path));
-      std::ifstream is(path);
-      rapidjson::IStreamWrapper wrapper(is);
-      rapidjson::Document document;
-      document.ParseStream(wrapper);
+    CAPTURE(path);
+    REQUIRE(exists(path));
+    std::ifstream is(path);
+    rapidjson::IStreamWrapper wrapper(is);
+    rapidjson::Document document;
+    document.ParseStream(wrapper);
 
-      REQUIRE(document.IsObject());
-      REQUIRE(document.HasMember("c_minus_By"));
-      REQUIRE(document["c_minus_By"].IsArray());
-      for(const auto &block : document["c_minus_By"].GetArray())
-        {
-          blocks.emplace_back(Test_Util::Json::parse_Float_Vector(block));
-        }
-    }
-  };
-}
+    REQUIRE(document.IsObject());
+    REQUIRE(document.HasMember("c_minus_By"));
+    REQUIRE(document["c_minus_By"].IsArray());
+    for(const auto &block : document["c_minus_By"].GetArray())
+      {
+        blocks.emplace_back(Test_Util::Json::parse_Float_Vector(block));
+      }
+  }
+};
 
 // Helper functions
 namespace
@@ -388,7 +346,7 @@ namespace Test_Util::REQUIRE_Equal
     const auto vec_to_matrix
       = [&](const Float_Vector &vec) { return to_matrix(std::vector({vec})); };
 
-    const Parse_SDP sdp(sdp_dir,runner);
+    const Parse_SDP sdp(sdp_dir, runner);
     const auto y_vec = Parse_Matrix_Txt(sdpb_out_dir / "y.txt").elements;
     const Float_Matrix y = vec_to_matrix(y_vec);
 
