@@ -39,6 +39,9 @@ namespace
   // mpirun -n 2
   std::string build_mpirun_prefix(int numProcs)
   {
+    // number of processes will be determined automatically
+    if(numProcs <= 0)
+      return Test_Config::mpirun;
     return build_command_line(Test_Config::mpirun, "-n",
                               std::to_string(numProcs));
   }
