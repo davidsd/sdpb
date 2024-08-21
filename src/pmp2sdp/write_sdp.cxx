@@ -1,6 +1,7 @@
 #include "Dual_Constraint_Group.hxx"
 #include "byte_counter.hxx"
 #include "Archive_Writer.hxx"
+#include "write_pmp_info_json.hxx"
 #include "write_sdp.hxx"
 #include "Output_SDP/Output_SDP.hxx"
 #include "sdpb_util/assert.hxx"
@@ -91,6 +92,10 @@ namespace
   {
     return temp_dir / "objectives.json";
   }
+  fs::path get_pmp_info_path(const fs::path &temp_dir)
+  {
+    return temp_dir / "pmp_info.json";
+  }
   fs::path get_normalization_path(const fs::path &temp_dir)
   {
     return temp_dir / "normalization.json";
@@ -111,6 +116,7 @@ namespace
                const Block_File_Format output_format, const fs::path &temp_dir,
                const size_t num_control_bytes,
                const size_t num_objectives_bytes,
+               const size_t num_pmp_info_bytes,
                const std::optional<size_t> num_normalization_bytes,
                const std::vector<size_t> &block_info_sizes,
                const std::vector<size_t> &block_data_sizes, Timers &timers)
@@ -131,6 +137,13 @@ namespace
       auto objectives_path = get_objectives_path(temp_dir);
       archive_gzipped_file(objectives_path, num_objectives_bytes, writer);
       fs::remove(objectives_path);
+    }
+    // pmp_info.json
+    {
+      Scoped_Timer objectives_timer(timers, "pmp_info");
+      auto pmp_info_path = get_pmp_info_path(temp_dir);
+      archive_gzipped_file(pmp_info_path, num_pmp_info_bytes, writer);
+      fs::remove(pmp_info_path);
     }
     // normalization.json
     if(num_normalization_bytes.has_value())
@@ -182,6 +195,7 @@ namespace
                            Block_File_Format output_format,
                            const size_t num_control_bytes,
                            const size_t num_objectives_bytes,
+                           const size_t num_pmp_info_bytes,
                            const std::optional<size_t> num_normalization_bytes,
                            const std::vector<size_t> &block_info_sizes,
                            const std::vector<size_t> &block_data_sizes,
@@ -199,8 +213,8 @@ namespace
         {
           ++file_count;
         }
-      // control.json + objectives.json + (block_info_XXX + block_data_XXX)
-      size_t expected_file_count = 2 + 2 * num_blocks;
+      // control.json + objectives.json + pmp_info.json + (block_info_XXX + block_data_XXX)
+      size_t expected_file_count = 3 + 2 * num_blocks;
       // + optional normalization.json
       if(num_normalization_bytes.has_value())
         expected_file_count += 1;
@@ -212,6 +226,7 @@ namespace
       Scoped_Timer file_sizes_timer(timers, "file_sizes");
       check_file_size(get_control_path(temp_dir), num_control_bytes);
       check_file_size(get_objectives_path(temp_dir), num_objectives_bytes);
+      check_file_size(get_pmp_info_path(temp_dir), num_pmp_info_bytes);
       if(num_normalization_bytes.has_value())
         {
           check_file_size(get_normalization_path(temp_dir),
@@ -229,6 +244,7 @@ namespace
 }
 
 void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
+               const Polynomial_Matrix_Program &pmp,
                Block_File_Format block_file_format, bool zip, Timers &timers,
                const Verbosity verbosity)
 {
@@ -255,6 +271,12 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
     // All ranks should wait until root clears the directories before writing.
     Scoped_Timer mpi_barrier_timer(timers, "mpi_barrier");
     El::mpi::Barrier();
+  }
+
+  std::vector<PVM_Info> pmp_info;
+  {
+    Scoped_Timer(timers, "synchronize_pmp_info");
+    pmp_info = synchronize_pmp_info(pmp);
   }
 
   // We use size_t rather than std::streamsize because MPI treats
@@ -348,6 +370,9 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
           write_objectives_json(os, sdp.objective_const, sdp.dual_objective_b);
         },
         zip);
+      size_t num_pmp_info_bytes = write_data_and_count_bytes(
+        get_pmp_info_path(temp_dir),
+        [&](std::ostream &os) { write_pmp_info_json(os, pmp_info); }, zip);
       std::optional<size_t> num_normalization_bytes;
       if(sdp.normalization.has_value())
         {
@@ -363,8 +388,8 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
         {
           write_to_zip(output_path, sdp, block_file_format, temp_dir,
                        num_control_bytes, num_objectives_bytes,
-                       num_normalization_bytes, block_info_sizes,
-                       block_data_sizes, timers);
+                       num_pmp_info_bytes, num_normalization_bytes,
+                       block_info_sizes, block_data_sizes, timers);
           // Do not call remove_all() to ensure that we
           // don't remove anything useful.
           // This function will fail if temp_dir is not empty.
@@ -374,8 +399,8 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
         {
           check_sdp_directory(temp_dir, sdp.num_blocks, block_file_format,
                               num_control_bytes, num_objectives_bytes,
-                              num_normalization_bytes, block_info_sizes,
-                              block_data_sizes, timers);
+                              num_pmp_info_bytes, num_normalization_bytes,
+                              block_info_sizes, block_data_sizes, timers);
           fs::rename(temp_dir, output_path);
         }
     }

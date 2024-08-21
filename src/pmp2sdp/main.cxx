@@ -42,7 +42,7 @@ int main(int argc, char **argv)
                                                 parameters.verbosity, timers);
 
       Output_SDP sdp(pmp, parameters.command_arguments, timers);
-      write_sdp(parameters.output_path, sdp, parameters.output_format,
+      write_sdp(parameters.output_path, sdp, pmp, parameters.output_format,
                 parameters.zip, timers, parameters.verbosity);
       if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {

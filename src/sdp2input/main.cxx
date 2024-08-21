@@ -94,7 +94,7 @@ int main(int argc, char **argv)
 
       Output_SDP sdp(pmp, command_arguments, timers);
       bool zip = false;
-      write_sdp(output_path, sdp, output_format, zip, timers, verbosity);
+      write_sdp(output_path, sdp, pmp, output_format, zip, timers, verbosity);
       if(El::mpi::Rank() == 0)
         {
           El::Output("Processed ", sdp.num_blocks, " SDP blocks in ",
