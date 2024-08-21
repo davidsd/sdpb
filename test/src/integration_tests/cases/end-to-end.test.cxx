@@ -162,6 +162,21 @@ TEST_CASE("end-to-end_tests")
   int num_procs = 6;
   int precision = 768;
 
+  SECTION("sdpa")
+  {
+    INFO("Test for SDPA input formats .dat and .dat-s");
+    INFO("Example from "
+         "https://github.com/nakatamaho/sdpa-gmp/blob/master/example1.dat-s");
+    INFO("Optimal objective value (SDPLIB): -41.9");
+    INFO("Due to differences in conventions, SDPB should return objective "
+         "with an opposite different sign, i.e. 41.9");
+
+    // Do not check normalization.json because it is absent for .dat-s
+    bool check_sdp_normalization = false;
+    end_to_end_test("sdpa/example1", num_procs, precision, {}, {}, {},
+                    check_sdp_normalization);
+  }
+
   SECTION("1d")
   {
     INFO("SDPB test for a simple one-dimensional problem from SDPB Manual:");

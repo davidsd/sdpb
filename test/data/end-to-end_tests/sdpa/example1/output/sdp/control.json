@@ -1,0 +1,4 @@
+{
+  "num_blocks": 1,
+  "command": "build/pmp2sdp --input=test/data/end-to-end_tests/sdpa/input/example.dat-s.json --output=test/out/end-to-end_tests/sdpa/example.dat-s.json/sdp --precision=768"
+}
