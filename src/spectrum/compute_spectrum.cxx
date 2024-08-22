@@ -99,6 +99,10 @@ compute_spectrum(const Polynomial_Matrix_Program &pmp,
 
       outfile << "{\n";
       outfile << "  \"prefactor\": " << block.prefactor << ",\n";
+      outfile << "  \"reduced_prefactor\": " << block.reduced_prefactor
+              << ",\n";
+      write_vector(outfile, block.sample_points, "  ", "sample_points");
+      outfile << ",\n";
       write_polynomial_vector_vector(outfile, summed_polynomials, "  ",
                                      "matrix");
       ASSERT(outfile.good(), "Problem when writing to output file: ", outpath);
