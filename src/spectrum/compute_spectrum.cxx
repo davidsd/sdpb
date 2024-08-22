@@ -98,7 +98,7 @@ compute_spectrum(const Polynomial_Matrix_Program &pmp,
       set_stream_precision(outfile);
 
       outfile << "{\n";
-      outfile << "  \"prefactor\": " << block.reduced_prefactor << ",\n";
+      outfile << "  \"prefactor\": " << block.prefactor << ",\n";
       write_polynomial_vector_vector(outfile, summed_polynomials, "  ",
                                      "matrix");
       ASSERT(outfile.good(), "Problem when writing to output file: ", outpath);
