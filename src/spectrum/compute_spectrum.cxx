@@ -5,6 +5,13 @@
 #include "sdpb_util/Mesh.hxx"
 #include "pmp/max_normalization_index.hxx"
 #include "sdpb_util/fill_weights.hxx"
+#include "write_polynomial_vector_vector.hxx"
+
+#include "sdpb_util/ostream/set_stream_precision.hxx"
+
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 std::vector<Zeros>
 compute_spectrum(const Polynomial_Matrix_Program &pmp,
@@ -81,7 +88,25 @@ compute_spectrum(const Polynomial_Matrix_Program &pmp,
         }
       const El::BigFloat block_epsilon(block_scale
                                        * El::limits::Epsilon<El::BigFloat>());
+      fs::create_directories("functionals");
+      const auto outpath = fs::path("functionals")
+                           / pmp.block_paths.at(block_index)
+                               .filename()
+                               .replace_extension(".json");
+      std::ofstream outfile(outpath);
+      ASSERT(outfile.good(), "Problem when opening output file: ", outpath);
+      set_stream_precision(outfile);
 
+      outfile << "{\n";
+      outfile << "  \"prefactor\": " << block.prefactor << ",\n";
+      outfile << "  \"reduced_prefactor\": " << block.reduced_prefactor
+              << ",\n";
+      write_vector(outfile, block.sample_points, "  ", "sample_points");
+      outfile << ",\n";
+      write_polynomial_vector_vector(outfile, summed_polynomials, "  ",
+                                     "matrix");
+      ASSERT(outfile.good(), "Problem when writing to output file: ", outpath);
+      outfile << "\n}";
       Mesh mesh(
         zero, max_delta,
         [&](const El::BigFloat &point) {
@@ -107,3 +132,11 @@ compute_spectrum(const Polynomial_Matrix_Program &pmp,
     }
   return zeros_blocks;
 }
+
+// compute_spectrum(const Polynomial_Matrix_Program &pmp,
+//                  const El::Matrix<El::BigFloat> &y,
+//                  const std::vector<El::Matrix<El::BigFloat>> &x,
+//                  const El::BigFloat &threshold,
+//                  const El::BigFloat &mesh_threshold, const bool &need_lambda) {
+
+//                  }
