@@ -34,33 +34,20 @@ public:
     const std::function<void(Polynomial_Vector_Matrix &&)> &on_parsed,
     const std::function<void()> &on_skipped)
       : Abstract_Json_Object_Parser(skip, on_parsed, on_skipped),
-        polynomials_parser(skip,
-                           [this](Matrix_Of_Polynomial_Vectors &&pvm) {
-                             this->polynomials = std::move(pvm);
-                           }),
-        prefactor_parser(skip,
-                         [this](Damped_Rational &&damped_rational) {
-                           this->prefactor = std::move(damped_rational);
-                         }),
-        reduced_prefactor_parser(skip,
-                                 [this](Damped_Rational &&damped_rational) {
-                                   this->reduced_prefactor
-                                     = std::move(damped_rational);
-                                 }),
-        sample_points_parser(
-          skip,
-          [this](std::vector<El::BigFloat> &&sample_points) {
-            this->sample_points = std::move(sample_points);
-          }),
-        sample_scalings_parser(skip,
-                               [this](std::vector<El::BigFloat> &&scalings) {
-                                 this->sample_scalings = std::move(scalings);
-                               }),
-        reduced_sample_scalings_parser(
-          skip,
-          [this](std::vector<El::BigFloat> &&scalings) {
-            this->reduced_sample_scalings = std::move(scalings);
-          }),
+
+#define ELEMENT_PARSER_CTOR(element_name)                                     \
+  element_name##_parser(                                                      \
+    skip, [this](auto &&value) { this->element_name = std::move(value); })
+
+        ELEMENT_PARSER_CTOR(polynomials),
+        ELEMENT_PARSER_CTOR(prefactor),
+        ELEMENT_PARSER_CTOR(reduced_prefactor),
+        ELEMENT_PARSER_CTOR(sample_points),
+        ELEMENT_PARSER_CTOR(sample_scalings),
+        ELEMENT_PARSER_CTOR(reduced_sample_scalings),
+
+#undef ELEMENT_PARSER_CTOR
+
         bilinear_basis_parser(skip,
                               [this](Polynomial_Vector &&value) {
                                 if(!this->bilinear_basis.has_value())
