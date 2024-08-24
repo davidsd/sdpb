@@ -130,16 +130,22 @@ public:
   {
     polynomials.reset();
     prefactor.reset();
+    reduced_prefactor.reset();
+
     sample_points.reset();
     sample_scalings.reset();
+    reduced_sample_scalings.reset();
     bilinear_basis.reset();
   }
   void reset_element_parsers(const bool skip) override
   {
-    prefactor_parser.reset(skip);
     polynomials_parser.reset(skip);
+    prefactor_parser.reset(skip);
+    reduced_prefactor_parser.reset(skip);
+
     sample_points_parser.reset(skip);
     sample_scalings_parser.reset(skip);
+    reduced_sample_scalings_parser.reset(skip);
 
     bilinear_basis_parser.reset(skip);
     bilinear_basis_0_parser.reset(skip);
