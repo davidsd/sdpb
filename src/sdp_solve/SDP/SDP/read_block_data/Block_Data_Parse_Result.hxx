@@ -8,6 +8,7 @@ struct Block_Data_Parse_Result
 {
   El::Matrix<El::BigFloat> B;
   std::vector<El::BigFloat> c;
+  std::vector<El::BigFloat> preconditioning_values;
   El::Matrix<El::BigFloat> bilinear_bases_even;
   El::Matrix<El::BigFloat> bilinear_bases_odd;
 
@@ -16,6 +17,7 @@ struct Block_Data_Parse_Result
   void clear()
   {
     c.clear();
+    preconditioning_values.clear();
     B.Empty();
     bilinear_bases_even.Empty();
     bilinear_bases_odd.Empty();

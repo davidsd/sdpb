@@ -68,6 +68,17 @@ namespace
     return to_BigFloat_Vector(sample_points(num_points, prefactor));
   }
 
+  std::vector<Polynomial_Power_Product> preconditioning_vector_or_default(
+    const std::optional<std::vector<Polynomial_Power_Product>>
+      &preconditioning_vector,
+    const El::Matrix<Polynomial_Vector> &polynomials)
+  {
+    if(preconditioning_vector.has_value())
+      return preconditioning_vector.value();
+
+    return std::vector<Polynomial_Power_Product>(polynomials.Height());
+  }
+
   std::vector<El::BigFloat> sample_scalings_or_default(
     const std::optional<std::vector<El::BigFloat>> &sample_scalings_opt,
     const std::vector<El::BigFloat> &sample_points,
@@ -126,6 +137,8 @@ Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
   const El::Matrix<Polynomial_Vector> &polynomials,
   const std::optional<Damped_Rational> &prefactor_opt,
   const std::optional<Damped_Rational> &reduced_prefactor_opt,
+  const std::optional<std::vector<Polynomial_Power_Product>>
+    &preconditioning_vector_opt,
   const std::optional<std::vector<El::BigFloat>> &sample_points_opt,
   const std::optional<std::vector<El::BigFloat>> &sample_scalings_opt,
   const std::optional<std::vector<El::BigFloat>> &reduced_sample_scalings_opt,
@@ -145,6 +158,9 @@ Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
       }
     return prefactor;
   }();
+
+  preconditioning_vector = preconditioning_vector_or_default(
+    preconditioning_vector_opt, polynomials);
 
   if(reduced_prefactor.poles.size() > prefactor.poles.size())
     {
@@ -197,6 +213,8 @@ void Polynomial_Vector_Matrix::validate(const int64_t num_points) const
       const size_t delta2 = (degree + 1) / 2 - 1;
       ASSERT_EQUAL(bilinear_basis[1].size(), delta2 + 1, DEBUG_STRING(degree));
     }
+
+  ASSERT_EQUAL(preconditioning_vector.size(), polynomials.Height());
 
   ASSERT_EQUAL(polynomials.Height(), polynomials.Width());
 

@@ -1,5 +1,6 @@
 #include "sdp_solve/Block_Diagonal_Matrix.hxx"
 #include "sdp_solve/Block_Info.hxx"
+#include "sdp_solve/Block_Vector.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
 // Compute the SchurComplement matrix using A_X_inv and
@@ -20,11 +21,13 @@ void compute_schur_complement(
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     &A_Y,
-  Block_Diagonal_Matrix &schur_complement, Timers &timers)
+  Block_Diagonal_Matrix &schur_complement, Timers &timers,
+  const Block_Vector &preconditioning_values)
 {
   Scoped_Timer schur_complement_timer(timers, "schur_complement");
 
   auto schur_complement_block(schur_complement.blocks.begin());
+  auto preconditioning_values_block(preconditioning_values.blocks.begin());
   size_t Q_index(0);
   // Put these BigFloats at the beginning to avoid memory churn
   El::BigFloat element, product;
@@ -118,8 +121,35 @@ void compute_schur_complement(
             }
         }
 
+      // S_ij -> pv_i pv_j S_ij
+      {
+        // Multiply i-th row by pv[i]
+        for(int i = 0; i < schur_complement_block->Height(); ++i)
+          {
+            // NB: DistMatrix::Get() already includes MPI broadcasting.
+            // This could be slow as we do it in a loop.
+            // TODO store copy of preconditioning_values_block on each rank in a group.
+            const El::BigFloat pv = preconditioning_values_block->Get(i, 0);
+            // take single row
+            auto row_view
+              = (*schur_complement_block)(El::Range(i, i + 1), El::ALL);
+            ASSERT(row_view.Viewing());
+            El::Scale(pv, row_view);
+          }
+        // Multiply j-th column by pv[j]
+        for(int j = 0; j < schur_complement_block->Width(); ++j)
+          {
+            const El::BigFloat pv = preconditioning_values_block->Get(j, 0);
+            auto col_view
+              = (*schur_complement_block)(El::ALL, El::Range(j, j + 1));
+            ASSERT(col_view.Viewing());
+            El::Scale(pv, col_view);
+          }
+      }
+
       El::MakeSymmetric(El::UpperOrLower::LOWER, *schur_complement_block);
       ++schur_complement_block;
+      ++preconditioning_values_block;
       ++Q_index;
     }
 }

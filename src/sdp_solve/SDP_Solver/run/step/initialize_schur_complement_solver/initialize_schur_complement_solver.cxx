@@ -48,7 +48,8 @@ void compute_schur_complement(
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     &A_Y,
-  Block_Diagonal_Matrix &schur_complement, Timers &timers);
+  Block_Diagonal_Matrix &schur_complement, Timers &timers,
+  const Block_Vector &preconditioning_values);
 
 void compute_Q(const Environment &env, const SDP &sdp,
                const Block_Info &block_info,
@@ -86,7 +87,8 @@ void initialize_schur_complement_solver(
       print_allocation_message_per_node(env, "schur_complement",
                                         get_allocated_bytes(schur_complement));
     }
-  compute_schur_complement(block_info, A_X_inv, A_Y, schur_complement, timers);
+  compute_schur_complement(block_info, A_X_inv, A_Y, schur_complement, timers,
+                           sdp.preconditioning_values);
 
   compute_Q(env, sdp, block_info, schur_complement, schur_off_diagonal,
             schur_complement_cholesky, bigint_syrk_context, Q, timers,

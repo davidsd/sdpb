@@ -42,6 +42,13 @@ namespace
       c.Resize(block_info.get_schur_block_size(block_index), 1);
       copy_matrix_from_root(sdp_block_local.primal_objective_c, c, comm);
     }
+    // sdp.preconditioning_values
+    {
+      auto &pv(sdp.preconditioning_values.blocks.at(index));
+      pv.SetGrid(grid);
+      pv.Resize(block_info.get_schur_block_size(block_index), 1);
+      copy_matrix_from_root(sdp_block_local.preconditioning_values, pv, comm);
+    }
 
     // sdp.free_var_matrix
     {
@@ -103,6 +110,7 @@ void read_block_data(const fs::path &sdp_path, const El::Grid &grid,
 
   const size_t num_blocks(block_info.block_indices.size());
   sdp.primal_objective_c.blocks.resize(num_blocks);
+  sdp.preconditioning_values.blocks.resize(num_blocks);
   sdp.free_var_matrix.blocks.resize(num_blocks);
   sdp.bilinear_bases.resize(2 * num_blocks);
   sdp.bases_blocks.resize(2 * num_blocks);

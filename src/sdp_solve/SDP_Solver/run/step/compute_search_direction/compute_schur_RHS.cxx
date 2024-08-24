@@ -28,12 +28,13 @@ void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
 
   auto Z_block(Z.blocks.begin());
   auto bilinear_bases_block(sdp.bilinear_bases.begin());
+  auto preconditioning_block(sdp.preconditioning_values.blocks.begin());
 
   for(auto &block_index : block_info.block_indices)
     {
-      // dx = -dual_residues
       *dx_block = *dual_residues_block;
-      *dx_block *= -1;
+      El::Zero(*dx_block);
+
       const size_t dx_block_size(block_info.num_points[block_index]);
 
       // dx[p] -= Tr(A_p Z)
@@ -80,7 +81,14 @@ void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
           ++bilinear_bases_block;
         }
 
+      // dx[p] *= preconditioning_vector[p]
+      El::Hadamard(*preconditioning_block, *dx_block, *dx_block);
+
+      // dx -= -dual_residues
+      *dx_block -= *dual_residues_block;
+
       ++dual_residues_block;
       ++dx_block;
+      ++preconditioning_block;
     }
 }

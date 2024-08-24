@@ -15,6 +15,7 @@ private:
 
   Json_Float_Vector_Parser<El::BigFloat> c_parser;
   Json_Matrix_Parser<Json_Float_Parser<El::BigFloat>> B_parser;
+  Json_Float_Vector_Parser<El::BigFloat> preconditioning_values_parser;
   Json_Matrix_Parser<Json_Float_Parser<El::BigFloat>>
     bilinear_bases_even_parser;
   Json_Matrix_Parser<Json_Float_Parser<El::BigFloat>> bilinear_bases_odd_parser;
@@ -30,6 +31,8 @@ protected:
       return c_parser;
     if(key == "B")
       return B_parser;
+    if(key == "preconditioningValues")
+      return preconditioning_values_parser;
     if(key == "bilinear_bases_even")
       return bilinear_bases_even_parser;
     if(key == "bilinear_bases_odd")
@@ -42,6 +45,7 @@ public:
   {
     c_parser.reset(skip);
     B_parser.reset(skip);
+    preconditioning_values_parser.reset(skip);
     bilinear_bases_even_parser.reset(skip);
     bilinear_bases_odd_parser.reset(skip);
   }
@@ -59,6 +63,11 @@ public:
                  [this](El::Matrix<El::BigFloat> &&B) {
                    this->result.B = std::move(B);
                  }),
+        preconditioning_values_parser(false,
+                                      [this](std::vector<El::BigFloat> &&vec) {
+                                        this->result.preconditioning_values
+                                          = std::move(vec);
+                                      }),
         bilinear_bases_even_parser(
           false,
           [this](El::Matrix<El::BigFloat> &&bilinear_bases_even) {

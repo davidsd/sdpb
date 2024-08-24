@@ -18,9 +18,14 @@ void constraint_matrix_weighted_sum(const Block_Info &block_info,
   auto a_block(a.blocks.begin());
   auto result_block(result.blocks.begin());
   auto bilinear_bases_block(sdp.bilinear_bases.begin());
+  auto preconditioning_block(sdp.preconditioning_values.blocks.begin());
 
   for(auto &block_index : block_info.block_indices)
     {
+      // Rescale a[p] *= preconditioning_vector[p]
+      auto a_matrix = *a_block;
+      El::Hadamard(*preconditioning_block, a_matrix, a_matrix);
+
       const size_t block_size(block_info.num_points[block_index]);
       for(size_t parity = 0; parity < 2; ++parity)
         {
@@ -38,7 +43,7 @@ void constraint_matrix_weighted_sum(const Block_Info &block_info,
                   ((column_block * (column_block + 1)) / 2 + row_block)
                   * block_size);
                 El::DistMatrix<El::BigFloat> sub_vector(
-                  El::LockedView(*a_block, vector_offset, 0, block_size, 1));
+                  El::LockedView(a_matrix, vector_offset, 0, block_size, 1));
                 El::DistMatrix<El::BigFloat> scaled_bases(
                   *bilinear_bases_block);
 
@@ -62,5 +67,6 @@ void constraint_matrix_weighted_sum(const Block_Info &block_info,
           ++bilinear_bases_block;
         }
       ++a_block;
+      ++preconditioning_block;
     }
 }

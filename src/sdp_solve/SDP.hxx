@@ -92,6 +92,11 @@ struct SDP
   // c, a vector of length P used with primal_objective
   Block_Vector primal_objective_c;
 
+  // a vector of length P
+  // Vector c and each column of B are elementwise multiplied
+  // by this vector.
+  Block_Vector preconditioning_values;
+
   // b, a vector of length N used with dual_objective
   // It is duplicated amongst all the blocks
   El::DistMatrix<El::BigFloat> dual_objective_b;

@@ -50,6 +50,22 @@ public:
   // `bilinear_bases[j]' above for some fixed j.
   std::array<El::Matrix<El::BigFloat>, 2> bilinear_bases;
 
+  // Vector of length P', having the same structure as c.
+  // Vector c and each column of matrix B are elementwise multiplied
+  // by preconditioning_values:
+  // c_{j,r,s,k} -> c_{j,r,s,k} * pv_{j,r,s,k}
+  // B_{j,r,s,k},n -> B_{j,r,s,k},n * pv_{j,r,s,k}
+  //
+  // The goal of preconditioning is to make the final functional (c-B.y) flat,
+  // thus reducing condition numbers etc.
+  //
+  // Currently, preconditioning_values{j,r,s,k} are calculated as (1+x_k)^{d_r + d_s},
+  // where x_k are sample points, and d_i is a vector read from "preconditioningPowersVector" in pmp.json.
+  //
+  // preconditioning_values allows for more fine-grained adjustments
+  // than prefactor/sample scalings (which have the same value for all PMP matrix elements)
+  std::vector<El::BigFloat> preconditioning_values;
+
   Dual_Constraint_Group() = default;
   Dual_Constraint_Group(const size_t &Block_index,
                         const Polynomial_Vector_Matrix &m);
