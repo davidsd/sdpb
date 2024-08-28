@@ -4,13 +4,14 @@
 #include "sdp_solve/Block_Info.hxx"
 
 #include <El.hpp>
+#include <optional>
 
 struct SDP_Block_Data
 {
   int block_index_local = -1;
   El::Matrix<El::BigFloat> constraint_matrix{};
   El::Matrix<El::BigFloat> primal_objective_c{};
-  El::Matrix<El::BigFloat> preconditioning_values{};
+  std::optional<El::Matrix<El::BigFloat>> preconditioning_values{};
 
   std::array<El::Matrix<El::BigFloat>, 2> bilinear_bases{};
   std::array<El::Matrix<El::BigFloat>, 2> bases_blocks{};

@@ -84,11 +84,6 @@ SDP_Block_Data::SDP_Block_Data(std::istream &block_stream,
       preconditioning_values
         = to_matrix(parse_result.preconditioning_values.value());
     }
-  else
-    {
-      preconditioning_values = primal_objective_c;
-      El::Fill(preconditioning_values, El::BigFloat(1));
-    }
 
   bilinear_bases[0] = std::move(parse_result.bilinear_bases_even);
   bilinear_bases[1] = std::move(parse_result.bilinear_bases_odd);

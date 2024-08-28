@@ -48,7 +48,9 @@ void compute_schur_complement(
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     &A_Y,
-  const Block_Vector_Star &preconditioning_values,
+  const std::vector<
+    std::optional<El::DistMatrix<El::BigFloat, El::STAR, El::STAR>>>
+    &preconditioning_values,
   Block_Diagonal_Matrix &schur_complement, Timers &timers);
 
 void compute_Q(const Environment &env, const SDP &sdp,

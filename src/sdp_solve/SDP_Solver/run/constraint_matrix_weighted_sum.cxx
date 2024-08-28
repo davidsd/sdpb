@@ -19,13 +19,21 @@ void constraint_matrix_weighted_sum(const Block_Info &block_info,
   auto a_block(a.blocks.begin());
   auto result_block(result.blocks.begin());
   auto bilinear_bases_block(sdp.bilinear_bases.begin());
-  auto preconditioning_block(sdp.preconditioning_values.blocks.begin());
+  auto preconditioning_block(sdp.preconditioning_values.begin());
 
   for(auto &block_index : block_info.block_indices)
     {
-      // Rescale a[p] *= preconditioning_vector[p]
-      auto a_matrix = *a_block;
-      hadamard(*preconditioning_block, a_matrix, a_matrix);
+      // Optionally rescale a[p] *= preconditioning_vector[p]
+      auto a_matrix = [&] {
+        // don't rescale if there is no preconditioning
+        if(preconditioning_block->has_value())
+          {
+            auto res = *a_block;
+            hadamard(preconditioning_block->value(), res, res);
+            return res;
+          }
+        return El::LockedView(*a_block);
+      }();
 
       const size_t block_size(block_info.num_points[block_index]);
       for(size_t parity = 0; parity < 2; ++parity)

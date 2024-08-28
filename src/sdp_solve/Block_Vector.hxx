@@ -16,14 +16,13 @@
 #include <list>
 #include <vector>
 
-template <class TDistMatrix>
-struct Block_Vector_Impl
+struct Block_Vector
 {
-  std::vector<TDistMatrix> blocks;
+  std::vector<El::DistMatrix<El::BigFloat>> blocks;
 
-  Block_Vector_Impl(const std::vector<size_t> &block_heights,
-                    const std::vector<size_t> &block_indices,
-                    const size_t &num_schur_blocks, const El::Grid &grid)
+  Block_Vector(const std::vector<size_t> &block_heights,
+               const std::vector<size_t> &block_indices,
+               const size_t &num_schur_blocks, const El::Grid &grid)
   {
     bool scale_index(num_schur_blocks != block_heights.size());
     blocks.reserve(block_indices.size() * (scale_index ? 2 : 1));
@@ -41,11 +40,5 @@ struct Block_Vector_Impl
           }
       }
   }
-  Block_Vector_Impl() = default;
+  Block_Vector() = default;
 };
-
-using Block_Vector = Block_Vector_Impl<El::DistMatrix<El::BigFloat>>;
-
-// Each element is copied over all ranks in group
-using Block_Vector_Star
-  = Block_Vector_Impl<El::DistMatrix<El::BigFloat, El::STAR, El::STAR>>;

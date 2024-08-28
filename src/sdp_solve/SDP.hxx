@@ -92,7 +92,7 @@ struct SDP
   // c, a vector of length P used with primal_objective
   Block_Vector primal_objective_c;
 
-  // a vector of length P
+  // Block vector of length P, having the same structure as primal_objective_c.
   // Vector c and each column of B were elementwise multiplied
   // by this vector when constructing SDP.
   // In solver, we have to multiply matrix A_p by preconditioning_values[p].
@@ -100,7 +100,8 @@ struct SDP
   //
   // Note that each block is DistMatrix<STAR,STAR>,
   // i.e. each element is copied over all ranks in group.
-  Block_Vector_Star preconditioning_values;
+  std::vector<std::optional<El::DistMatrix<El::BigFloat, El::STAR, El::STAR>>>
+    preconditioning_values;
 
   // b, a vector of length N used with dual_objective
   // It is duplicated amongst all the blocks

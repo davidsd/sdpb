@@ -3,6 +3,8 @@
 #include "sdp_solve/Block_Vector.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
+#include <optional>
+
 // Compute the SchurComplement matrix using A_X_inv and
 // A_Y and the formula
 //
@@ -21,13 +23,15 @@ void compute_schur_complement(
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     &A_Y,
-  const Block_Vector_Star &preconditioning_values,
+  const std::vector<
+    std::optional<El::DistMatrix<El::BigFloat, El::STAR, El::STAR>>>
+    &preconditioning_values,
   Block_Diagonal_Matrix &schur_complement, Timers &timers)
 {
   Scoped_Timer schur_complement_timer(timers, "schur_complement");
 
   auto schur_complement_block(schur_complement.blocks.begin());
-  auto preconditioning_values_block(preconditioning_values.blocks.begin());
+  auto preconditioning_values_block(preconditioning_values.begin());
   size_t Q_index(0);
   // Put these BigFloats at the beginning to avoid memory churn
   El::BigFloat element, product;
@@ -122,28 +126,30 @@ void compute_schur_complement(
         }
 
       // S_ij -> pv_i pv_j S_ij
-      {
-        // Note that preconditioning_values_block is DistMatrix<STAR,STAR>,
-        // i.e. each element is copied among all ranks.
-        const auto &pv = preconditioning_values_block->LockedMatrix();
+      if(preconditioning_values_block->has_value())
+        {
+          // Note that preconditioning_values_block is DistMatrix<STAR,STAR>,
+          // i.e. each element is copied among all ranks.
+          const auto &pv
+            = preconditioning_values_block->value().LockedMatrix();
 
-        // Multiply i-th row by pv[i]
-        for(int i = 0; i < schur_complement_block->Height(); ++i)
-          {
-            auto row_view
-              = (*schur_complement_block)(El::Range(i, i + 1), El::ALL);
-            ASSERT(row_view.Viewing());
-            El::Scale(pv.CRef(i), row_view);
-          }
-        // Multiply j-th column by pv[j]
-        for(int j = 0; j < schur_complement_block->Width(); ++j)
-          {
-            auto col_view
-              = (*schur_complement_block)(El::ALL, El::Range(j, j + 1));
-            ASSERT(col_view.Viewing());
-            El::Scale(pv.CRef(j), col_view);
-          }
-      }
+          // Multiply i-th row by pv[i]
+          for(int i = 0; i < schur_complement_block->Height(); ++i)
+            {
+              auto row_view
+                = (*schur_complement_block)(El::Range(i, i + 1), El::ALL);
+              ASSERT(row_view.Viewing());
+              El::Scale(pv.CRef(i), row_view);
+            }
+          // Multiply j-th column by pv[j]
+          for(int j = 0; j < schur_complement_block->Width(); ++j)
+            {
+              auto col_view
+                = (*schur_complement_block)(El::ALL, El::Range(j, j + 1));
+              ASSERT(col_view.Viewing());
+              El::Scale(pv.CRef(j), col_view);
+            }
+        }
 
       El::MakeSymmetric(El::UpperOrLower::LOWER, *schur_complement_block);
       ++schur_complement_block;

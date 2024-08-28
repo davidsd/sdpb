@@ -18,7 +18,7 @@ void compute_dual_residues_and_error(
   auto primal_objective_c_block(sdp.primal_objective_c.blocks.begin());
   auto y_block(y.blocks.begin());
   auto free_var_matrix_block(sdp.free_var_matrix.blocks.begin());
-  auto preconditioning_block(sdp.preconditioning_values.blocks.begin());
+  auto preconditioning_block(sdp.preconditioning_values.begin());
 
   size_t Q_index(0);
   El::BigFloat local_max(0);
@@ -48,8 +48,11 @@ void compute_dual_residues_and_error(
         }
 
       // rescale A[p,a,b] Y[a,b] by preconditioning_values[p]
-      hadamard(*preconditioning_block, *dual_residues_block,
+      if(preconditioning_block->has_value())
+        {
+          hadamard(preconditioning_block->value(), *dual_residues_block,
                    *dual_residues_block);
+        }
 
       // dualResidues -= B * y
       // TODO: Shouldn't this be Gemv since y is a vector?

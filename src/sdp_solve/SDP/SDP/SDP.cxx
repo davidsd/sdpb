@@ -161,8 +161,7 @@ void SDP::validate(const Block_Info &block_info) const noexcept(false)
   {
     // Check array sizes
     ASSERT_EQUAL(primal_objective_c.blocks.size(), num_blocks, error_prefix);
-    ASSERT_EQUAL(preconditioning_values.blocks.size(), num_blocks,
-                 error_prefix);
+    ASSERT_EQUAL(preconditioning_values.size(), num_blocks, error_prefix);
     ASSERT_EQUAL(free_var_matrix.blocks.size(), num_blocks, error_prefix);
     ASSERT_EQUAL(bilinear_bases.size(), 2 * num_blocks, error_prefix);
     ASSERT_EQUAL(bases_blocks.size(), 2 * num_blocks);
@@ -192,15 +191,12 @@ void SDP::validate(const Block_Info &block_info) const noexcept(false)
       {
         // Check vector c and matrix B
         const auto &c = primal_objective_c.blocks.at(index);
-        const auto &pv = preconditioning_values.blocks.at(index);
+        const auto &pv = preconditioning_values.at(index);
         const auto &B = free_var_matrix.blocks.at(index);
 
         ASSERT(El::mpi::Congruent(c.DistComm(), block_info.mpi_comm.value),
                error_prefix_index,
                " wrong MPI communicator for primal_objective_c");
-        ASSERT(El::mpi::Congruent(pv.Grid().Comm(), block_info.mpi_comm.value),
-               error_prefix_index,
-               " wrong MPI communicator for preconditioning_values");
         ASSERT(El::mpi::Congruent(B.DistComm(), block_info.mpi_comm.value),
                error_prefix_index,
                " wrong MPI communicator for free_var_matrix");
@@ -210,10 +206,18 @@ void SDP::validate(const Block_Info &block_info) const noexcept(false)
 
         ASSERT_EQUAL(c.Height(), P, error_prefix_index);
         ASSERT_EQUAL(c.Width(), 1, error_prefix_index);
-        ASSERT_EQUAL(pv.Height(), P, error_prefix_index);
-        ASSERT_EQUAL(pv.Width(), 1, error_prefix_index);
         ASSERT_EQUAL(B.Height(), P, error_prefix_index);
         ASSERT_EQUAL(B.Width(), N, error_prefix_index);
+
+        if(pv.has_value())
+          {
+            ASSERT(
+              El::mpi::Congruent(pv->Grid().Comm(), block_info.mpi_comm.value),
+              error_prefix_index,
+              " wrong MPI communicator for preconditioning_values");
+            ASSERT_EQUAL(pv->Height(), P, error_prefix_index);
+            ASSERT_EQUAL(pv->Width(), 1, error_prefix_index);
+          }
       }
 
       for(const size_t parity : {0, 1})

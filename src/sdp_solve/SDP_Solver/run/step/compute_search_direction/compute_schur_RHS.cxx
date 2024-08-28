@@ -21,15 +21,14 @@
 
 void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
                        const Block_Vector &dual_residues,
-                       const Block_Diagonal_Matrix &Z,
-                       Block_Vector &dx)
+                       const Block_Diagonal_Matrix &Z, Block_Vector &dx)
 {
   auto dual_residues_block(dual_residues.blocks.begin());
   auto dx_block(dx.blocks.begin());
 
   auto Z_block(Z.blocks.begin());
   auto bilinear_bases_block(sdp.bilinear_bases.begin());
-  auto preconditioning_block(sdp.preconditioning_values.blocks.begin());
+  auto preconditioning_block(sdp.preconditioning_values.begin());
 
   for(auto &block_index : block_info.block_indices)
     {
@@ -83,7 +82,8 @@ void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
         }
 
       // dx[p] *= preconditioning_vector[p]
-      hadamard(*preconditioning_block, *dx_block, *dx_block);
+      if(preconditioning_block->has_value())
+        hadamard(preconditioning_block->value(), *dx_block, *dx_block);
 
       // dx -= -dual_residues
       *dx_block -= *dual_residues_block;
