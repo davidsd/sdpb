@@ -45,11 +45,13 @@ parse_block_data(std::istream &block_stream, Block_File_Format format)
       ar >> result.c;
       ar >> result.bilinear_bases_even;
       ar >> result.bilinear_bases_odd;
-      // TODO Skip in case of EOF to ensure backward compatibility?
-      // TODO: better approach is to write version before data.
-      // This will break compatibility with 3.0,
-      // but will ensure it for future changes.
-      ar >> result.preconditioning_values;
+      // Skip in case of EOF to ensure backward compatibility.
+      // TODO: write SDP format version to control.json, so that we can change it as we want.
+      if(block_stream.peek() != EOF)
+        {
+          result.preconditioning_values.emplace();
+          ar >> result.preconditioning_values.value();
+        }
     }
   else if(format == json)
     {
@@ -77,7 +79,17 @@ SDP_Block_Data::SDP_Block_Data(std::istream &block_stream,
   auto parse_result = parse_block_data(block_stream, format);
   constraint_matrix = std::move(parse_result.B);
   primal_objective_c = to_matrix(parse_result.c);
-  preconditioning_values = to_matrix(parse_result.preconditioning_values);
+  if(parse_result.preconditioning_values.has_value())
+    {
+      preconditioning_values
+        = to_matrix(parse_result.preconditioning_values.value());
+    }
+  else
+    {
+      preconditioning_values = primal_objective_c;
+      El::Fill(preconditioning_values, El::BigFloat(1));
+    }
+
   bilinear_bases[0] = std::move(parse_result.bilinear_bases_even);
   bilinear_bases[1] = std::move(parse_result.bilinear_bases_odd);
 
