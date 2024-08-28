@@ -180,3 +180,27 @@ void copy_matrix_from_root(const El::Matrix<El::BigFloat> &source,
     copy_matrix_from_root_impl_send_recv(source, destination, comm);
   El::mpi::Free(shared_memory_comm);
 }
+
+void copy_matrix_from_root(
+  const El::Matrix<El::BigFloat> &source,
+  El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &destination,
+  const El::mpi::Comm &comm)
+{
+  ASSERT(El::mpi::Congruent(comm, destination.Grid().Comm()),
+         "Wrong communicator for copy_matrix_from_root(); "
+         "use output.Grid().Comm()");
+
+  if(comm.Rank() == 0)
+    {
+      // TODO set matrix size instead?
+      ASSERT(source.Height() == destination.Height()
+               && source.Width() == destination.Width(),
+             "Incompatible matrix sizes: ", El::DimsString(source, "source"),
+             ", ", El::DimsString(destination, "destination"));
+      El::Copy(source, destination.Matrix());
+    }
+
+  if(comm.Size() == 1)
+    return;
+  El::Broadcast(destination.Matrix(), comm, 0);
+}

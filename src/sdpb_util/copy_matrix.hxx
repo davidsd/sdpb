@@ -20,3 +20,12 @@ void copy_matrix(const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &source,
 void copy_matrix_from_root(const El::Matrix<El::BigFloat> &source,
                            El::DistMatrix<El::BigFloat> &destination,
                            const El::mpi::Comm &comm);
+
+// source: Matrix initialized at comm.Rank() = 0
+// destination: DistMatrix of the same size, elements will be copied from comm root.
+// comm should be equal to destination.DistComm()
+// (this argument is added for safety check)
+void copy_matrix_from_root(
+  const El::Matrix<El::BigFloat> &source,
+  El::DistMatrix<El::BigFloat, El::STAR, El::STAR> &destination,
+  const El::mpi::Comm &comm);

@@ -1,4 +1,5 @@
 #include "sdp_solve/SDP_Solver.hxx"
+#include "sdpb_util/hadamard.hxx"
 
 // dual_residues[p] = c[p] - A[p,a,b] Y[a,b] - B[p,a] y[a]
 //
@@ -47,7 +48,7 @@ void compute_dual_residues_and_error(
         }
 
       // rescale A[p,a,b] Y[a,b] by preconditioning_values[p]
-      El::Hadamard(*preconditioning_block, *dual_residues_block,
+      hadamard(*preconditioning_block, *dual_residues_block,
                    *dual_residues_block);
 
       // dualResidues -= B * y

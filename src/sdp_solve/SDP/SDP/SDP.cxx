@@ -198,7 +198,7 @@ void SDP::validate(const Block_Info &block_info) const noexcept(false)
         ASSERT(El::mpi::Congruent(c.DistComm(), block_info.mpi_comm.value),
                error_prefix_index,
                " wrong MPI communicator for primal_objective_c");
-        ASSERT(El::mpi::Congruent(pv.DistComm(), block_info.mpi_comm.value),
+        ASSERT(El::mpi::Congruent(pv.Grid().Comm(), block_info.mpi_comm.value),
                error_prefix_index,
                " wrong MPI communicator for preconditioning_values");
         ASSERT(El::mpi::Congruent(B.DistComm(), block_info.mpi_comm.value),

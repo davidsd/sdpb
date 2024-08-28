@@ -93,9 +93,14 @@ struct SDP
   Block_Vector primal_objective_c;
 
   // a vector of length P
-  // Vector c and each column of B are elementwise multiplied
-  // by this vector.
-  Block_Vector preconditioning_values;
+  // Vector c and each column of B were elementwise multiplied
+  // by this vector when constructing SDP.
+  // In solver, we have to multiply matrix A_p by preconditioning_values[p].
+  // See compute_schur_complement(), compute_schur_RHS(), compute_dual_residues_and_error(), constraint_matrix_weighted_sum()
+  //
+  // Note that each block is DistMatrix<STAR,STAR>,
+  // i.e. each element is copied over all ranks in group.
+  Block_Vector_Star preconditioning_values;
 
   // b, a vector of length N used with dual_objective
   // It is duplicated amongst all the blocks

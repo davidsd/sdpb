@@ -21,8 +21,8 @@ void compute_schur_complement(
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     &A_Y,
-  Block_Diagonal_Matrix &schur_complement, Timers &timers,
-  const Block_Vector &preconditioning_values)
+  const Block_Vector_Star &preconditioning_values,
+  Block_Diagonal_Matrix &schur_complement, Timers &timers)
 {
   Scoped_Timer schur_complement_timer(timers, "schur_complement");
 
@@ -123,27 +123,25 @@ void compute_schur_complement(
 
       // S_ij -> pv_i pv_j S_ij
       {
+        // Note that preconditioning_values_block is DistMatrix<STAR,STAR>,
+        // i.e. each element is copied among all ranks.
+        const auto &pv = preconditioning_values_block->LockedMatrix();
+
         // Multiply i-th row by pv[i]
         for(int i = 0; i < schur_complement_block->Height(); ++i)
           {
-            // NB: DistMatrix::Get() already includes MPI broadcasting.
-            // This could be slow as we do it in a loop.
-            // TODO store copy of preconditioning_values_block on each rank in a group.
-            const El::BigFloat pv = preconditioning_values_block->Get(i, 0);
-            // take single row
             auto row_view
               = (*schur_complement_block)(El::Range(i, i + 1), El::ALL);
             ASSERT(row_view.Viewing());
-            El::Scale(pv, row_view);
+            El::Scale(pv.CRef(i), row_view);
           }
         // Multiply j-th column by pv[j]
         for(int j = 0; j < schur_complement_block->Width(); ++j)
           {
-            const El::BigFloat pv = preconditioning_values_block->Get(j, 0);
             auto col_view
               = (*schur_complement_block)(El::ALL, El::Range(j, j + 1));
             ASSERT(col_view.Viewing());
-            El::Scale(pv, col_view);
+            El::Scale(pv.CRef(j), col_view);
           }
       }
 

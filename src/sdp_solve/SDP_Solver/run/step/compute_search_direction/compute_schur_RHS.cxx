@@ -1,4 +1,5 @@
 #include "sdp_solve/SDP_Solver.hxx"
+#include "sdpb_util/hadamard.hxx"
 
 // Compute the vector r_x on the right-hand side of the Schur
 // complement equation:
@@ -82,7 +83,7 @@ void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
         }
 
       // dx[p] *= preconditioning_vector[p]
-      El::Hadamard(*preconditioning_block, *dx_block, *dx_block);
+      hadamard(*preconditioning_block, *dx_block, *dx_block);
 
       // dx -= -dual_residues
       *dx_block -= *dual_residues_block;

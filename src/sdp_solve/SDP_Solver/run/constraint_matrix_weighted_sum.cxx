@@ -1,4 +1,5 @@
 #include "sdp_solve/SDP_Solver.hxx"
+#include "sdpb_util/hadamard.hxx"
 
 // result = \sum_p a[p] A_p,
 //
@@ -24,7 +25,7 @@ void constraint_matrix_weighted_sum(const Block_Info &block_info,
     {
       // Rescale a[p] *= preconditioning_vector[p]
       auto a_matrix = *a_block;
-      El::Hadamard(*preconditioning_block, a_matrix, a_matrix);
+      hadamard(*preconditioning_block, a_matrix, a_matrix);
 
       const size_t block_size(block_info.num_points[block_index]);
       for(size_t parity = 0; parity < 2; ++parity)
