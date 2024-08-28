@@ -25,6 +25,7 @@ namespace
     std::string default_sdpb_args;
     std::vector<std::string> sdpb_out_filenames;
     std::vector<std::string> sdpb_out_txt_keys;
+    bool check_sdp = true;
     bool check_sdp_normalization = true;
     bool run_sdpb_twice = false;
 
@@ -94,13 +95,16 @@ namespace
             runner.create_nested("pmp2sdp").mpi_run({"build/pmp2sdp"}, args,
                                                     num_procs);
 
-            // pmp2sdp runs with --precision=<precision>
-            // We check test output up to lower precision=<diff_precision>
-            // in order to neglect unimportant rounding errors
-            auto sdp_orig = data_output_dir / "sdp";
-            diff_sdp(sdp_path, sdp_orig, precision, diff_precision,
-                     runner.create_nested("sdp.diff"),
-                     check_sdp_normalization);
+            if(check_sdp)
+              {
+                // pmp2sdp runs with --precision=<precision>
+                // We check test output up to lower precision=<diff_precision>
+                // in order to neglect unimportant rounding errors
+                auto sdp_orig = data_output_dir / "sdp";
+                diff_sdp(sdp_path, sdp_orig, precision, diff_precision,
+                         runner.create_nested("sdp.diff"),
+                         check_sdp_normalization);
+              }
           }
 
           // sdpb
@@ -198,6 +202,29 @@ TEST_CASE("end-to-end_tests")
     test.num_procs = 2;
     // Do not check normalization.json because it is absent for XML
     test.check_sdp_normalization = false;
+    test.run();
+  }
+
+  SECTION("1d-preconditioning")
+  {
+    INFO("SDPB test for a simple one-dimensional problem from SDPB Manual:");
+    INFO("maximize (-y) s.t. (1 + x^4 + y * (x^4 / 12 + x^2)) >= 0)");
+    INFO("Same as 1d case, but the polynomial is multiplied by a custom preconditioning function f(x):");
+    INFO("  pmp.json:          f(x) = (0.2 + x)^0.3 * (10.1 + x + 3.1*x^2)^0.8");
+    INFO("  pmp-const-10.json: f(x) = 10.0");
+    INFO("Output is the same as in 1d, except for values in iterations.json "
+         "and primal vector x_0.txt (its elements are divided by "
+         "preconditioning values)");
+
+    End_To_End_Test test("1d-preconditioning");
+
+    test.num_procs = 2;
+    test.precision = 664;
+    // SDP is different because of preconditioning
+    // TODO: compare everything except block_data?
+    test.check_sdp = false;
+    // Ignore iterations.json and x.txt since they depend on preconditioning
+    test.sdpb_out_filenames = {"out.txt", "y.txt"};
     test.run();
   }
 
