@@ -38,7 +38,7 @@ struct Polynomial_Vector_Matrix
 
   Damped_Rational reduced_prefactor;
 
-  std::vector<Polynomial_Power_Product> preconditioning_vector;
+  std::optional<std::vector<Polynomial_Power_Product>> preconditioning_vector;
 
   // A list of real numbers x_k (0 <= k <= degree(M)) at which to
   // sample M(x) to construct the v_{b,k}.

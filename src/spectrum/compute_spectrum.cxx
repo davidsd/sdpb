@@ -1,9 +1,10 @@
-#include "eval_summed.hxx"
-#include "get_zeros.hxx"
 #include "Zeros.hxx"
 #include "compute_lambda.hxx"
-#include "sdpb_util/Mesh.hxx"
+#include "eval_summed.hxx"
+#include "get_zeros.hxx"
+#include "pmp/Polynomial_Matrix_Program.hxx"
 #include "pmp/max_normalization_index.hxx"
+#include "sdpb_util/Mesh.hxx"
 #include "sdpb_util/fill_weights.hxx"
 
 std::vector<Zeros>

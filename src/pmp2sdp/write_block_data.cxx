@@ -72,17 +72,21 @@ namespace
   {
     output_stream << "  \"B\":\n";
     write_matrix(output_stream, group.constraint_matrix, "  ");
-    output_stream << ",\n";
+    output_stream << "\n";
   }
 
   void write_preconditioning_values(std::ostream &output_stream,
-                              const Dual_Constraint_Group &group)
+                                    const Dual_Constraint_Group &group)
   {
-    ASSERT_EQUAL(group.constraint_matrix.Height(),
-                 group.preconditioning_values.size());
+    if(!group.preconditioning_values.has_value())
+      return;
+
+    const auto &pv = group.preconditioning_values.value();
+    ASSERT_EQUAL(group.constraint_matrix.Height(), pv.size());
 
     output_stream << "  \"preconditioningValues\":\n";
-    write_vector(output_stream, group.preconditioning_values, "  ");
+    write_vector(output_stream, pv, "  ");
+    output_stream << ",\n";
   }
 
   void write_block_data_json(std::ostream &output_stream,
@@ -91,9 +95,9 @@ namespace
     set_stream_precision(output_stream);
     output_stream << "{\n";
     write_bilinear_bases(output_stream, group);
+    write_preconditioning_values(output_stream, group);
     write_primal_objective_c(output_stream, group);
     write_free_var_matrix(output_stream, group);
-    write_preconditioning_values(output_stream, group);
     output_stream << "}\n";
   }
 
@@ -110,7 +114,8 @@ namespace
     ASSERT_EQUAL(group.bilinear_bases.size(), 2);
     ar << group.bilinear_bases[0];
     ar << group.bilinear_bases[1];
-    ar << group.preconditioning_values;
+    if(group.preconditioning_values.has_value())
+      ar << group.preconditioning_values.value();
   }
 }
 

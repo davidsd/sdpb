@@ -64,7 +64,7 @@ public:
   //
   // preconditioning_values allows for more fine-grained adjustments
   // than prefactor/sample scalings (which have the same value for all PMP matrix elements)
-  std::vector<El::BigFloat> preconditioning_values;
+  std::optional<std::vector<El::BigFloat>> preconditioning_values;
 
   Dual_Constraint_Group() = default;
   Dual_Constraint_Group(const size_t &Block_index,

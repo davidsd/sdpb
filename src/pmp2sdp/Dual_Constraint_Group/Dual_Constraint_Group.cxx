@@ -48,7 +48,8 @@ Dual_Constraint_Group::Dual_Constraint_Group(const size_t &Block_index,
   // The rest multiply decision variables y
   constraint_matrix.Resize(numConstraints, vectorDim - 1);
 
-  preconditioning_values.resize(numConstraints);
+  if(m.preconditioning_vector.has_value())
+    preconditioning_values.emplace(numConstraints);
 
   // Populate B and c by sampling the polynomial matrix
   int p = 0;
@@ -59,13 +60,15 @@ Dual_Constraint_Group::Dual_Constraint_Group(const size_t &Block_index,
           for(size_t k = 0; k < num_points; k++)
             {
               const El::BigFloat &x = m.sample_points.at(k);
+              El::BigFloat scale = m.sample_scalings.at(k);
 
-              preconditioning_values.at(p)
-                = m.preconditioning_vector.at(c).evaluate(x)
-                  * m.preconditioning_vector.at(r).evaluate(x);
-
-              const El::BigFloat &scale
-                = m.sample_scalings.at(k) * preconditioning_values.at(p);
+              if(preconditioning_values.has_value())
+                {
+                  preconditioning_values->at(p)
+                    = m.preconditioning_vector->at(c).evaluate(x)
+                      * m.preconditioning_vector->at(r).evaluate(x);
+                  scale *= preconditioning_values->at(p);
+                }
 
               constraint_constants[p] = scale * polys(r, c)[0](x);
               for(size_t n = 1; n < vectorDim; ++n)

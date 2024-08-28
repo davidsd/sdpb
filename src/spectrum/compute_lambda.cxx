@@ -1,14 +1,13 @@
-#include "Zero.hxx"
-#include "pmp2sdp/write_sdp.hxx"
+#include "compute_lambda.hxx"
 
-void compute_lambda(
-  const std::vector<El::BigFloat> &sample_points,
-  const std::vector<El::BigFloat> &sample_scalings,
-  const std::vector<Polynomial_Power_Product> &preconditioning_vector,
-  const Damped_Rational &prefactor, const size_t &num_rows,
-  const El::Matrix<El::BigFloat> &x,
-  const std::vector<El::BigFloat> &zero_vector, std::vector<Zero> &zeros,
-  El::BigFloat &error)
+void compute_lambda(const std::vector<El::BigFloat> &sample_points,
+                    const std::vector<El::BigFloat> &sample_scalings,
+                    const std::optional<std::vector<Polynomial_Power_Product>>
+                      &preconditioning_vector,
+                    const Damped_Rational &prefactor, const size_t &num_rows,
+                    const El::Matrix<El::BigFloat> &x,
+                    const std::vector<El::BigFloat> &zero_vector,
+                    std::vector<Zero> &zeros, El::BigFloat &error)
 {
   const size_t matrix_block_size(x.Height() / (num_rows * (num_rows + 1) / 2));
 
@@ -17,22 +16,34 @@ void compute_lambda(
   El::Matrix<El::BigFloat> x_scaled_matrix(matrix_block_size,
                                            (num_rows * (num_rows + 1) / 2));
   {
-    std::vector<El::BigFloat> pv(num_rows);
+    bool has_preconditioning = preconditioning_vector.has_value();
+    std::vector<El::BigFloat> pv;
+
     for(size_t index(0); index != matrix_block_size; ++index)
       {
         const auto &point = sample_points.at(index);
         const auto &scale = sample_scalings.at(index);
         // precompute preconditioning values
-        for(size_t row(0); row != num_rows; ++row)
-          pv.at(row) = preconditioning_vector.at(row).evaluate(point);
+        if(has_preconditioning)
+          {
+            pv.resize(num_rows);
+            for(size_t row(0); row != num_rows; ++row)
+              pv.at(row) = preconditioning_vector->at(row).evaluate(point);
+          }
 
         size_t row_column(0);
         for(size_t row(0); row != num_rows; ++row)
           for(size_t column(row); column != num_rows; ++column)
             {
               x_scaled_matrix(index, row_column)
-                = x(row_column * matrix_block_size + index, 0) * scale
-                  * pv.at(row) * pv.at(column);
+                = x(row_column * matrix_block_size + index, 0) * scale;
+
+              if(has_preconditioning)
+                {
+                  x_scaled_matrix(index, row_column)
+                    *= pv.at(row) * pv.at(column);
+                }
+
               ++row_column;
             }
       }
