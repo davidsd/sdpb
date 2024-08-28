@@ -25,6 +25,7 @@ struct PVM_Info
   std::vector<El::BigFloat> sample_points;
   std::vector<El::BigFloat> sample_scalings;
   std::vector<El::BigFloat> reduced_sample_scalings;
+  std::vector<Polynomial_Power_Product> preconditioning_vector;
 };
 
 inline void write_pmp_info_json(std::ostream &output_stream,
@@ -81,6 +82,32 @@ inline void write_pmp_info_json(std::ostream &output_stream,
         add_Boost_Float_array(block.reduced_prefactor.poles);
         writer.EndObject();
       }
+      writer.Key("preconditioningVector");
+      {
+        writer.StartArray();
+        for(const auto &polynomial_power_product :
+            block.preconditioning_vector)
+          {
+            writer.StartObject();
+            writer.Key("product");
+            {
+              writer.StartArray();
+              for(auto &pp : polynomial_power_product.terms)
+                {
+                  writer.StartObject();
+                  writer.Key("polynomial");
+                  add_Boost_Float_array(pp.polynomial.data());
+                  writer.Key("power");
+                  add_Boost_Float(pp.power);
+                  writer.EndObject();
+                }
+              writer.EndArray();
+            }
+            writer.EndObject();
+          }
+        writer.EndArray();
+      }
+
       writer.Key("samplePoints");
       add_bigFloat_array(block.sample_points);
       writer.Key("sampleScalings");
@@ -105,23 +132,23 @@ inline void synchronize_pvm_info(PVM_Info &pvm_info, const int from)
   if(to == from)
     return;
 
+  const auto &comm = El::mpi::COMM_WORLD;
+
   // block_path
   {
     auto block_path = pvm_info.block_path.string();
     if(rank == from)
       {
         const size_t path_size = block_path.size();
-        El::mpi::Send<size_t>(path_size, to, El::mpi::COMM_WORLD);
-        MPI_Send(block_path.data(), path_size, MPI_CHAR, to, 0,
-                 MPI_COMM_WORLD);
+        El::mpi::Send<size_t>(path_size, to, comm);
+        MPI_Send(block_path.data(), path_size, MPI_CHAR, to, 0, comm.comm);
       }
     if(rank == to)
       {
-        const auto path_size
-          = El::mpi::Recv<size_t>(from, El::mpi::COMM_WORLD);
+        const auto path_size = El::mpi::Recv<size_t>(from, comm);
         block_path.resize(path_size);
-        MPI_Recv(block_path.data(), path_size, MPI_CHAR, from, 0,
-                 MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(block_path.data(), path_size, MPI_CHAR, from, 0, comm.comm,
+                 MPI_STATUS_IGNORE);
         pvm_info.block_path = block_path;
       }
   }
@@ -131,25 +158,22 @@ inline void synchronize_pvm_info(PVM_Info &pvm_info, const int from)
     auto &reduced_prefactor = pvm_info.reduced_prefactor;
     if(rank == from)
       {
-        El::mpi::Send(to_BigFloat(reduced_prefactor.constant), to,
-                      El::mpi::COMM_WORLD);
-        El::mpi::Send(to_BigFloat(reduced_prefactor.base), to,
-                      El::mpi::COMM_WORLD);
+        El::mpi::Send(to_BigFloat(reduced_prefactor.constant), to, comm);
+        El::mpi::Send(to_BigFloat(reduced_prefactor.base), to, comm);
         const auto poles = to_BigFloat_Vector(reduced_prefactor.poles);
-        El::mpi::Send<size_t>(poles.size(), to, El::mpi::COMM_WORLD);
-        El::mpi::Send(poles.data(), poles.size(), to, El::mpi::COMM_WORLD);
+        El::mpi::Send<size_t>(poles.size(), to, comm);
+        El::mpi::Send(poles.data(), poles.size(), to, comm);
       }
     if(rank == to)
       {
-        reduced_prefactor.constant = to_Boost_Float(
-          El::mpi::Recv<El::BigFloat>(from, El::mpi::COMM_WORLD));
-        reduced_prefactor.base = to_Boost_Float(
-          El::mpi::Recv<El::BigFloat>(from, El::mpi::COMM_WORLD));
+        reduced_prefactor.constant
+          = to_Boost_Float(El::mpi::Recv<El::BigFloat>(from, comm));
+        reduced_prefactor.base
+          = to_Boost_Float(El::mpi::Recv<El::BigFloat>(from, comm));
 
-        const size_t num_poles
-          = El::mpi::Recv<size_t>(from, El::mpi::COMM_WORLD);
+        const size_t num_poles = El::mpi::Recv<size_t>(from, comm);
         std::vector<El::BigFloat> poles(num_poles);
-        El::mpi::Recv(poles.data(), poles.size(), from, El::mpi::COMM_WORLD);
+        El::mpi::Recv(poles.data(), poles.size(), from, comm);
         reduced_prefactor.poles = to_Boost_Float_Vector(poles);
       }
   }
@@ -159,54 +183,61 @@ inline void synchronize_pvm_info(PVM_Info &pvm_info, const int from)
       auto &vec = *vec_ptr;
       if(rank == from)
         {
-          El::mpi::Send<size_t>(vec.size(), to, El::mpi::COMM_WORLD);
-          El::mpi::Send(vec.data(), vec.size(), to, El::mpi::COMM_WORLD);
+          El::mpi::Send<size_t>(vec.size(), to, comm);
+          El::mpi::Send(vec.data(), vec.size(), to, comm);
         }
       if(rank == to)
         {
-          const size_t num_points
-            = El::mpi::Recv<size_t>(from, El::mpi::COMM_WORLD);
+          const size_t num_points = El::mpi::Recv<size_t>(from, comm);
           vec.resize(num_points);
-          El::mpi::Recv(vec.data(), vec.size(), from, El::mpi::COMM_WORLD);
+          El::mpi::Recv(vec.data(), vec.size(), from, comm);
         }
     }
-  // //sample_points
-  // {
-  //   auto &sample_points = pvm_info.sample_points;
-  //   if(rank == from)
-  //     {
-  //       El::mpi::Send<size_t>(sample_points.size(), to, El::mpi::COMM_WORLD);
-  //       El::mpi::Send(sample_points.data(), sample_points.size(), to,
-  //                     El::mpi::COMM_WORLD);
-  //     }
-  //   if(rank == to)
-  //     {
-  //       const size_t num_points
-  //         = El::mpi::Recv<size_t>(from, El::mpi::COMM_WORLD);
-  //       sample_points.resize(num_points);
-  //       El::mpi::Recv(sample_points.data(), sample_points.size(), from,
-  //                     El::mpi::COMM_WORLD);
-  //     }
-  // }
-  //
-  // //sample_scalings
-  // {
-  //   auto &sample_scalings = pvm_info.sample_scalings;
-  //   if(rank == from)
-  //     {
-  //       El::mpi::Send<size_t>(sample_scalings.size(), to, El::mpi::COMM_WORLD);
-  //       El::mpi::Send(sample_scalings.data(), sample_scalings.size(), to,
-  //                     El::mpi::COMM_WORLD);
-  //     }
-  //   if(rank == to)
-  //     {
-  //       const size_t num_points
-  //         = El::mpi::Recv<size_t>(from, El::mpi::COMM_WORLD);
-  //       sample_scalings.resize(num_points);
-  //       El::mpi::Recv(sample_scalings.data(), sample_scalings.size(), from,
-  //                     El::mpi::COMM_WORLD);
-  //     }
-  // }
+  // preconditioningVector
+  {
+    if(rank == from)
+      {
+        El::mpi::Send<size_t>(pvm_info.preconditioning_vector.size(), to,
+                              comm);
+        for(const auto &polynomial_power_product :
+            pvm_info.preconditioning_vector)
+          {
+            El::mpi::Send<size_t>(polynomial_power_product.terms.size(), to,
+                                  comm);
+            for(const auto &polynomial_power : polynomial_power_product.terms)
+              {
+                // TODO we have to convert each number to BigFloat and back.
+                // Maybe we should introduce Polynomial_Power_Product<BigFloat>?
+                // Or support Boost_Float as a custom MPI type?
+                const auto coeffs
+                  = to_BigFloat_Vector(polynomial_power.polynomial.data());
+                El::mpi::Send<size_t>(coeffs.size(), to, comm);
+                El::mpi::Send(coeffs.data(), coeffs.size(), to, comm);
+                El::mpi::Send(to_BigFloat(polynomial_power.power), to, comm);
+              }
+          }
+      }
+    if(rank == to)
+      {
+        const size_t size = El::mpi::Recv<size_t>(from, comm);
+        pvm_info.preconditioning_vector.resize(size);
+        for(auto &polynomial_power_product : pvm_info.preconditioning_vector)
+          {
+            const auto num_terms = El::mpi::Recv<size_t>(from, comm);
+            polynomial_power_product.terms.resize(num_terms);
+            for(auto &polynomial_power : polynomial_power_product.terms)
+              {
+                std::vector<El::BigFloat> coeffs;
+                const auto num_coeffs = El::mpi::Recv<size_t>(from, comm);
+                coeffs.resize(num_coeffs);
+                El::mpi::Recv(coeffs.data(), coeffs.size(), from, comm);
+                polynomial_power.polynomial = to_Boost_Float_Vector(coeffs);
+                polynomial_power.power
+                  = to_Boost_Float(El::mpi::Recv<El::BigFloat>(from, comm));
+              }
+          }
+      }
+  }
 }
 
 std::vector<PVM_Info> inline synchronize_pmp_info(
@@ -228,6 +259,7 @@ std::vector<PVM_Info> inline synchronize_pmp_info(
       pvm_info.sample_points = pvm.sample_points;
       pvm_info.sample_scalings = pvm.sample_scalings;
       pvm_info.reduced_sample_scalings = pvm.reduced_sample_scalings;
+      pvm_info.preconditioning_vector = pvm.preconditioning_vector;
     }
 
   // Synchronize owning ranks for each block
