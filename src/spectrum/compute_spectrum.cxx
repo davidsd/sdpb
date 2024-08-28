@@ -93,8 +93,9 @@ compute_spectrum(const Polynomial_Matrix_Program &pmp,
       if(need_lambda)
         {
           compute_lambda(block.sample_points, block.reduced_sample_scalings,
-                         block.reduced_prefactor, block.polynomials.Height(),
-                         x.at(block_index), get_zeros(mesh, threshold), zeros,
+                         block.preconditioning_vector, block.reduced_prefactor,
+                         block.polynomials.Height(), x.at(block_index),
+                         get_zeros(mesh, threshold), zeros,
                          zeros_blocks.at(block_index).error);
         }
       else
