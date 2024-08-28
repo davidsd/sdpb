@@ -88,6 +88,9 @@ SDP::SDP(
         }
     }
 
+  // NB: preconditioning is ignored in pmp2functions & outer_limits
+  preconditioning_values.resize(primal_objective_c.blocks.size());
+
   // Setup B
   const int64_t B_Height(block_offsets.back()),
     B_Width(dual_objective_b_star.Height());
