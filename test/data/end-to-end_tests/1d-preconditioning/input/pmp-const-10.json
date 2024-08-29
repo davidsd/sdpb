@@ -16,14 +16,10 @@
       },
       "preconditioningVector": [
         {
-          "product": [
-            {
-              "polynomial": [
-                "10"
-              ],
-              "power": "1"
-            }
-          ]
+          "polynomial": [
+            "10"
+          ],
+          "power": "1"
         }
       ],
       "polynomials":[
