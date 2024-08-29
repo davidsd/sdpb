@@ -209,8 +209,9 @@ TEST_CASE("end-to-end_tests")
   {
     INFO("SDPB test for a simple one-dimensional problem from SDPB Manual:");
     INFO("maximize (-y) s.t. (1 + x^4 + y * (x^4 / 12 + x^2)) >= 0)");
-    INFO("Same as 1d case, but the polynomial is multiplied by a custom preconditioning function f(x):");
-    INFO("  pmp.json:          f(x) = (0.2 + x)^0.3 * (10.1 + x + 3.1*x^2)^0.8");
+    INFO("Same as 1d case, but the polynomial is multiplied by a custom "
+         "preconditioning function f(x):");
+    INFO("  pmp.json: f(x) = (0.2 + x)^0.3 * (10.1 + x + 3.1*x^2)^0.8");
     INFO("  pmp-const-10.json: f(x) = 10.0");
     INFO("Output is the same as in 1d, except for values in iterations.json "
          "and primal vector x_0.txt (its elements are divided by "
@@ -278,15 +279,14 @@ TEST_CASE("end-to-end_tests")
       }
   }
 
-  SECTION("SingletScalar_cT_test_nmax6/primal_dual_optimal")
+  SECTION("SingletScalar_cT_test_nmax6")
   {
     INFO("SingletScalar_cT_test_nmax6 from "
          "https://gitlab.com/davidsd/scalars-3d/-/blob/master/src/Projects/"
          "Scalars3d/SingletScalar2020.hs");
     INFO("Test data is generated with SDPB 2.5.1 on Caltech cluster.");
     INFO("SDPB should find primal-dual optimal solution.");
-    End_To_End_Test test("SingletScalar_cT_test_nmax6/primal_dual_optimal");
-    test.default_sdpb_args
+    std::string default_sdpb_args
       = "--checkpointInterval 3600 --maxRuntime 1340 "
         "--dualityGapThreshold 1.0e-30 --primalErrorThreshold 1.0e-30 "
         "--dualErrorThreshold 1.0e-30 --initialMatrixScalePrimal 1.0e20 "
@@ -294,31 +294,37 @@ TEST_CASE("end-to-end_tests")
         "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
         "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 2 "
         "--procGranularity 1 --writeSolution x,y,z";
-    // This test is slow, we don't want to run it for both json and binary SDP.
-    // json/bin correctness is checked by other tests,
-    // so we use only binary SDP here
+    SECTION("primal_dual_optimal")
+    {
+      End_To_End_Test test("SingletScalar_cT_test_nmax6/primal_dual_optimal");
+      test.default_sdpb_args = default_sdpb_args;
+      // This test is slow, we don't want to run it for both json and binary SDP.
+      // json/bin correctness is checked by other tests,
+      // so we use only binary SDP here
 
-    test.check_sdp_normalization = true;
-    // run_sdpb_twice=true to test checkpoint loading, see https://github.com/davidsd/sdpb/issues/219
-    test.run_sdpb_twice = true;
-    test.run();
-  }
+      test.check_sdp_normalization = true;
+      // run_sdpb_twice=true to test checkpoint loading, see https://github.com/davidsd/sdpb/issues/219
+      test.run_sdpb_twice = true;
+      test.run();
+    }
 
-  SECTION("SingletScalar_cT_test_nmax6/primal_dual_optimal_reduced")
-  {
-    INFO("Same as primal_dual_optimal, but with reducedPrefactor");
-    INFO("SDPB should find primal-dual optimal solution.");
-    End_To_End_Test test(
-      "SingletScalar_cT_test_nmax6/primal_dual_optimal_reduced");
-    test.default_sdpb_args
-      = "--checkpointInterval 3600 --maxRuntime 1340 "
-        "--dualityGapThreshold 1.0e-30 --primalErrorThreshold 1.0e-30 "
-        "--dualErrorThreshold 1.0e-30 --initialMatrixScalePrimal 1.0e20 "
-        "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
-        "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
-        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 2 "
-        "--procGranularity 1 --writeSolution x,y,z";
-    test.run();
+    SECTION("primal_dual_optimal_reduced")
+    {
+      INFO("Same as primal_dual_optimal, but with reducedPrefactor.");
+      End_To_End_Test test(
+        "SingletScalar_cT_test_nmax6/primal_dual_optimal_reduced");
+      test.default_sdpb_args = default_sdpb_args;
+      test.run();
+    }
+    SECTION("primal_dual_optimal_preconditioning")
+    {
+      INFO("Same as primal_dual_optimal, but with preconditioning.");
+      End_To_End_Test test(
+        "SingletScalar_cT_test_nmax6/primal_dual_optimal_preconditioning");
+      test.default_sdpb_args = default_sdpb_args;
+      test.check_sdp = false;
+      test.run();
+    }
   }
 
   SECTION("SingletScalarAllowed_test_nmax6")
