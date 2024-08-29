@@ -6,6 +6,8 @@
 #include "sdpb_util/json/Abstract_Json_Object_Parser.hxx"
 #include "sdpb_util/json/Json_Float_Parser.hxx"
 
+#include <optional>
+
 // Product of polynomials raised to arbitrary powers,
 // e.g. (0.2 + x)^0.3 * (10.1 + x + 3.1 * x^2)^0.8 :
 // {
@@ -25,7 +27,7 @@ class Json_Polynomial_Power_Product_Parser final
     : public Abstract_Json_Object_Parser<Polynomial_Power_Product>
 {
 private:
-  // terms entering the product
+  // Polynomial_Power terms entering the product
   std::optional<std::vector<Polynomial_Power>> terms;
   // special case: single Polynomial_Power
   std::optional<std::vector<Boost_Float>> single_polynomial;
