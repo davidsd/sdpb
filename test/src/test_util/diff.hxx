@@ -145,4 +145,12 @@ namespace Test_Util::REQUIRE_Equal
     CAPTURE(b);
     DIFF(weakly_canonical(a).string(), weakly_canonical(b).string());
   }
+
+  template <class T>
+  void diff(const std::optional<T> &a, const std::optional<T> &b)
+  {
+    REQUIRE(a.has_value() == b.has_value());
+    if(a.has_value())
+      DIFF(a.value(), b.value());
+  }
 }

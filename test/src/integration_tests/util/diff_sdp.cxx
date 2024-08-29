@@ -95,6 +95,7 @@ namespace
     Float_Matrix bilinear_bases_odd;
     Float_Vector constraint_constants;
     Float_Matrix constraint_matrix;
+    std::optional<Float_Matrix> preconditioning_values;
     explicit Parse_Block_Data(const fs::path &block_path_no_extension)
     {
       CAPTURE(block_path_no_extension);
@@ -127,6 +128,11 @@ namespace
       bilinear_bases_odd = parse_Float_Matrix(document["bilinear_bases_odd"]);
       constraint_constants = parse_Float_Vector(document["c"]);
       constraint_matrix = parse_Float_Matrix(document["B"]);
+      if(document.HasMember("preconditioningValues"))
+        {
+          preconditioning_values
+            = parse_Float_Matrix(document["preconditioningValues"]);
+        }
     }
     void parse_bin(const fs::path &block_path)
     {
@@ -140,6 +146,8 @@ namespace
       ar >> constraint_constants;
       ar >> bilinear_bases_even;
       ar >> bilinear_bases_odd;
+      if(is.peek() != EOF)
+        ar >> preconditioning_values.emplace();
     }
   };
 }
@@ -209,6 +217,7 @@ namespace
     DIFF(a.bilinear_bases_odd, b.bilinear_bases_odd);
     DIFF(a.constraint_constants, b.constraint_constants);
     DIFF(a.constraint_matrix, b.constraint_matrix);
+    DIFF(a.preconditioning_values, b.preconditioning_values);
   }
 }
 
