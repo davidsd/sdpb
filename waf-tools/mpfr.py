@@ -24,7 +24,7 @@ def configure(conf):
     if not conf.options.mpfr_dir:
         env_dir = os.getenv('MPFR_DIR')
         if env_dir:
-            conf.to_log('Setting mpfr_dir using environment variable: ' + d + '=' + env_dir)
+            conf.to_log('Setting mpfr_dir using environment variable: MPFR_DIR=' + env_dir)
             conf.options.mpfr_dir = env_dir
 
     # Find MPFR
