@@ -4,7 +4,7 @@ import os, subprocess
 def options(opt):
     opt.load(['compiler_cxx', 'gnu_dirs'])
     opt.load(
-        ['cxx17', 'boost', 'gmpxx', 'mpfr', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'cblas', 'flint'],
+        ['cxx17', 'boost', 'gmpxx', 'mpfr', 'mpsolve', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'cblas', 'flint'],
         tooldir='./waf-tools')
 
 
@@ -12,7 +12,7 @@ def configure(conf):
     if not 'CXX' in os.environ or os.environ['CXX'] == 'g++' or os.environ['CXX'] == 'icpc':
         conf.environ['CXX'] = 'mpicxx'
 
-    conf.load(['compiler_cxx', 'gnu_dirs', 'cxx17', 'boost', 'gmpxx', 'mpfr',
+    conf.load(['compiler_cxx', 'gnu_dirs', 'cxx17', 'boost', 'gmpxx', 'mpfr', 'mpsolve',
                'elemental', 'libxml2', 'rapidjson', 'libarchive', 'cblas', 'flint'])
     conf.load('clang_compilation_database', tooldir='./waf-tools')
 
@@ -282,7 +282,7 @@ def build(bld):
                 cxxflags=default_flags,
                 defines=default_defines,
                 includes=default_includes,
-                use=use_packages + ['pmp_read', 'sdp_solve', 'pmp2sdp_lib', 'mesh']
+                use=use_packages + ['pmp_read', 'sdp_solve', 'pmp2sdp_lib', 'mesh', 'mpsolve']
                 )
 
     bld.program(source=['external/catch2/catch_amalgamated.cpp',
