@@ -3,6 +3,7 @@
 #include "sdp_solve/Block_Vector.hxx"
 #include "sdp_solve/SDP.hxx"
 #include "sdpb_util/Boost_Float.hxx"
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 
 #include <El.hpp>
 
