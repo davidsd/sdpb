@@ -1,5 +1,6 @@
 #include "pmp_read/pmp_read.hxx"
 #include "pmp2sdp/write_vector.hxx"
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 
 #include <filesystem>
 
