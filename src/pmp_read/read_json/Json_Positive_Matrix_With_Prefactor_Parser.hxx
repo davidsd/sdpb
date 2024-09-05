@@ -118,7 +118,8 @@ public:
   value_type get_result() override
   {
     ASSERT(polynomials.has_value(), "polynomials not found");
-    const auto matrix = to_matrix(std::move(polynomials).value());
+    const Simple_Matrix matrix(
+      std::move(polynomials).value());
     // TODO add move ctor for Polynomial_Vector_Matrix?
     return Polynomial_Vector_Matrix(
       matrix, prefactor, reduced_prefactor, preconditioning_vector,

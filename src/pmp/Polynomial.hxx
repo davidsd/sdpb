@@ -91,18 +91,7 @@ inline Polynomial operator/(const Polynomial &a, const El::BigFloat &b)
   return result;
 }
 
-struct Polynomial_Vector : std::vector<Polynomial>
-{
-  // Use all constructors from the base class
-  using std::vector<Polynomial>::vector;
-
-  // Need to implement this method to use El::Matrix<Polynomial_Vector>:
-  // for some configurations, El::MemZero() is called when constructing a matrix.
-  // It calls element.Zero() for each matrix element.
-  // TODO: most of El::Matrix operations are not allowed for this type,
-  // so it's better to use some Simple_Matrix class representing a 2D array.
-  void Zero() { clear(); }
-};
+using Polynomial_Vector = std::vector<Polynomial>;
 
 // Convenience functions to avoid copies
 inline void swap(Polynomial_Vector &polynomials,

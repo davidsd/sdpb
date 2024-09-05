@@ -3,6 +3,7 @@
 #include "Polynomial.hxx"
 #include "Damped_Rational.hxx"
 #include "Polynomial_Power_Product.hxx"
+#include "sdpb_util/Simple_Matrix.hxx"
 
 #include <optional>
 
@@ -34,7 +35,7 @@ struct Polynomial_Vector_Matrix
 {
   // TODO: This is actually a symmetric matrix (dim x dim) of a vector
   // of polynomials.  So we should use a proper symmetric matrix class.
-  El::Matrix<Polynomial_Vector> polynomials;
+  Simple_Matrix<Polynomial_Vector> polynomials;
 
   Damped_Rational reduced_prefactor;
 
@@ -54,7 +55,7 @@ struct Polynomial_Vector_Matrix
   std::array<Polynomial_Vector, 2> bilinear_basis;
 
   Polynomial_Vector_Matrix(
-    const El::Matrix<Polynomial_Vector> &polynomials,
+    const Simple_Matrix<Polynomial_Vector> &polynomials,
     const std::optional<Damped_Rational> &prefactor_opt,
     const std::optional<Damped_Rational> &reduced_prefactor_opt,
     const std::optional<std::vector<Polynomial_Power_Product>>
