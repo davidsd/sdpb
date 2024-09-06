@@ -1,7 +1,9 @@
-#include "Zero.hxx"
-#include "pmp2sdp/write_sdp.hxx"
+#pragma once
 
-void compute_lambda(const std::vector<El::BigFloat> &sample_points,
+#include "spectrum/Zero.hxx"
+#include "pmp/Damped_Rational.hxx"
+
+inline void compute_lambda(const std::vector<El::BigFloat> &sample_points,
                     const std::vector<El::BigFloat> &sample_scalings,
                     const Damped_Rational &prefactor, const size_t &num_rows,
                     const El::Matrix<El::BigFloat> &x,
