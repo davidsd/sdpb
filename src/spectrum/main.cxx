@@ -13,23 +13,23 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
                       bool &need_lambda, Verbosity &verbosity);
 
 std::vector<El::Matrix<El::BigFloat>>
+read_c_minus_By(const std::filesystem::path &input_path,
+                const std::vector<size_t> &block_indices);
+
+std::vector<El::Matrix<El::BigFloat>>
 read_x(const fs::path &solution_path,
        const std::vector<Polynomial_Vector_Matrix> &matrices,
        const std::vector<size_t> &block_indices);
 
-El::Matrix<El::BigFloat>
-read_y(const fs::path &solution_path, const size_t &y_height);
+std::vector<Zeros>
+compute_spectrum(const Polynomial_Matrix_Program &pmp,
+                 const std::vector<El::Matrix<El::BigFloat>> &c_minus_By,
+                 const std::optional<std::vector<El::Matrix<El::BigFloat>>> &x,
+                 const El::BigFloat &threshold, const bool &need_lambda);
 
 void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
                     const std::vector<Zeros> &zeros_blocks,
                     const std::vector<size_t> &block_indices);
-
-std::vector<Zeros>
-compute_spectrum(const Polynomial_Matrix_Program &pmp,
-                 const El::Matrix<El::BigFloat> &y,
-                 const std::vector<El::Matrix<El::BigFloat>> &x,
-                 const El::BigFloat &threshold,
-                 const El::BigFloat &mesh_threshold, const bool &need_lambda);
 
 int main(int argc, char **argv)
 {
@@ -41,6 +41,7 @@ int main(int argc, char **argv)
       fs::path input_path, solution_dir, output_path;
       bool need_lambda;
       Verbosity verbosity;
+      // TODO mark mesh_threshold as obsolete
       handle_arguments(argc, argv, threshold, mesh_threshold, input_path,
                        solution_dir, output_path, need_lambda, verbosity);
 
@@ -54,16 +55,21 @@ int main(int argc, char **argv)
         }
 
       Timers timers(env, verbosity);
+      // TODO read sdp/pmp_info.json instead of whole PMP
       const auto pmp
         = read_polynomial_matrix_program(env, input_path, verbosity, timers);
       const size_t num_blocks = pmp.num_matrices;
       const auto &block_indices = pmp.matrix_index_local_to_global;
-      El::Matrix<El::BigFloat> y(pmp.objective.size() - 1, 1);
-      read_text_block(y, solution_dir / "y.txt");
-      std::vector<El::Matrix<El::BigFloat>> x(
-        read_x(solution_dir, pmp.matrices, block_indices));
-      const std::vector<Zeros> zeros_blocks(
-        compute_spectrum(pmp, y, x, threshold, mesh_threshold, need_lambda));
+
+      std::optional<std::vector<El::Matrix<El::BigFloat>>> x;
+      if(need_lambda)
+        x.emplace(read_x(solution_dir, pmp.matrices, block_indices));
+
+      const auto c_minus_By = read_c_minus_By(
+        solution_dir / "c_minus_By" / "c_minus_By.json", block_indices);
+      const auto zeros_blocks
+        = compute_spectrum(pmp, c_minus_By, x, threshold, need_lambda);
+
       write_spectrum(output_path, num_blocks, zeros_blocks, block_indices);
     }
   catch(std::exception &e)

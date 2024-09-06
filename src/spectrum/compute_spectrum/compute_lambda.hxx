@@ -1,6 +1,12 @@
-#include "compute_lambda.hxx"
+#pragma once
 
-void compute_lambda(const std::vector<El::BigFloat> &sample_points,
+#include "spectrum/Zero.hxx"
+#include "pmp/Damped_Rational.hxx"
+#include "pmp/Polynomial_Power_Product.hxx"
+
+#include <optional>
+
+inline void compute_lambda(const std::vector<El::BigFloat> &sample_points,
                     const std::vector<El::BigFloat> &sample_scalings,
                     const std::optional<std::vector<Polynomial_Power_Product>>
                       &preconditioning_vector,
