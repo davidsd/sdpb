@@ -9,7 +9,7 @@
 
 struct Polynomial_Power
 {
-  boost::math::tools::polynomial<Boost_Float> polynomial{};
+  Boost_Polynomial polynomial{};
   Boost_Float power = 1;
 
   [[nodiscard]] Boost_Float evaluate(const Boost_Float &x) const
