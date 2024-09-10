@@ -6,14 +6,16 @@
 
 #include <optional>
 
-inline void compute_lambda(const std::vector<El::BigFloat> &sample_points,
-                    const std::vector<El::BigFloat> &sample_scalings,
-                    const std::optional<std::vector<Polynomial_Power_Product>>
-                      &preconditioning_vector,
-                    const Damped_Rational &prefactor, const size_t &num_rows,
-                    const El::Matrix<El::BigFloat> &x,
-                    const std::vector<El::BigFloat> &zero_vector,
-                    std::vector<Zero> &zeros, El::BigFloat &error)
+inline void
+compute_lambda(const std::vector<El::BigFloat> &sample_points,
+               const std::vector<El::BigFloat> &sample_scalings,
+               const std::optional<std::vector<Polynomial_Power_Product>>
+                 &preconditioning_vector,
+               const Damped_Rational &prefactor, const size_t &num_rows,
+               const El::Matrix<El::BigFloat> &x,
+               const std::vector<El::BigFloat> &zero_vector,
+               const size_t &global_block_index, std::vector<Zero> &zeros,
+               El::BigFloat &error)
 {
   const size_t matrix_block_size(x.Height() / (num_rows * (num_rows + 1) / 2));
 
@@ -156,36 +158,45 @@ inline void compute_lambda(const std::vector<El::BigFloat> &sample_points,
       // Eigenvalues are sorted, largest at the end.  Only add a zero
       // if max_eigenvalue >= 0.
       const size_t num_eigvals(eigenvalues.Height());
-      if(eigenvalues(num_eigvals - 1, 0) >= 0)
+      auto min_eigenvalue = eigenvalues(num_eigvals - 1, 0);
+      if(min_eigenvalue < 0)
         {
-          zeros.emplace_back(zero_vector[zero_index]);
-          auto &lambda(zeros.back().lambda);
-          // lambdas = eigenvectors * sqrt(eigenvalues)
-          // lambdas = v_{j,\tau} from Eq. (A.8)
-          lambda = El::View(eigenvectors, 0, num_eigvals - 1, num_eigvals, 1);
-          lambda *= El::Sqrt(eigenvalues(num_eigvals - 1, 0));
-
-          size_t row_column(0);
-          for(size_t row(0); row != num_rows; ++row)
-            for(size_t column(row); column != num_rows; ++column)
-              {
-                for(size_t index(0); index != matrix_block_size; ++index)
-                  {
-                    error_matrix(index, row_column)
-                      -= interpolation(index, zero_index) * lambda(row)
-                         * lambda(column) * (row == column ? 1 : 2);
-                  }
-                ++row_column;
-              }
-
-          // Set lambda = 1/sqrt(\chi) * v_{j,\tau}
-          // With this definition, lambda does not change
-          // if one adds reducedPrefactor != prefactor to PMP.json
-          // NB: this is different from Python script and from (A.8) definition!
-          lambda *= 1
-                    / El::Sqrt(to_BigFloat(
-                      prefactor.evaluate(to_Boost_Float(zeros.back().zero))));
+          // TODO print block index
+          PRINT_WARNING("block_", global_block_index,
+                        ": x=", zero_vector.at(zero_index),
+                        ": negative min_eigenvalue=", min_eigenvalue,
+                        " for Lambda matrix will be replaced with 0.");
+          min_eigenvalue = 0;
         }
+      {
+        zeros.emplace_back(zero_vector[zero_index]);
+        auto &lambda(zeros.back().lambda);
+        // lambdas = eigenvectors * sqrt(eigenvalues)
+        // lambdas = v_{j,\tau} from Eq. (A.8)
+        lambda = El::View(eigenvectors, 0, num_eigvals - 1, num_eigvals, 1);
+        lambda *= El::Sqrt(min_eigenvalue);
+
+        size_t row_column(0);
+        for(size_t row(0); row != num_rows; ++row)
+          for(size_t column(row); column != num_rows; ++column)
+            {
+              for(size_t index(0); index != matrix_block_size; ++index)
+                {
+                  error_matrix(index, row_column)
+                    -= interpolation(index, zero_index) * lambda(row)
+                       * lambda(column) * (row == column ? 1 : 2);
+                }
+              ++row_column;
+            }
+
+        // Set lambda = 1/sqrt(\chi) * v_{j,\tau}
+        // With this definition, lambda does not change
+        // if one adds reducedPrefactor != prefactor to PMP.json
+        // NB: this is different from Python script and from (A.8) definition!
+        lambda *= 1
+                  / El::Sqrt(to_BigFloat(
+                    prefactor.evaluate(to_Boost_Float(zeros.back().zero))));
+      }
     }
   error = El::Sqrt(El::Dot(error_matrix, error_matrix));
 }
