@@ -224,6 +224,7 @@ find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
              DEBUG_STRING(min_eigenvalue), DEBUG_STRING(threshold));
       if(min_eigenvalue < threshold)
         return {0};
+      return {};
     }
 
   // Regular case: polynomial matrix constraints.
