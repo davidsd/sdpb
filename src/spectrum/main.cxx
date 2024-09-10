@@ -8,9 +8,9 @@
 namespace fs = std::filesystem;
 
 void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
-                      El::BigFloat &mesh_threshold, fs::path &input_path,
-                      fs::path &solution_path, fs::path &output_path,
-                      bool &need_lambda, Verbosity &verbosity);
+                      fs::path &input_path, fs::path &solution_path,
+                      fs::path &output_path, bool &need_lambda,
+                      Verbosity &verbosity);
 
 std::vector<El::Matrix<El::BigFloat>>
 read_c_minus_By(const std::filesystem::path &input_path,
@@ -37,13 +37,12 @@ int main(int argc, char **argv)
 
   try
     {
-      El::BigFloat threshold, mesh_threshold;
+      El::BigFloat threshold;
       fs::path input_path, solution_dir, output_path;
       bool need_lambda;
       Verbosity verbosity;
-      // TODO mark mesh_threshold as obsolete
-      handle_arguments(argc, argv, threshold, mesh_threshold, input_path,
-                       solution_dir, output_path, need_lambda, verbosity);
+      handle_arguments(argc, argv, threshold, input_path, solution_dir,
+                       output_path, need_lambda, verbosity);
 
       // Print command line
       if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)

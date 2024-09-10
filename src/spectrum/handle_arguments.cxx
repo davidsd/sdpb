@@ -10,8 +10,7 @@
 
 namespace fs = std::filesystem;
 
-void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
-                      El::BigFloat &mesh_threshold, fs::path &input_path,
+void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,fs::path &input_path,
                       fs::path &solution_dir, fs::path &output_path,
                       bool &need_lambda, Verbosity &verbosity)
 {
@@ -33,11 +32,6 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
     "threshold", po::value<std::string>(&threshold_string)->required(),
     "Threshold for when a functional is considered to be zero.");
   options.add_options()(
-    "meshThreshold",
-    po::value<std::string>(&mesh_threshold_string)->default_value("0.001"),
-    "Relative error threshold for when to refine a mesh when approximating a "
-    "functional to look for zeros.");
-  options.add_options()(
     "output,o", po::value<fs::path>(&output_path)->required(), "Output file");
   options.add_options()(
     "precision", po::value<int>(&precision)->required(),
@@ -52,6 +46,11 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
     "Verbosity.  0 -> no output, 1 -> regular output, 2 -> debug output, 3 -> "
     "trace output");
 
+  options.add_options()(
+    "meshThreshold",
+    po::value<std::string>(&mesh_threshold_string),
+    "[OBSOLETE] Relative error threshold for when to refine a mesh when "
+    "approximating a functional to look for zeros.");
   options.add_options()(
     "format", po::value<std::string>(&format_string),
     "[OBSOLETE] Format of input file. Determined automatically.");
@@ -91,5 +90,4 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
   Environment::set_precision(precision);
 
   threshold = El::BigFloat(threshold_string);
-  mesh_threshold = El::BigFloat(mesh_threshold_string);
 }
