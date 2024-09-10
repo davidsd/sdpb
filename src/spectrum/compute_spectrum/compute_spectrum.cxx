@@ -31,6 +31,7 @@ compute_spectrum(const Polynomial_Matrix_Program &pmp,
             pvm.sample_points, pvm.reduced_sample_scalings,
             pvm.reduced_prefactor,
             pvm.polynomials.Height(), x->at(block_index), zero_values,
+            pmp.matrix_index_local_to_global.at(block_index),
             spectrum_block.zeros, spectrum_blocks.at(block_index).error);
         }
       else
