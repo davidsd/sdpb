@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Json_Damped_Rational_Parser.hxx"
-#include "Json_Polynomial_Vector_Parser.hxx"
+#include "Json_Polynomial_Parser.hxx"
 #include "pmp/Polynomial_Vector_Matrix.hxx"
 #include "sdpb_util/to_matrix.hxx"
 #include "sdpb_util/json/Json_Vector_Parser_With_Skip.hxx"
@@ -106,8 +106,7 @@ public:
   value_type get_result() override
   {
     ASSERT(polynomials.has_value(), "polynomials not found");
-    const Simple_Matrix matrix(
-      std::move(polynomials).value());
+    const Simple_Matrix matrix(std::move(polynomials).value());
     // TODO add move ctor for Polynomial_Vector_Matrix?
     return Polynomial_Vector_Matrix(
       matrix, prefactor, reduced_prefactor, sample_points, sample_scalings,
