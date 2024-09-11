@@ -3,10 +3,9 @@
 #include "sdpb_util/json/Json_Float_Parser.hxx"
 #include "sdpb_util/json/Json_Vector_Parser.hxx"
 #include "sdpb_util/json/Json_Vector_Parser_With_Skip.hxx"
+#include "sdpb_util/json/parse_json.hxx"
 
 #include <El.hpp>
-#include <rapidjson/istreamwrapper.h>
-#include <rapidjson/error/en.h>
 
 #include <filesystem>
 #include <set>
@@ -64,9 +63,6 @@ read_c_minus_By(const std::filesystem::path &input_path,
 {
   std::vector<El::Matrix<El::BigFloat>> c_minus_By_blocks;
   {
-    std::ifstream input_file(input_path);
-    rapidjson::IStreamWrapper wrapper(input_file);
-
     std::set<size_t> block_indices_set(block_indices.begin(),
                                        block_indices.end());
 
@@ -78,25 +74,7 @@ read_c_minus_By(const std::filesystem::path &input_path,
       c_minus_By_blocks = std::forward<decltype(result)>(result);
     };
     Json_c_minus_By_Parser parser(should_skip_block, on_parsed);
-
-    rapidjson::ParseResult res;
-    try
-      {
-        rapidjson::Reader reader;
-        res = reader.Parse(wrapper, parser);
-      }
-    catch(std::exception &e)
-      {
-        RUNTIME_ERROR("Failed to parse ", input_path,
-                      ": offset=", wrapper.Tell(), ": ", e.what());
-      }
-    if(res.IsError())
-      {
-        RUNTIME_ERROR("Failed to parse ", input_path,
-                      ": offset=", res.Offset(),
-                      ": error: ", rapidjson::GetParseError_En(res.Code()));
-      }
-
+    parse_json(input_path, parser);
     ASSERT_EQUAL(c_minus_By_blocks.size(), block_indices.size());
     return c_minus_By_blocks;
   }
