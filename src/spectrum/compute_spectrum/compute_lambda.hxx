@@ -1,8 +1,8 @@
 #pragma once
 
 #include "spectrum/Zero.hxx"
-#include "pmp/Damped_Rational.hxx"
 #include "sdpb_util/assert.hxx"
+#include "sdpb_util/Damped_Rational.hxx"
 
 inline void compute_lambda(const std::vector<El::BigFloat> &sample_points,
                     const std::vector<El::BigFloat> &sample_scalings,

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pmp/Damped_Rational.hxx"
 #include "Polynomial_Matrix_Program.hxx"
+#include "sdpb_util/Damped_Rational.hxx"
 
 #include <filesystem>
 #include <utility>
