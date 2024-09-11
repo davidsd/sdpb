@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Json_Damped_Rational_Parser.hxx"
+#include "sdpb_util/json/Json_Damped_Rational_Parser.hxx"
 #include "Json_Polynomial_Power_Product_Parser.hxx"
 #include "Json_Polynomial_Vector_Parser.hxx"
 #include "pmp/Polynomial_Power_Product.hxx"

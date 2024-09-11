@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Polynomial.hxx"
-#include "Damped_Rational.hxx"
+#include "sdpb_util/Damped_Rational.hxx"
 #include "Polynomial_Power_Product.hxx"
 #include "sdpb_util/Simple_Matrix.hxx"
 

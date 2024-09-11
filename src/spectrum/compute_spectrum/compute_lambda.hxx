@@ -1,7 +1,7 @@
 #pragma once
 
 #include "spectrum/Zero.hxx"
-#include "pmp/Damped_Rational.hxx"
+#include "sdpb_util/Damped_Rational.hxx"
 #include "pmp/Polynomial_Power_Product.hxx"
 
 #include <optional>
