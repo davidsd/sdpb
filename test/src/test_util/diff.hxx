@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pmp/Damped_Rational.hxx"
-#include "pmp/PVM_Info.hxx"
+#include "pmp/PMP_Info.hxx"
 
 #include <catch2/catch_amalgamated.hpp>
 #include <El.hpp>
