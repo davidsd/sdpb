@@ -296,6 +296,15 @@ namespace Test_Util::REQUIRE_Equal
         for(const auto &b : fs::directory_iterator(b_out_dir))
           {
             CAPTURE(b);
+            // Skip c_minus_By
+            if(b.is_directory())
+              {
+                const std::string c_minus_By = "c_minus_By";
+                REQUIRE(
+                  b.path().filename().string().substr(0, c_minus_By.size())
+                  == c_minus_By);
+                continue;
+              }
             REQUIRE(is_regular_file(a_out_dir / b.path().filename()));
           }
       }
