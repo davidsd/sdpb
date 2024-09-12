@@ -79,6 +79,20 @@ read_c_minus_By(const std::filesystem::path &input_path,
     Json_c_minus_By_Parser parser(should_skip_block, on_parsed);
     parse_json(input_path, parser);
     ASSERT_EQUAL(c_minus_By_blocks.size(), block_indices.size());
+    for(size_t i = 0; i < c_minus_By_blocks.size(); ++i)
+      {
+        const auto &pvm_info = pmp_info.blocks.at(i);
+        const auto &c_minus_By_block = c_minus_By_blocks.at(i);
+        const int height = pvm_info.dim * (pvm_info.dim + 1) / 2
+                           * pvm_info.sample_points.size();
+        ASSERT_EQUAL(height, c_minus_By_block.Height(),
+                     "c_minus_By block has incorrect height!",
+                     DEBUG_STRING(pvm_info.block_index),
+                     DEBUG_STRING(pvm_info.dim),
+                     DEBUG_STRING(pvm_info.sample_points.size()));
+        ASSERT_EQUAL(c_minus_By_block.Width(), 1,
+                     DEBUG_STRING(pvm_info.block_index));
+      }
     return c_minus_By_blocks;
   }
 }
