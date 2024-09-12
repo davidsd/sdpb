@@ -268,6 +268,8 @@ TEST_CASE("end-to-end_tests")
         "--procGranularity 1 --writeSolution x,y";
     test.num_procs = 1;
     test.check_sdp = false;
+    // Write SDP to zip archive  to test that spectrum can read sdp.zip/pmp_info.json
+    test.pmp2sdp_args = {{"--zip", ""}};
     test.run();
   }
 

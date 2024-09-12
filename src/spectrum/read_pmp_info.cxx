@@ -1,5 +1,6 @@
 #include "pmp/PMP_Info.hxx"
 #include "pmp_read/read_json/Json_Polynomial_Power_Product_Parser.hxx"
+#include "sdpb_util/Archive_Reader.hxx"
 #include "sdpb_util/json/Abstract_Json_Object_Parser.hxx"
 #include "sdpb_util/json/Json_Damped_Rational_Parser.hxx"
 #include "sdpb_util/json/Json_Float_Parser.hxx"
@@ -8,6 +9,8 @@
 #include "sdpb_util/json/Json_UInt64_Parser.hxx"
 #include "sdpb_util/json/Json_Vector_Parser_With_Skip.hxx"
 #include "sdpb_util/json/parse_json.hxx"
+
+namespace fs = std::filesystem;
 
 class Json_PVM_Info_Parser final : public Abstract_Json_Object_Parser<PVM_Info>
 {
@@ -115,7 +118,46 @@ PMP_Info read_pmp_info(const std::filesystem::path &input_path)
   Json_Vector_Parser_With_Skip<Json_PVM_Info_Parser> parser(
     skip, on_parsed, on_skipped, should_skip_block);
 
-  parse_json(input_path, parser);
+  // read pmp_info.json from regular file
+  if(fs::exists(input_path))
+    {
+      parse_json(input_path, parser);
+    }
+  // read pmp_info.json from sdp.zip archive
+  else
+    {
+      const auto parent_path = input_path.parent_path();
+      if(fs::exists(parent_path) && !fs::is_directory(parent_path))
+        {
+          const auto filename = input_path.filename();
+          try
+            {
+              Archive_Reader reader(parent_path);
+              bool found_pmp_info = false;
+              while(reader.next_entry())
+                {
+                  if(filename == archive_entry_pathname(reader.entry_ptr))
+                    {
+                      std::istream stream(&reader);
+                      parse_json(stream, parser, input_path);
+                      found_pmp_info = true;
+                      break;
+                    }
+                }
+              ASSERT(found_pmp_info, "Unable to find ", filename, " in ",
+                     parent_path);
+            }
+          catch(const std::exception &e)
+            {
+              RUNTIME_ERROR("Failed to read ", filename, " from archive ",
+                            parent_path, ": ", e.what());
+            }
+        }
+      else
+        {
+          RUNTIME_ERROR("Cannot find file: ", input_path);
+        }
+    }
 
   // Validate data
   for(size_t i = 0; i < parse_result.parsed_elements.size(); ++i)
