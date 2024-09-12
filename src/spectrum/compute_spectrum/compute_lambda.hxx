@@ -1,19 +1,24 @@
 #pragma once
 
+#include "pmp/PMP_Info.hxx"
 #include "spectrum/Zero.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/Damped_Rational.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
-inline void compute_lambda(const std::vector<El::BigFloat> &sample_points,
-                    const std::vector<El::BigFloat> &sample_scalings,
-                    const Damped_Rational &prefactor, const size_t &num_rows,
-                    const El::Matrix<El::BigFloat> &x,
-                    const std::vector<El::BigFloat> &zero_vector,
-               const size_t &global_block_index, std::vector<Zero> &zeros,
-               El::BigFloat &error, Timers &timers)
+inline void
+compute_lambda(const PVM_Info &pvm_info, const El::Matrix<El::BigFloat> &x,
+               const std::vector<El::BigFloat> &zero_values,
+               Zeros &spectrum_block, Timers &timers)
 {
   Scoped_Timer timer(timers, "compute_lambda");
+
+  const auto num_rows = pvm_info.dim;
+  const auto &sample_points = pvm_info.sample_points;
+
+  auto &zeros = spectrum_block.zeros;
+  auto &error = spectrum_block.error;
+
   const size_t matrix_block_size(x.Height() / (num_rows * (num_rows + 1) / 2));
 
   // U_{j,k} in Eq. (A.11)
@@ -29,14 +34,14 @@ inline void compute_lambda(const std::vector<El::BigFloat> &sample_points,
             {
               x_scaled_matrix(index, row_column)
                 = x(row_column * matrix_block_size + index, 0)
-                  * sample_scalings.at(index);
+                  * pvm_info.reduced_sample_scalings.at(index);
             }
           ++row_column;
         }
   }
   El::Matrix<El::BigFloat> error_matrix(x_scaled_matrix);
 
-  if(zero_vector.empty())
+  if(zero_values.empty())
     {
       error = El::Sqrt(El::Dot(error_matrix, error_matrix));
       return;
@@ -44,11 +49,11 @@ inline void compute_lambda(const std::vector<El::BigFloat> &sample_points,
 
   // Lagrange interpolation coefficients L(\tau, x_k^{(j)}, Eq. (A.15)
   El::Matrix<El::BigFloat> interpolation(sample_points.size(),
-                                         zero_vector.size());
+                                         zero_values.size());
   for(size_t point_index(0); point_index != sample_points.size();
       ++point_index)
     {
-      for(size_t zero_index(0); zero_index != zero_vector.size(); ++zero_index)
+      for(size_t zero_index(0); zero_index != zero_values.size(); ++zero_index)
         {
           auto &product(interpolation(point_index, zero_index));
           product = 1;
@@ -58,7 +63,7 @@ inline void compute_lambda(const std::vector<El::BigFloat> &sample_points,
             {
               if(point_index != point_product_index)
                 {
-                  product *= (zero_vector[zero_index]
+                  product *= (zero_values[zero_index]
                               - sample_points[point_product_index])
                              / (sample_points[point_index]
                                 - sample_points[point_product_index]);
@@ -100,7 +105,7 @@ inline void compute_lambda(const std::vector<El::BigFloat> &sample_points,
     El::Gemm(El::NORMAL, El::ADJOINT, El::BigFloat(1), V, U, roots_fit);
   }
 
-  for(size_t zero_index(0); zero_index != zero_vector.size(); ++zero_index)
+  for(size_t zero_index(0); zero_index != zero_values.size(); ++zero_index)
     {
       //  V_{j,\tau} from Eq. (A.15)
       El::Matrix<El::BigFloat> Lambda(num_rows, num_rows);
@@ -141,14 +146,14 @@ inline void compute_lambda(const std::vector<El::BigFloat> &sample_points,
                    "Eigenvalues were not sorted by El::HermitianEig()!");
       if(max_eigenvalue < 0)
         {
-          PRINT_WARNING("block_", global_block_index,
-                        ": x=", zero_vector.at(zero_index),
+          PRINT_WARNING("block_", pvm_info.block_index,
+                        ": x=", zero_values.at(zero_index),
                         ": negative max_eigenvalue=", max_eigenvalue,
                         " for Lambda matrix will be replaced with 0.");
           max_eigenvalue = 0;
         }
       {
-        zeros.emplace_back(zero_vector[zero_index]);
+        zeros.emplace_back(zero_values[zero_index]);
         auto &lambda(zeros.back().lambda);
         // lambdas = eigenvectors * sqrt(eigenvalues)
         // lambdas = v_{j,\tau} from Eq. (A.8)
@@ -173,8 +178,8 @@ inline void compute_lambda(const std::vector<El::BigFloat> &sample_points,
         // if one adds reducedPrefactor != prefactor to PMP.json
         // NB: this is different from Python script and from (A.8) definition!
         lambda *= 1
-                  / El::Sqrt(to_BigFloat(
-                    prefactor.evaluate(to_Boost_Float(zeros.back().zero))));
+                  / El::Sqrt(to_BigFloat(pvm_info.reduced_prefactor.evaluate(
+                    to_Boost_Float(zeros.back().zero))));
       }
     }
   error = El::Sqrt(El::Dot(error_matrix, error_matrix));

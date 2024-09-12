@@ -36,11 +36,8 @@ compute_spectrum(const PMP_Info &pmp,
       if(need_lambda)
         {
           ASSERT(x.has_value());
-          compute_lambda(
-            pvm_info.sample_points, pvm_info.reduced_sample_scalings,
-            pvm_info.reduced_prefactor, pvm_info.dim, x->at(local_block_index),
-            zero_values, pvm_info.block_index, spectrum_block.zeros,
-            spectrum_blocks.at(local_block_index).error, timers);
+          compute_lambda(pvm_info, x->at(local_block_index), zero_values,
+                         spectrum_block, timers);
         }
       else
         {
