@@ -138,6 +138,7 @@ namespace
                 {"--threshold", "1e-10"},
                 {"--output", (output_dir / "spectrum.json").string()},
                 {"--precision", std::to_string(precision)},
+                {"--verbosity", "debug"},
               };
               runner.create_nested("spectrum")
                 .mpi_run({"build/spectrum"}, args, num_procs);

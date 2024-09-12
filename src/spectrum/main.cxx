@@ -11,24 +11,29 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
                       fs::path &c_minus_By_path, fs::path &output_path,
                       bool &need_lambda, Verbosity &verbosity);
 
-PMP_Info read_pmp_info(const std::filesystem::path &input_path);
+PMP_Info
+read_pmp_info(const std::filesystem::path &input_path, Timers &timers);
 
 std::vector<El::Matrix<El::BigFloat>>
 read_c_minus_By(const std::filesystem::path &input_path,
-                const PMP_Info &pmp_info);
+                const PMP_Info &pmp_info, Timers &timers);
 
 std::vector<El::Matrix<El::BigFloat>>
-read_x(const fs::path &solution_path, const PMP_Info &pmp_info);
+read_x(const fs::path &solution_path, const PMP_Info &pmp_info,
+       Timers &timers);
 
 std::vector<Zeros>
 compute_spectrum(const PMP_Info &pmp_info,
                  const std::vector<El::Matrix<El::BigFloat>> &c_minus_By,
                  const std::optional<std::vector<El::Matrix<El::BigFloat>>> &x,
-                 const El::BigFloat &threshold, const bool &need_lambda);
+                 const El::BigFloat &threshold, const bool &need_lambda,
+                 Timers &timers);
 
 void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
                     const std::vector<Zeros> &zeros_blocks,
-                    const PMP_Info &pmp_info);
+                    const PMP_Info &pmp_info, Timers &timers);
+
+void write_profiling(const fs::path &spectrum_output_path, Timers &timers);
 
 int main(int argc, char **argv)
 {
@@ -54,18 +59,23 @@ int main(int argc, char **argv)
 
       // TODO use timers, print profiling data for --verbosity=debug
       Timers timers(env, verbosity);
-      const auto pmp_info = read_pmp_info(pmp_info_path);
-      const size_t num_blocks = pmp_info.num_blocks;
+      const auto pmp_info = read_pmp_info(pmp_info_path, timers);
 
       std::optional<std::vector<El::Matrix<El::BigFloat>>> x;
       if(need_lambda)
-        x.emplace(read_x(solution_dir, pmp_info));
+        x.emplace(read_x(solution_dir, pmp_info, timers));
 
-      const auto c_minus_By = read_c_minus_By(c_minus_By_path, pmp_info);
-      const auto zeros_blocks
-        = compute_spectrum(pmp_info, c_minus_By, x, threshold, need_lambda);
+      const auto c_minus_By
+        = read_c_minus_By(c_minus_By_path, pmp_info, timers);
+      const auto zeros_blocks = compute_spectrum(
+        pmp_info, c_minus_By, x, threshold, need_lambda, timers);
 
-      write_spectrum(output_path, num_blocks, zeros_blocks, pmp_info);
+      write_spectrum(output_path, pmp_info.num_blocks, zeros_blocks, pmp_info,
+                     timers);
+
+      // Write profiling data
+      if(verbosity >= Verbosity::debug)
+        write_profiling(output_path, timers);
     }
   catch(std::exception &e)
     {

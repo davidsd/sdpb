@@ -283,6 +283,7 @@ def build(bld):
                         'src/spectrum/read_c_minus_By.cxx',
                         'src/spectrum/read_pmp_info.cxx',
                         'src/spectrum/read_x.cxx',
+                        'src/spectrum/write_profiling.cxx',
                         'src/spectrum/compute_spectrum/compute_spectrum.cxx',
                         'src/spectrum/compute_spectrum/find_zeros.cxx',
                         'src/spectrum/compute_spectrum/mpsolve.cxx',

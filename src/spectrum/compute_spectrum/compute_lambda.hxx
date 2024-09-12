@@ -3,6 +3,7 @@
 #include "spectrum/Zero.hxx"
 #include "sdpb_util/Damped_Rational.hxx"
 #include "pmp/Polynomial_Power_Product.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 
 #include <optional>
 
@@ -15,8 +16,9 @@ compute_lambda(const std::vector<El::BigFloat> &sample_points,
                const El::Matrix<El::BigFloat> &x,
                const std::vector<El::BigFloat> &zero_vector,
                const size_t &global_block_index, std::vector<Zero> &zeros,
-               El::BigFloat &error)
+               El::BigFloat &error, Timers &timers)
 {
+  Scoped_Timer timer(timers, "compute_lambda");
   const size_t matrix_block_size(x.Height() / (num_rows * (num_rows + 1) / 2));
 
   // U_{j,k} in Eq. (A.11)
