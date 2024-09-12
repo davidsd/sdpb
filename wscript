@@ -4,7 +4,8 @@ import os, subprocess
 def options(opt):
     opt.load(['compiler_cxx', 'gnu_dirs'])
     opt.load(
-        ['cxx17', 'boost', 'gmpxx', 'mpfr', 'mpsolve', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'cblas', 'flint'],
+        ['cxx17', 'boost', 'gmpxx', 'mpfr', 'mpsolve', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'cblas',
+         'flint'],
         tooldir='./waf-tools')
 
 
@@ -272,6 +273,7 @@ def build(bld):
     bld.program(source=['src/spectrum/main.cxx',
                         'src/spectrum/handle_arguments.cxx',
                         'src/spectrum/read_c_minus_By.cxx',
+                        'src/spectrum/read_pmp_info.cxx',
                         'src/spectrum/read_x.cxx',
                         'src/spectrum/compute_spectrum/compute_spectrum.cxx',
                         'src/spectrum/compute_spectrum/find_zeros.cxx',
@@ -282,7 +284,7 @@ def build(bld):
                 cxxflags=default_flags,
                 defines=default_defines,
                 includes=default_includes,
-                use=use_packages + ['pmp_read', 'sdp_solve', 'pmp2sdp_lib', 'mesh', 'mpsolve']
+                use=use_packages + ['mpsolve']
                 )
 
     bld.program(source=['external/catch2/catch_amalgamated.cpp',

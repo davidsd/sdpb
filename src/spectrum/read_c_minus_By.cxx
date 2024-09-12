@@ -1,3 +1,4 @@
+#include "pmp/PMP_Info.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/json/Abstract_Json_Object_Parser.hxx"
 #include "sdpb_util/json/Json_Float_Parser.hxx"
@@ -59,17 +60,18 @@ public:
 
 std::vector<El::Matrix<El::BigFloat>>
 read_c_minus_By(const std::filesystem::path &input_path,
-                const std::vector<size_t> &block_indices)
+                const PMP_Info &pmp_info)
 {
   std::vector<El::Matrix<El::BigFloat>> c_minus_By_blocks;
   {
-    std::set<size_t> block_indices_set(block_indices.begin(),
-                                       block_indices.end());
+    std::set<size_t> block_indices;
+    for(const auto &block : pmp_info.blocks)
+      block_indices.emplace(block.block_index);
 
-    const auto should_skip_block =
-      [&block_indices_set](const size_t global_index) {
-        return block_indices_set.find(global_index) == block_indices_set.end();
-      };
+    const auto should_skip_block
+      = [&block_indices](const size_t global_index) {
+          return block_indices.find(global_index) == block_indices.end();
+        };
     const auto on_parsed = [&c_minus_By_blocks](auto &&result) {
       c_minus_By_blocks = std::forward<decltype(result)>(result);
     };

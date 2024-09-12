@@ -138,7 +138,7 @@ namespace
           if(exists(data_output_dir / "spectrum.json"))
             {
               Named_Args_Map args{
-                {"--input", pmp_path.string()},
+                {"--pmpInfo", sdp_path + "/pmp_info.json"},
                 {"--solution", (output_dir / "out").string()},
                 {"--threshold", "1e-10"},
                 {"--output", (output_dir / "spectrum.json").string()},
@@ -236,7 +236,8 @@ TEST_CASE("end-to-end_tests")
     INFO("maximize (-y) s.t. (1 + x^4 + y * (x^4 / 12 + x^2)) >= 0) for "
          "x=2/3, x=4/3, and x>=2");
     INFO("SDPB should find primal-dual optimal solution.");
-    INFO("Spectrum should find isolated zero for the last block (corresponding to x=4/3).");
+    INFO("Spectrum should find isolated zero for the last block "
+         "(corresponding to x=4/3).");
     End_To_End_Test test("1d-isolated-zeros");
     test.default_sdpb_args
       = "--checkpointInterval 3600 --maxRuntime 1340 "

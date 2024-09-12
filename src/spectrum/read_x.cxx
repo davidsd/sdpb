@@ -1,23 +1,20 @@
-#include "pmp_read/pmp_read.hxx"
-#include "sdp_solve/sdp_solve.hxx"
-#include "pmp2sdp/write_sdp.hxx"
+#include "pmp/PMP_Info.hxx"
+#include "sdp_solve/read_text_block.hxx"
 
 namespace fs = std::filesystem;
 
 std::vector<El::Matrix<El::BigFloat>>
-read_x(const fs::path &solution_path,
-       const std::vector<Polynomial_Vector_Matrix> &matrices,
-       const std::vector<size_t> &block_indices)
+read_x(const fs::path &solution_path, const PMP_Info &pmp)
 {
   std::vector<El::Matrix<El::BigFloat>> result;
-  result.reserve(matrices.size());
-  for(size_t i = 0; i < matrices.size(); ++i)
+  result.reserve(pmp.blocks.size());
+  for(auto &block : pmp.blocks)
     {
-      const auto block_index = block_indices.at(i);
-      const auto &m = matrices.at(i);
-      result.emplace_back(m.sample_points.size() * m.polynomials.Width() * (m.polynomials.Height() + 1) / 2,
-                          1);
-      read_text_block(result.back(), solution_path, "x_", block_index);
+      const auto height = block.dim;
+      const auto width = height;
+      result.emplace_back(
+        block.sample_points.size() * width * (height + 1) / 2, 1);
+      read_text_block(result.back(), solution_path, "x_", block.block_index);
     }
   return result;
 }
