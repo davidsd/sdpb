@@ -30,7 +30,8 @@ def build(bld):
     use_packages = external_packages + ['sdpb_util']
     default_includes = ['src', 'external']
 
-    bld.stlib(source=['src/sdpb_util/Boost_Float.cxx',
+    bld.stlib(source=['src/sdpb_util/Archive_Reader.cxx',
+                      'src/sdpb_util/Boost_Float.cxx',
                       'src/sdpb_util/copy_matrix.cxx',
                       'src/sdpb_util/Environment.cxx',
                       'src/sdpb_util/memory_estimates.cxx',
@@ -48,8 +49,6 @@ def build(bld):
     sdp_solve_sources = ['src/sdp_solve/Solver_Parameters/Solver_Parameters.cxx',
                          'src/sdp_solve/Solver_Parameters/ostream.cxx',
                          'src/sdp_solve/Solver_Parameters/to_property_tree.cxx',
-                         'src/sdp_solve/Archive_Reader/Archive_Reader.cxx',
-                         'src/sdp_solve/Archive_Reader/underflow.cxx',
                          'src/sdp_solve/Block_Info/Block_Info.cxx',
                          'src/sdp_solve/Block_Info/read_block_info.cxx',
                          'src/sdp_solve/Block_Info/read_block_costs.cxx',

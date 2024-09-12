@@ -1,5 +1,5 @@
 #include "sdp_solve/Block_Info.hxx"
-#include "sdp_solve/Archive_Reader.hxx"
+#include "sdpb_util/Archive_Reader.hxx"
 #include "pmp2sdp/write_sdp.hxx"
 #include "sdpb_util/assert.hxx"
 
