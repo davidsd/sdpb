@@ -116,14 +116,18 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
   ASSERT(fs::exists(c_minus_By_path), DEBUG_STRING(c_minus_By_path));
   ASSERT(fs::is_regular_file(c_minus_By_path), DEBUG_STRING(c_minus_By_path));
 
-  // TODO allow to read pmp_info.json from sdp.zip archive
-  ASSERT(fs::exists(pmp_info_path),
-         "--pmpInfo file does not exist: ", pmp_info_path);
+  ASSERT(
+    // pmp_info.json is a regular file in sdp directory:
+    fs::exists(pmp_info_path)
+      // or pmp_info.json is inside sdp.zip archive:
+      || (fs::exists(pmp_info_path.parent_path())
+          && !fs::is_directory(pmp_info_path.parent_path())),
+    "--pmpInfo file does not exist: ", pmp_info_path);
   ASSERT(!fs::is_directory(pmp_info_path),
          "--pmpInfo path is a directory, not a file: ", pmp_info_path);
 
   ASSERT(fs::exists(solution_dir),
-         "Solution file does not exist: ", solution_dir);
+         "Solution directory does not exist: ", solution_dir);
 
   ASSERT(output_path != ".", "Output file is a directory: ", output_path);
   ASSERT(!(fs::exists(output_path) && fs::is_directory(output_path)),
