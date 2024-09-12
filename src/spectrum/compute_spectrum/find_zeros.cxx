@@ -1,7 +1,7 @@
-#include "pmp/Polynomial_Vector_Matrix.hxx"
+#include "interpolate.hxx"
+#include "pmp/PMP_Info.hxx"
 #include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/assert.hxx"
-#include "interpolate.hxx"
 
 #include <El.hpp>
 
@@ -20,12 +20,10 @@ namespace
   // - divide (c-B.y)_{j,r,s,k} by reduced_prefactor_j(x_k) * pv_j_r(x_k) * pv_j_s(x_k)
   // - for each {j,r,s}, build interpolating polynomial p_{j,r,s}(x), degree = (num_points - 1)
   Simple_Matrix<Boost_Polynomial> get_interpolated_polynomial_matrix(
-    const El::Matrix<El::BigFloat> &c_minus_By_block,
-    const Polynomial_Vector_Matrix &pvm)
+    const El::Matrix<El::BigFloat> &c_minus_By_block, const PVM_Info &pvm)
   {
-    const int height = pvm.polynomials.Height();
-    const int width = pvm.polynomials.Width();
-    ASSERT_EQUAL(height, width);
+    const auto height = pvm.dim;
+    const auto width = height;
     const size_t num_points = pvm.sample_points.size();
 
     Simple_Matrix<Boost_Polynomial> interpolation_matrix(height, width);
@@ -195,7 +193,7 @@ namespace
 
 std::vector<El::BigFloat>
 find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
-           const Polynomial_Vector_Matrix &pvm, const El::BigFloat &threshold)
+           const PVM_Info &pvm, const El::BigFloat &threshold)
 {
   ASSERT(threshold > 0, DEBUG_STRING(threshold));
 

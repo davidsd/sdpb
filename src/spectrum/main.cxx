@@ -1,6 +1,5 @@
 #include "Zeros.hxx"
-#include "pmp2sdp/write_sdp.hxx"
-#include "pmp_read/pmp_read.hxx"
+#include "pmp/PMP_Info.hxx"
 #include "sdp_solve/sdp_solve.hxx"
 
 #include <filesystem>
@@ -8,28 +7,28 @@
 namespace fs = std::filesystem;
 
 void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
-                      fs::path &input_path, fs::path &solution_path,
-                      fs::path &output_path, bool &need_lambda,
-                      Verbosity &verbosity);
+                      fs::path &pmp_info_path, fs::path &solution_dir,
+                      fs::path &c_minus_By_path, fs::path &output_path,
+                      bool &need_lambda, Verbosity &verbosity);
+
+PMP_Info read_pmp_info(const std::filesystem::path &input_path);
 
 std::vector<El::Matrix<El::BigFloat>>
 read_c_minus_By(const std::filesystem::path &input_path,
-                const std::vector<size_t> &block_indices);
+                const PMP_Info &pmp_info);
 
 std::vector<El::Matrix<El::BigFloat>>
-read_x(const fs::path &solution_path,
-       const std::vector<Polynomial_Vector_Matrix> &matrices,
-       const std::vector<size_t> &block_indices);
+read_x(const fs::path &solution_path, const PMP_Info &pmp_info);
 
 std::vector<Zeros>
-compute_spectrum(const Polynomial_Matrix_Program &pmp,
+compute_spectrum(const PMP_Info &pmp_info,
                  const std::vector<El::Matrix<El::BigFloat>> &c_minus_By,
                  const std::optional<std::vector<El::Matrix<El::BigFloat>>> &x,
                  const El::BigFloat &threshold, const bool &need_lambda);
 
 void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
                     const std::vector<Zeros> &zeros_blocks,
-                    const std::vector<size_t> &block_indices);
+                    const PMP_Info &pmp_info);
 
 int main(int argc, char **argv)
 {
@@ -38,11 +37,11 @@ int main(int argc, char **argv)
   try
     {
       El::BigFloat threshold;
-      fs::path input_path, solution_dir, output_path;
+      fs::path pmp_info_path, solution_dir, output_path, c_minus_By_path;
       bool need_lambda;
       Verbosity verbosity;
-      handle_arguments(argc, argv, threshold, input_path, solution_dir,
-                       output_path, need_lambda, verbosity);
+      handle_arguments(argc, argv, threshold, pmp_info_path, solution_dir,
+                       c_minus_By_path, output_path, need_lambda, verbosity);
 
       // Print command line
       if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
@@ -53,23 +52,20 @@ int main(int argc, char **argv)
           std::cout << std::endl;
         }
 
+      // TODO use timers, print profiling data for --verbosity=debug
       Timers timers(env, verbosity);
-      // TODO read sdp/pmp_info.json instead of whole PMP
-      const auto pmp
-        = read_polynomial_matrix_program(env, input_path, verbosity, timers);
-      const size_t num_blocks = pmp.num_matrices;
-      const auto &block_indices = pmp.matrix_index_local_to_global;
+      const auto pmp_info = read_pmp_info(pmp_info_path);
+      const size_t num_blocks = pmp_info.num_blocks;
 
       std::optional<std::vector<El::Matrix<El::BigFloat>>> x;
       if(need_lambda)
-        x.emplace(read_x(solution_dir, pmp.matrices, block_indices));
+        x.emplace(read_x(solution_dir, pmp_info));
 
-      const auto c_minus_By = read_c_minus_By(
-        solution_dir / "c_minus_By" / "c_minus_By.json", block_indices);
+      const auto c_minus_By = read_c_minus_By(c_minus_By_path, pmp_info);
       const auto zeros_blocks
-        = compute_spectrum(pmp, c_minus_By, x, threshold, need_lambda);
+        = compute_spectrum(pmp_info, c_minus_By, x, threshold, need_lambda);
 
-      write_spectrum(output_path, num_blocks, zeros_blocks, block_indices);
+      write_spectrum(output_path, num_blocks, zeros_blocks, pmp_info);
     }
   catch(std::exception &e)
     {

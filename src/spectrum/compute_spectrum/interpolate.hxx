@@ -1,5 +1,6 @@
 #pragma once
 
+#include "pmp/Polynomial.hxx"
 #include "sdpb_util/Boost_Float.hxx"
 
 #include <El.hpp>
