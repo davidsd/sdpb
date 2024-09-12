@@ -1,11 +1,13 @@
 #include "pmp/PMP_Info.hxx"
 #include "sdp_solve/read_text_block.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 
 namespace fs = std::filesystem;
 
 std::vector<El::Matrix<El::BigFloat>>
-read_x(const fs::path &solution_path, const PMP_Info &pmp)
+read_x(const fs::path &solution_path, const PMP_Info &pmp, Timers &timers)
 {
+  Scoped_Timer timer(timers, "read_x");
   std::vector<El::Matrix<El::BigFloat>> result;
   result.reserve(pmp.blocks.size());
   for(auto &block : pmp.blocks)

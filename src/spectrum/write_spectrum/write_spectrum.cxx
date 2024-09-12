@@ -1,5 +1,6 @@
 #include "pmp/PMP_Info.hxx"
 #include "sdpb_util/assert.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 #include "spectrum/Zeros.hxx"
 
 #include <filesystem>
@@ -7,7 +8,7 @@
 namespace fs = std::filesystem;
 
 void write_file(const fs::path &output_path,
-                const std::vector<Zeros> &zeros_blocks);
+                const std::vector<Zeros> &zeros_blocks, Timers &timers);
 
 namespace
 {
@@ -104,42 +105,46 @@ namespace
 
 void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
                     const std::vector<Zeros> &zeros_blocks,
-                    const PMP_Info &pmp_info)
+                    const PMP_Info &pmp_info, Timers &timers)
 {
+  Scoped_Timer timer(timers, "write_spectrum");
   if(El::mpi::Size() == 1)
     {
-      write_file(output_path, zeros_blocks);
+      write_file(output_path, zeros_blocks, timers);
       return;
     }
 
   // Synchronize zeros
-  const int rank = El::mpi::Rank();
-
-  ASSERT_EQUAL(pmp_info.blocks.size(), zeros_blocks.size());
-
-  std::vector<int> block_ranks(num_blocks, -1);
-  std::map<size_t, size_t> block_index_global_to_local;
   std::vector<Zeros> zeros_all_blocks(num_blocks);
+  {
+    Scoped_Timer sync_timer(timers, "synchronize");
+    const int rank = El::mpi::Rank();
 
-  for(size_t local_index = 0; local_index < pmp_info.blocks.size();
-      ++local_index)
-    {
-      const auto block_index = pmp_info.blocks.at(local_index).block_index;
-      block_ranks.at(block_index) = rank;
-      block_index_global_to_local.emplace(block_index, local_index);
-      zeros_all_blocks.at(block_index) = zeros_blocks.at(local_index);
-    }
-  El::mpi::AllReduce(block_ranks.data(), block_ranks.size(), El::mpi::MAX,
-                     El::mpi::COMM_WORLD);
+    ASSERT_EQUAL(pmp_info.blocks.size(), zeros_blocks.size());
 
-  for(size_t block_index = 0; block_index < num_blocks; ++block_index)
-    {
-      const int block_rank = block_ranks.at(block_index);
-      ASSERT(block_rank >= 0, DEBUG_STRING(block_index));
-      ASSERT(block_rank < El::mpi::Size(), DEBUG_STRING(block_index));
+    std::vector<int> block_ranks(num_blocks, -1);
+    std::map<size_t, size_t> block_index_global_to_local;
 
-      auto &zeros_block = zeros_all_blocks.at(block_index);
-      synchronize_zeros_block(zeros_block, block_rank);
-    }
-  write_file(output_path, zeros_all_blocks);
+    for(size_t local_index = 0; local_index < pmp_info.blocks.size();
+        ++local_index)
+      {
+        const auto block_index = pmp_info.blocks.at(local_index).block_index;
+        block_ranks.at(block_index) = rank;
+        block_index_global_to_local.emplace(block_index, local_index);
+        zeros_all_blocks.at(block_index) = zeros_blocks.at(local_index);
+      }
+    El::mpi::AllReduce(block_ranks.data(), block_ranks.size(), El::mpi::MAX,
+                       El::mpi::COMM_WORLD);
+
+    for(size_t block_index = 0; block_index < num_blocks; ++block_index)
+      {
+        const int block_rank = block_ranks.at(block_index);
+        ASSERT(block_rank >= 0, DEBUG_STRING(block_index));
+        ASSERT(block_rank < El::mpi::Size(), DEBUG_STRING(block_index));
+
+        auto &zeros_block = zeros_all_blocks.at(block_index);
+        synchronize_zeros_block(zeros_block, block_rank);
+      }
+  }
+  write_file(output_path, zeros_all_blocks, timers);
 }

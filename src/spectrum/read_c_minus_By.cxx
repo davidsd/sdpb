@@ -1,5 +1,6 @@
 #include "pmp/PMP_Info.hxx"
 #include "sdpb_util/assert.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 #include "sdpb_util/json/Abstract_Json_Object_Parser.hxx"
 #include "sdpb_util/json/Json_Float_Parser.hxx"
 #include "sdpb_util/json/Json_Vector_Parser.hxx"
@@ -60,8 +61,9 @@ public:
 
 std::vector<El::Matrix<El::BigFloat>>
 read_c_minus_By(const std::filesystem::path &input_path,
-                const PMP_Info &pmp_info)
+                const PMP_Info &pmp_info, Timers &timers)
 {
+  Scoped_Timer timer(timers, "read_c_minus_By");
   std::vector<El::Matrix<El::BigFloat>> c_minus_By_blocks;
   {
     std::set<size_t> block_indices;

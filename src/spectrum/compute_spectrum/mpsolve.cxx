@@ -1,6 +1,7 @@
 #include "pmp/Polynomial.hxx"
 #include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/assert.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 
 #include <El.hpp>
 #include <vector>
@@ -20,7 +21,8 @@ struct MPSolve_Root
 };
 
 std::vector<MPSolve_Root>
-find_polynomial_roots(const std::vector<El::BigFloat> &polynomial_coeffs)
+find_polynomial_roots(const std::vector<El::BigFloat> &polynomial_coeffs,
+                      Timers &timers)
 {
   if(polynomial_coeffs.size() <= 1)
     return {};
@@ -53,7 +55,10 @@ find_polynomial_roots(const std::vector<El::BigFloat> &polynomial_coeffs)
   mps_context_set_input_poly(ctx, MPS_POLYNOMIAL(mps_poly));
   mps_context_set_output_goal(ctx, MPS_OUTPUT_GOAL_APPROXIMATE);
 
-  mps_mpsolve(ctx);
+  {
+    Scoped_Timer mpsolve_timer(timers, "mpsolve");
+    mps_mpsolve(ctx);
+  }
 
   mpc_t *mpc_roots = nullptr;
   rdpe_t *radii = nullptr;
@@ -98,10 +103,11 @@ find_polynomial_roots(const std::vector<El::BigFloat> &polynomial_coeffs)
 }
 
 std::vector<El::BigFloat>
-find_real_positive_roots_sorted(const Boost_Polynomial &polynomial)
+find_real_positive_roots_sorted(const Boost_Polynomial &polynomial,
+                                Timers &timers)
 {
   auto all_roots
-    = find_polynomial_roots(to_BigFloat_Vector(polynomial.data()));
+    = find_polynomial_roots(to_BigFloat_Vector(polynomial.data()), timers);
 
   std::vector<El::BigFloat> positive_roots;
 
@@ -132,12 +138,15 @@ find_real_positive_roots_sorted(const Boost_Polynomial &polynomial)
 }
 
 std::vector<El::BigFloat>
-find_real_positive_minima_sorted(const Boost_Polynomial &polynomial)
+find_real_positive_minima_sorted(const Boost_Polynomial &polynomial,
+                                 Timers &timers)
 {
+  Scoped_Timer timer(timers, "find_minima");
   std::vector<El::BigFloat> minima;
 
   // Roots of polynomial derivative
-  const auto deriv_roots = find_real_positive_roots_sorted(polynomial.prime());
+  const auto deriv_roots
+    = find_real_positive_roots_sorted(polynomial.prime(), timers);
   if(deriv_roots.empty())
     return minima;
 

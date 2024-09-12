@@ -1,5 +1,6 @@
 #include "pmp/PMP_Info.hxx"
 #include "sdpb_util/Archive_Reader.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 #include "sdpb_util/json/Abstract_Json_Object_Parser.hxx"
 #include "sdpb_util/json/Json_Damped_Rational_Parser.hxx"
 #include "sdpb_util/json/Json_Float_Parser.hxx"
@@ -91,8 +92,10 @@ public:
   void clear_result() override { result = PVM_Info(); }
 };
 
-PMP_Info read_pmp_info(const std::filesystem::path &input_path)
+PMP_Info read_pmp_info(const std::filesystem::path &input_path, Timers &timers)
 {
+  Scoped_Timer timer(timers, "read_pmp_info");
+
   Vector_Parse_Result_With_Skip<PVM_Info> parse_result;
 
   const bool skip = false;
