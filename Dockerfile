@@ -30,8 +30,12 @@ FROM vasdommes/flint:main as flint
 FROM bootstrapcollaboration/elemental:master AS build
 
 RUN apk add \
+    autoconf \
+    automake \
     binutils \
+    byacc \
     cmake \
+    flex \
     g++ \
     git \
     make \
@@ -40,6 +44,7 @@ RUN apk add \
     boost-dev \
     gmp-dev \
     libarchive-dev \
+    libtool \
     libxml2-dev \
     mpfr-dev \
     openblas-dev \
@@ -51,6 +56,16 @@ WORKDIR /usr/local/src/sdpb
 COPY --from=flint /usr/local /usr/local
 COPY --from=flint /usr/local/lib /usr/local/lib
 COPY --from=flint /usr/local/include /usr/local/include
+
+# Build MPSolve (takes ~1 minute)
+# TODO: create separate MPSolve image?
+RUN git clone https://github.com/robol/MPSolve.git && \
+    cd MPSolve && \
+    ./autogen.sh && \
+    CC=mpicc CXX=mpicxx ./configure --disable-examples --disable-ui --disable-graphical-debugger --disable-documentation && \
+    make && \
+    make install
+
 # Build SDPB from current sources, print build/config.log in configuration failed
 COPY . .
 RUN (./waf configure --elemental-dir=/usr/local --flint-dir=/usr/local --prefix=/usr/local \
