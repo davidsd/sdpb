@@ -40,13 +40,7 @@ SDPB requires
 
 - [FLINT](https://github.com/flintlib/flint) (2.8.0 or later)
 
-SDPB has only been tested on Linux (Debian buster and Centos 7).  On
-Centos 7, the system compiler (gcc 4.8.5) is too old to support
-C++ 17. So you will have to install a newer compiler and Boost. The
-system versions of GMP, MPFR, and libxml2 have been tested to work.
-
-In principle, SDPB should be installable on Mac OS X using a package
-manager such as [Homebrew](https://brew.sh).
+SDPB has been tested on Linux and Mac OS.
 
 # Installation
 
