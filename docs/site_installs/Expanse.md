@@ -93,6 +93,14 @@ The flag `--disable-gmp-internals` is required to prevent `mpn_gcd_11 not found`
     make -j 64 && make install
     cd ..
 
+## MPSolve
+    wget https://numpi.dm.unipi.it/_media/software/mpsolve/mpsolve-3.2.1.tar.bz2
+    tar -jxf mpsolve-3.2.1.tar.bz2
+    cd mpsolve-3.2.1
+    CC=mpicc CXX=mpicxx ./configure --prefix=$HOME/install
+    make && make install
+    cd ..
+
 ## RapidJSON
 
     git clone https://github.com/Tencent/rapidjson.git
