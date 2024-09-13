@@ -30,12 +30,8 @@ FROM vasdommes/flint:main as flint
 FROM bootstrapcollaboration/elemental:master AS build
 
 RUN apk add \
-    autoconf \
-    automake \
     binutils \
-    byacc \
     cmake \
-    flex \
     g++ \
     git \
     make \
@@ -44,7 +40,6 @@ RUN apk add \
     boost-dev \
     gmp-dev \
     libarchive-dev \
-    libtool \
     libxml2-dev \
     mpfr-dev \
     openblas-dev \
@@ -59,9 +54,9 @@ COPY --from=flint /usr/local/include /usr/local/include
 
 # Build MPSolve (takes ~1 minute)
 # TODO: create separate MPSolve image?
-RUN git clone https://github.com/robol/MPSolve.git && \
-    cd MPSolve && \
-    ./autogen.sh && \
+RUN wget https://numpi.dm.unipi.it/_media/software/mpsolve/mpsolve-3.2.1.tar.bz2 && \
+    tar -jxf mpsolve-3.2.1.tar.bz2 && \
+    cd mpsolve-3.2.1  && \
     CC=mpicc CXX=mpicxx ./configure --disable-examples --disable-ui --disable-graphical-debugger --disable-documentation && \
     make && \
     make install
