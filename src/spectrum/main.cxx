@@ -29,7 +29,7 @@ compute_spectrum(const PMP_Info &pmp_info,
                  const El::BigFloat &threshold, const bool &need_lambda,
                  Timers &timers);
 
-void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
+void write_spectrum(const fs::path &output_path,
                     const std::vector<Zeros> &zeros_blocks,
                     const PMP_Info &pmp_info, Timers &timers);
 
@@ -71,8 +71,7 @@ int main(int argc, char **argv)
       const auto zeros_blocks = compute_spectrum(
         pmp_info, c_minus_By, x, threshold, need_lambda, timers);
 
-      write_spectrum(output_path, pmp_info.num_blocks, zeros_blocks, pmp_info,
-                     timers);
+      write_spectrum(output_path, zeros_blocks, pmp_info, timers);
 
       // Write profiling data
       if(verbosity >= Verbosity::debug)
