@@ -82,7 +82,15 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
     }
   po::notify(variables_map);
 
-  // Print warnings
+  // Set parameters
+  {
+    Environment::set_precision(precision);
+    threshold = El::BigFloat(threshold_string);
+    if(c_minus_By_path.empty())
+      c_minus_By_path = solution_dir / "c_minus_By" / "c_minus_By.json";
+  }
+
+  // Asserts and warnings
   if(El::mpi::Rank() == 0)
     {
       if(variables_map.count("format") != 0)
@@ -95,45 +103,42 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
           PRINT_WARNING(
             "--meshThreshold option is obsolete and will be ignored");
         }
+
+      if(variables_map.count("solution") == 0)
+        {
+          ASSERT(need_lambda == false,
+                 "--solution must be specified unless --lambda=false");
+          ASSERT(variables_map.count("cMinusBy") != 0,
+                 "Please specify either --solution or --cMinusBy");
+        }
+
+      if(variables_map.count("cMinusBy") == 0 || need_lambda)
+        {
+          ASSERT(fs::exists(solution_dir),
+                 "--solution directory does not exist: ", solution_dir);
+          ASSERT(fs::is_directory(solution_dir),
+                 "--solution is not a directory: ", solution_dir);
+        }
+
+      ASSERT(fs::exists(c_minus_By_path), DEBUG_STRING(c_minus_By_path));
+      ASSERT(fs::is_regular_file(c_minus_By_path),
+             DEBUG_STRING(c_minus_By_path));
+
+      ASSERT(
+        // pmp_info.json is a regular file in sdp directory:
+        fs::exists(pmp_info_path)
+          // or pmp_info.json is inside sdp.zip archive:
+          || (fs::exists(pmp_info_path.parent_path())
+              && !fs::is_directory(pmp_info_path.parent_path())),
+        "--pmpInfo file does not exist: ", pmp_info_path);
+      ASSERT(!fs::is_directory(pmp_info_path),
+             "--pmpInfo path is a directory, not a file: ", pmp_info_path);
+
+      ASSERT(output_path != ".", "Output file is a directory: ", output_path);
+      ASSERT(!(fs::exists(output_path) && fs::is_directory(output_path)),
+             "Output file exists and is a directory: ", output_path);
     }
-  if(variables_map.count("solution") == 0)
-    {
-      ASSERT(variables_map.count("cMinusBy") != 0);
-    }
 
-  if(c_minus_By_path.empty() || need_lambda)
-    {
-      ASSERT(fs::exists(solution_dir),
-             "--solution directory does not exist: ", solution_dir);
-      ASSERT(fs::is_directory(solution_dir),
-             "--solution is not a directory: ", solution_dir);
-    }
-  if(c_minus_By_path.empty())
-    {
-      c_minus_By_path = solution_dir / "c_minus_By" / "c_minus_By.json";
-    }
-
-  ASSERT(fs::exists(c_minus_By_path), DEBUG_STRING(c_minus_By_path));
-  ASSERT(fs::is_regular_file(c_minus_By_path), DEBUG_STRING(c_minus_By_path));
-
-  ASSERT(
-    // pmp_info.json is a regular file in sdp directory:
-    fs::exists(pmp_info_path)
-      // or pmp_info.json is inside sdp.zip archive:
-      || (fs::exists(pmp_info_path.parent_path())
-          && !fs::is_directory(pmp_info_path.parent_path())),
-    "--pmpInfo file does not exist: ", pmp_info_path);
-  ASSERT(!fs::is_directory(pmp_info_path),
-         "--pmpInfo path is a directory, not a file: ", pmp_info_path);
-
-  ASSERT(fs::exists(solution_dir),
-         "Solution directory does not exist: ", solution_dir);
-
-  ASSERT(output_path != ".", "Output file is a directory: ", output_path);
-  ASSERT(!(fs::exists(output_path) && fs::is_directory(output_path)),
-         "Output file exists and is a directory: ", output_path);
-
-  Environment::set_precision(precision);
-
-  threshold = El::BigFloat(threshold_string);
+  // Wait for checks performed at rank=0
+  El::mpi::Barrier();
 }
