@@ -103,7 +103,7 @@ namespace
   }
 }
 
-void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
+void write_spectrum(const fs::path &output_path,
                     const std::vector<Zeros> &zeros_blocks,
                     const PMP_Info &pmp_info, Timers &timers)
 {
@@ -114,6 +114,8 @@ void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
       return;
     }
 
+  const size_t num_blocks = pmp_info.num_blocks;
+
   // Synchronize zeros
   std::vector<Zeros> zeros_all_blocks(num_blocks);
   {
@@ -123,14 +125,12 @@ void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
     ASSERT_EQUAL(pmp_info.blocks.size(), zeros_blocks.size());
 
     std::vector<int> block_ranks(num_blocks, -1);
-    std::map<size_t, size_t> block_index_global_to_local;
 
     for(size_t local_index = 0; local_index < pmp_info.blocks.size();
         ++local_index)
       {
         const auto block_index = pmp_info.blocks.at(local_index).block_index;
         block_ranks.at(block_index) = rank;
-        block_index_global_to_local.emplace(block_index, local_index);
         zeros_all_blocks.at(block_index) = zeros_blocks.at(local_index);
       }
     El::mpi::AllReduce(block_ranks.data(), block_ranks.size(), El::mpi::MAX,
