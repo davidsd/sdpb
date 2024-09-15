@@ -52,6 +52,12 @@ find_polynomial_roots(const std::vector<El::BigFloat> &polynomial_coeffs,
   }
   ASSERT_EQUAL(mps_monomial_poly_get_precision(ctx, mps_poly), prec);
 
+  // Disable threading.
+  // TODO the function is not public:
+  // mps_thread_pool_set_concurrency_limit (ctx, NULL, 1);
+  // So we have to set thread_safe = false as a workaround.
+  // NB: Threads are still created in thread pool when context is created.
+  MPS_POLYNOMIAL (mps_poly)->thread_safe = false;
   mps_context_set_input_poly(ctx, MPS_POLYNOMIAL(mps_poly));
   mps_context_set_output_goal(ctx, MPS_OUTPUT_GOAL_APPROXIMATE);
 
