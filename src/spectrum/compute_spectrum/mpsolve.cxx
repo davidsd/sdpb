@@ -36,7 +36,7 @@ find_polynomial_roots(const std::vector<El::BigFloat> &polynomial_coeffs,
   mps_context_set_input_prec(ctx, prec);
   mps_context_set_output_prec(ctx, prec);
 
-  mps_monomial_poly *mps_poly_prime = mps_monomial_poly_new(ctx, degree);
+  mps_monomial_poly *mps_poly = mps_monomial_poly_new(ctx, degree);
   {
     El::BigFloat zero(0);
     mpc_t coeff;
@@ -46,13 +46,13 @@ find_polynomial_roots(const std::vector<El::BigFloat> &polynomial_coeffs,
         mpf_set(mpc_Re(coeff), polynomial_coeffs.at(i).gmp_float.get_mpf_t());
         mpf_set(mpc_Im(coeff), zero.gmp_float.get_mpf_t());
 
-        mps_monomial_poly_set_coefficient_f(ctx, mps_poly_prime, i, coeff);
+        mps_monomial_poly_set_coefficient_f(ctx, mps_poly, i, coeff);
       }
     mpc_clear(coeff);
   }
-  ASSERT_EQUAL(mps_monomial_poly_get_precision(ctx, mps_poly_prime), prec);
+  ASSERT_EQUAL(mps_monomial_poly_get_precision(ctx, mps_poly), prec);
 
-  mps_context_set_input_poly(ctx, MPS_POLYNOMIAL(mps_poly_prime));
+  mps_context_set_input_poly(ctx, MPS_POLYNOMIAL(mps_poly));
   mps_context_set_output_goal(ctx, MPS_OUTPUT_GOAL_APPROXIMATE);
 
   {
@@ -93,7 +93,7 @@ find_polynomial_roots(const std::vector<El::BigFloat> &polynomial_coeffs,
 
   mpc_vfree(mpc_roots);
   rdpe_vfree(radii);
-  mps_monomial_poly_free(ctx, MPS_POLYNOMIAL(mps_poly_prime));
+  mps_monomial_poly_free(ctx, MPS_POLYNOMIAL(mps_poly));
   mps_context_free(ctx);
 
   return result;
