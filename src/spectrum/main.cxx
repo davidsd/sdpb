@@ -27,7 +27,7 @@ compute_spectrum(const PMP_Info &pmp_info,
                  const std::vector<El::Matrix<El::BigFloat>> &c_minus_By,
                  const std::optional<std::vector<El::Matrix<El::BigFloat>>> &x,
                  const El::BigFloat &threshold, const bool &need_lambda,
-                 Timers &timers);
+                 const Verbosity &verbosity, Timers &timers);
 
 void write_spectrum(const fs::path &output_path,
                     const std::vector<Zeros> &zeros_blocks,
@@ -69,7 +69,7 @@ int main(int argc, char **argv)
       const auto c_minus_By
         = read_c_minus_By(c_minus_By_path, pmp_info, timers);
       const auto zeros_blocks = compute_spectrum(
-        pmp_info, c_minus_By, x, threshold, need_lambda, timers);
+        pmp_info, c_minus_By, x, threshold, need_lambda, verbosity, timers);
 
       write_spectrum(output_path, zeros_blocks, pmp_info, timers);
 

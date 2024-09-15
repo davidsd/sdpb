@@ -14,7 +14,7 @@ compute_spectrum(const PMP_Info &pmp,
                  const std::vector<El::Matrix<El::BigFloat>> &c_minus_By,
                  const std::optional<std::vector<El::Matrix<El::BigFloat>>> &x,
                  const El::BigFloat &threshold, const bool &need_lambda,
-                 Timers &timers)
+                 const Verbosity &verbosity, Timers &timers)
 {
   Scoped_Timer timer(timers, "compute_spectrum");
   std::vector<Zeros> spectrum_blocks(pmp.blocks.size());
@@ -45,6 +45,13 @@ compute_spectrum(const PMP_Info &pmp,
             {
               spectrum_block.zeros.emplace_back(zero_value);
             }
+        }
+      if(verbosity >= Verbosity::trace)
+        {
+          El::Output("Finished block_", block_index, ": dim=", pvm_info.dim,
+                     " num_points=", pvm_info.sample_points.size(),
+                     " time=", block_timer.elapsed_milliseconds() / 1000.0,
+                     "s");
         }
     }
   return spectrum_blocks;
