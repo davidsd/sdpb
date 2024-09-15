@@ -48,10 +48,11 @@ compute_spectrum(const PMP_Info &pmp,
         }
       if(verbosity >= Verbosity::trace)
         {
+          double time = block_timer.elapsed_milliseconds() / 1000.0;
           El::Output("Finished block_", block_index, ": dim=", pvm_info.dim,
                      " num_points=", pvm_info.sample_points.size(),
-                     " time=", block_timer.elapsed_milliseconds() / 1000.0,
-                     "s");
+                     " num_zeros=", spectrum_block.zeros.size(),
+                     " time=", time, "s");
         }
     }
   return spectrum_blocks;
