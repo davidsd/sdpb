@@ -27,12 +27,15 @@ compute_spectrum(const PMP_Info &pmp_info,
                  const std::vector<El::Matrix<El::BigFloat>> &c_minus_By,
                  const std::optional<std::vector<El::Matrix<El::BigFloat>>> &x,
                  const El::BigFloat &threshold, const bool &need_lambda,
-                 const Verbosity &verbosity, Timers &timers);
+                 const Verbosity &verbosity,
+                 const std::filesystem::path &spectrum_output_path,
+                 Timers &timers);
 
 void write_spectrum(const fs::path &output_path,
                     const std::vector<Zeros> &zeros_blocks,
                     const PMP_Info &pmp_info, Timers &timers);
 
+void create_profiling_dir(const fs::path &spectrum_output_path);
 void write_profiling(const fs::path &spectrum_output_path, Timers &timers);
 
 int main(int argc, char **argv)
@@ -68,8 +71,13 @@ int main(int argc, char **argv)
 
       const auto c_minus_By
         = read_c_minus_By(c_minus_By_path, pmp_info, timers);
-      const auto zeros_blocks = compute_spectrum(
-        pmp_info, c_minus_By, x, threshold, need_lambda, verbosity, timers);
+
+      // Create directory spectrum.json.profiling/
+      if(verbosity >= Verbosity::debug)
+        create_profiling_dir(output_path);
+
+      const auto zeros_blocks = compute_spectrum(pmp_info, c_minus_By, x, threshold, need_lambda,
+                           verbosity, output_path, timers);
 
       write_spectrum(output_path, zeros_blocks, pmp_info, timers);
 

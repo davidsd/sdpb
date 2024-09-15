@@ -3,18 +3,23 @@
 #include "pmp/PMP_Info.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
+#include <filesystem>
 #include <vector>
 
 std::vector<El::BigFloat>
 find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
            const PVM_Info &pvm, const El::BigFloat &threshold, Timers &timers);
 
+void write_profiling(const std::filesystem::path &spectrum_output_path,
+                     Timers &timers);
+
 std::vector<Zeros>
 compute_spectrum(const PMP_Info &pmp,
                  const std::vector<El::Matrix<El::BigFloat>> &c_minus_By,
                  const std::optional<std::vector<El::Matrix<El::BigFloat>>> &x,
                  const El::BigFloat &threshold, const bool &need_lambda,
-                 const Verbosity &verbosity, Timers &timers)
+                 const Verbosity &verbosity,
+                 const std::filesystem::path &output_path, Timers &timers)
 {
   Scoped_Timer timer(timers, "compute_spectrum");
   std::vector<Zeros> spectrum_blocks(pmp.blocks.size());
@@ -53,6 +58,10 @@ compute_spectrum(const PMP_Info &pmp,
                      " num_points=", pvm_info.sample_points.size(),
                      " num_zeros=", spectrum_block.zeros.size(),
                      " time=", time, "s");
+          // Update profiling data.
+          // Can be helpful to look at profiling for unfinished runs,
+          // if some blocks take much longer than expected.
+          write_profiling(output_path, timers);
         }
     }
   return spectrum_blocks;
