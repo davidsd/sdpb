@@ -131,10 +131,12 @@ namespace
 
   Boost_Polynomial
   determinant(const Simple_Matrix<Boost_Polynomial> &interpolated_poly_matrix,
-              const std::vector<El::BigFloat> &original_sample_points)
+              const std::vector<El::BigFloat> &original_sample_points,
+              Timers &timers)
   {
-    const int height = interpolated_poly_matrix.Height();
-    const int width = interpolated_poly_matrix.Width();
+    Scoped_Timer timer(timers, "determinant");
+    const auto height = interpolated_poly_matrix.Height();
+    const auto width = interpolated_poly_matrix.Width();
     ASSERT_EQUAL(height, width);
 
     // Trivial case: determinant of a 1x1 matrix
@@ -190,6 +192,7 @@ namespace
         }
     }
 
+    Scoped_Timer interpolate_timer(timers, "interpolate");
     return interpolate(det_sample_points, det_samples);
   }
 
@@ -210,6 +213,7 @@ find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
   // Note that all other zeros will be strictly positive.
   if(pvm.sample_points.size() == 1)
     {
+      Scoped_Timer const_timer(timers, "constant_constraint");
       // El::HermitianEig modifies input matrix, so we have to make a copy
       auto block = c_minus_By_block;
 
@@ -240,8 +244,10 @@ find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
 
   const auto interpolated_poly_matrix
     = get_interpolated_polynomial_matrix(c_minus_By_block, pvm, timers);
-  std::vector<El::BigFloat> minima = find_real_positive_minima_sorted(
-    determinant(interpolated_poly_matrix, pvm.sample_points), timers);
+  const auto det
+    = determinant(interpolated_poly_matrix, pvm.sample_points, timers);
+  std::vector<El::BigFloat> minima
+    = find_real_positive_minima_sorted(det, timers);
 
   if(minima.empty() || minima.back() > 0)
     {
