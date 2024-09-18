@@ -40,6 +40,8 @@ SDPB requires
 
 - [FLINT](https://github.com/flintlib/flint) (2.8.0 or later)
 
+- [MPSolve](https://numpi.dm.unipi.it/scientific-computing-libraries/mpsolve/) (3.1.0 or later)
+
 SDPB has been tested on Linux and Mac OS.
 
 # Installation
