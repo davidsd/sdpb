@@ -57,9 +57,14 @@ find_polynomial_roots(const std::vector<El::BigFloat> &polynomial_coeffs,
   // mps_thread_pool_set_concurrency_limit (ctx, NULL, 1);
   // So we have to set thread_safe = false as a workaround.
   // NB: Threads are still created in thread pool when context is created.
-  MPS_POLYNOMIAL (mps_poly)->thread_safe = false;
+  MPS_POLYNOMIAL(mps_poly)->thread_safe = false;
   mps_context_set_input_poly(ctx, MPS_POLYNOMIAL(mps_poly));
   mps_context_set_output_goal(ctx, MPS_OUTPUT_GOAL_APPROXIMATE);
+  // MPS_ALGORITHM_STANDARD_MPSOLVE was several times faster
+  // in most of our realistic test cases,
+  // but sometimes it became incredibly slow (10+ hours instead of 1 minute).
+  // Thus, we use MPS_ALGORITHM_SECULAR_GA which seems to be more robust.
+  mps_context_select_algorithm(ctx, MPS_ALGORITHM_SECULAR_GA);
 
   {
     Scoped_Timer mpsolve_timer(timers, "mpsolve");
