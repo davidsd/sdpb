@@ -36,20 +36,29 @@ compute_spectrum(const PMP_Info &pmp,
 
       spectrum_block.block_path = pvm_info.block_path;
 
-      const auto zero_values
-        = find_zeros(c_minus_By_block, pvm_info, threshold, timers);
-      if(need_lambda)
+      try
         {
-          ASSERT(x.has_value());
-          compute_lambda(pvm_info, x->at(local_block_index), zero_values,
-                         spectrum_block, timers);
-        }
-      else
-        {
-          for(auto &zero_value : zero_values)
+          const auto zero_values
+            = find_zeros(c_minus_By_block, pvm_info, threshold, timers);
+          if(need_lambda)
             {
-              spectrum_block.zeros.emplace_back(zero_value);
+              ASSERT(x.has_value());
+              compute_lambda(pvm_info, x->at(local_block_index), zero_values,
+                             spectrum_block, timers);
             }
+          else
+            {
+              for(auto &zero_value : zero_values)
+                {
+                  spectrum_block.zeros.emplace_back(zero_value);
+                }
+            }
+        }
+      catch(const std::exception &e)
+        {
+          PRINT_WARNING("Failed to compute spectrum for block_",
+                        pvm_info.block_index,
+                        " block_path=", pvm_info.block_path, ":\n", e.what());
         }
       if(verbosity >= Verbosity::trace)
         {
