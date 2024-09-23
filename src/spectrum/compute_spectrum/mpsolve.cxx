@@ -82,6 +82,12 @@ find_polynomial_roots(const std::vector<El::BigFloat> &polynomial_coeffs,
     mps_mpsolve(ctx);
   }
 
+  if(mps_context_has_errors(ctx))
+    {
+      const char* msg = mps_context_error_msg(ctx);
+      RUNTIME_ERROR("MPSolve error: ", msg == nullptr ? "NULL" : msg);
+    }
+
   mpc_t *mpc_roots = nullptr;
   rdpe_t *radii = nullptr;
   mps_context_get_roots_m(ctx, &mpc_roots, &radii);
@@ -117,9 +123,6 @@ find_polynomial_roots(const std::vector<El::BigFloat> &polynomial_coeffs,
   rdpe_vfree(radii);
   mps_monomial_poly_free(ctx, MPS_POLYNOMIAL(mps_poly));
   mps_context_free(ctx);
-
-  if(mps_context_has_errors(ctx))
-    RUNTIME_ERROR("MPSolve error: ", mps_context_error_msg(ctx));
 
   return result;
 }
