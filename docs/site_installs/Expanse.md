@@ -94,10 +94,11 @@ The flag `--disable-gmp-internals` is required to prevent `mpn_gcd_11 not found`
     cd ..
 
 ## MPSolve
-    wget https://numpi.dm.unipi.it/_media/software/mpsolve/mpsolve-3.2.1.tar.bz2
-    tar -jxf mpsolve-3.2.1.tar.bz2
-    cd mpsolve-3.2.1
-    CC=mpicc CXX=mpicxx ./configure --prefix=$HOME/install
+
+    git clone https://github.com/vasdommes/MPSolve.git --branch add-missing-libmps-api
+    cd MPSolve
+    ./autogen.sh
+    CC=mpicc CXX=mpicxx ./configure --prefix=$HOME/install --disable-dependency-tracking --disable-examples --disable-ui --disable-graphical-debugger --disable-documentation
     make && make install
     cd ..
 

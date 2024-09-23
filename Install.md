@@ -40,7 +40,9 @@ SDPB requires
 
 - [FLINT](https://github.com/flintlib/flint) (2.8.0 or later)
 
-- [MPSolve](https://numpi.dm.unipi.it/scientific-computing-libraries/mpsolve/) (3.1.0 or later)
+- [MPSolve (fork)](https://github.com/vasdommes/MPSolve/tree/add-missing-libmps-api)
+
+- [Elemental (fork)](https://gitlab.com/bootstrapcollaboration/elemental)
 
 SDPB has been tested on Linux and Mac OS.
 
@@ -100,12 +102,12 @@ SDPB has been tested on Linux and Mac OS.
    
    See [FLINT documentation](https://flintlib.org/doc/building.html) for installation instructions.
 
-6. Install MPSolve
+6. Install the fork of [MPSolve](https://github.com/vasdommes/MPSolve/tree/add-missing-libmps-api) 
 
-        wget https://numpi.dm.unipi.it/_media/software/mpsolve/mpsolve-3.2.1.tar.bz2
-        tar -jxf mpsolve-3.2.1.tar.bz2
-        cd mpsolve-3.2.1
-        CC=mpicc CXX=mpicxx ./configure --prefix=$HOME/install
+        git clone https://github.com/vasdommes/MPSolve.git --branch add-missing-libmps-api
+        cd MPSolve
+        ./autogen.sh
+        CC=mpicc CXX=mpicxx ./configure --prefix=$HOME/install --disable-dependency-tracking --disable-examples --disable-ui --disable-graphical-debugger --disable-documentation
         make && make install
         cd ..
 
