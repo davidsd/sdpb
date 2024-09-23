@@ -107,6 +107,9 @@ find_polynomial_roots(const std::vector<El::BigFloat> &polynomial_coeffs,
   mps_monomial_poly_free(ctx, MPS_POLYNOMIAL(mps_poly));
   mps_context_free(ctx);
 
+  if(mps_context_has_errors(ctx))
+    RUNTIME_ERROR("MPSolve error: ", mps_context_error_msg(ctx));
+
   return result;
 }
 
