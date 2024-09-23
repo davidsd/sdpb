@@ -63,6 +63,14 @@ int main()
 {
   long int n = 5;
   mps_context *s = mps_context_new();
+  mps_context_select_algorithm(s, MPS_ALGORITHM_STANDARD_MPSOLVE);
+  
+  // The following functions are missing in MPSolve 3.2.1 and earlier.
+  // They have been added to 3.2.2 by the PR:
+  // https://github.com/robol/MPSolve/pull/42
+  mps_context_set_search_set(s, MPS_SEARCH_SET_POSITIVE_REAL_PART);
+  mps_context_set_n_threads(s, 1);
+  
   mps_monomial_poly * p = mps_monomial_poly_new(s, n);
   mpq_t one;
   mpq_init(one);
