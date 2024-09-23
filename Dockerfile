@@ -30,8 +30,12 @@ FROM vasdommes/flint:main as flint
 FROM bootstrapcollaboration/elemental:master AS build
 
 RUN apk add \
+    autoconf \
+    automake \
     binutils \
+    byacc \
     cmake \
+    flex \
     g++ \
     git \
     make \
@@ -40,27 +44,33 @@ RUN apk add \
     boost-dev \
     gmp-dev \
     libarchive-dev \
+    libtool \
     libxml2-dev \
     mpfr-dev \
     openblas-dev \
     openmpi \
     openmpi-dev \
     rapidjson-dev
-WORKDIR /usr/local/src/sdpb
 # Include FLINT
 COPY --from=flint /usr/local /usr/local
 COPY --from=flint /usr/local/lib /usr/local/lib
 COPY --from=flint /usr/local/include /usr/local/include
 
+WORKDIR /usr/local/src
 # Build MPSolve (takes ~1 minute)
 # TODO: create separate MPSolve image?
-RUN wget https://numpi.dm.unipi.it/_media/software/mpsolve/mpsolve-3.2.1.tar.bz2 && \
-    tar -jxf mpsolve-3.2.1.tar.bz2 && \
-    cd mpsolve-3.2.1  && \
-    CC=mpicc CXX=mpicxx ./configure --disable-examples --disable-ui --disable-graphical-debugger --disable-documentation && \
+# We use a fork that added missing functions to libmps API, see https://github.com/robol/MPSolve/issues/41
+RUN git clone https://github.com/vasdommes/MPSolve.git --branch add-missing-libmps-api && \
+    cd MPSolve && \
+    ./autogen.sh && \
+    CC=mpicc CXX=mpicxx ./configure --disable-dependency-tracking --disable-examples --disable-ui --disable-graphical-debugger --disable-documentation && \
     make && \
-    make install
+    make check && \
+    make install && \
+    echo "simple mpsolve test:" && \
+    mpsolve -p "x^4 - 6*x^9 + 6/7*x + 5"
 
+WORKDIR /usr/local/src/sdpb
 # Build SDPB from current sources, print build/config.log in configuration failed
 COPY . .
 RUN (./waf configure --elemental-dir=/usr/local --flint-dir=/usr/local --prefix=/usr/local \
@@ -100,7 +110,7 @@ COPY --from=build /usr/local/lib /usr/local/lib
 # Contains /home/testuser/sdpb/build and /home/testuser/sdpb/test folders,
 # which is sufficient to run tests as shown below:
 #
-# docker build -t sdpb-test --target test
+# docker build . -t sdpb-test --target test
 # docker run sdpb-test ./test/run_all_tests.sh mpirun --oversubscribe
 FROM install as test
 # Create testuser to run Docker non-root (and avoid 'mpirun --allow-run-as-root' warning)
