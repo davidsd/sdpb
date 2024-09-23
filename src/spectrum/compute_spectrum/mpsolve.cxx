@@ -53,18 +53,29 @@ find_polynomial_roots(const std::vector<El::BigFloat> &polynomial_coeffs,
   ASSERT_EQUAL(mps_monomial_poly_get_precision(ctx, mps_poly), prec);
 
   // Disable threading.
-  // TODO the function is not public:
-  // mps_thread_pool_set_concurrency_limit (ctx, NULL, 1);
-  // So we have to set thread_safe = false as a workaround.
+  // TODO ideally, we should also call:
+  //   mps_thread_pool_set_concurrency_limit (ctx, NULL, 1);
+  // but this function is not public.
   // NB: Threads are still created in thread pool when context is created.
-  MPS_POLYNOMIAL(mps_poly)->thread_safe = false;
+  mps_context_set_n_threads(ctx, 1);
+
   mps_context_set_input_poly(ctx, MPS_POLYNOMIAL(mps_poly));
   mps_context_set_output_goal(ctx, MPS_OUTPUT_GOAL_APPROXIMATE);
-  // MPS_ALGORITHM_STANDARD_MPSOLVE was several times faster
-  // in most of our realistic test cases,
-  // but sometimes it became incredibly slow (10+ hours instead of 1 minute).
-  // Thus, we use MPS_ALGORITHM_SECULAR_GA which seems to be more robust.
-  mps_context_select_algorithm(ctx, MPS_ALGORITHM_SECULAR_GA);
+
+  // We need only positive real roots.
+  // In practice, they will have a small imaginary part as well.
+  mps_context_set_search_set(ctx, MPS_SEARCH_SET_POSITIVE_REAL_PART);
+
+  // For some reason, the new MPS_ALGORITHM_SECULAR_GA in combination with
+  // MPS_SEARCH_SET_POSITIVE_REAL_PART can lead to ill-conditioned polynomials
+  // and thus converge very slowly (tested on 3.2.1).
+  // Thus, we will use the default MPS_ALGORITHM_STANDARD_MPSOLVE.
+  //
+  // Note that without MPS_SEARCH_SET_POSITIVE_REAL_PART the standard algorithm
+  // can hang for a long time (10+ hr instead of 1 min) trying to separate
+  // a cluster of negative roots (without numerical errors, it would be a multiple root)
+  // coming from a multiple pole in prefactor, e.g. 1/(1+x)^7.
+  mps_context_select_algorithm(ctx, MPS_ALGORITHM_STANDARD_MPSOLVE);
 
   {
     Scoped_Timer mpsolve_timer(timers, "mpsolve");
