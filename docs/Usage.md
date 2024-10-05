@@ -312,5 +312,3 @@ export OMP_NUM_THREADS=1
 ### Spectrum does not find zeros
 
 Try to set `--threshold` option for `spectrum` larger than `--dualityGapThreshold` for `sdpb`.
-
-Note that currently spectrum [cannot find isolated zeros](https://github.com/davidsd/sdpb/issues/153).
