@@ -163,15 +163,17 @@ compute_lambda(const PVM_Info &pvm_info, const El::Matrix<El::BigFloat> &x,
       // Eigenvalues are sorted, largest at the end.  Only add a zero
       // if max_eigenvalue >= 0.
       const size_t num_eigvals(eigenvalues.Height());
-      auto min_eigenvalue = eigenvalues(num_eigvals - 1, 0);
-      if(min_eigenvalue < 0)
+      auto max_eigenvalue = eigenvalues(num_eigvals - 1, 0);
+      ASSERT_EQUAL(max_eigenvalue, El::Max(eigenvalues),
+                   "Eigenvalues were not sorted by El::HermitianEig()!");
+      if(max_eigenvalue < 0)
         {
           // TODO print block index
           PRINT_WARNING("block_", pvm_info.block_index,
                         ": x=", zero_values.at(zero_index),
-                        ": negative min_eigenvalue=", min_eigenvalue,
+                        ": negative max_eigenvalue=", max_eigenvalue,
                         " for Lambda matrix will be replaced with 0.");
-          min_eigenvalue = 0;
+          max_eigenvalue = 0;
         }
       {
         zeros.emplace_back(zero_values[zero_index]);
@@ -179,7 +181,7 @@ compute_lambda(const PVM_Info &pvm_info, const El::Matrix<El::BigFloat> &x,
         // lambdas = eigenvectors * sqrt(eigenvalues)
         // lambdas = v_{j,\tau} from Eq. (A.8)
         lambda = El::View(eigenvectors, 0, num_eigvals - 1, num_eigvals, 1);
-        lambda *= El::Sqrt(min_eigenvalue);
+        lambda *= El::Sqrt(max_eigenvalue);
 
         size_t row_column(0);
         for(size_t row(0); row != num_rows; ++row)
