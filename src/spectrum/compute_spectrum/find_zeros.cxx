@@ -218,7 +218,7 @@ find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
   std::vector<El::BigFloat> minima
     = find_real_positive_minima_sorted(det, timers);
 
-  if(minima.empty() || minima.back() > 0)
+  if(minima.empty() || minima.front() > 0)
     {
       // We should always check x=0, even if MPSolve didn't find a root there
       minima.insert(minima.begin(), 0);
