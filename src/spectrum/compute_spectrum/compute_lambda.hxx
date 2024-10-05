@@ -138,9 +138,13 @@ compute_lambda(const PVM_Info &pvm_info, const El::Matrix<El::BigFloat> &x,
       El::Matrix<El::BigFloat> eigenvalues, eigenvectors;
       El::HermitianEig(El::UpperOrLowerNS::UPPER, Lambda, eigenvalues,
                        eigenvectors, hermitian_eig_ctrl);
-      // Eigenvalues are sorted, largest at the end.  Only add a zero
-      // if max_eigenvalue >= 0.
+      // Eigenvalues are sorted, largest at the end.
+
+      ASSERT_EQUAL(Lambda.Height(), eigenvalues.Height(),
+                   "Incorrect number of eigenvalues!",
+                   DEBUG_STRING(zero_index));
       const size_t num_eigvals(eigenvalues.Height());
+
       auto max_eigenvalue = eigenvalues(num_eigvals - 1, 0);
       ASSERT_EQUAL(max_eigenvalue, El::Max(eigenvalues),
                    "Eigenvalues were not sorted by El::HermitianEig()!");
@@ -157,6 +161,26 @@ compute_lambda(const PVM_Info &pvm_info, const El::Matrix<El::BigFloat> &x,
         auto &lambda(zeros.back().lambda);
         // lambdas = eigenvectors * sqrt(eigenvalues)
         // lambdas = v_{j,\tau} from Eq. (A.8)
+
+        // If eigenvalue == 0, then lambda = 0.
+        // TODO: lambda=0 is unphysical, shall we remove all such zeros and recompute lambdas?
+        // (note that adding/removing any zeros affects all lambdas in a block)
+        if(max_eigenvalue == El::BigFloat(0))
+          {
+            lambda.Resize(num_eigvals, 1);
+            El::Zero(lambda);
+            continue;
+          }
+
+        // NB: if Lambda == {{0}}, then
+        // El::HermitianEig() returns eigenvalues = {0}
+        // and does not initialize eigenvectors.
+        // This case is treated separately above.
+        ASSERT_EQUAL(eigenvalues.Height(), eigenvectors.Height(),
+                     "Number of eigenvalues and eigenvectors did not match, "
+                     "probably due to eigensolver failure. ",
+                     DEBUG_STRING(zero_index), DEBUG_STRING(max_eigenvalue));
+
         lambda = El::View(eigenvectors, 0, num_eigvals - 1, num_eigvals, 1);
         lambda *= El::Sqrt(max_eigenvalue);
 
