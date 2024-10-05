@@ -11,12 +11,14 @@
 namespace fs = std::filesystem;
 
 void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
-                      fs::path &pmp_info_path, fs::path &solution_dir,
-                      fs::path &c_minus_By_path, fs::path &output_path,
-                      bool &need_lambda, Verbosity &verbosity)
+                      El::BigFloat &max_zero, fs::path &pmp_info_path,
+                      fs::path &solution_dir, fs::path &c_minus_By_path,
+                      fs::path &output_path, bool &need_lambda,
+                      Verbosity &verbosity)
 {
   int precision;
-  std::string threshold_string, mesh_threshold_string, format_string;
+  std::string threshold_string, max_zero_string, mesh_threshold_string,
+    format_string;
 
   namespace po = boost::program_options;
 
@@ -44,6 +46,11 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
     "precision", po::value<int>(&precision)->required(),
     "The precision, in the number of bits, for numbers in the "
     "computation. ");
+  options.add_options()(
+    "maxZero,m",
+    po::value<std::string>(&max_zero_string)->default_value("0"),
+    "Spectrum will ignore all zeros larger than --maxZero. "
+    "--maxZero=0 means no limit.");
   options.add_options()("lambda",
                         po::value<bool>(&need_lambda)->default_value(true),
                         "If true, compute Λ and its associated error.");
@@ -67,6 +74,7 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
   positional.add("solution", 1);
   positional.add("output", 1);
   positional.add("threshold", 1);
+  positional.add("maxZero", 1);
 
   po::variables_map variables_map;
   po::store(po::command_line_parser(argc, argv)
@@ -86,6 +94,7 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
   {
     Environment::set_precision(precision);
     threshold = El::BigFloat(threshold_string);
+    max_zero = El::BigFloat(max_zero_string);
     if(c_minus_By_path.empty())
       c_minus_By_path = solution_dir / "c_minus_By" / "c_minus_By.json";
   }

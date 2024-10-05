@@ -169,7 +169,8 @@ namespace
 
 std::vector<El::BigFloat>
 find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
-           const PVM_Info &pvm, const El::BigFloat &threshold, Timers &timers)
+           const PVM_Info &pvm, const El::BigFloat &threshold,
+           const El::BigFloat &max_zero, Timers &timers)
 {
   Scoped_Timer timer(timers, "find_zeros");
   ASSERT(threshold > 0, DEBUG_STRING(threshold));
@@ -215,8 +216,18 @@ find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
     = get_interpolated_polynomial_matrix(c_minus_By_block, pvm, timers);
   const auto det
     = determinant(interpolated_poly_matrix, pvm.sample_points, timers);
-  std::vector<El::BigFloat> minima
-    = find_real_positive_minima_sorted(det, timers);
+  std::vector<El::BigFloat> minima;
+  for(auto &x : find_real_positive_minima_sorted(det, timers))
+    {
+      // Remove large zeros
+      if(max_zero > 0 && x > max_zero)
+        {
+          PRINT_WARNING("block_", pvm.block_index,
+                        ": ignore large zero at x=", x);
+          break;
+        }
+      minima.push_back(x);
+    }
 
   if(minima.empty() || minima.front() > 0)
     {

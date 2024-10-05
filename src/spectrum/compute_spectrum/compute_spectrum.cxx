@@ -8,7 +8,8 @@
 
 std::vector<El::BigFloat>
 find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
-           const PVM_Info &pvm, const El::BigFloat &threshold, Timers &timers);
+           const PVM_Info &pvm, const El::BigFloat &threshold,
+           const El::BigFloat &max_zero, Timers &timers);
 
 void write_profiling(const std::filesystem::path &spectrum_output_path,
                      Timers &timers);
@@ -17,8 +18,8 @@ std::vector<Zeros>
 compute_spectrum(const PMP_Info &pmp,
                  const std::vector<El::Matrix<El::BigFloat>> &c_minus_By,
                  const std::optional<std::vector<El::Matrix<El::BigFloat>>> &x,
-                 const El::BigFloat &threshold, const bool &need_lambda,
-                 const Verbosity &verbosity,
+                 const El::BigFloat &threshold, const El::BigFloat &max_zero,
+                 const bool &need_lambda, const Verbosity &verbosity,
                  const std::filesystem::path &output_path, Timers &timers)
 {
   Scoped_Timer timer(timers, "compute_spectrum");
@@ -38,8 +39,8 @@ compute_spectrum(const PMP_Info &pmp,
 
       try
         {
-          const auto zero_values
-            = find_zeros(c_minus_By_block, pvm_info, threshold, timers);
+          const auto zero_values = find_zeros(c_minus_By_block, pvm_info,
+                                              threshold, max_zero, timers);
           if(need_lambda)
             {
               ASSERT(x.has_value());
