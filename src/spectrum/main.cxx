@@ -7,9 +7,10 @@
 namespace fs = std::filesystem;
 
 void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
-                      fs::path &pmp_info_path, fs::path &solution_dir,
-                      fs::path &c_minus_By_path, fs::path &output_path,
-                      bool &need_lambda, Verbosity &verbosity);
+                      El::BigFloat &max_zero, fs::path &pmp_info_path,
+                      fs::path &solution_dir, fs::path &c_minus_By_path,
+                      fs::path &output_path, bool &need_lambda,
+                      Verbosity &verbosity);
 
 PMP_Info
 read_pmp_info(const std::filesystem::path &input_path, Timers &timers);
@@ -26,8 +27,8 @@ std::vector<Zeros>
 compute_spectrum(const PMP_Info &pmp_info,
                  const std::vector<El::Matrix<El::BigFloat>> &c_minus_By,
                  const std::optional<std::vector<El::Matrix<El::BigFloat>>> &x,
-                 const El::BigFloat &threshold, const bool &need_lambda,
-                 const Verbosity &verbosity,
+                 const El::BigFloat &threshold, const El::BigFloat &max_zero,
+                 const bool &need_lambda, const Verbosity &verbosity,
                  const std::filesystem::path &spectrum_output_path,
                  Timers &timers);
 
@@ -45,11 +46,13 @@ int main(int argc, char **argv)
   try
     {
       El::BigFloat threshold;
+      El::BigFloat max_zero;
       fs::path pmp_info_path, solution_dir, output_path, c_minus_By_path;
       bool need_lambda;
       Verbosity verbosity;
-      handle_arguments(argc, argv, threshold, pmp_info_path, solution_dir,
-                       c_minus_By_path, output_path, need_lambda, verbosity);
+      handle_arguments(argc, argv, threshold, max_zero, pmp_info_path,
+                       solution_dir, c_minus_By_path, output_path, need_lambda,
+                       verbosity);
 
       // Print command line
       if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
@@ -76,8 +79,9 @@ int main(int argc, char **argv)
       if(verbosity >= Verbosity::debug)
         create_profiling_dir(output_path);
 
-      const auto zeros_blocks = compute_spectrum(pmp_info, c_minus_By, x, threshold, need_lambda,
-                           verbosity, output_path, timers);
+      const auto zeros_blocks
+        = compute_spectrum(pmp_info, c_minus_By, x, threshold, max_zero,
+                           need_lambda, verbosity, output_path, timers);
 
       write_spectrum(output_path, zeros_blocks, pmp_info, timers);
 
