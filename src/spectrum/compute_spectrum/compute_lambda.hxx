@@ -168,8 +168,15 @@ compute_lambda(const PVM_Info &pvm_info, const El::Matrix<El::BigFloat> &x,
       const size_t num_eigvals(eigenvalues.Height());
 
       auto max_eigenvalue = eigenvalues(num_eigvals - 1, 0);
-      ASSERT_EQUAL(max_eigenvalue, El::Max(eigenvalues),
-                   "Eigenvalues were not sorted by El::HermitianEig()!");
+
+      // El::Max has a bug, see https://gitlab.com/bootstrapcollaboration/elemental/-/issues/4
+      // Thus, we'll just compare last eigenvalue with a first one (as a sanity check).
+      // ASSERT_EQUAL(max_eigenvalue, El::Max(eigenvalues),
+      //              "Eigenvalues were not sorted by El::HermitianEig()!");
+      ASSERT(max_eigenvalue >= eigenvalues(0, 0),
+             "Eigenvalues were not sorted by El::HermitianEig()!",
+             DEBUG_STRING(eigenvalues(0, 0)),
+             DEBUG_STRING(eigenvalues(num_eigvals - 1, 0)));
       if(max_eigenvalue < 0)
         {
           // TODO print block index
