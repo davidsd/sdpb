@@ -13,12 +13,6 @@
 namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
-void convert(const Polynomial_Matrix_Program &pmp,
-             El::BigFloat &objective_const,
-             std::vector<El::BigFloat> &dual_objective_b,
-             std::vector<Dual_Constraint_Group> &dual_constraint_groups,
-             Timers &timers);
-
 int main(int argc, char **argv)
 {
   Environment env(argc, argv);

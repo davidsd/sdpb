@@ -23,8 +23,9 @@ TEST_CASE("outer_limits")
 
     {
       INFO("run pmp2functions");
+      // TODO use input from "1d" and update output
       fs::path pmp_json = Test_Config::test_data_dir / "end-to-end_tests"
-                          / "1d" / "input" / "pmp.json";
+                          / "1d-old-sampling" / "input" / "pmp.json";
 
       // TODO allow running pmp2functions in parallel
       runner.create_nested("pmp2functions")

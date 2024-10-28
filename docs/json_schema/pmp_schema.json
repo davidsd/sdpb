@@ -20,6 +20,34 @@
                 "type": "object",
                 "properties":
                 {
+                    "prefactor":
+                    {
+                        "type": "object",
+                        "properties":
+                        {
+                            "base": { "type": "string" },
+                            "constant": { "type": "string" },
+                            "poles":
+                            {
+                                "type": "array",
+                                "items": { "type": "string" }
+                            }
+                        }
+                    },
+                    "reducedPrefactor":
+                    {
+                        "type": "object",
+                        "properties":
+                        {
+                            "base": { "type": "string" },
+                            "constant": { "type": "string" },
+                            "poles":
+                            {
+                                "type": "array",
+                                "items": { "type": "string" }
+                            }
+                        }
+                    },
                     "DampedRational":
                     {
                         "type": "object",
@@ -63,7 +91,29 @@
                             "type": "string"
                         }
                     },
+                    "reducedSampleScalings": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
                     "bilinearBasis": {
+                        "type": "array",
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                    "bilinearBasis_0": {
+                        "type": "array",
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                    "bilinearBasis_1": {
                         "type": "array",
                         "items": {
                             "type": "array",

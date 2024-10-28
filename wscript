@@ -167,14 +167,7 @@ def build(bld):
     pmp_sources = ['src/pmp/Polynomial_Vector_Matrix.cxx',
                    'src/pmp/convert/sample_points.cxx',
                    'src/pmp/convert/sample_scalings.cxx',
-                   'src/pmp/convert/bilinear_basis/bilinear_basis.cxx',
-                   'src/pmp/convert/bilinear_basis/precompute/precompute.cxx',
-                   'src/pmp/convert/bilinear_basis/precompute/integral.cxx',
-                   'src/pmp/convert/bilinear_basis/bilinear_form/bilinear_form.cxx',
-                   'src/pmp/convert/bilinear_basis/bilinear_form/rest.cxx',
-                   'src/pmp/convert/bilinear_basis/bilinear_form/dExp.cxx',
-                   'src/pmp/convert/bilinear_basis/bilinear_form/derivative.cxx',
-                   'src/pmp/convert/bilinear_basis/bilinear_form/operator_plus_set_Derivative_Term.cxx']
+                   'src/pmp/convert/bilinear_basis/bilinear_basis.cxx']
 
     bld.stlib(source=pmp_sources,
               target='pmp',
@@ -331,6 +324,7 @@ def build(bld):
                         'test/src/unit_tests/cases/calculate_matrix_square.test.cxx',
                         'test/src/unit_tests/cases/copy_matrix.test.cxx',
                         'test/src/unit_tests/cases/json.test.cxx',
+                        'test/src/unit_tests/cases/pmp_sampling.test.cxx',
                         'test/src/unit_tests/cases/shared_window.test.cxx'],
                 target='unit_tests',
                 cxxflags=default_flags,

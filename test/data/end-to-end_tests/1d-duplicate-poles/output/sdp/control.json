@@ -1,4 +1,4 @@
 {
   "num_blocks": 1,
-  "command": "build/pmp2sdp --input=test/data/pmp2sdp/duplicate_poles/pmp.json --output=test/out/pmp2sdp/duplicate_poles/sdp --precision=512 --verbosity=debug"
+  "command": "build/pmp2sdp --input=test/data/end-to-end_tests/1d-duplicate-poles/input/pmp.json --output=test/out/end-to-end_tests/1d-duplicate-poles/pmp.json/sdp --precision=768"
 }

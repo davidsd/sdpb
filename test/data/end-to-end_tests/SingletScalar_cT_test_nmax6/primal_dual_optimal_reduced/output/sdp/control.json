@@ -1,0 +1,4 @@
+{
+  "num_blocks": 11,
+  "command": "build/pmp2sdp --input=test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal_reduced/input/pmp.nsv --output=test/out/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal_reduced/pmp.nsv/format=json/sdp --outputFormat=json --precision=768"
+}

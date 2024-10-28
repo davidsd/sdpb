@@ -80,14 +80,15 @@ read_xml(const std::filesystem::path &input_file,
             std::optional<Damped_Rational> prefactor = std::nullopt;
             auto &sample_points = matrix_state.sample_points_state.value;
             auto &sample_scalings = matrix_state.sample_scalings_state.value;
-            Polynomial_Vector bilinear_basis;
-            swap(bilinear_basis, matrix_state.bilinear_basis_state.value);
+            std::array<Polynomial_Vector, 2> bilinear_basis;
+            swap(bilinear_basis[0], matrix_state.bilinear_basis_state.value);
+            bilinear_basis[1] = bilinear_basis[0];
 
             result.parsed_matrices.emplace(
-              index,
-              Polynomial_Vector_Matrix(
-                std::move(poly_vectors), prefactor, std::move(sample_points),
-                std::move(sample_scalings), std::move(bilinear_basis)));
+              index, Polynomial_Vector_Matrix(
+                       std::move(poly_vectors), prefactor, std::nullopt,
+                       std::move(sample_points), std::move(sample_scalings),
+                       std::nullopt, bilinear_basis));
           }
         ++result.num_matrices;
       };

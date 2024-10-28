@@ -184,39 +184,52 @@ the `--linear` option.  This avoids the one-time cost of an expensive
 solve.  Also, it only requires the solutions for `x` and `y`, which
 SDPB writes out by default.
 
-## Computing the Spectrum
+## Computing the spectrum
 
-Another thing that you can do now that you have a solution is to
-extract the spectrum.  You could use [Spectrum
-Extraction](https://gitlab.com/bootstrapcollaboration/spectrum-extraction),
-but SDPB now ships with `spectrum`, its own parallel implementation of
-spectrum extraction.  The options are described in more detail in the
-help text, obtained by running `spectrum --help`.  As a simple
-example, extracting the spectrum from the toy example would be
+Another thing that you can do now that you have a solution is to extract the spectrum.
+As a simple example, extracting the spectrum from the toy example would be
 
-    mpirun -n 4 build/spectrum --input=test/data/end-to-end_tests/1d/input/pmp.json --output=test/out/spectrum/1d/spectrum.json --precision=1024 --solution=test/data/spectrum/1d/solution --threshold=1e-10
+    mpirun -n 4 build/spectrum --input=test/data/end-to-end_tests/1d/input/pmp.json --output=test/out/spectrum/1d/spectrum.json --precision=768 --solution=test/data/end-to-end_tests/1d/pmp.json/out --threshold=1e-10
 
 This will output the spectra into `test/out/spectrum/1d/spectrum.json` and should look like
 
-    [
-      {
-        "block_path": "test/data/end-to-end_tests/1d/input/pmp.json",
-        "zeros":
-          [
-            {
-              "zero": "1.042496785718158120984006519404233029358116776979134529895423630711390744689477902669840296432317928924423313326990327506518264981179194497998966064495830449099906260064344924049936036999283366682972235210076078068737842418915631791070882527833746310933972007746317544906692813981560963543407009636600477760275",
-              "lambda":
-                [
-                  "0.9185423261272011850274891418839269990813583260329451648910407000720586506746630441457833744183236806171597526139823408776201480812734713281917240661102772732679114912585794391259809037078324838527906848460941323049630998481551259846120994742359929339200105456931828844698382241896844615225241582897538916998522"
-                ]
-            }
-          ],
-        "error": "3.270654739398825572856615907651196430155073411176062513853164640754491556816769579861611709003779514625636694652117900107560196318376153341414775658107623405929672675109050400217760922806803922272334854654452970680533543987925006373170235909839750992547956738264810134223945517825404125007202619504819133489523e-26"
-      }
-    ]
+```
+[
+  {
+    "block_path": "test/data/end-to-end_tests/1d/input/pmp.json",
+    "zeros":
+      [
+        {
+          "zero": "1.0424967857181581209840065194040256159993020360900482727878770557146614245818844773397565119010581109698382853498679936546513923307745546360686597437951864152447392489871552675002522402284639707590108004747402926563347806805408627031",
+          "lambda":
+            [
+              "1.54694357833877357195864820903901085838088924863264895636292566812483741243475458164155073771873903702617821828504900956715888510611718238011758262357999879234060791367950657551753978299255767817752180863347673614"
+            ]
+        }
+      ],
+    "error": "2.6155851084748106058372014479417985936837231505075543152693720913161268299244324614060365156178452537195052377426866117722568851267463995166401153416001203798485032869542329200019745454151278916593515227121025871432270728599938064247e-26"
+  }
+]
+```
+    
 
 It is a json file with arrays of zeros. There is a [JSON schema](json_schema/spectrum_schema.json)
 describing the format.
+
+The options are described in more detail in the
+help text, obtained by running `spectrum --help`.
+
+The spectrum extraction algorithm is described in
+[arxiv:1612.08471](https://arxiv.org/abs/1612.08471) (see Appendix A)
+and originally implemented in Python, see https://gitlab.com/bootstrapcollaboration/spectrum-extraction.
+
+The vector `"lambda"` in `spectrum.json` is defined as
+```math
+\vec{\lambda}_{j,x} = \vec{v}_{j,x} / \sqrt{\chi_j^\prime(x)}
+```
+where $\vec{v}_{j,x}$ is given by Eq. (A.7) in [arxiv:1612.08471](https://arxiv.org/abs/1612.08471)
+and $\chi_j^\prime(x)$ is a `reducedPrefactor` from pmp.json (see [SDPB Manual](SDPB_Manual/SDPB-Manual.pdf) for PMP format description).
+Note that this definition disagrees with Eq. (A.8) in [arxiv:1612.08471](https://arxiv.org/abs/1612.08471), which is incorrect.
 
 ## Common issues and workarounds
 

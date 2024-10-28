@@ -163,9 +163,24 @@ TEST_CASE("end-to-end_tests")
     INFO("maximize (-y) s.t. (1 + x^4 + y * (x^4 / 12 + x^2)) >= 0)");
 
     num_procs = 2;
+    // Do not check normalization.json because it is absent in pmp-no-optional-fields.json
+    bool check_sdp_normalization = false;
+    // binary precision 664 is equivalent to decimal precision 200 used in SDPB.m
+    // TODO generate input files with precision 768
+    end_to_end_test("1d", num_procs, 664, {}, {}, {}, check_sdp_normalization);
+  }
+
+  SECTION("1d-old-sampling")
+  {
+    INFO("SDPB test for a simple one-dimensional problem from SDPB Manual:");
+    INFO("maximize (-y) s.t. (1 + x^4 + y * (x^4 / 12 + x^2)) >= 0)");
+    INFO("Use old sampling algorithm, samplng data specified explicitly in "
+         "XML and JSON");
+
+    num_procs = 2;
     // Do not check normalization.json because it is absent for XML
     bool check_sdp_normalization = false;
-    end_to_end_test("1d", num_procs, precision, {}, {}, {},
+    end_to_end_test("1d-old-sampling", num_procs, precision, {}, {}, {},
                     check_sdp_normalization);
   }
 
@@ -242,6 +257,23 @@ TEST_CASE("end-to-end_tests")
     bool run_sdpb_twice = true;
     end_to_end_test(name, num_procs, precision, default_sdpb_args, {}, {},
                     check_sdp_normalization, run_sdpb_twice);
+  }
+
+  SECTION("SingletScalar_cT_test_nmax6/primal_dual_optimal_reduced")
+  {
+    INFO("Same as primal_dual_optimal, but with reducedPrefactor");
+    INFO("SDPB should find primal-dual optimal solution.");
+    const auto name
+      = "SingletScalar_cT_test_nmax6/primal_dual_optimal_reduced";
+    std::string default_sdpb_args
+      = "--checkpointInterval 3600 --maxRuntime 1340 "
+        "--dualityGapThreshold 1.0e-30 --primalErrorThreshold 1.0e-30 "
+        "--dualErrorThreshold 1.0e-30 --initialMatrixScalePrimal 1.0e20 "
+        "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
+        "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
+        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 2 "
+        "--procGranularity 1 --writeSolution x,y,z";
+    end_to_end_test(name, num_procs, precision, default_sdpb_args);
   }
 
   SECTION("SingletScalarAllowed_test_nmax6")
