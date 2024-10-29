@@ -1,0 +1,63 @@
+{
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "block_path": {
+        "type": "string"
+      },
+      "prefactor": {
+        "type": "object",
+        "properties": {
+          "base": {
+            "type": "string"
+          },
+          "constant": {
+            "type": "string"
+          },
+          "poles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "reducedPrefactor": {
+        "type": "object",
+        "properties": {
+          "base": {
+            "type": "string"
+          },
+          "constant": {
+            "type": "string"
+          },
+          "poles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "samplePoints": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "sampleScalings": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "reducedSampleScalings": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
