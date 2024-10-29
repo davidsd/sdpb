@@ -184,43 +184,6 @@ inline void synchronize_pvm_info(PVM_Info &pvm_info, const int from)
           El::mpi::Recv(vec.data(), vec.size(), from, El::mpi::COMM_WORLD);
         }
     }
-  // //sample_points
-  // {
-  //   auto &sample_points = pvm_info.sample_points;
-  //   if(rank == from)
-  //     {
-  //       El::mpi::Send<size_t>(sample_points.size(), to, El::mpi::COMM_WORLD);
-  //       El::mpi::Send(sample_points.data(), sample_points.size(), to,
-  //                     El::mpi::COMM_WORLD);
-  //     }
-  //   if(rank == to)
-  //     {
-  //       const size_t num_points
-  //         = El::mpi::Recv<size_t>(from, El::mpi::COMM_WORLD);
-  //       sample_points.resize(num_points);
-  //       El::mpi::Recv(sample_points.data(), sample_points.size(), from,
-  //                     El::mpi::COMM_WORLD);
-  //     }
-  // }
-  //
-  // //sample_scalings
-  // {
-  //   auto &sample_scalings = pvm_info.sample_scalings;
-  //   if(rank == from)
-  //     {
-  //       El::mpi::Send<size_t>(sample_scalings.size(), to, El::mpi::COMM_WORLD);
-  //       El::mpi::Send(sample_scalings.data(), sample_scalings.size(), to,
-  //                     El::mpi::COMM_WORLD);
-  //     }
-  //   if(rank == to)
-  //     {
-  //       const size_t num_points
-  //         = El::mpi::Recv<size_t>(from, El::mpi::COMM_WORLD);
-  //       sample_scalings.resize(num_points);
-  //       El::mpi::Recv(sample_scalings.data(), sample_scalings.size(), from,
-  //                     El::mpi::COMM_WORLD);
-  //     }
-  // }
 }
 
 std::vector<PVM_Info> inline synchronize_pmp_info(
