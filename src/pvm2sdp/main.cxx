@@ -38,7 +38,7 @@ int main(int argc, char **argv)
         = read_polynomial_matrix_program(env, input_files, verbosity, timers);
       Output_SDP sdp(pmp, command_arguments, timers);
       bool zip = false;
-      write_sdp(output_path, sdp, output_format, zip, timers, verbosity);
+      write_sdp(output_path, sdp, pmp, output_format, zip, timers, verbosity);
     }
   catch(std::exception &e)
     {
