@@ -21,6 +21,7 @@ namespace fs = std::filesystem;
 struct PVM_Info
 {
   fs::path block_path;
+  Damped_Rational prefactor;
   Damped_Rational reduced_prefactor;
   std::vector<El::BigFloat> sample_points;
   std::vector<El::BigFloat> sample_scalings;
@@ -69,6 +70,17 @@ inline void write_pmp_info_json(std::ostream &output_stream,
       writer.Key("block_path");
       {
         writer.String(block.block_path.string().c_str());
+      }
+      writer.Key("prefactor");
+      {
+        writer.StartObject();
+        writer.Key("constant");
+        add_Boost_Float(block.prefactor.constant);
+        writer.Key("base");
+        add_Boost_Float(block.prefactor.base);
+        writer.Key("poles");
+        add_Boost_Float_array(block.prefactor.poles);
+        writer.EndObject();
       }
       writer.Key("reducedPrefactor");
       {
@@ -126,33 +138,35 @@ inline void synchronize_pvm_info(PVM_Info &pvm_info, const int from)
       }
   }
 
-  // reduced_prefactor
-  {
-    auto &reduced_prefactor = pvm_info.reduced_prefactor;
-    if(rank == from)
-      {
-        El::mpi::Send(to_BigFloat(reduced_prefactor.constant), to,
-                      El::mpi::COMM_WORLD);
-        El::mpi::Send(to_BigFloat(reduced_prefactor.base), to,
-                      El::mpi::COMM_WORLD);
-        const auto poles = to_BigFloat_Vector(reduced_prefactor.poles);
-        El::mpi::Send<size_t>(poles.size(), to, El::mpi::COMM_WORLD);
-        El::mpi::Send(poles.data(), poles.size(), to, El::mpi::COMM_WORLD);
-      }
-    if(rank == to)
-      {
-        reduced_prefactor.constant = to_Boost_Float(
-          El::mpi::Recv<El::BigFloat>(from, El::mpi::COMM_WORLD));
-        reduced_prefactor.base = to_Boost_Float(
-          El::mpi::Recv<El::BigFloat>(from, El::mpi::COMM_WORLD));
+  // prefactor, reduced_prefactor
+  for(auto *damped_rational_ptr :
+      {&pvm_info.prefactor, &pvm_info.reduced_prefactor})
+    {
+      auto &damped_rational = *damped_rational_ptr;
+      if(rank == from)
+        {
+          El::mpi::Send(to_BigFloat(damped_rational.constant), to,
+                        El::mpi::COMM_WORLD);
+          El::mpi::Send(to_BigFloat(damped_rational.base), to,
+                        El::mpi::COMM_WORLD);
+          const auto poles = to_BigFloat_Vector(damped_rational.poles);
+          El::mpi::Send<size_t>(poles.size(), to, El::mpi::COMM_WORLD);
+          El::mpi::Send(poles.data(), poles.size(), to, El::mpi::COMM_WORLD);
+        }
+      if(rank == to)
+        {
+          damped_rational.constant = to_Boost_Float(
+            El::mpi::Recv<El::BigFloat>(from, El::mpi::COMM_WORLD));
+          damped_rational.base = to_Boost_Float(
+            El::mpi::Recv<El::BigFloat>(from, El::mpi::COMM_WORLD));
 
-        const size_t num_poles
-          = El::mpi::Recv<size_t>(from, El::mpi::COMM_WORLD);
-        std::vector<El::BigFloat> poles(num_poles);
-        El::mpi::Recv(poles.data(), poles.size(), from, El::mpi::COMM_WORLD);
-        reduced_prefactor.poles = to_Boost_Float_Vector(poles);
-      }
-  }
+          const size_t num_poles
+            = El::mpi::Recv<size_t>(from, El::mpi::COMM_WORLD);
+          std::vector<El::BigFloat> poles(num_poles);
+          El::mpi::Recv(poles.data(), poles.size(), from, El::mpi::COMM_WORLD);
+          damped_rational.poles = to_Boost_Float_Vector(poles);
+        }
+    }
   for(auto vec_ptr : {&pvm_info.sample_points, &pvm_info.sample_scalings,
                       &pvm_info.reduced_sample_scalings})
     {
