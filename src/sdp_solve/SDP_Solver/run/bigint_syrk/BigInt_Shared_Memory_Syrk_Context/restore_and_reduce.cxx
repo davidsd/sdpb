@@ -155,7 +155,14 @@ void BigInt_Shared_Memory_Syrk_Context::restore_and_reduce(
                 if(output.Owner(i, j) != global_ranks.at(to))
                   continue;
 
-                ASSERT(curr_send - send_buf.data() < send_buf.size());
+                ASSERT(curr_send + serialized_size - send_buf.data()
+                         <= send_buf.size(),
+                       "send buffer is too small!",
+                       DEBUG_STRING(send_buf.size()),
+                       DEBUG_STRING(curr_send - send_buf.data()),
+                       DEBUG_STRING(serialized_size), DEBUG_STRING(i),
+                       DEBUG_STRING(j), DEBUG_STRING(height),
+                       DEBUG_STRING(width), DEBUG_STRING(global_ranks.at(to)));
                 restore_bigint_from_residues(*output_residues_window, i, j,
                                              comb, residues_buffer_temp,
                                              bigint_value);
@@ -163,7 +170,10 @@ void BigInt_Shared_Memory_Syrk_Context::restore_and_reduce(
                 bigfloat_value.Serialize(curr_send);
                 curr_send += serialized_size;
               }
-          ASSERT_EQUAL(curr_send - send_buf.data(), send_buf.size());
+          ASSERT_EQUAL(curr_send - send_buf.data(), send_buf.size(),
+                       "send buffer has wrong size!",
+                       DEBUG_STRING(serialized_size), DEBUG_STRING(height),
+                       DEBUG_STRING(width), DEBUG_STRING(global_ranks.at(to)));
         }
 
         // Receive buffer will recieve elements for a current rank
