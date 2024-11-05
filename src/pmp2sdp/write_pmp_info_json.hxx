@@ -3,6 +3,7 @@
 #include "write_vector.hxx"
 #include "pmp/Damped_Rational.hxx"
 #include "pmp/Polynomial_Matrix_Program.hxx"
+#include "pmp/PVM_Info.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
@@ -15,18 +16,7 @@
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/writer.h>
 
-struct Polynomial_Matrix_Program;
 namespace fs = std::filesystem;
-
-struct PVM_Info
-{
-  fs::path block_path;
-  Damped_Rational prefactor;
-  Damped_Rational reduced_prefactor;
-  std::vector<El::BigFloat> sample_points;
-  std::vector<El::BigFloat> sample_scalings;
-  std::vector<El::BigFloat> reduced_sample_scalings;
-};
 
 inline void write_pmp_info_json(std::ostream &output_stream,
                                 const std::vector<PVM_Info> &pmp_info)
