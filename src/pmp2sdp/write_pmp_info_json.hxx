@@ -201,6 +201,7 @@ std::vector<PVM_Info> inline synchronize_pmp_info(
 
       auto &pvm_info = pmp_info.at(block_index);
       pvm_info.block_path = pmp.block_paths.at(local_index);
+      pvm_info.prefactor = pvm.prefactor;
       pvm_info.reduced_prefactor = pvm.reduced_prefactor;
       pvm_info.sample_points = pvm.sample_points;
       pvm_info.sample_scalings = pvm.sample_scalings;
