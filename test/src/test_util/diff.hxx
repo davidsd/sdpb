@@ -1,5 +1,8 @@
 #pragma once
 
+#include "pmp/Damped_Rational.hxx"
+#include "pmp/PVM_Info.hxx"
+
 #include <catch2/catch_amalgamated.hpp>
 #include <El.hpp>
 #include <boost/noncopyable.hpp>
@@ -144,5 +147,23 @@ namespace Test_Util::REQUIRE_Equal
     CAPTURE(a);
     CAPTURE(b);
     DIFF(weakly_canonical(a).string(), weakly_canonical(b).string());
+  }
+  template <>
+  inline void diff(const Damped_Rational &a, const Damped_Rational &b)
+  {
+    INFO("diff Damped_Rational");
+    DIFF(a.base, b.base);
+    DIFF(a.constant, b.constant);
+    DIFF(a.poles, b.poles);
+  }
+  template <> inline void diff(const PVM_Info &a, const PVM_Info &b)
+  {
+    // Ignore path
+    // DIFF(a.block_path,b.block_path);
+    DIFF(a.prefactor, b.prefactor);
+    DIFF(a.reduced_prefactor, b.reduced_prefactor);
+    DIFF(a.sample_points, b.sample_points);
+    DIFF(a.sample_scalings, b.sample_scalings);
+    DIFF(a.reduced_sample_scalings, b.reduced_sample_scalings);
   }
 }

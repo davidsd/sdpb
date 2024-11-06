@@ -135,7 +135,7 @@ Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
 
   const int64_t max_degree = get_max_degree(polynomials);
 
-  const auto prefactor = prefactor_or_default(prefactor_opt, max_degree);
+  prefactor = prefactor_or_default(prefactor_opt, max_degree);
 
   reduced_prefactor = [&] {
     if(reduced_prefactor_opt.has_value())

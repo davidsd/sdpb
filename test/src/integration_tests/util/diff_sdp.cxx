@@ -2,6 +2,7 @@
 
 #include "Float.hxx"
 #include "json.hxx"
+#include "pmp/PVM_Info.hxx"
 #include "sdpb_util/boost_serialization.hxx"
 
 #include <catch2/catch_amalgamated.hpp>
@@ -34,6 +35,35 @@ namespace
 
       num_blocks = document["num_blocks"].GetInt();
       command = document["command"].GetString();
+    }
+  };
+
+  struct Parse_Pmp_Info_Json : boost::noncopyable
+  {
+    std::vector<PVM_Info> pmp_info;
+    explicit Parse_Pmp_Info_Json(const fs::path &path)
+    {
+      CAPTURE(path);
+      REQUIRE(exists(path));
+      std::ifstream is(path);
+      rapidjson::IStreamWrapper wrapper(is);
+      rapidjson::Document document;
+      document.ParseStream(wrapper);
+
+      REQUIRE(document.IsArray());
+      for(const auto &item : document.GetArray())
+        {
+          auto &pvm_info = pmp_info.emplace_back();
+          pvm_info.block_path = item["block_path"].GetString();
+          pvm_info.prefactor = parse_Damped_Rational(item["prefactor"]);
+          pvm_info.reduced_prefactor
+            = parse_Damped_Rational(item["reducedPrefactor"]);
+          pvm_info.sample_points = parse_Float_Vector(item["samplePoints"]);
+          pvm_info.sample_scalings
+            = parse_Float_Vector(item["sampleScalings"]);
+          pvm_info.reduced_sample_scalings
+            = parse_Float_Vector(item["reducedSampleScalings"]);
+        }
     }
   };
 
@@ -161,6 +191,16 @@ namespace
     // diff(a.command, b.command);
   }
 
+  void diff_pmp_info_json(const fs::path &a_pmp_info_json,
+                          const fs::path &b_pmp_info_json)
+  {
+    CAPTURE(a_pmp_info_json);
+    CAPTURE(b_pmp_info_json);
+    const Parse_Pmp_Info_Json a(a_pmp_info_json);
+    const Parse_Pmp_Info_Json b(b_pmp_info_json);
+    DIFF(a.pmp_info, b.pmp_info);
+  }
+
   void diff_objectives_json(const fs::path &a_objectives_json,
                             const fs::path &b_objectives_json)
   {
@@ -234,6 +274,8 @@ namespace Test_Util::REQUIRE_Equal
           diff_normalization_json(a / "normalization.json",
                                   b / "normalization.json");
       }
+    diff_pmp_info_json(a / "pmp_info.json", b / "pmp_info.json");
+
     Parse_Control_Json control(a / "control.json");
     for(int i = 0; i < control.num_blocks; ++i)
       {
