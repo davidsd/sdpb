@@ -1,7 +1,9 @@
 #include "diff.hxx"
 
 #include "Float.hxx"
+#include "Parse_SDP.hxx"
 #include "json.hxx"
+#include "sdpb_util/to_matrix.hxx"
 
 #include <catch2/catch_amalgamated.hpp>
 
@@ -369,6 +371,47 @@ namespace Test_Util::REQUIRE_Equal
           diff_c_minus_By_json(a, b);
         else
           diff_matrix_txt(a, b);
+      }
+  }
+
+  void check_c_minus_By(const fs::path &sdp_dir, const fs::path &sdpb_out_dir,
+                        const unsigned int input_precision,
+                        const unsigned int diff_precision,
+                        const Test_Case_Runner &runner)
+  {
+    Float_Binary_Precision prec(input_precision, diff_precision);
+
+    CAPTURE(sdp_dir);
+    CAPTURE(sdpb_out_dir);
+
+    const auto vec_to_matrix
+      = [&](const Float_Vector &vec) { return to_matrix(std::vector({vec})); };
+
+    const Parse_SDP sdp(sdp_dir,runner);
+    const auto y_vec = Parse_Matrix_Txt(sdpb_out_dir / "y.txt").elements;
+    const Float_Matrix y = vec_to_matrix(y_vec);
+
+    const auto c_minus_By
+      = Parse_c_minus_By_Json(sdpb_out_dir / "c_minus_By" / "c_minus_By.json")
+          .blocks;
+
+    DIFF(sdp.block_data.size(), c_minus_By.size());
+
+    for(size_t block_index = 0; block_index < sdp.block_data.size();
+        block_index++)
+      {
+        CAPTURE(block_index);
+        const auto &block_data = sdp.block_data.at(block_index);
+        const auto &c = vec_to_matrix(block_data.constraint_constants);
+        const auto &B = block_data.constraint_matrix;
+
+        const Float_Matrix c_minus_By_block
+          = vec_to_matrix(c_minus_By.at(block_index));
+
+        auto c_minus_By_block_2 = c;
+        // c-> - B.y + c
+        El::Gemv(El::NORMAL, Float(-1), B, y, Float(1), c_minus_By_block_2);
+        DIFF(c_minus_By_block, c_minus_By_block_2);
       }
   }
 }

@@ -23,6 +23,13 @@ namespace Test_Util::REQUIRE_Equal
                             const std::vector<std::string> &filenames = {},
                             const std::vector<std::string> &out_txt_keys = {});
 
+  // Read c,B,y and check that (c - B.y) equals to the vector written to c_minus_By/c_minus_By.json
+  void
+  check_c_minus_By(const std::filesystem::path &sdp_dir,
+                   const std::filesystem::path &sdpb_out_dir,
+                   unsigned int input_precision, unsigned int diff_precision,
+                   const Test_Case_Runner &runner);
+
   void diff_sdp(const std::filesystem::path &a_sdp,
                 const std::filesystem::path &b_sdp,
                 unsigned int input_precision, unsigned int diff_precision,
