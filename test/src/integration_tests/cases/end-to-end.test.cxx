@@ -107,6 +107,11 @@ namespace
                 {"build/sdpb", default_sdpb_args}, args, num_procs);
             }
 
+          // Read c,B,y and check that (c - B.y) equals to the vector written to c_minus_By/c_minus_By.json
+          check_c_minus_By(sdp_path, output_dir / "out", precision,
+                           diff_precision,
+                           runner.create_nested("check_c_minus_By"));
+
           // SDPB runs with --precision=<precision>
           // We check test output up to lower precision=<sdpb_output_diff_precision>
           // in order to neglect unimportant rounding errors

@@ -1,6 +1,11 @@
 #pragma once
 
+#include "Damped_Rational.hxx"
+
+#include <El.hpp>
+
 #include <filesystem>
+#include <vector>
 
 struct PVM_Info
 {

@@ -1,6 +1,9 @@
 #include "diff.hxx"
 
 #include "Float.hxx"
+#include "Parse_SDP.hxx"
+#include "json.hxx"
+#include "sdpb_util/to_matrix.hxx"
 
 #include <catch2/catch_amalgamated.hpp>
 
@@ -134,6 +137,28 @@ namespace
         }
     }
   };
+
+  struct Parse_c_minus_By_Json
+  {
+    std::vector<Float_Vector> blocks;
+    explicit Parse_c_minus_By_Json(const fs::path &path)
+    {
+      CAPTURE(path);
+      REQUIRE(exists(path));
+      std::ifstream is(path);
+      rapidjson::IStreamWrapper wrapper(is);
+      rapidjson::Document document;
+      document.ParseStream(wrapper);
+
+      REQUIRE(document.IsObject());
+      REQUIRE(document.HasMember("c_minus_By"));
+      REQUIRE(document["c_minus_By"].IsArray());
+      for(const auto &block : document["c_minus_By"].GetArray())
+        {
+          blocks.emplace_back(Test_Util::Json::parse_Float_Vector(block));
+        }
+    }
+  };
 }
 
 // Helper functions
@@ -250,6 +275,15 @@ namespace
           }
       }
   }
+
+  void diff_c_minus_By_json(const fs::path &a_json, const fs::path &b_json)
+  {
+    CAPTURE(a_json);
+    CAPTURE(b_json);
+    const Parse_c_minus_By_Json a(a_json);
+    const Parse_c_minus_By_Json b(b_json);
+    DIFF(a.blocks, b.blocks);
+  }
 }
 
 // Implementation
@@ -270,6 +304,10 @@ namespace Test_Util::REQUIRE_Equal
     REQUIRE(is_directory(b_out_dir));
     Float_Binary_Precision prec(input_precision, diff_precision);
 
+    const std::string c_minus_By = "c_minus_By";
+    const fs::path c_minus_By_rel_path
+      = fs::path("c_minus_By") / "c_minus_By.json";
+
     std::vector<std::string> my_filenames = filenames;
     if(my_filenames.empty())
       {
@@ -279,24 +317,44 @@ namespace Test_Util::REQUIRE_Equal
         for(const auto &a : fs::directory_iterator(a_out_dir))
           {
             CAPTURE(a);
-            // Skip out/c_minus_By/ folders
-            // TODO check c_minus_By.json files
+            // Possible directories:
+            // out/c_minus_By/, out/c_minus_By.0/, out/c_minus_By.1/ etc.
             if(a.is_directory())
               {
-                const std::string c_minus_By = "c_minus_By";
-                REQUIRE(
-                  a.path().filename().string().substr(0, c_minus_By.size())
-                  == c_minus_By);
-                continue;
+                const auto dirname = a.path().filename().string();
+                REQUIRE(dirname.substr(0, c_minus_By.size()) == c_minus_By);
+
+                // check only the last c_minus_By file, out/c_minus_By/c_minus_By.json
+                if(dirname == c_minus_By)
+                  {
+                    my_filenames.push_back(c_minus_By_rel_path);
+                  }
               }
-            REQUIRE(is_regular_file(a.path()));
-            my_filenames.push_back(a.path().filename().string());
+            else
+              {
+                REQUIRE(is_regular_file(a.path()));
+                my_filenames.push_back(a.path().filename().string());
+              }
           }
         // Check that all files from b_out_dir exist in a_out_dir
-        for(const auto &b : fs::directory_iterator(b_out_dir))
+        for(const auto &b : fs::recursive_directory_iterator(b_out_dir))
           {
             CAPTURE(b);
-            REQUIRE(is_regular_file(a_out_dir / b.path().filename()));
+            if(!b.is_regular_file())
+              continue;
+            const auto rel_path = fs::relative(b.path(), b_out_dir);
+            if(rel_path.has_parent_path())
+              {
+                const auto parent_dir = rel_path.parent_path().string();
+                if(parent_dir != c_minus_By)
+                  {
+                    // Skip out/c_minus_By.0/, out/c_minus_By.1/ etc.
+                    REQUIRE(parent_dir.substr(0, c_minus_By.size())
+                            == c_minus_By);
+                    continue;
+                  }
+              }
+            REQUIRE(is_regular_file(a_out_dir / rel_path));
           }
       }
 
@@ -309,8 +367,51 @@ namespace Test_Util::REQUIRE_Equal
           diff_sdpb_out_txt(a, b, out_txt_keys);
         else if(name.substr(0, 10) == "iterations")
           diff_iterations_json(a, b);
+        else if(name == c_minus_By_rel_path)
+          diff_c_minus_By_json(a, b);
         else
           diff_matrix_txt(a, b);
+      }
+  }
+
+  void check_c_minus_By(const fs::path &sdp_dir, const fs::path &sdpb_out_dir,
+                        const unsigned int input_precision,
+                        const unsigned int diff_precision,
+                        const Test_Case_Runner &runner)
+  {
+    Float_Binary_Precision prec(input_precision, diff_precision);
+
+    CAPTURE(sdp_dir);
+    CAPTURE(sdpb_out_dir);
+
+    const auto vec_to_matrix
+      = [&](const Float_Vector &vec) { return to_matrix(std::vector({vec})); };
+
+    const Parse_SDP sdp(sdp_dir,runner);
+    const auto y_vec = Parse_Matrix_Txt(sdpb_out_dir / "y.txt").elements;
+    const Float_Matrix y = vec_to_matrix(y_vec);
+
+    const auto c_minus_By
+      = Parse_c_minus_By_Json(sdpb_out_dir / "c_minus_By" / "c_minus_By.json")
+          .blocks;
+
+    DIFF(sdp.block_data.size(), c_minus_By.size());
+
+    for(size_t block_index = 0; block_index < sdp.block_data.size();
+        block_index++)
+      {
+        CAPTURE(block_index);
+        const auto &block_data = sdp.block_data.at(block_index);
+        const auto &c = vec_to_matrix(block_data.constraint_constants);
+        const auto &B = block_data.constraint_matrix;
+
+        const Float_Matrix c_minus_By_block
+          = vec_to_matrix(c_minus_By.at(block_index));
+
+        auto c_minus_By_block_2 = c;
+        // c-> - B.y + c
+        El::Gemv(El::NORMAL, Float(-1), B, y, Float(1), c_minus_By_block_2);
+        DIFF(c_minus_By_block, c_minus_By_block_2);
       }
   }
 }
