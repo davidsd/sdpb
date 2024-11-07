@@ -1,5 +1,6 @@
 #pragma once
 #include "Float.hxx"
+#include "Test_Case_Runner.hxx"
 #include "pmp/PVM_Info.hxx"
 
 #include <optional>
@@ -61,6 +62,7 @@ private:
 
 struct Parse_SDP
 {
+  const std::filesystem::path sdp_dir;
   Parse_Control_Json control;
   Parse_Pmp_Info_Json pmp_info;
   Parse_Objectives_Json objectives;
@@ -68,5 +70,6 @@ struct Parse_SDP
   std::vector<Parse_Block_Info_Json> block_info;
   std::vector<Parse_Block_Data> block_data;
 
-  explicit Parse_SDP(const std::filesystem::path &sdp_dir);
+  Parse_SDP(const std::filesystem::path &sdp_path,
+            const Test_Util::Test_Case_Runner &runner);
 };

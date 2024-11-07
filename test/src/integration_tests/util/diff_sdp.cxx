@@ -19,15 +19,11 @@ namespace Test_Util::REQUIRE_Equal
     CAPTURE(b_sdp);
     Float_Binary_Precision prec(input_precision, diff_precision);
 
-    const auto a_sdp_dir
-      = fs::is_directory(a_sdp) ? a_sdp : runner.unzip_to_temp_dir(a_sdp);
-    const auto b_sdp_dir
-      = fs::is_directory(b_sdp) ? b_sdp : runner.unzip_to_temp_dir(b_sdp);
-    CAPTURE(a_sdp_dir);
-    CAPTURE(b_sdp_dir);
+    Parse_SDP a(a_sdp, runner);
+    Parse_SDP b(b_sdp, runner);
 
-    Parse_SDP a(a_sdp_dir);
-    Parse_SDP b(b_sdp_dir);
+    CAPTURE(a.sdp_dir);
+    CAPTURE(b.sdp_dir);
 
     DIFF(a.control.num_blocks, b.control.num_blocks);
     // ignore "command", since it's unimportant:

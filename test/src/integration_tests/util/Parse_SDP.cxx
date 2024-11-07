@@ -132,8 +132,11 @@ void Parse_Block_Data::parse_bin(const fs::path &block_path)
   ar >> bilinear_bases_odd;
 }
 
-Parse_SDP::Parse_SDP(const fs::path &sdp_dir)
-    : control(sdp_dir / "control.json"),
+Parse_SDP::Parse_SDP(const fs::path &sdp_path,
+                     const Test_Util::Test_Case_Runner &runner)
+    : sdp_dir(is_regular_file(sdp_path) ? runner.unzip_to_temp_dir(sdp_path)
+                                        : sdp_path),
+      control(sdp_dir / "control.json"),
       pmp_info(sdp_dir / "pmp_info.json"),
       objectives(sdp_dir / "objectives.json")
 {
