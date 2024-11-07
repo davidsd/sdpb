@@ -52,6 +52,8 @@ struct Parse_Block_Data
   Float_Matrix bilinear_bases_odd;
   Float_Vector constraint_constants;
   Float_Matrix constraint_matrix;
+  std::optional<Float_Matrix> preconditioning_values;
+
   explicit
   Parse_Block_Data(const std::filesystem::path &block_path_no_extension);
 

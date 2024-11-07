@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Damped_Rational.hxx"
+#include "Polynomial_Power_Product.hxx"
 
 #include <El.hpp>
 
@@ -15,4 +16,5 @@ struct PVM_Info
   std::vector<El::BigFloat> sample_points;
   std::vector<El::BigFloat> sample_scalings;
   std::vector<El::BigFloat> reduced_sample_scalings;
+  std::optional<std::vector<Polynomial_Power_Product>> preconditioning_vector;
 };

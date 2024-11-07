@@ -117,6 +117,11 @@ void Parse_Block_Data::parse_json(const fs::path &block_path)
   bilinear_bases_odd = parse_Float_Matrix(document["bilinear_bases_odd"]);
   constraint_constants = parse_Float_Vector(document["c"]);
   constraint_matrix = parse_Float_Matrix(document["B"]);
+  if(document.HasMember("preconditioningValues"))
+    {
+      preconditioning_values
+        = parse_Float_Matrix(document["preconditioningValues"]);
+    }
 }
 void Parse_Block_Data::parse_bin(const fs::path &block_path)
 {
@@ -130,6 +135,8 @@ void Parse_Block_Data::parse_bin(const fs::path &block_path)
   ar >> constraint_constants;
   ar >> bilinear_bases_even;
   ar >> bilinear_bases_odd;
+  if(is.peek() != EOF)
+    ar >> preconditioning_values.emplace();
 }
 
 Parse_SDP::Parse_SDP(const fs::path &sdp_path,

@@ -66,7 +66,8 @@ namespace Test_Util::REQUIRE_Equal
         DIFF(a_block_data.constraint_constants,
              b_block_data.constraint_constants);
         DIFF(a_block_data.constraint_matrix, b_block_data.constraint_matrix);
-        DIFF(a_block_data.preconditioning_values, b_block_data.preconditioning_values);
+        DIFF(a_block_data.preconditioning_values,
+             b_block_data.preconditioning_values);
       }
   }
 }
