@@ -157,15 +157,21 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
 
       reduce_scatter_buffer_bytes = get_reduce_scatter_buffer_bytes(
         shared_memory_comm, window_width, output_window_split_factor);
-      if(output_window_bytes + reduce_scatter_buffer_bytes
-         >= max_shared_memory_bytes)
-        continue;
 
       // Try to find minimal input_window_split_factor
+      size_t max_input_window_bytes;
+      if(output_window_bytes + reduce_scatter_buffer_bytes
+         >= max_shared_memory_bytes)
+        {
+          max_input_window_bytes = 0;
+        }
+      else
+        {
+          max_input_window_bytes = max_shared_memory_bytes
+                                   - output_window_bytes
+                                   - reduce_scatter_buffer_bytes;
+        }
 
-      auto max_input_window_bytes = max_shared_memory_bytes
-                                    - output_window_bytes
-                                    - reduce_scatter_buffer_bytes;
       // If output window is split, we need two (same-size) input windows
       // to calculate off-diagonal Q blocks
       if(output_window_split_factor > 1)

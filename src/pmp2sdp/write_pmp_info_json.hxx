@@ -3,6 +3,7 @@
 #include "write_vector.hxx"
 #include "pmp/Damped_Rational.hxx"
 #include "pmp/Polynomial_Matrix_Program.hxx"
+#include "pmp/PVM_Info.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
@@ -15,18 +16,7 @@
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/writer.h>
 
-struct Polynomial_Matrix_Program;
 namespace fs = std::filesystem;
-
-struct PVM_Info
-{
-  fs::path block_path;
-  Damped_Rational reduced_prefactor;
-  std::vector<El::BigFloat> sample_points;
-  std::vector<El::BigFloat> sample_scalings;
-  std::vector<El::BigFloat> reduced_sample_scalings;
-  std::optional<std::vector<Polynomial_Power_Product>> preconditioning_vector;
-};
 
 inline void write_pmp_info_json(std::ostream &output_stream,
                                 const std::vector<PVM_Info> &pmp_info)
@@ -70,6 +60,17 @@ inline void write_pmp_info_json(std::ostream &output_stream,
       writer.Key("block_path");
       {
         writer.String(block.block_path.string().c_str());
+      }
+      writer.Key("prefactor");
+      {
+        writer.StartObject();
+        writer.Key("constant");
+        add_Boost_Float(block.prefactor.constant);
+        writer.Key("base");
+        add_Boost_Float(block.prefactor.base);
+        writer.Key("poles");
+        add_Boost_Float_array(block.prefactor.poles);
+        writer.EndObject();
       }
       writer.Key("reducedPrefactor");
       {
@@ -127,13 +128,13 @@ inline void synchronize_pvm_info(PVM_Info &pvm_info, const int from)
 {
   const int to = 0;
 
-  const int rank = El::mpi::Rank();
+  const auto comm = El::mpi::COMM_WORLD;
+  const int rank = comm.Rank();
+
   if(rank != to && rank != from)
     return;
   if(to == from)
     return;
-
-  const auto &comm = El::mpi::COMM_WORLD;
 
   // block_path
   {
@@ -154,30 +155,32 @@ inline void synchronize_pvm_info(PVM_Info &pvm_info, const int from)
       }
   }
 
-  // reduced_prefactor
-  {
-    auto &reduced_prefactor = pvm_info.reduced_prefactor;
-    if(rank == from)
-      {
-        El::mpi::Send(to_BigFloat(reduced_prefactor.constant), to, comm);
-        El::mpi::Send(to_BigFloat(reduced_prefactor.base), to, comm);
-        const auto poles = to_BigFloat_Vector(reduced_prefactor.poles);
-        El::mpi::Send<size_t>(poles.size(), to, comm);
-        El::mpi::Send(poles.data(), poles.size(), to, comm);
-      }
-    if(rank == to)
-      {
-        reduced_prefactor.constant
-          = to_Boost_Float(El::mpi::Recv<El::BigFloat>(from, comm));
-        reduced_prefactor.base
-          = to_Boost_Float(El::mpi::Recv<El::BigFloat>(from, comm));
+  // prefactor, reduced_prefactor
+  for(auto *damped_rational_ptr :
+      {&pvm_info.prefactor, &pvm_info.reduced_prefactor})
+    {
+      auto &damped_rational = *damped_rational_ptr;
+      if(rank == from)
+        {
+          El::mpi::Send(to_BigFloat(damped_rational.constant), to, comm);
+          El::mpi::Send(to_BigFloat(damped_rational.base), to, comm);
+          const auto poles = to_BigFloat_Vector(damped_rational.poles);
+          El::mpi::Send<size_t>(poles.size(), to, comm);
+          El::mpi::Send(poles.data(), poles.size(), to, comm);
+        }
+      if(rank == to)
+        {
+          damped_rational.constant
+            = to_Boost_Float(El::mpi::Recv<El::BigFloat>(from, comm));
+          damped_rational.base
+            = to_Boost_Float(El::mpi::Recv<El::BigFloat>(from, comm));
 
-        const size_t num_poles = El::mpi::Recv<size_t>(from, comm);
-        std::vector<El::BigFloat> poles(num_poles);
-        El::mpi::Recv(poles.data(), poles.size(), from, comm);
-        reduced_prefactor.poles = to_Boost_Float_Vector(poles);
-      }
-  }
+          const size_t num_poles = El::mpi::Recv<size_t>(from, comm);
+          std::vector<El::BigFloat> poles(num_poles);
+          El::mpi::Recv(poles.data(), poles.size(), from, comm);
+          damped_rational.poles = to_Boost_Float_Vector(poles);
+        }
+    }
   for(auto vec_ptr : {&pvm_info.sample_points, &pvm_info.sample_scalings,
                       &pvm_info.reduced_sample_scalings})
     {
@@ -270,6 +273,7 @@ std::vector<PVM_Info> inline synchronize_pmp_info(
 
       auto &pvm_info = pmp_info.at(block_index);
       pvm_info.block_path = pmp.block_paths.at(local_index);
+      pvm_info.prefactor = pvm.prefactor;
       pvm_info.reduced_prefactor = pvm.reduced_prefactor;
       pvm_info.sample_points = pvm.sample_points;
       pvm_info.sample_scalings = pvm.sample_scalings;

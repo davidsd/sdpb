@@ -36,6 +36,7 @@ struct Polynomial_Vector_Matrix
   // of polynomials.  So we should use a proper symmetric matrix class.
   El::Matrix<Polynomial_Vector> polynomials;
 
+  Damped_Rational prefactor;
   Damped_Rational reduced_prefactor;
 
   std::optional<std::vector<Polynomial_Power_Product>> preconditioning_vector;

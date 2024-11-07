@@ -3,7 +3,7 @@
 #include "restore_bigint_from_residues.hxx"
 #include "sdpb_util/block_mapping/MPI_Comm_Wrapper.hxx"
 
-// Restore output maxtrix from residues (outpet_residues_window) and synchronize it for all nodes.
+// Restore output matrix from residues (output_residues_window) and synchronize it for all nodes.
 //
 // Initially, each node n has its own matrix Q_n, stored as residues in output_residues_window.
 // The function restores Q_n from residues, sums Q_n over all nodes
@@ -11,11 +11,11 @@
 //
 // Algorithm:
 // 1. The rank that owns the element Q[i,j] sets Q[i,j] = Q_n[i,j] restored from residues on its node.
-// 2. Accumulate Q_n[i,j] from other nodes to Q[i,j] according to the followin scheme:
+// 2. Accumulate Q_n[i,j] from other nodes to Q[i,j] according to the following scheme:
 //   for offset = 1..num_nodes-1:
 //   - Each node (n) restores all Q_n[i,j] for [i,j] owned by node (n+offset) from residues,
 //     and sends them to node (n+offset). Implemented via MPI_Sendrecv.
-//   - Each node updates its own Q[i,j] with data recevied from node (n-offset).
+//   - Each node updates its own Q[i,j] with data received from node (n-offset).
 //
 // All ranks on a node have access to each Q_n[i,j], so how do we decide
 //   which rank should send it?
@@ -155,7 +155,14 @@ void BigInt_Shared_Memory_Syrk_Context::restore_and_reduce(
                 if(output.Owner(i, j) != global_ranks.at(to))
                   continue;
 
-                ASSERT(curr_send - send_buf.data() < send_buf.size());
+                ASSERT(curr_send + serialized_size - send_buf.data()
+                         <= send_buf.size(),
+                       "send buffer is too small!",
+                       DEBUG_STRING(send_buf.size()),
+                       DEBUG_STRING(curr_send - send_buf.data()),
+                       DEBUG_STRING(serialized_size), DEBUG_STRING(i),
+                       DEBUG_STRING(j), DEBUG_STRING(height),
+                       DEBUG_STRING(width), DEBUG_STRING(global_ranks.at(to)));
                 restore_bigint_from_residues(*output_residues_window, i, j,
                                              comb, residues_buffer_temp,
                                              bigint_value);
@@ -163,10 +170,13 @@ void BigInt_Shared_Memory_Syrk_Context::restore_and_reduce(
                 bigfloat_value.Serialize(curr_send);
                 curr_send += serialized_size;
               }
-          ASSERT_EQUAL(curr_send - send_buf.data(), send_buf.size());
+          ASSERT_EQUAL(curr_send - send_buf.data(), send_buf.size(),
+                       "send buffer has wrong size!",
+                       DEBUG_STRING(serialized_size), DEBUG_STRING(height),
+                       DEBUG_STRING(width), DEBUG_STRING(global_ranks.at(to)));
         }
 
-        // Receive buffer will recieve elements for a current rank
+        // Receive buffer will receive elements for a current rank
         recv_buf.resize(num_output_elements.at(reduce_rank) * serialized_size);
 
         {

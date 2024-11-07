@@ -5,6 +5,7 @@
 #include "pmp_read/read_json/Json_PMP_Parser.hxx"
 #include "sdpb_util/json/Json_Float_Parser.hxx"
 #include "sdpb_util/json/Json_Vector_Parser.hxx"
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 #include "test_util/diff.hxx"
 #include "unit_tests/util/util.hxx"
 
