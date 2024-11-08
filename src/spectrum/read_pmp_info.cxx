@@ -21,6 +21,7 @@ class Json_PVM_Info_Parser final : public Abstract_Json_Object_Parser<PVM_Info>
   Json_UInt64_Parser block_index_parser;
   Json_String_Parser block_path_parser;
   Json_UInt64_Parser dim_parser;
+  Json_Damped_Rational_Parser prefactor_parser;
   Json_Damped_Rational_Parser reduced_prefactor_parser;
   Json_Vector_Parser<Json_Polynomial_Power_Product_Parser>
     preconditioning_vector_parser;
@@ -41,6 +42,7 @@ public:
         ELEMENT_PARSER_CTOR(block_index),
         ELEMENT_PARSER_CTOR(block_path),
         ELEMENT_PARSER_CTOR(dim),
+        ELEMENT_PARSER_CTOR(prefactor),
         ELEMENT_PARSER_CTOR(reduced_prefactor),
         ELEMENT_PARSER_CTOR(preconditioning_vector),
         ELEMENT_PARSER_CTOR(sample_points),
@@ -63,6 +65,8 @@ protected:
     if(key == "dim")
       return dim_parser;
 
+    if(key == "prefactor")
+      return prefactor_parser;
     if(key == "reducedPrefactor")
       return reduced_prefactor_parser;
     if(key == "preconditioningVector")
@@ -85,6 +89,7 @@ public:
     block_index_parser.reset(skip);
     block_path_parser.reset(skip);
     dim_parser.reset(skip);
+    prefactor_parser.reset(skip);
     reduced_prefactor_parser.reset(skip);
     sample_points_parser.reset(skip);
     sample_scalings_parser.reset(skip);
