@@ -13,6 +13,7 @@ struct PVM_Info
   int block_index = -1;
   std::filesystem::path block_path;
   size_t dim = 0;
+  Damped_Rational prefactor;
   Damped_Rational reduced_prefactor;
   std::vector<El::BigFloat> sample_points;
   std::vector<El::BigFloat> sample_scalings;
@@ -26,6 +27,7 @@ struct PVM_Info
       : block_index(block_index),
         block_path(std::move(block_path)),
         dim(pvm.polynomials.Height()),
+        prefactor(pvm.prefactor),
         reduced_prefactor(pvm.reduced_prefactor),
         sample_points(pvm.sample_points),
         sample_scalings(pvm.sample_scalings),
