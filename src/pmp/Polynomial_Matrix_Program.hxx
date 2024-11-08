@@ -6,6 +6,7 @@
 #include <El.hpp>
 
 #include <filesystem>
+#include <optional>
 #include <vector>
 
 // Result of JSON/Mathematica/xml input parsing.
