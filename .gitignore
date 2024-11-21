@@ -6,6 +6,8 @@ __pycache__/
 /waf-tools/*.pyc
 
 # cmake
+cmake-build*/
+build/
 /cmake-build*/
 
 # IDE
