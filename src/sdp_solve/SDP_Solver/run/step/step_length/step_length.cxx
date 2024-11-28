@@ -35,6 +35,19 @@ El::BigFloat step_length(const Block_Diagonal_Matrix &MCholesky,
   Block_Diagonal_Matrix MInvDM(dM);
   lower_triangular_inverse_congruence(MCholesky, MInvDM);
   const El::BigFloat lambda(min_eigenvalue(MInvDM));
+
+  El::BigFloat maxstep = -1 / lambda;
+
+  //if (El::mpi::Rank() == 0) std::cout << std::setprecision(8) << "lambda=" << lambda << " maxstep=" << maxstep << "\n";
+
+  if (maxstep >= 1 || maxstep <= 0)
+	  return 1;
+
+  if (maxstep > 0.95)
+	  return 1 - 5 * (1 - maxstep);
+  return -gamma / lambda;
+
+
   if(lambda > -gamma)
     {
       return 1;
