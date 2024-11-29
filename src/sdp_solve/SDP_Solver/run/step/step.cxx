@@ -132,15 +132,19 @@ void SDP_Solver::step(
   Block_Diagonal_Matrix dX_last(X), dY_last(Y);
   El::BigFloat primal_step_length_last, dual_step_length_last, step_length_max;
 
-  if(verbosity >= Verbosity::trace)
-    {
-      print_allocation_message_per_node(env, "dx", get_allocated_bytes(dx));
-      print_allocation_message_per_node(env, "dy", get_allocated_bytes(dy));
-      print_allocation_message_per_node(env, "dX", get_allocated_bytes(dX));
-      print_allocation_message_per_node(env, "dY", get_allocated_bytes(dY));
+#define VERBOSE_ALLOCATION_MESSAGE(var)                                       \
+  if(verbosity >= Verbosity::trace)                                           \
+    print_allocation_message_per_node(env, #var, get_allocated_bytes(var));
 
-      // TODO print dx_last etc.
-    }
+  VERBOSE_ALLOCATION_MESSAGE(dx);
+  VERBOSE_ALLOCATION_MESSAGE(dy);
+  VERBOSE_ALLOCATION_MESSAGE(dX);
+  VERBOSE_ALLOCATION_MESSAGE(dY);
+
+  VERBOSE_ALLOCATION_MESSAGE(dx_last);
+  VERBOSE_ALLOCATION_MESSAGE(dy_last);
+  VERBOSE_ALLOCATION_MESSAGE(dX_last);
+  VERBOSE_ALLOCATION_MESSAGE(dY_last);
 
   {
     // SchurComplementCholesky = L', the Cholesky decomposition of the
@@ -149,12 +153,7 @@ void SDP_Solver::step(
       block_info.schur_block_sizes(), block_info.block_indices,
       block_info.num_points.size(), grid);
 
-    if(verbosity >= Verbosity::trace)
-      {
-        print_allocation_message_per_node(
-          env, "schur_complement_cholesky",
-          get_allocated_bytes(schur_complement_cholesky));
-      }
+    VERBOSE_ALLOCATION_MESSAGE(schur_complement_cholesky);
 
     // SchurOffDiagonal = L'^{-1} FreeVarMatrix, needed in solving the
     // Schur complement equation.
@@ -170,10 +169,7 @@ void SDP_Solver::step(
     // that N' could change with each iteration.
     El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
                                    sdp.dual_objective_b.Height());
-    if(verbosity >= Verbosity::trace)
-      {
-        print_allocation_message_per_node(env, "Q", get_allocated_bytes(Q));
-      }
+    VERBOSE_ALLOCATION_MESSAGE(Q);
 
     // Compute SchurComplement and prepare to solve the Schur
     // complement equation for dx, dy
@@ -186,11 +182,8 @@ void SDP_Solver::step(
     // It will be reused for mu, R-err, compute_search_direction().
     Scoped_Timer XY_timer(timers, "XY");
     Block_Diagonal_Matrix minus_XY(X);
-    if(verbosity >= Verbosity::trace)
-      {
-        print_allocation_message_per_node(env, "XY",
-                                          get_allocated_bytes(minus_XY));
-      }
+    VERBOSE_ALLOCATION_MESSAGE(minus_XY);
+
     scale_multiply_add(El::BigFloat(-1), X, Y, El::BigFloat(0), minus_XY);
     XY_timer.stop();
 
@@ -399,4 +392,6 @@ void SDP_Solver::step(
   // Block timings
   Scoped_Timer block_timings_timer(timers, "block_timings_AllReduce");
   El::AllReduce(block_timings_ms, El::mpi::COMM_WORLD);
+
+#undef VERBOSE_ALLOCATION_MESSAGE
 }
