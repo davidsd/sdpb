@@ -121,6 +121,11 @@ boost::program_options::options_description Solver_Parameters::options()
     "Shrink each newton step by this factor (smaller means slower, more "
     "stable convergence). Corresponds to SDPA's gammaStar.");
   result.add_options()(
+    "maxCorrectorIterations",
+    boost::program_options::value<int64_t>(&max_corrector_iterations)
+      ->default_value(1),
+    "Maximum number of corrector iterations within each solver step.");
+  result.add_options()(
     "minPrimalStep",
     boost::program_options::value<El::BigFloat>(&min_primal_step)
       ->default_value(El::BigFloat(0)),

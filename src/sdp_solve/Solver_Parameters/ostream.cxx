@@ -30,6 +30,7 @@ std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
      << "infeasibleCenteringParameter = " << p.infeasible_centering_parameter
      << '\n'
      << "stepLengthReduction          = " << p.step_length_reduction << '\n'
+     << "maxCorrectorIterations       = " << p.max_corrector_iterations << '\n'
      << "maxComplementarity           = " << p.max_complementarity << '\n'
      << "initialCheckpointDir         = " << p.checkpoint_in << '\n'
      << "checkpointDir                = " << p.checkpoint_out << '\n';

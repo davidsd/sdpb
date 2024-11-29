@@ -255,7 +255,10 @@ void SDP_Solver::step(
       // TODO introduce SDPB parameters
       const El::BigFloat corIter_MuReduce = 0.7;
       const El::BigFloat corIter_stepLengthThreshold = 1.0;
-      const size_t max_corrector_iterations = 100;
+      const size_t max_corrector_iterations
+        = parameters.max_corrector_iterations > 0
+            ? parameters.max_corrector_iterations
+            : std::numeric_limits<int64_t>::max();
 
       bool undo_last_corrector_iteration = false;
       size_t corrector_iter_index;
