@@ -230,21 +230,18 @@ void SDP_Solver::step(
     {
       Scoped_Timer corrector_timer(timers, "corrector");
 
-      Block_Vector dx_last(dx), dy_last(dy);
-      Block_Diagonal_Matrix dX_last(dX), dY_last(dY);
+      Block_Vector dx_prev(dx), dy_prev(dy);
+      Block_Diagonal_Matrix dX_prev(dX), dY_prev(dY);
 
-      VERBOSE_ALLOCATION_MESSAGE(dx_last);
-      VERBOSE_ALLOCATION_MESSAGE(dy_last);
-      VERBOSE_ALLOCATION_MESSAGE(dX_last);
-      VERBOSE_ALLOCATION_MESSAGE(dY_last);
+      VERBOSE_ALLOCATION_MESSAGE(dx_prev);
+      VERBOSE_ALLOCATION_MESSAGE(dy_prev);
+      VERBOSE_ALLOCATION_MESSAGE(dX_prev);
+      VERBOSE_ALLOCATION_MESSAGE(dY_prev);
 
-      // Compute step-lengths that preserve positive definiteness of X, Y
-      El::BigFloat primal_step_length_last
-        = step_length(X_cholesky, dX, parameters.step_length_reduction,
-                      "stepLength(XCholesky)", timers);
-      El::BigFloat dual_step_length_last
-        = step_length(Y_cholesky, dY, parameters.step_length_reduction,
-                      "stepLength(YCholesky)", timers);
+      // Will be initialized at the end of the first corrector iteration
+      El::BigFloat primal_step_length_prev = 0;
+      El::BigFloat dual_step_length_prev = 0;
+      El::BigFloat beta_corrector_prev = 0;
 
       El::BigFloat step_length_max = 0;
 
@@ -260,6 +257,7 @@ void SDP_Solver::step(
       const El::BigFloat corIter_stepLengthThreshold = 1.0;
       const size_t max_corrector_iterations = 100;
 
+      bool undo_last_corrector_iteration = false;
       size_t corrector_iter_index;
       for(corrector_iter_index = 0;
           corrector_iter_index < max_corrector_iterations;
@@ -267,6 +265,19 @@ void SDP_Solver::step(
         {
           Scoped_Timer loop_timer(timers,
                                   std::to_string(corrector_iter_index));
+
+          if(corrector_iter_index > 0)
+            {
+              dx_prev = dx;
+              dy_prev = dy;
+              dX_prev = dX;
+              dY_prev = dY;
+              primal_step_length_prev = primal_step_length;
+              dual_step_length_prev = dual_step_length;
+              beta_corrector_prev = beta_corrector;
+
+              beta_corrector = beta_corrector * corIter_MuReduce;
+            }
 
           Scoped_Timer compute_search_direction_timer(
             timers, "compute_search_direction");
@@ -276,6 +287,7 @@ void SDP_Solver::step(
             primal_residue_p, true, Q, dx, dX, dy, dY);
           compute_search_direction_timer.stop();
 
+          // Compute step-lengths that preserve positive definiteness of X, Y
           primal_step_length
             = step_length(X_cholesky, dX, parameters.step_length_reduction,
                           "stepLength(XCholesky)", timers);
@@ -315,33 +327,29 @@ void SDP_Solver::step(
              && primal_step_length + dual_step_length
                   < step_length_max * corIter_stepLengthThreshold)
             {
+              undo_last_corrector_iteration = true;
               break;
             }
 
           step_length_max
             = El::Max(step_length_max, primal_step_length + dual_step_length);
-
-          dx_last = dx;
-          dy_last = dy;
-          dX_last = dX;
-          dY_last = dY;
-          primal_step_length_last = primal_step_length;
-          dual_step_length_last = dual_step_length;
-
-          beta_corrector = beta_corrector * corIter_MuReduce;
         }
 
       if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
         El::Output("num_corrector_steps=", corrector_iter_index);
 
-      dx = dx_last;
-      dy = dy_last;
-      dX = dX_last;
-      dY = dY_last;
-      primal_step_length = primal_step_length_last;
-      dual_step_length = dual_step_length_last;
-
-      beta_corrector = beta_corrector / corIter_MuReduce;
+      if(undo_last_corrector_iteration)
+        {
+          ASSERT(corrector_iter_index > 0,
+                 "Should perform at least one corrector iteration!");
+          dx = dx_prev;
+          dy = dy_prev;
+          dX = dX_prev;
+          dY = dY_prev;
+          primal_step_length = primal_step_length_prev;
+          dual_step_length = dual_step_length_prev;
+          beta_corrector = beta_corrector_prev;
+        }
     }
   }
 
