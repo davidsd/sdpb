@@ -25,6 +25,8 @@ boost::property_tree::ptree to_property_tree(const Solver_Parameters &p)
   result.put("infeasibleCenteringParameter", p.infeasible_centering_parameter);
   result.put("stepLengthReduction", p.step_length_reduction);
   result.put("correctorMuReduction", p.corrector_mu_reduction);
+  result.put("correctorStepLengthThreshold",
+             p.corrector_step_length_threshold);
   result.put("maxCorrectorIterations", p.max_corrector_iterations);
   result.put("maxComplementarity", p.max_complementarity);
   result.put("initialCheckpointDir", p.checkpoint_in.string());

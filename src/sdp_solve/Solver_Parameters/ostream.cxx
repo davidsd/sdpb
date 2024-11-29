@@ -31,6 +31,8 @@ std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
      << '\n'
      << "stepLengthReduction          = " << p.step_length_reduction << '\n'
      << "correctorMuReduction         = " << p.corrector_mu_reduction << '\n'
+     << "correctorStepLengthThreshold = " << p.corrector_step_length_threshold
+     << '\n'
      << "maxCorrectorIterations       = " << p.max_corrector_iterations << '\n'
      << "maxComplementarity           = " << p.max_complementarity << '\n'
      << "initialCheckpointDir         = " << p.checkpoint_in << '\n'

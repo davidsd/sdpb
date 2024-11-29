@@ -23,8 +23,8 @@ struct Solver_Parameters
     dual_error_threshold, initial_matrix_scale_primal,
     initial_matrix_scale_dual, feasible_centering_parameter,
     infeasible_centering_parameter, step_length_reduction,
-    corrector_mu_reduction, max_complementarity, min_primal_step,
-    min_dual_step;
+    corrector_mu_reduction, corrector_step_length_threshold,
+    max_complementarity, min_primal_step, min_dual_step;
 
   std::filesystem::path checkpoint_in, checkpoint_out;
   Solver_Parameters() = default;

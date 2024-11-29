@@ -252,9 +252,6 @@ void SDP_Solver::step(
       if(corIter_centering_Q)
         beta_corrector = 1;
 
-      // TODO introduce SDPB parameter
-      const El::BigFloat corIter_stepLengthThreshold = 1.0;
-
       const El::BigFloat corrector_iter_mu_reduction
         = parameters.corrector_mu_reduction;
       ASSERT(corrector_iter_mu_reduction > 0,
@@ -335,7 +332,8 @@ void SDP_Solver::step(
           // TODO: check other exit conditions, e.g (gap < dualityGapThreshold)
           if(corrector_iter_index > 0
              && primal_step_length + dual_step_length
-                  < step_length_max * corIter_stepLengthThreshold)
+                  < step_length_max
+                      * parameters.corrector_step_length_threshold)
             {
               undo_last_corrector_iteration = true;
               break;
