@@ -51,22 +51,18 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
             const Block_Diagonal_Matrix &dM, const El::BigFloat &gamma,
             const std::string &timer_name, Timers &timers);
 
-void compute_errors(
-  const Block_Info &block_info, const SDP &sdp,
-  const std::size_t &total_psd_rows,
-
-  const Block_Vector &x_const, const Block_Vector &dx_const,
-  const Block_Vector &y_const, const Block_Vector &dy_const,
-  const Block_Diagonal_Matrix &X_const, const Block_Diagonal_Matrix &dX_const,
-  const Block_Diagonal_Matrix &Y_const, const Block_Diagonal_Matrix &dY_const,
-
-  const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
-
-  El::BigFloat &primal_error_P, El::BigFloat &primal_error_p,
-  El::BigFloat &dual_error, El::BigFloat &R_error, El::BigFloat &mu,
-
-  Timers &timers)
+void compute_errors(const std::size_t &total_psd_rows,
+                    const Block_Vector &x_const, const Block_Vector &dx_const,
+                    const Block_Vector &y_const, const Block_Vector &dy_const,
+                    const Block_Diagonal_Matrix &X_const,
+                    const Block_Diagonal_Matrix &dX_const,
+                    const Block_Diagonal_Matrix &Y_const,
+                    const Block_Diagonal_Matrix &dY_const,
+                    const El::BigFloat &primal_step_length,
+                    const El::BigFloat &dual_step_length,
+                    El::BigFloat &R_error, El::BigFloat &mu, Timers &timers)
 {
+  Scoped_Timer timer(timers, "compute_errors");
   Block_Vector x(x_const), y(y_const), dx(dx_const), dy(dy_const);
   Block_Diagonal_Matrix X(X_const), Y(Y_const), dX(dX_const), dY(dY_const);
 
@@ -92,8 +88,6 @@ void compute_errors(
   R.add_diagonal(mu);
 
   R_error = R.max_abs();
-
-  return;
 }
 
 void SDP_Solver::step(
@@ -128,10 +122,6 @@ void SDP_Solver::step(
   Block_Vector dx(x), dy(y);
   Block_Diagonal_Matrix dX(X), dY(Y);
 
-  Block_Vector dx_last(x), dy_last(y);
-  Block_Diagonal_Matrix dX_last(X), dY_last(Y);
-  El::BigFloat primal_step_length_last, dual_step_length_last, step_length_max;
-
 #define VERBOSE_ALLOCATION_MESSAGE(var)                                       \
   if(verbosity >= Verbosity::trace)                                           \
     print_allocation_message_per_node(env, #var, get_allocated_bytes(var));
@@ -140,11 +130,6 @@ void SDP_Solver::step(
   VERBOSE_ALLOCATION_MESSAGE(dy);
   VERBOSE_ALLOCATION_MESSAGE(dX);
   VERBOSE_ALLOCATION_MESSAGE(dY);
-
-  VERBOSE_ALLOCATION_MESSAGE(dx_last);
-  VERBOSE_ALLOCATION_MESSAGE(dy_last);
-  VERBOSE_ALLOCATION_MESSAGE(dX_last);
-  VERBOSE_ALLOCATION_MESSAGE(dY_last);
 
   {
     // SchurComplementCholesky = L', the Cholesky decomposition of the
@@ -178,6 +163,11 @@ void SDP_Solver::step(
                                        schur_off_diagonal, bigint_syrk_context,
                                        Q, timers, block_timings_ms, verbosity);
 
+    // Calculate condition numbers for Cholesky matrices
+    update_cond_numbers(Q, block_info, schur_complement_cholesky, X_cholesky,
+                        Y_cholesky, timers, Q_cond_number,
+                        max_block_cond_number, max_block_cond_number_name);
+
     // Calculate matrix product -XY
     // It will be reused for mu, R-err, compute_search_direction().
     Scoped_Timer XY_timer(timers, "XY");
@@ -204,19 +194,24 @@ void SDP_Solver::step(
 
     // R = mu * I - XY
     // R_error = maxAbs(R)
+    //
+    // TODO: now we always update R_error during corrector phase by calling compute_errors:
+    // R = mu' * I - X'Y'
+    //   where:
+    //   X' = X + dX, Y' = Y + dY
+    //   mu' = Tr(X'Y') / X'.dim
+    // TODO: which definition should we use?
     R_error = compute_R_error(mu, minus_XY, timers);
 
-    El::BigFloat corIter_centering_dualityGapThreshold = El::BigFloat("0");
-
-    bool corIter_centering_Q = false;
-    if(this->duality_gap > 0
-       && this->duality_gap <= corIter_centering_dualityGapThreshold
-       && this->R_error < 1e-20)
-      corIter_centering_Q = true;
+    // If set to 'true', then we perform a centering step,
+    // i.e. with fixed mu (beta = 1)
+    // TODO: now we never perform a centering step.
+    // In principle, we could do it if we are far from the local central path
+    // (i.e. R-err is large)
+    const bool corIter_centering_Q = false;
 
     {
-      Scoped_Timer predictor_timer(timers,
-                                   "computeSearchDirection(betaPredictor)");
+      Scoped_Timer predictor_timer(timers, "predictor");
 
       // Compute the predictor solution for (dx, dX, dy, dY)
       beta_predictor = predictor_centering_parameter(
@@ -232,135 +227,122 @@ void SDP_Solver::step(
     }
 
     // Compute the corrector solution for (dx, dX, dy, dY)
+    {
+      Scoped_Timer corrector_timer(timers, "corrector");
 
-    // TODO update timer bounds
-    // Scoped_Timer corrector_timer(timers,
-    //                              "computeSearchDirection(betaCorrector)");
-    beta_corrector = corrector_centering_parameter(
-      parameters, X, dX, Y, dY, mu, is_primal_and_dual_feasible,
-      total_psd_rows);
+      Block_Vector dx_last(dx), dy_last(dy);
+      Block_Diagonal_Matrix dX_last(dX), dY_last(dY);
 
-    if(corIter_centering_Q)
-      beta_corrector = 1;
+      VERBOSE_ALLOCATION_MESSAGE(dx_last);
+      VERBOSE_ALLOCATION_MESSAGE(dy_last);
+      VERBOSE_ALLOCATION_MESSAGE(dX_last);
+      VERBOSE_ALLOCATION_MESSAGE(dY_last);
 
-    dx_last = dx;
-    dy_last = dy;
-    dX_last = dX;
-    dY_last = dY;
+      // Compute step-lengths that preserve positive definiteness of X, Y
+      El::BigFloat primal_step_length_last
+        = step_length(X_cholesky, dX, parameters.step_length_reduction,
+                      "stepLength(XCholesky)", timers);
+      El::BigFloat dual_step_length_last
+        = step_length(Y_cholesky, dY, parameters.step_length_reduction,
+                      "stepLength(YCholesky)", timers);
 
-    // Compute step-lengths that preserve positive definiteness of X, Y
-    primal_step_length_last
-      = step_length(X_cholesky, dX, parameters.step_length_reduction,
-                    "stepLength(XCholesky)", timers);
-    dual_step_length_last
-      = step_length(Y_cholesky, dY, parameters.step_length_reduction,
-                    "stepLength(YCholesky)", timers);
+      El::BigFloat step_length_max = 0;
 
-    // Calculate condition numbers for Cholesky matrices
-    update_cond_numbers(Q, block_info, schur_complement_cholesky, X_cholesky,
-                        Y_cholesky, timers, Q_cond_number,
-                        max_block_cond_number, max_block_cond_number_name);
+      beta_corrector = corrector_centering_parameter(
+        parameters, X, dX, Y, dY, mu, is_primal_and_dual_feasible,
+        total_psd_rows);
 
-    step_length_max = 0;
+      if(corIter_centering_Q)
+        beta_corrector = 1;
 
-    El::BigFloat corIter_MuReduce = El::BigFloat("0.7");
-    El::BigFloat corIter_stepLengthThreshold = El::BigFloat("1");
+      // TODO introduce SDPB parameters
+      const El::BigFloat corIter_MuReduce = 0.7;
+      const El::BigFloat corIter_stepLengthThreshold = 1.0;
+      const size_t max_corrector_iterations = 100;
 
-    El::BigFloat mu_temp = frobenius_product_symmetric(X, Y) / total_psd_rows;
-    //if(El::mpi::Rank() == 0) std::cout << "before coIt : mu=tr(XY)/X.dim=" << mu_temp << "\n";
+      size_t corrector_iter_index;
+      for(corrector_iter_index = 0;
+          corrector_iter_index < max_corrector_iterations;
+          corrector_iter_index++)
+        {
+          Scoped_Timer loop_timer(timers,
+                                  std::to_string(corrector_iter_index));
 
-    int i;
-    for(i = 0; i <= 100; i++)
-      {
-        compute_search_direction(block_info, sdp, *this, minus_XY,
-                                 schur_complement_cholesky, schur_off_diagonal,
-                                 X_cholesky, beta_corrector, mu,
-                                 primal_residue_p, true, Q, dx, dX, dy, dY);
+          Scoped_Timer compute_search_direction_timer(
+            timers, "compute_search_direction");
+          compute_search_direction(
+            block_info, sdp, *this, minus_XY, schur_complement_cholesky,
+            schur_off_diagonal, X_cholesky, beta_corrector, mu,
+            primal_residue_p, true, Q, dx, dX, dy, dY);
+          compute_search_direction_timer.stop();
 
-        primal_step_length
-          = step_length(X_cholesky, dX, parameters.step_length_reduction,
-                        "stepLength(XCholesky)", timers);
-        dual_step_length
-          = step_length(Y_cholesky, dY, parameters.step_length_reduction,
-                        "stepLength(YCholesky)", timers);
+          primal_step_length
+            = step_length(X_cholesky, dX, parameters.step_length_reduction,
+                          "stepLength(XCholesky)", timers);
+          dual_step_length
+            = step_length(Y_cholesky, dY, parameters.step_length_reduction,
+                          "stepLength(YCholesky)", timers);
 
-        //// print corrector iteration status ////////////////
-        El::BigFloat error_P, error_p, error_d, error_R, coit_mu;
-
-        compute_errors(block_info, sdp, total_psd_rows, x, dx, y, dy, X, dX, Y,
-                       dY, primal_step_length, dual_step_length, error_P,
-                       error_p, error_d, error_R, coit_mu, timers);
-        this->R_error = error_R;
-
-        if(El::mpi::Rank() == 0)
-          std::cout << "(" << primal_step_length << "," << dual_step_length
-                    << ") : R=" << error_R << " mu=" << coit_mu << " reduce="
-                    << 1
-                         - El::Min(primal_step_length, dual_step_length)
-                             * (1 - beta_corrector)
-                    << "\n";
-        /////////////////////////////////////////////////////
-
-        if(corIter_centering_Q)
-          break;
-
-        // this condition demand the primal_step_length+dual_step_length is not too small from historical maximum
-
-        /* */
-        if((primal_step_length + dual_step_length
-            < step_length_max * corIter_stepLengthThreshold)
-           && i > 0)
+          // Update R-err,
+          // print corrector iteration status
           {
-            if(El::mpi::Rank() == 0)
-              std::cout << "L=" << i << "\n";
-            break;
+            El::BigFloat error_P, error_p, error_d, coit_mu;
+
+            compute_errors(total_psd_rows, x, dx, y, dy, X, dX, Y, dY,
+                           primal_step_length, dual_step_length, this->R_error,
+                           coit_mu, timers);
+
+            const auto min_step_length
+              = El::Min(primal_step_length, dual_step_length);
+            const auto reduce_factor
+              = 1 - min_step_length * (1 - beta_corrector);
+            if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
+              {
+                El::Output("(", primal_step_length, ",", dual_step_length,
+                           ") : R=", R_error, " mu=", coit_mu,
+                           " reduce=", reduce_factor);
+              }
           }
 
-        /*
-			if ((El::Min(primal_step_length, dual_step_length) < El::Min(primal_step_length_last, dual_step_length_last)) && i>0)
-			{
-				if (El::mpi::Rank() == 0) std::cout << "L=" << i << "\n";
-				break;
-			}
-			*/
+          if(corIter_centering_Q)
+            break;
 
-        /*
-			if ((primal_step_length < primal_step_length_last || dual_step_length < dual_step_length_last) && i > 0)
-			{
-				if (El::mpi::Rank() == 0) std::cout << "L=" << i << "\n";
-				break;
-			}
-			*/
+          // continue corrector steps
+          // only if (primal_step_length + dual_step_length)
+          // is not too small compared to the historical maximum.
+          // TODO: check other exit conditions, e.g (gap < dualityGapThreshold)
+          if(corrector_iter_index > 0
+             && primal_step_length + dual_step_length
+                  < step_length_max * corIter_stepLengthThreshold)
+            {
+              break;
+            }
 
-        // this condition try to maximize step(1-beta)
-        /*if ((El::Min(primal_step_length, dual_step_length)*(1 - beta_corrector) <
-				El::Min(primal_step_length_last, dual_step_length_last)*(1 - beta_corrector / corIter_MuReduce)) && i > 0)
-			{
-				if (El::mpi::Rank() == 0) std::cout << "L=" << i << "\n";
-				break;
-			}*/
+          step_length_max
+            = El::Max(step_length_max, primal_step_length + dual_step_length);
 
-        if(primal_step_length + dual_step_length > step_length_max)
-          step_length_max = primal_step_length + dual_step_length;
+          dx_last = dx;
+          dy_last = dy;
+          dX_last = dX;
+          dY_last = dY;
+          primal_step_length_last = primal_step_length;
+          dual_step_length_last = dual_step_length;
 
-        dx_last = dx;
-        dy_last = dy;
-        dX_last = dX;
-        dY_last = dY;
-        primal_step_length_last = primal_step_length;
-        dual_step_length_last = dual_step_length;
+          beta_corrector = beta_corrector * corIter_MuReduce;
+        }
 
-        beta_corrector = beta_corrector * corIter_MuReduce;
-      }
+      if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
+        El::Output("num_corrector_steps=", corrector_iter_index);
 
-    dx = dx_last;
-    dy = dy_last;
-    dX = dX_last;
-    dY = dY_last;
-    primal_step_length = primal_step_length_last;
-    dual_step_length = dual_step_length_last;
+      dx = dx_last;
+      dy = dy_last;
+      dX = dX_last;
+      dY = dY_last;
+      primal_step_length = primal_step_length_last;
+      dual_step_length = dual_step_length_last;
 
-    beta_corrector = beta_corrector / corIter_MuReduce;
+      beta_corrector = beta_corrector / corIter_MuReduce;
+    }
   }
 
   // If our problem is both dual-feasible and primal-feasible,
