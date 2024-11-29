@@ -34,15 +34,16 @@ El::BigFloat step_length(const Block_Diagonal_Matrix &MCholesky,
   // MInvDM = L^{-1} dM L^{-T}, where M = L L^T
   Block_Diagonal_Matrix MInvDM(dM);
   lower_triangular_inverse_congruence(MCholesky, MInvDM);
+  Scoped_Timer lambda_timer(timers, "min_eigenvalue");
   const El::BigFloat lambda(min_eigenvalue(MInvDM));
+  lambda_timer.stop();
 
   El::BigFloat maxstep = -1 / lambda;
-
-  //if (El::mpi::Rank() == 0) std::cout << std::setprecision(8) << "lambda=" << lambda << " maxstep=" << maxstep << "\n";
 
   if (maxstep >= 1 || maxstep <= 0)
 	  return 1;
 
+  // TODO this is some magic. Need to explain and add new SDPB parameter.
   if (maxstep > 0.95)
 	  return 1 - 5 * (1 - maxstep);
   return -gamma / lambda;
