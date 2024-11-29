@@ -252,9 +252,16 @@ void SDP_Solver::step(
       if(corIter_centering_Q)
         beta_corrector = 1;
 
-      // TODO introduce SDPB parameters
-      const El::BigFloat corIter_MuReduce = 0.7;
+      // TODO introduce SDPB parameter
       const El::BigFloat corIter_stepLengthThreshold = 1.0;
+
+      const El::BigFloat corrector_iter_mu_reduction
+        = parameters.corrector_mu_reduction;
+      ASSERT(corrector_iter_mu_reduction > 0,
+             DEBUG_STRING(corrector_iter_mu_reduction));
+      ASSERT(corrector_iter_mu_reduction < 1,
+             DEBUG_STRING(corrector_iter_mu_reduction));
+
       const size_t max_corrector_iterations
         = parameters.max_corrector_iterations > 0
             ? parameters.max_corrector_iterations
@@ -279,7 +286,7 @@ void SDP_Solver::step(
               dual_step_length_prev = dual_step_length;
               beta_corrector_prev = beta_corrector;
 
-              beta_corrector = beta_corrector * corIter_MuReduce;
+              beta_corrector = beta_corrector * corrector_iter_mu_reduction;
             }
 
           Scoped_Timer compute_search_direction_timer(
