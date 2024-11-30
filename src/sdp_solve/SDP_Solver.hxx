@@ -91,8 +91,9 @@ public:
       const std::filesystem::path &iterations_json_path, Timers &timers,
       El::Matrix<int32_t> &block_timings_ms);
 
-  void step(const Environment &env,
-    const Solver_Parameters &parameters,const Verbosity &verbosity, const std::size_t &total_psd_rows,
+  void step(
+    const Environment &env, const Solver_Parameters &parameters,
+    const Verbosity &verbosity, const std::size_t &total_psd_rows,
     const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
     const SDP &sdp, const El::Grid &grid,
     const Block_Diagonal_Matrix &X_cholesky,
@@ -106,9 +107,9 @@ public:
     const Block_Vector &primal_residue_p,
     BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context, El::BigFloat &mu,
     El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
-    El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
-    El::Matrix<int32_t> &block_timings_ms, El::BigFloat &Q_cond_number,
-    El::BigFloat &max_block_cond_number,
+    El::BigFloat &dual_step_length, size_t &num_corrector_iterations,
+    bool &terminate_now, Timers &timers, El::Matrix<int32_t> &block_timings_ms,
+    El::BigFloat &Q_cond_number, El::BigFloat &max_block_cond_number,
     std::string &max_block_cond_number_name);
 
   void

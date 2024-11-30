@@ -106,9 +106,10 @@ void SDP_Solver::step(
   const Block_Vector &primal_residue_p,
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context, El::BigFloat &mu,
   El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
-  El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
-  El::Matrix<int32_t> &block_timings_ms, El::BigFloat &Q_cond_number,
-  El::BigFloat &max_block_cond_number, std::string &max_block_cond_number_name)
+  El::BigFloat &dual_step_length, size_t &num_corrector_iterations,
+  bool &terminate_now, Timers &timers, El::Matrix<int32_t> &block_timings_ms,
+  El::BigFloat &Q_cond_number, El::BigFloat &max_block_cond_number,
+  std::string &max_block_cond_number_name)
 {
   Scoped_Timer step_timer(timers, "step");
   block_timings_ms.Resize(block_info.dimensions.size(), 1);
@@ -265,15 +266,13 @@ void SDP_Solver::step(
             : std::numeric_limits<int64_t>::max();
 
       bool undo_last_corrector_iteration = false;
-      size_t corrector_iter_index;
-      for(corrector_iter_index = 0;
-          corrector_iter_index < max_corrector_iterations;
-          corrector_iter_index++)
+      num_corrector_iterations = 0;
+      while(num_corrector_iterations < max_corrector_iterations)
         {
           Scoped_Timer loop_timer(timers,
-                                  std::to_string(corrector_iter_index));
+                                  std::to_string(num_corrector_iterations));
 
-          if(corrector_iter_index > 0)
+          if(num_corrector_iterations > 0)
             {
               dx_prev = dx;
               dy_prev = dy;
@@ -323,14 +322,11 @@ void SDP_Solver::step(
               }
           }
 
-          if(corIter_centering_Q)
-            break;
-
           // continue corrector steps
           // only if (primal_step_length + dual_step_length)
           // is not too small compared to the historical maximum.
           // TODO: check other exit conditions, e.g (gap < dualityGapThreshold)
-          if(corrector_iter_index > 0
+          if(num_corrector_iterations > 0
              && primal_step_length + dual_step_length
                   < step_length_max
                       * parameters.corrector_step_length_threshold)
@@ -339,16 +335,24 @@ void SDP_Solver::step(
               break;
             }
 
+          // NB: if the last corrector iteration is canceled by 'break' above,
+          // we do not count it in num_corrector_iterations.
+          // This means that we report the number of SUCCESSFUL corrector iterations.
+          ++num_corrector_iterations;
+
+          if(corIter_centering_Q)
+            break;
+
           step_length_max
             = El::Max(step_length_max, primal_step_length + dual_step_length);
         }
 
       if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
-        El::Output("num_corrector_steps=", corrector_iter_index);
+        El::Output("num_corrector_iterations=", num_corrector_iterations);
 
       if(undo_last_corrector_iteration)
         {
-          ASSERT(corrector_iter_index > 0,
+          ASSERT(num_corrector_iterations > 0,
                  "Should perform at least one corrector iteration!");
           dx = dx_prev;
           dy = dy_prev;

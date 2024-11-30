@@ -9,7 +9,7 @@ void print_iteration(
   const std::filesystem::path &iterations_json_path, const int &iteration,
   const El::BigFloat &mu, const El::BigFloat &primal_step_length,
   const El::BigFloat &dual_step_length, const El::BigFloat &beta_corrector,
-  const SDP_Solver &sdp_solver,
+  const size_t &num_corrector_iterations, const SDP_Solver &sdp_solver,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
@@ -83,7 +83,9 @@ void print_iteration(
       os_json << "\n{ \"iteration\":" << iteration;
       os_json << std::setprecision(3) << std::fixed;
       os_json << ", \"total_time\": " << runtime_seconds
-              << ", \"iter_time\": " << iteration_time_seconds;
+              << ", \"iter_time\": " << iteration_time_seconds
+              << ", \"num_corrector_iterations\": "
+              << num_corrector_iterations;
       os_json << std::defaultfloat;
       set_stream_precision(os_json);
       os_json << ", \"mu\": \"" << mu << "\""

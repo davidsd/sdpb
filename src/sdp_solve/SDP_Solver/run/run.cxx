@@ -21,7 +21,7 @@ void print_iteration(
   const fs::path &iterations_json_path, const int &iteration,
   const El::BigFloat &mu, const El::BigFloat &primal_step_length,
   const El::BigFloat &dual_step_length, const El::BigFloat &beta_corrector,
-  const SDP_Solver &sdp_solver,
+  const size_t &num_corrector_iterations, const SDP_Solver &sdp_solver,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
@@ -424,15 +424,16 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
         }
 
       El::BigFloat mu, beta_corrector;
+      size_t num_corrector_iterations;
       El::BigFloat Q_cond_number;
       El::BigFloat max_block_cond_number;
       std::string max_block_cond_number_name;
       step(env, parameters, verbosity, total_psd_rows,
            is_primal_and_dual_feasible, block_info, sdp, grid, X_cholesky,
            Y_cholesky, A_X_inv, A_Y, primal_residue_p, bigint_syrk_context, mu,
-           beta_corrector, primal_step_length, dual_step_length, terminate_now,
-           timers, block_timings_ms, Q_cond_number, max_block_cond_number,
-           max_block_cond_number_name);
+           beta_corrector, primal_step_length, dual_step_length,
+           num_corrector_iterations, terminate_now, timers, block_timings_ms,
+           Q_cond_number, max_block_cond_number, max_block_cond_number_name);
 
       if(verbosity >= Verbosity::trace && El::mpi::Rank() == 0)
         {
@@ -459,11 +460,11 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
           break;
         }
       Scoped_Timer print_iteration_timer(timers, "print_iteration");
-      print_iteration(iterations_json_path, iteration, mu, primal_step_length,
-                      dual_step_length, beta_corrector, *this,
-                      solver_timer.start_time(), iteration_timer.start_time(),
-                      Q_cond_number, max_block_cond_number,
-                      max_block_cond_number_name, verbosity);
+      print_iteration(
+        iterations_json_path, iteration, mu, primal_step_length,
+        dual_step_length, beta_corrector, num_corrector_iterations, *this,
+        solver_timer.start_time(), iteration_timer.start_time(), Q_cond_number,
+        max_block_cond_number, max_block_cond_number_name, verbosity);
     }
 
   if(write_iterations_json_and_c_minus_By)
