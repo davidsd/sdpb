@@ -14,8 +14,8 @@ struct Json_Functions_Parser final
 {
 private:
   Functions_File_Parse_Result result;
-  Json_Float_Vector_Parser<El::BigFloat> objective_parser;
-  Json_Float_Vector_Parser<El::BigFloat> normalization_parser;
+  Json_Vector_Parser<Json_BigFloat_Parser> objective_parser;
+  Json_Vector_Parser<Json_BigFloat_Parser> normalization_parser;
   Json_Vector_Parser<Json_Vector_Parser<
     Json_Vector_Parser<Json_Vector_Parser<Json_Function_Parser>>>>
     functions_parser;

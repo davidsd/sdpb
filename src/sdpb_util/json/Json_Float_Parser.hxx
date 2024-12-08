@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Json_String_Element_Parser.hxx"
-#include "Json_Vector_Parser.hxx"
 #include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/assert.hxx"
 
@@ -46,6 +45,3 @@ protected:
 
 using Json_BigFloat_Parser = Json_Float_Parser<El::BigFloat>;
 using Json_Boost_Float_Parser = Json_Float_Parser<Boost_Float>;
-
-template <class TFloat>
-using Json_Float_Vector_Parser = Json_Vector_Parser<Json_Float_Parser<TFloat>>;
