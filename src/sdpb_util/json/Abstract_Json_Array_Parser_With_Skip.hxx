@@ -4,7 +4,6 @@
 
 #include <functional>
 
-// TODO merge with VectorState
 template <class TResult, class TElementParser>
 class Abstract_Json_Array_Parser_With_Skip
     : public Abstract_Json_Element_Parser<TResult>
@@ -43,7 +42,7 @@ public:
     bool skip, const std::function<void(TResult &&)> &on_parsed,
     const std::function<void()> &on_skipped,
     const std::function<bool(size_t index)> &skip_element,
-    const TArgs &...element_parser_args);
+    TArgs &&...element_parser_args);
 
 private:
   virtual void on_element_parsed(element_type &&value, size_t index) = 0;
@@ -164,7 +163,7 @@ Abstract_Json_Array_Parser_With_Skip<TResult, TElementParser>::
     bool skip, const std::function<void(TResult &&)> &on_parsed,
     const std::function<void()> &on_skipped,
     const std::function<bool(size_t index)> &skip_element_func,
-    const TArgs &...element_parser_args)
+    TArgs &&...element_parser_args)
     : base_type(skip, on_parsed, on_skipped),
       skip_element([this, skip_element_func](size_t index) {
         return this->skip || skip_element_func(index);
@@ -182,5 +181,5 @@ Abstract_Json_Array_Parser_With_Skip<TResult, TElementParser>::
           ++this->index;
           this->element_parser.reset(this->skip_element(this->index));
         },
-        element_parser_args...)
+        std::forward<TArgs>(element_parser_args)...)
 {}
