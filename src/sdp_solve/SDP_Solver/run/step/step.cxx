@@ -316,7 +316,7 @@ void SDP_Solver::step(
               = 1 - min_step_length * (1 - beta_corrector);
             if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
               {
-                El::Output("(", primal_step_length, ",", dual_step_length,
+                El::Output("  (", primal_step_length, ",", dual_step_length,
                            ") : R=", R_error, " mu=", coit_mu,
                            " reduce=", reduce_factor);
               }
@@ -348,7 +348,7 @@ void SDP_Solver::step(
         }
 
       if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
-        El::Output("num_corrector_iterations=", num_corrector_iterations);
+        El::Output("  num_corrector_iterations=", num_corrector_iterations);
 
       if(undo_last_corrector_iteration)
         {
