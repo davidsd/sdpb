@@ -24,11 +24,10 @@ void lower_triangular_inverse_congruence(const Block_Diagonal_Matrix &L,
 
 El::BigFloat min_eigenvalue(Block_Diagonal_Matrix &A);
 
-El::BigFloat step_length(const Block_Diagonal_Matrix &MCholesky,
-                         const Block_Diagonal_Matrix &dM,
-                         const El::BigFloat &gamma,
-                         const std::string &timer_name,
-                         Timers &timers)
+El::BigFloat
+step_length(const Block_Diagonal_Matrix &MCholesky,
+            const Block_Diagonal_Matrix &dM, const El::BigFloat &gamma,
+            const std::string &timer_name, Timers &timers)
 {
   Scoped_Timer step_length_timer(timers, timer_name);
   // MInvDM = L^{-1} dM L^{-T}, where M = L L^T
@@ -38,23 +37,30 @@ El::BigFloat step_length(const Block_Diagonal_Matrix &MCholesky,
   const El::BigFloat lambda(min_eigenvalue(MInvDM));
   lambda_timer.stop();
 
+  // maxstep = \alpha from the comments above
   El::BigFloat maxstep = -1 / lambda;
 
-  if (maxstep >= 1 || maxstep <= 0)
-	  return 1;
+  // Old algorithm:
+  // return El::Min(gamma * maxstep, El::BigFloat(1));
 
-  // TODO this is some magic. Need to explain and add new SDPB parameter.
-  if (maxstep > 0.95)
-	  return 1 - 5 * (1 - maxstep);
-  return -gamma / lambda;
+  // New algorithm:
 
+  // TODO does maxstep <= 0 make any sense?
+  if(maxstep >= 1 || maxstep <= 0)
+    return 1;
 
-  if(lambda > -gamma)
-    {
-      return 1;
-    }
-  else
-    {
-      return -gamma / lambda;
-    }
+  // TODO this is some magic (by Ning). Need to explain and add new SDPB parameter.
+  //
+  // Old algorithm (with default gamma = --stepLengthReduction = 0.7):
+  //   step(maxstep=0.95) = gamma * 0.95 = 0.665
+  //   step(maxstep=1.00) = gamma = 0.7
+  //   step(maxstep=1/gamma) = 1
+  // New algorithm:
+  //   step(maxstep=0.95) = 0.75
+  //   step(maxstep=1.00) = 1
+  //   step(maxstep=1/gamma) = 1
+  // i.e. we increased step length for maxstep in range (0.95, 1/gamma) = (0.95, 1.43)
+  if(maxstep > 0.95)
+    return 1 - 5 * (1 - maxstep);
+  return gamma * maxstep;
 }
