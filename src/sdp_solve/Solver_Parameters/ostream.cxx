@@ -3,39 +3,46 @@
 
 std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
 {
-  os << std::boolalpha << "maxIterations                = " << p.max_iterations
-     << '\n'
-     << "maxRuntime                   = " << p.max_runtime << '\n'
-     << "checkpointInterval           = " << p.checkpoint_interval << '\n'
-     << "maxSharedMemory              = "
+  os << std::boolalpha
+     << "maxIterations                    = " << p.max_iterations << '\n'
+     << "maxRuntime                       = " << p.max_runtime << '\n'
+     << "checkpointInterval               = " << p.checkpoint_interval << '\n'
+     << "maxSharedMemory                  = "
      << pretty_print_bytes(p.max_shared_memory_bytes, true) << '\n'
-     << "findPrimalFeasible           = " << p.find_primal_feasible << '\n'
-     << "findDualFeasible             = " << p.find_dual_feasible << '\n'
-     << "detectPrimalFeasibleJump     = " << p.detect_primal_feasible_jump
+     << "findPrimalFeasible               = " << p.find_primal_feasible << '\n'
+     << "findDualFeasible                 = " << p.find_dual_feasible << '\n'
+     << "detectPrimalFeasibleJump         = " << p.detect_primal_feasible_jump
      << '\n'
-     << "detectDualFeasibleJump       = " << p.detect_dual_feasible_jump
+     << "detectDualFeasibleJump           = " << p.detect_dual_feasible_jump
      << '\n'
-     << "precision(actual)            = " << p.precision << "("
+     << "precision(actual)                = " << p.precision << "("
      << mpf_get_default_prec() << ")" << '\n'
 
-     << "dualityGapThreshold          = " << p.duality_gap_threshold << '\n'
-     << "primalErrorThreshold         = " << p.primal_error_threshold << '\n'
-     << "dualErrorThreshold           = " << p.dual_error_threshold << '\n'
-     << "initialMatrixScalePrimal     = " << p.initial_matrix_scale_primal
+     << "dualityGapThreshold              = " << p.duality_gap_threshold
      << '\n'
-     << "initialMatrixScaleDual       = " << p.initial_matrix_scale_dual
+     << "primalErrorThreshold             = " << p.primal_error_threshold
      << '\n'
-     << "feasibleCenteringParameter   = " << p.feasible_centering_parameter
+     << "dualErrorThreshold               = " << p.dual_error_threshold << '\n'
+     << "initialMatrixScalePrimal         = " << p.initial_matrix_scale_primal
      << '\n'
-     << "infeasibleCenteringParameter = " << p.infeasible_centering_parameter
+     << "initialMatrixScaleDual           = " << p.initial_matrix_scale_dual
      << '\n'
-     << "stepLengthReduction          = " << p.step_length_reduction << '\n'
-     << "correctorMuReduction         = " << p.corrector_mu_reduction << '\n'
-     << "correctorStepLengthThreshold = " << p.corrector_step_length_threshold
+     << "feasibleCenteringParameter       = " << p.feasible_centering_parameter
      << '\n'
-     << "maxCorrectorIterations       = " << p.max_corrector_iterations << '\n'
-     << "maxComplementarity           = " << p.max_complementarity << '\n'
-     << "initialCheckpointDir         = " << p.checkpoint_in << '\n'
-     << "checkpointDir                = " << p.checkpoint_out << '\n';
+     << "infeasibleCenteringParameter     = "
+     << p.infeasible_centering_parameter << '\n'
+     << "stepLengthReduction              = " << p.step_length_reduction
+     << '\n'
+     << "correctorMuReduction             = " << p.corrector_mu_reduction
+     << '\n'
+     << "correctorStepLengthThreshold     = "
+     << p.corrector_step_length_threshold << '\n'
+     << "feasibleMaxCorrectorIterations   = "
+     << p.feasible_max_corrector_iterations << '\n'
+     << "infeasibleMaxCorrectorIterations = "
+     << p.infeasible_max_corrector_iterations << '\n'
+     << "maxComplementarity               = " << p.max_complementarity << '\n'
+     << "initialCheckpointDir             = " << p.checkpoint_in << '\n'
+     << "checkpointDir                    = " << p.checkpoint_out << '\n';
   return os;
 }

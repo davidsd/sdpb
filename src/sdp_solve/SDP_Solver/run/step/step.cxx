@@ -266,10 +266,12 @@ void SDP_Solver::step(
       ASSERT(corrector_iter_mu_reduction < 1,
              DEBUG_STRING(corrector_iter_mu_reduction));
 
-      const size_t max_corrector_iterations
-        = parameters.max_corrector_iterations > 0
-            ? parameters.max_corrector_iterations
-            : std::numeric_limits<int64_t>::max();
+      size_t max_corrector_iterations
+        = is_primal_and_dual_feasible
+            ? parameters.feasible_max_corrector_iterations
+            : parameters.infeasible_max_corrector_iterations;
+      if(max_corrector_iterations == 0)
+        max_corrector_iterations = std::numeric_limits<int64_t>::max();
 
       bool undo_last_corrector_iteration = false;
       num_corrector_iterations = 0;
