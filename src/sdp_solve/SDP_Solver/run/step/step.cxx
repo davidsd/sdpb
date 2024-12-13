@@ -250,8 +250,6 @@ void SDP_Solver::step(
               * (1 - beta_corrector);
       El::BigFloat reduce_factor_prev = 1;
 
-      El::BigFloat step_length_max = 0;
-
       beta_corrector = corrector_centering_parameter(
         parameters, X, dX, Y, dY, mu, is_primal_and_dual_feasible,
         total_psd_rows);
@@ -354,9 +352,6 @@ void SDP_Solver::step(
 
           if(corIter_centering_Q)
             break;
-
-          step_length_max
-            = El::Max(step_length_max, primal_step_length + dual_step_length);
         }
 
       if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
