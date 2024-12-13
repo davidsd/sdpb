@@ -327,6 +327,7 @@ void SDP_Solver::step(
                            " reduce=", reduce_factor);
               }
           }
+          ++num_corrector_iterations;
 
           // continue corrector steps
           // only if (primal_step_length + dual_step_length)
@@ -336,29 +337,18 @@ void SDP_Solver::step(
           if(El::Max(primal_step_length, dual_step_length)
              < parameters.corrector_step_length_threshold)
             {
-              if(num_corrector_iterations == 0)
-                {
-                  num_corrector_iterations = 1;
-                  break;
-                }
-              else
-                {
-                  undo_last_corrector_iteration = true;
-                  break;
-                }
+              if(num_corrector_iterations > 1)
+                undo_last_corrector_iteration = true;
+              // TODO in this case, we can exit even before computing and printing errors, shall we?
+              break;
             }
 
-          if(num_corrector_iterations > 0
+          if(num_corrector_iterations > 1
              && reduce_factor >= reduce_factor_prev)
             {
               undo_last_corrector_iteration = true;
               break;
             }
-
-          // NB: if the last corrector iteration is canceled by 'break' above,
-          // we do not count it in num_corrector_iterations.
-          // This means that we report the number of SUCCESSFUL corrector iterations.
-          ++num_corrector_iterations;
 
           if(corIter_centering_Q)
             break;
@@ -368,7 +358,11 @@ void SDP_Solver::step(
         }
 
       if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
-        El::Output("  num_corrector_iterations=", num_corrector_iterations);
+        {
+          El::Output(
+            "  num_corrector_iterations=", num_corrector_iterations,
+            undo_last_corrector_iteration ? ", the last one discarded." : "");
+        }
 
       if(undo_last_corrector_iteration)
         {
