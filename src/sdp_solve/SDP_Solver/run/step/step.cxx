@@ -244,6 +244,12 @@ void SDP_Solver::step(
       El::BigFloat dual_step_length_prev = 0;
       El::BigFloat beta_corrector_prev = 0;
 
+      El::BigFloat reduce_factor
+        = 1
+          - El::Min(primal_step_length, dual_step_length)
+              * (1 - beta_corrector);
+      El::BigFloat reduce_factor_prev = 1;
+
       El::BigFloat step_length_max = 0;
 
       beta_corrector = corrector_centering_parameter(
@@ -281,6 +287,7 @@ void SDP_Solver::step(
               primal_step_length_prev = primal_step_length;
               dual_step_length_prev = dual_step_length;
               beta_corrector_prev = beta_corrector;
+              reduce_factor_prev = reduce_factor;
 
               beta_corrector = beta_corrector * corrector_iter_mu_reduction;
             }
@@ -312,8 +319,7 @@ void SDP_Solver::step(
 
             const auto min_step_length
               = El::Min(primal_step_length, dual_step_length);
-            const auto reduce_factor
-              = 1 - min_step_length * (1 - beta_corrector);
+            reduce_factor = 1 - min_step_length * (1 - beta_corrector);
             if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
               {
                 El::Output("  (", primal_step_length, ",", dual_step_length,
@@ -326,10 +332,24 @@ void SDP_Solver::step(
           // only if (primal_step_length + dual_step_length)
           // is not too small compared to the historical maximum.
           // TODO: check other exit conditions, e.g (gap < dualityGapThreshold)
+
+          if(El::Max(primal_step_length, dual_step_length)
+             < parameters.corrector_step_length_threshold)
+            {
+              if(num_corrector_iterations == 0)
+                {
+                  num_corrector_iterations = 1;
+                  break;
+                }
+              else
+                {
+                  undo_last_corrector_iteration = true;
+                  break;
+                }
+            }
+
           if(num_corrector_iterations > 0
-             && primal_step_length + dual_step_length
-                  < step_length_max
-                      * parameters.corrector_step_length_threshold)
+             && reduce_factor >= reduce_factor_prev)
             {
               undo_last_corrector_iteration = true;
               break;
@@ -361,6 +381,7 @@ void SDP_Solver::step(
           primal_step_length = primal_step_length_prev;
           dual_step_length = dual_step_length_prev;
           beta_corrector = beta_corrector_prev;
+          reduce_factor = reduce_factor_prev;
         }
     }
   }
