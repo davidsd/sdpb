@@ -123,7 +123,7 @@ boost::program_options::options_description Solver_Parameters::options()
   result.add_options()(
     "correctorMuReduction",
     boost::program_options::value<El::BigFloat>(&corrector_mu_reduction)
-      ->default_value(El::BigFloat("0.7", 10)),
+      ->default_value(El::BigFloat("0.1", 10)),
     "Reduce mu on each additional corrector iteration "
     "(inside a single newton step) by this factor.");
   result.add_options()(
