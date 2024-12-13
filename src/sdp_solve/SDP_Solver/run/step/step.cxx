@@ -209,7 +209,10 @@ void SDP_Solver::step(
     // TODO: now we never perform a centering step.
     // In principle, we could do it if we are far from the local central path
     // (i.e. R-err is large)
-    const bool corIter_centering_Q = false;
+    const bool do_centering_step = false;
+    // The condition below leads to solver stalling at mu ~ 1e37
+    //   for SingletScalar_cT_test_nmax6 test case:
+    // const bool do_centering_step = R_error > mu;
 
     {
       Scoped_Timer predictor_timer(timers, "predictor");
@@ -218,7 +221,7 @@ void SDP_Solver::step(
       beta_predictor = predictor_centering_parameter(
         parameters, is_primal_and_dual_feasible);
 
-      if(corIter_centering_Q)
+      if(do_centering_step)
         beta_predictor = 1;
 
       compute_search_direction(block_info, sdp, *this, minus_XY,
@@ -254,9 +257,6 @@ void SDP_Solver::step(
         parameters, X, dX, Y, dY, mu, is_primal_and_dual_feasible,
         total_psd_rows);
 
-      if(corIter_centering_Q)
-        beta_corrector = 1;
-
       const El::BigFloat corrector_iter_mu_reduction
         = parameters.corrector_mu_reduction;
       ASSERT(corrector_iter_mu_reduction > 0,
@@ -270,6 +270,12 @@ void SDP_Solver::step(
             : parameters.infeasible_max_corrector_iterations;
       if(max_corrector_iterations == 0)
         max_corrector_iterations = std::numeric_limits<int64_t>::max();
+
+      if(do_centering_step)
+        {
+          beta_corrector = 1;
+          max_corrector_iterations = 1;
+        }
 
       bool undo_last_corrector_iteration = false;
       num_corrector_iterations = 0;
@@ -349,9 +355,6 @@ void SDP_Solver::step(
               undo_last_corrector_iteration = true;
               break;
             }
-
-          if(corIter_centering_Q)
-            break;
         }
 
       if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
