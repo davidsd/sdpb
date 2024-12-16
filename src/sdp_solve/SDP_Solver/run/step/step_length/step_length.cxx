@@ -27,7 +27,8 @@ El::BigFloat min_eigenvalue(Block_Diagonal_Matrix &A);
 El::BigFloat
 step_length(const Block_Diagonal_Matrix &MCholesky,
             const Block_Diagonal_Matrix &dM, const El::BigFloat &gamma,
-            const std::string &timer_name, Timers &timers)
+            const std::string &timer_name, El::BigFloat &max_step,
+            Timers &timers)
 {
   Scoped_Timer step_length_timer(timers, timer_name);
   // MInvDM = L^{-1} dM L^{-T}, where M = L L^T
@@ -38,7 +39,7 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
   lambda_timer.stop();
 
   // maxstep = \alpha from the comments above
-  El::BigFloat maxstep = -1 / lambda;
+  max_step = -1 / lambda;
 
   // Old algorithm:
   // return El::Min(gamma * maxstep, El::BigFloat(1));
@@ -46,7 +47,7 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
   // New algorithm:
 
   // TODO does maxstep <= 0 make any sense?
-  if(maxstep >= 1 || maxstep <= 0)
+  if(max_step >= 1 || max_step <= 0)
     return 1;
 
   // TODO this is some magic (by Ning). Need to explain and add new SDPB parameter.
@@ -60,7 +61,7 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
   //   step(maxstep=1.00) = 1
   //   step(maxstep=1/gamma) = 1
   // i.e. we increased step length for maxstep in range (0.95, 1/gamma) = (0.95, 1.43)
-  if(maxstep > 0.95)
-    return 1 - 5 * (1 - maxstep);
-  return gamma * maxstep;
+  if(max_step > 0.95)
+    return 1 - 5 * (1 - max_step);
+  return gamma * max_step;
 }

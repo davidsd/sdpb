@@ -49,7 +49,8 @@ El::BigFloat corrector_centering_parameter(
 El::BigFloat
 step_length(const Block_Diagonal_Matrix &MCholesky,
             const Block_Diagonal_Matrix &dM, const El::BigFloat &gamma,
-            const std::string &timer_name, Timers &timers);
+            const std::string &timer_name, El::BigFloat &max_step,
+            Timers &timers);
 
 void compute_errors(const std::size_t &total_psd_rows,
                     const Block_Vector &x_const, const Block_Vector &dx_const,
