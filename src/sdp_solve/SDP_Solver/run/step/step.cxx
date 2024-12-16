@@ -308,12 +308,14 @@ void SDP_Solver::step(
           compute_search_direction_timer.stop();
 
           // Compute step-lengths that preserve positive definiteness of X, Y
-          primal_step_length
-            = step_length(X_cholesky, dX, parameters.step_length_reduction,
-                          "stepLength(XCholesky)", timers);
-          dual_step_length
-            = step_length(Y_cholesky, dY, parameters.step_length_reduction,
-                          "stepLength(YCholesky)", timers);
+          El::BigFloat max_primal_step_length;
+          primal_step_length = step_length(
+            X_cholesky, dX, parameters.step_length_reduction,
+            "stepLength(XCholesky)", max_primal_step_length, timers);
+          El::BigFloat max_dual_step_length;
+          dual_step_length = step_length(
+            Y_cholesky, dY, parameters.step_length_reduction,
+            "stepLength(YCholesky)", max_dual_step_length, timers);
 
           // Update R-err,
           // print corrector iteration status
@@ -329,8 +331,10 @@ void SDP_Solver::step(
             reduce_factor = 1 - min_step_length * (1 - beta_corrector);
             if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
               {
-                El::Output("  (", primal_step_length, ",", dual_step_length,
-                           ") : R=", R_error, " mu=", coit_mu,
+                El::Output("  step=(", primal_step_length, ",",
+                           dual_step_length, ") maxstep=(",
+                           max_primal_step_length, ",", max_dual_step_length,
+                           ") R=", R_error, " mu=", coit_mu,
                            " reduce=", reduce_factor);
               }
           }
