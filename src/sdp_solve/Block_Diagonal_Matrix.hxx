@@ -119,6 +119,24 @@ public:
     return El::mpi::AllReduce(max, El::mpi::MAX, El::mpi::COMM_WORLD);
   }
 
+  // The mean absolute value of the elements of M
+  [[nodiscard]] El::BigFloat mean_abs() const
+  {
+    El::BigFloat sum = 0;
+    int size = 0;
+    for(auto &block : blocks)
+      {
+        const auto &m = block.LockedMatrix();
+        size += m.Height() * m.Width();
+        for(int i = 0; i < m.Height(); i++)
+          for(int j = 0; j < m.Width(); j++)
+            sum += El::Abs(m(i, j));
+      }
+    sum = El::mpi::AllReduce(sum, El::mpi::SUM, El::mpi::COMM_WORLD);
+    size = El::mpi::AllReduce(size, El::mpi::SUM, El::mpi::COMM_WORLD);
+    return sum / size;
+  }
+
   [[nodiscard]] El::BigFloat trace() const
   {
     El::BigFloat result = 0;
@@ -135,4 +153,3 @@ public:
   friend std::ostream &
   operator<<(std::ostream &os, const Block_Diagonal_Matrix &A);
 };
-

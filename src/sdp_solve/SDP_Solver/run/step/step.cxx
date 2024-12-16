@@ -61,7 +61,8 @@ void compute_errors(const std::size_t &total_psd_rows,
                     const Block_Diagonal_Matrix &dY_const,
                     const El::BigFloat &primal_step_length,
                     const El::BigFloat &dual_step_length,
-                    El::BigFloat &R_error, El::BigFloat &mu, Timers &timers)
+                    El::BigFloat &R_error, El::BigFloat &R_mean_abs,
+                    El::BigFloat &mu, Timers &timers)
 {
   Scoped_Timer timer(timers, "compute_errors");
   Block_Vector x(x_const), y(y_const), dx(dx_const), dy(dy_const);
@@ -89,6 +90,7 @@ void compute_errors(const std::size_t &total_psd_rows,
   R.add_diagonal(mu);
 
   R_error = R.max_abs();
+  R_mean_abs = R.mean_abs();
 }
 
 void SDP_Solver::step(
@@ -320,11 +322,11 @@ void SDP_Solver::step(
           // Update R-err,
           // print corrector iteration status
           {
-            El::BigFloat error_P, error_p, error_d, coit_mu;
+            El::BigFloat error_P, error_p, error_d, coit_mu, R_mean_abs;
 
             compute_errors(total_psd_rows, x, dx, y, dy, X, dX, Y, dY,
                            primal_step_length, dual_step_length, this->R_error,
-                           coit_mu, timers);
+                           R_mean_abs, coit_mu, timers);
 
             const auto min_step_length
               = El::Min(primal_step_length, dual_step_length);
@@ -334,8 +336,8 @@ void SDP_Solver::step(
                 El::Output("  step=(", primal_step_length, ",",
                            dual_step_length, ") maxstep=(",
                            max_primal_step_length, ",", max_dual_step_length,
-                           ") R=", R_error, " mu=", coit_mu,
-                           " reduce=", reduce_factor);
+                           ") R=", R_error, " R_mean=", R_mean_abs,
+                           " mu=", coit_mu, " reduce=", reduce_factor);
               }
           }
           ++num_corrector_iterations;
