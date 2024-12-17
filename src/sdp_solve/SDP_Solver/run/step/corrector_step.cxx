@@ -1,3 +1,4 @@
+#include "Corrector_Iteration.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/memory_estimates.hxx"
@@ -38,61 +39,110 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
             const std::string &timer_name, El::BigFloat &max_step,
             Timers &timers);
 
-inline void
-compute_errors(const std::size_t &total_psd_rows, const Block_Vector &x_const,
-               const Block_Vector &dx_const, const Block_Vector &y_const,
-               const Block_Vector &dy_const,
-               const Block_Diagonal_Matrix &X_const,
-               const Block_Diagonal_Matrix &dX_const,
-               const Block_Diagonal_Matrix &Y_const,
-               const Block_Diagonal_Matrix &dY_const,
-               const El::BigFloat &primal_step_length,
-               const El::BigFloat &dual_step_length, El::BigFloat &R_error,
-               El::BigFloat &R_mean_abs, El::BigFloat &mu, Timers &timers)
+// R = mu * I - X' Y',
+// where
+//   mu = Tr(X'Y') / dim(X')
+//   X' = X + primal_step_length * dX
+//   Y' = Y + primal_step_length * dY
+Block_Diagonal_Matrix
+compute_R_matrix(const std::size_t &total_psd_rows, const SDP_Solver &solver,
+                 const Block_Diagonal_Matrix &dX_const,
+                 const Block_Diagonal_Matrix &dY_const,
+                 const El::BigFloat &primal_step_length,
+                 const El::BigFloat &dual_step_length, El::BigFloat &mu)
 {
-  Scoped_Timer timer(timers, "compute_errors");
-  Block_Vector x(x_const), y(y_const), dx(dx_const), dy(dy_const);
-  Block_Diagonal_Matrix X(X_const), Y(Y_const), dX(dX_const), dY(dY_const);
-
-  // Update x, y, dX, dY ///////////
-  for(size_t block = 0; block < x.blocks.size(); ++block)
+  // X -> X + P_step * dX
+  Block_Diagonal_Matrix X = solver.X;
+  for(size_t i = 0; i < X.blocks.size(); ++i)
     {
-      El::Axpy(primal_step_length, dx.blocks[block], x.blocks[block]);
+      El::Axpy(primal_step_length, dX_const.blocks.at(i), X.blocks.at(i));
     }
-  dX *= primal_step_length;
-  X += dX;
-  for(size_t block = 0; block < dy.blocks.size(); ++block)
-    {
-      El::Axpy(dual_step_length, dy.blocks[block], y.blocks[block]);
-    }
-  dY *= dual_step_length;
-  Y += dY;
-  //////////////////////////////////
 
+  // Y -> Y + D_step * dY
+  Block_Diagonal_Matrix Y = solver.Y;
+  for(size_t i = 0; i < Y.blocks.size(); ++i)
+    {
+      El::Axpy(dual_step_length, dY_const.blocks.at(i), Y.blocks.at(i));
+    }
+
+  // mu = Tr(XY) / dim(X)
   mu = frobenius_product_symmetric(X, Y) / total_psd_rows;
 
+  // R = mu * I - XY,
   Block_Diagonal_Matrix R(X);
   scale_multiply_add(El::BigFloat(-1), X, Y, El::BigFloat(0), R);
   R.add_diagonal(mu);
-
-  R_error = R.max_abs();
-  R_mean_abs = R.mean_abs();
+  return R;
 }
 
-void corrector_step(
-  const Environment &env, const Solver_Parameters &parameters,
-  const Verbosity &verbosity, const std::size_t &total_psd_rows,
-  const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
-  const SDP &sdp, const Block_Diagonal_Matrix &schur_complement_cholesky,
+Corrector_Iteration single_corrector_iteration(
+  const SDP_Solver &solver, const std::size_t &total_psd_rows,
+  const Block_Info &block_info, const SDP &sdp,
+  const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
   const El::DistMatrix<El::BigFloat> &Q,
   const Block_Diagonal_Matrix &X_cholesky,
   const Block_Diagonal_Matrix &Y_cholesky,
-  const Block_Vector &primal_residue_p, const bool do_centering_step,
-  SDP_Solver &solver, El::BigFloat &mu, El::BigFloat &beta_corrector,
-  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
-  Block_Vector &dx, Block_Vector &dy, Block_Diagonal_Matrix &dX,
-  Block_Diagonal_Matrix &dY, const Block_Diagonal_Matrix &minus_XY,
+  const Block_Diagonal_Matrix &minus_XY, const Block_Vector &primal_residue_p,
+  const El::BigFloat &beta_corrector,
+  const El::BigFloat &step_length_reduction,
+  // mu = Tr(X Y)/X.dim
+  const El::BigFloat &initial_mu, Block_Vector &dx, Block_Diagonal_Matrix &dX,
+  Block_Vector &dy, Block_Diagonal_Matrix &dY, Timers &timers)
+{
+  Corrector_Iteration iter;
+
+  {
+    Scoped_Timer compute_search_direction_timer(timers,
+                                                "compute_search_direction");
+    constexpr bool is_corrector_phase = true;
+    compute_search_direction(
+      block_info, sdp, solver, minus_XY, schur_complement_cholesky,
+      schur_off_diagonal, X_cholesky, beta_corrector, initial_mu,
+      primal_residue_p, is_corrector_phase, Q, dx, dX, dy, dY);
+  }
+
+  {
+    iter.primal_step_length = step_length(
+      X_cholesky, dX, step_length_reduction, "stepLength(XCholesky)",
+      iter.max_primal_step_length, timers);
+    iter.dual_step_length = step_length(Y_cholesky, dY, step_length_reduction,
+                                        "stepLength(YCholesky)",
+                                        iter.max_dual_step_length, timers);
+  }
+
+  {
+    Scoped_Timer timer(timers, "compute_errors");
+    const auto R = compute_R_matrix(total_psd_rows, solver, dX, dY,
+                                    iter.primal_step_length,
+                                    iter.dual_step_length, iter.mu);
+
+    iter.R_error = R.max_abs();
+    iter.R_mean_abs = R.mean_abs();
+    iter.reduce_factor
+      = 1
+        - El::Min(iter.primal_step_length, iter.dual_step_length)
+            * (1 - beta_corrector);
+  }
+
+  return iter;
+}
+
+void corrector_step(
+  const SDP_Solver &solver, const Environment &env,
+  const Solver_Parameters &parameters, const Verbosity &verbosity,
+  const std::size_t &total_psd_rows, const bool &is_primal_and_dual_feasible,
+  const Block_Info &block_info, const SDP &sdp,
+  const Block_Diagonal_Matrix &schur_complement_cholesky,
+  const Block_Matrix &schur_off_diagonal,
+  const El::DistMatrix<El::BigFloat> &Q,
+  const Block_Diagonal_Matrix &X_cholesky,
+  const Block_Diagonal_Matrix &Y_cholesky,
+  const Block_Diagonal_Matrix &minus_XY, const Block_Vector &primal_residue_p,
+  const bool do_centering_step, const El::BigFloat &mu,
+  El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
+  El::BigFloat &dual_step_length, Block_Vector &dx, Block_Vector &dy,
+  Block_Diagonal_Matrix &dX, Block_Diagonal_Matrix &dY,
   size_t &num_corrector_iterations, Timers &timers)
 {
   Scoped_Timer corrector_timer(timers, "corrector");
@@ -104,15 +154,6 @@ void corrector_step(
   VERBOSE_ALLOCATION_MESSAGE(dy_prev);
   VERBOSE_ALLOCATION_MESSAGE(dX_prev);
   VERBOSE_ALLOCATION_MESSAGE(dY_prev);
-
-  // Will be initialized at the end of the first corrector iteration
-  El::BigFloat primal_step_length_prev = 0;
-  El::BigFloat dual_step_length_prev = 0;
-  El::BigFloat beta_corrector_prev = 0;
-
-  El::BigFloat reduce_factor
-    = 1 - El::Min(primal_step_length, dual_step_length) * (1 - beta_corrector);
-  El::BigFloat reduce_factor_prev = 1;
 
   beta_corrector = corrector_centering_parameter(
     parameters, solver.X, dX, solver.Y, dY, mu, is_primal_and_dual_feasible,
@@ -140,6 +181,8 @@ void corrector_step(
 
   bool undo_last_corrector_iteration = false;
   num_corrector_iterations = 0;
+  Corrector_Iteration prev_iteration;
+  Corrector_Iteration iteration;
   while(num_corrector_iterations < max_corrector_iterations)
     {
       Scoped_Timer loop_timer(timers,
@@ -151,61 +194,38 @@ void corrector_step(
           dy_prev = dy;
           dX_prev = dX;
           dY_prev = dY;
-          primal_step_length_prev = primal_step_length;
-          dual_step_length_prev = dual_step_length;
-          beta_corrector_prev = beta_corrector;
-          reduce_factor_prev = reduce_factor;
+          prev_iteration = iteration;
 
+          // Aim for lower mu each time
           beta_corrector = beta_corrector * corrector_iter_mu_reduction;
         }
 
-      Scoped_Timer compute_search_direction_timer(timers,
-                                                  "compute_search_direction");
-      compute_search_direction(block_info, sdp, solver, minus_XY,
-                               schur_complement_cholesky, schur_off_diagonal,
-                               X_cholesky, beta_corrector, mu,
-                               primal_residue_p, true, Q, dx, dX, dy, dY);
-      compute_search_direction_timer.stop();
+      // Compute dx,dy,dX,dY etc.
+      iteration = single_corrector_iteration(
+        solver, total_psd_rows, block_info, sdp, schur_complement_cholesky,
+        schur_off_diagonal, Q, X_cholesky, Y_cholesky, minus_XY,
+        primal_residue_p, beta_corrector, parameters.step_length_reduction, mu,
+        dx, dX, dy, dY, timers);
 
-      // Compute step-lengths that preserve positive definiteness of X, Y
-      El::BigFloat max_primal_step_length;
-      primal_step_length
-        = step_length(X_cholesky, dX, parameters.step_length_reduction,
-                      "stepLength(XCholesky)", max_primal_step_length, timers);
-      El::BigFloat max_dual_step_length;
-      dual_step_length
-        = step_length(Y_cholesky, dY, parameters.step_length_reduction,
-                      "stepLength(YCholesky)", max_dual_step_length, timers);
-
-      // Update R-err,
-      // print corrector iteration status
-      {
-        El::BigFloat error_P, error_p, error_d, coit_mu, R_mean_abs;
-
-        compute_errors(total_psd_rows, solver.x, dx, solver.y, dy, solver.X,
-                       dX, solver.Y, dY, primal_step_length, dual_step_length,
-                       solver.R_error, R_mean_abs, coit_mu, timers);
-
-        const auto min_step_length
-          = El::Min(primal_step_length, dual_step_length);
-        reduce_factor = 1 - min_step_length * (1 - beta_corrector);
-        if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
-          {
-            El::Output("  step=(", primal_step_length, ",", dual_step_length,
-                       ") maxstep=(", max_primal_step_length, ",",
-                       max_dual_step_length, ") R=", solver.R_error,
-                       " R_mean=", R_mean_abs, " mu=", coit_mu,
-                       " reduce=", reduce_factor);
-          }
-      }
       ++num_corrector_iterations;
 
-      // continue corrector steps
-      // only if (primal_step_length + dual_step_length)
-      // is not too small compared to the historical maximum.
-      // TODO: check other exit conditions, e.g (gap < dualityGapThreshold)
+      // print corrector iteration status
+      if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
+        {
+          El::Output("  step=(", iteration.primal_step_length, ",",
+                     iteration.dual_step_length, ") maxstep=(",
+                     iteration.max_primal_step_length, ",",
+                     iteration.max_dual_step_length, ") R=", iteration.R_error,
+                     " R_mean=", iteration.R_mean_abs, " mu=", iteration.mu,
+                     " reduce=", iteration.reduce_factor);
+        }
 
-      if(El::Max(primal_step_length, dual_step_length)
+      // Check whether we should continue corrector iterations.
+      // TODO: check also global exit conditions, e.g (gap < dualityGapThreshold)
+
+      // Continue corrector iterations
+      // only if max(primal_step_length, dual_step_length) is not too small.
+      if(El::Max(iteration.primal_step_length, iteration.dual_step_length)
          < parameters.corrector_step_length_threshold)
         {
           if(num_corrector_iterations > 1)
@@ -214,7 +234,9 @@ void corrector_step(
           break;
         }
 
-      if(num_corrector_iterations > 1 && reduce_factor >= reduce_factor_prev)
+      // Continue corrector iterations only if reduce_factor decreases.
+      if(num_corrector_iterations > 1
+         && iteration.reduce_factor >= prev_iteration.reduce_factor)
         {
           undo_last_corrector_iteration = true;
           break;
@@ -236,11 +258,13 @@ void corrector_step(
       dy = dy_prev;
       dX = dX_prev;
       dY = dY_prev;
-      primal_step_length = primal_step_length_prev;
-      dual_step_length = dual_step_length_prev;
-      beta_corrector = beta_corrector_prev;
-      reduce_factor = reduce_factor_prev;
+      iteration = prev_iteration;
     }
+
+  // Initialize output variables
+
+  primal_step_length = std::move(iteration.primal_step_length);
+  dual_step_length = std::move(iteration.dual_step_length);
 }
 
 #undef VERBOSE_ALLOCATION_MESSAGE

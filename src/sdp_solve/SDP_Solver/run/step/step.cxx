@@ -38,19 +38,20 @@ El::BigFloat predictor_centering_parameter(const Solver_Parameters &parameters,
                                            const bool is_primal_dual_feasible);
 
 void corrector_step(
-  const Environment &env, const Solver_Parameters &parameters,
-  const Verbosity &verbosity, const std::size_t &total_psd_rows,
-  const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
-  const SDP &sdp, const ::Block_Diagonal_Matrix &schur_complement_cholesky,
-  const ::Block_Matrix &schur_off_diagonal,
+  const SDP_Solver &solver, const Environment &env,
+  const Solver_Parameters &parameters, const Verbosity &verbosity,
+  const std::size_t &total_psd_rows, const bool &is_primal_and_dual_feasible,
+  const Block_Info &block_info, const SDP &sdp,
+  const Block_Diagonal_Matrix &schur_complement_cholesky,
+  const Block_Matrix &schur_off_diagonal,
   const El::DistMatrix<El::BigFloat> &Q,
   const Block_Diagonal_Matrix &X_cholesky,
   const Block_Diagonal_Matrix &Y_cholesky,
-  const Block_Vector &primal_residue_p, const bool do_centering_step,
-  SDP_Solver &solver, El::BigFloat &mu, El::BigFloat &beta_corrector,
-  El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
-  Block_Vector &dx, Block_Vector &dy, Block_Diagonal_Matrix &dX,
-  Block_Diagonal_Matrix &dY, const Block_Diagonal_Matrix &minus_XY,
+  const Block_Diagonal_Matrix &minus_XY, const Block_Vector &primal_residue_p,
+  const bool do_centering_step, const El::BigFloat &mu,
+  El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
+  El::BigFloat &dual_step_length, Block_Vector &dx, Block_Vector &dy,
+  Block_Diagonal_Matrix &dX, Block_Diagonal_Matrix &dY,
   size_t &num_corrector_iterations, Timers &timers);
 
 void SDP_Solver::step(
@@ -158,13 +159,6 @@ void SDP_Solver::step(
 
     // R = mu * I - XY
     // R_error = maxAbs(R)
-    //
-    // TODO: now we always update R_error during corrector phase by calling compute_errors:
-    // R = mu' * I - X'Y'
-    //   where:
-    //   X' = X + dX, Y' = Y + dY
-    //   mu' = Tr(X'Y') / X'.dim
-    // TODO: which definition should we use?
     R_error = compute_R_error(mu, minus_XY, timers);
 
     // If set to 'true', then we perform a centering step,
@@ -194,12 +188,13 @@ void SDP_Solver::step(
     }
 
     // Compute the corrector solution for (dx, dX, dy, dY)
-    corrector_step(
-      env, parameters, verbosity, total_psd_rows, is_primal_and_dual_feasible,
-      block_info, sdp, schur_complement_cholesky, schur_off_diagonal, Q,
-      X_cholesky, Y_cholesky, primal_residue_p, do_centering_step, *this, mu,
-      beta_corrector, primal_step_length, dual_step_length, dx, dy, dX, dY,
-      minus_XY, num_corrector_iterations, timers);
+    corrector_step(*this, env, parameters, verbosity, total_psd_rows,
+                   is_primal_and_dual_feasible, block_info, sdp,
+                   schur_complement_cholesky, schur_off_diagonal, Q,
+                   X_cholesky, Y_cholesky, minus_XY, primal_residue_p,
+                   do_centering_step, mu, beta_corrector, primal_step_length,
+                   dual_step_length, dx, dy, dX, dY, num_corrector_iterations,
+                   timers);
   }
 
   // If our problem is both dual-feasible and primal-feasible,
