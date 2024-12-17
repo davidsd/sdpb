@@ -143,7 +143,7 @@ void corrector_step(
   El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
   El::BigFloat &dual_step_length, Block_Vector &dx, Block_Vector &dy,
   Block_Diagonal_Matrix &dX, Block_Diagonal_Matrix &dY,
-  size_t &num_corrector_iterations, Timers &timers)
+  std::vector<Corrector_Iteration> &corrector_iterations, Timers &timers)
 {
   Scoped_Timer corrector_timer(timers, "corrector");
 
@@ -180,34 +180,30 @@ void corrector_step(
     }
 
   bool undo_last_corrector_iteration = false;
-  num_corrector_iterations = 0;
-  Corrector_Iteration prev_iteration;
-  Corrector_Iteration iteration;
-  while(num_corrector_iterations < max_corrector_iterations)
+  corrector_iterations.clear();
+  while(corrector_iterations.size() < max_corrector_iterations)
     {
       Scoped_Timer loop_timer(timers,
-                              std::to_string(num_corrector_iterations));
+                              std::to_string(corrector_iterations.size()));
 
-      if(num_corrector_iterations > 0)
+      if(!corrector_iterations.empty())
         {
           dx_prev = dx;
           dy_prev = dy;
           dX_prev = dX;
           dY_prev = dY;
-          prev_iteration = iteration;
 
           // Aim for lower mu each time
           beta_corrector = beta_corrector * corrector_iter_mu_reduction;
         }
 
       // Compute dx,dy,dX,dY etc.
-      iteration = single_corrector_iteration(
-        solver, total_psd_rows, block_info, sdp, schur_complement_cholesky,
-        schur_off_diagonal, Q, X_cholesky, Y_cholesky, minus_XY,
-        primal_residue_p, beta_corrector, parameters.step_length_reduction, mu,
-        dx, dX, dy, dY, timers);
-
-      ++num_corrector_iterations;
+      auto &iteration
+        = corrector_iterations.emplace_back(single_corrector_iteration(
+          solver, total_psd_rows, block_info, sdp, schur_complement_cholesky,
+          schur_off_diagonal, Q, X_cholesky, Y_cholesky, minus_XY,
+          primal_residue_p, beta_corrector, parameters.step_length_reduction,
+          mu, dx, dX, dy, dY, timers));
 
       // print corrector iteration status
       if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
@@ -228,15 +224,16 @@ void corrector_step(
       if(El::Max(iteration.primal_step_length, iteration.dual_step_length)
          < parameters.corrector_step_length_threshold)
         {
-          if(num_corrector_iterations > 1)
+          if(corrector_iterations.size() > 1)
             undo_last_corrector_iteration = true;
-          // TODO in this case, we can exit even before computing and printing errors, shall we?
           break;
         }
 
       // Continue corrector iterations only if reduce_factor decreases.
-      if(num_corrector_iterations > 1
-         && iteration.reduce_factor >= prev_iteration.reduce_factor)
+      if(corrector_iterations.size() > 1
+         && iteration.reduce_factor
+              >= corrector_iterations.at(corrector_iterations.size() - 2)
+                   .reduce_factor)
         {
           undo_last_corrector_iteration = true;
           break;
@@ -245,26 +242,31 @@ void corrector_step(
 
   if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
     {
-      El::Output("  num_corrector_iterations=", num_corrector_iterations,
+      El::Output("  num_corrector_iterations=", corrector_iterations.size(),
                  undo_last_corrector_iteration ? ", the last one discarded."
                                                : "");
     }
 
+  ASSERT(!corrector_iterations.empty(),
+         "Expected at least one corrector iteration!");
+  auto last_successful_iteration = corrector_iterations.back();
   if(undo_last_corrector_iteration)
     {
-      ASSERT(num_corrector_iterations > 0,
-             "Should perform at least one corrector iteration!");
+      ASSERT(corrector_iterations.size() >= 2,
+             DEBUG_STRING(corrector_iterations.size()),
+             "The first corrector iteration cannot be undone!");
       dx = dx_prev;
       dy = dy_prev;
       dX = dX_prev;
       dY = dY_prev;
-      iteration = prev_iteration;
+      last_successful_iteration
+        = corrector_iterations.at(corrector_iterations.size() - 2);
     }
 
   // Initialize output variables
 
-  primal_step_length = std::move(iteration.primal_step_length);
-  dual_step_length = std::move(iteration.dual_step_length);
+  primal_step_length = last_successful_iteration.primal_step_length;
+  dual_step_length = last_successful_iteration.dual_step_length;
 }
 
 #undef VERBOSE_ALLOCATION_MESSAGE

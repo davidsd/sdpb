@@ -1,3 +1,4 @@
+#include "Corrector_Iteration.hxx"
 #include "compute_R_error.hxx"
 #include "update_cond_numbers.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
@@ -52,7 +53,7 @@ void corrector_step(
   El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
   El::BigFloat &dual_step_length, Block_Vector &dx, Block_Vector &dy,
   Block_Diagonal_Matrix &dX, Block_Diagonal_Matrix &dY,
-  size_t &num_corrector_iterations, Timers &timers);
+  std::vector<Corrector_Iteration> &num_corrector_iterations, Timers &timers);
 
 void SDP_Solver::step(
   const Environment &env, const Solver_Parameters &parameters,
@@ -70,8 +71,9 @@ void SDP_Solver::step(
   const Block_Vector &primal_residue_p,
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context, El::BigFloat &mu,
   El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
-  El::BigFloat &dual_step_length, size_t &num_corrector_iterations,
-  bool &terminate_now, Timers &timers, El::Matrix<int32_t> &block_timings_ms,
+  El::BigFloat &dual_step_length,
+  std::vector<Corrector_Iteration> &corrector_iterations, bool &terminate_now,
+  Timers &timers, El::Matrix<int32_t> &block_timings_ms,
   El::BigFloat &Q_cond_number, El::BigFloat &max_block_cond_number,
   std::string &max_block_cond_number_name)
 {
@@ -193,7 +195,7 @@ void SDP_Solver::step(
                    schur_complement_cholesky, schur_off_diagonal, Q,
                    X_cholesky, Y_cholesky, minus_XY, primal_residue_p,
                    do_centering_step, mu, beta_corrector, primal_step_length,
-                   dual_step_length, dx, dy, dX, dY, num_corrector_iterations,
+                   dual_step_length, dx, dy, dX, dY, corrector_iterations,
                    timers);
   }
 

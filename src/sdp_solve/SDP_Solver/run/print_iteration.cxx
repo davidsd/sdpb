@@ -1,5 +1,6 @@
 #include "sdp_solve/SDP_Solver.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
+#include "step/Corrector_Iteration.hxx"
 
 #include <chrono>
 #include <iostream>
@@ -9,7 +10,8 @@ void print_iteration(
   const std::filesystem::path &iterations_json_path, const int &iteration,
   const El::BigFloat &mu, const El::BigFloat &primal_step_length,
   const El::BigFloat &dual_step_length, const El::BigFloat &beta_corrector,
-  const size_t &num_corrector_iterations, const SDP_Solver &sdp_solver,
+  const std::vector<Corrector_Iteration> &corrector_iterations,
+  const SDP_Solver &sdp_solver,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
     &solver_start_time,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
@@ -85,28 +87,57 @@ void print_iteration(
       os_json << ", \"total_time\": " << runtime_seconds
               << ", \"iter_time\": " << iteration_time_seconds
               << ", \"num_corrector_iterations\": "
-              << num_corrector_iterations;
+              << corrector_iterations.size();
+
+#define ADD_QUOTED_NO_COMMA(name, value)                                      \
+  os_json << "\"" << name << "\": \"" << value << "\""
+#define ADD_QUOTED(name, value)                                               \
+  os_json << ", \"" << name << "\": \"" << value << "\""
+
       os_json << std::defaultfloat;
       set_stream_precision(os_json);
-      os_json << ", \"mu\": \"" << mu << "\""
-              << ", \"P-obj\": \"" << sdp_solver.primal_objective << "\""
-              << ", \"D-obj\": \"" << sdp_solver.dual_objective << "\""
-              << ", \"gap\": \"" << sdp_solver.duality_gap << "\""
-              << ", \"P-err\": \"" << sdp_solver.primal_error_P << "\""
-              << ", \"p-err\": \"" << sdp_solver.primal_error_p << "\""
-              << ", \"D-err\": \"" << sdp_solver.dual_error << "\""
-              << ", \"R-err\": \"" << sdp_solver.R_error << "\""
-              << ", \"P-step\": \"" << primal_step_length << "\""
-              << ", \"D-step\": \"" << dual_step_length << "\""
-              << ", \"beta\": \"" << beta_corrector << "\""
-              << ", \"Q_cond_number\": \"" << Q_cond_number << "\""
-              << ", \"max_block_cond_number\": \"" << max_block_cond_number
-              << "\""
-              << ", \"block_name\": \"" << max_block_cond_number_name << "\""
-              << " }";
+      ADD_QUOTED("mu", mu);
+      ADD_QUOTED("P-obj", sdp_solver.primal_objective);
+      ADD_QUOTED("D-obj", sdp_solver.dual_objective);
+      ADD_QUOTED("gap", sdp_solver.duality_gap);
+      ADD_QUOTED("P-err", sdp_solver.primal_error_P);
+      ADD_QUOTED("p-err", sdp_solver.primal_error_p);
+      ADD_QUOTED("D-err", sdp_solver.dual_error);
+      ADD_QUOTED("R-err", sdp_solver.R_error);
+      ADD_QUOTED("P-step", primal_step_length);
+      ADD_QUOTED("D-step", dual_step_length);
+      ADD_QUOTED("beta", beta_corrector);
+      ADD_QUOTED("Q_cond_number", Q_cond_number);
+      ADD_QUOTED("max_block_cond_number", max_block_cond_number);
+      ADD_QUOTED("block_name", max_block_cond_number_name);
+      os_json << ", \"corrector_iterations\": [";
+      {
+        for(size_t i = 0; i < corrector_iterations.size(); i++)
+          {
+            if(i != 0)
+              os_json << ",";
+            os_json << "{";
+            {
+              const auto &iter = corrector_iterations.at(i);
+              ADD_QUOTED_NO_COMMA("P-step", iter.primal_step_length);
+              ADD_QUOTED("D-step", iter.dual_step_length);
+              ADD_QUOTED("max P-step", iter.max_primal_step_length);
+              ADD_QUOTED("max D-step", iter.max_dual_step_length);
+              ADD_QUOTED("mu", iter.mu);
+              ADD_QUOTED("reduce_factor", iter.reduce_factor);
+              ADD_QUOTED("R-err", iter.R_error);
+              ADD_QUOTED("R_mean_abs", iter.R_mean_abs);
+            }
+            os_json << "}";
+          }
+      }
+      os_json << "]";
+      os_json << " }";
       ASSERT(Q_cond_number >= 1, DEBUG_STRING(Q_cond_number));
       ASSERT(max_block_cond_number >= 1, DEBUG_STRING(max_block_cond_number));
       ASSERT(!max_block_cond_number_name.empty());
+#undef ADD_QUOTED_NO_COMMA
+#undef ADD_QUOTED
     }
   if(verbosity >= Verbosity::trace)
     {
