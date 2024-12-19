@@ -174,12 +174,9 @@ void corrector_step(
     parameters, solver.X, dX, solver.Y, dY, mu, is_primal_and_dual_feasible,
     total_psd_rows);
 
-  const El::BigFloat corrector_iter_mu_reduction
-    = parameters.corrector_mu_reduction;
-  ASSERT(corrector_iter_mu_reduction > 0,
-         DEBUG_STRING(corrector_iter_mu_reduction));
-  ASSERT(corrector_iter_mu_reduction < 1,
-         DEBUG_STRING(corrector_iter_mu_reduction));
+  El::BigFloat corrector_iter_mu_reduction = parameters.corrector_mu_reduction;
+  if(corrector_iter_mu_reduction <= 0)
+    corrector_iter_mu_reduction = beta_corrector;
 
   size_t max_corrector_iterations
     = is_primal_and_dual_feasible
@@ -288,7 +285,8 @@ void corrector_step(
         {
           if(iteration.log_mu_speed_corrector <= 0)
             {
-              // No real progress, cancel iteration:
+              // No real progress, cancel iteration.
+              // TODO: what if we have beta > 1 and really want to increase mu?
               undo_last_corrector_iteration = true;
             }
           break;
