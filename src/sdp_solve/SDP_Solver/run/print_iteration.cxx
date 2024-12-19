@@ -127,6 +127,8 @@ void print_iteration(
               ADD_QUOTED("reduce_factor", iter.reduce_factor);
               ADD_QUOTED("R-err", iter.R_error);
               ADD_QUOTED("R_mean_abs", iter.R_mean_abs);
+              ADD_QUOTED("-dlog(mu)/dt_full", iter.log_mu_speed_full);
+              ADD_QUOTED("-dlog(mu)/dt_corr", iter.log_mu_speed_corrector);
             }
             os_json << "}";
           }

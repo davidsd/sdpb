@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sdpb_util/Boost_Float.hxx"
+
 #include <El.hpp>
 
 struct Corrector_Iteration final
@@ -17,4 +19,13 @@ struct Corrector_Iteration final
   El::BigFloat R_mean_abs;
   // 1 - min_step_length * (1 - beta)
   El::BigFloat reduce_factor;
+  // How fast mu decreases with time:
+  // -d(log10 mu)/dt,
+  //   where dt is time since solver step start.
+  // Time t is normalized by full solver step (with single corrector iteration) timing.
+  // In other words, log_mu_speed = 1
+  //   if mu decreased by a factor of 10 after the first corrector iteration.
+  Boost_Float log_mu_speed_full;
+  // Same as log_mu_speed_full, but dt is current corrector iteration time.
+  Boost_Float log_mu_speed_corrector;
 };

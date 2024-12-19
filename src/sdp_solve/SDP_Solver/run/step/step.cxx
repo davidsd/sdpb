@@ -39,11 +39,11 @@ El::BigFloat predictor_centering_parameter(const Solver_Parameters &parameters,
                                            const bool is_primal_dual_feasible);
 
 void corrector_step(
-  const SDP_Solver &solver, const Environment &env,
-  const Solver_Parameters &parameters, const Verbosity &verbosity,
-  const std::size_t &total_psd_rows, const bool &is_primal_and_dual_feasible,
-  const Block_Info &block_info, const SDP &sdp,
-  const Block_Diagonal_Matrix &schur_complement_cholesky,
+  const SDP_Solver &solver, const Scoped_Timer &step_timer,
+  const Environment &env, const Solver_Parameters &parameters,
+  const Verbosity &verbosity, const std::size_t &total_psd_rows,
+  const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
+  const SDP &sdp, const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
   const El::DistMatrix<El::BigFloat> &Q,
   const Block_Diagonal_Matrix &X_cholesky,
@@ -190,9 +190,9 @@ void SDP_Solver::step(
     }
 
     // Compute the corrector solution for (dx, dX, dy, dY)
-    corrector_step(*this, env, parameters, verbosity, total_psd_rows,
-                   is_primal_and_dual_feasible, block_info, sdp,
-                   schur_complement_cholesky, schur_off_diagonal, Q,
+    corrector_step(*this, step_timer, env, parameters, verbosity,
+                   total_psd_rows, is_primal_and_dual_feasible, block_info,
+                   sdp, schur_complement_cholesky, schur_off_diagonal, Q,
                    X_cholesky, Y_cholesky, minus_XY, primal_residue_p,
                    do_centering_step, mu, beta_corrector, primal_step_length,
                    dual_step_length, dx, dy, dX, dY, corrector_iterations,

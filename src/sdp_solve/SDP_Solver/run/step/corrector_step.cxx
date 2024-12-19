@@ -1,5 +1,6 @@
 #include "Corrector_Iteration.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
+#include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/memory_estimates.hxx"
 
@@ -128,12 +129,26 @@ Corrector_Iteration single_corrector_iteration(
   return iter;
 }
 
+// -d(log10 mu)/dt, with t measured in ms
+// Optionally multiplied by normalization factor
+Boost_Float
+get_log_mu_speed(const El::BigFloat &mu_0, const El::BigFloat &mu_1,
+                 int64_t time_ms, const Boost_Float &normalization)
+{
+  if(time_ms == 0)
+    time_ms = 1;
+
+  ASSERT(time_ms > 0, DEBUG_STRING(time_ms));
+  return log10(to_Boost_Float(mu_0) / to_Boost_Float(mu_1)) / time_ms
+         * normalization;
+}
+
 void corrector_step(
-  const SDP_Solver &solver, const Environment &env,
-  const Solver_Parameters &parameters, const Verbosity &verbosity,
-  const std::size_t &total_psd_rows, const bool &is_primal_and_dual_feasible,
-  const Block_Info &block_info, const SDP &sdp,
-  const Block_Diagonal_Matrix &schur_complement_cholesky,
+  const SDP_Solver &solver, const Scoped_Timer &step_timer,
+  const Environment &env, const Solver_Parameters &parameters,
+  const Verbosity &verbosity, const std::size_t &total_psd_rows,
+  const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
+  const SDP &sdp, const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
   const El::DistMatrix<El::BigFloat> &Q,
   const Block_Diagonal_Matrix &X_cholesky,
@@ -179,6 +194,9 @@ void corrector_step(
       max_corrector_iterations = 1;
     }
 
+  // How fast do we decrease mu by doing one predictor + one corrector step
+  Boost_Float log_mu_speed_normalization;
+
   bool undo_last_corrector_iteration = false;
   corrector_iterations.clear();
   while(corrector_iterations.size() < max_corrector_iterations)
@@ -205,6 +223,29 @@ void corrector_step(
           primal_residue_p, beta_corrector, parameters.step_length_reduction,
           mu, dx, dX, dy, dY, timers));
 
+      // Previous iteration
+      auto prev_it = corrector_iterations.rbegin();
+      ++prev_it;
+
+      const int64_t total_step_time_ms = step_timer.elapsed_milliseconds();
+      if(corrector_iterations.size() == 1)
+        {
+          // Normalization:
+          // We set speed = 1
+          // If we decreased mu by a factor of 10
+          // during one full solver step (1 predictor + 1 corrector)
+          log_mu_speed_normalization
+            = 1 / get_log_mu_speed(mu, mu / 10, total_step_time_ms, 1);
+        }
+      iteration.log_mu_speed_full = get_log_mu_speed(
+        mu, iteration.mu, total_step_time_ms, log_mu_speed_normalization);
+      {
+        auto prev_mu = corrector_iterations.size() == 1 ? mu : prev_it->mu;
+        iteration.log_mu_speed_corrector = get_log_mu_speed(
+          prev_mu, iteration.mu, loop_timer.elapsed_milliseconds(),
+          log_mu_speed_normalization);
+      }
+
       // print corrector iteration status
       if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
         {
@@ -213,7 +254,9 @@ void corrector_step(
                      iteration.max_primal_step_length, ",",
                      iteration.max_dual_step_length, ") R=", iteration.R_error,
                      " R_mean=", iteration.R_mean_abs, " mu=", iteration.mu,
-                     " reduce=", iteration.reduce_factor);
+                     " reduce=", iteration.reduce_factor,
+                     " -dlog(mu)/dt_corr=", iteration.log_mu_speed_corrector,
+                     " -dlog(mu)/dt_full=", iteration.log_mu_speed_full);
         }
 
       // Check whether we should continue corrector iterations.
@@ -231,9 +274,7 @@ void corrector_step(
 
       // Continue corrector iterations only if reduce_factor decreases.
       if(corrector_iterations.size() > 1
-         && iteration.reduce_factor
-              >= corrector_iterations.at(corrector_iterations.size() - 2)
-                   .reduce_factor)
+         && iteration.reduce_factor >= prev_it->reduce_factor)
         {
           undo_last_corrector_iteration = true;
           break;
