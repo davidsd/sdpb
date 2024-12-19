@@ -279,6 +279,20 @@ void corrector_step(
           undo_last_corrector_iteration = true;
           break;
         }
+
+      // If current corrector decreases mu too slowly,
+      // then we should make full solver step again.
+      if(corrector_iterations.size() > 1
+         && iteration.log_mu_speed_corrector
+              < corrector_iterations.front().log_mu_speed_full)
+        {
+          if(iteration.log_mu_speed_corrector <= 0)
+            {
+              // No real progress, cancel iteration:
+              undo_last_corrector_iteration = true;
+            }
+          break;
+        }
     }
 
   if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
