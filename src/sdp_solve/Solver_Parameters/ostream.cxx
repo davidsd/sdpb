@@ -41,6 +41,8 @@ std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
      << p.feasible_max_corrector_iterations << '\n'
      << "infeasibleMaxCorrectorIterations = "
      << p.infeasible_max_corrector_iterations << '\n'
+     << "correctorCheckMuSpeed            = " << p.corrector_check_mu_speed
+     << '\n'
      << "maxComplementarity               = " << p.max_complementarity << '\n'
      << "initialCheckpointDir             = " << p.checkpoint_in << '\n'
      << "checkpointDir                    = " << p.checkpoint_out << '\n';

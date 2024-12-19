@@ -282,7 +282,7 @@ void corrector_step(
 
       // If current corrector decreases mu too slowly,
       // then we should make full solver step again.
-      if(corrector_iterations.size() > 1
+      if(parameters.corrector_check_mu_speed && corrector_iterations.size() > 1
          && iteration.log_mu_speed_corrector
               < corrector_iterations.front().log_mu_speed_full)
         {

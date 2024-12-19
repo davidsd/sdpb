@@ -147,6 +147,11 @@ boost::program_options::options_description Solver_Parameters::options()
     "Maximum number of corrector iterations within each solver step "
     "when either the primal or dual problems are infeasible.");
   result.add_options()(
+    "correctorCheckMuSpeed",
+    boost::program_options::value<bool>(&corrector_check_mu_speed)
+      ->default_value(true),
+    "Stop corrector iterations if mu is decreasing too slowly.");
+  result.add_options()(
     "minPrimalStep",
     boost::program_options::value<El::BigFloat>(&min_primal_step)
       ->default_value(El::BigFloat(0)),

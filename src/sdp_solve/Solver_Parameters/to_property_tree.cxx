@@ -29,6 +29,7 @@ boost::property_tree::ptree to_property_tree(const Solver_Parameters &p)
              p.corrector_step_length_threshold);
   result.put("feasibleMaxCorrectorIterations", p.feasible_max_corrector_iterations);
   result.put("infeasibleMaxCorrectorIterations", p.infeasible_max_corrector_iterations);
+  result.put("correctorCheckMuSpeed", p.corrector_check_mu_speed);
   result.put("maxComplementarity", p.max_complementarity);
   result.put("initialCheckpointDir", p.checkpoint_in.string());
   result.put("checkpointDir", p.checkpoint_out.string());
