@@ -81,61 +81,71 @@ void print_iteration(
     {
       if(iteration != 1)
         os_json << ",";
+      os_json << "\n{";
 
-      os_json << "\n{ \"iteration\":" << iteration;
+      bool need_comma = false;
+      const auto add_value
+        = [&os_json, &need_comma](const auto &name, const auto &value) {
+            if(need_comma)
+              os_json << ",";
+            os_json << "\"" << name << "\":" << value;
+            need_comma = true;
+          };
+
+      const auto add_string
+        = [&os_json, &need_comma](const auto &name, const auto &value) {
+            if(need_comma)
+              os_json << ",";
+            os_json << "\"" << name << "\": \"" << value << "\"";
+            need_comma = true;
+          };
+
+      add_value("iteration", iteration);
       os_json << std::setprecision(3) << std::fixed;
 
-#define ADD_VALUE(name, value) os_json << ", \"" << (name) << "\": " << (value)
+      add_value("total_time", runtime_seconds);
+      add_value("iter_time", iteration_time_seconds);
+      add_value("num_corrector_iterations", corrector_iterations.size());
 
-      ADD_VALUE("total_time", runtime_seconds);
-      ADD_VALUE("iter_time", iteration_time_seconds);
-      ADD_VALUE("num_corrector_iterations", corrector_iterations.size());
+      os_json << std::defaultfloat << set_stream_precision;
 
-#define ADD_QUOTED_NO_COMMA(name, value)                                      \
-  os_json << "\"" << (name) << "\": \"" << (value) << "\""
-#define ADD_QUOTED(name, value)                                               \
-  os_json << ", \"" << (name) << "\": \"" << (value) << "\""
-
-      os_json << std::defaultfloat;
-      set_stream_precision(os_json);
-      ADD_QUOTED("mu", mu);
-      ADD_QUOTED("P-obj", sdp_solver.primal_objective);
-      ADD_QUOTED("D-obj", sdp_solver.dual_objective);
-      ADD_QUOTED("gap", sdp_solver.duality_gap);
-      ADD_QUOTED("P-err", sdp_solver.primal_error_P);
-      ADD_QUOTED("p-err", sdp_solver.primal_error_p);
-      ADD_QUOTED("D-err", sdp_solver.dual_error);
-      ADD_QUOTED("R-err", sdp_solver.R_error);
-      ADD_QUOTED("P-step", primal_step_length);
-      ADD_QUOTED("D-step", dual_step_length);
-      ADD_QUOTED("beta", beta_corrector);
-      ADD_QUOTED("Q_cond_number", Q_cond_number);
-      ADD_QUOTED("max_block_cond_number", max_block_cond_number);
-      ADD_QUOTED("block_name", max_block_cond_number_name);
-      os_json << ", \"corrector_iterations\": [";
-      {
-        for(size_t i = 0; i < corrector_iterations.size(); i++)
+      add_string("mu", mu);
+      add_string("P-obj", sdp_solver.primal_objective);
+      add_string("D-obj", sdp_solver.dual_objective);
+      add_string("gap", sdp_solver.duality_gap);
+      add_string("P-err", sdp_solver.primal_error_P);
+      add_string("p-err", sdp_solver.primal_error_p);
+      add_string("D-err", sdp_solver.dual_error);
+      add_string("R-err", sdp_solver.R_error);
+      add_string("P-step", primal_step_length);
+      add_string("D-step", dual_step_length);
+      add_string("beta", beta_corrector);
+      add_string("Q_cond_number", Q_cond_number);
+      add_string("max_block_cond_number", max_block_cond_number);
+      add_string("block_name", max_block_cond_number_name);
+      os_json << ",\"corrector_iterations\": [";
+      for(size_t i = 0; i < corrector_iterations.size(); i++)
+        {
+          if(i != 0)
+            os_json << ",";
+          os_json << "{";
           {
-            if(i != 0)
-              os_json << ",";
-            os_json << "{";
-            {
-              const auto &iter = corrector_iterations.at(i);
-              ADD_QUOTED_NO_COMMA("P-step", iter.primal_step_length);
-              ADD_QUOTED("D-step", iter.dual_step_length);
-              ADD_QUOTED("max P-step", iter.max_primal_step_length);
-              ADD_QUOTED("max D-step", iter.max_dual_step_length);
-              ADD_QUOTED("mu", iter.mu);
-              ADD_QUOTED("reduce_factor", iter.reduce_factor);
-              ADD_QUOTED("R-err", iter.R_error);
-              ADD_QUOTED("R_mean_abs", iter.R_mean_abs);
-              ADD_QUOTED("-dlog(mu)/dt_full", iter.log_mu_speed_full);
-              ADD_QUOTED("-dlog(mu)/dt_corr", iter.log_mu_speed_corrector);
-              ADD_VALUE("is_canceled", iter.is_canceled ? "true" : "false");
-            }
-            os_json << "}";
+            const auto &iter = corrector_iterations.at(i);
+            need_comma = false;
+            add_string("P-step", iter.primal_step_length);
+            add_string("D-step", iter.dual_step_length);
+            add_string("max P-step", iter.max_primal_step_length);
+            add_string("max D-step", iter.max_dual_step_length);
+            add_string("mu", iter.mu);
+            add_string("reduce_factor", iter.reduce_factor);
+            add_string("R-err", iter.R_error);
+            add_string("R_mean_abs", iter.R_mean_abs);
+            add_string("-dlog(mu)/dt_full", iter.log_mu_speed_full);
+            add_string("-dlog(mu)/dt_corr", iter.log_mu_speed_corrector);
+            add_value("is_canceled", iter.is_canceled ? "true" : "false");
           }
-      }
+          os_json << "}";
+        }
       os_json << "]";
       os_json << " }";
       ASSERT(Q_cond_number >= 1, DEBUG_STRING(Q_cond_number));
