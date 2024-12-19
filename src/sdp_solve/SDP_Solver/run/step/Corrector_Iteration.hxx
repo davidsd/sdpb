@@ -28,4 +28,5 @@ struct Corrector_Iteration final
   Boost_Float log_mu_speed_full;
   // Same as log_mu_speed_full, but dt is current corrector iteration time.
   Boost_Float log_mu_speed_corrector;
+  bool is_canceled = false;
 };

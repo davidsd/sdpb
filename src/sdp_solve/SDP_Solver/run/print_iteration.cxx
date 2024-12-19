@@ -84,15 +84,17 @@ void print_iteration(
 
       os_json << "\n{ \"iteration\":" << iteration;
       os_json << std::setprecision(3) << std::fixed;
-      os_json << ", \"total_time\": " << runtime_seconds
-              << ", \"iter_time\": " << iteration_time_seconds
-              << ", \"num_corrector_iterations\": "
-              << corrector_iterations.size();
+
+#define ADD_VALUE(name, value) os_json << ", \"" << (name) << "\": " << (value)
+
+      ADD_VALUE("total_time", runtime_seconds);
+      ADD_VALUE("iter_time", iteration_time_seconds);
+      ADD_VALUE("num_corrector_iterations", corrector_iterations.size());
 
 #define ADD_QUOTED_NO_COMMA(name, value)                                      \
-  os_json << "\"" << name << "\": \"" << value << "\""
+  os_json << "\"" << (name) << "\": \"" << (value) << "\""
 #define ADD_QUOTED(name, value)                                               \
-  os_json << ", \"" << name << "\": \"" << value << "\""
+  os_json << ", \"" << (name) << "\": \"" << (value) << "\""
 
       os_json << std::defaultfloat;
       set_stream_precision(os_json);
@@ -129,6 +131,7 @@ void print_iteration(
               ADD_QUOTED("R_mean_abs", iter.R_mean_abs);
               ADD_QUOTED("-dlog(mu)/dt_full", iter.log_mu_speed_full);
               ADD_QUOTED("-dlog(mu)/dt_corr", iter.log_mu_speed_corrector);
+              ADD_VALUE("is_canceled", iter.is_canceled ? "true" : "false");
             }
             os_json << "}";
           }
@@ -138,6 +141,8 @@ void print_iteration(
       ASSERT(Q_cond_number >= 1, DEBUG_STRING(Q_cond_number));
       ASSERT(max_block_cond_number >= 1, DEBUG_STRING(max_block_cond_number));
       ASSERT(!max_block_cond_number_name.empty());
+
+#undef ADD_VALUE
 #undef ADD_QUOTED_NO_COMMA
 #undef ADD_QUOTED
     }

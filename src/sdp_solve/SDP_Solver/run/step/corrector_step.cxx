@@ -307,6 +307,7 @@ void corrector_step(
   auto last_successful_iteration = corrector_iterations.back();
   if(undo_last_corrector_iteration)
     {
+      corrector_iterations.back().is_canceled = true;
       ASSERT(corrector_iterations.size() >= 2,
              DEBUG_STRING(corrector_iterations.size()),
              "The first corrector iteration cannot be undone!");
