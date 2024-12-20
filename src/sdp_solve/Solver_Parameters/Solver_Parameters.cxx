@@ -125,14 +125,15 @@ boost::program_options::options_description Solver_Parameters::options()
     boost::program_options::value<El::BigFloat>(&corrector_mu_reduction)
       ->default_value(El::BigFloat("0", 10)),
     "Reduce mu on each additional corrector iteration "
-    "(inside a single newton step) by this factor.");
+    "(inside a single newton step) by this factor. "
+    "If set to zero, beta_corrector value will be used instead.");
   result.add_options()(
     "correctorStepLengthThreshold",
     boost::program_options::value<El::BigFloat>(
       &corrector_step_length_threshold)
       ->default_value(El::BigFloat("1.0", 10)),
     "Stop additional corrector iterations (inside a single newton step) "
-    "if the new step length is less than threshold * (old step length).");
+    "if the new step length is less than threshold.");
   result.add_options()(
     "feasibleMaxCorrectorIterations",
     boost::program_options::value<int64_t>(&feasible_max_corrector_iterations)
