@@ -139,6 +139,7 @@ void print_iteration(
             add_string("mu", iter.mu);
             add_string("R-err", iter.R_error);
             add_string("R_mean_abs", iter.R_mean_abs);
+            add_string("dXdY_mean", iter.dXdY_mean);
             add_string("-dlog(mu)/dt_full", iter.log_mu_speed_full);
             add_string("-dlog(mu)/dt_corr", iter.log_mu_speed_corrector);
             add_value("is_canceled", iter.is_canceled ? "true" : "false");

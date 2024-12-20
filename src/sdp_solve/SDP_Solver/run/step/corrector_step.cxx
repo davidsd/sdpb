@@ -127,6 +127,28 @@ Corrector_Iteration single_corrector_iteration(
 
     iter.R_error = R.max_abs();
     iter.R_mean_abs = R.mean_abs();
+
+    {
+      Scoped_Timer dXdY_timer(timers, "dXdY");
+      Block_Diagonal_Matrix dXdY(dX);
+      scale_multiply_add(1, dX, dY, 0, dXdY);
+      El::BigFloat total = 0;
+      int size = 0;
+      for(const auto &block : dXdY.blocks)
+        {
+          const auto &m = block.LockedMatrix();
+          size += m.Height() * m.Width();
+          for(int i = 0; i < m.Height(); ++i)
+            for(int j = 0; j < m.Width(); ++j)
+              {
+                // TODO should we also multiply by P-step and D-step?
+                total += m(i, j);
+              };
+        }
+      total = El::mpi::AllReduce(total, El::mpi::SUM, El::mpi::COMM_WORLD);
+      size = El::mpi::AllReduce(size, El::mpi::SUM, El::mpi::COMM_WORLD);
+      iter.dXdY_mean = total / size;
+    }
   }
 
   return iter;
@@ -253,7 +275,8 @@ void corrector_step(
                      iteration.dual_step_length, ") maxstep=(",
                      iteration.max_primal_step_length, ",",
                      iteration.max_dual_step_length, ") R=", iteration.R_error,
-                     " R_mean=", iteration.R_mean_abs, " mu=", iteration.mu,
+                     " R_mean=", iteration.R_mean_abs,
+                     " dXdY_mean=", iteration.dXdY_mean, " mu=", iteration.mu,
                      " -dlog(mu)/dt_corr=", iteration.log_mu_speed_corrector,
                      " -dlog(mu)/dt_full=", iteration.log_mu_speed_full);
         }
