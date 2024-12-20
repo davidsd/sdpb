@@ -199,14 +199,6 @@ void SDP_Solver::step(
                    timers);
   }
 
-  // If our problem is both dual-feasible and primal-feasible,
-  // ensure we're following the true Newton direction.
-  if(is_primal_and_dual_feasible)
-    {
-      primal_step_length = El::Min(primal_step_length, dual_step_length);
-      dual_step_length = primal_step_length;
-    }
-
   // Update the primal point (x, X) += primalStepLength*(dx, dX)
   for(size_t block = 0; block < x.blocks.size(); ++block)
     {

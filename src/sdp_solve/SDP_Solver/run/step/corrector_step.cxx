@@ -78,8 +78,8 @@ compute_R_matrix(const std::size_t &total_psd_rows, const SDP_Solver &solver,
 
 Corrector_Iteration single_corrector_iteration(
   const SDP_Solver &solver, const std::size_t &total_psd_rows,
-  const Block_Info &block_info, const SDP &sdp,
-  const Block_Diagonal_Matrix &schur_complement_cholesky,
+  const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
+  const SDP &sdp, const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
   const El::DistMatrix<El::BigFloat> &Q,
   const Block_Diagonal_Matrix &X_cholesky,
@@ -110,6 +110,13 @@ Corrector_Iteration single_corrector_iteration(
     iter.dual_step_length = step_length(Y_cholesky, dY, step_length_reduction,
                                         "stepLength(YCholesky)",
                                         iter.max_dual_step_length, timers);
+    // If our problem is both dual-feasible and primal-feasible,
+    // ensure we're following the true Newton direction.
+    if(is_primal_and_dual_feasible)
+      {
+        iter.primal_step_length = iter.dual_step_length
+          = El::Min(iter.primal_step_length, iter.dual_step_length);
+      }
   }
 
   {
@@ -215,10 +222,10 @@ void corrector_step(
       // Compute dx,dy,dX,dY etc.
       auto &iteration
         = corrector_iterations.emplace_back(single_corrector_iteration(
-          solver, total_psd_rows, block_info, sdp, schur_complement_cholesky,
-          schur_off_diagonal, Q, X_cholesky, Y_cholesky, minus_XY,
-          primal_residue_p, beta_corrector, parameters.step_length_reduction,
-          mu, dx, dX, dy, dY, timers));
+          solver, total_psd_rows, is_primal_and_dual_feasible, block_info, sdp,
+          schur_complement_cholesky, schur_off_diagonal, Q, X_cholesky,
+          Y_cholesky, minus_XY, primal_residue_p, beta_corrector,
+          parameters.step_length_reduction, mu, dx, dX, dy, dY, timers));
 
       // Previous iteration
       auto prev_it = corrector_iterations.rbegin();
