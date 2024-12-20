@@ -11,9 +11,10 @@
 // This is equivalent to Block_Matrix with width=1.  We use a separate
 // type to enhance type safety.
 
+#include "sdpb_util/assert.hxx"
+
 #include <El.hpp>
 
-#include <list>
 #include <vector>
 
 struct Block_Vector
@@ -41,4 +42,23 @@ struct Block_Vector
       }
   }
   Block_Vector() = default;
+
+  Block_Vector &operator+=(const Block_Vector &other)
+  {
+    ASSERT_EQUAL(blocks.size(), other.blocks.size());
+    for(size_t i = 0; i < blocks.size(); i++)
+      {
+        blocks.at(i) += other.blocks.at(i);
+      }
+    return *this;
+  }
+
+  Block_Vector &operator*=(const El::BigFloat &alpha)
+  {
+    for(auto &block : blocks)
+      {
+        block *= alpha;
+      }
+    return *this;
+  }
 };
