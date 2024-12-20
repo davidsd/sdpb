@@ -17,8 +17,6 @@ struct Corrector_Iteration final
   El::BigFloat R_error;
   // R_mean_abs = mean(abs(mu'*I - X'Y'))
   El::BigFloat R_mean_abs;
-  // 1 - min_step_length * (1 - beta)
-  El::BigFloat reduce_factor;
   // How fast mu decreases with time:
   // -d(log10 mu)/dt,
   //   where dt is time since solver step start.

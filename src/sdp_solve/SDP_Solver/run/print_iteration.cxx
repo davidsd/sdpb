@@ -137,7 +137,6 @@ void print_iteration(
             add_string("max P-step", iter.max_primal_step_length);
             add_string("max D-step", iter.max_dual_step_length);
             add_string("mu", iter.mu);
-            add_string("reduce_factor", iter.reduce_factor);
             add_string("R-err", iter.R_error);
             add_string("R_mean_abs", iter.R_mean_abs);
             add_string("-dlog(mu)/dt_full", iter.log_mu_speed_full);

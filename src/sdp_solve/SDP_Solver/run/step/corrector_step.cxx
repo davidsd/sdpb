@@ -127,10 +127,6 @@ Corrector_Iteration single_corrector_iteration(
 
     iter.R_error = R.max_abs();
     iter.R_mean_abs = R.mean_abs();
-    iter.reduce_factor
-      = 1
-        - El::Min(iter.primal_step_length, iter.dual_step_length)
-            * (1 - beta_corrector);
   }
 
   return iter;
@@ -258,13 +254,19 @@ void corrector_step(
                      iteration.max_primal_step_length, ",",
                      iteration.max_dual_step_length, ") R=", iteration.R_error,
                      " R_mean=", iteration.R_mean_abs, " mu=", iteration.mu,
-                     " reduce=", iteration.reduce_factor,
                      " -dlog(mu)/dt_corr=", iteration.log_mu_speed_corrector,
                      " -dlog(mu)/dt_full=", iteration.log_mu_speed_full);
         }
 
       // Check whether we should continue corrector iterations.
       // TODO: check also global exit conditions, e.g (gap < dualityGapThreshold)
+
+      // Stop if mu does not decrease
+      if(corrector_iterations.size() > 1 && iteration.mu >= prev_it->mu)
+        {
+          undo_last_corrector_iteration = true;
+          break;
+        }
 
       // Continue corrector iterations
       // only if max(primal_step_length, dual_step_length) is not too small.
@@ -276,26 +278,12 @@ void corrector_step(
           break;
         }
 
-      // Continue corrector iterations only if reduce_factor decreases.
-      if(corrector_iterations.size() > 1
-         && iteration.reduce_factor >= prev_it->reduce_factor)
-        {
-          undo_last_corrector_iteration = true;
-          break;
-        }
-
       // If current corrector decreases mu too slowly,
       // then we should make full solver step again.
       if(parameters.corrector_check_mu_speed && corrector_iterations.size() > 1
          && iteration.log_mu_speed_corrector
               < corrector_iterations.front().log_mu_speed_full)
         {
-          if(iteration.log_mu_speed_corrector <= 0)
-            {
-              // No real progress, cancel iteration.
-              // TODO: what if we have beta > 1 and really want to increase mu?
-              undo_last_corrector_iteration = true;
-            }
           break;
         }
     }
