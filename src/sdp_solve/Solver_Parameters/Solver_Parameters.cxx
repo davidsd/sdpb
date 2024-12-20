@@ -137,14 +137,14 @@ boost::program_options::options_description Solver_Parameters::options()
   result.add_options()(
     "feasibleMaxCorrectorIterations",
     boost::program_options::value<int64_t>(&feasible_max_corrector_iterations)
-      ->default_value(1),
+      ->default_value(100),
     "Maximum number of corrector iterations within each solver step "
     "when the primal and dual problems are feasible.");
   result.add_options()(
     "infeasibleMaxCorrectorIterations",
     boost::program_options::value<int64_t>(
       &infeasible_max_corrector_iterations)
-      ->default_value(1),
+      ->default_value(100),
     "Maximum number of corrector iterations within each solver step "
     "when either the primal or dual problems are infeasible.");
   result.add_options()(
