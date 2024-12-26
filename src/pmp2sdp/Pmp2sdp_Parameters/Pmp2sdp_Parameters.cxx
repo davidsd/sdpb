@@ -58,7 +58,8 @@ Pmp2sdp_Parameters::Pmp2sdp_Parameters(int argc, char **argv)
 
       if(variables_map.count("help") != 0)
         {
-          El::Output(options);
+          if(El::mpi::Rank() == 0)
+            El::Output(options);
           return;
         }
 
