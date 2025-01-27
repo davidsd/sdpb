@@ -337,8 +337,32 @@ void corrector_step(
 
   // Initialize output variables
 
-  primal_step_length = last_successful_iteration.primal_step_length;
-  dual_step_length = last_successful_iteration.dual_step_length;
+  const bool extra_corrector_success = [&] {
+    if(corrector_iterations.size() == 1)
+      return false;
+    if(corrector_iterations.size() == 2 && undo_last_corrector_iteration)
+      return false;
+    // TODO check also that R_mean decreased at least by a factor of 10.
+    return true;
+  }();
+
+  if(extra_corrector_success)
+    {
+      // Use full step size
+      primal_step_length = last_successful_iteration.primal_step_length;
+      dual_step_length = last_successful_iteration.dual_step_length;
+    }
+  else
+    {
+      // Use reduced step size, as in the ordinary SDPB algorithm.
+      primal_step_length
+        = El::Min(last_successful_iteration.max_primal_step_length
+                    * parameters.step_length_reduction,
+                  El::BigFloat(1));
+      dual_step_length = El::Min(last_successful_iteration.max_dual_step_length
+                                   * parameters.step_length_reduction,
+                                 El::BigFloat(1));
+    }
 }
 
 #undef VERBOSE_ALLOCATION_MESSAGE
