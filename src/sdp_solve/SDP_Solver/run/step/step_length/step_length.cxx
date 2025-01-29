@@ -61,7 +61,7 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
   //   step(maxstep=1.00) = 1
   //   step(maxstep=1/gamma) = 1
   // i.e. we increased step length for maxstep in range (0.95, 1/gamma) = (0.95, 1.43)
-  if(max_step > 0.95)
-    return 1 - 5 * (1 - max_step);
+  // if(max_step > 0.95)
+  //   return 1 - 5 * (1 - max_step);
   return gamma * max_step;
 }
