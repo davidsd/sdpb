@@ -37,8 +37,9 @@ El::BigFloat corrector_centering_parameter(
 El::BigFloat
 step_length(const Block_Diagonal_Matrix &MCholesky,
             const Block_Diagonal_Matrix &dM, const El::BigFloat &gamma,
-            const std::string &timer_name, El::BigFloat &max_step,
-            Timers &timers);
+            const El::BigFloat &boost_step_min,
+            const El::BigFloat &boost_step_max, const std::string &timer_name,
+            El::BigFloat &max_step, Timers &timers);
 
 // R = mu * I - X' Y',
 // where
@@ -85,8 +86,7 @@ Corrector_Iteration single_corrector_iteration(
   const Block_Diagonal_Matrix &X_cholesky,
   const Block_Diagonal_Matrix &Y_cholesky,
   const Block_Diagonal_Matrix &minus_XY, const Block_Vector &primal_residue_p,
-  const El::BigFloat &beta_corrector,
-  const El::BigFloat &step_length_reduction,
+  const El::BigFloat &beta_corrector, const Solver_Parameters &parameters,
   // mu = Tr(X Y)/X.dim
   const El::BigFloat &initial_mu, Block_Vector &dx, Block_Diagonal_Matrix &dX,
   Block_Vector &dy, Block_Diagonal_Matrix &dY, Timers &timers)
@@ -105,11 +105,13 @@ Corrector_Iteration single_corrector_iteration(
 
   {
     iter.primal_step_length = step_length(
-      X_cholesky, dX, step_length_reduction, "stepLength(XCholesky)",
-      iter.max_primal_step_length, timers);
-    iter.dual_step_length = step_length(Y_cholesky, dY, step_length_reduction,
-                                        "stepLength(YCholesky)",
-                                        iter.max_dual_step_length, timers);
+      X_cholesky, dX, parameters.step_length_reduction,
+      parameters.corrector_step_boost_min, parameters.corrector_step_boost_max,
+      "stepLength(XCholesky)", iter.max_primal_step_length, timers);
+    iter.dual_step_length = step_length(
+      Y_cholesky, dY, parameters.step_length_reduction,
+      parameters.corrector_step_boost_min, parameters.corrector_step_boost_max,
+      "stepLength(YCholesky)", iter.max_dual_step_length, timers);
     // If our problem is both dual-feasible and primal-feasible,
     // ensure we're following the true Newton direction.
     if(is_primal_and_dual_feasible)
@@ -242,8 +244,8 @@ void corrector_step(
         = corrector_iterations.emplace_back(single_corrector_iteration(
           solver, total_psd_rows, is_primal_and_dual_feasible, block_info, sdp,
           schur_complement_cholesky, schur_off_diagonal, Q, X_cholesky,
-          Y_cholesky, minus_XY, primal_residue_p, beta_corrector,
-          parameters.step_length_reduction, mu, dx, dX, dy, dY, timers));
+          Y_cholesky, minus_XY, primal_residue_p, beta_corrector, parameters,
+          mu, dx, dX, dy, dY, timers));
 
       // Previous iteration
       auto prev_it = corrector_iterations.rbegin();

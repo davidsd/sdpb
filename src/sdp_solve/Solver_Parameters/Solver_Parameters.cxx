@@ -135,6 +135,32 @@ boost::program_options::options_description Solver_Parameters::options()
     "Stop additional corrector iterations (inside a single newton step) "
     "if the new step length is less than threshold.");
   result.add_options()(
+    "correctorStepBoostMin",
+    boost::program_options::value<El::BigFloat>(&corrector_step_boost_min)
+      ->default_value(El::BigFloat("1.0", 10)),
+    "Newton step length taken by solver is a piecewise linear function of "
+    "maxStep. "
+    "For maxStep=0..correctorStepBoostMin, step = maxStep * "
+    "stepLengthReduction. "
+    "For maxStep=correctorStepBoostMin..correctorStepBoostMax, step grows "
+    "linearly to 1. "
+    "For maxStep > correctorStepBoostMax, step = 1. "
+    "Note that if extra corrector iterations failed, then we revert to "
+    "step = maxStep * stepLengthReduction, as in ordinary SDPB algorithm.");
+  result.add_options()(
+    "correctorStepBoostMax",
+    boost::program_options::value<El::BigFloat>(&corrector_step_boost_max)
+      ->default_value(El::BigFloat("1.0", 10)),
+    "Newton step length taken by solver is a piecewise linear function of "
+    "maxStep. "
+    "For maxStep=0..correctorStepBoostMin, step = maxStep * "
+    "stepLengthReduction. "
+    "For maxStep=correctorStepBoostMin..correctorStepBoostMax, step grows "
+    "linearly to 1. "
+    "For maxStep > correctorStepBoostMax, step = 1. "
+    "Note that if extra corrector iterations failed, then we revert to "
+    "step = maxStep * stepLengthReduction, as in ordinary SDPB algorithm.");
+  result.add_options()(
     "feasibleMaxCorrectorIterations",
     boost::program_options::value<int64_t>(&feasible_max_corrector_iterations)
       ->default_value(100),

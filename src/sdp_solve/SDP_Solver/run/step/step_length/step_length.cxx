@@ -1,8 +1,9 @@
 #include "sdp_solve/SDP_Solver.hxx"
 
-// min(gamma \alpha(M, dM), 1), where \alpha(M, dM) denotes the
-// largest positive real number such that M + \alpha dM is positive
-// semidefinite.
+// Step length is calculated as a function (see below)
+// of max_step = \alpha(M, dM),
+// which denotes the largest positive real number
+// such that M + \alpha dM is positive semidefinite.
 //
 // \alpha(M, dM) is computed with a Cholesky decomposition M = L L^T.
 // The eigenvalues of M + \alpha dM are equal to the eigenvalues of 1
@@ -16,7 +17,10 @@
 // - MInvDM (NB: overwritten when computing minEigenvalue)
 // - eigenvalues, a Vector of eigenvalues for each block of M
 // Output:
-// - min(\gamma \alpha(M, dM), 1) (returned)
+// - (output parameter:) max_step
+// - (returned:) piecewise linear function of max_step = \alpha(M, dM),
+// going through the points (0,0), (boost_step_min, gamma * boost_step_min), (boost_step_max, 1)
+// and limited by 0 <= step <= 1.
 
 // A := L^{-1} A L^{-T}
 void lower_triangular_inverse_congruence(const Block_Diagonal_Matrix &L,
@@ -27,8 +31,9 @@ El::BigFloat min_eigenvalue(Block_Diagonal_Matrix &A);
 El::BigFloat
 step_length(const Block_Diagonal_Matrix &MCholesky,
             const Block_Diagonal_Matrix &dM, const El::BigFloat &gamma,
-            const std::string &timer_name, El::BigFloat &max_step,
-            Timers &timers)
+            const El::BigFloat &boost_step_min,
+            const El::BigFloat &boost_step_max, const std::string &timer_name,
+            El::BigFloat &max_step, Timers &timers)
 {
   Scoped_Timer step_length_timer(timers, timer_name);
   // MInvDM = L^{-1} dM L^{-T}, where M = L L^T
@@ -41,27 +46,35 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
   // maxstep = \alpha from the comments above
   max_step = -1 / lambda;
 
-  // Old algorithm:
-  // return El::Min(gamma * maxstep, El::BigFloat(1));
+  if(max_step <= 0)
+    {
+      PRINT_WARNING(DEBUG_STRING(max_step));
+      return 0;
+    }
 
-  // New algorithm:
+  ASSERT(boost_step_min >= 0, DEBUG_STRING(boost_step_min));
+  ASSERT(boost_step_max >= boost_step_min, DEBUG_STRING(boost_step_min),
+         DEBUG_STRING(boost_step_max));
 
-  // TODO does maxstep <= 0 make any sense?
-  if(max_step >= 1 || max_step <= 0)
-    return 1;
+  El::BigFloat step;
+  if(max_step < boost_step_min)
+    {
+      // y = gamma * x
+      step = gamma * max_step;
+    }
+  else if(max_step < boost_step_max)
+    {
+      // Linear function from (boost_step_min, gamma * boost_step_min) to (boost_step_max, 1)
+      const El::BigFloat x1 = boost_step_min;
+      const El::BigFloat x2 = boost_step_max;
+      const El::BigFloat y1 = El::Min(gamma * x1, El::BigFloat(1));
+      const El::BigFloat y2 = 1;
 
-  // TODO this is some magic (by Ning). Need to explain and add new SDPB parameter.
-  //
-  // Old algorithm (with default gamma = --stepLengthReduction = 0.7):
-  //   step(maxstep=0.95) = gamma * 0.95 = 0.665
-  //   step(maxstep=1.00) = gamma = 0.7
-  //   step(maxstep=1/gamma) = 1
-  // New algorithm:
-  //   step(maxstep=0.95) = 0.75
-  //   step(maxstep=1.00) = 1
-  //   step(maxstep=1/gamma) = 1
-  // i.e. we increased step length for maxstep in range (0.95, 1/gamma) = (0.95, 1.43)
-  // if(max_step > 0.95)
-  //   return 1 - 5 * (1 - max_step);
-  return gamma * max_step;
+      return y1 + (y2 - y1) / (x2 - x1) * (max_step - x1);
+    }
+  else
+    {
+      step = 1;
+    }
+  return El::Min(step, El::BigFloat(1));
 }
