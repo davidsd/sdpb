@@ -27,6 +27,7 @@ boost::property_tree::ptree to_property_tree(const Solver_Parameters &p)
   result.put("correctorMuReduction", p.corrector_mu_reduction);
   result.put("correctorStepLengthThreshold",
              p.corrector_step_length_threshold);
+  result.put("correctorRThreshold", p.corrector_R_threshold);
   result.put("correctorStepBoostMin", p.corrector_step_boost_min);
   result.put("correctorStepBoostMax", p.corrector_step_boost_max);
   result.put("feasibleMaxCorrectorIterations", p.feasible_max_corrector_iterations);

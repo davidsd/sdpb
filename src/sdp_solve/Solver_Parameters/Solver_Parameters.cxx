@@ -135,6 +135,14 @@ boost::program_options::options_description Solver_Parameters::options()
     "Stop additional corrector iterations (inside a single newton step) "
     "if the new step length is less than threshold.");
   result.add_options()(
+    "correctorRThreshold",
+    boost::program_options::value<El::BigFloat>(&corrector_R_threshold)
+      ->default_value(El::BigFloat("0", 10)),
+    "Treat corrector iterations as successful only if mean(abs(R)) "
+    "after the last corrector iteration does not exceed "
+    "correctorRThreshold * mean(abs(R)) at the first corrector iteration. "
+    "--correctorRThreshold=0 disables this check.");
+  result.add_options()(
     "correctorStepBoostMin",
     boost::program_options::value<El::BigFloat>(&corrector_step_boost_min)
       ->default_value(El::BigFloat("1.0", 10)),

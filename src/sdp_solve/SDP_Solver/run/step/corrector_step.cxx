@@ -344,7 +344,15 @@ void corrector_step(
       return false;
     if(corrector_iterations.size() == 2 && undo_last_corrector_iteration)
       return false;
-    // TODO check also that R_mean decreased at least by a factor of 10.
+    if(parameters.corrector_R_threshold > 0)
+      {
+        if(last_successful_iteration.R_mean_abs
+           > corrector_iterations.front().R_mean_abs
+               * parameters.corrector_R_threshold)
+          {
+            return false;
+          }
+      }
     return true;
   }();
 
