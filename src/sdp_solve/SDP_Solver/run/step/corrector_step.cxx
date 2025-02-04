@@ -372,6 +372,13 @@ void corrector_step(
       dual_step_length = El::Min(last_successful_iteration.max_dual_step_length
                                    * parameters.step_length_reduction,
                                  El::BigFloat(1));
+      // If our problem is both dual-feasible and primal-feasible,
+      // ensure we're following the true Newton direction.
+      if(is_primal_and_dual_feasible)
+        {
+          primal_step_length = dual_step_length
+            = El::Min(primal_step_length, dual_step_length);
+        }
 
       if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
         {
