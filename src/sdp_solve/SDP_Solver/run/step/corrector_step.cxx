@@ -372,6 +372,12 @@ void corrector_step(
       dual_step_length = El::Min(last_successful_iteration.max_dual_step_length
                                    * parameters.step_length_reduction,
                                  El::BigFloat(1));
+
+      if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
+        {
+          El::Output("  reset step=(", primal_step_length, ",",
+                     dual_step_length, ")");
+        }
     }
 }
 
