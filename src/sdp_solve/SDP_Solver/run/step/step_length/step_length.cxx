@@ -48,7 +48,8 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
 
   if(max_step <= 0)
     {
-      PRINT_WARNING(DEBUG_STRING(max_step));
+      if(El::mpi::Rank() == 0)
+        PRINT_WARNING(DEBUG_STRING(max_step));
       return 0;
     }
 
