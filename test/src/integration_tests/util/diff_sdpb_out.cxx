@@ -112,6 +112,10 @@ namespace
               }
               auto name = std::string(it->name.GetString(),
                                       it->name.GetStringLength());
+              // Skip new fields written by corrector algorithm,
+              // TODO update test data check these fields too
+              if(name == "num_corrector_iterations" || name == "corrector_iterations")
+                continue;
 
               std::string value;
               CAPTURE(it->value.GetType());

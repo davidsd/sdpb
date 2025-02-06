@@ -49,6 +49,11 @@ TEST_CASE("outer_limits")
       {"--initialMatrixScaleDual", "1e1"},
       {"--maxIterations", "1000"},
       {"--verbosity", "1"},
+      // disable new corrector algorithm:
+      {"--feasibleMaxCorrectorIterations", "1"},
+      {"--infeasibleMaxCorrectorIterations", "1"},
+      {"--correctorStepBoostMin", "-1"},
+      {"--correctorStepBoostMax", "-1"}
     };
 
     {

@@ -98,7 +98,13 @@ namespace
             {"--precision", std::to_string(precision)},
             {"--sdpDir", sdp_path},
             {"--outDir", (output_dir / "out").string()},
-            {"--checkpointDir", (output_dir / "ck").string()}};
+            {"--checkpointDir", (output_dir / "ck").string()},
+            // disable new corrector algorithm. TODO add tests for it.
+            {"--feasibleMaxCorrectorIterations", "1"},
+            {"--infeasibleMaxCorrectorIterations", "1"},
+            {"--correctorStepBoostMin", "-1"},
+            {"--correctorStepBoostMax", "-1"},
+          };
           runner.create_nested("sdpb").mpi_run(
             {"build/sdpb", default_sdpb_args}, args, num_procs);
           if(run_sdpb_twice)
