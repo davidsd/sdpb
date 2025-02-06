@@ -41,6 +41,9 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
             const El::BigFloat &boost_step_max, const std::string &timer_name,
             El::BigFloat &max_step, Timers &timers);
 
+El::BigFloat
+step_length(const El::BigFloat &max_step, const El::BigFloat &gamma);
+
 // R = mu * I - X' Y',
 // where
 //   mu = Tr(X'Y') / dim(X')
@@ -366,12 +369,11 @@ void corrector_step(
     {
       // Use reduced step size, as in the ordinary SDPB algorithm.
       primal_step_length
-        = El::Min(last_successful_iteration.max_primal_step_length
-                    * parameters.step_length_reduction,
-                  El::BigFloat(1));
-      dual_step_length = El::Min(last_successful_iteration.max_dual_step_length
-                                   * parameters.step_length_reduction,
-                                 El::BigFloat(1));
+        = step_length(last_successful_iteration.max_primal_step_length,
+                      parameters.step_length_reduction);
+      dual_step_length
+        = step_length(last_successful_iteration.max_dual_step_length,
+                      parameters.step_length_reduction);
       // If our problem is both dual-feasible and primal-feasible,
       // ensure we're following the true Newton direction.
       if(is_primal_and_dual_feasible)

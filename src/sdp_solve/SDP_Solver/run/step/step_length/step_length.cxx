@@ -28,6 +28,59 @@ void lower_triangular_inverse_congruence(const Block_Diagonal_Matrix &L,
 
 El::BigFloat min_eigenvalue(Block_Diagonal_Matrix &A);
 
+// Compute step length for known max_step
+El::BigFloat
+step_length(const El::BigFloat &max_step, const El::BigFloat &gamma,
+            const El::BigFloat &boost_step_min,
+            const El::BigFloat &boost_step_max)
+{
+  if(max_step <= 0)
+    {
+      if(El::mpi::Rank() == 0)
+        PRINT_WARNING(DEBUG_STRING(max_step));
+      // TODO: in old algorithm, we return 1.
+      // Shall we return 0 instead? Some tests fail (have slightly different output) if we do so.
+      return 1;
+    }
+
+  // Old algorithm (disable boosting for large steps)
+  if(boost_step_max < 0)
+    return El::Min(gamma * max_step, El::BigFloat(1));
+
+  ASSERT(boost_step_max >= boost_step_min, DEBUG_STRING(boost_step_min),
+         DEBUG_STRING(boost_step_max));
+  ASSERT(boost_step_min >= 0, DEBUG_STRING(boost_step_min));
+
+  El::BigFloat step;
+  if(max_step < boost_step_min)
+    {
+      // y = gamma * x
+      step = gamma * max_step;
+    }
+  else if(max_step < boost_step_max)
+    {
+      // Linear function from (boost_step_min, gamma * boost_step_min) to (boost_step_max, 1)
+      const El::BigFloat x1 = boost_step_min;
+      const El::BigFloat x2 = boost_step_max;
+      const El::BigFloat y1 = El::Min(gamma * x1, El::BigFloat(1));
+      const El::BigFloat y2 = 1;
+
+      step = y1 + (y2 - y1) / (x2 - x1) * (max_step - x1);
+    }
+  else
+    {
+      step = El::Max(max_step, El::BigFloat(1));
+    }
+  return El::Min(step, El::BigFloat(1));
+}
+
+// Old algorithm, without boosting
+El::BigFloat
+step_length(const El::BigFloat &max_step, const El::BigFloat &gamma)
+{
+  return step_length(max_step, gamma, -1, -1);
+}
+
 El::BigFloat
 step_length(const Block_Diagonal_Matrix &MCholesky,
             const Block_Diagonal_Matrix &dM, const El::BigFloat &gamma,
@@ -46,36 +99,5 @@ step_length(const Block_Diagonal_Matrix &MCholesky,
   // maxstep = \alpha from the comments above
   max_step = -1 / lambda;
 
-  if(max_step <= 0)
-    {
-      if(El::mpi::Rank() == 0)
-        PRINT_WARNING(DEBUG_STRING(max_step));
-      return 0;
-    }
-
-  ASSERT(boost_step_min >= 0, DEBUG_STRING(boost_step_min));
-  ASSERT(boost_step_max >= boost_step_min, DEBUG_STRING(boost_step_min),
-         DEBUG_STRING(boost_step_max));
-
-  El::BigFloat step;
-  if(max_step < boost_step_min)
-    {
-      // y = gamma * x
-      step = gamma * max_step;
-    }
-  else if(max_step < boost_step_max)
-    {
-      // Linear function from (boost_step_min, gamma * boost_step_min) to (boost_step_max, 1)
-      const El::BigFloat x1 = boost_step_min;
-      const El::BigFloat x2 = boost_step_max;
-      const El::BigFloat y1 = El::Min(gamma * x1, El::BigFloat(1));
-      const El::BigFloat y2 = 1;
-
-      return y1 + (y2 - y1) / (x2 - x1) * (max_step - x1);
-    }
-  else
-    {
-      step = 1;
-    }
-  return El::Min(step, El::BigFloat(1));
+  return step_length(max_step, gamma, boost_step_min, boost_step_max);
 }
