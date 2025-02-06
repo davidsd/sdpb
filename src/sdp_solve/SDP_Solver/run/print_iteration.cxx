@@ -107,7 +107,8 @@ void print_iteration(
       add_value("iter_time", iteration_time_seconds);
       add_value("num_corrector_iterations", corrector_iterations.size());
 
-      os_json << std::defaultfloat << set_stream_precision;
+      os_json << std::defaultfloat;
+      set_stream_precision(os_json);
 
       add_string("mu", mu);
       add_string("P-obj", sdp_solver.primal_objective);
