@@ -45,8 +45,8 @@ namespace
   // The special characters ',', '(', ')', '{', and '}' can be used as punctuation and are ignored.
   // Negative numbers may be used to indicate that a block is actually a diagonal submatrix.
   // Thus a block size of -5 indicates a 5 by 5 block in which only the diagonal elements are nonzero.
-  // TODO: split a diagonal block into 1x1 blocks?
-  void read_block_sizes(std::istream &is, std::vector<size_t> &block_sizes,
+  // Further we'll split a diagonal block into 1x1 blocks.
+  void read_block_sizes(std::istream &is, std::vector<int> &block_sizes,
                         const size_t &nblocks)
   {
     block_sizes.clear();
@@ -67,7 +67,7 @@ namespace
           }
         int size;
         is >> size;
-        block_sizes.push_back(std::abs(size));
+        block_sizes.push_back(size);
         ASSERT(is.good());
         // In SDPA example.dat-s, there is a comment at the end of comments line, which should be ignored.
         if(block_sizes.size() == nblocks)
@@ -133,6 +133,98 @@ namespace
     std::ws(is);
     ASSERT(is.eof() || is.good());
   }
+
+  struct SDPA_Block_Structure
+  {
+    const size_t dual_dimension;
+    const std::vector<int> sdpa_block_sizes;
+    std::vector<size_t> sdpb_block_sizes;
+    size_t num_sdp_blocks;
+
+  private:
+    std::vector<size_t> num_prev_blocks;
+
+  public:
+    explicit SDPA_Block_Structure(const size_t m, const size_t nblocks,
+                                  const std::vector<int> &block_sizes)
+        : dual_dimension(m), sdpa_block_sizes(block_sizes)
+    {
+      ASSERT_EQUAL(nblocks, block_sizes.size());
+
+      size_t prev_blocks = 0;
+      for(const auto &block_size : block_sizes)
+        {
+          num_prev_blocks.push_back(prev_blocks);
+          ASSERT(block_size != 0);
+          if(block_size > 0)
+            {
+              prev_blocks += 1;
+              sdpb_block_sizes.push_back(block_size);
+            }
+          // if block_size is negative, this means a diagonal block.
+          // We split it into many 1x1 blocks
+          else
+            {
+              prev_blocks += -block_size;
+              sdpb_block_sizes.insert(sdpb_block_sizes.end(), -block_size, 1);
+            }
+        }
+      num_sdp_blocks = prev_blocks;
+    }
+
+    void
+    get_sdpb_position(const size_t sdpa_block_index, const size_t sdpa_i,
+                      const size_t sdpa_j,
+                      // output parameters:
+                      size_t &sdpb_block_index, size_t &i, size_t &j) const
+    {
+      const auto &block_size = sdpa_block_sizes.at(sdpa_block_index - 1);
+      ASSERT(block_size != 0);
+      ASSERT(sdpa_i > 0);
+      ASSERT(sdpa_i > 0);
+      const auto prev_blocks = num_prev_blocks.at(sdpa_block_index - 1);
+      if(block_size > 0)
+        {
+          sdpb_block_index = prev_blocks;
+          i = sdpa_i - 1;
+          j = sdpa_j - 1;
+        }
+      else
+        {
+          // We represent a diagonal SDP block as a collection of 1x1 blocks.
+          ASSERT_EQUAL(sdpa_i, sdpa_j,
+                       "Non-diagonal element found in diagonal SDP block!",
+                       DEBUG_STRING(sdpa_block_index),
+                       DEBUG_STRING(block_size));
+          sdpb_block_index = prev_blocks + sdpa_i - 1;
+          i = 0;
+          j = 0;
+        }
+    }
+  };
+
+  struct SDPB_Matrix_Entry
+  {
+    // Number of SDP block
+    size_t sdp_block_index;
+    // Each matrix element is (degree-0) polynomial vector;
+    // This is the index inside this vector.
+    size_t vector_index;
+    size_t i;
+    size_t j;
+    El::BigFloat value;
+
+    SDPB_Matrix_Entry(const SDPA_Matrix_Entry &entry,
+                      const SDPA_Block_Structure &block_structure)
+    {
+      block_structure.get_sdpb_position(entry.block_index, entry.i, entry.j,
+                                        sdp_block_index, i, j);
+
+      this->vector_index = entry.matrix_index;
+      // The matrix F_0 enters with minus sign in SDPA definition
+      this->value = vector_index == 0 ? -entry.value : entry.value;
+    }
+  };
 }
 
 // Read .dat-s input used in SDPA
@@ -148,30 +240,26 @@ read_sdpa(const std::filesystem::path &input_file,
 
   read_comments(is);
 
-  // m (from SDPA formulation) is equal to N (in SDPB formulation 2.2 or 3.1)
-  size_t m;
-  read_m(is, m);
+  const SDPA_Block_Structure block_structure = [&is] {
+    // m (from SDPA formulation) is equal to N (in SDPB formulation 2.2 or 3.1)
+    size_t m;
+    read_m(is, m);
 
-  // Number of SDP blocks
-  size_t num_blocks;
-  read_nblocks(is, num_blocks);
-  result.num_matrices = num_blocks;
+    // Number of SDP blocks
+    size_t num_blocks;
+    read_nblocks(is, num_blocks);
 
-  std::vector<size_t> block_sizes;
-  read_block_sizes(is, block_sizes, num_blocks);
-  ASSERT_EQUAL(num_blocks, block_sizes.size());
+    std::vector<int> block_sizes;
+    read_block_sizes(is, block_sizes, num_blocks);
+    ASSERT_EQUAL(num_blocks, block_sizes.size());
+    return SDPA_Block_Structure(m, num_blocks, block_sizes);
+  }();
 
-  std::vector<size_t> block_offsets{0};
-  block_offsets.resize(num_blocks);
-  for(size_t index = 1; index < num_blocks; ++index)
-    {
-      block_offsets.at(index)
-        = block_offsets.at(index - 1) + block_sizes.at(index - 1);
-    }
+  result.num_matrices = block_structure.num_sdp_blocks;
 
   std::vector<El::BigFloat> c_objective;
   read_c(is, c_objective);
-  ASSERT_EQUAL(m, c_objective.size());
+  ASSERT_EQUAL(block_structure.dual_dimension, c_objective.size());
 
   // Set a_0 = 0, it doesn't affect anything except objective value
   result.objective = {El::BigFloat(0)};
@@ -185,45 +273,43 @@ read_sdpa(const std::filesystem::path &input_file,
     }
 
   // Each matrix element is a vector of degree-0 polynomials: [-F0(i,j), F1(i,j), F2(i,j),...,Fm(i,j)]
-  std::vector<std::optional<El::Matrix<Polynomial_Vector>>> pvm_matrices(
-    num_blocks);
+  std::vector<std::optional<Simple_Matrix<Polynomial_Vector>>> pvm_matrices(
+    block_structure.num_sdp_blocks);
   for(size_t index = 0; index < pvm_matrices.size(); ++index)
     {
       if(!should_parse_matrix(index))
         continue;
-      pvm_matrices.at(index) = El::Matrix<Polynomial_Vector>(
-        block_sizes.at(index), block_sizes.at(index));
+      const size_t height = block_structure.sdpb_block_sizes.at(index);
+      const size_t width = block_structure.sdpb_block_sizes.at(index);
+      pvm_matrices.at(index).emplace(height, width);
       // Zero vector of length (m+1)
-      Polynomial_Vector zero(m + 1);
-      zero.resize(m + 1);
-      El::Fill(pvm_matrices.at(index).value(), zero);
+      Polynomial_Vector zero(block_structure.dual_dimension + 1);
+      for(size_t i = 0; i < height; ++i)
+        for(size_t j = 0; j < width; ++j)
+          pvm_matrices.at(index).value()(i, j) = zero;
     }
 
   // Fill matrices
   while(!is.eof())
     {
-      SDPA_Matrix_Entry entry;
-      read_matrix_entry(is, entry);
+      SDPA_Matrix_Entry sdpa_entry;
+      read_matrix_entry(is, sdpa_entry);
+      const SDPB_Matrix_Entry entry(sdpa_entry, block_structure);
+      const auto i = entry.i;
+      const auto j = entry.j;
 
-      if(!should_parse_matrix(entry.block_index - 1))
+      if(!should_parse_matrix(entry.sdp_block_index))
         continue;
 
-      // entry.i and j and 1-based indices, thus we subtract 1
-      int i = entry.i - 1;
-      int j = entry.j - 1;
-      auto &pvm = pvm_matrices.at(entry.block_index - 1).value();
+      auto &pvm = pvm_matrices.at(entry.sdp_block_index).value();
 
-      auto value = entry.value;
-      // The matrix F_0 enters with minus sign in SDPA definition
-      if(entry.matrix_index == 0)
-        value = -value;
-
-      ASSERT_EQUAL(pvm(i, j).size(), m + 1, DEBUG_STRING(i), DEBUG_STRING(j),
-                   DEBUG_STRING(entry.matrix_index),
-                   DEBUG_STRING(entry.block_index));
-      pvm(i, j).at(entry.matrix_index).coefficients = {value};
+      ASSERT_EQUAL(pvm(i, j).size(), block_structure.dual_dimension + 1,
+                   DEBUG_STRING(i), DEBUG_STRING(j),
+                   DEBUG_STRING(sdpa_entry.matrix_index),
+                   DEBUG_STRING(sdpa_entry.block_index));
+      pvm(i, j).at(entry.vector_index).coefficients = {entry.value};
       if(i != j)
-        pvm(j, i).at(entry.matrix_index).coefficients = {value};
+        pvm(j, i).at(entry.vector_index).coefficients = {entry.value};
     }
 
   // Convert matrices to Polynomial_Vector_Matrix
