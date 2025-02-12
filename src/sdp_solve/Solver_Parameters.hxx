@@ -24,8 +24,7 @@ struct Solver_Parameters
     initial_matrix_scale_dual, feasible_centering_parameter,
     infeasible_centering_parameter, step_length_reduction,
     corrector_mu_reduction, corrector_step_length_threshold,
-    corrector_R_threshold,
-    corrector_step_boost_min, corrector_step_boost_max,
+    corrector_R_threshold, corrector_step_boost_min, corrector_step_boost_max,
     max_complementarity, min_primal_step, min_dual_step;
 
   std::filesystem::path checkpoint_in, checkpoint_out;

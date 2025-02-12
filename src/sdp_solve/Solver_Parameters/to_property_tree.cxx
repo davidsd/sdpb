@@ -30,8 +30,10 @@ boost::property_tree::ptree to_property_tree(const Solver_Parameters &p)
   result.put("correctorRThreshold", p.corrector_R_threshold);
   result.put("correctorStepBoostMin", p.corrector_step_boost_min);
   result.put("correctorStepBoostMax", p.corrector_step_boost_max);
-  result.put("feasibleMaxCorrectorIterations", p.feasible_max_corrector_iterations);
-  result.put("infeasibleMaxCorrectorIterations", p.infeasible_max_corrector_iterations);
+  result.put("feasibleMaxCorrectorIterations",
+             p.feasible_max_corrector_iterations);
+  result.put("infeasibleMaxCorrectorIterations",
+             p.infeasible_max_corrector_iterations);
   result.put("correctorCheckMuSpeed", p.corrector_check_mu_speed);
   result.put("maxComplementarity", p.max_complementarity);
   result.put("initialCheckpointDir", p.checkpoint_in.string());

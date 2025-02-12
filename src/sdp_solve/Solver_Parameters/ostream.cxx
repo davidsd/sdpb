@@ -37,12 +37,12 @@ std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
      << '\n'
      << "correctorStepLengthThreshold     = "
      << p.corrector_step_length_threshold << '\n'
-     << "correctorRThreshold              = "
-     << p.corrector_R_threshold << '\n'
-     << "correctorStepBoostMin            = "
-     << p.corrector_step_boost_min << '\n'
-     << "correctorStepBoostMax            = "
-     << p.corrector_step_boost_max << '\n'
+     << "correctorRThreshold              = " << p.corrector_R_threshold
+     << '\n'
+     << "correctorStepBoostMin            = " << p.corrector_step_boost_min
+     << '\n'
+     << "correctorStepBoostMax            = " << p.corrector_step_boost_max
+     << '\n'
      << "feasibleMaxCorrectorIterations   = "
      << p.feasible_max_corrector_iterations << '\n'
      << "infeasibleMaxCorrectorIterations = "

@@ -11,7 +11,7 @@ struct Corrector_Iteration final
   // mu' = Tr(X'Y')/X.dim
   // where
   //   X' = X + primal_step_length * dX
-  //   Y' = Y + primal_step_length * dY
+  //   Y' = Y + dual_step_length * dY
   El::BigFloat mu;
   // R_error = max(abs(mu'*I - X'Y'))
   El::BigFloat R_error;
