@@ -187,6 +187,15 @@ boost::program_options::options_description Solver_Parameters::options()
       ->default_value(true),
     "Stop corrector iterations if mu is decreasing too slowly.");
   result.add_options()(
+    "correctorPrintExtraIterations",
+    boost::program_options::value<size_t>(&corrector_print_extra_iterations)
+      ->default_value(0),
+    "After corrector iterations stop, solver will try and print "
+    "the given number of extra corrector iterations. "
+    "These iterations will be discarded and do not change solver behavior. "
+    "They are used only for printing to stdout and iterations.json. "
+    "NB: you should also set --verbosity=debug or higher to enable printing.");
+  result.add_options()(
     "minPrimalStep",
     boost::program_options::value<El::BigFloat>(&min_primal_step)
       ->default_value(El::BigFloat(0)),

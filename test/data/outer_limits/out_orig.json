@@ -33,6 +33,7 @@
     "feasibleMaxCorrectorIterations": "1",
     "infeasibleMaxCorrectorIterations": "1",
     "correctorCheckMuSpeed": "true",
+    "correctorPrintExtraIterations": "0",
     "maxComplementarity": "1e+100",
     "initialCheckpointDir": "test\/out\/outer_limits\/mpirun-1\/ck",
     "checkpointDir": "test\/out\/outer_limits\/mpirun-1\/ck",

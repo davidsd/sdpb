@@ -192,13 +192,14 @@ void corrector_step(
 {
   Scoped_Timer corrector_timer(timers, "corrector");
 
-  Block_Vector dx_prev(dx), dy_prev(dy);
-  Block_Diagonal_Matrix dX_prev(dX), dY_prev(dY);
+  // Temporary dx,dy,dX,dY used for current corrector iteration
+  Block_Vector dx_curr(dx), dy_curr(dy);
+  Block_Diagonal_Matrix dX_curr(dX), dY_curr(dY);
 
-  VERBOSE_ALLOCATION_MESSAGE(dx_prev);
-  VERBOSE_ALLOCATION_MESSAGE(dy_prev);
-  VERBOSE_ALLOCATION_MESSAGE(dX_prev);
-  VERBOSE_ALLOCATION_MESSAGE(dY_prev);
+  VERBOSE_ALLOCATION_MESSAGE(dx_curr);
+  VERBOSE_ALLOCATION_MESSAGE(dy_curr);
+  VERBOSE_ALLOCATION_MESSAGE(dX_curr);
+  VERBOSE_ALLOCATION_MESSAGE(dY_curr);
 
   beta_corrector = corrector_centering_parameter(
     parameters, solver.X, dX, solver.Y, dY, mu, is_primal_and_dual_feasible,
@@ -224,8 +225,9 @@ void corrector_step(
   // How fast do we decrease mu by doing one predictor + one corrector step
   Boost_Float log_mu_speed_normalization;
 
-  bool undo_last_corrector_iteration = false;
   corrector_iterations.clear();
+  size_t last_successful_iteration_index = 0;
+  bool stop_corrector = false;
   while(corrector_iterations.size() < max_corrector_iterations)
     {
       Scoped_Timer loop_timer(timers,
@@ -233,12 +235,13 @@ void corrector_step(
 
       if(!corrector_iterations.empty())
         {
-          dx_prev = dx;
-          dy_prev = dy;
-          dX_prev = dX;
-          dY_prev = dY;
-
-          // Aim for lower mu each time
+          // Aim for lower mu each time.
+          // TODO: Now here we aim for beta' * mu,
+          //     where mu = Tr(XY)/X.dim is constant
+          //     and beta' = beta * corrector_iter_mu_reduction^N is reduced each time.
+          //   Shall we aim for beta * mu' instead,
+          //   where beta remains constant
+          //   and mu' = Tr(X'Y')/X.dim is taken from the previous corrector iteration?
           beta_corrector = beta_corrector * corrector_iter_mu_reduction;
         }
 
@@ -248,7 +251,7 @@ void corrector_step(
           solver, total_psd_rows, is_primal_and_dual_feasible, block_info, sdp,
           schur_complement_cholesky, schur_off_diagonal, Q, X_cholesky,
           Y_cholesky, minus_XY, primal_residue_p, beta_corrector, parameters,
-          mu, dx, dX, dy, dY, timers));
+          mu, dx_curr, dX_curr, dy_curr, dY_curr, timers));
 
       // Previous iteration
       auto prev_it = corrector_iterations.rbegin();
@@ -273,10 +276,52 @@ void corrector_step(
           log_mu_speed_normalization);
       }
 
+      // Check whether we should continue corrector iterations.
+      // TODO: check also global exit conditions, e.g (gap < dualityGapThreshold)
+
+      // Do not take any iterations after the first discarded one.
+      if(stop_corrector)
+        {
+          iteration.is_canceled = true;
+        }
+      // Stop if mu does not decrease
+      else if(corrector_iterations.size() > 1 && iteration.mu >= prev_it->mu)
+        {
+          iteration.is_canceled = true;
+          stop_corrector = true;
+        }
+      // Continue corrector iterations
+      // only if max(primal_step_length, dual_step_length) is not too small.
+      else if(El::Max(iteration.primal_step_length, iteration.dual_step_length)
+              < parameters.corrector_step_length_threshold)
+        {
+          stop_corrector = true;
+          if(corrector_iterations.size() > 1)
+            iteration.is_canceled = true;
+        }
+
+      if(!iteration.is_canceled)
+        {
+          dx = dx_curr;
+          dy = dy_curr;
+          dX = dX_curr;
+          dY = dY_curr;
+          last_successful_iteration_index = corrector_iterations.size() - 1;
+        }
+
       // print corrector iteration status
       if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
         {
-          El::Output("  step=(", iteration.primal_step_length, ",",
+          if(iteration.is_canceled
+             && last_successful_iteration_index
+                  == corrector_iterations.size() - 2)
+            {
+              // Start printing discarded iterations:
+              El::Output("  discarded iterations:");
+            }
+          // Extra indent for discarded iterations
+          const auto indent = iteration.is_canceled ? "    " : "  ";
+          El::Output(indent, "step=(", iteration.primal_step_length, ",",
                      iteration.dual_step_length, ") maxstep=(",
                      iteration.max_primal_step_length, ",",
                      iteration.max_dual_step_length, ") R=", iteration.R_error,
@@ -286,31 +331,20 @@ void corrector_step(
                      " -dlog(mu)/dt_full=", iteration.log_mu_speed_full);
         }
 
-      // Check whether we should continue corrector iterations.
-      // TODO: check also global exit conditions, e.g (gap < dualityGapThreshold)
-
-      // Stop if mu does not decrease
-      if(corrector_iterations.size() > 1 && iteration.mu >= prev_it->mu)
-        {
-          undo_last_corrector_iteration = true;
-          break;
-        }
-
-      // Continue corrector iterations
-      // only if max(primal_step_length, dual_step_length) is not too small.
-      if(El::Max(iteration.primal_step_length, iteration.dual_step_length)
-         < parameters.corrector_step_length_threshold)
-        {
-          if(corrector_iterations.size() > 1)
-            undo_last_corrector_iteration = true;
-          break;
-        }
-
       // If current corrector decreases mu too slowly,
       // then we should make full solver step again.
       if(parameters.corrector_check_mu_speed && corrector_iterations.size() > 1
          && iteration.log_mu_speed_corrector
               < corrector_iterations.front().log_mu_speed_full)
+        {
+          stop_corrector = true;
+        }
+
+      // Exit after we printed several extra (discarded) corrector iterations.
+      if(stop_corrector
+         && corrector_iterations.size()
+              > last_successful_iteration_index
+                  + parameters.corrector_print_extra_iterations)
         {
           break;
         }
@@ -319,33 +353,22 @@ void corrector_step(
   if(El::mpi::Rank() == 0 && verbosity >= Verbosity::debug)
     {
       El::Output("  num_corrector_iterations=", corrector_iterations.size(),
-                 undo_last_corrector_iteration ? ", the last one discarded."
-                                               : "");
+                 ", successful=", last_successful_iteration_index + 1);
     }
 
   ASSERT(!corrector_iterations.empty(),
          "Expected at least one corrector iteration!");
-  auto last_successful_iteration = corrector_iterations.back();
-  if(undo_last_corrector_iteration)
-    {
-      corrector_iterations.back().is_canceled = true;
-      ASSERT(corrector_iterations.size() >= 2,
-             DEBUG_STRING(corrector_iterations.size()),
-             "The first corrector iteration cannot be undone!");
-      dx = dx_prev;
-      dy = dy_prev;
-      dX = dX_prev;
-      dY = dY_prev;
-      last_successful_iteration
-        = corrector_iterations.at(corrector_iterations.size() - 2);
-    }
+  ASSERT(last_successful_iteration_index < corrector_iterations.size());
+
+  const auto &last_successful_iteration
+    = corrector_iterations.at(last_successful_iteration_index);
 
   // Initialize output variables
 
+  // Check if extra corrector steps were successful.
+  // If not, we'll revert to old SDPB step length reduction.
   const bool extra_corrector_success = [&] {
-    if(corrector_iterations.size() == 1)
-      return false;
-    if(corrector_iterations.size() == 2 && undo_last_corrector_iteration)
+    if(last_successful_iteration_index == 0)
       return false;
     if(parameters.corrector_R_threshold > 0)
       {
