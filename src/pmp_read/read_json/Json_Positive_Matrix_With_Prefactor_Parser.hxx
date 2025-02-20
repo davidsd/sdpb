@@ -1,20 +1,12 @@
 #pragma once
 
 #include "Json_Damped_Rational_Parser.hxx"
-#include "Json_Polynomial_Vector_Parser.hxx"
+#include "Json_Polynomial_Parser.hxx"
 #include "pmp/Polynomial_Vector_Matrix.hxx"
 #include "sdpb_util/to_matrix.hxx"
-#include "sdpb_util/json/Json_Vector_Parser_With_Skip.hxx"
 
 using Vector_Of_Polynomial_Vectors = std::vector<Polynomial_Vector>;
 using Matrix_Of_Polynomial_Vectors = std::vector<Vector_Of_Polynomial_Vectors>;
-
-using Json_Vector_Of_Polynomial_Vectors_Parser
-  = Json_Vector_Parser<Json_Polynomial_Vector_Parser>;
-
-// Matrix = Vector of Vectors <Polynomial_Vector>
-using Json_Matrix_Of_Polynomial_Vectors_Parser
-  = Json_Vector_Parser<Json_Vector_Of_Polynomial_Vectors_Parser>;
 
 class Json_Positive_Matrix_With_Prefactor_Parser final
     : public Abstract_Json_Object_Parser<Polynomial_Vector_Matrix>
@@ -34,33 +26,20 @@ public:
     const std::function<void(Polynomial_Vector_Matrix &&)> &on_parsed,
     const std::function<void()> &on_skipped)
       : Abstract_Json_Object_Parser(skip, on_parsed, on_skipped),
-        polynomials_parser(skip,
-                           [this](Matrix_Of_Polynomial_Vectors &&pvm) {
-                             this->polynomials = std::move(pvm);
-                           }),
-        prefactor_parser(skip,
-                         [this](Damped_Rational &&damped_rational) {
-                           this->prefactor = std::move(damped_rational);
-                         }),
-        reduced_prefactor_parser(skip,
-                                 [this](Damped_Rational &&damped_rational) {
-                                   this->reduced_prefactor
-                                     = std::move(damped_rational);
-                                 }),
-        sample_points_parser(
-          skip,
-          [this](std::vector<El::BigFloat> &&sample_points) {
-            this->sample_points = std::move(sample_points);
-          }),
-        sample_scalings_parser(skip,
-                               [this](std::vector<El::BigFloat> &&scalings) {
-                                 this->sample_scalings = std::move(scalings);
-                               }),
-        reduced_sample_scalings_parser(
-          skip,
-          [this](std::vector<El::BigFloat> &&scalings) {
-            this->reduced_sample_scalings = std::move(scalings);
-          }),
+
+#define ELEMENT_PARSER_CTOR(element_name)                                     \
+  element_name##_parser(                                                      \
+    skip, [this](auto &&value) { this->element_name = std::move(value); })
+
+        ELEMENT_PARSER_CTOR(polynomials),
+        ELEMENT_PARSER_CTOR(prefactor),
+        ELEMENT_PARSER_CTOR(reduced_prefactor),
+        ELEMENT_PARSER_CTOR(sample_points),
+        ELEMENT_PARSER_CTOR(sample_scalings),
+        ELEMENT_PARSER_CTOR(reduced_sample_scalings),
+
+#undef ELEMENT_PARSER_CTOR
+
         bilinear_basis_parser(skip,
                               [this](Polynomial_Vector &&value) {
                                 if(!this->bilinear_basis.has_value())
@@ -81,15 +60,26 @@ public:
   {}
 
 private:
-  Json_Matrix_Of_Polynomial_Vectors_Parser polynomials_parser;
-  Json_Damped_Rational_Parser prefactor_parser;
-  Json_Damped_Rational_Parser reduced_prefactor_parser;
-  Json_Float_Vector_Parser<El::BigFloat> sample_points_parser;
-  Json_Float_Vector_Parser<El::BigFloat> sample_scalings_parser;
-  Json_Float_Vector_Parser<El::BigFloat> reduced_sample_scalings_parser;
-  Json_Polynomial_Vector_Parser bilinear_basis_parser;
-  Json_Polynomial_Vector_Parser bilinear_basis_0_parser;
-  Json_Polynomial_Vector_Parser bilinear_basis_1_parser;
+  using BigFloat_Vector_Parser = Json_Vector_Parser<Json_BigFloat_Parser>;
+  using Damped_Rational_Parser
+    = Json_Damped_Rational_Parser;
+  using Polynomial_Vector_Parser
+    = Json_Vector_Parser<Json_Polynomial_Parser>;
+  using Vector_Of_Polynomial_Vectors_Parser
+    = Json_Vector_Parser<Polynomial_Vector_Parser>;
+  // Matrix = Vector of Vectors <Polynomial_Vector>
+  using Matrix_Of_Polynomial_Vectors_Parser
+    = Json_Vector_Parser<Vector_Of_Polynomial_Vectors_Parser>;
+
+  Matrix_Of_Polynomial_Vectors_Parser polynomials_parser;
+  Damped_Rational_Parser prefactor_parser;
+  Damped_Rational_Parser reduced_prefactor_parser;
+  BigFloat_Vector_Parser sample_points_parser;
+  BigFloat_Vector_Parser sample_scalings_parser;
+  BigFloat_Vector_Parser reduced_sample_scalings_parser;
+  Polynomial_Vector_Parser bilinear_basis_parser;
+  Polynomial_Vector_Parser bilinear_basis_0_parser;
+  Polynomial_Vector_Parser bilinear_basis_1_parser;
 
 protected:
   Abstract_Json_Reader_Handler &element_parser(const std::string &key) override
@@ -119,32 +109,35 @@ public:
   value_type get_result() override
   {
     ASSERT(polynomials.has_value(), "polynomials not found");
-    const auto matrix = to_matrix(std::move(polynomials).value());
+    const Simple_Matrix matrix(std::move(polynomials).value());
     // TODO add move ctor for Polynomial_Vector_Matrix?
-    return Polynomial_Vector_Matrix(
-      matrix, prefactor, reduced_prefactor, sample_points, sample_scalings,
-      reduced_sample_scalings, bilinear_basis);
+    return Polynomial_Vector_Matrix(matrix, prefactor, reduced_prefactor,
+                                    sample_points, sample_scalings,
+                                    reduced_sample_scalings, bilinear_basis);
   }
   void clear_result() override
   {
     polynomials.reset();
     prefactor.reset();
+    reduced_prefactor.reset();
+
     sample_points.reset();
     sample_scalings.reset();
+    reduced_sample_scalings.reset();
     bilinear_basis.reset();
   }
   void reset_element_parsers(const bool skip) override
   {
-    prefactor_parser.reset(skip);
     polynomials_parser.reset(skip);
+    prefactor_parser.reset(skip);
+    reduced_prefactor_parser.reset(skip);
+
     sample_points_parser.reset(skip);
     sample_scalings_parser.reset(skip);
+    reduced_sample_scalings_parser.reset(skip);
 
     bilinear_basis_parser.reset(skip);
     bilinear_basis_0_parser.reset(skip);
     bilinear_basis_1_parser.reset(skip);
   }
 };
-
-using Json_Positive_Matrix_With_Prefactor_Array_Parser
-  = Json_Vector_Parser_With_Skip<Json_Positive_Matrix_With_Prefactor_Parser>;

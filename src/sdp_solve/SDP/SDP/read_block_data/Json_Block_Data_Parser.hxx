@@ -13,11 +13,10 @@ struct Json_Block_Data_Parser final
 private:
   Block_Data_Parse_Result result;
 
-  Json_Float_Vector_Parser<El::BigFloat> c_parser;
-  Json_Matrix_Parser<Json_Float_Parser<El::BigFloat>> B_parser;
-  Json_Matrix_Parser<Json_Float_Parser<El::BigFloat>>
-    bilinear_bases_even_parser;
-  Json_Matrix_Parser<Json_Float_Parser<El::BigFloat>> bilinear_bases_odd_parser;
+  Json_Vector_Parser<Json_BigFloat_Parser> c_parser;
+  Json_Matrix_Parser<Json_BigFloat_Parser> B_parser;
+  Json_Matrix_Parser<Json_BigFloat_Parser> bilinear_bases_even_parser;
+  Json_Matrix_Parser<Json_BigFloat_Parser> bilinear_bases_odd_parser;
 
   // Abstract_Json_Object_Parser implementation
 public:
