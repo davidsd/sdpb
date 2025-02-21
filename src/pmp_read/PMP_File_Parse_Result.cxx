@@ -2,6 +2,8 @@
 
 #include "sdpb_util/assert.hxx"
 
+#include <boost/algorithm/string/predicate.hpp>
+
 namespace fs = std::filesystem;
 
 PMP_File_Parse_Result
@@ -48,10 +50,11 @@ PMP_File_Parse_Result PMP_File_Parse_Result::read(
         }
       // .dat: SDPA format
       // .dat-s: sparse SDPA format, see e.g. https://github.com/vsdp/SDPLIB
-      // TODO support also .dat-s.gz, and .dat.gz
       // TODO support also CBF (Conic Becnhmark Format) https://cblib.zib.de/
       else if(input_path.extension() == ".dat"
-              || input_path.extension() == ".dat-s")
+              || input_path.extension() == ".dat-s"
+              || boost::algorithm::ends_with(input_path.string(), ".dat.gz")
+              || boost::algorithm::ends_with(input_path.string(), ".dat-s.gz"))
         {
           result = read_sdpa(input_path, should_parse_matrix);
         }

@@ -5,6 +5,10 @@
 #include <cstdlib>
 #include <fstream>
 #include <functional>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
+
+namespace fs = std::filesystem;
 
 namespace
 {
@@ -31,7 +35,7 @@ namespace
            || std::isspace(token);
   }
 
-  void skip_ws(std::istream &is, const bool skip_newline)
+  template <class IStream> void skip_ws(IStream &is, const bool skip_newline)
   {
     while(should_skip(is.peek(), skip_newline))
       {
@@ -39,7 +43,8 @@ namespace
       }
   }
 
-  template <class T> T read_number(std::istream &is, const bool skip_newline)
+  template <class T, class IStream>
+  T read_number(IStream &is, const bool skip_newline)
   {
     T value;
     skip_ws(is, skip_newline);
@@ -68,7 +73,7 @@ namespace
   // https://github.com/vsdp/SDPLIB
 
   // 1. Comments. The file can begin with arbitrarily many lines of comments. Each line of comments must begin with " or *.
-  void read_comments(std::istream &is)
+  template <class IStream> void read_comments(IStream &is)
   {
     int next = is.peek();
     while(next == '"' || next == '*')
@@ -81,7 +86,7 @@ namespace
 
   // 2. The first line after the comments contains m, the number of constraint matrices.
   // Additional text on this line after m is ignored.
-  size_t read_m(std::istream &is)
+  template <class IStream> size_t read_m(IStream &is)
   {
     size_t m;
     is >> m;
@@ -92,7 +97,7 @@ namespace
 
   // 3. The second line after the comments contains nblocks, the number of blocks in the block diagonal structure of the matrices.
   // Additional text on this line after nblocks is ignored.
-  size_t read_nblocks(std::istream &is)
+  template <class IStream> size_t read_nblocks(IStream &is)
   {
     size_t nblocks;
     is >> nblocks;
@@ -106,13 +111,15 @@ namespace
   // Negative numbers may be used to indicate that a block is actually a diagonal submatrix.
   // Thus a block size of -5 indicates a 5 by 5 block in which only the diagonal elements are nonzero.
   // Further we'll split a diagonal block into 1x1 blocks.
-  std::vector<int> read_block_sizes(std::istream &is, const size_t &nblocks)
+  template <class IStream>
+  std::vector<int> read_block_sizes(IStream &is, const size_t &nblocks)
   {
     return read_vector<int>(is, nblocks);
   }
 
   // 5. The fourth line after the comments contains the objective function vector c.
-  std::vector<El::BigFloat> read_c(std::istream &is, const size_t m)
+  template <class IStream>
+  std::vector<El::BigFloat> read_c(IStream &is, const size_t m)
   {
     return read_vector<El::BigFloat>(is, m);
   }
@@ -137,7 +144,8 @@ namespace
   // <i> and <j> specify a location within the block,
   // and <entry> gives the value of the entry in the matrix.
   // Note that since all matrices are assumed to be symmetric, only entries in the upper triangle of a matrix are given.
-  void read_sparse_matrix_entry(std::istream &is, SDPA_Matrix_Entry &entry)
+  template <class IStream>
+  void read_sparse_matrix_entry(IStream &is, SDPA_Matrix_Entry &entry)
   {
     is >> entry.matrix_index;
     is >> entry.block_index;
@@ -240,8 +248,9 @@ namespace
     }
   };
 
+  template <class IStream>
   void
-  read_sparse_matrices(std::istream &is,
+  read_sparse_matrices(IStream &is,
                        const std::function<void(SDPA_Matrix_Entry &&)> &accept)
   {
     // Read all matrix entries in the file
@@ -254,9 +263,9 @@ namespace
       }
   }
 
+  template <class IStream>
   void
-  read_dense_matrices(std::istream &is,
-                      const SDPA_Block_Structure &block_structure,
+  read_dense_matrices(IStream &is, const SDPA_Block_Structure &block_structure,
                       const std::function<void(SDPA_Matrix_Entry &&)> &accept)
 
   {
@@ -321,23 +330,12 @@ namespace
 
 // Read .dat-s input used in SDPA
 // See format description e.g. in https://github.com/vsdp/SDPLIB
+template <class IStream>
 PMP_File_Parse_Result
-read_sdpa(const std::filesystem::path &input_file,
+read_sdpa(IStream &is, const SDPA_File_Type file_type,
           const std::function<bool(size_t matrix_index)> &should_parse_matrix)
 {
   PMP_File_Parse_Result result;
-
-  const SDPA_File_Type file_type = [&input_file] {
-    if(input_file.extension() == ".dat-s")
-      return SDPA_File_Type::sparse;
-    if(input_file.extension() == ".dat")
-      return SDPA_File_Type::dense;
-    RUNTIME_ERROR("Unknown SDPA file type, expected .dat or -dat-s: ",
-                  input_file.extension());
-  }();
-
-  std::ifstream is(input_file);
-  ASSERT(is.good(), "Could not open ", input_file);
 
   read_comments(is);
 
@@ -435,4 +433,47 @@ read_sdpa(const std::filesystem::path &input_file,
                  std::nullopt, std::nullopt, std::nullopt, std::nullopt));
     }
   return result;
+}
+
+PMP_File_Parse_Result
+read_sdpa(const std::filesystem::path &input_file,
+          const std::function<bool(size_t matrix_index)> &should_parse_matrix)
+{
+  auto extension = input_file.extension().string();
+  bool is_gzip = false;
+
+  const auto path = input_file.string();
+
+  if(extension == ".gz")
+    {
+      is_gzip = true;
+      extension = fs::path(input_file).replace_extension("").extension();
+    }
+
+  const SDPA_File_Type file_type = [&] {
+    if(extension == ".dat-s")
+      return SDPA_File_Type::sparse;
+    if(extension == ".dat")
+      return SDPA_File_Type::dense;
+    RUNTIME_ERROR(
+      "Unknown SDPA file type, expected .dat, .dat-s, .dat.gz, or .dat-s.gz: ",
+      input_file);
+  }();
+
+  if(is_gzip)
+    {
+      std::ifstream is(input_file, std::ios_base::in | std::ios_base::binary);
+      ASSERT(is.good(), "Could not open ", input_file);
+      boost::iostreams::filtering_istream unzip_stream;
+      unzip_stream.push(boost::iostreams::gzip_decompressor());
+      unzip_stream.push(is);
+      auto result = read_sdpa(unzip_stream, file_type, should_parse_matrix);
+      return result;
+    }
+  else
+    {
+      std::ifstream is(input_file);
+      ASSERT(is.good(), "Could not open ", input_file);
+      return read_sdpa(is, file_type, should_parse_matrix);
+    }
 }
