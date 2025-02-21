@@ -46,16 +46,18 @@ PMP_File_Parse_Result PMP_File_Parse_Result::read(
         {
           result = read_xml(input_path, should_parse_matrix);
         }
-      // SDPA format .dat-s, see e.g. https://github.com/vsdp/SDPLIB
-      // TODO support also .dat-s.gz, .dat and .dat.gz
+      // .dat: SDPA format
+      // .dat-s: sparse SDPA format, see e.g. https://github.com/vsdp/SDPLIB
+      // TODO support also .dat-s.gz, and .dat.gz
       // TODO support also CBF (Conic Becnhmark Format) https://cblib.zib.de/
-      else if(input_path.extension() == ".dat-s")
+      else if(input_path.extension() == ".dat"
+              || input_path.extension() == ".dat-s")
         {
           result = read_sdpa(input_path, should_parse_matrix);
         }
       else
         {
-          RUNTIME_ERROR("Expected .json, .m, .xml, or .dat-s extension.",
+          RUNTIME_ERROR("Expected .json, .m, .xml, .dat or .dat-s extension.",
                         DEBUG_STRING(input_path));
         }
 
