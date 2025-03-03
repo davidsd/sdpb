@@ -233,25 +233,27 @@ void corrector_step(
       Scoped_Timer loop_timer(timers,
                               std::to_string(corrector_iterations.size()));
 
-      if(!corrector_iterations.empty())
-        {
-          // Aim for lower mu each time.
-          // TODO: Now here we aim for beta' * mu,
-          //     where mu = Tr(XY)/X.dim is constant
-          //     and beta' = beta * corrector_iter_mu_reduction^N is reduced each time.
-          //   Shall we aim for beta * mu' instead,
-          //   where beta remains constant
-          //   and mu' = Tr(X'Y')/X.dim is taken from the previous corrector iteration?
-          beta_corrector = beta_corrector * corrector_iter_mu_reduction;
-        }
+      // At the first corrector iteration, aim for mu -> beta_corrector * mu,
+      // where mu = Tr(XY)/X.dim, as in the original SDPB algorithm.
+      // For each subsequent corrector iteration, aim at
+      // mu -> corrector_iter_mu_reduction * mu',
+      // where mu' = Tr(X'Y')/X.dim
+      // is taken from the last corrector iteration.
+      // TODO: according to our tests, setting corrector_iter_mu_reduction != beta_corrector
+      // does not speed up solver, maybe we should remove this option.
+      const auto &prev_mu
+        = corrector_iterations.empty() ? mu : corrector_iterations.back().mu;
+      const auto &beta = corrector_iterations.empty()
+                           ? beta_corrector
+                           : corrector_iter_mu_reduction;
 
       // Compute dx,dy,dX,dY etc.
       auto &iteration
         = corrector_iterations.emplace_back(single_corrector_iteration(
           solver, total_psd_rows, is_primal_and_dual_feasible, block_info, sdp,
           schur_complement_cholesky, schur_off_diagonal, Q, X_cholesky,
-          Y_cholesky, minus_XY, primal_residue_p, beta_corrector, parameters,
-          mu, dx_curr, dX_curr, dy_curr, dY_curr, timers));
+          Y_cholesky, minus_XY, primal_residue_p, beta, parameters, prev_mu,
+          dx_curr, dX_curr, dy_curr, dY_curr, timers));
 
       // Previous iteration
       auto prev_it = corrector_iterations.rbegin();
@@ -270,7 +272,6 @@ void corrector_step(
       iteration.log_mu_speed_full = get_log_mu_speed(
         mu, iteration.mu, total_step_time_ms, log_mu_speed_normalization);
       {
-        auto prev_mu = corrector_iterations.size() == 1 ? mu : prev_it->mu;
         iteration.log_mu_speed_corrector = get_log_mu_speed(
           prev_mu, iteration.mu, loop_timer.elapsed_milliseconds(),
           log_mu_speed_normalization);
