@@ -80,6 +80,33 @@ compute_R_matrix(const std::size_t &total_psd_rows, const SDP_Solver &solver,
   return R;
 }
 
+void compute_primal_dual_step_length(
+  const Block_Diagonal_Matrix &X_cholesky, const Block_Diagonal_Matrix &dX,
+  const Block_Diagonal_Matrix &Y_cholesky, const Block_Diagonal_Matrix &dY,
+  const El::BigFloat &step_length_reduction,
+  const El::BigFloat &corrector_step_boost_min,
+  const El::BigFloat &corrector_step_boost_max,
+  const bool is_primal_and_dual_feasible, El::BigFloat &primal_step_length,
+  El::BigFloat &max_primal_step_length, El::BigFloat &dual_step_length,
+  El::BigFloat &max_dual_step_length, Timers &timers)
+{
+  primal_step_length
+    = step_length(X_cholesky, dX, step_length_reduction,
+                  corrector_step_boost_min, corrector_step_boost_max,
+                  "stepLength(XCholesky)", max_primal_step_length, timers);
+  dual_step_length
+    = step_length(Y_cholesky, dY, step_length_reduction,
+                  corrector_step_boost_min, corrector_step_boost_max,
+                  "stepLength(YCholesky)", max_dual_step_length, timers);
+  // If our problem is both dual-feasible and primal-feasible,
+  // ensure we're following the true Newton direction.
+  if(is_primal_and_dual_feasible)
+    {
+      primal_step_length = dual_step_length
+        = El::Min(primal_step_length, dual_step_length);
+    }
+}
+
 Corrector_Iteration single_corrector_iteration(
   const SDP_Solver &solver, const std::size_t &total_psd_rows,
   const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
@@ -106,23 +133,12 @@ Corrector_Iteration single_corrector_iteration(
       primal_residue_p, is_corrector_phase, Q, dx, dX, dy, dY);
   }
 
-  {
-    iter.primal_step_length = step_length(
-      X_cholesky, dX, parameters.step_length_reduction,
-      parameters.corrector_step_boost_min, parameters.corrector_step_boost_max,
-      "stepLength(XCholesky)", iter.max_primal_step_length, timers);
-    iter.dual_step_length = step_length(
-      Y_cholesky, dY, parameters.step_length_reduction,
-      parameters.corrector_step_boost_min, parameters.corrector_step_boost_max,
-      "stepLength(YCholesky)", iter.max_dual_step_length, timers);
-    // If our problem is both dual-feasible and primal-feasible,
-    // ensure we're following the true Newton direction.
-    if(is_primal_and_dual_feasible)
-      {
-        iter.primal_step_length = iter.dual_step_length
-          = El::Min(iter.primal_step_length, iter.dual_step_length);
-      }
-  }
+  compute_primal_dual_step_length(
+    X_cholesky, dX, Y_cholesky, dY, parameters.step_length_reduction,
+    parameters.corrector_step_boost_min, parameters.corrector_step_boost_max,
+    is_primal_and_dual_feasible, iter.primal_step_length,
+    iter.max_primal_step_length, iter.dual_step_length,
+    iter.max_dual_step_length, timers);
 
   {
     Scoped_Timer timer(timers, "compute_errors");
@@ -213,8 +229,24 @@ void corrector_step(
     = is_primal_and_dual_feasible
         ? parameters.feasible_max_corrector_iterations
         : parameters.infeasible_max_corrector_iterations;
+
+  // Disable corrector iterations, compute step length and return.
   if(max_corrector_iterations == 0)
-    max_corrector_iterations = std::numeric_limits<int64_t>::max();
+    {
+      // Disable step boosting
+      El::BigFloat corrector_step_boost_min = -1;
+      El::BigFloat corrector_step_boost_max = -1;
+
+      El::BigFloat max_primal_step_length;
+      El::BigFloat max_dual_step_length;
+      compute_primal_dual_step_length(
+        X_cholesky, dX, Y_cholesky, dY, parameters.step_length_reduction,
+        corrector_step_boost_min, corrector_step_boost_max,
+        is_primal_and_dual_feasible, primal_step_length,
+        max_primal_step_length, dual_step_length, max_dual_step_length,
+        timers);
+      return;
+    }
 
   if(do_centering_step)
     {
