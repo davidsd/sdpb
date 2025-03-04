@@ -18,7 +18,7 @@ bilinear_basis(const std::vector<El::BigFloat> &sample_points,
 
 namespace
 {
-  int64_t get_max_degree(const El::Matrix<Polynomial_Vector> &pvm)
+  int64_t get_max_degree(const Simple_Matrix<Polynomial_Vector> &pvm)
   {
     int64_t max_degree = 0;
     for(int i = 0; i < pvm.Height(); ++i)
@@ -123,7 +123,7 @@ namespace
 }
 
 Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
-  const El::Matrix<Polynomial_Vector> &polynomials,
+  const Simple_Matrix<Polynomial_Vector> &polynomials,
   const std::optional<Damped_Rational> &prefactor_opt,
   const std::optional<Damped_Rational> &reduced_prefactor_opt,
   const std::optional<std::vector<Polynomial_Power_Product>>
@@ -132,9 +132,8 @@ Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
   const std::optional<std::vector<El::BigFloat>> &sample_scalings_opt,
   const std::optional<std::vector<El::BigFloat>> &reduced_sample_scalings_opt,
   const std::optional<std::array<Polynomial_Vector, 2>> &bilinear_basis_opt)
+    : polynomials(polynomials)
 {
-  this->polynomials = polynomials;
-
   const int64_t max_degree = get_max_degree(polynomials);
 
   prefactor = prefactor_or_default(prefactor_opt, max_degree);

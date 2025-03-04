@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sdpb_util/assert.hxx"
+
 #include <El.hpp>
 
 #include <rapidjson/rapidjson.h>

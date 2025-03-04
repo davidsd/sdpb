@@ -42,7 +42,7 @@ const char *parse_matrix(const char *begin, const char *end,
     }
 
   matrix = std::make_unique<Polynomial_Vector_Matrix>(
-    to_matrix(polynomials), prefactor, std::nullopt, std::nullopt,
+    Simple_Matrix(polynomials), prefactor, std::nullopt, std::nullopt,
     std::nullopt, std::nullopt, std::nullopt, std::nullopt);
   return std::next(close_bracket);
 }

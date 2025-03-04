@@ -2,8 +2,7 @@
 
 #include "write_vector.hxx"
 #include "pmp/Damped_Rational.hxx"
-#include "pmp/Polynomial_Matrix_Program.hxx"
-#include "pmp/PVM_Info.hxx"
+#include "pmp/PMP_Info.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
@@ -22,7 +21,6 @@ inline void write_pmp_info_json(std::ostream &output_stream,
                                 const std::vector<PVM_Info> &pmp_info)
 {
   ASSERT_EQUAL(El::mpi::Rank(), 0);
-  const size_t num_blocks = pmp_info.size();
   rapidjson::OStreamWrapper ows(output_stream);
   rapidjson::Writer writer(ows);
 
@@ -56,10 +54,19 @@ inline void write_pmp_info_json(std::ostream &output_stream,
   writer.StartArray();
   for(const auto &block : pmp_info)
     {
+      block.validate(pmp_info.size());
       writer.StartObject();
-      writer.Key("block_path");
+      writer.Key("index");
+      {
+        writer.Int(block.block_index);
+      }
+      writer.Key("path");
       {
         writer.String(block.block_path.string().c_str());
+      }
+      writer.Key("dim");
+      {
+        writer.Uint64(block.dim);
       }
       writer.Key("prefactor");
       {
@@ -136,6 +143,14 @@ inline void synchronize_pvm_info(PVM_Info &pvm_info, const int from)
   if(to == from)
     return;
 
+  // block_index
+  {
+    if(rank == from)
+      El::mpi::Send(pvm_info.block_index, to, comm);
+    if(rank == to)
+      pvm_info.block_index = El::mpi::Recv<int>(from, comm);
+  }
+
   // block_path
   {
     auto block_path = pvm_info.block_path.string();
@@ -153,6 +168,14 @@ inline void synchronize_pvm_info(PVM_Info &pvm_info, const int from)
                  MPI_STATUS_IGNORE);
         pvm_info.block_path = block_path;
       }
+  }
+
+  // dim
+  {
+    if(rank == from)
+      El::mpi::Send(pvm_info.dim, to, comm);
+    if(rank == to)
+      pvm_info.dim = El::mpi::Recv<size_t>(from, comm);
   }
 
   // prefactor, reduced_prefactor
@@ -258,44 +281,37 @@ inline void synchronize_pvm_info(PVM_Info &pvm_info, const int from)
   }
 }
 
-std::vector<PVM_Info> inline synchronize_pmp_info(
-  const Polynomial_Matrix_Program &pmp)
+// Collect all block on rank=0
+inline std::vector<PVM_Info>
+synchronize_pmp_info_blocks(const PMP_Info &pmp_info)
 {
-  std::vector<PVM_Info> pmp_info(pmp.num_matrices);
+  std::vector<PVM_Info> all_pvm_infos(pmp_info.num_blocks);
 
-  // Fill pmp_info with all local blocks
-  for(size_t local_index = 0;
-      local_index < pmp.matrix_index_local_to_global.size(); ++local_index)
+  // Fill all_pvm_infos with all local blocks
+  for(size_t local_index = 0; local_index < pmp_info.blocks.size();
+      ++local_index)
     {
-      const size_t block_index
-        = pmp.matrix_index_local_to_global.at(local_index);
-      const auto &pvm = pmp.matrices.at(local_index);
-
-      auto &pvm_info = pmp_info.at(block_index);
-      pvm_info.block_path = pmp.block_paths.at(local_index);
-      pvm_info.prefactor = pvm.prefactor;
-      pvm_info.reduced_prefactor = pvm.reduced_prefactor;
-      pvm_info.sample_points = pvm.sample_points;
-      pvm_info.sample_scalings = pvm.sample_scalings;
-      pvm_info.reduced_sample_scalings = pvm.reduced_sample_scalings;
-      pvm_info.preconditioning_vector = pvm.preconditioning_vector;
+      const int block_index = pmp_info.blocks.at(local_index).block_index;
+      ASSERT(block_index >= 0 && block_index < pmp_info.num_blocks,
+             DEBUG_STRING(block_index), DEBUG_STRING(pmp_info.num_blocks));
+      all_pvm_infos.at(block_index) = pmp_info.blocks.at(local_index);
     }
 
   // Synchronize owning ranks for each block
   const int rank = El::mpi::Rank();
-  std::vector<int> block_ranks(pmp.num_matrices, -1);
-  for(auto &block_index : pmp.matrix_index_local_to_global)
+  std::vector<int> block_ranks(pmp_info.num_blocks, -1);
+  for(auto &block : pmp_info.blocks)
     {
-      block_ranks.at(block_index) = rank;
+      block_ranks.at(block.block_index) = rank;
     }
   El::mpi::AllReduce(block_ranks.data(), block_ranks.size(), El::mpi::MAX,
                      El::mpi::COMM_WORLD);
 
   // Send all blocks to rank=0
-  for(size_t block_index = 0; block_index < pmp.num_matrices; ++block_index)
+  for(size_t block_index = 0; block_index < pmp_info.num_blocks; ++block_index)
     {
       const int from = block_ranks.at(block_index);
-      synchronize_pvm_info(pmp_info.at(block_index), from);
+      synchronize_pvm_info(all_pvm_infos.at(block_index), from);
     }
-  return pmp_info;
+  return all_pvm_infos;
 }

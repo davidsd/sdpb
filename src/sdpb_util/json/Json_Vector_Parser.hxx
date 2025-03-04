@@ -20,13 +20,12 @@ public:
   template <class... TArgs>
   Abstract_Json_Vector_Parser(
     const bool skip, const std::function<void(value_type &&)> &on_parsed,
-    const std::function<void()> &on_skipped,
-    const TArgs &...element_parser_args)
+    const std::function<void()> &on_skipped, TArgs &&...element_parser_args)
       : Abstract_Json_Array_Parser_With_Skip<value_type, TElementParser>(
           skip, on_parsed, on_skipped,
           // Never skip individual elements:
           [](size_t /*index*/) { return false; },
-          element_parser_args...)
+          std::forward<TArgs>(element_parser_args)...)
   {}
   void on_element_skipped(size_t /*index*/) override {}
 };
@@ -49,15 +48,17 @@ private:
   value_type result;
 
 public:
+  template <class... TArgs>
   Json_Vector_Parser(
     const bool skip, const std::function<void(value_type &&)> &on_parsed,
-    const std::function<void()> &on_skipped = [] {})
-      : base_type(skip, on_parsed, on_skipped)
+    const std::function<void()> &on_skipped = [] {},
+    TArgs&&... element_parser_args)
+      : base_type(skip, on_parsed, on_skipped, std::forward<TArgs>(element_parser_args)...)
   {}
 
   void on_element_parsed(element_type &&value, size_t index) override
   {
-    ASSERT_EQUAL(index , this->result.size());
+    ASSERT_EQUAL(index, this->result.size());
     this->result.push_back(std::move(value));
   }
 

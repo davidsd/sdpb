@@ -11,7 +11,7 @@ struct Json_Points_Parser final
 {
 private:
   std::vector<std::vector<El::BigFloat>> result;
-  Json_Vector_Parser<Json_Float_Vector_Parser<El::BigFloat>> points_parser;
+  Json_Vector_Parser<Json_Vector_Parser<Json_BigFloat_Parser>> points_parser;
 
   // Abstract_Json_Object_Parser implementation
 public:
@@ -32,8 +32,8 @@ public:
   void reset_element_parsers(bool skip) override { points_parser.reset(skip); }
   void clear_result() override { result.clear(); }
 
-  explicit
-  Json_Points_Parser(const std::function<void(value_type &&result)> &on_parsed)
+  explicit Json_Points_Parser(
+    const std::function<void(value_type &&result)> &on_parsed)
       : Abstract_Json_Object_Parser(false, on_parsed, [] {}),
         points_parser(false, [this](value_type &&points) {
           this->result = std::move(points);

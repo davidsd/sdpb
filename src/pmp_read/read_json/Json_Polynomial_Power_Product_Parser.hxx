@@ -34,7 +34,7 @@ private:
   std::optional<Boost_Float> single_power;
 
   Json_Vector_Parser<Json_Polynomial_Power_Parser> polynomial_powers_parser;
-  Json_Float_Vector_Parser<Boost_Float> polynomial_parser;
+  Json_Vector_Parser<Json_Boost_Float_Parser> polynomial_parser;
   Json_Float_Parser<Boost_Float> power_parser;
 
 public:

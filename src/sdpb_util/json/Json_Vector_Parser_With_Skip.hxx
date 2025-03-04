@@ -30,10 +30,11 @@ public:
       &on_parsed,
     const std::function<void()> &on_skipped,
     const std::function<bool(size_t index)> &skip_element,
-    const TArgs &...element_parser_args)
+    TArgs &&...element_parser_args)
       : Abstract_Json_Array_Parser_With_Skip<
           Vector_Parse_Result_With_Skip<element_type>, TElementParser>(
-          skip, on_parsed, on_skipped, skip_element, element_parser_args...)
+          skip, on_parsed, on_skipped, skip_element,
+          std::forward<TArgs>(element_parser_args)...)
   {}
   void on_element_parsed(element_type &&value, size_t index) override
   {

@@ -68,7 +68,7 @@ read_xml(const std::filesystem::path &input_file,
         auto index = result.num_matrices;
         if(should_parse_matrix(index))
           {
-            El::Matrix<Polynomial_Vector> poly_vectors(matrix_state.rows, matrix_state.cols);
+            Simple_Matrix<Polynomial_Vector> poly_vectors(matrix_state.rows, matrix_state.cols);
 
             auto elt = matrix_state.elements_state.value.begin();
             for(int i = 0; i < poly_vectors.Height(); ++i)

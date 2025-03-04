@@ -16,7 +16,7 @@ class Json_Polynomial_Power_Parser final
 {
 private:
   Polynomial_Power result;
-  Json_Float_Vector_Parser<Boost_Float> polynomial_parser;
+  Json_Vector_Parser<Json_Boost_Float_Parser> polynomial_parser;
   Json_Float_Parser<Boost_Float> power_parser;
 
 public:

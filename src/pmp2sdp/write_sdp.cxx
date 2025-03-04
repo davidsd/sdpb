@@ -273,10 +273,10 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
     El::mpi::Barrier();
   }
 
-  std::vector<PVM_Info> pmp_info;
+  std::vector<PVM_Info> pmp_info_blocks;
   {
-    Scoped_Timer(timers, "synchronize_pmp_info");
-    pmp_info = synchronize_pmp_info(pmp);
+    Scoped_Timer synchronize_pmp_info_timer(timers, "synchronize_pmp_info");
+    pmp_info_blocks = synchronize_pmp_info_blocks(PMP_Info(pmp));
   }
 
   // We use size_t rather than std::streamsize because MPI treats
@@ -372,7 +372,8 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
         zip);
       size_t num_pmp_info_bytes = write_data_and_count_bytes(
         get_pmp_info_path(temp_dir),
-        [&](std::ostream &os) { write_pmp_info_json(os, pmp_info); }, zip);
+        [&](std::ostream &os) { write_pmp_info_json(os, pmp_info_blocks); },
+        zip);
       std::optional<size_t> num_normalization_bytes;
       if(sdp.normalization.has_value())
         {
@@ -487,13 +488,19 @@ void print_matrix_sizes(
       std::vector<std::pair<std::string, size_t>> sizes{
         {"P (primal objective)", P},
         {"N (dual objective)", N},
-        {"B matrix (PxN) - free_var_matrix, schur_off_diagonal", B_matrix_elements},
+        {"B matrix (PxN) - free_var_matrix, schur_off_diagonal",
+         B_matrix_elements},
         {"Q matrix (NxN)", Q_matrix_size},
         {"Bilinear bases", bilinear_bases_elements},
-        {"Bilinear pairing blocks - A_x_inv, A_y", bilinear_pairing_block_elements},
+        {"Bilinear pairing blocks - A_x_inv, A_y",
+         bilinear_pairing_block_elements},
         // R,Z - from compute_search_direction(), TODO we shall account for them only if peak usage is there.
-        {"PSD blocks - X, Y, primal_residues, X_chol, Y_chol, dX, dY, XY, R, Z", psd_blocks_elements},
-        {"Schur (PxP block diagonal) - schur_complement, schur_complement_cholesky", schur_elements},
+        {"PSD blocks - X, Y, primal_residues, X_chol, Y_chol, dX, dY, XY, R, "
+         "Z",
+         psd_blocks_elements},
+        {"Schur (PxP block diagonal) - schur_complement, "
+         "schur_complement_cholesky",
+         schur_elements},
         {"Total (without shared windows) = 2#(B) + 10#(PSD) + 2#(S) + "
          "2#(Bilinear pairing) + #(Q)",
          total_size},
