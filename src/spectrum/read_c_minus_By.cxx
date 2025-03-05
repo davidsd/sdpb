@@ -3,6 +3,7 @@
 #include "sdpb_util/Timers/Timers.hxx"
 #include "sdpb_util/json/Abstract_Json_Object_Parser.hxx"
 #include "sdpb_util/json/Json_Float_Parser.hxx"
+#include "sdpb_util/json/Json_Vector_Parser.hxx"
 #include "sdpb_util/json/Json_Vector_Parser_With_Skip.hxx"
 #include "sdpb_util/json/parse_json.hxx"
 
@@ -12,7 +13,7 @@
 #include <set>
 
 using Json_Block_Vector_Parser
-  = Json_Vector_Parser_With_Skip<Json_Float_Vector_Parser<El::BigFloat>>;
+  = Json_Vector_Parser_With_Skip<Json_Vector_Parser<Json_BigFloat_Parser>>;
 
 class Json_c_minus_By_Parser final
     : public Abstract_Json_Object_Parser<std::vector<El::Matrix<El::BigFloat>>>

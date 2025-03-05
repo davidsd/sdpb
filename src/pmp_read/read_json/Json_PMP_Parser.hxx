@@ -4,6 +4,7 @@
 #include "pmp_read/PMP_File_Parse_Result.hxx"
 #include "sdpb_util/json/Abstract_Json_Object_Parser.hxx"
 #include "sdpb_util/json/Json_Float_Parser.hxx"
+#include "sdpb_util/json/Json_Vector_Parser_With_Skip.hxx"
 
 class Json_PMP_Parser final
     : public Abstract_Json_Object_Parser<PMP_File_Parse_Result>
@@ -12,11 +13,16 @@ class Json_PMP_Parser final
   using Ch = rapidjson::UTF8<>::Ch;
 
 private:
+  using BigFloat_Vector_Parser = Json_Vector_Parser<Json_BigFloat_Parser>;
+
+  using Json_Positive_Matrix_With_Prefactor_Array_Parser
+    = Json_Vector_Parser_With_Skip<Json_Positive_Matrix_With_Prefactor_Parser>;
+
   PMP_File_Parse_Result result;
 
   // Nested parsers
-  Json_Float_Vector_Parser<El::BigFloat> objective_parser;
-  Json_Float_Vector_Parser<El::BigFloat> normalization_parser;
+  BigFloat_Vector_Parser objective_parser;
+  BigFloat_Vector_Parser normalization_parser;
   Json_Positive_Matrix_With_Prefactor_Array_Parser matrices_parser;
 
 public:

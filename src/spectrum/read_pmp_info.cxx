@@ -25,9 +25,9 @@ class Json_PVM_Info_Parser final : public Abstract_Json_Object_Parser<PVM_Info>
   Json_Damped_Rational_Parser reduced_prefactor_parser;
   Json_Vector_Parser<Json_Polynomial_Power_Product_Parser>
     preconditioning_vector_parser;
-  Json_Float_Vector_Parser<El::BigFloat> sample_points_parser;
-  Json_Float_Vector_Parser<El::BigFloat> sample_scalings_parser;
-  Json_Float_Vector_Parser<El::BigFloat> reduced_sample_scalings_parser;
+  Json_Vector_Parser<Json_BigFloat_Parser> sample_points_parser;
+  Json_Vector_Parser<Json_BigFloat_Parser> sample_scalings_parser;
+  Json_Vector_Parser<Json_BigFloat_Parser> reduced_sample_scalings_parser;
   Json_Skip_Element_Parser skip_element_parser{};
 
 public:

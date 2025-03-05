@@ -5,16 +5,17 @@
 #include "sdpb_util/json/Abstract_Json_Object_Parser.hxx"
 #include "sdpb_util/json/Json_Float_Parser.hxx"
 #include "sdpb_util/Boost_Float.hxx"
+#include "sdpb_util/json/Json_Vector_Parser.hxx"
 
 using namespace std::string_literals;
 struct Json_Function_Parser final : Abstract_Json_Object_Parser<Function>
 {
 private:
   Function result;
-  Json_Float_Parser<El::BigFloat> max_delta_parser;
-  Json_Float_Parser<El::BigFloat> epsilon_value_parser;
-  Json_Float_Parser<El::BigFloat> infinity_value_parser;
-  Json_Float_Vector_Parser<Boost_Float> chebyshev_values_parser;
+  Json_BigFloat_Parser max_delta_parser;
+  Json_BigFloat_Parser epsilon_value_parser;
+  Json_BigFloat_Parser infinity_value_parser;
+  Json_Vector_Parser<Json_Boost_Float_Parser> chebyshev_values_parser;
 
   // Abstract_Json_Object_Parser implementation
 public:

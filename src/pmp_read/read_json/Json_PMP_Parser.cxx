@@ -6,19 +6,15 @@ Json_PMP_Parser::Json_PMP_Parser(
   const std::function<bool(size_t matrix_index)> &should_parse_matrix,
   const std::function<void(value_type &&result)> &on_parsed)
     : Abstract_Json_Object_Parser(false, on_parsed, [] {}),
-      objective_parser(
-        !should_parse_objective,
-        [this](std::vector<El::BigFloat> &&result) {
-          this->result.objective = std::move(result);
-        },
-        [] { LOGIC_ERROR(R"(Skipping "objective" not allowed)"); }),
-      normalization_parser(
-        !should_parse_normalization,
-        // accept normalization vector:
-        [this](std::vector<El::BigFloat> &&result) {
-          this->result.normalization = std::move(result);
-        },
-        [] { LOGIC_ERROR(R"(Skipping "normalization" not allowed)"); }),
+      objective_parser(!should_parse_objective,
+                       [this](std::vector<El::BigFloat> &&result) {
+                         this->result.objective = std::move(result);
+                       }),
+      normalization_parser(!should_parse_normalization,
+                           // accept normalization vector:
+                           [this](std::vector<El::BigFloat> &&result) {
+                             this->result.normalization = std::move(result);
+                           }),
       matrices_parser(
         // don't skip matrices array:
         false,

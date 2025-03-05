@@ -4,6 +4,7 @@
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/json/Abstract_Json_Object_Parser.hxx"
 #include "sdpb_util/json/Json_Float_Parser.hxx"
+#include "sdpb_util/json/Json_Vector_Parser.hxx"
 
 // Polynomial raised to an arbitrary power,
 // e.g. (0.2 + x)^0.3 :
@@ -16,7 +17,7 @@ class Json_Polynomial_Power_Parser final
 {
 private:
   Polynomial_Power result;
-  Json_Float_Vector_Parser<Boost_Float> polynomial_parser;
+  Json_Vector_Parser<Json_Boost_Float_Parser> polynomial_parser;
   Json_Float_Parser<Boost_Float> power_parser;
 
 public:
@@ -25,13 +26,12 @@ public:
     const std::function<void()> &on_skipped = [] {})
       : Abstract_Json_Object_Parser(skip, on_parsed, on_skipped),
         polynomial_parser(skip,
-                    [this](std::vector<Boost_Float> &&value) {
-                      this->result.polynomial = std::move(value);
-                    }),
-        power_parser(skip,
-                        [this](Boost_Float &&value) {
-                          this->result.power = std::move(value);
-                        })
+                          [this](std::vector<Boost_Float> &&value) {
+                            this->result.polynomial = std::move(value);
+                          }),
+        power_parser(skip, [this](Boost_Float &&value) {
+          this->result.power = std::move(value);
+        })
   {}
 
 protected:

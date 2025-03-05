@@ -58,7 +58,8 @@ Pmp2sdp_Parameters::Pmp2sdp_Parameters(int argc, char **argv)
 
       if(variables_map.count("help") != 0)
         {
-          El::Output(options);
+          if(El::mpi::Rank() == 0)
+            El::Output(options);
           return;
         }
 
@@ -87,6 +88,7 @@ boost::property_tree::ptree to_property_tree(const Pmp2sdp_Parameters &p)
   result.put("output", p.output_path.string());
   result.put("precision", p.precision);
   result.put("outputFormat", p.output_format);
+  result.put("zip", p.zip);
   result.put("verbosity", static_cast<int>(p.verbosity));
 
   return result;

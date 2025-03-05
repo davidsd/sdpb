@@ -4,6 +4,7 @@
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/json/Abstract_Json_Object_Parser.hxx"
 #include "sdpb_util/json/Json_Float_Parser.hxx"
+#include "sdpb_util/json/Json_Vector_Parser.hxx"
 
 // "DampedRational":
 // {
@@ -24,9 +25,12 @@ class Json_Damped_Rational_Parser final
 {
 private:
   Damped_Rational result;
-  Json_Float_Parser<Boost_Float> base_parser;
-  Json_Float_Parser<Boost_Float> constant_parser;
-  Json_Float_Vector_Parser<Boost_Float> poles_parser;
+
+  using Float_Parser = Json_Boost_Float_Parser;
+
+  Float_Parser base_parser;
+  Float_Parser constant_parser;
+  Json_Vector_Parser<Float_Parser> poles_parser;
 
 public:
   Json_Damped_Rational_Parser(

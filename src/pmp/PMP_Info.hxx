@@ -62,8 +62,8 @@ struct PMP_Info
   // Blocks stored on the current rank
   std::vector<PVM_Info> blocks;
 
-  explicit
-  PMP_Info(const size_t num_blocks, const std::vector<PVM_Info> &blocks)
+  explicit PMP_Info(const size_t num_blocks,
+                    const std::vector<PVM_Info> &blocks)
       : num_blocks(num_blocks), blocks(blocks)
   {}
 

@@ -5,8 +5,7 @@
 #include "pmp/Polynomial.hxx"
 
 class Json_Polynomial_Parser final
-    : public Abstract_Json_Vector_Parser<Polynomial,
-                                         Json_Float_Parser<El::BigFloat>>
+    : public Abstract_Json_Vector_Parser<Polynomial, Json_BigFloat_Parser>
 {
   Polynomial result{0, 0};
 

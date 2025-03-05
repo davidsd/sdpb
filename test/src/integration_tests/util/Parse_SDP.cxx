@@ -38,7 +38,9 @@ Parse_Pmp_Info_Json::Parse_Pmp_Info_Json(const fs::path &path)
   for(const auto &item : document.GetArray())
     {
       auto &pvm_info = pmp_info.emplace_back();
+      pvm_info.block_index = item["index"].GetInt();
       pvm_info.block_path = item["path"].GetString();
+      pvm_info.dim = item["dim"].GetUint();
       pvm_info.prefactor = parse_Damped_Rational(item["prefactor"]);
       pvm_info.reduced_prefactor
         = parse_Damped_Rational(item["reducedPrefactor"]);
