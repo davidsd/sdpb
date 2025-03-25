@@ -93,6 +93,15 @@ The flag `--disable-gmp-internals` is required to prevent `mpn_gcd_11 not found`
     make -j 64 && make install
     cd ..
 
+## MPSolve
+
+    git clone https://github.com/robol/MPSolve.git
+    cd MPSolve
+    ./autogen.sh
+    CC=mpicc CXX=mpicxx ./configure --prefix=$HOME/install --disable-dependency-tracking --disable-examples --disable-ui --disable-graphical-debugger --disable-documentation
+    make && make install
+    cd ..
+
 ## RapidJSON
 
     git clone https://github.com/Tencent/rapidjson.git
@@ -102,7 +111,7 @@ The flag `--disable-gmp-internals` is required to prevent `mpn_gcd_11 not found`
 
     git clone https://github.com/davidsd/sdpb.git
     cd sdpb
-    CXX=mpicxx ./waf configure --prefix=$HOME/install/sdpb-master --elemental-dir=$HOME/install --flint-dir=$HOME/install --rapidjson-dir=$HOME/install --boost-dir=$HOME/install  --libarchive-dir=$HOME/install
+    CXX=mpicxx ./waf configure --prefix=$HOME/install/sdpb-master --elemental-dir=$HOME/install --flint-dir=$HOME/install --rapidjson-dir=$HOME/install --boost-dir=$HOME/install  --libarchive-dir=$HOME/install --mpsolve-dir=$HOME/install
     ./waf # -j 1
     ./test/run_all_tests.sh
     ./waf install

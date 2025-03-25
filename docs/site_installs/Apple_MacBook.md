@@ -37,6 +37,15 @@ On other laptops, Python 2 fails instead, so that one has to call `python3 ./waf
     make && make install
     cd ../..
 
+## MPSolve
+
+    git clone https://github.com/robol/MPSolve.git
+    cd MPSolve
+    ./autogen.sh
+    CC=mpicc CXX=mpicxx ./configure --prefix=$HOME/install --disable-dependency-tracking --disable-examples --disable-ui --disable-graphical-debugger --disable-documentation
+    make && make install
+    cd ..
+
 ## sdpb
 
 ### Checkout
@@ -45,7 +54,7 @@ On other laptops, Python 2 fails instead, so that one has to call `python3 ./waf
 
 ### Configure
 
-    CXXFLAGS="${CXXFLAGS} -D_GNU_SOURCE=1" ./waf configure --elemental-dir=$HOME/install --boost-dir=/opt/homebrew/Cellar/boost/1.84.0_1 --gmpxx-dir=/opt/homebrew/Cellar/gmp/6.3.0 --mpfr-dir=/opt/homebrew/Cellar/mpfr/4.2.1 --rapidjson-dir=/opt/homebrew/Cellar/rapidjson/1.1.0 --libarchive-dir=/opt/homebrew/Cellar/libarchive/3.7.3 --flint-dir=/opt/homebrew/Cellar/flint/3.1.0 --cblas-dir=/opt/homebrew/Cellar/openblas/0.3.27 --prefix=$HOME/install/sdpb-master
+    CXXFLAGS="${CXXFLAGS} -D_GNU_SOURCE=1" ./waf configure --elemental-dir=$HOME/install --mpsolve-dir=$HOME/install --boost-dir=/opt/homebrew/Cellar/boost/1.84.0_1 --gmpxx-dir=/opt/homebrew/Cellar/gmp/6.3.0 --mpfr-dir=/opt/homebrew/Cellar/mpfr/4.2.1 --rapidjson-dir=/opt/homebrew/Cellar/rapidjson/1.1.0 --libarchive-dir=/opt/homebrew/Cellar/libarchive/3.7.3 --flint-dir=/opt/homebrew/Cellar/flint/3.1.0 --cblas-dir=/opt/homebrew/Cellar/openblas/0.3.27 --prefix=$HOME/install/sdpb-master
 
 If waf fails to find some package, e.g. `boost`, check the installation directory by calling, e.g. `brew info boost` and
 update `--boost-dir` argument above.
@@ -54,7 +63,7 @@ The above `./waf configure` command works or x86 processors (e.g. Intel i5), but
 M2) with linker warnings `found architecture 'arm64', required architecture 'x86_64` in `build/config.log`.
 In that case, you should set `-arch arm64` flag explicitly:
 
-    CXXFLAGS="${CXXFLAGS} -D_GNU_SOURCE=1 -arch arm64" LDFLAGS="${LDFLAGS} -arch arm64" ./waf configure --elemental-dir=$HOME/install --boost-dir=/opt/homebrew/Cellar/boost/1.84.0_1 --gmpxx-dir=/opt/homebrew/Cellar/gmp/6.3.0 --mpfr-dir=/opt/homebrew/Cellar/mpfr/4.2.1 --rapidjson-dir=/opt/homebrew/Cellar/rapidjson/1.1.0 --libarchive-dir=/opt/homebrew/Cellar/libarchive/3.7.3 --flint-dir=/opt/homebrew/Cellar/flint/3.1.0 --cblas-dir=/opt/homebrew/Cellar/openblas/0.3.27 --prefix=$HOME/install/sdpb-master
+    CXXFLAGS="${CXXFLAGS} -D_GNU_SOURCE=1 -arch arm64" LDFLAGS="${LDFLAGS} -arch arm64" ./waf configure --elemental-dir=$HOME/install --mpsolve-dir=$HOME/install --boost-dir=/opt/homebrew/Cellar/boost/1.84.0_1 --gmpxx-dir=/opt/homebrew/Cellar/gmp/6.3.0 --mpfr-dir=/opt/homebrew/Cellar/mpfr/4.2.1 --rapidjson-dir=/opt/homebrew/Cellar/rapidjson/1.1.0 --libarchive-dir=/opt/homebrew/Cellar/libarchive/3.7.3 --flint-dir=/opt/homebrew/Cellar/flint/3.1.0 --cblas-dir=/opt/homebrew/Cellar/openblas/0.3.27 --prefix=$HOME/install/sdpb-master
 
 ### Compile and install
 
