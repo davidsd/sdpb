@@ -90,7 +90,7 @@ COPY --from=build /usr/local/lib /usr/local/lib
 # Contains /home/testuser/sdpb/build and /home/testuser/sdpb/test folders,
 # which is sufficient to run tests as shown below:
 #
-# docker build -t sdpb-test --target test
+# docker build . -t sdpb-test --target test
 # docker run sdpb-test ./test/run_all_tests.sh mpirun --oversubscribe
 FROM install as test
 # Create testuser to run Docker non-root (and avoid 'mpirun --allow-run-as-root' warning)
