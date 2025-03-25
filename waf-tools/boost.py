@@ -22,7 +22,7 @@ def configure(conf):
                 conf.options.boost_libdir = env_dir
 
     if not conf.options.boost_dir:
-        for d in ['BOOST_HOME', 'BOOST_DIR']:
+        for d in ['BOOST_HOME', 'BOOST_DIR', 'BOOST_ROOT']:
             env_dir = os.getenv(d)
             if env_dir:
                 conf.to_log('Setting boost_dir using environment variable: ' + d + '=' + env_dir)
