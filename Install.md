@@ -40,6 +40,8 @@ SDPB requires
 
 - [FLINT](https://github.com/flintlib/flint) (2.8.0 or later)
 
+- [Elemental (fork)](https://gitlab.com/bootstrapcollaboration/elemental)
+
 SDPB has been tested on Linux and Mac OS.
 
 # Installation
