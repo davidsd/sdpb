@@ -45,8 +45,8 @@ compute_lambda(const PVM_Info &pvm_info, const El::Matrix<El::BigFloat> &x,
           }
 
         size_t row_column(0);
-        for(size_t row(0); row != num_rows; ++row)
-          for(size_t column(row); column != num_rows; ++column)
+        for(size_t column(0); column != num_rows; ++column)
+          for(size_t row(0); row <= column; ++row)
             {
               x_scaled_matrix(index, row_column)
                 = x(row_column * matrix_block_size + index, 0) * scale;
@@ -133,8 +133,8 @@ compute_lambda(const PVM_Info &pvm_info, const El::Matrix<El::BigFloat> &x,
       El::Matrix<El::BigFloat> Lambda(num_rows, num_rows);
       El::Matrix<El::BigFloat> fit(roots_fit.Height(), 1);
       size_t row_column(0);
-      for(size_t row(0); row != num_rows; ++row)
-        for(size_t column(row); column != num_rows; ++column)
+      for(size_t column(0); column != num_rows; ++column)
+        for(size_t row(0); row <= column; ++row)
           {
             El::Matrix<El::BigFloat> roots_view(
               El::View(roots_fit, zero_index, 0, 1, roots_fit.Width()));
@@ -215,8 +215,8 @@ compute_lambda(const PVM_Info &pvm_info, const El::Matrix<El::BigFloat> &x,
         lambda *= El::Sqrt(max_eigenvalue);
 
         size_t row_column(0);
-        for(size_t row(0); row != num_rows; ++row)
-          for(size_t column(row); column != num_rows; ++column)
+        for(size_t column(0); column != num_rows; ++column)
+          for(size_t row(0); row <= column; ++row)
             {
               for(size_t index(0); index != matrix_block_size; ++index)
                 {
