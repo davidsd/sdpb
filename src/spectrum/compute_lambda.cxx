@@ -16,8 +16,8 @@ void compute_lambda(const std::vector<El::BigFloat> &sample_points,
                                            (num_rows * (num_rows + 1) / 2));
   {
     size_t row_column(0);
-    for(size_t row(0); row != num_rows; ++row)
-      for(size_t column(row); column != num_rows; ++column)
+    for(size_t column(0); column != num_rows; ++column)
+      for(size_t row(0); row <= column; ++row)
         {
           for(size_t index(0); index != matrix_block_size; ++index)
             {
@@ -100,8 +100,8 @@ void compute_lambda(const std::vector<El::BigFloat> &sample_points,
       El::Matrix<El::BigFloat> Lambda(num_rows, num_rows);
       El::Matrix<El::BigFloat> fit(roots_fit.Height(), 1);
       size_t row_column(0);
-      for(size_t row(0); row != num_rows; ++row)
-        for(size_t column(row); column != num_rows; ++column)
+      for(size_t column(0); column != num_rows; ++column)
+        for(size_t row(0); row <= column; ++row)
           {
             El::Matrix<El::BigFloat> roots_view(
               El::View(roots_fit, zero_index, 0, 1, roots_fit.Width()));
@@ -140,8 +140,8 @@ void compute_lambda(const std::vector<El::BigFloat> &sample_points,
           lambda *= El::Sqrt(eigenvalues(num_eigvals - 1, 0));
 
           size_t row_column(0);
-          for(size_t row(0); row != num_rows; ++row)
-            for(size_t column(row); column != num_rows; ++column)
+          for(size_t column(0); column != num_rows; ++column)
+            for(size_t row(0); row <= column; ++row)
               {
                 for(size_t index(0); index != matrix_block_size; ++index)
                   {
