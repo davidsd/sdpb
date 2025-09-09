@@ -62,7 +62,7 @@ void initialize_schur_off_diagonal(
 
 // Check that Q_ii = 2^2N, where N = normalizer.precision.
 // This follows from the fact that columns of P are normalized and multiplied by 2^N
-void check_normalized_Q_diagonal(El::DistMatrix<El::BigFloat> &Q,
+void check_normalized_Q_diagonal(const El::DistMatrix<El::BigFloat> &Q,
                                  const Matrix_Normalizer &normalizer,
                                  Timers &timers)
 {
