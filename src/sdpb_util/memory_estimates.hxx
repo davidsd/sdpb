@@ -1,32 +1,17 @@
 #pragma once
 
 #include "Environment.hxx"
-#include "sdp_solve/Block_Diagonal_Matrix.hxx"
-#include "sdp_solve/Block_Info.hxx"
-#include "sdp_solve/SDP.hxx"
-#include "sdp_solve/SDP_Solver.hxx"
+#include "Verbosity.hxx"
 
 size_t
 get_max_shared_memory_bytes(size_t nonshared_memory_required_per_node_bytes,
                             const Environment &env, Verbosity verbosity);
 
-size_t get_matrix_size_local(const Block_Diagonal_Matrix &X);
-size_t get_A_X_size_local(const Block_Info &block_info, const SDP &sdp);
-size_t get_schur_complement_size_local(const Block_Info &block_info);
-size_t get_B_size_local(const SDP &sdp);
-size_t get_Q_size_local(const SDP &sdp);
-size_t get_SDP_size_local(const SDP &sdp);
-
 size_t bigfloat_bytes();
 
 size_t get_heap_allocated_bytes(const El::BigFloat &f);
-size_t get_heap_allocated_bytes(const Block_Diagonal_Matrix &m);
-size_t get_heap_allocated_bytes(const Block_Matrix &m);
-size_t get_heap_allocated_bytes(const Block_Vector &v);
-size_t get_heap_allocated_bytes(const El::DistMatrix<El::BigFloat> &m);
+size_t get_heap_allocated_bytes(const El::AbstractDistMatrix<El::BigFloat> &m);
 size_t get_heap_allocated_bytes(const El::Matrix<El::BigFloat> &m);
-size_t get_heap_allocated_bytes(const SDP &sdp);
-size_t get_heap_allocated_bytes(const SDP_Solver &solver);
 template <class T> size_t get_heap_allocated_bytes(const std::vector<T> &vec)
 {
   size_t res = 0;

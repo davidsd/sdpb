@@ -2,7 +2,7 @@
 #include "update_cond_numbers.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
-#include "sdpb_util/memory_estimates.hxx"
+#include "sdp_solve/memory_estimates.hxx"
 
 void scale_multiply_add(const El::BigFloat &alpha,
                         const Block_Diagonal_Matrix &A,

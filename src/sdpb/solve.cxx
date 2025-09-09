@@ -1,6 +1,6 @@
 #include "SDPB_Parameters.hxx"
+#include "sdp_solve/memory_estimates.hxx"
 #include "sdp_solve/sdp_solve.hxx"
-#include "sdpb_util/memory_estimates.hxx"
 #include "sdpb_util/ostream/pretty_print_bytes.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
 
