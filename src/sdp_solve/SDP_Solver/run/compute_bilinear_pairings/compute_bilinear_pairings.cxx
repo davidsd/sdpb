@@ -1,22 +1,22 @@
-#include "sdp_solve/Block_Diagonal_Matrix.hxx"
+#include "sdp_solve/Block_Matrix/Block_Diagonal_Matrix.hxx"
 #include "sdp_solve/Block_Info.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
 void compute_A_X_inv(
-  const Block_Info &block_info, const Block_Diagonal_Matrix &X_cholesky,
+  const Block_Info &block_info, const Paired_Block_Diagonal_Matrix &X_cholesky,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
   std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
              2> &A_X_inv);
 
 void compute_A_Y(
-  const Block_Info &block_info, const Block_Diagonal_Matrix &Y,
+  const Block_Info &block_info, const Paired_Block_Diagonal_Matrix &Y,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
   std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
              2> &A_Y);
 
 void compute_bilinear_pairings(
-  const Block_Info &block_info, const Block_Diagonal_Matrix &X_cholesky,
-  const Block_Diagonal_Matrix &Y,
+  const Block_Info &block_info, const Paired_Block_Diagonal_Matrix &X_cholesky,
+  const Paired_Block_Diagonal_Matrix &Y,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
   std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
              2> &A_X_inv,

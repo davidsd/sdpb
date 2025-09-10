@@ -1,10 +1,10 @@
-#include "sdp_solve/Block_Diagonal_Matrix.hxx"
+#include "sdp_solve/Block_Matrix/Block_Diagonal_Matrix.hxx"
 #include "sdp_solve/Block_Info.hxx"
 
 // A_X_inv = bilinear_base^T X^{-1} bilinear_base for each block
 
 void compute_A_X_inv(
-  const Block_Info &block_info, const Block_Diagonal_Matrix &X_cholesky,
+  const Block_Info &block_info, const Paired_Block_Diagonal_Matrix &X_cholesky,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
   std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
              2> &A_X_inv)

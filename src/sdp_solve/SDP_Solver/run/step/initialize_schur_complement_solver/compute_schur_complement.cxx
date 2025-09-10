@@ -1,4 +1,4 @@
-#include "sdp_solve/Block_Diagonal_Matrix.hxx"
+#include "sdp_solve/Block_Matrix/Block_Diagonal_Matrix.hxx"
 #include "sdp_solve/Block_Info.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 

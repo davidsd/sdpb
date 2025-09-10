@@ -1,7 +1,7 @@
 #pragma once
 
 #include "BigInt_Shared_Memory_Syrk_Context.hxx"
-#include "sdp_solve/Block_Matrix.hxx"
+#include "sdp_solve/Block_Matrix/Block_Matrix.hxx"
 #include "sdp_solve/Block_Info.hxx"
 #include "sdp_solve/SDP.hxx"
 #include "sdpb_util/assert.hxx"

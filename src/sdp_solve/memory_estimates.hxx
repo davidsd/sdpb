@@ -1,12 +1,13 @@
 #pragma once
 
-#include "Block_Diagonal_Matrix.hxx"
+#include "Block_Matrix/Block_Diagonal_Matrix.hxx"
 #include "Block_Info.hxx"
 #include "SDP.hxx"
 #include "SDP_Solver.hxx"
 #include "sdpb_util/memory_estimates.hxx"
 
-inline size_t get_matrix_size_local(const Block_Diagonal_Matrix &X)
+template<class Derived>
+size_t get_matrix_size_local(const Abstract_Block_Matrix<Derived> &X)
 {
   size_t X_size = 0;
   for(const auto &X_block : X.blocks)
@@ -99,17 +100,10 @@ inline size_t get_SDP_size_local(const SDP &sdp)
     SDP_size += B_block.AllocatedMemory();
   return SDP_size;
 }
-inline size_t get_heap_allocated_bytes(const Block_Diagonal_Matrix &m)
+template<class Derived>
+size_t get_heap_allocated_bytes(const Abstract_Block_Matrix<Derived> &m)
 {
   return get_heap_allocated_bytes(m.blocks);
-}
-inline size_t get_heap_allocated_bytes(const Block_Matrix &m)
-{
-  return get_heap_allocated_bytes(m.blocks);
-}
-inline size_t get_heap_allocated_bytes(const Block_Vector &v)
-{
-  return get_heap_allocated_bytes(v.blocks);
 }
 inline size_t get_heap_allocated_bytes(const SDP &sdp)
 {

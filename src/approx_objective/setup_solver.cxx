@@ -9,18 +9,18 @@
 namespace fs = std::filesystem;
 
 // TODO: Have this be part of sdp_solve.hxx
-void cholesky_decomposition(const Block_Diagonal_Matrix &A,
-                            Block_Diagonal_Matrix &L,
+void cholesky_decomposition(const Paired_Block_Diagonal_Matrix &A,
+                            Paired_Block_Diagonal_Matrix &L,
                             const Block_Info &block_info,
                             const std::string &name);
 void compute_A_X_inv(
-  const Block_Info &block_info, const Block_Diagonal_Matrix &X_cholesky,
+  const Block_Info &block_info, const Paired_Block_Diagonal_Matrix &X_cholesky,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
   std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
              2> &A_X_inv);
 
 void compute_A_Y(
-  const Block_Info &block_info, const Block_Diagonal_Matrix &Y,
+  const Block_Info &block_info, const Paired_Block_Diagonal_Matrix &Y,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
   std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
              2> &A_Y);
@@ -45,7 +45,7 @@ namespace
   // (including what's already allocated, e.g. SDP)
   size_t get_required_nonshared_memory_per_node_bytes(
     const Environment &env, const Block_Info &block_info, const SDP &sdp,
-    const Block_Diagonal_Matrix &X, const Verbosity verbosity)
+    const Paired_Block_Diagonal_Matrix &X, const Verbosity verbosity)
   {
     const auto &node_comm = env.comm_shared_mem;
 
@@ -135,7 +135,7 @@ namespace
   get_max_shared_memory_bytes(const size_t default_max_shared_memory_bytes,
                               const Environment &env,
                               const Block_Info &block_info, const SDP &sdp,
-                              const Block_Diagonal_Matrix &X,
+                              const Paired_Block_Diagonal_Matrix &X,
                               const Verbosity verbosity)
   {
     // If user sets --maxSharedMemory limit manually, we use it.
@@ -173,24 +173,25 @@ void setup_solver(const Environment &env, const Block_Info &block_info,
     }
   else
     {
-      Block_Diagonal_Matrix X(block_info.psd_matrix_block_sizes(),
-                              block_info.block_indices,
-                              block_info.num_points.size(), grid),
+      Paired_Block_Diagonal_Matrix X(block_info.psd_matrix_block_sizes(),
+                                     block_info.block_indices, grid),
         Y(X);
       for(size_t block = 0; block != block_info.block_indices.size(); ++block)
         {
           size_t block_index(block_info.block_indices.at(block));
           for(size_t psd_block(0); psd_block < 2; ++psd_block)
             {
+              const size_t psd_index = 2 * block_index + psd_block;
+              auto &X_block = X.get_block(block, psd_block);
+              auto &Y_block = Y.get_block(block, psd_block);
               // Constant constraints have empty odd parity blocks, so we do
               // not need to load them.
-              if(X.blocks.at(2 * block + psd_block).Height() != 0)
+              if(X_block.Height() != 0)
                 {
-                  const size_t psd_index(2 * block_index + psd_block);
-                  read_text_block(X.blocks.at(2 * block + psd_block),
-                                  solution_dir, "X_matrix_", psd_index);
-                  read_text_block(Y.blocks.at(2 * block + psd_block),
-                                  solution_dir, "Y_matrix_", psd_index);
+                  read_text_block(X_block, solution_dir, "X_matrix_",
+                                  psd_index);
+                  read_text_block(Y_block, solution_dir, "Y_matrix_",
+                                  psd_index);
                 }
             }
         }
@@ -199,8 +200,8 @@ void setup_solver(const Environment &env, const Block_Info &block_info,
         std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
         A_X_inv, A_Y;
 
-      Block_Diagonal_Matrix X_cholesky(X);
-      cholesky_decomposition(X, X_cholesky, block_info, "X");
+      auto X_cholesky = X;
+      cholesky_decomposition(X, X_cholesky, block_info.block_indices, "X");
       compute_A_X_inv(block_info, X_cholesky, sdp.bases_blocks, A_X_inv);
       compute_A_Y(block_info, Y, sdp.bases_blocks, A_Y);
 

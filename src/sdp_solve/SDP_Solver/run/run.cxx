@@ -11,11 +11,6 @@
 
 namespace fs = std::filesystem;
 
-void cholesky_decomposition(const Block_Diagonal_Matrix &A,
-                            Block_Diagonal_Matrix &L,
-                            const Block_Info &block_info,
-                            const std::string &name);
-
 void print_header(const Verbosity &verbosity);
 void print_iteration(
   const fs::path &iterations_json_path, const int &iteration,
@@ -35,8 +30,8 @@ void compute_objectives(const SDP &sdp, const Block_Vector &x,
                         El::BigFloat &duality_gap, Timers &timers);
 
 void compute_bilinear_pairings(
-  const Block_Info &block_info, const Block_Diagonal_Matrix &X_cholesky,
-  const Block_Diagonal_Matrix &Y,
+  const Block_Info &block_info, const Paired_Block_Diagonal_Matrix &X_cholesky,
+  const Paired_Block_Diagonal_Matrix &Y,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
   std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
              2> &A_X_inv,
@@ -63,7 +58,7 @@ void compute_dual_residues_and_error(
 
 void compute_primal_residues_and_error_P_Ax_X(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &x,
-  const Block_Diagonal_Matrix &X, Block_Diagonal_Matrix &primal_residues,
+  const Paired_Block_Diagonal_Matrix &X, Paired_Block_Diagonal_Matrix &primal_residues,
   El::BigFloat &primal_error_P, Timers &timers);
 
 void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
@@ -202,7 +197,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
 
   El::BigFloat primal_step_length(0), dual_step_length(0);
 
-  Block_Diagonal_Matrix X_cholesky(X), Y_cholesky(X);
+  auto X_cholesky(X), Y_cholesky(X);
   if(verbosity >= Verbosity::debug)
     {
       print_allocation_message_per_node(env, "X_cholesky",
@@ -383,8 +378,8 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
       {
         Scoped_Timer cholesky_decomposition_timer(timers,
                                                   "choleskyDecomposition");
-        cholesky_decomposition(X, X_cholesky, block_info, "X");
-        cholesky_decomposition(Y, Y_cholesky, block_info, "Y");
+        cholesky_decomposition(X, X_cholesky, block_info.block_indices, "X");
+        cholesky_decomposition(Y, Y_cholesky, block_info.block_indices, "Y");
       }
 
       compute_bilinear_pairings(block_info, X_cholesky, Y, sdp.bases_blocks,

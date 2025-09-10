@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "Block_Diagonal_Matrix.hxx"
+#include "Block_Matrix/Block_Diagonal_Matrix.hxx"
 #include "SDP.hxx"
 #include "SDP_Solver_Terminate_Reason.hxx"
 
@@ -27,16 +27,16 @@ public:
   // a Vector of length P = sdp.primalObjective.size()
   Block_Vector x;
 
-  // a Block_Diagonal_Matrix with block sizes given by
+  // a Paired_Block_Diagonal_Matrix with block sizes given by
   // sdp.psdMatrixBlockDims()
-  Block_Diagonal_Matrix X;
+  Paired_Block_Diagonal_Matrix X;
 
   // a Vector of length N = sdp.dualObjective.size()
   // Duplicated among all blocks.
   Block_Vector y;
 
-  // a Block_Diagonal_Matrix with the same structure as X
-  Block_Diagonal_Matrix Y;
+  // a Paired_Block_Diagonal_Matrix with the same structure as X
+  Paired_Block_Diagonal_Matrix Y;
 
   /********************************************/
   // Solver status
@@ -50,12 +50,12 @@ public:
     duality_gap;                 // normalized difference of objectives
 
   // Discrepancy in the primal equality constraints, a
-  // Block_Diagonal_Matrix with the same structure as X, called 'P' in
+  // Paired_Block_Diagonal_Matrix with the same structure as X, called 'P' in
   // the manual:
   //
   //   PrimalResidues = \sum_p A_p x_p - X
   //
-  Block_Diagonal_Matrix primal_residues;
+  Paired_Block_Diagonal_Matrix primal_residues;
 
   // primal_error is max of both primal_residues and p=(b - B^T x)
   El::BigFloat primal_error_P, primal_error_p; // |P| and |p|
@@ -91,12 +91,13 @@ public:
       const std::filesystem::path &iterations_json_path, Timers &timers,
       El::Matrix<int32_t> &block_timings_ms);
 
-  void step(const Environment &env,
-    const Solver_Parameters &parameters,const Verbosity &verbosity, const std::size_t &total_psd_rows,
+  void step(
+    const Environment &env, const Solver_Parameters &parameters,
+    const Verbosity &verbosity, const std::size_t &total_psd_rows,
     const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
     const SDP &sdp, const El::Grid &grid,
-    const Block_Diagonal_Matrix &X_cholesky,
-    const Block_Diagonal_Matrix &Y_cholesky,
+    const Paired_Block_Diagonal_Matrix &X_cholesky,
+    const Paired_Block_Diagonal_Matrix &Y_cholesky,
     const std::array<
       std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
       &A_X_inv,

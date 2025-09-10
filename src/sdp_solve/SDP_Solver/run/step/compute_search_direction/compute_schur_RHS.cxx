@@ -20,8 +20,7 @@
 
 void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
                        const Block_Vector &dual_residues,
-                       const Block_Diagonal_Matrix &Z,
-                       Block_Vector &dx)
+                       const Paired_Block_Diagonal_Matrix &Z, Block_Vector &dx)
 {
   auto dual_residues_block(dual_residues.blocks.begin());
   auto dx_block(dx.blocks.begin());

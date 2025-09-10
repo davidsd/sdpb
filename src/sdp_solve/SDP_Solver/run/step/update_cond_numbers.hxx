@@ -16,8 +16,8 @@ inline void
 update_cond_numbers(const El::DistMatrix<El::BigFloat> &Q,
                     const Block_Info &block_info,
                     const Block_Diagonal_Matrix &schur_complement_cholesky,
-                    const Block_Diagonal_Matrix &X_cholesky,
-                    const Block_Diagonal_Matrix &Y_cholesky, Timers &timers,
+                    const Paired_Block_Diagonal_Matrix &X_cholesky,
+                    const Paired_Block_Diagonal_Matrix &Y_cholesky, Timers &timers,
                     // Output variables:
                     El::BigFloat &Q_cond_number,
                     El::BigFloat &max_block_cond_number,
@@ -60,11 +60,10 @@ update_cond_numbers(const El::DistMatrix<El::BigFloat> &Q,
       for(const size_t parity : {0, 1})
         {
           const auto X_index = 2 * block_index + parity;
-          const auto local_X_index = 2 * i + parity;
           X_cholesky_cond.at(X_index)
-            = cholesky_condition_number(X_cholesky.blocks.at(local_X_index));
+            = cholesky_condition_number(X_cholesky.get_block(i, parity));
           Y_cholesky_cond.at(X_index)
-            = cholesky_condition_number(Y_cholesky.blocks.at(local_X_index));
+            = cholesky_condition_number(Y_cholesky.get_block(i, parity));
         }
     }
 

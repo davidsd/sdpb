@@ -1,15 +1,13 @@
 #include "sdp_solve/SDP.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
-El::BigFloat dot(const Block_Vector &a, const Block_Vector &b);
-
 void compute_objectives(const SDP &sdp, const Block_Vector &x,
                         const Block_Vector &y, El::BigFloat &primal_objective,
                         El::BigFloat &dual_objective,
                         El::BigFloat &duality_gap, Timers &timers)
 {
   Scoped_Timer objectives_timer(timers, "objectives");
-  primal_objective = sdp.objective_const + dot(sdp.primal_objective_c, x);
+  primal_objective = sdp.objective_const + dotu(sdp.primal_objective_c, x);
   // dual_objective_b is duplicated amongst the processors.  y is
   // duplicated amongst the blocks, but it is possible for some
   // processors to have no blocks.  In principle, we only need to

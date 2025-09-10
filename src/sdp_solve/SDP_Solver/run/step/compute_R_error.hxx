@@ -1,12 +1,14 @@
 #pragma once
 
-#include "sdp_solve/Block_Diagonal_Matrix.hxx"
+#include "sdp_solve/Block_Matrix/Block_Diagonal_Matrix.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
 // R = mu * I - XY
 // R_error = maxAbs(R)
-[[nodiscard]] inline El::BigFloat
-compute_R_error(const El::BigFloat &mu, const Block_Diagonal_Matrix &minus_XY,
+template <class Derived>
+[[nodiscard]] El::BigFloat
+compute_R_error(const El::BigFloat &mu,
+                const Abstract_Block_Diagonal_Matrix<Derived> &minus_XY,
                 Timers &timers)
 {
   Scoped_Timer R_error_timer(timers, "R_error");
