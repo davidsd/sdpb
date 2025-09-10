@@ -1,12 +1,13 @@
+#pragma once
+
 #include "sdp_solve/SDP_Solver.hxx"
 #include "sdp_solve/read_text_block.hxx"
 
-namespace fs = std::filesystem;
 
-bool load_text_checkpoint(const fs::path &checkpoint_directory,
-                          const std::vector<size_t> &block_indices,
-                          const Verbosity &verbosity, SDP_Solver &solver)
-{
+inline bool load_text_checkpoint(const std::filesystem::path &checkpoint_directory,
+  const std::vector<size_t> &block_indices,
+  const Verbosity &verbosity, SDP_Solver &solver)
+  {
   if(!exists(checkpoint_directory / "x_0.txt"))
     {
       return false;

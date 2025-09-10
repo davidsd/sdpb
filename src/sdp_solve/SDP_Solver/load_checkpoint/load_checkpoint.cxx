@@ -1,14 +1,18 @@
+#include "load_binary_checkpoint.hxx"
+#include "load_text_checkpoint.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
 #include "sdpb_util/assert.hxx"
 
 namespace fs = std::filesystem;
 
-bool load_binary_checkpoint(const fs::path &checkpoint_directory,
-                            const Verbosity &verbosity, SDP_Solver &solver);
-
-bool load_text_checkpoint(const fs::path &checkpoint_directory,
-                          const std::vector<size_t> &block_indices,
-                          const Verbosity &verbosity, SDP_Solver &solver);
+void load_local_binary_data(SDP_Solver &solver,
+                            std::ifstream &checkpoint_stream)
+{
+  read_local_binary_blocks(solver.x, checkpoint_stream);
+  read_local_binary_blocks(solver.X, checkpoint_stream);
+  read_local_binary_blocks(solver.y, checkpoint_stream);
+  read_local_binary_blocks(solver.Y, checkpoint_stream);
+}
 
 bool SDP_Solver::load_checkpoint(const fs::path &checkpoint_directory,
                                  const Block_Info &block_info,

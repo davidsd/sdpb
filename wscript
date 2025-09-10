@@ -60,8 +60,6 @@ def build(bld):
                          'src/sdp_solve/SDP/set_bases_blocks.cxx',
                          'src/sdp_solve/SDP_Solver/save_checkpoint.cxx',
                          'src/sdp_solve/SDP_Solver/load_checkpoint/load_checkpoint.cxx',
-                         'src/sdp_solve/SDP_Solver/load_checkpoint/load_binary_checkpoint.cxx',
-                         'src/sdp_solve/SDP_Solver/load_checkpoint/load_text_checkpoint.cxx',
                          'src/sdp_solve/SDP_Solver/SDP_Solver.cxx',
                          'src/sdp_solve/SDP_Solver/run/run.cxx',
                          'src/sdp_solve/SDP_Solver/run/constraint_matrix_weighted_sum.cxx',
