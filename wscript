@@ -101,6 +101,29 @@ def build(bld):
               includes=default_includes,
               use=use_packages + ['pmp2sdp_lib'])
 
+    sdpa_solve_sources = ['src/sdpa_solve/SDP.cxx',
+                          'src/sdpa_solve/Block_Info.cxx',
+                          'src/sdpa_solve/parse_sdpa/parse_sdpa.cxx',
+                          'src/sdpa_solve/SDP_Solver/save_checkpoint.cxx',
+                          'src/sdpa_solve/SDP_Solver/run/print_header.cxx',
+                          'src/sdpa_solve/SDP_Solver/run/compute_dual_residues_and_error.cxx',
+                          'src/sdpa_solve/SDP_Solver/run/step/compute_S.cxx',
+                          'src/sdpa_solve/SDP_Solver/run/step/compute_search_direction.cxx',
+                          'src/sdpa_solve/SDP_Solver/run/step/step.cxx',
+                          'src/sdpa_solve/SDP_Solver/run/run.cxx',
+                          'src/sdpa_solve/SDP_Solver/run/compute_primal_residues_and_error.cxx',
+                          'src/sdpa_solve/SDP_Solver/run/print_iteration.cxx',
+                          'src/sdpa_solve/SDP_Solver/run/compute_objectives.cxx',
+                          'src/sdpa_solve/SDP_Solver/load_checkpoint/load_checkpoint.cxx',
+                          'src/sdpa_solve/SDP_Solver/SDP_Solver.cxx']
+
+    bld.stlib(source=sdpa_solve_sources,
+              target='sdpa_solve',
+              cxxflags=default_flags,
+              defines=default_defines,
+              includes=default_includes,
+              use=use_packages + ['sdp_solve'])
+
     # SDPB executable
     bld.program(source=['src/sdpb/main.cxx',
                         'src/sdpb/solve.cxx',
