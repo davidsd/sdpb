@@ -2,6 +2,20 @@
 
 #include <El.hpp>
 
+inline void write_matrix(const El::Matrix<El::BigFloat> &matrix,
+                         const std::filesystem::path &path)
+{
+  if(path.has_parent_path())
+    std::filesystem::create_directories(path.parent_path());
+  std::ofstream stream(path);
+  El::Print(matrix,
+            std::to_string(matrix.Height()) + " "
+              + std::to_string(matrix.Width()),
+            "\n", stream);
+  stream << "\n";
+  ASSERT(stream.good(), "Error when writing to: ", path);
+}
+
 inline void
 write_distmatrix(const El::AbstractDistMatrix<El::BigFloat> &matrix,
                  const std::filesystem::path &path)
