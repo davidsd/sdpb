@@ -1,4 +1,4 @@
-#include "../Approx_Parameters.hxx"
+#include "Approx_Parameters.hxx"
 
 #include "sdp_solve/Solver_Parameters/String_To_Bytes_Translator.hxx"
 #include "sdpb_util/assert.hxx"
@@ -155,4 +155,20 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
       El::ReportException(e);
       El::mpi::Abort(El::mpi::COMM_WORLD, 1);
     }
+}
+
+std::ostream &operator<<(std::ostream &os, const Approx_Parameters &p)
+{
+  os << std::boolalpha
+     << "sdp                          = " << p.sdp_path << '\n'
+     << "newSdp                       = " << p.new_sdp_path << '\n'
+     << "procsGranularity             = " << p.proc_granularity << '\n'
+     << "maxSharedMemory              = " << p.max_shared_memory_bytes << '\n'
+     << "precision(actual)            = " << p.precision << "("
+     << mpf_get_default_prec() << ")" << '\n'
+     << "solutionDir                  = " << p.solution_dir << '\n'
+     << "writeSolverState             = " << p.write_solver_state << '\n'
+     << "verbosity                    = " << p.verbosity << '\n'
+     << '\n';
+  return os;
 }

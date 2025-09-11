@@ -71,7 +71,7 @@ SDP::SDP(
     {
       primal_objective_c.blocks.emplace_back(
         primal_objective_c_input.at(block_indices.at(block)).size(), 1, grid);
-      // TODO: copied from sdp_solve/SDP/SDP/read_primal_objective_c.cxx
+      // TODO: copied from sdp_solve/SDP/read_primal_objective_c.cxx
       auto &primal_block(primal_objective_c.blocks.back());
       const size_t local_height(primal_block.LocalHeight());
       if(primal_block.GlobalCol(0) == 0)

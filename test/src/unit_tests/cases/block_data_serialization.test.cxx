@@ -5,7 +5,7 @@
 #include "unit_tests/util/util.hxx"
 #include "pmp2sdp/Dual_Constraint_Group.hxx"
 #include "pmp2sdp/Block_File_Format.hxx"
-#include "sdp_solve/SDP/SDP/read_block_data/Block_Data_Parse_Result.hxx"
+#include "sdp_solve/SDP/read_block_data/Block_Data_Parse_Result.hxx"
 
 using Test_Util::random_bigfloat;
 using Test_Util::random_matrix;

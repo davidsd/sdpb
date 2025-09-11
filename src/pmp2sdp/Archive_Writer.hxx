@@ -4,7 +4,7 @@
 #include <archive.h>
 
 #include <filesystem>
-
+#include <iostream>
 #include <memory>
 
 struct Archive_Writer

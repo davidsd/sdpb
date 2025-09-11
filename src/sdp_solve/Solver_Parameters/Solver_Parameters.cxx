@@ -1,6 +1,7 @@
 #include "../Solver_Parameters.hxx"
 
 #include "String_To_Bytes_Translator.hxx"
+#include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
 #include <boost/program_options.hpp>
 
@@ -154,4 +155,69 @@ boost::program_options::options_description Solver_Parameters::options()
     "seconds.");
 
   return result;
+}
+
+boost::property_tree::ptree to_property_tree(const Solver_Parameters &p)
+{
+  boost::property_tree::ptree result;
+
+  result.put("maxIterations", p.max_iterations);
+  result.put("maxRuntime", p.max_runtime);
+  result.put("maxSharedMemory", p.max_shared_memory_bytes,
+             String_To_Bytes_Translator());
+  result.put("checkpointInterval", p.checkpoint_interval);
+  result.put("findPrimalFeasible", p.find_primal_feasible);
+  result.put("findDualFeasible", p.find_dual_feasible);
+  result.put("detectPrimalFeasibleJump", p.detect_primal_feasible_jump);
+  result.put("detectDualFeasibleJump", p.detect_dual_feasible_jump);
+  result.put("precision", p.precision);
+  result.put("precision_actual", mpf_get_default_prec());
+  result.put("dualityGapThreshold", p.duality_gap_threshold);
+  result.put("primalErrorThreshold", p.primal_error_threshold);
+  result.put("dualErrorThreshold", p.dual_error_threshold);
+  result.put("initialMatrixScalePrimal", p.initial_matrix_scale_primal);
+  result.put("initialMatrixScaleDual", p.initial_matrix_scale_dual);
+  result.put("feasibleCenteringParameter", p.feasible_centering_parameter);
+  result.put("infeasibleCenteringParameter", p.infeasible_centering_parameter);
+  result.put("stepLengthReduction", p.step_length_reduction);
+  result.put("maxComplementarity", p.max_complementarity);
+  result.put("initialCheckpointDir", p.checkpoint_in.string());
+  result.put("checkpointDir", p.checkpoint_out.string());
+
+  return result;
+}
+
+std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
+{
+  os << std::boolalpha << "maxIterations                = " << p.max_iterations
+     << '\n'
+     << "maxRuntime                   = " << p.max_runtime << '\n'
+     << "checkpointInterval           = " << p.checkpoint_interval << '\n'
+     << "maxSharedMemory              = "
+     << pretty_print_bytes(p.max_shared_memory_bytes, true) << '\n'
+     << "findPrimalFeasible           = " << p.find_primal_feasible << '\n'
+     << "findDualFeasible             = " << p.find_dual_feasible << '\n'
+     << "detectPrimalFeasibleJump     = " << p.detect_primal_feasible_jump
+     << '\n'
+     << "detectDualFeasibleJump       = " << p.detect_dual_feasible_jump
+     << '\n'
+     << "precision(actual)            = " << p.precision << "("
+     << mpf_get_default_prec() << ")" << '\n'
+
+     << "dualityGapThreshold          = " << p.duality_gap_threshold << '\n'
+     << "primalErrorThreshold         = " << p.primal_error_threshold << '\n'
+     << "dualErrorThreshold           = " << p.dual_error_threshold << '\n'
+     << "initialMatrixScalePrimal     = " << p.initial_matrix_scale_primal
+     << '\n'
+     << "initialMatrixScaleDual       = " << p.initial_matrix_scale_dual
+     << '\n'
+     << "feasibleCenteringParameter   = " << p.feasible_centering_parameter
+     << '\n'
+     << "infeasibleCenteringParameter = " << p.infeasible_centering_parameter
+     << '\n'
+     << "stepLengthReduction          = " << p.step_length_reduction << '\n'
+     << "maxComplementarity           = " << p.max_complementarity << '\n'
+     << "initialCheckpointDir         = " << p.checkpoint_in << '\n'
+     << "checkpointDir                = " << p.checkpoint_out << '\n';
+  return os;
 }
