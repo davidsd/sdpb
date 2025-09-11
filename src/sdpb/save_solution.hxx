@@ -1,27 +1,40 @@
+#pragma once
+
+#include "SDPB_Parameters.hxx"
 #include "pmp/max_normalization_index.hxx"
 #include "sdp_solve/sdp_solve.hxx"
+#include "sdpa_solve/sdpa_solve.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
 #include "sdpb_util/write_matrix.hxx"
 
-namespace fs = std::filesystem;
-
-void write_block_vector(const Block_Vector &v,
-                        const std::vector<size_t> &block_indices,
-                        const std::filesystem::path &prefix)
+inline void write_block_vector(const Block_Vector &v,
+                               const std::vector<size_t> &block_indices,
+                               const std::filesystem::path &prefix)
 {
   for(size_t b = 0; b < v.blocks.size(); ++b)
     {
       auto &block = v.blocks[b];
       const auto block_index = block_indices.at(b);
-      const fs::path path
-        = prefix.string() + El::BuildString(block_index, ".txt");
+      const auto path = prefix.string() + El::BuildString(block_index, ".txt");
       write_distmatrix(block, path);
     }
 }
 
-void write_paired_block_matrix(const Paired_Block_Diagonal_Matrix &m,
+inline void write_block_matrix(const Block_Diagonal_Matrix &m,
                                const std::vector<size_t> &block_indices,
                                const std::filesystem::path &prefix)
+{
+  for(size_t b = 0; b < m.blocks.size(); ++b)
+    {
+      auto &block = m.blocks[b];
+      const auto block_index = block_indices.at(b);
+      const auto path = prefix.string() + El::BuildString(block_index, ".txt");
+      write_distmatrix(block, path);
+    }
+}
+inline void write_paired_block_matrix(const Paired_Block_Diagonal_Matrix &m,
+                                      const std::vector<size_t> &block_indices,
+                                      const std::filesystem::path &prefix)
 {
   for(size_t b = 0; b < m.blocks.size(); ++b)
     {
@@ -30,16 +43,27 @@ void write_paired_block_matrix(const Paired_Block_Diagonal_Matrix &m,
         continue;
       const auto block_index = block_indices.at(b / 2);
       const auto parity = b % 2;
-      const fs::path path
+      const auto path
         = prefix.string() + El::BuildString(2 * block_index + parity, ".txt");
       write_distmatrix(block, path);
     }
 }
 
-void write_out_txt(const SDP_Solver &solver,
+inline El::BigFloat primal_error(const SDP_Solver &solver)
+{
+  return solver.primal_error();
+}
+inline El::BigFloat primal_error(const Sdpb::Sdpa::SDP_Solver &solver)
+{
+  return solver.primal_error;
+}
+
+template <class TSolver>
+void write_out_txt(const TSolver &solver,
                    const SDP_Solver_Terminate_Reason &terminate_reason,
                    const int64_t &solver_runtime,
-                   const fs::path &out_directory, const Verbosity &verbosity)
+                   const std::filesystem::path &out_directory,
+                   const Verbosity &verbosity)
 {
   // Internally, El::Print() sync's everything to the root core and
   // outputs it from there.  So do not actually open the file on
@@ -52,15 +76,15 @@ void write_out_txt(const SDP_Solver &solver,
         {
           std::cout << "Saving solution to      : " << out_directory << '\n';
         }
-      fs::create_directories(out_directory);
-      const fs::path output_path(out_directory / "out.txt");
+      create_directories(out_directory);
+      const auto output_path = out_directory / "out.txt";
       out_stream.open(output_path);
       set_stream_precision(out_stream);
       out_stream << "terminateReason = \"" << terminate_reason << "\";\n"
                  << "primalObjective = " << solver.primal_objective << ";\n"
                  << "dualObjective   = " << solver.dual_objective << ";\n"
                  << "dualityGap      = " << solver.duality_gap << ";\n"
-                 << "primalError     = " << solver.primal_error() << ";\n"
+                 << "primalError     = " << primal_error(solver) << ";\n"
                  << "dualError       = " << solver.dual_error << ";\n"
                  << "Solver runtime  = " << solver_runtime << ";\n";
       ASSERT(out_stream.good(), "Error when writing to: ", output_path);
@@ -68,8 +92,9 @@ void write_out_txt(const SDP_Solver &solver,
 }
 
 [[nodiscard]]
-El::Matrix<El::BigFloat> get_z(const El::Matrix<El::BigFloat> &y,
-                               const std::vector<El::BigFloat> &normalization)
+inline El::Matrix<El::BigFloat>
+get_z(const El::Matrix<El::BigFloat> &y,
+      const std::vector<El::BigFloat> &normalization)
 {
   El::Matrix<El::BigFloat> z(y.Height() + 1, y.Width());
   ASSERT_EQUAL(normalization.size(), y.Height() + 1);
@@ -102,21 +127,22 @@ El::Matrix<El::BigFloat> get_z(const El::Matrix<El::BigFloat> &y,
   return z;
 }
 
-void save_solution(
-  const SDP_Solver &solver,
-  const SDP_Solver_Terminate_Reason &terminate_reason,
-  const int64_t &solver_runtime, const fs::path &out_directory,
-  const Write_Solution &write_solution,
-  const std::vector<size_t> &block_indices,
-  const std::optional<std::vector<El::BigFloat>> &normalization,
-  const Verbosity &verbosity)
+inline void
+save_solution(const SDP_Solver &solver, const Block_Info &block_info,
+              const SDP &sdp, const SDPB_Parameters &parameters,
+              const SDP_Solver_Terminate_Reason &terminate_reason,
+              const int64_t &solver_runtime)
 {
+  const auto &out_directory = parameters.out_directory;
+  const auto &write_solution = parameters.write_solution;
+  const auto &block_indices = block_info.block_indices;
+
   write_out_txt(solver, terminate_reason, solver_runtime, out_directory,
-                verbosity);
+                parameters.verbosity);
   if(write_solution.vector_y || write_solution.vector_z)
     {
-      const fs::path y_path(out_directory / "y.txt");
-      const fs::path z_path(out_directory / "z.txt");
+      const auto y_path = out_directory / "y.txt";
+      const auto z_path = out_directory / "z.txt";
       // y is duplicated among blocks, so only need to print out copy
       // from the first block of rank 0.
       const auto &y_dist = solver.y.blocks.at(0);
@@ -137,8 +163,8 @@ void save_solution(
                 }
               if(write_solution.vector_z)
                 {
-                  ASSERT(normalization.has_value());
-                  const auto z = get_z(y, normalization.value());
+                  ASSERT(sdp.normalization.has_value());
+                  const auto z = get_z(y, sdp.normalization.value());
                   write_matrix(z, z_path);
                 }
             }
@@ -149,9 +175,9 @@ void save_solution(
           // Assertion will fail if something went completely wrong
           // and (y_dist.Root() == 0) is false for all blocks
           if(write_solution.vector_y)
-            ASSERT(fs::exists(y_path), y_path);
+            ASSERT(exists(y_path), y_path);
           if(write_solution.vector_z)
-            ASSERT(fs::exists(z_path), z_path);
+            ASSERT(exists(z_path), z_path);
         }
     }
 
@@ -163,4 +189,34 @@ void save_solution(
   if(write_solution.matrix_Y)
     write_paired_block_matrix(solver.Y, block_indices,
                               out_directory / "Y_matrix_");
+}
+
+inline void save_solution(const Sdpb::Sdpa::SDP_Solver &solver,
+                          const Sdpb::Sdpa::Block_Info &block_info,
+                          [[maybe_unused]] const Sdpb::Sdpa::SDP &sdp,
+                          const SDPB_Parameters &parameters,
+                          const SDP_Solver_Terminate_Reason &terminate_reason,
+                          const int64_t &solver_runtime)
+{
+  const auto &out_directory = parameters.out_directory;
+  const auto &write_solution = parameters.write_solution;
+  const auto &block_indices = block_info.block_indices;
+
+  write_out_txt(solver, terminate_reason, solver_runtime, out_directory,
+                parameters.verbosity);
+  if(El::mpi::Rank() == 0)
+    {
+      // TODO Use another Write_Solution type?
+      if(write_solution.vector_y)
+        PRINT_WARNING("--writeSolution=y is not available for SDPA problems");
+      if(write_solution.vector_z)
+        PRINT_WARNING("--writeSolution=z is not available for SDPA problems");
+    }
+
+  if(write_solution.vector_x)
+    write_distmatrix(solver.x, out_directory / "x.txt");
+  if(write_solution.matrix_X)
+    write_block_matrix(solver.X, block_indices, out_directory / "X_matrix_");
+  if(write_solution.matrix_Y)
+    write_block_matrix(solver.Y, block_indices, out_directory / "Y_matrix_");
 }

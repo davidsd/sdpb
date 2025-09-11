@@ -126,15 +126,12 @@ def build(bld):
 
     # SDPB executable
     bld.program(source=['src/sdpb/main.cxx',
-                        'src/sdpb/solve.cxx',
-                        'src/sdpb/write_timing.cxx',
-                        'src/sdpb/SDPB_Parameters.cxx',
-                        'src/sdpb/save_solution.cxx'],
+                        'src/sdpb/SDPB_Parameters.cxx'],
                 target='sdpb',
                 cxxflags=default_flags,
                 defines=default_defines,
                 includes=default_includes,
-                use=use_packages + ['sdp_solve']
+                use=use_packages + ['sdp_solve', 'sdpa_solve']
                 )
 
     pmp2sdp_sources = ['src/pmp2sdp/Dual_Constraint_Group/Dual_Constraint_Group.cxx',

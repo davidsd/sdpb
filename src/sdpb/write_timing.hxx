@@ -1,11 +1,14 @@
-#include "sdp_solve/sdp_solve.hxx"
+#pragma once
 
+#include "sdpb_util/Timers/Timers.hxx"
+#include "sdpb_util/assert.hxx"
+
+#include <El.hpp>
 #include <filesystem>
 
-namespace fs = std::filesystem;
-
-void write_profiling(const fs::path &checkpoint_out, const Timers &timers)
+inline void write_profiling(const std::filesystem::path &checkpoint_out, const Timers &timers)
 {
+namespace fs = std::filesystem;
   // Write profiling for each rank to ck.profiling/profiling.{rank}
   fs::path parent_dir = checkpoint_out.string() + ".profiling";
 
@@ -31,11 +34,11 @@ void write_profiling(const fs::path &checkpoint_out, const Timers &timers)
                        / ("profiling." + std::to_string(El::mpi::Rank())));
 }
 
-void write_block_timings(const fs::path &checkpoint_out,
-                         const Block_Info &block_info,
+inline void write_block_timings(const std::filesystem::path &checkpoint_out,
                          const El::Matrix<int32_t> &block_timings_ms,
                          const Verbosity verbosity)
 {
+namespace fs = std::filesystem;
   if(El::mpi::Rank() != 0)
     return;
 
@@ -44,7 +47,6 @@ void write_block_timings(const fs::path &checkpoint_out,
       El::Print(block_timings_ms, "block_timings, ms:", ", ");
       El::Output();
     }
-  ASSERT_EQUAL(block_timings_ms.Height(), block_info.dimensions.size());
   ASSERT_EQUAL(block_timings_ms.Width(), 1);
 
   fs::create_directories(checkpoint_out);
