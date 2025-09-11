@@ -28,6 +28,21 @@ void write_block_timings(const fs::path &checkpoint_out,
 
 void write_profiling(const fs::path &checkpoint_out, const Timers &timers);
 
+fs::path get_block_timings_path(const SDPB_Parameters &parameters)
+{
+  fs::path block_timings_path;
+  const auto sdp_block_timings_path = parameters.sdp_path / "block_timings";
+  const auto checkpoint_block_timings_path
+    = parameters.solver.checkpoint_in / "block_timings";
+
+  if(exists(checkpoint_block_timings_path))
+    block_timings_path = checkpoint_block_timings_path;
+
+  if(exists(sdp_block_timings_path))
+    block_timings_path = sdp_block_timings_path;
+  return block_timings_path;
+}
+
 int main(int argc, char **argv)
 {
   Environment env(argc, argv);
@@ -76,15 +91,15 @@ int main(int argc, char **argv)
           El::mpi::Barrier(env.comm_shared_mem);
         }
 
-      Block_Info block_info(env, parameters.sdp_path,
-                            parameters.solver.checkpoint_in,
-                            parameters.proc_granularity, parameters.verbosity);
+      const auto block_timings_path = get_block_timings_path(parameters);
+      auto block_info = Block_Info::create(
+        env, parameters.sdp_path, block_timings_path,
+        parameters.proc_granularity, parameters.verbosity);
       // Only generate a block_timings file if
       // 1) We are running in parallel
       // 2) We did not load a block_timings file
       // 3) We are not going to load a checkpoint.
-      if(El::mpi::Size(El::mpi::COMM_WORLD) > 1
-         && block_info.block_timings_filename.empty()
+      if(El::mpi::Size(El::mpi::COMM_WORLD) > 1 && block_timings_path.empty()
          && !exists(parameters.solver.checkpoint_in / "checkpoint.0"))
         {
           if(parameters.verbosity >= Verbosity::regular
@@ -138,9 +153,9 @@ int main(int argc, char **argv)
             }
 
           El::mpi::Barrier(El::mpi::COMM_WORLD);
-          Block_Info new_info(env, parameters.sdp_path, block_timings_ms,
-                              parameters.proc_granularity,
-                              parameters.verbosity);
+          auto new_info = Block_Info::create(
+            env, parameters.sdp_path, block_timings_ms,
+            parameters.proc_granularity, parameters.verbosity);
           swap(block_info, new_info);
 
           auto elapsed_seconds
@@ -149,14 +164,14 @@ int main(int argc, char **argv)
                 .count();
           parameters.solver.max_runtime -= elapsed_seconds;
         }
-      else if(!block_info.block_timings_filename.empty()
-              && block_info.block_timings_filename
+      else if(!block_timings_path.empty()
+              && block_timings_path
                    != (parameters.solver.checkpoint_out / "block_timings"))
         {
           if(El::mpi::Rank() == 0)
             {
               create_directories(parameters.solver.checkpoint_out);
-              copy_file(block_info.block_timings_filename,
+              copy_file(block_timings_path,
                         parameters.solver.checkpoint_out / "block_timings",
                         fs::copy_options::overwrite_existing);
             }

@@ -56,8 +56,9 @@ int main(int argc, char **argv)
         }
 
       Environment::set_precision(parameters.precision);
-      Block_Info block_info(env, parameters.sdp_path, parameters.solution_dir,
-                            parameters.proc_granularity, parameters.verbosity);
+      const auto block_info = Block_Info::create(
+        env, parameters.sdp_path, parameters.solution_dir,
+        parameters.proc_granularity, parameters.verbosity);
 
       El::Grid grid(block_info.mpi_comm.value);
       // TODO use timers also below

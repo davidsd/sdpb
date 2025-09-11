@@ -21,9 +21,11 @@
 // the interior point algorithm.  Each structure is allocated when an
 // SDPSolver is initialized, and reused in each iteration.
 //
-class SDP_Solver
+struct SDP_Solver
 {
-public:
+  using Block_Info_Type = Block_Info;
+  using SDP_Type = SDP;
+
   // a Vector of length P = sdp.primalObjective.size()
   Block_Vector x;
 
@@ -33,6 +35,7 @@ public:
 
   // a Vector of length N = sdp.dualObjective.size()
   // Duplicated among all blocks.
+  // TODO replace with El::DistMatrix<El::BigFloat, El::STAR, El::STAR>
   Block_Vector y;
 
   // a Paired_Block_Diagonal_Matrix with the same structure as X
