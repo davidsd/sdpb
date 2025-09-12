@@ -1,4 +1,4 @@
-#include "../Block_Diagonal_Matrix.hxx"
+#include "Block_Diagonal_Matrix.hxx"
 
 std::ostream &operator<<(std::ostream &os, const Block_Diagonal_Matrix &A)
 {

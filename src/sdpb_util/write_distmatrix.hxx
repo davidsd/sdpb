@@ -2,8 +2,9 @@
 
 #include <El.hpp>
 
-inline void write_distmatrix(const El::DistMatrix<El::BigFloat> &matrix,
-                             const std::filesystem::path &path)
+inline void
+write_distmatrix(const El::AbstractDistMatrix<El::BigFloat> &matrix,
+                 const std::filesystem::path &path)
 {
   std::ofstream stream;
   if(matrix.DistRank() == matrix.Root())

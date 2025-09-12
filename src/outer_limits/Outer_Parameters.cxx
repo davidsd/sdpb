@@ -1,4 +1,4 @@
-#include "../Outer_Parameters.hxx"
+#include "Outer_Parameters.hxx"
 
 #include "sdpb_util/assert.hxx"
 
@@ -147,4 +147,33 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
       El::ReportException(e);
       El::mpi::Abort(El::mpi::COMM_WORLD, 1);
     }
+}
+
+boost::property_tree::ptree to_property_tree(const Outer_Parameters &p)
+{
+  boost::property_tree::ptree result(to_property_tree(p.solver));
+
+  result.put("functions", p.functions_path.string());
+  result.put("points", p.points_path.string());
+  result.put("out", p.output_path.string());
+  result.put("dualityGapReduction", p.duality_gap_reduction);
+  result.put("meshThreshold", p.mesh_threshold);
+  result.put("writeSolution", p.write_solution);
+  result.put("verbosity", static_cast<int>(p.verbosity));
+
+  return result;
+}
+
+std::ostream &operator<<(std::ostream &os, const Outer_Parameters &p)
+{
+  os << "functions file  : " << p.functions_path << '\n'
+     << "out directory   : " << p.output_path << '\n'
+     << "\nParameters:\n"
+     << "dualityGapReduction          = " << p.duality_gap_reduction << '\n'
+     << "meshThreshold                = " << p.mesh_threshold << '\n'
+     << p.solver
+     << "writeSolution                = " << p.write_solution << '\n'
+     << "verbosity                    = " << static_cast<int>(p.verbosity)
+     << '\n';
+  return os;
 }

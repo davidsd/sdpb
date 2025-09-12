@@ -38,14 +38,6 @@ struct Damped_Rational
   }
 };
 
-inline void swap(Damped_Rational &a, Damped_Rational &b)
-{
-  using namespace std;
-  swap(a.constant, b.constant);
-  swap(a.base, b.base);
-  swap(a.poles, b.poles);
-}
-
 inline std::ostream &
 operator<<(std::ostream &os, const Damped_Rational &damped)
 {
