@@ -27,15 +27,6 @@ public:
   // Rename block_info.block_indices to local_block_indices to make it clearer
 
   Block_Info() = delete;
-
-  // Allow move
-  Block_Info(Block_Info &&other) noexcept = default;
-  Block_Info &operator=(Block_Info &&other) noexcept = default;
-  // Prohibit copy
-  Block_Info(const Block_Info &) = delete;
-  Block_Info &operator=(const Block_Info &) = delete;
-  ~Block_Info() = default;
-
   Block_Info(const Environment &env, const std::filesystem::path &sdp_path,
              const std::filesystem::path &checkpoint_in,
              const size_t &proc_granularity, const Verbosity &verbosity);
@@ -127,3 +118,14 @@ public:
     return num_points.at(index);
   }
 };
+
+inline void swap(Block_Info &a, Block_Info &b) noexcept
+{
+  using std::swap;
+  swap(a.block_timings_filename, b.block_timings_filename);
+  swap(a.dimensions, b.dimensions);
+  swap(a.num_points, b.num_points);
+  swap(a.block_indices, b.block_indices);
+  swap(a.mpi_group, b.mpi_group);
+  swap(a.mpi_comm, b.mpi_comm);
+}
