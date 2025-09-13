@@ -17,10 +17,8 @@ struct MPI_Group_Wrapper
   }
 };
 
-namespace std
+inline void swap(MPI_Group_Wrapper &a, MPI_Group_Wrapper &b) noexcept
 {
-  inline void swap(MPI_Group_Wrapper &a, MPI_Group_Wrapper &b) noexcept
-  {
-    swap(a.value, b.value);
-  }
+  using std::swap;
+  swap(a.value, b.value);
 }

@@ -73,8 +73,9 @@ public:
           {
             if(!element_state.inside)
               {
+                using std::swap;
                 value.emplace_back();
-                std::swap(value.back(), element_state.value);
+                swap(value.back(), element_state.value);
               }
           }
         else
@@ -102,8 +103,9 @@ public:
     element_state.json_string(s);
     if(!element_state.inside)
       {
+        using std::swap;
         value.emplace_back();
-        std::swap(value.back(), element_state.value);
+        swap(value.back(), element_state.value);
       }
   }
 
@@ -127,8 +129,9 @@ public:
         element_state.json_end_array();
         if(!element_state.inside)
           {
+            using std::swap;
             value.emplace_back();
-            std::swap(value.back(), element_state.value);
+            swap(value.back(), element_state.value);
           }
       }
     else
@@ -144,8 +147,9 @@ public:
     element_state.json_end_object();
     if(!element_state.inside)
       {
+        using std::swap;
         value.emplace_back();
-        std::swap(value.back(), element_state.value);
+        swap(value.back(), element_state.value);
       }
   }
 };
