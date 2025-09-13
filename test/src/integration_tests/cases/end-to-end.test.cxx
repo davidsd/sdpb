@@ -16,6 +16,16 @@ namespace fs = std::filesystem;
 
 namespace
 {
+  // TODO deduplicate with sdpb/main.cxx
+  bool is_sdpa_file(fs::path sdp_path)
+  {
+    if(sdp_path.extension() == ".gz")
+      sdp_path.replace_extension();
+    if(sdp_path.extension() == ".dat" || sdp_path.extension() == ".dat-s")
+      return true;
+    return false;
+  }
+
   void end_to_end_test(const std::string &name, int num_procs, int precision,
                        const std::string &default_sdpb_args = "",
                        const Named_Args_Map &pmp2sdp_args = {},
@@ -70,27 +80,38 @@ namespace
         Test_Case_Runner runner(runner_name);
         const auto &output_dir = runner.output_dir;
 
-        bool zip = pmp2sdp_args.find("--zip") != pmp2sdp_args.end();
-        auto sdp_path = (output_dir / (zip ? "sdp.zip" : "sdp")).string();
-        // pmp2sdp
-        {
-          INFO("run pmp2sdp");
-          auto args = pmp2sdp_args;
+        fs::path sdp_path;
+        const bool is_sdpa = is_sdpa_file(pmp_path);
+        if(is_sdpa)
+          {
+            // No need to run pmp2sdp, sdpb works directly with SDPA files
+            sdp_path = pmp_path;
+          }
+        else
+          {
+            bool zip = pmp2sdp_args.find("--zip") != pmp2sdp_args.end();
+            sdp_path = (output_dir / (zip ? "sdp.zip" : "sdp")).string();
+            // pmp2sdp
+            {
+              INFO("run pmp2sdp");
+              auto args = pmp2sdp_args;
 
-          args.insert({{"--input", pmp_path.string()},
-                       {"--output", sdp_path},
-                       {"--precision", std::to_string(precision)}});
+              args.insert({{"--input", pmp_path.string()},
+                           {"--output", sdp_path},
+                           {"--precision", std::to_string(precision)}});
 
-          runner.create_nested("pmp2sdp").mpi_run({"build/pmp2sdp"}, args,
-                                                  num_procs);
+              runner.create_nested("pmp2sdp").mpi_run({"build/pmp2sdp"}, args,
+                                                      num_procs);
 
-          // pmp2sdp runs with --precision=<precision>
-          // We check test output up to lower precision=<diff_precision>
-          // in order to neglect unimportant rounding errors
-          auto sdp_orig = data_output_dir / "sdp";
-          diff_sdp(sdp_path, sdp_orig, precision, diff_precision,
-                   runner.create_nested("sdp.diff"), check_sdp_normalization);
-        }
+              // pmp2sdp runs with --precision=<precision>
+              // We check test output up to lower precision=<diff_precision>
+              // in order to neglect unimportant rounding errors
+              auto sdp_orig = data_output_dir / "sdp";
+              diff_sdp(sdp_path, sdp_orig, precision, diff_precision,
+                       runner.create_nested("sdp.diff"),
+                       check_sdp_normalization);
+            }
+          }
 
         // sdpb
         {
@@ -107,11 +128,14 @@ namespace
                 {"build/sdpb", default_sdpb_args}, args, num_procs);
             }
 
-          // Read c,B,y and check that (c - B.y) equals to the vector written to c_minus_By/c_minus_By.json
-          check_c_minus_By(sdp_path, output_dir / "out", precision,
-                           diff_precision,
-                           runner.create_nested("check_c_minus_By"));
-
+          // SDPA does not have (c - B.y)
+          if(!is_sdpa)
+            {
+              // Read c,B,y and check that (c - B.y) equals to the vector written to c_minus_By/c_minus_By.json
+              check_c_minus_By(sdp_path, output_dir / "out", precision,
+                               diff_precision,
+                               runner.create_nested("check_c_minus_By"));
+            }
           // SDPB runs with --precision=<precision>
           // We check test output up to lower precision=<sdpb_output_diff_precision>
           // in order to neglect unimportant rounding errors
@@ -319,6 +343,39 @@ TEST_CASE("end-to-end_tests")
 
       end_to_end_test(name, num_procs, precision, default_sdpb_args, {},
                       out_txt_keys);
+    }
+  }
+
+  SECTION("sdpa")
+  {
+    INFO("SDPA examples from sdpa-gmp repository");
+    INFO("https://github.com/nakatamaho/sdpa-gmp");
+
+    std::string name = "sdpa";
+    // Default parameters used in sdpa-gmp
+    std::string default_sdpb_args
+      = "--maxIterations 200 --dualityGapThreshold 1.0e-30 "
+        "--initialMatrixScalePrimal 1.0e+4 --initialMatrixScaleDual 1.0e+4 "
+        "--maxComplementarity 4.0e+8 "
+        "--feasibleCenteringParameter 0.3 stepLengthReduction 0.9 "
+        "--primalErrorThreshold 1.0e-30 --dualErrorThreshold 1.0e-30 ";
+    precision = 200;
+
+    SECTION("example1")
+    {
+      name += "/example1";
+      INFO("Optimal objective value: -41.9");
+      // NB: we ignore matrix X since it consists of noisy values ~1e-30
+      default_sdpb_args += " --writeSolution x,Y";
+      end_to_end_test(name, num_procs, precision, default_sdpb_args);
+    }
+    SECTION("example2")
+    {
+      name += "/example2";
+      INFO("Optimal objective value: 3.2062692914757308e+01");
+      // NB: we ignore matrices X and Y since they contain noisy values ~1e-30
+      default_sdpb_args += " --writeSolution x";
+      end_to_end_test(name, num_procs, precision, default_sdpb_args);
     }
   }
 }
