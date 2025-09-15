@@ -1,6 +1,9 @@
 #pragma once
 
+#include "assert.hxx"
+
 #include <El.hpp>
+#include <filesystem>
 
 template <class T>
 void write_matrix(const El::Matrix<T> &matrix,
