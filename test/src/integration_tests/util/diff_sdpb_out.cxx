@@ -31,6 +31,7 @@ namespace
       height = width = 0;
       is >> height;
       is >> width;
+      REQUIRE(is.good());
       REQUIRE(height > 0);
       REQUIRE(width > 0);
       elements.reserve(height * width);
