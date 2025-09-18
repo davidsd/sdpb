@@ -375,7 +375,11 @@ TEST_CASE("end-to-end_tests")
       INFO("Optimal objective value: 3.2062692914757308e+01");
       // NB: we ignore matrices X and Y since they contain noisy values ~1e-30
       default_sdpb_args += " --writeSolution x";
-      end_to_end_test(name, num_procs, precision, default_sdpb_args);
+      constexpr bool check_sdp_normalization = false;
+      // run_sdpb_twice = true to test checkpoint loading
+      constexpr bool run_sdpb_twice = true;
+      end_to_end_test(name, num_procs, precision, default_sdpb_args, {}, {},
+                      check_sdp_normalization, run_sdpb_twice);
     }
   }
 }
