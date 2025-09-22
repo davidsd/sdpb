@@ -153,7 +153,7 @@ namespace
             // and then memcpy them to the shared window.
             // Thus we have to write residues one by one.
             //
-            // This will happen if a block is distributed among 4+ nodes.
+            // This will happen if a block is distributed among 4+ ranks.
             // TODO: store blocks in DistMatrix<BigFloat, STAR, VR>
             // instead of default DistMatrix<BigFloat> === DistMatrix<BigFloat, MC, MR>,
             // so that each column will belong to a single rank.
