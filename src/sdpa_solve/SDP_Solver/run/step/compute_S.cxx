@@ -1,5 +1,6 @@
-#include "sdpa_solve/SDP.hxx"
+#include "sdp_solve/Block_Matrix/Block_Matrix.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
+#include "sdpa_solve/SDP.hxx"
 #include "sdpa_solve/memory_estimates.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
@@ -36,14 +37,14 @@ namespace Sdpb::Sdpa
     Block_Matrix result(P_block_heights, P_width, block_info.block_indices,
                         grid);
 
-    for(size_t p = 0; p < sdp.primal_dimension(); ++p)
+    for(size_t block = 0; block < block_info.num_blocks_local(); ++block)
       {
-        for(size_t block = 0; block < block_info.num_blocks_local(); ++block)
-          {
-            const auto global_block_index = block_info.block_indices.at(block);
-            auto block_index_string = std::to_string(global_block_index);
+        const auto global_block_index = block_info.block_indices.at(block);
+        auto block_index_string = std::to_string(global_block_index);
 
-            Scoped_Timer solve_timer(timers, "solve_" + block_index_string);
+        Scoped_Timer solve_timer(timers, "solve_" + block_index_string);
+        for(size_t p = 0; p < sdp.primal_dimension(); ++p)
+          {
             // Compute G_p = L_X_Inv F_p L_Y
             // start with F_p
             El::DistMatrix<El::BigFloat> G_p_block
@@ -60,7 +61,7 @@ namespace Sdpb::Sdpa
             // This would require putting all blocks into a single DistMatrix:
             // Each block of F is smth like a Block_Matrix, with F_i stacked on top of each other
             // Internally, it is stored as a single DistMatrix.
-            // The should be a getter for F_i providing a view to this DistMatrix.
+            // There should be a getter for F_i providing a view to this DistMatrix.
 
             auto &P_block = result.blocks.at(block);
             // Write all elements of G_p into the p-th column of the resulting P matrix
@@ -73,10 +74,9 @@ namespace Sdpb::Sdpa
             // TODO how does the resulting DistMatrix grid change after reshape?
             // Will the elements be evenly distributed among ranks?
             El::Reshape(vec_height, vec_width, G_p_block, vec_G_p_view);
-
-            block_timings_ms(global_block_index, 0)
-              += solve_timer.elapsed_milliseconds();
           }
+        block_timings_ms(global_block_index, 0)
+          += solve_timer.elapsed_milliseconds();
       }
     if(verbosity >= Verbosity::trace)
       {
