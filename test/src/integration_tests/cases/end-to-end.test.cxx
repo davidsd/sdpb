@@ -186,6 +186,43 @@ TEST_CASE("end-to-end_tests")
   int num_procs = 6;
   int precision = 768;
 
+  SECTION("sdpa")
+  {
+    INFO("SDPA examples from sdpa-gmp repository");
+    INFO("https://github.com/nakatamaho/sdpa-gmp");
+
+    std::string name = "sdpa";
+    // Default parameters used in sdpa-gmp
+    std::string default_sdpb_args
+      = "--maxIterations 200 --dualityGapThreshold 1.0e-30 "
+        "--initialMatrixScalePrimal 1.0e+4 --initialMatrixScaleDual 1.0e+4 "
+        "--maxComplementarity 4.0e+8 "
+        "--feasibleCenteringParameter 0.3 stepLengthReduction 0.9 "
+        "--primalErrorThreshold 1.0e-30 --dualErrorThreshold 1.0e-30 ";
+    precision = 200;
+
+    SECTION("example1")
+    {
+      name += "/example1";
+      INFO("Optimal objective value: -41.9");
+      // NB: we ignore matrix X since it consists of noisy values ~1e-30
+      default_sdpb_args += " --writeSolution x,Y";
+      end_to_end_test(name, num_procs, precision, default_sdpb_args);
+    }
+    SECTION("example2")
+    {
+      name += "/example2";
+      INFO("Optimal objective value: 3.2062692914757308e+01");
+      // NB: we ignore matrices X and Y since they contain noisy values ~1e-30
+      default_sdpb_args += " --writeSolution x";
+      constexpr bool check_sdp_normalization = false;
+      // run_sdpb_twice = true to test checkpoint loading
+      constexpr bool run_sdpb_twice = true;
+      end_to_end_test(name, num_procs, precision, default_sdpb_args, {}, {},
+                      check_sdp_normalization, run_sdpb_twice);
+    }
+  }
+
   SECTION("1d")
   {
     INFO("SDPB test for a simple one-dimensional problem from SDPB Manual:");
@@ -343,43 +380,6 @@ TEST_CASE("end-to-end_tests")
 
       end_to_end_test(name, num_procs, precision, default_sdpb_args, {},
                       out_txt_keys);
-    }
-  }
-
-  SECTION("sdpa")
-  {
-    INFO("SDPA examples from sdpa-gmp repository");
-    INFO("https://github.com/nakatamaho/sdpa-gmp");
-
-    std::string name = "sdpa";
-    // Default parameters used in sdpa-gmp
-    std::string default_sdpb_args
-      = "--maxIterations 200 --dualityGapThreshold 1.0e-30 "
-        "--initialMatrixScalePrimal 1.0e+4 --initialMatrixScaleDual 1.0e+4 "
-        "--maxComplementarity 4.0e+8 "
-        "--feasibleCenteringParameter 0.3 stepLengthReduction 0.9 "
-        "--primalErrorThreshold 1.0e-30 --dualErrorThreshold 1.0e-30 ";
-    precision = 200;
-
-    SECTION("example1")
-    {
-      name += "/example1";
-      INFO("Optimal objective value: -41.9");
-      // NB: we ignore matrix X since it consists of noisy values ~1e-30
-      default_sdpb_args += " --writeSolution x,Y";
-      end_to_end_test(name, num_procs, precision, default_sdpb_args);
-    }
-    SECTION("example2")
-    {
-      name += "/example2";
-      INFO("Optimal objective value: 3.2062692914757308e+01");
-      // NB: we ignore matrices X and Y since they contain noisy values ~1e-30
-      default_sdpb_args += " --writeSolution x";
-      constexpr bool check_sdp_normalization = false;
-      // run_sdpb_twice = true to test checkpoint loading
-      constexpr bool run_sdpb_twice = true;
-      end_to_end_test(name, num_procs, precision, default_sdpb_args, {}, {},
-                      check_sdp_normalization, run_sdpb_twice);
     }
   }
 }
