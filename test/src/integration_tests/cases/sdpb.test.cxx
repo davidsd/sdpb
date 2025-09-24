@@ -123,11 +123,32 @@ TEST_CASE("sdpb")
       auto args = default_args;
       args["--maxIterations"] = "1";
       args["--writeSolution"] = "x,y,X,Y";
+      // We'll need a checkpoint in this case
+      args.erase("--noFinalCheckpoint");
 
       run_sdpb_set_out_ck_dirs(runner, args);
 
       INFO("Check reading from checkpoint...");
       run_sdpb_set_out_ck_dirs(runner, args);
+
+      {
+        INFO("Add extra checkpoint file => loading error");
+        std::ofstream os(args["--checkpointDir"] + "/checkpoint_2_2");
+        os << "any bytes to checkpoint_2_2";
+        const Test_Util::Test_Case_Runner runner_extra_ck_file
+          = runner.create_nested("extra_ck_file");
+        runner_extra_ck_file.mpi_run({"build/sdpb"}, args, num_procs, 1,
+                                     "unexpected checkpoint file");
+      }
+
+      {
+        INFO("Remove checkpoint file for rank=1 => loading error");
+        fs::remove(args["--checkpointDir"] + "/checkpoint_2_1");
+        const Test_Util::Test_Case_Runner runner_missing_ck_file
+          = runner.create_nested("missing_ck_file");
+        runner_missing_ck_file.mpi_run({"build/sdpb"}, args, num_procs, 1,
+                                       "Cannot find checkpoint file");
+      }
 
       INFO("now use outDir as checkpoint, "
            "remove read permissions => fail to read");
