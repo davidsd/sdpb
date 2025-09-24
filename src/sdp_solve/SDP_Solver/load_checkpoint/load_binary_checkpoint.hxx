@@ -105,16 +105,74 @@ bool load_binary_checkpoint(const std::filesystem::path &checkpoint_directory,
   El::mpi::Broadcast(reinterpret_cast<El::byte *>(&current_generation),
                      sizeof(current_generation) / sizeof(El::byte), 0,
                      El::mpi::COMM_WORLD);
-  fs::path checkpoint_filename;
+
+  const auto get_checkpoint_path_for_rank
+    = [&checkpoint_directory, &current_generation](const int mpi_rank) {
+        const auto filename = current_generation == -1
+                                ? "checkpoint." + std::to_string(mpi_rank)
+                                : "checkpoint_"
+                                    + std::to_string(current_generation) + "_"
+                                    + std::to_string(mpi_rank);
+        return checkpoint_directory / filename;
+      };
+
+  {
+    // Check that all checkpoint files exist and there are no extra files.
+    // all_files_exist = true if checkpoint files exist for all ranks=0..n-1
+    // all_files_exist = false if no checkpoint files exist (for brevity, we check rank=0 only)
+    // An error is thrown if there are extra files (we check for rank=n)
+    El::byte all_files_exist = false;
+    // Check only on rank=0 to avoid extra filesystem load.
+    if(El::mpi::Rank() == 0)
+      {
+        // check rank=0
+        const auto path_0 = get_checkpoint_path_for_rank(0);
+        if(exists(path_0))
+          {
+            // check rank=1..n-1
+            for(int rank = 1; rank < El::mpi::Size(); ++rank)
+              {
+                const auto curr_path = get_checkpoint_path_for_rank(rank);
+                if(!exists(curr_path))
+                  {
+                    RUNTIME_ERROR("Cannot find checkpoint file for MPI rank=",
+                                  rank, ": ", curr_path);
+                  }
+              }
+            all_files_exist = true;
+
+            // Check rank=n (should not exist)
+            const auto out_of_bound_path
+              = get_checkpoint_path_for_rank(El::mpi::Size());
+            if(exists(out_of_bound_path))
+              {
+                RUNTIME_ERROR(
+                  "Checkpoint should contain only files for MPI ranks from 0 "
+                  "to ",
+                  El::mpi::Size() - 1,
+                  ", but found unexpected checkpoint file: ",
+                  out_of_bound_path);
+              }
+          }
+
+        if(!all_files_exist && current_generation != -1)
+          {
+            // Checkpoint should exist in this case
+            RUNTIME_ERROR("Cannot find checkpoint file: ", path_0);
+          }
+      }
+    El::mpi::Broadcast(all_files_exist, 0, El::mpi::COMM_WORLD);
+    if(!all_files_exist && current_generation == -1)
+      return false;
+  }
+
+  const fs::path checkpoint_file_path
+    = get_checkpoint_path_for_rank(El::mpi::Rank());
+
+  // Update generations
   if(current_generation != -1)
     {
       solver.current_generation = current_generation;
-      checkpoint_filename
-        = checkpoint_directory
-          / ("checkpoint_" + std::to_string(current_generation) + "_"
-             + std::to_string(El::mpi::Rank()));
-      ASSERT(exists(checkpoint_filename),
-             "Missing checkpoint file: ", checkpoint_filename);
       // See note above about Broadcast()
       El::mpi::Broadcast(reinterpret_cast<El::byte *>(&backup_generation),
                          sizeof(current_generation) / sizeof(El::byte), 0,
@@ -122,23 +180,25 @@ bool load_binary_checkpoint(const std::filesystem::path &checkpoint_directory,
     }
   else
     {
-      checkpoint_filename
-        = checkpoint_directory
-          / ("checkpoint." + std::to_string(El::mpi::Rank()));
-      if(!exists(checkpoint_filename))
-        {
-          return false;
-        }
       current_generation = 0;
     }
 
-  std::ifstream checkpoint_stream(checkpoint_filename);
-  if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
+  try
     {
-      std::cout << "Loading binary checkpoint from : " << checkpoint_directory
-                << '\n';
+      std::ifstream checkpoint_stream(checkpoint_file_path);
+      ASSERT(checkpoint_stream.good(), "Cannot open ", checkpoint_file_path);
+      if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
+        {
+          El::Output("Loading binary checkpoint from : ",
+                     checkpoint_directory);
+        }
+      load_local_binary_data(solver, checkpoint_stream);
     }
-  load_local_binary_data(solver, checkpoint_stream);
+  catch(std::exception &e)
+    {
+      RUNTIME_ERROR("Failed to read checkpoint from binary file ",
+                    checkpoint_file_path, "\n  ", e.what());
+    }
   solver.current_generation = current_generation;
   if(backup_generation != -1)
     {
