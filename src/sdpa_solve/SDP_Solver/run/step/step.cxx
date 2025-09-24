@@ -72,9 +72,9 @@ namespace Sdpb::Sdpa
 
       compute_S(env, sdp, block_info, X_cholesky, Y_cholesky, grid,
                 bigint_syrk_context, S, timers, block_timings_ms, verbosity);
-      Scoped_Timer Cholesky_timer(timers, "Cholesky_S");
       try
         {
+          Scoped_Timer Cholesky_timer(timers, "Cholesky_S");
           Cholesky(El::UpperOrLowerNS::UPPER, S);
         }
       catch(std::exception &e)
