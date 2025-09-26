@@ -70,10 +70,17 @@ size_t get_max_shared_memory_bytes(
                           "\n\tIn case of OOM, consider increasing number of "
                           "nodes and/or decreasing --maxSharedMemory limit.");
         }
+      // If we don't have enough memory,
+      // we want to print OOM warning for any verbosity
+      if(nonshared_memory_required_per_node_bytes > mem_total_bytes
+         || verbosity >= Verbosity::debug)
+        {
+          PRINT_WARNING(ss.str());
+        }
       if(verbosity >= Verbosity::regular)
         {
-          if(env.node_index() == 0 || verbosity >= Verbosity::debug)
-            PRINT_WARNING(ss.str());
+          El::Output("node=", env.node_index(), ": Set --maxSharedMemory=",
+                     pretty_print_bytes(max_shared_memory_bytes, true));
         }
     }
   // All ranks on a node should have the same limit
