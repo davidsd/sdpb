@@ -129,7 +129,7 @@ def build(bld):
                 cxxflags=default_flags,
                 defines=default_defines,
                 includes=default_includes,
-                use=use_packages + ['sdp_solve']
+                use=use_packages + ['sdp_solve', 'mpsolve']
                 )
 
     pmp2sdp_sources = ['src/pmp2sdp/Dual_Constraint_Group/Dual_Constraint_Group.cxx',
