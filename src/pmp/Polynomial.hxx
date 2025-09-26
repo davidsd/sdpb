@@ -8,12 +8,15 @@
 #pragma once
 
 #include "sdpb_util/assert.hxx"
+#include "sdpb_util/Boost_Float.hxx"
 
 #include <El.hpp>
 
 #include <iostream>
 #include <vector>
 #include <boost/math/tools/polynomial.hpp>
+
+using Boost_Polynomial = boost::math::tools::polynomial<Boost_Float>;
 
 // FIXME: Use boost::math::tools::polynomial instead
 

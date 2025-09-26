@@ -1,7 +1,6 @@
 #include "Archive_Reader.hxx"
 
 #include <stdexcept>
-#include <string>
 
 Archive_Reader::Archive_Reader(const std::filesystem::path &filename)
     : ptr(archive_read_new(), archive_read_free)
@@ -14,6 +13,24 @@ Archive_Reader::Archive_Reader(const std::filesystem::path &filename)
       RUNTIME_ERROR("Error when opening ", filename);
     }
   setg(buffer.data(), buffer.data(), buffer.data());
+}
+
+bool Archive_Reader::next_entry()
+{
+  const auto read_result = archive_read_next_header(ptr.get(), &entry_ptr);
+  if(read_result == ARCHIVE_OK)
+    entry_is_valid = true;
+  else if(read_result == ARCHIVE_EOF)
+    entry_is_valid = false;
+  else
+    {
+      const char *const pathname = archive_entry_pathname(entry_ptr);
+      const std::string name = pathname ? pathname : "EOF";
+      RUNTIME_ERROR("Archive_Reader: ", name, ": ",
+                    archive_error_string(ptr.get()));
+    }
+
+  return entry_is_valid;
 }
 
 int Archive_Reader::underflow()

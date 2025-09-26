@@ -4,7 +4,7 @@
 #define RAPIDJSON_NOEXCEPT_ASSERT(x) assert(x)
 
 #include "Float.hxx"
-#include "pmp/Damped_Rational.hxx"
+#include "sdpb_util/Damped_Rational.hxx"
 #include "sdpb_util/assert.hxx"
 
 #include <catch2/catch_amalgamated.hpp>

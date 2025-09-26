@@ -189,7 +189,7 @@ SDPB writes out by default.
 Another thing that you can do now that you have a solution is to extract the spectrum.
 As a simple example, extracting the spectrum from the toy example would be
 
-    mpirun -n 4 build/spectrum --input=test/data/end-to-end_tests/1d/input/pmp.json --output=test/out/spectrum/1d/spectrum.json --precision=768 --solution=test/data/end-to-end_tests/1d/pmp.json/out --threshold=1e-10
+    mpirun -n 4 build/spectrum --pmpInfo=test/data/end-to-end_tests/1d/output/sdp/pmp_info.json --output=test/out/spectrum/1d/pmp.json/spectrum.json --precision=768 --solution=test/data/end-to-end_tests/1d/output/out --threshold=1e-10
 
 This will output the spectra into `test/out/spectrum/1d/spectrum.json` and should look like
 
@@ -312,5 +312,3 @@ export OMP_NUM_THREADS=1
 ### Spectrum does not find zeros
 
 Try to set `--threshold` option for `spectrum` larger than `--dualityGapThreshold` for `sdpb`.
-
-Note that currently spectrum [cannot find isolated zeros](https://github.com/davidsd/sdpb/issues/153).

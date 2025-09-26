@@ -1,4 +1,4 @@
-#include "../Damped_Rational.hxx"
+#include "sdpb_util/Damped_Rational.hxx"
 #include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/ostream/ostream_vector.hxx"

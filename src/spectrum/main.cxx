@@ -1,6 +1,5 @@
 #include "Zeros.hxx"
-#include "pmp2sdp/write_sdp.hxx"
-#include "pmp_read/pmp_read.hxx"
+#include "pmp/PMP_Info.hxx"
 #include "sdp_solve/sdp_solve.hxx"
 
 #include <filesystem>
@@ -8,28 +7,37 @@
 namespace fs = std::filesystem;
 
 void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
-                      El::BigFloat &mesh_threshold, fs::path &input_path,
-                      fs::path &solution_path, fs::path &output_path,
-                      bool &need_lambda, Verbosity &verbosity);
+                      El::BigFloat &max_zero, fs::path &pmp_info_path,
+                      fs::path &solution_dir, fs::path &c_minus_By_path,
+                      fs::path &output_path, bool &need_lambda,
+                      Verbosity &verbosity);
+
+PMP_Info
+read_pmp_info(const std::filesystem::path &input_path, Timers &timers);
 
 std::vector<El::Matrix<El::BigFloat>>
-read_x(const fs::path &solution_path,
-       const std::vector<Polynomial_Vector_Matrix> &matrices,
-       const std::vector<size_t> &block_indices);
+read_c_minus_By(const std::filesystem::path &input_path,
+                const PMP_Info &pmp_info, Timers &timers);
 
-El::Matrix<El::BigFloat>
-read_y(const fs::path &solution_path, const size_t &y_height);
-
-void write_spectrum(const fs::path &output_path, const size_t &num_blocks,
-                    const std::vector<Zeros> &zeros_blocks,
-                    const std::vector<size_t> &block_indices);
+std::vector<El::Matrix<El::BigFloat>>
+read_x(const fs::path &solution_path, const PMP_Info &pmp_info,
+       Timers &timers);
 
 std::vector<Zeros>
-compute_spectrum(const Polynomial_Matrix_Program &pmp,
-                 const El::Matrix<El::BigFloat> &y,
-                 const std::vector<El::Matrix<El::BigFloat>> &x,
-                 const El::BigFloat &threshold,
-                 const El::BigFloat &mesh_threshold, const bool &need_lambda);
+compute_spectrum(const PMP_Info &pmp_info,
+                 const std::vector<El::Matrix<El::BigFloat>> &c_minus_By,
+                 const std::optional<std::vector<El::Matrix<El::BigFloat>>> &x,
+                 const El::BigFloat &threshold, const El::BigFloat &max_zero,
+                 const bool &need_lambda, const Verbosity &verbosity,
+                 const std::filesystem::path &spectrum_output_path,
+                 Timers &timers);
+
+void write_spectrum(const fs::path &output_path,
+                    const std::vector<Zeros> &zeros_blocks,
+                    const PMP_Info &pmp_info, Timers &timers);
+
+void create_profiling_dir(const fs::path &spectrum_output_path);
+void write_profiling(const fs::path &spectrum_output_path, Timers &timers);
 
 int main(int argc, char **argv)
 {
@@ -37,12 +45,14 @@ int main(int argc, char **argv)
 
   try
     {
-      El::BigFloat threshold, mesh_threshold;
-      fs::path input_path, solution_dir, output_path;
+      El::BigFloat threshold;
+      El::BigFloat max_zero;
+      fs::path pmp_info_path, solution_dir, output_path, c_minus_By_path;
       bool need_lambda;
       Verbosity verbosity;
-      handle_arguments(argc, argv, threshold, mesh_threshold, input_path,
-                       solution_dir, output_path, need_lambda, verbosity);
+      handle_arguments(argc, argv, threshold, max_zero, pmp_info_path,
+                       solution_dir, c_minus_By_path, output_path, need_lambda,
+                       verbosity);
 
       // Print command line
       if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
@@ -53,18 +63,31 @@ int main(int argc, char **argv)
           std::cout << std::endl;
         }
 
+      // TODO use timers, print profiling data for --verbosity=debug
       Timers timers(env, verbosity);
-      const auto pmp
-        = read_polynomial_matrix_program(env, input_path, verbosity, timers);
-      const size_t num_blocks = pmp.num_matrices;
-      const auto &block_indices = pmp.matrix_index_local_to_global;
-      El::Matrix<El::BigFloat> y(pmp.objective.size() - 1, 1);
-      read_text_block(y, solution_dir / "y.txt");
-      std::vector<El::Matrix<El::BigFloat>> x(
-        read_x(solution_dir, pmp.matrices, block_indices));
-      const std::vector<Zeros> zeros_blocks(
-        compute_spectrum(pmp, y, x, threshold, mesh_threshold, need_lambda));
-      write_spectrum(output_path, num_blocks, zeros_blocks, block_indices);
+      Scoped_Timer timer(timers, "spectrum");
+      const auto pmp_info = read_pmp_info(pmp_info_path, timers);
+
+      std::optional<std::vector<El::Matrix<El::BigFloat>>> x;
+      if(need_lambda)
+        x.emplace(read_x(solution_dir, pmp_info, timers));
+
+      const auto c_minus_By
+        = read_c_minus_By(c_minus_By_path, pmp_info, timers);
+
+      // Create directory spectrum.json.profiling/
+      if(verbosity >= Verbosity::debug)
+        create_profiling_dir(output_path);
+
+      const auto zeros_blocks
+        = compute_spectrum(pmp_info, c_minus_By, x, threshold, max_zero,
+                           need_lambda, verbosity, output_path, timers);
+
+      write_spectrum(output_path, zeros_blocks, pmp_info, timers);
+
+      // Write profiling data
+      if(verbosity >= Verbosity::debug)
+        write_profiling(output_path, timers);
     }
   catch(std::exception &e)
     {

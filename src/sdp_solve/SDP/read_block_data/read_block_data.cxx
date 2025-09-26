@@ -1,6 +1,6 @@
 #include "SDP_Block_Data.hxx"
 #include "pmp2sdp/write_sdp.hxx"
-#include "sdp_solve/Archive_Reader.hxx"
+#include "sdpb_util/Archive_Reader.hxx"
 #include "sdp_solve/SDP.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/copy_matrix.hxx"

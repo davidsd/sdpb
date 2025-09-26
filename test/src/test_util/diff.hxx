@@ -1,6 +1,5 @@
 #pragma once
 
-#include "pmp/Damped_Rational.hxx"
 #include "pmp/PMP_Info.hxx"
 
 #include <catch2/catch_amalgamated.hpp>

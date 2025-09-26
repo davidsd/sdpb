@@ -4,7 +4,8 @@ import os, subprocess
 def options(opt):
     opt.load(['compiler_cxx', 'gnu_dirs'])
     opt.load(
-        ['cxx17', 'boost', 'gmpxx', 'mpfr', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'cblas', 'flint'],
+        ['cxx17', 'boost', 'gmpxx', 'mpfr', 'mpsolve', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'cblas',
+         'flint'],
         tooldir='./waf-tools')
 
 
@@ -12,7 +13,7 @@ def configure(conf):
     if not 'CXX' in os.environ or os.environ['CXX'] == 'g++' or os.environ['CXX'] == 'icpc':
         conf.environ['CXX'] = 'mpicxx'
 
-    conf.load(['compiler_cxx', 'gnu_dirs', 'cxx17', 'boost', 'gmpxx', 'mpfr',
+    conf.load(['compiler_cxx', 'gnu_dirs', 'cxx17', 'boost', 'gmpxx', 'mpfr', 'mpsolve',
                'elemental', 'libxml2', 'rapidjson', 'libarchive', 'cblas', 'flint'])
     conf.load('clang_compilation_database', tooldir='./waf-tools')
 
@@ -29,7 +30,8 @@ def build(bld):
     use_packages = external_packages + ['sdpb_util']
     default_includes = ['src', 'external']
 
-    bld.stlib(source=['src/sdpb_util/Boost_Float.cxx',
+    bld.stlib(source=['src/sdpb_util/Archive_Reader.cxx',
+                      'src/sdpb_util/Boost_Float.cxx',
                       'src/sdpb_util/copy_matrix.cxx',
                       'src/sdpb_util/Environment.cxx',
                       'src/sdpb_util/memory_estimates.cxx',
@@ -45,7 +47,6 @@ def build(bld):
               use=external_packages)
 
     sdp_solve_sources = ['src/sdp_solve/Solver_Parameters/Solver_Parameters.cxx',
-                         'src/sdp_solve/Archive_Reader.cxx',
                          'src/sdp_solve/Block_Info/Block_Info.cxx',
                          'src/sdp_solve/Block_Info/read_block_info.cxx',
                          'src/sdp_solve/Block_Info/read_block_costs.cxx',
@@ -271,18 +272,20 @@ def build(bld):
 
     bld.program(source=['src/spectrum/main.cxx',
                         'src/spectrum/handle_arguments.cxx',
+                        'src/spectrum/read_c_minus_By.cxx',
+                        'src/spectrum/read_pmp_info.cxx',
                         'src/spectrum/read_x.cxx',
-                        'src/spectrum/compute_spectrum.cxx',
-                        'src/spectrum/compute_lambda.cxx',
-                        'src/spectrum/eval_summed.cxx',
-                        'src/spectrum/get_zeros.cxx',
+                        'src/spectrum/write_profiling.cxx',
+                        'src/spectrum/compute_spectrum/compute_spectrum.cxx',
+                        'src/spectrum/compute_spectrum/find_zeros.cxx',
+                        'src/spectrum/compute_spectrum/mpsolve.cxx',
                         'src/spectrum/write_spectrum/write_spectrum.cxx',
                         'src/spectrum/write_spectrum/write_file.cxx'],
                 target='spectrum',
                 cxxflags=default_flags,
                 defines=default_defines,
                 includes=default_includes,
-                use=use_packages + ['pmp_read', 'sdp_solve', 'pmp2sdp_lib', 'mesh']
+                use=use_packages + ['mpsolve']
                 )
 
     bld.program(source=['external/catch2/catch_amalgamated.cpp',
