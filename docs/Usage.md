@@ -248,10 +248,11 @@ configuration for your problem.
 
 SDPB's defaults are set for optimal performance. This may result in using more memory than is available.
 
-Two ways to reduce memory usage:
+How to reduce memory usage:
 
 1. Running SDPB on more nodes will reduce the amount of memory required on each node.
 2. Set `--maxSharedMemory` option, e.g. `--maxSharedMemory=64G`. This will reduce memory usage by splitting shared memory windows used for matrix multiplication, see [bigint_syrk/Readme.md](../src/sdp_solve/SDP_Solver/run/bigint_syrk/Readme.md) for details.
+3. If some large SDP blocks are assigned to too many cores, this can lead to a significant memory overhead. The worst case is when the number of cores is a huge prime number (e.g. 13 or 17). In that scenario, matrices are distributed across a 1D MPI grid (e.g. `13x1` or `17x1`), which is generally bad for performance and memory (in particular, for the function `El::Trsm()`). Set e.g. `--procGranularity 2` (or `--procGranularity 4`) and/or reduce the number of cores per node. To see block distribution, run SDPB with `--verbosity debug`.
 
 If `--maxSharedMemory` is not set by user, SDPB will calculate it automatically based on expected memory usage and amount of available RAM (search for `--maxSharedMemory` in the output to see the new limit).
 Note that these estimates are very imprecise, and actual memory usage can be much higher than expected. If automatically calculated `--maxSharedMemory` value does not prevent OOM, consider decreasing it manually and/or increasing number of nodes.

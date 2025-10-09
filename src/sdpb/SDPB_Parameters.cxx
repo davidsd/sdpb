@@ -57,6 +57,20 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
     "(because, for example, you only want to know if SDPB found a primal "
     "feasible point), set this to an empty string.");
   basic_options.add_options()(
+    "procGranularity", po::value<size_t>(&proc_granularity)->default_value(1),
+    "procGranularity must evenly divide number of processes per node.\n\n"
+    "The minimum number of cores in a group, used during load balancing.\n"
+    "Pros of setting procGranularity > 1:\n"
+    "- --procGranularity=2 or --procGranularity=4 "
+    "prevents group size from being a prime number (e.g. 11 or 13).\n"
+    "  Prime numbers lead to 1D grids (e.g. 11x1 or 13x1), "
+    "which could be bad for performance and memory (e.g. in El::Trsm()).\n"
+    "  This can be important for large blocks.\n"
+    "Cons: \n"
+    "- Load balancing may become worse.\n"
+    "- Small blocks are assigned to larger groups, "
+    "which introduces extra performance overhead.");
+  basic_options.add_options()(
     "verbosity",
     po::value<Verbosity>(&verbosity)->default_value(Verbosity::regular),
     "Verbosity.  0 -> no output, 1 -> regular output, 2 -> debug output, 3 -> "
@@ -67,14 +81,6 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
     "procsPerNode", po::value<size_t>(),
     "[OBSOLETE] The number of MPI processes running on a node. "
     "Determined automatically from MPI environment.");
-  obsolete_options.add_options()(
-    "procGranularity", po::value<size_t>(&proc_granularity),
-    "[OBSOLETE] procGranularity must evenly divide number of processes per "
-    "node.\n\n"
-    "The minimum number of cores in a group, used during load balancing.  "
-    "Setting it to anything larger than 1 will make the solution take "
-    "longer.  "
-    "This option should not be used except for testing purposes.");
 
   cmd_line_options.add(basic_options);
   cmd_line_options.add(obsolete_options);
@@ -202,14 +208,6 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
                     "--procsPerNode option is obsolete. The number of "
                     "MPI processes running on a node is determined "
                     "automatically from MPI environment.");
-                }
-              if(variables_map.count("procGranularity") != 0)
-                {
-                  PRINT_WARNING("--procGranularity option is obsolete. "
-                                "Setting it to anything larger than 1 will "
-                                "make the solution take longer. "
-                                "This option should not be used except for "
-                                "testing purposes.");
                 }
             }
         }
