@@ -81,7 +81,7 @@ size_t get_max_shared_memory_bytes(
 
   return max_shared_memory_bytes;
 }
-size_t get_heap_allocated_bytes(const El::BigFloat &f)
+size_t get_heap_allocated_bytes(const El::BigFloat &)
 {
   return bigfloat_bytes();
 }
