@@ -13,10 +13,15 @@ namespace Sdpb::Sdpa
                      / El::mpi::Size());
     // TODO: in fact, different ranks can own slightly different number of elements.
     // So this is not a precise estimate.
-    // Sum of get_S_size_local() over all ranks will give upper bound to the real #(Q).
+    // Sum of get_S_size_local() over all ranks will give upper bound to the real #(S).
 
     // NB: reduce-scatter needs also ~(2 * S_size / split_factor^2 / num_nodes) per node for MPI buffers.
     // We account for it inside --maxSharedMemory limit, see BigInt_Shared_Memory_Syrk_Context() constructor.
+  }
+  inline size_t get_S_allocated_bytes(const SDP &sdp)
+  {
+    return sizeof(El::DistMatrix<El::BigFloat>)
+           + bigfloat_bytes() * get_S_size_local(sdp);
   }
   inline size_t get_SDP_size_local(const SDP &sdp)
   {
