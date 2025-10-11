@@ -111,17 +111,40 @@ namespace Sdpb::Sdpa
 
     if(verbosity >= Verbosity::debug)
       {
+        // Print memory estimates
+
+        std::vector<std::pair<std::string, size_t>> num_elements_per_category{
+          {"X", X_size},
+          {"S", S_size},
+        };
+
+        std::vector<std::pair<std::string, size_t>> bytes_per_category{
+          {"BigFloat size", bigfloat_bytes()},
+          {"Total non-shared memory estimate", mem_required_bytes},
+          {"\tInitial MemUsed (at SDPB start)", env.initial_node_mem_used()},
+          {"\tSDP", SDP_bytes},
+          {"\tSDP_Solver", SDP_solver_bytes},
+          {"\tSDP_Solver::run()", SDP_Solver_run_bytes},
+        };
+        if(initialize_P_bytes > 3 * X_bytes)
+          {
+            bytes_per_category.emplace_back("\t\tinitialize_P()",
+                                            initialize_P_bytes);
+          }
+
         std::ostringstream ss;
-        El::BuildStream(
-          ss, "node=", env.node_index(),
-          " matrix sizes and memory estimates: ", "\n\t#(X) = ", X_size,
-          "\n\t#(S) = ", S_size, "\n memory estimates: ",
-          "\n\tBigFloat size: ", pretty_print_bytes(bigfloat_bytes(), true),
-          "\n\t#(SDP) = ", pretty_print_bytes(SDP_bytes, true),
-          "\n\tInitial MemUsed (at SDPB start) = ",
-          pretty_print_bytes(env.initial_node_mem_used(), true),
-          "\n\tTotal non-shared memory estimate: ",
-          pretty_print_bytes(mem_required_bytes, true));
+        El::BuildStream(ss, "node=", env.node_index(),
+                        " matrix sizes and memory estimates: ");
+
+        for(const auto &[name, size] : num_elements_per_category)
+          {
+            El::BuildStream(ss, "\n\t#(", name, ") = ", size, " elements");
+          }
+        for(const auto &[name, bytes] : bytes_per_category)
+          {
+            El::BuildStream(ss, "\n\t", name, ": ",
+                            pretty_print_bytes(bytes, true));
+          }
         El::Output(ss.str());
       }
 
