@@ -7,7 +7,8 @@
 namespace Sdpb::Sdpa
 {
   // Memory allocated in initialize_P(), see in step/compute_S.cxx
-  // Includes:
+  // returns {total memory, trmm memory, trsm memory}
+  // Total memory includes:
   // - Size of matrix P (Block_Matrix part on current node)
   // - Memory usage for processing the largest block in a group:
   //   - F_p L_Y block
@@ -15,14 +16,15 @@ namespace Sdpb::Sdpa
   //   - Extra memory usage inside El::Trsm() call.
   // NB: returns all memory for MPI group from group_rank = 0
   // Other ranks return 0, so that mpi::Reduce() returns correct total memory.
-  inline size_t
-  get_initialize_P_bytes(const Block_Info &block_info, const El::Grid &grid)
+  inline std::tuple<size_t, size_t, size_t>
+  get_initialize_P_trmm_trsm_bytes(const Block_Info &block_info,
+                                   const El::Grid &grid)
   {
     const auto &group_comm = block_info.mpi_comm.value;
     const size_t primal_dimension = block_info.primal_dimension;
 
     if(group_comm.Rank() != 0)
-      return 0;
+      return {0, 0, 0};
 
     // Height of P submatrix stored on current MPI group
     size_t P_group_height = 0;
@@ -44,11 +46,16 @@ namespace Sdpb::Sdpa
       = bigfloat_bytes() * max_block_dim * max_block_dim * primal_dimension;
     const size_t G_block_horizontal_bytes = FY_block_vertical_bytes;
 
+    const size_t trmm_bytes
+      = get_trmm_bytes(max_block_dim * primal_dimension, max_block_dim,
+                       grid.Height(), grid.Width());
     const size_t trsm_bytes
       = get_trsm_bytes(max_block_dim, max_block_dim * primal_dimension,
                        grid.Height(), grid.Width());
-    return P_bytes + FY_block_vertical_bytes + G_block_horizontal_bytes
-           + trsm_bytes;
+    const size_t total_bytes
+      = P_bytes + FY_block_vertical_bytes
+        + std::max(trmm_bytes, G_block_horizontal_bytes + trsm_bytes);
+    return {total_bytes, trmm_bytes, trsm_bytes};
   }
 
   // Estimate how many BigFloats will be allocated by SDPB on the current node,
@@ -81,8 +88,11 @@ namespace Sdpb::Sdpa
     // SDP_Solver members
     const size_t SDP_solver_bytes = node_reduce(get_allocated_bytes(solver));
 
-    const size_t initialize_P_bytes
-      = node_reduce(get_initialize_P_bytes(block_info, grid));
+    auto [initialize_P_bytes, trmm_bytes, trsm_bytes]
+      = get_initialize_P_trmm_trsm_bytes(block_info, grid);
+    initialize_P_bytes = node_reduce(initialize_P_bytes);
+    trmm_bytes = node_reduce(trmm_bytes);
+    trsm_bytes = node_reduce(trsm_bytes);
 
     // run(): X_cholesky, Y_cholesky
     size_t SDP_Solver_run_bytes = 2 * X_bytes;
@@ -130,6 +140,8 @@ namespace Sdpb::Sdpa
           {
             bytes_per_category.emplace_back("\t\tinitialize_P()",
                                             initialize_P_bytes);
+            bytes_per_category.emplace_back("\t\t\tEl::Trmm()", trmm_bytes);
+            bytes_per_category.emplace_back("\t\t\tEl::Trsm()", trsm_bytes);
           }
 
         std::ostringstream ss;
