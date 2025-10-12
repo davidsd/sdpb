@@ -54,6 +54,11 @@ size_t get_max_shared_memory_bytes(
             pretty_print_bytes(max_shared_memory_bytes, false));
           El::BuildStream(ss, "\n\tSDPB will probably fail with OOM. Consider "
                               "increasing number of nodes or RAM per node.");
+          if(verbosity < Verbosity::debug)
+            {
+              El::BuildStream(ss, "\n\tTo print detailed memory estimates, "
+                                  "run SDPB with --verbosity debug.");
+            }
         }
       else
         {
