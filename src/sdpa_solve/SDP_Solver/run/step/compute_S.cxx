@@ -39,6 +39,11 @@ namespace Sdpb::Sdpa
     const size_t P_width = primal_dimension;
     Block_Matrix result(P_block_heights, P_width, block_info.block_indices,
                         grid);
+    if(verbosity >= Verbosity::trace)
+      {
+        print_allocation_message_per_node(env, "P",
+                                          get_allocated_bytes(result));
+      }
 
     for(size_t block = 0; block < block_info.num_blocks_local(); ++block)
       {
@@ -127,12 +132,6 @@ namespace Sdpb::Sdpa
           }
         block_timings_ms(global_block_index, 0)
           += solve_timer.elapsed_milliseconds();
-      }
-
-    if(verbosity >= Verbosity::trace)
-      {
-        print_allocation_message_per_node(env, "P",
-                                          get_allocated_bytes(result));
       }
 
     return result;
