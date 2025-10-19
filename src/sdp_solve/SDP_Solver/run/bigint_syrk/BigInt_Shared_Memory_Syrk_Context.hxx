@@ -3,7 +3,7 @@
 #include "blas_jobs/create_blas_jobs_schedule.hxx"
 #include "blas_jobs/Blas_Job_Schedule.hxx"
 #include "fmpz/Fmpz_Comb.hxx"
-#include "Block_Residue_Matrices_Window.hxx"
+#include "Vertical_Block_Residue_Matrices_Window.hxx"
 #include "Residue_Matrices_Window.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
@@ -64,9 +64,9 @@ private:
   const Verbosity verbosity;
   // All blocks from each MPI group are combined
   // into a single block in Block_Residue_Matrices_Window
-  std::unique_ptr<Block_Residue_Matrices_Window<double>>
+  std::unique_ptr<Vertical_Block_Residue_Matrices_Window<double>>
     input_grouped_block_residues_window_A;
-  std::unique_ptr<Block_Residue_Matrices_Window<double>>
+  std::unique_ptr<Vertical_Block_Residue_Matrices_Window<double>>
     input_grouped_block_residues_window_B;
   // How many times we should fill input window
   // to process all blocks:
@@ -90,7 +90,7 @@ private:
 
   void clear_residues(const Blas_Job_Schedule &blas_job_schedule);
   void compute_block_residues(
-    Block_Residue_Matrices_Window<double> &grouped_block_residues_window,
+    Vertical_Block_Residue_Matrices_Window<double> &grouped_block_residues_window,
     const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
     El::Int skip_rows, El::Range<El::Int> col_range, Timers &timers,
     El::Matrix<int32_t> &block_timings_ms);

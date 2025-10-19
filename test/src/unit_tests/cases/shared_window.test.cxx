@@ -3,7 +3,7 @@
 #include "sdpb_util/Shared_Window_Array.hxx"
 #include "test_util/diff.hxx"
 
-#include "sdp_solve/SDP_Solver/run/bigint_syrk/Block_Residue_Matrices_Window.hxx"
+#include "sdp_solve/SDP_Solver/run/bigint_syrk/Vertical_Block_Residue_Matrices_Window.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/Residue_Matrices_Window.hxx"
 
 #include <El.hpp>
@@ -81,7 +81,7 @@ TEST_CASE("MPI_Shared_Window")
         block_heights.at(b) = width + b; // to make heights different
       }
 
-    Block_Residue_Matrices_Window<double> window(comm, num_primes, num_blocks,
+    Vertical_Block_Residue_Matrices_Window<double> window(comm, num_primes, num_blocks,
                                                  block_heights, width);
     for(size_t p = 0; p < num_primes; ++p)
       {

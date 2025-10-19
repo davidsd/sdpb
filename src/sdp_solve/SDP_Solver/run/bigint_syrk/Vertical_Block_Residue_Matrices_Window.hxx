@@ -8,7 +8,8 @@
 // is split horizontally into blocks
 // (i.e. block_residues[prime_index][0..num_blocks-1])
 template <class T>
-class Block_Residue_Matrices_Window : public Residue_Matrices_Window<T>
+class Vertical_Block_Residue_Matrices_Window
+    : public Residue_Matrices_Window<T>
 {
 public:
   const size_t num_blocks;
@@ -26,10 +27,9 @@ public:
   // and block_residues[prime_index][block_index] is a view to its submatrix
   std::vector<std::vector<El::Matrix<T>>> block_residues;
 
-  Block_Residue_Matrices_Window(El::mpi::Comm shared_memory_comm,
-                                size_t num_primes, size_t num_blocks,
-                                const std::vector<El::Int> &block_heights,
-                                size_t block_width)
+  Vertical_Block_Residue_Matrices_Window(
+    El::mpi::Comm shared_memory_comm, size_t num_primes, size_t num_blocks,
+    const std::vector<El::Int> &block_heights, size_t block_width)
       : Residue_Matrices_Window<T>(shared_memory_comm, num_primes,
                                    Sum(block_heights), block_width),
         num_blocks(num_blocks),
