@@ -1,29 +1,17 @@
 #pragma once
 
-#include "sdpb_util/Environment.hxx"
-#include "sdpb_util/Verbosity.hxx"
-#include "sdpb_util/assert.hxx"
-#include "sdpb_util/block_mapping/Block_Cost.hxx"
-#include "sdpb_util/block_mapping/MPI_Comm_Wrapper.hxx"
-#include "sdpb_util/block_mapping/MPI_Group_Wrapper.hxx"
+#include "sdpb_util/block_mapping/Abstract_Block_Info.hxx"
 
-#include <El.hpp>
 #include <filesystem>
 
 namespace Sdpb::Sdpa
 {
-  class Block_Info
+  class Block_Info final : public Abstract_Block_Info
   {
   public:
     size_t primal_dimension;
     // Dimensions for all SDP blocks.
     std::vector<size_t> block_dimensions;
-    // Indices of blocks assigned to current MPI group
-    // (i.e. map from local block index to global block index).
-    std::vector<size_t> block_indices;
-
-    MPI_Group_Wrapper mpi_group;
-    MPI_Comm_Wrapper mpi_comm;
 
     [[nodiscard]]
     size_t num_blocks() const
@@ -59,7 +47,6 @@ namespace Sdpb::Sdpa
                const std::vector<Block_Cost> &block_costs,
                const size_t &proc_granularity, const Verbosity &verbosity);
   };
-
 
   void swap(Block_Info &a, Block_Info &b) noexcept;
 }

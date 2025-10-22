@@ -2,7 +2,6 @@
 
 #include "parse_sdpa/parse_sdpa.hxx"
 #include "sdp_solve/Block_Info/block_timings.hxx"
-#include "sdpb_util/block_mapping/allocate_block_mapping.hxx"
 
 #include <ostream>
 
@@ -55,17 +54,18 @@ namespace Sdpb::Sdpa
                          const std::vector<Block_Cost> &block_costs,
                          const size_t &proc_granularity,
                          const Verbosity &verbosity)
-      : primal_dimension(primal_dimension), block_dimensions(block_dimensions)
+      : Abstract_Block_Info(
+          env, block_costs, proc_granularity,
+          [&block_dimensions](std::ostream &os,
+                              const size_t block_index) -> auto & {
+            return os << block_index << "(" << block_dimensions[block_index]
+                      << ")";
+          },
+          verbosity),
+        primal_dimension(primal_dimension),
+        block_dimensions(block_dimensions)
   {
-    // Allocate blocks
-    const auto print_block
-      = [this](std::ostream &os, const size_t block_index) -> auto & {
-      return os << block_index << "(" << this->block_dimensions[block_index]
-                << ")";
-    };
-    allocate_block_mapping(env, block_costs, proc_granularity, print_block,
-                           verbosity, mpi_group.value, mpi_comm.value,
-                           block_indices);
+    ASSERT_EQUAL(block_dimensions.size(), block_costs.size());
   }
 
   Block_Info
@@ -111,10 +111,9 @@ namespace Sdpb::Sdpa
   void swap(Block_Info &a, Block_Info &b) noexcept
   {
     using std::swap;
+    swap(static_cast<Abstract_Block_Info &>(a),
+         static_cast<Abstract_Block_Info &>(b));
     swap(a.primal_dimension, b.primal_dimension);
     swap(a.block_dimensions, b.block_dimensions);
-    swap(a.block_indices, b.block_indices);
-    swap(a.mpi_group, b.mpi_group);
-    swap(a.mpi_comm, b.mpi_comm);
   }
 }

@@ -6,7 +6,7 @@
 #include "compute_block_grid_mapping.hxx"
 #include "create_mpi_block_mapping_groups.hxx"
 
-inline void allocate_block_mapping(
+inline std::vector<std::vector<Block_Map>> allocate_block_mapping(
   const Environment &env, const std::vector<Block_Cost> &block_costs,
   const size_t &proc_granularity,
   const std::function<std::ostream &(std::ostream &, size_t)> &print_block,
@@ -65,6 +65,21 @@ inline void allocate_block_mapping(
       El::Output(ss.str());
     }
 
+  if(El::mpi::Rank() == 0)
+    {
+      for(size_t node = 0; node < mapping.size(); ++node)
+        {
+          const auto &node_mapping = mapping[node];
+          for(size_t group = 0; group < node_mapping.size(); ++group)
+            {
+              const auto &group_mapping = node_mapping[group];
+              ASSERT(!group_mapping.block_indices.empty(),
+                     "No SDP blocks were assigned to node=", node,
+                     ", group=", group);
+            }
+        }
+    }
+
   const auto &node_comm = env.comm_shared_mem;
   const int node_index = env.node_index();
 
@@ -74,4 +89,5 @@ inline void allocate_block_mapping(
   ASSERT(!block_indices.empty(),
          "No SDP blocks were assigned to rank=", El::mpi::Rank(),
          ". node=", node_index, " node_rank=", node_comm.Rank());
+  return mapping;
 }

@@ -2,7 +2,6 @@
 #include "block_costs.hxx"
 #include "matrix_sizes.hxx"
 #include "read_block_info.hxx"
-#include "sdpb_util/block_mapping/allocate_block_mapping.hxx"
 
 namespace fs = std::filesystem;
 
@@ -14,19 +13,19 @@ Block_Info::Block_Info(const Environment &env,
                        const std::vector<Block_Cost> &block_costs,
                        const size_t &proc_granularity,
                        const Verbosity &verbosity)
-    : dimensions(dimensions), num_points(num_points)
+    : Abstract_Block_Info(
+        env, block_costs, proc_granularity,
+        [&dimensions, &num_points](std::ostream &os,
+                                   const size_t block_index) -> auto & {
+          return os << block_index << "(" << dimensions[block_index] << ","
+                    << num_points[block_index] << ")";
+        },
+        verbosity),
+      dimensions(dimensions),
+      num_points(num_points)
 {
   ASSERT_EQUAL(dimensions.size(), num_points.size());
   ASSERT_EQUAL(dimensions.size(), block_costs.size());
-
-  const auto print_block
-    = [this](std::ostream &os, const size_t block_index) -> auto & {
-    return os << block_index << "(" << this->dimensions[block_index] << ","
-              << this->num_points[block_index] << ")";
-  };
-  allocate_block_mapping(env, block_costs, proc_granularity, print_block,
-                         verbosity, mpi_group.value, mpi_comm.value,
-                         block_indices);
 }
 
 Block_Info
@@ -124,9 +123,8 @@ Block_Info::get_bilinear_bases_width(const size_t index, const size_t) const
 void swap(Block_Info &a, Block_Info &b) noexcept
 {
   using std::swap;
+  swap(static_cast<Abstract_Block_Info &>(a),
+       static_cast<Abstract_Block_Info &>(b));
   swap(a.dimensions, b.dimensions);
   swap(a.num_points, b.num_points);
-  swap(a.block_indices, b.block_indices);
-  swap(a.mpi_group, b.mpi_group);
-  swap(a.mpi_comm, b.mpi_comm);
 }

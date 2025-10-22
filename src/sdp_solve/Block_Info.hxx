@@ -1,25 +1,14 @@
 #pragma once
 
-#include "sdpb_util/Environment.hxx"
-#include "sdpb_util/Verbosity.hxx"
-#include "sdpb_util/assert.hxx"
-#include "sdpb_util/block_mapping/Block_Cost.hxx"
-#include "sdpb_util/block_mapping/MPI_Comm_Wrapper.hxx"
-#include "sdpb_util/block_mapping/MPI_Group_Wrapper.hxx"
+#include "sdpb_util/block_mapping/Abstract_Block_Info.hxx"
 
-#include <El.hpp>
-#include <algorithm>
 #include <filesystem>
 
-class Block_Info
+class Block_Info final : public Abstract_Block_Info
 {
 public:
   std::vector<size_t> dimensions;
   std::vector<size_t> num_points;
-
-  std::vector<size_t> block_indices;
-  MPI_Group_Wrapper mpi_group;
-  MPI_Comm_Wrapper mpi_comm;
 
   // TODO add Block_Info::total_size() == block_info.dimensions.size()
   // Rename block_info.block_indices to local_block_indices to make it clearer
