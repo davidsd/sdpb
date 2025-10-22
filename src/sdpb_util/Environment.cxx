@@ -46,6 +46,11 @@ size_t Environment::initial_node_mem_used() const
 {
   return _initial_node_mem_used;
 }
+size_t Environment::node_mem_total() const
+{
+  return _node_mem_total;
+}
+
 // NB: This function could be made static, but it makes no sense to call it
 // without constructing Environment instance and subscribing to SIGTERM.
 bool Environment::sigterm_received() const
@@ -91,8 +96,10 @@ void Environment::initialize()
         bool res;
         const auto meminfo = Proc_Meminfo::try_read(res);
         _initial_node_mem_used = res ? meminfo.mem_used() : 0;
+        _node_mem_total = res ? meminfo.mem_total : 0;
       }
     El::mpi::Broadcast(_initial_node_mem_used, 0, comm_shared_mem);
+    El::mpi::Broadcast(_node_mem_total, 0, comm_shared_mem);
   }
 }
 void Environment::finalize()
