@@ -53,7 +53,7 @@ TEST_CASE("MPI_Shared_Window")
       }
 
     // BLAS output will be stored here
-    Residue_Matrices_Window<double> window(comm, num_primes, height, width);
+    Matrix_Residues_Window<double> window(comm, num_primes, height, width);
     for(size_t p = 0; p < num_primes; ++p)
       for(size_t i = 0; i < height; ++i)
         for(size_t j = 0; j < width; ++j)
@@ -81,7 +81,7 @@ TEST_CASE("MPI_Shared_Window")
         block_heights.at(b) = width + b; // to make heights different
       }
 
-    Vertical_Block_Residue_Matrices_Window<double> window(comm, num_primes, num_blocks,
+    Vertical_Block_Matrix_Residues_Window<double> window(comm, num_primes, num_blocks,
                                                  block_heights, width);
     for(size_t p = 0; p < num_primes; ++p)
       {

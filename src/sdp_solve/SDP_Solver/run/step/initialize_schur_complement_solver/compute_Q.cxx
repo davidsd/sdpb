@@ -14,6 +14,9 @@ void initialize_schur_off_diagonal(
   El::Matrix<int32_t> &block_timings_ms, const Verbosity verbosity)
 {
   schur_off_diagonal.blocks.clear();
+  // Setting correct width is needed for Block_Matrix_Normalizer.
+  // TODO: refactor Block_Matrix to ensure correct block width for all blocks
+  schur_off_diagonal.width = sdp.dual_objective_b.Height();
   schur_off_diagonal.blocks.reserve(schur_complement_cholesky.blocks.size());
 
   size_t num_blocks_local = schur_complement_cholesky.blocks.size();
@@ -63,25 +66,25 @@ void initialize_schur_off_diagonal(
 // Check that Q_ii = 2^2N, where N = normalizer.precision.
 // This follows from the fact that columns of P are normalized and multiplied by 2^N
 void check_normalized_Q_diagonal(const El::DistMatrix<El::BigFloat> &Q,
-                                 const Matrix_Normalizer &normalizer,
+                                 const Block_Matrix_Normalizer<> &normalizer,
                                  Timers &timers)
 {
   Scoped_Timer timer(timers, "check_diagonal");
   for(int iLoc = 0; iLoc < Q.LocalHeight(); ++iLoc)
     for(int jLoc = 0; jLoc < Q.LocalWidth(); ++jLoc)
       {
-        int i = Q.GlobalRow(iLoc);
-        int j = Q.GlobalCol(jLoc);
+        const int i = Q.GlobalRow(iLoc);
+        const int j = Q.GlobalCol(jLoc);
         if(i == j)
           {
             auto value = Q.GetLocal(iLoc, jLoc); // should be 2^2N
-            auto should_be_one = value >> 2 * normalizer.precision;
+            auto should_be_one = value >> 2 * normalizer.bits;
 
             auto diff = El::Abs(should_be_one - El::BigFloat(1));
             // diff should be equal to zero up to some precision.
             // We cannot control rounding errors exactly,
             // so we (conservatively) require that at least N/2 bits are correct.
-            auto eps = El::BigFloat(1) >> normalizer.precision / 2;
+            auto eps = El::BigFloat(1) >> normalizer.bits / 2;
             ASSERT(diff < eps,
                    "Normalized Q should have ones on diagonal. For i = ", i,
                    ": Q_ii = ", should_be_one, ", |Q_ii - 1| = ", diff,
@@ -97,38 +100,31 @@ void syrk_Q(const Environment &env, Block_Matrix &schur_off_diagonal,
             El::Matrix<int32_t> &block_timings_ms, const Verbosity verbosity)
 {
   Scoped_Timer syrk_timer(timers, "syrk");
-  std::vector<El::DistMatrix<El::BigFloat>> &P_blocks
-    = schur_off_diagonal.blocks;
 
   // Normalize P columns and multiply by 2^N
-  int block_width = Q.Width();
-  Scoped_Timer normalizer_ctor_timer(timers, "Matrix_Normalizer_ctor");
-  Matrix_Normalizer normalizer(P_blocks, block_width, El::gmp::Precision(),
-                               El::mpi::COMM_WORLD);
+  Scoped_Timer normalizer_timer(timers, "normalize_P");
+  const auto normalizer
+    = normalize_and_shift<Matrix_Normalization_Kind::COLUMNS>(
+      schur_off_diagonal, El::gmp::Precision(), El::mpi::COMM_WORLD);
   if(verbosity >= Verbosity::trace)
     {
-      print_allocation_message_per_node(
-        env, "Matrix_Normalizer",
-        get_allocated_bytes(normalizer.column_norms));
+      print_allocation_message_per_node(env, "Matrix_Normalizer",
+                                        get_allocated_bytes(normalizer.norms));
     }
-  normalizer_ctor_timer.stop();
-  {
-    Scoped_Timer normalizer_timer(timers, "normalize_P");
-    normalizer.normalize_and_shift_P_blocks(P_blocks);
-  }
+  normalizer_timer.stop();
 
   // Calculate Q = P^T P
-  auto uplo = El::UPPER;
-  bigint_syrk_context.bigint_syrk_blas(uplo, P_blocks, Q, timers,
-                                       block_timings_ms);
+  constexpr auto uplo = El::UPPER;
+  bigint_syrk_context.bigint_syrk_blas(uplo, schur_off_diagonal.blocks, Q,
+                                       timers, block_timings_ms);
 
   // Check that Q_ii = 2^2N
   check_normalized_Q_diagonal(Q, normalizer, timers);
 
   // Remove normalization
   Scoped_Timer restore_timer(timers, "restore_P_Q");
-  normalizer.restore_P_blocks(P_blocks);
-  normalizer.restore_Q(uplo, Q);
+  normalizer.restore(schur_off_diagonal);
+  restore_syrk_output(uplo, normalizer, Q);
 }
 
 void compute_Q(const Environment &env, const SDP &sdp,

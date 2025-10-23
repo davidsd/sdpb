@@ -31,7 +31,7 @@ TEST_CASE("normalize_and_shift")
     CAPTURE(P_matrix.LocalHeight());
     CAPTURE(P_matrix.LocalWidth());
 
-    std::vector<El::DistMatrix<El::BigFloat>> P_matrix_blocks;
+    Block_Matrix P_block_matrix({}, P_matrix.Width(), {}, P_matrix.Grid());
 
     // Split P_matrix horizontally
     // into blocks with different random heights
@@ -55,25 +55,27 @@ TEST_CASE("normalize_and_shift")
           El::Range<int> rows(begin_row, end_row);
           El::Range<int> cols(0, P_matrix.Width());
           auto block = P_matrix(rows, cols);
-          P_matrix_blocks.push_back(block);
+          P_block_matrix.blocks.push_back(block);
 
           begin_row = end_row;
         }
-      CAPTURE(P_matrix_blocks.size());
+      CAPTURE(P_block_matrix.blocks.size());
     }
 
     auto initial_P_matrix = P_matrix;
 
-    Matrix_Normalizer normalizer(P_matrix_blocks, width, bits,
-                                 El::mpi::COMM_WORLD);
-    CAPTURE(normalizer.precision);
-    CAPTURE(normalizer.column_norms);
+    const auto P_normalizer
+      = normalize_and_shift<Matrix_Normalization_Kind::COLUMNS>(P_matrix,
+                                                                bits);
+    const auto P_block_normalizer
+      = normalize_and_shift<Matrix_Normalization_Kind::COLUMNS>(
+        P_block_matrix, bits, P_matrix.DistComm());
+    CAPTURE(P_normalizer.bits);
+    CAPTURE(P_normalizer.norms);
+    CAPTURE(P_block_normalizer.norms);
 
-    normalizer.normalize_and_shift_P(P_matrix);
     REQUIRE(P_matrix.Get(0, 0) != initial_P_matrix.Get(0, 0));
-
-    normalizer.normalize_and_shift_P_blocks(P_matrix_blocks);
-    DIFF(P_matrix_blocks.at(0).Get(0, 0), P_matrix.Get(0, 0));
+    DIFF(P_block_matrix.blocks.at(0).Get(0, 0), P_matrix.Get(0, 0));
 
     SECTION("restore_Q")
     {
@@ -99,23 +101,31 @@ TEST_CASE("normalize_and_shift")
             }
       }
 
-      normalizer.restore_Q(uplo, Q);
+      auto Q_from_P = Q;
+      auto Q_from_P_blocks = Q;
+
       El::MakeSymmetric(uplo, initial_Q);
-      El::MakeSymmetric(uplo, Q);
-      DIFF_PREC(initial_Q, Q, diff_precision);
+
+      restore_syrk_output(uplo, P_normalizer, Q_from_P);
+      El::MakeSymmetric(uplo, Q_from_P);
+      DIFF_PREC(initial_Q, Q_from_P, diff_precision);
+
+      restore_syrk_output(uplo, P_block_normalizer, Q_from_P_blocks);
+      El::MakeSymmetric(uplo, Q_from_P_blocks);
+      DIFF_PREC(initial_Q, Q_from_P_blocks, diff_precision);
     }
 
     SECTION("restore_P")
     {
       {
         INFO("restore_P");
-        normalizer.restore_P(P_matrix);
+        P_normalizer.restore(P_matrix);
         DIFF(P_matrix, initial_P_matrix);
       }
 
       {
         INFO("restore_P_blocks");
-        normalizer.restore_P_blocks(P_matrix_blocks);
+        P_block_normalizer.restore(P_block_matrix);
 
         int begin_row = 0;
         for(size_t block_index = 0; block_index < num_blocks; ++block_index)
@@ -130,7 +140,7 @@ TEST_CASE("normalize_and_shift")
             CAPTURE(block_index);
             CAPTURE(begin_row);
             CAPTURE(block_height);
-            DIFF(block, P_matrix_blocks.at(block_index));
+            DIFF(block, P_block_matrix.blocks.at(block_index));
 
             begin_row = end_row;
           }

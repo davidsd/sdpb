@@ -54,10 +54,8 @@ namespace
     INFO("auto P = P_matrix;");
     CAPTURE(P);
     CAPTURE(bits);
-    // matrix only on this rank, thus El::mpi::COMM_SELF, no communication
-    Matrix_Normalizer normalizer(P, bits, El::mpi::COMM_SELF);
-
-    normalizer.normalize_and_shift_P(P);
+    const auto normalizer
+      = normalize_and_shift<Matrix_Normalization_Kind::COLUMNS>(P, bits);
 
     El::Matrix<El::BigFloat> PT;
     Transpose(P, PT);
@@ -80,7 +78,7 @@ namespace
     El::Matrix<El::BigFloat> Q_result;
     Q.ToBigFloatMatrix(Q_result);
 
-    normalizer.restore_Q(El::UPPER, Q_result);
+    restore_syrk_output(El::UPPER, normalizer, Q_result);
     El::MakeSymmetric(El::UPPER, Q_result);
     return Q_result;
   }
@@ -255,10 +253,11 @@ TEST_CASE("calculate_Block_Matrix_square")
                                  El::mpi::COMM_WORLD);
             }
 
-            std::vector<El::DistMatrix<El::BigFloat>> P_matrix_blocks;
+            Block_Matrix P_block_matrix({}, block_width, {},
+                                        El::Grid::Default());
             std::vector<size_t> block_indices;
             {
-              INFO("Initialize P_matrix_blocks for FLINT+BLAS "
+              INFO("Initialize P_block_matrix for FLINT+BLAS "
                    "multiplication");
 
               int global_block_offset = 0;
@@ -287,12 +286,12 @@ TEST_CASE("calculate_Block_Matrix_square")
                           }
                       // TODO block indices for window!
                       block_indices.push_back(block_index);
-                      P_matrix_blocks.push_back(block);
+                      P_block_matrix.blocks.push_back(block);
                     }
                   global_block_offset += block_height;
                 }
               // Each MPI group should get at least 1 block
-              REQUIRE(!P_matrix_blocks.empty());
+              REQUIRE(!P_block_matrix.blocks.empty());
             }
 
             // calculate Q = P^T P using bigint_syrk_blas
@@ -312,13 +311,10 @@ TEST_CASE("calculate_Block_Matrix_square")
                                                       block_width);
                 {
                   // blocks are distributed among all ranks, thus COMM_WORLD
-                  Matrix_Normalizer normalizer(P_matrix_blocks, block_width,
-                                               bits, El::mpi::COMM_WORLD);
-                  CAPTURE(normalizer.column_norms);
-                  for(auto &block : P_matrix_blocks)
-                    {
-                      normalizer.normalize_and_shift_P(block);
-                    }
+                  const auto normalizer
+                    = normalize_and_shift<Matrix_Normalization_Kind::COLUMNS>(
+                      P_block_matrix, bits, El::mpi::COMM_WORLD);
+                  CAPTURE(normalizer.norms);
 
                   const El::UpperOrLower uplo = El::UpperOrLowerNS::UPPER;
 
@@ -338,7 +334,7 @@ TEST_CASE("calculate_Block_Matrix_square")
                     num_groups_per_node, group_size);
                   std::vector<El::Int> blocks_height_per_group(
                     num_groups_per_node);
-                  for(const auto &block : P_matrix_blocks)
+                  for(const auto &block : P_block_matrix.blocks)
                     {
                       if(block.DistComm().Rank() == 0)
                         blocks_height_per_group.at(group_index_in_node)
@@ -359,8 +355,9 @@ TEST_CASE("calculate_Block_Matrix_square")
                     El::Matrix<int32_t> block_timings_ms(num_blocks, 1);
                     El::Zero(block_timings_ms);
                     INFO("Calling bigint_syrk_blas()...");
-                    context.bigint_syrk_blas(uplo, P_matrix_blocks, Q_result,
-                                             timers, block_timings_ms);
+                    context.bigint_syrk_blas(uplo, P_block_matrix.blocks,
+                                             Q_result, timers,
+                                             block_timings_ms);
                   }
                   {
                     INFO("Check that normalized Q_ii = 1:");
@@ -375,13 +372,13 @@ TEST_CASE("calculate_Block_Matrix_square")
                             {
                               CAPTURE(i);
                               auto value = Q_result.GetLocal(iLoc, jLoc);
-                              DIFF_PREC(value >> 2 * normalizer.precision,
+                              DIFF_PREC(value >> 2 * normalizer.bits,
                                         El::BigFloat(1), diff_precision);
                             }
                         }
                   }
 
-                  normalizer.restore_Q(uplo, Q_result);
+                  restore_syrk_output(uplo, normalizer, Q_result);
                   El::MakeSymmetric(uplo, Q_result);
                 }
 

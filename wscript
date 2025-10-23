@@ -88,7 +88,6 @@ def build(bld):
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/fmpz/Fmpz_BigInt.cxx',
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/fmpz/Fmpz_Matrix.cxx',
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/fmpz/Fmpz_Comb.cxx',
-                         'src/sdp_solve/SDP_Solver/run/bigint_syrk/Matrix_Normalizer.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/compute_search_direction/compute_search_direction.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/compute_search_direction/compute_schur_RHS.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/compute_search_direction/solve_schur_complement_equation.cxx',
