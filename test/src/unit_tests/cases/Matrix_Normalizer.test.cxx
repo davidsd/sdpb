@@ -1,8 +1,8 @@
 #include "catch2/catch_amalgamated.hpp"
 
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/Matrix_Normalizer.hxx"
-#include "sdp_solve/SDP_Solver/run/bigint_syrk/fmpz/Fmpz_Comb.hxx"
 #include "sdpb_util/assert.hxx"
+#include "sdpb_util/bigint_shared_memory/fmpz/Fmpz_Comb.hxx"
 #include "unit_tests/util/util.hxx"
 
 #include <El.hpp>

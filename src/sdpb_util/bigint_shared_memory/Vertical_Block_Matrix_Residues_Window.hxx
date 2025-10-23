@@ -1,15 +1,14 @@
 #pragma once
 
-#include "Residue_Matrices_Window.hxx"
+#include "Matrix_Residues_Window.hxx"
 #include "sdpb_util/assert.hxx"
 
-// Same as Residue_Matrices_Window<T>,
+// Same as Matrix_Residues_Window<T>,
 // but each (tall) residue matrix (i.e. residues[prime_index])
 // is split horizontally into blocks
 // (i.e. block_residues[prime_index][0..num_blocks-1])
 template <class T>
-class Vertical_Block_Residue_Matrices_Window
-    : public Residue_Matrices_Window<T>
+class Vertical_Block_Matrix_Residues_Window : public Matrix_Residues_Window<T>
 {
 public:
   const size_t num_blocks;
@@ -27,20 +26,38 @@ public:
   // and block_residues[prime_index][block_index] is a view to its submatrix
   std::vector<std::vector<El::Matrix<T>>> block_residues;
 
-  Vertical_Block_Residue_Matrices_Window(
+  Vertical_Block_Matrix_Residues_Window(
     El::mpi::Comm shared_memory_comm, size_t num_primes, size_t num_blocks,
     const std::vector<El::Int> &block_heights, size_t block_width)
-      : Residue_Matrices_Window<T>(shared_memory_comm, num_primes,
-                                   Sum(block_heights), block_width),
+      : Matrix_Residues_Window<T>(shared_memory_comm, num_primes,
+                                  Sum(block_heights), block_width),
         num_blocks(num_blocks),
         block_residues(num_primes, std::vector<El::Matrix<T>>(num_blocks))
+  {
+    initialize(num_primes, block_heights);
+  }
+  Vertical_Block_Matrix_Residues_Window(
+    Shared_Window_Array_View<T> window_view, size_t num_primes,
+    size_t num_blocks, const std::vector<El::Int> &block_heights,
+    size_t block_width)
+      : Matrix_Residues_Window<T>(window_view, num_primes, Sum(block_heights),
+                                  block_width),
+        num_blocks(num_blocks),
+        block_residues(num_primes, std::vector<El::Matrix<T>>(num_blocks))
+  {
+    initialize(num_primes, block_heights);
+  }
+
+private:
+  void initialize(const size_t num_primes,
+                  const std::vector<El::Int> &block_heights)
   {
     for(size_t prime_index = 0; prime_index < num_primes; ++prime_index)
       {
         size_t block_start_row = 0;
         for(size_t block_index = 0; block_index < num_blocks; ++block_index)
           {
-            size_t block_height = block_heights.at(block_index);
+            const size_t block_height = block_heights.at(block_index);
             El::Range<El::Int> I(block_start_row,
                                  block_start_row + block_height);
             El::Range<El::Int> J(0, this->width);
@@ -53,7 +70,6 @@ public:
       ASSERT_EQUAL(block_residues[0][0].Buffer(), this->residues[0].Buffer());
   }
 
-private:
   static El::Int Sum(const std::vector<El::Int> &block_heights)
   {
     return std::accumulate(block_heights.begin(), block_heights.end(), 0);

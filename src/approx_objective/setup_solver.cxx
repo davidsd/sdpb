@@ -214,7 +214,7 @@ void setup_solver(const Environment &env, const Block_Info &block_info,
         = get_max_shared_memory_bytes(parameters.max_shared_memory_bytes, env,
                                       block_info, sdp, X, verbosity);
       auto bigint_syrk_context = initialize_bigint_syrk_context(
-        env, block_info, sdp, max_shared_memory_bytes, verbosity);
+        block_info, sdp, max_shared_memory_bytes, verbosity);
 
       initialize_schur_complement_solver(
         env, block_info, sdp, A_X_inv, A_Y, grid, schur_complement_cholesky,

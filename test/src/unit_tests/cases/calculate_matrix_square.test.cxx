@@ -2,7 +2,7 @@
 
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/Matrix_Normalizer.hxx"
-#include "sdp_solve/SDP_Solver/run/bigint_syrk/fmpz/Fmpz_Matrix.hxx"
+#include "sdpb_util/bigint_shared_memory/fmpz/Fmpz_Matrix.hxx"
 #include "test_util/test_util.hxx"
 #include "unit_tests/util/util.hxx"
 

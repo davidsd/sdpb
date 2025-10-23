@@ -1,6 +1,6 @@
 #include "../BigInt_Shared_Memory_Syrk_Context.hxx"
-#include "../fmpz/fmpz_mul_blas_util.hxx"
 #include "sdpb_util/assert.hxx"
+#include "sdpb_util/bigint_shared_memory/fmpz/fmpz_mul_blas_util.hxx"
 #include "sdpb_util/ostream/ostream_vector.hxx"
 #include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
@@ -26,7 +26,7 @@ namespace
 
   template <class T>
   [[nodiscard]] size_t
-  window_size_bytes(const Residue_Matrices_Window<T> &window)
+  window_size_bytes(const Matrix_Residues_Window<T> &window)
   {
     return window_size_bytes<T>(window.height, window.width,
                                 window.num_primes);
@@ -332,11 +332,11 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       El::Output(os.str());
     }
 
-  output_residues_window = std::make_unique<Residue_Matrices_Window<double>>(
+  output_residues_window = std::make_unique<Matrix_Residues_Window<double>>(
     shared_memory_comm, comb.num_primes, window_width, window_width);
 
   input_grouped_block_residues_window_A
-    = std::make_unique<Block_Residue_Matrices_Window<double>>(
+    = std::make_unique<Vertical_Block_Matrix_Residues_Window<double>>(
       shared_memory_comm, comb.num_primes, num_groups,
       input_window_height_per_group_per_prime, window_width);
 
@@ -345,7 +345,7 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
   if(output_window_split_factor > 1)
     {
       input_grouped_block_residues_window_B
-        = std::make_unique<Block_Residue_Matrices_Window<double>>(
+        = std::make_unique<Vertical_Block_Matrix_Residues_Window<double>>(
           shared_memory_comm, comb.num_primes, num_groups,
           input_window_height_per_group_per_prime, window_width);
     }

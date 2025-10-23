@@ -1,10 +1,10 @@
 #include "catch2/catch_amalgamated.hpp"
 
 #include "sdpb_util/Shared_Window_Array.hxx"
-#include "test_util/diff.hxx"
+#include "sdpb_util/bigint_shared_memory/Matrix_Residues_Window.hxx"
+#include "sdpb_util/bigint_shared_memory/Vertical_Block_Matrix_Residues_Window.hxx"
 
-#include "sdp_solve/SDP_Solver/run/bigint_syrk/Vertical_Block_Residue_Matrices_Window.hxx"
-#include "sdp_solve/SDP_Solver/run/bigint_syrk/Residue_Matrices_Window.hxx"
+#include "test_util/diff.hxx"
 
 #include <El.hpp>
 

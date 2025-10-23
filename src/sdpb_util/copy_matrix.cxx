@@ -107,7 +107,7 @@ void copy_matrix_from_root_impl_shared_window(
 
   const int ldim = destination.Height();
   auto get_buffer = [&](int i, int j) -> El::byte * {
-    return window.data + (i + j * ldim) * bigfloat_size_bytes;
+    return window.data() + (i + j * ldim) * bigfloat_size_bytes;
   };
 
   // Serialize input matrix to shared memory window

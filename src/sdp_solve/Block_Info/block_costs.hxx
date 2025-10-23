@@ -2,8 +2,8 @@
 
 #include "block_timings.hxx"
 #include "matrix_sizes.hxx"
-#include "sdp_solve/SDP_Solver/run/bigint_syrk/fmpz/Fmpz_Comb.hxx"
 #include "sdpb_util/assert.hxx"
+#include "sdpb_util/bigint_shared_memory/fmpz/Fmpz_Comb.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
 // Assign costs proportional to matrix sizes.

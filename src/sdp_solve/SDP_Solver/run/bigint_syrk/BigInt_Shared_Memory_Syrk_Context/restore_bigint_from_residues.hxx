@@ -1,13 +1,14 @@
 #pragma once
 
-#include "../fmpz/Fmpz_Comb.hxx"
-#include "../fmpz/fmpz_mul_blas_util.hxx"
 #include "sdpb_util/assert.hxx"
+#include "sdpb_util/bigint_shared_memory/fmpz/Fmpz_BigInt.hxx"
+#include "sdpb_util/bigint_shared_memory/fmpz/Fmpz_Comb.hxx"
+#include "sdpb_util/bigint_shared_memory/fmpz/fmpz_mul_blas_util.hxx"
 
 #include <El.hpp>
 
 inline void
-restore_bigint_from_residues(const Residue_Matrices_Window<double> &window,
+restore_bigint_from_residues(const Matrix_Residues_Window<double> &window,
                              size_t i, size_t j, Fmpz_Comb &comb,
                              std::vector<mp_limb_t> &residues_buffer_temp,
                              Fmpz_BigInt &output)

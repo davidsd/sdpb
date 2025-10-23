@@ -1,6 +1,6 @@
 #include "../BigInt_Shared_Memory_Syrk_Context.hxx"
-#include "../fmpz/Fmpz_BigInt.hxx"
-#include "../fmpz/fmpz_mul_blas_util.hxx"
+#include "sdpb_util/bigint_shared_memory/fmpz/Fmpz_BigInt.hxx"
+#include "sdpb_util/bigint_shared_memory/fmpz/fmpz_mul_blas_util.hxx"
 #include "sdpb_util/assert.hxx"
 
 // compute residues and put them to shared window
@@ -11,7 +11,7 @@ namespace
   void compute_column_residues_elementwise(
     const El::DistMatrix<El::BigFloat> &block, size_t group_index,
     El::Int residue_row_begin, El::Int global_col, Fmpz_Comb &comb,
-    Block_Residue_Matrices_Window<double> &block_residues_window)
+    Vertical_Block_Matrix_Residues_Window<double> &block_residues_window)
   {
     if(!block.IsLocalCol(global_col))
       return;
@@ -60,7 +60,7 @@ namespace
     El::Int group_index, const BlockIterator &consecutive_blocks_begin,
     const BlockIterator &consecutive_blocks_end, El::Int residue_row_begin,
     El::Int global_col, Fmpz_Comb &comb,
-    Block_Residue_Matrices_Window<double> &block_residues_window,
+    Vertical_Block_Matrix_Residues_Window<double> &block_residues_window,
     std::vector<double> &column_residues_buffer_temp)
   {
     auto total_height = std::transform_reduce(
@@ -125,7 +125,7 @@ namespace
     const size_t group_index,
     const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
     const El::Int global_col, Fmpz_Comb &comb,
-    Block_Residue_Matrices_Window<double> &input_block_residues_window,
+    Vertical_Block_Matrix_Residues_Window<double> &input_block_residues_window,
     std::vector<double> &column_residues_buffer_temp)
   {
     // offset for current block in the residues window
@@ -221,7 +221,7 @@ namespace
 // and then fill the input window with as many remaining rows as we can
 // (if the window height is small, we have to call compute_block_residues() several times)
 void BigInt_Shared_Memory_Syrk_Context::compute_block_residues(
-  Block_Residue_Matrices_Window<double> &grouped_block_residues_window,
+  Vertical_Block_Matrix_Residues_Window<double> &grouped_block_residues_window,
   const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
   El::Int skip_rows, El::Range<El::Int> col_range, Timers &timers,
   El::Matrix<int32_t> &block_timings_ms)

@@ -246,7 +246,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
     = get_max_shared_memory_bytes(parameters.max_shared_memory_bytes, env,
                                   block_info, sdp, *this, verbosity);
   auto bigint_syrk_context = initialize_bigint_syrk_context(
-    env, block_info, sdp, max_shared_memory_bytes, verbosity);
+    block_info, sdp, max_shared_memory_bytes, verbosity);
   initialize_bigint_syrk_context_timer.stop();
 
   initialize_timer.stop();

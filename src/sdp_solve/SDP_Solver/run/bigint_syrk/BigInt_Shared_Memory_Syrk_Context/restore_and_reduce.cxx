@@ -1,6 +1,6 @@
 #include "../BigInt_Shared_Memory_Syrk_Context.hxx"
-#include "sdp_solve/SDP_Solver/run/bigint_syrk/fmpz/Fmpz_BigInt.hxx"
 #include "restore_bigint_from_residues.hxx"
+#include "sdpb_util/bigint_shared_memory/fmpz/Fmpz_BigInt.hxx"
 #include "sdpb_util/block_mapping/MPI_Comm_Wrapper.hxx"
 
 // Restore output matrix from residues (output_residues_window) and synchronize it for all nodes.

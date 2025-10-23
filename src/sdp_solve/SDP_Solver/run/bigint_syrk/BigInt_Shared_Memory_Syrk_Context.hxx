@@ -2,9 +2,9 @@
 
 #include "blas_jobs/create_blas_jobs_schedule.hxx"
 #include "blas_jobs/Blas_Job_Schedule.hxx"
-#include "fmpz/Fmpz_Comb.hxx"
-#include "Vertical_Block_Residue_Matrices_Window.hxx"
-#include "Residue_Matrices_Window.hxx"
+#include "sdpb_util/bigint_shared_memory/fmpz/Fmpz_Comb.hxx"
+#include "sdpb_util/bigint_shared_memory/Vertical_Block_Matrix_Residues_Window.hxx"
+#include "sdpb_util/bigint_shared_memory/Matrix_Residues_Window.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
 #include <memory>
@@ -56,7 +56,7 @@ private:
   // Index of MPI group on a node
   size_t group_index;
   // Sizes of MPI groups on a node
-  const std::vector<int> &group_comm_sizes;
+  const std::vector<int> group_comm_sizes;
   // Number of MPI groups on a node
   size_t num_groups;
   int total_block_height_per_node;
@@ -64,16 +64,16 @@ private:
   const Verbosity verbosity;
   // All blocks from each MPI group are combined
   // into a single block in Block_Residue_Matrices_Window
-  std::unique_ptr<Vertical_Block_Residue_Matrices_Window<double>>
+  std::unique_ptr<Vertical_Block_Matrix_Residues_Window<double>>
     input_grouped_block_residues_window_A;
-  std::unique_ptr<Vertical_Block_Residue_Matrices_Window<double>>
+  std::unique_ptr<Vertical_Block_Matrix_Residues_Window<double>>
     input_grouped_block_residues_window_B;
   // How many times we should fill input window
   // to process all blocks:
   // (should be same for all ranks)
   size_t input_window_split_factor = 0;
   size_t output_window_split_factor = 0;
-  std::unique_ptr<Residue_Matrices_Window<double>> output_residues_window;
+  std::unique_ptr<Matrix_Residues_Window<double>> output_residues_window;
   const std::vector<size_t> block_index_local_to_global;
   std::function<Blas_Job_Schedule(Blas_Job::Kind kind, El::UpperOrLower uplo,
                                   size_t num_ranks, size_t num_primes,
@@ -90,7 +90,8 @@ private:
 
   void clear_residues(const Blas_Job_Schedule &blas_job_schedule);
   void compute_block_residues(
-    Vertical_Block_Residue_Matrices_Window<double> &grouped_block_residues_window,
+    Vertical_Block_Matrix_Residues_Window<double>
+      &grouped_block_residues_window,
     const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
     El::Int skip_rows, El::Range<El::Int> col_range, Timers &timers,
     El::Matrix<int32_t> &block_timings_ms);
