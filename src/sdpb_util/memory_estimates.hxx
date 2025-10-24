@@ -11,6 +11,7 @@ get_max_shared_memory_bytes(size_t nonshared_memory_required_per_node_bytes,
                             const Environment &env, Verbosity verbosity);
 
 size_t bigfloat_bytes();
+size_t bigfloat_bytes(mp_bitcnt_t precision);
 
 size_t get_heap_allocated_bytes(const El::BigFloat &f);
 size_t get_heap_allocated_bytes(const El::AbstractDistMatrix<El::BigFloat> &m);

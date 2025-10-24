@@ -10,6 +10,15 @@ size_t bigfloat_bytes()
 {
   return sizeof(El::BigFloat) + El::gmp::num_limbs * sizeof(mp_limb_t);
 }
+size_t bigfloat_bytes(const mp_bitcnt_t precision)
+{
+  // Copied from El::SetPrecision
+  const auto num_limbs = (std::max(precision, static_cast<mp_bitcnt_t>(53))
+                          + 2 * GMP_NUMB_BITS - 1)
+                           / GMP_NUMB_BITS
+                         + 1;
+  return sizeof(El::BigFloat) + num_limbs * sizeof(mp_limb_t);
+}
 
 size_t get_max_shared_memory_bytes(
   const size_t nonshared_memory_required_per_node_bytes,
