@@ -12,8 +12,6 @@
 template <class Derived>
 struct Abstract_Block_Diagonal_Matrix : Abstract_Block_Matrix<Derived>
 {
-  virtual ~Abstract_Block_Diagonal_Matrix() = default;
-
   void add_block(const size_t height, const El::Grid &grid) override
   {
     this->blocks.emplace_back(height, height, grid);
@@ -114,8 +112,9 @@ void lower_triangular_solve(
 
 // v := L^{-T} v, where L is lower-triangular
 template <class Derived_L, class Derived_B>
-void lower_triangular_transpose_solve(const Abstract_Block_Diagonal_Matrix<Derived_L> &L,
-                                      Abstract_Block_Matrix<Derived_B> &v)
+void lower_triangular_transpose_solve(
+  const Abstract_Block_Diagonal_Matrix<Derived_L> &L,
+  Abstract_Block_Matrix<Derived_B> &v)
 {
   for(size_t b = 0; b < L.blocks.size(); b++)
     {

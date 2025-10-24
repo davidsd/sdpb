@@ -15,7 +15,6 @@
 
 struct Block_Matrix : Abstract_Block_Matrix<Block_Matrix>
 {
-  virtual ~Block_Matrix() = default;
   size_t width{};
   Block_Matrix(const std::vector<size_t> &block_heights, const size_t &width,
                const std::vector<size_t> &block_indices, const El::Grid &grid)
