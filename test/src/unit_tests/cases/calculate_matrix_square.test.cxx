@@ -11,7 +11,8 @@
 
 using Test_Util::REQUIRE_Equal::diff;
 
-Blas_Job_Schedule create_blas_job_schedule_split_remaining_primes(
+Blas_Job_Schedule<Blas_Job>
+create_syrk_or_gemm_job_schedule_split_remaining_primes(
   Blas_Job::Kind kind, El::UpperOrLower uplo, size_t num_ranks,
   size_t num_primes, El::Int output_matrix_height, El::Int output_matrix_width,
   size_t split_factor);
@@ -318,15 +319,18 @@ TEST_CASE("calculate_Block_Matrix_square")
 
                   const El::UpperOrLower uplo = El::UpperOrLowerNS::UPPER;
 
-                  auto create_job_schedule
-                    = [&blas_schedule_split_factor](
-                        Blas_Job::Kind kind, El::UpperOrLower uplo,
-                        size_t num_ranks, size_t num_primes, int output_height,
-                        int output_width, Verbosity verbosity) {
-                        return create_blas_job_schedule_split_remaining_primes(
-                          kind, uplo, num_ranks, num_primes, output_height,
-                          output_width, blas_schedule_split_factor);
-                      };
+                  auto create_job_schedule = [&blas_schedule_split_factor](
+                                               Blas_Job::Kind kind,
+                                               El::UpperOrLower uplo,
+                                               size_t num_ranks,
+                                               size_t num_primes,
+                                               int output_height,
+                                               int output_width,
+                                               Verbosity verbosity) {
+                    return create_syrk_or_gemm_job_schedule_split_remaining_primes(
+                      kind, uplo, num_ranks, num_primes, output_height,
+                      output_width, blas_schedule_split_factor);
+                  };
 
                   // NB: group_comm.Size() is the same for everyone,
                   // otherwise we'd have to synchronize it

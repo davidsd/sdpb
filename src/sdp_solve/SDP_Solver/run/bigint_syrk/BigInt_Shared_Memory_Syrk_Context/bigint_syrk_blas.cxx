@@ -107,7 +107,7 @@ namespace
 
   void do_blas_jobs(
     const El::UpperOrLower uplo, const Blas_Job::Kind kind,
-    const Blas_Job_Schedule &blas_job_schedule,
+    const BigInt_Shared_Memory_Syrk_Context::Job_Schedule &blas_job_schedule,
     const std::unique_ptr<Vertical_Block_Matrix_Residues_Window<double>>
       &input_grouped_block_residues_window_A,
     const std::unique_ptr<Vertical_Block_Matrix_Residues_Window<double>>
@@ -252,11 +252,11 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem_submatrix(
   // syrk for diagonal blocks of Q (Q_II = P_I^T P_I),
   // gemm for off-diagonal (Q_IJ = P_I^T P_J)
   const auto kind = output_I == output_J ? Blas_Job::syrk : Blas_Job::gemm;
-  const auto blas_job_schedule
+  const auto &blas_job_schedule
     = get_blas_job_schedule(kind, uplo, output_height, output_width);
 
   // Clear input and output windows
-  clear_residues(*blas_job_schedule);
+  clear_residues(blas_job_schedule);
 
   // If input window is not big enough, we should fill input window
   // several times (taking different input block rows)
@@ -288,7 +288,7 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem_submatrix(
       // Square each residue matrix
       {
         Scoped_Timer syrk_timer(timers, "syrk");
-        do_blas_jobs(uplo, kind, *blas_job_schedule,
+        do_blas_jobs(uplo, kind, blas_job_schedule,
                      input_grouped_block_residues_window_A,
                      input_grouped_block_residues_window_B,
                      output_residues_window, shared_memory_comm, timers);

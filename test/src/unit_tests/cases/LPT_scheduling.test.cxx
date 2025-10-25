@@ -1,5 +1,6 @@
 #include <algorithm>
-#include "sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/LPT_scheduling.hxx"
+
+#include "sdpb_util/bigint_shared_memory/blas_jobs/LPT_scheduling.hxx"
 #include "unit_tests/util/util.hxx"
 
 namespace

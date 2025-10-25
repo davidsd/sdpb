@@ -117,7 +117,7 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
   const std::vector<El::Int> &blocks_height_per_group, const int block_width,
   const std::vector<size_t> &block_index_local_to_global,
   const Verbosity verbosity,
-  const std::function<Blas_Job_Schedule(
+  const std::function<Job_Schedule(
     Blas_Job::Kind kind, El::UpperOrLower uplo, size_t num_ranks,
     size_t num_primes, int output_height, int output_width,
     Verbosity _verbosity)> &create_job_schedule)

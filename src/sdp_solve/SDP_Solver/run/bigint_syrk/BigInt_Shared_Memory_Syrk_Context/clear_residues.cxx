@@ -2,7 +2,7 @@
 
 // Set all input and output residues to zero
 void BigInt_Shared_Memory_Syrk_Context::clear_residues(
-  const Blas_Job_Schedule &blas_job_schedule)
+  const Job_Schedule &blas_job_schedule)
 {
   // "First touch": each rank is accessing (and setting to zero) the parts of shared memory window
   // that it will use for BLAS jobs.

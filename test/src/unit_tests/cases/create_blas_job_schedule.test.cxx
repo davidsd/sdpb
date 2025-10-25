@@ -1,7 +1,7 @@
 #include "catch2/catch_amalgamated.hpp"
 
 #include "test_util/diff.hxx"
-#include "sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/create_blas_jobs_schedule.hxx"
+#include "sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/create_blas_job_schedule.hxx"
 
 #include <El.hpp>
 
@@ -47,8 +47,9 @@ TEST_CASE("create_blas_jobs_schedule")
         }
 
     {
+      // NB: Don't forget to change this if you change Blas_Job calculation!
       INFO("Check that total number of matrix elements to calculate:");
-      DIFF(total_cost.elements, Q_height * (Q_height + 1) / 2 * num_primes);
+      DIFF(total_cost.cost, Q_height * (Q_height + 1) / 2 * num_primes);
     }
 
     {
@@ -61,8 +62,7 @@ TEST_CASE("create_blas_jobs_schedule")
 
     {
       INFO("Check that max_cost is above the average cost:");
-      REQUIRE(schedule.max_rank_cost().elements * num_ranks
-              >= total_cost.elements);
+      REQUIRE(schedule.max_rank_cost().cost * num_ranks >= total_cost.cost);
     }
   }
 }
