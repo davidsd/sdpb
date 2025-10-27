@@ -14,13 +14,10 @@ initialize_bigint_syrk_context(const Block_Info &block_info, const SDP &sdp,
 
   const auto block_width = sdp.dual_objective_b.Height(); // = N
 
-  std::vector<int> group_comm_sizes;
   std::vector<int> blocks_height_per_group;
   for(const auto &group :
       block_info.block_mapping.mapping.at(block_info.node_index))
     {
-      group_comm_sizes.push_back(group.num_procs);
-
       size_t height = 0;
       for(const auto &block_index : group.block_indices)
         {
@@ -31,7 +28,6 @@ initialize_bigint_syrk_context(const Block_Info &block_info, const SDP &sdp,
     }
 
   return BigInt_Shared_Memory_Syrk_Context(
-    block_info.node_comm, group_index, group_comm_sizes, precision,
-    max_shared_memory_bytes, blocks_height_per_group, block_width,
-    block_info.block_indices, verbosity);
+    block_info.node_comm, group_index, precision, max_shared_memory_bytes,
+    blocks_height_per_group, block_width, block_info.block_indices, verbosity);
 }

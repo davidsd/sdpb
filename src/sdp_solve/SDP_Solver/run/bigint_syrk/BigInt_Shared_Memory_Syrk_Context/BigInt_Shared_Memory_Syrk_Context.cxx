@@ -112,27 +112,23 @@ namespace
 
 BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
   const El::mpi::Comm &shared_memory_comm, const size_t group_index,
-  const std::vector<int> &group_comm_sizes, const mp_bitcnt_t precision,
-  size_t max_shared_memory_bytes,
+  const mp_bitcnt_t precision, size_t max_shared_memory_bytes,
   const std::vector<El::Int> &blocks_height_per_group, const int block_width,
   const std::vector<size_t> &block_index_local_to_global,
   const Verbosity verbosity,
-  const std::function<Job_Schedule(
-    Blas_Job::Kind kind, El::UpperOrLower uplo, size_t num_ranks,
-    size_t num_primes, int output_height, int output_width,
-    Verbosity _verbosity)> &create_job_schedule)
+  const std::function<Job_Schedule(Blas_Job::Kind kind, El::UpperOrLower uplo,
+                                   size_t num_ranks, size_t num_primes,
+                                   int output_height, int output_width,
+                                   Verbosity _verbosity)> &create_job_schedule)
     : shared_memory_comm(shared_memory_comm),
       group_index(group_index),
-      group_comm_sizes(group_comm_sizes),
-      num_groups(group_comm_sizes.size()),
+      num_groups(blocks_height_per_group.size()),
       total_block_height_per_node(sum(blocks_height_per_group)),
       comb(precision, precision, 1, total_block_height_per_node),
       verbosity(verbosity),
       block_index_local_to_global(block_index_local_to_global),
       create_blas_job_schedule_func(create_job_schedule)
 {
-  ASSERT_EQUAL(blocks_height_per_group.size(), num_groups);
-
   std::vector<int> input_window_height_per_group_per_prime(num_groups);
   size_t window_width;
 
@@ -320,7 +316,6 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       El::BuildStream(os, "    Width: ", window_width, "\n");
       os << "    Heights for each MPI group: "
          << input_window_height_per_group_per_prime << "\n";
-      os << "    MPI group sizes:" << group_comm_sizes << "\n";
 
       if(reduce_scatter_buffer_bytes > 0)
         {

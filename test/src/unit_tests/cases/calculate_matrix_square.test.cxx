@@ -351,7 +351,7 @@ TEST_CASE("calculate_Block_Matrix_square")
                     const Verbosity verbosity = Verbosity::regular;
                     BigInt_Shared_Memory_Syrk_Context context(
                       node_comm, group_index_in_node,
-                      group_comm_sizes_per_node, bits, max_shared_memory_bytes,
+                       bits, max_shared_memory_bytes,
                       blocks_height_per_group, block_width, block_indices,
                       verbosity, create_job_schedule);
 

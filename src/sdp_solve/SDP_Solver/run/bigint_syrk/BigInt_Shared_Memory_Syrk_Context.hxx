@@ -17,8 +17,7 @@ public:
 
   BigInt_Shared_Memory_Syrk_Context(
     const El::mpi::Comm &shared_memory_comm, size_t group_index,
-    const std::vector<int> &group_comm_sizes, mp_bitcnt_t precision,
-    size_t max_shared_memory_bytes,
+    mp_bitcnt_t precision, size_t max_shared_memory_bytes,
     const std::vector<El::Int> &blocks_height_per_group, int block_width,
     const std::vector<size_t> &block_index_local_to_global,
     Verbosity verbosity,
@@ -56,8 +55,6 @@ private:
   El::mpi::Comm shared_memory_comm;
   // Index of MPI group on a node
   size_t group_index;
-  // Sizes of MPI groups on a node
-  const std::vector<int> group_comm_sizes;
   // Number of MPI groups on a node
   size_t num_groups;
   int total_block_height_per_node;
