@@ -63,7 +63,7 @@ Blas_Job_Schedule<TJob> create_blas_job_schedule(
   const size_t num_ranks, const size_t num_primes,
   const std::function<std::vector<TJob>(
     size_t prime_index, size_t split_factor)> &create_jobs_for_prime,
-  const Verbosity &verbosity)
+  const Verbosity &verbosity, size_t &best_split_factor)
 {
   const bool do_print
     = verbosity == Verbosity::trace && El::mpi::Rank() % num_ranks == 0;
@@ -82,7 +82,7 @@ Blas_Job_Schedule<TJob> create_blas_job_schedule(
   // In most cases, checking the first five split factors is good enough,
   // it usually gives almost uniform (up to several percents) load balancing.
   // Also, we don't split too much because of overhead.
-  size_t best_split_factor = min_split_factor;
+  best_split_factor = min_split_factor;
   Blas_Job_Cost min_cost
     = {std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max()};
   for(auto split_factor = min_split_factor;
@@ -106,28 +106,6 @@ Blas_Job_Schedule<TJob> create_blas_job_schedule(
                             / schedule.total_cost.cost,
                           " num_jobs=", num_jobs);
         }
-    }
-  if(do_print)
-    {
-      El::BuildStream(
-        ss, "\n\tChoosing the optimal split_factor=", best_split_factor);
-      El::BuildStream(ss, "\n\tFor the first ",
-                      num_primes - num_primes % num_ranks,
-                      " primes p_k, (Q mod p_k) will be calculated"
-                      " via single cblas_dsyrk() call.");
-      El::BuildStream(ss, "\n\tFor each of the remaining (", num_primes,
-                      " mod ", num_ranks, ") = ", num_primes % num_ranks,
-                      " primes, (Q mod p_k) will be split into ",
-                      best_split_factor, " diagonal blocks and ",
-                      best_split_factor * (best_split_factor - 1) / 2,
-                      " above-diagonal blocks.");
-      El::BuildStream(ss,
-                      "\n\tEach block is calculated independently"
-                      " via cblas_dsyrk() or cblas_dgemm().\n"
-                      "The jobs are distributed across all ",
-                      num_ranks, " ranks on the node.");
-      El::BuildStream(ss, "\n\t-----------------------------");
-      El::Output(ss.str());
     }
   // TODO here we are calculating jobs and schedule once again,
   // we should reuse what we did inside the for loop.

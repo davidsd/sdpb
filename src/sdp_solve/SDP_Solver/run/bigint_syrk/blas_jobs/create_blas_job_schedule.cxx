@@ -72,6 +72,31 @@ create_blas_job_schedule(const Blas_Job::Kind kind,
                                               split_factor);
   };
 
-  return create_blas_job_schedule<Blas_Job>(num_ranks, num_primes,
-                                            create_jobs_for_prime, verbosity);
+  size_t split_factor;
+  const auto result = create_blas_job_schedule<Blas_Job>(
+    num_ranks, num_primes, create_jobs_for_prime, verbosity, split_factor);
+  if(verbosity >= Verbosity::trace && El::mpi::Rank() % num_ranks == 0)
+    {
+      std::ostringstream ss;
+      El::BuildStream(ss,
+                      "\n\tChoosing the optimal split_factor=", split_factor);
+      El::BuildStream(ss, "\n\tFor the first ",
+                      num_primes - num_primes % num_ranks,
+                      " primes p_k, (Q mod p_k) will be calculated"
+                      " via single cblas_dsyrk() call.");
+      El::BuildStream(ss, "\n\tFor each of the remaining (", num_primes,
+                      " mod ", num_ranks, ") = ", num_primes % num_ranks,
+                      " primes, (Q mod p_k) will be split into ", split_factor,
+                      " diagonal blocks and ",
+                      split_factor * (split_factor - 1) / 2,
+                      " above-diagonal blocks.");
+      El::BuildStream(ss,
+                      "\n\tEach block is calculated independently"
+                      " via cblas_dsyrk() or cblas_dgemm().\n"
+                      "The jobs are distributed across all ",
+                      num_ranks, " ranks on the node.");
+      El::BuildStream(ss, "\n\t-----------------------------");
+      El::Output(ss.str());
+    }
+  return result;
 }
