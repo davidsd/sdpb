@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Fmpz_BigInt.hxx"
 #include "sdpb_util/flint.hxx"
 
 #include <boost/noncopyable.hpp>
@@ -12,7 +13,8 @@ struct Fmpz_Comb : boost::noncopyable
 {
   fmpz_comb_t comb{};
   fmpz_comb_temp_t comb_temp{};
-  const std::vector<mp_limb_t> primes;
+  std::vector<mp_limb_t> primes;
+  Fmpz_BigInt primes_product;
   size_t num_primes;
   std::vector<nmod_t> mods;
   std::vector<ulong> shifts;

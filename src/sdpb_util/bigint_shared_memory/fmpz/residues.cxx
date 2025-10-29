@@ -1,11 +1,7 @@
-#pragma once
-
-#include "Fmpz_Comb.hxx"
+#include "residues.hxx"
 #include "sdpb_util/assert.hxx"
 
-#include <El.hpp>
-
-// Code adopted from FLINT library, mat_mul_blas.c
+// Helper functions adopted from FLINT library, mat_mul_blas.c
 
 #define MAX_BLAS_DP_INT (UWORD(1) << 53)
 
@@ -13,7 +9,7 @@
 // n is the prime
 // input value is in the range [0;n)
 // output is in the range (-n/2; n/2]
-inline double uint32_t_residue_to_double(uint32_t value, mp_limb_t n)
+double uint32_t_residue_to_double(const uint32_t value, const mp_limb_t n)
 {
   // return (int32_t)(value - (n & (-(uint32_t)((int32_t)(n/2 - value) < 0))));
 
@@ -24,7 +20,7 @@ inline double uint32_t_residue_to_double(uint32_t value, mp_limb_t n)
     return value;
 }
 
-inline uint32_t double_to_uint32_t_residue(double value, nmod_t mod)
+uint32_t double_to_uint32_t_residue(double value, nmod_t mod)
 {
   ulong shift = ((2 * MAX_BLAS_DP_INT) / mod.n) * mod.n;
   mp_limb_t r;
@@ -34,21 +30,20 @@ inline uint32_t double_to_uint32_t_residue(double value, nmod_t mod)
   return (uint32_t)r;
 }
 
-inline double _reduce_uint32(mp_limb_t a, nmod_t mod)
+double _reduce_uint32(mp_limb_t a, nmod_t mod)
 {
   mp_limb_t r;
   NMOD_RED(r, a, mod);
   return (uint32_t)r;
 }
 
-inline double _reduce_double(mp_limb_t a, nmod_t mod)
+double _reduce_double(const mp_limb_t a, nmod_t mod)
 {
   return uint32_t_residue_to_double(_reduce_uint32(a, mod), mod.n);
 }
 
-inline void
-fmpz_multi_mod_uint32_stride(double *out, slong stride, const fmpz_t &input,
-                             const Fmpz_Comb &comb)
+void fmpz_multi_mod_uint32_stride(double *out, slong stride,
+                                  const fmpz_t &input, const Fmpz_Comb &comb)
 {
   const fmpz_comb_t &C = comb.comb;
   const fmpz_comb_temp_t &CT = comb.comb_temp;
@@ -116,4 +111,43 @@ fmpz_multi_mod_uint32_stride(double *out, slong stride, const fmpz_t &input,
 
   if(klen == 1)
     A[0] = *ttt;
+}
+
+// Convert BigInt to and from residues
+
+void bigint_to_residues(const Fmpz_BigInt &input, const Fmpz_Comb &comb,
+                        double *residues, const size_t stride)
+{
+  fmpz_multi_mod_uint32_stride(residues, stride, input.value, comb);
+}
+
+void residues_to_bigint(const double *residues, const size_t stride,
+                        Fmpz_Comb &comb,
+                        std::vector<mp_limb_t> &residues_buffer_temp,
+                        Fmpz_BigInt &output)
+{
+  constexpr int sign = 1; // means that negative values are allowed
+  const size_t num_primes = comb.num_primes;
+
+  residues_buffer_temp.resize(num_primes);
+  for(size_t prime_index = 0; prime_index < num_primes; prime_index++)
+    {
+      const double d = residues[prime_index * stride];
+      ASSERT(abs(d) <= MAX_BLAS_DP_INT);
+      const auto &mod = comb.mods.at(prime_index);
+      residues_buffer_temp.at(prime_index)
+        = double_to_uint32_t_residue(d, mod);
+    }
+  if(fmpz_cmpabs(output.value, comb.primes_product.value) >= 0)
+    {
+      El::BigFloat output_value;
+      El::BigFloat primes_product_value;
+      output.to_BigFloat(output_value);
+      comb.primes_product.to_BigFloat(primes_product_value);
+      RUNTIME_ERROR(
+        "restore_from_residues overflow: restored value = ", output_value,
+        " exceeds product of comb primes = ", primes_product_value);
+    }
+  fmpz_multi_CRT_ui(output.value, residues_buffer_temp.data(), comb.comb,
+                    comb.comb_temp, sign);
 }

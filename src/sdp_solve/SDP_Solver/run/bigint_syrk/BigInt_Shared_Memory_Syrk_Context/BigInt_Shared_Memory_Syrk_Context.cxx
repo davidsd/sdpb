@@ -1,6 +1,5 @@
 #include "../BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdpb_util/assert.hxx"
-#include "sdpb_util/bigint_shared_memory/fmpz/fmpz_mul_blas_util.hxx"
 #include "sdpb_util/ostream/ostream_vector.hxx"
 #include "sdpb_util/ostream/pretty_print_bytes.hxx"
 

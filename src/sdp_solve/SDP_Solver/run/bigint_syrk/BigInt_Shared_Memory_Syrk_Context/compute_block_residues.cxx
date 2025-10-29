@@ -1,6 +1,6 @@
 #include "../BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdpb_util/bigint_shared_memory/fmpz/Fmpz_BigInt.hxx"
-#include "sdpb_util/bigint_shared_memory/fmpz/fmpz_mul_blas_util.hxx"
+#include "sdpb_util/bigint_shared_memory/fmpz/residues.hxx"
 #include "sdpb_util/assert.hxx"
 
 // compute residues and put them to shared window
@@ -49,8 +49,8 @@ namespace
         bigint_value.from_BigFloat(
           block_column_submatrix.GetLocalCRef(iLoc, jLoc));
         double *data = first_residue_column_submatrix.Buffer(i, j);
-        fmpz_multi_mod_uint32_stride(data, block_residues_window.prime_stride,
-                                     bigint_value.value, comb);
+        bigint_to_residues(bigint_value, comb, data,
+                           block_residues_window.prime_stride);
       }
   }
 
@@ -93,8 +93,7 @@ namespace
               // pointer to the first residue
               double *data
                 = column_residues_buffer_temp.data() + data_offset + iLoc;
-              fmpz_multi_mod_uint32_stride(data, prime_stride,
-                                           bigint_value.value, comb);
+              bigint_to_residues(bigint_value, comb, data, prime_stride);
             }
           data_offset += block.LocalHeight();
         });

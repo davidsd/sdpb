@@ -1,7 +1,22 @@
 #include "../BigInt_Shared_Memory_Syrk_Context.hxx"
-#include "restore_bigint_from_residues.hxx"
 #include "sdpb_util/bigint_shared_memory/fmpz/Fmpz_BigInt.hxx"
+#include "sdpb_util/bigint_shared_memory/fmpz/residues.hxx"
 #include "sdpb_util/block_mapping/MPI_Comm_Wrapper.hxx"
+
+namespace
+{
+  void
+  restore_bigint_from_residues(const Matrix_Residues_Window<double> &window,
+                               size_t i, size_t j, Fmpz_Comb &comb,
+                               std::vector<mp_limb_t> &residues_buffer_temp,
+                               Fmpz_BigInt &output)
+  {
+    const double *first_residue = window.residues.at(0).LockedBuffer(i, j);
+    const auto prime_stride = window.prime_stride;
+    residues_to_bigint(first_residue, prime_stride, comb,
+                                 residues_buffer_temp, output);
+  }
+}
 
 // Restore output matrix from residues (output_residues_window) and synchronize it for all nodes.
 //

@@ -19,13 +19,13 @@ namespace
 
   // adapted from FLINT, fmpz_mat/mul_blas.c
   // TODO replace C-style allocation with std::vector::resize()
-  mp_limb_t *
-  _calculate_primes(slong *num_primes_, flint_bitcnt_t bits, slong k)
+  mp_limb_t *_calculate_primes(slong *num_primes_, flint_bitcnt_t bits,
+                               slong k, Fmpz_BigInt &primes_product)
   {
     slong num_primes, primes_alloc;
     mp_limb_t *primes;
     mp_limb_t p;
-    fmpz_t prod;
+    fmpz_t &prod = primes_product.value;
 
     p = 2 + 2 * n_sqrt((MAX_BLAS_DP_INT - 1) / (ulong)k);
     if(bits > 200)
@@ -46,7 +46,8 @@ namespace
           {
             if(p < 1000)
               {
-                fmpz_clear(prod);
+                // fmpz_clear(prod);
+                fmpz_zero(prod);
                 flint_free(primes);
                 *num_primes_ = 0;
                 return NULL;
@@ -67,16 +68,17 @@ namespace
 
     } while(fmpz_bits(prod) <= bits);
 
-    fmpz_clear(prod);
+    // fmpz_clear(prod);
 
     *num_primes_ = num_primes;
     return primes;
   }
 
-  std::vector<mp_limb_t> calculate_primes(flint_bitcnt_t bits, slong k)
+  std::vector<mp_limb_t>
+  calculate_primes(flint_bitcnt_t bits, slong k, Fmpz_BigInt &primes_product)
   {
     slong n;
-    mp_limb_t *primes = _calculate_primes(&n, bits, k);
+    mp_limb_t *primes = _calculate_primes(&n, bits, k, primes_product);
     // TODO test this case (happens with low precision) and add workaround
     ASSERT(primes != NULL, "Failed to calculate primes for bits=", bits,
            "k=", k);
@@ -88,11 +90,12 @@ namespace
 }
 
 Fmpz_Comb::Fmpz_Comb(mp_limb_t bits, mp_limb_signed_t k)
-    : primes(calculate_primes(bits, k)),
-      num_primes(primes.size()),
-      mods(num_primes),
-      shifts(num_primes)
 {
+  primes = calculate_primes(bits, k, primes_product);
+  num_primes = primes.size();
+  mods.resize(num_primes);
+  shifts.resize(num_primes);
+
   fmpz_comb_init(comb, primes.data(), num_primes);
   fmpz_comb_temp_init(comb_temp, comb);
   for(size_t i = 0; i < num_primes; ++i)
