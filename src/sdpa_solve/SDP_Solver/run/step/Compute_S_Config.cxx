@@ -198,7 +198,7 @@ namespace Sdpb::Sdpa
           input_split_factor, output_split_factor);
         const Compute_S_Config cfg{smallest_init_P_cfg, syrk_cfg};
         return cfg.node_total_bytes() > max_total_mem
-               && cfg.node_shmem_bytes() > max_shared_mem;
+               || cfg.node_shmem_bytes() > max_shared_mem;
       });
     // NB: All nodes should have the same output split factor!
     // We need max factor to avoid OOM.
@@ -213,7 +213,7 @@ namespace Sdpb::Sdpa
           input_split_factor, syrk_output_split_factor);
         const Compute_S_Config cfg{smallest_init_P_cfg, syrk_cfg};
         return cfg.node_total_bytes() > max_total_mem
-               && cfg.node_shmem_bytes() > max_shared_mem;
+               || cfg.node_shmem_bytes() > max_shared_mem;
       });
 
     const Bigint_Syrk_Config syrk_P_cfg(
@@ -236,11 +236,18 @@ namespace Sdpb::Sdpa
             block_index_node_to_global, node_block_dims, primal_dimension, p);
           const Compute_S_Config cfg{init_P_cfg, syrk_P_cfg};
           return cfg.node_total_bytes() > max_total_mem
-                 && cfg.node_shmem_bytes() > max_shared_mem;
+                 || cfg.node_shmem_bytes() > max_shared_mem;
         });
     const Initialize_P_Config initialize_P_cfg(
       comm, precision, block_index_local_to_node, block_index_node_to_global,
       node_block_dims, primal_dimension, primal_dimension_step);
-    return Compute_S_Config{initialize_P_cfg, syrk_P_cfg};
+    const auto result = Compute_S_Config{initialize_P_cfg, syrk_P_cfg};
+    ASSERT(result.node_shmem_bytes() < max_shared_mem,
+           DEBUG_STRING(result.node_shmem_bytes()),
+           DEBUG_STRING(max_shared_mem));
+    ASSERT(result.node_total_bytes() < max_total_mem,
+           DEBUG_STRING(result.node_total_bytes()),
+           DEBUG_STRING(max_total_mem));
+    return result;
   }
 }
