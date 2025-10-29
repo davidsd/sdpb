@@ -547,12 +547,38 @@ void restore_syrk_output(
   ASSERT_EQUAL(Util::global_height(syrk_output), column_norms.size());
   ASSERT_EQUAL(Util::global_width(syrk_output), column_norms.size());
 
+  // Since each input vector (row or column) is normalized,
+  // All normalized output elements should be in the range [-1-eps, 1+eps],
+  // and all diagonal elements should be either 0 or (1 +- eps),
+  // where the rounding error eps ~ O(2^{-input_bits}).
+  // We use conservative upper bound eps = 2^{-input_bits/2}
+  // for the assertion below.
+  const El::BigFloat zero(0), one(1);
+  const auto eps = one >> syrk_input_normalizer.bits / 2;
+  const auto one_eps = one + eps;
+  const auto minus_one_eps = -one_eps;
+
   Util::update_local_elements(
     syrk_output,
     [&](const int iLoc, const int jLoc, El::BigFloat &value) {
       const int i = Util::global_row(syrk_output, iLoc);
       const int j = Util::global_col(syrk_output, jLoc);
       value >>= bits;
+      // Check normalization
+      ASSERT(value >= minus_one_eps && value <= one_eps,
+             "All normalized elements of Syrk output matrix "
+             "should belong to the range [-1,1]. ",
+             DEBUG_STRING(i), DEBUG_STRING(j), DEBUG_STRING(value),
+             DEBUG_STRING(El::Abs(value) - one), DEBUG_STRING(eps));
+      if(i == j)
+        {
+          ASSERT((column_norms.at(i) == zero && value == zero)
+                   || El::Abs(value - one) <= eps,
+                 "Normalized Syrk output matrix should have either zeros or "
+                 "ones on diagonal. ",
+                 DEBUG_STRING(i), DEBUG_STRING(j), DEBUG_STRING(value),
+                 DEBUG_STRING(value - one), DEBUG_STRING(eps));
+        }
       value *= column_norms.at(i) * column_norms.at(j);
     },
     uplo);
@@ -597,11 +623,27 @@ void restore_trmm_output(
   ASSERT_EQUAL(X.Height(), left_row_norms->size());
   ASSERT_EQUAL(X.Width(), right_column_norms->size());
 
+  // Since each input vector (row or column) is normalized,
+  // All normalized output elements should be in the range [-1-eps, 1+eps],
+  // where the rounding error eps ~ O(2^{-input_bits}).
+  // We use conservative upper bound eps = 2^{-input_bits/2}
+  // for the assertion below.
+  const El::BigFloat one(1);
+  const auto eps = one >> std::min(L_normalizer.bits, X_normalizer.bits) / 2;
+  const auto one_eps = one + eps;
+  const auto minus_one_eps = -one_eps;
+
   Util::update_local_elements(
     X, [&](const int iLoc, const int jLoc, El::BigFloat &value) {
       const int i = Util::global_row(X, iLoc);
       const int j = Util::global_col(X, jLoc);
       value >>= bits;
+      // Check normalization
+      ASSERT(value >= minus_one_eps && value <= one_eps,
+             "All normalized elements of Trmm output matrix "
+             "should belong to the range [-1,1]. ",
+             DEBUG_STRING(i), DEBUG_STRING(j), DEBUG_STRING(value),
+             DEBUG_STRING(El::Abs(value) - one), DEBUG_STRING(eps));
       value *= left_row_norms->at(i) * right_column_norms->at(j);
     });
 }
@@ -623,15 +665,24 @@ void restore_trmm_output(
       auto &Xs = Xss.at(vec_index);
       const auto &Xs_normalizer
         = Xss_normalizer.normalizers.at(vec_index).normalizer;
-      ASSERT_EQUAL(Xs.blocks.size(), num_blocks);
-      ASSERT_EQUAL(Xs_normalizer.normalizers.size(), num_blocks);
+      ASSERT_EQUAL(Xs.blocks.size(), num_blocks, DEBUG_STRING(vec_index));
+      ASSERT_EQUAL(Xs_normalizer.normalizers.size(), num_blocks,
+                   DEBUG_STRING(vec_index));
       for(size_t block = 0; block < num_blocks; ++block)
         {
           const auto &L_normalizer = Ls_normalizer.normalizers().at(block);
           const auto &X_normalizer = Xs_normalizer.normalizers.at(block);
           auto &X = Xs.blocks.at(block);
-          restore_trmm_output(side, uplo, orientation, L_normalizer,
-                              X_normalizer, X);
+          try
+            {
+              restore_trmm_output(side, uplo, orientation, L_normalizer,
+                                  X_normalizer, X);
+            }
+          catch(std::exception &e)
+            {
+              RUNTIME_ERROR(DEBUG_STRING(vec_index), DEBUG_STRING(block),
+                            e.what());
+            }
         }
     }
 }

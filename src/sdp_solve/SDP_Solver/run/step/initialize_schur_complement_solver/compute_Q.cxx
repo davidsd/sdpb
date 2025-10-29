@@ -63,36 +63,6 @@ void initialize_schur_off_diagonal(
     }
 }
 
-// Check that Q_ii = 2^2N, where N = normalizer.precision.
-// This follows from the fact that columns of P are normalized and multiplied by 2^N
-void check_normalized_Q_diagonal(const El::DistMatrix<El::BigFloat> &Q,
-                                 const Block_Matrix_Normalizer<> &normalizer,
-                                 Timers &timers)
-{
-  Scoped_Timer timer(timers, "check_diagonal");
-  for(int iLoc = 0; iLoc < Q.LocalHeight(); ++iLoc)
-    for(int jLoc = 0; jLoc < Q.LocalWidth(); ++jLoc)
-      {
-        const int i = Q.GlobalRow(iLoc);
-        const int j = Q.GlobalCol(jLoc);
-        if(i == j)
-          {
-            auto value = Q.GetLocal(iLoc, jLoc); // should be 2^2N
-            auto should_be_one = value >> 2 * normalizer.bits;
-
-            auto diff = El::Abs(should_be_one - El::BigFloat(1));
-            // diff should be equal to zero up to some precision.
-            // We cannot control rounding errors exactly,
-            // so we (conservatively) require that at least N/2 bits are correct.
-            auto eps = El::BigFloat(1) >> normalizer.bits / 2;
-            ASSERT(diff < eps,
-                   "Normalized Q should have ones on diagonal. For i = ", i,
-                   ": Q_ii = ", should_be_one, ", |Q_ii - 1| = ", diff,
-                   ", eps = ", eps);
-          }
-      }
-}
-
 // Q = P^T P = (L^{-1} B)^T (L^{-1} B) = schur_off_diagonal^T schur_off_diagonal
 void syrk_Q(const Environment &env, Block_Matrix &schur_off_diagonal,
             BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
@@ -117,9 +87,6 @@ void syrk_Q(const Environment &env, Block_Matrix &schur_off_diagonal,
   constexpr auto uplo = El::UPPER;
   bigint_syrk_context.bigint_syrk_blas(uplo, schur_off_diagonal.blocks, Q,
                                        timers, block_timings_ms);
-
-  // Check that Q_ii = 2^2N
-  check_normalized_Q_diagonal(Q, normalizer, timers);
 
   // Remove normalization
   Scoped_Timer restore_timer(timers, "restore_P_Q");
