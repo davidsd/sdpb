@@ -1,6 +1,8 @@
 #pragma once
 
+#include <cstddef>
 #include <limits>
+#include <tuple>
 #include <vector>
 
 struct Block_Map
