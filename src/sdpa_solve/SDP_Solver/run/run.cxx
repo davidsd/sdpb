@@ -1,5 +1,5 @@
-#include "get_max_shared_memory_bytes.hxx"
-#include "initialize_bigint_syrk_context.hxx"
+#include "get_compute_S_config.hxx"
+#include "initialize_compute_S_context.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdpa_solve/SDP_Solver.hxx"
 
@@ -90,11 +90,11 @@ namespace Sdpb::Sdpa
     Scoped_Timer initialize_bigint_syrk_context_timer(timers,
                                                       "bigint_syrk_context");
 
-    auto max_shared_memory_bytes
-      = get_max_shared_memory_bytes(parameters.max_shared_memory_bytes, env,
-                                    block_info, sdp, grid, *this, verbosity);
-    auto bigint_syrk_context = initialize_bigint_syrk_context(
-      env, block_info, sdp, max_shared_memory_bytes, verbosity);
+    auto cfg = get_compute_S_config_and_print_memory(
+      env, block_info, sdp, *this, parameters.max_shared_memory_bytes,
+      verbosity);
+    auto compute_S_context
+      = initialize_compute_S_context(block_info, cfg, verbosity);
     initialize_bigint_syrk_context_timer.stop();
 
     initialize_timer.stop();
@@ -253,7 +253,7 @@ namespace Sdpb::Sdpa
         std::string max_block_cond_number_name;
         step(env, parameters, verbosity, total_psd_rows,
              is_primal_and_dual_feasible, block_info, sdp, grid, X_cholesky,
-             Y_cholesky, bigint_syrk_context, mu, beta_corrector,
+             Y_cholesky, compute_S_context, mu, beta_corrector,
              primal_step_length, dual_step_length, terminate_now, timers,
              block_timings_ms, Q_cond_number, max_block_cond_number,
              max_block_cond_number_name);

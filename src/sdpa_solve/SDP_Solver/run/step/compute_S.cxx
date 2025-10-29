@@ -1,5 +1,6 @@
 #include "sdp_solve/Block_Matrix/Block_Matrix.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
+#include "sdp_solve/SDP_Solver/run/bigint_syrk/Matrix_Normalizer.hxx"
 #include "sdpa_solve/SDP.hxx"
 #include "sdpa_solve/memory_estimates.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
@@ -17,14 +18,15 @@ namespace Sdpb::Sdpa
   // compute P = (vec(G_1) vec(G_2) vec(G_3) ... )
   // G_p = L_X_Inv F_p L_Y
   // P is split vertically into blocks
-  Block_Matrix
-  initialize_P(const Environment &env, const SDP &sdp,
-               const Block_Info &block_info, const El::Grid &grid,
-               const Block_Diagonal_Matrix &X_cholesky,
-               const Block_Diagonal_Matrix &Y_cholesky, Timers &timers,
-               El::Matrix<int32_t> &block_timings_ms,
-               const Verbosity verbosity)
+  Block_Matrix initialize_P(const Environment &env, const SDP &sdp,
+                            const Block_Info &block_info, const El::Grid &grid,
+                            const Block_Diagonal_Matrix &X_cholesky,
+                            const Block_Diagonal_Matrix &Y_cholesky,
+                            Initialize_P_Context &ctx, Timers &timers,
+                            El::Matrix<int32_t> &block_timings_ms,
+                            const Verbosity verbosity)
   {
+    // TODO add timers, update block_timings_ms
     Scoped_Timer timer(timers, "initialize_P");
     const size_t primal_dimension = block_info.primal_dimension;
 
@@ -45,111 +47,111 @@ namespace Sdpb::Sdpa
                                           get_allocated_bytes(result));
       }
 
-    for(size_t block = 0; block < block_info.num_blocks_local(); ++block)
+    const auto bits = El::gmp::Precision();
+    constexpr auto uplo = El::LOWER;
+    constexpr auto diag = El::NON_UNIT;
+    constexpr auto orientation = El::NORMAL;
+    auto L_X_inv = X_cholesky;
+    for(auto &block : L_X_inv.blocks)
       {
-        const auto global_block_index = block_info.block_indices.at(block);
-        auto block_index_string = std::to_string(global_block_index);
-        const size_t block_dim
-          = block_info.block_dimensions.at(global_block_index);
+        El::TriangularInverse(uplo, diag, block);
+      }
+    auto L_Y = Y_cholesky;
 
-        Scoped_Timer solve_timer(timers, "solve_" + block_index_string);
+    // Make L_X_inv and L_Y bigint matrices
+    const auto L_X_inv_normalizer
+      = normalize_and_shift<Matrix_Normalization_Kind::ROWS>(L_X_inv, bits,
+                                                             uplo);
+    const auto L_Y_normalizer
+      = normalize_and_shift<Matrix_Normalization_Kind::COLUMNS>(L_Y, bits,
+                                                                uplo);
 
-        // Compute G_p = L_X_Inv F_p L_Y
-        // start with F_p
+    ctx.compute_residues(L_X_inv, ctx.L_X_inv_residues, block_timings_ms);
+    ctx.compute_residues(L_Y, ctx.L_Y_residues, block_timings_ms);
 
-        // Take blocks with current block index from F_1,F_2,..F_m
-        // and put them on top of each other.
-        El::DistMatrix<El::BigFloat> FY_block_vertical(
-          block_dim * primal_dimension, block_dim, grid);
-        for(size_t p = 0; p < primal_dimension; ++p)
-          {
-            const auto &source = sdp.sdp_blocks_F.at(p).blocks.at(block);
-            const El::Range<int> I(p * block_dim, (p + 1) * block_dim);
-            const El::Range<int> J(0, block_dim);
-            auto dest = El::View(FY_block_vertical, I, J);
-            dest = source;
-            // sanity check
-            ASSERT(dest.Viewing());
-          }
+    for(size_t p_begin = 0; p_begin < primal_dimension;
+        p_begin += ctx.cfg.primal_dimension_step)
+      {
+        size_t p_end = std::min(p_begin + ctx.cfg.primal_dimension_step,
+                                primal_dimension);
+        Scoped_Timer(timers, El::BuildString("p_", p_begin, "_", p_end));
+        std::vector<Block_Diagonal_Matrix> G;
+        auto F_begin = sdp.sdp_blocks_F.begin() + p_begin;
+        auto F_end = sdp.sdp_blocks_F.begin() + p_end;
+        G.insert(G.end(), F_begin, F_end);
 
-        // compute F_p L_Y
+        // G := L_X_inv G
         {
-          Scoped_Timer trmm_timer(timers, "trmm");
-          El::Trmm(El::LeftOrRightNS::RIGHT, El::UpperOrLowerNS::LOWER,
-                   El::OrientationNS::NORMAL, El::UnitOrNonUnitNS::NON_UNIT,
-                   El::BigFloat(1), Y_cholesky.blocks.at(block),
-                   FY_block_vertical);
+          const auto G_normalizer
+            = normalize_and_shift<Matrix_Normalization_Kind::COLUMNS>(
+              G, bits, std::nullopt);
+
+          auto &G_residues = ctx.G_residues(p_end - p_begin, El::HORIZONTAL);
+          ctx.compute_residues(G, G_residues, block_timings_ms);
+
+          constexpr auto side = El::LEFT;
+          ctx.trmm(side, uplo, orientation, diag, ctx.L_X_inv_residues,
+                   G_residues, G, verbosity, timers, block_timings_ms);
+
+          restore_trmm_output(side, uplo, orientation, L_X_inv_normalizer,
+                              G_normalizer, G);
+        }
+        // G := G L_Y
+        {
+          const auto G_normalizer
+            = normalize_and_shift<Matrix_Normalization_Kind::ROWS>(
+              G, bits, std::nullopt);
+
+          auto &G_residues = ctx.G_residues(p_end - p_begin, El::VERTICAL);
+          ctx.compute_residues(G, G_residues, block_timings_ms);
+
+          constexpr auto side = El::RIGHT;
+          ctx.trmm(side, uplo, orientation, diag, ctx.L_Y_residues, G_residues,
+                   G, verbosity, timers, block_timings_ms);
+          restore_trmm_output(side, uplo, orientation, L_Y_normalizer,
+                              G_normalizer, G);
         }
 
-        // compute L_X_inv F_p L_Y
-
-        // Arrange blocks horizontally instead of vertically.
-        // NB: ve do not transpose each block itself!
-        Scoped_Timer transpose_G_timer(timers, "transpose_G");
-        El::DistMatrix<El::BigFloat> G_block_horizontal(
-          block_dim, block_dim * primal_dimension, grid);
-        for(size_t p = 0; p < primal_dimension; ++p)
-          {
-            const El::Range<int> I(p * block_dim, (p + 1) * block_dim);
-            const El::Range<int> J(0, block_dim);
-
-            const auto source = FY_block_vertical(I, J);
-            // NB: I <-> J
-            auto dest = El::View(G_block_horizontal, J, I);
-            dest = source;
-            //sanity check
-            ASSERT(dest.Viewing());
-          }
-        transpose_G_timer.stop();
-
-        {
-          Scoped_Timer trsm_timer(timers, "trsm");
-
-          El::Trsm(El::LeftOrRightNS::LEFT, El::UpperOrLowerNS::LOWER,
-                   El::OrientationNS::NORMAL, El::UnitOrNonUnitNS::NON_UNIT,
-                   El::BigFloat(1), X_cholesky.blocks.at(block),
-                   G_block_horizontal);
-        }
-
+        // Copy each G_p into a p-th column of the corresponding block of P
         Scoped_Timer reshape_timer(timers, "reshape");
-        for(size_t p = 0; p < sdp.primal_dimension(); ++p)
+        for(size_t block = 0; block < block_info.num_blocks_local(); ++block)
           {
-            const El::Range<int> in_I(0, block_dim);
-            const El::Range<int> in_J(p * block_dim, (p + 1) * block_dim);
-            const auto G_p_block = El::View(G_block_horizontal, in_I, in_J);
+            const auto global_block_index = block_info.block_indices.at(block);
+            auto block_index_string = std::to_string(global_block_index);
+            for(size_t p = p_begin; p < p_end; ++p)
+              {
+                const auto &G_p_block = G.at(p - p_begin).blocks.at(block);
+                auto &P_block = result.blocks.at(block);
+                // Write all elements of G_p into the p-th column of the resulting P matrix
+                const int vec_height = P_block.Height();
+                constexpr int vec_width = 1;
+                const auto out_I = El::Range<int>(0, vec_height);
+                const auto out_J = El::Range<int>(p, p + vec_width);
 
-            auto &P_block = result.blocks.at(block);
-            // Write all elements of G_p into the p-th column of the resulting P matrix
-            const int vec_height = P_block.Height();
-            constexpr int vec_width = 1;
-            const auto out_I = El::Range<int>(0, vec_height);
-            const auto out_J = El::Range<int>(p, p + vec_width);
-
-            auto vec_G_p_view = El::View(P_block, out_I, out_J);
-            // TODO how does the resulting DistMatrix grid change after reshape?
-            // Will the elements be evenly distributed among ranks?
-            El::Reshape(vec_height, vec_width, G_p_block, vec_G_p_view);
+                auto vec_G_p_view = El::View(P_block, out_I, out_J);
+                El::Reshape(vec_height, vec_width, G_p_block, vec_G_p_view);
+              }
           }
-        block_timings_ms(global_block_index, 0)
-          += solve_timer.elapsed_milliseconds();
       }
 
     return result;
   }
 
-  void compute_S(const Environment &env, const SDP &sdp,
-                 const Block_Info &block_info,
-                 const Block_Diagonal_Matrix &X_cholesky,
-                 const Block_Diagonal_Matrix &Y_cholesky, const El::Grid &grid,
-                 BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
-                 El::DistMatrix<El::BigFloat> &S, Timers &timers,
-                 El::Matrix<int32_t> &block_timings_ms, Verbosity verbosity)
+  void
+  compute_S(const Environment &env, const SDP &sdp,
+            const Block_Info &block_info,
+            const Block_Diagonal_Matrix &X_cholesky,
+            const Block_Diagonal_Matrix &Y_cholesky, const El::Grid &grid,
+            Compute_S_Context &compute_S_context,
+            El::DistMatrix<El::BigFloat> &S, Timers &timers,
+            El::Matrix<int32_t> &block_timings_ms, const Verbosity verbosity)
   {
     Scoped_Timer timer(timers, "S");
     Block_Matrix P
       = initialize_P(env, sdp, block_info, grid, X_cholesky, Y_cholesky,
-                     timers, block_timings_ms, verbosity);
-    syrk_Q(env, P, bigint_syrk_context, S, timers, block_timings_ms,
-           verbosity);
+                     compute_S_context.initialize_P_context, timers,
+                     block_timings_ms, verbosity);
+    syrk_Q(env, P, compute_S_context.syrk_P_context, S, timers,
+           block_timings_ms, verbosity);
   }
 }

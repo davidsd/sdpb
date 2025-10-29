@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SDP.hxx"
+#include "SDP_Solver/run/initialize_compute_S_context.hxx"
 #include "sdp_solve/Block_Matrix/Block_Diagonal_Matrix.hxx"
 #include "sdp_solve/SDP_Solver_Terminate_Reason.hxx"
 
@@ -83,7 +84,7 @@ namespace Sdpb::Sdpa
               const Block_Info &block_info, const SDP &sdp,
               const El::Grid &grid, const Block_Diagonal_Matrix &X_cholesky,
               const Block_Diagonal_Matrix &Y_cholesky,
-              BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
+              Compute_S_Context &compute_S_context,
               El::BigFloat &mu, El::BigFloat &beta_corrector,
               El::BigFloat &primal_step_length, El::BigFloat &dual_step_length,
               bool &terminate_now, Timers &timers,

@@ -13,7 +13,7 @@ namespace Sdpb::Sdpa
                  const Block_Info &block_info,
                  const Block_Diagonal_Matrix &X_cholesky,
                  const Block_Diagonal_Matrix &Y_cholesky, const El::Grid &grid,
-                 BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
+                 Compute_S_Context &compute_S_context,
                  El::DistMatrix<El::BigFloat> &S, Timers &timers,
                  El::Matrix<int32_t> &block_timings_ms, Verbosity verbosity);
 
@@ -34,7 +34,7 @@ namespace Sdpb::Sdpa
     const SDP &sdp, const El::Grid &grid,
     const Block_Diagonal_Matrix &X_cholesky,
     const Block_Diagonal_Matrix &Y_cholesky,
-    BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context, El::BigFloat &mu,
+    Compute_S_Context &compute_S_context, El::BigFloat &mu,
     El::BigFloat &beta_corrector, El::BigFloat &primal_step_length,
     El::BigFloat &dual_step_length, bool &terminate_now, Timers &timers,
     El::Matrix<int32_t> &block_timings_ms, El::BigFloat &S_cond_number,
@@ -71,7 +71,7 @@ namespace Sdpb::Sdpa
         }
 
       compute_S(env, sdp, block_info, X_cholesky, Y_cholesky, grid,
-                bigint_syrk_context, S, timers, block_timings_ms, verbosity);
+                compute_S_context, S, timers, block_timings_ms, verbosity);
       try
         {
           Scoped_Timer Cholesky_timer(timers, "Cholesky_S");
