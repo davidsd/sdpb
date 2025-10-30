@@ -192,7 +192,7 @@ namespace Sdpb::Sdpa
     size_t syrk_output_split_factor = partition_point(
       1, max_syrk_output_split_factor + 1,
       [&](const size_t output_split_factor) {
-        constexpr size_t input_split_factor = 1;
+        const size_t input_split_factor = max_syrk_input_split_factor;
         const Bigint_Syrk_Config syrk_cfg(
           comm, group_index, precision, num_nodes, P_group_heights, P_width,
           input_split_factor, output_split_factor);
