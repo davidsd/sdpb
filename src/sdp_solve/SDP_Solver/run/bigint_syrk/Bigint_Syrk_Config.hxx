@@ -61,7 +61,7 @@ struct Bigint_Syrk_Config
   }
   [[nodiscard]] size_t num_input_windows() const
   {
-    return input_split_factor == 1 ? 1 : 2;
+    return output_split_factor == 1 ? 1 : 2;
   }
   [[nodiscard]] size_t output_window_size() const
   {
