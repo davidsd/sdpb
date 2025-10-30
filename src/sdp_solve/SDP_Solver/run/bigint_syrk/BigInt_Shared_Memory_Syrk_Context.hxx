@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Bigint_Syrk_Config.hxx"
 #include "blas_jobs/create_blas_job_schedule.hxx"
 #include "sdpb_util/bigint_shared_memory/fmpz/Fmpz_Comb.hxx"
 #include "sdpb_util/bigint_shared_memory/Vertical_Block_Matrix_Residues_Window.hxx"
@@ -16,9 +17,7 @@ public:
   using Job_Schedule = Blas_Job_Schedule<Blas_Job>;
 
   BigInt_Shared_Memory_Syrk_Context(
-    const El::mpi::Comm &shared_memory_comm, size_t group_index,
-    mp_bitcnt_t precision, size_t max_shared_memory_bytes,
-    const std::vector<El::Int> &blocks_height_per_group, int block_width,
+    const Bigint_Syrk_Config &cfg, size_t group_index,
     const std::vector<size_t> &block_index_local_to_global,
     Verbosity verbosity,
     const std::function<Job_Schedule(

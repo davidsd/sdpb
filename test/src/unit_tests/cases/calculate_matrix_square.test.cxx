@@ -159,45 +159,40 @@ TEST_CASE("calculate_Block_Matrix_square")
                         total_block_height)
                 .num_primes;
 
-          size_t max_shared_memory_bytes
-            = GENERATE(std::numeric_limits<size_t>::max(), 1, 0);
-          // We cannot use variables inside GENERATE, e.g. max_shared_memory_bytes = GENERATE(block_width)
+          auto max_block_height
+            = *std::max_element(block_heights.begin(), block_heights.end());
+
+          size_t output_split_factor;
+          size_t input_split_factor;
+          // We cannot use variables inside GENERATE,
           // Thus we set them below:
-          INFO((max_shared_memory_bytes == 0
-                  ? "Splitting both P and Q memory windows"
-                : max_shared_memory_bytes == 1
-                  ? "Splitting P memory window"
-                  : "Do not split memory windows"));
-          if(max_shared_memory_bytes == 1)
+          constexpr auto div_ceil = [](const size_t a, const size_t b) {
+            return a / b + (a % b == 0 ? 0 : 1);
+          };
+          switch(GENERATE(1, 2, 3))
             {
-              // Do not split output window
-              size_t output_window_height = block_width;
-              size_t output_window_width = output_window_height;
-              // Input window will have 3 rows per MPI group
-              size_t input_window_height = 3 * El::mpi::Size();
-              size_t input_window_width = block_width;
-              max_shared_memory_bytes
-                = (output_window_height * output_window_width
-                   + input_window_height * input_window_width)
-                  * num_primes * sizeof(double);
-            }
-          else if(max_shared_memory_bytes == 0)
-            {
-              // Split output window by 3x3 submatrices
-              size_t output_window_height = std::ceil(block_width / 3.0);
-              size_t output_window_width = output_window_height;
-              // Two identical input windows of minimal size, i.e. one row per MPI group
-              size_t input_window_height = El::mpi::Size();
-              size_t input_window_width = output_window_width;
-              max_shared_memory_bytes
-                = (output_window_height * output_window_width
-                   + 2 * input_window_height * input_window_width)
-                  * num_primes * sizeof(double);
+              case 1: {
+                output_split_factor = 1;
+                input_split_factor = 1;
+                break;
+              }
+              case 2: {
+                output_split_factor = 1;
+                input_split_factor = 3;
+                break;
+              }
+              case 3: {
+                output_split_factor = div_ceil(block_width, 3);
+                input_split_factor = max_block_height;
+                break;
+              }
+            default: FAIL();
             }
 
           DYNAMIC_SECTION("P_height="
                           << total_block_height << " num_blocks=" << num_blocks
-                          << " maxSharedMemory=" << max_shared_memory_bytes)
+                          << " input_split_factor=" << input_split_factor
+                          << " output_split_factor=" << output_split_factor)
           {
             int bits;
             CAPTURE(bits = El::gmp::Precision());
@@ -320,12 +315,12 @@ TEST_CASE("calculate_Block_Matrix_square")
                   const El::UpperOrLower uplo = El::UpperOrLowerNS::UPPER;
 
                   auto create_job_schedule = [&blas_schedule_split_factor](
-                                               Blas_Job::Kind kind,
-                                               El::UpperOrLower uplo,
-                                               size_t num_ranks,
-                                               size_t num_primes,
-                                               int output_height,
-                                               int output_width,
+                                               const Blas_Job::Kind kind,
+                                               const El::UpperOrLower uplo,
+                                               const size_t num_ranks,
+                                               const size_t num_primes,
+                                               const int output_height,
+                                               const int output_width,
                                                Verbosity verbosity) {
                     return create_syrk_or_gemm_job_schedule_split_remaining_primes(
                       kind, uplo, num_ranks, num_primes, output_height,
@@ -336,7 +331,7 @@ TEST_CASE("calculate_Block_Matrix_square")
                   // otherwise we'd have to synchronize it
                   std::vector<int> group_comm_sizes_per_node(
                     num_groups_per_node, group_size);
-                  std::vector<El::Int> blocks_height_per_group(
+                  std::vector<size_t> blocks_height_per_group(
                     num_groups_per_node);
                   for(const auto &block : P_block_matrix.blocks)
                     {
@@ -348,12 +343,13 @@ TEST_CASE("calculate_Block_Matrix_square")
                                      num_groups_per_node, node_comm);
 
                   {
-                    const Verbosity verbosity = Verbosity::regular;
+                    constexpr Verbosity verbosity = Verbosity::regular;
+                    Bigint_Syrk_Config cfg(
+                      node_comm, bits, num_nodes, blocks_height_per_group,
+                      block_width, input_split_factor, output_split_factor);
                     BigInt_Shared_Memory_Syrk_Context context(
-                      node_comm, group_index_in_node,
-                       bits, max_shared_memory_bytes,
-                      blocks_height_per_group, block_width, block_indices,
-                      verbosity, create_job_schedule);
+                      cfg, group_index_in_node, block_indices, verbosity,
+                      create_job_schedule);
 
                     Timers timers;
                     El::Matrix<int32_t> block_timings_ms(num_blocks, 1);

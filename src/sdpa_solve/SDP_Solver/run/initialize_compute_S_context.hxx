@@ -52,12 +52,10 @@ namespace Sdpb::Sdpa
         blocks_height_per_group.push_back(height);
       }
 
+    // TODO: reuse shared buffers for trmm and syrk?
     return {Initialize_P_Context(cfg.initialize_P_config),
-            // TODO: initialize from cfg.syrk_P_config
-            // TODO: reuse shared buffers for trmm and syrk?
-            BigInt_Shared_Memory_Syrk_Context(
-              block_info.node_comm, group_index, precision,
-              cfg.syrk_P_config.node_shmem_bytes(), blocks_height_per_group,
-              block_width, block_info.block_indices, verbosity)};
+            BigInt_Shared_Memory_Syrk_Context(cfg.syrk_P_config, group_index,
+                                              block_info.block_indices,
+                                              verbosity)};
   }
 }

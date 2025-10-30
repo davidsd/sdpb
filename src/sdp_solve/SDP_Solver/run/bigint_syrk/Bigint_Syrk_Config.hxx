@@ -9,14 +9,11 @@
 struct Bigint_Syrk_Config
 {
   El::mpi::Comm shared_memory_comm;
-  const size_t group_index;
-
   const size_t precision;
-
   const size_t num_nodes;
 
   // group index (on a node) -> Total height for all blocks of an MPI group
-  const std::vector<size_t> &input_height_per_group;
+  const std::vector<size_t> input_height_per_group;
 
   const size_t input_height;
   const size_t input_width;
@@ -25,14 +22,16 @@ struct Bigint_Syrk_Config
   const size_t input_split_factor;
   const size_t output_split_factor;
 
+  const std::vector<size_t> input_window_height_per_group_per_prime;
+  // const size_t input_window_width;
+
   Bigint_Syrk_Config(const El::mpi::Comm &shared_memory_comm,
-                     const size_t group_index, const size_t precision,
+                     const size_t precision,
                      const size_t num_nodes,
                      const std::vector<size_t> &input_height_per_group,
                      const size_t input_width, const size_t input_split_factor,
                      const size_t output_split_factor)
       : shared_memory_comm(shared_memory_comm),
-        group_index(group_index),
         precision(precision),
         num_nodes(num_nodes),
         input_height_per_group(input_height_per_group),
@@ -41,7 +40,9 @@ struct Bigint_Syrk_Config
         input_width(input_width),
         output_dim(input_width),
         input_split_factor(input_split_factor),
-        output_split_factor(output_split_factor)
+        output_split_factor(output_split_factor),
+        input_window_height_per_group_per_prime(get_input_window_group_heights(
+          input_height_per_group, input_split_factor))
   {}
   [[nodiscard]] Fmpz_Comb comb() const
   {
@@ -54,10 +55,19 @@ struct Bigint_Syrk_Config
   }
   [[nodiscard]] size_t num_primes() const { return comb().num_primes; }
 
+  [[nodiscard]] size_t input_window_height() const
+  {
+    return std::accumulate(input_window_height_per_group_per_prime.begin(),
+                           input_window_height_per_group_per_prime.end(), 0);
+  }
+  // Input and output windows have the same width
+  [[nodiscard]] size_t window_width() const
+  {
+    return div_ceil(output_dim, output_split_factor);
+  }
   [[nodiscard]] size_t input_window_size() const
   {
-    return div_ceil(input_height, input_split_factor) * input_width
-           * num_primes();
+    return input_window_height() * window_width() * num_primes();
   }
   [[nodiscard]] size_t num_input_windows() const
   {
@@ -65,7 +75,7 @@ struct Bigint_Syrk_Config
   }
   [[nodiscard]] size_t output_window_size() const
   {
-    const size_t dim = div_ceil(output_dim, output_split_factor);
+    const size_t dim = window_width();
     return dim * dim * num_primes();
   }
   // Copied from BigInt_Shared_Memory_Syrk_Context.cxx
@@ -112,8 +122,20 @@ struct Bigint_Syrk_Config
 
   // Helper functions. TODO move elsewhere and reuse?
 private:
-  static size_t div_ceil(const size_t a, const size_t b)
+  [[nodiscard]] static size_t div_ceil(const size_t a, const size_t b)
   {
     return a / b + (a % b == 0 ? 0 : 1);
+  }
+
+  [[nodiscard]] static std::vector<size_t> get_input_window_group_heights(
+    const std::vector<size_t> &input_height_per_group,
+    const size_t split_factor)
+  {
+    auto heights = input_height_per_group;
+    for(auto &height : heights)
+      {
+        height = div_ceil(height, split_factor);
+      }
+    return heights;
   }
 };

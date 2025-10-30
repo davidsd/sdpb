@@ -28,7 +28,7 @@ public:
 
   Vertical_Block_Matrix_Residues_Window(
     El::mpi::Comm shared_memory_comm, size_t num_primes, size_t num_blocks,
-    const std::vector<El::Int> &block_heights, size_t block_width)
+    const std::vector<size_t> &block_heights, size_t block_width)
       : Matrix_Residues_Window<T>(shared_memory_comm, num_primes,
                                   Sum(block_heights), block_width),
         num_blocks(num_blocks),
@@ -38,7 +38,7 @@ public:
   }
   Vertical_Block_Matrix_Residues_Window(
     Shared_Window_Array_View<T> window_view, size_t num_primes,
-    size_t num_blocks, const std::vector<El::Int> &block_heights,
+    size_t num_blocks, const std::vector<size_t> &block_heights,
     size_t block_width)
       : Matrix_Residues_Window<T>(window_view, num_primes, Sum(block_heights),
                                   block_width),
@@ -49,8 +49,8 @@ public:
   }
 
 private:
-  void initialize(const size_t num_primes,
-                  const std::vector<El::Int> &block_heights)
+  void
+  initialize(const size_t num_primes, const std::vector<size_t> &block_heights)
   {
     for(size_t prime_index = 0; prime_index < num_primes; ++prime_index)
       {
@@ -70,7 +70,7 @@ private:
       ASSERT_EQUAL(block_residues[0][0].Buffer(), this->residues[0].Buffer());
   }
 
-  static El::Int Sum(const std::vector<El::Int> &block_heights)
+  static size_t Sum(const std::vector<size_t> &block_heights)
   {
     return std::accumulate(block_heights.begin(), block_heights.end(), 0);
   }

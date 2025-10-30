@@ -27,6 +27,7 @@ struct Abstract_Block_Info
 
   // Index of current MPI group on a node
   [[nodiscard]] size_t node_group_index() const;
+  [[nodiscard]] size_t num_nodes() const;
 
 protected:
   Abstract_Block_Info() = delete;

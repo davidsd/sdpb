@@ -37,6 +37,10 @@ size_t Abstract_Block_Info::node_group_index() const
 {
   return block_mapping.node_rank_to_group.at(node_index).at(node_comm.Rank());
 }
+size_t Abstract_Block_Info::num_nodes() const
+{
+  return block_mapping.mapping.size();
+}
 
 void swap(Abstract_Block_Info &a, Abstract_Block_Info &b) noexcept
 {

@@ -136,7 +136,6 @@ namespace Sdpb::Sdpa
                        const size_t max_total_mem, const size_t max_shared_mem)
   {
     const auto comm = env.comm_shared_mem;
-    const auto group_index = block_info.node_group_index();
     const auto num_nodes = env.num_nodes();
     const auto precision = El::gmp::Precision();
     const auto block_index_local_to_node
@@ -160,7 +159,7 @@ namespace Sdpb::Sdpa
       comm, precision, block_index_local_to_node, block_index_node_to_global,
       node_block_dims, primal_dimension, 1);
     const Bigint_Syrk_Config smallest_syrk_cfg(
-      comm, group_index, precision, num_nodes, P_group_heights, P_width,
+      comm, precision, num_nodes, P_group_heights, P_width,
       max_syrk_input_split_factor, max_syrk_output_split_factor);
 
     const Compute_S_Config smallest_cfg{smallest_init_P_cfg,
@@ -194,7 +193,7 @@ namespace Sdpb::Sdpa
       [&](const size_t output_split_factor) {
         const size_t input_split_factor = max_syrk_input_split_factor;
         const Bigint_Syrk_Config syrk_cfg(
-          comm, group_index, precision, num_nodes, P_group_heights, P_width,
+          comm, precision, num_nodes, P_group_heights, P_width,
           input_split_factor, output_split_factor);
         const Compute_S_Config cfg{smallest_init_P_cfg, syrk_cfg};
         return cfg.node_total_bytes() > max_total_mem
@@ -209,7 +208,7 @@ namespace Sdpb::Sdpa
       1, max_syrk_input_split_factor + 1,
       [&](const size_t input_split_factor) {
         const Bigint_Syrk_Config syrk_cfg(
-          comm, group_index, precision, num_nodes, P_group_heights, P_width,
+          comm, precision, num_nodes, P_group_heights, P_width,
           input_split_factor, syrk_output_split_factor);
         const Compute_S_Config cfg{smallest_init_P_cfg, syrk_cfg};
         return cfg.node_total_bytes() > max_total_mem
@@ -217,7 +216,7 @@ namespace Sdpb::Sdpa
       });
 
     const Bigint_Syrk_Config syrk_P_cfg(
-      comm, group_index, precision, num_nodes, P_group_heights, P_width,
+      comm, precision, num_nodes, P_group_heights, P_width,
       syrk_input_split_factor, syrk_output_split_factor);
 
     // TODO right now we are not reusing shared memory buffers.
