@@ -51,12 +51,22 @@ namespace Sdpb::Sdpa
     constexpr auto uplo = El::LOWER;
     constexpr auto diag = El::NON_UNIT;
     constexpr auto orientation = El::NORMAL;
+
+    // Prepare L_X_inv and L_Y
+    Scoped_Timer L_timer(timers, "L");
     auto L_X_inv = X_cholesky;
     for(auto &block : L_X_inv.blocks)
       {
         El::TriangularInverse(uplo, diag, block);
       }
     auto L_Y = Y_cholesky;
+    if(verbosity >= Verbosity::trace)
+      {
+        print_allocation_message_per_node(env, "L_X_inv",
+                                          get_allocated_bytes(L_X_inv));
+        print_allocation_message_per_node(env, "L_Y",
+                                          get_allocated_bytes(L_Y));
+      }
 
     // Make L_X_inv and L_Y bigint matrices
     const auto L_X_inv_normalizer
@@ -69,45 +79,69 @@ namespace Sdpb::Sdpa
     ctx.compute_residues(L_X_inv, ctx.L_X_inv_residues, block_timings_ms);
     ctx.compute_residues(L_Y, ctx.L_Y_residues, block_timings_ms);
 
+    L_timer.stop();
+
+    // Finished L_X_inv and L_Y
+
+    // Compute G_p = L_X_inv F_p L_Y and copy to P
+    Scoped_Timer G_timer(timers, "G");
     for(size_t p_begin = 0; p_begin < primal_dimension;
         p_begin += ctx.cfg.primal_dimension_step)
       {
-        size_t p_end = std::min(p_begin + ctx.cfg.primal_dimension_step,
-                                primal_dimension);
-        Scoped_Timer(timers, El::BuildString("p_", p_begin, "_", p_end));
+        const size_t p_end = std::min(p_begin + ctx.cfg.primal_dimension_step,
+                                      primal_dimension);
+        Scoped_Timer p_timer(timers,
+                             El::BuildString("p_", p_begin, "_", p_end));
         std::vector<Block_Diagonal_Matrix> G;
-        auto F_begin = sdp.sdp_blocks_F.begin() + p_begin;
-        auto F_end = sdp.sdp_blocks_F.begin() + p_end;
+        G.reserve(p_end - p_begin);
+        const auto F_begin = sdp.sdp_blocks_F.begin() + p_begin;
+        const auto F_end = sdp.sdp_blocks_F.begin() + p_end;
         G.insert(G.end(), F_begin, F_end);
-
+        if(verbosity >= Verbosity::trace && p_begin == 0)
+          {
+            print_allocation_message_per_node(env, "G",
+                                              get_allocated_bytes(G));
+          }
         // G := L_X_inv G
         {
+          Scoped_Timer norm_timer(timers, "normalize_G");
           const auto G_normalizer
             = normalize_and_shift<Matrix_Normalization_Kind::COLUMNS>(
               G, bits, std::nullopt);
+          norm_timer.stop();
 
+          Scoped_Timer compute_residues_timer(timers, "compute_residues");
           auto &G_residues = ctx.G_residues(p_end - p_begin, El::HORIZONTAL);
           ctx.compute_residues(G, G_residues, block_timings_ms);
+          compute_residues_timer.stop();
 
           constexpr auto side = El::LEFT;
           ctx.trmm(side, uplo, orientation, diag, ctx.L_X_inv_residues,
                    G_residues, G, verbosity, timers, block_timings_ms);
 
+          Scoped_Timer remove_normalization_timer(timers,
+                                                  "remove_normalization");
           restore_trmm_output(side, uplo, orientation, L_X_inv_normalizer,
                               G_normalizer, G);
         }
         // G := G L_Y
         {
+          Scoped_Timer norm_timer(timers, "normalize_G");
           const auto G_normalizer
             = normalize_and_shift<Matrix_Normalization_Kind::ROWS>(
               G, bits, std::nullopt);
+          norm_timer.stop();
 
+          Scoped_Timer compute_residues_timer(timers, "compute_residues");
           auto &G_residues = ctx.G_residues(p_end - p_begin, El::VERTICAL);
           ctx.compute_residues(G, G_residues, block_timings_ms);
+          compute_residues_timer.stop();
 
           constexpr auto side = El::RIGHT;
           ctx.trmm(side, uplo, orientation, diag, ctx.L_Y_residues, G_residues,
                    G, verbosity, timers, block_timings_ms);
+          Scoped_Timer remove_normalization_timer(timers,
+                                                  "remove_normalization");
           restore_trmm_output(side, uplo, orientation, L_Y_normalizer,
                               G_normalizer, G);
         }
