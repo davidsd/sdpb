@@ -91,6 +91,9 @@ void Environment::initialize()
 
   // Initial MemUsed (at SDPB start)
   {
+    // Just to make sure that all processes performed initial allocations etc.
+    // Probably it's not important.
+    El::mpi::Barrier(comm_shared_mem);
     if(comm_shared_mem.Rank() == 0)
       {
         bool res;
