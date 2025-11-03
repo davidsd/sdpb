@@ -33,7 +33,7 @@ TEST_CASE("pmp2sdp")
           auto sdp_path = (runner.output_dir / "sdp").string();
           args["--output"] = sdp_path;
 
-          runner.create_nested("run").mpi_run({"build/pmp2sdp"}, args);
+          runner.create_nested("run").mpi_run({"build/pmp2sdp", args});
 
           Test_Util::REQUIRE_Equal::diff_sdp(sdp_path, sdp_orig, precision,
                                              diff_precision,
@@ -69,7 +69,7 @@ TEST_CASE("pmp2sdp")
           args["--output"] = sdp_path.string();
           if(!output_format.empty())
             args["--outputFormat"] = output_format;
-          runner.create_nested("run").mpi_run({"build/pmp2sdp"}, args);
+          runner.create_nested("run").mpi_run({"build/pmp2sdp", args});
 
           {
             INFO("Check that pmp2sdp actually uses --outputFormat="
@@ -117,7 +117,7 @@ TEST_CASE("pmp2sdp")
       args["--input"] = input;
       args["--output"] = sdp_dir.string();
       // We allow pmp2sdp to overwrite exsiting sdp_temp
-      runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 0,
+      runner.mpi_run({"build/pmp2sdp", args}, num_procs, 0,
                      "exists and will be overwritten");
     }
     SECTION("sdp_dir_exists")
@@ -137,7 +137,7 @@ TEST_CASE("pmp2sdp")
       args["--input"] = input;
       args["--output"] = sdp_dir.string();
       // We allow pmp2sdp to overwrite exsiting sdp
-      runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 0,
+      runner.mpi_run({"build/pmp2sdp", args}, num_procs, 0,
                      "exists and will be overwritten");
     }
 
@@ -158,7 +158,7 @@ TEST_CASE("pmp2sdp")
       args["--output"] = sdp_readonly_zip.string();
       args["--zip"] = "";
       // We allow pmp2sdp to overwrite exsiting sdp
-      runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 0,
+      runner.mpi_run({"build/pmp2sdp", args}, num_procs, 0,
                      "exists and will be overwritten");
     }
 
@@ -180,7 +180,7 @@ TEST_CASE("pmp2sdp")
       args["--output"] = sdp_path;
 
       auto sdp_invalid_zip = (runner.output_dir / "sdp.invalid.zip").string();
-      runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 1, "No such file");
+      runner.mpi_run({"build/pmp2sdp", args}, num_procs, 1, "No such file");
     }
   }
 
@@ -207,7 +207,7 @@ TEST_CASE("pmp2sdp")
       auto sdp_path = (runner.output_dir / "sdp").string();
       args["--output"] = sdp_path;
 
-      runner.create_nested("run").mpi_run({"build/pmp2sdp"}, args, num_procs);
+      runner.create_nested("run").mpi_run({"build/pmp2sdp", args}, num_procs);
 
       auto sdp_orig = Test_Config::test_data_dir / "end-to-end_tests"
                       / "1d-constraints" / "output" / "sdp";
@@ -235,7 +235,7 @@ TEST_CASE("pmp2sdp")
       args["--input"] = input_nsv;
       auto sdp_path = (runner.output_dir / "sdp").string();
       args["--output"] = sdp_path;
-      runner.mpi_run({"build/pmp2sdp"}, args, num_procs, 1,
+      runner.mpi_run({"build/pmp2sdp", args}, num_procs, 1,
                      "Found different objective vectors in input files:");
     }
   }

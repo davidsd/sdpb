@@ -1,5 +1,7 @@
 #include "integration_tests/common.hxx"
 
+#include <boost/program_options/parsers.hpp>
+
 // Realistic end-to-end test for pmp2sdp + sdpb
 // JSON input taken from  "SingletScalar_cT_test_nmax6" and
 // "SingletScalarAllowed_test_nmax6"
@@ -22,7 +24,7 @@ namespace
     int num_procs = 6;
     int precision = 768;
     Named_Args_Map pmp2sdp_args;
-    std::string default_sdpb_args;
+    std::vector<std::string> default_sdpb_args;
     std::vector<std::string> sdpb_out_filenames;
     std::vector<std::string> sdpb_out_txt_keys;
     bool check_sdp = true;
@@ -92,7 +94,7 @@ namespace
                          {"--output", sdp_path},
                          {"--precision", std::to_string(precision)}});
 
-            runner.create_nested("pmp2sdp").mpi_run({"build/pmp2sdp"}, args,
+            runner.create_nested("pmp2sdp").mpi_run({"build/pmp2sdp", args},
                                                     num_procs);
 
             if(check_sdp)
@@ -115,17 +117,17 @@ namespace
               {"--outDir", (output_dir / "out").string()},
               {"--checkpointDir", (output_dir / "ck").string()}};
             runner.create_nested("sdpb").mpi_run(
-              {"build/sdpb", default_sdpb_args}, args, num_procs);
+              {"build/sdpb", default_sdpb_args, args}, num_procs);
             if(run_sdpb_twice)
               {
                 runner.create_nested("sdpb-2").mpi_run(
-                  {"build/sdpb", default_sdpb_args}, args, num_procs);
+                  {"build/sdpb", default_sdpb_args, args}, num_procs);
               }
 
-          // Read c,B,y and check that (c - B.y) equals to the vector written to c_minus_By/c_minus_By.json
-          check_c_minus_By(sdp_path, output_dir / "out", precision,
-                           diff_precision,
-                           runner.create_nested("check_c_minus_By"));
+            // Read c,B,y and check that (c - B.y) equals to the vector written to c_minus_By/c_minus_By.json
+            check_c_minus_By(sdp_path, output_dir / "out", precision,
+                             diff_precision,
+                             runner.create_nested("check_c_minus_By"));
 
             // SDPB runs with --precision=<precision>
             // We check test output up to lower precision=<sdpb_output_diff_precision>
@@ -146,7 +148,7 @@ namespace
                 {"--verbosity", "debug"},
               };
               runner.create_nested("spectrum")
-                .mpi_run({"build/spectrum"}, args, num_procs);
+                .mpi_run({"build/spectrum", args}, num_procs);
 
               // Cannot check block paths if the same spectrum.json
               // is generated several times by different PMP inputs,
@@ -240,14 +242,14 @@ TEST_CASE("end-to-end_tests")
     INFO("Spectrum should find isolated zero for the last block "
          "(corresponding to x=4/3).");
     End_To_End_Test test("1d-isolated-zeros");
-    test.default_sdpb_args
-      = "--checkpointInterval 3600 --maxRuntime 1340 "
-        "--dualityGapThreshold 1.0e-30 --primalErrorThreshold 1.0e-30 "
-        "--dualErrorThreshold 1.0e-30 --initialMatrixScalePrimal 1.0e20 "
-        "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
-        "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
-        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
-        "--procGranularity 1 --writeSolution x,y";
+    test.default_sdpb_args = boost::program_options::split_unix(
+      "--checkpointInterval 3600 --maxRuntime 1340 "
+      "--dualityGapThreshold 1.0e-30 --primalErrorThreshold 1.0e-30 "
+      "--dualErrorThreshold 1.0e-30 --initialMatrixScalePrimal 1.0e20 "
+      "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
+      "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
+      "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 1 "
+      "--procGranularity 1 --writeSolution x,y");
     test.num_procs = 1;
     test.check_sdp = false;
     // Write SDP to zip archive  to test that spectrum can read sdp.zip/pmp_info.json
@@ -262,15 +264,15 @@ TEST_CASE("end-to-end_tests")
          "which caused a bug.");
     INFO("Test data from Harvard cluster, gmp/6.2.1 mpfr/4.2.0");
     End_To_End_Test test("dfibo-0-0-j=3-c=3.0000-d=3-s=6");
-    test.default_sdpb_args
-      = "--findDualFeasible --findPrimalFeasible "
-        "--initialMatrixScalePrimal 1e10 --initialMatrixScaleDual 1e10 "
-        "--maxComplementarity 1e30 --dualErrorThreshold 1e-10 "
-        "--primalErrorThreshold 1e-153 --maxRuntime 259200 "
-        "--checkpointInterval 3600 --maxIterations 1000 "
-        "--feasibleCenteringParameter=0.1 --infeasibleCenteringParameter=0.3 "
-        "--stepLengthReduction=0.7 "
-        "--maxSharedMemory=100K"; // forces split_factor=3 for Q window
+    test.default_sdpb_args = boost::program_options::split_unix(
+      "--findDualFeasible --findPrimalFeasible "
+      "--initialMatrixScalePrimal 1e10 --initialMatrixScaleDual 1e10 "
+      "--maxComplementarity 1e30 --dualErrorThreshold 1e-10 "
+      "--primalErrorThreshold 1e-153 --maxRuntime 259200 "
+      "--checkpointInterval 3600 --maxIterations 1000 "
+      "--feasibleCenteringParameter=0.1 --infeasibleCenteringParameter=0.3 "
+      "--stepLengthReduction=0.7 "
+      "--maxSharedMemory=100K"); // forces split_factor=3 for Q window
     for(std::string sdp_format : {"", "bin", "json"})
       {
         DYNAMIC_SECTION(
@@ -291,14 +293,14 @@ TEST_CASE("end-to-end_tests")
          "Scalars3d/SingletScalar2020.hs");
     INFO("Test data is generated with SDPB 2.5.1 on Caltech cluster.");
     INFO("SDPB should find primal-dual optimal solution.");
-    std::string default_sdpb_args
-      = "--checkpointInterval 3600 --maxRuntime 1340 "
-        "--dualityGapThreshold 1.0e-30 --primalErrorThreshold 1.0e-30 "
-        "--dualErrorThreshold 1.0e-30 --initialMatrixScalePrimal 1.0e20 "
-        "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
-        "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
-        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 2 "
-        "--procGranularity 1 --writeSolution x,y,z";
+    auto default_sdpb_args = boost::program_options::split_unix(
+      "--checkpointInterval 3600 --maxRuntime 1340 "
+      "--dualityGapThreshold 1.0e-30 --primalErrorThreshold 1.0e-30 "
+      "--dualErrorThreshold 1.0e-30 --initialMatrixScalePrimal 1.0e20 "
+      "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
+      "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
+      "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 2 "
+      "--procGranularity 1 --writeSolution x,y,z");
     SECTION("primal_dual_optimal")
     {
       End_To_End_Test test("SingletScalar_cT_test_nmax6/primal_dual_optimal");
@@ -330,16 +332,16 @@ TEST_CASE("end-to-end_tests")
          "Scalars3d/SingletScalar2020.hs");
     INFO("Test data is generated with SDPB 2.5.1 on Caltech cluster.");
     std::string name = "SingletScalarAllowed_test_nmax6";
-    std::string default_sdpb_args
-      = "--checkpointInterval 3600 --maxRuntime 1341 "
-        "--dualityGapThreshold 1.0e-30 --primalErrorThreshold 1.0e-200 "
-        "--dualErrorThreshold 1.0e-200 --initialMatrixScalePrimal 1.0e20 "
-        "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
-        "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
-        "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 2 "
-        "--procGranularity 1 --writeSolution y,z "
-        "--detectPrimalFeasibleJump --detectDualFeasibleJump "
-        "--maxSharedMemory=100.1K"; // forces split_factor=3 for Q window; also test floating-point --maxSharedMemory value
+    auto default_sdpb_args = boost::program_options::split_unix(
+      "--checkpointInterval 3600 --maxRuntime 1341 "
+      "--dualityGapThreshold 1.0e-30 --primalErrorThreshold 1.0e-200 "
+      "--dualErrorThreshold 1.0e-200 --initialMatrixScalePrimal 1.0e20 "
+      "--initialMatrixScaleDual 1.0e20 --feasibleCenteringParameter 0.1 "
+      "--infeasibleCenteringParameter 0.3 --stepLengthReduction 0.7 "
+      "--maxComplementarity 1.0e100 --maxIterations 1000 --verbosity 2 "
+      "--procGranularity 1 --writeSolution y,z "
+      "--detectPrimalFeasibleJump --detectDualFeasibleJump "
+      "--maxSharedMemory=100.1K"); // forces split_factor=3 for Q window; also test floating-point --maxSharedMemory value
 
     SECTION("primal_feasible_jump")
     {
