@@ -17,9 +17,7 @@ namespace Sdpb::Sdpa
     const size_t max_block_dim;
     const size_t sum_dim_squared;
     const size_t primal_dimension;
-    // TODO find better name
-    // TODO: use split_factor instead?
-    const size_t primal_dimension_step;
+    const size_t split_factor;
 
     Initialize_P_Config(const El::mpi::Comm shared_memory_comm,
                         const size_t precision,
@@ -27,7 +25,7 @@ namespace Sdpb::Sdpa
                         const size_t node_index, const size_t group_index,
                         const std::vector<size_t> &block_dimensions,
                         const size_t primal_dimension,
-                        const size_t primal_dimension_step)
+                        const size_t split_factor)
         : shared_memory_comm(shared_memory_comm),
           precision(precision),
           block_mapping(block_mapping),
@@ -38,8 +36,11 @@ namespace Sdpb::Sdpa
           max_block_dim(get_max(node_block_dims)),
           sum_dim_squared(sum_squares(node_block_dims)),
           primal_dimension(primal_dimension),
-          primal_dimension_step(primal_dimension_step)
-    {}
+          split_factor(split_factor)
+    {
+      ASSERT(split_factor >= 1 && split_factor <= primal_dimension,
+             DEBUG_STRING(split_factor), DEBUG_STRING(primal_dimension));
+    }
 
     const std::vector<Block_Location> &local_block_locations() const
     {
@@ -68,7 +69,7 @@ namespace Sdpb::Sdpa
     // We process primal_dimension_step elements of this vector at once.
     [[nodiscard]] size_t F_size() const
     {
-      return sum_dim_squared * primal_dimension_step;
+      return sum_dim_squared * max_primal_dimension_step();
     }
     [[nodiscard]] size_t P_size() const
     {
@@ -113,7 +114,7 @@ namespace Sdpb::Sdpa
         }
 
       const size_t F_normalizer_size
-        = primal_dimension_step * L_normalizer_size;
+        = max_primal_dimension_step() * L_normalizer_size;
 
       // We estimate total MPI communication memory ~ 3 * buffer size.
       // The factor of 3 is somewhat arbitrary. See also comments in get_trsm_bytes().
@@ -138,9 +139,18 @@ namespace Sdpb::Sdpa
     {
       return node_local_bytes() + node_shmem_bytes();
     }
+    [[nodiscard]] size_t max_primal_dimension_step() const
+    {
+      return div_ceil(primal_dimension, split_factor);
+    }
 
     // Helper functions. TODO move elsewhere and reuse?
   private:
+    [[nodiscard]] static size_t div_ceil(const size_t a, const size_t b)
+    {
+      return a / b + (a % b == 0 ? 0 : 1);
+    }
+
     static std::vector<size_t>
     get_node_block_dims(const std::vector<Block_Location> &node_block_locations,
                         const std::vector<size_t> &block_dimensions)

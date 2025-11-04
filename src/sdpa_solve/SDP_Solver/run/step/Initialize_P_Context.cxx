@@ -252,9 +252,10 @@ namespace Sdpb::Sdpa
     Vector_Block_Diagonal_Matrix_Residues_Window<double> &window,
     El::Matrix<int32_t> &block_timings_ms)
   {
-    ASSERT(bdms.size() <= cfg.primal_dimension_step,
+    ASSERT(bdms.size() <= cfg.max_primal_dimension_step(),
            "vector<Block_Diagonal_Matrix> is longer than allowed by config",
-           DEBUG_STRING(bdms.size()), DEBUG_STRING(cfg.primal_dimension_step));
+           DEBUG_STRING(bdms.size()),
+           DEBUG_STRING(cfg.max_primal_dimension_step()));
     const auto num_blocks = cfg.local_block_locations().size();
     for(size_t vec_index = 0; vec_index < bdms.size(); ++vec_index)
       {

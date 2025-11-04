@@ -124,8 +124,8 @@ namespace Sdpb::Sdpa
                             pretty_print_bytes(bytes, true));
           }
         El::BuildStream(ss, "\n\tShared memory configuration: ",
-                        "\n\t\tinitialize_P() primal dimension step: ",
-                        cfg.initialize_P_config.primal_dimension_step,
+                        "\n\t\tinitialize_P() trmm split factor: ",
+                        cfg.initialize_P_config.split_factor,
                         "\n\t\tsyrk_P() input split factor: ",
                         cfg.syrk_P_config.input_split_factor,
                         "\n\t\tsyrk_P() output split factor: ",

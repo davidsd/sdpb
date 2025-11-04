@@ -3,6 +3,7 @@
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/Matrix_Normalizer.hxx"
 #include "sdpa_solve/SDP.hxx"
 #include "sdpa_solve/memory_estimates.hxx"
+#include "sdpb_util/split_range.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
 // Q = P^T P
@@ -85,11 +86,11 @@ namespace Sdpb::Sdpa
 
     // Compute G_p = L_X_inv F_p L_Y and copy to P
     Scoped_Timer G_timer(timers, "G");
-    for(size_t p_begin = 0; p_begin < primal_dimension;
-        p_begin += ctx.cfg.primal_dimension_step)
+    for(const auto &p_range :
+        split_range(El::IR(0, primal_dimension), ctx.cfg.split_factor))
       {
-        const size_t p_end = std::min(p_begin + ctx.cfg.primal_dimension_step,
-                                      primal_dimension);
+        const size_t p_begin = p_range.beg;
+        const size_t p_end = p_range.end;
         Scoped_Timer p_timer(timers,
                              El::BuildString("p_", p_begin, "_", p_end));
         std::vector<Block_Diagonal_Matrix> G;

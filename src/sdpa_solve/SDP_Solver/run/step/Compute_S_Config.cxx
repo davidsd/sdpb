@@ -90,16 +90,17 @@ namespace Sdpb::Sdpa
       = total_P_block_height_per_group(env, block_info);
     const size_t P_width = primal_dimension;
 
+    const size_t max_trmm_split_factor = primal_dimension;
     const size_t max_syrk_input_split_factor
       = *std::max_element(P_group_heights.begin(), P_group_heights.end());
     const size_t max_syrk_output_split_factor = P_width;
 
     const auto create_init_P_cfg
-      = [&](const size_t primal_dimension_step) -> Initialize_P_Config {
+      = [&](const size_t trmm_split_factor) -> Initialize_P_Config {
       return Initialize_P_Config(
         comm, precision, block_info.block_mapping, block_info.node_index,
         block_info.node_group_index(), block_info.block_dimensions,
-        primal_dimension, primal_dimension_step);
+        primal_dimension, trmm_split_factor);
     };
     const auto create_syrk_cfg
       = [&](const size_t syrk_input_split_factor,
@@ -111,7 +112,8 @@ namespace Sdpb::Sdpa
 
     // Check that we can fit into memory with the smallest possible allocations
     // (i.e. the largest split factors)
-    const Initialize_P_Config smallest_init_P_cfg = create_init_P_cfg(1);
+    const Initialize_P_Config smallest_init_P_cfg
+      = create_init_P_cfg(max_trmm_split_factor);
     const Bigint_Syrk_Config smallest_syrk_cfg = create_syrk_cfg(
       max_syrk_input_split_factor, max_syrk_output_split_factor);
 
@@ -174,20 +176,15 @@ namespace Sdpb::Sdpa
     // Thus, Bigint_Syrk_Config will take as much shared memory as it needs,
     // and Initialize_P_Config will get the remaining amount.
     // TODO: we should either reuse buffers or e.g. give (max_shared_mem / 2) to each stage.
-    //
-    // TODO: use primal_dimension_split_factor instead, to make it similar to syrk config?
-    // primal_dimension_split_factor = div_ceil(primal_dimension, primal_dimension_step)
-    // NB: we're looking for the largest primal_dimension_step,
-    // so we call partition_point(primal_dimension, 0, ...) and not partition_point(1, primal_dimension + 1, ...)
-    const size_t primal_dimension_step
-      = partition_point(primal_dimension, 0, [&](const size_t p) {
-          const Initialize_P_Config init_P_cfg = create_init_P_cfg(p);
-          const Compute_S_Config cfg{init_P_cfg, syrk_P_cfg};
-          return cfg.node_total_bytes() > max_total_mem
-                 || cfg.node_shmem_bytes() > max_shared_mem;
-        });
+    const size_t trmm_split_factor = partition_point(
+      1, primal_dimension + 1, [&](const size_t split_factor) {
+        const Initialize_P_Config init_P_cfg = create_init_P_cfg(split_factor);
+        const Compute_S_Config cfg{init_P_cfg, syrk_P_cfg};
+        return cfg.node_total_bytes() > max_total_mem
+               || cfg.node_shmem_bytes() > max_shared_mem;
+      });
     const Initialize_P_Config initialize_P_cfg
-      = create_init_P_cfg(primal_dimension_step);
+      = create_init_P_cfg(trmm_split_factor);
     const auto result = Compute_S_Config{initialize_P_cfg, syrk_P_cfg};
     ASSERT(result.node_shmem_bytes() < max_shared_mem,
            DEBUG_STRING(result.node_shmem_bytes()),
