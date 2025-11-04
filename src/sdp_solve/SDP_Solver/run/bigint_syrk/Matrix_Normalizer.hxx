@@ -256,6 +256,8 @@ namespace Matrix_Normalizer_Util
     else if constexpr(std::is_base_of_v<El::AbstractDistMatrix<El::BigFloat>,
                                         TMatrix>)
       {
+        // TODO: in principle, each rank needs only the columns that it owns.
+        // This could save some memory but introduce extra complexity.
         const auto comm = matrix.DistComm();
         std::vector<El::BigFloat> norms(norms_size<kind>(matrix), 0);
         add_local_norms_squared<kind>(matrix, uplo, norms);

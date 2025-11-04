@@ -26,8 +26,7 @@ struct Bigint_Syrk_Config
   // const size_t input_window_width;
 
   Bigint_Syrk_Config(const El::mpi::Comm &shared_memory_comm,
-                     const size_t precision,
-                     const size_t num_nodes,
+                     const size_t precision, const size_t num_nodes,
                      const std::vector<size_t> &input_height_per_group,
                      const size_t input_width, const size_t input_split_factor,
                      const size_t output_split_factor)
@@ -104,7 +103,13 @@ struct Bigint_Syrk_Config
   // Local memory allocated on a node
   [[nodiscard]] size_t node_local_bytes() const
   {
-    return bigfloat_bytes(precision) * get_reduce_scatter_buffer_size();
+    const size_t normalizer_size = input_width * shared_memory_comm.Size();
+    // Conservative estimate for mpi::AllReduce(column_norms) overhead
+    const size_t normalizer_all_reduce_size = 3 * normalizer_size;
+    return bigfloat_bytes(precision)
+           * (normalizer_size
+              + std::max(normalizer_all_reduce_size,
+                         get_reduce_scatter_buffer_size()));
   }
   // Local memory allocated on a node
   [[nodiscard]] size_t node_shmem_bytes() const
