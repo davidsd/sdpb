@@ -5,59 +5,6 @@ namespace Sdpb::Sdpa
 {
   namespace
   {
-    // Mapping from local block index to node block index
-    // TODO move to Block_info?
-    std::vector<size_t>
-    get_block_index_local_to_node(const Environment &env,
-                                  const Block_Info &block_info)
-    {
-      std::vector<size_t> result;
-      const auto node_index = env.node_index();
-      const auto group_index = block_info.node_group_index();
-
-      // Count all blocks on previous MPI groups on a node
-      size_t num_prev_blocks = 0;
-      for(size_t g = 0; g < group_index; ++g)
-        {
-          const auto &group
-            = block_info.block_mapping.mapping.at(node_index).at(g);
-          num_prev_blocks += group.block_indices.size();
-        }
-
-      const auto &num_local_blocks
-        = block_info.block_mapping.mapping.at(node_index)
-            .at(group_index)
-            .block_indices.size();
-      result.resize(num_local_blocks);
-      // Enumerate blocks on the current group: num_prev_blocks, num_prev_blocks+1,...
-      std::iota(result.begin(), result.end(), num_prev_blocks);
-      return result;
-    }
-    std::vector<size_t> get_node_block_indices(const Environment &env,
-                                               const Block_Info &block_info)
-    {
-      std::vector<size_t> result;
-      const auto node_index = env.node_index();
-      for(const auto &group : block_info.block_mapping.mapping.at(node_index))
-        {
-          result.insert(result.end(), group.block_indices.begin(),
-                        group.block_indices.end());
-        }
-      return result;
-    }
-    std::vector<size_t>
-    get_node_block_dims(const Environment &env, const Block_Info &block_info)
-    {
-      std::vector<size_t> dims;
-      const auto node_block_indices = get_node_block_indices(env, block_info);
-      dims.reserve(node_block_indices.size());
-      for(const auto block_index : node_block_indices)
-        {
-          dims.push_back(block_info.block_dimensions.at(block_index));
-        }
-      return dims;
-    }
-
     // For each MPI group on a node, return Sum(dim^2) for all blocks of this group.
     std::vector<size_t>
     total_P_block_height_per_group(const Environment &env,
@@ -138,12 +85,6 @@ namespace Sdpb::Sdpa
     const auto comm = env.comm_shared_mem;
     const auto num_nodes = env.num_nodes();
     const auto precision = El::gmp::Precision();
-    const auto block_index_local_to_node
-      = get_block_index_local_to_node(env, block_info);
-    const auto block_index_node_to_global
-      = block_info.block_mapping.block_index_node_to_global.at(
-        block_info.node_index);
-    const auto &node_block_dims = get_node_block_dims(env, block_info);
     const size_t primal_dimension = block_info.primal_dimension;
     const auto P_group_heights
       = total_P_block_height_per_group(env, block_info);
@@ -153,13 +94,25 @@ namespace Sdpb::Sdpa
       = *std::max_element(P_group_heights.begin(), P_group_heights.end());
     const size_t max_syrk_output_split_factor = P_width;
 
+    const auto create_init_P_cfg
+      = [&](const size_t primal_dimension_step) -> Initialize_P_Config {
+      return Initialize_P_Config(
+        comm, precision, block_info.block_mapping, block_info.node_index,
+        block_info.node_group_index(), block_info.block_dimensions,
+        primal_dimension, primal_dimension_step);
+    };
+    const auto create_syrk_cfg
+      = [&](const size_t syrk_input_split_factor,
+            const size_t syrk_output_split_factor) -> Bigint_Syrk_Config {
+      return Bigint_Syrk_Config(comm, precision, num_nodes, P_group_heights,
+                                P_width, syrk_input_split_factor,
+                                syrk_output_split_factor);
+    };
+
     // Check that we can fit into memory with the smallest possible allocations
     // (i.e. the largest split factors)
-    const Initialize_P_Config smallest_init_P_cfg(
-      comm, precision, block_index_local_to_node, block_index_node_to_global,
-      node_block_dims, primal_dimension, 1);
-    const Bigint_Syrk_Config smallest_syrk_cfg(
-      comm, precision, num_nodes, P_group_heights, P_width,
+    const Initialize_P_Config smallest_init_P_cfg = create_init_P_cfg(1);
+    const Bigint_Syrk_Config smallest_syrk_cfg = create_syrk_cfg(
       max_syrk_input_split_factor, max_syrk_output_split_factor);
 
     const Compute_S_Config smallest_cfg{smallest_init_P_cfg,
@@ -192,9 +145,8 @@ namespace Sdpb::Sdpa
       1, max_syrk_output_split_factor + 1,
       [&](const size_t output_split_factor) {
         const size_t input_split_factor = max_syrk_input_split_factor;
-        const Bigint_Syrk_Config syrk_cfg(
-          comm, precision, num_nodes, P_group_heights, P_width,
-          input_split_factor, output_split_factor);
+        const Bigint_Syrk_Config syrk_cfg
+          = create_syrk_cfg(input_split_factor, output_split_factor);
         const Compute_S_Config cfg{smallest_init_P_cfg, syrk_cfg};
         return cfg.node_total_bytes() > max_total_mem
                || cfg.node_shmem_bytes() > max_shared_mem;
@@ -207,9 +159,8 @@ namespace Sdpb::Sdpa
     const size_t syrk_input_split_factor = partition_point(
       1, max_syrk_input_split_factor + 1,
       [&](const size_t input_split_factor) {
-        const Bigint_Syrk_Config syrk_cfg(
-          comm, precision, num_nodes, P_group_heights, P_width,
-          input_split_factor, syrk_output_split_factor);
+        const Bigint_Syrk_Config syrk_cfg
+          = create_syrk_cfg(input_split_factor, syrk_output_split_factor);
         const Compute_S_Config cfg{smallest_init_P_cfg, syrk_cfg};
         return cfg.node_total_bytes() > max_total_mem
                || cfg.node_shmem_bytes() > max_shared_mem;
@@ -230,16 +181,13 @@ namespace Sdpb::Sdpa
     // so we call partition_point(primal_dimension, 0, ...) and not partition_point(1, primal_dimension + 1, ...)
     const size_t primal_dimension_step
       = partition_point(primal_dimension, 0, [&](const size_t p) {
-          const Initialize_P_Config init_P_cfg(
-            comm, precision, block_index_local_to_node,
-            block_index_node_to_global, node_block_dims, primal_dimension, p);
+          const Initialize_P_Config init_P_cfg = create_init_P_cfg(p);
           const Compute_S_Config cfg{init_P_cfg, syrk_P_cfg};
           return cfg.node_total_bytes() > max_total_mem
                  || cfg.node_shmem_bytes() > max_shared_mem;
         });
-    const Initialize_P_Config initialize_P_cfg(
-      comm, precision, block_index_local_to_node, block_index_node_to_global,
-      node_block_dims, primal_dimension, primal_dimension_step);
+    const Initialize_P_Config initialize_P_cfg
+      = create_init_P_cfg(primal_dimension_step);
     const auto result = Compute_S_Config{initialize_P_cfg, syrk_P_cfg};
     ASSERT(result.node_shmem_bytes() < max_shared_mem,
            DEBUG_STRING(result.node_shmem_bytes()),

@@ -229,12 +229,12 @@ namespace Sdpb::Sdpa
     Vector_Matrix_Residues_Window<double> &window,
     El::Matrix<int32_t> &block_timings_ms)
   {
-    ASSERT_EQUAL(bdm.blocks.size(), cfg.block_index_local_to_node.size());
+    ASSERT_EQUAL(bdm.blocks.size(), cfg.local_block_locations().size());
     for(size_t block = 0; block < bdm.blocks.size(); ++block)
       {
-        const auto node_block_index = cfg.block_index_local_to_node.at(block);
-        const auto global_block_index
-          = cfg.block_index_node_to_global.at(node_block_index);
+        const auto &loc = cfg.local_block_locations().at(block);
+        const auto node_block_index = loc.block_index_node;
+        const auto global_block_index = loc.block_index_global;
         const auto &matrix = bdm.blocks.at(block);
         Timer timer;
         for(int j = 0; j < matrix.Width(); ++j)
@@ -255,17 +255,16 @@ namespace Sdpb::Sdpa
     ASSERT(bdms.size() <= cfg.primal_dimension_step,
            "vector<Block_Diagonal_Matrix> is longer than allowed by config",
            DEBUG_STRING(bdms.size()), DEBUG_STRING(cfg.primal_dimension_step));
-    const auto num_blocks = cfg.block_index_local_to_node.size();
+    const auto num_blocks = cfg.local_block_locations().size();
     for(size_t vec_index = 0; vec_index < bdms.size(); ++vec_index)
       {
         const auto &bdm = bdms.at(vec_index);
         ASSERT_EQUAL(bdm.blocks.size(), num_blocks);
         for(size_t block = 0; block < num_blocks; ++block)
           {
-            const auto node_block_index
-              = cfg.block_index_local_to_node.at(block);
-            const auto global_block_index
-              = cfg.block_index_node_to_global.at(node_block_index);
+            const auto &loc = cfg.local_block_locations().at(block);
+            const auto node_block_index = loc.block_index_node;
+            const auto global_block_index = loc.block_index_global;
             const auto &matrix = bdm.blocks.at(block);
             Timer timer;
             for(int j = 0; j < matrix.Width(); ++j)
@@ -326,8 +325,9 @@ namespace Sdpb::Sdpa
       const auto shmem_rank = shared_memory_comm.Rank();
       for(const auto &job : schedule.jobs_by_rank.at(shmem_rank))
         {
-          const auto block_index
-            = cfg.block_index_node_to_global.at(job.block_index);
+          const auto &loc = cfg.node_block_locations().at(job.block_index);
+          ASSERT_EQUAL(loc.block_index_node, job.block_index);
+          const auto block_index = loc.block_index_global;
           Timer timer;
           do_blas_job(job, L_window, G_window);
           block_timings_ms(block_index, 0) += timer.elapsed_milliseconds();
@@ -351,10 +351,9 @@ namespace Sdpb::Sdpa
         for(size_t block = 0; block < bdm.blocks.size(); block++)
           {
             auto &matrix = bdm.blocks.at(block);
-            const auto node_block_index
-              = cfg.block_index_local_to_node.at(block);
-            const auto global_block_index
-              = cfg.block_index_node_to_global.at(node_block_index);
+            const auto &loc = cfg.local_block_locations().at(block);
+            const auto node_block_index = loc.block_index_node;
+            const auto global_block_index = loc.block_index_global;
             const auto &first_residue_matrix
               = bdms_residues.prime_block_vec_matrices.at(0)
                   .at(node_block_index)

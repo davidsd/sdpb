@@ -2,6 +2,7 @@
 
 #include "sdpb_util/bigint_shared_memory/fmpz/Fmpz_Comb.hxx"
 #include "sdpb_util/memory_estimates.hxx"
+#include "sdpb_util/block_mapping/Block_Mapping.hxx"
 
 namespace Sdpb::Sdpa
 {
@@ -9,33 +10,46 @@ namespace Sdpb::Sdpa
   {
     El::mpi::Comm shared_memory_comm;
     const size_t precision;
-    const std::vector<size_t> block_index_local_to_node;
-    const std::vector<size_t> block_index_node_to_global;
+    const Block_Mapping block_mapping;
+    const size_t node_index;
+    const size_t group_index;
     const std::vector<size_t> node_block_dims;
     const size_t max_block_dim;
     const size_t sum_dim_squared;
-    size_t primal_dimension;
+    const size_t primal_dimension;
     // TODO find better name
-    //
-    size_t primal_dimension_step;
+    // TODO: use split_factor instead?
+    const size_t primal_dimension_step;
 
     Initialize_P_Config(const El::mpi::Comm shared_memory_comm,
                         const size_t precision,
-                        const std::vector<size_t> &block_index_local_to_node,
-                        const std::vector<size_t> &block_index_node_to_global,
-                        const std::vector<size_t> &node_block_dims,
+                        const Block_Mapping &block_mapping,
+                        const size_t node_index, const size_t group_index,
+                        const std::vector<size_t> &block_dimensions,
                         const size_t primal_dimension,
                         const size_t primal_dimension_step)
         : shared_memory_comm(shared_memory_comm),
           precision(precision),
-          block_index_local_to_node(block_index_local_to_node),
-          block_index_node_to_global(block_index_node_to_global),
-          node_block_dims(node_block_dims),
+          block_mapping(block_mapping),
+          node_index(node_index),
+          group_index(group_index),
+          node_block_dims(
+            get_node_block_dims(node_block_locations(), block_dimensions)),
           max_block_dim(get_max(node_block_dims)),
           sum_dim_squared(sum_squares(node_block_dims)),
           primal_dimension(primal_dimension),
           primal_dimension_step(primal_dimension_step)
     {}
+
+    const std::vector<Block_Location> &local_block_locations() const
+    {
+      return block_mapping.node_group_block_locations.at(node_index)
+        .at(group_index);
+    }
+    const std::vector<Block_Location> &node_block_locations() const
+    {
+      return block_mapping.node_block_locations.at(node_index);
+    }
 
     [[nodiscard]] Fmpz_Comb comb() const
     {
@@ -91,11 +105,24 @@ namespace Sdpb::Sdpa
 
     // Helper functions. TODO move elsewhere and reuse?
   private:
-    template <class T> T get_max(const std::vector<T> &vec)
+    static std::vector<size_t>
+    get_node_block_dims(const std::vector<Block_Location> &node_block_locations,
+                        const std::vector<size_t> &block_dimensions)
+    {
+      std::vector<size_t> node_block_dims;
+      node_block_dims.reserve(node_block_locations.size());
+      for(auto &loc : node_block_locations)
+        {
+          node_block_dims.push_back(
+            block_dimensions.at(loc.block_index_global));
+        }
+      return node_block_dims;
+    }
+    template <class T> static T get_max(const std::vector<T> &vec)
     {
       return *std::max_element(vec.begin(), vec.end());
     }
-    template <class T> T sum_squares(const std::vector<T> &dims)
+    template <class T> static T sum_squares(const std::vector<T> &dims)
     {
       T result(0);
       for(const auto &dim : dims)
