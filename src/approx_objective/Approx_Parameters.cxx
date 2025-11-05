@@ -43,6 +43,18 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[],
     "A file containing either preprocessed input for the SDP you wish to "
     "approximate, or a null separated list of files with preprocessed input.");
   basic_options.add_options()(
+    "maxMemory",
+    boost::program_options::value<std::string>()
+      ->notifier([this](const std::string &s) {
+        this->max_memory = memory_limit_translator.from_string(s);
+      })
+      ->default_value("80%"),
+    "Maximum amount of memory that can be used for SDPB allocations, "
+    "in bytes."
+    " Optional suffixes: B (bytes), K/KB/KiB (kilobytes), M/MB/MiB "
+    "(megabytes), "
+    "G/GB/GiB (gigabytes), % (percents of MemAvailable at program start)");
+  basic_options.add_options()(
     "maxSharedMemory",
     boost::program_options::value<std::string>()
       ->notifier([this](const std::string &s) {

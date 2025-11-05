@@ -12,7 +12,7 @@ struct Approx_Parameters
 {
   size_t proc_granularity = 1;
   size_t precision;
-  Memory_Limit max_shared_memory;
+  Memory_Limit max_memory, max_shared_memory;
 
   std::filesystem::path sdp_path, new_sdp_path, solution_dir, param_path;
 
