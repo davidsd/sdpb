@@ -1,6 +1,6 @@
 #include "Approx_Parameters.hxx"
 
-#include "sdp_solve/Solver_Parameters/String_To_Bytes_Translator.hxx"
+#include "sdp_solve/Solver_Parameters/Memory_Limit.hxx"
 #include "sdpb_util/assert.hxx"
 
 #include <boost/program_options.hpp>
@@ -8,7 +8,9 @@
 namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
-Approx_Parameters::Approx_Parameters(int argc, char *argv[])
+Approx_Parameters::Approx_Parameters(int argc, char *argv[],
+                                     const Environment &env)
+    : memory_limit_translator(env.initial_node_mem_available())
 {
   std::string write_solution_string;
   using namespace std::string_literals;
@@ -44,14 +46,14 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
     "maxSharedMemory",
     boost::program_options::value<std::string>()
       ->notifier([this](const std::string &s) {
-        this->max_shared_memory_bytes
-          = String_To_Bytes_Translator::from_string(s);
+        this->max_shared_memory = memory_limit_translator.from_string(s);
       })
       ->default_value("0"),
     "Maximum amount of memory that can be used for MPI shared windows, "
     "in bytes."
-    " Optional suffixes: B (bytes), K or KB (kilobytes), M or MB (megabytes), "
-    "G or GB (gigabytes).");
+    " Optional suffixes: B (bytes), K/KB/KiB (kilobytes), M/MB/MiB "
+    "(megabytes), "
+    "G/GB/GiB (gigabytes), % (percents of MemAvailable at program start)");
   basic_options.add_options()(
     "solutionDir", boost::program_options::value<fs::path>(&solution_dir),
     "The directory with the text format solutions of x and y for the primary "
@@ -157,11 +159,11 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
 
 std::ostream &operator<<(std::ostream &os, const Approx_Parameters &p)
 {
-  os << std::boolalpha
-     << "sdp                          = " << p.sdp_path << '\n'
+  os << std::boolalpha << "sdp                          = " << p.sdp_path
+     << '\n'
      << "newSdp                       = " << p.new_sdp_path << '\n'
      << "procsGranularity             = " << p.proc_granularity << '\n'
-     << "maxSharedMemory              = " << p.max_shared_memory_bytes << '\n'
+     << "maxSharedMemory              = " << p.max_shared_memory << '\n'
      << "precision(actual)            = " << p.precision << "("
      << mpf_get_default_prec() << ")" << '\n'
      << "solutionDir                  = " << p.solution_dir << '\n'

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sdp_solve/Solver_Parameters/Memory_Limit.hxx"
+#include "sdpb_util/Environment.hxx"
 #include "sdpb_util/Verbosity.hxx"
 
 #include <filesystem>
@@ -10,7 +12,7 @@ struct Approx_Parameters
 {
   size_t proc_granularity = 1;
   size_t precision;
-  size_t max_shared_memory_bytes;
+  Memory_Limit max_shared_memory;
 
   std::filesystem::path sdp_path, new_sdp_path, solution_dir, param_path;
 
@@ -18,7 +20,10 @@ struct Approx_Parameters
 
   Verbosity verbosity;
 
-  Approx_Parameters(int argc, char *argv[]);
+  // Initialized from Environment - MemAvailable
+  String_To_Memory_Limit_Translator memory_limit_translator;
+
+  Approx_Parameters(int argc, char *argv[], const Environment &env);
   [[nodiscard]] bool is_valid() const { return !sdp_path.empty(); }
 };
 

@@ -2,6 +2,7 @@
 
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/Bigint_Syrk_Config.hxx"
 #include "Initialize_P_Config.hxx"
+#include "sdp_solve/Solver_Parameters.hxx"
 #include "sdpa_solve/Block_Info.hxx"
 
 namespace Sdpb::Sdpa
@@ -22,5 +23,5 @@ namespace Sdpb::Sdpa
 
   Compute_S_Config
   get_compute_S_config(const Environment &env, const Block_Info &block_info,
-                       size_t max_total_mem, size_t max_shared_mem);
+                       const Solver_Parameters &parameters, size_t other_mem);
 }

@@ -42,6 +42,10 @@ int Environment::node_index() const
 {
   return _node_index;
 }
+size_t Environment::initial_node_mem_available() const
+{
+  return _node_mem_total - _initial_node_mem_used;
+}
 size_t Environment::initial_node_mem_used() const
 {
   return _initial_node_mem_used;

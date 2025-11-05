@@ -12,7 +12,9 @@ namespace fs = std::filesystem;
 
 namespace po = boost::program_options;
 
-SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
+SDPB_Parameters::SDPB_Parameters(int argc, char *argv[],
+                                 const Environment &env)
+    : solver(env)
 {
   std::string write_solution_string;
   using namespace std::string_literals;

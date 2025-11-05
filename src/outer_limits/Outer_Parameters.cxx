@@ -7,7 +7,9 @@
 namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
-Outer_Parameters::Outer_Parameters(int argc, char *argv[])
+Outer_Parameters::Outer_Parameters(int argc, char *argv[],
+                                   const Environment &env)
+    : solver(env)
 {
   std::string write_solution_string;
   using namespace std::string_literals;
@@ -37,7 +39,8 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[])
     "out,o", po::value<fs::path>(&output_path),
     "The optimal solution is saved to this file in json "
     "format. Defaults to 'functions' with the ending '_out.json'.");
-  basic_options.add_options()("verbosity",
+  basic_options.add_options()(
+    "verbosity",
     po::value<Verbosity>(&verbosity)->default_value(Verbosity::regular),
     "Verbosity.  0 -> no output, 1 -> regular output, 2 -> debug output, 3 -> "
     "trace output");
@@ -171,8 +174,8 @@ std::ostream &operator<<(std::ostream &os, const Outer_Parameters &p)
      << "\nParameters:\n"
      << "dualityGapReduction          = " << p.duality_gap_reduction << '\n'
      << "meshThreshold                = " << p.mesh_threshold << '\n'
-     << p.solver
-     << "writeSolution                = " << p.write_solution << '\n'
+     << p.solver << "writeSolution                = " << p.write_solution
+     << '\n'
      << "verbosity                    = " << static_cast<int>(p.verbosity)
      << '\n';
   return os;

@@ -58,8 +58,9 @@ void compute_dual_residues_and_error(
 
 void compute_primal_residues_and_error_P_Ax_X(
   const Block_Info &block_info, const SDP &sdp, const Block_Vector &x,
-  const Paired_Block_Diagonal_Matrix &X, Paired_Block_Diagonal_Matrix &primal_residues,
-  El::BigFloat &primal_error_P, Timers &timers);
+  const Paired_Block_Diagonal_Matrix &X,
+  Paired_Block_Diagonal_Matrix &primal_residues, El::BigFloat &primal_error_P,
+  Timers &timers);
 
 void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
                                               const SDP &sdp,
@@ -158,7 +159,7 @@ namespace
   }
 
   size_t
-  get_max_shared_memory_bytes(const size_t default_max_shared_memory_bytes,
+  get_max_shared_memory_bytes(const Memory_Limit &default_max_shared_memory,
                               const Environment &env,
                               const Block_Info &block_info, const SDP &sdp,
                               const SDP_Solver &solver,
@@ -166,8 +167,8 @@ namespace
   {
     // If user sets --maxSharedMemory limit manually, we use it.
     // Otherwise, we calculate the limit automatically.
-    if(default_max_shared_memory_bytes != 0)
-      return default_max_shared_memory_bytes;
+    if(default_max_shared_memory.bytes != 0)
+      return default_max_shared_memory.bytes;
     const size_t nonshared_memory_required_per_node_bytes
       = get_required_nonshared_memory_per_node_bytes(env, block_info, sdp,
                                                      solver, verbosity);
@@ -242,9 +243,8 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
   Scoped_Timer initialize_bigint_syrk_context_timer(timers,
                                                     "bigint_syrk_context");
 
-  auto max_shared_memory_bytes
-    = get_max_shared_memory_bytes(parameters.max_shared_memory_bytes, env,
-                                  block_info, sdp, *this, verbosity);
+  auto max_shared_memory_bytes = get_max_shared_memory_bytes(
+    parameters.max_shared_memory, env, block_info, sdp, *this, verbosity);
   auto bigint_syrk_context = initialize_bigint_syrk_context(
     block_info, sdp, max_shared_memory_bytes, verbosity);
   initialize_bigint_syrk_context_timer.stop();

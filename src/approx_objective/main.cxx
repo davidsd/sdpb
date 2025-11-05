@@ -40,7 +40,7 @@ int main(int argc, char **argv)
 
   try
     {
-      Approx_Parameters parameters(argc, argv);
+      Approx_Parameters parameters(argc, argv, env);
       if(!parameters.is_valid())
         {
           return 0;

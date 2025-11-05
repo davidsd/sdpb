@@ -51,7 +51,8 @@ def build(bld):
               includes=default_includes,
               use=external_packages)
 
-    sdp_solve_sources = ['src/sdp_solve/Solver_Parameters/Solver_Parameters.cxx',
+    sdp_solve_sources = ['src/sdp_solve/Solver_Parameters/Memory_Limit.cxx',
+                         'src/sdp_solve/Solver_Parameters/Solver_Parameters.cxx',
                          'src/sdp_solve/Archive_Reader.cxx',
                          'src/sdp_solve/Block_Info/Block_Info.cxx',
                          'src/sdp_solve/Block_Matrix/Block_Diagonal_Matrix.cxx',

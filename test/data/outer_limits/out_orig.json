@@ -9,6 +9,7 @@
 {
     "maxIterations": "1000",
     "maxRuntime": "9223372036854775807",
+    "maxMemory": "80%",
     "maxSharedMemory": "0",
     "checkpointInterval": "3600",
     "findPrimalFeasible": "false",

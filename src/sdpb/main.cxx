@@ -33,7 +33,7 @@ int main(int argc, char **argv)
 
   try
     {
-      SDPB_Parameters parameters(argc, argv);
+      SDPB_Parameters parameters(argc, argv, env);
       if(!parameters.is_valid())
         {
           return 0;

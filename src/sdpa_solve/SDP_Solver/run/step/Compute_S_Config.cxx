@@ -80,7 +80,8 @@ namespace Sdpb::Sdpa
 
   Compute_S_Config
   get_compute_S_config(const Environment &env, const Block_Info &block_info,
-                       const size_t max_total_mem, const size_t max_shared_mem)
+                       const Solver_Parameters &parameters,
+                       const size_t other_mem)
   {
     const auto comm = env.comm_shared_mem;
     const auto num_nodes = env.num_nodes();
@@ -89,6 +90,10 @@ namespace Sdpb::Sdpa
     const auto P_group_heights
       = total_P_block_height_per_group(env, block_info);
     const size_t P_width = primal_dimension;
+
+    const size_t max_total_mem = parameters.max_memory.limit_or_infinite();
+    const size_t max_shared_mem
+      = parameters.max_shared_memory.limit_or_infinite();
 
     const size_t max_trmm_split_factor = primal_dimension;
     const size_t max_syrk_input_split_factor
@@ -120,16 +125,18 @@ namespace Sdpb::Sdpa
     const Compute_S_Config smallest_cfg{smallest_init_P_cfg,
                                         smallest_syrk_cfg};
 
-    const size_t min_total_bytes = smallest_cfg.node_total_bytes();
+    const size_t min_total_bytes = smallest_cfg.node_total_bytes() + other_mem;
     const size_t min_shmem_bytes = smallest_cfg.node_shmem_bytes();
     ASSERT(min_total_bytes <= max_total_mem,
-           "Not enough memory for compute_S: required at least ",
-           pretty_print_bytes(max_total_mem, true),
-           ", limit: ", pretty_print_bytes(min_total_bytes, true));
+           "Not enough memory: required at least ",
+           pretty_print_bytes(min_total_bytes, true), " (compute_S: ",
+           pretty_print_bytes(smallest_cfg.node_total_bytes()),
+           ", other: ", pretty_print_bytes(other_mem), ")",
+           ", --maxMemory limit: ", parameters.max_memory);
     ASSERT(min_shmem_bytes <= max_shared_mem,
            "Not enough shared memory for compute_S: required at least ",
            pretty_print_bytes(min_shmem_bytes, true),
-           ", limit: ", pretty_print_bytes(max_shared_mem, true));
+           ", --maxSharedMemory limit: ", parameters.max_shared_memory);
 
     // Now let's do binary search and find:
     // 1. minimal syrk_output_split_factor
@@ -150,7 +157,7 @@ namespace Sdpb::Sdpa
         const Bigint_Syrk_Config syrk_cfg
           = create_syrk_cfg(input_split_factor, output_split_factor);
         const Compute_S_Config cfg{smallest_init_P_cfg, syrk_cfg};
-        return cfg.node_total_bytes() > max_total_mem
+        return cfg.node_total_bytes() + other_mem > max_total_mem
                || cfg.node_shmem_bytes() > max_shared_mem;
       });
     // NB: All nodes should have the same output split factor!
@@ -164,7 +171,7 @@ namespace Sdpb::Sdpa
         const Bigint_Syrk_Config syrk_cfg
           = create_syrk_cfg(input_split_factor, syrk_output_split_factor);
         const Compute_S_Config cfg{smallest_init_P_cfg, syrk_cfg};
-        return cfg.node_total_bytes() > max_total_mem
+        return cfg.node_total_bytes() + other_mem > max_total_mem
                || cfg.node_shmem_bytes() > max_shared_mem;
       });
 
@@ -180,7 +187,7 @@ namespace Sdpb::Sdpa
       1, primal_dimension + 1, [&](const size_t split_factor) {
         const Initialize_P_Config init_P_cfg = create_init_P_cfg(split_factor);
         const Compute_S_Config cfg{init_P_cfg, syrk_P_cfg};
-        return cfg.node_total_bytes() > max_total_mem
+        return cfg.node_total_bytes() + other_mem > max_total_mem
                || cfg.node_shmem_bytes() > max_shared_mem;
       });
     const Initialize_P_Config initialize_P_cfg
@@ -188,10 +195,10 @@ namespace Sdpb::Sdpa
     const auto result = Compute_S_Config{initialize_P_cfg, syrk_P_cfg};
     ASSERT(result.node_shmem_bytes() < max_shared_mem,
            DEBUG_STRING(result.node_shmem_bytes()),
-           DEBUG_STRING(max_shared_mem));
-    ASSERT(result.node_total_bytes() < max_total_mem,
-           DEBUG_STRING(result.node_total_bytes()),
-           DEBUG_STRING(max_total_mem));
+           DEBUG_STRING(parameters.max_memory));
+    ASSERT(result.node_total_bytes() + other_mem < max_total_mem,
+           DEBUG_STRING(result.node_total_bytes()), DEBUG_STRING(other_mem),
+           DEBUG_STRING(parameters.max_shared_memory));
     return result;
   }
 }

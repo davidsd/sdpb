@@ -211,7 +211,7 @@ void setup_solver(const Environment &env, const Block_Info &block_info,
 
       const auto verbosity = parameters.verbosity;
       const auto max_shared_memory_bytes
-        = get_max_shared_memory_bytes(parameters.max_shared_memory_bytes, env,
+        = get_max_shared_memory_bytes(parameters.max_shared_memory.bytes, env,
                                       block_info, sdp, X, verbosity);
       auto bigint_syrk_context = initialize_bigint_syrk_context(
         block_info, sdp, max_shared_memory_bytes, verbosity);

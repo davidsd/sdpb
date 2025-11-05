@@ -91,8 +91,7 @@ namespace Sdpb::Sdpa
                                                       "bigint_syrk_context");
 
     auto cfg = get_compute_S_config_and_print_memory(
-      env, block_info, sdp, *this, parameters.max_shared_memory_bytes,
-      verbosity);
+      env, block_info, sdp, *this, parameters, verbosity);
     auto compute_S_context
       = initialize_compute_S_context(block_info, cfg, verbosity);
     initialize_bigint_syrk_context_timer.stop();
