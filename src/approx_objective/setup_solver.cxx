@@ -41,9 +41,12 @@ void initialize_schur_complement_solver(
 
 namespace
 {
-  BigInt_Shared_Memory_Syrk_Context create_syrk_Q_context_and_print_memory(
-    const Environment &env, const Block_Info &block_info, const SDP &sdp,
-    const Paired_Block_Diagonal_Matrix &X, const Approx_Parameters &parameters)
+  BigInt_Shared_Memory_Syrk_Context
+  create_syrk_Q_context_and_print_memory(const Environment &env,
+                                         const Block_Info &block_info,
+                                         const El::Grid &grid, const SDP &sdp,
+                                         const Paired_Block_Diagonal_Matrix &X,
+                                         const Approx_Parameters &parameters)
   {
     // Estimate how many BigFloats will be allocated by SDPB on the current node,
     // (including what's already allocated, e.g. SDP)
@@ -66,6 +69,24 @@ namespace
       = node_reduce(get_schur_complement_size_local(block_info));
     const size_t schur_complement_bytes
       = schur_complement_size * bigfloat_bytes();
+    const size_t schur_complement_cholesky_bytes = schur_complement_bytes;
+
+    // Memory overhead for computing L^{-1}
+    // (Trsm calls in initialize_schur_off_diagonal).
+    // Sum over MPI groups the Trsm memory for the largest block of B in group.
+    const size_t initialize_schur_off_diagonal_trsm_bytes = node_reduce([&] {
+      size_t trsm_bytes = 0;
+      if(block_info.mpi_comm.value.Rank() == 0)
+        {
+          for(auto &m : sdp.free_var_matrix.blocks)
+            {
+              trsm_bytes = std::max(
+                trsm_bytes, get_trsm_bytes(m.Height(), m.Width(),
+                                           grid.Height(), grid.Width()));
+            }
+        }
+      return trsm_bytes;
+    }());
 
     // #(B) = PxN
     // free_var_matrix, schur_off_diagonal
@@ -91,7 +112,7 @@ namespace
     solver_bytes += 2 * A_X_inv_bytes;
 
     // schur_complement_cholesky
-    solver_bytes += schur_complement_bytes;
+    solver_bytes += schur_complement_cholesky_bytes;
 
     // schur_off_diagonal = L^{-1} B takes the same size as B
     // Allocated in initialize_schur_off_diagonal()
@@ -104,11 +125,21 @@ namespace
       block_info, sdp, parameters.max_memory, parameters.max_shared_memory,
       mem_required_bytes() + std::max(schur_complement_bytes, SDP_bytes));
 
-    // Add either schur_complement from initialize_schur_complement_solver(),
+    // Add schur_complement + (syrk_S() or Trsm() temporary allocations)
+    // from initialize_schur_complement_solver()
     // or SDP from quadratic_approximate_objectives()
-    // (they do not coexist, thus we choose maximum size instead of adding both)
+    // (when allocations do not coexist, we choose maximum size instead of adding both)
+    // TODO implement RAII-like simulation of memory allocations/deallocations,
+    // to automatically track and print max memory usage.
+    const size_t initialize_schur_complement_solver_local_bytes
+      = schur_complement_bytes
+        + std::max(cfg.node_local_bytes(),
+                   initialize_schur_off_diagonal_trsm_bytes);
+    const size_t initialize_schur_complement_solver_total_bytes
+      = initialize_schur_complement_solver_local_bytes
+        + cfg.node_shmem_bytes();
     solver_bytes
-      += std::max(schur_complement_bytes + cfg.node_local_bytes(), SDP_bytes);
+      += std::max(initialize_schur_complement_solver_local_bytes, SDP_bytes);
     // Shared memory windows are allocated in the beginning, so they should be always included.
     solver_bytes += cfg.node_shmem_bytes();
 
@@ -133,10 +164,11 @@ namespace
           {"\tSolver", solver_bytes},
           {"\t\tSDP", SDP_bytes},
           {"\t\tinitialize_schur_complement_solver()",
-           schur_complement_bytes + cfg.node_total_bytes()},
+           initialize_schur_complement_solver_total_bytes},
           {"\t\t\tschur_complement", schur_complement_bytes},
+          {"\t\t\tEl::Trsm()", initialize_schur_off_diagonal_trsm_bytes},
           {"\t\t\tQ", Q_bytes},
-          {"\t\t\t\tshared memory", cfg.node_shmem_bytes()},
+          {"\t\t\tshared memory", cfg.node_shmem_bytes()},
         };
 
         std::ostringstream ss;
@@ -227,7 +259,7 @@ void setup_solver(const Environment &env, const Block_Info &block_info,
       const auto verbosity = parameters.verbosity;
       const auto max_memory = parameters.max_shared_memory;
       auto bigint_syrk_context = create_syrk_Q_context_and_print_memory(
-        env, block_info, sdp, X, parameters);
+        env, block_info, grid, sdp, X, parameters);
 
       initialize_schur_complement_solver(
         env, block_info, sdp, A_X_inv, A_Y, grid, schur_complement_cholesky,

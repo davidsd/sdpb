@@ -71,9 +71,9 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
 namespace
 {
   BigInt_Shared_Memory_Syrk_Context create_syrk_Q_context_and_print_memory(
-    const Environment &env, const Block_Info &block_info, const SDP &sdp,
-    const SDP_Solver &solver, const Solver_Parameters &parameters,
-    const Verbosity verbosity)
+    const Environment &env, const Block_Info &block_info, const El::Grid &grid,
+    const SDP &sdp, const SDP_Solver &solver,
+    const Solver_Parameters &parameters, const Verbosity verbosity)
   {
     // Estimate how many BigFloats will be allocated by SDPB on the current node,
     // (including what's already allocated, e.g. SDP)
@@ -97,6 +97,24 @@ namespace
       = node_reduce(get_schur_complement_size_local(block_info));
     const size_t schur_complement_bytes
       = schur_complement_size * bigfloat_bytes();
+    const size_t schur_complement_cholesky_bytes = schur_complement_bytes;
+
+    // Memory overhead for computing L^{-1}
+    // (Trsm calls in initialize_schur_off_diagonal).
+    // Sum over MPI groups the Trsm memory for the largest block of B in group.
+    const size_t initialize_schur_off_diagonal_trsm_bytes = node_reduce([&] {
+      size_t trsm_bytes = 0;
+      if(block_info.mpi_comm.value.Rank() == 0)
+        {
+          for(auto &m : sdp.free_var_matrix.blocks)
+            {
+              trsm_bytes = std::max(
+                trsm_bytes, get_trsm_bytes(m.Height(), m.Width(),
+                                           grid.Height(), grid.Width()));
+            }
+        }
+      return trsm_bytes;
+    }());
 
     // #(B) = PxN
     // sdp.free_var_matrix, schur_off_diagonal
@@ -127,7 +145,7 @@ namespace
     SDP_Solver_run_bytes += 2 * A_X_inv_bytes;
 
     // schur_complement_cholesky
-    SDP_Solver_run_bytes += schur_complement_bytes;
+    SDP_Solver_run_bytes += schur_complement_cholesky_bytes;
 
     // schur_off_diagonal = L^{-1} B
     SDP_Solver_run_bytes += B_bytes;
@@ -138,11 +156,21 @@ namespace
       block_info, sdp, parameters.max_memory, parameters.max_shared_memory,
       mem_required_bytes() + std::max(schur_complement_bytes, 3 * X_bytes));
 
-    // Add either schur_complement from initialize_schur_complement_solver(),
+    // Add schur_complement + (syrk_S() or Trsm() temporary allocations)
+    // from initialize_schur_complement_solver()
     // or XY,R,Z from compute_search_direction().
-    // (they do not coexist, thus we choose maximum size instead of adding both)
-    SDP_Solver_run_bytes += std::max(
-      schur_complement_bytes + cfg.node_local_bytes(), 3 * X_bytes);
+    // (when allocations do not coexist, we choose maximum size instead of adding both)
+    // TODO implement RAII-like simulation of memory allocations/deallocations,
+    // to automatically track and print max memory usage.
+    const size_t initialize_schur_complement_solver_local_bytes
+      = schur_complement_bytes
+        + std::max(cfg.node_local_bytes(),
+                   initialize_schur_off_diagonal_trsm_bytes);
+    const size_t initialize_schur_complement_solver_total_bytes
+      = initialize_schur_complement_solver_local_bytes
+        + cfg.node_shmem_bytes();
+    SDP_Solver_run_bytes
+      += std::max(initialize_schur_complement_solver_local_bytes, 3 * X_bytes);
     // Shared memory windows are allocated in the beginning, so they should be always included.
     SDP_Solver_run_bytes += cfg.node_shmem_bytes();
 
@@ -168,10 +196,11 @@ namespace
           {"\tSDP_Solver", SDP_Solver_bytes},
           {"\tSDP_Solver::run()", SDP_Solver_run_bytes},
           {"\t\tinitialize_schur_complement_solver()",
-           schur_complement_bytes + cfg.node_total_bytes()},
+           initialize_schur_complement_solver_total_bytes},
           {"\t\t\tschur_complement", schur_complement_bytes},
+          {"\t\t\tEl::Trsm()", initialize_schur_off_diagonal_trsm_bytes},
           {"\t\t\tQ", Q_bytes},
-          {"\t\t\t\tshared memory", cfg.node_shmem_bytes()},
+          {"\t\t\tshared memory", cfg.node_shmem_bytes()},
         };
 
         std::ostringstream ss;
@@ -265,7 +294,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
   Scoped_Timer initialize_bigint_syrk_context_timer(timers,
                                                     "bigint_syrk_context");
   auto bigint_syrk_context = create_syrk_Q_context_and_print_memory(
-    env, block_info, sdp, *this, parameters, verbosity);
+    env, block_info, grid, sdp, *this, parameters, verbosity);
   initialize_bigint_syrk_context_timer.stop();
 
   initialize_timer.stop();
