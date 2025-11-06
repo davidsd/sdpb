@@ -88,26 +88,29 @@ void Memory_Tracker::print(std::ostream &os, const Node &node,
 }
 Memory_Tracker::Node *Memory_Tracker::enter_scope(const std::string &name)
 {
-  return open(name, 0, true);
+  return open(name, 0, current_scope, true);
 }
 void Memory_Tracker::exit_scope(Node *scope)
 {
   close(scope, true);
 }
 Memory_Tracker::Node *
-Memory_Tracker::allocate(const std::string &name, size_t bytes)
+Memory_Tracker::allocate(const std::string &name, size_t bytes, Node *parent)
 {
-  return open(name, bytes, false);
+  return open(name, bytes, parent, false);
 }
 void Memory_Tracker::free(Node *node)
 {
   return close(node, false);
 }
 Memory_Tracker::Node *
-Memory_Tracker::open(const std::string &name, const size_t bytes,
+Memory_Tracker::open(const std::string &name, const size_t bytes, Node *parent,
                      const bool enter_scope)
 {
-  auto *child = current_scope->add_child(name, bytes);
+  // if(!parent)
+  //   parent = current_scope;
+  ASSERT(parent != nullptr);
+  auto *child = parent->add_child(name, bytes);
   active_nodes.push_back(child);
   if(enter_scope)
     current_scope = child;
@@ -141,7 +144,13 @@ Memory_Tracker::Scope::~Scope()
 Memory_Tracker::Allocation::Allocation(const std::string &name,
                                        const size_t bytes,
                                        Memory_Tracker &tracker)
-    : tracker(tracker), node(tracker.allocate(name, bytes))
+    : tracker(tracker),
+      node(tracker.allocate(name, bytes, tracker.current_scope))
+{}
+Memory_Tracker::Allocation::Allocation(const std::string &name, size_t bytes,
+                                       Memory_Tracker &tracker,
+                                       const Allocation &parent)
+    : tracker(tracker), node(tracker.allocate(name, bytes, parent.node))
 {}
 Memory_Tracker::Allocation::~Allocation()
 {

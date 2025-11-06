@@ -24,6 +24,9 @@ TEST_CASE("Memory_Tracker")
     Memory_Tracker tracker("root");
 #define SCOPE(name) Scope name##_scope(#name, tracker)
 #define ALLOCATION(name) Allocation name##_allocation(#name, name, tracker)
+#define GROUP(name) Allocation name##_group(#name, 0, tracker)
+#define GROUP_ITEM(group, name)                                               \
+  Allocation name##_group(#name, name, tracker, group##_group)
 
     // Some random numbers.
     // Peak memory will occur at different locations.
@@ -45,8 +48,9 @@ TEST_CASE("Memory_Tracker")
         ALLOCATION(foo_y);
         {
           SCOPE(bar);
-          ALLOCATION(bar_x);
-          ALLOCATION(bar_y);
+          GROUP(bar_xy);
+          GROUP_ITEM(bar_xy, bar_x);
+          GROUP_ITEM(bar_xy, bar_y);
           ALLOCATION(bar_z);
         }
         ALLOCATION(foo_z);

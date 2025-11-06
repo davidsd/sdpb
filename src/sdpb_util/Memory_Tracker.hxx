@@ -69,6 +69,8 @@ public:
   struct [[nodiscard]] Allocation
   {
     Allocation(const std::string &name, size_t bytes, Memory_Tracker &tracker);
+    Allocation(const std::string &name, size_t bytes, Memory_Tracker &tracker,
+               const Allocation &parent);
     ~Allocation();
 
   private:
@@ -104,12 +106,13 @@ private:
   // Exit named scope
   void exit_scope(Node *scope);
   // Make an allocation in the current scope
-  Node *allocate(const std::string &name, size_t bytes);
+  Node *allocate(const std::string &name, size_t bytes, Node *parent);
   // Free an allocation in the current scope
   void free(Node *node);
 
   // implementation for enter_scope() and allocate()
-  Node *open(const std::string &name, size_t bytes, bool enter_scope);
+  Node *
+  open(const std::string &name, size_t bytes, Node *parent, bool enter_scope);
   // implementation for exit_scope() and free()
   void close(Node *node, bool exit_scope);
 };
