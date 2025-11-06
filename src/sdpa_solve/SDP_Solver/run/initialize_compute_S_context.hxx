@@ -4,7 +4,7 @@
 #include "sdpa_solve/Block_Info.hxx"
 #include "sdpa_solve/SDP.hxx"
 #include "sdpa_solve/SDP_Solver/run/step/Initialize_P_Context.hxx"
-#include "sdp_solve/SDP_Solver/run/bigint_syrk/initialize_bigint_syrk_context.hxx"
+#include "sdp_solve/SDP_Solver/run/get_syrk_Q_config.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/bigint_shared_memory/Vector_Matrix_Residues_Window.hxx"

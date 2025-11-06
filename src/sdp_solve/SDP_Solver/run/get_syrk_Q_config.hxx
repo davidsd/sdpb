@@ -1,16 +1,17 @@
 #pragma once
 
-#include "BigInt_Shared_Memory_Syrk_Context.hxx"
+#include "bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdp_solve/Block_Info.hxx"
 #include "sdp_solve/SDP.hxx"
+#include "sdp_solve/Solver_Parameters/Memory_Limit.hxx"
 #include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
-inline BigInt_Shared_Memory_Syrk_Context
-initialize_bigint_syrk_context(const Block_Info &block_info, const SDP &sdp,
-                               const size_t max_shared_memory_bytes,
-                               const Verbosity verbosity)
+inline Bigint_Syrk_Config
+get_syrk_Q_config(const Block_Info &block_info, const SDP &sdp,
+                  const Memory_Limit &max_memory,
+                  const Memory_Limit &max_shared_memory,
+                  const size_t other_memory)
 {
-  const auto group_index = block_info.node_group_index();
   const auto precision = El::gmp::Precision();
   const auto num_nodes = block_info.num_nodes();
   const auto &node_comm = block_info.node_comm;
@@ -32,21 +33,36 @@ initialize_bigint_syrk_context(const Block_Info &block_info, const SDP &sdp,
       max_group_height = std::max(max_group_height, height);
     }
 
+  const size_t max_total_mem = max_memory.limit_or_infinite();
+  const size_t max_shared_mem = max_shared_memory.limit_or_infinite();
+
+  const auto create_cfg
+    = [&](const size_t input_split_factor, const size_t output_split_factor) {
+        return Bigint_Syrk_Config(node_comm, precision, num_nodes,
+                                  blocks_height_per_group, block_width,
+                                  input_split_factor, output_split_factor);
+      };
+
   const size_t max_input_split_factor = max_group_height;
   const size_t max_output_split_factor = block_width;
 
-  const Bigint_Syrk_Config smallest_cfg(
-    node_comm, precision, num_nodes, blocks_height_per_group, block_width,
-    max_input_split_factor, max_output_split_factor);
-  const Bigint_Syrk_Config largest_cfg(node_comm, precision, num_nodes,
-                                       blocks_height_per_group, block_width, 1,
-                                       1);
+  const Bigint_Syrk_Config smallest_cfg
+    = create_cfg(max_input_split_factor, max_output_split_factor);
+  const Bigint_Syrk_Config largest_cfg = create_cfg(1, 1);
 
+  const size_t min_total_bytes
+    = smallest_cfg.node_total_bytes() + other_memory;
   const size_t min_shmem_bytes = smallest_cfg.node_shmem_bytes();
-  ASSERT(min_shmem_bytes <= max_shared_memory_bytes,
+  ASSERT(min_total_bytes <= max_total_mem,
+         "Not enough memory: required at least ",
+         pretty_print_bytes(min_total_bytes, true),
+         " (compute_Q: ", pretty_print_bytes(smallest_cfg.node_total_bytes()),
+         ", other: ", pretty_print_bytes(other_memory), ")",
+         ", --maxMemory limit: ", max_memory);
+  ASSERT(min_shmem_bytes <= max_shared_mem,
          "Not enough shared memory for compute_Q(): required at least ",
          pretty_print_bytes(min_shmem_bytes, true),
-         ", limit: ", pretty_print_bytes(max_shared_memory_bytes, true));
+         ", --maxSharedMemory limit: ", max_shared_memory);
 
   // Find partition point of a range [begin, end) w.r.t predicate,
   // i.e. perform binary search to find p_0 such that:
@@ -73,26 +89,29 @@ initialize_bigint_syrk_context(const Block_Info &block_info, const SDP &sdp,
     return *it;
   };
 
+  // Check if we have enough memory for given split factors.
+  const auto enough_memory = [&max_memory, &max_shared_memory, &other_memory,
+                              &create_cfg](const size_t input_split_factor,
+                                           const size_t output_split_factor) {
+    const auto cfg = create_cfg(input_split_factor, output_split_factor);
+    return cfg.node_total_bytes() + other_memory
+             <= max_memory.limit_or_infinite()
+           && cfg.node_shmem_bytes() <= max_shared_memory.limit_or_infinite();
+  };
+
   const size_t output_split_factor = partition_point_unsafe(
-    1, max_output_split_factor + 1, [&](const size_t split_factor) {
-      const size_t input_split_factor = max_input_split_factor;
-      const Bigint_Syrk_Config cfg(node_comm, precision, num_nodes,
-                                   blocks_height_per_group, block_width,
-                                   input_split_factor, split_factor);
-      return cfg.node_shmem_bytes() > max_shared_memory_bytes;
+    1, max_output_split_factor + 1,
+    [&enough_memory, &max_input_split_factor](const size_t split_factor) {
+      return !enough_memory(max_input_split_factor, split_factor);
     });
 
   const size_t input_split_factor = partition_point_unsafe(
-    1, max_input_split_factor + 1, [&](const size_t split_factor) {
-      const Bigint_Syrk_Config cfg(node_comm, precision, num_nodes,
-                                   blocks_height_per_group, block_width,
-                                   split_factor, output_split_factor);
-      return cfg.node_shmem_bytes() > max_shared_memory_bytes;
+    1, max_input_split_factor + 1,
+    [&enough_memory, &output_split_factor](const size_t split_factor) {
+      return !enough_memory(split_factor, output_split_factor);
     });
 
-  const Bigint_Syrk_Config cfg(node_comm, precision, num_nodes,
-                               blocks_height_per_group, block_width,
-                               input_split_factor, output_split_factor);
+  const auto cfg = create_cfg(input_split_factor, output_split_factor);
 
   // Print warnings for large split factors.
   if(node_comm.Rank() == 0)
@@ -118,10 +137,10 @@ initialize_bigint_syrk_context(const Block_Info &block_info, const SDP &sdp,
             }
           El::BuildStream(
             ss,
-            "\tConsider increasing available shared memory per node "
-            "(--maxSharedMemory option).",
-            "\n\tShared memory limit: ",
-            pretty_print_bytes(max_shared_memory_bytes, true),
+            "\tConsider increasing available memory per node "
+            "(--maxMemory and --maxSharedMemory options).",
+            "\n\tTotal memory limit: ", max_memory,
+            "\n\tShared memory limit: ", max_shared_memory,
             "\n\tOutput window:", "\n\t\tactual size after splitting: ",
             pretty_print_bytes(cfg.output_window_size() * sizeof(double),
                                true),
@@ -137,7 +156,5 @@ initialize_bigint_syrk_context(const Block_Info &block_info, const SDP &sdp,
           PRINT_WARNING(ss.str());
         }
     }
-
-  return BigInt_Shared_Memory_Syrk_Context(
-    cfg, group_index, block_info.block_indices, verbosity);
+  return cfg;
 }

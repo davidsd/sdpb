@@ -1,7 +1,7 @@
 #include "save_c_minus_By.hxx"
 #include "sdp_solve/memory_estimates.hxx"
 #include "bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
-#include "bigint_syrk/initialize_bigint_syrk_context.hxx"
+#include "get_syrk_Q_config.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
 #include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
@@ -70,110 +70,132 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
 
 namespace
 {
-  // Estimate how many BigFloats will be allocated by SDPB on the current node,
-  // (including what's already allocated, e.g. SDP)
-  size_t get_required_nonshared_memory_per_node_bytes(
+  BigInt_Shared_Memory_Syrk_Context create_syrk_Q_context_and_print_memory(
     const Environment &env, const Block_Info &block_info, const SDP &sdp,
-    const SDP_Solver &solver, const Verbosity verbosity)
+    const SDP_Solver &solver, const Solver_Parameters &parameters,
+    const Verbosity verbosity)
   {
+    // Estimate how many BigFloats will be allocated by SDPB on the current node,
+    // (including what's already allocated, e.g. SDP)
     const auto &node_comm = env.comm_shared_mem;
 
+    const auto node_reduce = [&node_comm](const size_t value) -> size_t {
+      return El::mpi::AllReduce(value, node_comm);
+    };
+
     // X, Y, primal_residues, X_chol, Y_chol, dX, dY, R, Z
-    const size_t X_size
-      = El::mpi::Reduce(get_matrix_size_local(solver.X), 0, node_comm);
+    const size_t X_size = node_reduce(get_matrix_size_local(solver.X));
+    const size_t X_bytes = node_reduce(get_allocated_bytes(solver.X));
 
     // Bilinear pairing blocks - A_X_inv, A_Y
     const size_t A_X_inv_size
-      = El::mpi::Reduce(get_A_X_size_local(block_info, sdp), 0, node_comm);
+      = node_reduce(get_A_X_size_local(block_info, sdp));
+    const size_t A_X_inv_bytes = A_X_inv_size * bigfloat_bytes();
 
     // schur_complement, schur_complement_cholesky
-    const size_t schur_complement_size = El::mpi::Reduce(
-      get_schur_complement_size_local(block_info), 0, node_comm);
+    const size_t schur_complement_size
+      = node_reduce(get_schur_complement_size_local(block_info));
+    const size_t schur_complement_bytes
+      = schur_complement_size * bigfloat_bytes();
 
     // #(B) = PxN
     // sdp.free_var_matrix, schur_off_diagonal
-    const size_t B_size = El::mpi::Reduce(get_B_size_local(sdp), 0, node_comm);
+    const size_t B_size = node_reduce(get_B_size_local(sdp));
+    const size_t B_bytes
+      = node_reduce(get_allocated_bytes(sdp.free_var_matrix));
 
     // #Q = NxN, distributed over all nodes.
-    const size_t Q_size = El::mpi::Reduce(get_Q_size_local(sdp), 0, node_comm);
+    const size_t Q_size = node_reduce(get_Q_size_local(sdp));
+    const size_t Q_bytes = Q_size * bigfloat_bytes();
 
     // SDP struct
-    const size_t SDP_size
-      = El::mpi::Reduce(get_SDP_size_local(sdp), 0, node_comm);
+    const size_t SDP_bytes = node_reduce(get_allocated_bytes(sdp));
 
-    // We will use only result on rank=0
-    if(node_comm.Rank() != 0)
-      return 0;
+    // SDP_Solver struct
+    const size_t SDP_Solver_bytes = node_reduce(get_allocated_bytes(solver));
 
-    // Calculate mem_required_size
-    size_t mem_required_size = 0;
+    // SDP_Solver::run()
+    size_t SDP_Solver_run_bytes = 0;
 
-    // Everything allocated in SDP
-    mem_required_size += SDP_size;
+    const auto mem_required_bytes
+      = [&] { return SDP_bytes + SDP_Solver_bytes + SDP_Solver_run_bytes; };
 
-    // X, Y, X_cholesky, Y_cholesky, primal_residues, dX, dY
-    mem_required_size += 7 * X_size;
+    // X_cholesky, Y_cholesky, primal_residues, dX, dY
+    SDP_Solver_run_bytes += 5 * X_bytes;
 
     // A_X_inv and A_Y
-    mem_required_size += 2 * A_X_inv_size;
+    SDP_Solver_run_bytes += 2 * A_X_inv_bytes;
 
     // schur_complement_cholesky
-    mem_required_size += schur_complement_size;
+    SDP_Solver_run_bytes += schur_complement_bytes;
+
+    // schur_off_diagonal = L^{-1} B
+    SDP_Solver_run_bytes += B_bytes;
+    // Q = NxN
+    SDP_Solver_run_bytes += Q_bytes;
+
+    const auto cfg = get_syrk_Q_config(
+      block_info, sdp, parameters.max_memory, parameters.max_shared_memory,
+      mem_required_bytes() + std::max(schur_complement_bytes, 3 * X_bytes));
 
     // Add either schur_complement from initialize_schur_complement_solver(),
     // or XY,R,Z from compute_search_direction().
     // (they do not coexist, thus we choose maximum size instead of adding both)
-    mem_required_size += std::max(schur_complement_size, 3 * X_size);
+    SDP_Solver_run_bytes += std::max(
+      schur_complement_bytes + cfg.node_local_bytes(), 3 * X_bytes);
+    // Shared memory windows are allocated in the beginning, so they should be always included.
+    SDP_Solver_run_bytes += cfg.node_shmem_bytes();
 
-    // schur_off_diagonal = L^{-1} B
-    mem_required_size += B_size;
-    // Q = NxN
-    mem_required_size += Q_size;
-
-    // initial_node_mem_used() is RAM allocated at SDPB start.
-    // This could be important: e.g. on 128 cores (Expanse HPC) it is ~26GB
-    const size_t mem_required_bytes
-      = env.initial_node_mem_used() + mem_required_size * bigfloat_bytes();
-
-    if(verbosity >= Verbosity::debug)
+    if(node_comm.Rank() == 0 && verbosity >= Verbosity::debug)
       {
+        // Print memory estimates
+
+        std::vector<std::pair<std::string, size_t>> num_elements_per_category{
+          {"X", X_size},
+          {"A_X_inv", A_X_inv_size},
+          {"schur_complement", schur_complement_size},
+          {"B", B_size},
+          {"Q", Q_size},
+        };
+
+        std::vector<std::pair<std::string, size_t>> bytes_per_category{
+          {"Initial MemAvailable (at SDPB start)",
+           env.initial_node_mem_available()},
+          {"BigFloat size", bigfloat_bytes()},
+          {"Total SDPB memory estimate", mem_required_bytes()},
+          {"Shared memory estimate", cfg.node_shmem_bytes()},
+          {"\tSDP", SDP_bytes},
+          {"\tSDP_Solver", SDP_Solver_bytes},
+          {"\tSDP_Solver::run()", SDP_Solver_run_bytes},
+          {"\t\tinitialize_schur_complement_solver()",
+           schur_complement_bytes + cfg.node_total_bytes()},
+          {"\t\t\tschur_complement", schur_complement_bytes},
+          {"\t\t\tQ", Q_bytes},
+          {"\t\t\t\tshared memory", cfg.node_shmem_bytes()},
+        };
+
         std::ostringstream ss;
+        El::BuildStream(ss, "node=", env.node_index(),
+                        " matrix sizes and memory estimates: ");
+
+        for(const auto &[name, size] : num_elements_per_category)
+          {
+            El::BuildStream(ss, "\n\t#(", name, ") = ", size, " elements");
+          }
+        for(const auto &[name, bytes] : bytes_per_category)
+          {
+            El::BuildStream(ss, "\n\t", name, ": ",
+                            pretty_print_bytes(bytes, true));
+          }
         El::BuildStream(
-          ss, "node=", env.node_index(),
-          " matrix sizes and memory estimates: ", "\n\t#(SDP) = ", SDP_size,
-          "\n\t#(X) = ", X_size, "\n\t#(A_X_inv) = ", A_X_inv_size,
-          "\n\t#(schur_complement) = ", schur_complement_size,
-          "\n\t#(B) = ", B_size, "\n\t#(Q) = ", Q_size,
-          "\n\tBigFloat size: ", pretty_print_bytes(bigfloat_bytes()),
-          "\n\tTotal BigFloats to be allocated: ", mem_required_size,
-          " elements = ",
-          pretty_print_bytes(mem_required_size * bigfloat_bytes()),
-          "\n\tInitial MemUsed (at SDPB start) = ",
-          pretty_print_bytes(env.initial_node_mem_used()),
-          "\n\tTotal non-shared memory estimate: ",
-          pretty_print_bytes(mem_required_bytes, true));
+          ss, "\n\tShared memory configuration: ",
+          "\n\t\tsyrk_Q() input split factor: ", cfg.input_split_factor,
+          "\n\t\tsyrk_Q() output split factor: ", cfg.output_split_factor);
         El::Output(ss.str());
       }
 
-    return mem_required_bytes;
-  }
-
-  size_t
-  get_max_shared_memory_bytes(const Memory_Limit &default_max_shared_memory,
-                              const Environment &env,
-                              const Block_Info &block_info, const SDP &sdp,
-                              const SDP_Solver &solver,
-                              const Verbosity verbosity)
-  {
-    // If user sets --maxSharedMemory limit manually, we use it.
-    // Otherwise, we calculate the limit automatically.
-    if(default_max_shared_memory.bytes != 0)
-      return default_max_shared_memory.bytes;
-    const size_t nonshared_memory_required_per_node_bytes
-      = get_required_nonshared_memory_per_node_bytes(env, block_info, sdp,
-                                                     solver, verbosity);
-    return get_max_shared_memory_bytes(
-      nonshared_memory_required_per_node_bytes, env, verbosity);
+    return BigInt_Shared_Memory_Syrk_Context(
+      cfg, block_info.node_group_index(), block_info.block_indices, verbosity);
   }
 }
 
@@ -237,16 +259,13 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
     A_Y;
 
   auto psd_sizes(block_info.psd_matrix_block_sizes());
-  std::size_t total_psd_rows(
-    std::accumulate(psd_sizes.begin(), psd_sizes.end(), size_t(0)));
+  const size_t total_psd_rows
+    = std::accumulate(psd_sizes.begin(), psd_sizes.end(), 0);
 
   Scoped_Timer initialize_bigint_syrk_context_timer(timers,
                                                     "bigint_syrk_context");
-
-  auto max_shared_memory_bytes = get_max_shared_memory_bytes(
-    parameters.max_shared_memory, env, block_info, sdp, *this, verbosity);
-  auto bigint_syrk_context = initialize_bigint_syrk_context(
-    block_info, sdp, max_shared_memory_bytes, verbosity);
+  auto bigint_syrk_context = create_syrk_Q_context_and_print_memory(
+    env, block_info, sdp, *this, parameters, verbosity);
   initialize_bigint_syrk_context_timer.stop();
 
   initialize_timer.stop();
