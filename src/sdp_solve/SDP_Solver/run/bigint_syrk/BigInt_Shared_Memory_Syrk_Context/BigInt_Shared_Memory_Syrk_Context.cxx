@@ -107,11 +107,12 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       os << "    Heights for each MPI group: "
          << cfg.input_window_height_per_group_per_prime << "\n";
 
-      if(cfg.node_local_bytes() > 0)
+      if(cfg.get_reduce_scatter_buffer_size() > 0)
         {
-          El::BuildStream(os, "  Buffer size for reduce-scatter Q: ",
-                          pretty_print_bytes(cfg.node_local_bytes(), true),
-                          "\n");
+          El::BuildStream(
+            os, "  Buffer size for reduce-scatter Q: ",
+            pretty_print_bytes(cfg.get_reduce_scatter_buffer_size(), true),
+            "\n");
         }
 
       El::Output(os.str());
