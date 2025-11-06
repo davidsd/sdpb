@@ -214,7 +214,8 @@ TEST_CASE("end-to-end_tests")
       name += "/example2";
       INFO("Optimal objective value: 3.2062692914757308e+01");
       // NB: we ignore matrices X and Y since they contain noisy values ~1e-30
-      default_sdpb_args += " --writeSolution x";
+      // This problem requires 100.6KB, so 80K is forcing SDPB to split memory windows.
+      default_sdpb_args += " --writeSolution x --maxMemory 80K";
       constexpr bool check_sdp_normalization = false;
       // run_sdpb_twice = true to test checkpoint loading
       constexpr bool run_sdpb_twice = true;
@@ -283,7 +284,7 @@ TEST_CASE("end-to-end_tests")
         "--checkpointInterval 3600 --maxIterations 1000 "
         "--feasibleCenteringParameter=0.1 --infeasibleCenteringParameter=0.3 "
         "--stepLengthReduction=0.7 "
-        "--maxSharedMemory=100K"; // forces split_factor=3 for Q window
+        "--maxMemory=3.8M"; // forces splitting both P and Q windows
     for(std::string sdp_format : {"", "bin", "json"})
       {
         DYNAMIC_SECTION(
