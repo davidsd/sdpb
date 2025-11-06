@@ -10,7 +10,7 @@ namespace Sdpb::Sdpa
   struct Compute_S_Config
   {
     Initialize_P_Config initialize_P_config;
-    Bigint_Syrk_Config syrk_P_config;
+    Bigint_Syrk_Config syrk_S_config;
     // Total memory estimates
 
     // Local memory allocated on a node

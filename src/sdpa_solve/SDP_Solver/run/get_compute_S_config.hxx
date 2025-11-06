@@ -89,9 +89,9 @@ namespace Sdpb::Sdpa
               "\t\t\t\tshared memory",
               cfg.initialize_P_config.node_shmem_bytes());
             bytes_per_category.emplace_back(
-              "\t\t\tsyrk_P()", cfg.syrk_P_config.node_total_bytes());
+              "\t\t\tsyrk_S()", cfg.syrk_S_config.node_total_bytes());
             bytes_per_category.emplace_back(
-              "\t\t\t\tshared memory", cfg.syrk_P_config.node_shmem_bytes());
+              "\t\t\t\tshared memory", cfg.syrk_S_config.node_shmem_bytes());
           }
 
         std::ostringstream ss;
@@ -110,10 +110,10 @@ namespace Sdpb::Sdpa
         El::BuildStream(ss, "\n\tShared memory configuration: ",
                         "\n\t\tinitialize_P() trmm split factor: ",
                         cfg.initialize_P_config.split_factor,
-                        "\n\t\tsyrk_P() input split factor: ",
-                        cfg.syrk_P_config.input_split_factor,
-                        "\n\t\tsyrk_P() output split factor: ",
-                        cfg.syrk_P_config.output_split_factor);
+                        "\n\t\tsyrk_S() input split factor: ",
+                        cfg.syrk_S_config.input_split_factor,
+                        "\n\t\tsyrk_S() output split factor: ",
+                        cfg.syrk_S_config.output_split_factor);
         El::Output(ss.str());
       }
 

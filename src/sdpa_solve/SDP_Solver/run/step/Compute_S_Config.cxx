@@ -58,18 +58,18 @@ namespace Sdpb::Sdpa
     const size_t P_bytes = initialize_P_config.P_size()
                            * bigfloat_bytes(initialize_P_config.precision);
     // initialize_P() has some temporary allocations
-    // and P matrix, which persists through syrk_P
+    // and P matrix, which persists through syrk_S
     // TODO: shall we include P_bytes in Biginit_Syrk_Config::node_local_bytes()?
     return std::max(initialize_P_config.node_local_bytes(),
-                    syrk_P_config.node_local_bytes() + P_bytes);
+                    syrk_S_config.node_local_bytes() + P_bytes);
   }
   size_t Compute_S_Config::node_shmem_bytes() const
   {
     // TODO: currently we do not reuse trmm/syrk buffers.
     // return std::max(initialize_P_config.node_shmem_bytes(),
-    //                 syrk_P_config.node_shmem_bytes());
+    //                 syrk_S_config.node_shmem_bytes());
     return initialize_P_config.node_shmem_bytes()
-           + syrk_P_config.node_shmem_bytes();
+           + syrk_S_config.node_shmem_bytes();
   }
   size_t Compute_S_Config::node_total_bytes() const
   {
@@ -175,7 +175,7 @@ namespace Sdpb::Sdpa
                || cfg.node_shmem_bytes() > max_shared_mem;
       });
 
-    const Bigint_Syrk_Config syrk_P_cfg(
+    const Bigint_Syrk_Config syrk_S_cfg(
       comm, precision, num_nodes, P_group_heights, P_width,
       syrk_input_split_factor, syrk_output_split_factor);
 
@@ -186,13 +186,13 @@ namespace Sdpb::Sdpa
     const size_t trmm_split_factor = partition_point(
       1, primal_dimension + 1, [&](const size_t split_factor) {
         const Initialize_P_Config init_P_cfg = create_init_P_cfg(split_factor);
-        const Compute_S_Config cfg{init_P_cfg, syrk_P_cfg};
+        const Compute_S_Config cfg{init_P_cfg, syrk_S_cfg};
         return cfg.node_total_bytes() + other_mem > max_total_mem
                || cfg.node_shmem_bytes() > max_shared_mem;
       });
     const Initialize_P_Config initialize_P_cfg
       = create_init_P_cfg(trmm_split_factor);
-    const auto result = Compute_S_Config{initialize_P_cfg, syrk_P_cfg};
+    const auto result = Compute_S_Config{initialize_P_cfg, syrk_S_cfg};
     ASSERT(result.node_shmem_bytes() < max_shared_mem,
            DEBUG_STRING(result.node_shmem_bytes()),
            DEBUG_STRING(parameters.max_memory));

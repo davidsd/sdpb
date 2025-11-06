@@ -186,7 +186,7 @@ namespace Sdpb::Sdpa
       = initialize_P(env, sdp, block_info, grid, X_cholesky, Y_cholesky,
                      compute_S_context.initialize_P_context, timers,
                      block_timings_ms, verbosity);
-    syrk_Q(env, P, compute_S_context.syrk_P_context, S, timers,
+    syrk_Q(env, P, compute_S_context.syrk_S_context, S, timers,
            block_timings_ms, verbosity);
   }
 }

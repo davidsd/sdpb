@@ -12,12 +12,12 @@ namespace Sdpb::Sdpa
   struct Compute_S_Context
   {
     Initialize_P_Context initialize_P_context;
-    BigInt_Shared_Memory_Syrk_Context syrk_P_context;
+    BigInt_Shared_Memory_Syrk_Context syrk_S_context;
     // TODO
     // Compute_S_Context(const Initialize_P_Config &initialize_p_config,
-    //                   const Bigint_Syrk_Config &syrk_P_config)
+    //                   const Bigint_Syrk_Config &syrk_S_config)
     //     : initialize_P_context(initialize_p_config),
-    //       syrk_P_context(syrk_P_config)
+    //       syrk_S_context(syrk_S_config)
     // {}
   };
 
@@ -45,7 +45,7 @@ namespace Sdpb::Sdpa
 
     // TODO: reuse shared buffers for trmm and syrk?
     return {Initialize_P_Context(cfg.initialize_P_config),
-            BigInt_Shared_Memory_Syrk_Context(cfg.syrk_P_config, group_index,
+            BigInt_Shared_Memory_Syrk_Context(cfg.syrk_S_config, group_index,
                                               block_info.block_indices,
                                               verbosity)};
   }
