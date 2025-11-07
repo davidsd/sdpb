@@ -156,3 +156,10 @@ Memory_Tracker::Allocation::~Allocation()
 {
   tracker.free(node);
 }
+Memory_Tracker::Group::Group(const std::string &name, Memory_Tracker &tracker)
+    : Allocation(name, 0, tracker)
+{}
+Memory_Tracker::Group::Group(const std::string &name, Memory_Tracker &tracker,
+                             const Allocation &parent)
+    : Allocation(name, 0, tracker, parent)
+{}

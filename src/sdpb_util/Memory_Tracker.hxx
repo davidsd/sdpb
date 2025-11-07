@@ -22,8 +22,9 @@
 //   {
 //     // Short-living allocations inside bar() scope
 //     Scope bar("bar()", tracker);
-//     Allocation z("z", 400, tracker);
-//     Allocation w("w", 500, tracker);
+//     Group z_and_w("z and w", tracker);
+//     Allocation z("z", 400, tracker, z_and_w);
+//     Allocation w("w", 500, tracker, z_and_w);
 //   }
 // }
 // bool also_print_exact_bytes = false;
@@ -76,6 +77,14 @@ public:
   private:
     Memory_Tracker &tracker;
     Node *node;
+  };
+  // This is just an empty Allocation (own bytes=0),
+  // intended to be used as a parent for other allocations.
+  struct [[nodiscard]] Group : Allocation
+  {
+    Group(const std::string &name, Memory_Tracker &tracker);
+    Group(const std::string &name, Memory_Tracker &tracker,
+          const Allocation &parent);
   };
 
   // Memory_Tracker members

@@ -22,11 +22,11 @@ TEST_CASE("Memory_Tracker")
 
   {
     Memory_Tracker tracker("root");
-#define SCOPE(name) Scope name##_scope(#name, tracker)
-#define ALLOCATION(name) Allocation name##_allocation(#name, name, tracker)
-#define GROUP(name) Allocation name##_group(#name, 0, tracker)
+#define SCOPE(name) Memory_Tracker::Scope name##_scope(#name, tracker)
+#define ALLOCATION(name) Memory_Tracker::Allocation name##_allocation(#name, name, tracker)
+#define GROUP(name) Memory_Tracker::Group name##_group(#name, tracker)
 #define GROUP_ITEM(group, name)                                               \
-  Allocation name##_group(#name, name, tracker, group##_group)
+  Memory_Tracker::Allocation name##_group_item(#name, name, tracker, group##_group)
 
     // Some random numbers.
     // Peak memory will occur at different locations.
