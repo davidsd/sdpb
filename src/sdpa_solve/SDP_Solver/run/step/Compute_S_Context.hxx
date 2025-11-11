@@ -1,11 +1,9 @@
 #pragma once
 
-#include "sdp_solve/SDP_Solver/run/get_syrk_Q_config.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdpa_solve/Block_Info.hxx"
 #include "sdpa_solve/SDP_Solver/run/step/Initialize_P_Context.hxx"
-#include "step/Solver_Run_Config.hxx"
-#include "step/Initialize_P_Config.hxx"
+#include "Solver_Run_Config.hxx"
 
 namespace Sdpb::Sdpa
 {

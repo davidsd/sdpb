@@ -1,4 +1,4 @@
-#include "initialize_compute_S_context.hxx"
+#include "step/Compute_S_Context.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdpa_solve/SDP_Solver.hxx"
 #include "sdpa_solve/memory_estimates.hxx"
