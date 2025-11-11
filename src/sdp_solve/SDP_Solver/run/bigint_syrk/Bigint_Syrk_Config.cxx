@@ -91,6 +91,14 @@ size_t Bigint_Syrk_Config::get_reduce_scatter_buffer_size() const
   // and the same for MPI_Recv
   return 2 * div_ceil(num_elements, num_nodes);
 }
+size_t Bigint_Syrk_Config::input_windows_bytes() const
+{
+  return sizeof(double) * num_input_windows() * input_window_size();
+}
+size_t Bigint_Syrk_Config::output_window_bytes() const
+{
+  return sizeof(double) * output_window_size();
+}
 size_t Bigint_Syrk_Config::node_local_bytes() const
 {
   const size_t normalizer_size = input_width * shared_memory_comm.Size();
@@ -104,8 +112,7 @@ size_t Bigint_Syrk_Config::node_local_bytes() const
 size_t Bigint_Syrk_Config::node_shmem_bytes() const
 {
   // Input and output residue windows
-  return sizeof(double)
-         * (num_input_windows() * input_window_size() + output_window_size());
+  return input_windows_bytes() + output_window_bytes();
 }
 size_t Bigint_Syrk_Config::node_total_bytes() const
 {

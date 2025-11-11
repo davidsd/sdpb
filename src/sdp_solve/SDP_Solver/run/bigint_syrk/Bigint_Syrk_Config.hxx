@@ -45,6 +45,9 @@ struct Bigint_Syrk_Config
 
   // Total memory estimates
 
+  [[nodiscard]] size_t input_windows_bytes() const;
+  [[nodiscard]] size_t output_window_bytes() const;
+
   // Local memory allocated on a node
   [[nodiscard]] size_t node_local_bytes() const;
   // Local memory allocated on a node

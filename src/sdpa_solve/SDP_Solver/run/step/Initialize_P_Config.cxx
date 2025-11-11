@@ -110,6 +110,19 @@ namespace Sdpb::Sdpa
   {
     return F_size() * num_primes();
   }
+  size_t Initialize_P_Config::L_X_inv_window_bytes() const
+  {
+    return sizeof(double) * L_window_size();
+  }
+  size_t Initialize_P_Config::L_Y_window_bytes() const
+  {
+    return L_X_inv_window_bytes();
+  }
+  size_t Initialize_P_Config::F_window_bytes() const
+  {
+    return sizeof(double) * F_window_size();
+  }
+
   size_t Initialize_P_Config::node_local_bytes() const
   {
     // Matrix_Normalizer stores norms = vector<BigFloat>(dim) for each block.

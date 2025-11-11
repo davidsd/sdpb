@@ -42,12 +42,17 @@ namespace Sdpb::Sdpa
 
     // Total memory estimates
 
+    [[nodiscard]] size_t L_X_inv_window_bytes() const;
+    [[nodiscard]] size_t L_Y_window_bytes() const;
+    [[nodiscard]] size_t F_window_bytes() const;
+
     // Local memory allocated on a node
     [[nodiscard]] size_t node_local_bytes() const;
     // Local memory allocated on a node
     [[nodiscard]] size_t node_shmem_bytes() const;
     // All memory allocated on a node
     [[nodiscard]] size_t node_total_bytes() const;
+
     [[nodiscard]] size_t max_primal_dimension_step() const;
   };
 }

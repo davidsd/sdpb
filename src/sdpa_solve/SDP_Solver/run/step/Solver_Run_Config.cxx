@@ -111,12 +111,24 @@ namespace Sdpb::Sdpa
             NAMED_SCOPE(run, "SDP_Solver::run()");
             ALLOC(X_cholesky, cfg.sizes.X_bytes);
             ALLOC(Y_cholesky, cfg.sizes.X_bytes);
+
             NAMED_GROUP(shmem, "Shared memory windows",
                         [&](const size_t peak) { sdpb_shmem_bytes = peak; });
-            NAMED_GROUP_ITEM(shmem, shmem_initialize_P, "initialize_P()",
-                             cfg.initialize_P_config.node_shmem_bytes());
-            NAMED_GROUP_ITEM(shmem, shmem_syrk_S, "syrk_S()",
-                             cfg.syrk_S_config.node_shmem_bytes());
+            // initialize_P() windows
+            NAMED_GROUP_ITEM(shmem, shmem_initialize_P, "initialize_P()", 0);
+            GROUP_ITEM(shmem_initialize_P, L_X_inv_window,
+                       cfg.initialize_P_config.L_X_inv_window_bytes());
+            GROUP_ITEM(shmem_initialize_P, L_Y_window,
+                       cfg.initialize_P_config.L_Y_window_bytes());
+            GROUP_ITEM(shmem_initialize_P, F_window,
+                       cfg.initialize_P_config.F_window_bytes());
+            // syrk_S() windows
+            NAMED_GROUP_ITEM(shmem, shmem_syrk_S, "syrk_S()", 0);
+            GROUP_ITEM(shmem_syrk_S, syrk_input_windows,
+                       cfg.syrk_S_config.input_windows_bytes());
+            GROUP_ITEM(shmem_syrk_S, syrk_output_window,
+                       cfg.syrk_S_config.output_window_bytes());
+            // step()
             {
               FUNC_SCOPE(step);
               {
