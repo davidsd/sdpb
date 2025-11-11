@@ -235,6 +235,8 @@ namespace Sdpb::Sdpa
           }
         --indent_level;
       }
+      ADD_LINE("BigFloat size: ",
+               pretty_print_bytes(bigfloat_bytes(), also_print_exact_bytes));
 
       const auto initial_indent = std::string(2 * indent_level, ' ');
       mem_estimates.print(ss, initial_indent, indent_string,
