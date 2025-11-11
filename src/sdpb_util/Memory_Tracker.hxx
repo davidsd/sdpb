@@ -75,7 +75,7 @@ public:
   {
     Scope(Memory_Tracker &tracker, const std::string &name,
           const std::function<void(size_t)> &on_peak_changed = {});
-    ~Scope();
+    ~Scope() noexcept;
 
   private:
     Memory_Tracker &tracker;
@@ -90,7 +90,7 @@ public:
     Allocation(Memory_Tracker &tracker, const Allocation &parent,
                const std::string &name, size_t bytes,
                const std::function<void(size_t)> &on_peak_changed = {});
-    ~Allocation();
+    ~Allocation() noexcept;
 
   private:
     Memory_Tracker &tracker;
@@ -127,14 +127,13 @@ public:
   void
   print(std::ostream &os, const std::string &initial_indent,
         const std::string &indent_string, bool also_print_exact_bytes) const;
-  [[nodiscard]] std::string
-  to_string(const std::string &initial_indent,const std::string &indent_string,
-            bool also_print_exact_bytes) const;
+  [[nodiscard]] std::string to_string(const std::string &initial_indent,
+                                      const std::string &indent_string,
+                                      bool also_print_exact_bytes) const;
   [[nodiscard]] std::string
   to_string(const std::string &indent_string = "  ",
             bool also_print_exact_bytes = true) const;
-  [[nodiscard]] std::string
-  to_string(bool also_print_exact_bytes) const;
+  [[nodiscard]] std::string to_string(bool also_print_exact_bytes) const;
 
   // Memory_Tracker implementation
 

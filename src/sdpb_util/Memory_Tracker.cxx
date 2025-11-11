@@ -193,9 +193,20 @@ Memory_Tracker::Scope::Scope(Memory_Tracker &tracker, const std::string &name,
                              const std::function<void(size_t)> &on_peak_changed)
     : tracker(tracker), node(tracker.enter_scope(name, on_peak_changed))
 {}
-Memory_Tracker::Scope::~Scope()
+Memory_Tracker::Scope::~Scope() noexcept
 {
-  tracker.exit_scope(node);
+  try
+    {
+      tracker.exit_scope(node);
+    }
+  catch(const std::exception &e)
+    {
+      PRINT_WARNING("Memory_Tracker::Scope::~Scope() exception: ", e.what());
+    }
+  catch(...)
+    {
+      PRINT_WARNING("Memory_Tracker::Scope::~Scope(): unknown exception");
+    }
 }
 
 Memory_Tracker::Allocation::Allocation(
@@ -211,9 +222,22 @@ Memory_Tracker::Allocation::Allocation(
     : tracker(tracker),
       node(tracker.allocate(name, bytes, parent.node, on_peak_changed))
 {}
-Memory_Tracker::Allocation::~Allocation()
+Memory_Tracker::Allocation::~Allocation() noexcept
 {
-  tracker.free(node);
+  try
+    {
+      tracker.free(node);
+    }
+  catch(const std::exception &e)
+    {
+      PRINT_WARNING("Memory_Tracker::Allocation::~Allocation() exception: ",
+                    e.what());
+    }
+  catch(...)
+    {
+      PRINT_WARNING(
+        "Memory_Tracker::Allocation::~Allocation(): unknown exception");
+    }
 }
 Memory_Tracker::Group::Group(Memory_Tracker &tracker, const std::string &name,
                              const std::function<void(size_t)> &on_peak_changed)
