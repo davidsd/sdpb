@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sdpa_solve/Block_Info.hxx"
 #include "sdpb_util/bigint_shared_memory/fmpz/Fmpz_Comb.hxx"
 #include "sdpb_util/memory_estimates.hxx"
 #include "sdpb_util/block_mapping/Block_Mapping.hxx"
@@ -19,6 +20,14 @@ namespace Sdpb::Sdpa
     const size_t primal_dimension;
     const size_t split_factor;
 
+    Initialize_P_Config(const Block_Info &block_info,
+                        const size_t split_factor)
+        : Initialize_P_Config(block_info.node_comm, El::gmp::Precision(),
+                              block_info.block_mapping, block_info.node_index,
+                              block_info.node_group_index(),
+                              block_info.block_dimensions,
+                              block_info.primal_dimension, split_factor)
+    {}
     Initialize_P_Config(const El::mpi::Comm shared_memory_comm,
                         const size_t precision,
                         const Block_Mapping &block_mapping,

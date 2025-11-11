@@ -1,7 +1,7 @@
-#include "get_compute_S_config.hxx"
 #include "initialize_compute_S_context.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdpa_solve/SDP_Solver.hxx"
+#include "sdpa_solve/memory_estimates.hxx"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
@@ -87,14 +87,14 @@ namespace Sdpb::Sdpa
       = std::accumulate(block_info.block_dimensions.begin(),
                         block_info.block_dimensions.end(), size_t(0));
 
-    Scoped_Timer initialize_bigint_syrk_context_timer(timers,
-                                                      "bigint_syrk_context");
+    Scoped_Timer initialize_compute_S_context_timer(timers,
+                                                    "compute_S_context");
 
-    auto cfg = get_compute_S_config_and_print_memory(
-      env, block_info, sdp, *this, parameters, verbosity);
+    auto cfg = Solver_Run_Config::create(env, block_info, sdp, *this,
+                                         parameters, verbosity);
     auto compute_S_context
-      = initialize_compute_S_context(block_info, cfg, verbosity);
-    initialize_bigint_syrk_context_timer.stop();
+      = Compute_S_Context::create(block_info, cfg, verbosity);
+    initialize_compute_S_context_timer.stop();
 
     initialize_timer.stop();
     auto last_checkpoint_time(std::chrono::high_resolution_clock::now());
