@@ -202,7 +202,7 @@ namespace Sdpb::Sdpa
         comb(cfg.comb()),
         L_X_inv_residues(create_L_window()),
         L_Y_residues(create_L_window()),
-        G_window_view(shared_memory_comm, cfg.F_window_size())
+        G_window_view(shared_memory_comm, cfg.G_window_size())
   {}
   Vector_Block_Diagonal_Matrix_Residues_Window<double> &
   Initialize_P_Context::G_residues(

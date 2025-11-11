@@ -94,7 +94,7 @@ namespace Sdpb::Sdpa
   {
     return sum_dim_squared;
   }
-  size_t Initialize_P_Config::F_size() const
+  size_t Initialize_P_Config::G_size() const
   {
     return sum_dim_squared * max_primal_dimension_step();
   }
@@ -106,9 +106,9 @@ namespace Sdpb::Sdpa
   {
     return L_size() * num_primes();
   }
-  size_t Initialize_P_Config::F_window_size() const
+  size_t Initialize_P_Config::G_window_size() const
   {
-    return F_size() * num_primes();
+    return G_size() * num_primes();
   }
   size_t Initialize_P_Config::L_X_inv_window_bytes() const
   {
@@ -118,9 +118,9 @@ namespace Sdpb::Sdpa
   {
     return L_X_inv_window_bytes();
   }
-  size_t Initialize_P_Config::F_window_bytes() const
+  size_t Initialize_P_Config::G_window_bytes() const
   {
-    return sizeof(double) * F_window_size();
+    return sizeof(double) * G_window_size();
   }
 
   size_t Initialize_P_Config::node_local_bytes() const
@@ -161,12 +161,12 @@ namespace Sdpb::Sdpa
 
     // L_X_inv, L_Y, F_{p_min..p_max} (also L_X_inv F_p etc.), P
     return bigfloat_bytes(precision)
-           * (2 * L_size() + F_size() + P_size() + normalizers_size);
+           * (2 * L_size() + G_size() + P_size() + normalizers_size);
   }
   size_t Initialize_P_Config::node_shmem_bytes() const
   {
     // residues for L_X_inv, L_Y, F_p
-    return sizeof(double) * (2 * L_window_size() + F_window_size());
+    return L_X_inv_window_bytes() + L_Y_window_bytes() + G_window_bytes();
   }
   size_t Initialize_P_Config::node_total_bytes() const
   {

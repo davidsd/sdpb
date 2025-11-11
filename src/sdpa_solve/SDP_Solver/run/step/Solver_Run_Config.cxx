@@ -120,8 +120,8 @@ namespace Sdpb::Sdpa
                        cfg.initialize_P_config.L_X_inv_window_bytes());
             GROUP_ITEM(shmem_initialize_P, L_Y_window,
                        cfg.initialize_P_config.L_Y_window_bytes());
-            GROUP_ITEM(shmem_initialize_P, F_window,
-                       cfg.initialize_P_config.F_window_bytes());
+            GROUP_ITEM(shmem_initialize_P, G_window,
+                       cfg.initialize_P_config.G_window_bytes());
             // syrk_S() windows
             NAMED_GROUP_ITEM(shmem, shmem_syrk_S, "syrk_S()", 0);
             GROUP_ITEM(shmem_syrk_S, syrk_input_windows,

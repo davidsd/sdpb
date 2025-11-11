@@ -33,18 +33,19 @@ namespace Sdpb::Sdpa
     // Total number of elements in triangular block-diagonal matrix L
     [[nodiscard]] size_t L_size() const;
     // Total number of matrix elements in a buffer for processing
-    // vector<Block_Diagonal_Matrix> F_p.
+    // vector<Block_Diagonal_Matrix> G_p (transformations of F_p).
     // We process primal_dimension_step elements of this vector at once.
-    [[nodiscard]] size_t F_size() const;
+    [[nodiscard]] size_t G_size() const;
     [[nodiscard]] size_t P_size() const;
     [[nodiscard]] size_t L_window_size() const;
-    [[nodiscard]] size_t F_window_size() const;
+    [[nodiscard]] size_t G_window_size() const;
 
     // Total memory estimates
 
     [[nodiscard]] size_t L_X_inv_window_bytes() const;
     [[nodiscard]] size_t L_Y_window_bytes() const;
     [[nodiscard]] size_t F_window_bytes() const;
+    [[nodiscard]] size_t G_window_bytes() const;
 
     // Local memory allocated on a node
     [[nodiscard]] size_t node_local_bytes() const;
