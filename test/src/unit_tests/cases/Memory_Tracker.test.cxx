@@ -22,11 +22,13 @@ TEST_CASE("Memory_Tracker")
 
   {
     Memory_Tracker tracker("root");
-#define SCOPE(name) Memory_Tracker::Scope name##_scope(#name, tracker)
-#define ALLOCATION(name) Memory_Tracker::Allocation name##_allocation(#name, name, tracker)
-#define GROUP(name) Memory_Tracker::Group name##_group(#name, tracker)
+#define SCOPE(name) Memory_Tracker::Scope name##_scope(tracker, #name)
+#define ALLOCATION(name)                                                      \
+  Memory_Tracker::Allocation name##_allocation(tracker, #name, name)
+#define GROUP(name) Memory_Tracker::Group name##_group(tracker, #name)
 #define GROUP_ITEM(group, name)                                               \
-  Memory_Tracker::Allocation name##_group_item(#name, name, tracker, group##_group)
+  Memory_Tracker::Allocation name##_group_item(tracker, group##_group, #name, \
+                                               name)
 
     // Some random numbers.
     // Peak memory will occur at different locations.
@@ -39,6 +41,7 @@ TEST_CASE("Memory_Tracker")
     const size_t foo_z = GENERATE(3, 30);
     const size_t baz_x = GENERATE(15, 150);
 
+    size_t bar_xy_group_output = 0;
     // Make allocations
     {
       ALLOCATION(global_buffer);
@@ -48,7 +51,10 @@ TEST_CASE("Memory_Tracker")
         ALLOCATION(foo_y);
         {
           SCOPE(bar);
-          GROUP(bar_xy);
+          // GROUP(bar_xy);
+          Memory_Tracker::Group bar_xy_group(
+            tracker, "bar_xy",
+            [&](const size_t peak) { bar_xy_group_output = peak; });
           GROUP_ITEM(bar_xy, bar_x);
           GROUP_ITEM(bar_xy, bar_y);
           ALLOCATION(bar_z);
@@ -66,13 +72,10 @@ TEST_CASE("Memory_Tracker")
     const size_t foo = foo_x + foo_y + std::max(bar, foo_z);
 
     const size_t expected_peak_memory = global_buffer + std::max(foo, baz);
-    std::stringstream ss;
-    constexpr bool also_print_exact_bytes = false;
-    tracker.print(ss, also_print_exact_bytes);
-    auto tracker_output = ss.str();
     // Print the whole tree
-    CAPTURE(tracker_output);
+    CAPTURE(tracker.to_string());
     REQUIRE(tracker.is_finished());
+    DIFF(bar_xy_group_output, bar_x + bar_y);
     DIFF(tracker.peak_memory(), expected_peak_memory);
   }
 }
