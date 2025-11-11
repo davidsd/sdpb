@@ -48,6 +48,10 @@ struct Bigint_Syrk_Config
   [[nodiscard]] size_t input_windows_bytes() const;
   [[nodiscard]] size_t output_window_bytes() const;
 
+  [[nodiscard]] size_t node_P_normalizer_bytes() const;
+  [[nodiscard]] size_t node_normalize_and_shift_P_bytes() const;
+  [[nodiscard]] size_t node_reduce_scatter_bytes() const;
+
   // Local memory allocated on a node
   [[nodiscard]] size_t node_local_bytes() const;
   // Local memory allocated on a node

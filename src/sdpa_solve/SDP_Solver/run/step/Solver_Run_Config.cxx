@@ -72,6 +72,10 @@ namespace Sdpb::Sdpa
       using Group = Memory_Tracker::Group;
       Memory_Tracker tracker("Total memory estimate");
 
+      const auto &sizes = cfg.sizes;
+      const auto &p_cfg = cfg.initialize_P_config;
+      const auto &syrk_cfg = cfg.syrk_S_config;
+
       // Helper macros.
       // Expansion examples:
       // SCOPE(x) -> Scope x("x", tracker)
@@ -105,56 +109,76 @@ namespace Sdpb::Sdpa
         {
           NAMED_SCOPE(sdpb, "SDPB memory allocations",
                       [&](const size_t peak) { sdpb_total_bytes = peak; });
-          ALLOC(SDP, cfg.sizes.SDP_bytes);
-          ALLOC(SDP_Solver, cfg.sizes.SDP_solver_bytes);
+          ALLOC(SDP, sizes.SDP_bytes);
+          ALLOC(SDP_Solver, sizes.SDP_solver_bytes);
           {
             NAMED_SCOPE(run, "SDP_Solver::run()");
-            ALLOC(X_cholesky, cfg.sizes.X_bytes);
-            ALLOC(Y_cholesky, cfg.sizes.X_bytes);
+            ALLOC(X_cholesky, sizes.X_bytes);
+            ALLOC(Y_cholesky, sizes.X_bytes);
 
             NAMED_GROUP(shmem, "Shared memory windows",
                         [&](const size_t peak) { sdpb_shmem_bytes = peak; });
             // initialize_P() windows
             NAMED_GROUP_ITEM(shmem, shmem_initialize_P, "initialize_P()", 0);
             GROUP_ITEM(shmem_initialize_P, L_X_inv_window,
-                       cfg.initialize_P_config.L_X_inv_window_bytes());
+                       p_cfg.L_X_inv_window_bytes());
             GROUP_ITEM(shmem_initialize_P, L_Y_window,
-                       cfg.initialize_P_config.L_Y_window_bytes());
-            GROUP_ITEM(shmem_initialize_P, G_window,
-                       cfg.initialize_P_config.G_window_bytes());
+                       p_cfg.L_Y_window_bytes());
+            GROUP_ITEM(shmem_initialize_P, G_window, p_cfg.G_window_bytes());
             // syrk_S() windows
             NAMED_GROUP_ITEM(shmem, shmem_syrk_S, "syrk_S()", 0);
-            GROUP_ITEM(shmem_syrk_S, syrk_input_windows,
-                       cfg.syrk_S_config.input_windows_bytes());
-            GROUP_ITEM(shmem_syrk_S, syrk_output_window,
-                       cfg.syrk_S_config.output_window_bytes());
+            NAMED_GROUP_ITEM(shmem_syrk_S, syrk_input_windows,
+                             "input window(s)",
+                             syrk_cfg.input_windows_bytes());
+            NAMED_GROUP_ITEM(shmem_syrk_S, syrk_output_window, "output window",
+                             syrk_cfg.output_window_bytes());
             // step()
             {
               FUNC_SCOPE(step);
+              ALLOC(dx, sizes.x_bytes);
+              ALLOC(dX, sizes.X_bytes);
+              ALLOC(dY, sizes.X_bytes);
+              ALLOC(S, sizes.S_bytes);
               {
-                ALLOC(dx, cfg.sizes.x_bytes);
-                ALLOC(dX, cfg.sizes.X_bytes);
-                ALLOC(dY, cfg.sizes.X_bytes);
-                ALLOC(S, cfg.sizes.S_bytes);
+                FUNC_SCOPE(compute_S);
+                ALLOC(P, p_cfg.node_P_bytes());
+                // Temporary allocations inside initialize_P()
                 {
-                  FUNC_SCOPE(compute_S);
-                  // TODO exclude P_bytes from initialize_P_config.node_local_bytes()
-                  const size_t P_bytes
-                    = cfg.initialize_P_config.P_size() * bigfloat_bytes();
-                  ALLOC(P, P_bytes);
-                  // Temporary allocations inside initialize_P()
-                  TEMP_ALLOC("initialize_P()",
-                             cfg.initialize_P_config.node_local_bytes()
-                               - P_bytes);
-                  // Temporary allocations inside syrk_S()
-                  TEMP_ALLOC("syrk_S()", cfg.syrk_S_config.node_local_bytes());
+                  FUNC_SCOPE(initialize_P);
+                  ALLOC(L_X_inv, sizes.X_bytes);
+                  ALLOC(L_Y, sizes.X_bytes);
+                  ALLOC(L_X_inv_normalizer, p_cfg.node_L_normalizer_bytes());
+                  ALLOC(L_Y_normalizer, p_cfg.node_L_normalizer_bytes());
+                  TEMP_ALLOC("normalize_and_shift(L_X_inv)",
+                             p_cfg.node_normalize_and_shift_L_bytes());
+                  TEMP_ALLOC("normalize_and_shift(L_Y)",
+                             p_cfg.node_normalize_and_shift_L_bytes());
+                  {
+                    NAMED_SCOPE(p_range, "loop over p index");
+                    ALLOC(G, p_cfg.node_G_bytes());
+                    {
+                      FUNC_SCOPE(trmm);
+                      ALLOC(G_normalizer, p_cfg.node_G_Normalizer_bytes());
+                      TEMP_ALLOC("normalize_and_shift(G)",
+                                 p_cfg.node_normalize_and_shift_G_bytes());
+                    }
+                    TEMP_ALLOC("reshape", p_cfg.node_reshape_bytes());
+                  }
                 }
-                ALLOC(minus_XY, cfg.sizes.X_bytes);
                 {
-                  FUNC_SCOPE(compute_search_direction);
-                  ALLOC(R, cfg.sizes.X_bytes);
-                  ALLOC(Z, cfg.sizes.X_bytes);
+                  FUNC_SCOPE(syrk_S);
+                  ALLOC(P_normalizer, syrk_cfg.node_P_normalizer_bytes());
+                  TEMP_ALLOC("normalize_and_shift(P)",
+                             syrk_cfg.node_normalize_and_shift_P_bytes());
+                  TEMP_ALLOC("reduce_scatter()",
+                             syrk_cfg.node_reduce_scatter_bytes());
                 }
+              }
+              ALLOC(minus_XY, sizes.X_bytes);
+              {
+                FUNC_SCOPE(compute_search_direction);
+                ALLOC(R, sizes.X_bytes);
+                ALLOC(Z, sizes.X_bytes);
               }
             }
           }

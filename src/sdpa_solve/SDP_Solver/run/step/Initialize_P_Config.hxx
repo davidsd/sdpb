@@ -14,6 +14,7 @@ namespace Sdpb::Sdpa
     const size_t group_index;
     const std::vector<size_t> node_block_dims;
     const size_t max_block_dim;
+    const std::vector<size_t> max_group_block_dims;
     const size_t sum_dim_squared;
     const size_t primal_dimension;
     const size_t split_factor;
@@ -37,15 +38,26 @@ namespace Sdpb::Sdpa
     // We process primal_dimension_step elements of this vector at once.
     [[nodiscard]] size_t G_size() const;
     [[nodiscard]] size_t P_size() const;
+    [[nodiscard]] size_t L_normalizer_size() const;
+    [[nodiscard]] size_t G_normalizer_size() const;
     [[nodiscard]] size_t L_window_size() const;
     [[nodiscard]] size_t G_window_size() const;
 
-    // Total memory estimates
+    // Total memory estimates on a node
 
     [[nodiscard]] size_t L_X_inv_window_bytes() const;
     [[nodiscard]] size_t L_Y_window_bytes() const;
-    [[nodiscard]] size_t F_window_bytes() const;
     [[nodiscard]] size_t G_window_bytes() const;
+
+    [[nodiscard]] size_t node_P_bytes() const;
+    [[nodiscard]] size_t node_L_bytes() const;
+    [[nodiscard]] size_t node_L_normalizer_bytes() const;
+    [[nodiscard]] size_t node_G_bytes() const;
+    [[nodiscard]] size_t node_G_Normalizer_bytes() const;
+    // Temporary allocations inside normalize_and_shift()
+    [[nodiscard]] size_t node_normalize_and_shift_L_bytes() const;
+    [[nodiscard]] size_t node_normalize_and_shift_G_bytes() const;
+    [[nodiscard]] size_t node_reshape_bytes() const;
 
     // Local memory allocated on a node
     [[nodiscard]] size_t node_local_bytes() const;

@@ -99,6 +99,25 @@ size_t Bigint_Syrk_Config::output_window_bytes() const
 {
   return sizeof(double) * output_window_size();
 }
+size_t Bigint_Syrk_Config::node_P_normalizer_bytes() const
+{
+  return bigfloat_bytes(precision) * input_width * shared_memory_comm.Size();
+}
+size_t Bigint_Syrk_Config::node_normalize_and_shift_P_bytes() const
+{
+  // Temporary memory required to AllReduce column norms
+  if(shared_memory_comm.Size() == 1)
+    return 0;
+  // send buffer + recv buffer + extra MPI stuff => factor of 3.
+  return 3 * node_P_normalizer_bytes();
+}
+size_t Bigint_Syrk_Config::node_reduce_scatter_bytes() const
+{
+  // get_reduce_scatter_buffer_size() returns send_buf + recv_buf.
+  // We multiply it by 3/2 to account for extra overhead inside SendRecv.
+  return div_ceil(
+    bigfloat_bytes(precision) * get_reduce_scatter_buffer_size() * 3, 2);
+}
 size_t Bigint_Syrk_Config::node_local_bytes() const
 {
   const size_t normalizer_size = input_width * shared_memory_comm.Size();
