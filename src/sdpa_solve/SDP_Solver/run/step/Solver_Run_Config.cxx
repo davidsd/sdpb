@@ -119,14 +119,15 @@ namespace Sdpb::Sdpa
             NAMED_GROUP(shmem, "Shared memory windows",
                         [&](const size_t peak) { sdpb_shmem_bytes = peak; });
             // initialize_P() windows
-            NAMED_GROUP_ITEM(shmem, shmem_initialize_P, "initialize_P()", 0);
+            NAMED_GROUP_ITEM(shmem, shmem_initialize_P,
+                             "initialize_P() windows", 0);
             GROUP_ITEM(shmem_initialize_P, L_X_inv_window,
                        p_cfg.L_X_inv_window_bytes());
             GROUP_ITEM(shmem_initialize_P, L_Y_window,
                        p_cfg.L_Y_window_bytes());
             GROUP_ITEM(shmem_initialize_P, G_window, p_cfg.G_window_bytes());
             // syrk_S() windows
-            NAMED_GROUP_ITEM(shmem, shmem_syrk_S, "syrk_S()", 0);
+            NAMED_GROUP_ITEM(shmem, shmem_syrk_S, "syrk_S() windows", 0);
             NAMED_GROUP_ITEM(shmem_syrk_S, syrk_input_windows,
                              "input window(s)",
                              syrk_cfg.input_windows_bytes());
