@@ -190,6 +190,7 @@ namespace Sdpb::Sdpa
     void print_config_and_estimates(const Environment &env,
                                     const Solver_Run_Config &cfg,
                                     const Memory_Tracker &mem_estimates,
+                                    const Solver_Parameters &parameters,
                                     const Verbosity &verbosity)
     {
       if(verbosity < Verbosity::debug)
@@ -215,6 +216,13 @@ namespace Sdpb::Sdpa
       ADD_LINE("node=", env.node_index(),
                " solver configuration and memory estimates:");
       ++indent_level;
+      {
+        ADD_LINE("Memory limits:");
+        ++indent_level;
+        ADD_LINE("--maxMemory: ", parameters.max_memory);
+        ADD_LINE("--maxSharedMemory: ", parameters.max_shared_memory);
+        --indent_level;
+      }
       {
         ADD_LINE("Shared memory configuration:");
         ++indent_level;
@@ -412,7 +420,8 @@ namespace Sdpb::Sdpa
       const auto mem_estimates = get_memory_estimates(
         env, result, node_total_sdpb_bytes, node_shmem_sdpb_bytes);
 
-      print_config_and_estimates(env, result, mem_estimates, verbosity);
+      print_config_and_estimates(env, result, mem_estimates, parameters,
+                                 verbosity);
 
       ASSERT(node_total_sdpb_bytes < max_total_mem,
              DEBUG_STRING(node_total_sdpb_bytes),
