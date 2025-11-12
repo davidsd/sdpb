@@ -230,55 +230,6 @@ namespace Sdpb::Sdpa
     return 5 * bigfloat_bytes(precision) * num_elements_to_send;
   }
 
-  size_t Initialize_P_Config::node_local_bytes() const
-  {
-    // Matrix_Normalizer stores norms = vector<BigFloat>(dim) for each block.
-    // So, the total size is sum(group_size * sum(dims)) over all MPI groups on a node.
-    size_t L_normalizer_size = 0;
-    // For each block, we perform AllReduce for the vector of column norms.
-    // Each MPI group is processing one block at a time.
-    // So, the total buffer size <= sum(group_size * max(dim)) over all MPI groups on a node.
-    size_t L_normalizer_mpi_buffer_size = 0;
-    for(size_t group = 0; group < block_mapping.num_groups(node_index);
-        ++group)
-      {
-        const auto &block_map = block_mapping.mapping.at(node_index).at(group);
-        size_t max_dim = 0;
-        for(auto &block_index : block_map.block_indices)
-          {
-            const auto &loc = block_mapping.block_locations.at(block_index);
-            const auto dim = node_block_dims.at(loc.block_index_node);
-            max_dim = std::max(max_dim, dim);
-            L_normalizer_size += dim * block_map.num_procs;
-          }
-        // Max buffer size for AllReduce. Each rank allocates vector of size max_dim.
-        L_normalizer_mpi_buffer_size += max_dim * block_map.num_procs;
-      }
-
-    const size_t F_normalizer_size
-      = max_primal_dimension_step() * L_normalizer_size;
-
-    // We estimate total MPI communication memory ~ 3 * buffer size.
-    // The factor of 3 is somewhat arbitrary. See also comments in get_trsm_bytes().
-    const size_t normalizers_communication_size
-      = 3 * L_normalizer_mpi_buffer_size;
-
-    const size_t normalizers_size = 2 * L_normalizer_size + F_normalizer_size
-                                    + normalizers_communication_size;
-
-    // L_X_inv, L_Y, F_{p_min..p_max} (also L_X_inv F_p etc.), P
-    return bigfloat_bytes(precision)
-           * (2 * L_size() + G_size() + P_size() + normalizers_size);
-  }
-  size_t Initialize_P_Config::node_shmem_bytes() const
-  {
-    // residues for L_X_inv, L_Y, F_p
-    return L_X_inv_window_bytes() + L_Y_window_bytes() + G_window_bytes();
-  }
-  size_t Initialize_P_Config::node_total_bytes() const
-  {
-    return node_local_bytes() + node_shmem_bytes();
-  }
   size_t Initialize_P_Config::max_primal_dimension_step() const
   {
     return div_ceil(primal_dimension, split_factor);
