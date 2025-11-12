@@ -175,6 +175,13 @@ namespace Sdpb::Sdpa
                              syrk_cfg.node_reduce_scatter_bytes());
                 }
               }
+
+              const auto S_dim = cfg.initialize_P_config.primal_dimension;
+              const auto &grid = El::Grid::Default();
+              TEMP_ALLOC("Cholesky(S)",
+                         get_cholesky_bytes(El::UPPER, S_dim, S_dim,
+                                            grid.Height(), grid.Width())
+                           / env.num_nodes());
               ALLOC(minus_XY, sizes.X_bytes);
               {
                 FUNC_SCOPE(compute_search_direction);

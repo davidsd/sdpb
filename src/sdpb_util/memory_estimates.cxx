@@ -1,5 +1,6 @@
 #include "memory_estimates.hxx"
 
+#include "Memory_Tracker.hxx"
 #include "Proc_Meminfo.hxx"
 #include "assert.hxx"
 #include "ostream/pretty_print_bytes.hxx"
@@ -326,4 +327,123 @@ size_t get_trmm_bytes(const int height, const int width, const int grid_height,
   // Factor of 3 before communication_size is somewhat arbitrary.
   // See comments in get_trsm_bytes() above.
   return bigfloat_bytes() * (all_matrices_size + 3 * communication_size);
+}
+
+size_t get_cholesky_bytes(const El::UpperOrLower uplo, int height, int width,
+                          int grid_height, int grid_width)
+{
+  using Allocation = Memory_Tracker::Allocation;
+  using Scope = Memory_Tracker::Scope;
+
+  const auto grid_size = grid_height * grid_width;
+
+  // Approximate factor for redistributing a matrix of size X
+  // for MPI communication, e.g. copying a matrix of size X
+  // to another rank should require ~ 3 * X memory
+  constexpr int mpi_copy_factor = 3;
+
+  // Reproduce El::Cholesky::LowerVariant3Blocked()
+  // https://gitlab.com/bootstrapcollaboration/elemental/-/blob/6c11ea5df08b9f37193d7eb1df2400ed4a3a4d28/src/lapack_like/factor/Cholesky/LowerVariant3.hpp#L76
+  Memory_Tracker t("cholesky");
+  {
+    using El::Int, El::Min, El::Range;
+    ASSERT_EQUAL(height, width);
+    Allocation AProx(t, "AProx", height * width * bigfloat_bytes());
+    const Int n = height;
+    const Int bsize = El::Blocksize();
+    const Int STAR_STAR = grid_size;
+    const Int VC_STAR = 1;
+    const Int VR_STAR = 1;
+    const Int MC_STAR = grid_width;
+    const Int MR_STAR = grid_height;
+    const Int STAR_VC = 1;
+    const Int STAR_VR = 1;
+    const Int STAR_MC = grid_width;
+    const Int STAR_MR = grid_height;
+
+    for(Int k = 0; k < n; k += bsize)
+      {
+        const Int nb = Min(bsize, n - k);
+        const Int ind1 = nb;
+        const Int ind2 = n - (k + nb);
+        const auto A11_bytes = ind1 * ind1 * bigfloat_bytes();
+        const auto A12_bytes = ind1 * ind2 * bigfloat_bytes();
+        const auto A21_bytes = ind2 * ind1 * bigfloat_bytes();
+        const auto A22_bytes = ind2 * ind2 * bigfloat_bytes();
+
+        Allocation A11_STAR_STAR(t, "A11_STAR_STAR", A11_bytes * STAR_STAR);
+
+        if(uplo == El::UPPER)
+          {
+            Allocation A12_STAR_VR(t, "A12_STAR_VR", A21_bytes * STAR_VR);
+            Allocation A12_STAR_MC(t, "A12_STAR_MC", A21_bytes * STAR_MC);
+            Allocation A12_STAR_MR(t, "A12_STAR_MR", A21_bytes * STAR_MR);
+            if(grid_size > 1)
+              {
+                // Memory footprint for different operations involving MPI communication.
+                std::ignore
+                  = Allocation(t, "A11_STAR_STAR = A11;",
+                               mpi_copy_factor * A11_bytes * grid_size);
+                std::ignore = Allocation(t, "A12_STAR_VR = A12;",
+                                         mpi_copy_factor * A12_bytes);
+                std::ignore
+                  = Allocation(t, "A12_STAR_MC = A12_STAR_VR;",
+                               mpi_copy_factor * A12_bytes * STAR_MC);
+                std::ignore
+                  = Allocation(t, "A12_STAR_MR = A12_STAR_VR;",
+                               mpi_copy_factor * A12_bytes * STAR_MR);
+                std::ignore
+                  = Allocation(t, "A12 = A12_STAR_MR;",
+                               mpi_copy_factor * A12_bytes * STAR_MR);
+              }
+          }
+        else if(uplo == El::LOWER)
+          {
+            Allocation A21_VC_STAR(t, "A21_VC_STAR", A21_bytes * VC_STAR);
+
+            Allocation A21_VR_STAR(t, "A21_VR_STAR", A21_bytes * VR_STAR);
+
+            Allocation A21Trans_STAR_MC(t, "A21Trans_STAR_MC",
+                                        A21_bytes * STAR_MC);
+            Allocation A21Adj_STAR_MR(t, "A21Adj_STAR_MR",
+                                      A21_bytes * STAR_MR);
+            if(grid_size > 1)
+              {
+                // Memory footprint for different operations involving MPI communication.
+                std::ignore
+                  = Allocation(t, "A11_STAR_STAR = A11;",
+                               mpi_copy_factor * A11_bytes * grid_size);
+                std::ignore = Allocation(t, "A21_VC_STAR = A21;",
+                                         mpi_copy_factor * A21_bytes);
+                std::ignore = Allocation(t, "A21_VR_STAR = A21_VC_STAR;",
+                                         mpi_copy_factor * A21_bytes);
+                {
+                  Scope Transpose_A21_VC_STAR(
+                    t, "Transpose( A21_VC_STAR, A21Trans_STAR_MC );");
+                  // see El::transpose::PartialColAllGather
+                  Allocation ATrans(t, "ATrans", A21_bytes * grid_width);
+                  std::ignore = Allocation(
+                    t, "Copy()", mpi_copy_factor * A21_bytes * grid_width);
+                }
+                {
+                  Scope Adjoint_A21_VR_STAR(
+                    t, "Adjoint( A21_VR_STAR, A21Adj_STAR_MR );");
+                  // see El::transpose::PartialColAllGather
+                  Allocation ATrans(t, "ATrans", A21_bytes * grid_height);
+                  std::ignore = Allocation(
+                    t, "Copy()", mpi_copy_factor * A21_bytes * grid_height);
+                }
+                // El::transpose::RowFilter creates one copy of A21Trans_STAR_MC
+                std::ignore
+                  = Allocation(t, "Transpose( A21Trans_STAR_MC, A21 );",
+                               A21_bytes * grid_width);
+              }
+          }
+        else
+          {
+            LOGIC_ERROR(DEBUG_STRING(uplo));
+          }
+      }
+  }
+  return t.peak_memory();
 }

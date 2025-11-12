@@ -66,3 +66,7 @@ size_t get_trsm_bytes(int height, int width, int grid_height, int grid_width);
 // very high memory consumption compared to more balanced grids (e.g. 4x3 or 4x4).
 // To avoid this issue, set e.g. --procGranularity 2 or --procGranularity 4.
 size_t get_trmm_bytes(int height, int width, int grid_height, int grid_width);
+
+// Extra memory (on all ranks required for El::Cholesky(uplo, DistMatrix A)).
+// NB: do not forget to divide by num_nodes to get memory per node, if the matrix is global!
+size_t get_cholesky_bytes(El::UpperOrLower uplo, int height, int width, int grid_height, int grid_width);
