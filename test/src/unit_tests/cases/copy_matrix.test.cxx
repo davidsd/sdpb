@@ -4,30 +4,14 @@
 
 using Test_Util::REQUIRE_Equal::diff;
 
-void copy_matrix_from_root_impl_send_recv(
-  const El::Matrix<El::BigFloat> &source,
-  El::DistMatrix<El::BigFloat> &destination, const El::mpi::Comm &comm);
-
-void copy_matrix_from_root_impl_shared_window(
-  const El::Matrix<El::BigFloat> &source,
-  El::DistMatrix<El::BigFloat> &destination, const El::mpi::Comm &comm);
-
 TEST_CASE("copy_matrix")
 {
   SECTION("copy_matrix_from_root")
   {
     int height = GENERATE(1, 10);
     int width = GENERATE(1, 21);
-    bool use_shared_window = GENERATE(false, true);
-
-    DYNAMIC_SECTION((use_shared_window ? "copy_matrix_from_root_shared_window"
-                                       : "copy_matrix_from_root_send_recv"))
     DYNAMIC_SECTION("height=" << height << " width=" << width)
     {
-      const auto &copy_matrix_func
-        = use_shared_window ? copy_matrix_from_root_impl_shared_window
-                            : copy_matrix_from_root_impl_send_recv;
-
       // original_matrix will be the same for all ranks
       El::InitializeRandom(true);
       El::Matrix<El::BigFloat> original_matrix(height, width);
@@ -39,10 +23,18 @@ TEST_CASE("copy_matrix")
       // input initialized only on root
       El::Matrix<El::BigFloat> input;
       if(El::mpi::Rank() == 0)
-        input = original_matrix;
+        {
+          input = original_matrix;
+        }
+      else
+        {
+          // Set wrong size, this should lead to errors
+          // if we try to access it on non-root rank.
+          input.Resize(height + 1, width - 1);
+        }
 
       El::DistMatrix<El::BigFloat> output(height, width);
-      copy_matrix_func(input, output, output.DistComm());
+      copy_matrix_from_root(input, output, output.DistComm());
 
       // compare output with original_matrix
       for(int iLoc = 0; iLoc < output.LocalHeight(); ++iLoc)
