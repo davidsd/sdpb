@@ -148,9 +148,10 @@ namespace Sdpb::Sdpa
       const size_t vec_index, const El::Int global_col, Fmpz_Comb &comb,
       Vector_Block_Diagonal_Matrix_Residues_Window<double> &window)
     {
+      auto first_residue_matrix
+        = window.get_matrix_view(0, block_index, vec_index);
       compute_column_residues_elementwise(
-        block, global_col, window.prime_stride, comb,
-        window.prime_block_vec_matrices.at(0).at(block_index).at(vec_index));
+        block, global_col, window.prime_stride, comb, first_residue_matrix);
     }
 
     void restore_distmatrix_from_residues(
@@ -356,9 +357,7 @@ namespace Sdpb::Sdpa
             const auto node_block_index = loc.block_index_node;
             const auto global_block_index = loc.block_index_global;
             const auto &first_residue_matrix
-              = bdms_residues.prime_block_vec_matrices.at(0)
-                  .at(node_block_index)
-                  .at(vec_index);
+              = bdms_residues.get_matrix_view(0, node_block_index, vec_index);
 
             Timer block_timer;
             restore_distmatrix_from_residues(

@@ -11,11 +11,6 @@ namespace Sdpb::Sdpa
       : Vector_Matrix_Residues_Window<T>
   {
     El::VerticalOrHorizontal stacking;
-    // Residues for individual matrices (not stacked)
-    // Indexed by (prime index, block index, vector index)
-    // TODO rename
-    std::vector<std::vector<std::vector<El::Matrix<T>>>>
-      prime_block_vec_matrices;
 
     Vector_Block_Diagonal_Matrix_Residues_Window(
       Shared_Window_Array_View<double> window_view, size_t num_primes,
@@ -26,32 +21,23 @@ namespace Sdpb::Sdpa
             block_heights(block_dims, vector_size, stacking),
             block_widths(block_dims, vector_size, stacking)),
           stacking(stacking)
+    {}
+
+    El::Matrix<T>
+    get_matrix_view(const size_t prime_index, const size_t block_index,
+                    const size_t vec_index)
     {
-      prime_block_vec_matrices.reserve(this->num_primes);
-      for(size_t prime_index = 0; prime_index < this->num_primes;
-          ++prime_index)
+      auto &stacked_matrix
+        = this->matrices_residues.at(prime_index).at(block_index);
+      const size_t dim = stacking == El::HORIZONTAL ? stacked_matrix.Height()
+                                                    : stacked_matrix.Width();
+      El::IR I(0, dim);
+      El::IR J(dim * vec_index, dim * vec_index + dim);
+      if(stacking == El::VERTICAL)
         {
-          auto &block_vec_matrices = prime_block_vec_matrices.emplace_back();
-          block_vec_matrices.reserve(this->num_matrices);
-          for(size_t block = 0; block < this->num_matrices; ++block)
-            {
-              auto &vec_matrices = block_vec_matrices.emplace_back();
-              auto &stacked_matrix
-                = this->matrices_residues.at(prime_index).at(block);
-              const auto dim = block_dims.at(block);
-              vec_matrices.reserve(vector_size);
-              for(size_t vec_index = 0; vec_index < vector_size; ++vec_index)
-                {
-                  El::IR I(0, dim);
-                  El::IR J(dim * vec_index, dim * vec_index + dim);
-                  if(stacking == El::VERTICAL)
-                    {
-                      std::swap(I, J);
-                    }
-                  vec_matrices.emplace_back(stacked_matrix(I, J));
-                }
-            }
+          std::swap(I, J);
         }
+      return stacked_matrix(I, J);
     }
 
   private:
