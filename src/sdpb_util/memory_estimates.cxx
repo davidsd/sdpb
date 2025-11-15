@@ -6,6 +6,7 @@
 #include "ostream/pretty_print_bytes.hxx"
 
 #include <iomanip>
+#include <unistd.h>
 
 size_t bigfloat_bytes()
 {
@@ -446,4 +447,19 @@ size_t get_cholesky_bytes(const El::UpperOrLower uplo, int height, int width,
       }
   }
   return t.peak_memory();
+}
+size_t shmem_overhead_bytes(const El::mpi::Comm &comm_shared_mem,
+                            const size_t shmem_bytes)
+{
+  const size_t num_ranks = comm_shared_mem.Size();
+
+  long int page_size = sysconf(_SC_PAGESIZE);
+  // Default to typical page size = 4 KB
+  if(page_size <= 0)
+    page_size = 4096;
+
+  // on 64-bit systems:
+  constexpr size_t page_table_entry_size = 8;
+
+  return num_ranks * shmem_bytes * page_table_entry_size / page_size;
 }

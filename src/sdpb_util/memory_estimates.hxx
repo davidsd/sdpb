@@ -69,4 +69,12 @@ size_t get_trmm_bytes(int height, int width, int grid_height, int grid_width);
 
 // Extra memory (on all ranks required for El::Cholesky(uplo, DistMatrix A)).
 // NB: do not forget to divide by num_nodes to get memory per node, if the matrix is global!
-size_t get_cholesky_bytes(El::UpperOrLower uplo, int height, int width, int grid_height, int grid_width);
+size_t get_cholesky_bytes(El::UpperOrLower uplo, int height, int width,
+                          int grid_height, int grid_width);
+
+// In SDPB, each process performs random-access writes to shared memory windows.
+// Thus, it has to store page table entry (typically 8 bytes) per each page (typically 4 KB).
+// The resulting overhead can be significant:
+// e.g. for 128 cores per node it's 25% of window size.
+size_t
+shmem_overhead_bytes(const El::mpi::Comm &comm_shared_mem, size_t shmem_bytes);
