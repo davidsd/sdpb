@@ -126,7 +126,12 @@ boost::stacktrace::stacktrace();
                             fragment="""
 #include <boost/version.hpp>
 
-#if BOOST_VERSION < 108000
+// There are two versions for Boost.Process, V1 and V2.
+// V2 was introduced in Boost 1.80 and became default in Boost 1.89.
+// Prior to Boost 1.86, V2 failed to compile on Alpine Linux (musl-libc),
+// see https://github.com/boostorg/process/pull/376
+// NB: The code for choosing Boost.Process version should match test/src/integration_tests/util/process.cxx
+#if BOOST_VERSION < 108600
 #define USE_BOOST_PROCESS_V1
 #include <boost/process.hpp>
 namespace bp = boost::process;
