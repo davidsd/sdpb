@@ -77,8 +77,8 @@ namespace
     std::string name = El::BuildString("block_data_", block_index);
     switch(format)
       {
-      case json: name += ".json"; break;
-      case bin: name += ".bin"; break;
+      case Block_File_Format::json: name += ".json"; break;
+      case Block_File_Format::bin: name += ".bin"; break;
       default: RUNTIME_ERROR("Unsupported Block_File_Format: ", format);
       }
     return temp_dir / name;
@@ -312,7 +312,7 @@ void write_sdp(const fs::path &output_path, const Output_SDP &sdp,
             [&](std::ostream &os) {
               write_block_data(os, group, block_file_format);
             },
-            zip, block_file_format == bin);
+            zip, block_file_format == Block_File_Format::bin);
         }
       }
   }
