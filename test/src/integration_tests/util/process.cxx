@@ -8,9 +8,11 @@
 #include <boost/program_options/parsers.hpp>
 
 // There are two versions for Boost.Process, V1 and V2.
-// V2 was introduced in Boost 1.80 and became default in Boot 1.89.
-// We use V2 when possible.
-#if BOOST_VERSION < 108000
+// V2 was introduced in Boost 1.80 and became default in Boost 1.89.
+// Prior to Boost 1.86, V2 failed to compile on Alpine Linux (musl-libc),
+// see https://github.com/boostorg/process/pull/376
+// NB: The code for choosing Boost.Process version should match the one used in waf-tools/boost.py
+#if BOOST_VERSION < 108600
 #define USE_BOOST_PROCESS_V1
 #include <boost/process.hpp>
 namespace bp = boost::process;
