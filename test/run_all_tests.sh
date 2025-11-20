@@ -32,7 +32,7 @@ echo time $MPI_RUN_COMMAND -n 6 ./build/unit_tests --durations yes
 time $MPI_RUN_COMMAND -n 6 ./build/unit_tests --durations yes || { exit $?; }
 
 # integration_tests
-echo time ./build/integration_tests --durations yes --mpirun="$MPI_RUN_COMMAND"
+echo time ./build/bin/integration_tests --durations yes --mpirun="$MPI_RUN_COMMAND"
 time ./build/integration_tests --durations yes --mpirun="$MPI_RUN_COMMAND" || { exit $?; }
 
 echo "$0: ALL TESTS PASSED"
