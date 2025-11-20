@@ -6,6 +6,7 @@
 #include "sdpb_util/Timers/Timers.hxx"
 #include "sdpb_util/Environment.hxx"
 #include "SDPB_Parameters.hxx"
+#include "sdpb_util/malloc_trim.hxx"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
@@ -50,8 +51,10 @@ Timers time_and_solve(
           timing_parameters.verbosity = Verbosity::none;
         }
       El::Matrix<int32_t> block_timings_ms;
-      const Timers timers = solve<TSolver>(block_info, timing_parameters, env,
-                                           start_time, block_timings_ms);
+      Timers timers = solve<TSolver>(block_info, timing_parameters, env,
+                                     start_time, block_timings_ms);
+      // Release memory back to OS (glibc-only)
+      malloc_trim(env, timers);
 
       if(block_timings_ms.Height() == 0 && block_timings_ms.Width() == 0)
         {
