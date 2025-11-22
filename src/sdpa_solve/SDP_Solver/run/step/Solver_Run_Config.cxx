@@ -351,16 +351,19 @@ namespace Sdpb::Sdpa
     const auto smallest_mem_estimates = get_memory_estimates(
       env, smallest_cfg, min_total_bytes, min_shmem_bytes);
 
-    ASSERT(min_total_bytes <= max_total_mem,
-           "Not enough memory: required at least ",
-           pretty_print_bytes(min_total_bytes, true),
-           ", --maxMemory limit: ", parameters.max_memory, "\n",
-           to_string(smallest_mem_estimates));
-    ASSERT(min_shmem_bytes <= max_shared_mem,
-           "Not enough shared memory for compute_S: required at least ",
-           pretty_print_bytes(min_shmem_bytes, true),
-           ", --maxSharedMemory limit: ", parameters.max_shared_memory, "\n",
-           to_string(smallest_mem_estimates));
+    if(comm.Rank() == 0)
+      {
+        ASSERT(min_total_bytes <= max_total_mem,
+               "Not enough memory: required at least ",
+               pretty_print_bytes(min_total_bytes, true),
+               ", --maxMemory limit: ", parameters.max_memory, "\n",
+               to_string(smallest_mem_estimates));
+        ASSERT(min_shmem_bytes <= max_shared_mem,
+               "Not enough shared memory for compute_S: required at least ",
+               pretty_print_bytes(min_shmem_bytes, true),
+               ", --maxSharedMemory limit: ", parameters.max_shared_memory,
+               "\n", to_string(smallest_mem_estimates));
+      }
 
     // Now let's do binary search and find:
     // 1. minimal syrk_output_split_factor
@@ -434,16 +437,19 @@ namespace Sdpb::Sdpa
       print_config_and_estimates(env, result, mem_estimates, parameters,
                                  verbosity);
 
-      ASSERT(node_total_sdpb_bytes < max_total_mem,
-             DEBUG_STRING(node_total_sdpb_bytes),
-             DEBUG_STRING(parameters.max_memory),
-             DEBUG_STRING(block_info.node_index), "\n",
-             to_string(mem_estimates));
-      ASSERT(node_shmem_sdpb_bytes < max_shared_mem,
-             DEBUG_STRING(node_shmem_sdpb_bytes),
-             DEBUG_STRING(parameters.max_shared_memory),
-             DEBUG_STRING(block_info.node_index), "\n",
-             to_string(mem_estimates));
+      if(comm.Rank() == 0)
+        {
+          ASSERT(node_total_sdpb_bytes < max_total_mem,
+                 DEBUG_STRING(node_total_sdpb_bytes),
+                 DEBUG_STRING(parameters.max_memory),
+                 DEBUG_STRING(block_info.node_index), "\n",
+                 to_string(mem_estimates));
+          ASSERT(node_shmem_sdpb_bytes < max_shared_mem,
+                 DEBUG_STRING(node_shmem_sdpb_bytes),
+                 DEBUG_STRING(parameters.max_shared_memory),
+                 DEBUG_STRING(block_info.node_index), "\n",
+                 to_string(mem_estimates));
+        }
     }
     return result;
   }
