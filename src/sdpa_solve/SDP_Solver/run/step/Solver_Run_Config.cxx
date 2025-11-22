@@ -43,12 +43,18 @@ namespace Sdpb::Sdpa
     // f(p) == true for p in [begin; p_0)
     // f(p) == false for p in [p_0, end)
     // NB: fails if p_0 is out of range!
+    // TODO: deduplicate with sdp_solve\SDP_Solver\run\get_syrk_Q_config.hxx
     size_t
-    partition_point(size_t begin, size_t end,
-                    const std::function<bool(const size_t &)> &predicate)
+    partition_point_unsafe(size_t begin, size_t end,
+                           const std::function<bool(const size_t &)> &predicate)
     {
       ASSERT(begin != end);
 
+      // Shortcut for the common case when we have enough memory for split_factor=1.
+      if(!predicate(begin))
+        return begin;
+
+      // TODO: we don't need this case anymore, replace with ASSERT(begin < end)?
       const bool reverse = begin > end;
       if(reverse)
         std::swap(begin, end);
@@ -395,7 +401,7 @@ namespace Sdpb::Sdpa
     // Minimal viable output_split_factor(syrk) = 1..primal_dimension.
     // Increasing this split factor hurts performance,
     // so we always give to syrk output window as much memory as we can.
-    size_t syrk_output_split_factor = partition_point(
+    size_t syrk_output_split_factor = partition_point_unsafe(
       1, max_syrk_output_split_factor + 1,
       [&](const size_t output_split_factor) {
         const size_t input_split_factor = max_syrk_input_split_factor;
@@ -409,18 +415,18 @@ namespace Sdpb::Sdpa
       syrk_output_split_factor, El::mpi::MAX, El::mpi::COMM_WORLD);
 
     // Find minimal split factors allowed by syrk_output_split_factor.
-    const size_t min_syrk_input_split_factor
-      = partition_point(1, max_syrk_input_split_factor + 1,
-                        [&](const size_t input_split_factor) {
-                          const Bigint_Syrk_Config syrk_cfg = create_syrk_cfg(
-                            input_split_factor, syrk_output_split_factor);
-                          return !enough_memory(smallest_init_P_cfg, syrk_cfg);
-                        });
+    const size_t min_syrk_input_split_factor = partition_point_unsafe(
+      1, max_syrk_input_split_factor + 1,
+      [&](const size_t input_split_factor) {
+        const Bigint_Syrk_Config syrk_cfg
+          = create_syrk_cfg(input_split_factor, syrk_output_split_factor);
+        return !enough_memory(smallest_init_P_cfg, syrk_cfg);
+      });
 
     const auto smallest_syrk_input_cfg
       = create_syrk_cfg(max_syrk_input_split_factor, syrk_output_split_factor);
 
-    const size_t min_trmm_split_factor = partition_point(
+    const size_t min_trmm_split_factor = partition_point_unsafe(
       1, max_trmm_split_factor + 1, [&](const size_t split_factor) {
         const Initialize_P_Config init_P_cfg = create_init_P_cfg(split_factor);
         return !enough_memory(init_P_cfg, smallest_syrk_input_cfg);
@@ -458,7 +464,7 @@ namespace Sdpb::Sdpa
         {
           if(s > max_syrk_input_split_factor)
             break;
-          const auto t = partition_point(
+          const auto t = partition_point_unsafe(
             min_trmm_split_factor, max_trmm_split_factor + 1,
             [&](const size_t split_factor) {
               return !enough_memory(

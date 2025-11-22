@@ -69,12 +69,17 @@ get_syrk_Q_config(const Block_Info &block_info, const SDP &sdp,
   // f(p) == true for p in [begin; p_0)
   // f(p) == false for p in [p_0, end)
   // NB: fails if p_0 is out of range!
-  // TODO deduplicate with Compute_S_Config.cxx
+  // TODO deduplicate with sdpa_solve/SDP_Solver/run/step/Solver_Run_Config.cxx
   constexpr auto partition_point_unsafe
     = [](size_t begin, size_t end,
          const std::function<bool(const size_t &)> &predicate) -> size_t {
     ASSERT(begin != end);
 
+    // Shortcut for the common case when we have enough memory for split_factor=1.
+    if(!predicate(begin))
+      return begin;
+
+    // TODO: we don't need this case anymore, replace with ASSERT(begin < end)?
     const bool reverse = begin > end;
     if(reverse)
       std::swap(begin, end);
