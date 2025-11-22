@@ -365,17 +365,20 @@ namespace Sdpb::Sdpa
                "\n", to_string(smallest_mem_estimates));
       }
 
-    // Now let's do binary search and find:
-    // 1. minimal syrk_output_split_factor
+    // Now let's determine split factors.
+    // First, we find minimal allowed syrk_output_split_factor
     //   (this one is the most important since split_factor>1 is worse for performance)
-    // 2. minimal syrk_input_split_factor (depends entirely on syrk_output_split_factor)
-    // 3. maximal primal_dimension_step for initialize_P
+    // Then, we find syrk_input_split_factor and trmm_split_factor
+    // so that neither of them is too large (and memory is balance between syrk and trmm windows).
     // This will allow to allocate as much memory as possible without OOM.
     // In principle, we could come up with explicit formulas for these parameters,
-    // but binary search is easier and should be fast enough.
+    // but binary search is much easier and should be fast enough.
     // Every search step involves some integer arithmetics with matrix sizes,
     // and constructing Fmpz_Comb (which takes less than 1ms for prec=1024, height=1e6)
 
+    // TODO: cache Initialize_P_Config and Bigint_Syrk_Config for given split factors?
+    // TODO: Change signature to enough_memory(trmm_split_factor, syrk_input_split_factor, syrk_output_split_factor),
+    // and cache results?
     const auto enough_memory = [&env, &max_total_mem, &max_shared_mem, &sizes](
                                  const Initialize_P_Config &init_P_cfg,
                                  const Bigint_Syrk_Config &syrk_cfg) -> bool {
@@ -389,7 +392,9 @@ namespace Sdpb::Sdpa
       return total_bytes <= max_total_mem && shmem_bytes <= max_shared_mem;
     };
 
-    // Minimal viable output_split_factor(syrk) = 1..primal_dimension
+    // Minimal viable output_split_factor(syrk) = 1..primal_dimension.
+    // Increasing this split factor hurts performance,
+    // so we always give to syrk output window as much memory as we can.
     size_t syrk_output_split_factor = partition_point(
       1, max_syrk_output_split_factor + 1,
       [&](const size_t output_split_factor) {
@@ -403,7 +408,8 @@ namespace Sdpb::Sdpa
     syrk_output_split_factor = El::mpi::AllReduce(
       syrk_output_split_factor, El::mpi::MAX, El::mpi::COMM_WORLD);
 
-    const size_t syrk_input_split_factor
+    // Find minimal split factors allowed by syrk_output_split_factor.
+    const size_t min_syrk_input_split_factor
       = partition_point(1, max_syrk_input_split_factor + 1,
                         [&](const size_t input_split_factor) {
                           const Bigint_Syrk_Config syrk_cfg = create_syrk_cfg(
@@ -411,22 +417,71 @@ namespace Sdpb::Sdpa
                           return !enough_memory(smallest_init_P_cfg, syrk_cfg);
                         });
 
-    const Bigint_Syrk_Config syrk_S_cfg(
-      comm, precision, num_nodes, P_group_heights, P_width,
-      syrk_input_split_factor, syrk_output_split_factor);
+    const auto smallest_syrk_input_cfg
+      = create_syrk_cfg(max_syrk_input_split_factor, syrk_output_split_factor);
 
-    // TODO right now we are not reusing shared memory buffers.
-    // Thus, Bigint_Syrk_Config will take as much shared memory as it needs,
-    // and Initialize_P_Config will get the remaining amount.
-    // TODO: we should either reuse buffers or e.g. give (max_shared_mem / 2) to each stage.
-    const size_t trmm_split_factor = partition_point(
-      1, primal_dimension + 1, [&](const size_t split_factor) {
+    const size_t min_trmm_split_factor = partition_point(
+      1, max_trmm_split_factor + 1, [&](const size_t split_factor) {
         const Initialize_P_Config init_P_cfg = create_init_P_cfg(split_factor);
-        return !enough_memory(init_P_cfg, syrk_S_cfg);
+        return !enough_memory(init_P_cfg, smallest_syrk_input_cfg);
       });
-    const Initialize_P_Config initialize_P_cfg
-      = create_init_P_cfg(trmm_split_factor);
-    const auto result = Solver_Run_Config(sizes, initialize_P_cfg, syrk_S_cfg);
+
+    const auto result = [&]() -> Solver_Run_Config {
+      // Trmm memory ~ O(1/t), Syrk memory ~ O(1/s),
+      // where t = trmm_split_factor, s = syrk_input_split_factor.
+      // If we prioritize trmm, then we choose min(t) and max(s).
+      // If we prioritize syrk, then we choose min(s) and max(t).
+      // We don't want either of split factors to become too large.
+      // so the optimal t ~ 2*min(t), s ~ 2*min(s).
+      // (NB: if there is plenty of memory, then min(t) = min(s) = 1, and we should check t = 1, s = 1 too).
+      // So, the algorithm is:
+      // For each s = 2*min(s) - 1 .. 2*min(s) + 1, compute t
+      // and choose (s,t) that minimizes max(s,t).
+      // TODO: add unit tests for this algorithm.
+
+      // Comparator for choosing optimal (s,t)
+      constexpr auto compare = [](const std::pair<size_t, size_t> &a,
+                                  const std::pair<size_t, size_t> &b) {
+        auto [a_min, a_max] = std::minmax(a.first, a.second);
+        auto [b_min, b_max] = std::minmax(b.first, b.second);
+        return std::tie(a_max, a_min, a) < std::tie(b_max, b_min, b);
+      };
+
+      // Fallback value. Should be improved in the loop below.
+      std::pair best_st = {max_syrk_input_split_factor, max_trmm_split_factor};
+
+      // Now test s = [2*min(s) - 1, 2*min(s) + 2)
+      const size_t s_begin = std::min(2 * min_syrk_input_split_factor - 1,
+                                      max_syrk_input_split_factor);
+      const size_t s_end = s_begin + 3;
+      for(size_t s = s_begin; s != s_end; ++s)
+        {
+          if(s > max_syrk_input_split_factor)
+            break;
+          const auto t = partition_point(
+            min_trmm_split_factor, max_trmm_split_factor + 1,
+            [&](const size_t split_factor) {
+              return !enough_memory(
+                create_init_P_cfg(split_factor),
+                create_syrk_cfg(s, syrk_output_split_factor));
+            });
+          best_st = std::min({s, t}, best_st, compare);
+        }
+
+      const auto [syrk_input_split_factor, trmm_split_factor] = best_st;
+      // Sanity check: if min(s) != max(s) ot min(t) != max(t),
+      // then the loop above is guaranteed to find a better solution (s,t)
+      // than (max(s), max(t)).
+      if(min_syrk_input_split_factor != max_syrk_input_split_factor
+         || min_trmm_split_factor != max_trmm_split_factor)
+        {
+          ASSERT(syrk_input_split_factor + trmm_split_factor
+                 < max_syrk_input_split_factor + max_trmm_split_factor);
+        }
+      return Solver_Run_Config(
+        sizes, create_init_P_cfg(trmm_split_factor),
+        create_syrk_cfg(syrk_input_split_factor, syrk_output_split_factor));
+    }();
 
     {
       size_t node_total_sdpb_bytes = 0;
