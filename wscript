@@ -296,6 +296,7 @@ def build(bld):
                         'test/src/integration_tests/util/diff_sdpb_out.cxx',
                         'test/src/integration_tests/util/diff_spectrum.cxx',
                         'test/src/integration_tests/util/Parse_SDP.cxx',
+                        'test/src/integration_tests/util/process.cxx',
                         'test/src/integration_tests/util/Test_Case_Runner.cxx',
                         'test/src/integration_tests/cases/end-to-end.test.cxx',
                         'test/src/integration_tests/cases/outer_limits.test.cxx',

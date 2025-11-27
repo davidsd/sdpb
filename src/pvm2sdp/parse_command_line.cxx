@@ -36,7 +36,8 @@ void parse_command_line(int argc, char **argv,
   std::string first_arg = argv[curr_arg_pos];
   if(first_arg == "bin" || first_arg == "json")
     {
-      output_format = first_arg == "bin" ? bin : json;
+      output_format = first_arg == "bin" ? Block_File_Format::bin
+                                         : Block_File_Format::json;
       curr_arg_pos = 2;
     }
 
