@@ -59,8 +59,7 @@ COPY --from=flint /usr/local/include /usr/local/include
 WORKDIR /usr/local/src
 # Build MPSolve (takes ~1 minute)
 # TODO: create separate MPSolve image?
-# We use a fork that added missing functions to libmps API, see https://github.com/robol/MPSolve/issues/41
-RUN git clone https://github.com/vasdommes/MPSolve.git --branch add-missing-libmps-api && \
+RUN git clone https://github.com/robol/MPSolve.git --depth=1 && \
     cd MPSolve && \
     ./autogen.sh && \
     CC=mpicc CXX=mpicxx ./configure --disable-dependency-tracking --disable-examples --disable-ui --disable-graphical-debugger --disable-documentation && \

@@ -2,7 +2,7 @@
 #include "sdp_solve/SDP.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/Matrix_Normalizer.hxx"
-#include "sdpb_util/memory_estimates.hxx"
+#include "sdp_solve/memory_estimates.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
 // schur_off_diagonal = L^{-1} B
@@ -62,7 +62,7 @@ void initialize_schur_off_diagonal(
 
 // Check that Q_ii = 2^2N, where N = normalizer.precision.
 // This follows from the fact that columns of P are normalized and multiplied by 2^N
-void check_normalized_Q_diagonal(El::DistMatrix<El::BigFloat> &Q,
+void check_normalized_Q_diagonal(const El::DistMatrix<El::BigFloat> &Q,
                                  const Matrix_Normalizer &normalizer,
                                  Timers &timers)
 {

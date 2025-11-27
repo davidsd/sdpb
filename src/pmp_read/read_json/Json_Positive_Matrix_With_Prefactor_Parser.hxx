@@ -5,7 +5,6 @@
 #include "pmp/Polynomial_Vector_Matrix.hxx"
 #include "sdpb_util/to_matrix.hxx"
 #include "sdpb_util/json/Json_Damped_Rational_Parser.hxx"
-#include "sdpb_util/json/Json_Vector_Parser_With_Skip.hxx"
 
 using Vector_Of_Polynomial_Vectors = std::vector<Polynomial_Vector>;
 using Matrix_Of_Polynomial_Vectors = std::vector<Vector_Of_Polynomial_Vectors>;

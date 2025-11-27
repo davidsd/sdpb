@@ -2,19 +2,16 @@
 
 #include "write_vector.hxx"
 #include "pmp/PMP_Info.hxx"
-#include "sdpb_util/assert.hxx"
 #include "sdpb_util/Boost_Float.hxx"
+#include "sdpb_util/assert.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
 
 #include <El.hpp>
 
-#include <iostream>
 #include <filesystem>
-#include <optional>
+#include <sstream>
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/writer.h>
-
-namespace fs = std::filesystem;
 
 inline void write_pmp_info_json(std::ostream &output_stream,
                                 const std::vector<PVM_Info> &pmp_info)

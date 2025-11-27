@@ -29,8 +29,8 @@ TEST_CASE("outer_limits")
 
       // TODO allow running pmp2functions in parallel
       runner.create_nested("pmp2functions")
-        .run({"build/pmp2functions", std::to_string(precision), pmp_json,
-              functions_json});
+        .run({"build/pmp2functions",
+              {std::to_string(precision), pmp_json, functions_json}});
       Test_Util::REQUIRE_Equal::diff_functions_json(
         functions_json, functions_orig_json, precision, precision / 2);
     }
@@ -54,7 +54,7 @@ TEST_CASE("outer_limits")
     {
       INFO("run outer_limits");
       runner.create_nested("outer_limits")
-        .mpi_run({"build/outer_limits"}, args, num_procs);
+        .mpi_run({"build/outer_limits", args}, num_procs);
 
       auto out_orig_json = data_dir / "out_orig.json";
       Test_Util::REQUIRE_Equal::diff_outer_limits(out_json, out_orig_json,

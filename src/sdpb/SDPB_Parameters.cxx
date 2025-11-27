@@ -1,7 +1,6 @@
-#include "../SDPB_Parameters.hxx"
+#include "SDPB_Parameters.hxx"
 
 #include <boost/program_options.hpp>
-
 #include <El.hpp>
 #include <archive.h>
 #include <cblas.h>
@@ -220,4 +219,32 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
       El::ReportException(e);
       El::mpi::Abort(El::mpi::COMM_WORLD, 1);
     }
+}
+
+boost::property_tree::ptree to_property_tree(const SDPB_Parameters &p)
+{
+  boost::property_tree::ptree result(to_property_tree(p.solver));
+
+  result.put("sdpDir", p.sdp_path.string());
+  result.put("outDir", p.out_directory.string());
+  result.put("noFinalCheckpoint", p.no_final_checkpoint);
+  result.put("writeSolution", p.write_solution);
+  result.put("procGranularity", p.proc_granularity);
+  result.put("verbosity", static_cast<int>(p.verbosity));
+
+  return result;
+}
+
+std::ostream &operator<<(std::ostream &os, const SDPB_Parameters &p)
+{
+  os << "SDP directory   : " << p.sdp_path << '\n'
+     << "out directory   : " << p.out_directory << '\n'
+     << "\nParameters:\n"
+     << p.solver << "noFinalCheckpoint            = " << p.no_final_checkpoint
+     << '\n'
+     << "writeSolution                = " << p.write_solution << '\n'
+     << "procGranularity              = " << p.proc_granularity << '\n'
+     << "verbosity                    = " << static_cast<int>(p.verbosity)
+     << '\n';
+  return os;
 }

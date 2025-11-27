@@ -5,28 +5,6 @@
 
 namespace fs = std::filesystem;
 
-namespace
-{
-  void write_psd_block(const fs::path &outfile,
-                       const El::DistMatrix<El::BigFloat> &block)
-  {
-    std::ofstream stream;
-    if(block.DistRank() == block.Root())
-      {
-        stream.open(outfile);
-      }
-    El::Print(block,
-              std::to_string(block.Height()) + " "
-                + std::to_string(block.Width()),
-              "\n", stream);
-    if(block.DistRank() == block.Root())
-      {
-        stream << "\n";
-        ASSERT(stream.good(), "Error when writing to: ", outfile);
-      }
-  }
-}
-
 void save_solution(
   const SDP_Solver &solver,
   const SDP_Solver_Terminate_Reason &terminate_reason,
@@ -150,22 +128,22 @@ void save_solution(
                            out_directory
                              / ("x_" + std::to_string(block_index) + ".txt"));
         }
-      for(size_t psd_block(0); psd_block < 2; ++psd_block)
+      for(const size_t parity : {0, 1})
         {
-          std::string suffix(std::to_string(2 * block_index + psd_block)
-                             + ".txt");
+          const auto &X_block = solver.X.blocks.at(2 * block + parity);
+          const auto &Y_block = solver.Y.blocks.at(2 * block + parity);
 
-          if(write_solution.matrix_X
-             && solver.X.blocks.at(2 * block + psd_block).Height() != 0)
+          const auto suffix
+            = std::to_string(2 * block_index + parity) + ".txt";
+          if(write_solution.matrix_X && X_block.Height() != 0)
             {
-              write_psd_block(out_directory / ("X_matrix_" + suffix),
-                              solver.X.blocks.at(2 * block + psd_block));
+              write_distmatrix(X_block,
+                               out_directory / ("X_matrix_" + suffix));
             }
-          if(write_solution.matrix_Y
-             && solver.Y.blocks.at(2 * block + psd_block).Height() != 0)
+          if(write_solution.matrix_Y && Y_block.Height() != 0)
             {
-              write_psd_block(out_directory / ("Y_matrix_" + suffix),
-                              solver.Y.blocks.at(2 * block + psd_block));
+              write_distmatrix(Y_block,
+                               out_directory / ("Y_matrix_" + suffix));
             }
         }
     }

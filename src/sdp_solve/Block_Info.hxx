@@ -119,15 +119,13 @@ public:
   }
 };
 
-namespace std
+inline void swap(Block_Info &a, Block_Info &b) noexcept
 {
-  inline void swap(Block_Info &a, Block_Info &b)
-  {
-    swap(a.block_timings_filename, b.block_timings_filename);
-    swap(a.dimensions, b.dimensions);
-    swap(a.num_points, b.num_points);
-    swap(a.block_indices, b.block_indices);
-    swap(a.mpi_group, b.mpi_group);
-    swap(a.mpi_comm, b.mpi_comm);
-  }
+  using std::swap;
+  swap(a.block_timings_filename, b.block_timings_filename);
+  swap(a.dimensions, b.dimensions);
+  swap(a.num_points, b.num_points);
+  swap(a.block_indices, b.block_indices);
+  swap(a.mpi_group, b.mpi_group);
+  swap(a.mpi_comm, b.mpi_comm);
 }

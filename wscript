@@ -47,19 +47,17 @@ def build(bld):
               use=external_packages)
 
     sdp_solve_sources = ['src/sdp_solve/Solver_Parameters/Solver_Parameters.cxx',
-                         'src/sdp_solve/Solver_Parameters/ostream.cxx',
-                         'src/sdp_solve/Solver_Parameters/to_property_tree.cxx',
                          'src/sdp_solve/Block_Info/Block_Info.cxx',
                          'src/sdp_solve/Block_Info/read_block_info.cxx',
                          'src/sdp_solve/Block_Info/read_block_costs.cxx',
                          'src/sdp_solve/Block_Info/allocate_blocks.cxx',
-                         'src/sdp_solve/SDP/SDP/SDP.cxx',
-                         'src/sdp_solve/SDP/SDP/read_normalization.cxx',
-                         'src/sdp_solve/SDP/SDP/read_objectives.cxx',
-                         'src/sdp_solve/SDP/SDP/assign_bilinear_bases_dist.cxx',
-                         'src/sdp_solve/SDP/SDP/read_block_data/read_block_data.cxx',
-                         'src/sdp_solve/SDP/SDP/read_block_data/SDP_Block_Data.cxx',
-                         'src/sdp_solve/SDP/SDP/set_bases_blocks.cxx',
+                         'src/sdp_solve/SDP/SDP.cxx',
+                         'src/sdp_solve/SDP/read_normalization.cxx',
+                         'src/sdp_solve/SDP/read_objectives.cxx',
+                         'src/sdp_solve/SDP/assign_bilinear_bases_dist.cxx',
+                         'src/sdp_solve/SDP/read_block_data/read_block_data.cxx',
+                         'src/sdp_solve/SDP/read_block_data/SDP_Block_Data.cxx',
+                         'src/sdp_solve/SDP/set_bases_blocks.cxx',
                          'src/sdp_solve/SDP_Solver/save_checkpoint.cxx',
                          'src/sdp_solve/SDP_Solver/load_checkpoint/load_checkpoint.cxx',
                          'src/sdp_solve/SDP_Solver/load_checkpoint/load_binary_checkpoint.cxx',
@@ -109,9 +107,9 @@ def build(bld):
                          'src/sdp_solve/SDP_Solver/run/step/step_length/step_length.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/step_length/min_eigenvalue.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/step_length/lower_triangular_inverse_congruence.cxx',
-                         'src/sdp_solve/SDP_Solver_Terminate_Reason/ostream.cxx',
+                         'src/sdp_solve/SDP_Solver_Terminate_Reason.cxx',
                          'src/sdp_solve/lower_triangular_transpose_solve.cxx',
-                         'src/sdp_solve/Block_Diagonal_Matrix/ostream.cxx',
+                         'src/sdp_solve/Block_Diagonal_Matrix.cxx',
                          'src/sdp_solve/Write_Solution.cxx']
 
     bld.stlib(source=sdp_solve_sources,
@@ -125,9 +123,7 @@ def build(bld):
     bld.program(source=['src/sdpb/main.cxx',
                         'src/sdpb/solve.cxx',
                         'src/sdpb/write_timing.cxx',
-                        'src/sdpb/SDPB_Parameters/SDPB_Parameters.cxx',
-                        'src/sdpb/SDPB_Parameters/to_property_tree.cxx',
-                        'src/sdpb/SDPB_Parameters/ostream.cxx',
+                        'src/sdpb/SDPB_Parameters.cxx',
                         'src/sdpb/save_solution.cxx'],
                 target='sdpb',
                 cxxflags=default_flags,
@@ -145,8 +141,7 @@ def build(bld):
                        'src/pmp2sdp/write_normalization_json.cxx',
                        'src/pmp2sdp/write_sdp.cxx',
                        'src/pmp2sdp/write_control_json.cxx',
-                       'src/pmp2sdp/Archive_Writer/Archive_Writer.cxx',
-                       'src/pmp2sdp/Archive_Writer/write_entry.cxx',
+                       'src/pmp2sdp/Archive_Writer.cxx',
                        'src/pmp2sdp/Archive_Entry.cxx'
                        ]
 
@@ -239,9 +234,7 @@ def build(bld):
                         'src/outer_limits/compute_optimal/save_checkpoint.cxx',
                         'src/outer_limits/read_points/read_points.cxx',
                         'src/outer_limits/read_function_blocks/read_function_blocks.cxx',
-                        'src/outer_limits/Outer_Parameters/Outer_Parameters.cxx',
-                        'src/outer_limits/Outer_Parameters/to_property_tree.cxx',
-                        'src/outer_limits/Outer_Parameters/ostream.cxx'
+                        'src/outer_limits/Outer_Parameters.cxx'
                         ],
                 target='outer_limits',
                 cxxflags=default_flags,
@@ -251,13 +244,12 @@ def build(bld):
                 )
 
     bld.program(source=['src/approx_objective/main.cxx',
-                        'src/approx_objective/Approx_Parameters/Approx_Parameters.cxx',
-                        'src/approx_objective/Approx_Parameters/ostream.cxx',
+                        'src/approx_objective/Approx_Parameters.cxx',
                         'src/approx_objective/Axpy.cxx',
                         'src/approx_objective/setup_solver.cxx',
                         'src/approx_objective/write_solver_state.cxx',
-                        'src/approx_objective/Approx_Objective/Approx_Objective/Approx_Objective.cxx',
-                        'src/approx_objective/Approx_Objective/Approx_Objective/compute_dx_dy.cxx',
+                        'src/approx_objective/Approx_Objective/Approx_Objective.cxx',
+                        'src/approx_objective/Approx_Objective/compute_dx_dy.cxx',
                         'src/approx_objective/linear_approximate_objectives.cxx',
                         'src/approx_objective/quadratic_approximate_objectives.cxx'
                         ],
@@ -304,6 +296,7 @@ def build(bld):
                         'test/src/integration_tests/util/diff_sdpb_out.cxx',
                         'test/src/integration_tests/util/diff_spectrum.cxx',
                         'test/src/integration_tests/util/Parse_SDP.cxx',
+                        'test/src/integration_tests/util/process.cxx',
                         'test/src/integration_tests/util/Test_Case_Runner.cxx',
                         'test/src/integration_tests/cases/end-to-end.test.cxx',
                         'test/src/integration_tests/cases/outer_limits.test.cxx',

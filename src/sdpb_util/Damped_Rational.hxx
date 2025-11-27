@@ -38,9 +38,9 @@ struct Damped_Rational
   }
 };
 
-inline void swap(Damped_Rational &a, Damped_Rational &b)
+inline void swap(Damped_Rational &a, Damped_Rational &b) noexcept
 {
-  using namespace std;
+  using std::swap;
   swap(a.constant, b.constant);
   swap(a.base, b.base);
   swap(a.poles, b.poles);

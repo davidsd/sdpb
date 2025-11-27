@@ -103,7 +103,7 @@ inline void swap(Polynomial_Vector &polynomials,
   for(auto &elements : elements_vector)
     {
       polynomials.emplace_back();
-      std::swap(polynomials.back().coefficients, elements);
+      swap(polynomials.back().coefficients, elements);
     }
 }
 

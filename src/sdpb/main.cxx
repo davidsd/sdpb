@@ -141,7 +141,7 @@ int main(int argc, char **argv)
           Block_Info new_info(env, parameters.sdp_path, block_timings_ms,
                               parameters.proc_granularity,
                               parameters.verbosity);
-          std::swap(block_info, new_info);
+          swap(block_info, new_info);
 
           auto elapsed_seconds
             = std::chrono::duration_cast<std::chrono::seconds>(

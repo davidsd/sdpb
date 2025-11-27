@@ -1,8 +1,8 @@
 #pragma once
 
-#include "sdpb_util/Damped_Rational.hxx"
 #include "Polynomial_Matrix_Program.hxx"
 #include "Polynomial_Power_Product.hxx"
+#include "sdpb_util/Damped_Rational.hxx"
 
 #include <filesystem>
 #include <utility>

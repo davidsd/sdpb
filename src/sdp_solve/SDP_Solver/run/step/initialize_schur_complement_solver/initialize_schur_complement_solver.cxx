@@ -2,7 +2,7 @@
 #include "sdp_solve/Block_Diagonal_Matrix.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
-#include "sdpb_util/memory_estimates.hxx"
+#include "sdp_solve/memory_estimates.hxx"
 
 // Compute the quantities needed to solve the Schur complement
 // equation

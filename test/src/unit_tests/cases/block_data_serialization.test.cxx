@@ -5,7 +5,7 @@
 #include "unit_tests/util/util.hxx"
 #include "pmp2sdp/Dual_Constraint_Group.hxx"
 #include "pmp2sdp/Block_File_Format.hxx"
-#include "sdp_solve/SDP/SDP/read_block_data/Block_Data_Parse_Result.hxx"
+#include "sdp_solve/SDP/read_block_data/Block_Data_Parse_Result.hxx"
 
 using Test_Util::random_bigfloat;
 using Test_Util::random_matrix;
@@ -93,8 +93,9 @@ TEST_CASE("block_data serialization")
   Dual_Constraint_Group group = random_group_from_singlet_scalar_block_0();
   Dual_Constraint_Group zero_group = zero_group_from_singlet_scalar_block_0();
 
-  Block_File_Format format = GENERATE(bin, json);
-  DYNAMIC_SECTION((format == bin ? ".bin" : ".json"))
+  Block_File_Format format
+    = GENERATE(Block_File_Format::bin, Block_File_Format::json);
+  DYNAMIC_SECTION((format == Block_File_Format::bin ? ".bin" : ".json"))
   {
     auto other = serialize_deserialize(group, format);
     DIFF(group, other);
@@ -135,19 +136,19 @@ TEST_CASE("benchmark block_data write+parse", "[!benchmark]")
     // But it would make output less concise
     BENCHMARK("write+parse bin zero")
     {
-      return serialize_deserialize(zero_group, bin);
+      return serialize_deserialize(zero_group, Block_File_Format::bin);
     };
     BENCHMARK("write+parse bin nonzero")
     {
-      return serialize_deserialize(group, bin);
+      return serialize_deserialize(group, Block_File_Format::bin);
     };
     BENCHMARK("write+parse JSON zero")
     {
-      return serialize_deserialize(zero_group, json);
+      return serialize_deserialize(zero_group, Block_File_Format::json);
     };
     BENCHMARK("write+parse JSON nonzero")
     {
-      return serialize_deserialize(group, json);
+      return serialize_deserialize(group, Block_File_Format::json);
     };
   }
 }

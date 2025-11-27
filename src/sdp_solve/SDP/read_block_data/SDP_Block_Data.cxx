@@ -1,7 +1,7 @@
 #include "SDP_Block_Data.hxx"
 
 #include "Json_Block_Data_Parser.hxx"
-#include "sdp_solve/SDP/SDP/set_bases_blocks.hxx"
+#include "sdp_solve/SDP/set_bases_blocks.hxx"
 #include "sdpb_util/Vector_State.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/boost_serialization.hxx"
@@ -32,7 +32,7 @@ Block_Data_Parse_Result
 parse_block_data(std::istream &block_stream, Block_File_Format format)
 {
   Block_Data_Parse_Result result;
-  if(format == bin)
+  if(format == Block_File_Format::bin)
     {
       // NB: this should match pmp2sdp/write_block_data.cxx
       boost::archive::binary_iarchive ar(block_stream);
@@ -53,7 +53,7 @@ parse_block_data(std::istream &block_stream, Block_File_Format format)
           ar >> result.preconditioning_values.value();
         }
     }
-  else if(format == json)
+  else if(format == Block_File_Format::json)
     {
       rapidjson::IStreamWrapper wrapper(block_stream);
       Json_Block_Data_Parser parser(

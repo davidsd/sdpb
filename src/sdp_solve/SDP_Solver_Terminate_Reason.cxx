@@ -1,4 +1,4 @@
-#include "../SDP_Solver_Terminate_Reason.hxx"
+#include "SDP_Solver_Terminate_Reason.hxx"
 #include "sdpb_util/assert.hxx"
 
 std::ostream &

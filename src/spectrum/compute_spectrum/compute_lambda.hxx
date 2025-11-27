@@ -1,10 +1,11 @@
 #pragma once
 
 #include "pmp/PMP_Info.hxx"
-#include "spectrum/Zero.hxx"
-#include "sdpb_util/Damped_Rational.hxx"
 #include "pmp/Polynomial_Power_Product.hxx"
+#include "sdpb_util/Damped_Rational.hxx"
+#include "sdpb_util/assert.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
+#include "spectrum/Zero.hxx"
 
 #include <optional>
 
@@ -179,7 +180,6 @@ compute_lambda(const PVM_Info &pvm_info, const El::Matrix<El::BigFloat> &x,
              DEBUG_STRING(eigenvalues(num_eigvals - 1, 0)));
       if(max_eigenvalue < 0)
         {
-          // TODO print block index
           PRINT_WARNING("block_", pvm_info.block_index,
                         ": x=", zero_values.at(zero_index),
                         ": negative max_eigenvalue=", max_eigenvalue,

@@ -1,7 +1,7 @@
 #include "Approx_Parameters.hxx"
 #include "sdp_solve/sdp_solve.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/initialize_bigint_syrk_context.hxx"
-#include "sdpb_util/memory_estimates.hxx"
+#include "sdp_solve/memory_estimates.hxx"
 #include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
 #include <filesystem>
