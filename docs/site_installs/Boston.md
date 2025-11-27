@@ -8,62 +8,67 @@
 - [BU Shared Computing Cluster Documentation](https://www.bu.edu/tech/support/research/system-usage/)
 - [Running MPI jobs](https://www.bu.edu/tech/support/research/system-usage/running-jobs/)
 
-# Load modules
+# Use existing SDPB installation
 
-For compiling and/or running SDPB, you have to load modules first:
+## Load modules
 
-    module load python3 gcc/12.2.0 openmpi/4.1.5 cmake/3.22.2 gmplib/6.2.1 mpfr/4.2.1 boost/1.69.0 openblas/0.3.23
-
-You may run `module -t list` to view loaded modules,
-and `module purge` to unload all modules.
+    module use /home/vdommes/install/modules
+    module load sdpb
 
 You may also add this command to your `~/.bashrc` file, so that modules will load automatically.
 
-# Use existing SDPB installation
+You may run `module -t list` to view loaded modules, and `module purge` to unload all modules.
 
-## Choose SDPB version
+To see information about the currently loaded module, run
 
-SDPB is installed in `/usr2/collab/vdommes/install/sdpb-<VERSION>` folder,
-where `<VERSION>` denotes specific version.
+    module whatis sdpb
 
+### Choose SDPB version
+
+By default, `module load sdpb` is equivalent to `module load sdpb/master`.
+It loads SDPB built from the latest [master](https://github.com/davidsd/sdpb/tree/master) branch (
+run `sdpb --version` to see commit hash, e.g. `SDPB 3.0.0-171-gc39fd506`),
 You may list all available versions via
 
-    ls /usr2/collab/vdommes/install | grep sdpb
+    module av sdpb
 
-Fo example, `sdpb-master` is built from the latest [master](https://github.com/davidsd/sdpb/tree/master) branch (
-run `sdpb --version` to see commit hash, e.g. `SDPB 2.5.1-130-g88b1c9ae`),
-and `sdpb-3.0.0` is a stable [3.0.0](https://github.com/davidsd/sdpb/releases/tag/3.0.0) release.
+and load a specific version via `module load sdpb/<VERSION>`, for example
 
-Examples below are for `sdpb-master`.
-You may replace it with another version, e.g. `sdpb-3.0.0`.
-In that case, please refer
-to [3.0.0 documentation](https://github.com/davidsd/sdpb/blob/3.0.0/docs/site_installs/Boston.md).
+    module load sdpb/master    
+    module load sdpb/3.0.0
 
 ## Run SDPB
 
-    /usr2/collab/vdommes/install/sdpb-master/bin/sdpb --help
+An example script can be found at `$SDPB_HOME/share/sdpb_example.sh`.
+The command
 
-### Batch script example
+    qsub $SDPB_HOME/share/sdpb_example.sh
 
-    qsub /usr2/collab/vdommes/install/sdpb-master/share/sdpb_example.sh
-
-This command submits `sdpb_example.sh` to
-the [queueing system](https://www.bu.edu/tech/support/research/system-usage/running-jobs/).
+submits the script to the [queueing system](https://www.bu.edu/tech/support/research/system-usage/running-jobs/).
 
 `sdpb_example.sh` loads modules and runs `pmp2sdp`+`sdpb` for a simple problem.
 See script code and comments for more details.
 
 Script output is written to the log file in the current directory, e.g.:
-`./run_sdpb_example.sh.o8388881`.
+`./sdpb_example.o26306151`.
 SDPB output files are written to the `./out/` folder in the current directory.
 
 # Build SDPB from sources
+
+## Load modules
+
+For compiling and/or running your custom SDPB installation, you have to load modules first:
+
+    module load python3 gcc/12.2.0 openmpi/4.1.5 cmake/3.22.2 gmplib/6.2.1 mpfr/4.2.1 boost/1.83.0 openblas/0.3.23
+
+## Set environment variables
 
 Use `RPATH` instead of `RUNPATH` in `mpicxx` linker, to fix shared library loading in SDPB:
 
     export OMPI_LDFLAGS="$(mpicxx --showme:link) -Wl,--disable-new-dtags"
 
 ## Elemental
+
     git clone https://gitlab.com/bootstrapcollaboration/elemental.git
     cd elemental
     mkdir build
@@ -73,9 +78,13 @@ Use `RPATH` instead of `RUNPATH` in `mpicxx` linker, to fix shared library loadi
     cd ../..
 
 ## FLINT
-NB: when compiling FLINT on a login node, SDPB fails at runtime with `SIGILL #0 __funlockfile #1 n_is_probabprime #2 comb` error.
 
-You should compile it on a compute node, e.g. [loading interactive session](https://www.bu.edu/tech/support/research/system-usage/running-jobs/interactive-jobs/) via `qrsh`.
+NB: when compiling FLINT on a login node, SDPB fails at runtime with
+`SIGILL #0 __funlockfile #1 n_is_probabprime #2 comb` error.
+
+You should compile it on a compute node,
+e.g. [loading interactive session](https://www.bu.edu/tech/support/research/system-usage/running-jobs/interactive-jobs/)
+via `qrsh`.
 
     git clone https://github.com/flintlib/flint.git
     cd flint
@@ -87,10 +96,12 @@ You should compile it on a compute node, e.g. [loading interactive session](http
     cd ..
 
 ## RapidJSON
+
     git clone https://github.com/Tencent/rapidjson.git
     cp -r rapidjson/include $HOME/install
 
 ## libarchive
+
     wget http://www.libarchive.org/downloads/libarchive-3.7.1.tar.xz
     tar -xf libarchive-3.7.1.tar.xz
     cd libarchive-3.7.1
@@ -98,10 +109,20 @@ You should compile it on a compute node, e.g. [loading interactive session](http
     make && make install
     cd ..
 
+## MPSolve
+
+    git clone https://github.com/robol/MPSolve.git
+    cd MPSolve
+    ./autogen.sh
+    ./configure --prefix=$HOME/install --disable-dependency-tracking --disable-examples --disable-ui --disable-graphical-debugger --disable-documentation
+    make && make install
+    cd ..
+
 ## sdpb
+
     git clone https://github.com/davidsd/sdpb.git
-    cd sdpb 
-    ./waf configure --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --gmpxx-dir=$SCC_GMPLIB_DIR --mpfr-dir=$SCC_MPFR_DIR --flint-dir=$HOME/install --cblas-dir=$SCC_OPENBLAS_DIR --prefix=$HOME/install/sdpb-master
+    cd sdpb
+    ./waf configure --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --libarchive-dir=$HOME/install --gmpxx-dir=$SCC_GMPLIB_DIR --mpfr-dir=$SCC_MPFR_DIR --flint-dir=$HOME/install --cblas-dir=$SCC_OPENBLAS_DIR --mpsolve-dir=$HOME/install --prefix=$HOME/install/sdpb/master
     ./waf # -j 1
     ./test/run_all_tests.sh
     ./waf install

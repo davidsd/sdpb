@@ -6,49 +6,45 @@
 ### Useful links
 
 - [Expanse HPC User Guide](https://www.sdsc.edu/support/user_guides/expanse.html)
-- [Running MPI jobs](https://www.sdsc.edu/support/user_guides/expanse.html#running)
-
-# Load modules
-
-For compiling and/or running SDPB, you have to load modules first:
-
-    module load cpu/0.15.4 gcc/10.2.0 openmpi/4.0.4 gmp/6.1.2 mpfr/4.0.2 cmake/3.18.2 openblas/dynamic/0.3.7 boost/1.74.0 slurm
-
-You may run `module -t list` to view loaded modules,
-and `module purge` to unload all modules.
-
-You may also add this command to your `~/.bashrc` file, so that modules will load automatically.
+- [Running Jobs on Expanse](https://www.sdsc.edu/systems/expanse/user_guide.html#narrow-wysiwyg-7)
 
 # Use existing SDPB installation
 
-## Choose SDPB version
+## Load modules
 
-SDPB is installed in `/home/vdommes/install/sdpb-<VERSION>` folder,
-where `<VERSION>` denotes specific version.
+    module use /home/vdommes/install/modules
+    module load sdpb
 
+You may also add this command to your `~/.bashrc` file, so that modules will load automatically.
+
+You may run `module -t list` to view loaded modules, and `module purge` to unload all modules.
+
+To see information about the currently loaded module, run
+
+    module whatis sdpb
+
+### Choose SDPB version
+
+By default, `module load sdpb` is equivalent to `module load sdpb/master`.
+It loads SDPB built from the latest [master](https://github.com/davidsd/sdpb/tree/master) branch (
+run `sdpb --version` to see commit hash, e.g. `SDPB 3.0.0-171-gc39fd506`),
 You may list all available versions via
 
-    ls /home/vdommes/install | grep sdpb
+    module av sdpb
 
-Fo example, `sdpb-master` is built from the latest [master](https://github.com/davidsd/sdpb/tree/master) branch (
-run `sdpb --version` to see commit hash, e.g. `SDPB 2.5.1-130-g88b1c9ae`),
-and `sdpb-3.0.0` is a stable [3.0.0](https://github.com/davidsd/sdpb/releases/tag/3.0.0) release.
+and load a specific version via `module load sdpb/<VERSION>`, for example
 
-Examples below are for `sdpb-master`.
-You may replace it with another version, e.g. `sdpb-3.0.0`.
-In that case, please refer
-to [3.0.0 documentation](https://github.com/davidsd/sdpb/blob/3.0.0/docs/site_installs/Expanse.md).
+    module load sdpb/master    
+    module load sdpb/3.0.0
 
 ## Run SDPB
 
-    /home/vdommes/install/sdpb-master/bin/sdpb --help
+An example script can be found at `$SDPB_HOME/share/sdpb_example.sh`.
+The command
 
-### Batch script example
+    sbatch $SDPB_HOME/share/sdpb_example.sh
 
-    sbatch /home/vdommes/install/sdpb-master/share/sdpb_example.sh
-
-This command submits `sdpb_example.sh` to
-the [queueing system](https://www.sdsc.edu/support/user_guides/expanse.html#running).
+submits the script to the [queueing system](https://www.sdsc.edu/systems/expanse/user_guide.html#narrow-wysiwyg-7).
 
 `sdpb_example.sh` loads modules and runs `pmp2sdp`+`sdpb` for a simple problem.
 See script code and comments for more details.
@@ -59,7 +55,11 @@ SDPB output files are written to the `./out/` folder in the current directory.
 
 # Build SDPB from sources
 
-TODO: on compute nodes compiler fails to find some libs
+## Load modules
+
+For compiling and/or running your custom SDPB installation, you have to load modules first:
+
+    module load cpu/0.15.4 gcc/10.2.0 openmpi/4.0.4 gmp/6.1.2 mpfr/4.0.2 cmake/3.18.2 openblas/dynamic/0.3.7 boost/1.74.0 slurm
 
 ## Elemental
 
@@ -111,8 +111,11 @@ The flag `--disable-gmp-internals` is required to prevent `mpn_gcd_11 not found`
 
     git clone https://github.com/davidsd/sdpb.git
     cd sdpb
-    CXX=mpicxx ./waf configure --prefix=$HOME/install/sdpb-master --elemental-dir=$HOME/install --flint-dir=$HOME/install --rapidjson-dir=$HOME/install --boost-dir=$HOME/install  --libarchive-dir=$HOME/install --mpsolve-dir=$HOME/install
+    CXX=mpicxx ./waf configure --elemental-dir=$HOME/install --flint-dir=$HOME/install --rapidjson-dir=$HOME/install --boost-dir=$HOME/install  --libarchive-dir=$HOME/install --mpsolve-dir=$HOME/install --prefix=$HOME/install/sdpb/master
     ./waf # -j 1
     ./test/run_all_tests.sh
     ./waf install
     cd ..
+
+Note that computationally intensive processes (compilation, tests etc.) should be run on compute nodes and not on login
+nodes. See [Expanse User Guide](https://www.sdsc.edu/systems/expanse/user_guide.html#narrow-wysiwyg-7) for more details.
