@@ -44,7 +44,9 @@ SDPB requires
 
 - [Elemental (fork)](https://gitlab.com/bootstrapcollaboration/elemental)
 
-SDPB has been tested on Linux and Mac OS.
+SDPB has been tested on Linux and macOS.
+
+If you are using [Homebrew](https://brew.sh) package manager, follow installation instructions for [macOS](docs/site_installs/Apple_MacBook.md).
 
 # Installation
 
