@@ -23,11 +23,23 @@ else
   MPI_RUN_COMMAND="mpirun --oversubscribe"
 fi
 
-# Find existing time command, see https://stackoverflow.com/a/677212/3270684
-if command -v /usr/bin/time >/dev/null 2>&1; then
-    TIME_CMD="/usr/bin/time"
-elif command -v time >/dev/null 2>&1; then
+echo "Checking MPI_RUN_COMMAND=$MPI_RUN_COMMAND"
+$MPI_RUN_COMMAND -n 6 echo Hello >/dev/null
+ret=$?
+if [ $ret -ne 0 ]
+then
+  echo "Failed: $ret"
+  exit $ret
+fi
+
+# Find valid time command
+# /usr/bin/time
+if /usr/bin/time -- $MPI_RUN_COMMAND -n 6 echo Hello >/dev/null 2>&1; then
+    TIME_CMD="/usr/bin/time --"
+# Built-in time function (e.g. bash)
+elif time $MPI_RUN_COMMAND -n 6 echo Hello >/dev/null 2>&1; then
     TIME_CMD="time"
+# fallback: no timing, just run tests.
 else
     TIME_CMD=""
 fi
