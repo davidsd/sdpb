@@ -35,7 +35,7 @@ You may list all available versions via
 and load a specific version via `module load sdpb/<VERSION>`, for example
 
     module load sdpb/master    
-    module load sdpb/3.0.0
+    module load sdpb/3.1.0
 
 ## Run SDPB
 
