@@ -37,8 +37,8 @@ fi
 # https://github.com/catchorg/Catch2/blob/devel/docs/command-line.md
 
 # NB: for calculate_matrix_square_test to pass, number of processes must be a multiple of 6
-echo $TIME_CMD "$MPI_RUN_COMMAND" -n 6 ./build/unit_tests --durations yes
-$TIME_CMD "$MPI_RUN_COMMAND" -n 6 ./build/unit_tests --durations yes || { exit $?; }
+echo $TIME_CMD $MPI_RUN_COMMAND -n 6 ./build/unit_tests --durations yes
+$TIME_CMD $MPI_RUN_COMMAND -n 6 ./build/unit_tests --durations yes || { exit $?; }
 
 # integration_tests
 echo $TIME_CMD ./build/integration_tests --durations yes --mpirun="$MPI_RUN_COMMAND"
