@@ -216,7 +216,7 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
   ASSERT(input_window_split_factor > 0);
 
   // Print warnings for large split factors.
-  if(shared_memory_comm.Rank() == 0)
+  if(shared_memory_comm.Rank() == 0 && verbosity >= Verbosity::regular)
     {
       const bool print_output_warning = output_window_split_factor > 1;
       const bool print_input_warning = input_window_split_factor > 10;

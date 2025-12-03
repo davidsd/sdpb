@@ -7,6 +7,7 @@
 #include <mpfr.h>
 #include <libxml/xmlversion.h>
 #include <rapidjson/rapidjson.h>
+#include <mps/mps.h>
 
 namespace fs = std::filesystem;
 
@@ -117,6 +118,12 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
 #endif
               El::Output("  libxml ", LIBXML_DOTTED_VERSION);
               El::Output("  MPFR ", MPFR_VERSION_STRING);
+              // TODO: linker fails with "undefined reference ot mps_get_version()"
+              // even though we link to MPSolve library.
+              // Thus, we have to use MPS_MAJOR_VERSION etc.
+              // El::Output("  MPSolve ", mps_get_version());
+              El::Output("  MPSolve ", MPS_MAJOR_VERSION, ".",
+                         MPS_MINOR_VERSION, ".", MPS_PATCH_VERSION);
               El::Output("  RapidJSON ", RAPIDJSON_VERSION_STRING);
               // We should also print CBLAS version,
               // but the standard interface cblas.h does not have version macro.

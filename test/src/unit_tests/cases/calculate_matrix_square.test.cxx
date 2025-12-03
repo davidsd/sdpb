@@ -348,7 +348,7 @@ TEST_CASE("calculate_Block_Matrix_square")
                                      num_groups_per_node, node_comm);
 
                   {
-                    const Verbosity verbosity = Verbosity::regular;
+                    constexpr auto verbosity = Verbosity::none;
                     BigInt_Shared_Memory_Syrk_Context context(
                       node_comm, group_index_in_node,
                       group_comm_sizes_per_node, bits, max_shared_memory_bytes,
