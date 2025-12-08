@@ -1,3 +1,66 @@
+# Version 3.1.0
+
+## New features
+
+### pmp2sdp
+
+New sampling algorithm (see https://arxiv.org/abs/2509.14307 and [#255](https://github.com/davidsd/sdpb/pull/255) for details):
+- Choose sample points to minimize interpolation errors on the positive real line, and choose bilinear bases consistent with the choice of sample points and sample scalings. This leads to lower condition numbers (i.e. lower `--precision` required) and better accuracy.
+- Allow to downsample the PMP by specifying `"reducedPrefactor"` (or `"reducedSamplePoints"` and `"reducedSampleScalings"`) in pmp.json. Reduced prefactor has fewer poles than the original one, which means fewer sample points.
+
+Changes in [pmp.json schema](https://github.com/davidsd/sdpb/blob/ac2772797520ae4673c7598c85f9f8857733a0d4/docs/json_schema/pmp_schema.json):
+- Added optional fields: `"reducedPrefactor"`, `"reducedSamplePoints"` and `"reducedSampleScalings"`
+- Optional field `"bilinearBasis"` is made obsolete and replaced with `"bilinearBasis_0"` and `"bilinearBasis_1"`. If `"bilinearBasis"` is specified, it is used for both `"bilinearBasis_0"` and `"bilinearBasis_1"`.
+- `"DampedRational"` is renamed to `"prefactor"`. Old name is left for backward compatibility.
+
+`pmp2sdp` now also writes `sdp/pmp_info.json`, containing `block_path`, `prefactor`, `reducedPrefactor`, `samplePoints`, `sampleScalings`, `reducedSampleScalings`. This information (in particular sample points) can be used to plot `c - B.y`. See [#256](https://github.com/davidsd/sdpb/pull/256).
+
+### sdpb
+- `sdpb` prints the functional `c - B.y` to `out/c_minus_By/c_minus_By.json`. It can be used e.g. for computing spectrum. See [#256](https://github.com/davidsd/sdpb/pull/256).
+
+### spectrum
+
+`spectrum` is rewritten to use a new algorithm and interface.
+**NB**: it now requires input files `pmp_info.json` and `c_minus_By.json`, and thus is incompatible with SDPB 3.0.0 and older versions.
+
+See details in [#274](https://github.com/davidsd/sdpb/issues/274).
+
+#### New algorithm 
+
+Find minima of a polynomial `det (c-B.y)` using [MPSolve](https://github.com/robol/MPSolve). This makes finding zeros faster and more reliable than an old custom mesh algorithm.
+
+#### Updated command-line options
+
+Changed spectrum command-line options (call `spectrum --help` for details):
+- Instead of PMP file `--input path/to/pmp.nsv`, you should provide `--pmpInfo path/to/sdp/pmp_info.json`
+- If `--lambda=false`, you may omit `--solution` and specify only `--cMinusBy` (Path to `c_minus_By.json` with the block vector `(c - B.y)`)
+- Added option `--maxZero` to ignore zeros that are too large. `--maxZero 0` means no limit.
+- `--meshThreshold` is marked is obsolete.
+
+## Bugfixes
+
+- spectrum: Fix incorrect lambda computations for matrices 3x3 and larger [#267](https://github.com/davidsd/sdpb/pull/267).
+- spectrum: Find isolated zeros [#153](https://github.com/davidsd/sdpb/issues/153). 
+- Fix [#282](https://github.com/davidsd/sdpb/pull/282) Deleting too many zeros in DampedRational in SDPB.m [#283](https://github.com/davidsd/sdpb/pull/283).
+- Fix [#258](https://github.com/davidsd/sdpb/pull/258) BigInt_Shared_Memory_Syrk_Context::restore_and_reduce() fails due to inconsistent output split factors (introduced in 3.0.0) [#259](https://github.com/davidsd/sdpb/pull/259).
+- Fix [#251](https://github.com/davidsd/sdpb/pull/251) pmp2sdp fails for 2 input files with objectives when running on 1 core [#252](https://github.com/davidsd/sdpb/pull/252).
+
+## Other improvements
+
+- Fix compilation for FLINT 3.2+ [#244](https://github.com/davidsd/sdpb/pull/244)
+- Fix compilation for Boost 1.88+ [#279](https://github.com/davidsd/sdpb/pull/279)
+- Other compilation fixes [#246](https://github.com/davidsd/sdpb/pull/246), [#247](https://github.com/davidsd/sdpb/pull/247), [#278](https://github.com/davidsd/sdpb/pull/278)
+- Find dependencies paths via pkg-config [#243](https://github.com/davidsd/sdpb/pull/243)
+- Print versions for all libraries [#241](https://github.com/davidsd/sdpb/pull/241)
+- Improved logging
+
+## New dependencies
+
+- [MPSolve](https://github.com/robol/MPSolve) (3.2.2 or later)
+
+See https://github.com/davidsd/sdpb/releases/tag/3.1.0 for the full changelog.
+
+
 # Version 3.0.0
 
 ### Optimizations:
@@ -151,7 +214,7 @@ See https://github.com/davidsd/sdpb/releases/tag/2.6.0 for the full changelog.
   mesh is divided when searching for negative regions.
 
 - Added the `--useSVD` option to control whether to regularize the
-  problem with an SVD.
+.  problem with an SVD.
 
 - Added the `sdp2functions` and `pvm2functions` programs to convert
   JSON and XML input files to the format that `outer_limits` expects.
