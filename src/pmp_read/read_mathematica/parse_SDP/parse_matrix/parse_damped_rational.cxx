@@ -1,7 +1,7 @@
 #include "../is_valid_char.hxx"
 #include "../parse_vector.hxx"
 #include "../parse_number.hxx"
-#include "pmp/Damped_Rational.hxx"
+#include "sdpb_util/Damped_Rational.hxx"
 
 #include <algorithm>
 #include <iterator>

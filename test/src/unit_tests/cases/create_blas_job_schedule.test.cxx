@@ -25,7 +25,7 @@ TEST_CASE("create_blas_jobs_schedule")
     constexpr auto uplo = El::UPPER;
     auto schedule
       = create_blas_job_schedule(Blas_Job::syrk, uplo, num_ranks, num_primes,
-                                 Q_height, Q_width, Verbosity::regular);
+                                 Q_height, Q_width, Verbosity::none);
     {
       INFO("Check that schedule has correct number of ranks:");
       DIFF(schedule.jobs_by_rank.size(), num_ranks);

@@ -1,10 +1,12 @@
 #pragma once
 
+#include "process.hxx"
+
 #include <catch2/catch_amalgamated.hpp>
 
 #include <filesystem>
-#include <boost/process.hpp>
 #include <string>
+#include <boost/noncopyable.hpp>
 
 namespace Test_Util
 {
@@ -16,7 +18,7 @@ namespace Test_Util
   // inside the section! Otherwise, some output files will be removed.
   struct Test_Case_Runner : boost::noncopyable
   {
-    typedef std::map<std::string, std::string> Named_Args_Map;
+    using Named_Args_Map = Command::Named_Args_Map;
 
     const std::string name;
     const std::filesystem::path data_dir;
@@ -31,16 +33,9 @@ namespace Test_Util
     create_nested(const std::string &suffix,
                   const std::string &separator = "/") const;
 
-    void run(const std::string &command, int required_exit_code = 0,
+    void run(const Command &command, int required_exit_code = 0,
              const std::string &required_error_msg = "") const;
-    void mpi_run(const std::string &command, int numProcs = 2,
-                 int required_exit_code = 0,
-                 const std::string &required_error_msg = "") const;
-    void run(const std::vector<std::string> &args,
-             const Named_Args_Map &named_args = {}, int required_exit_code = 0,
-             const std::string &required_error_msg = "") const;
-    void mpi_run(const std::vector<std::string> &args,
-                 const Named_Args_Map &named_args = {}, int numProcs = 2,
+    void mpi_run(const Command &command, int numProcs = 2,
                  int required_exit_code = 0,
                  const std::string &required_error_msg = "") const;
 

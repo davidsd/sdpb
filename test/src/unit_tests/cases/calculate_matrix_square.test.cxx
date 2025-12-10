@@ -343,7 +343,7 @@ TEST_CASE("calculate_Block_Matrix_square")
                                      num_groups_per_node, node_comm);
 
                   {
-                    constexpr Verbosity verbosity = Verbosity::regular;
+                    constexpr auto verbosity = Verbosity::none;
                     Bigint_Syrk_Config cfg(
                       node_comm, bits, num_nodes, blocks_height_per_group,
                       block_width, input_split_factor, output_split_factor);

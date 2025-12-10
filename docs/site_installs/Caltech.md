@@ -9,47 +9,43 @@
 - [How to run MPI jobs](https://hpc.sites.caltech.edu/documentation/slurm-commands)
 - [Software and Modules](https://hpc.sites.caltech.edu/documentation/software-and-modules)
 
-# Load modules
+# Use existing SDPB installation
 
-For compiling and/or running SDPB, you have to load modules first:
+## Load modules
 
-    module load boost/1.84.0-gcc-11.3.1-zauawkb gcc/13.2.0-gcc-13.2.0-w55nxkl openmpi/5.0.1-gcc-13.2.0-xpoh5uw libarchive/3.7.1-gcc-13.2.0-bzt555v openblas/0.3.23-gcc-13.2.0-3csynno
-
-You may run `module -t list` to view loaded modules,
-and `module purge` to unload all modules.
+    module use /home/vdommes/install/modules
+    module load sdpb
 
 You may also add this command to your `~/.bashrc` file, so that modules will load automatically.
 
-# Use existing SDPB installation
+You may run `module -t list` to view loaded modules, and `module purge` to unload all modules.
 
-## Choose SDPB version
+To see information about the currently loaded module, run
 
-SDPB is installed in `/central/home/vdommes/install/sdpb-<VERSION>` folder,
-where `<VERSION>` denotes specific version.
+    module whatis sdpb
 
+### Choose SDPB version
+
+By default, `module load sdpb` is equivalent to `module load sdpb/master`.
+It loads SDPB built from the latest [master](https://github.com/davidsd/sdpb/tree/master) branch (
+run `sdpb --version` to see commit hash, e.g. `SDPB 3.0.0-171-gc39fd506`),
 You may list all available versions via
 
-    ls /central/home/vdommes/install | grep sdpb
+    module av sdpb
 
-Fo example, `sdpb-master` is built from the latest [master](https://github.com/davidsd/sdpb/tree/master) branch (
-run `sdpb --version` to see commit hash, e.g. `SDPB 2.5.1-130-g88b1c9ae`),
-and `sdpb-3.0.0` is a stable [3.0.0](https://github.com/davidsd/sdpb/releases/tag/3.0.0) release.
+and load a specific version via `module load sdpb/<VERSION>`, for example
 
-Examples below are for `sdpb-master`.
-You may replace it with another version, e.g. `sdpb-3.0.0`.
-In that case, please refer
-to [3.0.0 documentation](https://github.com/davidsd/sdpb/blob/3.0.0/docs/site_installs/Caltech.md).
+    module load sdpb/master    
+    module load sdpb/3.1.0
 
 ## Run SDPB
 
-    /central/home/vdommes/install/sdpb-master/bin/sdpb --help
+An example script can be found at `$SDPB_HOME/share/sdpb_example.sh`.
+The command
 
-### Batch script example
+    sbatch $SDPB_HOME/share/sdpb_example.sh
 
-    sbatch /central/home/vdommes/install/sdpb-master/share/sdpb_example.sh
-
-This command submits `sdpb_example.sh` to
-the [queueing system](https://hpc.sites.caltech.edu/documentation/slurm-commands).
+submits the script to the [queueing system](https://hpc.sites.caltech.edu/documentation/slurm-commands).
 
 `sdpb_example.sh` loads modules and runs `pmp2sdp`+`sdpb` for a simple problem.
 See script code and comments for more details.
@@ -60,8 +56,11 @@ SDPB output files are written to the `./out/` folder in the current directory.
 
 # Build SDPB from sources
 
-TODO: Note that `/usr/include/gmp.h` is present on login node, but may be absent on compute nodes. In that case one
-should compile on a login node.
+## Load modules
+
+For compiling and/or running your custom SDPB installation, you have to load modules first:
+
+    module load boost/1.84.0-gcc-11.3.1-zauawkb openmpi/5.0.1-gcc-13.2.0-xpoh5uw mpfr/4.2.0-gcc-13.2.0-yy2fkq5 libarchive/3.7.1-gcc-13.2.0-bzt555v openblas/0.3.23-gcc-11.3.1-cu3huj2 
 
 ## Elemental
 
@@ -82,24 +81,29 @@ should compile on a login node.
     make
     make check 
     make install
+    cd ..
+
+## MPSolve
+
+    git clone https://github.com/robol/MPSolve.git
+    cd MPSolve
+    ./autogen.sh
+    CC=mpicc CXX=mpicxx ./configure --prefix=$HOME/install --disable-dependency-tracking --disable-examples --disable-ui --disable-graphical-debugger --disable-documentation
+    make && make install
+    cd ..
 
 ## RapidJSON
+
     git clone https://github.com/Tencent/rapidjson.git
     cp -r rapidjson/include $HOME/install
 
-## libarchive
-
-    wget http://www.libarchive.org/downloads/libarchive-3.7.1.tar.xz
-    tar -xf libarchive-3.7.1.tar.xz
-    cd libarchive-3.7.1
-    ./configure --prefix=$HOME/install
-    make && make install
-    cd ../..
-
 ## sdpb
-    CXX=mpicxx ./waf configure --libarchive-dir=`pkg-config --variable=prefix libarchive` --elemental-dir=$HOME/install --rapidjson-dir=$HOME/install --flint-dir=$HOME/install 
-    --prefix=$HOME/install/sdpb-master
+
+    CXX=mpicxx ./waf configure --elemental-dir=$HOME/install --gmpxx-dir=/central/software9/spack/opt/spack/linux-rhel9-x86_64/gcc-13.2.0/gmp-6.2.1-lcnhysea5isaes4r547jt5nw2qru5ab7 --libarchive-dir=$(pkg-config --variable=prefix libarchive) --mpfr-dir=$(pkg-config --variable=prefix mpfr) --rapidjson-dir=$HOME/install --flint-dir=$HOME/install --mpsolve-dir=$HOME/install --boost-dir=$BOOST_ROOT --prefix=$HOME/install/sdpb/master
     ./waf # -j 1
     ./test/run_all_tests.sh
     ./waf install
     cd ..
+
+Note that computationally intensive processes (compilation, tests etc.) should be run on compute nodes and not on login
+nodes. See [HPC documentation](https://hpc.sites.caltech.edu/documentation/slurm-commands) for more details.

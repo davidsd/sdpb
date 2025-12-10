@@ -7,7 +7,7 @@
 # 3. 'deploy-master': On each 'master' branch update, build a multiplatform image (working for both AMD64 and ARM64)
 #     and push it to DockerHub as '${DOCKER_USERNAME}/sdpb:master', e.g. 'davidsd/sdpb:master'.
 # 4. 'deploy-tag': If new tag is pushed to the repo, build and push the multiplatform image
-#    '${DOCKER_USERNAME}/sdpb:${TAG}', e.g. 'davidsd/sdpb:3.0.0'
+#    '${DOCKER_USERNAME}/sdpb:${TAG}', e.g. 'davidsd/sdpb:3.1.0'
 # In steps 3 and 4, separate images for each platform are also pushed,
 #   e.g. davidsd/sdpb:master-amd64 and davidsd/sdpb:master-arm64.
 #   (TODO: this is necessary to push a multiplatform image, in principle we could delete them later.
@@ -211,7 +211,7 @@ workflows:
       - deploy-tag:
           filters:
             tags:
-              only: /^\d+\.\d+\.\d+$/ # only release tags, e.g 3.0.0
+              only: /^\d+\.\d+\.\d+$/ # only release tags, e.g 3.1.0
             # See https://discuss.circleci.com/t/tag-not-triggered-by-circleci-not-filter-in-workflow/32036
             branches:
               ignore: /.*/ # Ignore all branches, otherwise the job is triggered by any git push

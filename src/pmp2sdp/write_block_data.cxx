@@ -107,8 +107,8 @@ void write_block_data(std::ostream &os, const Dual_Constraint_Group &group,
 {
   switch(format)
     {
-    case bin: write_block_data_bin(os, group); break;
-    case json: write_block_data_json(os, group); break;
+    case Block_File_Format::bin: write_block_data_bin(os, group); break;
+    case Block_File_Format::json: write_block_data_json(os, group); break;
     default: RUNTIME_ERROR("Unknown Block_File_Format: ", format);
     }
 }

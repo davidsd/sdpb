@@ -1,13 +1,24 @@
-#include "Zero.hxx"
-#include "pmp2sdp/write_sdp.hxx"
+#pragma once
 
-void compute_lambda(const std::vector<El::BigFloat> &sample_points,
-                    const std::vector<El::BigFloat> &sample_scalings,
-                    const Damped_Rational &prefactor, const size_t &num_rows,
-                    const El::Matrix<El::BigFloat> &x,
-                    const std::vector<El::BigFloat> &zero_vector,
-                    std::vector<Zero> &zeros, El::BigFloat &error)
+#include "pmp/PMP_Info.hxx"
+#include "spectrum/Zero.hxx"
+#include "sdpb_util/assert.hxx"
+#include "sdpb_util/Damped_Rational.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
+
+inline void
+compute_lambda(const PVM_Info &pvm_info, const El::Matrix<El::BigFloat> &x,
+               const std::vector<El::BigFloat> &zero_values,
+               Zeros &spectrum_block, Timers &timers)
 {
+  Scoped_Timer timer(timers, "compute_lambda");
+
+  const auto num_rows = pvm_info.dim;
+  const auto &sample_points = pvm_info.sample_points;
+
+  auto &zeros = spectrum_block.zeros;
+  auto &error = spectrum_block.error;
+
   const size_t matrix_block_size(x.Height() / (num_rows * (num_rows + 1) / 2));
 
   // U_{j,k} in Eq. (A.11)
@@ -23,14 +34,14 @@ void compute_lambda(const std::vector<El::BigFloat> &sample_points,
             {
               x_scaled_matrix(index, row_column)
                 = x(row_column * matrix_block_size + index, 0)
-                  * sample_scalings.at(index);
+                  * pvm_info.reduced_sample_scalings.at(index);
             }
           ++row_column;
         }
   }
   El::Matrix<El::BigFloat> error_matrix(x_scaled_matrix);
 
-  if(zero_vector.empty())
+  if(zero_values.empty())
     {
       error = El::Sqrt(El::Dot(error_matrix, error_matrix));
       return;
@@ -38,11 +49,11 @@ void compute_lambda(const std::vector<El::BigFloat> &sample_points,
 
   // Lagrange interpolation coefficients L(\tau, x_k^{(j)}, Eq. (A.15)
   El::Matrix<El::BigFloat> interpolation(sample_points.size(),
-                                         zero_vector.size());
+                                         zero_values.size());
   for(size_t point_index(0); point_index != sample_points.size();
       ++point_index)
     {
-      for(size_t zero_index(0); zero_index != zero_vector.size(); ++zero_index)
+      for(size_t zero_index(0); zero_index != zero_values.size(); ++zero_index)
         {
           auto &product(interpolation(point_index, zero_index));
           product = 1;
@@ -52,7 +63,7 @@ void compute_lambda(const std::vector<El::BigFloat> &sample_points,
             {
               if(point_index != point_product_index)
                 {
-                  product *= (zero_vector[zero_index]
+                  product *= (zero_values[zero_index]
                               - sample_points[point_product_index])
                              / (sample_points[point_index]
                                 - sample_points[point_product_index]);
@@ -94,7 +105,7 @@ void compute_lambda(const std::vector<El::BigFloat> &sample_points,
     El::Gemm(El::NORMAL, El::ADJOINT, El::BigFloat(1), V, U, roots_fit);
   }
 
-  for(size_t zero_index(0); zero_index != zero_vector.size(); ++zero_index)
+  for(size_t zero_index(0); zero_index != zero_values.size(); ++zero_index)
     {
       //  V_{j,\tau} from Eq. (A.15)
       El::Matrix<El::BigFloat> Lambda(num_rows, num_rows);
@@ -127,39 +138,80 @@ void compute_lambda(const std::vector<El::BigFloat> &sample_points,
       El::Matrix<El::BigFloat> eigenvalues, eigenvectors;
       El::HermitianEig(El::UpperOrLowerNS::UPPER, Lambda, eigenvalues,
                        eigenvectors, hermitian_eig_ctrl);
-      // Eigenvalues are sorted, largest at the end.  Only add a zero
-      // if max_eigenvalue >= 0.
+      // Eigenvalues are sorted, largest at the end.
+
+      ASSERT_EQUAL(Lambda.Height(), eigenvalues.Height(),
+                   "Incorrect number of eigenvalues!",
+                   DEBUG_STRING(zero_index));
       const size_t num_eigvals(eigenvalues.Height());
-      if(eigenvalues(num_eigvals - 1, 0) >= 0)
+
+      auto max_eigenvalue = eigenvalues(num_eigvals - 1, 0);
+
+      // El::Max has a bug, see https://gitlab.com/bootstrapcollaboration/elemental/-/issues/4
+      // Thus, we'll just compare last eigenvalue with a first one (as a sanity check).
+      // ASSERT_EQUAL(max_eigenvalue, El::Max(eigenvalues),
+      //              "Eigenvalues were not sorted by El::HermitianEig()!");
+      ASSERT(max_eigenvalue >= eigenvalues(0, 0),
+             "Eigenvalues were not sorted by El::HermitianEig()!",
+             DEBUG_STRING(eigenvalues(0, 0)),
+             DEBUG_STRING(eigenvalues(num_eigvals - 1, 0)));
+      if(max_eigenvalue < 0)
         {
-          zeros.emplace_back(zero_vector[zero_index]);
-          auto &lambda(zeros.back().lambda);
-          // lambdas = eigenvectors * sqrt(eigenvalues)
-          // lambdas = v_{j,\tau} from Eq. (A.8)
-          lambda = El::View(eigenvectors, 0, num_eigvals - 1, num_eigvals, 1);
-          lambda *= El::Sqrt(eigenvalues(num_eigvals - 1, 0));
-
-          size_t row_column(0);
-          for(size_t column(0); column != num_rows; ++column)
-            for(size_t row(0); row <= column; ++row)
-              {
-                for(size_t index(0); index != matrix_block_size; ++index)
-                  {
-                    error_matrix(index, row_column)
-                      -= interpolation(index, zero_index) * lambda(row)
-                         * lambda(column) * (row == column ? 1 : 2);
-                  }
-                ++row_column;
-              }
-
-          // Set lambda = 1/sqrt(\chi) * v_{j,\tau}
-          // With this definition, lambda does not change
-          // if one adds reducedPrefactor != prefactor to PMP.json
-          // NB: this is different from Python script and from (A.8) definition!
-          lambda *= 1
-                    / El::Sqrt(to_BigFloat(
-                      prefactor.evaluate(to_Boost_Float(zeros.back().zero))));
+          PRINT_WARNING("block_", pvm_info.block_index,
+                        ": x=", zero_values.at(zero_index),
+                        ": negative max_eigenvalue=", max_eigenvalue,
+                        " for Lambda matrix will be replaced with 0.");
+          max_eigenvalue = 0;
         }
+      {
+        zeros.emplace_back(zero_values[zero_index]);
+        auto &lambda(zeros.back().lambda);
+        // lambdas = eigenvectors * sqrt(eigenvalues)
+        // lambdas = v_{j,\tau} from Eq. (A.8)
+
+        // If eigenvalue == 0, then lambda = 0.
+        // TODO: lambda=0 is unphysical, shall we remove all such zeros and recompute lambdas?
+        // (note that adding/removing any zeros affects all lambdas in a block)
+        if(max_eigenvalue == El::BigFloat(0))
+          {
+            lambda.Resize(num_eigvals, 1);
+            El::Zero(lambda);
+            continue;
+          }
+
+        // NB: if Lambda == {{0}}, then
+        // El::HermitianEig() returns eigenvalues = {0}
+        // and does not initialize eigenvectors.
+        // This case is treated separately above.
+        ASSERT_EQUAL(eigenvalues.Height(), eigenvectors.Height(),
+                     "Number of eigenvalues and eigenvectors did not match, "
+                     "probably due to eigensolver failure. ",
+                     DEBUG_STRING(zero_index), DEBUG_STRING(max_eigenvalue));
+
+        lambda = El::View(eigenvectors, 0, num_eigvals - 1, num_eigvals, 1);
+        lambda *= El::Sqrt(max_eigenvalue);
+
+        size_t row_column(0);
+        for(size_t column(0); column != num_rows; ++column)
+          for(size_t row(0); row <= column; ++row)
+            {
+              for(size_t index(0); index != matrix_block_size; ++index)
+                {
+                  error_matrix(index, row_column)
+                    -= interpolation(index, zero_index) * lambda(row)
+                       * lambda(column) * (row == column ? 1 : 2);
+                }
+              ++row_column;
+            }
+
+        // Set lambda = 1/sqrt(\chi) * v_{j,\tau}
+        // With this definition, lambda does not change
+        // if one adds reducedPrefactor != prefactor to PMP.json
+        // NB: this is different from Python script and from (A.8) definition!
+        lambda *= 1
+                  / El::Sqrt(to_BigFloat(pvm_info.reduced_prefactor.evaluate(
+                    to_Boost_Float(zeros.back().zero))));
+      }
     }
   error = El::Sqrt(El::Dot(error_matrix, error_matrix));
 }

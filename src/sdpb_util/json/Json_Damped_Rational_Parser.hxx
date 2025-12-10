@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pmp/Damped_Rational.hxx"
+#include "sdpb_util/Damped_Rational.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/json/Abstract_Json_Object_Parser.hxx"
 #include "sdpb_util/json/Json_Float_Parser.hxx"

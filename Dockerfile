@@ -25,13 +25,17 @@
 # based on the same alpine:3.18 build as below
 
 # Built from https://github.com/vasdommes/flint/tree/docker-main
-FROM vasdommes/flint:main as flint
+FROM vasdommes/flint:main AS flint
 
 FROM bootstrapcollaboration/elemental:master AS build
 
 RUN apk add \
+    autoconf \
+    automake \
     binutils \
+    byacc \
     cmake \
+    flex \
     g++ \
     git \
     make \
@@ -40,17 +44,32 @@ RUN apk add \
     boost-dev \
     gmp-dev \
     libarchive-dev \
+    libtool \
     libxml2-dev \
     mpfr-dev \
     openblas-dev \
     openmpi \
     openmpi-dev \
     rapidjson-dev
-WORKDIR /usr/local/src/sdpb
 # Include FLINT
 COPY --from=flint /usr/local /usr/local
 COPY --from=flint /usr/local/lib /usr/local/lib
 COPY --from=flint /usr/local/include /usr/local/include
+
+WORKDIR /usr/local/src
+# Build MPSolve (takes ~1 minute)
+# TODO: create separate MPSolve image?
+RUN git clone https://github.com/robol/MPSolve.git --depth=1 && \
+    cd MPSolve && \
+    ./autogen.sh && \
+    CC=mpicc CXX=mpicxx ./configure --disable-dependency-tracking --disable-examples --disable-ui --disable-graphical-debugger --disable-documentation && \
+    make && \
+    make check && \
+    make install && \
+    echo "simple mpsolve test:" && \
+    mpsolve -p "x^4 - 6*x^9 + 6/7*x + 5"
+
+WORKDIR /usr/local/src/sdpb
 # Build SDPB from current sources, print build/config.log in configuration failed
 COPY . .
 RUN (./waf configure --elemental-dir=/usr/local --flint-dir=/usr/local --prefix=/usr/local \
@@ -63,7 +82,7 @@ RUN (./waf configure --elemental-dir=/usr/local --flint-dir=/usr/local --prefix=
 # Unfortunately, boost1.82-stacktrace_addr2line does not exist as a standalone package in Alpine Linux repo.
 # Thus we have to load the whole boost-dev (~180MB extra)
 # TODO: for some reason, function names and source locations are not printed in stacktrace.
-FROM alpine:3.19 as install
+FROM alpine:3.19 AS install
 RUN apk add \
     binutils \
     boost-dev \
@@ -92,7 +111,7 @@ COPY --from=build /usr/local/lib /usr/local/lib
 #
 # docker build . -t sdpb-test --target test
 # docker run sdpb-test ./test/run_all_tests.sh mpirun --oversubscribe
-FROM install as test
+FROM install AS test
 # Create testuser to run Docker non-root (and avoid 'mpirun --allow-run-as-root' warning)
 RUN addgroup --gid 10000 testgroup && \
     adduser --disabled-password --uid 10000 --ingroup testgroup --shell /bin/sh testuser

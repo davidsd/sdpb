@@ -1,17 +1,15 @@
 #pragma once
 
 #include "write_vector.hxx"
-#include "pmp/Damped_Rational.hxx"
 #include "pmp/PMP_Info.hxx"
-#include "sdpb_util/assert.hxx"
 #include "sdpb_util/Boost_Float.hxx"
+#include "sdpb_util/assert.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
 
 #include <El.hpp>
 
-#include <iostream>
 #include <filesystem>
-#include <optional>
+#include <sstream>
 #include <rapidjson/ostreamwrapper.h>
 #include <rapidjson/writer.h>
 

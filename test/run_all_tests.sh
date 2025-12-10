@@ -23,16 +23,37 @@ else
   MPI_RUN_COMMAND="mpirun --oversubscribe"
 fi
 
+echo "Checking MPI_RUN_COMMAND=$MPI_RUN_COMMAND"
+$MPI_RUN_COMMAND -n 6 echo Hello >/dev/null
+ret=$?
+if [ $ret -ne 0 ]
+then
+  echo "Failed: $ret"
+  exit $ret
+fi
+
+# Find valid time command
+# /usr/bin/time
+if /usr/bin/time -- $MPI_RUN_COMMAND -n 6 echo Hello >/dev/null 2>&1; then
+    TIME_CMD="/usr/bin/time --"
+# Built-in time function (e.g. bash)
+elif time $MPI_RUN_COMMAND -n 6 echo Hello >/dev/null 2>&1; then
+    TIME_CMD="time"
+# fallback: no timing, just run tests.
+else
+    TIME_CMD=""
+fi
+
 # Run unit_tests and integration_tests with timing info and custom mpirun command
 # For more command-line options, see
 # https://github.com/catchorg/Catch2/blob/devel/docs/command-line.md
 
 # NB: for calculate_matrix_square_test to pass, number of processes must be a multiple of 6
-echo time $MPI_RUN_COMMAND -n 6 ./build/unit_tests --durations yes
-time $MPI_RUN_COMMAND -n 6 ./build/unit_tests --durations yes || { exit $?; }
+echo $TIME_CMD $MPI_RUN_COMMAND -n 6 ./build/unit_tests --durations yes
+$TIME_CMD $MPI_RUN_COMMAND -n 6 ./build/unit_tests --durations yes || { exit $?; }
 
 # integration_tests
-echo time ./build/integration_tests --durations yes --mpirun="$MPI_RUN_COMMAND"
-time ./build/integration_tests --durations yes --mpirun="$MPI_RUN_COMMAND" || { exit $?; }
+echo $TIME_CMD ./build/integration_tests --durations yes --mpirun="$MPI_RUN_COMMAND"
+$TIME_CMD ./build/integration_tests --durations yes --mpirun="$MPI_RUN_COMMAND" || { exit $?; }
 
 echo "$0: ALL TESTS PASSED"

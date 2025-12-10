@@ -1,4 +1,4 @@
-#include "../Damped_Rational.hxx"
+#include "sdpb_util/Damped_Rational.hxx"
 
 #include <vector>
 

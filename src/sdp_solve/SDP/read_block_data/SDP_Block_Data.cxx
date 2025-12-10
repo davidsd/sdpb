@@ -32,7 +32,7 @@ Block_Data_Parse_Result
 parse_block_data(std::istream &block_stream, Block_File_Format format)
 {
   Block_Data_Parse_Result result;
-  if(format == bin)
+  if(format == Block_File_Format::bin)
     {
       // NB: this should match pmp2sdp/write_block_data.cxx
       boost::archive::binary_iarchive ar(block_stream);
@@ -46,7 +46,7 @@ parse_block_data(std::istream &block_stream, Block_File_Format format)
       ar >> result.bilinear_bases_even;
       ar >> result.bilinear_bases_odd;
     }
-  else if(format == json)
+  else if(format == Block_File_Format::json)
     {
       rapidjson::IStreamWrapper wrapper(block_stream);
       Json_Block_Data_Parser parser(
