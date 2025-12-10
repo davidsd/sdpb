@@ -2,6 +2,8 @@
 
 #include "Float.hxx"
 
+#include <boost/algorithm/string.hpp>
+
 namespace fs = std::filesystem;
 
 // out.txt produced by SDPB

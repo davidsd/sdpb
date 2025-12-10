@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <map>
 #include <boost/iostreams/filter/gzip.hpp>
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/parsers.hpp>
 
 using namespace Test_Util;
 using namespace Test_Util::REQUIRE_Equal;
@@ -31,9 +33,7 @@ struct Compare_Case_Group
 {
   bool operator()(const std::vector<Sdplib_Case_Info> &lhs,
                   const std::vector<Sdplib_Case_Info> &rhs) const
-  {
-    return get_key(lhs) < get_key(rhs);
-  }
+  { return get_key(lhs) < get_key(rhs); }
 
 private:
   static size_t get_key(const std::vector<Sdplib_Case_Info> &a)
@@ -234,15 +234,16 @@ TEST_CASE("SDPLIB", "[.]")
                 const auto sdp_path = Test_Config::test_data_dir
                                       / "SDPLIB/data" / (name + ".dat-s");
                 // Default parameters used in sdpa-gmp
-                std::string default_sdpb_args
-                  = "--dualityGapThreshold 1.0e-30 "
+                const auto default_sdpb_args
+                  = boost::program_options::split_unix(
+                    "--dualityGapThreshold 1.0e-30 "
                     "--initialMatrixScalePrimal 1.0e+4 "
                     "--initialMatrixScaleDual 1.0e+4 "
                     "--maxComplementarity 4.0e+8 "
                     "--feasibleCenteringParameter 0.3 stepLengthReduction 0.9 "
                     "--primalErrorThreshold 1.0e-30 "
                     "--dualErrorThreshold 1.0e-30 "
-                    "--writeSolution x --noFinalCheckpoint";
+                    "--writeSolution x --noFinalCheckpoint");
 
                 Named_Args_Map args{
                   {"--precision", std::to_string(precision)},
@@ -251,7 +252,7 @@ TEST_CASE("SDPLIB", "[.]")
                   {"--checkpointDir", (output_dir / "ck").string()}};
 
                 runner.create_nested("sdpb").mpi_run(
-                  {"build/sdpb", default_sdpb_args}, args, num_procs);
+                  {"build/sdpb", default_sdpb_args, args}, num_procs);
               }
               //Check output
               {

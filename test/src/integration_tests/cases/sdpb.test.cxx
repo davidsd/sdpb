@@ -137,7 +137,7 @@ TEST_CASE("sdpb")
         os << "any bytes to checkpoint_2_2";
         const Test_Util::Test_Case_Runner runner_extra_ck_file
           = runner.create_nested("extra_ck_file");
-        runner_extra_ck_file.mpi_run({"build/sdpb"}, args, num_procs, 1,
+        runner_extra_ck_file.mpi_run({"build/sdpb", args}, num_procs, 1,
                                      "unexpected checkpoint file");
       }
 
@@ -146,7 +146,7 @@ TEST_CASE("sdpb")
         fs::remove(args["--checkpointDir"] + "/checkpoint_2_1");
         const Test_Util::Test_Case_Runner runner_missing_ck_file
           = runner.create_nested("missing_ck_file");
-        runner_missing_ck_file.mpi_run({"build/sdpb"}, args, num_procs, 1,
+        runner_missing_ck_file.mpi_run({"build/sdpb", args}, num_procs, 1,
                                        "Cannot find checkpoint file");
       }
 
