@@ -243,6 +243,20 @@ TEST_CASE("end-to-end_tests")
       test.run_sdpb_twice = true;
       test.run();
     }
+    SECTION("example1-objective-const")
+    {
+      End_To_End_Test test("sdpa/example1-objective-const");
+      test.precision = 200;
+      test.sdpb_out_filenames = {"out.txt", "x.txt"};
+      INFO("Same as example1, but added sdpb.objectiveConst = -0.1 to "
+           "objective value.");
+      INFO("New objective value: -42");
+      INFO("NB: this is an SDPB-only extension of the standard SDPA format!");
+      // NB: we ignore matrix X since it consists of noisy values ~1e-30
+      test.default_sdpb_args = boost::program_options::split_unix(
+        default_sdpb_args + " --writeSolution x,Y");
+      test.run();
+    }
   }
 
   SECTION("1d")

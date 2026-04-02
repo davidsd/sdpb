@@ -25,6 +25,9 @@ namespace Sdpb::Sdpa
     // It is duplicated amongst all the blocks.
     Primal_Dist_Vector primal_objective_c;
 
+    // Constant c_0 added to objective function
+    El::BigFloat objective_const;
+
     SDP(const std::filesystem::path &sdp_path, const Block_Info &block_info,
         const El::Grid &grid, Timers &timers);
 

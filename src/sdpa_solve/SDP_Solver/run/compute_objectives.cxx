@@ -11,10 +11,11 @@ namespace Sdpb::Sdpa
                           El::BigFloat &duality_gap, Timers &timers)
   {
     Scoped_Timer objectives_timer(timers, "objectives");
-    // P-obj = c.x
-    primal_objective = El::Dotu(sdp.primal_objective_c, x);
-    // D-obj = Tr(F_0 * Y)
-    dual_objective = dotu(sdp.sdp_block_F_0, Y);
+    // P-obj = c_0 + c.x
+    primal_objective
+      = sdp.objective_const + El::Dotu(sdp.primal_objective_c, x);
+    // D-obj = c_0 + Tr(F_0 * Y)
+    dual_objective = sdp.objective_const + dotu(sdp.sdp_block_F_0, Y);
     El::mpi::Broadcast(dual_objective, 0, El::mpi::COMM_WORLD);
 
     duality_gap
