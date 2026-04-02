@@ -23,6 +23,8 @@ namespace
     std::string name;
     int num_procs = 6;
     int precision = 768;
+    // Compare up to dualityGapThreshold = 1e-30 ~ 2^{-99.7}
+    int diff_precision = 99;
     Named_Args_Map pmp2sdp_args;
     std::vector<std::string> default_sdpb_args;
     std::vector<std::string> sdpb_out_filenames;
@@ -35,8 +37,6 @@ namespace
 
     void run()
     {
-      int diff_precision = precision / 2;
-
       const auto data_dir
         = Test_Config::test_data_dir / "end-to-end_tests" / name;
       auto data_input_dir = data_dir / "input";
