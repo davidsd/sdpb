@@ -4,6 +4,7 @@
 #include "pmp/Polynomial_Vector_Matrix.hxx"
 #include "sdpb_util/to_matrix.hxx"
 #include "sdpb_util/json/Json_Damped_Rational_Parser.hxx"
+#include "sdpb_util/json/Json_Int64_Parser.hxx"
 
 using Vector_Of_Polynomial_Vectors = std::vector<Polynomial_Vector>;
 using Matrix_Of_Polynomial_Vectors = std::vector<Vector_Of_Polynomial_Vectors>;
@@ -15,6 +16,7 @@ private:
   std::optional<Matrix_Of_Polynomial_Vectors> polynomials;
   std::optional<Damped_Rational> prefactor;
   std::optional<Damped_Rational> reduced_prefactor;
+  std::optional<int64_t> max_num_poles;
   std::optional<std::vector<El::BigFloat>> sample_points;
   std::optional<std::vector<El::BigFloat>> sample_scalings;
   std::optional<std::vector<El::BigFloat>> reduced_sample_scalings;
@@ -34,6 +36,7 @@ public:
         ELEMENT_PARSER_CTOR(polynomials),
         ELEMENT_PARSER_CTOR(prefactor),
         ELEMENT_PARSER_CTOR(reduced_prefactor),
+        ELEMENT_PARSER_CTOR(max_num_poles),
         ELEMENT_PARSER_CTOR(sample_points),
         ELEMENT_PARSER_CTOR(sample_scalings),
         ELEMENT_PARSER_CTOR(reduced_sample_scalings),
@@ -61,10 +64,8 @@ public:
 
 private:
   using BigFloat_Vector_Parser = Json_Vector_Parser<Json_BigFloat_Parser>;
-  using Damped_Rational_Parser
-    = Json_Damped_Rational_Parser;
-  using Polynomial_Vector_Parser
-    = Json_Vector_Parser<Json_Polynomial_Parser>;
+  using Damped_Rational_Parser = Json_Damped_Rational_Parser;
+  using Polynomial_Vector_Parser = Json_Vector_Parser<Json_Polynomial_Parser>;
   using Vector_Of_Polynomial_Vectors_Parser
     = Json_Vector_Parser<Polynomial_Vector_Parser>;
   // Matrix = Vector of Vectors <Polynomial_Vector>
@@ -74,6 +75,7 @@ private:
   Matrix_Of_Polynomial_Vectors_Parser polynomials_parser;
   Damped_Rational_Parser prefactor_parser;
   Damped_Rational_Parser reduced_prefactor_parser;
+  Json_Int64_Parser max_num_poles_parser;
   BigFloat_Vector_Parser sample_points_parser;
   BigFloat_Vector_Parser sample_scalings_parser;
   BigFloat_Vector_Parser reduced_sample_scalings_parser;
@@ -90,6 +92,8 @@ protected:
       return prefactor_parser;
     if(key == "reducedPrefactor")
       return reduced_prefactor_parser;
+    if(key == "maxNumPoles")
+      return max_num_poles_parser;
     if(key == "samplePoints")
       return sample_points_parser;
     if(key == "sampleScalings")
@@ -111,15 +115,16 @@ public:
     ASSERT(polynomials.has_value(), "polynomials not found");
     const Simple_Matrix matrix(std::move(polynomials).value());
     // TODO add move ctor for Polynomial_Vector_Matrix?
-    return Polynomial_Vector_Matrix(matrix, prefactor, reduced_prefactor,
-                                    sample_points, sample_scalings,
-                                    reduced_sample_scalings, bilinear_basis);
+    return Polynomial_Vector_Matrix(
+      matrix, prefactor, reduced_prefactor, max_num_poles, sample_points,
+      sample_scalings, reduced_sample_scalings, bilinear_basis);
   }
   void clear_result() override
   {
     polynomials.reset();
     prefactor.reset();
     reduced_prefactor.reset();
+    max_num_poles.reset();
 
     sample_points.reset();
     sample_scalings.reset();
@@ -131,6 +136,7 @@ public:
     polynomials_parser.reset(skip);
     prefactor_parser.reset(skip);
     reduced_prefactor_parser.reset(skip);
+    max_num_poles_parser.reset(skip);
 
     sample_points_parser.reset(skip);
     sample_scalings_parser.reset(skip);

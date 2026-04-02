@@ -317,7 +317,8 @@ TEST_CASE("end-to-end_tests")
 
     SECTION("primal_dual_optimal_reduced")
     {
-      INFO("Same as primal_dual_optimal, but with reducedPrefactor.");
+      INFO("Same as primal_dual_optimal, but with a custom "
+           "reducedPrefactor/maxNumPoles for each block.");
       End_To_End_Test test(
         "SingletScalar_cT_test_nmax6/primal_dual_optimal_reduced");
       test.default_sdpb_args = default_sdpb_args;

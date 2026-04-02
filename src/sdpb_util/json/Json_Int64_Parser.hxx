@@ -4,20 +4,20 @@
 
 #include <functional>
 
-class Json_UInt64_Parser final : public Abstract_Json_Element_Parser<uint64_t>
+class Json_Int64_Parser final : public Abstract_Json_Element_Parser<int64_t>
 {
-  uint64_t result = 0;
+  int64_t result = 0;
 
 public:
   using Abstract_Json_Element_Parser::value_type;
 
-  Json_UInt64_Parser(
+  Json_Int64_Parser(
     const bool skip, const std::function<void(value_type &&)> &on_parsed,
     const std::function<void()> &on_skipped = [] {})
       : Abstract_Json_Element_Parser(skip, on_parsed, on_skipped)
   {}
 
-  bool json_uint64(const uint64_t value) override
+  bool json_int64(const int64_t value) override
   {
     if(!this->skip)
       this->result = value;
@@ -26,7 +26,9 @@ public:
     return true;
   }
 
-  bool json_uint(const unsigned value) override { return json_uint64(value); }
+  bool json_uint64(const uint64_t value) override { return json_int64(value); }
+  bool json_int(const int value) override { return json_int64(value); }
+  bool json_uint(const unsigned value) override { return json_int64(value); }
 
   void reset(const bool skip) override { this->skip = skip; }
   value_type get_result() override { return result; }
