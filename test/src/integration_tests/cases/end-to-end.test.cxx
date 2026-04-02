@@ -127,59 +127,59 @@ namespace
                              check_sdp_normalization);
                   }
               }
+            }
 
-              // sdpb
+          // sdpb
+          {
+            Named_Args_Map args{
+              {"--precision", std::to_string(precision)},
+              {"--sdpDir", sdp_path},
+              {"--outDir", (output_dir / "out").string()},
+              {"--checkpointDir", (output_dir / "ck").string()}};
+            runner.create_nested("sdpb").mpi_run(
+              {"build/sdpb", default_sdpb_args, args}, num_procs);
+            if(run_sdpb_twice)
               {
-                Named_Args_Map args{
-                  {"--precision", std::to_string(precision)},
-                  {"--sdpDir", sdp_path},
-                  {"--outDir", (output_dir / "out").string()},
-                  {"--checkpointDir", (output_dir / "ck").string()}};
-                runner.create_nested("sdpb").mpi_run(
+                runner.create_nested("sdpb-2").mpi_run(
                   {"build/sdpb", default_sdpb_args, args}, num_procs);
-                if(run_sdpb_twice)
-                  {
-                    runner.create_nested("sdpb-2").mpi_run(
-                      {"build/sdpb", default_sdpb_args, args}, num_procs);
-                  }
-
-                // SDPA does not have (c - B.y)
-                if(!is_sdpa)
-                  {
-                    // Read c,B,y and check that (c - B.y) equals to the vector written to c_minus_By/c_minus_By.json
-                    check_c_minus_By(sdp_path, output_dir / "out", precision,
-                                     diff_precision,
-                                     runner.create_nested("check_c_minus_By"));
-                  }
-                // SDPB runs with --precision=<precision>
-                // We check test output up to lower precision=<sdpb_output_diff_precision>
-                // in order to neglect unimportant rounding errors
-                diff_sdpb_output_dir(
-                  output_dir / "out", data_output_dir / "out", precision,
-                  diff_precision, sdpb_out_filenames, sdpb_out_txt_keys);
               }
 
-              if(exists(data_output_dir / "spectrum.json"))
-                {
-                  Named_Args_Map args{
-                    {"--pmpInfo", sdp_path + "/pmp_info.json"},
-                    {"--solution", (output_dir / "out").string()},
-                    {"--threshold", "1e-10"},
-                    {"--output", (output_dir / "spectrum.json").string()},
-                    {"--precision", std::to_string(precision)},
-                    {"--verbosity", "debug"},
-                  };
-                  runner.create_nested("spectrum")
-                    .mpi_run({"build/spectrum", args}, num_procs);
+            // SDPA does not have (c - B.y)
+            if(!is_sdpa)
+              {
+                // Read c,B,y and check that (c - B.y) equals to the vector written to c_minus_By/c_minus_By.json
+                check_c_minus_By(sdp_path, output_dir / "out", precision,
+                                 diff_precision,
+                                 runner.create_nested("check_c_minus_By"));
+              }
+            // SDPB runs with --precision=<precision>
+            // We check test output up to lower precision=<sdpb_output_diff_precision>
+            // in order to neglect unimportant rounding errors
+            diff_sdpb_output_dir(output_dir / "out", data_output_dir / "out",
+                                 precision, diff_precision, sdpb_out_filenames,
+                                 sdpb_out_txt_keys);
+          }
 
-                  // Cannot check block paths if the same spectrum.json
-                  // is generated several times by different PMP inputs,
-                  // e.g. pmp.xml and pmp.json.
-                  bool check_block_paths = pmp_paths.size() == 1;
-                  diff_spectrum(output_dir / "spectrum.json",
-                                data_output_dir / "spectrum.json", precision,
-                                diff_precision, check_block_paths);
-                }
+          if(exists(data_output_dir / "spectrum.json"))
+            {
+              Named_Args_Map args{
+                {"--pmpInfo", sdp_path + "/pmp_info.json"},
+                {"--solution", (output_dir / "out").string()},
+                {"--threshold", "1e-10"},
+                {"--output", (output_dir / "spectrum.json").string()},
+                {"--precision", std::to_string(precision)},
+                {"--verbosity", "debug"},
+              };
+              runner.create_nested("spectrum")
+                .mpi_run({"build/spectrum", args}, num_procs);
+
+              // Cannot check block paths if the same spectrum.json
+              // is generated several times by different PMP inputs,
+              // e.g. pmp.xml and pmp.json.
+              bool check_block_paths = pmp_paths.size() == 1;
+              diff_spectrum(output_dir / "spectrum.json",
+                            data_output_dir / "spectrum.json", precision,
+                            diff_precision, check_block_paths);
             }
         }
     }
