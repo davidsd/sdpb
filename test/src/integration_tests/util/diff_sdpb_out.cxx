@@ -145,13 +145,21 @@ namespace
     CAPTURE(a_out_txt);
     CAPTURE(b_out_txt);
     Parse_Sdpb_Out_Txt a(a_out_txt);
-    Parse_Sdpb_Out_Txt b(a_out_txt);
+    Parse_Sdpb_Out_Txt b(b_out_txt);
 
     auto keys = keys_to_compare;
     // By default, test each key except for "Solver runtime"
     if(keys.empty())
-      keys = {"terminateReason", "primalObjective", "dualObjective",
-              "dualityGap",      "primalError",     "dualError"};
+      keys = {
+        "terminateReason",
+        "primalObjective",
+        "dualObjective",
+        // These errors are small (e.g. 1e-30 or 1e-200),
+        // so it doesn't make sense to compare them up to diff_precision.
+        // "dualityGap",
+        // "primalError",
+        // "dualError"
+      };
     CAPTURE(keys);
 
     for(const auto &key : keys)
