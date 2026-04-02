@@ -1,0 +1,13 @@
+"Example 1: mDim = 3, nBLOCK = 1, {2}"
+* sdpb.objectiveConst -1.00e-01
+   3  =  mDIM
+   1  =  nBOLCK
+   2  = bLOCKsTRUCT
+48, -8, 20
+0 1 1 1 -11
+0 1 2 2 23
+1 1 1 1 10
+1 1 1 2 4
+2 1 2 2 -8
+3 1 1 2 -8
+3 1 2 2 -2

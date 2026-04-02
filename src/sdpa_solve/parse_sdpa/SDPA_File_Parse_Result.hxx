@@ -14,6 +14,10 @@ namespace Sdpb::Sdpa
   {
     // Vector c_1..c_M
     std::vector<El::BigFloat> c_objective;
+
+    // objectiveConst = c_0
+    El::BigFloat objective_const;
+
     // If file is read by several processes,
     // each process saves only some matrices, according to should_parse_block()
     // parsed_blocks is a map: block_index -> blocks of [F_0, F_1,...F_M]
@@ -31,9 +35,9 @@ namespace Sdpb::Sdpa
 
     SDPA_File_Parse_Result(const SDPA_File_Parse_Result &other) = delete;
     SDPA_File_Parse_Result(SDPA_File_Parse_Result &&other) noexcept = default;
-    SDPA_File_Parse_Result &operator=(const SDPA_File_Parse_Result &other)
-      = delete;
-    SDPA_File_Parse_Result &operator=(SDPA_File_Parse_Result &&other) noexcept
-      = default;
+    SDPA_File_Parse_Result &
+    operator=(const SDPA_File_Parse_Result &other) = delete;
+    SDPA_File_Parse_Result &
+    operator=(SDPA_File_Parse_Result &&other) noexcept = default;
   };
 }

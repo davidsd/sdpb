@@ -54,7 +54,7 @@ namespace Sdpb::Sdpa
       T value;
       skip_ws(is, skip_newline);
       is >> value;
-      ASSERT(is.good());
+      ASSERT(is);
       return value;
     }
 
@@ -78,13 +78,28 @@ namespace Sdpb::Sdpa
     // https://github.com/vsdp/SDPLIB
 
     // 1. Comments. The file can begin with arbitrarily many lines of comments. Each line of comments must begin with " or *.
-    template <class IStream> void read_comments(IStream &is)
+    template <class IStream>
+    void read_comments(IStream &is, El::BigFloat &objective_const)
     {
       int next = is.peek();
       ASSERT(is.good());
       while(next == '"' || next == '*')
         {
-          skip_line(is);
+          // Trying to parse:
+          // "sdpb.objectiveConst 123.4567"
+          {
+            std::string line;
+            std::getline(is, line);
+
+            std::stringstream ss(line);
+            std::string word;
+            // Skip opening " or *
+            ss.get();
+            ss >> word;
+            if(word == "sdpb.objectiveConst")
+              objective_const = read_number<El::BigFloat>(ss, false);
+          }
+
           next = is.peek();
           ASSERT(is.good());
         }
@@ -119,16 +134,12 @@ namespace Sdpb::Sdpa
     // Further we'll split a diagonal block into 1x1 blocks.
     template <class IStream>
     std::vector<int> read_block_sizes(IStream &is, const size_t &nblocks)
-    {
-      return read_vector<int>(is, nblocks);
-    }
+    { return read_vector<int>(is, nblocks); }
 
     // 5. The fourth line after the comments contains the objective function vector c.
     template <class IStream>
     std::vector<El::BigFloat> read_c(IStream &is, const size_t m)
-    {
-      return read_vector<El::BigFloat>(is, m);
-    }
+    { return read_vector<El::BigFloat>(is, m); }
 
     struct SDPA_Matrix_Entry
     {
@@ -176,7 +187,7 @@ namespace Sdpb::Sdpa
       El::BigFloat value;
 
       Result_Matrix_Entry(const SDPA_Matrix_Entry &entry,
-                        const SDPA_Block_Structure &block_structure)
+                          const SDPA_Block_Structure &block_structure)
       {
         block_structure.get_element_position(entry.block_index, entry.i,
                                              entry.j, sdp_block_index, i, j);
@@ -270,9 +281,10 @@ namespace Sdpb::Sdpa
   // See format description e.g. in https://github.com/vsdp/SDPLIB
   // Read only block structure, do not read objective and SDP matrices.
   template <class IStream>
-  SDPA_Block_Structure read_block_structure(IStream &is)
+  SDPA_Block_Structure
+  read_block_structure(IStream &is, El::BigFloat &objective_const)
   {
-    read_comments(is);
+    read_comments(is, objective_const);
 
     // m (from SDPA formulation) is equal to N (in SDPB formulation 2.2 or 3.1)
     const size_t m = read_m(is);
@@ -293,7 +305,8 @@ namespace Sdpb::Sdpa
             const std::function<bool(size_t block_index)> &should_parse_block)
   {
     SDPA_File_Parse_Result result;
-    const SDPA_Block_Structure block_structure = read_block_structure(is);
+    const SDPA_Block_Structure block_structure
+      = read_block_structure(is, result.objective_const);
 
     result.c_objective = read_c(is, block_structure.m_dim);
     ASSERT_EQUAL(block_structure.m_dim, result.c_objective.size());
@@ -407,7 +420,8 @@ namespace Sdpb::Sdpa
   {
     const auto f = std::function(
       [](boost::iostreams::filtering_istream &is, const SDPA_File_Type &) {
-        return read_block_structure(is);
+        El::BigFloat objective_const;
+        return read_block_structure(is, objective_const);
       });
     return read_sdpa_file(input_file, f);
   }

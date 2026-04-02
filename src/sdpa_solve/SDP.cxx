@@ -55,6 +55,13 @@ namespace Sdpb::Sdpa
         primal_objective_c = c_circ_circ;
       }
 
+      // objective_const
+      {
+        objective_const = parse_result.objective_const;
+        // RUNTIME_ERROR(DEBUG_STRING(objective_const));
+        El::mpi::Broadcast(objective_const, 0, El::mpi::COMM_WORLD);
+      }
+
       // Prepare F_0 and F_i structure
       {
         sdp_block_F_0 = Block_Diagonal_Matrix(block_info.block_dimensions,
