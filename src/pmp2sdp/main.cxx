@@ -39,6 +39,7 @@ int main(int argc, char **argv)
       Scoped_Timer timer(timers, "pmp2sdp");
 
       auto pmp = read_polynomial_matrix_program(env, parameters.input_file,
+                                                parameters.max_num_poles,
                                                 parameters.verbosity, timers);
 
       Output_SDP sdp(pmp, parameters.command_arguments, timers);

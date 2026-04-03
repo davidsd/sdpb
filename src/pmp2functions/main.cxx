@@ -29,7 +29,8 @@ int main(int argc, char **argv)
 
       Timers timers(env, parameters.verbosity);
       const auto pmp = read_polynomial_matrix_program(
-        env, parameters.input_file, parameters.verbosity, timers);
+        env, parameters.input_file, parameters.max_num_poles,
+        parameters.verbosity, timers);
       write_functions(parameters.output_path, pmp);
     }
   catch(std::exception &e)

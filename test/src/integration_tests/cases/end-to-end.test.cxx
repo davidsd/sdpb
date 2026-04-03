@@ -324,6 +324,18 @@ TEST_CASE("end-to-end_tests")
       test.default_sdpb_args = default_sdpb_args;
       test.run();
     }
+
+    SECTION("primal_dual_optimal_reduced_max_num_poles_14")
+    {
+      INFO("Same as primal_dual_optimal_reduced, but with --maxNumPoles 14.");
+      INFO("NB: pmp contains blocks with maxNumPoles from 11 to 17.");
+      INFO("The resulting SDP blocks will have numPoles from 11 to 14.");
+      End_To_End_Test test(
+        "SingletScalar_cT_test_nmax6/primal_dual_optimal_reduced_max_num_poles_14");
+      test.default_sdpb_args = default_sdpb_args;
+      test.pmp2sdp_args = {{"--maxNumPoles", "14"}};
+      test.run();
+    }
   }
 
   SECTION("SingletScalarAllowed_test_nmax6")

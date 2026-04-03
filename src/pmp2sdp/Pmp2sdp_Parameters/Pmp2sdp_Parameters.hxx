@@ -11,6 +11,7 @@
 struct Pmp2sdp_Parameters
 {
   int precision;
+  int64_t max_num_poles;
   std::filesystem::path input_file;
   std::filesystem::path output_path;
   Block_File_Format output_format;

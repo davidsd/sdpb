@@ -13,6 +13,8 @@ class Json_Positive_Matrix_With_Prefactor_Parser final
     : public Abstract_Json_Object_Parser<Polynomial_Vector_Matrix>
 {
 private:
+  const int64_t max_num_poles_global;
+
   std::optional<Matrix_Of_Polynomial_Vectors> polynomials;
   std::optional<Damped_Rational> prefactor;
   std::optional<Damped_Rational> reduced_prefactor;
@@ -26,8 +28,10 @@ public:
   Json_Positive_Matrix_With_Prefactor_Parser(
     const bool skip,
     const std::function<void(Polynomial_Vector_Matrix &&)> &on_parsed,
-    const std::function<void()> &on_skipped)
+    const std::function<void()> &on_skipped,
+    const int64_t max_num_poles_global)
       : Abstract_Json_Object_Parser(skip, on_parsed, on_skipped),
+        max_num_poles_global(max_num_poles_global),
 
 #define ELEMENT_PARSER_CTOR(element_name)                                     \
   element_name##_parser(                                                      \
@@ -109,15 +113,27 @@ protected:
     RUNTIME_ERROR("unknown key=", key);
   }
 
+private:
+  static int64_t nonnegative_max_num_poles(const int64_t num_poles)
+  {
+    if(num_poles < 0)
+      return std::numeric_limits<int64_t>::max();
+    return num_poles;
+  }
+
 public:
   value_type get_result() override
   {
+    auto num_poles
+      = std::min(nonnegative_max_num_poles(max_num_poles.value_or(-1)),
+                 nonnegative_max_num_poles(max_num_poles_global));
+
     ASSERT(polynomials.has_value(), "polynomials not found");
     const Simple_Matrix matrix(std::move(polynomials).value());
     // TODO add move ctor for Polynomial_Vector_Matrix?
-    return Polynomial_Vector_Matrix(
-      matrix, prefactor, reduced_prefactor, max_num_poles, sample_points,
-      sample_scalings, reduced_sample_scalings, bilinear_basis);
+    return Polynomial_Vector_Matrix(matrix, prefactor, reduced_prefactor,
+                                    num_poles, sample_points, sample_scalings,
+                                    reduced_sample_scalings, bilinear_basis);
   }
   void clear_result() override
   {

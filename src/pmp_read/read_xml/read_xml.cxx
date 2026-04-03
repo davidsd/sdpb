@@ -48,7 +48,7 @@ namespace
 }
 
 PMP_File_Parse_Result
-read_xml(const std::filesystem::path &input_file,
+read_xml(const std::filesystem::path &input_file, const int64_t max_num_poles,
          const std::function<bool(size_t matrix_index)> &should_parse_matrix)
 {
   LIBXML_TEST_VERSION;
@@ -61,7 +61,7 @@ read_xml(const std::filesystem::path &input_file,
   // NB: should be called only once for each matrix index,
   // otherwise num_matrices will be incorrect!
   // Currently it is called in Xml_Polynomial_Vector_Matrix_State.xml_on_end_element()
-  auto process_matrix = [&should_parse_matrix, &result](
+  auto process_matrix = [max_num_poles, &should_parse_matrix, &result](
                           Xml_Polynomial_Vector_Matrix_State &matrix_state) {
     // num_matrices equals to current matrix index
     auto index = result.num_matrices;
@@ -79,7 +79,6 @@ read_xml(const std::filesystem::path &input_file,
 
         const std::optional<Damped_Rational> prefactor = std::nullopt;
         const std::optional<Damped_Rational> reduced_prefactor = std::nullopt;
-        const std::optional<int64_t> max_num_poles = std::nullopt;
         auto &sample_points = matrix_state.sample_points_state.value;
         auto &sample_scalings = matrix_state.sample_scalings_state.value;
         std::array<Polynomial_Vector, 2> bilinear_basis;
