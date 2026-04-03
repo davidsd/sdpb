@@ -34,6 +34,7 @@ Use `pmp2sdp` to create SDPB input from files with a PMP. The usage is
 `[PRECISION]` is the number of bits of precision used in the
 conversion.  `[INPUT]` is a single Mathematica, JSON, XML or NSV
 (Null Separated Value) file. `[OUTPUT]` is an output directory.
+You can also use `--maxNumPoles` to downsample the PMP (see Section 4.3 in https://arxiv.org/abs/2509.14307), and `--outputFormat` and `--zip` to specify output file format. Call `pmp2sdp --help` to see options description. 
 
 The single file Mathematica and JSON formats are described in Section
 3.2 of the [manual](SDPB_Manual/SDPB-Manual.pdf). In addition, for JSON there
