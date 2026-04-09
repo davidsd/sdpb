@@ -6,23 +6,21 @@
 #include <algorithm>
 #include <iterator>
 
-const char *parse_matrix(const char *begin, const char *end,
-                         std::unique_ptr<Polynomial_Vector_Matrix> &matrix);
+const char *
+parse_matrix(const char *begin, const char *end, int64_t max_num_poles,
+             std::unique_ptr<Polynomial_Vector_Matrix> &matrix);
 
 const char *
 parse_polynomial(const char *begin, const char *end, Polynomial &polynomial);
 
 inline const char *
 parse_generic(const char *begin, const char *end, Polynomial &polynomial)
-{
-  return parse_polynomial(begin, end, polynomial);
-}
+{ return parse_polynomial(begin, end, polynomial); }
 
-inline const char *parse_generic(const char *begin, const char *end,
-                                 std::unique_ptr<Polynomial_Vector_Matrix> &matrix)
-{
-  return parse_matrix(begin, end, matrix);
-}
+inline const char *
+parse_generic(const char *begin, const char *end, const int64_t max_num_poles,
+              std::unique_ptr<Polynomial_Vector_Matrix> &matrix)
+{ return parse_matrix(begin, end, max_num_poles, matrix); }
 
 template <typename T>
 const char *parse_generic(const char *begin, const char *end,
@@ -47,7 +45,6 @@ const char *parse_generic(const char *begin, const char *end,
         {
           RUNTIME_ERROR("Missing '}' at end of array");
         }
-    }
-  while(*delimiter != '}');
+  } while(*delimiter != '}');
   return std::next(delimiter);
 }

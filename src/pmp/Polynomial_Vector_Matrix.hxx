@@ -56,11 +56,12 @@ struct Polynomial_Vector_Matrix
     const Simple_Matrix<Polynomial_Vector> &polynomials,
     const std::optional<Damped_Rational> &prefactor_opt,
     const std::optional<Damped_Rational> &reduced_prefactor_opt,
+    const std::optional<int64_t> &max_num_poles_opt,
     const std::optional<std::vector<El::BigFloat>> &sample_points_opt,
     const std::optional<std::vector<El::BigFloat>> &sample_scalings_opt,
     const std::optional<std::vector<El::BigFloat>> &reduced_sample_scalings_opt,
     const std::optional<std::array<Polynomial_Vector, 2>>
       &bilinear_basis_opt) noexcept(false);
 
-  void validate(int64_t max_degree) const;
+  void validate(int64_t num_points) const;
 };

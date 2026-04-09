@@ -8,7 +8,7 @@
 // should_parse_matrix() accepts matrix index in file (starting from 0)
 // and tells if this rank should parse the matrix of skip it.
 const char *parse_matrices(
-  const char *begin, const char *end,
+  const char *begin, const char *end, const int64_t max_num_poles,
   const std::function<bool(size_t matrix_index)> &should_parse_matrix,
   size_t &num_matrices,
   std::map<size_t, Polynomial_Vector_Matrix> &parsed_matrices)
@@ -28,7 +28,7 @@ const char *parse_matrices(
       auto start_matrix(std::next(delimiter));
       // TODO fast-forward through matrices that we don't need
       std::unique_ptr<Polynomial_Vector_Matrix> matrix;
-      auto end_matrix(parse_matrix(start_matrix, end, matrix));
+      auto end_matrix(parse_matrix(start_matrix, end, max_num_poles, matrix));
       if(should_parse_matrix(matrix_index))
         {
           parsed_matrices.emplace(matrix_index, std::move(*matrix));

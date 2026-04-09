@@ -2,8 +2,6 @@
 
 #include "Abstract_Json_Element_Parser.hxx"
 
-#include <El.hpp>
-
 #include <functional>
 
 class Json_UInt64_Parser final : public Abstract_Json_Element_Parser<uint64_t>

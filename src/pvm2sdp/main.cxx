@@ -34,8 +34,10 @@ int main(int argc, char **argv)
 
       Timers timers(env, verbosity);
 
-      auto pmp
-        = read_polynomial_matrix_program(env, input_files, verbosity, timers);
+      // If you want to set this parameter, use pmp2sdp
+      constexpr int64_t max_num_poles = -1;
+      auto pmp = read_polynomial_matrix_program(
+        env, input_files, max_num_poles, verbosity, timers);
       Output_SDP sdp(pmp, command_arguments, timers);
       bool zip = false;
       write_sdp(output_path, sdp, pmp, output_format, zip, timers, verbosity);

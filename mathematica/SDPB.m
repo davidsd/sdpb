@@ -82,6 +82,7 @@ Module[
 <|
   "prefactor" -> toJsonDampedRational[pmp[["prefactor"]],prec],
   "reducedPrefactor" -> toJsonDampedRational[pmp[["reducedPrefactor"]],prec],
+  "maxNumPoles" -> pmp[["maxNumPoles"]],
   "polynomials" -> Map[toJsonNumberArray[safeCoefficientList[#, x],prec] &, pmp[["polynomials"]], {3}],
   "samplePoints" -> toJsonNumberArray[sampleData[["samplePoints"]],prec],
   "sampleScalings" -> toJsonNumberArray[sampleData[["sampleScalings"]],prec],

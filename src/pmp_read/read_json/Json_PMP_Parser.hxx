@@ -27,7 +27,8 @@ private:
 
 public:
   Json_PMP_Parser(
-    bool should_parse_objective, bool should_parse_normalization,
+    int64_t max_num_poles, bool should_parse_objective,
+    bool should_parse_normalization,
     const std::function<bool(size_t matrix_index)> &should_parse_matrix,
     const std::function<void(PMP_File_Parse_Result &&result)> &on_parsed);
   Abstract_Json_Reader_Handler &
