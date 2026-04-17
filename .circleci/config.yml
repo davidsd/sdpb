@@ -24,6 +24,52 @@ version: 2.1
 # See https://circleci.com/docs/reusing-config/
 commands:
 
+  # Build SDPB locally, using homebrew package manager (used for MacOS)
+  # NB: this step takes much longer than Docker since one has to
+  # build Elemental and other dependencies!
+  native-brew-build-test:
+    description: Build and test SDPB natively, installing dependencies via homebrew
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies via Homebrew
+          command: |
+            export HOMEBREW_NO_INSTALL_CLEANUP=1
+            export HOMEBREW_NO_ANALYTICS=1
+            brew install gmp mpfr boost rapidjson libarchive openblas flint cmake open-mpi metis automake libtool pkgconf bison
+      - run:
+          name: Install Elemental
+          command: |
+            git clone https://gitlab.com/bootstrapcollaboration/elemental.git
+            cd elemental
+            mkdir build
+            cd build
+            cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/install -DCMAKE_CXX_COMPILER=mpicxx -DCMAKE_C_COMPILER=mpicc
+            make && make install
+            cd ../..
+      - run:
+          name: Install MPSolve
+          command: |
+            git clone https://github.com/robol/MPSolve.git
+            cd MPSolve
+            ./autogen.sh
+            CC=mpicc CXX=mpicxx LDFLAGS="-L$(brew --prefix gmp)/lib" CPPFLAGS="-I$(brew --prefix gmp)/include" YACC=$(brew --prefix bison)/bin/yacc ./configure --prefix=$HOME/install --disable-dependency-tracking --disable-examples --disable-ui --disable-graphical-debugger --disable-documentation
+            make && make install
+            cd ..
+      - run:
+          name: Build SDPB
+          command: |
+            CXXFLAGS="${CXXFLAGS} -D_GNU_SOURCE=1" ./waf configure --elemental-dir=$HOME/install --mpsolve-dir=$HOME/install --boost-dir=$(brew --prefix boost) --gmpxx-dir=$(brew --prefix gmp) --mpfr-dir=$(brew --prefix mpfr) --rapidjson-dir=$(brew --prefix rapidjson) --libarchive-dir=$(brew --prefix libarchive) --flint-dir=$(brew --prefix flint) --cblas-dir=$(brew --prefix openblas) --prefix=$HOME/install/sdpb/master
+            ./waf     
+            ./build/sdpb --help
+      - run:
+          name: Run tests
+          command: ./test/run_all_tests.sh
+      - run:
+          name: Install
+          command: ./waf install
+            
+
   docker-build-test:
     description: Build and test Docker image for platform
     parameters:
@@ -144,15 +190,12 @@ jobs:
           platform: linux/arm64
           tag: arm64
   
-  # TODO MacOS M1 will be available on free plan after 24 Jun 2024
-  #  build-macos-m1:
-  #    macos:
-  #      xcode: 15.3.0
-  #    resource_class: macos.m1.medium.gen1
-  #    steps:
-  #      - docker-build-test:
-  #          platform: linux/arm64
-  #          tag: arm64
+  build-test-macos:
+    macos:
+      xcode: 26.1.1
+    resource_class:  m4pro.medium
+    steps:
+      - native-brew-build-test
 
   # Test deploy process for local registry
   # TODO:docker manifest push works for DockerHub, but fails for local registry.
@@ -196,6 +239,11 @@ workflows:
               only: /^\d+\.\d+\.\d+$/
 
       - build-test-linux-arm64:
+          filters:
+            tags:
+              only: /^\d+\.\d+\.\d+$/
+
+      - build-test-macos:
           filters:
             tags:
               only: /^\d+\.\d+\.\d+$/
