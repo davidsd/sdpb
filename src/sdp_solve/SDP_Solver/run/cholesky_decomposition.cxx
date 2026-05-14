@@ -17,11 +17,12 @@ void cholesky_decomposition(const Block_Diagonal_Matrix &A,
         }
       catch(std::exception &e)
         {
+          const auto block_index = block_info.block_indices.at(b / 2);
+          const auto parity = b % 2;
           RUNTIME_ERROR("Error when computing Cholesky decomposition of "
                         "Block_Diagonal_Matrix ",
-                        name,
-                        ", block index = ", block_info.block_indices.at(b),
-                        ": ", e.what());
+                        name, ", block index = ", block_index,
+                        ", parity = ", parity, ": ", e.what());
         }
     }
 }
