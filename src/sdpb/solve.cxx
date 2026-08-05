@@ -20,13 +20,12 @@ void save_solution(
   const std::optional<std::vector<El::BigFloat>> &normalization,
   const Verbosity &verbosity);
 
-Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
-             const Environment &env,
-             const std::chrono::time_point<std::chrono::high_resolution_clock>
-               &start_time,
-             El::Matrix<int32_t> &block_timings_ms)
+SDP_Solver_Terminate_Reason solve(
+  const Block_Info &block_info, const SDPB_Parameters &parameters,
+  const Environment &env,
+  const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time,
+  Timers &timers, El::Matrix<int32_t> &block_timings_ms)
 {
-  Timers timers(env, parameters.verbosity);
   Scoped_Timer solve_timer(timers, "sdpb.solve");
 
   El::Grid grid(block_info.mpi_comm.value);
@@ -89,8 +88,8 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
   {
     Scoped_Timer save_timer(timers, "save_solution");
     auto runtime = std::chrono::duration_cast<std::chrono::seconds>(
-                    std::chrono::high_resolution_clock::now() - start_time)
-                    .count();
+                     std::chrono::high_resolution_clock::now() - start_time)
+                     .count();
     save_solution(solver, reason, runtime, parameters.out_directory,
                   parameters.write_solution, block_info.block_indices,
                   sdp.normalization, parameters.verbosity);
@@ -103,5 +102,5 @@ Timers solve(const Block_Info &block_info, const SDPB_Parameters &parameters,
       MPI_Finalize();
       std::exit(SIGTERM);
     }
-  return timers;
+  return reason;
 }
