@@ -26,8 +26,6 @@ void write_block_timings(const fs::path &checkpoint_out,
                          const El::Matrix<int32_t> &block_timings_ms,
                          Verbosity verbosity);
 
-void write_profiling(const fs::path &checkpoint_out, const Timers &timers);
-
 int main(int argc, char **argv)
 {
   Environment env(argc, argv);
@@ -132,19 +130,6 @@ int main(int argc, char **argv)
           write_block_timings(timing_parameters.solver.checkpoint_out,
                               block_info, block_timings_ms,
                               timing_parameters.verbosity);
-          if(timing_parameters.verbosity >= Verbosity::debug)
-            {
-              try
-                {
-                  write_profiling(parameters.solver.checkpoint_out, timers);
-                }
-              catch(std::exception &e)
-                {
-                  El::Output(
-                    "An exception has been thrown in write_profiling():");
-                  El::ReportException(e);
-                }
-            }
 
           El::mpi::Barrier(El::mpi::COMM_WORLD);
           Block_Info new_info(env, parameters.sdp_path, block_timings_ms,
@@ -173,18 +158,6 @@ int main(int argc, char **argv)
       El::Matrix<int32_t> block_timings_ms;
       Timers timers(env, parameters.verbosity);
       solve(block_info, parameters, env, start_time, timers, block_timings_ms);
-      if(parameters.verbosity >= Verbosity::debug)
-        {
-          try
-            {
-              write_profiling(parameters.solver.checkpoint_out, timers);
-            }
-          catch(std::exception &e)
-            {
-              El::Output("An exception has been thrown in write_profiling():");
-              El::ReportException(e);
-            }
-        }
     }
   catch(std::exception &e)
     {

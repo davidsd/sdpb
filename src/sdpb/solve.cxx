@@ -12,6 +12,8 @@
 
 namespace fs = std::filesystem;
 
+void write_profiling(const fs::path &checkpoint_out, const Timers &timers);
+
 void save_solution(
   const SDP_Solver &solver,
   const SDP_Solver_Terminate_Reason &terminate_reason, const int64_t &runtime,
@@ -94,6 +96,19 @@ SDP_Solver_Terminate_Reason solve(
                   parameters.write_solution, block_info.block_indices,
                   sdp.normalization, parameters.verbosity);
   }
+
+  if(parameters.verbosity >= Verbosity::debug)
+    {
+      try
+        {
+          write_profiling(parameters.solver.checkpoint_out, timers);
+        }
+      catch(std::exception &e)
+        {
+          El::Output("An exception has been thrown in write_profiling():");
+          El::ReportException(e);
+        }
+    }
 
   if(reason == SDP_Solver_Terminate_Reason::SIGTERM_Received)
     {
