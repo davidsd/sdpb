@@ -47,9 +47,6 @@ std::pair<int, El::BigFloat> max_block_cholesky_condition_number(
 {
   El::BigFloat zero(0);
 
-  El::DistMatrix<El::BigFloat, El::STAR, El::STAR> tttt = local_blocks.at(0);
-  El::DistMatrix<El::BigFloat, El::CIRC, El::CIRC> wwww = local_blocks.at(0);
-
   std::vector<El::BigFloat> cond_numbers(num_blocks, zero);
   for(size_t i = 0; i < local_blocks.size(); ++i)
     {
