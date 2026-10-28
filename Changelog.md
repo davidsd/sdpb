@@ -1,3 +1,34 @@
+# Unreleased
+
+## pmp2sdp
+
+Added pmp2sdp option `--maxNumPoles` and pmp.json field `"maxNumPoles"`.
+
+When `maxNumPoles` is specified (globally or for a single SDP block), pmp2sdp creates `reducedPrefactor` from `prefactor` by keeping up to `maxNumPoles` rightmost poles.   
+
+
+
+See [#294](https://github.com/davidsd/sdpb/pull/294).
+
+## spectrum
+
+Updated output format: lambda is now an array of eigenvectors instead of a single eigenvector, e.g.:
+`"lambda": ["0","2","10"]` becomes `"lambda": [["0","2","10"]]`.
+Spectrum can find several eigenvectors for higher-rank OPE matrices.
+
+- New option `--minEigenvalueRatio`: When computing lambda, keep only eigenvalues (and the corresponding eigenvectors of OPE matrix) larger than `minEigenvalueRatio * max(eigenvalues)`. By default, `--minEigenvalueRatio=sqrt(dualityGap)`.
+To filter out numerical noise, set this value somewhat higher than `dualityGap` of your SDPB solution.
+- New option `--minZeroDistance`: Minimal distance between the zeros. Several zeros within a shorter distance from each other will be replaced with their arithmetic mean.
+- Added default value: `--threshold=sqrt(dualityGap)`.
+
+See [#297](https://github.com/davidsd/sdpb/pull/297) for details.
+
+## Bugfixes
+
+- Fix [#277](https://github.com/davidsd/sdpb/issues/277) SDPB throws an error if the solver exits after a single iteration
+- Fix [#295](https://github.com/davidsd/sdpb/issues/295) Hot-starting from a sister-point checkpoint crashes mid-iteration with `vector::_M_range_check 9 >= 5`
+- Fix [#287](https://github.com/davidsd/sdpb/issues/287) spectrum: computing lambda fails when `reducedPrefactor=inf` 
+
 # Version 3.1.0
 
 ## New features
