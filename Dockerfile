@@ -22,7 +22,7 @@
 # Note: 'mpirun --oversubscribe' is necessary only if your environment has less than 6 CPUs available
 
 # Elemental binaries built from https://gitlab.com/bootstrapcollaboration/elemental.git
-# based on the same alpine:3.18 build as below
+# based on the same alpine:3.24 build as below
 
 # Built from https://github.com/vasdommes/flint/tree/docker-main
 FROM vasdommes/flint:main AS flint
@@ -59,10 +59,12 @@ COPY --from=flint /usr/local/include /usr/local/include
 WORKDIR /usr/local/src
 # Build MPSolve (takes ~1 minute)
 # TODO: create separate MPSolve image?
+# -Wno-error=implicit-function-declaration: MPSolve calls undeclared yyparse(), which is an error since GCC 14.
 RUN git clone https://github.com/robol/MPSolve.git --depth=1 && \
     cd MPSolve && \
     ./autogen.sh && \
-    CC=mpicc CXX=mpicxx ./configure --disable-dependency-tracking --disable-examples --disable-ui --disable-graphical-debugger --disable-documentation && \
+    CC=mpicc CXX=mpicxx CFLAGS="-g -O2 -Wno-error=implicit-function-declaration" \
+        ./configure --disable-dependency-tracking --disable-examples --disable-ui --disable-graphical-debugger --disable-documentation && \
     make && \
     make check && \
     make install && \
@@ -79,19 +81,12 @@ RUN (./waf configure --elemental-dir=/usr/local --flint-dir=/usr/local --prefix=
     python3 ./waf install
 
 # Take only sdpb binaries + load necessary dynamic libraries
-# Unfortunately, boost1.82-stacktrace_addr2line does not exist as a standalone package in Alpine Linux repo.
-# Thus we have to load the whole boost-dev (~180MB extra)
-# TODO: for some reason, function names and source locations are not printed in stacktrace.
-FROM alpine:3.19 AS install
+# libboost_stacktrace_addr2line is not packaged separately, only in boost1.84-libs (all Boost libraries).
+# binutils provides addr2line, which prints function names and source locations in stacktraces.
+FROM alpine:3.24 AS install
 RUN apk add \
     binutils \
-    boost-dev \
-    boost1.82-date_time \
-    boost1.82-filesystem \
-    boost1.82-iostreams \
-    boost1.82-program_options \
-    boost1.82-serialization \
-    boost1.82-system \
+    boost1.84-libs \
     gmp \
     libarchive \
     libgmpxx \
