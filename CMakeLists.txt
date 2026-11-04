@@ -19,6 +19,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # All executables go to the build directory, e.g. build/sdpb
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
+# Installed executables find dependencies outside system directories
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
 
 # Dependencies
 
@@ -92,24 +94,25 @@ set(SDPB_DEPENDENCIES
 include(CheckPackageVersions)
 sdpb_check_package_versions(${SDPB_DEPENDENCIES} MPSolve::MPSolve)
 
+# Generates sdpb_version.hxx at every build
+set(SDPB_VERSION_STRING "" CACHE STRING "SDPB version, e.g. 3.1.0. Empty: run 'git describe' at every build")
 find_package(Git QUIET)
-if(GIT_FOUND)
-  execute_process(COMMAND "${GIT_EXECUTABLE}" describe --tags --always --dirty
-    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
-    OUTPUT_VARIABLE SDPB_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
-endif()
-if(NOT SDPB_VERSION)
-  set(SDPB_VERSION unknown)
-endif()
-message(STATUS "SDPB version: ${SDPB_VERSION}")
+set(generated_dir "${PROJECT_BINARY_DIR}/generated")
+add_custom_target(sdpb_version
+  COMMAND "${CMAKE_COMMAND}" "-DVERSION=${SDPB_VERSION_STRING}"
+    -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DGIT_EXECUTABLE=${GIT_EXECUTABLE}
+    -DOUTPUT=${generated_dir}/sdpb_version.hxx -P ${PROJECT_SOURCE_DIR}/cmake/SdpbVersion.cmake
+  BYPRODUCTS "${generated_dir}/sdpb_version.hxx"
+  VERBATIM)
 
 # Settings for all SDPB targets, linked to sdpb_util
 add_library(sdpb_options INTERFACE)
-target_include_directories(sdpb_options INTERFACE src external)
-# -g: stack traces show source locations
-target_compile_options(sdpb_options INTERFACE -Wall -Wextra -Werror=return-type -g)
+add_dependencies(sdpb_options sdpb_version)
+target_include_directories(sdpb_options INTERFACE src external "${generated_dir}")
+# -g: stack traces show source locations.
+# -UNDEBUG: keep assert() enabled in dependency headers, e.g. RapidJSON, as in waf builds.
+target_compile_options(sdpb_options INTERFACE -Wall -Wextra -Werror=return-type -g -UNDEBUG)
 target_compile_definitions(sdpb_options INTERFACE
-  SDPB_VERSION_STRING="${SDPB_VERSION}"
   ${stacktrace_define}
   # Boost.Stacktrace requires it on macOS
   $<$<PLATFORM_ID:Darwin>:_GNU_SOURCE>)
@@ -127,6 +130,9 @@ add_subdirectory(src/outer_limits)
 add_subdirectory(src/approx_objective)
 add_subdirectory(src/pmp2functions)
 add_subdirectory(src/spectrum)
+
+include(GNUInstallDirs)
+install(TARGETS sdpb pmp2sdp pvm2sdp sdp2input outer_limits approx_objective pmp2functions spectrum)
 
 enable_testing()
 add_subdirectory(test)

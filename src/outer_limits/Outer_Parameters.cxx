@@ -1,4 +1,5 @@
 #include "Outer_Parameters.hxx"
+#include "sdpb_version.hxx"
 
 #include "sdpb_util/assert.hxx"
 
