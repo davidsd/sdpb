@@ -4,6 +4,8 @@
 # This config has a single workflow, 'build-test-deploy', which goes as follows:
 # 1. 'build-test-linux-amd64': Builds Docker image from SDPB sources (using ./Dockerfile) for AMD64 platform and run tests
 # 2. 'build-test-linux-arm64': same for ARM64
+#    'build-test-linux-amd64-cmake': same for AMD64, built with CMake. Its image is not deployed.
+#    These three jobs run in parallel.
 # 3. 'deploy-master': On each 'master' branch update, build a multiplatform image (working for both AMD64 and ARM64)
 #     and push it to DockerHub as '${DOCKER_USERNAME}/sdpb:master', e.g. 'davidsd/sdpb:master'.
 # 4. 'deploy-tag': If new tag is pushed to the repo, build and push the multiplatform image
@@ -135,6 +137,21 @@ jobs:
           platform: linux/amd64
           tag: amd64
 
+  # A separate job, so that it runs in parallel with the waf builds
+  build-test-linux-amd64-cmake:
+    machine:
+      image: ubuntu-2004:current
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Build with CMake and run tests
+          # --cap-add=SYS_PTRACE is a workaround for https://github.com/open-mpi/ompi/issues/4948
+          command: |
+            docker build . --platform linux/amd64 --build-arg BUILD_SYSTEM=cmake --tag sdpb-test-cmake --target test
+            docker run --cap-add=SYS_PTRACE sdpb-test-cmake sdpb --help
+            docker run --cap-add=SYS_PTRACE sdpb-test-cmake ./test/run_all_tests.sh
+
   build-test-linux-arm64:
     machine:
       image: ubuntu-2004:current
@@ -200,6 +217,11 @@ workflows:
             tags:
               only: /^\d+\.\d+\.\d+$/
 
+      - build-test-linux-amd64-cmake:
+          filters:
+            tags:
+              only: /^\d+\.\d+\.\d+$/
+
       - deploy-master:
           filters:
             branches:
@@ -207,6 +229,7 @@ workflows:
           requires:
             - build-test-linux-amd64
             - build-test-linux-arm64
+            - build-test-linux-amd64-cmake
 
       - deploy-tag:
           filters:
@@ -220,3 +243,4 @@ workflows:
           requires:
             - build-test-linux-amd64
             - build-test-linux-arm64
+            - build-test-linux-amd64-cmake
