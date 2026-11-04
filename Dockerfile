@@ -111,9 +111,9 @@ FROM install AS test
 RUN addgroup --gid 10000 testgroup && \
     adduser --disabled-password --uid 10000 --ingroup testgroup --shell /bin/sh testuser
 WORKDIR /home/testuser/sdpb
-COPY --from=build /usr/local/src/sdpb/build build
-COPY --from=build /usr/local/src/sdpb/test test
-RUN chown -R testuser test
+# Tests write to build/test/out
+COPY --from=build --chown=testuser:testgroup /usr/local/src/sdpb/build build
+COPY --from=build --chown=testuser:testgroup /usr/local/src/sdpb/test test
 USER testuser:testgroup
 
 # Resulting image

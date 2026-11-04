@@ -115,7 +115,7 @@ namespace
                              {"--precision", std::to_string(precision)}});
 
                 runner.create_nested("pmp2sdp").mpi_run(
-                  {"build/pmp2sdp", args}, num_procs);
+                  {Test_Config::program("pmp2sdp"), args}, num_procs);
 
                 if(check_sdp)
                   {
@@ -138,11 +138,13 @@ namespace
               {"--outDir", (output_dir / "out").string()},
               {"--checkpointDir", (output_dir / "ck").string()}};
             runner.create_nested("sdpb").mpi_run(
-              {"build/sdpb", default_sdpb_args, args}, num_procs);
+              {Test_Config::program("sdpb"), default_sdpb_args, args},
+              num_procs);
             if(run_sdpb_twice)
               {
                 runner.create_nested("sdpb-2").mpi_run(
-                  {"build/sdpb", default_sdpb_args, args}, num_procs);
+                  {Test_Config::program("sdpb"), default_sdpb_args, args},
+                  num_procs);
               }
 
             // SDPA does not have (c - B.y)
@@ -174,7 +176,8 @@ namespace
                 {"--verbosity", "debug"},
               };
               runner.create_nested("spectrum")
-                .mpi_run({"build/spectrum", default_spectrum_args, args},
+                .mpi_run({Test_Config::program("spectrum"),
+                          default_spectrum_args, args},
                          num_procs);
 
               // Cannot check block paths if the same spectrum.json

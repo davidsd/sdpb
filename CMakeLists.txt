@@ -127,4 +127,6 @@ add_subdirectory(src/outer_limits)
 add_subdirectory(src/approx_objective)
 add_subdirectory(src/pmp2functions)
 add_subdirectory(src/spectrum)
+
+enable_testing()
 add_subdirectory(test)
