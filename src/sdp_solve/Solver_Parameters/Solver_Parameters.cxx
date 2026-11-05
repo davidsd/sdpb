@@ -1,11 +1,15 @@
 #include "../Solver_Parameters.hxx"
 
-#include "String_To_Bytes_Translator.hxx"
+#include "Memory_Limit.hxx"
 #include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
 #include <boost/program_options.hpp>
 
 namespace fs = std::filesystem;
+
+Solver_Parameters::Solver_Parameters(const Environment &env)
+    : memory_limit_translator(env.initial_node_mem_available())
+{}
 
 boost::program_options::options_description Solver_Parameters::options()
 {
@@ -59,17 +63,29 @@ boost::program_options::options_description Solver_Parameters::options()
                          ->default_value(std::numeric_limits<int64_t>::max()),
                        "Maximum amount of time to run the solver in seconds.");
   result.add_options()(
+    "maxMemory",
+    boost::program_options::value<std::string>()
+      ->notifier([this](const std::string &s) {
+        this->max_memory = memory_limit_translator.from_string(s);
+      })
+      ->default_value("80%"),
+    "Maximum amount of memory that can be used for SDPB allocations, "
+    "in bytes."
+    " Optional suffixes: B (bytes), K/KB/KiB (kilobytes), M/MB/MiB "
+    "(megabytes), "
+    "G/GB/GiB (gigabytes), % (percents of MemAvailable at program start)");
+  result.add_options()(
     "maxSharedMemory",
     boost::program_options::value<std::string>()
       ->notifier([this](const std::string &s) {
-        this->max_shared_memory_bytes
-          = String_To_Bytes_Translator::from_string(s);
+        this->max_shared_memory = memory_limit_translator.from_string(s);
       })
       ->default_value("0"),
     "Maximum amount of memory that can be used for MPI shared windows, "
     "in bytes."
-    " Optional suffixes: B (bytes), K or KB (kilobytes), M or MB (megabytes), "
-    "G or GB (gigabytes).");
+    " Optional suffixes: B (bytes), K/KB/KiB (kilobytes), M/MB/MiB "
+    "(megabytes), "
+    "G/GB/GiB (gigabytes), % (percents of MemAvailable at program start)");
   result.add_options()(
     "dualityGapThreshold",
     boost::program_options::value<El::BigFloat>(&duality_gap_threshold)
@@ -163,8 +179,9 @@ boost::property_tree::ptree to_property_tree(const Solver_Parameters &p)
 
   result.put("maxIterations", p.max_iterations);
   result.put("maxRuntime", p.max_runtime);
-  result.put("maxSharedMemory", p.max_shared_memory_bytes,
-             String_To_Bytes_Translator());
+  result.put("maxMemory", p.max_memory, p.memory_limit_translator);
+  result.put("maxSharedMemory", p.max_shared_memory,
+             p.memory_limit_translator);
   result.put("checkpointInterval", p.checkpoint_interval);
   result.put("findPrimalFeasible", p.find_primal_feasible);
   result.put("findDualFeasible", p.find_dual_feasible);
@@ -193,8 +210,8 @@ std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
      << '\n'
      << "maxRuntime                   = " << p.max_runtime << '\n'
      << "checkpointInterval           = " << p.checkpoint_interval << '\n'
-     << "maxSharedMemory              = "
-     << pretty_print_bytes(p.max_shared_memory_bytes, true) << '\n'
+     << "maxMemory                    = " << p.max_memory << '\n'
+     << "maxSharedMemory              = " << p.max_shared_memory << '\n'
      << "findPrimalFeasible           = " << p.find_primal_feasible << '\n'
      << "findDualFeasible             = " << p.find_dual_feasible << '\n'
      << "detectPrimalFeasibleJump     = " << p.detect_primal_feasible_jump

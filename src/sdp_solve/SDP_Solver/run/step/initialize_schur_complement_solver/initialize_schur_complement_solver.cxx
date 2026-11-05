@@ -1,5 +1,5 @@
 #include "sdp_solve/SDP.hxx"
-#include "sdp_solve/Block_Diagonal_Matrix.hxx"
+#include "sdp_solve/Block_Matrix/Block_Diagonal_Matrix.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdp_solve/memory_estimates.hxx"
@@ -78,9 +78,8 @@ void initialize_schur_complement_solver(
   // block for each 0 <= j < J.  SchurComplement.blocks[j] has dimension
   // (d_j+1)*m_j*(m_j+1)/2
   //
-  Block_Diagonal_Matrix schur_complement(
-    block_info.schur_block_sizes(), block_info.block_indices,
-    block_info.num_points.size(), group_grid);
+  Block_Diagonal_Matrix schur_complement(block_info.schur_block_sizes(),
+                                         block_info.block_indices, group_grid);
   if(verbosity >= Verbosity::trace)
     {
       print_allocation_message_per_node(env, "schur_complement",

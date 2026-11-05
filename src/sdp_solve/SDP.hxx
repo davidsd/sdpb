@@ -8,8 +8,8 @@
 #pragma once
 
 #include "Block_Info.hxx"
-#include "Block_Matrix.hxx"
-#include "Block_Vector.hxx"
+#include "Block_Matrix/Block_Matrix.hxx"
+#include "Block_Matrix/Block_Vector.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
 #include <filesystem>

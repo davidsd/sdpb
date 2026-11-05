@@ -1,4 +1,4 @@
-#include "sdp_solve/Block_Diagonal_Matrix.hxx"
+#include "sdp_solve/Block_Matrix/Block_Diagonal_Matrix.hxx"
 #include "sdp_solve/Block_Info.hxx"
 
 // A_Y[b] = Q[b]'^T A[b] Q[b]' for each block 0 <= b < Q.size()
@@ -14,7 +14,7 @@
 // different from the big Q that gets inverted.
 
 void compute_A_Y(
-  const Block_Info &block_info, const Block_Diagonal_Matrix &Y,
+  const Block_Info &block_info, const Paired_Block_Diagonal_Matrix &Y,
   const std::vector<El::DistMatrix<El::BigFloat>> &bases_blocks,
   std::array<std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>,
              2> &A_Y)

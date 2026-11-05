@@ -11,8 +11,7 @@
 
 struct Outer_Parameters
 {
-  bool require_initial_checkpoint = false,
-    use_svd = false;
+  bool require_initial_checkpoint = false, use_svd = false;
   Write_Solution write_solution;
 
   El::BigFloat duality_gap_reduction, mesh_threshold;
@@ -21,7 +20,7 @@ struct Outer_Parameters
 
   std::filesystem::path functions_path, points_path, output_path, param_path;
 
-  Outer_Parameters(int argc, char *argv[]);
+  Outer_Parameters(int argc, char *argv[], const Environment &env);
   bool is_valid() const { return !functions_path.empty(); }
 };
 

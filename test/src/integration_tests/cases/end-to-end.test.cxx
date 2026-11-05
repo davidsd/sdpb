@@ -18,6 +18,16 @@ namespace fs = std::filesystem;
 
 namespace
 {
+  // TODO deduplicate with sdpb/main.cxx
+  bool is_sdpa_file(fs::path sdp_path)
+  {
+    if(sdp_path.extension() == ".gz")
+      sdp_path.replace_extension();
+    if(sdp_path.extension() == ".dat" || sdp_path.extension() == ".dat-s")
+      return true;
+    return false;
+  }
+
   struct End_To_End_Test
   {
     std::string name;
@@ -84,31 +94,41 @@ namespace
           Test_Case_Runner runner(runner_name);
           const auto &output_dir = runner.output_dir;
 
-          bool zip = pmp2sdp_args.find("--zip") != pmp2sdp_args.end();
-          auto sdp_path = (output_dir / (zip ? "sdp.zip" : "sdp")).string();
-          // pmp2sdp
-          {
-            INFO("run pmp2sdp");
-            auto args = pmp2sdp_args;
-
-            args.insert({{"--input", pmp_path.string()},
-                         {"--output", sdp_path},
-                         {"--precision", std::to_string(precision)}});
-
-            runner.create_nested("pmp2sdp").mpi_run({"build/pmp2sdp", args},
-                                                    num_procs);
-
-            if(check_sdp)
+          std::string sdp_path;
+          const bool is_sdpa = is_sdpa_file(pmp_path);
+          if(is_sdpa)
+            {
+              // No need to run pmp2sdp, sdpb works directly with SDPA files
+              sdp_path = pmp_path;
+            }
+          else
+            {
+              bool zip = pmp2sdp_args.find("--zip") != pmp2sdp_args.end();
+              sdp_path = (output_dir / (zip ? "sdp.zip" : "sdp")).string();
+              // pmp2sdp
               {
-                // pmp2sdp runs with --precision=<precision>
-                // We check test output up to lower precision=<diff_precision>
-                // in order to neglect unimportant rounding errors
-                auto sdp_orig = data_output_dir / "sdp";
-                diff_sdp(sdp_path, sdp_orig, precision, diff_precision,
-                         runner.create_nested("sdp.diff"),
-                         check_sdp_normalization);
+                INFO("run pmp2sdp");
+                auto args = pmp2sdp_args;
+
+                args.insert({{"--input", pmp_path.string()},
+                             {"--output", sdp_path},
+                             {"--precision", std::to_string(precision)}});
+
+                runner.create_nested("pmp2sdp").mpi_run(
+                  {"build/pmp2sdp", args}, num_procs);
+
+                if(check_sdp)
+                  {
+                    // pmp2sdp runs with --precision=<precision>
+                    // We check test output up to lower precision=<diff_precision>
+                    // in order to neglect unimportant rounding errors
+                    auto sdp_orig = data_output_dir / "sdp";
+                    diff_sdp(sdp_path, sdp_orig, precision, diff_precision,
+                             runner.create_nested("sdp.diff"),
+                             check_sdp_normalization);
+                  }
               }
-          }
+            }
 
           // sdpb
           {
@@ -125,11 +145,14 @@ namespace
                   {"build/sdpb", default_sdpb_args, args}, num_procs);
               }
 
-            // Read c,B,y and check that (c - B.y) equals to the vector written to c_minus_By/c_minus_By.json
-            check_c_minus_By(sdp_path, output_dir / "out", precision,
-                             diff_precision,
-                             runner.create_nested("check_c_minus_By"));
-
+            // SDPA does not have (c - B.y)
+            if(!is_sdpa)
+              {
+                // Read c,B,y and check that (c - B.y) equals to the vector written to c_minus_By/c_minus_By.json
+                check_c_minus_By(sdp_path, output_dir / "out", precision,
+                                 diff_precision,
+                                 runner.create_nested("check_c_minus_By"));
+              }
             // SDPB runs with --precision=<precision>
             // We check test output up to lower precision=<sdpb_output_diff_precision>
             // in order to neglect unimportant rounding errors
@@ -187,13 +210,65 @@ TEST_CASE("end-to-end_tests")
   INFO("On different machines results can vary due to rounding errors, "
        "depending on GMP/MPFR version etc");
 
+  SECTION("sdpa")
+  {
+    INFO("SDPA examples from sdpa-gmp repository");
+    INFO("https://github.com/nakatamaho/sdpa-gmp");
+
+    // Default parameters used in sdpa-gmp
+    const std::string default_sdpb_args
+      = "--maxIterations 200 --dualityGapThreshold 1.0e-30 "
+        "--initialMatrixScalePrimal 1.0e+4 --initialMatrixScaleDual 1.0e+4 "
+        "--maxComplementarity 4.0e+8 "
+        "--feasibleCenteringParameter 0.3 stepLengthReduction 0.9 "
+        "--primalErrorThreshold 1.0e-30 --dualErrorThreshold 1.0e-30 ";
+    SECTION("example1")
+    {
+      End_To_End_Test test("sdpa/example1");
+      test.precision = 200;
+      INFO("Optimal objective value: -41.9");
+      // NB: we ignore matrix X since it consists of noisy values ~1e-30
+      test.default_sdpb_args = boost::program_options::split_unix(
+        default_sdpb_args + " --writeSolution x,Y");
+      test.run();
+    }
+    SECTION("example2")
+    {
+      INFO("Optimal objective value: 3.2062692914757308e+01");
+      End_To_End_Test test("sdpa/example2");
+      test.precision = 200;
+      // NB: we ignore matrices X and Y since they contain noisy values ~1e-30
+      // This problem requires 100-130KB,
+      // so 120K is forcing SDPB to split memory windows.
+      test.default_sdpb_args = boost::program_options::split_unix(
+        default_sdpb_args + " --writeSolution x --maxMemory 120K");
+      test.check_sdp_normalization = false;
+      // run_sdpb_twice = true to test checkpoint loading
+      test.run_sdpb_twice = true;
+      test.run();
+    }
+    SECTION("example1-objective-const")
+    {
+      End_To_End_Test test("sdpa/example1-objective-const");
+      test.precision = 200;
+      test.sdpb_out_filenames = {"out.txt", "x.txt"};
+      INFO("Same as example1, but added sdpb.objectiveConst = -0.1 to "
+           "objective value.");
+      INFO("New objective value: -42");
+      INFO("NB: this is an SDPB-only extension of the standard SDPA format!");
+      // NB: we ignore matrix X since it consists of noisy values ~1e-30
+      test.default_sdpb_args = boost::program_options::split_unix(
+        default_sdpb_args + " --writeSolution x,Y");
+      test.run();
+    }
+  }
+
   SECTION("1d")
   {
     INFO("SDPB test for a simple one-dimensional problem from SDPB Manual:");
     INFO("maximize (-y) s.t. (1 + x^4 + y * (x^4 / 12 + x^2)) >= 0)");
 
     End_To_End_Test test("1d");
-    test.num_procs = 2;
     test.num_procs = 2;
     // Do not check normalization.json because it is absent in pmp-no-optional-fields.json
     test.check_sdp_normalization = false;
@@ -280,7 +355,7 @@ TEST_CASE("end-to-end_tests")
       "--checkpointInterval 3600 --maxIterations 1000 "
       "--feasibleCenteringParameter=0.1 --infeasibleCenteringParameter=0.3 "
       "--stepLengthReduction=0.7 "
-      "--maxSharedMemory=100K"); // forces split_factor=3 for Q window
+      "--maxMemory=3.8M"); // forces splitting both P and Q windows
     for(std::string sdp_format : {"", "bin", "json"})
       {
         DYNAMIC_SECTION(

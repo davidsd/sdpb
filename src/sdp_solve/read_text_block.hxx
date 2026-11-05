@@ -5,7 +5,7 @@
 #include <filesystem>
 
 inline void
-set_element(El::DistMatrix<El::BigFloat> &block, const int64_t &row,
+set_element(El::AbstractDistMatrix<El::BigFloat> &block, const int64_t &row,
             const int64_t &column, const El::BigFloat &element)
 {
   if(block.IsLocal(row, column))

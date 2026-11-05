@@ -1,6 +1,6 @@
 #include "Approx_Parameters.hxx"
 
-#include "sdp_solve/Solver_Parameters/String_To_Bytes_Translator.hxx"
+#include "sdp_solve/Solver_Parameters/Memory_Limit.hxx"
 #include "sdpb_util/assert.hxx"
 
 #include <boost/program_options.hpp>
@@ -8,7 +8,9 @@
 namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
-Approx_Parameters::Approx_Parameters(int argc, char *argv[])
+Approx_Parameters::Approx_Parameters(int argc, char *argv[],
+                                     const Environment &env)
+    : memory_limit_translator(env.initial_node_mem_available())
 {
   std::string write_solution_string;
   using namespace std::string_literals;
@@ -41,17 +43,29 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
     "A file containing either preprocessed input for the SDP you wish to "
     "approximate, or a null separated list of files with preprocessed input.");
   basic_options.add_options()(
+    "maxMemory",
+    boost::program_options::value<std::string>()
+      ->notifier([this](const std::string &s) {
+        this->max_memory = memory_limit_translator.from_string(s);
+      })
+      ->default_value("80%"),
+    "Maximum amount of memory that can be used for SDPB allocations, "
+    "in bytes."
+    " Optional suffixes: B (bytes), K/KB/KiB (kilobytes), M/MB/MiB "
+    "(megabytes), "
+    "G/GB/GiB (gigabytes), % (percents of MemAvailable at program start)");
+  basic_options.add_options()(
     "maxSharedMemory",
     boost::program_options::value<std::string>()
       ->notifier([this](const std::string &s) {
-        this->max_shared_memory_bytes
-          = String_To_Bytes_Translator::from_string(s);
+        this->max_shared_memory = memory_limit_translator.from_string(s);
       })
       ->default_value("0"),
     "Maximum amount of memory that can be used for MPI shared windows, "
     "in bytes."
-    " Optional suffixes: B (bytes), K or KB (kilobytes), M or MB (megabytes), "
-    "G or GB (gigabytes).");
+    " Optional suffixes: B (bytes), K/KB/KiB (kilobytes), M/MB/MiB "
+    "(megabytes), "
+    "G/GB/GiB (gigabytes), % (percents of MemAvailable at program start)");
   basic_options.add_options()(
     "solutionDir", boost::program_options::value<fs::path>(&solution_dir),
     "The directory with the text format solutions of x and y for the primary "
@@ -68,6 +82,20 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
     "Only compute the linear correction, not the quadratic correction.  "
     "This avoids having to compute an expensive inverse.");
   basic_options.add_options()(
+    "procGranularity", po::value<size_t>(&proc_granularity)->default_value(1),
+    "procGranularity must evenly divide number of processes per node.\n\n"
+    "The minimum number of cores in a group, used during load balancing.\n"
+    "Pros of setting procGranularity > 1:\n"
+    "- --procGranularity=2 or --procGranularity=4 "
+    "prevents group size from being a prime number (e.g. 11 or 13).\n"
+    "  Prime numbers lead to 1D grids (e.g. 11x1 or 13x1), "
+    "which could be bad for performance and memory (e.g. in El::Trsm()).\n"
+    "  This can be important for large blocks.\n"
+    "Cons: \n"
+    "- Load balancing may become worse.\n"
+    "- Small blocks are assigned to larger groups, "
+    "which introduces extra performance overhead.");
+  basic_options.add_options()(
     "verbosity",
     po::value<Verbosity>(&verbosity)->default_value(Verbosity::regular),
     "Verbosity.  0 -> no output, 1 -> regular output, 2 -> debug output, 3 -> "
@@ -80,14 +108,6 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
     "procsPerNode", po::value<size_t>(),
     "[OBSOLETE] The number of MPI processes running on a node. "
     "Determined automatically from MPI environment.");
-  obsolete_options.add_options()(
-    "procGranularity", po::value<size_t>(&proc_granularity),
-    "[OBSOLETE] procGranularity must evenly divide number of processes per "
-    "node.\n\n"
-    "The minimum number of cores in a group, used during load balancing.  "
-    "Setting it to anything larger than 1 will make the solution take "
-    "longer.  "
-    "This option should not be used except for testing purposes.");
   cmd_line_options.add(obsolete_options);
 
   po::variables_map variables_map;
@@ -139,14 +159,6 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
                     "MPI processes running on a node is determined "
                     "automatically from MPI environment.");
                 }
-              if(variables_map.count("procGranularity") != 0)
-                {
-                  PRINT_WARNING("--procGranularity option is obsolete. "
-                                "Setting it to anything larger than 1 will "
-                                "make the solution take longer. "
-                                "This option should not be used except for "
-                                "testing purposes.");
-                }
             }
         }
     }
@@ -159,11 +171,11 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[])
 
 std::ostream &operator<<(std::ostream &os, const Approx_Parameters &p)
 {
-  os << std::boolalpha
-     << "sdp                          = " << p.sdp_path << '\n'
+  os << std::boolalpha << "sdp                          = " << p.sdp_path
+     << '\n'
      << "newSdp                       = " << p.new_sdp_path << '\n'
      << "procsGranularity             = " << p.proc_granularity << '\n'
-     << "maxSharedMemory              = " << p.max_shared_memory_bytes << '\n'
+     << "maxSharedMemory              = " << p.max_shared_memory << '\n'
      << "precision(actual)            = " << p.precision << "("
      << mpf_get_default_prec() << ")" << '\n'
      << "solutionDir                  = " << p.solution_dir << '\n'

@@ -75,7 +75,7 @@ std::vector<El::BigFloat> compute_optimal(
 int main(int argc, char **argv)
 {
   Environment env(argc, argv);
-  Outer_Parameters parameters(argc, argv);
+  Outer_Parameters parameters(argc, argv, env);
   if(!parameters.is_valid())
     {
       return 0;

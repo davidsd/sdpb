@@ -21,7 +21,7 @@ struct SDPB_Parameters
 
   std::filesystem::path sdp_path, out_directory, param_path;
 
-  SDPB_Parameters(int argc, char *argv[]);
+  SDPB_Parameters(int argc, char *argv[], const Environment &env);
   bool is_valid() const { return !sdp_path.empty(); }
 };
 

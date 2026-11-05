@@ -10,7 +10,8 @@ struct MPI_Comm_Wrapper
   void operator=(const MPI_Comm_Wrapper &) = delete;
   ~MPI_Comm_Wrapper()
   {
-    if(value != El::mpi::COMM_WORLD)
+    if(value != El::mpi::COMM_WORLD && value != El::mpi::COMM_SELF
+       && value != El::mpi::COMM_NULL)
       {
         El::mpi::Free(value);
       }

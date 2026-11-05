@@ -1,4 +1,6 @@
+#include "centering_parameters.hxx"
 #include "compute_R_error.hxx"
+#include "step_length.hxx"
 #include "update_cond_numbers.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
@@ -25,36 +27,22 @@ void initialize_schur_complement_solver(
 
 void compute_search_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
-  const Block_Diagonal_Matrix &minus_XY,
+  const Paired_Block_Diagonal_Matrix &minus_XY,
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
-  const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat &beta,
+  const Paired_Block_Diagonal_Matrix &X_cholesky, const El::BigFloat &beta,
   const El::BigFloat &mu, const Block_Vector &primal_residue_p,
   const bool &is_corrector_phase, const El::DistMatrix<El::BigFloat> &Q,
-  Block_Vector &dx, Block_Diagonal_Matrix &dX, Block_Vector &dy,
-  Block_Diagonal_Matrix &dY);
-
-El::BigFloat predictor_centering_parameter(const Solver_Parameters &parameters,
-                                           const bool is_primal_dual_feasible);
-
-El::BigFloat corrector_centering_parameter(
-  const Solver_Parameters &parameters, const Block_Diagonal_Matrix &X,
-  const Block_Diagonal_Matrix &dX, const Block_Diagonal_Matrix &Y,
-  const Block_Diagonal_Matrix &dY, const El::BigFloat &mu,
-  const bool is_primal_dual_feasible, const size_t &total_num_rows);
-
-El::BigFloat
-step_length(const Block_Diagonal_Matrix &MCholesky,
-            const Block_Diagonal_Matrix &dM, const El::BigFloat &gamma,
-            const std::string &timer_name, Timers &timers);
+  Block_Vector &dx, Paired_Block_Diagonal_Matrix &dX, Block_Vector &dy,
+  Paired_Block_Diagonal_Matrix &dY);
 
 void SDP_Solver::step(
   const Environment &env, const Solver_Parameters &parameters,
   const Verbosity &verbosity, const std::size_t &total_psd_rows,
   const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
   const SDP &sdp, const El::Grid &grid,
-  const Block_Diagonal_Matrix &X_cholesky,
-  const Block_Diagonal_Matrix &Y_cholesky,
+  const Paired_Block_Diagonal_Matrix &X_cholesky,
+  const Paired_Block_Diagonal_Matrix &Y_cholesky,
   const std::array<
     std::vector<std::vector<std::vector<El::DistMatrix<El::BigFloat>>>>, 2>
     &A_X_inv,
@@ -78,7 +66,7 @@ void SDP_Solver::step(
   // as (x, X, y, Y). They are computed twice each iteration:
   // once in the predictor step, and once in the corrector step.
   Block_Vector dx(x), dy(y);
-  Block_Diagonal_Matrix dX(X), dY(Y);
+  Paired_Block_Diagonal_Matrix dX(X), dY(Y);
   if(verbosity >= Verbosity::trace)
     {
       print_allocation_message_per_node(env, "dx", get_allocated_bytes(dx));
@@ -90,8 +78,7 @@ void SDP_Solver::step(
     // SchurComplementCholesky = L', the Cholesky decomposition of the
     // Schur complement matrix S.
     Block_Diagonal_Matrix schur_complement_cholesky(
-      block_info.schur_block_sizes(), block_info.block_indices,
-      block_info.num_points.size(), grid);
+      block_info.schur_block_sizes(), block_info.block_indices, grid);
     if(verbosity >= Verbosity::trace)
       {
         print_allocation_message_per_node(
@@ -128,7 +115,7 @@ void SDP_Solver::step(
     // Calculate matrix product -XY
     // It will be reused for mu, R-err, compute_search_direction().
     Scoped_Timer XY_timer(timers, "XY");
-    Block_Diagonal_Matrix minus_XY(X);
+    Paired_Block_Diagonal_Matrix minus_XY(X);
     if(verbosity >= Verbosity::trace)
       {
         print_allocation_message_per_node(env, "XY",

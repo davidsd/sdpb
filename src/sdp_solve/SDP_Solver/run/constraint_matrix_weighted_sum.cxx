@@ -13,7 +13,7 @@
 
 void constraint_matrix_weighted_sum(const Block_Info &block_info,
                                     const SDP &sdp, const Block_Vector &a,
-                                    Block_Diagonal_Matrix &result)
+                                    Paired_Block_Diagonal_Matrix &result)
 {
   auto a_block(a.blocks.begin());
   auto result_block(result.blocks.begin());

@@ -6,25 +6,26 @@
 //=======================================================================
 
 #include "SDPB_Parameters.hxx"
+#include "time_and_solve.hxx"
+#include "sdp_solve/SDP_Solver.hxx"
+#include "sdpa_solve/SDP_Solver.hxx"
 #include "sdpb_util/Proc_Meminfo.hxx"
 #include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
 #include <El.hpp>
 
-#include <boost/date_time/posix_time/posix_time.hpp>
+#include <filesystem>
 
 namespace fs = std::filesystem;
 
-SDP_Solver_Terminate_Reason solve(
-  const Block_Info &block_info, const SDPB_Parameters &parameters,
-  const Environment &env,
-  const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time,
-  Timers &timers, El::Matrix<int32_t> &block_timings_ms);
-
-void write_block_timings(const fs::path &checkpoint_out,
-                         const Block_Info &block_info,
-                         const El::Matrix<int32_t> &block_timings_ms,
-                         Verbosity verbosity);
+bool is_sdpa_file(fs::path sdp_path)
+{
+  if(sdp_path.extension() == ".gz")
+    sdp_path.replace_extension();
+  if(sdp_path.extension() == ".dat" || sdp_path.extension() == ".dat-s")
+    return true;
+  return false;
+}
 
 int main(int argc, char **argv)
 {
@@ -32,7 +33,7 @@ int main(int argc, char **argv)
 
   try
     {
-      SDPB_Parameters parameters(argc, argv);
+      SDPB_Parameters parameters(argc, argv, env);
       if(!parameters.is_valid())
         {
           return 0;
@@ -74,90 +75,10 @@ int main(int argc, char **argv)
           El::mpi::Barrier(env.comm_shared_mem);
         }
 
-      Block_Info block_info(env, parameters.sdp_path,
-                            parameters.solver.checkpoint_in,
-                            parameters.proc_granularity, parameters.verbosity);
-      // Only generate a block_timings file if
-      // 1) We are running in parallel
-      // 2) We did not load a block_timings file
-      // 3) We are not going to load a checkpoint.
-      if(El::mpi::Size(El::mpi::COMM_WORLD) > 1
-         && block_info.block_timings_filename.empty()
-         && !exists(parameters.solver.checkpoint_in / "checkpoint.0"))
-        {
-          if(parameters.verbosity >= Verbosity::regular
-             && El::mpi::Rank() == 0)
-            {
-              El::Output(boost::posix_time::second_clock::local_time(),
-                         " Start timing run");
-            }
-          SDPB_Parameters timing_parameters(parameters);
-          timing_parameters.solver.max_iterations = 2;
-          timing_parameters.no_final_checkpoint = true;
-          timing_parameters.solver.checkpoint_interval
-            = std::numeric_limits<int64_t>::max();
-          timing_parameters.solver.max_runtime
-            = std::numeric_limits<int64_t>::max();
-          timing_parameters.solver.duality_gap_threshold = 0;
-          timing_parameters.solver.primal_error_threshold = 0;
-          timing_parameters.solver.dual_error_threshold = 0;
-          timing_parameters.solver.min_primal_step = 0;
-          timing_parameters.solver.min_dual_step = 0;
-          if(timing_parameters.verbosity < Verbosity::debug)
-            {
-              timing_parameters.verbosity = Verbosity::none;
-            }
-          El::Matrix<int32_t> block_timings_ms;
-          Timers timers(env, timing_parameters.verbosity);
-          const auto terminate_reason
-            = solve(block_info, timing_parameters, env, start_time, timers,
-                    block_timings_ms);
-
-          if(terminate_reason
-             != SDP_Solver_Terminate_Reason::MaxIterationsExceeded)
-            {
-              // If the solver converged after a single iteration,
-              // there is no need for a second run.
-              return 0;
-            }
-          if(block_timings_ms.Height() == 0 && block_timings_ms.Width() == 0)
-            {
-              RUNTIME_ERROR(
-                "block_timings vector is empty, probably because "
-                "timing run exited before completing two solver iterations.");
-            }
-
-          write_block_timings(timing_parameters.solver.checkpoint_out,
-                              block_info, block_timings_ms,
-                              timing_parameters.verbosity);
-
-          El::mpi::Barrier(El::mpi::COMM_WORLD);
-          Block_Info new_info(env, parameters.sdp_path, block_timings_ms,
-                              parameters.proc_granularity,
-                              parameters.verbosity);
-          swap(block_info, new_info);
-
-          auto elapsed_seconds
-            = std::chrono::duration_cast<std::chrono::seconds>(
-                std::chrono::high_resolution_clock::now() - start_time)
-                .count();
-          parameters.solver.max_runtime -= elapsed_seconds;
-        }
-      else if(!block_info.block_timings_filename.empty()
-              && block_info.block_timings_filename
-                   != (parameters.solver.checkpoint_out / "block_timings"))
-        {
-          if(El::mpi::Rank() == 0)
-            {
-              create_directories(parameters.solver.checkpoint_out);
-              copy_file(block_info.block_timings_filename,
-                        parameters.solver.checkpoint_out / "block_timings",
-                        fs::copy_options::overwrite_existing);
-            }
-        }
-      El::Matrix<int32_t> block_timings_ms;
-      Timers timers(env, parameters.verbosity);
-      solve(block_info, parameters, env, start_time, timers, block_timings_ms);
+      if(is_sdpa_file(parameters.sdp_path))
+        time_and_solve<Sdpb::Sdpa::SDP_Solver>(env, parameters, start_time);
+      else
+        time_and_solve<SDP_Solver>(env, parameters, start_time);
     }
   catch(std::exception &e)
     {

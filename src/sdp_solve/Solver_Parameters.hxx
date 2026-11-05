@@ -3,6 +3,9 @@
 // for a detailed description of each.
 //
 
+#include "Solver_Parameters/Memory_Limit.hxx"
+#include "sdpb_util/Environment.hxx"
+
 #include <El.hpp>
 #include <filesystem>
 #include <boost/property_tree/ptree.hpp>
@@ -12,11 +15,14 @@
 
 struct Solver_Parameters
 {
-  int64_t max_iterations, max_runtime, checkpoint_interval;
-  size_t max_shared_memory_bytes;
-  bool find_primal_feasible, find_dual_feasible, detect_primal_feasible_jump,
-    detect_dual_feasible_jump;
-  size_t precision;
+  int64_t max_iterations{}, max_runtime{}, checkpoint_interval{};
+  Memory_Limit max_memory{}, max_shared_memory{};
+  bool find_primal_feasible{}, find_dual_feasible{}, detect_primal_feasible_jump{},
+    detect_dual_feasible_jump{};
+  size_t precision{};
+
+  // Initialized from Environment - MemAvailable
+  String_To_Memory_Limit_Translator memory_limit_translator;
 
   El::BigFloat duality_gap_threshold, primal_error_threshold,
     dual_error_threshold, initial_matrix_scale_primal,
@@ -25,7 +31,7 @@ struct Solver_Parameters
     min_primal_step, min_dual_step;
 
   std::filesystem::path checkpoint_in, checkpoint_out;
-  Solver_Parameters() = default;
+  explicit Solver_Parameters(const Environment &env);
   boost::program_options::options_description options();
 };
 
