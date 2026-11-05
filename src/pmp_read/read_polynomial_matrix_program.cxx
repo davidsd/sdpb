@@ -100,10 +100,11 @@ namespace
 Polynomial_Matrix_Program
 read_polynomial_matrix_program(const Environment &env,
                                const fs::path &input_file,
+                               const int64_t max_num_poles,
                                const Verbosity &verbosity, Timers &timers)
 {
   return read_polynomial_matrix_program(env, std::vector{input_file},
-                                        verbosity, timers);
+                                        max_num_poles, verbosity, timers);
 }
 
 // Read Polynomal Matrix Program in one of the supported formats.
@@ -120,6 +121,7 @@ read_polynomial_matrix_program(const Environment &env,
 Polynomial_Matrix_Program
 read_polynomial_matrix_program(const Environment &env,
                                const std::vector<fs::path> &input_files,
+                               const int64_t max_num_poles,
                                const Verbosity &verbosity, Timers &timers)
 {
   Scoped_Timer timer(timers, "read_pmp");
@@ -172,8 +174,8 @@ read_polynomial_matrix_program(const Environment &env,
         bool should_parse_normalization = mapping.mpi_comm.value.Rank() == 0;
 
         auto file_parse_result = PMP_File_Parse_Result::read(
-          file, should_parse_objective, should_parse_normalization,
-          should_parse_matrix);
+          file, max_num_poles, should_parse_objective,
+          should_parse_normalization, should_parse_matrix);
 
         num_matrices_in_group += file_parse_result.num_matrices;
 

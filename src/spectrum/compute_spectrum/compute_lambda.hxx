@@ -1,14 +1,16 @@
 #pragma once
 
 #include "pmp/PMP_Info.hxx"
-#include "spectrum/Zero.hxx"
 #include "sdpb_util/assert.hxx"
-#include "sdpb_util/Damped_Rational.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
+#include "spectrum/Zeros.hxx"
+
+#include <optional>
 
 inline void
 compute_lambda(const PVM_Info &pvm_info, const El::Matrix<El::BigFloat> &x,
                const std::vector<El::BigFloat> &zero_values,
+               const std::optional<El::BigFloat> &min_eigenvalue_ratio,
                Zeros &spectrum_block, Timers &timers)
 {
   Scoped_Timer timer(timers, "compute_lambda");
@@ -163,19 +165,41 @@ compute_lambda(const PVM_Info &pvm_info, const El::Matrix<El::BigFloat> &x,
                         " for Lambda matrix will be replaced with 0.");
           max_eigenvalue = 0;
         }
+
+      int num_large_eigenvals = 0;
+      if(max_eigenvalue > 0)
+        {
+          for(num_large_eigenvals = 1; num_large_eigenvals < num_eigvals;
+              ++num_large_eigenvals)
+            {
+              const int i = num_eigvals - num_large_eigenvals - 1;
+              const auto val = eigenvalues(i, 0);
+              if(val <= 0)
+                break;
+              // NB: not required for 1x1 matrices
+              ASSERT(
+                min_eigenvalue_ratio.has_value(),
+                "Need to set --minEigenvalueRatio for blocks larger than 1x1");
+              if(val / max_eigenvalue < min_eigenvalue_ratio.value())
+                break;
+            }
+        }
       {
         zeros.emplace_back(zero_values[zero_index]);
-        auto &lambda(zeros.back().lambda);
+        auto &lambdas = zeros.back().lambda;
         // lambdas = eigenvectors * sqrt(eigenvalues)
         // lambdas = v_{j,\tau} from Eq. (A.8)
 
-        // If eigenvalue == 0, then lambda = 0.
+        // If max_eigenvalue == 0, then lambda = 0.
         // TODO: lambda=0 is unphysical, shall we remove all such zeros and recompute lambdas?
         // (note that adding/removing any zeros affects all lambdas in a block)
-        if(max_eigenvalue == El::BigFloat(0))
+        if(num_large_eigenvals == 0)
           {
-            lambda.Resize(num_eigvals, 1);
-            El::Zero(lambda);
+            PRINT_WARNING("block_", pvm_info.block_index,
+                          ": x=", zero_values.at(zero_index),
+                          ": nontrivial eigenvectors not found, set lambda=0");
+            lambdas.Resize(num_eigvals, 1);
+            El::Zero(lambdas);
             continue;
           }
 
@@ -188,29 +212,57 @@ compute_lambda(const PVM_Info &pvm_info, const El::Matrix<El::BigFloat> &x,
                      "probably due to eigensolver failure. ",
                      DEBUG_STRING(zero_index), DEBUG_STRING(max_eigenvalue));
 
-        lambda = El::View(eigenvectors, 0, num_eigvals - 1, num_eigvals, 1);
-        lambda *= El::Sqrt(max_eigenvalue);
+        const El::IR large_range(num_eigvals - num_large_eigenvals,
+                                 num_eigvals);
+        const auto large_eigenvalues = eigenvalues(large_range, El::ALL);
+        lambdas = El::LockedView(eigenvectors, El::ALL, large_range);
 
-        size_t row_column(0);
-        for(size_t column(0); column != num_rows; ++column)
-          for(size_t row(0); row <= column; ++row)
-            {
-              for(size_t index(0); index != matrix_block_size; ++index)
+        const auto sqrt_chi_inv
+          = 1
+            / El::Sqrt(to_BigFloat(pvm_info.reduced_prefactor.evaluate(
+              to_Boost_Float(zeros.back().zero))));
+
+        // Below, we multiply lambda by 1 / sqrt(\chi) after updating error_matrix.
+        // If this factor is zero, then we should treat lambda as zero form the start,
+        // i.e. error_matrix should not change.
+        // Then, user will potentially get large error value indicating that something went wrong.
+        // See discussion in https://github.com/davidsd/sdpb/issues/287
+        if(sqrt_chi_inv == El::BigFloat(0))
+          {
+            PRINT_WARNING("block_", pvm_info.block_index,
+                          ", x=", zeros.back().zero,
+                          ": reduced_prefactor=inf, lambda will be set to 0");
+            El::Zero(lambdas);
+            continue;
+          }
+
+        for(int index = 0; index < num_large_eigenvals; ++index)
+          {
+            // Single eigenvector
+            auto lambda = lambdas(El::ALL, El::IR(index, index + 1));
+            ASSERT(lambda.Viewing());
+            const auto eigenvalue = large_eigenvalues(index, 0);
+
+            lambda *= El::Sqrt(eigenvalue);
+            size_t row_column(0);
+            for(size_t column(0); column != num_rows; ++column)
+              for(size_t row(0); row <= column; ++row)
                 {
-                  error_matrix(index, row_column)
-                    -= interpolation(index, zero_index) * lambda(row)
-                       * lambda(column) * (row == column ? 1 : 2);
+                  for(size_t index(0); index != matrix_block_size; ++index)
+                    {
+                      error_matrix(index, row_column)
+                        -= interpolation(index, zero_index) * lambda(row)
+                           * lambda(column) * (row == column ? 1 : 2);
+                    }
+                  ++row_column;
                 }
-              ++row_column;
-            }
 
-        // Set lambda = 1/sqrt(\chi) * v_{j,\tau}
-        // With this definition, lambda does not change
-        // if one adds reducedPrefactor != prefactor to PMP.json
-        // NB: this is different from Python script and from (A.8) definition!
-        lambda *= 1
-                  / El::Sqrt(to_BigFloat(pvm_info.reduced_prefactor.evaluate(
-                    to_Boost_Float(zeros.back().zero))));
+            // Set lambda = 1/sqrt(\chi) * v_{j,\tau}
+            // With this definition, lambda does not change
+            // if one adds reducedPrefactor != prefactor to PMP.json
+            // NB: this is different from Python script and from (A.8) definition!
+            lambda *= sqrt_chi_inv;
+          }
       }
     }
   error = El::Sqrt(El::Dot(error_matrix, error_matrix));

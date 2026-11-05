@@ -42,6 +42,7 @@ namespace
     bool check_sdp = true;
     bool check_sdp_normalization = true;
     bool run_sdpb_twice = false;
+    std::vector<std::string> default_spectrum_args;
 
     explicit End_To_End_Test(std::string name) : name(std::move(name)) {}
 
@@ -165,13 +166,16 @@ namespace
               Named_Args_Map args{
                 {"--pmpInfo", sdp_path + "/pmp_info.json"},
                 {"--solution", (output_dir / "out").string()},
-                {"--threshold", "1e-10"},
+                // threshold and minEigenvalueRatio are set automatically to sqrt(dualityGap).
+                // {"--threshold", "1e-10"},
+                // {"--minEigenvalueRatio", "1e-10"},
                 {"--output", (output_dir / "spectrum.json").string()},
                 {"--precision", std::to_string(precision)},
                 {"--verbosity", "debug"},
               };
               runner.create_nested("spectrum")
-                .mpi_run({"build/spectrum", args}, num_procs);
+                .mpi_run({"build/spectrum", default_spectrum_args, args},
+                         num_procs);
 
               // Cannot check block paths if the same spectrum.json
               // is generated several times by different PMP inputs,
@@ -300,8 +304,12 @@ TEST_CASE("end-to-end_tests")
     INFO("maximize (-y) s.t. (1 + x^4 + y * (x^4 / 12 + x^2)) >= 0) for "
          "x=2/3, x=4/3, and x>=2");
     INFO("SDPB should find primal-dual optimal solution.");
-    INFO("Spectrum should find isolated zero for the last block "
-         "(corresponding to x=4/3).");
+    INFO("Spectrum should find isolated zeros for all blocks corresponding to "
+         "x = 4/3.\n"
+         "Filenames for such blocks have the form "
+         "'constant_x=4%3_dim=$DIM_rank=$RANK.json'.\n"
+         "Number of eigenvectors in \"lambda\" is equal to $RANK, "
+         "and the length if each vector equals $DIM.");
     End_To_End_Test test("1d-isolated-zeros");
     test.default_sdpb_args = boost::program_options::split_unix(
       "--checkpointInterval 3600 --maxRuntime 1340 "
@@ -373,15 +381,32 @@ TEST_CASE("end-to-end_tests")
       test.check_sdp_normalization = true;
       // run_sdpb_twice=true to test checkpoint loading, see https://github.com/davidsd/sdpb/issues/219
       test.run_sdpb_twice = true;
+      // In other tests, --threshold and --minEigenvalueRatio are set automatically to sqrt(dualityGap).
+      // Here we set them manually to test spectrum argument parsing.
+      test.default_spectrum_args = boost::program_options::split_unix(
+        "--threshold 1e-10 --minEigenvalueRatio 1e-10");
       test.run();
     }
 
     SECTION("primal_dual_optimal_reduced")
     {
-      INFO("Same as primal_dual_optimal, but with reducedPrefactor.");
+      INFO("Same as primal_dual_optimal, but with a custom "
+           "reducedPrefactor/maxNumPoles for each block.");
       End_To_End_Test test(
         "SingletScalar_cT_test_nmax6/primal_dual_optimal_reduced");
       test.default_sdpb_args = default_sdpb_args;
+      test.run();
+    }
+
+    SECTION("primal_dual_optimal_reduced_max_num_poles_14")
+    {
+      INFO("Same as primal_dual_optimal_reduced, but with --maxNumPoles 14.");
+      INFO("NB: pmp contains blocks with maxNumPoles from 11 to 17.");
+      INFO("The resulting SDP blocks will have numPoles from 11 to 14.");
+      End_To_End_Test test("SingletScalar_cT_test_nmax6/"
+                           "primal_dual_optimal_reduced_max_num_poles_14");
+      test.default_sdpb_args = default_sdpb_args;
+      test.pmp2sdp_args = {{"--maxNumPoles", "14"}};
       test.run();
     }
   }

@@ -2,7 +2,8 @@
 #include "sdpb_util/json/Vector_Parse_Result_With_Skip.hxx"
 
 Json_PMP_Parser::Json_PMP_Parser(
-  bool should_parse_objective, bool should_parse_normalization,
+  const int64_t max_num_poles, bool should_parse_objective,
+  bool should_parse_normalization,
   const std::function<bool(size_t matrix_index)> &should_parse_matrix,
   const std::function<void(value_type &&result)> &on_parsed)
     : Abstract_Json_Object_Parser(false, on_parsed, [] {}),
@@ -36,7 +37,8 @@ Json_PMP_Parser::Json_PMP_Parser(
         // Skip some matrices according to their indices:
         [&should_parse_matrix](size_t index) {
           return !should_parse_matrix(index);
-        })
+        },
+        max_num_poles)
 {}
 Abstract_Json_Reader_Handler &
 Json_PMP_Parser::element_parser(const std::string &key)
@@ -57,9 +59,7 @@ void Json_PMP_Parser::clear_result()
   result.parsed_matrices.clear();
 }
 Json_PMP_Parser::value_type Json_PMP_Parser::get_result()
-{
-  return std::move(result);
-}
+{ return std::move(result); }
 void Json_PMP_Parser::reset_element_parsers(const bool skip)
 {
   objective_parser.reset(skip);

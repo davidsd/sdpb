@@ -2,6 +2,7 @@
 
 #include "SDPB_Parameters.hxx"
 #include "save_solution.hxx"
+#include "write_timing.hxx"
 #include "sdp_solve/memory_estimates.hxx"
 #include "sdp_solve/sdp_solve.hxx"
 #include "sdpa_solve/memory_estimates.hxx"
@@ -59,13 +60,13 @@ create_solver(const SDPB_Parameters &parameters,
 }
 
 template <class TSolver>
-Timers solve(const typename TSolver::Block_Info_Type &block_info,
-             const SDPB_Parameters &parameters, const Environment &env,
-             const std::chrono::time_point<std::chrono::high_resolution_clock>
-               &start_time,
-             El::Matrix<int32_t> &block_timings_ms)
+SDP_Solver_Terminate_Reason
+solve(const typename TSolver::Block_Info_Type &block_info,
+      const SDPB_Parameters &parameters, const Environment &env,
+      const std::chrono::time_point<std::chrono::high_resolution_clock>
+        &start_time,
+      Timers &timers, El::Matrix<int32_t> &block_timings_ms)
 {
-  Timers timers(env, parameters.verbosity);
   Scoped_Timer solve_timer(timers, "sdpb.solve");
 
   El::Grid grid(block_info.mpi_comm.value);
@@ -121,6 +122,19 @@ Timers solve(const typename TSolver::Block_Info_Type &block_info,
     save_solution(solver, block_info, sdp, parameters, reason, runtime);
   }
 
+  if(parameters.verbosity >= Verbosity::debug)
+    {
+      try
+        {
+          write_profiling(parameters.solver.checkpoint_out, timers);
+        }
+      catch(std::exception &e)
+        {
+          El::Output("An exception has been thrown in write_profiling():");
+          El::ReportException(e);
+        }
+    }
+
   if(reason == SDP_Solver_Terminate_Reason::SIGTERM_Received)
     {
       if(El::mpi::Rank() == 0)
@@ -128,5 +142,5 @@ Timers solve(const typename TSolver::Block_Info_Type &block_info,
       MPI_Finalize();
       std::exit(SIGTERM);
     }
-  return timers;
+  return reason;
 }

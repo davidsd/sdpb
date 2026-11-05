@@ -4,6 +4,7 @@
 #include "sdpb_util/assert.hxx"
 
 #include <boost/math/constants/constants.hpp>
+#include <iterator>
 
 std::vector<Boost_Float>
 sample_points(const size_t &num_points, const Damped_Rational &prefactor);
@@ -47,7 +48,7 @@ namespace
     // because we don't know required MPFR precision at that moment.
     // Thus, we do it inside the function.
     const Boost_Float exp_minus_one =
-#if(BOOST_VERSION >= 106900)
+#if (BOOST_VERSION >= 106900)
       boost::math::constants::exp_minus_one<Boost_Float>();
 #else
       Boost_Float(1) / boost::math::constants::e<Boost_Float>();
@@ -126,6 +127,7 @@ Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
   const Simple_Matrix<Polynomial_Vector> &polynomials,
   const std::optional<Damped_Rational> &prefactor_opt,
   const std::optional<Damped_Rational> &reduced_prefactor_opt,
+  const std::optional<int64_t> &max_num_poles_opt,
   const std::optional<std::vector<El::BigFloat>> &sample_points_opt,
   const std::optional<std::vector<El::BigFloat>> &sample_scalings_opt,
   const std::optional<std::vector<El::BigFloat>> &reduced_sample_scalings_opt,
@@ -136,22 +138,34 @@ Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
 
   prefactor = prefactor_or_default(prefactor_opt, max_degree);
 
-  reduced_prefactor = [&] {
+  // Set and validate reduced_prefactor
+  {
     if(reduced_prefactor_opt.has_value())
-      {
-        ASSERT(prefactor_opt.has_value());
-        return prefactor_or_default(reduced_prefactor_opt, max_degree);
-      }
-    return prefactor;
-  }();
+      PRINT_WARNING(prefactor_opt.has_value(),
+                    "reducedPrefactor is specified, but prefactor is not!");
+    reduced_prefactor = reduced_prefactor_opt.value_or(prefactor);
 
-  if(reduced_prefactor.poles.size() > prefactor.poles.size())
-    {
-      PRINT_WARNING("reducedPrefactor has more poles than prefactor, the "
-                    "number of sample points will be increased!\n\t",
-                    DEBUG_STRING(prefactor.poles.size()),
-                    DEBUG_STRING(reduced_prefactor.poles.size()));
-    }
+    // Leave the rightmost max_num_poles in reduced_prefactor
+    const int64_t max_num_poles
+      = max_num_poles_opt.has_value() && max_num_poles_opt.value() >= 0
+          ? max_num_poles_opt.value()
+          : reduced_prefactor.poles.size();
+    if(max_num_poles < reduced_prefactor.poles.size())
+      {
+        auto poles = reduced_prefactor.poles;
+        std::sort(poles.begin(), poles.end());
+        reduced_prefactor.poles
+          = {std::prev(poles.end(), max_num_poles), poles.end()};
+      }
+
+    if(reduced_prefactor.poles.size() > prefactor.poles.size())
+      {
+        PRINT_WARNING("reducedPrefactor has more poles than prefactor, the "
+                      "number of sample points will be increased!\n\t",
+                      DEBUG_STRING(prefactor.poles.size()),
+                      DEBUG_STRING(reduced_prefactor.poles.size()));
+      }
+  }
 
   const int64_t num_points
     = max_degree + 1 + reduced_prefactor.poles.size() - prefactor.poles.size();
@@ -163,9 +177,11 @@ Polynomial_Vector_Matrix::Polynomial_Vector_Matrix(
 
   sample_scalings = sample_scalings_or_default(sample_scalings_opt,
                                                this->sample_points, prefactor);
+
   reduced_sample_scalings = [&] {
     if(reduced_sample_scalings_opt.has_value()
-       || reduced_prefactor_opt.has_value())
+       || reduced_prefactor_opt.has_value()
+       || reduced_prefactor.poles.size() != prefactor.poles.size())
       {
         return sample_scalings_or_default(
           reduced_sample_scalings_opt, this->sample_points, reduced_prefactor);

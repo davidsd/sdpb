@@ -10,6 +10,7 @@
 struct Pmp2functions_Parameters
 {
   int precision;
+  int64_t max_num_poles;
   std::filesystem::path input_file;
   std::filesystem::path output_path;
   Verbosity verbosity;

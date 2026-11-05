@@ -155,8 +155,10 @@ int run_command(const Command &command,
       const auto exe = find_executable(command.exe).string();
       ASSERT(!exe.empty(), "Cannot find executable: ", command.exe);
       const auto &args = command.args;
-      return bp::execute(bp::process(ctx, exe, args, io), local_ec);
+      const int exit_code
+        = bp::execute(bp::process(ctx, exe, args, io), local_ec);
       ec.assign(local_ec.value(), local_ec.category());
+      return exit_code;
 #endif
     }
   catch(std::exception &ex)

@@ -95,6 +95,7 @@ Fmpz_Comb::Fmpz_Comb(mp_limb_t bits, mp_limb_signed_t k)
   num_primes = primes.size();
   mods.resize(num_primes);
   shifts.resize(num_primes);
+  residues_temp.resize(num_primes);
 
   fmpz_comb_init(comb, primes.data(), num_primes);
   fmpz_comb_temp_init(comb_temp, comb);

@@ -18,6 +18,8 @@ struct Fmpz_Comb : boost::noncopyable
   size_t num_primes;
   std::vector<nmod_t> mods;
   std::vector<ulong> shifts;
+  // Output buffer for fmpz_multi_mod_ui()
+  std::vector<mp_limb_t> residues_temp;
 
   Fmpz_Comb() = delete;
   // bits: Number of bits to store matrix multiplication result

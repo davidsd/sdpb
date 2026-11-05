@@ -1,5 +1,6 @@
 #include "Boost_Float.hxx"
 
+#include "assert.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
 
 #include <boost/multiprecision/mpfr.hpp>
@@ -25,6 +26,9 @@ Boost_Float to_Boost_Float(const El::BigFloat &alpha)
 }
 El::BigFloat to_BigFloat(const Boost_Float &value)
 {
+  // MPFR supports NaN or infinity, but GMP does not.
+  ASSERT(isfinite(value), "Cannot convert MPFR value=", value,
+         "to GMP BigFloat");
   El::BigFloat result;
   mpfr_get_f(result.gmp_float.get_mpf_t(), value.backend().data(), MPFR_RNDN);
   return result;

@@ -5,21 +5,21 @@
 namespace fs = std::filesystem;
 
 PMP_File_Parse_Result
-read_json(const std::filesystem::path &input_path, bool should_parse_objective,
-          bool should_parse_normalization,
+read_json(const std::filesystem::path &input_path, int64_t max_num_poles,
+          bool should_parse_objective, bool should_parse_normalization,
           const std::function<bool(size_t matrix_index)> &should_parse_matrix);
 
 PMP_File_Parse_Result read_mathematica(
-  const std::filesystem::path &input_path,
+  const std::filesystem::path &input_path, int64_t max_num_poles,
   const std::function<bool(size_t matrix_index)> &should_parse_matrix);
 
 PMP_File_Parse_Result
-read_xml(const std::filesystem::path &input_file,
+read_xml(const std::filesystem::path &input_file, int64_t max_num_poles,
          const std::function<bool(size_t matrix_index)> &should_parse_matrix);
 
 PMP_File_Parse_Result PMP_File_Parse_Result::read(
-  const fs::path &input_path, bool should_parse_objective,
-  bool should_parse_normalization,
+  const fs::path &input_path, const int64_t max_num_poles,
+  bool should_parse_objective, bool should_parse_normalization,
   const std::function<bool(size_t matrix_index)> &should_parse_matrix)
 {
   PMP_File_Parse_Result result;
@@ -29,18 +29,19 @@ PMP_File_Parse_Result PMP_File_Parse_Result::read(
 
       if(input_path.extension() == ".json")
         {
-          result = read_json(input_path, should_parse_objective,
+          result = read_json(input_path, max_num_poles, should_parse_objective,
                              should_parse_normalization, should_parse_matrix);
         }
       // TODO: use should_parse_objective and should_parse_normalization
       // also in read_mathematica() and read_xml()
       else if(input_path.extension() == ".m")
         {
-          result = read_mathematica(input_path, should_parse_matrix);
+          result
+            = read_mathematica(input_path, max_num_poles, should_parse_matrix);
         }
       else if(input_path.extension() == ".xml")
         {
-          result = read_xml(input_path, should_parse_matrix);
+          result = read_xml(input_path, max_num_poles, should_parse_matrix);
         }
       else
         {

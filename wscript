@@ -1,5 +1,9 @@
 import os, subprocess
 
+# Include and library paths are searched in this order
+external_packages = ['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'flint',
+                     'cblas']
+
 
 def options(opt):
     opt.load(['compiler_cxx', 'gnu_dirs'])
@@ -16,6 +20,9 @@ def configure(conf):
     conf.load(['compiler_cxx', 'gnu_dirs', 'cxx17', 'boost', 'gmpxx', 'mpfr', 'mpsolve',
                'elemental', 'libxml2', 'rapidjson', 'libarchive', 'cblas', 'flint'])
     conf.load('clang_compilation_database', tooldir='./waf-tools')
+    conf.load('check_package_versions', tooldir='./waf-tools')
+    # Some targets also use mpsolve, after all other packages
+    conf.check_package_versions(external_packages + ['mpsolve'])
 
     conf.env.git_version = subprocess.check_output('git describe --tags --always --dirty', universal_newlines=True,
                                                    shell=True).rstrip()
@@ -24,8 +31,6 @@ def configure(conf):
 def build(bld):
     default_flags = ['-Wall', '-Wextra', '-Werror=return-type', '-O3', '-g']
     default_defines = ['OMPI_SKIP_MPICXX', 'SDPB_VERSION_STRING="' + bld.env.git_version + '"']
-    external_packages = ['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'flint',
-                         'cblas']
     # All binaries (except for sdpb_util itself) depend also on sdpb_util
     use_packages = external_packages + ['sdpb_util']
     default_includes = ['src', 'external']
@@ -287,6 +292,7 @@ def build(bld):
                         'src/spectrum/read_c_minus_By.cxx',
                         'src/spectrum/read_pmp_info.cxx',
                         'src/spectrum/read_x.cxx',
+                        'src/spectrum/set_default_parameters.cxx',
                         'src/spectrum/write_profiling.cxx',
                         'src/spectrum/compute_spectrum/compute_spectrum.cxx',
                         'src/spectrum/compute_spectrum/find_zeros.cxx',

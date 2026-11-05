@@ -14,7 +14,7 @@
 #include <filesystem>
 
 template <class TSolver>
-Timers time_and_solve(
+void time_and_solve(
   const Environment &env, SDPB_Parameters parameters,
   const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time)
 {
@@ -51,8 +51,17 @@ Timers time_and_solve(
           timing_parameters.verbosity = Verbosity::none;
         }
       El::Matrix<int32_t> block_timings_ms;
-      Timers timers = solve<TSolver>(block_info, timing_parameters, env,
-                                     start_time, block_timings_ms);
+      Timers timers(env, timing_parameters.verbosity);
+      const auto terminate_reason
+        = solve<TSolver>(block_info, timing_parameters, env, start_time,
+                         timers, block_timings_ms);
+      if(terminate_reason
+         != SDP_Solver_Terminate_Reason::MaxIterationsExceeded)
+        {
+          // If the solver converged after a single iteration,
+          // there is no need for a second run.
+          return;
+        }
       // Release memory back to OS (glibc-only)
       malloc_trim(env, timers);
 
@@ -65,18 +74,6 @@ Timers time_and_solve(
 
       write_block_timings(timing_parameters.solver.checkpoint_out,
                           block_timings_ms, timing_parameters.verbosity);
-      if(timing_parameters.verbosity >= Verbosity::debug)
-        {
-          try
-            {
-              write_profiling(parameters.solver.checkpoint_out, timers);
-            }
-          catch(std::exception &e)
-            {
-              El::Output("An exception has been thrown in write_profiling():");
-              El::ReportException(e);
-            }
-        }
 
       El::mpi::Barrier(El::mpi::COMM_WORLD);
       auto new_info
@@ -102,6 +99,7 @@ Timers time_and_solve(
         }
     }
   El::Matrix<int32_t> block_timings_ms;
-  return solve<TSolver>(block_info, parameters, env, start_time,
-                        block_timings_ms);
+  Timers timers(env, parameters.verbosity);
+  solve<TSolver>(block_info, parameters, env, start_time, timers,
+                 block_timings_ms);
 }

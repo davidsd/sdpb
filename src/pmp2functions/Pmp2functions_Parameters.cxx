@@ -27,6 +27,12 @@ Pmp2functions_Parameters::Pmp2functions_Parameters(int argc, char **argv)
     "The precision, in the number of bits, for numbers in the "
     "computation. ");
   options.add_options()(
+    "maxNumPoles,n", po::value<int64_t>(&max_num_poles)->default_value(-1),
+    "Maximum number of poles in reducedPrefactor (-1 means unlimited).\n"
+    "pmp2functions will keep up to maxNumPoles rightmost poles in "
+    "reducedPrefactor, which is used for interpolating the PMP.\n"
+    "See https://arxiv.org/abs/2509.14307, Section 4.3 for details.");
+  options.add_options()(
     "verbosity,v",
     po::value<Verbosity>(&verbosity)->default_value(Verbosity::regular),
     "Verbosity.  0 -> no output, 1 -> regular "
@@ -71,9 +77,7 @@ Pmp2functions_Parameters::Pmp2functions_Parameters(int argc, char **argv)
     }
 }
 bool Pmp2functions_Parameters::is_valid() const
-{
-  return !input_file.empty();
-}
+{ return !input_file.empty(); }
 boost::property_tree::ptree to_property_tree(const Pmp2functions_Parameters &p)
 {
   boost::property_tree::ptree result;
@@ -81,6 +85,7 @@ boost::property_tree::ptree to_property_tree(const Pmp2functions_Parameters &p)
   result.put("input", p.input_file.string());
   result.put("output", p.output_path.string());
   result.put("precision", p.precision);
+  result.put("maxNumPoles", p.max_num_poles);
   result.put("verbosity", static_cast<int>(p.verbosity));
 
   return result;

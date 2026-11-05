@@ -115,9 +115,9 @@ To construct an SDP, \texttt{pmp2sdp} needs the following information:
 	\item a normalization vector $n\in \R^{N+1}$.
 \end{itemize}
 By default, $d_j$ equals to the maximum degree of polynomials in $W^0_j(x),\dots,W^N_j(x)$.
-To improve performance, one may use a lower value (e.g. by specifying \texttt{"reducedPrefactor"} or choosing sample points explicitly, see below).
+To improve performance, one may use a lower value (e.g. by specifying \texttt{"reducedPrefactor"}, \texttt{"maxNumPoles"} or the command-line option \texttt{pmp2sdp --maxNumPoles}, or choosing sample points explicitly, see below).
 A bilinear basis is a collection of polynomials $q_m^{(j)}(x)$ such that $\deg q_m^{(j)} = m$, for example monomials $q_m^{(j)}(x)=x^m$.  (A better choice for numerical stability is usually orthogonal polynomials on the positive real line.)  The sample points, sample scalings and bilinear bases determine how the PMP is represented internally as an SDP.  In principle, they do not affect the solution of the PMP, but in practice they can affect numerical stability.
-See Section 3.3 in \cite{DSD} for details.
+See \cite{Chang:2025mwt} and Section 3.3 in \cite{DSD} for details.
 
 
 \texttt{pmp2sdp} can parse input in \texttt{JSON}, \texttt{Mathematica} and \texttt{XML} formats, described below.
@@ -151,6 +151,7 @@ See details in \texttt{docs/Usage.md}.
 @\defn{positive matrix with prefactor $j$}@ {
 	@\textrm{\em{(optional)}}@ "prefactor" | "DampedRational": @\repl{damped-rational prefactor}@,
 	@\textrm{\em{(optional)}}@ "reducedPrefactor": @\repl{damped-rational prefactor}@,
+	@\textrm{\em{(optional)}}@ "maxNumPoles": @\repl{maximal number of poles in reducedPrefactor}@,
 	"polynomials": [
 		[@\repl{polynomial vector $Q^{n}_{j,11}(x)$}@, ... @\repl{polynomial vector $Q^{n}_{j,m_j1}(x)$}@],
 		...
@@ -199,16 +200,19 @@ These stand for
 \be
 \texttt{DampedRational[$c$, \{$p_1,\dots,p_k$\}, $b$, $x$]} &\to& c\frac{b^x}{\prod_{i=1}^k (x-p_i)}.
 \ee
-Sample points $x_0 \ldots x_{d_j}$ are chosen to minimize interpolation errors on the positive real line.
+Sample points $x_0 \ldots x_{d_j}$ are chosen to minimize interpolation errors on the positive real line \cite{Chang:2025mwt}.
 $d_j$ is determined as maximum degree of polynomials in $W^0_j(x),\dots,W^N_j(x)$ plus the number of poles in the reduced prefactor minus the number of poles in the prefactor.
 Sample scalings are $s_k = \chi(x_k)$ and reduced sample scalings are $s^\prime_k = \chi^\prime(x_k)$,
 where $\chi(x)$ is the prefactor and $\chi^\prime(x)$ is the reduced prefactor.
 \texttt{"bilinearBasis\_0"} is a set of orthogonal polynomials with respect to measure $\sum_{0}^{d_j}s^\prime_k \delta(x-x_k)dx$ on the positive real line, and \texttt{"bilinearBasis\_1"} is a set of orthogonal polynomials with respect to measure $x\sum_{0}^{d_j}s^\prime_k \delta(x-x_k)dx$.
+See \cite{Chang:2025mwt} for detailed discussion of the interpolation algorithm.
 
 If \texttt{"prefactor"} is not specified, default sample points, sample scalings and bilinear bases are calculated assuming the prefactor $\chi(x) = e^{-x}$. For constant constraints (degree-0 polynomials), default prefactor is $\chi(x) = 1$.
 Note that in SDPB 3.0.0 and earlier, \texttt{"prefactor"} was called \texttt{"DampedRational"}; this name is left for backward compatibility.
 
 If \texttt{"reducedPrefactor"} is not specified, it is set to the same value as \texttt{"prefactor"}.
+If \texttt{"reducedPrefactor"} has more poles than specified by the field \texttt{"maxNumPoles"} or by the command-line option \texttt{pmp2sdp --maxNumPoles}, then only the rightmost \texttt{maxNumPoles} poles are kept in \texttt{"reducedPrefactor"}.
+Negative \texttt{maxNumPoles} values are ignored.
 
 
 If \texttt{"bilinearBasis"} is specified, it is used for both $q_m^{(j1)}(x)$ and $q_m^{(j2)}(x)$. This field is left for backward compatibility with SDPB 3.0.0 and earlier.
@@ -954,6 +958,14 @@ I am supported by DOE grant number DE-SC0009988 and a William D. Loughlin Member
   \href{http://arXiv.org/abs/1406.4858}{arXiv:1406.4858 [hep-th]}.
   %%CITATION = ARXIV:1406.4858;%%
   %9 citations counted in INSPIRE as of 01 Feb 2015
+
+%\cite{Chang:2025mwt}
+\bibitem{Chang:2025mwt}
+  C.~H.~Chang, V.~Dommes, P.~Kravchuk, D.~Poland and D.~Simmons-Duffin,
+  ``Accurate bootstrap bounds from optimal interpolation,''
+  [arXiv:2509.14307 [hep-th]].
+%5 citations counted in INSPIRE as of 03 Apr 2026
+
 
 \bibitem{SDPA}
   M. Yamashita, K. Fujisawa, M. Fukuda, K. Nakata, and M. Nakata,

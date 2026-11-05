@@ -9,13 +9,13 @@
 #include <string>
 
 const char *parse_matrices(
-  const char *begin, const char *end,
+  const char *begin, const char *end, int64_t max_num_poles,
   const std::function<bool(size_t)> &should_parse_current_matrix,
   size_t &num_matrices,
   std::map<size_t, Polynomial_Vector_Matrix> &parsed_matrices);
 
 const char *
-parse_SDP(const char *begin, const char *end,
+parse_SDP(const char *begin, const char *end,const int64_t max_num_poles,
           const std::function<bool(size_t matrix_index)> &should_parse_matrix,
           std::optional<std::vector<El::BigFloat>> &objectives,
           std::optional<std::vector<El::BigFloat>> &normalization,
@@ -68,7 +68,7 @@ parse_SDP(const char *begin, const char *end,
       RUNTIME_ERROR("Missing comma after normalization");
     }
 
-  const char *end_matrices(parse_matrices(std::next(comma), end,
+  const char *end_matrices(parse_matrices(std::next(comma), end, max_num_poles,
                                           should_parse_matrix, num_matrices,
                                           parsed_matrices));
 

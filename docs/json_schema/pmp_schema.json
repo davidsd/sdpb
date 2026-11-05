@@ -48,6 +48,9 @@
                             }
                         }
                     },
+                    "maxNumPoles": {
+                        "type": "integer"
+                    },
                     "DampedRational":
                     {
                         "type": "object",

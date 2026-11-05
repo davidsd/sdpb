@@ -89,8 +89,10 @@ int main(int argc, char **argv)
       Timers timers(env, verbosity);
       Scoped_Timer timer(timers, "sdp2input");
 
-      auto pmp
-        = read_polynomial_matrix_program(env, input_file, verbosity, timers);
+      // If you want to set this parameter, use pmp2sdp
+      constexpr int64_t max_num_poles = -1;
+      auto pmp = read_polynomial_matrix_program(env, input_file, max_num_poles,
+                                                verbosity, timers);
 
       Output_SDP sdp(pmp, command_arguments, timers);
       bool zip = false;

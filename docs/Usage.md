@@ -34,6 +34,7 @@ Use `pmp2sdp` to create SDPB input from files with a PMP. The usage is
 `[PRECISION]` is the number of bits of precision used in the
 conversion.  `[INPUT]` is a single Mathematica, JSON, XML or NSV
 (Null Separated Value) file. `[OUTPUT]` is an output directory.
+You can also use `--maxNumPoles` to downsample the PMP (see Section 4.3 in https://arxiv.org/abs/2509.14307), and `--outputFormat` and `--zip` to specify output file format. Call `pmp2sdp --help` to see options description. 
 
 The single file Mathematica and JSON formats are described in Section
 3.2 of the [manual](SDPB_Manual/SDPB-Manual.pdf). In addition, for JSON there
@@ -197,17 +198,17 @@ This will output the spectra into `test/out/spectrum/1d/spectrum.json` and shoul
 [
   {
     "block_path": "test/data/end-to-end_tests/1d/input/pmp.json",
-    "zeros":
-      [
-        {
-          "zero": "1.0424967857181581209840065194040256159993020360900482727878770557146614245818844773397565119010581109698382853498679936546513923307745546360686597437951864152447392489871552675002522402284639707590108004747402926563347806805408627031",
-          "lambda":
-            [
-              "1.54694357833877357195864820903901085838088924863264895636292566812483741243475458164155073771873903702617821828504900956715888510611718238011758262357999879234060791367950657551753978299255767817752180863347673614"
-            ]
-        }
-      ],
-    "error": "2.6155851084748106058372014479417985936837231505075543152693720913161268299244324614060365156178452537195052377426866117722568851267463995166401153416001203798485032869542329200019745454151278916593515227121025871432270728599938064247e-26"
+    "zeros": [
+      {
+        "zero": "1.04249678571815812098400651940402588551817464537296262014475782848711468517831729605366065940294278580341286805477340769648758871722958945799926776073918390590815495720242896470413021851113098588836134728703346283",
+        "lambda": [
+          [
+            "1.54694357833877357195864820903901116949337414099884811266823030281476233526526217385572091950844480308078719637826381700862165648847084444755689823793327877973940615930065072306902959073017284495666199126761059837"
+          ]
+        ]
+      }
+    ],
+    "error": "2.61558507636706998768268589785574818292702184050960721508531240370407569660416817267708593353995302214421134564309862375671483311967442639952542078221319922448465353968305149652407922145661156680520217679074769755e-26"
   }
 ]
 ```
@@ -223,13 +224,26 @@ The spectrum extraction algorithm is described in
 [arxiv:1612.08471](https://arxiv.org/abs/1612.08471) (see Appendix A)
 and originally implemented in Python, see https://gitlab.com/bootstrapcollaboration/spectrum-extraction.
 
-The vector `"lambda"` in `spectrum.json` is defined as
+`"lambda"` in `spectrum.json` is an array of OPE coefficient vectors
+(eigenvectors of $V_{j,\tau}$ with non-negligible eigenvalues, see footnote 47 in [arxiv:1612.08471](https://arxiv.org/abs/1612.08471)),
+defined as
 ```math
 \vec{\lambda}_{j,x} = \vec{v}_{j,x} / \sqrt{\chi_j^\prime(x)}
 ```
 where $\vec{v}_{j,x}$ is given by Eq. (A.7) in [arxiv:1612.08471](https://arxiv.org/abs/1612.08471)
 and $\chi_j^\prime(x)$ is a `reducedPrefactor` from pmp.json (see [SDPB Manual](SDPB_Manual/SDPB-Manual.pdf) for PMP format description).
 Note that this definition disagrees with Eq. (A.8) in [arxiv:1612.08471](https://arxiv.org/abs/1612.08471), which is incorrect.
+
+Due to numerical errors, $V_{j,\tau}$ can have small non-zero eigenvalues `~ O(dualityGap) * max_eigenvalue`.
+To filter them out, you may use the option `--minEigenvalueRatio`.
+By default, `spectrum` will set `--minEigenvalueRatio` to `sqrt(dualityGap)`.
+
+`spectrum` detects zeros by checking conditions like `f(x) / f(x_1) < threshold`.
+You may adjust its sensitivity by changing the option `--threshold`. By default, it is set to `sqrt(dualityGap)`.
+
+If you get several zeros close to each other and want to replace them with a single zero, increase `--minZeroDistance`.
+
+If `spectrum` finds a large unphysical zero, set `--maxZero` to a lower value to exclude it.
 
 ## Common issues and workarounds
 
@@ -309,7 +323,3 @@ and/or
 ```
 export OMP_NUM_THREADS=1
 ```
-
-### Spectrum does not find zeros
-
-Try to set `--threshold` option for `spectrum` larger than `--dualityGapThreshold` for `sdpb`.

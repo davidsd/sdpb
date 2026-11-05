@@ -2,6 +2,8 @@
 #include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
+#include "sdpb_util/ostream/ostream_vector.hxx"
+#include "sdpb_util/ostream/set_stream_precision.hxx"
 
 #include <El.hpp>
 #include <vector>
@@ -84,7 +86,7 @@ find_polynomial_roots(const std::vector<El::BigFloat> &polynomial_coeffs,
 
   if(mps_context_has_errors(ctx))
     {
-      const char* msg = mps_context_error_msg(ctx);
+      const char *msg = mps_context_error_msg(ctx);
       RUNTIME_ERROR("MPSolve error: ", msg == nullptr ? "NULL" : msg);
     }
 
@@ -162,16 +164,81 @@ find_real_positive_roots_sorted(const Boost_Polynomial &polynomial,
   return positive_roots;
 }
 
+El::BigFloat arithmetic_mean(const std::vector<El::BigFloat> &values)
+{
+  ASSERT(!values.empty());
+  return std::accumulate(values.begin(), values.end(), El::BigFloat(0))
+         / values.size();
+}
+
+// Take a sorted array, find cluster of values within min_distance
+// and replace each cluster replaced with its arithmetic mean.
+std::vector<El::BigFloat>
+deduplicate_sorted_values(const std::vector<El::BigFloat> &sorted_values,
+                          const El::BigFloat &min_distance)
+{
+  if(sorted_values.empty())
+    return {};
+  ASSERT(min_distance >= 0);
+
+  std::vector<El::BigFloat> result;
+  // Current cluster of nearby zeros
+  std::vector<El::BigFloat> curr_cluster;
+
+  // Add avg(cluster) to result and clear cluster
+  const auto update_result_and_clear_cluster = [&] {
+    ASSERT(!curr_cluster.empty());
+    if(curr_cluster.size() == 1)
+      {
+        result.push_back(curr_cluster.back());
+      }
+    else
+      {
+        const auto mean = arithmetic_mean(curr_cluster);
+        result.push_back(mean);
+
+        std::ostringstream os;
+        os << "A cluster of polynomial roots within --minDistance="
+           << min_distance;
+        set_stream_precision(os);
+        os << "\n  " << curr_cluster << "\n  will be replaced with: " << mean;
+        PRINT_WARNING(os.str());
+      }
+    curr_cluster.clear();
+  };
+
+  for(const auto &x : sorted_values)
+    {
+      if(!curr_cluster.empty())
+        {
+          const auto &prev = curr_cluster.back();
+          ASSERT(prev <= x, "values are unsorted!");
+          // NB: strict inequality to ensure that we remove duplicates
+          // in case min_distance = 0.
+          if(x - prev > min_distance)
+            update_result_and_clear_cluster();
+        }
+      curr_cluster.push_back(x);
+    }
+  if(!curr_cluster.empty())
+    update_result_and_clear_cluster();
+  return result;
+}
+
 std::vector<El::BigFloat>
 find_real_positive_minima_sorted(const Boost_Polynomial &polynomial,
+                                 const El::BigFloat &min_zero_distance,
                                  Timers &timers)
 {
   Scoped_Timer timer(timers, "find_minima");
   std::vector<El::BigFloat> minima;
 
-  // Roots of polynomial derivative
-  const auto deriv_roots
-    = find_real_positive_roots_sorted(polynomial.prime(), timers);
+  // Roots of polynomial derivative.
+  // If several roots are within min_zero_distance between each other,
+  // they are replaced with their arithmetic mean.
+  const auto deriv_roots = deduplicate_sorted_values(
+    find_real_positive_roots_sorted(polynomial.prime(), timers),
+    min_zero_distance);
   if(deriv_roots.empty())
     return minima;
 

@@ -5,7 +5,7 @@
 
 #include <vector>
 
-void bigint_to_residues(const Fmpz_BigInt &input, const Fmpz_Comb &comb,
+void bigint_to_residues(const Fmpz_BigInt &input, Fmpz_Comb &comb,
                         double *residues, size_t stride);
 
 void residues_to_bigint(const double *residues, size_t stride, Fmpz_Comb &comb,

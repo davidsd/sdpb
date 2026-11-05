@@ -8,6 +8,7 @@
 
 std::vector<El::BigFloat>
 find_real_positive_minima_sorted(const Boost_Polynomial &polynomial,
+                                 const El::BigFloat &min_zero_distance,
                                  Timers &timers);
 
 namespace
@@ -19,7 +20,7 @@ namespace
   //   = p_{j, r, s}(x)*reduced_prefactor_j(x)
   //   p is polynomial
   // How to build it:
-  // - divide (c-B.y)_{j,r,s,k} by reduced_prefactor_j(x_k) * pv_j_r(x_k) * pv_j_s(x_k)
+  // - divide (c-B.y)_{j,r,s,k} by reduced_prefactor_j(x_k)
   // - for each {j,r,s}, build interpolating polynomial p_{j,r,s}(x), degree = (num_points - 1)
   Simple_Matrix<Boost_Polynomial> get_interpolated_polynomial_matrix(
     const El::Matrix<El::BigFloat> &c_minus_By_block, const PVM_Info &pvm,
@@ -62,7 +63,7 @@ namespace
     return interpolation_matrix;
   }
 
-  El::BigFloat eval_determinant(
+  Boost_Float eval_determinant(
     const Simple_Matrix<Boost_Polynomial> &interpolated_poly_matrix,
     const Damped_Rational &reduced_prefactor, const Boost_Float &x)
   {
@@ -70,20 +71,18 @@ namespace
     const auto width = interpolated_poly_matrix.Width();
     ASSERT_EQUAL(height, width);
 
-    std::optional<std::vector<Boost_Float>> pv;
-    const auto scale = reduced_prefactor.evaluate(x);
-
-    El::Matrix<El::BigFloat> result(height, width);
+    El::Matrix<El::BigFloat> poly_values(height, width);
     for(int i = 0; i < height; ++i)
       for(int j = 0; j < width; ++j)
         {
-          Boost_Float value
-            = interpolated_poly_matrix(i, j).evaluate(x) * scale;
-          if(pv.has_value())
-            value *= pv->at(i) * pv->at(j);
-          result(i, j) = to_BigFloat(value);
+          poly_values(i, j)
+            = to_BigFloat(interpolated_poly_matrix(i, j).evaluate(x));
         }
-    return El::Determinant(result);
+
+    const auto det = to_Boost_Float(El::Determinant(poly_values));
+    // Multiply each element by chi, so that det is multiplied by chi^N
+    const auto chi = reduced_prefactor.evaluate(x);
+    return det * pow(chi, height);
   }
 
   template <class T> T get_midpoint(const T &a, const T &b)
@@ -169,8 +168,9 @@ namespace
 
 std::vector<El::BigFloat>
 find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
-           const PVM_Info &pvm, const El::BigFloat &threshold,
-           const El::BigFloat &max_zero, Timers &timers)
+           const PVM_Info &pvm, const Boost_Float &threshold,
+           const El::BigFloat &max_zero, const El::BigFloat &min_zero_distance,
+           Timers &timers)
 {
   Scoped_Timer timer(timers, "find_zeros");
   ASSERT(threshold > 0, DEBUG_STRING(threshold));
@@ -184,8 +184,32 @@ find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
   if(pvm.sample_points.size() == 1)
     {
       Scoped_Timer const_timer(timers, "constant_constraint");
-      // El::HermitianEig modifies input matrix, so we have to make a copy
-      auto block = c_minus_By_block;
+
+      // c - B.y is a vector, we need to reshape it into a (dim x dim) matrix.
+      // We reuse get_interpolated_polynomial_matrix() to build it.
+      // In this case the interpolation matrix contains 0-degree polynomials:
+      // interpolated_poly_matrix[r,s] = (c - B.y)[rs,1] / scale
+      // where scale is reduced_sample_scaling at x_0.
+      const auto interpolated_poly_matrix
+        = get_interpolated_polynomial_matrix(c_minus_By_block, pvm, timers);
+      const auto dim = pvm.dim;
+      ASSERT_EQUAL(interpolated_poly_matrix.Height(), dim);
+      ASSERT_EQUAL(interpolated_poly_matrix.Width(), dim);
+
+      El::Matrix<El::BigFloat> block(dim, dim);
+      const auto &x = pvm.sample_points.front();
+      ASSERT_EQUAL(pvm.reduced_sample_scalings.size(), 1);
+      const auto &scale = pvm.reduced_sample_scalings.front();
+      for(int i = 0; i < dim; ++i)
+        {
+          for(int j = 0; j < dim; ++j)
+            {
+              const auto value
+                = interpolated_poly_matrix(i, j).evaluate(to_Boost_Float(x));
+              // NB: restore scaling removed in get_interpolated_polynomial_matrix()
+              block.Set(i, j, to_BigFloat(value) * scale);
+            }
+        }
 
       El::Matrix<El::BigFloat> eigenvalues;
       // Parameter tuning - copied from src/sdp_solve/SDP_Solver/run/step/step_length/min_eigenvalue.cxx
@@ -196,7 +220,7 @@ find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
 
       El::HermitianEig(El::UpperOrLowerNS::LOWER, block, eigenvalues,
                        hermitian_eig_ctrl);
-      auto min_eigenvalue = El::Min(eigenvalues);
+      auto min_eigenvalue = to_Boost_Float(El::Min(eigenvalues));
       ASSERT(min_eigenvalue > -threshold, "All eigenvalues must be positive!",
              DEBUG_STRING(min_eigenvalue), DEBUG_STRING(threshold));
       if(min_eigenvalue < threshold)
@@ -217,7 +241,8 @@ find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
   const auto det
     = determinant(interpolated_poly_matrix, pvm.sample_points, timers);
   std::vector<El::BigFloat> minima;
-  for(auto &x : find_real_positive_minima_sorted(det, timers))
+  for(auto &x :
+      find_real_positive_minima_sorted(det, min_zero_distance, timers))
     {
       // Remove large zeros
       if(max_zero > 0 && x > max_zero)
@@ -243,54 +268,74 @@ find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
                             to_Boost_Float(x));
   };
 
+  const auto is_zero_one_sided
+    = [&](const El::BigFloat &x, const El::BigFloat &x_other) {
+        const auto y = eval(x);
+        const auto y_other = eval(x_other);
+        const auto ratio = y / y_other;
+        ASSERT(!isnan(ratio), "Cannot check for zero: det(c-By)=", y,
+               " at x=", x, ", det(c-By)=", y_other, " at x=", x_other);
+        return ratio < threshold;
+      };
+
+  // TODO should it simply return
+  // is_zero_one_sided(x, x_left) && is_zero_one_sided(x, x_right)?
+  const auto is_zero_two_sided
+    = [&](const El::BigFloat &x, const El::BigFloat &x_left,
+          const El::BigFloat &x_right) {
+        const auto y = eval(x);
+        const auto y_left = eval(x_left);
+        const auto y_right = eval(x_right);
+        const auto ratio_squared = y * y / y_left / y_right;
+        ASSERT(!isnan(ratio_squared), "Cannot check for zero: det(c-By)=", y,
+               " at x=", x, ", det(c-By)=", y_left, " at x=", x_left,
+               ", det(c-By)=", y_right, " at x=", x_right);
+        return ratio_squared < threshold * threshold;
+      };
+
   Scoped_Timer check_minima_timer(timers, "check_minima");
   for(size_t i = 0; i < minima.size(); ++i)
     {
       const auto &x = minima.at(i);
-      const auto y = eval(x);
+      // TODO: what if y (or its neighbor) is infinite or NaN?
+      // This is possible e.g. if x=0 and prefactor has pole at x=0.
 
-      bool is_zero = false;
-      if(i == 0)
-        {
-          if(minima.size() > 1)
-            {
-              const auto x_right = get_midpoint(x, minima.at(i + 1));
-              const auto y_right = eval(x_right);
-              is_zero = y / y_right < threshold;
-            }
-          else
-            {
-              // This is a case of single minimum.
-              // TODO: which points should we choose for comparison?
-              // It's not obvious, choosing x/2 is not justified well.
-              auto x_other = x / 2;
-              if(x_other == El::BigFloat(0))
-                {
-                  // Special case: if x=0, we take the first nonzero sample point.
-                  x_other = pvm.sample_points.at(0);
-                  if(x_other == El::BigFloat(0))
-                    x_other = pvm.sample_points.at(1);
-                }
-              ASSERT(x_other > 0);
-
-              const auto y_other = eval(x_other);
-              is_zero = y / y_other < threshold;
-            }
-        }
-      else if(i + 1 == minima.size())
-        {
-          const auto x_left = get_midpoint(x, minima.at(i - 1));
-          const auto y_left = eval(x_left);
-          is_zero = y / y_left < threshold;
-        }
-      else
-        {
-          const auto x_left = get_midpoint(x, minima.at(i - 1));
-          const auto y_left = eval(x_left);
-          const auto x_right = get_midpoint(x, minima.at(i + 1));
-          const auto y_right = eval(x_right);
-          is_zero = y * y / y_left / y_right < threshold * threshold;
-        }
+      const bool is_zero = [&] {
+        // First zero candidate
+        if(i == 0)
+          {
+            if(minima.size() > 1)
+              {
+                const auto x_right = get_midpoint(x, minima.at(i + 1));
+                return is_zero_one_sided(x, x_right);
+              }
+            // This is a case of single minimum.
+            // TODO: which points should we choose for comparison?
+            // It's not obvious, choosing x/2 is not justified well.
+            auto x_other = x / 2;
+            if(x_other == El::BigFloat(0))
+              {
+                // Special case: if x=0, we take the first nonzero sample point.
+                // Note that we have at least two sample points:
+                // constant constraints are handled separately (see above).
+                x_other = pvm.sample_points.at(0);
+                if(x_other == El::BigFloat(0))
+                  x_other = pvm.sample_points.at(1);
+              }
+            ASSERT(x_other > 0);
+            return is_zero_one_sided(x, x_other);
+          }
+        // Last zero candidate
+        if(i + 1 == minima.size())
+          {
+            const auto x_left = get_midpoint(x, minima.at(i - 1));
+            return is_zero_one_sided(x, x_left);
+          }
+        // Regular case, check left and right neighbors
+        const auto x_left = get_midpoint(x, minima.at(i - 1));
+        const auto x_right = get_midpoint(x, minima.at(i + 1));
+        return is_zero_two_sided(x, x_left, x_right);
+      }();
 
       if(is_zero)
         zeros.emplace_back(x);

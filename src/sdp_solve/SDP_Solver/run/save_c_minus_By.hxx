@@ -3,14 +3,11 @@
 #include "sdp_solve/Block_Matrix/Block_Vector.hxx"
 #include "sdp_solve/SDP.hxx"
 #include "sdpb_util/Boost_Float.hxx"
-#include "sdpb_util/ostream/set_stream_precision.hxx"
+#include "sdpb_util/json/Json_Writer.hxx"
 
 #include <El.hpp>
 
-#include <filesystem>
-#include <rapidjson/ostreamwrapper.h>
-#include <rapidjson/rapidjson.h>
-#include <rapidjson/writer.h>
+#include <fstream>
 
 // Save vector c - B.y
 // TODO split calculation and writing
@@ -121,23 +118,17 @@ inline void save_c_minus_By(const std::filesystem::path &path,
         return;
       }
     rapidjson::OStreamWrapper osw(os);
-    rapidjson::Writer writer(osw);
+    Json_Writer writer(osw);
     writer.StartObject();
     writer.Key("c_minus_By");
     writer.StartArray();
-
-    // reusable stream for BigFloats
-    std::stringstream ss;
-    set_stream_precision(ss);
     for(const auto &block : c_minus_By)
       {
         ASSERT_EQUAL(block.Width(), 1);
         writer.StartArray();
         for(int i = 0; i < block.Height(); ++i)
           {
-            ss.str({});
-            ss << block.Get(i, 0);
-            writer.String(ss.str().c_str());
+            writer.BigFloat(block.Get(i, 0));
           }
         writer.EndArray();
       }

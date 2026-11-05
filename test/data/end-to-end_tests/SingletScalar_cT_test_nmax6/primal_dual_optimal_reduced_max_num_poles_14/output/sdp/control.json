@@ -1,0 +1,4 @@
+{
+  "num_blocks": 11,
+  "command": "build/pmp2sdp --input test/data/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal_reduced_max_num_poles_14/input/pmp_max_num_poles.nsv --maxNumPoles 14 --output test/out/end-to-end_tests/SingletScalar_cT_test_nmax6/primal_dual_optimal_reduced_max_num_poles_14/pmp_max_num_poles.nsv/sdp --precision 768 -f json"
+}

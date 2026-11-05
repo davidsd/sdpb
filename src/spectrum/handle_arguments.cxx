@@ -7,18 +7,22 @@
 
 #include <boost/program_options.hpp>
 #include <filesystem>
+#include <optional>
 
 namespace fs = std::filesystem;
 
-void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
-                      El::BigFloat &max_zero, fs::path &pmp_info_path,
-                      fs::path &solution_dir, fs::path &c_minus_By_path,
-                      fs::path &output_path, bool &need_lambda,
+void handle_arguments(const int &argc, char **argv,
+                      std::optional<Boost_Float> &threshold,
+                      El::BigFloat &max_zero, El::BigFloat &min_zero_distance,
+                      fs::path &pmp_info_path, fs::path &solution_dir,
+                      fs::path &c_minus_By_path, fs::path &output_path,
+                      bool &need_lambda,
+                      std::optional<El::BigFloat> &min_eigenvalue_ratio,
                       Verbosity &verbosity)
 {
   int precision;
-  std::string threshold_string, max_zero_string, mesh_threshold_string,
-    format_string;
+  std::string threshold_string, max_zero_string, min_zero_distance_string,
+    mesh_threshold_string, format_string, min_eigenvalue_ratio_string;
 
   namespace po = boost::program_options;
 
@@ -38,8 +42,9 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
     "Path to c_minus_By.json with the block vector (c - B.y). "
     "By default, equals to '${--solution}/c_minus_By/c_minus_By.json'.");
   options.add_options()(
-    "threshold", po::value<std::string>(&threshold_string)->required(),
-    "Threshold for when a functional is considered to be zero.");
+    "threshold", po::value<std::string>(&threshold_string),
+    "Threshold for when a functional is considered to be zero.\n"
+    "By default, --threshold=sqrt(dualityGap).");
   options.add_options()(
     "output,o", po::value<fs::path>(&output_path)->required(), "Output file");
   options.add_options()(
@@ -47,13 +52,25 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
     "The precision, in the number of bits, for numbers in the "
     "computation. ");
   options.add_options()(
-    "maxZero,m",
-    po::value<std::string>(&max_zero_string)->default_value("0"),
+    "maxZero,m", po::value<std::string>(&max_zero_string)->default_value("0"),
     "Spectrum will ignore all zeros larger than --maxZero. "
     "--maxZero=0 means no limit.");
+  options.add_options()(
+    // TODO: set default distance finite value, e.g. 2^{-precision/2}?
+    "minZeroDistance",
+    po::value<std::string>(&min_zero_distance_string)->default_value("0"),
+    "Several zeros within --minZeroDistance from each other "
+    "are replaced with their arithmetic mean. ");
   options.add_options()("lambda",
                         po::value<bool>(&need_lambda)->default_value(true),
                         "If true, compute Λ and its associated error.");
+  options.add_options()(
+    "minEigenvalueRatio", po::value<std::string>(&min_eigenvalue_ratio_string),
+    "When computing Λ, keep only eigenvalues larger than "
+    "minEigenvalueRatio * max(eigenvalues).\n"
+    "To filter out numerical noise, set this value "
+    "somewhat higher than dualityGap of your SDPB solution.\n"
+    "By default, --minEigenvalueRatio=sqrt(dualityGap).");
   options.add_options()(
     "verbosity",
     po::value<Verbosity>(&verbosity)->default_value(Verbosity::regular),
@@ -93,15 +110,22 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
   // Set parameters
   {
     Environment::set_precision(precision);
-    threshold = El::BigFloat(threshold_string);
+    if(variables_map.count("threshold") != 0)
+      threshold.emplace(Boost_Float(threshold_string));
     max_zero = El::BigFloat(max_zero_string);
+    min_zero_distance = El::BigFloat(min_zero_distance_string);
     if(c_minus_By_path.empty())
       c_minus_By_path = solution_dir / "c_minus_By" / "c_minus_By.json";
+    if(variables_map.count("minEigenvalueRatio") != 0)
+      min_eigenvalue_ratio.emplace(min_eigenvalue_ratio_string);
   }
 
   // Asserts and warnings
   if(El::mpi::Rank() == 0)
     {
+      ASSERT(max_zero >= 0, "--maxZero must be non-negative");
+      ASSERT(min_zero_distance >= 0, "--minZeroDistance must be non-negative");
+
       if(variables_map.count("format") != 0)
         {
           PRINT_WARNING("--format option is obsolete. Input file format is "
@@ -119,6 +143,9 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
                  "--solution must be specified unless --lambda=false");
           ASSERT(variables_map.count("cMinusBy") != 0,
                  "Please specify either --solution or --cMinusBy");
+          ASSERT(threshold.has_value(),
+                 "To set --threshold automatically, "
+                 "you need to specify --solution directory");
         }
 
       if(variables_map.count("cMinusBy") == 0 || need_lambda)
@@ -127,6 +154,20 @@ void handle_arguments(const int &argc, char **argv, El::BigFloat &threshold,
                  "--solution directory does not exist: ", solution_dir);
           ASSERT(fs::is_directory(solution_dir),
                  "--solution is not a directory: ", solution_dir);
+        }
+
+      if(min_eigenvalue_ratio.has_value())
+        {
+          if(!need_lambda)
+            {
+              PRINT_WARNING(
+                "--minEigenvalueRatio will be ignored since --lambda=false");
+            }
+
+          ASSERT(min_eigenvalue_ratio.value() >= 0
+                   && min_eigenvalue_ratio.value() <= 1,
+                 "--minEigenvalueRatio=", min_eigenvalue_ratio_string,
+                 " should be in range [0,1].");
         }
 
       ASSERT(fs::exists(c_minus_By_path), DEBUG_STRING(c_minus_By_path));

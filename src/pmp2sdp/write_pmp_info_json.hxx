@@ -4,48 +4,18 @@
 #include "pmp/PMP_Info.hxx"
 #include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/assert.hxx"
-#include "sdpb_util/ostream/set_stream_precision.hxx"
+#include "sdpb_util/json/Json_Writer.hxx"
 
 #include <El.hpp>
 
-#include <filesystem>
-#include <sstream>
-#include <rapidjson/ostreamwrapper.h>
-#include <rapidjson/writer.h>
+#include <ostream>
 
 inline void write_pmp_info_json(std::ostream &output_stream,
                                 const std::vector<PVM_Info> &pmp_info)
 {
   ASSERT_EQUAL(El::mpi::Rank(), 0);
   rapidjson::OStreamWrapper ows(output_stream);
-  rapidjson::Writer writer(ows);
-
-  // reusable stream for big floats
-  std::stringstream ss;
-  set_stream_precision(ss);
-  auto add_BigFloat = [&writer, &ss](const El::BigFloat &value) {
-    ss.str({});
-    ss << value;
-    writer.String(ss.str().c_str());
-  };
-  auto add_Boost_Float = [&writer, &ss](const Boost_Float &value) {
-    ss.str({});
-    ss << value;
-    writer.String(ss.str().c_str());
-  };
-
-  auto add_bigFloat_array = [&](const std::vector<El::BigFloat> &value) {
-    writer.StartArray();
-    for(auto &p : value)
-      add_BigFloat(p);
-    writer.EndArray();
-  };
-  auto add_Boost_Float_array = [&](const std::vector<Boost_Float> &value) {
-    writer.StartArray();
-    for(auto &p : value)
-      add_Boost_Float(p);
-    writer.EndArray();
-  };
+  Json_Writer writer(ows);
 
   writer.StartArray();
   for(const auto &block : pmp_info)
@@ -68,30 +38,30 @@ inline void write_pmp_info_json(std::ostream &output_stream,
       {
         writer.StartObject();
         writer.Key("constant");
-        add_Boost_Float(block.prefactor.constant);
+        writer.BigFloat(block.prefactor.constant);
         writer.Key("base");
-        add_Boost_Float(block.prefactor.base);
+        writer.BigFloat(block.prefactor.base);
         writer.Key("poles");
-        add_Boost_Float_array(block.prefactor.poles);
+        writer.BigFloatArray(block.prefactor.poles);
         writer.EndObject();
       }
       writer.Key("reducedPrefactor");
       {
         writer.StartObject();
         writer.Key("constant");
-        add_Boost_Float(block.reduced_prefactor.constant);
+        writer.BigFloat(block.reduced_prefactor.constant);
         writer.Key("base");
-        add_Boost_Float(block.reduced_prefactor.base);
+        writer.BigFloat(block.reduced_prefactor.base);
         writer.Key("poles");
-        add_Boost_Float_array(block.reduced_prefactor.poles);
+        writer.BigFloatArray(block.reduced_prefactor.poles);
         writer.EndObject();
       }
       writer.Key("samplePoints");
-      add_bigFloat_array(block.sample_points);
+      writer.BigFloatArray(block.sample_points);
       writer.Key("sampleScalings");
-      add_bigFloat_array(block.sample_scalings);
+      writer.BigFloatArray(block.sample_scalings);
       writer.Key("reducedSampleScalings");
-      add_bigFloat_array(block.reduced_sample_scalings);
+      writer.BigFloatArray(block.reduced_sample_scalings);
       writer.EndObject();
     }
 

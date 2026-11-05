@@ -19,7 +19,7 @@ namespace
   struct Zero
   {
     Float zero;
-    Float_Vector lambda;
+    std::vector<Float_Vector> lambda;
   };
   struct Zeros
   {
@@ -49,7 +49,10 @@ namespace
             {
               Zero zero;
               zero.zero = Json::parse_Float(z["zero"]);
-              zero.lambda = Json::parse_Float_Vector(z["lambda"]);
+              for(const auto &eigenvector : z["lambda"].GetArray())
+                {
+                  zero.lambda.push_back(Json::parse_Float_Vector(eigenvector));
+                }
               zeros.zeros.emplace_back(zero);
             }
           zeros.error = Json::parse_Float(item["error"]);

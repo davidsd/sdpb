@@ -1,15 +1,19 @@
-#include "spectrum/Zeros.hxx"
 #include "compute_lambda.hxx"
 #include "pmp/PMP_Info.hxx"
+#include "sdpb_util/Boost_Float.hxx"
+#include "sdpb_util/Boost_Float.hxx"
+#include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
+#include "spectrum/Zeros.hxx"
 
 #include <filesystem>
 #include <vector>
 
 std::vector<El::BigFloat>
 find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
-           const PVM_Info &pvm, const El::BigFloat &threshold,
-           const El::BigFloat &max_zero, Timers &timers);
+           const PVM_Info &pvm, const Boost_Float &threshold,
+           const El::BigFloat &max_zero, const El::BigFloat &min_zero_distance,
+           Timers &timers);
 
 void write_profiling(const std::filesystem::path &spectrum_output_path,
                      Timers &timers);
@@ -18,8 +22,11 @@ std::vector<Zeros>
 compute_spectrum(const PMP_Info &pmp,
                  const std::vector<El::Matrix<El::BigFloat>> &c_minus_By,
                  const std::optional<std::vector<El::Matrix<El::BigFloat>>> &x,
-                 const El::BigFloat &threshold, const El::BigFloat &max_zero,
-                 const bool &need_lambda, const Verbosity &verbosity,
+                 const Boost_Float &threshold, const El::BigFloat &max_zero,
+                 const El::BigFloat &min_zero_distance,
+                 const bool &need_lambda,
+                 const std::optional<El::BigFloat> &min_eigenvalue_ratio,
+                 const Verbosity &verbosity,
                  const std::filesystem::path &output_path, Timers &timers)
 {
   Scoped_Timer timer(timers, "compute_spectrum");
@@ -39,13 +46,14 @@ compute_spectrum(const PMP_Info &pmp,
 
       try
         {
-          const auto zero_values = find_zeros(c_minus_By_block, pvm_info,
-                                              threshold, max_zero, timers);
+          const auto zero_values
+            = find_zeros(c_minus_By_block, pvm_info, threshold, max_zero,
+                         min_zero_distance, timers);
           if(need_lambda)
             {
               ASSERT(x.has_value());
               compute_lambda(pvm_info, x->at(local_block_index), zero_values,
-                             spectrum_block, timers);
+                             min_eigenvalue_ratio, spectrum_block, timers);
             }
           else
             {

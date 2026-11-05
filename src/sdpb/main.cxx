@@ -75,23 +75,10 @@ int main(int argc, char **argv)
           El::mpi::Barrier(env.comm_shared_mem);
         }
 
-      const Timers timers
-        = is_sdpa_file(parameters.sdp_path)
-            ? time_and_solve<Sdpb::Sdpa::SDP_Solver>(env, parameters,
-                                                     start_time)
-            : time_and_solve<SDP_Solver>(env, parameters, start_time);
-      if(parameters.verbosity >= Verbosity::debug)
-        {
-          try
-            {
-              write_profiling(parameters.solver.checkpoint_out, timers);
-            }
-          catch(std::exception &e)
-            {
-              El::Output("An exception has been thrown in write_profiling():");
-              El::ReportException(e);
-            }
-        }
+      if(is_sdpa_file(parameters.sdp_path))
+        time_and_solve<Sdpb::Sdpa::SDP_Solver>(env, parameters, start_time);
+      else
+        time_and_solve<SDP_Solver>(env, parameters, start_time);
     }
   catch(std::exception &e)
     {
