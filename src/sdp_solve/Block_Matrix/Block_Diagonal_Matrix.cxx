@@ -61,7 +61,7 @@ void cholesky_decomposition(const Block_Diagonal_Matrix &A,
       catch(std::exception &e)
         {
           RUNTIME_ERROR("Error when computing Cholesky decomposition of "
-                        "Paired_Block_Diagonal_Matrix ",
+                        "Block_Diagonal_Matrix ",
                         name, DEBUG_STRING(block_index), ": ", e.what());
         }
     }
