@@ -14,6 +14,7 @@ See [#294](https://github.com/davidsd/sdpb/pull/294).
 
 Fixed precision loss in sample points computed by pmp2sdp (and thus in sample scalings and bilinear bases):
 - Prefactor with a pole at zero: some points had only half of the correct digits.
+- Prefactor without poles: all points had only half of the correct digits.
 - Prefactor with a small pole p (e.g. p=-1e-9): the first point (~|p|) lost up to ~20 bits.
 
 ## spectrum

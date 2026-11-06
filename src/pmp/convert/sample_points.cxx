@@ -58,12 +58,18 @@ namespace
 
     // step away from zero to avoid 0/0 in b_equation at p=0
     const Boost_Float min = SMALL_POLE_THRESHOLD;
-    const Boost_Float max = -(2 * num_points / log(prefactor.base));
-    ASSERT(min <= max, DEBUG_STRING(min), DEBUG_STRING(max),
+    // All pole terms in b_equation are >= 0, so the root is <= root_max,
+    // with equality only without poles.
+    // The root must be inside the bracket: near a bracket boundary,
+    // Newton's method converges slowly and stops with half of the digits.
+    const Boost_Float root_max = -(2 * num_points / log(prefactor.base));
+    const Boost_Float max = 2 * root_max;
+    ASSERT(min <= root_max, DEBUG_STRING(min), DEBUG_STRING(root_max),
            DEBUG_STRING(num_points), DEBUG_STRING(prefactor));
 
-    const Boost_Float guess = (min + max) / 2;
-    // TODO: can we use full precision?
+    const Boost_Float guess = root_max;
+    // Newton's method converges quadratically,
+    // so stopping at half precision gives the root with full precision.
     const auto digits2 = El::gmp::Precision() / 2;
     return boost::math::tools::newton_raphson_iterate(F, guess, min, max,
                                                       digits2);
@@ -140,6 +146,7 @@ namespace
 
     Boost_Float min = SMALL_POLE_THRESHOLD;
     const Boost_Float max = b;
+    // See find_b()
     const auto digits2 = El::gmp::Precision() / 2;
 
     for(size_t n = n_min; n < num_points; ++n)
