@@ -18,6 +18,8 @@ Fixed precision loss in sample points computed by pmp2sdp (and thus in sample sc
 - Prefactor with a small pole p (e.g. p=-1e-9): the first point (~|p|) lost up to ~20 bits.
 - Poles slightly above the small pole threshold `1e-10` (e.g. two poles at -1.5e-10): the first point (~2.6e-11) was replaced by `1e-10`.
 
+Same fixes in `mathematica/SDPB.m`. Also, `getSamplePoints` no longer fails for small poles (e.g. p=-1e-5), and counts small poles in the same way as pmp2sdp (`Abs[p]<=smallPoleThreshold`).
+
 ## spectrum
 
 Updated output format: lambda is now an array of eigenvectors instead of a single eigenvector, e.g.:
