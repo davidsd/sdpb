@@ -144,7 +144,12 @@ namespace
     ASSERT(b > 0, DEBUG_STRING(b), DEBUG_STRING(num_points),
            DEBUG_STRING(prefactor));
 
-    Boost_Float min = SMALL_POLE_THRESHOLD;
+    // integrated_density() grows from (number of zero poles) <= n_min at z=0
+    // to num_points at z=b, so all roots are in (0,b).
+    // Some roots may be smaller than SMALL_POLE_THRESHOLD,
+    // e.g. for poles slightly above the threshold.
+    // Newton's method never evaluates integrated_density() at z=min=0.
+    Boost_Float min = 0;
     const Boost_Float max = b;
     // See find_b()
     const auto digits2 = El::gmp::Precision() / 2;
