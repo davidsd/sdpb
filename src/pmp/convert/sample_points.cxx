@@ -16,27 +16,14 @@
 
 namespace
 {
-  // Truncate x to [-1,1] range (to compensate rounding errors) and evaluate acos(x)
-  Boost_Float acos_safe(const Boost_Float &x)
+  // acos(1 - 2t) for t = x / (x + y), where x, y >= 0.
+  // Computed as 2 atan2(sqrt(t), sqrt(1 - t)) = 2 atan2(sqrt(x), sqrt(y)).
+  // acos(1 - 2t) itself loses digits near t = 0 and t = 1
+  // (up to half of the digits for t = 1, e.g. for p = 0).
+  Boost_Float acos_1_minus_2t(const Boost_Float &x, const Boost_Float &y)
   {
-    if(abs(x) > 1)
-      {
-        // Print warning if x is too far from [-1,1].
-        // If delta is ~ rounding error (i.e. 1/2^{binary precision}), it's OK.
-        // If delta is much larger, it's suspicious and we print a warning.
-        const Boost_Float eps
-          = to_Boost_Float(El::BigFloat(1) >>= El::gmp::Precision() / 2);
-        if(abs(x) > 1 + eps)
-          {
-            PRINT_WARNING("acos argument lies outside of [-1,1] range and "
-                          "will be truncated",
-                          DEBUG_STRING(x), DEBUG_STRING(abs(x) - 1));
-          }
-
-        // Set x to -1 or 1
-        return acos(Boost_Float(sign(x)));
-      }
-    return acos(x);
+    ASSERT(x >= 0 && y >= 0, DEBUG_STRING(x), DEBUG_STRING(y));
+    return 2 * atan2(sqrt(x), sqrt(y));
   }
 
   // b equation and its first derivative
@@ -89,6 +76,9 @@ namespace
   //    ,{p,poles}
   //    ]
   //    -Log[base]/\[Pi] (Sqrt[(b-z) z]+ b/2 ArcCos[1-(2 z)/b]);
+  // where we evaluate ArcCos[1-2t] via acos_1_minus_2t():
+  //   1-(2z(b-p))/(b (z-p)): t = z(b-p) / (z(b-p) + (-p)(b-z))
+  //   1-(2 z)/b:             t = z / (z + (b-z))
   //
   // integratedDensity'[z] == Sqrt[b - z]/(\[Pi] Sqrt[z]) (Sum[Sqrt[-p]/(Sqrt[b - p] (z - p)), {p, poles}] - Log[base])
   std::tuple<Boost_Float, Boost_Float>
@@ -112,16 +102,14 @@ namespace
     Boost_Float density_deriv = 0;
     for(const auto &p : prefactor.poles)
       {
-        // TODO there is a square-root singularity at p = 0,
-        // which leads to precision loss. But it is probably not important for us.
         density += one_div_pi
-                   * (acos_safe(1 - (2 * z * (b - p)) / (b * (z - p)))
-                      - sqrt(-p / (b - p)) * acos_safe(1 - (2 * z) / b));
+                   * (acos_1_minus_2t(z * (b - p), -p * (b - z))
+                      - sqrt(-p / (b - p)) * acos_1_minus_2t(z, b - z));
         density_deriv
           += sqrt(-p) / (sqrt(b - p) * (z - p)) * sqrt(b - z) / (pi * sqrt(z));
       }
     density += -log(prefactor.base) / pi
-               * (sqrt((b - z) * z) + b / 2 * acos_safe(1 - (2 * z) / b));
+               * (sqrt((b - z) * z) + b / 2 * acos_1_minus_2t(z, b - z));
     density_deriv += -log(prefactor.base) * sqrt(b - z) / (pi * sqrt(z));
 
     ASSERT(!isnan(density) && !isnan(density_deriv) && !isinf(density)

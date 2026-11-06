@@ -10,6 +10,12 @@ When `maxNumPoles` is specified (globally or for a single SDP block), pmp2sdp cr
 
 See [#294](https://github.com/davidsd/sdpb/pull/294).
 
+## Sample points
+
+Fixed precision loss in sample points computed by pmp2sdp (and thus in sample scalings and bilinear bases):
+- Prefactor with a pole at zero: some points had only half of the correct digits.
+- Prefactor with a small pole p (e.g. p=-1e-9): the first point (~|p|) lost up to ~20 bits.
+
 ## spectrum
 
 Updated output format: lambda is now an array of eigenvectors instead of a single eigenvector, e.g.:
