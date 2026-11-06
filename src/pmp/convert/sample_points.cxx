@@ -16,27 +16,14 @@
 
 namespace
 {
-  // Truncate x to [-1,1] range (to compensate rounding errors) and evaluate acos(x)
-  Boost_Float acos_safe(const Boost_Float &x)
+  // acos(1 - 2t) for t = x / (x + y), where x, y >= 0.
+  // Computed as 2 atan2(sqrt(t), sqrt(1 - t)) = 2 atan2(sqrt(x), sqrt(y)).
+  // acos(1 - 2t) itself loses digits near t = 0 and t = 1
+  // (up to half of the digits for t = 1, e.g. for p = 0).
+  Boost_Float acos_1_minus_2t(const Boost_Float &x, const Boost_Float &y)
   {
-    if(abs(x) > 1)
-      {
-        // Print warning if x is too far from [-1,1].
-        // If delta is ~ rounding error (i.e. 1/2^{binary precision}), it's OK.
-        // If delta is much larger, it's suspicious and we print a warning.
-        const Boost_Float eps
-          = to_Boost_Float(El::BigFloat(1) >>= El::gmp::Precision() / 2);
-        if(abs(x) > 1 + eps)
-          {
-            PRINT_WARNING("acos argument lies outside of [-1,1] range and "
-                          "will be truncated",
-                          DEBUG_STRING(x), DEBUG_STRING(abs(x) - 1));
-          }
-
-        // Set x to -1 or 1
-        return acos(Boost_Float(sign(x)));
-      }
-    return acos(x);
+    ASSERT(x >= 0 && y >= 0, DEBUG_STRING(x), DEBUG_STRING(y));
+    return 2 * atan2(sqrt(x), sqrt(y));
   }
 
   // b equation and its first derivative
@@ -71,12 +58,18 @@ namespace
 
     // step away from zero to avoid 0/0 in b_equation at p=0
     const Boost_Float min = SMALL_POLE_THRESHOLD;
-    const Boost_Float max = -(2 * num_points / log(prefactor.base));
-    ASSERT(min <= max, DEBUG_STRING(min), DEBUG_STRING(max),
+    // All pole terms in b_equation are >= 0, so the root is <= root_max,
+    // with equality only without poles.
+    // The root must be inside the bracket: near a bracket boundary,
+    // Newton's method converges slowly and stops with half of the digits.
+    const Boost_Float root_max = -(2 * num_points / log(prefactor.base));
+    const Boost_Float max = 2 * root_max;
+    ASSERT(min <= root_max, DEBUG_STRING(min), DEBUG_STRING(root_max),
            DEBUG_STRING(num_points), DEBUG_STRING(prefactor));
 
-    const Boost_Float guess = (min + max) / 2;
-    // TODO: can we use full precision?
+    const Boost_Float guess = root_max;
+    // Newton's method converges quadratically,
+    // so stopping at half precision gives the root with full precision.
     const auto digits2 = El::gmp::Precision() / 2;
     return boost::math::tools::newton_raphson_iterate(F, guess, min, max,
                                                       digits2);
@@ -89,6 +82,9 @@ namespace
   //    ,{p,poles}
   //    ]
   //    -Log[base]/\[Pi] (Sqrt[(b-z) z]+ b/2 ArcCos[1-(2 z)/b]);
+  // where we evaluate ArcCos[1-2t] via acos_1_minus_2t():
+  //   1-(2z(b-p))/(b (z-p)): t = z(b-p) / (z(b-p) + (-p)(b-z))
+  //   1-(2 z)/b:             t = z / (z + (b-z))
   //
   // integratedDensity'[z] == Sqrt[b - z]/(\[Pi] Sqrt[z]) (Sum[Sqrt[-p]/(Sqrt[b - p] (z - p)), {p, poles}] - Log[base])
   std::tuple<Boost_Float, Boost_Float>
@@ -112,16 +108,14 @@ namespace
     Boost_Float density_deriv = 0;
     for(const auto &p : prefactor.poles)
       {
-        // TODO there is a square-root singularity at p = 0,
-        // which leads to precision loss. But it is probably not important for us.
         density += one_div_pi
-                   * (acos_safe(1 - (2 * z * (b - p)) / (b * (z - p)))
-                      - sqrt(-p / (b - p)) * acos_safe(1 - (2 * z) / b));
+                   * (acos_1_minus_2t(z * (b - p), -p * (b - z))
+                      - sqrt(-p / (b - p)) * acos_1_minus_2t(z, b - z));
         density_deriv
           += sqrt(-p) / (sqrt(b - p) * (z - p)) * sqrt(b - z) / (pi * sqrt(z));
       }
     density += -log(prefactor.base) / pi
-               * (sqrt((b - z) * z) + b / 2 * acos_safe(1 - (2 * z) / b));
+               * (sqrt((b - z) * z) + b / 2 * acos_1_minus_2t(z, b - z));
     density_deriv += -log(prefactor.base) * sqrt(b - z) / (pi * sqrt(z));
 
     ASSERT(!isnan(density) && !isnan(density_deriv) && !isinf(density)
@@ -150,8 +144,14 @@ namespace
     ASSERT(b > 0, DEBUG_STRING(b), DEBUG_STRING(num_points),
            DEBUG_STRING(prefactor));
 
-    Boost_Float min = SMALL_POLE_THRESHOLD;
+    // integrated_density() grows from (number of zero poles) <= n_min at z=0
+    // to num_points at z=b, so all roots are in (0,b).
+    // Some roots may be smaller than SMALL_POLE_THRESHOLD,
+    // e.g. for poles slightly above the threshold.
+    // Newton's method never evaluates integrated_density() at z=min=0.
+    Boost_Float min = 0;
     const Boost_Float max = b;
+    // See find_b()
     const auto digits2 = El::gmp::Precision() / 2;
 
     for(size_t n = n_min; n < num_points; ++n)
