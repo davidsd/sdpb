@@ -197,16 +197,18 @@ getAnalyticSampleData[numeratorDegOld,prefactorOld,prefactorNew,prec]
 
 
 (*
-Compute Table[root of f=1/2+n, {n,nmin,NN-1}]. First we find the root with n=nmin, then we use that as an initial condition to find the next root, and so on. If we set nmin=0, then the total number of roots returned is NN.
+Compute Table[root of f=1/2+n, {n,nmin,NN-1}] for a monotonically increasing f. First we find the root with n=nmin in the interval [xmin,xmax], then we search for the next root between the previous root and xmax, and so on. If we set nmin=0, then the total number of roots returned is NN.
+Roots are accurate to prec digits, but have Precision workPrec. We use WorkingPrecision->workPrec with workPrec>prec, otherwise FindRoot may fail to reach prec digits.
 *)
-findBohrSommerfeldRoots[f_,nmin_,NN_,x_,x0_,prec_]:=findBohrSommerfeldHelper[f,NN,x,{},prec][nmin,x0];
-(* Here, we use Mathematica's FindRoot. In the C++ implementation, perhaps we should use Newton's method (since we will know analytic formula for both the function f and its derivative)? *)
-findBohrSommerfeldHelper[f_,NN_,x_,xs_,prec_][n_,x0_]:=If[
+findBohrSommerfeldRoots[f_,nmin_,NN_,x_,xmin_,xmax_,prec_,workPrec_]:=findBohrSommerfeldHelper[f,NN,x,{},xmax,prec,workPrec][nmin,xmin];
+(* Brent's method always stays within the bracket. Unbracketed FindRoot can jump to x<0, e.g. if the first root is ~1e-5.
+By default, FindRoot stops at PrecisionGoal=WorkingPrecision/2. *)
+findBohrSommerfeldHelper[f_,NN_,x_,xs_,xmax_,prec_,workPrec_][n_,xmin_]:=If[
 n>=NN,
 xs,
 Module[
-{xPrime=x/.FindRoot[f==1/2+n,{x,x0},WorkingPrecision->prec]},
-findBohrSommerfeldHelper[f,NN,x,Append[xs,xPrime],prec][n+1,xPrime]
+{xPrime=x/.FindRoot[f==1/2+n,{x,xmin,xmax},Method->"Brent",WorkingPrecision->workPrec,PrecisionGoal->prec,AccuracyGoal->Infinity]},
+findBohrSommerfeldHelper[f,NN,x,Append[xs,xPrime],xmax,prec,workPrec][n+1,xPrime]
 ]
 ];
 
@@ -223,14 +225,13 @@ bGuess,
 b,
 integratedDensity,
 z,
-z0,
 nmin,
 numSmallRoots,
 smallRoots,
 smallRootEnd,
 bohrSommerfeldRoots,
-(* Mathematica seems to require some quantities to be higher precision in order for FindRoot to give answers with precision prec *)
-highPrec=2*prec,
+(* Extra digits for FindRoot *)
+workPrec=prec+10,
 result
 },
 
@@ -238,23 +239,31 @@ If[numSamplePoints==1,Return[{0}]];
 
 bEquation=Sum[1-Sqrt[-p/(bVar-p)],{p,poles}]-1/2 bVar Log[base]-numSamplePoints;
 bGuess=-((2 numSamplePoints)/Log[base]);
-(* Petr explains that to get rid of highPrec, we need to treat the p=0 case analytically in this sum *)
-b=bVar/.FindRoot[bEquation,{bVar,bGuess},WorkingPrecision->highPrec];
+b=bVar/.FindRoot[bEquation,{bVar,bGuess},WorkingPrecision->workPrec];
 (*TODO choose a better way to print warnings?*)
 If[b<smallPoleThreshold,
   Print["b is too small, setting b=smallPoleThreshold"];
   b=smallPoleThreshold;
 ];
 
-integratedDensity=Sum[ 1 /\[Pi] ( ArcCos[1-(2z(b-p))/(b (z-p))]- Sqrt[-p/(b-p)] ArcCos[1-(2 z)/b]),{p,poles}]-Log[base]/\[Pi] (Sqrt[(b-z) z]+ b/2 ArcCos[1-(2 z)/b]);
+(*
+integratedDensity = Sum[ 1 /\[Pi] ( ArcCos[1-(2z(b-p))/(b (z-p))]- Sqrt[-p/(b-p)] ArcCos[1-(2 z)/b]),{p,poles}]-Log[base]/\[Pi] (Sqrt[(b-z) z]+ b/2 ArcCos[1-(2 z)/b]);
+ArcCos[1-2t] loses digits near t=0 and t=1 (up to half of the digits for t=1, e.g. for p=0).
+Instead, we use ArcCos[1-2t] = 2 ArcTan[Sqrt[y], Sqrt[x]] for t = x/(x+y):
+  1-(2z(b-p))/(b (z-p)): x = z(b-p), y = -p(b-z)
+  1-(2 z)/b:             x = z, y = b-z
+*)
+(* For p=0, the term is exactly 1 for z>0. We set it to 1 also at z=0, where ArcTan[0,0] is undefined. *)
+integratedDensity=Sum[If[p==0,1, 1 /\[Pi] ( 2 ArcTan[Sqrt[-p (b-z)], Sqrt[z (b-p)]]- Sqrt[-p/(b-p)] 2 ArcTan[Sqrt[b-z], Sqrt[z]])],{p,poles}]-Log[base]/\[Pi] (Sqrt[(b-z) z]+ b ArcTan[Sqrt[b-z], Sqrt[z]]);
 
-numSmallRoots=Count[poles,_?(Abs[#]<smallPoleThreshold&)];
+(* Same condition as in C++ code *)
+numSmallRoots=Count[poles,_?(Abs[#]<=smallPoleThreshold&)];
 numSmallRoots=Min[numSmallRoots,numSamplePoints];
 
 
-z0=SetPrecision[smallPoleThreshold+(b-smallPoleThreshold)/(numSamplePoints-numSmallRoots+1.0),highPrec];
-
-bohrSommerfeldRoots=findBohrSommerfeldRoots[integratedDensity,numSmallRoots,numSamplePoints,z,z0,prec];
+(* integratedDensity grows from (number of zero poles) <= numSmallRoots at z=0 to numSamplePoints at z=b,
+so the remaining roots lie in (0,b). Some of them may be smaller than smallPoleThreshold. *)
+bohrSommerfeldRoots=findBohrSommerfeldRoots[integratedDensity,numSmallRoots,numSamplePoints,z,0,b,prec,workPrec];
 
 smallRootEnd=If[numSmallRoots==numSamplePoints,b,bohrSommerfeldRoots[[1]]];
 
@@ -264,10 +273,7 @@ smallRootEnd*(i-1)/numSmallRoots
 ,{i,numSmallRoots}
 ];
 
-result=Join[
-smallRoots,
-findBohrSommerfeldRoots[integratedDensity,numSmallRoots,numSamplePoints,z,z0,prec]
-];
+result=N[Join[smallRoots,bohrSommerfeldRoots],prec];
 
 Table[
   Assert[result[[i+1]]>result[[i]]];
