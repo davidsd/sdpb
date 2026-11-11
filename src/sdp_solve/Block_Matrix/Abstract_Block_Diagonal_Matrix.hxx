@@ -80,6 +80,13 @@ void multiply(const Abstract_Block_Diagonal_Matrix<Derived> &A,
 }
 
 // X := ACholesky^{-T} ACholesky^{-1} X = A^{-1} X
+//
+// Same as El::cholesky::SolveAfter(LOWER, NORMAL, ACholesky, X), but with
+// TRSM_LARGE. By default El::Trsm switches to TRSM_MEDIUM when X is no wider
+// than 5 * (group size). Medium does each panel's triangular solve on
+// X1^T[MR,*], i.e. split only over the grid width, which is 1 for a prime
+// group size: then every rank of the group solves the whole panel. Large
+// splits it over all ranks ([*,VR]) and gives bitwise the same result.
 template <class Derived>
 void cholesky_solve(const Abstract_Block_Diagonal_Matrix<Derived> &ACholesky,
                     Abstract_Block_Diagonal_Matrix<Derived> &X)
@@ -87,9 +94,14 @@ void cholesky_solve(const Abstract_Block_Diagonal_Matrix<Derived> &ACholesky,
   ASSERT_EQUAL(ACholesky.blocks.size(), X.blocks.size());
   for(size_t b = 0; b < X.blocks.size(); b++)
     {
-      El::cholesky::SolveAfter(El::UpperOrLowerNS::LOWER,
-                               El::OrientationNS::NORMAL, ACholesky.blocks[b],
-                               X.blocks[b]);
+      El::Trsm(El::LeftOrRight::LEFT, El::UpperOrLowerNS::LOWER,
+               El::Orientation::NORMAL, El::UnitOrNonUnit::NON_UNIT,
+               El::BigFloat(1), ACholesky.blocks[b], X.blocks[b], false,
+               El::TRSM_LARGE);
+      El::Trsm(El::LeftOrRight::LEFT, El::UpperOrLowerNS::LOWER,
+               El::Orientation::ADJOINT, El::UnitOrNonUnit::NON_UNIT,
+               El::BigFloat(1), ACholesky.blocks[b], X.blocks[b], false,
+               El::TRSM_LARGE);
     }
 }
 
@@ -135,9 +147,11 @@ void lower_triangular_inverse_congruence(
       El::Trsm(El::LeftOrRight::RIGHT, El::UpperOrLowerNS::LOWER,
                El::Orientation::TRANSPOSE, El::UnitOrNonUnit::NON_UNIT,
                El::BigFloat(1), L.blocks[b], A.blocks[b]);
+      // TRSM_LARGE: see cholesky_solve
       El::Trsm(El::LeftOrRight::LEFT, El::UpperOrLowerNS::LOWER,
                El::Orientation::NORMAL, El::UnitOrNonUnit::NON_UNIT,
-               El::BigFloat(1), L.blocks[b], A.blocks[b]);
+               El::BigFloat(1), L.blocks[b], A.blocks[b], false,
+               El::TRSM_LARGE);
     }
 }
 
