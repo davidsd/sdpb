@@ -90,7 +90,8 @@ namespace sdpb_gpu
     // expand it on the device for each use; bit for bit the dense B's results
     bool sparse_b = false;
     // release P once Q is formed: the directions use B and the inverse of the
-    // Schur factor instead (Zechuan Zheng's lean path); changes the rounding
+    // Schur factor instead (SDPviBe's lean mode, extended by Zechuan Zheng);
+    // changes the rounding
     bool lean_p = false;
     // per-phase timing inside the exact products (synchronizes)
     bool product_timing = false;
