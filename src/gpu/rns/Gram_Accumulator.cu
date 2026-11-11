@@ -47,7 +47,8 @@ namespace sdpb_gpu
                                 int g, const int32_t *__restrict__ primes,
                                 const double *__restrict__ minv,
                                 uint16_t *__restrict__ Qres, int64_t qplane,
-                                int N, int r0, int c0)
+                                int N, int r0, int c0, int tile_rows,
+                                int tile_cols)
     {
       int64_t t = blockIdx.x * (int64_t)blockDim.x + threadIdx.x;
       int64_t mn = (int64_t)m * n;
@@ -57,7 +58,8 @@ namespace sdpb_gpu
       int64_t i = r0 + a, j = c0 + b;
       if(i >= N || j >= N || i < j)
         return;
-      int64_t pk = j * N - j * (j - 1) / 2 + (i - j);
+      int64_t pk = tile_rows ? j * tile_rows + i - tile_cols
+                            : j * N - j * (j - 1) / 2 + (i - j);
       for(int p = 0; p < g; ++p)
         {
           long long hh = C[(int64_t)p * mn + t];
@@ -74,6 +76,18 @@ namespace sdpb_gpu
         }
     }
 
+    __global__ void export_mod(const uint16_t *in, uint32_t *out, int64_t n)
+    {
+      const int64_t i = int64_t(blockIdx.x) * blockDim.x + threadIdx.x;
+      if(i < n) out[i] = in[i];
+    }
+    __global__ void import_mod(const uint32_t *in, uint16_t *out,
+                               int64_t plane, int r, const int32_t *primes)
+    {
+      const int64_t i = int64_t(blockIdx.x) * blockDim.x + threadIdx.x;
+      if(i < plane * r) out[i] = uint16_t(in[i] % primes[i / plane]);
+    }
+
   }
 
   Gram_Accumulator::Gram_Accumulator(int N, int digits, int64_t rows_total,
@@ -82,6 +96,12 @@ namespace sdpb_gpu
   {
     if(N <= 0 || digits <= 0 || digits % 4 != 0)
       throw std::invalid_argument("Gram_Accumulator: N > 0, digits % 4 == 0");
+    if((opt_.tile_rows || opt_.tile_cols)
+       && (opt_.tile_rows <= 0 || opt_.tile_cols <= 0
+           || opt_.tile_rows % 32 || opt_.tile_cols % 32
+           || opt_.tile_rows + opt_.tile_cols != N
+           || opt_.tile_rows > opt_.max_rect || opt_.tile_cols > opt_.max_rect))
+      throw std::invalid_argument("Gram_Accumulator: invalid rectangular tile");
     Np_ = (N + 31) / 32 * 32;
     g_ = options.prime_group;
     basis_ = Rns_Basis::for_products(digits, rows_total);
@@ -198,7 +218,8 @@ namespace sdpb_gpu
     const int64_t mn = int64_t(m) * n;
     gram_reduce<<<blocks_for(mn), threads, 0, stream_>>>(
       d_gram_, m, n, gc, d_primes_ + i0, d_minv_ + i0,
-      d_Qres_ + int64_t(i0) * packed_size(), packed_size(), N_, r0, c0);
+      d_Qres_ + int64_t(i0) * packed_size(), packed_size(), N_, r0, c0,
+      opt_.tile_rows, opt_.tile_cols);
     GPU_CHECK(cudaGetLastError());
   }
 
@@ -289,7 +310,10 @@ namespace sdpb_gpu
         fill(i0, gc, d_R_, plane);
         toc("residues");
         tic();
-        gram_rect(0, Np_, i0, gc, rows);
+        if(opt_.tile_rows)
+          gram_block(opt_.tile_cols, N_, 0, opt_.tile_cols, i0, gc, rows);
+        else
+          gram_rect(0, Np_, i0, gc, rows);
         toc("gram GEMM + reduce");
       }
     rows_added_ += rows;
@@ -331,7 +355,29 @@ namespace sdpb_gpu
     if(err)
       throw std::runtime_error("Gram_Accumulator::finish: CRT carry check "
                                "failed (result out of range)");
-    GPU_CHECK(cudaMemsetAsync(d_Qres_, 0, size_t(r) * total * 2, stream_));
+    reset();
+  }
+
+  void Gram_Accumulator::export_residues(uint32_t *out) const
+  {
+    const int64_t n = int64_t(basis_.primes.size()) * packed_size();
+    export_mod<<<blocks_for(n), threads, 0, stream_>>>(d_Qres_, out, n);
+    GPU_CHECK(cudaGetLastError());
+  }
+
+  void Gram_Accumulator::import_residues(const uint32_t *sum)
+  {
+    const int r = int(basis_.primes.size());
+    import_mod<<<blocks_for(int64_t(r) * packed_size()), threads, 0, stream_>>>(
+      sum, d_Qres_, packed_size(), r, d_primes_);
+    GPU_CHECK(cudaGetLastError());
+  }
+
+  void Gram_Accumulator::reset()
+  {
+    GPU_CHECK(cudaMemsetAsync(d_Qres_, 0,
+                              basis_.primes.size() * packed_size() * 2, stream_));
+    GPU_CHECK(cudaMemsetAsync(d_err_, 0, sizeof(int), stream_));
     rows_added_ = 0;
   }
 }

@@ -28,6 +28,58 @@ Block_Info::Block_Info(const Environment &env,
   ASSERT_EQUAL(dimensions.size(), block_costs.size());
 }
 
+void Block_Info::allocate_single_rank_blocks(const std::vector<int> &owner)
+{
+  const int rank = El::mpi::Rank(), num_ranks = El::mpi::Size();
+  ASSERT_EQUAL(owner.size(), dimensions.size());
+
+  // Each rank's place (node, rank on the node), from every rank, so that all
+  // ranks build the same mapping whatever the launcher's placement, and every
+  // check below sees the same data on every rank
+  std::vector<int> place(2 * size_t(num_ranks));
+  const int mine[2] = {int(node_index), node_comm.Rank()};
+  MPI_Allgather(mine, 2, MPI_INT, place.data(), 2, MPI_INT, MPI_COMM_WORLD);
+
+  // Node -> group (= rank on the node) -> its blocks
+  const size_t num_nodes = this->num_nodes();
+  std::vector<std::vector<Block_Map>> mapping(num_nodes);
+  auto group_of = [&](const int r) -> Block_Map & {
+    return mapping.at(size_t(place[2 * r])).at(size_t(place[2 * r + 1]));
+  };
+  for(int r = 0; r < num_ranks; ++r)
+    {
+      const size_t node = size_t(place[2 * r]),
+                   node_rank = size_t(place[2 * r + 1]);
+      ASSERT(node < num_nodes, "rank ", r, " is on node ", node, " of ",
+             num_nodes);
+      if(mapping[node].size() <= node_rank)
+        mapping[node].resize(node_rank + 1);
+      mapping[node][node_rank].num_procs = 1;
+    }
+  for(size_t block = 0; block < owner.size(); ++block)
+    {
+      const int r = owner[block];
+      ASSERT(r >= 0 && r < num_ranks, "Invalid GPU block owner: ", r,
+             DEBUG_STRING(block));
+      group_of(r).block_indices.push_back(block);
+    }
+  for(int r = 0; r < num_ranks; ++r)
+    ASSERT(!group_of(r).block_indices.empty(), "GPU rank ", r,
+           " has no chunks; lower SDPB_GPU_CHUNK_BLOCKS");
+
+  MPI_Comm_Wrapper comm;
+  El::mpi::Split(El::mpi::COMM_WORLD, rank, 0, comm.value);
+  MPI_Group_Wrapper group;
+  El::mpi::CommGroup(comm.value, group.value);
+  // The old communicator and group are freed with comm and group
+  swap(mpi_comm, comm);
+  swap(mpi_group, group);
+  block_mapping = Block_Mapping(mapping);
+  block_indices = block_mapping.mapping.at(node_index)
+                    .at(node_group_index())
+                    .block_indices;
+}
+
 Block_Info
 Block_Info::create(const Environment &env, const fs::path &sdp_path,
                    const fs::path &block_timings_path,

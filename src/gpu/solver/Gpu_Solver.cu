@@ -6,6 +6,8 @@
 // Antoine Tilloy, MIT License (docs/GPU_backend_credits.md).
 
 #include "Gpu_Solver.hxx"
+#include "Gpu_Layout.hxx"
+#include "../linalg/Distributed_Q.hxx"
 #include "Mpf_Ops.hxx"
 #include "../rns/rns_kernels.cuh"
 
@@ -15,6 +17,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <map>
 #include <sstream>
 #include <stdexcept>
@@ -159,6 +162,10 @@ namespace sdpb_gpu
     std::unique_ptr<Rns_Workspace> workspace;
     std::map<int, std::unique_ptr<Block_Factor>> engines;
     std::unique_ptr<Mpf_Gram> gram;
+    std::unique_ptr<Gpu_Collective> world;
+    std::unique_ptr<Distributed_Q> distributed_q;
+    int64_t global_rows = 0;
+    std::vector<std::string> distributed_profiles;
     Mat b, y, dy, pvec, Xq, Qfull;
     Cond_Table conds;
     int iteration = 1;
@@ -170,6 +177,8 @@ namespace sdpb_gpu
     std::string cur_stage;
     std::map<std::string, double> total_s, iter_s, last_iter_s, stage_used_gb,
       stage_host_gb;
+    std::map<std::string, uint64_t> total_payload, iter_payload, last_iter_payload;
+    uint64_t stage_payload_begin = 0;
     std::vector<double> iter_wall;
     Clock::time_point t_iter;
     double peak_bytes = 0;
@@ -211,9 +220,16 @@ namespace sdpb_gpu
           const double dt = std::chrono::duration<double>(now - t_stage).count();
           total_s[cur_stage] += dt;
           iter_s[cur_stage] += dt;
+          if(world)
+            {
+              const uint64_t bytes=world->received_bytes()-stage_payload_begin;
+              total_payload[cur_stage]+=bytes;
+              iter_payload[cur_stage]+=bytes;
+            }
           note_memory();
         }
       cur_stage = name ? name : "";
+      stage_payload_begin=world ? world->received_bytes() : 0;
       t_stage = Clock::now();
     }
 
@@ -358,6 +374,85 @@ namespace sdpb_gpu
       if(b.m.empty() || b.e == -(int64_t(1) << 40))
         return a;
       return mag_less(a.m.data(), a.e, b.m.data(), b.e, L) ? b : a;
+    }
+
+    Host_Float global_max(const Host_Float &value) const
+    {
+      if(!world) return value;
+      Host_Float result;
+      for(int rank=0;rank<world->size();++rank)
+        {
+          Host_Float v=value;
+          v.m.resize(L,0);
+          if(value.m.empty()) v.e=-(int64_t(1)<<40);
+          opt.world.host_broadcast(v.m.data(),size_t(L)*4,rank);
+          opt.world.host_broadcast(&v.e,8,rank);
+          result=max_of(result,v);
+        }
+      return result;
+    }
+    Mat root_copy(const Mat &v)
+    {
+      return !world || world->rank()==0 ? make_copy(v)
+        : make_zero(L,v.b.batch,v.b.rows,v.b.cols);
+    }
+    void sum_ranks(Mat &v)
+    {
+      if(!world) return;
+      Mat sum(L,v.b.batch,v.b.rows,v.b.cols);
+      distributed_sum(v.b,sum.b,*world);
+      v=std::move(sum);
+    }
+    bool want_Q_digest() const
+    { return iteration==1 && std::getenv("SDPB_GPU_Q_DIGEST_PREFIX"); }
+    void record_Q_digest(const std::string &digest)
+    {
+      const char *prefix=std::getenv("SDPB_GPU_Q_DIGEST_PREFIX");
+      std::ofstream out(std::string(prefix)+".rank"+std::to_string(opt.world.rank)+".txt");
+      out << digest;
+      if(!out) throw std::runtime_error("could not write Q tile digests");
+    }
+
+    void record_distributed_Q_peak()
+    {
+      const double high=double(distributed_q->last_operation_peak_device_bytes());
+      peak_bytes=std::max(peak_bytes,high);
+      stage_used_gb[cur_stage]=std::max(stage_used_gb[cur_stage],high/1e9);
+    }
+
+    void distributed_Q_factor()
+    {
+      stage("Q = P^T P");
+      Gram_Options qopt=gopt;
+      qopt.timing=opt.product_timing;
+      distributed_q=std::make_unique<Distributed_Q>(N,L,D,global_rows,*world,qopt,
+        Distributed_Q_Options{opt.q_tile,opt.q_row_panel,opt.refine_dy,opt.q_wide_residual});
+      std::vector<Mpf_Matrix> panels;
+      for(auto &c:chunks) panels.push_back(P_of(c).view());
+      distributed_q->assemble(panels);
+      record_distributed_Q_peak();
+      if(opt.lean_p) for(auto &c:chunks) c.Pf.free();
+      if(want_Q_digest()) record_Q_digest(distributed_q->digests());
+      stage("Cholesky Q + inverse");
+      distributed_q->factor();
+      record_distributed_Q_peak();
+      Mat diag(L,1,N,1);
+      distributed_q->factor_diagonal(diag.b);
+      std::vector<int32_t> m(size_t(L)*N);
+      std::vector<int64_t> e(N);
+      mpf_download(diag.b,m.data(),e.data(),0);
+      Block_Cond c;
+      for(int i=0;i<N;++i)
+        {
+          Host_Float v; v.e=e[i]; v.m.resize(L);
+          for(int t=0;t<L;++t) v.m[t]=uint32_t(m[size_t(t)*N+i]);
+          if(e[i]==-(int64_t(1)<<40) || int32_t(v.m.back())<=0)
+            throw std::runtime_error("distributed Q has a nonpositive factor diagonal");
+          c.max=max_of(c.max,v);
+          if(c.min.m.empty() || mag_less(v.m.data(),v.e,c.min.m.data(),c.min.e,L)) c.min=v;
+        }
+      conds.Q=c;
+      peak_bytes=std::max(peak_bytes,double(distributed_q->peak_device_bytes()));
     }
 
     // (L_S, X) with X = L_S^-1 of the padded A: returns the inverse cut to n x n
@@ -579,69 +674,46 @@ namespace sdpb_gpu
 
     void build_chunks()
     {
-      std::map<int, std::vector<int>> bydim;
-      for(int j = 0; j < int(shapes.size()); ++j)
-        bydim[shapes[j].dim].push_back(j);
-      for(auto &kv : bydim)
+      const auto layout=gpu_chunks(shapes,opt.max_chunk_blocks);
+      const auto owners=gpu_chunk_owners(layout,opt.world.size);
+      global_rows=0;
+      for(size_t ci=0;ci<layout.size();++ci)
         {
-          auto &ids = kv.second;
-          std::sort(ids.begin(), ids.end(), [&](int a, int b) {
-            const auto &sa = shapes[a], &sb = shapes[b];
-            const auto ka = std::make_pair(sa.K, std::max(sa.he, sa.ho));
-            const auto kb = std::make_pair(sb.K, std::max(sb.he, sb.ho));
-            return ka != kb ? ka < kb : a < b;
-          });
-          const size_t step = opt.max_chunk_blocks > 0
-                                ? size_t(opt.max_chunk_blocks)
-                                : ids.size();
-          for(size_t i0 = 0; i0 < ids.size(); i0 += step)
+          global_rows+=int64_t(layout[ci].nb)*layout[ci].P;
+          if(owners[ci]!=opt.world.rank) continue;
+          Chunk c; c.info=layout[ci];
+          auto &I=c.info;
+          c.nseg=I.dim*(I.dim+1)/2;
+          c.hj.resize(2 * I.nb);
+          c.Kj.resize(I.nb);
+          for(int q = 0; q < I.nb; ++q)
             {
-              Chunk c;
-              auto &I = c.info;
-              I.dim = kv.first;
-              I.K = 0;
-              I.h = 0;
-              for(size_t i = i0; i < std::min(ids.size(), i0 + step); ++i)
-                {
-                  I.blocks.push_back(ids[i]);
-                  I.K = std::max(I.K, shapes[ids[i]].K);
-                  I.h = std::max({I.h, shapes[ids[i]].he, shapes[ids[i]].ho});
-                }
-              I.nb = int(I.blocks.size());
-              c.nseg = I.dim * (I.dim + 1) / 2;
-              I.P = c.nseg * I.K;
-              I.n = I.dim * I.h;
-              c.hj.resize(2 * I.nb);
-              c.Kj.resize(I.nb);
-              for(int q = 0; q < I.nb; ++q)
-                {
-                  const auto &s = shapes[I.blocks[q]];
-                  c.hj[q] = s.he;
-                  c.hj[I.nb + q] = s.ho;
-                  c.Kj[q] = s.K;
-                }
-              GS_CHECK(cudaMalloc(&c.d_hj, c.hj.size() * sizeof(int)));
-              GS_CHECK(cudaMalloc(&c.d_Kj, c.Kj.size() * sizeof(int)));
-              GS_CHECK(cudaMemcpy(c.d_hj, c.hj.data(), c.hj.size() * sizeof(int),
-                                  cudaMemcpyHostToDevice));
-              GS_CHECK(cudaMemcpy(c.d_Kj, c.Kj.data(), c.Kj.size() * sizeof(int),
-                                  cudaMemcpyHostToDevice));
-              c.V = Mat(L, 2 * I.nb, I.h, I.K);
-              c.c = Mat(L, I.nb, I.P, 1);
-              if(opt.sparse_b)
-                {
-                  c.B.b.L = L; // the shape only; upload keeps the nonzeros
-                  c.B.b.batch = I.nb;
-                  c.B.b.rows = I.P;
-                  c.B.b.cols = N;
-                }
-              else
-                c.B = Mat(L, I.nb, I.P, N);
-              c.x = Mat(L, I.nb, I.P, 1);
-              c.X = Mat(L, 2 * I.nb, I.n, I.n);
-              c.Y = Mat(L, 2 * I.nb, I.n, I.n);
-              chunks.push_back(std::move(c));
+              const auto &s = shapes[I.blocks[q]];
+              c.hj[q] = s.he;
+              c.hj[I.nb + q] = s.ho;
+              c.Kj[q] = s.K;
             }
+          GS_CHECK(cudaMalloc(&c.d_hj, c.hj.size() * sizeof(int)));
+          GS_CHECK(cudaMalloc(&c.d_Kj, c.Kj.size() * sizeof(int)));
+          GS_CHECK(cudaMemcpy(c.d_hj, c.hj.data(), c.hj.size() * sizeof(int),
+                              cudaMemcpyHostToDevice));
+          GS_CHECK(cudaMemcpy(c.d_Kj, c.Kj.data(), c.Kj.size() * sizeof(int),
+                              cudaMemcpyHostToDevice));
+          c.V = Mat(L, 2 * I.nb, I.h, I.K);
+          c.c = Mat(L, I.nb, I.P, 1);
+          if(opt.sparse_b)
+            {
+              c.B.b.L = L; // the shape only; upload keeps the nonzeros
+              c.B.b.batch = I.nb;
+              c.B.b.rows = I.P;
+              c.B.b.cols = N;
+            }
+          else
+            c.B = Mat(L, I.nb, I.P, N);
+          c.x = Mat(L, I.nb, I.P, 1);
+          c.X = Mat(L, 2 * I.nb, I.n, I.n);
+          c.Y = Mat(L, 2 * I.nb, I.n, I.n);
+          chunks.push_back(std::move(c));
         }
       nblocks_total = int(shapes.size());
       conds.schur.resize(nblocks_total);
@@ -736,6 +808,7 @@ namespace sdpb_gpu
           c.dres = add(t, d, -1);
           dual_error = max_of(dual_error, mpf_max_abs(c.dres.b, 0));
         }
+      dual_error = global_max(dual_error);
       r.dual_error = dual_error;
       // The floor of the dual residual that the explicit inverses of S leave only
       // matters once the residual has come down near it
@@ -756,15 +829,16 @@ namespace sdpb_gpu
           mpf_mask_blocks(c.Pres.b, c.info.h, c.d_hj, 0);
           err_P = max_of(err_P, mpf_max_abs(c.Pres.b, 0));
         }
-      r.primal_error_P = err_P;
+      r.primal_error_P = global_max(err_P);
 
       stage("primal residues p");
-      pvec = make_copy(b);
+      pvec = root_copy(b);
       for(auto &c : chunks)
         {
           Mat t = gemv_Bt(c, c.x);
           mpf_batch_add(pvec.b, t.b, -1, pvec.b, 0);
         }
+      sum_ranks(pvec);
       r.primal_error_p = mpf_max_abs(pvec.b, 0);
 
       stage("X Y");
@@ -819,7 +893,7 @@ namespace sdpb_gpu
       int64_t rows_total = 0;
       for(auto &c : chunks)
         rows_total += int64_t(c.info.nb) * c.info.P;
-      if(!gram)
+      if(!gram && !world)
         {
           Gram_Options qopt = gopt;
           qopt.timing = opt.product_timing;
@@ -839,7 +913,7 @@ namespace sdpb_gpu
           B_done(c);
           eng(I.nb).check();
           c.SiT.free();
-          gram->scan(P_of(c).view()); // only takes maxima: needs one P at a time
+          if(gram) gram->scan(P_of(c).view()); // only takes maxima: needs one P at a time
         }
       form_and_factor_Q();
       stage(nullptr);
@@ -849,6 +923,7 @@ namespace sdpb_gpu
     // layout, with solve_Q (a distributed Q would replace both)
     void form_and_factor_Q()
     {
+      if(world) { distributed_Q_factor(); return; }
       stage("Q = P^T P");
       for(auto &c : chunks)
         gram->add(P_of(c).view());
@@ -860,6 +935,7 @@ namespace sdpb_gpu
       gram->finish(Qp.b.m, Qp.b.e);
       mpf_unpack_symmetric(Qp.b, Q.b, 0);
       Qp.free();
+      if(want_Q_digest()) record_Q_digest(full_Q_tile_digests(Q.b,opt.q_tile));
 
       stage("Cholesky Q + inverse");
       // the optimized correction validated on real Q
@@ -878,6 +954,13 @@ namespace sdpb_gpu
     // steps of iterative refinement against Q itself
     Mat solve_Q(const Mat &v)
     {
+      if(world)
+        {
+          Mat out(L,1,N,1);
+          distributed_q->solve(v.b,out.b,opt.refine_dy);
+          record_distributed_Q_peak();
+          return out;
+        }
       auto through_inverse = [&](const Mat &r) {
         Mat t = gemv_square(Xq, r, false);
         return gemv_square(Xq, t, true);
@@ -906,7 +989,7 @@ namespace sdpb_gpu
           err = max_of(err, mpf_max_abs(R.b, 0));
         }
       stage(nullptr);
-      return err;
+      return global_max(err);
     }
 
     void direction(const Host_Float &beta_mu, bool corrector)
@@ -923,7 +1006,7 @@ namespace sdpb_gpu
       const char *const s_dY = corrector ? "corrector: dY" : "predictor: dY";
 
       Mat bm = scalar(beta_mu);
-      Mat rhs_y = make_copy(pvec);
+      Mat rhs_y = root_copy(pvec);
       for(auto &c : chunks)
         {
           const auto &I = c.info;
@@ -971,6 +1054,7 @@ namespace sdpb_gpu
         }
 
       stage(s_dy);
+      sum_ranks(rhs_y);
       dy = solve_Q(rhs_y);
 
       for(auto &c : chunks)
@@ -1039,7 +1123,7 @@ namespace sdpb_gpu
     void refine_system_step()
     {
       stage("corrector: refine the Schur system");
-      Mat rhs2 = make_copy(pvec);
+      Mat rhs2 = root_copy(pvec);
       for(auto &c : chunks)
         {
           Mat Sdx = gemv_square(c.S, c.dx, false);
@@ -1056,6 +1140,7 @@ namespace sdpb_gpu
           Mat ptw = gemv_Pt(c, c.w2);
           mpf_batch_add(rhs2.b, ptw.b, -1, rhs2.b, 0);
         }
+      sum_ranks(rhs2);
       Mat ddy = solve_Q(rhs2);
       for(auto &c : chunks)
         {
@@ -1300,6 +1385,12 @@ namespace sdpb_gpu
       dy.free();
       Xq.free();
       Qfull.free();
+      if(distributed_q)
+        {
+          distributed_profiles.push_back(distributed_q->profile_json());
+          peak_bytes=std::max(peak_bytes,double(distributed_q->peak_device_bytes()));
+          distributed_q.reset();
+        }
       stage(nullptr);
     }
 
@@ -1311,6 +1402,8 @@ namespace sdpb_gpu
       stage(nullptr);
       last_iter_s = iter_s;
       iter_s.clear();
+      last_iter_payload=iter_payload;
+      iter_payload.clear();
       ++iteration;
     }
 
@@ -1318,7 +1411,7 @@ namespace sdpb_gpu
     {
       std::ostringstream os;
       os.precision(6);
-      auto put = [&](const std::map<std::string, double> &m) {
+      auto put = [&](const auto &m) {
         os << "{";
         bool first = true;
         for(const auto &kv : m)
@@ -1356,6 +1449,20 @@ namespace sdpb_gpu
       put(stage_host_gb);
       os << ", \"product_phases_ms\": ";
       put(product_ms);
+      if(world)
+        {
+          os << ", \"collective_received_payload_by_stage\": ";
+          put(total_payload);
+          os << ", \"last_iteration_collective_received_payload_by_stage\": ";
+          put(last_iter_payload);
+          os << ", \"rank\": " << world->rank()
+             << ", \"G\": " << world->size()
+             << ", \"collective_received_payload\": " << world->received_bytes()
+             << ", \"distributed_q_iterations\": [";
+          for(size_t i=0;i<distributed_profiles.size();++i)
+            os << (i?",":"") << distributed_profiles[i];
+          os << "]";
+        }
       os << "}\n";
       return os.str();
     }
@@ -1374,6 +1481,8 @@ namespace sdpb_gpu
     p_->gopt.fused_residues = true;
     p_->gopt.product_timing = options.product_timing;
     p_->gopt.crt_guard_bits = options.crt_guard;
+    if(options.world.size>1)
+      p_->world=std::make_unique<Gpu_Collective>(options.world);
     p_->workspace = std::make_unique<Rns_Workspace>(cudaStream_t(0));
     p_->gopt.workspace = p_->workspace.get();
     g_workspace = p_->workspace.get();

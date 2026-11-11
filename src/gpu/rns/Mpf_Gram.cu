@@ -161,7 +161,7 @@ namespace sdpb_gpu
                                  int64_t r_bstride = 0,
                                  const int32_t *__restrict__ colmap = nullptr,
                                  int64_t win0 = 0, int64_t win = 0,
-                                 int64_t in_ld = 0)
+                                 int64_t in_ld = 0, bool local_refs = false)
     {
       // colmap: column j of the output is column colmap[j] of the input
       // (Eref too). win > 0: only rows win0..win0+win-1 are written
@@ -191,11 +191,12 @@ namespace sdpb_gpu
       uint32_t x[XN];
       bool zero = true;
       uint32_t ext = 0;
-      if(i < rows)
+      if(i < rows && jm >= 0)
         {
           const int64_t in = jm * (in_ld ? in_ld : rows) + i;
           const int64_t ex = e[in];
-          const long long s = (ex == MPF_EZ) ? (1LL << 40) : (long long)(Eref[jm] - ex);
+          const long long s = (ex == MPF_EZ) ? (1LL << 40)
+            : (long long)(Eref[local_refs ? j : jm] - ex);
           if(s <= 32LL * L + 1 && s >= -32LL)
             {
               zero = false;
@@ -639,6 +640,35 @@ namespace sdpb_gpu
         om[(int64_t)t * oplane + eo] = int32_t(r[t]);
       oe[eo] = ebase + sh;
     }
+    __global__ void select_tops(const uint64_t *global_tops,
+                                const int32_t *map, uint64_t *local, int n)
+    {
+      const int j = blockIdx.x * blockDim.x + threadIdx.x;
+      if(j < n) local[j] = map[j] >= 0 ? global_tops[map[j]] : 0;
+    }
+
+    __global__ void normalize_rect(const int32_t *in, int W, int nr, int nc,
+                                   const int64_t *refs, int L,
+                                   int32_t *out, int64_t *exps)
+    {
+      const int64_t q = int64_t(blockIdx.x) * blockDim.x + threadIdx.x;
+      const int64_t total = int64_t(nr) * nc;
+      if(q < total)
+        round_entry(in, W, total, q, L, total, q,
+                    refs[nc + q % nr] + refs[q / nr], out, exps);
+    }
+  }
+
+  void mpf_scan_column_tops(const Mpf_Matrix &P, uint64_t *tops,
+                            cudaStream_t stream)
+  {
+    if(P.rows == 0) return;
+    col_tops<<<dim3(unsigned(P.cols), unsigned((P.rows + 4095) / 4096)), 256,
+               0, stream>>>(P.m, P.e, P.L, P.rows, P.cols,
+                            P.plane ? P.plane : P.rows * P.cols,
+                            reinterpret_cast<unsigned long long *>(tops),
+                            0, 0, P.ld);
+    MG_CHECK(cudaGetLastError());
   }
 
   Mpf_Gram::Mpf_Gram(int N, int L, int digits, int64_t rows_total,
@@ -647,6 +677,8 @@ namespace sdpb_gpu
         G_(N, digits, rows_total + 16 * 4096, options, stream),
         stream_(stream), timing_(options.timing)
   {
+    tile_rows_ = options.tile_rows;
+    tile_cols_ = options.tile_cols;
     // (the constructor of G_ received rows_total + 16 * 4096: each chunk's
     // rows are padded to a multiple of 16)
     if(L > LMAX)
@@ -733,6 +765,21 @@ namespace sdpb_gpu
   {
     if(P.cols != N_ || P.L != L_)
       throw std::invalid_argument("Mpf_Gram::add: shape");
+    add_columns(P, nullptr);
+  }
+
+  void Mpf_Gram::set_column_tops(const uint64_t *global_tops, const int32_t *map)
+  {
+    select_tops<<<nblocks(N_), threads, 0, stream_>>>(
+      global_tops, map, reinterpret_cast<uint64_t *>(d_top_), N_);
+    MG_CHECK(cudaGetLastError());
+    refs_ready_ = false;
+  }
+
+  void Mpf_Gram::add_columns(const Mpf_Matrix &P, const int32_t *map)
+  {
+    if(P.L != L_ || (!map && P.cols != N_))
+      throw std::invalid_argument("Mpf_Gram::add_columns: shape");
     if(!refs_ready_)
       {
         make_refs<<<nblocks(N_), threads, 0, stream_>>>(
@@ -745,10 +792,10 @@ namespace sdpb_gpu
       const size_t sm = size_t(gc) * W_ * 4;
 #define MPF_RES(LT)                                                           \
   mpf_residues<LT><<<nblocks(ld * N_), threads, sm, stream_>>>(              \
-    P.m, P.e, L_, P.rows, P.cols, ld, P.rows * P.cols, 0, d_Eref_,            \
+    P.m, P.e, L_, P.rows, N_, ld, P.plane ? P.plane : P.rows * P.cols, 0, d_Eref_, \
     d_ctab_ + int64_t(i0) * W_,                                               \
     d_ctop_ + int64_t(i0) * 32, G_.device_primes() + i0,                      \
-    G_.device_minv() + i0, gc, R, plane)
+    G_.device_minv() + i0, gc, R, plane, 0, 0, 0, map, 0, 0, P.ld, true)
       if(L_ == 28)
         MPF_RES(28);
       else if(L_ == 30)
@@ -762,10 +809,20 @@ namespace sdpb_gpu
 
   void Mpf_Gram::finish(int32_t *d_m, int64_t *d_e)
   {
+    if(!refs_ready_)
+      {
+        make_refs<<<nblocks(N_), threads, 0, stream_>>>(
+          reinterpret_cast<unsigned long long *>(d_top_), d_Eref_, N_, D_);
+        MG_CHECK(cudaGetLastError());
+      }
     G_.finish(d_Qint_);
     tic();
-    normalize_packed<<<nblocks(G_.packed_size()), threads, 0, stream_>>>(
-      d_Qint_, G_.limbs_out(), G_.packed_size(), N_, d_Eref_, L_, d_m, d_e);
+    if(tile_rows_)
+      normalize_rect<<<nblocks(G_.packed_size()), threads, 0, stream_>>>(
+        d_Qint_, G_.limbs_out(), tile_rows_, tile_cols_, d_Eref_, L_, d_m, d_e);
+    else
+      normalize_packed<<<nblocks(G_.packed_size()), threads, 0, stream_>>>(
+        d_Qint_, G_.limbs_out(), G_.packed_size(), N_, d_Eref_, L_, d_m, d_e);
     MG_CHECK(cudaGetLastError());
     MG_CHECK(cudaMemsetAsync(d_top_, 0, N_ * sizeof(int64_t), stream_));
     refs_ready_ = false;

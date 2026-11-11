@@ -9,6 +9,7 @@
 #include "sdpb_util/malloc_trim.hxx"
 
 #ifdef SDPB_GPU
+#include "gpu_block_info.hxx"
 #include "sdp_solve/SDP_Solver/run/gpu/Gpu_Compute.hxx"
 #endif
 
@@ -31,14 +32,38 @@ void time_and_solve(
       set_threaded_sdp_reading(true);
     }
 #endif
+  // A checkpoint written by sdpb --gpu on several ranks holds each rank's
+  // blocks in that run's placement (gpu_layout, see gpu_block_info.hxx):
+  // only such a run can load it.
+  {
+    const auto &in = parameters.solver.checkpoint_in;
+    int gpu_checkpoint
+      = El::mpi::Rank() == 0 && fs::exists(in / "gpu_layout")
+        && (fs::exists(in / "checkpoint.json")
+            || fs::exists(in / "checkpoint.0"));
+    El::mpi::Broadcast(gpu_checkpoint, 0, El::mpi::COMM_WORLD);
+    ASSERT(!gpu_checkpoint
+             || (parameters.solver.gpu && El::mpi::Size() > 1),
+           "the checkpoint in ", in,
+           " was written by sdpb --gpu on several ranks (it has a "
+           "gpu_layout): only such a run, with the same placement, can "
+           "load it.");
+  }
   const auto block_timings_path = get_block_timings_path(parameters);
   auto block_info
     = create_block_info<TSolver>(env, parameters, block_timings_path);
+#ifdef SDPB_GPU
+  // sdpb --gpu on several ranks: each rank (one GPU) owns complete blocks
+  if(parameters.solver.gpu && El::mpi::Size() > 1)
+    assign_blocks_to_gpus(parameters, block_info);
+#endif
   // Only generate a block_timings file if
   // 1) We are running in parallel
   // 2) We did not load a block_timings file
   // 3) We are not going to load a checkpoint.
-  if(El::mpi::Size(El::mpi::COMM_WORLD) > 1 && block_timings_path.empty()
+  // 4) The blocks are not placed by the GPU backend (--gpu).
+  if(El::mpi::Size(El::mpi::COMM_WORLD) > 1 && !parameters.solver.gpu
+     && block_timings_path.empty()
      && !exists(parameters.solver.checkpoint_in / "checkpoint.0"))
     {
       if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)

@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <thread>
 #include <vector>
 
@@ -233,8 +234,8 @@ Gpu_Compute::Gpu_Compute(const Solver_Parameters &parameters,
                          const SDP_Solver &solver)
     : p_(std::make_unique<Impl>())
 {
-  ASSERT(El::mpi::Size(El::mpi::COMM_WORLD) == 1,
-         "--gpu runs on one MPI rank and one GPU");
+  ASSERT(El::mpi::Size(block_info.mpi_comm.value)==1,
+         "--gpu requires complete blocks on each MPI rank");
   auto &P = *p_;
   P.L = limbs_for_precision(parameters.precision);
   P.N = int(sdp.dual_objective_b.Height());
@@ -249,18 +250,31 @@ Gpu_Compute::Gpu_Compute(const Solver_Parameters &parameters,
   for(int j = 0; j < num_blocks; ++j)
     {
       const int loc = P.local_of[j];
-      ASSERT(loc >= 0, "--gpu: block not local");
       shapes[j].dim = int(block_info.dimensions[j]);
       shapes[j].K = int(block_info.num_points[j]);
-      shapes[j].he = int(sdp.bilinear_bases[2 * loc].Height());
-      shapes[j].ho = int(sdp.bilinear_bases[2 * loc + 1].Height());
+      shapes[j].he = int(block_info.get_bilinear_bases_height(j,0));
+      shapes[j].ho = int(block_info.get_bilinear_bases_height(j,1));
       P.he[j] = shapes[j].he;
       P.ho[j] = shapes[j].ho;
       P.Kj[j] = shapes[j].K;
-      ASSERT_EQUAL(sdp.bilinear_bases[2 * loc].Width(), shapes[j].K);
-      ASSERT_EQUAL(sdp.bilinear_bases[2 * loc + 1].Width(), shapes[j].K);
+      if(loc>=0)
+        {
+          ASSERT_EQUAL(sdp.bilinear_bases[2 * loc].Width(), shapes[j].K);
+          ASSERT_EQUAL(sdp.bilinear_bases[2 * loc + 1].Width(), shapes[j].K);
+          ASSERT_EQUAL(sdp.bilinear_bases[2 * loc].Height(), shapes[j].he);
+          ASSERT_EQUAL(sdp.bilinear_bases[2 * loc + 1].Height(), shapes[j].ho);
+        }
     }
   Gpu_Solver_Options o;
+  o.world.rank=El::mpi::Rank();
+  o.world.size=El::mpi::Size();
+  o.world.device=-1;
+  o.world.host_broadcast=[](void *p,size_t n,int root) {
+    El::mpi::Broadcast(static_cast<unsigned char *>(p),int(n),root,El::mpi::COMM_WORLD);
+  };
+  o.q_tile=int(env_long("SDPB_GPU_Q_TILE",512));
+  o.q_row_panel=int(env_long("SDPB_GPU_Q_ROW_PANEL",8192));
+  o.q_wide_residual=env_long("SDPB_GPU_Q_WIDE_RESIDUAL",0)!=0;
   o.L = P.L;
   o.digits = int(env_long("SDPB_GPU_DIGITS", 4 * P.L));
   o.eig_tol = env_double("SDPB_GPU_EIG_TOL", 1e-10);
@@ -303,6 +317,7 @@ Gpu_Compute::Gpu_Compute(const Solver_Parameters &parameters,
   for(int ci = 0; ci < P.gs->num_chunks(); ++ci)
     {
       const Chunk_Info &I = P.gs->chunk(ci);
+      for(int j:I.blocks) ASSERT(P.local_of[j]>=0,"GPU/host block ownership differs");
       const int nb = I.nb, K = I.K, h = I.h, n = I.n, Pc = I.P, dim = I.dim;
       // V (2 nb, h, K)
       P.fill(ci, Gpu_Array::V,
@@ -420,6 +435,7 @@ void Gpu_Compute::residues(const SDP &sdp, SDP_Solver &solver)
   El::BigFloat psum(0);
   for(const auto &t : P.last.primal_terms)
     psum += from_host(t);
+  if(El::mpi::Size()>1) psum=El::mpi::AllReduce(psum,El::mpi::SUM,El::mpi::COMM_WORLD);
   solver.primal_objective = sdp.objective_const + psum;
   solver.dual_objective = sdp.objective_const + from_host(P.last.dual_sum);
   solver.duality_gap
@@ -446,6 +462,7 @@ void Gpu_Compute::step(const Solver_Parameters &parameters, size_t total_psd_row
   El::BigFloat trace(0);
   for(const auto &t : P.last.minus_xy_trace)
     trace += from_host(t);
+  if(El::mpi::Size()>1) trace=El::mpi::AllReduce(trace,El::mpi::SUM,El::mpi::COMM_WORLD);
   mu = -trace / total_psd_rows;
   if(mu > parameters.max_complementarity)
     {
@@ -463,6 +480,7 @@ void Gpu_Compute::step(const Solver_Parameters &parameters, size_t total_psd_row
   El::BigFloat frobenius(0);
   for(const auto &t : P.gs->frobenius_terms())
     frobenius += from_host(t);
+  if(El::mpi::Size()>1) frobenius=El::mpi::AllReduce(frobenius,El::mpi::SUM,El::mpi::COMM_WORLD);
   const El::BigFloat r = frobenius / (mu * total_psd_rows);
   const El::BigFloat beta = r < 1 ? r * r : r;
   beta_corrector
@@ -483,12 +501,14 @@ void Gpu_Compute::step(const Solver_Parameters &parameters, size_t total_psd_row
   Q_cond_number = cond_of(C.Q);
   max_block_cond_number = 0;
   max_block_cond_number_name = "";
+  int max_condition_order = std::numeric_limits<int>::max();
   for(size_t j = 0; j < C.schur.size(); ++j)
     {
       const El::BigFloat s = cond_of(C.schur[j]);
       if(max_block_cond_number < s)
         {
           max_block_cond_number = s;
+          max_condition_order = int(5*j);
           max_block_cond_number_name
             = "schur_complement_cholesky.block_" + std::to_string(j);
         }
@@ -498,6 +518,7 @@ void Gpu_Compute::step(const Solver_Parameters &parameters, size_t total_psd_row
           if(max_block_cond_number < x)
             {
               max_block_cond_number = x;
+              max_condition_order = int(5*j+1+2*parity);
               max_block_cond_number_name = El::BuildString("X_cholesky.block_", j,
                                                            "_", parity);
             }
@@ -505,10 +526,29 @@ void Gpu_Compute::step(const Solver_Parameters &parameters, size_t total_psd_row
           if(max_block_cond_number < y)
             {
               max_block_cond_number = y;
+              max_condition_order = int(5*j+2+2*parity);
               max_block_cond_number_name = El::BuildString("Y_cholesky.block_", j,
                                                            "_", parity);
             }
         }
+    }
+
+  if(El::mpi::Size()>1)
+    {
+      const auto local=max_block_cond_number;
+      max_block_cond_number=El::mpi::AllReduce(local,El::mpi::MAX,El::mpi::COMM_WORLD);
+      // Preserve the single-rank block traversal on exact ties, regardless
+      // of which rank owns the earliest block in that traversal.
+      const int order=local==max_block_cond_number ? max_condition_order
+        : std::numeric_limits<int>::max();
+      const int first=El::mpi::AllReduce(order,El::mpi::MIN,El::mpi::COMM_WORLD);
+      int root=order==first ? El::mpi::Rank() : El::mpi::Size();
+      root=El::mpi::AllReduce(root,El::mpi::MIN,El::mpi::COMM_WORLD);
+      int length=int(max_block_cond_number_name.size());
+      El::mpi::Broadcast(&length,1,root,El::mpi::COMM_WORLD);
+      max_block_cond_number_name.resize(length);
+      El::mpi::Broadcast(reinterpret_cast<unsigned char *>(max_block_cond_number_name.data()),
+                         length,root,El::mpi::COMM_WORLD);
     }
 
   // a block that the float64 eigenvalue cannot resolve: SDPB's multiprecision
@@ -551,6 +591,11 @@ void Gpu_Compute::step(const Solver_Parameters &parameters, size_t total_psd_row
   };
   primal_step_length = step_of(lamP);
   dual_step_length = step_of(lamD);
+  if(El::mpi::Size()>1)
+    {
+      primal_step_length=El::mpi::AllReduce(primal_step_length,El::mpi::MIN,El::mpi::COMM_WORLD);
+      dual_step_length=El::mpi::AllReduce(dual_step_length,El::mpi::MIN,El::mpi::COMM_WORLD);
+    }
   if(lamP.refined + lamD.refined > 0)
     std::cerr << "Gpu_Compute: " << lamP.refined + lamD.refined
               << " blocks' step eigenvalues refined in multiprecision\n";
@@ -637,6 +682,8 @@ void Gpu_Compute::get_iterate(SDP_Solver &solver)
 
 void Gpu_Compute::write_profile(const std::filesystem::path &path) const
 {
-  std::ofstream os(path);
+  const auto dest=El::mpi::Rank()==0 ? path : std::filesystem::path(
+    path.string()+".rank"+std::to_string(El::mpi::Rank()));
+  std::ofstream os(dest);
   os << p_->gs->profile_json();
 }

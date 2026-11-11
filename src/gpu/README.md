@@ -10,7 +10,8 @@ mapping in [docs/GPU_backend_credits.md](../../docs/GPU_backend_credits.md)):
 - the Gram matrix Q = PᵀP accumulated in residue form over chunks, with one reconstruction per iteration;
 - batched, equilibrated fixed-point Cholesky and triangular inverses over SDP blocks of equal size;
 - step lengths from float64 eigenvalues with an error bound and multiprecision refinement;
-- chunked streaming of per-block arrays between host and device, and NCCL multi-GPU (planned).
+- chunked streaming of per-block arrays between host and device (planned), and NCCL collectives
+  (the experimental distributed-Q backend below).
 
 Device-float products first round operands to the chosen per-column
 alignment. RNS accumulation is exact for those aligned integers; the result
@@ -58,7 +59,7 @@ The option is off by default.
 `mpirun -n 1 sdpb --gpu <options>` runs the iterations on one GPU (one MPI rank). The driver, its termination and
 jump tests, `iterations.json`, checkpoints and outputs are SDPB's. Everything is kept resident on the device: the current code
 assumes that one device holds the whole iteration. Each run writes `gpu_profile.json` next to `iterations.json`:
-seconds per stage and the device memory at the end of each stage. Options through the environment:
+seconds per stage and device/host high-water measurements. Options through the environment:
 `SDPB_GPU_EIG_TOL` (step-length tolerance, 1e-10), `SDPB_GPU_REFINE_DY` (refinement steps in the solves with Q, 1), `SDPB_GPU_REFINE_SYSTEM` (of the corrector's Schur system: -1 automatic once the dual error is below 2^-200, 0 never, n always), `SDPB_GPU_CORRECT_XY`, `SDPB_GPU_CORRECT_SCHUR` (panel residual
 correction, on), `SDPB_GPU_CHUNK_BLOCKS` (blocks per chunk, 16, which is what fits at nmax18; 0: one chunk per dimension, the fastest at nmax14, where it fits), `SDPB_GPU_STRUCTURED_P` (P by column groups, on), `SDPB_GPU_SCHUR_DIGITS` (digits of the correction's second product on Schur blocks, -1: adaptive), `SDPB_GPU_CRT_GUARD` (guard of the truncated CRT in all products, 128; 0: untruncated, bit for bit with the earlier default), `SDPB_GPU_PRODUCT_TIMING`; `SDPB_GPU_PERTURB_STEP` and
 `SDPB_GPU_PERTURB_ITERATION` are the negative control of the comparison with SDPB.
@@ -84,6 +85,104 @@ have no effect with `--gpu`: no host or device memory estimate is made.
 | `SDPB_GPU_GEMV_THREADS` | 262144 | threads in all per matrix-vector product (0: one per output) |
 | `SDPB_GPU_PRODUCT_TIMING`, `SDPB_GPU_VERBOSE`, `SDPB_GPU_CORRECTION_VERBOSE`, `SDPB_GPU_DEBUG_TIES` | unset | diagnostics: per-product timing, planner and correction messages, tie report |
 | `SDPB_GPU_PERTURB_STEP`, `SDPB_GPU_PERTURB_ITERATION` | 0, 0 | test only: perturb a step, the negative control of the comparison with SDPB |
+
+## Experimental distributed Q
+
+Build with `--gpu-nccl-dir=<NCCL prefix>` (CMake: `-DSDPB_GPU_NCCL_DIR=<NCCL prefix>`) in addition to the GPU options above.
+Only the NCCL headers are needed at build time. At run time set
+`SDPB_GPU_NCCL_LIBRARY=/path/to/libnccl.so.2` if it is not on the library search
+path. The single-rank path neither loads NCCL nor changes its factor/solve
+algorithm.
+
+On one node, launch one MPI process per allocated GPU, for example
+`mpirun -n 2 --bind-to none sdpb --gpu <the same solver options>`. If all GPUs
+are visible, rank r selects device r; if Slurm exposes one device per rank,
+each uses its visible device. Duplicate device UUIDs are rejected. This
+prototype supports L=28 and requires at least one whole chunk on each rank.
+Keep the same `SDPB_GPU_CHUNK_BLOCKS` when comparing rank counts.
+Every rank must see the same `SDPB_GPU_*` settings (pass them with the launcher, e.g. `mpirun -x`); sdpb
+compares them across ranks at start-up and refuses a difference. The block placement is written to `gpu_layout`
+in the checkpoint directory, and a checkpoint is loaded only with the placement it was written with (a checkpoint
+without `gpu_layout`, e.g. from a CPU run, is refused on several GPU ranks).
+
+Whole B/P chunks and their Schur/X/Y blocks have deterministic owners.
+`linalg/Distributed_Q` assigns lower Q tiles cyclically to ranks, reduces
+integer residue sums before owner CRT, and retains the original owner tiles
+for refinement. Corrected tiled Cholesky keeps its lower factor and diagonal
+inverse tiles on their owners. It does not replicate a full Q or inverse.
+Subsequent vector sums use floating arithmetic and may round differently
+with the rank count. All ranks participate in the existing driver, including
+checkpoints and termination; multi-rank continuation has not yet been tested.
+
+Options: `SDPB_GPU_Q_TILE` (512), `SDPB_GPU_Q_ROW_PANEL` (8192), and the existing
+`SDPB_GPU_REFINE_DY` (1). `SDPB_GPU_Q_DIGEST_PREFIX` optionally writes first-
+iteration original-Q mantissa/exponent hashes to `<prefix>.rankR.txt`, with
+no whole-Q host copy. Use the same digest tile size to compare rank counts.
+Profiles are `gpu_profile.json` and `gpu_profile.json.rankR`. Collective
+counters record logical received application payload, not measured link
+traffic; reduce-scatter counts one output segment, while a ring moves G-1
+segments. Host RSS is a process high water, not stage-local live memory.
+
+Current evidence (computed once, D): nmax14/18 eight-iteration G=1/2/4 calls
+have identical assembled Q tile hashes. Four-GPU device peaks are 35.0/50.7
+GB, versus 82.1/146.6 GB on one GPU in the same cap16 configuration. Matched
+guard128 frozen factors pass independent MPFR forward and exact GMP sampled
+residual checks at every G, with corrupted factors rejected. The original
+tiled full solve fails the no-worse-than-monolithic per-column gate on 2/32
+and 15/32 columns. The strict relative iteration-field gate also fails for
+`p-err`; other fields agree to at least 175/153 decimal digits over eight
+iterations. A complete n14 G=2 call with the original residual reaches the
+same dual-feasible jump at iteration145 as the original G=1 and CPU runs;
+all non-p-err iteration-log fields agree to at least138/13.4 digits with those references.
+Terminal out.txt scalars are separate: dualError is 1.79e-143 (G2),
+2.82e-143 (G1),4.80e-168 (CPU), also failing the relative gate.
+No failed gate is waived by that verdict.
+
+The same L28 implementation also completes eight nmax22 R25+infinity
+iterations on G2/G4, with matching 136 Q tile hashes, 95.3/65.6 GB device
+peaks and 12.98/8.40 s/iteration. This is a resident configuration; the
+one-GPU implementation with sparse B also fits that input.
+The full G4 call reaches the CPU reference's dual-feasible jump at
+iteration 166: 8.285 s/iteration, 65.563 GB maximum device memory, all
+non-p-err iteration fields agreeing to at least 13.502 digits. Its first
+eight records and all initial Q digests reproduce the prefix exactly.
+The strict p-err gate still fails, and terminal dualError separately fails
+(4.89e-138 GPU versus 2.31e-152 CPU). This CPU reference is a run with fewer poles
+(maxNumPoles 25 and a node at infinity), not the production settings; no production CPU speedup is claimed.
+One 1024-tile comparison at nmax14/18 reduces distributed iteration time
+by 7% and 14–17%, with larger isolated workspaces and more collective
+payload. Its forward/factor checks pass, but its full per-column gate
+fails on 3/32 and 16/32 columns. The default tile remains 512. These are
+single-run measurements, not production acceptance or linear scaling.
+
+`SDPB_GPU_Q_WIDE_RESIDUAL=1` enables an optional experimental residual for
+distributed Q only (default OFF; G=1 solver arithmetic stays unchanged).
+It multiplies full 28-limb inputs, accumulates guarded signed integers across
+owners, subtracts Qv from the RHS, then rounds once. In one bounded frozen-Q test
+at nmax14/18 and G=1/2, it passes exact GMP comparisons at every residual
+row and the unchanged full-solve per-column gate for all32 columns at both
+MPFR reference precisions. Worst full-solve errors are about 2^-894.3;
+corrupted residual and factor controls fail. This is not a complete-solver
+validation of the optional path, and the original residual's failure remains
+recorded separately. Harness options are `--wide-residual 1 --refine 1`;
+`--mode residual` exports b-Qv for an external exact checker.
+
+Standalone harness (MPI headers/libraries must also be available to nvcc):
+
+```
+make -C src/gpu GMP_DIR=<GMP prefix> NCCL_DIR=<NCCL prefix> ARCH=90 build/distributed_q_check
+mpirun -n 2 src/gpu/build/distributed_q_check --mode assembly --N 173 --tile 64
+mpirun -n 2 src/gpu/build/distributed_q_check --mode factor --dir <frozen Q directory> \
+  --N 3406 --tile 512 --columns 32 --crt-guard 128 --out <output prefix>
+```
+
+The assembly fixture compares every entry with the original full Gram;
+`--drop-chunk 1` is its negative control. Factor exports alone are not an
+accuracy gate. Compare the exported solves with the independent MPFR LDL
+references of `test/ref_solve.c` at two precisions (`compare_references`;
+`make mpfr-checks`), and sample the factor's residual exactly in GMP;
+`--corrupt 1` must be rejected. `--mode monolithic` provides the unchanged
+single-GPU inverse-product arithmetic as a separate full-solve comparator.
 
 ## Speed and memory options of the factor and P = X B
 
@@ -116,7 +215,7 @@ lost definiteness, e.g. at too low a precision late in a hard run): it continues
 ## Tests
 
 The checks in `test/` are built by `src/gpu/Makefile`, or by CMake with `-DSDPB_ENABLE_GPU=ON`
-(targets `gpu_checks`, `mpfr_checks`, in `<build>/src/gpu/`),
+(targets `gpu_checks`, `mpfr_checks` and, with NCCL, `nccl_checks`, in `<build>/src/gpu/`),
 and need a GPU. They are not built by waf or by CMake's default target, and not run by `test/run_all_tests.sh` or CTest.
 - Self-contained, each generating its own data and comparing with independent GMP products:
   `gram_check`, `gemm_check`, `mpf_gram_check`, `mpf_gemm_check`, `chol_tile_check`, `block_factor_check`,

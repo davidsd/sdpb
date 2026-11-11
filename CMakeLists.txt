@@ -120,6 +120,8 @@ target_compile_definitions(sdpb_options INTERFACE
 # GPU backend (src/gpu, CUDA), off by default; without it the CPU build is unchanged.
 # The equivalent of waf's --enable-gpu: sdpb --gpu, see src/gpu/README.md.
 option(SDPB_ENABLE_GPU "Build the GPU backend (src/gpu, CUDA): the --gpu option of sdpb" OFF)
+set(SDPB_GPU_NCCL_DIR "" CACHE PATH
+  "NCCL prefix, for multi-GPU support (only the headers are used at build time; libnccl is loaded at run time)")
 if(SDPB_ENABLE_GPU)
   # 90: H100/H200, the default of the Makefile and of waf's --gpu-arch. E.g. -DCMAKE_CUDA_ARCHITECTURES="90-real;89-real".
   # The host compiler of nvcc can be set with -DCMAKE_CUDA_HOST_COMPILER.

@@ -22,6 +22,7 @@
 #pragma once
 
 #include "Host_Float.hxx"
+#include "Gpu_Collective.hxx"
 
 #include <cstdint>
 #include <functional>
@@ -55,6 +56,9 @@ namespace sdpb_gpu
 
   struct Gpu_Solver_Options
   {
+    Gpu_World world; // default G=1 keeps the original arithmetic path
+    int q_tile = 512, q_row_panel = 8192;
+    bool q_wide_residual = false;
     int L = 28;
     int digits = 112;
     // relative accuracy of the step lengths (SDPviBe's EIG_TOL)

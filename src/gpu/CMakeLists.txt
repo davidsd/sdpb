@@ -8,6 +8,10 @@ add_library(sdpb_gpu_options INTERFACE)
 target_compile_features(sdpb_gpu_options INTERFACE cuda_std_17)
 target_compile_options(sdpb_gpu_options INTERFACE "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall;-Xcompiler=-fopenmp;-Xcompiler=-fPIC;-UNDEBUG>")
 target_link_libraries(sdpb_gpu_options INTERFACE GMP::gmp)
+if(SDPB_GPU_NCCL_DIR)
+  target_compile_definitions(sdpb_gpu_options INTERFACE SDPB_GPU_NCCL)
+  target_include_directories(sdpb_gpu_options INTERFACE "${SDPB_GPU_NCCL_DIR}/include")
+endif()
 
 # Libraries of the device code (LDLIBS in the Makefile)
 add_library(sdpb_gpu_libs INTERFACE)
@@ -16,7 +20,8 @@ target_link_libraries(sdpb_gpu_libs INTERFACE
   CUDA::cublasLt
   GMP::gmp
   CBLAS::CBLAS
-  $<LINK_ONLY:OpenMP::OpenMP_CXX>)
+  $<LINK_ONLY:OpenMP::OpenMP_CXX>
+  ${CMAKE_DL_LIBS})
 
 add_library(sdpb_gpu STATIC
   rns/Rns_Basis.cxx
@@ -25,13 +30,15 @@ add_library(sdpb_gpu STATIC
   rns/Rns_Gemm.cu
   linalg/Block_Factor.cu
   solver/Mpf_Ops.cu
-  solver/Gpu_Solver.cu)
+  solver/Gpu_Solver.cu
+  solver/Gpu_Collective.cu
+  linalg/Distributed_Q.cu)
 # compiled by nvcc too, as in the Makefile and waf builds
 set_source_files_properties(rns/Rns_Basis.cxx PROPERTIES LANGUAGE CUDA)
 target_link_libraries(sdpb_gpu PRIVATE sdpb_gpu_options PUBLIC sdpb_gpu_libs)
 
 # Checks (src/gpu/README.md, "Tests"), outside the default build, in this build directory, e.g.
-#   cmake --build build --target gpu_checks mpfr_checks
+#   cmake --build build --target gpu_checks mpfr_checks nccl_checks
 
 # Self-contained or on dumps of real blocks; they need a GPU
 add_executable(gram_check EXCLUDE_FROM_ALL test/gram_check.cu)
@@ -69,8 +76,20 @@ target_compile_options(compare_references PRIVATE -UNDEBUG)
 target_link_libraries(compare_references PRIVATE MPFR::MPFR GMP::gmp m)
 add_custom_target(mpfr_checks DEPENDS ref_solve compare_references)
 
+# Several ranks with NCCL
+if(SDPB_GPU_NCCL_DIR)
+  add_executable(distributed_q_check EXCLUDE_FROM_ALL test/distributed_q_check.cu)
+  target_link_libraries(distributed_q_check PRIVATE sdpb_gpu sdpb_gpu_options MPI::MPI_CXX)
+  add_custom_target(nccl_checks DEPENDS distributed_q_check)
+endif()
+
 set_target_properties(gram_check mpf_gram_check gemm_check chol_tile_check mpf_gemm_check block_factor_check real_block_check q_check residual_check mpf_ops_check factor_profile gemv_compare PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
   # linked by the C++ compiler, as sdpb
   LINKER_LANGUAGE CXX)
 set_target_properties(ref_solve compare_references PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+if(SDPB_GPU_NCCL_DIR)
+  set_target_properties(distributed_q_check PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+    LINKER_LANGUAGE CXX)
+endif()

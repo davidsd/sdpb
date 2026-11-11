@@ -21,6 +21,7 @@ def options(opt):
     opt.add_option('--nvcc', action='store', default='nvcc',
                    help='CUDA compiler, with options, e.g. "nvcc --compiler-bindir /path/to/gcc13/bin"')
     opt.add_option('--gpu-arch', action='store', default='90', help='CUDA architectures, comma separated (90: H100/H200)')
+    opt.add_option('--gpu-nccl-dir', action='store', default='', help='NCCL headers for multi-GPU support (library loaded at run time)')
     opt.add_option('--cuda-dir', action='store', default=os.environ.get('CUDA_HOME', ''),
                    help='CUDA toolkit prefix (lib64/ has libcudart_static.a and libcublasLt)')
     opt.add_option('--gpu-gmp-include', action='store', default='',
@@ -52,6 +53,7 @@ def configure(conf):
         conf.env.GPU_ARCH = conf.options.gpu_arch.split(',')
         conf.env.CUDA_DIR = conf.options.cuda_dir
         conf.env.GPU_GMP_INCLUDE = conf.options.gpu_gmp_include
+        conf.env.GPU_NCCL_DIR = conf.options.gpu_nccl_dir
 
 
 def write_version_header(task):
@@ -71,9 +73,12 @@ def build(bld):
         default_defines = default_defines + ['SDPB_GPU']
         gpu_sources = ['src/gpu/rns/Rns_Basis.cxx', 'src/gpu/rns/Gram_Accumulator.cu', 'src/gpu/rns/Mpf_Gram.cu',
                        'src/gpu/rns/Rns_Gemm.cu', 'src/gpu/linalg/Block_Factor.cu', 'src/gpu/solver/Mpf_Ops.cu',
-                       'src/gpu/solver/Gpu_Solver.cu']
+                       'src/gpu/solver/Gpu_Solver.cu', 'src/gpu/solver/Gpu_Collective.cu',
+                       'src/gpu/linalg/Distributed_Q.cu']
         gencode = ' '.join('-gencode arch=compute_%s,code=sm_%s' % (a, a) for a in bld.env.GPU_ARCH)
         inc = '-I' + bld.env.GPU_GMP_INCLUDE if bld.env.GPU_GMP_INCLUDE else ''
+        if bld.env.GPU_NCCL_DIR:
+            inc += ' -DSDPB_GPU_NCCL -I' + os.path.join(bld.env.GPU_NCCL_DIR, 'include')
         gpu_headers = bld.path.ant_glob('src/gpu/**/*.hxx src/gpu/**/*.cuh')
         objs = []
         for src in gpu_sources:
