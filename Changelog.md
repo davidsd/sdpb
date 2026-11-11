@@ -1,5 +1,23 @@
 # Unreleased
 
+## sdpb
+
+### SDPA solver
+
+`sdpb` can now solve general (non-polynomial) semidefinite programs in SDPA format: pass a `.dat`, `.dat-s`, `.dat.gz` or `.dat-s.gz` file to `--sdpDir`.
+SDPB also reads an extension of the format: a comment line `"sdpb.objectiveConst <value>"` adds a constant to the objective.
+For SDPA problems, `--writeSolution` accepts `x`, `X` and `Y`; the default is `x`.
+See [Solving SDPA problems](docs/Usage.md#solving-sdpa-problems) for details.
+
+Note that the SDPA solver is currently slower than [sdpa-gmp-omp](https://github.com/Canonical111/sdpa-gmp-omp) and uses more memory.
+For problems that fit on a single node, we recommend sdpa-gmp-omp.
+
+### Memory limits
+
+- New option `--maxMemory` (also in `approx_objective`): limit for the estimated memory usage on each node, 80% of `MemAvailable` by default. SDPB splits shared memory windows to stay within the limit.
+- `--maxSharedMemory` is no longer set automatically. By default, shared memory windows are limited only by `--maxMemory`.
+- `--verbosity debug` prints detailed memory estimates.
+
 ## pmp2sdp
 
 Added pmp2sdp option `--maxNumPoles` and pmp.json field `"maxNumPoles"`.
@@ -38,6 +56,7 @@ See [#297](https://github.com/davidsd/sdpb/pull/297) for details.
 - Fix [#277](https://github.com/davidsd/sdpb/issues/277) SDPB throws an error if the solver exits after a single iteration
 - Fix [#295](https://github.com/davidsd/sdpb/issues/295) Hot-starting from a sister-point checkpoint crashes mid-iteration with `vector::_M_range_check 9 >= 5`
 - Fix [#287](https://github.com/davidsd/sdpb/issues/287) spectrum: computing lambda fails when `reducedPrefactor=inf` 
+- Fix [#281](https://github.com/davidsd/sdpb/issues/281) Excessive memory usage after timing run
 
 # Version 3.1.0
 

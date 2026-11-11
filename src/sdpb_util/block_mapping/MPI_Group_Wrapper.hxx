@@ -10,7 +10,7 @@ struct MPI_Group_Wrapper
   void operator=(const MPI_Group_Wrapper &) = delete;
   ~MPI_Group_Wrapper()
   {
-    if(value != El::mpi::GROUP_NULL)
+    if(value != El::mpi::GROUP_NULL && value != El::mpi::GROUP_EMPTY)
       {
         El::mpi::Free(value);
       }

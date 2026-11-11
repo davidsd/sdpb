@@ -1,10 +1,10 @@
 #include "catch2/catch_amalgamated.hpp"
 
 #include "sdpb_util/Shared_Window_Array.hxx"
-#include "test_util/diff.hxx"
+#include "sdpb_util/bigint_shared_memory/Matrix_Residues_Window.hxx"
+#include "sdpb_util/bigint_shared_memory/Vertical_Block_Matrix_Residues_Window.hxx"
 
-#include "sdp_solve/SDP_Solver/run/bigint_syrk/Block_Residue_Matrices_Window.hxx"
-#include "sdp_solve/SDP_Solver/run/bigint_syrk/Residue_Matrices_Window.hxx"
+#include "test_util/diff.hxx"
 
 #include <El.hpp>
 
@@ -53,7 +53,7 @@ TEST_CASE("MPI_Shared_Window")
       }
 
     // BLAS output will be stored here
-    Residue_Matrices_Window<double> window(comm, num_primes, height, width);
+    Matrix_Residues_Window<double> window(comm, num_primes, height, width);
     for(size_t p = 0; p < num_primes; ++p)
       for(size_t i = 0; i < height; ++i)
         for(size_t j = 0; j < width; ++j)
@@ -75,14 +75,14 @@ TEST_CASE("MPI_Shared_Window")
     size_t width = 32;
 
     std::vector<std::vector<El::Matrix<double>>> block_residues(num_primes);
-    std::vector<El::Int> block_heights(num_blocks);
+    std::vector<size_t> block_heights(num_blocks);
     for(size_t b = 0; b < num_blocks; ++b)
       {
         block_heights.at(b) = width + b; // to make heights different
       }
 
-    Block_Residue_Matrices_Window<double> window(comm, num_primes, num_blocks,
-                                                 block_heights, width);
+    Vertical_Block_Matrix_Residues_Window<double> window(
+      comm, num_primes, num_blocks, block_heights, width);
     for(size_t p = 0; p < num_primes; ++p)
       {
         block_residues.at(p).resize(num_blocks);
@@ -117,19 +117,19 @@ TEST_CASE("MPI_Shared_Window")
 
             INFO("Check that window.block_residues contains "
                  "submatrices of window.residues:");
-            auto height = block_residues[p][b].Height();
-            auto width = block_residues[p][b].Width();
-            for(int i = 0; i < height; ++i)
+            auto curr_height = block_residues[p][b].Height();
+            auto curr_width = block_residues[p][b].Width();
+            for(int i = 0; i < curr_height; ++i)
               {
                 CAPTURE(i);
-                for(int j = 0; j < width; ++j)
+                for(int j = 0; j < curr_width; ++j)
                   {
                     CAPTURE(j);
                     DIFF(window.block_residues[p][b](i, j),
                          window.residues[p](i + global_start_row, j));
                   }
               }
-            global_start_row += height;
+            global_start_row += curr_height;
           }
       }
   }

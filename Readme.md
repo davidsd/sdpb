@@ -30,6 +30,9 @@ Here, $M\succeq 0$ means "M is positive semidefinite."
 For more information, see [A Semidefinite Program Solver for the Conformal Bootstrap](http://arxiv.org/abs/1502.02033)
 and [the manual](/docs/SDPB_Manual/SDPB-Manual.pdf).
 
+SDPB can also solve general semidefinite programs in SDPA format,
+see [Solving SDPA problems](docs/Usage.md#solving-sdpa-problems).
+
 Authors: David Simmons-Duffin (dsd@caltech.edu), Walter Landry (wlandry@caltech.edu), Vasiliy Dommes (vasdommes@gmail.com)
 
 ## Installation and Usage

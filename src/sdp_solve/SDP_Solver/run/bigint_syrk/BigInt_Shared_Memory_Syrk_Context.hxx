@@ -1,10 +1,10 @@
 #pragma once
 
-#include "blas_jobs/create_blas_jobs_schedule.hxx"
-#include "blas_jobs/Blas_Job_Schedule.hxx"
-#include "fmpz/Fmpz_Comb.hxx"
-#include "Block_Residue_Matrices_Window.hxx"
-#include "Residue_Matrices_Window.hxx"
+#include "Bigint_Syrk_Config.hxx"
+#include "blas_jobs/create_blas_job_schedule.hxx"
+#include "sdpb_util/bigint_shared_memory/fmpz/Fmpz_Comb.hxx"
+#include "sdpb_util/bigint_shared_memory/Vertical_Block_Matrix_Residues_Window.hxx"
+#include "sdpb_util/bigint_shared_memory/Matrix_Residues_Window.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
 #include <memory>
@@ -14,14 +14,13 @@
 class BigInt_Shared_Memory_Syrk_Context : boost::noncopyable
 {
 public:
+  using Job_Schedule = Blas_Job_Schedule<Blas_Job>;
+
   BigInt_Shared_Memory_Syrk_Context(
-    const El::mpi::Comm &shared_memory_comm, size_t group_index,
-    const std::vector<int> &group_comm_sizes, mp_bitcnt_t precision,
-    size_t max_shared_memory_bytes,
-    const std::vector<El::Int> &blocks_height_per_group, int block_width,
+    const Bigint_Syrk_Config &cfg, size_t group_index,
     const std::vector<size_t> &block_index_local_to_global,
     Verbosity verbosity,
-    const std::function<Blas_Job_Schedule(
+    const std::function<Job_Schedule(
       Blas_Job::Kind kind, El::UpperOrLower uplo, size_t num_ranks,
       size_t num_primes, int output_height, int output_width,
       Verbosity _verbosity)> &create_job_schedule
@@ -55,8 +54,6 @@ private:
   El::mpi::Comm shared_memory_comm;
   // Index of MPI group on a node
   size_t group_index;
-  // Sizes of MPI groups on a node
-  const std::vector<int> &group_comm_sizes;
   // Number of MPI groups on a node
   size_t num_groups;
   int total_block_height_per_node;
@@ -64,33 +61,34 @@ private:
   const Verbosity verbosity;
   // All blocks from each MPI group are combined
   // into a single block in Block_Residue_Matrices_Window
-  std::unique_ptr<Block_Residue_Matrices_Window<double>>
+  std::unique_ptr<Vertical_Block_Matrix_Residues_Window<double>>
     input_grouped_block_residues_window_A;
-  std::unique_ptr<Block_Residue_Matrices_Window<double>>
+  std::unique_ptr<Vertical_Block_Matrix_Residues_Window<double>>
     input_grouped_block_residues_window_B;
   // How many times we should fill input window
   // to process all blocks:
   // (should be same for all ranks)
   size_t input_window_split_factor = 0;
   size_t output_window_split_factor = 0;
-  std::unique_ptr<Residue_Matrices_Window<double>> output_residues_window;
+  std::unique_ptr<Matrix_Residues_Window<double>> output_residues_window;
   const std::vector<size_t> block_index_local_to_global;
-  std::function<Blas_Job_Schedule(Blas_Job::Kind kind, El::UpperOrLower uplo,
-                                  size_t num_ranks, size_t num_primes,
-                                  int output_height, int output_width,
-                                  Verbosity verbosity)>
+  std::function<Job_Schedule(Blas_Job::Kind kind, El::UpperOrLower uplo,
+                             size_t num_ranks, size_t num_primes,
+                             int output_height, int output_width,
+                             Verbosity verbosity)>
     create_blas_job_schedule_func;
   std::map<std::tuple<Blas_Job::Kind, El::UpperOrLower, El::Int, El::Int>,
-           std::shared_ptr<Blas_Job_Schedule>>
+           Job_Schedule>
     blas_job_schedule_cache;
 
-  [[nodiscard]] std::shared_ptr<Blas_Job_Schedule>
+  [[nodiscard]] const Job_Schedule &
   get_blas_job_schedule(Blas_Job::Kind kind, El::UpperOrLower uplo,
                         El::Int output_height, El::Int output_width);
 
-  void clear_residues(const Blas_Job_Schedule &blas_job_schedule);
+  void clear_residues(const Job_Schedule &blas_job_schedule);
   void compute_block_residues(
-    Block_Residue_Matrices_Window<double> &grouped_block_residues_window,
+    Vertical_Block_Matrix_Residues_Window<double>
+      &grouped_block_residues_window,
     const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
     El::Int skip_rows, El::Range<El::Int> col_range, Timers &timers,
     El::Matrix<int32_t> &block_timings_ms);

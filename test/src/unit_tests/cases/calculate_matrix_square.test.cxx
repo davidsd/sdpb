@@ -2,7 +2,7 @@
 
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/Matrix_Normalizer.hxx"
-#include "sdp_solve/SDP_Solver/run/bigint_syrk/fmpz/Fmpz_Matrix.hxx"
+#include "sdpb_util/bigint_shared_memory/fmpz/Fmpz_Matrix.hxx"
 #include "test_util/test_util.hxx"
 #include "unit_tests/util/util.hxx"
 
@@ -11,7 +11,8 @@
 
 using Test_Util::REQUIRE_Equal::diff;
 
-Blas_Job_Schedule create_blas_job_schedule_split_remaining_primes(
+Blas_Job_Schedule<Blas_Job>
+create_syrk_or_gemm_job_schedule_split_remaining_primes(
   Blas_Job::Kind kind, El::UpperOrLower uplo, size_t num_ranks,
   size_t num_primes, El::Int output_matrix_height, El::Int output_matrix_width,
   size_t split_factor);
@@ -54,10 +55,8 @@ namespace
     INFO("auto P = P_matrix;");
     CAPTURE(P);
     CAPTURE(bits);
-    // matrix only on this rank, thus El::mpi::COMM_SELF, no communication
-    Matrix_Normalizer normalizer(P, bits, El::mpi::COMM_SELF);
-
-    normalizer.normalize_and_shift_P(P);
+    const auto normalizer
+      = normalize_and_shift<Matrix_Normalization_Kind::COLUMNS>(P, bits);
 
     El::Matrix<El::BigFloat> PT;
     Transpose(P, PT);
@@ -80,7 +79,7 @@ namespace
     El::Matrix<El::BigFloat> Q_result;
     Q.ToBigFloatMatrix(Q_result);
 
-    normalizer.restore_Q(El::UPPER, Q_result);
+    restore_syrk_output(El::UPPER, normalizer, Q_result);
     El::MakeSymmetric(El::UPPER, Q_result);
     return Q_result;
   }
@@ -160,45 +159,40 @@ TEST_CASE("calculate_Block_Matrix_square")
                         total_block_height)
                 .num_primes;
 
-          size_t max_shared_memory_bytes
-            = GENERATE(std::numeric_limits<size_t>::max(), 1, 0);
-          // We cannot use variables inside GENERATE, e.g. max_shared_memory_bytes = GENERATE(block_width)
+          auto max_block_height
+            = *std::max_element(block_heights.begin(), block_heights.end());
+
+          size_t output_split_factor;
+          size_t input_split_factor;
+          // We cannot use variables inside GENERATE,
           // Thus we set them below:
-          INFO((max_shared_memory_bytes == 0
-                  ? "Splitting both P and Q memory windows"
-                : max_shared_memory_bytes == 1
-                  ? "Splitting P memory window"
-                  : "Do not split memory windows"));
-          if(max_shared_memory_bytes == 1)
+          constexpr auto div_ceil = [](const size_t a, const size_t b) {
+            return a / b + (a % b == 0 ? 0 : 1);
+          };
+          switch(GENERATE(1, 2, 3))
             {
-              // Do not split output window
-              size_t output_window_height = block_width;
-              size_t output_window_width = output_window_height;
-              // Input window will have 3 rows per MPI group
-              size_t input_window_height = 3 * El::mpi::Size();
-              size_t input_window_width = block_width;
-              max_shared_memory_bytes
-                = (output_window_height * output_window_width
-                   + input_window_height * input_window_width)
-                  * num_primes * sizeof(double);
-            }
-          else if(max_shared_memory_bytes == 0)
-            {
-              // Split output window by 3x3 submatrices
-              size_t output_window_height = std::ceil(block_width / 3.0);
-              size_t output_window_width = output_window_height;
-              // Two identical input windows of minimal size, i.e. one row per MPI group
-              size_t input_window_height = El::mpi::Size();
-              size_t input_window_width = output_window_width;
-              max_shared_memory_bytes
-                = (output_window_height * output_window_width
-                   + 2 * input_window_height * input_window_width)
-                  * num_primes * sizeof(double);
+              case 1: {
+                output_split_factor = 1;
+                input_split_factor = 1;
+                break;
+              }
+              case 2: {
+                output_split_factor = 1;
+                input_split_factor = 3;
+                break;
+              }
+              case 3: {
+                output_split_factor = div_ceil(block_width, 3);
+                input_split_factor = max_block_height;
+                break;
+              }
+            default: FAIL();
             }
 
           DYNAMIC_SECTION("P_height="
                           << total_block_height << " num_blocks=" << num_blocks
-                          << " maxSharedMemory=" << max_shared_memory_bytes)
+                          << " input_split_factor=" << input_split_factor
+                          << " output_split_factor=" << output_split_factor)
           {
             int bits;
             CAPTURE(bits = El::gmp::Precision());
@@ -255,10 +249,11 @@ TEST_CASE("calculate_Block_Matrix_square")
                                  El::mpi::COMM_WORLD);
             }
 
-            std::vector<El::DistMatrix<El::BigFloat>> P_matrix_blocks;
+            Block_Matrix P_block_matrix({}, block_width, {},
+                                        El::Grid::Default());
             std::vector<size_t> block_indices;
             {
-              INFO("Initialize P_matrix_blocks for FLINT+BLAS "
+              INFO("Initialize P_block_matrix for FLINT+BLAS "
                    "multiplication");
 
               int global_block_offset = 0;
@@ -287,12 +282,12 @@ TEST_CASE("calculate_Block_Matrix_square")
                           }
                       // TODO block indices for window!
                       block_indices.push_back(block_index);
-                      P_matrix_blocks.push_back(block);
+                      P_block_matrix.blocks.push_back(block);
                     }
                   global_block_offset += block_height;
                 }
               // Each MPI group should get at least 1 block
-              REQUIRE(!P_matrix_blocks.empty());
+              REQUIRE(!P_block_matrix.blocks.empty());
             }
 
             // calculate Q = P^T P using bigint_syrk_blas
@@ -312,33 +307,33 @@ TEST_CASE("calculate_Block_Matrix_square")
                                                       block_width);
                 {
                   // blocks are distributed among all ranks, thus COMM_WORLD
-                  Matrix_Normalizer normalizer(P_matrix_blocks, block_width,
-                                               bits, El::mpi::COMM_WORLD);
-                  CAPTURE(normalizer.column_norms);
-                  for(auto &block : P_matrix_blocks)
-                    {
-                      normalizer.normalize_and_shift_P(block);
-                    }
+                  const auto normalizer
+                    = normalize_and_shift<Matrix_Normalization_Kind::COLUMNS>(
+                      P_block_matrix, bits, El::mpi::COMM_WORLD);
+                  CAPTURE(normalizer.norms);
 
                   const El::UpperOrLower uplo = El::UpperOrLowerNS::UPPER;
 
-                  auto create_job_schedule
-                    = [&blas_schedule_split_factor](
-                        Blas_Job::Kind kind, El::UpperOrLower uplo,
-                        size_t num_ranks, size_t num_primes, int output_height,
-                        int output_width, Verbosity verbosity) {
-                        return create_blas_job_schedule_split_remaining_primes(
-                          kind, uplo, num_ranks, num_primes, output_height,
-                          output_width, blas_schedule_split_factor);
-                      };
+                  auto create_job_schedule = [&blas_schedule_split_factor](
+                                               const Blas_Job::Kind kind,
+                                               const El::UpperOrLower uplo,
+                                               const size_t num_ranks,
+                                               const size_t num_primes,
+                                               const int output_height,
+                                               const int output_width,
+                                               Verbosity verbosity) {
+                    return create_syrk_or_gemm_job_schedule_split_remaining_primes(
+                      kind, uplo, num_ranks, num_primes, output_height,
+                      output_width, blas_schedule_split_factor);
+                  };
 
                   // NB: group_comm.Size() is the same for everyone,
                   // otherwise we'd have to synchronize it
                   std::vector<int> group_comm_sizes_per_node(
                     num_groups_per_node, group_size);
-                  std::vector<El::Int> blocks_height_per_group(
+                  std::vector<size_t> blocks_height_per_group(
                     num_groups_per_node);
-                  for(const auto &block : P_matrix_blocks)
+                  for(const auto &block : P_block_matrix.blocks)
                     {
                       if(block.DistComm().Rank() == 0)
                         blocks_height_per_group.at(group_index_in_node)
@@ -349,18 +344,20 @@ TEST_CASE("calculate_Block_Matrix_square")
 
                   {
                     constexpr auto verbosity = Verbosity::none;
+                    Bigint_Syrk_Config cfg(
+                      node_comm, bits, num_nodes, blocks_height_per_group,
+                      block_width, input_split_factor, output_split_factor);
                     BigInt_Shared_Memory_Syrk_Context context(
-                      node_comm, group_index_in_node,
-                      group_comm_sizes_per_node, bits, max_shared_memory_bytes,
-                      blocks_height_per_group, block_width, block_indices,
-                      verbosity, create_job_schedule);
+                      cfg, group_index_in_node, block_indices, verbosity,
+                      create_job_schedule);
 
                     Timers timers;
                     El::Matrix<int32_t> block_timings_ms(num_blocks, 1);
                     El::Zero(block_timings_ms);
                     INFO("Calling bigint_syrk_blas()...");
-                    context.bigint_syrk_blas(uplo, P_matrix_blocks, Q_result,
-                                             timers, block_timings_ms);
+                    context.bigint_syrk_blas(uplo, P_block_matrix.blocks,
+                                             Q_result, timers,
+                                             block_timings_ms);
                   }
                   {
                     INFO("Check that normalized Q_ii = 1:");
@@ -375,13 +372,13 @@ TEST_CASE("calculate_Block_Matrix_square")
                             {
                               CAPTURE(i);
                               auto value = Q_result.GetLocal(iLoc, jLoc);
-                              DIFF_PREC(value >> 2 * normalizer.precision,
+                              DIFF_PREC(value >> 2 * normalizer.bits,
                                         El::BigFloat(1), diff_precision);
                             }
                         }
                   }
 
-                  normalizer.restore_Q(uplo, Q_result);
+                  restore_syrk_output(uplo, normalizer, Q_result);
                   El::MakeSymmetric(uplo, Q_result);
                 }
 

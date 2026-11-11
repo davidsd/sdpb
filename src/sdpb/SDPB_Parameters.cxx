@@ -13,7 +13,9 @@ namespace fs = std::filesystem;
 
 namespace po = boost::program_options;
 
-SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
+SDPB_Parameters::SDPB_Parameters(int argc, char *argv[],
+                                 const Environment &env)
+    : solver(env)
 {
   std::string write_solution_string;
   using namespace std::string_literals;
@@ -21,7 +23,8 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
   po::options_description required_options("Required options");
   required_options.add_options()(
     "sdpDir,s", po::value<fs::path>(&sdp_path)->required(),
-    "Directory containing preprocessed SDP data files.");
+    "SDP to solve: directory or zip file created by pmp2sdp, "
+    "or a file in SDPA format (.dat, .dat-s, .dat.gz, .dat-s.gz).");
 
   po::options_description cmd_line_options;
   cmd_line_options.add(required_options);
@@ -48,7 +51,8 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
     "writeSolution",
     po::value<std::string>(&write_solution_string)->default_value("x,y"s),
     "A comma separated list of vectors and matrices to write into the output "
-    "directory.  The default only writes the vectors 'x' and 'y'. "
+    "directory.  The default only writes the vectors 'x' and 'y' "
+    "(only 'x' for SDPA problems). "
     "If you add 'z', SDPB will also write the vector z "
     "restored from y with the help of sdp/normalization.json. "
     "If you add the 'X' and 'Y' matrices, then the output directory can be "
@@ -56,7 +60,22 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
     "Runs started from text checkpoints will very close to, but "
     "not bitwise identical to, the original run.\nTo only output the result "
     "(because, for example, you only want to know if SDPB found a primal "
-    "feasible point), set this to an empty string.");
+    "feasible point), set this to an empty string.\nFor SDPA problems, "
+    "only 'x', 'X' and 'Y' are available.");
+  basic_options.add_options()(
+    "procGranularity", po::value<size_t>(&proc_granularity)->default_value(1),
+    "procGranularity must evenly divide number of processes per node.\n\n"
+    "The minimum number of cores in a group, used during load balancing.\n"
+    "Pros of setting procGranularity > 1:\n"
+    "- --procGranularity=2 or --procGranularity=4 "
+    "prevents group size from being a prime number (e.g. 11 or 13).\n"
+    "  Prime numbers lead to 1D grids (e.g. 11x1 or 13x1), "
+    "which could be bad for performance and memory (e.g. in El::Trsm()).\n"
+    "  This can be important for large blocks.\n"
+    "Cons: \n"
+    "- Load balancing may become worse.\n"
+    "- Small blocks are assigned to larger groups, "
+    "which introduces extra performance overhead.");
   basic_options.add_options()(
     "verbosity",
     po::value<Verbosity>(&verbosity)->default_value(Verbosity::regular),
@@ -68,14 +87,6 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
     "procsPerNode", po::value<size_t>(),
     "[OBSOLETE] The number of MPI processes running on a node. "
     "Determined automatically from MPI environment.");
-  obsolete_options.add_options()(
-    "procGranularity", po::value<size_t>(&proc_granularity),
-    "[OBSOLETE] procGranularity must evenly divide number of processes per "
-    "node.\n\n"
-    "The minimum number of cores in a group, used during load balancing.  "
-    "Setting it to anything larger than 1 will make the solution take "
-    "longer.  "
-    "This option should not be used except for testing purposes.");
 
   cmd_line_options.add(basic_options);
   cmd_line_options.add(obsolete_options);
@@ -192,7 +203,18 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
               require_initial_checkpoint = true;
             }
 
+          if(is_sdpa() && variables_map["writeSolution"].defaulted())
+            write_solution_string = "x";
           write_solution = Write_Solution(write_solution_string);
+          if(is_sdpa() && (write_solution.vector_y || write_solution.vector_z))
+            {
+              if(El::mpi::Rank() == 0)
+                PRINT_WARNING("--writeSolution: 'y' and 'z' are not "
+                              "available for SDPA problems and will be "
+                              "ignored.");
+              write_solution.vector_y = false;
+              write_solution.vector_z = false;
+            }
 
           if(El::mpi::Rank() == 0)
             {
@@ -210,14 +232,6 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
                     "MPI processes running on a node is determined "
                     "automatically from MPI environment.");
                 }
-              if(variables_map.count("procGranularity") != 0)
-                {
-                  PRINT_WARNING("--procGranularity option is obsolete. "
-                                "Setting it to anything larger than 1 will "
-                                "make the solution take longer. "
-                                "This option should not be used except for "
-                                "testing purposes.");
-                }
             }
         }
     }
@@ -226,6 +240,14 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[])
       El::ReportException(e);
       El::mpi::Abort(El::mpi::COMM_WORLD, 1);
     }
+}
+
+bool SDPB_Parameters::is_sdpa() const
+{
+  auto path = sdp_path;
+  if(path.extension() == ".gz")
+    path.replace_extension();
+  return path.extension() == ".dat" || path.extension() == ".dat-s";
 }
 
 boost::property_tree::ptree to_property_tree(const SDPB_Parameters &p)

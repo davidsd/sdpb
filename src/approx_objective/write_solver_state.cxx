@@ -1,5 +1,5 @@
 #include "sdp_solve/sdp_solve.hxx"
-#include "sdpb_util/write_distmatrix.hxx"
+#include "sdpb_util/write_matrix.hxx"
 
 #include <filesystem>
 

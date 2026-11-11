@@ -5,6 +5,19 @@
 #include "sdpb_util/ostream/ostream_vector.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
 
+// Create Block_Info with num_points=1 for each block
+Block_Info
+create_constant_block_info(const Environment &env,
+                           const std::vector<size_t> &matrix_dimensions,
+                           const size_t &dual_dimension,
+                           const Verbosity &verbosity)
+{
+  const std::vector<size_t> num_points(matrix_dimensions.size(), 1);
+  constexpr size_t proc_granularity = 1;
+  return Block_Info::create(env, matrix_dimensions, num_points, dual_dimension,
+                            proc_granularity, verbosity);
+}
+
 void compute_y_transform(
   const std::vector<std::vector<std::vector<std::vector<Function>>>>
     &function_blocks,
@@ -34,7 +47,9 @@ void compute_y_transform(
                                function_blocks[block].size());
     }
 
-  Block_Info block_info(env, matrix_dimensions, parameters.verbosity);
+  const auto block_info = create_constant_block_info(
+    env, matrix_dimensions, dual_objective_b_star.Height(),
+    parameters.verbosity);
 
   std::vector<std::vector<El::BigFloat>> primal_objective_c;
   primal_objective_c.reserve(num_constraints);

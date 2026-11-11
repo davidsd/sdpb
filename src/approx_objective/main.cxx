@@ -40,7 +40,7 @@ int main(int argc, char **argv)
 
   try
     {
-      Approx_Parameters parameters(argc, argv);
+      Approx_Parameters parameters(argc, argv, env);
       if(!parameters.is_valid())
         {
           return 0;
@@ -56,8 +56,9 @@ int main(int argc, char **argv)
         }
 
       Environment::set_precision(parameters.precision);
-      Block_Info block_info(env, parameters.sdp_path, parameters.solution_dir,
-                            parameters.proc_granularity, parameters.verbosity);
+      const auto block_info = Block_Info::create(
+        env, parameters.sdp_path, parameters.solution_dir,
+        parameters.proc_granularity, parameters.verbosity);
 
       El::Grid grid(block_info.mpi_comm.value);
       // TODO use timers also below
@@ -73,10 +74,10 @@ int main(int argc, char **argv)
         }
 
       Block_Vector x(block_info.schur_block_sizes(), block_info.block_indices,
-                     block_info.num_points.size(), grid),
+                     grid),
         y(std::vector<size_t>(block_info.num_points.size(),
                               sdp.dual_objective_b.Height()),
-          block_info.block_indices, block_info.num_points.size(), grid);
+          block_info.block_indices, grid);
       for(size_t block = 0; block != block_info.block_indices.size(); ++block)
         {
           size_t block_index(block_info.block_indices.at(block));
@@ -98,8 +99,7 @@ int main(int argc, char **argv)
       else
         {
           Block_Diagonal_Matrix schur_complement_cholesky(
-            block_info.schur_block_sizes(), block_info.block_indices,
-            block_info.num_points.size(), grid);
+            block_info.schur_block_sizes(), block_info.block_indices, grid);
           Block_Matrix schur_off_diagonal(sdp.free_var_matrix);
           El::DistMatrix<El::BigFloat> Q(sdp.dual_objective_b.Height(),
                                          sdp.dual_objective_b.Height());

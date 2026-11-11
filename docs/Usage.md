@@ -12,6 +12,8 @@ The build system creates the executables `pmp2sdp` and
 `sdpb` in the `build` directory.  There are two steps when running
 SDPB.
 
+`sdpb` can also solve general semidefinite programs in SDPA format, see [Solving SDPA problems](#solving-sdpa-problems).
+
 ## Create input files
 
 You will normally start with a Polynomial Matrix Program (PMP) described in a file (or several files) in JSON,
@@ -130,6 +132,62 @@ in `test/data/sdp2.zip` with a command like
 
 In addition to having the same block structure, the runs must also use
 the same `precision`, and number and distribution of cores.
+
+## Solving SDPA problems
+
+`sdpb` can also solve general (non-polynomial) semidefinite programs in the SDPA format,
+which is used e.g. by [SDPA](http://sdpa.sourceforge.net/), [SDPA-GMP](https://github.com/nakatamaho/sdpa-gmp)
+and the [SDPLIB](../test/data/SDPLIB/README.md) collection of test problems.
+Pass the file to `-s [--sdpDir]` instead of the `sdp` directory created by `pmp2sdp`:
+
+    mpirun -n 4 build/sdpb --precision=512 -s problem.dat-s -o out -c ck
+
+The file extension selects the format:
+
+- `.dat-s`: sparse format, see [SDPA sparse format](../test/data/SDPLIB/README.md#sdpa-sparse-format).
+- `.dat`: dense format, where each matrix is written in full, e.g. `{ {1, 2}, {2, 3} }`.
+- `.dat-s.gz`, `.dat.gz`: the same formats, compressed with gzip.
+
+As in SDPA, the problem is:
+
+- Primal: minimize $c_0 + \sum_{i=1}^m c_i x_i$ over $x \in \mathbb{R}^m$, such that $X = \sum_{i=1}^m F_i x_i - F_0 \succeq 0$.
+- Dual: maximize $c_0 + F_0 \bullet Y$ over $Y \succeq 0$, such that $F_i \bullet Y = c_i$ for $i=1,\dots,m$.
+
+The matrices $F_i$ are block diagonal. A negative block size in the input denotes a diagonal block;
+SDPB splits it into $1\times 1$ blocks.
+
+**Constant objective term.** The standard SDPA format has no constant term, so $c_0=0$ by default.
+SDPB adds an extension: to set $c_0$, add a comment line `"sdpb.objectiveConst <value>"`
+(or `* sdpb.objectiveConst <value>`) among the comment lines at the beginning of the file, e.g.
+
+    "Example 1: mDim = 3, nBLOCK = 1, {2}"
+    "sdpb.objectiveConst -0.1"
+       3  =  mDIM
+       ...
+
+Other SDPA solvers ignore this line, since it is a comment.
+See [example1.dat](../test/data/end-to-end_tests/sdpa/example1-objective-const/input/example1.dat).
+
+**Output.** `out.txt` has the same fields as for SDPB problems.
+`primalObjective` is $c_0 + \sum_i c_i x_i$, and `dualObjective` is $c_0 + F_0 \bullet Y$.
+The `--writeSolution` option accepts:
+
+- `x`: the vector $x$, written to `x.txt`.
+- `X`, `Y`: the matrices $X$ and $Y$, one file per block: `X_matrix_0.txt`, `X_matrix_1.txt`, etc.
+  Block indices start from 0. A diagonal block is split into $1\times 1$ blocks, and each of them is written to a separate file.
+
+The default is `--writeSolution=x`. `y` and `z` are not available for SDPA problems.
+
+**Other options.** All solver options (`--precision`, thresholds, `--initialMatrixScalePrimal`, `--maxIterations`,
+`--maxMemory` etc.) have the same meaning as for SDPB problems. Checkpoints work in the same way.
+SDPB reads and writes `block_timings` only in the checkpoint directory, since the input is a file.
+`approx_objective` and `spectrum` work only with SDPB problems created by `pmp2sdp`.
+
+**Performance.** The SDPA solver is new and currently slower than
+[sdpa-gmp-omp](https://github.com/Canonical111/sdpa-gmp-omp) (a fork of SDPA-GMP with fixed OpenMP parallelization):
+in [their benchmark](https://github.com/Canonical111/sdpa-gmp-omp/blob/main/BENCHMARKS.md#versus-sdpb-the-standard-multiprecision-sdp-solver),
+SDPB needed 2.4x more iterations and about 2x more time per iteration, and used 25x more RAM.
+Until this is fixed, we recommend sdpa-gmp-omp for all problems that fit on a single node.
 
 ## Running approx_objective
 
@@ -262,16 +320,18 @@ configuration for your problem.
 
 SDPB's defaults are set for optimal performance. This may result in using more memory than is available.
 
-Two ways to reduce memory usage:
+How to reduce memory usage:
 
 1. Running SDPB on more nodes will reduce the amount of memory required on each node.
-2. Set `--maxSharedMemory` option, e.g. `--maxSharedMemory=64G`. This will reduce memory usage by splitting shared memory windows used for matrix multiplication, see [bigint_syrk/Readme.md](../src/sdp_solve/SDP_Solver/run/bigint_syrk/Readme.md) for details.
+2. Decrease `--maxMemory`, e.g. `--maxMemory=60%` or `--maxMemory=64G`. This is the limit for the estimated memory usage on each node. By default, it is 80% of `MemAvailable` at program start. To stay within the limit, SDPB splits shared memory windows used for matrix multiplication, see [bigint_syrk/Readme.md](../src/sdp_solve/SDP_Solver/run/bigint_syrk/Readme.md) for details. If even maximal splitting is not enough, SDPB stops with a "Not enough memory" error.
+3. You can also limit only the shared memory windows with `--maxSharedMemory`, e.g. `--maxSharedMemory=32G`. By default, there is no separate limit for them.
+4. If some large SDP blocks are assigned to too many cores, this can lead to a significant memory overhead. The worst case is when the number of cores is a huge prime number (e.g. 13 or 17). In that scenario, matrices are distributed across a 1D MPI grid (e.g. `13x1` or `17x1`), which is generally bad for performance and memory (in particular, for the function `El::Trsm()`). Set e.g. `--procGranularity 2` (or `--procGranularity 4`) and/or reduce the number of cores per node. To see block distribution, run SDPB with `--verbosity debug`.
 
-If `--maxSharedMemory` is not set by user, SDPB will calculate it automatically based on expected memory usage and amount of available RAM (search for `--maxSharedMemory` in the output to see the new limit).
-Note that these estimates are very imprecise, and actual memory usage can be much higher than expected. If automatically calculated `--maxSharedMemory` value does not prevent OOM, consider decreasing it manually and/or increasing number of nodes.
+Note that memory estimates are imprecise, and actual memory usage can be higher than expected. If the default `--maxMemory` does not prevent OOM, consider decreasing it and/or increasing number of nodes.
+To print detailed memory estimates, run SDPB with `--verbosity debug`.
 
-Decreasing `--maxSharedMemory` may affect performance. If the value is too small, SDPB will print a warning with current and optimal shared windows sizes.
-In our benchmarks, the negative effect on performance was significant only when `--maxSharedMemory` was much smaller than the output window size.
+Smaller limits may affect performance. If shared memory windows have to be split, SDPB prints a warning with current and optimal window sizes.
+In our benchmarks, the negative effect on performance was significant only when the shared memory limit was much smaller than the output window size.
 
 ### SDPB crashes when using all available cores on the node
 

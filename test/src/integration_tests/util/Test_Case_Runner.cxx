@@ -103,7 +103,9 @@ namespace Test_Util
                                  const std::string &required_error_msg) const
   {
     auto mpi_command = Test_Config::mpirun;
-    mpi_command += {"-n", std::to_string(numProcs)};
+    // number of processes will be determined automatically if n <= 0
+    if(numProcs > 0)
+      mpi_command += {"-n", std::to_string(numProcs)};
     mpi_command += command;
     run(mpi_command, required_exit_code, required_error_msg);
   }

@@ -1,5 +1,4 @@
 #include "setup_constraints.hxx"
-#include "setup_constraints.hxx"
 #include "outer_limits/Outer_Parameters.hxx"
 #include "pmp/max_normalization_index.hxx"
 #include "sdpb_util/assert.hxx"
@@ -11,6 +10,12 @@
 #include "sdpb_util/ostream/set_stream_precision.hxx"
 
 namespace fs = std::filesystem;
+
+Block_Info
+create_constant_block_info(const Environment &env,
+                           const std::vector<size_t> &matrix_dimensions,
+                           const size_t &dual_dimension,
+                           const Verbosity &verbosity);
 
 void compute_y_transform(
   const std::vector<std::vector<std::vector<std::vector<Function>>>>
@@ -177,7 +182,9 @@ std::vector<El::BigFloat> compute_optimal(
       const El::BigFloat objective_const(objectives.at(max_index)
                                          / normalization.at(max_index));
 
-      Block_Info block_info(env, matrix_dimensions, parameters.verbosity);
+      const auto block_info = create_constant_block_info(
+        env, matrix_dimensions, dual_objective_b_star.Height(),
+        parameters.verbosity);
 
       El::Grid grid(block_info.mpi_comm.value);
 
@@ -211,7 +218,7 @@ std::vector<El::BigFloat> compute_optimal(
           El::Matrix<int32_t> block_timings_ms(block_info.dimensions.size(),
                                                1);
           El::Zero(block_timings_ms);
-          const auto iterations_json_path  = fs::path();
+          const auto iterations_json_path = fs::path();
           SDP_Solver_Terminate_Reason reason = solver.run(
             env, parameters.solver, parameters.verbosity, parameter_properties,
             block_info, sdp, grid, start_time, iterations_json_path, timers,

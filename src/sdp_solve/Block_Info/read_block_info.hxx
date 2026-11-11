@@ -1,0 +1,130 @@
+#pragma once
+
+#include "sdpb_util/Archive_Reader.hxx"
+#include "sdpb_util/assert.hxx"
+
+#include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
+
+#include <boost/algorithm/string/predicate.hpp>
+
+void read_objectives(const std::filesystem::path &sdp_path,
+                     const El::Grid &grid, El::BigFloat &objective_const,
+                     El::DistMatrix<El::BigFloat> &dual_objective_b,
+                     Timers &timers);
+
+inline void parse_block_info_json(const size_t &block_index,
+                                  std::istream &block_info_stream,
+                                  std::vector<size_t> &dimensions,
+                                  std::vector<size_t> &num_points)
+{
+  rapidjson::IStreamWrapper wrapper(block_info_stream);
+  rapidjson::Document document;
+  document.ParseStream(wrapper);
+  const size_t dim_value = document["dim"].GetInt64();
+  const size_t num_points_value = document["num_points"].GetInt64();
+  ASSERT(dim_value != 0 && num_points_value != 0, "Unable to parse block_",
+         block_index, ": dim=", dim_value, ", num_points=", num_points_value);
+
+  dimensions.at(block_index) = dim_value;
+  num_points.at(block_index) = num_points_value;
+}
+
+inline size_t parse_num_blocks(std::istream &control_stream)
+{
+  rapidjson::IStreamWrapper wrapper(control_stream);
+  rapidjson::Document document;
+  document.ParseStream(wrapper);
+  return document["num_blocks"].GetInt();
+}
+
+inline void read_block_info(const std::filesystem::path &sdp_path,
+                            std::vector<size_t> &dimensions,
+                            std::vector<size_t> &num_points)
+{
+  if(is_regular_file(sdp_path))
+    {
+      const size_t num_blocks([&] {
+        Archive_Reader reader(sdp_path);
+        while(reader.next_entry())
+          {
+            using namespace std::string_literals;
+            if("control.json"s == archive_entry_pathname(reader.entry_ptr))
+              {
+                std::istream stream(&reader);
+                return parse_num_blocks(stream);
+              }
+          }
+        RUNTIME_ERROR("Unable to find control.json in sdp input file");
+      }());
+
+      dimensions.resize(num_blocks);
+      num_points.resize(num_blocks);
+
+      const std::string prefix("block_info_");
+      Archive_Reader reader(sdp_path);
+      size_t processed_count = 0;
+      while(reader.next_entry())
+        {
+          const std::string pathname(archive_entry_pathname(reader.entry_ptr));
+          if(!boost::algorithm::starts_with(pathname, prefix))
+            continue;
+          const size_t blockIndex(std::stoll(pathname.substr(prefix.size())));
+          ASSERT(blockIndex < num_blocks, "Invalid block number for entry '",
+                 pathname, "' in '", sdp_path,
+                 ". The block number must be between 0 and ", num_blocks - 1,
+                 ".");
+          std::istream stream(&reader);
+          parse_block_info_json(blockIndex, stream, dimensions, num_points);
+          processed_count++;
+          if(processed_count == num_blocks)
+            break;
+        }
+      for(size_t block_index(0); block_index != num_blocks; ++block_index)
+        {
+          ASSERT(dimensions.at(block_index) > 0
+                   && num_points.at(block_index) > 0,
+                 "Missing block ", block_index, " from sdp path: ", sdp_path);
+        }
+    }
+  else
+    {
+      const size_t num_blocks([&]() {
+        const auto control_path = sdp_path / "control.json";
+        std::ifstream control_stream(control_path);
+        ASSERT(control_stream.good(), "Failed to open ", control_path);
+        return parse_num_blocks(control_stream);
+      }());
+
+      dimensions.resize(num_blocks);
+      num_points.resize(num_blocks);
+      for(size_t block(0); block != num_blocks; ++block)
+        {
+          std::filesystem::path block_info_path(
+            sdp_path / ("block_info_" + std::to_string(block) + ".json"));
+          std::ifstream block_stream(block_info_path);
+          ASSERT(block_stream.good(), "Failed to open ", block_info_path);
+          parse_block_info_json(block, block_stream, dimensions, num_points);
+        }
+    }
+}
+
+// read dual_dimension from SDP/objectives.json
+inline size_t read_dual_dimension(const Environment &env,
+                                  const std::filesystem::path &sdp_path)
+{
+  int dual_dimension = 0;
+  // To reduce
+  if(El::mpi::Rank() == 0)
+    {
+      Timers timers(env, Verbosity::none);
+      El::Grid grid(El::mpi::COMM_SELF);
+      El::BigFloat objective_const;
+      El::DistMatrix<El::BigFloat> dual_objective_b(grid);
+      read_objectives(sdp_path, grid, objective_const, dual_objective_b,
+                      timers);
+      dual_dimension = dual_objective_b.Height();
+    }
+  El::mpi::Broadcast(dual_dimension, 0, El::mpi::COMM_WORLD);
+  return dual_dimension;
+}

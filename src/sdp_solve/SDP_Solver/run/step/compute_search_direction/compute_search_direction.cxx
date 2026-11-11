@@ -15,26 +15,10 @@
 // - dx, dX, dy, dY
 //
 
-// C := alpha*A*B + beta*C
-void scale_multiply_add(const El::BigFloat &alpha,
-                        const Block_Diagonal_Matrix &A,
-                        const Block_Diagonal_Matrix &B,
-                        const El::BigFloat &beta, Block_Diagonal_Matrix &C);
-
-// C := A B
-inline void multiply(const Block_Diagonal_Matrix &A,
-                     const Block_Diagonal_Matrix &B, Block_Diagonal_Matrix &C)
-{
-  scale_multiply_add(El::BigFloat(1), A, B, El::BigFloat(0), C);
-}
-
-// X := ACholesky^{-T} ACholesky^{-1} X = A^{-1} X
-void cholesky_solve(const Block_Diagonal_Matrix &ACholesky,
-                    Block_Diagonal_Matrix &X);
-
 void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
                        const Block_Vector &dual_residues,
-                       const Block_Diagonal_Matrix &Z, Block_Vector &dx);
+                       const Paired_Block_Diagonal_Matrix &Z,
+                       Block_Vector &dx);
 
 void solve_schur_complement_equation(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
@@ -43,18 +27,18 @@ void solve_schur_complement_equation(
 
 void compute_search_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
-  const Block_Diagonal_Matrix &minus_XY,
+  const Paired_Block_Diagonal_Matrix &minus_XY,
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
-  const Block_Diagonal_Matrix &X_cholesky, const El::BigFloat &beta,
+  const Paired_Block_Diagonal_Matrix &X_cholesky, const El::BigFloat &beta,
   const El::BigFloat &mu, const Block_Vector &primal_residue_p,
   const bool &is_corrector_phase, const El::DistMatrix<El::BigFloat> &Q,
-  Block_Vector &dx, Block_Diagonal_Matrix &dX, Block_Vector &dy,
-  Block_Diagonal_Matrix &dY)
+  Block_Vector &dx, Paired_Block_Diagonal_Matrix &dX, Block_Vector &dy,
+  Paired_Block_Diagonal_Matrix &dY)
 {
   // R = beta mu I - X Y (predictor phase)
   // R = beta mu I - X Y - dX dY (corrector phase)
-  Block_Diagonal_Matrix R(minus_XY);
+  Paired_Block_Diagonal_Matrix R(minus_XY);
   if(is_corrector_phase)
     {
       scale_multiply_add(El::BigFloat(-1), dX, dY, El::BigFloat(1), R);
@@ -62,7 +46,7 @@ void compute_search_direction(
   R.add_diagonal(beta * mu);
 
   // Z = Symmetrize(X^{-1} (PrimalResidues Y - R))
-  Block_Diagonal_Matrix Z(solver.X);
+  Paired_Block_Diagonal_Matrix Z(solver.X);
   multiply(solver.primal_residues, solver.Y, Z);
   Z -= R;
   cholesky_solve(X_cholesky, Z);

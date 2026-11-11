@@ -1,5 +1,5 @@
 #include "../BigInt_Shared_Memory_Syrk_Context.hxx"
-#include "../fmpz/Fmpz_BigInt.hxx"
+#include "sdpb_util/bigint_shared_memory/fmpz/Fmpz_BigInt.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/split_range.hxx"
 
@@ -64,11 +64,12 @@ namespace
 
   // job: calculate submatrix Q_IJ = P_I^T * P_J (module some prime)
   // I and J are column ranges of P
-  void do_blas_job(
-    const Blas_Job &job, const El::UpperOrLower uplo,
-    const Block_Residue_Matrices_Window<double> &input_block_residues_window_A,
-    const Block_Residue_Matrices_Window<double> &input_block_residues_window_B,
-    Residue_Matrices_Window<double> &output_residues_window)
+  void do_blas_job(const Blas_Job &job, const El::UpperOrLower uplo,
+                   const Vertical_Block_Matrix_Residues_Window<double>
+                     &input_block_residues_window_A,
+                   const Vertical_Block_Matrix_Residues_Window<double>
+                     &input_block_residues_window_B,
+                   Matrix_Residues_Window<double> &output_residues_window)
   {
     const auto prime_index = job.prime_index;
     const auto I = job.I;
@@ -104,16 +105,16 @@ namespace
       }
   }
 
-  void
-  do_blas_jobs(const El::UpperOrLower uplo, const Blas_Job::Kind kind,
-               const Blas_Job_Schedule &blas_job_schedule,
-               const std::unique_ptr<Block_Residue_Matrices_Window<double>>
-                 &input_grouped_block_residues_window_A,
-               const std::unique_ptr<Block_Residue_Matrices_Window<double>>
-                 &input_grouped_block_residues_window_B,
-               const std::unique_ptr<Residue_Matrices_Window<double>>
-                 &output_residues_window,
-               const El::mpi::Comm &shared_memory_comm, Timers &timers)
+  void do_blas_jobs(
+    const El::UpperOrLower uplo, const Blas_Job::Kind kind,
+    const BigInt_Shared_Memory_Syrk_Context::Job_Schedule &blas_job_schedule,
+    const std::unique_ptr<Vertical_Block_Matrix_Residues_Window<double>>
+      &input_grouped_block_residues_window_A,
+    const std::unique_ptr<Vertical_Block_Matrix_Residues_Window<double>>
+      &input_grouped_block_residues_window_B,
+    const std::unique_ptr<Matrix_Residues_Window<double>>
+      &output_residues_window,
+    const El::mpi::Comm &shared_memory_comm, Timers &timers)
   {
     // Square each residue matrix
     {
@@ -141,7 +142,7 @@ namespace
     const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
     const std::vector<size_t> &block_index_local_to_global,
     const El::mpi::Comm &shared_memory_comm,
-    const Block_Residue_Matrices_Window<double>
+    const Vertical_Block_Matrix_Residues_Window<double>
       &input_grouped_block_residues_window,
     const size_t total_block_height)
   {
@@ -251,11 +252,11 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem_submatrix(
   // syrk for diagonal blocks of Q (Q_II = P_I^T P_I),
   // gemm for off-diagonal (Q_IJ = P_I^T P_J)
   const auto kind = output_I == output_J ? Blas_Job::syrk : Blas_Job::gemm;
-  const auto blas_job_schedule
+  const auto &blas_job_schedule
     = get_blas_job_schedule(kind, uplo, output_height, output_width);
 
   // Clear input and output windows
-  clear_residues(*blas_job_schedule);
+  clear_residues(blas_job_schedule);
 
   // If input window is not big enough, we should fill input window
   // several times (taking different input block rows)
@@ -287,7 +288,7 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem_submatrix(
       // Square each residue matrix
       {
         Scoped_Timer syrk_timer(timers, "syrk");
-        do_blas_jobs(uplo, kind, *blas_job_schedule,
+        do_blas_jobs(uplo, kind, blas_job_schedule,
                      input_grouped_block_residues_window_A,
                      input_grouped_block_residues_window_B,
                      output_residues_window, shared_memory_comm, timers);
