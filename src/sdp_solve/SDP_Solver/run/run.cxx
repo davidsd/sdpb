@@ -129,6 +129,17 @@ namespace
       = parameters.multimodular_trsm
           ? initialize_schur_off_diagonal_trsm_bytes
           : 0;
+    // --multimodularCholeskyQ: the trailing updates' residues, on Q's grid
+    const size_t multimodular_cholesky_Q_bytes
+      = parameters.multimodular_cholesky_Q > 0
+          ? node_reduce(multimodular_cholesky_upper_dist_bytes(
+              sdp.dual_objective_b.Height(), El::Grid::Default().Height(),
+              int(parameters.multimodular_cholesky_Q), [] {
+                Multimodular_Blas_Config config;
+                apply_multimodular_test_overrides(config);
+                return config;
+              }()))
+          : 0;
 
     // #(B) = PxN
     // sdp.free_var_matrix, schur_off_diagonal
@@ -169,7 +180,9 @@ namespace
     const auto cfg = get_syrk_Q_config(
       block_info, sdp, parameters.max_memory, parameters.max_shared_memory,
       mem_required_bytes()
-        + std::max(schur_complement_bytes + multimodular_trsm_bytes,
+        + std::max(schur_complement_bytes
+                     + std::max(multimodular_trsm_bytes,
+                                multimodular_cholesky_Q_bytes),
                    3 * X_bytes));
 
     // Add schur_complement + (syrk_S() or Trsm() temporary allocations)
@@ -218,6 +231,7 @@ namespace
                                         : "\t\t\tEl::Trsm()",
            initialize_schur_off_diagonal_trsm_bytes},
           {"\t\t\tQ", Q_bytes},
+          {"\t\t\t--multimodularCholeskyQ", multimodular_cholesky_Q_bytes},
           {"\t\t\tshared memory", cfg.node_shmem_bytes()},
         };
 

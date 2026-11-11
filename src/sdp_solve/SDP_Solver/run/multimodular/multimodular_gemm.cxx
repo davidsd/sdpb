@@ -122,7 +122,8 @@ namespace
                     int width, El::Matrix<El::BigFloat> &C,
                     const std::vector<long> &row_exp,
                     const std::vector<long> &col_exp, long shift_base,
-                    const std::vector<int> &row_start, Crt_Workspace &work)
+                    const std::vector<int> &row_start, Crt_Workspace &work,
+                    const int *row_end = nullptr)
   {
     const size_t C_stride = size_t(m) * width;
     mpf_t value;
@@ -139,7 +140,7 @@ namespace
             const size_t e = e0 + eb;
             const int i = e % m, j = e / m;
             if(col_exp[j] == no_exponent || row_exp[i] == no_exponent
-               || i < row_start[j])
+               || i < row_start[j] || (row_end != nullptr && i > row_end[j]))
               continue;
             const long shift = row_exp[i] + col_exp[j] - shift_base;
             const bool nonzero
@@ -198,6 +199,23 @@ void multimodular_gemm_sub(El::Matrix<El::BigFloat> &C,
                            const Multimodular_Blas_Config &config,
                            Multimodular_Blas_Timings &timings)
 {
+  multimodular_gemm_sub(C, A, orientation_B, B, row_start,
+                        std::vector<int>(C.Width(), C.Height() - 1), config,
+                        timings);
+}
+
+// C(i, j) -= (A op(B))(i, j) for row_start[j] <= i <= row_end[j] only.
+// Each column chunk multiplies only the rows its columns need
+// (the upper triangle of a distributed trailing update).
+void multimodular_gemm_sub(El::Matrix<El::BigFloat> &C,
+                           const El::Matrix<El::BigFloat> &A,
+                           const El::Orientation orientation_B,
+                           const El::Matrix<El::BigFloat> &B,
+                           const std::vector<int> &row_start,
+                           const std::vector<int> &row_end,
+                           const Multimodular_Blas_Config &config,
+                           Multimodular_Blas_Timings &timings)
+{
   const bool transpose_B = orientation_B != El::NORMAL;
   const int m = A.Height();
   const int k = A.Width();
@@ -206,6 +224,7 @@ void multimodular_gemm_sub(El::Matrix<El::BigFloat> &C,
   ASSERT_EQUAL(C.Width(), n);
   ASSERT_EQUAL(transpose_B ? B.Width() : B.Height(), k);
   ASSERT_EQUAL(row_start.size(), size_t(n));
+  ASSERT_EQUAL(row_end.size(), size_t(n));
   if(m == 0 || n == 0 || k == 0)
     return;
 
@@ -223,13 +242,17 @@ void multimodular_gemm_sub(El::Matrix<El::BigFloat> &C,
       const int m1 = m / 2;
       auto C1 = C(El::IR(0, m1), El::ALL);
       auto C2 = C(El::IR(m1, m), El::ALL);
-      std::vector<int> row_start2(n);
+      std::vector<int> row_start2(n), row_end1(n), row_end2(n);
       for(int j = 0; j < n; ++j)
-        row_start2[j] = std::max(0, row_start[j] - m1);
+        {
+          row_start2[j] = std::max(0, row_start[j] - m1);
+          row_end1[j] = std::min(m1 - 1, row_end[j]);
+          row_end2[j] = row_end[j] - m1;
+        }
       multimodular_gemm_sub(C1, A(El::IR(0, m1), El::ALL), orientation_B, B,
-                            row_start, config, timings);
+                            row_start, row_end1, config, timings);
       multimodular_gemm_sub(C2, A(El::IR(m1, m), El::ALL), orientation_B, B,
-                            row_start2, config, timings);
+                            row_start2, row_end2, config, timings);
       return;
     }
 
@@ -273,7 +296,6 @@ void multimodular_gemm_sub(El::Matrix<El::BigFloat> &C,
     {
       const int width = std::min(chunk, n - j0);
       const size_t B_stride = size_t(k) * width;
-      const size_t C_stride = size_t(m) * width;
 
       start = Clock::now();
       Blas_Residues::compute_blas_residues(
@@ -288,24 +310,44 @@ void multimodular_gemm_sub(El::Matrix<El::BigFloat> &C,
         false, B_residues.data());
       timings.to_int_seconds += seconds_since(start);
 
+      // rows r0..r1 are the only ones this chunk's columns need
+      int r0 = m, r1 = -1;
+      for(int j = j0; j < j0 + width; ++j)
+        if(row_start[j] <= row_end[j])
+          {
+            r0 = std::min(r0, std::max(0, row_start[j]));
+            r1 = std::max(r1, std::min(m - 1, row_end[j]));
+          }
+      if(r1 < r0)
+        continue;
+      const int mc = r1 - r0 + 1;
+      const size_t Cc_stride = size_t(mc) * width;
+
       start = Clock::now();
-      quotients.assign(flint_crt ? 0 : C_stride, 0.0);
+      quotients.assign(flint_crt ? 0 : Cc_stride, 0.0);
       for(size_t p = 0; p < num_primes; ++p)
-        prime_gemm(context, p, m, width, k, A_residues.data() + p * A_stride,
-                   m, B_residues.data() + p * B_stride, k,
-                   C_residues.data() + p * C_stride,
+        prime_gemm(context, p, mc, width, k,
+                   A_residues.data() + p * A_stride + r0, m,
+                   B_residues.data() + p * B_stride, k,
+                   C_residues.data() + p * Cc_stride,
                    flint_crt ? nullptr : quotients.data(), gemm_work);
       timings.blas_seconds += seconds_since(start);
 
       start = Clock::now();
-      auto C_chunk = C(El::ALL, El::IR(j0, j0 + width));
+      auto C_chunk = C(El::IR(r0, r1 + 1), El::IR(j0, j0 + width));
       const std::vector<long> chunk_col_exp(col_exp.begin() + j0,
                                             col_exp.begin() + j0 + width);
-      const std::vector<int> chunk_row_start(row_start.begin() + j0,
-                                             row_start.begin() + j0 + width);
-      crt_subtract(context, flint_crt, C_residues.data(), quotients.data(), m,
-                   width, C_chunk, row_exp, chunk_col_exp, 2 * bits,
-                   chunk_row_start, work);
+      const std::vector<long> chunk_row_exp(row_exp.begin() + r0,
+                                            row_exp.begin() + r1 + 1);
+      std::vector<int> chunk_row_start(width), chunk_row_end(width);
+      for(int j = 0; j < width; ++j)
+        {
+          chunk_row_start[j] = row_start[j0 + j] - r0;
+          chunk_row_end[j] = row_end[j0 + j] - r0;
+        }
+      crt_subtract(context, flint_crt, C_residues.data(), quotients.data(),
+                   mc, width, C_chunk, chunk_row_exp, chunk_col_exp,
+                   2 * bits, chunk_row_start, work, chunk_row_end.data());
       timings.from_int_seconds += seconds_since(start);
     }
 }

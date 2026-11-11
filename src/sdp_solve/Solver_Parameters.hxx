@@ -22,6 +22,9 @@ struct Solver_Parameters
   // Per-block Cholesky and L^{-1}B by multimodular BLAS,
   // see sdp_solve/SDP_Solver/run/multimodular/Readme.md
   bool multimodular_trsm{};
+  // Experimental: Cholesky of Q with the trailing update by
+  // multimodular BLAS, panel width = this value (0: El::Cholesky)
+  int64_t multimodular_cholesky_Q{};
   size_t precision{};
 
   // Initialized from Environment - MemAvailable

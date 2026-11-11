@@ -24,7 +24,7 @@ void initialize_schur_complement_solver(
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
   El::DistMatrix<El::BigFloat> &Q, Timers &timers,
   El::Matrix<int32_t> &block_timings_ms, bool multimodular_trsm,
-  Verbosity verbosity);
+  int64_t multimodular_cholesky_Q, Verbosity verbosity);
 
 void compute_search_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
@@ -112,7 +112,9 @@ void SDP_Solver::step(
                                        grid, schur_complement_cholesky,
                                        schur_off_diagonal, bigint_syrk_context,
                                        Q, timers, block_timings_ms,
-                                       parameters.multimodular_trsm, verbosity);
+                                       parameters.multimodular_trsm,
+                                       parameters.multimodular_cholesky_Q,
+                                       verbosity);
 
     // Calculate matrix product -XY
     // It will be reused for mu, R-err, compute_search_direction().

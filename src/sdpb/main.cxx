@@ -64,17 +64,20 @@ int main(int argc, char **argv)
           El::mpi::Barrier(env.comm_shared_mem);
         }
 
+      const bool multimodular = parameters.solver.multimodular_trsm
+                                || parameters.solver.multimodular_cholesky_Q
+                                     > 0;
       if(parameters.is_sdpa())
         {
-          if(parameters.solver.multimodular_trsm)
-            RUNTIME_ERROR("--multimodularTrsm is not supported for SDPA "
-                          "input (.dat, .dat-s).");
+          if(multimodular)
+            RUNTIME_ERROR("--multimodularTrsm and --multimodularCholeskyQ "
+                          "are not supported for SDPA input (.dat, .dat-s).");
           time_and_solve<Sdpb::Sdpa::SDP_Solver>(env, parameters,
                                                  start_time);
         }
       else
         {
-          if(parameters.solver.multimodular_trsm)
+          if(multimodular)
             check_multimodular_precision(Multimodular_Blas_Config(),
                                          El::gmp::Precision());
           time_and_solve<SDP_Solver>(env, parameters, start_time);
