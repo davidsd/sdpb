@@ -1,7 +1,10 @@
 #include "integration_tests/common.hxx"
 
+#include <algorithm>
+
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <map>
 
 namespace fs = std::filesystem;
@@ -134,6 +137,125 @@ TEST_CASE("pmp2sdp")
         ++num_files;
       }
     REQUIRE(num_files > 2);
+  }
+
+  SECTION("reuseSdp")
+  {
+    INFO("pmp2sdp --reuseSdp: in a list of input files where some have new "
+         "paths (as in a scan, where only some files change), the blocks of "
+         "the others are linked from the previous SDP. The result must be "
+         "byte-identical to a full build of the same list, except "
+         "control.json, which records the command.");
+    const auto orig_input
+      = Test_Config::test_data_dir / "end-to-end_tests"
+        / "SingletScalar_cT_test_nmax6" / "primal_dual_optimal" / "input";
+    Test_Util::Test_Case_Runner runner("pmp2sdp/reuseSdp");
+    const auto input = runner.output_dir / "input";
+    fs::create_directories(runner.output_dir);
+    fs::copy(orig_input, input, fs::copy_options::recursive);
+
+    // the list of input files (NUL-separated, relative to the list)
+    std::vector<std::string> files;
+    {
+      std::ifstream is(input / "pmp.nsv", std::ios::binary);
+      std::string entry;
+      while(std::getline(is, entry, '\0'))
+        if(!entry.empty())
+          files.push_back(entry);
+    }
+    REQUIRE(files.size() > 3);
+    // the objective, the normalization and one more matrix get new paths
+    // (same contents), as a changed file would in a scan; the list is also
+    // reversed, so that the reused blocks get new block indices
+    std::vector<std::string> new_files(files);
+    for(size_t i = 0; i < 3; ++i)
+      {
+        new_files[i] = "json/new_" + std::to_string(i) + ".json";
+        fs::copy_file(input / files[i], input / new_files[i]);
+      }
+    std::reverse(new_files.begin(), new_files.end());
+    {
+      std::ofstream os(input / "pmp_new.nsv", std::ios::binary);
+      for(const auto &f : new_files)
+        os << f << '\0';
+    }
+
+    Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
+    args["--precision"] = "768";
+    args["--input"] = (input / "pmp.nsv").string();
+    const auto sdp_old = runner.output_dir / "sdp_old";
+    args["--output"] = sdp_old.string();
+    runner.create_nested("old").mpi_run({Test_Config::program("pmp2sdp"), args});
+
+    args["--input"] = (input / "pmp_new.nsv").string();
+    const auto sdp_full = runner.output_dir / "sdp_full";
+    args["--output"] = sdp_full.string();
+    runner.create_nested("full").mpi_run({Test_Config::program("pmp2sdp"), args});
+
+    Test_Util::Test_Case_Runner::Named_Args_Map reuse_args(args);
+    reuse_args["--reuseSdp"] = sdp_old.string();
+    const auto sdp_reuse = runner.output_dir / "sdp_reuse";
+    reuse_args["--output"] = sdp_reuse.string();
+    runner.create_nested("reuse").mpi_run({Test_Config::program("pmp2sdp"), reuse_args});
+
+    auto read = [](const fs::path &path) {
+      std::ifstream is(path, std::ios::binary);
+      return std::string(std::istreambuf_iterator<char>(is), {});
+    };
+    size_t num_files = 0, num_linked = 0;
+    for(const auto &entry : fs::directory_iterator(sdp_full))
+      {
+        const auto name = entry.path().filename();
+        if(name == "control.json")
+          continue;
+        CAPTURE(name);
+        REQUIRE(fs::exists(sdp_reuse / name));
+        REQUIRE(read(sdp_reuse / name) == read(entry.path()));
+        ++num_files;
+        if(fs::hard_link_count(sdp_reuse / name) > 1)
+          ++num_linked;
+      }
+    for(const auto &entry : fs::directory_iterator(sdp_reuse))
+      REQUIRE(fs::exists(sdp_full / entry.path().filename()));
+    REQUIRE(num_files > 0);
+    // the unchanged files' blocks are linked, not rebuilt
+    REQUIRE(num_linked > 0);
+
+    // a previous SDP at another precision must be refused
+    {
+      auto refused_args = reuse_args;
+      refused_args["--precision"] = "640";
+      refused_args["--output"] = (runner.output_dir / "sdp_refused").string();
+      runner.create_nested("refused").mpi_run(
+        {Test_Config::program("pmp2sdp"), refused_args}, 2, 1,
+        "requires the old SDP to have the same precision");
+    }
+    // ... and so must a changed normalization (read from a new file)
+    {
+      const auto normalization_file = std::find_if(
+        new_files.begin(), new_files.end(), [&](const std::string &f) {
+          return f.find("new_") != std::string::npos
+                 && read(input / f).find("normalization")
+                      != std::string::npos;
+        });
+      REQUIRE(normalization_file != new_files.end());
+      std::string text = read(input / *normalization_file);
+      // change the first digit after the first '"' of a number
+      const auto pos = text.find_first_of("123456789",
+                                          text.find("normalization"));
+      REQUIRE(pos != std::string::npos);
+      text[pos] = text[pos] == '9' ? '8' : char(text[pos] + 1);
+      {
+        std::ofstream os(input / *normalization_file, std::ios::binary);
+        os << text;
+      }
+      auto refused_args = reuse_args;
+      refused_args["--output"]
+        = (runner.output_dir / "sdp_refused_normalization").string();
+      runner.create_nested("refused_normalization")
+        .mpi_run({Test_Config::program("pmp2sdp"), refused_args}, 2, 1,
+                 "the normalization differs");
+    }
   }
 
   SECTION("filesystem errors")
