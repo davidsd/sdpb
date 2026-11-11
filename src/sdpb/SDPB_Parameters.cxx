@@ -1,6 +1,8 @@
 #include "SDPB_Parameters.hxx"
 
 #include <boost/program_options.hpp>
+#include <cmath>
+#include <string>
 #include <El.hpp>
 #include <archive.h>
 #include <cblas.h>
@@ -47,6 +49,29 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[],
     po::bool_switch(&no_final_checkpoint)->default_value(false),
     "Don't save a final checkpoint after terminating (useful when "
     "debugging).");
+  basic_options.add_options()(
+    "reconstructXYmu",
+    po::value<std::string>(&reconstruct_XY_mu)
+      ->default_value("")
+      ->notifier([](const std::string &s) {
+        if(s.empty())
+          return;
+        // As El::BigFloat reads it later (any exponent; no inf or nan)
+        mpf_t value;
+        mpf_init(value);
+        const bool valid
+          = mpf_set_str(value, s.c_str(), 10) == 0 && mpf_sgn(value) > 0;
+        mpf_clear(value);
+        if(!valid)
+          throw po::invalid_option_value("--reconstructXYmu=" + s
+                                         + " (expected a positive number)");
+      }),
+    "Start from a text checkpoint (--initialCheckpointDir) that has only "
+    "x_*.txt and y.txt: set X = sum_p A_p x_p (exact) and Y = mu X^{-1} "
+    "(exact on the central path) with the given mu. Meant for runs whose "
+    "binary checkpoint is lost but whose final x, y and mu are known; follow "
+    "it with a few centering iterations (centering parameters 1) to restore "
+    "exact dual feasibility. Polynomial matrix programs only.");
   basic_options.add_options()(
     "writeSolution",
     po::value<std::string>(&write_solution_string)->default_value("x,y"s),
@@ -257,6 +282,8 @@ boost::property_tree::ptree to_property_tree(const SDPB_Parameters &p)
   result.put("sdpDir", p.sdp_path.string());
   result.put("outDir", p.out_directory.string());
   result.put("noFinalCheckpoint", p.no_final_checkpoint);
+  if(!p.reconstruct_XY_mu.empty())
+    result.put("reconstructXYmu", p.reconstruct_XY_mu);
   result.put("writeSolution", p.write_solution);
   result.put("procGranularity", p.proc_granularity);
   result.put("verbosity", static_cast<int>(p.verbosity));
