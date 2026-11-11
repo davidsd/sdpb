@@ -12,6 +12,9 @@ struct Pmp2sdp_Parameters
 {
   int precision;
   int64_t max_num_poles;
+  // Interpolation conditions at x = infinity per reduced block
+  // (--reducedPrefactorNodesAtInfinity)
+  int64_t num_nodes_at_infinity = 0;
   std::filesystem::path input_file;
   std::filesystem::path output_path;
   Block_File_Format output_format;

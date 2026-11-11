@@ -50,7 +50,19 @@ public:
   // `bilinear_bases[j]' above for some fixed j.
   std::array<El::Matrix<El::BigFloat>, 2> bilinear_bases;
 
+  // Digits lost to cancellation in the rows moved to x = infinity
+  // (pmp2sdp --reducedPrefactorNodesAtInfinity); not written to the SDP.
+  double nodes_at_infinity_digits_lost = 0;
+
   Dual_Constraint_Group() = default;
+  // num_nodes_at_infinity > 0: see nodes_at_infinity.cxx
   Dual_Constraint_Group(const size_t &Block_index,
-                        const Polynomial_Vector_Matrix &m);
+                        const Polynomial_Vector_Matrix &m,
+                        size_t num_nodes_at_infinity = 0);
 };
+
+// Replace the rows of the num_nodes_at_infinity largest sample points of a
+// block with a reduced prefactor by conditions at x = infinity.
+void apply_nodes_at_infinity(Dual_Constraint_Group &group,
+                             const Polynomial_Vector_Matrix &m,
+                             size_t num_nodes_at_infinity);

@@ -33,6 +33,15 @@ Pmp2sdp_Parameters::Pmp2sdp_Parameters(int argc, char **argv)
     "which is used for interpolating the PMP.\n"
     "See https://arxiv.org/abs/2509.14307, Section 4.3 for details.");
   options.add_options()(
+    "reducedPrefactorNodesAtInfinity",
+    po::value<int64_t>(&num_nodes_at_infinity)->default_value(0),
+    "For each block whose reducedPrefactor has other poles than its "
+    "prefactor, move the M largest of its interpolation conditions to "
+    "x = infinity: the reduced numerator interpolates at the other sample "
+    "points and matches the top M coefficients of its exact expansion at "
+    "infinity. Sample points, degree and SDP size are unchanged. 0 (default) "
+    "means plain interpolation.");
+  options.add_options()(
     "outputFormat,f",
     po::value<Block_File_Format>(&output_format)
       ->default_value(Block_File_Format::bin),
@@ -75,6 +84,8 @@ Pmp2sdp_Parameters::Pmp2sdp_Parameters(int argc, char **argv)
              "Input file does not exist: ", input_file);
       ASSERT(!fs::is_directory(input_file) && input_file != ".",
              "Input file is a directory, not a file:", input_file);
+      ASSERT(num_nodes_at_infinity >= 0,
+             "--reducedPrefactorNodesAtInfinity must be nonnegative");
     }
   catch(po::error &e)
     {
@@ -92,6 +103,7 @@ boost::property_tree::ptree to_property_tree(const Pmp2sdp_Parameters &p)
   result.put("output", p.output_path.string());
   result.put("precision", p.precision);
   result.put("maxNumPoles", p.max_num_poles);
+  result.put("reducedPrefactorNodesAtInfinity", p.num_nodes_at_infinity);
   result.put("outputFormat", p.output_format);
   result.put("zip", p.zip);
   result.put("verbosity", static_cast<int>(p.verbosity));
