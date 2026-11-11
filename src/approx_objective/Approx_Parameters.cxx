@@ -49,8 +49,8 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[],
         this->max_memory = memory_limit_translator.from_string(s);
       })
       ->default_value("80%"),
-    "Maximum amount of memory that can be used for SDPB allocations, "
-    "in bytes."
+    "Maximum amount of memory that can be used for SDPB allocations "
+    "on each node, in bytes."
     " Optional suffixes: B (bytes), K/KB/KiB (kilobytes), M/MB/MiB "
     "(megabytes), "
     "G/GB/GiB (gigabytes), % (percents of MemAvailable at program start)");
@@ -61,8 +61,8 @@ Approx_Parameters::Approx_Parameters(int argc, char *argv[],
         this->max_shared_memory = memory_limit_translator.from_string(s);
       })
       ->default_value("0"),
-    "Maximum amount of memory that can be used for MPI shared windows, "
-    "in bytes."
+    "Maximum amount of memory that can be used for MPI shared windows "
+    "on each node, in bytes. 0 means no separate limit."
     " Optional suffixes: B (bytes), K/KB/KiB (kilobytes), M/MB/MiB "
     "(megabytes), "
     "G/GB/GiB (gigabytes), % (percents of MemAvailable at program start)");
