@@ -6,10 +6,6 @@
 
 #include <algorithm>
 
-size_t
-get_max_shared_memory_bytes(size_t nonshared_memory_required_per_node_bytes,
-                            const Environment &env, Verbosity verbosity);
-
 size_t bigfloat_bytes();
 size_t bigfloat_bytes(mp_bitcnt_t precision);
 
