@@ -45,6 +45,18 @@ TEST_CASE("sdpb")
     fs::permissions(path, fs::perms::others_read);
   };
 
+#ifndef SDPB_GPU
+  SECTION("gpu")
+  {
+    INFO("A build without the GPU backend refuses --gpu at start-up.");
+    Test_Util::Test_Case_Runner runner("sdpb/gpu");
+    auto args = default_args;
+    args["--gpu"] = "";
+    run_sdpb_set_out_ck_dirs(runner, args, 1, 1,
+                             "built without the GPU backend");
+  }
+#endif
+
   SECTION("io_tests")
   {
     INFO("Check that sdpb fails on different IO errors.");
