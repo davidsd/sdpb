@@ -21,6 +21,12 @@ operator<<(std::ostream &os, const SDP_Solver_Terminate_Reason &r)
     case SDP_Solver_Terminate_Reason::DualFeasibleJumpDetected:
       os << "dual feasible jump detected";
       break;
+    case SDP_Solver_Terminate_Reason::DualObjectiveStop:
+      os << "dual feasible with dualObjective above dualObjectiveStop";
+      break;
+    case SDP_Solver_Terminate_Reason::PrimalObjectiveStop:
+      os << "primal feasible with primalObjective below primalObjectiveStop";
+      break;
     case SDP_Solver_Terminate_Reason::MaxIterationsExceeded:
       os << "maxIterations exceeded";
       break;
