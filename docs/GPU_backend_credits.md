@@ -37,6 +37,19 @@ SDPviBe was read at commit 0d02884735158b78e3a9ddd16c070ab20de90e63.
 | `src/gpu/solver/Mpf_Ops.{hxx,cu}` | `sdpvibe/mpf.py` (`mpf_mul`, `mpf_add`, `normalize`, `total`, `max_abs`, `to_float`), `sdpvibe/solver.py` (`cmws`, `schur`, `seg_diag`, `masked`, `add_diag`) | templates with the limbs in registers; assemblies as one launch over the batch; matrix-vector products as schoolbook sums on CUDA cores (new) |
 | `src/gpu/solver/Gpu_Solver.{hxx,cu}` | `sdpvibe/solver.py` (`Solver.run`: the passes and their order; `SDP._build`: blocks batched by dimension with inert padding; `min_eig`: float64 step lengths, the error bound (n + 2) eps ||M||_F, the tolerance) | explicit inverses instead of triangular solves; a block the float64 eigenvalue cannot resolve goes to SDPB's own multiprecision eigenvalue on the host, not to SDPviBe's `refine_min_eig` |
 
+SDPviBe's solver already keeps no P for chunked SDPs (`sdpvibe/solver.py`, the "lean" mode); `lean_p` in
+`src/gpu/solver/Gpu_Solver.hxx` follows it, as extended by Zechuan Zheng (below).
+
+## From Zechuan Zheng's GPU work on SDPviBe
+
+Zechuan Zheng extended SDPviBe in his own GPU port (not public). Three parts of this backend follow his work:
+
+| Backend file | From his port (what) |
+|---|---|
+| `src/gpu/solver/Mpf_Ops.cu` (the matrix-vector product with several threads per output), `src/gpu/test/gemv_compare.cu` | his partial-sum gemv: each of S threads sums every S-th term, and one reduction adds the partial sums and rounds |
+| `src/gpu/solver/Mpf_Ops.{hxx,cu}` (`mpf_pack_sparse`, the `sparse_b` option) | his SparseMPF format: B stored as its nonzero entries and their positions |
+| `src/gpu/solver/Gpu_Solver.{hxx,cu}` (the `lean_p` option) | SDPviBe's lean mode (no stored P), extended to SDPs that fit on the card |
+
 Planned (to be listed here as they are ported): the tiled Cholesky of Q (`blockchol.py`), the fixed-point
 recursive Cholesky with triangular solves and leaf refinement (`linalg.chol`, `batched.py`), `refine_min_eig`, the chunk/streaming planner
 (`solver.py` `Layout`, `store.py`), multi-GPU over NCCL (`dist.py`).
