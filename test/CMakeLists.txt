@@ -17,6 +17,7 @@ add_executable(integration_tests
   src/integration_tests/cases/pmp2sdp.test.cxx
   src/integration_tests/cases/SDPLIB.test.cxx
   src/integration_tests/cases/resident.test.cxx
+  src/integration_tests/cases/resident_gpu.test.cxx
   src/integration_tests/cases/sdpb.test.cxx)
 target_include_directories(integration_tests PRIVATE src)
 target_link_libraries(integration_tests PRIVATE sdpb_util catch2)

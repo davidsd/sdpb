@@ -401,6 +401,7 @@ def build(bld):
                         'test/src/integration_tests/cases/pmp2sdp.test.cxx',
                         'test/src/integration_tests/cases/SDPLIB.test.cxx',
                         'test/src/integration_tests/cases/resident.test.cxx',
+                        'test/src/integration_tests/cases/resident_gpu.test.cxx',
                         'test/src/integration_tests/cases/sdpb.test.cxx'],
                 target='integration_tests',
                 install_path=None,
