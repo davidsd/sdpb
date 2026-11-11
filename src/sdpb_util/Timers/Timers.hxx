@@ -38,11 +38,19 @@ private:
   size_t max_mem_used = 0;
   // name of the timer that had max MemUsed value
   std::string max_mem_used_name;
+  // named_timers gets one entry per timer start and is only ever read by write_profile().
+  // If false, a Scoped_Timer removes its entry when it is destroyed.
+  bool keep_finished_timers = true;
 
 public:
   Timers();
   Timers(const Environment &env, const Verbosity &verbosity);
   ~Timers() noexcept;
+
+  // For a run that will not call write_profile(): keeps named_timers from
+  // growing with iterations (on Ising+T nmax=26, 1369 entries per rank per
+  // iteration, i.e. about 6 GB per node over a 196-iteration call).
+  void discard_finished_timers();
 
 private:
   Timer &add_and_start(const std::string &name);
@@ -88,6 +96,7 @@ struct Scoped_Timer : boost::noncopyable
 private:
   Timers &timers;
   Timer &my_timer;
+  std::list<std::pair<std::string, Timer>>::iterator my_entry;
   std::string old_prefix;
   std::string new_prefix;
 
