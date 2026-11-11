@@ -44,3 +44,9 @@ add_library(sdp_solve STATIC
   SDP_Solver_Terminate_Reason.cxx
   Write_Solution.cxx)
 target_link_libraries(sdp_solve PUBLIC sdpb_util pmp2sdp_lib)
+
+if(SDPB_ENABLE_GPU)
+  target_sources(sdp_solve PRIVATE
+    SDP_Solver/run/gpu/Gpu_Compute.cxx)
+  target_link_libraries(sdp_solve PUBLIC sdpb_gpu)
+endif()

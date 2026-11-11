@@ -2,6 +2,7 @@
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdpa_solve/SDP_Solver.hxx"
 #include "sdpa_solve/memory_estimates.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
@@ -62,6 +63,10 @@ namespace Sdpb::Sdpa
     const fs::path &iterations_json_path, Timers &timers,
     El::Matrix<int32_t> &block_timings_ms)
   {
+    // The GPU backend implements SDPB's solver (polynomial matrix programs)
+    ASSERT(!parameters.gpu,
+           "--gpu is implemented for polynomial matrix programs only, "
+           "not for SDPA input.");
     SDP_Solver_Terminate_Reason terminate_reason(
       SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
     Scoped_Timer solver_timer(timers, "run");

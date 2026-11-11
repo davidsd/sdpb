@@ -142,6 +142,10 @@ int main(int argc, char **argv)
   const bool cmp_round = flag(argc, argv, "--compare-rounding");
   opt.crt_batch = atoll(arg(argc, argv, "--crt-batch", "524288"));
   opt.fused_residues = true;
+  // --crt-guard g: the CRT forms only the top of each product. The gate below
+  // must hold for g > 0; a negative g cuts into the float's own bits, and the
+  // gate must fail (the control)
+  opt.crt_guard_bits = atoi(arg(argc, argv, "--crt-guard", "0"));
   const uint64_t sA = 101, sB = 202;
   cudaDeviceProp prop;
   cudaGetDeviceProperties(&prop, 0);

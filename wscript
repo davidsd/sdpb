@@ -1,12 +1,30 @@
 import os, subprocess
+from waflib import TaskGen
 
 # Include and library paths are searched in this order
 external_packages = ['cxx17', 'gmpxx', 'mpfr', 'boost', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'flint',
                      'cblas']
 
 
+@TaskGen.feature('cxxprogram')
+@TaskGen.after_method('apply_link')
+def relink_when_gpu_library_changes(self):
+    # the archive is passed in LDFLAGS, which waf does not track as a dependency
+    if self.env.SDPB_GPU and getattr(self, 'gpu_library', False):
+        self.link_task.dep_nodes.append(self.bld.bldnode.find_or_declare('libsdpb_gpu.a'))
+
+
 def options(opt):
     opt.load(['compiler_cxx', 'gnu_dirs'])
+    opt.add_option('--enable-gpu', action='store_true', default=False,
+                   help='Build sdpb with the GPU backend (src/gpu, CUDA): the --gpu option of sdpb')
+    opt.add_option('--nvcc', action='store', default='nvcc',
+                   help='CUDA compiler, with options, e.g. "nvcc --compiler-bindir /path/to/gcc13/bin"')
+    opt.add_option('--gpu-arch', action='store', default='90', help='CUDA architectures, comma separated (90: H100/H200)')
+    opt.add_option('--cuda-dir', action='store', default=os.environ.get('CUDA_HOME', ''),
+                   help='CUDA toolkit prefix (lib64/ has libcudart_static.a and libcublasLt)')
+    opt.add_option('--gpu-gmp-include', action='store', default='',
+                   help='Directory of gmp.h for the CUDA compiler')
     opt.load(
         ['cxx17', 'boost', 'gmpxx', 'mpfr', 'mpsolve', 'elemental', 'libxml2', 'rapidjson', 'libarchive', 'cblas',
          'flint'],
@@ -27,6 +45,14 @@ def configure(conf):
     conf.env.git_version = subprocess.check_output('git describe --tags --always --dirty', universal_newlines=True,
                                                    shell=True).rstrip()
 
+    # GPU backend, off by default; without it the CPU build is unchanged
+    conf.env.SDPB_GPU = bool(conf.options.enable_gpu)
+    if conf.env.SDPB_GPU:
+        conf.env.NVCC = conf.options.nvcc
+        conf.env.GPU_ARCH = conf.options.gpu_arch.split(',')
+        conf.env.CUDA_DIR = conf.options.cuda_dir
+        conf.env.GPU_GMP_INCLUDE = conf.options.gpu_gmp_include
+
 
 def write_version_header(task):
     task.outputs[0].write('#pragma once\n#define SDPB_VERSION_STRING "%s"\n' % task.env.git_version)
@@ -39,6 +65,34 @@ def build(bld):
 
     default_flags = ['-Wall', '-Wextra', '-Werror=return-type', '-O3', '-g']
     default_defines = ['OMPI_SKIP_MPICXX']
+    gpu_link = {}
+    if bld.env.SDPB_GPU:
+        # The device library (src/gpu) is compiled by nvcc and linked into sdpb.
+        default_defines = default_defines + ['SDPB_GPU']
+        gpu_sources = ['src/gpu/rns/Rns_Basis.cxx', 'src/gpu/rns/Gram_Accumulator.cu', 'src/gpu/rns/Mpf_Gram.cu',
+                       'src/gpu/rns/Rns_Gemm.cu', 'src/gpu/linalg/Block_Factor.cu', 'src/gpu/solver/Mpf_Ops.cu',
+                       'src/gpu/solver/Gpu_Solver.cu']
+        gencode = ' '.join('-gencode arch=compute_%s,code=sm_%s' % (a, a) for a in bld.env.GPU_ARCH)
+        inc = '-I' + bld.env.GPU_GMP_INCLUDE if bld.env.GPU_GMP_INCLUDE else ''
+        gpu_headers = bld.path.ant_glob('src/gpu/**/*.hxx src/gpu/**/*.cuh')
+        objs = []
+        for src in gpu_sources:
+            lang = '-x cu' if src.endswith('.cxx') else ''
+            tgt = src + '.gpu.o'
+            # waf scans no includes for a rule: every header counts, or a changed class layout leaves stale objects
+            bld(rule='%s -std=c++17 -O3 %s -Xcompiler -Wall -Xcompiler -fopenmp -Xcompiler -fPIC %s %s -c ${SRC} -o ${TGT}'
+                     % (bld.env.NVCC, gencode, inc, lang),
+                source=src, target=tgt, deps=gpu_headers)
+            objs.append(tgt)
+        bld(rule='ar rcs ${TGT} ${SRC}', source=objs, target='libsdpb_gpu.a')
+        # the device library is complete before anything links to it
+        bld.add_group()
+        lib64 = os.path.join(bld.env.CUDA_DIR, 'lib64')
+        # LDFLAGS come last on the link line, after the static libraries that use them
+        gpu_link = dict(ldflags=[os.path.join(bld.bldnode.abspath(), 'libsdpb_gpu.a'),
+                                 os.path.join(lib64, 'libcudart_static.a'), '-L' + lib64, '-lcublasLt',
+                                 '-lopenblas', '-lgomp', '-lrt', '-lpthread', '-ldl'],
+                        rpath=[lib64], gpu_library=True)
     # All binaries (except for sdpb_util itself) depend also on sdpb_util
     use_packages = external_packages + ['sdpb_util']
     default_includes = ['src', 'external', bld.bldnode]
@@ -82,6 +136,7 @@ def build(bld):
                          'src/sdp_solve/SDP_Solver/load_checkpoint/load_checkpoint.cxx',
                          'src/sdp_solve/SDP_Solver/SDP_Solver.cxx',
                          'src/sdp_solve/SDP_Solver/run/run.cxx',
+                         *(['src/sdp_solve/SDP_Solver/run/gpu/Gpu_Compute.cxx'] if bld.env.SDPB_GPU else []),
                          'src/sdp_solve/SDP_Solver/run/constraint_matrix_weighted_sum.cxx',
                          'src/sdp_solve/SDP_Solver/run/compute_dual_residues_and_error.cxx',
                          'src/sdp_solve/SDP_Solver/run/compute_primal_residues_and_error_P_Ax_X.cxx',
@@ -154,7 +209,8 @@ def build(bld):
                 cxxflags=default_flags,
                 defines=default_defines,
                 includes=default_includes,
-                use=use_packages + ['sdp_solve', 'sdpa_solve', 'mpsolve']
+                use=use_packages + ['sdp_solve', 'sdpa_solve', 'mpsolve'],
+                **gpu_link
                 )
 
     pmp2sdp_sources = ['src/pmp2sdp/Dual_Constraint_Group/Dual_Constraint_Group.cxx',
@@ -265,7 +321,8 @@ def build(bld):
                 cxxflags=default_flags,
                 defines=default_defines,
                 includes=default_includes,
-                use=use_packages + ['pmp_read', 'sdp_solve', 'mesh']
+                use=use_packages + ['pmp_read', 'sdp_solve', 'mesh'],
+                **gpu_link
                 )
 
     bld.program(source=['src/approx_objective/main.cxx',
@@ -282,7 +339,8 @@ def build(bld):
                 cxxflags=default_flags,
                 defines=default_defines,
                 includes=default_includes,
-                use=use_packages + ['pmp_read', 'sdp_solve']
+                use=use_packages + ['pmp_read', 'sdp_solve'],
+                **gpu_link
                 )
 
     bld.program(source=['src/pmp2functions/main.cxx',
@@ -356,5 +414,6 @@ def build(bld):
                 cxxflags=default_flags,
                 defines=default_defines + ['CATCH_AMALGAMATED_CUSTOM_MAIN'],
                 use=use_packages + ['pmp_read', 'pmp2sdp_lib', 'sdp_solve'],
+                **gpu_link,
                 includes=default_includes + ['test/src']
                 )

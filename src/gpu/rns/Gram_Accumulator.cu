@@ -128,7 +128,6 @@ namespace sdpb_gpu
     GPU_CHECK(cudaMemcpy(d_D_, D.data(), D.size(), cudaMemcpyHostToDevice));
     GPU_CHECK(cudaMemcpy(d_Mdig_, Mdig.data(), E * 4, cudaMemcpyHostToDevice));
 
-    // (the int32 intermediate of the residues only without fused residues)
     if(!opt_.fused_residues)
       d_resC_ = dalloc<int32_t>(size_t(2 * g_) * opt_.max_entries_per_residue_batch,
                                 device_bytes_);

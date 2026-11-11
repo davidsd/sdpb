@@ -15,6 +15,11 @@
 #include <filesystem>
 #include <optional>
 
+#ifdef SDPB_GPU
+// sdpb --gpu (GPU builds): read the SDP on one rank with a thread per block
+void set_threaded_sdp_reading(bool on);
+#endif
+
 // The class SDP encodes a semidefinite program of the following form
 //
 // Dual: maximize f + b.y over y,Y such that

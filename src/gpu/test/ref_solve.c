@@ -290,6 +290,15 @@ int main(int argc, char **argv)
   const char *dir = argv[1], *chunk = argv[2], *colsf = argv[3];
   const mpfr_prec_t prec = atol(argv[4]);
   const char *blist = NULL, *save_ref = NULL, *load_ref = NULL, *extra_ref = NULL;
+  // --also a.bin,b.bin: other candidates' P for the same columns,
+  // compared with the same reference: per-candidate gate lines at the end
+  enum { MAX_ALSO = 8 };
+  const char *also_files[MAX_ALSO] = {0};
+  const char *also_ent[MAX_ALSO] = {0};
+  int nalso = 0;
+  static double also_worst[MAX_ALSO];
+  static int also_failed[MAX_ALSO];
+  static long also_better[MAX_ALSO], also_cols[MAX_ALSO];
   int upper = 0, require_no_worse = 0;
   double max_error = INFINITY;
   // negative control: S[i][j] (and S[j][i]) of block pb multiplied by 1 + 2^-pbits
@@ -299,6 +308,12 @@ int main(int argc, char **argv)
       if(!strcmp(argv[a], "--require-no-worse-sv")) require_no_worse=atoi(argv[a+1]);
       if(!strcmp(argv[a], "--max-log2")) max_error=atof(argv[a+1]);
       if(!strcmp(argv[a], "--extra-ref")) extra_ref = argv[a + 1];
+      if(!strcmp(argv[a], "--also"))
+        {
+          char *list = strdup(argv[a + 1]);
+          for(char *t = strtok(list, ","); t && nalso < MAX_ALSO; t = strtok(NULL, ","))
+            also_files[nalso++] = t;
+        }
       if(!strcmp(argv[a], "--save-ref")) save_ref = argv[a + 1];
       if(!strcmp(argv[a], "--load-ref")) load_ref = argv[a + 1];
       if(!strcmp(argv[a], "--perturb"))
@@ -320,6 +335,17 @@ int main(int argc, char **argv)
   const int32_t *col = h + 5, *kind = col + (size_t)nb * K;
   const char *ent = (const char *)(kind + (size_t)nb * K);
   const size_t esz = 4 * (size_t)L + 8;
+  for(int f = 0; f < nalso; ++f)
+    {
+      size_t la;
+      const char *ca = map(also_files[f], &la);
+      // "V32P": the same header, then only the candidate's columns (strip_cols.py)
+      const size_t want = (size_t)(ent - cb) + (size_t)nb * K * (size_t)P * esz;
+      if(la != want || memcmp(ca, "V32P", 4) || memcmp(ca + 4, cb + 4, (size_t)(ent - cb) - 4))
+        return fprintf(stderr, "--also %s: different shape or columns\n", also_files[f]), 2;
+      also_ent[f] = ca + (ent - cb);
+      also_worst[f] = -1e9;
+    }
   char path[4096];
   snprintf(path, sizeof path, "%s/S%s.m.bin", dir, chunk);
   const uint32_t *Sm = map(path, &lm);
@@ -433,7 +459,7 @@ int main(int argc, char **argv)
           mpfr_init2(pb[i], prec);
           mpfr_init2(ps[i], prec);
         }
-      char line[256 * 64];
+      char line[1024 * 64];
       int off = 0;
       double wb = -1e9, ws = -1e9;
       for(int k = 0; k < K; ++k)
@@ -462,6 +488,29 @@ int main(int argc, char **argv)
 #pragma omp atomic write
             g_failed=1;
           }
+          for(int f = 0; f < nalso; ++f)
+            {
+              const char *ba = also_ent[f] + ((size_t)b * K + k) * (size_t)P * esz;
+              for(int i = 0; i < P; ++i)
+                {
+                  const char *q = ba + (size_t)i * esz;
+                  memcpy(limbs, q, 4 * L);
+                  int64_t e;
+                  memcpy(&e, q + 4 * L, 8);
+                  mpf_entry(pb[i], limbs, L, e, z);
+                }
+              const double ea = colerr(pb, y, P, prec);
+#pragma omp critical
+              {
+                also_worst[f] = fmax(also_worst[f], ea);
+                also_cols[f]++;
+                also_better[f] += ea <= es;
+                if(!isfinite(ea) || ea > max_error || (require_no_worse && ea > es))
+                  also_failed[f] = 1;
+                if(off < (int)sizeof line - 256)
+                  off += snprintf(line + off, sizeof line - off, "ALSO %d %d %d %.2f %.2f\n", f, b, c, ea, es);
+              }
+            }
           wb = fmax(wb, eb);
           ws = fmax(ws, es);
           if(off < (int)sizeof line - 256)
@@ -508,5 +557,8 @@ int main(int argc, char **argv)
       mpz_clear(z);
     }
   if(require_no_worse || isfinite(max_error)) printf("MPFR_GATE %s\n",g_failed ? "FAILED" : "PASSED");
+  for(int f = 0; f < nalso; ++f)
+    printf("ALSO_GATE %s: %ld columns, worst 2^%.2f, %ld no worse than SDPviBe: %s\n", also_files[f],
+           also_cols[f], also_worst[f], also_better[f], also_failed[f] ? "FAILED" : "PASSED");
   return g_failed ? 1 : 0;
 }
