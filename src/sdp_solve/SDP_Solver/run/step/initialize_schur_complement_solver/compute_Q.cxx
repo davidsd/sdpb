@@ -67,7 +67,7 @@ void initialize_schur_off_diagonal(
       // schur_off_diagonal = L^{-1} B
       Scoped_Timer solve_timer(timers, "solve_" + block_index_string);
 
-      schur_off_diagonal.blocks.push_back(sdp.free_var_matrix.blocks[block]);
+      schur_off_diagonal.blocks.push_back(sdp.free_var_block_copy(block));
       if(multimodular_factor)
         multimodular_factor->solve(schur_off_diagonal.blocks[block], timers);
       else

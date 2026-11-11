@@ -108,16 +108,20 @@ namespace
       size_t trsm_bytes = 0;
       if(block_info.mpi_comm.value.Rank() == 0)
         {
-          for(auto &m : sdp.free_var_matrix.blocks)
+          // (with --sparseB, the dense size of each block of B)
+          for(size_t index = 0; index < sdp.free_var_matrix.blocks.size();
+              ++index)
             {
               trsm_bytes = std::max(
                 trsm_bytes,
                 parameters.multimodular_trsm
                   ? multimodular_block_factor_bytes(
-                      m.Height(), m.Width(), grid.Size(), bigfloat_bytes(),
-                      Multimodular_Blas_Config())
-                  : get_trsm_bytes(m.Height(), m.Width(), grid.Height(),
-                                   grid.Width()));
+                      sdp.free_var_block_height(index),
+                      sdp.free_var_block_width(index), grid.Size(),
+                      bigfloat_bytes(), Multimodular_Blas_Config())
+                  : get_trsm_bytes(sdp.free_var_block_height(index),
+                                   sdp.free_var_block_width(index),
+                                   grid.Height(), grid.Width()));
             }
         }
       return trsm_bytes;
@@ -133,8 +137,12 @@ namespace
     // #(B) = PxN
     // sdp.free_var_matrix, schur_off_diagonal
     const size_t B_size = node_reduce(get_B_size_local(sdp));
+    // With --sparseB, sdp.free_var_matrix holds only empty blocks, but
+    // schur_off_diagonal is dense: count B's dense size.
     const size_t B_bytes
-      = node_reduce(get_allocated_bytes(sdp.free_var_matrix));
+      = sdp.sparse_free_var_matrix
+          ? B_size * bigfloat_bytes()
+          : node_reduce(get_allocated_bytes(sdp.free_var_matrix));
 
     // #Q = NxN, distributed over all nodes.
     const size_t Q_size = node_reduce(get_Q_size_local(sdp));

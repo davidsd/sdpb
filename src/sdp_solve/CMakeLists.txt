@@ -45,5 +45,6 @@ add_library(sdp_solve STATIC
   SDP_Solver/run/step/compute_search_direction/compute_schur_RHS.cxx
   SDP_Solver/run/step/compute_search_direction/solve_schur_complement_equation.cxx
   SDP_Solver_Terminate_Reason.cxx
-  Write_Solution.cxx)
+  Write_Solution.cxx
+  Block_Matrix/Sparse_Block_Matrix.cxx)
 target_link_libraries(sdp_solve PUBLIC sdpb_util pmp2sdp_lib)

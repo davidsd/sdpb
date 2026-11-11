@@ -10,6 +10,7 @@
 #include "Block_Info.hxx"
 #include "Block_Matrix/Block_Matrix.hxx"
 #include "Block_Matrix/Block_Vector.hxx"
+#include "Block_Matrix/Sparse_Block_Matrix.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
 #include <filesystem>
@@ -89,6 +90,12 @@ struct SDP
   // free_var_matrix = B, a PxN matrix
   Block_Matrix free_var_matrix;
 
+  // With sdpb --sparseB, B is stored compactly here, and the
+  // blocks of free_var_matrix are empty DistMatrices that only keep the
+  // grid. Use free_var_block() or free_var_block_copy() to read B.
+  bool sparse_free_var_matrix = false;
+  std::vector<Sparse_Block_Matrix> free_var_matrix_sparse;
+
   // c, a vector of length P used with primal_objective
   Block_Vector primal_objective_c;
 
@@ -106,7 +113,8 @@ struct SDP
   std::optional<std::vector<El::BigFloat>> normalization;
 
   SDP(const std::filesystem::path &sdp_path, const Block_Info &block_info,
-      const El::Grid &grid, Timers &timers);
+      const El::Grid &grid, Timers &timers,
+      bool sparse_free_var_matrix = false);
   SDP(const El::BigFloat &objective_const,
       const std::vector<std::vector<El::BigFloat>> &primal_objective_c_input,
       const std::vector<El::Matrix<El::BigFloat>> &free_var_input,
@@ -116,6 +124,15 @@ struct SDP
       const std::vector<El::BigFloat> &normalization,
       const El::BigFloat &primal_c_scale, const Block_Info &block_info,
       const El::Grid &grid);
+
+  // Local block `index` of B as a DistMatrix: the stored block, or, with
+  // --sparseB, `scratch` filled from the compact form.
+  const El::DistMatrix<El::BigFloat> &
+  free_var_block(size_t index, El::DistMatrix<El::BigFloat> &scratch) const;
+  // A copy of local block `index` of B
+  El::DistMatrix<El::BigFloat> free_var_block_copy(size_t index) const;
+  El::Int free_var_block_height(size_t index) const;
+  El::Int free_var_block_width(size_t index) const;
 
 private:
   void validate(const Block_Info &block_info) const noexcept(false);
