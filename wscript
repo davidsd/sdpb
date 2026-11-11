@@ -350,11 +350,14 @@ def build(bld):
                         'test/src/unit_tests/cases/copy_matrix.test.cxx',
                         'test/src/unit_tests/cases/json.test.cxx',
                         'test/src/unit_tests/cases/pmp_sampling.test.cxx',
-                        'test/src/unit_tests/cases/shared_window.test.cxx'],
+                        'test/src/unit_tests/cases/shared_window.test.cxx',
+                        'test/src/unit_tests/cases/spectrum_zero_test.test.cxx',
+                        'src/spectrum/compute_spectrum/find_zeros.cxx',
+                        'src/spectrum/compute_spectrum/mpsolve.cxx'],
                 target='unit_tests',
                 install_path=None,
                 cxxflags=default_flags,
                 defines=default_defines + ['CATCH_AMALGAMATED_CUSTOM_MAIN'],
-                use=use_packages + ['pmp_read', 'pmp2sdp_lib', 'sdp_solve'],
+                use=use_packages + ['pmp_read', 'pmp2sdp_lib', 'sdp_solve', 'mpsolve'],
                 includes=default_includes + ['test/src']
                 )
