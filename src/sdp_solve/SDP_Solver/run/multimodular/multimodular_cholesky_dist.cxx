@@ -1,4 +1,5 @@
 #include "multimodular_blas.hxx"
+#include "Node_Diag_Exchange.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
@@ -6,7 +7,9 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 // Cholesky of the global Q (A = U^T U, upper triangle) on its [MC,MR] grid
@@ -24,12 +27,111 @@
 // of Cholesky_Q that grows as N^3/p.
 //
 // As El, the strictly lower triangle of A is not touched.
+//
+// node_mode (--qCholeskyNodeDiag, --qCholeskyNodeFactor; see
+// multimodular_blas.hxx and Node_Diag_Exchange.hxx) changes how the
+// diagonal blocks reach every rank and how they are factored, not the
+// arithmetic: the factor is bit for bit the same.
 namespace
 {
   using Clock = std::chrono::steady_clock;
   double seconds_since(const Clock::time_point &start)
   {
     return std::chrono::duration<double>(Clock::now() - start).count();
+  }
+
+  // --qCholeskyNodeFactor: multimodular_cholesky_lower(A) with its
+  // top-level split shared among the node's ranks, bit for bit the same:
+  //   A11 := chol(A11)               every rank (BigFloat, n1 <= base_size)
+  //   A21^T := A11^{-1} A21^T        node rank r solves the columns c = r mod R
+  //                                  (substitution_trsm: columns independent)
+  //   A22 -= A21 A21^T (lower)       node rank r updates the rows i = r mod R
+  //                                  (multimodular GEMM: each entry is exact
+  //                                  before one rounding, with per-row and
+  //                                  per-column scales, so any row subset
+  //                                  gives the same entries)
+  //   A22 := chol(A22)               every rank
+  // with the parts shared through node memory (Node_Diag_Exchange). Only
+  // where the serial code's triangular solve is substitution_trsm
+  // (n/2 <= base_size, e.g. Cholesky_Q's 64-wide panels); otherwise, or on
+  // one rank per node, it is multimodular_cholesky_lower itself.
+  void node_cholesky_lower(El::Matrix<El::BigFloat> &A, Node_Diag_Exchange &ex,
+                           const Multimodular_Blas_Config &config,
+                           Multimodular_Blas_Timings &timings)
+  {
+    const int n = A.Height();
+    const int n1 = n / 2, n2 = n - n1;
+    const int R = ex.ranks_on_node(), r = ex.rank_on_node();
+    if(n <= config.base_size || n1 > config.base_size || R == 1)
+      {
+        multimodular_cholesky_lower(A, config, timings);
+        return;
+      }
+    const auto top = El::IR(0, n1), bottom = El::IR(n1, n);
+    auto A11 = A(top, top);
+    auto A21 = A(bottom, top);
+    auto A22 = A(bottom, bottom);
+    multimodular_cholesky_lower(A11, config, timings);
+
+    // indices q, q + R, q + 2R, ... below m: node rank q's share
+    auto share = [R](const int q, const int m) {
+      return q < m ? (m - 1 - q) / R + 1 : 0;
+    };
+    const size_t S = ex.entry_size();
+    {
+      El::Matrix<El::BigFloat> X(n1, share(r, n2));
+      for(int c = r, l = 0; c < n2; c += R, ++l)
+        for(int i = 0; i < n1; ++i)
+          X(i, l) = A21.CRef(c, i);
+      multimodular_trsm_left_lower(A11, X, config, timings);
+      const std::byte *buf = ex.node_all_gather(
+        [&](const int q) { return size_t(n1) * size_t(share(q, n2)); }, X);
+      for(int q = 0; q < R; ++q)
+        {
+          const auto *p = reinterpret_cast<const El::byte *>(
+            buf + ex.node_offset(q) * S);
+          for(int c = q; c < n2; c += R)
+            for(int i = 0; i < n1; ++i)
+              p = A21.Ref(c, i).Deserialize(p);
+        }
+    }
+    {
+      const int m = share(r, n2);
+      El::Matrix<El::BigFloat> C(m, n2), Ar(m, n1);
+      for(int l = 0; l < m; ++l)
+        {
+          const int i = r + l * R;
+          for(int j = 0; j < n2; ++j)
+            C(l, j) = A22.CRef(i, j);
+          for(int k = 0; k < n1; ++k)
+            Ar(l, k) = A21.CRef(i, k);
+        }
+      // lower triangle: row i >= column j
+      std::vector<int> row_start(n2, 0), row_end(n2, -1);
+      for(int j = 0; j < n2; ++j)
+        {
+          const int l0 = j <= r ? 0 : (j - r + R - 1) / R;
+          if(l0 < m)
+            {
+              row_start[j] = l0;
+              row_end[j] = m - 1;
+            }
+        }
+      if(m > 0)
+        multimodular_gemm_sub(C, Ar, El::TRANSPOSE, A21, row_start, row_end,
+                              config, timings);
+      const std::byte *buf = ex.node_all_gather(
+        [&](const int q) { return size_t(share(q, n2)) * size_t(n2); }, C);
+      for(int q = 0; q < R; ++q)
+        {
+          const auto *p = reinterpret_cast<const El::byte *>(
+            buf + ex.node_offset(q) * S);
+          for(int j = 0; j < n2; ++j)
+            for(int i = q; i < n2; i += R)
+              p = A22.Ref(i, j).Deserialize(p);
+        }
+    }
+    multimodular_cholesky_lower(A22, config, timings);
   }
 }
 
@@ -38,7 +140,7 @@ void multimodular_cholesky_upper_dist(El::DistMatrix<El::BigFloat> &A,
                                       const bool mm_diag,
                                       const Multimodular_Blas_Config &config,
                                       Multimodular_Cholesky_Dist_Timings &t,
-                                      Timers *timers)
+                                      Timers *timers, const int node_mode)
 {
   // Scoped SDPB timers per phase (summed over panels by the profile readers)
   std::optional<Scoped_Timer> phase;
@@ -60,6 +162,15 @@ void multimodular_cholesky_upper_dist(El::DistMatrix<El::BigFloat> &A,
 
   const Int n = A.Height();
   const Int bsize = block_size > 0 ? block_size : Blocksize();
+  std::unique_ptr<Node_Diag_Exchange> node_exchange;
+  const bool node_diag = (node_mode & mmq_node_diag) != 0,
+             node_factor = (node_mode & mmq_node_factor) != 0 && mm_diag;
+  if((node_diag || node_factor) && n > 0)
+    {
+      begin("diag_setup");
+      node_exchange = std::make_unique<Node_Diag_Exchange>(
+        grid, size_t(Min(bsize, n)) * size_t(Min(bsize, n)));
+    }
   std::vector<int> row_start, row_end;
   for(Int k = 0; k < n; k += bsize)
     {
@@ -70,9 +181,23 @@ void multimodular_cholesky_upper_dist(El::DistMatrix<El::BigFloat> &A,
       auto A12 = A(ind1, ind2);
       auto A22 = A(ind2, ind2);
 
+      // diag: the copy of the diagonal block to every rank (sub-timer
+      // gather, including any wait for the slowest rank's update) and its
+      // factorization (factor)
       begin("diag");
       auto start = Clock::now();
-      A11_STAR_STAR = A11;
+      std::optional<Scoped_Timer> sub;
+      if(timers != nullptr)
+        sub.emplace(*timers, "gather");
+      if(node_diag)
+        node_exchange->all_gather(A11, A11_STAR_STAR);
+      else
+        A11_STAR_STAR = A11;
+      sub.reset();
+      t.diag_gather += seconds_since(start);
+      const auto factor_start = Clock::now();
+      if(timers != nullptr)
+        sub.emplace(*timers, "factor");
       if(mm_diag)
         {
           // L = U^T from the upper triangle; the strictly upper part of
@@ -82,7 +207,10 @@ void multimodular_cholesky_upper_dist(El::DistMatrix<El::BigFloat> &A,
           for(Int j = 0; j < nb; ++j)
             for(Int i = 0; i < nb; ++i)
               L(i, j) = i >= j ? a(j, i) : BigFloat(0);
-          multimodular_cholesky_lower(L, config, t.mm);
+          if(node_factor)
+            node_cholesky_lower(L, *node_exchange, config, t.mm);
+          else
+            multimodular_cholesky_lower(L, config, t.mm);
           for(Int j = 0; j < nb; ++j)
             for(Int i = 0; i <= j; ++i)
               a(i, j) = L(j, i);
@@ -91,6 +219,8 @@ void multimodular_cholesky_upper_dist(El::DistMatrix<El::BigFloat> &A,
         {
           Cholesky(UPPER, A11_STAR_STAR);
         }
+      sub.reset();
+      t.diag_factor += seconds_since(factor_start);
       A11 = A11_STAR_STAR;
       t.diag += seconds_since(start);
 
@@ -105,8 +235,8 @@ void multimodular_cholesky_upper_dist(El::DistMatrix<El::BigFloat> &A,
       begin("redist");
       start = Clock::now();
       A12_STAR_MC.AlignWith(A22);
-      A12_STAR_MC = A12_STAR_VR;
       A12_STAR_MR.AlignWith(A22);
+      A12_STAR_MC = A12_STAR_VR;
       A12_STAR_MR = A12_STAR_VR;
       t.redist += seconds_since(start);
 

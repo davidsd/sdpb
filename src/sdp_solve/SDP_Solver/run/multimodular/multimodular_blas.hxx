@@ -114,16 +114,25 @@ void multimodular_gemm_sub(El::Matrix<El::BigFloat> &C,
 // A22 -= A12^T A12 by multimodular BLAS.
 // block_size <= 0: El::Blocksize(). mm_diag: diagonal blocks by
 // multimodular_cholesky_lower instead of El::Cholesky.
+// node_mode, bits (the same factor, bit for bit, in every mode):
+//   mmq_node_diag (--qCholeskyNodeDiag): each diagonal block is gathered
+//     once per node into node-shared memory instead of once per rank;
+//   mmq_node_factor (--qCholeskyNodeFactor), with mm_diag: each diagonal
+//     block's factorization is shared among the node's ranks.
+constexpr int mmq_node_diag = 1, mmq_node_factor = 2;
 struct Multimodular_Cholesky_Dist_Timings
 {
   double diag = 0, panel = 0, redist = 0, update = 0;
+  // parts of diag: the gather of the diagonal block, its factorization
+  double diag_gather = 0, diag_factor = 0;
   Multimodular_Blas_Timings mm;
 };
 void multimodular_cholesky_upper_dist(El::DistMatrix<El::BigFloat> &A,
                                       int block_size, bool mm_diag,
                                       const Multimodular_Blas_Config &config,
                                       Multimodular_Cholesky_Dist_Timings &t,
-                                      Timers *timers = nullptr);
+                                      Timers *timers = nullptr,
+                                      int node_mode = 0);
 // Estimated workspace per rank, in bytes, of
 // multimodular_cholesky_upper_dist for an n x n matrix on a grid of
 // grid_height rows: the residues of the trailing update's C (column_chunk

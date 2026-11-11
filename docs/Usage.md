@@ -133,6 +133,9 @@ in `test/data/sdp2.zip` with a command like
 In addition to having the same block structure, the runs must also use
 the same `precision`, and number and distribution of cores.
 
+For large SDPs on many nodes, see the experimental options in
+[Many_nodes.md](Many_nodes.md).
+
 ## Solving SDPA problems
 
 `sdpb` can also solve general (non-polynomial) semidefinite programs in the SDPA format,

@@ -96,6 +96,8 @@ def build(bld):
                          'src/sdp_solve/SDP_Solver/run/print_iteration.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/step.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/initialize_schur_complement_solver/initialize_schur_complement_solver.cxx',
+                         'src/sdp_solve/SDP_Solver/run/step/Q_Grids.cxx',
+                         'src/sdp_solve/SDP_Solver/run/step/Q_Solve_Cache.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/initialize_schur_complement_solver/compute_schur_complement.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/initialize_schur_complement_solver/compute_Q.cxx',
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context/BigInt_Shared_Memory_Syrk_Context.cxx',

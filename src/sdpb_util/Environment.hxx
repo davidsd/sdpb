@@ -19,6 +19,9 @@ struct Environment
   [[nodiscard]] int num_nodes() const;
   // Node index for current rank, 0..(num_nodes-1)
   [[nodiscard]] int node_index() const;
+  // The same for code without an Environment at hand (-1 before one is
+  // initialized)
+  [[nodiscard]] static int process_node_index();
 
   // Memory available on a node at the initialization (in bytes)
   [[nodiscard]] size_t initial_node_mem_available() const;
