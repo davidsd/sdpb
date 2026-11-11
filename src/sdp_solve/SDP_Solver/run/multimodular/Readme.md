@@ -75,9 +75,9 @@ Results do not depend on which of these layouts is used (unit test `Multimodular
 The defaults are in `Multimodular_Blas_Config` (`multimodular_blas.hxx`); there are no run-time options besides
 `--multimodularTrsm`. For tests, the environment variables `SDPB_MULTIMODULAR_BASE_SIZE` and
 `SDPB_MULTIMODULAR_DISTRIBUTED_MIN` override `base_size` and `distributed_min_size` in sdpb's
-`--multimodularTrsm` path, so that small SDPs go through the multimodular kernels.
+`--multimodularTrsm` path and in `--multimodularCholeskyQ`, so that small SDPs go through the multimodular kernels.
 
-Limits: sdpb refuses `--multimodularTrsm` above `--precision=3200` (the residues and CRT in double are exact only up
+Limits: sdpb refuses `--multimodularTrsm` and `--multimodularCholeskyQ` above `--precision=3200` (the residues and CRT in double are exact only up
 to about 322 primes; `check_multimodular_precision()`, checked at startup), and with SDPA input (`.dat`, `.dat-s`),
 whose solver does not use it.
 

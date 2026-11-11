@@ -3,6 +3,7 @@
 #include "sdpb_util/Timers/Timers.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdp_solve/memory_estimates.hxx"
+#include "sdp_solve/SDP_Solver/run/multimodular/multimodular_blas.hxx"
 
 // Compute the quantities needed to solve the Schur complement
 // equation
@@ -73,7 +74,7 @@ void initialize_schur_complement_solver(
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
   El::DistMatrix<El::BigFloat> &Q, Timers &timers,
   El::Matrix<int32_t> &block_timings_ms, const bool multimodular_trsm,
-  const Verbosity verbosity)
+  const int64_t multimodular_cholesky_Q, const Verbosity verbosity)
 {
   Scoped_Timer initialize_timer(timers, "initializeSchurComplementSolver");
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
@@ -96,7 +97,21 @@ void initialize_schur_complement_solver(
   Scoped_Timer Cholesky_timer(timers, "Cholesky_Q");
   try
     {
-      Cholesky(El::UpperOrLowerNS::UPPER, Q);
+      if(multimodular_cholesky_Q > 0)
+        {
+          // El's blocked Cholesky with the trailing updates and the
+          // diagonal blocks by multimodular BLAS, see
+          // multimodular_cholesky_dist.cxx
+          Multimodular_Blas_Config config;
+          apply_multimodular_test_overrides(config);
+          Multimodular_Cholesky_Dist_Timings t;
+          // No per-panel timers (they would add ~5 entries per panel per
+          // iteration to the timer list); Cholesky_Q times the whole.
+          multimodular_cholesky_upper_dist(Q, int(multimodular_cholesky_Q),
+                                           true, config, t, nullptr);
+        }
+      else
+        Cholesky(El::UpperOrLowerNS::UPPER, Q);
     }
   catch(std::exception &e)
     {

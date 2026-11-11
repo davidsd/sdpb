@@ -20,6 +20,8 @@
 #include <cstddef>
 #include <vector>
 
+struct Timers;
+
 // Test hook: SDPB_MULTIMODULAR_BASE_SIZE and SDPB_MULTIMODULAR_DISTRIBUTED_MIN
 // (environment) override base_size and distributed_min_size, so that the
 // multimodular kernels run on small test SDPs, whose Schur blocks are below
@@ -98,6 +100,39 @@ void multimodular_gemm_sub(El::Matrix<El::BigFloat> &C,
 
 // B := L^{-1} B, L lower triangular with nonzero diagonal
 // (only the lower triangle of L is read).
+void multimodular_gemm_sub(El::Matrix<El::BigFloat> &C,
+                           const El::Matrix<El::BigFloat> &A,
+                           El::Orientation orientation_B,
+                           const El::Matrix<El::BigFloat> &B,
+                           const std::vector<int> &row_start,
+                           const std::vector<int> &row_end,
+                           const Multimodular_Blas_Config &config,
+                           Multimodular_Blas_Timings &timings);
+
+// Cholesky of a distributed matrix, A = U^T U (upper), as
+// El::cholesky::UpperVariant3Blocked, with the trailing update
+// A22 -= A12^T A12 by multimodular BLAS.
+// block_size <= 0: El::Blocksize(). mm_diag: diagonal blocks by
+// multimodular_cholesky_lower instead of El::Cholesky.
+struct Multimodular_Cholesky_Dist_Timings
+{
+  double diag = 0, panel = 0, redist = 0, update = 0;
+  Multimodular_Blas_Timings mm;
+};
+void multimodular_cholesky_upper_dist(El::DistMatrix<El::BigFloat> &A,
+                                      int block_size, bool mm_diag,
+                                      const Multimodular_Blas_Config &config,
+                                      Multimodular_Cholesky_Dist_Timings &t,
+                                      Timers *timers = nullptr);
+// Estimated workspace per rank, in bytes, of
+// multimodular_cholesky_upper_dist for an n x n matrix on a grid of
+// grid_height rows: the residues of the trailing update's C (column_chunk
+// columns) and A12^T (block_size columns) for the first panel. An estimate
+// from the allocations.
+size_t multimodular_cholesky_upper_dist_bytes(
+  int n, int grid_height, int block_size,
+  const Multimodular_Blas_Config &config);
+
 void multimodular_trsm_left_lower(const El::Matrix<El::BigFloat> &L,
                                   El::Matrix<El::BigFloat> &B,
                                   const Multimodular_Blas_Config &config,

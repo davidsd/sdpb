@@ -470,6 +470,21 @@ TEST_CASE("end-to-end_tests")
       test.run();
     }
 
+    SECTION("primal_dual_optimal --multimodularCholeskyQ")
+    {
+      INFO("Same as primal_dual_optimal, with the Cholesky of Q by "
+           "multimodular BLAS in panels of 8 columns on the 6 ranks' grid "
+           "(equal at working precision).");
+      End_To_End_Test test("SingletScalar_cT_test_nmax6/primal_dual_optimal");
+      test.default_sdpb_args = default_sdpb_args;
+      for(const std::string arg : {"--multimodularCholeskyQ", "8"})
+        test.default_sdpb_args.push_back(arg);
+      test.runner_name_suffix = "/multimodularCholeskyQ";
+      // the reference outputs come from two runs (a restart)
+      test.run_sdpb_twice = true;
+      test.run();
+    }
+
     SECTION("primal_dual_optimal_reduced")
     {
       INFO("Same as primal_dual_optimal, but with a custom "

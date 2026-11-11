@@ -1,9 +1,12 @@
 #include "../Solver_Parameters.hxx"
 
 #include "Memory_Limit.hxx"
+#include "sdpb_util/assert.hxx"
 #include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
 #include <boost/program_options.hpp>
+
+#include <limits>
 
 namespace fs = std::filesystem;
 
@@ -37,6 +40,21 @@ boost::program_options::options_description Solver_Parameters::options()
     "modulo primes, dgemm, CRT) instead of BigFloat El::Cholesky and "
     "El::Trsm. Backward errors are at the level of El's. Supports "
     "--precision up to 3200 bits; SDPB input only.");
+  result.add_options()(
+    "multimodularCholeskyQ",
+    boost::program_options::value<int64_t>(&multimodular_cholesky_Q)
+      ->default_value(0)
+      ->notifier([](const int64_t value) {
+        if(value < 0 || value > std::numeric_limits<int>::max())
+          RUNTIME_ERROR("--multimodularCholeskyQ=", value,
+                        ": the panel width must be 0 (off) or positive.");
+      }),
+    "Experimental: compute the Cholesky decomposition of Q as El does "
+    "(same panels and redistributions), but with the diagonal blocks and "
+    "the trailing updates by multimodular BLAS. The value is the panel "
+    "width (64 was fastest on 5-10 Expanse nodes; El's default is 128); "
+    "0 (default) uses El::Cholesky. Supports --precision up to 3200 bits; "
+    "SDPB input only.");
   result.add_options()(
     "findPrimalFeasible",
     boost::program_options::bool_switch(&find_primal_feasible)
@@ -194,6 +212,7 @@ boost::property_tree::ptree to_property_tree(const Solver_Parameters &p)
   result.put("checkpointInterval", p.checkpoint_interval);
   result.put("findPrimalFeasible", p.find_primal_feasible);
   result.put("multimodularTrsm", p.multimodular_trsm);
+  result.put("multimodularCholeskyQ", p.multimodular_cholesky_Q);
   result.put("findDualFeasible", p.find_dual_feasible);
   result.put("detectPrimalFeasibleJump", p.detect_primal_feasible_jump);
   result.put("detectDualFeasibleJump", p.detect_dual_feasible_jump);
@@ -223,6 +242,7 @@ std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
      << "maxMemory                    = " << p.max_memory << '\n'
      << "maxSharedMemory              = " << p.max_shared_memory << '\n'
      << "multimodularTrsm             = " << p.multimodular_trsm << '\n'
+     << "multimodularCholeskyQ        = " << p.multimodular_cholesky_Q << '\n'
      << "findPrimalFeasible           = " << p.find_primal_feasible << '\n'
      << "findDualFeasible             = " << p.find_dual_feasible << '\n'
      << "detectPrimalFeasibleJump     = " << p.detect_primal_feasible_jump

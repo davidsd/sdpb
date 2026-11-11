@@ -519,3 +519,69 @@ TEST_CASE("Multimodular_Block_Factor")
     REQUIRE(bitwise_equal(X_results.at(0), X_results.at(1)));
   }
 }
+
+// Cholesky of a distributed matrix (SDPB's Q) with the trailing
+// update by multimodular BLAS, against El::Cholesky(UPPER) on the same grid.
+TEST_CASE("multimodular_cholesky_upper_dist vs El")
+{
+  const int precision = El::gmp::Precision();
+  const El::Grid grid(El::mpi::COMM_WORLD);
+  const int n = GENERATE(50, 130, 300);
+  // 0: well conditioned; 1: D S D with D_ii = 2^(-i/2), condition ~2^n
+  const int scaled = GENERATE(0, 1);
+  DYNAMIC_SECTION("n=" << n << " scaled=" << scaled)
+  {
+    // The same matrix on every rank: built on rank 0, spread from [CIRC,CIRC]
+    El::DistMatrix<El::BigFloat, El::CIRC, El::CIRC> S_circ(n, n, grid);
+    if(S_circ.CrossRank() == S_circ.Root())
+      {
+        auto S = random_spd(n);
+        if(scaled)
+          for(int j = 0; j < n; ++j)
+            for(int i = 0; i < n; ++i)
+              mpf_div_2exp(S.Ref(i, j).gmp_float.get_mpf_t(),
+                           S.CRef(i, j).gmp_float.get_mpf_t(), (i + j) / 2);
+        S_circ.Matrix() = S;
+      }
+    const El::DistMatrix<El::BigFloat> S(S_circ);
+    El::DistMatrix<El::BigFloat> U_el(S);
+    El::Cholesky(El::UPPER, U_el);
+    const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> U_el_star(U_el),
+      S_star(S);
+
+    const int block_size = GENERATE(32, 64, 128);
+    const bool mm_diag = GENERATE(false, true);
+    DYNAMIC_SECTION("block_size=" << block_size << " mm_diag=" << mm_diag)
+    {
+      El::DistMatrix<El::BigFloat> U(S);
+      Multimodular_Blas_Config config;
+      Multimodular_Cholesky_Dist_Timings timings;
+      multimodular_cholesky_upper_dist(U, block_size, mm_diag, config,
+                                       timings);
+      const El::DistMatrix<El::BigFloat, El::STAR, El::STAR> U_star(U);
+      const auto &a = U_star.LockedMatrix();
+      const auto &b = U_el_star.LockedMatrix();
+      // Column by column (the scaled case spans ~2^(n/2) between columns):
+      // max_i |U_ij - U_el_ij| / max_i |U_el_ij| over the upper triangle
+      double worst = -INFINITY;
+      for(int j = 0; j < n; ++j)
+        {
+          El::BigFloat max_diff = 0, max_b = 0;
+          for(int i = 0; i <= j; ++i)
+            {
+              max_diff
+                = std::max(max_diff, El::Abs(a.CRef(i, j) - b.CRef(i, j)));
+              max_b = std::max(max_b, El::Abs(b.CRef(i, j)));
+            }
+          if(max_diff != El::BigFloat(0))
+            worst = std::max(worst, log2_abs(max_diff) - log2_abs(max_b));
+        }
+      CAPTURE(worst);
+      CHECK(worst < -precision + 16);
+      // The strictly lower triangle is untouched, as in El::Cholesky(UPPER)
+      for(int j = 0; j < n; ++j)
+        for(int i = j + 1; i < n; ++i)
+          REQUIRE(a.CRef(i, j) == S_star.LockedMatrix().CRef(i, j));
+    }
+  }
+}
