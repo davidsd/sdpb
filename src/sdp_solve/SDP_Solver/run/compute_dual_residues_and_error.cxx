@@ -16,12 +16,13 @@ void compute_dual_residues_and_error(
   auto dual_residues_block(dual_residues.blocks.begin());
   auto primal_objective_c_block(sdp.primal_objective_c.blocks.begin());
   auto y_block(y.blocks.begin());
-  auto free_var_matrix_block(sdp.free_var_matrix.blocks.begin());
+  El::DistMatrix<El::BigFloat> B_scratch; // for --sparseB
 
   size_t Q_index(0);
   El::BigFloat local_max(0);
   for(auto &block_index : block_info.block_indices)
     {
+      const auto &free_var_matrix_block = sdp.free_var_block(Q_index, B_scratch);
       El::Zero(*dual_residues_block);
       const size_t block_size(block_info.num_points[block_index]),
         dim(block_info.dimensions[block_index]);
@@ -47,7 +48,7 @@ void compute_dual_residues_and_error(
       // dualResidues -= B * y
       // TODO: Shouldn't this be Gemv since y is a vector?
       El::Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL,
-               El::BigFloat(-1), *free_var_matrix_block, *y_block,
+               El::BigFloat(-1), free_var_matrix_block, *y_block,
                El::BigFloat(1), *dual_residues_block);
       // dualResidues += c
       El::Axpy(El::BigFloat(1), *primal_objective_c_block,
@@ -57,7 +58,6 @@ void compute_dual_residues_and_error(
 
       ++primal_objective_c_block;
       ++y_block;
-      ++free_var_matrix_block;
       ++dual_residues_block;
       ++Q_index;
     }

@@ -2,6 +2,7 @@
 #include "sdp_solve/SDP.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/Matrix_Normalizer.hxx"
+#include "sdp_solve/SDP_Solver/run/multimodular/Multimodular_Block_Factor.hxx"
 #include "sdp_solve/memory_estimates.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
@@ -11,7 +12,8 @@ void initialize_schur_off_diagonal(
   const Block_Diagonal_Matrix &schur_complement,
   Block_Matrix &schur_off_diagonal,
   Block_Diagonal_Matrix &schur_complement_cholesky, Timers &timers,
-  El::Matrix<int32_t> &block_timings_ms, const Verbosity verbosity)
+  El::Matrix<int32_t> &block_timings_ms, const bool multimodular_trsm,
+  const Verbosity verbosity)
 {
   schur_off_diagonal.blocks.clear();
   // Setting correct width is needed for Block_Matrix_Normalizer.
@@ -24,15 +26,33 @@ void initialize_schur_off_diagonal(
     {
       const auto global_block_index = block_info.block_indices.at(block);
       auto block_index_string = std::to_string(global_block_index);
+      // --multimodularTrsm: Cholesky and L^{-1} B with multimodular BLAS,
+      // see SDP_Solver/run/multimodular/Readme.md
+      std::unique_ptr<Multimodular_Block_Factor> multimodular_factor;
+      if(multimodular_trsm)
+        {
+          Multimodular_Blas_Config config;
+          apply_multimodular_test_overrides(config);
+          multimodular_factor = std::make_unique<Multimodular_Block_Factor>(
+            schur_complement.blocks[block], config);
+        }
       {
         Scoped_Timer cholesky_timer(timers, "cholesky_" + block_index_string);
-        schur_complement_cholesky.blocks[block]
-          = schur_complement.blocks[block];
-
         try
           {
-            Cholesky(El::UpperOrLowerNS::LOWER,
-                     schur_complement_cholesky.blocks[block]);
+            if(multimodular_factor)
+              {
+                multimodular_factor->cholesky(
+                  schur_complement.blocks[block],
+                  schur_complement_cholesky.blocks[block], timers);
+              }
+            else
+              {
+                schur_complement_cholesky.blocks[block]
+                  = schur_complement.blocks[block];
+                Cholesky(El::UpperOrLowerNS::LOWER,
+                         schur_complement_cholesky.blocks[block]);
+              }
           }
         catch(std::exception &e)
           {
@@ -47,11 +67,14 @@ void initialize_schur_off_diagonal(
       // schur_off_diagonal = L^{-1} B
       Scoped_Timer solve_timer(timers, "solve_" + block_index_string);
 
-      schur_off_diagonal.blocks.push_back(sdp.free_var_matrix.blocks[block]);
-      El::Trsm(El::LeftOrRightNS::LEFT, El::UpperOrLowerNS::LOWER,
-               El::OrientationNS::NORMAL, El::UnitOrNonUnitNS::NON_UNIT,
-               El::BigFloat(1), schur_complement_cholesky.blocks[block],
-               schur_off_diagonal.blocks[block]);
+      schur_off_diagonal.blocks.push_back(sdp.free_var_block_copy(block));
+      if(multimodular_factor)
+        multimodular_factor->solve(schur_off_diagonal.blocks[block], timers);
+      else
+        El::Trsm(El::LeftOrRightNS::LEFT, El::UpperOrLowerNS::LOWER,
+                 El::OrientationNS::NORMAL, El::UnitOrNonUnitNS::NON_UNIT,
+                 El::BigFloat(1), schur_complement_cholesky.blocks[block],
+                 schur_off_diagonal.blocks[block]);
       block_timings_ms(global_block_index, 0)
         += solve_timer.elapsed_milliseconds();
     }
@@ -102,13 +125,14 @@ void compute_Q(const Environment &env, const SDP &sdp,
                BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
                El::DistMatrix<El::BigFloat> &Q, Timers &timers,
                El::Matrix<int32_t> &block_timings_ms,
-               const Verbosity verbosity)
+               const bool multimodular_trsm, const Verbosity verbosity)
 {
   Scoped_Timer timer(timers, "Q");
 
   initialize_schur_off_diagonal(env, sdp, block_info, schur_complement,
                                 schur_off_diagonal, schur_complement_cholesky,
-                                timers, block_timings_ms, verbosity);
+                                timers, block_timings_ms, multimodular_trsm,
+                                verbosity);
   syrk_Q(env, schur_off_diagonal, bigint_syrk_context, Q, timers,
          block_timings_ms, verbosity);
 }

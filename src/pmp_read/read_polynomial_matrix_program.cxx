@@ -15,14 +15,14 @@ namespace
     MPI_Group_Wrapper mpi_group;
     std::vector<size_t> file_indices;
 
-    Mapping(const Environment &env, const std::vector<fs::path> &input_files)
+    // Only files with indices in files_to_parse are distributed.
+    Mapping(const Environment &env, const std::vector<fs::path> &input_files,
+            const std::vector<size_t> &files_to_parse)
     {
-      const size_t num_files = input_files.size();
-
       // Distribute files among processes according to file size.
       std::vector<Block_Cost> file_costs;
-      file_costs.reserve(num_files);
-      for(size_t i = 0; i < num_files; ++i)
+      file_costs.reserve(files_to_parse.size());
+      for(const size_t i : files_to_parse)
         {
           file_costs.emplace_back(fs::file_size(input_files.at(i)), i);
         }
@@ -97,14 +97,16 @@ namespace
   }
 }
 
-Polynomial_Matrix_Program
-read_polynomial_matrix_program(const Environment &env,
-                               const fs::path &input_file,
-                               const int64_t max_num_poles,
-                               const Verbosity &verbosity, Timers &timers)
+Polynomial_Matrix_Program read_polynomial_matrix_program(
+  const Environment &env, const fs::path &input_file,
+  const int64_t max_num_poles, const Verbosity &verbosity, Timers &timers,
+  const std::function<std::optional<size_t>(const fs::path &)>
+    &known_num_matrices,
+  std::vector<std::pair<fs::path, size_t>> *file_matrix_counts)
 {
-  return read_polynomial_matrix_program(env, std::vector{input_file},
-                                        max_num_poles, verbosity, timers);
+  return read_polynomial_matrix_program(
+    env, std::vector{input_file}, max_num_poles, verbosity, timers,
+    known_num_matrices, file_matrix_counts);
 }
 
 // Read Polynomal Matrix Program in one of the supported formats.
@@ -118,11 +120,12 @@ read_polynomial_matrix_program(const Environment &env,
 // TODO: since IO is often a bottleneck, we can reduce it:
 //   root of each group copies file content to a shared memory window,
 //   and other processes read it.
-Polynomial_Matrix_Program
-read_polynomial_matrix_program(const Environment &env,
-                               const std::vector<fs::path> &input_files,
-                               const int64_t max_num_poles,
-                               const Verbosity &verbosity, Timers &timers)
+Polynomial_Matrix_Program read_polynomial_matrix_program(
+  const Environment &env, const std::vector<fs::path> &input_files,
+  const int64_t max_num_poles, const Verbosity &verbosity, Timers &timers,
+  const std::function<std::optional<size_t>(const fs::path &)>
+    &known_num_matrices,
+  std::vector<std::pair<fs::path, size_t>> *file_matrix_counts)
 {
   Scoped_Timer timer(timers, "read_pmp");
 
@@ -141,13 +144,27 @@ read_polynomial_matrix_program(const Environment &env,
   const auto all_files = collect_files_expanding_nsv(input_files);
   const size_t num_files = all_files.size();
 
+  // Number of matrices of the files that are not parsed
+  std::vector<std::optional<size_t>> known_counts(num_files);
+  std::vector<size_t> files_to_parse;
+  for(size_t i = 0; i < num_files; ++i)
+    {
+      if(known_num_matrices)
+        known_counts.at(i) = known_num_matrices(all_files.at(i));
+      if(!known_counts.at(i).has_value())
+        files_to_parse.push_back(i);
+    }
+  ASSERT(!files_to_parse.empty(),
+         "All input files have a known number of matrices; at least the "
+         "file with the objective must be read.");
+
   // Parse files
 
   std::map<size_t, PMP_File_Parse_Result> parse_results;
   {
     Scoped_Timer parse_timer(timers, "parse");
     // Determine which processes will parse which files
-    const Mapping mapping(env, all_files);
+    const Mapping mapping(env, all_files, files_to_parse);
     // Cumulative number of matrices in all files parsed
     // by the current group of processes
     size_t num_matrices_in_group = 0;
@@ -201,6 +218,12 @@ read_polynomial_matrix_program(const Environment &env,
       {
         num_matrices_per_file.at(file_index) = parse_result.num_matrices;
       }
+    for(size_t file_index = 0; file_index < num_files; ++file_index)
+      {
+        if(known_counts.at(file_index).has_value())
+          num_matrices_per_file.at(file_index)
+            = known_counts.at(file_index).value();
+      }
     El::mpi::AllReduce(num_matrices_per_file.data(), num_files, El::mpi::MAX,
                        El::mpi::COMM_WORLD);
 
@@ -215,6 +238,14 @@ read_polynomial_matrix_program(const Environment &env,
     num_matrices
       = std::accumulate(num_matrices_per_file.begin(),
                         num_matrices_per_file.end(), static_cast<size_t>(0));
+
+    if(file_matrix_counts != nullptr)
+      {
+        file_matrix_counts->clear();
+        for(size_t file_index = 0; file_index < num_files; ++file_index)
+          file_matrix_counts->emplace_back(
+            all_files.at(file_index), num_matrices_per_file.at(file_index));
+      }
   }
 
   // Get objective, normalization and polynomial vector matrices

@@ -36,6 +36,17 @@ namespace
   }
 }
 
+// Used by the resident mode (sdpb --controlDir) to set new objectives
+// from the text of an objectives.json.
+void read_objectives_from_stream(
+  const El::Grid &grid, std::istream &objectives_stream,
+  El::BigFloat &objective_const,
+  El::DistMatrix<El::BigFloat> &dual_objective_b)
+{
+  read_objectives_stream(grid, objectives_stream, objective_const,
+                         dual_objective_b);
+}
+
 void read_objectives(const fs::path &sdp_path, const El::Grid &grid,
                      El::BigFloat &objective_const,
                      El::DistMatrix<El::BigFloat> &dual_objective_b,

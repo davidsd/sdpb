@@ -25,3 +25,13 @@ struct SDP_Block_Data
   SDP_Block_Data &operator=(const SDP_Block_Data &other) = delete;
   SDP_Block_Data &operator=(SDP_Block_Data &&other) = default;
 };
+
+struct SDP;
+
+// Set the local block sdp_block_local.block_index_local of sdp from
+// sdp_block_local, which is initialized only at grid.Comm().Rank() == 0.
+// Collective over grid.Comm().
+void set_sdp_block_from_root(const El::Grid &grid,
+                             const Block_Info &block_info,
+                             const SDP_Block_Data &sdp_block_local, SDP &sdp,
+                             bool sparse_free_var_matrix);

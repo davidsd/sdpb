@@ -115,6 +115,7 @@ def build(bld):
                       'src/sdpb_util/bigint_shared_memory/fmpz/Fmpz_Matrix.cxx',
                       'src/sdpb_util/bigint_shared_memory/fmpz/Fmpz_Comb.cxx',
                       'src/sdpb_util/bigint_shared_memory/fmpz/residues.cxx',
+                      'src/sdpb_util/bigint_shared_memory/fmpz/blas_residues.cxx',
                       'src/sdpb_util/block_mapping/Abstract_Block_Info.cxx',
                       'src/sdpb_util/block_mapping/Block_Mapping.cxx',
                       'src/sdpb_util/Timers/Scoped_Timer.cxx',
@@ -166,11 +167,15 @@ def build(bld):
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/Blas_Job.cxx',
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/blas_jobs/create_blas_job_schedule.cxx',
                          'src/sdp_solve/SDP_Solver/run/bigint_syrk/Bigint_Syrk_Config.cxx',
+                         'src/sdp_solve/SDP_Solver/run/multimodular/multimodular_gemm.cxx',
+                         'src/sdp_solve/SDP_Solver/run/multimodular/blocked_cholesky_trsm.cxx',
+                         'src/sdp_solve/SDP_Solver/run/multimodular/Multimodular_Block_Factor.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/compute_search_direction/compute_search_direction.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/compute_search_direction/compute_schur_RHS.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/compute_search_direction/solve_schur_complement_equation.cxx',
                          'src/sdp_solve/SDP_Solver_Terminate_Reason.cxx',
-                         'src/sdp_solve/Write_Solution.cxx']
+                         'src/sdp_solve/Write_Solution.cxx',
+                         'src/sdp_solve/Block_Matrix/Sparse_Block_Matrix.cxx']
 
     bld.stlib(source=sdp_solve_sources,
               target='sdp_solve',
@@ -209,12 +214,15 @@ def build(bld):
 
     # SDPB executable
     bld.program(source=['src/sdpb/main.cxx',
-                        'src/sdpb/SDPB_Parameters.cxx'],
+                        'src/sdpb/SDPB_Parameters.cxx',
+                        'src/sdpb/resident/Control_Channel.cxx',
+                        'src/sdpb/resident/Resident.cxx'],
                 target='sdpb',
                 cxxflags=default_flags,
                 defines=default_defines,
                 includes=default_includes,
-                use=use_packages + ['sdp_solve', 'sdpa_solve', 'mpsolve'],
+                use=use_packages + ['sdp_solve', 'sdpa_solve', 'mpsolve',
+                                    'pmp_read', 'pmp', 'pmp2sdp_lib'],
                 **gpu_link
                 )
 
@@ -227,6 +235,7 @@ def build(bld):
                        'src/pmp2sdp/write_normalization_json.cxx',
                        'src/pmp2sdp/write_sdp.cxx',
                        'src/pmp2sdp/write_control_json.cxx',
+                       'src/pmp2sdp/Reuse_SDP.cxx',
                        'src/pmp2sdp/Archive_Writer.cxx',
                        'src/pmp2sdp/Archive_Entry.cxx'
                        ]
@@ -391,6 +400,7 @@ def build(bld):
                         'test/src/integration_tests/cases/outer_limits.test.cxx',
                         'test/src/integration_tests/cases/pmp2sdp.test.cxx',
                         'test/src/integration_tests/cases/SDPLIB.test.cxx',
+                        'test/src/integration_tests/cases/resident.test.cxx',
                         'test/src/integration_tests/cases/sdpb.test.cxx'],
                 target='integration_tests',
                 install_path=None,
@@ -407,13 +417,16 @@ def build(bld):
                         'test/src/unit_tests/cases/block_data_serialization.test.cxx',
                         'test/src/unit_tests/cases/block_mapping.test.cxx',
                         'test/src/unit_tests/cases/Boost_Float.test.cxx',
+                        'test/src/unit_tests/cases/blas_residues.test.cxx',
                         'test/src/unit_tests/cases/boost_serialization.test.cxx',
                         'test/src/unit_tests/cases/create_blas_job_schedule.test.cxx',
                         'test/src/unit_tests/cases/calculate_matrix_square.test.cxx',
                         'test/src/unit_tests/cases/copy_matrix.test.cxx',
                         'test/src/unit_tests/cases/json.test.cxx',
+                        'test/src/unit_tests/cases/multimodular_blas.test.cxx',
                         'test/src/unit_tests/cases/pmp_sampling.test.cxx',
-                        'test/src/unit_tests/cases/shared_window.test.cxx'],
+                        'test/src/unit_tests/cases/shared_window.test.cxx',
+                        'test/src/unit_tests/cases/Sparse_Block_Matrix.test.cxx'],
                 target='unit_tests',
                 install_path=None,
                 cxxflags=default_flags,

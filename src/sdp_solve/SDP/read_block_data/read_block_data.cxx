@@ -27,7 +27,8 @@ namespace
   // sdp_block_local in initialized only at comm.Rank() == 0
   // Data from sdp_block_local is sent to DistMatrices in sdp
   void set_sdp_from_root(const El::Grid &grid, const Block_Info &block_info,
-                         const SDP_Block_Data &sdp_block_local, SDP &sdp)
+                         const SDP_Block_Data &sdp_block_local, SDP &sdp,
+                         const bool sparse_free_var_matrix)
   {
     const auto &comm = grid.Comm();
 
@@ -57,6 +58,12 @@ namespace
       B.Resize(block_info.get_schur_block_size(block_index),
                sdp.dual_objective_b.Height());
       copy_matrix_from_root(sdp_block_local.constraint_matrix, B, comm);
+      if(sparse_free_var_matrix)
+        {
+          // --sparseB: keep the nonzeros only; B keeps its grid
+          sdp.free_var_matrix_sparse.at(index) = Sparse_Block_Matrix(B);
+          B.Empty();
+        }
     }
 
     // sdp.bilinear_bases and sdp.bases_blocks
@@ -178,8 +185,19 @@ namespace
 }
 #endif
 
+// Used by the resident mode (sdpb --controlDir) to replace a block in memory.
+void set_sdp_block_from_root(const El::Grid &grid,
+                             const Block_Info &block_info,
+                             const SDP_Block_Data &sdp_block_local, SDP &sdp,
+                             const bool sparse_free_var_matrix)
+{
+  set_sdp_from_root(grid, block_info, sdp_block_local, sdp,
+                    sparse_free_var_matrix);
+}
+
 void read_block_data(const fs::path &sdp_path, const El::Grid &grid,
-                     const Block_Info &block_info, SDP &sdp, Timers &timers)
+                     const Block_Info &block_info, SDP &sdp, Timers &timers,
+                     const bool sparse_free_var_matrix)
 {
   Scoped_Timer timer(timers, "read_block_data");
 
@@ -188,6 +206,9 @@ void read_block_data(const fs::path &sdp_path, const El::Grid &grid,
   const size_t num_blocks(block_info.block_indices.size());
   sdp.primal_objective_c.blocks.resize(num_blocks);
   sdp.free_var_matrix.blocks.resize(num_blocks);
+  sdp.sparse_free_var_matrix = sparse_free_var_matrix;
+  if(sparse_free_var_matrix)
+    sdp.free_var_matrix_sparse.resize(num_blocks);
   sdp.bilinear_bases.resize(2 * num_blocks);
   sdp.bases_blocks.resize(2 * num_blocks);
 
@@ -246,13 +267,16 @@ void read_block_data(const fs::path &sdp_path, const El::Grid &grid,
             }
 
           Scoped_Timer sync_timer(timers, "synchronize");
-          set_sdp_from_root(grid, block_info, sdp_block_local, sdp);
+          set_sdp_from_root(grid, block_info, sdp_block_local, sdp,
+                            sparse_free_var_matrix);
         }
     }
 #ifdef SDPB_GPU
   // GPU builds with --gpu only (set_threaded_sdp_reading()), so that every
-  // other read is as before
-  else if(El::mpi::Size() == 1 && threaded_one_rank_reading)
+  // other read is as before; not with --sparseB, which this reader doesn't
+  // implement (and --gpu refuses)
+  else if(El::mpi::Size() == 1 && threaded_one_rank_reading
+          && !sparse_free_var_matrix)
     {
       read_blocks_one_rank(sdp_path, grid, block_info, sdp);
     }
@@ -285,7 +309,8 @@ void read_block_data(const fs::path &sdp_path, const El::Grid &grid,
             }
 
           Scoped_Timer sync_timer(timers, "synchronize");
-          set_sdp_from_root(grid, block_info, sdp_block_local, sdp);
+          set_sdp_from_root(grid, block_info, sdp_block_local, sdp,
+                            sparse_free_var_matrix);
         }
     }
 }
