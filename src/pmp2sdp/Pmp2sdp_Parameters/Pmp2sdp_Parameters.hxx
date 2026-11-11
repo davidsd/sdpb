@@ -16,10 +16,11 @@ struct Pmp2sdp_Parameters
   std::filesystem::path output_path;
   Block_File_Format output_format;
   bool zip = false;
+  // Existing SDP directory whose blocks are reused (--reuseSdp)
+  std::filesystem::path reuse_sdp;
   Verbosity verbosity;
 
   std::vector<std::string> command_arguments;
-
 
   Pmp2sdp_Parameters(int argc, char **argv);
   [[nodiscard]] bool is_valid() const;
