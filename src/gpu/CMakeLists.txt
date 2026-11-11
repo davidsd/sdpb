@@ -39,6 +39,7 @@ target_link_libraries(sdpb_gpu PRIVATE sdpb_gpu_options PUBLIC sdpb_gpu_libs)
 
 # Checks (src/gpu/README.md, "Tests"), outside the default build, in this build directory, e.g.
 #   cmake --build build --target gpu_checks mpfr_checks nccl_checks
+set(SDPB_GPU_CHECK_LF 28 CACHE STRING "Float size (limbs) of chol_tile_check")
 
 # Self-contained or on dumps of real blocks; they need a GPU
 add_executable(gram_check EXCLUDE_FROM_ALL test/gram_check.cu)
@@ -49,6 +50,7 @@ add_executable(gemm_check EXCLUDE_FROM_ALL test/gemm_check.cu)
 target_link_libraries(gemm_check PRIVATE sdpb_gpu sdpb_gpu_options)
 add_executable(chol_tile_check EXCLUDE_FROM_ALL test/chol_tile_check.cu)
 target_link_libraries(chol_tile_check PRIVATE sdpb_gpu_options sdpb_gpu_libs)
+target_compile_definitions(chol_tile_check PRIVATE CHECK_LF=${SDPB_GPU_CHECK_LF})
 add_executable(mpf_gemm_check EXCLUDE_FROM_ALL test/mpf_gemm_check.cu)
 target_link_libraries(mpf_gemm_check PRIVATE sdpb_gpu sdpb_gpu_options)
 add_executable(block_factor_check EXCLUDE_FROM_ALL test/block_factor_check.cu)

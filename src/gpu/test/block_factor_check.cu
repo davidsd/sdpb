@@ -176,7 +176,7 @@ int main(int argc, char **argv)
   Factor_Options fo;
   fo.equilibrate = atoi(arg(argc, argv, "--equilibrate", "1"));
   fo.panel_refine = atoi(arg(argc, argv, "--panel-refine", "1"));
-  const int L = 28, D = 112;
+  const int L = atoi(arg(argc, argv, "--L", "28")), D = 4 * L;
   Gram_Options opt;
   opt.prime_group = 32;
   opt.timing = flag(argc, argv, "--timing");
@@ -342,7 +342,8 @@ int main(int argc, char **argv)
     }
   printf("residuals: max|LL^T - S|/sqrt(S_ii S_jj) = 2^%.1f, max|XL - I| = 2^%.1f, "
          "max|LP - B|/(k max|L| max|P|) = 2^%.1f\n", res_S, res_X, res_P);
-  bool ok = res_S < -850 && res_P < -850;
+  // -850 at L = 28
+  bool ok = res_S < -(32.0 * L - 46) && res_P < -(32.0 * L - 46);
   if(ref)
     {
       // GMP Cholesky of block 0 and substitution for all columns

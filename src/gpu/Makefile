@@ -79,9 +79,10 @@ $(BUILD)/compare_references: test/compare_references.c
 
 mpfr-checks: $(BUILD)/ref_solve $(BUILD)/compare_references
 
+CHECK_LF ?= 28
 $(BUILD)/chol_tile_check: test/chol_tile_check.cu linalg/basecase.cuh
 	@mkdir -p $(BUILD)
-	$(NVCC) $(NVFLAGS) $< -o $@ $(LDLIBS)
+	$(NVCC) $(NVFLAGS) -DCHECK_LF=$(CHECK_LF) $< -o $@ $(LDLIBS)
 
 clean:
 	rm -rf $(BUILD)

@@ -40,6 +40,8 @@ namespace sdpb_gpu
     std::string digests(bool factor = false);
     void save_factor(const std::string &prefix); // test export: owner tiles
     void corrupt_tile(int i, int j, int bit); // negative control of factor
+    // Graded control: clears the low limbs of every entry of a factor tile
+    void corrupt_tile_limbs(int i, int j, int limbs);
     int tile_size() const;
     int tiles() const;
     int owner(int i, int j) const;

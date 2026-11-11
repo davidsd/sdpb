@@ -86,7 +86,8 @@ int main(int argc, char **argv)
   const int nb = atoi(arg(argc, argv, "--nb", "36"));
   const int P = atoi(arg(argc, argv, "--P", "945"));
   const int N = atoi(arg(argc, argv, "--N", "3406"));
-  const int L = 28, D = atoi(arg(argc, argv, "--digits", "112"));
+  const int L = atoi(arg(argc, argv, "--L", "28"));
+  const int D = atoi(arg(argc, argv, "--digits", std::to_string(4 * L).c_str()));
   const int reps = atoi(arg(argc, argv, "--reps", "6"));
   const int preps = atoi(arg(argc, argv, "--profile-reps", "3"));
   const int n = (P + 31) / 32 * 32;

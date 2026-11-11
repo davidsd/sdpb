@@ -47,17 +47,17 @@ template<class T> struct Mapped
 void entry_one(std::vector<int32_t> &m,std::vector<int64_t> &e,int L,int64_t plane,int64_t q)
 { m[(L-1)*plane+q]=0x20000000; e[q]=-(32LL*L-3); }
 
-void assembly(Gpu_Collective &world,int N,int tile,bool drop)
+void assembly(Gpu_Collective &world,int N,int tile,bool drop,int L)
 {
-  constexpr int L=28, nchunks=11;
+  constexpr int nchunks=11;
   Gram_Options go; go.prime_group=32; go.fused_residues=true;
   go.max_rect=256; go.crt_batch=16384;
   int64_t total=0; for(int c=0;c<nchunks;++c) total+=37+3*c;
-  Distributed_Q q(N,L,112,total,world,go,{tile,64,1});
+  Distributed_Q q(N,L,4*L,total,world,go,{tile,64,1});
   std::vector<std::unique_ptr<Array>> arrays;
   std::vector<Mpf_Matrix> local;
   std::unique_ptr<Mpf_Gram> full;
-  if(world.rank()==0) full=std::make_unique<Mpf_Gram>(N,L,112,total,go);
+  if(world.rank()==0) full=std::make_unique<Mpf_Gram>(N,L,4*L,total,go);
   auto fill=[&](int c,Array &a) {
     const int64_t n=a.b.entries(); std::vector<int32_t> m(size_t(L)*n,0); std::vector<int64_t> e(n,ez);
     for(int j=0;j<N;++j) for(int i=0;i<a.b.rows;++i)
@@ -122,9 +122,8 @@ void assembly(Gpu_Collective &world,int N,int tile,bool drop)
 
 template<class Solver>
 void export_solutions(Solver &q,Gpu_Collective &world,int N,int columns,
-                      const std::string &dir,const std::string &out)
+                      const std::string &dir,const std::string &out,int L)
 {
-  constexpr int L=28;
   Array rhs(L,N,1), result(L,N,1), solved(L,N,1);
   std::vector<int32_t> rm(size_t(L)*N), cm(size_t(L)*N);
   std::vector<int64_t> re(N), ce(N);
@@ -166,7 +165,7 @@ void export_solutions(Solver &q,Gpu_Collective &world,int N,int columns,
 
 void real_factor(Gpu_Collective &world,int argc,char **argv)
 {
-  const int N=atoi(arg(argc,argv,"--N","3406")), L=28;
+  const int N=atoi(arg(argc,argv,"--N","3406")), L=atoi(arg(argc,argv,"--L","28"));
   const int tile=atoi(arg(argc,argv,"--tile","512"));
   const int columns=atoi(arg(argc,argv,"--columns","32"));
   const bool corrupt=atoi(arg(argc,argv,"--corrupt","0"));
@@ -178,7 +177,7 @@ void real_factor(Gpu_Collective &world,int argc,char **argv)
   const bool wide=atoi(arg(argc,argv,"--wide-residual","0"));
   const int refinements=atoi(arg(argc,argv,"--refine","1"));
   if(world.rank()==0) std::cout << "RESIDUAL wide="<<wide<<" refine="<<refinements<<"\n";
-  Distributed_Q q(N,L,112,1,world,go,{tile,8192,refinements,wide});
+  Distributed_Q q(N,L,4*L,1,world,go,{tile,8192,refinements,wide});
   {
     Mapped<int32_t> m(dir+"/S0.m.bin"); Mapped<int64_t> e(dir+"/S0.e.bin");
     if(m.bytes!=size_t(L)*N*N*4 || e.bytes!=size_t(N)*N*8) throw std::runtime_error("Q file shape");
@@ -218,9 +217,11 @@ void real_factor(Gpu_Collective &world,int argc,char **argv)
     }
   q.factor();
   if(corrupt) q.corrupt_tile(0,0,0);
+  const int corrupt_limbs=atoi(arg(argc,argv,"--corrupt-limbs","0"));
+  if(corrupt_limbs) q.corrupt_tile_limbs(0,0,corrupt_limbs);
   std::ofstream fdg(out+".L.rank"+std::to_string(world.rank())+".digest"); fdg<<q.digests(true);
   q.save_factor(out+".L");
-  export_solutions(q,world,N,columns,dir,out);
+  export_solutions(q,world,N,columns,dir,out,L);
   std::cout << "PROFILE " << q.profile_json() << "\n";
 }
 
@@ -228,11 +229,10 @@ void real_factor(Gpu_Collective &world,int argc,char **argv)
 // arithmetic, for a separate baseline of the full-Q solve error.
 struct Monolithic_Q
 {
-  int N;
+  int N, L;
   Array Q, X;
-  Monolithic_Q(int n,const std::string &dir,int guard) : N(n),Q(28,n,n),X(28,n,n)
+  Monolithic_Q(int n,const std::string &dir,int guard,int L_) : N(n),L(L_),Q(L,n,n),X(L,n,n)
   {
-    constexpr int L=28;
     {
       Mapped<int32_t> m(dir+"/S0.m.bin"); Mapped<int64_t> e(dir+"/S0.e.bin");
       if(m.bytes!=size_t(L)*N*N*4 || e.bytes!=size_t(N)*N*8)
@@ -253,7 +253,7 @@ struct Monolithic_Q
     Gram_Options go; go.prime_group=32; go.fused_residues=true; go.defer_crt_check=true;
     go.crt_guard_bits=guard;
     std::cout << "MONOLITHIC_FACTOR crt_guard=" << guard << "\n";
-    Block_Factor engine(32,1,L,112,go,0);
+    Block_Factor engine(32,1,L,4*L,go,0);
     Factor_Options fo{true,1,0,-1,1024,true};
     auto t=std::chrono::steady_clock::now();
     engine.factor(padded.b,F.b,Xi.b,fo);
@@ -270,7 +270,7 @@ struct Monolithic_Q
   void forward(const Mpf_Batch &rhs,Mpf_Batch &out) { mv(X.b,false,rhs,out); }
   void solve(const Mpf_Batch &rhs,Mpf_Batch &out)
   {
-    Array temp(28,N,1),prod(28,N,1),residual(28,N,1),correction(28,N,1);
+    Array temp(L,N,1),prod(L,N,1),residual(L,N,1),correction(L,N,1);
     mv(X.b,false,rhs,temp.b); mv(X.b,true,temp.b,out);
     mv(Q.b,false,out,prod.b); mpf_batch_add(rhs,prod.b,-1,residual.b,0);
     mv(X.b,false,residual.b,temp.b); mv(X.b,true,temp.b,correction.b);
@@ -284,8 +284,9 @@ void monolithic(Gpu_Collective &world,int argc,char **argv)
   const int columns=atoi(arg(argc,argv,"--columns","32"));
   if(N<=0 || columns<1 || columns>32) throw std::invalid_argument("monolithic dimensions");
   const std::string dir=arg(argc,argv,"--dir",""),out=arg(argc,argv,"--out","mono");
-  Monolithic_Q q(N,dir,atoi(arg(argc,argv,"--crt-guard","0")));
-  export_solutions(q,world,N,columns,dir,out);
+  const int L=atoi(arg(argc,argv,"--L","28"));
+  Monolithic_Q q(N,dir,atoi(arg(argc,argv,"--crt-guard","0")),L);
+  export_solutions(q,world,N,columns,dir,out,L);
 }
 
 int main(int argc,char **argv)
@@ -303,7 +304,7 @@ int main(int argc,char **argv)
         uint64_t hold=UINT64_MAX; CHECK(cudaMemPoolSetAttribute(pool,cudaMemPoolAttrReleaseThreshold,&hold));
         const std::string mode=arg(argc,argv,"--mode","assembly");
         auto t=std::chrono::steady_clock::now();
-        if(mode=="assembly") assembly(world,atoi(arg(argc,argv,"--N","173")),atoi(arg(argc,argv,"--tile","64")),atoi(arg(argc,argv,"--drop-chunk","0")));
+        if(mode=="assembly") assembly(world,atoi(arg(argc,argv,"--N","173")),atoi(arg(argc,argv,"--tile","64")),atoi(arg(argc,argv,"--drop-chunk","0")),atoi(arg(argc,argv,"--L","28")));
         else if(mode=="factor" || mode=="residual") real_factor(world,argc,argv);
         else if(mode=="monolithic") monolithic(world,argc,argv);
         else throw std::invalid_argument("unknown mode");

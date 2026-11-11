@@ -82,7 +82,7 @@ int main(int argc, char **argv)
   const int reps = atoi(arg(argc, argv, "--reps", "4"));
   const std::string out = arg(argc, argv, "--out", "cols.bin");
   const int n = (P + 31) / 32 * 32,
-            D = atoi(arg(argc, argv, "--digits", "112"));
+            D = atoi(arg(argc, argv, "--digits", std::to_string(4 * L).c_str()));
   for(const char *flag : {"--panel-leaf", "--update-tile", "--auxiliary-digits"})
     if(atoi(arg(argc, argv, flag, "0")))
       throw std::invalid_argument(std::string(flag)
@@ -169,6 +169,7 @@ int main(int argc, char **argv)
       fo.structured_solve = atoi(arg(argc, argv, "--structured-solve", "1"));
       fo.reuse_residues = atoi(arg(argc, argv, "--reuse-residues", "1"));
       fo.refine_max_n = atoi(arg(argc, argv, "--refine-max", "0"));
+      fo.corrupt_leaf_limbs = atoi(arg(argc, argv, "--corrupt-leaf-limbs", "0"));
       fo.log_panels = rep == 0 && atoi(arg(argc, argv, "--log-panels", "0"));
       F.factor(S, Lf, X, fo);
       printf("POLICY rep %d: panels uncorrected %d, restarts %d\n", rep,

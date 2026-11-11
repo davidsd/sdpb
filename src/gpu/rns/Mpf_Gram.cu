@@ -6,6 +6,7 @@
 // (c) 2026 Antoine Tilloy, MIT License (docs/GPU_backend_credits.md).
 
 #include "Mpf_Gram.hxx"
+#include "Limb_Sizes.hxx"
 #include "rns_kernels.cuh"
 
 #include <climits>
@@ -463,26 +464,33 @@ namespace sdpb_gpu
       oe[eo] = ebase + sh;
     }
 
+    // every option of normalize_blocks_reg, for any L and W: the general path
     __global__ void normalize_blocks(const int32_t *__restrict__ Ci, int W,
                                      int64_t in_plane, int64_t mp, int64_t m,
                                      int64_t n, int64_t total,
                                      const int64_t *__restrict__ EA,
                                      const int64_t *__restrict__ EB, int L,
                                      int32_t *__restrict__ om,
-                                     int64_t *__restrict__ oe, int64_t j0 = 0,
-                                     int64_t pc = -1, bool flat = false)
+                                     int64_t *__restrict__ oe, int64_t j0,
+                                     int64_t pc, int64_t row0, bool negate,
+                                     const int32_t *__restrict__ colmap = nullptr,
+                                     int exp_shift = 0, bool flat = false,
+                                     int64_t out_plane = 0, int64_t out_bs = 0,
+                                     int64_t out_ld = 0)
     {
-      if(pc < 0)
-        pc = n;
       const int64_t q = blockIdx.x * (int64_t)blockDim.x + threadIdx.x;
-      const int64_t batch = total / (m * n);
-      if(q >= batch * m * pc)
+      const int64_t batch = total / (m * n), mr = m - row0, mrp = mp - row0;
+      if(q >= batch * mr * pc)
         return;
-      const int64_t b = q / (m * pc), rem = q % (m * pc);
-      const int64_t jj = rem / m, i = rem % m, j = j0 + jj;
-      round_entry(Ci, W, in_plane, b * mp * pc + jj * mp + i, L, total,
-                  flat ? j * batch * m + b * m + i : b * m * n + j * m + i,
-                  EA[b * m + i] + EB[b * n + j], om, oe);
+      const int64_t b = q / (mr * pc), rem = q % (mr * pc);
+      const int64_t jj = rem / mr, ir = rem % mr, i = ir + row0;
+      const int64_t j = colmap ? colmap[j0 + jj] : j0 + jj;
+      round_entry(Ci, W, in_plane, b * mrp * pc + jj * mrp + ir, L,
+                  out_plane ? out_plane : total,
+                  flat ? j * batch * m + b * m + i
+                       : b * (out_bs ? out_bs : m * n)
+                           + j * (out_ld ? out_ld : m) + i,
+                  EA[b * m + i] + EB[b * n + j] + exp_shift, om, oe, negate);
     }
 
     // the same rounding with the limbs in registers: static indices, a
@@ -671,6 +679,46 @@ namespace sdpb_gpu
     MG_CHECK(cudaGetLastError());
   }
 
+// One residue launch: the kernel compiled for L_ (with WT = L_ if narrow), or
+// the general one. In scope: narrow, grid, sm.
+#define MG_RES_CASE(LT, ...)                                                  \
+  case LT:                                                                    \
+    if(narrow)                                                                \
+      mpf_residues<LT, LT><<<grid, threads, sm, stream_>>>(__VA_ARGS__);      \
+    else                                                                      \
+      mpf_residues<LT><<<grid, threads, sm, stream_>>>(__VA_ARGS__);          \
+    break;
+#define MG_RESIDUES(...)                                                      \
+  switch(L_)                                                                  \
+    {                                                                         \
+      SDPB_GPU_EACH_L(MG_RES_CASE, __VA_ARGS__)                               \
+    default:                                                                  \
+      mpf_residues<0><<<grid, threads, sm, stream_>>>(__VA_ARGS__);           \
+    }
+
+// One rounding launch for a product of W limbs, with the limbs in registers.
+// The caller has checked that a kernel is compiled for L_ and W; otherwise it
+// launches normalize_blocks, which gives the same bits. In scope: W, cplane.
+#define MG_ROUND_CASE(LT, ...)                                                \
+  case LT:                                                                    \
+    if(W <= rounding_regs_narrow(LT))                                         \
+      normalize_blocks_reg<rounding_regs_narrow(LT), LT>                      \
+        <<<nblocks(cplane), threads, 0, stream_>>>(__VA_ARGS__);             \
+    else if(W <= 64)                                                          \
+      normalize_blocks_reg<64, LT>                                            \
+        <<<nblocks(cplane), threads, 0, stream_>>>(__VA_ARGS__);             \
+    else                                                                      \
+      normalize_blocks_reg<rounding_regs_wide(LT), LT>                        \
+        <<<nblocks(cplane), threads, 0, stream_>>>(__VA_ARGS__);             \
+    break;
+#define MG_ROUND_REG(...)                                                     \
+  switch(L_)                                                                  \
+    {                                                                         \
+      SDPB_GPU_EACH_L(MG_ROUND_CASE, __VA_ARGS__)                             \
+    default:                                                                  \
+      throw std::logic_error("Mpf_Gemm: rounding kernel");                    \
+    }
+
   Mpf_Gram::Mpf_Gram(int N, int L, int digits, int64_t rows_total,
                      Gram_Options options, cudaStream_t stream)
       : N_(N), L_(L), D_(digits),
@@ -790,19 +838,12 @@ namespace sdpb_gpu
     const int64_t ld = (P.rows + 15) / 16 * 16;
     G_.add_residues(ld, [&](int i0, int gc, int8_t *R, int64_t plane) {
       const size_t sm = size_t(gc) * W_ * 4;
-#define MPF_RES(LT)                                                           \
-  mpf_residues<LT><<<nblocks(ld * N_), threads, sm, stream_>>>(              \
-    P.m, P.e, L_, P.rows, N_, ld, P.plane ? P.plane : P.rows * P.cols, 0, d_Eref_, \
-    d_ctab_ + int64_t(i0) * W_,                                               \
-    d_ctop_ + int64_t(i0) * 32, G_.device_primes() + i0,                      \
-    G_.device_minv() + i0, gc, R, plane, 0, 0, 0, map, 0, 0, P.ld, true)
-      if(L_ == 28)
-        MPF_RES(28);
-      else if(L_ == 30)
-        MPF_RES(30);
-      else
-        MPF_RES(0);
-#undef MPF_RES
+      const int64_t grid = nblocks(ld * N_);
+      const bool narrow = false;
+      MG_RESIDUES(P.m, P.e, L_, P.rows, N_, ld, P.plane ? P.plane : P.rows * P.cols, 0, d_Eref_,
+                  d_ctab_ + int64_t(i0) * W_, d_ctop_ + int64_t(i0) * 32,
+                  G_.device_primes() + i0, G_.device_minv() + i0, gc, R, plane,
+                  0, 0, 0, map, 0, 0, P.ld, true);
       MG_CHECK(cudaGetLastError());
     });
   }
@@ -909,20 +950,11 @@ namespace sdpb_gpu
       const size_t sm = size_t(gc) * CK * 4;
       const int64_t nt = int64_t(kp_) * cols;
       const dim3 grid(unsigned(nblocks(nt)), unsigned(batch_));
-#define MPF_RES2(...)                                                         \
-  mpf_residues<__VA_ARGS__><<<grid, threads, sm, stream_>>>(                 \
-    mm, ee, L_, k_, cols, kp_, pl, 0, Eref, d_ctab_ + int64_t(i0) * CK,       \
-    nullptr, G_.device_primes() + i0, G_.device_minv() + i0, gc, R, plane,    \
-    in_bs, eref_bs, r_bs, nullptr, 0, 0, in_ld)
-      if(L_ == 28 && 8 * D_ <= 32 * 28)
-        MPF_RES2(28, 28);
-      else if(L_ == 28)
-        MPF_RES2(28);
-      else if(L_ == 30)
-        MPF_RES2(30);
-      else
-        MPF_RES2(0);
-#undef MPF_RES2
+      const bool narrow = 8 * D_ <= 32 * L_;
+      MG_RESIDUES(mm, ee, L_, k_, cols, kp_, pl, 0, Eref,
+                  d_ctab_ + int64_t(i0) * CK, nullptr, G_.device_primes() + i0,
+                  G_.device_minv() + i0, gc, R, plane, in_bs, eref_bs, r_bs,
+                  nullptr, 0, 0, in_ld);
       MG_CHECK(cudaGetLastError());
     };
     G_.multiply_with(
@@ -941,23 +973,19 @@ namespace sdpb_gpu
         const int64_t total = int64_t(batch_) * m_ * n_;
         const int64_t row0 = (triangles & Product_Lower_Only) ? j0 : 0;
         const bool negate = (triangles & Product_Negate) != 0;
-        if(fast_rounding_ && L_ == 28 && G_.limbs_out() <= 32)
-          normalize_blocks_reg<32, 28><<<nblocks(cplane), threads, 0, stream_>>>(
-            panel, G_.limbs_out(), cplane, mp_, m_, n_, total, d_EA_, EB, d_cm,
-            d_ce, j0, pc, row0, negate, nullptr, G_.exp_shift(), flat, oplane,
-            obs, old);
-        else if(fast_rounding_ && L_ == 28 && G_.limbs_out() <= 64)
-          normalize_blocks_reg<64, 28><<<nblocks(cplane), threads, 0, stream_>>>(
-            panel, G_.limbs_out(), cplane, mp_, m_, n_, total, d_EA_, EB, d_cm,
-            d_ce, j0, pc, row0, negate, nullptr, G_.exp_shift(), flat, oplane,
-            obs, old);
-        else if(row0 || negate || G_.exp_shift() || oplane)
-          throw std::invalid_argument("Mpf_Gemm: this product needs fast rounding");
+        const int W = G_.limbs_out();
+        if(fast_rounding_ && is_compiled_L(L_) && W <= rounding_regs_wide(L_))
+          {
+            MG_ROUND_REG(panel, W, cplane, mp_, m_, n_, total, d_EA_, EB, d_cm, d_ce,
+                         j0, pc, row0, negate, nullptr, G_.exp_shift(), flat,
+                         oplane, obs, old);
+          }
         else
-          normalize_blocks<<<nblocks(int64_t(batch_) * m_ * pc), threads, 0,
-                             stream_>>>(panel, G_.limbs_out(), cplane, mp_, m_,
-                                        n_, total, d_EA_, EB, L_, d_cm, d_ce,
-                                        j0, pc, flat);
+          normalize_blocks<<<nblocks(int64_t(batch_) * (m_ - row0) * pc), threads, 0,
+                             stream_>>>(panel, W, cplane, mp_, m_, n_, total, d_EA_,
+                                        EB, L_, d_cm, d_ce, j0, pc, row0, negate,
+                                        nullptr, G_.exp_shift(), flat, oplane, obs,
+                                        old);
         MG_CHECK(cudaGetLastError());
       }, triangles);
   }
@@ -966,9 +994,8 @@ namespace sdpb_gpu
                                  const std::vector<Column_Group> &groups,
                                  int32_t *d_cm, int64_t *d_ce, bool flat)
   {
-    if(!fast_rounding_ || L_ != 28 || G_.limbs_out() > 64 || 8 * D_ > 32 * 28
-       || A.ld || B.ld)
-      throw std::invalid_argument("Mpf_Gemm::multiply_groups: options");
+    if(A.ld || B.ld)
+      throw std::invalid_argument("Mpf_Gemm::multiply_groups: views");
     alignments(A, B, false);
     if(!d_colmap_)
       MG_CHECK(cudaMalloc(&d_colmap_, size_t(n_) * 4));
@@ -998,35 +1025,42 @@ namespace sdpb_gpu
       [&](int i0, int gc, int8_t *RA, int64_t planeA) {
         const size_t sm = size_t(gc) * CK * 4;
         const dim3 grid(unsigned(nblocks(int64_t(kp_) * m_)), unsigned(batch_));
+        const bool narrow = 8 * D_ <= 32 * L_;
         if(mp_ != m_)
           MG_CHECK(cudaMemsetAsync(RA, 0, size_t(3 * gc) * planeA, stream_));
-        mpf_residues<28, 28><<<grid, threads, sm, stream_>>>(
-          A.m, A.e, L_, k_, m_, kp_, plA, 0, d_EA_, d_ctab_ + int64_t(i0) * CK,
-          nullptr, G_.device_primes() + i0, G_.device_minv() + i0, gc, RA,
-          planeA, int64_t(k_) * m_, int64_t(m_), int64_t(kp_) * mp_);
+        MG_RESIDUES(A.m, A.e, L_, k_, m_, kp_, plA, 0, d_EA_,
+                    d_ctab_ + int64_t(i0) * CK, nullptr, G_.device_primes() + i0,
+                    G_.device_minv() + i0, gc, RA, planeA, int64_t(k_) * m_,
+                    int64_t(m_), int64_t(kp_) * mp_);
         MG_CHECK(cudaGetLastError());
       },
       [&](int i0, int gc, const Product_Panel &p, int8_t *RB, int64_t planeB) {
         const size_t sm = size_t(gc) * CK * 4;
         const int64_t win = p.last - p.first;
         const dim3 grid(unsigned(nblocks(win * p.pc)), unsigned(batch_));
-        mpf_residues<28, 28><<<grid, threads, sm, stream_>>>(
-          B.m, B.e, L_, k_, p.pc, kp_, plB, 0, d_EB_, d_ctab_ + int64_t(i0) * CK,
-          nullptr, G_.device_primes() + i0, G_.device_minv() + i0, gc, RB, planeB,
-          int64_t(k_) * n_, int64_t(n_), int64_t(kp_) * p.pc, d_colmap_ + p.j0,
-          p.first, win);
+        const bool narrow = 8 * D_ <= 32 * L_;
+        MG_RESIDUES(B.m, B.e, L_, k_, p.pc, kp_, plB, 0, d_EB_,
+                    d_ctab_ + int64_t(i0) * CK, nullptr, G_.device_primes() + i0,
+                    G_.device_minv() + i0, gc, RB, planeB, int64_t(k_) * n_,
+                    int64_t(n_), int64_t(kp_) * p.pc, d_colmap_ + p.j0, p.first,
+                    win);
         MG_CHECK(cudaGetLastError());
       },
       [&](const int32_t *panel, int64_t cplane, const Product_Panel &p) {
         const int64_t total = int64_t(batch_) * m_ * n_;
-        if(G_.limbs_out() <= 32)
-          normalize_blocks_reg<32, 28><<<nblocks(cplane), threads, 0, stream_>>>(
-            panel, G_.limbs_out(), cplane, mp_, m_, n_, total, d_EA_, d_EB_, d_cm,
-            d_ce, p.j0, p.pc, p.row0, false, d_colmap_, G_.exp_shift(), flat);
+        const int W = G_.limbs_out();
+        if(fast_rounding_ && is_compiled_L(L_) && W <= rounding_regs_wide(L_))
+          {
+            MG_ROUND_REG(panel, W, cplane, mp_, m_, n_, total, d_EA_, d_EB_, d_cm,
+                         d_ce, p.j0, p.pc, p.row0, false, d_colmap_, G_.exp_shift(),
+                         flat);
+          }
         else
-          normalize_blocks_reg<64, 28><<<nblocks(cplane), threads, 0, stream_>>>(
-            panel, G_.limbs_out(), cplane, mp_, m_, n_, total, d_EA_, d_EB_, d_cm,
-            d_ce, p.j0, p.pc, p.row0, false, d_colmap_, G_.exp_shift(), flat);
+          normalize_blocks<<<nblocks(int64_t(batch_) * (m_ - p.row0) * p.pc), threads,
+                             0, stream_>>>(panel, W, cplane, mp_, m_, n_, total,
+                                           d_EA_, d_EB_, L_, d_cm, d_ce, p.j0, p.pc,
+                                           p.row0, false, d_colmap_, G_.exp_shift(),
+                                           flat);
         MG_CHECK(cudaGetLastError());
       },
       panels);

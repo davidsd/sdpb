@@ -759,12 +759,12 @@ namespace sdpb_gpu
               --i;
             const int s = q - i * (i + 1) / 2;
             u32 v[WL];
-            // Y_i = l_ik is an entry of L (|.| <= 1): 29 limbs; Y_s may be a
+            // Y_i = l_ik is an entry of L (|.| <= 1): LF + 1 limbs; Y_s may be a
             // large entry of the inverse
-            if(ytop[i] < 29 && ytop[s] < 29)
-              mag_mul_small<WL, LF, 29>(v, Y[i], Y[s]);
-            else if(ytop[i] < 29)
-              mag_mul_small<WL, LF, 29, WL>(v, Y[i], Y[s]);
+            if(ytop[i] < LF + 1 && ytop[s] < LF + 1)
+              mag_mul_small<WL, LF, LF + 1>(v, Y[i], Y[s]);
+            else if(ytop[i] < LF + 1)
+              mag_mul_small<WL, LF, LF + 1, WL>(v, Y[i], Y[s]);
             else
               mag_mul<WL, LF>(v, Y[i], ytop[i], Y[s], ytop[s]);
             rmw<WL>(s <= k ? at(XT, i, s) : at(T, i, s), v,

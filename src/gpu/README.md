@@ -18,6 +18,8 @@ alignment. RNS accumulation is exact for those aligned integers; the result
 is then rounded to a floating mantissa. The real-Q accuracy/cost tradeoff and
 explicit options are documented in [the regression recipe](test/q_accuracy.md).
 
+Float sizes: `rns/Limb_Sizes.hxx` lists the L with kernels compiled for them (even L from 24 to 40: --precision up to 1246 bits, rounded up to L = 24 below 704); adding a size is one line there and costs compile time. Checks take `--L`.
+
 ## What is here (products and block factorization)
 
 - `rns/Rns_Basis.{hxx,cxx}`: primes in (2^13, 2^14), residue and CRT tables (host, GMP).
@@ -85,6 +87,7 @@ have no effect with `--gpu`: no host or device memory estimate is made.
 | `SDPB_GPU_GEMV_THREADS` | 262144 | threads in all per matrix-vector product (0: one per output) |
 | `SDPB_GPU_PRODUCT_TIMING`, `SDPB_GPU_VERBOSE`, `SDPB_GPU_CORRECTION_VERBOSE`, `SDPB_GPU_DEBUG_TIES` | unset | diagnostics: per-product timing, planner and correction messages, tie report |
 | `SDPB_GPU_PERTURB_STEP`, `SDPB_GPU_PERTURB_ITERATION` | 0, 0 | test only: perturb a step, the negative control of the comparison with SDPB |
+| `SDPB_GPU_CORRUPT_LEAF_ITERATION`, `SDPB_GPU_CORRUPT_LEAF_LIMBS` | 0, 0 | test only: at that iteration, factor with the low limbs of block 0 cleared (a negative control) |
 
 ## Experimental distributed Q
 

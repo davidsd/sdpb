@@ -237,10 +237,10 @@ namespace sdpb_gpu
         E2_ = basis_.crt_digits_128();
         if(opt_.crt_guard_bits != 0)
           {
-            // the digits below j0 sum to at most 264 * 64 * 64 * 128^j0 / 127
+            // the digits below j0 sum to at most 2 r * 64 * 64 * 128^j0 / 127
             // (each of the 2 r products |l|, |h| <= 64 by a balanced digit
-            // <= 64; the k M term is smaller): below 2^13.1 128^j0, so
-            // 7 j0 + 14 <= 8 D - 2 - guard
+            // <= 64; the k M term is smaller): below 2^14 128^j0 for r <= 254
+            // (L <= 54), so 7 j0 + 14 <= 8 D - 2 - guard
             const int D = std::min(digitsA, digitsB);
             j0_ = std::max(0, (8 * D - 2 - opt_.crt_guard_bits - 14) / 7);
             Wt_ = (7 * (E2_ - j0_) + 31) / 32 + 1;

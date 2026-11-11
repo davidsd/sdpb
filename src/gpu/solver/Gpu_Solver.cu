@@ -750,6 +750,8 @@ namespace sdpb_gpu
         fo.panel_refine = 0;
       fo.correction_digits = opt.schur_correction_digits;
       fo.correction_limit = opt.schur_correction_limit;
+      if(iteration == opt.corrupt_leaf_iteration)
+        fo.corrupt_leaf_limbs = opt.corrupt_leaf_limbs;
       return fo;
     }
 

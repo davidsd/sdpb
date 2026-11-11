@@ -12,6 +12,7 @@
 // --fused: the fused leaf (leaf_fused.cuh) instead of chol_tiles +
 // trinv_tiles; the checks are the same.
 
+#include "../rns/Limb_Sizes.hxx"
 #include "../linalg/basecase.cuh"
 #include "../linalg/leaf_fused.cuh"
 
@@ -26,7 +27,11 @@
 
 using namespace sdpb_gpu;
 
-constexpr int LF = 28, WL = LF + 24, BT = 32;
+// make CHECK_LF=<L>: one tile size per binary
+#ifndef CHECK_LF
+#define CHECK_LF 28
+#endif
+constexpr int LF = CHECK_LF, WL = leaf_limbs(LF), BT = 32;
 
 namespace
 {

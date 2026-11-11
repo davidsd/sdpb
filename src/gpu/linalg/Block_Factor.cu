@@ -9,6 +9,8 @@
 #include "Block_Factor.hxx"
 #include "basecase.cuh"
 #include "leaf_fused.cuh"
+#include "../rns/Limb_Sizes.hxx"
+#include "../rns/Rns_Basis.hxx"
 #include "../rns/rns_kernels.cuh"
 
 #include <chrono>
@@ -437,6 +439,29 @@ namespace sdpb_gpu
     }
   }
 
+  namespace
+  {
+    template <int LF>
+    void launch_leaf(uint32_t *W, uint32_t *Xw, uint32_t *R, uint32_t *S,
+                     int tiles, const Gram_Options &o, cudaStream_t s)
+    {
+      constexpr int WL = leaf_limbs(LF);
+      if(o.fused_leaf && o.leaf_lookahead)
+        leaf_chol_inv<WL, LF, 32, 512, true, true>
+          <<<tiles, 512, 0, s>>>(W, Xw, nullptr);
+      else if(o.fused_leaf)
+        leaf_chol_inv<WL, LF, 32, 512, true, false>
+          <<<tiles, 512, 0, s>>>(W, Xw, nullptr);
+      else
+        {
+          chol_tiles<WL, LF, 32><<<tiles, 256, 0, s>>>(W, R);
+          BF_CHECK(cudaGetLastError());
+          trinv_tiles<WL, LF, 32><<<tiles, 256, 0, s>>>(W, R, Xw, S);
+        }
+      BF_CHECK(cudaGetLastError());
+    }
+  }
+
   // ---------------------------------------------------------------- helpers
   void mpf_transpose(const Mpf_Batch &A, Mpf_Batch &T, cudaStream_t s)
   {
@@ -485,9 +510,18 @@ namespace sdpb_gpu
   {
     if(n % 32 != 0)
       throw std::invalid_argument("Block_Factor: n % 32 != 0 (pad)");
-    if(L != 28)
+    if(rounded_L(L) == 0)
       throw std::invalid_argument(
-        "Block_Factor: leaves instantiated for L = 28");
+        "Block_Factor: L above the compiled sizes (rns/Limb_Sizes.hxx)");
+    // sizes for the planner in gemm_for. The basis is the largest a product of
+    // this shape can use; these margins give 132, 144, 264 and 60 at L = 28.
+    {
+      const Rns_Basis basis = Rns_Basis::for_products(D_, int64_t(1) << 16);
+      plan_primes_ = double(basis.primes.size()) + 2;
+      plan_padded_ = basis.num_padded;
+      plan_crt_digits_ = basis.crt_digits_128();
+      plan_limbs_ = basis.crt_digits / 4.0 + 2;
+    }
     // options.workspace: the caller's, shared with other engines on this stream
     if(opt_.share_workspace && !opt_.workspace)
       {
@@ -704,18 +738,19 @@ namespace sdpb_gpu
         BF_CHECK(cudaGetDevice(&device));
         BF_CHECK(cudaDeviceGetDefaultMemPool(&pool, device));
         BF_CHECK(cudaMemPoolTrimTo(pool, 0));
-        const double r = 132, g = o.prime_group, bm = double(batch_) * m;
+        const double r = plan_primes_, rp = plan_padded_, g = o.prime_group,
+                     bm = double(batch_) * m;
         // residues of C: uint16 per prime, or with reduce_to_crt (groups of
-        // at most 32 primes) the CRT rows (2 x 144 bytes) and a float
+        // at most 32 primes) the CRT rows (2 rp bytes) and a float
         const bool fused
           = o.reduce_to_crt && !o.fused_crt && o.prime_group <= 32;
         auto need = [&](int pn, bool ca) {
           const double crt = std::min(double(o.crt_batch), bm * pn);
           return 3.0 * g * batch_ * double(k) * pn   // RB
                  + 12.0 * g * bm * pn                  // int32 products
-                 + (fused ? 292.0 : 2.0 * r) * bm * pn // residues of C
-                 + crt * ((fused ? 0 : 2 * 144) + 4 * 264) // CRT buffers
-                 + 4.0 * 60 * bm * pn                      // exact panel
+                 + (fused ? 2.0 * rp + 4 : 2.0 * r) * bm * pn // residues of C
+                 + crt * ((fused ? 0 : 2 * rp) + 4 * plan_crt_digits_) // CRT buffers
+                 + 4.0 * plan_limbs_ * bm * pn                 // exact panel
                  + (ca ? 3.0 * r * bm * k : 3.0 * g * bm * k); // residues of A
         };
         bool cache_a = o.cache_a;
@@ -890,7 +925,9 @@ namespace sdpb_gpu
   void Block_Factor::leaf(const Mpf_Batch &A, const Mpf_Batch &Lf,
                           const Mpf_Batch &X)
   {
-    constexpr int LF = 28, WL = LF + 24;
+    // the compiled size at or above L: more fractional bits than asked for if
+    // L is not one of them (see rns/Limb_Sizes.hxx)
+    const int LF = rounded_L(L_), WL = leaf_limbs(LF);
     const int tiles = A.batch;
     const size_t wb = size_t(tiles) * 1024 * WL * 4;
     if(!leaf_W_)
@@ -913,19 +950,17 @@ namespace sdpb_gpu
     BF_CHECK(cudaGetLastError());
     toc("leaf: floats to fixed point");
     tic();
-    if(opt_.fused_leaf && opt_.leaf_lookahead)
-      leaf_chol_inv<WL, LF, 32, 512, true, true>
-        <<<tiles, 512, 0, stream_>>>(W, Xw, nullptr);
-    else if(opt_.fused_leaf)
-      leaf_chol_inv<WL, LF, 32, 512, true, false>
-        <<<tiles, 512, 0, stream_>>>(W, Xw, nullptr);
-    else
+#define BF_LEAF(LT, ...)                                                      \
+  case LT:                                                                    \
+    launch_leaf<LT>(W, Xw, R, S, tiles, opt_, stream_);                       \
+    break;
+    switch(LF)
       {
-        chol_tiles<WL, LF, 32><<<tiles, 256, 0, stream_>>>(W, R);
-        BF_CHECK(cudaGetLastError());
-        trinv_tiles<WL, LF, 32><<<tiles, 256, 0, stream_>>>(W, R, Xw, S);
+        SDPB_GPU_EACH_L(BF_LEAF)
+      default:
+        throw std::logic_error("Block_Factor::leaf: not a compiled size");
       }
-    BF_CHECK(cudaGetLastError());
+#undef BF_LEAF
     toc("leaf: Cholesky and inverse");
     tic();
     k_leaf_out<<<nb(int64_t(tiles) * 1024), TH, 0, stream_>>>(
@@ -934,6 +969,19 @@ namespace sdpb_gpu
       Xw, WL, LF, kk, tiles, true, L_, X.pl(), X.bs(), X.lda(), X.m, X.e);
     BF_CHECK(cudaGetLastError());
     toc("leaf: fixed point to floats");
+    if(corrupt_leaf_limbs_ > 0)
+      {
+        // block 0 of the tile, limb planes t < corrupt_leaf_limbs_
+        BF_CHECK(cudaStreamSynchronize(stream_));
+        const std::vector<int32_t> none(32, 0);
+        for(int t = 0; t < corrupt_leaf_limbs_; ++t)
+          for(int j = 0; j < 32; ++j)
+            BF_CHECK(cudaMemcpy(X.m + int64_t(t) * X.pl() + j * X.lda(), none.data(),
+                                32 * 4, cudaMemcpyHostToDevice));
+        printf("CORRUPTED one leaf: low %d of %d limbs of X, block 0\n",
+               corrupt_leaf_limbs_, L_);
+        corrupt_leaf_limbs_ = 0;
+      }
   }
 
   void Block_Factor::refined_panel(const Mpf_Batch &B, const Mpf_Batch &Lf,
@@ -1155,7 +1203,7 @@ namespace sdpb_gpu
 
   // Congruence-scaled inputs have diagonal in [1/4,1), hence every exact
   // Cholesky row has norm < 1. Budget the absolute error of the SMALL correction
-  // below 2^-900: k*64*2^(-8D)*max|R|*max|X| <= 2^-900.
+  // below 2^-(32 L + 4), 2^-900 at L = 28: k*64*2^(-8D)*max|R|*max|X| <= that.
   // The full-precision residual is untouched. Cap D at the available precision;
   // reaching that cap does not certify arbitrary ill-conditioned inputs.
   void Block_Factor::max_tops(const Mpf_Batch &A, const Mpf_Batch &B,
@@ -1200,7 +1248,7 @@ namespace sdpb_gpu
       ++bits_k;
     long long bits = er == LLONG_MIN || ex == LLONG_MIN
                        ? 0
-                       : 900 + 6 + bits_k + er + ex + 2 * (32 * L_ - 2);
+                       : 32 * L_ + 4 + 6 + bits_k + er + ex + 2 * (32 * L_ - 2);
     // The INT8 layout requires a multiple of four base-256 digits. Round up
     // (never down), preserving the error budget.
     int digits
@@ -1236,6 +1284,7 @@ namespace sdpb_gpu
     refine_min_ = options.refine_min_n;
     refine_max_ = options.refine_max_n;
     panels_skipped_ = 0;
+    corrupt_leaf_limbs_ = options.corrupt_leaf_limbs;
     if(options.correction_limit > 0
        || (options.correction_limit < 0 && !options.equilibrate))
       throw std::invalid_argument(

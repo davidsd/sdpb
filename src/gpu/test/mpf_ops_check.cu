@@ -22,7 +22,7 @@ using namespace sdpb_gpu;
 
 namespace
 {
-  constexpr int L = 28, NB = 32 * L - 2;
+  int L = 28, NB = 32 * L - 2; // --L
   constexpr int64_t EZ = MPF_EZ;
   std::mt19937_64 rng(332);
   int failures = 0;
@@ -235,6 +235,11 @@ int main(int argc, char **argv)
   for(int i = 1; i + 1 < argc; i += 2)
     if(std::string(argv[i]) == "--perturb-bits")
       perturb = atof(argv[i + 1]);
+    else if(std::string(argv[i]) == "--L")
+      {
+        L = atoi(argv[i + 1]);
+        NB = 32 * L - 2;
+      }
 
   Mpf_Vec t;
   // elementwise product
