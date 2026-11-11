@@ -359,6 +359,7 @@ def build(bld):
                         'test/src/unit_tests/cases/json.test.cxx',
                         'test/src/unit_tests/cases/multimodular_blas.test.cxx',
                         'test/src/unit_tests/cases/pmp_sampling.test.cxx',
+                        'test/src/unit_tests/cases/q_sub_grids.test.cxx',
                         'test/src/unit_tests/cases/shared_window.test.cxx'],
                 target='unit_tests',
                 install_path=None,

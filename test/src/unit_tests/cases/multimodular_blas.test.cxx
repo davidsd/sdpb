@@ -2,11 +2,15 @@
 
 #include "sdp_solve/SDP_Solver/run/multimodular/Multimodular_Block_Factor.hxx"
 #include "sdp_solve/SDP_Solver/run/multimodular/multimodular_blas.hxx"
+#include "sdp_solve/SDP_Solver/run/multimodular/Node_Diag_Exchange.hxx"
+#include "sdp_solve/SDP_Solver/run/step/Q_Solve_Cache.hxx"
 #include "unit_tests/util/util.hxx"
 
 #include <El.hpp>
 
 #include <cmath>
+#include <cstdlib>
+#include <string>
 #include <random>
 #include <utility>
 #include <vector>
@@ -583,5 +587,115 @@ TEST_CASE("multimodular_cholesky_upper_dist vs El")
         for(int i = j + 1; i < n; ++i)
           REQUIRE(a.CRef(i, j) == S_star.LockedMatrix().CRef(i, j));
     }
+  }
+}
+
+namespace
+{
+  // k > 0: split this host's ranks into k contiguous "nodes" for
+  // Node_Diag_Exchange; 0: Environment's nodes (one per host here)
+  void set_test_nodes(const int k)
+  {
+    const int size = El::mpi::Size();
+    node_diag_exchange_test_node()
+      = k > 0 ? El::mpi::Rank() / ((size + k - 1) / k) : -1;
+  }
+}
+
+// with node_mode = mmq_node_diag each diagonal block is gathered
+// once per node into node-shared memory, and with mmq_node_factor (mm_diag)
+// its factorization is shared among the node's ranks. The factor must be bit
+// for bit the one of node_mode = 0, on any grid shape and any split of the
+// ranks into nodes (set_test_nodes() makes several "nodes" on one host;
+// without it, the ranks of one host are one node).
+TEST_CASE("multimodular_cholesky_upper_dist: node modes give the same bits")
+{
+  const int size = El::mpi::Size();
+  const int n = GENERATE(37, 130);
+  // grid height: 0 = El's default, 1, size
+  const int height = GENERATE(0, 1, -1);
+  const int fake_nodes = GENERATE(0, 2, 3);
+  DYNAMIC_SECTION("n=" << n << " height=" << height
+                       << " fake_nodes=" << fake_nodes)
+  {
+    const El::Grid grid
+      = height == 0 ? El::Grid(El::mpi::COMM_WORLD)
+                    : El::Grid(El::mpi::COMM_WORLD, height > 0 ? 1 : size);
+    El::DistMatrix<El::BigFloat, El::CIRC, El::CIRC> S_circ(n, n, grid);
+    if(S_circ.CrossRank() == S_circ.Root())
+      S_circ.Matrix() = random_spd(n);
+    const El::DistMatrix<El::BigFloat> S(S_circ);
+
+    const int block_size = GENERATE(32, 64);
+    const bool mm_diag = GENERATE(false, true);
+    const int node_mode = GENERATE(mmq_node_diag, mmq_node_factor,
+                                   mmq_node_diag | mmq_node_factor);
+    DYNAMIC_SECTION("block_size=" << block_size << " mm_diag=" << mm_diag
+                                  << " node_mode=" << node_mode)
+    {
+      Multimodular_Blas_Config config;
+      Multimodular_Cholesky_Dist_Timings t0, t1;
+      El::DistMatrix<El::BigFloat> U0(S), U1(S);
+      multimodular_cholesky_upper_dist(U0, block_size, mm_diag, config, t0,
+                                       nullptr, 0);
+      set_test_nodes(fake_nodes);
+      multimodular_cholesky_upper_dist(U1, block_size, mm_diag, config, t1,
+                                       nullptr, node_mode);
+      set_test_nodes(0);
+      // all entries, both triangles
+      const int same = bitwise_equal(U0.LockedMatrix(), U1.LockedMatrix());
+      REQUIRE(El::mpi::AllReduce(same, El::mpi::MIN, El::mpi::COMM_WORLD)
+              == 1);
+    }
+  }
+}
+
+// Q_Solve_Cache (--qSolveCache) is El::cholesky::SolveAfter(
+// UPPER, NORMAL) with the diagonal blocks' copies kept: the same bits, for
+// one and two solves with the same factor, El's copies or one per node.
+TEST_CASE("Q_Solve_Cache: El's SolveAfter, the same bits")
+{
+  const int size = El::mpi::Size();
+  // 300: three of El's 128-row blocks, the last one partial
+  const int n = GENERATE(37, 130, 300);
+  const int height = GENERATE(0, 1, -1);
+  const int fake_nodes = GENERATE(0, 2);
+  DYNAMIC_SECTION("n=" << n << " height=" << height
+                       << " fake_nodes=" << fake_nodes)
+  {
+    const El::Grid grid
+      = height == 0 ? El::Grid(El::mpi::COMM_WORLD)
+                    : El::Grid(El::mpi::COMM_WORLD, height > 0 ? 1 : size);
+    El::DistMatrix<El::BigFloat, El::CIRC, El::CIRC> S_circ(n, n, grid),
+      b_circ(n, 1, grid);
+    if(S_circ.CrossRank() == S_circ.Root())
+      {
+        S_circ.Matrix() = random_spd(n);
+        const auto r = random_spd(n);
+        for(int i = 0; i < n; ++i)
+          b_circ.Matrix()(i, 0) = r.CRef(i, (i * 7) % n);
+      }
+    El::DistMatrix<El::BigFloat> U(S_circ);
+    El::Cholesky(El::UPPER, U);
+    const El::DistMatrix<El::BigFloat> b(b_circ);
+    El::DistMatrix<El::BigFloat> x_el(b);
+    El::cholesky::SolveAfter(El::UPPER, El::NORMAL, U, x_el);
+
+    set_test_nodes(fake_nodes);
+    for(const bool node_shared : {false, true})
+      {
+        Q_Solve_Cache cache(node_shared);
+        for(int solve = 0; solve < 2; ++solve)
+          {
+            El::DistMatrix<El::BigFloat> x(b);
+            cache.solve(U, x);
+            const int same = bitwise_equal(x.LockedMatrix(), x_el.LockedMatrix());
+            CAPTURE(node_shared);
+            CAPTURE(solve);
+            REQUIRE(El::mpi::AllReduce(same, El::mpi::MIN, El::mpi::COMM_WORLD)
+                    == 1);
+          }
+      }
+    set_test_nodes(0);
   }
 }
