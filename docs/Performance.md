@@ -91,6 +91,11 @@ To be added.
 | 3.0.0-194-g5e92aa2f | Expanse, 2 × 128 (`srun`) | 768 bits | 378 s (378 s) | 109.0 s | timing only: 8 iterations | 208.8 GB | is the reference | Production build with no experimental options, from a cold start; its 8 iterations are the reference iterations. | Simmons-Duffin group | 2026-11-11 |
 | 5e725bd6 (#303, #308, #311–#314) | Expanse, 2 × 128 (`srun`) | 768 bits, note 2 | 161 s (160 s) | 41.4 s | timing only: 8 iterations | — | yes: 1.2e-189 | The CPU options of the listed PRs on, from a cold start, in the same job as the row above; 2.6× faster per iteration. | Simmons-Duffin group | 2026-11-11 |
 
+## SDPA-format problems (`sdpb-test-sdpa-NN`)
+
+To be added: `.dat-s` problems of increasing size, run with `sdpb`'s SDPA mode
+(see [Solving SDPA problems](Usage.md#solving-sdpa-problems)), on CPU and GPU.
+
 ## Notes
 
 1. The total is the sum of the iterations' times over the segments; the start-up of each segment is not included.

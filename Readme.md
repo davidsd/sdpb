@@ -61,7 +61,8 @@ For work on SDPB's performance, there is a ladder of optimization test problems 
 Each comes with its SDP, its PMP (or a recipe to make it), a reference solution or reference timings, a README
 and a check script. They are
 [here](https://www.dropbox.com/scl/fo/cvpy6qz6ztsf3ibjpk7k6/AFS2Eb7iwgVNeeUgzm-WNFU?rlkey=0nfp6xddwcbe5creg7q4subiq&st=v7dq9dr5&dl=0);
-more rungs are being added. Measured timings on them are collected in
+more rungs are being added, among them SDPA-format problems (`.dat-s` files, which `sdpb` reads directly; see
+[Solving SDPA problems](docs/Usage.md#solving-sdpa-problems)). Measured timings on them are collected in
 [docs/Performance.md](docs/Performance.md).
 
 ## Front ends
