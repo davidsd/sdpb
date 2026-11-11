@@ -18,9 +18,11 @@ void compute_A_X_inv(
       auto &X_cholesky_block(X_cholesky.blocks[index]);
       El::DistMatrix<El::BigFloat> temp_space(block),
         A_X_inv_matrix(block.Width(), block.Width(), block.Grid());
+      // TRSM_LARGE: see cholesky_solve (Abstract_Block_Diagonal_Matrix.hxx)
       El::Trsm(El::LeftOrRight::LEFT, El::UpperOrLowerNS::LOWER,
                El::Orientation::NORMAL, El::UnitOrNonUnit::NON_UNIT,
-               El::BigFloat(1), X_cholesky_block, temp_space);
+               El::BigFloat(1), X_cholesky_block, temp_space, false,
+               El::TRSM_LARGE);
 
       // We have to set this to zero because the values can be NaN.
       // Multiplying 0*NaN = NaN.
