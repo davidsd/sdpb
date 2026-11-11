@@ -132,7 +132,8 @@ __global__ void reduce_res(const int32_t *rm, const int64_t *re,
   }
 }
 int main(int ac, char **av) {
-  int P = atoi(arg(ac, av, "--P", "3406")), n = (P + 31) / 32 * 32, L = 28,
+  int P = atoi(arg(ac, av, "--P", "3406")), n = (P + 31) / 32 * 32,
+      L = atoi(arg(ac, av, "--L", "28")),
       ns = atoi(arg(ac, av, "--samples", "128"));
   std::string qdir = arg(ac, av, "--dir", "."),
               lp = arg(ac, av, "--factor", ""),

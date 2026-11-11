@@ -100,9 +100,15 @@ namespace sdpb_gpu
     bool product_timing = false;
     // deliberate perturbation for the negative control of the comparison with
     // SDPB (relative, 0: none): the corrector's step eigenvalue is multiplied by
-    // 1 + perturb_step at iteration perturb_iteration
+    // 1 + perturb_step at iteration perturb_iteration. A double: below about
+    // 1e-16 it changes nothing, so it can't test agreement beyond that
     double perturb_step = 0;
     int perturb_iteration = 0;
+    // negative control at any depth: at this iteration
+    // each chunk's first leaf of the Schur factorization returns its inverse
+    // with the low limbs of block 0 cleared (Factor_Options::corrupt_leaf_limbs)
+    int corrupt_leaf_limbs = 0;
+    int corrupt_leaf_iteration = 0;
   };
 
   struct Block_Cond

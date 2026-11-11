@@ -28,7 +28,7 @@ using namespace sdpb_gpu;
 
 namespace
 {
-  constexpr int L = 28, NB = 32 * L - 2;
+  int L = 28, NB = 32 * L - 2; // --L
   const char *arg(int argc, char **argv, const char *name, const char *dflt)
   {
     for(int i = 1; i + 1 < argc; ++i)
@@ -165,6 +165,8 @@ namespace
 
 int main(int argc, char **argv)
 {
+  L = atoi(arg(argc, argv, "--L", "28"));
+  NB = 32 * L - 2;
   const std::string dir = arg(argc, argv, "--dir", "."), qdir = arg(argc, argv, "--q-dir", "");
   const int nb = atoi(arg(argc, argv, "--nb", "36")), P = atoi(arg(argc, argv, "--P", "945")),
             N = atoi(arg(argc, argv, "--N", "3406")), reps = atoi(arg(argc, argv, "--reps", "6"));
@@ -234,7 +236,7 @@ int main(int argc, char **argv)
           }
     up(S, m2.data(), e2.data());
     mpf_pad_identity(S.b, Sp.b, 0);
-    Block_Factor F(32, nb, L, 112);
+    Block_Factor F(32, nb, L, 4 * L);
     F.factor(Sp.b, Lf.b, Xs.b);
     F.check();
     check(cudaStreamSynchronize(0));

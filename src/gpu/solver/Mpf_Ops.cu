@@ -6,6 +6,7 @@
 
 #include "Mpf_Ops.hxx"
 #include "../linalg/leaf_fused.cuh"
+#include "../rns/Limb_Sizes.hxx"
 #include "../rns/rns_kernels.cuh"
 
 #include <algorithm>
@@ -42,8 +43,9 @@ namespace sdpb_gpu
 
     void check_L(int L)
     {
-      if(L != 28)
-        throw std::invalid_argument("Mpf_Ops: kernels instantiated for L = 28");
+      if(!is_compiled_L(L))
+        throw std::invalid_argument(
+          "Mpf_Ops: no kernels for this L (rns/Limb_Sizes.hxx)");
     }
 
     __device__ __forceinline__ i64 entry_index()
@@ -1161,7 +1163,18 @@ namespace sdpb_gpu
     }
   }
 
-#define L28(name) name<28>
+// kernel<L> for the run-time L, among the sizes in rns/Limb_Sizes.hxx
+#define OPS_L_CASE(LT, kernel, ...)                                           \
+  case LT:                                                                    \
+    kernel<LT> __VA_ARGS__;                                                   \
+    break;
+#define OPS_BY_L(L, kernel, ...)                                              \
+  switch(L)                                                                   \
+    {                                                                         \
+      SDPB_GPU_EACH_L(OPS_L_CASE, kernel, __VA_ARGS__)                        \
+    default:                                                                  \
+      check_L(L);                                                             \
+    }
 
   void dev_mul(const Mpf_Batch &A, const Mpf_Batch &B, Mpf_Batch &O,
                cudaStream_t s)
@@ -1171,14 +1184,14 @@ namespace sdpb_gpu
     const bool bs = B.entries() == 1;
     if(!bs && B.entries() != n)
       throw std::invalid_argument("dev_mul: shapes");
-    L28(k_mul)<<<nblk(n), TH, 0, s>>>(A.m, A.e, B.m, B.e, O.m, O.e, n, bs);
+    OPS_BY_L(A.L, k_mul, <<<nblk(n), TH, 0, s>>>(A.m, A.e, B.m, B.e, O.m, O.e, n, bs));
     OPS_CHECK(cudaGetLastError());
   }
 
   void dev_neg(const Mpf_Batch &A, Mpf_Batch &O, cudaStream_t s)
   {
     const int64_t n = A.entries();
-    L28(k_neg)<<<nblk(n), TH, 0, s>>>(A.m, A.e, O.m, O.e, n);
+    OPS_BY_L(A.L, k_neg, <<<nblk(n), TH, 0, s>>>(A.m, A.e, O.m, O.e, n));
     OPS_CHECK(cudaGetLastError());
   }
 
@@ -1190,84 +1203,84 @@ namespace sdpb_gpu
 
   void mpf_lower_to_upper(Mpf_Batch &M, cudaStream_t s)
   {
-    L28(k_lower_to_upper)<<<nblk(M.entries()), TH, 0, s>>>(M.m, M.e, M.rows,
-                                                           M.batch);
+    OPS_BY_L(M.L, k_lower_to_upper, <<<nblk(M.entries()), TH, 0, s>>>(M.m, M.e, M.rows,
+                                                           M.batch));
     OPS_CHECK(cudaGetLastError());
   }
 
   void mpf_mask_blocks(Mpf_Batch &M, int h, const int *d_hj, cudaStream_t s)
   {
-    L28(k_mask_blocks)<<<nblk(M.entries()), TH, 0, s>>>(M.m, M.e, M.rows, M.batch,
-                                                        h, d_hj);
+    OPS_BY_L(M.L, k_mask_blocks, <<<nblk(M.entries()), TH, 0, s>>>(M.m, M.e, M.rows, M.batch,
+                                                        h, d_hj));
     OPS_CHECK(cudaGetLastError());
   }
 
   void mpf_add_diag(Mpf_Batch &M, const Mpf_Batch &a, int h, const int *d_hj,
                     cudaStream_t s)
   {
-    L28(k_add_diag)<<<nblk(int64_t(M.batch) * M.rows), TH, 0, s>>>(
-      M.m, M.e, M.rows, M.batch, a.m, a.e, h, d_hj);
+    OPS_BY_L(M.L, k_add_diag, <<<nblk(int64_t(M.batch) * M.rows), TH, 0, s>>>(
+      M.m, M.e, M.rows, M.batch, a.m, a.e, h, d_hj));
     OPS_CHECK(cudaGetLastError());
   }
 
   void mpf_pad_identity(const Mpf_Batch &src, Mpf_Batch &dst, cudaStream_t s)
   {
-    L28(k_pad_identity)<<<nblk(dst.entries()), TH, 0, s>>>(
-      src.m, src.e, src.rows, dst.m, dst.e, dst.rows, src.batch);
+    OPS_BY_L(src.L, k_pad_identity, <<<nblk(dst.entries()), TH, 0, s>>>(
+      src.m, src.e, src.rows, dst.m, dst.e, dst.rows, src.batch));
     OPS_CHECK(cudaGetLastError());
   }
 
   void mpf_diagonal(const Mpf_Batch &M, Mpf_Batch &D, cudaStream_t s)
   {
-    L28(k_diagonal)<<<nblk(D.entries()), TH, 0, s>>>(M.m, M.e, M.rows, M.batch,
-                                                     D.m, D.e);
+    OPS_BY_L(M.L, k_diagonal, <<<nblk(D.entries()), TH, 0, s>>>(M.m, M.e, M.rows, M.batch,
+                                                     D.m, D.e));
     OPS_CHECK(cudaGetLastError());
   }
 
   void mpf_kron_identity(const Mpf_Batch &V, Mpf_Batch &Vx, int dim,
                          cudaStream_t s)
   {
-    L28(k_kron)<<<nblk(Vx.entries()), TH, 0, s>>>(V.m, V.e, V.rows, V.cols, dim,
-                                                  V.batch, Vx.m, Vx.e);
+    OPS_BY_L(V.L, k_kron, <<<nblk(Vx.entries()), TH, 0, s>>>(V.m, V.e, V.rows, V.cols, dim,
+                                                  V.batch, Vx.m, Vx.e));
     OPS_CHECK(cudaGetLastError());
   }
 
   void mpf_repeat(const Mpf_Batch &A, Mpf_Batch &R, cudaStream_t s)
   {
-    L28(k_repeat)<<<nblk(R.entries()), TH, 0, s>>>(
-      A.m, A.e, A.entries(), R.m, R.e, int(R.batch / A.batch));
+    OPS_BY_L(A.L, k_repeat, <<<nblk(R.entries()), TH, 0, s>>>(
+      A.m, A.e, A.entries(), R.m, R.e, int(R.batch / A.batch)));
     OPS_CHECK(cudaGetLastError());
   }
 
   void mpf_seg_diag(const Mpf_Batch &M, Mpf_Batch &v, int K, int dim,
                     cudaStream_t s)
   {
-    L28(k_seg_diag)<<<nblk(v.entries()), TH, 0, s>>>(
-      M.m, M.e, M.rows, M.batch / 2, K, dim * (dim + 1) / 2, v.m, v.e);
+    OPS_BY_L(M.L, k_seg_diag, <<<nblk(v.entries()), TH, 0, s>>>(
+      M.m, M.e, M.rows, M.batch / 2, K, dim * (dim + 1) / 2, v.m, v.e));
     OPS_CHECK(cudaGetLastError());
   }
 
   void mpf_scale_segments(const Mpf_Batch &VT, const Mpf_Batch &a, Mpf_Batch &VD,
                           int nseg, cudaStream_t s)
   {
-    L28(k_scale_segments)<<<nblk(VD.entries()), TH, 0, s>>>(
-      VT.m, VT.e, VT.rows, VT.cols, VT.batch / 2, a.m, a.e, nseg, VD.m, VD.e);
+    OPS_BY_L(VT.L, k_scale_segments, <<<nblk(VD.entries()), TH, 0, s>>>(
+      VT.m, VT.e, VT.rows, VT.cols, VT.batch / 2, a.m, a.e, nseg, VD.m, VD.e));
     OPS_CHECK(cudaGetLastError());
   }
 
   void mpf_cmws_assemble(const Mpf_Batch &C, Mpf_Batch &R, int h, int dim,
                          cudaStream_t s)
   {
-    L28(k_cmws)<<<nblk(R.entries()), TH, 0, s>>>(C.m, C.e, h, dim, R.batch, R.m,
-                                                 R.e);
+    OPS_BY_L(C.L, k_cmws, <<<nblk(R.entries()), TH, 0, s>>>(C.m, C.e, h, dim, R.batch, R.m,
+                                                 R.e));
     OPS_CHECK(cudaGetLastError());
   }
 
   void mpf_schur(const Mpf_Batch &AXI, const Mpf_Batch &AY, Mpf_Batch &S, int K,
                  int dim, const int *d_Kj, cudaStream_t s)
   {
-    L28(k_schur)<<<nblk(S.entries()), TH, 0, s>>>(
-      AXI.m, AXI.e, AY.m, AY.e, K, dim, S.batch, d_Kj, S.m, S.e);
+    OPS_BY_L(AXI.L, k_schur, <<<nblk(S.entries()), TH, 0, s>>>(
+      AXI.m, AXI.e, AY.m, AY.e, K, dim, S.batch, d_Kj, S.m, S.e));
     OPS_CHECK(cudaGetLastError());
   }
 
@@ -1292,29 +1305,29 @@ namespace sdpb_gpu
     const int64_t grid = (n + th - 1) / th;
     if(S > 1)
       {
-        constexpr int W = 2 * 28 + 2 - (28 - 3);
+        const int W = 2 * A.L + 2 - (A.L - 3);
         i64 *T;
         u32 *Part;
         OPS_CHECK(cudaMallocAsync(&T, size_t(n) * 8, s));
         OPS_CHECK(cudaMallocAsync(&Part, size_t(S) * W * n * 4, s));
-        L28(k_gemv_top)<<<grid, th, 0, s>>>(A.e, v.e, g.no, g.batch, g.ab, g.ao,
+        OPS_BY_L(A.L, k_gemv_top, <<<grid, th, 0, s>>>(A.e, v.e, g.no, g.batch, g.ab, g.ao,
                                             g.atb, g.ati, g.vb, g.vo, g.vtb, g.vti,
-                                            g.ntb, g.nti, T);
-        L28(k_gemv_part)<<<nblk(n * S), TH, 0, s>>>(
+                                            g.ntb, g.nti, T));
+        OPS_BY_L(A.L, k_gemv_part, <<<nblk(n * S), TH, 0, s>>>(
           A.m, A.e, A.entries(), v.m, v.e, v.entries(), T, g.no, g.batch, g.ab,
           g.ao, g.atb, g.ati, g.vb, g.vo, g.vtb, g.vti, g.ntb, g.nti, S,
-          g.ati == 1 ? 1 : 0, Part);
-        L28(k_gemv_reduce)<<<grid, th, 0, s>>>(Part, T, g.no, g.batch, S, g.ob,
-                                               g.oo, out.m, out.e, out.entries());
+          g.ati == 1 ? 1 : 0, Part));
+        OPS_BY_L(A.L, k_gemv_reduce, <<<grid, th, 0, s>>>(Part, T, g.no, g.batch, S, g.ob,
+                                               g.oo, out.m, out.e, out.entries()));
         OPS_CHECK(cudaGetLastError());
         OPS_CHECK(cudaFreeAsync(Part, s));
         OPS_CHECK(cudaFreeAsync(T, s));
         return;
       }
-    L28(k_gemv)<<<grid, th, 0, s>>>(
+    OPS_BY_L(A.L, k_gemv, <<<grid, th, 0, s>>>(
       A.m, A.e, A.entries(), v.m, v.e, v.entries(), g.no, g.batch, g.ab, g.ao,
       g.atb, g.ati, g.vb, g.vo, g.vtb, g.vti, g.ntb, g.nti, g.ob, g.oo, out.m,
-      out.e, out.entries());
+      out.e, out.entries()));
     OPS_CHECK(cudaGetLastError());
   }
 
@@ -1347,7 +1360,7 @@ namespace sdpb_gpu
     OPS_CHECK(cudaMallocAsync(&d, 8, s));
     OPS_CHECK(cudaMemsetAsync(d, 0, 8, s));
     const int64_t n = A.entries();
-    L28(k_max_key)<<<nblk(n), TH, 0, s>>>(A.m, A.e, n, emax, d);
+    OPS_BY_L(A.L, k_max_key, <<<nblk(n), TH, 0, s>>>(A.m, A.e, n, emax, d));
     OPS_CHECK(cudaGetLastError());
     OPS_CHECK(cudaMemcpyAsync(&key, d, 8, cudaMemcpyDeviceToHost, s));
     OPS_CHECK(cudaStreamSynchronize(s));
@@ -1357,7 +1370,7 @@ namespace sdpb_gpu
     OPS_CHECK(cudaMallocAsync(&o, 4 * size_t(A.L) * cap, s));
     OPS_CHECK(cudaMallocAsync(&dcount, 4, s));
     OPS_CHECK(cudaMemsetAsync(dcount, 0, 4, s));
-    L28(k_find_key)<<<nblk(n), TH, 0, s>>>(A.m, A.e, n, emax, key, o, dcount, cap);
+    OPS_BY_L(A.L, k_find_key, <<<nblk(n), TH, 0, s>>>(A.m, A.e, n, emax, key, o, dcount, cap));
     OPS_CHECK(cudaGetLastError());
     OPS_CHECK(cudaMemcpyAsync(&hcount, dcount, 4, cudaMemcpyDeviceToHost, s));
     OPS_CHECK(cudaStreamSynchronize(s));
@@ -1370,7 +1383,7 @@ namespace sdpb_gpu
         OPS_CHECK(cudaFreeAsync(o, s));
         OPS_CHECK(cudaMallocAsync(&o, 4 * size_t(A.L) * cap, s));
         OPS_CHECK(cudaMemsetAsync(dcount, 0, 4, s));
-        L28(k_find_key)<<<nblk(n), TH, 0, s>>>(A.m, A.e, n, emax, key, o, dcount, cap);
+        OPS_BY_L(A.L, k_find_key, <<<nblk(n), TH, 0, s>>>(A.m, A.e, n, emax, key, o, dcount, cap));
         OPS_CHECK(cudaGetLastError());
         OPS_CHECK(cudaStreamSynchronize(s));
         if(const char *dbg = getenv("SDPB_GPU_DEBUG_TIES"); dbg != nullptr)
@@ -1417,7 +1430,7 @@ namespace sdpb_gpu
     OPS_CHECK(cudaMallocAsync(&d, 8 * (W + 1), s));
     OPS_CHECK(cudaMemsetAsync(d, 0, 8 * (W + 1), s));
     const int64_t n = A.entries();
-    L28(k_total)<<<nblk(n), TH, 0, s>>>(A.m, A.e, n, t0, d);
+    OPS_BY_L(A.L, k_total, <<<nblk(n), TH, 0, s>>>(A.m, A.e, n, t0, d));
     OPS_CHECK(cudaGetLastError());
     OPS_CHECK(cudaMemcpyAsync(h.data(), d, 8 * (W + 1), cudaMemcpyDeviceToHost, s));
     OPS_CHECK(cudaStreamSynchronize(s));
@@ -1476,7 +1489,7 @@ namespace sdpb_gpu
                               cudaMemcpyHostToDevice, s));
     OPS_CHECK(cudaStreamSynchronize(s));
     const int64_t n = A.entries();
-    L28(k_to_double)<<<nblk(n), TH, 0, s>>>(A.m, A.e, per, A.batch, dt, d_out);
+    OPS_BY_L(A.L, k_to_double, <<<nblk(n), TH, 0, s>>>(A.m, A.e, per, A.batch, dt, d_out));
     OPS_CHECK(cudaGetLastError());
     OPS_CHECK(cudaFreeAsync(d, s));
     OPS_CHECK(cudaFreeAsync(dt, s));

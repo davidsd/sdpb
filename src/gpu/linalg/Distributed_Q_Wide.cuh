@@ -1,21 +1,25 @@
 // Internal exact-word arithmetic for distributed Q residuals.
-// Matrix/vector storage remains L=28. A full product is shifted only AFTER
-// multiplication; 128 low guard bits and 64 high headroom bits are retained.
+// Storage has L limbs (rns/Limb_Sizes.hxx). A full product of 2 L limbs is shifted
+// only AFTER multiplication; 128 low guard bits and 64 high headroom bits are retained.
 // The global integer sum is rounded once, after subtracting it from the RHS.
 #pragma once
 #include <cstdint>
 #ifdef __CUDACC__
 #define DQW_HD __host__ __device__ __forceinline__
 #define DQW_UNROLL _Pragma("unroll")
+#define DQW_CE __host__ __device__
 #else
 #define DQW_HD inline
 #define DQW_UNROLL
+#define DQW_CE
 #endif
 namespace sdpb_gpu { namespace dq_wide {
 using u32=uint32_t;
 using u64=uint64_t;
 using i64=int64_t;
-constexpr int L=28, P=2*L, guard=128, W=P+guard/32+2;
+constexpr int guard=128;
+// Words of the accumulator for floats of L limbs
+DQW_CE constexpr int width(int L) { return 2*L+guard/32+2; }
 constexpr i64 zero=-(i64(1)<<40);
 
 template<int K> DQW_HD void negate(u32 (&x)[K])
@@ -32,8 +36,9 @@ template<int K> DQW_HD bool magnitude(const int32_t *m,i64 plane,i64 index,u32 (
   if(negative) negate(x);
   return negative;
 }
-DQW_HD void product(const u32 (&x)[L],const u32 (&y)[L],u32 (&p)[P])
+template<int L> DQW_HD void product(const u32 (&x)[L],const u32 (&y)[L],u32 (&p)[2*L])
 {
+  constexpr int P=2*L;
   u32 c0=0,c1=0,c2=0;
   DQW_UNROLL
   for(int k=0;k<P-1;++k)
@@ -66,7 +71,7 @@ template<int K> DQW_HD u32 shifted_word(const u32 (&x)[K],int k,i64 shift)
   const u32 b=q+1>=0 && q+1<K?x[q+1]:0;
   return (a>>r)|(r?b<<(32-r):0);
 }
-template<int K> DQW_HD void add_shifted(u32 (&acc)[W],const u32 (&x)[K],i64 shift,bool negative)
+template<int W,int K> DQW_HD void add_shifted(u32 (&acc)[W],const u32 (&x)[K],i64 shift,bool negative)
 {
   const u32 mask=negative?~u32(0):0;
   u64 carry=negative?1:0;
@@ -77,7 +82,7 @@ template<int K> DQW_HD void add_shifted(u32 (&acc)[W],const u32 (&x)[K],i64 shif
       acc[k]=u32(t);carry=t>>32;
     }
 }
-DQW_HD void add_words(u32 (&acc)[W],const u32 *p,i64 stride)
+template<int W> DQW_HD void add_words(u32 (&acc)[W],const u32 *p,i64 stride)
 {
   u64 carry=0;
   DQW_UNROLL
@@ -92,9 +97,9 @@ DQW_HD int word_bits(u32 x)
   return x?32-__builtin_clz(x):0;
 #endif
 }
-// Same normalized 894-bit magnitude and half-up rule as Mpf_Ops.
+// Same normalized (32 L - 2)-bit magnitude and half-up rule as Mpf_Ops.
 // The input is a signed W-word integer; result is a signed L-word integer.
-DQW_HD void rounded(u32 (&acc)[W],i64 base,u32 (&out)[L],i64 &exponent)
+template<int W,int L> DQW_HD void rounded(u32 (&acc)[W],i64 base,u32 (&out)[L],i64 &exponent)
 {
   const bool negative=int32_t(acc[W-1])<0;
   if(negative) negate(acc);
@@ -119,3 +124,4 @@ DQW_HD void rounded(u32 (&acc)[W],i64 base,u32 (&out)[L],i64 &exponent)
 } }
 #undef DQW_HD
 #undef DQW_UNROLL
+#undef DQW_CE

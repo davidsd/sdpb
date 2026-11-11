@@ -1,4 +1,5 @@
 #include "Gpu_Compute.hxx"
+#include "gpu/rns/Limb_Sizes.hxx"
 #include "gpu/solver/Gpu_Solver.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
 #include "sdp_solve/SDP_Solver/run/step/centering_parameters.hxx"
@@ -23,12 +24,13 @@ namespace
 
 int Gpu_Compute::limbs_for_precision(const size_t precision)
 {
-  const int L = int((precision + 2 + 31) / 32) + 1;
-  ASSERT(L == 28,
-         "--gpu: this build has device kernels for 28 limbs only, i.e. "
-         "--precision from 831 to 862 bits; --precision ",
-         precision, " needs ", L, " limbs.");
-  static_assert(28 <= max_limbs);
+  // limbs for --precision, rounded up to a size with compiled kernels
+  const int L = sdpb_gpu::rounded_L(int((precision + 2 + 31) / 32) + 1);
+  ASSERT(L > 0, "--gpu: --precision ", precision,
+         " is above the largest float size with device kernels (",
+         sdpb_gpu::largest_compiled_L(),
+         " limbs, gpu/rns/Limb_Sizes.hxx)");
+  static_assert(sdpb_gpu::largest_compiled_L() <= max_limbs);
   return L;
 }
 
@@ -296,6 +298,8 @@ Gpu_Compute::Gpu_Compute(const Solver_Parameters &parameters,
   o.product_timing = env_long("SDPB_GPU_PRODUCT_TIMING", 0) != 0;
   o.perturb_step = env_double("SDPB_GPU_PERTURB_STEP", 0);
   o.perturb_iteration = int(env_long("SDPB_GPU_PERTURB_ITERATION", 0));
+  o.corrupt_leaf_limbs = int(env_long("SDPB_GPU_CORRUPT_LEAF_LIMBS", 0));
+  o.corrupt_leaf_iteration = int(env_long("SDPB_GPU_CORRUPT_LEAF_ITERATION", 0));
   P.gs = std::make_unique<Gpu_Solver>(o, P.N, shapes);
 
   const auto t0 = std::chrono::steady_clock::now();

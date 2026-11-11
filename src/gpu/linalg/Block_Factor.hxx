@@ -102,6 +102,11 @@ namespace sdpb_gpu
     // not always below the true noise of graded ones: on an inverse used in
     // solves it raised the solver's dual-error floor
     int crt_guard = 0;
+    // negative control: the first leaf of this
+    // factorization returns its inverse with the low limbs of every mantissa
+    // of block 0 cleared, as a leaf would that is accurate only to that many
+    // fewer limbs. The MPFR gate must catch it. 0: off.
+    int corrupt_leaf_limbs = 0;
   };
 
   class Block_Factor
@@ -211,6 +216,9 @@ namespace sdpb_gpu
     void toc(const std::string &phase);
     void log_panel(const char *what, const Mpf_Batch &M);
     int n_, batch_, L_, D_;
+    // what the planner in gemm_for assumes of a product at this size
+    double plan_primes_ = 0, plan_padded_ = 0, plan_crt_digits_ = 0, plan_limbs_ = 0;
+    int corrupt_leaf_limbs_ = 0; // Factor_Options::corrupt_leaf_limbs, until used
     bool skip_triangular_zeros_ = false, lower_update_ = false,
          measure_residual_ = false, structured_solve_ = false,
          reuse_residues_ = false;

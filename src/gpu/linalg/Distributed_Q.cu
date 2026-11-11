@@ -1,6 +1,7 @@
 #include "Distributed_Q.hxx"
 #include "Distributed_Q_Wide.cuh"
 #include "../solver/Mpf_Ops.hxx"
+#include "../rns/Limb_Sizes.hxx"
 #include "../rns/rns_kernels.cuh"
 
 #include <algorithm>
@@ -131,6 +132,11 @@ namespace sdpb_gpu
       // bit is a selected entry, not a requested error size.
       if(threadIdx.x == 0 && blockIdx.x == 0 && e[bit] != zero_exp) ++e[bit];
     }
+    __global__ void clear_low_limbs(int32_t *m, int64_t n, int limbs)
+    {
+      const int64_t q = int64_t(blockIdx.x)*blockDim.x+threadIdx.x;
+      if(q < n) for(int t=0;t<limbs;++t) m[int64_t(t)*n+q]=0;
+    }
     uint64_t digest(const void *data, size_t n)
     {
       auto p = static_cast<const unsigned char *>(data);
@@ -147,7 +153,7 @@ namespace sdpb_gpu
       if(i>=j) { entry=int64_t(col%b)*b+row%b; return tiles[i*nt+j]; }
       entry=int64_t(row%b)*b+col%b;return tiles[j*nt+i];
     }
-    __global__ void residual_top(const Q_Pointer *tiles,int nt,int b,int N,
+    __global__ void residual_top(const Q_Pointer *tiles,int nt,int b,int N,int L,
                                   const int64_t *ve,const int64_t *rhs,
                                   uint64_t *top)
     {
@@ -155,7 +161,7 @@ namespace sdpb_gpu
       if(row>=N)return;
       int64_t t=INT64_MIN;
       // Treat the L-word RHS as a product with an extra L zero low words.
-      if(rhs[row]!=zero_exp)t=rhs[row]-32*dq_wide::L;
+      if(rhs[row]!=zero_exp)t=rhs[row]-32*L;
       for(int col=0;col<N;++col)
         {
           int64_t q;auto a=q_entry(tiles,nt,b,row,col,q);
@@ -165,11 +171,13 @@ namespace sdpb_gpu
         }
       top[row]=uint64_t(t)^(uint64_t(1)<<63);
     }
+    template<int L>
     __global__ void residual_parts(const Q_Pointer *tiles,int nt,int b,int N,
                                     Mpf_Batch v,const uint64_t *top,int slices,
                                     uint32_t *part)
     {
       using namespace dq_wide;
+      constexpr int W=width(L),P=2*L;
       const int64_t tid=int64_t(blockIdx.x)*blockDim.x+threadIdx.x;
       const int row=int(tid%N),sl=int(tid/N);
       if(sl>=slices)return;
@@ -188,19 +196,23 @@ namespace sdpb_gpu
         }
       for(int k=0;k<W;++k)part[(int64_t(sl)*W+k)*N+row]=acc[k];
     }
+    template<int L>
     __global__ void residual_local_sum(const uint32_t *part,int N,int slices,uint32_t *sum)
     {
       using namespace dq_wide;
+      constexpr int W=width(L);
       const int row=blockIdx.x*blockDim.x+threadIdx.x;
       if(row>=N)return;
       u32 acc[W]={};
       for(int sl=0;sl<slices;++sl)add_words(acc,part+int64_t(sl)*W*N+row,N);
       for(int k=0;k<W;++k)sum[int64_t(k)*N+row]=acc[k];
     }
+    template<int L>
     __global__ void residual_finish(const uint32_t *gather,int G,int N,
                                      const uint64_t *top,Mpf_Batch rhs,Mpf_Batch out)
     {
       using namespace dq_wide;
+      constexpr int W=width(L);
       const int row=blockIdx.x*blockDim.x+threadIdx.x;
       if(row>=N)return;
       u32 acc[W]={},r[L];i64 ex=zero;
@@ -288,7 +300,8 @@ namespace sdpb_gpu
         b(checked_dimension(o.tile,"Distributed_Q tile")), nt((N+b-1)/b), np(nt*b), rows(r),
         world(w), go(g), opt(o), index(size_t(nt)*nt, -1), Xdiag(nt)
     {
-      if(L!=28 || D<=0 || rows<=0 || b%32 || opt.row_panel<=0 || opt.row_panel%16
+      // Mpf_Ops has kernels only for the compiled sizes (rns/Limb_Sizes.hxx)
+      if(!is_compiled_L(L) || D<=0 || rows<=0 || b%32 || opt.row_panel<=0 || opt.row_panel%16
          || opt.row_panel > (1<<17))
         throw std::invalid_argument("Distributed_Q dimensions");
       // Packed tile columns, distributed cyclically by tile (not by column).
@@ -613,9 +626,10 @@ namespace sdpb_gpu
   {
     auto &s=*p_;
     for(const auto *a:{&rhs,&v,static_cast<const Mpf_Batch *>(&out)})
-      if(a->L!=28 || a->batch!=1 || a->rows!=s.N || a->cols!=1)
+      if(a->L!=s.L || a->batch!=1 || a->rows!=s.N || a->cols!=1)
         throw std::invalid_argument("distributed Q residual vector shape");
-    constexpr int slices=16,W=dq_wide::W;
+    constexpr int slices=16;
+    const int W=dq_wide::width(s.L);
     std::vector<Q_Pointer> host(size_t(s.nt)*s.nt,{nullptr,nullptr});
     for(size_t q=0;q<s.order.size();++q)if(int(q%s.world.size())==s.world.rank())
       { auto [i,j]=s.order[q];host[i*s.nt+j]={s.Q[q].b.m,s.Q[q].b.e}; }
@@ -623,14 +637,24 @@ namespace sdpb_gpu
     DQ_CHECK(cudaMemcpy(tiles.p,host.data(),host.size()*sizeof(Q_Pointer),cudaMemcpyHostToDevice));
     Buffer<uint64_t> top(s.N);
     Buffer<uint32_t> part(size_t(slices)*W*s.N),local(size_t(W)*s.N),gather(size_t(s.world.size())*W*s.N);
-    residual_top<<<blocks(s.N),threads>>>(tiles.p,s.nt,s.b,s.N,v.e,rhs.e,top.p);
+    residual_top<<<blocks(s.N),threads>>>(tiles.p,s.nt,s.b,s.N,s.L,v.e,rhs.e,top.p);
     DQ_CHECK(cudaGetLastError());
     s.world.max_u64(top.p,s.N);
-    residual_parts<<<blocks(int64_t(s.N)*slices),threads>>>(tiles.p,s.nt,s.b,s.N,v,top.p,slices,part.p);
-    residual_local_sum<<<blocks(s.N),threads>>>(part.p,s.N,slices,local.p);
+#define DQ_PARTS_CASE(LT,...)                                                \
+    case LT:                                                                  \
+      residual_parts<LT><<<blocks(int64_t(s.N)*slices),threads>>>(tiles.p,s.nt,s.b,s.N,v,top.p,slices,part.p); \
+      residual_local_sum<LT><<<blocks(s.N),threads>>>(part.p,s.N,slices,local.p); \
+      break;
+    switch(s.L) { SDPB_GPU_EACH_L(DQ_PARTS_CASE,0) }
+#undef DQ_PARTS_CASE
     DQ_CHECK(cudaGetLastError());
     s.world.allgather(local.p,gather.p,size_t(W)*s.N*4);
-    residual_finish<<<blocks(s.N),threads>>>(gather.p,s.world.size(),s.N,top.p,rhs,out);
+#define DQ_FINISH_CASE(LT,...)                                               \
+    case LT:                                                                  \
+      residual_finish<LT><<<blocks(s.N),threads>>>(gather.p,s.world.size(),s.N,top.p,rhs,out); \
+      break;
+    switch(s.L) { SDPB_GPU_EACH_L(DQ_FINISH_CASE,0) }
+#undef DQ_FINISH_CASE
     DQ_CHECK(cudaGetLastError());
   }
 
@@ -704,6 +728,17 @@ namespace sdpb_gpu
     auto &s=*p_;
     if(bit<0 || bit>=s.b*s.b) throw std::invalid_argument("corrupt_tile entry");
     if(s.local(i,j)) perturb<<<1,1>>>(s.F[s.id(i,j)].b.e,bit);
+    DQ_CHECK(cudaGetLastError());
+  }
+  void Distributed_Q::corrupt_tile_limbs(int i,int j,int limbs)
+  {
+    auto &s=*p_;
+    if(limbs<0 || limbs>=s.L) throw std::invalid_argument("corrupt_tile_limbs");
+    if(s.local(i,j))
+      {
+        auto &a=s.F[s.id(i,j)].b;
+        clear_low_limbs<<<blocks(a.entries()),threads>>>(a.m,a.entries(),limbs);
+      }
     DQ_CHECK(cudaGetLastError());
   }
   uint64_t Distributed_Q::stored_bytes() const
