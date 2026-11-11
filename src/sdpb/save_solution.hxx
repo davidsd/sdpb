@@ -204,15 +204,6 @@ inline void save_solution(const Sdpb::Sdpa::SDP_Solver &solver,
 
   write_out_txt(solver, terminate_reason, solver_runtime, out_directory,
                 parameters.verbosity);
-  if(El::mpi::Rank() == 0)
-    {
-      // TODO Use another Write_Solution type?
-      if(write_solution.vector_y)
-        PRINT_WARNING("--writeSolution=y is not available for SDPA problems");
-      if(write_solution.vector_z)
-        PRINT_WARNING("--writeSolution=z is not available for SDPA problems");
-    }
-
   if(write_solution.vector_x)
     write_distmatrix(solver.x, out_directory / "x.txt");
   if(write_solution.matrix_X)

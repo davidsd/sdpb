@@ -14,19 +14,6 @@
 
 #include <El.hpp>
 
-#include <filesystem>
-
-namespace fs = std::filesystem;
-
-bool is_sdpa_file(fs::path sdp_path)
-{
-  if(sdp_path.extension() == ".gz")
-    sdp_path.replace_extension();
-  if(sdp_path.extension() == ".dat" || sdp_path.extension() == ".dat-s")
-    return true;
-  return false;
-}
-
 int main(int argc, char **argv)
 {
   Environment env(argc, argv);
@@ -75,7 +62,7 @@ int main(int argc, char **argv)
           El::mpi::Barrier(env.comm_shared_mem);
         }
 
-      if(is_sdpa_file(parameters.sdp_path))
+      if(parameters.is_sdpa())
         time_and_solve<Sdpb::Sdpa::SDP_Solver>(env, parameters, start_time);
       else
         time_and_solve<SDP_Solver>(env, parameters, start_time);

@@ -23,6 +23,8 @@ struct SDPB_Parameters
 
   SDPB_Parameters(int argc, char *argv[], const Environment &env);
   bool is_valid() const { return !sdp_path.empty(); }
+  // .dat, .dat-s, .dat.gz or .dat-s.gz
+  bool is_sdpa() const;
 };
 
 std::ostream &operator<<(std::ostream &os, const SDPB_Parameters &p);
