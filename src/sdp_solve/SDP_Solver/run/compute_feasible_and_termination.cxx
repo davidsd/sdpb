@@ -4,6 +4,7 @@
 void compute_feasible_and_termination(
   const Solver_Parameters &parameters, const El::BigFloat &primal_error,
   const El::BigFloat &dual_error, const El::BigFloat &duality_gap,
+  const El::BigFloat &primal_objective, const El::BigFloat &dual_objective,
   const El::BigFloat &primal_step_length, const El::BigFloat &dual_step_length,
   const int &iteration,
   const std::chrono::time_point<std::chrono::high_resolution_clock>
@@ -21,6 +22,16 @@ void compute_feasible_and_termination(
   if(is_primal_and_dual_feasible && is_optimal)
     {
       terminate_reason = SDP_Solver_Terminate_Reason::PrimalDualOptimal;
+    }
+  else if(is_dual_feasible && parameters.dual_objective_stop
+          && dual_objective > *parameters.dual_objective_stop)
+    {
+      terminate_reason = SDP_Solver_Terminate_Reason::DualObjectiveStop;
+    }
+  else if(is_primal_feasible && parameters.primal_objective_stop
+          && primal_objective < *parameters.primal_objective_stop)
+    {
+      terminate_reason = SDP_Solver_Terminate_Reason::PrimalObjectiveStop;
     }
   else if(is_dual_feasible && parameters.find_dual_feasible)
     {

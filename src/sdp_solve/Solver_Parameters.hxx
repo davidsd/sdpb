@@ -12,6 +12,7 @@
 #include <boost/program_options.hpp>
 
 #include <iostream>
+#include <optional>
 
 struct Solver_Parameters
 {
@@ -29,6 +30,12 @@ struct Solver_Parameters
     initial_matrix_scale_dual, feasible_centering_parameter,
     infeasible_centering_parameter, step_length_reduction, max_complementarity,
     min_primal_step, min_dual_step;
+
+  // Decision stops (unset = off). By weak duality, a dual feasible point with
+  // dualObjective > dual_objective_stop certifies optimum > dual_objective_stop,
+  // and a primal feasible point with primalObjective < primal_objective_stop
+  // certifies optimum < primal_objective_stop.
+  std::optional<El::BigFloat> dual_objective_stop, primal_objective_stop;
 
   std::filesystem::path checkpoint_in, checkpoint_out;
   explicit Solver_Parameters(const Environment &env);

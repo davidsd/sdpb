@@ -102,6 +102,12 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[],
 
           po::notify(variables_map);
 
+          // outer_limits solves a sequence of SDPs to optimality; a stop at
+          // a decided bound would cut them short
+          if(solver.dual_objective_stop || solver.primal_objective_stop)
+            RUNTIME_ERROR("--dualObjectiveStop and --primalObjectiveStop "
+                          "are not supported by outer_limits.");
+
           ASSERT(fs::exists(functions_path),
                  "functions path does not exist: ", functions_path);
           ASSERT(

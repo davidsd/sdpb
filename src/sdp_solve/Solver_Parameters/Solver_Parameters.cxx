@@ -55,6 +55,25 @@ boost::program_options::options_description Solver_Parameters::options()
     "enough. Try increasing either dualErrorThreshold or precision "
     "and run from the latest checkpoint.");
   result.add_options()(
+    "dualObjectiveStop",
+    boost::program_options::value<std::string>()->notifier(
+      [this](const std::string &s) {
+        this->dual_objective_stop = El::BigFloat(s, 10);
+      }),
+    "Terminate once the dual is feasible (dualError < dualErrorThreshold) "
+    "and dualObjective > this value. By weak duality the optimum is then "
+    "above this value, e.g. a point is excluded when a positive optimum "
+    "means that no allowed OPE coefficient exists. Off by default.");
+  result.add_options()(
+    "primalObjectiveStop",
+    boost::program_options::value<std::string>()->notifier(
+      [this](const std::string &s) {
+        this->primal_objective_stop = El::BigFloat(s, 10);
+      }),
+    "Terminate once the primal is feasible (primalError < "
+    "primalErrorThreshold) and primalObjective < this value. By weak "
+    "duality the optimum is then below this value. Off by default.");
+  result.add_options()(
     "maxIterations",
     boost::program_options::value<int64_t>(&max_iterations)->default_value(500),
     "Maximum number of iterations to run the solver.");
@@ -187,6 +206,10 @@ boost::property_tree::ptree to_property_tree(const Solver_Parameters &p)
   result.put("findDualFeasible", p.find_dual_feasible);
   result.put("detectPrimalFeasibleJump", p.detect_primal_feasible_jump);
   result.put("detectDualFeasibleJump", p.detect_dual_feasible_jump);
+  if(p.dual_objective_stop)
+    result.put("dualObjectiveStop", *p.dual_objective_stop);
+  if(p.primal_objective_stop)
+    result.put("primalObjectiveStop", *p.primal_objective_stop);
   result.put("precision", p.precision);
   result.put("precision_actual", mpf_get_default_prec());
   result.put("dualityGapThreshold", p.duality_gap_threshold);
@@ -217,6 +240,14 @@ std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
      << "detectPrimalFeasibleJump     = " << p.detect_primal_feasible_jump
      << '\n'
      << "detectDualFeasibleJump       = " << p.detect_dual_feasible_jump
+     << '\n'
+     << "dualObjectiveStop            = "
+     << (p.dual_objective_stop ? El::BuildString(*p.dual_objective_stop)
+                               : std::string("off"))
+     << '\n'
+     << "primalObjectiveStop          = "
+     << (p.primal_objective_stop ? El::BuildString(*p.primal_objective_stop)
+                                 : std::string("off"))
      << '\n'
      << "precision(actual)            = " << p.precision << "("
      << mpf_get_default_prec() << ")" << '\n'
