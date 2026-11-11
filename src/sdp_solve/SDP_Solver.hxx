@@ -79,6 +79,10 @@ struct SDP_Solver
   int64_t current_generation;
   boost::optional<int64_t> backup_generation;
 
+  // Set by load_checkpoint(): a text checkpoint without any X_matrix or
+  // Y_matrix file was loaded, so X = Y = 0 (see sdpb --reconstructXYmu)
+  bool loaded_without_XY = false;
+
   SDP_Solver(const Solver_Parameters &parameters, const Verbosity &verbosity,
              const bool &require_initial_checkpoint,
              const Block_Info &block_info, const El::Grid &grid,
