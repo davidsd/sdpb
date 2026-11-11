@@ -13,7 +13,8 @@
 namespace fs = std::filesystem;
 
 void read_block_data(const fs::path &sdp_path, const El::Grid &grid,
-                     const Block_Info &block_info, SDP &sdp, Timers &timers);
+                     const Block_Info &block_info, SDP &sdp, Timers &timers,
+                     bool sparse_free_var_matrix);
 void read_objectives(const fs::path &sdp_path, const El::Grid &grid,
                      El::BigFloat &objective_const,
                      El::DistMatrix<El::BigFloat> &dual_objective_b,
@@ -22,14 +23,16 @@ std::optional<std::vector<El::BigFloat>>
 read_normalization(const fs::path &sdp_path, Timers &timers);
 
 SDP::SDP(const fs::path &sdp_path, const Block_Info &block_info,
-         const El::Grid &grid, Timers &timers)
+         const El::Grid &grid, Timers &timers,
+         const bool sparse_free_var_matrix)
 {
   Scoped_Timer timer(timers, "SDP_ctor");
   read_objectives(sdp_path, grid, objective_const, dual_objective_b, timers);
   // normalization will be used only at rank=0
   if(El::mpi::Rank() == 0)
     normalization = read_normalization(sdp_path, timers);
-  read_block_data(sdp_path, grid, block_info, *this, timers);
+  read_block_data(sdp_path, grid, block_info, *this, timers,
+                  sparse_free_var_matrix);
 
   Scoped_Timer validate_timer(timers, "validate");
   validate(block_info);
@@ -191,6 +194,9 @@ void SDP::validate(const Block_Info &block_info) const noexcept(false)
         // Check vector c and matrix B
         const auto &c = primal_objective_c.blocks.at(index);
         const auto &B = free_var_matrix.blocks.at(index);
+        if(sparse_free_var_matrix)
+          ASSERT_EQUAL(free_var_matrix_sparse.size(), num_blocks,
+                       error_prefix);
 
         ASSERT(El::mpi::Congruent(c.DistComm(), block_info.mpi_comm.value),
                error_prefix_index,
@@ -204,8 +210,8 @@ void SDP::validate(const Block_Info &block_info) const noexcept(false)
 
         ASSERT_EQUAL(c.Height(), P, error_prefix_index);
         ASSERT_EQUAL(c.Width(), 1, error_prefix_index);
-        ASSERT_EQUAL(B.Height(), P, error_prefix_index);
-        ASSERT_EQUAL(B.Width(), N, error_prefix_index);
+        ASSERT_EQUAL(free_var_block_height(index), P, error_prefix_index);
+        ASSERT_EQUAL(free_var_block_width(index), N, error_prefix_index);
       }
 
       for(const size_t parity : {0, 1})
@@ -256,4 +262,36 @@ void SDP::validate(const Block_Info &block_info) const noexcept(false)
           }
         }
     }
+}
+
+const El::DistMatrix<El::BigFloat> &
+SDP::free_var_block(const size_t index,
+                    El::DistMatrix<El::BigFloat> &scratch) const
+{
+  if(!sparse_free_var_matrix)
+    return free_var_matrix.blocks.at(index);
+  scratch.SetGrid(free_var_matrix.blocks.at(index).Grid());
+  free_var_matrix_sparse.at(index).to_dense(scratch);
+  return scratch;
+}
+
+El::DistMatrix<El::BigFloat> SDP::free_var_block_copy(const size_t index) const
+{
+  if(!sparse_free_var_matrix)
+    return free_var_matrix.blocks.at(index);
+  El::DistMatrix<El::BigFloat> result(free_var_matrix.blocks.at(index).Grid());
+  free_var_matrix_sparse.at(index).to_dense(result);
+  return result;
+}
+
+El::Int SDP::free_var_block_height(const size_t index) const
+{
+  return sparse_free_var_matrix ? free_var_matrix_sparse.at(index).height
+                                : free_var_matrix.blocks.at(index).Height();
+}
+
+El::Int SDP::free_var_block_width(const size_t index) const
+{
+  return sparse_free_var_matrix ? free_var_matrix_sparse.at(index).width
+                                : free_var_matrix.blocks.at(index).Width();
 }

@@ -58,7 +58,7 @@ With CMake: `cmake -B build -DSDPB_ENABLE_GPU=ON -DCMAKE_CUDA_HOST_COMPILER=<gcc
 then `cmake --build build --target sdpb` (CUDA architectures: `-DCMAKE_CUDA_ARCHITECTURES`, `90-real` by default).
 The option is off by default.
 
-`mpirun -n 1 sdpb --gpu <options>` runs the iterations on one GPU (one MPI rank). The driver, its termination and
+With `--controlDir` the process stays resident between calls, SDP and iterate on the device (`src/sdpb/resident/Readme.md`). `mpirun -n 1 sdpb --gpu <options>` runs the iterations on one GPU (one MPI rank). The driver, its termination and
 jump tests, `iterations.json`, checkpoints and outputs are SDPB's. Everything is kept resident on the device: the current code
 assumes that one device holds the whole iteration. Each run writes `gpu_profile.json` next to `iterations.json`:
 seconds per stage and device/host high-water measurements. Options through the environment:

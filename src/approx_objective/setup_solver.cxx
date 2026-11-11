@@ -37,7 +37,8 @@ void initialize_schur_complement_solver(
   Block_Matrix &schur_off_diagonal,
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
   El::DistMatrix<El::BigFloat> &Q, Timers &timers,
-  El::Matrix<int32_t> &block_timings_ms, Verbosity verbosity);
+  El::Matrix<int32_t> &block_timings_ms, bool multimodular_trsm,
+  Verbosity verbosity);
 
 namespace
 {
@@ -264,6 +265,6 @@ void setup_solver(const Environment &env, const Block_Info &block_info,
       initialize_schur_complement_solver(
         env, block_info, sdp, A_X_inv, A_Y, grid, schur_complement_cholesky,
         schur_off_diagonal, bigint_syrk_context, Q, timers, block_timings_ms,
-        verbosity);
+        false, verbosity);
     }
 }

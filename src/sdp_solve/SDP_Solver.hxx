@@ -16,6 +16,9 @@
 #include "SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 
 #include <filesystem>
+#include <memory>
+
+class Gpu_Compute;
 
 // SDPSolver contains the data structures needed during the running of
 // the interior point algorithm.  Each structure is allocated when an
@@ -79,6 +82,9 @@ struct SDP_Solver
   int64_t current_generation;
   boost::optional<int64_t> backup_generation;
 
+  // Number of steps taken by the last run()
+  int64_t num_steps = 0;
+
   SDP_Solver(const Solver_Parameters &parameters, const Verbosity &verbosity,
              const bool &require_initial_checkpoint,
              const Block_Info &block_info, const El::Grid &grid,
@@ -92,7 +98,19 @@ struct SDP_Solver
       const std::chrono::time_point<std::chrono::high_resolution_clock>
         &start_time,
       const std::filesystem::path &iterations_json_path, Timers &timers,
-      El::Matrix<int32_t> &block_timings_ms);
+      El::Matrix<int32_t> &block_timings_ms,
+      // If not null, the BigInt syrk context (shared memory windows) is
+      // created there on the first run and reused by later runs
+      // (resident mode, sdpb --controlDir). It depends only on the block
+      // structure.
+      std::unique_ptr<BigInt_Shared_Memory_Syrk_Context>
+        *persistent_syrk_context
+      = nullptr,
+      // If not null (resident mode with --gpu), the GPU backend is kept
+      // there between runs, with the SDP and the iterate on the device:
+      // after a run only y is copied back (Gpu_Compute::get_iterate copies
+      // the rest).
+      std::shared_ptr<Gpu_Compute> *persistent_gpu = nullptr);
 
   void step(
     const Environment &env, const Solver_Parameters &parameters,

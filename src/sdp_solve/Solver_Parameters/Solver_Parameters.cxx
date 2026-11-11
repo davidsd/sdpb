@@ -29,6 +29,21 @@ boost::program_options::options_description Solver_Parameters::options()
     "preprocessing the input PMP files with 'pmp2sdp'.  GMP will round "
     "this up to a multiple of 32 or 64, depending on the system.");
   result.add_options()(
+    "multimodularTrsm",
+    boost::program_options::bool_switch(&multimodular_trsm)
+      ->default_value(false),
+    "Compute the Cholesky decompositions of the Schur complement blocks "
+    "and L^{-1} B with multimodular BLAS (fixed-point integers, residues "
+    "modulo primes, dgemm, CRT) instead of BigFloat El::Cholesky and "
+    "El::Trsm. Backward errors are at the level of El's. Supports "
+    "--precision up to 3200 bits; SDPB input only.");
+  result.add_options()(
+    "sparseB",
+    boost::program_options::bool_switch(&sparse_B)->default_value(false),
+    "Experimental: store the free variable matrix B with its nonzero "
+    "elements only. B is expanded block by block where it is used, so the "
+    "results are unchanged; saves memory when B has many zeros.");
+  result.add_options()(
     "findPrimalFeasible",
     boost::program_options::bool_switch(&find_primal_feasible)
       ->default_value(false),
@@ -194,6 +209,8 @@ boost::property_tree::ptree to_property_tree(const Solver_Parameters &p)
              p.memory_limit_translator);
   result.put("checkpointInterval", p.checkpoint_interval);
   result.put("findPrimalFeasible", p.find_primal_feasible);
+  result.put("multimodularTrsm", p.multimodular_trsm);
+  result.put("sparseB", p.sparse_B);
   result.put("findDualFeasible", p.find_dual_feasible);
   result.put("detectPrimalFeasibleJump", p.detect_primal_feasible_jump);
   result.put("detectDualFeasibleJump", p.detect_dual_feasible_jump);
@@ -222,6 +239,8 @@ std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
      << "checkpointInterval           = " << p.checkpoint_interval << '\n'
      << "maxMemory                    = " << p.max_memory << '\n'
      << "maxSharedMemory              = " << p.max_shared_memory << '\n'
+     << "multimodularTrsm             = " << p.multimodular_trsm << '\n'
+     << "sparseB                      = " << p.sparse_B << '\n'
      << "findPrimalFeasible           = " << p.find_primal_feasible << '\n'
      << "findDualFeasible             = " << p.find_dual_feasible << '\n'
      << "detectPrimalFeasibleJump     = " << p.detect_primal_feasible_jump

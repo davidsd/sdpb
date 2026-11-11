@@ -19,6 +19,12 @@ struct Solver_Parameters
   Memory_Limit max_memory{}, max_shared_memory{};
   bool find_primal_feasible{}, find_dual_feasible{}, detect_primal_feasible_jump{},
     detect_dual_feasible_jump{};
+  // Per-block Cholesky and L^{-1}B by multimodular BLAS,
+  // see sdp_solve/SDP_Solver/run/multimodular/Readme.md
+  bool multimodular_trsm{};
+  // Experimental: store the free variable matrix B compactly
+  // (nonzero elements only), see sdp_solve/Block_Matrix/Sparse_Block_Matrix.hxx
+  bool sparse_B{};
   size_t precision{};
   // run the iterations on one GPU (builds with waf configure --enable-gpu)
   bool gpu{};

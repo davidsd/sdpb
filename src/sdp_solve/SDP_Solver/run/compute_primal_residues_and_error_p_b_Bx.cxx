@@ -12,7 +12,8 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
                                               Block_Vector &primal_residue_p,
                                               El::BigFloat &primal_error)
 {
-  auto free_var_matrix_block(sdp.free_var_matrix.blocks.begin());
+  El::DistMatrix<El::BigFloat> B_scratch; // for --sparseB
+  size_t index = 0;
   auto x_block(x.blocks.begin());
   auto primal_residue_p_block(primal_residue_p.blocks.begin());
 
@@ -23,7 +24,8 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
   for(auto &block_index : block_info.block_indices)
     {
       El::Gemv(El::OrientationNS::TRANSPOSE, El::BigFloat(-1),
-               *free_var_matrix_block, *x_block, El::BigFloat(0),
+               sdp.free_var_block(index, B_scratch), *x_block,
+               El::BigFloat(0),
                *primal_residue_p_block);
 
       // The total primal error is the sum of all of the different
@@ -48,7 +50,7 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
             }
         }
 
-      ++free_var_matrix_block;
+      ++index;
       ++x_block;
       ++primal_residue_p_block;
     }

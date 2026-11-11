@@ -2,6 +2,7 @@
 #include "sdp_solve/memory_estimates.hxx"
 #include "bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "get_syrk_Q_config.hxx"
+#include "multimodular/Multimodular_Block_Factor.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
 #include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
@@ -77,7 +78,8 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
 
 namespace
 {
-  BigInt_Shared_Memory_Syrk_Context create_syrk_Q_context_and_print_memory(
+  std::unique_ptr<BigInt_Shared_Memory_Syrk_Context>
+  create_syrk_Q_context_and_print_memory(
     const Environment &env, const Block_Info &block_info, const El::Grid &grid,
     const SDP &sdp, const SDP_Solver &solver,
     const Solver_Parameters &parameters, const Verbosity verbosity)
@@ -109,25 +111,46 @@ namespace
     // Memory overhead for computing L^{-1}
     // (Trsm calls in initialize_schur_off_diagonal).
     // Sum over MPI groups the Trsm memory for the largest block of B in group.
+    // With --multimodularTrsm: the multimodular factor's buffers instead.
     const size_t initialize_schur_off_diagonal_trsm_bytes = node_reduce([&] {
       size_t trsm_bytes = 0;
       if(block_info.mpi_comm.value.Rank() == 0)
         {
-          for(auto &m : sdp.free_var_matrix.blocks)
+          // (with --sparseB, the dense size of each block of B)
+          for(size_t index = 0; index < sdp.free_var_matrix.blocks.size();
+              ++index)
             {
               trsm_bytes = std::max(
-                trsm_bytes, get_trsm_bytes(m.Height(), m.Width(),
-                                           grid.Height(), grid.Width()));
+                trsm_bytes,
+                parameters.multimodular_trsm
+                  ? multimodular_block_factor_bytes(
+                      sdp.free_var_block_height(index),
+                      sdp.free_var_block_width(index), grid.Size(),
+                      bigfloat_bytes(), Multimodular_Blas_Config())
+                  : get_trsm_bytes(sdp.free_var_block_height(index),
+                                   sdp.free_var_block_width(index),
+                                   grid.Height(), grid.Width()));
             }
         }
       return trsm_bytes;
     }());
+    // The multimodular factor's shared windows and residues coexist with
+    // the BigInt syrk's shared windows, so they reduce the memory left for
+    // them. (El::Trsm's overhead is counted as before, see below.)
+    const size_t multimodular_trsm_bytes
+      = parameters.multimodular_trsm
+          ? initialize_schur_off_diagonal_trsm_bytes
+          : 0;
 
     // #(B) = PxN
     // sdp.free_var_matrix, schur_off_diagonal
     const size_t B_size = node_reduce(get_B_size_local(sdp));
+    // With --sparseB, sdp.free_var_matrix holds only empty blocks, but
+    // schur_off_diagonal is dense: count B's dense size.
     const size_t B_bytes
-      = node_reduce(get_allocated_bytes(sdp.free_var_matrix));
+      = sdp.sparse_free_var_matrix
+          ? B_size * bigfloat_bytes()
+          : node_reduce(get_allocated_bytes(sdp.free_var_matrix));
 
     // #Q = NxN, distributed over all nodes.
     const size_t Q_size = node_reduce(get_Q_size_local(sdp));
@@ -161,7 +184,9 @@ namespace
 
     const auto cfg = get_syrk_Q_config(
       block_info, sdp, parameters.max_memory, parameters.max_shared_memory,
-      mem_required_bytes() + std::max(schur_complement_bytes, 3 * X_bytes));
+      mem_required_bytes()
+        + std::max(schur_complement_bytes + multimodular_trsm_bytes,
+                   3 * X_bytes));
 
     // Add schur_complement + (syrk_S() or Trsm() temporary allocations)
     // from initialize_schur_complement_solver()
@@ -205,7 +230,9 @@ namespace
           {"\t\tinitialize_schur_complement_solver()",
            initialize_schur_complement_solver_total_bytes},
           {"\t\t\tschur_complement", schur_complement_bytes},
-          {"\t\t\tEl::Trsm()", initialize_schur_off_diagonal_trsm_bytes},
+          {parameters.multimodular_trsm ? "\t\t\tmultimodular factor"
+                                        : "\t\t\tEl::Trsm()",
+           initialize_schur_off_diagonal_trsm_bytes},
           {"\t\t\tQ", Q_bytes},
           {"\t\t\tshared memory", cfg.node_shmem_bytes()},
         };
@@ -230,7 +257,7 @@ namespace
         El::Output(ss.str());
       }
 
-    return BigInt_Shared_Memory_Syrk_Context(
+    return std::make_unique<BigInt_Shared_Memory_Syrk_Context>(
       cfg, block_info.node_group_index(), block_info.block_indices, verbosity);
   }
 }
@@ -242,7 +269,9 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
   const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
   const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time,
   const fs::path &iterations_json_path, Timers &timers,
-  El::Matrix<int32_t> &block_timings_ms)
+  El::Matrix<int32_t> &block_timings_ms,
+  std::unique_ptr<BigInt_Shared_Memory_Syrk_Context> *persistent_syrk_context,
+  std::shared_ptr<Gpu_Compute> *persistent_gpu)
 {
   SDP_Solver_Terminate_Reason terminate_reason(
     SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
@@ -259,9 +288,16 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
 #ifdef SDPB_GPU
   // --gpu: the residues, factorizations, search directions and step lengths run
   // on one GPU; this driver stays (see src/gpu/solver/Gpu_Solver.hxx)
-  std::unique_ptr<Gpu_Compute> gpu;
+  std::shared_ptr<Gpu_Compute> gpu;
   if(parameters.gpu)
-    gpu = std::make_unique<Gpu_Compute>(parameters, block_info, sdp, *this);
+    {
+      if(persistent_gpu != nullptr)
+        gpu = *persistent_gpu;
+      if(!gpu)
+        gpu = std::make_shared<Gpu_Compute>(parameters, block_info, sdp, *this);
+      if(persistent_gpu != nullptr)
+        *persistent_gpu = gpu;
+    }
 #else
   ASSERT(!parameters.gpu, "--gpu: this sdpb was built without --enable-gpu");
 #endif
@@ -314,12 +350,16 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
 
   Scoped_Timer initialize_bigint_syrk_context_timer(timers,
                                                     "bigint_syrk_context");
-  // --gpu needs no BigInt syrk context (and none of its memory)
-  std::unique_ptr<BigInt_Shared_Memory_Syrk_Context> bigint_syrk_context;
-  if(!parameters.gpu)
-    bigint_syrk_context.reset(new BigInt_Shared_Memory_Syrk_Context(
-      create_syrk_Q_context_and_print_memory(env, block_info, grid, sdp, *this,
-                                             parameters, verbosity)));
+  // --gpu needs no BigInt syrk context (and none of its memory).
+  // persistent_syrk_context (resident mode, sdpb --controlDir): the context
+  // and its shared memory windows are created by the first run and reused.
+  std::unique_ptr<BigInt_Shared_Memory_Syrk_Context> local_syrk_context;
+  auto &syrk_context_ptr = persistent_syrk_context != nullptr
+                             ? *persistent_syrk_context
+                             : local_syrk_context;
+  if(!parameters.gpu && !syrk_context_ptr)
+    syrk_context_ptr = create_syrk_Q_context_and_print_memory(
+      env, block_info, grid, sdp, *this, parameters, verbosity);
   initialize_bigint_syrk_context_timer.stop();
 
   initialize_timer.stop();
@@ -387,6 +427,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
     }
 
   print_header(verbosity);
+  num_steps = 0;
   for(size_t iteration = 1;; ++iteration)
     {
       Scoped_Timer iteration_timer(timers,
@@ -534,7 +575,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
 #endif
         step(env, parameters, verbosity, total_psd_rows,
              is_primal_and_dual_feasible, block_info, sdp, grid, X_cholesky,
-             Y_cholesky, A_X_inv, A_Y, *primal_residue_p, *bigint_syrk_context,
+             Y_cholesky, A_X_inv, A_Y, *primal_residue_p, *syrk_context_ptr,
              mu, beta_corrector, primal_step_length, dual_step_length,
              terminate_now, timers, block_timings_ms, Q_cond_number,
              max_block_cond_number, max_block_cond_number_name);
@@ -563,6 +604,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
             = SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
           break;
         }
+      num_steps = iteration;
       Scoped_Timer print_iteration_timer(timers, "print_iteration");
       print_iteration(iterations_json_path, iteration, mu, primal_step_length,
                       dual_step_length, beta_corrector, *this,
@@ -574,7 +616,15 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
 #ifdef SDPB_GPU
   if(gpu)
     {
-      gpu->get_iterate(*this);
+      Scoped_Timer gpu_end_timer(timers, "gpu.end_of_run");
+      if(persistent_gpu != nullptr)
+        {
+          // x, X and Y stay on the device: the next run starts from them
+          gpu->get_y(*this);
+          gpu->end_run();
+        }
+      else
+        gpu->get_iterate(*this);
       if(write_iterations_json_and_c_minus_By)
         gpu->write_profile(iterations_json_path.parent_path()
                            / "gpu_profile.json");
