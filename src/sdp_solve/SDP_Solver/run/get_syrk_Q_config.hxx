@@ -104,11 +104,17 @@ get_syrk_Q_config(const Block_Info &block_info, const SDP &sdp,
            && cfg.node_shmem_bytes() <= max_shared_memory.limit_or_infinite();
   };
 
-  const size_t output_split_factor = partition_point_unsafe(
+  size_t output_split_factor = partition_point_unsafe(
     1, max_output_split_factor + 1,
     [&enough_memory, &max_input_split_factor](const size_t split_factor) {
       return !enough_memory(max_input_split_factor, split_factor);
     });
+  // All nodes must use the same output split factor (the output windows
+  // are reduced window by window across nodes); nodes can differ in memory,
+  // e.g. --qSolveRanks's copy of Q's factor is mostly on the first nodes.
+  // As in the SDPA solver, take the largest, to avoid running out of memory.
+  output_split_factor = El::mpi::AllReduce(output_split_factor, El::mpi::MAX,
+                                           El::mpi::COMM_WORLD);
 
   const size_t input_split_factor = partition_point_unsafe(
     1, max_input_split_factor + 1,

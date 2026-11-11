@@ -2,9 +2,13 @@
 #include "compute_R_error.hxx"
 #include "step_length.hxx"
 #include "update_cond_numbers.hxx"
+#include "Q_Solve_Cache.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdp_solve/memory_estimates.hxx"
+#include "sdp_solve/SDP_Solver/run/multimodular/multimodular_blas.hxx"
+
+#include <optional>
 
 void scale_multiply_add(const El::BigFloat &alpha,
                         const Block_Diagonal_Matrix &A,
@@ -24,7 +28,8 @@ void initialize_schur_complement_solver(
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
   El::DistMatrix<El::BigFloat> &Q, Timers &timers,
   El::Matrix<int32_t> &block_timings_ms, bool multimodular_trsm,
-  int64_t multimodular_cholesky_Q, Verbosity verbosity);
+  int64_t multimodular_cholesky_Q, Verbosity verbosity,
+  const Q_Grids *q_grids, int cholesky_Q_node_mode);
 
 void compute_search_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
@@ -35,13 +40,14 @@ void compute_search_direction(
   const El::BigFloat &mu, const Block_Vector &primal_residue_p,
   const bool &is_corrector_phase, const El::DistMatrix<El::BigFloat> &Q,
   Block_Vector &dx, Paired_Block_Diagonal_Matrix &dX, Block_Vector &dy,
-  Paired_Block_Diagonal_Matrix &dY);
+  Paired_Block_Diagonal_Matrix &dY, Timers &timers,
+  Q_Solve_Cache *q_solve_cache);
 
 void SDP_Solver::step(
   const Environment &env, const Solver_Parameters &parameters,
   const Verbosity &verbosity, const std::size_t &total_psd_rows,
   const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
-  const SDP &sdp, const El::Grid &grid,
+  const SDP &sdp, const El::Grid &grid, const Q_Grids *q_grids,
   const Paired_Block_Diagonal_Matrix &X_cholesky,
   const Paired_Block_Diagonal_Matrix &Y_cholesky,
   const std::array<
@@ -114,7 +120,21 @@ void SDP_Solver::step(
                                        Q, timers, block_timings_ms,
                                        parameters.multimodular_trsm,
                                        parameters.multimodular_cholesky_Q,
-                                       verbosity);
+                                       verbosity, q_grids,
+                                       (parameters.q_cholesky_node_diag
+                                          ? mmq_node_diag
+                                          : 0)
+                                         | (parameters.q_cholesky_node_factor
+                                              ? mmq_node_factor
+                                              : 0));
+
+    // --qSolveCache: the Q solves of this step keep the copies of Q's
+    // diagonal blocks, made once per node
+    std::optional<Q_Solve_Cache> q_solve_cache;
+    if(parameters.q_solve_cache)
+      q_solve_cache.emplace(true);
+    Q_Solve_Cache *q_cache
+      = q_solve_cache.has_value() ? &*q_solve_cache : nullptr;
 
     // Calculate matrix product -XY
     // It will be reused for mu, R-err, compute_search_direction().
@@ -157,7 +177,8 @@ void SDP_Solver::step(
       compute_search_direction(block_info, sdp, *this, minus_XY,
                                schur_complement_cholesky, schur_off_diagonal,
                                X_cholesky, beta_predictor, mu,
-                               primal_residue_p, false, Q, dx, dX, dy, dY);
+                               primal_residue_p, false, Q, dx, dX, dy, dY,
+                               timers, q_cache);
     }
 
     // Compute the corrector solution for (dx, dX, dy, dY)
@@ -171,7 +192,8 @@ void SDP_Solver::step(
       compute_search_direction(block_info, sdp, *this, minus_XY,
                                schur_complement_cholesky, schur_off_diagonal,
                                X_cholesky, beta_corrector, mu,
-                               primal_residue_p, true, Q, dx, dX, dy, dY);
+                               primal_residue_p, true, Q, dx, dX, dy, dY,
+                               timers, q_cache);
     }
 
     // Calculate condition numbers for Cholesky matrices
