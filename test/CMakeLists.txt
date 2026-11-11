@@ -37,7 +37,8 @@ add_executable(unit_tests
   src/unit_tests/cases/copy_matrix.test.cxx
   src/unit_tests/cases/json.test.cxx
   src/unit_tests/cases/pmp_sampling.test.cxx
-  src/unit_tests/cases/shared_window.test.cxx)
+  src/unit_tests/cases/shared_window.test.cxx
+  src/unit_tests/cases/trsm_large.test.cxx)
 target_include_directories(unit_tests PRIVATE src)
 target_link_libraries(unit_tests PRIVATE pmp_read pmp2sdp_lib sdp_solve catch2)
 
