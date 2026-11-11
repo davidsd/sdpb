@@ -38,6 +38,11 @@ Timers::~Timers() noexcept
     }
 }
 
+void Timers::discard_finished_timers()
+{
+  keep_finished_timers = false;
+}
+
 Timer &Timers::add_and_start(const std::string &name)
 {
   std::string full_name = prefix + name;
