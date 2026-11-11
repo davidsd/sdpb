@@ -86,6 +86,19 @@ namespace sdpb_gpu
       return (int32_t)r;
     }
 
+    // the same for 0 <= v < 2^51 or v of either sign, |v| < 2^51, with less work:
+    // the quotient's low word is all the remainder needs, and the float64
+    // quotient is off by at most one (v and 1/m are within 2^-52 of exact, and
+    // the quotient is below 2^38)
+    __device__ __forceinline__ int32_t mod_low(long long v, int32_t m, double minv)
+    {
+      const long long q = (long long)((double)v * minv);
+      int32_t r = int32_t(uint32_t(v) - uint32_t(q) * uint32_t(m));
+      r += (r >> 31) & m;
+      r += (r >> 31) & m;
+      return r >= m ? r - m : r;
+    }
+
     // C (m_ent x 2g, column-major): column 2p = sum_t d_t T_hi(p, t), 2p+1 the
     // lo part.  r = 128 z_hi + z_lo mod m_p, centred, r = 128 h + l with
     // l in [-64, 63], h in [-64, 64], s = h + l in [-127, 127]; planes
@@ -180,7 +193,11 @@ namespace sdpb_gpu
       int64_t e = blockIdx.x * (int64_t)blockDim.x + threadIdx.x;
       if(e >= ne)
         return;
-      long long v = 0, k = Kf ? (long long)__float2int_rn(Kf[e]) : K[e];
+      // |Z_j| <= 2 r 64 64 < 2^21 and |k Mdig_j| <= (r / 2) 64: the carry and
+      // the digit sums fit 32 bits
+      int32_t v = 0;
+      const int32_t k = Kf ? __float2int_rn(Kf[e]) : K[e];
+      const int32_t *zp = Z + e;
       // 32 digits of 7 bits make exactly 7 words: digits in groups of 32,
       // each at a static bit position
       const int nd = max(E2, (32 * W + 6) / 7), ng = (nd + 31) / 32;
@@ -194,9 +211,12 @@ namespace sdpb_gpu
             {
               const int j = gq * 32 + u;
               if(j < E2)
-                v += (long long)Z[(int64_t)j * ldz + e] - k * Mdig[j];
-              const uint32_t dig = uint32_t(v & 127);
-              v = (v - (long long)dig) >> 7;
+                {
+                  v += *zp - k * Mdig[j];
+                  zp += ldz;
+                }
+              const uint32_t dig = uint32_t(v) & 127u;
+              v = (v - int32_t(dig)) >> 7;
               const int bit = 7 * u, wq = bit >> 5, off = bit & 31;
               wd[wq] |= dig << off;
               if(off > 25)
@@ -269,73 +289,71 @@ namespace sdpb_gpu
                            int64_t strideC, int batch, int32_t alpha = 1,
                            int32_t beta = 0)
   {
-    cublasLtMatmulDesc_t op;
-    RNS_LT_CHECK(cublasLtMatmulDescCreate(&op, CUBLAS_COMPUTE_32I, CUDA_R_32I));
-    cublasOperation_t tA = CUBLAS_OP_T, tB = CUBLAS_OP_N;
-    RNS_LT_CHECK(cublasLtMatmulDescSetAttribute(
-      op, CUBLASLT_MATMUL_DESC_TRANSA, &tA, sizeof(tA)));
-    RNS_LT_CHECK(cublasLtMatmulDescSetAttribute(
-      op, CUBLASLT_MATMUL_DESC_TRANSB, &tB, sizeof(tB)));
-    cublasLtMatrixLayout_t La, Lb, Lc;
-    RNS_LT_CHECK(cublasLtMatrixLayoutCreate(&La, CUDA_R_8I, k, m, lda));
-    RNS_LT_CHECK(cublasLtMatrixLayoutCreate(&Lb, CUDA_R_8I, k, n, ldb));
-    RNS_LT_CHECK(cublasLtMatrixLayoutCreate(&Lc, CUDA_R_32I, m, n, ldc));
-    if(batch > 1)
-      {
-        cublasLtMatrixLayout_t Ls[3] = {La, Lb, Lc};
-        int64_t ss[3] = {strideA, strideB, strideC};
-        for(int q = 0; q < 3; ++q)
-          {
-            RNS_LT_CHECK(cublasLtMatrixLayoutSetAttribute(
-              Ls[q], CUBLASLT_MATRIX_LAYOUT_BATCH_COUNT, &batch,
-              sizeof(batch)));
-            RNS_LT_CHECK(cublasLtMatrixLayoutSetAttribute(
-              Ls[q], CUBLASLT_MATRIX_LAYOUT_STRIDED_BATCH_OFFSET, &ss[q],
-              sizeof(ss[q])));
-          }
-      }
-    // heuristic results cached by shape (the query costs ~0.1 ms per call)
-    static std::map<std::array<int64_t, 11>, cublasLtMatmulHeuristicResult_t> cache;
+    // descriptors, layouts and the heuristic's result cached by shape (the
+    // query costs ~0.1 ms, the objects a large part of a small product's time
+    // on the host). The heuristic keeps its first answer; beta is not in the key
+    // since the answer does not depend on it.
+    struct Plan
+    {
+      cublasLtMatmulDesc_t op;
+      cublasLtMatrixLayout_t La, Lb, Lc;
+      cublasLtMatmulHeuristicResult_t res;
+    };
+    static std::map<std::array<int64_t, 11>, Plan> cache;
     const std::array<int64_t, 11> key{m, n, k, lda, ldb, ldc, strideA,
                                       strideB, strideC, batch,
                                       int64_t(workspace_bytes)};
-    cublasLtMatmulHeuristicResult_t res{};
-    int nres = 0;
-    cublasLtMatmulPreference_t pref = nullptr;
     auto hit = cache.find(key);
-    if(hit != cache.end())
+    if(hit == cache.end())
       {
-        res = hit->second;
-        nres = 1;
-      }
-    else
-      {
+        Plan plan{};
+        RNS_LT_CHECK(cublasLtMatmulDescCreate(&plan.op, CUBLAS_COMPUTE_32I, CUDA_R_32I));
+        cublasOperation_t tA = CUBLAS_OP_T, tB = CUBLAS_OP_N;
+        RNS_LT_CHECK(cublasLtMatmulDescSetAttribute(
+          plan.op, CUBLASLT_MATMUL_DESC_TRANSA, &tA, sizeof(tA)));
+        RNS_LT_CHECK(cublasLtMatmulDescSetAttribute(
+          plan.op, CUBLASLT_MATMUL_DESC_TRANSB, &tB, sizeof(tB)));
+        RNS_LT_CHECK(cublasLtMatrixLayoutCreate(&plan.La, CUDA_R_8I, k, m, lda));
+        RNS_LT_CHECK(cublasLtMatrixLayoutCreate(&plan.Lb, CUDA_R_8I, k, n, ldb));
+        RNS_LT_CHECK(cublasLtMatrixLayoutCreate(&plan.Lc, CUDA_R_32I, m, n, ldc));
+        if(batch > 1)
+          {
+            cublasLtMatrixLayout_t Ls[3] = {plan.La, plan.Lb, plan.Lc};
+            int64_t ss[3] = {strideA, strideB, strideC};
+            for(int q = 0; q < 3; ++q)
+              {
+                RNS_LT_CHECK(cublasLtMatrixLayoutSetAttribute(
+                  Ls[q], CUBLASLT_MATRIX_LAYOUT_BATCH_COUNT, &batch,
+                  sizeof(batch)));
+                RNS_LT_CHECK(cublasLtMatrixLayoutSetAttribute(
+                  Ls[q], CUBLASLT_MATRIX_LAYOUT_STRIDED_BATCH_OFFSET, &ss[q],
+                  sizeof(ss[q])));
+              }
+          }
+        cublasLtMatmulPreference_t pref = nullptr;
         RNS_LT_CHECK(cublasLtMatmulPreferenceCreate(&pref));
         RNS_LT_CHECK(cublasLtMatmulPreferenceSetAttribute(
           pref, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES, &workspace_bytes,
           sizeof(workspace_bytes)));
-        RNS_LT_CHECK(cublasLtMatmulAlgoGetHeuristic(lt, op, La, Lb, Lc, Lc,
-                                                    pref, 1, &res, &nres));
-        if(nres > 0)
-          cache[key] = res;
+        int nres = 0;
+        RNS_LT_CHECK(cublasLtMatmulAlgoGetHeuristic(lt, plan.op, plan.La, plan.Lb,
+                                                    plan.Lc, plan.Lc, pref, 1,
+                                                    &plan.res, &nres));
+        cublasLtMatmulPreferenceDestroy(pref);
+        if(nres == 0)
+          {
+            std::ostringstream ss;
+            ss << "cuBLASLt: no INT8 algorithm for m=" << m << " n=" << n
+               << " k=" << k << " lda=" << lda << " ldb=" << ldb
+               << " ldc=" << ldc << " batch=" << batch;
+            throw std::runtime_error(ss.str());
+          }
+        hit = cache.emplace(key, plan).first;
       }
-    if(nres == 0)
-      {
-        std::ostringstream ss;
-        ss << "cuBLASLt: no INT8 algorithm for m=" << m << " n=" << n
-           << " k=" << k << " lda=" << lda << " ldb=" << ldb
-           << " ldc=" << ldc << " batch=" << batch;
-        throw std::runtime_error(ss.str());
-      }
-    RNS_LT_CHECK(cublasLtMatmul(lt, op, &alpha, A, La, B, Lb, &beta, C, Lc,
-                                C, Lc, &res.algo, workspace, workspace_bytes,
-                                stream));
-    if(pref)
-      cublasLtMatmulPreferenceDestroy(pref);
-    cublasLtMatrixLayoutDestroy(La);
-    cublasLtMatrixLayoutDestroy(Lb);
-    cublasLtMatrixLayoutDestroy(Lc);
-    cublasLtMatmulDescDestroy(op);
+    const Plan &p = hit->second;
+    RNS_LT_CHECK(cublasLtMatmul(lt, p.op, &alpha, A, p.La, B, p.Lb, &beta, C,
+                                p.Lc, C, p.Lc, &p.res.algo, workspace,
+                                workspace_bytes, stream));
     return 2.0 * m * n * double(k) * batch;
   }
 }

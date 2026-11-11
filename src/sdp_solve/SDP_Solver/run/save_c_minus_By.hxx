@@ -3,6 +3,7 @@
 #include "sdp_solve/Block_Matrix/Block_Vector.hxx"
 #include "sdp_solve/SDP.hxx"
 #include "sdpb_util/Boost_Float.hxx"
+#include "sdpb_util/for_each_threaded.hxx"
 #include "sdpb_util/json/Json_Writer.hxx"
 
 #include <El.hpp>
@@ -12,10 +13,11 @@
 // Save vector c - B.y
 // TODO split calculation and writing
 // TODO reuse calculation in compute_dual_residues_and_error()
+// threaded (sdpb --gpu): on one rank, each block's product on its own thread
 inline void save_c_minus_By(const std::filesystem::path &path,
                             const Block_Info &block_info, const SDP &sdp,
                             const Block_Vector &y, const Verbosity &verbosity,
-                            Timers &timers)
+                            Timers &timers, const bool threaded = false)
 {
   Scoped_Timer timer(timers, "save_c_minus_By");
 
@@ -24,12 +26,28 @@ inline void save_c_minus_By(const std::filesystem::path &path,
   {
     const El::BigFloat alpha(-1);
     const El::BigFloat beta(1);
-    for(int index = 0; index < dist_c_minus_By.blocks.size(); ++index)
+    // One rank (sdpb --gpu): no communication, so each block on its own
+    // thread. The local Gemm can differ from the distributed one in the last
+    // digit (seen at 768 bits), so CPU runs keep the loop below.
+    if(threaded && El::mpi::Size() == 1)
       {
-        const auto &B_block = sdp.free_var_matrix.blocks.at(index);
-        El::Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, alpha,
-                 B_block, y.blocks.at(index), beta,
-                 dist_c_minus_By.blocks.at(index));
+        for_each_threaded(
+          dist_c_minus_By.blocks.size(), [&](const size_t index) {
+            El::Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, alpha,
+                     sdp.free_var_matrix.blocks.at(index).LockedMatrix(),
+                     y.blocks.at(index).LockedMatrix(), beta,
+                     dist_c_minus_By.blocks.at(index).Matrix());
+          });
+      }
+    else
+      {
+        for(int index = 0; index < dist_c_minus_By.blocks.size(); ++index)
+          {
+            const auto &B_block = sdp.free_var_matrix.blocks.at(index);
+            El::Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, alpha,
+                     B_block, y.blocks.at(index), beta,
+                     dist_c_minus_By.blocks.at(index));
+          }
       }
   }
 

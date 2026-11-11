@@ -56,7 +56,7 @@ namespace sdpb_gpu
                              const int64_t *__restrict__ e, int L,
                              int64_t rows, int64_t cols, int64_t pl,
                              unsigned long long *top, int64_t in_bstride = 0,
-                             int64_t top_bstride = 0)
+                             int64_t top_bstride = 0, int64_t in_ld = 0)
     {
       // batch b = blockIdx.z: block b's matrix at offset b*in_bstride, its
       // column maxima at top + b*top_bstride
@@ -69,7 +69,7 @@ namespace sdpb_gpu
       for(int64_t i = r0 + threadIdx.x; i < rows && i < r0 + blockDim.x * 16;
           i += blockDim.x)
         {
-          const int64_t idx = j * rows + i;
+          const int64_t idx = j * (in_ld ? in_ld : rows) + i;
           const int64_t ex = e[idx];
           if(ex == MPF_EZ)
             continue;
@@ -88,6 +88,43 @@ namespace sdpb_gpu
         }
       if(threadIdx.x == 0 && red[0] != LLONG_MIN)
         atomicMax(top + j, (unsigned long long)(red[0]) ^ 0x8000000000000000ULL);
+    }
+
+    // col_tops and make_refs in one kernel, when one thread block holds a whole
+    // column (rows <= 16 * 256), so that a product launches one kernel per
+    // operand instead of a memset and two kernels (on Q most products are
+    // small and these launches are a large part of their time)
+    __global__ void col_refs(const int32_t *__restrict__ m,
+                             const int64_t *__restrict__ e, int L, int64_t rows,
+                             int64_t pl, int D, int64_t *__restrict__ Eref,
+                             int64_t in_bstride, int64_t ref_bstride, int64_t ld)
+    {
+      m += blockIdx.y * in_bstride;
+      e += blockIdx.y * in_bstride;
+      const int64_t j = blockIdx.x;
+      long long best = LLONG_MIN;
+      for(int64_t i = threadIdx.x; i < rows; i += blockDim.x)
+        {
+          const int64_t idx = j * ld + i;
+          const int64_t ex = e[idx];
+          if(ex == MPF_EZ)
+            continue;
+          const int bl = bitlen_tc(m, pl, idx, L);
+          if(bl)
+            best = max(best, (long long)(ex + bl + 1));
+        }
+      __shared__ long long red[256];
+      red[threadIdx.x] = best;
+      __syncthreads();
+      for(int w = blockDim.x / 2; w > 0; w /= 2)
+        {
+          if(threadIdx.x < w)
+            red[threadIdx.x] = max(red[threadIdx.x], red[threadIdx.x + w]);
+          __syncthreads();
+        }
+      if(threadIdx.x == 0)
+        (Eref + blockIdx.y * ref_bstride)[j]
+          = red[0] <= MPF_EZ / 2 ? 0 : red[0] - 8LL * D + 1;
     }
 
     __global__ void make_refs(const unsigned long long *top, int64_t *Eref,
@@ -109,7 +146,7 @@ namespace sdpb_gpu
     //   mod m from shared memory with the same index in every lane (broadcast).
     // Centred, r = 128 h + l, s = h + l, written to R[(X*gc + p)*plane +
     // j*ld + i]; rows i >= rows are zero.
-    template <int LT>
+    template <int LT, int WT = (LT > 0 ? LT + 2 : 0)>
     __global__ void mpf_residues(const int32_t *__restrict__ m,
                                  const int64_t *__restrict__ e, int Lrt,
                                  int64_t rows, int64_t cols, int64_t ld,
@@ -121,8 +158,13 @@ namespace sdpb_gpu
                                  const double *__restrict__ minv, int gc,
                                  int8_t *__restrict__ R, int64_t plane,
                                  int64_t in_bstride = 0, int64_t eref_bstride = 0,
-                                 int64_t r_bstride = 0)
+                                 int64_t r_bstride = 0,
+                                 const int32_t *__restrict__ colmap = nullptr,
+                                 int64_t win0 = 0, int64_t win = 0,
+                                 int64_t in_ld = 0)
     {
+      // colmap: column j of the output is column colmap[j] of the input
+      // (Eref too). win > 0: only rows win0..win0+win-1 are written
       // batch b = blockIdx.y: input at offset b*in_bstride, column exponents
       // at Eref + b*eref_bstride, output at r_off + b*r_bstride
       m += blockIdx.y * in_bstride;
@@ -131,23 +173,29 @@ namespace sdpb_gpu
       r_off += blockIdx.y * r_bstride;
       const int L = LT > 0 ? LT : Lrt;
       constexpr int XN = LT > 0 ? LT + 3 : LMAX + 3; // working limbs
-      const int CK = L + 3, WA = L + 2;
+      // WA words of the aligned integer: L + 2 always, or WT if the digits
+      // allow (|A| < 2^(8 digits - 2 + 1), so 8 digits <= 32 WT is enough)
+      const int CK = L + 3, WA = WT > 0 ? WT : L + 2;
       extern __shared__ uint32_t sc[]; // [gc][CK]
       for(int q = threadIdx.x; q < gc * CK; q += blockDim.x)
         sc[q] = ctab[q];
       __syncthreads();
-      const int64_t idx = blockIdx.x * (int64_t)blockDim.x + threadIdx.x;
-      if(idx >= ld * cols)
+      const int64_t wn = win ? win : ld;
+      const int64_t q64 = blockIdx.x * (int64_t)blockDim.x + threadIdx.x;
+      if(q64 >= wn * cols)
         return;
-      const int64_t j = idx / ld, i = idx % ld;
+      // one block's entries: below 2^32
+      const uint32_t q = uint32_t(q64), uw = uint32_t(wn), j32 = q / uw;
+      const int64_t j = j32, i = win0 + (q - j32 * uw), idx = j * ld + i;
+      const int64_t jm = colmap ? colmap[j] : j;
       uint32_t x[XN];
       bool zero = true;
       uint32_t ext = 0;
       if(i < rows)
         {
-          const int64_t in = j * rows + i;
+          const int64_t in = jm * (in_ld ? in_ld : rows) + i;
           const int64_t ex = e[in];
-          const long long s = (ex == MPF_EZ) ? (1LL << 40) : (long long)(Eref[j] - ex);
+          const long long s = (ex == MPF_EZ) ? (1LL << 40) : (long long)(Eref[jm] - ex);
           if(s <= 32LL * L + 1 && s >= -32LL)
             {
               zero = false;
@@ -190,10 +238,13 @@ namespace sdpb_gpu
                 }
 #pragma unroll
               for(int t = 0; t < XN; ++t)
-                x[t] = __funnelshift_r(x[t], (t + 1 < XN) ? x[t + 1] : ext, rs);
+                if(t < WA)
+                  x[t] = __funnelshift_r(x[t], (t + 1 < XN) ? x[t + 1] : ext, rs);
             }
         }
       const bool neg = int32_t(x[WA - 1]) < 0 && !zero;
+      int8_t *rh = R + r_off + idx, *rl = rh + int64_t(gc) * plane,
+             *rs = rl + int64_t(gc) * plane;
       for(int p = 0; p < gc; ++p)
         {
           int8_t hi8 = 0, lo8 = 0;
@@ -202,20 +253,29 @@ namespace sdpb_gpu
               const int32_t mp = primes[p];
               const uint32_t *c = sc + p * CK;
               unsigned long long acc = neg ? (unsigned long long)(mp - c[WA]) : 0ULL;
+              // a 32 x 32 multiply-add: as a 64-bit multiplication the compiler
+              // keeps a (zero) high word of every x[t] in a register
 #pragma unroll
               for(int t = 0; t < XN; ++t)
                 if(t < WA)
-                  acc += (unsigned long long)x[t] * c[t];
-              int32_t r = rns_detail::mod_d((long long)acc, mp, minv[p]);
-              if(r > mp / 2)
-                r -= mp;
-              int32_t lo = ((r + 64) & 127) - 64;
+                  {
+                    const uint32_t ct = c[t];
+                    asm("mad.wide.u32 %0, %1, %2, %0;"
+                        : "+l"(acc)
+                        : "r"(x[t]), "r"(ct));
+                  }
+              int32_t r = rns_detail::mod_low((long long)acc, mp, minv[p]);
+              r = r > mp / 2 ? r - mp : r;
+              const int32_t lo = ((r + 64) & 127) - 64;
               hi8 = (int8_t)((r - lo) >> 7);
               lo8 = (int8_t)lo;
             }
-          R[(int64_t)(0 * gc + p) * plane + r_off + idx] = hi8;
-          R[(int64_t)(1 * gc + p) * plane + r_off + idx] = lo8;
-          R[(int64_t)(2 * gc + p) * plane + r_off + idx] = (int8_t)(hi8 + lo8);
+          *rh = hi8;
+          *rl = lo8;
+          *rs = (int8_t)(hi8 + lo8);
+          rh += plane;
+          rl += plane;
+          rs += plane;
         }
     }
 
@@ -325,14 +385,15 @@ namespace sdpb_gpu
                                              int64_t ei, int L, int64_t total,
                                              int64_t eo, int64_t ebase,
                                              int32_t *__restrict__ om,
-                                             int64_t *__restrict__ oe)
+                                             int64_t *__restrict__ oe,
+                                             bool negate = false)
     {
       constexpr int WMAX = 96;
       uint32_t a[WMAX];
       for(int t = 0; t < W; ++t)
         a[t] = uint32_t(Ci[(int64_t)t * in_plane + ei]);
-      const bool neg = int32_t(a[W - 1]) < 0;
-      if(neg)
+      const bool magn_neg = int32_t(a[W - 1]) < 0, neg = magn_neg != negate;
+      if(magn_neg)
         {
           unsigned long long c = 1;
           for(int t = 0; t < W; ++t)
@@ -408,7 +469,7 @@ namespace sdpb_gpu
                                      const int64_t *__restrict__ EB, int L,
                                      int32_t *__restrict__ om,
                                      int64_t *__restrict__ oe, int64_t j0 = 0,
-                                     int64_t pc = -1)
+                                     int64_t pc = -1, bool flat = false)
     {
       if(pc < 0)
         pc = n;
@@ -419,7 +480,8 @@ namespace sdpb_gpu
       const int64_t b = q / (m * pc), rem = q % (m * pc);
       const int64_t jj = rem / m, i = rem % m, j = j0 + jj;
       round_entry(Ci, W, in_plane, b * mp * pc + jj * mp + i, L, total,
-                  b * m * n + j * m + i, EA[b * m + i] + EB[b * n + j], om, oe);
+                  flat ? j * batch * m + b * m + i : b * m * n + j * m + i,
+                  EA[b * m + i] + EB[b * n + j], om, oe);
     }
 
     // the same rounding with the limbs in registers: static indices, a
@@ -434,23 +496,33 @@ namespace sdpb_gpu
                                          const int64_t *__restrict__ EB,
                                          int32_t *__restrict__ om,
                                          int64_t *__restrict__ oe, int64_t j0,
-                                         int64_t pc)
+                                         int64_t pc, int64_t row0, bool negate,
+                                         const int32_t *__restrict__ colmap = nullptr,
+                                         int exp_shift = 0, bool flat = false,
+                                         int64_t out_plane = 0, int64_t out_bs = 0,
+                                         int64_t out_ld = 0)
     {
+      // rows row0..m-1 of the panel (Product_Lower_Only: row0 = j0)
       const int64_t q = blockIdx.x * (int64_t)blockDim.x + threadIdx.x;
-      const int64_t batch = total / (m * n);
-      if(q >= batch * m * pc)
+      const int64_t batch = total / (m * n), mr = m - row0, mrp = mp - row0;
+      if(q >= batch * mr * pc)
         return;
-      const int64_t b = q / (m * pc), rem = q % (m * pc);
-      const int64_t jj = rem / m, i = rem % m, j = j0 + jj;
-      const int64_t ei = b * mp * pc + jj * mp + i;
-      const int64_t eo = b * m * n + j * m + i;
-      const int64_t ebase = EA[b * m + i] + EB[b * n + j];
+      const int64_t b = q / (mr * pc), rem = q % (mr * pc);
+      const int64_t jj = rem / mr, ir = rem % mr, i = ir + row0;
+      const int64_t j = colmap ? colmap[j0 + jj] : j0 + jj;
+      const int64_t ei = b * mrp * pc + jj * mrp + ir;
+      const int64_t eo = flat ? j * batch * m + b * m + i
+                              : b * (out_bs ? out_bs : m * n)
+                                  + j * (out_ld ? out_ld : m) + i;
+      const int64_t oplane = out_plane ? out_plane : total;
+      const int64_t ebase = EA[b * m + i] + EB[b * n + j] + exp_shift;
       uint32_t a[WM];
 #pragma unroll
       for(int t = 0; t < WM; ++t)
         a[t] = t < W ? uint32_t(Ci[(int64_t)t * in_plane + ei]) : 0u;
-      const bool neg = int32_t(Ci[(int64_t)(W - 1) * in_plane + ei]) < 0;
-      if(neg)
+      const bool magn_neg = int32_t(Ci[(int64_t)(W - 1) * in_plane + ei]) < 0;
+      const bool neg = magn_neg != negate;
+      if(magn_neg)
         {
           unsigned long long c = 1;
 #pragma unroll
@@ -471,7 +543,7 @@ namespace sdpb_gpu
         {
 #pragma unroll
           for(int t = 0; t < LT; ++t)
-            om[(int64_t)t * total + eo] = 0;
+            om[(int64_t)t * oplane + eo] = 0;
           oe[eo] = MPF_EZ;
           return;
         }
@@ -479,7 +551,42 @@ namespace sdpb_gpu
       const int sh = bl - NB;
       if(sh < 1)
         {
-          round_entry(Ci, W, in_plane, ei, LT, total, eo, ebase, om, oe);
+          // fewer bits than a float holds: an exact shift to the left (common
+          // when the low digits of the product are not formed)
+          const int ls = -sh, ql = ls >> 5, rl = ls & 31;
+          uint32_t r[LT];
+#pragma unroll
+          for(int t = 0; t < LT; ++t)
+            r[t] = a[t];
+#pragma unroll
+          for(int bb = 0; (1 << bb) < LT; ++bb)
+            if(ql & (1 << bb))
+              {
+#pragma unroll
+                for(int t = LT - 1; t >= 0; --t)
+                  r[t] = (t >= (1 << bb)) ? r[t - (1 << bb)] : 0u;
+              }
+          if(rl)
+            {
+#pragma unroll
+              for(int t = LT - 1; t >= 0; --t)
+                r[t] = (r[t] << rl) | ((t > 0) ? r[t - 1] >> (32 - rl) : 0u);
+            }
+          if(neg)
+            {
+              unsigned long long cc = 1;
+#pragma unroll
+              for(int t = 0; t < LT; ++t)
+                {
+                  const unsigned long long v = (unsigned long long)(~r[t]) + cc;
+                  r[t] = uint32_t(v);
+                  cc = v >> 32;
+                }
+            }
+#pragma unroll
+          for(int t = 0; t < LT; ++t)
+            om[(int64_t)t * oplane + eo] = int32_t(r[t]);
+          oe[eo] = ebase + sh;
           return;
         }
       // the rounding bit, bit sh - 1
@@ -513,7 +620,7 @@ namespace sdpb_gpu
         }
       if((r[LT - 1] >> (NB - 32 * (LT - 1))) != 0 || r[LT] != 0)
         {
-          round_entry(Ci, W, in_plane, ei, LT, total, eo, ebase, om, oe);
+          round_entry(Ci, W, in_plane, ei, LT, oplane, eo, ebase, om, oe, negate);
           return;
         }
       if(neg)
@@ -529,7 +636,7 @@ namespace sdpb_gpu
         }
 #pragma unroll
       for(int t = 0; t < LT; ++t)
-        om[(int64_t)t * total + eo] = int32_t(r[t]);
+        om[(int64_t)t * oplane + eo] = int32_t(r[t]);
       oe[eo] = ebase + sh;
     }
   }
@@ -699,7 +806,8 @@ namespace sdpb_gpu
   Mpf_Gemm::~Mpf_Gemm()
   {
     for(void *p : {(void *)d_ctab_, (void *)d_topA_, (void *)d_topB_,
-                   (void *)d_EA_, (void *)d_EB_, (void *)d_exact_})
+                   (void *)d_EA_, (void *)d_EB_, (void *)d_exact_,
+                   (void *)d_colmap_})
       cudaFree(p);
     cudaEventDestroy(ev0_);
     cudaEventDestroy(ev1_);
@@ -723,43 +831,35 @@ namespace sdpb_gpu
   }
 
   void Mpf_Gemm::multiply(const Mpf_Matrix &A, const Mpf_Matrix &B,
-                          int32_t *d_cm, int64_t *d_ce, int triangles)
+                          int32_t *d_cm, int64_t *d_ce, int triangles, bool flat)
   {
-    if(A.rows != k_ || A.cols != m_ || B.rows != k_ || B.cols != n_
-       || A.L != L_ || B.L != L_)
-      throw std::invalid_argument("Mpf_Gemm::multiply: shapes");
-    tic();
-    MG_CHECK(cudaMemsetAsync(d_topA_, 0, size_t(batch_) * m_ * 8, stream_));
-    MG_CHECK(cudaMemsetAsync(d_topB_, 0, size_t(batch_) * n_ * 8, stream_));
-    const int64_t plA = int64_t(batch_) * k_ * m_, plB = int64_t(batch_) * k_ * n_;
-    col_tops<<<dim3(unsigned(m_), unsigned((k_ + 4095) / 4096), unsigned(batch_)),
-               256, 0, stream_>>>(A.m, A.e, L_, k_, m_, plA,
-                                  reinterpret_cast<unsigned long long *>(d_topA_),
-                                  int64_t(k_) * m_, int64_t(m_));
-    col_tops<<<dim3(unsigned(n_), unsigned((k_ + 4095) / 4096), unsigned(batch_)),
-               256, 0, stream_>>>(B.m, B.e, L_, k_, n_, plB,
-                                  reinterpret_cast<unsigned long long *>(d_topB_),
-                                  int64_t(k_) * n_, int64_t(n_));
-    make_refs<<<nblocks(int64_t(batch_) * m_), threads, 0, stream_>>>(
-      reinterpret_cast<unsigned long long *>(d_topA_), d_EA_, int64_t(batch_) * m_, D_);
-    make_refs<<<nblocks(int64_t(batch_) * n_), threads, 0, stream_>>>(
-      reinterpret_cast<unsigned long long *>(d_topB_), d_EB_, int64_t(batch_) * n_, D_);
-    MG_CHECK(cudaGetLastError());
-    toc("column maxima");
+    // (Product_Same_Operands implies A = B, then the same column exponents)
+    const bool same = (triangles & Product_Same_Operands) && m_ == n_;
+    alignments(A, B, same);
+    const int64_t plA = A.plane ? A.plane : int64_t(batch_) * k_ * m_,
+                  plB = B.plane ? B.plane : int64_t(batch_) * k_ * n_;
+    const int64_t bsA = A.bstride ? A.bstride : int64_t(k_) * m_,
+                  bsB = B.bstride ? B.bstride : int64_t(k_) * n_;
+    const int64_t ldA = A.ld ? A.ld : k_, ldB = B.ld ? B.ld : k_;
+    const int64_t oplane = out_plane_, obs = out_bstride_, old = out_ld_;
+    out_plane_ = out_bstride_ = out_ld_ = 0;
+    const int64_t *EB = same ? d_EA_ : d_EB_;
     const int CK = L_ + 3;
     auto launch = [&](const int32_t *mm, const int64_t *ee, int64_t cols,
-                      int64_t pl, int64_t in_bs, const int64_t *Eref,
+                      int64_t pl, int64_t in_bs, int64_t in_ld, const int64_t *Eref,
                       int64_t eref_bs, int64_t r_bs, int i0, int gc, int8_t *R,
                       int64_t plane) {
       const size_t sm = size_t(gc) * CK * 4;
       const int64_t nt = int64_t(kp_) * cols;
       const dim3 grid(unsigned(nblocks(nt)), unsigned(batch_));
-#define MPF_RES2(LT)                                                          \
-  mpf_residues<LT><<<grid, threads, sm, stream_>>>(                          \
+#define MPF_RES2(...)                                                         \
+  mpf_residues<__VA_ARGS__><<<grid, threads, sm, stream_>>>(                 \
     mm, ee, L_, k_, cols, kp_, pl, 0, Eref, d_ctab_ + int64_t(i0) * CK,       \
     nullptr, G_.device_primes() + i0, G_.device_minv() + i0, gc, R, plane,    \
-    in_bs, eref_bs, r_bs)
-      if(L_ == 28)
+    in_bs, eref_bs, r_bs, nullptr, 0, 0, in_ld)
+      if(L_ == 28 && 8 * D_ <= 32 * 28)
+        MPF_RES2(28, 28);
+      else if(L_ == 28)
         MPF_RES2(28);
       else if(L_ == 30)
         MPF_RES2(30);
@@ -772,28 +872,148 @@ namespace sdpb_gpu
       [&](int i0, int gc, int8_t *RA, int64_t planeA) {
         if(mp_ != m_)
           MG_CHECK(cudaMemsetAsync(RA, 0, size_t(3 * gc) * planeA, stream_));
-        launch(A.m, A.e, m_, plA, int64_t(k_) * m_, d_EA_, int64_t(m_),
+        launch(A.m, A.e, m_, plA, bsA, ldA, d_EA_, int64_t(m_),
                int64_t(kp_) * mp_, i0, gc, RA, planeA);
       },
       [&](int i0, int gc, int j0, int pc, int8_t *RB, int64_t planeB) {
-        launch(B.m + int64_t(j0) * k_, B.e + int64_t(j0) * k_, pc, plB,
-               int64_t(k_) * n_, d_EB_ + j0, int64_t(n_), int64_t(kp_) * pc, i0,
-               gc, RB, planeB);
+        launch(B.m + int64_t(j0) * ldB, B.e + int64_t(j0) * ldB, pc, plB, bsB,
+               ldB, EB + j0, int64_t(n_), int64_t(kp_) * pc, i0, gc, RB, planeB);
       },
       nullptr,
       [&](const int32_t *panel, int64_t cplane, int j0, int pc) {
         const int64_t total = int64_t(batch_) * m_ * n_;
-        if(fast_rounding_ && L_ == 28 && G_.limbs_out() <= 64)
-          normalize_blocks_reg<64, 28><<<nblocks(int64_t(batch_) * m_ * pc),
-                                         threads, 0, stream_>>>(
-            panel, G_.limbs_out(), cplane, mp_, m_, n_, total, d_EA_, d_EB_,
-            d_cm, d_ce, j0, pc);
+        const int64_t row0 = (triangles & Product_Lower_Only) ? j0 : 0;
+        const bool negate = (triangles & Product_Negate) != 0;
+        if(fast_rounding_ && L_ == 28 && G_.limbs_out() <= 32)
+          normalize_blocks_reg<32, 28><<<nblocks(cplane), threads, 0, stream_>>>(
+            panel, G_.limbs_out(), cplane, mp_, m_, n_, total, d_EA_, EB, d_cm,
+            d_ce, j0, pc, row0, negate, nullptr, G_.exp_shift(), flat, oplane,
+            obs, old);
+        else if(fast_rounding_ && L_ == 28 && G_.limbs_out() <= 64)
+          normalize_blocks_reg<64, 28><<<nblocks(cplane), threads, 0, stream_>>>(
+            panel, G_.limbs_out(), cplane, mp_, m_, n_, total, d_EA_, EB, d_cm,
+            d_ce, j0, pc, row0, negate, nullptr, G_.exp_shift(), flat, oplane,
+            obs, old);
+        else if(row0 || negate || G_.exp_shift() || oplane)
+          throw std::invalid_argument("Mpf_Gemm: this product needs fast rounding");
         else
           normalize_blocks<<<nblocks(int64_t(batch_) * m_ * pc), threads, 0,
                              stream_>>>(panel, G_.limbs_out(), cplane, mp_, m_,
-                                        n_, total, d_EA_, d_EB_, L_, d_cm, d_ce,
-                                        j0, pc);
+                                        n_, total, d_EA_, EB, L_, d_cm, d_ce,
+                                        j0, pc, flat);
         MG_CHECK(cudaGetLastError());
       }, triangles);
+  }
+
+  void Mpf_Gemm::multiply_groups(const Mpf_Matrix &A, const Mpf_Matrix &B,
+                                 const std::vector<Column_Group> &groups,
+                                 int32_t *d_cm, int64_t *d_ce, bool flat)
+  {
+    if(!fast_rounding_ || L_ != 28 || G_.limbs_out() > 64 || 8 * D_ > 32 * 28
+       || A.ld || B.ld)
+      throw std::invalid_argument("Mpf_Gemm::multiply_groups: options");
+    alignments(A, B, false);
+    if(!d_colmap_)
+      MG_CHECK(cudaMalloc(&d_colmap_, size_t(n_) * 4));
+    // the groups' columns in one list, cut into panels of at most the width
+    // the planner chose
+    std::vector<int32_t> colmap;
+    std::vector<Product_Panel> panels;
+    const int np = G_.panel_width();
+    for(const auto &g : groups)
+      for(size_t c0 = 0; c0 < g.cols.size(); c0 += np)
+        {
+          Product_Panel p;
+          p.j0 = int(colmap.size());
+          p.pc = int(std::min(size_t(np), g.cols.size() - c0));
+          p.row0 = p.first = g.first;
+          p.last = g.last;
+          colmap.insert(colmap.end(), g.cols.begin() + c0, g.cols.begin() + c0 + p.pc);
+          panels.push_back(std::move(p));
+        }
+    if(colmap.empty())
+      return;
+    MG_CHECK(cudaMemcpy(d_colmap_, colmap.data(), colmap.size() * 4,
+                        cudaMemcpyHostToDevice));
+    const int64_t plA = int64_t(batch_) * k_ * m_, plB = int64_t(batch_) * k_ * n_;
+    const int CK = L_ + 3;
+    G_.multiply_panels(
+      [&](int i0, int gc, int8_t *RA, int64_t planeA) {
+        const size_t sm = size_t(gc) * CK * 4;
+        const dim3 grid(unsigned(nblocks(int64_t(kp_) * m_)), unsigned(batch_));
+        if(mp_ != m_)
+          MG_CHECK(cudaMemsetAsync(RA, 0, size_t(3 * gc) * planeA, stream_));
+        mpf_residues<28, 28><<<grid, threads, sm, stream_>>>(
+          A.m, A.e, L_, k_, m_, kp_, plA, 0, d_EA_, d_ctab_ + int64_t(i0) * CK,
+          nullptr, G_.device_primes() + i0, G_.device_minv() + i0, gc, RA,
+          planeA, int64_t(k_) * m_, int64_t(m_), int64_t(kp_) * mp_);
+        MG_CHECK(cudaGetLastError());
+      },
+      [&](int i0, int gc, const Product_Panel &p, int8_t *RB, int64_t planeB) {
+        const size_t sm = size_t(gc) * CK * 4;
+        const int64_t win = p.last - p.first;
+        const dim3 grid(unsigned(nblocks(win * p.pc)), unsigned(batch_));
+        mpf_residues<28, 28><<<grid, threads, sm, stream_>>>(
+          B.m, B.e, L_, k_, p.pc, kp_, plB, 0, d_EB_, d_ctab_ + int64_t(i0) * CK,
+          nullptr, G_.device_primes() + i0, G_.device_minv() + i0, gc, RB, planeB,
+          int64_t(k_) * n_, int64_t(n_), int64_t(kp_) * p.pc, d_colmap_ + p.j0,
+          p.first, win);
+        MG_CHECK(cudaGetLastError());
+      },
+      [&](const int32_t *panel, int64_t cplane, const Product_Panel &p) {
+        const int64_t total = int64_t(batch_) * m_ * n_;
+        if(G_.limbs_out() <= 32)
+          normalize_blocks_reg<32, 28><<<nblocks(cplane), threads, 0, stream_>>>(
+            panel, G_.limbs_out(), cplane, mp_, m_, n_, total, d_EA_, d_EB_, d_cm,
+            d_ce, p.j0, p.pc, p.row0, false, d_colmap_, G_.exp_shift(), flat);
+        else
+          normalize_blocks_reg<64, 28><<<nblocks(cplane), threads, 0, stream_>>>(
+            panel, G_.limbs_out(), cplane, mp_, m_, n_, total, d_EA_, d_EB_, d_cm,
+            d_ce, p.j0, p.pc, p.row0, false, d_colmap_, G_.exp_shift(), flat);
+        MG_CHECK(cudaGetLastError());
+      },
+      panels);
+  }
+
+  void Mpf_Gemm::alignments(const Mpf_Matrix &A, const Mpf_Matrix &B, bool same)
+  {
+    if(A.rows != k_ || A.cols != m_ || B.rows != k_ || B.cols != n_
+       || A.L != L_ || B.L != L_)
+      throw std::invalid_argument("Mpf_Gemm::multiply: shapes");
+    tic();
+    const int64_t plA = A.plane ? A.plane : int64_t(batch_) * k_ * m_,
+                  plB = B.plane ? B.plane : int64_t(batch_) * k_ * n_;
+    const int64_t bsA = A.bstride ? A.bstride : int64_t(k_) * m_,
+                  bsB = B.bstride ? B.bstride : int64_t(k_) * n_;
+    const int64_t ldA = A.ld ? A.ld : k_, ldB = B.ld ? B.ld : k_;
+    if(k_ <= 4096)
+      {
+        col_refs<<<dim3(unsigned(m_), unsigned(batch_)), 256, 0, stream_>>>(
+          A.m, A.e, L_, k_, plA, D_, d_EA_, bsA, int64_t(m_), ldA);
+        if(!same)
+          col_refs<<<dim3(unsigned(n_), unsigned(batch_)), 256, 0, stream_>>>(
+            B.m, B.e, L_, k_, plB, D_, d_EB_, bsB, int64_t(n_), ldB);
+        MG_CHECK(cudaGetLastError());
+        toc("column maxima");
+        return;
+      }
+    MG_CHECK(cudaMemsetAsync(d_topA_, 0, size_t(batch_) * m_ * 8, stream_));
+    MG_CHECK(cudaMemsetAsync(d_topB_, 0, size_t(batch_) * n_ * 8, stream_));
+    col_tops<<<dim3(unsigned(m_), unsigned((k_ + 4095) / 4096), unsigned(batch_)),
+               256, 0, stream_>>>(A.m, A.e, L_, k_, m_, plA,
+                                  reinterpret_cast<unsigned long long *>(d_topA_),
+                                  bsA, int64_t(m_), ldA);
+    if(!same)
+      col_tops<<<dim3(unsigned(n_), unsigned((k_ + 4095) / 4096), unsigned(batch_)),
+                 256, 0, stream_>>>(B.m, B.e, L_, k_, n_, plB,
+                                    reinterpret_cast<unsigned long long *>(d_topB_),
+                                    bsB, int64_t(n_), ldB);
+    make_refs<<<nblocks(int64_t(batch_) * m_), threads, 0, stream_>>>(
+      reinterpret_cast<unsigned long long *>(d_topA_), d_EA_, int64_t(batch_) * m_, D_);
+    if(!same)
+      make_refs<<<nblocks(int64_t(batch_) * n_), threads, 0, stream_>>>(
+        reinterpret_cast<unsigned long long *>(d_topB_), d_EB_, int64_t(batch_) * n_, D_);
+    MG_CHECK(cudaGetLastError());
+    toc("column maxima");
   }
 }

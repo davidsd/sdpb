@@ -40,6 +40,8 @@
 
 namespace sdpb_gpu
 {
+  class Rns_Workspace;
+
   struct Gram_Options
   {
     int base = 256;        // diagonal blocks of Q at most this wide (full squares)
@@ -76,6 +78,26 @@ namespace sdpb_gpu
     // inputs (digits of y_i and the quotient estimate) in the CRT's row
     // layout, instead of storing uint16 residues that a CRT pre-pass rereads
     bool reduce_to_crt = true;
+    // Block_Factor: stage timers inside every cached product as well
+    // (synchronizes after each stage; profiles only)
+    bool profile_products = false;
+    // Block_Factor: stage timers inside its cached products, summed by phase
+    // (collect_product_timings)
+    bool product_timing = false;
+    // Rns_Gemm: when > 0, keep only the top of each exact product (base-128
+    // CRT): the digits of C below 2^(8 digits - 2 - guard) are not formed, with
+    // an error below 2^(8 digits - 2 - guard) in the integer C. The aligned
+    // operands are rounded to integers, so C is uncertain by about k 2^(8 digits - 2)
+    // anyway, and a float's unit in C's largest entries is 2^(8 digits - 2):
+    // those digits carry nothing. Fewer digits in the CRT product, the carries
+    // and the rounding. 0: exact (a negative value cuts into the result: tests).
+    int crt_guard_bits = 0;
+    // Rns_Gemm: work buffers from this workspace, shared by all products on the
+    // stream, instead of each product's own (one product runs at a time)
+    Rns_Workspace *workspace = nullptr;
+    // Block_Factor: its products share one workspace (the planner then budgets
+    // the largest product, not the sum over shapes)
+    bool share_workspace = true;
   };
 
   class Gram_Accumulator

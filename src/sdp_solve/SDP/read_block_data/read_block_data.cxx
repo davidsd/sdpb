@@ -4,7 +4,10 @@
 #include "sdp_solve/SDP.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/copy_matrix.hxx"
-
+#ifdef SDPB_GPU
+#include "sdpb_util/for_each_threaded.hxx"
+#include <fstream>
+#endif
 #include <unordered_map>
 
 namespace fs = std::filesystem;
@@ -94,6 +97,87 @@ namespace
   }
 }
 
+#ifdef SDPB_GPU
+namespace
+{
+  bool threaded_one_rank_reading = false;
+}
+
+void set_threaded_sdp_reading(const bool on)
+{
+  threaded_one_rank_reading = on;
+}
+
+namespace
+{
+  // One rank holds every block (sdpb --gpu), and nothing has to be sent: only
+  // SetGrid needs MPI, so each block is parsed, sized and copied on its own
+  // thread (sizing allocates every BigFloat). The same bytes end up in the same
+  // matrices.
+  void read_blocks_one_rank(const fs::path &sdp_path, const El::Grid &grid,
+                            const Block_Info &block_info, SDP &sdp)
+  {
+    const size_t num_blocks(block_info.block_indices.size());
+    for(size_t index = 0; index < num_blocks; ++index)
+      {
+        sdp.primal_objective_c.blocks.at(index).SetGrid(grid);
+        sdp.free_var_matrix.blocks.at(index).SetGrid(grid);
+        for(const size_t parity : {0, 1})
+          {
+            sdp.bilinear_bases.at(2 * index + parity).SetGrid(grid);
+            sdp.bases_blocks.at(2 * index + parity).SetGrid(grid);
+          }
+      }
+
+    auto read_block = [&](const size_t index) {
+      fs::path block_path(sdp_path
+                          / ("block_data_"
+                             + std::to_string(block_info.block_indices.at(index))
+                             + ".bin"));
+      if(!exists(block_path))
+        block_path.replace_extension(".json");
+      ASSERT(exists(block_path), "Block not found: ", block_path);
+
+      std::ifstream block_stream(block_path, std::ios::binary);
+      const SDP_Block_Data block(block_stream, get_block_format(block_path),
+                                 index, block_info);
+      const size_t block_index = block_info.block_indices.at(index);
+      auto copy = [](const El::Matrix<El::BigFloat> &source,
+                     El::DistMatrix<El::BigFloat> &destination,
+                     const int64_t height, const int64_t width) {
+        // as copy_matrix_from_root()
+        ASSERT(source.Height() == height && source.Width() == width,
+               "Incompatible matrix sizes: ", El::DimsString(source, "source"),
+               ", expected ", height, "x", width);
+        destination.Resize(height, width);
+        El::Copy(source, destination.Matrix());
+      };
+      copy(block.primal_objective_c, sdp.primal_objective_c.blocks.at(index),
+           block_info.get_schur_block_size(block_index), 1);
+      copy(block.constraint_matrix, sdp.free_var_matrix.blocks.at(index),
+           block_info.get_schur_block_size(block_index),
+           sdp.dual_objective_b.Height());
+      for(const size_t parity : {0, 1})
+        {
+          copy(block.bilinear_bases[parity],
+               sdp.bilinear_bases.at(2 * index + parity),
+               block_info.get_bilinear_bases_height(block_index, parity),
+               block_info.get_bilinear_bases_width(block_index, parity));
+          copy(block.bases_blocks[parity],
+               sdp.bases_blocks.at(2 * index + parity),
+               block_info.get_psd_matrix_block_size(block_index, parity),
+               block_info.get_bilinear_pairing_block_size(block_index, parity));
+        }
+    };
+    // The first on this thread: boost's serialization singletons start there.
+    if(num_blocks == 0)
+      return;
+    read_block(0);
+    for_each_threaded(num_blocks - 1, [&](const size_t i) { read_block(i + 1); });
+  }
+}
+#endif
+
 void read_block_data(const fs::path &sdp_path, const El::Grid &grid,
                      const Block_Info &block_info, SDP &sdp, Timers &timers)
 {
@@ -165,6 +249,14 @@ void read_block_data(const fs::path &sdp_path, const El::Grid &grid,
           set_sdp_from_root(grid, block_info, sdp_block_local, sdp);
         }
     }
+#ifdef SDPB_GPU
+  // GPU builds with --gpu only (set_threaded_sdp_reading()), so that every
+  // other read is as before
+  else if(El::mpi::Size() == 1 && threaded_one_rank_reading)
+    {
+      read_blocks_one_rank(sdp_path, grid, block_info, sdp);
+    }
+#endif
   else
     {
       for(size_t index(0); index != num_blocks; ++index)

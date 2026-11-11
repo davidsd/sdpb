@@ -7,6 +7,13 @@
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
+#include <memory>
+#include <optional>
+
+#ifdef SDPB_GPU
+#include "gpu/Gpu_Compute.hxx"
+#endif
+
 // The main solver loop
 
 namespace fs = std::filesystem;
@@ -249,7 +256,21 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
 
   El::BigFloat primal_step_length(0), dual_step_length(0);
 
-  auto X_cholesky(X), Y_cholesky(X);
+#ifdef SDPB_GPU
+  // --gpu: the residues, factorizations, search directions and step lengths run
+  // on one GPU; this driver stays (see src/gpu/solver/Gpu_Solver.hxx)
+  std::unique_ptr<Gpu_Compute> gpu;
+  if(parameters.gpu)
+    gpu = std::make_unique<Gpu_Compute>(parameters, block_info, sdp, *this);
+#else
+  ASSERT(!parameters.gpu, "--gpu: this sdpb was built without --enable-gpu");
+#endif
+
+  // With --gpu, X and Y are factored on the device: no host copies
+  const Paired_Block_Diagonal_Matrix no_blocks(std::vector<size_t>{},
+                                               std::vector<size_t>{}, grid);
+  auto X_cholesky = parameters.gpu ? no_blocks : X;
+  auto Y_cholesky = parameters.gpu ? no_blocks : X;
   if(verbosity >= Verbosity::debug)
     {
       print_allocation_message_per_node(env, "X_cholesky",
@@ -293,8 +314,12 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
 
   Scoped_Timer initialize_bigint_syrk_context_timer(timers,
                                                     "bigint_syrk_context");
-  auto bigint_syrk_context = create_syrk_Q_context_and_print_memory(
-    env, block_info, grid, sdp, *this, parameters, verbosity);
+  // --gpu needs no BigInt syrk context (and none of its memory)
+  std::unique_ptr<BigInt_Shared_Memory_Syrk_Context> bigint_syrk_context;
+  if(!parameters.gpu)
+    bigint_syrk_context.reset(new BigInt_Shared_Memory_Syrk_Context(
+      create_syrk_Q_context_and_print_memory(env, block_info, grid, sdp, *this,
+                                             parameters, verbosity)));
   initialize_bigint_syrk_context_timer.stop();
 
   initialize_timer.stop();
@@ -388,11 +413,19 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
                     if(iterations_json.good())
                       iterations_json << "\n]";
                   }
+#ifdef SDPB_GPU
+                if(gpu)
+                  gpu->get_iterate(*this);
+#endif
                 auto c_minus_By_path
                   = c_minus_By_dir_path / ("c_minus_By.json");
                 save_c_minus_By(c_minus_By_path, block_info, sdp, y, verbosity,
-                                timers);
+                                timers, parameters.gpu);
               }
+#ifdef SDPB_GPU
+            if(gpu)
+              gpu->get_iterate(*this);
+#endif
             return SDP_Solver_Terminate_Reason::SIGTERM_Received;
           }
       }
@@ -407,6 +440,10 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
       if(checkpoint_now == true)
         {
           Scoped_Timer save_timer(timers, "save_checkpoint");
+#ifdef SDPB_GPU
+          if(gpu)
+            gpu->get_iterate(*this);
+#endif
           save_checkpoint(parameters.checkpoint_out, verbosity,
                           parameter_properties);
           last_checkpoint_time = std::chrono::high_resolution_clock::now();
@@ -417,43 +454,57 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
                 = c_minus_By_dir_path
                   / ("c_minus_By." + std::to_string(iteration) + ".json");
               save_c_minus_By(c_minus_By_path, block_info, sdp, y, verbosity,
-                              timers);
+                              timers, parameters.gpu);
             }
         }
-      compute_objectives(sdp, x, y, primal_objective, dual_objective,
-                         duality_gap, timers);
-
-      {
-        Scoped_Timer cholesky_decomposition_timer(timers,
-                                                  "choleskyDecomposition");
-        cholesky_decomposition(X, X_cholesky, block_info.block_indices, "X");
-        cholesky_decomposition(Y, Y_cholesky, block_info.block_indices, "Y");
-      }
-
-      compute_bilinear_pairings(block_info, X_cholesky, Y, sdp.bases_blocks,
-                                A_X_inv, A_Y, timers);
-      if(verbosity >= Verbosity::trace)
-        {
-          print_allocation_message_per_node(env, "A_X_inv",
-                                            get_allocated_bytes(A_X_inv));
-          print_allocation_message_per_node(env, "A_Y",
-                                            get_allocated_bytes(A_Y));
-        }
-
-      compute_dual_residues_and_error(block_info, sdp, y, A_Y, dual_residues,
-                                      dual_error, timers);
-      compute_primal_residues_and_error_P_Ax_X(
-        block_info, sdp, x, X, primal_residues, primal_error_P, timers);
-
       // use y to set the sizes of primal_residue_p.  The data is
       // overwritten in compute_primal_residues_and_error_p.
-      Block_Vector primal_residue_p(y);
-      compute_primal_residues_and_error_p_b_Bx(
-        block_info, sdp, x, primal_residue_p, primal_error_p);
-      if(verbosity >= Verbosity::trace)
+      std::optional<Block_Vector> primal_residue_p;
+#ifdef SDPB_GPU
+      if(gpu)
         {
-          print_allocation_message_per_node(
-            env, "primal_residue_p", get_allocated_bytes(primal_residue_p));
+          Scoped_Timer gpu_residues_timer(timers, "gpu.residues");
+          gpu->residues(sdp, *this);
+        }
+      else
+#endif
+        {
+          compute_objectives(sdp, x, y, primal_objective, dual_objective,
+                             duality_gap, timers);
+
+          {
+            Scoped_Timer cholesky_decomposition_timer(timers,
+                                                      "choleskyDecomposition");
+            cholesky_decomposition(X, X_cholesky, block_info.block_indices,
+                                   "X");
+            cholesky_decomposition(Y, Y_cholesky, block_info.block_indices,
+                                   "Y");
+          }
+
+          compute_bilinear_pairings(block_info, X_cholesky, Y, sdp.bases_blocks,
+                                    A_X_inv, A_Y, timers);
+          if(verbosity >= Verbosity::trace)
+            {
+              print_allocation_message_per_node(env, "A_X_inv",
+                                                get_allocated_bytes(A_X_inv));
+              print_allocation_message_per_node(env, "A_Y",
+                                                get_allocated_bytes(A_Y));
+            }
+
+          compute_dual_residues_and_error(block_info, sdp, y, A_Y, dual_residues,
+                                          dual_error, timers);
+          compute_primal_residues_and_error_P_Ax_X(
+            block_info, sdp, x, X, primal_residues, primal_error_P, timers);
+
+          primal_residue_p.emplace(y);
+          compute_primal_residues_and_error_p_b_Bx(
+            block_info, sdp, x, *primal_residue_p, primal_error_p);
+          if(verbosity >= Verbosity::trace)
+            {
+              print_allocation_message_per_node(
+                env, "primal_residue_p",
+                get_allocated_bytes(*primal_residue_p));
+            }
         }
 
       bool terminate_now, is_primal_and_dual_feasible;
@@ -470,12 +521,23 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
       El::BigFloat Q_cond_number;
       El::BigFloat max_block_cond_number;
       std::string max_block_cond_number_name;
-      step(env, parameters, verbosity, total_psd_rows,
-           is_primal_and_dual_feasible, block_info, sdp, grid, X_cholesky,
-           Y_cholesky, A_X_inv, A_Y, primal_residue_p, bigint_syrk_context, mu,
-           beta_corrector, primal_step_length, dual_step_length, terminate_now,
-           timers, block_timings_ms, Q_cond_number, max_block_cond_number,
-           max_block_cond_number_name);
+#ifdef SDPB_GPU
+      if(gpu)
+        {
+          Scoped_Timer gpu_step_timer(timers, "gpu.step");
+          gpu->step(parameters, total_psd_rows, is_primal_and_dual_feasible,
+                    *this, mu, beta_corrector, primal_step_length,
+                    dual_step_length, terminate_now, Q_cond_number,
+                    max_block_cond_number, max_block_cond_number_name);
+        }
+      else
+#endif
+        step(env, parameters, verbosity, total_psd_rows,
+             is_primal_and_dual_feasible, block_info, sdp, grid, X_cholesky,
+             Y_cholesky, A_X_inv, A_Y, *primal_residue_p, *bigint_syrk_context,
+             mu, beta_corrector, primal_step_length, dual_step_length,
+             terminate_now, timers, block_timings_ms, Q_cond_number,
+             max_block_cond_number, max_block_cond_number_name);
 
       if(verbosity >= Verbosity::trace && El::mpi::Rank() == 0)
         {
@@ -509,6 +571,15 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
                       max_block_cond_number_name, verbosity);
     }
 
+#ifdef SDPB_GPU
+  if(gpu)
+    {
+      gpu->get_iterate(*this);
+      if(write_iterations_json_and_c_minus_By)
+        gpu->write_profile(iterations_json_path.parent_path()
+                           / "gpu_profile.json");
+    }
+#endif
   if(write_iterations_json_and_c_minus_By)
     {
       if(El::mpi::Rank() == 0)
@@ -519,7 +590,8 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
             iterations_json << "\n]";
         }
       auto c_minus_By_path = c_minus_By_dir_path / "c_minus_By.json";
-      save_c_minus_By(c_minus_By_path, block_info, sdp, y, verbosity, timers);
+      save_c_minus_By(c_minus_By_path, block_info, sdp, y, verbosity, timers,
+                      parameters.gpu);
     }
   return terminate_reason;
 }

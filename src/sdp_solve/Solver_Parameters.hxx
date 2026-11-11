@@ -20,6 +20,8 @@ struct Solver_Parameters
   bool find_primal_feasible{}, find_dual_feasible{}, detect_primal_feasible_jump{},
     detect_dual_feasible_jump{};
   size_t precision{};
+  // run the iterations on one GPU (builds with waf configure --enable-gpu)
+  bool gpu{};
 
   // Initialized from Environment - MemAvailable
   String_To_Memory_Limit_Translator memory_limit_translator;

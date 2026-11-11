@@ -38,12 +38,16 @@ namespace sdpb_gpu
   // A matrix of device floats, column-major per limb plane (as SDPB's
   // Elemental matrices; SDPviBe's MPF (L, rows, cols) is row-major):
   // m[t*rows*cols + j*rows + i], e[j*rows + i].
+  // Mpf_Gemm also takes a part of a larger batch (Mpf_Batch::block): ld is the
+  // distance between columns, bstride between blocks, plane between limb planes
+  // (0: packed).
   struct Mpf_Matrix
   {
     int32_t *m = nullptr;
     int64_t *e = nullptr;
     int L = 0;
     int64_t rows = 0, cols = 0;
+    int64_t ld = 0, bstride = 0, plane = 0;
   };
 
   class Mpf_Gram
@@ -103,12 +107,42 @@ namespace sdpb_gpu
     Mpf_Gemm(const Mpf_Gemm &) = delete;
     Mpf_Gemm &operator=(const Mpf_Gemm &) = delete;
     // A: rows k, cols m; B: rows k, cols n (batch blocks each); C: m x n floats
+    // triangles: see Rns_Gemm::multiply_with. With Product_Lower_Only the
+    // entries of C above the diagonal are not written (panel by panel: rows
+    // above a panel's first column; those of the panel's own triangle are).
+    // flat: C's rows of all blocks stacked per column (the layout Mpf_Gram
+    // takes), entry (i, j) of block b at j (batch m) + b m + i
     void multiply(const Mpf_Matrix &A, const Mpf_Matrix &B, int32_t *d_cm,
-                  int64_t *d_ce, int triangles = 0);
+                  int64_t *d_ce, int triangles = 0, bool flat = false);
+    // C = A^T B with A's columns triangular (A^T lower) and B known to be
+    // zero except on groups of columns sharing their nonzero rows: for each
+    // group, cols are its columns of B, rows first..last-1 (multiples of 16)
+    // hold all its nonzero entries. Rows of C above `first` are known zero and
+    // are not written. Bit for bit the entries of multiply().
+    struct Column_Group
+    {
+      std::vector<int> cols;
+      int first = 0, last = 0;
+    };
+    void multiply_groups(const Mpf_Matrix &A, const Mpf_Matrix &B,
+                         const std::vector<Column_Group> &groups, int32_t *d_cm,
+                         int64_t *d_ce, bool flat = false);
+    // for the next multiply: C is part of a larger batch, with these distances
+    // between limb planes, blocks and columns (default: packed)
+    void set_output_layout(int64_t plane, int64_t bstride, int64_t ld)
+    {
+      out_plane_ = plane;
+      out_bstride_ = bstride;
+      out_ld_ = ld;
+    }
     Rns_Gemm &gemm() { return G_; }
+    const Rns_Gemm &gemm() const { return G_; }
     const std::map<std::string, double> &timings() const { return ms_; }
+    size_t device_bytes() const { return G_.device_bytes(); }
 
   private:
+    // column maxima of A and B and the alignment exponents
+    void alignments(const Mpf_Matrix &A, const Mpf_Matrix &B, bool same);
     void tic();
     void toc(const std::string &phase);
     int m_, n_, k_, kp_, mp_, batch_, L_, D_;
@@ -120,6 +154,8 @@ namespace sdpb_gpu
     int64_t *d_topA_ = nullptr, *d_topB_ = nullptr, *d_EA_ = nullptr,
             *d_EB_ = nullptr;
     int32_t *d_exact_ = nullptr;
+    int32_t *d_colmap_ = nullptr; // position in the groups -> column of B
+    int64_t out_plane_ = 0, out_bstride_ = 0, out_ld_ = 0;
     std::map<std::string, double> ms_;
     cudaEvent_t ev0_, ev1_;
   };

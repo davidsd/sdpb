@@ -90,6 +90,8 @@ int main(int argc, char **argv)
   Gram_Options opt; // the defaults of real_block_check
   opt.prime_group = 32;
   opt.fused_residues = true;
+  opt.crt_guard_bits = atoi(arg(argc, argv, "--crt-guard", "0"));
+  opt.share_workspace = atoi(arg(argc, argv, "--share-workspace", "1"));
   auto T0 = std::chrono::steady_clock::now();
   const int64_t sp = int64_t(nb) * P * P, bp = int64_t(nb) * P * N;
   auto Sm = slurp<int32_t>(dir + "/S" + ch + ".m.bin", size_t(L) * sp);
@@ -156,13 +158,21 @@ int main(int argc, char **argv)
     {
       cudaDeviceSynchronize();
       auto t0 = std::chrono::steady_clock::now();
-      F.factor(S, Lf, X,
-               {atoi(arg(argc, argv, "--equilibrate", "1")) != 0,
-                atoi(arg(argc, argv, "--panel-refine", "1")),
-                atoi(arg(argc, argv, "--refine-min", "0")),
-                atoi(arg(argc, argv, "--correction-digits", "0")),
-                atoi(arg(argc, argv, "--gram-min", "0")),
-                atoi(arg(argc, argv, "--skip-triangular-zeros", "0")) != 0});
+      Factor_Options fo{atoi(arg(argc, argv, "--equilibrate", "1")) != 0,
+                        atoi(arg(argc, argv, "--panel-refine", "1")),
+                        atoi(arg(argc, argv, "--refine-min", "0")),
+                        atoi(arg(argc, argv, "--correction-digits", "0")),
+                        atoi(arg(argc, argv, "--gram-min", "0")),
+                        atoi(arg(argc, argv, "--skip-triangular-zeros", "1")) != 0};
+      fo.lower_update = atoi(arg(argc, argv, "--lower-update", "1"));
+      fo.correction_limit = atoi(arg(argc, argv, "--correction-limit", "0"));
+      fo.structured_solve = atoi(arg(argc, argv, "--structured-solve", "1"));
+      fo.reuse_residues = atoi(arg(argc, argv, "--reuse-residues", "1"));
+      fo.refine_max_n = atoi(arg(argc, argv, "--refine-max", "0"));
+      fo.log_panels = rep == 0 && atoi(arg(argc, argv, "--log-panels", "0"));
+      F.factor(S, Lf, X, fo);
+      printf("POLICY rep %d: panels uncorrected %d, restarts %d\n", rep,
+             F.panels_skipped(), F.correction_restarts());
       cudaDeviceSynchronize();
       auto t1 = std::chrono::steady_clock::now();
       if(Pn.m)

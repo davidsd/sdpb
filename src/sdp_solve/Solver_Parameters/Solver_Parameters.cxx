@@ -58,6 +58,16 @@ boost::program_options::options_description Solver_Parameters::options()
     "maxIterations",
     boost::program_options::value<int64_t>(&max_iterations)->default_value(500),
     "Maximum number of iterations to run the solver.");
+  result.add_options()(
+    "gpu", boost::program_options::bool_switch(&gpu)->default_value(false),
+    "Run the solver iterations on one GPU, one MPI rank (only in builds "
+    "configured with --enable-gpu). --maxMemory and --maxSharedMemory have "
+    "no effect with --gpu: its host and device memory are not estimated. "
+    "Tuning options are environment variables, see src/gpu/README.md. "
+    "A loss of positive definiteness (a non-positive pivot in a Cholesky "
+    "factor, e.g. at too low a precision late in a hard run) is not detected "
+    "on the GPU: where the CPU solver stops with an error, --gpu continues "
+    "on meaningless factors.");
   result.add_options()("maxRuntime",
                        boost::program_options::value<int64_t>(&max_runtime)
                          ->default_value(std::numeric_limits<int64_t>::max()),

@@ -118,7 +118,8 @@ target_compile_definitions(sdpb_options INTERFACE
   $<$<PLATFORM_ID:Darwin>:_GNU_SOURCE>)
 
 # GPU backend (src/gpu, CUDA), off by default; without it the CPU build is unchanged.
-option(SDPB_ENABLE_GPU "Build the GPU backend (src/gpu, CUDA)" OFF)
+# The equivalent of waf's --enable-gpu: sdpb --gpu, see src/gpu/README.md.
+option(SDPB_ENABLE_GPU "Build the GPU backend (src/gpu, CUDA): the --gpu option of sdpb" OFF)
 if(SDPB_ENABLE_GPU)
   # 90: H100/H200, the default of the Makefile and of waf's --gpu-arch. E.g. -DCMAKE_CUDA_ARCHITECTURES="90-real;89-real".
   # The host compiler of nvcc can be set with -DCMAKE_CUDA_HOST_COMPILER.
@@ -133,6 +134,7 @@ if(SDPB_ENABLE_GPU)
   set(CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES "")
   set(CMAKE_CUDA_RUNTIME_LIBRARY None)
   find_package(OpenMP REQUIRED COMPONENTS CXX C)
+  target_compile_definitions(sdpb_options INTERFACE SDPB_GPU)
   add_subdirectory(src/gpu)
 endif()
 

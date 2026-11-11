@@ -8,6 +8,10 @@
 #include "SDPB_Parameters.hxx"
 #include "sdpb_util/malloc_trim.hxx"
 
+#ifdef SDPB_GPU
+#include "sdp_solve/SDP_Solver/run/gpu/Gpu_Compute.hxx"
+#endif
+
 #include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <chrono>
@@ -19,6 +23,14 @@ void time_and_solve(
   const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time)
 {
   namespace fs = std::filesystem;
+#ifdef SDPB_GPU
+  // --gpu: refuse a precision without device kernels before reading anything
+  if(parameters.solver.gpu)
+    {
+      Gpu_Compute::limbs_for_precision(parameters.solver.precision);
+      set_threaded_sdp_reading(true);
+    }
+#endif
   const auto block_timings_path = get_block_timings_path(parameters);
   auto block_info
     = create_block_info<TSolver>(env, parameters, block_timings_path);

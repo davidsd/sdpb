@@ -102,6 +102,8 @@ Outer_Parameters::Outer_Parameters(int argc, char *argv[],
             }
 
           po::notify(variables_map);
+          ASSERT(!solver.gpu, "--gpu is an sdpb option; outer_limits runs "
+                              "its solves on the CPU.");
 
           ASSERT(fs::exists(functions_path),
                  "functions path does not exist: ", functions_path);

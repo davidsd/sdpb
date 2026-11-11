@@ -27,6 +27,11 @@ int main(int argc, char **argv)
           return 0;
         }
 
+#ifndef SDPB_GPU
+      ASSERT(!parameters.solver.gpu,
+             "--gpu: this sdpb was built without the GPU backend "
+             "(./waf configure --enable-gpu).");
+#endif
       Environment::set_precision(parameters.solver.precision);
       auto start_time = std::chrono::high_resolution_clock::now();
       if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
@@ -64,7 +69,12 @@ int main(int argc, char **argv)
         }
 
       if(parameters.is_sdpa())
-        time_and_solve<Sdpb::Sdpa::SDP_Solver>(env, parameters, start_time);
+        {
+          ASSERT(!parameters.solver.gpu,
+                 "--gpu is implemented for polynomial matrix programs only, "
+                 "not for SDPA input.");
+          time_and_solve<Sdpb::Sdpa::SDP_Solver>(env, parameters, start_time);
+        }
       else
         time_and_solve<SDP_Solver>(env, parameters, start_time);
     }
