@@ -24,9 +24,10 @@ inline void save_c_minus_By(const std::filesystem::path &path,
   {
     const El::BigFloat alpha(-1);
     const El::BigFloat beta(1);
+    El::DistMatrix<El::BigFloat> B_scratch; // for --sparseB
     for(int index = 0; index < dist_c_minus_By.blocks.size(); ++index)
       {
-        const auto &B_block = sdp.free_var_matrix.blocks.at(index);
+        const auto &B_block = sdp.free_var_block(index, B_scratch);
         El::Gemm(El::Orientation::NORMAL, El::Orientation::NORMAL, alpha,
                  B_block, y.blocks.at(index), beta,
                  dist_c_minus_By.blocks.at(index));

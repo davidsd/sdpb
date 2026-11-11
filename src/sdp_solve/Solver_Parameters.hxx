@@ -22,6 +22,9 @@ struct Solver_Parameters
   // Per-block Cholesky and L^{-1}B by multimodular BLAS,
   // see sdp_solve/SDP_Solver/run/multimodular/Readme.md
   bool multimodular_trsm{};
+  // Experimental: store the free variable matrix B compactly
+  // (nonzero elements only), see sdp_solve/Block_Matrix/Sparse_Block_Matrix.hxx
+  bool sparse_B{};
   size_t precision{};
 
   // Initialized from Environment - MemAvailable

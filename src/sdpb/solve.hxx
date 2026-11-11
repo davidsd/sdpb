@@ -13,13 +13,50 @@
 #include <csignal>
 #include <filesystem>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <sstream>
 
 inline SDP
 read_sdp(const SDPB_Parameters &parameters, const Block_Info &block_info,
          const El::Grid &grid, Timers &timers)
 {
   Scoped_Timer read_sdp_timer(timers, "read_sdp");
-  SDP sdp(parameters.sdp_path, block_info, grid, timers);
+  SDP sdp(parameters.sdp_path, block_info, grid, timers,
+          parameters.solver.sparse_B);
+  if(parameters.solver.sparse_B
+     && parameters.verbosity >= Verbosity::regular)
+    {
+      // Density of B, over all blocks
+      size_t counts[2] = {0, 0};
+      for(const auto &B_block : sdp.free_var_matrix_sparse)
+        {
+          counts[0] += B_block.num_nonzeros_local();
+          counts[1] += B_block.dense_size_local();
+        }
+      // Per rank, for memory checks (debug): nonzeros/dense elements
+      std::vector<size_t> per_rank(2 * El::mpi::Size(), 0);
+      per_rank[2 * El::mpi::Rank()] = counts[0];
+      per_rank[2 * El::mpi::Rank() + 1] = counts[1];
+      El::mpi::AllReduce(per_rank.data(), per_rank.size(), El::mpi::SUM,
+                         El::mpi::COMM_WORLD);
+      counts[0] = counts[1] = 0;
+      std::ostringstream ranks_ss;
+      for(int rank = 0; rank < El::mpi::Size(); ++rank)
+        {
+          counts[0] += per_rank[2 * rank];
+          counts[1] += per_rank[2 * rank + 1];
+          ranks_ss << " " << rank << ":" << per_rank[2 * rank] << "/"
+                   << per_rank[2 * rank + 1];
+        }
+      if(El::mpi::Rank() == 0)
+        {
+          El::Output("sparseB: B has ", counts[0], " nonzero elements of ",
+                     counts[1], " (density ",
+                     counts[1] == 0 ? 0.0 : double(counts[0]) / counts[1],
+                     ")");
+          if(parameters.verbosity >= Verbosity::debug)
+            El::Output("sparseB: per rank nonzeros/dense:", ranks_ss.str());
+        }
+    }
   if(El::mpi::Rank() == 0 && parameters.write_solution.vector_z)
     {
       ASSERT(sdp.normalization.has_value(),
@@ -33,6 +70,9 @@ Sdpb::Sdpa::SDP read_sdp(const SDPB_Parameters &parameters,
                          const Sdpb::Sdpa::Block_Info &block_info,
                          const El::Grid &grid, Timers &timers)
 {
+  ASSERT(!parameters.solver.sparse_B,
+         "--sparseB is implemented for polynomial matrix programs only, "
+         "not for SDPA input.");
   Scoped_Timer read_sdp_timer(timers, "read_sdp");
   return Sdpb::Sdpa::SDP(parameters.sdp_path, block_info, grid, timers);
 }

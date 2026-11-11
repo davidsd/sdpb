@@ -1,5 +1,6 @@
 #include "integration_tests/common.hxx"
 #include <filesystem>
+#include <fstream>
 
 namespace fs = std::filesystem;
 
@@ -44,6 +45,102 @@ TEST_CASE("sdpb")
     os << "";
     fs::permissions(path, fs::perms::others_read);
   };
+
+  SECTION("sparseB")
+  {
+    INFO("--sparseB stores B by its nonzeros; every result must be the same "
+         "as with dense B, bit for bit.");
+    // one rank, so that the comparison at full precision is deterministic
+    const int np = 1;
+    auto run = [&](const std::string &name,
+                   const std::vector<std::string> &flags) {
+      Test_Util::Test_Case_Runner runner("sdpb/sparseB/" + name);
+      auto args = default_args;
+      for(const auto &flag : flags)
+        args[flag] = "";
+      run_sdpb_set_out_ck_dirs(runner, args, np);
+      return runner.output_dir / "out";
+    };
+    for(const bool mm : {false, true})
+      DYNAMIC_SECTION((mm ? "--multimodularTrsm" : "El::Trsm"))
+      {
+        const std::vector<std::string> base
+          = mm ? std::vector<std::string>{"--multimodularTrsm"}
+               : std::vector<std::string>{};
+        auto with_sparse = base;
+        with_sparse.emplace_back("--sparseB");
+        const std::string name = mm ? "mm" : "el";
+        const auto out_dense = run(name + "/dense", base);
+        const auto out_sparse = run(name + "/sparse", with_sparse);
+        Test_Util::REQUIRE_Equal::diff_sdpb_output_dir(out_sparse, out_dense,
+                                                       1024, 1024);
+      }
+    SECTION("SDP with zeros in B, 4 ranks")
+    {
+      INFO("dfibo test SDP (21% of B is zero), 768 bits, 4 ranks, a fixed "
+           "block layout (block_timings: block 0 costs 1000, the others 1, "
+           "so block 0's group has several ranks and B's blocks are "
+           "distributed) and --maxSharedMemory, 40 iterations: --sparseB "
+           "gives dense B's output files bit for bit.");
+      const auto dfibo_sdp = Test_Config::test_data_dir / "end-to-end_tests"
+                             / "dfibo-0-0-j=3-c=3.0000-d=3-s=6" / "output"
+                             / "sdp";
+      size_t num_blocks = 0;
+      for(const auto &entry : fs::directory_iterator(dfibo_sdp))
+        if(entry.path().filename().string().rfind("block_info_", 0) == 0)
+          ++num_blocks;
+      REQUIRE(num_blocks > 1);
+      auto run_dfibo = [&](const std::string &name,
+                           const std::vector<std::string> &flags) {
+        Test_Util::Test_Case_Runner runner("sdpb/sparseB/dfibo/" + name);
+        // the layout from a file, not from a timing run
+        create_directories(runner.output_dir / "ck");
+        {
+          std::ofstream os(runner.output_dir / "ck" / "block_timings");
+          for(size_t b = 0; b < num_blocks; ++b)
+            os << (b == 0 ? 1000 : 1) << "\n";
+        }
+        Test_Util::Test_Case_Runner::Named_Args_Map args{
+          {"--sdpDir", dfibo_sdp.string()},
+          {"--precision", "768"},
+          {"--noFinalCheckpoint", ""},
+          {"--maxIterations", "40"},
+          {"--maxSharedMemory", "1G"},
+          {"--initialMatrixScalePrimal", "1e10"},
+          {"--initialMatrixScaleDual", "1e10"},
+          {"--writeSolution", "x,y"}};
+        for(const auto &flag : flags)
+          args[flag] = "";
+        run_sdpb_set_out_ck_dirs(runner, args, 4);
+        return runner.output_dir / "out";
+      };
+      for(const bool mm : {false, true})
+        DYNAMIC_SECTION((mm ? "--multimodularTrsm" : "El::Trsm"))
+        {
+          const std::vector<std::string> base
+            = mm ? std::vector<std::string>{"--multimodularTrsm"}
+                 : std::vector<std::string>{};
+          auto with_sparse = base;
+          with_sparse.emplace_back("--sparseB");
+          const std::string name = mm ? "mm" : "el";
+          const auto out_dense = run_dfibo(name + "/dense", base);
+          const auto out_sparse = run_dfibo(name + "/sparse", with_sparse);
+          Test_Util::REQUIRE_Equal::diff_sdpb_output_dir(out_sparse,
+                                                         out_dense, 768, 768);
+        }
+    }
+    SECTION("SDPA input")
+    {
+      Test_Util::Test_Case_Runner runner("sdpb/sparseB/sdpa");
+      auto args = default_args;
+      args["--sdpDir"] = (Test_Config::test_data_dir / "end-to-end_tests"
+                          / "sdpa" / "example1" / "input" / "example1.dat-s")
+                           .string();
+      args["--precision"] = "200";
+      args["--sparseB"] = "";
+      run_sdpb_set_out_ck_dirs(runner, args, np, 1, "not for SDPA input");
+    }
+  }
 
   SECTION("io_tests")
   {
