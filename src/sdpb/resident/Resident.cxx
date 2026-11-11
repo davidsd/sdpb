@@ -18,6 +18,9 @@
 #include "sdp_solve/sdp_solve.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
+#ifdef SDPB_GPU
+#include "sdp_solve/SDP_Solver/run/gpu/Gpu_Compute.hxx"
+#endif
 
 #include <El.hpp>
 
@@ -378,6 +381,14 @@ namespace
     SDP_Solver solver;
     bool loaded_checkpoint = false;
     std::unique_ptr<BigInt_Shared_Memory_Syrk_Context> syrk_context;
+    // --gpu: the backend, kept between solves with the SDP and the iterate on
+    // the device; after a solve only y is on the host (iterate_to_host())
+    std::shared_ptr<Gpu_Compute> gpu;
+    bool device_iterate_newer = false;
+    // blocks (global indices) and objectives changed on the host since the
+    // device last had them
+    std::set<size_t> device_stale_blocks;
+    bool device_stale_objectives = false;
     // World rank of the root of the group that owns each block
     std::vector<int> owner_root;
     Sdp_Files files;
@@ -412,9 +423,23 @@ namespace
                         const std::vector<size_t> &changed,
                         const std::vector<int> &holder);
     void check_checkpoint_dir(const fs::path &dir) const;
+    // --gpu on several ranks: dir's gpu_layout is this run's block placement;
+    // otherwise dir has none
+    void check_gpu_layout(const fs::path &dir) const;
     void checkpoint_elsewhere(const fs::path &dir);
     void set_objectives_text(const std::string &text);
     El::Matrix<El::BigFloat> y_on_group_root() const;
+    // --gpu: copy the iterate between the device and the host, and the
+    // changed blocks and objectives to the device (no-ops otherwise)
+    void iterate_to_host();
+    void iterate_from_host();
+    void sdp_to_device();
+    // Replace a local block (set_sdp_block_from_root) and note it for the
+    // device
+    void set_block(const SDP_Block_Data &block_data);
+    // --gpu: an error if a new local block has other bilinear bases than the
+    // block in memory (the device keeps products of the bases); "" otherwise
+    std::string gpu_bases_error(const SDP_Block_Data &block_data) const;
     void write_derived(const std::vector<std::string> &names,
                        Json_Writer &w) const;
   };
@@ -519,10 +544,83 @@ namespace
     return sb.GetString();
   }
 
+  void Resident_State::iterate_to_host()
+  {
+#ifdef SDPB_GPU
+    if(gpu && device_iterate_newer)
+      gpu->get_iterate(solver);
+#endif
+    device_iterate_newer = false;
+  }
+
+  void Resident_State::iterate_from_host()
+  {
+#ifdef SDPB_GPU
+    if(gpu)
+      gpu->set_iterate(solver);
+#endif
+    device_iterate_newer = false;
+  }
+
+  void Resident_State::sdp_to_device()
+  {
+#ifdef SDPB_GPU
+    if(gpu && (!device_stale_blocks.empty() || device_stale_objectives))
+      gpu->update_blocks(sdp,
+                         std::vector<size_t>(device_stale_blocks.begin(),
+                                             device_stale_blocks.end()),
+                         device_stale_objectives);
+#endif
+    device_stale_blocks.clear();
+    device_stale_objectives = false;
+  }
+
+  std::string
+  Resident_State::gpu_bases_error(const SDP_Block_Data &block_data) const
+  {
+    if(!parameters.solver.gpu || !is_group_root())
+      return "";
+    // With --gpu every group is one rank, so block_data is the block
+    const size_t local = size_t(block_data.block_index_local);
+    ASSERT(grid.Size() == 1 && local < block_info.block_indices.size());
+    for(const size_t parity : {0, 1})
+      {
+        const auto &old = sdp.bilinear_bases.at(2 * local + parity);
+        const auto &bases = block_data.bilinear_bases[parity];
+        bool same = bases.Height() == old.LocalHeight()
+                    && bases.Width() == old.LocalWidth();
+        for(int i = 0; same && i < bases.Height(); ++i)
+          for(int j = 0; same && j < bases.Width(); ++j)
+            same = bases.CRef(i, j) == old.GetLocal(i, j);
+        if(!same)
+          return El::BuildString(
+            "block ", block_info.block_indices.at(local),
+            " would change its bilinear bases, which --gpu does not support "
+            "in resident mode (the device keeps products of the bases); "
+            "use the CPU resident mode for scans that change them");
+      }
+    return "";
+  }
+
+  void Resident_State::set_block(const SDP_Block_Data &block_data)
+  {
+    if(parameters.solver.gpu && is_group_root())
+      {
+        // Checked by the commands before any change; this is a backstop
+        const auto error = gpu_bases_error(block_data);
+        ASSERT(error.empty(), error);
+        device_stale_blocks.insert(
+          block_info.block_indices.at(size_t(block_data.block_index_local)));
+      }
+    set_sdp_block_from_root(grid, block_info, block_data, sdp,
+                            parameters.solver.sparse_B);
+  }
+
   void
   Resident_State::checkpoint(const fs::path &dir,
                              const boost::property_tree::ptree &properties)
   {
+    iterate_to_host();
     solver.save_checkpoint(dir, parameters.verbosity, properties);
     if(dir == parameters.solver.checkpoint_out)
       dirty = false;
@@ -532,6 +630,43 @@ namespace
        && fs::exists(block_timings_path)
        && !fs::exists(dir / "block_timings"))
       fs::copy_file(block_timings_path, dir / "block_timings");
+    // and the GPU block placement (--gpu on several ranks)
+    const auto layout = parameters.solver.checkpoint_out / "gpu_layout";
+    if(El::mpi::Rank() == 0 && dir != parameters.solver.checkpoint_out
+       && fs::exists(layout) && !fs::exists(dir / "gpu_layout"))
+      fs::copy_file(layout, dir / "gpu_layout");
+  }
+
+  void Resident_State::check_gpu_layout(const fs::path &dir) const
+  {
+    if(!parameters.solver.gpu || El::mpi::Size() == 1)
+      {
+        // A checkpoint of --gpu on several ranks loads only in such a run
+        int gpu_checkpoint = El::mpi::Rank() == 0
+                             && fs::exists(dir / "gpu_layout");
+        El::mpi::Broadcast(gpu_checkpoint, 0, El::mpi::COMM_WORLD);
+        ASSERT(!gpu_checkpoint, "the checkpoint in ", dir,
+               " was written by sdpb --gpu on several ranks (it has a "
+               "gpu_layout): only such a run can load it");
+        return;
+      }
+    int same = 0;
+    if(El::mpi::Rank() == 0)
+      {
+        auto text = [](const fs::path &path) {
+          std::ifstream stream(path);
+          std::stringstream ss;
+          ss << stream.rdbuf();
+          return stream.is_open() ? ss.str() : std::string();
+        };
+        const auto here
+          = text(parameters.solver.checkpoint_out / "gpu_layout");
+        same = !here.empty() && text(dir / "gpu_layout") == here;
+      }
+    El::mpi::Broadcast(same, 0, El::mpi::COMM_WORLD);
+    ASSERT(same, "the checkpoint in ", dir,
+           " has no gpu_layout, or another one than this run's GPU block "
+           "placement");
   }
 
   // A checkpoint in a directory other than --checkpointDir: keep the
@@ -733,6 +868,8 @@ namespace
                    "solve: --precision is fixed in resident mode");
       ASSERT_EQUAL(q.solver.sparse_B, parameters.solver.sparse_B,
                    "solve: --sparseB is fixed in resident mode");
+      ASSERT_EQUAL(q.solver.gpu, parameters.solver.gpu,
+                   "solve: --gpu is fixed in resident mode");
       // The BigInt syrk context, sized by these limits, is kept between
       // solves
       ASSERT_EQUAL(q.solver.max_shared_memory.bytes,
@@ -776,7 +913,10 @@ namespace
     });
     const SDPB_Parameters &p = parsed.value();
     if(start_kind == "checkpoint")
-      check_checkpoint_dir(p.solver.checkpoint_in);
+      {
+        check_checkpoint_dir(p.solver.checkpoint_in);
+        check_gpu_layout(p.solver.checkpoint_in);
+      }
 
     // Starting point (validated above)
     if(start_kind == "initial")
@@ -789,12 +929,14 @@ namespace
           El::Zero(block);
         solver.X.add_diagonal(p.solver.initial_matrix_scale_primal);
         solver.Y.add_diagonal(p.solver.initial_matrix_scale_dual);
+        iterate_from_host();
         dirty = true;
       }
     else if(start_kind == "checkpoint")
       {
         solver.load_checkpoint(p.solver.checkpoint_in, block_info, p.verbosity,
                                true);
+        iterate_from_host();
         dirty = true;
       }
     else if(start_kind == "iterate")
@@ -804,8 +946,10 @@ namespace
         solver.X = it.X;
         solver.y = it.y;
         solver.Y = it.Y;
+        iterate_from_host();
         dirty = true;
       }
+    sdp_to_device();
 
     if(p.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
       El::Output(boost::posix_time::second_clock::local_time(),
@@ -820,7 +964,9 @@ namespace
     const SDP_Solver_Terminate_Reason reason(solver.run(
       env, p.solver, p.verbosity, parameters_tree, block_info, sdp, grid,
       run_start, iterations_json_path, timers, block_timings_ms,
-      &syrk_context));
+      &syrk_context, &gpu));
+    // With --gpu, x, X and Y stay on the device: the next solve starts there
+    device_iterate_newer = bool(gpu);
     const double run_seconds = seconds_since(run_start);
     ++num_solves;
     dirty = true;
@@ -848,6 +994,9 @@ namespace
     const auto solution_start = Clock::now();
     if(with_solution)
       {
+        if(p.write_solution.vector_x || p.write_solution.matrix_X
+           || p.write_solution.matrix_Y)
+          iterate_to_host();
         const auto runtime = static_cast<int64_t>(seconds_since(run_start));
         save_solution(solver, block_info, sdp, p, reason, runtime);
       }
@@ -1127,20 +1276,45 @@ namespace
     if(!requests.empty())
       MPI_Waitall(requests.size(), requests.data(), MPI_STATUSES_IGNORE);
 
+    // Read the local changed blocks on the group roots, and with --gpu check
+    // their bilinear bases, before anything changes (collective: every rank
+    // agrees, and on an error nothing has been replaced)
+    std::map<size_t, SDP_Block_Data> new_blocks;
+    {
+      std::string error;
+      if(is_group_root())
+        {
+          try
+            {
+              for(size_t local = 0; local < block_info.block_indices.size();
+                  ++local)
+                {
+                  const size_t index = block_info.block_indices.at(local);
+                  if(changed_set.count(index) == 0)
+                    continue;
+                  std::istringstream is(bytes.at(index), std::ios::binary);
+                  SDP_Block_Data data(is, files.format, local, block_info);
+                  const auto bases_error = gpu_bases_error(data);
+                  ASSERT(bases_error.empty(), "update_pmp: ", bases_error);
+                  new_blocks.emplace(index, std::move(data));
+                }
+            }
+          catch(std::exception &e)
+            {
+              error = e.what();
+            }
+        }
+      agree_or_throw(error);
+    }
+
     // Set the local changed blocks, in order (collective in each group)
     for(size_t local = 0; local < block_info.block_indices.size(); ++local)
       {
         const size_t index = block_info.block_indices.at(local);
         if(changed_set.count(index) == 0)
           continue;
-        SDP_Block_Data block_data;
-        if(is_group_root())
-          {
-            std::istringstream is(bytes.at(index), std::ios::binary);
-            block_data = SDP_Block_Data(is, files.format, local, block_info);
-          }
-        set_sdp_block_from_root(grid, block_info, block_data, sdp,
-                                parameters.solver.sparse_B);
+        SDP_Block_Data empty;
+        set_block(is_group_root() ? new_blocks.at(index) : empty);
       }
     El::mpi::Barrier(El::mpi::COMM_WORLD);
   }
@@ -1151,6 +1325,7 @@ namespace
     read_objectives_from_stream(grid, is, sdp.objective_const,
                                 sdp.dual_objective_b);
     files.objectives_text = text;
+    device_stale_objectives = true;
   }
 
   // update_pmp: like pmp2sdp --reuseSdp, in memory. "pmp": the new PMP
@@ -1376,6 +1551,8 @@ namespace
                   ASSERT(same, "update_sdp: block ", index,
                          " would change its size; the block structure must "
                          "stay the same");
+                  const auto bases_error = gpu_bases_error(data);
+                  ASSERT(bases_error.empty(), "update_sdp: ", bases_error);
                   new_blocks.emplace(index, std::move(data));
                 }
             }
@@ -1394,10 +1571,7 @@ namespace
         if(!std::binary_search(changed.begin(), changed.end(), index))
           continue;
         SDP_Block_Data empty;
-        set_sdp_block_from_root(grid, block_info,
-                                is_group_root() ? new_blocks.at(index)
-                                                : empty,
-                                sdp, parameters.solver.sparse_B);
+        set_block(is_group_root() ? new_blocks.at(index) : empty);
       }
     // Objectives as SDP's constructor reads them (the same text)
     set_objectives_text(new_files.objectives_text);
@@ -1660,8 +1834,7 @@ namespace
                   block_data.bilinear_bases[parity], bases_block);
               }
           }
-        set_sdp_block_from_root(grid, block_info, block_data, sdp,
-                                parameters.solver.sparse_B);
+        set_block(block_data);
       }
     El::mpi::Barrier(El::mpi::COMM_WORLD);
     // The block no longer comes from a file
@@ -1692,6 +1865,10 @@ namespace
             local(i, j) = -local(i, j);
       }
     sdp.objective_const = -sdp.objective_const;
+    // c changed in every block
+    if(parameters.solver.gpu)
+      device_stale_blocks.insert(block_info.block_indices.begin(),
+                                 block_info.block_indices.end());
     for(auto &x : normalization.value())
       x = -x;
     if(El::mpi::Rank() == 0)
@@ -1738,6 +1915,7 @@ namespace
       }
     else
       {
+        iterate_to_host();
         iterates.erase(name);
         iterates.emplace(name,
                          Iterate{solver.x, solver.y, solver.X, solver.Y});
@@ -1763,6 +1941,7 @@ namespace
     if(!dir.empty())
       {
         check_checkpoint_dir(dir);
+        check_gpu_layout(dir);
         const auto current = solver.current_generation;
         const auto backup = solver.backup_generation;
         solver.load_checkpoint(dir, block_info, parameters.verbosity, true);
@@ -1777,6 +1956,7 @@ namespace
         solver.y = it.y;
         solver.Y = it.Y;
       }
+    iterate_from_host();
     dirty = true;
     w.Key("restored");
     w.String(dir.empty() ? name.c_str() : dir.c_str());

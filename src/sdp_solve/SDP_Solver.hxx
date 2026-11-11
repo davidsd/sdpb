@@ -18,6 +18,8 @@
 #include <filesystem>
 #include <memory>
 
+class Gpu_Compute;
+
 // SDPSolver contains the data structures needed during the running of
 // the interior point algorithm.  Each structure is allocated when an
 // SDPSolver is initialized, and reused in each iteration.
@@ -103,7 +105,12 @@ struct SDP_Solver
       // structure.
       std::unique_ptr<BigInt_Shared_Memory_Syrk_Context>
         *persistent_syrk_context
-      = nullptr);
+      = nullptr,
+      // If not null (resident mode with --gpu), the GPU backend is kept
+      // there between runs, with the SDP and the iterate on the device:
+      // after a run only y is copied back (Gpu_Compute::get_iterate copies
+      // the rest).
+      std::shared_ptr<Gpu_Compute> *persistent_gpu = nullptr);
 
   void step(
     const Environment &env, const Solver_Parameters &parameters,

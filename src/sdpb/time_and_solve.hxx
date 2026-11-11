@@ -35,6 +35,11 @@ void time_and_solve(
   if(parameters.solver.gpu)
     {
       Gpu_Compute::limbs_for_precision(parameters.solver.precision);
+      ASSERT(!parameters.solver.sparse_B,
+             "--sparseB is a CPU option; with --gpu, SDPB_GPU_SPARSE_B=1 keeps "
+             "B as its nonzeros on the device.");
+      ASSERT(!parameters.solver.multimodular_trsm,
+             "--multimodularTrsm is a CPU option, without effect with --gpu.");
       set_threaded_sdp_reading(true);
     }
 #endif

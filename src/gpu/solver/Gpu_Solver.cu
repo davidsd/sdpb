@@ -565,6 +565,13 @@ namespace sdpb_gpu
       std::vector<int32_t> vm;
       std::vector<int64_t> ve;
       mpf_pack_sparse(m, e, c.B.b.entries(), L, pos, vm, ve);
+      // the chunk's earlier data, if this replaces them (resident mode)
+      c.Bnz.free();
+      if(c.Bpos)
+        {
+          GS_CHECK(cudaFreeAsync(c.Bpos, 0));
+          c.Bpos = nullptr;
+        }
       c.Bnz = Mat(L, 1, int64_t(pos.size()), 1);
       mpf_upload(vm.data(), ve.data(), c.Bnz.b, 0);
       GS_CHECK(solver_malloc(reinterpret_cast<void **>(&c.Bpos),
@@ -1546,6 +1553,24 @@ namespace sdpb_gpu
         mpf_kron_identity(c.V.b, c.Vx.b, I.dim, 0);
         c.V.free();
       }
+    GS_CHECK(cudaStreamSynchronize(0));
+  }
+  void Gpu_Solver::end_run()
+  {
+    auto &P = *p_;
+    for(auto &c : P.chunks)
+      {
+        c.Xi.free();
+        c.XiT.free();
+        c.Yi.free();
+        c.YiT.free();
+        c.AXI.free();
+        c.AY.free();
+        c.dres.free();
+        c.Pres.free();
+        c.mXY.free();
+      }
+    P.pvec.free();
     GS_CHECK(cudaStreamSynchronize(0));
   }
   Residue_Result Gpu_Solver::residues() { return p_->residues(); }

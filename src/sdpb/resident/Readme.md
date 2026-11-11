@@ -168,3 +168,37 @@ checkpoint, and `"start": {"iterate": ...}`), and each must equal the file route
   `{"cmd": "quit", "checkpoint": true}`.
 - A command that fails (bad arguments, a file that does not exist) gets an `error` answer; SDPB keeps its state.
   Errors inside collective operations (e.g. one rank failing to read a file) still abort MPI, as in `sdpb`.
+
+## With `--gpu` (GPU builds)
+
+`--gpu` is fixed for the session, like `--precision`. `--sparseB` and `--multimodularTrsm` are CPU options and are
+refused with `--gpu` (the device keeps B as its nonzeros with `SDPB_GPU_SPARSE_B=1`).
+
+- On the device between solves: the SDP (b, c, B, the bases' products) and the iterate (x, X, Y, y), with the product
+  engines and their workspace. What the last solve's residues left is freed at the end of each solve, so a later solve
+  has a first solve's memory.
+- On the host: the whole SDP as well, and y after each solve. x, X and Y come back to the host only when something reads
+  them: a checkpoint (also on SIGTERM, a stop file or the idle timeout), `save_iterate`, or a solution that writes x, X
+  or Y.
+- A host change of the iterate (`start`, `restore_iterate`) is copied to the device. Blocks re-read or rewritten on the
+  host (`update_sdp`, `update_pmp`, `set_coefficients`, `negate_normalization`) and new objectives go to the device
+  before the next solve. A new block's bilinear bases must equal the ones in memory: the device keeps products of
+  them, not the bases. `update_sdp` and `update_pmp` check every new block before replacing any, and answer an error
+  if one differs, with the SDP in memory unchanged; the session goes on. So scans whose blocks change their bases (a
+  gap scan, which changes a spin's gap block) need the CPU resident mode for now.
+- On several GPU ranks, checkpoints carry the block placement (`gpu_layout`), and `start: checkpoint` or
+  `restore_iterate` from a directory accepts only the same placement.
+
+Checked before this mode was merged with the CPU one, on one H200 (the GPU part of the protocol: solve, update_sdp,
+checkpoint):
+- consecutive real calls at nmax14 (dense B, whole-dimension chunks) and nmax18 (sparse B, 16 blocks): y, z, out.txt
+  but for the runtime, every non-timing field of `iterations.json`, `c_minus_By` and the checkpoint after the last call,
+  against `sdpb --gpu` runs chained through checkpoints;
+- all 45 hot calls of a whole nmax18 OPE-scan point: y and z of every call, and the final checkpoint.
+
+Checked after the merge with the CPU mode, on one H200: SDPB's own `resident_family` sequence (`load_family`,
+`set_coefficients`), named iterates with two `negate_normalization`s, `update_pmp` and `update_sdp` with unchanged bases,
+and a restart across two processes are byte-equal to the file route; a change of bases is answered with an error, and
+the following solves are byte-equal to file-route solves that never had the change (integration test `resident_gpu`).
+SDPB's own `resident` sequence changes a basis, so with `--gpu` its later solves stay on the first SDP; its
+`save_iterate`/`restore_iterate` part has run on CPU builds only.

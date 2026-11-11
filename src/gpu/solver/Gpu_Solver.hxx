@@ -160,6 +160,9 @@ namespace sdpb_gpu
     void download_y(int32_t *m, int64_t *e);
     // everything uploaded: derived constants, memory plan
     void finish_load();
+    // Resident mode: free what the last residues() left, as a process's exit
+    // would; x, X, Y, y, c, B, b and the bases stay. upload(c or B) may follow.
+    void end_run();
 
     // Cholesky factors of X, Y, pairings, residues, objectives, errors, X Y
     Residue_Result residues();

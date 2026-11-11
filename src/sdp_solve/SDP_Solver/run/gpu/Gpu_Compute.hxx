@@ -14,6 +14,7 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <vector>
 
 struct SDP_Solver;
 
@@ -44,6 +45,19 @@ public:
 
   // x, X, y, Y back into solver (checkpoints, outputs, c_minus_By)
   void get_iterate(SDP_Solver &solver);
+
+  // Resident mode (sdpb --controlDir): this object lives from solve to solve.
+  // y back into solver (all the outputs of an OPE scan's call need)
+  void get_y(SDP_Solver &solver);
+  // solver's x, X, y, Y onto the device (start from a checkpoint or the initial point)
+  void set_iterate(const SDP_Solver &solver);
+  // Free what the last residues() left on the device, so that the next run has
+  // the same memory as a first run
+  void end_run();
+  // c and B of these blocks (global indices) changed in sdp, and b if asked: the
+  // chunks that hold them again from sdp. The bilinear bases must not change.
+  void update_blocks(const SDP &sdp, const std::vector<size_t> &changed,
+                     bool objectives_changed);
 
   void write_profile(const std::filesystem::path &path) const;
 

@@ -270,7 +270,8 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
   const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time,
   const fs::path &iterations_json_path, Timers &timers,
   El::Matrix<int32_t> &block_timings_ms,
-  std::unique_ptr<BigInt_Shared_Memory_Syrk_Context> *persistent_syrk_context)
+  std::unique_ptr<BigInt_Shared_Memory_Syrk_Context> *persistent_syrk_context,
+  std::shared_ptr<Gpu_Compute> *persistent_gpu)
 {
   SDP_Solver_Terminate_Reason terminate_reason(
     SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
@@ -287,9 +288,16 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
 #ifdef SDPB_GPU
   // --gpu: the residues, factorizations, search directions and step lengths run
   // on one GPU; this driver stays (see src/gpu/solver/Gpu_Solver.hxx)
-  std::unique_ptr<Gpu_Compute> gpu;
+  std::shared_ptr<Gpu_Compute> gpu;
   if(parameters.gpu)
-    gpu = std::make_unique<Gpu_Compute>(parameters, block_info, sdp, *this);
+    {
+      if(persistent_gpu != nullptr)
+        gpu = *persistent_gpu;
+      if(!gpu)
+        gpu = std::make_shared<Gpu_Compute>(parameters, block_info, sdp, *this);
+      if(persistent_gpu != nullptr)
+        *persistent_gpu = gpu;
+    }
 #else
   ASSERT(!parameters.gpu, "--gpu: this sdpb was built without --enable-gpu");
 #endif
@@ -608,7 +616,15 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
 #ifdef SDPB_GPU
   if(gpu)
     {
-      gpu->get_iterate(*this);
+      Scoped_Timer gpu_end_timer(timers, "gpu.end_of_run");
+      if(persistent_gpu != nullptr)
+        {
+          // x, X and Y stay on the device: the next run starts from them
+          gpu->get_y(*this);
+          gpu->end_run();
+        }
+      else
+        gpu->get_iterate(*this);
       if(write_iterations_json_and_c_minus_By)
         gpu->write_profile(iterations_json_path.parent_path()
                            / "gpu_profile.json");
