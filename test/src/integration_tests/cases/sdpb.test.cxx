@@ -1,5 +1,9 @@
 #include "integration_tests/common.hxx"
+#include "integration_tests/util/Float.hxx"
 #include <filesystem>
+#include <fstream>
+#include <rapidjson/istreamwrapper.h>
+#include <rapidjson/document.h>
 
 namespace fs = std::filesystem;
 
@@ -44,6 +48,95 @@ TEST_CASE("sdpb")
     os << "";
     fs::permissions(path, fs::perms::others_read);
   };
+
+  SECTION("reconstructXYmu")
+  {
+    INFO("A text checkpoint with only x and y: refused without "
+         "--reconstructXYmu; with it, X = sum_p A_p x_p, Y = mu X^{-1}, and "
+         "the run reaches the same answer as a run from the start.");
+    const int np = 1;
+    // x and y of the first primal feasible iterate, as text. There
+    // X = sum_p A_p x_p (to the primal error) is well inside the cone; an
+    // earlier, primal infeasible x can give an indefinite sum.
+    Test_Util::Test_Case_Runner runner_xy("sdpb/reconstructXYmu/xy");
+    auto args_xy = default_args;
+    args_xy["--findPrimalFeasible"] = "";
+    args_xy["--writeSolution"] = "x,y";
+    run_sdpb_set_out_ck_dirs(runner_xy, args_xy, np);
+    const auto xy_dir = runner_xy.output_dir / "out";
+    REQUIRE(fs::exists(xy_dir / "x_0.txt"));
+    REQUIRE(!fs::exists(xy_dir / "X_matrix_0.txt"));
+
+    Test_Util::Test_Case_Runner runner_full("sdpb/reconstructXYmu/full");
+    auto args_full = default_args;
+    run_sdpb_set_out_ck_dirs(runner_full, args_full, np);
+
+    {
+      INFO("without the option the checkpoint is refused");
+      Test_Util::Test_Case_Runner runner("sdpb/reconstructXYmu/refused");
+      auto args = default_args;
+      args["--initialCheckpointDir"] = xy_dir.string();
+      run_sdpb_set_out_ck_dirs(runner, args, np, 1,
+                               "has no X_matrix/Y_matrix files");
+    }
+    {
+      Test_Util::Test_Case_Runner runner("sdpb/reconstructXYmu/restart");
+      auto args = default_args;
+      args["--initialCheckpointDir"] = xy_dir.string();
+      // about the mu of that iterate
+      args["--reconstructXYmu"] = "1e15";
+      run_sdpb_set_out_ck_dirs(runner, args, np);
+      Test_Util::REQUIRE_Equal::diff_sdpb_output_dir(
+        runner.output_dir / "out", runner_full.output_dir / "out", 1024, 64,
+        {"out.txt"}, {"terminateReason", "primalObjective", "dualObjective"});
+      {
+        INFO("The first iterate is the reconstructed one: X = sum_p A_p x_p "
+             "(primal residue P-err ~ 0) and mu = Tr(XY)/dim = 1e15.");
+        std::ifstream is(runner.output_dir / "out" / "iterations.json");
+        rapidjson::IStreamWrapper wrapper(is);
+        rapidjson::Document doc;
+        doc.ParseStream(wrapper);
+        REQUIRE(doc.IsArray());
+        REQUIRE(doc.Size() > 0);
+        const auto &first = doc[0];
+        Float_Binary_Precision prec(1024, 1024);
+        const El::BigFloat mu(first["mu"].GetString());
+        const El::BigFloat P_err(first["P-err"].GetString());
+        CAPTURE(mu);
+        CAPTURE(P_err);
+        REQUIRE(El::Abs(mu / El::BigFloat("1e15") - 1)
+                < El::BigFloat("1e-200"));
+        REQUIRE(P_err < El::BigFloat("1e-200"));
+      }
+    }
+    {
+      INFO("x, y and X/Y for some blocks only: refused");
+      Test_Util::Test_Case_Runner runner_part("sdpb/reconstructXYmu/partial");
+      auto args_part = default_args;
+      args_part["--maxIterations"] = "2";
+      args_part["--writeSolution"] = "x,y,X,Y";
+      run_sdpb_set_out_ck_dirs(runner_part, args_part, np);
+      const auto part_dir = runner_part.output_dir / "out";
+      REQUIRE(fs::exists(part_dir / "Y_matrix_0.txt"));
+      fs::remove(part_dir / "Y_matrix_0.txt");
+      Test_Util::Test_Case_Runner runner("sdpb/reconstructXYmu/partial/run");
+      auto args = default_args;
+      args["--initialCheckpointDir"] = part_dir.string();
+      run_sdpb_set_out_ck_dirs(runner, args, np, 1,
+                               "for some blocks but not for others");
+    }
+    {
+      INFO("SDPA input is refused");
+      Test_Util::Test_Case_Runner runner("sdpb/reconstructXYmu/sdpa");
+      auto args = default_args;
+      args["--sdpDir"] = (Test_Config::test_data_dir / "end-to-end_tests"
+                          / "sdpa" / "example1" / "input" / "example1.dat-s")
+                           .string();
+      args["--precision"] = "200";
+      args["--reconstructXYmu"] = "1e-10";
+      run_sdpb_set_out_ck_dirs(runner, args, np, 1, "not for SDPA input");
+    }
+  }
 
   SECTION("io_tests")
   {
