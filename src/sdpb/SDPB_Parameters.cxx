@@ -1,4 +1,5 @@
 #include "SDPB_Parameters.hxx"
+#include "sdpb_version.hxx"
 
 #include <boost/program_options.hpp>
 #include <El.hpp>

@@ -2,6 +2,7 @@
 
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/Verbosity.hxx"
+#include "sdpb_version.hxx"
 
 #include <filesystem>
 #include <boost/property_tree/json_parser.hpp>

@@ -32,8 +32,8 @@ TEST_CASE("sdpb")
     // but we keep it here to check backward compatibility,
     // i.e. SDPB shouldn't fail when we pass this option.
     args["--procsPerNode"] = std::to_string(num_procs);
-    runner.mpi_run({"build/sdpb", args}, num_procs, required_exit_code,
-                   required_error_msg);
+    runner.mpi_run({Test_Config::program("sdpb"), args}, num_procs,
+                   required_exit_code, required_error_msg);
   };
 
   // create file with readonly premissions
@@ -137,7 +137,8 @@ TEST_CASE("sdpb")
         os << "any bytes to checkpoint_2_2";
         const Test_Util::Test_Case_Runner runner_extra_ck_file
           = runner.create_nested("extra_ck_file");
-        runner_extra_ck_file.mpi_run({"build/sdpb", args}, num_procs, 1,
+        runner_extra_ck_file.mpi_run({Test_Config::program("sdpb"), args},
+                                     num_procs, 1,
                                      "unexpected checkpoint file");
       }
 
@@ -146,7 +147,8 @@ TEST_CASE("sdpb")
         fs::remove(args["--checkpointDir"] + "/checkpoint_2_1");
         const Test_Util::Test_Case_Runner runner_missing_ck_file
           = runner.create_nested("missing_ck_file");
-        runner_missing_ck_file.mpi_run({"build/sdpb", args}, num_procs, 1,
+        runner_missing_ck_file.mpi_run({Test_Config::program("sdpb"), args},
+                                       num_procs, 1,
                                        "Cannot find checkpoint file");
       }
 
@@ -157,7 +159,7 @@ TEST_CASE("sdpb")
                       fs::perms::none);
       const Test_Util::Test_Case_Runner runner_noread
         = runner.create_nested("noread");
-      runner_noread.mpi_run({"build/sdpb", args}, num_procs, 1,
+      runner_noread.mpi_run({Test_Config::program("sdpb"), args}, num_procs, 1,
                             "Unable to open checkpoint file");
     }
 
@@ -187,8 +189,8 @@ TEST_CASE("sdpb")
       args["--checkpointDir"] = args["--outDir"];
       const Test_Util::Test_Case_Runner runner_corrupt
         = runner.create_nested("read_corrupt");
-      runner_corrupt.mpi_run({"build/sdpb", args}, num_procs, 1,
-                             "Corrupted data in file");
+      runner_corrupt.mpi_run({Test_Config::program("sdpb"), args}, num_procs,
+                             1, "Corrupted data in file");
     }
   }
 }

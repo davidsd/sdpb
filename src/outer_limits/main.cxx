@@ -1,5 +1,6 @@
 #include "Function.hxx"
 #include "Outer_Parameters.hxx"
+#include "sdpb_version.hxx"
 #include "sdp_solve/sdp_solve.hxx"
 #include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/Environment.hxx"
