@@ -225,22 +225,22 @@ deduplicate_sorted_values(const std::vector<El::BigFloat> &sorted_values,
   return result;
 }
 
-std::vector<El::BigFloat>
-find_real_positive_minima_sorted(const Boost_Polynomial &polynomial,
-                                 const El::BigFloat &min_zero_distance,
-                                 Timers &timers)
+// Critical points (roots of P') and the local minima among them.
+// If several roots of P' are within min_zero_distance between each other,
+// they are replaced with their arithmetic mean.
+std::pair<std::vector<El::BigFloat>, std::vector<El::BigFloat>>
+find_real_positive_critical_points_and_minima_sorted(
+  const Boost_Polynomial &polynomial, const El::BigFloat &min_zero_distance,
+  Timers &timers)
 {
   Scoped_Timer timer(timers, "find_minima");
   std::vector<El::BigFloat> minima;
 
-  // Roots of polynomial derivative.
-  // If several roots are within min_zero_distance between each other,
-  // they are replaced with their arithmetic mean.
   const auto deriv_roots = deduplicate_sorted_values(
     find_real_positive_roots_sorted(polynomial.prime(), timers),
     min_zero_distance);
   if(deriv_roots.empty())
-    return minima;
+    return {deriv_roots, minima};
 
   const size_t num_points = deriv_roots.size();
 
@@ -273,5 +273,5 @@ find_real_positive_minima_sorted(const Boost_Polynomial &polynomial,
         minima.emplace_back(deriv_roots.at(i));
     }
 
-  return minima;
+  return {deriv_roots, minima};
 }

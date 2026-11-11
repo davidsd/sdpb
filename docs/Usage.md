@@ -382,3 +382,9 @@ and/or
 ```
 export OMP_NUM_THREADS=1
 ```
+
+### Spectrum: which minima are zeros
+
+By default (`--zeroTest geometricMean`), a minimum x0 of `det(c-B.y)` is a zero if `det(x0)/sqrt(det(x_left) det(x_right)) < threshold`, with `x_left`, `x_right` the midpoints to the neighbouring minima, as in SDPB 3.1.0 and earlier.
+
+`--zeroTest curvature` is a local alternative: x0 is a zero if `1/max(L |P'/P|, L^2 P''/(2P)) < threshold`, where `P = det M`, `M = (c-B.y)/prefactor`, and `L` is the distance to the nearest other critical point of `P` (at most the largest sample point); the logarithmic derivatives are computed from `M` (Jacobi's formula). For a dip of half-width `w` this is `(w/L)^2`. For x0 = 0 the test is `P/(L P') < threshold`. It doesn't depend on the prefactor's exponential decay, which can make `geometricMean` accept wiggles far out in the tail. It misses a double zero closer to x = 0 than about `1/sqrt(threshold)` of its own widths, and flat (e.g. quartic) dips. It has been compared with direct determinants on one large case so far, at `--threshold 1e-10`.

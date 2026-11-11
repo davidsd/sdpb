@@ -1,4 +1,8 @@
 #include "interpolate.hxx"
+#include "zero_depth.hxx"
+#include "spectrum/Zero_Test.hxx"
+
+#include <algorithm>
 #include "pmp/PMP_Info.hxx"
 #include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/assert.hxx"
@@ -6,10 +10,13 @@
 
 #include <El.hpp>
 
-std::vector<El::BigFloat>
-find_real_positive_minima_sorted(const Boost_Polynomial &polynomial,
-                                 const El::BigFloat &min_zero_distance,
-                                 Timers &timers);
+#include <optional>
+
+
+std::pair<std::vector<El::BigFloat>, std::vector<El::BigFloat>>
+find_real_positive_critical_points_and_minima_sorted(
+  const Boost_Polynomial &polynomial, const El::BigFloat &min_zero_distance,
+  Timers &timers);
 
 namespace
 {
@@ -166,9 +173,180 @@ namespace
 
 }
 
+namespace
+{
+  // A local minimum of det(c-B.y) (or x=0) and its depth for one zero test.
+  // It is a zero if depth < threshold, or, if squared, depth < threshold^2
+  // (geometricMean's two-sided ratio, compared as in SDPB 3.1.0).
+  struct Zero_Candidate
+  {
+    El::BigFloat x;
+    Boost_Float depth;
+    bool squared = false;
+  };
+}
+
+static std::vector<Zero_Candidate>
+find_zero_candidates(const El::Matrix<El::BigFloat> &c_minus_By_block,
+                     const PVM_Info &pvm, const Zero_Test &zero_test,
+                     const El::BigFloat &max_zero,
+                     const El::BigFloat &min_zero_distance, Timers &timers)
+{
+  // Regular case: polynomial matrix constraints.
+  // First, we divide (c-B.y) by sample scalings and reduced_prefactor,
+  // so that it corresponds to pure polynomials
+  // and can be interpolated accordingly.
+  // After that, we find minima of the determinant P(x)
+  // and compute, for each minimum, its depth for each requested zero test
+  // (see zero_depth.hxx and Zero_Test.hxx).
+  ASSERT(pvm.sample_points.size() > 1);
+
+  const auto interpolated_poly_matrix
+    = get_interpolated_polynomial_matrix(c_minus_By_block, pvm, timers);
+  const auto det
+    = determinant(interpolated_poly_matrix, pvm.sample_points, timers);
+  const auto [critical_points, all_minima]
+    = find_real_positive_critical_points_and_minima_sorted(
+      det, min_zero_distance, timers);
+  std::vector<El::BigFloat> minima;
+  for(auto &x : all_minima)
+    {
+      // Remove large zeros
+      if(max_zero > 0 && x > max_zero)
+        {
+          PRINT_WARNING("block_", pvm.block_index,
+                        ": ignore large zero at x=", x);
+          break;
+        }
+      minima.push_back(x);
+    }
+
+  // NB: critical points are strictly positive,
+  // so x=0 is always a boundary candidate, not a minimum of P.
+  if(minima.empty() || minima.front() > 0)
+    {
+      // We should always check x=0, even if MPSolve didn't find a root there
+      minima.insert(minima.begin(), 0);
+    }
+
+  // det(c-B.y) = P(x) * chi(x)^dim
+  const auto eval = [&](const El::BigFloat &x) {
+    return eval_determinant(interpolated_poly_matrix, pvm.reduced_prefactor,
+                            to_Boost_Float(x));
+  };
+
+  // Entry polynomials of M = (c-B.y)/prefactor and their first two derivatives
+  const auto height = interpolated_poly_matrix.Height();
+  const auto prime = [](const Boost_Polynomial &p) {
+    return p.size() > 1 ? p.prime() : Boost_Polynomial({Boost_Float(0)});
+  };
+  Simple_Matrix<Boost_Polynomial> d1_poly_matrix(height, height),
+    d2_poly_matrix(height, height);
+  for(size_t i = 0; i < height; ++i)
+    for(size_t j = 0; j < height; ++j)
+      {
+        d1_poly_matrix(i, j) = prime(interpolated_poly_matrix(i, j));
+        d2_poly_matrix(i, j) = prime(d1_poly_matrix(i, j));
+      }
+  const auto eval_matrix
+    = [&](const Simple_Matrix<Boost_Polynomial> &poly_matrix,
+          const El::BigFloat &x) {
+        El::Matrix<El::BigFloat> result(height, height);
+        const auto xx = to_Boost_Float(x);
+        for(size_t i = 0; i < height; ++i)
+          for(size_t j = 0; j < height; ++j)
+            result(i, j) = to_BigFloat(poly_matrix(i, j).evaluate(xx));
+        return result;
+      };
+  // If P has no other critical point, compare with the whole range of sample points.
+  const El::BigFloat fallback_length = *std::max_element(
+    pvm.sample_points.begin(), pvm.sample_points.end());
+
+  // Neighbouring points for the tests comparing with neighbours.
+  // x_left and x_right are midpoints between x and the neighbouring minima.
+  // If there is only one candidate, we compare it with x/2,
+  // or with the first nonzero sample point if x=0.
+  // TODO: It's not obvious which point to choose for a single minimum;
+  // x/2 is not justified well.
+  const auto neighbours = [&](const size_t i) {
+    const auto &x = minima.at(i);
+    std::optional<El::BigFloat> x_left, x_right;
+    if(i > 0)
+      x_left = get_midpoint(x, minima.at(i - 1));
+    if(i + 1 < minima.size())
+      x_right = get_midpoint(x, minima.at(i + 1));
+    if(minima.size() == 1)
+      {
+        auto x_other = x / 2;
+        if(x_other == El::BigFloat(0))
+          {
+            // Special case: if x=0, we take the first nonzero sample point.
+            // Note that we have at least two sample points:
+            // constant constraints are handled separately.
+            x_other = pvm.sample_points.at(0);
+            if(x_other == El::BigFloat(0))
+              x_other = pvm.sample_points.at(1);
+          }
+        ASSERT(x_other > 0);
+        x_left = x_other;
+      }
+    return std::make_pair(x_left, x_right);
+  };
+  const auto check_ratio = [&](const Boost_Float &ratio, const auto &x,
+                               const auto &x_other) {
+    ASSERT(!isnan(ratio), "Cannot check for zero: det(c-By)=", eval(x),
+           " at x=", x, ", det(c-By)=", eval(x_other), " at x=", x_other);
+    return ratio;
+  };
+
+  std::vector<Zero_Candidate> candidates;
+  Scoped_Timer check_minima_timer(timers, "check_minima");
+  for(size_t i = 0; i < minima.size(); ++i)
+    {
+      const auto &x = minima.at(i);
+      const bool is_boundary = x == El::BigFloat(0);
+      Zero_Candidate candidate{x, 0};
+      // TODO: what if y (or its neighbor) is infinite or NaN?
+      // This is possible e.g. if x=0 and prefactor has pole at x=0.
+      if(zero_test == Zero_Test::curvature)
+        {
+          const auto length
+            = zero_local_length(x, is_boundary, critical_points,
+                                min_zero_distance, fallback_length);
+          candidate.depth = zero_local_depth(
+            eval_matrix(interpolated_poly_matrix, x),
+            eval_matrix(d1_poly_matrix, x), eval_matrix(d2_poly_matrix, x),
+            length, is_boundary);
+        }
+      else
+        {
+          ASSERT(zero_test == Zero_Test::geometric_mean);
+          const auto [x_left, x_right] = neighbours(i);
+          const auto y = eval(x);
+          if(!x_left.has_value() || !x_right.has_value())
+            {
+              // First or last candidate: compare with one neighbour.
+              const auto &x_other = x_left.has_value() ? *x_left : *x_right;
+              candidate.depth = check_ratio(y / eval(x_other), x, x_other);
+            }
+          else
+            {
+              // y^2/(y_left y_right) < threshold^2
+              candidate.depth
+                = check_ratio(y * y / eval(*x_left) / eval(*x_right), x,
+                              *x_left);
+              candidate.squared = true;
+            }
+        }
+      candidates.push_back(candidate);
+    }
+  return candidates;
+}
+
 std::vector<El::BigFloat>
 find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
-           const PVM_Info &pvm, const Boost_Float &threshold,
+           const PVM_Info &pvm, const Zero_Test &zero_test,
+           const Boost_Float &threshold,
            const El::BigFloat &max_zero, const El::BigFloat &min_zero_distance,
            Timers &timers)
 {
@@ -200,9 +378,9 @@ find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
       const auto &x = pvm.sample_points.front();
       ASSERT_EQUAL(pvm.reduced_sample_scalings.size(), 1);
       const auto &scale = pvm.reduced_sample_scalings.front();
-      for(int i = 0; i < dim; ++i)
+      for(size_t i = 0; i < dim; ++i)
         {
-          for(int j = 0; j < dim; ++j)
+          for(size_t j = 0; j < dim; ++j)
             {
               const auto value
                 = interpolated_poly_matrix(i, j).evaluate(to_Boost_Float(x));
@@ -228,117 +406,14 @@ find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
       return {};
     }
 
-  // Regular case: polynomial matrix constraints.
-  // First, we divide (c-B.y) by sample scalings and reduced_prefactor,
-  // so that it corresponds to pure polynomials
-  // and can be interpolated accordingly.
-  // After that, we find minima of determinant.
-  // Then we multiply by reduced_prefactor,
-  // and check if the minima are deep enough to be considered zeros.
-
-  const auto interpolated_poly_matrix
-    = get_interpolated_polynomial_matrix(c_minus_By_block, pvm, timers);
-  const auto det
-    = determinant(interpolated_poly_matrix, pvm.sample_points, timers);
-  std::vector<El::BigFloat> minima;
-  for(auto &x :
-      find_real_positive_minima_sorted(det, min_zero_distance, timers))
-    {
-      // Remove large zeros
-      if(max_zero > 0 && x > max_zero)
-        {
-          PRINT_WARNING("block_", pvm.block_index,
-                        ": ignore large zero at x=", x);
-          break;
-        }
-      minima.push_back(x);
-    }
-
-  if(minima.empty() || minima.front() > 0)
-    {
-      // We should always check x=0, even if MPSolve didn't find a root there
-      minima.insert(minima.begin(), 0);
-    }
-
   std::vector<El::BigFloat> zeros;
-
-  // TODO compare min eigenvalues instead of determinants?
-  const auto eval = [&](const El::BigFloat &x) {
-    return eval_determinant(interpolated_poly_matrix, pvm.reduced_prefactor,
-                            to_Boost_Float(x));
-  };
-
-  const auto is_zero_one_sided
-    = [&](const El::BigFloat &x, const El::BigFloat &x_other) {
-        const auto y = eval(x);
-        const auto y_other = eval(x_other);
-        const auto ratio = y / y_other;
-        ASSERT(!isnan(ratio), "Cannot check for zero: det(c-By)=", y,
-               " at x=", x, ", det(c-By)=", y_other, " at x=", x_other);
-        return ratio < threshold;
-      };
-
-  // TODO should it simply return
-  // is_zero_one_sided(x, x_left) && is_zero_one_sided(x, x_right)?
-  const auto is_zero_two_sided
-    = [&](const El::BigFloat &x, const El::BigFloat &x_left,
-          const El::BigFloat &x_right) {
-        const auto y = eval(x);
-        const auto y_left = eval(x_left);
-        const auto y_right = eval(x_right);
-        const auto ratio_squared = y * y / y_left / y_right;
-        ASSERT(!isnan(ratio_squared), "Cannot check for zero: det(c-By)=", y,
-               " at x=", x, ", det(c-By)=", y_left, " at x=", x_left,
-               ", det(c-By)=", y_right, " at x=", x_right);
-        return ratio_squared < threshold * threshold;
-      };
-
-  Scoped_Timer check_minima_timer(timers, "check_minima");
-  for(size_t i = 0; i < minima.size(); ++i)
+  for(const auto &candidate :
+      find_zero_candidates(c_minus_By_block, pvm, zero_test, max_zero,
+                           min_zero_distance, timers))
     {
-      const auto &x = minima.at(i);
-      // TODO: what if y (or its neighbor) is infinite or NaN?
-      // This is possible e.g. if x=0 and prefactor has pole at x=0.
-
-      const bool is_zero = [&] {
-        // First zero candidate
-        if(i == 0)
-          {
-            if(minima.size() > 1)
-              {
-                const auto x_right = get_midpoint(x, minima.at(i + 1));
-                return is_zero_one_sided(x, x_right);
-              }
-            // This is a case of single minimum.
-            // TODO: which points should we choose for comparison?
-            // It's not obvious, choosing x/2 is not justified well.
-            auto x_other = x / 2;
-            if(x_other == El::BigFloat(0))
-              {
-                // Special case: if x=0, we take the first nonzero sample point.
-                // Note that we have at least two sample points:
-                // constant constraints are handled separately (see above).
-                x_other = pvm.sample_points.at(0);
-                if(x_other == El::BigFloat(0))
-                  x_other = pvm.sample_points.at(1);
-              }
-            ASSERT(x_other > 0);
-            return is_zero_one_sided(x, x_other);
-          }
-        // Last zero candidate
-        if(i + 1 == minima.size())
-          {
-            const auto x_left = get_midpoint(x, minima.at(i - 1));
-            return is_zero_one_sided(x, x_left);
-          }
-        // Regular case, check left and right neighbors
-        const auto x_left = get_midpoint(x, minima.at(i - 1));
-        const auto x_right = get_midpoint(x, minima.at(i + 1));
-        return is_zero_two_sided(x, x_left, x_right);
-      }();
-
-      if(is_zero)
-        zeros.emplace_back(x);
+      if(candidate.squared ? candidate.depth < threshold * threshold
+                           : candidate.depth < threshold)
+        zeros.push_back(candidate.x);
     }
   return zeros;
 }
