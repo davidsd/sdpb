@@ -26,6 +26,7 @@ endif()
 add_executable(unit_tests
   src/unit_tests/main.cxx
   src/unit_tests/cases/LPT_scheduling.test.cxx
+  src/unit_tests/cases/Timers.test.cxx
   src/unit_tests/cases/Matrix_Normalizer.test.cxx
   src/unit_tests/cases/Memory_Tracker.test.cxx
   src/unit_tests/cases/block_data_serialization.test.cxx
