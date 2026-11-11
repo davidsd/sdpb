@@ -2,6 +2,7 @@
 #include "sdp_solve/memory_estimates.hxx"
 #include "bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "get_syrk_Q_config.hxx"
+#include "multimodular/Multimodular_Block_Factor.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
 #include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
@@ -102,6 +103,7 @@ namespace
     // Memory overhead for computing L^{-1}
     // (Trsm calls in initialize_schur_off_diagonal).
     // Sum over MPI groups the Trsm memory for the largest block of B in group.
+    // With --multimodularTrsm: the multimodular factor's buffers instead.
     const size_t initialize_schur_off_diagonal_trsm_bytes = node_reduce([&] {
       size_t trsm_bytes = 0;
       if(block_info.mpi_comm.value.Rank() == 0)
@@ -109,12 +111,24 @@ namespace
           for(auto &m : sdp.free_var_matrix.blocks)
             {
               trsm_bytes = std::max(
-                trsm_bytes, get_trsm_bytes(m.Height(), m.Width(),
-                                           grid.Height(), grid.Width()));
+                trsm_bytes,
+                parameters.multimodular_trsm
+                  ? multimodular_block_factor_bytes(
+                      m.Height(), m.Width(), grid.Size(), bigfloat_bytes(),
+                      Multimodular_Blas_Config())
+                  : get_trsm_bytes(m.Height(), m.Width(), grid.Height(),
+                                   grid.Width()));
             }
         }
       return trsm_bytes;
     }());
+    // The multimodular factor's shared windows and residues coexist with
+    // the BigInt syrk's shared windows, so they reduce the memory left for
+    // them. (El::Trsm's overhead is counted as before, see below.)
+    const size_t multimodular_trsm_bytes
+      = parameters.multimodular_trsm
+          ? initialize_schur_off_diagonal_trsm_bytes
+          : 0;
 
     // #(B) = PxN
     // sdp.free_var_matrix, schur_off_diagonal
@@ -154,7 +168,9 @@ namespace
 
     const auto cfg = get_syrk_Q_config(
       block_info, sdp, parameters.max_memory, parameters.max_shared_memory,
-      mem_required_bytes() + std::max(schur_complement_bytes, 3 * X_bytes));
+      mem_required_bytes()
+        + std::max(schur_complement_bytes + multimodular_trsm_bytes,
+                   3 * X_bytes));
 
     // Add schur_complement + (syrk_S() or Trsm() temporary allocations)
     // from initialize_schur_complement_solver()
@@ -198,7 +214,9 @@ namespace
           {"\t\tinitialize_schur_complement_solver()",
            initialize_schur_complement_solver_total_bytes},
           {"\t\t\tschur_complement", schur_complement_bytes},
-          {"\t\t\tEl::Trsm()", initialize_schur_off_diagonal_trsm_bytes},
+          {parameters.multimodular_trsm ? "\t\t\tmultimodular factor"
+                                        : "\t\t\tEl::Trsm()",
+           initialize_schur_off_diagonal_trsm_bytes},
           {"\t\t\tQ", Q_bytes},
           {"\t\t\tshared memory", cfg.node_shmem_bytes()},
         };

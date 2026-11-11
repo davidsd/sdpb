@@ -57,7 +57,8 @@ void compute_Q(const Environment &env, const SDP &sdp,
                Block_Diagonal_Matrix &schur_complement_cholesky,
                BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
                El::DistMatrix<El::BigFloat> &Q, Timers &timers,
-               El::Matrix<int32_t> &block_timings_ms, Verbosity verbosity);
+               El::Matrix<int32_t> &block_timings_ms, bool multimodular_trsm,
+               Verbosity verbosity);
 
 void initialize_schur_complement_solver(
   const Environment &env, const Block_Info &block_info, const SDP &sdp,
@@ -71,7 +72,8 @@ void initialize_schur_complement_solver(
   Block_Matrix &schur_off_diagonal,
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
   El::DistMatrix<El::BigFloat> &Q, Timers &timers,
-  El::Matrix<int32_t> &block_timings_ms, const Verbosity verbosity)
+  El::Matrix<int32_t> &block_timings_ms, const bool multimodular_trsm,
+  const Verbosity verbosity)
 {
   Scoped_Timer initialize_timer(timers, "initializeSchurComplementSolver");
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
@@ -89,7 +91,7 @@ void initialize_schur_complement_solver(
 
   compute_Q(env, sdp, block_info, schur_complement, schur_off_diagonal,
             schur_complement_cholesky, bigint_syrk_context, Q, timers,
-            block_timings_ms, verbosity);
+            block_timings_ms, multimodular_trsm, verbosity);
 
   Scoped_Timer Cholesky_timer(timers, "Cholesky_Q");
   try

@@ -38,6 +38,9 @@ add_library(sdp_solve STATIC
   SDP_Solver/run/bigint_syrk/blas_jobs/Blas_Job.cxx
   SDP_Solver/run/bigint_syrk/blas_jobs/create_blas_job_schedule.cxx
   SDP_Solver/run/bigint_syrk/Bigint_Syrk_Config.cxx
+  SDP_Solver/run/multimodular/multimodular_gemm.cxx
+  SDP_Solver/run/multimodular/blocked_cholesky_trsm.cxx
+  SDP_Solver/run/multimodular/Multimodular_Block_Factor.cxx
   SDP_Solver/run/step/compute_search_direction/compute_search_direction.cxx
   SDP_Solver/run/step/compute_search_direction/compute_schur_RHS.cxx
   SDP_Solver/run/step/compute_search_direction/solve_schur_complement_equation.cxx
