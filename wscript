@@ -154,12 +154,15 @@ def build(bld):
 
     # SDPB executable
     bld.program(source=['src/sdpb/main.cxx',
-                        'src/sdpb/SDPB_Parameters.cxx'],
+                        'src/sdpb/SDPB_Parameters.cxx',
+                        'src/sdpb/resident/Control_Channel.cxx',
+                        'src/sdpb/resident/Resident.cxx'],
                 target='sdpb',
                 cxxflags=default_flags,
                 defines=default_defines,
                 includes=default_includes,
-                use=use_packages + ['sdp_solve', 'sdpa_solve', 'mpsolve']
+                use=use_packages + ['sdp_solve', 'sdpa_solve', 'mpsolve',
+                                    'pmp_read', 'pmp', 'pmp2sdp_lib']
                 )
 
     pmp2sdp_sources = ['src/pmp2sdp/Dual_Constraint_Group/Dual_Constraint_Group.cxx',

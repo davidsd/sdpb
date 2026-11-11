@@ -101,6 +101,16 @@ namespace
   }
 }
 
+// Used by the resident mode (sdpb --controlDir) to replace a block in memory.
+void set_sdp_block_from_root(const El::Grid &grid,
+                             const Block_Info &block_info,
+                             const SDP_Block_Data &sdp_block_local, SDP &sdp,
+                             const bool sparse_free_var_matrix)
+{
+  set_sdp_from_root(grid, block_info, sdp_block_local, sdp,
+                    sparse_free_var_matrix);
+}
+
 void read_block_data(const fs::path &sdp_path, const El::Grid &grid,
                      const Block_Info &block_info, SDP &sdp, Timers &timers,
                      const bool sparse_free_var_matrix)
