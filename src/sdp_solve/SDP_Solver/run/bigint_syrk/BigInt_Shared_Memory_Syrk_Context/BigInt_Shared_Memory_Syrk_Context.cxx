@@ -23,6 +23,7 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       verbosity(verbosity),
       input_window_split_factor(cfg.input_split_factor),
       output_window_split_factor(cfg.output_split_factor),
+      residues_star_vr(cfg.residues_star_vr),
       block_index_local_to_global(block_index_local_to_global),
       create_blas_job_schedule_func(create_job_schedule)
 {
@@ -41,6 +42,14 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
     }
   output_residues_window = std::make_unique<Matrix_Residues_Window<double>>(
     shared_memory_comm, comb.num_primes, window_width, window_width);
+  // --batchCrt: the window for the restored output submatrix, of the size
+  // counted by the config (zero if Batch_Crt can't take these primes)
+  if(cfg.restored_window_bytes() > 0)
+    {
+      batch_crt_restore = true;
+      restored_window = std::make_unique<Shared_Window_Array<El::byte>>(
+        shared_memory_comm, cfg.restored_window_bytes());
+    }
   // detect OpenBLAS using any OpenBLAS-specific macro from cblas.h
 #ifdef OPENBLAS_THREAD
   // Disable BLAS threading explicitly, each rank should work single-threaded.

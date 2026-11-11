@@ -9,7 +9,8 @@ namespace
 {
   // output = inputA^T * inputB
   void gemm(const El::Matrix<double> &input_A,
-            const El::Matrix<double> &input_B, El::Matrix<double> &output)
+            const El::Matrix<double> &input_B, El::Matrix<double> &output,
+            const double beta)
   {
     // A: KxN matrix
     // A: KxM matrix
@@ -29,7 +30,6 @@ namespace
     const double *B = input_B.LockedBuffer();
     const CBLAS_INDEX lda = input_A.LDim();
     const CBLAS_INDEX ldb = input_B.LDim();
-    const double beta = 1.0;
     double *C = output.Buffer();
     const CBLAS_INDEX ldc = output.LDim();
     // C := alpha * A^T * B + beta * C = (in our case) A^T * B + C
@@ -39,7 +39,7 @@ namespace
 
   // output = input^T * input
   void syrk(const El::UpperOrLower uplo, const El::Matrix<double> &input,
-            El::Matrix<double> &output)
+            El::Matrix<double> &output, const double beta)
   {
     // input: KxN matrix
     // output = input^T * input: NxN matrix
@@ -55,7 +55,6 @@ namespace
     const double alpha = 1.0;
     const double *A = input.LockedBuffer();
     const CBLAS_INDEX lda = input.LDim();
-    const double beta = 1.0;
     double *C = output.Buffer();
     const CBLAS_INDEX ldc = output.LDim();
     // C := alpha * A^T * A + beta * C = (in our case) A^T * A + C
@@ -69,7 +68,8 @@ namespace
                      &input_block_residues_window_A,
                    const Vertical_Block_Matrix_Residues_Window<double>
                      &input_block_residues_window_B,
-                   Matrix_Residues_Window<double> &output_residues_window)
+                   Matrix_Residues_Window<double> &output_residues_window,
+                   const double beta)
   {
     const auto prime_index = job.prime_index;
     const auto I = job.I;
@@ -86,7 +86,7 @@ namespace
             input_block_residues_window_A.residues.at(prime_index), El::ALL,
             I);
 
-          syrk(uplo, input_matrix, output_matrix);
+          syrk(uplo, input_matrix, output_matrix, beta);
           break;
         }
         case Blas_Job::gemm: {
@@ -96,7 +96,7 @@ namespace
           const auto input_B = El::LockedView(
             input_block_residues_window_B.residues.at(prime_index), El::ALL,
             J);
-          gemm(input_A, input_B, output_matrix);
+          gemm(input_A, input_B, output_matrix, beta);
           break;
         }
         default: {
@@ -114,7 +114,8 @@ namespace
       &input_grouped_block_residues_window_B,
     const std::unique_ptr<Matrix_Residues_Window<double>>
       &output_residues_window,
-    const El::mpi::Comm &shared_memory_comm, Timers &timers)
+    const El::mpi::Comm &shared_memory_comm, Timers &timers,
+    const double beta = 1.0)
   {
     // Square each residue matrix
     {
@@ -128,7 +129,7 @@ namespace
                       kind == Blas_Job::syrk
                         ? *input_grouped_block_residues_window_A
                         : *input_grouped_block_residues_window_B,
-                      *output_residues_window);
+                      *output_residues_window, beta);
         }
     }
     {
@@ -256,7 +257,27 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem_submatrix(
     = get_blas_job_schedule(kind, uplo, output_height, output_width);
 
   // Clear input and output windows
-  clear_residues(blas_job_schedule);
+  // --residuesNoClear: the clearing is
+  // also each rank's first touch of its parts of the windows (page
+  // placement), which matters once. Afterwards it only zeroes ~(num_primes x
+  // (P rows + Q) x N) doubles per node and iteration (~70 GB at N = 7,990):
+  // compute_block_residues rewrites every input entry the BLAS jobs read
+  // (rows past the blocks are filled with zeros), and the first pass over P
+  // now overwrites Q's residues (beta = 0) instead of adding to zeros. The
+  // sums are exact integers below 2^53, so the residues are the same.
+  // This needs each output tile to be written by exactly one BLAS job per
+  // pass: the jobs take all rows of P (El::ALL), i.e. the inner dimension is
+  // never split. A schedule that split it would need beta = 1 for all but
+  // one of a tile's jobs.
+  const bool no_clear = options.residues_no_clear;
+  bool cleared = true;
+  if(!no_clear || first_touched.count(&blas_job_schedule) == 0)
+    {
+      clear_residues(blas_job_schedule);
+      first_touched.insert(&blas_job_schedule);
+    }
+  else
+    cleared = false;
 
   // If input window is not big enough, we should fill input window
   // several times (taking different input block rows)
@@ -291,7 +312,8 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem_submatrix(
         do_blas_jobs(uplo, kind, blas_job_schedule,
                      input_grouped_block_residues_window_A,
                      input_grouped_block_residues_window_B,
-                     output_residues_window, shared_memory_comm, timers);
+                     output_residues_window, shared_memory_comm, timers,
+                     (!cleared && iter == 0) ? 0.0 : 1.0);
         update_block_timings_with_syrk(
           block_timings_ms, syrk_timer, bigint_input_matrix_blocks,
           block_index_local_to_global, shared_memory_comm,

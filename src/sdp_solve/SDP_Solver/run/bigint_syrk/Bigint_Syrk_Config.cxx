@@ -1,4 +1,5 @@
 #include "Bigint_Syrk_Config.hxx"
+#include "sdpb_util/bigint_shared_memory/fmpz/Batch_Crt.hxx"
 
 // Helper functions. TODO move elsewhere and reuse?
 namespace
@@ -24,7 +25,8 @@ Bigint_Syrk_Config::Bigint_Syrk_Config(
   const El::mpi::Comm &shared_memory_comm, const size_t precision,
   const size_t num_nodes, const std::vector<size_t> &input_height_per_group,
   const size_t input_width, const size_t input_split_factor,
-  const size_t output_split_factor)
+  const size_t output_split_factor, const bool batch_crt,
+  const bool residues_star_vr)
     : shared_memory_comm(shared_memory_comm),
       precision(precision),
       num_nodes(num_nodes),
@@ -36,7 +38,9 @@ Bigint_Syrk_Config::Bigint_Syrk_Config(
       input_split_factor(input_split_factor),
       output_split_factor(output_split_factor),
       input_window_height_per_group_per_prime(get_input_window_group_heights(
-        input_height_per_group, input_split_factor))
+        input_height_per_group, input_split_factor)),
+      batch_crt(batch_crt),
+      residues_star_vr(residues_star_vr)
 {}
 Fmpz_Comb Bigint_Syrk_Config::comb() const
 {
@@ -123,15 +127,29 @@ size_t Bigint_Syrk_Config::node_local_bytes() const
   const size_t normalizer_size = input_width * shared_memory_comm.Size();
   // Conservative estimate for mpi::AllReduce(column_norms) overhead
   const size_t normalizer_all_reduce_size = 3 * normalizer_size;
+  // --residuesStarVR: [STAR,VR] copies of the blocks of one input window
+  // fill, at most the window's rows times its width (all blocks multi-row)
+  const size_t star_vr_size
+    = residues_star_vr ? input_window_height() * window_width() : 0;
   return bigfloat_bytes(precision)
-         * (normalizer_size
+         * (normalizer_size + star_vr_size
             + std::max(normalizer_all_reduce_size,
                        get_reduce_scatter_buffer_size()));
 }
+size_t Bigint_Syrk_Config::restored_window_bytes() const
+{
+  // Batch_Crt needs primes small enough for exact double sums
+  if(!batch_crt || !Batch_Crt::supported(comb()))
+    return 0;
+  const size_t dim = window_width();
+  return bigfloat_bytes(precision) * dim * dim;
+}
 size_t Bigint_Syrk_Config::node_shmem_bytes() const
 {
-  // Input and output residue windows
-  return input_windows_bytes() + output_window_bytes();
+  // Input and output residue windows (and, with batch_crt, the restored
+  // output submatrix)
+  return input_windows_bytes() + output_window_bytes()
+         + restored_window_bytes();
 }
 size_t Bigint_Syrk_Config::node_total_bytes() const
 {

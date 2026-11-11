@@ -3,15 +3,27 @@
 #include "sdpb_util/bigint_shared_memory/fmpz/residues.hxx"
 #include "sdpb_util/assert.hxx"
 
+#include <optional>
+
 // compute residues and put them to shared window
 // NB: input blocks should be BigInt matrix (normalized matrix, multiplied by 2^N)
 
 namespace
 {
+  // --batchResidues: the residues of a
+  // column's entries by Batch_Crt::residues (BLAS, the same doubles as
+  // bigint_to_residues) instead of one FLINT multi-mod per entry.
+  // Integers |x| < 2^(precision + 2) (normalized and shifted P).
+  long batch_residue_bits()
+  {
+    return long(El::gmp::Precision()) + 2;
+  }
+
   void compute_column_residues_elementwise(
     const El::DistMatrix<El::BigFloat> &block, size_t group_index,
     El::Int residue_row_begin, El::Int global_col, Fmpz_Comb &comb,
-    Vertical_Block_Matrix_Residues_Window<double> &block_residues_window)
+    Vertical_Block_Matrix_Residues_Window<double> &block_residues_window,
+    Batch_Crt *batch)
   {
     if(!block.IsLocalCol(global_col))
       return;
@@ -39,10 +51,36 @@ namespace
       = group_residues_matrix(residue_I, residue_J);
     ASSERT(first_residue_column_submatrix.Viewing());
 
-    Fmpz_BigInt bigint_value;
     // Submatrix is single-column, thus index j is always 0.
     const int j = 0;
     const int jLoc = block_column_submatrix.LocalCol(j);
+    if(batch != nullptr)
+      {
+        const int n = block_column_submatrix.LocalHeight();
+        std::vector<const __mpf_struct *> x(n);
+        for(int iLoc = 0; iLoc < n; ++iLoc)
+          x[iLoc] = block_column_submatrix.GetLocalCRef(iLoc, jLoc)
+                      .gmp_float.get_mpf_t();
+        std::vector<double> r(size_t(n) * comb.num_primes);
+        batch->residues(x.data(), n, batch_residue_bits(), r.data(), 1, n);
+        // Write prime by prime: the local rows of one column modulo one
+        // prime lie within a few pages of the window, while consecutive
+        // primes are prime_stride apart (one page each). Same values as
+        // the entry-by-entry order below.
+        std::vector<double *> dest(n);
+        for(int iLoc = 0; iLoc < n; ++iLoc)
+          dest[iLoc] = first_residue_column_submatrix.Buffer(
+            block_column_submatrix.GlobalRow(iLoc), j);
+        for(size_t k = 0; k < comb.num_primes; ++k)
+          {
+            const size_t offset = k * block_residues_window.prime_stride;
+            const double *rk = r.data() + size_t(n) * k;
+            for(int iLoc = 0; iLoc < n; ++iLoc)
+              dest[iLoc][offset] = rk[iLoc];
+          }
+        return;
+      }
+    Fmpz_BigInt bigint_value;
     for(int iLoc = 0; iLoc < block_column_submatrix.LocalHeight(); ++iLoc)
       {
         const int i = block_column_submatrix.GlobalRow(iLoc);
@@ -61,7 +99,7 @@ namespace
     const BlockIterator &consecutive_blocks_end, El::Int residue_row_begin,
     El::Int global_col, Fmpz_Comb &comb,
     Vertical_Block_Matrix_Residues_Window<double> &block_residues_window,
-    std::vector<double> &column_residues_buffer_temp)
+    std::vector<double> &column_residues_buffer_temp, Batch_Crt *batch)
   {
     auto total_height = std::transform_reduce(
       consecutive_blocks_begin, consecutive_blocks_end, 0, std::plus{},
@@ -77,12 +115,30 @@ namespace
     column_residues_buffer_temp.resize(total_height * comb.num_primes);
 
     // Compute locally residues for a given column global_col and all blocks
+    if(batch != nullptr)
+      {
+        std::vector<const __mpf_struct *> x;
+        x.reserve(total_height);
+        std::for_each(consecutive_blocks_begin, consecutive_blocks_end,
+                      [&](const auto &block) {
+                        ASSERT(block.IsLocalCol(global_col));
+                        ASSERT_EQUAL(block.LocalHeight(), block.Height());
+                        const int jLoc = block.LocalCol(global_col);
+                        for(int iLoc = 0; iLoc < block.LocalHeight(); ++iLoc)
+                          x.push_back(block.GetLocalCRef(iLoc, jLoc)
+                                        .gmp_float.get_mpf_t());
+                      });
+        ASSERT_EQUAL(x.size(), size_t(total_height));
+        batch->residues(x.data(), total_height, batch_residue_bits(),
+                        column_residues_buffer_temp.data(), 1, prime_stride);
+      }
+    else
     {
       Fmpz_BigInt bigint_value;
       int data_offset = 0;
       std::for_each(
         consecutive_blocks_begin, consecutive_blocks_end,
-        [&](const El::DistMatrix<El::BigFloat> &block) {
+        [&](const auto &block) {
           // For a given column jLoc, calculate all residues locally and put to column_residues
           ASSERT(block.IsLocalCol(global_col));
           ASSERT_EQUAL(block.LocalHeight(), block.Height());
@@ -120,12 +176,15 @@ namespace
     }
   }
 
+  using Star_Vr_Block = El::DistMatrix<El::BigFloat, El::STAR, El::VR>;
+
   void compute_column_residues(
     const size_t group_index,
     const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
     const El::Int global_col, Fmpz_Comb &comb,
     Vertical_Block_Matrix_Residues_Window<double> &input_block_residues_window,
-    std::vector<double> &column_residues_buffer_temp)
+    std::vector<double> &column_residues_buffer_temp, Batch_Crt *batch,
+    const std::vector<std::optional<Star_Vr_Block>> &star_vr_blocks)
   {
     // offset for current block in the residues window
     int residue_row_begin = 0;
@@ -137,6 +196,21 @@ namespace
       {
         const auto curr_block
           = bigint_input_matrix_blocks.begin() + block_index_local;
+
+        // --residuesStarVR: a block on a grid with several rows was
+        // copied to [STAR,VR]; the rank owning global_col there writes the
+        // whole column at once
+        if(!star_vr_blocks.empty() && star_vr_blocks[block_index_local])
+          {
+            const auto &copy = *star_vr_blocks[block_index_local];
+            if(copy.IsLocalCol(global_col))
+              compute_column_residues_for_consecutive_blocks(
+                group_index, &copy, &copy + 1, residue_row_begin, global_col,
+                comb, input_block_residues_window,
+                column_residues_buffer_temp, batch);
+            residue_row_begin += curr_block->Height();
+            continue;
+          }
 
         if(!curr_block->IsLocalCol(global_col))
           {
@@ -160,7 +234,7 @@ namespace
             // https://www.cs.utexas.edu/~flame/pubs/Elemental1.pdf (page 12)
             compute_column_residues_elementwise(
               *curr_block, group_index, residue_row_begin, global_col, comb,
-              input_block_residues_window);
+              input_block_residues_window, batch);
 
             residue_row_begin += curr_block->Height();
             continue;
@@ -189,7 +263,7 @@ namespace
         compute_column_residues_for_consecutive_blocks(
           group_index, curr_block, curr_block + num_consecutive_blocks,
           residue_row_begin, global_col, comb, input_block_residues_window,
-          column_residues_buffer_temp);
+          column_residues_buffer_temp, batch);
 
         residue_row_begin += total_consecutive_height;
 
@@ -281,12 +355,42 @@ void BigInt_Shared_Memory_Syrk_Context::compute_block_residues(
       ASSERT_EQUAL(block_views_height, input_group_height_per_prime());
     }
 
+    // --batchResidues: residues by BLAS (see above)
+    Batch_Crt *batch = nullptr;
+    {
+      if(options.batch_residues && Batch_Crt::supported(comb))
+        {
+          if(!batch_crt)
+            batch_crt = std::make_unique<Batch_Crt>(comb);
+          batch = batch_crt.get();
+        }
+    }
+    // --residuesStarVR: a block on a grid
+    // with several process rows has no rank holding whole columns, so its
+    // residues were written entry by entry, num_primes scattered writes per
+    // entry (the dominant cost of compute_and_write on large SDPs). Copy such
+    // blocks to [STAR,VR] first (each column on one rank; SDPB's Readme TODO):
+    // the same values go to the same places of the window, column by column.
+    // The decision uses the grid shape, so it is the same on all ranks of the
+    // group (the copy is collective over the block's grid).
+    std::vector<std::optional<Star_Vr_Block>> star_vr_blocks;
+    {
+      if(residues_star_vr)
+        {
+          Scoped_Timer star_vr_timer(timers, "star_vr");
+          star_vr_blocks.resize(block_views.size());
+          for(size_t b = 0; b < block_views.size(); ++b)
+            if(block_views[b].Grid().Height() > 1)
+              star_vr_blocks[b].emplace(block_views[b]);
+        }
+    }
     std::vector<double> column_residues_buffer_temp;
     for(int global_col = 0; global_col < width; ++global_col)
       {
         compute_column_residues(group_index, block_views, global_col, comb,
                                 grouped_block_residues_window,
-                                column_residues_buffer_temp);
+                                column_residues_buffer_temp, batch,
+                                star_vr_blocks);
       }
 
     // Update block timings.

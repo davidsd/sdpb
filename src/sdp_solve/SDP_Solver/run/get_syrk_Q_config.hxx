@@ -10,7 +10,8 @@ inline Bigint_Syrk_Config
 get_syrk_Q_config(const Block_Info &block_info, const SDP &sdp,
                   const Memory_Limit &max_memory,
                   const Memory_Limit &max_shared_memory,
-                  const size_t other_memory)
+                  const size_t other_memory, const bool batch_crt = false,
+                  const bool residues_star_vr = false)
 {
   const auto precision = El::gmp::Precision();
   const auto num_nodes = block_info.num_nodes();
@@ -40,7 +41,8 @@ get_syrk_Q_config(const Block_Info &block_info, const SDP &sdp,
     = [&](const size_t input_split_factor, const size_t output_split_factor) {
         return Bigint_Syrk_Config(node_comm, precision, num_nodes,
                                   blocks_height_per_group, block_width,
-                                  input_split_factor, output_split_factor);
+                                  input_split_factor, output_split_factor,
+                                  batch_crt, residues_star_vr);
       };
 
   const size_t max_input_split_factor = max_group_height;

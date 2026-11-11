@@ -3,8 +3,6 @@
 
 // Helper functions adopted from FLINT library, mat_mul_blas.c
 
-#define MAX_BLAS_DP_INT (UWORD(1) << 53)
-
 // see mul_blas.c, _tod_worker()
 // n is the prime
 // input value is in the range [0;n)

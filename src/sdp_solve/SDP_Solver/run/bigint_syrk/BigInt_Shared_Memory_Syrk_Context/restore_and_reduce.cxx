@@ -3,6 +3,8 @@
 #include "sdpb_util/bigint_shared_memory/fmpz/residues.hxx"
 #include "sdpb_util/block_mapping/MPI_Comm_Wrapper.hxx"
 
+#include <algorithm>
+#include <cstring>
 #include <vector>
 
 namespace
@@ -113,13 +115,89 @@ void BigInt_Shared_Memory_Syrk_Context::restore_and_reduce(
   Fmpz_BigInt bigint_value;
   std::vector<mp_limb_t> residues_buffer_temp(comb.num_primes);
 
+  // --batchCrt: restoring the entries one
+  // by one (restore_bigint_from_residues) reads each entry's residues from
+  // num_primes different matrices of the window, and the entries a rank
+  // restores for another rank are strided in the window, so nearly every
+  // residue read is a cache miss. Instead, the ranks of the node first
+  // restore all (non-skipped) entries of Q_n, each rank a contiguous range of
+  // columns (balanced on entries), with Batch_Crt (exact; the same BigFloats
+  // as below, serialized) into restored_window. The loops below then copy
+  // serialized entries from it. Same values, same order of the sums: Q is
+  // bit for bit the same. Costs one shared window per node, of the output
+  // window's size in serialized BigFloats (allocated by the constructor and
+  // counted by Bigint_Syrk_Config). Primes too large for its exact double
+  // sums (products below ~200 bits) keep the per-entry path.
+  const bool batch = batch_crt_restore;
+  const size_t slot_size = El::BigFloat().SerializedSize();
+  // entries of column j: rows [row_begin[j], row_end[j]), stored from
+  // col_offset[j] on
+  std::vector<size_t> col_offset;
+  std::vector<int> row_begin, row_end;
+  auto restored = [&](const int i, const int j) -> El::byte * {
+    return restored_window->data()
+           + slot_size * (col_offset[j] + (i - row_begin[j]));
+  };
+  if(batch)
+    {
+      Scoped_Timer batch_timer(timers, "batch_crt");
+      col_offset.assign(width + 1, 0);
+      row_begin.assign(width, 0);
+      row_end.assign(width, height);
+      for(int j = 0; j < width; ++j)
+        {
+          if(uplo.has_value() && *uplo == El::UPPER)
+            row_end[j] = std::min(j + 1, height);
+          if(uplo.has_value() && *uplo == El::LOWER)
+            row_begin[j] = std::min(j, height);
+          col_offset[j + 1] = col_offset[j] + (row_end[j] - row_begin[j]);
+        }
+      const size_t total = col_offset[width];
+      // allocated by the constructor, window_width^2 * bigfloat_bytes()
+      ASSERT(restored_window->size() >= total * slot_size,
+             DEBUG_STRING(restored_window->size()), DEBUG_STRING(total),
+             DEBUG_STRING(slot_size));
+      if(!batch_crt)
+        batch_crt = std::make_unique<Batch_Crt>(comb);
+      const size_t num_ranks = shared_memory_comm.Size();
+      const size_t rank = shared_memory_comm.Rank();
+      const size_t begin = total * rank / num_ranks;
+      const size_t end = total * (rank + 1) / num_ranks;
+      const int mpf_prec
+        = El::BigFloat().gmp_float.get_mpf_t()[0]._mp_prec;
+      std::vector<const double *> column_residues(comb.num_primes);
+      for(int j = 0; j < width; ++j)
+        {
+          // column j belongs to the rank whose range holds its first entry
+          if(col_offset[j] < begin || col_offset[j] >= end)
+            continue;
+          const size_t n = row_end[j] - row_begin[j];
+          if(n == 0)
+            continue;
+          for(size_t k = 0; k < comb.num_primes; ++k)
+            column_residues[k]
+              = output_residues_window->residues.at(k).LockedBuffer(
+                row_begin[j], j);
+          batch_crt->restore_serialized(column_residues.data(), n, comb,
+                                        mpf_prec, restored(row_begin[j], j),
+                                        slot_size);
+        }
+      Scoped_Timer fence_timer(timers, "fence");
+      restored_window->Fence();
+    }
+
   {
     Scoped_Timer local_restore_timer(timers, "local_restore");
     for_each_owned(output.DistRank(), [&](const int i, const int j) {
-      restore_bigint_from_residues(*output_residues_window, i, j, comb,
-                                   residues_buffer_temp, bigint_value);
       const auto iLoc = output.LocalRow(i);
       const auto jLoc = output.LocalCol(j);
+      if(batch)
+        {
+          output.Matrix()(iLoc, jLoc).Deserialize(restored(i, j));
+          return;
+        }
+      restore_bigint_from_residues(*output_residues_window, i, j, comb,
+                                   residues_buffer_temp, bigint_value);
       bigint_value.to_BigFloat(output.Matrix()(iLoc, jLoc));
     });
   }
@@ -131,6 +209,8 @@ void BigInt_Shared_Memory_Syrk_Context::restore_and_reduce(
       // (if we split Q, the window is reused multimple times)
       Scoped_Timer fence_timer(timers, "fence");
       output_residues_window->Fence();
+      if(batch)
+        restored_window->Fence();
       return;
     }
 
@@ -196,6 +276,12 @@ void BigInt_Shared_Memory_Syrk_Context::restore_and_reduce(
                    DEBUG_STRING(serialized_size), DEBUG_STRING(i),
                    DEBUG_STRING(j), DEBUG_STRING(height), DEBUG_STRING(width),
                    DEBUG_STRING(global_ranks.at(to)));
+            if(batch)
+              {
+                std::memcpy(curr_send, restored(i, j), serialized_size);
+                curr_send += serialized_size;
+                return;
+              }
             restore_bigint_from_residues(*output_residues_window, i, j, comb,
                                          residues_buffer_temp, bigint_value);
             bigint_value.to_BigFloat(bigfloat_value);
@@ -242,4 +328,6 @@ void BigInt_Shared_Memory_Syrk_Context::restore_and_reduce(
   // (if we split Q, the window is reused multimple times)
   Scoped_Timer fence_timer(timers, "fence");
   output_residues_window->Fence();
+  if(batch)
+    restored_window->Fence();
 }

@@ -207,7 +207,8 @@ namespace
         + std::max(schur_complement_bytes
                      + std::max(multimodular_trsm_bytes,
                                 multimodular_cholesky_Q_bytes),
-                   3 * X_bytes));
+                   3 * X_bytes),
+      parameters.batch_crt, parameters.residues_star_vr);
 
     // Add schur_complement + (syrk_S() or Trsm() temporary allocations)
     // from initialize_schur_complement_solver()
@@ -268,6 +269,9 @@ namespace
           {
             El::BuildStream(ss, "\n\t#(", name, ") = ", size, " elements");
           }
+        if(cfg.restored_window_bytes() > 0)
+          bytes_per_category.emplace_back("\t\t\t\t--batchCrt window",
+                                          cfg.restored_window_bytes());
         for(const auto &[name, bytes] : bytes_per_category)
           {
             El::BuildStream(ss, "\n\t", name, ": ",
@@ -364,6 +368,12 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
     }
   auto bigint_syrk_context = create_syrk_Q_context_and_print_memory(
     env, block_info, grid, sdp, *this, parameters, q_grids, verbosity);
+  // Faster paths of Q's BigInt syrk, the same Q bit for bit
+  // (--batchResidues, --residuesNoClear; --batchCrt and --residuesStarVR,
+  // which need memory, are in the config, see get_syrk_Q_config)
+  bigint_syrk_context.options.batch_residues = parameters.batch_residues;
+  bigint_syrk_context.options.residues_no_clear
+    = parameters.residues_no_clear;
   initialize_bigint_syrk_context_timer.stop();
 
   initialize_timer.stop();
