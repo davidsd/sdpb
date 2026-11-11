@@ -367,6 +367,8 @@ Gpu_Compute::Gpu_Compute(const Solver_Parameters &parameters,
   o.world.rank=El::mpi::Rank();
   o.world.size=El::mpi::Size();
   o.world.device=-1;
+  // the GPU by the rank's place on its node, as Block_Info's placement
+  o.world.local_rank=block_info.node_comm.Rank();
   o.world.host_broadcast=[](void *p,size_t n,int root) {
     El::mpi::Broadcast(static_cast<unsigned char *>(p),int(n),root,El::mpi::COMM_WORLD);
   };
@@ -389,6 +391,7 @@ Gpu_Compute::Gpu_Compute(const Solver_Parameters &parameters,
   // 16: one chunk per dimension runs out of memory at nmax14 on one H200, with
   // 16 the peak is 131 GB. Not a planner yet.
   o.max_chunk_blocks = int(env_long("SDPB_GPU_CHUNK_BLOCKS", 16));
+  o.max_chunk_rows = env_long("SDPB_GPU_CHUNK_ROWS", 0);
   o.sparse_b = env_long("SDPB_GPU_SPARSE_B", 0) != 0;
   o.lean_p = env_long("SDPB_GPU_LEAN_P", 0) != 0;
   o.product_timing = env_long("SDPB_GPU_PRODUCT_TIMING", 0) != 0;

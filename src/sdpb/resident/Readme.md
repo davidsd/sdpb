@@ -196,6 +196,9 @@ checkpoint):
   against `sdpb --gpu` runs chained through checkpoints;
 - all 45 hot calls of a whole nmax18 OPE-scan point: y and z of every call, and the final checkpoint.
 
+With distributed Q on two ranks, checked: two consecutive real calls at nmax14, the
+same fields, and each rank's checkpoint. Not run above two ranks, or at raised precision.
+
 Checked after the merge with the CPU mode, on one H200: SDPB's own `resident_family` sequence (`load_family`,
 `set_coefficients`), named iterates with two `negate_normalization`s, `update_pmp` and `update_sdp` with unchanged bases,
 and a restart across two processes are byte-equal to the file route; a change of bases is answered with an error, and

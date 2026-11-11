@@ -79,6 +79,14 @@ $(BUILD)/compare_references: test/compare_references.c
 
 mpfr-checks: $(BUILD)/ref_solve $(BUILD)/compare_references
 
+# NCCL and MPI transfer rates between the job's ranks (needs NCCL_DIR for
+# nccl.h and an MPI compiler environment; libnccl is loaded at run time)
+$(BUILD)/nccl_rates: test/nccl_rates.cu
+	@mkdir -p $(BUILD)
+	$(NVCC) $(NVFLAGS) $< -o $@ -ldl -lmpi
+
+nccl-checks: $(BUILD)/distributed_q_check $(BUILD)/nccl_rates
+
 CHECK_LF ?= 28
 $(BUILD)/chol_tile_check: test/chol_tile_check.cu linalg/basecase.cuh
 	@mkdir -p $(BUILD)

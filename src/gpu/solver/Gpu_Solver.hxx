@@ -90,6 +90,7 @@ namespace sdpb_gpu
     int refine_x = 0;
     // at most this many blocks in one chunk (0: one chunk per dimension)
     int max_chunk_blocks = 16;
+    int64_t max_chunk_rows = 0; // 0: no limit on a chunk's rows, blocks times P
     // keep each chunk's B as its nonzero entries (80% of B is exact zeros) and
     // expand it on the device for each use; bit for bit the dense B's results
     bool sparse_b = false;

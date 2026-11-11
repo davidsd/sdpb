@@ -178,6 +178,8 @@ namespace sdpb_gpu
     std::map<std::string, double> total_s, iter_s, last_iter_s, stage_used_gb,
       stage_host_gb;
     std::map<std::string, uint64_t> total_payload, iter_payload, last_iter_payload;
+    std::map<std::string, double> total_comm_s, iter_comm_s, last_iter_comm_s;
+    double stage_comm_begin = 0;
     uint64_t stage_payload_begin = 0;
     std::vector<double> iter_wall;
     Clock::time_point t_iter;
@@ -225,11 +227,15 @@ namespace sdpb_gpu
               const uint64_t bytes=world->received_bytes()-stage_payload_begin;
               total_payload[cur_stage]+=bytes;
               iter_payload[cur_stage]+=bytes;
+              const double comm=world->seconds()-stage_comm_begin;
+              total_comm_s[cur_stage]+=comm;
+              iter_comm_s[cur_stage]+=comm;
             }
           note_memory();
         }
       cur_stage = name ? name : "";
       stage_payload_begin=world ? world->received_bytes() : 0;
+      stage_comm_begin=world ? world->seconds() : 0;
       t_stage = Clock::now();
     }
 
@@ -681,7 +687,7 @@ namespace sdpb_gpu
 
     void build_chunks()
     {
-      const auto layout=gpu_chunks(shapes,opt.max_chunk_blocks);
+      const auto layout=gpu_chunks(shapes,opt.max_chunk_blocks,opt.max_chunk_rows);
       const auto owners=gpu_chunk_owners(layout,opt.world.size);
       global_rows=0;
       for(size_t ci=0;ci<layout.size();++ci)
@@ -1413,6 +1419,8 @@ namespace sdpb_gpu
       iter_s.clear();
       last_iter_payload=iter_payload;
       iter_payload.clear();
+      last_iter_comm_s=iter_comm_s;
+      iter_comm_s.clear();
       ++iteration;
     }
 
@@ -1466,8 +1474,19 @@ namespace sdpb_gpu
           put(last_iter_payload);
           os << ", \"rank\": " << world->rank()
              << ", \"G\": " << world->size()
-             << ", \"collective_received_payload\": " << world->received_bytes()
-             << ", \"distributed_q_iterations\": [";
+             << ", \"collective_received_payload\": " << world->received_bytes();
+          if(world->timing())
+            {
+              os << ", \"collective_seconds_by_stage\": ";
+              put(total_comm_s);
+              os << ", \"last_iteration_collective_seconds_by_stage\": ";
+              put(last_iter_comm_s);
+              os << ", \"collective_seconds\": {\"broadcast\": " << world->broadcast_seconds()
+                 << ", \"max_u64\": " << world->max_seconds()
+                 << ", \"reduce_scatter\": " << world->reduce_scatter_seconds()
+                 << ", \"allgather\": " << world->allgather_seconds() << "}";
+            }
+          os << ", \"distributed_q_iterations\": [";
           for(size_t i=0;i<distributed_profiles.size();++i)
             os << (i?",":"") << distributed_profiles[i];
           os << "]";
