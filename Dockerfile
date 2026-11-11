@@ -72,13 +72,24 @@ RUN git clone https://github.com/robol/MPSolve.git --depth=1 && \
     mpsolve -p "x^4 - 6*x^9 + 6/7*x + 5"
 
 WORKDIR /usr/local/src/sdpb
-# Build SDPB from current sources, print build/config.log in configuration failed
+# Build SDPB from current sources, print build/config.log if waf configuration failed
 COPY . .
-RUN (./waf configure --elemental-dir=/usr/local --flint-dir=/usr/local --prefix=/usr/local \
-        || (cat build/config.log && exit 1) \
-    ) && \
-    python3 ./waf && \
-    python3 ./waf install
+# Build system: waf (default) or cmake, e.g. docker build . --build-arg BUILD_SYSTEM=cmake
+# Declared after all dependencies, so that waf and CMake builds share their layers.
+ARG BUILD_SYSTEM=waf
+RUN if [ "$BUILD_SYSTEM" = cmake ]; then \
+        cmake -B build && \
+        cmake --build build -j "$(nproc)" && \
+        cmake --install build; \
+    elif [ "$BUILD_SYSTEM" = waf ]; then \
+        (./waf configure --elemental-dir=/usr/local --flint-dir=/usr/local --prefix=/usr/local \
+            || (cat build/config.log && exit 1) \
+        ) && \
+        python3 ./waf && \
+        python3 ./waf install; \
+    else \
+        echo "Unknown BUILD_SYSTEM=$BUILD_SYSTEM, expected waf or cmake" && exit 1; \
+    fi
 
 # Take only sdpb binaries + load necessary dynamic libraries
 # libboost_stacktrace_addr2line is not packaged separately, only in boost1.84-libs (all Boost libraries).
@@ -111,9 +122,9 @@ FROM install AS test
 RUN addgroup --gid 10000 testgroup && \
     adduser --disabled-password --uid 10000 --ingroup testgroup --shell /bin/sh testuser
 WORKDIR /home/testuser/sdpb
-COPY --from=build /usr/local/src/sdpb/build build
-COPY --from=build /usr/local/src/sdpb/test test
-RUN chown -R testuser test
+# Tests write to build/test/out
+COPY --from=build --chown=testuser:testgroup /usr/local/src/sdpb/build build
+COPY --from=build --chown=testuser:testgroup /usr/local/src/sdpb/test test
 USER testuser:testgroup
 
 # Resulting image

@@ -252,7 +252,8 @@ TEST_CASE("SDPLIB", "[.]")
                   {"--checkpointDir", (output_dir / "ck").string()}};
 
                 runner.create_nested("sdpb").mpi_run(
-                  {"build/sdpb", default_sdpb_args, args}, num_procs);
+                  {Test_Config::program("sdpb"), default_sdpb_args, args},
+                  num_procs);
               }
               //Check output
               {

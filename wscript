@@ -28,12 +28,20 @@ def configure(conf):
                                                    shell=True).rstrip()
 
 
+def write_version_header(task):
+    task.outputs[0].write('#pragma once\n#define SDPB_VERSION_STRING "%s"\n' % task.env.git_version)
+
+
 def build(bld):
+    # Generate build/sdpb_version.hxx before compiling anything
+    bld(rule=write_version_header, target='sdpb_version.hxx', vars=['git_version'])
+    bld.add_group()
+
     default_flags = ['-Wall', '-Wextra', '-Werror=return-type', '-O3', '-g']
-    default_defines = ['OMPI_SKIP_MPICXX', 'SDPB_VERSION_STRING="' + bld.env.git_version + '"']
+    default_defines = ['OMPI_SKIP_MPICXX']
     # All binaries (except for sdpb_util itself) depend also on sdpb_util
     use_packages = external_packages + ['sdpb_util']
-    default_includes = ['src', 'external']
+    default_includes = ['src', 'external', bld.bldnode]
 
     bld.stlib(source=['src/sdpb_util/Archive_Reader.cxx',
                       'src/sdpb_util/Boost_Float.cxx',
@@ -344,6 +352,7 @@ def build(bld):
                         'test/src/unit_tests/cases/pmp_sampling.test.cxx',
                         'test/src/unit_tests/cases/shared_window.test.cxx'],
                 target='unit_tests',
+                install_path=None,
                 cxxflags=default_flags,
                 defines=default_defines + ['CATCH_AMALGAMATED_CUSTOM_MAIN'],
                 use=use_packages + ['pmp_read', 'pmp2sdp_lib', 'sdp_solve'],

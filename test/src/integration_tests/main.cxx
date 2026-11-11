@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <iostream>
+#include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/parsers.hpp>
 
@@ -43,6 +44,10 @@ int main(int argc, char *argv[])
 {
   Catch::Session session; // There must be exactly one instance
 
+  // SDPB executables are in the same directory as integration_tests.
+  // argv[0] may have no directory, e.g. if the program is found via PATH.
+  Test_Config::build_dir
+    = fs::path(boost::dll::program_location().string()).parent_path();
   set_working_directory();
 
   // Build a new command line parser on top of Catch2's
@@ -84,8 +89,7 @@ int main(int argc, char *argv[])
     }
 
   // clear output and log directory
-  fs::remove_all(Test_Config::test_output_dir);
-  fs::remove_all(Test_Config::test_log_dir);
+  fs::remove_all(Test_Config::test_output_dir());
 
   return session.run();
 }

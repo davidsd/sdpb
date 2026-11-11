@@ -71,3 +71,16 @@ In that case, you should set `-arch arm64` flag explicitly:
     ./build/sdpb --help     # run SDPB binary
     ./test/run_all_tests.sh # run tests to check correctness
     ./waf install           # install sdpb to --prefix=$HOME/install/sdpb/master
+
+### Build with CMake
+
+Instead of waf, you can use CMake (see also [Building with CMake](../../Install.md#building-with-cmake)):
+
+    cmake -B build -DCMAKE_PREFIX_PATH="$HOME/install;$(brew --prefix);$(brew --prefix openblas);$(brew --prefix libarchive)"
+    cmake --build build -j 8                         # build binaries
+    ./test/run_all_tests.sh                          # run tests to check correctness
+    cmake --install build --prefix $HOME/install/sdpb/master
+
+Homebrew does not link `openblas` and `libarchive` to `$(brew --prefix)`, so their prefixes are listed separately.
+CMake sets `-D_GNU_SOURCE` itself. If linking fails with `found architecture 'arm64', required architecture 'x86_64'`,
+add `-DCMAKE_OSX_ARCHITECTURES=arm64` to the first command.

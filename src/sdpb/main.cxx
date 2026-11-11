@@ -9,6 +9,7 @@
 #include "time_and_solve.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
 #include "sdpa_solve/SDP_Solver.hxx"
+#include "sdpb_version.hxx"
 #include "sdpb_util/Proc_Meminfo.hxx"
 #include "sdpb_util/ostream/pretty_print_bytes.hxx"
 

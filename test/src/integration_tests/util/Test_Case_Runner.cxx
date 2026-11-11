@@ -14,13 +14,14 @@ namespace Test_Util
   Test_Case_Runner::Test_Case_Runner(const std::string &name)
       : name(name),
         data_dir(Test_Config::test_data_dir / name),
-        output_dir(Test_Config::test_output_dir / name),
-        stdout_path(Test_Config::test_log_dir
+        output_dir(Test_Config::test_output_dir() / name),
+        stdout_path(Test_Config::test_log_dir()
                     / fs::path(name + ".stdout.log")),
-        stderr_path(Test_Config::test_log_dir / fs::path(name + ".stderr.log"))
+        stderr_path(Test_Config::test_log_dir()
+                    / fs::path(name + ".stderr.log"))
   {
     fs::remove_all(output_dir);
-    fs::remove_all(Test_Config::test_log_dir / name);
+    fs::remove_all(Test_Config::test_log_dir() / name);
 
     if(stdout_path.has_parent_path())
       fs::create_directories(stdout_path.parent_path());
