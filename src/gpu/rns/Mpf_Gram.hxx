@@ -65,6 +65,11 @@ namespace sdpb_gpu
     void scan(const Mpf_Matrix &P);
     // pass 2: Q += P^T P for each chunk
     void add(const Mpf_Matrix &P);
+    // Distributed tile assembly: tops are globally reduced, unsigned-encoded
+    // column maxima as returned by mpf_scan_column_tops. map has N entries;
+    // -1 denotes a padding column. add_columns also accepts a row-panel view.
+    void set_column_tops(const uint64_t *global_tops, const int32_t *map);
+    void add_columns(const Mpf_Matrix &P, const int32_t *map);
     // Q's lower triangle, packed by columns (Gram_Accumulator::packed_index),
     // as floats: m[t*packed + e], ex[e].  Resets.
     void finish(int32_t *d_m, int64_t *d_e);
@@ -75,7 +80,7 @@ namespace sdpb_gpu
   private:
     void tic();
     void toc(const std::string &phase);
-    int N_, L_, D_;
+    int N_, L_, D_, tile_rows_ = 0, tile_cols_ = 0;
     Gram_Accumulator G_;
     cudaStream_t stream_;
     bool timing_;
@@ -89,6 +94,11 @@ namespace sdpb_gpu
     std::map<std::string, double> ms_;
     cudaEvent_t ev0_, ev1_;
   };
+
+  // Caller zeroes N unsigned tops once; scans any number of row chunks and
+  // then all-reduces MAX as uint64, never as signed int64.
+  void mpf_scan_column_tops(const Mpf_Matrix &P, uint64_t *tops,
+                            cudaStream_t stream = 0);
 
   // Batched exact products of device floats, C_b = A_b^T B_b (A_b: k x m,
   // B_b: k x n), each entry of C rounded once to a float: the same column

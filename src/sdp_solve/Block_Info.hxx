@@ -33,6 +33,11 @@ public:
          const std::vector<size_t> &num_points, const size_t &dual_dimension,
          const size_t &proc_granularity, const Verbosity &verbosity);
 
+  // Each MPI rank owns complete blocks, owner[block] being its rank: one
+  // group of one process per rank, block_mapping to match. Used by the GPU
+  // backend (one process per GPU). Collective over all ranks.
+  void allocate_single_rank_blocks(const std::vector<int> &owner);
+
   [[nodiscard]] size_t get_schur_block_size(size_t index) const;
   [[nodiscard]] std::vector<size_t> schur_block_sizes() const;
   [[nodiscard]] size_t

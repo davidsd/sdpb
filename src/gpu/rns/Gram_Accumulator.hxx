@@ -98,6 +98,10 @@ namespace sdpb_gpu
     // Block_Factor: its products share one workspace (the planner then budgets
     // the largest product, not the sum over shapes)
     bool share_workspace = true;
+    // Optional rectangular Gram output: columns [0,tile_cols) against
+    // [tile_cols,tile_cols+tile_rows). Both lengths must be multiples of 32.
+    // Used by distributed Q; zero keeps the original packed triangular path.
+    int tile_rows = 0, tile_cols = 0;
   };
 
   class Gram_Accumulator
@@ -131,7 +135,17 @@ namespace sdpb_gpu
     // int32 limb planes, limb t (little endian, two's complement) of entry e at
     // t*packed_size() + e.  Resets the accumulator.
     void finish(int32_t *d_out);
-    int64_t packed_size() const { return int64_t(N_) * (N_ + 1) / 2; }
+    int64_t packed_size() const
+    {
+      return opt_.tile_rows ? int64_t(opt_.tile_rows) * opt_.tile_cols
+                            : int64_t(N_) * (N_ + 1) / 2;
+    }
+    // Exact collective seam. Export canonical residues as uint32 (NCCL has
+    // no uint16 sum); import reduces the sum modulo each prime. For G ranks
+    // require G*(max prime-1) <= UINT32_MAX before calling the collective.
+    void export_residues(uint32_t *out) const;
+    void import_residues(const uint32_t *sum);
+    void reset();
     static int64_t packed_index(int64_t N, int64_t i, int64_t j)
     {
       return j * N - j * (j - 1) / 2 + (i - j);

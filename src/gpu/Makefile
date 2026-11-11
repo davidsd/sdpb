@@ -10,12 +10,17 @@ ARCH    ?= 90
 GMP_DIR ?= /usr
 MPFR_DIR ?= $(GMP_DIR)
 BUILD   ?= build
+NCCL_DIR ?=
 
 GENCODE := $(foreach a,$(ARCH),-gencode arch=compute_$(a),code=sm_$(a))
 NVFLAGS := -std=c++17 -O3 $(GENCODE) -Xcompiler -Wall -Xcompiler -fopenmp -I$(GMP_DIR)/include
+ifneq ($(NCCL_DIR),)
+NVFLAGS += -DSDPB_GPU_NCCL -I$(NCCL_DIR)/include
+endif
 LDLIBS  := -lcublasLt -L$(GMP_DIR)/lib -Xlinker -rpath -Xlinker $(GMP_DIR)/lib -lgmp -lopenblas -lgomp
 
-LIB_SRC := rns/Rns_Basis.cxx rns/Gram_Accumulator.cu rns/Mpf_Gram.cu rns/Rns_Gemm.cu linalg/Block_Factor.cu solver/Mpf_Ops.cu solver/Gpu_Solver.cu
+LIB_SRC := rns/Rns_Basis.cxx rns/Gram_Accumulator.cu rns/Mpf_Gram.cu rns/Rns_Gemm.cu linalg/Block_Factor.cu solver/Mpf_Ops.cu solver/Gpu_Solver.cu solver/Gpu_Collective.cu linalg/Distributed_Q.cu
+LDLIBS += -ldl
 LIB_OBJ := $(patsubst %,$(BUILD)/%.o,$(LIB_SRC))
 
 all: $(BUILD)/gram_check $(BUILD)/mpf_gram_check $(BUILD)/gemm_check $(BUILD)/chol_tile_check $(BUILD)/mpf_gemm_check $(BUILD)/block_factor_check $(BUILD)/real_block_check $(BUILD)/q_check $(BUILD)/residual_check $(BUILD)/mpf_ops_check $(BUILD)/factor_profile $(BUILD)/gemv_compare
@@ -54,6 +59,9 @@ $(BUILD)/mpf_ops_check: $(BUILD)/test/mpf_ops_check.cu.o $(LIB_OBJ)
 
 $(BUILD)/gemv_compare: $(BUILD)/test/gemv_compare.cu.o $(LIB_OBJ)
 	$(NVCC) $(NVFLAGS) $^ -o $@ $(LDLIBS)
+
+$(BUILD)/distributed_q_check: $(BUILD)/test/distributed_q_check.cu.o $(LIB_OBJ)
+	$(NVCC) $(NVFLAGS) $^ -o $@ $(LDLIBS) -lmpi
 
 $(BUILD)/residual_check: $(BUILD)/test/residual_check.cu.o $(LIB_OBJ)
 	$(NVCC) $(NVFLAGS) $^ -o $@ $(LDLIBS)
