@@ -352,6 +352,7 @@ def build(bld):
                         'test/src/unit_tests/cases/block_data_serialization.test.cxx',
                         'test/src/unit_tests/cases/block_mapping.test.cxx',
                         'test/src/unit_tests/cases/Boost_Float.test.cxx',
+                        'test/src/unit_tests/cases/batch_crt.test.cxx',
                         'test/src/unit_tests/cases/blas_residues.test.cxx',
                         'test/src/unit_tests/cases/boost_serialization.test.cxx',
                         'test/src/unit_tests/cases/create_blas_job_schedule.test.cxx',
