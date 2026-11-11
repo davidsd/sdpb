@@ -8,6 +8,7 @@
 * [SDPB](#sdpb)
 * [Installation and Usage](#installation-and-usage)
 * [Experimental branches](#experimental-branches)
+* [Test problems](#test-problems)
 * [Front ends](#front-ends)
 * [Attribution](#attribution)
 * [Acknowledgements](#acknowledgements)
@@ -52,6 +53,16 @@ Usage instructions are detailed in [Usage.md](docs/Usage.md).
 Some new features (faster CPU paths, new options of `sdpb`, `pmp2sdp` and `spectrum`, and a GPU backend) are
 offered as pull requests before they are reviewed and merged. [docs/Experimental.md](docs/Experimental.md) lists
 them, with their review status and the people to credit if you use them, and says how to build and combine them.
+
+## Test problems
+
+For work on SDPB's performance, there is a ladder of optimization test problems of increasing size,
+`sdpb-test-01` to `sdpb-test-08`, from small problems that solve on one node to multi-node and multi-GPU ones.
+Each comes with its SDP, its PMP (or a recipe to make it), a reference solution or reference timings, a README
+and a check script. They are
+[here](https://www.dropbox.com/scl/fo/cvpy6qz6ztsf3ibjpk7k6/AFS2Eb7iwgVNeeUgzm-WNFU?rlkey=0nfp6xddwcbe5creg7q4subiq&st=v7dq9dr5&dl=0);
+more rungs are being added. Measured timings on them are collected in
+[docs/Performance.md](docs/Performance.md).
 
 ## Front ends
 
