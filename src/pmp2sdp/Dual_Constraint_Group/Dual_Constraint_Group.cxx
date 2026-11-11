@@ -28,8 +28,9 @@ sample_bilinear_basis(const std::array<Polynomial_Vector, 2> &bilinear_basis,
 //
 // for tuples p = (r,s,k).
 //
-Dual_Constraint_Group::Dual_Constraint_Group(const size_t &Block_index,
-                                             const Polynomial_Vector_Matrix &m)
+Dual_Constraint_Group::Dual_Constraint_Group(
+  const size_t &Block_index, const Polynomial_Vector_Matrix &m,
+  const size_t num_nodes_at_infinity)
     : block_index(Block_index),
       dim(m.polynomials.Height()),
       num_points(m.sample_points.size())
@@ -67,6 +68,8 @@ Dual_Constraint_Group::Dual_Constraint_Group(const size_t &Block_index,
             }
         }
     }
+
+  apply_nodes_at_infinity(*this, m, num_nodes_at_infinity);
 
   // The matrix Y has two blocks Y_1, Y_2.  The bilinear_bases for the
   // constraint matrices A_p are given by sampling the following
