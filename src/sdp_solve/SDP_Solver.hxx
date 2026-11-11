@@ -79,10 +79,13 @@ struct SDP_Solver
   int64_t current_generation;
   boost::optional<int64_t> backup_generation;
 
+  // sdp is read only by parameters.initial_seed ("rows[:a]") when no
+  // checkpoint is loaded; callers that don't pass it can't use a seed.
   SDP_Solver(const Solver_Parameters &parameters, const Verbosity &verbosity,
              const bool &require_initial_checkpoint,
              const Block_Info &block_info, const El::Grid &grid,
-             const size_t &dual_objective_b_height);
+             const size_t &dual_objective_b_height,
+             const SDP *sdp = nullptr);
 
   SDP_Solver_Terminate_Reason
   run(const Environment &env, const Solver_Parameters &parameters,

@@ -44,7 +44,7 @@ create_solver(const SDPB_Parameters &parameters, const Block_Info &block_info,
   Scoped_Timer solver_ctor_timer(timers, "SDP_Solver.ctor");
   return SDP_Solver(parameters.solver, parameters.verbosity,
                     parameters.require_initial_checkpoint, block_info, grid,
-                    sdp.dual_objective_b.Height());
+                    sdp.dual_objective_b.Height(), &sdp);
 }
 
 inline Sdpb::Sdpa::SDP_Solver
