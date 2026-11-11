@@ -2,6 +2,7 @@
 
 #include "write_vector.hxx"
 #include "pmp/PMP_Info.hxx"
+#include "Reuse_SDP.hxx"
 #include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/assert.hxx"
 #include "sdpb_util/json/Json_Writer.hxx"
@@ -13,6 +14,54 @@
 #include <ostream>
 #include <type_traits>
 
+inline void write_pvm_info_json(Json_Writer &writer, const PVM_Info &block,
+                                const size_t num_blocks)
+{
+  block.validate(num_blocks);
+  writer.StartObject();
+  writer.Key("index");
+  {
+    writer.Int(block.block_index);
+  }
+  writer.Key("path");
+  {
+    writer.String(block.block_path.string().c_str());
+  }
+  writer.Key("dim");
+  {
+    writer.Uint64(block.dim);
+  }
+  writer.Key("prefactor");
+  {
+    writer.StartObject();
+    writer.Key("constant");
+    writer.BigFloat(block.prefactor.constant);
+    writer.Key("base");
+    writer.BigFloat(block.prefactor.base);
+    writer.Key("poles");
+    writer.BigFloatArray(block.prefactor.poles);
+    writer.EndObject();
+  }
+  writer.Key("reducedPrefactor");
+  {
+    writer.StartObject();
+    writer.Key("constant");
+    writer.BigFloat(block.reduced_prefactor.constant);
+    writer.Key("base");
+    writer.BigFloat(block.reduced_prefactor.base);
+    writer.Key("poles");
+    writer.BigFloatArray(block.reduced_prefactor.poles);
+    writer.EndObject();
+  }
+  writer.Key("samplePoints");
+  writer.BigFloatArray(block.sample_points);
+  writer.Key("sampleScalings");
+  writer.BigFloatArray(block.sample_scalings);
+  writer.Key("reducedSampleScalings");
+  writer.BigFloatArray(block.reduced_sample_scalings);
+  writer.EndObject();
+}
+
 inline void write_pmp_info_json(std::ostream &output_stream,
                                 const std::vector<PVM_Info> &pmp_info)
 {
@@ -22,54 +71,42 @@ inline void write_pmp_info_json(std::ostream &output_stream,
 
   writer.StartArray();
   for(const auto &block : pmp_info)
-    {
-      block.validate(pmp_info.size());
-      writer.StartObject();
-      writer.Key("index");
-      {
-        writer.Int(block.block_index);
-      }
-      writer.Key("path");
-      {
-        writer.String(block.block_path.string().c_str());
-      }
-      writer.Key("dim");
-      {
-        writer.Uint64(block.dim);
-      }
-      writer.Key("prefactor");
-      {
-        writer.StartObject();
-        writer.Key("constant");
-        writer.BigFloat(block.prefactor.constant);
-        writer.Key("base");
-        writer.BigFloat(block.prefactor.base);
-        writer.Key("poles");
-        writer.BigFloatArray(block.prefactor.poles);
-        writer.EndObject();
-      }
-      writer.Key("reducedPrefactor");
-      {
-        writer.StartObject();
-        writer.Key("constant");
-        writer.BigFloat(block.reduced_prefactor.constant);
-        writer.Key("base");
-        writer.BigFloat(block.reduced_prefactor.base);
-        writer.Key("poles");
-        writer.BigFloatArray(block.reduced_prefactor.poles);
-        writer.EndObject();
-      }
-      writer.Key("samplePoints");
-      writer.BigFloatArray(block.sample_points);
-      writer.Key("sampleScalings");
-      writer.BigFloatArray(block.sample_scalings);
-      writer.Key("reducedSampleScalings");
-      writer.BigFloatArray(block.reduced_sample_scalings);
-      writer.EndObject();
-    }
+    write_pvm_info_json(writer, block, pmp_info.size());
 
   writer.EndArray();
   ASSERT(writer.IsComplete());
+}
+
+// Same output as write_pmp_info_json(), for an SDP with blocks reused from
+// an old SDP: reused entries are copied from the old pmp_info.json.
+inline void write_pmp_info_json(std::ostream &output_stream,
+                                const std::vector<PVM_Info> &pmp_info,
+                                const Reused_SDP &reuse)
+{
+  ASSERT_EQUAL(El::mpi::Rank(), 0);
+  ASSERT_EQUAL(reuse.new_to_old.size(), pmp_info.size());
+  rapidjson::OStreamWrapper ows(output_stream);
+  output_stream << '[';
+  for(size_t index = 0; index < pmp_info.size(); ++index)
+    {
+      if(index != 0)
+        output_stream << ',';
+      const auto &old_index = reuse.new_to_old.at(index);
+      if(old_index.has_value())
+        {
+          output_stream << reuse.renumbered_pmp_info_entry(old_index.value(),
+                                                           index);
+        }
+      else
+        {
+          ows.Flush();
+          Json_Writer writer(ows);
+          write_pvm_info_json(writer, pmp_info.at(index), pmp_info.size());
+          ASSERT(writer.IsComplete());
+          ows.Flush();
+        }
+    }
+  output_stream << ']';
 }
 
 // PVM_Info is collected on rank 0 in one MPI_Gatherv of a byte buffer per
@@ -210,6 +247,7 @@ public:
 };
 
 // Collect all blocks on rank=0.
+// Blocks reused by pmp2sdp --reuseSdp are on no rank and stay empty.
 inline std::vector<PVM_Info>
 synchronize_pmp_info_blocks(const PMP_Info &pmp_info)
 {
