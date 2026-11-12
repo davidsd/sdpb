@@ -6,33 +6,28 @@
 #include "sdp_solve/Solver_Parameters/Memory_Limit.hxx"
 #include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
+#include <algorithm>
+#include <vector>
+
+// Split factors of the shared memory windows for Q = P^T P on this node,
+// given the heights of the node's groups of blocks (P' for each group) and
+// N = block_width. Called on all ranks (it reduces over COMM_WORLD).
+// Separate from the overload below so that it can be unit-tested without
+// an SDP (test/src/unit_tests/cases/get_syrk_Q_config.test.cxx).
 inline Bigint_Syrk_Config
-get_syrk_Q_config(const Block_Info &block_info, const SDP &sdp,
-                  const Memory_Limit &max_memory,
+get_syrk_Q_config(const El::mpi::Comm &node_comm, const size_t num_nodes,
+                  const std::vector<size_t> &blocks_height_per_group,
+                  const size_t block_width, const Memory_Limit &max_memory,
                   const Memory_Limit &max_shared_memory,
                   const size_t other_memory, const bool batch_crt = false,
                   const bool residues_star_vr = false)
 {
   const auto precision = El::gmp::Precision();
-  const auto num_nodes = block_info.num_nodes();
-  const auto &node_comm = block_info.node_comm;
-
-  const auto block_width = sdp.dual_objective_b.Height(); // = N
-
-  std::vector<size_t> blocks_height_per_group;
-  size_t max_group_height = 0;
-  for(const auto &group :
-      block_info.block_mapping.mapping.at(block_info.node_index))
-    {
-      size_t height = 0;
-      for(const auto &block_index : group.block_indices)
-        {
-          // P' = height of the current block of sdp.free_var_matrix (aka B)
-          height += block_info.get_schur_block_size(block_index);
-        }
-      blocks_height_per_group.push_back(height);
-      max_group_height = std::max(max_group_height, height);
-    }
+  const size_t max_group_height
+    = blocks_height_per_group.empty()
+        ? 0
+        : *std::max_element(blocks_height_per_group.begin(),
+                            blocks_height_per_group.end());
 
   const size_t max_total_mem = max_memory.limit_or_infinite();
   const size_t max_shared_mem = max_shared_memory.limit_or_infinite();
@@ -170,4 +165,32 @@ get_syrk_Q_config(const Block_Info &block_info, const SDP &sdp,
         }
     }
   return cfg;
+}
+
+inline Bigint_Syrk_Config
+get_syrk_Q_config(const Block_Info &block_info, const SDP &sdp,
+                  const Memory_Limit &max_memory,
+                  const Memory_Limit &max_shared_memory,
+                  const size_t other_memory, const bool batch_crt = false,
+                  const bool residues_star_vr = false)
+{
+  const auto block_width = sdp.dual_objective_b.Height(); // = N
+
+  std::vector<size_t> blocks_height_per_group;
+  for(const auto &group :
+      block_info.block_mapping.mapping.at(block_info.node_index))
+    {
+      size_t height = 0;
+      for(const auto &block_index : group.block_indices)
+        {
+          // P' = height of the current block of sdp.free_var_matrix (aka B)
+          height += block_info.get_schur_block_size(block_index);
+        }
+      blocks_height_per_group.push_back(height);
+    }
+
+  return get_syrk_Q_config(block_info.node_comm, block_info.num_nodes(),
+                           blocks_height_per_group, block_width, max_memory,
+                           max_shared_memory, other_memory, batch_crt,
+                           residues_star_vr);
 }
