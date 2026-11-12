@@ -23,6 +23,7 @@
     "batchResidues": "false",
     "residuesNoClear": "false",
     "residuesStarVR": "false",
+    "groupedSyrk": "false",
     "findDualFeasible": "false",
     "detectPrimalFeasibleJump": "false",
     "detectDualFeasibleJump": "false",
