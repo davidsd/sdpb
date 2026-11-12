@@ -456,12 +456,58 @@ namespace sdpb_gpu
       DQ_CHECK(cudaStreamSynchronize(0));
       return g;
     };
+    // phase timers of the accumulators (with Gram_Options::timing)
+    auto note_phases=[&](Mpf_Gram &g) {
+      for(const auto &kv:g.timings()) s.seconds["assemble: "+kv.first]+=kv.second*1e-3;
+      for(const auto &kv:g.gram().timings()) s.seconds["assemble: "+kv.first]+=kv.second*1e-3;
+    };
+    // Single pass: this rank's whole packed lower triangle in residue form,
+    // the residues of every row panel formed once for all N columns
+    std::unique_ptr<Mpf_Gram> full;
+    if(s.opt.single_pass)
+      {
+        t=Impl::Clock::now();
+        Gram_Options gf=s.go;
+        gf.tile_rows=gf.tile_cols=0;
+        full=std::make_unique<Mpf_Gram>(s.N,s.L,s.D,s.rows,gf);
+        if(full->gram().basis().primes != rect.gram().basis().primes)
+          throw std::runtime_error("Distributed_Q single pass: residue basis");
+        {
+          Buffer<int32_t> identity(s.N);
+          std::vector<int32_t> hi(s.N);
+          for(int x=0;x<s.N;++x) hi[x]=x;
+          DQ_CHECK(cudaMemcpy(identity.p,hi.data(),size_t(s.N)*4,cudaMemcpyHostToDevice));
+          full->set_column_tops(tops.p,identity.p);
+          DQ_CHECK(cudaStreamSynchronize(0));
+        }
+        if(s.opt.structured)
+          // a residue plane as large as a row panel of all N columns
+          full->add_structured(P,int64_t(s.opt.row_panel)*((s.N+31)/32*32));
+        else
+          for(const auto &a:P)
+            for(int64_t row=0;row<a.rows;row+=s.opt.row_panel)
+              {
+                auto panel=a;
+                panel.m+=row; panel.e+=row;
+                panel.rows=std::min<int64_t>(s.opt.row_panel,a.rows-row);
+                panel.ld=a.ld?a.ld:a.rows;
+                panel.plane=a.plane?a.plane:a.rows*a.cols;
+                full->add_columns(panel,nullptr);
+              }
+        s.done("residues and products",t);
+      }
     for(size_t start=0;start<s.order.size();start+=G)
       {
         DQ_CHECK(cudaMemsetAsync(send.p,0,size_t(G)*count*4,0));
         t=Impl::Clock::now();
         for(int dest=0;dest<G && start+dest<s.order.size();++dest)
           {
+            if(full)
+              {
+                auto [i,j]=s.order[start+dest];
+                full->gram().export_tile_residues(send.p+size_t(dest)*count,i*b,j*b,b);
+                continue;
+              }
             auto &g=configure(int(start+dest));
             g.gram().reset();
             for(const auto &a:P)
@@ -476,7 +522,7 @@ namespace sdpb_gpu
                 }
             g.gram().export_residues(send.p+size_t(dest)*count);
           }
-        s.done("residues and products",t);
+        s.done(full?"tile residues from the packed triangle":"residues and products",t);
         t=Impl::Clock::now();
         s.world.reduce_scatter_u32(send.p,recv.p,count);
         s.done("residue reduce-scatter",t);
@@ -499,6 +545,8 @@ namespace sdpb_gpu
           }
         s.done("owner CRT",t);
       }
+    if(full) note_phases(*full);
+    note_phases(diag); note_phases(rect);
   }
 
   void Distributed_Q::load_tile(int i,int j,const int32_t *m,const int64_t *e)

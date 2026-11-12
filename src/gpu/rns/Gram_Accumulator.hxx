@@ -125,7 +125,13 @@ namespace sdpb_gpu
     // padded columns j >= N are zeroed here.  rows % 16 == 0.
     using Residue_Fill
       = std::function<void(int i0, int gc, int8_t *R, int64_t plane)>;
-    void add_residues(int64_t rows, const Residue_Fill &fill);
+    // d_cols (device, ncols entries, strictly increasing): the chunk has only
+    // these columns, in this order; fill then writes ncols columns (plane =
+    // rows * ncols rounded up to 32) and the products go to the entries
+    // (d_cols[i], d_cols[j]) of the packed triangle. Columns that are zero in
+    // every row of the chunk need no residues and no products this way.
+    void add_residues(int64_t rows, const Residue_Fill &fill,
+                      const int32_t *d_cols = nullptr, int ncols = 0);
     const int32_t *device_primes() const { return d_primes_; }
     const double *device_minv() const { return d_minv_; }
     cudaStream_t stream() const { return stream_; }
@@ -144,6 +150,12 @@ namespace sdpb_gpu
     // no uint16 sum); import reduces the sum modulo each prime. For G ranks
     // require G*(max prime-1) <= UINT32_MAX before calling the collective.
     void export_residues(uint32_t *out) const;
+    // The same seam for a b x b tile of this accumulator's packed lower
+    // triangle, rows i0.., columns j0.. (i0 == j0: a diagonal tile; otherwise
+    // i0 >= j0 + b), written in the layout of a tile accumulator's residues:
+    // diagonal, the packed lower triangle of b columns; otherwise column-major
+    // b x b. Entries beyond N are zero. out: [primes][b (b + 1) / 2 or b b].
+    void export_tile_residues(uint32_t *out, int i0, int j0, int b) const;
     void import_residues(const uint32_t *sum);
     void reset();
     static int64_t packed_index(int64_t N, int64_t i, int64_t j)
@@ -154,6 +166,8 @@ namespace sdpb_gpu
     int limbs_out() const { return basis_.crt_digits / 4; }
     const Rns_Basis &basis() const { return basis_; }
     int64_t rows_added() const { return rows_added_; }
+    // the most rows (padding included) that may be added before finish()
+    int64_t rows_bound() const { return rows_total_; }
     // milliseconds by phase (when options.timing)
     const std::map<std::string, double> &timings() const { return ms_; }
     size_t device_bytes() const { return device_bytes_; }
@@ -170,6 +184,9 @@ namespace sdpb_gpu
     void toc(const std::string &phase);
 
     int N_, Np_, NB_, g_;
+    // the columns of the chunk being added (N_, Np_ and no map, or add_residues' subset)
+    int cur_N_ = 0, cur_Np_ = 0;
+    const int32_t *cur_cols_ = nullptr;
     Rns_Basis basis_;
     Gram_Options opt_;
     cudaStream_t stream_;
@@ -188,7 +205,7 @@ namespace sdpb_gpu
     double *d_minv_ = nullptr;   // [num_padded] 1/m_i
     int32_t *d_resC_ = nullptr;  // residue GEMM output [2g][entries batch]
     int8_t *d_R_ = nullptr;      // residue planes [3][g][Np][rows]
-    int64_t rows_cap_ = 0;
+    int64_t rows_cap_ = 0;       // entries of one residue plane that d_R_ holds
     int32_t *d_gram_ = nullptr;  // Gram GEMM output [3g][max_rect^2]
     uint16_t *d_Qres_ = nullptr; // accumulated residues [num primes][packed_size]
     int8_t *d_Yh_ = nullptr, *d_Yl_ = nullptr; // CRT inputs [crt_batch][num_padded]

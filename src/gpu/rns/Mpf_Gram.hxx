@@ -31,6 +31,8 @@
 #include "Gram_Accumulator.hxx"
 #include "Rns_Gemm.hxx"
 
+#include <vector>
+
 namespace sdpb_gpu
 {
   constexpr int64_t MPF_EZ = -(int64_t(1) << 40);
@@ -70,6 +72,28 @@ namespace sdpb_gpu
     // -1 denotes a padding column. add_columns also accepts a row-panel view.
     void set_column_tops(const uint64_t *global_tops, const int32_t *map);
     void add_columns(const Mpf_Matrix &P, const int32_t *map);
+    // Q += P^T P as add(), taken by groups of rows that have the same nonzero
+    // columns: each group is one product over its nonzero columns only (the
+    // rows of SDPB's P = L^-1 B are zero in whole groups of columns, in the
+    // same columns for many rows). Exact zeros contribute nothing to an exact
+    // sum, so Q is the same bit for bit. The groups are found from P's
+    // exponents at every call and checked on the device (every nonzero entry
+    // of a row lies in its group's columns), else this throws. With so many
+    // groups that their padding would pass the residue basis's row bound, it
+    // takes the dense product instead. max_rows: the most rows in one product
+    // (0: all of a group's).
+    void add_structured(const Mpf_Matrix &P, int64_t max_rows = 0);
+    // the same over several matrices at once (the chunks of P): rows of any of
+    // them that share their nonzero columns go into one product, so a group's
+    // output block is written and reduced once instead of once per chunk.
+    // max_plane: the most entries (rows times columns) of one product's
+    // residue plane (0: only the bound of 2^17 rows per product).
+    // test_skip_group >= 0: that group is left out (the negative control of
+    // mpf_gram_check --structured, which must then fail).
+    void add_structured(const std::vector<Mpf_Matrix> &Ps, int64_t max_plane = 0,
+                        int test_skip_group = -1);
+    // multiply-adds of the last add_structured over those of the dense product
+    double structured_fraction() const { return structured_fraction_; }
     // Q's lower triangle, packed by columns (Gram_Accumulator::packed_index),
     // as floats: m[t*packed + e], ex[e].  Resets.
     void finish(int32_t *d_m, int64_t *d_e);
@@ -91,6 +115,7 @@ namespace sdpb_gpu
     uint32_t *d_ctop_ = nullptr; // [primes][32]: 2^-r mod m_i
     int32_t *d_Qint_ = nullptr;  // exact Q (packed limb planes)
     bool refs_ready_ = false;
+    double structured_fraction_ = 1;
     std::map<std::string, double> ms_;
     cudaEvent_t ev0_, ev1_;
   };

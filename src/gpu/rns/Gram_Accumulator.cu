@@ -48,7 +48,8 @@ namespace sdpb_gpu
                                 const double *__restrict__ minv,
                                 uint16_t *__restrict__ Qres, int64_t qplane,
                                 int N, int r0, int c0, int tile_rows,
-                                int tile_cols)
+                                int tile_cols, int Ne,
+                                const int32_t *__restrict__ cols)
     {
       int64_t t = blockIdx.x * (int64_t)blockDim.x + threadIdx.x;
       int64_t mn = (int64_t)m * n;
@@ -56,8 +57,14 @@ namespace sdpb_gpu
         return;
       int a = int(t % m), b = int(t / m);
       int64_t i = r0 + a, j = c0 + b;
-      if(i >= N || j >= N || i < j)
+      if(i >= Ne || j >= Ne || i < j)
         return;
+      if(cols)
+        {
+          // strictly increasing, so (i, j) stays in the lower triangle
+          i = cols[i];
+          j = cols[j];
+        }
       int64_t pk = tile_rows ? j * tile_rows + i - tile_cols
                             : j * N - j * (j - 1) / 2 + (i - j);
       for(int p = 0; p < g; ++p)
@@ -80,6 +87,23 @@ namespace sdpb_gpu
     {
       const int64_t i = int64_t(blockIdx.x) * blockDim.x + threadIdx.x;
       if(i < n) out[i] = in[i];
+    }
+    __global__ void export_tile(const uint16_t *__restrict__ Q, int64_t qplane,
+                                int N, int r, int i0, int j0, int b,
+                                uint32_t *__restrict__ out, int64_t oplane)
+    {
+      const int64_t t = int64_t(blockIdx.x) * blockDim.x + threadIdx.x;
+      if(t >= int64_t(b) * b) return;
+      const int a = int(t % b), c = int(t / b); // row, column in the tile
+      const bool diagonal = i0 == j0;
+      if(diagonal && a < c) return;
+      const int64_t pk = diagonal ? int64_t(c) * b - int64_t(c) * (c - 1) / 2 + (a - c)
+                                  : int64_t(c) * b + a;
+      const int64_t i = i0 + a, j = j0 + c;
+      const bool in = i < N && j < N;
+      const int64_t src = in ? j * N - j * (j - 1) / 2 + (i - j) : 0;
+      for(int p = 0; p < r; ++p)
+        out[p * oplane + pk] = in ? uint32_t(Q[p * qplane + src]) : 0u;
     }
     __global__ void import_mod(const uint32_t *in, uint16_t *out,
                                int64_t plane, int r, const int32_t *primes)
@@ -211,7 +235,7 @@ namespace sdpb_gpu
                                     int gc, int64_t rows)
   {
     const int m = r1 - r0, n = c1 - c0;
-    const int64_t plane = int64_t(Np_) * rows;
+    const int64_t plane = int64_t(cur_Np_) * rows;
     gemm_tn(m, n, int(rows), d_R_ + int64_t(r0) * rows, int(rows), plane,
             d_R_ + int64_t(c0) * rows, int(rows), plane, d_gram_, m,
             int64_t(m) * n, 3 * gc);
@@ -219,7 +243,7 @@ namespace sdpb_gpu
     gram_reduce<<<blocks_for(mn), threads, 0, stream_>>>(
       d_gram_, m, n, gc, d_primes_ + i0, d_minv_ + i0,
       d_Qres_ + int64_t(i0) * packed_size(), packed_size(), N_, r0, c0,
-      opt_.tile_rows, opt_.tile_cols);
+      opt_.tile_rows, opt_.tile_cols, cur_N_, cur_cols_);
     GPU_CHECK(cudaGetLastError());
   }
 
@@ -227,7 +251,7 @@ namespace sdpb_gpu
   void Gram_Accumulator::gram_rect(int c0, int c1, int i0, int gc,
                                    int64_t rows)
   {
-    if(c0 >= N_)
+    if(c0 >= cur_N_)
       return;
     const int R = opt_.max_rect;
     if(c1 - c0 <= opt_.base)
@@ -239,7 +263,7 @@ namespace sdpb_gpu
     int h = c0 + half;
     if(h >= c1)
       h = c1 - 32;
-    for(int rr = h; rr < c1 && rr < N_; rr += R)
+    for(int rr = h; rr < c1 && rr < cur_N_; rr += R)
       for(int cc = c0; cc < h; cc += R)
         gram_block(rr, std::min(c1, rr + R), cc, std::min(h, cc + R), i0, gc,
                    rows);
@@ -274,10 +298,16 @@ namespace sdpb_gpu
     });
   }
 
-  void Gram_Accumulator::add_residues(int64_t rows, const Residue_Fill &fill)
+  void Gram_Accumulator::add_residues(int64_t rows, const Residue_Fill &fill,
+                                      const int32_t *d_cols, int ncols)
   {
     if(rows <= 0)
       return;
+    if(d_cols && (ncols <= 0 || ncols > N_ || opt_.tile_rows))
+      throw std::invalid_argument("Gram_Accumulator::add_residues: column subset");
+    cur_N_ = d_cols ? ncols : N_;
+    cur_Np_ = (cur_N_ + 31) / 32 * 32;
+    cur_cols_ = d_cols;
     if(rows % 16 != 0)
       throw std::invalid_argument("Gram_Accumulator::add: rows % 16 != 0 "
                                   "(pad the chunk with zero rows)");
@@ -288,24 +318,26 @@ namespace sdpb_gpu
       throw std::invalid_argument("Gram_Accumulator::add: more rows than the "
                                   "bound the primes were chosen for");
     const int r = int(basis_.primes.size());
-    const int64_t plane = int64_t(Np_) * rows;
-    if(rows > rows_cap_)
+    const int64_t plane = int64_t(cur_Np_) * rows;
+    // the residue planes hold the chunk's columns only: (rows_cap_ counts
+    // entries of one plane, columns times rows)
+    if(plane > rows_cap_)
       {
         if(d_R_)
           {
             cudaFree(d_R_);
-            device_bytes_ -= size_t(3 * g_) * Np_ * rows_cap_;
+            device_bytes_ -= size_t(3 * g_) * rows_cap_;
           }
-        d_R_ = dalloc<int8_t>(size_t(3 * g_) * Np_ * rows, device_bytes_);
-        rows_cap_ = rows;
+        d_R_ = dalloc<int8_t>(size_t(3 * g_) * plane, device_bytes_);
+        rows_cap_ = plane;
       }
     for(int i0 = 0; i0 < r; i0 += g_)
       {
         const int gc = std::min(g_, r - i0);
         tic();
-        if(Np_ > N_)
-          GPU_CHECK(cudaMemset2DAsync(d_R_ + int64_t(N_) * rows, plane, 0,
-                                      size_t(Np_ - N_) * rows, 3 * gc,
+        if(cur_Np_ > cur_N_)
+          GPU_CHECK(cudaMemset2DAsync(d_R_ + int64_t(cur_N_) * rows, plane, 0,
+                                      size_t(cur_Np_ - cur_N_) * rows, 3 * gc,
                                       stream_));
         fill(i0, gc, d_R_, plane);
         toc("residues");
@@ -313,7 +345,7 @@ namespace sdpb_gpu
         if(opt_.tile_rows)
           gram_block(opt_.tile_cols, N_, 0, opt_.tile_cols, i0, gc, rows);
         else
-          gram_rect(0, Np_, i0, gc, rows);
+          gram_rect(0, cur_Np_, i0, gc, rows);
         toc("gram GEMM + reduce");
       }
     rows_added_ += rows;
@@ -362,6 +394,19 @@ namespace sdpb_gpu
   {
     const int64_t n = int64_t(basis_.primes.size()) * packed_size();
     export_mod<<<blocks_for(n), threads, 0, stream_>>>(d_Qres_, out, n);
+    GPU_CHECK(cudaGetLastError());
+  }
+
+  void Gram_Accumulator::export_tile_residues(uint32_t *out, int i0, int j0,
+                                              int b) const
+  {
+    if(opt_.tile_rows || b <= 0 || i0 < 0 || j0 < 0
+       || !(i0 == j0 || i0 >= j0 + b))
+      throw std::invalid_argument("Gram_Accumulator::export_tile_residues");
+    const int64_t oplane = i0 == j0 ? int64_t(b) * (b + 1) / 2 : int64_t(b) * b;
+    export_tile<<<blocks_for(int64_t(b) * b), threads, 0, stream_>>>(
+      d_Qres_, packed_size(), N_, int(basis_.primes.size()), i0, j0, b, out,
+      oplane);
     GPU_CHECK(cudaGetLastError());
   }
 

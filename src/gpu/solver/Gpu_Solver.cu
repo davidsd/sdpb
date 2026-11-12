@@ -431,8 +431,10 @@ namespace sdpb_gpu
       stage("Q = P^T P");
       Gram_Options qopt=gopt;
       qopt.timing=opt.product_timing;
+      qopt.base=std::min(opt.q_base,qopt.max_rect);
       distributed_q=std::make_unique<Distributed_Q>(N,L,D,global_rows,*world,qopt,
-        Distributed_Q_Options{opt.q_tile,opt.q_row_panel,opt.refine_dy,opt.q_wide_residual});
+        Distributed_Q_Options{opt.q_tile,opt.q_row_panel,opt.refine_dy,opt.q_wide_residual,
+                              opt.q_single_pass,opt.structured_q});
       std::vector<Mpf_Matrix> panels;
       for(auto &c:chunks) panels.push_back(P_of(c).view());
       distributed_q->assemble(panels);
@@ -912,6 +914,7 @@ namespace sdpb_gpu
         {
           Gram_Options qopt = gopt;
           qopt.timing = opt.product_timing;
+          qopt.base = std::min(opt.q_base, qopt.max_rect);
           gram = std::make_unique<Mpf_Gram>(N, L, D, rows_total, qopt,
                                             cudaStream_t(0));
         }
@@ -940,8 +943,16 @@ namespace sdpb_gpu
     {
       if(world) { distributed_Q_factor(); return; }
       stage("Q = P^T P");
-      for(auto &c : chunks)
-        gram->add(P_of(c).view());
+      if(opt.structured_q)
+        {
+          std::vector<Mpf_Matrix> views;
+          for(auto &c : chunks)
+            views.push_back(P_of(c).view());
+          gram->add_structured(views, opt.q_plane);
+        }
+      else
+        for(auto &c : chunks)
+          gram->add(P_of(c).view());
       if(opt.lean_p)
         for(auto &c : chunks)
           c.Pf.free();
