@@ -37,6 +37,7 @@ add_executable(unit_tests
   src/unit_tests/cases/create_blas_job_schedule.test.cxx
   src/unit_tests/cases/calculate_matrix_square.test.cxx
   src/unit_tests/cases/copy_matrix.test.cxx
+  src/unit_tests/cases/get_syrk_Q_config.test.cxx
   src/unit_tests/cases/json.test.cxx
   src/unit_tests/cases/multimodular_blas.test.cxx
   src/unit_tests/cases/pmp_sampling.test.cxx
