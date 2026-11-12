@@ -69,8 +69,10 @@ public:
     // in the input window, and each BLAS job takes, group by group, only
     // the column runs of the group that meet its tile. Exact zeros add
     // nothing to the exact sums of residues, so Q is the same bit for bit.
-    // Used when the input window holds all rows (input split factor 1);
-    // otherwise, or if the groups would save little, the dense product.
+    // When the input window is split, the groups are formed for each pass
+    // of the window (the rows that pass holds). If the groups would save
+    // little (multiply-adds >= 0.95 of the dense product) or are too many
+    // (> 4096 in a pass), the dense product is used.
     bool grouped = false;
     // unit tests only: leave this row group out (a negative control)
     int grouped_test_skip_group = -1;

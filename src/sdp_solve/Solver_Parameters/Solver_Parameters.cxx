@@ -121,8 +121,9 @@ boost::program_options::options_description Solver_Parameters::options()
     boost::program_options::bool_switch(&grouped_syrk)->default_value(false),
     "Experimental: in the computation of Q, take the product by groups of "
     "rows of P that have the same nonzero columns, over those columns only "
-    "(the groups are found from P's exact zeros at every iteration). Same Q "
-    "bit for bit. Needs the input window to hold all rows of P on a node.");
+    "(the groups are found from P's exact zeros at every iteration, for "
+    "each pass of the input window). Same Q bit for bit. Falls back to the "
+    "dense product when the groups would save less than 5%.");
   result.add_options()(
     "findPrimalFeasible",
     boost::program_options::bool_switch(&find_primal_feasible)
