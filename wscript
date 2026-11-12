@@ -154,12 +154,15 @@ def build(bld):
 
     # SDPB executable
     bld.program(source=['src/sdpb/main.cxx',
-                        'src/sdpb/SDPB_Parameters.cxx'],
+                        'src/sdpb/SDPB_Parameters.cxx',
+                        'src/sdpb/resident/Control_Channel.cxx',
+                        'src/sdpb/resident/Resident.cxx'],
                 target='sdpb',
                 cxxflags=default_flags,
                 defines=default_defines,
                 includes=default_includes,
-                use=use_packages + ['sdp_solve', 'sdpa_solve', 'mpsolve']
+                use=use_packages + ['sdp_solve', 'sdpa_solve', 'mpsolve',
+                                    'pmp_read', 'pmp', 'pmp2sdp_lib']
                 )
 
     pmp2sdp_sources = ['src/pmp2sdp/Dual_Constraint_Group/Dual_Constraint_Group.cxx',
@@ -171,6 +174,7 @@ def build(bld):
                        'src/pmp2sdp/write_normalization_json.cxx',
                        'src/pmp2sdp/write_sdp.cxx',
                        'src/pmp2sdp/write_control_json.cxx',
+                       'src/pmp2sdp/Reuse_SDP.cxx',
                        'src/pmp2sdp/Archive_Writer.cxx',
                        'src/pmp2sdp/Archive_Entry.cxx'
                        ]
@@ -333,6 +337,7 @@ def build(bld):
                         'test/src/integration_tests/cases/outer_limits.test.cxx',
                         'test/src/integration_tests/cases/pmp2sdp.test.cxx',
                         'test/src/integration_tests/cases/SDPLIB.test.cxx',
+                        'test/src/integration_tests/cases/resident.test.cxx',
                         'test/src/integration_tests/cases/sdpb.test.cxx'],
                 target='integration_tests',
                 install_path=None,

@@ -8,6 +8,8 @@
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 
+#include <memory>
+
 // The main solver loop
 
 namespace fs = std::filesystem;
@@ -71,7 +73,8 @@ void compute_primal_residues_and_error_p_b_Bx(const Block_Info &block_info,
 
 namespace
 {
-  BigInt_Shared_Memory_Syrk_Context create_syrk_Q_context_and_print_memory(
+  std::unique_ptr<BigInt_Shared_Memory_Syrk_Context>
+  create_syrk_Q_context_and_print_memory(
     const Environment &env, const Block_Info &block_info, const El::Grid &grid,
     const SDP &sdp, const SDP_Solver &solver,
     const Solver_Parameters &parameters, const Verbosity verbosity)
@@ -249,7 +252,7 @@ namespace
         El::Output(ss.str());
       }
 
-    return BigInt_Shared_Memory_Syrk_Context(
+    return std::make_unique<BigInt_Shared_Memory_Syrk_Context>(
       cfg, block_info.node_group_index(), block_info.block_indices, verbosity);
   }
 }
@@ -261,7 +264,8 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
   const Block_Info &block_info, const SDP &sdp, const El::Grid &grid,
   const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time,
   const fs::path &iterations_json_path, Timers &timers,
-  El::Matrix<int32_t> &block_timings_ms)
+  El::Matrix<int32_t> &block_timings_ms,
+  std::unique_ptr<BigInt_Shared_Memory_Syrk_Context> *persistent_syrk_context)
 {
   SDP_Solver_Terminate_Reason terminate_reason(
     SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
@@ -319,8 +323,16 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
 
   Scoped_Timer initialize_bigint_syrk_context_timer(timers,
                                                     "bigint_syrk_context");
-  auto bigint_syrk_context = create_syrk_Q_context_and_print_memory(
-    env, block_info, grid, sdp, *this, parameters, verbosity);
+  // persistent_syrk_context (resident mode, sdpb --controlDir): the context
+  // and its shared memory windows are created by the first run and reused.
+  std::unique_ptr<BigInt_Shared_Memory_Syrk_Context> local_syrk_context;
+  auto &syrk_context_ptr = persistent_syrk_context != nullptr
+                             ? *persistent_syrk_context
+                             : local_syrk_context;
+  if(!syrk_context_ptr)
+    syrk_context_ptr = create_syrk_Q_context_and_print_memory(
+      env, block_info, grid, sdp, *this, parameters, verbosity);
+  auto &bigint_syrk_context = *syrk_context_ptr;
   initialize_bigint_syrk_context_timer.stop();
 
   initialize_timer.stop();
@@ -388,6 +400,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
     }
 
   print_header(verbosity);
+  num_steps = 0;
   for(size_t iteration = 1;; ++iteration)
     {
       Scoped_Timer iteration_timer(timers,
@@ -527,6 +540,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
             = SDP_Solver_Terminate_Reason::MaxComplementarityExceeded;
           break;
         }
+      num_steps = iteration;
       Scoped_Timer print_iteration_timer(timers, "print_iteration");
       print_iteration(iterations_json_path, iteration, mu, primal_step_length,
                       dual_step_length, beta_corrector, *this,
