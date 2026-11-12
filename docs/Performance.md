@@ -1,6 +1,6 @@
 # Performance on the test problems
 
-*Last updated: 11 November 2026.*
+*Last updated: 12 November 2026.*
 
 Measured runs of SDPB on the test problems `sdpb-test-01` to `sdpb-test-08` (see [Test problems](../Readme.md#test-problems)),
 one table per problem and one row per run, with comments under each table. Each problem's README gives its recommended
@@ -10,15 +10,15 @@ checked against with `check.py`.
 ## Summary
 
 Time per iteration, for the baseline (the SDPB build and settings of the Simmons-Duffin group's earlier bootstrap computations; see Setups) and for
-the fastest measured run on CPUs and on a GPU, with the speedup over the baseline. The fastest run of each problem is in bold.
+the fastest measured run on CPUs and on GPUs, with the speedup over the baseline. The fastest run of each problem is in bold.
 
-| Problem | N; SDP size | Baseline | Fastest on CPUs | Fastest on a GPU |
+| Problem | N; SDP size | Baseline | Fastest on CPUs | Fastest on GPUs |
 |---|---|---|---|---|
 | [01](#sdpb-test-01) | 54; 0.01 GB | 0.235 s (1 node) | 0.161 s (1 node), 1.5× | **0.034 s** (1 H200), **6.9×** |
 | [02](#sdpb-test-02) | 274; 0.10 GB | 1.69 s (1 node) | 1.18 s (1 node), 1.4× | **0.16 s** (1 H200), **10×** |
-| [03](#sdpb-test-03) | 1,834; 2.87 GB | 43.4 s (4 nodes) | 18.8 s (4 nodes), 2.3× | **2.44 s** (1 H200), **18×** |
+| [03](#sdpb-test-03) | 1,834; 2.87 GB | 43.4 s (4 nodes) | 18.8 s (4 nodes), 2.3× | **2.17 s** (1 H200), **20×** |
 | [04](#sdpb-test-04) | 3,406; 9.04 GB | 70.5 s (5 nodes) | 25.8 s (5 nodes), 2.7× | **3.88 s** (1 H200), **18×** |
-| [05](#sdpb-test-05) | 5,458; 8.82 GB | 95.0 s (10 nodes) | **30.3 s** (10 nodes), **3.1×** | — |
+| [05](#sdpb-test-05) | 5,458; 8.82 GB | 95.0 s (10 nodes) | 30.3 s (10 nodes), 3.1× | **4.22 s** (2 H200s), **23×** |
 | [08](#sdpb-test-08) | 3,047; 3.28 GB | 109.0 s (2 nodes) | **41.4 s** (2 nodes), **2.6×** | — |
 
 Nodes are Expanse nodes (128 cores each). A dash means not measured; 06 and 07 are to be added.
@@ -46,7 +46,19 @@ How each code in the tables gets its speed. The pull requests are described in [
 - **GPU backend** (#319–#322). It runs whole SDPB iterations on one GPU. The multiprecision matrix products are done
   exactly in residues modulo many primes on the GPU's INT8 tensor cores and recombined by the Chinese remainder theorem,
   and the blocks' Cholesky factorizations are batched by size, following Antoine Tilloy's SDPviBe. The problem must fit
-  in the GPU's memory (141 GB on an H200); distributing Q over several GPUs (#321) has not been timed here.
+  in the GPU's memory (141 GB on an H200). With #321, Q is distributed over the GPUs of a node, so a problem can use
+  the memory of several (`mpirun -n G sdpb --gpu` for G GPUs); #324 extends this across nodes.
+- **Faster multi-GPU Q** (`gpu-fast-q`, the seventh GPU pull request, on top of #324). Three changes to how the GPU
+  backend forms Q and solves with it, all exact: the iterations are bitwise equal to #324's. (1) When Q is distributed,
+  the residues of P (the solve L⁻¹B of the Schur complement blocks) are formed once per iteration and every tile of Q
+  is cut from one packed result; before, each 512 × 512 tile recomputed them. (2) The matrix-vector products of the
+  solves with Q are split over more threads (down to 16 terms a thread instead of 256). (3) The product Q = PᵀP skips
+  P's zeros: rows of P with the same nonzero columns are multiplied as one group. These matter most on several GPUs and
+  at larger N: on an nmax = 22 SDP of the group's that is not among the test problems (N = 7,990), they take two H200s
+  from 13.99 to 7.65 s/iter (1.83×), and earlier runs gave 1.65× on four and 1.46× on eight. On one GPU the gain is
+  about 2% (sdpb-test-03). The cost is device memory while Q is formed, up to 15 GB more per GPU on that SDP (72.3 →
+  87.4 GB) and none on sdpb-test-05. `SDPB_GPU_STRUCTURED_Q=0 SDPB_GPU_Q_SINGLE_PASS=0 SDPB_GPU_GEMV_MIN_TERMS=256
+  SDPB_GPU_Q_BASE=256` restores #324's code path, for example where a GPU's memory is at its limit.
 - **Development builds.** Several rows come from builds made before their code was split into the pull requests above:
   5db9998 (the code of #311), 2eed3fef (#311–#313), 5e725bd6 (#303, #308, #311–#314) and 015f092d (#319–#322). In
   5e725bd6, the options of #313 other than `--qSolveRanks` and the four of #314 were set by environment variables; on the
@@ -115,15 +127,16 @@ computed with SDPB's `master` (3.1.0-27-gc5bd57e9).
 
 152 blocks (1×1 to 5×5), N = 1,834, P = 34,551, 1024 bits; SDP 2.87 GB.
 
-**Fastest: one H200 with the GPU backend, 2.44 s/iter, 18× the baseline on 4 Expanse nodes.** Fastest on
-CPUs: all CPU options, 18.8 s/iter, 2.3×.
+**Fastest: one H200 with the GPU backend and the faster Q, 2.17 s/iter, 20× the baseline on 4 Expanse nodes.**
+Fastest on CPUs: all CPU options, 18.8 s/iter, 2.3×.
 
 | Setup | s/iter | Speedup | Iterations, total | Start-up | Peak memory | Check | Code | Settings |
 |---|---|---|---|---|---|---|---|---|
 | Baseline, Expanse 4 × 128 | 43.4 | 1× | timing: 10 iterations | 202 s (200 s) | 58.7 GB | yes: 1e-240 | 3.0.0-194-g5e92aa2f | 1024 bits |
 | `--multimodularTrsm`, Expanse 4 × 128 | 22.3 | 1.9× | 269, 6,062 s (note 2) | — | — | reference | 5db9998 | 1024 bits, `--multimodularTrsm` |
 | All CPU options, Expanse 4 × 128 | 18.8 | 2.3× | timing: 10 iterations | 359 s (358 s) | 64.2 GB | yes: 4e-240 | 5e725bd6 | 1024 bits, all CPU options |
-| GPU backend, 1 H200 | **2.44** | **18×** | 269, 658 s | 10 s | 56.7 GB (device) | yes: 1e-41 | 015f092d | 1024 bits |
+| GPU backend, 1 H200 | 2.44 | 18× | 269, 658 s | 10 s | 56.7 GB (device) | yes: 1e-41 | 015f092d | 1024 bits |
+| GPU backend, faster Q, 1 H200 | **2.17** | **20×** | timing: 6 iterations | 9 s | 58.0 GB (device) | yes: 5e-14 | `gpu-fast-q` 054f9bd1 | 1024 bits, `SDPB_GPU_CHUNK_BLOCKS=0` |
 
 - **Baseline.** From a cold start (block-timing pass included). *Simmons-Duffin group, 2026-11-11.*
 - **`--multimodularTrsm`.** The reference solution, solved to optimality in two segments, the second resumed from a
@@ -136,6 +149,11 @@ CPUs: all CPU options, 18.8 s/iter, 2.3×.
 - **GPU backend** (Setups): whole iterations on the GPU, with exact multiprecision products on its tensor cores. Solved
   in one run, with the same 269 iterations as the reference. It used 56.7 GB of the GPU's 141 GB.
   *Simmons-Duffin group, 2026-11-11.*
+- **GPU backend, faster Q** (Setups, `gpu-fast-q`). Its 6 iterations are bitwise equal (every printed value, and y)
+  to those of the branch it is built on (#324, 2f2dff3c), run on the same GPU in the same session at 2.22 s/iter; so
+  on one GPU the faster Q gains about 2%, and most of the difference to the row above (2.44 s, an older build,
+  another day) is not from it. The 5e-14 is the largest relative difference of the printed values from the
+  reference's first 6 iterations, the same for 2f2dff3c. *Simmons-Duffin group, 2026-11-12.*
 
 ## sdpb-test-04
 
@@ -166,14 +184,16 @@ CPUs: all CPU options, 25.8 s/iter, 2.7×.
 
 301 blocks (1×1 to 5×5), N = 5,458, P = 78,953, 832 bits; SDP 8.82 GB.
 
-**Fastest: the mm options on 10 Expanse nodes, 30.3 s/iter, 3.1× the baseline on the same nodes.** Not yet
-run on a GPU.
+**Fastest: two H200s with the GPU backend and the faster Q, 4.22 s/iter, 23× the baseline on 10 Expanse nodes.**
+Fastest on CPUs: the mm options, 30.3 s/iter, 3.1×.
 
 | Setup | s/iter | Speedup | Iterations, total | Start-up | Peak memory | Check | Code | Settings |
 |---|---|---|---|---|---|---|---|---|
 | Baseline, Expanse 10 × 128 | 95.0 | 1× | timing: 8 iterations | — (none) | — | yes: 1e-141 | 3.0.0-194-g5e92aa2f | 832 bits |
-| mm options, Expanse 10 × 128 | **30.3** | **3.1×** | 384, 11,762 s (note 2) | — | — | reference | 2eed3fef | 832 bits, mm options |
+| mm options, Expanse 10 × 128 | 30.3 | 3.1× | 384, 11,762 s (note 2) | — | — | reference | 2eed3fef | 832 bits, mm options |
 | All CPU options, Expanse 10 × 128 | 33.9 | 2.8× | timing: 8 iterations | — (none) | — | yes: 1e-141 | 5e725bd6 | 832 bits, all CPU options |
+| GPU backend, 2 H200s | 6.57 | 14× | timing: 5 iterations | 39 s | 66.3 GB (device) | yes: 3e-15 | `gpu-multinode` 2f2dff3c | 832 bits, `SDPB_GPU_SPARSE_B=1 SDPB_GPU_Q_WIDE_RESIDUAL=1` |
+| GPU backend, faster Q, 2 H200s | **4.22** | **23×** | timing: 5 iterations | 38 s | 66.3 GB (device) | yes: 3e-15 | `gpu-fast-q` 054f9bd1 | 832 bits, `SDPB_GPU_SPARSE_B=1 SDPB_GPU_Q_WIDE_RESIDUAL=1` |
 
 - **Baseline.** With the block timings of an earlier run, so no block-timing pass. From a cold
   start, that pass takes 1,676 s on these 10 nodes, and the earlier run reached no iteration within its 55-minute limit.
@@ -183,6 +203,16 @@ run on a GPU.
   (Setups). *Simmons-Duffin group, 2026-11-03.*
 - **All CPU options** (Setups), in the same job as the baseline, with block timings from an earlier run. Slower than
   the mm options row on another day's nodes (note 3). *Simmons-Duffin group, 2026-11-11.*
+- **GPU backend, 2 H200s** (Setups; #324, the branch the faster Q is built on): one node, `mpirun -n 2 --bind-to none
+  sdpb --gpu`, with Q distributed over the two GPUs, B stored by its nonzeros, and the experimental residual of the
+  distributed Q (`src/gpu/README.md`). The peak is the larger of the two GPUs'. *Simmons-Duffin group, 2026-11-12.*
+- **GPU backend, faster Q, 2 H200s** (Setups, `gpu-fast-q`), in the same session, on the same GPUs and with the same
+  launch as the row above. Its 5 iterations are bitwise equal to that row's (every printed value, and y), and 1.56×
+  faster: here Q is distributed and P is 40% nonzero, so all three changes apply. The 3e-15 is the largest
+  relative difference of the printed values from the reference's first 5 iterations, the same for both rows. An earlier
+  whole solve with the same changes (a development build, before they were split into the pull request) took the
+  reference's 384 iterations in 1,720 s, every iteration bitwise equal to the same build with the changes off.
+  *Simmons-Duffin group, 2026-11-12.*
 
 ## sdpb-test-06, sdpb-test-07
 

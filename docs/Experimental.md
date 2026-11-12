@@ -11,7 +11,8 @@ branch passes SDPB's test suite and adds tests of its own. Until a branch has a 
 ## Credit
 
 You may use these branches **on the condition that you credit the people in the Contributors column of each
-branch you use** (the column includes its bases' contributors), in the acknowledgements or wherever your field
+branch you use and of every branch it is built on** (its Base, and the Base's bases: each row lists only the people
+whose work went into that branch itself), in the acknowledgements or wherever your field
 credits software, and cite SDPB as its [Attribution](../Readme.md#attribution) section asks, naming the branch
 (e.g. "the `cpu-mm-trsm` branch of SDPB, davidsd/sdpb#NNN").
 
@@ -31,18 +32,19 @@ pull request, which also says how it was checked.
 | `cpu-mm-cholesky-q` | [#312](https://github.com/davidsd/sdpb/pull/312) | the Cholesky decomposition of Q by multimodular arithmetic. Not bitwise; its accuracy not yet checked independently | `--multimodularCholeskyQ <panel>` | `cpu-mm-trsm` | Vasiliy Dommes (the multimodular method of `bigint_syrk`, which it reuses); David Simmons-Duffin | none yet |
 | `cpu-q-solve-options` | [#313](https://github.com/davidsd/sdpb/pull/313) | Q's solves and Cholesky on many nodes: solves on fewer ranks, node-shared diagonal blocks, a solve cache. Bitwise except `--qSolveRanks`, which changes the iterates at working precision | `--qSolveRanks`, `--qCholeskyNodeDiag`, `--qCholeskyNodeFactor`, `--qSolveCache` | `cpu-mm-cholesky-q` | Vasiliy Dommes (the multimodular method of `bigint_syrk`, which it builds on); David Simmons-Duffin | none yet |
 | `cpu-q-syrk-paths` | [#314](https://github.com/davidsd/sdpb/pull/314) | faster paths of Q's BigInt syrk on many nodes | `--batchCrt`, `--batchResidues`, `--residuesNoClear`, `--residuesStarVR` | `cpu-q-solve-options` and `cpu-fast-reduce` | Vasiliy Dommes (`bigint_syrk`, which it speeds up); David Simmons-Duffin | none yet |
-| `cpu-sparse-b` | [#315](https://github.com/davidsd/sdpb/pull/315) | the free variable matrix B stored by its nonzeros (memory) | `--sparseB` | `cpu-mm-trsm` | Vasiliy Dommes (via `cpu-mm-trsm`); David Simmons-Duffin | none yet |
+| `cpu-sparse-b` | [#315](https://github.com/davidsd/sdpb/pull/315) | the free variable matrix B stored by its nonzeros (memory) | `--sparseB` | `cpu-mm-trsm` | David Simmons-Duffin | none yet |
 
 ### `sdpb`: GPU backend
 
 | Branch | PR | What it does | Turned on by | Base | Contributors | Human review |
 |---|---|---|---|---|---|---|
 | `gpu-core` | [#319](https://github.com/davidsd/sdpb/pull/319) | the device library `src/gpu` (CUDA): exact multiprecision products on INT8 tensor cores, block Cholesky | its own build (SDPB's build is untouched) | `master` | Antoine Tilloy ([SDPviBe](https://github.com/AntoineTilloy/SDPviBe), the prototype of the backend, whose algorithms and code it adapts; `docs/GPU_backend_credits.md` on the branch lists what came from where); David Simmons-Duffin (asked for a GPU backend inside SDPB with SDPviBe as its prototype) | none yet |
-| `gpu-solver` | [#320](https://github.com/davidsd/sdpb/pull/320) | whole SDPB iterations on one GPU (about 20× per iteration at nmax = 14 on one H200, against SDPB on 5 nodes × 124 ranks), at `--precision` 831 to 862 bits only (`gpu-general-l` adds others) | build with the GPU backend, then `sdpb --gpu` | `gpu-core` | Antoine Tilloy (SDPviBe's solver, which it follows: blocks batched by size, the "lean" mode without a stored P; and via `gpu-core`); Zechuan Zheng (the partial-sum matrix-vector products, the sparse storage of B, and the extension of the lean mode to SDPs that fit on the GPU, from his GPU work on SDPviBe); David Simmons-Duffin | none yet |
-| `gpu-distributed-q` | [#321](https://github.com/davidsd/sdpb/pull/321) | Q distributed over the GPUs of a node (memory) | `mpirun -n G sdpb --gpu` for G GPUs, with NCCL | `gpu-solver` | Zechuan Zheng (his tiled Q; and via `gpu-solver`); Antoine Tilloy (via `gpu-solver`); David Simmons-Duffin | none yet |
-| `gpu-general-l` | [#322](https://github.com/davidsd/sdpb/pull/322) | GPU kernels for `--precision` from 704 to 1216 bits | `--gpu --precision ...` | `gpu-distributed-q` | Antoine Tilloy, Zechuan Zheng (via `gpu-distributed-q`); David Simmons-Duffin | none yet |
-| `gpu-resident` | [#323](https://github.com/davidsd/sdpb/pull/323) | resident mode on the GPU | `--gpu --controlDir` | `gpu-general-l` and `cpu-resident` | Antoine Tilloy, Zechuan Zheng (via `gpu-general-l`); Vasiliy Dommes (via `cpu-resident`); David Simmons-Duffin | none yet |
-| `gpu-multinode` | [#324](https://github.com/davidsd/sdpb/pull/324) | Q distributed across nodes | `sdpb --gpu` on several nodes | `gpu-resident` | Antoine Tilloy, Zechuan Zheng, Vasiliy Dommes (via `gpu-resident`); David Simmons-Duffin | none yet |
+| `gpu-solver` | [#320](https://github.com/davidsd/sdpb/pull/320) | whole SDPB iterations on one GPU (about 20× per iteration at nmax = 14 on one H200, against SDPB on 5 nodes × 124 ranks), at `--precision` 831 to 862 bits only (`gpu-general-l` adds others) | build with the GPU backend, then `sdpb --gpu` | `gpu-core` | Antoine Tilloy (SDPviBe's solver, which it follows: blocks batched by size, the "lean" mode without a stored P); Zechuan Zheng (the partial-sum matrix-vector products, the sparse storage of B, and the extension of the lean mode to SDPs that fit on the GPU, from his GPU work on SDPviBe); David Simmons-Duffin | none yet |
+| `gpu-distributed-q` | [#321](https://github.com/davidsd/sdpb/pull/321) | Q distributed over the GPUs of a node (memory) | `mpirun -n G sdpb --gpu` for G GPUs, with NCCL | `gpu-solver` | Zechuan Zheng (his tiled Q); David Simmons-Duffin | none yet |
+| `gpu-general-l` | [#322](https://github.com/davidsd/sdpb/pull/322) | GPU kernels for `--precision` from 704 to 1216 bits | `--gpu --precision ...` | `gpu-distributed-q` | David Simmons-Duffin | none yet |
+| `gpu-resident` | [#323](https://github.com/davidsd/sdpb/pull/323) | resident mode on the GPU | `--gpu --controlDir` | `gpu-general-l` and `cpu-resident` | David Simmons-Duffin | none yet |
+| `gpu-multinode` | [#324](https://github.com/davidsd/sdpb/pull/324) | Q distributed across nodes | `sdpb --gpu` on several nodes | `gpu-resident` | David Simmons-Duffin | none yet |
+| `gpu-fast-q` | [#326](https://github.com/davidsd/sdpb/pull/326) | faster Q on several GPUs, the same results bit for bit: P's residues formed once per rank instead of once per tile, matrix-vector products split over more threads (exact sums), and Q = PᵀP taken by groups of rows with the same nonzero columns. About 1.8× per iteration at nmax = 22 on two H200s, 1.5× on eight; 1.6× at nmax = 18 on two; ~2% on one GPU. Uses ~15 GB more device memory per GPU at nmax = 22 | on by default with `--gpu`; `SDPB_GPU_STRUCTURED_Q=0 SDPB_GPU_Q_SINGLE_PASS=0 SDPB_GPU_GEMV_MIN_TERMS=256 SDPB_GPU_Q_BASE=256` restore the earlier path (see `src/gpu/README.md`) | `gpu-multinode` | Zechuan Zheng (the partial-sum matrix-vector products, which it splits further); David Simmons-Duffin | none yet |
 
 ### `sdpb`: new options
 
@@ -51,7 +53,7 @@ pull request, which also says how it was checked.
 | `sdpb-decision-stop` | [#306](https://github.com/davidsd/sdpb/pull/306) | stop as soon as the iterate decides a bound | `--dualObjectiveStop`, `--primalObjectiveStop` | `master` | David Simmons-Duffin | none yet |
 | `initial-seed` | [#304](https://github.com/davidsd/sdpb/pull/304) | a cold start built from the SDP's own rows (fewer iterations on cold calls) | `--initialSeed=rows` | `master` | David Simmons-Duffin; Zechuan Zheng (the finding that equilibrated sample scalings cut SDPB's iteration counts, which this cold start grew out of) | none yet |
 | `sdpb-reconstruct-xymu` | [#307](https://github.com/davidsd/sdpb/pull/307) | restart from a text checkpoint that has only x and y | `--reconstructXYmu mu` | `master` | David Simmons-Duffin | none yet |
-| `cpu-resident` | [#316](https://github.com/davidsd/sdpb/pull/316) | resident mode: sdpb stays running between the calls of a scan and reads commands from a directory (protocol: `src/sdpb/resident/Readme.md`) | `--controlDir` | `cpu-sparse-b` and `pmp2sdp-reuse-sdp` | David Simmons-Duffin (proposed it: a scan mode inside sdpb, so that it never exits between calls); Vasiliy Dommes (via `cpu-sparse-b`) | none yet |
+| `cpu-resident` | [#316](https://github.com/davidsd/sdpb/pull/316) | resident mode: sdpb stays running between the calls of a scan and reads commands from a directory (protocol: `src/sdpb/resident/Readme.md`) | `--controlDir` | `cpu-sparse-b` and `pmp2sdp-reuse-sdp` | David Simmons-Duffin (proposed it: a scan mode inside sdpb, so that it never exits between calls) | none yet |
 
 ### `pmp2sdp` and `spectrum`
 
