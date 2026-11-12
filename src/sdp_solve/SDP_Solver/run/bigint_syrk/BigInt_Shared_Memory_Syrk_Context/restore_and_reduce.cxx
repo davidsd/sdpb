@@ -3,6 +3,8 @@
 #include "sdpb_util/bigint_shared_memory/fmpz/residues.hxx"
 #include "sdpb_util/block_mapping/MPI_Comm_Wrapper.hxx"
 
+#include <vector>
+
 namespace
 {
   void
@@ -66,6 +68,43 @@ void BigInt_Shared_Memory_Syrk_Context::restore_and_reduce(
   const auto output_comm = output.DistComm();
   const auto height = output.Height();
   const auto width = output.Width();
+
+  // Each pass below visits the elements of Q owned by one rank g. Looping over
+  // all height x width elements with an Owner(i, j) test costs O(N^2) per
+  // pass on every rank, and there are 2 + 2 (num_nodes - 1) passes per call,
+  // for only ~N^2 / num_ranks elements each; this grows with N^2 and with the
+  // number of nodes. Since Owner(i, j) = RowOwner(i) + ColOwner(j) * ColStride(),
+  // the elements of g are the rows {i : RowOwner(i) = g mod ColStride} times
+  // the columns {j : ColOwner(j) = g / ColStride}. Visiting them in row-major
+  // order gives the same elements in the same order as the full loop, hence
+  // the same send/receive buffers and the same sums.
+  std::vector<int> row_owner(height), col_owner(width);
+  for(int i = 0; i < height; ++i)
+    row_owner[i] = output.RowOwner(i);
+  for(int j = 0; j < width; ++j)
+    col_owner[j] = output.ColOwner(j);
+  // f(i, j) for all (i, j) owned by rank g of output.DistComm() and not
+  // skipped, in row-major order
+  auto for_each_owned = [&](const int g, const auto &f) {
+    const int stride = output.ColStride();
+    const int r = g % stride;
+    const int c = g / stride;
+    std::vector<int> cols;
+    for(int j = 0; j < width; ++j)
+      if(col_owner[j] == c)
+        cols.push_back(j);
+    for(int i = 0; i < height; ++i)
+      {
+        if(row_owner[i] != r)
+          continue;
+        for(const int j : cols)
+          {
+            if(skip_element(i, j))
+              continue;
+            f(i, j);
+          }
+      }
+  };
   ASSERT(height <= output_residues_window->height, DEBUG_STRING(height),
          DEBUG_STRING(output_residues_window->height));
   ASSERT(width <= output_residues_window->width, DEBUG_STRING(width),
@@ -76,20 +115,13 @@ void BigInt_Shared_Memory_Syrk_Context::restore_and_reduce(
 
   {
     Scoped_Timer local_restore_timer(timers, "local_restore");
-    for(int i = 0; i < height; ++i)
-      for(int j = 0; j < width; ++j)
-        {
-          if(skip_element(i, j))
-            continue;
-          if(!output.IsLocal(i, j))
-            continue;
-
-          restore_bigint_from_residues(*output_residues_window, i, j, comb,
-                                       residues_buffer_temp, bigint_value);
-          const auto iLoc = output.LocalRow(i);
-          const auto jLoc = output.LocalCol(j);
-          bigint_value.to_BigFloat(output.Matrix()(iLoc, jLoc));
-        }
+    for_each_owned(output.DistRank(), [&](const int i, const int j) {
+      restore_bigint_from_residues(*output_residues_window, i, j, comb,
+                                   residues_buffer_temp, bigint_value);
+      const auto iLoc = output.LocalRow(i);
+      const auto jLoc = output.LocalCol(j);
+      bigint_value.to_BigFloat(output.Matrix()(iLoc, jLoc));
+    });
   }
 
   // In a single-node case, no need to reduce anything
@@ -121,14 +153,8 @@ void BigInt_Shared_Memory_Syrk_Context::restore_and_reduce(
 
   // Number of output elements owned by a given rank in reduce_comm
   std::vector<int> num_output_elements(reduce_comm.Size());
-  for(int i = 0; i < height; ++i)
-    for(int j = 0; j < width; ++j)
-      {
-        if(skip_element(i, j))
-          continue;
-        if(output.IsLocal(i, j))
-          ++num_output_elements.at(reduce_rank);
-      }
+  for_each_owned(output.DistRank(),
+                 [&](int, int) { ++num_output_elements.at(reduce_rank); });
   for(int rank = 0; rank < reduce_comm.Size(); ++rank)
     {
       El::mpi::Broadcast(num_output_elements.at(rank), rank, reduce_comm);
@@ -162,29 +188,20 @@ void BigInt_Shared_Memory_Syrk_Context::restore_and_reduce(
           Scoped_Timer serialize_timer(timers, "serialize");
           send_buf.resize(num_output_elements.at(to) * serialized_size);
           El::byte *curr_send = send_buf.data();
-          for(int i = 0; i < height; ++i)
-            for(int j = 0; j < width; ++j)
-              {
-                if(skip_element(i, j))
-                  continue;
-                if(output.Owner(i, j) != global_ranks.at(to))
-                  continue;
-
-                ASSERT(curr_send + serialized_size - send_buf.data()
-                         <= send_buf.size(),
-                       "send buffer is too small!",
-                       DEBUG_STRING(send_buf.size()),
-                       DEBUG_STRING(curr_send - send_buf.data()),
-                       DEBUG_STRING(serialized_size), DEBUG_STRING(i),
-                       DEBUG_STRING(j), DEBUG_STRING(height),
-                       DEBUG_STRING(width), DEBUG_STRING(global_ranks.at(to)));
-                restore_bigint_from_residues(*output_residues_window, i, j,
-                                             comb, residues_buffer_temp,
-                                             bigint_value);
-                bigint_value.to_BigFloat(bigfloat_value);
-                bigfloat_value.Serialize(curr_send);
-                curr_send += serialized_size;
-              }
+          for_each_owned(global_ranks.at(to), [&](const int i, const int j) {
+            ASSERT(curr_send + serialized_size - send_buf.data()
+                     <= send_buf.size(),
+                   "send buffer is too small!", DEBUG_STRING(send_buf.size()),
+                   DEBUG_STRING(curr_send - send_buf.data()),
+                   DEBUG_STRING(serialized_size), DEBUG_STRING(i),
+                   DEBUG_STRING(j), DEBUG_STRING(height), DEBUG_STRING(width),
+                   DEBUG_STRING(global_ranks.at(to)));
+            restore_bigint_from_residues(*output_residues_window, i, j, comb,
+                                         residues_buffer_temp, bigint_value);
+            bigint_value.to_BigFloat(bigfloat_value);
+            bigfloat_value.Serialize(curr_send);
+            curr_send += serialized_size;
+          });
           ASSERT_EQUAL(curr_send - send_buf.data(), send_buf.size(),
                        "send buffer has wrong size!",
                        DEBUG_STRING(serialized_size), DEBUG_STRING(height),
@@ -205,23 +222,17 @@ void BigInt_Shared_Memory_Syrk_Context::restore_and_reduce(
         {
           Scoped_Timer deserialize_timer(timers, "deserialize");
           El::byte *curr_recv = recv_buf.data();
-          for(int i = 0; i < height; ++i)
-            for(int j = 0; j < width; ++j)
-              {
-                if(skip_element(i, j))
-                  continue;
-                if(output.Owner(i, j) != global_ranks.at(reduce_rank))
-                  continue;
+          for_each_owned(global_ranks.at(reduce_rank), [&](const int i,
+                                                           const int j) {
+            ASSERT(curr_recv - recv_buf.data() < recv_buf.size());
 
-                ASSERT(curr_recv - recv_buf.data() < recv_buf.size());
+            bigfloat_value.Deserialize(curr_recv);
 
-                bigfloat_value.Deserialize(curr_recv);
-
-                const auto iLoc = output.LocalRow(i);
-                const auto jLoc = output.LocalCol(j);
-                output.Matrix()(iLoc, jLoc) += bigfloat_value;
-                curr_recv += serialized_size;
-              }
+            const auto iLoc = output.LocalRow(i);
+            const auto jLoc = output.LocalCol(j);
+            output.Matrix()(iLoc, jLoc) += bigfloat_value;
+            curr_recv += serialized_size;
+          });
           ASSERT_EQUAL(curr_recv - recv_buf.data(), recv_buf.size());
         }
       }
