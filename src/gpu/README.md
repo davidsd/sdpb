@@ -94,6 +94,8 @@ have no effect with `--gpu`: no host or device memory estimate is made.
 | `SDPB_GPU_CHUNK_ROWS`, `SDPB_GPU_COMM_TIMING` | 0, unset | cap on a chunk's rows (blocks times P), cutting only a dimension's largest chunks; seconds in collectives per stage in `gpu_profile.json` |
 | `SDPB_GPU_CORRUPT_LEAF_ITERATION`, `SDPB_GPU_CORRUPT_LEAF_LIMBS` | 0, 0 | test only: at that iteration, factor with the low limbs of block 0 cleared (a negative control) |
 
+The switches for Q above (`SDPB_GPU_STRUCTURED_Q`, `SDPB_GPU_Q_SINGLE_PASS`, `SDPB_GPU_GEMV_MIN_TERMS`) don't change a bit of the result. To run the code path from before them, set `SDPB_GPU_STRUCTURED_Q=0 SDPB_GPU_Q_SINGLE_PASS=0 SDPB_GPU_GEMV_MIN_TERMS=256 SDPB_GPU_Q_BASE=256`.
+
 ## Experimental distributed Q
 
 Build with `--gpu-nccl-dir=<NCCL prefix>` (CMake: `-DSDPB_GPU_NCCL_DIR=<NCCL prefix>`) in addition to the GPU options above.
