@@ -29,6 +29,8 @@ Float sizes: `rns/Limb_Sizes.hxx` lists the L with kernels compiled for them (ev
   packed lower triangle kept across chunks, CRT once in `finish()`.
 - `rns/Mpf_Gram.{hxx,cu}`: the same on device floats (SDPviBe's format, column-major): column maxima,
   residues straight from the 32-bit limbs, exact Gram, each entry of Q rounded once to a float.
+  `add_structured` takes the product by groups of rows with the same nonzero columns (SDPB's P = L^-1 B is zero in
+  whole groups of columns): the same Q bit for bit, with the multiply-adds of the nonzero part only.
 - `rns/Rns_Gemm.{hxx,cu}`: exact batched products C_b = A_bᵀB_b over equal-size blocks (L⁻¹B with an
   explicit inverse, pairings, refinement), column panels of B, one CRT per panel.
 - `rns/rns_kernels.cuh`: shared kernels: residue finish, CRT, fused residues and fused CRT (WMMA INT8).
@@ -84,7 +86,9 @@ have no effect with `--gpu`: no host or device memory estimate is made.
 | `SDPB_GPU_CRT_GUARD`, `SDPB_GPU_PQ_GUARD` | 128, 0 | guard bits of the truncated CRT (0: untruncated); the same for P = X B and Q's factor |
 | `SDPB_GPU_DIGITS` | 4 L | digits per aligned operand in the products |
 | `SDPB_GPU_BUDGET`, `SDPB_GPU_PANEL` | 0.7, 512 | fraction of free device memory one product may plan for; widest column panel |
-| `SDPB_GPU_GEMV_THREADS` | 262144 | threads in all per matrix-vector product (0: one per output) |
+| `SDPB_GPU_GEMV_THREADS`, `SDPB_GPU_GEMV_MIN_TERMS` | 262144, 16 | threads in all per matrix-vector product (0: one per output); the fewest terms a thread sums (the same result bit for bit at any split) |
+| `SDPB_GPU_STRUCTURED_Q`, `SDPB_GPU_Q_BASE`, `SDPB_GPU_Q_PLANE` | 1, 2048, 2^26 | Q = P^T P by groups of rows with the same nonzero columns (0: the dense product; the same Q bit for bit); the widest diagonal block of Q formed as one full square product; on one GPU, the most entries of one product's residue plane |
+| `SDPB_GPU_Q_SINGLE_PASS` | 1 | several GPUs: each rank forms P's residues once and accumulates its whole packed triangle (0: residues per tile; the same Q bit for bit, less device memory) |
 | `SDPB_GPU_PRODUCT_TIMING`, `SDPB_GPU_VERBOSE`, `SDPB_GPU_CORRECTION_VERBOSE`, `SDPB_GPU_DEBUG_TIES` | unset | diagnostics: per-product timing, planner and correction messages, tie report |
 | `SDPB_GPU_PERTURB_STEP`, `SDPB_GPU_PERTURB_ITERATION` | 0, 0 | test only: perturb a step, the negative control of the comparison with SDPB |
 | `SDPB_GPU_CHUNK_ROWS`, `SDPB_GPU_COMM_TIMING` | 0, unset | cap on a chunk's rows (blocks times P), cutting only a dimension's largest chunks; seconds in collectives per stage in `gpu_profile.json` |
@@ -126,7 +130,14 @@ without `gpu_layout`, e.g. from a CPU run, is refused on several GPU ranks).
 Whole B/P chunks and their Schur/X/Y blocks have deterministic owners.
 `linalg/Distributed_Q` assigns lower Q tiles cyclically to ranks, reduces
 integer residue sums before owner CRT, and retains the original owner tiles
-for refinement. Corrected tiled Cholesky keeps its lower factor and diagonal
+for refinement. By default each rank accumulates the residues of its whole
+packed lower triangle in one pass over its rows (`Mpf_Gram::add_structured`:
+rows that share their nonzero columns form one product over those columns)
+and the tiles for the collective are cut from it; this holds
+primes x N (N + 1) bytes and the residue planes on every rank during the
+assembly (about 15 GB at N = 7,990). `SDPB_GPU_Q_SINGLE_PASS=0` forms the
+residues tile by tile instead, with less memory and about N / tile + 1 times
+the residue work; the assembled Q is the same bit for bit. Corrected tiled Cholesky keeps its lower factor and diagonal
 inverse tiles on their owners. It does not replicate a full Q or inverse.
 Subsequent vector sums use floating arithmetic and may round differently
 with the rank count. All ranks participate in the existing driver, including

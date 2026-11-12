@@ -16,6 +16,15 @@ namespace sdpb_gpu
     int row_panel = 8192; // bounds residue planes independently of chunk size
     int refine = 1;
     bool wide_residual = false; // experiment: one rounded integer reduction
+    // assemble(): each rank forms the residues of its rows once, for all N
+    // columns, and accumulates its whole packed lower triangle; the tiles are
+    // cut from it for the collective. false: every tile recomputes the
+    // residues of its 2 b columns (about N / b + 1 times the residue work).
+    // The assembled Q is the same bit for bit.
+    bool single_pass = true;
+    // single pass: by groups of rows with the same nonzero columns
+    // (Mpf_Gram::add_structured), each chunk in groups of at most row_panel rows
+    bool structured = true;
   };
   class Distributed_Q
   {

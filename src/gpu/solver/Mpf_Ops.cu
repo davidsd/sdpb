@@ -1290,6 +1290,15 @@ namespace sdpb_gpu
     return e ? std::atoi(e) : 262144;
   }();
 
+  // fewest terms a thread sums (SDPB_GPU_GEMV_MIN_TERMS). The result is the same
+  // bit for bit at any split (the partial sums are exact). At 256, a product
+  // with few outputs and few terms, as a 512 x 512 tile of the distributed Q's
+  // factor, ran on about a thousand threads.
+  int gemv_min_terms = [] {
+    const char *e = std::getenv("SDPB_GPU_GEMV_MIN_TERMS");
+    return std::max(1, e ? std::atoi(e) : 16);
+  }();
+
   void mpf_gemv(const Mpf_Batch &A, const Mpf_Batch &v, Mpf_Batch &out,
                 const Gemv_Spec &g, cudaStream_t s)
   {
@@ -1297,7 +1306,7 @@ namespace sdpb_gpu
     int S = 1;
     if(gemv_thread_target > 0 && n > 0)
       S = int(std::max<int64_t>(1, std::min<int64_t>({64, gemv_thread_target / n,
-                                                      nt / 256})));
+                                                      nt / gemv_min_terms})));
     // few long-running threads spread over all the streaming multiprocessors
     int th = 32;
     while(th < TH && n / th > 132)

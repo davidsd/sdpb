@@ -375,6 +375,10 @@ Gpu_Compute::Gpu_Compute(const Solver_Parameters &parameters,
   o.q_tile=int(env_long("SDPB_GPU_Q_TILE",512));
   o.q_row_panel=int(env_long("SDPB_GPU_Q_ROW_PANEL",8192));
   o.q_wide_residual=env_long("SDPB_GPU_Q_WIDE_RESIDUAL",0)!=0;
+  o.q_single_pass=env_long("SDPB_GPU_Q_SINGLE_PASS",1)!=0;
+  o.structured_q=env_long("SDPB_GPU_STRUCTURED_Q",1)!=0;
+  o.q_base=int(env_long("SDPB_GPU_Q_BASE",2048));
+  o.q_plane=env_long("SDPB_GPU_Q_PLANE",int64_t(1)<<26);
   o.L = P.L;
   o.digits = int(env_long("SDPB_GPU_DIGITS", 4 * P.L));
   o.eig_tol = env_double("SDPB_GPU_EIG_TOL", 1e-10);

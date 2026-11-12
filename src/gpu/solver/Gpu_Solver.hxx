@@ -59,6 +59,20 @@ namespace sdpb_gpu
     Gpu_World world; // default G=1 keeps the original arithmetic path
     int q_tile = 512, q_row_panel = 8192;
     bool q_wide_residual = false;
+    // distributed Q: residues of P once per row panel for all columns, the
+    // tiles cut from the packed triangle (false: residues per tile, the
+    // earlier assembly; the same Q bit for bit)
+    bool q_single_pass = true;
+    // Q = P^T P by groups of rows with the same nonzero columns (one GPU, and
+    // the single-pass distributed assembly); the same Q bit for bit
+    bool structured_q = true;
+    // Q's Gram products: diagonal blocks up to this wide are one full square
+    // product (Gram_Options::base). Each product call costs about 0.1 ms
+    // whatever its size, so few large products beat many small ones.
+    int q_base = 2048;
+    // one GPU: the most entries (rows times columns) of a residue plane of one
+    // of Q's products (96 bytes an entry at 32 primes a group)
+    int64_t q_plane = int64_t(1) << 26;
     int L = 28;
     int digits = 112;
     // relative accuracy of the step lengths (SDPviBe's EIG_TOL)

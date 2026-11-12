@@ -162,8 +162,10 @@ namespace sdpb_gpu
                                  int64_t r_bstride = 0,
                                  const int32_t *__restrict__ colmap = nullptr,
                                  int64_t win0 = 0, int64_t win = 0,
-                                 int64_t in_ld = 0, bool local_refs = false)
+                                 int64_t in_ld = 0, bool local_refs = false,
+                                 const int32_t *__restrict__ rowmap = nullptr)
     {
+      // rowmap: row i of the output is row rowmap[i] of the input
       // colmap: column j of the output is column colmap[j] of the input
       // (Eref too). win > 0: only rows win0..win0+win-1 are written
       // batch b = blockIdx.y: input at offset b*in_bstride, column exponents
@@ -194,7 +196,7 @@ namespace sdpb_gpu
       uint32_t ext = 0;
       if(i < rows && jm >= 0)
         {
-          const int64_t in = jm * (in_ld ? in_ld : rows) + i;
+          const int64_t in = jm * (in_ld ? in_ld : rows) + (rowmap ? rowmap[i] : i);
           const int64_t ex = e[in];
           const long long s = (ex == MPF_EZ) ? (1LL << 40)
             : (long long)(Eref[local_refs ? j : jm] - ex);
@@ -655,6 +657,58 @@ namespace sdpb_gpu
       if(j < n) local[j] = map[j] >= 0 ? global_tops[map[j]] : 0;
     }
 
+    // add_structured: per row of P (rows x cols exponents, columns ld apart), the
+    // number of nonzero entries and two hashes of their columns
+    __global__ void row_pattern(const int64_t *__restrict__ e, int64_t rows,
+                                int64_t cols, int64_t ld,
+                                int32_t *__restrict__ nnz,
+                                unsigned long long *__restrict__ h1,
+                                unsigned long long *__restrict__ h2)
+    {
+      const int64_t r = int64_t(blockIdx.x) * blockDim.x + threadIdx.x;
+      if(r >= rows)
+        return;
+      int32_t c = 0;
+      unsigned long long a = 1469598103934665603ULL, b = 0x9e3779b97f4a7c15ULL;
+      for(int64_t j = 0; j < cols; ++j)
+        if(e[j * ld + r] != MPF_EZ)
+          {
+            ++c;
+            a = (a ^ (unsigned long long)j) * 1099511628211ULL;
+            b = (b + (unsigned long long)j + 1) * 0xff51afd7ed558ccdULL;
+            b ^= b >> 29;
+          }
+      nnz[r] = c;
+      h1[r] = a;
+      h2[r] = b;
+    }
+    // the nonzero columns of one row, as a byte mask
+    __global__ void row_mask(const int64_t *__restrict__ e, int64_t row,
+                             int64_t cols, int64_t ld, uint8_t *__restrict__ mask)
+    {
+      const int64_t j = int64_t(blockIdx.x) * blockDim.x + threadIdx.x;
+      if(j < cols)
+        mask[j] = e[j * ld + row] != MPF_EZ;
+    }
+    // the check: nonzero entries of the listed rows outside the masked columns
+    __global__ void rows_outside_mask(const int64_t *__restrict__ e,
+                                      const int32_t *__restrict__ rowlist,
+                                      int64_t nrows, int64_t cols, int64_t ld,
+                                      const uint8_t *__restrict__ mask,
+                                      unsigned long long *__restrict__ bad)
+    {
+      const int64_t q = int64_t(blockIdx.x) * blockDim.x + threadIdx.x;
+      if(q >= nrows)
+        return;
+      const int64_t r = rowlist[q];
+      unsigned long long c = 0;
+      for(int64_t j = 0; j < cols; ++j)
+        if(!mask[j] && e[j * ld + r] != MPF_EZ)
+          ++c;
+      if(c)
+        atomicAdd(bad, c);
+    }
+
     __global__ void normalize_rect(const int32_t *in, int W, int nr, int nc,
                                    const int64_t *refs, int L,
                                    int32_t *out, int64_t *exps)
@@ -762,7 +816,8 @@ namespace sdpb_gpu
     MG_CHECK(cudaMalloc(&d_top_, N * sizeof(int64_t)));
     MG_CHECK(cudaMalloc(&d_Eref_, N * sizeof(int64_t)));
     MG_CHECK(cudaMemsetAsync(d_top_, 0, N * sizeof(int64_t), stream_));
-    MG_CHECK(cudaMalloc(&d_Qint_, size_t(G_.limbs_out()) * G_.packed_size() * 4));
+    // d_Qint_ (the exact Q) is allocated by the first finish(): an accumulator
+    // that only exports residues never needs it
     MG_CHECK(cudaEventCreate(&ev0_));
     MG_CHECK(cudaEventCreate(&ev1_));
   }
@@ -848,6 +903,228 @@ namespace sdpb_gpu
     });
   }
 
+  void Mpf_Gram::add_structured(const Mpf_Matrix &P, int64_t max_rows)
+  {
+    const int64_t Np = (N_ + 31) / 32 * 32;
+    add_structured(std::vector<Mpf_Matrix>{P}, max_rows > 0 ? max_rows * Np : 0);
+  }
+
+  void Mpf_Gram::add_structured(const std::vector<Mpf_Matrix> &Ps,
+                                int64_t max_plane, int test_skip_group)
+  {
+    int64_t Rmax = 0, Rtot = 0;
+    for(const auto &P : Ps)
+      {
+        if(P.L != L_ || P.cols != N_ || tile_rows_)
+          throw std::invalid_argument("Mpf_Gram::add_structured: shape");
+        Rmax = std::max(Rmax, P.rows);
+        Rtot += P.rows;
+      }
+    if(Rtot == 0)
+      return;
+    if(!refs_ready_)
+      {
+        make_refs<<<nblocks(N_), threads, 0, stream_>>>(
+          reinterpret_cast<unsigned long long *>(d_top_), d_Eref_, N_, D_);
+        MG_CHECK(cudaGetLastError());
+        refs_ready_ = true;
+      }
+    tic();
+    const int Np = (N_ + 31) / 32 * 32;
+    int32_t *d_nnz = nullptr, *d_cols = nullptr, *d_rows = nullptr;
+    unsigned long long *d_h1 = nullptr, *d_h2 = nullptr, *d_bad = nullptr;
+    uint8_t *d_mask = nullptr;
+    MG_CHECK(cudaMalloc(&d_nnz, size_t(Rmax) * 4));
+    MG_CHECK(cudaMalloc(&d_h1, size_t(Rmax) * 8));
+    MG_CHECK(cudaMalloc(&d_h2, size_t(Rmax) * 8));
+    MG_CHECK(cudaMalloc(&d_cols, size_t(Np) * 4));
+    MG_CHECK(cudaMalloc(&d_mask, size_t(N_)));
+    MG_CHECK(cudaMalloc(&d_bad, 8));
+    MG_CHECK(cudaMemsetAsync(d_bad, 0, 8, stream_));
+    // groups of rows, over all the matrices, with the same number of nonzero
+    // entries and the same hashes of their columns; in order of first appearance
+    struct Part
+    {
+      int mat;
+      int64_t off; // of its rows in the group's list
+      int64_t n;
+    };
+    struct Group
+    {
+      int nnz;
+      std::vector<Part> parts;
+      std::vector<int32_t> rows; // row within its matrix, parts concatenated
+    };
+    std::map<std::pair<unsigned long long, unsigned long long>, int> index;
+    std::vector<Group> groups;
+    {
+      std::vector<int32_t> nnz(Rmax);
+      std::vector<unsigned long long> h1(Rmax), h2(Rmax);
+      for(size_t q = 0; q < Ps.size(); ++q)
+        {
+          const auto &P = Ps[q];
+          const int64_t R = P.rows, ld = P.ld ? P.ld : P.rows;
+          if(R == 0)
+            continue;
+          row_pattern<<<nblocks(R), threads, 0, stream_>>>(P.e, R, N_, ld, d_nnz,
+                                                           d_h1, d_h2);
+          MG_CHECK(cudaGetLastError());
+          MG_CHECK(cudaMemcpyAsync(nnz.data(), d_nnz, size_t(R) * 4, cudaMemcpyDeviceToHost, stream_));
+          MG_CHECK(cudaMemcpyAsync(h1.data(), d_h1, size_t(R) * 8, cudaMemcpyDeviceToHost, stream_));
+          MG_CHECK(cudaMemcpyAsync(h2.data(), d_h2, size_t(R) * 8, cudaMemcpyDeviceToHost, stream_));
+          MG_CHECK(cudaStreamSynchronize(stream_));
+          for(int64_t r = 0; r < R; ++r)
+            {
+              if(nnz[r] == 0)
+                continue;
+              const auto key
+                = std::make_pair(h1[r], h2[r] ^ (unsigned long long)nnz[r]);
+              auto it = index.find(key);
+              if(it == index.end())
+                {
+                  it = index.emplace(key, int(groups.size())).first;
+                  groups.emplace_back();
+                  groups.back().nnz = nnz[r];
+                }
+              auto &g = groups[it->second];
+              if(g.parts.empty() || g.parts.back().mat != int(q))
+                g.parts.push_back(Part{int(q), int64_t(g.rows.size()), 0});
+              g.rows.push_back(int32_t(r));
+              ++g.parts.back().n;
+            }
+        }
+    }
+    size_t most = 1;
+    for(const auto &g : groups)
+      most = std::max(most, g.rows.size());
+    // Every product pads its rows to a multiple of 16, and the residue basis
+    // was chosen for a bounded number of rows, padding included. With very many
+    // groups (zero patterns that few rows share) the padding would pass that
+    // bound, and the dense product is the better one anyway: take it instead.
+    const auto step_of = [&](int nnz) {
+      int64_t step = int64_t(1) << 17;
+      if(max_plane > 0)
+        step = std::min(step, std::max<int64_t>(
+                                16, max_plane / ((nnz + 31) / 32 * 32) / 16 * 16));
+      return step;
+    };
+    int64_t padded = 0;
+    for(const auto &g : groups)
+      {
+        const int64_t total = int64_t(g.rows.size()), step = step_of(g.nnz);
+        padded += total / step * step + (total % step + 15) / 16 * 16;
+      }
+    if(G_.rows_added() + padded > G_.rows_bound() && test_skip_group < 0)
+      {
+        toc("structure: groups of rows");
+        for(void *p : {(void *)d_nnz, (void *)d_h1, (void *)d_h2, (void *)d_cols,
+                       (void *)d_mask, (void *)d_bad})
+          cudaFree(p);
+        for(const auto &P : Ps)
+          {
+            const int64_t rp
+              = max_plane > 0 ? std::max<int64_t>(16, max_plane / Np / 16 * 16)
+                              : std::max<int64_t>(P.rows, 16);
+            for(int64_t row = 0; row < P.rows; row += rp)
+              {
+                Mpf_Matrix panel = P;
+                panel.m += row;
+                panel.e += row;
+                panel.rows = std::min<int64_t>(rp, P.rows - row);
+                panel.ld = P.ld ? P.ld : P.rows;
+                panel.plane = P.plane ? P.plane : P.rows * P.cols;
+                add_columns(panel, nullptr);
+              }
+          }
+        structured_fraction_ = 1;
+        return;
+      }
+    MG_CHECK(cudaMalloc(&d_rows, most * 4));
+    toc("structure: groups of rows");
+    std::vector<uint8_t> mask(N_);
+    std::vector<int32_t> cols(Np);
+    double macs = 0;
+    for(const auto &g : groups)
+      {
+        if(test_skip_group >= 0 && &g - groups.data() == test_skip_group)
+          continue;
+        tic();
+        // the group's columns, from its first row
+        const auto &P0 = Ps[g.parts[0].mat];
+        row_mask<<<nblocks(N_), threads, 0, stream_>>>(
+          P0.e, g.rows[0], N_, P0.ld ? P0.ld : P0.rows, d_mask);
+        MG_CHECK(cudaGetLastError());
+        MG_CHECK(cudaMemcpyAsync(mask.data(), d_mask, size_t(N_), cudaMemcpyDeviceToHost, stream_));
+        MG_CHECK(cudaStreamSynchronize(stream_));
+        int nc = 0;
+        for(int j = 0; j < N_; ++j)
+          if(mask[j])
+            cols[nc++] = j;
+        if(nc != g.nnz)
+          throw std::runtime_error("Mpf_Gram::add_structured: a row changed");
+        const int ncp = (nc + 31) / 32 * 32;
+        for(int j = nc; j < ncp; ++j)
+          cols[j] = -1;
+        MG_CHECK(cudaMemcpyAsync(d_cols, cols.data(), size_t(ncp) * 4, cudaMemcpyHostToDevice, stream_));
+        MG_CHECK(cudaMemcpyAsync(d_rows, g.rows.data(), g.rows.size() * 4, cudaMemcpyHostToDevice, stream_));
+        for(const auto &part : g.parts)
+          {
+            const auto &P = Ps[part.mat];
+            rows_outside_mask<<<nblocks(part.n), threads, 0, stream_>>>(
+              P.e, d_rows + part.off, part.n, N_, P.ld ? P.ld : P.rows, d_mask,
+              d_bad);
+            MG_CHECK(cudaGetLastError());
+          }
+        // the host buffers must outlive the copies
+        MG_CHECK(cudaStreamSynchronize(stream_));
+        toc("structure: columns and check");
+        const int64_t total = int64_t(g.rows.size()), step = step_of(g.nnz);
+        for(int64_t r0 = 0; r0 < total; r0 += step)
+          {
+            const int64_t nr = std::min(step, total - r0);
+            const int64_t ldp = (nr + 15) / 16 * 16;
+            G_.add_residues(
+              ldp,
+              [&](int i0, int gc, int8_t *Rp, int64_t plane) {
+                const size_t sm = size_t(gc) * W_ * 4;
+                const bool narrow = false;
+                for(const auto &part : g.parts)
+                  {
+                    const int64_t a = std::max(part.off, r0),
+                                  b = std::min(part.off + part.n, r0 + nr);
+                    if(a >= b)
+                      continue;
+                    const auto &P = Ps[part.mat];
+                    // the part that ends the panel also writes its zero padding
+                    const int64_t count = b - a,
+                                  win = count + (b == r0 + nr ? ldp - nr : 0);
+                    const int64_t grid = nblocks(win * ncp);
+                    MG_RESIDUES(P.m, P.e, L_, count, ncp, ldp,
+                                P.plane ? P.plane : P.rows * P.cols, a - r0,
+                                d_Eref_, d_ctab_ + int64_t(i0) * W_,
+                                d_ctop_ + int64_t(i0) * 32,
+                                G_.device_primes() + i0, G_.device_minv() + i0,
+                                gc, Rp, plane, 0, 0, 0, d_cols, 0, win,
+                                P.ld ? P.ld : P.rows, false, d_rows + a);
+                    MG_CHECK(cudaGetLastError());
+                  }
+              },
+              d_cols, nc);
+            macs += double(nr) * nc * nc;
+          }
+      }
+    structured_fraction_ = macs / (double(Rtot) * N_ * N_);
+    unsigned long long bad = 0;
+    MG_CHECK(cudaMemcpyAsync(&bad, d_bad, 8, cudaMemcpyDeviceToHost, stream_));
+    MG_CHECK(cudaStreamSynchronize(stream_));
+    for(void *p : {(void *)d_nnz, (void *)d_h1, (void *)d_h2, (void *)d_cols,
+                   (void *)d_rows, (void *)d_mask, (void *)d_bad})
+      cudaFree(p);
+    if(bad)
+      throw std::runtime_error("Mpf_Gram::add_structured: rows of one group "
+                               "do not share their nonzero columns");
+  }
+
   void Mpf_Gram::finish(int32_t *d_m, int64_t *d_e)
   {
     if(!refs_ready_)
@@ -856,6 +1133,8 @@ namespace sdpb_gpu
           reinterpret_cast<unsigned long long *>(d_top_), d_Eref_, N_, D_);
         MG_CHECK(cudaGetLastError());
       }
+    if(!d_Qint_)
+      MG_CHECK(cudaMalloc(&d_Qint_, size_t(G_.limbs_out()) * G_.packed_size() * 4));
     G_.finish(d_Qint_);
     tic();
     if(tile_rows_)

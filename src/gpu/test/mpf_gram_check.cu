@@ -42,7 +42,13 @@ namespace
     uint64_t h = splitmix(seed ^ splitmix(uint64_t(c) * 0x100000001B3ULL
                                           ^ splitmix(uint64_t(j) << 22
                                                      ^ uint64_t(i))));
-    if((h & 15) == 0)
+    // --bands B (in the seed's top byte): rows in runs of 64 share a band b =
+    // (i / 64) % B, and their entries in the columns with j % B > b are exact
+    // zeros, as the rows of SDPB's P = L^-1 B are zero in whole groups of
+    // columns. Then no random zeros, so that the rows of a band share their
+    // nonzero columns.
+    const int B = int(seed >> 56);
+    if(B ? (j % B) > ((i / 64) % B) : (h & 15) == 0)
       {
         for(int t = 0; t < L; ++t)
           w[t] = 0;
@@ -125,7 +131,17 @@ int main(int argc, char **argv)
   const int D = atoi(arg(argc, argv, "--digits", "112"));
   const int sample_cols = atoi(arg(argc, argv, "--sample-cols", "0"));
   const int reps = atoi(arg(argc, argv, "--reps", "1"));
-  const uint64_t seed = strtoull(arg(argc, argv, "--seed", "5"), nullptr, 10);
+  // --structured: Q by groups of rows with the same nonzero columns
+  // (Mpf_Gram::add_structured over all chunks) instead of add(); --plane: its
+  // bound on a residue plane's entries
+  const bool structured = flag(argc, argv, "--structured");
+  const int64_t plane = atoll(arg(argc, argv, "--plane", "0"));
+  const int bands = atoi(arg(argc, argv, "--bands", "0"));
+  // negative control of --structured: one group of rows is left out
+  const int skip_group = atoi(arg(argc, argv, "--skip-group", "-1"));
+  const uint64_t seed = (strtoull(arg(argc, argv, "--seed", "5"), nullptr, 10)
+                         & ((uint64_t(1) << 56) - 1))
+                        | (uint64_t(bands) << 56);
   // --reuse: every chunk is chunk 0 (one buffer)
   const bool reuse = flag(argc, argv, "--reuse");
   Gram_Options opt;
@@ -178,8 +194,18 @@ int main(int argc, char **argv)
       auto t0 = std::chrono::steady_clock::now();
       for(int c = 0; c < chunks; ++c)
         MG.scan(Pc[reuse ? 0 : c]);
-      for(int c = 0; c < chunks; ++c)
-        MG.add(Pc[reuse ? 0 : c]);
+      if(structured)
+        {
+          std::vector<Mpf_Matrix> all;
+          for(int c = 0; c < chunks; ++c)
+            all.push_back(Pc[reuse ? 0 : c]);
+          MG.add_structured(all, plane, skip_group);
+          printf("structured: %.4f of the dense product's multiply-adds\n",
+                 MG.structured_fraction());
+        }
+      else
+        for(int c = 0; c < chunks; ++c)
+          MG.add(Pc[reuse ? 0 : c]);
       MG.finish(d_qm, d_qe);
       cudaDeviceSynchronize();
       double s = std::chrono::duration<double>(std::chrono::steady_clock::now()
