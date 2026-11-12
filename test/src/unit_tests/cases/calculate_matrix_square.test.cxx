@@ -457,12 +457,13 @@ TEST_CASE("calculate_Block_Matrix_square")
                       }
 
                     // --groupedSyrk: P with exact zeros in groups of columns
-                    // (rows by (global row / 2) mod 5: the right half zero;
+                    // (rows by (global row / 2) mod 6: the right half zero;
                     // the first third and every fifth column zero; dense;
-                    // all zero; only the last column), squared grouped and
-                    // dense with every combination of the other flags, must
-                    // agree bit for bit. Rep 0 squares the original P first,
-                    // so that --residuesNoClear's windows hold other values.
+                    // all zero; only the last column; every odd column
+                    // zero), squared grouped and dense with every
+                    // combination of the other flags, must agree bit for
+                    // bit. Rep 0 squares the original P first, so that
+                    // --residuesNoClear's windows hold other values.
                     auto P_struct = P_block_matrix.blocks;
                     for(auto &block : P_struct)
                       for(int iLoc = 0; iLoc < block.LocalHeight(); ++iLoc)
@@ -472,13 +473,14 @@ TEST_CASE("calculate_Block_Matrix_square")
                             const int j = block.GlobalCol(jLoc);
                             const int w = block.Width();
                             bool zero = false;
-                            switch((i / 2) % 5)
+                            switch((i / 2) % 6)
                               {
                               case 0: zero = 2 * j >= w; break;
                               case 1: zero = 3 * j < w || j % 5 == 0; break;
                               case 2: break;
                               case 3: zero = true; break;
                               case 4: zero = j != w - 1; break;
+                              case 5: zero = j % 2 == 1; break;
                               }
                             if(zero)
                               block.SetLocal(iLoc, jLoc, El::BigFloat(0));
@@ -515,6 +517,22 @@ TEST_CASE("calculate_Block_Matrix_square")
                                 ctx.grouped_stats.fraction);
                         if(input_split_factor == 1 && block_width > 2)
                           REQUIRE(ctx.grouped_stats.active);
+                        // The schedule chosen by cost splits a narrow Q
+                        // into tiles of one column, so no tile holds two
+                        // column runs of a group. Forced splits 1 (whole
+                        // tiles: several runs of a group in one syrk or gemm
+                        // tile) and 3 (runs cut by tile edges) must give
+                        // the same Q.
+                        El::DistMatrix<El::BigFloat> Q_split1(block_width,
+                                                              block_width),
+                          Q_split3(block_width, block_width);
+                        ctx.options.grouped_test_split = 1;
+                        ctx.bigint_syrk_blas(uplo, P_struct, Q_split1, timers,
+                                             block_timings_ms);
+                        ctx.options.grouped_test_split = 3;
+                        ctx.bigint_syrk_blas(uplo, P_struct, Q_split3, timers,
+                                             block_timings_ms);
+                        ctx.options.grouped_test_split = 0;
                         // negative control: with a group left out, Q must
                         // differ somewhere (checked over all ranks below)
                         El::DistMatrix<El::BigFloat> Q_skip(block_width,
@@ -552,14 +570,17 @@ TEST_CASE("calculate_Block_Matrix_square")
                         for(int iLoc = 0; iLoc < Q_dense.LocalHeight(); ++iLoc)
                           for(int jLoc = 0; jLoc < Q_dense.LocalWidth();
                               ++jLoc)
-                            for(int which = 0; which < 2; ++which)
+                            for(int which = 0; which < 4; ++which)
                               {
                                 const auto &a
-                                  = (which == 0 ? Q_dense : Q_result)
+                                  = (which == 1 ? Q_result : Q_dense)
                                       .GetLocalCRef(iLoc, jLoc)
                                       .gmp_float.get_mpf_t()[0];
                                 const auto &b
-                                  = (which == 0 ? Q_grouped : Q_full)
+                                  = (which == 0   ? Q_grouped
+                                     : which == 1 ? Q_full
+                                     : which == 2 ? Q_split1
+                                                  : Q_split3)
                                       .GetLocalCRef(iLoc, jLoc)
                                       .gmp_float.get_mpf_t()[0];
                                 CAPTURE(iLoc, jLoc, which);

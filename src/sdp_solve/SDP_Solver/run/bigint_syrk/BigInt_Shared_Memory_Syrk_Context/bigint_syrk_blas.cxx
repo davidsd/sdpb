@@ -434,8 +434,10 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem_submatrix(
   const bool grouped = !pass_row_perm.empty();
   auto make_grouped_schedule = [&](const std::vector<Row_Group> &groups) {
       Scoped_Timer schedule_timer(timers, "grouped_schedule");
+      const int forced_split = options.grouped_test_split;
       std::vector<El::Int> key{El::Int(kind), El::Int(uplo), output_I.beg,
-                               output_I.end, output_J.beg, output_J.end};
+                               output_I.end, output_J.beg, output_J.end,
+                               El::Int(forced_split)};
       for(const auto &g : groups)
         {
           key.push_back(g.row_end - g.row_begin);
@@ -458,8 +460,12 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem_submatrix(
       size_t best_split = 0;
       // split_mode 0: as SDPB's schedule (whole Q for the first primes,
       // the remaining ones split); 1: every prime split
-      for(int split_mode = 0; split_mode < 2; ++split_mode)
-        for(const size_t split : {1, 2, 3, 4, 5, 6, 8, 10, 12, 16})
+      std::vector<size_t> splits{1, 2, 3, 4, 5, 6, 8, 10, 12, 16};
+      if(forced_split > 0)
+        splits = {size_t(forced_split)};
+      for(int split_mode = forced_split > 0 ? 1 : 0; split_mode < 2;
+          ++split_mode)
+        for(const size_t split : splits)
           {
             std::vector<Blas_Job> jobs;
             const size_t no_split

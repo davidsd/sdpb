@@ -76,6 +76,10 @@ public:
     bool grouped = false;
     // unit tests only: leave this row group out (a negative control)
     int grouped_test_skip_group = -1;
+    // unit tests only: if > 0, the grouped schedule splits every prime's
+    // tile by this factor instead of choosing the split by cost (with 1,
+    // a tile holds several column runs of a group even when P is narrow)
+    int grouped_test_split = 0;
   };
   Options options;
 
