@@ -117,6 +117,13 @@ boost::program_options::options_description Solver_Parameters::options()
     "distributed over several process rows to [STAR,VR] first, so that "
     "each column's residues are written by one rank. Same Q bit for bit.");
   result.add_options()(
+    "groupedSyrk",
+    boost::program_options::bool_switch(&grouped_syrk)->default_value(false),
+    "Experimental: in the computation of Q, take the product by groups of "
+    "rows of P that have the same nonzero columns, over those columns only "
+    "(the groups are found from P's exact zeros at every iteration). Same Q "
+    "bit for bit. Needs the input window to hold all rows of P on a node.");
+  result.add_options()(
     "findPrimalFeasible",
     boost::program_options::bool_switch(&find_primal_feasible)
       ->default_value(false),
@@ -282,6 +289,7 @@ boost::property_tree::ptree to_property_tree(const Solver_Parameters &p)
   result.put("batchResidues", p.batch_residues);
   result.put("residuesNoClear", p.residues_no_clear);
   result.put("residuesStarVR", p.residues_star_vr);
+  result.put("groupedSyrk", p.grouped_syrk);
   result.put("findDualFeasible", p.find_dual_feasible);
   result.put("detectPrimalFeasibleJump", p.detect_primal_feasible_jump);
   result.put("detectDualFeasibleJump", p.detect_dual_feasible_jump);
@@ -321,6 +329,7 @@ std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
      << "batchResidues                = " << p.batch_residues << '\n'
      << "residuesNoClear              = " << p.residues_no_clear << '\n'
      << "residuesStarVR               = " << p.residues_star_vr << '\n'
+     << "groupedSyrk                  = " << p.grouped_syrk << '\n'
      << "findPrimalFeasible           = " << p.find_primal_feasible << '\n'
      << "findDualFeasible             = " << p.find_dual_feasible << '\n'
      << "detectPrimalFeasibleJump     = " << p.detect_primal_feasible_jump
