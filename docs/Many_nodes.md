@@ -1,19 +1,22 @@
 # Options for large SDPs on many nodes (experimental)
 
 These options speed up the stages of an SDPB iteration that work on the global N x N matrix Q of the Schur complement
-solver after it is computed: its Cholesky decomposition (`Cholesky_Q`) and the two triangular solves with its factor in
-each search direction. On many nodes these stages are latency- and memory-bound and get slower as ranks are added. All
-options are off by default; with them off, SDPB runs its default code paths. Each one is checked by unit tests and by
-bit-for-bit comparisons of whole SDPB runs (iterations, y, x) on 1-16 Expanse nodes.
+solver: computing it (BigInt syrk), its Cholesky decomposition (`Cholesky_Q`) and the two triangular solves with its
+factor in each search direction. On many nodes these stages are latency- and memory-bound and get slower as ranks are
+added. All options are off by default; with them off, SDPB runs its default code paths. Each one is checked by unit
+tests and, in an earlier version on SDPB's master, by bit-for-bit comparisons of whole SDPB runs (iterations, y, x)
+on 1-16 Expanse nodes.
 
-Measured on Expanse, 128 ranks per node (`srun`), 832 bits, synthetic nmax22 SDP (N = 7,990) on 16 nodes
+Measured on Expanse, 128 ranks per node (`srun`), 832 bits, on a synthetic nmax22 SDP (one of the size and block
+structure of 3d Ising with the stress tensor at nmax = 22, N = 7,990, built for timing) on 16 nodes
 unless stated; all with `--multimodularTrsm`. The numbers come from single allocations and move by ~5-10% between
 allocations.
 
 A combination for 10-16 nodes:
 
     sdpb ... --multimodularTrsm --multimodularCholeskyQ 64 --qSolveRanks 64 \
-      --qCholeskyNodeDiag --qCholeskyNodeFactor --qSolveCache
+      --qCholeskyNodeDiag --qCholeskyNodeFactor --qSolveCache \
+      --batchCrt --batchResidues --residuesNoClear --residuesStarVR
 
 ## `--multimodularCholeskyQ <panel width>`
 
@@ -58,6 +61,33 @@ grid from 32 to 64 ranks. Costs N x 128 BigFloats per solve rank (~150 MB at nma
 Together, `--qCholeskyNodeDiag --qCholeskyNodeFactor --qSolveCache` with `--qSolveRanks 64` instead of 32: nmax22, 16
 nodes, 50.0 -> 45.9 s/iter. With `--qSolveRanks 32` on a real nmax18 SDP (3d Ising with the stress tensor, an OPE scan
 point, 10 nodes): 33.9 -> 32.3 s/iter, bit for bit the same iterates.
+
+## `--batchCrt`
+
+In the computation of Q: each node's part Q_n is restored from its residues once, column by column, with an exact
+BLAS CRT (`sdpb_util/bigint_shared_memory/fmpz/Batch_Crt.hxx`) into a shared window of serialized BigFloats, which
+`restore_and_reduce` then copies from; instead of one FLINT CRT per entry and destination, whose residue reads are
+mostly cache misses. Same Q bit for bit. Costs one more shared window per node, of the output window's size in
+serialized BigFloats; it is counted in `--maxSharedMemory` and `--maxMemory` (`Bigint_Syrk_Config`).
+
+## `--batchResidues`
+
+The residues of P modulo the primes by BLAS instead of one FLINT multi-mod per entry: the same doubles, so the same Q.
+
+## `--residuesNoClear`
+
+The residue windows are zeroed only the first time each BLAS job schedule is used (their first touch, which places the
+pages); later the first BLAS pass overwrites Q's residues (beta = 0) instead of adding to zeros. The sums are exact
+integers, so Q is the same bit for bit.
+
+## `--residuesStarVR`
+
+Blocks of P distributed over several process rows are copied to `[STAR,VR]` before their residues are written, so
+each column's residues are written by one rank instead of entry by entry. Same Q bit for bit.
+
+The four Q options together, on a real nmax18 SDP (3d Ising with the stress tensor, 10 nodes): -1.9 to -2.4 s/iter
+(5-7%) with block timings from the same binary, -3.2 s with another binary's; on the synthetic nmax22 SDP on 16 nodes,
+-3.4 s/iter.
 
 ## Testing on one machine
 

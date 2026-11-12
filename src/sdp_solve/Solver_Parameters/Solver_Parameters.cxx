@@ -87,6 +87,36 @@ boost::program_options::options_description Solver_Parameters::options()
     "per iteration (once per node), instead of once per solve. Same results "
     "bit for bit. Best with --qSolveRanks.");
   result.add_options()(
+    "batchCrt",
+    boost::program_options::bool_switch(&batch_crt)->default_value(false),
+    "Experimental: in the computation of Q, restore each node's part of Q "
+    "from its residues column by column with an exact BLAS CRT, instead of "
+    "one FLINT CRT per entry. Same Q bit for bit; costs one more shared "
+    "window per node, of the output window's size in serialized BigFloats, "
+    "counted in --maxSharedMemory and --maxMemory.");
+  result.add_options()(
+    "batchResidues",
+    boost::program_options::bool_switch(&batch_residues)
+      ->default_value(false),
+    "Experimental: in the computation of Q, compute the residues of P "
+    "modulo the primes by BLAS instead of one FLINT multi-mod per entry. "
+    "Same residues, so the same Q bit for bit.");
+  result.add_options()(
+    "residuesNoClear",
+    boost::program_options::bool_switch(&residues_no_clear)
+      ->default_value(false),
+    "Experimental: in the computation of Q, zero the residue windows only "
+    "the first time each job schedule is used (their first touch); later "
+    "the first BLAS pass overwrites Q's residues instead of adding to "
+    "zeros. Same Q bit for bit.");
+  result.add_options()(
+    "residuesStarVR",
+    boost::program_options::bool_switch(&residues_star_vr)
+      ->default_value(false),
+    "Experimental: in the computation of Q, copy blocks of P that are "
+    "distributed over several process rows to [STAR,VR] first, so that "
+    "each column's residues are written by one rank. Same Q bit for bit.");
+  result.add_options()(
     "findPrimalFeasible",
     boost::program_options::bool_switch(&find_primal_feasible)
       ->default_value(false),
@@ -248,6 +278,10 @@ boost::property_tree::ptree to_property_tree(const Solver_Parameters &p)
   result.put("qCholeskyNodeDiag", p.q_cholesky_node_diag);
   result.put("qCholeskyNodeFactor", p.q_cholesky_node_factor);
   result.put("qSolveCache", p.q_solve_cache);
+  result.put("batchCrt", p.batch_crt);
+  result.put("batchResidues", p.batch_residues);
+  result.put("residuesNoClear", p.residues_no_clear);
+  result.put("residuesStarVR", p.residues_star_vr);
   result.put("findDualFeasible", p.find_dual_feasible);
   result.put("detectPrimalFeasibleJump", p.detect_primal_feasible_jump);
   result.put("detectDualFeasibleJump", p.detect_dual_feasible_jump);
@@ -283,6 +317,10 @@ std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
      << "qCholeskyNodeFactor          = " << p.q_cholesky_node_factor
      << '\n'
      << "qSolveCache                  = " << p.q_solve_cache << '\n'
+     << "batchCrt                     = " << p.batch_crt << '\n'
+     << "batchResidues                = " << p.batch_residues << '\n'
+     << "residuesNoClear              = " << p.residues_no_clear << '\n'
+     << "residuesStarVR               = " << p.residues_star_vr << '\n'
      << "findPrimalFeasible           = " << p.find_primal_feasible << '\n'
      << "findDualFeasible             = " << p.find_dual_feasible << '\n'
      << "detectPrimalFeasibleJump     = " << p.detect_primal_feasible_jump

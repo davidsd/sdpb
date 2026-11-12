@@ -5,10 +5,13 @@
 #include "sdpb_util/bigint_shared_memory/fmpz/Fmpz_Comb.hxx"
 #include "sdpb_util/bigint_shared_memory/Vertical_Block_Matrix_Residues_Window.hxx"
 #include "sdpb_util/bigint_shared_memory/Matrix_Residues_Window.hxx"
+#include "sdpb_util/bigint_shared_memory/fmpz/Batch_Crt.hxx"
+#include "sdpb_util/Shared_Window_Array.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
 #include <memory>
 #include <optional>
+#include <set>
 #include <vector>
 
 class BigInt_Shared_Memory_Syrk_Context : boost::noncopyable
@@ -44,6 +47,23 @@ public:
   //
   // If you want to square arbitrary BigFloat matrix P,
   // then use Matrix_Normalizer before and after calling this bigint_syrk_blas()
+  // Faster paths of bigint_syrk_blas, all off by default; each gives the
+  // same Q bit for bit. Set from Solver_Parameters (--batchResidues,
+  // --residuesNoClear) and read at every call. --batchCrt and
+  // --residuesStarVR, which need memory, are set by Bigint_Syrk_Config
+  // instead (its batch_crt and residues_star_vr).
+  struct Options
+  {
+    // compute_block_residues: the residues of P by BLAS (Batch_Crt::
+    // residues, the same doubles as FLINT's multi-mod)
+    bool batch_residues = false;
+    // the residue windows are cleared only at the first call with each BLAS
+    // job schedule (their first touch); later, the first pass over P
+    // overwrites Q's residues (beta = 0)
+    bool residues_no_clear = false;
+  };
+  Options options;
+
   void bigint_syrk_blas(El::UpperOrLower uplo,
                         const std::vector<El::DistMatrix<El::BigFloat>>
                           &bigint_input_matrix_blocks,
@@ -71,6 +91,22 @@ private:
   size_t input_window_split_factor = 0;
   size_t output_window_split_factor = 0;
   std::unique_ptr<Matrix_Residues_Window<double>> output_residues_window;
+  // --batchCrt (Bigint_Syrk_Config::batch_crt, and the comb's primes small
+  // enough for Batch_Crt): Q_n restored once per node, column by column with
+  // Batch_Crt, into a shared window of serialized BigFloats, allocated with
+  // the other windows, that restore_and_reduce then copies from
+  bool batch_crt_restore = false;
+  // --residuesStarVR (Bigint_Syrk_Config::residues_star_vr): blocks on grids
+  // with several process rows are copied to [STAR,VR] before their residues
+  // are computed, so each column is written by one rank
+  bool residues_star_vr = false;
+  std::unique_ptr<Shared_Window_Array<El::byte>> restored_window;
+  // Batch_Crt for the restore and for --batchResidues (made on first use)
+  std::unique_ptr<Batch_Crt> batch_crt;
+  // options.residues_no_clear: schedules whose windows were cleared (first
+  // touch) once. The schedules live in blas_job_schedule_cache (a std::map,
+  // never erased) as long as the context, so their addresses identify them.
+  std::set<const Job_Schedule *> first_touched;
   const std::vector<size_t> block_index_local_to_global;
   std::function<Job_Schedule(Blas_Job::Kind kind, El::UpperOrLower uplo,
                              size_t num_ranks, size_t num_primes,

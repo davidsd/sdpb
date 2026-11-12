@@ -25,11 +25,20 @@ struct Bigint_Syrk_Config
   const std::vector<size_t> input_window_height_per_group_per_prime;
   // const size_t input_window_width;
 
+  // sdpb --batchCrt: restore_and_reduce keeps the restored output submatrix
+  // in one more shared window (see restored_window_bytes())
+  const bool batch_crt;
+  // sdpb --residuesStarVR: compute_block_residues copies the blocks of P on
+  // grids with several process rows to [STAR,VR] (counted in
+  // node_local_bytes())
+  const bool residues_star_vr;
+
   Bigint_Syrk_Config(const El::mpi::Comm &shared_memory_comm,
                      const size_t precision, const size_t num_nodes,
                      const std::vector<size_t> &input_height_per_group,
                      const size_t input_width, const size_t input_split_factor,
-                     const size_t output_split_factor);
+                     const size_t output_split_factor,
+                     bool batch_crt = false, bool residues_star_vr = false);
   [[nodiscard]] Fmpz_Comb comb() const;
   [[nodiscard]] size_t num_primes() const;
 
@@ -47,6 +56,9 @@ struct Bigint_Syrk_Config
 
   [[nodiscard]] size_t input_windows_bytes() const;
   [[nodiscard]] size_t output_window_bytes() const;
+  // With batch_crt (and primes that Batch_Crt supports): serialized BigFloats
+  // of one output submatrix, at most window_width()^2 entries; else 0
+  [[nodiscard]] size_t restored_window_bytes() const;
 
   [[nodiscard]] size_t node_P_normalizer_bytes() const;
   [[nodiscard]] size_t node_normalize_and_shift_P_bytes() const;

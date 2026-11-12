@@ -13,6 +13,7 @@ add_library(sdpb_util STATIC
   bigint_shared_memory/fmpz/Fmpz_Comb.cxx
   bigint_shared_memory/fmpz/residues.cxx
   bigint_shared_memory/fmpz/blas_residues.cxx
+  bigint_shared_memory/fmpz/Batch_Crt.cxx
   block_mapping/Abstract_Block_Info.cxx
   block_mapping/Block_Mapping.cxx
   Timers/Scoped_Timer.cxx

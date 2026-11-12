@@ -33,6 +33,9 @@ struct Solver_Parameters
   // ranks; and the Q solves keep their copies of Q's diagonal blocks, made
   // once per node (same bits in all three)
   bool q_cholesky_node_diag{}, q_cholesky_node_factor{}, q_solve_cache{};
+  // Experimental: faster paths of Q's BigInt syrk, the same Q bit
+  // for bit, see BigInt_Shared_Memory_Syrk_Context::Options
+  bool batch_crt{}, batch_residues{}, residues_no_clear{}, residues_star_vr{};
   size_t precision{};
 
   // Initialized from Environment - MemAvailable

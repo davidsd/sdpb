@@ -1,5 +1,7 @@
 #include "catch2/catch_amalgamated.hpp"
 
+#include <algorithm>
+
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/Matrix_Normalizer.hxx"
 #include "sdpb_util/bigint_shared_memory/fmpz/Fmpz_Matrix.hxx"
@@ -358,6 +360,101 @@ TEST_CASE("calculate_Block_Matrix_square")
                     context.bigint_syrk_blas(uplo, P_block_matrix.blocks,
                                              Q_result, timers,
                                              block_timings_ms);
+
+                    // --batchCrt (batched CRT in restore_and_reduce: a
+                    // second context, made from a config with batch_crt,
+                    // whose window it allocates), options.batch_residues (BLAS
+                    // residues) and both must give the same Q bit for bit
+                    // (the CRT twice: the second call reuses the window)
+                    // options.residues_no_clear (no zeroing of the windows
+                    // after the first call, beta = 0): rep 4 squares a
+                    // modified P (even rows zero) with it and rep 5 without
+                    // (must agree); rep 6 the original P with it, over the
+                    // modified P's residues (must be Q_result).
+                    auto P_modified = P_block_matrix.blocks;
+                    for(auto &block : P_modified)
+                      for(int iLoc = 0; iLoc < block.LocalHeight(); ++iLoc)
+                        if(block.GlobalRow(iLoc) % 2 == 0)
+                          for(int jLoc = 0; jLoc < block.LocalWidth(); ++jLoc)
+                            block.SetLocal(iLoc, jLoc, El::BigFloat(0));
+                    El::DistMatrix<El::BigFloat> Q_modified(block_width,
+                                                            block_width);
+                    Bigint_Syrk_Config cfg_batch(
+                      node_comm, bits, num_nodes, blocks_height_per_group,
+                      block_width, input_split_factor, output_split_factor,
+                      true);
+                    REQUIRE((cfg_batch.restored_window_bytes() > 0)
+                            == Batch_Crt::supported(cfg_batch.comb()));
+                    REQUIRE(cfg_batch.node_shmem_bytes()
+                            == cfg.node_shmem_bytes()
+                                 + cfg_batch.restored_window_bytes());
+                    BigInt_Shared_Memory_Syrk_Context context_batch(
+                      cfg_batch, group_index_in_node, block_indices,
+                      verbosity, create_job_schedule);
+                    // --residuesStarVR, alone and with --batchCrt
+                    Bigint_Syrk_Config cfg_star(
+                      node_comm, bits, num_nodes, blocks_height_per_group,
+                      block_width, input_split_factor, output_split_factor,
+                      false, true),
+                      cfg_all(node_comm, bits, num_nodes,
+                              blocks_height_per_group, block_width,
+                              input_split_factor, output_split_factor, true,
+                              true);
+                    REQUIRE(cfg_star.node_local_bytes()
+                            > cfg.node_local_bytes());
+                    BigInt_Shared_Memory_Syrk_Context context_star(
+                      cfg_star, group_index_in_node, block_indices, verbosity,
+                      create_job_schedule),
+                      context_all(cfg_all, group_index_in_node, block_indices,
+                                  verbosity, create_job_schedule);
+                    // rep 7: --residuesStarVR alone, rep 8: with all
+                    // the other flags (must be Q_result)
+                    for(int rep = 0; rep < 9; ++rep)
+                      {
+                        CAPTURE(rep);
+                        El::DistMatrix<El::BigFloat> Q_batch(block_width,
+                                                             block_width);
+                        const bool batch_crt
+                          = rep != 2 && rep != 5 && rep != 7;
+                        const bool star_vr = rep >= 7;
+                        auto &ctx = star_vr ? (batch_crt ? context_all
+                                                         : context_star)
+                                            : (batch_crt ? context_batch
+                                                         : context);
+                        auto &options = ctx.options;
+                        options.batch_residues
+                          = rep >= 2 && rep != 5 && rep != 7;
+                        options.residues_no_clear
+                          = rep == 4 || rep == 6 || rep == 8;
+                        ctx.bigint_syrk_blas(
+                          uplo, (rep == 4 || rep == 5) ? P_modified
+                                                       : P_block_matrix.blocks,
+                          Q_batch, timers, block_timings_ms);
+                        options = {};
+                        if(rep == 4)
+                          {
+                            Q_modified = Q_batch;
+                            continue;
+                          }
+                        const auto &Q_ref
+                          = rep == 5 ? Q_modified : Q_result;
+                        for(int iLoc = 0; iLoc < Q_result.LocalHeight();
+                            ++iLoc)
+                          for(int jLoc = 0; jLoc < Q_result.LocalWidth();
+                              ++jLoc)
+                            {
+                              const auto &a = Q_ref.GetLocalCRef(iLoc, jLoc)
+                                                .gmp_float.get_mpf_t()[0];
+                              const auto &b = Q_batch.GetLocalCRef(iLoc, jLoc)
+                                                .gmp_float.get_mpf_t()[0];
+                              CAPTURE(iLoc, jLoc);
+                              REQUIRE(a._mp_size == b._mp_size);
+                              REQUIRE(a._mp_exp == b._mp_exp);
+                              REQUIRE(std::equal(a._mp_d,
+                                                 a._mp_d + std::abs(a._mp_size),
+                                                 b._mp_d));
+                            }
+                      }
                   }
                   {
                     INFO("Check that normalized Q_ii = 1:");
