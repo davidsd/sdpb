@@ -82,7 +82,9 @@ add_custom_target(mpfr_checks DEPENDS ref_solve compare_references)
 if(SDPB_GPU_NCCL_DIR)
   add_executable(distributed_q_check EXCLUDE_FROM_ALL test/distributed_q_check.cu)
   target_link_libraries(distributed_q_check PRIVATE sdpb_gpu sdpb_gpu_options MPI::MPI_CXX)
-  add_custom_target(nccl_checks DEPENDS distributed_q_check)
+  add_executable(nccl_rates EXCLUDE_FROM_ALL test/nccl_rates.cu)
+  target_link_libraries(nccl_rates PRIVATE sdpb_gpu_options CUDA::cudart_static ${CMAKE_DL_LIBS} MPI::MPI_CXX)
+  add_custom_target(nccl_checks DEPENDS distributed_q_check nccl_rates)
 endif()
 
 set_target_properties(gram_check mpf_gram_check gemm_check chol_tile_check mpf_gemm_check block_factor_check real_block_check q_check residual_check mpf_ops_check factor_profile gemv_compare PROPERTIES
@@ -91,7 +93,7 @@ set_target_properties(gram_check mpf_gram_check gemm_check chol_tile_check mpf_g
   LINKER_LANGUAGE CXX)
 set_target_properties(ref_solve compare_references PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 if(SDPB_GPU_NCCL_DIR)
-  set_target_properties(distributed_q_check PROPERTIES
+  set_target_properties(distributed_q_check nccl_rates PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
     LINKER_LANGUAGE CXX)
 endif()

@@ -12,7 +12,11 @@ namespace sdpb_gpu
 {
   struct Gpu_World
   {
+    // device < 0: the rank's place among the ranks on its node picks the GPU.
     int rank = 0, size = 1, device = 0;
+    // that place, from the host's node communicator (SDPB's definition of a
+    // node); -1: found by comparing host names
+    int local_rank = -1;
     std::function<void(void *, size_t, int)> host_broadcast;
   };
 
@@ -34,6 +38,14 @@ namespace sdpb_gpu
     // Logical payload received, not a claim about physical link traffic.
     uint64_t received_bytes() const;
     uint64_t collective_calls() const;
+    // With SDPB_GPU_COMM_TIMING=1 each collective waits for stream 0 before and
+    // after, and its wall time adds here; otherwise these stay zero.
+    bool timing() const;
+    double seconds() const;
+    double broadcast_seconds() const;
+    double max_seconds() const;
+    double reduce_scatter_seconds() const;
+    double allgather_seconds() const;
   private:
     struct Impl;
     std::unique_ptr<Impl> p_;

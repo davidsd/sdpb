@@ -8,7 +8,6 @@
 #include "gpu/solver/Gpu_Layout.hxx"
 #include "sdp_solve/Block_Info.hxx"
 #include "sdpa_solve/Block_Info.hxx"
-#include "sdpb_util/Environment.hxx"
 #include "sdpb_util/assert.hxx"
 
 #include <algorithm>
@@ -91,15 +90,15 @@ inline void
 assign_blocks_to_gpus(const SDPB_Parameters &parameters, Block_Info &block_info)
 {
   check_gpu_settings_agree();
-  ASSERT(block_info.num_nodes() == 1,
-         "The distributed GPU prototype currently requires one node");
   std::vector<sdpb_gpu::Block_Shape> shapes(block_info.dimensions.size());
   for(size_t j = 0; j < shapes.size(); ++j)
     shapes[j] = {int(block_info.dimensions[j]), int(block_info.num_points[j]),
                  int(block_info.get_bilinear_bases_height(j, 0)),
                  int(block_info.get_bilinear_bases_height(j, 1))};
   const char *cap = std::getenv("SDPB_GPU_CHUNK_BLOCKS");
-  const auto chunks = sdpb_gpu::gpu_chunks(shapes, cap ? std::atoi(cap) : 16);
+  const char *rows = std::getenv("SDPB_GPU_CHUNK_ROWS");
+  const auto chunks = sdpb_gpu::gpu_chunks(shapes, cap ? std::atoi(cap) : 16,
+                                           rows ? std::atoll(rows) : 0);
   const auto owners = sdpb_gpu::gpu_chunk_owners(chunks, El::mpi::Size());
   std::vector<int> block_owner(shapes.size(), -1);
   for(size_t c = 0; c < chunks.size(); ++c)

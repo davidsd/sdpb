@@ -47,7 +47,7 @@ template<class T> struct Mapped
 void entry_one(std::vector<int32_t> &m,std::vector<int64_t> &e,int L,int64_t plane,int64_t q)
 { m[(L-1)*plane+q]=0x20000000; e[q]=-(32LL*L-3); }
 
-void assembly(Gpu_Collective &world,int N,int tile,bool drop,int L)
+void assembly(Gpu_Collective &world,int N,int tile,int drop,int L)
 {
   constexpr int nchunks=11;
   Gram_Options go; go.prime_group=32; go.fused_residues=true;
@@ -78,7 +78,8 @@ void assembly(Gpu_Collective &world,int N,int tile,bool drop,int L)
   std::vector<std::unique_ptr<Array>> reference;
   for(int c=0;c<nchunks;++c)
     {
-      if(c%world.size()==world.rank() && !(drop && c==5))
+      // --drop-chunk 1 omits chunk 5, any larger value that chunk, so a control can pick its owner's node.
+      if(c%world.size()==world.rank() && !(drop && c==(drop==1?5:drop)))
         {
           arrays.emplace_back(new Array(L,37+3*c,N)); fill(c,*arrays.back());
           local.push_back(arrays.back()->b.view());

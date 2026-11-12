@@ -87,6 +87,7 @@ have no effect with `--gpu`: no host or device memory estimate is made.
 | `SDPB_GPU_GEMV_THREADS` | 262144 | threads in all per matrix-vector product (0: one per output) |
 | `SDPB_GPU_PRODUCT_TIMING`, `SDPB_GPU_VERBOSE`, `SDPB_GPU_CORRECTION_VERBOSE`, `SDPB_GPU_DEBUG_TIES` | unset | diagnostics: per-product timing, planner and correction messages, tie report |
 | `SDPB_GPU_PERTURB_STEP`, `SDPB_GPU_PERTURB_ITERATION` | 0, 0 | test only: perturb a step, the negative control of the comparison with SDPB |
+| `SDPB_GPU_CHUNK_ROWS`, `SDPB_GPU_COMM_TIMING` | 0, unset | cap on a chunk's rows (blocks times P), cutting only a dimension's largest chunks; seconds in collectives per stage in `gpu_profile.json` |
 | `SDPB_GPU_CORRUPT_LEAF_ITERATION`, `SDPB_GPU_CORRUPT_LEAF_LIMBS` | 0, 0 | test only: at that iteration, factor with the low limbs of block 0 cleared (a negative control) |
 
 ## Experimental distributed Q
@@ -97,12 +98,26 @@ Only the NCCL headers are needed at build time. At run time set
 path. The single-rank path neither loads NCCL nor changes its factor/solve
 algorithm.
 
-On one node, launch one MPI process per allocated GPU, for example
-`mpirun -n 2 --bind-to none sdpb --gpu <the same solver options>`. If all GPUs
-are visible, rank r selects device r; if Slurm exposes one device per rank,
-each uses its visible device. Duplicate device UUIDs are rejected. This
-prototype supports L=28 and requires at least one whole chunk on each rank.
-Keep the same `SDPB_GPU_CHUNK_BLOCKS` when comparing rank counts.
+Launch one MPI process per allocated GPU, for example
+`mpirun -n 2 --bind-to none sdpb --gpu <the same solver options>`, and across
+nodes `mpirun -n 4 --map-by ppr:2:node --bind-to none ...`, filling each node
+before the next. A rank takes the GPU given by its place
+among the ranks on its node; if Slurm exposes one device per rank, it uses that.
+Duplicate device UUIDs are rejected. Checks cover Q's assembly, factor and
+solves across two nodes; whole calls across nodes have run at nmax14 only. This
+prototype runs at every L in `rns/Limb_Sizes.hxx` and requires at least
+one whole chunk on each rank. Keep the same `SDPB_GPU_CHUNK_BLOCKS` and
+`SDPB_GPU_CHUNK_ROWS` when comparing rank counts. `SDPB_GPU_CHUNK_ROWS` (0, off)
+caps a chunk's rows, blocks times P, which cuts only the largest chunks of a
+dimension and lets whole chunks spread over more ranks; it changes the chunks,
+so rounding differs from the same run without it. `SDPB_GPU_COMM_TIMING=1` adds
+seconds in collectives per stage to `gpu_profile.json`. Check
+that a job's step really sees all its GPUs: some clusters expose only half of a node's GPUs to a step.
+
+Known problem, not yet understood: on two nodes (2+2 ranks) `mpirun` has hung after `MPI_Abort` (three times of
+three; on 1+1 it exits). Every error of a multi-node `--gpu` run (out of memory on one rank, a refused checkpoint,
+fewer visible GPUs than ranks on a node, ...) ends in `MPI_Abort` from `main`, so such a job can sit idle until its
+time limit. Give multi-node GPU jobs a tight time limit or a watchdog on the output.
 Every rank must see the same `SDPB_GPU_*` settings (pass them with the launcher, e.g. `mpirun -x`); sdpb
 compares them across ranks at start-up and refuses a difference. The block placement is written to `gpu_layout`
 in the checkpoint directory, and a checkpoint is loaded only with the placement it was written with (a checkpoint
@@ -160,7 +175,7 @@ single-run measurements, not production acceptance or linear scaling.
 
 `SDPB_GPU_Q_WIDE_RESIDUAL=1` enables an optional experimental residual for
 distributed Q only (default OFF; G=1 solver arithmetic stays unchanged).
-It multiplies full 28-limb inputs, accumulates guarded signed integers across
+It multiplies full L-limb inputs, accumulates guarded signed integers across
 owners, subtracts Qv from the RHS, then rounds once. In one bounded frozen-Q test
 at nmax14/18 and G=1/2, it passes exact GMP comparisons at every residual
 row and the unchanged full-solve per-column gate for all32 columns at both
@@ -229,6 +244,9 @@ and need a GPU. They are not built by waf or by CMake's default target, and not 
   `residual_check`, `gemv_compare` and `factor_profile`, and the MPFR references `ref_solve`/`compare_references` (CPU, `make mpfr-checks`) on their
   output. `test/make_spd_fixtures.py` writes synthetic SPD fixtures in the same format (see
   [test/q_accuracy.md](test/q_accuracy.md)).
+- Need several ranks with NCCL (`make nccl-checks NCCL_DIR=<prefix>`): `distributed_q_check` (Q and its
+  factor on G GPUs against one) and `nccl_rates` (NCCL and MPI rates at the sizes distributed Q exchanges, checking the
+  data of every transfer but all-reduce, which is only timed).
 
 ## Build (standalone, beside the CPU build)
 

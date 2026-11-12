@@ -1,11 +1,14 @@
 #include "Gpu_Collective.hxx"
 #include <cuda_runtime.h>
 #include <dlfcn.h>
+#include <unistd.h>
+#include <chrono>
 #include <cstdlib>
 #include <stdexcept>
 #include <string>
 #include <vector>
 #include <cstring>
+#include <array>
 
 #ifdef SDPB_GPU_NCCL
 #include <nccl.h>
@@ -17,6 +20,23 @@ namespace sdpb_gpu
   {
     Gpu_World w;
     uint64_t bytes = 0, calls = 0;
+    bool timing = false;
+    double t_broadcast = 0, t_max = 0, t_scatter = 0, t_gather = 0;
+    using Clock = std::chrono::steady_clock;
+    Clock::time_point begin()
+    {
+      if(!timing) return {};
+      auto e = cudaStreamSynchronize(0);
+      if(e != cudaSuccess) throw std::runtime_error(cudaGetErrorString(e));
+      return Clock::now();
+    }
+    void end(double &total, Clock::time_point t)
+    {
+      if(!timing) return;
+      auto e = cudaStreamSynchronize(0);
+      if(e != cudaSuccess) throw std::runtime_error(cudaGetErrorString(e));
+      total += std::chrono::duration<double>(Clock::now() - t).count();
+    }
 #ifdef SDPB_GPU_NCCL
     void *lib = nullptr;
     ncclComm_t comm = nullptr;
@@ -53,15 +73,33 @@ namespace sdpb_gpu
     if(w.size < 1 || w.rank < 0 || w.rank >= w.size)
       throw std::invalid_argument("Gpu_World rank/size");
     p_->w = w;
+    const char *timing=std::getenv("SDPB_GPU_COMM_TIMING");
+    p_->timing=timing && std::atoi(timing)!=0;
     int device=w.device;
     if(device<0)
       {
         int count=0;
         auto err=cudaGetDeviceCount(&count);
         if(err!=cudaSuccess) throw std::runtime_error(cudaGetErrorString(err));
-        if(count!=1 && count<w.size)
-          throw std::runtime_error("fewer visible GPUs than MPI ranks");
-        device=count==1 ? 0 : w.rank;
+        // This rank's place among the ranks on its node, by host name.
+        int local=w.local_rank>=0 ? w.local_rank : w.rank;
+        if(w.size>1 && w.local_rank<0)
+          {
+            if(!w.host_broadcast)
+              throw std::invalid_argument("Gpu_World needs a host broadcast");
+            std::array<char,256> mine{};
+            gethostname(mine.data(),mine.size()-1);
+            local=0;
+            for(int root=0;root<w.size;++root)
+              {
+                auto name=mine;
+                w.host_broadcast(name.data(),name.size(),root);
+                if(root<w.rank && name==mine) ++local;
+              }
+          }
+        if(count!=1 && count<=local)
+          throw std::runtime_error("fewer visible GPUs than MPI ranks on a node");
+        device=count==1 ? 0 : local;
       }
     p_->w.device=device;
     auto e = cudaSetDevice(device);
@@ -108,13 +146,22 @@ namespace sdpb_gpu
   int Gpu_Collective::size() const { return p_->w.size; }
   uint64_t Gpu_Collective::received_bytes() const { return p_->bytes; }
   uint64_t Gpu_Collective::collective_calls() const { return p_->calls; }
+  bool Gpu_Collective::timing() const { return p_->timing; }
+  double Gpu_Collective::seconds() const
+  { return p_->t_broadcast + p_->t_max + p_->t_scatter + p_->t_gather; }
+  double Gpu_Collective::broadcast_seconds() const { return p_->t_broadcast; }
+  double Gpu_Collective::max_seconds() const { return p_->t_max; }
+  double Gpu_Collective::reduce_scatter_seconds() const { return p_->t_scatter; }
+  double Gpu_Collective::allgather_seconds() const { return p_->t_gather; }
 
   void Gpu_Collective::broadcast(void *buf, size_t bytes, int root)
   {
     if(root < 0 || root >= size()) throw std::invalid_argument("broadcast root");
     if(size() == 1 || !bytes) return;
 #ifdef SDPB_GPU_NCCL
+    const auto t = p_->begin();
     p_->check(p_->bcast(buf, buf, bytes, ncclUint8, root, p_->comm, 0));
+    p_->end(p_->t_broadcast, t);
 #endif
     ++p_->calls;
     if(rank() != root) p_->bytes += bytes;
@@ -123,7 +170,9 @@ namespace sdpb_gpu
   {
     if(size() == 1 || !n) return;
 #ifdef SDPB_GPU_NCCL
+    const auto t = p_->begin();
     p_->check(p_->allreduce(v, v, n, ncclUint64, ncclMax, p_->comm, 0));
+    p_->end(p_->t_max, t);
 #endif
     ++p_->calls;
     p_->bytes += n * 8; // resulting payload, implementation-dependent wire volume
@@ -138,7 +187,9 @@ namespace sdpb_gpu
         return;
       }
 #ifdef SDPB_GPU_NCCL
+    const auto t = p_->begin();
     p_->check(p_->scatter(in, out, n, ncclUint32, ncclSum, p_->comm, 0));
+    p_->end(p_->t_scatter, t);
 #endif
     ++p_->calls;
     p_->bytes += n * 4;
@@ -152,7 +203,9 @@ namespace sdpb_gpu
         return;
       }
 #ifdef SDPB_GPU_NCCL
+    const auto t = p_->begin();
     p_->check(p_->gather(in, out, n, ncclUint8, p_->comm, 0));
+    p_->end(p_->t_gather, t);
 #endif
     ++p_->calls;
     p_->bytes += n * (size() - 1);
