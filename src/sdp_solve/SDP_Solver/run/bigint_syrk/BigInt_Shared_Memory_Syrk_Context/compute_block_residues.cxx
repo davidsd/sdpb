@@ -23,7 +23,7 @@ namespace
     const El::DistMatrix<El::BigFloat> &block, size_t group_index,
     El::Int residue_row_begin, El::Int global_col, Fmpz_Comb &comb,
     Vertical_Block_Matrix_Residues_Window<double> &block_residues_window,
-    Batch_Crt *batch)
+    Batch_Crt *batch, const El::Int *row_perm)
   {
     if(!block.IsLocalCol(global_col))
       return;
@@ -56,11 +56,21 @@ namespace
     const int jLoc = block_column_submatrix.LocalCol(j);
     if(batch != nullptr)
       {
-        const int n = block_column_submatrix.LocalHeight();
+        // --groupedSyrk (row_perm): the residues of exact zeros are never
+        // read (a row's zero columns are outside its group's columns), so
+        // they are neither computed nor written
+        std::vector<int> rows;
+        for(int iLoc = 0; iLoc < block_column_submatrix.LocalHeight(); ++iLoc)
+          if(row_perm == nullptr
+             || mpf_sgn(block_column_submatrix.GetLocalCRef(iLoc, jLoc)
+                          .gmp_float.get_mpf_t())
+                  != 0)
+            rows.push_back(iLoc);
+        const int n = rows.size();
         std::vector<const __mpf_struct *> x(n);
-        for(int iLoc = 0; iLoc < n; ++iLoc)
-          x[iLoc] = block_column_submatrix.GetLocalCRef(iLoc, jLoc)
-                      .gmp_float.get_mpf_t();
+        for(int c = 0; c < n; ++c)
+          x[c] = block_column_submatrix.GetLocalCRef(rows[c], jLoc)
+                   .gmp_float.get_mpf_t();
         std::vector<double> r(size_t(n) * comb.num_primes);
         batch->residues(x.data(), n, batch_residue_bits(), r.data(), 1, n);
         // Write prime by prime: the local rows of one column modulo one
@@ -68,9 +78,15 @@ namespace
         // primes are prime_stride apart (one page each). Same values as
         // the entry-by-entry order below.
         std::vector<double *> dest(n);
-        for(int iLoc = 0; iLoc < n; ++iLoc)
-          dest[iLoc] = first_residue_column_submatrix.Buffer(
-            block_column_submatrix.GlobalRow(iLoc), j);
+        for(int c = 0; c < n; ++c)
+          dest[c]
+            = row_perm == nullptr
+                ? first_residue_column_submatrix.Buffer(
+                    block_column_submatrix.GlobalRow(rows[c]), j)
+                : block_residues_window.residues.at(0).Buffer(
+                    row_perm[residue_row_begin
+                             + block_column_submatrix.GlobalRow(rows[c])],
+                    global_col);
         for(size_t k = 0; k < comb.num_primes; ++k)
           {
             const size_t offset = k * block_residues_window.prime_stride;
@@ -84,9 +100,18 @@ namespace
     for(int iLoc = 0; iLoc < block_column_submatrix.LocalHeight(); ++iLoc)
       {
         const int i = block_column_submatrix.GlobalRow(iLoc);
+        if(row_perm != nullptr
+           && mpf_sgn(block_column_submatrix.GetLocalCRef(iLoc, jLoc)
+                        .gmp_float.get_mpf_t())
+                == 0)
+          continue;
         bigint_value.from_BigFloat(
           block_column_submatrix.GetLocalCRef(iLoc, jLoc));
-        double *data = first_residue_column_submatrix.Buffer(i, j);
+        double *data
+          = row_perm == nullptr
+              ? first_residue_column_submatrix.Buffer(i, j)
+              : block_residues_window.residues.at(0).Buffer(
+                  row_perm[residue_row_begin + i], global_col);
         bigint_to_residues(bigint_value, comb, data,
                            block_residues_window.prime_stride);
       }
@@ -99,7 +124,8 @@ namespace
     const BlockIterator &consecutive_blocks_end, El::Int residue_row_begin,
     El::Int global_col, Fmpz_Comb &comb,
     Vertical_Block_Matrix_Residues_Window<double> &block_residues_window,
-    std::vector<double> &column_residues_buffer_temp, Batch_Crt *batch)
+    std::vector<double> &column_residues_buffer_temp, Batch_Crt *batch,
+    const El::Int *row_perm)
   {
     auto total_height = std::transform_reduce(
       consecutive_blocks_begin, consecutive_blocks_end, 0, std::plus{},
@@ -114,6 +140,74 @@ namespace
     // (column residues for prime_1),(column residues for prime_2),... stored in a single array.
     column_residues_buffer_temp.resize(total_height * comb.num_primes);
 
+    // --groupedSyrk (row_perm): only the nonzero entries, whose residues are
+    // the only ones the grouped BLAS jobs read, in a compact buffer; the
+    // window's places of the zero entries are left as they are
+    if(row_perm != nullptr)
+      {
+        std::vector<const El::BigFloat *> x;
+        std::vector<int> rows;
+        x.reserve(total_height);
+        rows.reserve(total_height);
+        int offset = 0;
+        std::for_each(consecutive_blocks_begin, consecutive_blocks_end,
+                      [&](const auto &block) {
+                        ASSERT(block.IsLocalCol(global_col));
+                        ASSERT_EQUAL(block.LocalHeight(), block.Height());
+                        const int jLoc = block.LocalCol(global_col);
+                        for(int iLoc = 0; iLoc < block.LocalHeight(); ++iLoc)
+                          {
+                            const auto &v = block.GetLocalCRef(iLoc, jLoc);
+                            if(mpf_sgn(v.gmp_float.get_mpf_t()) != 0)
+                              {
+                                x.push_back(&v);
+                                rows.push_back(offset + iLoc);
+                              }
+                          }
+                        offset += block.LocalHeight();
+                      });
+        ASSERT_EQUAL(offset, total_height);
+        const int n = x.size();
+        column_residues_buffer_temp.resize(std::max<size_t>(
+          column_residues_buffer_temp.size(), size_t(n) * comb.num_primes));
+        if(batch != nullptr)
+          {
+            std::vector<const __mpf_struct *> xm(n);
+            for(int c = 0; c < n; ++c)
+              xm[c] = x[c]->gmp_float.get_mpf_t();
+            if(n > 0)
+              batch->residues(xm.data(), n, batch_residue_bits(),
+                              column_residues_buffer_temp.data(), 1, n);
+          }
+        else
+          {
+            Fmpz_BigInt bigint_value;
+            for(int c = 0; c < n; ++c)
+              {
+                bigint_value.from_BigFloat(*x[c]);
+                bigint_to_residues(bigint_value, comb,
+                                   column_residues_buffer_temp.data() + c, n);
+              }
+          }
+        // runs of consecutive source rows with consecutive places
+        const int j = global_col;
+        for(int c0 = 0; c0 < n;)
+          {
+            const El::Int d0 = row_perm[residue_row_begin + rows[c0]];
+            int c1 = c0 + 1;
+            while(c1 < n && rows[c1] == rows[c0] + (c1 - c0)
+                  && row_perm[residue_row_begin + rows[c1]] == d0 + (c1 - c0))
+              ++c1;
+            for(size_t prime_index = 0; prime_index < comb.num_primes;
+                ++prime_index)
+              std::memcpy(
+                block_residues_window.residues.at(prime_index).Buffer(d0, j),
+                column_residues_buffer_temp.data() + prime_index * n + c0,
+                sizeof(double) * (c1 - c0));
+            c0 = c1;
+          }
+        return;
+      }
     // Compute locally residues for a given column global_col and all blocks
     if(batch != nullptr)
       {
@@ -184,7 +278,8 @@ namespace
     const El::Int global_col, Fmpz_Comb &comb,
     Vertical_Block_Matrix_Residues_Window<double> &input_block_residues_window,
     std::vector<double> &column_residues_buffer_temp, Batch_Crt *batch,
-    const std::vector<std::optional<Star_Vr_Block>> &star_vr_blocks)
+    const std::vector<std::optional<Star_Vr_Block>> &star_vr_blocks,
+    const El::Int *row_perm)
   {
     // offset for current block in the residues window
     int residue_row_begin = 0;
@@ -207,7 +302,7 @@ namespace
               compute_column_residues_for_consecutive_blocks(
                 group_index, &copy, &copy + 1, residue_row_begin, global_col,
                 comb, input_block_residues_window,
-                column_residues_buffer_temp, batch);
+                column_residues_buffer_temp, batch, row_perm);
             residue_row_begin += curr_block->Height();
             continue;
           }
@@ -234,7 +329,7 @@ namespace
             // https://www.cs.utexas.edu/~flame/pubs/Elemental1.pdf (page 12)
             compute_column_residues_elementwise(
               *curr_block, group_index, residue_row_begin, global_col, comb,
-              input_block_residues_window, batch);
+              input_block_residues_window, batch, row_perm);
 
             residue_row_begin += curr_block->Height();
             continue;
@@ -263,7 +358,7 @@ namespace
         compute_column_residues_for_consecutive_blocks(
           group_index, curr_block, curr_block + num_consecutive_blocks,
           residue_row_begin, global_col, comb, input_block_residues_window,
-          column_residues_buffer_temp, batch);
+          column_residues_buffer_temp, batch, row_perm);
 
         residue_row_begin += total_consecutive_height;
 
@@ -384,13 +479,18 @@ void BigInt_Shared_Memory_Syrk_Context::compute_block_residues(
               star_vr_blocks[b].emplace(block_views[b]);
         }
     }
+    // --groupedSyrk: each row's place in the window (rows of this MPI
+    // group, numbered from its start); the window holds all rows then
+    const El::Int *row_perm = nullptr;
+    if(grouped_row_perm != nullptr)
+      row_perm = grouped_row_perm->data() + group_row_offsets.at(group_index);
     std::vector<double> column_residues_buffer_temp;
     for(int global_col = 0; global_col < width; ++global_col)
       {
         compute_column_residues(group_index, block_views, global_col, comb,
                                 grouped_block_residues_window,
                                 column_residues_buffer_temp, batch,
-                                star_vr_blocks);
+                                star_vr_blocks, row_perm);
       }
 
     // Update block timings.

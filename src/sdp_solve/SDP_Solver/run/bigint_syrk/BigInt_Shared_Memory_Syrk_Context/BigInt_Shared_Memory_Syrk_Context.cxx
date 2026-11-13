@@ -27,6 +27,24 @@ BigInt_Shared_Memory_Syrk_Context::BigInt_Shared_Memory_Syrk_Context(
       block_index_local_to_global(block_index_local_to_global),
       create_blas_job_schedule_func(create_job_schedule)
 {
+  input_width = cfg.input_width;
+  {
+    El::Int offset = 0;
+    for(const auto height : cfg.input_height_per_group)
+      {
+        group_full_offsets.push_back(offset);
+        group_full_heights.push_back(height);
+        offset += height;
+      }
+  }
+  {
+    El::Int offset = 0;
+    for(const auto height : cfg.input_window_height_per_group_per_prime)
+      {
+        group_row_offsets.push_back(offset);
+        offset += height;
+      }
+  }
   size_t window_width = cfg.window_width();
   input_grouped_block_residues_window_A
     = std::make_unique<Vertical_Block_Matrix_Residues_Window<double>>(

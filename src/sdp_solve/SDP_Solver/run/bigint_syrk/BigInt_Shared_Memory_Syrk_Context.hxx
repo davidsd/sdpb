@@ -9,6 +9,7 @@
 #include "sdpb_util/Shared_Window_Array.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
+#include <map>
 #include <memory>
 #include <optional>
 #include <set>
@@ -61,8 +62,38 @@ public:
     // job schedule (their first touch); later, the first pass over P
     // overwrites Q's residues (beta = 0)
     bool residues_no_clear = false;
+    // --groupedSyrk: the product is taken by groups of rows of P that have
+    // the same nonzero columns, over those columns only. The groups are
+    // found at every call from P's exact zeros (all entries, on all ranks
+    // of the node); the rows of each group are stored next to each other
+    // in the input window, and each BLAS job takes, group by group, only
+    // the column runs of the group that meet its tile. Exact zeros add
+    // nothing to the exact sums of residues, so Q is the same bit for bit.
+    // When the input window is split, the groups are formed for each pass
+    // of the window (the rows that pass holds). If the groups would save
+    // little (multiply-adds >= 0.95 of the dense product) or are too many
+    // (> 4096 in a pass), the dense product is used.
+    bool grouped = false;
+    // unit tests only: leave this row group out (a negative control)
+    int grouped_test_skip_group = -1;
+    // unit tests only: if > 0, the grouped schedule splits every prime's
+    // tile by this factor instead of choosing the split by cost (with 1,
+    // a tile holds several column runs of a group even when P is narrow)
+    int grouped_test_split = 0;
   };
   Options options;
+
+  // --groupedSyrk: what the last call did, for logs and tests
+  struct Grouped_Stats
+  {
+    bool active = false;
+    size_t num_groups = 0;
+    size_t num_runs = 0;
+    // multiply-adds of the grouped product over the dense one's
+    double fraction = 1.0;
+    size_t split_factor = 0;
+  };
+  Grouped_Stats grouped_stats;
 
   void bigint_syrk_blas(El::UpperOrLower uplo,
                         const std::vector<El::DistMatrix<El::BigFloat>>
@@ -140,4 +171,44 @@ private:
                      El::DistMatrix<El::BigFloat> &output, Timers &timers);
 
   [[nodiscard]] El::Int input_group_height_per_prime() const;
+
+  // --groupedSyrk: rows of P on the node (in the order of the input window
+  // without grouping: MPI groups, then their blocks, then rows) that share
+  // their nonzero columns
+public:
+  struct Row_Group
+  {
+    // rows [row_begin, row_end) of the input window (after the permutation)
+    El::Int row_begin = 0, row_end = 0;
+    // nonzero columns of P (global column indices), as sorted disjoint runs
+    std::vector<El::Range<El::Int>> col_runs;
+  };
+
+private:
+  size_t input_width = 0;
+  // For each pass of the input window (input_window_split_factor of them):
+  // the place of each row of the window (a permutation of [0, window
+  // height)) and the groups. Empty when the grouped product is off.
+  std::vector<std::vector<El::Int>> pass_row_perm;
+  std::vector<std::vector<Row_Group>> pass_row_groups;
+  // the pass being computed (nullptr: the dense product)
+  const std::vector<El::Int> *grouped_row_perm = nullptr;
+  const std::vector<Row_Group> *row_groups = nullptr;
+  // one bit per (row, column) of P on the node, set from P's nonzeros
+  std::unique_ptr<Shared_Window_Array<uint64_t>> grouped_mask_window;
+  // start of each MPI group's rows in the input window
+  std::vector<El::Int> group_row_offsets;
+  // each MPI group's rows of P on the node, and their start in the mask
+  std::vector<El::Int> group_full_heights, group_full_offsets;
+  std::optional<Job_Schedule> grouped_schedule;
+  // grouped schedules of this call, by the shape of the groups and the
+  // output submatrix (passes with the same shape share one)
+  std::map<std::vector<El::Int>, Job_Schedule> grouped_schedule_cache;
+
+  // Find pass_row_groups and pass_row_perm from P's zeros (collective over
+  // shared_memory_comm); sets grouped_stats. Returns false (and clears
+  // them) if the dense product is to be used.
+  bool compute_row_groups(
+    const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
+    Timers &timers);
 };

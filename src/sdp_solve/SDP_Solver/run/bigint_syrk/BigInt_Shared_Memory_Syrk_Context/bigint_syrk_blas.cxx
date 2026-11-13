@@ -5,6 +5,13 @@
 
 #include <cblas.h>
 
+#include <unordered_map>
+
+// blas_jobs/create_blas_job_schedule.cxx
+std::vector<Blas_Job> create_syrk_or_gemm_jobs_for_prime(
+  Blas_Job::Kind kind, El::UpperOrLower uplo, El::Int output_matrix_height,
+  El::Int output_matrix_width, size_t prime_index, size_t split_factor);
+
 namespace
 {
   // output = inputA^T * inputB
@@ -105,6 +112,148 @@ namespace
       }
   }
 
+  using Row_Group = BigInt_Shared_Memory_Syrk_Context::Row_Group;
+
+  // runs (global columns) clipped to [lo, hi)
+  void clip_runs(const std::vector<El::Range<El::Int>> &runs, const El::Int lo,
+                 const El::Int hi, std::vector<El::Range<El::Int>> &out)
+  {
+    out.clear();
+    for(const auto &r : runs)
+      {
+        const auto b = std::max(r.beg, lo);
+        const auto e = std::min(r.end, hi);
+        if(b < e)
+          out.emplace_back(b, e);
+      }
+  }
+
+  // --groupedSyrk: the job's tile of Q (mod its prime), group by group over
+  // the group's column runs only. offset_I and offset_J: the first global
+  // column of P in the input windows A and B (= the output submatrix's
+  // first row and column). The same integers as do_blas_job: the rows and
+  // columns left out are exact zeros, and every partial sum is an exact
+  // integer below 2^53, as the dense sum is.
+  void do_grouped_blas_job(
+    const Blas_Job &job, const El::UpperOrLower uplo,
+    const Vertical_Block_Matrix_Residues_Window<double> &input_window_A,
+    const Vertical_Block_Matrix_Residues_Window<double> &input_window_B,
+    Matrix_Residues_Window<double> &output_residues_window,
+    const double beta, const std::vector<Row_Group> &groups,
+    const El::Int offset_I, const El::Int offset_J, const int skip_group)
+  {
+    const auto &A = input_window_A.residues.at(job.prime_index);
+    const auto &B = input_window_B.residues.at(job.prime_index);
+    auto &Q = output_residues_window.residues.at(job.prime_index);
+    if(beta == 0.0)
+      {
+        auto tile = El::View(Q, job.I, job.J);
+        El::Zero(tile);
+      }
+    const El::Int I_beg = offset_I + job.I.beg, I_end = offset_I + job.I.end;
+    const El::Int J_beg = offset_J + job.J.beg, J_end = offset_J + job.J.end;
+    std::vector<El::Range<El::Int>> runs_I, runs_J;
+    for(size_t group = 0; group < groups.size(); ++group)
+      {
+        if(int(group) == skip_group)
+          continue;
+        const auto &g = groups[group];
+        const El::Range<El::Int> rows(g.row_begin, g.row_end);
+        clip_runs(g.col_runs, I_beg, I_end, runs_I);
+        if(runs_I.empty())
+          continue;
+        if(job.kind == Blas_Job::syrk)
+          {
+            ASSERT(job.I == job.J);
+            for(size_t a = 0; a < runs_I.size(); ++a)
+              {
+                const auto &Ra = runs_I[a];
+                const El::Range<El::Int> ca(Ra.beg - offset_I,
+                                            Ra.end - offset_I);
+                const auto Pa = El::LockedView(A, rows, ca);
+                {
+                  auto Qaa = El::View(Q, ca, ca);
+                  syrk(uplo, Pa, Qaa, 1.0);
+                }
+                for(size_t b = a + 1; b < runs_I.size(); ++b)
+                  {
+                    const auto &Rb = runs_I[b];
+                    const El::Range<El::Int> cb(Rb.beg - offset_I,
+                                                Rb.end - offset_I);
+                    const auto Pb = El::LockedView(A, rows, cb);
+                    // runs are sorted: all of a lies before b
+                    if(uplo == El::UPPER)
+                      {
+                        auto Qab = El::View(Q, ca, cb);
+                        gemm(Pa, Pb, Qab, 1.0);
+                      }
+                    else
+                      {
+                        auto Qba = El::View(Q, cb, ca);
+                        gemm(Pb, Pa, Qba, 1.0);
+                      }
+                  }
+              }
+          }
+        else
+          {
+            clip_runs(g.col_runs, J_beg, J_end, runs_J);
+            for(const auto &Ra : runs_I)
+              {
+                const El::Range<El::Int> ca(Ra.beg - offset_I,
+                                            Ra.end - offset_I);
+                const auto Pa = El::LockedView(A, rows, ca);
+                for(const auto &Rb : runs_J)
+                  {
+                    const El::Range<El::Int> cb(Rb.beg - offset_J,
+                                                Rb.end - offset_J);
+                    const auto Pb = El::LockedView(B, rows, cb);
+                    auto Qab = El::View(Q, ca, cb);
+                    gemm(Pa, Pb, Qab, 1.0);
+                  }
+              }
+          }
+      }
+  }
+
+  // --groupedSyrk: multiply-adds of a job (the cost for LPT scheduling)
+  Blas_Job_Cost
+  grouped_job_cost(const Blas_Job &job, const std::vector<Row_Group> &groups,
+                   const El::Int offset_I, const El::Int offset_J)
+  {
+    size_t cost = 0, calls = 0;
+    std::vector<El::Range<El::Int>> runs_I, runs_J;
+    for(const auto &g : groups)
+      {
+        const size_t K = g.row_end - g.row_begin;
+        clip_runs(g.col_runs, offset_I + job.I.beg, offset_I + job.I.end,
+                  runs_I);
+        if(runs_I.empty())
+          continue;
+        size_t nI = 0;
+        for(const auto &r : runs_I)
+          nI += r.end - r.beg;
+        if(job.kind == Blas_Job::syrk)
+          {
+            cost += K * nI * (nI + 1) / 2;
+            calls += runs_I.size() * (runs_I.size() + 1) / 2;
+          }
+        else
+          {
+            clip_runs(g.col_runs, offset_J + job.J.beg, offset_J + job.J.end,
+                      runs_J);
+            size_t nJ = 0;
+            for(const auto &r : runs_J)
+              nJ += r.end - r.beg;
+            cost += K * nI * nJ;
+            calls += runs_I.size() * runs_J.size();
+          }
+      }
+    // writing the tile (zeroing, and the output traffic of each call)
+    cost += size_t(job.I.end - job.I.beg) * (job.J.end - job.J.beg);
+    return {cost, calls};
+  }
+
   void do_blas_jobs(
     const El::UpperOrLower uplo, const Blas_Job::Kind kind,
     const BigInt_Shared_Memory_Syrk_Context::Job_Schedule &blas_job_schedule,
@@ -115,7 +264,9 @@ namespace
     const std::unique_ptr<Matrix_Residues_Window<double>>
       &output_residues_window,
     const El::mpi::Comm &shared_memory_comm, Timers &timers,
-    const double beta = 1.0)
+    const double beta = 1.0, const std::vector<Row_Group> *groups = nullptr,
+    const El::Int offset_I = 0, const El::Int offset_J = 0,
+    const int skip_group = -1)
   {
     // Square each residue matrix
     {
@@ -125,6 +276,17 @@ namespace
         {
           if(kind == Blas_Job::syrk && job.I.beg != job.J.beg)
             ASSERT_EQUAL(job.I.beg < job.J.beg, uplo == El::UPPER);
+          if(groups != nullptr)
+            {
+              do_grouped_blas_job(
+                job, uplo, *input_grouped_block_residues_window_A,
+                kind == Blas_Job::syrk
+                  ? *input_grouped_block_residues_window_A
+                  : *input_grouped_block_residues_window_B,
+                *output_residues_window, beta, *groups, offset_I, offset_J,
+                skip_group);
+              continue;
+            }
           do_blas_job(job, uplo, *input_grouped_block_residues_window_A,
                       kind == Blas_Job::syrk
                         ? *input_grouped_block_residues_window_A
@@ -199,6 +361,18 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas(
   ASSERT(output_residues_window->width * output_window_split_factor
          >= bigint_output.Height());
 
+  // --groupedSyrk: P's row groups for this call (or the dense product)
+  grouped_row_perm = nullptr;
+  row_groups = nullptr;
+  if(options.grouped)
+    compute_row_groups(bigint_input_matrix_blocks, timers);
+  else
+    {
+      pass_row_perm.clear();
+      pass_row_groups.clear();
+      grouped_stats = {};
+    }
+
   const auto output_ranges
     = split_range({0, bigint_output.Height()}, output_window_split_factor);
 
@@ -255,6 +429,70 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem_submatrix(
   const auto kind = output_I == output_J ? Blas_Job::syrk : Blas_Job::gemm;
   const auto &blas_job_schedule
     = get_blas_job_schedule(kind, uplo, output_height, output_width);
+  // --groupedSyrk: the same tiles, balanced by their grouped cost (per pass
+  // of the input window: each pass has its own groups)
+  const bool grouped = !pass_row_perm.empty();
+  auto make_grouped_schedule = [&](const std::vector<Row_Group> &groups) {
+      Scoped_Timer schedule_timer(timers, "grouped_schedule");
+      const int forced_split = options.grouped_test_split;
+      std::vector<El::Int> key{El::Int(kind), El::Int(uplo), output_I.beg,
+                               output_I.end, output_J.beg, output_J.end,
+                               El::Int(forced_split)};
+      for(const auto &g : groups)
+        {
+          key.push_back(g.row_end - g.row_begin);
+          key.push_back(g.col_runs.size());
+          for(const auto &r : g.col_runs)
+            {
+              key.push_back(r.beg);
+              key.push_back(r.end);
+            }
+        }
+      if(const auto it = grouped_schedule_cache.find(key);
+         it != grouped_schedule_cache.end())
+        {
+          grouped_schedule.emplace(it->second);
+          return;
+        }
+      const size_t num_ranks = shared_memory_comm.Size();
+      const size_t num_primes = comb.num_primes;
+      std::optional<Job_Schedule> best;
+      size_t best_split = 0;
+      // split_mode 0: as SDPB's schedule (whole Q for the first primes,
+      // the remaining ones split); 1: every prime split
+      std::vector<size_t> splits{1, 2, 3, 4, 5, 6, 8, 10, 12, 16};
+      if(forced_split > 0)
+        splits = {size_t(forced_split)};
+      for(int split_mode = forced_split > 0 ? 1 : 0; split_mode < 2;
+          ++split_mode)
+        for(const size_t split : splits)
+          {
+            std::vector<Blas_Job> jobs;
+            const size_t no_split
+              = split_mode == 0 ? num_primes - num_primes % num_ranks : 0;
+            for(size_t prime = 0; prime < num_primes; ++prime)
+              {
+                auto prime_jobs = create_syrk_or_gemm_jobs_for_prime(
+                  kind, uplo, output_height, output_width, prime,
+                  prime < no_split ? 1 : split);
+                for(auto &job : prime_jobs)
+                  {
+                    job.cost = grouped_job_cost(job, groups, output_I.beg,
+                                                output_J.beg);
+                    jobs.push_back(job);
+                  }
+              }
+            Job_Schedule schedule(num_ranks, jobs);
+            if(!best || schedule.max_rank_cost() < best->max_rank_cost())
+              {
+                best.emplace(std::move(schedule));
+                best_split = split_mode == 0 ? split : 100 + split;
+              }
+          }
+      grouped_stats.split_factor = best_split;
+      grouped_schedule_cache.emplace(key, *best);
+      grouped_schedule.emplace(std::move(*best));
+  };
 
   // Clear input and output windows
   // --residuesNoClear: the clearing is
@@ -285,6 +523,12 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem_submatrix(
   for(size_t iter = 0; iter < input_window_split_factor; ++iter)
     {
       Scoped_Timer iter_timer(timers, "split_P_" + std::to_string(iter));
+      if(grouped)
+        {
+          grouped_row_perm = &pass_row_perm.at(iter);
+          row_groups = &pass_row_groups.at(iter);
+          make_grouped_schedule(*row_groups);
+        }
 
       // Compute block residues
       {
@@ -309,11 +553,14 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem_submatrix(
       // Square each residue matrix
       {
         Scoped_Timer syrk_timer(timers, "syrk");
-        do_blas_jobs(uplo, kind, blas_job_schedule,
+        do_blas_jobs(uplo, kind,
+                     grouped ? *grouped_schedule : blas_job_schedule,
                      input_grouped_block_residues_window_A,
                      input_grouped_block_residues_window_B,
                      output_residues_window, shared_memory_comm, timers,
-                     (!cleared && iter == 0) ? 0.0 : 1.0);
+                     (!cleared && iter == 0) ? 0.0 : 1.0,
+                     grouped ? row_groups : nullptr, output_I.beg,
+                     output_J.beg, options.grouped_test_skip_group);
         update_block_timings_with_syrk(
           block_timings_ms, syrk_timer, bigint_input_matrix_blocks,
           block_index_local_to_global, shared_memory_comm,
@@ -321,5 +568,221 @@ void BigInt_Shared_Memory_Syrk_Context::bigint_syrk_blas_shmem_submatrix(
       }
     }
 
+  grouped_row_perm = nullptr;
+  row_groups = nullptr;
   output_residues_window->Fence();
+}
+
+// --groupedSyrk: find the groups of rows of P on the node that have the same
+// nonzero columns, and the place of each row in the grouped input window,
+// for each pass of the input window. Collective over shared_memory_comm;
+// every rank computes the same result from the same shared mask.
+bool BigInt_Shared_Memory_Syrk_Context::compute_row_groups(
+  const std::vector<El::DistMatrix<El::BigFloat>> &bigint_input_matrix_blocks,
+  Timers &timers)
+{
+  Scoped_Timer timer(timers, "grouped_pattern");
+  const auto previous = grouped_stats;
+  grouped_schedule_cache.clear();
+  pass_row_perm.clear();
+  pass_row_groups.clear();
+  grouped_schedule.reset();
+  grouped_stats = {};
+
+  // rows of P on the node (mask rows) and of the window (one pass)
+  const El::Int H_full = total_block_height_per_node;
+  const El::Int H = input_grouped_block_residues_window_A->height;
+  const El::Int N = input_width;
+  const size_t W = (N + 63) / 64;
+  if(H_full == 0 || H == 0 || N == 0)
+    return false;
+  if(!grouped_mask_window)
+    grouped_mask_window = std::make_unique<Shared_Window_Array<uint64_t>>(
+      shared_memory_comm, size_t(H_full) * W);
+  uint64_t *mask = grouped_mask_window->data();
+  {
+    const size_t total = size_t(H_full) * W;
+    const size_t rank = shared_memory_comm.Rank();
+    const size_t num_ranks = shared_memory_comm.Size();
+    std::fill(mask + total * rank / num_ranks,
+              mask + total * (rank + 1) / num_ranks, uint64_t(0));
+  }
+  grouped_mask_window->Fence();
+  {
+    // Each rank sets the bits of its local nonzero entries
+    Scoped_Timer set_timer(timers, "set_bits");
+    El::Int row_begin = group_full_offsets.at(group_index);
+    std::vector<uint64_t> local;
+    for(const auto &block : bigint_input_matrix_blocks)
+      {
+        ASSERT_EQUAL(block.Width(), N);
+        const int height_local = block.LocalHeight();
+        const int width_local = block.LocalWidth();
+        if(height_local > 0 && width_local > 0)
+          {
+            local.assign(size_t(height_local) * W, 0);
+            for(int jLoc = 0; jLoc < width_local; ++jLoc)
+              {
+                const El::Int col = block.GlobalCol(jLoc);
+                const uint64_t bit = uint64_t(1) << (col % 64);
+                const size_t word = col / 64;
+                for(int iLoc = 0; iLoc < height_local; ++iLoc)
+                  if(mpf_sgn(block.GetLocalCRef(iLoc, jLoc)
+                               .gmp_float.get_mpf_t())
+                     != 0)
+                    local[size_t(iLoc) * W + word] |= bit;
+              }
+            for(int iLoc = 0; iLoc < height_local; ++iLoc)
+              {
+                const El::Int row = row_begin + block.GlobalRow(iLoc);
+                ASSERT(row < H_full, DEBUG_STRING(row), DEBUG_STRING(H_full));
+                for(size_t w = 0; w < W; ++w)
+                  {
+                    const uint64_t bits = local[size_t(iLoc) * W + w];
+                    if(bits != 0)
+                      __atomic_fetch_or(mask + size_t(row) * W + w, bits,
+                                        __ATOMIC_RELAXED);
+                  }
+              }
+          }
+        row_begin += block.Height();
+      }
+    ASSERT_EQUAL(row_begin, group_full_offsets.at(group_index)
+                              + group_full_heights.at(group_index));
+  }
+  grouped_mask_window->Fence();
+
+  const size_t num_passes = input_window_split_factor;
+  std::vector<std::vector<El::Int>> perms(num_passes);
+  std::vector<std::vector<Row_Group>> all_groups(num_passes);
+  double grouped_madds = 0;
+  size_t max_groups = 0, max_runs = 0;
+  for(size_t pass = 0; pass < num_passes; ++pass)
+    {
+      // mask row of each window row in this pass (-1: past the group's
+      // rows, zero); the pass holds rows [pass h_g, (pass + 1) h_g) of
+      // each MPI group g, h_g its window height (compute_block_residues)
+      std::vector<El::Int> mask_row(H, -1);
+      for(size_t g = 0; g < group_row_offsets.size(); ++g)
+        {
+          const El::Int h_g
+            = input_grouped_block_residues_window_A->block_residues.at(0)
+                .at(g)
+                .Height();
+          for(El::Int w = 0; w < h_g; ++w)
+            {
+              const El::Int r = El::Int(pass) * h_g + w;
+              if(r < group_full_heights.at(g))
+                mask_row[group_row_offsets[g] + w]
+                  = group_full_offsets.at(g) + r;
+            }
+        }
+      // Groups in order of first appearance; all-zero rows go last
+      std::vector<int> row_group(H, -1);
+      std::vector<El::Int> group_first_row, group_count;
+      {
+        std::unordered_map<uint64_t, std::vector<int>> index;
+        for(El::Int row = 0; row < H; ++row)
+          {
+            if(mask_row[row] < 0)
+              continue;
+            const uint64_t *m = mask + size_t(mask_row[row]) * W;
+            uint64_t hash = 1469598103934665603ULL;
+            bool any = false;
+            for(size_t w = 0; w < W; ++w)
+              {
+                any |= m[w] != 0;
+                hash = (hash ^ m[w]) * 1099511628211ULL;
+                hash ^= hash >> 29;
+              }
+            if(!any)
+              continue;
+            auto &candidates = index[hash];
+            int group = -1;
+            for(const int g : candidates)
+              if(std::equal(m, m + W,
+                            mask
+                              + size_t(mask_row[group_first_row[g]]) * W))
+                {
+                  group = g;
+                  break;
+                }
+            if(group < 0)
+              {
+                group = group_first_row.size();
+                candidates.push_back(group);
+                group_first_row.push_back(row);
+                group_count.push_back(0);
+              }
+            row_group[row] = group;
+            ++group_count[group];
+          }
+      }
+      const size_t num_groups = group_first_row.size();
+      auto &groups = all_groups[pass];
+      groups.resize(num_groups);
+      size_t num_runs = 0;
+      El::Int begin = 0;
+      for(size_t g = 0; g < num_groups; ++g)
+        {
+          groups[g].row_begin = begin;
+          begin += group_count[g];
+          groups[g].row_end = begin;
+          const uint64_t *m = mask + size_t(mask_row[group_first_row[g]]) * W;
+          El::Int nnz = 0;
+          for(El::Int col = 0; col < N;)
+            {
+              if(((m[col / 64] >> (col % 64)) & 1) == 0)
+                {
+                  ++col;
+                  continue;
+                }
+              El::Int end = col + 1;
+              while(end < N && ((m[end / 64] >> (end % 64)) & 1) != 0)
+                ++end;
+              groups[g].col_runs.emplace_back(col, end);
+              nnz += end - col;
+              col = end;
+            }
+          num_runs += groups[g].col_runs.size();
+          grouped_madds
+            += double(group_count[g]) * double(nnz) * double(nnz);
+        }
+      max_groups = std::max(max_groups, num_groups);
+      max_runs = std::max(max_runs, num_runs);
+      auto &perm = perms[pass];
+      perm.assign(H, 0);
+      std::vector<El::Int> next(num_groups);
+      for(size_t g = 0; g < num_groups; ++g)
+        next[g] = groups[g].row_begin;
+      El::Int zero_next = begin;
+      for(El::Int row = 0; row < H; ++row)
+        perm[row] = row_group[row] < 0 ? zero_next++ : next[row_group[row]]++;
+      ASSERT_EQUAL(zero_next, H);
+    }
+  const double fraction
+    = grouped_madds / (double(H_full) * double(N) * double(N));
+
+  grouped_stats.num_groups = max_groups;
+  grouped_stats.num_runs = max_runs;
+  grouped_stats.fraction = fraction;
+  // Not worth it: many groups (many small BLAS calls), or few zeros
+  const bool active = max_groups > 0 && max_groups <= 4096 && fraction < 0.95;
+  if(active)
+    {
+      pass_row_perm = std::move(perms);
+      pass_row_groups = std::move(all_groups);
+    }
+  grouped_stats.active = active;
+
+  if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0
+     && (previous.num_groups != grouped_stats.num_groups
+         || previous.num_runs != grouped_stats.num_runs
+         || std::abs(previous.fraction - grouped_stats.fraction) > 1e-3))
+    El::Output("groupedSyrk (node of rank 0): ", max_groups,
+               " row groups and ", max_runs, " column runs at most per pass, ",
+               num_passes, " pass(es), ", H_full, " rows x ", N,
+               " columns; multiply-adds ", fraction, " of the dense product",
+               active ? "" : "; using the dense product");
+  return active;
 }

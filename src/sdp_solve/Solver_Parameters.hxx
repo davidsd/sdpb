@@ -36,6 +36,9 @@ struct Solver_Parameters
   // Experimental: faster paths of Q's BigInt syrk, the same Q bit
   // for bit, see BigInt_Shared_Memory_Syrk_Context::Options
   bool batch_crt{}, batch_residues{}, residues_no_clear{}, residues_star_vr{};
+  // Experimental: Q's BigInt syrk by groups of rows of P with the same
+  // nonzero columns, the same Q bit for bit
+  bool grouped_syrk{};
   size_t precision{};
 
   // Initialized from Environment - MemAvailable

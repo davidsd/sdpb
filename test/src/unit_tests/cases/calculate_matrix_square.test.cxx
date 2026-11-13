@@ -455,6 +455,142 @@ TEST_CASE("calculate_Block_Matrix_square")
                                                  b._mp_d));
                             }
                       }
+
+                    // --groupedSyrk: P with exact zeros in groups of columns
+                    // (rows by (global row / 2) mod 6: the right half zero;
+                    // the first third and every fifth column zero; dense;
+                    // all zero; only the last column; every odd column
+                    // zero), squared grouped and dense with every
+                    // combination of the other flags, must agree bit for
+                    // bit. Rep 0 squares the original P first, so that
+                    // --residuesNoClear's windows hold other values.
+                    auto P_struct = P_block_matrix.blocks;
+                    for(auto &block : P_struct)
+                      for(int iLoc = 0; iLoc < block.LocalHeight(); ++iLoc)
+                        for(int jLoc = 0; jLoc < block.LocalWidth(); ++jLoc)
+                          {
+                            const int i = block.GlobalRow(iLoc);
+                            const int j = block.GlobalCol(jLoc);
+                            const int w = block.Width();
+                            bool zero = false;
+                            switch((i / 2) % 6)
+                              {
+                              case 0: zero = 2 * j >= w; break;
+                              case 1: zero = 3 * j < w || j % 5 == 0; break;
+                              case 2: break;
+                              case 3: zero = true; break;
+                              case 4: zero = j != w - 1; break;
+                              case 5: zero = j % 2 == 1; break;
+                              }
+                            if(zero)
+                              block.SetLocal(iLoc, jLoc, El::BigFloat(0));
+                          }
+                    for(int combo = 0; combo < 8; ++combo)
+                      {
+                        CAPTURE(combo);
+                        const bool batch_crt = combo & 1;
+                        const bool star_vr = combo & 2;
+                        auto &ctx = star_vr ? (batch_crt ? context_all
+                                                         : context_star)
+                                            : (batch_crt ? context_batch
+                                                         : context);
+                        El::DistMatrix<El::BigFloat> Q_dense(block_width,
+                                                             block_width),
+                          Q_grouped(block_width, block_width);
+                        ctx.options = {};
+                        ctx.options.batch_residues = combo & 4;
+                        ctx.options.residues_no_clear = combo >= 4;
+                        // dense P_struct, then the full P (so that with
+                        // --residuesNoClear the windows hold its nonzero
+                        // residues where P_struct is zero: the grouped
+                        // product must never read them), then grouped
+                        ctx.bigint_syrk_blas(uplo, P_struct, Q_dense, timers,
+                                             block_timings_ms);
+                        ctx.bigint_syrk_blas(uplo, P_block_matrix.blocks,
+                                             Q_grouped, timers,
+                                             block_timings_ms);
+                        ctx.options.grouped = true;
+                        ctx.bigint_syrk_blas(uplo, P_struct, Q_grouped,
+                                             timers, block_timings_ms);
+                        CAPTURE(ctx.grouped_stats.active,
+                                ctx.grouped_stats.num_groups,
+                                ctx.grouped_stats.fraction);
+                        if(input_split_factor == 1 && block_width > 2)
+                          REQUIRE(ctx.grouped_stats.active);
+                        // The schedule chosen by cost splits a narrow Q
+                        // into tiles of one column, so no tile holds two
+                        // column runs of a group. Forced splits 1 (whole
+                        // tiles: several runs of a group in one syrk or gemm
+                        // tile) and 3 (runs cut by tile edges) must give
+                        // the same Q.
+                        El::DistMatrix<El::BigFloat> Q_split1(block_width,
+                                                              block_width),
+                          Q_split3(block_width, block_width);
+                        ctx.options.grouped_test_split = 1;
+                        ctx.bigint_syrk_blas(uplo, P_struct, Q_split1, timers,
+                                             block_timings_ms);
+                        ctx.options.grouped_test_split = 3;
+                        ctx.bigint_syrk_blas(uplo, P_struct, Q_split3, timers,
+                                             block_timings_ms);
+                        ctx.options.grouped_test_split = 0;
+                        // negative control: with a group left out, Q must
+                        // differ somewhere (checked over all ranks below)
+                        El::DistMatrix<El::BigFloat> Q_skip(block_width,
+                                                            block_width);
+                        ctx.options.grouped_test_skip_group = 0;
+                        ctx.bigint_syrk_blas(uplo, P_struct, Q_skip, timers,
+                                             block_timings_ms);
+                        ctx.options.grouped_test_skip_group = -1;
+                        {
+                          // (collective on every rank: the groups are per
+                          // node, so some nodes may use the dense product)
+                          int active = ctx.grouped_stats.active ? 1 : 0;
+                          int differ = 0;
+                          for(int iLoc = 0; iLoc < Q_dense.LocalHeight();
+                              ++iLoc)
+                            for(int jLoc = 0; jLoc < Q_dense.LocalWidth();
+                                ++jLoc)
+                              if(Q_dense.GetLocal(iLoc, jLoc)
+                                 != Q_skip.GetLocal(iLoc, jLoc))
+                                differ = 1;
+                          active = El::mpi::AllReduce(active, El::mpi::MAX,
+                                                      El::mpi::COMM_WORLD);
+                          differ = El::mpi::AllReduce(differ, El::mpi::MAX,
+                                                      El::mpi::COMM_WORLD);
+                          if(active == 1)
+                            REQUIRE(differ == 1);
+                        }
+                        // and P without zeros: groups of one pattern
+                        El::DistMatrix<El::BigFloat> Q_full(block_width,
+                                                            block_width);
+                        ctx.bigint_syrk_blas(uplo, P_block_matrix.blocks,
+                                             Q_full, timers,
+                                             block_timings_ms);
+                        ctx.options = {};
+                        for(int iLoc = 0; iLoc < Q_dense.LocalHeight(); ++iLoc)
+                          for(int jLoc = 0; jLoc < Q_dense.LocalWidth();
+                              ++jLoc)
+                            for(int which = 0; which < 4; ++which)
+                              {
+                                const auto &a
+                                  = (which == 1 ? Q_result : Q_dense)
+                                      .GetLocalCRef(iLoc, jLoc)
+                                      .gmp_float.get_mpf_t()[0];
+                                const auto &b
+                                  = (which == 0   ? Q_grouped
+                                     : which == 1 ? Q_full
+                                     : which == 2 ? Q_split1
+                                                  : Q_split3)
+                                      .GetLocalCRef(iLoc, jLoc)
+                                      .gmp_float.get_mpf_t()[0];
+                                CAPTURE(iLoc, jLoc, which);
+                                REQUIRE(a._mp_size == b._mp_size);
+                                REQUIRE(a._mp_exp == b._mp_exp);
+                                REQUIRE(std::equal(
+                                  a._mp_d, a._mp_d + std::abs(a._mp_size),
+                                  b._mp_d));
+                              }
+                      }
                   }
                   {
                     INFO("Check that normalized Q_ii = 1:");

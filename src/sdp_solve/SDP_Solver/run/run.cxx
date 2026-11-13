@@ -374,6 +374,7 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
   bigint_syrk_context.options.batch_residues = parameters.batch_residues;
   bigint_syrk_context.options.residues_no_clear
     = parameters.residues_no_clear;
+  bigint_syrk_context.options.grouped = parameters.grouped_syrk;
   initialize_bigint_syrk_context_timer.stop();
 
   initialize_timer.stop();
