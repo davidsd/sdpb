@@ -334,6 +334,8 @@ def build(bld):
                 cxxflags=default_flags,
                 defines=default_defines + ['CATCH_AMALGAMATED_CUSTOM_MAIN'],
                 use=use_packages,
+                # Boost.DLL needs libdl for glibc < 2.34
+                lib=['dl'],
                 includes=default_includes + ['test/src']
                 )
     bld.program(source=['external/catch2/catch_amalgamated.cpp',
