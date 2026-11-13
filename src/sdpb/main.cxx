@@ -8,6 +8,7 @@
 #include "SDPB_Parameters.hxx"
 #include "time_and_solve.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
+#include "sdp_solve/SDP_Solver/run/multimodular/multimodular_blas.hxx"
 #include "sdpa_solve/SDP_Solver.hxx"
 #include "sdpb_version.hxx"
 #include "sdpb_util/Proc_Meminfo.hxx"
@@ -64,9 +65,20 @@ int main(int argc, char **argv)
         }
 
       if(parameters.is_sdpa())
-        time_and_solve<Sdpb::Sdpa::SDP_Solver>(env, parameters, start_time);
+        {
+          if(parameters.solver.multimodular_trsm)
+            RUNTIME_ERROR("--multimodularTrsm is not supported for SDPA "
+                          "input (.dat, .dat-s).");
+          time_and_solve<Sdpb::Sdpa::SDP_Solver>(env, parameters,
+                                                 start_time);
+        }
       else
-        time_and_solve<SDP_Solver>(env, parameters, start_time);
+        {
+          if(parameters.solver.multimodular_trsm)
+            check_multimodular_precision(Multimodular_Blas_Config(),
+                                         El::gmp::Precision());
+          time_and_solve<SDP_Solver>(env, parameters, start_time);
+        }
     }
   catch(std::exception &e)
     {

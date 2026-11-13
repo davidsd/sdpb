@@ -19,6 +19,9 @@ struct Solver_Parameters
   Memory_Limit max_memory{}, max_shared_memory{};
   bool find_primal_feasible{}, find_dual_feasible{}, detect_primal_feasible_jump{},
     detect_dual_feasible_jump{};
+  // Per-block Cholesky and L^{-1}B by multimodular BLAS,
+  // see sdp_solve/SDP_Solver/run/multimodular/Readme.md
+  bool multimodular_trsm{};
   size_t precision{};
 
   // Initialized from Environment - MemAvailable
