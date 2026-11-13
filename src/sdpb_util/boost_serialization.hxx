@@ -11,6 +11,34 @@
 
 #include <El.hpp>
 
+#include <algorithm>
+#include <cstdlib>
+#include <cstring>
+
+// pmp2sdp --encodingPoints computes at a higher precision than the SDP is
+// written at.  El::BigFloat::Serialize() writes gmp::num_limbs limbs, set by
+// El's global precision (which can be set only once), and SDPB reads as many
+// limbs as its own precision gives.  If output_num_limbs() > 0, BigFloats are
+// saved in El's layout (int _mp_size, mp_exp_t _mp_exp, limbs) with that many
+// limbs instead: the most significant ones, i.e. the value truncated.
+// Loading is unchanged.  0 (default): El's own Serialize().
+namespace sdpb_serialization
+{
+  inline int &output_num_limbs()
+  {
+    static int num_limbs = 0;
+    return num_limbs;
+  }
+  // El's gmp::num_limbs for a precision (El's gmp.cpp, SetPrecision)
+  inline int num_limbs_for_precision(const mp_bitcnt_t precision)
+  {
+    return (std::max(precision, static_cast<mp_bitcnt_t>(53))
+            + 2 * GMP_NUMB_BITS - 1)
+             / GMP_NUMB_BITS
+           + 1;
+  }
+}
+
 namespace boost::serialization
 {
   // El::BigFloat
@@ -39,6 +67,25 @@ namespace boost::serialization
       {
         if(Archive::is_loading::value)
           f = zero;
+        return;
+      }
+
+    const int output_num_limbs = sdpb_serialization::output_num_limbs();
+    if(Archive::is_saving::value && output_num_limbs > 0)
+      {
+        const auto &mpf = f.gmp_float.get_mpf_t()[0];
+        const int abs_size = std::abs(mpf._mp_size);
+        const int n = std::min(abs_size, output_num_limbs);
+        const int sign_size = mpf._mp_size < 0 ? -n : n;
+        std::vector<El::byte> vec(sizeof(int) + sizeof(mp_exp_t)
+                                  + output_num_limbs * sizeof(mp_limb_t));
+        El::byte *buffer = vec.data();
+        std::memcpy(buffer, &sign_size, sizeof(int));
+        std::memcpy(buffer + sizeof(int), &mpf._mp_exp, sizeof(mp_exp_t));
+        std::memcpy(buffer + sizeof(int) + sizeof(mp_exp_t),
+                    mpf._mp_d + (abs_size - n), n * sizeof(mp_limb_t));
+        auto array = make_array(buffer, vec.size());
+        ar & array;
         return;
       }
 

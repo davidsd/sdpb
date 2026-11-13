@@ -68,6 +68,17 @@ Dual_Constraint_Group::Dual_Constraint_Group(const size_t &Block_index,
         }
     }
 
+  if(!m.encoding_points.empty())
+    {
+      // pmp2sdp --encodingPoints: B and c above are the block at its
+      // approximation points; write it at the encoding points.
+      encoding_digits_lost = reencode_dual_constraint_group(
+        *this, m.sample_points, m.reduced_sample_scalings, m.encoding_points,
+        m.encoding_scalings,
+        {m.bilinear_basis[0].size(), m.bilinear_basis[1].size()});
+      return;
+    }
+
   // The matrix Y has two blocks Y_1, Y_2.  The bilinear_bases for the
   // constraint matrices A_p are given by sampling the following
   // vectors for each block:

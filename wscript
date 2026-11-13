@@ -159,6 +159,7 @@ def build(bld):
 
     pmp2sdp_sources = ['src/pmp2sdp/Dual_Constraint_Group/Dual_Constraint_Group.cxx',
                        'src/pmp2sdp/Dual_Constraint_Group/sample_bilinear_basis.cxx',
+                       'src/pmp2sdp/Dual_Constraint_Group/two_set_encoding.cxx',
                        'src/pmp2sdp/Output_SDP/Output_SDP.cxx',
                        'src/pmp2sdp/write_block_data.cxx',
                        'src/pmp2sdp/write_block_info_json.cxx',
@@ -188,6 +189,7 @@ def build(bld):
     pmp_sources = ['src/pmp/Polynomial_Vector_Matrix.cxx',
                    'src/pmp/convert/sample_points.cxx',
                    'src/pmp/convert/sample_scalings.cxx',
+                   'src/pmp/convert/encoding_points.cxx',
                    'src/pmp/convert/bilinear_basis/bilinear_basis.cxx']
 
     bld.stlib(source=pmp_sources,
@@ -232,6 +234,7 @@ def build(bld):
                 )
 
     bld.program(source=['src/pmp2sdp/main.cxx',
+                        'src/pmp2sdp/apply_encoding_points.cxx',
                         'src/pmp2sdp/Pmp2sdp_Parameters/Pmp2sdp_Parameters.cxx'
                         ],
                 target='pmp2sdp',
@@ -352,7 +355,8 @@ def build(bld):
                         'test/src/unit_tests/cases/copy_matrix.test.cxx',
                         'test/src/unit_tests/cases/json.test.cxx',
                         'test/src/unit_tests/cases/pmp_sampling.test.cxx',
-                        'test/src/unit_tests/cases/shared_window.test.cxx'],
+                        'test/src/unit_tests/cases/shared_window.test.cxx',
+                        'test/src/unit_tests/cases/two_set_encoding.test.cxx'],
                 target='unit_tests',
                 install_path=None,
                 cxxflags=default_flags,

@@ -50,7 +50,24 @@ public:
   // `bilinear_bases[j]' above for some fixed j.
   std::array<El::Matrix<El::BigFloat>, 2> bilinear_bases;
 
+  // Two-set encoding (pmp2sdp --encodingPoints): decimal digits the rows
+  // lose in the step from the approximation points to the encoding points
+  // (estimate, see two_set_encoding.cxx); not written to the SDP.
+  double encoding_digits_lost = 0;
+
   Dual_Constraint_Group() = default;
   Dual_Constraint_Group(const size_t &Block_index,
                         const Polynomial_Vector_Matrix &m);
 };
+
+// The second step of the two-set encoding (two_set_encoding.cxx): rewrite a
+// block written at its approximation points (rows sigma_k R(x_k)) at the
+// given encoding points and scalings, with bilinear bases by recurrence.
+// Returns the estimated decimal digits lost.
+double reencode_dual_constraint_group(
+  Dual_Constraint_Group &group,
+  const std::vector<El::BigFloat> &approximation_points,
+  const std::vector<El::BigFloat> &approximation_scalings,
+  const std::vector<El::BigFloat> &encoding_points,
+  const std::vector<El::BigFloat> &encoding_scalings,
+  const std::array<size_t, 2> &basis_sizes);

@@ -1,6 +1,8 @@
 #include "Dual_Constraint_Group.hxx"
 #include "write_vector.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
+
+#include <cmath>
 #include "Block_File_Format.hxx"
 #include "sdpb_util/assert.hxx"
 
@@ -75,10 +77,22 @@ namespace
     output_stream << "\n";
   }
 
+  // pmp2sdp --encodingPoints computes at a higher precision than it writes
+  // (set_block_data_output_precision); 0: the working precision.
+  mp_bitcnt_t block_data_output_precision = 0;
+  mp_bitcnt_t output_precision()
+  {
+    return block_data_output_precision != 0 ? block_data_output_precision
+                                            : El::gmp::Precision();
+  }
+
   void write_block_data_json(std::ostream &output_stream,
                              const Dual_Constraint_Group &group)
   {
     set_stream_precision(output_stream);
+    if(block_data_output_precision != 0)
+      output_stream.precision(
+        std::ceil(block_data_output_precision * std::log10(2.0)) + 1);
     output_stream << "{\n";
     write_bilinear_bases(output_stream, group);
     write_primal_objective_c(output_stream, group);
@@ -91,7 +105,9 @@ namespace
   {
     boost::archive::binary_oarchive ar(output_stream);
     // store precision in order to ensure correct deserialization
-    ar << El::gmp::Precision();
+    // (the numbers themselves must have been truncated to this precision,
+    // see set_block_data_output_precision)
+    ar << output_precision();
     // write fields in the same order as in Dual_Constraint_Group declaration
     // TODO use the same order in JSON?
     ar << group.constraint_matrix;
@@ -100,6 +116,28 @@ namespace
     ar << group.bilinear_bases[0];
     ar << group.bilinear_bases[1];
   }
+}
+
+void set_block_data_output_precision(const mp_bitcnt_t precision)
+{
+  // GMP rounds a precision up to whole limbs (224 -> 256): the block files
+  // carry the rounded value, as El::gmp::Precision() would report it.
+  block_data_output_precision = 0;
+  if(precision != 0)
+    {
+      mpf_t rounded;
+      mpf_init2(rounded, precision);
+      block_data_output_precision = mpf_get_prec(rounded);
+      mpf_clear(rounded);
+    }
+  // Binary blocks: El's layout with the output precision's limb count
+  // (sdpb_util/boost_serialization.hxx)
+  sdpb_serialization::output_num_limbs()
+    = block_data_output_precision == 0
+          || block_data_output_precision == El::gmp::Precision()
+        ? 0
+        : sdpb_serialization::num_limbs_for_precision(
+          block_data_output_precision);
 }
 
 void write_block_data(std::ostream &os, const Dual_Constraint_Group &group,
