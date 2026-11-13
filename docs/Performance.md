@@ -43,6 +43,18 @@ How each code in the tables gets its speed. The pull requests are described in [
   The cost: the results are not bitwise equal to `master`'s. The multimodular steps differ within a proven error bound
   far below the working precision, and `--qSolveRanks` changes the iterates at working precision. Each row's Check
   column says how closely its iterations match the reference.
+- **Grouped Gram product on CPUs** (`--groupedSyrk`, `cpu-grouped-syrk`, #329, on top of #314). SDPB computes the
+  product Q = PᵀP (P = L⁻¹B, the solve of the Schur complement blocks) exactly, in residues modulo many primes with
+  double-precision BLAS (its BigInt syrk, which #314 speeds up). P is exactly zero in whole groups of columns, and in
+  the same columns for many rows: on the SDPs measured (nmax = 14 to 22), the rows of P have only 6 to 19
+  distinct sets of nonzero columns. With the option, the rows
+  that share a set are multiplied as one group, over those columns only, so P's zeros cost no multiply-adds; Q is the
+  same bit for bit, and so are the iterations. The gain follows the share of the dense multiply-adds that is left:
+  0.22 on sdpb-test-05 (1.26× per iteration on 4 nodes, against the same build without the option) and 0.75 on
+  sdpb-test-04 (no gain). On an nmax = 26 SDP of the group's that is not among the test problems (N = 11,002, 896
+  bits), it takes 16 nodes from 105.4 to 84.0 s/iter (1.25×). The cost: no memory is saved (P is still stored dense),
+  and the grouped BLAS calls, with shorter inner dimensions, run less efficiently than one dense call, which is why
+  sdpb-test-04 gains nothing.
 - **GPU backend** (#319–#322). It runs whole SDPB iterations on one GPU. The multiprecision matrix products are done
   exactly in residues modulo many primes on the GPU's INT8 tensor cores and recombined by the Chinese remainder theorem,
   and the blocks' Cholesky factorizations are batched by size, following Antoine Tilloy's SDPviBe. The problem must fit
@@ -167,6 +179,8 @@ CPUs: all CPU options, 25.8 s/iter, 2.7×.
 | Baseline, Expanse 5 × 128 | 70.5 | 1× | timing: 8 iterations | 212 s (208 s) | 106.9 GB | yes: 7e-162 | 3.0.0-194-g5e92aa2f | 832 bits |
 | mm options, Expanse 5 × 124 | 27.8 | 2.5× | 356, 10,099 s (note 2) | — | — | reference | 2eed3fef | 832 bits, mm options |
 | All CPU options, Expanse 5 × 128 | 25.8 | 2.7× | timing: 8 iterations | 7 s (none) | 109.8 GB | yes: 3e-163 | 5e725bd6 | 832 bits, all CPU options |
+| All CPU options, Expanse 2 × 128 | 48.96 | 1.4× | timing: 5 iterations | 4 s (none) | — | yes: 5e-163 | `cpu-grouped-syrk` 6984360e | 832 bits, all CPU options |
+| All CPU options + `--groupedSyrk`, Expanse 2 × 128 | 49.03 | 1.4× | timing: 5 iterations (2 runs) | 4–5 s (none) | — | yes: 5e-163 | `cpu-grouped-syrk` 6984360e | 832 bits, all CPU options, `--groupedSyrk` |
 | GPU backend, 1 H200 | **3.88** | **18×** | 356, 1,442 s | 23 s | 127.3 GB (device) | yes: 8e-45 | 015f092d | 832 bits |
 
 - **Baseline.** From a cold start. *Simmons-Duffin group, 2026-11-11.*
@@ -176,6 +190,14 @@ CPUs: all CPU options, 25.8 s/iter, 2.7×.
 - **All CPU options** (Setups), with block timings from an earlier run of the same setup, so no block-timing pass. The
   mm options, plus Q's solves and syrk reorganized for many nodes. (An earlier run stopped after 2 iterations when the
   operating system killed one MPI rank.) *Simmons-Duffin group, 2026-11-11.*
+- **All CPU options, 2 nodes**, the comparison for the next row: the build of `cpu-grouped-syrk` (#329) with
+  `--groupedSyrk` off, on 2 nodes, in one job with the next row's runs and with the package's
+  `reference/block_timings/` for all of them. In the same job its base, `cpu-q-syrk-paths` (#314, 412644c0), ran at 48.87 s/iter, with the same printed values
+  bit for bit. These runs use the stopping settings of the group's scans (error thresholds 1e-200, feasible-jump detection), which differ from `reference/sdpb-args.txt` but don't change these 5 iterations. The speedup is against the baseline's 5 nodes. *Simmons-Duffin group, 2026-11-12.*
+- **All CPU options + `--groupedSyrk`** (Setups, #329), the same job and nodes as the row above: 49.18 and 48.87 s/iter
+  in two runs (the row gives their mean), so no gain. Here 75% of the dense multiply-adds of Q = PᵀP remain after P's zeros are skipped, and the
+  grouped BLAS calls are less efficient than one dense call. The solution x, y, the checkpoint data and every printed value are the same bit for bit
+  as the row above's (only timings and the recorded options differ). *Simmons-Duffin group, 2026-11-12.*
 - **GPU backend** (Setups): whole iterations on the GPU, with exact multiprecision products on its tensor cores. Solved
   in one run, with the same 356 iterations as the reference. It used 127.3 GB of the GPU's 141 GB, close to the limit
   for one H200. *Simmons-Duffin group, 2026-11-11.*
@@ -192,6 +214,8 @@ Fastest on CPUs: the mm options, 30.3 s/iter, 3.1×.
 | Baseline, Expanse 10 × 128 | 95.0 | 1× | timing: 8 iterations | — (none) | — | yes: 1e-141 | 3.0.0-194-g5e92aa2f | 832 bits |
 | mm options, Expanse 10 × 128 | 30.3 | 3.1× | 384, 11,762 s (note 2) | — | — | reference | 2eed3fef | 832 bits, mm options |
 | All CPU options, Expanse 10 × 128 | 33.9 | 2.8× | timing: 8 iterations | — (none) | — | yes: 1e-141 | 5e725bd6 | 832 bits, all CPU options |
+| All CPU options, Expanse 4 × 128 | 56.94 | 1.7× | timing: 5 iterations (2 runs) | 7–21 s (none) | — | yes: 1e-141 | `cpu-grouped-syrk` 6984360e | 832 bits, all CPU options |
+| All CPU options + `--groupedSyrk`, Expanse 4 × 128 | 45.27 | 2.1× | timing: 5 iterations (2 runs) | 7 s (none) | — | yes: 1e-141 | `cpu-grouped-syrk` 6984360e | 832 bits, all CPU options, `--groupedSyrk` |
 | GPU backend, 2 H200s | 6.57 | 14× | timing: 5 iterations | 39 s | 66.3 GB (device) | yes: 3e-15 | `gpu-multinode` 2f2dff3c | 832 bits, `SDPB_GPU_SPARSE_B=1 SDPB_GPU_Q_WIDE_RESIDUAL=1` |
 | GPU backend, faster Q, 2 H200s | **4.22** | **23×** | timing: 5 iterations | 38 s | 66.3 GB (device) | yes: 3e-15 | `gpu-fast-q` 054f9bd1 | 832 bits, `SDPB_GPU_SPARSE_B=1 SDPB_GPU_Q_WIDE_RESIDUAL=1` |
 
@@ -203,6 +227,16 @@ Fastest on CPUs: the mm options, 30.3 s/iter, 3.1×.
   (Setups). *Simmons-Duffin group, 2026-11-03.*
 - **All CPU options** (Setups), in the same job as the baseline, with block timings from an earlier run. Slower than
   the mm options row on another day's nodes (note 3). *Simmons-Duffin group, 2026-11-11.*
+- **All CPU options, 4 nodes**, the comparison for the next row: the build of `cpu-grouped-syrk` (#329) with
+  `--groupedSyrk` off, on 4 nodes, in one job with the next row's runs (in the order off, on, base, on, off) and with
+  the package's `reference/block_timings/` for all of them. Its s/iter is the mean of its two runs' (57.08 and 56.80). In the same job its
+  base, `cpu-q-syrk-paths` (#314, 412644c0), ran at 56.76 s/iter, with the same printed values bit for bit. These runs use the stopping settings of the group's scans (error thresholds 1e-200, maxComplementarity 1e130, feasible-jump detection), which differ from `reference/sdpb-args.txt` but don't change these 5 iterations. The speedup is
+  against the baseline's 10 nodes. *Simmons-Duffin group, 2026-11-12.*
+- **All CPU options + `--groupedSyrk`** (Setups, #329), the same job and nodes as the row above: 45.41 and 45.12 s/iter
+  in two runs (the row gives their mean), **1.26× the row above**. Only 22% of the dense multiply-adds of Q = PᵀP remain once the rows of P with
+  the same nonzero columns are multiplied as groups over those columns. The solution x, y, the checkpoint data and every printed value are the same bit for bit as the row above's (only timings and the recorded options differ). A run in the same job with
+  another valid Cholesky panel for Q (`--multimodularCholeskyQ 32`) differed in almost every file, so the comparison
+  could see a change. *Simmons-Duffin group, 2026-11-12.*
 - **GPU backend, 2 H200s** (Setups; #324, the branch the faster Q is built on): one node, `mpirun -n 2 --bind-to none
   sdpb --gpu`, with Q distributed over the two GPUs, B stored by its nonzeros, and the experimental residual of the
   distributed Q (`src/gpu/README.md`). The peak is the larger of the two GPUs'. *Simmons-Duffin group, 2026-11-12.*

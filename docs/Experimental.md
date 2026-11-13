@@ -1,6 +1,6 @@
 # Experimental branches and pull requests
 
-*Last updated: 11 November 2026.*
+*Last updated: 12 November 2026.*
 
 Options and a GPU backend for SDPB, `pmp2sdp` and `spectrum`, offered as pull requests against `master` before they
 are reviewed and merged; they may change or be withdrawn. Options are off by default, and with them off the output
@@ -32,6 +32,7 @@ pull request, which also says how it was checked.
 | `cpu-mm-cholesky-q` | [#312](https://github.com/davidsd/sdpb/pull/312) | the Cholesky decomposition of Q by multimodular arithmetic. Not bitwise; its accuracy not yet checked independently | `--multimodularCholeskyQ <panel>` | `cpu-mm-trsm` | Vasiliy Dommes (the multimodular method of `bigint_syrk`, which it reuses); David Simmons-Duffin | none yet |
 | `cpu-q-solve-options` | [#313](https://github.com/davidsd/sdpb/pull/313) | Q's solves and Cholesky on many nodes: solves on fewer ranks, node-shared diagonal blocks, a solve cache. Bitwise except `--qSolveRanks`, which changes the iterates at working precision | `--qSolveRanks`, `--qCholeskyNodeDiag`, `--qCholeskyNodeFactor`, `--qSolveCache` | `cpu-mm-cholesky-q` | Vasiliy Dommes (the multimodular method of `bigint_syrk`, which it builds on); David Simmons-Duffin | none yet |
 | `cpu-q-syrk-paths` | [#314](https://github.com/davidsd/sdpb/pull/314) | faster paths of Q's BigInt syrk on many nodes | `--batchCrt`, `--batchResidues`, `--residuesNoClear`, `--residuesStarVR` | `cpu-q-solve-options` and `cpu-fast-reduce` | Vasiliy Dommes (`bigint_syrk`, which it speeds up); David Simmons-Duffin | none yet |
+| `cpu-grouped-syrk` | [#329](https://github.com/davidsd/sdpb/pull/329) | Q = PᵀP (P = L⁻¹B) taken by groups of rows of P that have the same nonzero columns, over those columns only: P's exact zeros are skipped, and Q is the same bit for bit. 1.26× per iteration at nmax = 18 on 4 nodes and 1.25× at nmax = 26 on 16, against the same build without the option; none at nmax = 14, where most of P is nonzero. No memory saved | `--groupedSyrk` | `cpu-q-syrk-paths` | Vasiliy Dommes (`bigint_syrk`, which it speeds up); David Simmons-Duffin | none yet |
 | `cpu-sparse-b` | [#315](https://github.com/davidsd/sdpb/pull/315) | the free variable matrix B stored by its nonzeros (memory) | `--sparseB` | `cpu-mm-trsm` | David Simmons-Duffin | none yet |
 
 ### `sdpb`: GPU backend
@@ -71,7 +72,7 @@ Check out a branch once its PR is open ("—" in the PR column: not yet):
     git clone -b <branch> https://github.com/davidsd/sdpb.git
 
 A branch contains its bases, so one checkout gets a whole stack: `gpu-multinode` has every GPU branch (and
-`cpu-resident` with its bases), `cpu-q-syrk-paths` the multimodular CPU solver. To combine branches from different
+`cpu-resident` with its bases), `cpu-grouped-syrk` the multimodular CPU solver. To combine branches from different
 stacks, merge them yourself (`git fetch https://github.com/davidsd/sdpb.git <branch> && git merge FETCH_HEAD`).
 Many of them add to the same lists (option registration, tests, build files), so expect conflicts there, and
 run the tests on the result.
