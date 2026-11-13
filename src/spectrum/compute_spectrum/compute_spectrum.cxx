@@ -4,6 +4,7 @@
 #include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
+#include "spectrum/Zero_Test.hxx"
 #include "spectrum/Zeros.hxx"
 
 #include <filesystem>
@@ -11,7 +12,8 @@
 
 std::vector<El::BigFloat>
 find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
-           const PVM_Info &pvm, const Boost_Float &threshold,
+           const PVM_Info &pvm, const Zero_Test &zero_test,
+           const Boost_Float &threshold,
            const El::BigFloat &max_zero, const El::BigFloat &min_zero_distance,
            Timers &timers);
 
@@ -22,7 +24,8 @@ std::vector<Zeros>
 compute_spectrum(const PMP_Info &pmp,
                  const std::vector<El::Matrix<El::BigFloat>> &c_minus_By,
                  const std::optional<std::vector<El::Matrix<El::BigFloat>>> &x,
-                 const Boost_Float &threshold, const El::BigFloat &max_zero,
+                 const Zero_Test &zero_test, const Boost_Float &threshold,
+                 const El::BigFloat &max_zero,
                  const El::BigFloat &min_zero_distance,
                  const bool &need_lambda,
                  const std::optional<El::BigFloat> &min_eigenvalue_ratio,
@@ -47,8 +50,8 @@ compute_spectrum(const PMP_Info &pmp,
       try
         {
           const auto zero_values
-            = find_zeros(c_minus_By_block, pvm_info, threshold, max_zero,
-                         min_zero_distance, timers);
+            = find_zeros(c_minus_By_block, pvm_info, zero_test, threshold,
+                         max_zero, min_zero_distance, timers);
           if(need_lambda)
             {
               ASSERT(x.has_value());
