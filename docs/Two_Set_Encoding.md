@@ -90,8 +90,12 @@ the encoding changes the number of digits SDPB loses per iteration, so the preci
 not assumed.
 
 Limitations:
-- `approx_objective` has not been tried on a two-set SDP. `spectrum` has been checked on one small problem
-  (SDPB's nmax = 6 end-to-end test, where it reproduces the default encoding's spectrum).
+- `approx_objective` has not been tried on a two-set SDP. `spectrum` has been checked on one small problem, SDPB's
+  nmax = 6 end-to-end test (a primal-dual optimal problem at 768 bits, duality gap 1e-30). With the two-set encoding,
+  the objectives agree with the default's to 30 digits, y to 6e-23, the spectrum's zeros to 2e-22 and its OPE
+  coefficients to 2e-14 (relative). The default encoding itself, started on another central path, differs from its own
+  first run by 2e-23, 5e-23 and 5e-15. The blocks' `error` estimates in `spectrum.json` are residuals of the
+  encoded SDP and differ between encodings (1e-28 to 1e-33 in the default encoding, down to 1e-51 in the two-set one).
 - The two-set encoding has not been combined with nodes at infinity (`--reducedPrefactorNodesAtInfinity`, a separate
   pull request that moves some interpolation conditions of reduced blocks to x = ∞). If both are merged, `pmp2sdp`
   must refuse the combination with a clear error until the second step handles the moved rows; the lab's development
