@@ -4,6 +4,7 @@
 Scoped_Timer::Scoped_Timer(Timers &timers, const std::string &name)
     : timers(timers),
       my_timer(timers.add_and_start(name)),
+      my_entry(std::prev(timers.named_timers.end())),
       old_prefix(timers.prefix),
       new_prefix(timers.prefix + name + ".")
 
@@ -14,6 +15,8 @@ Scoped_Timer::~Scoped_Timer()
 {
   if(is_running())
     stop();
+  if(!timers.keep_finished_timers)
+    timers.named_timers.erase(my_entry);
 }
 std::chrono::time_point<std::chrono::high_resolution_clock>
 Scoped_Timer::start_time() const

@@ -67,6 +67,10 @@ solve(const typename TSolver::Block_Info_Type &block_info,
         &start_time,
       Timers &timers, El::Matrix<int32_t> &block_timings_ms)
 {
+  // write_profiling() below is called only at --verbosity debug or above;
+  // otherwise nothing reads a finished timer, so don't keep it.
+  if(parameters.verbosity < Verbosity::debug)
+    timers.discard_finished_timers();
   Scoped_Timer solve_timer(timers, "sdpb.solve");
 
   El::Grid grid(block_info.mpi_comm.value);

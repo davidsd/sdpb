@@ -1,5 +1,7 @@
 #include "integration_tests/common.hxx"
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 
 namespace fs = std::filesystem;
 
@@ -76,6 +78,16 @@ TEST_CASE("sdpb")
                                       / ("ck.profiling" + dir_suffix)
                                       / ("profiling." + std::to_string(rank));
                 REQUIRE(fs::file_size(profiling_path) > 0);
+                // At --verbosity debug the profile keeps the timers that
+                // have finished, not only the ones still running
+                std::ifstream is(profiling_path);
+                const std::string profile(
+                  (std::istreambuf_iterator<char>(is)), {});
+                CAPTURE(profiling_path);
+                REQUIRE(profile.find("\"sdpb.solve.read_sdp\"")
+                        != std::string::npos);
+                REQUIRE(profile.find("\"sdpb.solve.run.iter_1\"")
+                        != std::string::npos);
               }
         }
         {
