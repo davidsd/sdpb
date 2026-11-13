@@ -46,7 +46,7 @@ How each code in the tables gets its speed. The pull requests are described in [
 - **Grouped Gram product on CPUs** (`--groupedSyrk`, `cpu-grouped-syrk`, #329, on top of #314). SDPB computes the
   product Q = PᵀP (P = L⁻¹B, the solve of the Schur complement blocks) exactly, in residues modulo many primes with
   double-precision BLAS (its BigInt syrk, which #314 speeds up). P is exactly zero in whole groups of columns, and in
-  the same columns for many rows: on the SDPs measured (nmax = 14 to 22), a node's rows of P have only 6 to 19
+  the same columns for many rows: on the SDPs measured (nmax = 14 to 22), the rows of P have only 6 to 19
   distinct sets of nonzero columns. With the option, the rows
   that share a set are multiplied as one group, over those columns only, so P's zeros cost no multiply-adds; Q is the
   same bit for bit, and so are the iterations. The gain follows the share of the dense multiply-adds that is left:
@@ -192,12 +192,12 @@ CPUs: all CPU options, 25.8 s/iter, 2.7×.
   operating system killed one MPI rank.) *Simmons-Duffin group, 2026-11-11.*
 - **All CPU options, 2 nodes**, the comparison for the next row: the build of `cpu-grouped-syrk` (#329) with
   `--groupedSyrk` off, on 2 nodes, in one job with the next row's runs and with the package's
-  `reference/block_timings/` for all of them. In the same job its base, `cpu-q-syrk-paths` (#314, 412644c0), ran at 48.87 s/iter, with the same outputs bit
-  for bit. The speedup is against the baseline's 5 nodes. *Simmons-Duffin group, 2026-11-12.*
+  `reference/block_timings/` for all of them. In the same job its base, `cpu-q-syrk-paths` (#314, 412644c0), ran at 48.87 s/iter, with the same printed values
+  bit for bit. These runs use the stopping settings of the group's scans (error thresholds 1e-200, feasible-jump detection), which differ from `reference/sdpb-args.txt` but don't change these 5 iterations. The speedup is against the baseline's 5 nodes. *Simmons-Duffin group, 2026-11-12.*
 - **All CPU options + `--groupedSyrk`** (Setups, #329), the same job and nodes as the row above: 49.18 and 48.87 s/iter
   in two runs (the row gives their mean), so no gain. Here 75% of the dense multiply-adds of Q = PᵀP remain after P's zeros are skipped, and the
-  grouped BLAS calls are less efficient than one dense call. Every output and checkpoint file is the same bit for bit
-  as the row above's. *Simmons-Duffin group, 2026-11-12.*
+  grouped BLAS calls are less efficient than one dense call. The solution x, y, the checkpoint data and every printed value are the same bit for bit
+  as the row above's (only timings and the recorded options differ). *Simmons-Duffin group, 2026-11-12.*
 - **GPU backend** (Setups): whole iterations on the GPU, with exact multiprecision products on its tensor cores. Solved
   in one run, with the same 356 iterations as the reference. It used 127.3 GB of the GPU's 141 GB, close to the limit
   for one H200. *Simmons-Duffin group, 2026-11-11.*
@@ -230,11 +230,11 @@ Fastest on CPUs: the mm options, 30.3 s/iter, 3.1×.
 - **All CPU options, 4 nodes**, the comparison for the next row: the build of `cpu-grouped-syrk` (#329) with
   `--groupedSyrk` off, on 4 nodes, in one job with the next row's runs (in the order off, on, base, on, off) and with
   the package's `reference/block_timings/` for all of them. Its s/iter is the mean of its two runs' (57.08 and 56.80). In the same job its
-  base, `cpu-q-syrk-paths` (#314, 412644c0), ran at 56.76 s/iter, with the same outputs bit for bit. The speedup is
+  base, `cpu-q-syrk-paths` (#314, 412644c0), ran at 56.76 s/iter, with the same printed values bit for bit. These runs use the stopping settings of the group's scans (error thresholds 1e-200, maxComplementarity 1e130, feasible-jump detection), which differ from `reference/sdpb-args.txt` but don't change these 5 iterations. The speedup is
   against the baseline's 10 nodes. *Simmons-Duffin group, 2026-11-12.*
 - **All CPU options + `--groupedSyrk`** (Setups, #329), the same job and nodes as the row above: 45.41 and 45.12 s/iter
   in two runs (the row gives their mean), **1.26× the row above**. Only 22% of the dense multiply-adds of Q = PᵀP remain once the rows of P with
-  the same nonzero columns are multiplied as groups over those columns. Every output and checkpoint file is the same bit for bit as the row above's. A run in the same job with
+  the same nonzero columns are multiplied as groups over those columns. The solution x, y, the checkpoint data and every printed value are the same bit for bit as the row above's (only timings and the recorded options differ). A run in the same job with
   another valid Cholesky panel for Q (`--multimodularCholeskyQ 32`) differed in almost every file, so the comparison
   could see a change. *Simmons-Duffin group, 2026-11-12.*
 - **GPU backend, 2 H200s** (Setups; #324, the branch the faster Q is built on): one node, `mpirun -n 2 --bind-to none
