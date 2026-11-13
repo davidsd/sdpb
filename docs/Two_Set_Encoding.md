@@ -31,7 +31,9 @@ the SDP at a second set of $d+1$ **encoding points** $y_j$ with scalings $w_j$:
   times $\sqrt{w_j}$ and $\sqrt{w_j y_j}$, made by the three-term (Stieltjes) recurrence on the sampled vectors, with
   full reorthogonalization, instead of a Cholesky factorization of monomial moments (which loses most of the
   precision when the points span many decades);
-- the objective and normalization are unchanged.
+- the objective and normalization are those of the default encoding, to working precision: the whole conversion runs at
+  the extra precision and is then truncated, so the objective (and blocks of degree 0) can
+  differ from the default's output in the last bits; `normalization.json` is identical.
 
 In exact arithmetic the feasible set and the optimum are the same as with the default encoding (with or without a
 reduced prefactor: both encode the same interpolant $R$). What changes is the SDP's coordinates, and with them the
@@ -100,6 +102,10 @@ Limitations:
   pull request that moves some interpolation conditions of reduced blocks to x = ∞). If both are merged, `pmp2sdp`
   must refuse the combination with a clear error until the second step handles the moved rows; the lab's development
   branch does so.
+- `functionalMatched` needs at least as many points as a block has nonzero kept poles. A block with more (for example
+  11 poles on 5 points, as in SDPB's `1d-duplicate-poles` test, or a 12-pole block of degree 10, also when
+  `--maxNumPoles 4` leaves 3 points) stops `pmp2sdp` with the assertion "more nonzero kept poles than points". Use
+  `chebyshev` (or reduce `--maxNumPoles` below the number of points) for such blocks.
 
 ## Measurements
 
@@ -117,13 +123,14 @@ recorded runs reproduced the number; "measured once" means one run per arm, not 
 | default, 320 bits | 106 | 2,983 s | checked; marginal: its functional agrees with the 832-bit default's to 5.8 digits only |
 
 - A whole call is **3.15 to 3.20 times faster** with the two-set encoding at 320 bits than with the default at 832
-  (checked). About 1.77× comes from fewer iterations (106 against 60) and 1.83× from the lower precision.
-- The default also reaches the exclusion at 320 bits, with less margin (5.8 digits of agreement against 9.5 for the
-  two-set encoding at 320). Against the default at 320, the two-set encoding is **1.74×** faster a call (checked; one
+  (checked by an independent re-analysis; the matched factors use whole default times inferred from per-iteration
+  timings, and the 3.197 end is a cross-node comparison that includes a restart). About 1.77× comes from fewer iterations (106 against 60) and 1.83× from the lower precision.
+- The default also reaches the exclusion at 320 bits, with less margin (5.8 digits of agreement against 9.7 for the
+  two-set encoding at 320: 9.66 in the objective, a median of 9.80 in μ). Against the default at 320, the two-set encoding is **1.74×** faster a call (checked; one
   default-320 run).
 - At a fixed precision the two encodings cost the same per iteration.
 - With a scale per block (`--encodingScaleFile`) derived from the functional of a neighbouring point, the same point
-  was excluded at 256 bits in 55 iterations (measured once; an independent repeat is in progress).
+  was excluded at 256 bits in 55 iterations (checked: an independent repeat reproduced the 55 iterations and the 7.58 digits of agreement).
 - The number of iterations depends on the scale $a$: with $A = 0.5$ instead of 1, both rules needed 102 to 104
   iterations (measured once). The rule (`functionalMatched` or `chebyshev`) mattered less than the scale in these
   tests. Smaller problems gained less: at nmax = 10 (152 blocks, `--maxNumPoles 20`), 62 against 70 iterations at every
