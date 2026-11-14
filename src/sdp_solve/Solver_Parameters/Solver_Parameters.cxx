@@ -29,6 +29,27 @@ boost::program_options::options_description Solver_Parameters::options()
     "preprocessing the input PMP files with 'pmp2sdp'.  GMP will round "
     "this up to a multiple of 32 or 64, depending on the system.");
   result.add_options()(
+    "stepLengthDouble",
+    boost::program_options::bool_switch(&step_length_double)
+      ->default_value(false),
+    "Experimental: compute each block's smallest eigenvalue for the step "
+    "lengths in double precision (LAPACK), and use SDPB's multiprecision "
+    "eigenvalue only for a block whose double eigenvalue, with its error "
+    "bound, could change the step length by more than "
+    "stepLengthDoubleTol (relative). The GPU backend's scheme.");
+  result.add_options()(
+    "stepLengthDoubleTol",
+    boost::program_options::value<double>(&step_length_double_tol)
+      ->default_value(1e-10),
+    "Experimental, with --stepLengthDouble: the relative error allowed in "
+    "each block's step length (the GPU backend's SDPB_GPU_EIG_TOL).");
+  result.add_options()(
+    "stepLengthCheck",
+    boost::program_options::bool_switch(&step_length_check)
+      ->default_value(false),
+    "Experimental: compute the step lengths both ways (default and "
+    "--stepLengthDouble), use the default one, and print how they agree.");
+  result.add_options()(
     "findPrimalFeasible",
     boost::program_options::bool_switch(&find_primal_feasible)
       ->default_value(false),
@@ -184,6 +205,9 @@ boost::property_tree::ptree to_property_tree(const Solver_Parameters &p)
              p.memory_limit_translator);
   result.put("checkpointInterval", p.checkpoint_interval);
   result.put("findPrimalFeasible", p.find_primal_feasible);
+  result.put("stepLengthDouble", p.step_length_double);
+  result.put("stepLengthDoubleTol", p.step_length_double_tol);
+  result.put("stepLengthCheck", p.step_length_check);
   result.put("findDualFeasible", p.find_dual_feasible);
   result.put("detectPrimalFeasibleJump", p.detect_primal_feasible_jump);
   result.put("detectDualFeasibleJump", p.detect_dual_feasible_jump);
@@ -212,6 +236,9 @@ std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
      << "checkpointInterval           = " << p.checkpoint_interval << '\n'
      << "maxMemory                    = " << p.max_memory << '\n'
      << "maxSharedMemory              = " << p.max_shared_memory << '\n'
+     << "stepLengthDouble             = " << p.step_length_double << '\n'
+     << "stepLengthDoubleTol          = " << p.step_length_double_tol << '\n'
+     << "stepLengthCheck              = " << p.step_length_check << '\n'
      << "findPrimalFeasible           = " << p.find_primal_feasible << '\n'
      << "findDualFeasible             = " << p.find_dual_feasible << '\n'
      << "detectPrimalFeasibleJump     = " << p.detect_primal_feasible_jump

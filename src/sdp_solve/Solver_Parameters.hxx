@@ -19,6 +19,12 @@ struct Solver_Parameters
   Memory_Limit max_memory{}, max_shared_memory{};
   bool find_primal_feasible{}, find_dual_feasible{}, detect_primal_feasible_jump{},
     detect_dual_feasible_jump{};
+  // Experimental: each block's step eigenvalue in double, with
+  // El::HermitianEig only where double can't resolve the step length to
+  // step_length_double_tol (the GPU backend's scheme); and a check of it
+  // against El::HermitianEig
+  bool step_length_double{}, step_length_check{};
+  double step_length_double_tol{};
   size_t precision{};
 
   // Initialized from Environment - MemAvailable

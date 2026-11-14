@@ -176,13 +176,19 @@ void SDP_Solver::step(
                         max_block_cond_number, max_block_cond_number_name);
   }
   // Compute step-lengths that preserve positive definiteness of X, Y
+  Step_Length_Options step_length_options;
+  step_length_options.use_double = parameters.step_length_double;
+  step_length_options.double_tol = parameters.step_length_double_tol;
+  step_length_options.check = parameters.step_length_check;
+  step_length_options.print_stats
+    = parameters.step_length_double && verbosity >= Verbosity::debug;
   primal_step_length
     = step_length(X_cholesky, dX, parameters.step_length_reduction,
-                  "stepLength(XCholesky)", timers);
+                  "stepLength(XCholesky)", timers, step_length_options);
 
   dual_step_length
     = step_length(Y_cholesky, dY, parameters.step_length_reduction,
-                  "stepLength(YCholesky)", timers);
+                  "stepLength(YCholesky)", timers, step_length_options);
 
   // If our problem is both dual-feasible and primal-feasible,
   // ensure we're following the true Newton direction.

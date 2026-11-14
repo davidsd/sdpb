@@ -94,6 +94,7 @@ def build(bld):
                          'src/sdp_solve/SDP_Solver/run/print_header.cxx',
                          'src/sdp_solve/SDP_Solver/run/print_iteration.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/step.cxx',
+                         'src/sdp_solve/SDP_Solver/run/step/step_length_double.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/initialize_schur_complement_solver/initialize_schur_complement_solver.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/initialize_schur_complement_solver/compute_schur_complement.cxx',
                          'src/sdp_solve/SDP_Solver/run/step/initialize_schur_complement_solver/compute_Q.cxx',
