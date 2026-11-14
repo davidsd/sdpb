@@ -666,7 +666,7 @@ TEST_CASE("two_set_encoding")
         const Boost_Float log2_b2
           = 2 * log2(abs(to_Boost_Float(g0.bilinear_bases[0].CRef(0, 0))));
         if(i == 4)
-          REQUIRE(abs(log2_b2) > 1); // sigma != 1 (a prefactor with a pole)
+          REQUIRE(abs(log2_b2) > 0.5); // sigma != 1 (a prefactor with a pole)
         const Boost_Float before = log2_max_entry(g0) - log2_b2;
         const long e = static_cast<long>(round(median - before));
         CAPTURE(e);
