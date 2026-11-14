@@ -160,6 +160,7 @@ def build(bld):
     pmp2sdp_sources = ['src/pmp2sdp/Dual_Constraint_Group/Dual_Constraint_Group.cxx',
                        'src/pmp2sdp/Dual_Constraint_Group/sample_bilinear_basis.cxx',
                        'src/pmp2sdp/Dual_Constraint_Group/two_set_encoding.cxx',
+                       'src/pmp2sdp/Dual_Constraint_Group/scale_degree_0_blocks.cxx',
                        'src/pmp2sdp/Output_SDP/Output_SDP.cxx',
                        'src/pmp2sdp/write_block_data.cxx',
                        'src/pmp2sdp/write_block_info_json.cxx',

@@ -8,6 +8,7 @@
 void set_block_data_output_precision(mp_bitcnt_t precision);
 #include "sdpb_util/Verbosity.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
+#include "sdpb_util/assert.hxx"
 
 #include <string>
 #include <boost/program_options.hpp>
@@ -88,6 +89,33 @@ int main(int argc, char **argv)
                  "--encodingExtraPrecision=",
                  parameters.encoding_extra_precision,
                  " bits minus 32 allow. Raise --encodingExtraPrecision.");
+
+          // Blocks of degree 0 are not re-encoded: bring them to the
+          // re-encoded blocks' scale (an equivalent constraint; see
+          // Dual_Constraint_Group/scale_degree_0_blocks.cxx).
+          for(size_t i = 0; i < pmp.matrices.size(); ++i)
+            ASSERT_EQUAL(sdp.dual_constraint_groups.at(i).block_index,
+                         pmp.matrix_index_local_to_global.at(i));
+          const auto degree_0
+            = scale_degree_0_blocks(sdp.dual_constraint_groups, pmp.matrices);
+          if(El::mpi::Rank() == 0
+             && parameters.verbosity >= Verbosity::regular
+             && degree_0.num_degree_0 > 0)
+            {
+              if(degree_0.num_reencoded == 0)
+                El::Output("encodingPoints: ", degree_0.num_degree_0,
+                           " blocks of degree 0 and no re-encoded block: "
+                           "the degree-0 blocks keep their scale");
+              else
+                El::Output(
+                  "encodingPoints: ", degree_0.num_degree_0,
+                  " blocks of degree 0 brought to the median scale of the ",
+                  degree_0.num_reencoded,
+                  " re-encoded blocks (largest |entry| of B and c 10^",
+                  degree_0.median_log2 * std::log10(2.0), "): ",
+                  degree_0.num_scaled, " multiplied by 2^e, e from ",
+                  degree_0.min_exponent, " to ", degree_0.max_exponent);
+            }
 
           // Write at --precision (binary blocks must have SDPB's precision).
           // El's global precision can be set only once, so each written

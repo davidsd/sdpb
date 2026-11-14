@@ -120,6 +120,69 @@ namespace
              ? -1e9
              : static_cast<double>(log2(to_Boost_Float(m)));
   }
+
+  // log2 of the largest |entry| of B and c, in Boost_Float (independent of
+  // the code's mpf_get_d_2exp)
+  Boost_Float log2_max_entry(const Dual_Constraint_Group &group)
+  {
+    Boost_Float m = 0;
+    for(const auto &c : group.constraint_constants)
+      m = std::max(m, Boost_Float(abs(to_Boost_Float(c))));
+    for(int j = 0; j < group.constraint_matrix.Width(); ++j)
+      for(int i = 0; i < group.constraint_matrix.Height(); ++i)
+        m = std::max(
+          m, Boost_Float(abs(to_Boost_Float(group.constraint_matrix.CRef(i, j)))));
+    REQUIRE(m > 0);
+    return log2(m);
+  }
+
+  // p with every coefficient times 2^k (exact)
+  Polynomial_Vector times_power_of_2(Polynomial_Vector v, const int k)
+  {
+    for(auto &p : v)
+      for(auto &c : p.coefficients)
+        for(int i = 0; i < std::abs(k); ++i)
+          {
+            if(k > 0)
+              c *= 2;
+            else
+              c /= 2;
+          }
+    return v;
+  }
+
+  // A block re-encoded at its functionalMatched points
+  Polynomial_Vector_Matrix
+  reencoded_pvm(const Simple_Matrix<Polynomial_Vector> &polys,
+                const Damped_Rational &prefactor)
+  {
+    auto m = make_pvm(polys, prefactor);
+    std::vector<El::BigFloat> points, scalings;
+    functional_matched_encoding_points(
+      m.reduced_prefactor, m.sample_points.size(),
+      encoding_points_scale(m.reduced_prefactor, El::BigFloat(1)), points,
+      scalings);
+    set_encoding_points(m, points, scalings);
+    return m;
+  }
+
+  // a and b agree to within 2^-bits relative to max|a|, max|b| (entrywise)
+  bool same_entries(const El::Matrix<El::BigFloat> &a,
+                    const El::Matrix<El::BigFloat> &b, const double bits)
+  {
+    if(a.Height() != b.Height() || a.Width() != b.Width())
+      return false;
+    for(int i = 0; i < a.Height(); ++i)
+      for(int j = 0; j < a.Width(); ++j)
+        {
+          const Boost_Float x = to_Boost_Float(a.CRef(i, j)),
+                            y = to_Boost_Float(b.CRef(i, j));
+          if(abs(x - y) > pow(Boost_Float(2), -bits)
+                            * std::max(Boost_Float(abs(x)), Boost_Float(abs(y))))
+            return false;
+        }
+    return true;
+  }
 }
 
 TEST_CASE("two_set_encoding")
@@ -511,6 +574,175 @@ TEST_CASE("two_set_encoding")
             == group_default.bilinear_bases[1].Height());
   }
 
+  SECTION("degree-0 blocks: brought to the re-encoded blocks' median scale")
+  {
+    // Three re-encoded blocks whose rows differ by 2^60 and 2^-90 (the
+    // median is the middle one's), a 1x1 constant block far above them
+    // (2^300), a 2x2 constant block far below (2^-250, with a prefactor, so
+    // its point is not 0), and a constant block that is zero.  Each
+    // degree-0 block is multiplied by the power of 2 that brings its largest
+    // |entry| to the median; nothing else changes.
+    const Damped_Rational prefactor{1, Boost_Float("0.3"), {-0.5, -4}};
+    const Damped_Rational none{1, 1, {}};
+    const Damped_Rational shifted{1, Boost_Float("0.3"), {-2}};
+    std::vector<Polynomial_Vector_Matrix> matrices;
+    for(const int k : {60, 0, -90})
+      {
+        Simple_Matrix<Polynomial_Vector> polys(1, 1);
+        polys(0, 0) = times_power_of_2(
+          {test_polynomial(6, 1), test_polynomial(6, 2), test_polynomial(5, 3)},
+          k);
+        matrices.push_back(reencoded_pvm(polys, prefactor));
+      }
+    {
+      Simple_Matrix<Polynomial_Vector> polys(1, 1);
+      polys(0, 0) = times_power_of_2(
+        {test_polynomial(0, 4), test_polynomial(0, 5), test_polynomial(0, 6)},
+        300);
+      matrices.push_back(make_pvm(polys, none));
+    }
+    {
+      Simple_Matrix<Polynomial_Vector> polys(2, 2);
+      for(int r = 0; r < 2; ++r)
+        for(int c = 0; c < 2; ++c)
+          polys(r, c) = times_power_of_2(
+            {test_polynomial(0, 7 + r + c), test_polynomial(0, 9 + r * c),
+             test_polynomial(0, 11 + std::min(r, c) + 2 * std::max(r, c))},
+            -250);
+      matrices.push_back(make_pvm(polys, shifted));
+    }
+    {
+      Simple_Matrix<Polynomial_Vector> polys(1, 1);
+      Polynomial zero;
+      zero.coefficients = {El::BigFloat(0)};
+      polys(0, 0) = {zero, zero, zero};
+      matrices.push_back(make_pvm(polys, none));
+    }
+    std::vector<Dual_Constraint_Group> groups;
+    for(size_t i = 0; i < matrices.size(); ++i)
+      groups.emplace_back(i, matrices[i]);
+    const auto groups_before = groups;
+    const auto matrices_before = matrices;
+
+    std::vector<Boost_Float> reencoded_log2;
+    for(size_t i = 0; i < 3; ++i)
+      reencoded_log2.push_back(log2_max_entry(groups[i]));
+    std::sort(reencoded_log2.begin(), reencoded_log2.end());
+    const Boost_Float median = reencoded_log2[1];
+
+    const auto result
+      = scale_degree_0_blocks(groups, matrices, El::mpi::COMM_SELF);
+    REQUIRE(result.num_degree_0 == 3);
+    REQUIRE(result.num_reencoded == 3);
+    REQUIRE(result.num_scaled == 2);
+    REQUIRE(abs(Boost_Float(result.median_log2) - median) < 1e-9);
+    REQUIRE(result.min_exponent < -200);
+    REQUIRE(result.max_exponent > 200);
+
+    for(size_t i = 0; i < groups.size(); ++i)
+      {
+        CAPTURE(i);
+        const auto &g = groups[i], &g0 = groups_before[i];
+        for(int parity = 0; parity < 2; ++parity)
+          REQUIRE(log2_max_diff(g.bilinear_bases[parity],
+                                g0.bilinear_bases[parity])
+                  == -1e9);
+        if(i < 3 || i == 5)
+          {
+            // re-encoded blocks and the zero block: unchanged
+            REQUIRE(log2_max_diff(g.constraint_matrix, g0.constraint_matrix)
+                    == -1e9);
+            REQUIRE(g.constraint_constants == g0.constraint_constants);
+            REQUIRE(matrices[i].sample_scalings
+                    == matrices_before[i].sample_scalings);
+            REQUIRE(matrices[i].reduced_sample_scalings
+                    == matrices_before[i].reduced_sample_scalings);
+            continue;
+          }
+        // the exponent, from the independent median; a degree-0 block's
+        // scale is its largest |entry| over b^2, b its bilinear basis
+        REQUIRE(g0.bilinear_bases[0].Height() == 1);
+        REQUIRE(g0.bilinear_bases[0].Width() == 1);
+        const Boost_Float log2_b2
+          = 2 * log2(abs(to_Boost_Float(g0.bilinear_bases[0].CRef(0, 0))));
+        if(i == 4)
+          REQUIRE(abs(log2_b2) > 1); // sigma != 1 (a prefactor with a pole)
+        const Boost_Float before = log2_max_entry(g0) - log2_b2;
+        const long e = static_cast<long>(round(median - before));
+        CAPTURE(e);
+        REQUIRE(std::abs(e) > 200);
+        REQUIRE(abs(log2_max_entry(g) - log2_b2 - median) <= 0.5 + 1e-9);
+        // every entry of B and c, and the scalings, times 2^e
+        El::BigFloat factor = 1;
+        for(long k = 0; k < std::abs(e); ++k)
+          {
+            if(e > 0)
+              factor *= 2;
+            else
+              factor /= 2;
+          }
+        El::Matrix<El::BigFloat> expected(g0.constraint_matrix);
+        for(int r = 0; r < expected.Height(); ++r)
+          for(int c = 0; c < expected.Width(); ++c)
+            expected.Set(r, c, expected.CRef(r, c) * factor);
+        REQUIRE(same_entries(g.constraint_matrix, expected, precision - 2));
+        REQUIRE(g.constraint_constants.size() == g0.constraint_constants.size());
+        for(size_t p = 0; p < g.constraint_constants.size(); ++p)
+          REQUIRE(rel_err(to_Boost_Float(g.constraint_constants[p]),
+                          to_Boost_Float(g0.constraint_constants[p] * factor))
+                  < pow(Boost_Float(2), -(precision - 2)));
+        REQUIRE(rel_err(to_Boost_Float(matrices[i].sample_scalings.at(0)),
+                        to_Boost_Float(matrices_before[i].sample_scalings.at(0)
+                                       * factor))
+                < pow(Boost_Float(2), -(precision - 2)));
+        REQUIRE(rel_err(
+                  to_Boost_Float(matrices[i].reduced_sample_scalings.at(0)),
+                  to_Boost_Float(
+                    matrices_before[i].reduced_sample_scalings.at(0) * factor))
+                < pow(Boost_Float(2), -(precision - 2)));
+        // The same block given these sample scalings in the input has the
+        // same rows, but its bilinear basis is sqrt(2^e) times larger: A
+        // would scale with B and c, and the block's term in Q would not
+        // change.  The scaling keeps the basis (and so A).
+        const Polynomial_Vector_Matrix m_input(
+          matrices[i].polynomials, matrices[i].prefactor, std::nullopt,
+          std::nullopt, matrices_before[i].sample_points,
+          matrices[i].sample_scalings, matrices[i].reduced_sample_scalings,
+          std::nullopt);
+        const Dual_Constraint_Group g_input(i, m_input);
+        REQUIRE(same_entries(g.constraint_matrix, g_input.constraint_matrix,
+                             precision - 2));
+        for(size_t p = 0; p < g.constraint_constants.size(); ++p)
+          REQUIRE(rel_err(to_Boost_Float(g.constraint_constants[p]),
+                          to_Boost_Float(g_input.constraint_constants[p]))
+                  < pow(Boost_Float(2), -(precision - 2)));
+        REQUIRE(abs(log2(to_Boost_Float(g_input.bilinear_bases[0].CRef(0, 0))
+                         / to_Boost_Float(g.bilinear_bases[0].CRef(0, 0)))
+                    - Boost_Float(e) / 2)
+                < 1e-30);
+      }
+
+    // Without re-encoded blocks nothing is scaled
+    std::vector<Polynomial_Vector_Matrix> only_constant{matrices_before[3]};
+    std::vector<Dual_Constraint_Group> only_constant_groups;
+    only_constant_groups.emplace_back(0, only_constant[0]);
+    const auto none_result = scale_degree_0_blocks(
+      only_constant_groups, only_constant, El::mpi::COMM_SELF);
+    REQUIRE(none_result.num_degree_0 == 1);
+    REQUIRE(none_result.num_reencoded == 0);
+    REQUIRE(none_result.num_scaled == 0);
+    REQUIRE(only_constant_groups[0].constraint_constants
+            == groups_before[3].constraint_constants);
+  }
+
+  SECTION("median_log2_max_abs")
+  {
+    REQUIRE(median_log2_max_abs({3.0}) == 3.0);
+    REQUIRE(median_log2_max_abs({5.0, -1.0, 2.0}) == 2.0);
+    REQUIRE(median_log2_max_abs({5.0, -1.0, 2.0, 10.0}) == 3.5);
+    REQUIRE_THROWS(median_log2_max_abs({}));
+  }
+
   SECTION("encoding points = approximation points reproduce the default")
   {
     const Damped_Rational prefactor{1, Boost_Float("0.3"), {-0.5, -4, -9}};
@@ -556,4 +788,53 @@ TEST_CASE("two_set_encoding")
     REQUIRE_THROWS(set_encoding_points(m, {-1, 2, 3, 4, 5}, sc));
     REQUIRE_NOTHROW(set_encoding_points(m, pts, sc));
   }
+}
+
+TEST_CASE("two_set_encoding: degree-0 scale over all ranks")
+{
+  // Every rank holds one re-encoded block, its rows times 2^(40 rank); rank 0
+  // also holds a constant block.  The median is over all ranks' blocks.
+  const int rank = El::mpi::Rank(), num_procs = El::mpi::Size();
+  const Damped_Rational prefactor{1, Boost_Float("0.3"), {-0.5, -4}};
+  std::vector<Polynomial_Vector_Matrix> matrices;
+  {
+    Simple_Matrix<Polynomial_Vector> polys(1, 1);
+    polys(0, 0) = times_power_of_2(
+      {test_polynomial(5, 1), test_polynomial(5, 2)}, 40 * rank);
+    matrices.push_back(reencoded_pvm(polys, prefactor));
+  }
+  if(rank == 0)
+    {
+      Simple_Matrix<Polynomial_Vector> polys(1, 1);
+      polys(0, 0) = {test_polynomial(0, 4), test_polynomial(0, 5)};
+      matrices.push_back(make_pvm(polys, Damped_Rational{1, 1, {}}));
+    }
+  std::vector<Dual_Constraint_Group> groups;
+  for(size_t i = 0; i < matrices.size(); ++i)
+    groups.emplace_back(num_procs * i + rank, matrices[i]);
+  // log2 max of rank 0's block: the others are +40 r exactly (powers of 2)
+  const Boost_Float base = log2_max_entry(groups[0]) - 40 * rank;
+  std::vector<Boost_Float> all;
+  for(int r = 0; r < num_procs; ++r)
+    all.push_back(base + 40 * r);
+  const Boost_Float median
+    = num_procs % 2 == 1 ? all[num_procs / 2]
+                         : (all[num_procs / 2 - 1] + all[num_procs / 2]) / 2;
+  // its basis is 1 (sigma = 1: no poles, base 1)
+  const Boost_Float constant_before
+    = rank == 0 ? log2_max_entry(groups[1]) : Boost_Float(0);
+
+  const auto result = scale_degree_0_blocks(groups, matrices);
+  CAPTURE(rank, num_procs, result.median_log2);
+  REQUIRE(result.num_degree_0 == 1);
+  REQUIRE(result.num_reencoded == num_procs);
+  REQUIRE(abs(Boost_Float(result.median_log2) - median) < 1e-6);
+  REQUIRE(result.min_exponent == result.max_exponent);
+  REQUIRE(result.num_scaled == 1);
+  if(rank == 0)
+    {
+      REQUIRE(result.max_exponent
+              == static_cast<El::Int>(round(median - constant_before)));
+      REQUIRE(abs(log2_max_entry(groups[1]) - median) <= 0.5 + 1e-6);
+    }
 }

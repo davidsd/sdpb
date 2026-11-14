@@ -32,8 +32,8 @@ the SDP at a second set of $d+1$ **encoding points** $y_j$ with scalings $w_j$:
   full reorthogonalization, instead of a Cholesky factorization of monomial moments (which loses most of the
   precision when the points span many decades);
 - the objective and normalization are those of the default encoding, to working precision: the whole conversion runs at
-  the extra precision and is then truncated, so the objective (and blocks of degree 0) can
-  differ from the default's output in the last bits; `normalization.json` is identical.
+  the extra precision and is then truncated, so the objective can differ from the default's output in the last bits;
+  `normalization.json` is identical.
 
 In exact arithmetic the feasible set and the optimum are the same as with the default encoding (with or without a
 reduced prefactor: both encode the same interpolant $R$). What changes is the SDP's coordinates, and with them the
@@ -42,8 +42,31 @@ number of iterations SDPB needs and the precision it needs to reach a verdict.
 `pmp_info.json` lists the encoding points and scalings as each block's sample points and scalings (they are the
 points at which the SDP is written).
 
-Blocks of degree 0 (one sample point, e.g. an isolated constant constraint) have nothing to re-encode and keep the
-default encoding, whatever the rule (with `file`, their entries in the file are not used).
+Blocks of degree 0 (one sample point, e.g. an isolated operator) have nothing to re-encode, whatever the rule (with
+`file`, their entries in the file are not used). They keep the default encoding up to a power of 2:
+
+- **Why.** The re-encoded blocks' rows are at the scale of their encoding scalings, which can be tens of orders of
+  magnitude below the default's (3d Ising with the stress tensor at $n_{\max} = 22$: about 50). A degree-0 block at the
+  input's scale then dominates SDPB's Schur complement $Q$ at the initial point, and Cholesky($Q$) fails in the first
+  iteration. (Measured on a scalar $n_{\max} = 14$ gap problem, 20 blocks, with one constant block added: without the
+  scaling Cholesky($Q$) fails in iteration 1 at 320 bits; with it, two-set reaches the same verdict in the same 20
+  iterations as without the block, whether the constant block is given at its own scale or $10^{-30}$ or $10^{20}$
+  times it.)
+- **What.** The rows of $B$ and $c$ of each degree-0 block are multiplied by $2^e$, with $e$ the integer nearest to
+  $\log_2(M/m)$: $m$ is the block's largest $|$entry$|$ of $B$ and $c$ divided by $b^2$, where $b$ is its bilinear
+  basis (a single number, $\sqrt{\sigma}$ for its sample scaling $\sigma$; the block's term in $Q$ is set by
+  $|B|/b^2$), and $M$ is the median, over the re-encoded blocks, of their largest $|$entry$|$ of $B$ and $c$ (their
+  bases are orthonormal). `pmp2sdp` prints the median and the range of $e$. The bilinear basis is unchanged.
+- **Why it is safe.** A positive factor on a block's rows of $B$ and $c$, with its basis unchanged, is an equivalent
+  constraint: $\mathrm{Tr}(A_p Y) + s (By)_p = s c_p$ is $\mathrm{Tr}(A_p Y/s) + (By)_p = c_p$. The feasible set in $y$,
+  both objectives and the optimum are unchanged; only that block's $x$ and $X$ are divided, and its $Y$ multiplied, by
+  $2^e$. A power of 2 changes no digit. `pmp_info.json` lists the block's sample scaling times $2^e$, so that its rows
+  are still "scaling times polynomial" and $x$ times the scaling (what `spectrum` reads as the OPE coefficient) is
+  unchanged; `spectrum`'s test for a zero of a constant block uses the reduced prefactor at its point, as for the
+  other blocks, so it does not see the factor.
+- **Why the median.** SDPB starts every block at the same $X$ and $Y$, so a block whose rows are far from all the
+  others' costs iterations, above or below them (in the test above: more iterations once the constant block is
+  outside the range of the re-encoded blocks' scales, on either side). The median is least far from all of them.
 
 ## The rules for the encoding points
 

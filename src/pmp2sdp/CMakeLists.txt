@@ -2,6 +2,7 @@ add_library(pmp2sdp_lib STATIC
   Dual_Constraint_Group/Dual_Constraint_Group.cxx
   Dual_Constraint_Group/sample_bilinear_basis.cxx
   Dual_Constraint_Group/two_set_encoding.cxx
+  Dual_Constraint_Group/scale_degree_0_blocks.cxx
   Output_SDP/Output_SDP.cxx
   write_block_data.cxx
   write_block_info_json.cxx

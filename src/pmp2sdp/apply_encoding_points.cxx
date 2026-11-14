@@ -91,7 +91,8 @@ apply_encoding_points(Polynomial_Matrix_Program &pmp,
       // A degree-0 block (one sample point, e.g. an isolated constant
       // constraint) has nothing to re-encode: its single approximation point
       // is its encoding.  Leave it on the default path (the reach ratio below
-      // would also divide by its point x = 0).
+      // would also divide by its point x = 0); main() then brings it to the
+      // re-encoded blocks' scale (scale_degree_0_blocks).
       if(num_points < 2)
         continue;
       std::vector<El::BigFloat> points, scalings;

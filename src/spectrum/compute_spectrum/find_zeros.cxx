@@ -199,7 +199,13 @@ find_zeros(const El::Matrix<El::BigFloat> &c_minus_By_block,
       El::Matrix<El::BigFloat> block(dim, dim);
       const auto &x = pvm.sample_points.front();
       ASSERT_EQUAL(pvm.reduced_sample_scalings.size(), 1);
-      const auto &scale = pvm.reduced_sample_scalings.front();
+      // Restore the reduced prefactor at x_0, as for the other blocks below
+      // (the determinant times reduced_prefactor(x)).  By default this is the
+      // reduced sample scaling; pmp2sdp --encodingPoints multiplies the
+      // scaling of a degree-0 block by a power of 2 (an equivalent
+      // constraint), which must not change this test.
+      const El::BigFloat scale = to_BigFloat(pvm.reduced_prefactor.evaluate(
+        to_Boost_Float(x), Boost_Float("1e-16")));
       for(int i = 0; i < dim; ++i)
         {
           for(int j = 0; j < dim; ++j)
