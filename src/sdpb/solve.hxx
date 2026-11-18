@@ -4,6 +4,7 @@
 #include "save_solution.hxx"
 #include "write_timing.hxx"
 #include "sdp_solve/memory_estimates.hxx"
+#include "sdp_solve/SDP_Solver/run/constraint_matrix_weighted_sum.hxx"
 #include "sdp_solve/sdp_solve.hxx"
 #include "sdpa_solve/memory_estimates.hxx"
 #include "sdpa_solve/sdpa_solve.hxx"
@@ -59,6 +60,74 @@ create_solver(const SDPB_Parameters &parameters,
                                 block_info, grid);
 }
 
+// sdpb --reconstructXYmu mu: after a text checkpoint with only x and y,
+// X = sum_p A_p x_p and Y = mu X^{-1}. Without the option, such a
+// checkpoint is refused: X = Y = 0 is no starting point.
+inline void
+reconstruct_XY_mu(const SDPB_Parameters &parameters,
+                  const Block_Info &block_info, const SDP &sdp,
+                  SDP_Solver &solver, Timers &timers)
+{
+  const auto &ck = parameters.solver.checkpoint_in;
+  if(parameters.reconstruct_XY_mu.empty())
+    {
+      ASSERT(!solver.loaded_without_XY, "Text checkpoint ", ck,
+             " has no X_matrix/Y_matrix files; use --reconstructXYmu.");
+      return;
+    }
+  ASSERT(solver.loaded_without_XY,
+         "--reconstructXYmu needs a text checkpoint with x_*.txt, y.txt and "
+         "no X/Y matrices: ",
+         ck);
+  Scoped_Timer reconstruct_timer(timers, "reconstruct_XY");
+  const El::BigFloat mu(parameters.reconstruct_XY_mu);
+  ASSERT(mu > 0, "--reconstructXYmu must be positive: ",
+         parameters.reconstruct_XY_mu);
+  // X = sum_p A_p x_p  (C = 0, see compute_primal_residues_and_error_P_Ax_X)
+  constraint_matrix_weighted_sum(block_info, sdp, solver.x, solver.X);
+  // Y = mu X^{-1} = mu L^{-T} L^{-1}, X = L L^T
+  for(size_t b = 0; b < solver.X.blocks.size(); ++b)
+    {
+      auto &X_block = solver.X.blocks[b];
+      auto &Y_block = solver.Y.blocks[b];
+      if(X_block.Height() == 0)
+        continue;
+      El::DistMatrix<El::BigFloat> L(X_block);
+      try
+        {
+          El::Cholesky(El::UpperOrLowerNS::LOWER, L);
+        }
+      catch(std::exception &e)
+        {
+          RUNTIME_ERROR("--reconstructXYmu: X = sum_p A_p x_p is not "
+                        "positive definite in local block ",
+                        b, " (", e.what(),
+                        "); x must be primal feasible, or nearly.");
+        }
+      El::DistMatrix<El::BigFloat> L_inv(L.Grid());
+      El::Identity(L_inv, L.Height(), L.Width());
+      El::Trsm(El::LeftOrRight::LEFT, El::UpperOrLowerNS::LOWER,
+               El::Orientation::NORMAL, El::UnitOrNonUnit::NON_UNIT,
+               El::BigFloat(1), L, L_inv);
+      El::Syrk(El::UpperOrLowerNS::LOWER, El::Orientation::TRANSPOSE, mu,
+               L_inv, El::BigFloat(0), Y_block);
+      El::MakeSymmetric(El::UpperOrLowerNS::LOWER, Y_block);
+    }
+  if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
+    std::cout << "Reconstructed X = sum_p A_p x_p and Y = mu X^{-1}, mu = "
+              << parameters.reconstruct_XY_mu << '\n';
+}
+
+inline void reconstruct_XY_mu(const SDPB_Parameters &parameters,
+                              const Sdpb::Sdpa::Block_Info &,
+                              const Sdpb::Sdpa::SDP &,
+                              Sdpb::Sdpa::SDP_Solver &, Timers &)
+{
+  ASSERT(parameters.reconstruct_XY_mu.empty(),
+         "--reconstructXYmu is implemented for polynomial matrix programs "
+         "only, not for SDPA input.");
+}
+
 template <class TSolver>
 SDP_Solver_Terminate_Reason
 solve(const typename TSolver::Block_Info_Type &block_info,
@@ -78,6 +147,7 @@ solve(const typename TSolver::Block_Info_Type &block_info,
     }
 
   auto solver = create_solver(parameters, block_info, sdp, grid, timers);
+  reconstruct_XY_mu(parameters, block_info, sdp, solver, timers);
   if(parameters.verbosity >= Verbosity::debug)
     {
       print_allocation_message_per_node(env, "SDP_Solver",

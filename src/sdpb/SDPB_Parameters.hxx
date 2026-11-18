@@ -14,6 +14,9 @@ struct SDPB_Parameters
   bool no_final_checkpoint;
   size_t proc_granularity = 1;
   bool require_initial_checkpoint = false;
+  // If nonempty: after loading a text checkpoint that has only x and y,
+  // set X = sum_p A_p x_p and Y = mu X^{-1} with this mu.
+  std::string reconstruct_XY_mu;
   Write_Solution write_solution;
 
   Solver_Parameters solver;
