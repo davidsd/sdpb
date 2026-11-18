@@ -785,6 +785,10 @@ Found a solution for $y,Y$ that is dual feasible.  \SDPB\ will only terminate wi
 A Newton step with primal step length $\alpha_\cP$ just occurred, without resulting in a primal feasible solution.  (Usually this means one should increase \texttt{precision}.)
 \item[\texttt{dual feasible jump detected}] \hfill\\
 A Newton step with dual step length $\alpha_\cD$ just occurred, without resulting in a dual feasible solution.  (Usually this means one should increase \texttt{precision}.)
+\item[\texttt{dual feasible with dualObjective above dualObjectiveStop}] \hfill\\
+Found a dual feasible solution whose objective exceeds the value given by \texttt{--dualObjectiveStop}.  By weak duality, the optimum is then above that value.  \SDPB\ will only terminate with this result if that option is specified.
+\item[\texttt{primal feasible with primalObjective below primalObjectiveStop}] \hfill\\
+Found a primal feasible solution whose objective is below the value given by \texttt{--primalObjectiveStop}.  By weak duality, the optimum is then below that value.  \SDPB\ will only terminate with this result if that option is specified.
 \item[\texttt{maxIterations exceeded}] \hfill\\
 \SDPB\ has run for more iterations than specified by the option \texttt{--maxIterations}.
 \item[\texttt{maxRuntime exceeded}] \hfill\\
@@ -794,6 +798,8 @@ $\mu=\Tr(XY)/\dim(X)$ exceeded the value specified by \texttt{--maxComplementari
 \end{description}
 
 When using \SDPB\ to determine primal or dual feasibility, one can specify the options \texttt{--findPrimalFeasible} or \texttt{--findDualFeasible}.  This will cause the solver to terminate immediately once the primal or dual errors are sufficiently small.  This often occurs immediately after the primal or dual step lengths become equal to $1$.  A step length of $1$ means that the solver has found a Newton step that exactly solves the primal or dual constraints, while preserving positive-semidefiniteness of $X,Y$.  Sometimes a step length of $1$ does not result in sufficiently small primal/dual errors.  This is indicative of numerical instabilities and usually means \texttt{precision} should be increased.  The options \texttt{--detectPrimalFeasibleJump} and \texttt{--detectPrimalFeasibleJump} cause \SDPB\ to terminate if a step length of 1 occurs without resulting in primal/dual feasibility.  If desired, one can then restart the solver with a higher value of \texttt{precision}.
+
+When the question is only whether the optimum lies above or below some value $v$ (for example, whether a point is excluded because no positive OPE coefficient is allowed), the options \texttt{--dualObjectiveStop=$v$} and \texttt{--primalObjectiveStop=$v$} terminate the solver as soon as the current iterate decides it: a dual feasible iterate with dual objective above $v$, or a primal feasible iterate with primal objective below $v$.  They are off by default, apply to SDPA input as well, and are not supported by \texttt{outer\_limits}.
 
 
 \subsection{Output File}

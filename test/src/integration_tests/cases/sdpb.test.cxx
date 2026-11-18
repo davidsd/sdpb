@@ -1,5 +1,7 @@
 #include "integration_tests/common.hxx"
 #include <filesystem>
+#include <map>
+#include <fstream>
 
 namespace fs = std::filesystem;
 
@@ -44,6 +46,71 @@ TEST_CASE("sdpb")
     os << "";
     fs::permissions(path, fs::perms::others_read);
   };
+
+  SECTION("objectiveStop")
+  {
+    INFO("--dualObjectiveStop / --primalObjectiveStop on the 1d problem, "
+         "whose optimum is 1.8402657631...: a stop below (above) the optimum "
+         "ends the run early with a feasible dual (primal) objective past it; "
+         "a stop beyond the optimum never fires.");
+    auto read_out = [](const fs::path &out_dir) {
+      std::map<std::string, std::string> values;
+      std::ifstream is(out_dir / "out.txt");
+      std::string line;
+      while(std::getline(is, line))
+        {
+          auto eq = line.find(" = ");
+          if(eq == std::string::npos)
+            continue;
+          auto key = line.substr(0, line.find_first_of(" ="));
+          auto value = line.substr(eq + 3);
+          if(!value.empty() && value.back() == ';')
+            value.pop_back();
+          values[key] = value;
+        }
+      return values;
+    };
+    auto run = [&](const std::string &name, const std::string &option,
+                   const std::string &value) {
+      Test_Util::Test_Case_Runner runner("sdpb/objectiveStop/" + name);
+      auto args = default_args;
+      if(!option.empty())
+        args[option] = value;
+      run_sdpb_set_out_ck_dirs(runner, args, 1);
+      return read_out(runner.output_dir / "out");
+    };
+    const auto optimal = run("default", "", "");
+    REQUIRE(optimal.at("terminateReason")
+            == "\"found primal-dual optimal solution\"");
+    const double primal_opt = std::stod(optimal.at("primalObjective"));
+    const double dual_opt = std::stod(optimal.at("dualObjective"));
+
+    SECTION("dual")
+    {
+      const auto out = run("dual", "--dualObjectiveStop", "1.0");
+      REQUIRE(out.at("terminateReason")
+              == "\"dual feasible with dualObjective above dualObjectiveStop\"");
+      const double dual = std::stod(out.at("dualObjective"));
+      REQUIRE(dual > 1.0);
+      REQUIRE(dual <= primal_opt + 1e-12);
+    }
+    SECTION("primal")
+    {
+      const auto out = run("primal", "--primalObjectiveStop", "2.0");
+      REQUIRE(out.at("terminateReason")
+              == "\"primal feasible with primalObjective below "
+                 "primalObjectiveStop\"");
+      const double primal = std::stod(out.at("primalObjective"));
+      REQUIRE(primal < 2.0);
+      REQUIRE(primal >= dual_opt - 1e-12);
+    }
+    SECTION("beyond the optimum")
+    {
+      const auto out = run("beyond", "--dualObjectiveStop", "2.0");
+      REQUIRE(out.at("terminateReason")
+              == "\"found primal-dual optimal solution\"");
+    }
+  }
 
   SECTION("io_tests")
   {

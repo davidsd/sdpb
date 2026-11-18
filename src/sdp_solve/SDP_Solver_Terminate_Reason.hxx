@@ -12,6 +12,8 @@ enum class SDP_Solver_Terminate_Reason
   DualFeasible,
   PrimalFeasibleJumpDetected,
   DualFeasibleJumpDetected,
+  DualObjectiveStop,
+  PrimalObjectiveStop,
   MaxComplementarityExceeded,
   MaxIterationsExceeded,
   MaxRuntimeExceeded,
