@@ -229,6 +229,102 @@ struct Gpu_Compute::Impl
     parallel_for(tot, [&](int64_t q) { fn(q, m.data(), tot, e.data()); });
     gs->upload(chunk, a, m.data(), e.data());
   }
+
+  // rows of c, B, x: segment s, point k -> s K + k
+  static int block_row(int row, int K, int Kb)
+  {
+    const int s = row / K, k = row % K;
+    return k < Kb ? s * Kb + k : -1;
+  }
+
+  void upload_b(const SDP &sdp)
+  {
+    std::vector<int32_t> m(size_t(L) * N);
+    std::vector<int64_t> e(N);
+    const auto &bm = sdp.dual_objective_b.LockedMatrix();
+    for(int i = 0; i < N; ++i)
+      to_device(bm.CRef(i, 0), L, m.data(), N, i, e.data());
+    gs->upload_b(m.data(), e.data());
+  }
+
+  void upload_c_B(int ci, const SDP &sdp)
+  {
+    const Chunk_Info &I = gs->chunk(ci);
+    const int K = I.K, Pc = I.P, Nv = N;
+    fill(ci, Gpu_Array::c, [&](int64_t q, int32_t *m, int64_t tot, int64_t *e) {
+      const int q_ = int(q / Pc), row = int(q % Pc);
+      const int j = I.blocks[q_];
+      const int r = block_row(row, K, Kj[j]);
+      if(r >= 0)
+        to_device(sdp.primal_objective_c.blocks[local_of[j]].LockedMatrix().CRef(r, 0),
+                  L, m, tot, q, e);
+      else
+        zero_device(L, m, tot, q, e);
+    });
+    fill(ci, Gpu_Array::B, [&](int64_t q, int32_t *m, int64_t tot, int64_t *e) {
+      const int64_t per = int64_t(Pc) * Nv;
+      const int q_ = int(q / per);
+      const int64_t rem = q % per;
+      const int row = int(rem % Pc), col = int(rem / Pc);
+      const int j = I.blocks[q_];
+      const int r = block_row(row, K, Kj[j]);
+      if(r >= 0)
+        to_device(sdp.free_var_matrix.blocks[local_of[j]].LockedMatrix().CRef(r, col),
+                  L, m, tot, q, e);
+      else
+        zero_device(L, m, tot, q, e);
+    });
+  }
+
+  void upload_y(const SDP_Solver &solver)
+  {
+    // y: duplicated among the blocks
+    std::vector<int32_t> m(size_t(L) * N);
+    std::vector<int64_t> e(N);
+    const auto &ym = solver.y.blocks.at(0).LockedMatrix();
+    for(int i = 0; i < N; ++i)
+      to_device(ym.CRef(i, 0), L, m.data(), N, i, e.data());
+    gs->upload_y(m.data(), e.data());
+  }
+
+  void upload_x_X_Y(int ci, const SDP_Solver &solver)
+  {
+    const Chunk_Info &I = gs->chunk(ci);
+    const int nb = I.nb, K = I.K, h = I.h, n = I.n, Pc = I.P;
+    fill(ci, Gpu_Array::x, [&](int64_t q, int32_t *m, int64_t tot, int64_t *e) {
+      const int q_ = int(q / Pc), row = int(q % Pc);
+      const int j = I.blocks[q_];
+      const int r = block_row(row, K, Kj[j]);
+      if(r >= 0)
+        to_device(solver.x.blocks[local_of[j]].LockedMatrix().CRef(r, 0), L, m, tot,
+                  q, e);
+      else
+        zero_device(L, m, tot, q, e);
+    });
+    auto fill_matrix = [&](Gpu_Array which,
+                           const Paired_Block_Diagonal_Matrix &M) {
+      fill(ci, which, [&](int64_t q, int32_t *m, int64_t tot, int64_t *e) {
+        const int64_t per = int64_t(n) * n;
+        const int z = int(q / per);
+        const int64_t rem = q % per;
+        const int i0 = int(rem % n), j0 = int(rem / n);
+        const int q_ = z % nb, par = z / nb;
+        const int j = I.blocks[q_];
+        const int hb = par == 0 ? he[j] : ho[j];
+        const int ci_ = i0 / h, i = i0 % h, cj_ = j0 / h, jj = j0 % h;
+        if(i < hb && jj < hb)
+          to_device(M.get_block(local_of[j], par).LockedMatrix().CRef(
+                      ci_ * hb + i, cj_ * hb + jj),
+                    L, m, tot, q, e);
+        else if(i0 == j0)
+          one_device(L, m, tot, q, e);
+        else
+          zero_device(L, m, tot, q, e);
+      });
+    };
+    fill_matrix(Gpu_Array::X, solver.X);
+    fill_matrix(Gpu_Array::Y, solver.Y);
+  }
 };
 
 Gpu_Compute::Gpu_Compute(const Solver_Parameters &parameters,
@@ -304,25 +400,13 @@ Gpu_Compute::Gpu_Compute(const Solver_Parameters &parameters,
 
   const auto t0 = std::chrono::steady_clock::now();
   const int L = P.L;
-  // objectives
-  {
-    std::vector<int32_t> m(size_t(L) * P.N);
-    std::vector<int64_t> e(P.N);
-    const auto &bm = sdp.dual_objective_b.LockedMatrix();
-    for(int i = 0; i < P.N; ++i)
-      to_device(bm.CRef(i, 0), L, m.data(), P.N, i, e.data());
-    P.gs->upload_b(m.data(), e.data());
-    // y: duplicated among the blocks
-    const auto &ym = solver.y.blocks.at(0).LockedMatrix();
-    for(int i = 0; i < P.N; ++i)
-      to_device(ym.CRef(i, 0), L, m.data(), P.N, i, e.data());
-    P.gs->upload_y(m.data(), e.data());
-  }
+  P.upload_b(sdp);
+  P.upload_y(solver);
   for(int ci = 0; ci < P.gs->num_chunks(); ++ci)
     {
       const Chunk_Info &I = P.gs->chunk(ci);
       for(int j:I.blocks) ASSERT(P.local_of[j]>=0,"GPU/host block ownership differs");
-      const int nb = I.nb, K = I.K, h = I.h, n = I.n, Pc = I.P, dim = I.dim;
+      const int nb = I.nb, K = I.K, h = I.h;
       // V (2 nb, h, K)
       P.fill(ci, Gpu_Array::V,
              [&](int64_t q, int32_t *m, int64_t tot, int64_t *e) {
@@ -338,76 +422,8 @@ Gpu_Compute::Gpu_Compute(const Solver_Parameters &parameters,
                else
                  zero_device(L, m, tot, q, e);
              });
-      // rows of c, B, x: segment s, point k -> s K + k
-      auto block_row = [&](int row, int Kb) {
-        const int s = row / K, k = row % K;
-        return k < Kb ? s * Kb + k : -1;
-      };
-      P.fill(ci, Gpu_Array::c,
-             [&](int64_t q, int32_t *m, int64_t tot, int64_t *e) {
-               const int q_ = int(q / Pc), row = int(q % Pc);
-               const int j = I.blocks[q_];
-               const int r = block_row(row, P.Kj[j]);
-               if(r >= 0)
-                 to_device(sdp.primal_objective_c.blocks[P.local_of[j]]
-                             .LockedMatrix()
-                             .CRef(r, 0),
-                           L, m, tot, q, e);
-               else
-                 zero_device(L, m, tot, q, e);
-             });
-      P.fill(ci, Gpu_Array::B,
-             [&](int64_t q, int32_t *m, int64_t tot, int64_t *e) {
-               const int64_t per = int64_t(Pc) * P.N;
-               const int q_ = int(q / per);
-               const int64_t rem = q % per;
-               const int row = int(rem % Pc), col = int(rem / Pc);
-               const int j = I.blocks[q_];
-               const int r = block_row(row, P.Kj[j]);
-               if(r >= 0)
-                 to_device(sdp.free_var_matrix.blocks[P.local_of[j]]
-                             .LockedMatrix()
-                             .CRef(r, col),
-                           L, m, tot, q, e);
-               else
-                 zero_device(L, m, tot, q, e);
-             });
-      P.fill(ci, Gpu_Array::x,
-             [&](int64_t q, int32_t *m, int64_t tot, int64_t *e) {
-               const int q_ = int(q / Pc), row = int(q % Pc);
-               const int j = I.blocks[q_];
-               const int r = block_row(row, P.Kj[j]);
-               if(r >= 0)
-                 to_device(solver.x.blocks[P.local_of[j]].LockedMatrix().CRef(r, 0),
-                           L, m, tot, q, e);
-               else
-                 zero_device(L, m, tot, q, e);
-             });
-      auto fill_matrix = [&](Gpu_Array which,
-                             const Paired_Block_Diagonal_Matrix &M) {
-        P.fill(ci, which, [&](int64_t q, int32_t *m, int64_t tot, int64_t *e) {
-          const int64_t per = int64_t(n) * n;
-          const int z = int(q / per);
-          const int64_t rem = q % per;
-          const int i0 = int(rem % n), j0 = int(rem / n);
-          const int q_ = z % nb, par = z / nb;
-          const int j = I.blocks[q_];
-          const int hb = par == 0 ? P.he[j] : P.ho[j];
-          const int ci_ = i0 / h, i = i0 % h, cj_ = j0 / h, jj = j0 % h;
-          if(i < hb && jj < hb)
-            to_device(M.get_block(P.local_of[j], par)
-                        .LockedMatrix()
-                        .CRef(ci_ * hb + i, cj_ * hb + jj),
-                      L, m, tot, q, e);
-          else if(i0 == j0)
-            one_device(L, m, tot, q, e);
-          else
-            zero_device(L, m, tot, q, e);
-        });
-      };
-      fill_matrix(Gpu_Array::X, solver.X);
-      fill_matrix(Gpu_Array::Y, solver.Y);
-      (void)dim;
+      P.upload_c_B(ci, sdp);
+      P.upload_x_X_Y(ci, solver);
     }
   P.gs->finish_load();
   if(El::mpi::Rank() == 0)
@@ -610,6 +626,53 @@ void Gpu_Compute::step(const Solver_Parameters &parameters, size_t total_psd_row
     }
   P.gs->update(to_host(primal_step_length, L), to_host(dual_step_length, L));
   P.gs->end_iteration();
+}
+
+void Gpu_Compute::get_y(SDP_Solver &solver)
+{
+  auto &P = *p_;
+  std::vector<int32_t> m(size_t(P.L) * P.N);
+  std::vector<int64_t> e(P.N);
+  P.gs->download_y(m.data(), e.data());
+  for(auto &yb : solver.y.blocks)
+    {
+      auto &Y = yb.Matrix();
+      for(int i = 0; i < P.N; ++i)
+        Y.Set(i, 0,
+              e[i] == MPF_ZERO_EXP
+                ? El::BigFloat(0)
+                : from_limbs(reinterpret_cast<const uint32_t *>(m.data()) + i,
+                             P.L, P.N, e[i]));
+    }
+}
+
+void Gpu_Compute::set_iterate(const SDP_Solver &solver)
+{
+  auto &P = *p_;
+  P.upload_y(solver);
+  for(int ci = 0; ci < P.gs->num_chunks(); ++ci)
+    P.upload_x_X_Y(ci, solver);
+}
+
+void Gpu_Compute::end_run() { p_->gs->end_run(); }
+
+void Gpu_Compute::update_blocks(const SDP &sdp, const std::vector<size_t> &changed,
+                                const bool objectives_changed)
+{
+  auto &P = *p_;
+  if(objectives_changed)
+    P.upload_b(sdp);
+  for(int ci = 0; ci < P.gs->num_chunks(); ++ci)
+    {
+      const auto &blocks = P.gs->chunk(ci).blocks;
+      const bool touched
+        = std::any_of(blocks.begin(), blocks.end(), [&](const int j) {
+            return std::find(changed.begin(), changed.end(), size_t(j))
+                   != changed.end();
+          });
+      if(touched)
+        P.upload_c_B(ci, sdp);
+    }
 }
 
 void Gpu_Compute::get_iterate(SDP_Solver &solver)

@@ -16,6 +16,8 @@ add_executable(integration_tests
   src/integration_tests/cases/outer_limits.test.cxx
   src/integration_tests/cases/pmp2sdp.test.cxx
   src/integration_tests/cases/SDPLIB.test.cxx
+  src/integration_tests/cases/resident.test.cxx
+  src/integration_tests/cases/resident_gpu.test.cxx
   src/integration_tests/cases/sdpb.test.cxx)
 target_include_directories(integration_tests PRIVATE src)
 target_link_libraries(integration_tests PRIVATE sdpb_util catch2)
@@ -31,13 +33,16 @@ add_executable(unit_tests
   src/unit_tests/cases/block_data_serialization.test.cxx
   src/unit_tests/cases/block_mapping.test.cxx
   src/unit_tests/cases/Boost_Float.test.cxx
+  src/unit_tests/cases/blas_residues.test.cxx
   src/unit_tests/cases/boost_serialization.test.cxx
   src/unit_tests/cases/create_blas_job_schedule.test.cxx
   src/unit_tests/cases/calculate_matrix_square.test.cxx
   src/unit_tests/cases/copy_matrix.test.cxx
   src/unit_tests/cases/json.test.cxx
+  src/unit_tests/cases/multimodular_blas.test.cxx
   src/unit_tests/cases/pmp_sampling.test.cxx
-  src/unit_tests/cases/shared_window.test.cxx)
+  src/unit_tests/cases/shared_window.test.cxx
+  src/unit_tests/cases/Sparse_Block_Matrix.test.cxx)
 target_include_directories(unit_tests PRIVATE src)
 target_link_libraries(unit_tests PRIVATE pmp_read pmp2sdp_lib sdp_solve catch2)
 

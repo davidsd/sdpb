@@ -7,7 +7,9 @@
 
 #include "SDPB_Parameters.hxx"
 #include "time_and_solve.hxx"
+#include "resident/Resident.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
+#include "sdp_solve/SDP_Solver/run/multimodular/multimodular_blas.hxx"
 #include "sdpa_solve/SDP_Solver.hxx"
 #include "sdpb_version.hxx"
 #include "sdpb_util/Proc_Meminfo.hxx"
@@ -15,12 +17,19 @@
 
 #include <El.hpp>
 
+void run_resident(const Environment &env, const SDPB_Parameters &parameters,
+                  const std::vector<std::string> &startup_args,
+                  mp_bitcnt_t startup_precision, const Block_Info &block_info);
+
 int main(int argc, char **argv)
 {
   Environment env(argc, argv);
 
   try
     {
+      // The options are parsed at GMP's precision before set_precision()
+      // (resident mode parses its solve commands at the same precision)
+      const mp_bitcnt_t startup_precision = El::gmp::Precision();
       SDPB_Parameters parameters(argc, argv, env);
       if(!parameters.is_valid())
         {
@@ -73,10 +82,36 @@ int main(int argc, char **argv)
           ASSERT(!parameters.solver.gpu,
                  "--gpu is implemented for polynomial matrix programs only, "
                  "not for SDPA input.");
+          ASSERT(parameters.control_dir.empty(),
+                 "--controlDir (resident mode) is implemented for polynomial "
+                 "matrix programs only, not for SDPA input.");
+          if(parameters.solver.multimodular_trsm)
+            RUNTIME_ERROR("--multimodularTrsm is not supported for SDPA "
+                          "input (.dat, .dat-s).");
           time_and_solve<Sdpb::Sdpa::SDP_Solver>(env, parameters, start_time);
         }
+      else if(!parameters.control_dir.empty())
+        {
+          if(parameters.solver.multimodular_trsm)
+            check_multimodular_precision(Multimodular_Blas_Config(),
+                                         El::gmp::Precision());
+          // Resident mode (sdpb --controlDir): after the timing run, solve
+          // on command
+          const std::vector<std::string> startup_args(argv + 1, argv + argc);
+          time_and_solve<SDP_Solver>(
+            env, parameters, start_time,
+            [&](const Block_Info &block_info, const SDPB_Parameters &p) {
+              run_resident(env, p, startup_args, startup_precision,
+                           block_info);
+            });
+        }
       else
-        time_and_solve<SDP_Solver>(env, parameters, start_time);
+        {
+          if(parameters.solver.multimodular_trsm)
+            check_multimodular_precision(Multimodular_Blas_Config(),
+                                         El::gmp::Precision());
+          time_and_solve<SDP_Solver>(env, parameters, start_time);
+        }
     }
   catch(std::exception &e)
     {

@@ -3,6 +3,7 @@
 #include "Dual_Constraint_Group.hxx"
 #include "write_sdp.hxx"
 #include "pmp_read/pmp_read.hxx"
+#include "Reuse_SDP.hxx"
 #include "sdpb_util/Verbosity.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
@@ -38,13 +39,37 @@ int main(int argc, char **argv)
       Timers timers(env, parameters.verbosity);
       Scoped_Timer timer(timers, "pmp2sdp");
 
-      auto pmp = read_polynomial_matrix_program(env, parameters.input_file,
-                                                parameters.max_num_poles,
-                                                parameters.verbosity, timers);
+      std::optional<Reused_SDP> reuse;
+      std::function<std::optional<size_t>(const fs::path &)> known_num_matrices;
+      std::vector<std::pair<fs::path, size_t>> file_matrix_counts;
+      if(!parameters.reuse_sdp.empty())
+        {
+          Scoped_Timer reuse_timer(timers, "read_reuse_sdp");
+          reuse.emplace(parameters.reuse_sdp, parameters.precision,
+                        parameters.max_num_poles, parameters.output_format);
+          known_num_matrices = [&reuse](const fs::path &path) {
+            return reuse->num_matrices(path);
+          };
+        }
+
+      auto pmp = read_polynomial_matrix_program(
+        env, parameters.input_file, parameters.max_num_poles,
+        parameters.verbosity, timers, known_num_matrices, &file_matrix_counts);
+      if(reuse.has_value())
+        {
+          reuse->set_new_block_mapping(file_matrix_counts);
+          ASSERT_EQUAL(reuse->new_to_old.size(), pmp.num_matrices);
+          if(parameters.verbosity >= Verbosity::regular
+             && El::mpi::Rank() == 0)
+            El::Output("Reusing ", reuse->num_reused_blocks(), " of ",
+                       pmp.num_matrices, " SDP blocks from ",
+                       parameters.reuse_sdp.string());
+        }
 
       Output_SDP sdp(pmp, parameters.command_arguments, timers);
       write_sdp(parameters.output_path, sdp, pmp, parameters.output_format,
-                parameters.zip, timers, parameters.verbosity);
+                parameters.zip, timers, parameters.verbosity,
+                reuse.has_value() ? &reuse.value() : nullptr);
       if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
         {
           El::Output("Processed ", sdp.num_blocks, " SDP blocks in ",

@@ -133,6 +133,29 @@ in `test/data/sdp2.zip` with a command like
 In addition to having the same block structure, the runs must also use
 the same `precision`, and number and distribution of cores.
 
+### Resident mode: many related solves in one process
+
+For a scan that solves many SDPs with the same block structure, such as the
+OPE search (one block changes with the OPE coefficients, dozens of solves per
+point), SDPB can stay resident: it loads the SDP once and then executes
+commands from a control directory until it is told to quit.
+
+    mpirun -n 4 build/sdpb --precision=1024 -s test/out/sdp -c test/out/ck --controlDir=test/out/control
+
+A driver writes `cmd.1.json`, `cmd.2.json`, ... into the control directory
+(each renamed into place) and SDPB answers with `res.1.json`, ... Commands
+solve from the iterate in memory (with the arguments of an `sdpb` run, e.g.
+`{"cmd": "solve", "args": ["--outDir=out_17"]}`), replace changed blocks or the
+objective in memory (`update_pmp` converts the changed PMP files as pmp2sdp
+does; `update_sdp` re-reads them from an SDP directory written by pmp2sdp, e.g.
+with `--reuseSdp`), make a block a parametric family (`load_family`,
+`set_coefficients`), save and restore iterates, and write checkpoints. For the
+same sequence of SDPs the results equal those of `sdpb` runs chained through a
+checkpoint directory, bit for bit, while launching MPI, reading the SDP and
+the checkpoint, and writing a checkpoint at every solve are saved. See
+[src/sdpb/resident/Readme.md](../src/sdpb/resident/Readme.md) for the protocol
+and the commands.
+
 ## Solving SDPA problems
 
 `sdpb` can also solve general (non-polynomial) semidefinite programs in the SDPA format,

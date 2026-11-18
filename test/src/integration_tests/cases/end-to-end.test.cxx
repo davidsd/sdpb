@@ -1,5 +1,6 @@
 #include "integration_tests/common.hxx"
 
+#include <cstdlib>
 #include <boost/program_options/parsers.hpp>
 
 // Realistic end-to-end test for pmp2sdp + sdpb
@@ -42,6 +43,9 @@ namespace
     bool check_sdp = true;
     bool check_sdp_normalization = true;
     bool run_sdpb_twice = false;
+    // Appended to the output directory name, to run the same test data
+    // with different sdpb options
+    std::string runner_name_suffix;
     std::vector<std::string> default_spectrum_args;
 
     explicit End_To_End_Test(std::string name) : name(std::move(name)) {}
@@ -91,6 +95,7 @@ namespace
             = "end-to-end_tests/" + name + "/" + pmp_path.filename().string();
           if(!sdp_format.empty())
             runner_name += "/format=" + sdp_format;
+          runner_name += runner_name_suffix;
           Test_Case_Runner runner(runner_name);
           const auto &output_dir = runner.output_dir;
 
@@ -281,6 +286,18 @@ TEST_CASE("end-to-end_tests")
     test.run();
   }
 
+  SECTION("1d --multimodularTrsm")
+  {
+    INFO("Same as 1d, with sdpb --multimodularTrsm.");
+    End_To_End_Test test("1d");
+    test.num_procs = 2;
+    test.check_sdp_normalization = false;
+    test.precision = 664;
+    test.default_sdpb_args = {"--multimodularTrsm"};
+    test.runner_name_suffix = "/multimodularTrsm";
+    test.run();
+  }
+
   SECTION("1d-old-sampling")
   {
     INFO("SDPB test for a simple one-dimensional problem from SDPB Manual:");
@@ -402,6 +419,54 @@ TEST_CASE("end-to-end_tests")
       // Here we set them manually to test spectrum argument parsing.
       test.default_spectrum_args = boost::program_options::split_unix(
         "--threshold 1e-10 --minEigenvalueRatio 1e-10");
+      test.run();
+    }
+
+    SECTION("primal_dual_optimal --multimodularTrsm")
+    {
+      INFO("Same as primal_dual_optimal, with sdpb --multimodularTrsm: "
+           "multimodular Cholesky and L^{-1} B for the Schur complement "
+           "blocks.");
+      End_To_End_Test test("SingletScalar_cT_test_nmax6/primal_dual_optimal");
+      test.default_sdpb_args = default_sdpb_args;
+      test.default_sdpb_args.push_back("--multimodularTrsm");
+      test.runner_name_suffix = "/multimodularTrsm";
+      // as primal_dual_optimal: also checks restarting from the checkpoint
+      test.run_sdpb_twice = true;
+      test.run();
+    }
+
+    SECTION("primal_dual_optimal --multimodularTrsm small base")
+    {
+      INFO("Same as primal_dual_optimal --multimodularTrsm, with the "
+           "multimodular base size lowered (SDPB_MULTIMODULAR_BASE_SIZE=4, "
+           "and SDPB_MULTIMODULAR_DISTRIBUTED_MIN=8), so that the Schur "
+           "complement blocks (24 to 31 rows here) go through the "
+           "multimodular GEMM, Trsm and CRT instead of the BigFloat base "
+           "case. Here every block is on a one-rank group, so the "
+           "distributed Cholesky does not run (the unit test "
+           "Multimodular_Block_Factor covers it).");
+      End_To_End_Test test("SingletScalar_cT_test_nmax6/primal_dual_optimal");
+      test.default_sdpb_args = default_sdpb_args;
+      test.default_sdpb_args.push_back("--multimodularTrsm");
+      test.runner_name_suffix = "/multimodularTrsmSmallBase";
+      // the reference outputs come from two runs (a restart from the
+      // checkpoint), so this one also restarts through the kernels
+      test.run_sdpb_twice = true;
+      // Restores the environment even if the test fails
+      struct Env_Guard
+      {
+        Env_Guard()
+        {
+          setenv("SDPB_MULTIMODULAR_BASE_SIZE", "4", 1);
+          setenv("SDPB_MULTIMODULAR_DISTRIBUTED_MIN", "8", 1);
+        }
+        ~Env_Guard()
+        {
+          unsetenv("SDPB_MULTIMODULAR_BASE_SIZE");
+          unsetenv("SDPB_MULTIMODULAR_DISTRIBUTED_MIN");
+        }
+      } env_guard;
       test.run();
     }
 

@@ -13,6 +13,8 @@
     "maxSharedMemory": "0",
     "checkpointInterval": "3600",
     "findPrimalFeasible": "false",
+    "multimodularTrsm": "false",
+    "sparseB": "false",
     "findDualFeasible": "false",
     "detectPrimalFeasibleJump": "false",
     "detectDualFeasibleJump": "false",

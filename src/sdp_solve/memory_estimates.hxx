@@ -68,12 +68,17 @@ inline size_t get_schur_complement_size_local(const Block_Info &block_info)
     }
   return schur_complement_size;
 }
+// Dense size of B, as allocated for schur_off_diagonal = L^{-1} B
 inline size_t get_B_size_local(const SDP &sdp)
 {
   size_t B_size = 0;
   for(const auto &B_block : sdp.free_var_matrix.blocks)
     {
       B_size += B_block.AllocatedMemory();
+    }
+  for(const auto &B_block : sdp.free_var_matrix_sparse)
+    {
+      B_size += B_block.dense_size_local();
     }
   return B_size;
 }
@@ -98,6 +103,9 @@ inline size_t get_SDP_size_local(const SDP &sdp)
     SDP_size += matrix.AllocatedMemory();
   for(const auto &B_block : sdp.free_var_matrix.blocks)
     SDP_size += B_block.AllocatedMemory();
+  // --sparseB: nonzeros only (the indices add 4 B per element)
+  for(const auto &B_block : sdp.free_var_matrix_sparse)
+    SDP_size += B_block.num_nonzeros_local();
   return SDP_size;
 }
 template<class Derived>
@@ -105,12 +113,19 @@ size_t get_heap_allocated_bytes(const Abstract_Block_Matrix<Derived> &m)
 {
   return get_heap_allocated_bytes(m.blocks);
 }
+inline size_t get_heap_allocated_bytes(const Sparse_Block_Matrix &m)
+{
+  return get_heap_allocated_bytes(m.values)
+         + m.col_start.capacity() * sizeof(size_t)
+         + m.rows.capacity() * sizeof(int32_t);
+}
 inline size_t get_heap_allocated_bytes(const SDP &sdp)
 {
   size_t res = get_heap_allocated_bytes(sdp.bases_blocks)
                + get_heap_allocated_bytes(sdp.bilinear_bases)
                + get_heap_allocated_bytes(sdp.dual_objective_b)
                + get_heap_allocated_bytes(sdp.free_var_matrix)
+               + get_heap_allocated_bytes(sdp.free_var_matrix_sparse)
                + get_heap_allocated_bytes(sdp.objective_const)
                + get_heap_allocated_bytes(sdp.primal_objective_c);
   if(sdp.normalization.has_value())

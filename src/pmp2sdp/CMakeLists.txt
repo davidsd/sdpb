@@ -8,6 +8,7 @@ add_library(pmp2sdp_lib STATIC
   write_normalization_json.cxx
   write_sdp.cxx
   write_control_json.cxx
+  Reuse_SDP.cxx
   Archive_Writer.cxx
   Archive_Entry.cxx)
 target_link_libraries(pmp2sdp_lib PUBLIC sdpb_util pmp)

@@ -17,11 +17,17 @@
 
 #include <chrono>
 #include <filesystem>
+#include <functional>
 
+// solve_after_timing (optional): called with the final block_info and
+// parameters instead of the solve (resident mode, sdpb --controlDir).
 template <class TSolver>
 void time_and_solve(
   const Environment &env, SDPB_Parameters parameters,
-  const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time)
+  const std::chrono::time_point<std::chrono::high_resolution_clock> &start_time,
+  const std::function<void(const typename TSolver::Block_Info_Type &,
+                           const SDPB_Parameters &)> &solve_after_timing
+  = {})
 {
   namespace fs = std::filesystem;
 #ifdef SDPB_GPU
@@ -29,6 +35,11 @@ void time_and_solve(
   if(parameters.solver.gpu)
     {
       Gpu_Compute::limbs_for_precision(parameters.solver.precision);
+      ASSERT(!parameters.solver.sparse_B,
+             "--sparseB is a CPU option; with --gpu, SDPB_GPU_SPARSE_B=1 keeps "
+             "B as its nonzeros on the device.");
+      ASSERT(!parameters.solver.multimodular_trsm,
+             "--multimodularTrsm is a CPU option, without effect with --gpu.");
       set_threaded_sdp_reading(true);
     }
 #endif
@@ -97,6 +108,15 @@ void time_and_solve(
         {
           // If the solver converged after a single iteration,
           // there is no need for a second run.
+          if(!solve_after_timing)
+            return;
+          // Resident mode: the timing run's iterate is discarded, and the
+          // session starts with the block layout it had (no timings).
+          if(El::mpi::Rank() == 0
+             && parameters.verbosity >= Verbosity::regular)
+            El::Output("The timing run ended early (", terminate_reason,
+                       "); starting resident mode without block timings.");
+          solve_after_timing(block_info, parameters);
           return;
         }
       // Release memory back to OS (glibc-only)
@@ -134,6 +154,11 @@ void time_and_solve(
                     parameters.solver.checkpoint_out / "block_timings",
                     fs::copy_options::overwrite_existing);
         }
+    }
+  if(solve_after_timing)
+    {
+      solve_after_timing(block_info, parameters);
+      return;
     }
   El::Matrix<int32_t> block_timings_ms;
   Timers timers(env, parameters.verbosity);

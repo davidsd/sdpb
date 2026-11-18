@@ -59,6 +59,10 @@ void copy_matrix_from_root(const El::Matrix<El::BigFloat> &source,
       El::Copy(source, destination.Matrix());
       return;
     }
+  // QueueUpdate() adds to the existing elements: start from zero, so that
+  // this copies also into a matrix that already holds data (
+  // the resident mode replaces SDP blocks in place)
+  El::Zero(destination);
   if(comm.Rank() == 0)
     {
       for(int i = 0; i < source.Height(); ++i)

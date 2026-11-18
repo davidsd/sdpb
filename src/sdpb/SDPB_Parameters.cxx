@@ -16,6 +16,13 @@ namespace po = boost::program_options;
 
 SDPB_Parameters::SDPB_Parameters(int argc, char *argv[],
                                  const Environment &env)
+    : SDPB_Parameters({std::vector<std::string>(argv + 1, argv + argc)}, false,
+                      env)
+{}
+
+SDPB_Parameters::SDPB_Parameters(
+  const std::vector<std::vector<std::string>> &arg_lists,
+  const bool throw_on_error, const Environment &env)
     : solver(env)
 {
   std::string write_solution_string;
@@ -82,6 +89,17 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[],
     po::value<Verbosity>(&verbosity)->default_value(Verbosity::regular),
     "Verbosity.  0 -> no output, 1 -> regular output, 2 -> debug output, 3 -> "
     "trace output");
+  basic_options.add_options()(
+    "controlDir", po::value<fs::path>(&control_dir),
+    "Resident mode: load the SDP once, then read commands (solve, update "
+    "blocks, set coefficients, save iterates, ...) from files in this "
+    "directory and answer each in a result file, until 'quit'. "
+    "See src/sdpb/resident/Readme.md. Without it, SDPB solves once.");
+  basic_options.add_options()(
+    "controlIdleTimeout",
+    po::value<int64_t>(&control_idle_timeout)->default_value(0),
+    "Resident mode: exit after this many seconds without a command "
+    "(0: wait forever).");
 
   po::options_description obsolete_options("Obsolete options");
   obsolete_options.add_options()(
@@ -96,8 +114,11 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[],
   po::variables_map variables_map;
   try
     {
-      po::store(po::parse_command_line(argc, argv, cmd_line_options),
-                variables_map);
+      for(const auto &args : arg_lists)
+        po::store(po::command_line_parser(args)
+                    .options(cmd_line_options)
+                    .run(),
+                  variables_map);
 
       if(variables_map.count("help") != 0)
         {
@@ -238,6 +259,8 @@ SDPB_Parameters::SDPB_Parameters(int argc, char *argv[],
     }
   catch(po::error &e)
     {
+      if(throw_on_error)
+        throw std::runtime_error(e.what());
       El::ReportException(e);
       El::mpi::Abort(El::mpi::COMM_WORLD, 1);
     }
