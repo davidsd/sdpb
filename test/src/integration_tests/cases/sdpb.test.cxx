@@ -1,5 +1,8 @@
 #include "integration_tests/common.hxx"
 #include <filesystem>
+#include <fstream>
+#include <rapidjson/istreamwrapper.h>
+#include <rapidjson/document.h>
 
 namespace fs = std::filesystem;
 
@@ -44,6 +47,63 @@ TEST_CASE("sdpb")
     os << "";
     fs::permissions(path, fs::perms::others_read);
   };
+
+  SECTION("initialSeed")
+  {
+    INFO("--initialSeed=none and --initialSeed=rows:0 are the default start: "
+         "the whole run must be the same as without the option. "
+         "--initialSeed=rows starts elsewhere and must reach the same answer.");
+    // one rank, so that the comparison at full precision is deterministic
+    const int np = 1;
+    auto run = [&](const std::string &name, const std::string &seed) {
+      Test_Util::Test_Case_Runner runner("sdpb/initialSeed/" + name);
+      auto args = default_args;
+      if(!seed.empty())
+        args["--initialSeed"] = seed;
+      run_sdpb_set_out_ck_dirs(runner, args, np);
+      return runner.output_dir / "out";
+    };
+    const auto out_default = run("default", "");
+    for(const std::string seed : {"none", "rows:0"})
+      DYNAMIC_SECTION("--initialSeed=" << seed)
+      {
+        const auto out = run(seed, seed);
+        Test_Util::REQUIRE_Equal::diff_sdpb_output_dir(out, out_default, 1024,
+                                                       1024);
+      }
+    SECTION("--initialSeed=rows")
+    {
+      const auto out = run("rows", "rows");
+      Test_Util::REQUIRE_Equal::diff_sdpb_output_dir(
+        out, out_default, 1024, 64, {"y.txt", "out.txt"},
+        {"terminateReason", "primalObjective", "dualObjective"});
+      INFO("... from another start: the first iterate's primal error "
+           "(|X - sum_p A_p x_p| with x = 0) differs from the default's.");
+      const auto first_P_err = [](const fs::path &out_dir) {
+        std::ifstream is(out_dir / "iterations.json");
+        rapidjson::IStreamWrapper wrapper(is);
+        rapidjson::Document doc;
+        doc.ParseStream(wrapper);
+        REQUIRE(doc.IsArray());
+        REQUIRE(doc.Size() > 0);
+        return std::string(doc[0]["P-err"].GetString());
+      };
+      REQUIRE(first_P_err(out) != first_P_err(out_default));
+    }
+    SECTION("--initialSeed=rows on SDPA input")
+    {
+      INFO("The seed is defined for polynomial matrix programs only; "
+           "the SDPA solver must refuse it rather than ignore it.");
+      Test_Util::Test_Case_Runner runner("sdpb/initialSeed/sdpa");
+      auto args = default_args;
+      args["--sdpDir"] = (Test_Config::test_data_dir / "end-to-end_tests"
+                          / "sdpa" / "example1" / "input" / "example1.dat-s")
+                           .string();
+      args["--precision"] = "200";
+      args["--initialSeed"] = "rows";
+      run_sdpb_set_out_ck_dirs(runner, args, np, 1, "not for SDPA input");
+    }
+  }
 
   SECTION("io_tests")
   {

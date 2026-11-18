@@ -1,3 +1,4 @@
+#include <cmath>
 #include "../Solver_Parameters.hxx"
 
 #include "Memory_Limit.hxx"
@@ -164,6 +165,42 @@ boost::program_options::options_description Solver_Parameters::options()
                        "The initial checkpoint directory to load. Defaults to "
                        "checkpointDir.");
   result.add_options()(
+    "initialSeed",
+    boost::program_options::value<std::string>(&initial_seed)
+      ->default_value("")
+      ->notifier([](const std::string &s) {
+        if(s.empty() || s == "none" || s == "rows")
+          return;
+        if(s.rfind("rows:", 0) == 0 && s.size() > 5)
+          {
+            const std::string a = s.substr(5);
+            size_t used = 0;
+            double value = 0;
+            try
+              {
+                value = std::stod(a, &used);
+              }
+            catch(const std::exception &)
+              {
+                used = 0;
+              }
+            if(used == a.size() && std::isfinite(value))
+              return;
+          }
+        throw boost::program_options::invalid_option_value(
+          "--initialSeed=" + s
+          + " (expected none, rows or rows:<a> with a finite a)");
+      }),
+    "Cold start, used only when no checkpoint is loaded. 'none' (default): "
+    "X = initialMatrixScalePrimal 1, Y = initialMatrixScaleDual 1. "
+    "'rows[:a]' (a = 0.5 if omitted): in each Gram sector of a block with "
+    "more than one sample, X = initialMatrixScalePrimal M, "
+    "Y = initialMatrixScaleDual M^-1, M = 1 + Q diag(g^a - 1) Q^T, with Q "
+    "the sector's bilinear basis and g_k = 1/max(|c_p|, |B_pn|) over the "
+    "block's rows p at sample k. 'rows:0' is the default start exactly. "
+    "Needs bilinear bases with orthonormal rows (pmp2sdp's default ones); "
+    "polynomial matrix programs only.");
+  result.add_options()(
     "checkpointInterval",
     boost::program_options::value<int64_t>(&checkpoint_interval)
       ->default_value(3600),
@@ -200,6 +237,8 @@ boost::property_tree::ptree to_property_tree(const Solver_Parameters &p)
   result.put("maxComplementarity", p.max_complementarity);
   result.put("initialCheckpointDir", p.checkpoint_in.string());
   result.put("checkpointDir", p.checkpoint_out.string());
+  if(!p.initial_seed.empty() && p.initial_seed != "none")
+    result.put("initialSeed", p.initial_seed);
 
   return result;
 }
@@ -236,5 +275,7 @@ std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
      << "maxComplementarity           = " << p.max_complementarity << '\n'
      << "initialCheckpointDir         = " << p.checkpoint_in << '\n'
      << "checkpointDir                = " << p.checkpoint_out << '\n';
+  if(!p.initial_seed.empty())
+    os << "initialSeed                  = " << p.initial_seed << '\n';
   return os;
 }

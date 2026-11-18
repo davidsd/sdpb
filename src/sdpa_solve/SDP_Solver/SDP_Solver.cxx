@@ -1,4 +1,5 @@
 #include "../SDP_Solver.hxx"
+#include "sdpb_util/assert.hxx"
 
 namespace Sdpb::Sdpa
 {
@@ -24,6 +25,12 @@ namespace Sdpb::Sdpa
         X.add_diagonal(parameters.initial_matrix_scale_primal);
         // Y = \Omega_d I
         Y.add_diagonal(parameters.initial_matrix_scale_dual);
+
+        if(!parameters.initial_seed.empty()
+           && parameters.initial_seed != "none")
+          RUNTIME_ERROR("--initialSeed=", parameters.initial_seed,
+                        " is implemented for polynomial matrix programs "
+                        "only, not for SDPA input.");
       }
     if(verbosity >= Verbosity::regular && El::mpi::Rank() == 0)
       {

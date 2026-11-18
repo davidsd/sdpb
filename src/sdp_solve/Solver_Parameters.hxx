@@ -31,6 +31,11 @@ struct Solver_Parameters
     min_primal_step, min_dual_step;
 
   std::filesystem::path checkpoint_in, checkpoint_out;
+
+  // Cold start when no checkpoint is loaded: empty (or "none") is
+  // X = initialMatrixScalePrimal * 1, Y = initialMatrixScaleDual * 1;
+  // "rows[:a]" is the seed of SDP_Solver.cxx.
+  std::string initial_seed;
   explicit Solver_Parameters(const Environment &env);
   boost::program_options::options_description options();
 };
