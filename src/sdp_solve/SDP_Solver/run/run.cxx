@@ -4,6 +4,7 @@
 #include "get_syrk_Q_config.hxx"
 #include "multimodular/Multimodular_Block_Factor.hxx"
 #include "sdp_solve/SDP_Solver.hxx"
+#include "step/Q_Grids.hxx"
 #include "sdpb_util/ostream/pretty_print_bytes.hxx"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -74,7 +75,8 @@ namespace
   BigInt_Shared_Memory_Syrk_Context create_syrk_Q_context_and_print_memory(
     const Environment &env, const Block_Info &block_info, const El::Grid &grid,
     const SDP &sdp, const SDP_Solver &solver,
-    const Solver_Parameters &parameters, const Verbosity verbosity)
+    const Solver_Parameters &parameters, const Q_Grids &q_grids,
+    const Verbosity verbosity)
   {
     // Estimate how many BigFloats will be allocated by SDPB on the current node,
     // (including what's already allocated, e.g. SDP)
@@ -177,6 +179,28 @@ namespace
     // Q = NxN
     SDP_Solver_run_bytes += Q_bytes;
 
+    // --qSolveRanks: the copy of Q's factor on the solve grid (N x N
+    // BigFloats over its ranks, plus receive buffers for its upper triangle),
+    // and the send buffers on all ranks. --qSolveCache: N x 128 BigFloats per
+    // rank of the solve grid (all ranks without --qSolveRanks).
+    const size_t q_solve_bytes = node_reduce([&] {
+      const size_t N = sdp.dual_objective_b.Height();
+      const El::Grid *solve_grid = q_grids.solve_grid();
+      const bool in_solve_grid = solve_grid == nullptr || solve_grid->InGrid();
+      size_t bytes = 0;
+      if(solve_grid != nullptr)
+        {
+          const size_t upper = N * (N + 1) / 2;
+          bytes += upper / El::mpi::Size() * bigfloat_bytes();
+          if(in_solve_grid)
+            bytes += (N * N + upper) / solve_grid->Size() * bigfloat_bytes();
+        }
+      if(parameters.q_solve_cache && in_solve_grid)
+        bytes += N * 128 * bigfloat_bytes();
+      return bytes;
+    }());
+    SDP_Solver_run_bytes += q_solve_bytes;
+
     const auto cfg = get_syrk_Q_config(
       block_info, sdp, parameters.max_memory, parameters.max_shared_memory,
       mem_required_bytes()
@@ -233,6 +257,7 @@ namespace
           {"\t\t\tQ", Q_bytes},
           {"\t\t\t--multimodularCholeskyQ", multimodular_cholesky_Q_bytes},
           {"\t\t\tshared memory", cfg.node_shmem_bytes()},
+          {"\t\t--qSolveRanks, --qSolveCache", q_solve_bytes},
         };
 
         std::ostringstream ss;
@@ -325,8 +350,20 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
 
   Scoped_Timer initialize_bigint_syrk_context_timer(timers,
                                                     "bigint_syrk_context");
+  // Optional sub-grid for the Q solves (--qSolveRanks)
+  const Q_Grids q_grids(env, parameters.q_solve_ranks);
+  if(El::mpi::Rank() == 0)
+    {
+      if((parameters.q_cholesky_node_diag || parameters.q_cholesky_node_factor)
+         && parameters.multimodular_cholesky_Q <= 0)
+        PRINT_WARNING("--qCholeskyNodeDiag and --qCholeskyNodeFactor act "
+                      "only with --multimodularCholeskyQ; ignored.");
+      if(parameters.q_solve_ranks > 0 && q_grids.solve_grid() == nullptr)
+        PRINT_WARNING("--qSolveRanks ", parameters.q_solve_ranks,
+                      " is not below the number of ranks; ignored.");
+    }
   auto bigint_syrk_context = create_syrk_Q_context_and_print_memory(
-    env, block_info, grid, sdp, *this, parameters, verbosity);
+    env, block_info, grid, sdp, *this, parameters, q_grids, verbosity);
   initialize_bigint_syrk_context_timer.stop();
 
   initialize_timer.stop();
@@ -503,7 +540,8 @@ SDP_Solver_Terminate_Reason SDP_Solver::run(
       El::BigFloat max_block_cond_number;
       std::string max_block_cond_number_name;
       step(env, parameters, verbosity, total_psd_rows,
-           is_primal_and_dual_feasible, block_info, sdp, grid, X_cholesky,
+           is_primal_and_dual_feasible, block_info, sdp, grid, &q_grids,
+           X_cholesky,
            Y_cholesky, A_X_inv, A_Y, primal_residue_p, bigint_syrk_context, mu,
            beta_corrector, primal_step_length, dual_step_length, terminate_now,
            timers, block_timings_ms, Q_cond_number, max_block_cond_number,

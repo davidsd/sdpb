@@ -1,6 +1,7 @@
 #include "integration_tests/common.hxx"
 
 #include <cstdlib>
+
 #include <boost/program_options/parsers.hpp>
 
 // Realistic end-to-end test for pmp2sdp + sdpb
@@ -482,6 +483,55 @@ TEST_CASE("end-to-end_tests")
       test.runner_name_suffix = "/multimodularCholeskyQ";
       // the reference outputs come from two runs (a restart)
       test.run_sdpb_twice = true;
+      test.run();
+    }
+
+    SECTION("primal_dual_optimal --qSolveRanks")
+    {
+      INFO("Same as primal_dual_optimal, with the Q solves on a sub-grid of "
+           "2 of the 6 ranks and the solve cache (equal at working "
+           "precision).");
+      End_To_End_Test test("SingletScalar_cT_test_nmax6/primal_dual_optimal");
+      test.default_sdpb_args = default_sdpb_args;
+      for(const std::string arg : {"--qSolveRanks", "2", "--qSolveCache"})
+        test.default_sdpb_args.push_back(arg);
+      test.runner_name_suffix = "/qSolveRanks";
+      // the reference outputs come from two runs (a restart)
+      test.run_sdpb_twice = true;
+      test.run();
+    }
+
+    SECTION("primal_dual_optimal, node options on two fake nodes")
+    {
+      INFO("Same as primal_dual_optimal, with the multimodular Cholesky of Q "
+           "in panels of 8 (Q is 20 x 20: three panels, two trailing "
+           "updates), its node options and the solve cache, the 6 ranks "
+           "split into two nodes by SDPB_FAKE_NODES=2. The multimodular base "
+           "size is 4 (SDPB_MULTIMODULAR_BASE_SIZE), so that the diagonal "
+           "blocks' node factorization runs the multimodular kernels.");
+      End_To_End_Test test("SingletScalar_cT_test_nmax6/primal_dual_optimal");
+      test.default_sdpb_args = default_sdpb_args;
+      for(const std::string arg :
+          {"--multimodularTrsm", "--multimodularCholeskyQ", "8",
+           "--qCholeskyNodeDiag", "--qCholeskyNodeFactor", "--qSolveCache"})
+        test.default_sdpb_args.push_back(arg);
+      test.runner_name_suffix = "/nodeOptions";
+      // the reference outputs come from two runs (a restart)
+      test.run_sdpb_twice = true;
+      // Restores the environment even if the test fails
+      struct Env_Guard
+      {
+        Env_Guard()
+        {
+          setenv("SDPB_FAKE_NODES", "2", 1);
+          setenv("SDPB_MULTIMODULAR_BASE_SIZE", "4", 1);
+        }
+        ~Env_Guard()
+        {
+          unsetenv("SDPB_FAKE_NODES");
+          unsetenv("SDPB_MULTIMODULAR_BASE_SIZE");
+        }
+      } env_guard;
       test.run();
     }
 

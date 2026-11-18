@@ -17,6 +17,9 @@
 
 #include <filesystem>
 
+// Sub-grids for Q, see SDP_Solver/run/step/Q_Grids.hxx
+class Q_Grids;
+
 // SDPSolver contains the data structures needed during the running of
 // the interior point algorithm.  Each structure is allocated when an
 // SDPSolver is initialized, and reused in each iteration.
@@ -98,7 +101,7 @@ struct SDP_Solver
     const Environment &env, const Solver_Parameters &parameters,
     const Verbosity &verbosity, const std::size_t &total_psd_rows,
     const bool &is_primal_and_dual_feasible, const Block_Info &block_info,
-    const SDP &sdp, const El::Grid &grid,
+    const SDP &sdp, const El::Grid &grid, const Q_Grids *q_grids,
     const Paired_Block_Diagonal_Matrix &X_cholesky,
     const Paired_Block_Diagonal_Matrix &Y_cholesky,
     const std::array<

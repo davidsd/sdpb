@@ -25,6 +25,14 @@ struct Solver_Parameters
   // Experimental: Cholesky of Q with the trailing update by
   // multimodular BLAS, panel width = this value (0: El::Cholesky)
   int64_t multimodular_cholesky_Q{};
+  // Experimental: number of ranks for the Q solves (0: all ranks), see
+  // sdp_solve/SDP_Solver/run/step/Q_Grids.hxx
+  int64_t q_solve_ranks{};
+  // Experimental, with multimodular_cholesky_Q: each diagonal
+  // block gathered once per node / its factorization shared by the node's
+  // ranks; and the Q solves keep their copies of Q's diagonal blocks, made
+  // once per node (same bits in all three)
+  bool q_cholesky_node_diag{}, q_cholesky_node_factor{}, q_solve_cache{};
   size_t precision{};
 
   // Initialized from Environment - MemAvailable

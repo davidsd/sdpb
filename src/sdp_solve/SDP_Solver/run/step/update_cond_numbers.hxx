@@ -23,7 +23,10 @@ inline void update_cond_numbers(
 {
   Scoped_Timer cond_number_timer(timers, "condition_numbers");
 
-  Q_cond_number = cholesky_condition_number(Q);
+  // Q may live on a sub-grid (--qSolveRanks); rank 0 is
+  // always in it
+  if(Q.Participating())
+    Q_cond_number = cholesky_condition_number(Q);
 
   max_block_cond_number = 0;
   max_block_cond_number_name = "";

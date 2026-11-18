@@ -4,6 +4,7 @@
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdp_solve/memory_estimates.hxx"
 #include "sdp_solve/SDP_Solver/run/multimodular/multimodular_blas.hxx"
+#include "sdp_solve/SDP_Solver/run/step/Q_Grids.hxx"
 
 // Compute the quantities needed to solve the Schur complement
 // equation
@@ -74,7 +75,8 @@ void initialize_schur_complement_solver(
   BigInt_Shared_Memory_Syrk_Context &bigint_syrk_context,
   El::DistMatrix<El::BigFloat> &Q, Timers &timers,
   El::Matrix<int32_t> &block_timings_ms, const bool multimodular_trsm,
-  const int64_t multimodular_cholesky_Q, const Verbosity verbosity)
+  const int64_t multimodular_cholesky_Q, const Verbosity verbosity,
+  const Q_Grids *q_grids, const int cholesky_Q_node_mode)
 {
   Scoped_Timer initialize_timer(timers, "initializeSchurComplementSolver");
   // The Schur complement matrix S: a Block_Diagonal_Matrix with one
@@ -94,6 +96,17 @@ void initialize_schur_complement_solver(
             schur_complement_cholesky, bigint_syrk_context, Q, timers,
             block_timings_ms, multimodular_trsm, verbosity);
 
+  // q_grids (may be nullptr; --qSolveRanks, see Q_Grids.hxx): leave the
+  // factor on q_grids->solve_grid(). Then Q is a matrix on that grid, and
+  // ranks outside it hold no part of Q. Q is moved by its upper triangle (all
+  // that the solves read), the strictly lower part is zero.
+  auto move_Q_to = [&Q, &timers](const El::Grid &grid, const char *name) {
+    Scoped_Timer timer(timers, name);
+    El::DistMatrix<El::BigFloat> Q_new(grid);
+    copy_upper_between_grids(Q, Q_new);
+    Q.Empty();
+    Q = std::move(Q_new);
+  };
   Scoped_Timer Cholesky_timer(timers, "Cholesky_Q");
   try
     {
@@ -101,14 +114,16 @@ void initialize_schur_complement_solver(
         {
           // El's blocked Cholesky with the trailing updates and the
           // diagonal blocks by multimodular BLAS, see
-          // multimodular_cholesky_dist.cxx
+          // multimodular_cholesky_dist.cxx; cholesky_Q_node_mode: per-node
+          // copies (--qCholeskyNodeDiag, --qCholeskyNodeFactor)
           Multimodular_Blas_Config config;
           apply_multimodular_test_overrides(config);
           Multimodular_Cholesky_Dist_Timings t;
           // No per-panel timers (they would add ~5 entries per panel per
           // iteration to the timer list); Cholesky_Q times the whole.
           multimodular_cholesky_upper_dist(Q, int(multimodular_cholesky_Q),
-                                           true, config, t, nullptr);
+                                           true, config, t, nullptr,
+                                           cholesky_Q_node_mode);
         }
       else
         Cholesky(El::UpperOrLowerNS::UPPER, Q);
@@ -117,4 +132,8 @@ void initialize_schur_complement_solver(
     {
       RUNTIME_ERROR("Error when computing Cholesky(Q): ", e.what());
     }
+  Cholesky_timer.stop();
+
+  if(q_grids != nullptr && q_grids->solve_grid() != nullptr)
+    move_Q_to(*q_grids->solve_grid(), "Q_to_solve_grid");
 }

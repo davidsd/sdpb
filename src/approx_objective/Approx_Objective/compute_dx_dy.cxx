@@ -4,7 +4,9 @@
 void solve_schur_complement_equation(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
-  const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx, Block_Vector &dy);
+  const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx, Block_Vector &dy,
+  struct Timers *timers = nullptr,
+  class Q_Solve_Cache *q_solve_cache = nullptr);
 
 void compute_dx_dy(const Block_Info &block_info,
                    const SDP &d_sdp, const Block_Vector &x,

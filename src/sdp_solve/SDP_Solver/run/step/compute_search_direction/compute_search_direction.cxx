@@ -1,4 +1,6 @@
 #include "sdp_solve/SDP_Solver/run/constraint_matrix_weighted_sum.hxx"
+#include "sdp_solve/SDP_Solver/run/step/Q_Solve_Cache.hxx"
+#include "sdpb_util/Timers/Timers.hxx"
 
 // Compute the search direction (dx, dX, dy, dY) for the predictor and
 // corrector phases.
@@ -23,7 +25,8 @@ void compute_schur_RHS(const Block_Info &block_info, const SDP &sdp,
 void solve_schur_complement_equation(
   const Block_Diagonal_Matrix &schur_complement_cholesky,
   const Block_Matrix &schur_off_diagonal,
-  const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx, Block_Vector &dy);
+  const El::DistMatrix<El::BigFloat> &Q, Block_Vector &dx, Block_Vector &dy,
+  Timers *timers, Q_Solve_Cache *q_solve_cache);
 
 void compute_search_direction(
   const Block_Info &block_info, const SDP &sdp, const SDP_Solver &solver,
@@ -34,7 +37,8 @@ void compute_search_direction(
   const El::BigFloat &mu, const Block_Vector &primal_residue_p,
   const bool &is_corrector_phase, const El::DistMatrix<El::BigFloat> &Q,
   Block_Vector &dx, Paired_Block_Diagonal_Matrix &dX, Block_Vector &dy,
-  Paired_Block_Diagonal_Matrix &dY)
+  Paired_Block_Diagonal_Matrix &dY, Timers &timers,
+  Q_Solve_Cache *q_solve_cache)
 {
   // R = beta mu I - X Y (predictor phase)
   // R = beta mu I - X Y - dX dY (corrector phase)
@@ -58,8 +62,14 @@ void compute_search_direction(
   dy = primal_residue_p;
 
   // Solve for dx, dy in-place
+  // Sub-timers of the Q solve only with the options that change it
+  // (--qSolveRanks, --qSolveCache): the default profile stays as it was.
+  const bool q_options
+    = q_solve_cache != nullptr || Q.Grid() != El::Grid::Default();
   solve_schur_complement_equation(schur_complement_cholesky,
-                                  schur_off_diagonal, Q, dx, dy);
+                                  schur_off_diagonal, Q, dx, dy,
+                                  q_options ? &timers : nullptr,
+                                  q_solve_cache);
 
   // dX = PrimalResidues + \sum_p A_p dx[p]
   constraint_matrix_weighted_sum(block_info, sdp, dx, dX);

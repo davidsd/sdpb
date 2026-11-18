@@ -27,6 +27,8 @@ add_library(sdp_solve STATIC
   SDP_Solver/run/print_iteration.cxx
   SDP_Solver/run/step/step.cxx
   SDP_Solver/run/step/initialize_schur_complement_solver/initialize_schur_complement_solver.cxx
+  SDP_Solver/run/step/Q_Grids.cxx
+  SDP_Solver/run/step/Q_Solve_Cache.cxx
   SDP_Solver/run/step/initialize_schur_complement_solver/compute_schur_complement.cxx
   SDP_Solver/run/step/initialize_schur_complement_solver/compute_Q.cxx
   SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context/BigInt_Shared_Memory_Syrk_Context.cxx

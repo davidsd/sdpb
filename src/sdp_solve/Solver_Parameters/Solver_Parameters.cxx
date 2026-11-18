@@ -56,6 +56,37 @@ boost::program_options::options_description Solver_Parameters::options()
     "0 (default) uses El::Cholesky. Supports --precision up to 3200 bits; "
     "SDPB input only.");
   result.add_options()(
+    "qSolveRanks",
+    boost::program_options::value<int64_t>(&q_solve_ranks)
+      ->default_value(0),
+    "Experimental: solve with the Cholesky factor of Q on the first N ranks "
+    "only (in node order); the factor is copied there, and dy is summed "
+    "over all ranks and broadcast back. On many nodes the solves are much "
+    "faster on one node's ranks (e.g. 32 or 64). Changes the iterates at "
+    "working precision. 0 (default): all ranks.");
+  result.add_options()(
+    "qCholeskyNodeDiag",
+    boost::program_options::bool_switch(&q_cholesky_node_diag)
+      ->default_value(false),
+    "Experimental, with --multimodularCholeskyQ: gather each diagonal block "
+    "of Q's Cholesky decomposition once per node into shared memory, "
+    "instead of once per rank. Same results bit for bit; faster on many "
+    "nodes (~1 s/iteration at 10-16 nodes), not on one.");
+  result.add_options()(
+    "qCholeskyNodeFactor",
+    boost::program_options::bool_switch(&q_cholesky_node_factor)
+      ->default_value(false),
+    "Experimental, with --multimodularCholeskyQ: share the factorization of "
+    "each diagonal block of Q among the ranks of a node, instead of "
+    "repeating it on every rank. Same results bit for bit.");
+  result.add_options()(
+    "qSolveCache",
+    boost::program_options::bool_switch(&q_solve_cache)->default_value(false),
+    "Experimental: in the solves with Q's Cholesky factor (four per "
+    "iteration), copy each diagonal block of the factor to every rank once "
+    "per iteration (once per node), instead of once per solve. Same results "
+    "bit for bit. Best with --qSolveRanks.");
+  result.add_options()(
     "findPrimalFeasible",
     boost::program_options::bool_switch(&find_primal_feasible)
       ->default_value(false),
@@ -213,6 +244,10 @@ boost::property_tree::ptree to_property_tree(const Solver_Parameters &p)
   result.put("findPrimalFeasible", p.find_primal_feasible);
   result.put("multimodularTrsm", p.multimodular_trsm);
   result.put("multimodularCholeskyQ", p.multimodular_cholesky_Q);
+  result.put("qSolveRanks", p.q_solve_ranks);
+  result.put("qCholeskyNodeDiag", p.q_cholesky_node_diag);
+  result.put("qCholeskyNodeFactor", p.q_cholesky_node_factor);
+  result.put("qSolveCache", p.q_solve_cache);
   result.put("findDualFeasible", p.find_dual_feasible);
   result.put("detectPrimalFeasibleJump", p.detect_primal_feasible_jump);
   result.put("detectDualFeasibleJump", p.detect_dual_feasible_jump);
@@ -243,6 +278,11 @@ std::ostream &operator<<(std::ostream &os, const Solver_Parameters &p)
      << "maxSharedMemory              = " << p.max_shared_memory << '\n'
      << "multimodularTrsm             = " << p.multimodular_trsm << '\n'
      << "multimodularCholeskyQ        = " << p.multimodular_cholesky_Q << '\n'
+     << "qSolveRanks                  = " << p.q_solve_ranks << '\n'
+     << "qCholeskyNodeDiag            = " << p.q_cholesky_node_diag << '\n'
+     << "qCholeskyNodeFactor          = " << p.q_cholesky_node_factor
+     << '\n'
+     << "qSolveCache                  = " << p.q_solve_cache << '\n'
      << "findPrimalFeasible           = " << p.find_primal_feasible << '\n'
      << "findDualFeasible             = " << p.find_dual_feasible << '\n'
      << "detectPrimalFeasibleJump     = " << p.detect_primal_feasible_jump
