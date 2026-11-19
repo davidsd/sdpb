@@ -1,4 +1,5 @@
 #include "Zeros.hxx"
+#include "Zero_Test.hxx"
 #include "pmp/PMP_Info.hxx"
 #include "sdp_solve/sdp_solve.hxx"
 #include "sdpb_util/Boost_Float.hxx"
@@ -7,7 +8,7 @@
 
 namespace fs = std::filesystem;
 
-void handle_arguments(const int &argc, char **argv,
+void handle_arguments(const int &argc, char **argv, Zero_Test &zero_test,
                       std::optional<Boost_Float> &threshold,
                       El::BigFloat &max_zero, El::BigFloat &min_zero_distance,
                       fs::path &pmp_info_path, fs::path &solution_dir,
@@ -37,7 +38,8 @@ std::vector<Zeros>
 compute_spectrum(const PMP_Info &pmp_info,
                  const std::vector<El::Matrix<El::BigFloat>> &c_minus_By,
                  const std::optional<std::vector<El::Matrix<El::BigFloat>>> &x,
-                 const Boost_Float &threshold, const El::BigFloat &max_zero,
+                 const Zero_Test &zero_test, const Boost_Float &threshold,
+                 const El::BigFloat &max_zero,
                  const El::BigFloat &min_zero_distance,
                  const bool &need_lambda,
                  const std::optional<El::BigFloat> &min_eigenvalue_ratio,
@@ -58,6 +60,7 @@ int main(int argc, char **argv)
 
   try
     {
+      Zero_Test zero_test;
       std::optional<Boost_Float> threshold;
       El::BigFloat max_zero;
       El::BigFloat min_zero_distance;
@@ -65,10 +68,10 @@ int main(int argc, char **argv)
       bool need_lambda;
       std::optional<El::BigFloat> min_eigenvalue_ratio;
       Verbosity verbosity;
-      handle_arguments(argc, argv, threshold, max_zero, min_zero_distance,
-                       pmp_info_path, solution_dir, c_minus_By_path,
-                       output_path, need_lambda, min_eigenvalue_ratio,
-                       verbosity);
+      handle_arguments(argc, argv, zero_test, threshold, max_zero,
+                       min_zero_distance, pmp_info_path, solution_dir,
+                       c_minus_By_path, output_path, need_lambda,
+                       min_eigenvalue_ratio, verbosity);
 
       // Print command line
       if(verbosity >= Verbosity::debug && El::mpi::Rank() == 0)
@@ -100,7 +103,7 @@ int main(int argc, char **argv)
 
       ASSERT(threshold.has_value(), "--threshold must be specified!");
       const auto zeros_blocks = compute_spectrum(
-        pmp_info, c_minus_By, x, threshold.value(), max_zero,
+        pmp_info, c_minus_By, x, zero_test, threshold.value(), max_zero,
         min_zero_distance, need_lambda, min_eigenvalue_ratio, verbosity,
         output_path, timers);
 

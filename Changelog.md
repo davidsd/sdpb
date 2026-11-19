@@ -96,6 +96,7 @@ Changed spectrum command-line options (call `spectrum --help` for details):
 - If `--lambda=false`, you may omit `--solution` and specify only `--cMinusBy` (Path to `c_minus_By.json` with the block vector `(c - B.y)`)
 - Added option `--maxZero` to ignore zeros that are too large. `--maxZero 0` means no limit.
 - `--meshThreshold` is marked is obsolete.
+- Added option `--zeroTest` choosing how a minimum of `det(c-B.y)` is accepted as a zero. The default, `geometricMean`, is the existing test (comparison with the values at midpoints to the neighbouring minima). The new `curvature` is a local test: the width of the dip of `P = det((c-B.y)/prefactor)` relative to the distance to the nearest other critical point of `P`, from the logarithmic derivatives of `P` computed exactly from the matrix; it does not depend on the prefactor's exponential decay, but misses a double zero closer to x = 0 than about 1/sqrt(threshold) of its own widths, and flat (e.g. quartic) dips. The meaning of `--threshold` (default `sqrt(dualityGap)`) is the same: a minimum is a zero if its depth is below it. See `spectrum --help`.
 
 ## Bugfixes
 

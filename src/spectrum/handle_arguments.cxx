@@ -1,3 +1,4 @@
+#include "Zero_Test.hxx"
 #include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/Environment.hxx"
 #include "sdpb_util/Verbosity.hxx"
@@ -11,7 +12,7 @@
 
 namespace fs = std::filesystem;
 
-void handle_arguments(const int &argc, char **argv,
+void handle_arguments(const int &argc, char **argv, Zero_Test &zero_test,
                       std::optional<Boost_Float> &threshold,
                       El::BigFloat &max_zero, El::BigFloat &min_zero_distance,
                       fs::path &pmp_info_path, fs::path &solution_dir,
@@ -21,8 +22,9 @@ void handle_arguments(const int &argc, char **argv,
                       Verbosity &verbosity)
 {
   int precision;
-  std::string threshold_string, max_zero_string, min_zero_distance_string,
-    mesh_threshold_string, format_string, min_eigenvalue_ratio_string;
+  std::string zero_test_string, threshold_string, max_zero_string,
+    min_zero_distance_string, mesh_threshold_string, format_string,
+    min_eigenvalue_ratio_string;
 
   namespace po = boost::program_options;
 
@@ -43,8 +45,23 @@ void handle_arguments(const int &argc, char **argv,
     "By default, equals to '${--solution}/c_minus_By/c_minus_By.json'.");
   options.add_options()(
     "threshold", po::value<std::string>(&threshold_string),
-    "Threshold for when a functional is considered to be zero.\n"
+    "Threshold for when a functional is considered to be zero: "
+    "a minimum is a zero if its depth (see --zeroTest) is below it.\n"
     "By default, --threshold=sqrt(dualityGap).");
+  options.add_options()(
+    "zeroTest",
+    po::value<std::string>(&zero_test_string)->default_value("geometricMean"),
+    "How to decide whether a minimum x0 of det(c-B.y) is a zero.\n"
+    "geometricMean (default): depth = det(x0)/sqrt(det(x_left) det(x_right)), "
+    "where x_left, x_right are midpoints to the neighbouring minima "
+    "(the test of SDPB 3.1.0 and earlier).\n"
+    "curvature: let P(x) = det(M(x)), M = (c-B.y)/prefactor, and L the "
+    "distance from x0 to the nearest other critical point of P (or to x=0 "
+    "if there is none on the left), at most the largest sample point. "
+    "depth = 1/max(L |P'/P|, L^2 P''/(2P)), i.e. (width of the dip / L)^2, "
+    "with P'/P and P''/P computed from M by Jacobi's formula. For x0=0: "
+    "depth = P/(L P'). It misses a double zero closer to x=0 than "
+    "~1/sqrt(threshold) of its widths, and flat (e.g. quartic) dips.");
   options.add_options()(
     "output,o", po::value<fs::path>(&output_path)->required(), "Output file");
   options.add_options()(
@@ -110,6 +127,7 @@ void handle_arguments(const int &argc, char **argv,
   // Set parameters
   {
     Environment::set_precision(precision);
+    zero_test = to_Zero_Test(zero_test_string);
     if(variables_map.count("threshold") != 0)
       threshold.emplace(Boost_Float(threshold_string));
     max_zero = El::BigFloat(max_zero_string);

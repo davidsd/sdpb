@@ -38,9 +38,12 @@ add_executable(unit_tests
   src/unit_tests/cases/copy_matrix.test.cxx
   src/unit_tests/cases/json.test.cxx
   src/unit_tests/cases/pmp_sampling.test.cxx
-  src/unit_tests/cases/shared_window.test.cxx)
+  src/unit_tests/cases/shared_window.test.cxx
+  src/unit_tests/cases/spectrum_zero_test.test.cxx
+  ${PROJECT_SOURCE_DIR}/src/spectrum/compute_spectrum/find_zeros.cxx
+  ${PROJECT_SOURCE_DIR}/src/spectrum/compute_spectrum/mpsolve.cxx)
 target_include_directories(unit_tests PRIVATE src)
-target_link_libraries(unit_tests PRIVATE pmp_read pmp2sdp_lib sdp_solve catch2)
+target_link_libraries(unit_tests PRIVATE pmp_read pmp2sdp_lib sdp_solve MPSolve::MPSolve catch2)
 
 # Tests for ctest
 
