@@ -38,6 +38,9 @@ conversion.  `[INPUT]` is a single Mathematica, JSON, XML or NSV
 (Null Separated Value) file. `[OUTPUT]` is an output directory.
 You can also use `--maxNumPoles` to downsample the PMP (see Section 4.3 in https://arxiv.org/abs/2509.14307), and `--outputFormat` and `--zip` to specify output file format. Call `pmp2sdp --help` to see options description. 
 
+Experimental: `--encodingPoints` writes the SDP at a second set of points, chosen for the SDP's conditioning, while the
+polynomials stay defined at the sample points (the two-set encoding; see [Two_Set_Encoding.md](Two_Set_Encoding.md)).
+
 The single file Mathematica and JSON formats are described in Section
 3.2 of the [manual](SDPB_Manual/SDPB-Manual.pdf). In addition, for JSON there
 is a [schema](json_schema/pmp_schema.json).

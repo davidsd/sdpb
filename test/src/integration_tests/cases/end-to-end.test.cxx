@@ -43,6 +43,13 @@ namespace
     bool check_sdp_normalization = true;
     bool run_sdpb_twice = false;
     std::vector<std::string> default_spectrum_args;
+    // Appended to the output directory name, for tests that run the same
+    // input with other pmp2sdp arguments
+    std::string runner_suffix;
+    // Binary precision of the spectrum comparison (0: diff_precision)
+    int spectrum_diff_precision = 0;
+    // Compare the spectrum's per-block error estimates
+    bool check_spectrum_error = true;
 
     explicit End_To_End_Test(std::string name) : name(std::move(name)) {}
 
@@ -91,6 +98,8 @@ namespace
             = "end-to-end_tests/" + name + "/" + pmp_path.filename().string();
           if(!sdp_format.empty())
             runner_name += "/format=" + sdp_format;
+          if(!runner_suffix.empty())
+            runner_name += "/" + runner_suffix;
           Test_Case_Runner runner(runner_name);
           const auto &output_dir = runner.output_dir;
 
@@ -186,7 +195,10 @@ namespace
               bool check_block_paths = pmp_paths.size() == 1;
               diff_spectrum(output_dir / "spectrum.json",
                             data_output_dir / "spectrum.json", precision,
-                            diff_precision, check_block_paths);
+                            spectrum_diff_precision != 0
+                              ? spectrum_diff_precision
+                              : diff_precision,
+                            check_block_paths, check_spectrum_error);
             }
         }
     }
@@ -370,6 +382,18 @@ TEST_CASE("end-to-end_tests")
           test.run();
         }
       }
+    SECTION("two_set_encoding")
+    {
+      INFO("The same problem with --encodingPoints functionalMatched: its "
+           "48 degree-0 blocks keep the default encoding, the others are "
+           "re-encoded; SDPB must reach the same verdict.");
+      test.pmp2sdp_args = {{"--encodingPoints", "functionalMatched"}};
+      test.runner_suffix = "two_set_encoding";
+      test.check_sdp = false;
+      test.sdpb_out_filenames = {"out.txt"};
+      test.sdpb_out_txt_keys = {"terminateReason"};
+      test.run();
+    }
   }
 
   SECTION("SingletScalar_cT_test_nmax6")
@@ -424,6 +448,36 @@ TEST_CASE("end-to-end_tests")
                            "primal_dual_optimal_reduced_max_num_poles_14");
       test.default_sdpb_args = default_sdpb_args;
       test.pmp2sdp_args = {{"--maxNumPoles", "14"}};
+      test.run();
+    }
+
+    SECTION("primal_dual_optimal_reduced_max_num_poles_14_two_set_encoding")
+    {
+      INFO("Same as primal_dual_optimal_reduced_max_num_poles_14, with "
+           "--encodingPoints functionalMatched (two-set encoding).");
+      INFO("The SDP is written at other points, but the polynomial program "
+           "is the same, so the optimum, y and the spectrum must be the "
+           "default's, up to the accuracy to which SDPB determines them on "
+           "another central path. The default encoding itself, started at "
+           "initialMatrixScale 1e21 instead of 1e20, moves y by 2e-23 and "
+           "the spectrum's OPE coefficients by 5e-15 (relative); the two-set "
+           "encoding moves them by 6e-23 and 2e-14. So y and the objectives "
+           "are compared to 64 bits (5e-20), the spectrum to 40 (1e-12).");
+      End_To_End_Test test("SingletScalar_cT_test_nmax6/"
+                           "primal_dual_optimal_reduced_max_num_poles_14");
+      test.default_sdpb_args = default_sdpb_args;
+      test.pmp2sdp_args = {{"--maxNumPoles", "14"},
+                           {"--encodingPoints", "functionalMatched"}};
+      test.runner_suffix = "two_set_encoding";
+      test.check_sdp = false;
+      test.diff_precision = 64;
+      test.spectrum_diff_precision = 40;
+      // spectrum's "error" is a residual of the encoded SDP (1e-28 to 1e-33
+      // a block in the default encoding, down to 1e-51 in the two-set one)
+      test.check_spectrum_error = false;
+      test.sdpb_out_filenames = {"out.txt", "y.txt"};
+      test.sdpb_out_txt_keys
+        = {"terminateReason", "primalObjective", "dualObjective"};
       test.run();
     }
   }

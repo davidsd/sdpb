@@ -30,7 +30,16 @@ struct PVM_Info
         sample_points(pvm.sample_points),
         sample_scalings(pvm.sample_scalings),
         reduced_sample_scalings(pvm.reduced_sample_scalings)
-  {}
+  {
+    // Two-set encoding (pmp2sdp --encodingPoints): the SDP's rows are at
+    // the encoding points, with the same scalings for B, c and the bases.
+    if(!pvm.encoding_points.empty())
+      {
+        sample_points = pvm.encoding_points;
+        sample_scalings = pvm.encoding_scalings;
+        reduced_sample_scalings = pvm.encoding_scalings;
+      }
+  }
 
   void validate() const
   {

@@ -52,6 +52,15 @@ struct Polynomial_Vector_Matrix
   // polynomial with degree deg(q_m) = m.
   std::array<Polynomial_Vector, 2> bilinear_basis;
 
+  // Two-set encoding (pmp2sdp --encodingPoints, see
+  // convert/encoding_points.cxx).  If not empty, the block's polynomials are
+  // still defined at sample_points (the approximation points), and the SDP
+  // is written at these encoding points with these scalings (for B, c and
+  // the bilinear bases alike), the bases made by recurrence.  Empty
+  // (default): the SDP is written at the sample points.
+  std::vector<El::BigFloat> encoding_points;
+  std::vector<El::BigFloat> encoding_scalings;
+
   Polynomial_Vector_Matrix(
     const Simple_Matrix<Polynomial_Vector> &polynomials,
     const std::optional<Damped_Rational> &prefactor_opt,
@@ -65,3 +74,26 @@ struct Polynomial_Vector_Matrix
 
   void validate(int64_t num_points) const;
 };
+
+// Two-set encoding (pmp2sdp --encodingPoints; convert/encoding_points.cxx).
+// The scale a = scale_factor * median |kept pole| (10 * scale_factor without
+// poles).
+El::BigFloat encoding_points_scale(const Damped_Rational &reduced_prefactor,
+                                   const El::BigFloat &scale_factor);
+// The functionalMatched rule: the points and weights of the quadrature that
+// is exact to degree num_points - 1 for dx / (sqrt(x) g(x)), with g made of
+// the kept poles and the scale a.
+void functional_matched_encoding_points(
+  const Damped_Rational &reduced_prefactor, size_t num_points,
+  const El::BigFloat &scale, std::vector<El::BigFloat> &points,
+  std::vector<El::BigFloat> &scalings);
+// The chebyshev rule: Chebyshev points of x / (x + a), with the scalings
+// 1 / (prod_i (x - p_i) (x + a)^(num_points - 1 - #poles)).
+void chebyshev_encoding_points(const Damped_Rational &reduced_prefactor,
+                               size_t num_points, const El::BigFloat &scale,
+                               std::vector<El::BigFloat> &points,
+                               std::vector<El::BigFloat> &scalings);
+// Check and set m.encoding_points and m.encoding_scalings.
+void set_encoding_points(Polynomial_Vector_Matrix &m,
+                         std::vector<El::BigFloat> points,
+                         std::vector<El::BigFloat> scalings);
