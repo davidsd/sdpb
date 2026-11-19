@@ -1,6 +1,6 @@
 # Experimental branches and pull requests
 
-*Last updated: 12 November 2026.*
+*Last updated: 16 November 2026.*
 
 Options and a GPU backend for SDPB, `pmp2sdp` and `spectrum`, offered as pull requests against `master` before they
 are reviewed and merged; they may change or be withdrawn. Options are off by default, and with them off the output
@@ -34,6 +34,7 @@ pull request, which also says how it was checked.
 | `cpu-q-syrk-paths` | [#314](https://github.com/davidsd/sdpb/pull/314) | faster paths of Q's BigInt syrk on many nodes | `--batchCrt`, `--batchResidues`, `--residuesNoClear`, `--residuesStarVR` | `cpu-q-solve-options` and `cpu-fast-reduce` | Vasiliy Dommes (`bigint_syrk`, which it speeds up); David Simmons-Duffin | none yet |
 | `cpu-grouped-syrk` | [#329](https://github.com/davidsd/sdpb/pull/329) | Q = PᵀP (P = L⁻¹B) taken by groups of rows of P that have the same nonzero columns, over those columns only: P's exact zeros are skipped, and Q is the same bit for bit. 1.26× per iteration at nmax = 18 on 4 nodes and 1.25× at nmax = 26 on 16, against the same build without the option; none at nmax = 14, where most of P is nonzero. No memory saved | `--groupedSyrk` | `cpu-q-syrk-paths` | Vasiliy Dommes (`bigint_syrk`, which it speeds up); David Simmons-Duffin | none yet |
 | `cpu-sparse-b` | [#315](https://github.com/davidsd/sdpb/pull/315) | the free variable matrix B stored by its nonzeros (memory) | `--sparseB` | `cpu-mm-trsm` | David Simmons-Duffin | none yet |
+| `lab/pub3-step-length-double` | [#332](https://github.com/davidsd/sdpb/pull/332) | each block's smallest eigenvalue for the step lengths in double, with SDPB's multiprecision eigenvalue only for a block whose double value could move the step length by more than a tolerance. About 7% less time per iteration at 832 bits and 9% at 320 on sdpb-test-04 (2 nodes, with the CPU stack's options on in both arms); 14% on sdpb-test-02 at 320 bits on `master` alone. Not bitwise: the iterates agree with the default's to about 14 digits at 832 bits and 11 at 320 (the accuracy of a double step length), with the same verdict and iteration count in a whole solve. Merge [#331](https://github.com/davidsd/sdpb/pull/331) first: low-precision runs need its z.txt fix | `--stepLengthDouble` (`--stepLengthDoubleTol`, default 1e-10; `--stepLengthCheck` for testing) | `master` | Antoine Tilloy ([SDPviBe](https://github.com/AntoineTilloy/SDPviBe)'s checked float64 step lengths, which the GPU backend took and this branch brings to CPUs: the error bound and the tolerance that decide when double is enough); David Simmons-Duffin | none yet |
 
 ### `sdpb`: GPU backend
 
@@ -56,6 +57,12 @@ pull request, which also says how it was checked.
 | `sdpb-reconstruct-xymu` | [#307](https://github.com/davidsd/sdpb/pull/307) | restart from a text checkpoint that has only x and y | `--reconstructXYmu mu` | `master` | David Simmons-Duffin | none yet |
 | `cpu-resident` | [#316](https://github.com/davidsd/sdpb/pull/316) | resident mode: sdpb stays running between the calls of a scan and reads commands from a directory (protocol: `src/sdpb/resident/Readme.md`) | `--controlDir` | `cpu-sparse-b` and `pmp2sdp-reuse-sdp` | David Simmons-Duffin (proposed it: a scan mode inside sdpb, so that it never exits between calls) | none yet |
 
+### `sdpb`: fixes
+
+| Branch | PR | What it does | Turned on by | Base | Contributors | Human review |
+|---|---|---|---|---|---|---|
+| `lab/pub-z-normalization-c0ad` | [#331](https://github.com/davidsd/sdpb/pull/331) | z.txt written so that n·z = 1 (n the normalization) to the precision's digits, and checked on the written file. Before, the eliminated component of z was formed and printed at the solver's precision, so when z is large (after a dual feasible jump, at low precision) the written z could have n·z far from 1 (−9.4e52 at 128 bits) without any warning | always on (**changes z.txt and out.txt**: one component of z has more digits; out.txt has two more lines, `zNormalizationError` and `zNormalizationFailed`, and a failed check prints a warning) | `master` | David Simmons-Duffin | none yet |
+
 ### `pmp2sdp` and `spectrum`
 
 | Branch | PR | What it does | Turned on by | Base | Contributors | Human review |
@@ -64,6 +71,7 @@ pull request, which also says how it was checked.
 | `pmp2sdp-reuse-sdp` | [#310](https://github.com/davidsd/sdpb/pull/310) | reuse the blocks of unchanged input files from a previous SDP | `--reuseSdp <sdp>` | `pmp2sdp-pmp-info-gatherv` | David Simmons-Duffin | none yet |
 | `pmp2sdp-nodes-at-infinity` | [#317](https://github.com/davidsd/sdpb/pull/317) | interpolation conditions at x = ∞ for reduced prefactors. **Offered for discussion: not shown to be useful** | `--reducedPrefactorNodesAtInfinity M` | `master` | David Simmons-Duffin | none yet |
 | `spectrum-zero-test` | [#318](https://github.com/davidsd/sdpb/pull/318) | a second, local test of which minima are zeros | `--zeroTest curvature` (the default stays `geometricMean`) | `master` | Vasiliy Dommes (raised the problem with spectrum's zero test, gave the test cases and suggested approaches); David Simmons-Duffin (chose to keep the default) | none yet |
+| `lab/pub4-two-set-encoding` | [#333](https://github.com/davidsd/sdpb/pull/333) | two sets of points: the polynomials stay defined at the sample points, and each block's SDP is written at a second set of encoding points. The polynomial program and its optimum are the same; the SDP is better conditioned, so it can need fewer iterations or less precision. At nmax = 14 (one excluded point of the 3d Ising bootstrap with the stress tensor) 60 iterations at 320 bits against the default's 106 at 832, about 3.2× a whole call (1.7× against the default at 320 bits, where it passes marginally); at nmax = 22 no precision gain (512 bits, as the default), 128 iterations against 184. With the option on, the objective equals the default's to working precision, not byte for byte. With the option off, one change remains, a fix: `spectrum`'s zero test for constant (degree-0) blocks now uses the reduced prefactor at the block's point instead of its stored sample scaling, which removes a spurious zero when a PMP supplies its own scalings (as XML PMPs and SDPB's dfibo test do); PMPs whose constant blocks have scaling 1 are unaffected. Merge [#331](https://github.com/davidsd/sdpb/pull/331) first: at low precision `master` can write a z.txt with n·z far from 1 | `--encodingPoints functionalMatched` (or `chebyshev`, `file`; see `docs/Two_Set_Encoding.md` on the branch) | `master` | David Simmons-Duffin (the idea: one set of points for approximating the blocks, another for encoding the SDP) | none yet |
 
 ## Building
 
@@ -86,6 +94,13 @@ Build with CMake as [Install.md](../Install.md) describes, then run the tests
 
 (`90` is the H100/H200 compute capability; use your GPU's), then run `sdpb --gpu`. Without the option the build
 needs no CUDA. `src/gpu/README.md` has the details.
+
+**Runs at low precision** (well below SDPB's usual 768 to 1024 bits) can also need a fix in the bootstrap collaboration's
+Elemental fork, which SDPB builds against: its `Axpy` with α = ±1 and its `MakeSymmetric` round away the guard limb, so a
+symmetrized matrix differs from its transpose in the last limb, and a Cholesky decomposition can fail (in tests, at 192 bits on
+a small problem and at 384 on sdpb-test-01). Merge request
+[!11](https://gitlab.com/bootstrapcollaboration/elemental/-/merge_requests/11) of the fork (open)
+makes both exact; build Elemental from it for such runs.
 
 ## Adding a branch
 
