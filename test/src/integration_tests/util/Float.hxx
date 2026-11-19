@@ -17,6 +17,6 @@ struct Float_Binary_Precision : boost::noncopyable
   ~Float_Binary_Precision();
 
 private:
-  unsigned int old_binary_precision;
-  unsigned int old_diff_precision;
+  mp_bitcnt_t old_binary_precision;
+  int old_diff_precision;
 };
