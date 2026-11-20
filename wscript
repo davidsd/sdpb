@@ -166,6 +166,7 @@ def build(bld):
                        'src/pmp2sdp/write_normalization_json.cxx',
                        'src/pmp2sdp/write_sdp.cxx',
                        'src/pmp2sdp/write_control_json.cxx',
+                       'src/pmp2sdp/Reuse_SDP.cxx',
                        'src/pmp2sdp/Archive_Writer.cxx',
                        'src/pmp2sdp/Archive_Entry.cxx'
                        ]
