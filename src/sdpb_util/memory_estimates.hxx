@@ -3,6 +3,7 @@
 #include "Environment.hxx"
 #include "Verbosity.hxx"
 #include "assert.hxx"
+#include "Boost_Float.hxx"
 
 #include <algorithm>
 
@@ -10,6 +11,7 @@ size_t bigfloat_bytes();
 size_t bigfloat_bytes(mp_bitcnt_t precision);
 
 size_t get_heap_allocated_bytes(const El::BigFloat &f);
+size_t get_heap_allocated_bytes(const Boost_Float &f);
 size_t get_heap_allocated_bytes(const El::AbstractDistMatrix<El::BigFloat> &m);
 size_t get_heap_allocated_bytes(const El::Matrix<El::BigFloat> &m);
 template <class T> size_t get_heap_allocated_bytes(const std::vector<T> &vec)

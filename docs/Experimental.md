@@ -1,6 +1,6 @@
 # Experimental branches and pull requests
 
-*Last updated: 16 November 2026.*
+*Last updated: 20 November 2026.*
 
 Options and a GPU backend for SDPB, `pmp2sdp` and `spectrum`, offered as pull requests against `master` before they
 are reviewed and merged; they may change or be withdrawn. Options are off by default, and with them off the output
@@ -56,12 +56,6 @@ pull request, which also says how it was checked.
 | `initial-seed` | [#304](https://github.com/davidsd/sdpb/pull/304) | a cold start built from the SDP's own rows (fewer iterations on cold calls) | `--initialSeed=rows` | `master` | David Simmons-Duffin; Zechuan Zheng (the finding that equilibrated sample scalings cut SDPB's iteration counts, which this cold start grew out of) | none yet |
 | `sdpb-reconstruct-xymu` | [#307](https://github.com/davidsd/sdpb/pull/307) | restart from a text checkpoint that has only x and y | `--reconstructXYmu mu` | `master` | David Simmons-Duffin | none yet |
 | `cpu-resident` | [#316](https://github.com/davidsd/sdpb/pull/316) | resident mode: sdpb stays running between the calls of a scan and reads commands from a directory (protocol: `src/sdpb/resident/Readme.md`) | `--controlDir` | `cpu-sparse-b` and `pmp2sdp-reuse-sdp` | David Simmons-Duffin (proposed it: a scan mode inside sdpb, so that it never exits between calls) | none yet |
-
-### `sdpb`: fixes
-
-| Branch | PR | What it does | Turned on by | Base | Contributors | Human review |
-|---|---|---|---|---|---|---|
-| `lab/pub-z-normalization-c0ad` | [#331](https://github.com/davidsd/sdpb/pull/331) | z.txt written so that n·z = 1 (n the normalization) to the precision's digits, and checked on the written file. Before, the eliminated component of z was formed and printed at the solver's precision, so when z is large (after a dual feasible jump, at low precision) the written z could have n·z far from 1 (−9.4e52 at 128 bits) without any warning | always on (**changes z.txt and out.txt**: one component of z has more digits; out.txt has two more lines, `zNormalizationError` and `zNormalizationFailed`, and a failed check prints a warning) | `master` | David Simmons-Duffin | none yet |
 
 ### `pmp2sdp` and `spectrum`
 

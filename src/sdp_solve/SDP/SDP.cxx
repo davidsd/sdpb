@@ -1,5 +1,6 @@
 #include "assign_bilinear_bases_dist.hxx"
 #include "set_bases_blocks.hxx"
+#include "read_normalization.hxx"
 #include "sdp_solve/SDP.hxx"
 
 #include "sdpb_util/assert.hxx"
@@ -18,8 +19,6 @@ void read_objectives(const fs::path &sdp_path, const El::Grid &grid,
                      El::BigFloat &objective_const,
                      El::DistMatrix<El::BigFloat> &dual_objective_b,
                      Timers &timers);
-std::optional<std::vector<El::BigFloat>>
-read_normalization(const fs::path &sdp_path, Timers &timers);
 
 SDP::SDP(const fs::path &sdp_path, const Block_Info &block_info,
          const El::Grid &grid, Timers &timers)
@@ -46,7 +45,7 @@ SDP::SDP(
   const El::Grid &grid)
     : dual_objective_b(dual_objective_b_star.Height(), 1, grid),
       objective_const(objective_const_input),
-      normalization(normalization)
+      normalization(to_Boost_Float_Vector(normalization))
 {
   std::vector<size_t> block_offsets(primal_objective_c_input.size() + 1, 0);
   for(size_t p(0); p < primal_objective_c_input.size(); ++p)

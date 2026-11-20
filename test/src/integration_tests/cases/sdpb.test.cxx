@@ -1,7 +1,13 @@
 #include "integration_tests/common.hxx"
+#include "sdpb_util/Boost_Float.hxx"
+#include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 
 namespace fs = std::filesystem;
+using Test_Util::REQUIRE_Equal::diff;
 
 TEST_CASE("sdpb")
 {
@@ -193,4 +199,127 @@ TEST_CASE("sdpb")
                              1, "Corrupted data in file");
     }
   }
+}
+namespace
+{
+  // Entries of a vector written by write_matrix() ("<N> 1", then N entries)
+  std::vector<std::string> read_vector_txt(const fs::path &path)
+  {
+    CAPTURE(path);
+    std::ifstream is(path);
+    size_t height = 0, width = 0;
+    is >> height >> width;
+    REQUIRE(is.good());
+    REQUIRE(width == 1);
+    std::vector<std::string> entries(height);
+    for(auto &entry : entries)
+      is >> entry;
+    REQUIRE(!is.fail());
+    return entries;
+  }
+
+  // "normalization" of normalization.json, as the strings in the file
+  std::vector<std::string> read_normalization_json(const fs::path &path)
+  {
+    CAPTURE(path);
+    std::ifstream is(path);
+    REQUIRE(is.good());
+    rapidjson::IStreamWrapper wrapper(is);
+    rapidjson::Document document;
+    document.ParseStream(wrapper);
+    std::vector<std::string> result;
+    for(const auto &value : document["normalization"].GetArray())
+      result.emplace_back(value.GetString());
+    return result;
+  }
+}
+
+TEST_CASE("sdpb_z_normalization")
+{
+  INFO("z.txt must satisfy n.z == 1 as written: z_k = (1 - sum_{i!=k} "
+       "n_i z_i) / n_k formed and written at SDPB's precision gives n.z far "
+       "from 1 when |n_i z_i| >> 2^precision, e.g. after a dual feasible "
+       "jump.");
+  INFO("Here: the 1d problem with a normalization of many digits, "
+       "--precision=64, and a hand-made y = -1.23e60 loaded from a text "
+       "checkpoint; SDPB stops at once (--maxIterations=0) and writes z.");
+  Test_Util::Test_Case_Runner runner("sdpb_z_normalization");
+  const auto &dir = runner.output_dir;
+  fs::create_directories(dir);
+  const int num_procs = 2;
+
+  // The 1d problem with normalization 1/sqrt(2), 1/pi (200 digits; k = 0)
+  // and a huge y (input/y.txt)
+  const auto input_dir = Test_Config::test_data_dir / "end-to-end_tests"
+                         / "1d-z-normalization" / "input";
+  const auto pmp_path = input_dir / "pmp.json";
+  const auto sdp_path = dir / "sdp";
+  runner.create_nested("pmp2sdp").mpi_run(
+    {Test_Config::program("pmp2sdp"),
+     {{"--input", pmp_path.string()},
+      {"--output", sdp_path.string()},
+      {"--precision", "1024"},
+      // json, so that SDPB can read it at another precision
+      {"--outputFormat", "json"}}},
+    num_procs);
+
+  const Test_Util::Test_Case_Runner::Named_Args_Map args{
+    {"--sdpDir", sdp_path.string()},
+    {"--precision", "64"},
+    {"--noFinalCheckpoint", ""},
+  };
+  // One iteration, to get a text checkpoint (x, y, X, Y)
+  const auto out_1 = dir / "out_1";
+  {
+    auto a = args;
+    a["--maxIterations"] = "1";
+    a["--writeSolution"] = "x,y,X,Y";
+    a["--outDir"] = out_1.string();
+    a["--checkpointDir"] = (dir / "ck_1").string();
+    runner.create_nested("sdpb_1").mpi_run({Test_Config::program("sdpb"), a},
+                                          num_procs);
+  }
+  // Replace y by a huge one
+  fs::copy_file(input_dir / "y.txt", out_1 / "y.txt",
+                fs::copy_options::overwrite_existing);
+  const auto out_2 = dir / "out_2";
+  {
+    auto a = args;
+    a["--maxIterations"] = "0";
+    a["--writeSolution"] = "y,z";
+    a["--outDir"] = out_2.string();
+    a["--checkpointDir"] = out_1.string();
+    const auto sdpb_2 = runner.create_nested("sdpb_2");
+    sdpb_2.mpi_run({Test_Config::program("sdpb"), a}, num_procs);
+
+    INFO("the z.txt self-check prints no warning");
+    std::ifstream is(sdpb_2.stderr_path);
+    const std::string stderr_text((std::istreambuf_iterator<char>(is)),
+                                  std::istreambuf_iterator<char>());
+    CAPTURE(stderr_text);
+    REQUIRE(stderr_text.find("n.z") == std::string::npos);
+  }
+
+  const auto z = read_vector_txt(out_2 / "z.txt");
+  const auto y = read_vector_txt(out_2 / "y.txt");
+  const auto n = read_normalization_json(sdp_path / "normalization.json");
+  REQUIRE(z.size() == 2);
+  REQUIRE(y.size() == 1);
+  REQUIRE(n.size() == 2);
+  CAPTURE(z, y, n);
+
+  INFO("z_i (i != k = 0) are written as y.txt writes y");
+  DIFF(std::vector<std::string>(z.begin() + 1, z.end()), y);
+
+  INFO("|z_1| must be the huge y");
+  Scoped_Boost_Float_Precision precision(5000);
+  REQUIRE(abs(Boost_Float(z[1])) > 1e59);
+
+  INFO("n.z == 1 for the written decimals, to 2^-64 (at 5000 bits)");
+  Boost_Float nz = 0;
+  for(size_t i = 0; i < z.size(); ++i)
+    nz += Boost_Float(n[i]) * Boost_Float(z[i]);
+  const Boost_Float error = abs(nz - 1);
+  CAPTURE(error);
+  REQUIRE(error <= ldexp(Boost_Float(1), -64));
 }

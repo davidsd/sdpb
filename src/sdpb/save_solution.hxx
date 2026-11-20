@@ -1,7 +1,7 @@
 #pragma once
 
 #include "SDPB_Parameters.hxx"
-#include "pmp/max_normalization_index.hxx"
+#include "z_normalization.hxx"
 #include "sdp_solve/sdp_solve.hxx"
 #include "sdpa_solve/sdpa_solve.hxx"
 #include "sdpb_util/ostream/set_stream_precision.hxx"
@@ -91,42 +91,6 @@ void write_out_txt(const TSolver &solver,
     }
 }
 
-[[nodiscard]]
-inline El::Matrix<El::BigFloat>
-get_z(const El::Matrix<El::BigFloat> &y,
-      const std::vector<El::BigFloat> &normalization)
-{
-  El::Matrix<El::BigFloat> z(y.Height() + 1, y.Width());
-  ASSERT_EQUAL(normalization.size(), y.Height() + 1);
-
-  auto max_index = max_normalization_index(normalization);
-  ASSERT(normalization.at(max_index) != El::BigFloat(0));
-  // To construct z, we take y
-  // and insert a new element into it at max_index position.
-  // The value of this element is chosen to satisfy
-  // the normalization condition n.z == 1.
-  // NB: this procedure (in particular, choice of max_index)
-  // is the inverse of conversion
-  // Polynomial_Matrix_Program.objective -> Output_SDP.dual_objective_b
-  // in Outout_SDP constructor
-  for(int i = 0; i < max_index; ++i)
-    z(i, 0) = y(i, 0);
-  z(max_index, 0) = 0; // to be updated below
-  for(int i = max_index; i < y.Height(); ++i)
-    z(i + 1, 0) = y(i, 0);
-
-  // Calculate n.z
-  // we convert sdt::vector to El::Matrix to use it in El::Dot
-  El::Matrix<El::BigFloat> normalization_view;
-  normalization_view.LockedAttach(normalization.size(), 1,
-                                  normalization.data(), normalization.size());
-  // n.z - n[max_index]*z[max_index]
-  auto nz = El::Dot(normalization_view, z);
-  z(max_index, 0) = (1 - nz) / normalization.at(max_index);
-  // now n.z == 1
-  return z;
-}
-
 inline void
 save_solution(const SDP_Solver &solver, const Block_Info &block_info,
               const SDP &sdp, const SDPB_Parameters &parameters,
@@ -164,8 +128,7 @@ save_solution(const SDP_Solver &solver, const Block_Info &block_info,
               if(write_solution.vector_z)
                 {
                   ASSERT(sdp.normalization.has_value());
-                  const auto z = get_z(y, sdp.normalization.value());
-                  write_matrix(z, z_path);
+                  write_z(y, sdp.normalization.value(), z_path);
                 }
             }
         }

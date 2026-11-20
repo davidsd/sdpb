@@ -18,6 +18,13 @@ For problems that fit on a single node, we recommend sdpa-gmp-omp.
 - `--maxSharedMemory` is no longer set automatically. By default, shared memory windows are limited only by `--maxMemory`.
 - `--verbosity debug` prints detailed memory estimates.
 
+### z.txt
+
+Fixed precision loss in `z.txt`. The component of z eliminated by the normalization (the one with the largest |n_k|) was formed and printed at SDPB's precision, so when z is large (e.g. after a dual feasible jump at low precision) the written z could have n·z far from 1.
+Now it is formed from the written values of the other components at a higher precision, so that the written z satisfies n·z = 1 to SDPB's precision. This component has more digits than the others. SDPB checks n·z of the written file and prints a warning if the check fails.
+
+See [#331](https://github.com/davidsd/sdpb/pull/331).
+
 ## pmp2sdp
 
 Added pmp2sdp option `--maxNumPoles` and pmp.json field `"maxNumPoles"`.
