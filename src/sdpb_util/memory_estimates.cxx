@@ -26,6 +26,12 @@ size_t get_heap_allocated_bytes(const El::BigFloat &)
 {
   return bigfloat_bytes();
 }
+size_t get_heap_allocated_bytes(const Boost_Float &f)
+{
+  // MPFR's limbs
+  const auto bits = mpfr_get_prec(f.backend().data());
+  return (bits + GMP_NUMB_BITS - 1) / GMP_NUMB_BITS * sizeof(mp_limb_t);
+}
 size_t get_heap_allocated_bytes(const El::AbstractDistMatrix<El::BigFloat> &m)
 {
   return m.AllocatedMemory() * bigfloat_bytes();

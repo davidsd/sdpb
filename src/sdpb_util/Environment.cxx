@@ -32,7 +32,10 @@ void Environment::set_precision(const mp_bitcnt_t digits2)
   // El::gmp wants base-2 bits, but boost::multiprecision wants
   // base-10 digits.
   const unsigned digits10 = El::gmp::Precision() * log(2) / log(10);
+  // The global default, for threads that have not used Boost_Float yet,
+  // and the calling thread's own, in case it has (Boost >= 1.77)
   Boost_Float::default_precision(digits10);
+  set_boost_float_thread_default_digits10(digits10);
 }
 int Environment::num_nodes() const
 {

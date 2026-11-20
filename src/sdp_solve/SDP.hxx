@@ -10,6 +10,7 @@
 #include "Block_Info.hxx"
 #include "Block_Matrix/Block_Matrix.hxx"
 #include "Block_Matrix/Block_Vector.hxx"
+#include "sdpb_util/Boost_Float.hxx"
 #include "sdpb_util/Timers/Timers.hxx"
 
 #include <filesystem>
@@ -103,7 +104,9 @@ struct SDP
   // Normalization condition n.z = 1 is used to translate
   // SDP_Solver.y (eq. 2.2 in SDPB Manual) to vector z (eq. 3.1)
   // Not initialized if there was no normalization in PMP
-  std::optional<std::vector<El::BigFloat>> normalization;
+  // Read from normalization.json, it keeps all digits of the file
+  // (z.txt needs more than SDPB's precision, see sdpb/z_normalization.hxx).
+  std::optional<std::vector<Boost_Float>> normalization;
 
   SDP(const std::filesystem::path &sdp_path, const Block_Info &block_info,
       const El::Grid &grid, Timers &timers);
