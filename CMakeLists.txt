@@ -117,6 +117,25 @@ target_compile_definitions(sdpb_options INTERFACE
   # Boost.Stacktrace requires it on macOS
   $<$<PLATFORM_ID:Darwin>:_GNU_SOURCE>)
 
+# GPU backend (src/gpu, CUDA), off by default; without it the CPU build is unchanged.
+option(SDPB_ENABLE_GPU "Build the GPU backend (src/gpu, CUDA)" OFF)
+if(SDPB_ENABLE_GPU)
+  # 90: H100/H200, the default of the Makefile and of waf's --gpu-arch. E.g. -DCMAKE_CUDA_ARCHITECTURES="90-real;89-real".
+  # The host compiler of nvcc can be set with -DCMAKE_CUDA_HOST_COMPILER.
+  if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+    set(CMAKE_CUDA_ARCHITECTURES 90-real)
+  endif()
+  enable_language(CUDA C)
+  find_package(CUDAToolkit 12.2 REQUIRED)
+  # The device code is linked as waf links it: the CUDA runtime and cuBLASLt named explicitly (src/gpu/CMakeLists.txt),
+  # without the libraries and directories of nvcc's host compiler, which may differ from SDPB's C++ compiler.
+  set(CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES "")
+  set(CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES "")
+  set(CMAKE_CUDA_RUNTIME_LIBRARY None)
+  find_package(OpenMP REQUIRED COMPONENTS CXX C)
+  add_subdirectory(src/gpu)
+endif()
+
 add_subdirectory(src/sdpb_util)
 add_subdirectory(src/pmp)
 add_subdirectory(src/pmp2sdp)
