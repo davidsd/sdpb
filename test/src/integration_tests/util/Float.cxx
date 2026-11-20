@@ -22,8 +22,8 @@ namespace
 
 Float_Binary_Precision::Float_Binary_Precision(unsigned int binary_precision,
                                                unsigned int diff_precision)
-    : old_binary_precision(binary_precision),
-      old_diff_precision(diff_precision)
+    : old_binary_precision(mpf_get_default_prec()),
+      old_diff_precision(Test_Util::REQUIRE_Equal::diff_precision)
 {
   El_gmp_set_precision(binary_precision);
   Test_Util::REQUIRE_Equal::diff_precision = diff_precision;
