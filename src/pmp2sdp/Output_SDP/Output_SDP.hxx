@@ -29,5 +29,7 @@ struct Output_SDP : boost::noncopyable
   // Command-line arguments
   std::vector<std::string> command_arguments;
 
-  Output_SDP(const Polynomial_Matrix_Program &pmp, const std::vector<std::string> &command_arguments, Timers& timers);
+  Output_SDP(const Polynomial_Matrix_Program &pmp,
+             const std::vector<std::string> &command_arguments,
+             Timers &timers, size_t num_nodes_at_infinity = 0);
 };

@@ -76,7 +76,8 @@ namespace
 
 Output_SDP::Output_SDP(const Polynomial_Matrix_Program &pmp,
                        const std::vector<std::string> &command_arguments,
-                       Timers &timers)
+                       Timers &timers,
+                       const size_t num_nodes_at_infinity)
     : normalization(pmp.normalization),
       num_blocks(pmp.num_matrices),
       command_arguments(command_arguments)
@@ -122,8 +123,10 @@ Output_SDP::Output_SDP(const Polynomial_Matrix_Program &pmp,
           const auto &matrix = pmp.matrices.at(i);
           const auto block_index = pmp.matrix_index_local_to_global.at(i);
           dual_constraint_groups.emplace_back(
-            block_index, convert_pvm_using_normalization(
-                           matrix, normalization.value(), max_index));
+            block_index,
+            convert_pvm_using_normalization(matrix, normalization.value(),
+                                            max_index),
+            num_nodes_at_infinity);
         }
     }
   else
@@ -142,7 +145,8 @@ Output_SDP::Output_SDP(const Polynomial_Matrix_Program &pmp,
         {
           const auto &matrix = pmp.matrices.at(i);
           const auto block_index = pmp.matrix_index_local_to_global.at(i);
-          dual_constraint_groups.emplace_back(block_index, matrix);
+          dual_constraint_groups.emplace_back(block_index, matrix,
+                                              num_nodes_at_infinity);
         }
     }
   validate(*this);

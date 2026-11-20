@@ -8,6 +8,7 @@
 
 #include <string>
 #include <boost/program_options.hpp>
+#include <cmath>
 #include <filesystem>
 
 namespace fs = std::filesystem;
@@ -42,7 +43,38 @@ int main(int argc, char **argv)
                                                 parameters.max_num_poles,
                                                 parameters.verbosity, timers);
 
-      Output_SDP sdp(pmp, parameters.command_arguments, timers);
+      Output_SDP sdp(pmp, parameters.command_arguments, timers,
+                     parameters.num_nodes_at_infinity);
+      if(parameters.num_nodes_at_infinity > 0)
+        {
+          double digits_lost = 0;
+          for(const auto &group : sdp.dual_constraint_groups)
+            digits_lost
+              = std::max(digits_lost, group.nodes_at_infinity_digits_lost);
+          digits_lost = El::mpi::AllReduce(digits_lost, El::mpi::MAX,
+                                           El::mpi::COMM_WORLD);
+          // The moved rows are sums of the other rows (rounded to the
+          // working precision) with large weights: cancelling digits_lost
+          // digits leaves about working_digits - digits_lost of them.
+          const double working_digits
+            = parameters.precision * std::log10(2.0);
+          if(El::mpi::Rank() == 0)
+            {
+              if(parameters.verbosity >= Verbosity::regular)
+                El::Output("reducedPrefactorNodesAtInfinity=",
+                           parameters.num_nodes_at_infinity, ": at most ",
+                           digits_lost,
+                           " decimal digits lost to cancellation (working "
+                           "precision has ",
+                           working_digits, ")");
+              if(digits_lost > working_digits / 2)
+                PRINT_WARNING(
+                  "--reducedPrefactorNodesAtInfinity: ", digits_lost,
+                  " of the working precision's ", working_digits,
+                  " decimal digits lost to cancellation in the moved rows. "
+                  "Use fewer nodes at infinity or a higher precision.");
+            }
+        }
       write_sdp(parameters.output_path, sdp, pmp, parameters.output_format,
                 parameters.zip, timers, parameters.verbosity);
       if(parameters.verbosity >= Verbosity::regular && El::mpi::Rank() == 0)

@@ -1,5 +1,9 @@
 #include "integration_tests/common.hxx"
 
+#include <fstream>
+#include <map>
+#include <rapidjson/document.h>
+
 #include <filesystem>
 
 namespace fs = std::filesystem;
@@ -91,6 +95,107 @@ TEST_CASE("pmp2sdp")
                                              runner.create_nested("diff"));
         }
       }
+  }
+
+  SECTION("reducedPrefactorNodesAtInfinity")
+  {
+    INFO("Every polynomial is P = Pi_dropped * S with deg S = d, so the "
+         "reduced numerator P / Pi_dropped is a polynomial of degree d and "
+         "conditions at infinity must give the same SDP as plain "
+         "interpolation.");
+    auto data_dir = Test_Config::test_data_dir / "pmp2sdp" / "nodes-at-infinity";
+    auto input = (data_dir / "pmp.json").string();
+
+    Test_Util::Test_Case_Runner runner("pmp2sdp/nodes-at-infinity");
+    Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
+    args["--input"] = input;
+    args["--maxNumPoles"] = "2";
+    args["--outputFormat"] = "json";
+    const auto plain_sdp = runner.output_dir / "sdp-plain";
+    args["--output"] = plain_sdp.string();
+    runner.create_nested("plain").mpi_run({Test_Config::program("pmp2sdp"), args});
+
+    for(const std::string num_nodes : {"1", "2", "5"})
+      DYNAMIC_SECTION("M=" << num_nodes)
+      {
+        auto nested = runner.create_nested("M=" + num_nodes);
+        Test_Util::Test_Case_Runner::Named_Args_Map args_inf(args);
+        args_inf["--reducedPrefactorNodesAtInfinity"] = num_nodes;
+        const auto sdp = nested.output_dir / "sdp";
+        args_inf["--output"] = sdp.string();
+        nested.create_nested("run").mpi_run({Test_Config::program("pmp2sdp"), args_inf});
+        Test_Util::REQUIRE_Equal::diff_sdp(sdp, plain_sdp, precision,
+                                           diff_precision,
+                                           nested.create_nested("diff"));
+      }
+  }
+
+  SECTION("reducedPrefactorNodesAtInfinity on a generic PMP")
+  {
+    INFO("On SingletScalar_cT_test_nmax6 with --maxNumPoles 14 (blocks have "
+         "11 to 17 poles), the nodes at infinity must change the blocks "
+         "whose poles were reduced, and leave the others byte-identical.");
+    const auto input = Test_Config::test_data_dir / "end-to-end_tests"
+                       / "SingletScalar_cT_test_nmax6"
+                       / "primal_dual_optimal" / "input" / "pmp.nsv";
+    Test_Util::Test_Case_Runner runner("pmp2sdp/nodes-at-infinity-generic");
+    Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
+    args["--input"] = input.string();
+    args["--precision"] = "768";
+    args["--maxNumPoles"] = "14";
+    const auto plain_sdp = runner.output_dir / "sdp-plain";
+    args["--output"] = plain_sdp.string();
+    runner.create_nested("plain").mpi_run({Test_Config::program("pmp2sdp"), args});
+    args["--reducedPrefactorNodesAtInfinity"] = "2";
+    const auto inf_sdp = runner.output_dir / "sdp-inf";
+    args["--output"] = inf_sdp.string();
+    runner.create_nested("M=2").mpi_run({Test_Config::program("pmp2sdp"), args});
+
+    auto read = [](const fs::path &path) {
+      std::ifstream is(path, std::ios::binary);
+      REQUIRE(is.good());
+      return std::string(std::istreambuf_iterator<char>(is), {});
+    };
+    // A block changes iff its poles were reduced (pmp_info.json: fewer
+    // reducedPrefactor poles than prefactor poles)
+    std::map<size_t, bool> reduced;
+    {
+      rapidjson::Document doc;
+      const auto text = read(plain_sdp / "pmp_info.json");
+      doc.Parse(text.c_str());
+      REQUIRE(!doc.HasParseError());
+      REQUIRE(doc.IsArray());
+      for(const auto &block : doc.GetArray())
+        reduced[block["index"].GetUint64()]
+          = block["reducedPrefactor"]["poles"].Size()
+            < block["prefactor"]["poles"].Size();
+    }
+    size_t num_changed = 0, num_same = 0, num_reduced = 0;
+    for(const auto &[index, is_reduced] : reduced)
+      num_reduced += is_reduced;
+    for(const auto &entry : fs::directory_iterator(plain_sdp))
+      {
+        const auto name = entry.path().filename().string();
+        CAPTURE(name);
+        if(name == "control.json")
+          continue;
+        const bool same = read(entry.path()) == read(inf_sdp / name);
+        if(name.rfind("block_data_", 0) == 0)
+          {
+            const size_t index = std::stoul(name.substr(11));
+            REQUIRE(reduced.count(index) == 1);
+            REQUIRE(same == !reduced.at(index));
+            (same ? num_same : num_changed) += 1;
+          }
+        else if(name != "pmp_info.json")
+          // block_info_*, objectives, normalization: unchanged
+          REQUIRE(same);
+      }
+    CAPTURE(num_changed);
+    CAPTURE(num_same);
+    REQUIRE(num_changed == num_reduced);
+    REQUIRE(num_changed > 0);
+    REQUIRE(num_same > 0);
   }
 
   SECTION("filesystem errors")
