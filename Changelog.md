@@ -12,6 +12,10 @@ See [Solving SDPA problems](docs/Usage.md#solving-sdpa-problems) for details.
 Note that the SDPA solver is currently slower than [sdpa-gmp-omp](https://github.com/Canonical111/sdpa-gmp-omp) and uses more memory.
 For problems that fit on a single node, we recommend sdpa-gmp-omp.
 
+### Performance
+
+- Faster reduction of Q (and of S in the SDPA solver) across nodes: each pass of the reduction now visits only the elements of Q owned by one rank, instead of all elements. The saving grows with the number of nodes, e.g. 12.0 s → 1.8 s per iteration for this step on 10 nodes. The results are bitwise identical. See [#303](https://github.com/davidsd/sdpb/pull/303).
+
 ### Memory limits
 
 - New option `--maxMemory` (also in `approx_objective`): limit for the estimated memory usage on each node, 80% of `MemAvailable` by default. SDPB splits shared memory windows to stay within the limit.
