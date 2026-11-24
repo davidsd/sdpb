@@ -25,7 +25,6 @@ pull request, which also says how it was checked.
 
 | Branch | PR | What it does | Turned on by | Base | Contributors | Human review |
 |---|---|---|---|---|---|---|
-| `timers-bounded` | [#308](https://github.com/davidsd/sdpb/pull/308) | below `--verbosity debug`, sdpb stops keeping finished timers that nothing reads (memory grows every iteration otherwise) | always on (no output changes) | `master` | David Simmons-Duffin | none yet |
 | `cpu-trsm-large` | [#309](https://github.com/davidsd/sdpb/pull/309) | Elemental's `TRSM_LARGE` for the per-block triangular solves (faster when a block's group has a prime number of ranks) | always on (no output changes) | `master` | David Simmons-Duffin | none yet |
 | `cpu-mm-trsm` | [#311](https://github.com/davidsd/sdpb/pull/311) | each Schur complement block's Cholesky factor L and the solve L⁻¹B (B the free variable matrix) by exact multimodular arithmetic (integers modulo many primes, multiplied with BLAS). Not bitwise: results differ from `master`'s within a proven error bound | `--multimodularTrsm` | `master` | Vasiliy Dommes (the multimodular method of `bigint_syrk`, which it extends); David Simmons-Duffin | none yet |
 | `cpu-mm-cholesky-q` | [#312](https://github.com/davidsd/sdpb/pull/312) | the Cholesky decomposition of Q by multimodular arithmetic. Not bitwise; its accuracy not yet checked independently | `--multimodularCholeskyQ <panel>` | `cpu-mm-trsm` | Vasiliy Dommes (the multimodular method of `bigint_syrk`, which it reuses); David Simmons-Duffin | none yet |
