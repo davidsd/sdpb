@@ -40,20 +40,19 @@ private:
   size_t max_mem_used = 0;
   // name of the timer that had max MemUsed value
   std::string max_mem_used_name;
-  // If false, a Scoped_Timer erases its entry from named_timers
-  // when it is destroyed.
-  bool keep_finished_timers = true;
+  // named_timers gets an entry for every timer started, and only
+  // write_profile() reads finished timers. Programs write a profile only at
+  // --verbosity debug or above. Below that, a Scoped_Timer erases its entry
+  // when it is destroyed, so named_timers does not grow with the number of
+  // solver iterations.
+  const bool keep_finished_timers;
 
 public:
   Timers();
+  // Without an Environment, every rank prints debug output (for tests).
+  explicit Timers(const Verbosity &verbosity);
   Timers(const Environment &env, const Verbosity &verbosity);
   ~Timers() noexcept;
-
-  // named_timers gets an entry for every timer started, and only
-  // write_profile() reads it. Call this if write_profile() will not be called:
-  // then finished timers are erased, and named_timers does not grow with the
-  // number of solver iterations.
-  void discard_finished_timers();
 
 private:
   Named_Timers::iterator add_and_start(const std::string &name);
@@ -76,7 +75,7 @@ private:
 //
 // void f()
 // {
-//   Timers timers(false);
+//   Timers timers;
 //   Scoped_Timer root_timer(timers, "root"); // "root"
 //   Scoped_Timer foo_timer(timers, "foo"); // "root.foo"
 //   foo_timer.stop();

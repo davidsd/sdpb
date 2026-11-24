@@ -7,7 +7,7 @@
 #include <optional>
 #include <sstream>
 
-// What a profile holds, with and without Timers::discard_finished_timers().
+// What a profile holds at --verbosity debug and below it.
 // A temporary file per rank, removed at the end.
 namespace
 {
@@ -31,9 +31,9 @@ namespace
 
 TEST_CASE("Timers")
 {
-  SECTION("by default, every finished timer stays in the profile")
+  SECTION("at --verbosity debug, every finished timer stays in the profile")
   {
-    Timers timers;
+    Timers timers(Verbosity::debug);
     {
       Scoped_Timer outer(timers, "outer");
       Scoped_Timer inner(timers, "inner");
@@ -42,10 +42,9 @@ TEST_CASE("Timers")
     REQUIRE(has(profile, "outer"));
     REQUIRE(has(profile, "outer.inner"));
   }
-  SECTION("discard_finished_timers: finished timers go, running ones stay")
+  SECTION("below --verbosity debug, finished timers go, running ones stay")
   {
-    Timers timers;
-    timers.discard_finished_timers();
+    Timers timers(GENERATE(Verbosity::none, Verbosity::regular));
     Scoped_Timer outer(timers, "outer");
     for(int i = 0; i < 3; ++i)
       {
@@ -59,12 +58,11 @@ TEST_CASE("Timers")
     REQUIRE_FALSE(has(profile, "outer.iter_0"));
     REQUIRE_FALSE(has(profile, "outer.iter_2.step"));
   }
-  SECTION("discard_finished_timers: a timer destroyed before a later sibling")
+  SECTION("below --verbosity debug: a timer destroyed before a later sibling")
   {
     // Scoped_Timers need not be destroyed in the reverse order of creation:
     // each Scoped_Timer must erase its own entry, not the last one.
     Timers timers;
-    timers.discard_finished_timers();
     std::optional<Scoped_Timer> first, second;
     first.emplace(timers, "first");
     first->stop();

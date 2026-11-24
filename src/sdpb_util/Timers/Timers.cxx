@@ -12,9 +12,12 @@ namespace
   }
 }
 
-Timers::Timers() = default;
+Timers::Timers() : Timers(Verbosity::regular) {}
+Timers::Timers(const Verbosity &verbosity)
+    : verbosity(verbosity), keep_finished_timers(verbosity >= Verbosity::debug)
+{}
 Timers::Timers(const Environment &env, const Verbosity &verbosity)
-    : verbosity(verbosity)
+    : Timers(verbosity)
 {
   if(env.comm_shared_mem.Rank() != 0)
     {
@@ -36,11 +39,6 @@ Timers::~Timers() noexcept
     {
       // destructors should never throw exceptions
     }
-}
-
-void Timers::discard_finished_timers()
-{
-  keep_finished_timers = false;
 }
 
 Timers::Named_Timers::iterator Timers::add_and_start(const std::string &name)
