@@ -217,17 +217,17 @@ void BigInt_Shared_Memory_Syrk_Context::restore_and_reduce(
         {
           Scoped_Timer deserialize_timer(timers, "deserialize");
           El::byte *curr_recv = recv_buf.data();
-          for_each_owned(global_ranks.at(reduce_rank), [&](const int i,
-                                                           const int j) {
-            ASSERT(curr_recv - recv_buf.data() < recv_buf.size());
+          for_each_owned(
+            global_ranks.at(reduce_rank), [&](const int i, const int j) {
+              ASSERT(curr_recv - recv_buf.data() < recv_buf.size());
 
-            bigfloat_value.Deserialize(curr_recv);
+              bigfloat_value.Deserialize(curr_recv);
 
-            const auto iLoc = output.LocalRow(i);
-            const auto jLoc = output.LocalCol(j);
-            output.Matrix()(iLoc, jLoc) += bigfloat_value;
-            curr_recv += serialized_size;
-          });
+              const auto iLoc = output.LocalRow(i);
+              const auto jLoc = output.LocalCol(j);
+              output.Matrix()(iLoc, jLoc) += bigfloat_value;
+              curr_recv += serialized_size;
+            });
           ASSERT_EQUAL(curr_recv - recv_buf.data(), recv_buf.size());
         }
       }
