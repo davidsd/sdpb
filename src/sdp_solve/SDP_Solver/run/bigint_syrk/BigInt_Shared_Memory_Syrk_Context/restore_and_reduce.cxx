@@ -69,41 +69,36 @@ void BigInt_Shared_Memory_Syrk_Context::restore_and_reduce(
   const auto height = output.Height();
   const auto width = output.Width();
 
-  // Each pass below visits the elements of Q owned by one rank g. Looping over
+  // Each pass below visits the elements of Q owned by one rank. Looping over
   // all height x width elements with an Owner(i, j) test costs O(N^2) per
   // pass on every rank, and there are 2 + 2 (num_nodes - 1) passes per call,
   // for only ~N^2 / num_ranks elements each; this grows with N^2 and with the
-  // number of nodes. Since Owner(i, j) = RowOwner(i) + ColOwner(j) * ColStride(),
-  // the elements of g are the rows {i : RowOwner(i) = g mod ColStride} times
-  // the columns {j : ColOwner(j) = g / ColStride}. Visiting them in row-major
-  // order gives the same elements in the same order as the full loop, hence
-  // the same send/receive buffers and the same sums.
-  std::vector<int> row_owner(height), col_owner(width);
-  for(int i = 0; i < height; ++i)
-    row_owner[i] = output.RowOwner(i);
-  for(int j = 0; j < width; ++j)
-    col_owner[j] = output.ColOwner(j);
-  // f(i, j) for all (i, j) owned by rank g of output.DistComm() and not
-  // skipped, in row-major order
-  auto for_each_owned = [&](const int g, const auto &f) {
-    const int stride = output.ColStride();
-    const int r = g % stride;
-    const int c = g / stride;
-    std::vector<int> cols;
-    for(int j = 0; j < width; ++j)
-      if(col_owner[j] == c)
-        cols.push_back(j);
-    for(int i = 0; i < height; ++i)
-      {
-        if(row_owner[i] != r)
-          continue;
-        for(const int j : cols)
-          {
-            if(skip_element(i, j))
-              continue;
-            f(i, j);
-          }
-      }
+  // number of nodes.
+  //
+  // f(i, j) for all (i, j) owned by dist_rank (a rank in output.DistComm())
+  // and not skipped, in row-major order: the same elements in the same order
+  // as the full loop, hence the same send/receive buffers and the same sums.
+  // Owner(i, j) = RowOwner(i) + ColOwner(j) * ColStride(), where
+  // RowOwner(i) = (i + ColAlign()) % ColStride() and
+  // ColOwner(j) = (j + RowAlign()) % RowStride(). ("Col" in Elemental refers
+  // to the distribution of a column, i.e. of the row index i.)
+  // El::Shift(owner, align, stride) is the first index with this owner.
+  auto for_each_owned = [&](const int dist_rank, const auto &f) {
+    ASSERT(0 <= dist_rank && dist_rank < output.DistSize(),
+           DEBUG_STRING(dist_rank), DEBUG_STRING(output.DistSize()));
+    const El::Int col_stride = output.ColStride();
+    const El::Int row_stride = output.RowStride();
+    const El::Int first_row
+      = El::Shift(dist_rank % col_stride, output.ColAlign(), col_stride);
+    const El::Int first_col
+      = El::Shift(dist_rank / col_stride, output.RowAlign(), row_stride);
+    for(El::Int i = first_row; i < height; i += col_stride)
+      for(El::Int j = first_col; j < width; j += row_stride)
+        {
+          if(skip_element(i, j))
+            continue;
+          f(i, j);
+        }
   };
   ASSERT(height <= output_residues_window->height, DEBUG_STRING(height),
          DEBUG_STRING(output_residues_window->height));
