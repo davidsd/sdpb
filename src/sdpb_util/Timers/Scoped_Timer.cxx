@@ -3,8 +3,7 @@
 
 Scoped_Timer::Scoped_Timer(Timers &timers, const std::string &name)
     : timers(timers),
-      my_timer(timers.add_and_start(name)),
-      my_entry(std::prev(timers.named_timers.end())),
+      my_entry(timers.add_and_start(name)),
       old_prefix(timers.prefix),
       new_prefix(timers.prefix + name + ".")
 
@@ -21,12 +20,12 @@ Scoped_Timer::~Scoped_Timer()
 std::chrono::time_point<std::chrono::high_resolution_clock>
 Scoped_Timer::start_time() const
 {
-  return my_timer.start_time;
+  return my_entry->second.start_time;
 }
 void Scoped_Timer::stop()
 {
   ASSERT(is_running(), "Timer '" + new_prefix + "' already stopped!");
-  my_timer.stop();
+  my_entry->second.stop();
 
   // This assertion will fail if some of the nested timers is still running:
   ASSERT_EQUAL(timers.prefix, new_prefix);
@@ -34,13 +33,13 @@ void Scoped_Timer::stop()
 }
 const Timer &Scoped_Timer::timer() const
 {
-  return my_timer;
+  return my_entry->second;
 }
 bool Scoped_Timer::is_running() const
 {
-  return my_timer.is_running();
+  return my_entry->second.is_running();
 }
 int64_t Scoped_Timer::elapsed_milliseconds() const
 {
-  return my_timer.elapsed_milliseconds();
+  return my_entry->second.elapsed_milliseconds();
 }

@@ -67,9 +67,9 @@ solve(const typename TSolver::Block_Info_Type &block_info,
         &start_time,
       Timers &timers, El::Matrix<int32_t> &block_timings_ms)
 {
-  // write_profiling() below is called only at --verbosity debug or above;
-  // otherwise nothing reads a finished timer, so don't keep it.
-  if(parameters.verbosity < Verbosity::debug)
+  // Only the profile reads finished timers; without it, don't keep them.
+  const bool write_profile = parameters.verbosity >= Verbosity::debug;
+  if(!write_profile)
     timers.discard_finished_timers();
   Scoped_Timer solve_timer(timers, "sdpb.solve");
 
@@ -126,7 +126,7 @@ solve(const typename TSolver::Block_Info_Type &block_info,
     save_solution(solver, block_info, sdp, parameters, reason, runtime);
   }
 
-  if(parameters.verbosity >= Verbosity::debug)
+  if(write_profile)
     {
       try
         {

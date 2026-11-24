@@ -24,10 +24,12 @@ struct Timers
   friend struct Scoped_Timer; // can change private field prefix
 
 private:
-  // We use std::list instead of std::vector to avoid reallocation.
-  // Scoped_Timer holds reference to timer, which would be invalidated after reallocation.
+  using Named_Timers = std::list<std::pair<std::string, Timer>>;
+  // We use std::list instead of std::vector:
+  // each Scoped_Timer holds an iterator to its entry, and std::list keeps it
+  // valid when other entries are added or erased.
   // TODO refactor timers in a way that prevents such obscure bugs.
-  std::list<std::pair<std::string, Timer>> named_timers;
+  Named_Timers named_timers;
   std::string prefix;
 
   Verbosity verbosity = Verbosity::regular;
@@ -38,8 +40,8 @@ private:
   size_t max_mem_used = 0;
   // name of the timer that had max MemUsed value
   std::string max_mem_used_name;
-  // named_timers gets one entry per timer start and is only ever read by write_profile().
-  // If false, a Scoped_Timer removes its entry when it is destroyed.
+  // If false, a Scoped_Timer erases its entry from named_timers
+  // when it is destroyed.
   bool keep_finished_timers = true;
 
 public:
@@ -47,18 +49,17 @@ public:
   Timers(const Environment &env, const Verbosity &verbosity);
   ~Timers() noexcept;
 
-  // For a run that will not call write_profile(): keeps named_timers from
-  // growing with iterations (on Ising+T nmax=26, 1369 entries per rank per
-  // iteration, i.e. about 6 GB per node over a 196-iteration call).
+  // named_timers gets an entry for every timer started, and only
+  // write_profile() reads it. Call this if write_profile() will not be called:
+  // then finished timers are erased, and named_timers does not grow with the
+  // number of solver iterations.
   void discard_finished_timers();
 
 private:
-  Timer &add_and_start(const std::string &name);
+  Named_Timers::iterator add_and_start(const std::string &name);
 
 public:
   void write_profile(const std::filesystem::path &path) const;
-
-  [[nodiscard]] int64_t elapsed_milliseconds(const std::string &s) const;
 
 private:
   void print_max_mem_used() const;
@@ -95,8 +96,8 @@ struct Scoped_Timer : boost::noncopyable
 
 private:
   Timers &timers;
-  Timer &my_timer;
-  std::list<std::pair<std::string, Timer>>::iterator my_entry;
+  // Entry in timers.named_timers
+  Timers::Named_Timers::iterator my_entry;
   std::string old_prefix;
   std::string new_prefix;
 
