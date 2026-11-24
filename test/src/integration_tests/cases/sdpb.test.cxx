@@ -85,8 +85,8 @@ TEST_CASE("sdpb")
                 // At --verbosity debug the profile keeps the timers that
                 // have finished, not only the ones still running
                 std::ifstream is(profiling_path);
-                const std::string profile(
-                  (std::istreambuf_iterator<char>(is)), {});
+                const std::string profile((std::istreambuf_iterator<char>(is)),
+                                          {});
                 CAPTURE(profiling_path);
                 REQUIRE(profile.find("\"sdpb.solve.read_sdp\"")
                         != std::string::npos);

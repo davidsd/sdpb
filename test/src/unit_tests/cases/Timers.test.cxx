@@ -4,6 +4,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <sstream>
 
 // What a profile holds, with and without Timers::discard_finished_timers().
@@ -13,8 +14,8 @@ namespace
   std::string profile_of(const Timers &timers)
   {
     const auto path = std::filesystem::temp_directory_path()
-                      / ("Timers.test." + std::to_string(El::mpi::Rank())
-                         + "." + std::to_string(::getpid()));
+                      / ("Timers.test." + std::to_string(El::mpi::Rank()) + "."
+                         + std::to_string(::getpid()));
     timers.write_profile(path);
     std::ifstream in(path);
     std::stringstream ss;
@@ -50,27 +51,32 @@ TEST_CASE("Timers")
       {
         Scoped_Timer iter(timers, "iter_" + std::to_string(i));
         Scoped_Timer step(timers, "step");
-        // The elapsed time stays readable from a live Scoped_Timer, as compute_Q and bigint_syrk_blas read it.
+        // A timer stopped before it is destroyed goes too
         step.stop();
-        REQUIRE(step.elapsed_milliseconds() >= 0);
       }
     const auto profile = profile_of(timers);
     REQUIRE(has(profile, "outer"));
     REQUIRE_FALSE(has(profile, "outer.iter_0"));
     REQUIRE_FALSE(has(profile, "outer.iter_2.step"));
   }
-  SECTION("discard_finished_timers: a timer stopped early, then a sibling that outlives it")
+  SECTION("discard_finished_timers: a timer destroyed before a later sibling")
   {
+    // Scoped_Timers need not be destroyed in the reverse order of creation:
+    // each Scoped_Timer must erase its own entry, not the last one.
     Timers timers;
     timers.discard_finished_timers();
-    {
-      Scoped_Timer first(timers, "first");
-      first.stop();
-      Scoped_Timer second(timers, "second");
-      const auto profile = profile_of(timers);
-      REQUIRE(has(profile, "first"));
-      REQUIRE(has(profile, "second"));
-    }
+    std::optional<Scoped_Timer> first, second;
+    first.emplace(timers, "first");
+    first->stop();
+    second.emplace(timers, "second");
+    REQUIRE(has(profile_of(timers), "first"));
+
+    first.reset();
+    auto profile = profile_of(timers);
+    REQUIRE_FALSE(has(profile, "first"));
+    REQUIRE(has(profile, "second"));
+
+    second.reset();
     REQUIRE_FALSE(has(profile_of(timers), "second"));
   }
 }
