@@ -2,18 +2,23 @@
 
 #include "sdp_solve/Block_Matrix/Block_Diagonal_Matrix.hxx"
 #include "sdpb_util/copy_matrix.hxx"
+#include "test_util/diff.hxx"
 #include "unit_tests/util/util.hxx"
 
 #include <El.hpp>
+#include <boost/noncopyable.hpp>
 
-#include <memory>
 #include <vector>
+
+using Test_Util::REQUIRE_Equal::diff;
 
 // cholesky_solve and lower_triangular_inverse_congruence
 // (Abstract_Block_Diagonal_Matrix.hxx) call El::Trsm with TRSM_LARGE instead
 // of Elemental's default, which is TRSM_MEDIUM when the right-hand side is no
-// wider than 5 * (grid size). The result must be bitwise the same, on any grid
-// shape and on both sides of that threshold.
+// wider than 5 * (grid size). The result must be bitwise the same as with
+// TRSM_MEDIUM, on any grid shape. The reference asks for TRSM_MEDIUM
+// explicitly, so that every case compares the two algorithms, whatever the
+// number of ranks.
 
 namespace
 {
@@ -39,46 +44,60 @@ namespace
     return M;
   }
 
-  bool equal(const El::DistMatrix<El::BigFloat> &A,
-             const El::DistMatrix<El::BigFloat> &B)
+  // Bitwise comparison of two DistMatrices. Plain DIFF_PREC would fail only
+  // on the ranks holding a mismatch, and the other ranks would then hang in
+  // the next section's collectives. Here every rank fails together, and
+  // DIFF_PREC reports the first mismatch on the ranks that have one.
+  void diff_bitwise(const El::DistMatrix<El::BigFloat> &a,
+                    const El::DistMatrix<El::BigFloat> &b)
   {
-    int eq = A.LocalHeight() == B.LocalHeight()
-             && A.LocalWidth() == B.LocalWidth();
-    for(El::Int j = 0; eq && j < A.LocalWidth(); ++j)
-      for(El::Int i = 0; i < A.LocalHeight(); ++i)
-        if(A.GetLocalCRef(i, j) != B.GetLocalCRef(i, j))
-          eq = 0;
-    return El::mpi::AllReduce(eq, El::mpi::MIN, El::mpi::COMM_WORLD) == 1;
+    // The local entries of a and b are the same global entries only if the
+    // sizes, grids and alignments match. These are the same on every rank,
+    // so a mismatch fails every rank.
+    REQUIRE(a.Height() == b.Height());
+    REQUIRE(a.Width() == b.Width());
+    REQUIRE(a.Grid() == b.Grid());
+    REQUIRE(a.ColAlign() == b.ColAlign());
+    REQUIRE(a.RowAlign() == b.RowAlign());
+    int local_equal = 1;
+    for(El::Int jLoc = 0; local_equal && jLoc < a.LocalWidth(); ++jLoc)
+      for(El::Int iLoc = 0; iLoc < a.LocalHeight(); ++iLoc)
+        if(a.GetLocalCRef(iLoc, jLoc) != b.GetLocalCRef(iLoc, jLoc))
+          local_equal = 0;
+    const bool all_equal
+      = El::mpi::AllReduce(local_equal, El::mpi::MIN, a.DistComm()) == 1;
+    if(!all_equal)
+      DIFF_PREC(a, b, -1);
+    REQUIRE(all_equal);
   }
+
+  // Restores El's block size, even if a REQUIRE fails
+  struct Blocksize_Guard : boost::noncopyable
+  {
+    const int old = El::Blocksize();
+    ~Blocksize_Guard() { El::SetBlocksize(old); }
+  };
 }
 
 TEST_CASE("TRSM_LARGE in cholesky_solve and the step-length congruence: "
-          "bitwise as El's default",
+          "bitwise as TRSM_MEDIUM",
           "[trsm_large]")
 {
   const int size = El::mpi::Size(El::mpi::COMM_WORLD);
-  // size x 1, 1 x size and the default grid
-  const int height = GENERATE(0, 1, -1);
-  // below, at and above 5 * size (Medium / Large in El's default), and
-  // 300: more than two of El's 128-row panels
-  const int n
-    = GENERATE_COPY(3, 2 * size + 1, 5 * size, 5 * size + 1, 37, 300);
-  // El's block size: the default (128) and 8, so that small n also spans
-  // several panels
+  // Grid height: El's default, 1 (1 x size), or size (size x 1)
+  const int height = GENERATE_COPY(0, 1, size);
+  const int n = GENERATE(3, 13, 37);
+  // El's block size: the default (128) and 8, so that n also spans several
+  // panels
   const int block_size = GENERATE(0, 8);
   DYNAMIC_SECTION("n=" << n << " height=" << height
                        << " block_size=" << block_size)
   {
-    // restored even if a REQUIRE below fails
-    struct Blocksize_Guard
-    {
-      int old = El::Blocksize();
-      ~Blocksize_Guard() { El::SetBlocksize(old); }
-    } guard;
+    Blocksize_Guard guard;
     if(block_size > 0)
       El::SetBlocksize(block_size);
-    const int h = height == -1 ? size : height;
-    El::Grid grid(El::mpi::COMM_WORLD, h > 0 ? h : El::Grid::DefaultHeight(size));
+    El::Grid grid(El::mpi::COMM_WORLD,
+                  height > 0 ? height : El::Grid::DefaultHeight(size));
     const auto A = same_matrix(n, true), R = same_matrix(n, false);
     Block_Diagonal_Matrix L({size_t(n)}, {0}, grid), X(L), Y(L), C(L);
     copy_matrix(A, L.blocks[0]);
@@ -88,16 +107,20 @@ TEST_CASE("TRSM_LARGE in cholesky_solve and the step-length congruence: "
     Y = X;
     C = X;
 
+    // El::cholesky::SolveAfter(LOWER, NORMAL), with TRSM_MEDIUM
     cholesky_solve(L, X);
-    El::cholesky::SolveAfter(El::LOWER, El::NORMAL, L.blocks[0], Y.blocks[0]);
-    REQUIRE(equal(X.blocks[0], Y.blocks[0]));
+    El::Trsm(El::LEFT, El::LOWER, El::NORMAL, El::NON_UNIT, El::BigFloat(1),
+             L.blocks[0], Y.blocks[0], false, El::TRSM_MEDIUM);
+    El::Trsm(El::LEFT, El::LOWER, El::ADJOINT, El::NON_UNIT, El::BigFloat(1),
+             L.blocks[0], Y.blocks[0], false, El::TRSM_MEDIUM);
+    diff_bitwise(X.blocks[0], Y.blocks[0]);
 
     auto D = C;
     lower_triangular_inverse_congruence(L, C);
     El::Trsm(El::RIGHT, El::LOWER, El::TRANSPOSE, El::NON_UNIT,
              El::BigFloat(1), L.blocks[0], D.blocks[0]);
     El::Trsm(El::LEFT, El::LOWER, El::NORMAL, El::NON_UNIT, El::BigFloat(1),
-             L.blocks[0], D.blocks[0]);
-    REQUIRE(equal(C.blocks[0], D.blocks[0]));
+             L.blocks[0], D.blocks[0], false, El::TRSM_MEDIUM);
+    diff_bitwise(C.blocks[0], D.blocks[0]);
   }
 }
