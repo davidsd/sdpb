@@ -48,10 +48,15 @@ void initialize_schur_off_diagonal(
       Scoped_Timer solve_timer(timers, "solve_" + block_index_string);
 
       schur_off_diagonal.blocks.push_back(sdp.free_var_matrix.blocks[block]);
+      // TRSM_LARGE: see cholesky_solve (Abstract_Block_Diagonal_Matrix.hxx).
+      // B has N columns (the free variables); El's default picks
+      // TRSM_MEDIUM when N <= 5 * (group size). Its memory estimate in
+      // run.cxx and in approx_objective's setup_solver.cxx passes TRSM_LARGE
+      // too.
       El::Trsm(El::LeftOrRightNS::LEFT, El::UpperOrLowerNS::LOWER,
                El::OrientationNS::NORMAL, El::UnitOrNonUnitNS::NON_UNIT,
                El::BigFloat(1), schur_complement_cholesky.blocks[block],
-               schur_off_diagonal.blocks[block]);
+               schur_off_diagonal.blocks[block], false, El::TRSM_LARGE);
       block_timings_ms(global_block_index, 0)
         += solve_timer.elapsed_milliseconds();
     }
