@@ -16,32 +16,44 @@ using Test_Util::REQUIRE_Equal::diff;
 // (Abstract_Block_Diagonal_Matrix.hxx) call El::Trsm with TRSM_LARGE instead
 // of Elemental's default, which is TRSM_MEDIUM when the right-hand side is no
 // wider than 5 * (grid size). The result must be bitwise the same as with
-// TRSM_MEDIUM, on any grid shape. The reference asks for TRSM_MEDIUM
+// TRSM_MEDIUM, on any grid shape. The same holds for the rectangular solves
+// L^{-1} B in compute_A_X_inv and compute_Q, which call El::Trsm(LEFT, LOWER,
+// NORMAL) with TRSM_LARGE directly. The references ask for TRSM_MEDIUM
 // explicitly, so that every case compares the two algorithms, whatever the
 // number of ranks.
 
 namespace
 {
-  // The same matrix on every rank: random (spd: G G^T + n I) on rank 0,
-  // broadcast
-  El::Matrix<El::BigFloat> same_matrix(const int n, const bool spd)
+  // The same matrix on every rank: random G on rank 0, broadcast.
+  // spd (square only): G G^T + height I.
+  El::Matrix<El::BigFloat>
+  same_matrix(const int height, const int width, const bool spd)
   {
-    El::Matrix<El::BigFloat> M(n, n);
+    REQUIRE((!spd || height == width));
+    El::Matrix<El::BigFloat> M(height, width);
     if(El::mpi::Rank() == 0)
       {
-        const auto G = Test_Util::random_matrix(n, n);
+        const auto G = Test_Util::random_matrix(height, width);
         if(spd)
           {
             El::Gemm(El::NORMAL, El::TRANSPOSE, El::BigFloat(1), G, G,
                      El::BigFloat(0), M);
-            for(int i = 0; i < n; ++i)
-              M(i, i) += El::BigFloat(n);
+            for(int i = 0; i < height; ++i)
+              M(i, i) += El::BigFloat(height);
           }
         else
           M = G;
       }
-    El::mpi::Broadcast(M.Buffer(), n * n, 0, El::mpi::COMM_WORLD);
+    El::mpi::Broadcast(M.Buffer(), height * width, 0, El::mpi::COMM_WORLD);
     return M;
+  }
+
+  // Lower Cholesky factor of a random spd matrix, on grid
+  void random_cholesky_factor(const int n, El::DistMatrix<El::BigFloat> &L)
+  {
+    copy_matrix(same_matrix(n, n, true), L);
+    El::Cholesky(El::LOWER, L);
+    El::MakeTrapezoidal(El::LOWER, L);
   }
 
   // Bitwise comparison of two DistMatrices. Plain DIFF_PREC would fail only
@@ -98,12 +110,9 @@ TEST_CASE("TRSM_LARGE in cholesky_solve and the step-length congruence: "
       El::SetBlocksize(block_size);
     El::Grid grid(El::mpi::COMM_WORLD,
                   height > 0 ? height : El::Grid::DefaultHeight(size));
-    const auto A = same_matrix(n, true), R = same_matrix(n, false);
     Block_Diagonal_Matrix L({size_t(n)}, {0}, grid), X(L), Y(L), C(L);
-    copy_matrix(A, L.blocks[0]);
-    El::Cholesky(El::LOWER, L.blocks[0]);
-    El::MakeTrapezoidal(El::LOWER, L.blocks[0]);
-    copy_matrix(R, X.blocks[0]);
+    random_cholesky_factor(n, L.blocks[0]);
+    copy_matrix(same_matrix(n, n, false), X.blocks[0]);
     Y = X;
     C = X;
 
@@ -122,5 +131,37 @@ TEST_CASE("TRSM_LARGE in cholesky_solve and the step-length congruence: "
     El::Trsm(El::LEFT, El::LOWER, El::NORMAL, El::NON_UNIT, El::BigFloat(1),
              L.blocks[0], D.blocks[0], false, El::TRSM_MEDIUM);
     diff_bitwise(C.blocks[0], D.blocks[0]);
+  }
+}
+
+TEST_CASE("TRSM_LARGE for L^{-1} B with a rectangular B (compute_A_X_inv, "
+          "compute_Q): bitwise as TRSM_MEDIUM",
+          "[trsm_large]")
+{
+  const int size = El::mpi::Size(El::mpi::COMM_WORLD);
+  const int height = GENERATE_COPY(0, 1, size);
+  const int n = GENERATE(3, 13, 37);
+  // B narrower and wider than L. Width 1 would go to Trsv, whatever the
+  // algorithm.
+  const int width = GENERATE_COPY(2, n + 7);
+  const int block_size = GENERATE(0, 8);
+  DYNAMIC_SECTION("n=" << n << " width=" << width << " height=" << height
+                       << " block_size=" << block_size)
+  {
+    Blocksize_Guard guard;
+    if(block_size > 0)
+      El::SetBlocksize(block_size);
+    El::Grid grid(El::mpi::COMM_WORLD,
+                  height > 0 ? height : El::Grid::DefaultHeight(size));
+    El::DistMatrix<El::BigFloat> L(grid), X(grid);
+    random_cholesky_factor(n, L);
+    copy_matrix(same_matrix(n, width, false), X);
+    auto Y = X;
+
+    El::Trsm(El::LEFT, El::LOWER, El::NORMAL, El::NON_UNIT, El::BigFloat(1), L,
+             X, false, El::TRSM_LARGE);
+    El::Trsm(El::LEFT, El::LOWER, El::NORMAL, El::NON_UNIT, El::BigFloat(1), L,
+             Y, false, El::TRSM_MEDIUM);
+    diff_bitwise(X, Y);
   }
 }
