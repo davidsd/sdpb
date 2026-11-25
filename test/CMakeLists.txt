@@ -26,16 +26,17 @@ endif()
 
 add_executable(unit_tests
   src/unit_tests/main.cxx
+  src/unit_tests/cases/Boost_Float.test.cxx
   src/unit_tests/cases/LPT_scheduling.test.cxx
   src/unit_tests/cases/Matrix_Normalizer.test.cxx
   src/unit_tests/cases/Memory_Tracker.test.cxx
+  src/unit_tests/cases/Timers.test.cxx
   src/unit_tests/cases/block_data_serialization.test.cxx
   src/unit_tests/cases/block_mapping.test.cxx
-  src/unit_tests/cases/Boost_Float.test.cxx
   src/unit_tests/cases/boost_serialization.test.cxx
-  src/unit_tests/cases/create_blas_job_schedule.test.cxx
   src/unit_tests/cases/calculate_matrix_square.test.cxx
   src/unit_tests/cases/copy_matrix.test.cxx
+  src/unit_tests/cases/create_blas_job_schedule.test.cxx
   src/unit_tests/cases/json.test.cxx
   src/unit_tests/cases/pmp_sampling.test.cxx
   src/unit_tests/cases/shared_window.test.cxx

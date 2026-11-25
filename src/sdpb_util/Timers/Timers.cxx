@@ -12,9 +12,12 @@ namespace
   }
 }
 
-Timers::Timers() = default;
+Timers::Timers() : Timers(Verbosity::regular) {}
+Timers::Timers(const Verbosity &verbosity)
+    : verbosity(verbosity), keep_finished_timers(verbosity >= Verbosity::debug)
+{}
 Timers::Timers(const Environment &env, const Verbosity &verbosity)
-    : verbosity(verbosity)
+    : Timers(verbosity)
 {
   if(env.comm_shared_mem.Rank() != 0)
     {
@@ -38,14 +41,13 @@ Timers::~Timers() noexcept
     }
 }
 
-Timer &Timers::add_and_start(const std::string &name)
+Timers::Named_Timers::iterator Timers::add_and_start(const std::string &name)
 {
   std::string full_name = prefix + name;
 
   process_meminfo(full_name);
 
-  named_timers.emplace_back(full_name, Timer());
-  return named_timers.back().second;
+  return named_timers.emplace(named_timers.end(), full_name, Timer());
 }
 void Timers::write_profile(const std::filesystem::path &path) const
 {
@@ -68,16 +70,6 @@ void Timers::write_profile(const std::filesystem::path &path) const
 
   ASSERT(f.good(), "Error when writing to: ", path);
 }
-int64_t Timers::elapsed_milliseconds(const std::string &s) const
-{
-  auto iter(std::find_if(named_timers.rbegin(), named_timers.rend(),
-                         [&s](const std::pair<std::string, Timer> &timer) {
-                           return timer.first == s;
-                         }));
-  ASSERT(iter != named_timers.rend(), "Could not find timing for ", s);
-  return iter->second.elapsed_milliseconds();
-}
-
 void Timers::print_max_mem_used() const
 {
   if(max_mem_used > 0 && !max_mem_used_name.empty())

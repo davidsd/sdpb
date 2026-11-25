@@ -21,6 +21,7 @@ For problems that fit on a single node, we recommend sdpa-gmp-omp.
 - New option `--maxMemory` (also in `approx_objective`): limit for the estimated memory usage on each node, 80% of `MemAvailable` by default. SDPB splits shared memory windows to stay within the limit.
 - `--maxSharedMemory` is no longer set automatically. By default, shared memory windows are limited only by `--maxMemory`.
 - `--verbosity debug` prints detailed memory estimates.
+- Below `--verbosity debug`, memory use no longer grows with the number of iterations. SDPB programs kept every timer they started for the profile, which they write only at `--verbosity debug`. In `sdpb` (and `outer_limits`) this grew every iteration, by several GB per node on large, long runs. See [#308](https://github.com/davidsd/sdpb/pull/308).
 
 ### z.txt
 
