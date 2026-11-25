@@ -40,17 +40,19 @@ void print_allocation_message_per_node(const Environment &env,
                                        const std::string &name, size_t bytes);
 
 // Extra memory required to compute L^{-1} X, via
-// El::Trsm(LEFT, LOWER, NORMAL, NON_UNIT, 1, L, X);
+// El::Trsm(LEFT, LOWER, NORMAL, NON_UNIT, 1, L, X, false, alg);
 // L ~ height x height, lower triangular
 // X ~ height x width
-// See https://gitlab.com/bootstrapcollaboration/elemental/-/blob/3ee9f404e632d9d0a4751e9b6717da51e59b5697/src/blas_like/level3/Trsm.cpp#L119-L122
+// alg: TRSM_DEFAULT (chosen as El::Trsm does), TRSM_LARGE or TRSM_MEDIUM
+// See https://gitlab.com/bootstrapcollaboration/elemental/-/blob/3ee9f404e632d9d0a4751e9b6717da51e59b5697/src/blas_like/level3/Trsm.cpp#L97-L127
 //
 // NB: if grid_size (=MPI group size) is a prime number (e.g. 11, 13, or 17),
 // then the grid has 1D shape (e.g. 11x1, 13x1, or 17x1).
 // In this case the terms proportional to grid_height will lead to
 // very high memory consumption compared to more balanced grids (e.g. 4x3 or 4x4).
 // To avoid this issue, set e.g. --procGranularity 2 or --procGranularity 4.
-size_t get_trsm_bytes(int height, int width, int grid_height, int grid_width);
+size_t get_trsm_bytes(int height, int width, int grid_height, int grid_width,
+                      El::TrsmAlgorithm alg = El::TRSM_DEFAULT);
 
 // Extra memory required to compute X L, via
 // El::Trmm(RIGHT, LOWER, NORMAL, NON_UNIT, 1, L, X)

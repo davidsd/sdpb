@@ -15,6 +15,7 @@ For problems that fit on a single node, we recommend sdpa-gmp-omp.
 ### Performance
 
 - Faster reduction of Q (and of S in the SDPA solver) across nodes: each pass of the reduction now visits only the elements of Q owned by one rank, instead of all elements. The saving grows with the number of nodes, e.g. 12.0 s → 1.8 s per iteration for this step on 10 nodes. The results are bitwise identical. See [#303](https://github.com/davidsd/sdpb/pull/303).
+- Faster triangular solves in each SDP block (and in the SDPA solver's search direction): the search direction, the step length, the bilinear pairings and the Schur complement solve L⁻¹B now use Elemental's `TRSM_LARGE` algorithm, which splits the work over all ranks of the block's MPI group. The gain is largest when the group has a prime number of ranks, e.g. 1.3–1.5× per iteration in 3d Ising runs on Expanse. The results are bitwise identical. See [#309](https://github.com/davidsd/sdpb/pull/309).
 
 ### Memory limits
 

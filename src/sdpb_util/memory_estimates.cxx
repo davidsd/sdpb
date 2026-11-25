@@ -51,7 +51,7 @@ void print_allocation_message_per_node(const Environment &env,
     }
 }
 size_t get_trsm_bytes(const int height, const int width, const int grid_height,
-                      const int grid_width)
+                      const int grid_width, El::TrsmAlgorithm alg)
 {
   ASSERT(height > 0, DEBUG_STRING(height));
   ASSERT(width > 0, DEBUG_STRING(width));
@@ -108,9 +108,16 @@ size_t get_trsm_bytes(const int height, const int width, const int grid_height,
   if(grid_height > 1)
     communication_size = std::max(communication_size, L21_MC_STAR);
 
+  // Same choice as El::Trsm for LEFT, LOWER, NORMAL.
+  // (El::Trsm calls Trsv for width == 1, whatever alg is; not modelled here,
+  // this overestimates it.)
+  if(alg == El::TRSM_DEFAULT)
+    alg = n > 5 * grid_size ? El::TRSM_LARGE : El::TRSM_MEDIUM;
+  ASSERT(alg == El::TRSM_LARGE || alg == El::TRSM_MEDIUM, DEBUG_STRING(alg));
+
   // LLNLarge
   // https://gitlab.com/bootstrapcollaboration/elemental/-/blob/3ee9f404e632d9d0a4751e9b6717da51e59b5697/src/blas_like/level3/Trsm/LLN.hpp#L19
-  if(n > 5 * grid_size)
+  if(alg == El::TRSM_LARGE)
     {
       // DistMatrix<F,STAR,VR  > X1_STAR_VR(g);
       // Data is not duplicated

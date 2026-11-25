@@ -108,9 +108,10 @@ namespace
         {
           for(auto &m : sdp.free_var_matrix.blocks)
             {
-              trsm_bytes = std::max(
-                trsm_bytes, get_trsm_bytes(m.Height(), m.Width(),
-                                           grid.Height(), grid.Width()));
+              trsm_bytes
+                = std::max(trsm_bytes,
+                           get_trsm_bytes(m.Height(), m.Width(), grid.Height(),
+                                          grid.Width(), El::TRSM_LARGE));
             }
         }
       return trsm_bytes;

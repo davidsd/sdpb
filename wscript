@@ -354,6 +354,7 @@ def build(bld):
                         'test/src/unit_tests/cases/json.test.cxx',
                         'test/src/unit_tests/cases/pmp_sampling.test.cxx',
                         'test/src/unit_tests/cases/shared_window.test.cxx',
+                        'test/src/unit_tests/cases/trsm_large.test.cxx',
                         'test/src/unit_tests/cases/z_normalization.test.cxx'],
                 target='unit_tests',
                 install_path=None,
