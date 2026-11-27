@@ -1,5 +1,4 @@
-#include "SDPA_File_Parse_Result.hxx"
-#include "SDPA_Block_Structure.hxx"
+#include "parse_sdpa.hxx"
 #include "catch2/catch_amalgamated.hpp"
 #include "sdpb_util/assert.hxx"
 
