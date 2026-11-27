@@ -21,20 +21,21 @@ TEST_CASE("sdpa_streamed_input")
         REQUIRE(objective.c_objective == cpu.c_objective);
         REQUIRE(objective.objective_const == cpu.objective_const);
 
+        const El::BigFloat zero(0);
         using Key = std::tuple<size_t, size_t, size_t, size_t>;
         std::map<Key, El::BigFloat> expected, actual;
         for(const auto &[block, matrices] : cpu.parsed_blocks)
           for(size_t p = 0; p < matrices.size(); ++p)
             for(int i = 0; i < matrices[p].Height(); ++i)
               for(int j = 0; j <= i; ++j)
-                if(matrices[p](i, j) != 0)
+                if(matrices[p](i, j) != zero)
                   expected[{block, p, i, j}] = matrices[p](i, j);
 
         visit_sdpa_lower(file.path(), [&](size_t block, size_t matrix, size_t i,
                                          size_t j, const El::BigFloat &value) {
           REQUIRE(i >= j);
           const Key key{block, matrix, i, j};
-          if(value != 0)
+          if(value != zero)
             actual[key] = value;
           else
             actual.erase(key);
