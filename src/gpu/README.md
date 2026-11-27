@@ -96,6 +96,17 @@ have no effect with `--gpu`: no host or device memory estimate is made.
 
 The switches for Q above (`SDPB_GPU_STRUCTURED_Q`, `SDPB_GPU_Q_SINGLE_PASS`, `SDPB_GPU_GEMV_MIN_TERMS`) don't change a bit of the result. To run the code path from before them, set `SDPB_GPU_STRUCTURED_Q=0 SDPB_GPU_Q_SINGLE_PASS=0 SDPB_GPU_GEMV_MIN_TERMS=256 SDPB_GPU_Q_BASE=256`.
 
+## SDPA input on GPUs
+
+Use `sdpb --gpu -s problem.dat-s` to solve a general SDP. Dense `.dat` and
+gzip-compressed versions of both formats use the same SDPA reader as the CPU.
+The device holds the constraint matrices as sparse lower triangles. Each block
+contributes a Gram matrix formed from its transformed constraints to the Schur
+complement. The factorization and search directions use the multiprecision
+backend described above. For several GPUs on one node, launch one MPI rank
+per GPU with NCCL enabled. Each rank owns whole blocks. The
+`SDPB_GPU_CHUNK_ROWS` cap counts padded matrix entries per chunk.
+
 ## Experimental distributed Q
 
 Build with `--gpu-nccl-dir=<NCCL prefix>` (CMake: `-DSDPB_GPU_NCCL_DIR=<NCCL prefix>`) in addition to the GPU options above.

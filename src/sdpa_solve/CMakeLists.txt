@@ -20,3 +20,7 @@ add_library(sdpa_solve STATIC
   SDP_Solver/load_checkpoint/load_checkpoint.cxx
   SDP_Solver/SDP_Solver.cxx)
 target_link_libraries(sdpa_solve PUBLIC sdp_solve)
+
+if(SDPB_ENABLE_GPU)
+  target_sources(sdpa_solve PRIVATE SDP_Solver/run/gpu/Gpu_Compute.cxx)
+endif()

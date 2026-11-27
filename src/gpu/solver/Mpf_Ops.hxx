@@ -100,6 +100,33 @@ namespace sdpb_gpu
   void mpf_gemv(const Mpf_Batch &A, const Mpf_Batch &v, Mpf_Batch &out,
                 const Gemv_Spec &spec, cudaStream_t s);
 
+  // Sparse products for the SDPA solver's constraint matrices: O[out(o)] = sum over terms t of output o of A[val(t)] v[col(t)], one
+  // rounding per output as in mpf_gemv. All arrays are on the device.
+  struct Csr_Gemv
+  {
+    int64_t n = 0;                 // outputs
+    const int64_t *ptr = nullptr;  // the terms of output o: ptr[o] .. ptr[o + 1] - 1
+    const uint32_t *col = nullptr; // index into v; the top bit: the term counts twice
+    const uint32_t *val = nullptr; // index into A (nullptr: t itself)
+    const uint32_t *out = nullptr; // index into O (nullptr: o itself)
+  };
+  void mpf_csr_gemv(const Mpf_Batch &A, const Mpf_Batch &v, Mpf_Batch &O,
+                    const Csr_Gemv &c, cudaStream_t s);
+  // W (nb, n, n dp) holds slices s = 0 .. dp - 1 of n x n blocks, as a batch of
+  // nb dp blocks: entry (i, j) of slice s of block z at (z dp + s) n n + j n + i.
+  // Writes entries first .. last - 1 of A into it, and their mirrors: pos[t] =
+  // z n n + j n + i (the top bit is ignored, Csr_Gemv's flag), slice[t] = p0 + s.
+  // W's other entries are left as they are.
+  void mpf_fill_slices(const Mpf_Batch &A, const uint32_t *pos,
+                       const uint32_t *slice, int64_t first, int64_t last,
+                       int64_t n, int dp, int64_t p0, Mpf_Batch &W,
+                       cudaStream_t s);
+  // Columns p0 .. p0 + dp - 1 of P (R x m): row r of column p0 + s is entry
+  // tab[r] = z n n + j n + i of slice s of G, laid out as W above.
+  void mpf_gather_slices(const Mpf_Batch &G, const uint32_t *tab, int64_t R,
+                         int64_t n, int dp, int64_t p0, Mpf_Batch &P,
+                         cudaStream_t s);
+
   // Reductions (they synchronize the stream).  max |A[i]| and the index of an
   // entry attaining it (zero if all entries are zero).
   Host_Float mpf_max_abs(const Mpf_Batch &A, cudaStream_t s);

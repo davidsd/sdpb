@@ -184,7 +184,8 @@ def build(bld):
               includes=default_includes,
               use=use_packages + ['pmp2sdp_lib'])
 
-    sdpa_solve_sources = ['src/sdpa_solve/SDP.cxx',
+    sdpa_solve_sources = [*(['src/sdpa_solve/SDP_Solver/run/gpu/Gpu_Compute.cxx'] if bld.env.SDPB_GPU else []),
+                          'src/sdpa_solve/SDP.cxx',
                           'src/sdpa_solve/Block_Info.cxx',
                           'src/sdpa_solve/parse_sdpa/parse_sdpa.cxx',
                           'src/sdpa_solve/SDP_Solver/save_checkpoint.cxx',

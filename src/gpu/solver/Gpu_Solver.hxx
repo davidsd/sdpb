@@ -114,6 +114,13 @@ namespace sdpb_gpu
     bool lean_p = false;
     // per-phase timing inside the exact products (synchronizes)
     bool product_timing = false;
+    // SDPA mode: F slices at a time in forming P, as bytes of one chunk's device
+    // floats (the products take twice that)
+    double sdpa_band_bytes = 1e9;
+    // SDPA mode: bits above last iteration's column maxima of P that the Gram's
+    // alignment allows for, so that P need not be held; negative: the exact maxima
+    // at every iteration, at the price of a pass that forms P twice
+    int sdpa_headroom = 28;
     // deliberate perturbation for the negative control of the comparison with
     // SDPB (relative, 0: none): the corrector's step eigenvalue is multiplied by
     // 1 + perturb_step at iteration perturb_iteration. A double: below about
@@ -161,6 +168,15 @@ namespace sdpb_gpu
 
     Gpu_Solver(const Gpu_Solver_Options &options, int N,
                const std::vector<Block_Shape> &blocks);
+    // SDPA mode (src/sdpa_solve): minimize c.x subject to
+    // X = sum_p x_p F_p - F_0 >= 0, Tr(F_p Y) = c_p, with S_pq = Tr(F_p X^-1 F_q Y)
+    // in Q's place, formed as P^T P with column p of P the entries of
+    // L_X^-1 F_p L_Y. Chunks are gpu_sdpa_chunks: X, Y, F_0 (nb, n, n), identity
+    // on X's and Y's padded rows, zero on F_0's. upload_b, upload_y, download_y
+    // hold c and x, Gpu_Array::c holds F_0; min_eig, R_error, frobenius_terms,
+    // cond, end_iteration and the profile are the ones above. N = m.
+    Gpu_Solver(const Gpu_Solver_Options &options, int m,
+               const std::vector<int> &block_dims);
     ~Gpu_Solver();
 
     int num_chunks() const;
@@ -195,6 +211,20 @@ namespace sdpb_gpu
     const Cond_Table &cond() const;
     // CRT checks of all products, profile bookkeeping
     void end_iteration();
+
+    // The nonzero entries of F_1 .. F_m in chunk i, lower triangles, sorted by
+    // (p, position): p_of[t] = p in 0 .. m - 1, pos[t] = q n n + j n + i, i >= j,
+    // limb t' of entry t at m[t' * nnz + t]
+    void sdpa_upload_F(int i, int64_t nnz, const int32_t *p_of,
+                       const uint32_t *pos, const int32_t *m, const int64_t *e);
+    // dual_sum: c . x; primal_terms: Tr(F_0 Y) by chunk; dual_error: max|d|,
+    // d = c - Tr(F_* Y); primal_error_P: max|sum_p x_p F_p - F_0 - X|;
+    // minus_xy_trace as above
+    Residue_Result sdpa_residues();
+    // P, S = P^T P and its factor (Q's code)
+    void sdpa_factor();
+    void sdpa_direction(const Host_Float &beta_mu, bool corrector);
+    void sdpa_update(const Host_Float &alpha_P, const Host_Float &alpha_D);
 
     // s by stage: totals and, per iteration, the last iteration (JSON)
     std::string profile_json() const;

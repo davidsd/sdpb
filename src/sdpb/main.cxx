@@ -79,9 +79,8 @@ int main(int argc, char **argv)
 
       if(parameters.is_sdpa())
         {
-          ASSERT(!parameters.solver.gpu,
-                 "--gpu is implemented for polynomial matrix programs only, "
-                 "not for SDPA input.");
+          ASSERT(!parameters.solver.gpu || env.num_nodes() == 1,
+                 "--gpu with SDPA input supports GPUs on a single node.");
           ASSERT(parameters.control_dir.empty(),
                  "--controlDir (resident mode) is implemented for polynomial "
                  "matrix programs only, not for SDPA input.");

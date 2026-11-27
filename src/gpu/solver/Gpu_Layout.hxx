@@ -3,6 +3,7 @@
 #pragma once
 #include "Gpu_Solver.hxx"
 #include <algorithm>
+#include <limits>
 #include <map>
 #include <numeric>
 #include <stdexcept>
@@ -48,6 +49,45 @@ namespace sdpb_gpu
       }
     return out;
   }
+  // Group blocks by padded matrix size. The row cap counts entries of
+  // the padded matrices in one chunk of transformed constraints.
+  inline std::vector<Chunk_Info>
+  gpu_sdpa_chunks(const std::vector<int> &dims, int cap, int64_t row_cap)
+  {
+    constexpr int64_t round = 8;
+    std::map<int, std::vector<int>> by_size;
+    for(size_t j = 0; j < dims.size(); ++j)
+      {
+        const int64_t n = (int64_t(dims[j]) + round - 1) / round * round;
+        if(dims[j] <= 0 || n * n > std::numeric_limits<int32_t>::max())
+          throw std::invalid_argument("SDPA block exceeds the GPU index range");
+        by_size[int(n)].push_back(int(j));
+      }
+    std::vector<Chunk_Info> out;
+    for(const auto &[n, blocks] : by_size)
+      {
+        const int entries = n * n;
+        // Matrix positions reserve their high bit for off-diagonal terms.
+        // Transposing a batch uses one CUDA grid depth per block.
+        size_t step = std::min(65535, std::numeric_limits<int32_t>::max() / entries);
+        if(cap > 0)
+          step = std::min(step, size_t(cap));
+        if(row_cap > 0)
+          step = std::min(step, size_t(std::max<int64_t>(1, row_cap / entries)));
+        for(size_t begin = 0; begin < blocks.size(); begin += step)
+          {
+            Chunk_Info c{};
+            c.dim = c.K = 1;
+            c.h = c.n = n;
+            c.P = entries;
+            const size_t end = std::min(begin + step, blocks.size());
+            c.blocks.assign(blocks.begin() + begin, blocks.begin() + end);
+            c.nb = int(c.blocks.size());
+            out.push_back(std::move(c));
+          }
+      }
+    return out;
+  }
   inline std::vector<int> gpu_chunk_owners(const std::vector<Chunk_Info> &chunks,int G)
   {
     if(G<1) throw std::invalid_argument("GPU rank count must be positive");
@@ -63,5 +103,15 @@ namespace sdpb_gpu
         owner[c]=rank; load[rank]+=int64_t(chunks[c].nb)*chunks[c].P;
       }
     return owner;
+  }
+  inline std::vector<int> gpu_block_owners(const std::vector<Chunk_Info> &chunks,
+                                           size_t num_blocks, int ranks)
+  {
+    const auto owners = gpu_chunk_owners(chunks, ranks);
+    std::vector<int> block_owner(num_blocks, -1);
+    for(size_t c = 0; c < chunks.size(); ++c)
+      for(const int block : chunks[c].blocks)
+        block_owner.at(block) = owners[c];
+    return block_owner;
   }
 }

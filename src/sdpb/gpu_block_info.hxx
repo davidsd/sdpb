@@ -86,6 +86,16 @@ inline void check_and_record_gpu_layout(const SDPB_Parameters &parameters,
          "differs: other SDPB_GPU_CHUNK_* settings or rank counts).");
 }
 
+template<class BlockInfo>
+inline void assign_gpu_chunks(const SDPB_Parameters &parameters, BlockInfo &block_info,
+                              const std::vector<sdpb_gpu::Chunk_Info> &chunks,
+                              size_t num_blocks)
+{
+  const auto block_owner = sdpb_gpu::gpu_block_owners(chunks, num_blocks, El::mpi::Size());
+  block_info.allocate_single_rank_blocks(block_owner);
+  check_and_record_gpu_layout(parameters, block_owner);
+}
+
 inline void
 assign_blocks_to_gpus(const SDPB_Parameters &parameters, Block_Info &block_info)
 {
@@ -99,18 +109,17 @@ assign_blocks_to_gpus(const SDPB_Parameters &parameters, Block_Info &block_info)
   const char *rows = std::getenv("SDPB_GPU_CHUNK_ROWS");
   const auto chunks = sdpb_gpu::gpu_chunks(shapes, cap ? std::atoi(cap) : 16,
                                            rows ? std::atoll(rows) : 0);
-  const auto owners = sdpb_gpu::gpu_chunk_owners(chunks, El::mpi::Size());
-  std::vector<int> block_owner(shapes.size(), -1);
-  for(size_t c = 0; c < chunks.size(); ++c)
-    for(const int j : chunks[c].blocks)
-      block_owner[j] = owners[c];
-  block_info.allocate_single_rank_blocks(block_owner);
-  check_and_record_gpu_layout(parameters, block_owner);
+  assign_gpu_chunks(parameters, block_info, chunks, shapes.size());
 }
 
 inline void
-assign_blocks_to_gpus(const SDPB_Parameters &, Sdpb::Sdpa::Block_Info &)
+assign_blocks_to_gpus(const SDPB_Parameters &parameters, Sdpb::Sdpa::Block_Info &block_info)
 {
-  RUNTIME_ERROR("--gpu is implemented for polynomial matrix programs only, "
-                "not for SDPA input.");
+  check_gpu_settings_agree();
+  const std::vector<int> dims(block_info.block_dimensions.begin(), block_info.block_dimensions.end());
+  const char *cap = std::getenv("SDPB_GPU_CHUNK_BLOCKS");
+  const char *rows = std::getenv("SDPB_GPU_CHUNK_ROWS");
+  const auto chunks = sdpb_gpu::gpu_sdpa_chunks(dims, cap ? std::atoi(cap) : 0,
+                                                rows ? std::atoll(rows) : 0);
+  assign_gpu_chunks(parameters, block_info, chunks, dims.size());
 }

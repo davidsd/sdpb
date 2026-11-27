@@ -29,6 +29,11 @@ struct Abstract_Block_Info
   [[nodiscard]] size_t node_group_index() const;
   [[nodiscard]] size_t num_nodes() const;
 
+  // Each MPI rank owns complete blocks, owner[block] being its rank: one
+  // group of one process per rank, block_mapping to match. Used by the GPU
+  // backend (one process per GPU). Collective over all ranks.
+  void allocate_single_rank_blocks(const std::vector<int> &owner);
+
 protected:
   Abstract_Block_Info() = delete;
 

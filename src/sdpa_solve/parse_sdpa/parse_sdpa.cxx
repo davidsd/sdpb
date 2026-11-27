@@ -277,6 +277,31 @@ namespace Sdpb::Sdpa
     }
   }
 
+  template <class IStream>
+  void read_entries(IStream &is, SDPA_File_Type file_type,
+                    const SDPA_Block_Structure &block_structure,
+                    const std::function<void(SDPA_Matrix_Entry &&)> &accept_sdpa_entry)
+  {
+    switch(file_type)
+      {
+      case sparse: read_sparse_matrices(is, accept_sdpa_entry); break;
+      case dense:
+        read_dense_matrices(is, block_structure, accept_sdpa_entry);
+        break;
+      default: LOGIC_ERROR("Unknown SDPA_File_Type=", file_type);
+      }
+
+    skip_ws(is, true);
+    if(!is.eof())
+      {
+        std::string line;
+        const auto pos = is.tellg();
+        std::getline(is, line);
+        RUNTIME_ERROR("Unexpected data at the end of file, position: ", pos,
+                      ", next line: ", line);
+      }
+  }
+
   // Read .dat-s input used in SDPA
   // See format description e.g. in https://github.com/vsdp/SDPLIB
   // Read only block structure, do not read objective and SDP matrices.
@@ -344,24 +369,7 @@ namespace Sdpb::Sdpa
         matrix(j, i) = entry.value;
     };
 
-    switch(file_type)
-      {
-      case sparse: read_sparse_matrices(is, accept_sdpa_entry); break;
-      case dense:
-        read_dense_matrices(is, block_structure, accept_sdpa_entry);
-        break;
-      default: LOGIC_ERROR("Unknown SDPA_File_Type=", file_type);
-      }
-
-    skip_ws(is, true);
-    if(!is.eof())
-      {
-        std::string line;
-        const auto pos = is.tellg();
-        std::getline(is, line);
-        RUNTIME_ERROR("Unexpected data at the end of file, position: ", pos,
-                      ", next line: ", line);
-      }
+    read_entries(is, file_type, block_structure, accept_sdpa_entry);
 
     for(size_t index = 0; index < sdp_blocks_F.size(); ++index)
       {
@@ -424,6 +432,40 @@ namespace Sdpb::Sdpa
         return read_block_structure(is, objective_const);
       });
     return read_sdpa_file(input_file, f);
+  }
+
+  SDPA_File_Parse_Result read_sdpa_objective(const fs::path &path)
+  {
+    const auto read = std::function([](boost::iostreams::filtering_istream &is,
+                                      const SDPA_File_Type &) {
+      SDPA_File_Parse_Result result;
+      const auto blocks = read_block_structure(is, result.objective_const);
+      result.c_objective = read_c(is, blocks.m_dim);
+      return result;
+    });
+    return read_sdpa_file(path, read);
+  }
+
+  void visit_sdpa_lower(const fs::path &path, const SDPA_Entry_Visitor &visit)
+  {
+    const auto read = std::function([&](boost::iostreams::filtering_istream &is,
+                                       const SDPA_File_Type &type) {
+      El::BigFloat objective_const;
+      const auto blocks = read_block_structure(is, objective_const);
+      read_c(is, blocks.m_dim);
+      read_entries(is, type, blocks, [&](SDPA_Matrix_Entry &&raw) {
+        ASSERT(raw.matrix_index <= blocks.m_dim);
+        const int dim = blocks.input_block_sizes.at(raw.block_index - 1);
+        ASSERT(raw.i >= 1 && raw.j >= 1 && raw.i <= size_t(std::abs(dim))
+               && raw.j <= size_t(std::abs(dim)), "SDPA matrix index out of bounds");
+        const Result_Matrix_Entry entry(raw, blocks);
+        if(type == dense && entry.i < entry.j)
+          return;
+        visit(entry.sdp_block_index, entry.vector_index, std::max(entry.i, entry.j),
+              std::min(entry.i, entry.j), entry.value);
+      });
+    });
+    read_sdpa_file(path, read);
   }
 
   SDPA_File_Parse_Result

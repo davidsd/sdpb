@@ -11,9 +11,9 @@ namespace fs = std::filesystem;
 namespace Sdpb::Sdpa
 {
   SDP::SDP(const fs::path &sdp_path, const Block_Info &block_info,
-           const El::Grid &grid, Timers &timers)
+           const El::Grid &grid, Timers &timers, bool gpu)
       : sdp_block_F_0(block_info.block_dimensions, block_info.block_indices,
-                      grid)
+                      grid), gpu_input(gpu ? sdp_path : fs::path{})
   {
     Scoped_Timer timer(timers, "SDP_ctor");
 
@@ -27,6 +27,8 @@ namespace Sdpb::Sdpa
       if(comm.Rank() == 0)
         {
           Scoped_Timer parse_timer(timers, "parse");
+          if(gpu)
+            return read_sdpa_objective(sdp_path);
           std::set block_indices_to_parse(block_info.block_indices.begin(),
                                           block_info.block_indices.end());
           const auto should_parse_block = [&](const size_t index) {
@@ -61,6 +63,10 @@ namespace Sdpb::Sdpa
         // RUNTIME_ERROR(DEBUG_STRING(objective_const));
         El::mpi::Broadcast(objective_const, 0, El::mpi::COMM_WORLD);
       }
+
+      // The device driver reads F directly in sparse form.
+      if(gpu)
+        return;
 
       // Prepare F_0 and F_i structure
       {
@@ -103,7 +109,7 @@ namespace Sdpb::Sdpa
 
   size_t SDP::primal_dimension() const
   {
-    return sdp_blocks_F.size();
+    return primal_objective_c.Height();
   }
 
   void SDP::validate(const Block_Info &block_info) const noexcept(false)
