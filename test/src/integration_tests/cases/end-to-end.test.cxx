@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <boost/program_options/parsers.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 // Realistic end-to-end test for pmp2sdp + sdpb
 // JSON input taken from  "SingletScalar_cT_test_nmax6" and
@@ -145,6 +146,15 @@ namespace
             runner.create_nested("sdpb").mpi_run(
               {Test_Config::program("sdpb"), default_sdpb_args, args},
               num_procs);
+            if(std::find(default_sdpb_args.begin(), default_sdpb_args.end(),
+                         "--gpu") != default_sdpb_args.end())
+              {
+                // A silent fallback to the CPU could match every reference value.
+                boost::property_tree::ptree profile;
+                boost::property_tree::read_json(
+                  (output_dir / "out" / "gpu_profile.json").string(), profile);
+                REQUIRE(profile.get<int>("iterations") > 0);
+              }
             if(run_sdpb_twice)
               {
                 runner.create_nested("sdpb-2").mpi_run(
