@@ -6,6 +6,7 @@
 #include "sdpa_solve/SDP_Solver.hxx"
 #include "sdpa_solve/parse_sdpa/parse_sdpa.hxx"
 #include "sdpb_util/assert.hxx"
+#include "sdpb_util/for_each_threaded.hxx"
 
 #include <chrono>
 #include <fstream>
@@ -118,42 +119,42 @@ namespace Sdpb::Sdpa
       });
       const auto t_upload = std::chrono::steady_clock::now();
       read_F_s = std::chrono::duration<double>(t_upload - t_read).count();
+      // Per chunk, on threads: the last line of each (matrix, position), without
+      // explicit zeros, sorted by matrix and position, as (slot, index).
+      using Ref = std::pair<uint32_t, uint32_t>;
+      std::vector<std::vector<Ref>> kept(nc);
+      for_each_threaded(size_t(nc), [&](const size_t ci) {
+        struct Sorted
+        {
+          uint64_t key, order; // key: matrix + 1, then position
+          Ref ref;
+        };
+        std::vector<Sorted> all;
+        for(size_t s = 0; s < slots; ++s)
+          {
+            const F_Piece &P = pieces[s][ci];
+            ASSERT(P.p.size() <= std::numeric_limits<uint32_t>::max());
+            for(size_t k = 0; k < P.p.size(); ++k)
+              all.push_back({(uint64_t(P.p[k] + 1) << 32) | P.pos[k], P.order[k],
+                             Ref(uint32_t(s), uint32_t(k))});
+          }
+        std::sort(all.begin(), all.end(), [](const Sorted &a, const Sorted &b) {
+          return a.key != b.key ? a.key < b.key : a.order < b.order;
+        });
+        auto &keep = kept[ci];
+        for(size_t t = 0; t < all.size(); ++t)
+          {
+            if(t + 1 < all.size() && all[t].key == all[t + 1].key)
+              continue;
+            if(pieces[all[t].ref.first][ci].e[all[t].ref.second] != MPF_ZERO_EXP)
+              keep.push_back(all[t].ref);
+          }
+      });
       for(int ci = 0; ci < nc; ++ci)
         {
           const Chunk_Info &I = gs->chunk(ci);
           const int64_t n = I.n;
-          // Entries as (slot, index), sorted by matrix, position and file order
-          using Ref = std::pair<uint32_t, uint32_t>;
-          std::vector<Ref> refs;
-          for(size_t s = 0; s < slots; ++s)
-            {
-              const size_t count = pieces[s][ci].p.size();
-              ASSERT(count <= std::numeric_limits<uint32_t>::max());
-              for(size_t k = 0; k < count; ++k)
-                refs.emplace_back(uint32_t(s), uint32_t(k));
-            }
-          auto key = [&](const Ref &r) {
-            const F_Piece &P = pieces[r.first][ci];
-            return std::make_tuple(P.p[r.second], P.pos[r.second],
-                                   P.order[r.second]);
-          };
-          std::sort(refs.begin(), refs.end(),
-                    [&](const Ref &a, const Ref &b) { return key(a) < key(b); });
-          // The last line of each position; no explicit zeros
-          auto same_place = [&](const Ref &a, const Ref &b) {
-            return std::get<0>(key(a)) == std::get<0>(key(b))
-                   && std::get<1>(key(a)) == std::get<1>(key(b));
-          };
-          std::vector<Ref> keep;
-          for(size_t t = 0; t < refs.size(); ++t)
-            {
-              if(t + 1 < refs.size() && same_place(refs[t], refs[t + 1]))
-                continue;
-              if(pieces[refs[t].first][ci].e[refs[t].second] != MPF_ZERO_EXP)
-                keep.push_back(refs[t]);
-            }
-          refs.clear();
-          refs.shrink_to_fit();
+          const auto keep = std::move(kept[ci]);
           size_t nF0 = 0;
           while(nF0 < keep.size() && pieces[keep[nF0].first][ci].p[keep[nF0].second] < 0)
             ++nF0;
