@@ -41,6 +41,15 @@ Pmp2sdp_Parameters::Pmp2sdp_Parameters(int argc, char **argv)
     "zip,z", po::bool_switch(&zip),
     "Store output to zip file instead of plain directory.");
   options.add_options()(
+    "reuseSdp", po::value<fs::path>(&reuse_sdp),
+    "Existing SDP directory, written by pmp2sdp with the same --precision, "
+    "--maxNumPoles and --outputFormat, by the same pmp2sdp build. Input "
+    "files whose paths appear in its pmp_info.json are assumed unchanged, "
+    "by path only (no size, time or content is compared, so the input "
+    "files must have content-addressed names): they are not read, and "
+    "their blocks are linked or copied from it. The normalization must be "
+    "found in the other input files and be equal to the old one.");
+  options.add_options()(
     "verbosity,v",
     po::value<Verbosity>(&verbosity)->default_value(Verbosity::regular),
     "Verbosity.  0 -> no output, 1 -> regular output, 2 -> debug output, 3 -> "
@@ -75,6 +84,11 @@ Pmp2sdp_Parameters::Pmp2sdp_Parameters(int argc, char **argv)
              "Input file does not exist: ", input_file);
       ASSERT(!fs::is_directory(input_file) && input_file != ".",
              "Input file is a directory, not a file:", input_file);
+      ASSERT(reuse_sdp.empty() || !zip, "--reuseSdp does not support --zip");
+      ASSERT(reuse_sdp.empty()
+               || fs::weakly_canonical(reuse_sdp)
+                    != fs::weakly_canonical(output_path),
+             "--reuseSdp must differ from --output");
     }
   catch(po::error &e)
     {
@@ -94,6 +108,7 @@ boost::property_tree::ptree to_property_tree(const Pmp2sdp_Parameters &p)
   result.put("maxNumPoles", p.max_num_poles);
   result.put("outputFormat", p.output_format);
   result.put("zip", p.zip);
+  result.put("reuseSdp", p.reuse_sdp.string());
   result.put("verbosity", static_cast<int>(p.verbosity));
 
   return result;
