@@ -20,12 +20,14 @@ namespace Sdpb::Sdpa
 {
   namespace
   {
-    // Lower-triangle entries of a chunk, in file order. Index -1 denotes F_0.
+    // Lower-triangle entries of a chunk read by one slot of the reader, in
+    // file order. Index -1 denotes F_0.
     struct F_Piece
     {
       std::vector<int32_t> p;
       std::vector<uint32_t> pos;
-      std::vector<int32_t> m; // L limbs per entry, entry by entry
+      std::vector<uint64_t> order; // place in the file
+      std::vector<int32_t> m;      // L limbs per entry, entry by entry
       std::vector<int64_t> e;
     };
   }
@@ -91,9 +93,12 @@ namespace Sdpb::Sdpa
     {
       const auto t_read = std::chrono::steady_clock::now();
       const int nc = gs->num_chunks();
-      std::vector<F_Piece> pieces(nc);
-      std::vector<int32_t> limbs(L);
-      visit_sdpa_lower(path, [&](size_t block, size_t matrix, size_t i, size_t j,
+      const size_t slots = sdpa_visit_slots();
+      // pieces[slot][chunk]
+      std::vector<std::vector<F_Piece>> pieces(slots, std::vector<F_Piece>(nc));
+      std::vector<std::vector<int32_t>> limbs(slots, std::vector<int32_t>(L));
+      visit_sdpa_lower(path, [&](size_t slot, uint64_t order, size_t block,
+                                 size_t matrix, size_t i, size_t j,
                                  const El::BigFloat &value) {
         const int ci = chunk_of.at(block);
         if(ci < 0)
@@ -101,12 +106,14 @@ namespace Sdpb::Sdpa
         const int64_t n = gs->chunk(ci).n;
         const auto pos = int64_t(q_of[block]) * n * n + int64_t(j) * n + i;
         ASSERT(pos <= std::numeric_limits<uint32_t>::max(), "GPU chunk is too large");
-        auto &part = pieces[ci];
+        auto &part = pieces.at(slot)[ci];
+        auto &l = limbs[slot];
         int64_t exponent;
-        to_device(value, L, limbs.data(), 1, 0, &exponent);
+        to_device(value, L, l.data(), 1, 0, &exponent);
         part.p.push_back(int32_t(matrix) - 1);
         part.pos.push_back(uint32_t(pos));
-        part.m.insert(part.m.end(), limbs.begin(), limbs.end());
+        part.order.push_back(order);
+        part.m.insert(part.m.end(), l.begin(), l.end());
         part.e.push_back(exponent);
       });
       const auto t_upload = std::chrono::steady_clock::now();
@@ -115,23 +122,40 @@ namespace Sdpb::Sdpa
         {
           const Chunk_Info &I = gs->chunk(ci);
           const int64_t n = I.n;
-          auto part = std::move(pieces[ci]);
-          std::vector<size_t> order(part.p.size());
-          std::iota(order.begin(), order.end(), size_t(0));
-          auto key = [&](size_t k) { return std::tie(part.p[k], part.pos[k]); };
-          std::stable_sort(order.begin(), order.end(),
-                           [&](size_t a, size_t b) { return key(a) < key(b); });
-          std::vector<size_t> keep;
-          for(size_t t = 0; t < order.size(); ++t)
+          // Entries as (slot, index), sorted by matrix, position and file order
+          using Ref = std::pair<uint32_t, uint32_t>;
+          std::vector<Ref> refs;
+          for(size_t s = 0; s < slots; ++s)
             {
-              const size_t k = order[t];
-              if(t + 1 < order.size() && key(k) == key(order[t + 1]))
-                continue;
-              if(part.e[k] != MPF_ZERO_EXP)
-                keep.push_back(k);
+              const size_t count = pieces[s][ci].p.size();
+              ASSERT(count <= std::numeric_limits<uint32_t>::max());
+              for(size_t k = 0; k < count; ++k)
+                refs.emplace_back(uint32_t(s), uint32_t(k));
             }
+          auto key = [&](const Ref &r) {
+            const F_Piece &P = pieces[r.first][ci];
+            return std::make_tuple(P.p[r.second], P.pos[r.second],
+                                   P.order[r.second]);
+          };
+          std::sort(refs.begin(), refs.end(),
+                    [&](const Ref &a, const Ref &b) { return key(a) < key(b); });
+          // The last line of each position; no explicit zeros
+          auto same_place = [&](const Ref &a, const Ref &b) {
+            return std::get<0>(key(a)) == std::get<0>(key(b))
+                   && std::get<1>(key(a)) == std::get<1>(key(b));
+          };
+          std::vector<Ref> keep;
+          for(size_t t = 0; t < refs.size(); ++t)
+            {
+              if(t + 1 < refs.size() && same_place(refs[t], refs[t + 1]))
+                continue;
+              if(pieces[refs[t].first][ci].e[refs[t].second] != MPF_ZERO_EXP)
+                keep.push_back(refs[t]);
+            }
+          refs.clear();
+          refs.shrink_to_fit();
           size_t nF0 = 0;
-          while(nF0 < keep.size() && part.p[keep[nF0]] < 0)
+          while(nF0 < keep.size() && pieces[keep[nF0].first][ci].p[keep[nF0].second] < 0)
             ++nF0;
           {
             const int64_t tot = int64_t(I.nb) * n * n;
@@ -139,7 +163,8 @@ namespace Sdpb::Sdpa
             std::vector<int64_t> e(tot, MPF_ZERO_EXP);
             for(size_t t = 0; t < nF0; ++t)
               {
-                const size_t k = keep[t];
+                const F_Piece &part = pieces[keep[t].first][ci];
+                const size_t k = keep[t].second;
                 const int64_t a = part.pos[k], base = a / (n * n) * (n * n), rem = a % (n * n);
                 const int64_t b = base + (rem % n) * n + rem / n;
                 for(int w = 0; w < L; ++w)
@@ -157,7 +182,8 @@ namespace Sdpb::Sdpa
           std::vector<uint32_t> posv(nnz);
           std::vector<int64_t> e(nnz);
           parallel_for(nnz, [&](int64_t t) {
-            const size_t k = keep[nF0 + t];
+            const F_Piece &part = pieces[keep[nF0 + t].first][ci];
+            const size_t k = keep[nF0 + t].second;
             pv[t] = part.p[k];
             posv[t] = part.pos[k];
             e[t] = part.e[k];
@@ -165,6 +191,8 @@ namespace Sdpb::Sdpa
               mm[w * nnz + t] = part.m[size_t(L) * k + w];
           });
           gs->sdpa_upload_F(ci, nnz, pv.data(), posv.data(), mm.data(), e.data());
+          for(size_t s = 0; s < slots; ++s)
+            pieces[s][ci] = F_Piece();
         }
       upload_F_s = std::chrono::duration<double>(std::chrono::steady_clock::now()
                                                  - t_upload)
