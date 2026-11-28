@@ -8,7 +8,10 @@
 
 #include <El.hpp>
 
+#include <cstring>
+#include <limits>
 #include <ostream>
+#include <type_traits>
 
 inline void write_pmp_info_json(std::ostream &output_stream,
                                 const std::vector<PVM_Info> &pmp_info)
@@ -69,129 +72,209 @@ inline void write_pmp_info_json(std::ostream &output_stream,
   ASSERT(writer.IsComplete());
 }
 
-// Send from rank='from' to rank=0
-inline void synchronize_pvm_info(PVM_Info &pvm_info, const int from)
+// PVM_Info is collected on rank 0 in one MPI_Gatherv of a byte buffer per
+// rank.
+// Boost_Float values are packed exactly: their MPFR precision and an exact
+// hex string. (Converting them to El::BigFloat and back rounds them, so
+// pmp_info.json depended on which rank owned each block.)
+class PVM_Info_Packer
 {
-  const int to = 0;
+public:
+  std::vector<char> buffer;
 
-  const auto comm = El::mpi::COMM_WORLD;
-  const int rank = comm.Rank();
-
-  if(rank != to && rank != from)
-    return;
-  if(to == from)
-    return;
-
-  // block_index
+  template <class T> void put(const T &value)
   {
-    if(rank == from)
-      El::mpi::Send(pvm_info.block_index, to, comm);
-    if(rank == to)
-      pvm_info.block_index = El::mpi::Recv<int>(from, comm);
+    static_assert(std::is_trivially_copyable_v<T>);
+    const auto *bytes = reinterpret_cast<const char *>(&value);
+    buffer.insert(buffer.end(), bytes, bytes + sizeof(T));
   }
-
-  // block_path
+  void put_string(const std::string &str)
   {
-    auto block_path = pvm_info.block_path.string();
-    if(rank == from)
+    put<size_t>(str.size());
+    buffer.insert(buffer.end(), str.begin(), str.end());
+  }
+  void put_boost_float(const Boost_Float &value)
+  {
+    const auto &x = value.backend().data();
+    char *str = nullptr;
+    ASSERT(mpfr_asprintf(&str, "%Ra", x) >= 0);
+    const std::string hex(str);
+    mpfr_free_str(str);
+    put<size_t>(mpfr_get_prec(x));
+    put_string(hex);
+  }
+  void put_big_floats(const std::vector<El::BigFloat> &vec)
+  {
+    put<size_t>(vec.size());
+    for(const auto &value : vec)
       {
-        const size_t path_size = block_path.size();
-        El::mpi::Send<size_t>(path_size, to, comm);
-        MPI_Send(block_path.data(), path_size, MPI_CHAR, to, 0, comm.comm);
-      }
-    if(rank == to)
-      {
-        const auto path_size = El::mpi::Recv<size_t>(from, comm);
-        block_path.resize(path_size);
-        MPI_Recv(block_path.data(), path_size, MPI_CHAR, from, 0, comm.comm,
-                 MPI_STATUS_IGNORE);
-        pvm_info.block_path = block_path;
+        const size_t offset = buffer.size();
+        buffer.resize(offset + value.SerializedSize());
+        value.Serialize(reinterpret_cast<El::byte *>(buffer.data() + offset));
       }
   }
-
-  // dim
+  void put_damped_rational(const Damped_Rational &damped_rational)
   {
-    if(rank == from)
-      El::mpi::Send(pvm_info.dim, to, comm);
-    if(rank == to)
-      pvm_info.dim = El::mpi::Recv<size_t>(from, comm);
+    put_boost_float(damped_rational.constant);
+    put_boost_float(damped_rational.base);
+    put<size_t>(damped_rational.poles.size());
+    for(const auto &pole : damped_rational.poles)
+      put_boost_float(pole);
   }
+  void put_pvm_info(const PVM_Info &pvm_info)
+  {
+    put<int>(pvm_info.block_index);
+    put_string(pvm_info.block_path.string());
+    put<size_t>(pvm_info.dim);
+    put_damped_rational(pvm_info.prefactor);
+    put_damped_rational(pvm_info.reduced_prefactor);
+    put_big_floats(pvm_info.sample_points);
+    put_big_floats(pvm_info.sample_scalings);
+    put_big_floats(pvm_info.reduced_sample_scalings);
+  }
+};
 
-  // prefactor, reduced_prefactor
-  for(auto *damped_rational_ptr :
-      {&pvm_info.prefactor, &pvm_info.reduced_prefactor})
-    {
-      auto &damped_rational = *damped_rational_ptr;
-      if(rank == from)
-        {
-          El::mpi::Send(to_BigFloat(damped_rational.constant), to, comm);
-          El::mpi::Send(to_BigFloat(damped_rational.base), to, comm);
-          const auto poles = to_BigFloat_Vector(damped_rational.poles);
-          El::mpi::Send<size_t>(poles.size(), to, comm);
-          El::mpi::Send(poles.data(), poles.size(), to, comm);
-        }
-      if(rank == to)
-        {
-          damped_rational.constant
-            = to_Boost_Float(El::mpi::Recv<El::BigFloat>(from, comm));
-          damped_rational.base
-            = to_Boost_Float(El::mpi::Recv<El::BigFloat>(from, comm));
+class PVM_Info_Unpacker
+{
+public:
+  const char *pos;
+  const char *const end;
 
-          const size_t num_poles = El::mpi::Recv<size_t>(from, comm);
-          std::vector<El::BigFloat> poles(num_poles);
-          El::mpi::Recv(poles.data(), poles.size(), from, comm);
-          damped_rational.poles = to_Boost_Float_Vector(poles);
-        }
-    }
-  for(auto vec_ptr : {&pvm_info.sample_points, &pvm_info.sample_scalings,
-                      &pvm_info.reduced_sample_scalings})
-    {
-      auto &vec = *vec_ptr;
-      if(rank == from)
-        {
-          El::mpi::Send<size_t>(vec.size(), to, comm);
-          El::mpi::Send(vec.data(), vec.size(), to, comm);
-        }
-      if(rank == to)
-        {
-          const size_t num_points = El::mpi::Recv<size_t>(from, comm);
-          vec.resize(num_points);
-          El::mpi::Recv(vec.data(), vec.size(), from, comm);
-        }
-    }
-}
+  PVM_Info_Unpacker(const char *begin, const char *end)
+      : pos(begin), end(end)
+  {}
 
-// Collect all block on rank=0
+  template <class T> T get()
+  {
+    static_assert(std::is_trivially_copyable_v<T>);
+    ASSERT(pos + sizeof(T) <= end, "PVM_Info buffer is too short");
+    T value;
+    std::memcpy(&value, pos, sizeof(T));
+    pos += sizeof(T);
+    return value;
+  }
+  std::string get_string()
+  {
+    const auto size = get<size_t>();
+    ASSERT(pos + size <= end, "PVM_Info buffer is too short");
+    std::string str(pos, size);
+    pos += size;
+    return str;
+  }
+  Boost_Float get_boost_float()
+  {
+    const auto prec = get<size_t>();
+    const auto hex = get_string();
+    Boost_Float result;
+    auto &x = result.backend().data();
+    mpfr_set_prec(x, prec);
+    ASSERT(mpfr_set_str(x, hex.c_str(), 0, MPFR_RNDN) == 0, "Cannot parse ",
+           hex);
+    return result;
+  }
+  std::vector<El::BigFloat> get_big_floats()
+  {
+    std::vector<El::BigFloat> vec(get<size_t>());
+    for(auto &value : vec)
+      {
+        ASSERT(pos + value.SerializedSize() <= end,
+               "PVM_Info buffer is too short");
+        pos = reinterpret_cast<const char *>(
+          value.Deserialize(reinterpret_cast<const El::byte *>(pos)));
+      }
+    return vec;
+  }
+  Damped_Rational get_damped_rational()
+  {
+    Damped_Rational damped_rational;
+    damped_rational.constant = get_boost_float();
+    damped_rational.base = get_boost_float();
+    damped_rational.poles.resize(get<size_t>());
+    for(auto &pole : damped_rational.poles)
+      pole = get_boost_float();
+    return damped_rational;
+  }
+  PVM_Info get_pvm_info()
+  {
+    PVM_Info pvm_info;
+    pvm_info.block_index = get<int>();
+    pvm_info.block_path = get_string();
+    pvm_info.dim = get<size_t>();
+    pvm_info.prefactor = get_damped_rational();
+    pvm_info.reduced_prefactor = get_damped_rational();
+    pvm_info.sample_points = get_big_floats();
+    pvm_info.sample_scalings = get_big_floats();
+    pvm_info.reduced_sample_scalings = get_big_floats();
+    return pvm_info;
+  }
+};
+
+// Collect all blocks on rank=0.
 inline std::vector<PVM_Info>
 synchronize_pmp_info_blocks(const PMP_Info &pmp_info)
 {
+  const auto comm = El::mpi::COMM_WORLD;
+  const int rank = comm.Rank();
+  const int num_ranks = comm.Size();
   std::vector<PVM_Info> all_pvm_infos(pmp_info.num_blocks);
 
-  // Fill all_pvm_infos with all local blocks
-  for(size_t local_index = 0; local_index < pmp_info.blocks.size();
-      ++local_index)
+  PVM_Info_Packer packer;
+  if(rank != 0)
     {
-      const int block_index = pmp_info.blocks.at(local_index).block_index;
-      ASSERT(block_index >= 0 && block_index < pmp_info.num_blocks,
-             DEBUG_STRING(block_index), DEBUG_STRING(pmp_info.num_blocks));
-      all_pvm_infos.at(block_index) = pmp_info.blocks.at(local_index);
+      packer.put<size_t>(pmp_info.blocks.size());
+      for(const auto &block : pmp_info.blocks)
+        packer.put_pvm_info(block);
     }
+  // MPI counts are int
+  ASSERT(packer.buffer.size()
+           <= static_cast<size_t>(std::numeric_limits<int>::max()),
+         DEBUG_STRING(packer.buffer.size()));
+  const int send_size = packer.buffer.size();
 
-  // Synchronize owning ranks for each block
-  const int rank = El::mpi::Rank();
-  std::vector<int> block_ranks(pmp_info.num_blocks, -1);
-  for(auto &block : pmp_info.blocks)
+  std::vector<int> recv_sizes(rank == 0 ? num_ranks : 0);
+  MPI_Gather(&send_size, 1, MPI_INT, recv_sizes.data(), 1, MPI_INT, 0,
+             comm.comm);
+
+  std::vector<int> displacements;
+  std::vector<char> recv_buffer;
+  if(rank == 0)
     {
-      block_ranks.at(block.block_index) = rank;
+      size_t total_size = 0;
+      for(const int size : recv_sizes)
+        {
+          displacements.push_back(total_size);
+          total_size += size;
+          ASSERT(total_size
+                   <= static_cast<size_t>(std::numeric_limits<int>::max()),
+                 DEBUG_STRING(total_size));
+        }
+      recv_buffer.resize(total_size);
     }
-  El::mpi::AllReduce(block_ranks.data(), block_ranks.size(), El::mpi::MAX,
-                     El::mpi::COMM_WORLD);
+  MPI_Gatherv(packer.buffer.data(), send_size, MPI_CHAR, recv_buffer.data(),
+              recv_sizes.data(), displacements.data(), MPI_CHAR, 0,
+              comm.comm);
 
-  // Send all blocks to rank=0
-  for(size_t block_index = 0; block_index < pmp_info.num_blocks; ++block_index)
+  const auto set_block = [&](PVM_Info &&block) {
+    const int block_index = block.block_index;
+    ASSERT(block_index >= 0 && block_index < pmp_info.num_blocks,
+           DEBUG_STRING(block_index), DEBUG_STRING(pmp_info.num_blocks));
+    ASSERT(all_pvm_infos.at(block_index).block_index == -1,
+           "block_", block_index, " is on more than one rank");
+    all_pvm_infos.at(block_index) = std::move(block);
+  };
+  // Every rank keeps its own blocks, as before
+  for(const auto &block : pmp_info.blocks)
+    set_block(PVM_Info(block));
+  if(rank != 0)
+    return all_pvm_infos;
+  for(int from = 1; from < num_ranks; ++from)
     {
-      const int from = block_ranks.at(block_index);
-      synchronize_pvm_info(all_pvm_infos.at(block_index), from);
+      const char *begin = recv_buffer.data() + displacements.at(from);
+      PVM_Info_Unpacker unpacker(begin, begin + recv_sizes.at(from));
+      const auto num_blocks = unpacker.get<size_t>();
+      for(size_t i = 0; i < num_blocks; ++i)
+        set_block(unpacker.get_pvm_info());
+      ASSERT(unpacker.pos == unpacker.end, DEBUG_STRING(from));
     }
   return all_pvm_infos;
 }

@@ -1,6 +1,8 @@
 #include "integration_tests/common.hxx"
 
 #include <filesystem>
+#include <fstream>
+#include <map>
 
 namespace fs = std::filesystem;
 using namespace std::string_literals;
@@ -91,6 +93,47 @@ TEST_CASE("pmp2sdp")
                                              runner.create_nested("diff"));
         }
       }
+  }
+
+  SECTION("number of ranks")
+  {
+    INFO("pmp2sdp on 1 and 3 ranks writes the same SDP, byte for byte "
+         "(except control.json, which records the command). pmp_info.json "
+         "used to depend on which rank owned each block: its prefactors "
+         "were sent through El::BigFloat, which rounds Boost_Float values "
+         "at 768 bits.");
+    const auto input = Test_Config::test_data_dir / "end-to-end_tests"
+                       / "SingletScalar_cT_test_nmax6"
+                       / "primal_dual_optimal" / "input" / "pmp.nsv";
+    Test_Util::Test_Case_Runner runner("pmp2sdp/number_of_ranks");
+    Test_Util::Test_Case_Runner::Named_Args_Map args(default_args);
+    args["--input"] = input.string();
+    args["--precision"] = "768";
+    std::map<int, fs::path> sdp;
+    for(const int num_procs : {1, 3})
+      {
+        sdp[num_procs] = runner.output_dir / ("sdp_np" + std::to_string(num_procs));
+        args["--output"] = sdp[num_procs].string();
+        runner.create_nested("np" + std::to_string(num_procs))
+          .mpi_run({"build/pmp2sdp", args}, num_procs);
+      }
+    auto read = [](const fs::path &path) {
+      std::ifstream is(path, std::ios::binary);
+      REQUIRE(is.good());
+      return std::string(std::istreambuf_iterator<char>(is), {});
+    };
+    size_t num_files = 0;
+    for(const auto &entry : fs::directory_iterator(sdp[1]))
+      {
+        const auto name = entry.path().filename();
+        if(name == "control.json")
+          continue;
+        CAPTURE(name);
+        REQUIRE(fs::exists(sdp[3] / name));
+        REQUIRE(read(entry.path()) == read(sdp[3] / name));
+        ++num_files;
+      }
+    REQUIRE(num_files > 2);
   }
 
   SECTION("filesystem errors")
