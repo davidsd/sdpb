@@ -1,6 +1,6 @@
 # Experimental branches and pull requests
 
-*Last updated: 24 November 2026.*
+*Last updated: 28 November 2026.*
 
 Options and a GPU backend for SDPB, `pmp2sdp` and `spectrum`, offered as pull requests against `master` before they
 are reviewed and merged; they may change or be withdrawn. Options are off by default, and with them off the output
@@ -44,6 +44,7 @@ pull request, which also says how it was checked.
 | `gpu-resident` | [#323](https://github.com/davidsd/sdpb/pull/323) | resident mode on the GPU | `--gpu --controlDir` | `gpu-general-l` and `cpu-resident` | David Simmons-Duffin | none yet |
 | `gpu-multinode` | [#324](https://github.com/davidsd/sdpb/pull/324) | Q distributed across nodes | `sdpb --gpu` on several nodes | `gpu-resident` | David Simmons-Duffin | none yet |
 | `gpu-fast-q` | [#326](https://github.com/davidsd/sdpb/pull/326) | faster Q on several GPUs, the same results bit for bit: P's residues formed once per rank instead of once per tile, matrix-vector products split over more threads (exact sums), and Q = PᵀP taken by groups of rows with the same nonzero columns. About 1.8× per iteration at nmax = 22 on two H200s, 1.5× on eight; 1.6× at nmax = 18 on two; ~2% on one GPU. Uses ~15 GB more device memory per GPU at nmax = 22 | on by default with `--gpu`; `SDPB_GPU_STRUCTURED_Q=0 SDPB_GPU_Q_SINGLE_PASS=0 SDPB_GPU_GEMV_MIN_TERMS=256 SDPB_GPU_Q_BASE=256` restore the earlier path (see `src/gpu/README.md`) | `gpu-multinode` | Zechuan Zheng (the partial-sum matrix-vector products, which it splits further); David Simmons-Duffin | none yet |
+| `gpu-sdpa` | [#336](https://github.com/davidsd/sdpb/pull/336) | SDPA-format input (`.dat-s`: dense, sparse or gzip-compressed, with the existing SDPA grammar and objective-constant convention) solved on the GPU backend, one MPI rank per GPU on a single node. The constraint matrices stay sparse on the device; the Schur complement is assembled from the transformed constraints and handed to the GPU stack's multiprecision factorization, solves and step lengths. Checked on one H100: a 3,410-constraint SDPA problem at 768 bits reaches primal-dual optimality in 73 iterations as an earlier single-GPU SDPA solver does, both objectives agreeing to 25 digits and the solution files byte for byte; about 4.3 s per iteration. Sparse input is parsed on `OMP_NUM_THREADS` threads (dense input still serially). Only one GPU has been tested | `sdpb --gpu -s problem.dat-s` (CPU execution stays the default) | `gpu-fast-q` | Vasiliy Dommes (the SDPA solver and its multimodular Schur construction, which the driver follows); Antoine Tilloy ([SDPviBe](https://github.com/AntoineTilloy/SDPviBe)'s running column maxima and headroom, used for the streamed Gram alignment); Zechuan Zheng (the partial-sum matrix-vector product, adapted for the sparse constraint products, and his streaming Schur construction, which informs releasing the transformed constraints after accumulation); David Simmons-Duffin | none yet |
 
 ### `sdpb`: new options
 
