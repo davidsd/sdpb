@@ -36,6 +36,8 @@ namespace Sdpb::Sdpa
     int L, m;
     std::vector<int> dims, local_of, chunk_of, q_of;
     Residue_Result last;
+    // Seconds spent reading and converting F, and packing and uploading it
+    double read_F_s = 0, upload_F_s = 0;
 
     template <class Fn> void fill(int chunk, Gpu_Array a, const Fn &fn)
     {
@@ -87,6 +89,7 @@ namespace Sdpb::Sdpa
     // rule, including an explicit zero that cancels an earlier value.
     void load_F(const std::filesystem::path &path)
     {
+      const auto t_read = std::chrono::steady_clock::now();
       const int nc = gs->num_chunks();
       std::vector<F_Piece> pieces(nc);
       std::vector<int32_t> limbs(L);
@@ -106,6 +109,8 @@ namespace Sdpb::Sdpa
         part.m.insert(part.m.end(), limbs.begin(), limbs.end());
         part.e.push_back(exponent);
       });
+      const auto t_upload = std::chrono::steady_clock::now();
+      read_F_s = std::chrono::duration<double>(t_upload - t_read).count();
       for(int ci = 0; ci < nc; ++ci)
         {
           const Chunk_Info &I = gs->chunk(ci);
@@ -161,6 +166,9 @@ namespace Sdpb::Sdpa
           });
           gs->sdpa_upload_F(ci, nnz, pv.data(), posv.data(), mm.data(), e.data());
         }
+      upload_F_s = std::chrono::duration<double>(std::chrono::steady_clock::now()
+                                                 - t_upload)
+                     .count();
     }
   };
 
@@ -218,7 +226,11 @@ namespace Sdpb::Sdpa
     o.product_timing = env_long("SDPB_GPU_PRODUCT_TIMING", 0) != 0;
     o.perturb_step = env_double("SDPB_GPU_PERTURB_STEP", 0);
     o.perturb_iteration = int(env_long("SDPB_GPU_PERTURB_ITERATION", 0));
+    const auto t_init = std::chrono::steady_clock::now();
     P.gs = std::make_unique<Gpu_Solver>(o, P.m, P.dims);
+    const double init_s = std::chrono::duration<double>(
+                            std::chrono::steady_clock::now() - t_init)
+                            .count();
 
     for(int ci = 0; ci < P.gs->num_chunks(); ++ci)
       {
@@ -232,20 +244,28 @@ namespace Sdpb::Sdpa
           }
       }
     const auto t0 = std::chrono::steady_clock::now();
+    const auto since = [](const std::chrono::steady_clock::time_point &t) {
+      return std::chrono::duration<double>(std::chrono::steady_clock::now() - t)
+        .count();
+    };
     P.upload_vector(sdp.primal_objective_c, true);
     P.upload_vector(solver.x, false);
     P.load_F(sdp.gpu_input);
+    const auto t_xy = std::chrono::steady_clock::now();
     for(int ci = 0; ci < P.gs->num_chunks(); ++ci)
       P.upload_X_Y(ci, solver);
+    const double xy_s = since(t_xy);
+    const auto t_finish = std::chrono::steady_clock::now();
     P.gs->finish_load();
+    const double finish_s = since(t_finish);
     if(El::mpi::Rank() == 0)
       {
         std::cout << "Gpu_Compute (SDPA): " << P.gs->num_chunks()
                   << " chunks, L = " << P.L << ", m = " << P.m << ", loaded in "
-                  << std::chrono::duration<double>(
-                       std::chrono::steady_clock::now() - t0)
-                       .count()
-                  << " s\n";
+                  << since(t0) << " s (device setup " << init_s
+                  << " s before; read F " << P.read_F_s << " s, upload F "
+                  << P.upload_F_s << " s, X and Y " << xy_s << " s, finish "
+                  << finish_s << " s)\n";
         for(int ci = 0; ci < P.gs->num_chunks(); ++ci)
           std::cout << "  chunk " << ci << ": " << P.gs->chunk(ci).nb
                     << " blocks, n " << P.gs->chunk(ci).n << "\n";
