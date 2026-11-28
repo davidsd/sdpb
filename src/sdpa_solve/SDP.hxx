@@ -28,8 +28,11 @@ namespace Sdpb::Sdpa
     // Constant c_0 added to objective function
     El::BigFloat objective_const;
 
+    // Device solvers stream the matrices directly from this file.
+    std::filesystem::path gpu_input;
+
     SDP(const std::filesystem::path &sdp_path, const Block_Info &block_info,
-        const El::Grid &grid, Timers &timers);
+        const El::Grid &grid, Timers &timers, bool gpu = false);
 
     size_t primal_dimension() const;
 

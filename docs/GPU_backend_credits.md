@@ -53,3 +53,10 @@ Zechuan Zheng extended SDPviBe in his own GPU port (not public). Three parts of 
 Planned (to be listed here as they are ported): the tiled Cholesky of Q (`blockchol.py`), the fixed-point
 recursive Cholesky with triangular solves and leaf refinement (`linalg.chol`, `batched.py`), `refine_min_eig`, the chunk/streaming planner
 (`solver.py` `Layout`, `store.py`), multi-GPU over NCCL (`dist.py`).
+
+The SDPA path uses the running column maxima with headroom from Antoine
+Tilloy's SDPviBe Gram assembly. It checks for an overflow of that headroom
+and repeats the assembly with measured maxima when necessary. Its sparse
+constraint products extend Zechuan Zheng's partial-sum matrix-vector
+products to indexed entries. The SDPA equations and input handling follow
+Vasiliy Dommes's SDPA solver in SDPB.

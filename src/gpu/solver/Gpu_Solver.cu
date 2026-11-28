@@ -19,6 +19,7 @@
 #include <cstring>
 #include <fstream>
 #include <map>
+#include <numeric>
 #include <sstream>
 #include <stdexcept>
 
@@ -120,6 +121,17 @@ namespace sdpb_gpu
       Mat Xi, XiT, Yi, YiT, AXI, AY, dres, Pres, mXY;
       Mat Si, SiT, Pf;
       Mat R, w, dx, dX, dY, S, rhs, w2;
+      // SDPA mode: c holds F_0; LY is the factor of Y.
+      // Fnz: entries of F_1 .. F_m, lower triangles, by (p, position); F_p's are
+      // Fptr[p] .. Fptr[p + 1] - 1, Fcol their positions in an (nb, n, n) matrix
+      // (top bit: off the diagonal, which counts twice in a trace), Fp their p.
+      // Wn positions have entries, those at position k are Wptr[k] .. Wptr[k + 1] - 1,
+      // with p in Wp and index in Fnz in Wval. Ptab: positions of P's Prows rows.
+      Mat LY, Fnz;
+      int64_t *Fptr = nullptr, *Wptr = nullptr;
+      uint32_t *Fcol = nullptr, *Fp = nullptr, *Wp = nullptr, *Wval = nullptr,
+               *Wpos = nullptr, *Ptab = nullptr;
+      int64_t Wn = 0, Prows = 0;
     };
 
     Mat make_copy(const Mat &A)
@@ -469,7 +481,8 @@ namespace sdpb_gpu
     template <class Valid>
     void factor_block(const Mat &A, Mat &Xi, Mat *XiT, Factor_Options fo,
                       std::vector<Block_Cond> &out,
-                      const std::vector<size_t> &out_index, const Valid &valid)
+                      const std::vector<size_t> &out_index, const Valid &valid,
+                      Mat *factor = nullptr)
     {
       const int n = int(A.b.rows), batch = A.b.batch;
       const int np = std::max(32, (n + 31) / 32 * 32);
@@ -535,6 +548,16 @@ namespace sdpb_gpu
         Xi = std::move(Xp);
       if(XiT)
         *XiT = transpose(Xi);
+      if(factor)
+        {
+          if(np != n)
+            {
+              *factor = Mat(L, batch, n, n);
+              mpf_sub_block(Lf.b, 0, 0, factor->b, false, 0);
+            }
+          else
+            *factor = std::move(Lf);
+        }
     }
 
     // sum_p a_p A_p for a (nb, P, 1): R (2 nb, n, n)
@@ -734,6 +757,483 @@ namespace sdpb_gpu
       conds.schur.resize(nblocks_total);
       conds.X.resize(2 * nblocks_total);
       conds.Y.resize(2 * nblocks_total);
+    }
+
+    // SDPA mode: the same arrays and helpers, its own passes
+    bool sdpa = false;
+
+    void build_sdpa_chunks(const std::vector<int> &dims)
+    {
+      const auto layout = gpu_sdpa_chunks(dims, opt.max_chunk_blocks, opt.max_chunk_rows);
+      const auto owners = gpu_chunk_owners(layout, opt.world.size);
+      global_rows = 0;
+      for(size_t ci = 0; ci < layout.size(); ++ci)
+        {
+          for(int j : layout[ci].blocks)
+            global_rows += int64_t(dims[j]) * dims[j];
+          if(owners[ci] != opt.world.rank)
+            continue;
+          Chunk c;
+          c.info = layout[ci];
+          const auto &I = c.info;
+          c.hj.resize(I.nb);
+          for(int q = 0; q < I.nb; ++q)
+            c.hj[q] = dims[I.blocks[q]];
+          GS_CHECK(cudaMalloc(&c.d_hj, c.hj.size() * sizeof(int)));
+          GS_CHECK(cudaMemcpy(c.d_hj, c.hj.data(), c.hj.size() * sizeof(int),
+                              cudaMemcpyHostToDevice));
+          c.c = Mat(L, I.nb, I.n, I.n);
+          c.X = Mat(L, I.nb, I.n, I.n);
+          c.Y = Mat(L, I.nb, I.n, I.n);
+          std::vector<uint32_t> tab;
+          for(int q = 0; q < I.nb; ++q)
+            for(int j = 0; j < c.hj[q]; ++j)
+              for(int i = 0; i < c.hj[q]; ++i)
+                tab.push_back(uint32_t(int64_t(q) * I.n * I.n + int64_t(j) * I.n + i));
+          c.Prows = int64_t(tab.size());
+          c.Ptab = to_device_array(tab);
+          chunks.push_back(std::move(c));
+        }
+      nblocks_total = int(dims.size());
+      conds.X.resize(nblocks_total);
+      conds.Y.resize(nblocks_total);
+    }
+
+    template <class T> T *to_device_array(const std::vector<T> &v)
+    {
+      T *d = nullptr;
+      GS_CHECK(cudaMalloc(&d, std::max<size_t>(1, v.size()) * sizeof(T)));
+      if(!v.empty())
+        GS_CHECK(cudaMemcpy(d, v.data(), v.size() * sizeof(T),
+                            cudaMemcpyHostToDevice));
+      return d;
+    }
+
+    void sdpa_upload_F(Chunk &c, int64_t nnz, const int32_t *p_of,
+                       const uint32_t *pos, const int32_t *m, const int64_t *e)
+    {
+      const int64_t n = c.info.n;
+      if(nnz >= (int64_t(1) << 32) || int64_t(c.info.nb) * n * n >= (int64_t(1) << 31))
+        throw std::runtime_error("Gpu_Solver: an SDPA chunk beyond 32-bit positions");
+      c.Fnz = Mat(L, 1, std::max<int64_t>(nnz, 1), 1);
+      if(nnz)
+        mpf_upload(m, e, c.Fnz.b, 0);
+      std::vector<int64_t> fptr(N + 1, 0);
+      std::vector<uint32_t> fcol(nnz), fp(nnz), order(nnz);
+      for(int64_t t = 0; t < nnz; ++t)
+        {
+          ++fptr[p_of[t] + 1];
+          const int64_t rem = pos[t] % (n * n);
+          fcol[t] = pos[t] | (rem % n != rem / n ? 0x80000000u : 0u);
+          fp[t] = uint32_t(p_of[t]);
+          order[t] = uint32_t(t);
+        }
+      for(int p = 0; p < N; ++p)
+        fptr[p + 1] += fptr[p];
+      // by position: the weighted sums over p
+      std::stable_sort(order.begin(), order.end(), [&](uint32_t a, uint32_t b) {
+        return pos[a] < pos[b];
+      });
+      std::vector<int64_t> wptr;
+      std::vector<uint32_t> wp(nnz), wpos;
+      for(int64_t t = 0; t < nnz; ++t)
+        {
+          if(t == 0 || pos[order[t]] != pos[order[t - 1]])
+            {
+              wptr.push_back(t);
+              wpos.push_back(pos[order[t]]);
+            }
+          wp[t] = uint32_t(p_of[order[t]]);
+        }
+      c.Wn = int64_t(wpos.size());
+      wptr.push_back(nnz);
+      c.Fptr = to_device_array(fptr);
+      c.Fcol = to_device_array(fcol);
+      c.Fp = to_device_array(fp);
+      c.Wptr = to_device_array(wptr);
+      c.Wp = to_device_array(wp);
+      c.Wval = to_device_array(order);
+      c.Wpos = to_device_array(wpos);
+    }
+
+    // Tr(F_p M) for all p, for symmetric M (nb, n, n): (1, m, 1)
+    Mat dot_F(Chunk &c, const Mat &M)
+    {
+      Mat O(L, 1, N, 1);
+      Csr_Gemv g;
+      g.n = N;
+      g.ptr = c.Fptr;
+      g.col = c.Fcol;
+      mpf_csr_gemv(c.Fnz.b, M.b, O.b, g, 0);
+      return O;
+    }
+
+    // sum_p v_p F_p, v (1, m, 1): (nb, n, n)
+    Mat sum_F(Chunk &c, const Mat &v)
+    {
+      Mat O = make_zero(L, c.info.nb, c.info.n, c.info.n);
+      Csr_Gemv g;
+      g.n = c.Wn;
+      g.ptr = c.Wptr;
+      g.col = c.Wp;
+      g.val = c.Wval;
+      g.out = c.Wpos;
+      mpf_csr_gemv(c.Fnz.b, v.b, O.b, g, 0);
+      mpf_lower_to_upper(O.b, 0);
+      return O;
+    }
+
+    Residue_Result sdpa_residues()
+    {
+      Residue_Result r;
+      stage("objectives");
+      {
+        Mat t(L, 1, N, 1);
+        dev_mul(b.b, y.b, t.b, 0);
+        r.dual_sum = mpf_total(t.b, 0);
+      }
+      for(auto &c : chunks)
+        {
+          Mat t(L, c.info.nb, c.info.n, c.info.n);
+          dev_mul(c.c.b, c.Y.b, t.b, 0);
+          r.primal_terms.push_back(mpf_total(t.b, 0));
+        }
+
+      stage("Cholesky X, Y + inverses");
+      for(auto &c : chunks)
+        {
+          const auto &I = c.info;
+          std::vector<size_t> ix(I.blocks.begin(), I.blocks.end());
+          auto valid = [&](int z, int i) { return i < c.hj[z]; };
+          factor_block(c.X, c.Xi, &c.XiT, xy_options(), conds.X, ix, valid);
+          factor_block(c.Y, c.Yi, &c.YiT, xy_options(), conds.Y, ix, valid, &c.LY);
+          c.Yi.free();
+        }
+
+      stage("dual residues");
+      pvec = root_copy(b);
+      for(auto &c : chunks)
+        {
+          Mat t = dot_F(c, c.Y);
+          mpf_batch_add(pvec.b, t.b, -1, pvec.b, 0);
+        }
+      sum_ranks(pvec);
+      r.dual_error = mpf_max_abs(pvec.b, 0);
+
+      stage("primal residues");
+      Host_Float err_P;
+      for(auto &c : chunks)
+        {
+          Mat Ax = sum_F(c, y);
+          Mat t = add(Ax, c.c, -1);
+          Ax.free();
+          c.Pres = add(t, c.X, -1);
+          t.free();
+          mpf_mask_blocks(c.Pres.b, c.info.h, c.d_hj, 0);
+          err_P = max_of(err_P, mpf_max_abs(c.Pres.b, 0));
+        }
+      r.primal_error_P = global_max(err_P);
+
+      stage("X Y");
+      for(auto &c : chunks)
+        {
+          const auto &I = c.info;
+          Mat XY = prod(c.X, c.Y);
+          mpf_mask_blocks(XY.b, I.h, c.d_hj, 0);
+          dev_neg(XY.b, XY.b, 0);
+          c.mXY = std::move(XY);
+          Mat D(L, I.nb, I.n, 1);
+          mpf_diagonal(c.mXY.b, D.b, 0);
+          r.minus_xy_trace.push_back(mpf_total(D.b, 0));
+        }
+      stage(nullptr);
+      return r;
+    }
+
+    // Column p of P: the entries of G_p^T = L_Y^T (L_X^-1 F_p)^T, which are those
+    // of L_X^-1 F_p L_Y in another order of the rows. Q = P^T P doesn't see that.
+    void form_P(Chunk &c)
+    {
+      const auto &I = c.info;
+      const int64_t n = I.n;
+      const int64_t per_p = int64_t(I.nb) * n * n, bytes_per_p = per_p * (4 * L + 8);
+      // (nb band blocks is mpf_transpose's grid depth, at most 65535)
+      const int band = int(std::max<int64_t>(
+        1, std::min<int64_t>({int64_t(N), int64_t(opt.sdpa_band_bytes / double(bytes_per_p)),
+                              int64_t(60000 / I.nb)})));
+      c.Pf = Mat(L, 1, c.Prows, N);
+      std::vector<int64_t> ptr(N + 1);
+      GS_CHECK(cudaStreamSynchronize(0));
+      GS_CHECK(cudaMemcpy(ptr.data(), c.Fptr, ptr.size() * 8, cudaMemcpyDeviceToHost));
+      for(int p0 = 0; p0 < N; p0 += band)
+        {
+          const int dp = std::min(band, N - p0);
+          Mat W = make_zero(L, I.nb, n, n * dp);
+          mpf_fill_slices(c.Fnz.b, c.Fcol, c.Fp, ptr[p0], ptr[p0 + dp], n, dp, p0, W.b, 0);
+          // U = L_X^-1 W: the left factor is lower triangular (Rns_Gemm can use
+          // that only when the rows need no padding of its own)
+          Mat U(L, I.nb, n, n * dp);
+          eng(I.nb).mm(c.XiT.b, true, W.b, false, U.b, 0, n % 16 == 0 ? 1 : 0);
+          W.free();
+          // slices as a batch of nb dp blocks (the same layout)
+          Mpf_Batch Uv = U.b, Tv;
+          Uv.batch = I.nb * dp;
+          Uv.cols = n;
+          Mat Ut(L, I.nb * dp, n, n);
+          mpf_transpose(Uv, Ut.b, 0);
+          U.free();
+          Tv = Ut.b;
+          Tv.batch = I.nb;
+          Tv.cols = n * dp;
+          Mat G(L, I.nb, n, n * dp);
+          eng(I.nb).mm(c.LY.b, true, Tv, false, G.b);
+          Ut.free();
+          mpf_gather_slices(G.b, c.Ptab, c.Prows, n, dp, p0, c.Pf.b, 0);
+        }
+    }
+
+    // P exists only to form S, so each chunk's goes as soon as it is in the Gram's
+    // residues, as Zechuan Zheng's streaming S does for bands of rows. The
+    // Gram aligns each column to one exponent over all chunks, chosen before the
+    // first chunk is formed: last iteration's column maxima plus sdpa_headroom bits
+    // (SDPviBe's GramAcc keeps 28 too). If a column outgrows them, or at the first
+    // iteration, a pass over the chunks finds the maxima and the sum starts again.
+    // Headroom costs that many of the aligned digits' 8 D bits (D = 4 L: 32 L).
+    std::vector<uint64_t> sdpa_top_host;
+    uint64_t *d_sdpa_tops = nullptr, *d_sdpa_chunk_tops = nullptr;
+    int32_t *d_sdpa_map = nullptr;
+
+    // tops encode exponents as unsigned, as mpf_scan_column_tops writes them (zero: empty column)
+    void sdpa_scan_tops(Chunk &c, uint64_t *d_tops)
+    {
+      mpf_scan_column_tops(P_of(c).view(), d_tops, 0);
+    }
+
+    void sdpa_set_tops(const std::vector<uint64_t> &tops, int headroom)
+    {
+      std::vector<uint64_t> shifted(tops);
+      for(auto &t : shifted)
+        if(t != 0)
+          t += uint64_t(headroom);
+      GS_CHECK(cudaMemcpy(d_sdpa_tops, shifted.data(), size_t(N) * 8,
+                          cudaMemcpyHostToDevice));
+      gram->set_column_tops(d_sdpa_tops, d_sdpa_map);
+      GS_CHECK(cudaStreamSynchronize(0));
+    }
+
+    void sdpa_factor()
+    {
+      if(world)
+        {
+          stage("P: L_X^-1 F_p L_Y");
+          for(auto &c : chunks)
+            form_P(c);
+          for(auto &c : chunks)
+            {
+              c.LY.free();
+              eng(c.info.nb).check();
+            }
+          form_and_factor_Q();
+          stage(nullptr);
+          return;
+        }
+      if(!gram)
+        {
+          Gram_Options qopt = gopt;
+          qopt.timing = opt.product_timing;
+          qopt.base = std::min(opt.q_base, qopt.max_rect);
+          gram = std::make_unique<Mpf_Gram>(N, L, D, global_rows, qopt,
+                                            cudaStream_t(0));
+          GS_CHECK(cudaMalloc(&d_sdpa_tops, size_t(N) * 8));
+          GS_CHECK(cudaMalloc(&d_sdpa_chunk_tops, size_t(N) * 8));
+          GS_CHECK(cudaMalloc(&d_sdpa_map, size_t(N) * 4));
+          std::vector<int32_t> map(N);
+          std::iota(map.begin(), map.end(), 0);
+          GS_CHECK(cudaMemcpy(d_sdpa_map, map.data(), size_t(N) * 4,
+                              cudaMemcpyHostToDevice));
+        }
+      const size_t tops_bytes = size_t(N) * 8;
+      std::vector<uint64_t> seen(N, 0), host(N);
+      // one pass with the Gram; a column above its reference starts it again with
+      // the maxima this pass has found by then, completed over all chunks
+      auto pass = [&](bool add, int headroom) {
+        for(auto &c : chunks)
+          {
+            stage("P: L_X^-1 F_p L_Y");
+            form_P(c);
+            stage("Q = P^T P");
+            GS_CHECK(cudaMemset(d_sdpa_chunk_tops, 0, tops_bytes));
+            sdpa_scan_tops(c, d_sdpa_chunk_tops);
+            GS_CHECK(cudaStreamSynchronize(0));
+            GS_CHECK(cudaMemcpy(host.data(), d_sdpa_chunk_tops, tops_bytes,
+                                cudaMemcpyDeviceToHost));
+            bool over = false;
+            for(int p = 0; p < N; ++p)
+              {
+                if(host[p] > seen[p])
+                  seen[p] = host[p];
+                if(add && host[p] != 0 && !sdpa_top_host.empty()
+                   && host[p] > sdpa_top_host[p] + uint64_t(headroom))
+                  over = true;
+              }
+            if(add && !over)
+              gram->add_columns(P_of(c).view(), nullptr);
+            c.Pf.free();
+            if(over)
+              return false;
+          }
+        return true;
+      };
+      const int headroom = opt.sdpa_headroom;
+      bool done = false;
+      if(!sdpa_top_host.empty() && headroom >= 0)
+        {
+          sdpa_set_tops(sdpa_top_host, headroom);
+          done = pass(true, headroom);
+          if(!done)
+            {
+              ++sdpa_restarts;
+              fprintf(stderr, "Gpu_Solver: a column of P outgrew its alignment at iteration %d\n",
+                      iteration);
+              gram->gram().reset();
+            }
+        }
+      if(!done)
+        {
+          if(!pass(false, 0))
+            throw std::logic_error("Gpu_Solver: a pass without the Gram stopped");
+          sdpa_set_tops(seen, 0);
+          sdpa_top_host = seen;
+          if(!pass(true, 0))
+            throw std::runtime_error(
+              "Gpu_Solver: P's column maxima changed between two passes");
+        }
+      else
+        // the true maxima, for the next iteration's references
+        sdpa_top_host = seen;
+      for(auto &c : chunks)
+        {
+          c.LY.free();
+          eng(c.info.nb).check();
+        }
+      form_and_factor_Q();
+      stage(nullptr);
+    }
+    int sdpa_restarts = 0;
+
+    void sdpa_direction(const Host_Float &beta_mu, bool corrector)
+    {
+      const char *const s_R = corrector ? "corrector: R" : "predictor: R";
+      const char *const s_Z = corrector ? "corrector: Z" : "predictor: Z";
+      const char *const s_rhs
+        = corrector ? "corrector: Schur rhs" : "predictor: Schur rhs";
+      const char *const s_dx = corrector ? "corrector: dx" : "predictor: dx";
+      const char *const s_dX = corrector ? "corrector: dX" : "predictor: dX";
+      const char *const s_dY = corrector ? "corrector: dY" : "predictor: dY";
+
+      Mat bm = scalar(beta_mu);
+      // -d_p - Tr(F_p Z); d on one rank, as in the sum of the ranks
+      Mat rhs = make_zero(L, 1, N, 1);
+      if(!world || world->rank() == 0)
+        mpf_batch_add(rhs.b, pvec.b, -1, rhs.b, 0);
+      for(auto &c : chunks)
+        {
+          const auto &I = c.info;
+          stage(s_R);
+          Mat R;
+          if(corrector)
+            {
+              Mat dXdY = prod(c.dX, c.dY);
+              R = add(c.mXY, dXdY, -1);
+            }
+          else
+            R = make_copy(c.mXY);
+          mpf_add_diag(R.b, bm.b, I.h, c.d_hj, 0);
+
+          stage(s_Z);
+          Mat Z;
+          {
+            Mat PY = prod(c.Pres, c.Y); // Pres Y (Pres symmetric)
+            Mat W = add(PY, R, -1);
+            PY.free();
+            Mat U = solve_X(c, W);
+            W.free();
+            Z = symmetrize(U);
+          }
+
+          stage(s_rhs);
+          Mat t = dot_F(c, Z);
+          mpf_batch_add(rhs.b, t.b, -1, rhs.b, 0);
+          c.R = std::move(R);
+        }
+
+      stage(s_dx);
+      sum_ranks(rhs);
+      dy = solve_Q(rhs);
+
+      for(auto &c : chunks)
+        {
+          const auto &I = c.info;
+          stage(s_dX);
+          Mat Ad = sum_F(c, dy);
+          c.dX = add(Ad, c.Pres, 1);
+          Ad.free();
+
+          stage(s_dY);
+          Mat dXY = prod(c.dX, c.Y); // dX Y (dX symmetric)
+          Mat W = add(dXY, c.R, -1);
+          dXY.free();
+          Mat U = solve_X(c, W);
+          W.free();
+          Mat Sy = symmetrize(U);
+          U.free();
+          dev_neg(Sy.b, Sy.b, 0);
+          mpf_mask_blocks(Sy.b, I.h, c.d_hj, 0);
+          c.dY = std::move(Sy);
+          c.R.free();
+        }
+      stage(nullptr);
+    }
+
+    void sdpa_update(const Host_Float &aP, const Host_Float &aD)
+    {
+      stage("update");
+      Mat sP = scalar(aP), sD = scalar(aD);
+      for(auto &c : chunks)
+        {
+          {
+            Mat t(L, c.dX.b.batch, c.dX.b.rows, c.dX.b.cols);
+            dev_mul(c.dX.b, sP.b, t.b, 0);
+            mpf_batch_add(c.X.b, t.b, 1, c.X.b, 0);
+          }
+          {
+            Mat t(L, c.dY.b.batch, c.dY.b.rows, c.dY.b.cols);
+            dev_mul(c.dY.b, sD.b, t.b, 0);
+            mpf_batch_add(c.Y.b, t.b, 1, c.Y.b, 0);
+          }
+          c.dX.free();
+          c.dY.free();
+          c.Xi.free();
+          c.XiT.free();
+          c.YiT.free();
+          c.Pf.free();
+          c.Pres.free();
+          c.mXY.free();
+        }
+      Mat t(L, 1, N, 1);
+      dev_mul(dy.b, sP.b, t.b, 0);
+      mpf_batch_add(y.b, t.b, 1, y.b, 0);
+      dy.free();
+      pvec.free();
+      Xq.free();
+      Qfull.free();
+      if(distributed_q)
+        {
+          distributed_profiles.push_back(distributed_q->profile_json());
+          peak_bytes=std::max(peak_bytes,double(distributed_q->peak_device_bytes()));
+          distributed_q.reset();
+        }
+      stage(nullptr);
     }
 
     Mat &array(int i, Gpu_Array a)
@@ -943,16 +1443,20 @@ namespace sdpb_gpu
     {
       if(world) { distributed_Q_factor(); return; }
       stage("Q = P^T P");
-      if(opt.structured_q)
+      // The SDPA path already accumulated each chunk into the Gram matrix.
+      if(!sdpa)
         {
-          std::vector<Mpf_Matrix> views;
-          for(auto &c : chunks)
-            views.push_back(P_of(c).view());
-          gram->add_structured(views, opt.q_plane);
+          if(opt.structured_q)
+            {
+              std::vector<Mpf_Matrix> views;
+              for(auto &c : chunks)
+                views.push_back(P_of(c).view());
+              gram->add_structured(views, opt.q_plane);
+            }
+          else
+            for(auto &c : chunks)
+              gram->add(P_of(c).view());
         }
-      else
-        for(auto &c : chunks)
-          gram->add(P_of(c).view());
       if(opt.lean_p)
         for(auto &c : chunks)
           c.Pf.free();
@@ -1530,6 +2034,30 @@ namespace sdpb_gpu
     p_->y = Mat(p_->L, 1, N, 1);
   }
 
+  Gpu_Solver::Gpu_Solver(const Gpu_Solver_Options &options, int m,
+                         const std::vector<int> &block_dims)
+      : p_(std::make_unique<Impl>())
+  {
+    p_->opt = options;
+    p_->opt.lean_p = true; // P is used for S only: the directions use F
+    p_->N = m;
+    p_->L = options.L;
+    p_->D = options.digits;
+    p_->sdpa = true;
+    p_->gopt.prime_group = 32;
+    p_->gopt.fused_residues = true;
+    p_->gopt.product_timing = options.product_timing;
+    p_->gopt.crt_guard_bits = options.crt_guard;
+    if(options.world.size>1)
+      p_->world=std::make_unique<Gpu_Collective>(options.world);
+    p_->workspace = std::make_unique<Rns_Workspace>(cudaStream_t(0));
+    p_->gopt.workspace = p_->workspace.get();
+    g_workspace = p_->workspace.get();
+    p_->build_sdpa_chunks(block_dims);
+    p_->b = Mat(p_->L, 1, m, 1);
+    p_->y = Mat(p_->L, 1, m, 1);
+  }
+
   Gpu_Solver::~Gpu_Solver()
   {
     if(p_)
@@ -1537,7 +2065,21 @@ namespace sdpb_gpu
         {
           cudaFree(c.d_hj);
           cudaFree(c.d_Kj);
+          cudaFree(c.Fptr);
+          cudaFree(c.Fcol);
+          cudaFree(c.Fp);
+          cudaFree(c.Wptr);
+          cudaFree(c.Wp);
+          cudaFree(c.Wval);
+          cudaFree(c.Wpos);
+          cudaFree(c.Ptab);
         }
+    if(p_)
+      {
+        cudaFree(p_->d_sdpa_tops);
+        cudaFree(p_->d_sdpa_chunk_tops);
+        cudaFree(p_->d_sdpa_map);
+      }
   }
 
   int Gpu_Solver::num_chunks() const { return int(p_->chunks.size()); }
@@ -1572,6 +2114,11 @@ namespace sdpb_gpu
   void Gpu_Solver::finish_load()
   {
     auto &P = *p_;
+    if(P.sdpa)
+      {
+        GS_CHECK(cudaStreamSynchronize(0));
+        return;
+      }
     const int L = P.L;
     for(auto &c : P.chunks)
       {
@@ -1602,6 +2149,22 @@ namespace sdpb_gpu
       }
     P.pvec.free();
     GS_CHECK(cudaStreamSynchronize(0));
+  }
+  void Gpu_Solver::sdpa_upload_F(int i, int64_t nnz, const int32_t *p_of,
+                                 const uint32_t *pos, const int32_t *m,
+                                 const int64_t *e)
+  {
+    p_->sdpa_upload_F(p_->chunks.at(i), nnz, p_of, pos, m, e);
+  }
+  Residue_Result Gpu_Solver::sdpa_residues() { return p_->sdpa_residues(); }
+  void Gpu_Solver::sdpa_factor() { p_->sdpa_factor(); }
+  void Gpu_Solver::sdpa_direction(const Host_Float &beta_mu, bool corrector)
+  {
+    p_->sdpa_direction(beta_mu, corrector);
+  }
+  void Gpu_Solver::sdpa_update(const Host_Float &aP, const Host_Float &aD)
+  {
+    p_->sdpa_update(aP, aD);
   }
   Residue_Result Gpu_Solver::residues() { return p_->residues(); }
   void Gpu_Solver::factor() { p_->factor(); }

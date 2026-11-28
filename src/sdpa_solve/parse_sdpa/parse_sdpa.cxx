@@ -1,7 +1,7 @@
-#include "SDPA_File_Parse_Result.hxx"
-#include "SDPA_Block_Structure.hxx"
+#include "parse_sdpa.hxx"
 #include "catch2/catch_amalgamated.hpp"
 #include "sdpb_util/assert.hxx"
+#include "sdpb_util/for_each_threaded.hxx"
 
 #include <El.hpp>
 #include <cstdlib>
@@ -10,6 +10,8 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/device/array.hpp>
+#include <boost/iostreams/stream.hpp>
 
 namespace fs = std::filesystem;
 
@@ -277,6 +279,31 @@ namespace Sdpb::Sdpa
     }
   }
 
+  template <class IStream>
+  void read_entries(IStream &is, SDPA_File_Type file_type,
+                    const SDPA_Block_Structure &block_structure,
+                    const std::function<void(SDPA_Matrix_Entry &&)> &accept_sdpa_entry)
+  {
+    switch(file_type)
+      {
+      case sparse: read_sparse_matrices(is, accept_sdpa_entry); break;
+      case dense:
+        read_dense_matrices(is, block_structure, accept_sdpa_entry);
+        break;
+      default: LOGIC_ERROR("Unknown SDPA_File_Type=", file_type);
+      }
+
+    skip_ws(is, true);
+    if(!is.eof())
+      {
+        std::string line;
+        const auto pos = is.tellg();
+        std::getline(is, line);
+        RUNTIME_ERROR("Unexpected data at the end of file, position: ", pos,
+                      ", next line: ", line);
+      }
+  }
+
   // Read .dat-s input used in SDPA
   // See format description e.g. in https://github.com/vsdp/SDPLIB
   // Read only block structure, do not read objective and SDP matrices.
@@ -344,24 +371,7 @@ namespace Sdpb::Sdpa
         matrix(j, i) = entry.value;
     };
 
-    switch(file_type)
-      {
-      case sparse: read_sparse_matrices(is, accept_sdpa_entry); break;
-      case dense:
-        read_dense_matrices(is, block_structure, accept_sdpa_entry);
-        break;
-      default: LOGIC_ERROR("Unknown SDPA_File_Type=", file_type);
-      }
-
-    skip_ws(is, true);
-    if(!is.eof())
-      {
-        std::string line;
-        const auto pos = is.tellg();
-        std::getline(is, line);
-        RUNTIME_ERROR("Unexpected data at the end of file, position: ", pos,
-                      ", next line: ", line);
-      }
+    read_entries(is, file_type, block_structure, accept_sdpa_entry);
 
     for(size_t index = 0; index < sdp_blocks_F.size(); ++index)
       {
@@ -424,6 +434,106 @@ namespace Sdpb::Sdpa
         return read_block_structure(is, objective_const);
       });
     return read_sdpa_file(input_file, f);
+  }
+
+  SDPA_File_Parse_Result read_sdpa_objective(const fs::path &path)
+  {
+    const auto read = std::function([](boost::iostreams::filtering_istream &is,
+                                      const SDPA_File_Type &) {
+      SDPA_File_Parse_Result result;
+      const auto blocks = read_block_structure(is, result.objective_const);
+      result.c_objective = read_c(is, blocks.m_dim);
+      return result;
+    });
+    return read_sdpa_file(path, read);
+  }
+
+  size_t sdpa_visit_slots()
+  {
+    const char *s = std::getenv("OMP_NUM_THREADS");
+    return s ? std::max(1, std::atoi(s)) : 1;
+  }
+
+  void visit_sdpa_lower(const fs::path &path, const SDPA_Entry_Visitor &visit)
+  {
+    const auto read = std::function([&](boost::iostreams::filtering_istream &is,
+                                       const SDPA_File_Type &type) {
+      El::BigFloat objective_const;
+      const auto blocks = read_block_structure(is, objective_const);
+      read_c(is, blocks.m_dim);
+      const auto accept = [&](const size_t slot, const uint64_t order,
+                              const SDPA_Matrix_Entry &raw) {
+        ASSERT(raw.matrix_index <= blocks.m_dim);
+        ASSERT(raw.block_index >= 1
+                 && raw.block_index <= blocks.input_block_sizes.size(),
+               "SDPA block index out of bounds");
+        const int dim = blocks.input_block_sizes.at(raw.block_index - 1);
+        ASSERT(raw.i >= 1 && raw.j >= 1 && raw.i <= size_t(std::abs(dim))
+               && raw.j <= size_t(std::abs(dim)), "SDPA matrix index out of bounds");
+        const Result_Matrix_Entry entry(raw, blocks);
+        if(type == dense && entry.i < entry.j)
+          return;
+        visit(slot, order, entry.sdp_block_index, entry.vector_index,
+              std::max(entry.i, entry.j), std::min(entry.i, entry.j),
+              entry.value);
+      };
+      if(type == dense)
+        {
+          uint64_t order = 0;
+          read_entries(is, type, blocks, [&](SDPA_Matrix_Entry &&raw) {
+            accept(0, order++, raw);
+          });
+          return;
+        }
+      // Sparse: one entry per line. Read slices that end at a line end and
+      // parse a batch of them at a time, one slice per slot.
+      constexpr size_t slice_bytes = size_t(16) << 20;
+      const size_t slots = sdpa_visit_slots();
+      std::vector<std::string> slices(slots);
+      std::string carry;
+      uint64_t slice_number = 0;
+      bool end_of_file = false;
+      while(!end_of_file)
+        {
+          size_t used = 0;
+          while(used < slots && !end_of_file)
+            {
+              std::string &slice = slices[used];
+              slice.swap(carry);
+              carry.clear();
+              // The carried text has no line end: read until there is one.
+              size_t newline = std::string::npos;
+              while(newline == std::string::npos && !end_of_file)
+                {
+                  const size_t old = slice.size();
+                  slice.resize(old + slice_bytes);
+                  is.read(slice.data() + old, slice_bytes);
+                  const size_t got = is.gcount();
+                  slice.resize(old + got);
+                  end_of_file = got < slice_bytes;
+                  newline = slice.rfind('\n');
+                }
+              if(!end_of_file)
+                {
+                  carry.assign(slice, newline + 1);
+                  slice.resize(newline + 1);
+                }
+              ++used;
+            }
+          for_each_threaded(used, [&](const size_t slot) {
+            boost::iostreams::stream<boost::iostreams::array_source> chunk(
+              slices[slot].data(), slices[slot].size());
+            std::ws(chunk);
+            uint64_t order = (slice_number + slot) << 32;
+            if(!chunk.eof())
+              read_sparse_matrices(chunk, [&](SDPA_Matrix_Entry &&raw) {
+                accept(slot, order++, raw);
+              });
+          });
+          slice_number += used;
+        }
+    });
+    read_sdpa_file(path, read);
   }
 
   SDPA_File_Parse_Result

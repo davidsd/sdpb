@@ -2,9 +2,14 @@
 #include "sdp_solve/SDP_Solver/run/bigint_syrk/BigInt_Shared_Memory_Syrk_Context.hxx"
 #include "sdpa_solve/SDP_Solver.hxx"
 #include "sdpa_solve/memory_estimates.hxx"
-#include "sdpb_util/assert.hxx"
 
 #include <boost/date_time/posix_time/posix_time.hpp>
+
+#include <memory>
+
+#ifdef SDPB_GPU
+#include "gpu/Gpu_Compute.hxx"
+#endif
 
 // The main solver loop
 
@@ -63,10 +68,6 @@ namespace Sdpb::Sdpa
     const fs::path &iterations_json_path, Timers &timers,
     El::Matrix<int32_t> &block_timings_ms)
   {
-    // The GPU backend implements SDPB's solver (polynomial matrix programs)
-    ASSERT(!parameters.gpu,
-           "--gpu is implemented for polynomial matrix programs only, "
-           "not for SDPA input.");
     SDP_Solver_Terminate_Reason terminate_reason(
       SDP_Solver_Terminate_Reason::MaxIterationsExceeded);
     Scoped_Timer solver_timer(timers, "run");
@@ -78,6 +79,16 @@ namespace Sdpb::Sdpa
       }
 
     El::BigFloat primal_step_length(0), dual_step_length(0);
+
+#ifdef SDPB_GPU
+    // --gpu: the residues, factorizations, search directions and step lengths run
+    // on the GPU; this driver stays (src/gpu/solver/Gpu_Solver.hxx)
+    std::unique_ptr<Gpu_Compute> gpu;
+    if(parameters.gpu)
+      gpu = std::make_unique<Gpu_Compute>(parameters, block_info, sdp, *this);
+#else
+    ASSERT(!parameters.gpu, "--gpu: this sdpb was built without --enable-gpu");
+#endif
 
     Block_Diagonal_Matrix X_cholesky(X), Y_cholesky(X);
     if(verbosity >= Verbosity::debug)
@@ -95,10 +106,14 @@ namespace Sdpb::Sdpa
     Scoped_Timer initialize_compute_S_context_timer(timers,
                                                     "compute_S_context");
 
-    auto cfg = Solver_Run_Config::create(env, block_info, sdp, *this,
-                                         parameters, verbosity);
-    auto compute_S_context
-      = Compute_S_Context::create(block_info, cfg, verbosity);
+    std::unique_ptr<Compute_S_Context> compute_S_context;
+    if(!parameters.gpu)
+      {
+        auto cfg = Solver_Run_Config::create(env, block_info, sdp, *this,
+                                             parameters, verbosity);
+        compute_S_context.reset(new Compute_S_Context(
+          Compute_S_Context::create(block_info, cfg, verbosity)));
+      }
     initialize_compute_S_context_timer.stop();
 
     initialize_timer.stop();
@@ -199,6 +214,10 @@ namespace Sdpb::Sdpa
                   // save_c_minus_By(c_minus_By_path, block_info, sdp, y, verbosity,
                   //                 timers);
                 }
+#ifdef SDPB_GPU
+              if(gpu)
+                gpu->get_iterate(*this);
+#endif
               return SDP_Solver_Terminate_Reason::SIGTERM_Received;
             }
         }
@@ -213,6 +232,10 @@ namespace Sdpb::Sdpa
         if(checkpoint_now == true)
           {
             Scoped_Timer save_timer(timers, "save_checkpoint");
+#ifdef SDPB_GPU
+            if(gpu)
+              gpu->get_iterate(*this);
+#endif
             save_checkpoint(parameters.checkpoint_out, verbosity,
                             parameter_properties);
             last_checkpoint_time = std::chrono::high_resolution_clock::now();
@@ -226,20 +249,32 @@ namespace Sdpb::Sdpa
                 //                 timers);
               }
           }
-        compute_objectives(sdp, x, Y, primal_objective, dual_objective,
-                           duality_gap, timers);
+#ifdef SDPB_GPU
+        if(gpu)
+          {
+            Scoped_Timer gpu_residues_timer(timers, "gpu.residues");
+            gpu->residues(sdp, *this);
+          }
+        else
+#endif
+          {
+            compute_objectives(sdp, x, Y, primal_objective, dual_objective,
+                               duality_gap, timers);
 
-        {
-          Scoped_Timer cholesky_decomposition_timer(timers,
-                                                    "choleskyDecomposition");
-          cholesky_decomposition(X, X_cholesky, block_info.block_indices, "X");
-          cholesky_decomposition(Y, Y_cholesky, block_info.block_indices, "Y");
-        }
+            {
+              Scoped_Timer cholesky_decomposition_timer(
+                timers, "choleskyDecomposition");
+              cholesky_decomposition(X, X_cholesky, block_info.block_indices,
+                                     "X");
+              cholesky_decomposition(Y, Y_cholesky, block_info.block_indices,
+                                     "Y");
+            }
 
-        compute_dual_residues_and_error(sdp, Y, dual_residues, dual_error,
-                                        timers);
-        compute_primal_residues_and_error(sdp, x, X, primal_residues,
-                                          primal_error, timers);
+            compute_dual_residues_and_error(sdp, Y, dual_residues, dual_error,
+                                            timers);
+            compute_primal_residues_and_error(sdp, x, X, primal_residues,
+                                              primal_error, timers);
+          }
 
         bool terminate_now, is_primal_and_dual_feasible;
         compute_feasible_and_termination(
@@ -255,12 +290,23 @@ namespace Sdpb::Sdpa
         El::BigFloat Q_cond_number;
         El::BigFloat max_block_cond_number;
         std::string max_block_cond_number_name;
-        step(env, parameters, verbosity, total_psd_rows,
-             is_primal_and_dual_feasible, block_info, sdp, grid, X_cholesky,
-             Y_cholesky, compute_S_context, mu, beta_corrector,
-             primal_step_length, dual_step_length, terminate_now, timers,
-             block_timings_ms, Q_cond_number, max_block_cond_number,
-             max_block_cond_number_name);
+#ifdef SDPB_GPU
+        if(gpu)
+          {
+            Scoped_Timer gpu_step_timer(timers, "gpu.step");
+            gpu->step(parameters, total_psd_rows, is_primal_and_dual_feasible,
+                      *this, mu, beta_corrector, primal_step_length,
+                      dual_step_length, terminate_now, Q_cond_number,
+                      max_block_cond_number, max_block_cond_number_name);
+          }
+        else
+#endif
+          step(env, parameters, verbosity, total_psd_rows,
+               is_primal_and_dual_feasible, block_info, sdp, grid, X_cholesky,
+               Y_cholesky, *compute_S_context, mu, beta_corrector,
+               primal_step_length, dual_step_length, terminate_now, timers,
+               block_timings_ms, Q_cond_number, max_block_cond_number,
+               max_block_cond_number_name);
 
         if(verbosity >= Verbosity::trace && El::mpi::Rank() == 0)
           {
@@ -294,6 +340,16 @@ namespace Sdpb::Sdpa
           max_block_cond_number_name, verbosity);
       }
 
+#ifdef SDPB_GPU
+    if(gpu)
+      {
+        Scoped_Timer gpu_end_timer(timers, "gpu.end_of_run");
+        gpu->get_iterate(*this);
+        if(write_iterations_json_and_c_minus_By)
+          gpu->write_profile(iterations_json_path.parent_path()
+                             / "gpu_profile.json");
+      }
+#endif
     if(write_iterations_json_and_c_minus_By)
       {
         if(El::mpi::Rank() == 0)

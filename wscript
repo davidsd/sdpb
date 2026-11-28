@@ -184,7 +184,8 @@ def build(bld):
               includes=default_includes,
               use=use_packages + ['pmp2sdp_lib'])
 
-    sdpa_solve_sources = ['src/sdpa_solve/SDP.cxx',
+    sdpa_solve_sources = [*(['src/sdpa_solve/SDP_Solver/run/gpu/Gpu_Compute.cxx'] if bld.env.SDPB_GPU else []),
+                          'src/sdpa_solve/SDP.cxx',
                           'src/sdpa_solve/Block_Info.cxx',
                           'src/sdpa_solve/parse_sdpa/parse_sdpa.cxx',
                           'src/sdpa_solve/SDP_Solver/save_checkpoint.cxx',
@@ -399,6 +400,7 @@ def build(bld):
                         'test/src/integration_tests/cases/end-to-end.test.cxx',
                         'test/src/integration_tests/cases/outer_limits.test.cxx',
                         'test/src/integration_tests/cases/pmp2sdp.test.cxx',
+                        'test/src/integration_tests/cases/sdpa_reader.test.cxx',
                         'test/src/integration_tests/cases/SDPLIB.test.cxx',
                         'test/src/integration_tests/cases/resident.test.cxx',
                         'test/src/integration_tests/cases/resident_gpu.test.cxx',
@@ -407,7 +409,7 @@ def build(bld):
                 install_path=None,
                 cxxflags=default_flags,
                 defines=default_defines + ['CATCH_AMALGAMATED_CUSTOM_MAIN'],
-                use=use_packages,
+                use=use_packages + ['sdpa_solve'],
                 includes=default_includes + ['test/src']
                 )
     bld.program(source=['external/catch2/catch_amalgamated.cpp',

@@ -1,3 +1,5 @@
+#include "gpu/solver/Gpu_Layout.hxx"
+
 #include <catch2/catch_amalgamated.hpp>
 
 #include "sdpb_util/block_mapping/compute_block_grid_mapping.hxx"
@@ -116,4 +118,21 @@ TEST_CASE("compute_block_grid_mapping")
       REQUIRE(processed_indices.size() == num_blocks);
     }
   }
+}
+
+TEST_CASE("SDPA GPU block ownership follows the row cap")
+{
+  using namespace sdpb_gpu;
+  // 1,2,3 pad to size 8 and 9,10 to 16. The cap of 128 places the
+  // first two blocks together, the third alone and each size-16 block alone.
+  const std::vector<int> dims{1, 2, 3, 9, 10};
+  const auto chunks = gpu_sdpa_chunks(dims, 0, 128);
+  REQUIRE(chunks.size() == 4);
+  CHECK(chunks[0].blocks == std::vector<int>{0, 1});
+  CHECK(chunks[1].blocks == std::vector<int>{2});
+  CHECK(chunks[2].blocks == std::vector<int>{3});
+  CHECK(chunks[3].blocks == std::vector<int>{4});
+  CHECK(gpu_block_owners(chunks, dims.size(), 2) == std::vector<int>{0, 0, 1, 0, 1});
+  CHECK(gpu_block_owners(gpu_sdpa_chunks(dims, 0, 0), dims.size(), 2)
+        == std::vector<int>{1, 1, 1, 0, 0});
 }

@@ -330,6 +330,177 @@ int main(int argc, char **argv)
       printf("mpf_max_abs                        exact  ok\n");
     mpf_clears(sum, big, nullptr);
   }
+  // total: a negative term that rounds to zero is no term
+  {
+    Host_Mat A(1, 2, 1);
+    set_random(A, 0, 0, 0.0);
+    set_random(A, 1, 0, 0.0);
+    // entry 0 positive, entry 1 negative
+    const auto with_sign = [&](int64_t i, bool neg) {
+      const bool is_neg = A.m[(L - 1) * A.entries() + i] < 0;
+      if(is_neg != neg)
+        {
+          unsigned long long c = 1;
+          for(int k = 0; k < L; ++k)
+            {
+              const unsigned long long v
+                = (unsigned long long)(~uint32_t(A.m[k * A.entries() + i])) + c;
+              A.m[k * A.entries() + i] = int32_t(uint32_t(v));
+              c = v >> 32;
+            }
+        }
+    };
+    with_sign(0, false);
+    with_sign(1, true);
+    // t0 = e0 - 32, and a term is shifted by t0 - e <= 32 L: its top bit at NB - 1 is gone
+    A.e[1] = A.e[0] - 32 - 32 * L;
+    Dev dA(A);
+    Host_Float s = mpf_total(dA.b, 0);
+    value(A.m.data(), A.entries(), 0, A.e[0], t.a);
+    value(reinterpret_cast<int32_t *>(s.m.data()), 1, 0, s.e, t.b, int(s.m.size()));
+    mpf_sub(t.c, t.b, t.a);
+    mpf_abs(t.d, t.a);
+    report("mpf_total, a negative term rounding to zero", log2_abs(t.c) - log2_abs(t.d),
+           -double(NB) - 24);
+  }
+  // sparse products against exact sums, and the slices of P
+  {
+    const int64_t n = 37, nv = 300;
+    std::vector<int64_t> ptr(n + 1, 0);
+    std::vector<uint32_t> col, val, out(n);
+    for(int64_t o = 0; o < n; ++o)
+      {
+        const int terms = o == 5 ? 0 : 1 + int(rng() % 40);
+        for(int k = 0; k < terms; ++k)
+          {
+            col.push_back(uint32_t(rng() % nv) | ((rng() & 1) ? 0x80000000u : 0u));
+            val.push_back(0);
+          }
+        ptr[o + 1] = int64_t(col.size());
+        out[o] = uint32_t(2 * o + 1);
+      }
+    const int64_t nnz = int64_t(col.size());
+    for(int64_t k = 0; k < nnz; ++k)
+      val[k] = uint32_t((nnz - 1) - k);
+    Host_Mat A = random_mat(1, nnz, 1, 300, 0.05), v = random_mat(1, nv, 1, 300, 0.05);
+    Dev dA(A), dv(v), dO(1, 2 * n + 1, 1);
+    mpf_zero(dO.b, 0);
+    auto dev = [](const void *p, size_t bytes) {
+      void *d = nullptr;
+      if(cudaMalloc(&d, bytes) != cudaSuccess || cudaMemcpy(d, p, bytes, cudaMemcpyHostToDevice) != cudaSuccess)
+        throw std::runtime_error("device copy");
+      return d;
+    };
+    Csr_Gemv g;
+    g.n = n;
+    g.ptr = static_cast<const int64_t *>(dev(ptr.data(), ptr.size() * 8));
+    g.col = static_cast<const uint32_t *>(dev(col.data(), col.size() * 4));
+    g.val = static_cast<const uint32_t *>(dev(val.data(), val.size() * 4));
+    g.out = static_cast<const uint32_t *>(dev(out.data(), out.size() * 4));
+    mpf_csr_gemv(dA.b, dv.b, dO.b, g, 0);
+    cudaStreamSynchronize(0);
+    Host_Mat O = dO.get();
+    double worst = -1e30, worst_control = -1e30;
+    mpf_t sum, big;
+    mpf_inits(sum, big, nullptr);
+    for(int64_t o = 0; o < n; ++o)
+      {
+        mpf_set_ui(sum, 0);
+        mpf_set_ui(big, 0);
+        for(int64_t k = ptr[o]; k < ptr[o + 1]; ++k)
+          {
+            value(A.m.data(), A.entries(), val[k], A.e[val[k]], t.a);
+            const int64_t iv = col[k] & 0x7fffffffu;
+            value(v.m.data(), v.entries(), iv, v.e[iv], t.b);
+            mpf_mul(t.c, t.a, t.b);
+            if(col[k] & 0x80000000u)
+              mpf_mul_2exp(t.c, t.c, 1);
+            mpf_add(sum, sum, t.c);
+            mpf_abs(t.c, t.c);
+            if(mpf_cmp(t.c, big) > 0)
+              mpf_set(big, t.c);
+          }
+        const int64_t at = out[o];
+        value(O.m.data(), O.entries(), at, O.e[at], t.a);
+        mpf_sub(t.b, t.a, sum);
+        if(mpf_sgn(big) != 0)
+          worst = std::max(worst, log2_abs(t.b) - log2_abs(big));
+        // the even outputs are not written
+        value(O.m.data(), O.entries(), 2 * o, O.e[2 * o], t.a);
+        worst_control = std::max(worst_control, log2_abs(t.a));
+      }
+    mpf_clears(sum, big, nullptr);
+    report("mpf_csr_gemv, relative to the largest term", worst, -double(NB) + 20);
+    if(worst_control > -1e29)
+      {
+        printf("mpf_csr_gemv: wrote outside its output list\n");
+        ++failures;
+      }
+    // slices: entries of two 4 x 4 blocks of three slices, with their mirrors, and P's rows
+    const int64_t bn = 4;
+    const int dp = 3, nb = 2;
+    std::vector<uint32_t> pos, slice;
+    std::vector<int32_t> vm;
+    Host_Mat F = random_mat(1, 5, 1, 10, 0.0);
+    const int64_t ents[5][4] = {{0, 0, 2, 1}, {0, 2, 3, 3}, {1, 1, 1, 0}, {1, 0, 0, 0}, {0, 1, 3, 0}}; // z, s, i, j
+    for(auto &e : ents)
+      {
+        pos.push_back(uint32_t(e[0] * bn * bn + e[3] * bn + e[2]) | 0x80000000u);
+        slice.push_back(uint32_t(7 + e[1])); // p0 = 7
+      }
+    Dev dF(F), dW(nb * dp, bn, bn);
+    mpf_zero(dW.b, 0);
+    const auto *dpos = static_cast<const uint32_t *>(dev(pos.data(), pos.size() * 4));
+    const auto *dslice = static_cast<const uint32_t *>(dev(slice.data(), slice.size() * 4));
+    mpf_fill_slices(dF.b, dpos, dslice, 0, 5, bn, dp, 7, dW.b, 0);
+    cudaStreamSynchronize(0);
+    Host_Mat W = dW.get();
+    int bad = 0;
+    for(int k = 0; k < 5; ++k)
+      {
+        const int64_t base = (ents[k][0] * dp + ents[k][1]) * bn * bn;
+        for(const int64_t q : {base + ents[k][3] * bn + ents[k][2], base + ents[k][2] * bn + ents[k][3]})
+          {
+            if(W.e[q] != F.e[k])
+              ++bad;
+            for(int w = 0; w < L; ++w)
+              if(W.m[w * W.entries() + q] != F.m[w * F.entries() + k])
+                ++bad;
+          }
+      }
+    int nonzero = 0;
+    for(int64_t q = 0; q < W.entries(); ++q)
+      nonzero += W.e[q] != EZ;
+    if(nonzero != 8) // five entries, two on the diagonal
+      ++bad;
+    // the valid rows of block 1 (dimension 2) and of block 0 (dimension 3)
+    std::vector<uint32_t> tab;
+    for(int z = 0; z < nb; ++z)
+      for(int j = 0; j < 3 - z; ++j)
+        for(int i = 0; i < 3 - z; ++i)
+          tab.push_back(uint32_t(z * bn * bn + j * bn + i));
+    const int64_t R = int64_t(tab.size());
+    const auto *dtab = static_cast<const uint32_t *>(dev(tab.data(), tab.size() * 4));
+    Dev dP(1, R, 10);
+    mpf_zero(dP.b, 0);
+    mpf_gather_slices(dW.b, dtab, R, bn, dp, 7, dP.b, 0);
+    cudaStreamSynchronize(0);
+    Host_Mat Pm = dP.get();
+    for(int s_ = 0; s_ < dp; ++s_)
+      for(int64_t r = 0; r < R; ++r)
+        {
+          const int64_t z = tab[r] / (bn * bn), rem = tab[r] % (bn * bn);
+          const int64_t from = (z * dp + s_) * bn * bn + rem, to = (7 + s_) * R + r;
+          if(Pm.e[to] != W.e[from])
+            ++bad;
+          for(int w = 0; w < L; ++w)
+            if(Pm.m[w * Pm.entries() + to] != W.m[w * W.entries() + from])
+              ++bad;
+        }
+    printf("mpf_fill_slices, mpf_gather_slices: %d differences  %s\n", bad, bad ? "FAILED" : "ok");
+    if(bad)
+      ++failures;
+  }
   // to double
   {
     Host_Mat A = random_mat(3, 20, 20, 300, 0.1);

@@ -988,6 +988,144 @@ namespace sdpb_gpu
         write_zero<L>(Om, Oe, oplane, out);
     }
 
+    // mpf_csr_gemv: k_gemv_top, k_gemv_part and k_gemv_reduce's sums over a list of
+    // terms, extending Zechuan Zheng's partial-sum GEMV. S lanes share an output and take every S-th term.
+    constexpr uint32_t CSR_TWICE = 0x80000000u;
+
+    __global__ void
+    k_csr_top(const int64_t *__restrict__ Ae, const int64_t *__restrict__ Ve,
+              const int64_t *__restrict__ ptr, const uint32_t *__restrict__ col,
+              const uint32_t *__restrict__ val, int64_t n, i64 *__restrict__ T)
+    {
+      const int64_t q = entry_index();
+      if(q >= n)
+        return;
+      i64 top = LLONG_MIN;
+      for(int64_t t = ptr[q]; t < ptr[q + 1]; ++t)
+        {
+          const uint32_t c = col[t];
+          const i64 ea = Ae[val ? int64_t(val[t]) : t],
+                    ev = Ve[c & ~CSR_TWICE];
+          if(ea != MPF_EZ && ev != MPF_EZ)
+            {
+              const i64 x = ea + ev + ((c & CSR_TWICE) ? 1 : 0);
+              if(x > top)
+                top = x;
+            }
+        }
+      T[q] = top;
+    }
+
+    template <int L>
+    __global__ void
+    k_csr_part(const int32_t *__restrict__ Am, const int64_t *__restrict__ Ae,
+               int64_t aplane, const int32_t *__restrict__ Vm,
+               const int64_t *__restrict__ Ve, int64_t vplane,
+               const int64_t *__restrict__ ptr, const uint32_t *__restrict__ col,
+               const uint32_t *__restrict__ val, const i64 *__restrict__ T,
+               int64_t n, int S, u32 *__restrict__ Part)
+    {
+      const int64_t gid = entry_index(), q = gid / S, sl = gid % S;
+      if(q >= n)
+        return;
+      constexpr int NB = 32 * L - 2, KMIN = L - 3, W = 2 * L + 2 - KMIN;
+      const i64 top = T[q];
+      u32 acc[W];
+#pragma unroll
+      for(int k = 0; k < W; ++k)
+        acc[k] = 0;
+      if(top != LLONG_MIN)
+        for(int64_t t = ptr[q] + sl; t < ptr[q + 1]; t += S)
+          {
+            const uint32_t c = col[t];
+            const int64_t ia = val ? int64_t(val[t]) : t, iv = c & ~CSR_TWICE;
+            const i64 ea = Ae[ia], ev = Ve[iv];
+            if(ea == MPF_EZ || ev == MPF_EZ)
+              continue;
+            const i64 s = top - (ea + ev + ((c & CSR_TWICE) ? 1 : 0));
+            if(s > NB)
+              continue;
+            u32 x[L], y[L];
+            bool nx, ny;
+            read_mag<L>(Am, aplane, ia, x, nx);
+            read_mag<L>(Vm, vplane, iv, y, ny);
+            shift_right_round<L>(x, s);
+            const bool neg = nx != ny;
+            const u32 mask = neg ? 0xffffffffu : 0u;
+            u32 cc = neg ? 1u : 0u;
+            u32 c0 = 0, c1 = 0, c2 = 0;
+#pragma unroll
+            for(int k = KMIN; k < 2 * L - 1; ++k)
+              {
+#pragma unroll
+                for(int i = (k - (L - 1) > 0 ? k - (L - 1) : 0);
+                    i <= (k < L - 1 ? k : L - 1); ++i)
+                  leaf_detail::mac3(c0, c1, c2, x[i], y[k - i]);
+                const u64 v = (u64)acc[k - KMIN] + (c0 ^ mask) + cc;
+                acc[k - KMIN] = u32(v);
+                cc = u32(v >> 32);
+                c0 = c1;
+                c1 = c2;
+                c2 = 0;
+              }
+#pragma unroll
+            for(int k = 2 * L - 1; k <= 2 * L + 1; ++k)
+              {
+                const u64 v = (u64)acc[k - KMIN] + (c0 ^ mask) + cc;
+                acc[k - KMIN] = u32(v);
+                cc = u32(v >> 32);
+                c0 = c1;
+                c1 = 0;
+              }
+          }
+#pragma unroll
+      for(int k = 0; k < W; ++k)
+        Part[(sl * W + k) * n + q] = acc[k];
+    }
+
+    template <int L>
+    __global__ void
+    k_csr_reduce(const u32 *__restrict__ Part, const i64 *__restrict__ T,
+                 int64_t n, int S, const uint32_t *__restrict__ oidx,
+                 int32_t *__restrict__ Om, int64_t *__restrict__ Oe,
+                 int64_t oplane)
+    {
+      const int64_t q = entry_index();
+      if(q >= n)
+        return;
+      const int64_t out = oidx ? int64_t(oidx[q]) : q;
+      constexpr int KMIN = L - 3, W = 2 * L + 2 - KMIN;
+      if(T[q] == LLONG_MIN)
+        {
+          write_zero<L>(Om, Oe, oplane, out);
+          return;
+        }
+      u32 acc[W];
+#pragma unroll
+      for(int k = 0; k < W; ++k)
+        acc[k] = Part[int64_t(k) * n + q];
+      for(int sl = 1; sl < S; ++sl)
+        {
+          u64 c = 0;
+#pragma unroll
+          for(int k = 0; k < W; ++k)
+            {
+              const u64 v = (u64)acc[k] + Part[(int64_t(sl) * W + k) * n + q] + c;
+              acc[k] = u32(v);
+              c = v >> 32;
+            }
+        }
+      const bool neg = int32_t(acc[W - 1]) < 0;
+      if(neg)
+        negate_reg<W>(acc);
+      u32 r[L];
+      i64 ex;
+      if(round_to_float<L, W>(acc, T[q] + 32 * KMIN, r, ex))
+        write_float<L>(Om, Oe, oplane, out, r, ex, neg);
+      else
+        write_zero<L>(Om, Oe, oplane, out);
+    }
+
     __global__ void k_max_exp2(const int64_t *e, int64_t n, u64 *out)
     {
       __shared__ i64 v[TH];
@@ -1354,6 +1492,106 @@ namespace sdpb_gpu
       OPS_CHECK(cudaFreeAsync(d, s));
       return (i64)(h ^ 0x8000000000000000ULL);
     }
+  }
+
+  void mpf_csr_gemv(const Mpf_Batch &A, const Mpf_Batch &v, Mpf_Batch &O,
+                    const Csr_Gemv &c, cudaStream_t s)
+  {
+    const int64_t n = c.n;
+    if(n == 0)
+      return;
+    // terms per output from the list's own length, as mpf_gemv's thread choice
+    int64_t nnz = 0;
+    OPS_CHECK(cudaMemcpy(&nnz, c.ptr + n, 8, cudaMemcpyDeviceToHost));
+    int S = 1;
+    if(gemv_thread_target > 0)
+      S = int(std::max<int64_t>(
+        1, std::min<int64_t>({64, gemv_thread_target / n, nnz / n / 256})));
+    int th = 32;
+    while(th < TH && n / th > 132)
+      th *= 2;
+    const int64_t grid = (n + th - 1) / th;
+    const int W = 2 * A.L + 2 - (A.L - 3);
+    i64 *T;
+    u32 *Part;
+    OPS_CHECK(cudaMallocAsync(&T, size_t(n) * 8, s));
+    OPS_CHECK(cudaMallocAsync(&Part, size_t(S) * W * n * 4, s));
+    k_csr_top<<<grid, th, 0, s>>>(A.e, v.e, c.ptr, c.col, c.val, n, T);
+    OPS_BY_L(A.L, k_csr_part, <<<nblk(n * S), TH, 0, s>>>(
+      A.m, A.e, A.entries(), v.m, v.e, v.entries(), c.ptr, c.col, c.val, T, n, S,
+      Part));
+    OPS_BY_L(A.L, k_csr_reduce, <<<grid, th, 0, s>>>(Part, T, n, S, c.out, O.m, O.e,
+                                                     O.entries()));
+    OPS_CHECK(cudaGetLastError());
+    OPS_CHECK(cudaFreeAsync(Part, s));
+    OPS_CHECK(cudaFreeAsync(T, s));
+  }
+
+  namespace
+  {
+    __global__ void k_fill_slices(const int32_t *__restrict__ am,
+                                  const int64_t *__restrict__ ae, int64_t aplane,
+                                  const uint32_t *__restrict__ pos,
+                                  const uint32_t *__restrict__ slice, int64_t first,
+                                  int64_t count, int64_t n, int dp, int64_t p0, int L,
+                                  int32_t *__restrict__ wm, int64_t *__restrict__ we,
+                                  int64_t wplane)
+    {
+      const int64_t q = entry_index();
+      if(q >= count)
+        return;
+      const int64_t t = first + q, nn = n * n, at = pos[t] & ~CSR_TWICE;
+      const int64_t z = at / nn, rem = at % nn;
+      const int64_t base = (z * dp + (int64_t(slice[t]) - p0)) * nn;
+      const int64_t a = base + rem, b = base + (rem % n) * n + rem / n;
+      we[a] = ae[t];
+      we[b] = ae[t];
+      for(int k = 0; k < L; ++k)
+        {
+          const int32_t v = am[int64_t(k) * aplane + t];
+          wm[int64_t(k) * wplane + a] = v;
+          wm[int64_t(k) * wplane + b] = v;
+        }
+    }
+
+    __global__ void k_gather_slices(const int32_t *__restrict__ gm,
+                                    const int64_t *__restrict__ ge, int64_t gplane,
+                                    const uint32_t *__restrict__ tab, int64_t R,
+                                    int64_t n, int dp, int64_t p0, int L,
+                                    int32_t *__restrict__ pm, int64_t *__restrict__ pe,
+                                    int64_t pplane)
+    {
+      const int64_t q = entry_index();
+      if(q >= R * dp)
+        return;
+      const int64_t s = q / R, r = q % R, nn = n * n;
+      const int64_t z = tab[r] / nn, rem = tab[r] % nn;
+      const int64_t from = (z * dp + s) * nn + rem, to = (p0 + s) * R + r;
+      pe[to] = ge[from];
+      for(int k = 0; k < L; ++k)
+        pm[int64_t(k) * pplane + to] = gm[int64_t(k) * gplane + from];
+    }
+  }
+
+  void mpf_fill_slices(const Mpf_Batch &A, const uint32_t *pos,
+                       const uint32_t *slice, int64_t first, int64_t last,
+                       int64_t n, int dp, int64_t p0, Mpf_Batch &W, cudaStream_t s)
+  {
+    const int64_t count = last - first;
+    if(count <= 0)
+      return;
+    k_fill_slices<<<nblk(count), TH, 0, s>>>(A.m, A.e, A.entries(), pos, slice, first,
+                                             count, n, dp, p0, A.L, W.m, W.e,
+                                             W.entries());
+    OPS_CHECK(cudaGetLastError());
+  }
+
+  void mpf_gather_slices(const Mpf_Batch &G, const uint32_t *tab, int64_t R,
+                         int64_t n, int dp, int64_t p0, Mpf_Batch &P, cudaStream_t s)
+  {
+    k_gather_slices<<<nblk(R * dp), TH, 0, s>>>(G.m, G.e, G.entries(), tab, R, n, dp,
+                                                p0, G.L, P.m, P.e, P.entries());
+    OPS_CHECK(cudaGetLastError());
   }
 
   Host_Float mpf_max_abs(const Mpf_Batch &A, cudaStream_t s)

@@ -74,7 +74,7 @@ Sdpb::Sdpa::SDP read_sdp(const SDPB_Parameters &parameters,
          "--sparseB is implemented for polynomial matrix programs only, "
          "not for SDPA input.");
   Scoped_Timer read_sdp_timer(timers, "read_sdp");
-  return Sdpb::Sdpa::SDP(parameters.sdp_path, block_info, grid, timers);
+  return Sdpb::Sdpa::SDP(parameters.sdp_path, block_info, grid, timers, parameters.solver.gpu);
 }
 
 inline SDP_Solver

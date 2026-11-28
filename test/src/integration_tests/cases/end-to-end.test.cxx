@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <boost/program_options/parsers.hpp>
+#include <boost/property_tree/json_parser.hpp>
 
 // Realistic end-to-end test for pmp2sdp + sdpb
 // JSON input taken from  "SingletScalar_cT_test_nmax6" and
@@ -145,6 +146,15 @@ namespace
             runner.create_nested("sdpb").mpi_run(
               {Test_Config::program("sdpb"), default_sdpb_args, args},
               num_procs);
+            if(std::find(default_sdpb_args.begin(), default_sdpb_args.end(),
+                         "--gpu") != default_sdpb_args.end())
+              {
+                // A silent fallback to the CPU could match every reference value.
+                boost::property_tree::ptree profile;
+                boost::property_tree::read_json(
+                  (output_dir / "out" / "gpu_profile.json").string(), profile);
+                REQUIRE(profile.get<int>("iterations") > 0);
+              }
             if(run_sdpb_twice)
               {
                 runner.create_nested("sdpb-2").mpi_run(
@@ -534,3 +544,25 @@ TEST_CASE("end-to-end_tests")
     }
   }
 }
+
+#ifdef SDPB_GPU
+TEST_CASE("sdpa_gpu")
+{
+  for(const auto *name : {"example1", "example1-objective-const", "example2"})
+    DYNAMIC_SECTION(name)
+    {
+      End_To_End_Test test(std::string("sdpa/") + name);
+      test.num_procs = 1;
+      test.precision = 768;
+      test.diff_precision = 83; // about 25 decimal digits against the CPU solutions
+      test.runner_name_suffix = "_gpu";
+      test.sdpb_out_filenames = {"out.txt", "x.txt"};
+      test.default_sdpb_args = boost::program_options::split_unix(
+        "--gpu --maxIterations 200 --dualityGapThreshold 1e-30 "
+        "--primalErrorThreshold 1e-30 --dualErrorThreshold 1e-30 "
+        "--initialMatrixScalePrimal 1e4 --initialMatrixScaleDual 1e4 "
+        "--writeSolution x");
+      test.run();
+    }
+}
+#endif

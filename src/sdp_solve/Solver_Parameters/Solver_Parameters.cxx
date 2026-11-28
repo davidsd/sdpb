@@ -75,7 +75,7 @@ boost::program_options::options_description Solver_Parameters::options()
     "Maximum number of iterations to run the solver.");
   result.add_options()(
     "gpu", boost::program_options::bool_switch(&gpu)->default_value(false),
-    "Run the solver iterations on one GPU, one MPI rank (only in builds "
+    "Run PMP or SDPA iterations on GPUs, one MPI rank per GPU (only in builds "
     "configured with --enable-gpu). --maxMemory and --maxSharedMemory have "
     "no effect with --gpu: its host and device memory are not estimated. "
     "Tuning options are environment variables, see src/gpu/README.md. "
